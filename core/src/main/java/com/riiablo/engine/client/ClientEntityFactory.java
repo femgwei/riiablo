@@ -7,8 +7,8 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.IntIntMap;
 
 import com.riiablo.Riiablo;
-import com.riiablo.ai.AI;
-import com.riiablo.ai.Npc;
+import com.riiablo.engine.server.ai.AI;
+import com.riiablo.engine.server.ai.Npc;
 import com.riiablo.codec.excel.LvlWarp;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
@@ -144,6 +144,10 @@ public class ClientEntityFactory extends ServerEntityFactory {
     final int orientation = DT1.Tile.Index.orientation(index);
 
     int id = super.createWarp(index, x, y);
+    if (id == Engine.INVALID_ENTITY) {
+      // Server factory returned INVALID_ENTITY (e.g., LvlWarp entry not found), skip
+      return Engine.INVALID_ENTITY;
+    }
     Warp warp = mWarp.get(id);
     LvlWarp.Entry entry = warp.warp;
 
@@ -200,7 +204,12 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   @Override
   public int createMissile(int missileId, Vector2 angle, Vector2 position) {
-    int id = super.createMissile(missileId, angle, position);
+    return createMissile(missileId, angle, position, -1);
+  }
+  
+  @Override
+  public int createMissile(int missileId, Vector2 angle, Vector2 position, int ownerId) {
+    int id = super.createMissile(missileId, angle, position, ownerId);
     Missile missileWrapper = mMissile.get(id);
     Riiablo.assets.load(missileWrapper.missileDescriptor);
     mBox2DBody.create(id);

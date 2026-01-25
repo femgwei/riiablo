@@ -47,6 +47,7 @@ import com.riiablo.engine.EngineConfig;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.client.AnimationStepper;
 import com.riiablo.engine.client.AutoInteracter;
+import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.ClientEntityFactory;
 import com.riiablo.engine.client.ClientItemManager;
 import com.riiablo.engine.client.CofAlphaHandler;
@@ -58,8 +59,10 @@ import com.riiablo.engine.client.CofResolver;
 import com.riiablo.engine.client.CofTransformHandler;
 import com.riiablo.engine.client.CofUnloader;
 import com.riiablo.engine.client.CursorMovementSystem;
+import com.riiablo.engine.client.KeyboardMovementSystem;
 import com.riiablo.engine.client.DamageHandler;
 import com.riiablo.engine.client.DeathHandler;
+import com.riiablo.engine.client.CorpseManager;
 import com.riiablo.engine.client.DialogManager;
 import com.riiablo.engine.client.DirectionResolver;
 import com.riiablo.engine.client.FootstepEmitter;
@@ -95,13 +98,13 @@ import com.riiablo.engine.server.Box2DSynchronizerPre;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
-import com.riiablo.engine.server.MissileHandler;
 import com.riiablo.engine.server.ObjectCollisionUpdater;
 import com.riiablo.engine.server.ObjectInitializer;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.PlayerItemHandler;
 import com.riiablo.engine.server.SequenceHandler;
+import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.VelocityModeChanger;
 import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.ZoneMovementModesChanger;
@@ -160,6 +163,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   final AssetDescriptor<DC6> loadingscreenDescriptor = new AssetDescriptor<>("data\\local\\ui\\loadingscreen.dc6", DC6.class);
   final AssetDescriptor<Sound> windowopenDescriptor = new AssetDescriptor<>("data\\global\\sfx\\cursor\\windowopen.wav", Sound.class);
+  
+  // 小地图精灵资源
+  final AssetDescriptor<DC6> automapDescriptor = new AssetDescriptor<>("data\\global\\ui\\AUTOMAP\\MaxiMap.dc6", DC6.class);
 
   final AssetDescriptor<Texture> touchpadBackgroundDescriptor = new AssetDescriptor<>("textures/touchBackground.png", Texture.class);
   final AssetDescriptor<Texture> touchpadKnobDescriptor = new AssetDescriptor<>("textures/touchKnob.png", Texture.class);
@@ -168,6 +174,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   final Array<AssetDescriptor> preloadedAssets = new Array<AssetDescriptor>() {{
     add(loadingscreenDescriptor);
     add(windowopenDescriptor);
+    add(automapDescriptor);
     if (Gdx.app.getType() == Application.ApplicationType.Android || DEBUG_TOUCHPAD) {
       add(touchpadBackgroundDescriptor);
       add(touchpadKnobDescriptor);
@@ -193,6 +200,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   GameLoadingScreen loadingScreen;
   boolean created;
   boolean isDebug;
+  
+  // Automap 持续缩放累加器（用于按住键持续放大/缩小）
+  private float automapZoomAccumulator = 0f;
+  // Automap 持续平移累加器（用于按住键持续移动）
+  private float automapPanAccumulator = 0f;
   MappedKeyStateAdapter debugKeyListener = new MappedKeyStateAdapter() {
     @Override
     public void onPressed(MappedKey key, int keycode) {
@@ -392,6 +404,17 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         }
 
         if (key == Keys.Esc) {
+          // D2MOO: Priority 1 - Handle player death respawn
+          // If player is dead, respawn at town instead of showing menu
+          if (Riiablo.game.player >= 0 && engine != null) {
+            com.riiablo.engine.client.DeathHandler deathHandler = engine.getSystem(com.riiablo.engine.client.DeathHandler.class);
+            if (deathHandler != null && deathHandler.isPlayerDead(Riiablo.game.player)) {
+              deathHandler.respawnPlayerAtTown(Riiablo.game.player);
+              return; // Don't show menu when respawning
+            }
+          }
+          
+          // Priority 2 - Normal ESC key handling (show/hide menu)
           if (escapePanel.isVisible()) {
             escapePanel.setVisible(false);
           } else if (input.isVisible()) {
@@ -464,14 +487,74 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         switch (keycode) {
           case Input.Keys.TAB:
             if (UIUtils.shift()) {
+              // Shift+Tab: toggle debug walkable overlay
               RenderSystem.RENDER_DEBUG_WALKABLE = RenderSystem.RENDER_DEBUG_WALKABLE == 0 ? 1 : 0;
-            } else {
+            } else if (UIUtils.ctrl()) {
+              // Ctrl+Tab: cycle debug grid modes
               RenderSystem.RENDER_DEBUG_GRID++;
               if (RenderSystem.RENDER_DEBUG_GRID > RenderSystem.DEBUG_GRID_MODES) {
                 RenderSystem.RENDER_DEBUG_GRID = 0;
               }
+            } else {
+              // Tab: toggle automap (like original Diablo 2)
+              RenderSystem.toggleAutomap();
             }
             return true;
+
+          // 小地图方向键平移 - 仅当小地图打开时
+          case Input.Keys.UP:
+            if (RenderSystem.isAutomapVisible()) {
+              AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+              if (automapRenderer != null) automapRenderer.panUp();
+              return true;
+            }
+            return false;
+          case Input.Keys.DOWN:
+            if (RenderSystem.isAutomapVisible()) {
+              AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+              if (automapRenderer != null) automapRenderer.panDown();
+              return true;
+            }
+            return false;
+          case Input.Keys.LEFT:
+            if (RenderSystem.isAutomapVisible()) {
+              AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+              if (automapRenderer != null) automapRenderer.panLeft();
+              return true;
+            }
+            return false;
+          case Input.Keys.RIGHT:
+            if (RenderSystem.isAutomapVisible()) {
+              AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+              if (automapRenderer != null) automapRenderer.panRight();
+              return true;
+            }
+            return false;
+            
+          // 小地图缩放控制
+          case Input.Keys.EQUALS:
+          case Input.Keys.NUMPAD_ADD:
+            if (RenderSystem.isAutomapVisible()) {
+              AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+              if (automapRenderer != null) automapRenderer.zoomIn();
+              return true;
+            }
+            return false;
+          case Input.Keys.MINUS:
+          case Input.Keys.NUMPAD_SUBTRACT:
+            if (RenderSystem.isAutomapVisible()) {
+              AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+              if (automapRenderer != null) automapRenderer.zoomOut();
+              return true;
+            }
+            return false;
+          case Input.Keys.HOME:
+            if (RenderSystem.isAutomapVisible()) {
+              AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+              if (automapRenderer != null) automapRenderer.reset();
+              return true;
+            }
+            return false;
 
           case Input.Keys.F9: {
             PathDebugger debugger = engine.getSystem(PathDebugger.class);
@@ -490,6 +573,19 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             debugger.setEnabled(!debugger.isEnabled());
             return true;
           }
+          
+          case Input.Keys.ESCAPE: {
+            // Handle player death respawn (like d2mod)
+            // If player is dead (in MODE_DD), respawn at town
+            com.riiablo.engine.client.DeathHandler deathHandler = engine.getSystem(com.riiablo.engine.client.DeathHandler.class);
+            if (deathHandler != null && Riiablo.game.player >= 0) {
+              if (deathHandler.isPlayerDead(Riiablo.game.player)) {
+                deathHandler.respawnPlayerAtTown(Riiablo.game.player);
+                return true;
+              }
+            }
+            return false; // Let other systems handle ESC
+          }
 
           default:
             return false;
@@ -497,6 +593,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       }
     };
 
+    // 使用全局游戏随机种子（参考 D2MOO 的 pGameSeed）
+    // 如果尚未初始化，则使用时间戳初始化；否则使用已存在的全局 seed，确保同一游戏会话中地图可复现
+    /*if (Riiablo.gameSeed == 0) {
+      Riiablo.gameSeed = (int) (System.nanoTime() & 0x7FFF_FFFF);
+    }
+    config = new EngineConfig(Riiablo.gameSeed, 0);*/
     config = new EngineConfig(0, 0);
     map = new Map(config.seed(), config.diff());
     mapManager = new MapManager();
@@ -572,6 +674,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         ;
     if (!DEBUG_TOUCHPAD && Gdx.app.getType() == Application.ApplicationType.Desktop) {
       builder.with(new CursorMovementSystem());
+      builder.with(new KeyboardMovementSystem()); // 键盘方向键移动支持
     }
     builder
         .with(new Actioneer()) // TODO: move to more appropriate spot in list
@@ -580,6 +683,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new OverlayStepper()) // TODO: move to more appropriate spot in list
         .with(new DamageHandler()) // TODO: move to more appropriate spot in list
         .with(new DeathHandler()) // TODO: move to more appropriate spot in list
+        .with(new CorpseManager()) // Manages corpse lifetime and removal
         ;
     if (socket == null) {
       builder.with(new ItemGenerator());
@@ -616,7 +720,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new Box2DPhysics(1 / 60f))
         .with(new Box2DSynchronizerPost())
 
-        .with(new MissileHandler()) // TODO: move to more appropriate spot in list
+        .with(new MissileCollisionSystem()) // 处理导弹的碰撞和伤害
 
         .with(new ZoneChangeTracker())
         .with(new ZoneMovementModesChanger())
@@ -644,6 +748,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new MonsterLabelManager())
 
         .with(new ItemEffectManager())
+
+        .with(new AutomapRenderer())
 
         .with(new PathDebugger())
         .with(new Box2DDebugger())
@@ -721,6 +827,69 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       }
     }
 
+    // 检测持续按键：automap 缩放和平移（按住键持续操作）
+    if (RenderSystem.isAutomapVisible()) {
+      AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+      if (automapRenderer != null) {
+        float actionInterval = 0.1f;  // 操作间隔（秒）
+        
+        // 检查 +/- 键是否持续按下，每 0.1 秒触发一次缩放
+        if (Gdx.input.isKeyPressed(Input.Keys.EQUALS) || Gdx.input.isKeyPressed(Input.Keys.NUMPAD_ADD)) {
+          automapZoomAccumulator += delta;
+          if (automapZoomAccumulator >= actionInterval) {
+            automapRenderer.zoomIn();
+            automapZoomAccumulator = 0f;
+          }
+        } else if (Gdx.input.isKeyPressed(Input.Keys.MINUS) || Gdx.input.isKeyPressed(Input.Keys.NUMPAD_SUBTRACT)) {
+          automapZoomAccumulator += delta;
+          if (automapZoomAccumulator >= actionInterval) {
+            automapRenderer.zoomOut();
+            automapZoomAccumulator = 0f;
+          }
+        } else {
+          // 缩放按键释放时重置累加器
+          automapZoomAccumulator = 0f;
+        }
+        
+        // 检查箭头键是否持续按下，每 0.1 秒触发一次平移
+        boolean anyPanKeyPressed = false;
+        if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
+          automapPanAccumulator += delta;
+          if (automapPanAccumulator >= actionInterval) {
+            automapRenderer.panUp();
+            automapPanAccumulator = 0f;
+          }
+          anyPanKeyPressed = true;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+          automapPanAccumulator += delta;
+          if (automapPanAccumulator >= actionInterval) {
+            automapRenderer.panDown();
+            automapPanAccumulator = 0f;
+          }
+          anyPanKeyPressed = true;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+          automapPanAccumulator += delta;
+          if (automapPanAccumulator >= actionInterval) {
+            automapRenderer.panLeft();
+            automapPanAccumulator = 0f;
+          }
+          anyPanKeyPressed = true;
+        } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+          automapPanAccumulator += delta;
+          if (automapPanAccumulator >= actionInterval) {
+            automapRenderer.panRight();
+            automapPanAccumulator = 0f;
+          }
+          anyPanKeyPressed = true;
+        }
+        
+        if (!anyPanKeyPressed) {
+          // 所有平移按键释放时重置累加器
+          automapPanAccumulator = 0f;
+        }
+      }
+    }
+
     Riiablo.assets.update();
     engine.setDelta(delta);
     engine.process();
@@ -731,6 +900,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     details = null;
     stage.act(delta);
     stage.draw();
+    
+    // Draw death message overlay if player is dead (like d2mod)
+    drawDeathMessage();
+    
     if (firstRender) {
       firstRender = false;
       for (Actor actor : stage.getActors()) {
@@ -766,6 +939,61 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     //  reset using seed
     //  list of used dt1s
     //  list of used ds1s
+  }
+  
+  /**
+   * Draw death message overlay when player is dead
+   * Reference: d2mod - shows "Press ESC to continue" message in center of screen
+   */
+  private void drawDeathMessage() {
+    if (Riiablo.game.player < 0) {
+      return;
+    }
+    
+    com.riiablo.engine.client.DeathHandler deathHandler = engine.getSystem(com.riiablo.engine.client.DeathHandler.class);
+    if (deathHandler == null) {
+      return;
+    }
+    
+    if (!deathHandler.isPlayerDead(Riiablo.game.player)) {
+      return;
+    }
+    
+    // Draw death message in center of screen
+    // D2MOO: Show "Press ESC to continue" message when player is dead
+    com.badlogic.gdx.graphics.g2d.BitmapFont font = Riiablo.fonts.fontformal12;
+    if (font == null) {
+      // Font not loaded yet, skip drawing
+      return;
+    }
+    
+    String message = "You have died, Press ESC to continue"; // "You have died, Press ESC to continue"
+    
+    // Calculate text position (center of screen)
+    float screenWidth = Gdx.graphics.getWidth();
+    float screenHeight = Gdx.graphics.getHeight();
+    com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(font, message);
+    float textX = (screenWidth - layout.width) / 2;
+    float textY = screenHeight / 2;
+    
+    // Draw text with semi-transparent background
+    // Note: This is called after stage.draw(), so batch should not be active
+    Riiablo.batch.begin();
+    
+    // Draw semi-transparent black background using white texture with color modulation
+    com.badlogic.gdx.graphics.Color oldColor = Riiablo.batch.getColor();
+    Riiablo.batch.setColor(0, 0, 0, 0.7f); // Black with 70% opacity
+    // Use TextureRegion to draw a rectangle
+    if (Riiablo.textures.white != null) {
+      com.badlogic.gdx.graphics.g2d.TextureRegion whiteRegion = new com.badlogic.gdx.graphics.g2d.TextureRegion(Riiablo.textures.white);
+      Riiablo.batch.draw(whiteRegion, textX - 10, textY - layout.height - 10, layout.width + 20, layout.height + 20);
+    }
+    Riiablo.batch.setColor(oldColor);
+    
+    // Draw text
+    font.setColor(com.badlogic.gdx.graphics.Color.WHITE);
+    font.draw(Riiablo.batch, message, textX, textY);
+    Riiablo.batch.end();
   }
 
   @Override

@@ -338,7 +338,7 @@ public final class StatList {
         stat, entry(index), encodedValues);
     values[index] += encodedValues;
     flags[index] |= FLAG_MODIFIED;
-    if (log.debugEnabled()) log.debug(indexDebugString(index));
+    // if (log.debugEnabled()) log.debug(indexDebugString(index));
     return index;
   }
 
@@ -364,7 +364,7 @@ public final class StatList {
         "subEncoded(stat: %d (%s), encodedValues: %d (0x%3$x))",
         stat, entry(index), encodedValues);
     values[index] -= encodedValues;
-    if (log.debugEnabled()) log.debug(indexDebugString(index));
+    // if (log.debugEnabled()) log.debug(indexDebugString(index));
     return index;
   }
 
@@ -645,7 +645,7 @@ public final class StatList {
     params[index] = encodedParams;
     values[index] = encodedValue;
     flags[index] = encodeFlags(entry);
-    if (log.debugEnabled()) log.debug(indexDebugString(index));
+    // if (log.debugEnabled()) log.debug(indexDebugString(index));
     return index;
   }
 

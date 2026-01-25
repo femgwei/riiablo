@@ -6,6 +6,7 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.ObjectSet;
 import com.riiablo.codec.excel.ArmType;
 import com.riiablo.codec.excel.Armor;
+import com.riiablo.codec.excel.AutoMap;
 import com.riiablo.codec.excel.BodyLocs;
 import com.riiablo.codec.excel.CharStats;
 import com.riiablo.codec.excel.Colors;
@@ -27,6 +28,7 @@ import com.riiablo.codec.excel.MagicSuffix;
 import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonAI;
+import com.riiablo.codec.excel.MonLvl;
 import com.riiablo.codec.excel.MonMode;
 import com.riiablo.codec.excel.MonPreset;
 import com.riiablo.codec.excel.MonStats;
@@ -49,6 +51,7 @@ import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.codec.excel.Speech;
+import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.codec.excel.UniqueItems;
 import com.riiablo.codec.excel.WeaponClass;
 import com.riiablo.codec.excel.Weapons;
@@ -74,6 +77,12 @@ public class Files {
   public final ItemStatCost     ItemStatCost;
   public final ItemTypes        ItemTypes;
   public final Levels           Levels;
+  /**
+   * AutoMap.txt 表
+   * 
+   * 用于驱动小地图 / 自动地图的瓷砖图标映射
+   */
+  public final AutoMap          AutoMap;
   public final LowQualityItems  LowQualityItems;
   public final LvlPrest         LvlPrest;
   public final LvlTypes         LvlTypes;
@@ -83,6 +92,7 @@ public class Files {
   public final MagicPrefix      MagicPrefix;
   public final MagicSuffix      MagicSuffix;
   public final MonAI            MonAI;
+  public final MonLvl           MonLvl;
   public final MonMode          MonMode;
   public final MonStats         monstats;
   public final MonStats2        monstats2;
@@ -102,6 +112,7 @@ public class Files {
   public final Skills           skills;
   public final SkillDesc        skilldesc;
   public final Sounds           Sounds;
+  public final SuperUniques     SuperUniques;
   public final UniqueItems      UniqueItems;
   //public final UniquePrefix   UniquePrefix;
   //public final UniqueSuffix   UniqueSuffix;
@@ -132,6 +143,8 @@ public class Files {
     ItemStatCost     = load(ItemStatCost.class);
     ItemTypes        = load(ItemTypes.class);
     Levels           = load(Levels.class, Excel.EXPANSION);
+    // 加载 AutoMap.txt（不区分是否为资料片，使用原始表即可）
+    AutoMap          = load(AutoMap.class);
     LowQualityItems  = load(LowQualityItems.class);
     LvlPrest         = load(LvlPrest.class);
     LvlTypes         = load(LvlTypes.class);
@@ -141,6 +154,7 @@ public class Files {
     MagicPrefix      = load(MagicPrefix.class, Excel.EXPANSION);
     MagicSuffix      = load(MagicSuffix.class, Excel.EXPANSION);
     MonAI            = load(MonAI.class);
+    MonLvl           = load(MonLvl.class);
     MonMode          = load(MonMode.class);
     monstats         = load(MonStats.class, Excel.EXPANSION);
     monstats2        = load(MonStats2.class, Excel.EXPANSION);
@@ -160,6 +174,7 @@ public class Files {
     skills           = load(Skills.class);
     skilldesc        = load(SkillDesc.class);
     Sounds           = load(Sounds.class);
+    SuperUniques     = load(SuperUniques.class, Excel.EXPANSION);
     UniqueItems      = load(UniqueItems.class, Excel.EXPANSION);
     //UniquePrefix   = load(UniquePrefix.class);
     //UniqueSuffix   = load(UniqueSuffix.class);

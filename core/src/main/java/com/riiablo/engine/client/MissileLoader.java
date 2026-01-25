@@ -9,8 +9,10 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DCC;
 import com.riiablo.codec.excel.Missiles;
+import com.riiablo.engine.Direction;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.BBoxWrapper;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.graphics.BlendMode;
 
@@ -20,6 +22,7 @@ public class MissileLoader extends IteratingSystem {
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
+  protected ComponentMapper<Angle> mAngle;
 
   @Override
   protected void process(int entityId) {
@@ -43,7 +46,15 @@ public class MissileLoader extends IteratingSystem {
     animation.setMode(entry.LoopAnim > 0 ? Animation.Mode.LOOP : Animation.Mode.CLAMP); // TODO: Some are 2 -- special case?
     animation.setFrame(entry.RandStart);
     animation.setFrameDelta(256); // FIXME: entry.animrate was too fast
-    animation.setDirection(0);
+    
+    // Set direction based on Angle component if available
+    if (mAngle.has(entityId)) {
+      float radians = mAngle.get(entityId).angle.angleRad();
+      int direction = Direction.radiansToDirection(radians, animation.getNumDirections());
+      animation.setDirection(direction);
+    } else {
+      animation.setDirection(0);
+    }
 
     mBBoxWrapper.create(entityId).box = animation.getBox();
   }

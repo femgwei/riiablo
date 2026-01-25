@@ -152,7 +152,13 @@ public class Box2DPhysics extends IntervalSystem {
           CircleShape shape = new CircleShape(); {
             shape.setRadius(size / 2f);
             Fixture fixture = body.createFixture(shape, 1f);
-            //fixture.setSensor(true);
+            // Set collision filter: monsters don't collide with players or other monsters
+            // This prevents players from pushing monsters away (like original D2)
+            Filter filter = new Filter();
+            filter.categoryBits = 0x0002; // Monster category
+            filter.maskBits = 0x0001; // Only collide with walls/objects
+            filter.groupIndex = 0;
+            fixture.setFilterData(filter);
           } shape.dispose();
         }
         break;
@@ -172,7 +178,13 @@ public class Box2DPhysics extends IntervalSystem {
           CircleShape shape = new CircleShape(); {
             shape.setRadius(size / 2f);
             Fixture fixture = body.createFixture(shape, 1f);
-            //fixture.setSensor(true);
+            // Set collision filter: players don't collide with monsters
+            // This prevents players from pushing monsters away (like original D2)
+            Filter filter = new Filter();
+            filter.categoryBits = 0x0004; // Player category
+            filter.maskBits = 0x0001; // Only collide with walls/objects
+            filter.groupIndex = 0;
+            fixture.setFilterData(filter);
           } shape.dispose();
         }
         break;

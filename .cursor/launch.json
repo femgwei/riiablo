@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/launch",
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Riiablo Desktop - Debug",
+      "request": "launch",
+      "mainClass": "com.riiablo.desktop.DesktopLauncher",
+      "projectName": "riiablo",
+      "cwd": "${workspaceFolder}",
+      "vmArgs": "-XstartOnFirstThread -ea"
+    },
+    {
+      "type": "java",
+      "name": "Riiablo Desktop - Attach",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005,
+      "projectName": "riiablo"
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
@@ -58,6 +59,15 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
   final AssetDescriptor<DC6> overlapDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\overlap.DC6", DC6.class);
   DC6 overlap;
+
+  ExperienceWidget experienceWidget;
+  
+  // 经验条位置和尺寸常量（参考 OpenDiablo2）
+  // 经验条相对于 controlWidget 中心的 x 偏移（使其居中在 controlWidget 上方）
+  private static final float EXP_BAR_OFFSET_X_FROM_CONTROL_CENTER = -38f; // 
+  private static final float EXP_BAR_OFFSET_Y_EXTRA = -11f;                 // 经验条相对于面板底部的额外 y 偏移（在 height 基础上）
+  private static final float EXP_BAR_WIDTH = 120f;                        // 经验条宽度（参考 OpenDiablo2）
+  private static final int EXP_BAR_HEIGHT = 2;                            // 经验条高度
 
   final AssetDescriptor<DC6> popbeltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl_popbelt.DC6", DC6.class);
   TextureRegion popbelt;
@@ -125,6 +135,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     final int numFrames = ctrlpnl.getNumFramesPerDir();
     healthWidget = new HealthWidget(ctrlpnl.getTexture(0));
     manaWidget = new ManaWidget(ctrlpnl.getTexture(numFrames - 2));
+
+    // Create experience widget (无纹理依赖，参考 OpenDiablo2)
+    experienceWidget = new ExperienceWidget();
 
     if (!DEBUG_MOBILE && Gdx.app.getType() == Application.ApplicationType.Desktop) {
       int leftSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
@@ -209,6 +222,24 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     if (rightSkill != null) add(rightSkill).bottom();
     add(manaWidget).height(height).growX().right().bottom();
     pack();
+    
+    // 经验条使用固定位置，不参与 Table 布局（参考 OpenDiablo2）
+    // 位置相对于 controlWidget 的中心，使其居中显示在控制面板上方
+    float expBarX;
+    if (controlWidget != null) {
+      // 相对于 controlWidget 的中心定位
+      float controlCenterX = controlWidget.getX() + controlWidget.getWidth() / 2f;
+      expBarX = controlCenterX + EXP_BAR_OFFSET_X_FROM_CONTROL_CENTER; // 居中，偏移半个宽度
+    } else {
+      // 如果没有 controlWidget，则相对于面板中心
+      expBarX = getWidth() / 2f + EXP_BAR_OFFSET_X_FROM_CONTROL_CENTER;
+    }
+    // y 坐标：距离底部 height + 4 像素（保持之前的逻辑）
+    float expBarY = height + EXP_BAR_OFFSET_Y_EXTRA;
+    experienceWidget.setPosition(expBarX, expBarY);
+    experienceWidget.setWidth(EXP_BAR_WIDTH);
+    experienceWidget.setHeight(EXP_BAR_HEIGHT);
+    addActor(experienceWidget); // 直接添加到面板，而不是 Table 布局
 
     //setHeight(controlWidget.background.getHeight() - 7);
     //setY(0);
@@ -248,6 +279,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     TextureRegion health;
     TextureRegion overlay;
     Label label;
+    private final TextureRegion tempHealth = new TextureRegion(); // 用于裁剪的临时区域
 
     HealthWidget(TextureRegion background) {
       this.background = background;
@@ -266,14 +298,31 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       final float x = getX();
       final float y = getY();
       batch.draw(background, x, y);
-      batch.draw(health,  x + 30, y + 14);
+      
+      // 计算 HP 比例并裁剪血条高度（暗黑2中血条是垂直的，从底部向上填充，减少时从顶部裁剪）
+      float currentHP = Riiablo.charData.getStats().get(Stat.hitpoints).asFixed();
+      float maxHP = Riiablo.charData.getStats().get(Stat.maxhp).asFixed();
+      float hpRatio = maxHP > 0 ? Math.max(0, Math.min(1, currentHP / maxHP)) : 0;
+      
+      int fullHeight = health.getRegionHeight();
+      int healthHeight = (int)(fullHeight * hpRatio);
+      if (healthHeight > 0) {
+        // 使用临时区域裁剪血条（从底部开始，向上填充，减少时从顶部裁剪）
+        tempHealth.setRegion(health);
+        int startY = fullHeight - healthHeight; // 从底部开始计算起始位置
+        tempHealth.setRegionY(startY); // 裁剪起始位置（从顶部裁剪掉的部分）
+        tempHealth.setRegionHeight(healthHeight); // 保留的高度
+        // 绘制位置保持不变（y + 14），使血条底部对齐
+        batch.draw(tempHealth, x + 30, y + 14);
+      }
+      
       batch.draw(overlay, x + 28, y +  6);
       super.draw(batch, a);
       if (label.isVisible()) {
         label.setX(getX());
         label.setText(Riiablo.string.format("panelhealth",
-            (int) Riiablo.charData.getStats().get(Stat.hitpoints).asFixed(),
-            (int) Riiablo.charData.getStats().get(Stat.maxhp).asFixed()));
+            (int) currentHP,
+            (int) maxHP));
         label.draw(batch, a);
       }
     }
@@ -283,6 +332,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     TextureRegion mana;
     TextureRegion overlay;
     Label label;
+    private final TextureRegion tempMana = new TextureRegion(); // 用于裁剪的临时区域
 
     ManaWidget(TextureRegion background) {
       this.background = background;
@@ -301,18 +351,104 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       final float x = getX();
       final float y = getY();
       batch.draw(background, x, y);
-      batch.draw(mana,    x + 8, y + 14);
+      
+      // 计算 MP 比例并裁剪法力条高度（暗黑2中法力条是垂直的，从底部向上填充，减少时从顶部裁剪）
+      float currentMana = Riiablo.charData.getStats().get(Stat.mana).asFixed();
+      float maxMana = Riiablo.charData.getStats().get(Stat.maxmana).asFixed();
+      float manaRatio = maxMana > 0 ? Math.max(0, Math.min(1, currentMana / maxMana)) : 0;
+      
+      int fullHeight = mana.getRegionHeight();
+      int manaHeight = (int)(fullHeight * manaRatio);
+      if (manaHeight > 0) {
+        // 使用临时区域裁剪法力条（从底部开始，向上填充，减少时从顶部裁剪）
+        tempMana.setRegion(mana);
+        int startY = fullHeight - manaHeight; // 从底部开始计算起始位置
+        tempMana.setRegionY(startY); // 裁剪起始位置（从顶部裁剪掉的部分）
+        tempMana.setRegionHeight(manaHeight); // 保留的高度
+        // 绘制位置保持不变（y + 14），使法力条底部对齐
+        batch.draw(tempMana, x + 8, y + 14);
+      }
+      
       batch.draw(overlay, x + 8, y + 10);
       super.draw(batch, a);
       if (label.isVisible()) {
         label.setX(getX() - 32);
         label.setText(Riiablo.string.format("panelmana",
-            (int) Riiablo.charData.getStats().get(Stat.mana).asFixed(),
-            (int) Riiablo.charData.getStats().get(Stat.maxmana).asFixed()));
+            (int) currentMana,
+            (int) maxMana));
         label.draw(batch, a);
       }
     }
   }
+
+  private class ExperienceWidget extends Actor {
+    // 经验条尺寸（参考 OpenDiablo2 的常量）
+    // 注意：实际宽度和位置由外部设置，这里只保留高度常量
+    private static final int EXP_BAR_HEIGHT = 2;
+
+    // 1x1白色像素纹理用于填充
+    private final TextureRegion whitePixel;
+
+    ExperienceWidget() {
+      setHeight(EXP_BAR_HEIGHT);
+      // 宽度和位置由外部设置
+
+      // 创建1x1白色像素纹理
+      Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+      pixmap.setColor(Color.WHITE);
+      pixmap.fill();
+      Texture texture = new Texture(pixmap);
+      whitePixel = new TextureRegion(texture);
+      pixmap.dispose();
+    }
+
+    @Override
+    public void draw(Batch batch, float a) {
+      final float x = getX();
+      final float y = getY();
+
+      // 绘制背景（深灰色）
+      batch.setColor(new Color(0.2f, 0.2f, 0.2f, 1f));
+      batch.draw(whitePixel, x, y, getWidth(), getHeight());
+
+      // 计算经验百分比
+      long currentExp = Riiablo.charData.getStats().get(Stat.experience).asLong();
+      int currentLevel = Riiablo.charData.getStats().get(Stat.level).asInt();
+      int charClass = Riiablo.charData.charClass;
+
+      // 获取当前等级和下一等级所需经验
+      long nextLevelExp = getNextLevelExperience(currentLevel, charClass);
+      long currentLevelExp = getCurrentLevelExperience(currentLevel, charClass);
+
+      // 计算百分比（0.0 到 1.0）
+      float percentage = 0;
+      if (nextLevelExp > currentLevelExp && currentExp >= currentLevelExp) {
+        percentage = (float) (currentExp - currentLevelExp) / (nextLevelExp - currentLevelExp);
+        percentage = Math.min(1.0f, Math.max(0.0f, percentage));
+      }
+
+      // 绘制填充（白色，参考 OpenDiablo2）
+      if (percentage > 0) {
+        float fillWidth = getWidth() * percentage;
+        batch.setColor(Color.WHITE);
+        batch.draw(whitePixel, x, y, fillWidth, getHeight());
+      }
+
+      // 重置颜色
+      batch.setColor(Color.WHITE);
+    }
+
+    private long getNextLevelExperience(int level, int charClass) {
+      if (level >= 99) return Long.MAX_VALUE;
+      return (long) (500 + Math.pow(level * 0.8, 2.5) * 100);
+    }
+
+    private long getCurrentLevelExperience(int level, int charClass) {
+      if (level <= 1) return 0;
+      return getNextLevelExperience(level - 1, charClass);
+    }
+  }
+
   private class ControlWidget extends WidgetGroup implements Disposable, ItemGrid.GridListener {
     final AssetDescriptor<DC6> menubuttonDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\menubutton.DC6", DC6.class);
     Button btnMenu;

@@ -82,12 +82,20 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public Pixmap getPixmap(int d, int f) {
-    return frames[d][f].pixmap;
+    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    Frame frame = getFrame(d, f);
+    return frame != null ? frame.pixmap : null;
   }
 
   @Override
   public TextureRegion getTexture(int d, int i) {
-    assert regions[d] != null : "loadDirection(d) must be called before getTexture(d,i)";
+    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    if (regions == null || d < 0 || d >= regions.length || regions[d] == null) {
+      return null; // Invalid direction or not loaded
+    }
+    if (i < 0 || i >= regions[d].length) {
+      return null; // Invalid frame index
+    }
     return regions[d][i];
   }
 
@@ -108,7 +116,11 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public boolean isLoaded(int d) {
-    return textures != null && textures[d] != null;
+    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    if (textures == null || d < 0 || d >= textures.length) {
+      return false;
+    }
+    return textures[d] != null;
   }
 
   @Override
@@ -119,13 +131,27 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public void loadDirection(int d, boolean combineFrames) {
+    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    if (d < 0 || d >= header.directions) {
+      return; // Invalid direction
+    }
+    if (frames == null || d >= frames.length || frames[d] == null) {
+      return; // Frames not initialized
+    }
+    
     if (textures == null) textures = new Texture[header.directions][];
     else if (textures[d] != null) return;
     preloadDirection(d);
 
     textures[d] = new Texture[header.framesPerDir];
     for (int f = 0; f < header.framesPerDir; f++) {
+      if (f >= frames[d].length || frames[d][f] == null) {
+        continue; // Skip invalid frames
+      }
       Pixmap pixmap = frames[d][f].pixmap;
+      if (pixmap == null) {
+        continue; // Skip frames without pixmap
+      }
       Texture texture = new Texture(new PixmapTextureData(pixmap, null, false, false, false));
       //texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
       texture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge);
@@ -134,7 +160,9 @@ public class DCC extends com.riiablo.codec.DC {
 
     regions[d] = new TextureRegion[header.framesPerDir];
     for (int f = 0; f < header.framesPerDir; f++) {
-      regions[d][f] = new TextureRegion(textures[d][f]);
+      if (textures[d][f] != null) {
+        regions[d][f] = new TextureRegion(textures[d][f]);
+      }
     }
   }
 
@@ -154,11 +182,19 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public Direction getDirection(int d) {
+    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    if (directions == null || d < 0 || d >= directions.length) {
+      return null; // Invalid direction
+    }
     return directions[d];
   }
 
   @Override
   public Frame getFrame(int d, int f) {
+    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    if (frames == null || d < 0 || d >= frames.length || frames[d] == null || f < 0 || f >= frames[d].length) {
+      return null; // Invalid direction or frame
+    }
     return frames[d][f];
   }
 
@@ -169,6 +205,11 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public BBox getBox(int d) {
+    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // directions array size may not match numDirections if DCC data is incomplete
+    if (directions == null || d < 0 || d >= directions.length) {
+      return box; // Invalid direction, return default box
+    }
     return directions[d].box;
   }
 

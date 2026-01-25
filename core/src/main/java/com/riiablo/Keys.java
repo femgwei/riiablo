@@ -47,6 +47,7 @@ public class Keys {
   public static final MappedKey Vendor = new MappedKey("Vendor", "vendor", Input.Keys.NUMPAD_2);
   public static final MappedKey SwapWeapons = new MappedKey("SwapWeapons", "swap", Input.Keys.W);
   public static final MappedKey Enter = new MappedKey("Enter", "enter", Input.Keys.ENTER);
+  public static final MappedKey Automap = new MappedKey("Automap", "automap", Input.Keys.TAB);
 
   public static final MappedKey Skill1  = new MappedKey("Skill 1",  "skill1",  Input.Keys.F1);
   public static final MappedKey Skill2  = new MappedKey("Skill 2",  "skill2",  Input.Keys.F2);
@@ -74,4 +75,16 @@ public class Keys {
   public static final MappedKey Belt3 = new MappedKey("Use Belt 3", "belt3", Input.Keys.NUM_3);
   public static final MappedKey Belt4 = new MappedKey("Use Belt 4", "belt4", Input.Keys.NUM_4);
   public static final MappedKey Belt[] = new MappedKey[] { Belt1, Belt2, Belt3, Belt4 };
+
+  // 方向键移动 - 支持箭头键和 WASD
+  public static final MappedKey MoveUp = new MappedKey("Move Up", "moveup", Input.Keys.UP);
+  public static final MappedKey MoveDown = new MappedKey("Move Down", "movedown", Input.Keys.DOWN);
+  public static final MappedKey MoveLeft = new MappedKey("Move Left", "moveleft", Input.Keys.LEFT);
+  public static final MappedKey MoveRight = new MappedKey("Move Right", "moveright", Input.Keys.RIGHT);
+  public static final MappedKey Run = new MappedKey("Run", "run", Input.Keys.R, Input.Keys.SHIFT_LEFT);
+  
+  // 小地图控制 - 缩放和重置
+  public static final MappedKey AutomapZoomIn = new MappedKey("Automap Zoom In", "automap_zoom_in", Input.Keys.EQUALS, Input.Keys.NUMPAD_ADD);
+  public static final MappedKey AutomapZoomOut = new MappedKey("Automap Zoom Out", "automap_zoom_out", Input.Keys.MINUS, Input.Keys.NUMPAD_SUBTRACT);
+  public static final MappedKey AutomapReset = new MappedKey("Automap Reset", "automap_reset", Input.Keys.HOME);
 }

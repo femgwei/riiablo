@@ -34,6 +34,10 @@ public class AnimStepper extends IntervalIteratingSystem {
       events.dispatch(AnimDataFinishedEvent.obtain(entityId));
     }
 
+    if (animData.keyframes == null || animData.keyframes.length == 0) {
+      return;
+    }
+
     final byte keyframe = animData.keyframes[animData.frame >>> 8];
     if (keyframe > Engine.KEYFRAME_NIL) {
       log.debug("broadcasting AnimDataKeyframeEvent({},{})", entityId, Engine.getKeyframe(keyframe));

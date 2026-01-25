@@ -19,29 +19,31 @@ import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.server.Actioneer;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Target;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
 import com.riiablo.item.Item;
-import com.riiablo.logger.LogManager;
-import com.riiablo.logger.Logger;
+import com.riiablo.item.BodyLoc;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.profiler.ProfilerSystem;
 import com.riiablo.save.ItemController;
 
 public class CursorMovementSystem extends BaseSystem {
-  private static final Logger log = LogManager.getLogger(CursorMovementSystem.class);
-
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Interactable> mInteractable;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
   protected RenderSystem renderer;
   protected MenuManager menuManager;
   protected DialogManager dialogManager;
   protected ProfilerSystem profiler;
   protected Actioneer actioneer;
+  protected DeathHandler deathHandler;
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
@@ -71,6 +73,15 @@ public class CursorMovementSystem extends BaseSystem {
   @Override
   protected void processSystem() {
     if (profiler != null && profiler.hit()) return;
+    
+    // D2MOO: Check if player is dead, if so, block all input except ESC key
+    final int playerId = renderer.getSrc();
+    if (deathHandler != null && deathHandler.isPlayerDead(playerId)) {
+      // Player is dead, block all movement/attack input
+      // ESC key handling for respawn should be done elsewhere (e.g., GameScreen)
+      return;
+    }
+    
     stage.screenToStageCoordinates(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY()));
     Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
     scaledStage.screenToStageCoordinates(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY()));
@@ -80,11 +91,14 @@ public class CursorMovementSystem extends BaseSystem {
 
     final boolean leftPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
     if ((leftPressed && UIUtils.shift()) || Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
-      final int playerId = renderer.getSrc();
-      final int skillId = Riiablo.charData.getAction(leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
-      iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
       final int targetId = getHovered(playerId);
-      actioneer.cast(playerId, skillId, targetId, tmpVec2);
+      if (targetId != Engine.INVALID_ENTITY && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(playerId))) {
+        actioneer.moveTo(playerId, Engine.INVALID_ENTITY);
+      } else {
+        final int skillId = Riiablo.charData.getAction(leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
+        iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
+        actioneer.cast(playerId, skillId, targetId, tmpVec2);
+      }
     } else {
       updateLeft();
     }
@@ -117,8 +131,8 @@ public class CursorMovementSystem extends BaseSystem {
         actioneer.moveTo(src, tmpVec2);
       }
     } else if (!pressed && actioneer.canInterrupt(src)) {
-      //pathfinder.findPath(src, null);
       requireRelease = false;
+      actioneer.clearLastAttackTargetDied(src);
       Target target = mTarget.get(src);
       if (target != null) {
         int targetId = target.target;
@@ -134,8 +148,53 @@ public class CursorMovementSystem extends BaseSystem {
         if (interactable != null && dst <= interactable.range) {
           actioneer.moveTo(src, Engine.INVALID_ENTITY);
           interactable.interactor.interact(src, targetId);
-        } else if (interactable == null && dst <= 3) { // TODO: change to check targetability of targetId
-          actioneer.cast(src, Riiablo.charData.getAction(Input.Buttons.LEFT), targetId, targetPos);
+        } else if (interactable == null) {
+          if (isTargetDead(targetId)) {
+            actioneer.moveTo(src, Engine.INVALID_ENTITY);
+            return;
+          }
+          if (actioneer.didLastAttackTargetDie(src)) return;
+          
+          // Check if in melee range
+          boolean inMeleeRange = actioneer.isInMeleeRange(src, targetId, 3);
+          
+          // Check if equipped weapon is throwable and in throwing range
+          boolean canThrow = false;
+          float throwRange = 0f;
+          Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
+          if (weapon == null) {
+            weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
+          }
+          
+          if (weapon != null && weapon.base != null) {
+            boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
+                                 weapon.type.is(com.riiablo.item.Type.TKNI) || 
+                                 weapon.type.is(com.riiablo.item.Type.TAXE);
+            
+            if (isThrowable) {
+              // Check quantity
+              com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+              if (quantity != null && quantity.asInt() > 0) {
+                // Get throwing range from weapon's RangeAdder or default
+                if (weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry) {
+                  com.riiablo.codec.excel.Weapons.Entry weaponEntry = (com.riiablo.codec.excel.Weapons.Entry) weapon.base;
+                  throwRange = weaponEntry.RangeAdder + 3f; // RangeAdder + player range bonus
+                } else {
+                  throwRange = 10f; // Default throwing range
+                }
+                
+                // Check if target is within throwing range
+                if (dst <= throwRange) {
+                  canThrow = true;
+                }
+              }
+            }
+          }
+          
+          // Allow attack if in melee range or can throw
+          if (inMeleeRange || canThrow) {
+            actioneer.cast(src, Riiablo.charData.getAction(Input.Buttons.LEFT), targetId, targetPos);
+          }
         }
       }
     }
@@ -148,9 +207,79 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private boolean touchDown(int src) {
+    if (actioneer.hasCasting(src) || actioneer.hasSequence(src)) return false;
+    if (actioneer.didLastAttackTargetDie(src)) return false;
+    
     int target = getHovered(src);
     if (target == Engine.INVALID_ENTITY) return false;
+    
+    if (mInteractable.get(target) == null) {
+      if (isTargetDead(target)) return false;
+      
+      Vector2 targetPos = mPosition.get(target).position;
+      float dst = mPosition.get(src).position.dst(targetPos);
+      
+      // Check if in melee range
+      boolean inMeleeRange = actioneer.isInMeleeRange(src, target, 3);
+      
+      // Check if equipped weapon is throwable and in throwing range
+      boolean canThrow = false;
+      float throwRange = 0f;
+      Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
+      if (weapon == null) {
+        weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
+      }
+      
+      if (weapon != null && weapon.base != null) {
+        boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
+                             weapon.type.is(com.riiablo.item.Type.TKNI) || 
+                             weapon.type.is(com.riiablo.item.Type.TAXE);
+        
+        if (isThrowable) {
+          com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+          if (quantity != null && quantity.asInt() > 0) {
+            if (weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry) {
+              com.riiablo.codec.excel.Weapons.Entry weaponEntry = (com.riiablo.codec.excel.Weapons.Entry) weapon.base;
+              throwRange = weaponEntry.RangeAdder + 3f;
+            } else {
+              throwRange = 10f;
+            }
+            
+            if (dst <= throwRange) {
+              canThrow = true;
+            }
+          }
+        }
+      }
+      
+      // Allow attack if in melee range or can throw
+      if (inMeleeRange || canThrow) {
+        actioneer.cast(src, Riiablo.charData.getAction(Input.Buttons.LEFT), target, targetPos);
+        return true;
+      }
+    }
+    
     actioneer.moveTo(src, target);
     return true;
+  }
+
+  /**
+   * D2MOO: Check if target entity is dead
+   * @param targetId The target entity ID
+   * @return true if target is dead or doesn't exist
+   */
+  private boolean isTargetDead(int targetId) {
+    if (targetId == Engine.INVALID_ENTITY) {
+      return true;
+    }
+    if (!mAttributesWrapper.has(targetId)) {
+      return true; // Entity doesn't exist or has no attributes
+    }
+    Attributes attrs = mAttributesWrapper.get(targetId).attrs;
+    com.riiablo.attributes.StatRef hitpoints = attrs.get(Stat.hitpoints);
+    if (hitpoints == null) {
+      return false; // No hitpoints stat, assume alive
+    }
+    return hitpoints.asFixed() <= 0f;
   }
 }

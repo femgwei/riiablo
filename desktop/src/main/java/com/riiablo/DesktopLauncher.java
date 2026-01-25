@@ -12,6 +12,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Toolkit;
+
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
@@ -185,12 +189,108 @@ public class DesktopLauncher {
     config.height = height;
     config.forceExit = SystemUtils.IS_OS_MAC_OSX; /** see {@link LwjglApplicationConfiguration#forceExit */
     final Client client = new Client(d2Home, d2Saves, height);
+    boolean windowedForced = false;
     if (cmd != null) {
-      client.setWindowedForced(cmd.hasOption("windowed"));
+      windowedForced = cmd.hasOption("windowed");
+      client.setWindowedForced(windowedForced);
       client.setDrawFPSForced(cmd.hasOption("fps"));
+    }
+    
+    // 设置窗口模式（参考 OpenDiablo2）
+    // 如果强制窗口化（命令行参数 -windowed），则设置为窗口模式
+    // 否则根据 Cvar 的值决定
+    // 注意：此时 Cvar 可能还没有被加载（在 Client.create() 中加载），所以使用默认值
+    // 如果 Cvar 在加载时值发生变化，监听器会在 LwjglApplication 创建后处理
+    boolean windowedCvar = Cvars.Client.Windowed.get(); // 获取 Cvar 值（可能是默认值或已加载的值）
+    config.fullscreen = !windowedForced && !windowedCvar;
+    
+    // 如果窗口模式，计算窗口初始位置（右下角）
+    // 窗口位置将在窗口创建后设置，因为 LwjglApplicationConfiguration 可能不支持直接设置 x 和 y
+    final int windowX, windowY;
+    if (!config.fullscreen) {
+      GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+      GraphicsDevice gd = ge.getDefaultScreenDevice();
+      int screenWidth = gd.getDisplayMode().getWidth();
+      int screenHeight = gd.getDisplayMode().getHeight();
+      
+      // 获取任务栏高度
+      Toolkit toolkit = Toolkit.getDefaultToolkit();
+      java.awt.Insets screenInsets = toolkit.getScreenInsets(gd.getDefaultConfiguration());
+      int taskbarHeight = screenInsets.bottom;
+      
+      // 计算窗口位置：右下角
+      // x = 屏幕宽度 - 窗口宽度（窗口右边贴着屏幕右边）
+      // y = 屏幕高度 - 窗口高度 - 任务栏高度 - 65（窗口底部向上提高65像素）
+      windowX = screenWidth - width;
+      windowY = screenHeight - height - taskbarHeight - 65;
+      
+      log.debug("Window position calculated for bottom-right: x={}, y={} (screen: {}x{}, taskbar height: {})", 
+          windowX, windowY, screenWidth, screenHeight, taskbarHeight);
+    } else {
+      windowX = -1;
+      windowY = -1;
+    }
+    
+    // 记录窗口模式（仅PC平台有效，移动平台无效）
+    // 使用 warn 级别确保日志能输出（默认日志级别是 WARN，warn 级别会输出）
+    String windowMode = config.fullscreen ? "fullscreen" : "windowed";
+    if (windowedForced) {
+      log.warn("Window mode: {} (forced by -windowed command line option)", windowMode);
+    } else {
+      log.warn("Window mode: {} (determined by Cvar Client.Windowed={})", windowMode, Cvars.Client.Windowed.get());
     }
 
     new LwjglApplication(client, config);
+    
+    // 如果窗口模式，设置窗口位置到右下角
+    if (!config.fullscreen && windowX >= 0 && windowY >= 0) {
+      Gdx.app.postRunnable(new Runnable() {
+        @Override
+        public void run() {
+          // 使用 LWJGL Display API 设置窗口位置
+          try {
+            org.lwjgl.opengl.Display.setLocation(windowX, windowY);
+            log.debug("Window position set to bottom-right: x={}, y={}", windowX, windowY);
+          } catch (Exception e) {
+            log.debug("Failed to set window position: {}", e.getMessage());
+          }
+        }
+      });
+    }
+    
+    // 等待 Client.create() 完成，确保 Cvar 已加载
+    // 然后根据实际加载的 Cvar 值设置窗口模式（如果与初始设置不一致）
+    Gdx.app.postRunnable(new Runnable() {
+      @Override
+      public void run() {
+        // 此时 Cvar 应该已经加载，检查是否需要调整窗口模式
+        if (!client.isWindowedForced() && Gdx.graphics != null) {
+          boolean windowedCvar = Cvars.Client.Windowed.get();
+          boolean shouldBeWindowed = windowedCvar;
+          boolean isCurrentlyFullscreen = Gdx.graphics.isFullscreen();
+          
+          if (shouldBeWindowed && isCurrentlyFullscreen) {
+            // Cvar 要求窗口模式，但当前是全屏，切换到窗口模式
+            Gdx.graphics.setWindowedMode((int) (Riiablo.DESKTOP_VIEWPORT_HEIGHT * 16f / 9f), Riiablo.DESKTOP_VIEWPORT_HEIGHT);
+            log.warn("Window mode adjusted to windowed (Cvar Client.Windowed={})", windowedCvar);
+            
+            // 设置窗口位置到右下角
+            if (windowX >= 0 && windowY >= 0) {
+              try {
+                org.lwjgl.opengl.Display.setLocation(windowX, windowY);
+              } catch (Exception e) {
+                // 忽略错误
+              }
+            }
+          } else if (!shouldBeWindowed && !isCurrentlyFullscreen) {
+            // Cvar 要求全屏模式，但当前是窗口模式，切换到全屏模式
+            Gdx.graphics.setFullscreenMode(Gdx.graphics.getDisplayMode());
+            log.warn("Window mode adjusted to fullscreen (Cvar Client.Windowed={})", windowedCvar);
+          }
+        }
+      }
+    });
+    
     if (cmd != null) {
       final int gdxLogLevel;
       switch (logLevel) {
@@ -218,10 +318,37 @@ public class DesktopLauncher {
       @Override
       public void onChanged(@NonNull Cvar<Boolean> cvar, Boolean from, Boolean to) {
         if (!client.isWindowedForced()) {
-          if (to && Gdx.graphics.isFullscreen()) {
-            Gdx.graphics.setWindowedMode((int) (Riiablo.DESKTOP_VIEWPORT_HEIGHT * 16f / 9f), Riiablo.DESKTOP_VIEWPORT_HEIGHT);
+          // 根据 Cvar 值设置窗口模式
+          if (to) {
+            // Cvar 为 true，设置为窗口模式
+            if (Gdx.graphics.isFullscreen()) {
+              int windowWidth = (int) (Riiablo.DESKTOP_VIEWPORT_HEIGHT * 16f / 9f);
+              int windowHeight = Riiablo.DESKTOP_VIEWPORT_HEIGHT;
+              Gdx.graphics.setWindowedMode(windowWidth, windowHeight);
+              
+              // 设置窗口位置到右下角
+              GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+              GraphicsDevice gd = ge.getDefaultScreenDevice();
+              int screenWidth = gd.getDisplayMode().getWidth();
+              int screenHeight = gd.getDisplayMode().getHeight();
+              Toolkit toolkit = Toolkit.getDefaultToolkit();
+              java.awt.Insets screenInsets = toolkit.getScreenInsets(gd.getDefaultConfiguration());
+              int taskbarHeight = screenInsets.bottom;
+              int newWindowX = screenWidth - windowWidth;
+              int newWindowY = screenHeight - windowHeight - taskbarHeight - 65; // 向上提高65像素
+              
+              try {
+                org.lwjgl.opengl.Display.setLocation(newWindowX, newWindowY);
+                log.debug("Window position set to bottom-right: x={}, y={}", newWindowX, newWindowY);
+              } catch (Exception e) {
+                log.debug("Failed to set window position: {}", e.getMessage());
+              }
+            }
           } else {
-            Gdx.graphics.setFullscreenMode(Gdx.graphics.getDisplayMode());
+            // Cvar 为 false，设置为全屏模式
+            if (!Gdx.graphics.isFullscreen()) {
+              Gdx.graphics.setFullscreenMode(Gdx.graphics.getDisplayMode());
+            }
           }
         }
       }

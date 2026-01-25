@@ -147,6 +147,9 @@ public class COF {
   }
 
   public static COF loadFromFile(FileHandle handle) {
+    if (handle == null) {
+      throw new GdxRuntimeException("COF file handle is null");
+    }
     return loadFromStream(handle.read());
   }
 

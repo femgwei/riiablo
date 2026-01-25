@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.IntArray;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Inventory;
 import com.riiablo.item.Item;
@@ -78,7 +79,8 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
         getHeight() - inventory.gridTop - grid.getHeight());
     addActor(grid);
 
-    Label stashgold = new Label(Integer.toString(Riiablo.charData.getStats().get(Stat.goldbank).asInt()), Riiablo.fonts.font16);
+    StatRef goldbankStat = Riiablo.charData.getStats().get(Stat.goldbank);
+    Label stashgold = new Label(Integer.toString(goldbankStat != null ? goldbankStat.asInt() : 0), Riiablo.fonts.font16);
     stashgold.setSize(150, 16);
     stashgold.setPosition(98, 393);
     addActor(stashgold);

@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -24,6 +25,7 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.D2S;
 import com.riiablo.save.D2SReader;
 import com.riiablo.widget.CharacterSelectButton;
+import com.riiablo.widget.Label;
 import com.riiablo.widget.TextButton;
 
 public class SelectCharacterScreen extends ScreenAdapter {
@@ -44,6 +46,10 @@ public class SelectCharacterScreen extends ScreenAdapter {
   private CharacterSelectButton        selected;
   private Array<CharacterSelectButton> characters;
 
+  private Table deleteConfirm;
+  private Button btnDeleteYes;
+  private Button btnDeleteNo;
+
   public SelectCharacterScreen() {
     load();
 
@@ -62,6 +68,13 @@ public class SelectCharacterScreen extends ScreenAdapter {
           Riiablo.client.clearAndSet(new GameScreen(Riiablo.charData.clear().load(selected.getD2S())));
         } else if (actor == btnCreateNewCharacter) {
           Riiablo.client.pushScreen(new CreateCharacterScreen());
+        } else if (actor == btnDeleteCharacter) {
+          toggleDeleteCharacterDialog(true);
+        } else if (actor == btnDeleteYes) {
+          deleteSelectedCharacter();
+          toggleDeleteCharacterDialog(false);
+        } else if (actor == btnDeleteNo) {
+          toggleDeleteCharacterDialog(false);
         }
       }
     };
@@ -106,17 +119,78 @@ public class SelectCharacterScreen extends ScreenAdapter {
     btnOK.setDisabled(true);
     stage.addActor(btnOK);
 
+    createDeleteConfirm(mediumButtonStyle, clickListener);
+    refreshCharacters();
+  }
+
+  private void createDeleteConfirm(TextButton.TextButtonStyle mediumButtonStyle, ChangeListener clickListener) {
+    deleteConfirm = new Table();
+    deleteConfirm.setFillParent(true);
+    deleteConfirm.setVisible(false);
+    deleteConfirm.setTouchable(Touchable.enabled);
+
+    Table box = new Table();
+    box.setBackground(Label.MODAL);
+
+    Label label = new Label(1878, Riiablo.fonts.font16); // "Are you sure you want to delete this character?"
+    label.setWrap(true);
+    label.setAlignment(Align.center);
+
+    btnDeleteYes = new TextButton("Yes", mediumButtonStyle);
+    btnDeleteYes.addListener(clickListener);
+    btnDeleteNo = new TextButton("No", mediumButtonStyle);
+    btnDeleteNo.addListener(clickListener);
+
+    box.add(label).width(320).pad(8).row();
+    box.add(btnDeleteYes).width(120).pad(6);
+    box.add(btnDeleteNo).width(120).pad(6);
+    box.pack();
+
+    deleteConfirm.add(box);
+    stage.addActor(deleteConfirm);
+  }
+
+  private void toggleDeleteCharacterDialog(boolean show) {
+    deleteConfirm.setVisible(show);
+    btnOK.setDisabled(show || selected == null);
+    btnDeleteCharacter.setDisabled(show || selected == null);
+    btnCreateNewCharacter.setDisabled(show);
+    btnExit.setDisabled(show);
+  }
+
+  private void deleteSelectedCharacter() {
+    if (selected == null) return;
+    FileHandle file = selected.getFile();
+    if (file != null) {
+      boolean deleted = file.delete();
+      if (!deleted) {
+        Gdx.app.error(TAG, "Failed to delete character file: " + file);
+      }
+    }
+    refreshCharacters();
+  }
+
+  private void refreshCharacters() {
+    if (characters != null) {
+      for (CharacterSelectButton b : characters) {
+        b.remove();
+        b.dispose();
+      }
+    }
+    selected = null;
+    characters = new Array<>();
+
     FileHandle savesLocation = Riiablo.saves;
     Gdx.app.debug(TAG, "Accessing saves within " + savesLocation.toString());
     FileHandle[] saves = savesLocation.list(D2S.EXT);
-    characters = new Array<>();
     for (FileHandle save : saves) {
       Gdx.app.debug(TAG, "Loading " + save.toString());
       D2S d2s = D2SReader.INSTANCE.readD2S(save);
-      CharacterSelectButton button = new CharacterSelectButton(d2s);
+      CharacterSelectButton button = new CharacterSelectButton(d2s, save);
       button.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          if (deleteConfirm.isVisible()) return;
           if (getTapCount() >= 2) {
             assert selected == event.getListenerActor();
             btnOK.toggle();
@@ -126,14 +200,15 @@ public class SelectCharacterScreen extends ScreenAdapter {
           if (selected != null) selected.deselect();
           selected = (CharacterSelectButton) event.getListenerActor();
           selected.select();
+          btnOK.setDisabled(false);
+          btnDeleteCharacter.setDisabled(false);
         }
       });
       characters.add(button);
+      stage.addActor(button);
       if (selected == null) {
         selected = button;
         selected.select();
-        btnOK.setDisabled(false);
-        //btnDeleteCharacter.setDisabled(false); // TODO
       }
     }
 
@@ -143,9 +218,12 @@ public class SelectCharacterScreen extends ScreenAdapter {
       x = (i & 1) == 0 ? offsetX : offsetX + CharacterSelectButton.WIDTH;
       CharacterSelectButton character = characters.get(i);
       character.setPosition(x, y);
-      stage.addActor(character);
       if ((i & 1) == 1) y -= CharacterSelectButton.HEIGHT;
     }
+
+    boolean hasChars = characters.size > 0;
+    btnOK.setDisabled(!hasChars);
+    btnDeleteCharacter.setDisabled(!hasChars);
   }
 
   @Override

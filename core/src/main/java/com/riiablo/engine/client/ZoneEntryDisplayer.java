@@ -31,6 +31,7 @@ public class ZoneEntryDisplayer extends BaseSystem {
   @Subscribe
   public void onZoneChanged(ZoneChangeEvent event) {
     if (event.entityId != Riiablo.game.player) return;
+    if (event.zone == null) return; // zone 可能为 null，跳过显示
     displayEntry(event.zone);
   }
 

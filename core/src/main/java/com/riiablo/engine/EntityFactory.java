@@ -106,5 +106,14 @@ public abstract class EntityFactory extends PassiveSystem {
     return createMissile(missile.Id, angle, position);
   }
 
+  public final int createMissile(Missiles.Entry missile, Vector2 angle, Vector2 position, int ownerId) {
+    return createMissile(missile.Id, angle, position, ownerId);
+  }
+
   public abstract int createMissile(int missileId, Vector2 angle, Vector2 position);
+  
+  public int createMissile(int missileId, Vector2 angle, Vector2 position, int ownerId) {
+    // Default implementation: create missile without ownerId
+    return createMissile(missileId, angle, position);
+  }
 }

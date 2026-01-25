@@ -490,6 +490,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
 
     DC dc    = layer.dc;
     BBox box = dc.getBox(d, f);
+    if (box == null) return; // Invalid box, skip shadow drawing
 
     SHADOW_TRANSFORM.idt();
     SHADOW_TRANSFORM.preTranslate(box.xMin, -(box.yMax / 2));
@@ -497,10 +498,16 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     SHADOW_TRANSFORM.preTranslate(x, y);
     SHADOW_TRANSFORM.scale(1, 0.5f);
 
+    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    if (layer.regions == null || d < 0 || d >= layer.regions.length) {
+      return; // Invalid direction, skip shadow drawing
+    }
     if (layer.regions[d] == null) layer.load(d);
-    if (f >= layer.regions[d].length) return; // FIXME: see #113
+    if (layer.regions[d] == null || f < 0 || f >= layer.regions[d].length) {
+      return; // Invalid frame or regions not loaded, skip shadow drawing
+    }
     TextureRegion region = layer.regions[d][f];
-    if (region.getTexture().getTextureObjectHandle() == 0) return;
+    if (region == null || region.getTexture().getTextureObjectHandle() == 0) return;
     batch.draw(region, region.getRegionWidth(), region.getRegionHeight(), SHADOW_TRANSFORM);
   }
 
@@ -606,6 +613,11 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     }
 
     protected Layer load(int d) {
+      // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+      // regions array size may not match numDirections if DC data is incomplete
+      if (regions == null || d < 0 || d >= regions.length) {
+        return this; // Invalid direction, skip loading
+      }
       if (regions[d] != null) return this;
       dc.loadDirection(d);
       return this;
@@ -648,12 +660,20 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
 
     protected void draw(Batch batch, int d, int f, float x, float y) {
       BBox box = dc.getBox(d, f);
+      if (box == null) return; // Invalid box, skip drawing
       x += box.xMin;
       y -= box.yMax;
+      
+      // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+      if (regions == null || d < 0 || d >= regions.length) {
+        return; // Invalid direction, skip drawing
+      }
       if (regions[d] == null) load(d);
-      if (f >= regions[d].length) return; // FIXME: see #113
+      if (regions[d] == null || f < 0 || f >= regions[d].length) {
+        return; // Invalid frame or regions not loaded, skip drawing
+      }
       TextureRegion region = regions[d][f];
-      if (region.getTexture().getTextureObjectHandle() == 0) return;
+      if (region == null || region.getTexture().getTextureObjectHandle() == 0) return;
       PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
       b.setBlendMode(blendMode, tint, true);
       b.setColormap(transform, transformColor);

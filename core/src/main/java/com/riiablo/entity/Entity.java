@@ -368,8 +368,8 @@ public abstract class Entity implements Animation.AnimationListener {
 
   public final void validate() {
     if (dirty == Dirty.NONE && load == Dirty.NONE) return;
-    updateCOF();
-    loadLayers();
+    updateCOF(); // 更新COF
+    loadLayers(); // 加载图层
   }
 
   protected void updateCOF() {
@@ -381,9 +381,9 @@ public abstract class Entity implements Animation.AnimationListener {
     if (changed) dirty = Dirty.ALL;
     if (dirty == Dirty.NONE) return;
     if (DEBUG_DIRTY) Gdx.app.debug(TAG, "dirty layers: " + Dirty.toString(dirty));
-    load = Dirty.NONE; // TODO: unload this.layer assets
+    load = Dirty.NONE; // TODO: 卸载this.layer资源
 
-    final int start = type.PATH.length() + 4; // start after token
+    final int start = type.PATH.length() + 4; // token之后开始
     StringBuilder builder = new StringBuilder(start + 19)
         .append(type.PATH).append('\\')
         .append(token).append('\\')
@@ -392,11 +392,18 @@ public abstract class Entity implements Animation.AnimationListener {
     for (int l = 0; l < cof.getNumLayers(); l++) {
       COF.Layer layer = cof.getLayer(l);
       if (!Dirty.isDirty(dirty, layer.component)) continue;
-      if (comp[layer.component] == 0) { // should also ignore 0xFF which is -1
+      if (comp[layer.component] == 0) { // 应该也忽略0xFF即-1
         this.layer[layer.component] = null;
         continue;
       } else if (comp[layer.component] == -1) {
         comp[layer.component] = 1;
+      }
+      
+      // 对于武器/盾牌组件（RH, LH, SH），LIT (0x01) 表示无物品，应跳过加载
+      if ((layer.component == COF.Component.RH || layer.component == COF.Component.LH || 
+           layer.component == COF.Component.SH) && comp[layer.component] == 1) {
+        this.layer[layer.component] = null;
+        continue;
       }
 
       String composit = COMPOSIT[layer.component];

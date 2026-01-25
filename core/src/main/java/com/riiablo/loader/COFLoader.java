@@ -20,6 +20,11 @@ public class COFLoader extends AsynchronousAssetLoader<COF, COFLoader.COFLoaderP
 
   @Override
   public void loadAsync(AssetManager assets, String fileName, FileHandle file, COFLoaderParameters params) {
+    // Silently handle missing COF files (common for some monster animations)
+    if (file == null || !file.exists()) {
+      cof = null;
+      return;
+    }
     cof = COF.loadFromFile(file);
   }
 
@@ -27,6 +32,10 @@ public class COFLoader extends AsynchronousAssetLoader<COF, COFLoader.COFLoaderP
   public COF loadSync(AssetManager assets, String fileName, FileHandle file, COFLoaderParameters params) {
     COF cof = this.cof;
     if (cof == null) {
+      // Silently handle missing COF files (common for some monster animations)
+      if (file == null || !file.exists()) {
+        return null;
+      }
       cof = COF.loadFromFile(file);
     } else {
       this.cof = null;

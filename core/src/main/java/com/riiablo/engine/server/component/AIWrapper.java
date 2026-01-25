@@ -3,7 +3,7 @@ package com.riiablo.engine.server.component;
 import com.artemis.PooledComponent;
 import com.artemis.annotations.PooledWeaver;
 import com.artemis.annotations.Transient;
-import com.riiablo.ai.AI;
+import com.riiablo.engine.server.ai.AI;
 
 @Transient
 @PooledWeaver

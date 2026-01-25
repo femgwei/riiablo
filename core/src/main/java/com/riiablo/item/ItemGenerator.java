@@ -99,11 +99,15 @@ public class ItemGenerator extends PassiveSystem {
 //    ethereal(item);
 //    durability(item);
 
-//    if (base.stackable) {
-//      // TODO: spawnstack ± ?
-//      int quantity = base.spawnstack;
-//      item.props.base.put(Stat.quantity, quantity);
-//    }
+    // Set quantity for stackable weapons (javelins, throwing knives, throwing axes)
+    if (base.stackable) {
+      int quantity = base.spawnstack;
+      if (quantity <= 0) {
+        // Default quantity if spawnstack is 0 or invalid
+        quantity = 80; // Default stack size for throwing weapons
+      }
+      item.attrs.base().put(Stat.quantity, quantity);
+    }
 
     return item;
   }
@@ -121,11 +125,15 @@ public class ItemGenerator extends PassiveSystem {
       item.setBase(base);
     }
 
-//    if (base.stackable) {
-//      // TODO: spawnstack ± ?
-//      int quantity = base.spawnstack;
-//      item.props.base.put(Stat.quantity, quantity);
-//    }
+    // Set quantity for stackable misc items
+    if (base.stackable) {
+      int quantity = base.spawnstack;
+      if (quantity <= 0) {
+        // Default quantity if spawnstack is 0 or invalid
+        quantity = 1; // Default for misc stackable items
+      }
+      item.attrs.base().put(Stat.quantity, quantity);
+    }
 
     return item;
   }

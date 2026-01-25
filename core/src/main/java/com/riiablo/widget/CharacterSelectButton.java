@@ -1,6 +1,7 @@
 package com.riiablo.widget;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -32,13 +33,14 @@ public class CharacterSelectButton extends Table implements Disposable {
   }
 
   D2S d2s;
+  FileHandle file;
   EntityWrapper preview;
   Label title;
   Label name;
   Label levelClass;
   Label expansion;
 
-  public CharacterSelectButton(D2S d2s) {
+  public CharacterSelectButton(D2S d2s, FileHandle file) {
     setSize(WIDTH, HEIGHT);
     setTouchable(Touchable.enabled);
 
@@ -70,7 +72,7 @@ public class CharacterSelectButton extends Table implements Disposable {
     add(textColumn).growX().top();
 
     //setDebug(true, true);
-    set(d2s);
+    set(d2s, file);
   }
 
   @Override
@@ -78,8 +80,9 @@ public class CharacterSelectButton extends Table implements Disposable {
     //preview.dispose(); // TODO
   }
 
-  public void set(D2S d2s) {
+  public void set(D2S d2s, FileHandle file) {
     this.d2s = d2s;
+    this.file = file;
     setName(d2s.name());
     @SuppressWarnings("deprecation")
     com.riiablo.entity.CharacterPreview character = new com.riiablo.entity.CharacterPreview(d2s);
@@ -93,6 +96,10 @@ public class CharacterSelectButton extends Table implements Disposable {
 
   public D2S getD2S() {
     return d2s;
+  }
+
+  public FileHandle getFile() {
+    return file;
   }
 
   public void select() {

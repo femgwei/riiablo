@@ -19,12 +19,14 @@ import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.Cvars;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.ExperienceTable;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
+import com.riiablo.widget.ProgressBar;
 import com.riiablo.widget.StatLabel;
 
 public class CharacterPanel extends WidgetGroup implements Disposable {

@@ -32,9 +32,15 @@ public class CofLoader extends IteratingSystem {
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
     if (DEBUG_EVENTS) Gdx.app.debug(TAG, "inserted");
-    AssetDescriptor<COF> descriptor = mCofDescriptor.get(event.entityId).descriptor;
-    Riiablo.assets.load(descriptor);
-    if (DEBUG) Gdx.app.debug(TAG, "Loading " + descriptor.fileName);
+    
+    CofDescriptor descriptor = mCofDescriptor.get(event.entityId);
+    if (descriptor == null) {
+      if (DEBUG) Gdx.app.debug(TAG, "CofDescriptor not found for entity " + event.entityId);
+      return;
+    }
+    
+    Riiablo.assets.load(descriptor.descriptor);
+    if (DEBUG) Gdx.app.debug(TAG, "Loading " + descriptor.descriptor.fileName);
     checkLoaded(event.entityId);
   }
 
@@ -45,7 +51,13 @@ public class CofLoader extends IteratingSystem {
   private void checkLoaded(int entityId) {
     AssetDescriptor<COF> descriptor = mCofDescriptor.get(entityId).descriptor;
     if (!Riiablo.assets.isLoaded(descriptor)) return;
-    mCofWrapper.create(entityId).cof = Riiablo.assets.get(descriptor);
+    COF cof = Riiablo.assets.get(descriptor);
+    // D2MOO: COF can be null if file doesn't exist, system continues with null COF
+    if (cof == null) {
+      if (DEBUG) Gdx.app.debug(TAG, "COF is null for " + descriptor.fileName + ", skipping wrapper creation");
+      return;  // Don't create wrapper if COF is null
+    }
+    mCofWrapper.create(entityId).cof = cof;
     if (DEBUG) Gdx.app.debug(TAG, "Loaded " + descriptor.fileName);
   }
 }

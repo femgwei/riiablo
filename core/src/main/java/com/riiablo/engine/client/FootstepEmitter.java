@@ -38,7 +38,15 @@ public class FootstepEmitter extends BaseEntitySystem {
   @Override
   protected void processSystem() {
     final int entityId = Riiablo.game.player;
-    boolean isMoving = !mVelocity.get(entityId).velocity.isZero();
+    // 检查玩家实体是否存在且有 Velocity 组件（防止死亡后访问空指针）
+    if (entityId < 0 || !mVelocity.has(entityId)) {
+      return;
+    }
+    Velocity velocityComponent = mVelocity.get(entityId);
+    if (velocityComponent == null || velocityComponent.velocity == null) {
+      return;
+    }
+    boolean isMoving = !velocityComponent.velocity.isZero();
     if (!isMoving) {
       if (nextTrigger >= 0) nextTrigger = -1;
       return;

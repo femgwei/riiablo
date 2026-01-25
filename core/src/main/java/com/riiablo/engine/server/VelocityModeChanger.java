@@ -30,7 +30,9 @@ public class VelocityModeChanger extends IteratingSystem {
 
   @Override
   protected void begin() {
-    Vector2 velocity = mVelocity.get(Riiablo.game.player).velocity;
+    Velocity velocityComp = mVelocity.get(Riiablo.game.player);
+    if (velocityComp == null) return; // Player may be dead (Velocity component removed)
+    Vector2 velocity = velocityComp.velocity;
     if (velocity.isZero()) return;
     if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
       mRunning.remove(Riiablo.game.player);

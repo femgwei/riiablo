@@ -67,7 +67,7 @@ public class MPQ {
 
   public InputStream read(String fileName) {
     fileName = fileName.replaceAll("/", "\\\\");
-    Gdx.app.log(TAG, "Reading " + fileName + "...");
+    // Gdx.app.debug(TAG, "Reading " + fileName + "...");  // 屏蔽日志输出
     HashTable.Entry entry = hashTable.getEntry(fileName);
     if (DEBUG) Gdx.app.debug(TAG, "entry = " + Objects.toString(entry));
     if (entry == null) {
@@ -87,7 +87,7 @@ public class MPQ {
 
   public byte[] readBytes(String fileName) {
     fileName = fileName.replaceAll("/", "\\\\");
-    Gdx.app.log(TAG, "Reading " + fileName + "...");
+    // Gdx.app.debug(TAG, "Reading " + fileName + "...");  // 屏蔽日志输出
     HashTable.Entry entry = hashTable.getEntry(fileName);
     if (DEBUG) Gdx.app.debug(TAG, "entry = " + Objects.toString(entry));
     if (entry == null) {

@@ -15,6 +15,12 @@ public class Missile extends PooledComponent {
   public float range = 0;
   public AssetDescriptor<DCC> missileDescriptor;
   public final Vector2 start = new Vector2();
+  
+  /** 导弹拥有者实体 ID（用于伤害计算和敌人判断） */
+  public int ownerId = -1;
+  
+  /** 已移动距离（用于范围检查，与 d2mod 一致） */
+  public float distanceTraveled = 0f;
 
   @Override
   protected void reset() {
@@ -22,6 +28,8 @@ public class Missile extends PooledComponent {
     range = 0;
     missileDescriptor = null;
     start.setZero();
+    ownerId = -1;
+    distanceTraveled = 0f;
   }
 
   public Missile set(Missiles.Entry missile, Vector2 start, float range) {
@@ -29,6 +37,11 @@ public class Missile extends PooledComponent {
     this.start.set(start);
     this.range = range;
     this.missileDescriptor = new AssetDescriptor<>(Class.Type.MIS.PATH + '\\' + missile.CelFile + ".dcc", DCC.class);
+    return this;
+  }
+  
+  public Missile setOwner(int ownerId) {
+    this.ownerId = ownerId;
     return this;
   }
 }

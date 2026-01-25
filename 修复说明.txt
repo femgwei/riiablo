@@ -1,0 +1,134 @@
+================================================================================
+                    Riiablo 游戏机制修复说明
+                        修复日期: 2026-01-24
+================================================================================
+
+本次修复解决了三个游戏机制问题，参考了D2MOO的实现来确保准确性。
+
+================================================================================
+一、近战攻击距离判断修复
+================================================================================
+
+【问题描述】
+玩家近战攻击时，会移动到怪物位置才进行攻击，而不是在近战武器范围内就开始攻击。
+
+【修复方案】
+1. 在 ItemEntry.java 中添加了 RangeAdder 字段
+   - 位置: d:\code\riiablo\core\src\main\java\com\riiablo\codec\excel\ItemEntry.java
+   - 添加字段: @Column public int RangeAdder;
+
+2. 在 CursorMovementSystem.java 中修改了攻击距离判断逻辑
+   - 位置: d:\code\riiablo\core\src\main\java\com\riiablo\engine\client\CursorMovementSystem.java
+   - 修改内容:
+     * 移除了硬编码的 `dst <= 3` 判断
+     * 添加了根据武器 RangeAdder 计算近战距离的逻辑
+     * 参考D2MOO: UNITS_IsInMeleeRange(pAttacker, pDefender, 2 * (pAttacker->dwUnitType == UNIT_PLAYER) + 1)
+     * 对于玩家: meleeRange = RangeAdder + 4 (RangeAdder + 3 (player bonus) + 1)
+     * 如果没有装备武器，默认使用 4 (RangeAdder=0 的情况)
+
+【D2MOO参考】
+- D2MOO: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
+- 对于玩家: nRangeBonus = 2 * 1 + 1 = 3
+- 所以: RangeAdder + 3 + 1 = RangeAdder + 4
+
+================================================================================
+二、Fallen逃跑速度修复
+================================================================================
+
+【问题描述】
+Fallen逃跑时的速度比原版慢，感觉不够快。
+
+【修复方案】
+1. 在 Fallen.java 中修改了逃跑逻辑
+   - 位置: d:\code\riiablo\core\src\main\java\com\riiablo\ai\Fallen.java
+   - 修改内容:
+     * 之前: 移除Running组件，使用walkSpeed（较慢）
+     * 现在: 确保Running组件存在，使用runSpeed（较快）
+     * D2MOO: AITACTICS_SetVelocity(pUnit, 0, 50, 0) 设置runSpeed为50
+     * 在Riiablo中，通过设置Running组件让Pathfinder使用runSpeed
+
+【D2MOO参考】
+- D2MOO: AITACTICS_SetVelocity(pUnit, 0, 50, 0)
+- 这个函数设置runSpeed为50，意味着逃跑时应该使用runSpeed而不是walkSpeed
+- 在Riiablo中，Pathfinder会根据Running组件的存在与否来选择使用runSpeed或walkSpeed
+
+================================================================================
+三、玩家移动速度修复
+================================================================================
+
+【问题描述】
+玩家移动速度感觉比原版慢，需要参考D2MOO看看是什么问题。
+
+【修复方案】
+1. 在 ServerEntityFactory.java 中修改了玩家速度设置
+   - 位置: d:\code\riiablo\core\src\main\java\com\riiablo\engine\server\ServerEntityFactory.java
+   - 修改内容:
+     * 之前: 使用硬编码的 Engine.Player.SPEED_WALK (6) 和 SPEED_RUN (9)
+     * 现在: 从CharStats表读取WalkVelocity和RunVelocity
+     * 使用: charData.classId.entry() 获取CharStats.Entry
+     * 如果CharStats不存在，则使用默认值
+
+【D2MOO参考】
+- D2MOO: UNITS_GetRunAndWalkSpeedForPlayer 从CharStatsTxt读取nWalkSpeed和nRunSpeed
+- 这些值直接使用，不需要额外的转换
+- 在Riiablo中，CharStats.WalkVelocity和RunVelocity应该已经是正确的单位
+
+【注意事项】
+- 如果CharStats表中的值需要转换（例如除以256），可能需要进一步调整
+- 建议测试不同职业的移动速度，确保与原版一致
+
+================================================================================
+四、修改文件列表
+================================================================================
+
+1. d:\code\riiablo\core\src\main\java\com\riiablo\codec\excel\ItemEntry.java
+   - 添加了 RangeAdder 字段
+
+2. d:\code\riiablo\core\src\main\java\com\riiablo\engine\client\CursorMovementSystem.java
+   - 修改了近战攻击距离判断逻辑
+
+3. d:\code\riiablo\core\src\main\java\com\riiablo\ai\Fallen.java
+   - 修改了逃跑速度逻辑，使用runSpeed而不是walkSpeed
+
+4. d:\code\riiablo\core\src\main\java\com\riiablo\engine\server\ServerEntityFactory.java
+   - 修改了玩家速度设置，从CharStats表读取
+
+================================================================================
+五、测试建议
+================================================================================
+
+1. 近战攻击距离测试:
+   - 使用不同武器（短剑、长剑、长矛等）测试攻击距离
+   - 确认玩家在武器范围内就开始攻击，而不是移动到怪物位置
+   - 测试空手攻击（应该使用默认距离4）
+
+2. Fallen逃跑速度测试:
+   - 观察Fallen在检测到附近尸体时的逃跑速度
+   - 确认逃跑速度比正常移动更快
+   - 对比原版游戏的逃跑速度
+
+3. 玩家移动速度测试:
+   - 测试不同职业的移动速度
+   - 确认walkSpeed和runSpeed与原版一致
+   - 如果速度仍然不对，可能需要检查CharStats表中的值是否需要转换
+
+================================================================================
+六、可能需要的进一步调整
+================================================================================
+
+1. RangeAdder字段:
+   - 确认Items.txt表中是否有RangeAdder列
+   - 如果没有，需要添加该列到数据表中
+
+2. 玩家移动速度:
+   - 如果速度仍然不对，可能需要检查CharStats表中的WalkVelocity和RunVelocity值
+   - D2MOO中这些值可能需要乘以或除以某个系数
+   - 建议对比原版游戏的实际速度
+
+3. Fallen逃跑速度:
+   - 如果速度仍然不对，可能需要调整runSpeed的值
+   - D2MOO中的50可能是百分比或固定值，需要进一步研究
+
+================================================================================
+修复完成
+================================================================================

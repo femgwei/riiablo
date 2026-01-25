@@ -1,5 +1,6 @@
 package com.riiablo.screen;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
@@ -25,6 +26,8 @@ import com.riiablo.codec.DC6;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.loader.DC6Loader;
+import com.riiablo.save.CharData;
+import com.riiablo.save.D2SWriter;
 import com.riiablo.widget.AnimationWrapper;
 import com.riiablo.widget.CharacterCreateButton;
 import com.riiablo.widget.Label;
@@ -188,7 +191,18 @@ public class CreateCharacterScreen extends ScreenAdapter {
           Riiablo.client.popScreen();
         } else if (actor == btnOK) {
           if (selected == null) return;
-          Riiablo.client.clearAndSet(new GameScreen(Riiablo.charData.clear().set(Riiablo.NORMAL, true, tfCharName.getText(), (byte) selected.charClass.id)));
+          // Create and initialize new character
+          CharData charData = Riiablo.charData.clear().set(Riiablo.NORMAL, true, tfCharName.getText(), (byte) selected.charClass.id);
+          // Initialize character with starting stats from CharStats.txt
+          initializeNewCharacter(charData, selected.charClass);
+          // Save character to file
+          boolean saved = D2SWriter.INSTANCE.save(charData);
+          if (saved) {
+            Riiablo.client.clearAndSet(new GameScreen(charData));
+          } else {
+            // TODO: Show error message to user
+            Gdx.app.error("CreateCharacterScreen", "Failed to save character!");
+          }
         }
       }
     };
@@ -422,5 +436,52 @@ public class CreateCharacterScreen extends ScreenAdapter {
       b.end();
     }
     */
+  }
+
+  /**
+   * Initialize a new character with starting stats from CharStats.txt
+   */
+  private void initializeNewCharacter(CharData charData, CharacterClass charClass) {
+    // Get starting stats from CharStats.txt
+    com.riiablo.codec.excel.CharStats.Entry stats = charClass.entry();
+
+    // Set base attributes
+    com.riiablo.attributes.StatListRef base = charData.getStats().base();
+    base.put(com.riiablo.attributes.Stat.strength, stats.str);
+    base.put(com.riiablo.attributes.Stat.energy, stats._int); // _int is the energy/intelligence field
+    base.put(com.riiablo.attributes.Stat.dexterity, stats.dex);
+    base.put(com.riiablo.attributes.Stat.vitality, stats.vit);
+    base.put(com.riiablo.attributes.Stat.statpts, 0);
+    base.put(com.riiablo.attributes.Stat.newskills, 0);
+
+    // Calculate derived stats
+    int maxHp = stats.vit + stats.hpadd;
+    int maxMana = stats._int; // _int is the energy/intelligence field
+    int maxStamina = stats.stamina;
+
+    base.put(com.riiablo.attributes.Stat.hitpoints, maxHp << 8);
+    base.put(com.riiablo.attributes.Stat.maxhp, maxHp << 8);
+    base.put(com.riiablo.attributes.Stat.mana, maxMana << 8);
+    base.put(com.riiablo.attributes.Stat.maxmana, maxMana << 8);
+    base.put(com.riiablo.attributes.Stat.stamina, maxStamina << 8);
+    base.put(com.riiablo.attributes.Stat.maxstamina, maxStamina << 8);
+    base.put(com.riiablo.attributes.Stat.level, 1);
+    base.put(com.riiablo.attributes.Stat.experience, 0);
+    base.put(com.riiablo.attributes.Stat.gold, 0);
+    base.put(com.riiablo.attributes.Stat.goldbank, 0);
+
+    // Panels read from aggregated stats (agg). At this point we've only populated base,
+    // so sync base -> agg now to avoid null StatRef reads during GameScreen construction.
+    charData.getStats().reset();
+
+    // Set starting town to Act 1 Rogue Encampment
+    charData.towns[Riiablo.NORMAL] = 0;
+    charData.towns[Riiablo.NIGHTMARE] = 0;
+    charData.towns[Riiablo.HELL] = 0;
+
+    // Set map seed
+    charData.mapSeed = (int) System.currentTimeMillis();
+
+    // Skills are handled by CharData.update() automatically
   }
 }

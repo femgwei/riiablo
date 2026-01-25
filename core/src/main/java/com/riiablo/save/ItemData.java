@@ -149,6 +149,35 @@ public class ItemData {
       updateStats();
       Item LH = getEquipped(BodyLoc.LARM);
       Item RH = getEquipped(BodyLoc.RARM);
+      
+      // Log weapon quantity when switching weapons
+      com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(ItemData.class);
+      log.info("[WEAPON_SWITCH] Switching to alternate: {}", alternate);
+      if (RH != null && RH.base != null) {
+        boolean isRanged = RH.type.is(com.riiablo.item.Type.BOW) || RH.type.is(com.riiablo.item.Type.XBOW);
+        boolean isThrowable = RH.type.is(com.riiablo.item.Type.JAVE) || 
+                             RH.type.is(com.riiablo.item.Type.TKNI) || 
+                             RH.type.is(com.riiablo.item.Type.TAXE);
+        if (isRanged || isThrowable) {
+          com.riiablo.attributes.StatRef quantity = RH.attrs.base().get(com.riiablo.attributes.Stat.quantity);
+          int qty = quantity != null ? quantity.asInt() : 0;
+          log.info("[WEAPON_SWITCH] Right hand {} weapon: {} (code: {}), quantity: {}", 
+              isThrowable ? "throwable" : "ranged", RH.base.name, RH.code, qty);
+        }
+      }
+      if (LH != null && LH.base != null) {
+        boolean isRanged = LH.type.is(com.riiablo.item.Type.BOW) || LH.type.is(com.riiablo.item.Type.XBOW);
+        boolean isThrowable = LH.type.is(com.riiablo.item.Type.JAVE) || 
+                             LH.type.is(com.riiablo.item.Type.TKNI) || 
+                             LH.type.is(com.riiablo.item.Type.TAXE);
+        if (isRanged || isThrowable) {
+          com.riiablo.attributes.StatRef quantity = LH.attrs.base().get(com.riiablo.attributes.Stat.quantity);
+          int qty = quantity != null ? quantity.asInt() : 0;
+          log.info("[WEAPON_SWITCH] Left hand {} weapon: {} (code: {}), quantity: {}", 
+              isThrowable ? "throwable" : "ranged", LH.base.name, LH.code, qty);
+        }
+      }
+      
       notifyAlternated(alternate, LH, RH);
     }
   }
@@ -260,16 +289,70 @@ public class ItemData {
     assert j == INVALID_ITEM : "Item " + j + " should have been unequipped by this point.";
     updateStats(); // TODO: add support for appending to existing stats if this is an additional item
     updateSet(item, 1);
+    
+    // Log weapon quantity when equipping ranged/throwing weapons
+    if (item != null && item.base != null && (bodyLoc == BodyLoc.RARM || bodyLoc == BodyLoc.LARM)) {
+      boolean isRanged = item.type.is(com.riiablo.item.Type.BOW) || item.type.is(com.riiablo.item.Type.XBOW);
+      boolean isThrowable = item.type.is(com.riiablo.item.Type.JAVE) || 
+                           item.type.is(com.riiablo.item.Type.TKNI) || 
+                           item.type.is(com.riiablo.item.Type.TAXE);
+      if (isRanged || isThrowable) {
+        com.riiablo.attributes.StatRef quantity = item.attrs.base().get(com.riiablo.attributes.Stat.quantity);
+        int qty = quantity != null ? quantity.asInt() : 0;
+        com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(ItemData.class);
+        log.info("[WEAPON_EQUIP] Equipped {} weapon: {} (code: {}), quantity: {}", 
+            isThrowable ? "throwable" : "ranged", item.base.name, item.code, qty);
+      }
+    }
+    
     notifyEquip(bodyLoc, item);
   }
 
   int unequip(BodyLoc bodyLoc) {
     int i = equipped.remove(bodyLoc);
+    if (i == INVALID_ITEM) {
+      // No item equipped at this location, nothing to unequip
+      return INVALID_ITEM;
+    }
     Item item = itemData.get(i);
     updateStats();
     updateSet(item, -1);
     notifyUnequip(bodyLoc, item);
     return i;
+  }
+
+  /**
+   * Public method to unequip an item from a body location.
+   * Used by systems that need to remove equipment (e.g., player death).
+   * 
+   * @param bodyLoc The body location to unequip from
+   * @return The item index that was unequipped, or INVALID_ITEM if nothing was equipped
+   */
+  public int unequipItem(BodyLoc bodyLoc) {
+    int i = equipped.get(bodyLoc);
+    if (i == INVALID_ITEM) {
+      return INVALID_ITEM;
+    }
+    return unequip(bodyLoc);
+  }
+
+  /**
+   * Public method to equip an item to a body location.
+   * Used by systems that need to equip items (e.g., corpse retrieval).
+   * 
+   * @param bodyLoc The body location to equip to
+   * @param itemIndex The index of the item in the itemData array
+   */
+  public void equipItem(BodyLoc bodyLoc, int itemIndex) {
+    if (itemIndex < 0 || itemIndex >= itemData.size) {
+      throw new IllegalArgumentException("Item index out of bounds: " + itemIndex);
+    }
+    // Check if slot is already occupied
+    int existing = equipped.get(bodyLoc);
+    if (existing != INVALID_ITEM) {
+      throw new IllegalStateException("Body location " + bodyLoc + " is already occupied by item " + existing);
+    }
+    equip(bodyLoc, itemIndex);
   }
 
   void updateStats() {
@@ -282,7 +365,41 @@ public class ItemData {
       Item item = itemData.get(j);
       if (isActive(item)) {
         item.update(updater, stats, charStats, equippedSets);
+        // Add all stat lists (base, aggregate, remaining) to ensure weapon damage is included
+        // Weapon mindamage/maxdamage are in base(), not just remaining()
+        update.add(item.attrs.base());
+        update.add(item.attrs.aggregate());
         update.add(item.attrs.remaining());
+        
+        // Directly add weapon damage from item base() to character aggregate()
+        // This ensures weapon damage is properly aggregated even if not in character base()
+        // Reference D2MOO: STAT_SECONDARY_MINDAMAGE/MAXDAMAGE is for two-handed weapons (WieldType == 2)
+        // For one-handed weapons (including dual wielding), use mindamage/maxdamage
+        // For two-handed weapons, use secondary_mindamage/maxdamage (from weapon._2handmindam/_2handmaxdam)
+        StatRef itemMinDmg = item.attrs.base().get(Stat.mindamage);
+        StatRef itemMaxDmg = item.attrs.base().get(Stat.maxdamage);
+        StatRef itemSecondaryMinDmg = item.attrs.base().get(Stat.secondary_mindamage);
+        StatRef itemSecondaryMaxDmg = item.attrs.base().get(Stat.secondary_maxdamage);
+        
+        if (item.type.is(Type.WEAP)) {
+          // Check if this is a two-handed weapon (has secondary damage values)
+          if (itemSecondaryMinDmg != null && itemSecondaryMaxDmg != null && 
+              itemSecondaryMinDmg.asInt() > 0 && itemSecondaryMaxDmg.asInt() > 0) {
+            // Two-handed weapon: use secondary_mindamage/maxdamage
+            stats.aggregate().put(Stat.secondary_mindamage, itemSecondaryMinDmg.asInt());
+            stats.aggregate().put(Stat.secondary_maxdamage, itemSecondaryMaxDmg.asInt());
+          } else if (itemMinDmg != null && itemMaxDmg != null) {
+            // One-handed weapon (including dual wielding): use mindamage/maxdamage
+            // For dual wielding, both hands use mindamage/maxdamage, attack sequence determines which weapon is used
+            stats.aggregate().add(itemMinDmg);
+            stats.aggregate().add(itemMaxDmg);
+          }
+        } else if (itemMinDmg != null && itemMaxDmg != null) {
+          // Other items (shields, etc.): add to mindamage/maxdamage
+          stats.aggregate().add(itemMinDmg);
+          stats.aggregate().add(itemMaxDmg);
+        }
+        
         if ((stat = item.attrs.get(Stat.armorclass)) != null) {
           stats.aggregate().add(stat); // TODO: necessary anymore?
         }
@@ -303,6 +420,41 @@ public class ItemData {
       }
     }
     update.apply();
+    
+    // After update.apply(), add throwable weapon damage to aggregate
+    // This must be done AFTER apply() because apply() resets and recalculates aggregate
+    // Re-get equipped items cache since it may have been modified
+    int[] equippedCache = equipped.values();
+    for (int i = 0, s = equippedCache.length, j; i < s; i++) {
+      j = equippedCache[i];
+      if (j == INVALID_ITEM) continue;
+      Item item = itemData.get(j);
+      if (isActive(item) && item.type.is(Type.WEAP)) {
+        // Check if this is a throwable weapon (javelin, throwing knife, throwing axe)
+        boolean isThrowable = item.type.is(com.riiablo.item.Type.JAVE) || 
+                             item.type.is(com.riiablo.item.Type.TKNI) || 
+                             item.type.is(com.riiablo.item.Type.TAXE);
+        
+        if (isThrowable) {
+          // Throwable weapon: sync item_throw_mindamage/maxdamage to player stats
+          // Use add() to accumulate with other stats
+          StatRef itemThrowMinDmg = item.attrs.base().get(Stat.item_throw_mindamage);
+          StatRef itemThrowMaxDmg = item.attrs.base().get(Stat.item_throw_maxdamage);
+          if (itemThrowMinDmg != null && itemThrowMaxDmg != null) {
+            stats.aggregate().add(itemThrowMinDmg);
+            stats.aggregate().add(itemThrowMaxDmg);
+            com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(ItemData.class);
+            log.info("[THROW_WEAPON_SYNC] Synced throw damage: item={}, minDamage={}, maxDamage={}, itemCode={}", 
+                item, itemThrowMinDmg.asInt(), itemThrowMaxDmg.asInt(), item.code);
+          } else {
+            com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(ItemData.class);
+            log.warn("[THROW_WEAPON_SYNC] Throwable weapon but no throw damage stats: item={}, itemCode={}, minDmgRef={}, maxDmgRef={}", 
+                item, item.code, itemThrowMinDmg, itemThrowMaxDmg);
+          }
+        }
+      }
+    }
+    
     notifyUpdated();
   }
 

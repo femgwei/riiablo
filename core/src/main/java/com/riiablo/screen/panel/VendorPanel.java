@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.Disposable;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Inventory;
@@ -224,7 +225,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     goldbankLabel.setPosition(20, 57);
     addActor(goldbankLabel);
 
-    Label goldbank = new Label(Integer.toString(Riiablo.charData.getStats().get(Stat.goldbank).asInt()), Riiablo.fonts.font16);
+    StatRef goldbankStat = Riiablo.charData.getStats().get(Stat.goldbank);
+    Label goldbank = new Label(Integer.toString(goldbankStat != null ? goldbankStat.asInt() : 0), Riiablo.fonts.font16);
     goldbank.setSize(goldbankLabel.getWidth(), goldbankLabel.getHeight());
     goldbank.setPosition(goldbankLabel.getX(), goldbankLabel.getY());
     goldbank.setAlignment(Align.right);

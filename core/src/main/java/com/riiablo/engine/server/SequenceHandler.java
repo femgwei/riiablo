@@ -22,15 +22,24 @@ public class SequenceHandler extends IteratingSystem {
   public void onAnimDataFinished(AnimDataFinishedEvent event) {
     if (!mSequence.has(event.entityId)) return;
     Sequence sequence = mSequence.get(event.entityId);
+    // Log sequence transition for debugging
+    com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(SequenceHandler.class);
+    log.trace("Sequence finished for entity {}: mode1={} -> mode2={}", event.entityId, sequence.mode1, sequence.mode2);
+    log.info("=== SequenceHandler.onAnimDataFinished ===");
+    log.info("Entity: {}, Removing Sequence, mode1={} -> mode2={}", event.entityId, sequence.mode1, sequence.mode2);
     cofs.setMode(event.entityId, sequence.mode2);
     mAnimData.get(event.entityId).override = -1;
     mSequence.remove(event.entityId);
+    log.info("After removal: Has Sequence: {}", mSequence.has(event.entityId));
   }
 
   @Override
   protected void process(int entityId) {
     Sequence sequence = mSequence.get(entityId);
     if (mCofReference.get(entityId).mode != sequence.mode1) {
+      // Log sequence start for debugging
+      com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(SequenceHandler.class);
+      log.trace("Starting sequence for entity {}: setting mode to {}", entityId, sequence.mode1);
       cofs.setMode(entityId, sequence.mode1);
       mAnimData.get(entityId).override = -1;
     }

@@ -63,7 +63,7 @@ public class Cvars {
         .description(
             "Whether or not the client is in windowed mode. Note: This cvar is ignored when the " +
             "client is started with the -windowed option")
-        .defaultValue(Boolean.FALSE)
+        .defaultValue(Boolean.TRUE)
         .validator(Validator.ACCEPT_NON_NULL)
         .build();
 
