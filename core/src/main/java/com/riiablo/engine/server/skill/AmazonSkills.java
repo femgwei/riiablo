@@ -6,11 +6,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 亚马逊技能实现 - 基于 D2MOO SkillAma.cpp 移植
+ * 亚马逊技能实现 - 基于 D2MOD SkillAma.cpp 移植
  * 
  * <p>包含标枪和长矛、被动和魔法、弓和弩三系技能的实现。
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/SkillAma.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/SkillAma.cpp
  * 
  * @author riiablo team
  */

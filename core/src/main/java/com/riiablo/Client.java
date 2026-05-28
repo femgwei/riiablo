@@ -236,7 +236,11 @@ public class Client extends Game {
     Gdx.app.setLogLevel(Application.LOG_DEBUG);
 
     final LoggerRegistry registry = LogManager.getRegistry();
-    registry.setLevel(LoggerRegistry.ROOT, Level.DEBUG, true); // required to init root properly
+    // 设置根日志级别为 OFF，屏蔽所有日志
+    registry.setLevel(LoggerRegistry.ROOT, Level.OFF, true);
+    
+    // 只保留地图拼接相关的日志
+    registry.setLevel("com.riiablo.map", Level.DEBUG, true);
 
     Riiablo.logs = logs = new GdxLoggerManager(registry);
     logs.loadAll();

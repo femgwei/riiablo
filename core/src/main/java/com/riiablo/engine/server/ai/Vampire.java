@@ -23,9 +23,9 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.AttributesWrapper;
 
 /**
- * Vampire AI implementation matching D2MOO's AITHINK_Fn028_Vampire logic.
+ * Vampire AI implementation matching D2MOD's AITHINK_Fn028_Vampire logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = VAMPIRE_AI_PARAM_MELEE_CHANCE_PCT (melee chance)
  * - params[1] = VAMPIRE_AI_PARAM_CAST_CHANCE_PCT (cast chance)
  * - params[2] = VAMPIRE_AI_PARAM_ACTIVE_DISTANCE (active distance)
@@ -149,7 +149,7 @@ public class Vampire extends AI {
 
     time = SLEEP;
 
-    // D2MOO: Decrement skill cooldown
+    // D2MOD: Decrement skill cooldown
     if (aiParam2 > 0) {
       aiParam2--;
     }
@@ -174,13 +174,13 @@ public class Vampire extends AI {
 
     int spellFlags = params.length > 4 ? params[4] : 0;
 
-    // D2MOO: Check special AI state
+    // D2MOD: Check special AI state
     if (checkSpecialAiState()) {
       if (aiParam0 == 0) {
         aiParam0 = 1;
       }
 
-      // D2MOO: Track distance
+      // D2MOD: Track distance
       if (targetDistance < 30 && targetDistance > aiParam1) {
         aiParam1 = (int)targetDistance;
       }
@@ -189,11 +189,11 @@ public class Vampire extends AI {
         Vector2 targetPos = mPosition.get(targetId).position;
         boolean bCombat = isInCombat(targetId);
 
-        // D2MOO: If in combat, 30% chance to use spell
+        // D2MOD: If in combat, 30% chance to use spell
         if (bCombat && (spellFlags & 1) != 0 && MathUtils.randomBoolean(0.3f)) {
-          // D2MOO: 50% chance skill0, 50% chance skill3
+          // D2MOD: 50% chance skill0, 50% chance skill3
           if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty() && MathUtils.randomBoolean(0.5f)) {
-            // D2MOO: Use skill0
+            // D2MOD: Use skill0
             // TODO: Implement skill casting
             stateMachine.changeState(State.CAST);
             lookAt(targetId);
@@ -202,7 +202,7 @@ public class Vampire extends AI {
             time = MathUtils.random(1f, 2);
             return;
           } else if (monster.monstats.Skill4 != null && !monster.monstats.Skill4.isEmpty()) {
-            // D2MOO: Use skill3
+            // D2MOD: Use skill3
             // TODO: Implement skill casting
             stateMachine.changeState(State.CAST);
             lookAt(targetId);
@@ -213,7 +213,7 @@ public class Vampire extends AI {
           }
         }
 
-        // D2MOO: Normal melee attack
+        // D2MOD: Normal melee attack
         if (bCombat) {
           pathfinder.findPath(entityId, null);
           lookAt(targetId);
@@ -227,7 +227,7 @@ public class Vampire extends AI {
       }
     }
 
-    // D2MOO: Escape state (aiParam0 == 2)
+    // D2MOD: Escape state (aiParam0 == 2)
     if (aiParam0 == 2) {
       float lifePercent = getLifePercentage();
       if (lifePercent >= 75) {
@@ -243,9 +243,9 @@ public class Vampire extends AI {
 
       if (targetId != Engine.INVALID_ENTITY) {
         Vector2 targetPos = mPosition.get(targetId).position;
-        // D2MOO: Check escape conditions
+        // D2MOD: Check escape conditions
         if (targetDistance < 14 || targetDistance <= aiParam1) {
-          // D2MOO: Try to escape
+          // D2MOD: Try to escape
           stateMachine.changeState(State.ESCAPE);
           Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
           Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(8f));
@@ -265,9 +265,9 @@ public class Vampire extends AI {
               return;
             }
 
-            // D2MOO: Check upgrade cast
+            // D2MOD: Check upgrade cast
             if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-              // D2MOO: Use skill1
+              // D2MOD: Use skill1
               // TODO: Implement skill casting
               aiParam2 = 11;
               stateMachine.changeState(State.CAST);
@@ -279,7 +279,7 @@ public class Vampire extends AI {
             }
 
             if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-              // D2MOO: Use skill2
+              // D2MOD: Use skill2
               // TODO: Implement skill casting
               aiParam2 = 11;
               stateMachine.changeState(State.CAST);
@@ -291,7 +291,7 @@ public class Vampire extends AI {
             }
 
             if ((spellFlags & 1) != 0 && targetDistance <= 20) {
-              // D2MOO: Use skill0 or skill3
+              // D2MOD: Use skill0 or skill3
               if (MathUtils.randomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
                 // TODO: Implement skill casting
                 stateMachine.changeState(State.CAST);
@@ -347,23 +347,23 @@ public class Vampire extends AI {
     boolean bCombat = isInCombat(targetId);
     float activeDistance = params.length > 2 ? params[2] : 20f;
 
-    // D2MOO: If too far, idle
+    // D2MOD: If too far, idle
     if (targetDistance >= activeDistance) {
       stateMachine.changeState(State.IDLE);
       time = 15f * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
 
-    // D2MOO: Check cast chance
+    // D2MOD: Check cast chance
     if (params.length > 1 && !MathUtils.randomBoolean(params[1] / 100f)) {
       stateMachine.changeState(State.IDLE);
       time = 15f * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
 
-    // D2MOO: Check upgrade cast
+    // D2MOD: Check upgrade cast
     if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-      // D2MOO: Use skill1
+      // D2MOD: Use skill1
       // TODO: Implement skill casting
       aiParam2 = 11;
       stateMachine.changeState(State.CAST);
@@ -375,7 +375,7 @@ public class Vampire extends AI {
     }
 
     if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-      // D2MOO: Use skill2
+      // D2MOD: Use skill2
       // TODO: Implement skill casting
       aiParam2 = 11;
       stateMachine.changeState(State.CAST);
@@ -386,7 +386,7 @@ public class Vampire extends AI {
       return;
     }
 
-    // D2MOO: Use basic spell
+    // D2MOD: Use basic spell
     if ((spellFlags & 1) != 0 && targetDistance <= 20) {
       if (MathUtils.randomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
         // TODO: Implement skill casting
@@ -407,7 +407,7 @@ public class Vampire extends AI {
       }
     }
 
-    // D2MOO: Normal melee attack
+    // D2MOD: Normal melee attack
     if (bCombat) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -419,7 +419,7 @@ public class Vampire extends AI {
       return;
     }
 
-    // D2MOO: Approach
+    // D2MOD: Approach
     pathfinder.findPath(entityId, targetPos, false, targetId);
     stateMachine.changeState(State.APPROACH);
     time = MathUtils.random(1f, 2);

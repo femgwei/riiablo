@@ -1,6 +1,8 @@
 rootProject.name = 'riiablo'
 
 include 'core'
+include 'D2MOO_JAVA'
+project(':D2MOO_JAVA').projectDir = new File(settingsDir, '../D2MOO_JAVA')
 include 'desktop'
 include 'android'
 

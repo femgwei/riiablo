@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * PantherWoman AI implementation matching D2MOO's AITHINK_Fn018_PantherWoman logic.
+ * PantherWoman AI implementation matching D2MOD's AITHINK_Fn018_PantherWoman logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = PANTHERWOMAN_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
  * - params[1] = PANTHERWOMAN_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[2] = PANTHERWOMAN_AI_PARAM_PACK_DISTANCE (pack distance)
@@ -200,7 +200,7 @@ public class PantherWoman extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
       if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
         pathfinder.findPath(entityId, null);
@@ -218,26 +218,26 @@ public class PantherWoman extends AI {
       }
     }
 
-    // D2MOO: Not in combat
+    // D2MOD: Not in combat
     if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
-      // D2MOO: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
+      // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: Check pack behavior
+    // D2MOD: Check pack behavior
     float packDistance = params.length > 2 ? params[2] : 10f;
     int packMemberId = findPackMember(packDistance * 2f);
     if (packMemberId != Engine.INVALID_ENTITY) {
       Vector2 packPos = mPosition.get(packMemberId).position;
       float packDistSq = entityPos.dst2(packPos);
       if (packDistSq > packDistance * packDistance) {
-        // D2MOO: Too far from pack, move to pack member
-        // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
-        // D2MOO: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, arg.pTarget, 7)
+        // D2MOD: Too far from pack, move to pack member
+        // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
+        // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, arg.pTarget, 7)
         pathfinder.findPath(entityId, packPos, false, packMemberId);
         stateMachine.changeState(State.GROUP);
         time = MathUtils.random(1f, 2);
@@ -245,13 +245,13 @@ public class PantherWoman extends AI {
       }
     }
 
-    // D2MOO: Random idle or circle
+    // D2MOD: Random idle or circle
     if (MathUtils.randomBoolean(0.75f)) {
       stateMachine.changeState(State.IDLE);
       time = params.length > 3 ? params[3] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     } else {
-      // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
+      // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);

@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 雇佣兵管理器 - 基于 D2MOO PlayerPets.cpp 和 SUnitNpc.cpp 移植
+ * 雇佣兵管理器 - 基于 D2MOD PlayerPets.cpp 和 SUnitNpc.cpp 移植
  * 
  * <p>管理雇佣兵的完整生命周期：
  * <ul>
@@ -20,8 +20,8 @@ import com.riiablo.logger.Logger;
  * 
  * <p>参考：
  * <ul>
- *   <li>D2MOO/source/D2Game/src/PLAYER/PlayerPets.cpp</li>
- *   <li>D2MOO/source/D2Game/src/UNIT/SUnitNpc.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/PLAYER/PlayerPets.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/UNIT/SUnitNpc.cpp</li>
  * </ul>
  * 
  * @author riiablo team

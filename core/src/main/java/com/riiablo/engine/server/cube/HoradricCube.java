@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 赫拉迪克方块管理器 - 基于 D2MOO HoradricCube.cpp 移植
+ * 赫拉迪克方块管理器 - 基于 D2MOD HoradricCube.cpp 移植
  * 
  * <p>管理赫拉迪克方块的合成系统：
  * <ul>
@@ -16,7 +16,7 @@ import com.riiablo.logger.Logger;
  *   <li>合成执行</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Common/src/DataTbls/HoradricCube.cpp
+ * <p>参考：D2MOD/source/D2Common/src/DataTbls/HoradricCube.cpp
  * 
  * @author riiablo team
  */

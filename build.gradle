@@ -39,6 +39,13 @@ allprojects {
   }
 }
 
+// Ensure consistent source encoding across all subprojects (including D2MOO_JAVA)
+configure(subprojects) {
+  tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+  }
+}
+
 configure(subprojects - project(':android')) {
   apply plugin: 'java-library'
   sourceCompatibility = JavaVersion.VERSION_1_8

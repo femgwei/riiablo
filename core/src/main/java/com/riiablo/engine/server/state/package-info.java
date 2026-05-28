@@ -1,5 +1,5 @@
 /**
- * 状态系统模块 - 基于 D2MOO D2States 移植
+ * 状态系统模块 - 基于 D2MOD D2States 移植
  * 
  * <p>该模块管理游戏中的各种状态效果（buff/debuff），包括：
  * <ul>
@@ -28,8 +28,8 @@
  * 
  * <h2>参考来源</h2>
  * <ul>
- *   <li>D2MOO/source/D2Common/include/D2States.h</li>
- *   <li>D2MOO/source/D2Common/src/D2States.cpp</li>
+ *   <li>D2MOD/source/D2Common/include/D2States.h</li>
+ *   <li>D2MOD/source/D2Common/src/D2States.cpp</li>
  * </ul>
  * 
  * @author riiablo team

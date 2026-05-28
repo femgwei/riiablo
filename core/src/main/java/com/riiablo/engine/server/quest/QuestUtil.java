@@ -4,11 +4,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 任务工具类 - 基于 D2MOO Quests.cpp 移植
+ * 任务工具类 - 基于 D2MOD Quests.cpp 移植
  * 
  * <p>提供任务相关的辅助方法。
  * 
- * <p>参考：D2MOO/source/D2Game/src/QUESTS/Quests.cpp
+ * <p>参考：D2MOD/source/D2Game/src/QUESTS/Quests.cpp
  * 
  * @author riiablo team
  */

@@ -20,19 +20,19 @@ import com.riiablo.logger.Logger;
 import com.riiablo.save.CharData;
 
 /**
- * 经验值管理系统 - 参考 D2MOO SUNITDMG_* 实现
+ * 经验值管理系统 - 参考 D2MOD SUNITDMG_* 实现
  * 
  * <p>处理角色击杀怪物后的经验值获取和升级逻辑，包括：
  * <ul>
  *   <li>等级差惩罚/奖励机制</li>
- *   <li>组队经验值分配（参考 D2MOO SUNITDMG_DistributeExperience）</li>
+ *   <li>组队经验值分配（参考 D2MOD SUNITDMG_DistributeExperience）</li>
  *   <li>佣兵经验值处理（33.6%经验）</li>
  *   <li>难度系数调整</li>
  *   <li>升级时的属性自动增长</li>
  *   <li>升级时的生命/法力恢复</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/SUnitDmg.cpp
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/SUnitDmg.cpp
  * 
  * @author riiablo team
  */
@@ -46,7 +46,7 @@ public class ExperienceManager extends PassiveSystem {
   private PartyManager partyManager;
 
   //==========================================================================
-  // 经验值系数常量（来自 D2MOO）
+  // 经验值系数常量（来自 D2MOD）
   //==========================================================================
 
   // 经验值惩罚系数（当攻击者等级 >= 防御者等级时）
@@ -125,12 +125,12 @@ public class ExperienceManager extends PassiveSystem {
       defenderLevel = monster.monstats.Level[expIndex];
     }
 
-    // 分配经验值（参考 D2MOO SUNITDMG_DistributeExperience）
+    // 分配经验值（参考 D2MOD SUNITDMG_DistributeExperience）
     distributeExperience(player.data, event.killer, defenderLevel, defenderExp);
   }
 
   /**
-   * 分配经验值（参考 D2MOO SUNITDMG_DistributeExperience）
+   * 分配经验值（参考 D2MOD SUNITDMG_DistributeExperience）
    * 
    * <p>处理组队经验共享、佣兵经验等复杂逻辑
    * 
@@ -197,7 +197,7 @@ public class ExperienceManager extends PassiveSystem {
       return;
     }
 
-    // 计算组队经验加成（D2MOO公式）
+    // 计算组队经验加成（D2MOD公式）
     // totalExp = baseExp + 89 * baseExp * (members - 1) / 256
     long totalExp = defenderExp + 
         (long) PARTY_EXP_BONUS_NUMERATOR * defenderExp * (memberCount - 1) / PARTY_EXP_BONUS_DENOMINATOR;
@@ -230,7 +230,7 @@ public class ExperienceManager extends PassiveSystem {
   }
 
   /**
-   * 计算经验值获取量（参考 D2MOO SUNITDMG_ComputeExperienceGain）
+   * 计算经验值获取量（参考 D2MOD SUNITDMG_ComputeExperienceGain）
    * 
    * <p>完整实现包括：
    * <ul>
@@ -288,7 +288,7 @@ public class ExperienceManager extends PassiveSystem {
     }
 
     // 应用难度系数（ExpRatio）
-    // D2MOO: 使用 DATATBLS_GetExpRatio 获取难度经验比例
+    // D2MOD: 使用 DATATBLS_GetExpRatio 获取难度经验比例
     result = applyDifficultyRatio(result, attackerLevel);
 
     // TODO: 应用装备经验值加成（STAT_ITEM_ADDEXPERIENCE）
@@ -301,7 +301,7 @@ public class ExperienceManager extends PassiveSystem {
   /**
    * 应用难度经验系数
    * 
-   * <p>参考 D2MOO DATATBLS_GetExpRatio，根据等级和难度调整经验值
+   * <p>参考 D2MOD DATATBLS_GetExpRatio，根据等级和难度调整经验值
    * 
    * @param experience 基础经验值
    * @param level 玩家等级
@@ -356,7 +356,7 @@ public class ExperienceManager extends PassiveSystem {
   /**
    * 为佣兵添加经验值
    * 
-   * <p>参考 D2MOO SUNITDMG_AddExperienceForHireling
+   * <p>参考 D2MOD SUNITDMG_AddExperienceForHireling
    * 
    * @param playerData 玩家角色数据
    * @param hirelingLevel 佣兵等级
@@ -386,7 +386,7 @@ public class ExperienceManager extends PassiveSystem {
   }
 
   /**
-   * 计算百分比值（参考 D2MOO MONSTERUNIQUE_CalculatePercentage）
+   * 计算百分比值（参考 D2MOD MONSTERUNIQUE_CalculatePercentage）
    * 
    * @param value 基础值
    * @param numerator 分子
@@ -401,7 +401,7 @@ public class ExperienceManager extends PassiveSystem {
   }
 
   /**
-   * 为玩家添加经验值（参考 D2MOO SUNITDMG_AddExperienceForPlayer）
+   * 为玩家添加经验值（参考 D2MOD SUNITDMG_AddExperienceForPlayer）
    * 
    * @param charData 角色数据
    * @param oldLevel 旧等级
@@ -435,7 +435,7 @@ public class ExperienceManager extends PassiveSystem {
   }
 
   /**
-   * 根据经验值计算当前等级（参考 D2MOO DATATBLS_GetCurrentLevelFromExp）
+   * 根据经验值计算当前等级（参考 D2MOD DATATBLS_GetCurrentLevelFromExp）
    * 
    * @param charClass 角色职业
    * @param experience 经验值
@@ -452,7 +452,7 @@ public class ExperienceManager extends PassiveSystem {
   }
 
   /**
-   * 处理角色升级（参考 D2MOO PLAYERSTATS_LevelUp）
+   * 处理角色升级（参考 D2MOD PLAYERSTATS_LevelUp）
    * 
    * @param charData 角色数据
    * @param oldLevel 旧等级

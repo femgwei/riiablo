@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.monster;
 
 /**
- * 怪物等级/品质 - 基于 D2MOO MonsterSpawn.h 移植
+ * 怪物等级/品质 - 基于 D2MOD MonsterSpawn.h 移植
  * 
  * <p>定义了怪物的等级品质：普通、冠军、暗金、BOSS等。
  * 
- * <p>参考：D2MOO/source/D2Game/src/MONSTER/MonsterSpawn.h
+ * <p>参考：D2MOD/source/D2Game/src/MONSTER/MonsterSpawn.h
  * 
  * @author riiablo team
  */

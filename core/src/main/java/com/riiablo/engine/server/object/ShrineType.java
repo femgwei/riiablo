@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.object;
 
 /**
- * 神殿类型枚举 - 基于 D2MOO Shrines.h 移植
+ * 神殿类型枚举 - 基于 D2MOD Shrines.h 移植
  * 
  * <p>定义了游戏中所有神殿的效果类型。
  * 
- * <p>参考：D2MOO/source/D2Game/src/OBJECTS/Shrines.h
+ * <p>参考：D2MOD/source/D2Game/src/OBJECTS/Shrines.h
  * 
  * @author riiablo team
  */

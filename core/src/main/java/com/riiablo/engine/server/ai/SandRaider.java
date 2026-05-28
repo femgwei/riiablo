@@ -23,9 +23,9 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.AttributesWrapper;
 
 /**
- * SandRaider AI implementation matching D2MOO's AITHINK_Fn008_SandRaider logic.
+ * SandRaider AI implementation matching D2MOD's AITHINK_Fn008_SandRaider logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = SANDRAIDER_AI_PARAM_HURT_PCT (hurt percentage threshold)
  * - params[1] = SANDRAIDER_AI_PARAM_CIRCLE_CHANCE_PCT (circle chance)
  * - params[2] = SANDRAIDER_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
@@ -70,7 +70,7 @@ public class SandRaider extends AI {
   float nextAction;
   float time;
   
-  // AI state tracking (similar to D2MOO's dwAiParam)
+  // AI state tracking (similar to D2MOD's dwAiParam)
   int aiParam0 = 0;  // Charge counter
   int aiParam1 = 0;  // Charged state (0=not charged, 1=charged)
   int aiParam2 = 0;  // Hurt escape counter
@@ -149,27 +149,27 @@ public class SandRaider extends AI {
 
     time = SLEEP;
 
-    // D2MOO: Initialize charge state on first update
+    // D2MOD: Initialize charge state on first update
     if (aiParam0 == 0) {
-      // D2MOO: STATES_ToggleState(pUnit, STATE_BLUE, 0) and STATE_RED, 0
+      // D2MOD: STATES_ToggleState(pUnit, STATE_BLUE, 0) and STATE_RED, 0
       aiParam1 = 0;
     }
 
     aiParam0++;
 
-    // D2MOO: Check charge duration
+    // D2MOD: Check charge duration
     int chargeDuration = params.length > 4 ? params[4] : 0;
     int chargeColor = params.length > 5 ? params[5] : 0;
     
     if (aiParam0 == chargeDuration && chargeDuration > 0) {
-      // D2MOO: UNITS_SetOverlay(pUnit, nChargeColor == 1 ? 150 : 46, 0)
+      // D2MOD: UNITS_SetOverlay(pUnit, nChargeColor == 1 ? 150 : 46, 0)
       stateMachine.changeState(State.CHARGE);
       time = (monster.monstats.aidel[0] + 1) * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
 
     if (aiParam0 > chargeDuration && chargeDuration > 0) {
-      // D2MOO: STATES_ToggleState(pUnit, nChargeColor == 1 ? STATE_BLUE : STATE_RED, 1)
+      // D2MOD: STATES_ToggleState(pUnit, nChargeColor == 1 ? STATE_BLUE : STATE_RED, 1)
       aiParam1 = 1; // Charged
     }
 
@@ -220,7 +220,7 @@ public class SandRaider extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: Check if hurt and should escape
+    // D2MOD: Check if hurt and should escape
     if (aiParam2 < 7 && params.length > 0) {
       float lifePercent = getLifePercentage();
       if (lifePercent < params[0]) {
@@ -236,9 +236,9 @@ public class SandRaider extends AI {
       }
     }
 
-    // D2MOO: Circle around target if far and not charged
+    // D2MOD: Circle around target if far and not charged
     if (targetDistance > 4 && aiParam1 == 0 && params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
-      // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 0, 0)
+      // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 0, 0)
       // Simplified: walk around target
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
@@ -246,9 +246,9 @@ public class SandRaider extends AI {
       return;
     }
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
-      // D2MOO: If charged, use skill
+      // D2MOD: If charged, use skill
       if (aiParam1 == 1 && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
         // TODO: Use skill (nSkill[0])
         // For now, use normal attack
@@ -263,7 +263,7 @@ public class SandRaider extends AI {
         return;
       }
 
-      // D2MOO: Normal attack
+      // D2MOD: Normal attack
       if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
@@ -276,7 +276,7 @@ public class SandRaider extends AI {
         return;
       }
     } else {
-      // D2MOO: Not in combat
+      // D2MOD: Not in combat
       if (aiParam1 == 1 || (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f))) {
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
@@ -285,7 +285,7 @@ public class SandRaider extends AI {
       }
     }
 
-    // D2MOO: Reset charge if too long
+    // D2MOD: Reset charge if too long
     if (chargeDuration > 0) {
       int maxChargeTime = Math.max(24 - chargeDuration, 6) + chargeDuration;
       if (aiParam0 > maxChargeTime) {

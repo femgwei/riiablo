@@ -16,7 +16,7 @@ import com.riiablo.save.ItemData;
 /**
  * System that handles player corpse retrieval.
  * When a player approaches their corpse, they can retrieve their items.
- * Reference: D2MOO - players can interact with their corpse to get items back
+ * Reference: D2MOD - players can interact with their corpse to get items back
  */
 @All({Player.class, Position.class})
 public class PlayerCorpseRetrievalSystem extends IteratingSystem {

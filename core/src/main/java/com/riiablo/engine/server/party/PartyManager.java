@@ -7,11 +7,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 队伍管理器 - 基于 D2MOO Party.cpp 移植
+ * 队伍管理器 - 基于 D2MOD Party.cpp 移植
  * 
  * <p>管理所有队伍的创建、销毁、成员加入/离开等操作。
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/Party.cpp
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/Party.cpp
  * 
  * @author riiablo team
  */
@@ -73,7 +73,7 @@ public class PartyManager {
   /**
    * 创建新队伍
    * 
-   * <p>对应 D2MOO sub_6FCB9C40
+   * <p>对应 D2MOD sub_6FCB9C40
    * 
    * @param leaderId 队长实体 ID
    * @return 队伍 ID，失败返回 -1
@@ -161,7 +161,7 @@ public class PartyManager {
   /**
    * 加入队伍
    * 
-   * <p>对应 D2MOO sub_6FCB9D10
+   * <p>对应 D2MOD sub_6FCB9D10
    * 
    * @param partyId 队伍 ID
    * @param entityId 玩家实体 ID
@@ -212,7 +212,7 @@ public class PartyManager {
   /**
    * 离开队伍
    * 
-   * <p>对应 D2MOO PARTY_LeaveParty
+   * <p>对应 D2MOD PARTY_LeaveParty
    * 
    * @param entityId 玩家实体 ID
    */
@@ -445,7 +445,7 @@ public class PartyManager {
   /**
    * 计算金币共享分配
    * 
-   * <p>对应 D2MOO PARTY_ShareGoldDrop
+   * <p>对应 D2MOD PARTY_ShareGoldDrop
    * 
    * @param entityId 拾取者实体 ID
    * @param levelId 当前场景 ID
@@ -554,7 +554,7 @@ public class PartyManager {
   /**
    * 获取玩家所属队伍 ID
    * 
-   * <p>对应 D2MOO PARTY_GetPartyIdForUnitOwner
+   * <p>对应 D2MOD PARTY_GetPartyIdForUnitOwner
    * 
    * @param entityId 玩家实体 ID
    * @return 队伍 ID，不在队伍中返回 -1
@@ -591,7 +591,7 @@ public class PartyManager {
   /**
    * 获取同场景的存活队伍成员数量
    * 
-   * <p>对应 D2MOO PARTY_GetLivingPartyMemberCountInSameLevel
+   * <p>对应 D2MOD PARTY_GetLivingPartyMemberCountInSameLevel
    * 
    * @param entityId 玩家实体 ID
    * @param levelId 场景 ID

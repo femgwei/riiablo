@@ -6,12 +6,12 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 
 /**
- * AI 上下文信息 - 基于 D2MOO D2AiTickParamStrc 结构移植
+ * AI 上下文信息 - 基于 D2MOD D2AiTickParamStrc 结构移植
  * 
  * <p>该类包含 AI 每次决策所需的上下文信息，包括当前目标、
  * 距离、战斗状态、怪物属性等。
  * 
- * <p>参考：D2MOO/source/D2Game/include/AI/AiGeneral.h - D2AiTickParamStrc
+ * <p>参考：D2MOD/source/D2Game/include/AI/AiGeneral.h - D2AiTickParamStrc
  * 
  * @author riiablo team
  */

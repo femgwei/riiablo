@@ -99,7 +99,7 @@ public class Pathfinder extends IteratingSystem {
       if (mClass.has(entityId)) {
         Class.Type type = mClass.get(entityId).type;
         if (type == Class.Type.PLR) {
-          rangeBonus = 3; // D2MOO: 2 * (pAttacker->dwUnitType == UNIT_PLAYER) + 1 = 2 * 1 + 1 = 3
+          rangeBonus = 3; // D2MOD: 2 * (pAttacker->dwUnitType == UNIT_PLAYER) + 1 = 2 * 1 + 1 = 3
         }
       }
       float meleeRangeThreshold = meleeRange + rangeBonus + 1f;
@@ -141,8 +141,8 @@ public class Pathfinder extends IteratingSystem {
       }
     }
     
-    // D2MOO: Check if path is valid (has path points)
-    // Similar to PATH_GetNumberOfPathPoints in D2MOO
+    // D2MOD: Check if path is valid (has path points)
+    // Similar to PATH_GetNumberOfPathPoints in D2MOD
     // If target is zero or no more path points, stop movement
     if (target.isZero() || (!targets.hasNext() && tmpVec2.epsilonEquals(target, 0.1f))) {
       // Path is invalid or completed, stop movement

@@ -1,5 +1,5 @@
 /**
- * 职业技能模块 - 基于 D2MOO Skills 移植
+ * 职业技能模块 - 基于 D2MOD Skills 移植
  * 
  * <p>该模块包含各职业的具体技能实现：
  * <ul>
@@ -23,13 +23,13 @@
  * 
  * <h2>参考来源</h2>
  * <ul>
- *   <li>D2MOO/source/D2Game/src/SKILLS/SkillSor.cpp</li>
- *   <li>D2MOO/source/D2Game/src/SKILLS/SkillNec.cpp</li>
- *   <li>D2MOO/source/D2Game/src/SKILLS/SkillPal.cpp</li>
- *   <li>D2MOO/source/D2Game/src/SKILLS/SkillBar.cpp</li>
- *   <li>D2MOO/source/D2Game/src/SKILLS/SkillAma.cpp</li>
- *   <li>D2MOO/source/D2Game/src/SKILLS/SkillDruid.cpp</li>
- *   <li>D2MOO/source/D2Game/src/SKILLS/SkillAss.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/SKILLS/SkillSor.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/SKILLS/SkillNec.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/SKILLS/SkillPal.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/SKILLS/SkillBar.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/SKILLS/SkillAma.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/SKILLS/SkillDruid.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/SKILLS/SkillAss.cpp</li>
  * </ul>
  * 
  * @author riiablo team

@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.item;
 
 /**
- * 物品模式枚举 - 基于 D2MOO D2C_ItemModes 移植
+ * 物品模式枚举 - 基于 D2MOD D2C_ItemModes 移植
  * 
  * <p>定义了物品在游戏中的不同状态/位置。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2Items.h
+ * <p>参考：D2MOD/source/D2Common/include/D2Items.h
  * 
  * @author riiablo team
  */

@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.missile;
 
 /**
- * 投射物 ID 常量 - 基于 D2MOO MissilesIds.h 移植
+ * 投射物 ID 常量 - 基于 D2MOD MissilesIds.h 移植
  * 
  * <p>定义了游戏中所有投射物的 ID。
  * 
- * <p>参考：D2MOO/source/D2Common/include/DataTbls/MissilesIds.h
+ * <p>参考：D2MOD/source/D2Common/include/DataTbls/MissilesIds.h
  * 
  * @author riiablo team
  */

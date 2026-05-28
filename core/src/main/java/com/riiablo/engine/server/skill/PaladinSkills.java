@@ -6,11 +6,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 圣骑士技能实现 - 基于 D2MOO SkillPal.cpp 移植
+ * 圣骑士技能实现 - 基于 D2MOD SkillPal.cpp 移植
  * 
  * <p>包含战斗技能、攻击光环、防御光环三系技能的实现。
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/SkillPal.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/SkillPal.cpp
  * 
  * @author riiablo team
  */

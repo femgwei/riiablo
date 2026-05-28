@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 赫拉迪克方块管理器 - 基于 D2MOO PlrTrade.cpp 移植
+ * 赫拉迪克方块管理器 - 基于 D2MOD PlrTrade.cpp 移植
  * 
  * <p>管理赫拉迪克方块的物品合成：
  * <ul>
@@ -17,7 +17,7 @@ import com.riiablo.logger.Logger;
  *   <li>装备升级</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlrTrade.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlrTrade.cpp
  * 
  * @author riiablo team
  */

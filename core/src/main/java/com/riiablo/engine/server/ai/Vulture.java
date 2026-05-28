@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * Vulture AI implementation matching D2MOO's AITHINK_Fn019_Vulture logic.
+ * Vulture AI implementation matching D2MOD's AITHINK_Fn019_Vulture logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = VULTURE_AI_PARAM_MOVE_CHANCE_PCT (move chance)
  * - params[1] = VULTURE_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = VULTURE_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
@@ -150,11 +150,11 @@ public class Vulture extends AI {
       }
     }
 
-    // D2MOO: Complex state machine handling
+    // D2MOD: Complex state machine handling
     if (aiParam0 >= 1) {
-      // D2MOO: Position state handling
+      // D2MOD: Position state handling
       if (checkSpecialCondition()) {
-        // D2MOO: Use skill2
+        // D2MOD: Use skill2
         // TODO: Implement skill casting
         stateMachine.changeState(State.POSITION);
         aiParam0 = -1;
@@ -197,7 +197,7 @@ public class Vulture extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If not in combat
+    // D2MOD: If not in combat
     if (!bCombat) {
       if (aiParam0 != -1) {
         if (params.length > 0 && !MathUtils.randomBoolean(params[0] / 100f)) {
@@ -208,14 +208,14 @@ public class Vulture extends AI {
       }
 
       if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-        // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 6u, 0)
+        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 6u, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         aiParam0 = 0;
         time = 12f * com.riiablo.codec.Animation.FRAME_DURATION;
         return;
       } else {
-        // D2MOO: AITACTICS_WalkInRadiusToTarget(pGame, pUnit, pAiTickParam->pTarget, 9, 0)
+        // D2MOD: AITACTICS_WalkInRadiusToTarget(pGame, pUnit, pAiTickParam->pTarget, 9, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         aiParam0 = 0;
@@ -224,7 +224,7 @@ public class Vulture extends AI {
       }
     }
 
-    // D2MOO: In combat
+    // D2MOD: In combat
     if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);

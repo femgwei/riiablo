@@ -1,5 +1,5 @@
 /**
- * 碰撞系统模块 - 基于 D2MOO Collision 移植
+ * 碰撞系统模块 - 基于 D2MOD Collision 移植
  * 
  * <p>该模块管理游戏中的碰撞检测，包括：
  * <ul>
@@ -30,8 +30,8 @@
  * 
  * <h2>参考来源</h2>
  * <ul>
- *   <li>D2MOO/source/D2Common/include/D2Collision.h</li>
- *   <li>D2MOO/source/D2Common/src/Collision/Collision.cpp</li>
+ *   <li>D2MOD/source/D2Common/include/D2Collision.h</li>
+ *   <li>D2MOD/source/D2Common/src/Collision/Collision.cpp</li>
  * </ul>
  * 
  * @author riiablo team

@@ -1,5 +1,5 @@
 /**
- * 任务系统模块 - 基于 D2MOO Quests 移植
+ * 任务系统模块 - 基于 D2MOD Quests 移植
  * 
  * <p>该模块管理游戏中的任务，包括：
  * <ul>
@@ -29,8 +29,8 @@
  * 
  * <h2>参考来源</h2>
  * <ul>
- *   <li>D2MOO/source/D2Game/include/QUESTS/Quests.h</li>
- *   <li>D2MOO/source/D2Game/src/QUESTS/Quests.cpp</li>
+ *   <li>D2MOD/source/D2Game/include/QUESTS/Quests.h</li>
+ *   <li>D2MOD/source/D2Game/src/QUESTS/Quests.cpp</li>
  * </ul>
  * 
  * @author riiablo team

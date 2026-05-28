@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * PinHead AI implementation matching D2MOO's AITHINK_Fn039_PinHead logic.
+ * PinHead AI implementation matching D2MOD's AITHINK_Fn039_PinHead logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = PINHEAD_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[1] = PINHEAD_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = PINHEAD_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
@@ -165,7 +165,7 @@ public class PinHead extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
       if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
         pathfinder.findPath(entityId, null);
@@ -183,9 +183,9 @@ public class PinHead extends AI {
       }
     }
 
-    // D2MOO: Not in combat
+    // D2MOD: Not in combat
     if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-      // D2MOO: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
+      // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);

@@ -74,7 +74,7 @@ public class CursorMovementSystem extends BaseSystem {
   protected void processSystem() {
     if (profiler != null && profiler.hit()) return;
     
-    // D2MOO: Check if player is dead, if so, block all input except ESC key
+    // D2MOD: Check if player is dead, if so, block all input except ESC key
     final int playerId = renderer.getSrc();
     if (deathHandler != null && deathHandler.isPlayerDead(playerId)) {
       // Player is dead, block all movement/attack input
@@ -264,7 +264,7 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   /**
-   * D2MOO: Check if target entity is dead
+   * D2MOD: Check if target entity is dead
    * @param targetId The target entity ID
    * @return true if target is dead or doesn't exist
    */

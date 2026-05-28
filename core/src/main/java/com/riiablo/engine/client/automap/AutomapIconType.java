@@ -4,7 +4,7 @@ package com.riiablo.engine.client.automap;
  * 小地图图标类型常量
  * 定义了游戏中各种特殊物体在小地图上的图标ID
  * 
- * 参考: D2MOO D2C_AutomapCells
+ * 参考: D2MOD D2C_AutomapCells
  */
 public final class AutomapIconType {
   private AutomapIconType() {}

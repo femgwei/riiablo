@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 怪物生成器 - 基于 D2MOO MonsterSpawn.cpp 移植
+ * 怪物生成器 - 基于 D2MOD MonsterSpawn.cpp 移植
  * 
  * <p>管理怪物的生成逻辑：
  * <ul>
@@ -17,7 +17,7 @@ import com.riiablo.logger.Logger;
  *   <li>BOSS 生成</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/MONSTER/MonsterSpawn.cpp
+ * <p>参考：D2MOD/source/D2Game/src/MONSTER/MonsterSpawn.cpp
  * 
  * @author riiablo team
  */
@@ -99,7 +99,7 @@ public class MonsterSpawner {
   /**
    * 生成怪物群
    * 
-   * <p>参考 D2MOO MONSTERSPAWN_SpawnMonsterPack
+   * <p>参考 D2MOD MONSTERSPAWN_SpawnMonsterPack
    * 
    * @param monsterId 怪物类型 ID
    * @param centerX 中心位置 X
@@ -248,7 +248,7 @@ public class MonsterSpawner {
   /**
    * 生成随机词缀
    * 
-   * <p>参考 D2MOO MONSTERUNIQUE_RollAffixes
+   * <p>参考 D2MOD MONSTERUNIQUE_RollAffixes
    */
   public long generateRandomAffixes(int areaLevel) {
     long[] availableAffixes;

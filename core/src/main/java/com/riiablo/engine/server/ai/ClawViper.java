@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * ClawViper AI implementation matching D2MOO's AITHINK_Fn016_ClawViper logic.
+ * ClawViper AI implementation matching D2MOD's AITHINK_Fn016_ClawViper logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = CLAWVIPER_AI_PARAM_CHARGE_CHANCE_PCT (charge chance)
  * - params[1] = CLAWVIPER_AI_PARAM_CHARGE_DISTANCE (charge distance)
  * - params[2] = CLAWVIPER_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
@@ -124,10 +124,10 @@ public class ClawViper extends AI {
 
     time = SLEEP;
 
-    // D2MOO: Reset charge state if needed
+    // D2MOD: Reset charge state if needed
     int chargeColor = params.length > 5 ? params[5] : 0;
     if (aiParam0 != 0 && chargeColor != 0) {
-      // D2MOO: STATES_ToggleState(pUnit, nChargeColor == 2 ? STATE_RED : STATE_BLUE, 0)
+      // D2MOD: STATES_ToggleState(pUnit, nChargeColor == 2 ? STATE_RED : STATE_BLUE, 0)
       // Reset charge visual state
     }
 
@@ -178,7 +178,7 @@ public class ClawViper extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
       if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
         pathfinder.findPath(entityId, null);
@@ -197,11 +197,11 @@ public class ClawViper extends AI {
       }
     }
 
-    // D2MOO: Check if should use charge skill
+    // D2MOD: Check if should use charge skill
     float chargeDistance = params.length > 1 ? params[1] : 10f;
     if (targetDistance < chargeDistance && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
         && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-      // D2MOO: Use charge skill (nSkill[0])
+      // D2MOD: Use charge skill (nSkill[0])
       // TODO: Implement skill casting for charge
       stateMachine.changeState(State.CHARGE);
       lookAt(targetId);
@@ -210,7 +210,7 @@ public class ClawViper extends AI {
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       
       if (chargeColor != 0) {
-        // D2MOO: STATES_ToggleState(pUnit, nChargeColor == 2 ? STATE_RED : STATE_BLUE, 0)
+        // D2MOD: STATES_ToggleState(pUnit, nChargeColor == 2 ? STATE_RED : STATE_BLUE, 0)
         // Set charge visual state
       }
       
@@ -219,7 +219,7 @@ public class ClawViper extends AI {
       return;
     }
 
-    // D2MOO: Random walk or idle
+    // D2MOD: Random walk or idle
     if (MathUtils.randomBoolean(0.5f)) {
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);

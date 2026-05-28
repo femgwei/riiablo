@@ -373,7 +373,7 @@ public class ItemData {
         
         // Directly add weapon damage from item base() to character aggregate()
         // This ensures weapon damage is properly aggregated even if not in character base()
-        // Reference D2MOO: STAT_SECONDARY_MINDAMAGE/MAXDAMAGE is for two-handed weapons (WieldType == 2)
+        // Reference D2MOD: STAT_SECONDARY_MINDAMAGE/MAXDAMAGE is for two-handed weapons (WieldType == 2)
         // For one-handed weapons (including dual wielding), use mindamage/maxdamage
         // For two-handed weapons, use secondary_mindamage/maxdamage (from weapon._2handmindam/_2handmaxdam)
         StatRef itemMinDmg = item.attrs.base().get(Stat.mindamage);

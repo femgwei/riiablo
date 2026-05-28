@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * NPC 对话管理器 - 基于 D2MOO SUnitProxy.cpp 和 SUnitNpc.cpp 移植
+ * NPC 对话管理器 - 基于 D2MOD SUnitProxy.cpp 和 SUnitNpc.cpp 移植
  * 
  * <p>管理 NPC 交互和对话系统：
  * <ul>
@@ -19,8 +19,8 @@ import com.riiablo.logger.Logger;
  * 
  * <p>参考：
  * <ul>
- *   <li>D2MOO/source/D2Game/src/UNIT/SUnitProxy.cpp</li>
- *   <li>D2MOO/source/D2Game/src/UNIT/SUnitNpc.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/UNIT/SUnitProxy.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/UNIT/SUnitNpc.cpp</li>
  * </ul>
  * 
  * @author riiablo team

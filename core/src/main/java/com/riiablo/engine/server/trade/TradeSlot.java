@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.trade;
 
 /**
- * 交易槽位数据 - 基于 D2MOO 移植
+ * 交易槽位数据 - 基于 D2MOD 移植
  * 
  * <p>存储单个交易槽位中的物品信息。
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlrTrade.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlrTrade.cpp
  * 
  * @author riiablo team
  */

@@ -1,5 +1,5 @@
 /**
- * 交易系统模块 - 基于 D2MOO PlrTrade 移植
+ * 交易系统模块 - 基于 D2MOD PlrTrade 移植
  * 
  * <p>该模块提供玩家之间的交易功能：
  * <ul>
@@ -34,8 +34,8 @@
  * 
  * <h2>参考来源</h2>
  * <ul>
- *   <li>D2MOO/source/D2Game/include/PLAYER/PlrTrade.h</li>
- *   <li>D2MOO/source/D2Game/src/PLAYER/PlrTrade.cpp</li>
+ *   <li>D2MOD/source/D2Game/include/PLAYER/PlrTrade.h</li>
+ *   <li>D2MOD/source/D2Game/src/PLAYER/PlrTrade.cpp</li>
  * </ul>
  * 
  * @author riiablo team

@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.object;
 
 /**
- * 场景对象数据结构 - 基于 D2MOO D2ObjectStrc 移植
+ * 场景对象数据结构 - 基于 D2MOD D2ObjectStrc 移植
  * 
  * <p>存储单个场景对象的所有运行时数据。
  * 
- * <p>参考：D2MOO/source/D2Game/src/OBJECTS/Objects.h
+ * <p>参考：D2MOD/source/D2Game/src/OBJECTS/Objects.h
  * 
  * @author riiablo team
  */

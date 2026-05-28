@@ -17,9 +17,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * SkeletonMage AI implementation matching D2MOO's AITHINK_Fn064_SkeletonMage logic.
+ * SkeletonMage AI implementation matching D2MOD's AITHINK_Fn064_SkeletonMage logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = SKELETONMAGE_AI_PARAM_SHOOT_CHANCE_PCT (shoot chance)
  * - params[1] = SKELETONMAGE_AI_PARAM_APPROACH_DISTANCE (approach distance)
  * - params[2] = SKELETONMAGE_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
@@ -156,20 +156,20 @@ public class SkeletonMage extends AI {
     float tooCloseDistance = params.length > 3 ? params[3] : 5f;
     float fireDistance = params.length > 5 ? params[5] : 15f;
 
-    // D2MOO: If too far, approach
+    // D2MOD: If too far, approach
     if (targetDistance > approachDistance && params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
-      // D2MOO: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, SKELETONMAGE_AI_PARAM_APPROACH_DISTANCE))
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
+      // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, SKELETONMAGE_AI_PARAM_APPROACH_DISTANCE))
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: If too close, walk away
+    // D2MOD: If too close, walk away
     if (targetDistance <= tooCloseDistance && params.length > 4 && MathUtils.randomBoolean(params[4] / 100f)) {
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 25, 0)
-      // D2MOO: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pTarget, 5u, 1)
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 25, 0)
+      // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pTarget, 5u, 1)
       stateMachine.changeState(State.ESCAPE);
       Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
       Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(5f));
@@ -186,7 +186,7 @@ public class SkeletonMage extends AI {
       return;
     }
 
-    // D2MOO: If in fire range, shoot
+    // D2MOD: If in fire range, shoot
     if (targetDistance < fireDistance && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -198,7 +198,7 @@ public class SkeletonMage extends AI {
       return;
     }
 
-    // D2MOO: If within approach distance or no approach chance
+    // D2MOD: If within approach distance or no approach chance
     if (targetDistance <= approachDistance || (params.length > 2 && !MathUtils.randomBoolean(params[2] / 100f))) {
       if (params.length > 6 && !MathUtils.randomBoolean(params[6] / 100f)) {
         // Idle
@@ -207,16 +207,16 @@ public class SkeletonMage extends AI {
         return;
       } else {
         // Circle
-        // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
+        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
       }
     } else {
-      // D2MOO: Approach
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
-      // D2MOO: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, AI_GetParamValue(pGame, pAiTickParam, SKELETONMAGE_AI_PARAM_APPROACH_DISTANCE))
+      // D2MOD: Approach
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
+      // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, AI_GetParamValue(pGame, pAiTickParam, SKELETONMAGE_AI_PARAM_APPROACH_DISTANCE))
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);

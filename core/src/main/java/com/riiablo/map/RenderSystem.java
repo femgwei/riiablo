@@ -950,6 +950,55 @@ public class RenderSystem extends BaseEntitySystem {
 
     if (DEBUG_MOUSE)
       drawDebugMouse(shapes);
+
+    // F10 调试：D2MOD 土路路径（红色线条与小方块），与 Pathfind 紫色路径使用相同坐标转换
+    if (map != null && map.pathDebugPoints.size > 0)
+      drawDebugD2MODPath(shapes);
+  }
+
+  private void drawDebugD2MODPath(ShapeRenderer shapes) {
+    final float BOX_SIZE = 8;
+    final float HALF_BOX = BOX_SIZE / 2;
+    Vector2 tmpA = new Vector2();
+    Vector2 tmpB = new Vector2();
+    shapes.setColor(Color.RED);
+    for (int i = 0; i < map.pathDebugPoints.size; i++) {
+      float[] p = map.pathDebugPoints.get(i);
+      iso.toScreen(p[0], p[1], tmpB);
+      if (i > 0) {
+        shapes.rectLine(tmpA, tmpB, 3);
+      }
+      tmpA.set(tmpB);
+    }
+    for (int i = 0; i < map.pathDebugPoints.size; i++) {
+      float[] p = map.pathDebugPoints.get(i);
+      iso.toScreen(p[0], p[1], tmpA).sub(HALF_BOX, HALF_BOX);
+      shapes.setColor(Color.RED);
+      shapes.rect(tmpA.x, tmpA.y, BOX_SIZE, BOX_SIZE);
+    }
+    // 白线：玩家位置到最近路径点（用平方距离比较，避免开方）
+    if (src >= 0 && map.pathDebugPoints.size > 0) {
+      float px = currentPos.x;
+      float py = currentPos.y;
+      int closest = 0;
+      float[] first = map.pathDebugPoints.get(0);
+      float minDistSq = (first[0] - px) * (first[0] - px) + (first[1] - py) * (first[1] - py);
+      for (int i = 1; i < map.pathDebugPoints.size; i++) {
+        float[] p = map.pathDebugPoints.get(i);
+        float dx = p[0] - px;
+        float dy = p[1] - py;
+        float distSq = dx * dx + dy * dy;
+        if (distSq < minDistSq) {
+          minDistSq = distSq;
+          closest = i;
+        }
+      }
+      float[] nearest = map.pathDebugPoints.get(closest);
+      iso.toScreen(px, py, tmpA);
+      iso.toScreen(nearest[0], nearest[1], tmpB);
+      shapes.setColor(Color.WHITE);
+      shapes.rectLine(tmpA, tmpB, 2);
+    }
   }
 
   private void drawDebugGrid(ShapeRenderer shapes) {

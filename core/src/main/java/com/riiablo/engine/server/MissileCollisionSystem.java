@@ -156,7 +156,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         return false;
       }
 
-      // D2MOO: 远程命中判定（level、AR、armorclass_vs_missile），未命中则不造成伤害
+      // D2MOD: 远程命中判定（level、AR、armorclass_vs_missile），未命中则不造成伤害
       boolean hit = true;
       if (mAttributesWrapper.has(missile.ownerId) && mAttributesWrapper.has(targetId)) {
         Attributes ownerAttrs = mAttributesWrapper.get(missile.ownerId).attrs;
@@ -276,7 +276,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /**
-   * 计算远程/导弹伤害（参考 D2MOO）
+   * 计算远程/导弹伤害（参考 D2MOD）
    * 怪物：A1MinD/A1MaxD + damagepercent；玩家投掷：item_throw_mindamage/maxdamage；否则 mindamage/maxdamage
    * 使用 DamageCalculator.calculateSimpleDamage 统一计算
    */

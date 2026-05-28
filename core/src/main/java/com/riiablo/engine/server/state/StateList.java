@@ -12,7 +12,7 @@ import com.riiablo.logger.Logger;
  * <p>该类维护一个状态实例列表，提供添加、移除、查询和更新功能。
  * 使用对象池来减少 GC 压力。
  * 
- * <p>参考：D2MOO 的状态链表管理
+ * <p>参考：D2MOD 的状态链表管理
  * 
  * @author riiablo team
  */

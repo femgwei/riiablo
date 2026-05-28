@@ -7,11 +7,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 法师技能实现 - 基于 D2MOO SkillSor.cpp 移植
+ * 法师技能实现 - 基于 D2MOD SkillSor.cpp 移植
  * 
  * <p>包含火焰、闪电、冰冷三系技能的实现。
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/SkillSor.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/SkillSor.cpp
  * 
  * @author riiablo team
  */

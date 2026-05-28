@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * CorruptRogue AI implementation matching D2MOO's AITHINK_Fn010_CorruptRogue logic.
+ * CorruptRogue AI implementation matching D2MOD's AITHINK_Fn010_CorruptRogue logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = CORRUPTROGUE_AI_PARAM_APPROACH (approach chance)
  * - params[1] = CORRUPTROGUE_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = CORRUPTROGUE_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
@@ -89,7 +89,7 @@ public class CorruptRogue extends AI {
 
   /**
    * Check if monster is in combat (within melee range).
-   * D2MOO: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
+   * D2MOD: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
    */
   private boolean isInCombat(int targetId) {
     if (targetId == Engine.INVALID_ENTITY) return false;
@@ -165,13 +165,13 @@ public class CorruptRogue extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
     
-    // D2MOO: Distance check with player count bonus (simplified: distance <= 20)
-    float activeDistance = 20f; // D2MOO: 20 - 3 * playerCountBonus.nDifficulty
+    // D2MOD: Distance check with player count bonus (simplified: distance <= 20)
+    float activeDistance = 20f; // D2MOD: 20 - 3 * playerCountBonus.nDifficulty
     
     if (targetDistance <= activeDistance) {
-      // D2MOO: If in combat, check attack chance
+      // D2MOD: If in combat, check attack chance
       if (bCombat) {
-        // D2MOO: CORRUPTROGUE_AI_PARAM_ATTACK_CHANCE_PCT
+        // D2MOD: CORRUPTROGUE_AI_PARAM_ATTACK_CHANCE_PCT
         if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
           pathfinder.findPath(entityId, null);
           lookAt(targetId);
@@ -184,16 +184,16 @@ public class CorruptRogue extends AI {
         } else {
           // No attack, idle
           stateMachine.changeState(State.IDLE);
-          // D2MOO: CORRUPTROGUE_AI_PARAM_STALL_DURATION
+          // D2MOD: CORRUPTROGUE_AI_PARAM_STALL_DURATION
           time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
           return;
         }
       } else {
-        // D2MOO: Not in combat, check approach chance
+        // D2MOD: Not in combat, check approach chance
         if (!MathUtils.randomBoolean(params[0] / 100f)) {
           // No approach, idle
           stateMachine.changeState(State.IDLE);
-          // D2MOO: CORRUPTROGUE_AI_PARAM_STALL_DURATION
+          // D2MOD: CORRUPTROGUE_AI_PARAM_STALL_DURATION
           time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
           return;
         } else if (params.length > 4 && !MathUtils.randomBoolean(params[4] / 100f)) {
@@ -206,9 +206,9 @@ public class CorruptRogue extends AI {
       }
     }
 
-    // D2MOO: Far from target, run to target
-    // D2MOO: AITACTICS_SetVelocity(pUnit, 13, AI_GetParamValue(pGame, pAiTickParam, CORRUPTROGUE_AI_PARAM_RUN_VELOCITY), 0)
-    // D2MOO: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
+    // D2MOD: Far from target, run to target
+    // D2MOD: AITACTICS_SetVelocity(pUnit, 13, AI_GetParamValue(pGame, pAiTickParam, CORRUPTROGUE_AI_PARAM_RUN_VELOCITY), 0)
+    // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
     if (mVelocity.has(entityId) && params.length > 3) {
       com.riiablo.engine.server.component.Velocity vel = mVelocity.get(entityId);
       // Set run velocity (simplified)

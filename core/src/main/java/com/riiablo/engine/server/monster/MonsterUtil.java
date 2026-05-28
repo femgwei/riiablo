@@ -6,7 +6,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 怪物工具类 - 基于 D2MOO Monster.cpp 移植
+ * 怪物工具类 - 基于 D2MOD Monster.cpp 移植
  * 
  * <p>提供怪物相关的计算和工具方法：
  * <ul>
@@ -16,7 +16,7 @@ import com.riiablo.logger.Logger;
  *   <li>经验值计算</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/MONSTER/Monster.cpp
+ * <p>参考：D2MOD/source/D2Game/src/MONSTER/Monster.cpp
  * 
  * @author riiablo team
  */
@@ -37,7 +37,7 @@ public final class MonsterUtil {
   public static final int DIFFICULTY_HELL = 2;
 
   //==========================================================================
-  // 玩家数量加成表（基于 D2MOO）
+  // 玩家数量加成表（基于 D2MOD）
   //==========================================================================
 
   /**
@@ -81,7 +81,7 @@ public final class MonsterUtil {
   /**
    * 获取生命值加成百分比
    * 
-   * <p>基于 D2MOO MONSTER_GetHpBonus 函数
+   * <p>基于 D2MOD MONSTER_GetHpBonus 函数
    * 
    * @param playerCount 玩家数量（1-8）
    * @return 生命值加成百分比（100 = 100%）
@@ -94,7 +94,7 @@ public final class MonsterUtil {
   /**
    * 获取经验值加成百分比
    * 
-   * <p>基于 D2MOO MONSTER_GetExperienceBonus 函数
+   * <p>基于 D2MOD MONSTER_GetExperienceBonus 函数
    * 
    * @param playerCount 玩家数量（1-8）
    * @return 经验值加成百分比（100 = 100%）
@@ -135,7 +135,7 @@ public final class MonsterUtil {
   /**
    * 计算怪物在指定难度和区域的等级
    * 
-   * <p>基于 D2MOO DATATBLS_GetMonsterLevelInArea 逻辑
+   * <p>基于 D2MOD DATATBLS_GetMonsterLevelInArea 逻辑
    * 
    * @param baseLevel 基础等级（来自 monstats.txt）
    * @param areaLevel 区域等级（来自 levels.txt）

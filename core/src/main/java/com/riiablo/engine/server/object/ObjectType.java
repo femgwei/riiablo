@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.object;
 
 /**
- * 场景对象类型 - 基于 D2MOO Objects.h 移植
+ * 场景对象类型 - 基于 D2MOD Objects.h 移植
  * 
  * <p>定义了游戏中所有可交互对象的类型。
  * 
- * <p>参考：D2MOO/source/D2Game/src/OBJECTS/Objects.h
+ * <p>参考：D2MOD/source/D2Game/src/OBJECTS/Objects.h
  * 
  * @author riiablo team
  */

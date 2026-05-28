@@ -1,12 +1,12 @@
 package com.riiablo.engine.server.combat;
 
 /**
- * 伤害计算结果 - 基于 D2MOO D2DamageStrc 结构
+ * 伤害计算结果 - 基于 D2MOD D2DamageStrc 结构
  * 
  * <p>该类存储一次攻击的完整伤害信息，包括各种伤害类型、
  * 状态效果持续时间、命中结果标志等。
  * 
- * <p>参考：D2MOO/source/D2Game/include/UNIT/SUnitDmg.h - D2DamageStrc
+ * <p>参考：D2MOD/source/D2Game/include/UNIT/SUnitDmg.h - D2DamageStrc
  * 
  * @author riiablo team
  */

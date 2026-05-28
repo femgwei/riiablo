@@ -52,7 +52,7 @@ public class CofLoader extends IteratingSystem {
     AssetDescriptor<COF> descriptor = mCofDescriptor.get(entityId).descriptor;
     if (!Riiablo.assets.isLoaded(descriptor)) return;
     COF cof = Riiablo.assets.get(descriptor);
-    // D2MOO: COF can be null if file doesn't exist, system continues with null COF
+    // D2MOD: COF can be null if file doesn't exist, system continues with null COF
     if (cof == null) {
       if (DEBUG) Gdx.app.debug(TAG, "COF is null for " + descriptor.fileName + ", skipping wrapper creation");
       return;  // Don't create wrapper if COF is null

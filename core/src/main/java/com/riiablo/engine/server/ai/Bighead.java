@@ -17,9 +17,9 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.AttributesWrapper;
 
 /**
- * Bighead AI implementation matching D2MOO's AITHINK_Fn004_Bighead logic.
+ * Bighead AI implementation matching D2MOD's AITHINK_Fn004_Bighead logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = BIGHEAD_AI_PARAM_HURT_PCT (hurt percentage threshold)
  * - params[1] = BIGHEAD_AI_PARAM_FIRE_WHILE_HEALTHY_CHANCE_PCT (fire while healthy chance)
  * - params[2] = BIGHEAD_AI_PARAM_FIRE_WHILE_HURT_CHANCE_PCT (fire while hurt chance)
@@ -184,9 +184,9 @@ public class Bighead extends AI {
     float lifePercent = getLifePercentage();
     float hurtPct = params.length > 0 ? params[0] : 50f;
 
-    // D2MOO: Check special AI state first
+    // D2MOD: Check special AI state first
     if (!bCombat && checkSpecialAiState()) {
-      // D2MOO: AITACTICS_ChangeModeAndTargetUnit(pGame, pUnit, MONMODE_ATTACK2, pAiTickParam->pTarget)
+      // D2MOD: AITACTICS_ChangeModeAndTargetUnit(pGame, pUnit, MONMODE_ATTACK2, pAiTickParam->pTarget)
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
@@ -196,7 +196,7 @@ public class Bighead extends AI {
       return;
     }
 
-    // D2MOO: Healthy behavior
+    // D2MOD: Healthy behavior
     if (lifePercent >= hurtPct) {
       if (bCombat) {
         pathfinder.findPath(entityId, null);
@@ -209,7 +209,7 @@ public class Bighead extends AI {
         return;
       }
 
-      // D2MOO: Check if should fire while healthy (distance < 15)
+      // D2MOD: Check if should fire while healthy (distance < 15)
       if (targetDistance < 15 && params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
@@ -220,24 +220,24 @@ public class Bighead extends AI {
         return;
       }
 
-      // D2MOO: Walk to target
+      // D2MOD: Walk to target
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: Hurt behavior
+    // D2MOD: Hurt behavior
     if (targetDistance >= 3) {
       if (targetDistance > 15) {
-        // D2MOO: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 6u)
+        // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 6u)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
       }
 
-      // D2MOO: Check if should fire while hurt
+      // D2MOD: Check if should fire while hurt
       if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
@@ -248,9 +248,9 @@ public class Bighead extends AI {
         return;
       }
 
-      // D2MOO: Circle or idle
+      // D2MOD: Circle or idle
       if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-        // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
+        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
@@ -261,9 +261,9 @@ public class Bighead extends AI {
         return;
       }
     } else {
-      // D2MOO: Very close, escape
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 50, 0)
-      // D2MOO: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 5u, 1)
+      // D2MOD: Very close, escape
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 50, 0)
+      // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 5u, 1)
       stateMachine.changeState(State.ESCAPE);
       // Try to escape, if can't escape, attack
       Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();

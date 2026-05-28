@@ -90,7 +90,7 @@ public class DeathHandler extends PassiveSystem {
   
   /**
    * Handle player death: create corpse, save equipment, trigger death sequence
-   * Reference: D2MOO - players create corpse at death location, respawn at town
+   * Reference: D2MOD - players create corpse at death location, respawn at town
    */
   private void handlePlayerDeath(int playerId) {
     log.info("Player {} has died", playerId);
@@ -106,7 +106,7 @@ public class DeathHandler extends PassiveSystem {
       return;
     }
     
-    // D2MOO: Immediately remove Velocity component to prevent movement after death
+    // D2MOD: Immediately remove Velocity component to prevent movement after death
     // This should be done before creating death sequence to prevent player from running
     if (mVelocity.has(playerId)) {
       mVelocity.remove(playerId);
@@ -127,7 +127,7 @@ public class DeathHandler extends PassiveSystem {
     com.riiablo.save.ItemData itemData = player.data.getItems();
     com.badlogic.gdx.utils.IntIntMap equippedItemIndices = new com.badlogic.gdx.utils.IntIntMap();
     
-    // D2MOO: Ensure player HP stays at 0 or below after death
+    // D2MOD: Ensure player HP stays at 0 or below after death
     // Save current HP state before unequipping items (which may trigger updateStats)
     float currentHp = 0f;
     if (mAttributesWrapper.has(playerId)) {
@@ -144,7 +144,7 @@ public class DeathHandler extends PassiveSystem {
     }
     
     // Save all equipped item indices by BodyLoc
-    // Reference: D2MOO - player corpse stores equipped items
+    // Reference: D2MOD - player corpse stores equipped items
     for (BodyLoc bodyLoc : BodyLoc.values()) {
       if (bodyLoc == BodyLoc.NONE) continue;
       com.riiablo.item.Item item = itemData.getSlot(bodyLoc);
@@ -159,7 +159,7 @@ public class DeathHandler extends PassiveSystem {
       }
     }
     
-    // D2MOO: After unequipping items, ensure HP remains at 0 or below
+    // D2MOD: After unequipping items, ensure HP remains at 0 or below
     // updateStats() may have recalculated maxhp, but HP should stay at 0
     if (mAttributesWrapper.has(playerId)) {
       com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(playerId).attrs;
@@ -180,7 +180,7 @@ public class DeathHandler extends PassiveSystem {
         playerId, equippedItemIndices.size);
     
     // Create death sequence: MODE_DT (death animation) -> MODE_DD (corpse)
-    // Reference: D2MOO - players use MODE_DT -> MODE_DD sequence like monsters
+    // Reference: D2MOD - players use MODE_DT -> MODE_DD sequence like monsters
     if (!mSequence.has(playerId)) {
       mSequence.create(playerId).sequence(Engine.Player.MODE_DT, Engine.Player.MODE_DD);
       log.debug("Player {} death sequence started: MODE_DT -> MODE_DD", playerId);
@@ -353,21 +353,21 @@ public class DeathHandler extends PassiveSystem {
   
   /**
    * Check if player is dead (has PlayerCorpse component)
-   * D2MOO: Player is considered dead once PlayerCorpse component is created
+   * D2MOD: Player is considered dead once PlayerCorpse component is created
    * (even if still in MODE_DT death animation, before MODE_DD)
    */
   public boolean isPlayerDead(int playerId) {
     if (!mPlayer.has(playerId)) {
       return false;
     }
-    // D2MOO: Player is dead if PlayerCorpse component exists
+    // D2MOD: Player is dead if PlayerCorpse component exists
     // This component is created immediately when player dies, even before MODE_DD
     return mPlayerCorpse.has(playerId);
   }
   
   /**
    * Respawn player at town location (called when ESC is pressed after death)
-   * Reference: D2MOO - players respawn at town waypoint after death
+   * Reference: D2MOD - players respawn at town waypoint after death
    */
   public void respawnPlayerAtTown(int playerId) {
     if (map == null) {
@@ -419,7 +419,7 @@ public class DeathHandler extends PassiveSystem {
       mSequence.remove(playerId);
     }
     
-    // D2MOO: Remove PlayerCorpse component to mark player as alive
+    // D2MOD: Remove PlayerCorpse component to mark player as alive
     // This is critical - without removing this, isPlayerDead() will always return true
     if (mPlayerCorpse.has(playerId)) {
       mPlayerCorpse.remove(playerId);
@@ -427,7 +427,7 @@ public class DeathHandler extends PassiveSystem {
     }
     
     // Restore Velocity component so player can move again
-    // D2MOO: Velocity component was removed on death, need to recreate it with correct speeds
+    // D2MOD: Velocity component was removed on death, need to recreate it with correct speeds
     if (!mVelocity.has(playerId) && mPlayer.has(playerId)) {
       Player player = mPlayer.get(playerId);
       com.riiablo.save.CharData charData = player.data;

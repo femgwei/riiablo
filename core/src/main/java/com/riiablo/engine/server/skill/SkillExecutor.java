@@ -8,7 +8,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 技能执行器 - 基于 D2MOO Skills.cpp 移植
+ * 技能执行器 - 基于 D2MOD Skills.cpp 移植
  * 
  * <p>管理技能的执行流程：
  * <ul>
@@ -18,7 +18,7 @@ import com.riiablo.logger.Logger;
  *   <li>技能后处理（消耗、冷却）</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/Skills.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/Skills.cpp
  * 
  * @author riiablo team
  */
@@ -270,7 +270,7 @@ public class SkillExecutor {
   /**
    * 执行技能
    * 
-   * <p>参考 D2MOO SKILLS_DoSkill
+   * <p>参考 D2MOD SKILLS_DoSkill
    * 
    * @param context 技能上下文
    * @return 执行结果

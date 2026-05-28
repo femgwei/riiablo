@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.quest;
 
 /**
- * 任务运行时数据 - 基于 D2MOO D2QuestDataStrc 移植
+ * 任务运行时数据 - 基于 D2MOD D2QuestDataStrc 移植
  * 
  * <p>存储任务的运行时状态和数据。
  * 
- * <p>参考：D2MOO/source/D2Game/include/QUESTS/Quests.h
+ * <p>参考：D2MOD/source/D2Game/include/QUESTS/Quests.h
  * 
  * @author riiablo team
  */

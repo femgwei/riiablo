@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 战斗系统 - 基于 D2MOO SUnitDmg.cpp 移植
+ * 战斗系统 - 基于 D2MOD SUnitDmg.cpp 移植
  * 
  * <p>实现完整的暗黑破坏神 II 战斗机制：
  * <ul>
@@ -20,7 +20,7 @@ import com.riiablo.logger.Logger;
  *   <li>吸血和法力偷取</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/SUnitDmg.cpp
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/SUnitDmg.cpp
  * 
  * @author riiablo team
  */
@@ -304,7 +304,7 @@ public class CombatSystem {
   /**
    * 计算攻击结果
    * 
-   * <p>参考 D2MOO SUNITDMG_CalculateDamage
+   * <p>参考 D2MOD SUNITDMG_CalculateDamage
    * 
    * @param attacker 攻击者数据
    * @param defender 防御者数据

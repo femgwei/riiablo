@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.trade;
 
 /**
- * 交易工具类 - 基于 D2MOO PlrTrade.cpp 移植
+ * 交易工具类 - 基于 D2MOD PlrTrade.cpp 移植
  * 
  * <p>提供交易相关的辅助计算方法。
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlrTrade.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlrTrade.cpp
  * 
  * @author riiablo team
  */

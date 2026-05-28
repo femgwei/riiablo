@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 状态效果管理器 - 基于 D2MOO D2States.cpp 移植
+ * 状态效果管理器 - 基于 D2MOD D2States.cpp 移植
  * 
  * <p>管理所有 Buff/Debuff 状态效果：
  * <ul>
@@ -18,7 +18,7 @@ import com.riiablo.logger.Logger;
  *   <li>状态免疫检查</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Common/src/D2States.cpp
+ * <p>参考：D2MOD/source/D2Common/src/D2States.cpp
  * 
  * @author riiablo team
  */

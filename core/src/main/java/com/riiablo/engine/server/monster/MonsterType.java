@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.monster;
 
 /**
- * 怪物类型枚举 - 基于 D2MOO MonsterIds.h 移植
+ * 怪物类型枚举 - 基于 D2MOD MonsterIds.h 移植
  * 
  * <p>定义了游戏中重要的怪物类型ID，这些ID对应 monstats.txt 中的条目。
  * 
- * <p>参考：D2MOO/source/D2Common/include/DataTbls/MonsterIds.h
+ * <p>参考：D2MOD/source/D2Common/include/DataTbls/MonsterIds.h
  * 
  * @author riiablo team
  */

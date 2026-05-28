@@ -17,9 +17,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * SkeletonBow AI implementation matching D2MOO's AITHINK_Fn037_SkeletonBow logic.
+ * SkeletonBow AI implementation matching D2MOD's AITHINK_Fn037_SkeletonBow logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = SKELETONBOW_AI_PARAM_SHOOT_CHANCE_PCT (shoot chance)
  * - params[1] = SKELETONBOW_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = SKELETONBOW_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
@@ -170,9 +170,9 @@ public class SkeletonBow extends AI {
 
     Vector2 targetPos = mPosition.get(targetId).position;
 
-    // D2MOO: Check special AI state first
+    // D2MOD: Check special AI state first
     if (checkSpecialAiState()) {
-      // D2MOO: Find better target and attack
+      // D2MOD: Find better target and attack
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
@@ -182,10 +182,10 @@ public class SkeletonBow extends AI {
       return;
     }
 
-    // D2MOO: If target is within range (distance < 20)
+    // D2MOD: If target is within range (distance < 20)
     float shootDistance = params.length > 4 ? params[4] : 20f;
     if (targetDistance < shootDistance) {
-      // D2MOO: Check shoot chance
+      // D2MOD: Check shoot chance
       if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
@@ -197,22 +197,22 @@ public class SkeletonBow extends AI {
         return;
       }
 
-      // D2MOO: 20% chance to circle
+      // D2MOD: 20% chance to circle
       if (MathUtils.randomBoolean(0.2f)) {
-        // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
+        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
       }
 
-      // D2MOO: Idle
+      // D2MOD: Idle
       stateMachine.changeState(State.IDLE);
       time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
 
-    // D2MOO: Too far, approach
+    // D2MOD: Too far, approach
     if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);

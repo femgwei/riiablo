@@ -9,7 +9,7 @@ package com.riiablo.codec.excel;
  * 
  * 典型例子：Corpsefire（尸火）、Pindleskin（平得尔斯金）、Nihlathak（尼拉塞克）
  * 
- * 参考：D2MOO D2SuperUniquesTxt 结构
+ * 参考：D2MOD D2SuperUniquesTxt 结构
  */
 @Excel.Binned
 public class SuperUniques extends Excel<SuperUniques.Entry> {

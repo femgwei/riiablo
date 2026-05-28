@@ -16,9 +16,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * SandLeaper AI implementation matching D2MOO's AITHINK_Fn017_SandLeaper logic.
+ * SandLeaper AI implementation matching D2MOD's AITHINK_Fn017_SandLeaper logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = SANDLEAPER_AI_PARAM_LEAP_CHANCE_PCT (leap chance)
  * - params[1] = SANDLEAPER_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[2] = SANDLEAPER_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
@@ -154,10 +154,10 @@ public class SandLeaper extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: Check if should use leap skill (distance < 5)
+    // D2MOD: Check if should use leap skill (distance < 5)
     if (targetDistance < 5 && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
         && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-      // D2MOO: Use leap skill (nSkill[0])
+      // D2MOD: Use leap skill (nSkill[0])
       // TODO: Implement skill casting for leap
       stateMachine.changeState(State.LEAP);
       lookAt(targetId);
@@ -168,7 +168,7 @@ public class SandLeaper extends AI {
       return;
     }
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
       if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
         pathfinder.findPath(entityId, null);
@@ -181,10 +181,10 @@ public class SandLeaper extends AI {
         return;
       }
     } else {
-      // D2MOO: Not in combat
+      // D2MOD: Not in combat
       if (targetDistance > 10) {
-        // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
-        // D2MOO: D2GAME_AICORE_WalkToOwner_6FCD0B60(pGame, pUnit, pAiTickParam->pTarget, 5u)
+        // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
+        // D2MOD: D2GAME_AICORE_WalkToOwner_6FCD0B60(pGame, pUnit, pAiTickParam->pTarget, 5u)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
@@ -199,7 +199,7 @@ public class SandLeaper extends AI {
       }
 
       if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-        // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
+        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
         // Circle around target
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);

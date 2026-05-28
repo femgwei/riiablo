@@ -9,7 +9,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 防御计算器 - 基于 D2MOO SUnitDmg.cpp 移植
+ * 防御计算器 - 基于 D2MOD SUnitDmg.cpp 移植
  * 
  * <p>该类实现了暗黑破坏神2的完整防御计算公式，包括：
  * <ul>
@@ -19,7 +19,7 @@ import com.riiablo.logger.Logger;
  *   <li>吸收计算（火焰吸收、闪电吸收等）</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/SUnitDmg.cpp
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/SUnitDmg.cpp
  * 
  * @author riiablo team
  */
@@ -82,7 +82,7 @@ public class DefenseCalculator {
   /**
    * 检查是否触发任何防御机制
    * 
-   * <p>防御判定顺序（来自 D2MOO）：
+   * <p>防御判定顺序（来自 D2MOD）：
    * <ol>
    *   <li>格挡（需要装备盾牌且不在跑步/行走）</li>
    *   <li>武器格挡（刺客武器格挡技能）</li>
@@ -155,7 +155,7 @@ public class DefenseCalculator {
   /**
    * 计算格挡几率
    * 
-   * <p>格挡公式（来自 D2MOO）：
+   * <p>格挡公式（来自 D2MOD）：
    * <pre>
    * 格挡率 = 盾牌格挡% * (DEX - 15) / (等级 * 2)
    * </pre>
@@ -170,7 +170,7 @@ public class DefenseCalculator {
       return 0;
     }
 
-    // D2MOO 格挡公式
+    // D2MOD 格挡公式
     int effectiveBlock = baseBlockChance + (dexterity - BLOCK_BASE_DEX) / (Math.max(level, 1) * 2);
     return Math.max(0, Math.min(MAX_BLOCK_CHANCE, effectiveBlock));
   }

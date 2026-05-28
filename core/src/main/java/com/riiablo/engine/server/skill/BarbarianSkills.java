@@ -6,11 +6,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 野蛮人技能实现 - 基于 D2MOO SkillBar.cpp 移植
+ * 野蛮人技能实现 - 基于 D2MOD SkillBar.cpp 移植
  * 
  * <p>包含战斗技能、战吼、战斗专精三系技能的实现。
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/SkillBar.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/SkillBar.cpp
  * 
  * @author riiablo team
  */

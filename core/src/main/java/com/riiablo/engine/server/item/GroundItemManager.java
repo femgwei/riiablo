@@ -8,7 +8,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 地面物品管理器 - 基于 D2MOO ItemMode.cpp 移植
+ * 地面物品管理器 - 基于 D2MOD ItemMode.cpp 移植
  * 
  * <p>管理地面上的物品：
  * <ul>
@@ -25,7 +25,7 @@ import com.riiablo.logger.Logger;
  *   <li>不同品质物品显示不同颜色的名称</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/ITEMS/ItemMode.cpp
+ * <p>参考：D2MOD/source/D2Game/src/ITEMS/ItemMode.cpp
  * 
  * @author riiablo team
  */

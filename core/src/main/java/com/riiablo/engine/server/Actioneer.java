@@ -210,7 +210,7 @@ public class Actioneer extends PassiveSystem {
   }
 
   /**
-   * D2MOO: UNITS_GetMeleeRange(D2UnitStrc* pUnit)
+   * D2MOD: UNITS_GetMeleeRange(D2UnitStrc* pUnit)
    * Gets the melee range for an entity based on its type:
    * - Player: Returns RangeAdder from equipped weapon (0 if no weapon)
    * - Monster: Returns MeleeRng from MonStats2
@@ -222,16 +222,16 @@ public class Actioneer extends PassiveSystem {
     Class.Type type = mClass.get(entityId).type;
     switch (type) {
       case PLR:
-        // D2MOO: For players, get RangeAdder from equipped weapon
+        // D2MOD: For players, get RangeAdder from equipped weapon
         // TODO: Implement weapon inventory system to get actual RangeAdder
         // For now, return 0 (no weapon equipped)
         return 0;
       case MON:
-        // D2MOO: For monsters, get MeleeRng from MonStats2
+        // D2MOD: For monsters, get MeleeRng from MonStats2
         if (mMonster.has(entityId)) {
           Monster monster = mMonster.get(entityId);
           if (monster.monstats2 != null) {
-            // D2MOO: If MeleeRng == 255, check weapon class (2HT = 2, else 0)
+            // D2MOD: If MeleeRng == 255, check weapon class (2HT = 2, else 0)
             // For simplicity, we'll just return MeleeRng (assuming it's not 255)
             return monster.monstats2.MeleeRng;
           }
@@ -243,7 +243,7 @@ public class Actioneer extends PassiveSystem {
   }
 
   /**
-   * D2MOO: UNITS_IsInMeleeRange(D2UnitStrc* pUnit1, D2UnitStrc* pUnit2, int nRangeBonus)
+   * D2MOD: UNITS_IsInMeleeRange(D2UnitStrc* pUnit1, D2UnitStrc* pUnit2, int nRangeBonus)
    * Checks if attacker is within melee range of target.
    * Formula: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= distance
    * 
@@ -264,7 +264,7 @@ public class Actioneer extends PassiveSystem {
     Vector2 targetPos = mPosition.get(targetId).position;
     float distance = attackerPos.dst(targetPos);
     
-    // D2MOO: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
+    // D2MOD: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
     int meleeRange = getMeleeRange(attackerId);
     return meleeRange + rangeBonus + 1 >= distance;
   }
@@ -276,7 +276,7 @@ public class Actioneer extends PassiveSystem {
         event.entityId, event.keyframe, Engine.getKeyframe(event.keyframe));
     final Casting casting = mCasting.get(event.entityId);
     
-    // D2MOO: Check if target is dead before processing attack keyframe
+    // D2MOD: Check if target is dead before processing attack keyframe
     // If target is dead, skip damage/events but allow animation to complete
     // This ensures attack animation is shown at least once even if target dies immediately
     boolean targetDead = false;
@@ -323,7 +323,7 @@ public class Actioneer extends PassiveSystem {
     log.traceEntry("onAnimDataFinished(entityId: {})", event.entityId);
     final Casting casting = mCasting.get(event.entityId);
     
-    // D2MOO: Check if target is dead after attack animation completes
+    // D2MOD: Check if target is dead after attack animation completes
     boolean targetDead = false;
     if (casting.targetId != Engine.INVALID_ENTITY) {
       if (!mAttributesWrapper.has(casting.targetId)) {
@@ -345,7 +345,7 @@ public class Actioneer extends PassiveSystem {
       if (mTarget.has(event.entityId)) {
         mTarget.remove(event.entityId);
       }
-      // D2MOO: Require release before next attack; prevents repeated swinging after target death
+      // D2MOD: Require release before next attack; prevents repeated swinging after target death
       lastAttackTargetDied.add(event.entityId);
     }
   }
@@ -429,7 +429,7 @@ public class Actioneer extends PassiveSystem {
         }
         log.debug("{} {}", targetId, hitpoints.asFixed());
 
-        // D2MOO: 命中判定（level、AR、defense），未命中则不造成伤害
+        // D2MOD: 命中判定（level、AR、defense），未命中则不造成伤害
         if (!mAttributesWrapper.has(entityId)) {
           log.debug("{} has no attributes, cannot attack", entityId);
           break;
@@ -554,9 +554,9 @@ public class Actioneer extends PassiveSystem {
       if (ms != null && ms.A1MinD != null && ms.A1MaxD != null && ms.A1MinD.length > 0 && ms.A1MaxD.length > 0) {
         int diff = 0; // Normal; TODO: use game difficulty when exposed
         int di = Math.min(diff, Math.min(ms.A1MinD.length, ms.A1MaxD.length) - 1);
-        // 参考D2MOO: MonsterMode.cpp中nA1MinD/nA1MaxD被设置为STAT_MINDAMAGE/STAT_MAXDAMAGE（原始值）
+        // 参考D2MOD: MonsterMode.cpp中nA1MinD/nA1MaxD被设置为STAT_MINDAMAGE/STAT_MAXDAMAGE（原始值）
         // 然后在SUnitDmg.cpp中从STAT读取时左移8位（乘以256），转换为固定点数
-        // 在D2MOO中，伤害值和HP都是以256为单位的固定点数，所以直接相减
+        // 在D2MOD中，伤害值和HP都是以256为单位的固定点数，所以直接相减
         // 在riiablo中，HP是实际值（50.0），所以需要将A1MinD/A1MaxD除以256转换为实际伤害值
         // 使用向上取整确保最小伤害至少为1（暗黑2中伤害没有小数）
         minDmg = Math.max(1, (ms.A1MinD[di] + 255) / 256);  // 向上取整

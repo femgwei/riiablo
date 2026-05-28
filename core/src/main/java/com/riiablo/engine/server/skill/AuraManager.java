@@ -9,7 +9,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 光环管理器 - 基于 D2MOO SkillPal.cpp 移植
+ * 光环管理器 - 基于 D2MOD SkillPal.cpp 移植
  * 
  * <p>管理圣骑士光环及其他光环效果：
  * <ul>
@@ -20,7 +20,7 @@ import com.riiablo.logger.Logger;
  *   <li>光环持续消耗</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/SkillPal.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/SkillPal.cpp
  * 
  * @author riiablo team
  */

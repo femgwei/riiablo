@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * Scarab AI implementation matching D2MOO's AITHINK_Fn020_Scarab logic.
+ * Scarab AI implementation matching D2MOD's AITHINK_Fn020_Scarab logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = SCARAB_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[1] = SCARAB_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT (A1 vs A2 chance)
  * - params[2] = SCARAB_AI_PARAM_STALL_DURATION (idle time)
@@ -150,15 +150,15 @@ public class Scarab extends AI {
       }
     }
 
-    // D2MOO: Check command state
+    // D2MOD: Check command state
     if (aiParam0 == 1) {
       if (targetId != Engine.INVALID_ENTITY) {
         Vector2 targetPos = mPosition.get(targetId).position;
         boolean bCombat = isInCombat(targetId);
         
-        // D2MOO: If in combat and has skill, use it
+        // D2MOD: If in combat and has skill, use it
         if (bCombat && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-          // D2MOO: Use skill (nSkill[0])
+          // D2MOD: Use skill (nSkill[0])
           // TODO: Implement skill casting
           aiParam0 = 0;
           pathfinder.findPath(entityId, null);
@@ -169,8 +169,8 @@ public class Scarab extends AI {
           time = MathUtils.random(1f, 2);
           return;
         } else {
-          // D2MOO: AITACTICS_SetVelocity(pUnit, 2, 100, 0)
-          // D2MOO: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 0)
+          // D2MOD: AITACTICS_SetVelocity(pUnit, 2, 100, 0)
+          // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 0)
           pathfinder.findPath(entityId, targetPos, false, targetId);
           stateMachine.changeState(State.APPROACH);
           time = MathUtils.random(1f, 2);
@@ -208,21 +208,21 @@ public class Scarab extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If not in combat
+    // D2MOD: If not in combat
     if (!bCombat) {
       if (aiParam0 != 0) {
-        // D2MOO: AITACTICS_SetVelocity(pUnit, 2, 0, 4u)
-        // D2MOO: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
+        // D2MOD: AITACTICS_SetVelocity(pUnit, 2, 0, 4u)
+        // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
-        // D2MOO: 10% chance to exit command state
+        // D2MOD: 10% chance to exit command state
         if (MathUtils.randomBoolean(0.1f)) {
           aiParam0 = 0;
         }
         time = MathUtils.random(1f, 2);
         return;
       } else {
-        // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 0, 0)
+        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 0, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         aiParam0 = 1;
         stateMachine.changeState(State.APPROACH);
@@ -231,7 +231,7 @@ public class Scarab extends AI {
       }
     }
 
-    // D2MOO: In combat
+    // D2MOD: In combat
     if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -243,7 +243,7 @@ public class Scarab extends AI {
       time = MathUtils.random(1f, 2);
       return;
     } else {
-      // D2MOO: Check jab chance
+      // D2MOD: Check jab chance
       if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);

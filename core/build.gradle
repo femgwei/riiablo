@@ -63,6 +63,11 @@ dependencies {
   implementation project(':table:annotations')
 }
 
+// D2MOO_JAVA: Act1 DRLG layout (allocDrlg / createLevelConnections)
+dependencies {
+  implementation project(':D2MOO_JAVA')
+}
+
 // Networking
 dependencies {
   api "com.google.flatbuffers:flatbuffers-java:$flatbuffersVersion"

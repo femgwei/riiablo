@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * FetishShaman AI implementation matching D2MOO's AITHINK_Fn065_FetishShaman logic.
+ * FetishShaman AI implementation matching D2MOD's AITHINK_Fn065_FetishShaman logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = FETISHSHAMAN_AI_PARAM_HEAL_CHANCE_PCT (heal chance)
  * - params[1] = FETISHSHAMAN_AI_PARAM_HEAL_CAPABILITY (heal capability)
  * - params[2] = FETISHSHAMAN_AI_PARAM_HEAL_RANGE (heal range)
@@ -155,17 +155,17 @@ public class FetishShaman extends AI {
       }
     }
 
-    // D2MOO: Check inferno state and skill range
+    // D2MOD: Check inferno state and skill range
     int skillLevel = 1;
     // TODO: Get skill level from monster's skill
     if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
       skillLevel = Math.max(1, 1); // Simplified
     }
 
-    // D2MOO: If can use inferno skill (distance < skill level) and not in inferno state
+    // D2MOD: If can use inferno skill (distance < skill level) and not in inferno state
     if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
         && targetDistance < skillLevel && !isInInfernoState()) {
-      // D2MOO: Use inferno skill (nSkill[0])
+      // D2MOD: Use inferno skill (nSkill[0])
       // TODO: Implement skill casting
       stateMachine.changeState(State.CAST);
       if (targetId != Engine.INVALID_ENTITY) {
@@ -178,24 +178,24 @@ public class FetishShaman extends AI {
       return;
     }
 
-    // D2MOO: Check inferno state
+    // D2MOD: Check inferno state
     if (isInInfernoState()) {
-      // D2MOO: Toggle off inferno state
+      // D2MOD: Toggle off inferno state
       // TODO: Implement state toggle
     }
 
-    // D2MOO: Check heal dead ally
+    // D2MOD: Check heal dead ally
     float healSearchRange = params.length > 4 ? params[4] : 15f;
     int deadAllyId = findNearbyDeadAlly(healSearchRange);
     if (deadAllyId != Engine.INVALID_ENTITY && monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()
         && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-      // D2MOO: Use heal skill (nSkill[2])
+      // D2MOD: Use heal skill (nSkill[2])
       float healRange = params.length > 2 ? params[2] : 5f;
       Vector2 deadPos = mPosition.get(deadAllyId).position;
       float deadDist = entityPos.dst(deadPos);
       
       if (deadDist <= healRange) {
-        // D2MOO: Use sequence skill
+        // D2MOD: Use sequence skill
         // TODO: Implement skill casting
         stateMachine.changeState(State.HEAL);
         lookAt(deadAllyId);
@@ -204,8 +204,8 @@ public class FetishShaman extends AI {
         time = MathUtils.random(1f, 2);
         return;
       } else {
-        // D2MOO: Walk to dead ally
-        // D2MOO: D2GAME_AICORE_WalkToOwner_6FCD0B60(pGame, pUnit, arg.pClosestDeadTarget, 10)
+        // D2MOD: Walk to dead ally
+        // D2MOD: D2GAME_AICORE_WalkToOwner_6FCD0B60(pGame, pUnit, arg.pClosestDeadTarget, 10)
         pathfinder.findPath(entityId, deadPos, false, deadAllyId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
@@ -213,13 +213,13 @@ public class FetishShaman extends AI {
       }
     }
 
-    // D2MOO: Circle or idle
+    // D2MOD: Circle or idle
     if (params.length > 3 && !MathUtils.randomBoolean(params[3] / 100f)) {
       stateMachine.changeState(State.IDLE);
       time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     } else {
-      // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
+      // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
       if (targetId != Engine.INVALID_ENTITY) {
         Vector2 targetPos = mPosition.get(targetId).position;
         pathfinder.findPath(entityId, targetPos, false, targetId);

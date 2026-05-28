@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.item;
 
 /**
- * 物品类型枚举 - 基于 D2MOO D2C_ItemTypes 移植
+ * 物品类型枚举 - 基于 D2MOD D2C_ItemTypes 移植
  * 
  * <p>定义了游戏中所有物品类型，对应 itemtypes.txt 中的条目。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2Items.h
+ * <p>参考：D2MOD/source/D2Common/include/D2Items.h
  * 
  * @author riiablo team
  */

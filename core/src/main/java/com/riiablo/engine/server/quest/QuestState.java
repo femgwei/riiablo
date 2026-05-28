@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.quest;
 
 /**
- * 任务状态枚举 - 基于 D2MOO 任务状态系统移植
+ * 任务状态枚举 - 基于 D2MOD 任务状态系统移植
  * 
  * <p>定义了任务的各种状态。
  * 
- * <p>参考：D2MOO/source/D2Game/include/QUESTS/Quests.h
+ * <p>参考：D2MOD/source/D2Game/include/QUESTS/Quests.h
  * 
  * @author riiablo team
  */

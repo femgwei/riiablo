@@ -3,11 +3,11 @@ package com.riiablo.engine.server.trade;
 import com.badlogic.gdx.utils.Array;
 
 /**
- * 交易会话 - 基于 D2MOO 移植
+ * 交易会话 - 基于 D2MOD 移植
  * 
  * <p>代表一次交易的完整会话，包含双方的交易数据。
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlrTrade.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlrTrade.cpp
  * 
  * @author riiablo team
  */

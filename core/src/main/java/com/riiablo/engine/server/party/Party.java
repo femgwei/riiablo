@@ -4,11 +4,11 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 
 /**
- * 队伍实例 - 基于 D2MOO D2PartyStrc 移植
+ * 队伍实例 - 基于 D2MOD D2PartyStrc 移植
  * 
  * <p>代表一个游戏内的队伍，管理队伍成员。
  * 
- * <p>参考：D2MOO/source/D2Game/include/UNIT/Party.h
+ * <p>参考：D2MOD/source/D2Game/include/UNIT/Party.h
  * 
  * @author riiablo team
  */

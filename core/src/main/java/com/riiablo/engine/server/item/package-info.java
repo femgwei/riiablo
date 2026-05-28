@@ -1,5 +1,5 @@
 /**
- * 物品系统模块 - 基于 D2MOO Items 移植
+ * 物品系统模块 - 基于 D2MOD Items 移植
  * 
  * <p>该模块管理游戏中的物品，包括：
  * <ul>
@@ -33,9 +33,9 @@
  * 
  * <h2>参考来源</h2>
  * <ul>
- *   <li>D2MOO/source/D2Common/include/D2Items.h</li>
- *   <li>D2MOO/source/D2Game/src/ITEMS/Items.cpp</li>
- *   <li>D2MOO/source/D2Game/src/ITEMS/ItemsMagic.cpp</li>
+ *   <li>D2MOD/source/D2Common/include/D2Items.h</li>
+ *   <li>D2MOD/source/D2Game/src/ITEMS/Items.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/ITEMS/ItemsMagic.cpp</li>
  * </ul>
  * 
  * @author riiablo team

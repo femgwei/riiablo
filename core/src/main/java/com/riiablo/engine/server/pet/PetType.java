@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.pet;
 
 /**
- * 宠物类型枚举 - 基于 D2MOO PlayerPets.h 移植
+ * 宠物类型枚举 - 基于 D2MOD PlayerPets.h 移植
  * 
  * <p>定义了游戏中所有召唤物/宠物的类型。
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlayerPets.h
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlayerPets.h
  * 
  * @author riiablo team
  */

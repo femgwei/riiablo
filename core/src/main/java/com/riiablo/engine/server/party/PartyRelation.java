@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.party;
 
 /**
- * 队伍关系类型 - 基于 D2MOO 移植
+ * 队伍关系类型 - 基于 D2MOD 移植
  * 
  * <p>定义了玩家之间的各种关系状态。
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/Friendly.cpp
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/Friendly.cpp
  * 
  * @author riiablo team
  */

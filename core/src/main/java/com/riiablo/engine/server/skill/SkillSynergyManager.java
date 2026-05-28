@@ -7,7 +7,7 @@ import com.riiablo.logger.Logger;
 import com.riiablo.save.CharData;
 
 /**
- * 技能协同管理器 - 基于 D2MOO 移植
+ * 技能协同管理器 - 基于 D2MOD 移植
  * 
  * <p>管理技能之间的协同加成：
  * <ul>
@@ -21,7 +21,7 @@ import com.riiablo.save.CharData;
  * - 火球可以从火焰箭、火墙等技能获得伤害加成
  * - 每点协同技能通常提供一定百分比的加成
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/Skills.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/Skills.cpp
  * 
  * @author riiablo team
  */
@@ -55,7 +55,7 @@ public class SkillSynergyManager {
   /**
    * 计算技能协同加成百分比
    * 
-   * <p>参考 D2MOO SKILLS_GetSynergyBonus
+   * <p>参考 D2MOD SKILLS_GetSynergyBonus
    * 
    * @param charData 角色数据
    * @param skillId 技能ID

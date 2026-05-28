@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.monster;
 
 /**
- * 怪物标志位 - 基于 D2MOO MonStatsTxt 标志移植
+ * 怪物标志位 - 基于 D2MOD MonStatsTxt 标志移植
  * 
  * <p>定义了怪物的各种属性标志，对应 monstats.txt 中的标志列。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2DataTbls.h
+ * <p>参考：D2MOD/source/D2Common/include/D2DataTbls.h
  * 
  * @author riiablo team
  */

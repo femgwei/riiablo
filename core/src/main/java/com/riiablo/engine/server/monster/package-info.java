@@ -1,5 +1,5 @@
 /**
- * 怪物系统模块 - 基于 D2MOO Monster 移植
+ * 怪物系统模块 - 基于 D2MOD Monster 移植
  * 
  * <p>该模块管理游戏中的怪物，包括：
  * <ul>
@@ -30,9 +30,9 @@
  * 
  * <h2>参考来源</h2>
  * <ul>
- *   <li>D2MOO/source/D2Game/include/MONSTER/Monster.h</li>
- *   <li>D2MOO/source/D2Game/src/MONSTER/Monster.cpp</li>
- *   <li>D2MOO/source/D2Game/src/MONSTER/MonsterMode.cpp</li>
+ *   <li>D2MOD/source/D2Game/include/MONSTER/Monster.h</li>
+ *   <li>D2MOD/source/D2Game/src/MONSTER/Monster.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/MONSTER/MonsterMode.cpp</li>
  * </ul>
  * 
  * @author riiablo team

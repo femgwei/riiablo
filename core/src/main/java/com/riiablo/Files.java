@@ -20,7 +20,9 @@ import com.riiablo.codec.excel.ItemStatCost;
 import com.riiablo.codec.excel.ItemTypes;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LowQualityItems;
+import com.riiablo.codec.excel.LvlMaze;
 import com.riiablo.codec.excel.LvlPrest;
+import com.riiablo.codec.excel.LvlSub;
 import com.riiablo.codec.excel.LvlTypes;
 import com.riiablo.codec.excel.LvlWarp;
 import com.riiablo.codec.excel.MagicPrefix;
@@ -84,9 +86,16 @@ public class Files {
    */
   public final AutoMap          AutoMap;
   public final LowQualityItems  LowQualityItems;
+  public final LvlMaze          LvlMaze;
   public final LvlPrest         LvlPrest;
   public final LvlTypes         LvlTypes;
   public final LvlWarp          LvlWarp;
+  /**
+   * LvlSub.txt 表
+   *
+   * 用于驱动野外区域的子类型 / 替换规则（池塘、岩石、密度控制等）
+   */
+  public final LvlSub           LvlSub;
   public final Misc             misc;
   public final Missiles         Missiles;
   public final MagicPrefix      MagicPrefix;
@@ -146,9 +155,11 @@ public class Files {
     // 加载 AutoMap.txt（不区分是否为资料片，使用原始表即可）
     AutoMap          = load(AutoMap.class);
     LowQualityItems  = load(LowQualityItems.class);
+    LvlMaze          = load(LvlMaze.class);
     LvlPrest         = load(LvlPrest.class);
     LvlTypes         = load(LvlTypes.class);
     LvlWarp          = load(LvlWarp.class, Excel.EXPANSION);
+    LvlSub           = load(LvlSub.class);
     misc             = load(Misc.class, Excel.EXPANSION);
     Missiles         = load(Missiles.class);
     MagicPrefix      = load(MagicPrefix.class, Excel.EXPANSION);

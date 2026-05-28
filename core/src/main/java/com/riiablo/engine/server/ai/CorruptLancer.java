@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * CorruptLancer AI implementation matching D2MOO's AITHINK_Fn036_CorruptLancer logic.
+ * CorruptLancer AI implementation matching D2MOD's AITHINK_Fn036_CorruptLancer logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = CORRUPTLANCER_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[1] = CORRUPTLANCER_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = CORRUPTLANCER_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
@@ -165,7 +165,7 @@ public class CorruptLancer extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
       if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
         pathfinder.findPath(entityId, null);
@@ -183,20 +183,20 @@ public class CorruptLancer extends AI {
       }
     }
 
-    // D2MOO: Not in combat, approach
+    // D2MOD: Not in combat, approach
     if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-      // D2MOO: PATH_SetStepNum(pUnit->pDynamicPath, pAiTickParam->pMonstats2Txt->nMeleeRng)
+      // D2MOD: PATH_SetStepNum(pUnit->pDynamicPath, pAiTickParam->pMonstats2Txt->nMeleeRng)
       float meleeRng = 1f + monster.monstats2.MeleeRng;
       
       if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-        // D2MOO: AITACTICS_SetVelocity(pUnit, 13, 100, 0)
-        // D2MOO: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, pAiTickParam->pMonstats2Txt->nMeleeRng)
+        // D2MOD: AITACTICS_SetVelocity(pUnit, 13, 100, 0)
+        // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, pAiTickParam->pMonstats2Txt->nMeleeRng)
         pathfinder.findPath(entityId, targetPos, true, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
       } else {
-        // D2MOO: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
+        // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);

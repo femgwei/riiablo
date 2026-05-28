@@ -1,5 +1,5 @@
 /**
- * 宠物系统 - 基于 D2MOO PlayerPets 模块移植
+ * 宠物系统 - 基于 D2MOD PlayerPets 模块移植
  * 
  * <p>管理游戏中所有召唤物/宠物的创建、更新和销毁。
  * 
@@ -19,7 +19,7 @@
  *   <li>法师：九头蛇</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlayerPets.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlayerPets.cpp
  * 
  * @author riiablo team
  */

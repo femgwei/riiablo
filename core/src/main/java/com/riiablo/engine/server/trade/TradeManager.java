@@ -7,11 +7,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 交易管理器 - 基于 D2MOO PlrTrade.cpp 移植
+ * 交易管理器 - 基于 D2MOD PlrTrade.cpp 移植
  * 
  * <p>管理所有交易会话的创建、执行、完成等操作。
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlrTrade.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlrTrade.cpp
  * 
  * @author riiablo team
  */
@@ -97,7 +97,7 @@ public class TradeManager {
   /**
    * 发起交易请求
    * 
-   * <p>对应 D2MOO PLRTRADE_TryToTrade
+   * <p>对应 D2MOD PLRTRADE_TryToTrade
    * 
    * @param requesterId 发起者实体 ID
    * @param targetId 目标实体 ID
@@ -362,7 +362,7 @@ public class TradeManager {
   /**
    * 取消交易
    * 
-   * <p>对应 D2MOO PLRTRADE_StopAllPlayerInteractions
+   * <p>对应 D2MOD PLRTRADE_StopAllPlayerInteractions
    * 
    * @param playerId 玩家实体 ID
    * @return 结果代码
@@ -477,7 +477,7 @@ public class TradeManager {
   /**
    * 检查玩家是否在交易中
    * 
-   * <p>对应 D2MOO D2GAME_PLRTRADE_IsInteractingWithPlayer
+   * <p>对应 D2MOD D2GAME_PLRTRADE_IsInteractingWithPlayer
    * 
    * @param playerId 玩家实体 ID
    * @return true 如果在交易中

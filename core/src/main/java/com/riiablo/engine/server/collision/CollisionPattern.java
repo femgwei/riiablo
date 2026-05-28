@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.collision;
 
 /**
- * 碰撞模式 - 基于 D2MOO D2C_CollisionPattern 移植
+ * 碰撞模式 - 基于 D2MOD D2C_CollisionPattern 移植
  * 
  * <p>定义了不同类型单位的碰撞检测模式。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2Collision.h
+ * <p>参考：D2MOD/source/D2Common/include/D2Collision.h
  * 
  * @author riiablo team
  */

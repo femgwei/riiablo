@@ -241,6 +241,28 @@ public class Cvars {
             .build();
       }
     }
+
+    interface Map {
+      Cvar<Boolean> UseD2MODImplementation = Cvar.builder(Boolean.class)
+          .alias("Client.Map.UseD2MODImplementation")
+          .description("Whether to use D2MOD map generation implementation instead of the original one")
+          .defaultValue(Boolean.TRUE)
+          .validator(Validator.ACCEPT_NON_NULL)
+          .build();
+
+    /**
+     * 是否从 DRLG TileGrid 重建并渲染地板（当前仅用于 Act1 Blood Moor 调试）。
+     *
+     * - false：使用现有 Zone 生成结果渲染（默认行为）；
+     * - true ：在 Zone.generate() 之后，用 TileGrid 覆盖 Blood Moor 的地板。
+     */
+    Cvar<Boolean> RenderFromTileGrid = Cvar.builder(Boolean.class)
+        .alias("Client.Map.RenderFromTileGrid")
+        .description("Render outdoor floors from DRLG TileGrid instead of the original generator (Act1 Blood Moor only for now)")
+        .defaultValue(Boolean.FALSE)
+        .validator(Validator.ACCEPT_NON_NULL)
+        .build();
+    }
   }
 
 }

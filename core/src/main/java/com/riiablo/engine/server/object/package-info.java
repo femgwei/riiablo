@@ -1,5 +1,5 @@
 /**
- * 场景对象系统 - 基于 D2MOO Objects 模块移植
+ * 场景对象系统 - 基于 D2MOD Objects 模块移植
  * 
  * <p>管理游戏中所有场景对象的创建、交互和效果。
  * 
@@ -20,7 +20,7 @@
  *   <li>任务对象：各种任务相关的特殊对象</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/OBJECTS/Objects.cpp
+ * <p>参考：D2MOD/source/D2Game/src/OBJECTS/Objects.cpp
  * 
  * @author riiablo team
  */

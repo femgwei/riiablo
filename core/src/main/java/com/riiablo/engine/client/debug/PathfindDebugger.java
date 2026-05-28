@@ -15,13 +15,14 @@ import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.graphics.PaletteIndexedBatch;
+
 import com.riiablo.map.RenderSystem;
 import com.riiablo.map.pfa.GraphPath;
 import com.riiablo.map.pfa.Point2;
 import com.riiablo.profiler.GpuSystem;
 
 @GpuSystem
-@All({Pathfind.class, Position.class})
+@All(Position.class)  // 有 Position 的实体（如玩家）在场时才会处理 Pathfind 调试绘制
 public class PathfindDebugger extends IteratingSystem {
   private final float BOX_SIZE = 8;
   private final float HALF_BOX = BOX_SIZE / 2;
@@ -50,6 +51,7 @@ public class PathfindDebugger extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
+    if (!mPathfind.has(entityId)) return;
     Position position = mPosition.get(entityId);
     if (!renderer.withinRadius(position.position)) return;
     Pathfind pathfind = mPathfind.get(entityId);

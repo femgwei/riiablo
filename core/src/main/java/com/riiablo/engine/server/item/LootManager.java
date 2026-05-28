@@ -9,7 +9,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 掉落物品管理器 - 基于 D2MOO Items.cpp 移植
+ * 掉落物品管理器 - 基于 D2MOD Items.cpp 移植
  * 
  * <p>管理怪物死亡时的物品掉落逻辑，包括：
  * <ul>
@@ -20,7 +20,7 @@ import com.riiablo.logger.Logger;
  *   <li>物品数量判定</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/ITEMS/Items.cpp
+ * <p>参考：D2MOD/source/D2Game/src/ITEMS/Items.cpp
  * 
  * @author riiablo team
  */
@@ -229,7 +229,7 @@ public class LootManager {
   /**
    * 计算怪物死亡掉落
    * 
-   * <p>参考 D2MOO ITEMS_DropItems
+   * <p>参考 D2MOD ITEMS_DropItems
    * 
    * @param config 掉落配置
    * @return 掉落结果
@@ -334,7 +334,7 @@ public class LootManager {
   /**
    * 计算金币掉落
    * 
-   * <p>参考 D2MOO ITEMS_DropGold
+   * <p>参考 D2MOD ITEMS_DropGold
    */
   private void calculateGoldDrop(LootConfig config, LootResult result) {
     // 金币掉落几率（大部分怪物都掉金币）
@@ -463,7 +463,7 @@ public class LootManager {
   /**
    * 判定物品品质
    * 
-   * <p>参考 D2MOO 的品质判定逻辑：
+   * <p>参考 D2MOD 的品质判定逻辑：
    * <ol>
    *   <li>先判定暗金</li>
    *   <li>再判定套装</li>

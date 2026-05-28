@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * Goatman/Swarm AI implementation matching D2MOO's AITHINK_Fn012_019_Goatman_Swarm logic.
+ * Goatman/Swarm AI implementation matching D2MOD's AITHINK_Fn012_019_Goatman_Swarm logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = GOATMAN_SWARM_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
  * - params[1] = GOATMAN_SWARM_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = GOATMAN_SWARM_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
@@ -164,7 +164,7 @@ public class Goatman extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
       if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
         pathfinder.findPath(entityId, null);
@@ -182,7 +182,7 @@ public class Goatman extends AI {
       }
     }
 
-    // D2MOO: Not in combat, approach
+    // D2MOD: Not in combat, approach
     if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);

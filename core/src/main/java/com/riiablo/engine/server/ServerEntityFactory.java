@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.artemis.ComponentMapper;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
@@ -86,9 +87,9 @@ public class ServerEntityFactory extends EntityFactory {
     mMapWrapper.create(id).set(map, map.getZone(position));
 
     mPosition.create(id).position.set(position);
-    // D2MOO: UNITS_GetRunAndWalkSpeedForPlayer reads from CharStatsTxt.nWalkSpeed and nRunSpeed
+    // D2MOD: UNITS_GetRunAndWalkSpeedForPlayer reads from CharStatsTxt.nWalkSpeed and nRunSpeed
     // These values are in units that need to be converted to actual speed
-    // D2MOO uses these values directly (they're already in the correct units for the game)
+    // D2MOD uses these values directly (they're already in the correct units for the game)
     // In riiablo, we read from CharStats.WalkVelocity and RunVelocity
     com.riiablo.codec.excel.CharStats.Entry charStats = charData.classId != null ? charData.classId.entry() : null;
     float walkSpeed = charStats != null ? charStats.WalkVelocity : Engine.Player.SPEED_WALK;
@@ -176,8 +177,8 @@ public class ServerEntityFactory extends EntityFactory {
       StatListRef base = attrs.base();
       base.clear();
       
-      // Calculate monster stats based on level using D2MOO logic
-      // Reference: D2MOO DATATBLS_CalculateMonsterStatsByLevel
+      // Calculate monster stats based on level using D2MOD logic
+      // Reference: D2MOD DATATBLS_CalculateMonsterStatsByLevel
       MonsterStatsCalculator.MonsterStatsInit statsInit = new MonsterStatsCalculator.MonsterStatsInit();
       int monsterLevel = (monstats.Level != null && monstats.Level.length > 0) ? monstats.Level[0] : 1;
       int gameType = 1; // Assume expansion (can be made configurable)
@@ -211,7 +212,7 @@ public class ServerEntityFactory extends EntityFactory {
         base.put(Stat.maxhp, maxHp);
         
         // Set monster damage attributes (A1MinD/A1MaxD for attack 1)
-        // Reference D2MOO: Monsters use A1MinD/A1MaxD for their base damage
+        // Reference D2MOD: Monsters use A1MinD/A1MaxD for their base damage
         if (monstats.A1MinD != null && monstats.A1MaxD != null && 
             monstats.A1MinD.length > 0 && monstats.A1MaxD.length > 0) {
           base.put(Stat.mindamage, monstats.A1MinD[0]);
@@ -281,7 +282,20 @@ public class ServerEntityFactory extends EntityFactory {
     final int orientation = DT1.Tile.Index.orientation(index);
 
     Map.Zone zone = map.getZone(x, y);
-    int dst = zone.level.Vis[mainIndex];
+    int dstFromOverride = map.getWarpDestinationOverride(zone.level.Id, mainIndex);
+    int dst = dstFromOverride;
+    if (dst <= 0) {
+      dst = zone.level.Vis[mainIndex];
+    }
+    // 调试：Rogue Encampment 所有 warp 打日志
+    if (zone.level.Id == 1) {
+      Gdx.app.log(TAG, "createWarp RogueEnc: mainIndex=" + mainIndex + " dstFromOverride=" + dstFromOverride + " dstFromVis=" + zone.level.Vis[mainIndex] + " finalDst=" + dst);
+    }
+    // Act1 城镇出口：Rogue Encampment(1) 任意 warp 若指向 Cold Plains(3) 均改为 Blood Moor(2)
+    if (zone.level.Id == 1 && dst == 3) {
+      Gdx.app.log(TAG, "Warp fallback: RogueEnc dst ColdPlains(3)->BloodMoor(2) mainIndex=" + mainIndex);
+      dst = 2;
+    }
     assert dst > 0 : "Warp to unknown level!";
     int wrp = zone.level.Warp[mainIndex];
     assert wrp >= 0 : "Invalid warp";

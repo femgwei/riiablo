@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.cube;
 
 /**
- * 赫拉迪克方块配方 - 基于 D2MOO HoradricCube.h 移植
+ * 赫拉迪克方块配方 - 基于 D2MOD HoradricCube.h 移植
  * 
  * <p>表示单个配方的定义。
  * 
- * <p>参考：D2MOO/source/D2Common/src/DataTbls/HoradricCube.cpp
+ * <p>参考：D2MOD/source/D2Common/src/DataTbls/HoradricCube.cpp
  * 
  * @author riiablo team
  */

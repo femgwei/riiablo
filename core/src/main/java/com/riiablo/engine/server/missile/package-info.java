@@ -1,5 +1,5 @@
 /**
- * 投射物系统 - 基于 D2MOO MISSILES 模块移植
+ * 投射物系统 - 基于 D2MOD MISSILES 模块移植
  * 
  * <p>管理游戏中所有投射物的数据结构、ID 和标志位。
  * 
@@ -13,7 +13,7 @@
  *   <li>{@link com.riiablo.engine.server.missile.MissileFlags} - 投射物标志位</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/MISSILES/
+ * <p>参考：D2MOD/source/D2Game/src/MISSILES/
  * 
  * @author riiablo team
  */

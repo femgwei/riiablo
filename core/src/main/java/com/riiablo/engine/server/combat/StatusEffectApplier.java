@@ -4,7 +4,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 状态效果应用器 - 基于 D2MOO 移植
+ * 状态效果应用器 - 基于 D2MOD 移植
  * 
  * <p>处理伤害造成的状态效果：
  * <ul>
@@ -16,7 +16,7 @@ import com.riiablo.logger.Logger;
  *   <li>击退</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/SUnitDmg.cpp
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/SUnitDmg.cpp
  * 
  * @author riiablo team
  */
@@ -54,7 +54,7 @@ public class StatusEffectApplier {
   /**
    * 应用中毒效果
    * 
-   * <p>参考 D2MOO SUNITDMG_ApplyPoisonDamage
+   * <p>参考 D2MOD SUNITDMG_ApplyPoisonDamage
    * 
    * @param targetEntityId 目标实体ID
    * @param poisonDamage 每帧毒素伤害
@@ -78,7 +78,7 @@ public class StatusEffectApplier {
   /**
    * 应用燃烧效果
    * 
-   * <p>参考 D2MOO SUNITDMG_ApplyBurnDamage
+   * <p>参考 D2MOD SUNITDMG_ApplyBurnDamage
    * 
    * @param targetEntityId 目标实体ID
    * @param burnDamage 每帧燃烧伤害
@@ -101,7 +101,7 @@ public class StatusEffectApplier {
   /**
    * 应用冰冷减速效果
    * 
-   * <p>参考 D2MOO SUNITDMG_ApplyColdState
+   * <p>参考 D2MOD SUNITDMG_ApplyColdState
    * 
    * @param targetEntityId 目标实体ID
    * @param coldDuration 持续时间（帧）
@@ -121,7 +121,7 @@ public class StatusEffectApplier {
   /**
    * 应用冰冻效果（完全停止）
    * 
-   * <p>参考 D2MOO SUNITDMG_ApplyFreezeState
+   * <p>参考 D2MOD SUNITDMG_ApplyFreezeState
    * 
    * @param targetEntityId 目标实体ID
    * @param freezeDuration 持续时间（帧）

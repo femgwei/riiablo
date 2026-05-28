@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.party;
 
 /**
- * 队伍工具类 - 基于 D2MOO Party.cpp 移植
+ * 队伍工具类 - 基于 D2MOD Party.cpp 移植
  * 
  * <p>提供队伍相关的辅助计算方法。
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/Party.cpp
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/Party.cpp
  * 
  * @author riiablo team
  */
@@ -91,7 +91,7 @@ public final class PartyUtil {
   /**
    * 计算金币共享分配
    * 
-   * <p>对应 D2MOO PARTY_CalculatePickAndDrop
+   * <p>对应 D2MOD PARTY_CalculatePickAndDrop
    * 
    * @param goldValue 金币总量
    * @param currentGold 玩家当前金币

@@ -23,9 +23,9 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.AttributesWrapper;
 
 /**
- * Fetish AI implementation matching D2MOO's AITHINK_Fn030_Fetish logic.
+ * Fetish AI implementation matching D2MOD's AITHINK_Fn030_Fetish logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = FETISH_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[1] = FETISH_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = FETISH_AI_PARAM_ATTACK_LOOP (attack loop count)
@@ -185,7 +185,7 @@ public class Fetish extends AI {
     boolean bCombat = isInCombat(targetId);
     float lifePercent = getLifePercentage();
 
-    // D2MOO: State machine
+    // D2MOD: State machine
     switch (aiParam0) {
       case 0: // Normal state
         if (bCombat) {
@@ -208,8 +208,8 @@ public class Fetish extends AI {
           }
         }
         
-        // D2MOO: AITACTICS_SetVelocity(pUnit, 13, 50, 0)
-        // D2MOO: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
+        // D2MOD: AITACTICS_SetVelocity(pUnit, 13, 50, 0)
+        // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
@@ -224,8 +224,8 @@ public class Fetish extends AI {
         if (aiParam1 > attackLoop && lifePercent > weakPct) {
           aiParam0 = 2;
           aiParam1 = 0;
-          // D2MOO: AITACTICS_SetVelocity(pUnit, 2, 50, 0)
-          // D2MOO: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 14, 1)
+          // D2MOD: AITACTICS_SetVelocity(pUnit, 2, 50, 0)
+          // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 14, 1)
           stateMachine.changeState(State.ESCAPE);
           Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
           Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(14f));
@@ -251,15 +251,15 @@ public class Fetish extends AI {
           }
         }
         
-        // D2MOO: AITACTICS_SetVelocity(pUnit, 13, 50, 0)
-        // D2MOO: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 0)
+        // D2MOD: AITACTICS_SetVelocity(pUnit, 13, 50, 0)
+        // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
 
       case 2: // Escaping state
-        // D2MOO: Continue escaping
+        // D2MOD: Continue escaping
         stateMachine.changeState(State.ESCAPE);
         Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
         Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(14f));

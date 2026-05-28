@@ -22,13 +22,13 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * Brute AI implementation matching D2MOO's AITHINK_Fn007_Brute logic.
+ * Brute AI implementation matching D2MOD's AITHINK_Fn007_Brute logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = BRUTE_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[1] = BRUTE_AI_PARAM_ATTACK1_OR_2_CHANCE_PCT (A1 vs A2 chance)
  * 
- * D2MOO: Speed decreases as health decreases (100 - life percentage, clamped to 40-100)
+ * D2MOD: Speed decreases as health decreases (100 - life percentage, clamped to 40-100)
  */
 public class Brute extends AI {
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
@@ -89,7 +89,7 @@ public class Brute extends AI {
 
   /**
    * Check if monster is in combat (within melee range).
-   * D2MOO: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
+   * D2MOD: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
    */
   private boolean isInCombat(int targetId) {
     if (targetId == Engine.INVALID_ENTITY) return false;
@@ -105,7 +105,7 @@ public class Brute extends AI {
 
   /**
    * Get current life percentage (0-100).
-   * D2MOO: UNITS_GetCurrentLifePercentage(pUnit)
+   * D2MOD: UNITS_GetCurrentLifePercentage(pUnit)
    */
   private float getLifePercentage() {
     if (!mAttributesWrapper.has(entityId)) return 100f;
@@ -178,14 +178,14 @@ public class Brute extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
-      // D2MOO: BRUTE_AI_PARAM_ATTACK_CHANCE_PCT
+      // D2MOD: BRUTE_AI_PARAM_ATTACK_CHANCE_PCT
       if (MathUtils.randomBoolean(params[0] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
-        // D2MOO: BRUTE_AI_PARAM_ATTACK1_OR_2_CHANCE_PCT
+        // D2MOD: BRUTE_AI_PARAM_ATTACK1_OR_2_CHANCE_PCT
         byte attackMode = MathUtils.randomBoolean(params[1] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
@@ -193,9 +193,9 @@ public class Brute extends AI {
         time = MathUtils.random(1f, 2);
         return;
       } else {
-        // D2MOO: Second chance to attack (same param)
+        // D2MOD: Second chance to attack (same param)
         if (MathUtils.randomBoolean(params[0] / 100f)) {
-          // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
+          // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
           // This appears to be a special attack or skill, but we'll use normal attack for now
           pathfinder.findPath(entityId, null);
           lookAt(targetId);
@@ -213,9 +213,9 @@ public class Brute extends AI {
       }
     }
 
-    // D2MOO: Not in combat
-    // D2MOO: Speed decreases as health decreases: nSpeedMalus = D2Clamp(UNITS_GetCurrentLifePercentage(pUnit), 40, 100)
-    // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 100 - nSpeedMalus, 0)
+    // D2MOD: Not in combat
+    // D2MOD: Speed decreases as health decreases: nSpeedMalus = D2Clamp(UNITS_GetCurrentLifePercentage(pUnit), 40, 100)
+    // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 100 - nSpeedMalus, 0)
     float lifePercent = getLifePercentage();
     float speedMalus = MathUtils.clamp(lifePercent, 40f, 100f);
     float speedModifier = 100f - speedMalus;
@@ -223,12 +223,12 @@ public class Brute extends AI {
     // Apply speed modifier to velocity
     if (mVelocity.has(entityId)) {
       com.riiablo.engine.server.component.Velocity vel = mVelocity.get(entityId);
-      // Note: D2MOO's velocity parameter affects pathfinding speed, not animation
+      // Note: D2MOD's velocity parameter affects pathfinding speed, not animation
       // We'll adjust the pathfinding speed by modifying the velocity length
       // This is a simplified implementation
     }
     
-    // D2MOO: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
+    // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
     // This appears to be a walk-to-target function with flags=7
     pathfinder.findPath(entityId, targetPos, false, targetId);
     stateMachine.changeState(State.APPROACH);

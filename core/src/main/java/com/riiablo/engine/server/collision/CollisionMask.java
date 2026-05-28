@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.collision;
 
 /**
- * 碰撞掩码常量 - 基于 D2MOO D2C_CollisionMaskFlags 移植
+ * 碰撞掩码常量 - 基于 D2MOD D2C_CollisionMaskFlags 移植
  * 
  * <p>定义了游戏中的各种碰撞类型标志。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2Collision.h
+ * <p>参考：D2MOD/source/D2Common/include/D2Collision.h
  * 
  * @author riiablo team
  */

@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.pet;
 
 /**
- * 宠物数据结构 - 基于 D2MOO D2PetStrc 移植
+ * 宠物数据结构 - 基于 D2MOD D2PetStrc 移植
  * 
  * <p>存储单个宠物/召唤物的所有运行时数据。
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlayerPets.h
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlayerPets.h
  * 
  * @author riiablo team
  */

@@ -24,9 +24,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * Fallen AI implementation matching D2MOO's AITHINK_Fn006_Fallen logic.
+ * Fallen AI implementation matching D2MOD's AITHINK_Fn006_Fallen logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = FALLEN_AI_PARAM_COMMAND_ATTACK_CHANCE_PCT (command minions to attack chance)
  * - params[1] = FALLEN_AI_PARAM_APPROACH_DISTANCE (approach distance)
  * - params[2] = FALLEN_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
@@ -69,7 +69,7 @@ public class Fallen extends AI {
   float nextAction;
   float time;
   
-  // AI state tracking (similar to D2MOO's dwAiParam[0])
+  // AI state tracking (similar to D2MOD's dwAiParam[0])
   boolean aiParam0 = false;  // Used to track command state
 
   public Fallen(int entityId) {
@@ -102,15 +102,15 @@ public class Fallen extends AI {
 
   /**
    * Check if there's a nearby Fallen in death animation (MODE_DT) within 15 tiles.
-   * D2MOO: Checks adjacent rooms for corpses in MONMODE_DEATH within 15 tiles.
-   * D2MOO checks ppRoomList[j]->nLastDeadGUIDs[i] which are monsters in MODE_DT.
+   * D2MOD: Checks adjacent rooms for corpses in MONMODE_DEATH within 15 tiles.
+   * D2MOD checks ppRoomList[j]->nLastDeadGUIDs[i] which are monsters in MODE_DT.
    */
   private boolean checkNearbyCorpse() {
     if (!mPosition.has(entityId)) return false;
     Vector2 entityPos = mPosition.get(entityId).position;
     
     // Check all monsters for death animation (MODE_DT)
-    // D2MOO checks for monsters in MODE_DT, not corpses with Corpse component
+    // D2MOD checks for monsters in MODE_DT, not corpses with Corpse component
     IntBag monsters = monsterEntities.getEntities();
     for (int i = 0, size = monsters.size(); i < size; i++) {
       int monsterId = monsters.get(i);
@@ -142,7 +142,7 @@ public class Fallen extends AI {
 
   /**
    * Check if this monster is a leader (has minions).
-   * D2MOO: AIGENERAL_GetMinionOwner(pUnit) == pUnit means it's a leader.
+   * D2MOD: AIGENERAL_GetMinionOwner(pUnit) == pUnit means it's a leader.
    * For now, we'll use a simplified check based on monster type.
    */
   private boolean isLeader() {
@@ -154,23 +154,23 @@ public class Fallen extends AI {
 
   /**
    * Check if monster is in special AI state (sub_6FCF2E70).
-   * D2MOO: Returns true if AI state == 3 || AI state == 19.
+   * D2MOD: Returns true if AI state == 3 || AI state == 19.
    * For now, we'll use a simplified check.
    */
   private boolean checkSpecialAiState() {
     // TODO: Implement proper AI state check
-    // D2MOO checks MONSTER_GetAiState(pUnit) == 3 || == 19
+    // D2MOD checks MONSTER_GetAiState(pUnit) == 3 || == 19
     return false;
   }
 
   /**
    * Attempt to escape from nearby corpse.
-   * D2MOO: D2GAME_AICORE_Escape_6FCD0560 with distance 12.
-   * D2MOO: AITACTICS_SetVelocity(pUnit, 0, 50, 0) - sets velocity parameter to 50 (speed modifier)
-   * D2MOO: D2GAME_AICORE_Escape uses MONMODE_WALK (not MONMODE_RUN), so escape keeps walk animation
+   * D2MOD: D2GAME_AICORE_Escape_6FCD0560 with distance 12.
+   * D2MOD: AITACTICS_SetVelocity(pUnit, 0, 50, 0) - sets velocity parameter to 50 (speed modifier)
+   * D2MOD: D2GAME_AICORE_Escape uses MONMODE_WALK (not MONMODE_RUN), so escape keeps walk animation
    * The velocity parameter (50) is used to make the path movement faster, but animation stays WL
    * 
-   * In riiablo: We keep WL mode (no Running component) to match D2MOO behavior.
+   * In riiablo: We keep WL mode (no Running component) to match D2MOD behavior.
    * This avoids FARNHTH (Fallen Run) COF lookup failures since D2 table doesn't have that entry.
    */
   private boolean tryEscape(int targetId) {
@@ -200,8 +200,8 @@ public class Fallen extends AI {
     // Calculate escape position: entityPos + escapeDir * escapeDistance
     Vector2 escapePos = tmpVec2_2.set(escapeDir).scl(escapeDistance).add(entityPos);
     
-    // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 50, 0) sets velocity parameter (not animation mode)
-    // D2MOO: D2GAME_AICORE_Escape uses MONMODE_WALK, so we keep WL mode (no Running component)
+    // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 50, 0) sets velocity parameter (not animation mode)
+    // D2MOD: D2GAME_AICORE_Escape uses MONMODE_WALK, so we keep WL mode (no Running component)
     // The velocity parameter affects path speed calculation, but animation stays walk
     // We remove Running component if present to ensure WL mode
     if (mRunning.has(entityId)) {
@@ -222,9 +222,9 @@ public class Fallen extends AI {
 
   /**
    * Check if monster is in combat (within melee range).
-   * D2MOO: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
-   * D2MOO: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
-   * Note: D2MOO uses MeleeRng + 1, and also checks collision
+   * D2MOD: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
+   * D2MOD: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
+   * Note: D2MOD uses MeleeRng + 1, and also checks collision
    */
   private boolean isInCombat(int targetId) {
     if (targetId == Engine.INVALID_ENTITY) return false;
@@ -236,10 +236,10 @@ public class Fallen extends AI {
     // Calculate distance between unit centers
     float distance = entityPos.dst(targetPos);
     
-    // Get melee range: D2MOO uses MeleeRng + 1 (nRangeBonus=0, so +1)
+    // Get melee range: D2MOD uses MeleeRng + 1 (nRangeBonus=0, so +1)
     float meleeRng = monster.monstats2.MeleeRng + 1f;
     
-    // D2MOO: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
+    // D2MOD: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
     // This means: MeleeRng + 0 + 1 >= distance, so MeleeRng + 1 >= distance
     return distance <= meleeRng;
   }
@@ -259,7 +259,7 @@ public class Fallen extends AI {
 
     time = SLEEP;
 
-    // D2MOO: Check if in death animation, return early
+    // D2MOD: Check if in death animation, return early
     if (mCofReference.has(entityId)) {
       byte mode = mCofReference.get(entityId).mode;
       if (mode == Engine.Monster.MODE_DT || mode == Engine.Monster.MODE_DD) {
@@ -267,10 +267,10 @@ public class Fallen extends AI {
       }
     }
 
-    // D2MOO: Check for nearby corpses and escape if found
+    // D2MOD: Check for nearby corpses and escape if found
     // This check happens every AI update, so it will catch nearby Fallen deaths quickly
     if (checkNearbyCorpse()) {
-      aiParam0 = true;  // Set flag like D2MOO's dwAiParam[0] = 1
+      aiParam0 = true;  // Set flag like D2MOD's dwAiParam[0] = 1
       
       // Find target to escape from (player)
       int targetId = Engine.INVALID_ENTITY;
@@ -283,10 +283,10 @@ public class Fallen extends AI {
         }
       }
       
-      // D2MOO: AIGENERAL_FreeCurrentAiCommand - clear any current AI command
+      // D2MOD: AIGENERAL_FreeCurrentAiCommand - clear any current AI command
       // We don't have AI commands yet, so skip this
       
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 50, 0) and D2GAME_AICORE_Escape
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 50, 0) and D2GAME_AICORE_Escape
       // Debug log disabled
       // log.info("Fallen {} detected nearby corpse, attempting to escape", entityId);
       if (tryEscape(targetId)) {
@@ -314,7 +314,7 @@ public class Fallen extends AI {
       }
     }
 
-    // D2MOO: If not in NEUTRAL mode, go to NEUTRAL
+    // D2MOD: If not in NEUTRAL mode, go to NEUTRAL
     // But only if not moving (no Pathfind component) to avoid interfering with movement animations
     if (mCofReference.has(entityId) && !mPathfind.has(entityId)) {
       byte mode = mCofReference.get(entityId).mode;
@@ -395,7 +395,7 @@ public class Fallen extends AI {
       }
     }
 
-    // D2MOO: If not in combat and checkSpecialAiState, walk to target
+    // D2MOD: If not in combat and checkSpecialAiState, walk to target
     if (!bCombat && checkSpecialAiState()) {
       // Remove Sequence component if exists to allow VelocityModeChanger to set walk/run mode
       if (mSequence.has(entityId)) {
@@ -411,7 +411,7 @@ public class Fallen extends AI {
       return;
     }
 
-    // D2MOO: If distance < 15 and is leader, command minions to attack (30% chance)
+    // D2MOD: If distance < 15 and is leader, command minions to attack (30% chance)
     if (targetDistance < 15f && isLeader() && MathUtils.randomBoolean(params[0] / 100f)) {
       // TODO: Implement command minions logic
       // For now, just use skill2 mode
@@ -423,7 +423,7 @@ public class Fallen extends AI {
       return;
     }
 
-    // D2MOO: If not in combat
+    // D2MOD: If not in combat
     if (!bCombat) {
       // If distance <= APPROACH_DISTANCE, walk to target
       // But stop before reaching melee range to prevent overlapping
@@ -463,7 +463,7 @@ public class Fallen extends AI {
       return;
     }
 
-    // D2MOO: In combat
+    // D2MOD: In combat
     // Stop movement when in melee range to prevent overlapping
     pathfinder.findPath(entityId, null);
     

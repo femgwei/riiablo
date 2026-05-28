@@ -363,6 +363,35 @@ public class Map implements Disposable {
      *        nested iterator is within systems which use Map#getZone()
      */
     for (Zone zone : new Array.ArrayIterator<>(zones)) zone.generate();
+    
+    // Act1 + D2MOD 实现下：在所有 zone 生成完成后，统一调用 addSecondaryBorder
+    // 注意：这必须在所有 zone.generate() 完成后调用，因为 applyTileGridToZone 会在 zone.generate() 中被调用
+    if (act == 0 && Riiablo.cvars != null) {
+      com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+      boolean useD2MOD = cvar != null && Boolean.TRUE.equals(cvar.get());
+      
+      if (useD2MOD) {
+        try {
+          // 在所有 zone 生成完成后，统一调用 addSecondaryBorder
+          // 这会更新 TileGrid，然后如果 RenderFromTileGrid 为 true，applyTileGridToZone 会应用这些更改
+          Act1MapBuilderD2MOD.INSTANCE.applySecondaryBordersAfterZoneGeneration(this, seed);
+          
+          // 在所有 zone 生成完成后，生成路径
+          // 路径生成基于 TileGrid，会在 TileGrid 上绘制路径
+          Act1MapBuilderD2MOD.INSTANCE.generatePathsOnTileGrid(this, seed);
+          // 路径绘制到 TileGrid 后，需将 TileGrid 应用到 Blood Moor zone 才能显示（zone.generate 中的 apply 早于路径生成）
+          // 使用 D2MOD 时始终应用，确保 BM 显示路径；RenderFromTileGrid 仍可覆盖其他 zone
+          for (Zone z : new Array.ArrayIterator<>(zones)) {
+            if (z != null && z.level != null && z.level.Id == 2) { // Blood Moor
+              Act1MapBuilderD2MOD.INSTANCE.applyTileGridToZone(z);
+              break;
+            }
+          }
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "Error during D2MOD post-generation processing", t);
+        }
+      }
+    }
   }
 
   @Override
@@ -372,6 +401,7 @@ public class Map implements Disposable {
     for (DT1s dt1s : this.dt1s.values()) dt1s.clear();
     dt1s.clear();
     mapGraph.clear();
+    warpDestinationOverrides.clear();
   }
 
   public Array<AssetDescriptor> getDependencies() {
@@ -384,11 +414,96 @@ public class Map implements Disposable {
     MathUtils.random.setSeed(seed);
     Riiablo.cofs.active = updateCofs(act);
     switch (act) {
-      case 0: Act1MapBuilder.INSTANCE.generate(this, seed, diff); break;
-      case 1: Act2MapBuilder.INSTANCE.generate(this, seed, diff); break;
-      case 2: Act3MapBuilder.INSTANCE.generate(this, seed, diff); break;
-      case 3: Act4MapBuilder.INSTANCE.generate(this, seed, diff); break;
-      case 4: Act5MapBuilder.INSTANCE.generate(this, seed, diff); break;
+      case 0:
+        // Act1：默认使用 D2MOD 实现（与 Act2–Act5 一致），可通过 Client.Map.UseD2MODImplementation 关闭
+        boolean useD2MOD = true;
+        if (Riiablo.cvars != null) {
+          com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+          if (cvar != null) {
+            useD2MOD = cvar.get();
+          }
+        }
+        if (useD2MOD) {
+          Act1MapBuilderD2MOD.INSTANCE.generate(this, seed, diff);
+        } else {
+          Act1MapBuilder.INSTANCE.generate(this, seed, diff);
+        }
+        // 无条件设置城镇出口覆盖：Levels.txt 的 Vis 可能指向 Cold Plains，导致出城错误
+        // Rogue Encampment=1, Blood Moor=2, Cold Plains=3
+        // 遍历 Rogue Encampment 的 Vis，将指向 Cold Plains 的 warp 全部改为指向 Blood Moor
+        Levels.Entry rogueEnc = Riiablo.files.Levels.get(1);
+        if (rogueEnc != null && rogueEnc.Vis != null) {
+          for (int mi = 0; mi < rogueEnc.Vis.length; mi++) {
+            if (rogueEnc.Vis[mi] == 3) { // Cold Plains
+              addWarpDestinationOverride(1, mi, 2); // -> Blood Moor
+              //if (DEBUG_BUILD) {
+                Gdx.app.debug(TAG, "Warp override: RogueEnc mainIndex=" + mi + " ColdPlains->BloodMoor");
+              //}
+            }
+          }
+        }
+        addWarpDestinationOverride(1, 5, 2); // 兜底：VIS_5_42 mainIndex=5
+        break;
+      case 1: 
+        // Act2: 优先使用 D2MOD 实现
+        boolean useD2MOD_Act2 = true; // 默认使用 D2MOD 实现
+        if (Riiablo.cvars != null) {
+          com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+          if (cvar != null) {
+            useD2MOD_Act2 = cvar.get();
+          }
+        }
+        if (useD2MOD_Act2) {
+          Act2MapBuilderD2MOD.INSTANCE.generate(this, seed, diff);
+        } else {
+          Act2MapBuilder.INSTANCE.generate(this, seed, diff);
+        }
+        break;
+      case 2: 
+        // Act3: 优先使用 D2MOD 实现
+        boolean useD2MOD_Act3 = true;
+        if (Riiablo.cvars != null) {
+          com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+          if (cvar != null) {
+            useD2MOD_Act3 = cvar.get();
+          }
+        }
+        if (useD2MOD_Act3) {
+          Act3MapBuilderD2MOD.INSTANCE.generate(this, seed, diff);
+        } else {
+          Act3MapBuilder.INSTANCE.generate(this, seed, diff);
+        }
+        break;
+      case 3: 
+        // Act4: 优先使用 D2MOD 实现
+        boolean useD2MOD_Act4 = true;
+        if (Riiablo.cvars != null) {
+          com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+          if (cvar != null) {
+            useD2MOD_Act4 = cvar.get();
+          }
+        }
+        if (useD2MOD_Act4) {
+          Act4MapBuilderD2MOD.INSTANCE.generate(this, seed, diff);
+        } else {
+          Act4MapBuilder.INSTANCE.generate(this, seed, diff);
+        }
+        break;
+      case 4: 
+        // Act5: 优先使用 D2MOD 实现
+        boolean useD2MOD_Act5 = true;
+        if (Riiablo.cvars != null) {
+          com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+          if (cvar != null) {
+            useD2MOD_Act5 = cvar.get();
+          }
+        }
+        if (useD2MOD_Act5) {
+          Act5MapBuilderD2MOD.INSTANCE.generate(this, seed, diff);
+        } else {
+          Act5MapBuilder.INSTANCE.generate(this, seed, diff);
+        }
+        break;
     }
   }
 
@@ -449,6 +564,33 @@ public class Map implements Disposable {
   }
 
   final IntIntMap warpSubsts = new IntIntMap();
+
+  /**
+   * 覆盖 warp 的目标关卡。当使用 D2MOD 动态布局时，Levels.txt 的 Vis 可能指向错误的关卡。
+   * 例如：城镇出口应指向 Blood Moor，但 Levels.txt 可能指向 Cold Plains。
+   * Key: (levelId << 8) | mainIndex，Value: 目标关卡 Id。
+   */
+  final IntIntMap warpDestinationOverrides = new IntIntMap();
+
+  /** F10 路径调试：D2MOD 土路路径点的世界坐标列表，每点 float[]{worldX, worldY} */
+  public final com.badlogic.gdx.utils.Array<float[]> pathDebugPoints = new com.badlogic.gdx.utils.Array<>(64);
+
+  public void clearPathDebugPoints() {
+    pathDebugPoints.clear();
+  }
+
+  public void addPathDebugPoint(float worldX, float worldY) {
+    pathDebugPoints.add(new float[]{worldX, worldY});
+  }
+
+  public void addWarpDestinationOverride(int levelId, int mainIndex, int dstLevelId) {
+    warpDestinationOverrides.put((levelId << 8) | (mainIndex & 0xFF), dstLevelId);
+    Gdx.app.log(TAG, "Warp override: levelId=" + levelId + " mainIndex=" + mainIndex + " -> dstLevelId=" + dstLevelId);
+  }
+
+  public int getWarpDestinationOverride(int levelId, int mainIndex) {
+    return warpDestinationOverrides.get((levelId << 8) | (mainIndex & 0xFF), -1);
+  }
 
   public void addWarpSubsts(IntIntMap warps) {
     this.warpSubsts.putAll(warps);
@@ -615,6 +757,8 @@ public class Map implements Disposable {
     public int          diff;
 
     boolean        town;
+    /** D2MOD: 城镇出口方向 ALTDIR (0=WEST,1=NORTH,2=EAST,3=SOUTH)，仅 town 时有效，-1 表示未设置 */
+    public int     townExitDirection = -1;
     LvlTypes.Entry type;
     DT1s           dt1s;
     byte           flags[];
@@ -638,6 +782,11 @@ public class Map implements Disposable {
       @Override public void generate(Zone zone, DT1s dt1s, int tx, int ty) {}
     };
     Generator generator = EMPTY_GENERATOR;
+
+    public int x() { return x; }
+    public int y() { return y; }
+    public int width() { return width; }
+    public int height() { return height; }
 
     static final Pool<Zone> pool = Pools.get(Zone.class, 16);
 
@@ -683,8 +832,8 @@ public class Map implements Disposable {
       this.gridsY = gridsY;
       tilesX   = gridsX * gridSizeX;
       tilesY   = gridsY * gridSizeY;
-      width    = gridsX * DT1.Tile.SUBTILE_SIZE;
-      height   = gridsY * DT1.Tile.SUBTILE_SIZE;
+      width    = tilesX * DT1.Tile.SUBTILE_SIZE;
+      height   = tilesY * DT1.Tile.SUBTILE_SIZE;
       flags    = obtainByteArray(width * height);
       presets  = new Preset[gridsX][gridsY];
       return this;
@@ -719,6 +868,7 @@ public class Map implements Disposable {
 
       dt1s = null; // TODO: setting null -- depending on Map dispose to clear DT1s on act change
       town = false;
+      townExitDirection = -1;
       entities = EMPTY_ENTITY_ARRAY;
       warps = EMPTY_INT_INT_MAP;
       generator = EMPTY_GENERATOR;
@@ -851,7 +1001,57 @@ public class Map implements Disposable {
     Array<AssetDescriptor> getDependencies() {
       if (dependencies == EMPTY_ASSET_ARRAY) {
         dependencies = new Array<>(false, 64);
+        
+        // 从 presets 获取依赖项
         for (Preset[] x : presets) for (Preset y : x) if (y != null) dependencies.addAll(y.getDependencies(type));
+        
+        // 如果没有 preset，需要为程序生成加载 DT1 文件
+        // 检查是否所有 preset 都是 null
+        boolean hasAnyPreset = false;
+        for (Preset[] x : presets) {
+          for (Preset y : x) {
+            if (y != null) {
+              hasAnyPreset = true;
+              break;
+            }
+          }
+          if (hasAnyPreset) break;
+        }
+        
+        // 如果没有 preset，根据 Level 的 Act 和 LevelType 加载 DT1 文件
+        if (!hasAnyPreset && type != null) {
+          int dt1Mask = OutdoorGrid.getDt1MaskForLevel(level);
+          if (DEBUG_BUILD) {
+            Gdx.app.debug(TAG, String.format("Zone.getDependencies: %s (Act=%d, LevelType=%d) dt1Mask=0x%X", 
+                level.LevelName, level.Act, level.LevelType, dt1Mask));
+          }
+          int filesAdded = 0;
+          for (int i = 0; i < Integer.SIZE; i++) {
+            if ((dt1Mask & (1 << i)) != 0) {
+              // 跳过无效的文件（"0" 或空字符串）
+              if (i < type.File.length && 
+                  type.File[i] != null && 
+                  !type.File[i].isEmpty() && 
+                  type.File[i].charAt(0) != '0') {
+                String filePath = TILES_PATH + type.File[i];
+                dependencies.add(new AssetDescriptor<>(filePath, DT1.class));
+                filesAdded++;
+                if (DEBUG_BUILD) {
+                  Gdx.app.debug(TAG, String.format("Zone.getDependencies: Added DT1 file[%d]=%s", i, filePath));
+                }
+              } else if (DEBUG_BUILD) {
+                String fileInfo = i < type.File.length 
+                    ? (type.File[i] == null ? "null" : (type.File[i].isEmpty() ? "empty" : type.File[i]))
+                    : "out of bounds";
+                Gdx.app.debug(TAG, String.format("Zone.getDependencies: Skipped file[%d]=%s", i, fileInfo));
+              }
+            }
+          }
+          if (DEBUG_BUILD) {
+            Gdx.app.debug(TAG, String.format("Zone.getDependencies: %s added %d DT1 files from dt1Mask=0x%X", 
+                level.LevelName, filesAdded, dt1Mask));
+          }
+        }
       }
       return dependencies;
     }
@@ -864,11 +1064,41 @@ public class Map implements Disposable {
       int type = this.type.Id;
       DT1s dt1s = map.dt1s.get(type);
       if (dt1s == null) map.dt1s.put(type, dt1s = new DT1s());
-      for (AssetDescriptor asset : getDependencies()) {
+      
+      Array<AssetDescriptor> deps = getDependencies();
+      int dt1Count = 0;
+      for (AssetDescriptor asset : deps) {
         Riiablo.assets.finishLoadingAsset(asset);
         if (asset.type == DT1.class) {
-          dt1s.add((DT1) Riiablo.assets.get(asset));
+          DT1 dt1 = (DT1) Riiablo.assets.get(asset);
+          dt1s.add(dt1);
+          dt1Count++;
+          if (DEBUG_BUILD) {
+            int floorTiles = 0;
+            for (DT1.Tile tile : dt1.tiles) {
+              if (tile != null && tile.isFloor()) floorTiles++;
+            }
+            Gdx.app.debug(TAG, String.format("Zone.finishLoading: Loaded DT1 %s for %s, %d tiles (%d floor tiles)", 
+                asset.fileName, level.LevelName, dt1.tiles.length, floorTiles));
+          }
         }
+      }
+      
+      if (DEBUG_BUILD) {
+        int totalTiles = 0;
+        int floorTileTypes = 0;
+        for (IntMap.Entry<Array<DT1.Tile>> entry : dt1s.tiles.entries()) {
+          int id = entry.key;
+          Array<DT1.Tile> tileArray = entry.value;
+          if (tileArray != null && tileArray.size > 0) {
+            totalTiles += tileArray.size;
+            // 检查是否是 floor tile (orientation = 0)
+            int orientation = DT1.Tile.Index.orientation(id);
+            if (orientation == 0) floorTileTypes++;
+          }
+        }
+        Gdx.app.debug(TAG, String.format("Zone.finishLoading: %s loaded %d DT1 files, %d tile types (%d floor types), %d total tiles", 
+            level.LevelName, dt1Count, dt1s.tiles.size, floorTileTypes, totalTiles));
       }
     }
 
@@ -878,6 +1108,17 @@ public class Map implements Disposable {
 //      Validate.validState(allNull, "tiles have already been loaded");
       generator.init(this);
       dt1s = map.dt1s.get(type.Id);
+      
+      // 确保 dt1s 不为 null（如果 finishLoading 没有加载任何 DT1 文件，dt1s 可能为 null）
+      if (dt1s == null) {
+        dt1s = new DT1s();
+        map.dt1s.put(type.Id, dt1s);
+        if (DEBUG_BUILD) {
+          Gdx.app.error(TAG, String.format("Zone.generate: dt1s was null for type %d (%s), created empty DT1s", 
+              type.Id, type.Name));
+        }
+      }
+      
       tiles[Map.FLOOR_OFFSET] = Zone.obtainTileArray(tilesX * tilesY);
       for (int x = 0, gridX = 0, gridY = 0; x < gridsX; x++, gridX += gridSizeX, gridY = 0) {
         for (int y = 0; y < gridsY; y++, gridY += gridSizeY) {
@@ -889,6 +1130,38 @@ public class Map implements Disposable {
 
           preset.finishLoading();
           preset.copyTo(this, gridX, gridY);
+          
+          // 对于非城镇区域，即使有preset也要生成怪物
+          // 因为preset只包含地形，不包含怪物
+          if (!town && generator != EMPTY_GENERATOR) {
+            generator.generate(this, dt1s, gridX, gridY);
+          }
+        }
+      }
+      
+      // Act1 + D2MOD 实现下：在 Zone.generate 完成后，可选从 TileGrid 重建 Blood Moor 地板
+      // 注意：addSecondaryBorder 会在 Act1MapBuilderD2MOD.generate() 中更新 TileGrid，所以这里应用 TileGrid 时会包含这些更改
+      if (map.act == 0 && level != null && level.Id == 2 && Riiablo.cvars != null) { // 2 == LEVEL_BLOODMOOR
+        com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.RenderFromTileGrid");
+        boolean renderFromTileGrid = cvar != null && Boolean.TRUE.equals(cvar.get());
+
+        if (renderFromTileGrid) {
+          try {
+            Act1MapBuilderD2MOD.INSTANCE.applyTileGridToZone(this);
+          } catch (Throwable t) {
+            Gdx.app.error(TAG, "Error during Blood Moor TileGrid apply", t);
+          }
+        }
+
+        // 始终保留对齐校验，方便后续调试
+        if (DEBUG_BUILD) {
+          try {
+            int sampleStep = 8; // 可以按需调小
+            Act1MapBuilderD2MOD.INSTANCE.debugDumpTileGrid(level.Id, sampleStep);
+            Act1MapBuilderD2MOD.INSTANCE.debugCompareTileGridWithZone(this, sampleStep);
+          } catch (Throwable t) {
+            Gdx.app.error(TAG, "Error during Blood Moor TileGrid debug compare", t);
+          }
         }
       }
     }
@@ -1005,7 +1278,13 @@ public class Map implements Disposable {
         int DT1Mask = preset.Dt1Mask;
         for (int i = 0; i < Integer.SIZE; i++) {
           if ((DT1Mask & (1 << i)) != 0) {
-            dependencies.add(new AssetDescriptor<>(TILES_PATH + type.File[i], DT1.class));
+            // 跳过无效的文件（"0" 或空字符串）
+            if (i < type.File.length && 
+                type.File[i] != null && 
+                !type.File[i].isEmpty() && 
+                type.File[i].charAt(0) != '0') {
+              dependencies.add(new AssetDescriptor<>(TILES_PATH + type.File[i], DT1.class));
+            }
           }
         }
       }
@@ -1136,14 +1415,18 @@ public class Map implements Disposable {
             //}
 
             DT1.Tile tile = zone.tiles[layer][zone.tileIndex(tx, ty)] = zone.dt1s.get(cell);
-            or(zone, tx, ty, tile);
+            if (tile != null) {
+              or(zone, tx, ty, tile);
+            }
 
             // Special case, because LEFT_NORTH_CORNER_WALL don't seem to exist, but they contain
             // collision data for RIGHT_NORTH_CORNER_WALL, ORing the data just in case some
             // RIGHT_NORTH_CORNER_WALL actually does anything
             if (cell.orientation == Orientation.RIGHT_NORTH_CORNER_WALL) {
               DT1.Tile sibling = zone.dt1s.get(Orientation.LEFT_NORTH_CORNER_WALL, cell.mainIndex, cell.subIndex);
-              or(zone, tx, ty, sibling);
+              if (sibling != null) {
+                or(zone, tx, ty, sibling);
+              }
             }
           }
         }
@@ -1197,6 +1480,9 @@ public class Map implements Disposable {
     }
 
     static void or(Zone zone, int tx, int ty, DT1.Tile tile) {
+      if (tile == null) {
+        return; // 跳过 null tile
+      }
       // Note: walkable flags are stored inverted y-axis, this corrects it
       final int startX = tx * DT1.Tile.SUBTILE_SIZE;
       ty = (ty * DT1.Tile.SUBTILE_SIZE) + (DT1.Tile.SUBTILE_SIZE - 1);

@@ -4,7 +4,7 @@ package com.riiablo.engine.client.automap;
  * 小地图单元格数据
  * 表示小地图上的单个显示元素
  * 
- * 参考: D2MOO D2AutomapCellStrc
+ * 参考: D2MOD D2AutomapCellStrc
  */
 public class AutomapCell {
   

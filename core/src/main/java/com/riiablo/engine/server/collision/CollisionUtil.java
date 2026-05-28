@@ -7,11 +7,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 碰撞工具类 - 基于 D2MOO Collision.cpp 移植
+ * 碰撞工具类 - 基于 D2MOD Collision.cpp 移植
  * 
  * <p>提供碰撞检测相关的辅助方法。
  * 
- * <p>参考：D2MOO/source/D2Common/src/Collision/Collision.cpp
+ * <p>参考：D2MOD/source/D2Common/src/Collision/Collision.cpp
  * 
  * @author riiablo team
  */
@@ -302,7 +302,7 @@ public final class CollisionUtil {
   /**
    * 尝试移动单位碰撞掩码
    * 
-   * <p>对应 D2MOO COLLISION_TryMoveUnitCollisionMask
+   * <p>对应 D2MOD COLLISION_TryMoveUnitCollisionMask
    * 
    * @param fromX 起点 X
    * @param fromY 起点 Y

@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 伤害应用器 - 基于 D2MOO SUNITDMG_CalculateTotalDamage 移植
+ * 伤害应用器 - 基于 D2MOD SUNITDMG_CalculateTotalDamage 移植
  * 
  * <p>处理伤害的最终计算，包括：
  * <ul>
@@ -19,7 +19,7 @@ import com.riiablo.logger.Logger;
  *   <li>状态效果免疫检查</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/SUnitDmg.cpp - SUNITDMG_CalculateTotalDamage
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/SUnitDmg.cpp - SUNITDMG_CalculateTotalDamage
  * 
  * @author riiablo team
  */
@@ -75,7 +75,7 @@ public class DamageApplier {
   /**
    * 应用抗性和吸收计算
    * 
-   * <p>参考 D2MOO SUNITDMG_ApplyResistancesAndAbsorb
+   * <p>参考 D2MOD SUNITDMG_ApplyResistancesAndAbsorb
    * 
    * @param result 伤害结果（将被修改）
    * @param defenderAttrs 防御者属性
@@ -310,7 +310,7 @@ public class DamageApplier {
   /**
    * 应用伤害转换
    * 
-   * <p>参考 D2MOO 伤害转换逻辑，将物理伤害的一部分转换为元素伤害
+   * <p>参考 D2MOD 伤害转换逻辑，将物理伤害的一部分转换为元素伤害
    * 
    * @param result 伤害结果
    * @param conversionType 转换类型（元素类型）

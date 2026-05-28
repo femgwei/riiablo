@@ -19,7 +19,7 @@ public enum Act1MapBuilder implements MapBuilder {
 
   private static final String TAG = "Act1MapBuilder";
   private static final boolean DEBUG       = true;
-  private static final boolean DEBUG_BUILD = DEBUG && true;
+  private static final boolean DEBUG_BUILD = DEBUG && false;
 
   @Wire(name = "factory")
   protected EntityFactory factory;

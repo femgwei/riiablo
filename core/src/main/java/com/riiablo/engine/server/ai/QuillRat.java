@@ -11,9 +11,9 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Engine;
 
 /**
- * QuillRat AI implementation matching D2MOO's AITHINK_Fn014_QuillRat logic.
+ * QuillRat AI implementation matching D2MOD's AITHINK_Fn014_QuillRat logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = QUILLRAT_AI_PARAM_ACTIVATE_DISTANCE (activate distance)
  * - params[1] = QUILLRAT_AI_PARAM_SHOOT_CHANCE_PCT (shoot chance)
  * - params[2] = QUILLRAT_AI_PARAM_UNUSED (unused)
@@ -83,7 +83,7 @@ public class QuillRat extends AI {
 
   /**
    * 射程内可攻击（用于远程怪即时反应）
-   * 使用 activate distance 作为射程，与 D2MOO 一致。
+   * 使用 activate distance 作为射程，与 D2MOD 一致。
    */
   private boolean isInRangedRange(float distance) {
     float activateDistance = params.length > 0 ? params[0] : 15f;
@@ -100,7 +100,7 @@ public class QuillRat extends AI {
 
   /**
    * Walk close to target unit (random walk around self, NOT target).
-   * D2MOO: AITACTICS_WalkCloseToUnit(pGame, pUnit, nWalkDist)
+   * D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, nWalkDist)
    * 
    * IMPORTANT: This function walks to a random position around the MONSTER itself,
    * NOT around the target! This is why QuillRat doesn't chase players.
@@ -108,7 +108,7 @@ public class QuillRat extends AI {
   private void walkCloseToUnit(int targetId, float walkDist) {
     Vector2 entityPos = mPosition.get(entityId).position;
     
-    // D2MOO: Calculate random offset from monster's own position
+    // D2MOD: Calculate random offset from monster's own position
     // nOffsetX and nOffsetY are randomly chosen, one is nMaxDistance, the other is random(0, nMaxDistance)
     float offsetX, offsetY;
     if (MathUtils.randomBoolean()) {
@@ -136,7 +136,7 @@ public class QuillRat extends AI {
 
   /**
    * Try to escape from target.
-   * D2MOO: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pTarget, nWalkDist, 1)
+   * D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pTarget, nWalkDist, 1)
    */
   private boolean tryEscape(int targetId, float walkDist) {
     if (targetId == Engine.INVALID_ENTITY || !mPosition.has(targetId)) return false;
@@ -198,7 +198,7 @@ public class QuillRat extends AI {
     time = SLEEP;
     // targetId / targetDistance 已由上方即时反应前的 findNearestTargetWithAidist 得到，主逻辑复用
 
-    // D2MOO: If in combat, use ATTACK1
+    // D2MOD: If in combat, use ATTACK1
     if (targetId != Engine.INVALID_ENTITY && isInCombat(targetId)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -210,7 +210,7 @@ public class QuillRat extends AI {
       return;
     }
 
-    // D2MOO: Check special AI state (sub_6FCF2E70)
+    // D2MOD: Check special AI state (sub_6FCF2E70)
     if (targetId != Engine.INVALID_ENTITY && checkSpecialAiState()) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -254,14 +254,14 @@ public class QuillRat extends AI {
     float walkDistance = params.length > 3 ? params[3] : 3f;
     if (walkDistance < 3) walkDistance = 3f;
 
-    // D2MOO: If target distance >= ACTIVATE_DISTANCE, walk close to unit (random walk)
+    // D2MOD: If target distance >= ACTIVATE_DISTANCE, walk close to unit (random walk)
     if (targetDistance >= activateDistance) {
       walkCloseToUnit(targetId, walkDistance);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: Target distance < ACTIVATE_DISTANCE
+    // D2MOD: Target distance < ACTIVATE_DISTANCE
     // Check shoot chance
     if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
       pathfinder.findPath(entityId, null);
@@ -275,11 +275,11 @@ public class QuillRat extends AI {
       return;
     }
 
-    // D2MOO: Try to escape
+    // D2MOD: Try to escape
     if (!tryEscape(targetId, walkDistance)) {
       // Can't escape
       if (targetDistance < 4) {
-        // D2MOO: If very close, shoot
+        // D2MOD: If very close, shoot
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
@@ -291,7 +291,7 @@ public class QuillRat extends AI {
         return;
       }
 
-      // D2MOO: Walk close to unit (random walk)
+      // D2MOD: Walk close to unit (random walk)
       walkCloseToUnit(targetId, walkDistance);
       time = MathUtils.random(1f, 2);
       return;

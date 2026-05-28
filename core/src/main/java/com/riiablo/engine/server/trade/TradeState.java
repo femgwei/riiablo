@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.trade;
 
 /**
- * 交易状态常量 - 基于 D2MOO 移植
+ * 交易状态常量 - 基于 D2MOD 移植
  * 
  * <p>定义了交易过程中的各种状态。
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlrTrade.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlrTrade.cpp
  * 
  * @author riiablo team
  */

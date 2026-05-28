@@ -1,5 +1,5 @@
 /**
- * 战斗系统模块 - 基于 D2MOO 移植
+ * 战斗系统模块 - 基于 D2MOD 移植
  * 
  * <p>本包实现了暗黑破坏神2的战斗伤害计算系统，包括：
  * 
@@ -31,13 +31,13 @@
  * </ol>
  * 
  * <h2>参考来源</h2>
- * <p>本模块参考了 D2MOO 项目的以下文件：
+ * <p>本模块参考了 D2MOD 项目的以下文件：
  * <ul>
  *   <li>D2Game/src/UNIT/SUnitDmg.cpp - 伤害计算核心逻辑</li>
  *   <li>D2Game/include/UNIT/SUnitDmg.h - 数据结构定义</li>
  * </ul>
  * 
  * @author riiablo team
- * @see <a href="https://github.com/AruaSmith/D2MOO">D2MOO Project</a>
+ * @see <a href="https://github.com/AruaSmith/D2MOD">D2MOD Project</a>
  */
 package com.riiablo.engine.server.combat;

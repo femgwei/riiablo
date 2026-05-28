@@ -82,14 +82,14 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public Pixmap getPixmap(int d, int f) {
-    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
     Frame frame = getFrame(d, f);
     return frame != null ? frame.pixmap : null;
   }
 
   @Override
   public TextureRegion getTexture(int d, int i) {
-    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
     if (regions == null || d < 0 || d >= regions.length || regions[d] == null) {
       return null; // Invalid direction or not loaded
     }
@@ -116,7 +116,7 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public boolean isLoaded(int d) {
-    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
     if (textures == null || d < 0 || d >= textures.length) {
       return false;
     }
@@ -131,7 +131,7 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public void loadDirection(int d, boolean combineFrames) {
-    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
     if (d < 0 || d >= header.directions) {
       return; // Invalid direction
     }
@@ -182,7 +182,7 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public Direction getDirection(int d) {
-    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
     if (directions == null || d < 0 || d >= directions.length) {
       return null; // Invalid direction
     }
@@ -191,7 +191,7 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public Frame getFrame(int d, int f) {
-    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
     if (frames == null || d < 0 || d >= frames.length || frames[d] == null || f < 0 || f >= frames[d].length) {
       return null; // Invalid direction or frame
     }
@@ -205,7 +205,7 @@ public class DCC extends com.riiablo.codec.DC {
 
   @Override
   public BBox getBox(int d) {
-    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
     // directions array size may not match numDirections if DCC data is incomplete
     if (directions == null || d < 0 || d >= directions.length) {
       return box; // Invalid direction, return default box

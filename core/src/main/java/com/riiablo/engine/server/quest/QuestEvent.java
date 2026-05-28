@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.quest;
 
 /**
- * 任务事件枚举 - 基于 D2MOO 任务事件系统移植
+ * 任务事件枚举 - 基于 D2MOD 任务事件系统移植
  * 
  * <p>定义了可以触发任务回调的事件类型。
  * 
- * <p>参考：D2MOO/source/D2Game/src/QUESTS/Quests.cpp
+ * <p>参考：D2MOD/source/D2Game/src/QUESTS/Quests.cpp
  * 
  * @author riiablo team
  */

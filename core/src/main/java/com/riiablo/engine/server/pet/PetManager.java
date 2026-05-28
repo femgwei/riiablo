@@ -8,7 +8,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 宠物管理器 - 基于 D2MOO PlayerPets.cpp 移植
+ * 宠物管理器 - 基于 D2MOD PlayerPets.cpp 移植
  * 
  * <p>管理玩家的所有召唤物/宠物：
  * <ul>
@@ -18,7 +18,7 @@ import com.riiablo.logger.Logger;
  *   <li>宠物属性计算</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlayerPets.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlayerPets.cpp
  * 
  * @author riiablo team
  */
@@ -133,7 +133,7 @@ public class PetManager {
   /**
    * 创建宠物
    * 
-   * <p>参考 D2MOO PLAYERPETS_CreatePet
+   * <p>参考 D2MOD PLAYERPETS_CreatePet
    * 
    * @param ownerId 所有者实体 ID
    * @param petType 宠物类型
@@ -375,7 +375,7 @@ public class PetManager {
   /**
    * 初始化宠物属性
    * 
-   * <p>参考 D2MOO PLAYERPETS_SetPetStats
+   * <p>参考 D2MOD PLAYERPETS_SetPetStats
    */
   private void initializePetStats(PetData pet, int skillLevel) {
     // 基础属性根据宠物类型和技能等级计算

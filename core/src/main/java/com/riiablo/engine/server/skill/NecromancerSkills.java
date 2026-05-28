@@ -6,11 +6,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 死灵法师技能实现 - 基于 D2MOO SkillNec.cpp 移植
+ * 死灵法师技能实现 - 基于 D2MOD SkillNec.cpp 移植
  * 
  * <p>包含诅咒、毒素和骨、召唤三系技能的实现。
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/SkillNec.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/SkillNec.cpp
  * 
  * @author riiablo team
  */

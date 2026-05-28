@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.item;
 
 /**
- * 物品品质枚举 - 基于 D2MOO D2C_ItemQualities 移植
+ * 物品品质枚举 - 基于 D2MOD D2C_ItemQualities 移植
  * 
  * <p>定义了游戏中所有物品品质级别。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2Items.h
+ * <p>参考：D2MOD/source/D2Common/include/D2Items.h
  * 
  * @author riiablo team
  */

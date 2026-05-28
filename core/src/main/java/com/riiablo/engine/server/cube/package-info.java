@@ -1,5 +1,5 @@
 /**
- * 赫拉迪克方块系统 - 基于 D2MOO HoradricCube 模块移植
+ * 赫拉迪克方块系统 - 基于 D2MOD HoradricCube 模块移植
  * 
  * <p>管理赫拉迪克方块的合成配方和执行。
  * 
@@ -19,7 +19,7 @@
  *   <li>洗点Token：四种精华合成</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Common/src/DataTbls/HoradricCube.cpp
+ * <p>参考：D2MOD/source/D2Common/src/DataTbls/HoradricCube.cpp
  * 
  * @author riiablo team
  */

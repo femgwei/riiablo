@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.collision;
 
 /**
- * 碰撞单位大小 - 基于 D2MOO D2C_CollisionUnitSize 移植
+ * 碰撞单位大小 - 基于 D2MOD D2C_CollisionUnitSize 移植
  * 
  * <p>定义了单位在子格中的占用宽度。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2Collision.h
+ * <p>参考：D2MOD/source/D2Common/include/D2Collision.h
  * 
  * @author riiablo team
  */

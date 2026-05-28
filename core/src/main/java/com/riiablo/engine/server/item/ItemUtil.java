@@ -6,7 +6,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 物品工具类 - 基于 D2MOO Items.cpp 移植
+ * 物品工具类 - 基于 D2MOD Items.cpp 移植
  * 
  * <p>提供物品相关的计算和工具方法：
  * <ul>
@@ -16,7 +16,7 @@ import com.riiablo.logger.Logger;
  *   <li>物品等级计算</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/ITEMS/Items.cpp
+ * <p>参考：D2MOD/source/D2Game/src/ITEMS/Items.cpp
  * 
  * @author riiablo team
  */
@@ -80,7 +80,7 @@ public final class ItemUtil {
   /**
    * 掷骰子判定物品品质
    * 
-   * <p>基于 D2MOO ITEMS_RollItemQuality 函数
+   * <p>基于 D2MOD ITEMS_RollItemQuality 函数
    * 
    * @param magicFind 魔法装备加成百分比
    * @param itemLevel 物品等级

@@ -17,9 +17,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * CorruptArcher AI implementation matching D2MOO's AITHINK_Fn035_CorruptArcher logic.
+ * CorruptArcher AI implementation matching D2MOD's AITHINK_Fn035_CorruptArcher logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = CORRUPTARCHER_AI_PARAM_SHOOT_CHANCE_PCT (shoot chance)
  * - params[1] = CORRUPTARCHER_AI_PARAM_STALL_DURATION (idle time)
  * - params[2] = CORRUPTARCHER_AI_PARAM_WALK_TOW_DISTANCE (walk toward distance)
@@ -176,45 +176,45 @@ public class CorruptArcher extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: Check special condition
+    // D2MOD: Check special condition
     if (checkSpecialCondition(targetId, targetDistance)) {
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 100, 0)
-      // D2MOO: sub_6FCD06D0(pGame, pUnit, pTarget, 12, 1)
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 100, 0)
+      // D2MOD: sub_6FCD06D0(pGame, pUnit, pTarget, 12, 1)
       pathfinder.findPath(entityId, targetPos, true, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: If far, walk toward target
+    // D2MOD: If far, walk toward target
     float walkTowDistance = params.length > 2 ? params[2] : 15f;
     if (walkTowDistance > 0 && targetDistance > walkTowDistance
         && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
-      // D2MOO: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_WALK_TOW_DISTANCE))
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
+      // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_WALK_TOW_DISTANCE))
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: If very far, always run
+    // D2MOD: If very far, always run
     float alwaysRunDistance = params.length > 4 ? params[4] : 20f;
     if (targetDistance > alwaysRunDistance) {
-      // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 100, 0)
-      // D2MOO: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_ALWAYS_RUN_DISTANCE))
+      // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 100, 0)
+      // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_ALWAYS_RUN_DISTANCE))
       pathfinder.findPath(entityId, targetPos, true, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: Check shoot chance
+    // D2MOD: Check shoot chance
     if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-      // D2MOO: Check skill usage
+      // D2MOD: Check skill usage
       if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()
           && params.length > 5 && MathUtils.randomBoolean(params[5] / 100f)) {
-        // D2MOO: Use skill2
+        // D2MOD: Use skill2
         // TODO: Implement skill casting
         stateMachine.changeState(State.CAST);
         lookAt(targetId);
@@ -226,7 +226,7 @@ public class CorruptArcher extends AI {
 
       if (monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()
           && params.length > 6 && MathUtils.randomBoolean(params[6] / 100f)) {
-        // D2MOO: Use skill3
+        // D2MOD: Use skill3
         // TODO: Implement skill casting
         stateMachine.changeState(State.CAST);
         lookAt(targetId);
@@ -237,7 +237,7 @@ public class CorruptArcher extends AI {
       }
 
       if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-        // D2MOO: Use skill1
+        // D2MOD: Use skill1
         // TODO: Implement skill casting
         stateMachine.changeState(State.CAST);
         lookAt(targetId);
@@ -247,7 +247,7 @@ public class CorruptArcher extends AI {
         return;
       }
 
-      // D2MOO: Normal attack
+      // D2MOD: Normal attack
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);

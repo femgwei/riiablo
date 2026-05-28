@@ -38,6 +38,12 @@ public class MapManager extends PassiveSystem {
   }
 
   public void createEntities(Map.Zone zone) {
+    // 只对城镇区域创建 NPC 和其他对象
+    // 野外区域的对象应该通过 generator 或其他方式创建
+    if (!zone.town) {
+      return; // 跳过非城镇区域，避免在野外区域创建 NPC
+    }
+    
     for (int x = 0, gridX = 0, gridY = 0; x < zone.gridsX; x++, gridX += zone.gridSizeX, gridY = 0) {
       for (int y = 0; y < zone.gridsY; y++, gridY += zone.gridSizeY) {
         Map.Preset preset = zone.presets[x][y];

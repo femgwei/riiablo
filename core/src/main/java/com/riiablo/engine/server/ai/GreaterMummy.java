@@ -16,9 +16,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * GreaterMummy AI implementation matching D2MOO's AITHINK_Fn022_GreaterMummy logic.
+ * GreaterMummy AI implementation matching D2MOD's AITHINK_Fn022_GreaterMummy logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = GREATMUMMY_AI_PARAM_MELEE_BREATHE_CHANCE_PCT (melee breathe chance)
  * - params[1] = GREATMUMMY_AI_PARAM_RAISE_CHANCE_PCT (raise dead chance)
  * - params[2] = GREATMUMMY_AI_PARAM_HEAL_CHANCE_PCT (heal chance)
@@ -175,7 +175,7 @@ public class GreaterMummy extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If in combat, melee breathe attack
+    // D2MOD: If in combat, melee breathe attack
     if (bCombat && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -187,7 +187,7 @@ public class GreaterMummy extends AI {
       return;
     }
 
-    // D2MOO: If close (< 5), breathe attack
+    // D2MOD: If close (< 5), breathe attack
     if (targetDistance < 5 && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -199,11 +199,11 @@ public class GreaterMummy extends AI {
       return;
     }
 
-    // D2MOO: Check heal chance
+    // D2MOD: Check heal chance
     if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()) {
       int healTargetId = findNearbyAlly(20f);
       if (healTargetId != Engine.INVALID_ENTITY && params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-        // D2MOO: Use heal skill (nSkill[1])
+        // D2MOD: Use heal skill (nSkill[1])
         // TODO: Implement skill casting
         stateMachine.changeState(State.HEAL);
         lookAt(healTargetId);
@@ -214,12 +214,12 @@ public class GreaterMummy extends AI {
       }
     }
 
-    // D2MOO: Check raise dead chance
+    // D2MOD: Check raise dead chance
     float raiseRange = params.length > 4 ? params[4] : 10f;
     int corpseId = findNearbyCorpse(raiseRange);
     if (corpseId != Engine.INVALID_ENTITY && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
         && params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
-      // D2MOO: Use raise dead skill (nSkill[0])
+      // D2MOD: Use raise dead skill (nSkill[0])
       // TODO: Implement skill casting
       stateMachine.changeState(State.RAISE);
       lookAt(corpseId);
@@ -229,10 +229,10 @@ public class GreaterMummy extends AI {
       return;
     }
 
-    // D2MOO: Check shoot chance
+    // D2MOD: Check shoot chance
     if (monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()
         && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
-      // D2MOO: Use shoot skill (nSkill[2])
+      // D2MOD: Use shoot skill (nSkill[2])
       // TODO: Implement skill casting
       stateMachine.changeState(State.CAST);
       lookAt(targetId);
@@ -242,16 +242,16 @@ public class GreaterMummy extends AI {
       return;
     }
 
-    // D2MOO: Walk to target or circle
-    // D2MOO: AITACTICS_SetVelocity(pUnit, 0, 50, 0)
-    // D2MOO: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
+    // D2MOD: Walk to target or circle
+    // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 50, 0)
+    // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
     if (MathUtils.randomBoolean(0.5f)) {
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     } else {
-      // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
+      // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);

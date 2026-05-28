@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 技能冷却管理器 - 基于 D2MOO 移植
+ * 技能冷却管理器 - 基于 D2MOD 移植
  * 
  * <p>管理技能冷却时间：
  * <ul>
@@ -17,7 +17,7 @@ import com.riiablo.logger.Logger;
  *   <li>共享冷却组</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/Skills.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/Skills.cpp
  * 
  * @author riiablo team
  */
@@ -228,7 +228,7 @@ public class SkillCooldownManager {
   /**
    * 获取技能基础冷却时间（帧）
    * 
-   * <p>参考 D2MOO Skills.txt 数据
+   * <p>参考 D2MOD Skills.txt 数据
    * 
    * @param skillId 技能ID
    * @return 冷却帧数

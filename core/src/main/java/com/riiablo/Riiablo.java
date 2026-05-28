@@ -100,7 +100,7 @@ public class Riiablo {
   public static GdxLoggerManager      logs;
 
   /**
-   * 全局游戏随机种子（参考 D2MOO 的 pGameSeed）
+   * 全局游戏随机种子（参考 D2MOD 的 pGameSeed）
    * 在游戏创建时初始化一次，整个游戏会话中保持不变，确保地图生成可复现
    */
   public static int                   gameSeed;

@@ -49,18 +49,18 @@ public class AnimDataResolver extends PassiveSystem {
     
     AnimData animData = mAnimData.create(entityId);
     
-    // D2MOO: DATATBLS_GetAnimDataRecord returns default record if not found
+    // D2MOD: DATATBLS_GetAnimDataRecord returns default record if not found
     // Default values: dwFrames = 2048, dwAnimSpeed = 256
-    // D2MOO silently uses default values without logging errors
+    // D2MOD silently uses default values without logging errors
     if (entry == null) {
       // Log failed lookup so we can check for typos or missing COF data
       log.warn(
         "COF lookup failed -> keyframes=null | entity={} cof=\"{}\" (token=\"{}\" mode={} \"{}\" wclass={} \"{}\")",
         entityId, cof, c.token, (int) c.mode, modeStr, (int) c.wclass, wclassStr
       );
-      animData.speed     = 256;  // D2MOO: dwAnimSpeed = 256
+      animData.speed     = 256;  // D2MOD: dwAnimSpeed = 256
       animData.frame     = 0;
-      animData.numFrames = 2048 << 8;  // D2MOO: dwFrames = 2048, converted to fixed point
+      animData.numFrames = 2048 << 8;  // D2MOD: dwFrames = 2048, converted to fixed point
       animData.keyframes  = null;  // No keyframe data for default
     } else {
       animData.speed     = entry.speed;

@@ -9,7 +9,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 场景对象管理器 - 基于 D2MOO Objects.cpp 移植
+ * 场景对象管理器 - 基于 D2MOD Objects.cpp 移植
  * 
  * <p>管理游戏中所有场景对象：
  * <ul>
@@ -19,7 +19,7 @@ import com.riiablo.logger.Logger;
  *   <li>容器物品掉落</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/OBJECTS/Objects.cpp
+ * <p>参考：D2MOD/source/D2Game/src/OBJECTS/Objects.cpp
  * 
  * @author riiablo team
  */

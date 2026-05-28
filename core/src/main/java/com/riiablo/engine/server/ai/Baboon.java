@@ -23,9 +23,9 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.AttributesWrapper;
 
 /**
- * Baboon AI implementation matching D2MOO's AITHINK_Fn011_Baboon logic.
+ * Baboon AI implementation matching D2MOD's AITHINK_Fn011_Baboon logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = BABOON_AI_PARAM_HURT_PCT (hurt percentage threshold)
  * - params[1] = BABOON_AI_PARAM_CIRCLE_CHANCE_PCT (circle chance)
  * - params[2] = BABOON_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
@@ -151,18 +151,18 @@ public class Baboon extends AI {
     float lifePercent = getLifePercentage();
     float hurtPct = params.length > 0 ? params[0] : 50f;
 
-    // D2MOO: Calculate velocity modifier based on run/velocity ratio
+    // D2MOD: Calculate velocity modifier based on run/velocity ratio
     int nVel = 0;
     // TODO: Calculate from monstats.nRun and monstats.nVelocity
 
-    // D2MOO: If in regen state
+    // D2MOD: If in regen state
     if (aiParam0 > 0) {
       aiParam1 = 0;
       aiParam0--;
 
-      // D2MOO: Remove regen bonus if timer expired or life > 75%
+      // D2MOD: Remove regen bonus if timer expired or life > 75%
       if (aiParam0 == 0 || lifePercent > 75) {
-        // D2MOO: STATLIST_SetUnitStat(pUnit, STAT_HPREGEN, STATLIST_UnitGetStatValue(pUnit, STAT_HPREGEN, 0) - pAiTickParam->pAiControl->dwAiParam[2], 0)
+        // D2MOD: STATLIST_SetUnitStat(pUnit, STAT_HPREGEN, STATLIST_UnitGetStatValue(pUnit, STAT_HPREGEN, 0) - pAiTickParam->pAiControl->dwAiParam[2], 0)
         // TODO: Remove regen bonus from attributes
         aiParam2 = 0;
       }
@@ -189,7 +189,7 @@ public class Baboon extends AI {
         Vector2 targetPos = mPosition.get(targetId).position;
         boolean bCombat = isInCombat(targetId);
 
-        // D2MOO: If in combat, 33% chance to attack
+        // D2MOD: If in combat, 33% chance to attack
         if (bCombat && MathUtils.randomBoolean(0.33f)) {
           pathfinder.findPath(entityId, null);
           lookAt(targetId);
@@ -201,21 +201,21 @@ public class Baboon extends AI {
           return;
         }
 
-        // D2MOO: If life > 75%, exit regen state
+        // D2MOD: If life > 75%, exit regen state
         if (lifePercent > 75) {
           aiParam0 = 0;
-          // D2MOO: AITACTICS_SetVelocity(pUnit, 13, nVel, 0)
-          // D2MOO: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
+          // D2MOD: AITACTICS_SetVelocity(pUnit, 13, nVel, 0)
+          // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
           pathfinder.findPath(entityId, targetPos, false, targetId);
           stateMachine.changeState(State.APPROACH);
           time = MathUtils.random(1f, 2);
           return;
         }
 
-        // D2MOO: If far (distance >= 24) and not in special state
+        // D2MOD: If far (distance >= 24) and not in special state
         if (targetDistance >= 24 && !checkSpecialAiState()) {
           if (MathUtils.randomBoolean(0.33f)) {
-            // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
+            // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 4u, 0)
             pathfinder.findPath(entityId, targetPos, false, targetId);
             stateMachine.changeState(State.APPROACH);
           }
@@ -224,9 +224,9 @@ public class Baboon extends AI {
           return;
         }
 
-        // D2MOO: Try to escape
-        // D2MOO: AITACTICS_SetVelocity(pUnit, 2, nVel, 0)
-        // D2MOO: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 15, 1)
+        // D2MOD: Try to escape
+        // D2MOD: AITACTICS_SetVelocity(pUnit, 2, nVel, 0)
+        // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 15, 1)
         stateMachine.changeState(State.ESCAPE);
         Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
         Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(15f));
@@ -234,7 +234,7 @@ public class Baboon extends AI {
         if (!mPathfind.has(entityId)) {
           // Can't escape
           if (!bCombat) {
-            // D2MOO: AITACTICS_WalkCloseToUnit(pGame, pUnit, 5u)
+            // D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, 5u)
             pathfinder.findPath(entityId, targetPos, false, targetId);
             stateMachine.changeState(State.APPROACH);
           } else {
@@ -299,30 +299,30 @@ public class Baboon extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If not in combat, approach
+    // D2MOD: If not in combat, approach
     if (!bCombat) {
-      // D2MOO: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
+      // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: In combat
+    // D2MOD: In combat
     if (checkSpecialAiState()) {
-      // D2MOO: If hurt, start regen
+      // D2MOD: If hurt, start regen
       if (lifePercent < hurtPct && MathUtils.randomBoolean(0.5f)) {
         aiParam0 = MathUtils.random(2, 6); // Random 2-6 ticks
         
-        // D2MOO: Add regen bonus
+        // D2MOD: Add regen bonus
         // TODO: Add regen bonus to attributes
         if (params.length > 4) {
           // Calculate regen bonus
           aiParam2 = params[4]; // Simplified
         }
 
-        // D2MOO: AITACTICS_SetVelocity(pUnit, 2, nVel, 0)
-        // D2MOO: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 0xFu, 0)
+        // D2MOD: AITACTICS_SetVelocity(pUnit, 2, nVel, 0)
+        // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pAiTickParam->pTarget, 0xFu, 0)
         stateMachine.changeState(State.ESCAPE);
         Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
         Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(15f));
@@ -331,7 +331,7 @@ public class Baboon extends AI {
         return;
       }
 
-      // D2MOO: If not attacked yet, attack
+      // D2MOD: If not attacked yet, attack
       if (aiParam1 == 0) {
         aiParam1 = 1;
         pathfinder.findPath(entityId, null);
@@ -344,9 +344,9 @@ public class Baboon extends AI {
         return;
       }
 
-      // D2MOO: 20% chance to circle
+      // D2MOD: 20% chance to circle
       if (MathUtils.randomBoolean(0.2f)) {
-        // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
+        // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
         aiParam1 = 0;
@@ -355,7 +355,7 @@ public class Baboon extends AI {
       }
     }
 
-    // D2MOO: Normal attack logic
+    // D2MOD: Normal attack logic
     if (aiParam1 == 0 || (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f))) {
       aiParam1 = 1;
       pathfinder.findPath(entityId, null);
@@ -369,9 +369,9 @@ public class Baboon extends AI {
       return;
     }
 
-    // D2MOO: Circle or idle
+    // D2MOD: Circle or idle
     if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
-      // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
+      // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       aiParam1 = 0;

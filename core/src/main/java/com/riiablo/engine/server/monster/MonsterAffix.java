@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.monster;
 
 /**
- * 怪物词缀 - 基于 D2MOO MonsterUnique.h 移植
+ * 怪物词缀 - 基于 D2MOD MonsterUnique.h 移植
  * 
  * <p>定义了暗金怪物可能拥有的特殊能力词缀。
  * 
- * <p>参考：D2MOO/source/D2Game/src/MONSTER/MonsterUnique.h
+ * <p>参考：D2MOD/source/D2Game/src/MONSTER/MonsterUnique.h
  * 
  * @author riiablo team
  */

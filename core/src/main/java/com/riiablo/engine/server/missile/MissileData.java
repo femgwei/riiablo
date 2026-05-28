@@ -3,11 +3,11 @@ package com.riiablo.engine.server.missile;
 import com.badlogic.gdx.math.Vector2;
 
 /**
- * 投射物数据结构 - 基于 D2MOO D2MissileStrc 移植
+ * 投射物数据结构 - 基于 D2MOD D2MissileStrc 移植
  * 
  * <p>存储单个投射物的所有运行时数据。
  * 
- * <p>参考：D2MOO/source/D2Game/src/MISSILES/Missiles.h
+ * <p>参考：D2MOD/source/D2Game/src/MISSILES/Missiles.h
  * 
  * @author riiablo team
  */

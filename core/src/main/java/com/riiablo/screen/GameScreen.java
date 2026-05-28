@@ -404,7 +404,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         }
 
         if (key == Keys.Esc) {
-          // D2MOO: Priority 1 - Handle player death respawn
+          // D2MOD: Priority 1 - Handle player death respawn
           // If player is dead, respawn at town instead of showing menu
           if (Riiablo.game.player >= 0 && engine != null) {
             com.riiablo.engine.client.DeathHandler deathHandler = engine.getSystem(com.riiablo.engine.client.DeathHandler.class);
@@ -569,8 +569,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           }
 
           case Input.Keys.F10: {
-            PathfindDebugger debugger = engine.getSystem(PathfindDebugger.class);
-            debugger.setEnabled(!debugger.isEnabled());
+            PathfindDebugger pathfindDebugger = engine.getSystem(PathfindDebugger.class);
+            pathfindDebugger.setEnabled(!pathfindDebugger.isEnabled());
+            // F10 同时切换 RenderSystemDebugger，使 D2MOD 土路路径在 drawDebug 中正确绘制
+            com.riiablo.engine.client.debug.RenderSystemDebugger renderDebugger =
+                engine.getSystem(com.riiablo.engine.client.debug.RenderSystemDebugger.class);
+            if (renderDebugger != null) {
+              renderDebugger.setEnabled(pathfindDebugger.isEnabled());
+            }
             return true;
           }
           
@@ -593,13 +599,15 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       }
     };
 
-    // 使用全局游戏随机种子（参考 D2MOO 的 pGameSeed）
-    // 如果尚未初始化，则使用时间戳初始化；否则使用已存在的全局 seed，确保同一游戏会话中地图可复现
-    /*if (Riiablo.gameSeed == 0) {
-      Riiablo.gameSeed = (int) (System.nanoTime() & 0x7FFF_FFFF);
+    // 使用角色存档的 mapSeed 和 diff，与 D2 一致：
+    // - 新角色：CreateCharacterScreen 用 System.currentTimeMillis() 初始化 mapSeed
+    // - 加载角色：D2SReader 从 d2s 读取 mapSeed
+    // 同一角色每次进入游戏地图相同；不同角色/新游戏地图不同
+    int mapSeed = charData.mapSeed;
+    if (mapSeed == 0) {
+      mapSeed = (int) (System.nanoTime() & 0x7FFF_FFFF); // 兜底：mapSeed 未设置时随机
     }
-    config = new EngineConfig(Riiablo.gameSeed, 0);*/
-    config = new EngineConfig(0, 0);
+    config = new EngineConfig(mapSeed, charData.diff);
     map = new Map(config.seed(), config.diff());
     mapManager = new MapManager();
     renderer = new RenderSystem(Riiablo.batch, map);
@@ -960,7 +968,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     
     // Draw death message in center of screen
-    // D2MOO: Show "Press ESC to continue" message when player is dead
+    // D2MOD: Show "Press ESC to continue" message when player is dead
     com.badlogic.gdx.graphics.g2d.BitmapFont font = Riiablo.fonts.fontformal12;
     if (font == null) {
       // Font not loaded yet, skip drawing
@@ -1060,7 +1068,22 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     Vector2 origin = map.find(Map.ID.TOWN_ENTRY_1);
     if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_2);
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
-    Map.Zone zone = map.getZone(origin);
+    Map.Zone zone = origin != null ? map.getZone(origin) : null;
+    if (origin == null || zone == null) {
+      // 无传送点或 D2MOO 回退布局时：使用城镇 zone 中心作为出生点
+      com.riiablo.codec.excel.Levels.Entry townLevel = Riiablo.files.Levels.get(1);
+      if (townLevel != null) {
+        Map.Zone townZone = map.findZone(townLevel);
+        if (townZone != null) {
+          origin = new Vector2(townZone.x() + townZone.width() / 2f, townZone.y() + townZone.height() / 2f);
+          zone = townZone;
+        }
+      }
+    }
+    if (origin == null || zone == null) {
+      Gdx.app.error("GameScreen", "No spawn position or zone available");
+      return;
+    }
     player = factory.createPlayer(charData, origin);
     engine.getSystem(EventSystem.class).dispatch(ZoneChangeEvent.obtain(player, zone));
 

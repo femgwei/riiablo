@@ -7,7 +7,7 @@ import com.badlogic.gdx.utils.IntMap;
  * 小地图图层数据
  * 存储单个关卡/区域的小地图单元格信息
  * 
- * 参考: D2MOO D2AutomapLayerStrc
+ * 参考: D2MOD D2AutomapLayerStrc
  */
 public class AutomapLayer {
   

@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * MaggotLarva AI implementation matching D2MOO's AITHINK_Fn038_MaggotLarva logic.
+ * MaggotLarva AI implementation matching D2MOD's AITHINK_Fn038_MaggotLarva logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = MAGGOTLARVA_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[1] = MAGGOTLARVA_AI_PARAM_ATTACK_RECOVERY_DURATION (attack recovery time)
  * - params[2] = MAGGOTLARVA_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
@@ -168,7 +168,7 @@ public class MaggotLarva extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: If in combat
+    // D2MOD: If in combat
     if (bCombat) {
       if (aiParam0 != 0 || (params.length > 0 && !MathUtils.randomBoolean(params[0] / 100f))) {
         aiParam0 = 0;
@@ -188,11 +188,11 @@ public class MaggotLarva extends AI {
       }
     }
 
-    // D2MOO: Not in combat
+    // D2MOD: Not in combat
     aiParam0 = 0;
     
     if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-      // D2MOO: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 1)
+      // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 1)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);

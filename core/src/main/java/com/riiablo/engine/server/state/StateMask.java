@@ -1,12 +1,12 @@
 package com.riiablo.engine.server.state;
 
 /**
- * 状态掩码 - 基于 D2MOO D2C_StateMasks 移植
+ * 状态掩码 - 基于 D2MOD D2C_StateMasks 移植
  * 
  * <p>定义了用于分类和过滤状态的掩码。这些掩码对应 states.txt 中的
  * 各个标志列，用于快速判断状态的特性。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2States.h
+ * <p>参考：D2MOD/source/D2Common/include/D2States.h
  * 
  * @author riiablo team
  */

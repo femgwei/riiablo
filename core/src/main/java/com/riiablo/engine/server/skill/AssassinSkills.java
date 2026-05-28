@@ -6,11 +6,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 刺客技能实现 - 基于 D2MOO SkillAss.cpp 移植
+ * 刺客技能实现 - 基于 D2MOD SkillAss.cpp 移植
  * 
  * <p>包含武技、陷阱、暗影三系技能的实现。
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/SkillAss.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/SkillAss.cpp
  * 
  * @author riiablo team
  */

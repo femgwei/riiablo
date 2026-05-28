@@ -5,7 +5,7 @@ import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.server.ai.AiContext;
 
 /**
- * 怪物运行时数据 - 基于 D2MOO D2MonsterDataStrc 移植
+ * 怪物运行时数据 - 基于 D2MOD D2MonsterDataStrc 移植
  * 
  * <p>存储怪物的运行时状态和数据，包括：
  * <ul>
@@ -16,7 +16,7 @@ import com.riiablo.engine.server.ai.AiContext;
  *   <li>所属关卡ID</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2Structs.h D2MonsterDataStrc
+ * <p>参考：D2MOD/source/D2Common/include/D2Structs.h D2MonsterDataStrc
  * 
  * @author riiablo team
  */

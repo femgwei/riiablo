@@ -13,7 +13,7 @@ package com.riiablo.codec.excel;
  * For each stat, there are values for Normal, Nightmare, and Hell difficulties.
  * There are also "L-" prefixed versions for expansion (LoD) content.
  * 
- * Reference: D2MOO source/D2Common/include/DataTbls/MonsterTbls.h:82
+ * Reference: D2MOD source/D2Common/include/DataTbls/MonsterTbls.h:82
  */
 @Excel.Binned
 public class MonLvl extends Excel<MonLvl.Entry> {

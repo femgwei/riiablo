@@ -11,7 +11,7 @@ import com.riiablo.logger.Logger;
 import com.riiablo.save.ItemData;
 
 /**
- * 物品耐久度管理器 - 基于 D2MOO 移植
+ * 物品耐久度管理器 - 基于 D2MOD 移植
  * 
  * <p>管理物品耐久度的消耗和修理：
  * <ul>
@@ -22,7 +22,7 @@ import com.riiablo.save.ItemData;
  *   <li>不破坏物品处理</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/SUnitDmg.cpp - SUNITDMG_DrainItemDurability
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/SUnitDmg.cpp - SUNITDMG_DrainItemDurability
  * 
  * @author riiablo team
  */
@@ -51,7 +51,7 @@ public class ItemDurabilityManager {
 
   /** 
    * 护甲部位耐久度消耗权重
-   * 参考 D2MOO sgDurabilityLossWeights
+   * 参考 D2MOD sgDurabilityLossWeights
    */
   private static final DurabilityLossWeight[] ARMOR_DURABILITY_WEIGHTS = {
     new DurabilityLossWeight(BodyLoc.HEAD, 3),   // 头盔
@@ -83,7 +83,7 @@ public class ItemDurabilityManager {
   /**
    * 消耗武器耐久度（攻击时调用）
    * 
-   * <p>参考 D2MOO ITEMS_UpdateDurability
+   * <p>参考 D2MOD ITEMS_UpdateDurability
    * 
    * @param item 武器物品
    * @param isMelee 是否为近战攻击
@@ -111,7 +111,7 @@ public class ItemDurabilityManager {
   /**
    * 消耗护甲耐久度（被攻击时调用）
    * 
-   * <p>参考 D2MOO SUNITDMG_DrainItemDurability
+   * <p>参考 D2MOD SUNITDMG_DrainItemDurability
    * 
    * @param itemData 玩家物品数据
    * @return 损坏的物品（如果有）

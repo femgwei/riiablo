@@ -10,7 +10,7 @@ import com.riiablo.logger.Logger;
 import com.riiablo.save.CharData;
 
 /**
- * 玩家属性管理器 - 基于 D2MOO PLAYERSTATS 移植
+ * 玩家属性管理器 - 基于 D2MOD PLAYERSTATS 移植
  * 
  * <p>处理玩家属性点分配和技能点分配：
  * <ul>
@@ -21,7 +21,7 @@ import com.riiablo.save.CharData;
  *   <li>技能点分配</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/PLAYER/PlayerStats.cpp
+ * <p>参考：D2MOD/source/D2Game/src/PLAYER/PlayerStats.cpp
  * 
  * @author riiablo team
  */
@@ -69,7 +69,7 @@ public class PlayerStatsManager {
   /**
    * 分配属性点
    * 
-   * <p>参考 D2MOO PLAYERSTATS_SpendStatPoint
+   * <p>参考 D2MOD PLAYERSTATS_SpendStatPoint
    * 
    * @param charData 角色数据
    * @param statType 属性类型（0=力量, 1=精力, 2=敏捷, 3=体力）

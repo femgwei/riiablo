@@ -9,7 +9,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 伤害计算器 - 基于 D2MOO SUnitDmg.cpp 移植
+ * 伤害计算器 - 基于 D2MOD SUnitDmg.cpp 移植
  * 
  * <p>该类实现了暗黑破坏神2的完整伤害计算公式，包括：
  * <ul>
@@ -21,7 +21,7 @@ import com.riiablo.logger.Logger;
  *   <li>特殊伤害类型（对恶魔/亡灵增伤）</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/UNIT/SUnitDmg.cpp
+ * <p>参考：D2MOD/source/D2Game/src/UNIT/SUnitDmg.cpp
  * 
  * @author riiablo team
  */
@@ -34,7 +34,7 @@ public class DamageCalculator {
   private DamageCalculator() {}
 
   //==========================================================================
-  // 伤害结果标志位 (D2MOO: D2DamageResultFlags)
+  // 伤害结果标志位 (D2MOD: D2DamageResultFlags)
   //==========================================================================
   
   /** 成功命中 */
@@ -61,7 +61,7 @@ public class DamageCalculator {
   public static final int RESULT_WEAPON_BLOCK = 0x00008000;
 
   //==========================================================================
-  // 伤害命中标志位 (D2MOO: D2DamageHitFlags)
+  // 伤害命中标志位 (D2MOD: D2DamageHitFlags)
   //==========================================================================
   
   /** 生命偷取 */
@@ -78,7 +78,7 @@ public class DamageCalculator {
   public static final int HIT_BYPASS_BEASTS = 0x00000400;
 
   //==========================================================================
-  // 伤害减免类型 (D2MOO: D2DamageReductionType)
+  // 伤害减免类型 (D2MOD: D2DamageReductionType)
   //==========================================================================
   
   /** 无减免 */
@@ -95,7 +95,7 @@ public class DamageCalculator {
   /**
    * 计算攻击命中率
    * 
-   * <p>命中公式（来自 D2MOO SUNITDMG_IsHitSuccessful）：
+   * <p>命中公式（来自 D2MOD SUNITDMG_IsHitSuccessful）：
    * <pre>
    * 命中率 = 100 * 攻击准确率 / (攻击准确率 + 防御者防御值)
    * </pre>
@@ -107,7 +107,7 @@ public class DamageCalculator {
    * @return 命中概率 (0-100)
    */
   public int calculateHitChance(int attackerAR, int defenderDef, int attackerLvl, int defenderLvl) {
-    // Reference D2MOO: SUNITDMG_IsHitSuccessful (lines 2510-2533)
+    // Reference D2MOD: SUNITDMG_IsHitSuccessful (lines 2510-2533)
     // Formula: nChanceToHit = Clamp(2 * attackerLevel * toHitFactor / (defenderLevel + attackerLevel), 5, 95)
     // where toHitFactor = 100 * nToHit / (nToHit + nDefense) if divisor != 0, else 100
     
@@ -132,7 +132,7 @@ public class DamageCalculator {
       toHitFactor = 100 * attackerAR / divisor;
     }
     
-    // Final hit chance formula from D2MOO (avoid div-by-zero when both levels 0)
+    // Final hit chance formula from D2MOD (avoid div-by-zero when both levels 0)
     int levelSum = Math.max(1, defenderLvl + attackerLvl);
     int hitChance = 2 * attackerLvl * toHitFactor / levelSum;
     
@@ -161,7 +161,7 @@ public class DamageCalculator {
   /**
    * 计算物理伤害
    * 
-   * <p>伤害公式（来自 D2MOO SUNITDMG_ApplyDamageBonuses）：
+   * <p>伤害公式（来自 D2MOD SUNITDMG_ApplyDamageBonuses）：
    * <pre>
    * 1. 获取武器基础伤害 (minDmg ~ maxDmg)
    * 2. 计算伤害加成%：
@@ -185,7 +185,7 @@ public class DamageCalculator {
       int strength, int dexterity, int strBonus, int dexBonus, 
       int damagePercent, int srcDamPercent) {
     
-    // D2MOO: SUNITDMG_ApplyDamageBonuses
+    // D2MOD: SUNITDMG_ApplyDamageBonuses
     
     // 1. 确保最小/最大伤害有效
     if (minDamage < 1) minDamage = 1;
@@ -231,7 +231,7 @@ public class DamageCalculator {
   /**
    * 计算元素伤害
    * 
-   * <p>元素伤害计算（来自 D2MOO SUNITDMG_FillDamageValues）：
+   * <p>元素伤害计算（来自 D2MOD SUNITDMG_FillDamageValues）：
    * <pre>
    * 1. 获取元素基础伤害 (minDmg ~ maxDmg)
    * 2. 应用精通加成（女巫被动技能）
@@ -244,7 +244,7 @@ public class DamageCalculator {
    * @return 计算后的元素伤害
    */
   public int calculateElementalDamage(int minDamage, int maxDamage, int masteryBonus) {
-    // D2MOO: SUNITDMG_RollDamageValueInRange
+    // D2MOD: SUNITDMG_RollDamageValueInRange
     
     if (maxDamage < 1) return 0;
     if (minDamage < 0) minDamage = 0;
@@ -266,7 +266,7 @@ public class DamageCalculator {
   /**
    * 应用抗性减免
    * 
-   * <p>抗性公式（来自 D2MOO SUNITDMG_ApplyResistancesAndAbsorb）：
+   * <p>抗性公式（来自 D2MOD SUNITDMG_ApplyResistancesAndAbsorb）：
    * <pre>
    * 1. 实际抗性 = min(抗性, 最大抗性) - 穿透%
    * 2. 减免后伤害 = 伤害 * (100 - 实际抗性) / 100
@@ -285,7 +285,7 @@ public class DamageCalculator {
   public int applyResistance(int damage, int resistance, int maxResist, 
       int pierce, int absorbPercent, int absorbFlat) {
     
-    // D2MOO: SUNITDMG_ApplyResistancesAndAbsorb
+    // D2MOD: SUNITDMG_ApplyResistancesAndAbsorb
     
     if (damage <= 0) return 0;
     
@@ -317,7 +317,7 @@ public class DamageCalculator {
   /**
    * 判断是否暴击
    * 
-   * <p>暴击判定优先级（来自 D2MOO SUNITDMG_FillDamageValues）：
+   * <p>暴击判定优先级（来自 D2MOD SUNITDMG_FillDamageValues）：
    * <ol>
    *   <li>武器精通暴击（野蛮人被动）</li>
    *   <li>暴击技能（亚马逊Critical Strike）</li>
@@ -330,7 +330,7 @@ public class DamageCalculator {
    * @return 是否暴击
    */
   public boolean rollCriticalStrike(int criticalStrikeChance, int deadlyStrikeChance, int masteryChance) {
-    // D2MOO: 按优先级检查暴击
+    // D2MOD: 按优先级检查暴击
     
     // 1. 武器精通暴击
     if (masteryChance > 0 && MathUtils.random(99) < masteryChance) {
@@ -356,7 +356,7 @@ public class DamageCalculator {
   /**
    * 计算生命偷取
    * 
-   * <p>生命偷取公式（来自 D2MOO SUNITDMG_AddLeechedLife）：
+   * <p>生命偷取公式（来自 D2MOD SUNITDMG_AddLeechedLife）：
    * <pre>
    * 偷取量 = 物理伤害 * 偷取% / 100
    * 实际偷取 = min(偷取量, 目标当前生命)
@@ -392,7 +392,7 @@ public class DamageCalculator {
   /**
    * 判断是否触发格挡
    * 
-   * <p>格挡公式（来自 D2MOO SUNITDMG_ApplyBlockOrDodge）：
+   * <p>格挡公式（来自 D2MOD SUNITDMG_ApplyBlockOrDodge）：
    * <pre>
    * 格挡率 = 盾牌格挡% + (DEX - 15) / (等级 * 2)
    * </pre>
@@ -405,7 +405,7 @@ public class DamageCalculator {
   public boolean rollBlock(int baseBlockChance, int dexterity, int level) {
     if (baseBlockChance <= 0) return false;
     
-    // D2MOO: SUNITDMG_ApplyBlockOrDodge
+    // D2MOD: SUNITDMG_ApplyBlockOrDodge
     // 格挡公式：block% + (dex - 15) / (clvl * 2)
     int effectiveBlock = baseBlockChance + (dexterity - 15) / (Math.max(level, 1) * 2);
     effectiveBlock = Math.max(0, Math.min(75, effectiveBlock)); // 最大75%格挡
@@ -438,7 +438,7 @@ public class DamageCalculator {
       int demonDamageBonus, int undeadDamageBonus, boolean isBluntWeapon,
       boolean isDemon, boolean isUndead) {
     
-    // D2MOO: SUNITDMG_FillDamageValues 中的 MONSTERS_IsDemon / MONSTERS_IsUndead 检查
+    // D2MOD: SUNITDMG_FillDamageValues 中的 MONSTERS_IsDemon / MONSTERS_IsUndead 检查
     
     int bonusPercent = 0;
     
@@ -489,7 +489,7 @@ public class DamageCalculator {
     int dexterity = getInt(attacker, Stat.dexterity, 0);
     
     // Calculate attack rating based on attacker type
-    // Reference D2MOO: SUNITDMG_IsHitSuccessful (line 2440-2447) and UNITS_GetAttackRate (line 2395-2418)
+    // Reference D2MOD: SUNITDMG_IsHitSuccessful (line 2440-2447) and UNITS_GetAttackRate (line 2395-2418)
     // For monsters: nAttackRate = nStatValue + 5 * DEX + STAT_TOHIT (nStatValue = 0 for basic attack)
     // For players: nAttackRate = UNITS_GetAttackRate(pAttacker) = STAT_TOHIT + 5 * (DEX - 7) + ToHitFactor
     // For now, we use a simplified version without ToHitFactor
@@ -506,7 +506,7 @@ public class DamageCalculator {
     } else {
       // Monster formula: nStatValue + 5 * DEX + STAT_TOHIT
       // Since monsters may not have DEX set, we use baseToHit directly
-      // In D2MOO, monsters without DEX would have DEX = 0, so: nAttackRate = 0 + 5 * 0 + STAT_TOHIT = STAT_TOHIT
+      // In D2MOD, monsters without DEX would have DEX = 0, so: nAttackRate = 0 + 5 * 0 + STAT_TOHIT = STAT_TOHIT
       attackRating = baseToHit;
     }
     
@@ -523,7 +523,7 @@ public class DamageCalculator {
     result.resultFlags |= RESULT_SUCCESSFUL_HIT;
     
     // 4. Calculate physical damage
-    // Reference D2MOO: STAT_SECONDARY_MINDAMAGE/MAXDAMAGE is for two-handed weapons (WieldType == 2)
+    // Reference D2MOD: STAT_SECONDARY_MINDAMAGE/MAXDAMAGE is for two-handed weapons (WieldType == 2)
     // For one-handed weapons (including dual wielding), use STAT_MINDAMAGE/MAXDAMAGE
     // For two-handed weapons, use STAT_SECONDARY_MINDAMAGE/MAXDAMAGE
     // Dual wielding: both hands use mindamage/maxdamage, attack sequence determines which weapon is used (not added together)
@@ -535,7 +535,7 @@ public class DamageCalculator {
     int secondaryMaxDmg = getInt(attacker, Stat.secondary_maxdamage, 0);
     
     // If secondary damage exists and is greater than primary, use it (two-handed weapon)
-    // Reference D2MOO SUnitDmg.cpp: if WieldType == 2, use STAT_SECONDARY_MINDAMAGE/MAXDAMAGE
+    // Reference D2MOD SUnitDmg.cpp: if WieldType == 2, use STAT_SECONDARY_MINDAMAGE/MAXDAMAGE
     if (secondaryMinDmg > 0 && secondaryMaxDmg > 0 && 
         (secondaryMinDmg > minDmg || secondaryMaxDmg > maxDmg)) {
       minDmg = secondaryMinDmg;

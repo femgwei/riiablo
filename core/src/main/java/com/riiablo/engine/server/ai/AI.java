@@ -154,7 +154,7 @@ public abstract class AI implements Interactable.Interactor {
   private static EntitySubscription enemyEntities;
 
   /**
-   * 获取玩家实体订阅（用于远程怪查找目标）。懒初始化，与 D2MOO pTargetNodes 等价。
+   * 获取玩家实体订阅（用于远程怪查找目标）。懒初始化，与 D2MOD pTargetNodes 等价。
    */
   protected static EntitySubscription getEnemyEntities() {
     if (enemyEntities == null) {
@@ -166,7 +166,7 @@ public abstract class AI implements Interactable.Interactor {
 
   /**
    * 查找最近玩家，返回 targetId；outDistance[0] 为距离。
-   * 优化：使用 aidist 限制查找范围，平方距离避免开方。D2MOO 使用 nAiDist 限制查找。
+   * 优化：使用 aidist 限制查找范围，平方距离避免开方。D2MOD 使用 nAiDist 限制查找。
    */
   protected int findNearestTargetWithAidist(float[] outDistance) {
     Vector2 entityPos = mPosition.get(entityId).position;

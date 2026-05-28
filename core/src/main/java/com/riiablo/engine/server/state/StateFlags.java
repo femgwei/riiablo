@@ -1,12 +1,12 @@
 package com.riiablo.engine.server.state;
 
 /**
- * 状态标志位集合 - 基于 D2MOO 的位操作实现
+ * 状态标志位集合 - 基于 D2MOD 的位操作实现
  * 
  * <p>该类使用位数组来高效存储和查询单位上激活的状态。
  * 每个状态ID对应一个位，可以快速检查状态是否存在。
  * 
- * <p>参考：D2MOO/source/D2Common/src/D2States.cpp 中的位操作
+ * <p>参考：D2MOD/source/D2Common/src/D2States.cpp 中的位操作
  * 
  * @author riiablo team
  */

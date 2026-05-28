@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.missile;
 
 /**
- * 投射物标志位 - 基于 D2MOO Missiles.h 移植
+ * 投射物标志位 - 基于 D2MOD Missiles.h 移植
  * 
  * <p>定义投射物的各种行为标志。
  * 
- * <p>参考：D2MOO/source/D2Game/src/MISSILES/Missiles.h
+ * <p>参考：D2MOD/source/D2Game/src/MISSILES/Missiles.h
  * 
  * @author riiablo team
  */

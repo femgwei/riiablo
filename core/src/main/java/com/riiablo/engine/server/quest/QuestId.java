@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.quest;
 
 /**
- * 任务 ID 枚举 - 基于 D2MOO D2Quests 移植
+ * 任务 ID 枚举 - 基于 D2MOD D2Quests 移植
  * 
  * <p>定义了游戏中所有任务的 ID。
  * 
- * <p>参考：D2MOO/source/D2Game/include/QUESTS/Quests.h
+ * <p>参考：D2MOD/source/D2Game/include/QUESTS/Quests.h
  * 
  * @author riiablo team
  */

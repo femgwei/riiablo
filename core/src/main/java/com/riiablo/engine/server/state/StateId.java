@@ -1,12 +1,12 @@
 package com.riiablo.engine.server.state;
 
 /**
- * 状态ID枚举 - 基于 D2MOO D2C_States 移植
+ * 状态ID枚举 - 基于 D2MOD D2C_States 移植
  * 
  * <p>定义了游戏中所有状态效果的ID，对应 states.txt 中的条目。
  * 这些状态包括光环、诅咒、增益、减益等各种效果。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2States.h
+ * <p>参考：D2MOD/source/D2Common/include/D2States.h
  * 
  * @author riiablo team
  */

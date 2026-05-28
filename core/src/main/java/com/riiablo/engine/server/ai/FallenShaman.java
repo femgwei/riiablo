@@ -22,9 +22,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
- * FallenShaman AI implementation matching D2MOO's AITHINK_Fn013_FallenShaman logic.
+ * FallenShaman AI implementation matching D2MOD's AITHINK_Fn013_FallenShaman logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = FALLENSHAMAN_AI_PARAM_RAISE_CHANCE_PCT (raise dead chance)
  * - params[1] = FALLENSHAMAN_AI_PARAM_RAISE_RANGE (raise range)
  * - params[2] = FALLENSHAMAN_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
@@ -89,7 +89,7 @@ public class FallenShaman extends AI {
 
   /**
    * Check if monster is in combat (within melee range).
-   * D2MOO: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
+   * D2MOD: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
    */
   private boolean isInCombat(int targetId) {
     if (targetId == Engine.INVALID_ENTITY) return false;
@@ -105,7 +105,7 @@ public class FallenShaman extends AI {
 
   /**
    * Find nearby corpse to raise (simplified version).
-   * D2MOO: AITHINK_TargetCallback_FallenShaman searches for corpses
+   * D2MOD: AITHINK_TargetCallback_FallenShaman searches for corpses
    */
   private int findNearbyCorpse(float maxRange) {
     // TODO: Implement corpse finding logic
@@ -175,12 +175,12 @@ public class FallenShaman extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOO: Check if should raise dead (if not in combat and has skill)
+    // D2MOD: Check if should raise dead (if not in combat and has skill)
     if (!bCombat && params.length > 1) {
       float raiseRange = params[1];
       int corpseId = findNearbyCorpse(raiseRange);
       if (corpseId != Engine.INVALID_ENTITY && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-        // D2MOO: Use raise dead skill (nSkill[0])
+        // D2MOD: Use raise dead skill (nSkill[0])
         // TODO: Implement skill casting for raise dead
         stateMachine.changeState(State.CAST);
         time = MathUtils.random(1f, 2);
@@ -188,14 +188,14 @@ public class FallenShaman extends AI {
       }
     }
 
-    // D2MOO: If in combat, check attack chance
+    // D2MOD: If in combat, check attack chance
     if (bCombat) {
-      // D2MOO: FALLENSHAMAN_AI_PARAM_ATTACK_CHANCE_PCT
+      // D2MOD: FALLENSHAMAN_AI_PARAM_ATTACK_CHANCE_PCT
       if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
-        // D2MOO: FALLENSHAMAN_AI_PARAM_ATTACK1_OR_2_CHANCE_PCT
+        // D2MOD: FALLENSHAMAN_AI_PARAM_ATTACK1_OR_2_CHANCE_PCT
         byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
@@ -210,7 +210,7 @@ public class FallenShaman extends AI {
       }
     }
 
-    // D2MOO: Not in combat, approach target
+    // D2MOD: Not in combat, approach target
     pathfinder.findPath(entityId, targetPos, false, targetId);
     stateMachine.changeState(State.APPROACH);
     time = MathUtils.random(1f, 2);

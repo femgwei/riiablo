@@ -5,9 +5,9 @@ import com.riiablo.codec.excel.MonLvl;
 import com.riiablo.codec.excel.MonStats;
 
 /**
- * Calculates monster stats based on level, following D2MOO's DATATBLS_CalculateMonsterStatsByLevel logic.
+ * Calculates monster stats based on level, following D2MOD's DATATBLS_CalculateMonsterStatsByLevel logic.
  * 
- * Reference: D2MOO source/D2Common/src/DataTbls/MonsterTbls.cpp:562
+ * Reference: D2MOD source/D2Common/src/DataTbls/MonsterTbls.cpp:562
  */
 public class MonsterStatsCalculator {
   
@@ -71,7 +71,7 @@ public class MonsterStatsCalculator {
     }
     
     // Calculate offset for expansion (3 for expansion, 0 for classic)
-    // In D2MOO: nOffset = 3 * (nGameType != 0)
+    // In D2MOD: nOffset = 3 * (nGameType != 0)
     // For expansion, use LHP/LAC/etc. arrays instead of HP/AC/etc.
     int offset = (gameType != 0) ? 3 : 0;
     
@@ -86,7 +86,7 @@ public class MonsterStatsCalculator {
         result.maxHP = monstats.maxHP[difficulty];
       } else if (useMonLvlTable) {
         // Use actual MonLvl table data
-        // In D2MOO: ApplyRatio(MonLvl.dwHP[difficulty + offset], MonStats.minHP[difficulty], 100)
+        // In D2MOD: ApplyRatio(MonLvl.dwHP[difficulty + offset], MonStats.minHP[difficulty], 100)
         int[] hpArray = (offset > 0) ? monLvl.LHP : monLvl.HP;
         if (hpArray != null && hpArray.length > difficulty) {
           int hpMultiplier = hpArray[difficulty];
@@ -257,7 +257,7 @@ public class MonsterStatsCalculator {
    * Calculate level-based multiplier for monster stats
    * 
    * This is a simplified approximation since we don't have the MonLvl table.
-   * In D2MOO: HP = ApplyRatio(MonLvl.dwHP[difficulty + offset], MonStats.minHP/maxHP[difficulty], 100)
+   * In D2MOD: HP = ApplyRatio(MonLvl.dwHP[difficulty + offset], MonStats.minHP/maxHP[difficulty], 100)
    * Which means: HP = MonLvl.dwHP * MonStats.minHP/maxHP / 100
    * 
    * Based on user feedback: MonStats.maxHP[0] = 181, but actual HP should be 15-20
@@ -288,7 +288,7 @@ public class MonsterStatsCalculator {
     float multiplier = baseMultiplier * (1f + (level - 1) * growthRate);
     
     // Adjust for difficulty (nightmare and hell use different MonLvl array indices)
-    // In D2MOO: nOffset = 3 * (nGameType != 0), then uses dwHP[difficulty + nOffset]
+    // In D2MOD: nOffset = 3 * (nGameType != 0), then uses dwHP[difficulty + nOffset]
     // For expansion: difficulty 0 uses dwLHP[0], difficulty 1 uses dwLHP[1], etc.
     // For classic: difficulty 0 uses dwHP[0], difficulty 1 uses dwHP[1], etc.
     // Nightmare and Hell typically have higher multipliers
@@ -309,11 +309,11 @@ public class MonsterStatsCalculator {
   
   /**
    * Apply ratio calculation (value * multiplier / divisor)
-   * Reference: D2MOO DATATBLS_ApplyRatio
+   * Reference: D2MOD DATATBLS_ApplyRatio
    */
   private static int applyRatio(int value, int multiplier, int divisor) {
     if (divisor == 0) return value;
-    // Handle overflow cases similar to D2MOO
+    // Handle overflow cases similar to D2MOD
     if (value <= 0x100000 && multiplier <= 0x10000) {
       return multiplier * value / divisor;
     }

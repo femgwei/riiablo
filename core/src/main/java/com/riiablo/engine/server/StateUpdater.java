@@ -13,7 +13,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 状态更新系统 - 基于 D2MOO 状态处理逻辑移植
+ * 状态更新系统 - 基于 D2MOD 状态处理逻辑移植
  * 
  * <p>该系统每帧更新所有单位的状态，处理：
  * <ul>
@@ -23,7 +23,7 @@ import com.riiablo.logger.Logger;
  *   <li>状态效果应用（减速、眩晕等）</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Common/src/D2States.cpp
+ * <p>参考：D2MOD/source/D2Common/src/D2States.cpp
  * 
  * @author riiablo team
  */

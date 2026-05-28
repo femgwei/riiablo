@@ -20,9 +20,9 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * Zombie AI implementation matching D2MOO's AITHINK_Fn003_Zombie logic.
+ * Zombie AI implementation matching D2MOD's AITHINK_Fn003_Zombie logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = ZOMBIE_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
  * - params[1] = ZOMBIE_AI_PARAM_AWARE_DISTANCE (aware distance)
  * - params[3] = ZOMBIE_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT (A1 vs A2 chance)
@@ -84,18 +84,18 @@ public class Zombie extends AI {
 
   /**
    * Check if monster is in special AI state (sub_6FCF2E70).
-   * D2MOO: Returns true if AI state == 3 || AI state == 19.
+   * D2MOD: Returns true if AI state == 3 || AI state == 19.
    * For now, we'll use a simplified check.
    */
   private boolean checkSpecialAiState() {
     // TODO: Implement proper AI state check
-    // D2MOO checks MONSTER_GetAiState(pUnit) == 3 || == 19
+    // D2MOD checks MONSTER_GetAiState(pUnit) == 3 || == 19
     return false;
   }
 
   /**
    * Check if current level is Burial Grounds.
-   * D2MOO: DUNGEON_GetLevelIdFromRoom(UNITS_GetRoom(pUnit)) == LEVEL_BURIALGROUNDS
+   * D2MOD: DUNGEON_GetLevelIdFromRoom(UNITS_GetRoom(pUnit)) == LEVEL_BURIALGROUNDS
    */
   private boolean isInBurialGrounds() {
     // TODO: Implement level ID check
@@ -105,7 +105,7 @@ public class Zombie extends AI {
 
   /**
    * Check if monster is in combat (within melee range).
-   * D2MOO: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
+   * D2MOD: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
    */
   private boolean isInCombat(int targetId) {
     if (targetId == Engine.INVALID_ENTITY) return false;
@@ -203,7 +203,7 @@ public class Zombie extends AI {
       }
     }
 
-    // D2MOO: If in combat, attack
+    // D2MOD: If in combat, attack
     if (bCombat) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -216,7 +216,7 @@ public class Zombie extends AI {
       return;
     }
 
-    // D2MOO: Not in combat
+    // D2MOD: Not in combat
     // Check conditions for running to target:
     // 1. checkSpecialAiState() OR
     // 2. (distance < AWARE_DISTANCE AND random chance) OR
@@ -226,7 +226,7 @@ public class Zombie extends AI {
         || isInBurialGrounds();
 
     if (shouldRun) {
-      // Run to target (set velocity to 100 like D2MOO)
+      // Run to target (set velocity to 100 like D2MOD)
       if (mVelocity.has(entityId)) {
         mVelocity.get(entityId).velocity.set(targetPos).sub(entityPos).nor().scl(100f);
       }

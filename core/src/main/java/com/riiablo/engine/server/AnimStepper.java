@@ -38,7 +38,17 @@ public class AnimStepper extends IntervalIteratingSystem {
       return;
     }
 
-    final byte keyframe = animData.keyframes[animData.frame >>> 8];
+    // 计算关键帧索引（frame 是 24.8 固定点数，右移 8 位获取整数部分）
+    final int keyframeIndex = animData.frame >>> 8;
+    
+    // 边界检查：防止数组越界
+    if (keyframeIndex < 0 || keyframeIndex >= animData.keyframes.length) {
+      log.warn("Keyframe index out of bounds: frame={}, index={}, keyframes.length={}, entityId={}", 
+          animData.frame, keyframeIndex, animData.keyframes.length, entityId);
+      return;
+    }
+
+    final byte keyframe = animData.keyframes[keyframeIndex];
     if (keyframe > Engine.KEYFRAME_NIL) {
       log.debug("broadcasting AnimDataKeyframeEvent({},{})", entityId, Engine.getKeyframe(keyframe));
       events.dispatch(AnimDataKeyframeEvent.obtain(entityId, keyframe));

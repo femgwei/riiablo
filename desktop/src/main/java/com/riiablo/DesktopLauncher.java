@@ -121,6 +121,21 @@ public class DesktopLauncher {
     }
     log.debug("logLevel: {}", logLevel);
     LogManager.setLevel(DesktopLauncher.class.getName(), logLevel);
+    
+    // 屏蔽非地图相关的DEBUG日志，只保留地图拼接相关的日志
+    // 设置战斗、动画、序列等系统的日志级别为WARN，屏蔽DEBUG日志
+    LogManager.setLevel("com.riiablo.engine.server.Actioneer", Level.WARN);
+    LogManager.setLevel("com.riiablo.engine.server.combat.DamageCalculator", Level.WARN);
+    LogManager.setLevel("com.riiablo.engine.server.AnimStepper", Level.WARN);
+    LogManager.setLevel("com.riiablo.engine.server.SequenceHandler", Level.WARN);
+    LogManager.setLevel("com.riiablo.engine.client.DamageHandler", Level.WARN);
+    LogManager.setLevel("com.riiablo.engine.client.DeathHandler", Level.WARN);
+    LogManager.setLevel("com.riiablo.engine.client.CorpseManager", Level.WARN);
+    
+    // 保留地图相关的DEBUG日志
+    LogManager.setLevel("com.riiablo.map.Act1MapBuilderD2MOD", Level.DEBUG);
+    LogManager.setLevel("com.riiablo.map.Map", Level.DEBUG);
+    LogManager.setLevel("com.riiablo.map.MapManager", Level.DEBUG);
 
     final InstallationFinder finder = InstallationFinder.getInstance();
 

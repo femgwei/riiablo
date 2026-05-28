@@ -1,0 +1,8 @@
+{
+  "java.import.gradle.enabled": true,
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.project.importOnFirstTimeStartup": "automatic",
+  "java.project.importHint": true,
+  "java.server.launchMode": "Standard",
+  "gradle.nestedProjects": true
+}

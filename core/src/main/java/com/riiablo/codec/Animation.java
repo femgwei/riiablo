@@ -498,7 +498,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     SHADOW_TRANSFORM.preTranslate(x, y);
     SHADOW_TRANSFORM.scale(1, 0.5f);
 
-    // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+    // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
     if (layer.regions == null || d < 0 || d >= layer.regions.length) {
       return; // Invalid direction, skip shadow drawing
     }
@@ -613,7 +613,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     }
 
     protected Layer load(int d) {
-      // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+      // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
       // regions array size may not match numDirections if DC data is incomplete
       if (regions == null || d < 0 || d >= regions.length) {
         return this; // Invalid direction, skip loading
@@ -664,7 +664,7 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
       x += box.xMin;
       y -= box.yMax;
       
-      // D2MOO: Add bounds check to prevent ArrayIndexOutOfBoundsException
+      // D2MOD: Add bounds check to prevent ArrayIndexOutOfBoundsException
       if (regions == null || d < 0 || d >= regions.length) {
         return; // Invalid direction, skip drawing
       }

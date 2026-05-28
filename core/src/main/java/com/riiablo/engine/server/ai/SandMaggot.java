@@ -17,9 +17,9 @@ import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.AttributesWrapper;
 
 /**
- * SandMaggot AI implementation matching D2MOO's AITHINK_Fn015_SandMaggot logic.
+ * SandMaggot AI implementation matching D2MOD's AITHINK_Fn015_SandMaggot logic.
  * 
- * D2MOO AI Parameters:
+ * D2MOD AI Parameters:
  * - params[0] = SANDMAGGOT_AI_PARAM_LAY_CHANCE_PCT (lay egg chance)
  * - params[1] = SANDMAGGOT_AI_PARAM_SPIT_CHANCE_PCT (spit chance)
  * - params[2] = SANDMAGGOT_AI_PARAM_NUMBER_OF_EGGS (max number of eggs)
@@ -149,11 +149,11 @@ public class SandMaggot extends AI {
 
     time = SLEEP;
 
-    // D2MOO: Burrow state handling (nParam >= 3)
+    // D2MOD: Burrow state handling (nParam >= 3)
     if (aiParam0 >= 3) {
       if (targetId == Engine.INVALID_ENTITY || targetDistance >= 16) {
         if (aiParam0 == 3) {
-          // D2MOO: sub_6FCD0150(pGame, pUnit, 20)
+          // D2MOD: sub_6FCD0150(pGame, pUnit, 20)
           stateMachine.changeState(State.BURROW);
           time = 20f * com.riiablo.codec.Animation.FRAME_DURATION;
           return;
@@ -161,10 +161,10 @@ public class SandMaggot extends AI {
       }
 
       if (aiParam0 == 3) {
-        // D2MOO: Check if can unburrow and use skill
+        // D2MOD: Check if can unburrow and use skill
         // TODO: Check game frame vs aiParam1
         if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-          // D2MOO: Use skill (nSkill[0]) - unburrow and attack
+          // D2MOD: Use skill (nSkill[0]) - unburrow and attack
           // TODO: Implement skill casting
           stateMachine.changeState(State.UNBURROW);
           aiParam0 = 1;
@@ -179,12 +179,12 @@ public class SandMaggot extends AI {
         return;
       }
     } else {
-      // D2MOO: Normal state (nParam < 3)
+      // D2MOD: Normal state (nParam < 3)
       if (targetId == Engine.INVALID_ENTITY || targetDistance > 10) {
-        // D2MOO: Check if should burrow (use skill[1])
+        // D2MOD: Check if should burrow (use skill[1])
         // TODO: Check game frame vs aiParam1
         if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()) {
-          // D2MOO: Use burrow skill (nSkill[1])
+          // D2MOD: Use burrow skill (nSkill[1])
           // TODO: Implement skill casting
           stateMachine.changeState(State.BURROW);
           aiParam0 = 3;
@@ -226,10 +226,10 @@ public class SandMaggot extends AI {
     boolean bCombat = isInCombat(targetId);
     float lifePercent = getLifePercentage();
 
-    // D2MOO: If hurt (< 25%) and close (< 7), try to burrow
+    // D2MOD: If hurt (< 25%) and close (< 7), try to burrow
     if (lifePercent < 25 && targetDistance < 7 && monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()
         && MathUtils.randomBoolean(0.2f)) {
-      // D2MOO: Use burrow skill (nSkill[1])
+      // D2MOD: Use burrow skill (nSkill[1])
       // TODO: Implement skill casting
       stateMachine.changeState(State.BURROW);
       aiParam0 = 3;
@@ -239,7 +239,7 @@ public class SandMaggot extends AI {
       return;
     }
 
-    // D2MOO: If in combat, melee attack
+    // D2MOD: If in combat, melee attack
     if (bCombat && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -251,7 +251,7 @@ public class SandMaggot extends AI {
       return;
     }
 
-    // D2MOO: If close (< 15), spit attack
+    // D2MOD: If close (< 15), spit attack
     if (targetDistance < 15 && params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -263,16 +263,16 @@ public class SandMaggot extends AI {
       return;
     }
 
-    // D2MOO: 20% chance to circle
+    // D2MOD: 20% chance to circle
     if (MathUtils.randomBoolean(0.2f)) {
-      // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 6u, 0)
+      // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 6u, 0)
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
-    // D2MOO: Check if should lay egg
+    // D2MOD: Check if should lay egg
     int maxEggs = params.length > 2 ? params[2] : 3;
     if (aiParam2 >= maxEggs || (params.length > 0 && !MathUtils.randomBoolean(params[0] / 100f))) {
       // Can't lay more eggs or no lay chance
@@ -281,9 +281,9 @@ public class SandMaggot extends AI {
       return;
     }
 
-    // D2MOO: Prepare to lay egg
+    // D2MOD: Prepare to lay egg
     if (aiParam0 == 2 && monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()) {
-      // D2MOO: Use lay egg skill (nSkill[2])
+      // D2MOD: Use lay egg skill (nSkill[2])
       // TODO: Implement skill casting
       aiParam0 = 1;
       aiParam2++;
@@ -292,8 +292,8 @@ public class SandMaggot extends AI {
       return;
     }
 
-    // D2MOO: Start preparing to lay egg
-    // D2MOO: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 6u, 0)
+    // D2MOD: Start preparing to lay egg
+    // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 6u, 0)
     pathfinder.findPath(entityId, targetPos, false, targetId);
     aiParam0 = 2;
     stateMachine.changeState(State.APPROACH);

@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 镶嵌管理器 - 基于 D2MOO Items.cpp 移植
+ * 镶嵌管理器 - 基于 D2MOD Items.cpp 移植
  * 
  * <p>管理物品的镶嵌系统：
  * <ul>
@@ -17,7 +17,7 @@ import com.riiablo.logger.Logger;
  *   <li>镶嵌物移除</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Common/src/Items/Items.cpp
+ * <p>参考：D2MOD/source/D2Common/src/Items/Items.cpp
  * 
  * @author riiablo team
  */
@@ -189,7 +189,7 @@ public class SocketManager {
   /**
    * 镶嵌物品到孔洞
    * 
-   * <p>参考 D2MOO ITEMS_InsertItemIntoSocket
+   * <p>参考 D2MOD ITEMS_InsertItemIntoSocket
    * 
    * @param targetItem 目标装备信息
    * @param targetSockets 目标装备当前已镶嵌的物品

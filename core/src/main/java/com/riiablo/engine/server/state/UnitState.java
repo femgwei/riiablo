@@ -14,7 +14,7 @@ import com.riiablo.logger.Logger;
  *   <li>状态来源（施法者ID）</li>
  * </ul>
  * 
- * <p>参考：D2MOO 的状态链表结构
+ * <p>参考：D2MOD 的状态链表结构
  * 
  * @author riiablo team
  */

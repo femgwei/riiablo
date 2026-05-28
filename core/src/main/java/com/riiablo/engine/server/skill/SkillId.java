@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.skill;
 
 /**
- * 技能 ID 常量 - 基于 D2MOO SkillsIds.h 移植
+ * 技能 ID 常量 - 基于 D2MOD SkillsIds.h 移植
  * 
  * <p>定义了游戏中所有技能的 ID。
  * 
- * <p>参考：D2MOO/source/D2Common/include/DataTbls/SkillsIds.h
+ * <p>参考：D2MOD/source/D2Common/include/DataTbls/SkillsIds.h
  * 
  * @author riiablo team
  */

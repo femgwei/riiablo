@@ -6,11 +6,11 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 德鲁伊技能实现 - 基于 D2MOO SkillDruid.cpp 移植
+ * 德鲁伊技能实现 - 基于 D2MOD SkillDruid.cpp 移植
  * 
  * <p>包含元素、变形、召唤三系技能的实现。
  * 
- * <p>参考：D2MOO/source/D2Game/src/SKILLS/SkillDruid.cpp
+ * <p>参考：D2MOD/source/D2Game/src/SKILLS/SkillDruid.cpp
  * 
  * @author riiablo team
  */

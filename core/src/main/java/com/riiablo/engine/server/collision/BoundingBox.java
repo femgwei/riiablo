@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.collision;
 
 /**
- * 边界框 - 基于 D2MOO D2BoundingBoxStrc 移植
+ * 边界框 - 基于 D2MOD D2BoundingBoxStrc 移植
  * 
  * <p>用于碰撞检测的轴对齐边界框（AABB）。
  * 
- * <p>参考：D2MOO/source/D2Common/include/D2Collision.h
+ * <p>参考：D2MOD/source/D2Common/include/D2Collision.h
  * 
  * @author riiablo team
  */
@@ -103,7 +103,7 @@ public class BoundingBox {
   /**
    * 根据中心点和大小创建边界框
    * 
-   * <p>对应 D2MOO COLLISION_CreateBoundingBox
+   * <p>对应 D2MOD COLLISION_CreateBoundingBox
    * 
    * @param centerX 中心 X 坐标
    * @param centerY 中心 Y 坐标

@@ -1,5 +1,5 @@
 /**
- * 队伍系统模块 - 基于 D2MOO Party 移植
+ * 队伍系统模块 - 基于 D2MOD Party 移植
  * 
  * <p>该模块提供多人游戏中的队伍功能：
  * <ul>
@@ -30,9 +30,9 @@
  * 
  * <h2>参考来源</h2>
  * <ul>
- *   <li>D2MOO/source/D2Game/include/UNIT/Party.h</li>
- *   <li>D2MOO/source/D2Game/src/UNIT/Party.cpp</li>
- *   <li>D2MOO/source/D2Game/src/PLAYER/PartyScreen.cpp</li>
+ *   <li>D2MOD/source/D2Game/include/UNIT/Party.h</li>
+ *   <li>D2MOD/source/D2Game/src/UNIT/Party.cpp</li>
+ *   <li>D2MOD/source/D2Game/src/PLAYER/PartyScreen.cpp</li>
  * </ul>
  * 
  * @author riiablo team

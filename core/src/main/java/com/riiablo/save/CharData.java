@@ -133,8 +133,8 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     level   = 1;
     Arrays.fill(hotkeys, D2S.HOTKEY_UNASSIGNED);
     for (int[] actions : actions) Arrays.fill(actions, 0);
-    // TODO: check and set town against saved town
-    mapSeed   = 0;
+    // 新角色：mapSeed 必须在创建时设置，与 D2 一致。用于地图生成的随机数序列，保证每个角色地图不同。
+    mapSeed = (int) (System.currentTimeMillis() & 0xFFFFFFFF);
     return this;
   }
 

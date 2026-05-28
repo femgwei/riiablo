@@ -27,7 +27,7 @@ import com.riiablo.util.DebugUtils;
  * - 迷雾/探索区域系统
  * - 名称显示
  * 
- * 参考: D2MOO D2AutomapCellStrc/D2AutomapLayerStrc, OpenDiablo2 AutoMapRecord
+ * 参考: D2MOD D2AutomapCellStrc/D2AutomapLayerStrc, OpenDiablo2 AutoMapRecord
  */
 public class AutomapManager implements Disposable {
   private static final String TAG = "AutomapManager";

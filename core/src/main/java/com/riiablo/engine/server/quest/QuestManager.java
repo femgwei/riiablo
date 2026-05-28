@@ -7,7 +7,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /**
- * 任务管理器 - 基于 D2MOO Quests.cpp 移植
+ * 任务管理器 - 基于 D2MOD Quests.cpp 移植
  * 
  * <p>管理游戏任务的完整生命周期：
  * <ul>
@@ -18,7 +18,7 @@ import com.riiablo.logger.Logger;
  *   <li>任务事件处理</li>
  * </ul>
  * 
- * <p>参考：D2MOO/source/D2Game/src/QUESTS/Quests.cpp
+ * <p>参考：D2MOD/source/D2Game/src/QUESTS/Quests.cpp
  * 
  * @author riiablo team
  */

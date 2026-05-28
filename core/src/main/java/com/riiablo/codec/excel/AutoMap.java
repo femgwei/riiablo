@@ -4,7 +4,7 @@ package com.riiablo.codec.excel;
  * AutoMap.txt 数据表
  * 定义小地图显示使用的瓷砖图标映射规则
  * 
- * 参考: D2MOO D2AutomapCellStrc / OpenDiablo2 AutoMapRecord
+ * 参考: D2MOD D2AutomapCellStrc / OpenDiablo2 AutoMapRecord
  */
 @Excel.Binned
 public class AutoMap extends Excel<AutoMap.Entry> {

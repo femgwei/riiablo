@@ -1,11 +1,11 @@
 package com.riiablo.engine.server.party;
 
 /**
- * 队伍成员数据 - 基于 D2MOO D2PartyNodeStrc 移植
+ * 队伍成员数据 - 基于 D2MOD D2PartyNodeStrc 移植
  * 
  * <p>存储单个队伍成员的运行时数据。
  * 
- * <p>参考：D2MOO/source/D2Game/include/UNIT/Party.h
+ * <p>参考：D2MOD/source/D2Game/include/UNIT/Party.h
  * 
  * @author riiablo team
  */
