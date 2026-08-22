@@ -1515,9 +1515,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     SeamRepairResult result = repairTownSeam(
         grid, entryX, entryY, direction, TOWN_SEAM_MAX_GAP_TILES);
     Gdx.app.log(TAG, String.format(
-        "Town seam repair: dir=%s entry=(%d,%d) target=(%d,%d) carved=%d maxGap=%d status=%s",
+        "Town seam repair: dir=%s entry=(%d,%d) target=(%d,%d) carved=%d roomFill=%d maxGap=%d status=%s",
         altDirectionName(direction), entryX, entryY, result.targetX, result.targetY,
-        result.carved, TOWN_SEAM_MAX_GAP_TILES, result.found ? "connected" : "not-found"));
+        result.carved, result.roomFill, TOWN_SEAM_MAX_GAP_TILES,
+        result.found ? "connected" : "not-found"));
   }
 
   private static int clamp(int value, int min, int max) {
@@ -1539,12 +1540,14 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     final int targetX;
     final int targetY;
     final int carved;
+    final int roomFill;
 
-    SeamRepairResult(boolean found, int targetX, int targetY, int carved) {
+    SeamRepairResult(boolean found, int targetX, int targetY, int carved, int roomFill) {
       this.found = found;
       this.targetX = targetX;
       this.targetY = targetY;
       this.carved = carved;
+      this.roomFill = roomFill;
     }
   }
 
@@ -1553,8 +1556,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       TileGrid grid, int entryX, int entryY, int direction, int maxDistance) {
     if (grid == null || !grid.inBounds(entryX, entryY) || maxDistance < 0
         || direction < ALTDIR_WEST || direction > ALTDIR_SOUTH) {
-      return new SeamRepairResult(false, -1, -1, 0);
+      return new SeamRepairResult(false, -1, -1, 0, 0);
     }
+
+    boolean entryRoomWasEmpty = isOutdoorRoomEmpty(grid, entryX, entryY);
 
     int targetX = -1;
     int targetY = -1;
@@ -1570,7 +1575,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         }
       }
     }
-    if (targetX < 0) return new SeamRepairResult(false, -1, -1, 0);
+    if (targetX < 0) return new SeamRepairResult(false, -1, -1, 0, 0);
 
     int floorId = grid.floorIds[targetY][targetX];
     int carved = 0;
@@ -1599,20 +1604,69 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         carved += carveSeamCell(grid, x, y, floorId);
       }
     }
-    return new SeamRepairResult(true, targetX, targetY, carved);
+    int roomFill = entryRoomWasEmpty
+        ? fillEmptyOutdoorRoom(grid, entryX, entryY, targetX, targetY, floorId)
+        : 0;
+    return new SeamRepairResult(true, targetX, targetY, carved, roomFill);
+  }
+
+  private static boolean isOutdoorRoomEmpty(TileGrid grid, int tileX, int tileY) {
+    int roomSize = OutdoorGrid.GRID_SIZE_TILES;
+    int startX = tileX / roomSize * roomSize;
+    int startY = tileY / roomSize * roomSize;
+    int endX = Math.min(startX + roomSize, grid.width);
+    int endY = Math.min(startY + roomSize, grid.height);
+    for (int y = startY; y < endY; y++) {
+      for (int x = startX; x < endX; x++) {
+        if (grid.exportedFloorCells[y][x] && grid.floorIds[y][x] != -1) return false;
+      }
+    }
+    return true;
+  }
+
+  /** Copies only floor artwork from the nearest real RoomEx into the town seam RoomEx. */
+  private static int fillEmptyOutdoorRoom(TileGrid grid, int entryX, int entryY,
+      int sourceX, int sourceY, int fallbackFloorId) {
+    int roomSize = OutdoorGrid.GRID_SIZE_TILES;
+    int destStartX = entryX / roomSize * roomSize;
+    int destStartY = entryY / roomSize * roomSize;
+    int sourceStartX = sourceX / roomSize * roomSize;
+    int sourceStartY = sourceY / roomSize * roomSize;
+    int destEndX = Math.min(destStartX + roomSize, grid.width);
+    int destEndY = Math.min(destStartY + roomSize, grid.height);
+    int filled = 0;
+    for (int y = destStartY; y < destEndY; y++) {
+      for (int x = destStartX; x < destEndX; x++) {
+        boolean alreadyCarved = grid.exportedFloorCells[y][x];
+        int srcX = sourceStartX + x - destStartX;
+        int srcY = sourceStartY + y - destStartY;
+        int floorId = grid.inBounds(srcX, srcY)
+                && grid.exportedFloorCells[srcY][srcX]
+                && grid.floorIds[srcY][srcX] != -1
+            ? grid.floorIds[srcY][srcX]
+            : fallbackFloorId;
+        fillSeamFloorCell(grid, x, y, floorId);
+        if (!alreadyCarved) filled++;
+      }
+    }
+    return filled;
   }
 
   private static int carveSeamCell(TileGrid grid, int x, int y, int floorId) {
     grid.dirtPathFlags[y][x] = true;
     if (grid.exportedFloorCells[y][x]) return 0;
 
+    fillSeamFloorCell(grid, x, y, floorId);
+    return 1;
+  }
+
+  private static void fillSeamFloorCell(TileGrid grid, int x, int y, int floorId) {
     grid.floorIds[y][x] = floorId;
     grid.exportedFloorCells[y][x] = true;
     grid.shadowIds[y][x] = -1;
     for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
       grid.wallIds[layer][y][x] = -1;
     }
-    return 1;
   }
 
   /**

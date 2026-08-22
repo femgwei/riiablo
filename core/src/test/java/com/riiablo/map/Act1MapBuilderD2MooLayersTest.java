@@ -248,6 +248,35 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void fillsOnlyEmptyOutdoorRoomContainingTownExit() {
+    TileGrid grid = new TileGrid(16, 8);
+    for (int y = 0; y < 8; y++) {
+      for (int x = 8; x < 16; x++) {
+        grid.floorIds[y][x] = 0x7000 + y * 8 + x;
+        grid.exportedFloorCells[y][x] = true;
+      }
+    }
+
+    Act1MapBuilderD2MOD.SeamRepairResult result =
+        Act1MapBuilderD2MOD.repairTownSeam(grid, 3, 7, 1, 8);
+
+    assertEquals(true, result.found);
+    assertEquals(8, result.targetX);
+    assertEquals(7, result.targetY);
+    assertEquals(5, result.carved);
+    assertEquals(59, result.roomFill);
+    for (int y = 0; y < 8; y++) {
+      for (int x = 0; x < 8; x++) {
+        assertEquals(true, grid.exportedFloorCells[y][x]);
+        assertEquals(grid.floorIds[y][x + 8], grid.floorIds[y][x]);
+      }
+    }
+    assertEquals(false, grid.dirtPathFlags[0][0]);
+    assertEquals(true, grid.dirtPathFlags[7][3]);
+    assertEquals(true, grid.dirtPathFlags[7][8]);
+  }
+
+  @Test
   void refusesToFillTownSeamBeyondOneRoomEx() {
     TileGrid grid = seamGrid(12, 1, 11, 0, 0x6789);
 
