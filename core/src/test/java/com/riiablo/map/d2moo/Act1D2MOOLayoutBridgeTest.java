@@ -34,6 +34,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
     exportAndReport(first.drlg);
     DrlgDrlg.freeDrlg(first.drlg);
+    Act1D2MOOLayoutBridge.releaseDataTables();
 
     Act1D2MOOLayoutBridge.LayoutAndDrlg second =
         Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, difficulty, burialId);
@@ -41,6 +42,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertEquals(firstSummary, summarize(second.drlg),
         "same seed must produce the same Act1 layout summary");
     DrlgDrlg.freeDrlg(second.drlg);
+    Act1D2MOOLayoutBridge.releaseDataTables();
   }
 
   private static int findLevelId(String name) {
@@ -93,6 +95,10 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       assertEquals(0, applier.getMissingGridCount(), "missing target grid for level " + levelId);
       assertEquals(0, applier.getOutOfBoundsCount(), "out-of-bounds tile for level " + levelId);
       assertEquals(0, applier.getInvalidTileCount(), "invalid tile id for level " + levelId);
+      assertEquals(0, applier.getDuplicatePositionCount(),
+          "multiple rooms exported the same floor coordinate for level " + levelId);
+      assertEquals(0, applier.getNonFloorOrientationCount(),
+          "floor export referenced non-floor DT1 entries for level " + levelId);
       System.out.println("[ACT1-DIAG] level=" + levelId
           + " size=" + width + 'x' + height
           + " attemptedFloor=" + attempted
@@ -101,7 +107,11 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           + " ignoredLayer=" + applier.getIgnoredLayerCount()
           + " missingGrid=" + applier.getMissingGridCount()
           + " outOfBounds=" + applier.getOutOfBoundsCount()
-          + " invalidTile=" + applier.getInvalidTileCount());
+          + " invalidTile=" + applier.getInvalidTileCount()
+          + " duplicatePosition=" + applier.getDuplicatePositionCount()
+          + " nonFloorOrientation=" + applier.getNonFloorOrientationCount()
+          + " zeroTileId=" + applier.getZeroTileIdCount()
+          + " uniqueFloorIds=" + applier.getUniqueFloorIdCount());
     }
   }
 }

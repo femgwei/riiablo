@@ -379,12 +379,13 @@ public class Map implements Disposable {
           // 在所有 zone 生成完成后，生成路径
           // 路径生成基于 TileGrid，会在 TileGrid 上绘制路径
           Act1MapBuilderD2MOD.INSTANCE.generatePathsOnTileGrid(this, seed);
-          // 路径绘制到 TileGrid 后，需将 TileGrid 应用到 Blood Moor zone 才能显示（zone.generate 中的 apply 早于路径生成）
-          // 使用 D2MOD 时始终应用，确保 BM 显示路径；RenderFromTileGrid 仍可覆盖其他 zone
+          // Re-apply every D2MOO-exported outdoor level after secondary
+          // borders and dirt paths mutate TileGrid. Applying only Blood Moor
+          // left Cold Plains and Stony Field on stale pre-processing tiles.
           for (Zone z : new Array.ArrayIterator<>(zones)) {
-            if (z != null && z.level != null && z.level.Id == 2) { // Blood Moor
+            if (z != null && z.level != null
+                && Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(z.level.Id)) {
               Act1MapBuilderD2MOD.INSTANCE.applyTileGridToZone(z);
-              break;
             }
           }
         } catch (Throwable t) {

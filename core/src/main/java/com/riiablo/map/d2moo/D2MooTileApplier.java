@@ -1,6 +1,7 @@
 package com.riiablo.map.d2moo;
 
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.IntSet;
 import com.d2moo.common.drlg.DrlgTileExporter;
 import com.riiablo.drlg.TileGrid;
 import com.riiablo.map.DT1;
@@ -18,6 +19,10 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     private int missingGridCount;
     private int outOfBoundsCount;
     private int invalidTileCount;
+    private int duplicatePositionCount;
+    private int nonFloorOrientationCount;
+    private int zeroTileIdCount;
+    private final IntSet uniqueFloorIds = new IntSet();
 
     /** 注册 levelId -> TileGrid，仅写入 floor 层到 grid.floorIds。 */
     public void putGrid(int levelId, TileGrid grid) {
@@ -38,6 +43,10 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     public int getMissingGridCount() { return missingGridCount; }
     public int getOutOfBoundsCount() { return outOfBoundsCount; }
     public int getInvalidTileCount() { return invalidTileCount; }
+    public int getDuplicatePositionCount() { return duplicatePositionCount; }
+    public int getNonFloorOrientationCount() { return nonFloorOrientationCount; }
+    public int getZeroTileIdCount() { return zeroTileIdCount; }
+    public int getUniqueFloorIdCount() { return uniqueFloorIds.size; }
 
     public void resetLastExportedFloorCount() {
         lastExportedFloorCount = 0;
@@ -46,6 +55,10 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         missingGridCount = 0;
         outOfBoundsCount = 0;
         invalidTileCount = 0;
+        duplicatePositionCount = 0;
+        nonFloorOrientationCount = 0;
+        zeroTileIdCount = 0;
+        uniqueFloorIds.clear();
     }
 
     @Override
@@ -68,8 +81,13 @@ public final class D2MooTileApplier implements DrlgTileExporter {
             outOfBoundsCount++;
             return;
         }
+        int orientation = (tileId >>> 24) & 0xFF;
+        if (orientation != 0) nonFloorOrientationCount++;
+        if (grid.floorIds[ty][tx] != -1) duplicatePositionCount++;
         int riiabloTileId = toRiiabloTileIndex(tileId);
+        if (riiabloTileId == 0) zeroTileIdCount++;
         grid.floorIds[ty][tx] = riiabloTileId;
+        uniqueFloorIds.add(riiabloTileId);
         lastExportedFloorCount++;
     }
 

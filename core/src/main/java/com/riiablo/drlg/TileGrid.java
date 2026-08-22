@@ -37,6 +37,15 @@ public class TileGrid {
     }
   }
 
+  /** Resets the floor layer to the unassigned sentinel. */
+  public void clearFloorIds() {
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        floorIds[y][x] = -1;
+      }
+    }
+  }
+
   public boolean inBounds(int x, int y) {
     return x >= 0 && x < width && y >= 0 && y < height;
   }

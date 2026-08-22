@@ -78,6 +78,7 @@ public final class Act1D2MOOLayoutBridge {
      * @return 成功时返回 LayoutAndDrlg（含 result 与 drlg），失败时返回 null
      */
     public static LayoutAndDrlg getLayoutAndDrlg(int seed, int diff, int burialGroundsId) {
+        D2DrlgStrc drlg = null;
         try {
             D2LevelDefBin[] cache = buildLevelDefCache(diff, burialGroundsId);
             if (cache == null) return null;
@@ -96,7 +97,13 @@ public final class Act1D2MOOLayoutBridge {
                 return handle == null ? null : handle.readBytes();
             };
 
-            D2DrlgStrc drlg = DrlgDrlg.allocDrlg(
+            // Native D2Common loads these tables before DRLG generation.
+            // Without LvlSub every outdoor room remains the same 0x40002
+            // base floor and the export loses paths and substitutions.
+            DataTbls.loadLvlPrestTxt(archive, 0);
+            DataTbls.loadLvlSubTxt(archive);
+
+            drlg = DrlgDrlg.allocDrlg(
                 act,
                 D2C_Acts.ACT_I,
                 archive,
@@ -109,7 +116,7 @@ public final class Act1D2MOOLayoutBridge {
                 null
             );
             if (drlg == null) {
-                DataTbls.setLevelDefBinCache(null);
+                releaseDataTables();
                 return null;
             }
 
@@ -122,7 +129,7 @@ public final class Act1D2MOOLayoutBridge {
                 if (level == null) {
                     D2Log.error("ACT1_D2MOO_INIT missing level=%d seed=%d diff=%d", levelId, seed, diff);
                     DrlgDrlg.freeDrlg(drlg);
-                    DataTbls.setLevelDefBinCache(null);
+                    releaseDataTables();
                     return null;
                 }
                 D2Log.debug("ACT1_D2MOO_INIT level=%d type=%d beforeRooms=%d", levelId,
@@ -144,13 +151,13 @@ public final class Act1D2MOOLayoutBridge {
                 D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
                 if (level == null) {
                     DrlgDrlg.freeDrlg(drlg);
-                    DataTbls.setLevelDefBinCache(null);
+                    releaseDataTables();
                     return null;
                 }
                 D2DrlgCoord c = level.getLevelCoords();
                 if (c == null) {
                     DrlgDrlg.freeDrlg(drlg);
-                    DataTbls.setLevelDefBinCache(null);
+                    releaseDataTables();
                     return null;
                 }
                 result.coords[i][0] = c.getNPosX();
@@ -175,7 +182,8 @@ public final class Act1D2MOOLayoutBridge {
             D2Log.error("ACT1_D2MOO_LAYOUT failed seed=%d diff=%d burial=%d: %s",
                 seed, diff, burialGroundsId, t.toString());
             if (Boolean.getBoolean("riiablo.drlg.stacktrace")) t.printStackTrace();
-            DataTbls.setLevelDefBinCache(null);
+            if (drlg != null) DrlgDrlg.freeDrlg(drlg);
+            releaseDataTables();
             return null;
         }
     }
@@ -192,8 +200,16 @@ public final class Act1D2MOOLayoutBridge {
         LayoutAndDrlg layoutAndDrlg = getLayoutAndDrlg(seed, diff, burialGroundsId);
         if (layoutAndDrlg == null) return null;
         DrlgDrlg.freeDrlg(layoutAndDrlg.drlg);
-        DataTbls.setLevelDefBinCache(null);
+        releaseDataTables();
         return layoutAndDrlg.result;
+    }
+
+    /** Releases the static D2MOO table caches populated by this bridge. */
+    public static void releaseDataTables() {
+        DataTbls.setLevelDefBinCache(null);
+        DataTbls.setLevelTypesTxtCache(null);
+        DataTbls.unloadLvlPrestTxt();
+        DataTbls.unloadLvlSubTxt();
     }
 
     /**

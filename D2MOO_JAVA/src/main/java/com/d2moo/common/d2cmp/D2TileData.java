@@ -18,6 +18,7 @@ public class D2TileData {
     private int dwFlags;                 // 标志
     private int nOrientation;            // 方向
     private int nSubTileFlags;           // 子瓦片标志
+    private int nRarity;                 // 稀有度（动画瓦片时为帧号）
     
     public D2TileData() {
         this.nTileId = 0;
@@ -118,5 +119,13 @@ public class D2TileData {
     
     public void setNSubTileFlags(int nSubTileFlags) {
         this.nSubTileFlags = nSubTileFlags;
+    }
+
+    public int getNRarity() {
+        return nRarity;
+    }
+
+    public void setNRarity(int nRarity) {
+        this.nRarity = nRarity;
     }
 }

@@ -12,6 +12,9 @@ import com.d2moo.common.util.D2BinaryReader;
  * 当前实现提供基础框架和接口，实际文件加载需要后续实现
  */
 public class D2Cmp {
+
+    private static final int DT1_HEADER_SIZE = 276;
+    private static final int DT1_TILE_HEADER_SIZE = 96;
     
     // 瓦片库缓存（占位符，实际需要从文件加载）
     private static D2TileLibrary[] tileLibraryCache;
@@ -419,9 +422,11 @@ public class D2Cmp {
         if (pTileLibraryEntry == null) {
             return 1;
         }
-        
-        // 注意：实际应该从瓦片库条目中获取稀有度
-        // 当前实现返回默认值 1
+
+        if (pTileLibraryEntry instanceof D2TileData) {
+            return Math.max(1, ((D2TileData) pTileLibraryEntry).getNRarity());
+        }
+
         return 1;
     }
     
@@ -483,127 +488,82 @@ public class D2Cmp {
         if (fileName == null || fileName.isEmpty()) {
             return null;
         }
-        
-        // 读取 DT1 文件数据
+
         byte[] fileData = readDT1FileData(archive, fileName);
         if (fileData == null || fileData.length == 0) {
             D2Log.warning("D2CMP_ParseDT1File: Failed to read DT1 file: " + fileName);
             return null;
         }
-        
-        // 解析文件头
-        DT1FileHeader header = parseDT1Header(fileData, 0);
-        if (header == null || header.tileCount <= 0) {
-            D2Log.warning("D2CMP_ParseDT1File: Failed to parse DT1 header or invalid tile count: " + fileName);
+        return parseDT1FileData(fileData, fileName);
+    }
+
+    /**
+     * Parses DT1 metadata from an in-memory file.
+     *
+     * <p>A DT1 contains a 276-byte library header followed by a contiguous
+     * array of 96-byte tile headers. Pixel blocks live elsewhere in the file
+     * and are not needed by DRLG tile selection.</p>
+     */
+    public static D2TileLibrary parseDT1FileData(byte[] fileData, String fileName) {
+        if (fileData == null || fileData.length < DT1_HEADER_SIZE) {
+            D2Log.warning("D2CMP_ParseDT1File: Invalid or truncated DT1 file: " + fileName);
             return null;
         }
-        
-        // 创建瓦片库对象
+
+        int version1 = D2BinaryReader.readInt32(fileData, 0);
+        int version2 = D2BinaryReader.readInt32(fileData, 4);
+        int tileCount = D2BinaryReader.readInt32(fileData, 268);
+        int tileOffset = D2BinaryReader.readInt32(fileData, 272);
+        if (tileCount <= 0 || tileCount > 10000) {
+            D2Log.warning("D2CMP_ParseDT1File: Invalid tile count " + tileCount + ": " + fileName);
+            return null;
+        }
+
+        long tileHeadersEnd = (long) tileOffset + (long) tileCount * DT1_TILE_HEADER_SIZE;
+        if (tileOffset < DT1_HEADER_SIZE || tileHeadersEnd > fileData.length) {
+            D2Log.warning("D2CMP_ParseDT1File: Tile headers exceed file bounds: " + fileName
+                    + " offset=" + tileOffset + " count=" + tileCount
+                    + " length=" + fileData.length);
+            return null;
+        }
+
+        D2TileData[] tiles = new D2TileData[tileCount];
+        int offset = tileOffset;
+        for (int i = 0; i < tileCount; i++, offset += DT1_TILE_HEADER_SIZE) {
+            D2TileData tile = parseDT1TileHeader(fileData, offset);
+            if (tile == null) {
+                D2Log.warning("D2CMP_ParseDT1File: Failed to parse tile " + i
+                        + " at offset " + offset + ": " + fileName);
+                return null;
+            }
+            tiles[i] = tile;
+        }
+
         D2TileLibrary tileLibrary = new D2TileLibrary();
         tileLibrary.setFileName(fileName);
-        tileLibrary.setNTiles(header.tileCount);
-        
-        // 分配瓦片数据数组
-        D2TileData[] tiles = new D2TileData[header.tileCount];
-        
-        // 解析每个瓦片数据
-        // DT1 文件格式：
-        // - 文件头：8 字节（版本号 4 字节 + 瓦片数量 4 字节）
-        // - 瓦片数据：每个瓦片的大小不固定，取决于瓦片的宽度和高度
-        //   基本字段：28 字节（方向、风格、序列、宽度、高度、X位置、Y位置）
-        //   图像数据：宽度 * 高度 * 字节数（取决于像素格式）
-        //   其他字段：标志、子瓦片等（大小可变）
-        int offset = 8; // 文件头为 8 字节
-        for (int i = 0; i < header.tileCount; ++i) {
-            D2TileData tileData = parseDT1TileData(fileData, offset);
-            if (tileData == null) {
-                D2Log.warning("D2CMP_ParseDT1File: Failed to parse tile " + i + " at offset " + offset);
-                break;
-            }
-            
-            tiles[i] = tileData;
-            
-            // 计算下一个瓦片的偏移
-            // 基本字段：28 字节
-            int tileSize = 28;
-            // 图像数据大小：宽度 * 高度 * 字节数（假设每个像素 1 字节，实际可能不同）
-            // 注意：实际 DT1 格式可能更复杂，包含子瓦片、标志等字段
-            // 当前实现使用固定大小作为占位符，实际使用时需要根据 DT1 文件格式文档调整
-            int imageDataSize = tileData.getNWidth() * tileData.getNHeight();
-            tileSize += imageDataSize;
-            // 添加其他字段的估计大小（标志、子瓦片等）
-            tileSize += 20; // 占位符：实际大小需要根据 DT1 格式文档确定
-            
-            offset += tileSize;
-            
-            // 安全检查：确保不会超出文件范围
-            if (offset >= fileData.length) {
-                D2Log.warning("D2CMP_ParseDT1File: Offset exceeds file size at tile " + i);
-                break;
-            }
-        }
-        
-        // 设置瓦片数据数组
+        tileLibrary.setNTiles(tileCount);
         tileLibrary.setPTiles(tiles);
-        
-        D2Log.debug("D2CMP_ParseDT1File: Parsed DT1 file: " + fileName + ", tiles: " + header.tileCount);
-        
+        D2Log.debug("D2CMP_ParseDT1File: Parsed DT1 file: " + fileName
+                + ", version=" + version1 + "." + version2
+                + ", tileOffset=" + tileOffset + ", tiles=" + tileCount);
         return tileLibrary;
     }
-    
-    /**
-     * 解析单个 DT1 瓦片数据
-     * 
-     * @param fileData 文件数据
-     * @param offset 起始偏移
-     * @return 瓦片数据，如果解析失败返回 null
-     */
-    private static D2TileData parseDT1TileData(byte[] fileData, int offset) {
-        if (fileData == null || offset < 0) {
+
+    private static D2TileData parseDT1TileHeader(byte[] fileData, int offset) {
+        if (!D2BinaryReader.hasEnoughData(fileData, offset, DT1_TILE_HEADER_SIZE)) {
             return null;
         }
-        
-        // DT1 瓦片数据格式（根据实际格式调整，简化版）：
-        // - 4 bytes: 方向/类型
-        // - 4 bytes: 风格
-        // - 4 bytes: 序列号
-        // - 4 bytes: 宽度
-        // - 4 bytes: 高度
-        // - 4 bytes: X 位置
-        // - 4 bytes: Y 位置
-        // - 其他字段（标志、图像数据等）
-        
-        // 检查是否有足够的数据读取基本字段
-        int minTileSize = 28; // 至少 28 字节
-        if (!D2BinaryReader.hasEnoughData(fileData, offset, minTileSize)) {
-            return null;
-        }
-        
-        D2TileData tileData = new D2TileData();
-        
-        // 读取基本字段（根据实际格式调整）
-        int nOrientation = D2BinaryReader.readInt32(fileData, offset);
-        int nStyle = D2BinaryReader.readInt32(fileData, offset + 4);
-        int nSequence = D2BinaryReader.readInt32(fileData, offset + 8);
-        int nWidth = D2BinaryReader.readInt32(fileData, offset + 12);
-        int nHeight = D2BinaryReader.readInt32(fileData, offset + 16);
-        int nPosX = D2BinaryReader.readInt32(fileData, offset + 20);
-        int nPosY = D2BinaryReader.readInt32(fileData, offset + 24);
-        
-        // 设置瓦片数据
-        tileData.setNOrientation(nOrientation);
-        tileData.setNTileId(nStyle); // 使用风格作为瓦片ID（根据实际格式调整）
-        tileData.setNSequence(nSequence);
-        tileData.setNWidth(nWidth);
-        tileData.setNHeight(nHeight);
-        tileData.setNPosX(nPosX);
-        tileData.setNPosY(nPosY);
-        
-        // 注意：图像数据和其他字段（标志、子瓦片等）的解析需要根据实际 DT1 文件格式文档实现
-        // 图像数据通常位于瓦片基本字段的后面，大小根据宽度和高度计算
-        // 当前实现仅解析基本字段，图像数据解析可以在后续根据实际需求完善
-        
-        return tileData;
+
+        D2TileData tile = new D2TileData();
+        tile.setDwFlags(D2BinaryReader.readUInt16(fileData, offset + 6));
+        tile.setNHeight(D2BinaryReader.readInt32(fileData, offset + 8));
+        tile.setNWidth(D2BinaryReader.readInt32(fileData, offset + 12));
+        tile.setNPosY(D2BinaryReader.readInt32(fileData, offset + 16));
+        tile.setNOrientation(D2BinaryReader.readInt32(fileData, offset + 20));
+        tile.setNTileId(D2BinaryReader.readInt32(fileData, offset + 24));
+        tile.setNSequence(D2BinaryReader.readInt32(fileData, offset + 28));
+        tile.setNRarity(D2BinaryReader.readInt32(fileData, offset + 32));
+        return tile;
     }
     
     /**
@@ -628,59 +588,6 @@ public class D2Cmp {
         
         D2Log.debug("D2CMP_ReadDT1FileData: Successfully read DT1 file: " + fileName + " (size: " + fileData.length + " bytes)");
         return fileData;
-    }
-    
-    /**
-     * 解析 DT1 文件头
-     * DT1 文件头格式（简化版）：
-     * - 4 bytes: 版本号
-     * - 4 bytes: 瓦片数量
-     * - 其他字段...
-     * 
-     * @param fileData 文件数据
-     * @param offset 起始偏移
-     * @return 解析后的文件头信息（包含版本、瓦片数量等），如果失败返回 null
-     */
-    private static DT1FileHeader parseDT1Header(byte[] fileData, int offset) {
-        if (fileData == null || offset < 0) {
-            return null;
-        }
-        
-        // DT1 文件头格式（根据实际格式调整）：
-        // - 4 bytes: 版本号
-        // - 4 bytes: 瓦片数量
-        // 总共至少 8 字节
-        
-        if (!D2BinaryReader.hasEnoughData(fileData, offset, 8)) {
-            D2Log.warning("D2CMP_ParseDT1Header: Not enough data for header, offset: " + offset + ", length: " + fileData.length);
-            return null;
-        }
-        
-        // 读取文件头数据
-        int version = D2BinaryReader.readInt32(fileData, offset);
-        int tileCount = D2BinaryReader.readInt32(fileData, offset + 4);
-        
-        // 验证数据有效性
-        if (tileCount < 0 || tileCount > 10000) {
-            D2Log.warning("D2CMP_ParseDT1Header: Invalid tile count: " + tileCount);
-            tileCount = 0;
-        }
-        
-        DT1FileHeader header = new DT1FileHeader();
-        header.version = version;
-        header.tileCount = tileCount;
-        
-        D2Log.debug("D2CMP_ParseDT1Header: Parsed header - version: " + version + ", tileCount: " + tileCount);
-        
-        return header;
-    }
-    
-    /**
-     * DT1 文件头信息
-     */
-    private static class DT1FileHeader {
-        int version;
-        int tileCount;
     }
     
     /**

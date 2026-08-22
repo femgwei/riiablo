@@ -10,7 +10,6 @@ import com.badlogic.gdx.utils.IntSet;
 
 import java.util.HashMap;
 
-import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.drlg.D2DrlgStrc;
@@ -181,6 +180,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     }
     drlgContext = new DrlgContext(seed, diff, 0);
     drlgLevels.clear();
+    levelsFilledByExport.clear();
     lvlSubDs1PlacedCounts.clear();
     MathUtils.random.setSeed(seed);
 
@@ -562,25 +562,43 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               }
               
               int tileIndex = Zone.index(zone.tilesX, currentTx - zone.tx, currentTy - zone.ty);
-              
-              // 如果地板还没有生成，使用默认逻辑（向后兼容）
-              if (zone.getLayer(Map.FLOOR_OFFSET)[tileIndex] == null) {
-                DT1.Tile tile = selectTerrainTile(dt1s, gridX, gridY, x, y, dt1Mask);
-                if (tile != null) {
-                  zone.getLayer(Map.FLOOR_OFFSET)[tileIndex] = tile;
-                } else {
-                  zone.getLayer(Map.FLOOR_OFFSET)[tileIndex] = dt1s.get(0, 0, 0);
+
+              int tileX = currentTx - zone.tx;
+              int tileY = currentTy - zone.ty;
+              int exportedId = -1;
+              DT1.Tile[] floorLayer = zone.getLayer(Map.FLOOR_OFFSET);
+
+              // D2MOO export happens before Zone.generate(). Resolve its tile
+              // first so the compatibility terrain generator cannot silently
+              // overwrite the exported grid.
+              if (levelsFilledByExport.contains(zone.level.Id)
+                  && grid != null && grid.inBounds(tileX, tileY)) {
+                exportedId = grid.floorIds[tileY][tileX];
+                if (exportedId != -1 && dt1s != null) {
+                  DT1.Tile exportedTile = dt1s.get(exportedId);
+                  if (exportedTile != null) {
+                    floorLayer[tileIndex] = exportedTile;
+                  }
                 }
               }
 
-              // 将当前选择的地板信息“影子写入” TileGrid，便于后续 DRLGOUTDOORS 移植
-              // 注意：TileGrid 的尺寸可能和 zone 的实际尺寸不一致（如 Blood Moor 动态调整）
-              if (grid != null) {
-                int tileX = currentTx - zone.tx;
-                int tileY = currentTy - zone.ty;
-                // 检查坐标是否在 TileGrid 范围内（可能小于 zone 的实际尺寸）
-                if (tileX >= 0 && tileX < grid.width && tileY >= 0 && tileY < grid.height) {
-                  DT1.Tile floor = (DT1.Tile) zone.getLayer(Map.FLOOR_OFFSET)[tileIndex];
+              // Exported levels can contain intentional blank-border cells.
+              // Fill only cells D2MOO did not resolve, preserving the export
+              // ID for diagnostics and later post-processing.
+              if (floorLayer[tileIndex] == null) {
+                DT1.Tile tile = selectTerrainTile(dt1s, gridX, gridY, x, y, dt1Mask);
+                if (tile != null) {
+                  floorLayer[tileIndex] = tile;
+                } else {
+                  floorLayer[tileIndex] = dt1s.get(0, 0, 0);
+                }
+              }
+
+              // Backfill only empty TileGrid cells. Previously this assignment
+              // replaced every D2MOO-exported ID with the local fallback tile.
+              if (grid != null && grid.inBounds(tileX, tileY)) {
+                if (grid.floorIds[tileY][tileX] == -1) {
+                  DT1.Tile floor = floorLayer[tileIndex];
                   int id = floor != null ? floor.id : -1;
                   grid.floorIds[tileY][tileX] = id;
                 }
@@ -1211,24 +1229,45 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           applier.putGrid(e.key, e.value.grid);
         }
       }
-      levelsFilledByExport.clear();
       int[] outdoorLevelIds = { LEVEL_BLOODMOOR, LEVEL_COLDPLAINS, LEVEL_STONYFIELD };
       for (int levelId : outdoorLevelIds) {
         applier.resetLastExportedFloorCount();
         int n = DrlgExport.exportLevelTiles(drlg, levelId, applier);
         int written = applier.getLastExportedFloorCount();
-        if (written > 0) {
+        boolean qualityPassed = written > 0
+            && applier.getUniqueFloorIdCount() > 1
+            && applier.getZeroTileIdCount() < written
+            && applier.getInvalidTileCount() == 0
+            && applier.getOutOfBoundsCount() == 0;
+        boolean renderExportedFloors = Boolean.getBoolean("riiablo.drlg.renderExportedFloors");
+        boolean acceptedForRendering = renderExportedFloors && qualityPassed;
+        if (acceptedForRendering) {
           levelsFilledByExport.add(levelId);
+        } else {
+          // A rejected floor export must not poison the local fallback grid.
+          // The current bridge still ignores D2MOO walls and shadows, so
+          // exported floors remain opt-in until the complete layer contract
+          // is implemented and the quality gate passes.
+          DrlgLevel exportedLevel = drlgLevels.get(levelId);
+          if (exportedLevel != null && exportedLevel.grid != null) {
+            exportedLevel.grid.clearFloorIds();
+          }
         }
         Gdx.app.log(TAG, String.format(
             "D2MOO_JAVA export: levelId=%d attemptedFloor=%d callbacks=%d writtenFloor=%d "
-                + "ignoredLayer=%d missingGrid=%d outOfBounds=%d invalidTile=%d",
+                + "ignoredLayer=%d missingGrid=%d outOfBounds=%d invalidTile=%d "
+                + "qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
             levelId, n, applier.getCallbackCount(), written,
             applier.getIgnoredLayerCount(), applier.getMissingGridCount(),
-            applier.getOutOfBoundsCount(), applier.getInvalidTileCount()));
+            applier.getOutOfBoundsCount(), applier.getInvalidTileCount(),
+            qualityPassed, renderExportedFloors, acceptedForRendering)
+            + String.format(" duplicatePosition=%d nonFloorOrientation=%d zeroTileId=%d uniqueFloorIds=%d",
+            applier.getDuplicatePositionCount(), applier.getNonFloorOrientationCount(),
+            applier.getZeroTileIdCount(),
+            applier.getUniqueFloorIdCount()));
       }
       DrlgDrlg.freeDrlg(drlg);
-      DataTbls.setLevelDefBinCache(null);
+      Act1D2MOOLayoutBridge.releaseDataTables();
     }
 
     // 打印所有区域的坐标范围总结，检查是否有重叠
@@ -2128,6 +2167,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
    *
    * 仅覆盖 TileGrid 中非 -1 的格子，其它保持原有地板不变。
    */
+  public boolean hasD2MooExport(int levelId) {
+    return levelsFilledByExport.contains(levelId);
+  }
+
   public void applyTileGridToZone(Zone zone) {
     if (zone == null || zone.level == null) return;
 
@@ -2193,11 +2236,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         Gdx.app.log(TAG, sb.toString());
       }
     }
-    // Blood Moor 始终打印应用数量便于诊断路径问题
-    if (zone.level.Id == LEVEL_BLOODMOOR && !DEBUG_GROUND_MAP) {
+    // D2MOO-exported levels always emit one compact summary. This makes
+    // parser/DT1-mask mismatches visible without enabling per-tile logging.
+    if (levelsFilledByExport.contains(zone.level.Id)) {
       Gdx.app.log(TAG, String.format(
-          "applyTileGridToZone: applied %d tiles from TileGrid to Blood Moor (zone id=%d)",
-          applied, zone.level.Id));
+          "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d applied=%d failedResolve=%d",
+          zone.level.LevelName, zone.level.Id, grid.width, grid.height,
+          zone.tilesX, zone.tilesY, applied, failedResolve));
     } else if (DEBUG_BUILD) {
       Gdx.app.debug(TAG, String.format(
           "applyTileGridToZone: applied %d tiles from TileGrid to zone %s (id=%d)",

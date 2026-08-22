@@ -5,7 +5,10 @@ import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2BinaryReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * 数据表工具类
@@ -354,7 +357,7 @@ public class DataTbls {
             return;
         }
         
-        // 第一行是表头，跳过
+        Map<String, Integer> columns = createColumnIndex(rows.get(0));
         List<D2LvlPrestTxt> records = new ArrayList<>();
         
         for (int i = 1; i < rows.size(); i++) {
@@ -365,72 +368,31 @@ public class DataTbls {
             
             D2LvlPrestTxt record = new D2LvlPrestTxt();
             
-            // 解析字段（根据实际 TXT 文件格式调整）
-            // Def, LevelId, Populate, Logicals, Outdoors, Animate, KillEdge, FillBlanks, Expansion, AnimSpeed, SizeX, SizeY, AutoMap, Scan, Pops, PopPad, Files, File1-6, Beta
-            int colIndex = 0;
-            if (colIndex < row.length) {
-                record.setDwDef(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwLevelId(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwPopulate(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwLogicals(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwOutdoors(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwAnimate(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwKillEdge(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwFillBlanks(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwExpansion(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setNAnimSpeed(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwSizeX(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwSizeY(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwAutoMap(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwScan(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwPops(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwPopPad(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwFiles(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            
-            // 解析文件名数组（最多 6 个）
+            record.setDwDef(parseColumnInt(row, columns, "Def", 0));
+            record.setDwLevelId(parseColumnInt(row, columns, "LevelId", 0));
+            record.setDwPopulate(parseColumnInt(row, columns, "Populate", 0));
+            record.setDwLogicals(parseColumnInt(row, columns, "Logicals", 0));
+            record.setDwOutdoors(parseColumnInt(row, columns, "Outdoors", 0));
+            record.setDwAnimate(parseColumnInt(row, columns, "Animate", 0));
+            record.setDwKillEdge(parseColumnInt(row, columns, "KillEdge", 0));
+            record.setDwFillBlanks(parseColumnInt(row, columns, "FillBlanks", 0));
+            record.setDwExpansion(parseColumnInt(row, columns, "Expansion", 0));
+            record.setNAnimSpeed(parseColumnInt(row, columns, "AnimSpeed", 0));
+            record.setDwSizeX(parseColumnInt(row, columns, "SizeX", 0));
+            record.setDwSizeY(parseColumnInt(row, columns, "SizeY", 0));
+            record.setDwAutoMap(parseColumnInt(row, columns, "AutoMap", 0));
+            record.setDwScan(parseColumnInt(row, columns, "Scan", 0));
+            record.setDwPops(parseColumnInt(row, columns, "Pops", 0));
+            record.setDwPopPad(parseColumnInt(row, columns, "PopPad", 0));
+            record.setDwFiles(parseColumnInt(row, columns, "Files", 0));
+            record.setDwDt1Mask(parseColumnInt(row, columns, "Dt1Mask", 0));
+
             String[] files = new String[6];
-            for (int fileIndex = 0; fileIndex < 6 && colIndex < row.length; fileIndex++) {
-                files[fileIndex] = D2TxtFileParser.parseString(row[colIndex++], null);
+            for (int fileIndex = 0; fileIndex < files.length; fileIndex++) {
+                files[fileIndex] = parseColumnString(row, columns, "File" + (fileIndex + 1), null);
             }
             record.setSzFile(files);
-            
-            // Beta
-            if (colIndex < row.length) {
-                record.setDwBeta(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
+            record.setDwBeta(parseColumnInt(row, columns, "Beta", 0));
             
             records.add(record);
         }
@@ -1252,7 +1214,7 @@ public class DataTbls {
             return;
         }
         
-        // 第一行是表头，跳过
+        Map<String, Integer> columns = createColumnIndex(rows.get(0));
         List<D2LvlSubTxt> records = new ArrayList<>();
         
         for (int i = 1; i < rows.size(); i++) {
@@ -1263,46 +1225,18 @@ public class DataTbls {
             
             D2LvlSubTxt record = new D2LvlSubTxt();
             
-            // 解析字段（根据实际 TXT 文件格式调整）
-            // Type, File, CheckAll, BordType, Dt1Mask, GridSize, Prob1-5, Trials1-5, Max1-5, Expansion
-            int colIndex = 0;
-            if (colIndex < row.length) {
-                record.setDwType(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setSzFile(D2TxtFileParser.parseString(row[colIndex++], ""));
-            }
-            if (colIndex < row.length) {
-                record.setDwCheckAll(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwBordType(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwDt1Mask(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwGridSize(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            
-            // 解析概率数组（5 个值）
-            for (int probIndex = 0; probIndex < 5 && colIndex < row.length; probIndex++) {
-                record.setNProb(probIndex, D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            
-            // 解析尝试次数数组（5 个值）
-            for (int trialIndex = 0; trialIndex < 5 && colIndex < row.length; trialIndex++) {
-                record.setNTrials(trialIndex, D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            
-            // 解析最大替换次数数组（5 个值）
-            for (int maxIndex = 0; maxIndex < 5 && colIndex < row.length; maxIndex++) {
-                record.setNMax(maxIndex, D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            
-            // Expansion
-            if (colIndex < row.length) {
-                record.setDwExpansion(D2TxtFileParser.parseInt(row[colIndex++], 0));
+            record.setDwType(parseColumnInt(row, columns, "Type", 0));
+            record.setSzFile(parseColumnString(row, columns, "File", ""));
+            record.setDwCheckAll(parseColumnInt(row, columns, "CheckAll", 0));
+            record.setDwBordType(parseColumnInt(row, columns, "BordType", -1));
+            record.setDwDt1Mask(parseColumnInt(row, columns, "Dt1Mask", 0));
+            record.setDwGridSize(parseColumnInt(row, columns, "GridSize", 0));
+            record.setDwExpansion(parseColumnInt(row, columns, "Expansion", 0));
+
+            for (int index = 0; index < 5; index++) {
+                record.setNProb(index, parseColumnInt(row, columns, "Prob" + index, 0));
+                record.setNTrials(index, parseColumnInt(row, columns, "Trials" + index, 0));
+                record.setNMax(index, parseColumnInt(row, columns, "Max" + index, 0));
             }
             
             // 注意：pDrlgFile、pTileTypeGrid、pWallGrid、pFloorGrid、pShadowGrid 需要后续加载 DS1 文件
@@ -1447,5 +1381,30 @@ public class DataTbls {
      */
     public static void unloadLvlMazeTxt() {
         lvlMazeTxtCache = null;
+    }
+
+    private static Map<String, Integer> createColumnIndex(String[] header) {
+        Map<String, Integer> columns = new HashMap<>();
+        if (header == null) return columns;
+        for (int i = 0; i < header.length; i++) {
+            String name = header[i];
+            if (name == null) continue;
+            name = name.trim().toLowerCase(Locale.ROOT);
+            if (!name.isEmpty()) columns.put(name, i);
+        }
+        return columns;
+    }
+
+    private static String parseColumnString(String[] row, Map<String, Integer> columns,
+            String name, String defaultValue) {
+        Integer index = columns.get(name.toLowerCase(Locale.ROOT));
+        if (index == null || index < 0 || index >= row.length) return defaultValue;
+        return D2TxtFileParser.parseString(row[index], defaultValue);
+    }
+
+    private static int parseColumnInt(String[] row, Map<String, Integer> columns,
+            String name, int defaultValue) {
+        String value = parseColumnString(row, columns, name, null);
+        return value == null ? defaultValue : D2TxtFileParser.parseInt(value, defaultValue);
     }
 }
