@@ -28,6 +28,8 @@ class D2MooTileApplierTest {
         pack(Orientation.SHADOW, 3, 4));
 
     assertEquals(index(Orientation.FLOOR, 5, 7), grid.floorIds[0][1]);
+    assertEquals(true, grid.exportedFloorCells[0][1]);
+    assertEquals(false, grid.exportedFloorCells[0][0]);
     assertEquals(index(Orientation.RIGHT_NORTH_CORNER_WALL, 8, 9), grid.wallIds[0][0][1]);
     assertEquals(index(Orientation.LEFT_NORTH_CORNER_WALL, 8, 9), grid.wallIds[1][0][1]);
     assertEquals(-1, grid.wallIds[2][0][1]);
@@ -72,6 +74,7 @@ class D2MooTileApplierTest {
   void clearExportedTileIdsPreservesDirtPathFlags() {
     TileGrid grid = new TileGrid(1, 1);
     grid.floorIds[0][0] = 1;
+    grid.exportedFloorCells[0][0] = true;
     grid.wallIds[0][0][0] = 2;
     grid.shadowIds[0][0] = 3;
     grid.dirtPathFlags[0][0] = true;
@@ -79,6 +82,7 @@ class D2MooTileApplierTest {
     grid.clearExportedTileIds();
 
     assertEquals(-1, grid.floorIds[0][0]);
+    assertEquals(false, grid.exportedFloorCells[0][0]);
     assertEquals(-1, grid.wallIds[0][0][0]);
     assertEquals(-1, grid.shadowIds[0][0]);
     assertEquals(true, grid.dirtPathFlags[0][0]);

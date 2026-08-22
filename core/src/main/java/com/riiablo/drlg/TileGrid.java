@@ -23,6 +23,13 @@ public class TileGrid {
   public final int[][] floorIds;
 
   /**
+   * True only where D2MOO exported an actual floor cell. Outdoor levels are
+   * not necessarily rectangular; cells outside generated RoomEx instances
+   * must stay empty even if later compatibility passes mutate floorIds.
+   */
+  public final boolean[][] exportedFloorCells;
+
+  /**
    * wallIds[layer][y][x] stores up to four wall/roof tiles at one coordinate.
    * -1 means that the slot is unassigned.
    */
@@ -44,6 +51,7 @@ public class TileGrid {
     this.width = width;
     this.height = height;
     this.floorIds = new int[height][width];
+    this.exportedFloorCells = new boolean[height][width];
     this.wallIds = new int[MAX_WALL_LAYERS][height][width];
     this.shadowIds = new int[height][width];
     this.dirtPathFlags = new boolean[height][width];
@@ -55,6 +63,7 @@ public class TileGrid {
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
+        exportedFloorCells[y][x] = false;
       }
     }
   }
@@ -64,6 +73,7 @@ public class TileGrid {
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
+        exportedFloorCells[y][x] = false;
         shadowIds[y][x] = -1;
         for (int layer = 0; layer < MAX_WALL_LAYERS; layer++) {
           wallIds[layer][y][x] = -1;

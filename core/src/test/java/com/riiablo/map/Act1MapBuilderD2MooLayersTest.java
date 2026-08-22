@@ -126,6 +126,29 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void leavesExportedVoidCellsUndrawnAndBlocksTheirCollision() throws Exception {
+    DT1.Tile floor = tile(Orientation.FLOOR, 1, 1);
+    TileGrid footprint = new TileGrid(2, 1);
+    footprint.floorIds[0][0] = floor.id;
+    footprint.exportedFloorCells[0][0] = true;
+
+    DT1.Tile[][] layers = new DT1.Tile[Map.MAX_LAYERS][];
+    layers[Map.FLOOR_OFFSET] = new DT1.Tile[] {floor, null};
+    byte[] flags = new byte[2 * DT1.Tile.SUBTILE_SIZE * DT1.Tile.SUBTILE_SIZE];
+
+    Act1MapBuilderD2MOD.CollisionApplyCounts counts =
+        Act1MapBuilderD2MOD.rebuildTileCollisionFlags(
+            footprint, layers, null, flags, 2, 1, 2, 1);
+
+    assertEquals(1, counts.tiles);
+    assertEquals(1, counts.voidTiles);
+    assertEquals(25, counts.blockedSubtiles);
+    assertEquals(0, flags[0] & 0xFF);
+    assertEquals(DT1.Tile.FLAG_BLOCK_WALK, flags[5] & 0xFF);
+    assertEquals(DT1.Tile.FLAG_BLOCK_WALK, flags[49] & 0xFF);
+  }
+
+  @Test
   void convertsGeneratorOffsetsAsZoneLocalTileCoordinates() {
     assertEquals(0, Act1MapBuilderD2MOD.toLocalGridCoordinate(0, 8));
     assertEquals(2, Act1MapBuilderD2MOD.toLocalGridCoordinate(16, 8));

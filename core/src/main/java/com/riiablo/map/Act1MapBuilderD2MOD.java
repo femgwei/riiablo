@@ -519,6 +519,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           DrlgLevel drlgLevel = drlgLevels.get(zone.level.Id);
           DrlgGrid drlgGrid = drlgLevel != null ? drlgLevel.drlgGrid : null;
           TileGrid grid = drlgLevel != null ? drlgLevel.grid : null;
+          boolean renderD2MooExport = levelsFilledByExport.contains(zone.level.Id);
           
           // D2MOD: DRLGOUTPLACE_CreateOutdoorRoomEx 等价逻辑
           // 检查当前 8x8 网格单元是否有 preset
@@ -537,7 +538,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           
           // 如果没有 preset，生成随机房间（对应 DRLGOUTPLACE_CreateOutdoorRoomEx）
           // 若该关卡已由 D2MOO_JAVA export 填满 TileGrid，则跳过本地 generateOutdoorRoom
-          if (!hasPreset && !levelsFilledByExport.contains(zone.level.Id)) {
+          if (!hasPreset && !renderD2MooExport) {
             // D2MOD: DRLGTILESUB_PickSubThemes - 根据 SubType/SubTheme 选择子主题掩码
             int subThemeMask = pickSubThemes(zone, drlgLevel, finalSeed, gridX, gridY);
             
@@ -576,7 +577,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               // D2MOO export happens before Zone.generate(). Resolve its tile
               // first so the compatibility terrain generator cannot silently
               // overwrite the exported grid.
-              if (levelsFilledByExport.contains(zone.level.Id)
+              if (renderD2MooExport
                   && grid != null && grid.inBounds(tileX, tileY)) {
                 exportedId = grid.floorIds[tileY][tileX];
                 if (exportedId != -1 && dt1s != null) {
@@ -587,10 +588,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                 }
               }
 
-              // Exported levels can contain intentional blank-border cells.
-              // Fill only cells D2MOO did not resolve, preserving the export
-              // ID for diagnostics and later post-processing.
-              if (floorLayer[tileIndex] == null) {
+              // D2MOO outdoor levels are irregular RoomEx footprints inside
+              // a rectangular level bounding box. A -1 exported ID means no
+              // room exists here and must remain empty, not fallback terrain.
+              if (floorLayer[tileIndex] == null
+                  && (!renderD2MooExport || exportedId != -1)) {
                 DT1.Tile tile = selectTerrainTile(dt1s, gridX, gridY, x, y, dt1Mask);
                 if (tile != null) {
                   floorLayer[tileIndex] = tile;
@@ -599,14 +601,22 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                 }
               }
 
-              // Backfill only empty TileGrid cells. Previously this assignment
-              // replaced every D2MOO-exported ID with the local fallback tile.
-              if (grid != null && grid.inBounds(tileX, tileY)) {
+              // Compatibility generation owns non-exported grids. Accepted
+              // D2MOO grids retain both their IDs and their empty footprint.
+              if (!renderD2MooExport && grid != null && grid.inBounds(tileX, tileY)) {
                 if (grid.floorIds[tileY][tileX] == -1) {
                   DT1.Tile floor = floorLayer[tileIndex];
                   int id = floor != null ? floor.id : -1;
                   grid.floorIds[tileY][tileX] = id;
                 }
+              }
+
+              // Do not spawn compatibility monsters in the rectangular area
+              // outside D2MOO's generated RoomEx footprint.
+              if (renderD2MooExport
+                  && (grid == null || !grid.inBounds(tileX, tileY)
+                      || !grid.exportedFloorCells[tileY][tileX])) {
+                continue;
               }
               
               // 生成怪物（仅在客户端）
@@ -1388,7 +1398,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       Gdx.app.debug(TAG, "=== Placing Advanced Features ===");
     }
     for (Zone zone : map.zones) {
-      if (!zone.town) {
+      if (!zone.town && !levelsFilledByExport.contains(zone.level.Id)) {
         if (DEBUG_BUILD) {
           Gdx.app.debug(TAG, String.format("Processing features for: %s (id=%d)", 
               zone.level.LevelName, zone.level.Id));
@@ -1462,7 +1472,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
     // 在所有 zone 生成完成后，统一调用 addSecondaryBorder
     for (Zone zone : map.zones) {
-      if (!zone.town) {
+      // D2MOO already placed Act1 primary and secondary border presets before
+      // RoomEx export. Running the local approximation again corrupts that
+      // footprint and can reintroduce tiles into intentional void cells.
+      if (!zone.town && !levelsFilledByExport.contains(zone.level.Id)) {
         DrlgLevel drlgLevel = drlgLevels.get(zone.level.Id);
         if (drlgLevel != null && drlgLevel.subType != -1) {
           DrlgGrid drlgGrid = drlgLevel.drlgGrid;
@@ -2234,8 +2247,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         grid, zone.dt1s, zone.tiles, zone.tilesX, width, height, idHistogram);
     CollisionApplyCounts collisionCounts = new CollisionApplyCounts();
     if (counts.floors > 0 || counts.walls > 0) {
+      TileGrid exportedFootprint = levelsFilledByExport.contains(zone.level.Id) ? grid : null;
       collisionCounts = rebuildTileCollisionFlags(
-          zone.tiles, zone.dt1s, zone.flags, zone.tilesX, zone.tilesY, width, height);
+          exportedFootprint, zone.tiles, zone.dt1s, zone.flags,
+          zone.tilesX, zone.tilesY, width, height);
     }
 
     // Blood Moor 地面调试：grid/zone 尺寸、坐标、ID 分布、解析失败数
@@ -2261,10 +2276,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (levelsFilledByExport.contains(zone.level.Id)) {
       Gdx.app.log(TAG, String.format(
           "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d "
-              + "failedFloor=%d failedWall=%d failedShadow=%d collisionTiles=%d blockedSubtiles=%d",
+              + "failedFloor=%d failedWall=%d failedShadow=%d voidTiles=%d "
+              + "collisionTiles=%d blockedSubtiles=%d",
           zone.level.LevelName, zone.level.Id, grid.width, grid.height,
           zone.tilesX, zone.tilesY, counts.floors, counts.walls, counts.shadows,
-          counts.failedFloors, counts.failedWalls, counts.failedShadows,
+          counts.failedFloors, counts.failedWalls, counts.failedShadows, collisionCounts.voidTiles,
           collisionCounts.tiles, collisionCounts.blockedSubtiles));
       if (counts.failedResolve > 0) {
         Gdx.app.log(TAG, "D2MOO unresolved IDs: floor=" + formatTileIds(counts.failedFloorIds)
@@ -2362,6 +2378,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   static CollisionApplyCounts rebuildTileCollisionFlags(DT1.Tile[][] layers, DT1s dt1s,
       byte[] flags, int zoneTilesX, int zoneTilesY, int width, int height) {
+    return rebuildTileCollisionFlags(
+        null, layers, dt1s, flags, zoneTilesX, zoneTilesY, width, height);
+  }
+
+  static CollisionApplyCounts rebuildTileCollisionFlags(TileGrid exportedFootprint,
+      DT1.Tile[][] layers, DT1s dt1s, byte[] flags,
+      int zoneTilesX, int zoneTilesY, int width, int height) {
     CollisionApplyCounts counts = new CollisionApplyCounts();
     if (layers == null || layers.length < Map.MAX_LAYERS || flags == null
         || zoneTilesX <= 0 || zoneTilesY <= 0) return counts;
@@ -2383,6 +2406,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
+        if (exportedFootprint != null
+            && (!exportedFootprint.inBounds(x, y)
+                || !exportedFootprint.exportedFloorCells[y][x])) {
+          markVoidTileBlocked(flags, subtileWidth, x, y);
+          counts.voidTiles++;
+          continue;
+        }
         int tileIndex = Zone.index(zoneTilesX, x, y);
         for (int layer = Map.FLOOR_OFFSET;
              layer < Map.FLOOR_OFFSET + Map.MAX_FLOORS; layer++) {
@@ -2423,6 +2453,16 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     return counts;
   }
 
+  private static void markVoidTileBlocked(byte[] flags, int subtileWidth, int tileX, int tileY) {
+    int startX = tileX * DT1.Tile.SUBTILE_SIZE;
+    int startY = tileY * DT1.Tile.SUBTILE_SIZE;
+    byte blocked = (byte) DT1.Tile.FLAG_BLOCK_WALK;
+    for (int y = 0; y < DT1.Tile.SUBTILE_SIZE; y++) {
+      int rowStart = (startY + y) * subtileWidth + startX;
+      Arrays.fill(flags, rowStart, rowStart + DT1.Tile.SUBTILE_SIZE, blocked);
+    }
+  }
+
   private static void orTileCollisionFlags(byte[] flags, int subtileWidth,
       int tileX, int tileY, DT1.Tile tile) {
     int startX = tileX * DT1.Tile.SUBTILE_SIZE;
@@ -2452,6 +2492,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int tiles;
     int siblingTiles;
     int blockedSubtiles;
+    int voidTiles;
   }
 
   /**
@@ -3027,6 +3068,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int halfWidth = pathWidth / 2;
     final int sub = DT1.Tile.SUBTILE_SIZE;
     if (grid.inBounds(x, y)) {
+      boolean preserveD2MooFootprint = zone != null && zone.level != null
+          && levelsFilledByExport.contains(zone.level.Id);
+      if (preserveD2MooFootprint && !grid.exportedFloorCells[y][x]) return;
       grid.dirtPathFlags[y][x] = true;
       if (pathGenMap != null) {
         float wx = zone.x + x * sub + sub / 2f;
@@ -3036,7 +3080,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       for (int dy = -halfWidth; dy <= halfWidth; dy++) {
         for (int dx = -halfWidth; dx <= halfWidth; dx++) {
           int nx = x + dx, ny = y + dy;
-          if (grid.inBounds(nx, ny) && dx * dx + dy * dy <= halfWidth * halfWidth) {
+          if (grid.inBounds(nx, ny) && dx * dx + dy * dy <= halfWidth * halfWidth
+              && (!preserveD2MooFootprint || grid.exportedFloorCells[ny][nx])) {
             grid.dirtPathFlags[ny][nx] = true;
           }
         }
@@ -3069,6 +3114,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     for (int nY = 0; nY < h; nY++) {
       for (int nX = 0; nX < w; nX++) {
         if (!dp[nY][nX]) continue;
+        if (levelsFilledByExport.contains(zone.level.Id)
+            && !grid.exportedFloorCells[nY][nX]) continue;
         pathCells++;
         int nDirectionsWithPathFlags = 0;
         for (int i = 0; i < 8; i++) {

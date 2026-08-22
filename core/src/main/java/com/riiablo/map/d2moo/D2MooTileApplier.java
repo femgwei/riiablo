@@ -130,6 +130,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         if (grid.floorIds[ty][tx] != -1) duplicatePositionCount++;
         if (tileId == 0) zeroTileIdCount++;
         grid.floorIds[ty][tx] = tileId;
+        grid.exportedFloorCells[ty][tx] = true;
         uniqueFloorIds.add(tileId);
         exportedFloorCount++;
     }
