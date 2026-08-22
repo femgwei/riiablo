@@ -16,6 +16,7 @@ import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
+import com.d2moo.common.drlg.D2UnitTypes;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
@@ -72,6 +73,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private static final int LEVEL_DARKWOOD = 5;
   private static final int LEVEL_BLACKMARSH = 6;
   private static final int LEVEL_TAMOEHIGHLAND = 7;
+  private static final int LEVEL_UNDERGROUNDPASSAGELVL1 = 10;
   private static final int LEVEL_MOOMOOFARM = 44;
   private static final int LEVEL_MONASTERYGATE = 31;
   private static final int LEVEL_DENOFEVIL = 8;
@@ -132,8 +134,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     Levels.Entry burial = Riiablo.files.Levels.get(burialGroundsId);
     Levels.Entry black = Riiablo.files.Levels.get(LEVEL_BLACKMARSH);
     Levels.Entry tamoe = Riiablo.files.Levels.get(LEVEL_TAMOEHIGHLAND);
+    Levels.Entry dark = Riiablo.files.Levels.get(LEVEL_DARKWOOD);
+    Levels.Entry underground = Riiablo.files.Levels.get(LEVEL_UNDERGROUNDPASSAGELVL1);
     if (stony == null || cold == null || blood == null || town == null || burial == null
-        || black == null || tamoe == null) return null;
+        || black == null || tamoe == null || dark == null || underground == null) return null;
 
     int sw = stony.SizeX[diff], sh = stony.SizeY[diff];
     int cw = cold.SizeX[diff], ch = cold.SizeY[diff];
@@ -142,6 +146,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int burw = burial.SizeX[diff], burh = burial.SizeY[diff];
     int blw = black.SizeX[diff], blh = black.SizeY[diff];
     int taw = tamoe.SizeX[diff], tah = tamoe.SizeY[diff];
+    int daw = dark.SizeX[diff], dah = dark.SizeY[diff];
+    int unw = underground.SizeX[diff], unh = underground.SizeY[diff];
 
     Act1LayoutResult r = new Act1LayoutResult();
     r.levelIds[0] = LEVEL_STONYFIELD;
@@ -151,6 +157,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     r.levelIds[4] = burialGroundsId;
     r.levelIds[5] = LEVEL_BLACKMARSH;
     r.levelIds[6] = LEVEL_TAMOEHIGHLAND;
+    r.levelIds[7] = LEVEL_DARKWOOD;
+    r.levelIds[8] = LEVEL_UNDERGROUNDPASSAGELVL1;
 
     // 布局: Stony-Cold 在东侧，Blood 接 Cold 西侧，Town 在 Blood 西侧，Burial 在 Cold 北侧
     r.coords[0][0] = bw + cw;  r.coords[0][1] = 0;       r.coords[0][2] = sw;   r.coords[0][3] = sh;   // Stony
@@ -160,6 +168,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     r.coords[4][0] = bw;       r.coords[4][1] = ch;      r.coords[4][2] = burw; r.coords[4][3] = burh; // Burial 北邻 Cold
     r.coords[5][0] = bw + cw + sw;       r.coords[5][1] = 0; r.coords[5][2] = blw; r.coords[5][3] = blh;
     r.coords[6][0] = bw + cw + sw + blw; r.coords[6][1] = 0; r.coords[6][2] = taw; r.coords[6][3] = tah;
+    r.coords[7][0] = bw + cw + sw; r.coords[7][1] = blh; r.coords[7][2] = daw; r.coords[7][3] = dah;
+    r.coords[8][0] = bw + cw + sw + blw + taw; r.coords[8][1] = 0;
+    r.coords[8][2] = unw; r.coords[8][3] = unh;
     r.townDirection = 3; // 出口朝东(Blood)
     return r;
   }
@@ -1251,17 +1262,35 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       D2MooTileApplier applier = new D2MooTileApplier();
       for (IntMap.Entry<DrlgLevel> e : drlgLevels) {
         boolean nativeAct1Outdoor = e.key >= LEVEL_BLOODMOOR && e.key <= LEVEL_TAMOEHIGHLAND;
-        if (e.value.grid != null && (nativeAct1Outdoor || e.key == burialGroundsId)) {
+        if (e.value.grid != null && (nativeAct1Outdoor || e.key == burialGroundsId
+            || e.key == LEVEL_UNDERGROUNDPASSAGELVL1)) {
           applier.putGrid(e.key, e.value.grid);
         }
       }
       int[] outdoorLevelIds = {
           LEVEL_BLOODMOOR, LEVEL_COLDPLAINS, LEVEL_STONYFIELD, burialGroundsId,
-          LEVEL_BLACKMARSH, LEVEL_TAMOEHIGHLAND
+          LEVEL_BLACKMARSH, LEVEL_TAMOEHIGHLAND, LEVEL_DARKWOOD,
+          LEVEL_UNDERGROUNDPASSAGELVL1
       };
       for (int levelId : outdoorLevelIds) {
         applier.resetLastExportedFloorCount();
         int n = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+        Array<Map.NativeObject> nativeObjects = new Array<>();
+        int[] rawObjectCounts = new int[2];
+        int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
+            (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+              if (unitType != D2UnitTypes.UNIT_OBJECT || !ds1Raw || spawned) return;
+              rawObjectCounts[0]++;
+              DrlgLevel targetLevel = drlgLevels.get(exportLevelId);
+              if (targetLevel == null || targetLevel.grid == null
+                  || x < 0 || y < 0
+                  || x >= targetLevel.grid.width * DT1.Tile.SUBTILE_SIZE
+                  || y >= targetLevel.grid.height * DT1.Tile.SUBTILE_SIZE) {
+                rawObjectCounts[1]++;
+                return;
+              }
+              nativeObjects.add(new Map.NativeObject(index, mode, x, y));
+            });
         int exportedDt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
         d2MooDt1Masks.put(levelId, exportedDt1Mask);
         int written = applier.getLastExportedFloorCount();
@@ -1276,10 +1305,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             && applier.getNonFloorOrientationCount() == 0
             && applier.getNonWallOrientationCount() == 0
             && applier.getNonShadowOrientationCount() == 0;
-        boolean renderExportedFloors = Boolean.getBoolean("riiablo.drlg.renderExportedFloors");
+        // Native rendering is now the production path. Keep an explicit JVM
+        // escape hatch while requiring every export quality check to pass.
+        boolean renderExportedFloors = Boolean.parseBoolean(
+            System.getProperty("riiablo.drlg.renderExportedFloors", "true"));
         boolean acceptedForRendering = renderExportedFloors && qualityPassed;
         if (acceptedForRendering) {
           levelsFilledByExport.add(levelId);
+          Zone nativeZone = findZoneByLevelId(map, levelId);
+          if (nativeZone != null) nativeZone.nativeObjects.addAll(nativeObjects);
           D2DrlgLevel nativeLevel = DrlgDrlg.getLevel(drlg, levelId);
           D2DrlgOutdoorInfoStrc nativeOutdoors =
               nativeLevel != null ? nativeLevel.getOutdoors() : null;
@@ -1288,8 +1322,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           }
         } else {
           // A rejected export must not poison any layer of the local fallback grid.
-          // Rendering remains opt-in until D2MOO produces a complete tile set
-          // and the exported wall/shadow layers are applied to Zone.
+          // Keep the local generator intact whenever native export is
+          // explicitly disabled or any completeness check fails.
           DrlgLevel exportedLevel = drlgLevels.get(levelId);
           if (exportedLevel != null && exportedLevel.grid != null) {
             exportedLevel.grid.clearExportedTileIds();
@@ -1299,17 +1333,20 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             "D2MOO_JAVA export: levelId=%d attemptedFloor=%d callbacks=%d writtenFloor=%d "
                 + "ignoredLayer=%d missingGrid=%d outOfBounds=%d invalidTile=%d "
                 + "clippedBoundary=%d clippedFloor=%d wall=%d shadow=%d dt1Mask=0x%X "
+                + "presetUnits=%d rawObjects=%d acceptedObjects=%d invalidObjectPos=%d "
                 + "qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
             levelId, n, applier.getCallbackCount(), written,
             applier.getIgnoredLayerCount(), applier.getMissingGridCount(),
             applier.getOutOfBoundsCount(), applier.getInvalidTileCount(),
             applier.getClippedBoundaryCount(), applier.getClippedBoundaryFloorCount(),
             applier.getExportedWallCount(), applier.getExportedShadowCount(), exportedDt1Mask,
+            presetUnits, rawObjectCounts[0], nativeObjects.size, rawObjectCounts[1],
             qualityPassed, renderExportedFloors, acceptedForRendering)
-            + String.format(" duplicatePosition=%d duplicateShadow=%d wallOverflow=%d"
+            + String.format(" duplicatePosition=%d duplicateWall=%d duplicateShadow=%d wallOverflow=%d"
                 + " nonFloorOrientation=%d nonWallOrientation=%d nonShadowOrientation=%d"
                 + " zeroTileId=%d uniqueFloorIds=%d uniqueWallIds=%d uniqueShadowIds=%d",
-            applier.getDuplicatePositionCount(), applier.getDuplicateShadowCount(),
+            applier.getDuplicatePositionCount(), applier.getDuplicateWallCount(),
+            applier.getDuplicateShadowCount(),
             applier.getWallLayerOverflowCount(),
             applier.getNonFloorOrientationCount(), applier.getNonWallOrientationCount(),
             applier.getNonShadowOrientationCount(), applier.getZeroTileIdCount(),
@@ -2485,6 +2522,84 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     return d2MooDt1Masks.get(levelId, 0);
   }
 
+  /** Connects native special-wall markers after every exported Zone has been applied. */
+  public void linkNativeWarpSpecials(Map map) {
+    if (map == null) return;
+    int linked = 0;
+    int missingZone = 0;
+    int missingReverse = 0;
+    for (Zone source : new Array.ArrayIterator<>(map.zones)) {
+      if (source == null || source.level == null || source.specials == null) continue;
+      for (IntMap.Entry<DS1.Cell> entry : source.specials.entries()) {
+        DS1.Cell sourceCell = entry.value;
+        if (sourceCell == null || !Map.ID.WARPS.contains(sourceCell.id)) continue;
+        int destinationLevelId = resolveWarpDestination(map, source, sourceCell.mainIndex);
+        if (destinationLevelId <= 0) continue;
+        Zone destination = findZoneByLevelId(map, destinationLevelId);
+        if (destination == null) {
+          if (missingZone < 16 && Gdx.app != null) {
+            Gdx.app.log(TAG, String.format(
+                "D2MOO warp missing zone: %s(%d) special=0x%08X mainIndex=%d target=%d",
+                source.level.LevelName, source.level.Id, sourceCell.id,
+                sourceCell.mainIndex, destinationLevelId));
+          }
+          missingZone++;
+          continue;
+        }
+        DS1.Cell destinationCell = findReverseWarp(map, destination, source.level.Id);
+        if (destinationCell == null) {
+          if (missingReverse < 16 && Gdx.app != null) {
+            Gdx.app.log(TAG, String.format(
+                "D2MOO warp missing reverse: %s(%d) special=0x%08X mainIndex=%d -> %s(%d)",
+                source.level.LevelName, source.level.Id, sourceCell.id,
+                sourceCell.mainIndex, destination.level.LevelName, destination.level.Id));
+          }
+          missingReverse++;
+          continue;
+        }
+        source.setWarp(sourceCell.id, destinationCell.id);
+        if (linked < 16 && Gdx.app != null) {
+          Gdx.app.log(TAG, String.format(
+              "D2MOO warp link: %s(%d) special=0x%08X -> %s(%d) special=0x%08X",
+              source.level.LevelName, source.level.Id, sourceCell.id,
+              destination.level.LevelName, destination.level.Id, destinationCell.id));
+        }
+        linked++;
+      }
+    }
+    if (Gdx.app != null) {
+      Gdx.app.log(TAG, String.format(
+          "D2MOO warp summary: linked=%d missingZone=%d missingReverse=%d",
+          linked, missingZone, missingReverse));
+    }
+  }
+
+  private static int resolveWarpDestination(Map map, Zone source, int mainIndex) {
+    int override = map.getWarpDestinationOverride(source.level.Id, mainIndex);
+    if (override > 0) return override;
+    return source.level.Vis != null && mainIndex >= 0 && mainIndex < source.level.Vis.length
+        ? source.level.Vis[mainIndex] : -1;
+  }
+
+  private static Zone findZoneByLevelId(Map map, int levelId) {
+    for (Zone zone : map.zones) {
+      if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
+    }
+    return null;
+  }
+
+  private static DS1.Cell findReverseWarp(Map map, Zone destination, int sourceLevelId) {
+    if (destination.specials == null) return null;
+    for (IntMap.Entry<DS1.Cell> entry : destination.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell != null && Map.ID.WARPS.contains(cell.id)
+          && resolveWarpDestination(map, destination, cell.mainIndex) == sourceLevelId) {
+        return cell;
+      }
+    }
+    return null;
+  }
+
   public void applyTileGridToZone(Zone zone) {
     if (zone == null || zone.level == null) return;
 
@@ -2514,6 +2629,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         ? new IntMap<>() : null;
     LayerApplyCounts counts = applyTileGridLayers(
         grid, zone.dt1s, zone.tiles, zone.tilesX, width, height, idHistogram);
+    if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
+    SpecialApplyCounts specialCounts = registerSpecialWalls(
+        grid, zone.specials, width, height);
     CollisionApplyCounts collisionCounts = new CollisionApplyCounts();
     if (counts.floors > 0 || counts.walls > 0) {
       TileGrid exportedFootprint = levelsFilledByExport.contains(zone.level.Id) ? grid : null;
@@ -2545,10 +2663,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (levelsFilledByExport.contains(zone.level.Id)) {
       Gdx.app.log(TAG, String.format(
           "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d "
+              + "special=%d warpSpecial=%d skippedWarpPair=%d "
               + "failedFloor=%d failedWall=%d failedShadow=%d voidTiles=%d "
               + "collisionTiles=%d blockedSubtiles=%d",
           zone.level.LevelName, zone.level.Id, grid.width, grid.height,
           zone.tilesX, zone.tilesY, counts.floors, counts.walls, counts.shadows,
+          specialCounts.total, specialCounts.warps, specialCounts.skippedWarpPairMarkers,
           counts.failedFloors, counts.failedWalls, counts.failedShadows, collisionCounts.voidTiles,
           collisionCounts.tiles, collisionCounts.blockedSubtiles));
       if (counts.failedResolve > 0) {
@@ -2628,6 +2748,50 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       }
     }
     return counts;
+  }
+
+  static SpecialApplyCounts registerSpecialWalls(TileGrid grid, IntMap<DS1.Cell> specials,
+      int width, int height) {
+    SpecialApplyCounts counts = new SpecialApplyCounts();
+    if (grid == null || specials == null) return counts;
+    width = Math.max(0, Math.min(width, grid.width));
+    height = Math.max(0, Math.min(height, grid.height));
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS && slot < Map.MAX_WALLS; slot++) {
+          int id = grid.wallIds[slot][y][x];
+          if (id == -1) continue;
+          int orientation = DT1.Tile.Index.orientation(id);
+          if (!Orientation.isSpecial(orientation)) continue;
+
+          // A DS1 warp commonly uses sub-index 0 as its logical trigger and
+          // sub-index 1 as the paired visual marker. The legacy copyWalls
+          // path deliberately excludes the latter from Zone.specials.
+          if (Map.ID.WARPS.contains(id) && DT1.Tile.Index.subIndex(id) == 1) {
+            counts.skippedWarpPairMarkers++;
+            continue;
+          }
+
+          DS1.Cell cell = new DS1.Cell();
+          cell.id = id;
+          cell.mainIndex = (short) DT1.Tile.Index.mainIndex(id);
+          cell.subIndex = (short) DT1.Tile.Index.subIndex(id);
+          cell.orientation = (short) orientation;
+          cell.value = ((cell.mainIndex & 0x3F) << 20) | ((cell.subIndex & 0xFF) << 8);
+          int layer = Map.WALL_OFFSET + slot;
+          specials.put(Zone.tileHashCode(layer, x, y), cell);
+          counts.total++;
+          if (Map.ID.WARPS.contains(id)) counts.warps++;
+        }
+      }
+    }
+    return counts;
+  }
+
+  static final class SpecialApplyCounts {
+    int total;
+    int warps;
+    int skippedWarpPairMarkers;
   }
 
   private static String formatTileIds(IntSet ids) {

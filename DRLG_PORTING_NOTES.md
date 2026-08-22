@@ -14,7 +14,7 @@
   - DS1 MPQ 路径与二进制解析修正后，固定 seed 的 floor 从 `1` 个全零 ID 恢复到 `22–24` 个唯一 ID，证明 LvlSub 替换已进入瓦片生成链。
   - 当前仍导出 `0 wall / 0 shadow`；消费端契约已就绪，下一个阻塞点位于 D2MOO 的 outdoor wall/shadow 生成或瓦片选择链。
 - **当前集成策略**：D2MOO_JAVA 默认只接管布局/连接；瓦片导出用于诊断，经过多样性、非零 ID、越界和无效 ID 质量门槛后才可接管渲染。
-- **调试开关**：`-Driiablo.drlg.renderExportedFloors=true`。默认关闭；即使开启，质量门槛未通过时仍会回退到 riiablo 地形生成。
+- **原生渲染开关**：`-Driiablo.drlg.renderExportedFloors=false` 可显式关闭。默认启用；质量门槛未通过时仍会自动回退到 riiablo 地形生成。
 
 ### 已完成
 

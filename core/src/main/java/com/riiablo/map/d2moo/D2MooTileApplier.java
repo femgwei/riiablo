@@ -27,6 +27,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     private int clippedBoundaryFloorCount;
     private int invalidTileCount;
     private int duplicatePositionCount;
+    private int duplicateWallCount;
     private int duplicateShadowCount;
     private int wallLayerOverflowCount;
     private int nonFloorOrientationCount;
@@ -62,6 +63,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     public int getClippedBoundaryFloorCount() { return clippedBoundaryFloorCount; }
     public int getInvalidTileCount() { return invalidTileCount; }
     public int getDuplicatePositionCount() { return duplicatePositionCount; }
+    public int getDuplicateWallCount() { return duplicateWallCount; }
     public int getDuplicateShadowCount() { return duplicateShadowCount; }
     public int getWallLayerOverflowCount() { return wallLayerOverflowCount; }
     public int getNonFloorOrientationCount() { return nonFloorOrientationCount; }
@@ -84,6 +86,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         clippedBoundaryFloorCount = 0;
         invalidTileCount = 0;
         duplicatePositionCount = 0;
+        duplicateWallCount = 0;
         duplicateShadowCount = 0;
         wallLayerOverflowCount = 0;
         nonFloorOrientationCount = 0;
@@ -166,6 +169,15 @@ public final class D2MooTileApplier implements DrlgTileExporter {
 
     private void applyWall(TileGrid grid, int tx, int ty, int tileId, int orientation) {
         if (!isWallLayerOrientation(orientation)) nonWallOrientationCount++;
+        // Adjacent native RoomEx grids share their boundary row/column and
+        // may report the same wall more than once. Do not consume another of
+        // riiablo's four wall slots for an identical tile.
+        for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS; slot++) {
+            if (grid.wallIds[slot][ty][tx] == tileId) {
+                duplicateWallCount++;
+                return;
+            }
+        }
         for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS; slot++) {
             if (grid.wallIds[slot][ty][tx] == -1) {
                 grid.wallIds[slot][ty][tx] = tileId;

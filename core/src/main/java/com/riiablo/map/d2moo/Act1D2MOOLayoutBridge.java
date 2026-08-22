@@ -39,6 +39,8 @@ public final class Act1D2MOOLayoutBridge {
         D2LevelIds.LEVEL_BURIALGROUNDS,
         D2LevelIds.LEVEL_BLACKMARSH,
         D2LevelIds.LEVEL_TAMOEHIGHLAND,
+        D2LevelIds.LEVEL_DARKWOOD,
+        D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1,
     };
 
     /**
@@ -59,13 +61,14 @@ public final class Act1D2MOOLayoutBridge {
      */
     public static final class Act1LayoutResult {
         /** 每格 [x, y, width, height] 单位 tile，与 D2DrlgCoord 一致 */
-        public final int[][] coords = new int[7][4];
-        /** 0=Stony, 1=Cold, 2=Blood, 3=Town, 4=Burial, 5=Black Marsh, 6=Tamoe. */
-        public final int[] levelIds = new int[7];
+        public final int[][] coords = new int[9][4];
+        /** 0=Stony, 1=Cold, 2=Blood, 3=Town, 4=Burial, 5=Black Marsh,
+         * 6=Tamoe, 7=Dark Wood, 8=Underground Passage level 1. */
+        public final int[] levelIds = new int[9];
         /** levelLink[i]：连接到的上一格索引，-1 表示无 */
-        public final int[] levelLink = new int[] { -1, 0, 1, 2, 1, -1, 5 };
+        public final int[] levelLink = new int[] { -1, 0, 1, 2, 1, 7, 5, -1, 0 };
         /** levelLinkEx[i] */
-        public final int[] levelLinkEx = new int[] { -1, -1, -1, -1, -1, -1, -1 };
+        public final int[] levelLinkEx = new int[] { -1, -1, -1, -1, -1, -1, -1, -1, 7 };
         /** 城镇出口方向 0–3 (D2MOD rand[0][townIndex])，用于预设选择与路径 */
         public int townDirection;
     }
@@ -100,6 +103,8 @@ public final class Act1D2MOOLayoutBridge {
             // base floor and the export loses paths and substitutions.
             DataTbls.loadLvlPrestTxt(archive, 0);
             DataTbls.loadLvlSubTxt(archive);
+            DataTbls.loadLvlMazeTxt(archive);
+            DataTbls.loadLvlWarpTxt(archive);
 
             drlg = DrlgDrlg.allocDrlg(
                 act,
@@ -145,6 +150,8 @@ public final class Act1D2MOOLayoutBridge {
             result.levelIds[4] = burialGroundsId;
             result.levelIds[5] = D2LevelIds.LEVEL_BLACKMARSH;
             result.levelIds[6] = D2LevelIds.LEVEL_TAMOEHIGHLAND;
+            result.levelIds[7] = D2LevelIds.LEVEL_DARKWOOD;
+            result.levelIds[8] = D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1;
 
             for (int i = 0; i < D2MOO_ACT1_LEVEL_IDS.length; i++) {
                 int levelId = D2MOO_ACT1_LEVEL_IDS[i];
@@ -229,6 +236,8 @@ public final class Act1D2MOOLayoutBridge {
         DataTbls.setLevelTypesTxtCache(null);
         DataTbls.unloadLvlPrestTxt();
         DataTbls.unloadLvlSubTxt();
+        DataTbls.unloadLvlMazeTxt();
+        DataTbls.unloadLvlWarpTxt();
     }
 
     /**

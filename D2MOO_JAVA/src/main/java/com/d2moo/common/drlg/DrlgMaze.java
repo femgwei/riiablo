@@ -9,6 +9,16 @@ import com.d2moo.common.util.D2Pool;
  * 对应 C++ 文件：DrlgMaze.cpp
  */
 public class DrlgMaze {
+
+    private static D2MazeLevelIdStrc[] act1CaveIds(
+            int north, int east, int south, int west) {
+        return new D2MazeLevelIdStrc[] {
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CAVE_N, north, -1, 3),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CAVE_E, east, -1, 0),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CAVE_S, south, -1, 1),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CAVE_W, west, -1, 2),
+        };
+    }
     
     /**
      * D2Common.0x6FD79480
@@ -101,8 +111,8 @@ public class DrlgMaze {
         
         switch (nLevelType) {
             case LVLTYPE_ACT1_CAVE:
-            case LVLTYPE_ACT1_CRYPT:
-                // Act1 洞穴和墓穴：随机添加房间
+                // Act1 caves: grow the maze, then install the native entry,
+                // down-level and (for Underground Passage 1) next-level DS1s.
                 nRooms = mazeRecord.getDwRooms(drlg.getDifficulty());
                 if (level.getLevelId() == drlg.getStaffTombLevel()) {
                     nRooms *= 3;
@@ -120,9 +130,55 @@ public class DrlgMaze {
                         addAdjacentMazeRoom(randomRoomEx, nDirection, true);
                     }
                 }
-                
-                // 注意：某些关卡类型可能需要额外的特殊预设放置逻辑
-                // 这些可以在后续根据需要添加
+                nRand = (int)(Seed.rollRandomNumber(level.getSeed()) & 3);
+                int[] caveRand = new int[] { nRand };
+                scanReplaceSpecialPreset(level, act1CaveIds(
+                    D2LvlPrestIds.LVLPREST_ACT1_CAVE_PREV_N,
+                    D2LvlPrestIds.LVLPREST_ACT1_CAVE_PREV_E,
+                    D2LvlPrestIds.LVLPREST_ACT1_CAVE_PREV_S,
+                    D2LvlPrestIds.LVLPREST_ACT1_CAVE_PREV_W)[nRand], caveRand);
+                nRand = caveRand[0];
+                if (level.getLevelId() == D2LevelIds.LEVEL_DENOFEVIL) {
+                    scanReplaceSpecialPreset(level, act1CaveIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_DEN_OF_EVIL_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_DEN_OF_EVIL_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_DEN_OF_EVIL_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_DEN_OF_EVIL_W)[nRand], caveRand);
+                } else {
+                    scanReplaceSpecialPreset(level, act1CaveIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_DOWN_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_DOWN_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_DOWN_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_DOWN_W)[nRand], caveRand);
+                }
+                nRand = caveRand[0];
+                if (level.getLevelId() == D2LevelIds.LEVEL_CAVELEV1) {
+                    scanReplaceSpecialPreset(level, act1CaveIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_COLDCROW_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_COLDCROW_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_COLDCROW_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_COLDCROW_W)[nRand], caveRand);
+                    nRand = caveRand[0];
+                }
+                if (level.getLevelId() == D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1) {
+                    scanReplaceSpecialPreset(level, act1CaveIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_NEXT_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_NEXT_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_NEXT_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_CAVE_NEXT_W)[nRand], caveRand);
+                }
+                break;
+
+            case LVLTYPE_ACT1_CRYPT:
+                nRooms = mazeRecord.getDwRooms(drlg.getDifficulty());
+                while (level.getRooms() < nRooms) {
+                    randomRoomEx = getRandomRoomExFromLevel(level);
+                    if (randomRoomEx == null) break;
+                    nDirection = (int)(Seed.rollRandomNumber(randomRoomEx.getSeed()) & 3);
+                    if (!hasMapDS1(randomRoomEx)) {
+                        addAdjacentMazeRoom(randomRoomEx, nDirection, true);
+                    }
+                }
                 break;
                 
             case LVLTYPE_ACT1_BARRACKS:
@@ -282,6 +338,35 @@ public class DrlgMaze {
             // 更新房间坐标
             DrlgDrlg.updateRoomExCoordinates(level);
         }
+
+        // DRLGMAZE_RollBasicPresets converts the temporary maze rooms into
+        // backed preset maps. Act 1 cave rooms are 8x8, so the native
+        // BuildArea operation is a one-room mapping and can retain the
+        // existing RoomEx/orth topology here.
+        materializeBasicPresetMaps(level);
+    }
+
+    private static void materializeBasicPresetMaps(D2DrlgLevel level) {
+        for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+                room = room.getDrlgRoomNext()) {
+            if (!(room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) continue;
+            D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) room.getMazeOrOutdoor();
+            if (preset.getPMap() != null || preset.getNLevelPrest() <= 0) continue;
+
+            D2DrlgMapStrc map = DrlgPreset.allocDrlgMap(
+                level, preset.getNLevelPrest(), room.getDrlgCoord(), level.getSeed());
+            if (map == null || map.getPLvlPrestTxtRecord() == null) {
+                D2Log.warning("DRLGMAZE_RollBasicPresets: missing LvlPrest=%d level=%d",
+                    preset.getNLevelPrest(), level.getLevelId());
+                continue;
+            }
+            if (preset.getNPickedFile() >= 0) {
+                map.setNPickedFile(preset.getNPickedFile());
+            }
+            preset.setPMap(map);
+            preset.setNPickedFile(map.getNPickedFile());
+            room.setDt1Mask(map.getPLvlPrestTxtRecord().getDwDt1Mask());
+        }
     }
     
     /**
@@ -325,27 +410,29 @@ public class DrlgMaze {
         }
     }
     
-    // 关卡类型常量
-    private static final int LVLTYPE_ACT1_CAVE = 0;
-    private static final int LVLTYPE_ACT1_CRYPT = 1;
-    private static final int LVLTYPE_ACT1_BARRACKS = 2;
-    private static final int LVLTYPE_ACT1_JAIL = 3;
-    private static final int LVLTYPE_ACT1_CATACOMBS = 4;
-    private static final int LVLTYPE_ACT2_SEWER = 5;
-    private static final int LVLTYPE_ACT2_HAREM = 6;
-    private static final int LVLTYPE_ACT2_BASEMENT = 7;
-    private static final int LVLTYPE_ACT2_TOMB = 8;
-    private static final int LVLTYPE_ACT2_LAIR = 9;
-    private static final int LVLTYPE_ACT2_ARCANE = 10;
-    private static final int LVLTYPE_ACT3_KURAST = 11;
-    private static final int LVLTYPE_ACT3_SPIDER = 12;
-    private static final int LVLTYPE_ACT3_DUNGEON = 13;
-    private static final int LVLTYPE_ACT3_SEWER = 14;
-    private static final int LVLTYPE_ACT4_LAVA = 15;
-    private static final int LVLTYPE_ACT5_ICE_CAVES = 16;
-    private static final int LVLTYPE_ACT5_TEMPLE = 17;
-    private static final int LVLTYPE_ACT5_BAAL = 18;
-    private static final int LVLTYPE_ACT5_LAVA = 19;
+    // Native D2C_LvlTypes values. LVLTYPE_NONE occupies zero, so these are
+    // the same 1-based ids stored in Levels.txt; the former zero-based list
+    // routed every maze through the wrong generator branch.
+    private static final int LVLTYPE_ACT1_CAVE = 3;
+    private static final int LVLTYPE_ACT1_CRYPT = 4;
+    private static final int LVLTYPE_ACT1_BARRACKS = 7;
+    private static final int LVLTYPE_ACT1_JAIL = 8;
+    private static final int LVLTYPE_ACT1_CATACOMBS = 10;
+    private static final int LVLTYPE_ACT2_SEWER = 13;
+    private static final int LVLTYPE_ACT2_HAREM = 14;
+    private static final int LVLTYPE_ACT2_BASEMENT = 15;
+    private static final int LVLTYPE_ACT2_TOMB = 17;
+    private static final int LVLTYPE_ACT2_LAIR = 18;
+    private static final int LVLTYPE_ACT2_ARCANE = 19;
+    private static final int LVLTYPE_ACT3_KURAST = 22;
+    private static final int LVLTYPE_ACT3_SPIDER = 23;
+    private static final int LVLTYPE_ACT3_DUNGEON = 24;
+    private static final int LVLTYPE_ACT3_SEWER = 25;
+    private static final int LVLTYPE_ACT4_LAVA = 28;
+    private static final int LVLTYPE_ACT5_TEMPLE = 32;
+    private static final int LVLTYPE_ACT5_ICE_CAVES = 33;
+    private static final int LVLTYPE_ACT5_BAAL = 34;
+    private static final int LVLTYPE_ACT5_LAVA = 35;
     
     // 硬编码预设重映射表（用于 harem, basement 和 spider cave）
     private static final int[][] nHardcodedPresetsRemapping = {
@@ -1612,29 +1699,37 @@ public class DrlgMaze {
         return !checkRoomNotOverlaping(newRoomEx.getLevel(), newRoomEx, parentRoomEx, 0);
     }
     
-    // 辅助函数：分配正交链接（简化版本，实际需要调用 DrlgDrlgRoom 的函数）
+    // Native DRLGROOM_AllocDrlgOrthsForRooms stores the opposite room and
+    // that room's coordinate box. DRLGROOM_AddOrth is for level links and
+    // cannot be used here (it makes every candidate overlap the whole level).
     private static void allocDrlgOrthsForRooms(D2DrlgRoom drlgRoom1, D2DrlgRoom drlgRoom2, int direction) {
-        // 创建双向链接
-        D2DrlgOrth[] ppDrlgOrth1 = new D2DrlgOrth[1];
-        ppDrlgOrth1[0] = drlgRoom1.getDrlgOrth();
-        DrlgDrlgRoom.addOrth(ppDrlgOrth1, drlgRoom2.getLevel(), direction, true);
-        drlgRoom1.setDrlgOrth(ppDrlgOrth1[0]);
-        
-        // 计算反向方向
-        int oppositeDirection = (direction + 2) % 4; // 简单的反向计算（仅适用于4方向）
-        // 对于8方向，需要更复杂的映射
-        if (direction >= 4) {
-            // 对角线方向的反向
-            oppositeDirection = direction + 4;
-            if (oppositeDirection >= 8) {
-                oppositeDirection -= 8;
-            }
+        boolean linked12 = false;
+        for (D2DrlgOrth orth = drlgRoom1.getDrlgOrth(); orth != null; orth = orth.getPNext()) {
+            if (orth.getPDrlgRoom() == drlgRoom2) { linked12 = true; break; }
         }
-        
-        D2DrlgOrth[] ppDrlgOrth2 = new D2DrlgOrth[1];
-        ppDrlgOrth2[0] = drlgRoom2.getDrlgOrth();
-        DrlgDrlgRoom.addOrth(ppDrlgOrth2, drlgRoom1.getLevel(), oppositeDirection, true);
-        drlgRoom2.setDrlgOrth(ppDrlgOrth2[0]);
+        if (!linked12) {
+            D2DrlgOrth orth = new D2DrlgOrth();
+            orth.setPDrlgRoom(drlgRoom2);
+            orth.setNDirection((byte) direction);
+            orth.setBInit(true);
+            orth.setPBox(drlgRoom2.getDrlgCoord());
+            orth.setPNext(drlgRoom1.getDrlgOrth());
+            drlgRoom1.setDrlgOrth(orth);
+        }
+
+        boolean linked21 = false;
+        for (D2DrlgOrth orth = drlgRoom2.getDrlgOrth(); orth != null; orth = orth.getPNext()) {
+            if (orth.getPDrlgRoom() == drlgRoom1) { linked21 = true; break; }
+        }
+        if (!linked21) {
+            D2DrlgOrth orth = new D2DrlgOrth();
+            orth.setPDrlgRoom(drlgRoom1);
+            orth.setNDirection((byte) ((direction + 2) & 3));
+            orth.setBInit(true);
+            orth.setPBox(drlgRoom1.getDrlgCoord());
+            orth.setPNext(drlgRoom2.getDrlgOrth());
+            drlgRoom2.setDrlgOrth(orth);
+        }
     }
     
     // 辅助函数：计算曼哈顿距离（复制自 DrlgDrlg 的逻辑）
@@ -1755,7 +1850,7 @@ public class DrlgMaze {
                         D2DrlgOrth pDrlgOrth = drlgRoom.getDrlgOrth();
                         boolean bFound = false;
                         while (pDrlgOrth != null) {
-                            if (pDrlgOrth.getPLevel() == i.getLevel()) {
+                            if (pDrlgOrth.getPDrlgRoom() == i) {
                                 bFound = true;
                                 break;
                             }
@@ -1984,6 +2079,13 @@ public class DrlgMaze {
         
         // 添加到关卡
         DrlgDrlgRoom.addRoomExToLevel(parentRoomEx.getLevel(), newRoomEx);
+        // Native DRLG assigns a directional LvlPrest to both sides as soon
+        // as the room is linked. The reset flag keeps them replaceable by
+        // entrance/exit presets while making their DS1 map metadata valid.
+        if (mergeRooms) {
+            pickRoomPreset(parentRoomEx, true);
+        }
+        pickRoomPreset(newRoomEx, true);
         return newRoomEx;
     }
     

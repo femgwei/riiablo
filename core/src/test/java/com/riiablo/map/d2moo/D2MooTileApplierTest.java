@@ -23,6 +23,8 @@ class D2MooTileApplierTest {
     applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 1, 0,
         pack(Orientation.RIGHT_NORTH_CORNER_WALL, 8, 9));
     applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 1, 0,
+        pack(Orientation.RIGHT_NORTH_CORNER_WALL, 8, 9));
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 1, 0,
         pack(Orientation.LEFT_NORTH_CORNER_WALL, 8, 9));
     applier.onTile(LEVEL_ID, DrlgExport.LAYER_SHADOW, 1, 0,
         pack(Orientation.SHADOW, 3, 4));
@@ -36,6 +38,7 @@ class D2MooTileApplierTest {
     assertEquals(index(Orientation.SHADOW, 3, 4), grid.shadowIds[0][1]);
     assertEquals(1, applier.getLastExportedFloorCount());
     assertEquals(2, applier.getExportedWallCount());
+    assertEquals(1, applier.getDuplicateWallCount());
     assertEquals(1, applier.getExportedShadowCount());
     assertEquals(0, applier.getIgnoredLayerCount());
     assertEquals(0, applier.getNonFloorOrientationCount());

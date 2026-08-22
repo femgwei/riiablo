@@ -1,6 +1,7 @@
 package com.riiablo.map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -14,14 +15,114 @@ import org.junit.jupiter.api.Test;
 
 import com.badlogic.gdx.utils.IntMap;
 import com.d2moo.common.drlg.D2DrlgLevel;
+import com.d2moo.common.drlg.D2DrlgCoord;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgStrc;
+import com.d2moo.common.drlg.D2DrlgTileGrid;
+import com.d2moo.common.drlg.D2PresetUnit;
+import com.d2moo.common.drlg.D2UnitTypes;
 import com.d2moo.common.drlg.DrlgExport;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.TileGrid;
 
 class Act1MapBuilderD2MooLayersTest {
+  @Test
+  void registersNativeSpecialWallsForWarpEntityCreation() {
+    TileGrid grid = new TileGrid(2, 1);
+    grid.wallIds[0][0][0] = Map.ID.VIS_0_00;
+    grid.wallIds[1][0][1] = Map.ID.VIS_1_11;
+    grid.wallIds[2][0][1] = DT1.Tile.Index.create(Orientation.LEFT_WALL, 2, 3);
+    IntMap<DS1.Cell> specials = new IntMap<>();
+
+    Act1MapBuilderD2MOD.SpecialApplyCounts counts =
+        Act1MapBuilderD2MOD.registerSpecialWalls(grid, specials, 2, 1);
+
+    assertEquals(2, counts.total);
+    assertEquals(2, counts.warps);
+    DS1.Cell first = specials.get(Map.Zone.tileHashCode(Map.WALL_OFFSET, 0, 0));
+    DS1.Cell second = specials.get(Map.Zone.tileHashCode(Map.WALL_OFFSET + 1, 1, 0));
+    assertNotNull(first);
+    assertNotNull(second);
+    assertEquals(Map.ID.VIS_0_00, first.id);
+    assertEquals(Orientation.SPECIAL_10, first.orientation);
+    assertEquals(0, first.mainIndex);
+    assertEquals(Map.ID.VIS_1_11, second.id);
+    assertEquals(1, second.mainIndex);
+  }
+
+  @Test
+  void skipsNonInteractiveWarpPairMarker() {
+    TileGrid grid = new TileGrid(1, 1);
+    grid.wallIds[0][0][0] = Map.ID.VIS_4_41;
+    IntMap<DS1.Cell> specials = new IntMap<>();
+
+    Act1MapBuilderD2MOD.SpecialApplyCounts counts =
+        Act1MapBuilderD2MOD.registerSpecialWalls(grid, specials, 1, 1);
+
+    assertEquals(0, counts.total);
+    assertEquals(0, counts.warps);
+    assertEquals(1, counts.skippedWarpPairMarkers);
+    assertEquals(0, specials.size);
+  }
+
+  @Test
+  void linksStonyUndergroundAndDarkWoodWarpsInBothDirections() {
+    Map map = new Map(1, 0);
+    Map.Zone stony = zone(4, "Stony Field", vis(4, 10));
+    Map.Zone darkWood = zone(5, "Dark Wood", vis(3, 10));
+    Map.Zone underground = zone(10, "Underground Passage Level 1",
+        vis(new int[][] {{0, 4}, {1, 5}, {4, 11}}));
+    map.zones.add(stony);
+    map.zones.add(darkWood);
+    map.zones.add(underground);
+
+    putSpecial(stony, Map.ID.VIS_4_40);
+    putSpecial(darkWood, Map.ID.VIS_3_30);
+    putSpecial(underground, Map.ID.VIS_0_03);
+    putSpecial(underground, Map.ID.VIS_1_15);
+    putSpecial(underground, Map.ID.VIS_4_38); // level 11 is not exported yet
+
+    Act1MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(map);
+
+    assertEquals(Map.ID.VIS_0_03, stony.getWarp(Map.ID.VIS_4_40));
+    assertEquals(Map.ID.VIS_4_40, underground.getWarp(Map.ID.VIS_0_03));
+    assertEquals(Map.ID.VIS_1_15, darkWood.getWarp(Map.ID.VIS_3_30));
+    assertEquals(Map.ID.VIS_3_30, underground.getWarp(Map.ID.VIS_1_15));
+    assertEquals(-1, underground.getWarp(Map.ID.VIS_4_38));
+  }
+
+  private static Map.Zone zone(int id, String name, int[] vis) {
+    Levels.Entry level = new Levels.Entry();
+    level.Id = id;
+    level.LevelName = name;
+    level.Vis = vis;
+    Map.Zone zone = new Map.Zone();
+    zone.level = level;
+    zone.specials = new IntMap<>();
+    return zone;
+  }
+
+  private static int[] vis(int index, int destination) {
+    return vis(new int[][] {{index, destination}});
+  }
+
+  private static int[] vis(int[][] values) {
+    int[] vis = new int[8];
+    Arrays.fill(vis, -1);
+    for (int[] value : values) vis[value[0]] = value[1];
+    return vis;
+  }
+
+  private static void putSpecial(Map.Zone zone, int id) {
+    DS1.Cell cell = new DS1.Cell();
+    cell.id = id;
+    cell.mainIndex = (short) DT1.Tile.Index.mainIndex(id);
+    cell.subIndex = (short) DT1.Tile.Index.subIndex(id);
+    cell.orientation = (short) DT1.Tile.Index.orientation(id);
+    zone.specials.put(zone.specials.size, cell);
+  }
+
   @Test
   void collectsBaseAndPresetRoomDt1MasksForExportedLevel() {
     D2DrlgStrc drlg = new D2DrlgStrc();
@@ -37,6 +138,55 @@ class Act1MapBuilderD2MooLayersTest {
     level.setFirstRoomEx(outdoor);
 
     assertEquals(0x102C4103, DrlgExport.collectLevelDt1Mask(drlg, 3));
+  }
+
+  @Test
+  void exportsNativePresetObjectsInLevelLocalSubtiles() {
+    D2DrlgStrc drlg = new D2DrlgStrc();
+    D2DrlgLevel level = new D2DrlgLevel();
+    level.setLevelId(4);
+    D2DrlgCoord levelCoords = new D2DrlgCoord();
+    levelCoords.setNPosX(1000);
+    levelCoords.setNPosY(2000);
+    level.setLevelCoords(levelCoords);
+    drlg.setLevel(level);
+
+    D2DrlgRoom room = new D2DrlgRoom();
+    room.setNTileXPos(1008);
+    room.setNTileYPos(2016);
+    room.setTileGrid(new D2DrlgTileGrid());
+    level.setFirstRoomEx(room);
+
+    D2PresetUnit unit = new D2PresetUnit();
+    unit.setNUnitType(D2UnitTypes.UNIT_OBJECT);
+    unit.setNIndex(12);
+    unit.setNMode(0);
+    unit.setNXpos(7);
+    unit.setNYpos(9);
+    unit.setDs1Raw(true);
+    room.setPresetUnits(unit);
+
+    int[] exported = new int[8];
+    int count = DrlgExport.exportLevelPresetUnits(drlg, 4,
+        (levelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+          exported[0] = levelId;
+          exported[1] = unitType;
+          exported[2] = index;
+          exported[3] = mode;
+          exported[4] = x;
+          exported[5] = y;
+          exported[6] = ds1Raw ? 1 : 0;
+          exported[7] = spawned ? 1 : 0;
+        });
+
+    assertEquals(1, count);
+    assertEquals(4, exported[0]);
+    assertEquals(D2UnitTypes.UNIT_OBJECT, exported[1]);
+    assertEquals(12, exported[2]);
+    assertEquals(47, exported[4]);
+    assertEquals(89, exported[5]);
+    assertEquals(1, exported[6]);
+    assertEquals(0, exported[7]);
   }
 
   @Test

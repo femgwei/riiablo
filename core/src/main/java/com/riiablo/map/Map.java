@@ -388,6 +388,10 @@ public class Map implements Disposable {
               Act1MapBuilderD2MOD.INSTANCE.applyTileGridToZone(z);
             }
           }
+          // Special orientation 10/11 cells are now present in every native
+          // Zone, so pair their source/destination ids before MapManager
+          // creates the Warp entities.
+          Act1MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(this);
         } catch (Throwable t) {
           Gdx.app.error(TAG, "Error during D2MOD post-generation processing", t);
         }
@@ -775,6 +779,9 @@ public class Map implements Disposable {
     static final Array<AssetDescriptor> EMPTY_ASSET_ARRAY = new Array<>(0);
     Array<AssetDescriptor> dependencies = EMPTY_ASSET_ARRAY;
 
+    /** Persistent copies of native RoomEx DS1 objects. */
+    final Array<NativeObject> nativeObjects = new Array<>();
+
     static final IntMap<DS1.Cell> EMPTY_INT_CELL_MAP = new IntMap<>();
     IntMap<DS1.Cell> specials = EMPTY_INT_CELL_MAP;
 
@@ -867,6 +874,8 @@ public class Map implements Disposable {
       for (AssetDescriptor asset : dependencies) Riiablo.assets.unload(asset.fileName);
       dependencies = EMPTY_ASSET_ARRAY;
 
+      nativeObjects.clear();
+
       dt1s = null; // TODO: setting null -- depending on Map dispose to clear DT1s on act change
       town = false;
       townExitDirection = -1;
@@ -905,6 +914,14 @@ public class Map implements Disposable {
 
     public boolean isTown() {
       return town;
+    }
+
+    public void addNativeObject(int presetIndex, int mode, int x, int y) {
+      nativeObjects.add(new NativeObject(presetIndex, mode, x, y));
+    }
+
+    public Array<NativeObject> getNativeObjects() {
+      return nativeObjects;
     }
 
     static int index(int width, int x, int y) {
@@ -1236,6 +1253,21 @@ public class Map implements Disposable {
     interface Generator {
       void init(Zone zone);
       void generate(Zone zone, DT1s dt1s, int tx, int ty);
+    }
+  }
+
+  /** A DS1 object exported from a native D2MOO RoomEx, in Zone-local subtiles. */
+  public static final class NativeObject {
+    public final int presetIndex;
+    public final int mode;
+    public final int x;
+    public final int y;
+
+    NativeObject(int presetIndex, int mode, int x, int y) {
+      this.presetIndex = presetIndex;
+      this.mode = mode;
+      this.x = x;
+      this.y = y;
     }
   }
 

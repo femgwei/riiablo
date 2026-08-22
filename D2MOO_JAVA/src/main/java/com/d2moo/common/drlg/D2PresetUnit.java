@@ -11,6 +11,8 @@ public class D2PresetUnit {
     private int nXpos;                           // 0x0C
     private int nYpos;                           // 0x10
     private boolean bSpawned;                    // 0x14
+    /** True when nIndex still uses the DS1 Obj/MonPreset index contract. */
+    private boolean ds1Raw;
     private D2MapAIStrc pMapAI;                  // 0x18 D2MapAIStrc*
     private D2PresetUnit pNext;                  // 0x1C
     
@@ -31,6 +33,9 @@ public class D2PresetUnit {
     
     public boolean isBSpawned() { return bSpawned; }
     public void setBSpawned(boolean bSpawned) { this.bSpawned = bSpawned; }
+
+    public boolean isDs1Raw() { return ds1Raw; }
+    public void setDs1Raw(boolean ds1Raw) { this.ds1Raw = ds1Raw; }
     
     public D2MapAIStrc getPMapAI() { return pMapAI; }
     public void setPMapAI(D2MapAIStrc pMapAI) { this.pMapAI = pMapAI; }

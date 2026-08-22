@@ -949,6 +949,7 @@ public class DrlgPreset {
         newPresetUnit.setNXpos(x + presetUnit.getNXpos());
         newPresetUnit.setNYpos(y + presetUnit.getNYpos());
         newPresetUnit.setBSpawned(presetUnit.isBSpawned());
+        newPresetUnit.setDs1Raw(presetUnit.isDs1Raw());
         
         // 复制 MapAI（如果存在）
         if (presetUnit.getPMapAI() != null) {
@@ -1198,6 +1199,11 @@ public class DrlgPreset {
                 unit.setNXpos(in.readInt());
                 unit.setNYpos(in.readInt());
                 if (version > 5) unit.setBSpawned(in.readInt() != 0);
+                // Native D2Common resolves this index through Obj/MonPreset
+                // when the unit is spawned. Keep its provenance so an
+                // external renderer does not confuse it with hard-coded
+                // class ids added later by DRLGROOMTILE_AddTilePresetUnits.
+                unit.setDs1Raw(true);
                 unit.setPNext(first);
                 first = unit;
             }

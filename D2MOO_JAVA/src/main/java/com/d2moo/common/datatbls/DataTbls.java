@@ -431,7 +431,7 @@ public class DataTbls {
             return;
         }
         
-        // 第一行是表头，跳过
+        Map<String, Integer> columns = createColumnIndex(rows.get(0));
         List<D2LvlWarpTxt> records = new ArrayList<>();
         
         for (int i = 1; i < rows.size(); i++) {
@@ -442,49 +442,20 @@ public class DataTbls {
             
             D2LvlWarpTxt record = new D2LvlWarpTxt();
             
-            // 解析字段（根据实际 TXT 文件格式调整）
-            // Level, Warp, SelectX, SelectY, SelectDX, SelectDY, ExitWalkX, ExitWalkY, OffsetX, OffsetY, LitVersion, Tiles, Direction
-            int colIndex = 0;
-            if (colIndex < row.length) {
-                record.setDwLevelId(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            // Warp 字段可能不存在，跳过
-            if (colIndex < row.length) {
-                colIndex++; // 跳过 Warp 字段
-            }
-            if (colIndex < row.length) {
-                record.setDwSelectX(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwSelectY(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwSelectDX(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwSelectDY(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwExitWalkX(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwExitWalkY(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwOffsetX(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwOffsetY(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwLitVersion(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setDwTiles(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            if (colIndex < row.length) {
-                record.setSzDirection(D2TxtFileParser.parseString(row[colIndex++], ""));
-            }
+            // LvlWarp starts with the descriptive Name column. Reading by
+            // position shifted every field and made every warp id zero.
+            record.setDwLevelId(parseColumnInt(row, columns, "Id", 0));
+            record.setDwSelectX(parseColumnInt(row, columns, "SelectX", 0));
+            record.setDwSelectY(parseColumnInt(row, columns, "SelectY", 0));
+            record.setDwSelectDX(parseColumnInt(row, columns, "SelectDX", 0));
+            record.setDwSelectDY(parseColumnInt(row, columns, "SelectDY", 0));
+            record.setDwExitWalkX(parseColumnInt(row, columns, "ExitWalkX", 0));
+            record.setDwExitWalkY(parseColumnInt(row, columns, "ExitWalkY", 0));
+            record.setDwOffsetX(parseColumnInt(row, columns, "OffsetX", 0));
+            record.setDwOffsetY(parseColumnInt(row, columns, "OffsetY", 0));
+            record.setDwLitVersion(parseColumnInt(row, columns, "LitVersion", 0));
+            record.setDwTiles(parseColumnInt(row, columns, "Tiles", 0));
+            record.setSzDirection(parseColumnString(row, columns, "Direction", ""));
             
             records.add(record);
         }
@@ -1329,7 +1300,7 @@ public class DataTbls {
             return;
         }
         
-        // 第一行是表头，跳过
+        Map<String, Integer> columns = createColumnIndex(rows.get(0));
         List<D2LvlMazeTxt> records = new ArrayList<>();
         
         for (int i = 1; i < rows.size(); i++) {
@@ -1340,32 +1311,19 @@ public class DataTbls {
             
             D2LvlMazeTxt record = new D2LvlMazeTxt();
             
-            // 解析字段（根据实际 TXT 文件格式调整）
-            // LevelId, Rooms1-3 (普通、噩梦、地狱), SizeX, SizeY, Merge
-            int colIndex = 0;
-            if (colIndex < row.length) {
-                record.setDwLevelId(D2TxtFileParser.parseInt(row[colIndex++], 0));
+            // LvlMaze also starts with Name; use headers so the native
+            // LevelId/Rooms values are not shifted by one column.
+            int levelId = parseColumnInt(row, columns, "LevelId", Integer.MIN_VALUE);
+            if (levelId == Integer.MIN_VALUE) {
+                levelId = parseColumnInt(row, columns, "Level", 0);
             }
-            
-            // 解析房间数量数组（3 个值：普通、噩梦、地狱）
-            for (int roomIndex = 0; roomIndex < 3 && colIndex < row.length; roomIndex++) {
-                record.setDwRooms(roomIndex, D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            
-            // SizeX
-            if (colIndex < row.length) {
-                record.setDwSizeX(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            
-            // SizeY
-            if (colIndex < row.length) {
-                record.setDwSizeY(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
-            
-            // Merge
-            if (colIndex < row.length) {
-                record.setDwMerge(D2TxtFileParser.parseInt(row[colIndex++], 0));
-            }
+            record.setDwLevelId(levelId);
+            record.setDwRooms(0, parseColumnInt(row, columns, "Rooms", 0));
+            record.setDwRooms(1, parseColumnInt(row, columns, "Rooms(N)", 0));
+            record.setDwRooms(2, parseColumnInt(row, columns, "Rooms(H)", 0));
+            record.setDwSizeX(parseColumnInt(row, columns, "SizeX", 0));
+            record.setDwSizeY(parseColumnInt(row, columns, "SizeY", 0));
+            record.setDwMerge(parseColumnInt(row, columns, "Merge", 0));
             
             records.add(record);
         }

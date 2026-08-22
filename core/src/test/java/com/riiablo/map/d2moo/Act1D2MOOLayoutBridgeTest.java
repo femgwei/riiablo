@@ -17,12 +17,14 @@ import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2DrlgVertexStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2PresetUnit;
+import com.d2moo.common.drlg.D2UnitTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.drlg.TileGrid;
+import com.riiablo.map.Map;
 
 /** Fixed-seed DRLG smoke test and diagnostic report for the Act1 bridge. */
 public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
@@ -36,6 +38,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     int difficulty = Integer.getInteger("d2.difficulty", DEFAULT_DIFFICULTY);
     int burialId = findLevelId("Burial Grounds");
     assertTrue(burialId > 0, "Burial Grounds is missing from Levels.txt");
+    assertNativeUndergroundVisRoutes();
 
     Act1D2MOOLayoutBridge.LayoutAndDrlg first =
         Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, difficulty, burialId);
@@ -65,6 +68,30 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     return -1;
   }
 
+  private static void assertNativeUndergroundVisRoutes() {
+    Levels.Entry stony = Riiablo.files.Levels.get(D2LevelIds.LEVEL_STONYFIELD);
+    Levels.Entry darkWood = Riiablo.files.Levels.get(D2LevelIds.LEVEL_DARKWOOD);
+    Levels.Entry underground =
+        Riiablo.files.Levels.get(D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1);
+    assertEquals(D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1, stony.Vis[4]);
+    assertEquals(D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1, darkWood.Vis[3]);
+    assertEquals(D2LevelIds.LEVEL_STONYFIELD, underground.Vis[0]);
+    assertEquals(D2LevelIds.LEVEL_DARKWOOD, underground.Vis[1]);
+    assertEquals(D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL2, underground.Vis[4]);
+    assertWarpTableEntry(stony, 4);
+    assertWarpTableEntry(darkWood, 3);
+    assertWarpTableEntry(underground, 0);
+    assertWarpTableEntry(underground, 1);
+    assertWarpTableEntry(underground, 4);
+  }
+
+  private static void assertWarpTableEntry(Levels.Entry level, int mainIndex) {
+    assertTrue(level.Warp[mainIndex] >= 0,
+        "negative LvlWarp id for level " + level.Id + " mainIndex " + mainIndex);
+    assertNotNull(Riiablo.files.LvlWarp.get(level.Warp[mainIndex]),
+        "missing LvlWarp row for level " + level.Id + " mainIndex " + mainIndex);
+  }
+
   /** Guards the LvlSub wall-grid regression that blanked most outdoor cells. */
   private static void assertFixedSeedOutdoorCoverage(D2DrlgStrc drlg) {
     assertEquals(91, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD).getRooms(),
@@ -79,6 +106,11 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         "fixed seed Black Marsh native border/LvlSub room count changed");
     assertEquals(95, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_TAMOEHIGHLAND).getRooms(),
         "fixed seed Tamoe Highland native border/LvlSub room count changed");
+    assertEquals(90, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_DARKWOOD).getRooms(),
+        "fixed seed Dark Wood native border/LvlSub room count changed");
+    assertEquals(7,
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1).getRooms(),
+        "fixed seed Underground Passage level 1 native maze room count changed");
     assertBloodMoorNativeLinks(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
     assertPresetFileSelectionsResolveToDs1(
@@ -93,11 +125,14 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLACKMARSH));
     assertPresetFileSelectionsResolveToDs1(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_TAMOEHIGHLAND));
+    assertPresetFileSelectionsResolveToDs1(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_DARKWOOD));
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD), false);
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS), false);
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR), false);
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLACKMARSH), false);
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_TAMOEHIGHLAND), false);
+    assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_DARKWOOD), false);
     assertPresetUnitListsAreAcyclic(drlg);
   }
 
@@ -222,7 +257,9 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         D2LevelIds.LEVEL_ROGUEENCAMPMENT,
         D2LevelIds.LEVEL_BURIALGROUNDS,
         D2LevelIds.LEVEL_BLACKMARSH,
-        D2LevelIds.LEVEL_TAMOEHIGHLAND }) {
+        D2LevelIds.LEVEL_TAMOEHIGHLAND,
+        D2LevelIds.LEVEL_DARKWOOD,
+        D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1 }) {
       D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
       assertNotNull(level, "missing D2MOO level " + levelId);
       assertNotNull(level.getLevelCoords(), "missing coordinates for level " + levelId);
@@ -248,20 +285,46 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         D2LevelIds.LEVEL_BLOODMOOR,
         D2LevelIds.LEVEL_BURIALGROUNDS,
         D2LevelIds.LEVEL_BLACKMARSH,
-        D2LevelIds.LEVEL_TAMOEHIGHLAND }) {
+        D2LevelIds.LEVEL_TAMOEHIGHLAND,
+        D2LevelIds.LEVEL_DARKWOOD,
+        D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1 }) {
       D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
       int width = Math.max(1, level.getLevelCoords().getNWidth());
       int height = Math.max(1, level.getLevelCoords().getNHeight());
-      applier.putGrid(levelId, new TileGrid(width, height));
+      TileGrid grid = new TileGrid(width, height);
+      applier.putGrid(levelId, grid);
       applier.resetLastExportedFloorCount();
       int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
-      if (levelId != D2LevelIds.LEVEL_BURIALGROUNDS) {
+      int[] unitStats = new int[3];
+      int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
+          (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+            unitStats[0]++;
+            if (unitType == D2UnitTypes.UNIT_OBJECT && !spawned) {
+              unitStats[1]++;
+              if (ds1Raw) {
+                unitStats[2]++;
+                assertTrue(index >= 0 && index < Riiablo.files.obj.getSize(1),
+                    "Act I DS1 object preset index is invalid: level=" + levelId
+                        + " index=" + index);
+              }
+            }
+          });
+      assertEquals(presetUnits, unitStats[0],
+          "preset-unit callback accounting mismatch for level " + levelId);
+      int expectedObjects = expectedFixedSeedRawObjects(levelId);
+      assertEquals(expectedObjects, unitStats[2],
+          "fixed-seed native DS1 object coverage changed for level " + levelId);
+      if (levelId != D2LevelIds.LEVEL_BURIALGROUNDS
+          && levelId != D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1) {
         assertNativeDirtPaths(level, true);
       }
       SourceGridStats source = sourceGridStats(level);
       assertTrue(attempted > 0, "D2MOO exported no floor tiles for level " + levelId);
-      assertEquals(expectedFixedSeedFloors(levelId), attempted,
-          "fixed-seed floor coverage changed for level " + levelId);
+      int expectedFloors = expectedFixedSeedFloors(levelId);
+      if (expectedFloors >= 0) {
+        assertEquals(expectedFloors, attempted,
+            "fixed-seed floor coverage changed for level " + levelId);
+      }
       assertEquals(0, applier.getMissingGridCount(), "missing target grid for level " + levelId);
       assertEquals(0, applier.getOutOfBoundsCount(), "out-of-bounds tile for level " + levelId);
       assertEquals(0, applier.getInvalidTileCount(), "invalid tile id for level " + levelId);
@@ -271,23 +334,32 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       assertEquals(attempted - applier.getClippedBoundaryFloorCount(),
           applier.getLastExportedFloorCount(),
           "not every exported floor tile was written for level " + levelId);
-      assertEquals(0, applier.getDuplicatePositionCount(),
-          "multiple rooms exported the same floor coordinate for level " + levelId);
+      assertEquals(levelId == D2LevelIds.LEVEL_DARKWOOD ? 1 : 0,
+          applier.getDuplicatePositionCount(),
+          "unexpected shared floor coordinates for level " + levelId);
       assertEquals(0, applier.getNonFloorOrientationCount(),
           "floor export referenced non-floor DT1 entries for level " + levelId);
       assertEquals(0, applier.getWallLayerOverflowCount(),
-          "more than four walls occupied one coordinate for level " + levelId);
+          "more than four distinct walls occupied one coordinate for level " + levelId);
       assertEquals(0, applier.getNonWallOrientationCount(),
           "wall export referenced an incompatible orientation for level " + levelId);
       assertEquals(0, applier.getNonShadowOrientationCount(),
           "shadow export referenced a non-shadow DT1 entry for level " + levelId);
       assertTrue(applier.getExportedWallCount() > 0,
           "Act1 picked presets produced no wall tiles for level " + levelId);
+      if (levelId == D2LevelIds.LEVEL_STONYFIELD
+          || levelId == D2LevelIds.LEVEL_DARKWOOD
+          || levelId == D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1) {
+        assertTrue(countWarpSpecials(grid) > 0,
+            "native entry/exit produced no warp special for level " + levelId);
+        assertNativeUndergroundSpecials(levelId, grid);
+      }
       assertTrue(source.presetRooms > 0,
           "Act1 picked preset cells produced no preset rooms for level " + levelId);
       assertEquals(applier.getCallbackCount(), attempted
               + applier.getExportedWallCount() + applier.getExportedShadowCount()
-              + applier.getClippedBoundaryCount() - applier.getClippedBoundaryFloorCount(),
+              + applier.getClippedBoundaryCount() - applier.getClippedBoundaryFloorCount()
+              + applier.getDuplicateWallCount() + applier.getWallLayerOverflowCount(),
           "layer callback accounting mismatch for level " + levelId);
       System.out.println("[ACT1-DIAG] level=" + levelId
           + " size=" + width + 'x' + height
@@ -303,6 +375,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           + " clippedFloor=" + applier.getClippedBoundaryFloorCount()
           + " invalidTile=" + applier.getInvalidTileCount()
           + " duplicatePosition=" + applier.getDuplicatePositionCount()
+          + " duplicateWall=" + applier.getDuplicateWallCount()
           + " duplicateShadow=" + applier.getDuplicateShadowCount()
           + " wallOverflow=" + applier.getWallLayerOverflowCount()
           + " nonFloorOrientation=" + applier.getNonFloorOrientationCount()
@@ -312,6 +385,10 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           + " uniqueFloorIds=" + applier.getUniqueFloorIdCount()
           + " uniqueWallIds=" + applier.getUniqueWallIdCount()
           + " uniqueShadowIds=" + applier.getUniqueShadowIdCount()
+          + " warpSpecials=" + formatWarpSpecials(grid)
+          + " presetUnits=" + presetUnits
+          + " objects=" + unitStats[1]
+          + " rawDs1Objects=" + unitStats[2]
           + " sourceWallFlags=" + source.wallFlags
           + " sourceShadowFlags=" + source.shadowFlags
           + " sourceNonzeroWallCells=" + source.nonzeroWallCells
@@ -328,12 +405,94 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       case D2LevelIds.LEVEL_BURIALGROUNDS: return 1920;
       case D2LevelIds.LEVEL_BLACKMARSH: return 6016;
       case D2LevelIds.LEVEL_TAMOEHIGHLAND: return 6080;
+      case D2LevelIds.LEVEL_DARKWOOD: return 5761;
+      case D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1: return 4032;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
   }
 
   private static int expectedFixedSeedClippedFloors(int levelId) {
     return levelId == D2LevelIds.LEVEL_BLOODMOOR ? 2 : 0;
+  }
+
+  private static int expectedFixedSeedRawObjects(int levelId) {
+    switch (levelId) {
+      case D2LevelIds.LEVEL_STONYFIELD: return 21;
+      case D2LevelIds.LEVEL_COLDPLAINS: return 13;
+      case D2LevelIds.LEVEL_BLOODMOOR: return 6;
+      case D2LevelIds.LEVEL_BURIALGROUNDS: return 11;
+      case D2LevelIds.LEVEL_BLACKMARSH: return 28;
+      case D2LevelIds.LEVEL_TAMOEHIGHLAND: return 7;
+      case D2LevelIds.LEVEL_DARKWOOD: return 27;
+      case D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1: return 32;
+      default: throw new IllegalArgumentException("unexpected level " + levelId);
+    }
+  }
+
+  private static int countWarpSpecials(TileGrid grid) {
+    int count = 0;
+    for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
+      for (int y = 0; y < grid.height; y++) {
+        for (int x = 0; x < grid.width; x++) {
+          int id = grid.wallIds[layer][y][x];
+          if (id != -1 && com.riiablo.map.Orientation.isSpecial(
+              com.riiablo.map.DT1.Tile.Index.orientation(id))) count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  private static void assertNativeUndergroundSpecials(int levelId, TileGrid grid) {
+    switch (levelId) {
+      case D2LevelIds.LEVEL_STONYFIELD:
+        assertTrue(containsTileId(grid, Map.ID.VIS_4_40));
+        assertTrue(containsTileId(grid, Map.ID.VIS_4_41));
+        break;
+      case D2LevelIds.LEVEL_DARKWOOD:
+        assertTrue(containsTileId(grid, Map.ID.VIS_3_30));
+        assertTrue(containsTileId(grid, Map.ID.VIS_3_31));
+        break;
+      case D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1:
+        assertTrue(containsTileId(grid, Map.ID.VIS_0_03));
+        assertTrue(containsTileId(grid, Map.ID.VIS_1_15));
+        assertTrue(containsTileId(grid, Map.ID.VIS_4_38));
+        break;
+      default:
+        throw new IllegalArgumentException("unexpected level " + levelId);
+    }
+  }
+
+  private static boolean containsTileId(TileGrid grid, int expected) {
+    for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
+      for (int y = 0; y < grid.height; y++) {
+        for (int x = 0; x < grid.width; x++) {
+          if (grid.wallIds[layer][y][x] == expected) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static String formatWarpSpecials(TileGrid grid) {
+    StringBuilder out = new StringBuilder("[");
+    int count = 0;
+    for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
+      for (int y = 0; y < grid.height; y++) {
+        for (int x = 0; x < grid.width; x++) {
+          int id = grid.wallIds[layer][y][x];
+          if (id == -1 || !com.riiablo.map.Orientation.isSpecial(
+              com.riiablo.map.DT1.Tile.Index.orientation(id))) continue;
+          count++;
+          if (count <= 8) {
+            if (count > 1) out.append(',');
+            out.append(String.format("0x%08X@%d,%d", id, x, y));
+          }
+        }
+      }
+    }
+    if (count > 8) out.append(",...");
+    return out.append(']').toString();
   }
 
   private static SourceGridStats sourceGridStats(D2DrlgLevel level) {

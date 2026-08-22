@@ -47,6 +47,7 @@ public final class DrlgExport {
                 initialized++;
             }
             exportRoomTiles(room, levelId, levelOriginX, levelOriginY, exporter, counts);
+            exportPresetSpecials(room, levelId, levelOriginX, levelOriginY, exporter, counts);
             rooms++;
             room = room.getDrlgRoomNext();
         }
@@ -78,6 +79,38 @@ public final class DrlgExport {
             room = room.getDrlgRoomNext();
         }
         return mask;
+    }
+
+    /**
+     * Exports preset-unit lists created while RoomEx tile grids are
+     * initialized. Coordinates are level-local subtiles, matching the game
+     * entity coordinate system rather than the tile coordinates used by
+     * {@link #exportLevelTiles}.
+     */
+    public static int exportLevelPresetUnits(D2DrlgStrc drlg, int levelId,
+            DrlgPresetUnitExporter exporter) {
+        if (drlg == null || exporter == null) return 0;
+        D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+        if (level == null || level.getLevelCoords() == null) return 0;
+
+        int levelOriginX = level.getLevelCoords().getNPosX();
+        int levelOriginY = level.getLevelCoords().getNPosY();
+        int count = 0;
+        for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+                room = room.getDrlgRoomNext()) {
+            if (room.getTileGrid() == null) DrlgActivate.initializeRoomEx(room);
+            int roomX = (room.getNTileXPos() - levelOriginX) * 5;
+            int roomY = (room.getNTileYPos() - levelOriginY) * 5;
+            for (D2PresetUnit unit = room.getPresetUnits(); unit != null;
+                    unit = unit.getPNext()) {
+                exporter.onPresetUnit(levelId, unit.getNUnitType(), unit.getNIndex(),
+                    unit.getNMode(), roomX + unit.getNXpos(), roomY + unit.getNYpos(),
+                    unit.isDs1Raw(), unit.isBSpawned());
+                count++;
+            }
+        }
+        D2Log.debug("DRLG_EXPORT_UNITS level=%d count=%d", levelId, count);
+        return count;
     }
 
     private static void exportRoomTiles(D2DrlgRoom room, int levelId, int levelOriginX, int levelOriginY,
@@ -126,6 +159,43 @@ public final class DrlgExport {
                 if (tileId < 0) continue;
                 exporter.onTile(levelId, LAYER_SHADOW, tx, ty, tileId);
                 counts.shadows++;
+            }
+        }
+    }
+
+    /**
+     * Orientation 10/11 cells are logical warp markers, not ordinary rendered
+     * wall tiles. Native room tiling consumes them while constructing warp
+     * links, so they are absent from pWallTiles and must be exported from the
+     * initialized preset grids explicitly.
+     */
+    private static void exportPresetSpecials(D2DrlgRoom room, int levelId,
+            int levelOriginX, int levelOriginY, DrlgTileExporter exporter,
+            ExportCounts counts) {
+        if (!(room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) return;
+        D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) room.getMazeOrOutdoor();
+        for (int layer = 0; layer < preset.getPWallGrid().length; layer++) {
+            D2DrlgGridStrc walls = preset.getPWallGrid(layer);
+            D2DrlgGridStrc types = preset.getPTileTypeGrid(layer);
+            if (walls == null || types == null || walls.getPCellsFlags() == null
+                    || types.getPCellsFlags() == null) continue;
+            int width = Math.min(walls.getNWidth(), types.getNWidth());
+            int height = Math.min(walls.getNHeight(), types.getNHeight());
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    int orientation = types.getFlag(x, y) & 0xFF;
+                    if (orientation != DrlgRoomTile.TILETYPE_WALL_LEFT_EXIT
+                            && orientation != DrlgRoomTile.TILETYPE_WALL_RIGHT_EXIT) continue;
+                    D2C_PackedTileInformation info =
+                        new D2C_PackedTileInformation(walls.getFlag(x, y));
+                    int tileId = ((orientation & 0xFF) << 24)
+                        | ((info.getNTileStyle() & 0xFFF) << 12)
+                        | (info.getNTileSequence() & 0xFFF);
+                    int tx = room.getNTileXPos() + x - levelOriginX;
+                    int ty = room.getNTileYPos() + y - levelOriginY;
+                    exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId);
+                    counts.walls++;
+                }
             }
         }
     }
