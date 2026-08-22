@@ -19,7 +19,7 @@ public class DrlgLevel {
   public final int levelType;
   public final int subType;
 
-  /** 关卡在当前难度下的宽高（tile 数，来自 SizeX[diff]/SizeY[diff]） */
+  /** 关卡在当前布局下的宽高（tile 数；默认来自 SizeX[diff]/SizeY[diff]） */
   public final int tilesX;
   public final int tilesY;
 
@@ -34,8 +34,8 @@ public class DrlgLevel {
   }
 
   /**
-   * 支持自定义尺寸（用于 Blood Moor 等 D2MOD 布局中动态调整的区域）。
-   * D2MOD 的 placeBloodMoor 会将 BM 设为 56x96 或 96x56，需与 zone 一致。
+   * 支持自定义尺寸，用于 D2MOO 按 seed 旋转或调整过的布局区域；
+   * TileGrid、DrlgGrid 和 Zone 必须使用同一组最终宽高。
    */
   public DrlgLevel(Levels.Entry entry, int diff, int customTilesX, int customTilesY) {
     this.levelsEntry = entry;

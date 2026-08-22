@@ -13,6 +13,8 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import com.badlogic.gdx.utils.IntMap;
+import com.riiablo.codec.excel.Levels;
+import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.TileGrid;
 
 class Act1MapBuilderD2MooLayersTest {
@@ -108,6 +110,23 @@ class Act1MapBuilderD2MooLayersTest {
     assertEquals(67, Act1MapBuilderD2MOD.toLocalTileIndex(3, 2, 32, 24));
     assertEquals(-1, Act1MapBuilderD2MOD.toLocalTileIndex(-1, 2, 32, 24));
     assertEquals(-1, Act1MapBuilderD2MOD.toLocalTileIndex(32, 2, 32, 24));
+  }
+
+  @Test
+  void customDrlgLayoutDimensionsDriveBothExportGrids() {
+    Levels.Entry entry = new Levels.Entry();
+    entry.Id = 3;
+    entry.SizeX = new int[] {80, 80, 80};
+    entry.SizeY = new int[] {160, 160, 160};
+
+    DrlgLevel level = new DrlgLevel(entry, 0, 160, 64);
+
+    assertEquals(160, level.tilesX);
+    assertEquals(64, level.tilesY);
+    assertEquals(160, level.grid.width);
+    assertEquals(64, level.grid.height);
+    assertEquals(20, level.drlgGrid.gridWidth);
+    assertEquals(8, level.drlgGrid.gridHeight);
   }
 
   private static DT1.Tile tile(int orientation, int mainIndex, int subIndex) throws IOException {

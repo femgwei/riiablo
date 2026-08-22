@@ -227,8 +227,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       Levels.Entry level = Riiablo.files.Levels.get(result.levelIds[i]);
       if (level != null && !drlgLevels.containsKey(level.Id)) {
         int w = result.coords[i][2], h = result.coords[i][3];
-        DrlgLevel drlgLevel = (result.levelIds[i] == LEVEL_BLOODMOOR)
-            ? new DrlgLevel(level, diff, w, h) : new DrlgLevel(level, diff);
+        // Every linked outdoor level may be rotated or resized for this seed;
+        // the export target must match D2MOO's actual level coordinates, not
+        // the static Levels.txt dimensions.
+        DrlgLevel drlgLevel = new DrlgLevel(level, diff, w, h);
         drlgLevels.put(level.Id, drlgLevel);
       }
     }
