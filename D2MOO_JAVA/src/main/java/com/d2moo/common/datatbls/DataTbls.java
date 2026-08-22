@@ -1181,14 +1181,13 @@ public class DataTbls {
             return null;
         }
         
-        // 从下一个位置开始查找相同类型的记录
-        for (int i = currentIndex + 1; i < lvlSubTxtCache.length; ++i) {
-            if (lvlSubTxtCache[i] != null && lvlSubTxtCache[i].getDwType() == nSubType) {
-                return lvlSubTxtCache[i];
-            }
-        }
-        
-        return null;
+        // Native ++pLvlSubTxtRecord advances exactly one row and the caller's
+        // while condition stops at the first different Type. Do not skip over
+        // intervening types looking for another matching row.
+        int nextIndex = currentIndex + 1;
+        if (nextIndex >= lvlSubTxtCache.length) return null;
+        D2LvlSubTxt next = lvlSubTxtCache[nextIndex];
+        return next != null && next.getDwType() == nSubType ? next : null;
     }
     
     /**

@@ -27,6 +27,10 @@ public class D2LvlSubTxt {
     public D2LvlSubTxt() {
         this.pTileTypeGrid = new D2DrlgGridStrc[4];
         this.pWallGrid = new D2DrlgGridStrc[4];
+        for (int i = 0; i < 4; i++) {
+            this.pTileTypeGrid[i] = new D2DrlgGridStrc();
+            this.pWallGrid[i] = new D2DrlgGridStrc();
+        }
         this.pFloorGrid = new D2DrlgGridStrc();
         this.pShadowGrid = new D2DrlgGridStrc();
         this.nProb = new int[5];

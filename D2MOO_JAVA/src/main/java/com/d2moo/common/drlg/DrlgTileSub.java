@@ -27,7 +27,6 @@ public class DrlgTileSub {
         }
         
         // 遍历所有相同类型的 LvlSubTxt 记录
-        boolean bOuterBreak = false;
         while (pLvlSubTxtRecord != null && pLvlSubTxtRecord.getDwType() == a1.getNLvlSubId()) {
             initializeDrlgFile(a1.getPLevel().getDrlg().getArchive(), pLvlSubTxtRecord);
             
@@ -48,8 +47,9 @@ public class DrlgTileSub {
                 
                 int nSubstGroups = pLvlSubTxtRecord.getPDrlgFile().getNSubstGroups();
                 for (int j = 0; j < nSubstGroups; ++j) {
+                    int nSubstGroupIndex = (nRand + j) % nSubstGroups;
                     D2DrlgSubstGroupStrc pSubstGroup = pLvlSubTxtRecord.getPDrlgFile()
-                            .getPSubstGroups()[(nRand + j) % nSubstGroups];
+                            .getPSubstGroups()[nSubstGroupIndex];
                     
                     boolean bWilderness = (a1.getPLevel().getLevelId() >= D2LevelIds.LEVEL_BLOODMOOR 
                             && a1.getPLevel().getLevelId() <= D2LevelIds.LEVEL_TAMOEHIGHLAND);
@@ -66,17 +66,25 @@ public class DrlgTileSub {
                     
                     int nArea = nWidth * nHeight;
                     if (nArea > 0) {
+                        if (nArea > 256) {
+                            D2Log.warning("DRLG_TILESUB candidate area exceeds native buffer"
+                                            + " level=%d type=%d file=%s group=%d area=%d size=%dx%d",
+                                    a1.getPLevel().getLevelId(), a1.getNLvlSubId(),
+                                    pLvlSubTxtRecord.getSzFile(), nSubstGroupIndex,
+                                    nArea, nWidth, nHeight);
+                            continue;
+                        }
                         boolean bSmallWilderness = (a1.getNLvlSubId() == 1 && bWilderness 
                                 && nWidth < 6 && nHeight < 6);
                         
                         // 创建坐标数组并随机化
                         D2Coord[] pCoord = new D2Coord[256];
-                        for (int i = 0; i < nArea && i < 256; ++i) {
+                        for (int i = 0; i < nArea; ++i) {
                             pCoord[i] = new D2Coord(i % nWidth, i / nWidth);
                         }
                         
                         // 随机化坐标数组
-                        for (int i = 0; i < nArea && i < 256; ++i) {
+                        for (int i = 0; i < nArea; ++i) {
                             int nRand1 = Seed.rollLimitedRandomNumber(a1.getPLevel().getSeed(), nArea);
                             int nRand2 = Seed.rollLimitedRandomNumber(a1.getPLevel().getSeed(), nArea);
                             
@@ -89,7 +97,7 @@ public class DrlgTileSub {
                         }
                         
                         boolean bBreak = false;
-                        for (int i = 0; i < nArea && i < 256; ++i) {
+                        for (int i = 0; i < nArea; ++i) {
                             int nX = pCoord[i].getX();
                             int nY = pCoord[i].getY();
                             
@@ -97,12 +105,31 @@ public class DrlgTileSub {
                                 if (testReplaceSubPreset(nX, nY, a1, pSubstGroup, pLvlSubTxtRecord)) {
                                     int nRandVal = Seed.rollLimitedRandomNumber(a1.getPLevel().getSeed(), 
                                             pSubstGroup.getField_14());
+                                    int variantOffset = (nRandVal + 1)
+                                            * (pSubstGroup.getTBox().getNWidth() + 1);
+                                    ReplacementStats stats = inspectReplacement(
+                                            pSubstGroup, pLvlSubTxtRecord, variantOffset);
+                                    int blanksBefore = countBlankGridCells(a1.getPGrid2());
                                     replaceSubPreset(nX, nY, a1, pSubstGroup, pLvlSubTxtRecord, 
-                                            (nRandVal + 1) * (pSubstGroup.getTBox().getNWidth() + 1));
+                                            variantOffset);
+                                    int blanksAfter = countBlankGridCells(a1.getPGrid2());
+                                    D2Log.debug("DRLG_TILESUB apply level=%d type=%d file=%s"
+                                                    + " group=%d/%d box=(%d,%d %dx%d)"
+                                                    + " origin=(%d,%d) variant=%d offset=%d"
+                                                    + " cells=%d wall=%d clear=%d blank=%d unk08=%d->%d",
+                                            a1.getPLevel().getLevelId(), a1.getNLvlSubId(),
+                                            pLvlSubTxtRecord.getSzFile(), nSubstGroupIndex,
+                                            nSubstGroups,
+                                            pSubstGroup.getTBox().getNPosX(),
+                                            pSubstGroup.getTBox().getNPosY(),
+                                            pSubstGroup.getTBox().getNWidth(),
+                                            pSubstGroup.getTBox().getNHeight(),
+                                            nX, nY, nRandVal, variantOffset,
+                                            stats.cells, stats.wall, stats.clear, stats.blank,
+                                            blanksBefore, blanksAfter);
                                     
                                     if (pLvlSubTxtRecord.getDwBordType() == 0) {
                                         bBreak = true;
-                                        bOuterBreak = true; // 需要跳出外层循环
                                         break;
                                     } else if (pLvlSubTxtRecord.getDwBordType() == 1) {
                                         break;
@@ -119,11 +146,46 @@ public class DrlgTileSub {
             }
             
             // 移动到下一个记录（模拟 C++ 中的 ++pLvlSubTxtRecord）
-            if (bOuterBreak) {
-                break;
-            }
             pLvlSubTxtRecord = DataTbls.getNextLvlSubTxtRecord(pLvlSubTxtRecord, a1.getNLvlSubId());
         }
+    }
+
+    private static ReplacementStats inspectReplacement(D2DrlgSubstGroupStrc group,
+            D2LvlSubTxt record, int variantOffset) {
+        ReplacementStats stats = new ReplacementStats();
+        for (int y = 0; y < group.getTBox().getNHeight(); y++) {
+            for (int x = 0; x < group.getTBox().getNWidth(); x++) {
+                stats.cells++;
+                int sourceX = variantOffset + group.getTBox().getNPosX() + x;
+                int sourceY = group.getTBox().getNPosY() + y;
+                int wall = record.getPDrlgFile().getNWallLayers() == 0 ? 0
+                        : DrlgDrlgGrid.getGridEntry(record.getPWallGrid(0), sourceX, sourceY);
+                int floor = record.getPDrlgFile().getNFloorLayers() == 0 ? 0
+                        : DrlgDrlgGrid.getGridEntry(record.getPFloorGrid(), sourceX, sourceY);
+                if ((wall & 1) != 0) stats.wall++;
+                else if ((floor & 2) != 0) stats.clear++;
+                else stats.blank++;
+            }
+        }
+        return stats;
+    }
+
+    private static int countBlankGridCells(D2DrlgGridStrc grid) {
+        if (grid == null) return 0;
+        int count = 0;
+        for (int y = 0; y < grid.getNHeight(); y++) {
+            for (int x = 0; x < grid.getNWidth(); x++) {
+                if ((DrlgDrlgGrid.getGridEntry(grid, x, y) & 0x100) != 0) count++;
+            }
+        }
+        return count;
+    }
+
+    private static final class ReplacementStats {
+        int cells;
+        int wall;
+        int clear;
+        int blank;
     }
     
     /**
@@ -835,6 +897,12 @@ public class DrlgTileSub {
         
         // 填充墙壁和瓦片类型网格
         for (int i = 0; i < ppDrlgFile[0].getNWallLayers(); ++i) {
+            if (pLvlSubTxtRecord.getPWallGrid(i) == null) {
+                pLvlSubTxtRecord.setPWallGrid(i, new D2DrlgGridStrc());
+            }
+            if (pLvlSubTxtRecord.getPTileTypeGrid(i) == null) {
+                pLvlSubTxtRecord.setPTileTypeGrid(i, new D2DrlgGridStrc());
+            }
             // 获取层数据并确保类型正确
             Object wallLayerObj = ppDrlgFile[0].getPWallLayer(i);
             Object tileTypeLayerObj = ppDrlgFile[0].getPTileTypeLayer(i);

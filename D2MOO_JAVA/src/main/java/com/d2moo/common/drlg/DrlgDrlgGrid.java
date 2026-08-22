@@ -328,27 +328,35 @@ public class DrlgDrlgGrid {
             return;
         }
         
-        // pCellsFlags 指向 pCellPos 数组的某个位置
-        // 在 Java 中，我们需要创建一个新的数组视图或直接使用原始数组
-        // 为了安全，我们创建一个新的数组并复制数据
-        int nCells = pDrlgCoord.getNWidth() * pDrlgCoord.getNHeight();
-        if (startIndex + nCells > pCellPos.length) {
+        // Native keeps a view into pCellPos with the source row stride. Java
+        // arrays cannot represent an offset view, so copy each source row into
+        // a compact grid and use the compact width for row offsets. A single
+        // contiguous copy corrupts every row after the first when width is
+        // larger than pDrlgCoord.nWidth.
+        int gridWidth = pDrlgCoord.getNWidth();
+        int gridHeight = pDrlgCoord.getNHeight();
+        if (gridWidth < 0 || gridHeight < 0) {
             return;
         }
-        
-        // 分配新的标志数组并复制数据
+        int nCells = Math.multiplyExact(gridWidth, gridHeight);
+        int lastRowStart = startIndex + Math.max(0, gridHeight - 1) * width;
+        if (lastRowStart < 0 || lastRowStart > pCellPos.length - gridWidth) {
+            return;
+        }
+
         int[] pCellsFlags = D2Pool.callocIntArrayPool(memPool, nCells);
-        System.arraycopy(pCellPos, startIndex, pCellsFlags, 0, nCells);
+        for (int y = 0; y < gridHeight; y++) {
+            System.arraycopy(pCellPos, startIndex + y * width,
+                    pCellsFlags, y * gridWidth, gridWidth);
+        }
         pDrlgGrid.setPCellsFlags(pCellsFlags);
         
         // 分配行偏移数组
         int[] pCellsRowOffsets = D2Pool.callocIntArrayPool(memPool, pDrlgCoord.getNHeight());
         
-        // 计算行偏移（每行的偏移量是 width）
-        int nOffset = 0;
-        for (int i = 0; i < pDrlgCoord.getNHeight(); ++i) {
-            pCellsRowOffsets[i] = nOffset;
-            nOffset += width;
+        // The copied storage is compact, so its stride is gridWidth.
+        for (int i = 0; i < gridHeight; ++i) {
+            pCellsRowOffsets[i] = i * gridWidth;
         }
         
         pDrlgGrid.setPCellsRowOffsets(pCellsRowOffsets);

@@ -1,6 +1,7 @@
 package com.d2moo.common.drlg;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -96,6 +97,25 @@ class D2MooAct1NativeParityTest {
     DrlgOutWild.getBridgeCoords(level, x, y);
     assertEquals(-1, x[0]);
     assertEquals(-1, y[0]);
+  }
+
+  @Test
+  void fillNewCellFlagsPreservesSourceStrideForSubregions() {
+    int[] source = {
+        0, 1, 2, 3, 4,
+        5, 6, 7, 8, 9,
+        10, 11, 12, 13, 14,
+        15, 16, 17, 18, 19,
+    };
+    D2DrlgCoord region = coord(1, 1, 2, 2);
+    D2DrlgGridStrc grid = new D2DrlgGridStrc();
+
+    DrlgDrlgGrid.fillNewCellFlags(null, grid, source, region, 5);
+
+    assertArrayEquals(new int[] {6, 7, 11, 12}, grid.getPCellsFlags());
+    assertArrayEquals(new int[] {0, 2}, grid.getPCellsRowOffsets());
+    assertEquals(6, DrlgDrlgGrid.getGridEntry(grid, 0, 0));
+    assertEquals(12, DrlgDrlgGrid.getGridEntry(grid, 1, 1));
   }
 
   private static D2DrlgCoord coord(int x, int y, int width, int height) {

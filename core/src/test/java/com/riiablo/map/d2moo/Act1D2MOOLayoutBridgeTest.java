@@ -36,6 +36,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     Act1D2MOOLayoutBridge.LayoutAndDrlg first =
         Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, difficulty, burialId);
     assertNotNull(first, "D2MOO Act1 layout failed; inspect ACT1_D2MOO logs");
+    assertFixedSeedOutdoorCoverage(first.drlg);
     String firstSummary = summarize(first.drlg);
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
     exportAndReport(first.drlg);
@@ -45,6 +46,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     Act1D2MOOLayoutBridge.LayoutAndDrlg second =
         Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, difficulty, burialId);
     assertNotNull(second, "Second fixed-seed generation failed");
+    assertFixedSeedOutdoorCoverage(second.drlg);
     assertEquals(firstSummary, summarize(second.drlg),
         "same seed must produce the same Act1 layout summary");
     DrlgDrlg.freeDrlg(second.drlg);
@@ -56,6 +58,16 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       if (entry != null && name.equals(entry.LevelName)) return entry.Id;
     }
     return -1;
+  }
+
+  /** Guards the LvlSub wall-grid regression that blanked most outdoor cells. */
+  private static void assertFixedSeedOutdoorCoverage(D2DrlgStrc drlg) {
+    assertEquals(98, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD).getRooms(),
+        "fixed seed should retain only two intentional Stony Field border voids");
+    assertEquals(100, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS).getRooms(),
+        "fixed seed Cold Plains should be continuous");
+    assertEquals(84, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR).getRooms(),
+        "fixed seed Blood Moor should cover all 7x12 outdoor cells");
   }
 
   private static String summarize(D2DrlgStrc drlg) {
