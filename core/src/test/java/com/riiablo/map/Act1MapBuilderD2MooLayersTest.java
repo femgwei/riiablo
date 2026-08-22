@@ -176,6 +176,102 @@ class Act1MapBuilderD2MooLayersTest {
     assertEquals(8, level.drlgGrid.gridHeight);
   }
 
+  @Test
+  void repairsNorthTownSeamAlongBloodMoorBoundary() {
+    TileGrid grid = seamGrid(7, 5, 4, 4, 0x1234);
+    grid.wallIds[0][4][2] = 99;
+    grid.shadowIds[4][2] = 98;
+
+    Act1MapBuilderD2MOD.SeamRepairResult result =
+        Act1MapBuilderD2MOD.repairTownSeam(grid, 1, 4, 1, 8);
+
+    assertEquals(true, result.found);
+    assertEquals(4, result.targetX);
+    assertEquals(4, result.targetY);
+    assertEquals(3, result.carved);
+    assertSeamCell(grid, 1, 4, 0x1234);
+    assertSeamCell(grid, 2, 4, 0x1234);
+    assertSeamCell(grid, 3, 4, 0x1234);
+    assertEquals(-1, grid.wallIds[0][4][2]);
+    assertEquals(-1, grid.shadowIds[4][2]);
+  }
+
+  @Test
+  void repairsSouthTownSeamInwardFromTopBoundary() {
+    TileGrid grid = seamGrid(6, 5, 3, 2, 0x2345);
+
+    Act1MapBuilderD2MOD.SeamRepairResult result =
+        Act1MapBuilderD2MOD.repairTownSeam(grid, 3, 0, 3, 8);
+
+    assertEquals(true, result.found);
+    assertEquals(2, result.carved);
+    assertSeamCell(grid, 3, 0, 0x2345);
+    assertSeamCell(grid, 3, 1, 0x2345);
+  }
+
+  @Test
+  void repairsEastTownSeamInwardFromLeftBoundary() {
+    TileGrid grid = seamGrid(5, 6, 2, 1, 0x3456);
+
+    Act1MapBuilderD2MOD.SeamRepairResult result =
+        Act1MapBuilderD2MOD.repairTownSeam(grid, 0, 1, 2, 8);
+
+    assertEquals(true, result.found);
+    assertEquals(2, result.carved);
+    assertSeamCell(grid, 0, 1, 0x3456);
+    assertSeamCell(grid, 1, 1, 0x3456);
+  }
+
+  @Test
+  void repairsWestTownSeamInwardFromRightBoundary() {
+    TileGrid grid = seamGrid(5, 6, 2, 3, 0x4567);
+
+    Act1MapBuilderD2MOD.SeamRepairResult result =
+        Act1MapBuilderD2MOD.repairTownSeam(grid, 4, 3, 0, 8);
+
+    assertEquals(true, result.found);
+    assertEquals(2, result.carved);
+    assertSeamCell(grid, 4, 3, 0x4567);
+    assertSeamCell(grid, 3, 3, 0x4567);
+  }
+
+  @Test
+  void leavesAlreadyConnectedTownSeamUnchanged() {
+    TileGrid grid = seamGrid(5, 5, 2, 4, 0x5678);
+
+    Act1MapBuilderD2MOD.SeamRepairResult result =
+        Act1MapBuilderD2MOD.repairTownSeam(grid, 2, 4, 1, 8);
+
+    assertEquals(true, result.found);
+    assertEquals(0, result.carved);
+    assertEquals(0x5678, grid.floorIds[4][2]);
+  }
+
+  @Test
+  void refusesToFillTownSeamBeyondOneRoomEx() {
+    TileGrid grid = seamGrid(12, 1, 11, 0, 0x6789);
+
+    Act1MapBuilderD2MOD.SeamRepairResult result =
+        Act1MapBuilderD2MOD.repairTownSeam(grid, 0, 0, 2, 8);
+
+    assertEquals(false, result.found);
+    assertEquals(0, result.carved);
+    assertEquals(false, grid.exportedFloorCells[0][0]);
+  }
+
+  private static TileGrid seamGrid(int width, int height, int floorX, int floorY, int floorId) {
+    TileGrid grid = new TileGrid(width, height);
+    grid.floorIds[floorY][floorX] = floorId;
+    grid.exportedFloorCells[floorY][floorX] = true;
+    return grid;
+  }
+
+  private static void assertSeamCell(TileGrid grid, int x, int y, int floorId) {
+    assertEquals(true, grid.exportedFloorCells[y][x]);
+    assertEquals(true, grid.dirtPathFlags[y][x]);
+    assertEquals(floorId, grid.floorIds[y][x]);
+  }
+
   private static DT1.Tile tile(int orientation, int mainIndex, int subIndex) throws IOException {
     byte[] bytes = new byte[DT1.Tile.SIZE];
     ByteBuffer buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);

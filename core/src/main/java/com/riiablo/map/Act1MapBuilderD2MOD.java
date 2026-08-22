@@ -71,6 +71,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private static final int LEVEL_MOOMOOFARM = 44;
   private static final int LEVEL_MONASTERYGATE = 31;
   private static final int LEVEL_DENOFEVIL = 8;
+  /** Only bridge a single D2MOO RoomEx-sized gap at the town boundary. */
+  private static final int TOWN_SEAM_MAX_GAP_TILES = OutdoorGrid.GRID_SIZE_TILES;
 
   /**
    * D2MOD: byte_6FDCF958 - 路径连通性模式 → 土路瓦片类型索引。
@@ -1387,6 +1389,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (townZone != null && bloodMoorZone != null) {
       townZone.setWarp(Map.ID.VIS_5_42, Map.ID.VIS_0_03);
       bloodMoorZone.setWarp(Map.ID.VIS_0_03, Map.ID.VIS_5_42);
+      repairTownToBloodMoorSeam(townZone, bloodMoorZone);
       if (DEBUG_BUILD) {
         Gdx.app.debug(TAG, "Set warp connection between town and Blood Moor");
       }
@@ -1456,6 +1459,160 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (localTileX < 0 || localTileX >= zoneTilesX
         || localTileY < 0 || localTileY >= zoneTilesY) return -1;
     return Zone.index(zoneTilesX, localTileX, localTileY);
+  }
+
+  /**
+   * Bridges only the small void between the town gate and Blood Moor's nearest
+   * exported RoomEx. D2MOO outdoor levels are intentionally non-rectangular,
+   * so filling every missing cell would turn genuine outside space into map.
+   */
+  private void repairTownToBloodMoorSeam(Zone town, Zone bloodMoor) {
+    if (town == null || bloodMoor == null
+        || !levelsFilledByExport.contains(LEVEL_BLOODMOOR)) return;
+
+    DrlgLevel level = drlgLevels.get(LEVEL_BLOODMOOR);
+    if (level == null || level.grid == null) return;
+
+    TileGrid grid = level.grid;
+    int direction = town.townExitDirection;
+    if (direction < ALTDIR_WEST || direction > ALTDIR_SOUTH) {
+      Gdx.app.log(TAG, "Town seam repair skipped: invalid exit direction " + direction);
+      return;
+    }
+
+    final int sub = DT1.Tile.SUBTILE_SIZE;
+    int[] townOffset = TOWN_OFFSETS[direction];
+    int exitWorldX = town.x / sub + townOffset[0];
+    int exitWorldY = town.y / sub + townOffset[1];
+    int bloodOriginX = bloodMoor.x / sub;
+    int bloodOriginY = bloodMoor.y / sub;
+    int entryX;
+    int entryY;
+
+    // The offset supplies the coordinate along the shared edge. The other
+    // coordinate must be projected onto Blood Moor: the DS1 gate point itself
+    // can be several tiles inside town and is therefore outside Blood Moor.
+    switch (direction) {
+      case ALTDIR_NORTH:
+        entryX = clamp(exitWorldX - bloodOriginX, 0, grid.width - 1);
+        entryY = grid.height - 1;
+        break;
+      case ALTDIR_SOUTH:
+        entryX = clamp(exitWorldX - bloodOriginX, 0, grid.width - 1);
+        entryY = 0;
+        break;
+      case ALTDIR_EAST:
+        entryX = 0;
+        entryY = clamp(exitWorldY - bloodOriginY, 0, grid.height - 1);
+        break;
+      case ALTDIR_WEST:
+      default:
+        entryX = grid.width - 1;
+        entryY = clamp(exitWorldY - bloodOriginY, 0, grid.height - 1);
+        break;
+    }
+
+    SeamRepairResult result = repairTownSeam(
+        grid, entryX, entryY, direction, TOWN_SEAM_MAX_GAP_TILES);
+    Gdx.app.log(TAG, String.format(
+        "Town seam repair: dir=%s entry=(%d,%d) target=(%d,%d) carved=%d maxGap=%d status=%s",
+        altDirectionName(direction), entryX, entryY, result.targetX, result.targetY,
+        result.carved, TOWN_SEAM_MAX_GAP_TILES, result.found ? "connected" : "not-found"));
+  }
+
+  private static int clamp(int value, int min, int max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private static String altDirectionName(int direction) {
+    switch (direction) {
+      case ALTDIR_WEST: return "WEST";
+      case ALTDIR_NORTH: return "NORTH";
+      case ALTDIR_EAST: return "EAST";
+      case ALTDIR_SOUTH: return "SOUTH";
+      default: return "UNKNOWN(" + direction + ")";
+    }
+  }
+
+  static final class SeamRepairResult {
+    final boolean found;
+    final int targetX;
+    final int targetY;
+    final int carved;
+
+    SeamRepairResult(boolean found, int targetX, int targetY, int carved) {
+      this.found = found;
+      this.targetX = targetX;
+      this.targetY = targetY;
+      this.carved = carved;
+    }
+  }
+
+  /** Package-private pure helper for deterministic seam-repair tests. */
+  static SeamRepairResult repairTownSeam(
+      TileGrid grid, int entryX, int entryY, int direction, int maxDistance) {
+    if (grid == null || !grid.inBounds(entryX, entryY) || maxDistance < 0
+        || direction < ALTDIR_WEST || direction > ALTDIR_SOUTH) {
+      return new SeamRepairResult(false, -1, -1, 0);
+    }
+
+    int targetX = -1;
+    int targetY = -1;
+    int bestDistance = maxDistance + 1;
+    for (int y = 0; y < grid.height; y++) {
+      for (int x = 0; x < grid.width; x++) {
+        if (!grid.exportedFloorCells[y][x] || grid.floorIds[y][x] == -1) continue;
+        int distance = Math.abs(x - entryX) + Math.abs(y - entryY);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          targetX = x;
+          targetY = y;
+        }
+      }
+    }
+    if (targetX < 0) return new SeamRepairResult(false, -1, -1, 0);
+
+    int floorId = grid.floorIds[targetY][targetX];
+    int carved = 0;
+    int x = entryX;
+    int y = entryY;
+    carved += carveSeamCell(grid, x, y, floorId);
+
+    // Move parallel to the shared edge first, then inward. This keeps the
+    // bridge attached to the gate instead of cutting diagonally through void.
+    if (direction == ALTDIR_NORTH || direction == ALTDIR_SOUTH) {
+      while (x != targetX) {
+        x += Integer.signum(targetX - x);
+        carved += carveSeamCell(grid, x, y, floorId);
+      }
+      while (y != targetY) {
+        y += Integer.signum(targetY - y);
+        carved += carveSeamCell(grid, x, y, floorId);
+      }
+    } else {
+      while (y != targetY) {
+        y += Integer.signum(targetY - y);
+        carved += carveSeamCell(grid, x, y, floorId);
+      }
+      while (x != targetX) {
+        x += Integer.signum(targetX - x);
+        carved += carveSeamCell(grid, x, y, floorId);
+      }
+    }
+    return new SeamRepairResult(true, targetX, targetY, carved);
+  }
+
+  private static int carveSeamCell(TileGrid grid, int x, int y, int floorId) {
+    grid.dirtPathFlags[y][x] = true;
+    if (grid.exportedFloorCells[y][x]) return 0;
+
+    grid.floorIds[y][x] = floorId;
+    grid.exportedFloorCells[y][x] = true;
+    grid.shadowIds[y][x] = -1;
+    for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
+      grid.wallIds[layer][y][x] = -1;
+    }
+    return 1;
   }
 
   /**
