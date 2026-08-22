@@ -326,13 +326,13 @@ public class DrlgDrlg {
             }
         } else {
             if (coord1.getNPosX() == coord2.getNPosX() + coord2.getNWidth()) {
-                return 3; // DIRECTION_SOUTHWEST
+                return 0; // DIRECTION_SOUTHWEST
             }
         }
         
         if (coord1.getNPosY() <= coord2.getNPosY()) {
             if (coord2.getNPosY() == coord1.getNPosY() + coord1.getNHeight()) {
-                return 0; // DIRECTION_NORTHEAST
+                return 3; // DIRECTION_NORTHEAST
             }
         } else {
             if (coord1.getNPosY() == coord2.getNPosY() + coord2.getNHeight()) {

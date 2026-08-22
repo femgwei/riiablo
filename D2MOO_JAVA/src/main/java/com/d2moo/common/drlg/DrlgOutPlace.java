@@ -430,6 +430,12 @@ public class DrlgOutPlace {
             // 检查顶点标志（dwFlags & 1）
             if ((pVertex.getDwFlags() & 1) != 0) {
                 int nOutLinkVisFlag = DrlgOutdoors.getOutLinkVisFlag(level, pVertex);
+                D2Log.debug(
+                        "DRLG_LINKFLAG level=%d edge=(%d,%d)->(%d,%d) flags=0x%X direction=%d vis=0x%X preset=%s",
+                        level.getLevelId(), pVertex.getNPosX(), pVertex.getNPosY(),
+                        pNext.getNPosX(), pNext.getNPosY(), pVertex.getDwFlags(),
+                        pVertex.getNDirection(), nOutLinkVisFlag,
+                        (pVertex.getDwFlags() & 2) != 0);
                 DrlgDrlgGrid.sub_6FD75DE0(outdoors.getPGrid(1), pVertex,
                         nOutLinkVisFlag, DrlgDrlgGrid.FlagOperation.OR, true);
 
@@ -813,6 +819,10 @@ public class DrlgOutPlace {
                         DrlgDrlgGrid.alterGridFlag(outdoors.getPGrid(2), nX, nY, 0xF0000, DrlgDrlgGrid.FlagOperation.AND_NEGATED);
                         DrlgDrlgGrid.alterGridFlag(outdoors.getPGrid(2), nX, nY, 
                                 tPackedInfoToAdd.getNPackedValue(), DrlgDrlgGrid.FlagOperation.OR);
+                        D2Log.debug(
+                                "DRLG_BORDER link level=%d cell=(%d,%d) pickedFile=%d edgeFlags=0x%X",
+                                level.getLevelId(), nX, nY, tPackedInfoToAdd.getNPickedFile(),
+                                pDrlgVertex.getDwFlags());
                         break;
                     }
                     case ACT_IV: {
@@ -867,7 +877,9 @@ public class DrlgOutPlace {
             int v41;
             switch (nLevelType) {
                 case LVLTYPE_ACT1_WILDERNESS:
-                    v41 = (nDirection == 0) ? 0 : 1;
+                    // Native C++ assigns the BOOL expression
+                    // `nDirection == 0`: true is 1 and false is 0.
+                    v41 = getAct1BorderColumn(nDirection);
                     break;
                 case LVLTYPE_ACT2_DESERT:
                     v41 = 2;
@@ -923,6 +935,10 @@ public class DrlgOutPlace {
         
         // 最后设置空白边界网格单元格
         setBlankBorderGridCells(level);
+    }
+
+    static int getAct1BorderColumn(int direction) {
+        return direction == 0 ? 1 : 0;
     }
     
     /**
@@ -1822,8 +1838,10 @@ public class DrlgOutPlace {
                 // Java representation is only the six Act-I entries (including
                 // the sentinel). Never walk past the actual array.
                 for (int i = 0; i < gAct1WildernessDrlgLink.length; ++i) {
-                    if (i != nIteration && gAct1WildernessDrlgLink[i].getNLevelLink() == nLevelLink 
-                            && pLevelLinkData.getNRand(2)[nIteration] == pLevelLinkData.getNRand(2)[i]) {
+                    // C++ accesses the flat union view nRand2[nIteration].
+                    // For indices 0..14 this aliases nRand[0], not nRand[2].
+                    if (i != nIteration && gAct1WildernessDrlgLink[i].getNLevelLink() == nLevelLink
+                            && pLevelLinkData.getNRand(0)[nIteration] == pLevelLinkData.getNRand(0)[i]) {
                         return false;
                     }
                 }

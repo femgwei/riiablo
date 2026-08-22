@@ -864,21 +864,12 @@ public class DrlgOutdoors {
         // C++: static const D2CoordStrc pOffsetCoords[] = { {-4,4}, {4,-4}, {12,4}, {4,12} };
         final int[][] pOffsetCoords = { { -4, 4 }, { 4, -4 }, { 12, 4 }, { 4, 12 } };
 
-        int nIndex;
         int vx = pDrlgVertex.getNPosX();
         int vy = pDrlgVertex.getNPosY();
         int nGridWidth = outdoors.getNGridWidth();
         int nGridHeight = outdoors.getNGridHeight();
-
-        if (vx == 0) {
-            nIndex = (vy == 0) ? 0 : 1;
-        } else if (vy == 0) {
-            nIndex = (vx == nGridWidth - 1) ? 2 : 1;
-        } else if (vx == nGridWidth - 1) {
-            nIndex = (vy == nGridHeight - 1) ? 3 : 2;
-        } else if (vy == nGridHeight - 1) {
-            nIndex = 3;
-        } else {
+        int nIndex = getOutLinkDirectionIndex(vx, vy, nGridWidth, nGridHeight);
+        if (nIndex < 0) {
             return 0;
         }
 
@@ -907,6 +898,20 @@ public class DrlgOutdoors {
             return 0;
         }
         return 0;
+    }
+
+    static int getOutLinkDirectionIndex(int x, int y, int gridWidth, int gridHeight) {
+        if (x == 0) {
+            // Native BOOL assignment: nIndex = (y == 0).
+            return y == 0 ? 1 : 0;
+        } else if (y == 0) {
+            return (x == gridWidth - 1 ? 1 : 0) + 1;
+        } else if (x == gridWidth - 1) {
+            return (y == gridHeight - 1 ? 1 : 0) + 2;
+        } else if (y == gridHeight - 1) {
+            return 3;
+        }
+        return -1;
     }
 
     /**

@@ -160,6 +160,18 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void mapsNativeTownPresetAndOutdoorLinkDirections() {
+    assertEquals(1, Act1MapBuilderD2MOD.townExitDirectionFromPreset(0)); // north
+    assertEquals(2, Act1MapBuilderD2MOD.townExitDirectionFromPreset(1)); // east
+    assertEquals(3, Act1MapBuilderD2MOD.townExitDirectionFromPreset(2)); // south
+    assertEquals(0, Act1MapBuilderD2MOD.townExitDirectionFromPreset(3)); // west
+    assertEquals(-1, Act1MapBuilderD2MOD.townExitDirectionFromPreset(4));
+
+    assertEquals(3, Act1MapBuilderD2MOD.oppositeAltDirection(1));
+    assertEquals(0, Act1MapBuilderD2MOD.oppositeAltDirection(2));
+  }
+
+  @Test
   void customDrlgLayoutDimensionsDriveBothExportGrids() {
     Levels.Entry entry = new Levels.Entry();
     entry.Id = 3;

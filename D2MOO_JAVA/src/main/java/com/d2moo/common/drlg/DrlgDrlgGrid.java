@@ -423,47 +423,41 @@ public class DrlgDrlgGrid {
         if (pDrlgGrid == null || pDrlgVertex == null || pDrlgVertex.getPNext() == null) {
             return;
         }
-        
+
         D2DrlgVertexStrc next = pDrlgVertex.getPNext();
-        
-        // 计算起点和终点
         int startX = pDrlgVertex.getNPosX();
         int startY = pDrlgVertex.getNPosY();
         int endX = next.getNPosX();
         int endY = next.getNPosY();
-        
-        // 使用 Bresenham 算法在两点之间设置标志
-        int dx = Math.abs(endX - startX);
-        int dy = Math.abs(endY - startY);
-        int sx = startX < endX ? 1 : -1;
-        int sy = startY < endY ? 1 : -1;
-        int err = dx - dy;
-        
-        int x = startX;
-        int y = startY;
-        
-        while (true) {
-            if (isPointInsideGridArea(pDrlgGrid, x, y)) {
-                alterGridFlag(pDrlgGrid, x, y, flag, operation);
+
+        if (startX == endX && startY == endY) {
+            alterGridFlag(pDrlgGrid, startX, startY, flag, operation);
+            return;
+        }
+
+        // Native DRLG vertices describe orthogonal boundary segments. It
+        // fills the cells strictly between the endpoints, then always alters
+        // the current vertex and optionally the next vertex. In particular,
+        // bAlterNextVertex does not recurse into the following segment.
+        if (startX == endX) {
+            int y = Math.min(startY, endY) + 1;
+            int end = Math.max(startY, endY);
+            while (y != end) {
+                alterGridFlag(pDrlgGrid, startX, y, flag, operation);
+                ++y;
             }
-            
-            if (x == endX && y == endY) {
-                break;
-            }
-            
-            int e2 = 2 * err;
-            if (e2 > -dy) {
-                err -= dy;
-                x += sx;
-            }
-            if (e2 < dx) {
-                err += dx;
-                y += sy;
+        } else {
+            int x = Math.min(startX, endX) + 1;
+            int end = Math.max(startX, endX);
+            while (x != end) {
+                alterGridFlag(pDrlgGrid, x, startY, flag, operation);
+                ++x;
             }
         }
-        
-        if (alterNextVertex && next.getPNext() != null) {
-            sub_6FD75DE0(pDrlgGrid, next, flag, operation, false);
+
+        alterGridFlag(pDrlgGrid, startX, startY, flag, operation);
+        if (alterNextVertex) {
+            alterGridFlag(pDrlgGrid, endX, endY, flag, operation);
         }
     }
     

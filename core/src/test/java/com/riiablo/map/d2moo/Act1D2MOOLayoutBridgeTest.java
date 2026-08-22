@@ -8,10 +8,13 @@ import org.junit.jupiter.api.Test;
 
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
+import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
+import com.d2moo.common.drlg.D2DrlgOutdoorPackedGrid2InfoStrc;
 import com.d2moo.common.drlg.D2DrlgOutdoorRoomStrc;
 import com.d2moo.common.drlg.D2DrlgPresetRoomStrc;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgStrc;
+import com.d2moo.common.drlg.D2DrlgVertexStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2PresetUnit;
 import com.d2moo.common.drlg.DrlgDrlg;
@@ -64,12 +67,14 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
 
   /** Guards the LvlSub wall-grid regression that blanked most outdoor cells. */
   private static void assertFixedSeedOutdoorCoverage(D2DrlgStrc drlg) {
-    assertEquals(100, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD).getRooms(),
-        "fixed seed Stony Field should cover all 10x10 outdoor cells");
-    assertEquals(97, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS).getRooms(),
-        "fixed seed Cold Plains should retain three native LvlSub border voids");
-    assertEquals(81, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR).getRooms(),
-        "fixed seed Blood Moor should retain three native LvlSub border voids");
+    assertEquals(91, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD).getRooms(),
+        "fixed seed Stony Field native border/LvlSub room count changed");
+    assertEquals(96, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS).getRooms(),
+        "fixed seed Cold Plains native border/LvlSub room count changed");
+    assertEquals(80, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR).getRooms(),
+        "fixed seed Blood Moor native border/LvlSub room count changed");
+    assertBloodMoorNativeLinks(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
     assertPresetFileSelectionsResolveToDs1(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD));
     assertPresetFileSelectionsResolveToDs1(
@@ -77,6 +82,48 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertPresetFileSelectionsResolveToDs1(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
     assertPresetUnitListsAreAcyclic(drlg);
+  }
+
+  private static void assertBloodMoorNativeLinks(D2DrlgLevel bloodMoor) {
+    D2DrlgOutdoorInfoStrc outdoors = bloodMoor.getOutdoors();
+    assertNotNull(outdoors, "Blood Moor outdoor data missing");
+    D2DrlgVertexStrc head = outdoors.getPVertex();
+    assertNotNull(head, "Blood Moor boundary vertices missing");
+
+    int flaggedEdges = 0;
+    boolean southTownPresetEdge = false;
+    D2DrlgVertexStrc vertex = head;
+    do {
+      if ((vertex.getDwFlags() & 1) != 0) {
+        flaggedEdges++;
+        if ((vertex.getDwFlags() & 2) != 0
+            && vertex.getNPosY() == outdoors.getNGridHeight() - 1) {
+          southTownPresetEdge = true;
+        }
+      }
+      vertex = vertex.getPNext();
+    } while (vertex != head);
+    assertEquals(2, flaggedEdges,
+        "Blood Moor must retain both Cold Plains and town boundary edges");
+    assertTrue(southTownPresetEdge,
+        "Rogue Encampment preset link must remain on Blood Moor's south edge");
+
+    int levelLinks = 0;
+    int pickedFile3Links = 0;
+    for (int y = 0; y < outdoors.getNGridHeight(); y++) {
+      for (int x = 0; x < outdoors.getNGridWidth(); x++) {
+        D2DrlgOutdoorPackedGrid2InfoStrc packed =
+            new D2DrlgOutdoorPackedGrid2InfoStrc(outdoors.getPGrid(2).getFlag(x, y));
+        if (packed.isBLvlLink()) {
+          levelLinks++;
+          if (packed.getNPickedFile() == 3) pickedFile3Links++;
+        }
+      }
+    }
+    assertEquals(1, levelLinks,
+        "native preset town edge is flag=3 and must not become a second bLvlLink");
+    assertEquals(1, pickedFile3Links,
+        "Blood Moor's ordinary outdoor link must select native file variant 3");
   }
 
   private static void assertPresetUnitListsAreAcyclic(D2DrlgStrc drlg) {
@@ -203,9 +250,9 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
 
   private static int expectedFixedSeedFloors(int levelId) {
     switch (levelId) {
-      case D2LevelIds.LEVEL_STONYFIELD: return 6400;
-      case D2LevelIds.LEVEL_COLDPLAINS: return 6208;
-      case D2LevelIds.LEVEL_BLOODMOOR: return 5184;
+      case D2LevelIds.LEVEL_STONYFIELD: return 5824;
+      case D2LevelIds.LEVEL_COLDPLAINS: return 6144;
+      case D2LevelIds.LEVEL_BLOODMOOR: return 5120;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
   }

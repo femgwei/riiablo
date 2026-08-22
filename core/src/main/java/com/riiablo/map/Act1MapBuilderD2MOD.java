@@ -266,8 +266,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           }
         }
 
-        int townSelectIndex = 0;
-        int townD2Dir = 0;
+        int townExitAltDirection = ALTDIR_EAST;
         if (!isPresetLevel || preset == null) {
           // 理论上城镇应当是 PRESET；若数据不一致，则退回到随机生成，防止读图错乱
           int gridSizeX = OutdoorGrid.GRID_SIZE_TILES;
@@ -285,11 +284,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             break; // 创建失败，退出循环
           }
 
-          // 城镇预设选择：
-          // D2MOO_JAVA 提供的 preset.nDirection 在不同实现/调用点上容易产生“入口/出口语义”的歧义。
-          // 为了保证几何一致性，这里直接使用布局坐标推导“城镇出口指向 Blood Moor 的方向”，
-          // 然后用该方向选择城镇预设变体，并设置 townExitDirection。
-          final int rawD2Dir = result.townDirection; // 仍保留用于调试对照
+          // Native assigns pPreset->nDirection directly from the linker's
+          // nRand[0] value. Its 0..3 values are the four town DS1 variants:
+          // north, east, south and west.
+          final int rawD2Dir = result.townDirection;
 
           // 以布局坐标推导出口方向：比较 Town 与 Blood Moor 的中心点相对位置（tile 单位）
           final int bloodIndex = 2; // Act1LayoutResult: [2] == Blood Moor
@@ -300,23 +298,27 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           int bloodCy = result.coords[bloodIndex][1] + result.coords[bloodIndex][3] / 2;
           int dx = bloodCx - townCx;
           int dy = bloodCy - townCy;
-          final int exitD2Dir;
+          final int inferredExitAltDirection;
           if (Math.abs(dx) >= Math.abs(dy)) {
-            exitD2Dir = dx >= 0 ? 1 : 3; // E/W
+            inferredExitAltDirection = dx >= 0 ? ALTDIR_EAST : ALTDIR_WEST;
           } else {
-            exitD2Dir = dy >= 0 ? 2 : 4; // S/N（注意：D2 坐标系 Y 正向为“南”）
+            inferredExitAltDirection = dy >= 0 ? ALTDIR_SOUTH : ALTDIR_NORTH;
           }
 
-          townD2Dir = exitD2Dir;
           final int townFileVariantIndex;
-          switch (exitD2Dir) {
-            case 4: townFileVariantIndex = 0; break; // N
-            case 1: townFileVariantIndex = 1; break; // E
-            case 2: townFileVariantIndex = 2; break; // S
-            case 3: townFileVariantIndex = 3; break; // W
-            default: townFileVariantIndex = 0; break;
+          if (rawD2Dir >= 0 && rawD2Dir < 4) {
+            townFileVariantIndex = rawD2Dir;
+            townExitAltDirection = townExitDirectionFromPreset(rawD2Dir);
+            if (townExitAltDirection != inferredExitAltDirection) {
+              Gdx.app.log(TAG, String.format(
+                  "Town direction mismatch: nativePreset=%d nativeExit=%s inferredExit=%s",
+                  rawD2Dir, altDirectionName(townExitAltDirection),
+                  altDirectionName(inferredExitAltDirection)));
+            }
+          } else {
+            townExitAltDirection = inferredExitAltDirection;
+            townFileVariantIndex = townPresetFromExitDirection(inferredExitAltDirection);
           }
-          townSelectIndex = townFileVariantIndex;
           int selectIndex = townFileVariantIndex % Math.max(1, numFiles);
           int select = fileId[selectIndex];
 
@@ -335,15 +337,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         int finalY = (result.coords[i][1] + offsetY) * DT1.Tile.SUBTILE_SIZE;
         townZone.setPosition(finalX, finalY);
         townZone.town = true;
-        // townExitDirection 用于路径/出口逻辑，统一成本工程的 ALTDIR：0=WEST,1=NORTH,2=EAST,3=SOUTH
-        // D2MOO nDirection: 1=E,2=S,3=W,4=N
-        switch (townD2Dir) {
-          case 1: townZone.townExitDirection = ALTDIR_EAST;  break;
-          case 2: townZone.townExitDirection = ALTDIR_SOUTH; break;
-          case 3: townZone.townExitDirection = ALTDIR_WEST;  break;
-          case 4: townZone.townExitDirection = ALTDIR_NORTH; break;
-          default: townZone.townExitDirection = ALTDIR_EAST; break; // 合理默认：面向 Blood Moor
-        }
+        townZone.townExitDirection = townExitAltDirection;
 
         if (DEBUG_BUILD) {
           Gdx.app.debug(TAG, String.format("Placed town %s (id=%d) at (%d, %d)", level.LevelName, result.levelIds[i], finalX, finalY));
@@ -1481,7 +1475,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     }
 
     final int sub = DT1.Tile.SUBTILE_SIZE;
-    int[] townOffset = TOWN_OFFSETS[direction];
+    // Native SpawnAct1DirtPaths stores the direction from the outdoor level
+    // toward town, opposite to the direction in which the player exits town.
+    int[] townOffset = TOWN_OFFSETS[oppositeAltDirection(direction)];
     int exitWorldX = town.x / sub + townOffset[0];
     int exitWorldY = town.y / sub + townOffset[1];
     int bloodOriginX = bloodMoor.x / sub;
@@ -1533,6 +1529,30 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       case ALTDIR_SOUTH: return "SOUTH";
       default: return "UNKNOWN(" + direction + ")";
     }
+  }
+
+  static int townExitDirectionFromPreset(int presetDirection) {
+    switch (presetDirection) {
+      case 0: return ALTDIR_NORTH;
+      case 1: return ALTDIR_EAST;
+      case 2: return ALTDIR_SOUTH;
+      case 3: return ALTDIR_WEST;
+      default: return -1;
+    }
+  }
+
+  private static int townPresetFromExitDirection(int direction) {
+    switch (direction) {
+      case ALTDIR_NORTH: return 0;
+      case ALTDIR_EAST: return 1;
+      case ALTDIR_SOUTH: return 2;
+      case ALTDIR_WEST: return 3;
+      default: return 0;
+    }
+  }
+
+  static int oppositeAltDirection(int direction) {
+    return (direction + 2) & 3;
   }
 
   static final class SeamRepairResult {
@@ -2954,12 +2974,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
     final int sub = DT1.Tile.SUBTILE_SIZE;
     final int levelPosX = 0, levelPosY = 0; // act 以 town 为原点
-    int townDir = town.townExitDirection >= 0 ? town.townExitDirection : 0;
+    int townExitDir = town.townExitDirection >= 0 ? town.townExitDirection : ALTDIR_EAST;
+    int outdoorToTownDir = oppositeAltDirection(townExitDir);
 
     // 1. 城镇顶点 pVertices[0]: 固定偏移 (tile)
     int townOriginTx = town.x / sub;
     int townOriginTy = town.y / sub;
-    int[] townOff = TOWN_OFFSETS[townDir % 4];
+    int[] townOff = TOWN_OFFSETS[outdoorToTownDir];
     int v0Tx = townOriginTx + townOff[0];
     int v0Ty = townOriginTy + townOff[1];
 
@@ -2969,9 +2990,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int bmCenterGx = (bmTx + bmW / 2) / 8;
     int bmCenterGy = (bmTy + bmH / 2) / 8;
     int bmEdgeGx = bmCenterGx, bmEdgeGy = bmCenterGy;
-    if (townDir == ALTDIR_SOUTH) bmEdgeGy = bmTy / 8;
-    else if (townDir == ALTDIR_NORTH) bmEdgeGy = (bmTy + bmH - 1) / 8;
-    else if (townDir == ALTDIR_EAST) bmEdgeGx = bmTx / 8;
+    if (townExitDir == ALTDIR_SOUTH) bmEdgeGy = bmTy / 8;
+    else if (townExitDir == ALTDIR_NORTH) bmEdgeGy = (bmTy + bmH - 1) / 8;
+    else if (townExitDir == ALTDIR_EAST) bmEdgeGx = bmTx / 8;
     else bmEdgeGx = (bmTx + bmW - 1) / 8;
     int bmVTx = levelPosX + 8 * bmEdgeGx + 3;
     int bmVTy = levelPosY + 8 * bmEdgeGy + 3;
@@ -2979,7 +3000,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     // 3. CalculatePathCoordinates -> pVertices[6]
     int[] v0 = {v0Tx, v0Ty};
     int[] v6 = new int[2];
-    calculatePathCoordinates(levelPosX, levelPosY, v0, townDir, v6);
+    calculatePathCoordinates(levelPosX, levelPosY, v0, outdoorToTownDir, v6);
 
     // 4. sub_6FD7F5B0: hub = 中心或有效格。简化为 BM 入口格
     int hubGx = bmEdgeGx, hubGy = bmEdgeGy;
