@@ -81,7 +81,50 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS));
     assertPresetFileSelectionsResolveToDs1(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
+    assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD), false);
+    assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS), false);
+    assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR), false);
     assertPresetUnitListsAreAcyclic(drlg);
+  }
+
+  private static void assertNativeDirtPaths(D2DrlgLevel level, boolean roomsInitialized) {
+    D2DrlgOutdoorInfoStrc outdoors = level.getOutdoors();
+    assertNotNull(outdoors, "outdoor data missing for level " + level.getLevelId());
+    assertTrue(outdoors.getNVertices() > 0,
+        "native dirt path has no endpoints for level " + level.getLevelId());
+
+    int paths = 0;
+    for (int i = 0; i < outdoors.getNVertices(); i++) {
+      if (outdoors.getPPathStarts(i) != null) paths++;
+    }
+    assertTrue(paths > 0, "native dirt path search failed for every endpoint in level "
+        + level.getLevelId());
+
+    int topologyCells = 0;
+    for (int y = 0; y < outdoors.getNGridHeight(); y++) {
+      for (int x = 0; x < outdoors.getNGridWidth(); x++) {
+        D2DrlgOutdoorPackedGrid2InfoStrc packed =
+            new D2DrlgOutdoorPackedGrid2InfoStrc(outdoors.getPGrid(2).getFlag(x, y));
+        if (packed.isNUnkb07()) topologyCells++;
+      }
+    }
+    assertTrue(topologyCells > 0,
+        "native dirt path did not mark Grid2 topology for level " + level.getLevelId());
+
+    if (!roomsInitialized) return;
+    int floorCells = 0;
+    for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+        room = room.getDrlgRoomNext()) {
+      if (!(room.getMazeOrOutdoor() instanceof D2DrlgOutdoorRoomStrc)) continue;
+      D2DrlgGridStrc floor =
+          ((D2DrlgOutdoorRoomStrc) room.getMazeOrOutdoor()).getPFloorGrid();
+      if (floor == null || floor.getPCellsFlags() == null) continue;
+      for (int flags : floor.getPCellsFlags()) {
+        if ((flags & 0xFF) == 0x82 && ((flags >>> 8) & 0xFF) != 0) floorCells++;
+      }
+    }
+    assertTrue(floorCells > 0,
+        "native dirt path did not reach RoomEx floor grids for level " + level.getLevelId());
   }
 
   private static void assertBloodMoorNativeLinks(D2DrlgLevel bloodMoor) {
@@ -193,15 +236,20 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       applier.putGrid(levelId, new TileGrid(width, height));
       applier.resetLastExportedFloorCount();
       int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+      assertNativeDirtPaths(level, true);
       SourceGridStats source = sourceGridStats(level);
       assertTrue(attempted > 0, "D2MOO exported no floor tiles for level " + levelId);
       assertEquals(expectedFixedSeedFloors(levelId), attempted,
           "fixed-seed floor coverage changed for level " + levelId);
-      assertEquals(attempted, applier.getLastExportedFloorCount(),
-          "not every exported floor tile was written for level " + levelId);
       assertEquals(0, applier.getMissingGridCount(), "missing target grid for level " + levelId);
       assertEquals(0, applier.getOutOfBoundsCount(), "out-of-bounds tile for level " + levelId);
       assertEquals(0, applier.getInvalidTileCount(), "invalid tile id for level " + levelId);
+      assertEquals(expectedFixedSeedClippedFloors(levelId),
+          applier.getClippedBoundaryFloorCount(),
+          "fixed-seed native shared-boundary floor count changed for level " + levelId);
+      assertEquals(attempted - applier.getClippedBoundaryFloorCount(),
+          applier.getLastExportedFloorCount(),
+          "not every exported floor tile was written for level " + levelId);
       assertEquals(0, applier.getDuplicatePositionCount(),
           "multiple rooms exported the same floor coordinate for level " + levelId);
       assertEquals(0, applier.getNonFloorOrientationCount(),
@@ -217,7 +265,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       assertTrue(source.presetRooms > 0,
           "Act1 picked preset cells produced no preset rooms for level " + levelId);
       assertEquals(applier.getCallbackCount(), attempted
-              + applier.getExportedWallCount() + applier.getExportedShadowCount(),
+              + applier.getExportedWallCount() + applier.getExportedShadowCount()
+              + applier.getClippedBoundaryCount() - applier.getClippedBoundaryFloorCount(),
           "layer callback accounting mismatch for level " + levelId);
       System.out.println("[ACT1-DIAG] level=" + levelId
           + " size=" + width + 'x' + height
@@ -229,6 +278,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           + " ignoredLayer=" + applier.getIgnoredLayerCount()
           + " missingGrid=" + applier.getMissingGridCount()
           + " outOfBounds=" + applier.getOutOfBoundsCount()
+          + " clippedBoundary=" + applier.getClippedBoundaryCount()
+          + " clippedFloor=" + applier.getClippedBoundaryFloorCount()
           + " invalidTile=" + applier.getInvalidTileCount()
           + " duplicatePosition=" + applier.getDuplicatePositionCount()
           + " duplicateShadow=" + applier.getDuplicateShadowCount()
@@ -252,9 +303,13 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     switch (levelId) {
       case D2LevelIds.LEVEL_STONYFIELD: return 5824;
       case D2LevelIds.LEVEL_COLDPLAINS: return 6144;
-      case D2LevelIds.LEVEL_BLOODMOOR: return 5120;
+      case D2LevelIds.LEVEL_BLOODMOOR: return 5122;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
+  }
+
+  private static int expectedFixedSeedClippedFloors(int levelId) {
+    return levelId == D2LevelIds.LEVEL_BLOODMOOR ? 2 : 0;
   }
 
   private static SourceGridStats sourceGridStats(D2DrlgLevel level) {

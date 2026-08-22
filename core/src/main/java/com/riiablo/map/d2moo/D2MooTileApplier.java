@@ -1,5 +1,6 @@
 package com.riiablo.map.d2moo;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.IntSet;
 import com.d2moo.common.drlg.DrlgExport;
@@ -22,6 +23,8 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     private int ignoredLayerCount;
     private int missingGridCount;
     private int outOfBoundsCount;
+    private int clippedBoundaryCount;
+    private int clippedBoundaryFloorCount;
     private int invalidTileCount;
     private int duplicatePositionCount;
     private int duplicateShadowCount;
@@ -55,6 +58,8 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     public int getIgnoredLayerCount() { return ignoredLayerCount; }
     public int getMissingGridCount() { return missingGridCount; }
     public int getOutOfBoundsCount() { return outOfBoundsCount; }
+    public int getClippedBoundaryCount() { return clippedBoundaryCount; }
+    public int getClippedBoundaryFloorCount() { return clippedBoundaryFloorCount; }
     public int getInvalidTileCount() { return invalidTileCount; }
     public int getDuplicatePositionCount() { return duplicatePositionCount; }
     public int getDuplicateShadowCount() { return duplicateShadowCount; }
@@ -75,6 +80,8 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         ignoredLayerCount = 0;
         missingGridCount = 0;
         outOfBoundsCount = 0;
+        clippedBoundaryCount = 0;
+        clippedBoundaryFloorCount = 0;
         invalidTileCount = 0;
         duplicatePositionCount = 0;
         duplicateShadowCount = 0;
@@ -105,6 +112,28 @@ public final class D2MooTileApplier implements DrlgTileExporter {
             return;
         }
         if (!grid.inBounds(tx, ty)) {
+            // Native RoomEx floor/wall grids have a shared +1 border. A tile
+            // on the east/south edge belongs to the adjacent room; at the
+            // outer level edge there is no adjacent destination, so clip it
+            // without rejecting the otherwise valid native export.
+            boolean sharedBoundary = tx >= 0 && ty >= 0
+                && tx <= grid.width && ty <= grid.height
+                && (tx == grid.width || ty == grid.height);
+            if (sharedBoundary) {
+                if (clippedBoundaryCount < 8 && Gdx.app != null) {
+                    Gdx.app.log("D2MooTileApplier", String.format(
+                        "D2MOO export clipped shared boundary: level=%d layer=%d pos=(%d,%d) grid=%dx%d tile=0x%08X",
+                        levelId, layer, tx, ty, grid.width, grid.height, tileId));
+                }
+                clippedBoundaryCount++;
+                if (layer == DrlgExport.LAYER_FLOOR) clippedBoundaryFloorCount++;
+                return;
+            }
+            if (outOfBoundsCount < 8 && Gdx.app != null) {
+                Gdx.app.log("D2MooTileApplier", String.format(
+                    "D2MOO export out of bounds: level=%d layer=%d pos=(%d,%d) grid=%dx%d tile=0x%08X",
+                    levelId, layer, tx, ty, grid.width, grid.height, tileId));
+            }
             outOfBoundsCount++;
             return;
         }

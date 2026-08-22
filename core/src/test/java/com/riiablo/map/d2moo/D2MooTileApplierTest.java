@@ -57,7 +57,7 @@ class D2MooTileApplierTest {
         pack(Orientation.SHADOW, 2, 1));
     applier.onTile(LEVEL_ID, DrlgExport.LAYER_SHADOW, 0, 0,
         pack(Orientation.FLOOR, 2, 2));
-    applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, 1, 0,
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, 2, 0,
         pack(Orientation.FLOOR, 1, 1));
     applier.onTile(LEVEL_ID, 99, 0, 0, pack(Orientation.FLOOR, 1, 1));
 
@@ -68,6 +68,28 @@ class D2MooTileApplierTest {
     assertEquals(1, applier.getNonShadowOrientationCount());
     assertEquals(1, applier.getOutOfBoundsCount());
     assertEquals(1, applier.getIgnoredLayerCount());
+  }
+
+  @Test
+  void clipsNativeSharedRoomBoundaryWithoutHidingTrueOutOfBoundsTiles() {
+    TileGrid grid = new TileGrid(3, 2);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, 1, 2,
+        pack(Orientation.FLOOR, 1, 1));
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 3, 1,
+        pack(Orientation.LEFT_WALL, 1, 1));
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, 1, 3,
+        pack(Orientation.FLOOR, 1, 1));
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, -1, 0,
+        pack(Orientation.FLOOR, 1, 1));
+
+    assertEquals(2, applier.getClippedBoundaryCount());
+    assertEquals(1, applier.getClippedBoundaryFloorCount());
+    assertEquals(2, applier.getOutOfBoundsCount());
+    assertEquals(0, applier.getLastExportedFloorCount());
+    assertEquals(0, applier.getExportedWallCount());
   }
 
   @Test

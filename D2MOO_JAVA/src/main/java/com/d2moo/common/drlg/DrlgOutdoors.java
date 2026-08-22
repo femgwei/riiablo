@@ -1232,151 +1232,368 @@ public class DrlgOutdoors {
         return new D2DrlgOutdoorPackedGrid2InfoStrc(packedValue);
     }
     
-    /**
-     * D2Common.0x6FD7F0A0
-     * 生成 Act1 泥土路径
-     * 
-     * 功能：
-     * 1. 从 pPathStarts 获取路径起点
-     * 2. 计算 Hub（中心点）
-     * 3. 绘制路径到 pDirtPathGrid
-     * 
-     * @param level 关卡
-     * @param drlgRoom 房间
-     */
-    public static void generateDirtPath(D2DrlgLevel level, D2DrlgRoom drlgRoom) {
-        if (level == null || drlgRoom == null) {
-            return;
-        }
-        
-        Object outdoorsObj = level.getPresetOrOutdoorsOrMaze();
-        if (!(outdoorsObj instanceof D2DrlgOutdoorInfoStrc)) {
-            return;
-        }
-        
-        D2DrlgOutdoorInfoStrc outdoors = (D2DrlgOutdoorInfoStrc) outdoorsObj;
-        Object outdoorRoomObj = drlgRoom.getMazeOrOutdoor();
-        if (!(outdoorRoomObj instanceof D2DrlgOutdoorRoomStrc)) {
-            return;
-        }
-        
-        D2DrlgOutdoorRoomStrc outdoorRoom = (D2DrlgOutdoorRoomStrc) outdoorRoomObj;
-        D2DrlgGridStrc pDirtPathGrid = outdoorRoom.getPDirtPathGrid();
-        
-        if (!DrlgDrlgGrid.isGridValid(pDirtPathGrid)) {
-            return;
-        }
-        
-        // 获取房间的网格坐标（相对于关卡）
-        int nRoomGridX = drlgRoom.getNTileXPos() / 8;
-        int nRoomGridY = drlgRoom.getNTileYPos() / 8;
-        int nRoomGridWidth = drlgRoom.getNTileWidth() / 8;
-        int nRoomGridHeight = drlgRoom.getNTileHeight() / 8;
-        
-        // 计算 Hub（中心点）- 使用房间的中心作为 Hub
-        int nHubX = nRoomGridX + nRoomGridWidth / 2;
-        int nHubY = nRoomGridY + nRoomGridHeight / 2;
-        
-        // 路径标志（用于标记路径）
-        final int DIRT_PATH_FLAG = 0x01;
-        
-        // 遍历路径起点数组（最多6个）
-        for (int i = 0; i < 6; ++i) {
-            D2DrlgVertexStrc pPathStart = outdoors.getPPathStarts(i);
-            if (pPathStart == null) {
-                continue;
+    private static final int ALTDIR_WEST = 0;
+    private static final int ALTDIR_NORTH = 1;
+    private static final int ALTDIR_EAST = 2;
+    private static final int ALTDIR_SOUTH = 3;
+    private static final int ALTDIR_CENTER = 4;
+    private static final int MAX_ACT1_DIRT_PATHS = 6;
+
+    private static final byte[] ACT1_DIRT_PATH_TILES = {
+        0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x10, 0x10,
+        0x0E, 0x0E, 0x06, 0x13, 0x0E, 0x0E, 0x06, 0x13,
+        0x0F, 0x0F, 0x05, 0x05, 0x0F, 0x0F, 0x15, 0x15,
+        0x08, 0x08, 0x0A, 0x26, 0x08, 0x08, 0x28, 0x14,
+        0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x10, 0x10,
+        0x0E, 0x0E, 0x06, 0x13, 0x0E, 0x0E, 0x06, 0x13,
+        0x0F, 0x0F, 0x05, 0x05, 0x0F, 0x0F, 0x15, 0x15,
+        0x08, 0x08, 0x0A, 0x26, 0x08, 0x08, 0x28, 0x14,
+        0x0D, 0x0D, 0x07, 0x07, 0x0D, 0x0D, 0x0D, 0x07,
+        0x04, 0x04, 0x0B, 0x25, 0x04, 0x04, 0x0B, 0x2B,
+        0x03, 0x03, 0x0C, 0x0C, 0x03, 0x03, 0x27, 0x27,
+        0x09, 0x09, 0x02, 0x2B, 0x09, 0x09, 0x2C, 0x1A,
+        0x0D, 0x0D, 0x07, 0x07, 0x0D, 0x0D, 0x0D, 0x07,
+        0x17, 0x17, 0x29, 0x11, 0x17, 0x17, 0x29, 0x11,
+        0x03, 0x03, 0x0C, 0x0C, 0x03, 0x03, 0x27, 0x27,
+        0x2A, 0x2A, 0x2E, 0x2A, 0x2A, 0x2A, 0x21, 0x1F,
+        0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x10, 0x10,
+        0x0E, 0x0E, 0x06, 0x13, 0x0E, 0x0E, 0x06, 0x13,
+        0x0F, 0x0F, 0x05, 0x05, 0x0F, 0x0F, 0x15, 0x15,
+        0x08, 0x08, 0x0A, 0x26, 0x08, 0x08, 0x23, 0x14,
+        0x00, 0x00, 0x10, 0x10, 0x00, 0x00, 0x10, 0x10,
+        0x0E, 0x0E, 0x06, 0x13, 0x0E, 0x0E, 0x06, 0x13,
+        0x0F, 0x0F, 0x05, 0x05, 0x0F, 0x0F, 0x15, 0x15,
+        0x08, 0x08, 0x0A, 0x26, 0x08, 0x08, 0x28, 0x14,
+        0x0D, 0x0D, 0x07, 0x07, 0x0D, 0x0D, 0x0D, 0x07,
+        0x04, 0x04, 0x0B, 0x25, 0x04, 0x04, 0x0B, 0x25,
+        0x12, 0x12, 0x23, 0x23, 0x12, 0x12, 0x16, 0x16,
+        0x24, 0x24, 0x2D, 0x22, 0x24, 0x24, 0x1C, 0x1D,
+        0x0D, 0x0D, 0x07, 0x07, 0x0D, 0x0D, 0x0D, 0x07,
+        0x17, 0x17, 0x29, 0x11, 0x17, 0x17, 0x29, 0x11,
+        0x12, 0x12, 0x23, 0x23, 0x12, 0x12, 0x16, 0x16,
+        0x18, 0x18, 0x19, 0x20, 0x18, 0x18, 0x1E, 0x01,
+    };
+
+    /** D2Common.0x6FD7F250. */
+    public static void spawnAct1DirtPaths(D2DrlgLevel level) {
+        if (level == null || level.getOutdoors() == null || level.getLevelCoords() == null) return;
+        D2DrlgOutdoorInfoStrc outdoors = level.getOutdoors();
+        outdoors.setNVertices(0);
+        for (int i = 0; i < MAX_ACT1_DIRT_PATHS; i++) outdoors.setPPathStarts(i, null);
+        for (int i = 0; i < outdoors.getPVertices().length; i++) resetVertex(outdoors.getPVertices(i));
+
+        for (D2DrlgOrth roomData = outdoors.getPRoomData(); roomData != null;
+                roomData = roomData.getPNext()) {
+            D2DrlgLevel linked = roomData.getPLevel();
+            if (linked == null || linked.getLevelCoords() == null) continue;
+            if (linked.getLevelId() == D2LevelIds.LEVEL_ROGUEENCAMPMENT) {
+                D2DrlgVertexStrc vertex = nextDirtPathVertex(level, outdoors);
+                if (vertex == null) break;
+                vertex.setNDirection(roomData.getNDirection());
+                int x = linked.getLevelCoords().getNPosX();
+                int y = linked.getLevelCoords().getNPosY();
+                switch (roomData.getNDirection()) {
+                    case ALTDIR_WEST: vertex.setNPosX(x + 59); vertex.setNPosY(y + 19); break;
+                    case ALTDIR_NORTH: vertex.setNPosX(x + 29); vertex.setNPosY(y + 35); break;
+                    case ALTDIR_EAST: vertex.setNPosX(x + 4); vertex.setNPosY(y + 22); break;
+                    case ALTDIR_SOUTH: vertex.setNPosX(x + 29); vertex.setNPosY(y + 3); break;
+                    default: break;
+                }
+            } else if (linked.getLevelId() == D2LevelIds.LEVEL_MONASTERYGATE) {
+                D2DrlgVertexStrc vertex = nextDirtPathVertex(level, outdoors);
+                if (vertex == null) break;
+                vertex.setNPosX(linked.getLevelCoords().getNPosX() + 27);
+                vertex.setNPosY(linked.getLevelCoords().getNPosY() + 13);
+                vertex.setNDirection((byte) ALTDIR_NORTH);
             }
-            
-            // 获取路径起点的网格坐标
-            int nStartX = pPathStart.getNPosX();
-            int nStartY = pPathStart.getNPosY();
-            
-            // 检查路径起点是否在当前房间的网格范围内
-            if (nStartX < nRoomGridX || nStartX >= nRoomGridX + nRoomGridWidth ||
-                nStartY < nRoomGridY || nStartY >= nRoomGridY + nRoomGridHeight) {
-                continue;
-            }
-            
-            // 计算路径起点相对于房间的局部坐标
-            int nLocalStartX = nStartX - nRoomGridX;
-            int nLocalStartY = nStartY - nRoomGridY;
-            int nLocalHubX = nHubX - nRoomGridX;
-            int nLocalHubY = nHubY - nRoomGridY;
-            
-            // 使用 Bresenham 算法绘制从起点到 Hub 的路径
-            drawLine(pDirtPathGrid, nLocalStartX, nLocalStartY, nLocalHubX, nLocalHubY, DIRT_PATH_FLAG);
-            
-            // 如果路径起点有下一个顶点，也绘制到下一个顶点的路径
-            D2DrlgVertexStrc pNext = pPathStart.getPNext();
-            if (pNext != null) {
-                int nNextX = pNext.getNPosX();
-                int nNextY = pNext.getNPosY();
-                
-                // 检查下一个顶点是否在当前房间的网格范围内
-                if (nNextX >= nRoomGridX && nNextX < nRoomGridX + nRoomGridWidth &&
-                    nNextY >= nRoomGridY && nNextY < nRoomGridY + nRoomGridHeight) {
-                    int nLocalNextX = nNextX - nRoomGridX;
-                    int nLocalNextY = nNextY - nRoomGridY;
-                    drawLine(pDirtPathGrid, nLocalStartX, nLocalStartY, nLocalNextX, nLocalNextY, DIRT_PATH_FLAG);
+        }
+
+        int levelX = level.getLevelCoords().getNPosX();
+        int levelY = level.getLevelCoords().getNPosY();
+        outer:
+        for (int x = 0; x < outdoors.getNGridWidth(); x++) {
+            for (int y = 0; y < outdoors.getNGridHeight(); y++) {
+                int preset = DrlgDrlgGrid.getGridEntry(outdoors.getPGrid(0), x, y);
+                D2DrlgOutdoorPackedGrid2InfoStrc packed = getPackedGrid2Info(outdoors, x, y);
+                int direction = ALTDIR_CENTER;
+                switch (preset) {
+                    case 4: if (packed.getNPickedFile() == 3) direction = ALTDIR_SOUTH; break;
+                    case 5: if (packed.getNPickedFile() == 3) direction = ALTDIR_WEST; break;
+                    case 6: if (packed.getNPickedFile() == 3) direction = ALTDIR_NORTH; break;
+                    case 7: if (packed.getNPickedFile() == 3) direction = ALTDIR_EAST; break;
+                    case 24: direction = ALTDIR_NORTH; break;
+                    case 25: direction = ALTDIR_WEST; break;
+                    case 28:
+                        if (packed.getNPickedFile() == 1 && x == outdoors.getNGridWidth() - 2) {
+                            direction = ALTDIR_EAST;
+                        }
+                        break;
+                    case 51:
+                    case 52: direction = packed.getNPickedFile() != 0 ? 1 : 0; break;
+                    default: break;
+                }
+                if (direction != ALTDIR_CENTER) {
+                    D2DrlgVertexStrc vertex = nextDirtPathVertex(level, outdoors);
+                    if (vertex == null) break outer;
+                    vertex.setNPosX(levelX + 8 * x + 3);
+                    vertex.setNPosY(levelY + 8 * y + 3);
+                    vertex.setNDirection((byte) direction);
                 }
             }
         }
-        
-        // 在 Hub 位置也设置路径标志
-        int nLocalHubX = nHubX - nRoomGridX;
-        int nLocalHubY = nHubY - nRoomGridY;
-        if (DrlgDrlgGrid.isPointInsideGridArea(pDirtPathGrid, nLocalHubX, nLocalHubY)) {
-            DrlgDrlgGrid.alterGridFlag(pDirtPathGrid, nLocalHubX, nLocalHubY, DIRT_PATH_FLAG, DrlgDrlgGrid.FlagOperation.OR);
+
+        for (int i = 0; i < outdoors.getNVertices(); i++) {
+            calculatePathCoordinates(level, outdoors.getPVertices(i), outdoors.getPVertices(6 + i));
         }
-        
-        D2Log.debug("DRLGOUTDOORS_GenerateDirtPath: Generated dirt path for room at (" + nRoomGridX + ", " + nRoomGridY + ")");
+        calculateDirtPathHub(level);
+
+        int built = 0;
+        for (int i = 0; i < outdoors.getNVertices(); i++) {
+            if (DrlgOutPlace.buildAct1DirtPath(level, i)) {
+                D2DrlgOutdoorPackedGrid2InfoStrc pathInfo = new D2DrlgOutdoorPackedGrid2InfoStrc(0);
+                pathInfo.setNUnkb07(true);
+                DrlgDrlgGrid.setVertexGridFlags(
+                        outdoors.getPGrid(2), outdoors.getPPathStarts(i), pathInfo.getNPackedValue());
+                finalizeDirtPath(level, i);
+                logDirtPath(level, i);
+                built++;
+            }
+        }
+        D2Log.debug("DRLG_DIRTPATH topology level=%d endpoints=%d built=%d",
+                level.getLevelId(), outdoors.getNVertices(), built);
     }
-    
-    /**
-     * 使用 Bresenham 算法绘制直线路径
-     * 
-     * @param grid 网格
-     * @param x0 起点 X
-     * @param y0 起点 Y
-     * @param x1 终点 X
-     * @param y1 终点 Y
-     * @param flag 路径标志
-     */
-    private static void drawLine(D2DrlgGridStrc grid, int x0, int y0, int x1, int y1, int flag) {
-        if (!DrlgDrlgGrid.isGridValid(grid)) {
-            return;
+
+    private static D2DrlgVertexStrc nextDirtPathVertex(
+            D2DrlgLevel level, D2DrlgOutdoorInfoStrc outdoors) {
+        int index = outdoors.getNVertices();
+        if (index >= MAX_ACT1_DIRT_PATHS) {
+            D2Log.warning("DRLG_DIRTPATH endpoint overflow level=%d max=%d",
+                    level.getLevelId(), MAX_ACT1_DIRT_PATHS);
+            return null;
         }
-        
-        // Bresenham 直线算法
-        int dx = Math.abs(x1 - x0);
-        int dy = Math.abs(y1 - y0);
-        int sx = (x0 < x1) ? 1 : -1;
-        int sy = (y0 < y1) ? 1 : -1;
-        int err = dx - dy;
-        
-        int x = x0;
-        int y = y0;
-        
-        while (true) {
-            // 在网格中设置路径标志
-            if (DrlgDrlgGrid.isPointInsideGridArea(grid, x, y)) {
-                DrlgDrlgGrid.alterGridFlag(grid, x, y, flag, DrlgDrlgGrid.FlagOperation.OR);
+        D2DrlgVertexStrc vertex = outdoors.getPVertices(index);
+        resetVertex(vertex);
+        outdoors.setNVertices(index + 1);
+        return vertex;
+    }
+
+    private static void resetVertex(D2DrlgVertexStrc vertex) {
+        vertex.setNPosX(0);
+        vertex.setNPosY(0);
+        vertex.setNDirection((byte) 0);
+        vertex.setDwFlags(0);
+        vertex.setPNext(null);
+    }
+
+    static void calculatePathCoordinates(
+            D2DrlgLevel level, D2DrlgVertexStrc source, D2DrlgVertexStrc target) {
+        int levelX = level.getLevelCoords().getNPosX();
+        int levelY = level.getLevelCoords().getNPosY();
+        int x = source.getNPosX() - levelX;
+        int y = source.getNPosY() - levelY;
+        switch (source.getNDirection()) {
+            case ALTDIR_WEST: x = 8 * (x / 8) + 11; break;
+            case ALTDIR_NORTH: y = 8 * (y / 8) + 11; break;
+            case ALTDIR_EAST: x = 8 * (x / 8) - 5; break;
+            case ALTDIR_SOUTH: y = 8 * (y / 8) - 5; break;
+            default: break;
+        }
+        target.setNPosX(x + levelX);
+        target.setNPosY(y + levelY);
+    }
+
+    private static void calculateDirtPathHub(D2DrlgLevel level) {
+        D2DrlgOutdoorInfoStrc outdoors = level.getOutdoors();
+        int levelX = level.getLevelCoords().getNPosX();
+        int levelY = level.getLevelCoords().getNPosY();
+        int[] bridgeX = {-1};
+        int[] bridgeY = {-1};
+        if ((outdoors.getDwFlags() & OUTDOOR_RIVER) != 0) {
+            DrlgOutWild.getBridgeCoords(level, bridgeX, bridgeY);
+        }
+        if (bridgeX[0] != -1) {
+            int hubX = levelX + 8 * bridgeX[0] + 3;
+            int hubY = levelY + 8 * bridgeY[0] + 3;
+            for (int i = 0; i < outdoors.getNVertices(); i++) {
+                D2DrlgVertexStrc rawHub = outdoors.getPVertices(18 + i);
+                rawHub.setNPosY(hubY);
+                if (outdoors.getPVertices(i).getNPosX() <= hubX) {
+                    rawHub.setNPosX(hubX);
+                    rawHub.setNDirection((byte) ALTDIR_EAST);
+                } else {
+                    rawHub.setNPosX(hubX + 8);
+                    rawHub.setNDirection((byte) ALTDIR_WEST);
+                }
             }
-            
-            // 检查是否到达终点
-            if (x == x1 && y == y1) {
-                break;
+        } else {
+            int gridX;
+            int gridY;
+            if (outdoors.getNVertices() == 1) {
+                gridX = outdoors.getNGridWidth() / 2;
+                gridY = outdoors.getNGridHeight() / 2;
+            } else {
+                int sumX = 0;
+                int sumY = 0;
+                for (int i = 0; i < outdoors.getNVertices(); i++) {
+                    sumX += outdoors.getPVertices(i).getNPosX() - levelX;
+                    sumY += outdoors.getPVertices(i).getNPosY() - levelY;
+                }
+                gridX = sumX / (8 * outdoors.getNVertices());
+                gridY = sumY / (8 * outdoors.getNVertices());
             }
-            
-            int e2 = 2 * err;
-            if (e2 > -dy) {
-                err -= dy;
-                x += sx;
+            int[] xOffsets = {-1, 0, 0, 1};
+            int[] yOffsets = {0, 1, -1, 0};
+            boolean found = false;
+            for (int radius = 0; radius < 8 && !found; radius++) {
+                for (int direction = 0; direction < 4; direction++) {
+                    int x = gridX + radius * xOffsets[direction];
+                    int y = gridY + radius * yOffsets[direction];
+                    if (x >= 0 && x < outdoors.getNGridWidth()
+                            && y >= 0 && y < outdoors.getNGridHeight()
+                            && testGridCellSpawnValid(level, x, y)) {
+                        gridX = x;
+                        gridY = y;
+                        found = true;
+                        break;
+                    }
+                }
             }
-            if (e2 < dx) {
-                err += dx;
-                y += sy;
+            D2DrlgVertexStrc firstHub = outdoors.getPVertices(18);
+            firstHub.setNPosX(levelX + 8 * gridX + 3);
+            firstHub.setNPosY(levelY + 8 * gridY + 3);
+            firstHub.setNDirection((byte) ALTDIR_CENTER);
+            for (int i = 1; i < outdoors.getNVertices(); i++) {
+                D2DrlgVertexStrc rawHub = outdoors.getPVertices(18 + i);
+                rawHub.setNPosX(firstHub.getNPosX());
+                rawHub.setNPosY(firstHub.getNPosY());
+                rawHub.setNDirection((byte) ALTDIR_CENTER);
             }
+        }
+        for (int i = 0; i < outdoors.getNVertices(); i++) {
+            calculatePathCoordinates(
+                    level, outdoors.getPVertices(18 + i), outdoors.getPVertices(12 + i));
+        }
+    }
+
+    private static void finalizeDirtPath(D2DrlgLevel level, int vertexId) {
+        D2DrlgOutdoorInfoStrc outdoors = level.getOutdoors();
+        D2DrlgVertexStrc path = outdoors.getPPathStarts(vertexId);
+        int directionIndex = (int) (Seed.rollRandomNumber(level.getSeed()) & 3);
+        if (path == null) return;
+        D2DrlgVertexStrc rawHub = outdoors.getPVertices(18 + vertexId);
+        if (rawHub.getNDirection() != ALTDIR_CENTER) {
+            D2DrlgVertexStrc newHead = new D2DrlgVertexStrc(
+                    rawHub.getNPosX(), rawHub.getNPosY(), (byte) 0);
+            newHead.setPNext(path);
+            outdoors.setPPathStarts(vertexId, newHead);
+        }
+        path.setNPosX(outdoors.getPVertices(12 + vertexId).getNPosX());
+        path.setNPosY(outdoors.getPVertices(12 + vertexId).getNPosY());
+        D2DrlgVertexStrc vertex = path.getPNext();
+        int[] xOffsets = {1, 0, -1, 0};
+        int[] yOffsets = {0, 1, 0, -1};
+        if (vertex != null) {
+            while (vertex.getPNext() != null) {
+                int offsetX = (((int) Seed.rollRandomNumber(level.getSeed()) & 1) + 2)
+                        * xOffsets[directionIndex];
+                int offsetY = (((int) Seed.rollRandomNumber(level.getSeed()) & 1) + 2)
+                        * yOffsets[directionIndex];
+                directionIndex = (directionIndex + 1) & 3;
+                vertex.setNPosX(8 * vertex.getNPosX()
+                        + level.getLevelCoords().getNPosX() + offsetX + 3);
+                vertex.setNPosY(8 * vertex.getNPosY()
+                        + level.getLevelCoords().getNPosY() + offsetY + 3);
+                vertex = vertex.getPNext();
+            }
+            vertex.setNPosX(outdoors.getPVertices(6 + vertexId).getNPosX());
+            vertex.setNPosY(outdoors.getPVertices(6 + vertexId).getNPosY());
+            vertex.setPNext(new D2DrlgVertexStrc(
+                    outdoors.getPVertices(vertexId).getNPosX(),
+                    outdoors.getPVertices(vertexId).getNPosY(), (byte) 0));
+        }
+    }
+
+    private static void logDirtPath(D2DrlgLevel level, int vertexId) {
+        D2DrlgVertexStrc path = level.getOutdoors().getPPathStarts(vertexId);
+        if (path == null) return;
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        int vertices = 0;
+        for (D2DrlgVertexStrc vertex = path; vertex != null && vertices < 1000;
+                vertex = vertex.getPNext()) {
+            minX = Math.min(minX, vertex.getNPosX());
+            minY = Math.min(minY, vertex.getNPosY());
+            maxX = Math.max(maxX, vertex.getNPosX());
+            maxY = Math.max(maxY, vertex.getNPosY());
+            vertices++;
+        }
+        D2Log.debug("DRLG_DIRTPATH path level=%d endpoint=%d vertices=%d bounds=(%d,%d)-(%d,%d)",
+                level.getLevelId(), vertexId, vertices, minX, minY, maxX, maxY);
+    }
+
+    /** D2Common.0x6FD7EFE0 - writes the native dirt-path floor flags for one RoomEx. */
+    public static void generateDirtPath(D2DrlgLevel level, D2DrlgRoom drlgRoom) {
+        if (level == null || drlgRoom == null || level.getOutdoors() == null
+                || !(drlgRoom.getMazeOrOutdoor() instanceof D2DrlgOutdoorRoomStrc)) return;
+        D2DrlgOutdoorInfoStrc outdoors = level.getOutdoors();
+        D2DrlgOutdoorRoomStrc room = (D2DrlgOutdoorRoomStrc) drlgRoom.getMazeOrOutdoor();
+        D2DrlgGridStrc dirt = room.getPDirtPathGrid();
+        DrlgDrlgGrid.initializeGridCells(level.getDrlg().getMempool(), dirt,
+                drlgRoom.getNTileWidth() + 3, drlgRoom.getNTileHeight() + 3);
+        D2DrlgCoord roomBox = new D2DrlgCoord();
+        roomBox.setNPosX(drlgRoom.getNTileXPos() - 1);
+        roomBox.setNPosY(drlgRoom.getNTileYPos() - 1);
+        roomBox.setNWidth(drlgRoom.getNTileWidth() + 3);
+        roomBox.setNHeight(drlgRoom.getNTileHeight() + 3);
+        for (int i = 0; i < outdoors.getNVertices(); i++) {
+            for (D2DrlgVertexStrc vertex = outdoors.getPPathStarts(i);
+                    vertex != null; vertex = vertex.getPNext()) {
+                if (vertex.getPNext() != null) {
+                    DrlgDrlgGrid.sub_6FD75F60(
+                            dirt, vertex, roomBox, 1, DrlgDrlgGrid.FlagOperation.OR, 2);
+                }
+            }
+        }
+
+        int rasterCells = 0;
+        if (dirt.getPCellsFlags() != null) {
+            for (int flags : dirt.getPCellsFlags()) {
+                if (flags != 0) rasterCells++;
+            }
+        }
+        int changed = 0;
+        for (int x = 1; x <= drlgRoom.getNTileWidth(); x++) {
+            for (int y = drlgRoom.getNTileHeight() + 1; y >= 1; y--) {
+                int center = DrlgDrlgGrid.getGridEntry(dirt, x, y);
+                if (center == 0) continue;
+                int directions = 0;
+                for (int boxIndex = 8; boxIndex >= 0; boxIndex--) {
+                    if (boxIndex == 4) continue;
+                    directions <<= 1;
+                    int boxX = boxIndex / 3;
+                    int boxY = boxIndex % 3;
+                    int offsetX = boxX - 1;
+                    int offsetY = 1 - boxY;
+                    if (DrlgDrlgGrid.getGridEntry(dirt, x + offsetX, y + offsetY) != 0) {
+                        directions |= 1;
+                    }
+                }
+                if (directions != 0) {
+                    int tile = ACT1_DIRT_PATH_TILES[directions] & 0xFF;
+                    if (tile != 0) {
+                        DrlgDrlgGrid.alterGridFlag(room.getPFloorGrid(), x - 1, y - 1,
+                                (tile << 8) | 0x82, DrlgDrlgGrid.FlagOperation.OVERWRITE);
+                        changed++;
+                    }
+                }
+            }
+        }
+        if (changed != 0) {
+            D2Log.debug("DRLG_DIRTPATH room level=%d pos=(%d,%d) rasterCells=%d floorCells=%d",
+                    level.getLevelId(), drlgRoom.getNTileXPos(), drlgRoom.getNTileYPos(),
+                    rasterCells, changed);
         }
     }
 }

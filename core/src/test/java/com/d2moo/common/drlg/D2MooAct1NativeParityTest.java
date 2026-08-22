@@ -3,6 +3,7 @@ package com.d2moo.common.drlg;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -235,6 +236,52 @@ class D2MooAct1NativeParityTest {
     assertArrayEquals(new int[] {0, 2}, grid.getPCellsRowOffsets());
     assertEquals(6, DrlgDrlgGrid.getGridEntry(grid, 0, 0));
     assertEquals(12, DrlgDrlgGrid.getGridEntry(grid, 1, 1));
+  }
+
+  @Test
+  void nativeDirtPathDirectionUsesD2CardinalOrdering() {
+    assertEquals(0, DrlgOutPlace.nativeCardinalDirection(0, 0, 5, 0));
+    assertEquals(1, DrlgOutPlace.nativeCardinalDirection(0, 0, 0, 5));
+    assertEquals(2, DrlgOutPlace.nativeCardinalDirection(0, 0, -5, 0));
+    assertEquals(3, DrlgOutPlace.nativeCardinalDirection(0, 0, 0, -5));
+  }
+
+  @Test
+  void nativeDirtPathSearchConnectsEndpointToHubWithoutCrossingPresetCells() {
+    D2DrlgLevel level = new D2DrlgLevel();
+    level.setPLevelCoords(coord(100, 200, 48, 48));
+    D2DrlgOutdoorInfoStrc outdoors = new D2DrlgOutdoorInfoStrc();
+    outdoors.setNGridWidth(6);
+    outdoors.setNGridHeight(6);
+    outdoors.setNVertices(1);
+    level.setPresetOrOutdoorsOrMaze(outdoors);
+    for (int i = 0; i < outdoors.getPGrid().length; i++) {
+      DrlgDrlgGrid.initializeGridCells(null, outdoors.getPGrid(i), 6, 6);
+    }
+
+    outdoors.getPVertices(6).setNPosX(100 + 8);
+    outdoors.getPVertices(6).setNPosY(200 + 8);
+    outdoors.getPVertices(12).setNPosX(100 + 32);
+    outdoors.getPVertices(12).setNPosY(200 + 32);
+    D2DrlgOutdoorPackedGrid2InfoStrc blocked = new D2DrlgOutdoorPackedGrid2InfoStrc();
+    blocked.setBHasPickedFile(true);
+    DrlgDrlgGrid.alterGridFlag(outdoors.getPGrid(2), 2, 2,
+        blocked.getNPackedValue(), DrlgDrlgGrid.FlagOperation.OVERWRITE);
+
+    assertTrue(DrlgOutPlace.buildAct1DirtPath(level, 0));
+    D2DrlgVertexStrc path = outdoors.getPPathStarts(0);
+    assertNotNull(path);
+    assertEquals(4, path.getNPosX());
+    assertEquals(4, path.getNPosY());
+    boolean reachedStart = false;
+    int length = 0;
+    for (D2DrlgVertexStrc vertex = path; vertex != null; vertex = vertex.getPNext()) {
+      assertFalse(vertex.getNPosX() == 2 && vertex.getNPosY() == 2,
+          "native dirt path crossed a picked preset cell");
+      if (vertex.getNPosX() == 1 && vertex.getNPosY() == 1) reachedStart = true;
+      assertTrue(++length < 64, "native dirt path contains a cycle");
+    }
+    assertTrue(reachedStart, "native dirt path did not reach its endpoint");
   }
 
   private static D2DrlgCoord coord(int x, int y, int width, int height) {

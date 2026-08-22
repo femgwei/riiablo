@@ -93,11 +93,11 @@ public class DrlgOutWild {
             logGrid2Flags(level, outdoors, "transitionsCaves");
             addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_BORDER, "border");
 
-            // DRLGOUTDOORS_SpawnAct1DirtPaths and its A* helpers have not yet
-            // been ported.  Do not pretend the per-room straight-line fallback
-            // is equivalent; expose the missing topology in every seed trace.
-            D2Log.warning("DRLG_OUTWILD native dirt-path topology pending level=%d roomLinks=%d",
-                    levelId, countRoomData(outdoors.getPRoomData()));
+            // Native order: the road topology is fixed after all borders,
+            // transitions and caves, but before waypoint/shrine presets can
+            // consume the remaining free cells.
+            DrlgOutdoors.spawnAct1DirtPaths(level);
+            logGrid2Flags(level, outdoors, "dirtPaths");
         } else if (levelId == D2LevelIds.LEVEL_MOOMOOFARM) {
             addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_CLIFFS, "cliffs");
             addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_MIDDLE, "middle");
@@ -254,12 +254,6 @@ public class DrlgOutWild {
             DrlgOutdoors.spawnOutdoorLevelPresetEx(level, x, y, preset, -1, false);
             outdoors.setDwFlags(outdoors.getDwFlags() | DrlgOutdoors.OUTDOOR_OUT_CAVES);
         }
-    }
-
-    private static int countRoomData(D2DrlgOrth roomData) {
-        int count = 0;
-        for (; roomData != null && count < 1024; roomData = roomData.getPNext()) count++;
-        return count;
     }
 
     private static void logVertices(D2DrlgLevel level, D2DrlgVertexStrc head, String stage) {

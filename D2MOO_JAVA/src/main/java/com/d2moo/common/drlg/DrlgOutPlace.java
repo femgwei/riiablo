@@ -450,6 +450,187 @@ public class DrlgOutPlace {
             pNext = pVertex.getPNext();
         } while (pVertex != outdoors.getPVertex());
     }
+
+    private static final int[] DIRT_PATH_TURN_ORDER = {
+        0, 1, 2, 3,
+        0, 1, 1, 1,
+        3, 2, 1, 2,
+        0, 3, 2, 1,
+    };
+    private static final int[] DIRT_PATH_X_OFFSETS = {1, 0, -1, 0};
+    private static final int[] DIRT_PATH_Y_OFFSETS = {0, 1, 0, -1};
+    private static final int[] PATH_PRIMARY_DIRECTIONS = {
+        5, 4, 4, 4, 3,
+        6, 5, 4, 3, 2,
+        6, 6, 6, 2, 2,
+        6, 7, 0, 1, 2,
+        7, 0, 0, 0, 1,
+    };
+
+    /** D2Common.0x6FD80750 - builds the native grid-cell route for one endpoint. */
+    public static boolean buildAct1DirtPath(D2DrlgLevel level, int vertexId) {
+        if (level == null || level.getOutdoors() == null || vertexId < 0
+                || vertexId >= level.getOutdoors().getNVertices()) {
+            return false;
+        }
+
+        D2DrlgOutdoorInfoStrc outdoors = level.getOutdoors();
+        D2DrlgCoord coords = level.getLevelCoords();
+        int levelX = coords.getNPosX();
+        int levelY = coords.getNPosY();
+        int startX = (outdoors.getPVertices(6 + vertexId).getNPosX() - levelX) / 8;
+        int startY = (outdoors.getPVertices(6 + vertexId).getNPosY() - levelY) / 8;
+        int goalX = (outdoors.getPVertices(12 + vertexId).getNPosX() - levelX) / 8;
+        int goalY = (outdoors.getPVertices(12 + vertexId).getNPosY() - levelY) / 8;
+
+        int dx = Math.abs(startX - goalX);
+        int dy = Math.abs(startY - goalY);
+        if (dx + dy < 2) {
+            D2DrlgVertexStrc start = new D2DrlgVertexStrc(startX, startY, (byte) 0);
+            start.setPNext(new D2DrlgVertexStrc(goalX, goalY, (byte) 0));
+            outdoors.setPPathStarts(vertexId, start);
+            return true;
+        }
+
+        int initialHeuristic = dirtPathHeuristic(startX, startY, goalX, goalY);
+        int bound = initialHeuristic + initialHeuristic / 2;
+        int maxBound = bound + 35;
+        PathSearchState state = new PathSearchState(outdoors, goalX, goalY);
+        PathNode found = null;
+        while (bound < maxBound && found == null) {
+            state.nodes = 1;
+            PathNode root = new PathNode(startX, startY, null);
+            root.cost = 0;
+            root.direction = nativeCardinalDirection(startX, startY, goalX, goalY);
+            found = searchAct1DirtPath(state, root, bound, 0, -1);
+            bound += 5;
+        }
+        if (found == null) {
+            outdoors.setPPathStarts(vertexId, null);
+            return false;
+        }
+
+        D2DrlgVertexStrc head = null;
+        D2DrlgVertexStrc tail = null;
+        for (PathNode node = found; node != null; node = node.parent) {
+            D2DrlgVertexStrc vertex = new D2DrlgVertexStrc(node.x, node.y, (byte) 0);
+            if (head == null) head = vertex;
+            else tail.setPNext(vertex);
+            tail = vertex;
+        }
+        outdoors.setPPathStarts(vertexId, head);
+        return true;
+    }
+
+    private static PathNode searchAct1DirtPath(PathSearchState state, PathNode current,
+            int bound, int turnBase, int attemptStart) {
+        if (current.x == state.goalX && current.y == state.goalY) return current;
+        if (state.nodes >= 900) return null;
+
+        int direction = current.direction;
+        int turnIndex = turnBase;
+        for (int attempt = attemptStart; attempt < 3; attempt++) {
+            if (attempt > attemptStart) {
+                ++turnIndex;
+                direction = (direction + DIRT_PATH_TURN_ORDER[turnIndex]) & 3;
+            }
+            int testX = current.x + DIRT_PATH_X_OFFSETS[direction];
+            int testY = current.y + DIRT_PATH_Y_OFFSETS[direction];
+            boolean isGoal = testX == state.goalX && testY == state.goalY;
+            if (!isGoal && (!isDirtPathCellAvailable(state.outdoors, testX, testY)
+                    || isInPath(current, testX, testY))) {
+                continue;
+            }
+
+            int cost = current.cost + 2;
+            int heuristic = dirtPathHeuristic(testX, testY, state.goalX, state.goalY);
+            if (cost + heuristic > bound) continue;
+
+            PathNode child = new PathNode(testX, testY, current);
+            child.cost = cost;
+            int goalDirection = nativeCardinalDirection(testX, testY, state.goalX, state.goalY);
+            int childBase = 4 * ((direction - goalDirection) & 3);
+            child.direction = (goalDirection + DIRT_PATH_TURN_ORDER[childBase]) & 3;
+            state.nodes++;
+            PathNode found = searchAct1DirtPath(state, child, bound, childBase, 0);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static boolean isDirtPathCellAvailable(D2DrlgOutdoorInfoStrc outdoors, int x, int y) {
+        return x >= 0 && x < outdoors.getNGridWidth()
+                && y >= 0 && y < outdoors.getNGridHeight()
+                && !DrlgOutdoors.getPackedGrid2Info(outdoors, x, y).isBHasPickedFile();
+    }
+
+    private static boolean isInPath(PathNode node, int x, int y) {
+        for (PathNode current = node; current != null; current = current.parent) {
+            if (current.x == x && current.y == y) return true;
+        }
+        return false;
+    }
+
+    private static int dirtPathHeuristic(int x, int y, int goalX, int goalY) {
+        int dx = Math.abs(x - goalX);
+        int dy = Math.abs(y - goalY);
+        return Math.min(dx, dy) + 2 * Math.max(dx, dy);
+    }
+
+    static int nativeCardinalDirection(int x, int y, int goalX, int goalY) {
+        int dx = goalX - x;
+        int dy = goalY - y;
+        int absX = Math.abs(dx);
+        int absY = Math.abs(dy);
+        if (absX < 2 * absY) {
+            if (absY >= 2 * absX) {
+                if (dx < 0) {
+                    if (dy < -1) return PATH_PRIMARY_DIRECTIONS[5] / 2;
+                    if (dy > 1) dy = 2;
+                    return PATH_PRIMARY_DIRECTIONS[dy + 7] / 2;
+                }
+                dx &= 1;
+            }
+        } else {
+            dy = dy >= 0 ? dy & 1 : -1;
+        }
+        if (dx < -1) dx = -2;
+        else if (dx > 1) dx = 2;
+        int index;
+        if (dy < -1) index = 5 * dx + 10;
+        else {
+            if (dy > 1) dy = 2;
+            index = dy + 5 * dx + 12;
+        }
+        return PATH_PRIMARY_DIRECTIONS[index] / 2;
+    }
+
+    private static final class PathSearchState {
+        final D2DrlgOutdoorInfoStrc outdoors;
+        final int goalX;
+        final int goalY;
+        int nodes;
+
+        PathSearchState(D2DrlgOutdoorInfoStrc outdoors, int goalX, int goalY) {
+            this.outdoors = outdoors;
+            this.goalX = goalX;
+            this.goalY = goalY;
+        }
+    }
+
+    private static final class PathNode {
+        final int x;
+        final int y;
+        final PathNode parent;
+        int cost;
+        int direction;
+
+        PathNode(int x, int y, PathNode parent) {
+            this.x = x;
+            this.y = y;
+            this.parent = parent;
+        }
+    }
     
     // 边界索引查找表（对应 C++ nBorderIndices）
     private static final int[] nBorderIndices = {

@@ -13,6 +13,8 @@ import java.util.HashMap;
 
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
+import com.d2moo.common.drlg.D2DrlgLevel;
+import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
@@ -63,6 +65,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private static final int LEVEL_BURIALGROUNDS   = 22;
   /** 由 D2MOO_JAVA export 填满 TileGrid 的关卡 ID，这些关卡跳过本地 generateOutdoorRoom */
   private final IntSet levelsFilledByExport = new IntSet();
+  /** 已由原生 D2MOO 道路拓扑和 RoomEx floor grid 填充的关卡。 */
+  private final IntSet levelsWithNativeDirtPaths = new IntSet();
   /** D2MOO 实际生成房间所引用的 DT1 mask（包含 outdoor preset/LvlSub 扩展位）。 */
   private final IntMap<Integer> d2MooDt1Masks = new IntMap<>();
   private static final int LEVEL_DARKWOOD = 5;
@@ -186,6 +190,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     drlgContext = new DrlgContext(seed, diff, 0);
     drlgLevels.clear();
     levelsFilledByExport.clear();
+    levelsWithNativeDirtPaths.clear();
     d2MooDt1Masks.clear();
     lvlSubDs1PlacedCounts.clear();
     MathUtils.random.setSeed(seed);
@@ -1260,6 +1265,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         boolean acceptedForRendering = renderExportedFloors && qualityPassed;
         if (acceptedForRendering) {
           levelsFilledByExport.add(levelId);
+          D2DrlgLevel nativeLevel = DrlgDrlg.getLevel(drlg, levelId);
+          D2DrlgOutdoorInfoStrc nativeOutdoors =
+              nativeLevel != null ? nativeLevel.getOutdoors() : null;
+          if (hasNativeDirtPath(nativeOutdoors)) {
+            levelsWithNativeDirtPaths.add(levelId);
+          }
         } else {
           // A rejected export must not poison any layer of the local fallback grid.
           // Rendering remains opt-in until D2MOO produces a complete tile set
@@ -1272,10 +1283,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         Gdx.app.log(TAG, String.format(
             "D2MOO_JAVA export: levelId=%d attemptedFloor=%d callbacks=%d writtenFloor=%d "
                 + "ignoredLayer=%d missingGrid=%d outOfBounds=%d invalidTile=%d "
-                + "wall=%d shadow=%d dt1Mask=0x%X qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
+                + "clippedBoundary=%d clippedFloor=%d wall=%d shadow=%d dt1Mask=0x%X "
+                + "qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
             levelId, n, applier.getCallbackCount(), written,
             applier.getIgnoredLayerCount(), applier.getMissingGridCount(),
             applier.getOutOfBoundsCount(), applier.getInvalidTileCount(),
+            applier.getClippedBoundaryCount(), applier.getClippedBoundaryFloorCount(),
             applier.getExportedWallCount(), applier.getExportedShadowCount(), exportedDt1Mask,
             qualityPassed, renderExportedFloors, acceptedForRendering)
             + String.format(" duplicatePosition=%d duplicateShadow=%d wallOverflow=%d"
@@ -2736,6 +2749,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int voidTiles;
   }
 
+  private static boolean hasNativeDirtPath(D2DrlgOutdoorInfoStrc outdoors) {
+    if (outdoors == null || outdoors.getNVertices() <= 0) return false;
+    int count = Math.min(outdoors.getNVertices(), outdoors.getPPathStarts().length);
+    for (int i = 0; i < count; i++) {
+      if (outdoors.getPPathStarts(i) != null) return true;
+    }
+    return false;
+  }
+
   /**
    * 在所有 zone 生成完成后，在 TileGrid 上生成路径系统。
    * 
@@ -2751,6 +2773,18 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
    */
   public void generatePathsOnTileGrid(Map map, int seed) {
     if (map == null || map.zones == null) {
+      return;
+    }
+
+    // D2MOO has already converted the native endpoint topology into floor
+    // tile flags before export. Re-running the old straight-line approximation
+    // would replace those tiles and can create discontinuities at level links.
+    if (levelsWithNativeDirtPaths.contains(LEVEL_BLOODMOOR)
+        && levelsWithNativeDirtPaths.contains(LEVEL_COLDPLAINS)
+        && levelsWithNativeDirtPaths.contains(LEVEL_STONYFIELD)) {
+      map.clearPathDebugPoints();
+      Gdx.app.log(TAG,
+          "[PathDebug] native D2MOO dirt paths already exported; compatibility fallback skipped");
       return;
     }
 
