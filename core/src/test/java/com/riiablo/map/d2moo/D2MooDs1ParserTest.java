@@ -40,6 +40,23 @@ class D2MooDs1ParserTest extends RiiabloTest {
     assertNotNull(file.getPSubstGroups()[0]);
   }
 
+  @Test
+  void zeroPadsRetailTreesFinalSubstitutionGroup() {
+    D2DrlgFileStrc file = load("Act1/Outdoors/Trees.ds1");
+
+    assertEquals(36, file.getNWidth());
+    assertEquals(8, file.getNHeight());
+    assertEquals(14, file.getNSubstGroups());
+    assertNotNull(file.getPSubstGroups());
+    assertEquals(14, file.getPSubstGroups().length);
+    assertNotNull(file.getPSubstGroups()[13]);
+    assertEquals(0, file.getPSubstGroups()[13].getTBox().getNPosX());
+    assertEquals(0, file.getPSubstGroups()[13].getTBox().getNPosY());
+    assertEquals(0, file.getPSubstGroups()[13].getTBox().getNWidth());
+    assertEquals(0, file.getPSubstGroups()[13].getTBox().getNHeight());
+    assertTrue(file.getPShadowLayer() instanceof int[]);
+  }
+
   private static D2DrlgFileStrc load(String path) {
     Object[] result = new Object[1];
     D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;

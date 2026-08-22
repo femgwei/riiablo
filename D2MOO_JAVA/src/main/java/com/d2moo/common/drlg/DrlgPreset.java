@@ -1118,7 +1118,7 @@ public class DrlgPreset {
         }
 
         try {
-            parseDS1FileData(pDrlgFile, fileData);
+            parseDS1FileData(pDrlgFile, fileData, szFile);
             D2Log.debug("DRLGPRESET_ParseDS1File: Parsed DS1 file: %s"
                     + " version=%d size=%dx%d walls=%d floors=%d groups=%d",
                     szFile, D2BinaryReader.readInt32(fileData, 0),
@@ -1132,8 +1132,9 @@ public class DrlgPreset {
     }
 
     /** Direct translation of D2MOO DRLGPRESET_ParseDS1File's stream layout. */
-    private static void parseDS1FileData(D2DrlgFileStrc out, byte[] data) {
+    private static void parseDS1FileData(D2DrlgFileStrc out, byte[] data, String fileName) {
         Ds1Cursor in = new Ds1Cursor(data);
+        in.section("header");
         int version = in.readInt();
         int width = in.readInt();
         int height = in.readInt();
@@ -1148,12 +1149,14 @@ public class DrlgPreset {
         int substMethod = version >= 10 ? in.readInt() : 0;
         out.setNSubstMethod(substMethod);
         if (version >= 3) {
+            in.section("dependencies");
             int strings = in.readCount("dependency strings", 4096);
             for (int i = 0; i < strings; i++) in.skipCString();
         }
         if (version >= 9 && version < 14) in.skipInts(2);
 
         int area = Math.multiplyExact(width + 1, height + 1);
+        in.section("tile layers");
         if (version < 4) {
             out.setNWallLayers(1);
             out.setNFloorLayers(1);
@@ -1173,12 +1176,15 @@ public class DrlgPreset {
             for (int i = 0; i < floors; i++) out.setPFloorLayer(i, in.readIntLayer(area));
         }
 
+        in.section("shadow layer");
         out.setPShadowLayer(in.readIntLayer(area));
         if (substMethod > 0 && substMethod <= 2) {
+            in.section("substitution tag layer");
             out.setPSubstGroupTags(in.readIntLayer(area));
         }
 
         if (version > 1) {
+            in.section("preset units");
             int units = in.readCount("preset units", 100000);
             D2PresetUnit first = null;
             for (int i = 0; i < units; i++) {
@@ -1195,16 +1201,38 @@ public class DrlgPreset {
         }
 
         if (version >= 12 && substMethod > 0 && substMethod <= 2) {
+            in.section("substitution groups");
             if (version >= 18) in.skipInts(1);
             int groups = in.readCount("substitution groups", 100000);
+            int intsPerGroup = version >= 13 ? 5 : 4;
+            int expectedGroupBytes = Math.multiplyExact(groups,
+                    Math.multiplyExact(intsPerGroup, Integer.BYTES));
+            int missingGroupBytes = expectedGroupBytes - in.remaining();
+            if (missingGroupBytes > 0) {
+                int maximumNativePadding = (intsPerGroup - 1) * Integer.BYTES;
+                if (missingGroupBytes > maximumNativePadding || in.remaining() % Integer.BYTES != 0) {
+                    throw new IllegalArgumentException("truncated substitution groups"
+                            + " at offset " + in.offset()
+                            + " expected=" + expectedGroupBytes
+                            + " remaining=" + in.remaining());
+                }
+                // Retail Trees.ds1 declares one final group whose last three
+                // ints are absent. D2's archive allocator exposes zero-filled
+                // tail padding, so native D2Common parses a zero-extended
+                // final group. Limit compatibility to less than one group.
+                D2Log.warning("DRLGPRESET_ParseDS1File: zero-padding final substitution group"
+                                + " file=%s version=%d groups=%d missingBytes=%d",
+                        fileName, version, groups, missingGroupBytes);
+            }
+            in.section("substitution group entries count=" + groups);
             D2DrlgSubstGroupStrc[] values = new D2DrlgSubstGroupStrc[groups];
             for (int i = 0; i < groups; i++) {
                 D2DrlgSubstGroupStrc group = new D2DrlgSubstGroupStrc();
-                group.getTBox().setNPosX(in.readInt());
-                group.getTBox().setNPosY(in.readInt());
-                group.getTBox().setNWidth(in.readInt());
-                group.getTBox().setNHeight(in.readInt());
-                if (version >= 13) group.setField_14(in.readInt());
+                group.getTBox().setNPosX(in.readIntOrZero());
+                group.getTBox().setNPosY(in.readIntOrZero());
+                group.getTBox().setNWidth(in.readIntOrZero());
+                group.getTBox().setNHeight(in.readIntOrZero());
+                if (version >= 13) group.setField_14(in.readIntOrZero());
                 values[i] = group;
             }
             out.setNSubstGroups(groups);
@@ -1215,14 +1243,25 @@ public class DrlgPreset {
     private static final class Ds1Cursor {
         private final byte[] data;
         private int offset;
+        private String section = "unknown";
+        private int sectionOffset;
 
         Ds1Cursor(byte[] data) { this.data = data; }
+
+        void section(String section) {
+            this.section = section;
+            this.sectionOffset = offset;
+        }
 
         int readInt() {
             require(4);
             int value = D2BinaryReader.readInt32(data, offset);
             offset += 4;
             return value;
+        }
+
+        int readIntOrZero() {
+            return remaining() >= Integer.BYTES ? readInt() : 0;
         }
 
         int readCount(String label, int maximum) {
@@ -1256,10 +1295,19 @@ public class DrlgPreset {
             }
         }
 
+        int remaining() {
+            return data.length - offset;
+        }
+
+        int offset() {
+            return offset;
+        }
+
         void require(int length) {
             if (length < 0 || offset > data.length - length) {
                 throw new IllegalArgumentException("unexpected end at offset " + offset
-                        + " need=" + length + " remaining=" + (data.length - offset));
+                        + " need=" + length + " remaining=" + (data.length - offset)
+                        + " section=" + section + " sectionOffset=" + sectionOffset);
             }
         }
     }
