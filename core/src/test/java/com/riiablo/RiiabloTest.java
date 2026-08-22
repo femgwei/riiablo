@@ -21,7 +21,7 @@ public class RiiabloTest {
   }
 
   @BeforeAll
-  public static void setup() throws InstallationFinder.DefaultNotFound {
+  public static void setup() throws InstallationFinder.DefaultNotFound, InstallationFinder.ArgNotFound {
     Gdx.app = new HeadlessApplication(new ApplicationAdapter() {});
     final InstallationFinder finder = InstallationFinder.getInstance();
     Riiablo.home = finder.defaultHomeDir();
@@ -30,7 +30,16 @@ public class RiiabloTest {
     Riiablo.files = new Files();
     Riiablo.logs = new GdxLoggerManager(LogManager.getRegistry());
     Riiablo.logs.getRootLogger().addAppender(new OutputStreamAppender(System.out));
-    testHome = finder.defaultTestDir();
+    String configuredTestHome = System.getProperty("d2test");
+    if (configuredTestHome == null || configuredTestHome.isEmpty()) {
+      configuredTestHome = System.getenv("D2_TEST");
+    }
+    if (configuredTestHome == null || configuredTestHome.isEmpty()) {
+      // A full D2 installation is sufficient for the DRLG diagnostics and is
+      // also the path used by DesktopLauncher when no test fixture is set.
+      configuredTestHome = System.getenv("D2_HOME");
+    }
+    testHome = finder.defaultTestDir("d2test", configuredTestHome);
   }
 
   @AfterAll

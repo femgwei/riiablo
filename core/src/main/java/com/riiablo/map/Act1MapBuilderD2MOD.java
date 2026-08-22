@@ -1214,13 +1214,18 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       levelsFilledByExport.clear();
       int[] outdoorLevelIds = { LEVEL_BLOODMOOR, LEVEL_COLDPLAINS, LEVEL_STONYFIELD };
       for (int levelId : outdoorLevelIds) {
+        applier.resetLastExportedFloorCount();
         int n = DrlgExport.exportLevelTiles(drlg, levelId, applier);
-        if (n > 0) {
+        int written = applier.getLastExportedFloorCount();
+        if (written > 0) {
           levelsFilledByExport.add(levelId);
-          if (DEBUG_BUILD) {
-            Gdx.app.debug(TAG, String.format("D2MOO_JAVA export: levelId=%d exported %d floor tiles", levelId, n));
-          }
         }
+        Gdx.app.log(TAG, String.format(
+            "D2MOO_JAVA export: levelId=%d attemptedFloor=%d callbacks=%d writtenFloor=%d "
+                + "ignoredLayer=%d missingGrid=%d outOfBounds=%d invalidTile=%d",
+            levelId, n, applier.getCallbackCount(), written,
+            applier.getIgnoredLayerCount(), applier.getMissingGridCount(),
+            applier.getOutOfBoundsCount(), applier.getInvalidTileCount()));
       }
       DrlgDrlg.freeDrlg(drlg);
       DataTbls.setLevelDefBinCache(null);

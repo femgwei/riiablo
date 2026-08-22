@@ -3,14 +3,22 @@ package com.riiablo.map.d2moo;
 import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.datatbls.D2LevelDefBin;
 import com.d2moo.common.drlg.D2DrlgAct;
+import com.d2moo.common.drlg.D2C_Acts;
 import com.d2moo.common.drlg.D2DrlgCoord;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgPresetInfoStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2LevelIds;
+import com.d2moo.common.drlg.D2DrlgTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
+import com.d2moo.common.util.D2Log;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * 使用 D2MOO_JAVA 的 createLevelConnections 生成 Act1 荒野布局，
@@ -72,13 +80,14 @@ public final class Act1D2MOOLayoutBridge {
             DataTbls.setLevelDefBinCache(cache);
 
             D2DrlgAct act = new D2DrlgAct();
-            act.setAct((byte) 1);
+            // D2C_Acts is 0-based: Act I is 0.
+            act.setAct(D2C_Acts.ACT_I);
             act.setTownId(D2LevelIds.LEVEL_ROGUEENCAMPMENT);
             act.setPMemPool(new Object());
 
             D2DrlgStrc drlg = DrlgDrlg.allocDrlg(
                 act,
-                (byte) 1,
+                D2C_Acts.ACT_I,
                 null,
                 seed,
                 D2LevelIds.LEVEL_ROGUEENCAMPMENT,
@@ -91,6 +100,25 @@ public final class Act1D2MOOLayoutBridge {
             if (drlg == null) {
                 DataTbls.setLevelDefBinCache(null);
                 return null;
+            }
+
+            // allocDrlg initializes the town only. Outdoor levels must be
+            // explicitly initialized before their room/tile chains can be
+            // exported.
+            for (int levelId : D2MOO_ACT1_LEVEL_IDS) {
+                if (levelId == D2LevelIds.LEVEL_ROGUEENCAMPMENT) continue;
+                D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+                if (level == null) {
+                    D2Log.error("ACT1_D2MOO_INIT missing level=%d seed=%d diff=%d", levelId, seed, diff);
+                    DrlgDrlg.freeDrlg(drlg);
+                    DataTbls.setLevelDefBinCache(null);
+                    return null;
+                }
+                D2Log.debug("ACT1_D2MOO_INIT level=%d type=%d beforeRooms=%d", levelId,
+                    level.getDrlgType(), level.getRooms());
+                DrlgDrlg.initLevel(level);
+                D2Log.debug("ACT1_D2MOO_INIT level=%d afterRooms=%d firstRoom=%s", levelId,
+                    level.getRooms(), level.getFirstRoomEx() != null ? "yes" : "no");
             }
 
             Act1LayoutResult result = new Act1LayoutResult();
@@ -119,6 +147,10 @@ public final class Act1D2MOOLayoutBridge {
                 result.coords[i][2] = c.getNWidth();
                 result.coords[i][3] = c.getNHeight();
 
+                D2Log.debug("ACT1_D2MOO_LAYOUT level=%d type=%d coord=(%d,%d %dx%d) rooms=%d",
+                    levelId, level.getDrlgType(), c.getNPosX(), c.getNPosY(),
+                    c.getNWidth(), c.getNHeight(), level.getRooms());
+
                 if (levelId == D2LevelIds.LEVEL_ROGUEENCAMPMENT) {
                     D2DrlgPresetInfoStrc preset = level.getPreset();
                     if (preset != null) {
@@ -129,6 +161,9 @@ public final class Act1D2MOOLayoutBridge {
 
             return new LayoutAndDrlg(result, drlg);
         } catch (Throwable t) {
+            D2Log.error("ACT1_D2MOO_LAYOUT failed seed=%d diff=%d burial=%d: %s",
+                seed, diff, burialGroundsId, t.toString());
+            if (Boolean.getBoolean("riiablo.drlg.stacktrace")) t.printStackTrace();
             DataTbls.setLevelDefBinCache(null);
             return null;
         }
@@ -154,25 +189,76 @@ public final class Act1D2MOOLayoutBridge {
      * 从 Riiablo.files.Levels 构建 D2MOO 所需的 LevelDef 缓存。
      */
     private static D2LevelDefBin[] buildLevelDefCache(int diff, int burialGroundsId) {
-        int[] ids = { 1, 2, 3, 4, 17 };
-        D2LevelDefBin[] cache = new D2LevelDefBin[ids.length];
-        for (int i = 0; i < ids.length; i++) {
-            int rid = ids[i] == 17 ? burialGroundsId : ids[i];
-            Levels.Entry entry = Riiablo.files.Levels.get(rid);
-            if (entry == null) return null;
+        List<D2LevelDefBin> records = new ArrayList<>();
+        Set<Integer> seenIds = new HashSet<>();
+        for (Levels.Entry entry : Riiablo.files.Levels) {
+            if (entry == null) continue;
+            final int sourceId = entry.Id;
+            // Riiablo and D2MOO use the same ids for Act 1 in the current
+            // data set; keep the explicit burial remap for forks that do not.
+            final int d2Id = sourceId == burialGroundsId
+                ? D2LevelIds.LEVEL_BURIALGROUNDS : sourceId;
+            if (!seenIds.add(d2Id)) continue;
+            if (entry.SizeX == null || entry.SizeY == null
+                || entry.SizeX.length < 3 || entry.SizeY.length < 3) {
+                D2Log.warning("ACT1_D2MOO_LEVELDEF skip id=%d: missing SizeX/SizeY", sourceId);
+                continue;
+            }
+            final int drlgType;
+            try {
+                drlgType = toD2MooDrlgType(entry.DrlgType);
+            } catch (IllegalArgumentException ignored) {
+                D2Log.warning("ACT1_D2MOO_LEVELDEF skip id=%d: unsupported DrlgType=%d",
+                    sourceId, entry.DrlgType);
+                continue;
+            }
             D2LevelDefBin bin = new D2LevelDefBin();
-            bin.setDwLevelId(ids[i]);
-            bin.setDwDrlgType(entry.DrlgType);
+            bin.setDwLevelId(d2Id);
+            bin.setDwDrlgType(drlgType);
             bin.setDwLevelType(entry.LevelType);
+            bin.setDwQuestFlag(entry.QuestFlag);
+            bin.setDwQuestFlagEx(entry.QuestFlagEx);
+            bin.setDwLayer(entry.Layer);
             bin.setDwOffsetX(entry.OffsetX);
             bin.setDwOffsetY(entry.OffsetY);
+            bin.setDwDepend(entry.Depend);
+            bin.setDwSubType(entry.SubType);
+            bin.setDwSubTheme(entry.SubTheme);
+            bin.setDwSubWaypoint(entry.SubWaypoint);
+            bin.setDwSubShrine(entry.SubShrine);
+            bin.setDwVis(entry.Vis != null ? entry.Vis.clone() : new int[8]);
+            bin.setDwWarp(entry.Warp != null ? entry.Warp.clone() : new int[8]);
+            bin.setNIntensity((byte) entry.Intensity);
+            bin.setNRed((byte) entry.Red);
+            bin.setNGreen((byte) entry.Green);
+            bin.setNBlue((byte) entry.Blue);
+            bin.setDwPortal(entry.Portal ? 1 : 0);
+            bin.setDwPosition(entry.Position ? 1 : 0);
+            bin.setDwSaveMonsters(entry.SaveMonsters ? 1 : 0);
+            bin.setDwLOSDraw(entry.LOSDraw ? 1 : 0);
             int[] sx = new int[] { entry.SizeX[0], entry.SizeX[1], entry.SizeX[2] };
             int[] sy = new int[] { entry.SizeY[0], entry.SizeY[1], entry.SizeY[2] };
             bin.setDwSizeX(sx);
             bin.setDwSizeY(sy);
-            cache[i] = bin;
+            records.add(bin);
+            D2Log.debug("ACT1_D2MOO_LEVELDEF id=%d sourceId=%d type=%d levelType=%d size=(%d,%d)/(%d,%d)/(%d,%d) depend=%d subtype=%d subtheme=%d",
+                d2Id, sourceId, bin.getDwDrlgType(), bin.getDwLevelType(),
+                sx[0], sy[0], sx[1], sy[1], sx[2], sy[2],
+                bin.getDwDepend(), bin.getDwSubType(), bin.getDwSubTheme());
         }
-        return cache;
+        D2Log.debug("ACT1_D2MOO_LEVELDEF cacheRecords=%d burialSourceId=%d", records.size(), burialGroundsId);
+        return records.toArray(new D2LevelDefBin[0]);
+    }
+
+    /** Convert the riiablo Levels.txt value to the D2MOO 1-based contract. */
+    private static int toD2MooDrlgType(int value) {
+        switch (value) {
+            case 1: return D2DrlgTypes.DRLGTYPE_MAZE;
+            case 2: return D2DrlgTypes.DRLGTYPE_PRESET;
+            case 3: return D2DrlgTypes.DRLGTYPE_OUTDOOR;
+            default:
+                throw new IllegalArgumentException("Unsupported Levels.DrlgType=" + value);
+        }
     }
 
     private Act1D2MOOLayoutBridge() {}
