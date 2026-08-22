@@ -691,19 +691,32 @@ public class DrlgTileSub {
             return;
         }
         
-        D2LvlSubTxt pLvlSubTxtRecord = DataTbls.getLvlSubTxtRecord(pOutdoorLevel.getNSubWaypoint_Shrine());
-        if (pLvlSubTxtRecord == null) {
-            return;
-        }
-        
+        int lvlSubIndex = pOutdoorLevel.getNSubWaypoint_Shrine();
         int nThemeFlag = pOutdoorLevel.getNSubThemePicked();
         
         while (nThemeFlag != 0) {
+            // Native code advances D2LvlSubTxt* once for every mask bit,
+            // including zero bits. Reusing the base record loses the wall and
+            // shadow variants stored in the following rows.
+            D2LvlSubTxt pLvlSubTxtRecord = DataTbls.getLvlSubTxtRecord(lvlSubIndex);
+            if (pLvlSubTxtRecord == null) return;
             if ((nThemeFlag & 1) != 0) {
                 // 初始化 Drlg 文件
                 D2DrlgStrc drlg = pOutdoorLevel.getPDrlgRoom().getLevel().getDrlg();
                 Object hArchive = drlg != null ? drlg.getArchive() : null;
                 initializeDrlgFile(hArchive, pLvlSubTxtRecord);
+                D2Log.debug("DRLG_TILESUB level=%d room=(%d,%d) record=%d file=%s"
+                                + " checkAll=%d method=%d groups=%d sourceWalls=%d sourceShadows=%d",
+                        pOutdoorLevel.getPDrlgRoom().getLevel().getLevelId(),
+                        pOutdoorLevel.getPDrlgRoom().getNTileXPos(),
+                        pOutdoorLevel.getPDrlgRoom().getNTileYPos(), lvlSubIndex,
+                        pLvlSubTxtRecord.getSzFile(), pLvlSubTxtRecord.getDwCheckAll(),
+                        pLvlSubTxtRecord.getPDrlgFile() != null
+                                ? pLvlSubTxtRecord.getPDrlgFile().getNSubstMethod() : -1,
+                        pLvlSubTxtRecord.getPDrlgFile() != null
+                                ? pLvlSubTxtRecord.getPDrlgFile().getNSubstGroups() : 0,
+                        countGridFlag(pLvlSubTxtRecord.getPWallGrid(0), 0x00000001),
+                        countGridFlag(pLvlSubTxtRecord.getPShadowGrid(), 0x08000000));
                 
                 if (pLvlSubTxtRecord.getDwCheckAll() != 0) {
                     // 检查所有模式：遍历所有替换组
@@ -773,10 +786,15 @@ public class DrlgTileSub {
             }
             
             nThemeFlag >>= 1;
-            // 注意：C++ 代码中有 ++pLvlSubTxtRecord，这里需要获取下一个记录
-            // 由于 Java 中无法直接递增指针，需要从 DataTbls 获取下一个记录
-            // 这里暂时跳过，因为通常只有一个主题标志
+            lvlSubIndex++;
         }
+    }
+
+    private static int countGridFlag(D2DrlgGridStrc grid, int flag) {
+        if (grid == null || grid.getPCellsFlags() == null) return 0;
+        int count = 0;
+        for (int value : grid.getPCellsFlags()) if ((value & flag) != 0) count++;
+        return count;
     }
     
     /**

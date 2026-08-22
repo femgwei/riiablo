@@ -7,6 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.d2moo.common.drlg.D2DrlgLevel;
+import com.d2moo.common.drlg.D2DrlgGridStrc;
+import com.d2moo.common.drlg.D2DrlgOutdoorRoomStrc;
+import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.DrlgDrlg;
@@ -89,6 +92,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       applier.putGrid(levelId, new TileGrid(width, height));
       applier.resetLastExportedFloorCount();
       int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+      SourceGridStats source = sourceGridStats(level);
       assertTrue(attempted > 0, "D2MOO exported no floor tiles for level " + levelId);
       assertEquals(attempted, applier.getLastExportedFloorCount(),
           "not every exported floor tile was written for level " + levelId);
@@ -128,7 +132,36 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           + " zeroTileId=" + applier.getZeroTileIdCount()
           + " uniqueFloorIds=" + applier.getUniqueFloorIdCount()
           + " uniqueWallIds=" + applier.getUniqueWallIdCount()
-          + " uniqueShadowIds=" + applier.getUniqueShadowIdCount());
+          + " uniqueShadowIds=" + applier.getUniqueShadowIdCount()
+          + " sourceWallFlags=" + source.wallFlags
+          + " sourceShadowFlags=" + source.shadowFlags
+          + " sourceNonzeroWallCells=" + source.nonzeroWallCells);
     }
+  }
+
+  private static SourceGridStats sourceGridStats(D2DrlgLevel level) {
+    SourceGridStats stats = new SourceGridStats();
+    for (D2DrlgRoom room = level.getFirstRoomEx(); room != null; room = room.getDrlgRoomNext()) {
+      if (!(room.getMazeOrOutdoor() instanceof D2DrlgOutdoorRoomStrc)) continue;
+      D2DrlgOutdoorRoomStrc outdoor = (D2DrlgOutdoorRoomStrc) room.getMazeOrOutdoor();
+      collectGridStats(outdoor.getPWallGrid(), stats, true);
+      collectGridStats(outdoor.getPFloorGrid(), stats, false);
+    }
+    return stats;
+  }
+
+  private static void collectGridStats(D2DrlgGridStrc grid, SourceGridStats stats, boolean wallGrid) {
+    if (grid == null || grid.getPCellsFlags() == null) return;
+    for (int value : grid.getPCellsFlags()) {
+      if (wallGrid && value != 0) stats.nonzeroWallCells++;
+      if ((value & 0x00000001) != 0) stats.wallFlags++;
+      if ((value & 0x08000000) != 0) stats.shadowFlags++;
+    }
+  }
+
+  private static final class SourceGridStats {
+    int wallFlags;
+    int shadowFlags;
+    int nonzeroWallCells;
   }
 }
