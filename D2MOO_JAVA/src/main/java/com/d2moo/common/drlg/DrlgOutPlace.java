@@ -753,7 +753,11 @@ public class DrlgOutPlace {
             int nLevelPrestId = 0;
             switch (nLevelType) {
                 case LVLTYPE_ACT1_WILDERNESS:
-                    nLevelPrestId = sub_6FD80BE0(nCurrentDiffX, nCurrentDiffY, (pDrlgVertex.getNDirection() == 0) ? 0 : 1);
+                    // Native passes the BOOL expression (nDirection == 0): true is 1.
+                    // Reversing these values selects cliff presets for ordinary borders;
+                    // level-link marker file 3 is then outside those presets' file count.
+                    nLevelPrestId = sub_6FD80BE0(nCurrentDiffX, nCurrentDiffY,
+                            (pDrlgVertex.getNDirection() == 0) ? 1 : 0);
                     break;
                 case LVLTYPE_ACT2_DESERT:
                     nLevelPrestId = sub_6FD80BE0(nCurrentDiffX, nCurrentDiffY, 2);

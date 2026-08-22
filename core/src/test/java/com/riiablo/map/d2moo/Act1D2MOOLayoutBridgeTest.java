@@ -13,6 +13,7 @@ import com.d2moo.common.drlg.D2DrlgPresetRoomStrc;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2LevelIds;
+import com.d2moo.common.drlg.D2PresetUnit;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
 import com.riiablo.Riiablo;
@@ -40,6 +41,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     String firstSummary = summarize(first.drlg);
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
     exportAndReport(first.drlg);
+    assertPresetUnitListsAreAcyclic(first.drlg);
     DrlgDrlg.freeDrlg(first.drlg);
     Act1D2MOOLayoutBridge.releaseDataTables();
 
@@ -62,12 +64,49 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
 
   /** Guards the LvlSub wall-grid regression that blanked most outdoor cells. */
   private static void assertFixedSeedOutdoorCoverage(D2DrlgStrc drlg) {
-    assertEquals(98, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD).getRooms(),
-        "fixed seed should retain only two intentional Stony Field border voids");
-    assertEquals(100, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS).getRooms(),
-        "fixed seed Cold Plains should be continuous");
-    assertEquals(84, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR).getRooms(),
-        "fixed seed Blood Moor should cover all 7x12 outdoor cells");
+    assertEquals(100, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD).getRooms(),
+        "fixed seed Stony Field should cover all 10x10 outdoor cells");
+    assertEquals(97, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS).getRooms(),
+        "fixed seed Cold Plains should retain three native LvlSub border voids");
+    assertEquals(81, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR).getRooms(),
+        "fixed seed Blood Moor should retain three native LvlSub border voids");
+    assertPresetFileSelectionsResolveToDs1(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD));
+    assertPresetFileSelectionsResolveToDs1(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS));
+    assertPresetFileSelectionsResolveToDs1(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
+    assertPresetUnitListsAreAcyclic(drlg);
+  }
+
+  private static void assertPresetUnitListsAreAcyclic(D2DrlgStrc drlg) {
+    for (D2DrlgLevel level = drlg.getLevel(); level != null; level = level.getPNextLevel()) {
+      for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+          room = room.getDrlgRoomNext()) {
+        java.util.IdentityHashMap<D2PresetUnit, Boolean> seen = new java.util.IdentityHashMap<>();
+        for (D2PresetUnit unit = room.getPresetUnits(); unit != null; unit = unit.getPNext()) {
+          assertTrue(seen.put(unit, Boolean.TRUE) == null,
+              "cyclic preset-unit list in level " + level.getLevelId() + " room ("
+                  + room.getNTileXPos() + ',' + room.getNTileYPos() + ')');
+        }
+      }
+    }
+  }
+
+  /** Level links may use a non-random File4, but must never select a "0" placeholder. */
+  private static void assertPresetFileSelectionsResolveToDs1(D2DrlgLevel level) {
+    for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+        room = room.getDrlgRoomNext()) {
+      if (!(room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) continue;
+      D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) room.getMazeOrOutdoor();
+      assertNotNull(preset.getPMap(), "preset room has no map");
+      assertNotNull(preset.getPMap().getPLvlPrestTxtRecord(), "preset map has no LvlPrest");
+      int pickedFile = preset.getPMap().getNPickedFile();
+      String path = preset.getPMap().getPLvlPrestTxtRecord().getSzFile(pickedFile);
+      assertTrue(path != null && !path.isEmpty() && !"0".equals(path),
+          "level " + level.getLevelId() + " preset " + preset.getNLevelPrest()
+              + " selected unresolved file " + pickedFile + " path=" + path);
+    }
   }
 
   private static String summarize(D2DrlgStrc drlg) {
@@ -109,6 +148,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
       SourceGridStats source = sourceGridStats(level);
       assertTrue(attempted > 0, "D2MOO exported no floor tiles for level " + levelId);
+      assertEquals(expectedFixedSeedFloors(levelId), attempted,
+          "fixed-seed floor coverage changed for level " + levelId);
       assertEquals(attempted, applier.getLastExportedFloorCount(),
           "not every exported floor tile was written for level " + levelId);
       assertEquals(0, applier.getMissingGridCount(), "missing target grid for level " + levelId);
@@ -157,6 +198,15 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           + " sourceNonzeroWallCells=" + source.nonzeroWallCells
           + " outdoorRooms=" + source.outdoorRooms
           + " presetRooms=" + source.presetRooms);
+    }
+  }
+
+  private static int expectedFixedSeedFloors(int levelId) {
+    switch (levelId) {
+      case D2LevelIds.LEVEL_STONYFIELD: return 6400;
+      case D2LevelIds.LEVEL_COLDPLAINS: return 6208;
+      case D2LevelIds.LEVEL_BLOODMOOR: return 5184;
+      default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
   }
 

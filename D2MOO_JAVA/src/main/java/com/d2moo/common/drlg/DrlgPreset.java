@@ -82,7 +82,11 @@ public class DrlgPreset {
                 
                 // 验证怪物ID是否有效（使用 Monsters 模块验证）
                 if (com.d2moo.common.monsters.Monsters.validateMonsterId(nClassId)) {
-                    allocateAndAddPresetUnitToMap(drlgRoom, memPool, D2UnitTypes.UNIT_MONSTER, 
+                    // Native deliberately passes NULL here. The unit belongs to
+                    // pMazeMap until InitPresetRoomGrids transfers it to a room.
+                    // Passing drlgRoom links the same node into both lists and
+                    // creates a self-cycle during that transfer.
+                    allocateAndAddPresetUnitToMap(null, memPool, D2UnitTypes.UNIT_MONSTER,
                         nClassId, D2MonModes.MONMODE_NEUTRAL, nX, nY, mazeMap, false);
                 } else {
                     D2Log.warning("DRLGPRESET_SpawnHardcodedPresetUnits: Invalid monster ID: " + nClassId + " (MONSTER_NAVI)");
