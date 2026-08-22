@@ -99,6 +99,17 @@ class Act1MapBuilderD2MooLayersTest {
     assertEquals(0x55, flags[49] & 0xFF);
   }
 
+  @Test
+  void convertsGeneratorOffsetsAsZoneLocalTileCoordinates() {
+    assertEquals(0, Act1MapBuilderD2MOD.toLocalGridCoordinate(0, 8));
+    assertEquals(2, Act1MapBuilderD2MOD.toLocalGridCoordinate(16, 8));
+    assertEquals(-1, Act1MapBuilderD2MOD.toLocalGridCoordinate(-1, 8));
+
+    assertEquals(67, Act1MapBuilderD2MOD.toLocalTileIndex(3, 2, 32, 24));
+    assertEquals(-1, Act1MapBuilderD2MOD.toLocalTileIndex(-1, 2, 32, 24));
+    assertEquals(-1, Act1MapBuilderD2MOD.toLocalTileIndex(32, 2, 32, 24));
+  }
+
   private static DT1.Tile tile(int orientation, int mainIndex, int subIndex) throws IOException {
     byte[] bytes = new byte[DT1.Tile.SIZE];
     ByteBuffer buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);

@@ -499,8 +499,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           final int gridSize = OutdoorGrid.GRID_SIZE_TILES;
           
           // 计算当前 grid 在 zone 中的网格坐标
-          int gridX = (tx - zone.tx) / gridSize;
-          int gridY = (ty - zone.ty) / gridSize;
+          int gridX = toLocalGridCoordinate(tx, gridSize);
+          int gridY = toLocalGridCoordinate(ty, gridSize);
           
           // 获取 Dt1Mask（根据 Level 的 Act 和 LevelType）
           int dt1Mask = OutdoorGrid.getDt1MaskForLevel(zone.level);
@@ -556,16 +556,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               int currentTx = startTx + x;
               int currentTy = startTy + y;
               
-              // 检查是否在 zone 范围内
-              if (currentTx < zone.tx || currentTx >= zone.tx + zone.tilesX ||
-                  currentTy < zone.ty || currentTy >= zone.ty + zone.tilesY) {
-                continue;
-              }
-              
-              int tileIndex = Zone.index(zone.tilesX, currentTx - zone.tx, currentTy - zone.ty);
+              // Zone.generate passes grid offsets in zone-local tile units.
+              // zone.tx/ty are world tile origins and must not participate in
+              // array indexing here, especially for non-origin outdoor zones.
+              int tileIndex = toLocalTileIndex(
+                  currentTx, currentTy, zone.tilesX, zone.tilesY);
+              if (tileIndex < 0) continue;
 
-              int tileX = currentTx - zone.tx;
-              int tileY = currentTy - zone.ty;
+              int tileX = currentTx;
+              int tileY = currentTy;
               int exportedId = -1;
               DT1.Tile[] floorLayer = zone.getLayer(Map.FLOOR_OFFSET);
 
@@ -615,8 +614,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                       ? monster.MaxGrp
                       : MathUtils.random(monster.MinGrp, monster.MaxGrp);
                   for (int j = 0; j < count; j++) {
-                    float px = zone.getGlobalX((currentTx - zone.tx) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-                    float py = zone.getGlobalY((currentTy - zone.ty) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+                    float px = zone.getGlobalX(currentTx * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+                    float py = zone.getGlobalY(currentTy * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
                     zone.map.factory.createMonster(monster, px, py);
                   }
                 }
@@ -1430,7 +1429,18 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       Gdx.app.debug(TAG, "NOTE: addSecondaryBorder will be called after Map.generate() completes");
     }
   }
-  
+
+  static int toLocalGridCoordinate(int localTileCoordinate, int gridSize) {
+    if (localTileCoordinate < 0 || gridSize <= 0) return -1;
+    return localTileCoordinate / gridSize;
+  }
+
+  static int toLocalTileIndex(int localTileX, int localTileY, int zoneTilesX, int zoneTilesY) {
+    if (localTileX < 0 || localTileX >= zoneTilesX
+        || localTileY < 0 || localTileY >= zoneTilesY) return -1;
+    return Zone.index(zoneTilesX, localTileX, localTileY);
+  }
+
   /**
    * 在所有 zone 生成完成后统一调用 addSecondaryBorder
    * 这个方法应该在 Map.generate() 完成后调用，确保所有 zone.generate() 都已经完成
