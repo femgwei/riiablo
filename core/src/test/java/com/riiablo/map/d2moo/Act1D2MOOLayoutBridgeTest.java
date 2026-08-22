@@ -87,6 +87,12 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       applier.putGrid(levelId, new TileGrid(width, height));
       applier.resetLastExportedFloorCount();
       int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+      assertTrue(attempted > 0, "D2MOO exported no floor tiles for level " + levelId);
+      assertEquals(attempted, applier.getLastExportedFloorCount(),
+          "not every exported floor tile was written for level " + levelId);
+      assertEquals(0, applier.getMissingGridCount(), "missing target grid for level " + levelId);
+      assertEquals(0, applier.getOutOfBoundsCount(), "out-of-bounds tile for level " + levelId);
+      assertEquals(0, applier.getInvalidTileCount(), "invalid tile id for level " + levelId);
       System.out.println("[ACT1-DIAG] level=" + levelId
           + " size=" + width + 'x' + height
           + " attemptedFloor=" + attempted

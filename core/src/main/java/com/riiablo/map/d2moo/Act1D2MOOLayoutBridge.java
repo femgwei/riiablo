@@ -2,6 +2,7 @@ package com.riiablo.map.d2moo;
 
 import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.datatbls.D2LevelDefBin;
+import com.d2moo.common.datatbls.D2LevelTypesTxt;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2C_Acts;
 import com.d2moo.common.drlg.D2DrlgCoord;
@@ -12,8 +13,11 @@ import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2DrlgTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.util.D2Log;
+import com.d2moo.common.util.D2FileReader;
+import com.d2moo.common.util.D2MemoryPool;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.codec.excel.LvlTypes;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -78,17 +82,24 @@ public final class Act1D2MOOLayoutBridge {
             D2LevelDefBin[] cache = buildLevelDefCache(diff, burialGroundsId);
             if (cache == null) return null;
             DataTbls.setLevelDefBinCache(cache);
+            DataTbls.setLevelTypesTxtCache(buildLevelTypesCache());
 
             D2DrlgAct act = new D2DrlgAct();
             // D2C_Acts is 0-based: Act I is 0.
             act.setAct(D2C_Acts.ACT_I);
             act.setTownId(D2LevelIds.LEVEL_ROGUEENCAMPMENT);
-            act.setPMemPool(new Object());
+            act.setPMemPool(new D2MemoryPool());
+
+            D2FileReader.ArchiveReader archive = fileName -> {
+                if (Riiablo.mpqs == null) return null;
+                com.badlogic.gdx.files.FileHandle handle = Riiablo.mpqs.resolve(fileName);
+                return handle == null ? null : handle.readBytes();
+            };
 
             D2DrlgStrc drlg = DrlgDrlg.allocDrlg(
                 act,
                 D2C_Acts.ACT_I,
-                null,
+                archive,
                 seed,
                 D2LevelIds.LEVEL_ROGUEENCAMPMENT,
                 0,
@@ -248,6 +259,31 @@ public final class Act1D2MOOLayoutBridge {
         }
         D2Log.debug("ACT1_D2MOO_LEVELDEF cacheRecords=%d burialSourceId=%d", records.size(), burialGroundsId);
         return records.toArray(new D2LevelDefBin[0]);
+    }
+
+    private static D2LevelTypesTxt[] buildLevelTypesCache() {
+        java.util.ArrayList<D2LevelTypesTxt> cache = new java.util.ArrayList<>();
+        for (LvlTypes.Entry source : Riiablo.files.LvlTypes) {
+            if (source == null) continue;
+            D2LevelTypesTxt target = new D2LevelTypesTxt();
+            target.setDwLevelType(source.Id);
+            target.setDwAct(source.Act);
+            target.setDwExpansion(source.Expansion ? 1 : 0);
+            target.setDwBeta(source.Beta ? 1 : 0);
+            if (source.File != null) {
+                for (int i = 0; i < source.File.length && i < 32; i++) {
+                    String path = source.File[i];
+                    if (path == null || path.isEmpty()) continue;
+                    if (!path.regionMatches(true, 0, "DATA\\", 0, 5)) {
+                        path = "DATA\\GLOBAL\\Tiles\\" + path;
+                    }
+                    target.setSzFile(i, path);
+                }
+            }
+            cache.add(target);
+        }
+        D2Log.debug("ACT1_D2MOO_LVLTYPES records=%d", cache.size());
+        return cache.toArray(new D2LevelTypesTxt[0]);
     }
 
     /** Convert the riiablo Levels.txt value to the D2MOO 1-based contract. */
