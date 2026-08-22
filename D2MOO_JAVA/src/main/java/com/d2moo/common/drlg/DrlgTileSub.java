@@ -691,15 +691,15 @@ public class DrlgTileSub {
             return;
         }
         
-        int lvlSubIndex = pOutdoorLevel.getNSubWaypoint_Shrine();
+        int lvlSubType = pOutdoorLevel.getNSubWaypoint_Shrine();
+        D2LvlSubTxt pLvlSubTxtRecord = DataTbls.getLvlSubTxtRecord(lvlSubType);
         int nThemeFlag = pOutdoorLevel.getNSubThemePicked();
         
-        while (nThemeFlag != 0) {
+        int recordOffset = 0;
+        while (nThemeFlag != 0 && pLvlSubTxtRecord != null) {
             // Native code advances D2LvlSubTxt* once for every mask bit,
-            // including zero bits. Reusing the base record loses the wall and
-            // shadow variants stored in the following rows.
-            D2LvlSubTxt pLvlSubTxtRecord = DataTbls.getLvlSubTxtRecord(lvlSubIndex);
-            if (pLvlSubTxtRecord == null) return;
+            // including zero bits. DATATBLS_GetLvlSubTxtRecord accepts a type
+            // id and returns its first row; it does not accept a row index.
             if ((nThemeFlag & 1) != 0) {
                 // 初始化 Drlg 文件
                 D2DrlgStrc drlg = pOutdoorLevel.getPDrlgRoom().getLevel().getDrlg();
@@ -709,7 +709,7 @@ public class DrlgTileSub {
                                 + " checkAll=%d method=%d groups=%d sourceWalls=%d sourceShadows=%d",
                         pOutdoorLevel.getPDrlgRoom().getLevel().getLevelId(),
                         pOutdoorLevel.getPDrlgRoom().getNTileXPos(),
-                        pOutdoorLevel.getPDrlgRoom().getNTileYPos(), lvlSubIndex,
+                        pOutdoorLevel.getPDrlgRoom().getNTileYPos(), recordOffset,
                         pLvlSubTxtRecord.getSzFile(), pLvlSubTxtRecord.getDwCheckAll(),
                         pLvlSubTxtRecord.getPDrlgFile() != null
                                 ? pLvlSubTxtRecord.getPDrlgFile().getNSubstMethod() : -1,
@@ -786,7 +786,8 @@ public class DrlgTileSub {
             }
             
             nThemeFlag >>= 1;
-            lvlSubIndex++;
+            pLvlSubTxtRecord = DataTbls.getNextLvlSubTxtRecord(pLvlSubTxtRecord, lvlSubType);
+            recordOffset++;
         }
     }
 

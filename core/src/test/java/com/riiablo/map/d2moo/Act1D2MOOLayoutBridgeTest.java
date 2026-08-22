@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgOutdoorRoomStrc;
+import com.d2moo.common.drlg.D2DrlgPresetRoomStrc;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2LevelIds;
@@ -109,6 +110,10 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           "wall export referenced an incompatible orientation for level " + levelId);
       assertEquals(0, applier.getNonShadowOrientationCount(),
           "shadow export referenced a non-shadow DT1 entry for level " + levelId);
+      assertTrue(applier.getExportedWallCount() > 0,
+          "Act1 picked presets produced no wall tiles for level " + levelId);
+      assertTrue(source.presetRooms > 0,
+          "Act1 picked preset cells produced no preset rooms for level " + levelId);
       assertEquals(applier.getCallbackCount(), attempted
               + applier.getExportedWallCount() + applier.getExportedShadowCount(),
           "layer callback accounting mismatch for level " + levelId);
@@ -135,17 +140,27 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           + " uniqueShadowIds=" + applier.getUniqueShadowIdCount()
           + " sourceWallFlags=" + source.wallFlags
           + " sourceShadowFlags=" + source.shadowFlags
-          + " sourceNonzeroWallCells=" + source.nonzeroWallCells);
+          + " sourceNonzeroWallCells=" + source.nonzeroWallCells
+          + " outdoorRooms=" + source.outdoorRooms
+          + " presetRooms=" + source.presetRooms);
     }
   }
 
   private static SourceGridStats sourceGridStats(D2DrlgLevel level) {
     SourceGridStats stats = new SourceGridStats();
     for (D2DrlgRoom room = level.getFirstRoomEx(); room != null; room = room.getDrlgRoomNext()) {
-      if (!(room.getMazeOrOutdoor() instanceof D2DrlgOutdoorRoomStrc)) continue;
-      D2DrlgOutdoorRoomStrc outdoor = (D2DrlgOutdoorRoomStrc) room.getMazeOrOutdoor();
-      collectGridStats(outdoor.getPWallGrid(), stats, true);
-      collectGridStats(outdoor.getPFloorGrid(), stats, false);
+      if (room.getMazeOrOutdoor() instanceof D2DrlgOutdoorRoomStrc) {
+        stats.outdoorRooms++;
+        D2DrlgOutdoorRoomStrc outdoor = (D2DrlgOutdoorRoomStrc) room.getMazeOrOutdoor();
+        collectGridStats(outdoor.getPWallGrid(), stats, true);
+        collectGridStats(outdoor.getPFloorGrid(), stats, false);
+      } else if (room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc) {
+        stats.presetRooms++;
+        D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) room.getMazeOrOutdoor();
+        for (D2DrlgGridStrc grid : preset.getPWallGrid()) collectGridStats(grid, stats, true);
+        for (D2DrlgGridStrc grid : preset.getPFloorGrid()) collectGridStats(grid, stats, false);
+        collectGridStats(preset.getPCellGrid(), stats, false);
+      }
     }
     return stats;
   }
@@ -163,5 +178,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     int wallFlags;
     int shadowFlags;
     int nonzeroWallCells;
+    int outdoorRooms;
+    int presetRooms;
   }
 }

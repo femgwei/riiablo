@@ -895,12 +895,34 @@ public class DrlgPreset {
 
         // 处理单元格网格
         DrlgRoomTile.countAllTileTypes(drlgRoom, presetRoom.getPCellGrid(), false, bKillEdgeX, bKillEdgeY);
-        
-        // 注意：后续的瓦片加载逻辑已在其他模块实现
-        // 1. 加载初始化房间瓦片：由 DrlgRoomTile.loadInitRoomTiles 处理
-        // 2. 处理特殊瓦片类型：由 DrlgRoomTile 模块处理
-        // 3. 处理城镇/墓地的特殊逻辑：可以在后续根据需要实现
-        // 当前实现：基本的瓦片计数和网格初始化已完成
+
+        // Counting only reserves sizes. Native DRLGPRESET_AddPresetRoomMapTiles
+        // then allocates and materializes every layer into pTileGrid; without
+        // this half preset rooms exist but export as empty rooms.
+        DrlgRoomTile.allocTileData(drlgRoom);
+        for (int i = 0; i < mazeMap.getPFile().getNFloorLayers(); ++i) {
+            boolean checkCoordinates = i == 0 && pLvlPrestTxtRecord.getDwFillBlanks() != 0;
+            DrlgRoomTile.loadInitRoomTiles(drlgRoom, presetRoom.getPFloorGrid(i), null,
+                    checkCoordinates, bKillEdgeX, bKillEdgeY);
+        }
+        for (int i = 0; i < mazeMap.getPFile().getNWallLayers(); ++i) {
+            DrlgRoomTile.loadInitRoomTiles(drlgRoom, presetRoom.getPWallGrid(i),
+                    presetRoom.getPTileTypeGrid(i), false, bKillEdgeX, bKillEdgeY);
+        }
+        DrlgRoomTile.loadInitRoomTiles(drlgRoom, presetRoom.getPCellGrid(), null,
+                false, bKillEdgeX, bKillEdgeY);
+
+        if (drlgRoom.getTileGrid() != null && drlgRoom.getTileGrid().getPTiles() != null) {
+            drlgRoom.getTileGrid().getPTiles().setNWalls(drlgRoom.getTileGrid().getNWalls());
+            drlgRoom.getTileGrid().getPTiles().setNFloors(drlgRoom.getTileGrid().getNFloors());
+            drlgRoom.getTileGrid().getPTiles().setNRoofs(drlgRoom.getTileGrid().getNShadows());
+        }
+        if (pLvlPrestTxtRecord.getDwLogicals() != 0) {
+            DrlgDrlgLogic.initializeDrlgCoordList(drlgRoom, presetRoom.getPTileTypeGrid(0),
+                    presetRoom.getPFloorGrid(0), presetRoom.getPWallGrid(0));
+        } else {
+            DrlgDrlgLogic.allocCoordLists(drlgRoom);
+        }
     }
     
     /**
@@ -1645,21 +1667,21 @@ public class DrlgPreset {
      * @param pDrlgMap Drlg 地图结构
      */
     public static void freeDrlgMap(Object memPool, Object pDrlgMap) {
-        if (pDrlgMap == null) {
-            return;
-        }
-        
-        if (pDrlgMap instanceof D2DrlgMapStrc) {
-            D2DrlgMapStrc drlgMap = (D2DrlgMapStrc) pDrlgMap;
-            
-            // 释放文件结构
+        if (!(pDrlgMap instanceof D2DrlgMapStrc)) return;
+
+        // pCurrentMap is a linked list. Every map owns one reference obtained
+        // through loadDrlgFile, so release every node through the shared file
+        // cache instead of clearing the first file's arrays in place.
+        D2DrlgMapStrc drlgMap = (D2DrlgMapStrc) pDrlgMap;
+        while (drlgMap != null) {
+            D2DrlgMapStrc next = drlgMap.getPNext();
             if (drlgMap.getPFile() != null) {
-                freeDrlgFile(memPool, drlgMap.getPFile());
+                Object[] file = { drlgMap.getPFile() };
+                freeDrlgFile(file);
                 drlgMap.setPFile(null);
             }
-            
-            // 释放其他资源（如果需要）
-            // 注意：Java 中不需要手动释放对象，GC 会自动处理
+            drlgMap.setPNext(null);
+            drlgMap = next;
         }
     }
     
@@ -1683,70 +1705,6 @@ public class DrlgPreset {
             if (level.getPCurrentMap() != null) {
                 freeDrlgMap(memPool, level.getPCurrentMap());
                 level.setPCurrentMap(null);
-            }
-        }
-    }
-    
-    /**
-     * 释放 Drlg 文件结构
-     * @param memPool 内存池
-     * @param pDrlgFile Drlg 文件结构
-     */
-    private static void freeDrlgFile(Object memPool, Object pDrlgFile) {
-        if (pDrlgFile == null) {
-            return;
-        }
-        
-        if (pDrlgFile instanceof D2DrlgFileStrc) {
-            D2DrlgFileStrc drlgFile = (D2DrlgFileStrc) pDrlgFile;
-            
-            // 释放替换组数组
-            if (drlgFile.getPSubstGroups() != null) {
-                D2Pool.freePool(memPool, drlgFile.getPSubstGroups());
-                drlgFile.setPSubstGroups(null);
-            }
-            
-            // 释放预设单位数组
-            if (drlgFile.getPPresetUnit() != null) {
-                D2Pool.freePool(memPool, drlgFile.getPPresetUnit());
-                drlgFile.setPPresetUnit(null);
-            }
-            
-            // 释放层数据数组
-            // 释放墙壁层数组
-            Object[] pWallLayer = drlgFile.getPWallLayer();
-            if (pWallLayer != null) {
-                for (int i = 0; i < pWallLayer.length; i++) {
-                    if (pWallLayer[i] != null) {
-                        D2Pool.freePool(memPool, pWallLayer[i]);
-                    }
-                }
-                drlgFile.setPWallLayer(null);
-            }
-            // 释放地板层数组
-            Object[] pFloorLayer = drlgFile.getPFloorLayer();
-            if (pFloorLayer != null) {
-                for (int i = 0; i < pFloorLayer.length; i++) {
-                    if (pFloorLayer[i] != null) {
-                        D2Pool.freePool(memPool, pFloorLayer[i]);
-                    }
-                }
-                drlgFile.setPFloorLayer(null);
-            }
-            // 释放瓦片类型层数组
-            Object[] pTileTypeLayer = drlgFile.getPTileTypeLayer();
-            if (pTileTypeLayer != null) {
-                for (int i = 0; i < pTileTypeLayer.length; i++) {
-                    if (pTileTypeLayer[i] != null) {
-                        D2Pool.freePool(memPool, pTileTypeLayer[i]);
-                    }
-                }
-                drlgFile.setPTileTypeLayer(null);
-            }
-            // 释放阴影层
-            if (drlgFile.getPShadowLayer() != null) {
-                D2Pool.freePool(memPool, drlgFile.getPShadowLayer());
-                drlgFile.setPShadowLayer(null);
             }
         }
     }
@@ -1810,19 +1768,35 @@ public class DrlgPreset {
             drlgMap = new D2DrlgMapStrc();
         }
         
-        // 初始化地图结构
+        // Direct translation of DRLGPRESET_AllocDrlgMap. The random file roll
+        // is significant even when a caller subsequently supplies a picked
+        // file because it advances the level seed in the native code.
         drlgMap.setNLevelPrest(nLevelPrest);
-        drlgMap.setNPickedFile(0);
-        drlgMap.setPDrlgCoord(pDrlgCoord);
         drlgMap.setBHasInfo(false);
-        drlgMap.setBInited(false);
+        drlgMap.setBInited(true);
         drlgMap.setNPops(0);
         
         // 从数据表获取预设文本记录
         D2LvlPrestTxt lvlPrestTxtRecord = com.d2moo.common.datatbls.DataTbls.getLvlPrestTxtRecord(nLevelPrest);
-        if (lvlPrestTxtRecord != null) {
-            drlgMap.setPLvlPrestTxtRecord(lvlPrestTxtRecord);
+        if (lvlPrestTxtRecord == null) return null;
+        drlgMap.setPLvlPrestTxtRecord(lvlPrestTxtRecord);
+        int files = lvlPrestTxtRecord.getDwFiles();
+        drlgMap.setNPickedFile(files > 0 ? Seed.rollLimitedRandomNumber(seed, files) : 0);
+
+        D2DrlgCoord mapCoord = new D2DrlgCoord();
+        mapCoord.setNPosX(pDrlgCoord.getNPosX());
+        mapCoord.setNPosY(pDrlgCoord.getNPosY());
+        if (lvlPrestTxtRecord.getDwSizeX() != 0 && lvlPrestTxtRecord.getDwSizeY() != 0) {
+            mapCoord.setNWidth(lvlPrestTxtRecord.getDwSizeX());
+            mapCoord.setNHeight(lvlPrestTxtRecord.getDwSizeY());
+        } else {
+            mapCoord.setNWidth(pDrlgCoord.getNWidth());
+            mapCoord.setNHeight(pDrlgCoord.getNHeight());
         }
+        drlgMap.setPDrlgCoord(mapCoord);
+
+        drlgMap.setPNext((D2DrlgMapStrc) level.getPCurrentMap());
+        level.setPCurrentMap(drlgMap);
         
         return drlgMap;
     }
@@ -1849,13 +1823,59 @@ public class DrlgPreset {
      * @param a6a 参数（可能是方向或其他标志）
      * @param a7 参数（可能是标志或其他值）
      */
-    public static void buildArea(D2DrlgLevel level, D2DrlgMapStrc pDrlgMap, int a6a, int a7) {
+    public static void buildArea(D2DrlgLevel level, D2DrlgMapStrc pDrlgMap, int nFlags, int bSingleRoom) {
         if (level == null || pDrlgMap == null) {
             return;
         }
-        
-        // 构建区域的逻辑
-        // 注意：具体实现可能需要根据 C++ 源码来确定
-        // 这里提供一个基础框架
+
+        D2LvlPrestTxt prest = pDrlgMap.getPLvlPrestTxtRecord();
+        D2DrlgCoord map = pDrlgMap.getPDrlgCoord();
+        if (prest == null || map == null || map.getNWidth() <= 0 || map.getNHeight() <= 0) return;
+        if (prest.getDwOutdoors() != 0) nFlags |= 0x80000;
+
+        if (bSingleRoom != 0) {
+            initPresetRoomData(level, pDrlgMap, map, prest.getDwDt1Mask(), nFlags, 1);
+            return;
+        }
+
+        int xEnd = map.getNPosX() + map.getNWidth();
+        int yEnd = map.getNPosY() + map.getNHeight();
+        for (int y = map.getNPosY(); y < yEnd; y += 8) {
+            for (int x = map.getNPosX(); x < xEnd; x += 8) {
+                D2DrlgCoord roomCoord = new D2DrlgCoord();
+                roomCoord.setNPosX(x);
+                roomCoord.setNPosY(y);
+                roomCoord.setNWidth(Math.min(8, xEnd - x));
+                roomCoord.setNHeight(Math.min(8, yEnd - y));
+                initPresetRoomData(level, pDrlgMap, roomCoord, prest.getDwDt1Mask(), nFlags, 0);
+            }
+        }
+        D2Log.debug("DRLGPRESET_BuildArea level=%d prest=%d file=%d pos=(%d,%d) size=%dx%d rooms=%d flags=0x%X",
+                level.getLevelId(), pDrlgMap.getNLevelPrest(), pDrlgMap.getNPickedFile(),
+                map.getNPosX(), map.getNPosY(), map.getNWidth(), map.getNHeight(),
+                ((map.getNWidth() + 7) / 8) * ((map.getNHeight() + 7) / 8), nFlags);
+    }
+
+    private static D2DrlgRoom initPresetRoomData(D2DrlgLevel level, D2DrlgMapStrc map,
+            D2DrlgCoord coord, int dt1Mask, int roomFlags, int presetFlags) {
+        D2DrlgRoom room = DrlgDrlgRoom.allocRoomEx(level, D2DrlgTypes.DRLGTYPE_PRESET);
+        if (room == null) return null;
+        room.setDt1Mask(dt1Mask);
+        room.setFlags(room.getFlags() | roomFlags);
+        room.setNTileXPos(coord.getNPosX());
+        room.setNTileYPos(coord.getNPosY());
+        room.setNTileWidth(coord.getNWidth());
+        room.setNTileHeight(coord.getNHeight());
+
+        D2DrlgPresetRoomStrc presetRoom = (D2DrlgPresetRoomStrc) room.getMazeOrOutdoor();
+        presetRoom.setPMap(map);
+        presetRoom.setDwFlags(presetFlags);
+        presetRoom.setNLevelPrest(map.getPLvlPrestTxtRecord().getDwDef());
+        presetRoom.setNPickedFile(map.getNPickedFile());
+        if (map.getPLvlPrestTxtRecord().getDwPopulate() == 0) {
+            room.setFlags(room.getFlags() | D2DrlgRoomFlags.POPULATION_ZERO);
+        }
+        DrlgDrlgRoom.addRoomExToLevel(level, room);
+        return room;
     }
 }
