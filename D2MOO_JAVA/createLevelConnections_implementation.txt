@@ -1,0 +1,79 @@
+// 这是 createLevelConnections 及其依赖函数的实现
+// 需要添加到 DrlgOutPlace.java 中
+
+// 1. 在类开头添加常量数组（在 createLevelConnections 方法之前）
+
+    // 常量数组：Act1 荒野链接
+    private static final D2DrlgLink[] gAct1WildernessDrlgLink = {
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_STONYFIELD, -1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81380, D2LevelIds.LEVEL_COLDPLAINS, 0, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81950, D2LevelIds.LEVEL_BLOODMOOR, 1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81720, D2LevelIds.LEVEL_ROGUEENCAMPMENT, 2, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81380, D2LevelIds.LEVEL_BURIALGROUNDS, 1, -1),
+        new D2DrlgLink(null, 0, -1, -1),
+    };
+    
+    // 常量数组：Act1 修道院链接
+    private static final D2DrlgLink[] gAct1MonasteryDrlgLink = {
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_MOOMOOFARM, -1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_MONASTERYGATE, -1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81AD0, D2LevelIds.LEVEL_TAMOEHIGHLAND, 1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81380, D2LevelIds.LEVEL_BLACKMARSH, 2, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81380, D2LevelIds.LEVEL_DARKWOOD, 3, -1),
+        new D2DrlgLink(null, 0, -1, -1),
+    };
+    
+    // 常量数组：Act2 户外链接
+    private static final D2DrlgLink[] gAct2OutdoorDrlgLink = {
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_LUTGHOLEIN, -1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81B30, D2LevelIds.LEVEL_ROCKYWASTE, 0, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81530, D2LevelIds.LEVEL_DRYHILLS, 1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81530, D2LevelIds.LEVEL_FAROASIS, 2, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81530, D2LevelIds.LEVEL_LOSTCITY, 3, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81BF0, D2LevelIds.LEVEL_VALLEYOFSNAKES, 4, -1),
+        new D2DrlgLink(null, 0, -1, -1),
+    };
+    
+    // 常量数组：Act2 峡谷链接
+    private static final D2DrlgLink[] gAct2CanyonDrlgLink = {
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_CANYONOFTHEMAGI, -1, -1),
+        new D2DrlgLink(null, 0, -1, -1),
+    };
+    
+    // 常量数组：Act4 户外链接
+    private static final D2DrlgLink[] gAct4OutdoorDrlgLink = {
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_THEPANDEMONIUMFORTRESS, -1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81CA0, D2LevelIds.LEVEL_OUTERSTEPPES, 0, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81380, D2LevelIds.LEVEL_PLAINSOFDESPAIR, 1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81380, D2LevelIds.LEVEL_CITYOFTHEDAMNED, 2, -1),
+        new D2DrlgLink(null, 0, -1, -1),
+    };
+    
+    // 常量数组：Act4 混沌圣域链接
+    private static final D2DrlgLink[] gAct4ChaosSanctumDrlgLink = {
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_CHAOSSANCTUM, -1, -1),
+        new D2DrlgLink(null, 0, -1, -1),
+    };
+    
+    // 常量数组：Act5 户外链接
+    private static final D2DrlgLink[] gAct5OutdoorDrlgLink = {
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_HARROGATH, -1, -1),
+        new D2DrlgLink(DrlgOutPlace::sub_6FD81330, D2LevelIds.LEVEL_BLOODYFOOTHILLS, 0, -1),
+        new D2DrlgLink(DrlgOutRoom::linkLevelsByLevelCoords, D2LevelIds.LEVEL_ID_ACT5_BARRICADE_1, 1, -1),
+        new D2DrlgLink(DrlgOutRoom::linkLevelsByOffsetCoords, D2LevelIds.LEVEL_ARREATPLATEAU, 2, -1),
+        new D2DrlgLink(null, 0, -1, -1),
+    };
+    
+    // 常量数组：Act5 苔原链接
+    private static final D2DrlgLink[] gAct5TundraDrlgLink = {
+        new D2DrlgLink(DrlgOutRoom::linkLevelsByLevelDef, D2LevelIds.LEVEL_TUNDRAWASTELANDS, -1, -1),
+        new D2DrlgLink(null, 0, -1, -1),
+    };
+    
+    // Act1 荒野链接验证表
+    private static final boolean[] dword_6FDD05C0 = {
+        true, true, false, false, false, false, false, false, false, true, false, false, false, false, false, false,
+        false, false, false, true, false, true, false, false, true, false, false, false, false, false, true, true,
+        false, true, false, false, false, false, false, true, false, true, false, false, false, false, false, false,
+        false, false, false, false, false, true, true, false, true, false, false, false, false, false, true, true,
+    };
