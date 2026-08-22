@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.IntSet;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 import com.d2moo.common.drlg.DrlgDrlg;
@@ -2209,6 +2210,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         ? new IntMap<>() : null;
     LayerApplyCounts counts = applyTileGridLayers(
         grid, zone.dt1s, zone.tiles, zone.tilesX, width, height, idHistogram);
+    CollisionApplyCounts collisionCounts = new CollisionApplyCounts();
+    if (counts.floors > 0 || counts.walls > 0) {
+      collisionCounts = rebuildTileCollisionFlags(
+          zone.tiles, zone.dt1s, zone.flags, zone.tilesX, zone.tilesY, width, height);
+    }
 
     // Blood Moor 地面调试：grid/zone 尺寸、坐标、ID 分布、解析失败数
     if (DEBUG_GROUND_MAP && zone.level.Id == LEVEL_BLOODMOOR) {
@@ -2230,10 +2236,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     // parser/DT1-mask mismatches visible without enabling per-tile logging.
     if (levelsFilledByExport.contains(zone.level.Id)) {
       Gdx.app.log(TAG, String.format(
-          "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d failedResolve=%d",
+          "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d "
+              + "failedResolve=%d collisionTiles=%d blockedSubtiles=%d",
           zone.level.LevelName, zone.level.Id, grid.width, grid.height,
           zone.tilesX, zone.tilesY, counts.floors, counts.walls, counts.shadows,
-          counts.failedResolve));
+          counts.failedResolve, collisionCounts.tiles, collisionCounts.blockedSubtiles));
     } else if (DEBUG_BUILD) {
       Gdx.app.debug(TAG, String.format(
           "applyTileGridToZone: applied floor=%d wall=%d shadow=%d from TileGrid to zone %s (id=%d)",
@@ -2302,11 +2309,92 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     return counts;
   }
 
+  static CollisionApplyCounts rebuildTileCollisionFlags(DT1.Tile[][] layers, DT1s dt1s,
+      byte[] flags, int zoneTilesX, int zoneTilesY, int width, int height) {
+    CollisionApplyCounts counts = new CollisionApplyCounts();
+    if (layers == null || layers.length < Map.MAX_LAYERS || flags == null
+        || zoneTilesX <= 0 || zoneTilesY <= 0) return counts;
+
+    int subtileSize = DT1.Tile.SUBTILE_SIZE;
+    int subtileWidth = zoneTilesX * subtileSize;
+    int availableSubtileRows = flags.length / subtileWidth;
+    width = Math.max(0, Math.min(width, zoneTilesX));
+    height = Math.max(0, Math.min(height,
+        Math.min(zoneTilesY, availableSubtileRows / subtileSize)));
+    if (width == 0 || height == 0) return counts;
+
+    int clearWidth = width * subtileSize;
+    int clearHeight = height * subtileSize;
+    for (int sy = 0; sy < clearHeight; sy++) {
+      int rowStart = sy * subtileWidth;
+      Arrays.fill(flags, rowStart, rowStart + clearWidth, (byte) 0);
+    }
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        int tileIndex = Zone.index(zoneTilesX, x, y);
+        for (int layer = Map.FLOOR_OFFSET;
+             layer < Map.FLOOR_OFFSET + Map.MAX_FLOORS; layer++) {
+          DT1.Tile[] tiles = layers[layer];
+          if (tiles == null || tileIndex >= tiles.length || tiles[tileIndex] == null) continue;
+          orTileCollisionFlags(flags, subtileWidth, x, y, tiles[tileIndex]);
+          counts.tiles++;
+        }
+        for (int layer = Map.WALL_OFFSET;
+             layer < Map.WALL_OFFSET + Map.MAX_WALLS; layer++) {
+          DT1.Tile[] tiles = layers[layer];
+          if (tiles == null || tileIndex >= tiles.length) continue;
+          DT1.Tile tile = tiles[tileIndex];
+          if (tile == null) continue;
+          orTileCollisionFlags(flags, subtileWidth, x, y, tile);
+          counts.tiles++;
+
+          // Match Preset.copyWalls: the left half carries the missing collision
+          // flags for right north-corner wall graphics in the original DT1 data.
+          if (dt1s != null && tile.orientation == Orientation.RIGHT_NORTH_CORNER_WALL) {
+            DT1.Tile sibling = dt1s.get(
+                Orientation.LEFT_NORTH_CORNER_WALL, tile.mainIndex, tile.subIndex);
+            if (sibling != null) {
+              orTileCollisionFlags(flags, subtileWidth, x, y, sibling);
+              counts.siblingTiles++;
+            }
+          }
+        }
+      }
+    }
+
+    for (int sy = 0; sy < clearHeight; sy++) {
+      int rowStart = sy * subtileWidth;
+      for (int sx = 0; sx < clearWidth; sx++) {
+        if (flags[rowStart + sx] != 0) counts.blockedSubtiles++;
+      }
+    }
+    return counts;
+  }
+
+  private static void orTileCollisionFlags(byte[] flags, int subtileWidth,
+      int tileX, int tileY, DT1.Tile tile) {
+    int startX = tileX * DT1.Tile.SUBTILE_SIZE;
+    int sy = tileY * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE - 1;
+    for (int y = 0, t = 0; y < DT1.Tile.SUBTILE_SIZE; y++, sy--) {
+      int rowStart = sy * subtileWidth;
+      for (int x = 0; x < DT1.Tile.SUBTILE_SIZE; x++, t++) {
+        flags[rowStart + startX + x] |= tile.flags[t];
+      }
+    }
+  }
+
   static final class LayerApplyCounts {
     int floors;
     int walls;
     int shadows;
     int failedResolve;
+  }
+
+  static final class CollisionApplyCounts {
+    int tiles;
+    int siblingTiles;
+    int blockedSubtiles;
   }
 
   /**

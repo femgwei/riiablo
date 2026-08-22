@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
@@ -61,6 +62,41 @@ class Act1MapBuilderD2MooLayersTest {
     assertSame(wall1, layers[Map.WALL_OFFSET + 1][4]);
     assertNull(layers[Map.WALL_OFFSET + 2]);
     assertSame(shadow, layers[Map.SHADOW_OFFSET][5]);
+  }
+
+  @Test
+  void rebuildsCollisionFromFinalLayersAndPreservesOutsideRegion() throws Exception {
+    DT1.Tile floor = tile(Orientation.FLOOR, 1, 1);
+    DT1.Tile wall = tile(Orientation.LEFT_WALL, 2, 1);
+    floor.flags[0] = DT1.Tile.FLAG_BLOCK_WALK;
+    wall.flags[0] = DT1.Tile.FLAG_BLOCK_LIGHT;
+    wall.flags[24] = DT1.Tile.FLAG_BLOCK_JUMP;
+
+    DT1.Tile[][] layers = new DT1.Tile[Map.MAX_LAYERS][];
+    layers[Map.FLOOR_OFFSET] = new DT1.Tile[] {floor, null};
+    layers[Map.WALL_OFFSET] = new DT1.Tile[] {wall, null};
+
+    byte[] flags = new byte[2 * DT1.Tile.SUBTILE_SIZE * DT1.Tile.SUBTILE_SIZE];
+    Arrays.fill(flags, (byte) 0x7F);
+    for (int y = 0; y < DT1.Tile.SUBTILE_SIZE; y++) {
+      Arrays.fill(flags,
+          y * 2 * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE,
+          (y + 1) * 2 * DT1.Tile.SUBTILE_SIZE,
+          (byte) 0x55);
+    }
+
+    Act1MapBuilderD2MOD.CollisionApplyCounts counts =
+        Act1MapBuilderD2MOD.rebuildTileCollisionFlags(
+            layers, null, flags, 2, 1, 1, 1);
+
+    assertEquals(2, counts.tiles);
+    assertEquals(0, counts.siblingTiles);
+    assertEquals(2, counts.blockedSubtiles);
+    assertEquals(DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_LIGHT, flags[40] & 0xFF);
+    assertEquals(DT1.Tile.FLAG_BLOCK_JUMP, flags[4] & 0xFF);
+    assertEquals(0, flags[0] & 0xFF);
+    assertEquals(0x55, flags[5] & 0xFF);
+    assertEquals(0x55, flags[49] & 0xFF);
   }
 
   private static DT1.Tile tile(int orientation, int mainIndex, int subIndex) throws IOException {
