@@ -1237,8 +1237,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         boolean qualityPassed = written > 0
             && applier.getUniqueFloorIdCount() > 1
             && applier.getZeroTileIdCount() < written
+            && applier.getExportedWallCount() > 0
+            && applier.getUniqueWallIdCount() > 0
             && applier.getInvalidTileCount() == 0
-            && applier.getOutOfBoundsCount() == 0;
+            && applier.getOutOfBoundsCount() == 0
+            && applier.getWallLayerOverflowCount() == 0
+            && applier.getNonWallOrientationCount() == 0;
         boolean renderExportedFloors = Boolean.getBoolean("riiablo.drlg.renderExportedFloors");
         boolean acceptedForRendering = renderExportedFloors && qualityPassed;
         if (acceptedForRendering) {
@@ -2190,8 +2194,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     }
 
     TileGrid grid = drlgLevel.grid;
-    DT1.Tile[] floorLayer = zone.getLayer(Map.FLOOR_OFFSET);
-    if (floorLayer == null) {
+    if (zone.getLayer(Map.FLOOR_OFFSET) == null) {
       if (DEBUG_BUILD) {
         Gdx.app.debug(TAG, String.format(
             "applyTileGridToZone: floor layer is null for zone %s (id=%d)",
@@ -2202,35 +2205,17 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
     int width = Math.min(grid.width, zone.tilesX);
     int height = Math.min(grid.height, zone.tilesY);
-
-    int applied = 0;
-    int failedResolve = 0;  // id>0 但 dt1s.get(id)==null
-    IntMap<Integer> idHistogram = DEBUG_GROUND_MAP && zone.level.Id == LEVEL_BLOODMOOR ? new IntMap<>() : null;
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        int id = grid.floorIds[y][x];
-        if (id == -1) continue; // 只覆盖已写入的格子
-
-        int tileIndex = Zone.index(zone.tilesX, x, y);
-        if (tileIndex < 0 || tileIndex >= floorLayer.length) continue;
-
-        DT1.Tile tile = zone.dt1s != null ? zone.dt1s.get(id) : null;
-        if (tile != null) {
-          floorLayer[tileIndex] = tile;
-          applied++;
-          if (idHistogram != null) idHistogram.put(id, idHistogram.get(id, 0) + 1);
-        } else if (id > 0) {
-          failedResolve++;
-        }
-      }
-    }
+    IntMap<Integer> idHistogram = DEBUG_GROUND_MAP && zone.level.Id == LEVEL_BLOODMOOR
+        ? new IntMap<>() : null;
+    LayerApplyCounts counts = applyTileGridLayers(
+        grid, zone.dt1s, zone.tiles, zone.tilesX, width, height, idHistogram);
 
     // Blood Moor 地面调试：grid/zone 尺寸、坐标、ID 分布、解析失败数
     if (DEBUG_GROUND_MAP && zone.level.Id == LEVEL_BLOODMOOR) {
       Gdx.app.log(TAG, String.format(
           "[GroundDebug] BM applyTileGrid: grid=%dx%d zone=%dx%d copy=%dx%d zone.tx=%d ty=%d applied=%d failedResolve=%d",
           grid.width, grid.height, zone.tilesX, zone.tilesY, width, height,
-          zone.tx, zone.ty, applied, failedResolve));
+          zone.tx, zone.ty, counts.floors, counts.failedResolve));
       if (idHistogram != null && idHistogram.size > 0) {
         StringBuilder sb = new StringBuilder("[GroundDebug] BM tile IDs: ");
         int n = 0;
@@ -2245,14 +2230,83 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     // parser/DT1-mask mismatches visible without enabling per-tile logging.
     if (levelsFilledByExport.contains(zone.level.Id)) {
       Gdx.app.log(TAG, String.format(
-          "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d applied=%d failedResolve=%d",
+          "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d failedResolve=%d",
           zone.level.LevelName, zone.level.Id, grid.width, grid.height,
-          zone.tilesX, zone.tilesY, applied, failedResolve));
+          zone.tilesX, zone.tilesY, counts.floors, counts.walls, counts.shadows,
+          counts.failedResolve));
     } else if (DEBUG_BUILD) {
       Gdx.app.debug(TAG, String.format(
-          "applyTileGridToZone: applied %d tiles from TileGrid to zone %s (id=%d)",
-          applied, zone.level.LevelName, zone.level.Id));
+          "applyTileGridToZone: applied floor=%d wall=%d shadow=%d from TileGrid to zone %s (id=%d)",
+          counts.floors, counts.walls, counts.shadows, zone.level.LevelName, zone.level.Id));
     }
+  }
+
+  static LayerApplyCounts applyTileGridLayers(TileGrid grid, DT1s dt1s, DT1.Tile[][] layers,
+      int zoneTilesX, int width, int height, IntMap<Integer> floorHistogram) {
+    LayerApplyCounts counts = new LayerApplyCounts();
+    if (grid == null || dt1s == null || layers == null || zoneTilesX <= 0
+        || layers.length < Map.MAX_LAYERS || layers[Map.FLOOR_OFFSET] == null) return counts;
+    int layerSize = layers[Map.FLOOR_OFFSET].length;
+    width = Math.max(0, Math.min(width, Math.min(grid.width, zoneTilesX)));
+    height = Math.max(0, Math.min(height, Math.min(grid.height, layerSize / zoneTilesX)));
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        int tileIndex = Zone.index(zoneTilesX, x, y);
+        if (tileIndex < 0 || tileIndex >= layerSize) continue;
+        int floorId = grid.floorIds[y][x];
+        if (floorId != -1) {
+          DT1.Tile tile = dt1s.get(floorId);
+          if (tile != null) {
+            layers[Map.FLOOR_OFFSET][tileIndex] = tile;
+            counts.floors++;
+            if (floorHistogram != null) {
+              floorHistogram.put(floorId, floorHistogram.get(floorId, 0) + 1);
+            }
+          } else {
+            counts.failedResolve++;
+          }
+        }
+
+        for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS && slot < Map.MAX_WALLS; slot++) {
+          int wallId = grid.wallIds[slot][y][x];
+          if (wallId == -1) continue;
+          DT1.Tile tile = dt1s.get(wallId);
+          if (tile == null) {
+            counts.failedResolve++;
+            continue;
+          }
+          int layer = Map.WALL_OFFSET + slot;
+          if (layers[layer] == null) layers[layer] = Zone.obtainTileArray(layerSize);
+          if (tileIndex >= layers[layer].length) continue;
+          layers[layer][tileIndex] = tile;
+          counts.walls++;
+        }
+
+        int shadowId = grid.shadowIds[y][x];
+        if (shadowId != -1) {
+          DT1.Tile tile = dt1s.get(shadowId);
+          if (tile != null) {
+            if (layers[Map.SHADOW_OFFSET] == null) {
+              layers[Map.SHADOW_OFFSET] = Zone.obtainTileArray(layerSize);
+            }
+            if (tileIndex >= layers[Map.SHADOW_OFFSET].length) continue;
+            layers[Map.SHADOW_OFFSET][tileIndex] = tile;
+            counts.shadows++;
+          } else {
+            counts.failedResolve++;
+          }
+        }
+      }
+    }
+    return counts;
+  }
+
+  static final class LayerApplyCounts {
+    int floors;
+    int walls;
+    int shadows;
+    int failedResolve;
   }
 
   /**
