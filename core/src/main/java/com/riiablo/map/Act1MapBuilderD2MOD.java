@@ -63,6 +63,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private static final int LEVEL_BURIALGROUNDS   = 22;
   /** 由 D2MOO_JAVA export 填满 TileGrid 的关卡 ID，这些关卡跳过本地 generateOutdoorRoom */
   private final IntSet levelsFilledByExport = new IntSet();
+  /** D2MOO 实际生成房间所引用的 DT1 mask（包含 outdoor preset/LvlSub 扩展位）。 */
+  private final IntMap<Integer> d2MooDt1Masks = new IntMap<>();
   private static final int LEVEL_DARKWOOD = 5;
   private static final int LEVEL_BLACKMARSH = 6;
   private static final int LEVEL_TAMOEHIGHLAND = 7;
@@ -182,6 +184,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     drlgContext = new DrlgContext(seed, diff, 0);
     drlgLevels.clear();
     levelsFilledByExport.clear();
+    d2MooDt1Masks.clear();
     lvlSubDs1PlacedCounts.clear();
     MathUtils.random.setSeed(seed);
 
@@ -1235,6 +1238,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       for (int levelId : outdoorLevelIds) {
         applier.resetLastExportedFloorCount();
         int n = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+        int exportedDt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
+        d2MooDt1Masks.put(levelId, exportedDt1Mask);
         int written = applier.getLastExportedFloorCount();
         boolean qualityPassed = written > 0
             && applier.getUniqueFloorIdCount() > 1
@@ -1261,11 +1266,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         Gdx.app.log(TAG, String.format(
             "D2MOO_JAVA export: levelId=%d attemptedFloor=%d callbacks=%d writtenFloor=%d "
                 + "ignoredLayer=%d missingGrid=%d outOfBounds=%d invalidTile=%d "
-                + "wall=%d shadow=%d qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
+                + "wall=%d shadow=%d dt1Mask=0x%X qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
             levelId, n, applier.getCallbackCount(), written,
             applier.getIgnoredLayerCount(), applier.getMissingGridCount(),
             applier.getOutOfBoundsCount(), applier.getInvalidTileCount(),
-            applier.getExportedWallCount(), applier.getExportedShadowCount(),
+            applier.getExportedWallCount(), applier.getExportedShadowCount(), exportedDt1Mask,
             qualityPassed, renderExportedFloors, acceptedForRendering)
             + String.format(" duplicatePosition=%d duplicateShadow=%d wallOverflow=%d"
                 + " nonFloorOrientation=%d nonWallOrientation=%d nonShadowOrientation=%d"
@@ -2193,6 +2198,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     return levelsFilledByExport.contains(levelId);
   }
 
+  /** DT1 mask used by all D2MOO rooms exported for this level. */
+  public int getD2MooDt1Mask(int levelId) {
+    return d2MooDt1Masks.get(levelId, 0);
+  }
+
   public void applyTileGridToZone(Zone zone) {
     if (zone == null || zone.level == null) return;
 
@@ -2231,9 +2241,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     // Blood Moor 地面调试：grid/zone 尺寸、坐标、ID 分布、解析失败数
     if (DEBUG_GROUND_MAP && zone.level.Id == LEVEL_BLOODMOOR) {
       Gdx.app.log(TAG, String.format(
-          "[GroundDebug] BM applyTileGrid: grid=%dx%d zone=%dx%d copy=%dx%d zone.tx=%d ty=%d applied=%d failedResolve=%d",
+          "[GroundDebug] BM applyTileGrid: grid=%dx%d zone=%dx%d copy=%dx%d zone.tx=%d ty=%d "
+              + "applied=%d failedFloor=%d failedWall=%d failedShadow=%d",
           grid.width, grid.height, zone.tilesX, zone.tilesY, width, height,
-          zone.tx, zone.ty, counts.floors, counts.failedResolve));
+          zone.tx, zone.ty, counts.floors, counts.failedFloors,
+          counts.failedWalls, counts.failedShadows));
       if (idHistogram != null && idHistogram.size > 0) {
         StringBuilder sb = new StringBuilder("[GroundDebug] BM tile IDs: ");
         int n = 0;
@@ -2249,10 +2261,16 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (levelsFilledByExport.contains(zone.level.Id)) {
       Gdx.app.log(TAG, String.format(
           "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d "
-              + "failedResolve=%d collisionTiles=%d blockedSubtiles=%d",
+              + "failedFloor=%d failedWall=%d failedShadow=%d collisionTiles=%d blockedSubtiles=%d",
           zone.level.LevelName, zone.level.Id, grid.width, grid.height,
           zone.tilesX, zone.tilesY, counts.floors, counts.walls, counts.shadows,
-          counts.failedResolve, collisionCounts.tiles, collisionCounts.blockedSubtiles));
+          counts.failedFloors, counts.failedWalls, counts.failedShadows,
+          collisionCounts.tiles, collisionCounts.blockedSubtiles));
+      if (counts.failedResolve > 0) {
+        Gdx.app.log(TAG, "D2MOO unresolved IDs: floor=" + formatTileIds(counts.failedFloorIds)
+            + " wall=" + formatTileIds(counts.failedWallIds)
+            + " shadow=" + formatTileIds(counts.failedShadowIds));
+      }
     } else if (DEBUG_BUILD) {
       Gdx.app.debug(TAG, String.format(
           "applyTileGridToZone: applied floor=%d wall=%d shadow=%d from TileGrid to zone %s (id=%d)",
@@ -2284,6 +2302,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             }
           } else {
             counts.failedResolve++;
+            counts.failedFloors++;
+            counts.failedFloorIds.add(floorId);
           }
         }
 
@@ -2293,6 +2313,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           DT1.Tile tile = dt1s.get(wallId);
           if (tile == null) {
             counts.failedResolve++;
+            counts.failedWalls++;
+            counts.failedWallIds.add(wallId);
             continue;
           }
           int layer = Map.WALL_OFFSET + slot;
@@ -2314,11 +2336,28 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             counts.shadows++;
           } else {
             counts.failedResolve++;
+            counts.failedShadows++;
+            counts.failedShadowIds.add(shadowId);
           }
         }
       }
     }
     return counts;
+  }
+
+  private static String formatTileIds(IntSet ids) {
+    if (ids == null || ids.size == 0) return "[]";
+    StringBuilder out = new StringBuilder("[");
+    int count = 0;
+    for (IntSet.IntSetIterator it = ids.iterator(); it.hasNext && count < 8;) {
+      int id = it.next();
+      if (count++ > 0) out.append(',');
+      out.append(String.format("0x%08X(o=%d,m=%d,s=%d)", id,
+          DT1.Tile.Index.orientation(id), DT1.Tile.Index.mainIndex(id),
+          DT1.Tile.Index.subIndex(id)));
+    }
+    if (ids.size > count) out.append(",...");
+    return out.append(']').toString();
   }
 
   static CollisionApplyCounts rebuildTileCollisionFlags(DT1.Tile[][] layers, DT1s dt1s,
@@ -2401,6 +2440,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int walls;
     int shadows;
     int failedResolve;
+    int failedFloors;
+    int failedWalls;
+    int failedShadows;
+    final IntSet failedFloorIds = new IntSet();
+    final IntSet failedWallIds = new IntSet();
+    final IntSet failedShadowIds = new IntSet();
   }
 
   static final class CollisionApplyCounts {

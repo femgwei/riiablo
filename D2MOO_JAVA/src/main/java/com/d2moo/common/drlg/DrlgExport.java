@@ -57,6 +57,29 @@ public final class DrlgExport {
         return counts.floors;
     }
 
+    /**
+     * Returns the union of the DT1 masks attached to every generated room in
+     * a level. Outdoor preset rooms can extend the base outdoor mask, so a
+     * renderer consuming {@link #exportLevelTiles} must use this union rather
+     * than only the mask selected by {@code DRLGOUTDOORS_GenerateLevel}.
+     *
+     * <p>Call this after exporting the level. Export initializes streamed
+     * rooms and tile-substitution may add further DT1 mask bits while doing so.</p>
+     */
+    public static int collectLevelDt1Mask(D2DrlgStrc drlg, int levelId) {
+        if (drlg == null) return 0;
+        D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+        if (level == null) return 0;
+
+        int mask = 0;
+        D2DrlgRoom room = level.getFirstRoomEx();
+        while (room != null) {
+            mask |= room.getDt1Mask();
+            room = room.getDrlgRoomNext();
+        }
+        return mask;
+    }
+
     private static void exportRoomTiles(D2DrlgRoom room, int levelId, int levelOriginX, int levelOriginY,
             DrlgTileExporter exporter, ExportCounts counts) {
         D2DrlgTileGrid grid = room.getTileGrid();

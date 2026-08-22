@@ -13,11 +13,32 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import com.badlogic.gdx.utils.IntMap;
+import com.d2moo.common.drlg.D2DrlgLevel;
+import com.d2moo.common.drlg.D2DrlgRoom;
+import com.d2moo.common.drlg.D2DrlgStrc;
+import com.d2moo.common.drlg.DrlgExport;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.TileGrid;
 
 class Act1MapBuilderD2MooLayersTest {
+  @Test
+  void collectsBaseAndPresetRoomDt1MasksForExportedLevel() {
+    D2DrlgStrc drlg = new D2DrlgStrc();
+    D2DrlgLevel level = new D2DrlgLevel();
+    level.setLevelId(3);
+    drlg.setLevel(level);
+
+    D2DrlgRoom outdoor = new D2DrlgRoom();
+    outdoor.setDt1Mask(0x44103);
+    D2DrlgRoom preset = new D2DrlgRoom();
+    preset.setDt1Mask(0x10280000);
+    outdoor.setDrlgRoomNext(preset);
+    level.setFirstRoomEx(outdoor);
+
+    assertEquals(0x102C4103, DrlgExport.collectLevelDt1Mask(drlg, 3));
+  }
+
   @Test
   void appliesExportedFloorWallAndShadowLayersWithoutOverwritingEmptyCells() throws Exception {
     DT1.Tile floor = tile(Orientation.FLOOR, 1, 1);
@@ -54,6 +75,9 @@ class Act1MapBuilderD2MooLayersTest {
     assertEquals(2, counts.walls);
     assertEquals(1, counts.shadows);
     assertEquals(1, counts.failedResolve);
+    assertEquals(1, counts.failedFloors);
+    assertEquals(0, counts.failedWalls);
+    assertEquals(0, counts.failedShadows);
     assertEquals(1, floorHistogram.get(floor.id, 0));
 
     assertSame(floor, layers[Map.FLOOR_OFFSET][0]);

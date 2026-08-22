@@ -1021,12 +1021,17 @@ public class Map implements Disposable {
         
         // 如果没有 preset，根据 Level 的 Act 和 LevelType 加载 DT1 文件
         if (!hasAnyPreset && type != null) {
-          int dt1Mask = OutdoorGrid.getDt1MaskForLevel(level);
-          if (DEBUG_BUILD) {
-            Gdx.app.debug(TAG, String.format("Zone.getDependencies: %s (Act=%d, LevelType=%d) dt1Mask=0x%X", 
-                level.LevelName, level.Act, level.LevelType, dt1Mask));
-          }
+          int baseDt1Mask = OutdoorGrid.getDt1MaskForLevel(level);
+          int exportedDt1Mask = Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(level.Id)
+              ? Act1MapBuilderD2MOD.INSTANCE.getD2MooDt1Mask(level.Id) : 0;
+          int dt1Mask = baseDt1Mask | exportedDt1Mask;
           int filesAdded = 0;
+          if (DEBUG_BUILD) {
+            Gdx.app.debug(TAG, String.format(
+                "Zone.getDependencies: %s (Act=%d, LevelType=%d) baseMask=0x%X exportedMask=0x%X dt1Mask=0x%X",
+                level.LevelName, level.Act, level.LevelType,
+                baseDt1Mask, exportedDt1Mask, dt1Mask));
+          }
           for (int i = 0; i < Integer.SIZE; i++) {
             if ((dt1Mask & (1 << i)) != 0) {
               // 跳过无效的文件（"0" 或空字符串）
@@ -1035,8 +1040,7 @@ public class Map implements Disposable {
                   !type.File[i].isEmpty() && 
                   type.File[i].charAt(0) != '0') {
                 String filePath = TILES_PATH + type.File[i];
-                dependencies.add(new AssetDescriptor<>(filePath, DT1.class));
-                filesAdded++;
+                if (addDt1Dependency(filePath)) filesAdded++;
                 if (DEBUG_BUILD) {
                   Gdx.app.debug(TAG, String.format("Zone.getDependencies: Added DT1 file[%d]=%s", i, filePath));
                 }
@@ -1048,6 +1052,19 @@ public class Map implements Disposable {
               }
             }
           }
+          // D2MOO loads these libraries after the room-mask libraries for
+          // every initialized room, outside LevelTypes.txt. Preserve that
+          // ordering and make exported warp/blank tiles resolvable too.
+          if (exportedDt1Mask != 0) {
+            String[] d2MooRoomDefaults = {
+                "Act1/Outdoors/Blank.dt1",
+                "Act1/Barracks/InvisWal.dt1",
+                "Act1/Barracks/Warp.dt1"
+            };
+            for (String file : d2MooRoomDefaults) {
+              if (addDt1Dependency(TILES_PATH + file)) filesAdded++;
+            }
+          }
           if (DEBUG_BUILD) {
             Gdx.app.debug(TAG, String.format("Zone.getDependencies: %s added %d DT1 files from dt1Mask=0x%X", 
                 level.LevelName, filesAdded, dt1Mask));
@@ -1055,6 +1072,16 @@ public class Map implements Disposable {
         }
       }
       return dependencies;
+    }
+
+    private boolean addDt1Dependency(String filePath) {
+      for (AssetDescriptor dependency : dependencies) {
+        if (dependency.type == DT1.class && dependency.fileName.equalsIgnoreCase(filePath)) {
+          return false;
+        }
+      }
+      dependencies.add(new AssetDescriptor<>(filePath, DT1.class));
+      return true;
     }
 
     void load() {
