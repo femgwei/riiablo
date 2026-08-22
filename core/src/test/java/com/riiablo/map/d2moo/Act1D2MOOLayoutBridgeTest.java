@@ -75,6 +75,10 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         "fixed seed Blood Moor native border/LvlSub room count changed");
     assertEquals(30, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BURIALGROUNDS).getRooms(),
         "fixed seed Burial Grounds native graveyard room count changed");
+    assertEquals(94, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLACKMARSH).getRooms(),
+        "fixed seed Black Marsh native border/LvlSub room count changed");
+    assertEquals(95, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_TAMOEHIGHLAND).getRooms(),
+        "fixed seed Tamoe Highland native border/LvlSub room count changed");
     assertBloodMoorNativeLinks(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
     assertPresetFileSelectionsResolveToDs1(
@@ -85,9 +89,15 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
     assertPresetFileSelectionsResolveToDs1(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BURIALGROUNDS));
+    assertPresetFileSelectionsResolveToDs1(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLACKMARSH));
+    assertPresetFileSelectionsResolveToDs1(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_TAMOEHIGHLAND));
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD), false);
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS), false);
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR), false);
+    assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLACKMARSH), false);
+    assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_TAMOEHIGHLAND), false);
     assertPresetUnitListsAreAcyclic(drlg);
   }
 
@@ -210,7 +220,9 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         D2LevelIds.LEVEL_COLDPLAINS,
         D2LevelIds.LEVEL_BLOODMOOR,
         D2LevelIds.LEVEL_ROGUEENCAMPMENT,
-        D2LevelIds.LEVEL_BURIALGROUNDS }) {
+        D2LevelIds.LEVEL_BURIALGROUNDS,
+        D2LevelIds.LEVEL_BLACKMARSH,
+        D2LevelIds.LEVEL_TAMOEHIGHLAND }) {
       D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
       assertNotNull(level, "missing D2MOO level " + levelId);
       assertNotNull(level.getLevelCoords(), "missing coordinates for level " + levelId);
@@ -234,7 +246,9 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         D2LevelIds.LEVEL_STONYFIELD,
         D2LevelIds.LEVEL_COLDPLAINS,
         D2LevelIds.LEVEL_BLOODMOOR,
-        D2LevelIds.LEVEL_BURIALGROUNDS }) {
+        D2LevelIds.LEVEL_BURIALGROUNDS,
+        D2LevelIds.LEVEL_BLACKMARSH,
+        D2LevelIds.LEVEL_TAMOEHIGHLAND }) {
       D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
       int width = Math.max(1, level.getLevelCoords().getNWidth());
       int height = Math.max(1, level.getLevelCoords().getNHeight());
@@ -312,6 +326,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       case D2LevelIds.LEVEL_COLDPLAINS: return 6144;
       case D2LevelIds.LEVEL_BLOODMOOR: return 5122;
       case D2LevelIds.LEVEL_BURIALGROUNDS: return 1920;
+      case D2LevelIds.LEVEL_BLACKMARSH: return 6016;
+      case D2LevelIds.LEVEL_TAMOEHIGHLAND: return 6080;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
   }

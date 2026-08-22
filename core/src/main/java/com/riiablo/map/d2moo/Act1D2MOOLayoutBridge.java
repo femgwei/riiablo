@@ -30,13 +30,15 @@ import java.util.Set;
  */
 public final class Act1D2MOOLayoutBridge {
 
-    /** D2MOO Act1 荒野链接顺序: Stony(4), Cold(3), Blood(2), Town(1), Burial(17) */
+    /** Act 1 levels consumed by the current native-layout bridge. */
     private static final int[] D2MOO_ACT1_LEVEL_IDS = {
         D2LevelIds.LEVEL_STONYFIELD,
         D2LevelIds.LEVEL_COLDPLAINS,
         D2LevelIds.LEVEL_BLOODMOOR,
         D2LevelIds.LEVEL_ROGUEENCAMPMENT,
         D2LevelIds.LEVEL_BURIALGROUNDS,
+        D2LevelIds.LEVEL_BLACKMARSH,
+        D2LevelIds.LEVEL_TAMOEHIGHLAND,
     };
 
     /**
@@ -57,13 +59,13 @@ public final class Act1D2MOOLayoutBridge {
      */
     public static final class Act1LayoutResult {
         /** 每格 [x, y, width, height] 单位 tile，与 D2DrlgCoord 一致 */
-        public final int[][] coords = new int[5][4];
-        /** 对应 riiablo 的 level id：0=Stony, 1=Cold, 2=Blood, 3=Town, 4=Burial(使用 burialGroundsId) */
-        public final int[] levelIds = new int[5];
+        public final int[][] coords = new int[7][4];
+        /** 0=Stony, 1=Cold, 2=Blood, 3=Town, 4=Burial, 5=Black Marsh, 6=Tamoe. */
+        public final int[] levelIds = new int[7];
         /** levelLink[i]：连接到的上一格索引，-1 表示无 */
-        public final int[] levelLink = new int[] { -1, 0, 1, 2, 1 };
+        public final int[] levelLink = new int[] { -1, 0, 1, 2, 1, -1, 5 };
         /** levelLinkEx[i] */
-        public final int[] levelLinkEx = new int[] { -1, -1, -1, -1, -1 };
+        public final int[] levelLinkEx = new int[] { -1, -1, -1, -1, -1, -1, -1 };
         /** 城镇出口方向 0–3 (D2MOD rand[0][townIndex])，用于预设选择与路径 */
         public int townDirection;
     }
@@ -141,8 +143,10 @@ public final class Act1D2MOOLayoutBridge {
             result.levelIds[2] = D2LevelIds.LEVEL_BLOODMOOR;
             result.levelIds[3] = D2LevelIds.LEVEL_ROGUEENCAMPMENT;
             result.levelIds[4] = burialGroundsId;
+            result.levelIds[5] = D2LevelIds.LEVEL_BLACKMARSH;
+            result.levelIds[6] = D2LevelIds.LEVEL_TAMOEHIGHLAND;
 
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < D2MOO_ACT1_LEVEL_IDS.length; i++) {
                 int levelId = D2MOO_ACT1_LEVEL_IDS[i];
                 D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
                 if (level == null) {

@@ -130,13 +130,18 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     Levels.Entry blood = Riiablo.files.Levels.get(LEVEL_BLOODMOOR);
     Levels.Entry town = Riiablo.files.Levels.get(LEVEL_ROGUEENCAMPMENT);
     Levels.Entry burial = Riiablo.files.Levels.get(burialGroundsId);
-    if (stony == null || cold == null || blood == null || town == null || burial == null) return null;
+    Levels.Entry black = Riiablo.files.Levels.get(LEVEL_BLACKMARSH);
+    Levels.Entry tamoe = Riiablo.files.Levels.get(LEVEL_TAMOEHIGHLAND);
+    if (stony == null || cold == null || blood == null || town == null || burial == null
+        || black == null || tamoe == null) return null;
 
     int sw = stony.SizeX[diff], sh = stony.SizeY[diff];
     int cw = cold.SizeX[diff], ch = cold.SizeY[diff];
     int bw = 56, bh = 96; // Blood Moor 固定 56x96
     int tw = town.SizeX[diff], th = town.SizeY[diff];
     int burw = burial.SizeX[diff], burh = burial.SizeY[diff];
+    int blw = black.SizeX[diff], blh = black.SizeY[diff];
+    int taw = tamoe.SizeX[diff], tah = tamoe.SizeY[diff];
 
     Act1LayoutResult r = new Act1LayoutResult();
     r.levelIds[0] = LEVEL_STONYFIELD;
@@ -144,6 +149,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     r.levelIds[2] = LEVEL_BLOODMOOR;
     r.levelIds[3] = LEVEL_ROGUEENCAMPMENT;
     r.levelIds[4] = burialGroundsId;
+    r.levelIds[5] = LEVEL_BLACKMARSH;
+    r.levelIds[6] = LEVEL_TAMOEHIGHLAND;
 
     // 布局: Stony-Cold 在东侧，Blood 接 Cold 西侧，Town 在 Blood 西侧，Burial 在 Cold 北侧
     r.coords[0][0] = bw + cw;  r.coords[0][1] = 0;       r.coords[0][2] = sw;   r.coords[0][3] = sh;   // Stony
@@ -151,6 +158,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     r.coords[2][0] = 0;        r.coords[2][1] = 0;       r.coords[2][2] = bw;  r.coords[2][3] = bh;   // Blood
     r.coords[3][0] = -tw;      r.coords[3][1] = 0;       r.coords[3][2] = tw;   r.coords[3][3] = th;   // Town 左邻 Blood
     r.coords[4][0] = bw;       r.coords[4][1] = ch;      r.coords[4][2] = burw; r.coords[4][3] = burh; // Burial 北邻 Cold
+    r.coords[5][0] = bw + cw + sw;       r.coords[5][1] = 0; r.coords[5][2] = blw; r.coords[5][3] = blh;
+    r.coords[6][0] = bw + cw + sw + blw; r.coords[6][1] = 0; r.coords[6][2] = taw; r.coords[6][3] = tah;
     r.townDirection = 3; // 出口朝东(Blood)
     return r;
   }
@@ -222,7 +231,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
     if (DEBUG_BUILD) {
       Gdx.app.debug(TAG, String.format("=== D2MOO_JAVA Act1 Layout (seed=0x%08X, diff=%d) ===", seed, diff));
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < result.levelIds.length; i++) {
         Levels.Entry lev = Riiablo.files.Levels.get(result.levelIds[i]);
         Gdx.app.debug(TAG, String.format("  Zone[%d]: %s (id=%d) at (%d,%d) size %dx%d",
             i, lev != null ? lev.LevelName : "?", result.levelIds[i],
@@ -232,7 +241,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     }
 
     // DrlgLevel 初始化
-    final int NUM_ZONES = 5;
+    final int NUM_ZONES = result.levelIds.length;
     for (int i = 0; i < NUM_ZONES; i++) {
       Levels.Entry level = Riiablo.files.Levels.get(result.levelIds[i]);
       if (level != null && !drlgLevels.containsKey(level.Id)) {
@@ -1247,7 +1256,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         }
       }
       int[] outdoorLevelIds = {
-          LEVEL_BLOODMOOR, LEVEL_COLDPLAINS, LEVEL_STONYFIELD, burialGroundsId
+          LEVEL_BLOODMOOR, LEVEL_COLDPLAINS, LEVEL_STONYFIELD, burialGroundsId,
+          LEVEL_BLACKMARSH, LEVEL_TAMOEHIGHLAND
       };
       for (int levelId : outdoorLevelIds) {
         applier.resetLastExportedFloorCount();
