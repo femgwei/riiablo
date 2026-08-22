@@ -1,6 +1,5 @@
 package com.d2moo.common.drlg;
 
-import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2Pool;
 
 /**
@@ -36,69 +35,138 @@ public class DrlgDrlgVer {
         if (ppVertices == null || ppVertices.length == 0 || pDrlgCoord == null) {
             return;
         }
-        
-        // 1. 调整坐标（根据方向）
-        int nPosX = pDrlgCoord.getNTileXPos();
-        int nPosY = pDrlgCoord.getNTileYPos();
-        // Native DRLGVER_CreateVertices temporarily decrements both extents
-        // before creating the four corner vertices.  Coordinates describe
-        // inclusive grid-cell bounds: an 80-tile level becomes cells 0..9
-        // after the caller divides by 8, not 0..10.  Using the full extent
-        // put the right and bottom edges outside the outdoor grid, leaving an
-        // open border which the corner flood-fill then marked entirely blank.
-        int nWidth = pDrlgCoord.getNTileWidth() - 1;
-        int nHeight = pDrlgCoord.getNTileHeight() - 1;
-        
-        // 根据方向调整坐标（简化实现，实际可能需要更复杂的变换）
-        // 方向值：0=无旋转, 1=90度, 2=180度, 3=270度
-        int nAdjustedX = nPosX;
-        int nAdjustedY = nPosY;
-        int nAdjustedWidth = nWidth;
-        int nAdjustedHeight = nHeight;
-        
-        if (direction == 1 || direction == 3) {
-            // 90度或270度旋转，交换宽度和高度
-            int temp = nAdjustedWidth;
-            nAdjustedWidth = nAdjustedHeight;
-            nAdjustedHeight = temp;
+
+        // Native DRLGVER_CreateVertices builds the polygon counter-clockwise,
+        // using inclusive right/bottom bounds.  The order is significant to
+        // the outdoor border walker and must not be replaced by a rotated
+        // rectangle approximation.
+        int originX = pDrlgCoord.getNPosX();
+        int originY = pDrlgCoord.getNPosY();
+        int width = pDrlgCoord.getNWidth() - 1;
+        int height = pDrlgCoord.getNHeight() - 1;
+
+        D2DrlgVertexStrc bottomLeft = allocVertex(memPool, direction);
+        bottomLeft.setNPosX(originX);
+        bottomLeft.setNPosY(originY + height);
+
+        D2DrlgVertexStrc topLeft = allocVertex(memPool, direction);
+        topLeft.setNPosX(originX);
+        topLeft.setNPosY(originY);
+        bottomLeft.setPNext(topLeft);
+
+        D2DrlgVertexStrc topRight = allocVertex(memPool, direction);
+        topRight.setNPosX(originX + width);
+        topRight.setNPosY(originY);
+        topLeft.setPNext(topRight);
+
+        D2DrlgVertexStrc bottomRight = allocVertex(memPool, direction);
+        bottomRight.setNPosX(originX + width);
+        bottomRight.setNPosY(originY + height);
+        topRight.setPNext(bottomRight);
+        bottomRight.setPNext(bottomLeft);
+        ppVertices[0] = bottomLeft;
+
+        // Splice level-link intervals into their matching polygon edges.  A
+        // flagged vertex is the native marker consumed by SetOutGridLinkFlags
+        // and later by Act 1 transition/path generation.
+        for (D2DrlgOrth roomData = pDrlgRoomData; roomData != null; roomData = roomData.getPNext()) {
+            D2DrlgCoord coords = roomData.getPBox() != null ? roomData.getPBox() : pDrlgCoord;
+            int coordsWidth = coords.getNWidth() - 1;
+            int coordsHeight = coords.getNHeight() - 1;
+            D2DrlgVertexStrc edgeStart;
+            boolean vertical;
+            int intervalStart;
+            int intervalEnd;
+            int edgeStartCoord;
+            int edgeEndCoord;
+            int sign;
+
+            switch (roomData.getNDirection()) {
+                case 0: // ALTDIR_WEST
+                    edgeStart = bottomLeft;
+                    vertical = true;
+                    intervalStart = coords.getNPosY() + coordsHeight;
+                    intervalEnd = coords.getNPosY();
+                    edgeStartCoord = bottomLeft.getNPosY();
+                    edgeEndCoord = topLeft.getNPosY();
+                    sign = -1;
+                    break;
+                case 1: // ALTDIR_NORTH
+                    edgeStart = topLeft;
+                    vertical = false;
+                    intervalStart = coords.getNPosX();
+                    intervalEnd = coords.getNPosX() + coordsWidth;
+                    edgeStartCoord = topLeft.getNPosX();
+                    edgeEndCoord = topRight.getNPosX();
+                    sign = 1;
+                    break;
+                case 2: // ALTDIR_EAST
+                    edgeStart = topRight;
+                    vertical = true;
+                    intervalStart = coords.getNPosY();
+                    intervalEnd = coords.getNPosY() + coordsHeight;
+                    edgeStartCoord = topRight.getNPosY();
+                    edgeEndCoord = bottomRight.getNPosY();
+                    sign = 1;
+                    break;
+                case 3: // ALTDIR_SOUTH
+                    edgeStart = bottomRight;
+                    vertical = false;
+                    intervalStart = coords.getNPosX() + coordsWidth;
+                    intervalEnd = coords.getNPosX();
+                    edgeStartCoord = bottomRight.getNPosX();
+                    edgeEndCoord = bottomLeft.getNPosX();
+                    sign = -1;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid alternate direction: "
+                            + roomData.getNDirection());
+            }
+
+            D2DrlgVertexStrc marker = edgeStart;
+            if (sign * intervalStart > sign * edgeStartCoord) {
+                if (sign * intervalStart <= sign * edgeEndCoord) {
+                    marker = insertVertexAfter(memPool, marker, direction, vertical, intervalStart);
+                    markLevelLink(marker, roomData.isBPreset());
+                    if (sign * intervalEnd < sign * edgeEndCoord) {
+                        insertVertexAfter(memPool, marker, direction, vertical, intervalEnd);
+                    }
+                }
+            } else if (sign * intervalEnd >= sign * edgeStartCoord) {
+                markLevelLink(marker, roomData.isBPreset());
+                if (sign * intervalEnd < sign * edgeEndCoord) {
+                    insertVertexAfter(memPool, marker, direction, vertical, intervalEnd);
+                }
+            }
         }
-        
-        // 2. 创建基础顶点（4个角）
-        D2DrlgVertexStrc pFirstVertex = allocVertex(memPool, direction);
-        pFirstVertex.setNPosX(nAdjustedX);
-        pFirstVertex.setNPosY(nAdjustedY);
-        
-        D2DrlgVertexStrc pSecondVertex = allocVertex(memPool, direction);
-        pSecondVertex.setNPosX(nAdjustedX + nAdjustedWidth);
-        pSecondVertex.setNPosY(nAdjustedY);
-        pFirstVertex.setPNext(pSecondVertex);
-        
-        D2DrlgVertexStrc pThirdVertex = allocVertex(memPool, direction);
-        pThirdVertex.setNPosX(nAdjustedX + nAdjustedWidth);
-        pThirdVertex.setNPosY(nAdjustedY + nAdjustedHeight);
-        pSecondVertex.setPNext(pThirdVertex);
-        
-        D2DrlgVertexStrc pFourthVertex = allocVertex(memPool, direction);
-        pFourthVertex.setNPosX(nAdjustedX);
-        pFourthVertex.setNPosY(nAdjustedY + nAdjustedHeight);
-        pThirdVertex.setPNext(pFourthVertex);
-        
-        // 形成循环链表
-        pFourthVertex.setPNext(pFirstVertex);
-        
-        // 3. The native routine can splice room-data vertices into this
-        // polygon.  The old Java approximation inserted arbitrary diagonal
-        // edges, which makes the outdoor border walker non-convergent.  Keep
-        // the guaranteed orthogonal rectangle until that splice algorithm is
-        // ported faithfully; retain a diagnostic so this limitation is
-        // visible in fixed-seed traces.
-        if (pDrlgRoomData != null && pDrlgRoomData.getPBox() != null) {
-            D2Log.debug("DRLG_VERTEX roomData splice deferred box=(%d,%d %dx%d)",
-                    pDrlgRoomData.getPBox().getNTileXPos(), pDrlgRoomData.getPBox().getNTileYPos(),
-                    pDrlgRoomData.getPBox().getNTileWidth(), pDrlgRoomData.getPBox().getNTileHeight());
+
+        // The C++ routine returns coordinates local to the level; its caller
+        // only converts them from tiles to 8x8 outdoor cells.
+        D2DrlgVertexStrc vertex = ppVertices[0];
+        do {
+            vertex.setNPosX(vertex.getNPosX() - originX);
+            vertex.setNPosY(vertex.getNPosY() - originY);
+            vertex = vertex.getPNext();
+        } while (vertex != ppVertices[0]);
+    }
+
+    private static D2DrlgVertexStrc insertVertexAfter(Object memPool, D2DrlgVertexStrc vertex,
+            byte direction, boolean vertical, int coordinate) {
+        D2DrlgVertexStrc inserted = allocVertex(memPool, direction);
+        if (vertical) {
+            inserted.setNPosX(vertex.getNPosX());
+            inserted.setNPosY(coordinate);
+        } else {
+            inserted.setNPosX(coordinate);
+            inserted.setNPosY(vertex.getNPosY());
         }
-        
-        ppVertices[0] = pFirstVertex;
+        inserted.setPNext(vertex.getPNext());
+        vertex.setPNext(inserted);
+        return inserted;
+    }
+
+    private static void markLevelLink(D2DrlgVertexStrc vertex, boolean preset) {
+        vertex.setDwFlags(vertex.getDwFlags() | 1 | (preset ? 2 : 0));
     }
     
     /**

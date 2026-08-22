@@ -23,10 +23,12 @@ import com.riiablo.drlg.TileGrid;
 /** Fixed-seed DRLG smoke test and diagnostic report for the Act1 bridge. */
 public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   private static final int DEFAULT_DIFFICULTY = 0;
+  /** Reproduction seed from the town-exit black-map game log. */
+  private static final String DEFAULT_SEED = "0x171A6100";
 
   @Test
   public void fixedSeedAct1LayoutIsStableAndExportable() {
-    int seed = Integer.decode(System.getProperty("d2.seed", "0x13579BDF"));
+    int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
     int difficulty = Integer.getInteger("d2.difficulty", DEFAULT_DIFFICULTY);
     int burialId = findLevelId("Burial Grounds");
     assertTrue(burialId > 0, "Burial Grounds is missing from Levels.txt");

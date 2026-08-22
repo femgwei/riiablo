@@ -243,7 +243,7 @@ public class DrlgOutPlace {
         
         // Act1 生成泥土路径
         byte nAct = DrlgDrlg.getActNoFromLevelId(drlgRoom.getLevel().getLevelId());
-        if (nAct == 1) {
+        if (nAct == D2C_Acts.ACT_I) {
             DrlgOutdoors.generateDirtPath(drlgRoom.getLevel(), drlgRoom);
         }
         

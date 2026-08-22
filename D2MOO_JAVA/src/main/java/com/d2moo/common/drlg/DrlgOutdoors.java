@@ -105,13 +105,11 @@ public class DrlgOutdoors {
                     throw new IllegalStateException("DRLG vertex list is not circular for level "
                             + level.getLevelId());
                 }
-                // Outdoor grids are local to the level.  Vertices are laid
-                // out in world tile coordinates, so subtract the level
-                // origin before converting tiles to 8x8 grid cells.
-                pCurrentVertex.setNPosX((pCurrentVertex.getNPosX()
-                        - level.getLevelCoords().getNPosX()) / 8);
-                pCurrentVertex.setNPosY((pCurrentVertex.getNPosY()
-                        - level.getLevelCoords().getNPosY()) / 8);
+                // DRLGVER_CreateVertices already returns level-local tile
+                // coordinates, matching native D2MOO.  Only scale them to
+                // outdoor 8x8 cells here.
+                pCurrentVertex.setNPosX(pCurrentVertex.getNPosX() / 8);
+                pCurrentVertex.setNPosY(pCurrentVertex.getNPosY() / 8);
                 pCurrentVertex = pCurrentVertex.getPNext();
             } while (pCurrentVertex != null && pCurrentVertex != pVertex);
             D2Log.debug("DRLG_OUTDOOR vertices normalized level=%d count=%d", level.getLevelId(), vertexCount);
@@ -121,29 +119,32 @@ public class DrlgOutdoors {
         if (pVertex != null) {
             D2DrlgVertexStrc pCurrentVertex = pVertex;
             int vertexCount = 0;
+            int removedCount = 0;
             do {
                 if (++vertexCount > 1024) {
                     throw new IllegalStateException("DRLG duplicate-removal vertex list is not circular for level "
                             + level.getLevelId());
                 }
                 D2DrlgVertexStrc pNextVertex = pCurrentVertex.getPNext();
-                if (pNextVertex != null && pNextVertex != pVertex) {
-                    if (pCurrentVertex.getNPosX() == pNextVertex.getNPosX() 
-                            && pCurrentVertex.getNPosY() == pNextVertex.getNPosY()) {
-                        // 合并顶点
-                        if (pNextVertex == pVertex) {
-                            pVertex = pCurrentVertex;
-                            pOutdoorInfo.setPVertex(pVertex);
-                        }
-                        pCurrentVertex.setPNext(pNextVertex.getPNext());
-                        pCurrentVertex.setDwFlags(pCurrentVertex.getDwFlags() | pNextVertex.getDwFlags());
-                        pCurrentVertex.setNDirection(pNextVertex.getNDirection());
-                        // 释放 pNextVertex（在 Java 中由 GC 处理）
+                if (pNextVertex != null
+                        && pCurrentVertex.getNPosX() == pNextVertex.getNPosX()
+                        && pCurrentVertex.getNPosY() == pNextVertex.getNPosY()) {
+                    // Native also merges the closing vertex with the head.
+                    // The previous guard skipped exactly that case and could
+                    // leave a zero-length edge after tile->grid truncation.
+                    if (pNextVertex == pVertex) {
+                        pVertex = pCurrentVertex;
+                        pOutdoorInfo.setPVertex(pVertex);
                     }
+                    pCurrentVertex.setPNext(pNextVertex.getPNext());
+                    pCurrentVertex.setDwFlags(pCurrentVertex.getDwFlags() | pNextVertex.getDwFlags());
+                    pCurrentVertex.setNDirection(pNextVertex.getNDirection());
+                    removedCount++;
                 }
                 pCurrentVertex = pCurrentVertex.getPNext();
             } while (pCurrentVertex != null && pCurrentVertex != pVertex);
-            D2Log.debug("DRLG_OUTDOOR vertices deduplicated level=%d visits=%d", level.getLevelId(), vertexCount);
+            D2Log.debug("DRLG_OUTDOOR vertices deduplicated level=%d visits=%d removed=%d",
+                    level.getLevelId(), vertexCount, removedCount);
         }
         
         // 根据 Act 初始化户外关卡

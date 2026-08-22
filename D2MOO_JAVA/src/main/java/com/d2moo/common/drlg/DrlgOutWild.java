@@ -8,6 +8,12 @@ import com.d2moo.common.seed.Seed;
  * 对应 C++ 文件：DrlgOutWild.cpp
  */
 public class DrlgOutWild {
+
+    // Native D2C_LvlSubIds values used by Act 1 wilderness borders.
+    static final int LVLSUB_ACT1_BORDER_CLIFFS = 0;
+    static final int LVLSUB_ACT1_BORDER_MIDDLE = 1;
+    static final int LVLSUB_ACT1_BORDER_CORNER = 2;
+    static final int LVLSUB_ACT1_BORDER_BORDER = 3;
     
     // 河流预设文件映射表
     private static class RiverFileMap {
@@ -40,15 +46,9 @@ public class DrlgOutWild {
      * 初始化 Act1 户外关卡
      * 被 DrlgOutdoors 依赖
      * 
-     * 功能：
-     * 1. 处理顶点方向（根据坐标差计算方向）
-     * 2. 设置网格链接标志
-     * 3. 放置边界
-     * 4. 添加次要边界
-     * 5. 生成河流（可选）
-     * 6. 生成悬崖洞穴（可选）
-     * 7. 生成城镇过渡和洞穴（可选）
-     * 8. 生成特殊预设（可选）
+     * Port of DRLGOUTWILD_InitAct1OutdoorLevel.  Keep the native stage order:
+     * vertex/link flags, primary border, four secondary borders with river and
+     * cave stages interleaved, transitions, waypoint/shrines, special presets.
      */
     public static void initAct1OutdoorLevel(D2DrlgLevel level) {
         if (level == null) {
@@ -61,55 +61,16 @@ public class DrlgOutWild {
         }
         
         D2DrlgOutdoorInfoStrc outdoors = (D2DrlgOutdoorInfoStrc) outdoorsObj;
-        D2DrlgVertexStrc pVertex = outdoors.getPVertex();
-        
-        if (pVertex == null) {
+        D2DrlgVertexStrc head = outdoors.getPVertex();
+        if (head == null) {
             D2Log.warning("DRLG_OUTWILD no vertex level=%d", level.getLevelId());
             return;
         }
         D2Log.debug("DRLG_OUTWILD begin level=%d grid=%dx%d flags=0x%X", level.getLevelId(),
                 outdoors.getNGridWidth(), outdoors.getNGridHeight(), outdoors.getDwFlags());
         
-        // 1. 处理顶点方向
-        // 遍历顶点链表，根据坐标差计算方向
-        D2DrlgVertexStrc pCurrent = pVertex;
-        D2DrlgVertexStrc pStart = pVertex;
-        int[] pDiffX = new int[1];
-        int[] pDiffY = new int[1];
-        
-        do {
-            // 获取当前顶点到下一个顶点的坐标差
-            DrlgDrlgVer.getCoordDiff(pCurrent, pDiffX, pDiffY);
-            
-            // 根据坐标差计算方向
-            // 方向值：0=无方向, 1=东, 2=南, 3=西, 4=北
-            // 简化实现：根据坐标差设置方向
-            byte nDirection = 0;
-            int nDiffX = pDiffX[0];
-            int nDiffY = pDiffY[0];
-            
-            if (nDiffX > 0 && nDiffY == 0) {
-                nDirection = 1; // 东
-            } else if (nDiffX == 0 && nDiffY > 0) {
-                nDirection = 2; // 南
-            } else if (nDiffX < 0 && nDiffY == 0) {
-                nDirection = 3; // 西
-            } else if (nDiffX == 0 && nDiffY < 0) {
-                nDirection = 4; // 北
-            } else if (nDiffX != 0 || nDiffY != 0) {
-                // 对角线方向，使用主要方向
-                if (Math.abs(nDiffX) > Math.abs(nDiffY)) {
-                    nDirection = (byte)(nDiffX > 0 ? 1 : 3);
-                } else {
-                    nDirection = (byte)(nDiffY > 0 ? 2 : 4);
-                }
-            }
-            
-            pCurrent.setNDirection(nDirection);
-            
-            // 移动到下一个顶点
-            pCurrent = pCurrent.getPNext();
-        } while (pCurrent != null && pCurrent != pStart);
+        applyNativeCliffDirections(level, outdoors, head);
+        logVertices(level, head, "directions");
         
         // 2. 设置网格链接标志
         D2Log.debug("DRLG_OUTWILD linkFlags begin level=%d", level.getLevelId());
@@ -117,27 +78,203 @@ public class DrlgOutWild {
         D2Log.debug("DRLG_OUTWILD linkFlags end level=%d", level.getLevelId());
         logGrid2Flags(level, outdoors, "linkFlags");
         
-        // 3. 放置边界
         D2Log.debug("DRLG_OUTWILD borders begin level=%d", level.getLevelId());
         DrlgOutPlace.placeAct1245OutdoorBorders(level);
         D2Log.debug("DRLG_OUTWILD borders end level=%d", level.getLevelId());
         logGrid2Flags(level, outdoors, "borders");
         
-        // 4. 添加次要边界
-        // Act1 使用荒野边界预设
-        DrlgOutdoors.addAct124SecondaryBorder(level, 1, D2LvlPrestIds.LVLPREST_ACT1_WILD_BORDER_1);
-        logGrid2Flags(level, outdoors, "secondary1");
-        DrlgOutdoors.addAct124SecondaryBorder(level, 2, D2LvlPrestIds.LVLPREST_ACT1_WILD_BORDER_1);
-        logGrid2Flags(level, outdoors, "secondary2");
-        DrlgOutdoors.addAct124SecondaryBorder(level, 3, D2LvlPrestIds.LVLPREST_ACT1_WILD_BORDER_1);
-        logGrid2Flags(level, outdoors, "secondary3");
-        D2Log.debug("DRLG_OUTWILD secondaryBorders end level=%d", level.getLevelId());
-        
-        // 5-8. 生成河流、悬崖洞穴、城镇过渡和洞穴、特殊预设
-        // 这些功能可以根据关卡ID和具体需求调用相应的函数
-        // 目前保留为可选功能，可以在后续根据需求实现
-        
-        D2Log.debug("DRLGOUTWILD_InitAct1OutdoorLevel: Act1 outdoor level initialized successfully");
+        int levelId = level.getLevelId();
+        if (isAct1Wilderness(levelId)) {
+            addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_CLIFFS, "cliffs");
+            spawnNativeRiversAndCliffCaves(level, outdoors);
+            addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_MIDDLE, "middle");
+            addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_CORNER, "corner");
+            spawnTownTransitionsAndCaves(level);
+            logGrid2Flags(level, outdoors, "transitionsCaves");
+            addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_BORDER, "border");
+
+            // DRLGOUTDOORS_SpawnAct1DirtPaths and its A* helpers have not yet
+            // been ported.  Do not pretend the per-room straight-line fallback
+            // is equivalent; expose the missing topology in every seed trace.
+            D2Log.warning("DRLG_OUTWILD native dirt-path topology pending level=%d roomLinks=%d",
+                    levelId, countRoomData(outdoors.getPRoomData()));
+        } else if (levelId == D2LevelIds.LEVEL_MOOMOOFARM) {
+            addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_CLIFFS, "cliffs");
+            addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_MIDDLE, "middle");
+            addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_CORNER, "corner");
+            addSecondaryBorder(level, outdoors, LVLSUB_ACT1_BORDER_BORDER, "border");
+        }
+
+        if (levelId >= D2LevelIds.LEVEL_COLDPLAINS && levelId <= D2LevelIds.LEVEL_BLACKMARSH) {
+            DrlgOutdoors.spawnAct12Waypoint(level);
+            logGrid2Flags(level, outdoors, "waypoint");
+        }
+        if (isAct1Wilderness(levelId)) {
+            DrlgOutdoors.spawnAct12Shrines(level, 5);
+            logGrid2Flags(level, outdoors, "shrines");
+        }
+        spawnSpecialPresets(level);
+        logGrid2Flags(level, outdoors, "specialPresets");
+        D2Log.debug("DRLG_OUTWILD end level=%d flags=0x%X", levelId, outdoors.getDwFlags());
+    }
+
+    static boolean isAct1Wilderness(int levelId) {
+        return levelId >= D2LevelIds.LEVEL_BLOODMOOR
+                && levelId <= D2LevelIds.LEVEL_TAMOEHIGHLAND;
+    }
+
+    static boolean preservesInitialDirections(int levelId) {
+        return levelId == D2LevelIds.LEVEL_BLOODMOOR
+                || levelId == D2LevelIds.LEVEL_COLDPLAINS
+                || levelId == D2LevelIds.LEVEL_BURIALGROUNDS;
+    }
+
+    private static void addSecondaryBorder(D2DrlgLevel level, D2DrlgOutdoorInfoStrc outdoors,
+            int lvlSubId, String stage) {
+        DrlgOutdoors.addAct124SecondaryBorder(level, lvlSubId,
+                D2LvlPrestIds.LVLPREST_ACT1_WILD_BORDER_1);
+        logGrid2Flags(level, outdoors, "secondary-" + stage);
+    }
+
+    private static void applyNativeCliffDirections(D2DrlgLevel level,
+            D2DrlgOutdoorInfoStrc outdoors, D2DrlgVertexStrc head) {
+        if (preservesInitialDirections(level.getLevelId())) {
+            return;
+        }
+
+        D2DrlgVertexStrc previous = head;
+        int guard = 0;
+        while (previous.getPNext() != head) {
+            previous = previous.getPNext();
+            if (previous == null || ++guard > 1024) {
+                throw new IllegalStateException("Invalid Act1 vertex ring for level " + level.getLevelId());
+            }
+        }
+
+        D2DrlgVertexStrc vertex = head;
+        boolean breakOuter = false;
+        guard = 0;
+        do {
+            D2DrlgVertexStrc next = vertex.getPNext();
+            boolean corner = vertex.getNPosX() < next.getNPosX()
+                    && previous.getNPosY() > vertex.getNPosY()
+                    && (vertex.getDwFlags() & 1) == 0 && (previous.getDwFlags() & 1) == 0;
+            corner |= vertex.getNPosY() > next.getNPosY()
+                    && previous.getNPosX() > vertex.getNPosX()
+                    && (vertex.getDwFlags() & 1) == 0 && (previous.getDwFlags() & 1) == 0;
+            if (corner) {
+                D2DrlgVertexStrc first = vertex;
+                D2DrlgVertexStrc special = null;
+                do {
+                    if (vertex == head) breakOuter = true;
+                    if (stopsCliffDirectionRun(vertex)) break;
+                    if (isCliffDirectionCandidate(vertex)) special = vertex;
+                    vertex = vertex.getPNext();
+                } while (vertex != first);
+
+                if (special != null) {
+                    D2DrlgVertexStrc marked = first;
+                    while (marked != special) {
+                        marked.setNDirection((byte) 1); // ALTDIR_NORTH
+                        marked = marked.getPNext();
+                    }
+                    special.setNDirection((byte) 1);
+                    outdoors.setDwFlags(outdoors.getDwFlags() | DrlgOutdoors.OUTDOOR_CLIFFS);
+                }
+            }
+            previous = vertex;
+            vertex = vertex.getPNext();
+            if (++guard > 2048) {
+                throw new IllegalStateException("Act1 cliff-direction walk did not converge for level "
+                        + level.getLevelId());
+            }
+        } while (!breakOuter && vertex != head);
+    }
+
+    static boolean isCliffDirectionCandidate(D2DrlgVertexStrc vertex) {
+        D2DrlgVertexStrc next = vertex != null ? vertex.getPNext() : null;
+        D2DrlgVertexStrc next2 = next != null ? next.getPNext() : null;
+        if (next == null || next2 == null) return false;
+        if (vertex.getNPosX() >= next.getNPosX() || next.getNPosY() >= next2.getNPosY()
+                || (vertex.getDwFlags() & 1) != 0 || (next.getDwFlags() & 1) != 0) {
+            if (vertex.getNPosY() <= next.getNPosY() || next.getNPosX() >= next2.getNPosX()
+                    || (vertex.getDwFlags() & 1) != 0 || (next.getDwFlags() & 1) != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    static boolean stopsCliffDirectionRun(D2DrlgVertexStrc vertex) {
+        D2DrlgVertexStrc next = vertex != null ? vertex.getPNext() : null;
+        if (next == null) return true;
+        if (vertex.getNPosY() >= next.getNPosY() && vertex.getNPosX() <= next.getNPosX()) {
+            if ((vertex.getDwFlags() & 1) == 0) {
+                return (next.getDwFlags() & 1) != 0;
+            }
+        }
+        return true;
+    }
+
+    private static void spawnNativeRiversAndCliffCaves(D2DrlgLevel level,
+            D2DrlgOutdoorInfoStrc outdoors) {
+        if ((outdoors.getDwFlags() & (DrlgOutdoors.OUTDOOR_BRIDGE
+                | DrlgOutdoors.OUTDOOR_RIVER_OTHER)) != 0) {
+            int riverX = outdoors.getNGridWidth() - 2;
+            if (testSpawnRiver(level, riverX)) spawnRiver(level, riverX);
+        }
+
+        if ((outdoors.getDwFlags() & DrlgOutdoors.OUTDOOR_CLIFFS) != 0
+                && (outdoors.getDwFlags() & DrlgOutdoors.OUTDOOR_OUT_CAVES) == 0) {
+            boolean transpose = (Seed.rollRandomNumber(level.getSeed()) & 1) != 0;
+            boolean added = false;
+            for (int y = 0; y < outdoors.getNGridHeight() && !added; y++) {
+                for (int x = 0; x < outdoors.getNGridWidth() && !added; x++) {
+                    int caveX = transpose ? y : x;
+                    int caveY = transpose ? x : y;
+                    if (caveX < outdoors.getNGridWidth() && caveY < outdoors.getNGridHeight()) {
+                        added = spawnCliffCaves(level, caveX, caveY);
+                    }
+                }
+            }
+            if (!added) D2Log.warning("DRLG_OUTWILD cliff cave not placed level=%d", level.getLevelId());
+        }
+
+        if ((outdoors.getDwFlags() & 0x1C) != 0
+                && (outdoors.getDwFlags() & DrlgOutdoors.OUTDOOR_OUT_CAVES) == 0) {
+            int y = outdoors.getNGridHeight() - 4;
+            int x = outdoors.getNGridWidth()
+                    - (((~outdoors.getDwFlags() & 0x10) | 0x40) >> 4);
+            int random = (int) (Seed.rollRandomNumber(level.getSeed()) & 3);
+            if ((random & 1) != 0) x = 3;
+            if (random / 2 != 0) y = 3;
+            int preset = level.getLevelId() == D2LevelIds.LEVEL_BLOODMOOR
+                    ? D2LvlPrestIds.LVLPREST_ACT1_DOE_ENTRANCE
+                    : D2LvlPrestIds.LVLPREST_ACT1_CAVE_ENTRANCE;
+            DrlgOutdoors.spawnOutdoorLevelPresetEx(level, x, y, preset, -1, false);
+            outdoors.setDwFlags(outdoors.getDwFlags() | DrlgOutdoors.OUTDOOR_OUT_CAVES);
+        }
+    }
+
+    private static int countRoomData(D2DrlgOrth roomData) {
+        int count = 0;
+        for (; roomData != null && count < 1024; roomData = roomData.getPNext()) count++;
+        return count;
+    }
+
+    private static void logVertices(D2DrlgLevel level, D2DrlgVertexStrc head, String stage) {
+        StringBuilder trace = new StringBuilder();
+        D2DrlgVertexStrc vertex = head;
+        int count = 0;
+        do {
+            if (count > 0) trace.append(' ');
+            trace.append('(').append(vertex.getNPosX()).append(',').append(vertex.getNPosY())
+                    .append(" d=").append(vertex.getNDirection())
+                    .append(" f=0x").append(Integer.toHexString(vertex.getDwFlags())).append(')');
+            vertex = vertex.getPNext();
+        } while (vertex != null && vertex != head && ++count < 32);
+        D2Log.debug("DRLG_OUTWILD vertices stage=%s level=%d %s", stage,
+                level.getLevelId(), trace.toString());
     }
 
     private static void logGrid2Flags(D2DrlgLevel level, D2DrlgOutdoorInfoStrc outdoors, String stage) {
@@ -167,10 +304,9 @@ public class DrlgOutWild {
      * D2Common.0x6FD84CA0
      * 获取桥梁坐标
      * 
-     * 功能：
-     * 1. 从关卡的户外信息中获取网格
-     * 2. 在网格中查找桥梁预设（LVLPREST_ACT3_BRIDGE）
-     * 3. 返回桥梁的坐标
+     * Locate the already-picked Act 1 bridge cell.  This is a lookup, not a
+     * placement-validity test; native D2MOO searches preset id 28 on the two
+     * central river columns and requires picked file 1.
      */
     public static void getBridgeCoords(D2DrlgLevel level, int[] x, int[] y) {
         if (level == null || x == null || x.length == 0 || y == null || y.length == 0) {
@@ -179,34 +315,24 @@ public class DrlgOutWild {
             return;
         }
         
-        // 初始化返回值
         x[0] = -1;
         y[0] = -1;
-        
-        // 获取户外信息
         Object presetOrOutdoors = level.getPresetOrOutdoorsOrMaze();
         if (!(presetOrOutdoors instanceof D2DrlgOutdoorInfoStrc)) {
             return;
         }
-        
         D2DrlgOutdoorInfoStrc outdoors = (D2DrlgOutdoorInfoStrc) presetOrOutdoors;
-        
-        // 在网格中查找桥梁预设
-        // 桥梁预设 ID 通常是 LVLPREST_ACT3_BRIDGE
-        int nBridgePrestId = D2LvlPrestIds.LVLPREST_ACT3_BRIDGE;
-        
-        // 遍历网格查找桥梁预设
-        int nGridWidth = outdoors.getNGridWidth();
-        int nGridHeight = outdoors.getNGridHeight();
-        
-        for (int gridY = 0; gridY < nGridHeight; ++gridY) {
-            for (int gridX = 0; gridX < nGridWidth; ++gridX) {
-                // 使用 DrlgOutdoors 模块的函数测试是否为桥梁预设
-                if (DrlgOutdoors.testOutdoorLevelPreset(level, gridX, gridY, nBridgePrestId, 0, (byte)15)) {
-                    x[0] = gridX;
-                    y[0] = gridY;
-                    return; // 找到桥梁，返回
-                }
+        int bridgeX = outdoors.getNGridWidth() / 2 - 1;
+        // D2MOO 1.10f uses nGridWidth as the upper Y bound. Clamp it for
+        // malformed/non-square inputs while preserving the native scan range.
+        int yEnd = Math.min(outdoors.getNGridWidth() - 1, outdoors.getNGridHeight());
+        for (int bridgeY = 1; bridgeY < yEnd; bridgeY++) {
+            if (DrlgDrlgGrid.getGridEntry(outdoors.getPGrid(0), bridgeX, bridgeY)
+                    == D2LvlPrestIds.LVLPREST_ACT1_BRIDGE
+                    && DrlgOutdoors.getPackedGrid2Info(outdoors, bridgeX, bridgeY).getNPickedFile() == 1) {
+                x[0] = bridgeX;
+                y[0] = bridgeY;
+                return;
             }
         }
     }
