@@ -1241,11 +1241,14 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (drlg != null) {
       D2MooTileApplier applier = new D2MooTileApplier();
       for (IntMap.Entry<DrlgLevel> e : drlgLevels) {
-        if (e.value.grid != null && e.key >= LEVEL_BLOODMOOR && e.key <= LEVEL_TAMOEHIGHLAND) {
+        boolean nativeAct1Outdoor = e.key >= LEVEL_BLOODMOOR && e.key <= LEVEL_TAMOEHIGHLAND;
+        if (e.value.grid != null && (nativeAct1Outdoor || e.key == burialGroundsId)) {
           applier.putGrid(e.key, e.value.grid);
         }
       }
-      int[] outdoorLevelIds = { LEVEL_BLOODMOOR, LEVEL_COLDPLAINS, LEVEL_STONYFIELD };
+      int[] outdoorLevelIds = {
+          LEVEL_BLOODMOOR, LEVEL_COLDPLAINS, LEVEL_STONYFIELD, burialGroundsId
+      };
       for (int levelId : outdoorLevelIds) {
         applier.resetLastExportedFloorCount();
         int n = DrlgExport.exportLevelTiles(drlg, levelId, applier);
@@ -1260,7 +1263,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             && applier.getInvalidTileCount() == 0
             && applier.getOutOfBoundsCount() == 0
             && applier.getWallLayerOverflowCount() == 0
-            && applier.getNonWallOrientationCount() == 0;
+            && applier.getNonFloorOrientationCount() == 0
+            && applier.getNonWallOrientationCount() == 0
+            && applier.getNonShadowOrientationCount() == 0;
         boolean renderExportedFloors = Boolean.getBoolean("riiablo.drlg.renderExportedFloors");
         boolean acceptedForRendering = renderExportedFloors && qualityPassed;
         if (acceptedForRendering) {

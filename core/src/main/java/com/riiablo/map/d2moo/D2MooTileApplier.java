@@ -178,7 +178,16 @@ public final class D2MooTileApplier implements DrlgTileExporter {
     }
 
     private void applyShadow(TileGrid grid, int tx, int ty, int tileId, int orientation) {
-        if (orientation != Orientation.SHADOW) nonShadowOrientationCount++;
+        if (orientation != Orientation.SHADOW) {
+            if (nonShadowOrientationCount < 16 && Gdx.app != null) {
+                Gdx.app.log("D2MooTileApplier", String.format(
+                    "D2MOO shadow slot referenced non-shadow DT1: pos=(%d,%d)"
+                        + " orientation=%d(%s) style=%d sequence=%d tile=0x%08X",
+                    tx, ty, orientation, Orientation.toString(orientation),
+                    DT1.Tile.Index.mainIndex(tileId), DT1.Tile.Index.subIndex(tileId), tileId));
+            }
+            nonShadowOrientationCount++;
+        }
         if (grid.shadowIds[ty][tx] != -1) duplicateShadowCount++;
         grid.shadowIds[ty][tx] = tileId;
         uniqueShadowIds.add(tileId);

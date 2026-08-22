@@ -73,6 +73,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         "fixed seed Cold Plains native border/LvlSub room count changed");
     assertEquals(80, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR).getRooms(),
         "fixed seed Blood Moor native border/LvlSub room count changed");
+    assertEquals(30, DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BURIALGROUNDS).getRooms(),
+        "fixed seed Burial Grounds native graveyard room count changed");
     assertBloodMoorNativeLinks(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
     assertPresetFileSelectionsResolveToDs1(
@@ -81,6 +83,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS));
     assertPresetFileSelectionsResolveToDs1(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR));
+    assertPresetFileSelectionsResolveToDs1(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BURIALGROUNDS));
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_STONYFIELD), false);
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_COLDPLAINS), false);
     assertNativeDirtPaths(DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR), false);
@@ -229,14 +233,17 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     for (int levelId : new int[] {
         D2LevelIds.LEVEL_STONYFIELD,
         D2LevelIds.LEVEL_COLDPLAINS,
-        D2LevelIds.LEVEL_BLOODMOOR }) {
+        D2LevelIds.LEVEL_BLOODMOOR,
+        D2LevelIds.LEVEL_BURIALGROUNDS }) {
       D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
       int width = Math.max(1, level.getLevelCoords().getNWidth());
       int height = Math.max(1, level.getLevelCoords().getNHeight());
       applier.putGrid(levelId, new TileGrid(width, height));
       applier.resetLastExportedFloorCount();
       int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
-      assertNativeDirtPaths(level, true);
+      if (levelId != D2LevelIds.LEVEL_BURIALGROUNDS) {
+        assertNativeDirtPaths(level, true);
+      }
       SourceGridStats source = sourceGridStats(level);
       assertTrue(attempted > 0, "D2MOO exported no floor tiles for level " + levelId);
       assertEquals(expectedFixedSeedFloors(levelId), attempted,
@@ -304,6 +311,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       case D2LevelIds.LEVEL_STONYFIELD: return 5824;
       case D2LevelIds.LEVEL_COLDPLAINS: return 6144;
       case D2LevelIds.LEVEL_BLOODMOOR: return 5122;
+      case D2LevelIds.LEVEL_BURIALGROUNDS: return 1920;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
   }

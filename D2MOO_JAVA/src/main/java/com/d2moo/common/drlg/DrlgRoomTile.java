@@ -20,7 +20,8 @@ import com.d2moo.common.dungeon.Dungeon;
  */
 public class DrlgRoomTile {
     
-    // 瓦片类型常量
+    // D2CMP D2TileType values. These values are persisted in DS1/DT1 data and
+    // therefore must stay identical to the native enum (D2CMP.h).
     public static final int TILETYPE_FLOOR = 0;
     public static final int TILETYPE_WALL_LEFT = 1;
     public static final int TILETYPE_WALL_RIGHT = 2;
@@ -28,14 +29,19 @@ public class DrlgRoomTile {
     public static final int TILETYPE_WALL_TOP_CORNER_LEFT = 4;
     public static final int TILETYPE_WALL_TOP_RIGHT = 5;
     public static final int TILETYPE_WALL_BOTTOM_LEFT = 6;
-    public static final int TILETYPE_ROOF = 7;  // 屋顶类型
     public static final int TILETYPE_WALL_BOTTOM_RIGHT = 7;
-    public static final int TILETYPE_SHADOW = 8;
-    public static final int TILETYPE_WALL_LEFT_EXIT = 9;
-    public static final int TILETYPE_WALL_RIGHT_EXIT = 10;
-    public static final int TILETYPE_WALL_LEFT_DOOR = 11;
-    public static final int TILETYPE_WALL_RIGHT_DOOR = 12;
-    public static final int TILETYPE_TREE = 13;
+    public static final int TILETYPE_WALL_LEFT_DOOR = 8;
+    public static final int TILETYPE_WALL_RIGHT_DOOR = 9;
+    public static final int TILETYPE_WALL_LEFT_EXIT = 10;
+    public static final int TILETYPE_WALL_RIGHT_EXIT = 11;
+    public static final int TILETYPE_COLUMN = 12;
+    public static final int TILETYPE_SHADOW = 13;
+    public static final int TILETYPE_TREE = 14;
+    public static final int TILETYPE_ROOF = 15;
+    public static final int TILETYPE_LEFT_WALL_DOWN = 16;
+    public static final int TILETYPE_RIGHT_WALL_DOWN = 17;
+    public static final int TILETYPE_FULL_WALL_DOWN = 18;
+    public static final int TILETYPE_FRONT_WALL_DOWN = 19;
     
     // 瓦片大小常量
     public static final int DRLGROOMTILE_TILES_SIZE = 8;
@@ -1669,12 +1675,17 @@ public class DrlgRoomTile {
             3,   // [5] TILETYPE_WALL_TOP_RIGHT
             4,   // [6] TILETYPE_WALL_BOTTOM_LEFT
             5,   // [7] TILETYPE_WALL_BOTTOM_RIGHT
-            -2,  // [8] TILETYPE_SHADOW
-            -2,  // [9] TILETYPE_WALL_LEFT_EXIT
-            -1,  // [10] TILETYPE_WALL_RIGHT_EXIT
-            -1,  // [11] TILETYPE_WALL_LEFT_DOOR
-            -1,  // [12] TILETYPE_WALL_RIGHT_DOOR
-            -1,  // [13] TILETYPE_TREE
+            -2,  // [8] TILETYPE_WALL_LEFT_DOOR
+            -2,  // [9] TILETYPE_WALL_RIGHT_DOOR
+            -1,  // [10] TILETYPE_WALL_LEFT_EXIT
+            -1,  // [11] TILETYPE_WALL_RIGHT_EXIT
+            -1,  // [12] TILETYPE_COLUMN
+            -2,  // [13] TILETYPE_SHADOW
+            -1,  // [14] TILETYPE_TREE
+            -1,  // [15] TILETYPE_ROOF
+            -1,  // [16] TILETYPE_LEFT_WALL_DOWN
+            -1,  // [17] TILETYPE_RIGHT_WALL_DOWN
+            -1,  // [18] TILETYPE_FULL_WALL_DOWN
         };
         
         // 墙壁瓦片类型重映射表

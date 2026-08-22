@@ -15,6 +15,21 @@ import org.junit.jupiter.api.Test;
 class D2MooAct1NativeParityTest {
 
   @Test
+  void tileTypesMatchNativeD2CmpEnum() {
+    assertEquals(0, DrlgRoomTile.TILETYPE_FLOOR);
+    assertEquals(7, DrlgRoomTile.TILETYPE_WALL_BOTTOM_RIGHT);
+    assertEquals(8, DrlgRoomTile.TILETYPE_WALL_LEFT_DOOR);
+    assertEquals(9, DrlgRoomTile.TILETYPE_WALL_RIGHT_DOOR);
+    assertEquals(10, DrlgRoomTile.TILETYPE_WALL_LEFT_EXIT);
+    assertEquals(11, DrlgRoomTile.TILETYPE_WALL_RIGHT_EXIT);
+    assertEquals(12, DrlgRoomTile.TILETYPE_COLUMN);
+    assertEquals(13, DrlgRoomTile.TILETYPE_SHADOW);
+    assertEquals(14, DrlgRoomTile.TILETYPE_TREE);
+    assertEquals(15, DrlgRoomTile.TILETYPE_ROOF);
+    assertEquals(19, DrlgRoomTile.TILETYPE_FRONT_WALL_DOWN);
+  }
+
+  @Test
   void act1PresetIdsMatchNativeD2MooEnum() {
     assertEquals(0, DrlgOutWild.LVLSUB_ACT1_BORDER_CLIFFS);
     assertEquals(1, DrlgOutWild.LVLSUB_ACT1_BORDER_MIDDLE);
