@@ -181,6 +181,10 @@ class Act1MapBuilderD2MooLayersTest {
     TileGrid grid = seamGrid(7, 5, 4, 4, 0x1234);
     grid.wallIds[0][4][2] = 99;
     grid.shadowIds[4][2] = 98;
+    for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
+      grid.wallIds[layer][4][4] = 100 + layer;
+    }
+    grid.shadowIds[4][4] = 97;
 
     Act1MapBuilderD2MOD.SeamRepairResult result =
         Act1MapBuilderD2MOD.repairTownSeam(grid, 1, 4, 1, 8);
@@ -194,6 +198,12 @@ class Act1MapBuilderD2MooLayersTest {
     assertSeamCell(grid, 3, 4, 0x1234);
     assertEquals(-1, grid.wallIds[0][4][2]);
     assertEquals(-1, grid.shadowIds[4][2]);
+    assertEquals(0x1234, grid.floorIds[4][4]);
+    assertEquals(true, grid.exportedFloorCells[4][4]);
+    for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
+      assertEquals(-1, grid.wallIds[layer][4][4]);
+    }
+    assertEquals(-1, grid.shadowIds[4][4]);
   }
 
   @Test

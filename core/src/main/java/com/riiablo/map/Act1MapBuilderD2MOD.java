@@ -1654,7 +1654,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   private static int carveSeamCell(TileGrid grid, int x, int y, int floorId) {
     grid.dirtPathFlags[y][x] = true;
-    if (grid.exportedFloorCells[y][x]) return 0;
+    if (grid.exportedFloorCells[y][x]) {
+      // The nearest exported floor is the path's connection point, but it can
+      // still contain a border wall. Keep its original floor artwork while
+      // opening the seam through every collision-producing visual layer.
+      clearSeamObstacles(grid, x, y);
+      return 0;
+    }
 
     fillSeamFloorCell(grid, x, y, floorId);
     return 1;
@@ -1663,6 +1669,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private static void fillSeamFloorCell(TileGrid grid, int x, int y, int floorId) {
     grid.floorIds[y][x] = floorId;
     grid.exportedFloorCells[y][x] = true;
+    clearSeamObstacles(grid, x, y);
+  }
+
+  private static void clearSeamObstacles(TileGrid grid, int x, int y) {
     grid.shadowIds[y][x] = -1;
     for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
       grid.wallIds[layer][y][x] = -1;
