@@ -1089,52 +1089,157 @@ public class DrlgPreset {
         if (pDrlgFile == null || szFile == null || szFile.isEmpty()) {
             return;
         }
-        
-        // 注意：DS1 文件读取逻辑已在其他函数中实现
-        // 1. 从存档或文件系统读取：由 D2FileReader.readFile 处理
-        // 2. 解析文件头：由 parseDS1Header 处理
-        // 3. 解析层数据：由 parseDS1Layers 处理
-        // 4. 解析预设单位：由 parseDS1PresetUnits 处理
-        // 5. 解析替换组：由 parseDS1SubstitutionGroups 处理
-        // 
-        // 当前实现：此函数为占位符，实际文件读取由 loadDrlgFile 和相关解析函数完成
-        // 实际实现需要读取和解析 DS1 文件二进制格式
-        pDrlgFile.setNWidth(8);  // 默认宽度
-        pDrlgFile.setNHeight(8); // 默认高度
-        pDrlgFile.setNWallLayers(0);
-        pDrlgFile.setNFloorLayers(0);
-        pDrlgFile.setNSubstGroups(0);
-        
-        // 初始化层数组（已由构造函数完成）
-        // 预设单位链表初始化为 null（已由构造函数完成）
-        
-        // 解析 DS1 文件（分步实现）
-        // 步骤 1: 读取文件数据（待实现）
         byte[] fileData = readDS1FileData(hArchive, szFile);
         if (fileData == null || fileData.length == 0) {
             D2Log.warning("DRLGPRESET_ParseDS1File: Failed to read DS1 file: " + szFile);
             return;
         }
-        
-        // 步骤 2: 解析文件头
-        int offset = parseDS1Header(pDrlgFile, fileData, 0);
-        if (offset < 0) {
-            D2Log.warning("DRLGPRESET_ParseDS1File: Failed to parse DS1 header: " + szFile);
-            return;
+
+        try {
+            parseDS1FileData(pDrlgFile, fileData);
+            D2Log.debug("DRLGPRESET_ParseDS1File: Parsed DS1 file: %s"
+                    + " version=%d size=%dx%d walls=%d floors=%d groups=%d",
+                    szFile, D2BinaryReader.readInt32(fileData, 0),
+                    pDrlgFile.getNWidth(), pDrlgFile.getNHeight(),
+                    pDrlgFile.getNWallLayers(), pDrlgFile.getNFloorLayers(),
+                    pDrlgFile.getNSubstGroups());
+        } catch (IllegalArgumentException e) {
+            D2Log.warning("DRLGPRESET_ParseDS1File: Invalid DS1 file=%s error=%s",
+                    szFile, e.getMessage());
         }
-        
-        // 步骤 3: 解析层数据
-        offset = parseDS1Layers(pDrlgFile, fileData, offset, drlg);
-        
-        // 步骤 4: 解析预设单位
-        offset = parseDS1PresetUnits(pDrlgFile, fileData, offset, drlg);
-        
-        // 步骤 5: 解析替换组
-        parseDS1SubstitutionGroups(pDrlgFile, fileData, offset, drlg);
-        
-        D2Log.debug("DRLGPRESET_ParseDS1File: Parsed DS1 file: " + szFile 
-                + " (width=" + pDrlgFile.getNWidth() 
-                + ", height=" + pDrlgFile.getNHeight() + ")");
+    }
+
+    /** Direct translation of D2MOO DRLGPRESET_ParseDS1File's stream layout. */
+    private static void parseDS1FileData(D2DrlgFileStrc out, byte[] data) {
+        Ds1Cursor in = new Ds1Cursor(data);
+        int version = in.readInt();
+        int width = in.readInt();
+        int height = in.readInt();
+        if (width < 0 || width > 1024 || height < 0 || height > 1024) {
+            throw new IllegalArgumentException("invalid dimensions " + width + "x" + height);
+        }
+        out.setPDS1File(data);
+        out.setNWidth(width);
+        out.setNHeight(height);
+
+        if (version >= 8) in.readInt(); // act; unit remapping is not required by LvlSub
+        int substMethod = version >= 10 ? in.readInt() : 0;
+        out.setNSubstMethod(substMethod);
+        if (version >= 3) {
+            int strings = in.readCount("dependency strings", 4096);
+            for (int i = 0; i < strings; i++) in.skipCString();
+        }
+        if (version >= 9 && version < 14) in.skipInts(2);
+
+        int area = Math.multiplyExact(width + 1, height + 1);
+        if (version < 4) {
+            out.setNWallLayers(1);
+            out.setNFloorLayers(1);
+            out.setPWallLayer(0, in.readIntLayer(area));
+            out.setPFloorLayer(0, in.readIntLayer(area));
+            out.setPTileTypeLayer(0, in.readIntLayer(area));
+            out.setPSubstGroupTags(in.readIntLayer(area));
+        } else {
+            int walls = in.readCount("wall layers", DRLG_MAX_WALL_LAYERS);
+            int floors = version < 16 ? 1 : in.readCount("floor layers", DRLG_MAX_FLOOR_LAYERS);
+            out.setNWallLayers(walls);
+            out.setNFloorLayers(floors);
+            for (int i = 0; i < walls; i++) {
+                out.setPWallLayer(i, in.readIntLayer(area));
+                out.setPTileTypeLayer(i, in.readIntLayer(area));
+            }
+            for (int i = 0; i < floors; i++) out.setPFloorLayer(i, in.readIntLayer(area));
+        }
+
+        out.setPShadowLayer(in.readIntLayer(area));
+        if (substMethod > 0 && substMethod <= 2) {
+            out.setPSubstGroupTags(in.readIntLayer(area));
+        }
+
+        if (version > 1) {
+            int units = in.readCount("preset units", 100000);
+            D2PresetUnit first = null;
+            for (int i = 0; i < units; i++) {
+                D2PresetUnit unit = new D2PresetUnit();
+                unit.setNUnitType(in.readInt());
+                unit.setNIndex(in.readInt());
+                unit.setNXpos(in.readInt());
+                unit.setNYpos(in.readInt());
+                if (version > 5) unit.setBSpawned(in.readInt() != 0);
+                unit.setPNext(first);
+                first = unit;
+            }
+            out.setPPresetUnit(first);
+        }
+
+        if (version >= 12 && substMethod > 0 && substMethod <= 2) {
+            if (version >= 18) in.skipInts(1);
+            int groups = in.readCount("substitution groups", 100000);
+            D2DrlgSubstGroupStrc[] values = new D2DrlgSubstGroupStrc[groups];
+            for (int i = 0; i < groups; i++) {
+                D2DrlgSubstGroupStrc group = new D2DrlgSubstGroupStrc();
+                group.getTBox().setNPosX(in.readInt());
+                group.getTBox().setNPosY(in.readInt());
+                group.getTBox().setNWidth(in.readInt());
+                group.getTBox().setNHeight(in.readInt());
+                if (version >= 13) group.setField_14(in.readInt());
+                values[i] = group;
+            }
+            out.setNSubstGroups(groups);
+            out.setPSubstGroups(values);
+        }
+    }
+
+    private static final class Ds1Cursor {
+        private final byte[] data;
+        private int offset;
+
+        Ds1Cursor(byte[] data) { this.data = data; }
+
+        int readInt() {
+            require(4);
+            int value = D2BinaryReader.readInt32(data, offset);
+            offset += 4;
+            return value;
+        }
+
+        int readCount(String label, int maximum) {
+            int value = readInt();
+            if (value < 0 || value > maximum) {
+                throw new IllegalArgumentException("invalid " + label + " count " + value
+                        + " at offset " + (offset - 4));
+            }
+            return value;
+        }
+
+        int[] readIntLayer(int length) {
+            require(Math.multiplyExact(length, 4));
+            int[] values = new int[length];
+            for (int i = 0; i < length; i++) values[i] = readInt();
+            return values;
+        }
+
+        void skipInts(int count) {
+            int bytes = Math.multiplyExact(count, 4);
+            require(bytes);
+            offset += bytes;
+        }
+
+        void skipCString() {
+            while (offset < data.length && data[offset++] != 0) {
+                // scan to the NUL terminator
+            }
+            if (offset > data.length || (offset == data.length && data[offset - 1] != 0)) {
+                throw new IllegalArgumentException("unterminated dependency string");
+            }
+        }
+
+        void require(int length) {
+            if (length < 0 || offset > data.length - length) {
+                throw new IllegalArgumentException("unexpected end at offset " + offset
+                        + " need=" + length + " remaining=" + (data.length - offset));
+            }
+        }
     }
     
     /**

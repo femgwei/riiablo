@@ -7,7 +7,12 @@
   1. `D2Cmp` 曾把 DT1 的 276 字节文件头当作 8 字节，并把 96 字节瓦片头当作 28 字节可变块；所有 DT1 因此被误报为 6 个瓦片。
   2. `LvlPrest.txt` / `LvlSub.txt` 曾按错误的固定列序读取，`Name` 和 DS1 路径被当成整数，字段整体错位。
   3. D2MOO 导出到 `TileGrid` 后，`Zone.generate()` 又用 riiablo 的默认地形逐格覆盖导出 ID。
-  4. 当前消费端只接收 floor，wall/shadow 层仍被忽略；固定 seed 的三个野外关卡仍只导出单一基础 floor ID，说明完整瓦片管线尚未完成。
+  4. D2MOO 的 DS1 读取曾把变长文件头误解为固定 20 字节，并颠倒 wall/orientation 层顺序，导致替换组计数和所有层偏移错误。
+  5. `LvlSub/LvlPrest` 中的 DS1 为相对 `data/global/tiles` 的路径；桥接层曾直接向 MPQ 查询相对路径，导致边界、路点、神殿等 DS1 全部加载失败。
+- **2026-08-22 多层导出进展**：
+  - `TileGrid` 已建立 riiablo 对齐的 `1 floor + 4 wall/roof + 1 shadow` 导出结构，同坐标墙体不再相互覆盖。
+  - DS1 MPQ 路径与二进制解析修正后，固定 seed 的 floor 从 `1` 个全零 ID 恢复到 `22–24` 个唯一 ID，证明 LvlSub 替换已进入瓦片生成链。
+  - 当前仍导出 `0 wall / 0 shadow`；消费端契约已就绪，下一个阻塞点位于 D2MOO 的 outdoor wall/shadow 生成或瓦片选择链。
 - **当前集成策略**：D2MOO_JAVA 默认只接管布局/连接；瓦片导出用于诊断，经过多样性、非零 ID、越界和无效 ID 质量门槛后才可接管渲染。
 - **调试开关**：`-Driiablo.drlg.renderExportedFloors=true`。默认关闭；即使开启，质量门槛未通过时仍会回退到 riiablo 地形生成。
 

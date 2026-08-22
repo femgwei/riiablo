@@ -1244,27 +1244,32 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         if (acceptedForRendering) {
           levelsFilledByExport.add(levelId);
         } else {
-          // A rejected floor export must not poison the local fallback grid.
-          // The current bridge still ignores D2MOO walls and shadows, so
-          // exported floors remain opt-in until the complete layer contract
-          // is implemented and the quality gate passes.
+          // A rejected export must not poison any layer of the local fallback grid.
+          // Rendering remains opt-in until D2MOO produces a complete tile set
+          // and the exported wall/shadow layers are applied to Zone.
           DrlgLevel exportedLevel = drlgLevels.get(levelId);
           if (exportedLevel != null && exportedLevel.grid != null) {
-            exportedLevel.grid.clearFloorIds();
+            exportedLevel.grid.clearExportedTileIds();
           }
         }
         Gdx.app.log(TAG, String.format(
             "D2MOO_JAVA export: levelId=%d attemptedFloor=%d callbacks=%d writtenFloor=%d "
                 + "ignoredLayer=%d missingGrid=%d outOfBounds=%d invalidTile=%d "
-                + "qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
+                + "wall=%d shadow=%d qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
             levelId, n, applier.getCallbackCount(), written,
             applier.getIgnoredLayerCount(), applier.getMissingGridCount(),
             applier.getOutOfBoundsCount(), applier.getInvalidTileCount(),
+            applier.getExportedWallCount(), applier.getExportedShadowCount(),
             qualityPassed, renderExportedFloors, acceptedForRendering)
-            + String.format(" duplicatePosition=%d nonFloorOrientation=%d zeroTileId=%d uniqueFloorIds=%d",
-            applier.getDuplicatePositionCount(), applier.getNonFloorOrientationCount(),
-            applier.getZeroTileIdCount(),
-            applier.getUniqueFloorIdCount()));
+            + String.format(" duplicatePosition=%d duplicateShadow=%d wallOverflow=%d"
+                + " nonFloorOrientation=%d nonWallOrientation=%d nonShadowOrientation=%d"
+                + " zeroTileId=%d uniqueFloorIds=%d uniqueWallIds=%d uniqueShadowIds=%d",
+            applier.getDuplicatePositionCount(), applier.getDuplicateShadowCount(),
+            applier.getWallLayerOverflowCount(),
+            applier.getNonFloorOrientationCount(), applier.getNonWallOrientationCount(),
+            applier.getNonShadowOrientationCount(), applier.getZeroTileIdCount(),
+            applier.getUniqueFloorIdCount(), applier.getUniqueWallIdCount(),
+            applier.getUniqueShadowIdCount()));
       }
       DrlgDrlg.freeDrlg(drlg);
       Act1D2MOOLayoutBridge.releaseDataTables();

@@ -730,8 +730,8 @@ public class DrlgTileSub {
                             int nHeight = pOutdoorLevel.getPDrlgRoom().getNTileHeight() - tBox.getNHeight() + 1;
                             
                             if (nWidth > 0 && nHeight > 0) {
-                                if (pLvlSubTxtRecord.getPDrlgFile().getNSubstMethod() == 0) {
-                                    // DRLGSUBST_FIXED = 0
+                                if (pLvlSubTxtRecord.getPDrlgFile().getNSubstMethod() == 1) {
+                                    // DRLGSUBST_FIXED = 1
                                     for (int j = 1; j < nHeight; ++j) {
                                         for (int i = 1; i < nWidth; ++i) {
                                             if (sub_6FD8B010(i, j, pOutdoorLevel, pSubstGroup, pLvlSubTxtRecord)) {
@@ -740,8 +740,8 @@ public class DrlgTileSub {
                                             }
                                         }
                                     }
-                                } else if (pLvlSubTxtRecord.getPDrlgFile().getNSubstMethod() == 1) {
-                                    // DRLGSUBST_RANDOM = 1
+                                } else if (pLvlSubTxtRecord.getPDrlgFile().getNSubstMethod() == 2) {
+                                    // DRLGSUBST_RANDOM = 2
                                     for (int j = 0; j < nHeight; ++j) {
                                         for (int i = 0; i < nWidth; ++i) {
                                             if (sub_6FD8B130(i, j, pOutdoorLevel, pSubstGroup, pLvlSubTxtRecord)) {

@@ -99,19 +99,36 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           "multiple rooms exported the same floor coordinate for level " + levelId);
       assertEquals(0, applier.getNonFloorOrientationCount(),
           "floor export referenced non-floor DT1 entries for level " + levelId);
+      assertEquals(0, applier.getWallLayerOverflowCount(),
+          "more than four walls occupied one coordinate for level " + levelId);
+      assertEquals(0, applier.getNonWallOrientationCount(),
+          "wall export referenced an incompatible orientation for level " + levelId);
+      assertEquals(0, applier.getNonShadowOrientationCount(),
+          "shadow export referenced a non-shadow DT1 entry for level " + levelId);
+      assertEquals(applier.getCallbackCount(), attempted
+              + applier.getExportedWallCount() + applier.getExportedShadowCount(),
+          "layer callback accounting mismatch for level " + levelId);
       System.out.println("[ACT1-DIAG] level=" + levelId
           + " size=" + width + 'x' + height
           + " attemptedFloor=" + attempted
           + " callbacks=" + applier.getCallbackCount()
           + " writtenFloor=" + applier.getLastExportedFloorCount()
+          + " writtenWall=" + applier.getExportedWallCount()
+          + " writtenShadow=" + applier.getExportedShadowCount()
           + " ignoredLayer=" + applier.getIgnoredLayerCount()
           + " missingGrid=" + applier.getMissingGridCount()
           + " outOfBounds=" + applier.getOutOfBoundsCount()
           + " invalidTile=" + applier.getInvalidTileCount()
           + " duplicatePosition=" + applier.getDuplicatePositionCount()
+          + " duplicateShadow=" + applier.getDuplicateShadowCount()
+          + " wallOverflow=" + applier.getWallLayerOverflowCount()
           + " nonFloorOrientation=" + applier.getNonFloorOrientationCount()
+          + " nonWallOrientation=" + applier.getNonWallOrientationCount()
+          + " nonShadowOrientation=" + applier.getNonShadowOrientationCount()
           + " zeroTileId=" + applier.getZeroTileIdCount()
-          + " uniqueFloorIds=" + applier.getUniqueFloorIdCount());
+          + " uniqueFloorIds=" + applier.getUniqueFloorIdCount()
+          + " uniqueWallIds=" + applier.getUniqueWallIdCount()
+          + " uniqueShadowIds=" + applier.getUniqueShadowIdCount());
     }
   }
 }

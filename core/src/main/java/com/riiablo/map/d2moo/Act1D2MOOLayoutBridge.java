@@ -91,11 +91,7 @@ public final class Act1D2MOOLayoutBridge {
             act.setTownId(D2LevelIds.LEVEL_ROGUEENCAMPMENT);
             act.setPMemPool(new D2MemoryPool());
 
-            D2FileReader.ArchiveReader archive = fileName -> {
-                if (Riiablo.mpqs == null) return null;
-                com.badlogic.gdx.files.FileHandle handle = Riiablo.mpqs.resolve(fileName);
-                return handle == null ? null : handle.readBytes();
-            };
+            D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
 
             // Native D2Common loads these tables before DRLG generation.
             // Without LvlSub every outdoor room remains the same 0x40002
@@ -202,6 +198,25 @@ public final class Act1D2MOOLayoutBridge {
         DrlgDrlg.freeDrlg(layoutAndDrlg.drlg);
         releaseDataTables();
         return layoutAndDrlg.result;
+    }
+
+    /**
+     * D2 tables store DS1 names relative to data/global/tiles, while DT1 and
+     * table paths are commonly already rooted at data/. Try the path as given
+     * first, then the DS1 tiles root without changing D2MOO_JAVA's archive API.
+     */
+    static byte[] readArchiveFile(String fileName) {
+        if (Riiablo.mpqs == null || fileName == null || fileName.isEmpty()) return null;
+        String normalized = fileName.replace('\\', '/');
+        String lower = normalized.toLowerCase(java.util.Locale.ROOT);
+        String[] candidates = lower.startsWith("data/")
+            ? new String[] { normalized }
+            : new String[] { normalized, "data/global/tiles/" + normalized };
+        for (String candidate : candidates) {
+            com.badlogic.gdx.files.FileHandle handle = Riiablo.mpqs.resolve(candidate);
+            if (handle != null && handle.exists()) return handle.readBytes();
+        }
+        return null;
     }
 
     /** Releases the static D2MOO table caches populated by this bridge. */

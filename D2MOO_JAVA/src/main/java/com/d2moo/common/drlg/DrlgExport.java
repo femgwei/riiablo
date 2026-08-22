@@ -34,7 +34,7 @@ public final class DrlgExport {
         int levelOriginX = levelCoord.getNPosX();
         int levelOriginY = levelCoord.getNPosY();
 
-        int count = 0;
+        ExportCounts counts = new ExportCounts();
         int rooms = 0;
         int initialized = 0;
         D2DrlgRoom room = level.getFirstRoomEx();
@@ -46,29 +46,29 @@ public final class DrlgExport {
                 DrlgActivate.initializeRoomEx(room);
                 initialized++;
             }
-            count += exportRoomTiles(room, levelId, levelOriginX, levelOriginY, exporter);
+            exportRoomTiles(room, levelId, levelOriginX, levelOriginY, exporter, counts);
             rooms++;
             room = room.getDrlgRoomNext();
         }
-        D2Log.debug("DRLG_EXPORT level=%d origin=(%d,%d) rooms=%d initialized=%d floorTiles=%d",
-                levelId, levelOriginX, levelOriginY, rooms, initialized, count);
-        return count;
+        D2Log.debug("DRLG_EXPORT level=%d origin=(%d,%d) rooms=%d initialized=%d"
+                        + " floorTiles=%d wallTiles=%d shadowTiles=%d",
+                levelId, levelOriginX, levelOriginY, rooms, initialized,
+                counts.floors, counts.walls, counts.shadows);
+        return counts.floors;
     }
 
-    private static int exportRoomTiles(D2DrlgRoom room, int levelId, int levelOriginX, int levelOriginY,
-            DrlgTileExporter exporter) {
+    private static void exportRoomTiles(D2DrlgRoom room, int levelId, int levelOriginX, int levelOriginY,
+            DrlgTileExporter exporter, ExportCounts counts) {
         D2DrlgTileGrid grid = room.getTileGrid();
-        if (grid == null) return 0;
+        if (grid == null) return;
         D2DrlgRoomTilesStrc tiles = grid.getPTiles();
-        if (tiles == null) return 0;
+        if (tiles == null) return;
 
         // nTileXPos/nTileYPos and D2DrlgTileData.nPosX/nPosY are already
         // expressed in game-tile units. Do not convert through grid/subtile
         // units here; the C++ code adds the room origin and local tile offset.
         int roomBaseTx = room.getNTileXPos();
         int roomBaseTy = room.getNTileYPos();
-        int n = 0;
-
         D2DrlgTileDataStrc[] pFloor = tiles.getPFloorTiles();
         if (pFloor != null) {
             for (D2DrlgTileDataStrc t : pFloor) {
@@ -78,7 +78,7 @@ public final class DrlgExport {
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
                 exporter.onTile(levelId, LAYER_FLOOR, tx, ty, tileId);
-                n++;
+                counts.floors++;
             }
         }
         D2DrlgTileDataStrc[] pWall = tiles.getPWallTiles();
@@ -90,6 +90,7 @@ public final class DrlgExport {
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
                 exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId);
+                counts.walls++;
             }
         }
         D2DrlgTileDataStrc[] pRoof = tiles.getPRoofTiles();
@@ -101,9 +102,15 @@ public final class DrlgExport {
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
                 exporter.onTile(levelId, LAYER_SHADOW, tx, ty, tileId);
+                counts.shadows++;
             }
         }
-        return n;
+    }
+
+    private static final class ExportCounts {
+        int floors;
+        int walls;
+        int shadows;
     }
 
     /**
