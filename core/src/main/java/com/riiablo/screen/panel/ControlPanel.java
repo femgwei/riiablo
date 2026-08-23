@@ -69,6 +69,10 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   private static final float EXP_BAR_WIDTH = 120f;
   private static final int EXP_BAR_HEIGHT = 3;
   private static final float EXP_BAR_TOP_OFFSET = 11f;
+  // The assembled control-panel texture has a small transparent/asymmetric
+  // margin. Keep the bar geometrically centered, then apply this world-space
+  // nudge so it aligns with the visible center of the panel at every scale.
+  private static final float EXP_BAR_CENTER_OFFSET_X = 6f;
 
   final AssetDescriptor<DC6> popbeltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl_popbelt.DC6", DC6.class);
   TextureRegion popbelt;
@@ -246,10 +250,11 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     if (controlWidget != null) {
       // Center the complete bar over the actual control widget. The previous
       // -38 offset left the bar visibly shifted and was calculated only once.
-      anchorX = controlWidget.getX() + (controlWidget.getWidth() - barWidth) / 2f;
+      anchorX = controlWidget.getX() + (controlWidget.getWidth() - barWidth) / 2f
+          + EXP_BAR_CENTER_OFFSET_X;
       anchorY = controlWidget.getY() + controlWidget.getHeight() - EXP_BAR_TOP_OFFSET;
     } else {
-      anchorX = (getWidth() - barWidth) / 2f;
+      anchorX = (getWidth() - barWidth) / 2f + EXP_BAR_CENTER_OFFSET_X;
       anchorY = getHeight() - EXP_BAR_TOP_OFFSET;
     }
     experienceWidget.setPosition(anchorX, anchorY);
