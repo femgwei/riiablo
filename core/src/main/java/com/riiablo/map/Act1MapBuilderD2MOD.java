@@ -655,8 +655,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                       ? monster.MaxGrp
                       : MathUtils.random(monster.MinGrp, monster.MaxGrp);
                   for (int j = 0; j < count; j++) {
-                    float px = zone.getGlobalX(currentTx * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-                    float py = zone.getGlobalY(currentTy * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
+                    // currentTx/currentTy identify the top-left subtile of a 5x5
+                    // floor tile. Jittering around that corner used to push half
+                    // of edge-tile spawns into D2MOO's void footprint. Keep the
+                    // whole spawn safely inside the selected exported floor tile.
+                    float px = monsterSpawnCoordinate(zone.x, currentTx, MathUtils.random(-1f, 1f));
+                    float py = monsterSpawnCoordinate(zone.y, currentTy, MathUtils.random(-1f, 1f));
                     zone.map.factory.createMonster(monster, px, py);
                   }
                 }
@@ -1517,6 +1521,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (localTileX < 0 || localTileX >= zoneTilesX
         || localTileY < 0 || localTileY >= zoneTilesY) return -1;
     return Zone.index(zoneTilesX, localTileX, localTileY);
+  }
+
+  static float monsterSpawnCoordinate(int zoneOrigin, int localTile, float jitter) {
+    float tileCenter = DT1.Tile.SUBTILE_SIZE / 2f;
+    return zoneOrigin + localTile * DT1.Tile.SUBTILE_SIZE
+        + tileCenter + MathUtils.clamp(jitter, -1f, 1f);
   }
 
   /**

@@ -20,6 +20,11 @@ import com.riiablo.engine.server.component.Velocity;
 @All({MovementModes.class, Velocity.class, AnimData.class, CofReference.class})
 @Exclude(Sequence.class)
 public class VelocityModeChanger extends IteratingSystem {
+  // D2Common UNITS_GetBaseAnimSpeed: player run=101, all other player
+  // movement modes (including walk/town-walk)=213, in 24.8 frame units.
+  static final int PLAYER_RUN_ANIM_SPEED = 101;
+  static final int PLAYER_WALK_ANIM_SPEED = 213;
+
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Running> mRunning;
@@ -36,10 +41,10 @@ public class VelocityModeChanger extends IteratingSystem {
     if (velocity.isZero()) return;
     if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
       mRunning.remove(Riiablo.game.player);
-      velocity.setLength(6);
+      velocity.setLength(velocityComp.walkSpeed);
     } else {
       mRunning.create(Riiablo.game.player);
-      velocity.setLength(9);
+      velocity.setLength(velocityComp.runSpeed);
     }
   }
 
@@ -60,19 +65,28 @@ public class VelocityModeChanger extends IteratingSystem {
       AnimData animData = mAnimData.get(entityId);
       if (mRunning.has(entityId)) {
         cofs.setMode(entityId, mMovementModes.get(entityId).RN);
-        animData.override = MathUtils.roundPositive(animData.speed * currentVelocity.len() / velocity.runSpeed);
+        animData.override = scaleAnimationSpeed(
+            animData.speed, currentVelocity.len(), velocity.runSpeed);
       } else {
         cofs.setMode(entityId, mMovementModes.get(entityId).WL);
-        animData.override = MathUtils.roundPositive(animData.speed * currentVelocity.len() / velocity.walkSpeed);
+        animData.override = scaleAnimationSpeed(
+            animData.speed, currentVelocity.len(), velocity.walkSpeed);
       }
     } else {
       if (mRunning.has(entityId)) {
         cofs.setMode(entityId, mMovementModes.get(entityId).RN);
-        mAnimData.get(entityId).override = MathUtils.roundPositive(16 * currentVelocity.len());
+        mAnimData.get(entityId).override = scaleAnimationSpeed(
+            PLAYER_RUN_ANIM_SPEED, currentVelocity.len(), velocity.runSpeed);
       } else {
         cofs.setMode(entityId, mMovementModes.get(entityId).WL);
-        mAnimData.get(entityId).override = MathUtils.roundPositive(32 * currentVelocity.len());
+        mAnimData.get(entityId).override = scaleAnimationSpeed(
+            PLAYER_WALK_ANIM_SPEED, currentVelocity.len(), velocity.walkSpeed);
       }
     }
+  }
+
+  static int scaleAnimationSpeed(int baseAnimSpeed, float currentSpeed, float baseVelocity) {
+    if (baseAnimSpeed <= 0 || currentSpeed <= 0 || baseVelocity <= 0) return 0;
+    return MathUtils.roundPositive(baseAnimSpeed * currentSpeed / baseVelocity);
   }
 }

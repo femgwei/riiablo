@@ -28,6 +28,22 @@ import com.riiablo.drlg.TileGrid;
 
 class Act1MapBuilderD2MooLayersTest {
   @Test
+  void keepsMonsterJitterInsideSelectedFloorTile() {
+    int zoneOrigin = -480;
+    int localTile = 7;
+    float tileMin = zoneOrigin + localTile * DT1.Tile.SUBTILE_SIZE;
+    float tileMax = tileMin + DT1.Tile.SUBTILE_SIZE;
+
+    float minSpawn = Act1MapBuilderD2MOD.monsterSpawnCoordinate(
+        zoneOrigin, localTile, -100f);
+    float maxSpawn = Act1MapBuilderD2MOD.monsterSpawnCoordinate(
+        zoneOrigin, localTile, 100f);
+
+    assertEquals(tileMin + 1.5f, minSpawn);
+    assertEquals(tileMax - 1.5f, maxSpawn);
+  }
+
+  @Test
   void registersNativeSpecialWallsForWarpEntityCreation() {
     TileGrid grid = new TileGrid(2, 1);
     grid.wallIds[0][0][0] = Map.ID.VIS_0_00;
