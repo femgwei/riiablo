@@ -34,7 +34,21 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
 
   @Override
   public void interact(int src, int entityId) {
-    operate(src, entityId, mObject.get(entityId).base.OperateFn);
+    Object object = mObject.get(entityId);
+    if (object == null || object.base == null) {
+      Gdx.app.error(TAG, "Object interaction has no object data: entity=" + entityId
+          + " player=" + src);
+      return;
+    }
+    if (object.base.OperateFn == 23) {
+      CofReference cof = mCofReference.get(entityId);
+      Position position = mPosition.get(entityId);
+      Gdx.app.log(TAG, "Waypoint interaction received: entity=" + entityId
+          + " player=" + src + " object=" + object.base.Id
+          + " mode=" + (cof == null ? "none" : cof.mode)
+          + " position=" + (position == null ? "none" : position.position));
+    }
+    operate(src, entityId, object.base.OperateFn);
   }
 
   private void operate(int src, int entityId, int operateFn) {
@@ -57,6 +71,11 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         CharData data = player.data;
         boolean newlyActivated = data.activateWaypoint(level.Act, level.Waypoint);
         CofReference cofComponent = mCofReference.get(entityId);
+        if (cofComponent == null) {
+          Gdx.app.error(TAG, "Waypoint has no animation state: entity=" + entityId
+              + " level=" + level.LevelName + "(" + level.Id + ")");
+          break;
+        }
         boolean openMenu = cofComponent.mode == Engine.Object.MODE_OP
             || cofComponent.mode == Engine.Object.MODE_ON;
         if (cofComponent.mode == Engine.Object.MODE_NU) {
@@ -71,6 +90,10 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
             Gdx.app.error(TAG, "Failed to persist activated waypoint for " + data.name);
           }
         }
+
+        Gdx.app.log(TAG, "Waypoint interaction handled: level=" + level.LevelName
+            + "(" + level.Id + ") newlyActivated=" + newlyActivated
+            + " openMenu=" + openMenu + " mode=" + cofComponent.mode);
 
         // This system is installed in client and headless server worlds. Only
         // the client owns UI; activation itself is stored on the source player.

@@ -165,13 +165,37 @@ public class ServerEntityFactory extends EntityFactory {
       mCofTransforms.create(id);
     }
 
-    if (base.OperateRange > 0 && ArrayUtils.contains(base.Selectable, true)) {
-      mInteractable.create(id).set(base.OperateRange, objectInteractor);
+    boolean waypoint = isWaypointObject(base);
+    float operateRange = resolveObjectInteractionRange(base);
+    if (operateRange > 0) {
+      // Native D2 treats waypoint OperateFn 23 as an operable object. Keep a
+      // conservative fallback so incomplete table mode flags cannot create a
+      // visible but inert waypoint.
+      mInteractable.create(id).set(operateRange, objectInteractor);
+      if (waypoint) {
+        log.info("Waypoint server entity wired: entity={} object={} operateFn={} range={} "
+                + "position=({}, {})",
+            id, base.Id, base.OperateFn, operateRange, x, y);
+      }
     }
 
     mSize.create(id); // single size doesn't make any sense in this case because this is a rect
     mNetworked.create(id);
     return id;
+  }
+
+  protected static boolean isWaypointObject(Objects.Entry base) {
+    return base != null
+        && (base.SubClass & Engine.Object.SUBCLASS_WAYPOINT)
+            == Engine.Object.SUBCLASS_WAYPOINT;
+  }
+
+  protected static float resolveObjectInteractionRange(Objects.Entry base) {
+    if (base == null) return 0;
+    if (isWaypointObject(base)) return base.OperateRange > 0 ? base.OperateRange : 5f;
+    return base.OperateRange > 0 && ArrayUtils.contains(base.Selectable, true)
+        ? base.OperateRange
+        : 0;
   }
 
   @Override

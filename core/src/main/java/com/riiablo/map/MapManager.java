@@ -12,6 +12,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
@@ -28,6 +29,7 @@ public class MapManager extends PassiveSystem {
   protected EntityFactory factory;
 
   protected ComponentMapper<Object> mObject;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
 
   public void createEntities() {
@@ -99,6 +101,10 @@ public class MapManager extends PassiveSystem {
             zone.level.LevelName, zone.level.Id, object.presetIndex, objectId, object.mode,
             object.x, object.y, zone.x + object.x, zone.y + object.y));
       } else {
+        // Native exports already tell us the owning level. Do not resolve it
+        // again from coordinates: adjacent/overlapping zone bounds can make a
+        // waypoint activate the wrong Levels.txt record.
+        mMapWrapper.create(id).set(map, zone);
         zone.addEntity(id);
         created++;
       }

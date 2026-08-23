@@ -70,9 +70,10 @@ public class ClientEntityFactory extends ServerEntityFactory {
     if (id == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;
 
     Objects.Entry base = mObject.get(id).base;
+    boolean waypoint = isWaypoint(base);
 
     String name;
-    if ((base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) == Engine.Object.SUBCLASS_WAYPOINT) {
+    if (waypoint) {
       Map.Zone zone = map.getZone(x, y);
       mMapWrapper.create(id).set(map, zone);
       String levelName = Riiablo.string.lookup(zone.level.LevelName);
@@ -88,7 +89,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     }
 
     BBoxWrapper boxWrapper = mBBoxWrapper.create(id);
-    if ((base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) == Engine.Object.SUBCLASS_WAYPOINT) {
+    if (waypoint) {
       BBox box = boxWrapper.box = new BBox();
       box.xMin = -70;
       box.yMin = -30;
@@ -105,8 +106,37 @@ public class ClientEntityFactory extends ServerEntityFactory {
     label.actor = createLabel(name);
     label.actor.setUserObject(id);
 
+    // Object mode events normally keep Selectable in sync, but native D2MOO
+    // objects enter the world in NU mode. No transition is guaranteed before
+    // the first input frame, so a waypoint could have Interactable and a hit
+    // box while remaining invisible to HoveredManager. Wire its initial input
+    // state explicitly; SelectableManager will still update later modes.
+    if (isInitiallySelectable(base)) mSelectable.create(id);
+
     mBox2DBody.create(id);
+    if (waypoint) {
+      Map.Zone zone = mMapWrapper.get(id).zone;
+      float interactionRange = mInteractable.has(id) ? mInteractable.get(id).range : 0;
+      com.badlogic.gdx.Gdx.app.log(TAG, "Waypoint client entity wired: entity=" + id
+          + " object=" + base.Id + " operateFn=" + base.OperateFn
+          + " range=" + interactionRange + " selectable=" + mSelectable.has(id)
+          + " interactable=" + mInteractable.has(id)
+          + " level=" + (zone == null ? "null" : zone.level.LevelName + "(" + zone.level.Id + ")")
+          + " position=(" + x + "," + y + ")");
+    }
     return id;
+  }
+
+  static boolean isWaypoint(Objects.Entry base) {
+    return isWaypointObject(base);
+  }
+
+  static boolean isInitiallySelectable(Objects.Entry base) {
+    if (isWaypoint(base)) return true;
+    return base != null
+        && base.Selectable != null
+        && Engine.Object.MODE_NU < base.Selectable.length
+        && base.Selectable[Engine.Object.MODE_NU];
   }
 
   @Override
