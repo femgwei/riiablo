@@ -12,9 +12,8 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
-import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
-import com.riiablo.engine.server.combat.DamageCalculator;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
@@ -429,54 +428,49 @@ public class Actioneer extends PassiveSystem {
         }
         log.debug("{} {}", targetId, hitpoints.asFixed());
 
-        // D2MOD: 命中判定（level、AR、defense），未命中则不造成伤害
         if (!mAttributesWrapper.has(entityId)) {
           log.debug("{} has no attributes, cannot attack", entityId);
           break;
         }
         Attributes attackerAttrs = mAttributesWrapper.get(entityId).attrs;
-        int attLvl = getStatInt(attackerAttrs, Stat.level, 1);
-        int defLvl = getStatInt(attrs, Stat.level, 1);
-        
-        // 计算攻击等级：玩家使用 STAT_TOHIT + 5 * (DEX - 7)，怪物直接使用 STAT_TOHIT
-        // 参考 DamageCalculator.calculateDamage 中的逻辑
-        int baseToHit = getStatInt(attackerAttrs, Stat.tohit, 0);
-        int dexterity = getStatInt(attackerAttrs, Stat.dexterity, 0);
-        int ar;
-        if (mMonster.has(entityId)) {
-          // 怪物：直接使用 baseToHit（DEX 通常为 0）
-          ar = baseToHit;
-        } else {
-          // 玩家：STAT_TOHIT + 5 * (DEX - 7)
-          ar = baseToHit + 5 * Math.max(0, dexterity - 7);
-        }
-        
-        int def = getStatInt(attrs, Stat.armorclass_vs_hth, 0);
-        if (def == 0) def = getStatInt(attrs, Stat.armorclass, 0);
-        if (log.debugEnabled()) {
-          log.debug("{} attacking {}: attLvl={}, defLvl={}, ar={} (baseToHit={}, dex={}), def={}", 
-              entityId, targetId, attLvl, defLvl, ar, baseToHit, dexterity, def);
-        }
-        if (!DamageCalculator.INSTANCE.isHitSuccessful(ar, def, attLvl, defLvl)) {
-          log.debug("{} melee miss on {} (ar={}, def={}, attLvl={}, defLvl={})", entityId, targetId, ar, def, attLvl, defLvl);
+        CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
+            attackerAttrs,
+            attrs,
+            isPlayerEntity(entityId),
+            isPlayerEntity(targetId),
+            false);
+        if (!combat.hit) {
+          log.debug("{} melee miss on {} (hitChance={}%)", entityId, targetId, combat.hitChance);
           break;
         }
-        log.debug("{} melee hit on {}!", entityId, targetId);
+        if (combat.blocked) {
+          log.debug("{} melee attack blocked by {}", entityId, targetId);
+          break;
+        }
+        log.debug("{} melee hit on {}: damage={}, hitChance={}%, critical={}, deadly={}, crushing={}",
+            entityId, targetId, combat.totalDamage, combat.hitChance,
+            combat.critical, combat.deadlyStrike, combat.crushingBlow);
 
-        float damage = calculateMeleeDamage(entityId, targetId);
+        float damage = combat.totalDamage;
         if (log.debugEnabled()) {
           log.debug("{} calculated damage: {} on {}", entityId, damage, targetId);
         }
         if (damage <= 0) {
-          log.warn("{} calculated zero or negative damage: {} on {}", entityId, damage, targetId);
+          log.debug("{} melee hit on {} caused no damage", entityId, targetId);
           break;
         }
         float hpBefore = hitpoints.asFixed();
-    DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
-    events.dispatch(event);
-    hitpoints.sub(event.damage);
+        DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
+        events.dispatch(event);
+        float appliedDamage = Math.max(0f, event.damage);
+        hitpoints.sub(appliedDamage);
         float hpAfter = hitpoints.asFixed();
-        log.debug("{} {} (damage={}, hp: {} -> {})", targetId, hpAfter, damage, hpBefore, hpAfter);
+        if (hpAfter < 0f) {
+          hitpoints.set(0f);
+          hpAfter = 0f;
+        }
+        log.debug("{} hp after {} attack: damage={}, hp: {} -> {}", targetId,
+            entityId, appliedDamage, hpBefore, hpAfter);
 
         if (hitpoints.asFixed() <= 0f) {
           log.debug("{} is dead!", targetId);
@@ -532,55 +526,7 @@ public class Actioneer extends PassiveSystem {
     }
   }
 
-  /**
-   * 计算近战伤害（怪物用 MonStats A1MinD/A1MaxD，玩家用 Stat.mindamage/maxdamage）
-   * 原逻辑硬编码 50，导致 50 血玩家被一击必杀
-   */
-  private static int getStatInt(Attributes attrs, short stat, int defaultValue) {
-    if (attrs == null) return defaultValue;
-    // 使用 get(stat, dst) 接口避免重用问题
-    StatRef r = attrs.get(stat, StatRef.obtain());
-    return r != null ? r.asInt() : defaultValue;
-  }
-
-  private float calculateMeleeDamage(int attackerId, int targetId) {
-    int minDmg = 1;
-    int maxDmg = 2;
-    int damageBonus = 0;
-
-    if (mMonster.has(attackerId)) {
-      Monster mon = mMonster.get(attackerId);
-      MonStats.Entry ms = mon != null ? mon.monstats : null;
-      if (ms != null && ms.A1MinD != null && ms.A1MaxD != null && ms.A1MinD.length > 0 && ms.A1MaxD.length > 0) {
-        int diff = 0; // Normal; TODO: use game difficulty when exposed
-        int di = Math.min(diff, Math.min(ms.A1MinD.length, ms.A1MaxD.length) - 1);
-        // 参考D2MOD: MonsterMode.cpp中nA1MinD/nA1MaxD被设置为STAT_MINDAMAGE/STAT_MAXDAMAGE（原始值）
-        // 然后在SUnitDmg.cpp中从STAT读取时左移8位（乘以256），转换为固定点数
-        // 在D2MOD中，伤害值和HP都是以256为单位的固定点数，所以直接相减
-        // 在riiablo中，HP是实际值（50.0），所以需要将A1MinD/A1MaxD除以256转换为实际伤害值
-        // 使用向上取整确保最小伤害至少为1（暗黑2中伤害没有小数）
-        minDmg = Math.max(1, (ms.A1MinD[di] + 255) / 256);  // 向上取整
-        maxDmg = Math.max(minDmg, (ms.A1MaxD[di] + 255) / 256);  // 向上取整，且>=minDmg
-        if (log.debugEnabled()) {
-          log.debug("Monster {} damage: A1MinD[{}]={}, A1MaxD[{}]={}, calculated min={}, max={}",
-              ms.Id, di, ms.A1MinD[di], di, ms.A1MaxD[di], minDmg, maxDmg);
-        }
-      }
-    } else if (mAttributesWrapper.has(attackerId)) {
-      Attributes attrs = mAttributesWrapper.get(attackerId).attrs;
-      // 使用 get(stat, dst) 接口避免重用问题
-      StatRef minR = attrs.get(Stat.mindamage, StatRef.obtain());
-      StatRef maxR = attrs.get(Stat.maxdamage, StatRef.obtain());
-      minDmg = minR != null ? Math.max(1, minR.asInt()) : 1;
-      maxDmg = maxR != null ? Math.max(minDmg, maxR.asInt()) : minDmg;
-      StatRef dmgPct = attrs.get(Stat.damagepercent, StatRef.obtain());
-      damageBonus = dmgPct != null ? dmgPct.asInt() : 0;
-      if (log.debugEnabled()) {
-        log.debug("Player {} damage: min={}, max={}, bonus={}%", attackerId, minDmg, maxDmg, damageBonus);
-      }
-    }
-
-    int dmg = DamageCalculator.INSTANCE.calculateSimpleDamage(minDmg, maxDmg, damageBonus);
-    return (float) Math.max(1, dmg);
+  private boolean isPlayerEntity(int entityId) {
+    return mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
   }
 }

@@ -62,11 +62,13 @@ public class AnimDataResolver extends PassiveSystem {
       animData.frame     = 0;
       animData.numFrames = 2048 << 8;  // D2MOD: dwFrames = 2048, converted to fixed point
       animData.keyframes  = null;  // No keyframe data for default
+      animData.lastKeyframeIndex = -1;
     } else {
       animData.speed     = entry.speed;
       animData.frame     = 0;
       animData.numFrames = entry.framesPerDir << 8;
       animData.keyframes = entry.data;
+      animData.lastKeyframeIndex = -1;
     }
   }
 }

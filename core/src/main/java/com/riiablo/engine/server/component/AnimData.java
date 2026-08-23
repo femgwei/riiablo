@@ -10,4 +10,6 @@ public class AnimData extends Component {
   public int  numFrames; // fixed point 24.8
   public byte keyframes[];
   public int  override = -1;
+  /** Last integer keyframe index dispatched; -1 means the animation has just started. */
+  public int  lastKeyframeIndex = -1;
 }

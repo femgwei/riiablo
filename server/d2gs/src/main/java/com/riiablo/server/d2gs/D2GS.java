@@ -56,6 +56,11 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.AIStepper;
 import com.riiablo.engine.server.Actioneer;
+import com.riiablo.engine.server.AnimStepper;
+import com.riiablo.engine.server.MissileCollisionSystem;
+import com.riiablo.engine.server.SequenceHandler;
+import com.riiablo.engine.server.StateUpdater;
+import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ItemInteractor;
@@ -269,6 +274,11 @@ public class D2GS extends ApplicationAdapter {
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
 
         .with(new Actioneer())
+        .with(new AnimStepper())
+        .with(new SequenceHandler())
+        .with(new MissileCollisionSystem())
+        .with(new StateUpdater())
+        .with(new ExperienceManager())
 
         .with(new VendorGenerator())
         .with(new AIStepper())

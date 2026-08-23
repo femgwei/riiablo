@@ -2,7 +2,9 @@ package com.riiablo.engine.server.combat;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -26,6 +28,9 @@ import com.riiablo.logger.Logger;
  */
 public class CombatSystem {
   private static final Logger log = LogManager.getLogger(CombatSystem.class);
+
+  /** Shared pure combat resolver used by the ECS systems. */
+  public static final CombatSystem INSTANCE = new CombatSystem();
 
   //==========================================================================
   // 常量 - 伤害类型
@@ -296,6 +301,98 @@ public class CombatSystem {
   //==========================================================================
 
   public CombatSystem() {}
+
+  /**
+   * Builds the native-style combat context from the attributes that belong to
+   * the two entities and resolves one hit. Keeping this adapter here makes the
+   * Actioneer and missile paths use exactly the same hit/damage pipeline.
+   *
+   * @param attacker attributes of the attacking entity
+   * @param defender attributes of the target entity
+   * @param attackerPlayer whether the attacker is a player
+   * @param defenderPlayer whether the target is a player
+   * @param missile whether this is a missile/ranged hit
+   */
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile) {
+    if (attacker == null || defender == null) {
+      CombatResult result = new CombatResult();
+      result.reset();
+      return result;
+    }
+
+    AttackerData a = new AttackerData();
+    a.isPlayer = attackerPlayer;
+    a.isMissile = missile;
+    a.level = statInt(attacker, Stat.level, 1);
+    a.strength = statInt(attacker, Stat.strength, 0);
+    a.dexterity = statInt(attacker, Stat.dexterity, 0);
+    a.attackRating = statInt(attacker, Stat.tohit, 0);
+    a.attackRatingPercent = statInt(attacker, Stat.item_tohit_percent, 0);
+    a.minDamage = statInt(attacker, Stat.mindamage, 1);
+    a.maxDamage = statInt(attacker, Stat.maxdamage, Math.max(2, a.minDamage));
+    if (missile) {
+      int throwMin = statInt(attacker, Stat.item_throw_mindamage, 0);
+      int throwMax = statInt(attacker, Stat.item_throw_maxdamage, 0);
+      if (throwMin > 0 && throwMax >= throwMin) {
+        a.minDamage = throwMin;
+        a.maxDamage = throwMax;
+      }
+    }
+    a.enhancedDamagePercent = statInt(attacker, Stat.damagepercent, 0);
+    a.elementalMinDamage[DAMAGE_FIRE] = statInt(attacker, Stat.firemindam, 0);
+    a.elementalMaxDamage[DAMAGE_FIRE] = statInt(attacker, Stat.firemaxdam, 0);
+    a.elementalMinDamage[DAMAGE_LIGHTNING] = statInt(attacker, Stat.lightmindam, 0);
+    a.elementalMaxDamage[DAMAGE_LIGHTNING] = statInt(attacker, Stat.lightmaxdam, 0);
+    a.elementalMinDamage[DAMAGE_COLD] = statInt(attacker, Stat.coldmindam, 0);
+    a.elementalMaxDamage[DAMAGE_COLD] = statInt(attacker, Stat.coldmaxdam, 0);
+    a.elementalMinDamage[DAMAGE_POISON] = statInt(attacker, Stat.poisonmindam, 0);
+    a.elementalMaxDamage[DAMAGE_POISON] = statInt(attacker, Stat.poisonmaxdam, 0);
+    a.elementalMinDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmindam, 0);
+    a.elementalMaxDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmaxdam, 0);
+    a.deadlyStrike = statInt(attacker, Stat.item_deadlystrike, 0);
+    a.criticalStrike = statInt(attacker, Stat.passive_critical_strike, 0);
+    a.crushingBlow = statInt(attacker, Stat.item_crushingblow, 0);
+    a.lifeLeech = statInt(attacker, Stat.lifedrainmindam, 0);
+    a.manaLeech = statInt(attacker, Stat.manadrainmindam, 0);
+    a.ignoreTargetDefense = statInt(attacker, Stat.item_ignoretargetac, 0) > 0;
+
+    DefenderData d = new DefenderData();
+    d.isPlayer = defenderPlayer;
+    d.isMonster = !defenderPlayer;
+    d.level = statInt(defender, Stat.level, 1);
+    d.dexterity = statInt(defender, Stat.dexterity, 0);
+    d.defense = statInt(defender, Stat.armorclass, 0);
+    int alternateDefense = statInt(defender,
+        missile ? Stat.armorclass_vs_missile : Stat.armorclass_vs_hth, 0);
+    if (d.defense == 0) {
+      d.defense = alternateDefense;
+    }
+    d.currentLife = Math.max(0, statInt(defender, Stat.hitpoints, 0));
+    d.maxLife = Math.max(d.currentLife, statInt(defender, Stat.maxhp, d.currentLife));
+    d.blockChance = statInt(defender, Stat.toblock, 0);
+    d.canBlock = d.blockChance > 0 && !missile;
+    d.resistances[DAMAGE_PHYSICAL] = statInt(defender, Stat.damageresist, 0);
+    d.resistances[DAMAGE_FIRE] = statInt(defender, Stat.fireresist, 0);
+    d.resistances[DAMAGE_LIGHTNING] = statInt(defender, Stat.lightresist, 0);
+    d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
+    d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
+    d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
+    d.damageReducedPercent = Math.max(0, d.resistances[DAMAGE_PHYSICAL]);
+    d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
+    d.immunePhysical = d.resistances[DAMAGE_PHYSICAL] >= 100;
+    for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
+      d.immuneElemental[i] = d.resistances[i] >= 100;
+    }
+    return calculateAttack(a, d);
+  }
+
+  private static int statInt(Attributes attrs, short stat, int defaultValue) {
+    if (attrs == null) return defaultValue;
+    StatRef ref = attrs.get(stat);
+    return ref != null ? ref.asInt() : defaultValue;
+  }
 
   //==========================================================================
   // 核心方法 - 战斗解算
