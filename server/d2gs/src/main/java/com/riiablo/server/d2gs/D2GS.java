@@ -64,6 +64,7 @@ import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.CofManager;
+import com.riiablo.engine.server.DeathRewardSystem;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInitializer;
@@ -276,6 +277,7 @@ public class D2GS extends ApplicationAdapter {
 
         .with(new Actioneer())
         .with(new ServerSkillSystem())
+        .with(new DeathRewardSystem())
         .with(new AnimStepper())
         .with(new SequenceHandler())
         .with(new MissileCollisionSystem())
