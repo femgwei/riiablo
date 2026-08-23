@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+import com.d2moo.common.drlg.D2DrlgCoord;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
@@ -45,6 +46,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, difficulty, burialId);
     assertNotNull(first, "D2MOO Act1 layout failed; inspect ACT1_D2MOO logs");
     assertDiscoveredNativeSublevels(first);
+    assertNativeMonasteryMainline(first.drlg, first.result.levelIds);
     assertFixedSeedOutdoorCoverage(first.drlg);
     String firstSummary = summarize(first.drlg, first.result.levelIds);
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
@@ -57,6 +59,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, difficulty, burialId);
     assertNotNull(second, "Second fixed-seed generation failed");
     assertDiscoveredNativeSublevels(second);
+    assertNativeMonasteryMainline(second.drlg, second.result.levelIds);
     assertFixedSeedOutdoorCoverage(second.drlg);
     assertEquals(firstSummary, summarize(second.drlg, second.result.levelIds),
         "same seed must produce the same Act1 layout summary");
@@ -88,9 +91,100 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     }
   }
 
+  @Test
+  public void mapBuilderCreatesContinuousMonasteryZones() {
+    int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
+    Map map = new Map(seed, DEFAULT_DIFFICULTY);
+    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
+    try {
+      Map.Zone tamoe = zone(map, D2LevelIds.LEVEL_TAMOEHIGHLAND);
+      Map.Zone gate = zone(map, D2LevelIds.LEVEL_MONASTERYGATE);
+      Map.Zone cloister = zone(map, D2LevelIds.LEVEL_OUTERCLOISTER);
+      Map.Zone barracks = zone(map, D2LevelIds.LEVEL_BARRACKS);
+      assertTrue(touches(tamoe, gate), "Tamoe Highland must touch Monastery Gate");
+      assertTrue(touches(gate, cloister), "Monastery Gate must touch Outer Cloister");
+      assertTrue(touches(cloister, barracks), "Outer Cloister must touch Barracks");
+      for (int levelId : new int[] {
+          D2LevelIds.LEVEL_MONASTERYGATE,
+          D2LevelIds.LEVEL_OUTERCLOISTER,
+          D2LevelIds.LEVEL_BARRACKS }) {
+        assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(levelId),
+            "native monastery export was rejected " + levelId);
+      }
+    } finally {
+      map.dispose();
+    }
+  }
+
+  private static Map.Zone zone(Map map, int levelId) {
+    Map.Zone zone = map.findZone(Riiablo.files.Levels.get(levelId));
+    assertNotNull(zone, "zone is missing " + levelId);
+    return zone;
+  }
+
+  private static boolean touches(Map.Zone a, Map.Zone b) {
+    boolean vertical = (a.x() + a.width() == b.x() || b.x() + b.width() == a.x())
+        && a.y() < b.y() + b.height() && b.y() < a.y() + a.height();
+    boolean horizontal = (a.y() + a.height() == b.y() || b.y() + b.height() == a.y())
+        && a.x() < b.x() + b.width() && b.x() < a.x() + a.width();
+    return vertical || horizontal;
+  }
+
   private static boolean overlaps(Map.Zone a, Map.Zone b) {
     return a.x() < b.x() + b.width() && b.x() < a.x() + a.width()
         && a.y() < b.y() + b.height() && b.y() < a.y() + a.height();
+  }
+
+  private static void assertNativeMonasteryMainline(D2DrlgStrc drlg, int[] levelIds) {
+    for (int levelId : new int[] {
+        D2LevelIds.LEVEL_MONASTERYGATE,
+        D2LevelIds.LEVEL_OUTERCLOISTER,
+        D2LevelIds.LEVEL_BARRACKS }) {
+      assertTrue(contains(levelIds, levelId), "native monastery level is missing " + levelId);
+      assertNativeLevelExport(drlg, levelId);
+    }
+    assertTouches(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_TAMOEHIGHLAND),
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_MONASTERYGATE));
+    assertTouches(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_MONASTERYGATE),
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_OUTERCLOISTER));
+    assertTouches(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_OUTERCLOISTER),
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BARRACKS));
+  }
+
+  private static void assertNativeLevelExport(D2DrlgStrc drlg, int levelId) {
+    D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+    assertNotNull(level, "missing D2MOO level " + levelId);
+    assertTrue(level.getRooms() > 0, "D2MOO level has no rooms " + levelId);
+    TileGrid grid = new TileGrid(
+        level.getLevelCoords().getNWidth(), level.getLevelCoords().getNHeight());
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(levelId, grid);
+    assertTrue(DrlgExport.exportLevelTiles(drlg, levelId, applier) > 0,
+        "D2MOO level exported no floors " + levelId);
+    assertTrue(applier.getExportedWallCount() > 0,
+        "D2MOO level exported no walls " + levelId);
+    assertEquals(0, applier.getInvalidTileCount());
+    assertEquals(0, applier.getOutOfBoundsCount());
+  }
+
+  private static void assertTouches(D2DrlgLevel a, D2DrlgLevel b) {
+    assertNotNull(a);
+    assertNotNull(b);
+    D2DrlgCoord ac = a.getLevelCoords();
+    D2DrlgCoord bc = b.getLevelCoords();
+    boolean vertical = (ac.getNPosX() + ac.getNWidth() == bc.getNPosX()
+        || bc.getNPosX() + bc.getNWidth() == ac.getNPosX())
+        && ac.getNPosY() < bc.getNPosY() + bc.getNHeight()
+        && bc.getNPosY() < ac.getNPosY() + ac.getNHeight();
+    boolean horizontal = (ac.getNPosY() + ac.getNHeight() == bc.getNPosY()
+        || bc.getNPosY() + bc.getNHeight() == ac.getNPosY())
+        && ac.getNPosX() < bc.getNPosX() + bc.getNWidth()
+        && bc.getNPosX() < ac.getNPosX() + ac.getNWidth();
+    assertTrue(vertical || horizontal,
+        "native levels do not share a boundary " + a.getLevelId() + " -> " + b.getLevelId());
   }
 
   private static void assertDiscoveredNativeSublevels(

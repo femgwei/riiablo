@@ -149,7 +149,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int daw = dark.SizeX[diff], dah = dark.SizeY[diff];
     int unw = underground.SizeX[diff], unh = underground.SizeY[diff];
 
-    Act1LayoutResult r = new Act1LayoutResult();
+    // The fallback only covers the original nine-map outdoor bootstrap; the
+    // native bridge extends its default result with the monastery mainline.
+    Act1LayoutResult r = new Act1LayoutResult(9);
     r.levelIds[0] = LEVEL_STONYFIELD;
     r.levelIds[1] = LEVEL_COLDPLAINS;
     r.levelIds[2] = LEVEL_BLOODMOOR;

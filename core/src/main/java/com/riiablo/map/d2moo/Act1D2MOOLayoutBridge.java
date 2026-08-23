@@ -43,6 +43,9 @@ public final class Act1D2MOOLayoutBridge {
         D2LevelIds.LEVEL_TAMOEHIGHLAND,
         D2LevelIds.LEVEL_DARKWOOD,
         D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1,
+        D2LevelIds.LEVEL_MONASTERYGATE,
+        D2LevelIds.LEVEL_OUTERCLOISTER,
+        D2LevelIds.LEVEL_BARRACKS,
     };
 
     /**
@@ -65,13 +68,14 @@ public final class Act1D2MOOLayoutBridge {
         /** 每格 [x, y, width, height] 单位 tile，与 D2DrlgCoord 一致 */
         public final int[][] coords;
         /** 0=Stony, 1=Cold, 2=Blood, 3=Town, 4=Burial, 5=Black Marsh,
-         * 6=Tamoe, 7=Dark Wood, 8=Underground Passage level 1. Native linked
+         * 6=Tamoe, 7=Dark Wood, 8=Underground Passage level 1,
+         * 9=Monastery Gate, 10=Outer Cloister, 11=Barracks. Native linked
          * sublevels discovered from actual warp specials follow those entries. */
         public final int[] levelIds;
         /** levelLink[i]：连接到的上一格索引，-1 表示无 */
-        public final int[] levelLink = new int[] { -1, 0, 1, 2, 1, 7, 5, -1, 0 };
+        public final int[] levelLink;
         /** levelLinkEx[i] */
-        public final int[] levelLinkEx = new int[] { -1, -1, -1, -1, -1, -1, -1, -1, 7 };
+        public final int[] levelLinkEx;
         /** 城镇出口方向 0–3 (D2MOD rand[0][townIndex])，用于预设选择与路径 */
         public int townDirection;
 
@@ -82,6 +86,30 @@ public final class Act1D2MOOLayoutBridge {
         public Act1LayoutResult(int levelCount) {
             coords = new int[levelCount][4];
             levelIds = new int[levelCount];
+            levelLink = new int[levelCount];
+            levelLinkEx = new int[levelCount];
+            java.util.Arrays.fill(levelLink, -1);
+            java.util.Arrays.fill(levelLinkEx, -1);
+            // Wilderness chain and detached Underground Passage links.
+            if (levelCount > 1) levelLink[1] = 0;
+            if (levelCount > 2) levelLink[2] = 1;
+            if (levelCount > 3) levelLink[3] = 2;
+            if (levelCount > 4) levelLink[4] = 1;
+            if (levelCount > 9) {
+                levelLink[5] = 6;
+                levelLink[6] = 9;
+                levelLink[7] = 5;
+            } else {
+                if (levelCount > 5) levelLink[5] = 7;
+                if (levelCount > 6) levelLink[6] = 5;
+            }
+            if (levelCount > 8) {
+                levelLink[8] = 0;
+                levelLinkEx[8] = 7;
+            }
+            // Monastery Gate -> Outer Cloister -> Barracks seamless chain.
+            if (levelCount > 10) levelLink[10] = 9;
+            if (levelCount > 11) levelLink[11] = 10;
         }
     }
 
