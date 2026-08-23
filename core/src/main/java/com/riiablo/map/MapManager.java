@@ -1,11 +1,20 @@
 package com.riiablo.map;
 
+import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Levels;
+import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.component.Object;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Size;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -17,6 +26,9 @@ public class MapManager extends PassiveSystem {
 
   @Wire(name = "factory")
   protected EntityFactory factory;
+
+  protected ComponentMapper<Object> mObject;
+  protected ComponentMapper<Position> mPosition;
 
   public void createEntities() {
     for (Map.Zone zone : new Array.ArrayIterator<>(map.zones)) {
@@ -51,14 +63,21 @@ public class MapManager extends PassiveSystem {
     // 只对城镇区域创建 NPC 和其他对象
     // 野外区域的对象应该通过 generator 或其他方式创建
     if (!zone.town) {
-      return; // 跳过非城镇区域，避免在野外区域创建 NPC
+      // Outdoor waypoint presets contain the actual selectable DS1 object.
+      // Keep skipping monsters/NPCs here, but do not discard the waypoint.
+      createPresetEntities(zone, true);
+      return;
     }
-    
+
+    createPresetEntities(zone, false);
+  }
+
+  private void createPresetEntities(Map.Zone zone, boolean waypointsOnly) {
     for (int x = 0, gridX = 0, gridY = 0; x < zone.gridsX; x++, gridX += zone.gridSizeX, gridY = 0) {
       for (int y = 0; y < zone.gridsY; y++, gridY += zone.gridSizeY) {
         Map.Preset preset = zone.presets[x][y];
         if (preset == null) continue;
-        createEntities(zone, preset, gridX, gridY);
+        createEntities(zone, preset, gridX, gridY, waypointsOnly);
       }
     }
   }
@@ -85,14 +104,81 @@ public class MapManager extends PassiveSystem {
     }
   }
 
-  private void createEntities(Map.Zone zone, Map.Preset preset, int gridX, int gridY) {
+  private void createEntities(
+      Map.Zone zone, Map.Preset preset, int gridX, int gridY, boolean waypointsOnly) {
     final int x = zone.x + (gridX * DT1.Tile.SUBTILE_SIZE);
     final int y = zone.y + (gridY * DT1.Tile.SUBTILE_SIZE);
     DS1 ds1 = preset.ds1;
     for (int i = 0, size = ds1.numObjects; i < size; i++) {
       DS1.Object object = ds1.objects[i];
+      if (waypointsOnly && !isWaypoint(ds1, object)) continue;
       int id = factory.createObject(preset, object, x + object.x, y + object.y);
       if (id != Engine.INVALID_ENTITY) zone.entities.add(id);
     }
+  }
+
+  private boolean isWaypoint(DS1 ds1, DS1.Object object) {
+    if (object.type != DS1.Object.STATIC_TYPE) return false;
+    int objectId = Riiablo.files.obj.getObjectId(ds1.getAct(), object.id);
+    Objects.Entry base = Riiablo.files.objects.get(objectId);
+    return base != null
+        && (base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) != 0;
+  }
+
+  /** Finds a safe player destination adjacent to the waypoint in {@code level}. */
+  public Vector2 findWaypointPosition(Levels.Entry level, Vector2 out) {
+    Map.Zone zone = map.findZone(level);
+    if (zone == null) return null;
+
+    for (int i = 0; i < zone.entities.size; i++) {
+      int entityId = zone.entities.get(i);
+      Object object = mObject.get(entityId);
+      Position position = mPosition.get(entityId);
+      if (object == null || position == null
+          || (object.base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) == 0) {
+        continue;
+      }
+
+      int radius = MathUtils.ceil(Math.max(object.base.SizeX, object.base.SizeY) / 2f) + 2;
+      Vector2 waypoint = position.position;
+      if (findWalkableAdjacent(zone, waypoint, radius, out)) return out;
+
+      Gdx.app.error(TAG, "No walkable waypoint arrival tile: level=" + level.LevelName
+          + "(" + level.Id + ") position=" + waypoint);
+      return out.set(waypoint);
+    }
+
+    Gdx.app.error(TAG, "Waypoint entity not found: level=" + level.LevelName
+        + "(" + level.Id + ")");
+    return null;
+  }
+
+  private boolean findWalkableAdjacent(
+      Map.Zone zone, Vector2 waypoint, int minimumRadius, Vector2 out) {
+    for (int radius = minimumRadius; radius <= minimumRadius + 8; radius++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        if (isWalkable(zone, waypoint.x + dx, waypoint.y - radius, out)) return true;
+        if (isWalkable(zone, waypoint.x + dx, waypoint.y + radius, out)) return true;
+      }
+      for (int dy = -radius + 1; dy < radius; dy++) {
+        if (isWalkable(zone, waypoint.x - radius, waypoint.y + dy, out)) return true;
+        if (isWalkable(zone, waypoint.x + radius, waypoint.y + dy, out)) return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isWalkable(Map.Zone zone, float x, float y, Vector2 out) {
+    int worldX = MathUtils.round(x);
+    int worldY = MathUtils.round(y);
+    int playerRadius = Size.MEDIUM / 2;
+    for (int checkX = worldX - playerRadius; checkX <= worldX + playerRadius; checkX++) {
+      for (int checkY = worldY - playerRadius; checkY <= worldY + playerRadius; checkY++) {
+        if (!zone.contains(checkX, checkY)) return false;
+        if ((map.flags(checkX, checkY) & DT1.Tile.FLAG_BLOCK_WALK) != 0) return false;
+      }
+    }
+    out.set(worldX + 0.5f, worldY + 0.5f);
+    return true;
   }
 }

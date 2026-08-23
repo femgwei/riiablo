@@ -145,6 +145,7 @@ public class ServerEntityFactory extends EntityFactory {
     mObject.create(id).base = base;
 
     mPosition.create(id).position.set(x, y);
+    mMapWrapper.create(id).set(map, map.getZone(x, y));
 
     if (base.Draw) {
       mCofReference.create(id).set(base.Token, Class.Type.OBJ.DEFAULT_MODE);

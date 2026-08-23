@@ -479,6 +479,12 @@ public class CreateCharacterScreen extends ScreenAdapter {
     charData.towns[Riiablo.NIGHTMARE] = 0;
     charData.towns[Riiablo.HELL] = 0;
 
+    // The town waypoint is available to every new character in the current
+    // difficulty, matching the initial waypoint bit in an original D2 save.
+    for (int difficulty = 0; difficulty < Riiablo.NUM_DIFFS; difficulty++) {
+      charData.activateWaypoint(difficulty, Riiablo.ACT1, 0);
+    }
+
     // Set map seed
     charData.mapSeed = (int) System.currentTimeMillis();
 

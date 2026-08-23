@@ -394,6 +394,9 @@ public class D2SReader96 {
       data.waypointData[i][Riiablo.ACT3] = (int) bits.readRaw(9);
       data.waypointData[i][Riiablo.ACT4] = (int) bits.readRaw(3);
       data.waypointData[i][Riiablo.ACT5] = (int) bits.readRaw(9);
+      // D2's WAYPOINTS_CopyAndValidateWaypointData always restores the first
+      // town waypoint bit for every difficulty.
+      data.waypointData[i][Riiablo.ACT1] |= 1;
 
       bits = BitInput.wrap(d2s.npcs.flags[D2S.NPCData.GREETING_INTRO][i]);
       data.npcIntroData[i] = bits.readRaw(64);

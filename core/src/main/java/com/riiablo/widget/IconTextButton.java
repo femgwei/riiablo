@@ -17,11 +17,21 @@ public class IconTextButton extends Table {
     addListener(new InputListener() {
       @Override
       public boolean handle(Event e) {
+        if (button.isDisabled()) return false;
         button.getClickListener().handle(e);
         label.clickListener.handle(e);
         return true;
       }
     });
+  }
+
+  public void setDisabled(boolean disabled) {
+    button.setDisabled(disabled);
+    setTouchable(disabled ? Touchable.disabled : Touchable.enabled);
+  }
+
+  public boolean isDisabled() {
+    return button.isDisabled();
   }
 
 }

@@ -1,13 +1,21 @@
 package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
+import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Interactable;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Object;
+import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.map.Map;
+import com.riiablo.save.CharData;
+import com.riiablo.save.D2SWriter;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -17,6 +25,12 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected ComponentMapper<Object> mObject;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Player> mPlayer;
+
+  @Wire(name = "map")
+  protected Map map;
 
   @Override
   public void interact(int src, int entityId) {
@@ -32,11 +46,36 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       case 20: case 21: case 22:
         break;
       case 23: { // waypoint
+        Levels.Entry level = getLevel(entityId);
+        Player player = mPlayer.get(src);
+        if (level == null || level.Waypoint == 0xFF || player == null || player.data == null) {
+          Gdx.app.error(TAG, "Unable to activate waypoint: entity=" + entityId
+              + " player=" + src + " level=" + level);
+          break;
+        }
+
+        CharData data = player.data;
+        boolean newlyActivated = data.activateWaypoint(level.Act, level.Waypoint);
         CofReference cofComponent = mCofReference.get(entityId);
+        boolean openMenu = cofComponent.mode == Engine.Object.MODE_OP
+            || cofComponent.mode == Engine.Object.MODE_ON;
         if (cofComponent.mode == Engine.Object.MODE_NU) {
           mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
           Riiablo.audio.play("object_waypoint_open", true);
-        } else if (cofComponent.mode == Engine.Object.MODE_ON) {
+        }
+
+        if (newlyActivated) {
+          Gdx.app.log(TAG, "Waypoint activated: level=" + level.LevelName
+              + "(" + level.Id + ") act=" + level.Act + " index=" + level.Waypoint);
+          if (data.managed && Riiablo.saves != null && !D2SWriter.INSTANCE.save(data)) {
+            Gdx.app.error(TAG, "Failed to persist activated waypoint for " + data.name);
+          }
+        }
+
+        // This system is installed in client and headless server worlds. Only
+        // the client owns UI; activation itself is stored on the source player.
+        if (openMenu && Riiablo.game != null) {
+          Riiablo.game.waygatePanel.refresh();
           Riiablo.game.setLeftPanel(Riiablo.game.waygatePanel);
         }
       }
@@ -56,5 +95,14 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       default:
         Gdx.app.error(TAG, "Invalid OperateFn for " + entityId + ": " + operateFn);
     }
+  }
+
+  private Levels.Entry getLevel(int entityId) {
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    if (wrapper != null && wrapper.zone != null) return wrapper.zone.level;
+    Position position = mPosition.get(entityId);
+    if (position == null || map == null) return null;
+    Map.Zone zone = map.getZone(position.position);
+    return zone == null ? null : zone.level;
   }
 }

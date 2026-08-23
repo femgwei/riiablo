@@ -3,11 +3,17 @@ package com.riiablo.engine.server;
 import com.artemis.BaseEntitySystem;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Classname;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Object;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.map.Map;
 
 @All(Object.class)
 public class ObjectInitializer extends BaseEntitySystem {
@@ -15,8 +21,12 @@ public class ObjectInitializer extends BaseEntitySystem {
 
   protected ComponentMapper<Object> mObject;
   protected ComponentMapper<Classname> mClassname;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Position> mPosition;
 
   protected CofManager cofs;
+  @Wire(name = "map")
+  protected Map map;
 
   @Override
   protected void inserted(int entityId) {
@@ -43,8 +53,12 @@ public class ObjectInitializer extends BaseEntitySystem {
       case 9 : case 10: case 11: case 12: case 13: case 14: case 15: case 16:
         break;
       case 17: // waypoint
-        // TODO: Set ON based on save file
-        cofs.setMode(entityId, Engine.Object.MODE_ON);
+        Levels.Entry level = getLevel(entityId);
+        boolean active = level != null
+            && level.Waypoint != 0xFF
+            && Riiablo.charData != null
+            && Riiablo.charData.isWaypointActivated(level.Act, level.Waypoint);
+        cofs.setMode(entityId, active ? Engine.Object.MODE_ON : Engine.Object.MODE_NU);
         break;
       case 18:
       case 19: case 20: case 21: case 22: case 23: case 24: case 25: case 26: case 27: case 28:
@@ -58,5 +72,14 @@ public class ObjectInitializer extends BaseEntitySystem {
       default:
         Gdx.app.error(TAG, "Invalid InitFn for " + mClassname.get(entityId).classname + ": " + base.InitFn);
     }
+  }
+
+  private Levels.Entry getLevel(int entityId) {
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    if (wrapper != null && wrapper.zone != null) return wrapper.zone.level;
+    Position position = mPosition.get(entityId);
+    if (position == null || map == null) return null;
+    Map.Zone zone = map.getZone(position.position);
+    return zone == null ? null : zone.level;
   }
 }

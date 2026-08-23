@@ -327,7 +327,69 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   }
 
   public int getWaypoints(int act) {
+    validateWaypointAct(act);
     return waypointData[diff][act];
+  }
+
+  public boolean isWaypointActivated(int act, int waypointNo) {
+    int waypoint = getWaypointIndex(act, waypointNo);
+    return (waypointData[diff][act] & (1 << waypoint)) != 0;
+  }
+
+  /**
+   * Activates a waypoint for the current difficulty.
+   *
+   * @return {@code true} when the waypoint changed from inactive to active
+   */
+  public boolean activateWaypoint(int act, int waypointNo) {
+    return activateWaypoint(diff, act, waypointNo);
+  }
+
+  public boolean activateWaypoint(int difficulty, int act, int waypointNo) {
+    if (difficulty < 0 || difficulty >= Riiablo.NUM_DIFFS) {
+      throw new IllegalArgumentException("Invalid waypoint difficulty: " + difficulty);
+    }
+    int waypoint = getWaypointIndex(act, waypointNo);
+    int mask = 1 << waypoint;
+    int previous = waypointData[difficulty][act];
+    waypointData[difficulty][act] = previous | mask;
+    return (previous & mask) == 0;
+  }
+
+  public static int getNumWaypoints(int act) {
+    validateWaypointAct(act);
+    return act == Riiablo.ACT4 ? 3 : 9;
+  }
+
+  /** Converts the global Levels.txt waypoint number to its act-local save bit. */
+  public static int getWaypointIndex(int act, int waypointNo) {
+    int count = getNumWaypoints(act);
+    int offset = getWaypointOffset(act);
+    int waypoint = waypointNo - offset;
+    if (waypoint < 0 || waypoint >= count) {
+      throw new IllegalArgumentException(
+          "Invalid global waypoint " + waypointNo + " for act " + act
+              + " (expected " + offset + ".." + (offset + count - 1) + ")");
+    }
+    return waypoint;
+  }
+
+  public static int getWaypointOffset(int act) {
+    validateWaypointAct(act);
+    switch (act) {
+      case Riiablo.ACT1: return 0;
+      case Riiablo.ACT2: return 9;
+      case Riiablo.ACT3: return 18;
+      case Riiablo.ACT4: return 27;
+      case Riiablo.ACT5: return 30;
+      default: throw new AssertionError(act);
+    }
+  }
+
+  private static void validateWaypointAct(int act) {
+    if (act < 0 || act >= Riiablo.NUM_ACTS) {
+      throw new IllegalArgumentException("Invalid waypoint act: " + act);
+    }
   }
 
   public long getNpcIntro() {

@@ -21,6 +21,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.loader.DC6Loader;
+import com.riiablo.save.CharData;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.IconTextButton;
 
@@ -43,8 +44,11 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
   Button btnExit;
 
   ClickListener clickListener;
+  final CharData charData;
+  final Array<WaypointControl> waypointControls = new Array<>(42);
 
-  public WaygatePanel() {
+  public WaygatePanel(CharData charData) {
+    this.charData = charData;
     Riiablo.assets.load(waygatebackgroundDescriptor);
     Riiablo.assets.finishLoadingAsset(waygatebackgroundDescriptor);
     waygatebackground = Riiablo.assets.get(waygatebackgroundDescriptor).getTexture();
@@ -85,6 +89,7 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         IconTextButton button = (IconTextButton) event.getListenerActor();
+        if (button.isDisabled()) return;
         Levels.Entry target = (Levels.Entry) button.getUserObject();
         Riiablo.game.setLevel(target);
       }
@@ -115,6 +120,7 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
         Actor controller = tab.addWaypoint(entry.LevelName);
         controller.setUserObject(entry);
         controller.addListener(clickListener);
+        waypointControls.add(new WaypointControl(entry, (IconTextButton) controller));
       }
 
       tab.pack();
@@ -156,7 +162,18 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     tabGroup.setMaxCheckCount(1);
     tabs[0].setVisible(true);
 
+    refresh();
+
     //setDebug(true, true);
+  }
+
+  /** Refreshes destination availability from the current difficulty save flags. */
+  public void refresh() {
+    for (WaypointControl control : waypointControls) {
+      Levels.Entry level = control.level;
+      boolean active = charData.isWaypointActivated(level.Act, level.Waypoint);
+      control.button.setDisabled(!active);
+    }
   }
 
   @Override
@@ -182,6 +199,16 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
       IconTextButton button = new IconTextButton(waygateButtonStyle, Riiablo.string.lookup(descId), Riiablo.fonts.font16);
       add(button).row();
       return button;
+    }
+  }
+
+  private static class WaypointControl {
+    final Levels.Entry level;
+    final IconTextButton button;
+
+    WaypointControl(Levels.Entry level, IconTextButton button) {
+      this.level = level;
+      this.button = button;
     }
   }
 }

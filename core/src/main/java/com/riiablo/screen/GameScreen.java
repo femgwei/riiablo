@@ -92,6 +92,8 @@ import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.AngularVelocity;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AnimStepper;
+import com.riiablo.engine.server.StateUpdater;
+import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
 import com.riiablo.engine.server.Box2DDisposer;
 import com.riiablo.engine.server.Box2DSynchronizerPost;
 import com.riiablo.engine.server.Box2DSynchronizerPre;
@@ -105,10 +107,13 @@ import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.PlayerItemHandler;
 import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.MissileCollisionSystem;
+import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.VelocityModeChanger;
 import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.ZoneMovementModesChanger;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.Box2DBody;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
@@ -223,6 +228,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   EngineConfig config;
   Map map;
   MapManager mapManager;
+  Levels.Entry pendingWaypointTarget;
   IsometricCamera iso;
   InputProcessor testingInputProcessor;
 
@@ -376,7 +382,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     questsPanel.setPosition(0, stage.getHeight() - questsPanel.getHeight());
     stage.addActor(questsPanel);
 
-    waygatePanel = new WaygatePanel();
+    waygatePanel = new WaygatePanel(charData);
     waygatePanel.setPosition(0, stage.getHeight() - waygatePanel.getHeight());
     stage.addActor(waygatePanel);
 
@@ -729,6 +735,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new Box2DSynchronizerPost())
 
         .with(new MissileCollisionSystem()) // 处理导弹的碰撞和伤害
+        .with(new StateUpdater())
+        .with(new ExperienceManager())
+        .with(new PlayerCorpseRetrievalSystem())
 
         .with(new ZoneChangeTracker())
         .with(new ZoneMovementModesChanger())
@@ -1065,7 +1074,15 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     engine.getSystem(Box2DPhysics.class).createBodies();
 
-    Vector2 origin = map.find(Map.ID.TOWN_ENTRY_1);
+    Levels.Entry waypointTarget = pendingWaypointTarget;
+    Vector2 origin = waypointTarget != null && waypointTarget.Act == map.getAct()
+        ? mapManager.findWaypointPosition(waypointTarget, new Vector2())
+        : null;
+    if (origin != null) {
+      Gdx.app.log(TAG, "Arriving at waypoint: level=" + waypointTarget.LevelName
+          + "(" + waypointTarget.Id + ") position=" + origin);
+    }
+    if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_1);
     if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_2);
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
     Map.Zone zone = origin != null ? map.getZone(origin) : null;
@@ -1086,6 +1103,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     player = factory.createPlayer(charData, origin);
     engine.getSystem(EventSystem.class).dispatch(ZoneChangeEvent.obtain(player, zone));
+    pendingWaypointTarget = null;
 
     renderer.setSrc(player);
     renderer.updatePosition(true);
@@ -1187,37 +1205,48 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   public void setLevel(Levels.Entry target) {
     assert target.Waypoint != 0xFF;
+    if (socket != null) {
+      Gdx.app.error(TAG, "Waypoint travel requires a server-authoritative request in multiplayer; "
+          + "rejecting client-side travel to " + target.LevelName + "(" + target.Id + ")");
+      return;
+    }
+    if (!charData.isWaypointActivated(target.Act, target.Waypoint)) {
+      Gdx.app.error(TAG, "Rejected travel to inactive waypoint: level=" + target.LevelName
+          + "(" + target.Id + ") act=" + target.Act + " index=" + target.Waypoint);
+      waygatePanel.refresh();
+      return;
+    }
+
     if (target.Act != map.getAct()) {
+      pendingWaypointTarget = target;
+      setLeftPanel(null);
       setAct(target.Act);
       return;
     }
 
-    // TODO: support waypoints from same act
-//    Riiablo.engine.removeAllEntities(Family.exclude(PlayerComponent.class).get());
-//    Box2DPhysicsSystem system = engine.getSystem(Box2DPhysicsSystem.class);
-//    World body2dWorld = system.world;
-//    Array<Body> bodies = new Array<>(32768);
-//    body2dWorld.getBodies(bodies);
-//    for (Body body : bodies) body2dWorld.destroyBody(body);
-//    player.getComponent(Box2DComponent.class).body = null;
-//    system.entityAdded(player);
-//
-//    loadingScreen.loadAct(target.Act);
-//    Riiablo.client.pushScreen(loadingScreen);
-    /*
-    map.clear();
-    map.setAct(target.Act);
-    map.load();
-    map.finishLoading();
-    map.generate();
-    */
+    Vector2 destination = mapManager.findWaypointPosition(target, new Vector2());
+    if (destination == null) {
+      Gdx.app.error(TAG, "Unable to travel: target waypoint entity is missing for "
+          + target.LevelName + "(" + target.Id + ")");
+      return;
+    }
 
-//    Vector2 origin = map.find(Map.ID.TOWN_ENTRY_1);
-//    if (origin == null) origin = map.find(Map.ID.TOWN_ENTRY_2);
-//    if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
-//    player.getComponent(PositionComponent.class).position.set(origin);
-//    player.getComponent(Box2DComponent.class).body.setTransform(origin, 0);
-//    player.getComponent(MapComponent.class).zone = map.getZone(origin);
+    Actioneer actioneer = engine.getSystem(Actioneer.class);
+    actioneer.moveTo(player, Engine.INVALID_ENTITY);
 
+    Position position = engine.getMapper(Position.class).get(player);
+    position.position.set(destination);
+    Box2DBody box2d = engine.getMapper(Box2DBody.class).get(player);
+    if (box2d != null && box2d.body != null) box2d.body.setTransform(destination, 0);
+
+    Map.Zone zone = map.getZone(destination);
+    MapWrapper mapWrapper = engine.getMapper(MapWrapper.class).get(player);
+    mapWrapper.set(map, zone);
+    engine.getSystem(EventSystem.class).dispatch(ZoneChangeEvent.obtain(player, zone));
+
+    setLeftPanel(null);
+    renderer.updatePosition(true);
+    Gdx.app.log(TAG, "Waypoint travel complete: level=" + target.LevelName
+        + "(" + target.Id + ") position=" + destination);
   }
 }
