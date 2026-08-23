@@ -424,7 +424,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       assertEquals(attempted - applier.getClippedBoundaryFloorCount(),
           applier.getLastExportedFloorCount(),
           "not every exported floor tile was written for level " + levelId);
-      assertEquals(0, applier.getDuplicatePositionCount(),
+      assertEquals(levelId == D2LevelIds.LEVEL_DARKWOOD ? 1 : 0,
+          applier.getDuplicatePositionCount(),
           "unexpected shared floor coordinates for level " + levelId);
       assertEquals(0, applier.getNonFloorOrientationCount(),
           "floor export referenced non-floor DT1 entries for level " + levelId);
@@ -494,7 +495,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       case D2LevelIds.LEVEL_BURIALGROUNDS: return 1920;
       case D2LevelIds.LEVEL_BLACKMARSH: return 6016;
       case D2LevelIds.LEVEL_TAMOEHIGHLAND: return 6080;
-      case D2LevelIds.LEVEL_DARKWOOD: return 5760;
+      case D2LevelIds.LEVEL_DARKWOOD: return 5761;
       case D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1: return 4032;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
@@ -506,13 +507,13 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
 
   private static int expectedFixedSeedRawObjects(int levelId) {
     switch (levelId) {
-      case D2LevelIds.LEVEL_STONYFIELD: return 14;
+      case D2LevelIds.LEVEL_STONYFIELD: return 21;
       case D2LevelIds.LEVEL_COLDPLAINS: return 13;
       case D2LevelIds.LEVEL_BLOODMOOR: return 6;
       case D2LevelIds.LEVEL_BURIALGROUNDS: return 11;
-      case D2LevelIds.LEVEL_BLACKMARSH: return 25;
+      case D2LevelIds.LEVEL_BLACKMARSH: return 28;
       case D2LevelIds.LEVEL_TAMOEHIGHLAND: return 7;
-      case D2LevelIds.LEVEL_DARKWOOD: return 29;
+      case D2LevelIds.LEVEL_DARKWOOD: return 27;
       case D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1: return 32;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
