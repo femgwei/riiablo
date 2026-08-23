@@ -171,6 +171,9 @@ public class CombatSystem {
     /** 击中后冰冻敌人时间（帧） */
     public int coldLength;
 
+    /** 毒素持续时间（帧） */
+    public int poisonLength;
+
     /** 使用的技能 ID（-1 表示普通攻击） */
     public int skillId = -1;
 
@@ -278,6 +281,10 @@ public class CombatSystem {
     /** 实际命中率 */
     public int hitChance;
 
+    /** 状态效果持续时间（帧） */
+    public int coldDuration;
+    public int poisonDuration;
+
     /** 重置结果 */
     public void reset() {
       hit = false;
@@ -293,6 +300,8 @@ public class CombatSystem {
       lifeStolen = 0;
       manaStolen = 0;
       hitChance = 0;
+      coldDuration = 0;
+      poisonDuration = 0;
     }
   }
 
@@ -356,6 +365,8 @@ public class CombatSystem {
     a.crushingBlow = statInt(attacker, Stat.item_crushingblow, 0);
     a.lifeLeech = statInt(attacker, Stat.lifedrainmindam, 0);
     a.manaLeech = statInt(attacker, Stat.manadrainmindam, 0);
+    a.coldLength = statInt(attacker, Stat.coldlength, 0);
+    a.poisonLength = statInt(attacker, Stat.poisonlength, 0);
     a.ignoreTargetDefense = statInt(attacker, Stat.item_ignoretargetac, 0) > 0;
 
     DefenderData d = new DefenderData();
@@ -453,6 +464,8 @@ public class CombatSystem {
     result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender);
 
     // 7. 计算元素伤害
+    result.coldDuration = Math.max(0, attacker.coldLength);
+    result.poisonDuration = Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);
       if (elemDamage > 0) {
@@ -463,7 +476,11 @@ public class CombatSystem {
     // 8. 计算总伤害
     result.totalDamage = result.physicalDamage;
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
-      result.totalDamage += result.elementalDamage[i];
+      // Poison damage is applied by StateUpdater over its duration. Do not
+      // also apply it as an immediate hit when a duration is present.
+      if (i != DAMAGE_POISON || result.poisonDuration <= 0) {
+        result.totalDamage += result.elementalDamage[i];
+      }
     }
 
     // 9. 计算偷取

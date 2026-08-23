@@ -14,6 +14,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
@@ -27,6 +28,7 @@ import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
@@ -50,6 +52,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   // teleport-specific components
   protected ComponentMapper<Position> mPosition;
@@ -480,6 +483,8 @@ public class Actioneer extends PassiveSystem {
         log.debug("{} hp after {} attack: damage={}, hp: {} -> {}", targetId,
             entityId, appliedDamage, hpBefore, hpAfter);
 
+        applyCombatStates(entityId, targetId, combat);
+
         if (hitpoints.asFixed() <= 0f) {
           log.debug("{} is dead!", targetId);
           events.dispatch(DeathEvent.obtain(entityId, targetId));
@@ -536,5 +541,20 @@ public class Actioneer extends PassiveSystem {
 
   private boolean isPlayerEntity(int entityId) {
     return mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
+  }
+
+  private void applyCombatStates(int attackerId, int targetId,
+      CombatSystem.CombatResult combat) {
+    if (!mUnitStates.has(targetId)) return;
+    if (combat.poisonDuration > 0
+        && combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0) {
+      StatusEffectApplier.INSTANCE.applyPoison(targetId,
+          combat.elementalDamage[CombatSystem.DAMAGE_POISON],
+          combat.poisonDuration, attackerId);
+    }
+    if (combat.coldDuration > 0
+        && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
+      StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+    }
   }
 }

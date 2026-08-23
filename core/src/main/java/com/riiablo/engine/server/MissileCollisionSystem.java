@@ -19,7 +19,9 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.logger.LogManager;
@@ -47,6 +49,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<UnitStates> mUnitStates;
   
   protected EventSystem events;
   
@@ -198,6 +201,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             hitpoints.set(0);
             hpAfter = 0;
           }
+          applyCombatStates(missile.ownerId, targetId, combat);
           if (hpAfter <= 0) {
             log.debug("{} killed by missile from {}", targetId, missile.ownerId);
             events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));
@@ -222,6 +226,21 @@ public class MissileCollisionSystem extends IteratingSystem {
     float closestX = start.x + t * dx;
     float closestY = start.y + t * dy;
     return point.dst(closestX, closestY);
+  }
+
+  private void applyCombatStates(int attackerId, int targetId,
+      CombatSystem.CombatResult combat) {
+    if (!mUnitStates.has(targetId)) return;
+    if (combat.poisonDuration > 0
+        && combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0) {
+      StatusEffectApplier.INSTANCE.applyPoison(targetId,
+          combat.elementalDamage[CombatSystem.DAMAGE_POISON],
+          combat.poisonDuration, attackerId);
+    }
+    if (combat.coldDuration > 0
+        && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
+      StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+    }
   }
   
   /**
