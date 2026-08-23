@@ -35,6 +35,7 @@ import com.badlogic.gdx.math.Vector2;
  */
 public class ServerSkillSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(ServerSkillSystem.class);
+  private static final float MULTI_MISSILE_SPREAD_RADIANS = 0.12f;
 
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Player> mPlayer;
@@ -97,19 +98,6 @@ public class ServerSkillSystem extends PassiveSystem {
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
 
-    String missileName = skill.cltmissilea;
-    if (missileName == null || missileName.isEmpty()) {
-      missileName = resolveThrowableMissile(event.entityId, event.skillId, skill);
-    }
-    if (missileName == null || missileName.isEmpty()) return;
-
-    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
-    if (missile == null) {
-      log.warn("Server skill missile lookup failed: entity={}, skill={}, missile={}",
-          event.entityId, event.skillId, missileName);
-      return;
-    }
-
     Vector2 start = mPosition.get(event.entityId).position;
     Vector2 target = new Vector2();
     if (event.targetId >= 0 && mPosition.has(event.targetId)) {
@@ -123,11 +111,46 @@ public class ServerSkillSystem extends PassiveSystem {
     if (target.isZero(0.0001f)) target.set(1, 0);
     target.nor();
 
-    int missileId = factory != null
-        ? factory.createMissile(missile, target, start, event.entityId)
-        : -1;
-    log.debug("Server skill projectile: entity={}, skill={}, missile={}, entityId={}, dir=({}, {})",
-        event.entityId, event.skillId, missileName, missileId, target.x, target.y);
+    String throwableMissile = resolveThrowableMissile(event.entityId, event.skillId, skill);
+    String[] missileNames = {
+        skill.cltmissilea,
+        skill.cltmissileb,
+        skill.cltmissilec,
+        skill.cltmissiled
+    };
+    int configuredCount = 0;
+    for (String name : missileNames) {
+      if (name != null && !name.isEmpty()) configuredCount++;
+    }
+    if (configuredCount == 0 && throwableMissile != null && !throwableMissile.isEmpty()) {
+      missileNames[0] = throwableMissile;
+      configuredCount = 1;
+    }
+    if (configuredCount == 0) return;
+
+    int ordinal = 0;
+    for (String missileName : missileNames) {
+      if (missileName == null || missileName.isEmpty()) continue;
+      Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+      if (missile == null) {
+        log.warn("Server skill missile lookup failed: entity={}, skill={}, missile={}",
+            event.entityId, event.skillId, missileName);
+        continue;
+      }
+
+      Vector2 direction = new Vector2(target);
+      if (configuredCount > 1) {
+        float offset = (ordinal - (configuredCount - 1) * 0.5f)
+            * MULTI_MISSILE_SPREAD_RADIANS;
+        direction.rotateRad(offset);
+      }
+      int missileId = factory != null
+          ? factory.createMissile(missile, direction, start, event.entityId)
+          : -1;
+      log.debug("Server skill projectile: entity={}, skill={}, missile={}, entityId={}, dir=({}, {})",
+          event.entityId, event.skillId, missileName, missileId, direction.x, direction.y);
+      ordinal++;
+    }
   }
 
   private float getManaCost(Skills.Entry skill, int level) {
