@@ -11,6 +11,22 @@ import com.d2moo.common.util.D2Log;
  * 注意：这是一个怪物管理模块，用于处理怪物的验证和管理
  */
 public class Monsters {
+
+    /** Exact value-returning form of D2Common {@code MONSTERS_ValidateMonsterId}. */
+    public static int validateMonsterId(int nMonsterId, int monStatsRecordCount) {
+        return nMonsterId >= 0 && nMonsterId < monStatsRecordCount ? nMonsterId : -1;
+    }
+
+    /** D2Common {@code MONSTERS_GetHirelingExpForNextLevel}. */
+    public static int getHirelingExperienceForNextLevel(int level, int experiencePerLevel) {
+        return experiencePerLevel * level * level * (level + 1);
+    }
+
+    /** Pure formula used by D2Common {@code MONSTERS_GetHirelingResurrectionCost}. */
+    public static int getHirelingResurrectionCost(int level) {
+        int cost = 15 * level * level / 2;
+        return Math.min(cost, 50_000);
+    }
     
     /**
      * 验证怪物ID是否有效
