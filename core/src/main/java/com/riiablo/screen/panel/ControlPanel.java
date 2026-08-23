@@ -64,12 +64,11 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
   ExperienceWidget experienceWidget;
   
-  // 经验条位置和尺寸常量（参考 OpenDiablo2）
-  // 经验条相对于 controlWidget 中心的 x 偏移（使其居中在 controlWidget 上方）
-  private static final float EXP_BAR_OFFSET_X_FROM_CONTROL_CENTER = -38f; // 
-  private static final float EXP_BAR_OFFSET_Y_EXTRA = -11f;                 // 经验条相对于面板底部的额外 y 偏移（在 height 基础上）
-  private static final float EXP_BAR_WIDTH = 120f;                        // 经验条宽度（参考 OpenDiablo2）
-  private static final int EXP_BAR_HEIGHT = 2;                            // 经验条高度
+  // 经验条尺寸（Stage 世界坐标）。位置由 controlWidget 的实时布局决定，
+  // 不使用屏幕像素或构造时缓存的绝对坐标。
+  private static final float EXP_BAR_WIDTH = 120f;
+  private static final int EXP_BAR_HEIGHT = 3;
+  private static final float EXP_BAR_TOP_OFFSET = 11f;
 
   final AssetDescriptor<DC6> popbeltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl_popbelt.DC6", DC6.class);
   TextureRegion popbelt;
@@ -225,28 +224,41 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     add(manaWidget).height(height).growX().right().bottom();
     pack();
     
-    // 经验条使用固定位置，不参与 Table 布局（参考 OpenDiablo2）
-    // 位置相对于 controlWidget 的中心，使其居中显示在控制面板上方
-    float expBarX;
-    if (controlWidget != null) {
-      // 相对于 controlWidget 的中心定位
-      float controlCenterX = controlWidget.getX() + controlWidget.getWidth() / 2f;
-      expBarX = controlCenterX + EXP_BAR_OFFSET_X_FROM_CONTROL_CENTER; // 居中，偏移半个宽度
-    } else {
-      // 如果没有 controlWidget，则相对于面板中心
-      expBarX = getWidth() / 2f + EXP_BAR_OFFSET_X_FROM_CONTROL_CENTER;
-    }
-    // y 坐标：距离底部 height + 4 像素（保持之前的逻辑）
-    float expBarY = height + EXP_BAR_OFFSET_Y_EXTRA;
-    experienceWidget.setPosition(expBarX, expBarY);
     experienceWidget.setWidth(EXP_BAR_WIDTH);
     experienceWidget.setHeight(EXP_BAR_HEIGHT);
-    addActor(experienceWidget); // 直接添加到面板，而不是 Table 布局
+    addActor(experienceWidget); // 直接添加到面板，但位置跟随 controlWidget 布局
+    updateExperienceWidgetLayout();
 
     //setHeight(controlWidget.background.getHeight() - 7);
     //setY(0);
     setTouchable(Touchable.childrenOnly);
     //setDebug(true, true);
+  }
+
+  /** Re-anchor the experience bar after Table layout, width changes, or resize. */
+  private void updateExperienceWidgetLayout() {
+    if (experienceWidget == null) return;
+
+    final float barWidth = experienceWidget.getWidth() > 0
+        ? experienceWidget.getWidth() : EXP_BAR_WIDTH;
+    final float anchorX;
+    final float anchorY;
+    if (controlWidget != null) {
+      // Center the complete bar over the actual control widget. The previous
+      // -38 offset left the bar visibly shifted and was calculated only once.
+      anchorX = controlWidget.getX() + (controlWidget.getWidth() - barWidth) / 2f;
+      anchorY = controlWidget.getY() + controlWidget.getHeight() - EXP_BAR_TOP_OFFSET;
+    } else {
+      anchorX = (getWidth() - barWidth) / 2f;
+      anchorY = getHeight() - EXP_BAR_TOP_OFFSET;
+    }
+    experienceWidget.setPosition(anchorX, anchorY);
+  }
+
+  @Override
+  public void layout() {
+    super.layout();
+    updateExperienceWidgetLayout();
   }
 
   @Override
@@ -395,6 +407,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     private long lastLoggedCurrentLevelExp = Long.MIN_VALUE;
     private long lastLoggedNextLevelExp = Long.MIN_VALUE;
     private boolean missingStatsLogged;
+    private float lastLayoutX = Float.NaN;
+    private float lastLayoutY = Float.NaN;
 
     ExperienceWidget() {
       setHeight(EXP_BAR_HEIGHT);
@@ -411,12 +425,27 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void draw(Batch batch, float a) {
+      // Table children can move when the panel is regrouped or the viewport is
+      // resized. Re-anchor immediately before drawing as a final safeguard.
+      updateExperienceWidgetLayout();
       final float x = getX();
       final float y = getY();
 
-      // 绘制背景（深灰色）
-      batch.setColor(new Color(0.2f, 0.2f, 0.2f, 1f));
+      if (Float.isNaN(lastLayoutX) || Math.abs(lastLayoutX - x) > 0.5f
+          || Math.abs(lastLayoutY - y) > 0.5f) {
+        Gdx.app.log(TAG, String.format(
+            "[XP_BAR_LAYOUT] rect=(%.1f,%.1f %.1fx%.1f) control=%s",
+            x, y, getWidth(), getHeight(), controlWidget == null ? "panel" : "control"));
+        lastLayoutX = x;
+        lastLayoutY = y;
+      }
+
+      // 绘制背景和边框；填充宽度由当前等级区间的经验百分比决定。
+      batch.setColor(new Color(0.08f, 0.08f, 0.08f, 1f));
       batch.draw(whitePixel, x, y, getWidth(), getHeight());
+      batch.setColor(new Color(0.65f, 0.45f, 0.12f, 1f));
+      batch.draw(whitePixel, x, y, getWidth(), 1f);
+      batch.draw(whitePixel, x, y + getHeight() - 1f, getWidth(), 1f);
 
       // 计算经验百分比。经验条没有自己的计数器，始终消费 CharData 的
       // aggregate（服务端同步也会更新该列表），因此不会与战斗经验分叉。
@@ -464,9 +493,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
       // 绘制填充（白色，参考 OpenDiablo2）
       if (percentage > 0) {
-        float fillWidth = getWidth() * percentage;
-        batch.setColor(Color.WHITE);
-        batch.draw(whitePixel, x, y, fillWidth, getHeight());
+        float fillWidth = Math.max(0f, (getWidth() - 2f) * percentage);
+        batch.setColor(new Color(0.95f, 0.80f, 0.30f, 1f));
+        batch.draw(whitePixel, x + 1f, y + 1f, fillWidth, Math.max(1f, getHeight() - 2f));
       }
 
       // 重置颜色

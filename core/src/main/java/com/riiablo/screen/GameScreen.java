@@ -811,6 +811,26 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   }
 
   @Override
+  public void resize(int width, int height) {
+    super.resize(width, height);
+    if (stage == null) return;
+
+    // Client.resize updates the shared viewport before delegating here. Keep
+    // the HUD root centered after a window/viewport change; child widgets,
+    // including the experience bar, then re-anchor from the new layout.
+    stage.getViewport().update(width, height, true);
+    if (controlPanel == null) return;
+    if (Boolean.TRUE.equals(Cvars.Client.Display.KeepControlPanelGrouped.get())) {
+      controlPanel.setWidth(stage.getWidth());
+      controlPanel.layout();
+    } else {
+      controlPanel.pack();
+      controlPanel.setPosition(stage.getWidth() / 2f, 0,
+          Align.bottom | Align.center);
+    }
+  }
+
+  @Override
   public void render(float delta) {
     // TODO: move to a separate system TouchpadMovementSystem
     if (touchpad != null) {
