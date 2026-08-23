@@ -1,5 +1,8 @@
 package com.d2moo.common.util;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 /**
  * 二进制数据读取工具类
  * 用于解析游戏文件（DS1、DT1 等）的二进制格式
@@ -19,7 +22,7 @@ public class D2BinaryReader {
      * @return 32 位整数，如果越界返回 0
      */
     public static int readInt32(byte[] data, int offset) {
-        if (data == null || offset < 0 || offset + 4 > data.length) {
+        if (!hasEnoughData(data, offset, Integer.BYTES)) {
             D2Log.warning("D2BinaryReader_ReadInt32: Invalid offset or data length, offset: " + offset + ", length: " + (data != null ? data.length : 0));
             return 0;
         }
@@ -39,7 +42,7 @@ public class D2BinaryReader {
      * @return 32 位无符号整数（作为 long），如果越界返回 0
      */
     public static long readUInt32(byte[] data, int offset) {
-        if (data == null || offset < 0 || offset + 4 > data.length) {
+        if (!hasEnoughData(data, offset, Integer.BYTES)) {
             return 0;
         }
         
@@ -58,12 +61,12 @@ public class D2BinaryReader {
      * @return 16 位整数，如果越界返回 0
      */
     public static int readInt16(byte[] data, int offset) {
-        if (data == null || offset < 0 || offset + 2 > data.length) {
+        if (!hasEnoughData(data, offset, Short.BYTES)) {
             return 0;
         }
         
         // 小端序：最低有效字节在前
-        return ((data[offset] & 0xFF) |
+        return (short) ((data[offset] & 0xFF) |
                 ((data[offset + 1] & 0xFF) << 8));
     }
     
@@ -75,7 +78,7 @@ public class D2BinaryReader {
      * @return 16 位无符号整数（作为 int），如果越界返回 0
      */
     public static int readUInt16(byte[] data, int offset) {
-        if (data == null || offset < 0 || offset + 2 > data.length) {
+        if (!hasEnoughData(data, offset, Short.BYTES)) {
             return 0;
         }
         
@@ -143,7 +146,7 @@ public class D2BinaryReader {
         // 转换为字符串（假设使用 ASCII 编码）
         byte[] stringBytes = new byte[length];
         System.arraycopy(data, offset, stringBytes, 0, length);
-        return new String(stringBytes);
+        return new String(stringBytes, StandardCharsets.US_ASCII);
     }
     
     /**
@@ -155,14 +158,14 @@ public class D2BinaryReader {
      * @return 字符串，如果越界返回空字符串
      */
     public static String readString(byte[] data, int offset, int length) {
-        if (data == null || offset < 0 || offset + length > data.length) {
+        if (!hasEnoughData(data, offset, length)) {
             return "";
         }
         
         // 转换为字符串（假设使用 ASCII 编码）
         byte[] stringBytes = new byte[length];
         System.arraycopy(data, offset, stringBytes, 0, length);
-        return new String(stringBytes).trim(); // 去除尾部的空白字符
+        return new String(stringBytes, StandardCharsets.US_ASCII);
     }
     
     /**
@@ -174,11 +177,12 @@ public class D2BinaryReader {
      * @return 如果有足够的数据返回 true，否则返回 false
      */
     public static boolean hasEnoughData(byte[] data, int offset, int length) {
-        if (data == null || offset < 0 || length < 0) {
+        if (data == null || offset < 0 || length < 0 || offset > data.length) {
             return false;
         }
         
-        return offset + length <= data.length;
+        // 使用减法避免 offset + length 的 int 溢出。
+        return length <= data.length - offset;
     }
     
     /**
@@ -189,11 +193,35 @@ public class D2BinaryReader {
      * @return 浮点数，如果越界返回 0.0f
      */
     public static float readFloat32(byte[] data, int offset) {
-        if (data == null || offset < 0 || offset + 4 > data.length) {
+        if (!hasEnoughData(data, offset, Float.BYTES)) {
             return 0.0f;
         }
         
         int bits = readInt32(data, offset);
         return Float.intBitsToFloat(bits);
+    }
+
+    /** Reads a signed 64-bit little-endian integer. */
+    public static long readInt64(byte[] data, int offset) {
+        if (!hasEnoughData(data, offset, Long.BYTES)) {
+            return 0L;
+        }
+
+        return ((long) data[offset] & 0xFFL)
+                | (((long) data[offset + 1] & 0xFFL) << 8)
+                | (((long) data[offset + 2] & 0xFFL) << 16)
+                | (((long) data[offset + 3] & 0xFFL) << 24)
+                | (((long) data[offset + 4] & 0xFFL) << 32)
+                | (((long) data[offset + 5] & 0xFFL) << 40)
+                | (((long) data[offset + 6] & 0xFFL) << 48)
+                | (((long) data[offset + 7] & 0xFFL) << 56);
+    }
+
+    /** Returns an independent copy of a byte range, or an empty array when invalid. */
+    public static byte[] readBytes(byte[] data, int offset, int length) {
+        if (!hasEnoughData(data, offset, length)) {
+            return new byte[0];
+        }
+        return Arrays.copyOfRange(data, offset, offset + length);
     }
 }
