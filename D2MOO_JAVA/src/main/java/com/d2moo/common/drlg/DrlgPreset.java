@@ -1776,18 +1776,23 @@ public class DrlgPreset {
         if (level == null) {
             return;
         }
-        
-        // 对于预设关卡，初始化预设信息
-        if (level.getDrlgType() == D2DrlgTypes.DRLGTYPE_PRESET) {
-            D2DrlgPresetInfoStrc preset = level.getPreset();
-            if (preset == null) {
-                preset = new D2DrlgPresetInfoStrc();
-                level.setPreset(preset);
-            }
-            
-            // 初始化预设方向（如果需要）
-            // 注意：具体的初始化逻辑可能需要根据关卡ID和类型来确定
+
+        // Native DRLGPRESET_InitLevelData chooses the DS1 variant while the
+        // level seed is still in its allocation state. Delaying this roll
+        // changes both the selected map and every later random decision.
+        D2LvlPrestTxt prest = DataTbls.getLvlPrestTxtRecordFromLevelId(level.getLevelId());
+        if (prest == null) {
+            D2Log.warning("DRLGPRESET_InitLevelData: no LvlPrest claims level=%d",
+                level.getLevelId());
+            return;
         }
+
+        D2DrlgPresetInfoStrc preset = new D2DrlgPresetInfoStrc();
+        preset.setPDrlgMap(null);
+        preset.setNDirection(prest.getDwFiles() > 0
+            ? Seed.rollLimitedRandomNumber(level.getSeed(), prest.getDwFiles()) : -1);
+        level.setPreset(preset);
+        DrlgDrlg.setLevelPositionAndSize(level.getDrlg(), level);
     }
     
     /**
@@ -1796,13 +1801,33 @@ public class DrlgPreset {
      * @param level 关卡
      */
     public static void generateLevel(D2DrlgLevel level) {
-        if (level == null) {
+        if (level == null || level.getPreset() == null) {
             return;
         }
-        
-        // 预设关卡通常不需要特殊的生成逻辑
-        // 预设房间会在需要时通过其他函数加载
-        // 这里可以添加预设关卡的特殊处理逻辑（如果需要）
+
+        D2LvlPrestTxt prest = DataTbls.getLvlPrestTxtRecordFromLevelId(level.getLevelId());
+        if (prest == null) {
+            D2Log.warning("DRLGPRESET_GenerateLevel: no LvlPrest claims level=%d",
+                level.getLevelId());
+            return;
+        }
+
+        D2DrlgMapStrc map = allocDrlgMap(
+            level, prest.getDwDef(), level.getLevelCoords(), level.getSeed());
+        if (map == null) {
+            D2Log.warning("DRLGPRESET_GenerateLevel: failed to allocate map level=%d prest=%d",
+                level.getLevelId(), prest.getDwDef());
+            return;
+        }
+        level.getPreset().setPDrlgMap(map);
+
+        if (level.getPreset().getNDirection() == -1) {
+            level.getPreset().setNDirection(map.getNPickedFile());
+        } else {
+            setPickedFileInDrlgMap(map, level.getPreset().getNDirection());
+        }
+
+        buildArea(level, map, 0, 0);
     }
     
     /**

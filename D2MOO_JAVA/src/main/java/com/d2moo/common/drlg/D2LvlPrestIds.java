@@ -81,10 +81,10 @@ public class D2LvlPrestIds {
     public static final int LVLPREST_ACT1_CAVE_COLDCROW_E = 100;
     public static final int LVLPREST_ACT1_CAVE_COLDCROW_S = 101;
     public static final int LVLPREST_ACT1_CAVE_COLDCROW_N = 102;
-    public static final int LVLPREST_ACT1_CAIRN_STONES = 160;
-    public static final int LVLPREST_ACT1_INIFUS = 161;
-    public static final int LVLPREST_ACT1_TOWER_TOME = 162;
-    public static final int LVLPREST_ACT1_TOWER_1 = 163;
+    public static final int LVLPREST_ACT1_CAIRN_STONES = 162;
+    public static final int LVLPREST_ACT1_INIFUS = 163;
+    public static final int LVLPREST_ACT1_TOWER_TOME = 164;
+    public static final int LVLPREST_ACT1_TOWER_1 = 165;
     // Act1 地下墓穴基础预设
     public static final int LVLPREST_ACT1_CATACOMBS_W = 258;
     public static final int LVLPREST_ACT1_CATACOMBS_E = 259;
@@ -104,6 +104,33 @@ public class D2LvlPrestIds {
     public static final int LVLPREST_ACT1_CATACOMBS_WAYPOINT_N = 298;
     public static final int LVLPREST_ACT1_TRISTRAM = 300;
     public static final int LVLPREST_ACT1_GRAVEYARD = 108;
+    // Act 1 crypt base and special presets. These values intentionally keep
+    // the gaps occupied by the EW/corner/theme variants in the native enum.
+    public static final int LVLPREST_ACT1_CRYPT_W = 109;
+    public static final int LVLPREST_ACT1_CRYPT_E = 110;
+    public static final int LVLPREST_ACT1_CRYPT_S = 112;
+    public static final int LVLPREST_ACT1_CRYPT_N = 116;
+    public static final int LVLPREST_ACT1_CRYPT_PREV_W = 141;
+    public static final int LVLPREST_ACT1_CRYPT_PREV_E = 142;
+    public static final int LVLPREST_ACT1_CRYPT_PREV_S = 143;
+    public static final int LVLPREST_ACT1_CRYPT_PREV_N = 144;
+    public static final int LVLPREST_ACT1_CRYPT_NEXT_W = 145;
+    public static final int LVLPREST_ACT1_CRYPT_NEXT_E = 146;
+    public static final int LVLPREST_ACT1_CRYPT_NEXT_S = 147;
+    public static final int LVLPREST_ACT1_CRYPT_NEXT_N = 148;
+    public static final int LVLPREST_ACT1_CRYPT_BONEBREAK_W = 149;
+    public static final int LVLPREST_ACT1_CRYPT_BONEBREAK_E = 150;
+    public static final int LVLPREST_ACT1_CRYPT_BONEBREAK_S = 151;
+    public static final int LVLPREST_ACT1_CRYPT_BONEBREAK_N = 152;
+    public static final int LVLPREST_ACT1_CRYPT_CHEST_W = 153;
+    public static final int LVLPREST_ACT1_CRYPT_CHEST_E = 154;
+    public static final int LVLPREST_ACT1_CRYPT_CHEST_S = 155;
+    public static final int LVLPREST_ACT1_CRYPT_CHEST_N = 156;
+    public static final int LVLPREST_ACT1_CRYPT_PORTAL_W = 157;
+    public static final int LVLPREST_ACT1_CRYPT_PORTAL_E = 158;
+    public static final int LVLPREST_ACT1_CRYPT_PORTAL_S = 159;
+    public static final int LVLPREST_ACT1_CRYPT_PORTAL_N = 160;
+    public static final int LVLPREST_ACT1_CRYPT_COUNTESS_X = 161;
     
     // Act 2 预设
     public static final int LVLPREST_ACT2_DESERT_TRANSITION_W = 504;

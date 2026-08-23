@@ -41,7 +41,9 @@ class D2MooAct1NativeParityTest {
     assertEquals(51, D2LvlPrestIds.LVLPREST_ACT1_CAVE_ENTRANCE);
     assertEquals(52, D2LvlPrestIds.LVLPREST_ACT1_DOE_ENTRANCE);
     assertEquals(108, D2LvlPrestIds.LVLPREST_ACT1_GRAVEYARD);
-    assertEquals(160, D2LvlPrestIds.LVLPREST_ACT1_CAIRN_STONES);
+    assertEquals(141, D2LvlPrestIds.LVLPREST_ACT1_CRYPT_PREV_W);
+    assertEquals(160, D2LvlPrestIds.LVLPREST_ACT1_CRYPT_PORTAL_N);
+    assertEquals(162, D2LvlPrestIds.LVLPREST_ACT1_CAIRN_STONES);
     assertEquals(300, D2LvlPrestIds.LVLPREST_ACT1_TRISTRAM);
   }
 

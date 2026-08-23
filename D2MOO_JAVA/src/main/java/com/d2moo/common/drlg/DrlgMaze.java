@@ -19,6 +19,16 @@ public class DrlgMaze {
             new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CAVE_W, west, -1, 2),
         };
     }
+
+    private static D2MazeLevelIdStrc[] act1CryptIds(
+            int north, int east, int south, int west) {
+        return new D2MazeLevelIdStrc[] {
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CRYPT_N, north, -1, 3),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CRYPT_E, east, -1, 0),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CRYPT_S, south, -1, 1),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CRYPT_W, west, -1, 2),
+        };
+    }
     
     /**
      * D2Common.0x6FD79480
@@ -171,6 +181,11 @@ public class DrlgMaze {
 
             case LVLTYPE_ACT1_CRYPT:
                 nRooms = mazeRecord.getDwRooms(drlg.getDifficulty());
+                if (level.getLevelId() == drlg.getStaffTombLevel()) {
+                    nRooms *= 3;
+                } else if (level.getLevelId() == drlg.getBossTombLevel()) {
+                    nRooms *= 2;
+                }
                 while (level.getRooms() < nRooms) {
                     randomRoomEx = getRandomRoomExFromLevel(level);
                     if (randomRoomEx == null) break;
@@ -178,6 +193,34 @@ public class DrlgMaze {
                     if (!hasMapDS1(randomRoomEx)) {
                         addAdjacentMazeRoom(randomRoomEx, nDirection, true);
                     }
+                }
+                nRand = (int)(Seed.rollRandomNumber(level.getSeed()) & 3);
+                int[] cryptRand = new int[] { nRand };
+                scanReplaceSpecialPreset(level, act1CryptIds(
+                    D2LvlPrestIds.LVLPREST_ACT1_CRYPT_PREV_N,
+                    D2LvlPrestIds.LVLPREST_ACT1_CRYPT_PREV_E,
+                    D2LvlPrestIds.LVLPREST_ACT1_CRYPT_PREV_S,
+                    D2LvlPrestIds.LVLPREST_ACT1_CRYPT_PREV_W)[nRand], cryptRand);
+                nRand = cryptRand[0];
+                if (level.getLevelId() == D2LevelIds.LEVEL_CRYPT) {
+                    scanReplaceSpecialPreset(level, act1CryptIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_BONEBREAK_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_BONEBREAK_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_BONEBREAK_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_BONEBREAK_W)[nRand], cryptRand);
+                } else if (level.getLevelId() == D2LevelIds.LEVEL_MAUSOLEUM) {
+                    scanReplaceSpecialPreset(level, act1CryptIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_CHEST_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_CHEST_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_CHEST_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_CHEST_W)[nRand], cryptRand);
+                } else if (level.getLevelId() >= D2LevelIds.LEVEL_TOWERCELLARLVL1
+                        && level.getLevelId() <= D2LevelIds.LEVEL_TOWERCELLARLVL4) {
+                    scanReplaceSpecialPreset(level, act1CryptIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_NEXT_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_NEXT_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_NEXT_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_CRYPT_NEXT_W)[nRand], cryptRand);
                 }
                 break;
                 

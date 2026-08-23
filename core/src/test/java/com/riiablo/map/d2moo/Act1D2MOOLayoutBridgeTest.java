@@ -46,7 +46,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertNotNull(first, "D2MOO Act1 layout failed; inspect ACT1_D2MOO logs");
     assertDiscoveredNativeSublevels(first);
     assertFixedSeedOutdoorCoverage(first.drlg);
-    String firstSummary = summarize(first.drlg);
+    String firstSummary = summarize(first.drlg, first.result.levelIds);
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
     exportAndReport(first.drlg);
     assertPresetUnitListsAreAcyclic(first.drlg);
@@ -58,30 +58,31 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertNotNull(second, "Second fixed-seed generation failed");
     assertDiscoveredNativeSublevels(second);
     assertFixedSeedOutdoorCoverage(second.drlg);
-    assertEquals(firstSummary, summarize(second.drlg),
+    assertEquals(firstSummary, summarize(second.drlg, second.result.levelIds),
         "same seed must produce the same Act1 layout summary");
     DrlgDrlg.freeDrlg(second.drlg);
     Act1D2MOOLayoutBridge.releaseDataTables();
   }
 
   @Test
-  public void mapBuilderCreatesDiscoveredDenOfEvilZone() {
+  public void mapBuilderCreatesDiscoveredAct1SublevelZones() {
     int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
     Map map = new Map(seed, DEFAULT_DIFFICULTY);
     Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
     try {
-      Map.Zone bloodMoor = map.findZone(
-          Riiablo.files.Levels.get(D2LevelIds.LEVEL_BLOODMOOR));
-      Map.Zone denOfEvil = map.findZone(
-          Riiablo.files.Levels.get(D2LevelIds.LEVEL_DENOFEVIL));
-      assertNotNull(bloodMoor, "Blood Moor zone is missing");
-      assertNotNull(denOfEvil, "auto-discovered Den of Evil zone is missing");
-      assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(
-          D2LevelIds.LEVEL_DENOFEVIL), "Den of Evil native export was rejected");
-      assertTrue(denOfEvil.width() > 0 && denOfEvil.height() > 0,
-          "Den of Evil zone has invalid bounds");
-      assertTrue(!overlaps(bloodMoor, denOfEvil),
-          "Den of Evil must occupy a detached world-coordinate region");
+      int[][] routes = nativeSublevelRoutes();
+      for (int[] route : routes) {
+        Map.Zone source = map.findZone(Riiablo.files.Levels.get(route[1]));
+        Map.Zone target = map.findZone(Riiablo.files.Levels.get(route[0]));
+        assertNotNull(source, "source zone is missing " + route[1]);
+        assertNotNull(target, "auto-discovered zone is missing " + route[0]);
+        assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(route[0]),
+            "native export was rejected " + route[0]);
+        assertTrue(target.width() > 0 && target.height() > 0,
+            "discovered zone has invalid bounds " + route[0]);
+        assertTrue(!overlaps(source, target),
+            "linked sublevel must occupy a detached world-coordinate region " + route[0]);
+      }
     } finally {
       map.dispose();
     }
@@ -94,17 +95,27 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
 
   private static void assertDiscoveredNativeSublevels(
       Act1D2MOOLayoutBridge.LayoutAndDrlg layout) {
-    int[][] routes = {
-        {D2LevelIds.LEVEL_DENOFEVIL, D2LevelIds.LEVEL_BLOODMOOR},
-        {D2LevelIds.LEVEL_CAVEOFLEVEL1, D2LevelIds.LEVEL_COLDPLAINS},
-        {D2LevelIds.LEVEL_HOLELVL1, D2LevelIds.LEVEL_BLACKMARSH},
-        {D2LevelIds.LEVEL_PITLVL1, D2LevelIds.LEVEL_TAMOEHIGHLAND},
-    };
-    for (int[] route : routes) {
+    for (int[] route : nativeSublevelRoutes()) {
       assertTrue(contains(layout.result.levelIds, route[0]),
           "native linked level was not discovered: " + route[0]);
       assertNativeLinkedSublevelWarp(layout.drlg, route[0], route[1]);
     }
+  }
+
+  private static int[][] nativeSublevelRoutes() {
+    return new int[][] {
+        {D2LevelIds.LEVEL_DENOFEVIL, D2LevelIds.LEVEL_BLOODMOOR},
+        {D2LevelIds.LEVEL_CAVEOFLEVEL1, D2LevelIds.LEVEL_COLDPLAINS},
+        {D2LevelIds.LEVEL_HOLELVL1, D2LevelIds.LEVEL_BLACKMARSH},
+        {D2LevelIds.LEVEL_PITLVL1, D2LevelIds.LEVEL_TAMOEHIGHLAND},
+        {D2LevelIds.LEVEL_CAVEOFLEVEL2, D2LevelIds.LEVEL_CAVEOFLEVEL1},
+        {D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL2,
+            D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1},
+        {D2LevelIds.LEVEL_HOLELVL2, D2LevelIds.LEVEL_HOLELVL1},
+        {D2LevelIds.LEVEL_PITLVL2, D2LevelIds.LEVEL_PITLVL1},
+        {D2LevelIds.LEVEL_CRYPT, D2LevelIds.LEVEL_BURIALGROUNDS},
+        {D2LevelIds.LEVEL_MAUSOLEUM, D2LevelIds.LEVEL_BURIALGROUNDS},
+    };
   }
 
   private static boolean contains(int[] values, int expected) {
@@ -336,18 +347,9 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     }
   }
 
-  private static String summarize(D2DrlgStrc drlg) {
+  private static String summarize(D2DrlgStrc drlg, int[] levelIds) {
     StringBuilder out = new StringBuilder();
-    for (int levelId : new int[] {
-        D2LevelIds.LEVEL_STONYFIELD,
-        D2LevelIds.LEVEL_COLDPLAINS,
-        D2LevelIds.LEVEL_BLOODMOOR,
-        D2LevelIds.LEVEL_ROGUEENCAMPMENT,
-        D2LevelIds.LEVEL_BURIALGROUNDS,
-        D2LevelIds.LEVEL_BLACKMARSH,
-        D2LevelIds.LEVEL_TAMOEHIGHLAND,
-        D2LevelIds.LEVEL_DARKWOOD,
-        D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1 }) {
+    for (int levelId : levelIds) {
       D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
       assertNotNull(level, "missing D2MOO level " + levelId);
       assertNotNull(level.getLevelCoords(), "missing coordinates for level " + levelId);
@@ -422,8 +424,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       assertEquals(attempted - applier.getClippedBoundaryFloorCount(),
           applier.getLastExportedFloorCount(),
           "not every exported floor tile was written for level " + levelId);
-      assertEquals(levelId == D2LevelIds.LEVEL_DARKWOOD ? 1 : 0,
-          applier.getDuplicatePositionCount(),
+      assertEquals(0, applier.getDuplicatePositionCount(),
           "unexpected shared floor coordinates for level " + levelId);
       assertEquals(0, applier.getNonFloorOrientationCount(),
           "floor export referenced non-floor DT1 entries for level " + levelId);
@@ -493,7 +494,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       case D2LevelIds.LEVEL_BURIALGROUNDS: return 1920;
       case D2LevelIds.LEVEL_BLACKMARSH: return 6016;
       case D2LevelIds.LEVEL_TAMOEHIGHLAND: return 6080;
-      case D2LevelIds.LEVEL_DARKWOOD: return 5761;
+      case D2LevelIds.LEVEL_DARKWOOD: return 5760;
       case D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1: return 4032;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
@@ -505,13 +506,13 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
 
   private static int expectedFixedSeedRawObjects(int levelId) {
     switch (levelId) {
-      case D2LevelIds.LEVEL_STONYFIELD: return 21;
+      case D2LevelIds.LEVEL_STONYFIELD: return 14;
       case D2LevelIds.LEVEL_COLDPLAINS: return 13;
       case D2LevelIds.LEVEL_BLOODMOOR: return 6;
       case D2LevelIds.LEVEL_BURIALGROUNDS: return 11;
-      case D2LevelIds.LEVEL_BLACKMARSH: return 28;
+      case D2LevelIds.LEVEL_BLACKMARSH: return 25;
       case D2LevelIds.LEVEL_TAMOEHIGHLAND: return 7;
-      case D2LevelIds.LEVEL_DARKWOOD: return 27;
+      case D2LevelIds.LEVEL_DARKWOOD: return 29;
       case D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1: return 32;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }
