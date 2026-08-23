@@ -376,10 +376,13 @@ public class ItemData {
         // Reference D2MOD: STAT_SECONDARY_MINDAMAGE/MAXDAMAGE is for two-handed weapons (WieldType == 2)
         // For one-handed weapons (including dual wielding), use mindamage/maxdamage
         // For two-handed weapons, use secondary_mindamage/maxdamage (from weapon._2handmindam/_2handmaxdam)
-        StatRef itemMinDmg = item.attrs.base().get(Stat.mindamage);
-        StatRef itemMaxDmg = item.attrs.base().get(Stat.maxdamage);
-        StatRef itemSecondaryMinDmg = item.attrs.base().get(Stat.secondary_mindamage);
-        StatRef itemSecondaryMaxDmg = item.attrs.base().get(Stat.secondary_maxdamage);
+        // StatListRef.get(stat) returns a reusable tuple.  Keep independent
+        // refs here; otherwise reading max damage overwrites the min-damage
+        // ref and the aggregate receives max twice while min is lost.
+        StatRef itemMinDmg = item.attrs.base().get(Stat.mindamage, StatRef.obtain());
+        StatRef itemMaxDmg = item.attrs.base().get(Stat.maxdamage, StatRef.obtain());
+        StatRef itemSecondaryMinDmg = item.attrs.base().get(Stat.secondary_mindamage, StatRef.obtain());
+        StatRef itemSecondaryMaxDmg = item.attrs.base().get(Stat.secondary_maxdamage, StatRef.obtain());
         
         if (item.type.is(Type.WEAP)) {
           // Check if this is a two-handed weapon (has secondary damage values)
@@ -438,8 +441,10 @@ public class ItemData {
         if (isThrowable) {
           // Throwable weapon: sync item_throw_mindamage/maxdamage to player stats
           // Use add() to accumulate with other stats
-          StatRef itemThrowMinDmg = item.attrs.base().get(Stat.item_throw_mindamage);
-          StatRef itemThrowMaxDmg = item.attrs.base().get(Stat.item_throw_maxdamage);
+          // Use independent refs for min/max; StatListRef.get(stat) reuses a
+          // mutable tuple and would otherwise turn both variables into max.
+          StatRef itemThrowMinDmg = item.attrs.base().get(Stat.item_throw_mindamage, StatRef.obtain());
+          StatRef itemThrowMaxDmg = item.attrs.base().get(Stat.item_throw_maxdamage, StatRef.obtain());
           if (itemThrowMinDmg != null && itemThrowMaxDmg != null) {
             stats.aggregate().add(itemThrowMinDmg);
             stats.aggregate().add(itemThrowMaxDmg);

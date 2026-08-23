@@ -165,9 +165,9 @@ public class Actioneer extends PassiveSystem {
       int itemThrowMin = 0;
       int itemThrowMax = 0;
       if (weapon != null && weapon.attrs != null) {
-        StatRef qty = weapon.attrs.base().get(Stat.quantity);
-        StatRef min = weapon.attrs.base().get(Stat.item_throw_mindamage);
-        StatRef max = weapon.attrs.base().get(Stat.item_throw_maxdamage);
+        StatRef qty = weapon.attrs.base().get(Stat.quantity, StatRef.obtain());
+        StatRef min = weapon.attrs.base().get(Stat.item_throw_mindamage, StatRef.obtain());
+        StatRef max = weapon.attrs.base().get(Stat.item_throw_maxdamage, StatRef.obtain());
         quantity = qty != null ? qty.asInt() : -1;
         itemThrowMin = min != null ? min.asInt() : 0;
         itemThrowMax = max != null ? max.asInt() : 0;

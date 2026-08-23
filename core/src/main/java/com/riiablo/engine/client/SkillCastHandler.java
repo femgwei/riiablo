@@ -414,10 +414,18 @@ public class SkillCastHandler extends PassiveSystem {
     
     Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
     if (missile == null) {
+      log.warn("[MISSILE_CREATE] phase=client_resolve owner={} skill={} weaponCode={} missileName={} result=missing",
+          event.entityId, event.skillId,
+          weapon != null ? weapon.code : "none", missileName);
       return;
     }
 
     Vector2 angle = tmpVec.set(event.targetVec).sub(position).nor();
+    log.info("[MISSILE_CREATE] phase=client_throw owner={} skill={} weaponCode={} missile={} "
+            + "speed={} range={} start=({}, {}) direction=({}, {})",
+        event.entityId, event.skillId, weapon != null ? weapon.code : "none",
+        missile.Missile, missile.Vel, missile.Range,
+        position.x, position.y, angle.x, angle.y);
     // Pass event.entityId as ownerId so the missile can properly check collisions
     factory.createMissile(missile, angle, position, event.entityId);
   }
