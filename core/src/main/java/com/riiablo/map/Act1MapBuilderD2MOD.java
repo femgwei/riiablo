@@ -2683,12 +2683,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (levelsFilledByExport.contains(zone.level.Id)) {
       Gdx.app.log(TAG, String.format(
           "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d "
-              + "special=%d warpSpecial=%d skippedWarpPair=%d "
+              + "special=%d warpSpecial=%d skippedWarpPair=%d warpVisual=%d failedWarpVisual=%d "
               + "failedFloor=%d failedWall=%d failedShadow=%d voidTiles=%d "
               + "collisionTiles=%d blockedSubtiles=%d",
           zone.level.LevelName, zone.level.Id, grid.width, grid.height,
           zone.tilesX, zone.tilesY, counts.floors, counts.walls, counts.shadows,
           specialCounts.total, specialCounts.warps, specialCounts.skippedWarpPairMarkers,
+          counts.warpWalls, counts.failedWarpWalls,
           counts.failedFloors, counts.failedWalls, counts.failedShadows, collisionCounts.voidTiles,
           collisionCounts.tiles, collisionCounts.blockedSubtiles));
       if (counts.failedResolve > 0) {
@@ -2735,10 +2736,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS && slot < Map.MAX_WALLS; slot++) {
           int wallId = grid.wallIds[slot][y][x];
           if (wallId == -1) continue;
+          boolean warpWall = Map.ID.WARPS.contains(wallId);
           DT1.Tile tile = dt1s.get(wallId);
           if (tile == null) {
             counts.failedResolve++;
             counts.failedWalls++;
+            if (warpWall) counts.failedWarpWalls++;
             counts.failedWallIds.add(wallId);
             continue;
           }
@@ -2747,6 +2750,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           if (tileIndex >= layers[layer].length) continue;
           layers[layer][tileIndex] = tile;
           counts.walls++;
+          if (warpWall) counts.warpWalls++;
         }
 
         int shadowId = grid.shadowIds[y][x];
@@ -2932,10 +2936,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int floors;
     int walls;
     int shadows;
+    int warpWalls;
     int failedResolve;
     int failedFloors;
     int failedWalls;
     int failedShadows;
+    int failedWarpWalls;
     final IntSet failedFloorIds = new IntSet();
     final IntSet failedWallIds = new IntSet();
     final IntSet failedShadowIds = new IntSet();

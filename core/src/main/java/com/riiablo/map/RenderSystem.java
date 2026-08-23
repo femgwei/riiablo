@@ -866,35 +866,37 @@ public class RenderSystem extends BaseEntitySystem {
     if (px > renderMaxX || py > renderMaxY || px + Tile.WIDTH < renderMinX) return;
     for (int i = Map.WALL_OFFSET; i < Map.WALL_OFFSET + Map.MAX_WALLS; i++) {
       Tile tile = zone.get(i, tx, ty);
-      if (tile == null || tile == null) continue;
+      if (tile == null) continue;
       if (popped.get(tile.mainIndex)) continue;
-      switch (tile.orientation) {
-        case Orientation.LEFT_WALL:
-        case Orientation.LEFT_NORTH_CORNER_WALL:
-        case Orientation.LEFT_END_WALL:
-        case Orientation.LEFT_WALL_DOOR:
-          //break;
-        case Orientation.RIGHT_WALL:
-        case Orientation.RIGHT_NORTH_CORNER_WALL:
-        case Orientation.RIGHT_END_WALL:
-        case Orientation.RIGHT_WALL_DOOR:
-          //break;
-        case Orientation.SOUTH_CORNER_WALL:
-        case Orientation.PILLAR:
-          /**
-           * TODO: pseudocode: if TREE, assume only 1 tile in all 25 subtiles is unwalkable and use
-           *       that position as the tile position and render it as if its an entity
-           */
-        case Orientation.TREE: // TODO: should be in-line rendered with entities
-          if (py + tile.texture.getRegionHeight() < renderMinY) break;
-          batch.draw(tile.texture, px, py);
-          if (tile.orientation == Orientation.RIGHT_NORTH_CORNER_WALL) {
-            Tile sibling = zone.dt1s.get(Orientation.LEFT_NORTH_CORNER_WALL, tile.mainIndex, tile.subIndex);
-            batch.draw(sibling.texture, px, py);
-          }
-          // fall-through to continue
-        default:
+      if (!isDrawableWallOrientation(tile.orientation)) continue;
+      if (py + tile.texture.getRegionHeight() < renderMinY) continue;
+      batch.draw(tile.texture, px, py);
+      if (tile.orientation == Orientation.RIGHT_NORTH_CORNER_WALL) {
+        Tile sibling = zone.dt1s.get(
+            Orientation.LEFT_NORTH_CORNER_WALL, tile.mainIndex, tile.subIndex);
+        if (sibling != null) batch.draw(sibling.texture, px, py);
       }
+    }
+  }
+
+  static boolean isDrawableWallOrientation(int orientation) {
+    switch (orientation) {
+      case Orientation.LEFT_WALL:
+      case Orientation.LEFT_NORTH_CORNER_WALL:
+      case Orientation.LEFT_END_WALL:
+      case Orientation.LEFT_WALL_DOOR:
+      case Orientation.RIGHT_WALL:
+      case Orientation.RIGHT_NORTH_CORNER_WALL:
+      case Orientation.RIGHT_END_WALL:
+      case Orientation.RIGHT_WALL_DOOR:
+      case Orientation.SOUTH_CORNER_WALL:
+      case Orientation.SPECIAL_10:
+      case Orientation.SPECIAL_11:
+      case Orientation.PILLAR:
+      case Orientation.TREE:
+        return true;
+      default:
+        return false;
     }
   }
 

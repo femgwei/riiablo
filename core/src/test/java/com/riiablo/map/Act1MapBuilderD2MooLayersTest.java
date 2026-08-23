@@ -2,8 +2,8 @@ package com.riiablo.map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -27,6 +27,13 @@ import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.TileGrid;
 
 class Act1MapBuilderD2MooLayersTest {
+
+  @Test
+  void warpExitTilesAreDrawableWalls() {
+    assertTrue(RenderSystem.isDrawableWallOrientation(Orientation.SPECIAL_10));
+    assertTrue(RenderSystem.isDrawableWallOrientation(Orientation.SPECIAL_11));
+  }
+
   @Test
   void keepsMonsterJitterInsideSelectedFloorTile() {
     int zoneOrigin = -480;
@@ -227,6 +234,7 @@ class Act1MapBuilderD2MooLayersTest {
     DT1.Tile floor = tile(Orientation.FLOOR, 1, 1);
     DT1.Tile wall0 = tile(Orientation.LEFT_WALL, 2, 1);
     DT1.Tile wall1 = tile(Orientation.RIGHT_NORTH_CORNER_WALL, 2, 2);
+    DT1.Tile warpWall = tile(Orientation.SPECIAL_11, 4, 0);
     DT1.Tile shadow = tile(Orientation.SHADOW, 3, 1);
     DT1.Tile preserved = tile(Orientation.FLOOR, 9, 9);
 
@@ -234,6 +242,7 @@ class Act1MapBuilderD2MooLayersTest {
     dt1s.add(floor);
     dt1s.add(wall0);
     dt1s.add(wall1);
+    dt1s.add(warpWall);
     dt1s.add(shadow);
 
     TileGrid grid = new TileGrid(3, 2);
@@ -241,6 +250,7 @@ class Act1MapBuilderD2MooLayersTest {
     grid.floorIds[0][2] = DT1.Tile.Index.create(Orientation.FLOOR, 99, 99);
     grid.wallIds[0][0][1] = wall0.id;
     grid.wallIds[1][1][0] = wall1.id;
+    grid.wallIds[2][1][1] = warpWall.id;
     grid.shadowIds[1][1] = shadow.id;
 
     DT1.Tile[][] layers = new DT1.Tile[Map.MAX_LAYERS][];
@@ -255,7 +265,9 @@ class Act1MapBuilderD2MooLayersTest {
             grid, dt1s, layers, 4, 3, 2, floorHistogram);
 
     assertEquals(1, counts.floors);
-    assertEquals(2, counts.walls);
+    assertEquals(3, counts.walls);
+    assertEquals(1, counts.warpWalls);
+    assertEquals(0, counts.failedWarpWalls);
     assertEquals(1, counts.shadows);
     assertEquals(1, counts.failedResolve);
     assertEquals(1, counts.failedFloors);
@@ -269,7 +281,7 @@ class Act1MapBuilderD2MooLayersTest {
     assertSame(preserved, layers[Map.FLOOR_OFFSET][11]);
     assertSame(wall0, layers[Map.WALL_OFFSET][1]);
     assertSame(wall1, layers[Map.WALL_OFFSET + 1][4]);
-    assertNull(layers[Map.WALL_OFFSET + 2]);
+    assertSame(warpWall, layers[Map.WALL_OFFSET + 2][5]);
     assertSame(shadow, layers[Map.SHADOW_OFFSET][5]);
   }
 

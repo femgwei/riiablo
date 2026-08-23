@@ -30,6 +30,37 @@ class D2MooAct1NativeParityTest {
   }
 
   @Test
+  void mapTileFlagsUseNativeD2MooBitPositions() {
+    D2C_PackedTileInformation info = new D2C_PackedTileInformation();
+    info.setNWallLayer(2);
+    info.setBLayerAbove(true);
+    info.setBLinkage(true);
+    info.setBUnwalkable(true);
+    info.setBFillLOS(true);
+    info.setBEnclosed(true);
+    info.setBHidden(true);
+    info.setBRevealHidden(true);
+    info.setBObjectWall(true);
+    info.setBLOS(true);
+
+    D2DrlgTileDataStrc tile = new D2DrlgTileDataStrc();
+    DrlgRoomTile.initTileData(null, tile, 0, 0, info.getNPackedValue(), new Object());
+
+    int expected = 0x00C000  // wall layer 2 is stored as layer + 1 at bit 14
+        | 0x000001          // MAPTILE_UNK_0x1
+        | 0x000002          // MAPTILE_WALL_EXIT from linkage
+        | 0x000004          // MAPTILE_TREES
+        | 0x000008          // MAPTILE_HIDDEN
+        | 0x000040          // MAPTILE_UNWALKABLE
+        | 0x000080          // MAPTILE_FILL_LOS
+        | 0x000100          // MAPTILE_FLOOR_LINKER_PATH
+        | 0x000200          // MAPTILE_UNK_0x200
+        | 0x000800          // MAPTILE_OBJECT_WALL
+        | 0x002000;         // MAPTILE_LOS
+    assertEquals(expected, tile.getDwFlags());
+  }
+
+  @Test
   void act1PresetIdsMatchNativeD2MooEnum() {
     assertEquals(0, DrlgOutWild.LVLSUB_ACT1_BORDER_CLIFFS);
     assertEquals(1, DrlgOutWild.LVLSUB_ACT1_BORDER_MIDDLE);

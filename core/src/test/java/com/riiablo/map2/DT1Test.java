@@ -86,6 +86,26 @@ public class DT1Test extends RiiabloTest {
     }
   }
 
+  @Test
+  @DisplayName("Act 1 cave warp exit tiles contain visible graphics")
+  public void act1CaveWarpExitTilesContainVisibleGraphics() {
+    FileHandle handle = Riiablo.mpqs.resolve(
+        "DATA\\GLOBAL\\Tiles\\Act1\\Barracks\\Warp.dt1");
+    assertNotNull(handle);
+    DT1 dt1 = testDt1(handle);
+    int matches = 0;
+    for (int i = 0; i < dt1.numTiles(); i++) {
+      Tile tile = dt1.tile(i);
+      if (tile.orientation == Orientation.SPECIAL_11
+          && tile.mainIndex == 4 && tile.subIndex < 2) {
+        assertTrue(tile.numBlocks > 0,
+            "Stony Field cave warp tile must not be treated as an invisible marker");
+        matches++;
+      }
+    }
+    assertTrue(matches > 0);
+  }
+
   String[] getDt1s() {
     return new String[]{
         "data\\global\\tiles\\ACT1\\BARRACKS\\barracks.dt1",

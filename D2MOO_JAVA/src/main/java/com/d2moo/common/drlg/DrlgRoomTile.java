@@ -42,6 +42,23 @@ public class DrlgRoomTile {
     public static final int TILETYPE_RIGHT_WALL_DOWN = 17;
     public static final int TILETYPE_FULL_WALL_DOWN = 18;
     public static final int TILETYPE_FRONT_WALL_DOWN = 19;
+
+    // D2MapTileFlags from D2DrlgDrlg.h. These flags are consumed by room
+    // linking, warp variants, collision and the offline renderer export, so
+    // their native bit positions must not be approximated.
+    private static final int MAPTILE_UNK_0x1 = 0x000001;
+    private static final int MAPTILE_WALL_EXIT = 0x000002;
+    private static final int MAPTILE_TREES = 0x000004;
+    private static final int MAPTILE_HIDDEN = 0x000008;
+    private static final int MAPTILE_HASPRESETUNITS = 0x000020;
+    private static final int MAPTILE_UNWALKABLE = 0x000040;
+    private static final int MAPTILE_FILL_LOS = 0x000080;
+    private static final int MAPTILE_FLOOR_LINKER_PATH = 0x000100;
+    private static final int MAPTILE_UNK_0x200 = 0x000200;
+    private static final int MAPTILE_OBJECT_WALL = 0x000800;
+    private static final int MAPTILE_LOS = 0x002000;
+    private static final int MAPTILE_WALL_LAYER_BIT = 14;
+    private static final int MAPTILE_WALL_LAYER_MASK = 0x01C000;
     
     // 瓦片大小常量
     public static final int DRLGROOMTILE_TILES_SIZE = 8;
@@ -634,40 +651,57 @@ public class DrlgRoomTile {
         // 设置墙壁层标志
         if (nType != TILETYPE_SHADOW) {
             int nWallLayer = tileInfo.getNWallLayer();
-            pTileData.setDwFlags(pTileData.getDwFlags() | ((nWallLayer + 1) << 0)); // MAPTILE_WALL_LAYER_BIT = 0
+            pTileData.setDwFlags(pTileData.getDwFlags()
+                    | ((nWallLayer + 1) << MAPTILE_WALL_LAYER_BIT));
         }
         
         // 设置树标志
         if (nType == TILETYPE_TREE) {
-            pTileData.setDwFlags(pTileData.getDwFlags() | 0x1); // MAPTILE_TREES
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_TREES);
         } else if (nType == TILETYPE_WALL_RIGHT_EXIT || nType == TILETYPE_WALL_LEFT_EXIT 
                 || nType == TILETYPE_WALL_RIGHT_DOOR || nType == TILETYPE_WALL_LEFT_DOOR) {
-            pTileData.setDwFlags(pTileData.getDwFlags() | 0x2); // MAPTILE_WALL_EXIT
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_WALL_EXIT);
         }
         
         // 设置其他标志
         if (tileInfo.isBLayerAbove()) {
-            pTileData.setDwFlags(pTileData.getDwFlags() | 0x1); // MAPTILE_UNK_0x1
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_UNK_0x1);
         }
         
         if (tileInfo.isBLinkage()) {
-            pTileData.setDwFlags(pTileData.getDwFlags() | 0x4 | 0x2); // MAPTILE_FLOOR_LINKER_PATH | MAPTILE_WALL_EXIT
+            pTileData.setDwFlags(pTileData.getDwFlags()
+                    | MAPTILE_FLOOR_LINKER_PATH | MAPTILE_WALL_EXIT);
         }
         
         if (tileInfo.isBUnwalkable()) {
-            pTileData.setDwFlags(pTileData.getDwFlags() | 0x8); // MAPTILE_UNWALKABLE
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_UNWALKABLE);
         }
         
         if (tileInfo.isBFillLOS()) {
-            pTileData.setDwFlags(pTileData.getDwFlags() | 0x10); // MAPTILE_FILL_LOS
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_FILL_LOS);
         }
         
         if (tileInfo.isBEnclosed()) {
-            pTileData.setDwFlags(pTileData.getDwFlags() | 0x1); // MAPTILE_TREES
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_TREES);
         }
         
         if (!tileInfo.isBHidden()) {
-            pTileData.setDwFlags(pTileData.getDwFlags() & ~0x20); // MAPTILE_HIDDEN
+            pTileData.setDwFlags(pTileData.getDwFlags() & ~MAPTILE_HIDDEN);
+        } else {
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_HIDDEN);
+        }
+
+        if (tileInfo.isBRevealHidden()) {
+            pTileData.setDwFlags(pTileData.getDwFlags()
+                    | MAPTILE_UNK_0x200 | MAPTILE_TREES | MAPTILE_HIDDEN);
+        }
+
+        if (tileInfo.isBObjectWall()) {
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_OBJECT_WALL);
+        }
+
+        if (tileInfo.isBLOS()) {
+            pTileData.setDwFlags(pTileData.getDwFlags() | MAPTILE_LOS);
         }
     }
     
@@ -998,10 +1032,6 @@ public class DrlgRoomTile {
             }
         }
     }
-    
-    // 瓦片标志常量
-    private static final int MAPTILE_HASPRESETUNITS = 0x000020; // 瓦片已有预设单位
-    private static final int MAPTILE_HIDDEN = 0x000008; // 隐藏瓦片（用于传送门等）
     
     // 房间标志常量（使用 D2DrlgRoomFlags 中定义的常量）
     // DRLGROOMFLAG_POPULATION_ZERO 在 D2DrlgRoomFlags 中定义为 POPULATION_ZERO = 0x00800000
@@ -1474,10 +1504,6 @@ public class DrlgRoomTile {
             }
         }
     }
-    
-    // 瓦片标志辅助函数
-    private static final int MAPTILE_WALL_LAYER_BIT = 14;
-    private static final int MAPTILE_WALL_LAYER_MASK = 0x1C000; // 3 bits value indicating the wall layer + 1
     
     /**
      * 检查瓦片是否有墙壁层标志
