@@ -146,7 +146,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     if (!DEBUG_MOBILE && Gdx.app.getType() == Application.ApplicationType.Desktop) {
       int leftSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
-      if (leftSkillId > 0) {
+      // Skill id 0 is the valid D2 normal attack, not an unassigned slot.
+      if (leftSkillId >= 0) {
         final Skills.Entry skill = Riiablo.files.skills.get(leftSkillId);
         final SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
         int iconCel = desc.IconCel;
@@ -174,7 +175,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       });
 
       int rightSkillId = Riiablo.charData.getAction(Input.Buttons.RIGHT);
-      if (rightSkillId > 0) {
+      // Skill id 0 is the valid D2 normal attack, not an unassigned slot.
+      if (rightSkillId >= 0) {
         final Skills.Entry skill = Riiablo.files.skills.get(rightSkillId);
         final SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
         int iconCel = desc.IconCel;

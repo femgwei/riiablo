@@ -136,7 +136,11 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     flags   = D2S.FLAG_EXPANSION;
     level   = 1;
     Arrays.fill(hotkeys, D2S.HOTKEY_UNASSIGNED);
-    for (int[] actions : actions) Arrays.fill(actions, 0);
+    // D2 stores the normal attack as skill id 0. A newly-created character
+    // must still have an explicit left/right action selection; leaving these
+    // slots at the Java default makes the UI look unassigned even though the
+    // input path happens to interpret 0 as attack.
+    for (int[] actions : actions) Arrays.fill(actions, SkillCodes.attack);
     // 新角色：mapSeed 必须在创建时设置，与 D2 一致。用于地图生成的随机数序列，保证每个角色地图不同。
     mapSeed = (int) (System.currentTimeMillis() & 0xFFFFFFFF);
     return this;
