@@ -75,6 +75,12 @@ public class CursorMovementSystem extends BaseSystem {
   boolean requireRelease;
   int lastInteractionTraceTarget = Engine.INVALID_ENTITY;
   long lastInteractionTraceMillis;
+  int lastAttackRangeTarget = Engine.INVALID_ENTITY;
+  int lastAttackRangeSkill = Integer.MIN_VALUE;
+  boolean lastAttackRangeInMelee;
+  boolean lastAttackRangeCanThrow;
+  boolean attackRangeTraceInitialized;
+  long lastAttackRangeTraceMillis;
 
   private final Vector2 tmpVec2 = new Vector2();
   private final Vector2 cursorScreen = new Vector2();
@@ -464,10 +470,33 @@ public class CursorMovementSystem extends BaseSystem {
 
   private void traceAttackRange(int src, int targetId, int skillId, float distance,
       boolean inMeleeRange, boolean explicitThrowSkill, boolean canThrow) {
+    long now = TimeUtils.millis();
+    boolean stateChanged = !attackRangeTraceInitialized
+        || lastAttackRangeTarget != targetId
+        || lastAttackRangeSkill != skillId
+        || lastAttackRangeInMelee != inMeleeRange
+        || lastAttackRangeCanThrow != canThrow;
+    if (!stateChanged && now - lastAttackRangeTraceMillis < 1000L) return;
+
+    Item throwable = Riiablo.charData != null && Riiablo.charData.getItems() != null
+        ? Riiablo.charData.getItems().getEquippedThrowableWeapon() : null;
+    int quantity = -1;
+    if (throwable != null && throwable.attrs != null) {
+      com.riiablo.attributes.StatRef quantityRef = throwable.attrs.base().get(Stat.quantity);
+      quantity = quantityRef != null ? quantityRef.asInt() : -1;
+    }
     Gdx.app.log(TAG, "[ATTACK_RANGE] player=" + src + " target=" + targetId
         + " skill=" + skillId + " distance=" + distance
         + " mode=" + (explicitThrowSkill ? "throw" : "melee")
-        + " inMelee=" + inMeleeRange + " canThrow=" + canThrow);
+        + " inMelee=" + inMeleeRange + " canThrow=" + canThrow
+        + " throwable=" + (throwable != null ? throwable.code : "none")
+        + " quantity=" + quantity);
+    lastAttackRangeTarget = targetId;
+    lastAttackRangeSkill = skillId;
+    lastAttackRangeInMelee = inMeleeRange;
+    lastAttackRangeCanThrow = canThrow;
+    attackRangeTraceInitialized = true;
+    lastAttackRangeTraceMillis = now;
   }
 
   /**
