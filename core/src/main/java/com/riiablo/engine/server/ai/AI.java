@@ -50,14 +50,16 @@ public abstract class AI implements Interactable.Interactor {
       Constructor constructor = clazz.getConstructor(int.class);
       return (AI) constructor.newInstance(entityId);
     } catch (ClassNotFoundException e) {
-      // AI类不存在，使用默认Idle AI
-      log.debug("AI class not found: entityId={}, ai={}, className={}, using default Idle AI", 
+      // A missing native AI must not silently turn a spawned monster into a
+      // shared idle singleton. Use the generic server-authoritative AI so it
+      // can still acquire targets, move and perform the basic attack loop.
+      log.warn("[AI_FALLBACK] entityId={} ai={} className={} using GenericMonster",
           entityId, ai, fullClassName);
-      return AI.IDLE;
+      return new GenericMonster(entityId, ai);
     } catch (Throwable t) {
-      log.error("Failed to load AI: entityId={}, ai={}, className={}, error={}", 
+      log.error("[AI_FALLBACK] failed to load entityId={} ai={} className={} error={} using GenericMonster",
           entityId, ai, fullClassName, ExceptionUtils.getRootCauseMessage(t), t);
-      return AI.IDLE;
+      return new GenericMonster(entityId, ai);
     }
   }
 

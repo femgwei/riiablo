@@ -13,6 +13,8 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Missiles;
+import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.Engine;
@@ -56,6 +58,9 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<CofReference> mCofReference;
+
+  @com.artemis.annotations.Wire(name = "factory")
+  protected EntityFactory factory;
 
   // teleport-specific components
   protected ComponentMapper<Position> mPosition;
@@ -436,6 +441,14 @@ public class Actioneer extends PassiveSystem {
         if (!mAttributesWrapper.has(targetId)) break;
         log.debug("{} attack {}", entityId, targetId);
 
+        // Native monster attacks with MissA1/MissA2 are projectile attacks,
+        // even though their AI enters the shared Attack skill (srvdofunc=1).
+        // Resolve them at the same animation keyframe as melee damage so the
+        // server remains authoritative for creation, collision and damage.
+        if (spawnMonsterAttackMissile(entityId, targetId)) {
+          break;
+        }
+
         // Check if this is a throwing attack and consume quantity
         if (mCasting.has(entityId)) {
           Casting casting = mCasting.get(entityId);
@@ -583,5 +596,43 @@ public class Actioneer extends PassiveSystem {
         && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
       StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
     }
+  }
+
+  private boolean spawnMonsterAttackMissile(int entityId, int targetId) {
+    if (!mMonster.has(entityId) || factory == null || !mPosition.has(entityId)
+        || !mPosition.has(targetId)) {
+      return false;
+    }
+
+    Monster monster = mMonster.get(entityId);
+    if (monster.monstats == null) return false;
+    String missileName = monster.monstats.MissA1;
+    if (missileName == null || missileName.isEmpty()) {
+      missileName = monster.monstats.MissA2;
+    }
+    if (missileName == null || missileName.isEmpty()) return false;
+
+    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    if (missile == null) {
+      log.warn("[MONSTER_MISSILE] lookup_failed entity={} target={} missile={}",
+          entityId, targetId, missileName);
+      return false;
+    }
+
+    Vector2 start = mPosition.get(entityId).position;
+    Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(start);
+    if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+    direction.nor();
+    int missileId = factory.createMissile(missile, direction, start, entityId);
+    if (missileId < 0) {
+      log.warn("[MONSTER_MISSILE] create_failed entity={} target={} missile={}",
+          entityId, targetId, missileName);
+      return false;
+    }
+    log.info("[MONSTER_MISSILE] created entity={} target={} missileId={} missile={} "
+            + "speed={} range={} start=({}, {}) direction=({}, {})",
+        entityId, targetId, missileId, missile.Missile, missile.Vel, missile.Range,
+        start.x, start.y, direction.x, direction.y);
+    return true;
   }
 }
