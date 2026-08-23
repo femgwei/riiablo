@@ -18,10 +18,12 @@ import com.badlogic.gdx.utils.TimeUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Interactable;
+import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.attributes.Attributes;
@@ -39,6 +41,8 @@ public class CursorMovementSystem extends BaseSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Interactable> mInteractable;
+  protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
+  protected ComponentMapper<Object> mObject;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
   protected RenderSystem renderer;
@@ -64,20 +68,28 @@ public class CursorMovementSystem extends BaseSystem {
   protected ItemController itemController;
 
   EntitySubscription hoveredSubscriber;
+  EntitySubscription waypointInputSubscriber;
   boolean requireRelease;
   int lastInteractionTraceTarget = Engine.INVALID_ENTITY;
   long lastInteractionTraceMillis;
 
   private final Vector2 tmpVec2 = new Vector2();
+  private final Vector2 cursorScreen = new Vector2();
+  private final Vector2 entityScreen = new Vector2();
 
   @Override
   protected void initialize() {
     hoveredSubscriber = world.getAspectSubscriptionManager().get(Aspect.all(Hovered.class));
+    waypointInputSubscriber = world.getAspectSubscriptionManager().get(
+        Aspect.all(Interactable.class, Position.class, BBoxWrapper.class, Object.class));
   }
 
   @Override
   protected void processSystem() {
-    if (profiler != null && profiler.hit()) return;
+    if (profiler != null && profiler.hit()) {
+      traceBlockedClick("profiler");
+      return;
+    }
     
     // D2MOD: Check if player is dead, if so, block all input except ESC key
     final int playerId = renderer.getSrc();
@@ -92,7 +104,11 @@ public class CursorMovementSystem extends BaseSystem {
     scaledStage.screenToStageCoordinates(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY()));
     Actor hit2 = scaledStage.hit(tmpVec2.x, tmpVec2.y, true);
     boolean hit = hit1 != null || hit2 != null;
-    if (hit) return;
+    if (hit) {
+      traceBlockedClick(hit1 != null ? "stage:" + hit1.getClass().getSimpleName()
+          : "scaledStage:" + hit2.getClass().getSimpleName());
+      return;
+    }
 
     final boolean leftPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
     if ((leftPressed && UIUtils.shift()) || Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
@@ -210,8 +226,6 @@ public class CursorMovementSystem extends BaseSystem {
 
   private int getHovered(int src) {
     IntBag hoveredEntities = hoveredSubscriber.getEntities();
-    if (hoveredEntities.size() == 0) return Engine.INVALID_ENTITY;
-
     Position srcPosition = mPosition.get(src);
     int selected = Engine.INVALID_ENTITY;
     boolean selectedInteractable = false;
@@ -233,7 +247,52 @@ public class CursorMovementSystem extends BaseSystem {
         selectedDst2 = candidateDst2;
       }
     }
+
+    // CursorMovementSystem runs before HoveredManager. A waypoint that becomes
+    // selectable or is entered by the cursor on the click frame would
+    // otherwise be absent until the following frame. Perform a synchronous
+    // hit test for waypoints so the click cannot be lost to system ordering.
+    cursorScreen.set(Gdx.input.getX(), Gdx.input.getY());
+    iso.unproject(cursorScreen);
+    IntBag waypoints = waypointInputSubscriber.getEntities();
+    for (int i = 0, size = waypoints.size(); i < size; i++) {
+      int candidate = waypoints.get(i);
+      Object object = mObject.get(candidate);
+      if (!isWaypoint(object)) continue;
+
+      Position candidatePosition = mPosition.get(candidate);
+      BBoxWrapper boxWrapper = mBBoxWrapper.get(candidate);
+      if (candidatePosition == null || boxWrapper == null || boxWrapper.box == null) continue;
+      iso.toScreen(entityScreen.set(candidatePosition.position));
+      if (!containsScreenPoint(boxWrapper.box, entityScreen, cursorScreen)) continue;
+
+      float candidateDst2 = srcPosition == null
+          ? Float.POSITIVE_INFINITY
+          : srcPosition.position.dst2(candidatePosition.position);
+      if (selected == Engine.INVALID_ENTITY
+          || !selectedInteractable
+          || candidateDst2 < selectedDst2) {
+        selected = candidate;
+        selectedInteractable = true;
+        selectedDst2 = candidateDst2;
+      }
+    }
     return selected;
+  }
+
+  static boolean isWaypoint(Object object) {
+    return object != null
+        && object.base != null
+        && (object.base.SubClass & Engine.Object.SUBCLASS_WAYPOINT)
+            == Engine.Object.SUBCLASS_WAYPOINT;
+  }
+
+  static boolean containsScreenPoint(com.riiablo.codec.util.BBox box,
+      Vector2 entityScreen, Vector2 cursorScreen) {
+    float x = entityScreen.x + box.xMin;
+    float y = entityScreen.y - box.yMax;
+    return x <= cursorScreen.x && cursorScreen.x <= x + box.width
+        && y <= cursorScreen.y && cursorScreen.y <= y + box.height;
   }
 
   static boolean shouldReplaceHoveredTarget(
@@ -250,7 +309,10 @@ public class CursorMovementSystem extends BaseSystem {
     if (actioneer.didLastAttackTargetDie(src)) return false;
     
     int target = getHovered(src);
-    if (target == Engine.INVALID_ENTITY) return false;
+    if (target == Engine.INVALID_ENTITY) {
+      traceNoInteractionTarget(src);
+      return false;
+    }
 
     Interactable selectedInteractable = mInteractable.get(target);
     if (selectedInteractable != null) {
@@ -326,6 +388,44 @@ public class CursorMovementSystem extends BaseSystem {
         + " player=" + src + " entity=" + target
         + " distance=" + distance + " range=" + interactable.range
         + " hovered=" + hoveredSubscriber.getEntities().size());
+  }
+
+  private void traceBlockedClick(String reason) {
+    if (!Gdx.input.isButtonPressed(Input.Buttons.LEFT)) return;
+    traceInput("blocked reason=" + reason);
+  }
+
+  private void traceNoInteractionTarget(int src) {
+    cursorScreen.set(Gdx.input.getX(), Gdx.input.getY());
+    iso.unproject(cursorScreen);
+    int nearest = Engine.INVALID_ENTITY;
+    float nearestScreenDst2 = Float.POSITIVE_INFINITY;
+    IntBag waypoints = waypointInputSubscriber.getEntities();
+    for (int i = 0, size = waypoints.size(); i < size; i++) {
+      int candidate = waypoints.get(i);
+      if (!isWaypoint(mObject.get(candidate))) continue;
+      Position position = mPosition.get(candidate);
+      if (position == null) continue;
+      iso.toScreen(entityScreen.set(position.position));
+      float dst2 = cursorScreen.dst2(entityScreen);
+      if (dst2 < nearestScreenDst2) {
+        nearest = candidate;
+        nearestScreenDst2 = dst2;
+      }
+    }
+    traceInput("miss player=" + src + " cursor=" + cursorScreen
+        + " nearestWaypoint=" + nearest
+        + " nearestScreenDistance=" + (float) Math.sqrt(nearestScreenDst2)
+        + " hovered=" + hoveredSubscriber.getEntities().size());
+  }
+
+  private void traceInput(String message) {
+    if (Gdx.app == null) return;
+    long now = TimeUtils.millis();
+    if (now - lastInteractionTraceMillis < 1000L) return;
+    lastInteractionTraceTarget = Engine.INVALID_ENTITY;
+    lastInteractionTraceMillis = now;
+    Gdx.app.log(TAG, "Interaction input: " + message);
   }
 
   /**
