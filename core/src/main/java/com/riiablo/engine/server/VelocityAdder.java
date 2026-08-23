@@ -19,6 +19,9 @@ public class VelocityAdder extends IteratingSystem {
     // in one place. Moving missiles here as well would advance them twice in
     // the server pipeline (and make range/collision results frame-dependent).
     if (mMissile.has(entityId)) return;
-    mPosition.get(entityId).position.mulAdd(mVelocity.get(entityId).velocity, world.delta);
+    com.riiablo.engine.server.component.Velocity velocity = mVelocity.get(entityId);
+    if (velocity.stateMovementLocked) return;
+    mPosition.get(entityId).position.mulAdd(velocity.velocity,
+        world.delta * velocity.stateSpeedMultiplier);
   }
 }

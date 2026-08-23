@@ -10,11 +10,18 @@ public class Velocity extends PooledComponent {
   public float walkSpeed;
   public float runSpeed;
 
+  /** Movement modifier calculated from active server states. */
+  public float stateSpeedMultiplier = 1f;
+  /** Whether active states completely prevent movement. */
+  public boolean stateMovementLocked;
+
   @Override
   protected void reset() {
     velocity.setZero();
     walkSpeed = 0;
     runSpeed = 0;
+    stateSpeedMultiplier = 1f;
+    stateMovementLocked = false;
   }
 
   public Velocity set(float walkSpeed, float runSpeed) {

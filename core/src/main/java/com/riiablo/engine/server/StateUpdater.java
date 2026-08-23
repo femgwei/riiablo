@@ -87,16 +87,21 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
    */
   private void applyVelocityModifiers(int entityId, StateList stateList) {
     Velocity velocity = mVelocity.get(entityId);
+
+    // Keep the desired velocity untouched. VelocityAdder applies this state
+    // multiplier after Pathfinder has selected the direction for this tick.
+    velocity.stateSpeedMultiplier = 1f;
+    velocity.stateMovementLocked = false;
     
     // 检查冰冻状态 - 完全停止移动
     if (stateList.hasState(StateId.FREEZE)) {
-      velocity.velocity.setZero();
+      velocity.stateMovementLocked = true;
       return;
     }
     
     // 检查眩晕状态 - 完全停止移动
     if (stateList.hasState(StateId.STUNNED)) {
-      velocity.velocity.setZero();
+      velocity.stateMovementLocked = true;
       return;
     }
     
@@ -123,8 +128,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // 应用减速（限制最大减速为90%）
     if (slowPercent > 0) {
       slowPercent = Math.min(slowPercent, 90);
-      float multiplier = 1.0f - (slowPercent / 100.0f);
-      velocity.velocity.scl(multiplier);
+      velocity.stateSpeedMultiplier = 1.0f - (slowPercent / 100.0f);
     }
   }
 
