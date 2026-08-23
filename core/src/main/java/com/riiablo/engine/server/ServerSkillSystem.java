@@ -10,6 +10,7 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillCastEvent;
@@ -23,6 +24,8 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.IntSet;
 
 /**
  * Server-authoritative part of the player skill pipeline.
@@ -36,10 +39,12 @@ import com.badlogic.gdx.math.Vector2;
 public class ServerSkillSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(ServerSkillSystem.class);
   private static final float MULTI_MISSILE_SPREAD_RADIANS = 0.12f;
+  private static final int NOVA_MISSILE_COUNT = 64;
 
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Missile> mMissile;
 
   /** Registered as "factory" by D2GS. */
   @Wire(name = "factory")
@@ -99,6 +104,11 @@ public class ServerSkillSystem extends PassiveSystem {
     if (skill == null) return;
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
+      spawnNova(event, skill, start);
+      return;
+    }
+
     Vector2 target = new Vector2();
     if (event.targetId >= 0 && mPosition.has(event.targetId)) {
       target.set(mPosition.get(event.targetId).position);
@@ -128,6 +138,7 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (configuredCount == 0) return;
 
+    IntSet sharedHitTargets = configuredCount > 1 ? new IntSet() : null;
     int ordinal = 0;
     for (String missileName : missileNames) {
       if (missileName == null || missileName.isEmpty()) continue;
@@ -144,13 +155,62 @@ public class ServerSkillSystem extends PassiveSystem {
             * MULTI_MISSILE_SPREAD_RADIANS;
         direction.rotateRad(offset);
       }
-      int missileId = factory != null
-          ? factory.createMissile(missile, direction, start, event.entityId)
-          : -1;
+      int missileId = createMissile(missile, direction, start, event.entityId,
+          sharedHitTargets);
       log.debug("Server skill projectile: entity={}, skill={}, missile={}, entityId={}, dir=({}, {})",
           event.entityId, event.skillId, missileName, missileId, direction.x, direction.y);
       ordinal++;
     }
+  }
+
+  private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+    if (missileName == null) {
+      log.warn("Server nova has no missile configured: entity={}, skill={}",
+          event.entityId, event.skillId);
+      return;
+    }
+    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    if (missile == null) {
+      log.warn("Server nova missile lookup failed: entity={}, skill={}, missile={}",
+          event.entityId, event.skillId, missileName);
+      return;
+    }
+
+    IntSet sharedHitTargets = new IntSet();
+    Vector2 direction = new Vector2();
+    int created = 0;
+    for (int i = 0; i < NOVA_MISSILE_COUNT; i++) {
+      radialDirection(i, NOVA_MISSILE_COUNT, direction);
+      if (createMissile(missile, direction, start, event.entityId,
+          sharedHitTargets) >= 0) {
+        created++;
+      }
+    }
+    log.debug("Server nova projectiles: entity={}, skill={}, missile={}, created={}",
+        event.entityId, event.skillId, missileName, created);
+  }
+
+  private int createMissile(Missiles.Entry missile, Vector2 direction, Vector2 start,
+      int ownerId, IntSet sharedHitTargets) {
+    if (factory == null) return -1;
+    int missileId = factory.createMissile(missile, direction, start, ownerId);
+    if (missileId >= 0 && sharedHitTargets != null && mMissile.has(missileId)) {
+      mMissile.get(missileId).shareHitTargets(sharedHitTargets);
+    }
+    return missileId;
+  }
+
+  static Vector2 radialDirection(int index, int count, Vector2 out) {
+    if (count <= 0) return out.setZero();
+    float radians = MathUtils.PI2 * index / count;
+    return out.set(MathUtils.cos(radians), MathUtils.sin(radians)).nor();
+  }
+
+  private static String firstNonEmpty(String primary, String fallback) {
+    if (primary != null && !primary.isEmpty()) return primary;
+    if (fallback != null && !fallback.isEmpty()) return fallback;
+    return null;
   }
 
   private float getManaCost(Skills.Entry skill, int level) {

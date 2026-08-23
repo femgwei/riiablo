@@ -162,6 +162,13 @@ public class MissileCollisionSystem extends IteratingSystem {
         return false;
       }
 
+      // D2 radial/fan skills create many missiles for one activation. Resolve
+      // a target only once for that cast so overlapping launch paths cannot
+      // multiply the same hit dozens of times.
+      if (missile.sharedHitTargets != null && !missile.sharedHitTargets.add(targetId)) {
+        return false;
+      }
+
       if (!mAttributesWrapper.has(missile.ownerId) || !mAttributesWrapper.has(targetId)) {
         log.warn("Missile {} collided with entity {} without complete combat attributes", missileId, targetId);
         world.delete(missileId);

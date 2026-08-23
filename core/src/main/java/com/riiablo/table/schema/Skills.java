@@ -62,6 +62,10 @@ public class Skills {
   public boolean aura;
   public int srvstfunc;
   public int srvdofunc;
+  public String srvmissilea;
+  public String srvmissileb;
+  public String srvmissilec;
+  public String srvmissiled;
   public int cltstfunc;
   public int cltdofunc;
   public String cltmissilea;

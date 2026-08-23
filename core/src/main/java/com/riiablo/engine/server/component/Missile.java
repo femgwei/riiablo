@@ -5,6 +5,7 @@ import com.artemis.annotations.PooledWeaver;
 import com.artemis.annotations.Transient;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.codec.DCC;
 import com.riiablo.codec.excel.Missiles;
 
@@ -22,6 +23,9 @@ public class Missile extends PooledComponent {
   /** 已移动距离（用于范围检查，与 d2mod 一致） */
   public float distanceTraveled = 0f;
 
+  /** Targets already resolved by another missile from the same cast. */
+  public IntSet sharedHitTargets;
+
   @Override
   protected void reset() {
     missile = null;
@@ -30,6 +34,7 @@ public class Missile extends PooledComponent {
     start.setZero();
     ownerId = -1;
     distanceTraveled = 0f;
+    sharedHitTargets = null;
   }
 
   public Missile set(Missiles.Entry missile, Vector2 start, float range) {
@@ -42,6 +47,11 @@ public class Missile extends PooledComponent {
   
   public Missile setOwner(int ownerId) {
     this.ownerId = ownerId;
+    return this;
+  }
+
+  public Missile shareHitTargets(IntSet targets) {
+    sharedHitTargets = targets;
     return this;
   }
 }
