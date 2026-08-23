@@ -276,7 +276,11 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     mPosition.create(id).position.set(x, y);
-    mVelocity.create(id).set(monstats.Velocity, monstats.Run);
+    // D2Common UNITS_GetBaseVelocity always uses MonStats.Velocity for
+    // monsters. MonStats.Run only participates in run-animation-rate table
+    // generation; treating it as displacement speed makes animation and
+    // authoritative movement diverge.
+    mVelocity.create(id).setMonster(monstats.Velocity);
     mAngle.create(id);
 
     CofReference reference = mCofReference.create(id);

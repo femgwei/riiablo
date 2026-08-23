@@ -139,7 +139,7 @@ public class Pathfinder extends IteratingSystem {
       
       // If should repath (player moved or timer expired), recalculate path
       if (shouldRepath) {
-        findPath(entityId, targetPos, false, targetId);
+        repathPreservingMovementIntent(entityId, targetPos, targetId);
         return;
       }
     }
@@ -165,10 +165,11 @@ public class Pathfinder extends IteratingSystem {
     }
 
     Velocity velocity = mVelocity.get(entityId);
-    float speed    = (mRunning.has(entityId) ? velocity.runSpeed : velocity.walkSpeed);
+    boolean running = mRunning.has(entityId);
+    float speed = velocity.speed(running);
     if (speed <= 0f) {
       log.warn("[MOVEMENT] invalid speed entity={} running={} walkSpeed={} runSpeed={}",
-          entityId, mRunning.has(entityId), velocity.walkSpeed, velocity.runSpeed);
+          entityId, running, velocity.walkSpeed, velocity.runSpeed);
       velocity.velocity.setZero();
       return;
     }
@@ -216,6 +217,14 @@ public class Pathfinder extends IteratingSystem {
     // Don't allow pathfinding if entity doesn't have Velocity component (e.g., dead player)
     if (!mVelocity.has(src)) {
       return false;
+    }
+
+    // A native AITACTICS_SetVelocity bonus belongs to one mode-change
+    // request. A new ordinary monster path starts from the native 75% base;
+    // AI.moveTo installs any explicit bonus again after path creation.
+    if (mMonster.has(src)) {
+      mVelocity.get(src).clearModeSpeedBonus();
+      mRunning.remove(src);
     }
     if (target == null) {
       mPathfind.remove(src);
@@ -285,6 +294,19 @@ public class Pathfinder extends IteratingSystem {
 
   static void stopBlockedMovement(Velocity velocity) {
     if (velocity != null) velocity.velocity.setZero();
+  }
+
+  private boolean repathPreservingMovementIntent(
+      int entityId, Vector2 target, int targetEntityId) {
+    Velocity velocity = mVelocity.get(entityId);
+    float bonus = velocity.modeSpeedBonusMultiplier;
+    boolean running = mRunning.has(entityId);
+    boolean success = findPath(entityId, target, false, targetEntityId);
+    if (success) {
+      velocity.modeSpeedBonusMultiplier = bonus;
+      if (running) mRunning.create(entityId);
+    }
+    return success;
   }
 
   protected boolean findPath(int src, Vector2 srcPos, Vector2 targetPos, int flags, int size, GraphPath path) {

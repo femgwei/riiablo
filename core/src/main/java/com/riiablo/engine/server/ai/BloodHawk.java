@@ -215,7 +215,7 @@ public class BloodHawk extends AI {
         stateMachine.changeState(State.ESCAPE);
         Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
         Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(4f));
-        pathfinder.findPath(entityId, escapePos, false, Engine.INVALID_ENTITY);
+        walkTo(escapePos, params.length > 3 ? params[3] : 0, Engine.INVALID_ENTITY);
         if (!mPathfind.has(entityId)) {
           // Can't escape, attack
           pathfinder.findPath(entityId, null);
@@ -244,7 +244,7 @@ public class BloodHawk extends AI {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, AI_GetParamValue(pGame, pAiTickParam, BLOODHAWK_AI_PARAM_CHARGE_VELOCITY), pAiTickParam->nTargetDistance)
       aiParam0 = 1;
       stateMachine.changeState(State.CHARGE);
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, params.length > 4 ? params[4] : 0, targetId);
       time = MathUtils.random(1f, 2);
       return;
     }
@@ -255,7 +255,7 @@ public class BloodHawk extends AI {
       stateMachine.changeState(State.ESCAPE);
       Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
       Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(4f));
-      pathfinder.findPath(entityId, escapePos, false, Engine.INVALID_ENTITY);
+      walkTo(escapePos, params.length > 3 ? params[3] : 0, Engine.INVALID_ENTITY);
       if (!mPathfind.has(entityId)) {
         // Can't escape, attack
         pathfinder.findPath(entityId, null);
@@ -272,14 +272,14 @@ public class BloodHawk extends AI {
     if (params.length > 1 && !MathUtils.randomBoolean(params[1] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 0, 0)
       // D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, 3u)
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     } else {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, -50, 0)
       // D2MOD: AITACTICS_WalkCloseToUnit(pGame, pUnit, 4u)
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, -50, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;

@@ -81,7 +81,7 @@ public class CorruptRogue extends AI {
   @Override
   public void kill() {
     if (stateMachine.getCurrentState() == State.DEAD) return;
-    pathfinder.findPath(entityId, null);
+    stopMovement();
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
     Riiablo.audio.play(monsound + "_death_1", true);
@@ -141,7 +141,7 @@ public class CorruptRogue extends AI {
       switch (stateMachine.getCurrentState()) {
         case IDLE:
           if (nextAction < 0) {
-            pathfinder.findPath(entityId, null);
+            stopMovement();
             stateMachine.changeState(State.WANDER);
           }
           break;
@@ -152,7 +152,7 @@ public class CorruptRogue extends AI {
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
             dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
-            pathfinder.findPath(entityId, dst);
+            walkTo(dst, Engine.INVALID_ENTITY);
           }
           break;
         default:
@@ -173,7 +173,7 @@ public class CorruptRogue extends AI {
       if (bCombat) {
         // D2MOD: CORRUPTROGUE_AI_PARAM_ATTACK_CHANCE_PCT
         if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-          pathfinder.findPath(entityId, null);
+          stopMovement();
           lookAt(targetId);
           stateMachine.changeState(State.ATTACK);
           mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
@@ -198,7 +198,7 @@ public class CorruptRogue extends AI {
           return;
         } else if (params.length > 4 && !MathUtils.randomBoolean(params[4] / 100f)) {
           // Walk to target
-          pathfinder.findPath(entityId, targetPos, false, targetId);
+          walkTo(targetPos, targetId);
           stateMachine.changeState(State.APPROACH);
           time = MathUtils.random(1f, 2);
           return;
@@ -209,11 +209,8 @@ public class CorruptRogue extends AI {
     // D2MOD: Far from target, run to target
     // D2MOD: AITACTICS_SetVelocity(pUnit, 13, AI_GetParamValue(pGame, pAiTickParam, CORRUPTROGUE_AI_PARAM_RUN_VELOCITY), 0)
     // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
-    if (mVelocity.has(entityId) && params.length > 3) {
-      com.riiablo.engine.server.component.Velocity vel = mVelocity.get(entityId);
-      // Set run velocity (simplified)
-    }
-    pathfinder.findPath(entityId, targetPos, true, targetId); // true = run
+    int runVelocityBonus = params.length > 3 ? params[3] : 0;
+    runTo(targetPos, runVelocityBonus, targetId);
     stateMachine.changeState(State.APPROACH);
     time = MathUtils.random(1f, 2);
   }

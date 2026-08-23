@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.riiablo.engine.server.component.Velocity;
 import org.junit.jupiter.api.Test;
 
 class VelocityModeChangerTest {
@@ -24,5 +25,19 @@ class VelocityModeChangerTest {
     assertEquals(0, VelocityModeChanger.scaleAnimationSpeed(213, 0f, 6f));
     assertEquals(0, VelocityModeChanger.scaleAnimationSpeed(213, 6f, 0f));
     assertEquals(0, VelocityModeChanger.scaleAnimationSpeed(0, 6f, 6f));
+  }
+
+  @Test
+  void appliesNativeMonsterBaseAndAiVelocityBonus() {
+    Velocity velocity = new Velocity().setMonster(8f);
+
+    assertEquals(6f, velocity.speed(false));
+    assertEquals(6f, velocity.speed(true));
+
+    velocity.setModeSpeedBonusPercent(75f);
+    assertEquals(12f, velocity.speed(false));
+
+    velocity.setModeSpeedBonusPercent(-100f);
+    assertEquals(2f, velocity.speed(false));
   }
 }

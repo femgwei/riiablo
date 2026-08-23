@@ -88,7 +88,7 @@ public class PantherWoman extends AI {
   @Override
   public void kill() {
     if (stateMachine.getCurrentState() == State.DEAD) return;
-    pathfinder.findPath(entityId, null);
+    stopMovement();
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
     Riiablo.audio.play(monsound + "_death_1", true);
@@ -176,7 +176,7 @@ public class PantherWoman extends AI {
       switch (stateMachine.getCurrentState()) {
         case IDLE:
           if (nextAction < 0) {
-            pathfinder.findPath(entityId, null);
+            stopMovement();
             stateMachine.changeState(State.WANDER);
           }
           break;
@@ -187,7 +187,7 @@ public class PantherWoman extends AI {
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
             dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
-            pathfinder.findPath(entityId, dst);
+            walkTo(dst, Engine.INVALID_ENTITY);
           }
           break;
         default:
@@ -203,7 +203,7 @@ public class PantherWoman extends AI {
     // D2MOD: If in combat
     if (bCombat) {
       if (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
-        pathfinder.findPath(entityId, null);
+        stopMovement();
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
@@ -222,7 +222,7 @@ public class PantherWoman extends AI {
     if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
       // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, 75, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
@@ -238,7 +238,7 @@ public class PantherWoman extends AI {
         // D2MOD: Too far from pack, move to pack member
         // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
         // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, arg.pTarget, 7)
-        pathfinder.findPath(entityId, packPos, false, packMemberId);
+        walkTo(packPos, 75, packMemberId);
         stateMachine.changeState(State.GROUP);
         time = MathUtils.random(1f, 2);
         return;
@@ -252,7 +252,7 @@ public class PantherWoman extends AI {
       return;
     } else {
       // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;

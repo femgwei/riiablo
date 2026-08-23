@@ -22,11 +22,12 @@ import com.riiablo.engine.server.component.Sequence;
  * D2MOD AI Parameters:
  * - params[0] = CORRUPTARCHER_AI_PARAM_SHOOT_CHANCE_PCT (shoot chance)
  * - params[1] = CORRUPTARCHER_AI_PARAM_STALL_DURATION (idle time)
- * - params[2] = CORRUPTARCHER_AI_PARAM_WALK_TOW_DISTANCE (walk toward distance)
+ * - params[2] = CORRUPTARCHER_AI_PARAM_RUN_CHANCE_PCT (close escape chance)
  * - params[3] = CORRUPTARCHER_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
  * - params[4] = CORRUPTARCHER_AI_PARAM_ALWAYS_RUN_DISTANCE (always run distance)
  * - params[5] = CORRUPTARCHER_AI_PARAM_USE_SKILL_2_CHANCE_PCT (use skill2 chance)
  * - params[6] = CORRUPTARCHER_AI_PARAM_USE_SKILL_3_CHANCE_PCT (use skill3 chance)
+ * - params[7] = CORRUPTARCHER_AI_PARAM_WALK_TOW_DISTANCE (walk toward distance)
  * 
  * Special: Ranged attack AI with multiple skills. Can run when far.
  */
@@ -81,7 +82,7 @@ public class CorruptArcher extends AI {
   @Override
   public void kill() {
     if (stateMachine.getCurrentState() == State.DEAD) return;
-    pathfinder.findPath(entityId, null);
+    stopMovement();
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
     Riiablo.audio.play(monsound + "_death_1", true);
@@ -106,8 +107,10 @@ public class CorruptArcher extends AI {
    * Check special condition (simplified).
    */
   private boolean checkSpecialCondition(int targetId, float distance) {
-    // TODO: Implement special condition check
-    return false;
+    return targetId != Engine.INVALID_ENTITY
+        && distance < 6f
+        && params.length > 2
+        && MathUtils.randomBoolean(params[2] / 100f);
   }
 
   @Override
@@ -124,13 +127,13 @@ public class CorruptArcher extends AI {
     float[] outDist = { Float.MAX_VALUE };
     int targetId = findNearestTargetWithAidist(outDist);
     float targetDistance = outDist[0];
-    float rangedRange = params.length > 2 ? params[2] : 15f;
+    float rangedRange = missile != null && missile.Range > 0 ? missile.Range - 2f : 15f;
     if (rangedRange <= 0) rangedRange = 15f;
     if (targetId != Engine.INVALID_ENTITY
         && stateMachine.getCurrentState() != State.ATTACK
         && stateMachine.getCurrentState() != State.CAST
         && targetDistance <= rangedRange) {
-      pathfinder.findPath(entityId, null);
+      stopMovement();
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
       Vector2 targetPos = mPosition.get(targetId).position;
@@ -152,7 +155,7 @@ public class CorruptArcher extends AI {
       switch (stateMachine.getCurrentState()) {
         case IDLE:
           if (nextAction < 0) {
-            pathfinder.findPath(entityId, null);
+            stopMovement();
             stateMachine.changeState(State.WANDER);
           }
           break;
@@ -163,7 +166,7 @@ public class CorruptArcher extends AI {
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
             dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
-            pathfinder.findPath(entityId, dst);
+            walkTo(dst, Engine.INVALID_ENTITY);
           }
           break;
         default:
@@ -173,6 +176,7 @@ public class CorruptArcher extends AI {
       return;
     }
 
+    Vector2 entityPos = mPosition.get(entityId).position;
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
@@ -180,19 +184,20 @@ public class CorruptArcher extends AI {
     if (checkSpecialCondition(targetId, targetDistance)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 100, 0)
       // D2MOD: sub_6FCD06D0(pGame, pUnit, pTarget, 12, 1)
-      pathfinder.findPath(entityId, targetPos, true, targetId);
+      Vector2 escapePos = tmpVec2.set(entityPos).sub(targetPos).nor().scl(12f).add(entityPos);
+      runTo(escapePos, 100, Engine.INVALID_ENTITY);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
     }
 
     // D2MOD: If far, walk toward target
-    float walkTowDistance = params.length > 2 ? params[2] : 15f;
+    float walkTowDistance = params.length > 7 ? params[7] : 15f;
     if (walkTowDistance > 0 && targetDistance > walkTowDistance
         && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
       // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_WALK_TOW_DISTANCE))
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, 10, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
@@ -203,7 +208,7 @@ public class CorruptArcher extends AI {
     if (targetDistance > alwaysRunDistance) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 100, 0)
       // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_ALWAYS_RUN_DISTANCE))
-      pathfinder.findPath(entityId, targetPos, true, targetId);
+      runTo(targetPos, 100, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
@@ -248,7 +253,7 @@ public class CorruptArcher extends AI {
       }
 
       // D2MOD: Normal attack
-      pathfinder.findPath(entityId, null);
+      stopMovement();
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);

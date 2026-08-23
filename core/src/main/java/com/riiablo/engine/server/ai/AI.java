@@ -33,6 +33,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.Running;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -68,6 +69,7 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<PathWrapper> mPathWrapper;
@@ -88,6 +90,10 @@ public abstract class AI implements Interactable.Interactor {
   protected int entityId;
   protected Monster monster;
   protected String monsound;
+
+  private boolean movementActive;
+  private boolean lastMovementRunning;
+  private int lastMovementVelocityBonus = Integer.MIN_VALUE;
 
   public AI(int entityId) {
     this.entityId = entityId;
@@ -135,6 +141,73 @@ public abstract class AI implements Interactable.Interactor {
     Angle angle = mAngle.get(entityId);
     angle.target.set(tmpVec2).nor();
     return angle;
+  }
+
+  /**
+   * Starts a native-style monster movement action. The velocity argument is
+   * the temporary bonus passed to AITACTICS_SetVelocity, not an absolute
+   * world speed. A value of 75 therefore combines with the native monster
+   * base 75% to produce 150% movement and animation speed.
+   */
+  protected boolean moveTo(
+      Vector2 target,
+      boolean running,
+      int velocityBonusPercent,
+      boolean raycast,
+      int targetEntityId) {
+    boolean found = pathfinder.findPath(entityId, target, raycast, targetEntityId);
+    if (!found) {
+      stopMovement();
+      return false;
+    }
+
+    Velocity velocity = mVelocity.get(entityId);
+    velocity.setModeSpeedBonusPercent(velocityBonusPercent);
+    if (running) {
+      mRunning.create(entityId);
+    } else {
+      mRunning.remove(entityId);
+    }
+
+    if (!movementActive
+        || lastMovementRunning != running
+        || lastMovementVelocityBonus != velocityBonusPercent) {
+      log.info(
+          "[MONSTER_MOVE] entity={} monster={} ai={} mode={} baseVelocity={} "
+              + "velocityBonusPct={} effectiveSpeed={} target={} raycast={}",
+          entityId,
+          monster != null && monster.monstats != null ? monster.monstats.Id : "unknown",
+          getClass().getSimpleName(),
+          running ? "RUN" : "WALK",
+          running ? velocity.runSpeed : velocity.walkSpeed,
+          velocityBonusPercent,
+          velocity.speed(running),
+          targetEntityId,
+          raycast);
+    }
+    movementActive = true;
+    lastMovementRunning = running;
+    lastMovementVelocityBonus = velocityBonusPercent;
+    return true;
+  }
+
+  protected boolean walkTo(Vector2 target, int targetEntityId) {
+    return moveTo(target, false, 0, false, targetEntityId);
+  }
+
+  protected boolean walkTo(Vector2 target, int velocityBonusPercent, int targetEntityId) {
+    return moveTo(target, false, velocityBonusPercent, false, targetEntityId);
+  }
+
+  protected boolean runTo(Vector2 target, int velocityBonusPercent, int targetEntityId) {
+    return moveTo(target, true, velocityBonusPercent, true, targetEntityId);
+  }
+
+  protected void stopMovement() {
+    pathfinder.findPath(entityId, null);
+    mRunning.remove(entityId);
+    if (mVelocity.has(entityId)) mVelocity.get(entityId).clearModeSpeedBonus();
+    movementActive = false;
   }
 
   protected int fire(Missiles.Entry missile) {

@@ -220,17 +220,9 @@ public class Brute extends AI {
     float speedMalus = MathUtils.clamp(lifePercent, 40f, 100f);
     float speedModifier = 100f - speedMalus;
     
-    // Apply speed modifier to velocity
-    if (mVelocity.has(entityId)) {
-      com.riiablo.engine.server.component.Velocity vel = mVelocity.get(entityId);
-      // Note: D2MOD's velocity parameter affects pathfinding speed, not animation
-      // We'll adjust the pathfinding speed by modifying the velocity length
-      // This is a simplified implementation
-    }
-    
     // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
     // This appears to be a walk-to-target function with flags=7
-    pathfinder.findPath(entityId, targetPos, false, targetId);
+    walkTo(targetPos, MathUtils.round(speedModifier), targetId);
     stateMachine.changeState(State.APPROACH);
     time = MathUtils.random(1f, 2);
   }

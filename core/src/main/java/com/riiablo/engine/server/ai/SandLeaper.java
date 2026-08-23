@@ -185,7 +185,7 @@ public class SandLeaper extends AI {
       if (targetDistance > 10) {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 75, 0)
         // D2MOD: D2GAME_AICORE_WalkToOwner_6FCD0B60(pGame, pUnit, pAiTickParam->pTarget, 5u)
-        pathfinder.findPath(entityId, targetPos, false, targetId);
+        walkTo(targetPos, 75, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;

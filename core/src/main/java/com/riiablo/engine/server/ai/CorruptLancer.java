@@ -25,10 +25,11 @@ import com.riiablo.engine.server.component.Sequence;
  * CorruptLancer AI implementation matching D2MOD's AITHINK_Fn036_CorruptLancer logic.
  * 
  * D2MOD AI Parameters:
- * - params[0] = CORRUPTLANCER_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
- * - params[1] = CORRUPTLANCER_AI_PARAM_STALL_DURATION (idle time)
- * - params[2] = CORRUPTLANCER_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
+ * - params[0] = CORRUPTLANCER_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
+ * - params[1] = CORRUPTLANCER_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
+ * - params[2] = CORRUPTLANCER_AI_PARAM_STALL_DURATION (idle time)
  * - params[3] = CORRUPTLANCER_AI_PARAM_RUN_CHANCE_PCT (run chance)
+ * - params[4] = CORRUPTLANCER_AI_PARAM_ALWAYS_RUN_DISTANCE
  * 
  * Special: Can run when approaching target.
  */
@@ -63,6 +64,7 @@ public class CorruptLancer extends AI {
   final StateMachine<Integer, State> stateMachine;
   float nextAction;
   float time;
+  boolean ranToTarget;
 
   public CorruptLancer(int entityId) {
     super(entityId);
@@ -82,7 +84,7 @@ public class CorruptLancer extends AI {
   @Override
   public void kill() {
     if (stateMachine.getCurrentState() == State.DEAD) return;
-    pathfinder.findPath(entityId, null);
+    stopMovement();
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
     Riiablo.audio.play(monsound + "_death_1", true);
@@ -141,7 +143,7 @@ public class CorruptLancer extends AI {
       switch (stateMachine.getCurrentState()) {
         case IDLE:
           if (nextAction < 0) {
-            pathfinder.findPath(entityId, null);
+            stopMovement();
             stateMachine.changeState(State.WANDER);
           }
           break;
@@ -152,7 +154,7 @@ public class CorruptLancer extends AI {
           } else {
             Vector2 dst = tmpVec2.set(mPosition.get(entityId).position);
             dst.add(MathUtils.random(-5, 5), MathUtils.random(-5, 5));
-            pathfinder.findPath(entityId, dst);
+            walkTo(dst, Engine.INVALID_ENTITY);
           }
           break;
         default:
@@ -165,10 +167,20 @@ public class CorruptLancer extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
+    float alwaysRunDistance = params.length > 4 ? params[4] : 20f;
+    if (targetDistance > alwaysRunDistance) {
+      runTo(targetPos, 100, targetId);
+      ranToTarget = true;
+      stateMachine.changeState(State.APPROACH);
+      time = MathUtils.random(1f, 2f);
+      return;
+    }
+
     // D2MOD: If in combat
     if (bCombat) {
-      if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-        pathfinder.findPath(entityId, null);
+      if (ranToTarget || (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f))) {
+        ranToTarget = false;
+        stopMovement();
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
@@ -178,26 +190,23 @@ public class CorruptLancer extends AI {
         return;
       } else {
         stateMachine.changeState(State.IDLE);
-        time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+        time = params.length > 2 ? params[2] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
         return;
       }
     }
 
     // D2MOD: Not in combat, approach
-    if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-      // D2MOD: PATH_SetStepNum(pUnit->pDynamicPath, pAiTickParam->pMonstats2Txt->nMeleeRng)
-      float meleeRng = 1f + monster.monstats2.MeleeRng;
-      
+    if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
       if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 13, 100, 0)
         // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, pAiTickParam->pMonstats2Txt->nMeleeRng)
-        pathfinder.findPath(entityId, targetPos, true, targetId);
+        runTo(targetPos, 100, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
       } else {
         // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
-        pathfinder.findPath(entityId, targetPos, false, targetId);
+        walkTo(targetPos, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
@@ -205,7 +214,7 @@ public class CorruptLancer extends AI {
     }
 
     stateMachine.changeState(State.IDLE);
-    time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+    time = params.length > 2 ? params[2] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
   }
 
   @Override

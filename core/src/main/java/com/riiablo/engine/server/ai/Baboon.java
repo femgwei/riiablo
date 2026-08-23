@@ -153,7 +153,10 @@ public class Baboon extends AI {
 
     // D2MOD: Calculate velocity modifier based on run/velocity ratio
     int nVel = 0;
-    // TODO: Calculate from monstats.nRun and monstats.nVelocity
+    if (monster.monstats.Velocity > 0) {
+      int ratio = 100 * monster.monstats.Run / monster.monstats.Velocity;
+      if (ratio >= 100) nVel = Math.min(ratio - 100, 120);
+    }
 
     // D2MOD: If in regen state
     if (aiParam0 > 0) {
@@ -206,7 +209,7 @@ public class Baboon extends AI {
           aiParam0 = 0;
           // D2MOD: AITACTICS_SetVelocity(pUnit, 13, nVel, 0)
           // D2MOD: sub_6FCD0410(pGame, pUnit, pAiTickParam->pTarget, 7)
-          pathfinder.findPath(entityId, targetPos, false, targetId);
+          walkTo(targetPos, nVel, targetId);
           stateMachine.changeState(State.APPROACH);
           time = MathUtils.random(1f, 2);
           return;
@@ -230,7 +233,7 @@ public class Baboon extends AI {
         stateMachine.changeState(State.ESCAPE);
         Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
         Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(15f));
-        pathfinder.findPath(entityId, escapePos, false, Engine.INVALID_ENTITY);
+        walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
         if (!mPathfind.has(entityId)) {
           // Can't escape
           if (!bCombat) {
@@ -326,7 +329,7 @@ public class Baboon extends AI {
         stateMachine.changeState(State.ESCAPE);
         Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
         Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(15f));
-        pathfinder.findPath(entityId, escapePos, false, Engine.INVALID_ENTITY);
+        walkTo(escapePos, nVel, Engine.INVALID_ENTITY);
         time = MathUtils.random(1f, 2);
         return;
       }

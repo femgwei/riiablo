@@ -171,7 +171,7 @@ public class Scarab extends AI {
         } else {
           // D2MOD: AITACTICS_SetVelocity(pUnit, 2, 100, 0)
           // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 0)
-          pathfinder.findPath(entityId, targetPos, false, targetId);
+          walkTo(targetPos, 100, targetId);
           stateMachine.changeState(State.APPROACH);
           time = MathUtils.random(1f, 2);
           return;
@@ -213,7 +213,7 @@ public class Scarab extends AI {
       if (aiParam0 != 0) {
         // D2MOD: AITACTICS_SetVelocity(pUnit, 2, 0, 4u)
         // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
-        pathfinder.findPath(entityId, targetPos, false, targetId);
+        walkTo(targetPos, targetId);
         stateMachine.changeState(State.APPROACH);
         // D2MOD: 10% chance to exit command state
         if (MathUtils.randomBoolean(0.1f)) {

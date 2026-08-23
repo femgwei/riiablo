@@ -160,7 +160,7 @@ public class SkeletonMage extends AI {
     if (targetDistance > approachDistance && params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
       // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, SKELETONMAGE_AI_PARAM_APPROACH_DISTANCE))
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, 10, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;
@@ -173,7 +173,7 @@ public class SkeletonMage extends AI {
       stateMachine.changeState(State.ESCAPE);
       Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
       Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(5f));
-      pathfinder.findPath(entityId, escapePos, false, Engine.INVALID_ENTITY);
+      walkTo(escapePos, 25, Engine.INVALID_ENTITY);
       if (!mPathfind.has(entityId)) {
         // Can't escape, attack
         pathfinder.findPath(entityId, null);
@@ -217,7 +217,7 @@ public class SkeletonMage extends AI {
       // D2MOD: Approach
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
       // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, AI_GetParamValue(pGame, pAiTickParam, SKELETONMAGE_AI_PARAM_APPROACH_DISTANCE))
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, 10, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;

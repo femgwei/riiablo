@@ -210,7 +210,7 @@ public class Fetish extends AI {
         
         // D2MOD: AITACTICS_SetVelocity(pUnit, 13, 50, 0)
         // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 7)
-        pathfinder.findPath(entityId, targetPos, false, targetId);
+        walkTo(targetPos, 50, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;
@@ -229,7 +229,7 @@ public class Fetish extends AI {
           stateMachine.changeState(State.ESCAPE);
           Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
           Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(14f));
-          pathfinder.findPath(entityId, escapePos, false, Engine.INVALID_ENTITY);
+          walkTo(escapePos, 50, Engine.INVALID_ENTITY);
           time = MathUtils.random(1f, 2);
           return;
         }
@@ -253,7 +253,7 @@ public class Fetish extends AI {
         
         // D2MOD: AITACTICS_SetVelocity(pUnit, 13, 50, 0)
         // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, 0)
-        pathfinder.findPath(entityId, targetPos, false, targetId);
+        walkTo(targetPos, 50, targetId);
         stateMachine.changeState(State.APPROACH);
         time = MathUtils.random(1f, 2);
         return;

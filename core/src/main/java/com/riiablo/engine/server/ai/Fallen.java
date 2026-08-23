@@ -200,24 +200,14 @@ public class Fallen extends AI {
     // Calculate escape position: entityPos + escapeDir * escapeDistance
     Vector2 escapePos = tmpVec2_2.set(escapeDir).scl(escapeDistance).add(entityPos);
     
-    // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 50, 0) sets velocity parameter (not animation mode)
-    // D2MOD: D2GAME_AICORE_Escape uses MONMODE_WALK, so we keep WL mode (no Running component)
-    // The velocity parameter affects path speed calculation, but animation stays walk
-    // We remove Running component if present to ensure WL mode
-    if (mRunning.has(entityId)) {
-      mRunning.remove(entityId);
-    }
-    
     // Debug log disabled
     // log.info("Fallen {} attempting to escape: target={}, escapeDistance={}, escapePos=({}, {})", 
     //     entityId, targetId, String.format("%.2f", escapeDistance), 
     //     String.format("%.2f", escapePos.x), String.format("%.2f", escapePos.y));
     
-    // Try to pathfind away (Pathfinder will use walkSpeed since no Running component)
-    // Use raycast=true to find a valid path even if direct path is blocked
-    boolean pathFound = pathfinder.findPath(entityId, escapePos, true);
-    
-    return pathFound;
+    // D2GAME_AICORE_Escape uses MONMODE_WALK with a temporary +50%
+    // velocity stat and asks pathfinding for a collision-safe fallback.
+    return moveTo(escapePos, false, 50, true, Engine.INVALID_ENTITY);
   }
 
   /**

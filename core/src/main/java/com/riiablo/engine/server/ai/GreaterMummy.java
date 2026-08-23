@@ -246,7 +246,7 @@ public class GreaterMummy extends AI {
     // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 50, 0)
     // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pAiTickParam->pTarget, 3u)
     if (MathUtils.randomBoolean(0.5f)) {
-      pathfinder.findPath(entityId, targetPos, false, targetId);
+      walkTo(targetPos, 50, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
       return;

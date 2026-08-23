@@ -268,7 +268,7 @@ public class Bighead extends AI {
       // Try to escape, if can't escape, attack
       Vector2 escapeDir = tmpVec2.set(entityPos).sub(targetPos).nor();
       Vector2 escapePos = tmpVec2.set(entityPos).add(escapeDir.scl(5f));
-      pathfinder.findPath(entityId, escapePos, false, Engine.INVALID_ENTITY);
+      walkTo(escapePos, 50, Engine.INVALID_ENTITY);
       if (!mPathfind.has(entityId)) {
         // Can't escape, attack
         pathfinder.findPath(entityId, null);
