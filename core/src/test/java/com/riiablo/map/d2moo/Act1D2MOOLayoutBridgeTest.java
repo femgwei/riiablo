@@ -600,7 +600,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       applier.putGrid(levelId, grid);
       applier.resetLastExportedFloorCount();
       int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
-      int[] unitStats = new int[3];
+      int[] unitStats = new int[4];
       int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
           (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
             unitStats[0]++;
@@ -611,6 +611,12 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
                 assertTrue(index >= 0 && index < Riiablo.files.obj.getSize(1),
                     "Act I DS1 object preset index is invalid: level=" + levelId
                         + " index=" + index);
+                int objectId = Riiablo.files.obj.getObjectId(1, index);
+                com.riiablo.codec.excel.Objects.Entry base = Riiablo.files.objects.get(objectId);
+                if (base != null
+                    && (base.SubClass & com.riiablo.engine.Engine.Object.SUBCLASS_WAYPOINT) != 0) {
+                  unitStats[3]++;
+                }
               }
             }
           });
@@ -619,6 +625,13 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       int expectedObjects = expectedFixedSeedRawObjects(levelId);
       assertEquals(expectedObjects, unitStats[2],
           "fixed-seed native DS1 object coverage changed for level " + levelId);
+      int expectedWaypoints = levelId == D2LevelIds.LEVEL_COLDPLAINS
+              || levelId == D2LevelIds.LEVEL_STONYFIELD
+              || levelId == D2LevelIds.LEVEL_DARKWOOD
+              || levelId == D2LevelIds.LEVEL_BLACKMARSH
+          ? 1 : 0;
+      assertEquals(expectedWaypoints, unitStats[3],
+          "native waypoint object coverage changed for level " + levelId);
       if (levelId != D2LevelIds.LEVEL_BURIALGROUNDS
           && levelId != D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1) {
         assertNativeDirtPaths(level, true);
@@ -722,13 +735,13 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
 
   private static int expectedFixedSeedRawObjects(int levelId) {
     switch (levelId) {
-      case D2LevelIds.LEVEL_STONYFIELD: return 21;
-      case D2LevelIds.LEVEL_COLDPLAINS: return 13;
+      case D2LevelIds.LEVEL_STONYFIELD: return 24;
+      case D2LevelIds.LEVEL_COLDPLAINS: return 14;
       case D2LevelIds.LEVEL_BLOODMOOR: return 6;
       case D2LevelIds.LEVEL_BURIALGROUNDS: return 11;
-      case D2LevelIds.LEVEL_BLACKMARSH: return 28;
+      case D2LevelIds.LEVEL_BLACKMARSH: return 31;
       case D2LevelIds.LEVEL_TAMOEHIGHLAND: return 7;
-      case D2LevelIds.LEVEL_DARKWOOD: return 27;
+      case D2LevelIds.LEVEL_DARKWOOD: return 30;
       case D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1: return 32;
       default: throw new IllegalArgumentException("unexpected level " + levelId);
     }

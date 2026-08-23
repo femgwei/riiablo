@@ -1083,10 +1083,21 @@ public class DrlgOutdoors {
 
             int gridHeight = outdoors.getNGridHeight();
             int gridWidth = outdoors.getNGridWidth();
+            int matchingLinkFlags = 0;
+            int levelLinkCells = 0;
+            int matchingLevelLinks = 0;
             for (int y = 0; y < gridHeight; ++y) {
                 for (int x = 0; x < gridWidth; ++x) {
-                    if ((DrlgDrlgGrid.getGridEntry(outdoors.getPGrid(1), x, y) & flags) != 0
-                            && DrlgOutdoors.testGridCellNonLvlLink(level, x, y) == 0) {
+                    int cellFlags = DrlgDrlgGrid.getGridEntry(outdoors.getPGrid(1), x, y);
+                    boolean matchingLink = matchesColdPlainsWaypointLink(cellFlags, flags);
+                    boolean levelLink = DrlgOutdoors.testGridCellNonLvlLink(level, x, y) == 0;
+                    if (matchingLink) matchingLinkFlags++;
+                    if (levelLink) levelLinkCells++;
+                    if (matchingLink && levelLink) {
+                        matchingLevelLinks++;
+                        int sourceX = x;
+                        int sourceY = y;
+                        int sourcePacked = DrlgDrlgGrid.getGridEntry(outdoors.getPGrid(2), x, y);
                         // 避免落在边界上
                         if (x == 0) {
                             x = 1;
@@ -1101,6 +1112,8 @@ public class DrlgOutdoors {
                             --y;
                         }
 
+                        int targetPacked = DrlgDrlgGrid.getGridEntry(outdoors.getPGrid(2), x, y);
+
                         DrlgDrlgGrid.alterGridFlag(outdoors.getPGrid(1), x, y, 0x20000,
                                 DrlgDrlgGrid.FlagOperation.OR);
                         D2DrlgOutdoorPackedGrid2InfoStrc packedInfo =
@@ -1108,10 +1121,19 @@ public class DrlgOutdoors {
                         packedInfo.setNUnkb11(true);
                         DrlgDrlgGrid.alterGridFlag(outdoors.getPGrid(2), x, y,
                                 packedInfo.getNPackedValue(), DrlgDrlgGrid.FlagOperation.OR);
+                        D2Log.debug("DRLG_WAYPOINT placed level=%d source=(%d,%d) cell=(%d,%d) "
+                                        + "roomFlag=0x20000 visFlag=0x%X cellFlags=0x%X "
+                                        + "sourcePacked=0x%X targetPacked=0x%X special=true",
+                                level.getLevelId(), sourceX, sourceY, x, y, flags,
+                                cellFlags, sourcePacked, targetPacked);
                         return;
                     }
                 }
             }
+            D2Log.debug("DRLG_WAYPOINT cold-plains special miss level=%d visFlag=0x%X "
+                            + "matchingFlags=%d levelLinks=%d overlap=%d",
+                    level.getLevelId(), flags, matchingLinkFlags, levelLinkCells,
+                    matchingLevelLinks);
         }
 
         // 一般情况：在可用的网格中打乱坐标后随机选择
@@ -1150,9 +1172,22 @@ public class DrlgOutdoors {
                 packedInfo.setNUnkb11(true);
                 DrlgDrlgGrid.alterGridFlag(outdoors.getPGrid(2), x, y,
                         packedInfo.getNPackedValue(), DrlgDrlgGrid.FlagOperation.OR);
+                D2Log.debug("DRLG_WAYPOINT placed level=%d cell=(%d,%d) roomFlag=0x10000 special=false",
+                        level.getLevelId(), x, y);
                 break;
             }
         }
+    }
+
+    static boolean matchesColdPlainsWaypointLink(int cellFlags, int bloodMoorVisFlag) {
+        // Native DRLG builds a runtime Vis entry for the Blood Moor link. The
+        // standalone Java bridge currently has only Levels.txt Vis data,
+        // which describes Cold Plains cave warps and can leave this flag at
+        // zero. In that case retain native placement semantics by accepting
+        // an outdoor level-link bit (Vis0..Vis7 occupy bits 4..11) instead of
+        // silently omitting the waypoint altogether.
+        int linkMask = bloodMoorVisFlag != 0 ? bloodMoorVisFlag : 0x00000FF0;
+        return (cellFlags & linkMask) != 0;
     }
 
     /**

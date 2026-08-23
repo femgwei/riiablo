@@ -706,37 +706,68 @@ public class DrlgTileSub {
         // 处理预设单位
         if (pLvlSubTxtRecord.getPDrlgFile() != null 
                 && pLvlSubTxtRecord.getPDrlgFile().getPPresetUnit() != null) {
-            int nMinX = tBox.getNPosX();
-            int nMinY = tBox.getNPosY();
-            int nMaxX = tBox.getNWidth();
-            int nMaxY = tBox.getNHeight();
-            
-            // 将游戏瓦片坐标转换为子瓦片坐标
-            com.d2moo.common.dungeon.Dungeon.gameTileToSubtileCoords(new int[]{nX}, new int[]{nY});
-            com.d2moo.common.dungeon.Dungeon.gameTileToSubtileCoords(new int[]{nMinX}, new int[]{nMinY});
-            com.d2moo.common.dungeon.Dungeon.gameTileToSubtileCoords(new int[]{nMaxX}, new int[]{nMaxY});
-            
             // 遍历预设单位链表
             D2PresetUnit pPresetUnit = pLvlSubTxtRecord.getPDrlgFile().getPPresetUnit();
+            boolean exportDs1Origin = isWaypointSubstitution(pLvlSubTxtRecord);
             while (pPresetUnit != null) {
-                int nUnitX = pPresetUnit.getNXpos();
-                int nUnitY = pPresetUnit.getNYpos();
-                
-                if (nUnitX > nMinX && nUnitX < nMinX + nMaxX 
-                        && nUnitY > nMinY && nUnitY < nMinY + nMaxY) {
-                    // 分配预设单位（使用已实现的函数）
-                    if (pOutdoorLevel.getPDrlgRoom() != null) {
-                        int nFinalX = nX + nUnitX - nMinX;
-                        int nFinalY = nY + nUnitY - nMinY;
-                        DrlgDrlgRoom.allocPresetUnit(pOutdoorLevel.getPDrlgRoom(), pMemPool,
-                                pPresetUnit.getNUnitType(), pPresetUnit.getNIndex(),
-                                pPresetUnit.getNMode(), nFinalX, nFinalY);
-                    }
-                }
+                copySubstitutionPresetUnit(pOutdoorLevel.getPDrlgRoom(), pMemPool,
+                        pPresetUnit, nX, nY, tBox, exportDs1Origin);
                 
                 pPresetUnit = pPresetUnit.getPNext();
             }
         }
+    }
+
+    /**
+     * Copies one DS1 preset unit using the native D2Common game-tile to
+     * subtile coordinate contract from {@code sub_6FD8ACE0}.
+     *
+     * <p>The old Java port passed freshly allocated arrays to
+     * {@code gameTileToSubtileCoords} and then discarded them, leaving every
+     * value unconverted. It also lost the external exporter's DS1 provenance
+     * bit. The rendered waypoint substitution therefore existed without a
+     * matching exported object entity.</p>
+     */
+    static D2PresetUnit copySubstitutionPresetUnit(D2DrlgRoom room, Object memPool,
+            D2PresetUnit source, int tileX, int tileY, D2DrlgCoord groupBox,
+            boolean exportDs1Origin) {
+        if (room == null || source == null || groupBox == null) return null;
+
+        int subtileX = tileX * 5;
+        int subtileY = tileY * 5;
+        int minSubtileX = groupBox.getNPosX() * 5;
+        int minSubtileY = groupBox.getNPosY() * 5;
+        int widthSubtiles = groupBox.getNWidth() * 5;
+        int heightSubtiles = groupBox.getNHeight() * 5;
+        int unitX = source.getNXpos();
+        int unitY = source.getNYpos();
+        if (unitX <= minSubtileX || unitX >= minSubtileX + widthSubtiles
+                || unitY <= minSubtileY || unitY >= minSubtileY + heightSubtiles) {
+            return null;
+        }
+
+        D2PresetUnit copy = DrlgDrlgRoom.allocPresetUnit(room, memPool,
+                source.getNUnitType(), source.getNIndex(), source.getNMode(),
+                subtileX + unitX - minSubtileX,
+                subtileY + unitY - minSubtileY);
+        // ds1Raw is Java-only provenance used by the riiablo export bridge.
+        // Native units allocated here still carry the DS1 Obj/MonPreset index
+        // contract, so preserve it across the substitution copy.
+        copy.setDs1Raw(exportDs1Origin && source.isDs1Raw());
+        return copy;
+    }
+
+    static boolean isWaypointSubstitution(D2LvlSubTxt record) {
+        if (record == null || record.getSzFile() == null) return false;
+        String file = record.getSzFile().replace('\\', '/');
+        int separator = file.lastIndexOf('/');
+        String name = separator >= 0 ? file.substring(separator + 1) : file;
+        // SubWaypoint's second native mask bit (Cold Plains' 0x20000 room
+        // flag) selects WaySmall.ds1 rather than Waypoint.ds1. Both files
+        // contain the waypoint object's DS1 preset unit and must remain
+        // visible to riiablo's external entity bridge.
+        return name.equalsIgnoreCase("Waypoint.ds1")
+                || name.equalsIgnoreCase("WaySmall.ds1");
     }
     
     /**
