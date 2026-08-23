@@ -76,7 +76,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   // The visible slot in ctrlpnl7 starts 10 Stage units to the right of the
   // assembled control widget's geometric center. This keeps the fill aligned
   // with the slot border rather than the transparent texture margin.
-  private static final float EXP_BAR_CENTER_OFFSET_X = 16f;
+  private static final float EXP_BAR_CENTER_OFFSET_X = 21f;
 
   final AssetDescriptor<DC6> popbeltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl_popbelt.DC6", DC6.class);
   TextureRegion popbelt;

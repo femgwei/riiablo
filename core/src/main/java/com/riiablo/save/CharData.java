@@ -319,7 +319,13 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   }
 
   public void setAction(int alternate, int button, int skill) {
+    int previous = actions[alternate][button];
     actions[alternate][button] = skill;
+    if (previous != skill && Gdx.app != null) {
+      Gdx.app.log(TAG, "[SKILL_SELECT] alternate=" + alternate
+          + " button=" + button + " skill=" + skill
+          + " previous=" + previous);
+    }
   }
 
   public boolean hasMerc() {

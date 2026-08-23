@@ -203,17 +203,9 @@ public class CursorMovementSystem extends BaseSystem {
           // not turn the normal Attack skill into a ranged attack.
           boolean canThrow = false;
           float throwRange = 0f;
-          Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-          if (weapon == null) {
-            weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-          }
+          Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
           
           if (explicitThrowSkill && weapon != null && weapon.base != null) {
-            boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
-                                 weapon.type.is(com.riiablo.item.Type.TKNI) || 
-                                 weapon.type.is(com.riiablo.item.Type.TAXE);
-            
-            if (isThrowable) {
               // Check quantity
               com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
               if (quantity != null && quantity.asInt() > 0) {
@@ -230,9 +222,8 @@ public class CursorMovementSystem extends BaseSystem {
                   canThrow = true;
                 }
               }
-            }
           }
-          
+
           traceAttackRange(src, targetId, selectedSkillId, dst, inMeleeRange,
               explicitThrowSkill, canThrow);
 
@@ -360,29 +351,20 @@ public class CursorMovementSystem extends BaseSystem {
       // point-blank melee even when a throwable weapon is equipped.
       boolean canThrow = false;
       float throwRange = 0f;
-      Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-      if (weapon == null) {
-        weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-      }
-      
+      Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+
       if (explicitThrowSkill && weapon != null && weapon.base != null) {
-        boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
-                             weapon.type.is(com.riiablo.item.Type.TKNI) || 
-                             weapon.type.is(com.riiablo.item.Type.TAXE);
-        
-        if (isThrowable) {
-          com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
-          if (quantity != null && quantity.asInt() > 0) {
-            if (weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry) {
-              com.riiablo.codec.excel.Weapons.Entry weaponEntry = (com.riiablo.codec.excel.Weapons.Entry) weapon.base;
-              throwRange = weaponEntry.RangeAdder + 3f;
-            } else {
-              throwRange = 10f;
-            }
-            
-            if (dst <= throwRange) {
-              canThrow = true;
-            }
+        com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+        if (quantity != null && quantity.asInt() > 0) {
+          if (weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry) {
+            com.riiablo.codec.excel.Weapons.Entry weaponEntry = (com.riiablo.codec.excel.Weapons.Entry) weapon.base;
+            throwRange = weaponEntry.RangeAdder + 3f;
+          } else {
+            throwRange = 10f;
+          }
+
+          if (dst <= throwRange) {
+            canThrow = true;
           }
         }
       }

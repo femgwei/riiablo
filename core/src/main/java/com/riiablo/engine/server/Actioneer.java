@@ -17,7 +17,6 @@ import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
-import com.riiablo.item.BodyLoc;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
@@ -149,8 +148,7 @@ public class Actioneer extends PassiveSystem {
     // missile collision or damage-calculation problem without changing combat
     // behaviour.
     if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-      Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-      if (weapon == null) weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
+      Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
       int quantity = -1;
       int itemThrowMin = 0;
       int itemThrowMax = 0;
@@ -172,25 +170,15 @@ public class Actioneer extends PassiveSystem {
     
     // For players, check if equipped weapon is throwable and has quantity
     if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-      Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-      if (weapon == null) {
-        weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-      }
+      Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
       
       if (weapon != null && weapon.base != null) {
-        // Check if weapon is throwable (javelin, throwing knife, throwing axe)
-        boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
-                             weapon.type.is(com.riiablo.item.Type.TKNI) || 
-                             weapon.type.is(com.riiablo.item.Type.TAXE);
-        
-        if (isThrowable) {
-          // Check quantity
-          StatRef quantity = weapon.attrs.base().get(Stat.quantity);
-          if (quantity == null || quantity.asInt() <= 0) {
-            return; // Cannot throw, no quantity
-          }
-        } else {
-          return; // Not a throwable weapon
+        // Check quantity. The helper already selected a throwable weapon from
+        // either active hand, so an unrelated melee RARM item cannot block a
+        // valid throwable weapon in LARM.
+        StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+        if (quantity == null || quantity.asInt() <= 0) {
+          return; // Cannot throw, no quantity
         }
       } else {
         return; // No weapon equipped
@@ -450,22 +438,13 @@ public class Actioneer extends PassiveSystem {
           
           boolean isThrowAttack = isThrowSkill || isThrowFunc;
           if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-            Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-            if (weapon == null) {
-              weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-            }
+            Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
             
             if (weapon != null && weapon.base != null) {
-              boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
-                                   weapon.type.is(com.riiablo.item.Type.TKNI) || 
-                                   weapon.type.is(com.riiablo.item.Type.TAXE);
-              
-              if (isThrowable) {
-                StatRef quantity = weapon.attrs.base().get(Stat.quantity);
-                if (quantity != null && quantity.asInt() > 0) {
-                  // Decrease quantity by 1
-                  quantity.sub(1);
-                }
+              StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+              if (quantity != null && quantity.asInt() > 0) {
+                // Decrease quantity by 1
+                quantity.sub(1);
               }
             }
           }
@@ -544,23 +523,14 @@ public class Actioneer extends PassiveSystem {
           
           // Check weapon type even if not a throw skill (might be equipped throwable weapon)
           if (mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-            Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-            if (weapon == null) {
-              weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-            }
+            Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
             
             if (weapon != null && weapon.base != null) {
-              boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
-                                   weapon.type.is(com.riiablo.item.Type.TKNI) || 
-                                   weapon.type.is(com.riiablo.item.Type.TAXE);
-              
-              // Consume quantity if it's a throwable weapon
-              if (isThrowable) {
-                StatRef quantity = weapon.attrs.base().get(Stat.quantity);
-                if (quantity != null && quantity.asInt() > 0) {
-                  // Decrease quantity by 1
-                  quantity.sub(1);
-                }
+              // Consume quantity if a throwable weapon is active
+              StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+              if (quantity != null && quantity.asInt() > 0) {
+                // Decrease quantity by 1
+                quantity.sub(1);
               }
             }
           }

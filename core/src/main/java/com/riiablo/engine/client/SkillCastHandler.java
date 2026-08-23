@@ -18,7 +18,6 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
-import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.item.Type;
 import com.riiablo.logger.LogManager;
@@ -340,10 +339,7 @@ public class SkillCastHandler extends PassiveSystem {
       // If skill doesn't have missile, try to get from equipped throwable weapon
       try {
         if (Riiablo.charData != null && Riiablo.charData.getItems() != null) {
-          weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-          if (weapon == null) {
-            weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-          }
+          weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
           if (weapon != null && weapon.base != null) {
             boolean isThrowable = weapon.type.is(Type.JAVE) || 
                                  weapon.type.is(Type.TKNI) || 

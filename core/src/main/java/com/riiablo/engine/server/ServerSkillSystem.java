@@ -16,7 +16,6 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
-import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -348,8 +347,7 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     Player player = mPlayer.get(entityId);
     if (player.data == null || player.data.getItems() == null) return null;
-    Item weapon = player.data.getItems().getEquipped(BodyLoc.RARM);
-    if (weapon == null) weapon = player.data.getItems().getEquipped(BodyLoc.LARM);
+    Item weapon = player.data.getItems().getEquippedThrowableWeapon();
     return weapon != null ? weapon.code : null;
   }
 

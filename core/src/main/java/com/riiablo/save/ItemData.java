@@ -134,6 +134,24 @@ public class ItemData {
     return getSlot(BodyLoc.getAlternate(bodyLoc, alternate));
   }
 
+  /** Returns whether an item can be used by the explicit Throw skills. */
+  public static boolean isThrowableWeapon(Item item) {
+    return item != null && item.type != null
+        && (item.type.is(Type.JAVE) || item.type.is(Type.TKNI) || item.type.is(Type.TAXE));
+  }
+
+  /**
+   * Finds the active throwable weapon in either hand. The right hand is not
+   * preferred blindly: a melee weapon may occupy RARM while the throwable
+   * weapon is in LARM (especially after weapon-set switching).
+   */
+  public Item getEquippedThrowableWeapon() {
+    Item right = getEquipped(BodyLoc.RARM);
+    if (isThrowableWeapon(right)) return right;
+    Item left = getEquipped(BodyLoc.LARM);
+    return isThrowableWeapon(left) ? left : null;
+  }
+
   public boolean isActive(Item item) {
     if (item == null) return false;
     return item.bodyLoc == BodyLoc.getAlternate(item.bodyLoc, alternate);
