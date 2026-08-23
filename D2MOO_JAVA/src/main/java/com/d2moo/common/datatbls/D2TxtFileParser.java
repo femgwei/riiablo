@@ -33,7 +33,7 @@ public class D2TxtFileParser {
         String content = new String(fileData, StandardCharsets.UTF_8);
         
         // 按行分割
-        String[] lines = content.split("\r?\n");
+        String[] lines = content.split("\r\n|\n|\r");
         
         for (String line : lines) {
             // 跳过空行
@@ -48,6 +48,12 @@ public class D2TxtFileParser {
             
             // 按制表符分割字段
             String[] fields = line.split("\t", -1); // -1 保留空字段
+
+            // UTF-8 表格可能带 BOM；它属于文件签名而不是第一列名称。
+            if (rows.isEmpty() && fields.length > 0 && !fields[0].isEmpty()
+                    && fields[0].charAt(0) == '\uFEFF') {
+                fields[0] = fields[0].substring(1);
+            }
             
             // 移除字段前后的空白字符
             for (int i = 0; i < fields.length; i++) {
@@ -74,11 +80,16 @@ public class D2TxtFileParser {
         
         try {
             // 处理十六进制值（以 0x 开头）
-            if (value.trim().startsWith("0x") || value.trim().startsWith("0X")) {
-                return Integer.parseInt(value.trim().substring(2), 16);
+            String trimmed = value.trim();
+            if (trimmed.startsWith("0x") || trimmed.startsWith("0X")) {
+                long parsed = Long.parseLong(trimmed.substring(2), 16);
+                if ((parsed & ~0xFFFFFFFFL) != 0) {
+                    return defaultValue;
+                }
+                return (int) parsed;
             }
             
-            return Integer.parseInt(value.trim());
+            return Integer.parseInt(trimmed);
         } catch (NumberFormatException e) {
             D2Log.debug("Failed to parse integer: " + value + ", using default: " + defaultValue);
             return defaultValue;
