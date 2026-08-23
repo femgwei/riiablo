@@ -20,7 +20,21 @@ public class PlayerSerializer implements FlatBuffersSerializer<Player, PlayerP> 
   public int putData(FlatBufferBuilder builder, Player c) {
     CharData data = c.data;
     int charNameOffset = builder.createString(data.name);
-    return PlayerP.createPlayerP(builder, data.charClass, charNameOffset);
+    // PlayerP is also the authoritative progression snapshot.  The client
+    // keeps its local CharData for presentation, but combat/XP is resolved by
+    // the server in networked games, so serializing only the name/class leaves
+    // the experience bar permanently stale.
+    long experience = data.getStats().aggregate().getValue(
+        com.riiablo.attributes.Stat.experience, 0L);
+    int level = data.getStats().aggregate().getValue(
+        com.riiablo.attributes.Stat.level, data.level & 0xFF);
+
+    PlayerP.startPlayerP(builder);
+    PlayerP.addLevel(builder, level);
+    PlayerP.addExperience(builder, Math.max(0L, experience));
+    PlayerP.addCharName(builder, charNameOffset);
+    PlayerP.addCharClass(builder, data.charClass);
+    return PlayerP.endPlayerP(builder);
   }
 
   @Override

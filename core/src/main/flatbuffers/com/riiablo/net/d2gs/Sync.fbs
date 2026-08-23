@@ -61,6 +61,11 @@ table AngleP {
 table PlayerP {
   charClass:uint8;
   charName:string;
+  // Authoritative character progression. These fields are included in every
+  // player snapshot so a networked HUD cannot get stuck on the client-side
+  // character file after the server awards experience or a level-up.
+  experience:ulong;
+  level:uint8;
 }
 
 table DS1ObjectWrapperP {

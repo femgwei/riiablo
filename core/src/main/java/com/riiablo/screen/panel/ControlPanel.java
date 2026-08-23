@@ -30,6 +30,7 @@ import com.riiablo.CharacterClass;
 import com.riiablo.Keys;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.ExperienceTable;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
@@ -389,6 +390,11 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     // 1x1白色像素纹理用于填充
     private final TextureRegion whitePixel;
+    private long lastLoggedExperience = Long.MIN_VALUE;
+    private int lastLoggedLevel = Integer.MIN_VALUE;
+    private long lastLoggedCurrentLevelExp = Long.MIN_VALUE;
+    private long lastLoggedNextLevelExp = Long.MIN_VALUE;
+    private boolean missingStatsLogged;
 
     ExperienceWidget() {
       setHeight(EXP_BAR_HEIGHT);
@@ -412,10 +418,24 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       batch.setColor(new Color(0.2f, 0.2f, 0.2f, 1f));
       batch.draw(whitePixel, x, y, getWidth(), getHeight());
 
-      // 计算经验百分比
-      long currentExp = Riiablo.charData.getStats().get(Stat.experience).asLong();
-      int currentLevel = Riiablo.charData.getStats().get(Stat.level).asInt();
-      int charClass = Riiablo.charData.charClass;
+      // 计算经验百分比。经验条没有自己的计数器，始终消费 CharData 的
+      // aggregate（服务端同步也会更新该列表），因此不会与战斗经验分叉。
+      if (Riiablo.charData == null || Riiablo.charData.getStats() == null) {
+        if (!missingStatsLogged) {
+          Gdx.app.log(TAG, "[XP_BAR] character stats unavailable; drawing empty bar");
+          missingStatsLogged = true;
+        }
+        batch.setColor(Color.WHITE);
+        return;
+      }
+      StatListRef aggregate = Riiablo.charData.getStats().aggregate();
+      StatListRef base = Riiablo.charData.getStats().base();
+      long currentExp = aggregate.getValue(Stat.experience,
+          base.getValue(Stat.experience, 0L));
+      int currentLevel = aggregate.getValue(Stat.level,
+          Riiablo.charData.level & 0xFF);
+      currentLevel = Math.max(1, Math.min(ExperienceTable.MAX_LEVEL, currentLevel));
+      int charClass = Riiablo.charData.charClass & 0xFF;
 
       // 获取当前等级和下一等级所需经验
       long nextLevelExp = getNextLevelExperience(currentLevel, charClass);
@@ -423,9 +443,23 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
       // 计算百分比（0.0 到 1.0）
       float percentage = 0;
-      if (nextLevelExp > currentLevelExp && currentExp >= currentLevelExp) {
+      if (currentLevel >= ExperienceTable.MAX_LEVEL) {
+        percentage = 1.0f;
+      } else if (nextLevelExp > currentLevelExp && currentExp >= currentLevelExp) {
         percentage = (float) (currentExp - currentLevelExp) / (nextLevelExp - currentLevelExp);
         percentage = Math.min(1.0f, Math.max(0.0f, percentage));
+      }
+
+      if (currentExp != lastLoggedExperience || currentLevel != lastLoggedLevel
+          || currentLevelExp != lastLoggedCurrentLevelExp
+          || nextLevelExp != lastLoggedNextLevelExp) {
+        Gdx.app.log(TAG, String.format(
+            "[XP_BAR] level=%d experience=%d range=[%d,%d] progress=%.4f",
+            currentLevel, currentExp, currentLevelExp, nextLevelExp, percentage));
+        lastLoggedExperience = currentExp;
+        lastLoggedLevel = currentLevel;
+        lastLoggedCurrentLevelExp = currentLevelExp;
+        lastLoggedNextLevelExp = nextLevelExp;
       }
 
       // 绘制填充（白色，参考 OpenDiablo2）

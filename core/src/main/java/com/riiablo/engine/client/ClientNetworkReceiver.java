@@ -20,6 +20,7 @@ import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.physics.box2d.Body;
 
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Dirty;
 import com.riiablo.engine.Engine;
@@ -340,6 +341,44 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
 
 
+  /**
+   * Applies the server's progression snapshot to the local character data.
+   * PlayerP is also sent for remote players, but their progression must never
+   * overwrite this client's character file.
+   */
+  private void applyPlayerSnapshot(int entityId, PlayerP data) {
+    if (Riiablo.charData == null || Riiablo.game == null
+        || entityId != Riiablo.game.player) {
+      return;
+    }
+
+    long wireExperience = data.experience();
+    // Stat values are encoded as unsigned 32-bit values. Clamp malformed or
+    // future packets before writing to avoid assertion failures in StatList.
+    long experience = wireExperience < 0 ? 0L : Math.min(wireExperience, 0xFFFFFFFFL);
+    int level = Math.max(1, data.level());
+
+    long oldExperience = Riiablo.charData.getStats().aggregate()
+        .getValue(Stat.experience, 0L);
+    int oldLevel = Riiablo.charData.getStats().aggregate()
+        .getValue(Stat.level, Riiablo.charData.level & 0xFF);
+
+    // The HUD reads aggregate stats, while save/load and server award code use
+    // the base list. Keep both in lockstep so a later refresh cannot erase the
+    // value received from the server.
+    Riiablo.charData.getStats().base().put(Stat.experience, experience);
+    Riiablo.charData.getStats().aggregate().put(Stat.experience, experience);
+    Riiablo.charData.getStats().base().put(Stat.level, level);
+    Riiablo.charData.getStats().aggregate().put(Stat.level, level);
+    Riiablo.charData.level = (byte) level;
+
+    if (oldExperience != experience || oldLevel != level) {
+      Gdx.app.log(TAG, String.format(
+          "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d",
+          entityId, experience, oldExperience, level, oldLevel));
+    }
+  }
+
   private void Synchronize(D2GS packet) {
     packet.data(sync);
     Synchronize(sync);
@@ -365,7 +404,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
     for (int i = 0, len = entityData.componentLength(); i < len; i++) {
       switch (entityData.componentType(i)) {
         case ComponentP.ClassP:
-        case ComponentP.PlayerP:
+          break;
+        case ComponentP.PlayerP: {
+          PlayerP data = (PlayerP) entityData.component(new PlayerP(), i);
+          applyPlayerSnapshot(entityId, data);
+          break;
+        }
         case ComponentP.DS1ObjectWrapperP:
         case ComponentP.WarpP:
         case ComponentP.MonsterP:

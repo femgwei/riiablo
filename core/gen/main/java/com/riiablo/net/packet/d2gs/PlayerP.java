@@ -19,19 +19,27 @@ public final class PlayerP extends Table {
   public String charName() { int o = __offset(6); return o != 0 ? __string(o + bb_pos) : null; }
   public ByteBuffer charNameAsByteBuffer() { return __vector_as_bytebuffer(6, 1); }
   public ByteBuffer charNameInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 6, 1); }
+  public long experience() { int o = __offset(8); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public int level() { int o = __offset(10); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
 
   public static int createPlayerP(FlatBufferBuilder builder,
       int charClass,
-      int charNameOffset) {
-    builder.startTable(2);
+      int charNameOffset,
+      long experience,
+      int level) {
+    builder.startTable(4);
+    PlayerP.addExperience(builder, experience);
     PlayerP.addCharName(builder, charNameOffset);
+    PlayerP.addLevel(builder, level);
     PlayerP.addCharClass(builder, charClass);
     return PlayerP.endPlayerP(builder);
   }
 
-  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(2); }
+  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(4); }
   public static void addCharClass(FlatBufferBuilder builder, int charClass) { builder.addByte(0, (byte)charClass, (byte)0); }
   public static void addCharName(FlatBufferBuilder builder, int charNameOffset) { builder.addOffset(1, charNameOffset, 0); }
+  public static void addExperience(FlatBufferBuilder builder, long experience) { builder.addLong(2, experience, 0L); }
+  public static void addLevel(FlatBufferBuilder builder, int level) { builder.addByte(3, (byte)level, (byte)0); }
   public static int endPlayerP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;
