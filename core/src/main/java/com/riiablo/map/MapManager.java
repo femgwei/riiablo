@@ -3,7 +3,6 @@ package com.riiablo.map;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
@@ -16,7 +15,6 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
-import com.riiablo.engine.server.component.Size;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -181,7 +179,7 @@ public class MapManager extends PassiveSystem {
         && (base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) != 0;
   }
 
-  /** Finds a safe player destination adjacent to the waypoint in {@code level}. */
+  /** Finds the exact object center of the waypoint in {@code level}. */
   public Vector2 findWaypointPosition(Levels.Entry level, Vector2 out) {
     Map.Zone zone = map.findZone(level);
     if (zone == null) return null;
@@ -195,13 +193,7 @@ public class MapManager extends PassiveSystem {
         continue;
       }
 
-      int radius = MathUtils.ceil(Math.max(object.base.SizeX, object.base.SizeY) / 2f) + 2;
-      Vector2 waypoint = position.position;
-      if (findWalkableAdjacent(zone, waypoint, radius, out)) return out;
-
-      Gdx.app.error(TAG, "No walkable waypoint arrival tile: level=" + level.LevelName
-          + "(" + level.Id + ") position=" + waypoint);
-      return out.set(waypoint);
+      return copyWaypointCenter(position.position, out);
     }
 
     Gdx.app.error(TAG, "Waypoint entity not found: level=" + level.LevelName
@@ -209,32 +201,7 @@ public class MapManager extends PassiveSystem {
     return null;
   }
 
-  private boolean findWalkableAdjacent(
-      Map.Zone zone, Vector2 waypoint, int minimumRadius, Vector2 out) {
-    for (int radius = minimumRadius; radius <= minimumRadius + 8; radius++) {
-      for (int dx = -radius; dx <= radius; dx++) {
-        if (isWalkable(zone, waypoint.x + dx, waypoint.y - radius, out)) return true;
-        if (isWalkable(zone, waypoint.x + dx, waypoint.y + radius, out)) return true;
-      }
-      for (int dy = -radius + 1; dy < radius; dy++) {
-        if (isWalkable(zone, waypoint.x - radius, waypoint.y + dy, out)) return true;
-        if (isWalkable(zone, waypoint.x + radius, waypoint.y + dy, out)) return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean isWalkable(Map.Zone zone, float x, float y, Vector2 out) {
-    int worldX = MathUtils.round(x);
-    int worldY = MathUtils.round(y);
-    int playerRadius = Size.MEDIUM / 2;
-    for (int checkX = worldX - playerRadius; checkX <= worldX + playerRadius; checkX++) {
-      for (int checkY = worldY - playerRadius; checkY <= worldY + playerRadius; checkY++) {
-        if (!zone.contains(checkX, checkY)) return false;
-        if ((map.flags(checkX, checkY) & DT1.Tile.FLAG_BLOCK_WALK) != 0) return false;
-      }
-    }
-    out.set(worldX + 0.5f, worldY + 0.5f);
-    return true;
+  static Vector2 copyWaypointCenter(Vector2 waypoint, Vector2 out) {
+    return out.set(waypoint);
   }
 }
