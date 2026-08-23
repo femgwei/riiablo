@@ -50,6 +50,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertNativeMonasteryMainline(first.drlg, first.result.levelIds);
     assertNativeJailChain(first.drlg, first.result.levelIds);
     assertNativeCathedralChain(first.drlg, first.result.levelIds);
+    assertNativePortalLevels(first.drlg, first.result.levelIds);
     assertFixedSeedOutdoorCoverage(first.drlg);
     String firstSummary = summarize(first.drlg, first.result.levelIds);
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
@@ -65,6 +66,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertNativeMonasteryMainline(second.drlg, second.result.levelIds);
     assertNativeJailChain(second.drlg, second.result.levelIds);
     assertNativeCathedralChain(second.drlg, second.result.levelIds);
+    assertNativePortalLevels(second.drlg, second.result.levelIds);
     assertFixedSeedOutdoorCoverage(second.drlg);
     assertEquals(firstSummary, summarize(second.drlg, second.result.levelIds),
         "same seed must produce the same Act1 layout summary");
@@ -125,6 +127,26 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           D2LevelIds.LEVEL_CATHEDRAL }) {
         assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(levelId),
             "native monastery export was rejected " + levelId);
+      }
+    } finally {
+      map.dispose();
+    }
+  }
+
+  @Test
+  public void mapBuilderCreatesDynamicPortalDestinations() {
+    int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
+    Map map = new Map(seed, DEFAULT_DIFFICULTY);
+    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
+    try {
+      for (int levelId : new int[] {
+          D2LevelIds.LEVEL_TRISTRAM,
+          D2LevelIds.LEVEL_MOOMOOFARM }) {
+        Map.Zone destination = zone(map, levelId);
+        assertTrue(destination.width() > 0 && destination.height() > 0,
+            "dynamic portal destination has invalid bounds " + levelId);
+        assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(levelId),
+            "dynamic portal destination was not exported " + levelId);
       }
     } finally {
       map.dispose();
@@ -214,6 +236,16 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertPresetInRange(drlg, D2LevelIds.LEVEL_CATACOMBSLVL3,
         D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_W,
         D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_N);
+  }
+
+  private static void assertNativePortalLevels(D2DrlgStrc drlg, int[] levelIds) {
+    for (int levelId : new int[] {
+        D2LevelIds.LEVEL_TRISTRAM,
+        D2LevelIds.LEVEL_MOOMOOFARM }) {
+      assertTrue(contains(levelIds, levelId),
+          "native dynamic portal level is missing " + levelId);
+      assertNativeLevelExport(drlg, levelId);
+    }
   }
 
   private static void assertPresetInRange(
