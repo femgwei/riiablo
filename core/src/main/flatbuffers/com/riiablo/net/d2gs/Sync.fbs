@@ -13,6 +13,7 @@ union ComponentP {
   WarpP,
   MonsterP,
   ItemP,
+  StateP,
 }
 
 enum EntityFlags:uint8 (bit_flags) {
@@ -78,4 +79,12 @@ table MonsterP {
 
 table ItemP {
   data:[ubyte];
+}
+
+// Authoritative server status snapshot. The three vectors share the same
+// indices: stateId[i], duration[i], and level[i] describe one active state.
+table StateP {
+  stateId:[uint16];
+  duration:[int32];
+  level:[uint8];
 }

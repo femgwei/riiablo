@@ -37,6 +37,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
@@ -72,6 +73,7 @@ import com.riiablo.net.packet.d2gs.SwapBodyItem;
 import com.riiablo.net.packet.d2gs.SwapStoreItem;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.WarpP;
+import com.riiablo.net.packet.d2gs.StateP;
 import com.riiablo.save.CharData;
 import com.riiablo.util.ArrayUtils;
 import com.riiablo.util.BufferUtils;
@@ -92,6 +94,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -368,6 +371,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
         case ComponentP.MonsterP:
         case ComponentP.ItemP:
           break;
+        case ComponentP.StateP: {
+          StateP data = (StateP) entityData.component(new StateP(), i);
+          applyStateSnapshot(entityId, data);
+          break;
+        }
         case ComponentP.CofComponentsP: {
           CofComponentsP data = (CofComponentsP) entityData.component(new CofComponentsP(), i);
           for (int j = 0, s0 = data.componentLength(); j < s0; j++) {
@@ -424,6 +432,25 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
     cofs.updateTransform(entityId, tFlags);
     cofs.updateAlpha(entityId, aFlags);
+  }
+
+  private void applyStateSnapshot(int entityId, StateP data) {
+    if (!mUnitStates.has(entityId)) {
+      Gdx.app.debug(TAG, "Ignoring state snapshot for entity without UnitStates: " + entityId);
+      return;
+    }
+    UnitStates unitStates = mUnitStates.get(entityId);
+    if (unitStates.stateList == null) unitStates.init(entityId);
+    int count = data.stateIdLength();
+    int[] stateIds = new int[count];
+    int[] durations = new int[count];
+    int[] levels = new int[count];
+    for (int i = 0; i < count; i++) {
+      stateIds[i] = data.stateId(i);
+      durations[i] = i < data.durationLength() ? data.duration(i) : 0;
+      levels[i] = i < data.levelLength() ? data.level(i) : 1;
+    }
+    unitStates.stateList.replaceFromSnapshot(stateIds, durations, levels);
   }
 
   private void GroundToCursor(D2GS packet) {

@@ -413,6 +413,23 @@ public class StateList {
   }
 
   /**
+   * Replaces the runtime state list with an authoritative network snapshot.
+   * This is intentionally a small, allocation-free-at-steady-state bridge
+   * for the client receiver; server-side callers should continue to use
+   * {@link #addState(int, int, int, int)} so source and DOT metadata are kept.
+   */
+  public void replaceFromSnapshot(int[] stateIds, int[] durations, int[] levels) {
+    clearAll();
+    if (stateIds == null) return;
+    int count = stateIds.length;
+    for (int i = 0; i < count; i++) {
+      int duration = durations != null && i < durations.length ? durations[i] : 0;
+      int level = levels != null && i < levels.length ? levels[i] : 1;
+      addState(stateIds[i], duration, level, -1);
+    }
+  }
+
+  /**
    * 设置所属实体ID
    * 
    * @param entityId 实体ID
