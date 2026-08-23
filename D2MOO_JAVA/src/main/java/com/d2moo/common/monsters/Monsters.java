@@ -27,6 +27,27 @@ public class Monsters {
         int cost = 15 * level * level / 2;
         return Math.min(cost, 50_000);
     }
+
+    public static boolean isDemon(int monStatsFlags) {
+        return (monStatsFlags & D2MonsterFlags.DEMON) != 0;
+    }
+
+    public static boolean isUndead(int monStatsFlags) {
+        return (monStatsFlags & (D2MonsterFlags.LOW_UNDEAD | D2MonsterFlags.HIGH_UNDEAD)) != 0;
+    }
+
+    public static boolean isBoss(int monStatsFlags) {
+        return (monStatsFlags & D2MonsterFlags.BOSS) != 0;
+    }
+
+    public static boolean isPrimeEvil(int monStatsFlags) {
+        return (monStatsFlags & D2MonsterFlags.PRIME_EVIL) != 0;
+    }
+
+    public static boolean canBeInTown(int monStatsFlags, boolean revived) {
+        return revived
+                || (monStatsFlags & (D2MonsterFlags.NPC | D2MonsterFlags.IN_TOWN)) != 0;
+    }
     
     /**
      * 验证怪物ID是否有效
