@@ -13,6 +13,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
+import com.badlogic.gdx.utils.TimeUtils;
 
 import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
@@ -33,6 +34,8 @@ import com.riiablo.profiler.ProfilerSystem;
 import com.riiablo.save.ItemController;
 
 public class CursorMovementSystem extends BaseSystem {
+  private static final String TAG = "CursorMovementSystem";
+
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Interactable> mInteractable;
@@ -62,6 +65,8 @@ public class CursorMovementSystem extends BaseSystem {
 
   EntitySubscription hoveredSubscriber;
   boolean requireRelease;
+  int lastInteractionTraceTarget = Engine.INVALID_ENTITY;
+  long lastInteractionTraceMillis;
 
   private final Vector2 tmpVec2 = new Vector2();
 
@@ -146,8 +151,11 @@ public class CursorMovementSystem extends BaseSystem {
         Interactable interactable = mInteractable.get(targetId);
         final float dst = srcPos.dst(targetPos);
         if (interactable != null && dst <= interactable.range) {
+          traceInteraction(src, targetId, interactable, dst, "trigger", true);
           actioneer.moveTo(src, Engine.INVALID_ENTITY);
           interactable.interactor.interact(src, targetId);
+        } else if (interactable != null) {
+          traceInteraction(src, targetId, interactable, dst, "approach", false);
         } else if (interactable == null) {
           if (isTargetDead(targetId)) {
             actioneer.moveTo(src, Engine.INVALID_ENTITY);
@@ -203,7 +211,38 @@ public class CursorMovementSystem extends BaseSystem {
   private int getHovered(int src) {
     IntBag hoveredEntities = hoveredSubscriber.getEntities();
     if (hoveredEntities.size() == 0) return Engine.INVALID_ENTITY;
-    return hoveredEntities.get(0);
+
+    Position srcPosition = mPosition.get(src);
+    int selected = Engine.INVALID_ENTITY;
+    boolean selectedInteractable = false;
+    float selectedDst2 = Float.POSITIVE_INFINITY;
+    for (int i = 0, size = hoveredEntities.size(); i < size; i++) {
+      int candidate = hoveredEntities.get(i);
+      Position candidatePosition = mPosition.get(candidate);
+      if (candidatePosition == null) continue;
+
+      boolean candidateInteractable = mInteractable.has(candidate);
+      float candidateDst2 = srcPosition == null
+          ? Float.POSITIVE_INFINITY
+          : srcPosition.position.dst2(candidatePosition.position);
+      if (selected == Engine.INVALID_ENTITY
+          || shouldReplaceHoveredTarget(candidateInteractable, candidateDst2,
+              selectedInteractable, selectedDst2)) {
+        selected = candidate;
+        selectedInteractable = candidateInteractable;
+        selectedDst2 = candidateDst2;
+      }
+    }
+    return selected;
+  }
+
+  static boolean shouldReplaceHoveredTarget(
+      boolean candidateInteractable,
+      float candidateDst2,
+      boolean selectedInteractable,
+      float selectedDst2) {
+    if (candidateInteractable != selectedInteractable) return candidateInteractable;
+    return candidateDst2 < selectedDst2;
   }
 
   private boolean touchDown(int src) {
@@ -212,8 +251,16 @@ public class CursorMovementSystem extends BaseSystem {
     
     int target = getHovered(src);
     if (target == Engine.INVALID_ENTITY) return false;
-    
-    if (mInteractable.get(target) == null) {
+
+    Interactable selectedInteractable = mInteractable.get(target);
+    if (selectedInteractable != null) {
+      Position srcPosition = mPosition.get(src);
+      Position targetPosition = mPosition.get(target);
+      float distance = srcPosition != null && targetPosition != null
+          ? srcPosition.position.dst(targetPosition.position)
+          : Float.NaN;
+      traceInteraction(src, target, selectedInteractable, distance, "click", true);
+    } else {
       if (isTargetDead(target)) return false;
       
       Vector2 targetPos = mPosition.get(target).position;
@@ -261,6 +308,24 @@ public class CursorMovementSystem extends BaseSystem {
     
     actioneer.moveTo(src, target);
     return true;
+  }
+
+  private void traceInteraction(int src, int target, Interactable interactable,
+      float distance, String phase, boolean force) {
+    if (Gdx.app == null) return;
+    long now = TimeUtils.millis();
+    if (!force
+        && lastInteractionTraceTarget == target
+        && now - lastInteractionTraceMillis < 1000L) {
+      return;
+    }
+
+    lastInteractionTraceTarget = target;
+    lastInteractionTraceMillis = now;
+    Gdx.app.log(TAG, "Interaction target: phase=" + phase
+        + " player=" + src + " entity=" + target
+        + " distance=" + distance + " range=" + interactable.range
+        + " hovered=" + hoveredSubscriber.getEntities().size());
   }
 
   /**

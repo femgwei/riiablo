@@ -25,6 +25,7 @@ import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.excel.Objects;
+import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Interactable;
@@ -143,7 +144,13 @@ public class Box2DPhysics extends IntervalSystem {
           body = box2d.createBody(objectBodyDef);
           PolygonShape shape = new PolygonShape(); {
             shape.setAsBox(object.base.SizeX / 2f, object.base.SizeY / 2f);
-            body.createFixture(shape, 1f);
+            Fixture fixture = body.createFixture(shape, 1f);
+            // Waypoint coordinates point at the centre of the object and the
+            // native interaction range can be as small as two subtiles. A
+            // solid fixture around that centre prevents the player from ever
+            // reaching the range check. Keep the fixture for picking/debug
+            // visibility, but do not let it block movement.
+            fixture.setSensor(isNonBlockingObject(object.base));
           } shape.dispose();
           if (map != null && !mInteractable.has(entityId)) { // FIXME: need to tune this to allow pathing to entity that's solid
             map.or(position, object.base.SizeX, object.base.SizeY, DT1.Tile.FLAG_BLOCK_WALK);
@@ -274,6 +281,12 @@ public class Box2DPhysics extends IntervalSystem {
       mask |= CATEGORY_PLAYER;
     }
     return mask;
+  }
+
+  static boolean isNonBlockingObject(Objects.Entry base) {
+    return base != null
+        && (base.SubClass & Engine.Object.SUBCLASS_WAYPOINT)
+            == Engine.Object.SUBCLASS_WAYPOINT;
   }
 
   private static boolean allEqualMovementMask(Map map, int x, int y, int len, short mask) {
