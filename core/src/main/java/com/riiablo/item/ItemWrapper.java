@@ -2,10 +2,13 @@ package com.riiablo.item;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.Disposable;
 
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.Index;
 import com.riiablo.codec.excel.Inventory;
@@ -23,6 +26,9 @@ public class ItemWrapper extends Actor implements Disposable {
 
   public Index charColormap;
   public int   charColorIndex;
+
+  /** Last quantity reported to the diagnostic log; avoids per-frame spam. */
+  private int lastLoggedQuantity = Integer.MIN_VALUE;
 
   ItemWrapper(Item item) {
     this.item = item;
@@ -79,6 +85,41 @@ public class ItemWrapper extends Actor implements Disposable {
     invFile.draw(b, getX(), getY());
     if (invColormap != null) b.resetColormap();
     if (ethereal) b.resetColor();
+
+    drawQuantity(b);
+  }
+
+  /** Draws the stack count used by throwing weapons and other stackable items. */
+  private void drawQuantity(PaletteIndexedBatch b) {
+    if (item.base == null || !item.base.stackable || item.attrs == null) return;
+
+    StatRef quantity = item.attrs.base().get(Stat.quantity);
+    if (quantity == null) {
+      if (lastLoggedQuantity != -1) {
+        com.riiablo.logger.LogManager.getLogger(ItemWrapper.class).warn(
+            "[ITEM_QUANTITY_UI] missing quantity itemCode={} itemId={}", item.code, item.id);
+        lastLoggedQuantity = -1;
+      }
+      return;
+    }
+
+    int value = quantity.asInt();
+    if (value != lastLoggedQuantity) {
+      com.riiablo.logger.LogManager.getLogger(ItemWrapper.class).info(
+          "[ITEM_QUANTITY_UI] itemCode={} itemId={} quantity={}", item.code, item.id, value);
+      lastLoggedQuantity = value;
+    }
+
+    String text = Integer.toString(Math.max(0, value));
+    com.riiablo.codec.FontTBL.BitmapFont font = Riiablo.fonts.font16;
+    GlyphLayout layout = new GlyphLayout(font, text);
+    // Item numbers sit in the lower-right corner of the icon in D2. The
+    // one-pixel inset keeps the final glyph inside the inventory slot.
+    float x = getX() + getWidth() - layout.width - 1;
+    float y = getY() + layout.height + 1;
+    b.setBlendMode(font.getBlendMode(), Riiablo.colors.white);
+    font.draw(b, text, x, y);
+    b.resetBlendMode();
   }
 
   @Override
