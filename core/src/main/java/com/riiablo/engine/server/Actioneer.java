@@ -98,10 +98,9 @@ public class Actioneer extends PassiveSystem {
   }
 
   private boolean canCast(int entityId) {
-    if (mCasting.has(entityId)) return false;
-    if (mSequence.has(entityId)) return false;
-    // TODO: unsure if both checks will be needed -- may be more appropriate to use pflags
-    return true;
+    // A movement sequence is interruptible by a new player action. An active
+    // cast/attack sequence is not, because its keyframe events must finish.
+    return !mCasting.has(entityId);
   }
 
   public boolean canInterrupt(int entityId) {
@@ -117,7 +116,11 @@ public class Actioneer extends PassiveSystem {
   }
 
   public void cast(int entityId, int skillId, int targetId, Vector2 targetVec) {
-    if (!canCast(entityId)) return;
+    if (!canCast(entityId)) {
+      log.info("[SKILL_CAST] rejected_busy entity={} skill={} casting={} sequence={}",
+          entityId, skillId, mCasting.has(entityId), mSequence.has(entityId));
+      return;
+    }
     if (mAttributesWrapper.has(entityId)) {
       StatRef hp = mAttributesWrapper.get(entityId).attrs.get(Stat.hitpoints, StatRef.obtain());
       if (hp != null && hp.asFixed() <= 0f) {
@@ -178,9 +181,13 @@ public class Actioneer extends PassiveSystem {
         // valid throwable weapon in LARM.
         StatRef quantity = weapon.attrs.base().get(Stat.quantity);
         if (quantity == null || quantity.asInt() <= 0) {
+          log.info("[THROW_ATTACK] phase=reject entity={} skill={} reason=empty_quantity weaponCode={}",
+              entityId, skillId, weapon.code);
           return; // Cannot throw, no quantity
         }
       } else {
+        log.info("[THROW_ATTACK] phase=reject entity={} skill={} reason=no_throwable_weapon",
+            entityId, skillId);
         return; // No weapon equipped
       }
     }
