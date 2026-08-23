@@ -249,14 +249,11 @@ public class Pathfinder extends IteratingSystem {
       if (success) {
         success = findPath(src, position, collision.point, flags, size, path);
         if (!success || path.getCount() <= 1) {
-          tmpVec2.set(target);
-
-          Angle angle = mAngle.get(src);
-          angle.target.set(tmpVec2.sub(position)).nor();
-
-          Velocity velocity = mVelocity.get(src);
-          velocity.velocity.set(tmpVec2);
-
+          // The ray ended at the blocking boundary and there is no usable
+          // path to its last clear point. Moving directly toward the original
+          // target here bypasses the collision graph and lets units escape
+          // irregular cave/outdoor footprints.
+          stopBlockedMovement(mVelocity.get(src));
           mPathfind.remove(src);
           Pools.free(path);
           return false;
@@ -284,6 +281,10 @@ public class Pathfinder extends IteratingSystem {
       Pools.free(path);
       return false;
     }
+  }
+
+  static void stopBlockedMovement(Velocity velocity) {
+    if (velocity != null) velocity.velocity.setZero();
   }
 
   protected boolean findPath(int src, Vector2 srcPos, Vector2 targetPos, int flags, int size, GraphPath path) {

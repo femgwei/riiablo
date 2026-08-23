@@ -52,6 +52,46 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void relocatesMonsterFromIsolatedCliffPocketToMainWalkableRegion() {
+    int width = 9;
+    int height = 7;
+    byte[] flags = new byte[width * height];
+    Arrays.fill(flags, (byte) DT1.Tile.FLAG_BLOCK_WALK);
+    for (int y = 2; y <= 4; y++) {
+      for (int x = 1; x <= 3; x++) {
+        flags[y * width + x] = 0;
+      }
+    }
+    flags[3 * width + 7] = 0;
+
+    Act1MapBuilderD2MOD.WalkableRegion region =
+        Act1MapBuilderD2MOD.largestWalkableRegion(
+            flags, width, height, DT1.Tile.FLAG_BLOCK_WALK);
+    int[] spawn = new int[2];
+
+    assertEquals(9, region.size);
+    assertTrue(Act1MapBuilderD2MOD.findNearestMonsterSpawn(
+        flags, width, height, 7, 3, 1, region, 6, spawn));
+    assertEquals(region.label, region.labels[spawn[1] * width + spawn[0]]);
+    assertEquals(false, spawn[0] == 7 && spawn[1] == 3);
+  }
+
+  @Test
+  void requiresEntireMonsterFootprintToStayInsideWalkableRegion() {
+    int width = 5;
+    int height = 5;
+    byte[] flags = new byte[width * height];
+    Act1MapBuilderD2MOD.WalkableRegion region =
+        Act1MapBuilderD2MOD.largestWalkableRegion(
+            flags, width, height, DT1.Tile.FLAG_BLOCK_WALK);
+
+    assertEquals(false, Act1MapBuilderD2MOD.isMonsterSpawnCellValid(
+        flags, width, height, 0, 0, 2, region));
+    assertTrue(Act1MapBuilderD2MOD.isMonsterSpawnCellValid(
+        flags, width, height, 2, 2, 2, region));
+  }
+
+  @Test
   void registersNativeSpecialWallsForWarpEntityCreation() {
     TileGrid grid = new TileGrid(2, 1);
     grid.wallIds[0][0][0] = Map.ID.VIS_0_00;

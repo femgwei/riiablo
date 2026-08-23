@@ -5,6 +5,7 @@ import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.IntSet;
 
@@ -21,6 +22,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.drlg.DrlgContext;
 import com.riiablo.drlg.DrlgLevel;
@@ -79,6 +81,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private static final int LEVEL_DENOFEVIL = 8;
   /** Only bridge a single D2MOO RoomEx-sized gap at the town boundary. */
   private static final int TOWN_SEAM_MAX_GAP_TILES = OutdoorGrid.GRID_SIZE_TILES;
+  private static final int MONSTER_SPAWN_SEARCH_RADIUS = DT1.Tile.SUBTILE_SIZE * 2;
 
   /**
    * D2MOD: byte_6FDCF958 - 路径连通性模式 → 土路瓦片类型索引。
@@ -200,6 +203,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   /** 路径生成时缓存的 map，用于 findPathFloorId 从兄弟 zone 获取有效 floor id */
   private Map pathGenMap;
 
+  /** Random monsters wait until the final native collision layer is available. */
+  private final IntMap<Array<PendingMonsterSpawn>> pendingMonsterSpawns = new IntMap<>();
+
   // 实际运行时的 Burial Grounds 关卡 ID（从 Levels.txt 推导），用于避免与 D2MOO 的枚举常量不一致
   private int burialGroundsId = LEVEL_BURIALGROUNDS;
 
@@ -214,6 +220,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     levelsFilledByExport.clear();
     levelsWithNativeDirtPaths.clear();
     d2MooDt1Masks.clear();
+    pendingMonsterSpawns.clear();
     lvlSubDs1PlacedCounts.clear();
     MathUtils.random.setSeed(seed);
 
@@ -661,7 +668,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                     // whole spawn safely inside the selected exported floor tile.
                     float px = monsterSpawnCoordinate(zone.x, currentTx, MathUtils.random(-1f, 1f));
                     float py = monsterSpawnCoordinate(zone.y, currentTy, MathUtils.random(-1f, 1f));
-                    zone.map.factory.createMonster(monster, px, py);
+                    if (renderD2MooExport) {
+                      queueMonsterSpawn(zone.level.Id, monster, px, py);
+                    } else {
+                      zone.map.factory.createMonster(monster, px, py);
+                    }
                   }
                 }
               }
@@ -1527,6 +1538,190 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     float tileCenter = DT1.Tile.SUBTILE_SIZE / 2f;
     return zoneOrigin + localTile * DT1.Tile.SUBTILE_SIZE
         + tileCenter + MathUtils.clamp(jitter, -1f, 1f);
+  }
+
+  private void queueMonsterSpawn(int levelId, MonStats.Entry monster, float x, float y) {
+    if (monster == null) return;
+    MonStats2.Entry monstats2 = Riiablo.files.monstats2.get(monster.MonStatsEx);
+    int size = monstats2 == null ? 1 : Math.max(1, monstats2.SizeX);
+    Array<PendingMonsterSpawn> pending = pendingMonsterSpawns.get(levelId);
+    if (pending == null) {
+      pendingMonsterSpawns.put(levelId, pending = new Array<>());
+    }
+    pending.add(new PendingMonsterSpawn(monster.hcIdx, size, x, y));
+  }
+
+  private void spawnPendingMonsters(Zone zone) {
+    Array<PendingMonsterSpawn> pending = pendingMonsterSpawns.remove(zone.level.Id);
+    if (pending == null || pending.size == 0 || zone.map.factory == null) return;
+
+    WalkableRegion region = largestWalkableRegion(
+        zone.flags, zone.width, zone.height, DT1.Tile.FLAG_BLOCK_WALK);
+    int spawned = 0;
+    int relocated = 0;
+    int rejected = 0;
+    int[] local = new int[2];
+    for (PendingMonsterSpawn candidate : pending) {
+      int preferredX = Map.round(candidate.x - zone.x);
+      int preferredY = Map.round(candidate.y - zone.y);
+      if (!findNearestMonsterSpawn(zone.flags, zone.width, zone.height,
+          preferredX, preferredY, candidate.size, region,
+          MONSTER_SPAWN_SEARCH_RADIUS, local)) {
+        rejected++;
+        continue;
+      }
+
+      float spawnX = candidate.x;
+      float spawnY = candidate.y;
+      if (local[0] != preferredX || local[1] != preferredY) {
+        spawnX = zone.x + local[0];
+        spawnY = zone.y + local[1];
+        relocated++;
+      }
+      zone.map.factory.createMonster(candidate.monsterId, spawnX, spawnY);
+      spawned++;
+    }
+
+    Gdx.app.log(TAG, String.format(
+        "D2MOO monster placement: level=%s(%d) queued=%d spawned=%d relocated=%d "
+            + "rejected=%d mainWalkableRegion=%d",
+        zone.level.LevelName, zone.level.Id, pending.size, spawned, relocated,
+        rejected, region.size));
+  }
+
+  static WalkableRegion largestWalkableRegion(
+      byte[] flags, int width, int height, int blockMask) {
+    int cells = width > 0 && height > 0 ? width * height : 0;
+    int[] labels = new int[cells];
+    if (flags == null || flags.length < cells || cells == 0) {
+      return new WalkableRegion(labels, 0, 0, blockMask);
+    }
+
+    IntArray queue = new IntArray(false, 256);
+    int nextLabel = 0;
+    int largestLabel = 0;
+    int largestSize = 0;
+    for (int start = 0; start < cells; start++) {
+      if (labels[start] != 0 || (flags[start] & blockMask) != 0) continue;
+      int label = ++nextLabel;
+      int componentSize = 0;
+      labels[start] = label;
+      queue.clear();
+      queue.add(start);
+      for (int cursor = 0; cursor < queue.size; cursor++) {
+        int cell = queue.get(cursor);
+        componentSize++;
+        int x = cell % width;
+        int y = cell / width;
+        for (int dy = -1; dy <= 1; dy++) {
+          for (int dx = -1; dx <= 1; dx++) {
+            if (dx == 0 && dy == 0) continue;
+            int nx = x + dx;
+            int ny = y + dy;
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+            int neighbor = ny * width + nx;
+            if (labels[neighbor] != 0 || (flags[neighbor] & blockMask) != 0) continue;
+            labels[neighbor] = label;
+            queue.add(neighbor);
+          }
+        }
+      }
+      if (componentSize > largestSize) {
+        largestLabel = label;
+        largestSize = componentSize;
+      }
+    }
+    return new WalkableRegion(labels, largestLabel, largestSize, blockMask);
+  }
+
+  static boolean findNearestMonsterSpawn(byte[] flags, int width, int height,
+      int preferredX, int preferredY, int unitSize, WalkableRegion region,
+      int maxRadius, int[] out) {
+    if (out == null || out.length < 2 || region == null) return false;
+    maxRadius = Math.max(0, maxRadius);
+    for (int radius = 0; radius <= maxRadius; radius++) {
+      if (radius == 0) {
+        if (isMonsterSpawnCellValid(
+            flags, width, height, preferredX, preferredY, unitSize, region)) {
+          out[0] = preferredX;
+          out[1] = preferredY;
+          return true;
+        }
+        continue;
+      }
+
+      int minX = preferredX - radius;
+      int maxX = preferredX + radius;
+      int minY = preferredY - radius;
+      int maxY = preferredY + radius;
+      for (int x = minX; x <= maxX; x++) {
+        if (setMonsterSpawnIfValid(flags, width, height, x, minY, unitSize, region, out)
+            || setMonsterSpawnIfValid(flags, width, height, x, maxY, unitSize, region, out)) {
+          return true;
+        }
+      }
+      for (int y = minY + 1; y < maxY; y++) {
+        if (setMonsterSpawnIfValid(flags, width, height, minX, y, unitSize, region, out)
+            || setMonsterSpawnIfValid(flags, width, height, maxX, y, unitSize, region, out)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static boolean setMonsterSpawnIfValid(byte[] flags, int width, int height,
+      int x, int y, int unitSize, WalkableRegion region, int[] out) {
+    if (!isMonsterSpawnCellValid(flags, width, height, x, y, unitSize, region)) return false;
+    out[0] = x;
+    out[1] = y;
+    return true;
+  }
+
+  static boolean isMonsterSpawnCellValid(byte[] flags, int width, int height,
+      int centerX, int centerY, int unitSize, WalkableRegion region) {
+    if (flags == null || region == null || region.label == 0) return false;
+    int radius = Math.max(0, unitSize - 1);
+    for (int y = centerY - radius; y <= centerY + radius; y++) {
+      for (int x = centerX - radius; x <= centerX + radius; x++) {
+        if (x < 0 || x >= width || y < 0 || y >= height) return false;
+        int index = y * width + x;
+        if (index >= flags.length || index >= region.labels.length
+            || (flags[index] & region.blockMask) != 0
+            || region.labels[index] != region.label) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  static final class WalkableRegion {
+    final int[] labels;
+    final int label;
+    final int size;
+    final int blockMask;
+
+    WalkableRegion(int[] labels, int label, int size, int blockMask) {
+      this.labels = labels;
+      this.label = label;
+      this.size = size;
+      this.blockMask = blockMask;
+    }
+  }
+
+  private static final class PendingMonsterSpawn {
+    final int monsterId;
+    final int size;
+    final float x;
+    final float y;
+
+    PendingMonsterSpawn(int monsterId, int size, float x, float y) {
+      this.monsterId = monsterId;
+      this.size = size;
+      this.x = x;
+      this.y = y;
+    }
   }
 
   /**
@@ -2658,6 +2853,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       collisionCounts = rebuildTileCollisionFlags(
           exportedFootprint, zone.tiles, zone.dt1s, zone.flags,
           zone.tilesX, zone.tilesY, width, height);
+    }
+    if (levelsFilledByExport.contains(zone.level.Id)) {
+      spawnPendingMonsters(zone);
     }
 
     // Blood Moor 地面调试：grid/zone 尺寸、坐标、ID 分布、解析失败数

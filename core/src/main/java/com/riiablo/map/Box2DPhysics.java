@@ -37,6 +37,10 @@ public class Box2DPhysics extends IntervalSystem {
   private static final String TAG = "Box2DPhysicsSystem";
   private static final boolean DEBUG = true;
 
+  static final short CATEGORY_WORLD = 0x0001;
+  static final short CATEGORY_MONSTER = 0x0002;
+  static final short CATEGORY_PLAYER = 0x0004;
+
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
@@ -155,8 +159,8 @@ public class Box2DPhysics extends IntervalSystem {
             // Set collision filter: monsters don't collide with players or other monsters
             // This prevents players from pushing monsters away (like original D2)
             Filter filter = new Filter();
-            filter.categoryBits = 0x0002; // Monster category
-            filter.maskBits = 0x0001; // Only collide with walls/objects
+            filter.categoryBits = CATEGORY_MONSTER;
+            filter.maskBits = CATEGORY_WORLD;
             filter.groupIndex = 0;
             fixture.setFilterData(filter);
           } shape.dispose();
@@ -181,8 +185,8 @@ public class Box2DPhysics extends IntervalSystem {
             // Set collision filter: players don't collide with monsters
             // This prevents players from pushing monsters away (like original D2)
             Filter filter = new Filter();
-            filter.categoryBits = 0x0004; // Player category
-            filter.maskBits = 0x0001; // Only collide with walls/objects
+            filter.categoryBits = CATEGORY_PLAYER;
+            filter.maskBits = CATEGORY_WORLD;
             filter.groupIndex = 0;
             fixture.setFilterData(filter);
           } shape.dispose();
@@ -197,16 +201,18 @@ public class Box2DPhysics extends IntervalSystem {
   private void createBodies(Vector2 offset) {
     IntMap<Filter> filters = new IntMap<>();
 
-    boolean[][] handled = new boolean[1000][1000];
     for (Map.Zone zone : new Array.ArrayIterator<>(map.zones)) {
-      for (boolean[] a : handled) Arrays.fill(a, false);
+      boolean[][] handled = new boolean[zone.height][zone.width];
+      int zoneEndX = zone.x + zone.width;
       for (int y = 0, ty = zone.y, height = zone.height; y < height; y++, ty++) {
         for (int x = 0, tx = zone.x, width = zone.width; x < width; x++, tx++) {
           if (handled[y][x]) continue;
           int flags = map.flags(tx, ty);
-          if (flags != 0) {
+          short unitMask = unitMaskForTileFlags(flags);
+          if (unitMask != 0) {
             int endX = tx + 1;
-            while (endX < width && map.flags(endX, ty) == flags) {
+            while (endX < zoneEndX
+                && unitMaskForTileFlags(map.flags(endX, ty)) == unitMask) {
               endX++;
             }
 
@@ -214,7 +220,7 @@ public class Box2DPhysics extends IntervalSystem {
             int endY = ty + 1;
 
             int dy = y + 1;
-            while (dy < height && allEqual(map, tx, endY, lenX, flags)) {
+            while (dy < height && allEqualMovementMask(map, tx, endY, lenX, unitMask)) {
               Arrays.fill(handled[dy], x, x + lenX, true);
               dy++;
               endY++;
@@ -226,11 +232,11 @@ public class Box2DPhysics extends IntervalSystem {
             PolygonShape shape = new PolygonShape();
             shape.setAsBox(lenX / 2f, lenY / 2f);
 
-            Filter filter = filters.get(flags);
+            Filter filter = filters.get(unitMask);
             if (filter == null) {
-              filters.put(flags, filter = new Filter());
-              filter.categoryBits = 0xFF;
-              filter.maskBits     = (short) flags;
+              filters.put(unitMask, filter = new Filter());
+              filter.categoryBits = CATEGORY_WORLD;
+              filter.maskBits = unitMask;
               filter.groupIndex   = 0;
             }
 
@@ -259,9 +265,20 @@ public class Box2DPhysics extends IntervalSystem {
     }
   }
 
-  private static boolean allEqual(Map map, int x, int y, int len, int flags) {
+  static short unitMaskForTileFlags(int flags) {
+    short mask = 0;
+    if ((flags & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+      mask |= CATEGORY_MONSTER | CATEGORY_PLAYER;
+    }
+    if ((flags & DT1.Tile.FLAG_BLOCK_PLAYER_WALK) != 0) {
+      mask |= CATEGORY_PLAYER;
+    }
+    return mask;
+  }
+
+  private static boolean allEqualMovementMask(Map map, int x, int y, int len, short mask) {
     len += x;
-    while (x < len && map.flags(x, y) == flags) x++;
+    while (x < len && unitMaskForTileFlags(map.flags(x, y)) == mask) x++;
     return x == len;
   }
 }
