@@ -180,7 +180,15 @@ public class Actioneer extends PassiveSystem {
     mAngle.get(entityId).target.set(targetVec).sub(entityPos).nor();
     mSequence.create(entityId).sequence(mode, mMovementModes.get(entityId).NU);
     mCasting.create(entityId).set(skillId, targetId, targetVec);
-    events.dispatch(SkillCastEvent.obtain(entityId, skillId, targetId, targetVec));
+    SkillCastEvent castEvent = SkillCastEvent.obtain(entityId, skillId, targetId, targetVec);
+    events.dispatch(castEvent);
+    if (!castEvent.accepted) {
+      log.debug("Skill cast rejected by server: entity={}, skill={}, resultCode={}, manaCost={}",
+          entityId, skillId, castEvent.resultCode, castEvent.manaCost);
+      mCasting.remove(entityId);
+      mSequence.remove(entityId);
+      return;
+    }
 
     srvstfunc(entityId, skill.srvstfunc, targetId, targetVec);
     events.dispatch(SkillStartEvent.obtain(entityId, skillId, targetId, targetVec, skill.srvstfunc, skill.cltstfunc));

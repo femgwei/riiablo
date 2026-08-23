@@ -13,6 +13,12 @@ public class SkillCastEvent implements Event {
   public int targetId;
   public Vector2 targetVec;
 
+  /** Server-side validation result. Events are accepted by default so the
+   * client-only world keeps its existing behaviour. */
+  public boolean accepted = true;
+  public int resultCode;
+  public float manaCost;
+
   public static SkillCastEvent obtain(int entityId, int skillId, int targetId, Vector2 targetVec) {
     SkillCastEvent event = new SkillCastEvent();
     event.entityId = entityId;

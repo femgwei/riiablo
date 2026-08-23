@@ -321,7 +321,10 @@ public class SkillExecutor {
 
     // 7. 设置冷却
     if (result.success && skillData.cooldown > 0 && cooldownManager != null) {
-      cooldownManager.startCooldown(context.casterId, context.skillId, skillData.cooldown);
+      // SkillCooldownManager expects the current frame here. Passing the
+      // duration used to make every cooldown end near frame 0, so a skill
+      // could be cast again immediately after the first cast.
+      cooldownManager.startCooldown(context.casterId, context.skillId, context.currentFrame);
       result.cooldownFrames = skillData.cooldown;
     }
 
