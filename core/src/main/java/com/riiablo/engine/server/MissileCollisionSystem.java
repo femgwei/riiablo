@@ -162,6 +162,12 @@ public class MissileCollisionSystem extends IteratingSystem {
         return false;
       }
 
+      log.info("[MISSILE_HIT] phase=collision missileId={} missile={} owner={} target={} "
+              + "distance={} radius={} position=({}, {}) traveled={} range={}",
+          missileId, missile.missile != null ? missile.missile.Missile : "unknown",
+          missile.ownerId, targetId, distance, collisionRadius,
+          missilePos.x, missilePos.y, missile.distanceTraveled, missile.range);
+
       // D2 radial/fan skills create many missiles for one activation. Resolve
       // a target only once for that cast so overlapping launch paths cannot
       // multiply the same hit dozens of times.
@@ -177,6 +183,15 @@ public class MissileCollisionSystem extends IteratingSystem {
 
       Attributes ownerAttrs = mAttributesWrapper.get(missile.ownerId).attrs;
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
+      log.info("[MISSILE_HIT] phase=stats missileId={} owner={} target={} "
+              + "throwMin={} throwMax={} weaponMin={} weaponMax={} attackRating={} "
+              + "targetDefense={} targetHp={}",
+          missileId, missile.ownerId, targetId,
+          statInt(ownerAttrs, Stat.item_throw_mindamage),
+          statInt(ownerAttrs, Stat.item_throw_maxdamage),
+          statInt(ownerAttrs, Stat.mindamage), statInt(ownerAttrs, Stat.maxdamage),
+          statInt(ownerAttrs, Stat.tohit), statInt(targetAttrs, Stat.armorclass),
+          statFixed(targetAttrs, Stat.hitpoints));
       CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
           ownerAttrs,
           targetAttrs,
@@ -184,12 +199,21 @@ public class MissileCollisionSystem extends IteratingSystem {
           mPlayer.has(targetId),
           true);
       if (!combat.hit) {
+        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
+            missileId, missile.ownerId, targetId, combat.hitChance);
         log.debug("Missile {} ranged miss on {} (owner={}, hitChance={}%)",
             missileId, targetId, missile.ownerId, combat.hitChance);
       } else if (combat.blocked) {
+        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=blocked chance={} damage=0",
+            missileId, missile.ownerId, targetId, combat.hitChance);
         log.debug("Missile {} attack blocked by {} (owner={})", missileId, targetId, missile.ownerId);
       } else {
         float damage = combat.totalDamage;
+        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit chance={} "
+                + "physical={} total={} critical={} deadly={} crushing={}",
+            missileId, missile.ownerId, targetId, combat.hitChance,
+            combat.physicalDamage, damage, combat.critical, combat.deadlyStrike,
+            combat.crushingBlow);
         if (damage > 0 && mAttributesWrapper.has(targetId)) {
           log.info("Missile {} hits {} for {} damage (ownerId={}, critical={}, deadly={})",
               missileId, targetId, damage, missile.ownerId, combat.critical, combat.deadlyStrike);
@@ -248,6 +272,18 @@ public class MissileCollisionSystem extends IteratingSystem {
         && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
       StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
     }
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    if (attrs == null) return 0;
+    StatRef ref = attrs.get(stat);
+    return ref != null ? ref.asInt() : 0;
+  }
+
+  private static float statFixed(Attributes attrs, short stat) {
+    if (attrs == null) return 0;
+    StatRef ref = attrs.get(stat);
+    return ref != null ? ref.asFixed() : 0f;
   }
   
   /**

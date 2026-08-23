@@ -153,6 +153,32 @@ public class Actioneer extends PassiveSystem {
     }
     
     boolean isThrowAttack = isThrowSkill || isThrowFunc || hasThrowableWeapon;
+
+    // Keep one authoritative snapshot in the log before the animation starts.
+    // This lets us distinguish an equipment/stat aggregation problem from a
+    // missile collision or damage-calculation problem without changing combat
+    // behaviour.
+    if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
+      Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
+      if (weapon == null) weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
+      int quantity = -1;
+      int itemThrowMin = 0;
+      int itemThrowMax = 0;
+      if (weapon != null && weapon.attrs != null) {
+        StatRef qty = weapon.attrs.base().get(Stat.quantity);
+        StatRef min = weapon.attrs.base().get(Stat.item_throw_mindamage);
+        StatRef max = weapon.attrs.base().get(Stat.item_throw_maxdamage);
+        quantity = qty != null ? qty.asInt() : -1;
+        itemThrowMin = min != null ? min.asInt() : 0;
+        itemThrowMax = max != null ? max.asInt() : 0;
+      }
+      log.info("[THROW_ATTACK] phase=cast entity={} skill={} target={} skillThrow={} funcThrow={} "
+              + "weaponCode={} weaponType={} quantity={} itemThrowMin={} itemThrowMax={}",
+          entityId, skillId, targetId, isThrowSkill, isThrowFunc,
+          weapon != null ? weapon.code : "none",
+          weapon != null && weapon.type != null ? weapon.type : "none",
+          quantity, itemThrowMin, itemThrowMax);
+    }
     
     // For players, check if equipped weapon is throwable and has quantity
     if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {

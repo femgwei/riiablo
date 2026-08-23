@@ -144,6 +144,13 @@ public class ServerSkillSystem extends PassiveSystem {
       missileNames[0] = throwableMissile;
       configuredCount = 1;
     }
+    if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
+        || event.srvdofunc == 3 || event.srvdofunc == 5) {
+      log.info("[THROW_ATTACK] phase=missile_resolve entity={} skill={} srvDoFunc={} "
+              + "weaponCode={} configuredMissiles={} missileA={} missileB={} missileC={} missileD={}",
+          event.entityId, event.skillId, event.srvdofunc, throwableMissile, configuredCount,
+          missileNames[0], missileNames[1], missileNames[2], missileNames[3]);
+    }
     if (configuredCount == 0) return;
 
     IntSet sharedHitTargets = configuredCount > 1 ? new IntSet() : null;
@@ -165,6 +172,13 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       int missileId = createMissile(missile, direction, start, event.entityId,
           sharedHitTargets);
+      if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
+          || event.srvdofunc == 3 || event.srvdofunc == 5) {
+        log.info("[MISSILE_CREATE] phase=throw entity={} missileId={} owner={} missile={} "
+                + "speed={} range={} start=({}, {}) direction=({}, {})", event.entityId,
+            missileId, event.entityId, missile.Missile, missile.Vel, missile.Range,
+            start.x, start.y, direction.x, direction.y);
+      }
       log.debug("Server skill projectile: entity={}, skill={}, missile={}, entityId={}, dir=({}, {})",
           event.entityId, event.skillId, missileName, missileId, direction.x, direction.y);
       ordinal++;
