@@ -115,8 +115,9 @@ public class Seed {
             // nMax 是 2 的幂
             return (int) (randomValue & (nMax - 1));
         } else {
-            // nMax 不是 2 的幂，使用模运算
-            return (int) Long.remainderUnsigned(randomValue, nMax);
+            // 原版先强制转换为 uint32_t，再执行取模。
+            long lowSeed = randomValue & 0xFFFFFFFFL;
+            return (int) (lowSeed % nMax);
         }
     }
     
@@ -140,13 +141,29 @@ public class Seed {
         }
         return rollLimitedRandomNumber(seed, nValue);
     }
+
+    /**
+     * D2Common.0x6FDAEA80 (#10920)
+     *
+     * <p>这是原版不依赖 {@link D2Seed} 的进程级随机值入口。其计算使用有符号
+     * 32 位回绕，最后清除符号位。游戏确定性逻辑应继续使用 seed 参数版本。
+     */
+    public static int getRandomValue(int nValue) {
+        int epochSeconds = (int) (System.currentTimeMillis() / 1000L);
+        int tickCount = (int) (System.nanoTime() / 1_000_000L);
+        return computeRandomValue(nValue, epochSeconds, tickCount);
+    }
+
+    static int computeRandomValue(int nValue, int epochSeconds, int tickCount) {
+        return (0x2F490A95 * (epochSeconds + nValue + tickCount) - 0x2E330917)
+            & 0x7FFFFFFF;
+    }
     
     /**
      * D2Common.0x6FDA5260 (#10916)
-     * 返回（可能是重置种子状态，具体实现需要查看源码）
+     * 原版只输出一条调试跟踪，没有状态或返回值。
      */
     public static void seedReturn() {
-        // TODO: 需要查看 C++ 源码确定具体实现
-        // 可能是重置全局种子状态或其他操作
+        // Intentionally empty; matches D2MOO SEED_Return.
     }
 }
