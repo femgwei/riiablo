@@ -66,9 +66,14 @@ public enum D2SWriter {
    * Saves a CharData to a D2S file.
    */
   public boolean save(CharData charData) {
-    D2S d2s = D2SWriter96.createD2S(charData);
-    String fileName = charData.name + "." + D2S.EXT;
-    FileHandle file = Riiablo.saves.child(fileName);
-    return writeD2S(d2s, file);
+    try {
+      D2S d2s = D2SWriter96.createD2S(charData);
+      String fileName = charData.name + "." + D2S.EXT;
+      FileHandle file = Riiablo.saves.child(fileName);
+      return writeD2S(d2s, file);
+    } catch (IllegalArgumentException e) {
+      log.error("Refusing to write an incompatible D2S character name: " + charData.name, e);
+      return false;
+    }
   }
 }

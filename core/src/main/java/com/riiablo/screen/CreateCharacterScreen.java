@@ -27,6 +27,7 @@ import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.CharData;
+import com.riiablo.save.D2S;
 import com.riiablo.save.D2SWriter;
 import com.riiablo.widget.AnimationWrapper;
 import com.riiablo.widget.CharacterCreateButton;
@@ -160,10 +161,11 @@ public class CreateCharacterScreen extends ScreenAdapter {
       cursor = new TextureRegionDrawable(Riiablo.textures.white);
     }});
     tfCharName.setOnlyFontChars(true);
+    tfCharName.setMaxLength(Riiablo.MAX_NAME_LENGTH);
     tfCharName.setTextFieldListener(new com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldListener() {
       @Override
       public void keyTyped(com.badlogic.gdx.scenes.scene2d.ui.TextField textField, char c) {
-        btnOK.setVisible(!textField.getText().isEmpty());
+        btnOK.setVisible(D2S.isOriginalNameCompatible(textField.getText()));
       }
     });
 
@@ -191,6 +193,7 @@ public class CreateCharacterScreen extends ScreenAdapter {
           Riiablo.client.popScreen();
         } else if (actor == btnOK) {
           if (selected == null) return;
+          if (!D2S.isOriginalNameCompatible(tfCharName.getText())) return;
           // Create and initialize new character
           CharData charData = Riiablo.charData.clear().set(Riiablo.NORMAL, true, tfCharName.getText(), (byte) selected.charClass.id);
           // Initialize character with starting stats from CharStats.txt
@@ -249,7 +252,7 @@ public class CreateCharacterScreen extends ScreenAdapter {
         selectedDescription.setHeight(selectedDescription.getPrefHeight());
         selectedDescription.setPosition(stage.getWidth() / 2, stage.getHeight() - selectedName.getHeight() - 10, Align.top | Align.center);
         selectedDescription.setVisible(true);
-        btnOK.setVisible(!tfCharName.getText().isEmpty());
+        btnOK.setVisible(D2S.isOriginalNameCompatible(tfCharName.getText()));
         charOptions.setVisible(true);
         stage.setKeyboardFocus(tfCharName);
         fixActorOrder();
@@ -326,7 +329,7 @@ public class CreateCharacterScreen extends ScreenAdapter {
         public boolean keyDown(int keycode) {
           switch (keycode) {
             case Input.Keys.ENTER:
-              if (tfCharName.getText().length() > 2) btnOK.toggle();
+              if (D2S.isOriginalNameCompatible(tfCharName.getText())) btnOK.toggle();
               return true;
 
             case Input.Keys.ESCAPE:
@@ -459,12 +462,15 @@ public class CreateCharacterScreen extends ScreenAdapter {
     int maxMana = stats._int; // _int is the energy/intelligence field
     int maxStamina = stats.stamina;
 
-    base.put(com.riiablo.attributes.Stat.hitpoints, maxHp << 8);
-    base.put(com.riiablo.attributes.Stat.maxhp, maxHp << 8);
-    base.put(com.riiablo.attributes.Stat.mana, maxMana << 8);
-    base.put(com.riiablo.attributes.Stat.maxmana, maxMana << 8);
-    base.put(com.riiablo.attributes.Stat.stamina, maxStamina << 8);
-    base.put(com.riiablo.attributes.Stat.maxstamina, maxStamina << 8);
+    // StatList applies ItemStatCost.ValShift itself. Passing pre-shifted values
+    // here used to double-shift vitals in memory and forced the old writer to
+    // rely on an accidental asInt() cancellation.
+    base.put(com.riiablo.attributes.Stat.hitpoints, maxHp);
+    base.put(com.riiablo.attributes.Stat.maxhp, maxHp);
+    base.put(com.riiablo.attributes.Stat.mana, maxMana);
+    base.put(com.riiablo.attributes.Stat.maxmana, maxMana);
+    base.put(com.riiablo.attributes.Stat.stamina, maxStamina);
+    base.put(com.riiablo.attributes.Stat.maxstamina, maxStamina);
     base.put(com.riiablo.attributes.Stat.level, 1);
     base.put(com.riiablo.attributes.Stat.experience, 0);
     base.put(com.riiablo.attributes.Stat.gold, 0);
@@ -479,11 +485,8 @@ public class CreateCharacterScreen extends ScreenAdapter {
     charData.towns[Riiablo.NIGHTMARE] = 0;
     charData.towns[Riiablo.HELL] = 0;
 
-    // The town waypoint is available to every new character in the current
-    // difficulty, matching the initial waypoint bit in an original D2 save.
-    for (int difficulty = 0; difficulty < Riiablo.NUM_DIFFS; difficulty++) {
-      charData.activateWaypoint(difficulty, Riiablo.ACT1, 0);
-    }
+    // Only the difficulty being created owns the initial town waypoint.
+    charData.activateWaypoint(charData.diff, Riiablo.ACT1, 0);
 
     // Set map seed
     charData.mapSeed = (int) System.currentTimeMillis();

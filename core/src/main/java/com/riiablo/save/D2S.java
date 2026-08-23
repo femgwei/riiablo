@@ -37,6 +37,32 @@ public class D2S {
   static final int NUM_HOTKEYS = 16;
   static final int NUM_DIFFS = Riiablo.NUM_DIFFS;
 
+  /**
+   * Returns whether {@code name} can be represented losslessly by the classic
+   * D2S header and used as a save-file name by Diablo II.
+   *
+   * <p>The game header stores a zero-terminated, 15-character ASCII name. Keep
+   * separators away from the ends so the generated name is also accepted by
+   * the original character-selection UI.</p>
+   */
+  public static boolean isOriginalNameCompatible(String name) {
+    if (name == null || name.length() < 2 || name.length() > Riiablo.MAX_NAME_LENGTH) {
+      return false;
+    }
+
+    for (int i = 0; i < name.length(); i++) {
+      char c = name.charAt(i);
+      boolean alphaNumeric = c >= 'A' && c <= 'Z'
+          || c >= 'a' && c <= 'z'
+          || c >= '0' && c <= '9';
+      boolean separator = c == '-' || c == '_';
+      if (!alphaNumeric && !separator) return false;
+      if (separator && (i == 0 || i == name.length() - 1)) return false;
+    }
+
+    return true;
+  }
+
   int version;
   int size;
   int checksum;

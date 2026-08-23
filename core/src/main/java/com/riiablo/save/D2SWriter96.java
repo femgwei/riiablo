@@ -2,12 +2,14 @@ package com.riiablo.save;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import java.util.Arrays;
+import java.util.Iterator;
 
 import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.Riiablo;
-import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.attributes.StatListWriter;
 import com.riiablo.codec.COF;
 import com.riiablo.codec.excel.Armor;
@@ -25,12 +27,21 @@ public class D2SWriter96 {
   private static final Logger log = LogManager.getLogger(D2SWriter96.class);
 
   private static final int VERSION = D2S.VERSION_110;
-  private static final int DEFAULT_TIMESTAMP = (int) (System.currentTimeMillis() / 1000);
+  private static final int NUM_STATS = 16;
+  private static final int NUM_SKILLS = D2S.SkillData.NUM_TREES * D2S.SkillData.NUM_SKILLS;
+  private static final int STAT_ID_BITS = 9;
+  private static final int STAT_END = (1 << STAT_ID_BITS) - 1;
+  private static final int UNKNOWN_PLAY_TIME = -1;
 
   /**
    * 从CharData创建D2S结构
    */
   public static D2S createD2S(CharData charData) {
+    if (!D2S.isOriginalNameCompatible(charData.name)) {
+      throw new IllegalArgumentException(
+          "Character name is not compatible with Diablo II 1.13c: " + charData.name);
+    }
+
     D2S d2s = new D2S();
     d2s.version = VERSION;
     d2s.alternate = charData.getItems().alternate;
@@ -38,7 +49,7 @@ public class D2SWriter96 {
     d2s.flags = charData.flags;
     d2s.charClass = charData.charClass;
     d2s.level = charData.level;
-    d2s.timestamp = DEFAULT_TIMESTAMP;
+    d2s.timestamp = (int) (System.currentTimeMillis() / 1000);
     d2s.hotkeys = charData.hotkeys.clone();
     d2s.actions = new int[D2S.NUM_ACTIONS][D2S.NUM_BUTTONS];
     for (int i = 0; i < D2S.NUM_ACTIONS; i++) {
@@ -48,6 +59,7 @@ public class D2SWriter96 {
     d2s.composites = extractComposites(charData);
     d2s.colors = extractColors(charData);
     d2s.towns = charData.towns.clone();
+    d2s.towns[charData.diff] = (byte) ((d2s.towns[charData.diff] & 0x7F) | 0x80);
     d2s.mapSeed = charData.mapSeed;
 
     // 佣兵数据
@@ -206,17 +218,15 @@ public class D2SWriter96 {
   private static final byte[] MERC_SIGNATURE = {0x6A, 0x66};
   private static final byte[] GOLEM_SIGNATURE = {0x6B, 0x66};
 
-  // 玩家属性的位宽（来自diablo_edit）
-  private static final int[] STAT_BITS = {
-      10, 10, 10, 10, 10, 8,    // str, energy, dex, vit, statpts, skillpts
-      21, 21, 21, 21, 21, 21,   // life, maxlife, mana, maxmana, stamina, maxstamina
-      7, 32, 25, 25             // level, exp, gold, goldbank
-  };
-
   protected StatListWriter statListWriter = new StatListWriter();
   protected ItemWriter itemWriter = new ItemWriter();
 
   public byte[] writeD2S(D2S d2s) {
+    if (!D2S.isOriginalNameCompatible(d2s.name)) {
+      throw new IllegalArgumentException(
+          "Character name is not compatible with Diablo II 1.13c: " + d2s.name);
+    }
+
     // 估算缓冲区大小（D2S文件通常为1-4KB）
     ByteBuf buffer = Unpooled.buffer(8192);
     ByteOutput out = ByteOutput.wrap(buffer);
@@ -292,11 +302,12 @@ public class D2SWriter96 {
     out.writeChars(d2s.name, Riiablo.MAX_NAME_LENGTH + 1);
     out.write32(d2s.flags);
     out.write8(d2s.charClass);
-    out.skipBytes(2); // 未知字段
+    out.write8(NUM_STATS);
+    out.write8(NUM_SKILLS);
     out.write8(d2s.level);
-    out.skipBytes(4); // 未知字段
+    out.write32(d2s.timestamp); // dwCreateTime
     out.write32(d2s.timestamp);
-    out.skipBytes(4); // 未知字段 (0xFFFFFFFF)
+    out.write32(UNKNOWN_PLAY_TIME);
 
     // 快捷键
     for (int hotkey : d2s.hotkeys) {
@@ -397,40 +408,19 @@ public class D2SWriter96 {
     BitOutput bits = out.unalign();
 
     if (stats != null && stats.attrs != null) {
+      // D2MOO PLRSAVE2_WritePlayerStats uses ItemStatCost.CSvBits and
+      // CSvParam for every base stat. StatListWriter implements that exact
+      // data-driven representation and preserves 8-bit fixed-point values.
       StatListRef base = stats.attrs.base();
-
-      // 按顺序写入属性及其ID
-      writeStatIfPresent(bits, base, Stat.strength, 0);
-      writeStatIfPresent(bits, base, Stat.energy, 1);
-      writeStatIfPresent(bits, base, Stat.dexterity, 2);
-      writeStatIfPresent(bits, base, Stat.vitality, 3);
-      writeStatIfPresent(bits, base, Stat.statpts, 4);
-      writeStatIfPresent(bits, base, Stat.newskills, 5);
-      writeStatIfPresent(bits, base, Stat.hitpoints, 6);
-      writeStatIfPresent(bits, base, Stat.maxhp, 7);
-      writeStatIfPresent(bits, base, Stat.mana, 8);
-      writeStatIfPresent(bits, base, Stat.maxmana, 9);
-      writeStatIfPresent(bits, base, Stat.stamina, 10);
-      writeStatIfPresent(bits, base, Stat.maxstamina, 11);
-      writeStatIfPresent(bits, base, Stat.level, 12);
-      writeStatIfPresent(bits, base, Stat.experience, 13);
-      writeStatIfPresent(bits, base, Stat.gold, 14);
-      writeStatIfPresent(bits, base, Stat.goldbank, 15);
-    }
-
-    // 写入结束标记 (0x1FF = 511)
-    bits.write15u(0x1FF, 9);
-    bits.align();
-  }
-
-  private void writeStatIfPresent(BitOutput bits, StatListRef base, short statId, int index) {
-    if (base.containsAny(statId)) {
-      int value = base.get(statId).asInt();
-      if (value != 0 || statId == Stat.level) { // 总是写入等级
-        bits.write15u(index, 9); // 属性ID
-        bits.write32(value, STAT_BITS[index]); // 属性值
+      for (Iterator<StatRef> it = base.iterator(); it.hasNext();) {
+        StatRef stat = it.next();
+        if (stat.entry().CSvBits <= 0) continue;
+        bits.write15u(stat.id(), STAT_ID_BITS);
+        statListWriter.write(base, stat, bits, true);
       }
     }
+    bits.write15u(STAT_END, STAT_ID_BITS);
+    bits.align();
   }
 
   static void writeSkillData(D2S.SkillData skills, ByteOutput out) {
@@ -524,17 +514,9 @@ public class D2SWriter96 {
   private static byte[] extractComposites(CharData charData) {
     byte[] composites = new byte[COF.Component.NUM_COMPONENTS];
     ItemData itemData = charData.getItems();
-    
-    // 使用默认值初始化：
-    // - 武器/盾牌槽位（RH, LH, SH）：NIL (0xFF) - 无物品
-    // - 防具槽位（HD, TR, LG, RA, LA, S1, S2）：LIT (0x01) - 默认lit外观
-    for (int i = 0; i < composites.length; i++) {
-      if (i == COF.Component.RH || i == COF.Component.LH || i == COF.Component.SH) {
-        composites[i] = (byte) ItemCodes.NIL; // 默认无武器/盾牌
-      } else {
-        composites[i] = (byte) ItemCodes.LIT; // 防具默认lit外观
-      }
-    }
+
+    // D2MOO clears both arrays to 0xFF before inventory gfx are applied.
+    Arrays.fill(composites, (byte) 0xFF);
     
     // 提取武器composites（RH, LH, SH）
     // 注意：盾牌可能在RARM或LARM槽位，武器在RARM/LARM槽位
@@ -611,11 +593,8 @@ public class D2SWriter96 {
   private static byte[] extractColors(CharData charData) {
     byte[] colors = new byte[COF.Component.NUM_COMPONENTS];
     ItemData itemData = charData.getItems();
-    
-    // 使用默认值（0）初始化
-    for (int i = 0; i < colors.length; i++) {
-      colors[i] = 0;
-    }
+
+    Arrays.fill(colors, (byte) 0xFF);
     
     // 从装备中提取颜色
     Item HEAD = itemData.getEquipped(BodyLoc.HEAD);

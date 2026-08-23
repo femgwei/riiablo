@@ -27,10 +27,13 @@ public enum D2SReader {
 
   private static class ChecksumCalculator implements ByteProcessor {
     int checksum = 0;
+    int index = 0;
 
     @Override
     public boolean process(byte value) {
-      checksum = (checksum << 1) + value;
+      int octet = index >= 0x0C && index < 0x10 ? 0 : value & 0xFF;
+      checksum = ((checksum << 1) | ((checksum >>> 31) & 1)) + octet;
+      index++;
       return true;
     }
   }
