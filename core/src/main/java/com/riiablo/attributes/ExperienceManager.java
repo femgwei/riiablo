@@ -421,11 +421,18 @@ public class ExperienceManager extends PassiveSystem {
     long newExp = Math.min(currentExp + experienceGained, maxExp);
 
     // 更新经验值
-    stats.put(Stat.experience, (int) Math.min(newExp, Integer.MAX_VALUE));
-    stats.put(Stat.lastexp, (int) Math.min(experienceGained, Integer.MAX_VALUE));
+    int encodedExp = (int) Math.min(newExp, Integer.MAX_VALUE);
+    int encodedLastExp = (int) Math.min(experienceGained, Integer.MAX_VALUE);
+    stats.put(Stat.experience, encodedExp);
+    stats.put(Stat.lastexp, encodedLastExp);
+    // The HUD and combat adapter read aggregate stats.  Updating base only
+    // leaves the visible XP bar unchanged until an unrelated item refresh.
+    charData.getStats().aggregate().put(Stat.experience, encodedExp);
+    charData.getStats().aggregate().put(Stat.lastexp, encodedLastExp);
 
-    log.debug("Added {} experience to character. Total: {} (old level: {})",
-        experienceGained, newExp, oldLevel);
+    log.info("[XP_SYNC] character={} gained={} total={} oldLevel={} aggregate={}",
+        charData.name, experienceGained, newExp, oldLevel,
+        charData.getStats().get(Stat.experience).asLong());
 
     // 检查是否升级
     int newLevel = getCurrentLevelFromExp(charClass, newExp);
@@ -468,11 +475,13 @@ public class ExperienceManager extends PassiveSystem {
 
     StatListRef stats = charData.getStats().base();
     stats.put(Stat.level, newLevel);
+    charData.getStats().aggregate().put(Stat.level, newLevel);
 
     // 更新下一级所需经验值
     int charClass = charData.charClass & 0xFF;
     long nextExp = expTable.getExperienceForNextLevel(newLevel, charClass);
     stats.put(Stat.nextexp, (int) Math.min(nextExp, Integer.MAX_VALUE));
+    charData.getStats().aggregate().put(Stat.nextexp, (int) Math.min(nextExp, Integer.MAX_VALUE));
 
     log.info("Character leveled up from {} to {}!", oldLevel, newLevel);
 

@@ -19,6 +19,8 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.Engine;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.map.pfa.GraphPath;
@@ -27,6 +29,7 @@ import java.util.Iterator;
 
 @All({Pathfind.class, Position.class, Velocity.class})
 public class Pathfinder extends IteratingSystem {
+  private static final Logger log = LogManager.getLogger(Pathfinder.class);
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Pathfind> mPathfind;
@@ -163,6 +166,12 @@ public class Pathfinder extends IteratingSystem {
 
     Velocity velocity = mVelocity.get(entityId);
     float speed    = (mRunning.has(entityId) ? velocity.runSpeed : velocity.walkSpeed);
+    if (speed <= 0f) {
+      log.warn("[MOVEMENT] invalid speed entity={} running={} walkSpeed={} runSpeed={}",
+          entityId, mRunning.has(entityId), velocity.walkSpeed, velocity.runSpeed);
+      velocity.velocity.setZero();
+      return;
+    }
     float distance = speed * world.delta;
     float traveled = 0;
     while (traveled < distance) {

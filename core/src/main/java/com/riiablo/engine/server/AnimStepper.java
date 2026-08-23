@@ -33,6 +33,10 @@ public class AnimStepper extends IntervalIteratingSystem {
     int delta = animData.override >= 0 ? animData.override : animData.speed;
     if (delta < 0) delta = 0;
     int nextFrame = animData.frame + delta;
+    if (delta == 0) {
+      log.warn("[ATTACK_ANIM] stalled entity={} frame={} mode animation has zero delta",
+          entityId, animData.frame);
+    }
     while (nextFrame >= animData.numFrames) {
       nextFrame -= animData.numFrames;
       dispatchKeyframes(entityId, animData, true);

@@ -29,6 +29,8 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
@@ -53,6 +55,8 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<AnimData> mAnimData;
+  protected ComponentMapper<CofReference> mCofReference;
 
   // teleport-specific components
   protected ComponentMapper<Position> mPosition;
@@ -115,6 +119,13 @@ public class Actioneer extends PassiveSystem {
 
   public void cast(int entityId, int skillId, int targetId, Vector2 targetVec) {
     if (!canCast(entityId)) return;
+    if (mAttributesWrapper.has(entityId)) {
+      StatRef hp = mAttributesWrapper.get(entityId).attrs.get(Stat.hitpoints, StatRef.obtain());
+      if (hp != null && hp.asFixed() <= 0f) {
+        log.info("[ATTACK_ANIM] rejected_dead entity={} skill={} target={}", entityId, skillId, targetId);
+        return;
+      }
+    }
     moveTo(entityId, Engine.INVALID_ENTITY);
     final Skills.Entry skill = Riiablo.files.skills.get(skillId);
     log.traceEntry("cast(entityId: {}, skillId: {} ({}), targetId: {}, targetVec: {})",
@@ -285,6 +296,11 @@ public class Actioneer extends PassiveSystem {
     log.traceEntry("onAnimDataKeyframe(entityId: {}, keyframe: {} ({}))",
         event.entityId, event.keyframe, Engine.getKeyframe(event.keyframe));
     final Casting casting = mCasting.get(event.entityId);
+    byte mode = mCofReference.has(event.entityId) ? mCofReference.get(event.entityId).mode : -1;
+    int frame = mAnimData.has(event.entityId) ? mAnimData.get(event.entityId).frame : -1;
+    log.info("[ATTACK_ANIM] keyframe entity={} skill={} target={} keyframe={} mode={} frame={}",
+        event.entityId, casting.skillId, casting.targetId,
+        Engine.getKeyframe(event.keyframe), (int) mode, frame);
     
     // D2MOD: Check if target is dead before processing attack keyframe
     // If target is dead, skip damage/events but allow animation to complete
@@ -362,6 +378,15 @@ public class Actioneer extends PassiveSystem {
 
   @Subscribe
   public void onDeath(DeathEvent event) {
+    // A death can happen during the attack keyframe.  Clear the attack state
+    // before the death handler installs MODE_DT -> MODE_DD; otherwise the old
+    // attack sequence receives the next AnimDataFinishedEvent and restores NU.
+    if (event.victim != Engine.INVALID_ENTITY) {
+      if (mCasting.has(event.victim)) mCasting.remove(event.victim);
+      if (mSequence.has(event.victim)) mSequence.remove(event.victim);
+      if (mTarget.has(event.victim)) mTarget.remove(event.victim);
+      log.info("[PLAYER_DEATH] action state cleared entity={} killer={}", event.victim, event.killer);
+    }
     if (mTarget.has(event.killer)) {
       Target target = mTarget.get(event.killer);
       if (target.target == event.victim) {
@@ -451,14 +476,17 @@ public class Actioneer extends PassiveSystem {
             isPlayerEntity(targetId),
             false);
         if (!combat.hit) {
-          log.debug("{} melee miss on {} (hitChance={}%)", entityId, targetId, combat.hitChance);
+          log.info("[COMBAT_HIT] entity={} target={} result=miss chance={}% attackerLevel={} targetLevel={} ar={} defense={}",
+              entityId, targetId, combat.hitChance,
+              statInt(attackerAttrs, Stat.level), statInt(attrs, Stat.level),
+              statInt(attackerAttrs, Stat.tohit), statInt(attrs, Stat.armorclass));
           break;
         }
         if (combat.blocked) {
           log.debug("{} melee attack blocked by {}", entityId, targetId);
           break;
         }
-        log.debug("{} melee hit on {}: damage={}, hitChance={}%, critical={}, deadly={}, crushing={}",
+        log.info("[COMBAT_HIT] entity={} target={} result=hit damage={} chance={}% critical={} deadly={} crushing={}",
             entityId, targetId, combat.totalDamage, combat.hitChance,
             combat.critical, combat.deadlyStrike, combat.crushingBlow);
 
@@ -541,6 +569,12 @@ public class Actioneer extends PassiveSystem {
 
   private boolean isPlayerEntity(int entityId) {
     return mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    if (attrs == null) return 0;
+    StatRef ref = attrs.get(stat, StatRef.obtain());
+    return ref == null ? 0 : ref.asInt();
   }
 
   private void applyCombatStates(int attackerId, int targetId,

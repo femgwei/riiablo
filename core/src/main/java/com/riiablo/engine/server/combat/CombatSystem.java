@@ -334,10 +334,17 @@ public class CombatSystem {
     AttackerData a = new AttackerData();
     a.isPlayer = attackerPlayer;
     a.isMissile = missile;
-    a.level = statInt(attacker, Stat.level, 1);
+    a.level = Math.max(1, statInt(attacker, Stat.level, 1));
     a.strength = statInt(attacker, Stat.strength, 0);
     a.dexterity = statInt(attacker, Stat.dexterity, 0);
     a.attackRating = statInt(attacker, Stat.tohit, 0);
+    // A newly-created character may not have a tohit entry until an item/stat
+    // refresh has completed.  D2 still gives every player a level/dexterity
+    // based attack rating; treating the missing value as zero produces the
+    // artificial 5% floor seen in game.log.
+    if (attackerPlayer && a.attackRating <= 0) {
+      a.attackRating = Math.max(1, a.dexterity * 5 + Math.max(1, a.level) * 2);
+    }
     a.attackRatingPercent = statInt(attacker, Stat.item_tohit_percent, 0);
     a.minDamage = statInt(attacker, Stat.mindamage, 1);
     a.maxDamage = statInt(attacker, Stat.maxdamage, Math.max(2, a.minDamage));
@@ -372,7 +379,7 @@ public class CombatSystem {
     DefenderData d = new DefenderData();
     d.isPlayer = defenderPlayer;
     d.isMonster = !defenderPlayer;
-    d.level = statInt(defender, Stat.level, 1);
+    d.level = Math.max(1, statInt(defender, Stat.level, 1));
     d.dexterity = statInt(defender, Stat.dexterity, 0);
     d.defense = statInt(defender, Stat.armorclass, 0);
     int alternateDefense = statInt(defender,
@@ -426,7 +433,10 @@ public class CombatSystem {
     result.hit = rollHit(result.hitChance);
 
     if (!result.hit) {
-      log.debug("Attack missed: hitChance={}%", result.hitChance);
+      log.debug("[COMBAT_HIT] result=miss ar={} defense={} attackerLevel={} defenderLevel={} chance={}%",
+          calculateEffectiveAttackRating(attacker, defender),
+          calculateEffectiveDefense(attacker, defender), attacker.level, defender.level,
+          result.hitChance);
       return result;
     }
 
@@ -436,7 +446,7 @@ public class CombatSystem {
       result.blocked = MathUtils.random(99) < blockChance;
 
       if (result.blocked) {
-        log.debug("Attack blocked: blockChance={}%", blockChance);
+        log.debug("[COMBAT_HIT] result=blocked blockChance={} chance={}%", blockChance, result.hitChance);
         return result;
       }
     }
@@ -487,9 +497,9 @@ public class CombatSystem {
     result.lifeStolen = calculateLifeLeech(result.physicalDamage, attacker);
     result.manaStolen = calculateManaLeech(result.physicalDamage, attacker);
 
-    log.debug("Attack hit: physical={}, total={}, hitChance={}%, crit={}, deadly={}",
+    log.debug("[COMBAT_HIT] result=hit physical={} total={} chance={}% crit={} deadly={} crushing={}",
         result.physicalDamage, result.totalDamage, result.hitChance, 
-        result.critical, result.deadlyStrike);
+        result.critical, result.deadlyStrike, result.crushingBlow);
 
     return result;
   }

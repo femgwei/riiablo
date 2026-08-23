@@ -22,6 +22,10 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.Pathfind;
+import com.riiablo.engine.server.component.Running;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Size;
@@ -51,6 +55,10 @@ public class DeathHandler extends PassiveSystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<MovementModes> mMovementModes;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<Pathfind> mPathfind;
+  protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   protected CofManager cofs;
 
@@ -93,7 +101,11 @@ public class DeathHandler extends PassiveSystem {
    * Reference: D2MOD - players create corpse at death location, respawn at town
    */
   private void handlePlayerDeath(int playerId) {
-    log.info("Player {} has died", playerId);
+    if (mPlayerCorpse.has(playerId)) {
+      log.debug("[PLAYER_DEATH] duplicate death ignored entity={}", playerId);
+      return;
+    }
+    log.info("[PLAYER_DEATH] begin entity={}", playerId);
     
     // Get player position (death location)
     if (!mPosition.has(playerId)) {
@@ -181,10 +193,13 @@ public class DeathHandler extends PassiveSystem {
     
     // Create death sequence: MODE_DT (death animation) -> MODE_DD (corpse)
     // Reference: D2MOD - players use MODE_DT -> MODE_DD sequence like monsters
-    if (!mSequence.has(playerId)) {
-      mSequence.create(playerId).sequence(Engine.Player.MODE_DT, Engine.Player.MODE_DD);
-      log.debug("Player {} death sequence started: MODE_DT -> MODE_DD", playerId);
-    }
+    // Replace an in-flight attack/cast sequence.  Keeping it would let the
+    // attack's completion event switch the player back to standing mode.
+    if (mCasting.has(playerId)) mCasting.remove(playerId);
+    if (mPathfind.has(playerId)) mPathfind.remove(playerId);
+    if (mSequence.has(playerId)) mSequence.remove(playerId);
+    mSequence.create(playerId).sequence(Engine.Player.MODE_DT, Engine.Player.MODE_DD);
+    log.info("[PLAYER_DEATH] sequence entity={} mode=DT->DD", playerId);
     
     // Create independent corpse entity at death location (like d2mod)
     // The corpse entity will remain at death location while player respawns at town
@@ -392,6 +407,14 @@ public class DeathHandler extends PassiveSystem {
       log.debug("Player {} respawned at town location: ({}, {})", 
           playerId, townLocation.x, townLocation.y);
     }
+
+    if (mPathfind.has(playerId)) mPathfind.remove(playerId);
+    if (mCasting.has(playerId)) mCasting.remove(playerId);
+    if (mTarget.has(playerId)) mTarget.remove(playerId);
+    if (mRunning.has(playerId)) mRunning.remove(playerId);
+    if (mUnitStates.has(playerId) && mUnitStates.get(playerId).stateList != null) {
+      mUnitStates.get(playerId).stateList.clearAll();
+    }
     
     // Restore HP/MP to full
     if (mAttributesWrapper.has(playerId)) {
@@ -434,11 +457,20 @@ public class DeathHandler extends PassiveSystem {
       if (charData != null) {
         // Get walk/run speeds from CharStats (same as ServerEntityFactory.createPlayer)
         com.riiablo.codec.excel.CharStats.Entry charStats = charData.classId != null ? charData.classId.entry() : null;
-        float walkSpeed = charStats != null ? charStats.WalkVelocity : Engine.Player.SPEED_WALK;
-        float runSpeed = charStats != null ? charStats.RunVelocity : Engine.Player.SPEED_RUN;
+        float walkSpeed = charStats != null && charStats.WalkVelocity > 0
+            ? charStats.WalkVelocity : Engine.Player.SPEED_WALK;
+        float runSpeed = charStats != null && charStats.RunVelocity > 0
+            ? charStats.RunVelocity : Engine.Player.SPEED_RUN;
         mVelocity.create(playerId).set(walkSpeed, runSpeed);
         log.debug("Player {} Velocity component restored: walkSpeed={}, runSpeed={}", playerId, walkSpeed, runSpeed);
       }
+    }
+
+    // Death removes the physics body.  Re-adding the component lets
+    // Box2DPhysics create a fresh body at the respawn position.
+    if (!mBox2DBody.has(playerId)) {
+      mBox2DBody.create(playerId);
+      log.info("[PLAYER_REVIVE] physics body recreated entity={}", playerId);
     }
     
     // Restore MovementModes component if it was removed
@@ -447,6 +479,7 @@ public class DeathHandler extends PassiveSystem {
       log.debug("Player {} MovementModes component restored", playerId);
     }
     
-    log.info("Player {} respawned at town, death state cleared", playerId);
+    log.info("[PLAYER_REVIVE] entity={} position=({}, {}) hpRestored=true movementRestored=true",
+        playerId, townLocation.x, townLocation.y);
   }
 }

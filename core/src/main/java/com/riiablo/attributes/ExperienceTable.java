@@ -150,8 +150,9 @@ public class ExperienceTable {
     if (level >= MAX_LEVEL) {
       return Long.MAX_VALUE; // Max level reached
     }
-
-    int nextLevel = level + 1;
+    // The table stores the amount required to reach level n + 1 at index n:
+    // level 1 -> 500, level 2 -> 1500, ...
+    int nextLevel = Math.max(1, level);
     switch (classId) {
       case 0: return amazon[nextLevel];
       case 1: return sorceress[nextLevel];
@@ -172,15 +173,17 @@ public class ExperienceTable {
    */
   public long getExperienceForCurrentLevel(int level, int classId) {
     if (level < 1) level = 1;
+    if (level == 1) return 0;
+    int reached = level - 1;
     switch (classId) {
-      case 0: return amazon[level];
-      case 1: return sorceress[level];
-      case 2: return necromancer[level];
-      case 3: return paladin[level];
-      case 4: return barbarian[level];
-      case 5: return druid[level];
-      case 6: return assassin[level];
-      default: return amazon[level];
+      case 0: return amazon[reached];
+      case 1: return sorceress[reached];
+      case 2: return necromancer[reached];
+      case 3: return paladin[reached];
+      case 4: return barbarian[reached];
+      case 5: return druid[reached];
+      case 6: return assassin[reached];
+      default: return amazon[reached];
     }
   }
 }

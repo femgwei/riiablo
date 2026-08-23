@@ -30,6 +30,7 @@ import com.riiablo.CharacterClass;
 import com.riiablo.Keys;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.ExperienceTable;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.SkillDesc;
@@ -439,13 +440,11 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     }
 
     private long getNextLevelExperience(int level, int charClass) {
-      if (level >= 99) return Long.MAX_VALUE;
-      return (long) (500 + Math.pow(level * 0.8, 2.5) * 100);
+      return ExperienceTable.getInstance().getExperienceForNextLevel(level, charClass);
     }
 
     private long getCurrentLevelExperience(int level, int charClass) {
-      if (level <= 1) return 0;
-      return getNextLevelExperience(level - 1, charClass);
+      return ExperienceTable.getInstance().getExperienceForCurrentLevel(level, charClass);
     }
   }
 

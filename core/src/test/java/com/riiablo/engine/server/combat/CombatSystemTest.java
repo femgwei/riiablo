@@ -48,4 +48,19 @@ public class CombatSystemTest {
 
     assertEquals(54, combat.calculateBlockChance(defender));
   }
+
+  @Test
+  public void playerFallbackAttackRatingAvoidsArtificialFivePercentFloor() {
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.isPlayer = true;
+    attacker.level = 1;
+    attacker.dexterity = 25;
+    attacker.attackRating = 25 * 5 + 2;
+
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.level = 1;
+    defender.defense = 20;
+
+    assertTrue(combat.calculateHitChance(attacker, defender) > CombatSystem.MIN_TO_HIT_CHANCE);
+  }
 }

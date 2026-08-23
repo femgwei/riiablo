@@ -50,9 +50,12 @@ import com.riiablo.engine.server.component.ZoneAware;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 public class ServerEntityFactory extends EntityFactory {
   private static final String TAG = "ServerEntityFactory";
+  private static final Logger log = LogManager.getLogger(ServerEntityFactory.class);
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
@@ -95,8 +98,12 @@ public class ServerEntityFactory extends EntityFactory {
     // D2MOD uses these values directly (they're already in the correct units for the game)
     // In riiablo, we read from CharStats.WalkVelocity and RunVelocity
     com.riiablo.codec.excel.CharStats.Entry charStats = charData.classId != null ? charData.classId.entry() : null;
-    float walkSpeed = charStats != null ? charStats.WalkVelocity : Engine.Player.SPEED_WALK;
-    float runSpeed = charStats != null ? charStats.RunVelocity : Engine.Player.SPEED_RUN;
+    float walkSpeed = charStats != null && charStats.WalkVelocity > 0
+        ? charStats.WalkVelocity : Engine.Player.SPEED_WALK;
+    float runSpeed = charStats != null && charStats.RunVelocity > 0
+        ? charStats.RunVelocity : Engine.Player.SPEED_RUN;
+    log.info("[MOVEMENT] player={} walkSpeed={} runSpeed={} source={}",
+        id, walkSpeed, runSpeed, charStats == null ? "fallback" : "CharStats");
     mVelocity.create(id).set(walkSpeed, runSpeed);
     mAngle.create(id);
 
