@@ -2,6 +2,7 @@ package com.riiablo.engine.server.combat;
 
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.state.StateId;
 
 /**
  * 状态效果应用器 - 基于 D2MOD 移植
@@ -27,6 +28,18 @@ public class StatusEffectApplier {
   public static final StatusEffectApplier INSTANCE = new StatusEffectApplier();
 
   private StatusEffectApplier() {}
+
+  /** Runtime sink supplied by the ECS StateUpdater. */
+  public interface StateSink {
+    void applyState(int targetEntityId, int stateId, int duration, int level,
+        int sourceEntityId, int damagePerFrame, int damageType);
+  }
+
+  private StateSink stateSink;
+
+  public void setStateSink(StateSink stateSink) {
+    this.stateSink = stateSink;
+  }
 
   //==========================================================================
   // 状态效果常量
@@ -68,8 +81,10 @@ public class StatusEffectApplier {
       return;
     }
 
-    // TODO: 通过 StateUpdater 系统应用毒素状态
-    // 需要创建或更新 STATE_POISON 状态
+    if (stateSink != null) {
+      stateSink.applyState(targetEntityId, StateId.POISON, poisonDuration, 1,
+          attackerEntityId, poisonDamage, 4);
+    }
     
     log.debug("Applied poison: target={}, damage={}/frame, duration={} frames",
         targetEntityId, poisonDamage, poisonDuration);
@@ -92,7 +107,10 @@ public class StatusEffectApplier {
       return;
     }
 
-    // TODO: 通过 StateUpdater 系统应用燃烧状态
+    if (stateSink != null) {
+      stateSink.applyState(targetEntityId, StateId.BURNING, burnDuration, 1,
+          attackerEntityId, burnDamage, 1);
+    }
     
     log.debug("Applied burn: target={}, damage={}/frame, duration={} frames",
         targetEntityId, burnDamage, burnDuration);
@@ -112,8 +130,10 @@ public class StatusEffectApplier {
       return;
     }
 
-    // TODO: 通过 StateUpdater 系统应用冰冷状态
-    // 设置 STATE_COLD，减速目标移动和攻击速度
+    if (stateSink != null) {
+      stateSink.applyState(targetEntityId, StateId.COLD, coldDuration, 1,
+          attackerEntityId, 0, 3);
+    }
     
     log.debug("Applied cold slow: target={}, duration={} frames", targetEntityId, coldDuration);
   }
@@ -132,8 +152,10 @@ public class StatusEffectApplier {
       return;
     }
 
-    // TODO: 通过 StateUpdater 系统应用冰冻状态
-    // 设置 STATE_FREEZE，完全停止目标
+    if (stateSink != null) {
+      stateSink.applyState(targetEntityId, StateId.FREEZE, freezeDuration, 1,
+          attackerEntityId, 0, 3);
+    }
     
     log.debug("Applied freeze: target={}, duration={} frames", targetEntityId, freezeDuration);
   }
@@ -152,7 +174,10 @@ public class StatusEffectApplier {
     // 限制眩晕持续时间
     stunDuration = Math.max(MIN_STUN_DURATION, Math.min(MAX_STUN_DURATION, stunDuration));
 
-    // TODO: 通过 StateUpdater 系统应用眩晕状态
+    if (stateSink != null) {
+      stateSink.applyState(targetEntityId, StateId.STUNNED, stunDuration, 1,
+          -1, 0, 0);
+    }
     
     log.debug("Applied stun: target={}, duration={} frames", targetEntityId, stunDuration);
   }

@@ -6,11 +6,19 @@ import com.artemis.systems.IteratingSystem;
 
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import net.mostlyoriginal.api.event.common.EventSystem;
 
 /**
  * 状态更新系统 - 基于 D2MOD 状态处理逻辑移植
@@ -28,11 +36,20 @@ import com.riiablo.logger.Logger;
  * @author riiablo team
  */
 @All(UnitStates.class)
-public class StateUpdater extends IteratingSystem {
+public class StateUpdater extends IteratingSystem implements StatusEffectApplier.StateSink {
   private static final Logger log = LogManager.getLogger(StateUpdater.class);
 
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+
+  protected EventSystem events;
+
+  @Override
+  protected void initialize() {
+    super.initialize();
+    StatusEffectApplier.INSTANCE.setStateSink(this);
+  }
 
   //==========================================================================
   // 系统处理
@@ -47,32 +64,20 @@ public class StateUpdater extends IteratingSystem {
 
     StateList stateList = unitStates.stateList;
     
-    // 更新所有状态（处理过期）
+    // Resolve this tick before decrementing duration. A one-frame state must
+    // still deal its final DOT tick, then expire.
+    processDamageOverTime(entityId, stateList);
     stateList.update();
-    
-    // 应用状态效果
-    applyStateEffects(entityId, stateList);
+
+    // Apply movement/control effects only while the state remains active.
+    if (mVelocity.has(entityId)) {
+      applyVelocityModifiers(entityId, stateList);
+    }
   }
 
   //==========================================================================
   // 状态效果应用
   //==========================================================================
-
-  /**
-   * 应用状态效果到实体
-   * 
-   * @param entityId 实体ID
-   * @param stateList 状态列表
-   */
-  private void applyStateEffects(int entityId, StateList stateList) {
-    // 处理移动速度修正
-    if (mVelocity.has(entityId)) {
-      applyVelocityModifiers(entityId, stateList);
-    }
-    
-    // 处理持续伤害
-    processDamageOverTime(entityId, stateList);
-  }
 
   /**
    * 应用移动速度修正
@@ -134,9 +139,8 @@ public class StateUpdater extends IteratingSystem {
     if (stateList.hasState(StateId.POISON)) {
       UnitState poisonState = stateList.getState(StateId.POISON);
       if (poisonState.damagePerFrame > 0) {
-        // TODO: 应用毒素伤害
-        // 需要 AttributesWrapper 组件来修改生命值
-        log.trace("实体 {} 受到 {} 点毒素伤害", entityId, poisonState.damagePerFrame);
+        applyDamageOverTime(entityId, poisonState.sourceEntityId,
+            poisonState.damagePerFrame, stateList, StateId.POISON);
       }
     }
     
@@ -144,8 +148,8 @@ public class StateUpdater extends IteratingSystem {
     if (stateList.hasState(StateId.BURNING)) {
       UnitState burningState = stateList.getState(StateId.BURNING);
       if (burningState.damagePerFrame > 0) {
-        // TODO: 应用燃烧伤害
-        log.trace("实体 {} 受到 {} 点燃烧伤害", entityId, burningState.damagePerFrame);
+        applyDamageOverTime(entityId, burningState.sourceEntityId,
+            burningState.damagePerFrame, stateList, StateId.BURNING);
       }
     }
     
@@ -154,8 +158,37 @@ public class StateUpdater extends IteratingSystem {
       UnitState woundsState = stateList.getState(StateId.OPENWOUNDS);
       // 撕开伤口伤害基于角色等级
       int damage = woundsState.level * 2;
-      // TODO: 应用伤害
-      log.trace("实体 {} 受到 {} 点撕开伤口伤害", entityId, damage);
+      if (damage > 0) {
+        applyDamageOverTime(entityId, woundsState.sourceEntityId,
+            damage, stateList, StateId.OPENWOUNDS);
+      }
+    }
+  }
+
+  /** Applies one server tick of DOT and emits the normal damage/death events. */
+  private void applyDamageOverTime(int entityId, int sourceEntityId, float damage,
+      StateList stateList, int stateId) {
+    if (damage <= 0 || !mAttributesWrapper.has(entityId)) return;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    if (attrs == null) return;
+    StatRef hitpoints = attrs.get(Stat.hitpoints, StatRef.obtain());
+    if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
+
+    DamageEvent event = DamageEvent.obtain(sourceEntityId, entityId, damage);
+    if (events != null) events.dispatch(event);
+    float appliedDamage = Math.max(0f, event.damage);
+    hitpoints.sub(appliedDamage);
+    float hpAfter = hitpoints.asFixed();
+    if (hpAfter <= 0f) {
+      hitpoints.set(0f);
+      log.debug("Entity {} died from state {} (damage={})", entityId,
+          StateId.getName(stateId), appliedDamage);
+      if (events != null) events.dispatch(DeathEvent.obtain(sourceEntityId, entityId));
+      // Prevent a dead entity from emitting the same death event every tick.
+      stateList.clearAll();
+    } else {
+      log.trace("Entity {} takes {} damage from state {} (hp={})", entityId,
+          appliedDamage, StateId.getName(stateId), hpAfter);
     }
   }
 
@@ -184,6 +217,22 @@ public class StateUpdater extends IteratingSystem {
     }
     
     unitStates.stateList.addState(stateId, duration, level, sourceId);
+  }
+
+  @Override
+  public void applyState(int entityId, int stateId, int duration, int level,
+      int sourceId, int damagePerFrame, int damageType) {
+    if (!mUnitStates.has(entityId)) {
+      log.warn("Entity {} has no UnitStates component; state {} ignored", entityId, stateId);
+      return;
+    }
+    UnitStates unitStates = mUnitStates.get(entityId);
+    if (unitStates.stateList == null) unitStates.init(entityId);
+    UnitState state = unitStates.stateList.addState(stateId, duration, level, sourceId);
+    if (state == null) return;
+    if (damagePerFrame > state.damagePerFrame) state.damagePerFrame = damagePerFrame;
+    state.damageType = damageType;
+    state.needsSync = true;
   }
 
   /**

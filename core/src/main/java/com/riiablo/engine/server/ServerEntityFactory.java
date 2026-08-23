@@ -43,6 +43,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.ZoneAware;
@@ -74,6 +75,7 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<AIWrapper> mAIWrapper;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   protected ObjectInteractor objectInteractor;
   protected WarpInteractor warpInteractor;
@@ -84,6 +86,7 @@ public class ServerEntityFactory extends EntityFactory {
     int id = super.createEntity(Class.Type.PLR, "player");
     mPlayer.create(id).data = charData;
     mAttributesWrapper.create(id).attrs = charData.getStats();
+    mUnitStates.create(id).init(id);
     mMapWrapper.create(id).set(map, map.getZone(position));
 
     mPosition.create(id).position.set(position);
@@ -238,6 +241,7 @@ public class ServerEntityFactory extends EntityFactory {
 
       attrs.reset(); // propagate base changes
       mAttributesWrapper.create(id).attrs = attrs;
+      mUnitStates.create(id).init(id);
     }
 
     mPosition.create(id).position.set(x, y);
