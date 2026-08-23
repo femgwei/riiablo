@@ -433,14 +433,17 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       } else {
         // 找不到对应的 preset，不设置 preset，让 generator 生成地形
         // 使用 8x8 网格系统（参考 D2MOD: DRLGGRID）
-        int gridSizeX = OutdoorGrid.GRID_SIZE_TILES;  // 每个网格 8 tiles
-        int gridSizeY = OutdoorGrid.GRID_SIZE_TILES;  // 每个网格 8 tiles
-        
         // D2MOO 布局已包含各区域尺寸
         int tilesX = result.coords[i][2];
         int tilesY = result.coords[i][3];
-        int gridsX = tilesX / gridSizeX;  // 例如：80 / 8 = 10 或 96 / 8 = 12
-        int gridsY = tilesY / gridSizeY;  // 例如：80 / 8 = 10 或 56 / 8 = 7
+        // Native maze bounds are not necessarily multiples of an outdoor
+        // RoomEx (Barracks is 60x42 for the fixed seed).  Keep the largest
+        // factor of the native 8-tile grid so Zone bounds remain exact; plain
+        // integer division would truncate the exported floor/collision edge.
+        int gridSizeX = nativeGridSize(tilesX);
+        int gridSizeY = nativeGridSize(tilesY);
+        int gridsX = tilesX / gridSizeX;
+        int gridsY = tilesY / gridSizeY;
         
         // 使用带网格数量的 addZone 方法
         zone = map.addZone(level, gridSizeX, gridSizeY, gridsX, gridsY);
@@ -2511,6 +2514,17 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
    */
   public boolean hasD2MooExport(int levelId) {
     return levelsFilledByExport.contains(levelId);
+  }
+
+  static int nativeGridSize(int tiles) {
+    int a = OutdoorGrid.GRID_SIZE_TILES;
+    int b = Math.max(1, tiles);
+    while (b != 0) {
+      int remainder = a % b;
+      a = b;
+      b = remainder;
+    }
+    return Math.max(1, a);
   }
 
   /** DT1 mask used by all D2MOO rooms exported for this level. */

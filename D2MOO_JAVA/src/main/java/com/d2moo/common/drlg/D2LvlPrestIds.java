@@ -484,6 +484,31 @@ public class D2LvlPrestIds {
     public static final int LVLPREST_ACT1_BARRACKS_FORGE_E = 203;
     public static final int LVLPREST_ACT1_BARRACKS_FORGE_S = 204;
     public static final int LVLPREST_ACT1_BARRACKS_FORGE_W = 202;
+    // Act 1 jail base and special presets in the runtime LvlPrest table.
+    public static final int LVLPREST_ACT1_JAIL_W = 206;
+    public static final int LVLPREST_ACT1_JAIL_E = 207;
+    public static final int LVLPREST_ACT1_JAIL_S = 209;
+    public static final int LVLPREST_ACT1_JAIL_N = 213;
+    public static final int LVLPREST_ACT1_JAIL_PREV_W = 236;
+    public static final int LVLPREST_ACT1_JAIL_PREV_E = 237;
+    public static final int LVLPREST_ACT1_JAIL_PREV_S = 238;
+    public static final int LVLPREST_ACT1_JAIL_PREV_N = 239;
+    public static final int LVLPREST_ACT1_JAIL_NEXT_W = 240;
+    public static final int LVLPREST_ACT1_JAIL_NEXT_E = 241;
+    public static final int LVLPREST_ACT1_JAIL_NEXT_S = 242;
+    public static final int LVLPREST_ACT1_JAIL_NEXT_N = 243;
+    public static final int LVLPREST_ACT1_JAIL_CATH_W = 244;
+    public static final int LVLPREST_ACT1_JAIL_CATH_E = 245;
+    public static final int LVLPREST_ACT1_JAIL_CATH_S = 246;
+    public static final int LVLPREST_ACT1_JAIL_CATH_N = 247;
+    public static final int LVLPREST_ACT1_JAIL_WAYPOINT_W = 248;
+    public static final int LVLPREST_ACT1_JAIL_WAYPOINT_E = 249;
+    public static final int LVLPREST_ACT1_JAIL_WAYPOINT_S = 250;
+    public static final int LVLPREST_ACT1_JAIL_WAYPOINT_N = 251;
+    public static final int LVLPREST_ACT1_JAIL_PITSPAWN_W = 252;
+    public static final int LVLPREST_ACT1_JAIL_PITSPAWN_E = 253;
+    public static final int LVLPREST_ACT1_JAIL_PITSPAWN_S = 254;
+    public static final int LVLPREST_ACT1_JAIL_PITSPAWN_N = 255;
     
     // Act 2 迷宫预设
     public static final int LVLPREST_ACT2_TOWN = 504; // 与 DESERT_TRANSITION_W 相同

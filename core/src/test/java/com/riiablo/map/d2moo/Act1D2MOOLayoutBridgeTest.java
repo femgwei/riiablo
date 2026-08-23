@@ -17,6 +17,7 @@ import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2DrlgVertexStrc;
 import com.d2moo.common.drlg.D2LevelIds;
+import com.d2moo.common.drlg.D2LvlPrestIds;
 import com.d2moo.common.drlg.D2PresetUnit;
 import com.d2moo.common.drlg.D2UnitTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
@@ -47,6 +48,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertNotNull(first, "D2MOO Act1 layout failed; inspect ACT1_D2MOO logs");
     assertDiscoveredNativeSublevels(first);
     assertNativeMonasteryMainline(first.drlg, first.result.levelIds);
+    assertNativeJailChain(first.drlg, first.result.levelIds);
     assertFixedSeedOutdoorCoverage(first.drlg);
     String firstSummary = summarize(first.drlg, first.result.levelIds);
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
@@ -60,6 +62,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertNotNull(second, "Second fixed-seed generation failed");
     assertDiscoveredNativeSublevels(second);
     assertNativeMonasteryMainline(second.drlg, second.result.levelIds);
+    assertNativeJailChain(second.drlg, second.result.levelIds);
     assertFixedSeedOutdoorCoverage(second.drlg);
     assertEquals(firstSummary, summarize(second.drlg, second.result.levelIds),
         "same seed must produce the same Act1 layout summary");
@@ -104,6 +107,10 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       assertTrue(touches(tamoe, gate), "Tamoe Highland must touch Monastery Gate");
       assertTrue(touches(gate, cloister), "Monastery Gate must touch Outer Cloister");
       assertTrue(touches(cloister, barracks), "Outer Cloister must touch Barracks");
+      assertEquals(60 * com.riiablo.map.DT1.Tile.SUBTILE_SIZE, barracks.width(),
+          "Barracks Zone must retain the exact native width");
+      assertEquals(42 * com.riiablo.map.DT1.Tile.SUBTILE_SIZE, barracks.height(),
+          "Barracks Zone must retain the exact native height");
       for (int levelId : new int[] {
           D2LevelIds.LEVEL_MONASTERYGATE,
           D2LevelIds.LEVEL_OUTERCLOISTER,
@@ -152,6 +159,40 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertTouches(
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_OUTERCLOISTER),
         DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BARRACKS));
+  }
+
+  private static void assertNativeJailChain(D2DrlgStrc drlg, int[] levelIds) {
+    for (int levelId : new int[] {
+        D2LevelIds.LEVEL_JAILLVL1,
+        D2LevelIds.LEVEL_JAILLVL2,
+        D2LevelIds.LEVEL_JAILLVL3,
+        D2LevelIds.LEVEL_INNERCLOISTER }) {
+      assertTrue(contains(levelIds, levelId), "native jail level is missing " + levelId);
+      assertNativeLevelExport(drlg, levelId);
+    }
+
+    assertPresetInRange(drlg, D2LevelIds.LEVEL_JAILLVL1,
+        D2LvlPrestIds.LVLPREST_ACT1_JAIL_WAYPOINT_W,
+        D2LvlPrestIds.LVLPREST_ACT1_JAIL_WAYPOINT_N);
+    assertPresetInRange(drlg, D2LevelIds.LEVEL_JAILLVL2,
+        D2LvlPrestIds.LVLPREST_ACT1_JAIL_PITSPAWN_W,
+        D2LvlPrestIds.LVLPREST_ACT1_JAIL_PITSPAWN_N);
+    assertPresetInRange(drlg, D2LevelIds.LEVEL_JAILLVL3,
+        D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_W,
+        D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_N);
+  }
+
+  private static void assertPresetInRange(
+      D2DrlgStrc drlg, int levelId, int firstPreset, int lastPreset) {
+    D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+    for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+        room = room.getDrlgRoomNext()) {
+      if (!(room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) continue;
+      int preset = ((D2DrlgPresetRoomStrc) room.getMazeOrOutdoor()).getNLevelPrest();
+      if (preset >= firstPreset && preset <= lastPreset) return;
+    }
+    throw new AssertionError("missing native special preset " + firstPreset + ".."
+        + lastPreset + " in level " + levelId);
   }
 
   private static void assertNativeLevelExport(D2DrlgStrc drlg, int levelId) {
@@ -215,6 +256,10 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         {D2LevelIds.LEVEL_TOWERCELLARLVL3, D2LevelIds.LEVEL_TOWERCELLARLVL2},
         {D2LevelIds.LEVEL_TOWERCELLARLVL4, D2LevelIds.LEVEL_TOWERCELLARLVL3},
         {D2LevelIds.LEVEL_TOWERCELLARLVL5, D2LevelIds.LEVEL_TOWERCELLARLVL4},
+        {D2LevelIds.LEVEL_JAILLVL1, D2LevelIds.LEVEL_BARRACKS},
+        {D2LevelIds.LEVEL_JAILLVL2, D2LevelIds.LEVEL_JAILLVL1},
+        {D2LevelIds.LEVEL_JAILLVL3, D2LevelIds.LEVEL_JAILLVL2},
+        {D2LevelIds.LEVEL_INNERCLOISTER, D2LevelIds.LEVEL_JAILLVL3},
     };
   }
 

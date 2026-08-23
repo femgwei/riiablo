@@ -29,6 +29,16 @@ public class DrlgMaze {
             new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CRYPT_W, west, -1, 2),
         };
     }
+
+    private static D2MazeLevelIdStrc[] act1JailIds(
+            int north, int east, int south, int west) {
+        return new D2MazeLevelIdStrc[] {
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_JAIL_N, north, -1, 3),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_JAIL_E, east, -1, 0),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_JAIL_S, south, -1, 1),
+            new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_JAIL_W, west, -1, 2),
+        };
+    }
     
     /**
      * D2Common.0x6FD79480
@@ -225,7 +235,68 @@ public class DrlgMaze {
                 break;
                 
             case LVLTYPE_ACT1_BARRACKS:
+                initBasicMazeLayout(level, 2);
+                nRooms = mazeRecord.getDwRooms(drlg.getDifficulty());
+                while (level.getRooms() < nRooms) {
+                    randomRoomEx = getRandomRoomExFromLevel(level);
+                    if (randomRoomEx == null) break;
+                    nDirection = (int)(Seed.rollRandomNumber(randomRoomEx.getSeed()) & 3);
+                    if (!hasMapDS1(randomRoomEx)) {
+                        addAdjacentMazeRoom(randomRoomEx, nDirection, true);
+                    }
+                }
+                break;
+
             case LVLTYPE_ACT1_JAIL:
+                initBasicMazeLayout(level, 2);
+                nRooms = mazeRecord.getDwRooms(drlg.getDifficulty());
+                while (level.getRooms() < nRooms) {
+                    randomRoomEx = getRandomRoomExFromLevel(level);
+                    if (randomRoomEx == null) break;
+                    nDirection = (int)(Seed.rollRandomNumber(randomRoomEx.getSeed()) & 3);
+                    if (!hasMapDS1(randomRoomEx)) {
+                        addAdjacentMazeRoom(randomRoomEx, nDirection, true);
+                    }
+                }
+                nRand = (int)(Seed.rollRandomNumber(level.getSeed()) & 3);
+                int[] jailRand = new int[] { nRand };
+                scanReplaceSpecialPreset(level, act1JailIds(
+                    D2LvlPrestIds.LVLPREST_ACT1_JAIL_PREV_N,
+                    D2LvlPrestIds.LVLPREST_ACT1_JAIL_PREV_E,
+                    D2LvlPrestIds.LVLPREST_ACT1_JAIL_PREV_S,
+                    D2LvlPrestIds.LVLPREST_ACT1_JAIL_PREV_W)[nRand], jailRand);
+                nRand = jailRand[0];
+                if (level.getLevelId() == D2LevelIds.LEVEL_JAILLVL1) {
+                    scanReplaceSpecialPreset(level, act1JailIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_WAYPOINT_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_WAYPOINT_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_WAYPOINT_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_WAYPOINT_W)[nRand], jailRand);
+                }
+                nRand = jailRand[0];
+                if (level.getLevelId() == D2LevelIds.LEVEL_JAILLVL2) {
+                    scanReplaceSpecialPreset(level, act1JailIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_PITSPAWN_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_PITSPAWN_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_PITSPAWN_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_PITSPAWN_W)[nRand], jailRand);
+                }
+                nRand = jailRand[0];
+                if (level.getLevelId() == D2LevelIds.LEVEL_JAILLVL3) {
+                    scanReplaceSpecialPreset(level, act1JailIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_W)[nRand], jailRand);
+                } else {
+                    scanReplaceSpecialPreset(level, act1JailIds(
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_NEXT_N,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_NEXT_E,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_NEXT_S,
+                        D2LvlPrestIds.LVLPREST_ACT1_JAIL_NEXT_W)[nRand], jailRand);
+                }
+                break;
+
             case LVLTYPE_ACT2_SEWER:
             case LVLTYPE_ACT2_HAREM:
             case LVLTYPE_ACT2_BASEMENT:
