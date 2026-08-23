@@ -201,8 +201,9 @@ public class ServerSkillSystem extends PassiveSystem {
 
   /**
    * D2MOO's SKILLS_SrvDo008_MultipleShot_Teeth_ShockWave.  The native
-   * implementation evaluates calc1 as the total count and calc2 as the
-   * centre group, then emits left/centre/right groups along a perpendicular
+   * implementation evaluates calc1 as the total count and calc3 as the
+   * centre group (calc2 is the missile activation frame), then emits
+   * left/centre/right groups along a perpendicular
    * target offset.  The entity factory currently accepts a direction rather
    * than an explicit target point, so the same lane layout is represented by
    * a deterministic narrow fan of directions.
@@ -226,7 +227,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (total <= 0) total = firstParam(skill, 1, 1);
     total = Math.max(1, Math.min(64, total));
 
-    int centre = SkillFormula.evaluate(skill.calc2, skill, skillLevel);
+    int centre = SkillFormula.evaluate(skill.calc3, skill, skillLevel);
     if (centre <= 0) centre = total;
     centre = Math.max(0, Math.min(total, centre));
 
@@ -283,7 +284,7 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   static int getSrvDo008Centre(Skills.Entry skill, int skillLevel, int total) {
-    int centre = SkillFormula.evaluate(skill != null ? skill.calc2 : null, skill, skillLevel);
+    int centre = SkillFormula.evaluate(skill != null ? skill.calc3 : null, skill, skillLevel);
     return Math.max(0, Math.min(total, centre > 0 ? centre : total));
   }
 
