@@ -53,6 +53,13 @@ class D2MooAct1NativeParityTest {
     assertEquals(244, D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_W);
     assertEquals(251, D2LvlPrestIds.LVLPREST_ACT1_JAIL_WAYPOINT_N);
     assertEquals(255, D2LvlPrestIds.LVLPREST_ACT1_JAIL_PITSPAWN_N);
+    assertEquals(257, D2LvlPrestIds.LVLPREST_ACT1_CATHEDRAL);
+    assertEquals(258, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_W);
+    assertEquals(265, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_N);
+    assertEquals(288, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_PREV_EW);
+    assertEquals(290, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_PREV_NSEW);
+    assertEquals(294, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_N);
+    assertEquals(298, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_WAYPOINT_N);
     assertEquals(300, D2LvlPrestIds.LVLPREST_ACT1_TRISTRAM);
   }
 

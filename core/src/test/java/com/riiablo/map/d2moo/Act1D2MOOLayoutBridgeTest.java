@@ -49,6 +49,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertDiscoveredNativeSublevels(first);
     assertNativeMonasteryMainline(first.drlg, first.result.levelIds);
     assertNativeJailChain(first.drlg, first.result.levelIds);
+    assertNativeCathedralChain(first.drlg, first.result.levelIds);
     assertFixedSeedOutdoorCoverage(first.drlg);
     String firstSummary = summarize(first.drlg, first.result.levelIds);
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
@@ -63,6 +64,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertDiscoveredNativeSublevels(second);
     assertNativeMonasteryMainline(second.drlg, second.result.levelIds);
     assertNativeJailChain(second.drlg, second.result.levelIds);
+    assertNativeCathedralChain(second.drlg, second.result.levelIds);
     assertFixedSeedOutdoorCoverage(second.drlg);
     assertEquals(firstSummary, summarize(second.drlg, second.result.levelIds),
         "same seed must produce the same Act1 layout summary");
@@ -104,9 +106,13 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       Map.Zone gate = zone(map, D2LevelIds.LEVEL_MONASTERYGATE);
       Map.Zone cloister = zone(map, D2LevelIds.LEVEL_OUTERCLOISTER);
       Map.Zone barracks = zone(map, D2LevelIds.LEVEL_BARRACKS);
+      Map.Zone innerCloister = zone(map, D2LevelIds.LEVEL_INNERCLOISTER);
+      Map.Zone cathedral = zone(map, D2LevelIds.LEVEL_CATHEDRAL);
       assertTrue(touches(tamoe, gate), "Tamoe Highland must touch Monastery Gate");
       assertTrue(touches(gate, cloister), "Monastery Gate must touch Outer Cloister");
       assertTrue(touches(cloister, barracks), "Outer Cloister must touch Barracks");
+      assertTrue(touches(innerCloister, cathedral),
+          "Inner Cloister must touch Cathedral");
       assertEquals(60 * com.riiablo.map.DT1.Tile.SUBTILE_SIZE, barracks.width(),
           "Barracks Zone must retain the exact native width");
       assertEquals(42 * com.riiablo.map.DT1.Tile.SUBTILE_SIZE, barracks.height(),
@@ -114,7 +120,9 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       for (int levelId : new int[] {
           D2LevelIds.LEVEL_MONASTERYGATE,
           D2LevelIds.LEVEL_OUTERCLOISTER,
-          D2LevelIds.LEVEL_BARRACKS }) {
+          D2LevelIds.LEVEL_BARRACKS,
+          D2LevelIds.LEVEL_INNERCLOISTER,
+          D2LevelIds.LEVEL_CATHEDRAL }) {
         assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(levelId),
             "native monastery export was rejected " + levelId);
       }
@@ -180,6 +188,32 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     assertPresetInRange(drlg, D2LevelIds.LEVEL_JAILLVL3,
         D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_W,
         D2LvlPrestIds.LVLPREST_ACT1_JAIL_CATH_N);
+  }
+
+  private static void assertNativeCathedralChain(D2DrlgStrc drlg, int[] levelIds) {
+    for (int levelId : new int[] {
+        D2LevelIds.LEVEL_CATHEDRAL,
+        D2LevelIds.LEVEL_CATACOMBSLVL1,
+        D2LevelIds.LEVEL_CATACOMBSLVL2,
+        D2LevelIds.LEVEL_CATACOMBSLVL3,
+        D2LevelIds.LEVEL_CATACOMBSLVL4 }) {
+      assertTrue(contains(levelIds, levelId),
+          "native cathedral/catacombs level is missing " + levelId);
+      assertNativeLevelExport(drlg, levelId);
+    }
+
+    assertTouches(
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_INNERCLOISTER),
+        DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_CATHEDRAL));
+    assertPresetInRange(drlg, D2LevelIds.LEVEL_CATACOMBSLVL1,
+        D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_W,
+        D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_N);
+    assertPresetInRange(drlg, D2LevelIds.LEVEL_CATACOMBSLVL2,
+        D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_WAYPOINT_W,
+        D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_WAYPOINT_N);
+    assertPresetInRange(drlg, D2LevelIds.LEVEL_CATACOMBSLVL3,
+        D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_W,
+        D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_N);
   }
 
   private static void assertPresetInRange(
@@ -260,6 +294,10 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
         {D2LevelIds.LEVEL_JAILLVL2, D2LevelIds.LEVEL_JAILLVL1},
         {D2LevelIds.LEVEL_JAILLVL3, D2LevelIds.LEVEL_JAILLVL2},
         {D2LevelIds.LEVEL_INNERCLOISTER, D2LevelIds.LEVEL_JAILLVL3},
+        {D2LevelIds.LEVEL_CATACOMBSLVL1, D2LevelIds.LEVEL_CATHEDRAL},
+        {D2LevelIds.LEVEL_CATACOMBSLVL2, D2LevelIds.LEVEL_CATACOMBSLVL1},
+        {D2LevelIds.LEVEL_CATACOMBSLVL3, D2LevelIds.LEVEL_CATACOMBSLVL2},
+        {D2LevelIds.LEVEL_CATACOMBSLVL4, D2LevelIds.LEVEL_CATACOMBSLVL3},
     };
   }
 

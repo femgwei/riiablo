@@ -374,7 +374,10 @@ public class DrlgMaze {
                     new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_S, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_S, -1, 1),
                     new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_W, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_NEXT_W, -1, 2),
                 };
-                scanReplaceSpecialPreset(level, nAct1CatacombsNextIds[nRandCatacombs], new int[]{nRandCatacombs});
+                int[] catacombsRand = {nRandCatacombs};
+                scanReplaceSpecialPreset(
+                    level, nAct1CatacombsNextIds[nRandCatacombs], catacombsRand);
+                nRandCatacombs = catacombsRand[0];
                 
                 if (level.getLevelId() == D2LevelIds.LEVEL_CATACOMBSLEV2) {
                     D2MazeLevelIdStrc[] nAct1CatacombsWaypointIds = {
@@ -383,7 +386,8 @@ public class DrlgMaze {
                         new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_S, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_WAYPOINT_S, -1, 1),
                         new D2MazeLevelIdStrc(D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_W, D2LvlPrestIds.LVLPREST_ACT1_CATACOMBS_WAYPOINT_W, -1, 2),
                     };
-                    scanReplaceSpecialPreset(level, nAct1CatacombsWaypointIds[nRandCatacombs], new int[]{nRandCatacombs});
+                    scanReplaceSpecialPreset(
+                        level, nAct1CatacombsWaypointIds[nRandCatacombs], catacombsRand);
                 }
                 break;
                 

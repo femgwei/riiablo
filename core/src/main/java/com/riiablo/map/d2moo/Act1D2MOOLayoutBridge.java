@@ -46,6 +46,9 @@ public final class Act1D2MOOLayoutBridge {
         D2LevelIds.LEVEL_MONASTERYGATE,
         D2LevelIds.LEVEL_OUTERCLOISTER,
         D2LevelIds.LEVEL_BARRACKS,
+        // Cathedral is a seamless preset dependency of Inner Cloister rather
+        // than a normal warp target, so it must seed discovery explicitly.
+        D2LevelIds.LEVEL_CATHEDRAL,
     };
 
     /**
@@ -69,8 +72,8 @@ public final class Act1D2MOOLayoutBridge {
         public final int[][] coords;
         /** 0=Stony, 1=Cold, 2=Blood, 3=Town, 4=Burial, 5=Black Marsh,
          * 6=Tamoe, 7=Dark Wood, 8=Underground Passage level 1,
-         * 9=Monastery Gate, 10=Outer Cloister, 11=Barracks. Native linked
-         * sublevels discovered from actual warp specials follow those entries. */
+         * 9=Monastery Gate, 10=Outer Cloister, 11=Barracks, 12=Cathedral.
+         * Native linked sublevels discovered from actual warp specials follow. */
         public final int[] levelIds;
         /** levelLink[i]：连接到的上一格索引，-1 表示无 */
         public final int[] levelLink;
