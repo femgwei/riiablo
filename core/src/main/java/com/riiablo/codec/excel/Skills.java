@@ -56,6 +56,11 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public boolean aura;
     @Column public int     srvstfunc;
     @Column public int     srvdofunc;
+    /** D2 skill formula expressions (calc1..calc4). */
+    @Column public String  calc1;
+    @Column public String  calc2;
+    @Column public String  calc3;
+    @Column public String  calc4;
     @Column public String  srvmissilea;
     @Column public String  srvmissileb;
     @Column public String  srvmissilec;

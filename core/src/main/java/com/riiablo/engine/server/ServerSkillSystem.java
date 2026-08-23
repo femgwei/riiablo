@@ -10,6 +10,7 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -20,6 +21,8 @@ import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.skill.SkillCodes;
+import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.skill.SkillFormula;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -43,6 +46,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Missile> mMissile;
 
@@ -106,6 +110,10 @@ public class ServerSkillSystem extends PassiveSystem {
     Vector2 start = mPosition.get(event.entityId).position;
     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
       spawnNova(event, skill, start);
+      return;
+    }
+    if (event.srvdofunc == 8 || skill.srvdofunc == 8) {
+      spawnMultipleShotTeethShockWave(event, skill, start);
       return;
     }
 
@@ -191,6 +199,100 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, event.skillId, missileName, created);
   }
 
+  /**
+   * D2MOO's SKILLS_SrvDo008_MultipleShot_Teeth_ShockWave.  The native
+   * implementation evaluates calc1 as the total count and calc2 as the
+   * centre group, then emits left/centre/right groups along a perpendicular
+   * target offset.  The entity factory currently accepts a direction rather
+   * than an explicit target point, so the same lane layout is represented by
+   * a deterministic narrow fan of directions.
+   */
+  private void spawnMultipleShotTeethShockWave(SkillDoEvent event, Skills.Entry skill,
+      Vector2 start) {
+    Vector2 target = new Vector2();
+    if (event.targetId >= 0 && mPosition.has(event.targetId)) {
+      target.set(mPosition.get(event.targetId).position);
+    } else if (event.targetVec != null) {
+      target.set(event.targetVec);
+    } else {
+      target.set(start).add(1, 0);
+    }
+    target.sub(start);
+    if (target.isZero(0.0001f)) target.set(1, 0);
+    target.nor();
+
+    int skillLevel = getSkillLevel(event.entityId, event.skillId);
+    int total = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
+    if (total <= 0) total = firstParam(skill, 1, 1);
+    total = Math.max(1, Math.min(64, total));
+
+    int centre = SkillFormula.evaluate(skill.calc2, skill, skillLevel);
+    if (centre <= 0) centre = total;
+    centre = Math.max(0, Math.min(total, centre));
+
+    int left = (total - centre) / 2;
+    int right = total - left - centre;
+    String missileName = selectSrvDo008Missile(event.entityId, skill);
+    if (missileName == null) {
+      log.warn("SrvDo008 has no missile configured: entity={}, skill={}, total={}, centre={}",
+          event.entityId, event.skillId, total, centre);
+      return;
+    }
+    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    if (missile == null) {
+      log.warn("SrvDo008 missile lookup failed: entity={}, skill={}, missile={}",
+          event.entityId, event.skillId, missileName);
+      return;
+    }
+
+    IntSet sharedHitTargets = total > 1 ? new IntSet() : null;
+    Vector2 direction = new Vector2();
+    int created = 0;
+    for (int i = 0; i < total; i++) {
+      fanDirection(target, i, total, direction);
+      if (createMissile(missile, direction, start, event.entityId, sharedHitTargets) >= 0) {
+        created++;
+      }
+    }
+    log.debug("Server SrvDo008 projectiles: entity={}, skill={}, missile={}, level={}, total={}, "
+            + "left={}, centre={}, right={}, created={}",
+        event.entityId, event.skillId, missileName, skillLevel, total, left, centre, right, created);
+  }
+
+  private String selectSrvDo008Missile(int entityId, Skills.Entry skill) {
+    // D2MOO selects wSrvMissileB for every weapon class except HTH.  The
+    // component is absent for old/remote entities, where HTH is the safe
+    // native default.
+    boolean nonHandToHand = mCofReference != null && mCofReference.has(entityId)
+        && mCofReference.get(entityId).wclass != Engine.WEAPON_HTH;
+    if (nonHandToHand) {
+      String missile = firstNonEmpty(skill.srvmissileb, skill.srvmissilea);
+      if (missile != null) return missile;
+    }
+    return firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+  }
+
+  static int firstParam(Skills.Entry skill, int index, int fallback) {
+    if (skill == null || skill.Param == null || index < 1 || index > skill.Param.length) return fallback;
+    return skill.Param[index - 1];
+  }
+
+  static int getSrvDo008Total(Skills.Entry skill, int skillLevel) {
+    int total = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, skillLevel);
+    return total > 0 ? Math.min(64, total) : Math.max(1, firstParam(skill, 1, 1));
+  }
+
+  static int getSrvDo008Centre(Skills.Entry skill, int skillLevel, int total) {
+    int centre = SkillFormula.evaluate(skill != null ? skill.calc2 : null, skill, skillLevel);
+    return Math.max(0, Math.min(total, centre > 0 ? centre : total));
+  }
+
+  static Vector2 fanDirection(Vector2 base, int index, int count, Vector2 out) {
+    if (count <= 1) return out.set(base).nor();
+    float offset = (index - (count - 1) * 0.5f) * MULTI_MISSILE_SPREAD_RADIANS;
+    return out.set(base).rotateRad(offset).nor();
+  }
+
   private int createMissile(Missiles.Entry missile, Vector2 direction, Vector2 start,
       int ownerId, IntSet sharedHitTargets) {
     if (factory == null) return -1;
@@ -217,6 +319,11 @@ public class ServerSkillSystem extends PassiveSystem {
     int shift = Math.max(0, Math.min(30, skill.manashift));
     float base = (1 << shift) / 256f * skill.mana;
     return Math.max(0, base + skill.lvlmana * level);
+  }
+
+  private int getSkillLevel(int entityId, int skillId) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return 1;
+    return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId));
   }
 
   private String resolveThrowableMissile(int entityId, int skillId, Skills.Entry skill) {
