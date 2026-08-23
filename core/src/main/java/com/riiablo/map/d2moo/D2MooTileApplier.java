@@ -100,6 +100,11 @@ public final class D2MooTileApplier implements DrlgTileExporter {
 
     @Override
     public void onTile(int levelId, int layer, int tx, int ty, int tileId) {
+        onTile(levelId, layer, tx, ty, tileId, 0);
+    }
+
+    @Override
+    public void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags) {
         callbackCount++;
         if (layer < DrlgExport.LAYER_FLOOR || layer > DrlgExport.LAYER_SHADOW) {
             ignoredLayerCount++;
@@ -147,7 +152,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                 applyFloor(grid, tx, ty, riiabloTileId, orientation);
                 break;
             case DrlgExport.LAYER_WALL:
-                applyWall(grid, tx, ty, riiabloTileId, orientation);
+                applyWall(grid, tx, ty, riiabloTileId, orientation, flags);
                 break;
             case DrlgExport.LAYER_SHADOW:
                 applyShadow(grid, tx, ty, riiabloTileId, orientation);
@@ -167,13 +172,15 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         exportedFloorCount++;
     }
 
-    private void applyWall(TileGrid grid, int tx, int ty, int tileId, int orientation) {
+    private void applyWall(TileGrid grid, int tx, int ty, int tileId, int orientation, int flags) {
         if (!isWallLayerOrientation(orientation)) nonWallOrientationCount++;
         // Adjacent native RoomEx grids share their boundary row/column and
         // may report the same wall more than once. Do not consume another of
         // riiablo's four wall slots for an identical tile.
         for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS; slot++) {
             if (grid.wallIds[slot][ty][tx] == tileId) {
+                grid.hiddenWallCells[slot][ty][tx] |=
+                    (flags & DrlgTileExporter.FLAG_HIDDEN) != 0;
                 duplicateWallCount++;
                 return;
             }
@@ -181,6 +188,8 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS; slot++) {
             if (grid.wallIds[slot][ty][tx] == -1) {
                 grid.wallIds[slot][ty][tx] = tileId;
+                grid.hiddenWallCells[slot][ty][tx] =
+                    (flags & DrlgTileExporter.FLAG_HIDDEN) != 0;
                 uniqueWallIds.add(tileId);
                 exportedWallCount++;
                 return;

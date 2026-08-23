@@ -2,6 +2,7 @@ package com.riiablo.map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -54,6 +55,7 @@ class Act1MapBuilderD2MooLayersTest {
   void registersNativeSpecialWallsForWarpEntityCreation() {
     TileGrid grid = new TileGrid(2, 1);
     grid.wallIds[0][0][0] = Map.ID.VIS_0_00;
+    grid.hiddenWallCells[0][0][0] = true;
     grid.wallIds[1][0][1] = Map.ID.VIS_1_11;
     grid.wallIds[2][0][1] = DT1.Tile.Index.create(Orientation.LEFT_WALL, 2, 3);
     IntMap<DS1.Cell> specials = new IntMap<>();
@@ -251,6 +253,7 @@ class Act1MapBuilderD2MooLayersTest {
     grid.wallIds[0][0][1] = wall0.id;
     grid.wallIds[1][1][0] = wall1.id;
     grid.wallIds[2][1][1] = warpWall.id;
+    grid.hiddenWallCells[2][1][1] = true;
     grid.shadowIds[1][1] = shadow.id;
 
     DT1.Tile[][] layers = new DT1.Tile[Map.MAX_LAYERS][];
@@ -265,8 +268,9 @@ class Act1MapBuilderD2MooLayersTest {
             grid, dt1s, layers, 4, 3, 2, floorHistogram);
 
     assertEquals(1, counts.floors);
-    assertEquals(3, counts.walls);
-    assertEquals(1, counts.warpWalls);
+    assertEquals(2, counts.walls);
+    assertEquals(0, counts.warpWalls);
+    assertEquals(1, counts.hiddenWarpWalls);
     assertEquals(0, counts.failedWarpWalls);
     assertEquals(1, counts.shadows);
     assertEquals(1, counts.failedResolve);
@@ -281,7 +285,7 @@ class Act1MapBuilderD2MooLayersTest {
     assertSame(preserved, layers[Map.FLOOR_OFFSET][11]);
     assertSame(wall0, layers[Map.WALL_OFFSET][1]);
     assertSame(wall1, layers[Map.WALL_OFFSET + 1][4]);
-    assertSame(warpWall, layers[Map.WALL_OFFSET + 2][5]);
+    assertNull(layers[Map.WALL_OFFSET + 2]);
     assertSame(shadow, layers[Map.SHADOW_OFFSET][5]);
   }
 

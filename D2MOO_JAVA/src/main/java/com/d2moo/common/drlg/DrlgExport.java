@@ -3,6 +3,9 @@ package com.d2moo.common.drlg;
 import com.d2moo.common.d2cmp.D2Cmp;
 import com.d2moo.common.d2cmp.D2TileData;
 import com.d2moo.common.util.D2Log;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 /**
  * 从 D2DrlgStrc 导出各关卡的瓦片数据到 DrlgTileExporter。
@@ -52,9 +55,11 @@ public final class DrlgExport {
             room = room.getDrlgRoomNext();
         }
         D2Log.debug("DRLG_EXPORT level=%d origin=(%d,%d) rooms=%d initialized=%d"
-                        + " floorTiles=%d wallTiles=%d shadowTiles=%d",
+                        + " floorTiles=%d wallTiles=%d shadowTiles=%d"
+                        + " inactiveWarpFloor=%d inactiveWarpWall=%d inactiveWarpShadow=%d",
                 levelId, levelOriginX, levelOriginY, rooms, initialized,
-                counts.floors, counts.walls, counts.shadows);
+                counts.floors, counts.walls, counts.shadows,
+                counts.hiddenFloors, counts.hiddenWalls, counts.hiddenShadows);
         return counts.floors;
     }
 
@@ -119,6 +124,7 @@ public final class DrlgExport {
         if (grid == null) return;
         D2DrlgRoomTilesStrc tiles = grid.getPTiles();
         if (tiles == null) return;
+        Set<D2DrlgTileDataStrc> inactiveWarpTiles = collectInactiveWarpTiles(room);
 
         // nTileXPos/nTileYPos and D2DrlgTileData.nPosX/nPosY are already
         // expressed in game-tile units. Do not convert through grid/subtile
@@ -129,11 +135,15 @@ public final class DrlgExport {
         if (pFloor != null) {
             for (D2DrlgTileDataStrc t : pFloor) {
                 if (t == null) continue;
+                if (inactiveWarpTiles.contains(t)) {
+                    counts.hiddenFloors++;
+                    continue;
+                }
                 int tx = roomBaseTx + t.getNPosX() - levelOriginX;
                 int ty = roomBaseTy + t.getNPosY() - levelOriginY;
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
-                exporter.onTile(levelId, LAYER_FLOOR, tx, ty, tileId);
+                exporter.onTile(levelId, LAYER_FLOOR, tx, ty, tileId, t.getDwFlags());
                 counts.floors++;
             }
         }
@@ -141,11 +151,15 @@ public final class DrlgExport {
         if (pWall != null) {
             for (D2DrlgTileDataStrc t : pWall) {
                 if (t == null) continue;
+                if (inactiveWarpTiles.contains(t)) {
+                    counts.hiddenWalls++;
+                    continue;
+                }
                 int tx = roomBaseTx + t.getNPosX() - levelOriginX;
                 int ty = roomBaseTy + t.getNPosY() - levelOriginY;
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
-                exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId);
+                exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId, t.getDwFlags());
                 counts.walls++;
             }
         }
@@ -153,14 +167,39 @@ public final class DrlgExport {
         if (pRoof != null) {
             for (D2DrlgTileDataStrc t : pRoof) {
                 if (t == null) continue;
+                if (inactiveWarpTiles.contains(t)) {
+                    counts.hiddenShadows++;
+                    continue;
+                }
                 int tx = roomBaseTx + t.getNPosX() - levelOriginX;
                 int ty = roomBaseTy + t.getNPosY() - levelOriginY;
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
-                exporter.onTile(levelId, LAYER_SHADOW, tx, ty, tileId);
+                exporter.onTile(levelId, LAYER_SHADOW, tx, ty, tileId, t.getDwFlags());
                 counts.shadows++;
             }
         }
+    }
+
+    /**
+     * Native D2MOO keeps the currently selected warp graphics in unk0x10 and
+     * the inactive (lit/alternate) graphics in unk0x0C. Both chains also live
+     * in the flattened room arrays. Export only the selected chain; filtering
+     * every MAPTILE_HIDDEN tile would incorrectly remove ordinary cave floors.
+     */
+    static Set<D2DrlgTileDataStrc> collectInactiveWarpTiles(D2DrlgRoom room) {
+        Set<D2DrlgTileDataStrc> inactive =
+                Collections.newSetFromMap(new IdentityHashMap<D2DrlgTileDataStrc, Boolean>());
+        if (room == null) return inactive;
+        for (D2RoomTile warp = room.getRoomTiles(); warp != null; warp = warp.getPNext()) {
+            Object head = warp.getUnk0x0C();
+            if (!(head instanceof D2DrlgTileDataStrc)) continue;
+            D2DrlgTileDataStrc tile = (D2DrlgTileDataStrc) head;
+            while (tile != null && inactive.add(tile)) {
+                tile = tile.getUnk0x20();
+            }
+        }
+        return inactive;
     }
 
     /**
@@ -193,7 +232,8 @@ public final class DrlgExport {
                         | (info.getNTileSequence() & 0xFFF);
                     int tx = room.getNTileXPos() + x - levelOriginX;
                     int ty = room.getNTileYPos() + y - levelOriginY;
-                    exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId);
+                    int flags = info.isBHidden() ? DrlgTileExporter.FLAG_HIDDEN : 0;
+                    exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId, flags);
                     counts.walls++;
                 }
             }
@@ -204,6 +244,9 @@ public final class DrlgExport {
         int floors;
         int walls;
         int shadows;
+        int hiddenFloors;
+        int hiddenWalls;
+        int hiddenShadows;
     }
 
     /**

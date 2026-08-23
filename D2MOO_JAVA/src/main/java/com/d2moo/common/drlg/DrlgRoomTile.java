@@ -1264,14 +1264,11 @@ public class DrlgRoomTile {
             // 检查是否在房间边界内
             if (nPosX != drlgRoom.getNTileWidth() && nPosY != drlgRoom.getNTileHeight()) {
                 // 转换为子瓦片坐标
-                int[] posArray = {nPosX, nPosY};
-                        int[] xArray = {nPosX};
-                        int[] yArray = {nPosY};
-                        com.d2moo.common.dungeon.Dungeon.gameTileToSubtileCoords(xArray, yArray);
-                        nPosX = xArray[0];
-                        nPosY = yArray[0];
-                nPosX = posArray[0];
-                nPosY = posArray[1];
+                int[] xArray = {nPosX};
+                int[] yArray = {nPosY};
+                com.d2moo.common.dungeon.Dungeon.gameTileToSubtileCoords(xArray, yArray);
+                nPosX = xArray[0];
+                nPosY = yArray[0];
                 
                 // 添加偏移
                 nPosX += pLvlWarpTxtRecord.getDwOffsetX();
@@ -1376,7 +1373,21 @@ public class DrlgRoomTile {
         D2RoomTile pWarpTile = findDestinationWarpTile(drlgRoom, tileInfo);
         
         if (pWarpTile == null) {
-            D2Log.warning("DRLGROOMTILE_LoadWallWarpTiles: Warp tile not found");
+            int lvlWarpId = DrlgDrlgWarp.getWarpDestinationFromArray(
+                    drlgRoom.getLevel(), (byte) tileInfo.getNTileStyle());
+            StringBuilder linked = new StringBuilder();
+            for (D2RoomTile candidate = drlgRoom.getRoomTiles(); candidate != null;
+                    candidate = candidate.getPNext()) {
+                if (linked.length() > 0) linked.append(',');
+                Object record = candidate.getPLvlWarpTxtRecord();
+                linked.append(record instanceof D2LvlWarpTxt
+                        ? ((D2LvlWarpTxt) record).getDwLevelId() : "null");
+            }
+            D2Log.warning(String.format(
+                    "DRLGROOMTILE_LoadWallWarpTiles: Warp tile not found"
+                        + " source=%d room=(%d,%d) style=%d lvlWarpId=%d linked=[%s]",
+                    drlgRoom.getLevel().getLevelId(), drlgRoom.getNTileXPos(),
+                    drlgRoom.getNTileYPos(), tileInfo.getNTileStyle(), lvlWarpId, linked));
             return;
         }
         
@@ -1404,9 +1415,13 @@ public class DrlgRoomTile {
                 tileInfo.setNTileSequence(tileInfo.getNTileSequence() | pWarpDef.getDwTiles());
                 
                 Object pTileCache = getTileCache(drlgRoom, nTileType, tileInfo.getNPackedValue());
-                D2DrlgTileDataStrc pDrlgTileData = initWallTileData(drlgRoom, 
-                        (D2DrlgTileDataStrc[]) new Object[]{pWarpTile.getUnk0x0C()}, 
+                D2DrlgTileDataStrc[] ppInactiveTile = {
+                    (D2DrlgTileDataStrc) pWarpTile.getUnk0x0C()
+                };
+                D2DrlgTileDataStrc pDrlgTileData = initWallTileData(drlgRoom,
+                        ppInactiveTile,
                         nTilePosX, nTilePosY, tileInfo.getNPackedValue(), pTileCache, nTileType);
+                pWarpTile.setUnk0x0C(ppInactiveTile[0]);
                 
                 if (pDrlgTileData != null) {
                     pDrlgTileData.setDwFlags(pDrlgTileData.getDwFlags() | MAPTILE_HIDDEN);
@@ -1451,6 +1466,9 @@ public class DrlgRoomTile {
             D2LvlWarpTxt pWarpDef = updateAndGetLvlWarpTxtRecord(pWarpTile, nTileType);
             
             if (pWarpDef != null && pWarpDef.getDwLitVersion() != 0) {
+                D2DrlgTileDataStrc[] ppInactiveTile = {
+                    (D2DrlgTileDataStrc) pWarpTile.getUnk0x0C()
+                };
                 // 为每个目标瓦片序列创建隐藏的地板瓦片
                 for (int nDestinationTileSequence = 0; nDestinationTileSequence < 4; ++nDestinationTileSequence) {
                     D2C_PackedTileInformation nDestinationTileInfo = new D2C_PackedTileInformation(0);
@@ -1464,10 +1482,7 @@ public class DrlgRoomTile {
                     int nDestinationTilePosX = nX - 1 + gWarpTileOffsets[nDestinationTileSequence][0];
                     int nDestinationTilePosY = nY - 1 + gWarpTileOffsets[nDestinationTileSequence][1];
                     
-                    D2DrlgTileDataStrc[] ppTileData = new D2DrlgTileDataStrc[1];
-                    ppTileData[0] = (D2DrlgTileDataStrc) pWarpTile.getUnk0x0C();
-                    
-                    D2DrlgTileDataStrc pDestTileData = initFloorTileData(drlgRoom, ppTileData,
+                    D2DrlgTileDataStrc pDestTileData = initFloorTileData(drlgRoom, ppInactiveTile,
                             nDestinationTilePosX, nDestinationTilePosY, 
                             nDestinationTileInfo.getNPackedValue(), pTileCache);
                     
@@ -1475,6 +1490,7 @@ public class DrlgRoomTile {
                         pDestTileData.setDwFlags(pDestTileData.getDwFlags() | MAPTILE_HIDDEN);
                     }
                 }
+                pWarpTile.setUnk0x0C(ppInactiveTile[0]);
                 
                 // 链接所有匹配的地板瓦片
                 if (drlgRoom.getTileGrid() != null && drlgRoom.getTileGrid().getPTiles() != null) {
@@ -1490,12 +1506,14 @@ public class DrlgRoomTile {
                                     int nTileStyle = D2Cmp.getTileStyle(pTile);
                                     int nTileSequence = D2Cmp.getTileSequence(pTile);
                                     
-                                    // 检查瓦片风格和序列是否匹配（如果需要）
-                                    // 当前实现：直接链接瓦片数据
-                                    
-                                    // 链接瓦片数据
-                                    pFloorTileData.setUnk0x20((D2DrlgTileDataStrc) pWarpTile.getUnk0x10());
-                                    pWarpTile.setUnk0x10(pFloorTileData);
+                                    // Match native D2MOO: only the four source
+                                    // floor variants belong to this warp.
+                                    if (nTileStyle == tileInfo.getNTileSequence()
+                                            && Integer.compareUnsigned(nTileSequence, 4) < 0) {
+                                        pFloorTileData.setUnk0x20(
+                                                (D2DrlgTileDataStrc) pWarpTile.getUnk0x10());
+                                        pWarpTile.setUnk0x10(pFloorTileData);
+                                    }
                                 }
                             }
                         }

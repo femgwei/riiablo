@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import com.d2moo.common.drlg.DrlgExport;
+import com.d2moo.common.drlg.DrlgTileExporter;
 import com.riiablo.drlg.TileGrid;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Orientation;
@@ -44,6 +45,19 @@ class D2MooTileApplierTest {
     assertEquals(0, applier.getNonFloorOrientationCount());
     assertEquals(0, applier.getNonWallOrientationCount());
     assertEquals(0, applier.getNonShadowOrientationCount());
+  }
+
+  @Test
+  void retainsHiddenWarpMarkersForInteractionWithoutLosingVisibilityState() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 0, 0,
+        pack(Orientation.SPECIAL_10, 6, 24), DrlgTileExporter.FLAG_HIDDEN);
+
+    assertEquals(index(Orientation.SPECIAL_10, 6, 24), grid.wallIds[0][0][0]);
+    assertEquals(true, grid.hiddenWallCells[0][0][0]);
   }
 
   @Test
@@ -101,6 +115,7 @@ class D2MooTileApplierTest {
     grid.floorIds[0][0] = 1;
     grid.exportedFloorCells[0][0] = true;
     grid.wallIds[0][0][0] = 2;
+    grid.hiddenWallCells[0][0][0] = true;
     grid.shadowIds[0][0] = 3;
     grid.dirtPathFlags[0][0] = true;
 
@@ -109,6 +124,7 @@ class D2MooTileApplierTest {
     assertEquals(-1, grid.floorIds[0][0]);
     assertEquals(false, grid.exportedFloorCells[0][0]);
     assertEquals(-1, grid.wallIds[0][0][0]);
+    assertEquals(false, grid.hiddenWallCells[0][0][0]);
     assertEquals(-1, grid.shadowIds[0][0]);
     assertEquals(true, grid.dirtPathFlags[0][0]);
   }

@@ -34,14 +34,33 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
 
   @Override
   public void interact(int src, int entity) {
-    Gdx.app.log(TAG, "zim zim zala bim");
     Warp warp = mWarp.get(entity);
-    Map.Zone dst = map.findZone(warp.dstLevel);
-    int dstIndex = mMapWrapper.get(entity).zone.getWarp(warp.index);
+    MapWrapper sourceWrapper = mMapWrapper.get(entity);
+    Map.Zone source = sourceWrapper == null ? null : sourceWrapper.zone;
+    Map.Zone dst = warp == null ? null : map.findZone(warp.dstLevel);
+    if (warp == null || source == null || dst == null) {
+      Gdx.app.error(TAG, "Warp interaction missing map data: player=" + src
+          + " entity=" + entity + " warp=" + warp + " source=" + source + " dst=" + dst);
+      return;
+    }
+    int dstIndex = source.getWarp(warp.index);
     int dstWarpEntity = dst.findWarp(dstIndex);
-    if (dstWarpEntity == Engine.INVALID_ENTITY) throw new AssertionError("Invalid dstWarp: " + dstIndex);
+    if (dstWarpEntity == Engine.INVALID_ENTITY) {
+      Gdx.app.error(TAG, "Warp destination entity missing: source=" + source.level.LevelName
+          + "(" + source.level.Id + ") special=0x" + Integer.toHexString(warp.index)
+          + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
+          + " reverseSpecial=0x" + Integer.toHexString(dstIndex));
+      return;
+    }
     Vector2 dstWarpPos = mPosition.get(dstWarpEntity).position;
     Vector2 position = mPosition.get(src).position;
+    Gdx.app.log(TAG, "Warp interaction: player=" + src
+        + " source=" + source.level.LevelName + "(" + source.level.Id + ")"
+        + " special=0x" + Integer.toHexString(warp.index)
+        + " sourcePosition=" + position
+        + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
+        + " reverseSpecial=0x" + Integer.toHexString(dstIndex)
+        + " destinationPosition=" + dstWarpPos);
     position.set(dstWarpPos);
 
     Box2DBody box2dWrapper = mBox2DBody.get(src);

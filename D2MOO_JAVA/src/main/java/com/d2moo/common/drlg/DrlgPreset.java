@@ -1914,6 +1914,17 @@ public class DrlgPreset {
         D2LvlPrestTxt prest = pDrlgMap.getPLvlPrestTxtRecord();
         D2DrlgCoord map = pDrlgMap.getPDrlgCoord();
         if (prest == null || map == null || map.getNWidth() <= 0 || map.getNHeight() <= 0) return;
+
+        // DRLGPRESET_BuildPresetArea marks Vis links whose LvlWarp entry is
+        // -1 on every room in the preset. The Java port omitted this loop,
+        // leaving native near-room/Warp initialization without its source
+        // flags for several preset levels.
+        int[] vis = DrlgDrlgRoom.getVisArrayFromLevelId(level.getDrlg(), level.getLevelId());
+        for (int i = 0; i < 8 && vis != null && i < vis.length; i++) {
+            if (vis[i] != 0 && DrlgDrlgWarp.getWarpDestinationFromArray(level, (byte) i) == -1) {
+                nFlags |= D2DrlgRoomFlags.HAS_WARP_0 << i;
+            }
+        }
         if (prest.getDwOutdoors() != 0) nFlags |= 0x80000;
 
         if (bSingleRoom != 0) {

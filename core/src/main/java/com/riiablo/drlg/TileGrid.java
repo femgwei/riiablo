@@ -36,6 +36,13 @@ public class TileGrid {
   public final int[][][] wallIds;
 
   /**
+   * Native hidden special walls are logical warp markers. Keep them in
+   * wallIds for interaction discovery, but exclude them from rendering and
+   * collision.
+   */
+  public final boolean[][][] hiddenWallCells;
+
+  /**
    * shadowIds[y][x] stores the single shadow layer supported by riiablo.
    * -1 means that the slot is unassigned.
    */
@@ -53,6 +60,7 @@ public class TileGrid {
     this.floorIds = new int[height][width];
     this.exportedFloorCells = new boolean[height][width];
     this.wallIds = new int[MAX_WALL_LAYERS][height][width];
+    this.hiddenWallCells = new boolean[MAX_WALL_LAYERS][height][width];
     this.shadowIds = new int[height][width];
     this.dirtPathFlags = new boolean[height][width];
     clearExportedTileIds();
@@ -77,6 +85,7 @@ public class TileGrid {
         shadowIds[y][x] = -1;
         for (int layer = 0; layer < MAX_WALL_LAYERS; layer++) {
           wallIds[layer][y][x] = -1;
+          hiddenWallCells[layer][y][x] = false;
         }
       }
     }

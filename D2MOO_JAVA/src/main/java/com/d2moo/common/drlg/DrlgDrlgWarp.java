@@ -117,11 +117,18 @@ public class DrlgDrlgWarp {
      */
     public static D2LvlWarpTxt getLvlWarpTxtRecordFromWarpIdAndDirection(D2DrlgLevel level, 
             byte warpId, char direction) {
-        // 从数据表获取传送点文本记录
+        if (level == null) {
+            return null;
+        }
+        // Native DRLGWARP_GetLvlWarpTxtRecordFromWarpIdAndDirection resolves
+        // the level's Warp slot first. LvlWarp.txt is keyed by that warp
+        // definition id, not by the source level that owns the entrance room.
+        int lvlWarpId = getWarpDestinationFromArray(level, warpId);
+        if (lvlWarpId < 0) {
+            return null;
+        }
         return DataTbls.getLvlWarpTxtRecordFromLevelIdAndDirection(
-            level.getLevelId(), 
-            direction
-        );
+            lvlWarpId, direction);
     }
     
     /**
