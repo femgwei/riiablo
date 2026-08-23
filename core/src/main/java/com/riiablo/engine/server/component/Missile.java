@@ -23,6 +23,11 @@ public class Missile extends PooledComponent {
   /** 已移动距离（用于范围检查，与 d2mod 一致） */
   public float distanceTraveled = 0f;
 
+  /** Optional monster attack profile captured when the missile is spawned. */
+  public int attackMinDamage;
+  public int attackMaxDamage;
+  public int attackRating;
+
   /** Targets already resolved by another missile from the same cast. */
   public IntSet sharedHitTargets;
 
@@ -34,6 +39,9 @@ public class Missile extends PooledComponent {
     start.setZero();
     ownerId = -1;
     distanceTraveled = 0f;
+    attackMinDamage = 0;
+    attackMaxDamage = 0;
+    attackRating = 0;
     sharedHitTargets = null;
   }
 

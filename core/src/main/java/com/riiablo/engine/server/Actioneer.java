@@ -55,6 +55,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<CofReference> mCofReference;
@@ -489,7 +490,10 @@ public class Actioneer extends PassiveSystem {
             attrs,
             isPlayerEntity(entityId),
             isPlayerEntity(targetId),
-            false);
+            false,
+            monsterAttackMinDamage(entityId),
+            monsterAttackMaxDamage(entityId),
+            monsterAttackRating(entityId));
         if (!combat.hit) {
           log.info("[COMBAT_HIT] entity={} target={} result=miss chance={}% attackerLevel={} targetLevel={} ar={} defense={}",
               entityId, targetId, combat.hitChance,
@@ -606,9 +610,10 @@ public class Actioneer extends PassiveSystem {
 
     Monster monster = mMonster.get(entityId);
     if (monster.monstats == null) return false;
-    String missileName = monster.monstats.MissA1;
+    boolean attack2 = currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2;
+    String missileName = attack2 ? monster.monstats.MissA2 : monster.monstats.MissA1;
     if (missileName == null || missileName.isEmpty()) {
-      missileName = monster.monstats.MissA2;
+      missileName = attack2 ? monster.monstats.MissA1 : monster.monstats.MissA2;
     }
     if (missileName == null || missileName.isEmpty()) return false;
 
@@ -629,10 +634,50 @@ public class Actioneer extends PassiveSystem {
           entityId, targetId, missileName);
       return false;
     }
-    log.info("[MONSTER_MISSILE] created entity={} target={} missileId={} missile={} "
-            + "speed={} range={} start=({}, {}) direction=({}, {})",
-        entityId, targetId, missileId, missile.Missile, missile.Vel, missile.Range,
+    if (attack2 && mMissile.has(missileId)) {
+      // Keep the A2 profile on this projectile; the shared monster attributes
+      // represent A1 and must remain unchanged for overlapping attacks.
+      com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+      projectile.attackMinDamage = arrayValue(monster.monstats.A2MinD);
+      projectile.attackMaxDamage = arrayValue(monster.monstats.A2MaxD);
+      projectile.attackRating = arrayValue(monster.monstats.A2TH);
+    }
+    log.info("[MONSTER_MISSILE] created entity={} target={} mode={} missileId={} missile={} "
+            + "speed={} range={} damage={}..{} ar={} start=({}, {}) direction=({}, {})",
+        entityId, targetId, attack2 ? "A2" : "A1", missileId, missile.Missile,
+        missile.Vel, missile.Range, monsterAttackMinDamage(entityId),
+        monsterAttackMaxDamage(entityId), monsterAttackRating(entityId),
         start.x, start.y, direction.x, direction.y);
     return true;
+  }
+
+  private byte currentMonsterAttackMode(int entityId) {
+    return mCofReference.has(entityId)
+        ? mCofReference.get(entityId).mode : Engine.Monster.MODE_A1;
+  }
+
+  private int monsterAttackMinDamage(int entityId) {
+    Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
+    return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
+        && monster != null && monster.monstats != null
+        ? arrayValue(monster.monstats.A2MinD) : 0;
+  }
+
+  private int monsterAttackMaxDamage(int entityId) {
+    Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
+    return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
+        && monster != null && monster.monstats != null
+        ? arrayValue(monster.monstats.A2MaxD) : 0;
+  }
+
+  private int monsterAttackRating(int entityId) {
+    Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
+    return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
+        && monster != null && monster.monstats != null
+        ? arrayValue(monster.monstats.A2TH) : 0;
+  }
+
+  private static int arrayValue(int[] values) {
+    return values != null && values.length > 0 ? Math.max(0, values[0]) : 0;
   }
 }

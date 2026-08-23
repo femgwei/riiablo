@@ -208,7 +208,10 @@ public class MissileCollisionSystem extends IteratingSystem {
           targetAttrs,
           mPlayer.has(missile.ownerId),
           mPlayer.has(targetId),
-          true);
+          true,
+          missile.attackMinDamage,
+          missile.attackMaxDamage,
+          missile.attackRating);
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
             missileId, missile.ownerId, targetId, combat.hitChance);

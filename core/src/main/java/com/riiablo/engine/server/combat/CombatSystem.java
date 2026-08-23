@@ -325,6 +325,21 @@ public class CombatSystem {
   public CombatResult calculateAttack(
       Attributes attacker, Attributes defender,
       boolean attackerPlayer, boolean defenderPlayer, boolean missile) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        0, 0, 0);
+  }
+
+  /**
+   * Resolves an attack with an optional native monster attack profile.
+   * MonStats stores separate A1/A2 damage and to-hit values while the ECS
+   * attribute list contains the default A1 profile.  A2 attacks therefore
+   * need a small per-action override instead of mutating shared attributes.
+   */
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -337,7 +352,8 @@ public class CombatSystem {
     a.level = Math.max(1, statInt(attacker, Stat.level, 1));
     a.strength = statInt(attacker, Stat.strength, 0);
     a.dexterity = statInt(attacker, Stat.dexterity, 0);
-    a.attackRating = statInt(attacker, Stat.tohit, 0);
+    a.attackRating = attackRatingOverride > 0
+        ? attackRatingOverride : statInt(attacker, Stat.tohit, 0);
     // A newly-created character may not have a tohit entry until an item/stat
     // refresh has completed.  D2 still gives every player a level/dexterity
     // based attack rating; treating the missing value as zero produces the
@@ -346,8 +362,11 @@ public class CombatSystem {
       a.attackRating = Math.max(1, a.dexterity * 5 + Math.max(1, a.level) * 2);
     }
     a.attackRatingPercent = statInt(attacker, Stat.item_tohit_percent, 0);
-    a.minDamage = statInt(attacker, Stat.mindamage, 1);
-    a.maxDamage = statInt(attacker, Stat.maxdamage, Math.max(2, a.minDamage));
+    a.minDamage = attackMinDamageOverride > 0
+        ? attackMinDamageOverride : statInt(attacker, Stat.mindamage, 1);
+    a.maxDamage = attackMaxDamageOverride > 0
+        ? attackMaxDamageOverride
+        : statInt(attacker, Stat.maxdamage, Math.max(2, a.minDamage));
     if (missile) {
       int throwMin = statInt(attacker, Stat.item_throw_mindamage, 0);
       int throwMax = statInt(attacker, Stat.item_throw_maxdamage, 0);
