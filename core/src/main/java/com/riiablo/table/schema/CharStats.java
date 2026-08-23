@@ -47,6 +47,7 @@ public class CharStats {
 
   public String StrClassOnly;
   public String baseWClass;
+  public String StartSkill;
 
   @Format(
       format = "Skill %d",

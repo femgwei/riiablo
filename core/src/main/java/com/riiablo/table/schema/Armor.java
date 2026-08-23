@@ -11,6 +11,8 @@ public class Armor extends ItemEntry {
   public int lArm;
   public int lSPad;
   public int rSPad;
+  public int minac;
+  public int maxac;
   public int reqstr;
   public int durability;
   public int block;

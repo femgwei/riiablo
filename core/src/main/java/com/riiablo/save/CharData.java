@@ -2,6 +2,7 @@ package com.riiablo.save;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Locale;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -21,9 +22,12 @@ import com.riiablo.attributes.StatListReader;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.DifficultyLevels;
+import com.riiablo.codec.excel.CharStats;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
+import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.ItemReader;
 import com.riiablo.item.Location;
 import com.riiablo.item.StoreLoc;
@@ -410,6 +414,123 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 
   public Attributes getStats() {
     return statData;
+  }
+
+  /**
+   * Creates and places the new-character items declared by CharStats.txt.
+   * Placement follows D2Game's PLAYER_CreateStartItem rules: belt-compatible
+   * items are placed in the belt first, declared body slots are equipped, and
+   * all remaining items are packed into the character inventory.
+   */
+  public void initializeStartItems(CharStats.Entry charStats) {
+    if (charStats == null) throw new IllegalArgumentException("charStats cannot be null");
+    if (itemData.itemData.size != 0) {
+      throw new IllegalStateException("Starting items can only be initialized for an empty inventory");
+    }
+
+    itemData.charStats = charStats;
+    ItemGenerator generator = new ItemGenerator();
+    boolean[][] occupied = new boolean[4][10];
+    int beltSlot = 0;
+    int itemOrdinal = 0;
+    int startSkill = findSkillId(charStats.StartSkill);
+
+    for (int slot = 0; slot < charStats.item.length; slot++) {
+      String code = charStats.item[slot];
+      int count = parseStartItemCount(charStats.itemcount[slot]);
+      if (code == null || code.isEmpty() || "0".equals(code) || count <= 0) continue;
+
+      BodyLoc bodyLoc = parseBodyLoc(charStats.itemloc[slot]);
+      for (int copy = 0; copy < count; copy++) {
+        int id = mapSeed + (++itemOrdinal);
+        Item item = generator.generateStartItem(code, id, slot == 0 ? startSkill : -1);
+
+        if (item.typeEntry.Beltable && beltSlot < 4) {
+          itemData.add(item);
+          itemData.setLocation(item, Location.BELT);
+          item.storeLoc = StoreLoc.NONE;
+          item.bodyLoc = BodyLoc.NONE;
+          item.gridX = (byte) beltSlot++;
+          item.gridY = 0;
+        } else if (bodyLoc != BodyLoc.NONE) {
+          itemData.equip(bodyLoc, item);
+        } else {
+          int position = findInventoryPosition(occupied, item.base.invwidth, item.base.invheight);
+          if (position < 0) {
+            throw new IllegalStateException("No inventory space for starting item " + code);
+          }
+          int x = position % 10;
+          int y = position / 10;
+          int index = itemData.add(item);
+          itemData.store(StoreLoc.INVENTORY, index, x, y);
+          occupy(occupied, x, y, item.base.invwidth, item.base.invheight);
+        }
+      }
+    }
+
+    itemData.updateStats();
+  }
+
+  private static int findSkillId(String skillName) {
+    if (skillName == null || skillName.isEmpty()) return -1;
+    for (Skills.Entry skill : Riiablo.files.skills) {
+      if (skillName.equalsIgnoreCase(skill.skill)) return skill.Id;
+    }
+    return -1;
+  }
+
+  private static int parseStartItemCount(String value) {
+    if (value == null || value.isEmpty()) return 0;
+    try {
+      return Integer.parseInt(value);
+    } catch (NumberFormatException ignored) {
+      throw new IllegalArgumentException("Invalid CharStats starting item count: " + value);
+    }
+  }
+
+  private static BodyLoc parseBodyLoc(String value) {
+    if (value == null || value.isEmpty()) return BodyLoc.NONE;
+    switch (value.toLowerCase(Locale.ROOT)) {
+      case "head": return BodyLoc.HEAD;
+      case "neck": return BodyLoc.NECK;
+      case "tors": return BodyLoc.TORS;
+      case "rarm": return BodyLoc.RARM;
+      case "larm": return BodyLoc.LARM;
+      case "rrin": return BodyLoc.RRIN;
+      case "lrin": return BodyLoc.LRIN;
+      case "belt": return BodyLoc.BELT;
+      case "feet": return BodyLoc.FEET;
+      case "glov": return BodyLoc.GLOV;
+      case "rarm2": return BodyLoc.RARM2;
+      case "larm2": return BodyLoc.LARM2;
+      default: throw new IllegalArgumentException("Unknown CharStats body location: " + value);
+    }
+  }
+
+  private static int findInventoryPosition(boolean[][] occupied, int width, int height) {
+    for (int y = 0; y <= occupied.length - height; y++) {
+      for (int x = 0; x <= occupied[y].length - width; x++) {
+        boolean available = true;
+        for (int dy = 0; dy < height && available; dy++) {
+          for (int dx = 0; dx < width; dx++) {
+            if (occupied[y + dy][x + dx]) {
+              available = false;
+              break;
+            }
+          }
+        }
+        if (available) return y * 10 + x;
+      }
+    }
+    return -1;
+  }
+
+  private static void occupy(boolean[][] occupied, int x, int y, int width, int height) {
+    for (int dy = 0; dy < height; dy++) {
+      for (int dx = 0; dx < width; dx++) {
+        occupied[y + dy][x + dx] = true;
+      }
+    }
   }
 
   public void update() {

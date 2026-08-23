@@ -491,6 +491,9 @@ public class CreateCharacterScreen extends ScreenAdapter {
     // Set map seed
     charData.mapSeed = (int) System.currentTimeMillis();
 
+    // D2Game creates these from the ten CharStats item/itemloc/itemcount groups.
+    charData.initializeStartItems(stats);
+
     // Skills are handled by CharData.update() automatically
   }
 }

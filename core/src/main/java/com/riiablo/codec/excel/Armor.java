@@ -9,6 +9,8 @@ public class Armor extends Excel<Armor.Entry> {
     @Column public int     lArm;
     @Column public int     lSPad;
     @Column public int     rSPad;
+    @Column public int     minac;
+    @Column public int     maxac;
     @Column public int     reqstr;
     @Column public int     durability;
     @Column public int     block;

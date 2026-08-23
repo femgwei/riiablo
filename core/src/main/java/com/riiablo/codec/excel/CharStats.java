@@ -36,6 +36,7 @@ public class CharStats extends Excel<CharStats.Entry> {
     public String  StrSkillTab[];
     @Column public String  StrClassOnly;
     @Column public String  baseWClass;
+    @Column public String  StartSkill;
     @Column(format = "Skill %d", startIndex = 1, endIndex = 11)
     public String  Skill[];
     @Column(format = "item%d", startIndex = 1, endIndex = 11)

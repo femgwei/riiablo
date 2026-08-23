@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatListRef;
 import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.codec.excel.Misc;
@@ -41,6 +42,61 @@ public class ItemGenerator extends PassiveSystem {
     }
 
     throw new AssertionError();
+  }
+
+  /**
+   * Creates a normal, identified item using the fields required by the native
+   * 1.10+ D2S format. This mirrors the item initialization performed by
+   * D2Game's {@code PLAYER_CreateStartItem}.
+   *
+   * @param startSkill skill id granted by the first starting item, or -1
+   */
+  public Item generateStartItem(String code, int id, int startSkill) {
+    Item item = generate(code);
+    item.flags |= Item.ITEMFLAG_IDENTIFIED | Item.ITEMFLAG_BEGINNER;
+    item.version = Item.VERSION_110;
+    item.id = id;
+    item.ilvl = 1;
+    item.quality = Quality.NORMAL;
+
+    if (item.base.stackable) {
+      item.attrs.base().put(Stat.quantity, Math.max(1, item.base.maxstack));
+    }
+
+    if (item.base instanceof Armor.Entry) {
+      Armor.Entry armor = item.getBase();
+      int minAc = Math.min(armor.minac, armor.maxac);
+      int maxAc = Math.max(armor.minac, armor.maxac);
+      int armorClass = minAc;
+      if (maxAc > minAc) {
+        armorClass += Math.floorMod(id, maxAc - minAc + 1);
+      }
+      item.attrs.base().put(Stat.armorclass, armorClass);
+      initializeDurability(item, armor.durability);
+    } else if (item.base instanceof Weapons.Entry) {
+      Weapons.Entry weapon = item.getBase();
+      initializeDurability(item, weapon.durability);
+    }
+
+    if ((item.flags & Item.ITEMFLAG_COMPACT) == 0) {
+      // A standard item always serializes a magic list. An empty list is still
+      // required so ItemWriter emits the 0x1ff end marker expected by D2.
+      StatListRef magic = item.attrs.buildList();
+      if (startSkill >= 0) {
+        magic.putEncoded(Stat.item_singleskill, startSkill, 1);
+      }
+    }
+
+    item.attrs.reset();
+    return item;
+  }
+
+  private static void initializeDurability(Item item, int durability) {
+    int maxDurability = item.base.nodurability ? 0 : Math.max(0, durability);
+    item.attrs.base().put(Stat.maxdurability, maxDurability);
+    if (maxDurability > 0) {
+      item.attrs.base().put(Stat.durability, maxDurability);
+    }
   }
 
   private static void socket(Item item) {

@@ -164,6 +164,16 @@ public final class Attributes implements Iterable<StatRef> {
     return list;
   }
 
+  /**
+   * Creates the next serialized property list.
+   *
+   * <p>Standard items must contain a magic property list even when it is
+   * empty, because the D2S item stream still requires that list's terminator.
+   */
+  public StatListRef buildList() {
+    return list.buildList();
+  }
+
   public StatListRef list(int list) {
     return this.list.get(list);
   }
