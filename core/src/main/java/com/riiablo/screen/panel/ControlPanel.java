@@ -67,7 +67,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   // 经验条尺寸（Stage 世界坐标）。位置由 controlWidget 的实时布局决定，
   // 不使用屏幕像素或构造时缓存的绝对坐标。
   private static final float EXP_BAR_WIDTH = 120f;
-  private static final int EXP_BAR_HEIGHT = 3;
+  // OpenDiablo2 uses a 120x4 widget and renders a 2px fill inside it.
+  private static final int EXP_BAR_HEIGHT = 4;
   private static final float EXP_BAR_TOP_OFFSET = 11f;
   // The assembled control-panel texture has a small transparent/asymmetric
   // margin. Keep the bar geometrically centered, then apply this world-space
@@ -292,6 +293,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     Riiablo.assets.unload(overlapDescriptor.fileName);
     Riiablo.assets.unload(hlthmanaDescriptor.fileName);
     Riiablo.assets.unload(SkilliconDescriptor.fileName);
+    if (experienceWidget != null) experienceWidget.dispose();
     if (controlWidget != null) controlWidget.dispose();
   }
 
@@ -403,12 +405,12 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   }
 
   private class ExperienceWidget extends Actor {
-    // 经验条尺寸（参考 OpenDiablo2 的常量）
-    // 注意：实际宽度和位置由外部设置，这里只保留高度常量
-    private static final int EXP_BAR_HEIGHT = 2;
+    // OpenDiablo2 renders a 2 Stage-unit high fill in a 4-unit widget.
+    private static final int EXP_BAR_FILL_HEIGHT = 2;
 
     // 1x1白色像素纹理用于填充
     private final TextureRegion whitePixel;
+    private final Texture whitePixelTexture;
     private long lastLoggedExperience = Long.MIN_VALUE;
     private int lastLoggedLevel = Integer.MIN_VALUE;
     private long lastLoggedCurrentLevelExp = Long.MIN_VALUE;
@@ -416,6 +418,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     private boolean missingStatsLogged;
     private float lastLayoutX = Float.NaN;
     private float lastLayoutY = Float.NaN;
+    private float lastLayoutWidth = Float.NaN;
+    private float lastLayoutHeight = Float.NaN;
 
     ExperienceWidget() {
       setHeight(EXP_BAR_HEIGHT);
@@ -425,9 +429,13 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
       pixmap.setColor(Color.WHITE);
       pixmap.fill();
-      Texture texture = new Texture(pixmap);
-      whitePixel = new TextureRegion(texture);
+      whitePixelTexture = new Texture(pixmap);
+      whitePixel = new TextureRegion(whitePixelTexture);
       pixmap.dispose();
+    }
+
+    void dispose() {
+      whitePixelTexture.dispose();
     }
 
     @Override
@@ -439,20 +447,27 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       final float y = getY();
 
       if (Float.isNaN(lastLayoutX) || Math.abs(lastLayoutX - x) > 0.5f
-          || Math.abs(lastLayoutY - y) > 0.5f) {
+          || Math.abs(lastLayoutY - y) > 0.5f
+          || Math.abs(lastLayoutWidth - getWidth()) > 0.5f
+          || Math.abs(lastLayoutHeight - getHeight()) > 0.5f) {
+        final String controlRect = controlWidget == null
+            ? "none"
+            : String.format("(%.1f,%.1f %.1fx%.1f)", controlWidget.getX(),
+                controlWidget.getY(), controlWidget.getWidth(), controlWidget.getHeight());
+        final com.badlogic.gdx.scenes.scene2d.Stage stage = getStage();
+        final String stageSize = stage == null
+            ? "none"
+            : String.format("(%.1fx%.1f)", stage.getWidth(), stage.getHeight());
         Gdx.app.log(TAG, String.format(
-            "[XP_BAR_LAYOUT] rect=(%.1f,%.1f %.1fx%.1f) control=%s",
-            x, y, getWidth(), getHeight(), controlWidget == null ? "panel" : "control"));
+            "[XP_BAR_LAYOUT] bar=(%.1f,%.1f %.1fx%.1f) control=%s panel=(%.1f,%.1f %.1fx%.1f) stage=%s",
+            x, y, getWidth(), getHeight(), controlRect,
+            ControlPanel.this.getX(), ControlPanel.this.getY(),
+            ControlPanel.this.getWidth(), ControlPanel.this.getHeight(), stageSize));
         lastLayoutX = x;
         lastLayoutY = y;
+        lastLayoutWidth = getWidth();
+        lastLayoutHeight = getHeight();
       }
-
-      // 绘制背景和边框；填充宽度由当前等级区间的经验百分比决定。
-      batch.setColor(new Color(0.08f, 0.08f, 0.08f, 1f));
-      batch.draw(whitePixel, x, y, getWidth(), getHeight());
-      batch.setColor(new Color(0.65f, 0.45f, 0.12f, 1f));
-      batch.draw(whitePixel, x, y, getWidth(), 1f);
-      batch.draw(whitePixel, x, y + getHeight() - 1f, getWidth(), 1f);
 
       // 计算经验百分比。经验条没有自己的计数器，始终消费 CharData 的
       // aggregate（服务端同步也会更新该列表），因此不会与战斗经验分叉。
@@ -498,11 +513,14 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         lastLoggedNextLevelExp = nextLevelExp;
       }
 
-      // 绘制填充（白色，参考 OpenDiablo2）
+      // OpenDiablo2 renders only the filled portion. The panel texture supplies
+      // the dark/ornamental area underneath, so drawing an extra border here
+      // makes the bar look like a detached rectangle and becomes too faint
+      // after viewport scaling.
       if (percentage > 0) {
-        float fillWidth = Math.max(0f, (getWidth() - 2f) * percentage);
-        batch.setColor(new Color(0.95f, 0.80f, 0.30f, 1f));
-        batch.draw(whitePixel, x + 1f, y + 1f, fillWidth, Math.max(1f, getHeight() - 2f));
+        float fillWidth = Math.min(getWidth(), Math.max(0f, getWidth() * percentage));
+        batch.setColor(Color.WHITE);
+        batch.draw(whitePixel, x, y, fillWidth, EXP_BAR_FILL_HEIGHT);
       }
 
       // 重置颜色
