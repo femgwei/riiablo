@@ -92,6 +92,12 @@ public class MapManager extends PassiveSystem {
           zone.x + object.x, zone.y + object.y);
       if (id == Engine.INVALID_ENTITY) {
         failed++;
+        int objectId = Riiablo.files.obj.getObjectId(1, object.presetIndex);
+        Gdx.app.error(TAG, String.format(
+            "Unable to create D2MOO native object: level=%s(%d) presetIndex=%d objectId=%d mode=%d "
+                + "local=(%d,%d) world=(%d,%d)",
+            zone.level.LevelName, zone.level.Id, object.presetIndex, objectId, object.mode,
+            object.x, object.y, zone.x + object.x, zone.y + object.y));
       } else {
         zone.addEntity(id);
         created++;
