@@ -37,15 +37,6 @@ public final class D2IDAStar {
             {0, 7, 2, 5, 7, 5, 2, 7}
     };
 
-    /** First direction from native {@code stru_6FDD2158}. */
-    private static final int[] PRIMARY_DIRECTIONS = {
-            5, 4, 4, 4, 3,
-            6, 5, 4, 3, 2,
-            6, 6, 6, 2, 2,
-            6, 7, 0, 1, 2,
-            7, 0, 0, 0, 1
-    };
-
     private D2IDAStar() {}
 
     public static Result findPath(
@@ -254,37 +245,7 @@ public final class D2IDAStar {
     }
 
     private static int direction(D2Path.Point from, D2Path.Point to) {
-        return PRIMARY_DIRECTIONS[directionTableIndex(from.x, from.y, to.x, to.y)];
-    }
-
-    /** Exact port of D2Common {@code sub_6FDAB610}. */
-    private static int directionTableIndex(int x1, int y1, int x2, int y2) {
-        int differenceX = x2 - x1;
-        int differenceY = y2 - y1;
-        int absoluteX = Math.abs(differenceX);
-        int absoluteY = Math.abs(differenceY);
-
-        if (absoluteX < 2 * absoluteY) {
-            if (absoluteY >= 2 * absoluteX) {
-                if (differenceX < 0) {
-                    if (differenceY < -1) return 5;
-                    if (differenceY > 1) differenceY = 2;
-                    return differenceY + 7;
-                }
-                differenceX &= 1;
-            }
-        } else {
-            differenceY = differenceY >= 0 ? differenceY & 1 : -1;
-        }
-
-        if (differenceX < -1) {
-            differenceX = -2;
-        } else if (differenceX > 1) {
-            differenceX = 2;
-        }
-        if (differenceY < -1) return 5 * differenceX + 10;
-        if (differenceY > 1) differenceY = 2;
-        return differenceY + 5 * differenceX + 12;
+        return D2PathMisc.primaryDirection(from, to);
     }
 
     /** Native flush: compressed straight paths and paths at the 78-point limit are rejected. */
