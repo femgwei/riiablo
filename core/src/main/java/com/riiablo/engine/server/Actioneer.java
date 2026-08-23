@@ -138,21 +138,11 @@ public class Actioneer extends PassiveSystem {
     boolean isThrowSkill = (skillId == SkillCodes.throw_ || skillId == SkillCodes.left_hand_throw);
     boolean isThrowFunc = (skill != null && (skill.cltdofunc == 3 || skill.cltdofunc == 5));
     
-    // For players, also check if equipped weapon is throwable
-    boolean hasThrowableWeapon = false;
-    if (mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-      Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-      if (weapon == null) {
-        weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-      }
-      if (weapon != null && weapon.base != null) {
-        hasThrowableWeapon = weapon.type.is(com.riiablo.item.Type.JAVE) || 
-                            weapon.type.is(com.riiablo.item.Type.TKNI) || 
-                            weapon.type.is(com.riiablo.item.Type.TAXE);
-      }
-    }
-    
-    boolean isThrowAttack = isThrowSkill || isThrowFunc || hasThrowableWeapon;
+    // A throwable weapon does not make the normal Attack skill a throw. In
+    // Diablo II, a javelin/throwing knife/throwing axe can still be used for a
+    // point-blank melee Attack; only explicit Throw skills (or throw functions
+    // in Skills.txt) create a missile and consume quantity here.
+    boolean isThrowAttack = isThrowSkill || isThrowFunc;
 
     // Keep one authoritative snapshot in the log before the animation starts.
     // This lets us distinguish an equipment/stat aggregation problem from a

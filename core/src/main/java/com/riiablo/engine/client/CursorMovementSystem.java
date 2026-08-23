@@ -28,12 +28,15 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
+import com.riiablo.item.Type;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.profiler.ProfilerSystem;
 import com.riiablo.save.ItemController;
+import com.riiablo.skill.SkillCodes;
 
 public class CursorMovementSystem extends BaseSystem {
   private static final String TAG = "CursorMovementSystem";
@@ -118,7 +121,17 @@ public class CursorMovementSystem extends BaseSystem {
       } else {
         final int skillId = Riiablo.charData.getAction(leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
-        actioneer.cast(playerId, skillId, targetId, tmpVec2);
+        // Shift-click/right-click bypasses updateLeft(). Keep the same melee
+        // range contract here so normal Attack cannot damage a distant target.
+        // Bows and crossbows are the exception: their normal Attack is ranged.
+        if (targetId != Engine.INVALID_ENTITY && isMeleeNormalAttack(skillId)
+            && !actioneer.isInMeleeRange(playerId, targetId, 3)) {
+          Gdx.app.log(TAG, "[ATTACK_RANGE] rejected remote normal attack player=" + playerId
+              + " skill=" + skillId + " target=" + targetId + " mode=melee");
+          actioneer.moveTo(playerId, targetId);
+        } else {
+          actioneer.cast(playerId, skillId, targetId, tmpVec2);
+        }
       }
     } else {
       updateLeft();
@@ -182,7 +195,12 @@ public class CursorMovementSystem extends BaseSystem {
           // Check if in melee range
           boolean inMeleeRange = actioneer.isInMeleeRange(src, targetId, 3);
           
-          // Check if equipped weapon is throwable and in throwing range
+          final int selectedSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
+          final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
+
+          // Check if the selected skill is an explicit throw and the equipped
+          // weapon is throwable and in throwing range. A throwable weapon does
+          // not turn the normal Attack skill into a ranged attack.
           boolean canThrow = false;
           float throwRange = 0f;
           Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
@@ -190,7 +208,7 @@ public class CursorMovementSystem extends BaseSystem {
             weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
           }
           
-          if (weapon != null && weapon.base != null) {
+          if (explicitThrowSkill && weapon != null && weapon.base != null) {
             boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
                                  weapon.type.is(com.riiablo.item.Type.TKNI) || 
                                  weapon.type.is(com.riiablo.item.Type.TAXE);
@@ -215,9 +233,12 @@ public class CursorMovementSystem extends BaseSystem {
             }
           }
           
+          traceAttackRange(src, targetId, selectedSkillId, dst, inMeleeRange,
+              explicitThrowSkill, canThrow);
+
           // Allow attack if in melee range or can throw
           if (inMeleeRange || canThrow) {
-            actioneer.cast(src, Riiablo.charData.getAction(Input.Buttons.LEFT), targetId, targetPos);
+            actioneer.cast(src, selectedSkillId, targetId, targetPos);
           }
         }
       }
@@ -331,7 +352,12 @@ public class CursorMovementSystem extends BaseSystem {
       // Check if in melee range
       boolean inMeleeRange = actioneer.isInMeleeRange(src, target, 3);
       
-      // Check if equipped weapon is throwable and in throwing range
+      final int selectedSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
+      final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
+
+      // Check if the selected skill is an explicit throw and the equipped
+      // weapon is throwable and in throwing range. Normal Attack remains
+      // point-blank melee even when a throwable weapon is equipped.
       boolean canThrow = false;
       float throwRange = 0f;
       Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
@@ -339,7 +365,7 @@ public class CursorMovementSystem extends BaseSystem {
         weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
       }
       
-      if (weapon != null && weapon.base != null) {
+      if (explicitThrowSkill && weapon != null && weapon.base != null) {
         boolean isThrowable = weapon.type.is(com.riiablo.item.Type.JAVE) || 
                              weapon.type.is(com.riiablo.item.Type.TKNI) || 
                              weapon.type.is(com.riiablo.item.Type.TAXE);
@@ -361,9 +387,12 @@ public class CursorMovementSystem extends BaseSystem {
         }
       }
       
+      traceAttackRange(src, target, selectedSkillId, dst, inMeleeRange,
+          explicitThrowSkill, canThrow);
+
       // Allow attack if in melee range or can throw
       if (inMeleeRange || canThrow) {
-        actioneer.cast(src, Riiablo.charData.getAction(Input.Buttons.LEFT), target, targetPos);
+        actioneer.cast(src, selectedSkillId, target, targetPos);
         return true;
       }
     }
@@ -426,6 +455,37 @@ public class CursorMovementSystem extends BaseSystem {
     lastInteractionTraceTarget = Engine.INVALID_ENTITY;
     lastInteractionTraceMillis = now;
     Gdx.app.log(TAG, "Interaction input: " + message);
+  }
+
+  /**
+   * Returns whether a selected skill explicitly uses the throw/left-hand throw
+   * pipeline. Weapon type alone is intentionally not enough: D2 lets a
+   * javelin, throwing knife, or throwing axe perform a normal melee Attack.
+   */
+  private static boolean isThrowSkill(int skillId) {
+    if (skillId < 0) return false;
+    if (skillId == SkillCodes.throw_ || skillId == SkillCodes.left_hand_throw) {
+      return true;
+    }
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    return skill != null && (skill.srvdofunc == 3 || skill.srvdofunc == 5
+        || skill.cltdofunc == 3 || skill.cltdofunc == 5);
+  }
+
+  private boolean isMeleeNormalAttack(int skillId) {
+    if (skillId != SkillCodes.attack) return false;
+    Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
+    if (weapon == null) weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
+    if (weapon == null || weapon.type == null) return true;
+    return !weapon.type.is(Type.BOW) && !weapon.type.is(Type.XBOW);
+  }
+
+  private void traceAttackRange(int src, int targetId, int skillId, float distance,
+      boolean inMeleeRange, boolean explicitThrowSkill, boolean canThrow) {
+    Gdx.app.log(TAG, "[ATTACK_RANGE] player=" + src + " target=" + targetId
+        + " skill=" + skillId + " distance=" + distance
+        + " mode=" + (explicitThrowSkill ? "throw" : "melee")
+        + " inMelee=" + inMeleeRange + " canThrow=" + canThrow);
   }
 
   /**

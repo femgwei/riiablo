@@ -21,7 +21,6 @@ import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.item.Type;
-import com.riiablo.skill.SkillCodes;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -138,35 +137,10 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 2: // Kick / melee hit with specific sound
-        // Check if this is a throw attack with throwable weapon
-        if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw) {
-          // This is a throw skill, create missile
-          log.info("[CLTDOFUNC] Creating throw missile for throw skill: skillId={}", event.skillId);
-          cltDoThrowMissile(event, skill, position);
-        } else {
-          // Check if equipped weapon is throwable (for player only)
-          try {
-            if (Riiablo.charData != null && Riiablo.charData.getItems() != null) {
-              Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-              if (weapon == null) {
-                weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-              }
-              if (weapon != null && weapon.base != null) {
-                boolean isThrowable = weapon.type.is(Type.JAVE) || 
-                                     weapon.type.is(Type.TKNI) || 
-                                     weapon.type.is(Type.TAXE);
-                if (isThrowable) {
-                  log.info("[CLTDOFUNC] Creating throw missile for throwable weapon: weapon={}, skillId={}", 
-                      weapon.code, event.skillId);
-                  cltDoThrowMissile(event, skill, position);
-                  break;
-                }
-              }
-            }
-          } catch (Exception e) {
-            // Not a player entity, continue with normal melee sound
-          }
-        }
+        // cltdofunc=2 is a melee/kick presentation function. Do not infer a
+        // throw from the equipped weapon: normal Attack with a javelin or
+        // throwing knife is still melee in D2. Explicit throw skills use
+        // cltdofunc 3/5 and are handled by their dedicated cases below.
         Riiablo.audio.play("weapon_1hs_small_1", true);
         break;
 
