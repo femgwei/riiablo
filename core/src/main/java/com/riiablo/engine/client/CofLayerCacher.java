@@ -18,6 +18,7 @@ import com.riiablo.engine.client.component.CofWrapper;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofComponents;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.CofChangeEvent;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -36,6 +37,7 @@ public class CofLayerCacher extends IteratingSystem {
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<CofLoadingComponents> mCofLoadingComponents;
   protected ComponentMapper<CofComponentDescriptors> mCofComponentDescriptors;
+  protected ComponentMapper<Player> mPlayer;
 
   protected CofManager cofs;
 
@@ -105,6 +107,12 @@ public class CofLayerCacher extends IteratingSystem {
         alteredLayers |= flag;
         if (DEBUG) Gdx.app.debug(TAG, "Loaded[" + Engine.getComposite(c) + "] " + descriptor.fileName);
         DC dc = Riiablo.assets.get(descriptor);
+        // D2 keeps the active unit graphics ready for all discrete facings.
+        // Lazy GL texture creation during a player direction change stalls or
+        // briefly blanks a composite layer, which is visible as flashing.
+        // Limit eager loading to the local player to keep monster memory use
+        // bounded.
+        if (mPlayer.has(entityId)) dc.loadDirections();
         animation.setLayer(layer, dc, false);
       }
     }

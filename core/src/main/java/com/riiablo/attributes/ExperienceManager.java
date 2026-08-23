@@ -498,47 +498,52 @@ public class ExperienceManager extends PassiveSystem {
       return;
     }
 
-    // 增加生命值上限（每级增长）
-    int maxHpIncrease = levelDiff * charStats.LifePerLevel << 6;
-    int currentMaxHp = getInt(stats, Stat.maxhp, 0);
-    stats.put(Stat.maxhp, currentMaxHp + maxHpIncrease);
+    // CharStats stores life/mana/stamina growth in quarter points. D2 adds
+    // those values to the raw 24.8 stat with << 6. StatListRef.put(float)
+    // already performs the 24.8 conversion, so shifting and then calling
+    // put(int) double-encodes the value and turns a normal +2 life level-up
+    // into roughly +512 life.
+    float maxHpBefore = getFixed(charData.getStats().aggregate(), Stat.maxhp, 0f);
+    float maxHpIncrease = levelDiff * charStats.LifePerLevel / 4f;
+    addFixed(stats, Stat.maxhp, maxHpIncrease);
+    addFixed(charData.getStats().aggregate(), Stat.maxhp, maxHpIncrease);
+    float newMaxHp = getFixed(charData.getStats().aggregate(), Stat.maxhp,
+        getFixed(stats, Stat.maxhp, 0f));
+    stats.put(Stat.hitpoints, newMaxHp);
+    charData.getStats().aggregate().put(Stat.hitpoints, newMaxHp);
 
-    // 恢复满血（如果当前生命值 > 0）
-    int currentHp = getInt(stats, Stat.hitpoints, 0);
-    if (currentHp > 0) {
-      int newMaxHp = getInt(stats, Stat.maxhp, 0);
-      stats.put(Stat.hitpoints, newMaxHp);
-    }
-
-    // 增加法力值上限（每级增长）
-    int maxManaIncrease = levelDiff * charStats.ManaPerLevel << 6;
-    int currentMaxMana = getInt(stats, Stat.maxmana, 0);
-    stats.put(Stat.maxmana, currentMaxMana + maxManaIncrease);
-
-    // 恢复满蓝
-    int newMaxMana = getInt(stats, Stat.maxmana, 0);
+    float maxManaIncrease = levelDiff * charStats.ManaPerLevel / 4f;
+    addFixed(stats, Stat.maxmana, maxManaIncrease);
+    addFixed(charData.getStats().aggregate(), Stat.maxmana, maxManaIncrease);
+    float newMaxMana = getFixed(charData.getStats().aggregate(), Stat.maxmana,
+        getFixed(stats, Stat.maxmana, 0f));
     stats.put(Stat.mana, newMaxMana);
+    charData.getStats().aggregate().put(Stat.mana, newMaxMana);
 
-    // 增加体力值上限（每级增长）
-    int maxStaminaIncrease = levelDiff * charStats.StaminaPerLevel << 6;
-    int currentMaxStamina = getInt(stats, Stat.maxstamina, 0);
-    stats.put(Stat.maxstamina, currentMaxStamina + maxStaminaIncrease);
-
-    // 恢复满体力
-    int newMaxStamina = getInt(stats, Stat.maxstamina, 0);
+    float maxStaminaIncrease = levelDiff * charStats.StaminaPerLevel / 4f;
+    addFixed(stats, Stat.maxstamina, maxStaminaIncrease);
+    addFixed(charData.getStats().aggregate(), Stat.maxstamina, maxStaminaIncrease);
+    float newMaxStamina = getFixed(charData.getStats().aggregate(), Stat.maxstamina,
+        getFixed(stats, Stat.maxstamina, 0f));
     stats.put(Stat.stamina, newMaxStamina);
+    charData.getStats().aggregate().put(Stat.stamina, newMaxStamina);
 
     // 增加属性点（每级增长）
     int statPtsIncrease = levelDiff * charStats.StatPerLevel;
     int currentStatPts = getInt(stats, Stat.statpts, 0);
     stats.put(Stat.statpts, currentStatPts + statPtsIncrease);
+    charData.getStats().aggregate().put(Stat.statpts, currentStatPts + statPtsIncrease);
 
     // 增加技能点（每级 1 点）
     int currentSkillPts = getInt(stats, Stat.newskills, 0);
     stats.put(Stat.newskills, currentSkillPts + levelDiff);
+    charData.getStats().aggregate().put(Stat.newskills, currentSkillPts + levelDiff);
 
-    // 同步属性（base -> agg）
-    charData.getStats().reset();
+    // Do not reset the complete aggregate here: reset() copies base only and
+    // temporarily drops equipped-item stats. Update just the changed stats.
+    log.info("[XP_LEVEL] character={} level={}->{} maxHp={}->{} lifeGain={} maxMana={} maxStamina={}",
+        charData.name, oldLevel, newLevel, maxHpBefore, newMaxHp, maxHpIncrease,
+        newMaxMana, newMaxStamina);
 
     // TODO: 播放升级音效
     // TODO: 触发升级事件
@@ -550,6 +555,21 @@ public class ExperienceManager extends PassiveSystem {
   private int getInt(StatListRef stats, short stat, int defaultValue) {
     StatRef ref = stats.get(stat);
     return ref != null ? ref.asInt() : defaultValue;
+  }
+
+  private float getFixed(StatListRef stats, short stat, float defaultValue) {
+    StatRef ref = stats.get(stat);
+    return ref != null ? ref.asFixed() : defaultValue;
+  }
+
+  private void addFixed(StatListRef stats, short stat, float value) {
+    if (value == 0f) return;
+    StatRef ref = stats.get(stat);
+    if (ref == null) {
+      stats.put(stat, value);
+    } else {
+      ref.add(value);
+    }
   }
 
   /**
