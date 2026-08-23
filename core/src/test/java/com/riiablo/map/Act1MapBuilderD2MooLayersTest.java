@@ -92,6 +92,23 @@ class Act1MapBuilderD2MooLayersTest {
     assertEquals(-1, underground.getWarp(Map.ID.VIS_4_38));
   }
 
+  @Test
+  void linksBloodMoorAndDenOfEvilWarpsInBothDirections() {
+    Map map = new Map(1, 0);
+    Map.Zone bloodMoor = zone(2, "Blood Moor", vis(5, 8));
+    Map.Zone denOfEvil = zone(8, "Den of Evil", vis(0, 2));
+    map.zones.add(bloodMoor);
+    map.zones.add(denOfEvil);
+
+    putSpecial(bloodMoor, Map.ID.VIS_5_42);
+    putSpecial(denOfEvil, Map.ID.VIS_0_03);
+
+    Act1MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(map);
+
+    assertEquals(Map.ID.VIS_0_03, bloodMoor.getWarp(Map.ID.VIS_5_42));
+    assertEquals(Map.ID.VIS_5_42, denOfEvil.getWarp(Map.ID.VIS_0_03));
+  }
+
   private static Map.Zone zone(int id, String name, int[] vis) {
     Levels.Entry level = new Levels.Entry();
     level.Id = id;

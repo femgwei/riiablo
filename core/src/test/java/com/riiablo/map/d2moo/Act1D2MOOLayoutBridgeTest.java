@@ -24,6 +24,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.drlg.TileGrid;
+import com.riiablo.map.Act1MapBuilderD2MOD;
 import com.riiablo.map.Map;
 
 /** Fixed-seed DRLG smoke test and diagnostic report for the Act1 bridge. */
@@ -43,6 +44,7 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     Act1D2MOOLayoutBridge.LayoutAndDrlg first =
         Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, difficulty, burialId);
     assertNotNull(first, "D2MOO Act1 layout failed; inspect ACT1_D2MOO logs");
+    assertDiscoveredNativeSublevels(first);
     assertFixedSeedOutdoorCoverage(first.drlg);
     String firstSummary = summarize(first.drlg);
     System.out.println("[ACT1-DIAG] seed=" + seed + " diff=" + difficulty + " " + firstSummary);
@@ -54,11 +56,97 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     Act1D2MOOLayoutBridge.LayoutAndDrlg second =
         Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, difficulty, burialId);
     assertNotNull(second, "Second fixed-seed generation failed");
+    assertDiscoveredNativeSublevels(second);
     assertFixedSeedOutdoorCoverage(second.drlg);
     assertEquals(firstSummary, summarize(second.drlg),
         "same seed must produce the same Act1 layout summary");
     DrlgDrlg.freeDrlg(second.drlg);
     Act1D2MOOLayoutBridge.releaseDataTables();
+  }
+
+  @Test
+  public void mapBuilderCreatesDiscoveredDenOfEvilZone() {
+    int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
+    Map map = new Map(seed, DEFAULT_DIFFICULTY);
+    Act1MapBuilderD2MOD.INSTANCE.generate(map, seed, DEFAULT_DIFFICULTY);
+    try {
+      Map.Zone bloodMoor = map.findZone(
+          Riiablo.files.Levels.get(D2LevelIds.LEVEL_BLOODMOOR));
+      Map.Zone denOfEvil = map.findZone(
+          Riiablo.files.Levels.get(D2LevelIds.LEVEL_DENOFEVIL));
+      assertNotNull(bloodMoor, "Blood Moor zone is missing");
+      assertNotNull(denOfEvil, "auto-discovered Den of Evil zone is missing");
+      assertTrue(Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(
+          D2LevelIds.LEVEL_DENOFEVIL), "Den of Evil native export was rejected");
+      assertTrue(denOfEvil.width() > 0 && denOfEvil.height() > 0,
+          "Den of Evil zone has invalid bounds");
+      assertTrue(!overlaps(bloodMoor, denOfEvil),
+          "Den of Evil must occupy a detached world-coordinate region");
+    } finally {
+      map.dispose();
+    }
+  }
+
+  private static boolean overlaps(Map.Zone a, Map.Zone b) {
+    return a.x() < b.x() + b.width() && b.x() < a.x() + a.width()
+        && a.y() < b.y() + b.height() && b.y() < a.y() + a.height();
+  }
+
+  private static void assertDiscoveredNativeSublevels(
+      Act1D2MOOLayoutBridge.LayoutAndDrlg layout) {
+    int[][] routes = {
+        {D2LevelIds.LEVEL_DENOFEVIL, D2LevelIds.LEVEL_BLOODMOOR},
+        {D2LevelIds.LEVEL_CAVEOFLEVEL1, D2LevelIds.LEVEL_COLDPLAINS},
+        {D2LevelIds.LEVEL_HOLELVL1, D2LevelIds.LEVEL_BLACKMARSH},
+        {D2LevelIds.LEVEL_PITLVL1, D2LevelIds.LEVEL_TAMOEHIGHLAND},
+    };
+    for (int[] route : routes) {
+      assertTrue(contains(layout.result.levelIds, route[0]),
+          "native linked level was not discovered: " + route[0]);
+      assertNativeLinkedSublevelWarp(layout.drlg, route[0], route[1]);
+    }
+  }
+
+  private static boolean contains(int[] values, int expected) {
+    for (int value : values) if (value == expected) return true;
+    return false;
+  }
+
+  private static void assertNativeLinkedSublevelWarp(
+      D2DrlgStrc drlg, int levelId, int sourceLevelId) {
+    D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+    assertNotNull(level, "missing linked D2MOO level " + levelId);
+    assertTrue(level.getRooms() > 0, "linked level has no rooms " + levelId);
+    TileGrid grid = new TileGrid(
+        level.getLevelCoords().getNWidth(), level.getLevelCoords().getNHeight());
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(levelId, grid);
+    int floors = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+    assertTrue(floors > 0, "linked level exported no floors " + levelId);
+    assertTrue(applier.getExportedWallCount() > 0,
+        "linked level exported no walls " + levelId);
+    assertEquals(0, applier.getInvalidTileCount());
+    assertEquals(0, applier.getOutOfBoundsCount());
+
+    Levels.Entry levelEntry = Riiablo.files.Levels.get(levelId);
+    boolean reverseWarp = false;
+    for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS && !reverseWarp; layer++) {
+      for (int y = 0; y < grid.height && !reverseWarp; y++) {
+        for (int x = 0; x < grid.width; x++) {
+          int id = grid.wallIds[layer][y][x];
+          if (id == -1 || !com.riiablo.map.Orientation.isSpecial(
+              com.riiablo.map.DT1.Tile.Index.orientation(id))) continue;
+          int mainIndex = com.riiablo.map.DT1.Tile.Index.mainIndex(id);
+          int subIndex = com.riiablo.map.DT1.Tile.Index.subIndex(id);
+          if (subIndex != 1 && mainIndex < levelEntry.Vis.length
+              && levelEntry.Vis[mainIndex] == sourceLevelId) {
+            reverseWarp = true;
+            break;
+          }
+        }
+      }
+    }
+    assertTrue(reverseWarp, "linked level has no reverse warp to " + sourceLevelId);
   }
 
   private static int findLevelId(String name) {

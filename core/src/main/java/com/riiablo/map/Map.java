@@ -157,6 +157,10 @@ public class Map implements Disposable {
           VIS_7_46, VIS_7_83);
     }
 
+    public static boolean isWarp(int id) {
+      return WARPS.contains(id);
+    }
+
     public static int getWarpIndex(DS1.Cell cell) {
       return cell.mainIndex;
     }

@@ -12,12 +12,14 @@ import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2DrlgTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
+import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2MemoryPool;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlTypes;
+import com.riiablo.map.Map;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -61,16 +63,26 @@ public final class Act1D2MOOLayoutBridge {
      */
     public static final class Act1LayoutResult {
         /** 每格 [x, y, width, height] 单位 tile，与 D2DrlgCoord 一致 */
-        public final int[][] coords = new int[9][4];
+        public final int[][] coords;
         /** 0=Stony, 1=Cold, 2=Blood, 3=Town, 4=Burial, 5=Black Marsh,
-         * 6=Tamoe, 7=Dark Wood, 8=Underground Passage level 1. */
-        public final int[] levelIds = new int[9];
+         * 6=Tamoe, 7=Dark Wood, 8=Underground Passage level 1. Native linked
+         * sublevels discovered from actual warp specials follow those entries. */
+        public final int[] levelIds;
         /** levelLink[i]：连接到的上一格索引，-1 表示无 */
         public final int[] levelLink = new int[] { -1, 0, 1, 2, 1, 7, 5, -1, 0 };
         /** levelLinkEx[i] */
         public final int[] levelLinkEx = new int[] { -1, -1, -1, -1, -1, -1, -1, -1, 7 };
         /** 城镇出口方向 0–3 (D2MOD rand[0][townIndex])，用于预设选择与路径 */
         public int townDirection;
+
+        public Act1LayoutResult() {
+            this(D2MOO_ACT1_LEVEL_IDS.length);
+        }
+
+        public Act1LayoutResult(int levelCount) {
+            coords = new int[levelCount][4];
+            levelIds = new int[levelCount];
+        }
     }
 
     /**
@@ -142,19 +154,11 @@ public final class Act1D2MOOLayoutBridge {
                     level.getRooms(), level.getFirstRoomEx() != null ? "yes" : "no");
             }
 
-            Act1LayoutResult result = new Act1LayoutResult();
-            result.levelIds[0] = D2LevelIds.LEVEL_STONYFIELD;
-            result.levelIds[1] = D2LevelIds.LEVEL_COLDPLAINS;
-            result.levelIds[2] = D2LevelIds.LEVEL_BLOODMOOR;
-            result.levelIds[3] = D2LevelIds.LEVEL_ROGUEENCAMPMENT;
-            result.levelIds[4] = burialGroundsId;
-            result.levelIds[5] = D2LevelIds.LEVEL_BLACKMARSH;
-            result.levelIds[6] = D2LevelIds.LEVEL_TAMOEHIGHLAND;
-            result.levelIds[7] = D2LevelIds.LEVEL_DARKWOOD;
-            result.levelIds[8] = D2LevelIds.LEVEL_UNDERGROUNDPASSAGELVL1;
+            List<Integer> generatedLevelIds = discoverNativeLinkedLevels(drlg);
+            Act1LayoutResult result = new Act1LayoutResult(generatedLevelIds.size());
 
-            for (int i = 0; i < D2MOO_ACT1_LEVEL_IDS.length; i++) {
-                int levelId = D2MOO_ACT1_LEVEL_IDS[i];
+            for (int i = 0; i < generatedLevelIds.size(); i++) {
+                int levelId = generatedLevelIds.get(i);
                 D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
                 if (level == null) {
                     DrlgDrlg.freeDrlg(drlg);
@@ -167,6 +171,8 @@ public final class Act1D2MOOLayoutBridge {
                     releaseDataTables();
                     return null;
                 }
+                result.levelIds[i] = levelId == D2LevelIds.LEVEL_BURIALGROUNDS
+                    ? burialGroundsId : levelId;
                 result.coords[i][0] = c.getNPosX();
                 result.coords[i][1] = c.getNPosY();
                 result.coords[i][2] = c.getNWidth();
@@ -209,6 +215,115 @@ public final class Act1D2MOOLayoutBridge {
         DrlgDrlg.freeDrlg(layoutAndDrlg.drlg);
         releaseDataTables();
         return layoutAndDrlg.result;
+    }
+
+    /**
+     * Discovers detached Act I maps from warp specials that were actually
+     * selected by native DRLG generation. Levels.txt alone is insufficient:
+     * it lists possible routes, while the special wall proves that an entrance
+     * exists in this seed. Requiring the reverse Vis route rejects ordinary
+     * orientation-10 automap/pop-pad markers.
+     */
+    static List<Integer> discoverNativeLinkedLevels(D2DrlgStrc drlg) {
+        List<Integer> generated = new ArrayList<>();
+        Set<Integer> seen = new HashSet<>();
+        for (int levelId : D2MOO_ACT1_LEVEL_IDS) {
+            generated.add(levelId);
+            seen.add(levelId);
+        }
+
+        for (int cursor = 0; cursor < generated.size(); cursor++) {
+            int sourceLevelId = generated.get(cursor);
+            Levels.Entry source = Riiablo.files.Levels.get(sourceLevelId);
+            if (source == null || source.Vis == null || source.Warp == null) continue;
+
+            Set<Integer> targets = new java.util.LinkedHashSet<>();
+            DrlgExport.exportLevelTiles(drlg, sourceLevelId,
+                (exportLevelId, layer, tx, ty, tileId) -> {
+                    if (layer != DrlgExport.LAYER_WALL) return;
+                    int orientation = (tileId >>> 24) & 0xFF;
+                    if (orientation != 10 && orientation != 11) return;
+                    int riiabloTileId = D2MooTileApplier.toRiiabloTileIndex(tileId);
+                    if (!Map.ID.isWarp(riiabloTileId)) return;
+                    int mainIndex = (tileId >>> 12) & 0xFFF;
+                    int subIndex = tileId & 0xFFF;
+                    if (subIndex == 1 || mainIndex < 0
+                        || mainIndex >= source.Vis.length
+                        || mainIndex >= source.Warp.length
+                        || source.Warp[mainIndex] < 0) return;
+                    int targetLevelId = source.Vis[mainIndex];
+                    Levels.Entry target = Riiablo.files.Levels.get(targetLevelId);
+                    if (targetLevelId <= 0 || target == null || target.Act != 0
+                        || !hasReverseVis(target, sourceLevelId)) return;
+                    targets.add(targetLevelId);
+                });
+
+            for (int targetLevelId : targets) {
+                if (!seen.add(targetLevelId)) continue;
+                try {
+                    D2DrlgLevel target = DrlgDrlg.getLevel(drlg, targetLevelId);
+                    if (target == null) {
+                        D2Log.warning("ACT1_D2MOO_LINKED skip source=%d target=%d: allocation failed",
+                            sourceLevelId, targetLevelId);
+                        continue;
+                    }
+                    if (target.getFirstRoomEx() == null) DrlgDrlg.initLevel(target);
+                    if (target.getFirstRoomEx() == null || target.getRooms() <= 0
+                        || target.getLevelCoords() == null) {
+                        D2Log.warning("ACT1_D2MOO_LINKED skip source=%d target=%d: no generated rooms",
+                            sourceLevelId, targetLevelId);
+                        continue;
+                    }
+                    if (!hasWarpSpecialTo(drlg, targetLevelId, sourceLevelId)) {
+                        D2Log.warning("ACT1_D2MOO_LINKED skip source=%d target=%d: no reverse warp special",
+                            sourceLevelId, targetLevelId);
+                        continue;
+                    }
+                    generated.add(targetLevelId);
+                    D2DrlgCoord c = target.getLevelCoords();
+                    D2Log.debug("ACT1_D2MOO_LINKED source=%d target=%d coord=(%d,%d %dx%d) rooms=%d",
+                        sourceLevelId, targetLevelId, c.getNPosX(), c.getNPosY(),
+                        c.getNWidth(), c.getNHeight(), target.getRooms());
+                } catch (Throwable t) {
+                    D2Log.warning("ACT1_D2MOO_LINKED skip source=%d target=%d: %s",
+                        sourceLevelId, targetLevelId, t.toString());
+                    if (Boolean.getBoolean("riiablo.drlg.stacktrace")) t.printStackTrace();
+                }
+            }
+        }
+        D2Log.debug("ACT1_D2MOO_LINKED summary levels=%s", generated.toString());
+        return generated;
+    }
+
+    private static boolean hasReverseVis(Levels.Entry target, int sourceLevelId) {
+        if (target.Vis == null) return false;
+        for (int vis : target.Vis) if (vis == sourceLevelId) return true;
+        return false;
+    }
+
+    private static boolean hasWarpSpecialTo(
+            D2DrlgStrc drlg, int levelId, int destinationLevelId) {
+        Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        if (level == null || level.Vis == null || level.Warp == null) return false;
+        boolean[] found = { false };
+        DrlgExport.exportLevelTiles(drlg, levelId,
+            (exportLevelId, layer, tx, ty, tileId) -> {
+                if (found[0] || layer != DrlgExport.LAYER_WALL) return;
+                int orientation = (tileId >>> 24) & 0xFF;
+                if (orientation != 10 && orientation != 11) return;
+                int riiabloTileId = D2MooTileApplier.toRiiabloTileIndex(tileId);
+                if (!Map.ID.isWarp(riiabloTileId)) return;
+                int mainIndex = (tileId >>> 12) & 0xFFF;
+                int subIndex = tileId & 0xFFF;
+                if (subIndex != 1 && mainIndex >= 0
+                    && mainIndex < level.Vis.length
+                    && mainIndex < level.Warp.length
+                    && level.Warp[mainIndex] >= 0
+                    && level.Vis[mainIndex] == destinationLevelId) {
+                    found[0] = true;
+                }
+            });
+        return found[0];
     }
 
     /**

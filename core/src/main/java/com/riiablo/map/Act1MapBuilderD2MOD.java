@@ -1260,19 +1260,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     // D2MOO_JAVA TileGrid 导出：若某关卡由 D2MOO 生成了瓦片则跳过本地 generateOutdoorRoom
     if (drlg != null) {
       D2MooTileApplier applier = new D2MooTileApplier();
-      for (IntMap.Entry<DrlgLevel> e : drlgLevels) {
-        boolean nativeAct1Outdoor = e.key >= LEVEL_BLOODMOOR && e.key <= LEVEL_TAMOEHIGHLAND;
-        if (e.value.grid != null && (nativeAct1Outdoor || e.key == burialGroundsId
-            || e.key == LEVEL_UNDERGROUNDPASSAGELVL1)) {
-          applier.putGrid(e.key, e.value.grid);
-        }
+      for (int levelId : result.levelIds) {
+        if (levelId == LEVEL_ROGUEENCAMPMENT) continue;
+        DrlgLevel target = drlgLevels.get(levelId);
+        if (target != null && target.grid != null) applier.putGrid(levelId, target.grid);
       }
-      int[] outdoorLevelIds = {
-          LEVEL_BLOODMOOR, LEVEL_COLDPLAINS, LEVEL_STONYFIELD, burialGroundsId,
-          LEVEL_BLACKMARSH, LEVEL_TAMOEHIGHLAND, LEVEL_DARKWOOD,
-          LEVEL_UNDERGROUNDPASSAGELVL1
-      };
-      for (int levelId : outdoorLevelIds) {
+      for (int levelId : result.levelIds) {
+        if (levelId == LEVEL_ROGUEENCAMPMENT) continue;
         applier.resetLastExportedFloorCount();
         int n = DrlgExport.exportLevelTiles(drlg, levelId, applier);
         Array<Map.NativeObject> nativeObjects = new Array<>();
