@@ -183,6 +183,17 @@ public class MissileCollisionSystem extends IteratingSystem {
 
       Attributes ownerAttrs = mAttributesWrapper.get(missile.ownerId).attrs;
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
+      StatRef targetHitpoints = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
+      if (targetHitpoints == null || targetHitpoints.asFixed() <= 0f) {
+        // A dead entity may remain in the ECS until its death animation and
+        // reward processing finish.  Do not resolve additional missiles
+        // against it, otherwise one cast can award experience repeatedly.
+        log.info("[MISSILE_HIT] phase=skip_dead missileId={} owner={} target={} targetHp={}",
+            missileId, missile.ownerId, targetId,
+            targetHitpoints != null ? targetHitpoints.asFixed() : 0f);
+        world.delete(missileId);
+        return true;
+      }
       log.info("[MISSILE_HIT] phase=stats missileId={} owner={} target={} "
               + "throwMin={} throwMax={} weaponMin={} weaponMax={} attackRating={} "
               + "targetDefense={} targetHp={}",
@@ -191,7 +202,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           statInt(ownerAttrs, Stat.item_throw_maxdamage),
           statInt(ownerAttrs, Stat.mindamage), statInt(ownerAttrs, Stat.maxdamage),
           statInt(ownerAttrs, Stat.tohit), statInt(targetAttrs, Stat.armorclass),
-          statFixed(targetAttrs, Stat.hitpoints));
+          targetHitpoints.asFixed());
       CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
           ownerAttrs,
           targetAttrs,
