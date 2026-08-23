@@ -12,6 +12,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
@@ -31,6 +32,7 @@ public class MapManager extends PassiveSystem {
   protected ComponentMapper<Object> mObject;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<CofReference> mCofReference;
 
   public void createEntities() {
     for (Map.Zone zone : new Array.ArrayIterator<>(map.zones)) {
@@ -105,6 +107,7 @@ public class MapManager extends PassiveSystem {
         // again from coordinates: adjacent/overlapping zone bounds can make a
         // waypoint activate the wrong Levels.txt record.
         mMapWrapper.create(id).set(map, zone);
+        prepareWaypointInitialState(id, zone);
         zone.addEntity(id);
         created++;
       }
@@ -125,8 +128,49 @@ public class MapManager extends PassiveSystem {
       DS1.Object object = ds1.objects[i];
       if (waypointsOnly && !isWaypoint(ds1, object)) continue;
       int id = factory.createObject(preset, object, x + object.x, y + object.y);
-      if (id != Engine.INVALID_ENTITY) zone.entities.add(id);
+      if (id != Engine.INVALID_ENTITY) {
+        prepareWaypointInitialState(id, zone);
+        zone.entities.add(id);
+      }
     }
+  }
+
+  /**
+   * Finalizes a waypoint's owning level and persisted visual mode before the
+   * first ECS process cycle starts loading its COF.
+   *
+   * <p>New characters already own the town waypoint. Previously every object
+   * was inserted as NU and {@code ObjectInitializer} immediately changed the
+   * town waypoint to ON. That queued two different COFs in one insertion
+   * cycle and could leave the object interactable but visually absent. Native
+   * outdoor exports also need the explicit {@code zone}, because overlapping
+   * bounds make coordinate-only ownership ambiguous.</p>
+   */
+  private void prepareWaypointInitialState(int id, Map.Zone zone) {
+    Object object = mObject.get(id);
+    if (object == null || object.base == null
+        || (object.base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) == 0) {
+      return;
+    }
+
+    mMapWrapper.create(id).set(map, zone);
+    CofReference reference = mCofReference.get(id);
+    if (reference == null) return;
+
+    Levels.Entry level = zone != null ? zone.level : null;
+    boolean active = level != null
+        && level.Waypoint != 0xFF
+        && Riiablo.charData != null
+        && Riiablo.charData.isWaypointActivated(level.Act, level.Waypoint);
+    reference.mode = resolveWaypointInitialMode(active);
+    Gdx.app.log(TAG, String.format(
+        "Waypoint initial visual state: entity=%d level=%s(%d) active=%s mode=%s",
+        id, level == null ? "null" : level.LevelName, level == null ? -1 : level.Id,
+        active, active ? "ON" : "NU"));
+  }
+
+  static byte resolveWaypointInitialMode(boolean active) {
+    return active ? Engine.Object.MODE_ON : Engine.Object.MODE_NU;
   }
 
   private boolean isWaypoint(DS1 ds1, DS1.Object object) {

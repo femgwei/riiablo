@@ -24,7 +24,9 @@ import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
+import com.riiablo.codec.COF;
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.codec.excel.Objects;
 import com.riiablo.drlg.TileGrid;
 import com.riiablo.map.Act1MapBuilderD2MOD;
 import com.riiablo.map.Map;
@@ -34,6 +36,42 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   private static final int DEFAULT_DIFFICULTY = 0;
   /** Reproduction seed from the town-exit black-map game log. */
   private static final String DEFAULT_SEED = "0x171A6100";
+
+  @Test
+  public void rogueEncampmentWaypointDefinitionIsRenderable() {
+    Objects.Entry waypoint = Riiablo.files.objects.get(119);
+    assertNotNull(waypoint, "Rogue Encampment waypoint object 119 is missing");
+    assertTrue(waypoint.Draw, "Rogue Encampment waypoint is marked non-drawable");
+    assertTrue(waypoint.Mode[com.riiablo.engine.Engine.Object.MODE_NU],
+        "Rogue Encampment waypoint NU mode is disabled");
+    assertTrue(waypoint.Mode[com.riiablo.engine.Engine.Object.MODE_ON],
+        "Rogue Encampment waypoint ON mode is disabled");
+    assertTrue(waypoint.FrameCnt[com.riiablo.engine.Engine.Object.MODE_NU] > 0,
+        "Rogue Encampment waypoint NU mode has no frames");
+    assertTrue(waypoint.FrameCnt[com.riiablo.engine.Engine.Object.MODE_ON] > 0,
+        "Rogue Encampment waypoint ON mode has no frames");
+    for (String mode : new String[] {"NU", "ON"}) {
+      String cofPath = "data\\global\\objects\\wp\\cof\\wp" + mode + "HTH.cof";
+      assertTrue(Riiablo.mpqs.contains(cofPath),
+          "Rogue Encampment waypoint " + mode + " COF is missing");
+      COF cof = COF.loadFromFile(Riiablo.mpqs.resolve(cofPath));
+      for (int i = 0; i < cof.getNumLayers(); i++) {
+        COF.Layer layer = cof.getLayer(i);
+        String component = com.riiablo.engine.Engine.getComposite(layer.component);
+        String dccPath = "data\\global\\objects\\wp\\" + component + "\\wp"
+            + component + "LIT" + mode + layer.weaponClass + ".dcc";
+        assertTrue(Riiablo.mpqs.contains(dccPath),
+            "Rogue Encampment waypoint component is missing: " + dccPath);
+      }
+    }
+    System.out.println("[ACT1-DIAG] town waypoint object=119 token=" + waypoint.Token
+        + " draw=" + waypoint.Draw + " modeNU=" + waypoint.Mode[0]
+        + " modeON=" + waypoint.Mode[com.riiablo.engine.Engine.Object.MODE_ON]
+        + " frameNU=" + waypoint.FrameCnt[com.riiablo.engine.Engine.Object.MODE_NU]
+        + " frameON=" + waypoint.FrameCnt[com.riiablo.engine.Engine.Object.MODE_ON]
+        + " components="
+        + java.util.Arrays.toString(waypoint.Components));
+  }
 
   @Test
   public void fixedSeedAct1LayoutIsStableAndExportable() {
