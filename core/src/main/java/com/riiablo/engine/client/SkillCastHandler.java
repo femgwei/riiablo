@@ -22,6 +22,7 @@ import com.riiablo.item.Item;
 import com.riiablo.item.Type;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.skill.SkillCodes;
 
 public class SkillCastHandler extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(SkillCastHandler.class);
@@ -126,6 +127,22 @@ public class SkillCastHandler extends PassiveSystem {
 
     Vector2 position = mPosition.has(event.entityId) ? mPosition.get(event.entityId).position : null;
 
+    // In the shipped Skills.txt data Throw and Left Hand Throw use
+    // cltdofunc=2, while their authoritative server functions are 3 and 5.
+    // cltdofunc=2 is therefore not sufficient to classify the action as a
+    // kick/melee presentation.  Route the explicit throw skills first so the
+    // client creates the visible javelin/throwing-weapon missile as soon as
+    // the server reaches the skill-do keyframe.
+    if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
+        || event.srvdofunc == 3 || event.srvdofunc == 5) {
+      log.info("[THROW_VISUAL] entity={} skill={} srvDoFunc={} cltDoFunc={} position=({}, {})",
+          event.entityId, event.skillId, event.srvdofunc, event.cltdofunc,
+          position != null ? position.x : Float.NaN,
+          position != null ? position.y : Float.NaN);
+      cltDoThrowMissile(event, skill, position);
+      return;
+    }
+
     switch (event.cltdofunc) {
       case 0:
         break;
@@ -136,14 +153,14 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 2: // Kick / melee hit with specific sound
-        // cltdofunc=2 is a melee/kick presentation function. Do not infer a
-        // throw from the equipped weapon: normal Attack with a javelin or
-        // throwing knife is still melee in D2. Explicit throw skills use
-        // cltdofunc 3/5 and are handled by their dedicated cases below.
+        // Explicit Throw/Left Hand Throw has already been handled above.
+        // Keep this branch for genuine non-throwing skills that use the same
+        // client function number.
         Riiablo.audio.play("weapon_1hs_small_1", true);
         break;
 
       case 3: // Throw - create thrown missile visual
+        // Older/custom skill tables may still use cltdofunc=3 directly.
         cltDoThrowMissile(event, skill, position);
         break;
 
