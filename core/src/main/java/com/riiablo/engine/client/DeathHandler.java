@@ -6,6 +6,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.Gdx;
 
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.Selectable;
@@ -198,6 +199,10 @@ public class DeathHandler extends PassiveSystem {
     if (mCasting.has(playerId)) mCasting.remove(playerId);
     if (mPathfind.has(playerId)) mPathfind.remove(playerId);
     if (mSequence.has(playerId)) mSequence.remove(playerId);
+    // Player DT/DD COFs only exist for HTH. Keeping the equipped weapon class
+    // here attempts to load e.g. AMDT1HT, stalls the death sequence, and lets
+    // ESC revive the player while the old physics body is still active.
+    cofs.setWClass(playerId, Engine.WEAPON_HTH);
     mSequence.create(playerId).sequence(Engine.Player.MODE_DT, Engine.Player.MODE_DD);
     log.info("[PLAYER_DEATH] sequence entity={} mode=DT->DD", playerId);
     
@@ -379,6 +384,17 @@ public class DeathHandler extends PassiveSystem {
     // This component is created immediately when player dies, even before MODE_DD
     return mPlayerCorpse.has(playerId);
   }
+
+  /**
+   * Returns whether the death animation has completed and ESC may revive the
+   * player. Movement remains blocked for the whole DT/DD interval via
+   * {@link #isPlayerDead(int)}.
+   */
+  public boolean canRespawnPlayer(int playerId) {
+    return isPlayerDead(playerId)
+        && mCofReference.has(playerId)
+        && mCofReference.get(playerId).mode == Engine.Player.MODE_DD;
+  }
   
   /**
    * Respawn player at town location (called when ESC is pressed after death)
@@ -401,6 +417,10 @@ public class DeathHandler extends PassiveSystem {
       townLocation = new Vector2(0, 0);
     }
     
+    Vector2 oldLocation = mPosition.has(playerId)
+        ? new Vector2(mPosition.get(playerId).position)
+        : new Vector2(Float.NaN, Float.NaN);
+
     // Move player to town location
     if (mPosition.has(playerId)) {
       mPosition.get(playerId).position.set(townLocation);
@@ -466,9 +486,23 @@ public class DeathHandler extends PassiveSystem {
       }
     }
 
-    // Death removes the physics body.  Re-adding the component lets
-    // Box2DPhysics create a fresh body at the respawn position.
-    if (!mBox2DBody.has(playerId)) {
+    // ESC can be delivered close to a mode transition. If a body still
+    // exists, teleport it as well as Position; otherwise
+    // Box2DSynchronizerPost copies the old death location back over the town
+    // position on the next frame, which looks like an in-place resurrection.
+    if (mBox2DBody.has(playerId)) {
+      Body body = mBox2DBody.get(playerId).body;
+      if (body != null) {
+        body.setLinearVelocity(0f, 0f);
+        body.setAngularVelocity(0f);
+        body.setTransform(townLocation, body.getAngle());
+        log.info("[PLAYER_REVIVE] physics body teleported entity={}", playerId);
+      } else {
+        mBox2DBody.remove(playerId);
+        mBox2DBody.create(playerId);
+        log.info("[PLAYER_REVIVE] null physics body recreated entity={}", playerId);
+      }
+    } else {
       mBox2DBody.create(playerId);
       log.info("[PLAYER_REVIVE] physics body recreated entity={}", playerId);
     }
@@ -481,5 +515,10 @@ public class DeathHandler extends PassiveSystem {
     
     log.info("[PLAYER_REVIVE] entity={} position=({}, {}) hpRestored=true movementRestored=true",
         playerId, townLocation.x, townLocation.y);
+    Map.Zone townZone = map.getZone(townLocation);
+    Gdx.app.log("DeathHandler", String.format(
+        "[PLAYER_REVIVE] entity=%d from=(%.3f,%.3f) to=(%.3f,%.3f) zone=%s",
+        playerId, oldLocation.x, oldLocation.y, townLocation.x, townLocation.y,
+        townZone == null || townZone.level == null ? "null" : townZone.level.LevelName));
   }
 }

@@ -415,8 +415,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           if (Riiablo.game.player >= 0 && engine != null) {
             com.riiablo.engine.client.DeathHandler deathHandler = engine.getSystem(com.riiablo.engine.client.DeathHandler.class);
             if (deathHandler != null && deathHandler.isPlayerDead(Riiablo.game.player)) {
-              deathHandler.respawnPlayerAtTown(Riiablo.game.player);
-              return; // Don't show menu when respawning
+              boolean ready = deathHandler.canRespawnPlayer(Riiablo.game.player);
+              Gdx.app.log(TAG, "[PLAYER_REVIVE_INPUT] entity=" + Riiablo.game.player
+                  + " ready=" + ready);
+              if (ready) deathHandler.respawnPlayerAtTown(Riiablo.game.player);
+              return; // Never show the menu during DT/DD
             }
           }
           
@@ -586,19 +589,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             return true;
           }
           
-          case Input.Keys.ESCAPE: {
-            // Handle player death respawn (like d2mod)
-            // If player is dead (in MODE_DD), respawn at town
-            com.riiablo.engine.client.DeathHandler deathHandler = engine.getSystem(com.riiablo.engine.client.DeathHandler.class);
-            if (deathHandler != null && Riiablo.game.player >= 0) {
-              if (deathHandler.isPlayerDead(Riiablo.game.player)) {
-                deathHandler.respawnPlayerAtTown(Riiablo.game.player);
-                return true;
-              }
-            }
-            return false; // Let other systems handle ESC
-          }
-
           default:
             return false;
         }

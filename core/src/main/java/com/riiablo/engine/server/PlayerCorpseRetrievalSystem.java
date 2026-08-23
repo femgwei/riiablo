@@ -34,6 +34,12 @@ public class PlayerCorpseRetrievalSystem extends IteratingSystem {
   
   @Override
   protected void process(int playerId) {
+    // DeathHandler attaches PlayerCorpse to the player as the authoritative
+    // dead-state marker. Do not let a dead player retrieve the independent
+    // corpse that occupies the same death location; retrieval becomes valid
+    // only after ESC has revived the player and removed this marker.
+    if (mPlayerCorpse.has(playerId)) return;
+
     // Check if this player has a corpse
     // We need to find the corpse entity for this player
     // For now, we'll check all PlayerCorpse components to find the one matching this player
@@ -48,6 +54,8 @@ public class PlayerCorpseRetrievalSystem extends IteratingSystem {
     
     for (int i = 0; i < entities.size(); i++) {
       int corpseEntityId = entities.get(i);
+      // The player-side marker is not the corpse entity containing loot.
+      if (corpseEntityId == playerId) continue;
       if (!mPlayerCorpse.has(corpseEntityId)) continue;
       
       PlayerCorpse corpse = mPlayerCorpse.get(corpseEntityId);
