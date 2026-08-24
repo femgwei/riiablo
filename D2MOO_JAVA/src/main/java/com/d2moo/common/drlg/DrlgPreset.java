@@ -772,6 +772,10 @@ public class DrlgPreset {
         // 处理单元格边缘标志
         // 修改边缘网格标志
         DrlgDrlgGrid.alterEdgeGridFlags(presetRoom.getPCellGrid(), 132, DrlgDrlgGrid.FlagOperation.OR);
+
+        // Native DRLGPRESET scans wall-exit markers 30..34 into the level's
+        // fixed TileInfo array.  This is consumed by DUNGEON_FindActSpawnLocation.
+        scanLevelTileInfo(drlgRoom, mazeMap);
         
         // 处理预设单位：将属于当前房间的预设单位从地图移动到房间
         pDrlgCoord.setNPosX(drlgRoom.getNTileXPos());
@@ -944,6 +948,58 @@ public class DrlgPreset {
         }
 
         collectTombStoneTileCoords(drlgRoom);
+    }
+
+    private static void scanLevelTileInfo(D2DrlgRoom drlgRoom, D2DrlgMapStrc map) {
+        if (drlgRoom == null || map == null || map.getPFile() == null
+                || drlgRoom.getLevel() == null || map.getPLvlPrestTxtRecord() == null
+                || map.getPLvlPrestTxtRecord().getDwScan() == 0) return;
+        D2DrlgLevel level = drlgRoom.getLevel();
+        D2DrlgFileStrc file = map.getPFile();
+        D2DrlgCoord mapCoord = map.getPDrlgCoord();
+        int stride = file.getNWidth() + 1;
+        for (int layer = 0; layer < file.getNWallLayers(); layer++) {
+            int[] types = asIntLayer(file.getPTileTypeLayer(layer));
+            int[] walls = asIntLayer(file.getPWallLayer(layer));
+            if (types == null || walls == null) continue;
+            for (int y = 0; y < file.getNHeight(); y++) {
+                for (int x = 0; x < file.getNWidth(); x++) {
+                    int offset = y * stride + x;
+                    if (offset >= types.length || offset >= walls.length) continue;
+                    if (types[offset] != DrlgRoomTile.TILETYPE_WALL_RIGHT_EXIT
+                            && types[offset] != DrlgRoomTile.TILETYPE_WALL_LEFT_EXIT) continue;
+                    int packed = walls[offset];
+                    int marker = (packed >>> 20) & 0x3F;
+                    if (marker < 30 || marker > 34 || level.getNTileInfo() >= level.getPTileInfo().length) continue;
+                    int tileIndex;
+                    int byte1 = (packed >>> 8) & 0xFF;
+                    switch (marker) {
+                        case 30: tileIndex = byte1; break;
+                        case 31: tileIndex = byte1 + 5; break;
+                        case 32: tileIndex = 10; break;
+                        case 33: tileIndex = 11; break;
+                        case 34: tileIndex = 12; break;
+                        default: continue;
+                    }
+                    boolean duplicate = false;
+                    for (int i = 0; i < level.getNTileInfo(); i++) {
+                        D2DrlgTileInfoStrc existing = level.getPTileInfo(i);
+                        if (existing != null && existing.getNPosX() == x + mapCoord.getNPosX()
+                                && existing.getNPosY() == y + mapCoord.getNPosY()
+                                && existing.getNTileIndex() == tileIndex) {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+                    if (duplicate) continue;
+                    D2DrlgTileInfoStrc info = level.getPTileInfo(level.getNTileInfo());
+                    info.setNPosX(x + mapCoord.getNPosX());
+                    info.setNPosY(y + mapCoord.getNPosY());
+                    info.setNTileIndex(tileIndex);
+                    level.setNTileInfo(level.getNTileInfo() + 1);
+                }
+            }
+        }
     }
 
     /** D2Common {@code DRLGPRESET_GetTombStoneTileCoords}. */

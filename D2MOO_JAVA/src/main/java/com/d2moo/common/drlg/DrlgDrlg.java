@@ -430,9 +430,10 @@ public class DrlgDrlg {
         
         Dungeon.gameTileToSubtileCoords(drlgCoords);
         
-        if (drlgRoom.getTileGrid() != null 
-            && (drlgRoom.getTileGrid().getPTiles().getNWalls() > 0 
-                || drlgRoom.getTileGrid().getPTiles().getNFloors() > 0)) {
+        if (drlgRoom.getTileGrid() != null) {
+            if (drlgRoom.getTileGrid().getPTiles() == null) {
+                drlgRoom.getTileGrid().setPTiles(new D2DrlgRoomTilesStrc());
+            }
             int dwFlags = 0;
             
             if ((drlgRoom.getFlags() & D2DrlgRoomFlags.AUTOMAP_REVEAL) != 0) {

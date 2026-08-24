@@ -18,7 +18,7 @@ public class D2DrlgLevel {
     private Object presetOrOutdoorsOrMaze;        // 0x38 union
     private Object currentMap;                    // 0x3C
     private int coordLists;                       // 0x40
-    private Object[] pTileInfo;                   // 0x44 D2DrlgTileInfoStrc pTileInfo[32]
+    private D2DrlgTileInfoStrc[] pTileInfo;       // 0x44 D2DrlgTileInfoStrc pTileInfo[32]
     private int nTileInfoCount;                   // 0x1C4
     private int[] roomCenterWarpX;                // 0x1C8 int nRoom_Center_Warp_X[9]
     private int[] roomCenterWarpY;                 // 0x1EC int nRoom_Center_Warp_Y[9]
@@ -34,7 +34,8 @@ public class D2DrlgLevel {
     public D2DrlgLevel() {
         // Embedded in the native structure; Java must allocate it eagerly.
         this.levelCoords = new D2DrlgCoord();
-        this.pTileInfo = new Object[32];
+        this.pTileInfo = new D2DrlgTileInfoStrc[32];
+        for (int i = 0; i < this.pTileInfo.length; i++) this.pTileInfo[i] = new D2DrlgTileInfoStrc();
         this.roomCenterWarpX = new int[9];
         this.roomCenterWarpY = new int[9];
     }
@@ -87,8 +88,11 @@ public class D2DrlgLevel {
     public int getCoordLists() { return coordLists; }
     public void setCoordLists(int coordLists) { this.coordLists = coordLists; }
     
-    public Object[] getPTileInfo() { return pTileInfo; }
-    public void setPTileInfo(Object[] pTileInfo) { this.pTileInfo = pTileInfo; }
+    public D2DrlgTileInfoStrc[] getPTileInfo() { return pTileInfo; }
+    public void setPTileInfo(D2DrlgTileInfoStrc[] pTileInfo) { this.pTileInfo = pTileInfo; }
+    public D2DrlgTileInfoStrc getPTileInfo(int index) {
+        return pTileInfo != null && index >= 0 && index < pTileInfo.length ? pTileInfo[index] : null;
+    }
     
     public int getNTileInfoCount() { return nTileInfoCount; }
     public void setNTileInfoCount(int nTileInfoCount) { this.nTileInfoCount = nTileInfoCount; }

@@ -193,6 +193,22 @@ public class Dungeon {
                 : null;
     }
 
+    /** D2Common #10046. Returns game-tile coordinates in {@code x}/{@code y}. */
+    public static D2ActiveRoom findActSpawnLocation(D2DrlgAct act, int levelId,
+            int tileIndex, int[] x, int[] y) {
+        return act != null && act.getDrlg() != null
+                ? com.d2moo.common.drlg.DrlgDrlgWarp.findActSpawnLocation(
+                        act.getDrlg(), levelId, tileIndex, x, y) : null;
+    }
+
+    /** D2Common #10045. Returns collision-safe subtile coordinates. */
+    public static D2ActiveRoom findActSpawnLocationEx(D2DrlgAct act, int levelId,
+            int tileIndex, int[] x, int[] y, int unitSize) {
+        return act != null && act.getDrlg() != null
+                ? com.d2moo.common.drlg.DrlgDrlgWarp.findActSpawnLocationEx(
+                        act.getDrlg(), levelId, tileIndex, x, y, unitSize) : null;
+    }
+
     /** D2Common #10069. Rooms containing a client take priority over sight-only rooms. */
     public static D2ActiveRoom getARoomInClientSight(D2DrlgAct act) {
         return act != null && act.getDrlg() != null
@@ -1048,6 +1064,18 @@ public class Dungeon {
             room.setNTileHeight(drlgRoom.getNTileHeight());
         }
         room.setPRoomTiles(tiles);
+        // Native DUNGEON_AllocRoom allocates the collision grid before the
+        // Act callback. Keep the same ordering so spawn/path consumers never
+        // observe an active room without a grid.
+        int collisionWidth = Math.max(1, room.getCoords().getNSubtileWidth());
+        int collisionHeight = Math.max(1, room.getCoords().getNSubtileHeight());
+        com.d2moo.common.drlg.D2DrlgGridStrc collision =
+                new com.d2moo.common.drlg.D2DrlgGridStrc(collisionWidth, collisionHeight);
+        int[] rowOffsets = new int[collisionHeight];
+        for (int row = 0; row < collisionHeight; row++) rowOffsets[row] = row * collisionWidth;
+        collision.setPCellsRowOffsets(rowOffsets);
+        collision.setPCellsFlags(new int[collisionWidth * collisionHeight]);
+        room.setPCollisionGrid(collision);
         D2Seed roomSeed = new D2Seed();
         Seed.initLowSeed(roomSeed, seed);
         room.setSeed(roomSeed);

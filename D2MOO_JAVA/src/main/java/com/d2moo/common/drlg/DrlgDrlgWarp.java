@@ -1,6 +1,9 @@
 package com.d2moo.common.drlg;
 
 import com.d2moo.common.datatbls.DataTbls;
+import com.d2moo.common.datatbls.D2LevelDefBin;
+import com.d2moo.common.collision.D2Collision;
+import com.d2moo.common.dungeon.Dungeon;
 
 import java.util.Arrays;
 
@@ -10,6 +13,130 @@ import java.util.Arrays;
  */
 public class DrlgDrlgWarp {
     private static final int MAPTILE_HIDDEN = 0x000008;
+    private static final int[][] SPAWN_TILE_GROUP = {
+        {1, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {1, 1},
+        {0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, {0, 5}
+    };
+
+    /** Native DUNGEON_FindActSpawnLocation (the non-Ex, game-tile form). */
+    public static D2ActiveRoom findActSpawnLocation(D2DrlgStrc drlg, int levelId,
+            int tileIndex, int[] x, int[] y) {
+        if (!hasXY(x, y) || drlg == null) return null;
+        x[0] = -1; y[0] = -1;
+        D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+        if (level == null) return null;
+        if (level.getFirstRoomEx() == null) DrlgDrlg.initLevel(level);
+        D2LevelDefBin def = DataTbls.getLevelDefRecord(levelId);
+        if (def != null && def.getDwPosition() != 0) {
+            if (tileIndex == 13) {
+                D2DrlgRoom waypoint = getWaypointRoomExFromLevel(level, x, y);
+                return initializeAndGet(waypoint);
+            }
+            int selected = selectTileInfo(level, tileIndex);
+            if (selected >= 0) {
+                D2DrlgTileInfoStrc info = level.getPTileInfo(selected);
+                x[0] = info.getNPosX(); y[0] = info.getNPosY();
+                return initializeAndGet(DrlgDrlg.getRoomExFromCoordinates(x[0], y[0], drlg, null, level));
+            }
+        }
+        D2DrlgRoom room = getWaypointRoomExFromLevel(level, x, y);
+        if (room == null) {
+            int[] warps = getWarpIdArrayFromLevelId(drlg, levelId);
+            for (D2DrlgRoom candidate = level.getFirstRoomEx(); candidate != null;
+                    candidate = candidate.getDrlgRoomNext()) {
+                for (int i = 0; i < 8; i++) {
+                    if ((candidate.getFlags() & (D2DrlgRoomFlags.HAS_WARP_0 << i)) != 0
+                            && warps != null && i < warps.length && warps[i] != -1) {
+                        x[0] = candidate.getNTileXPos() + candidate.getNTileWidth() / 2;
+                        y[0] = candidate.getNTileYPos() + candidate.getNTileHeight() / 2;
+                        return initializeAndGet(candidate);
+                    }
+                }
+            }
+            room = DrlgDrlg.getRoomExFromLevelAndCoordinates(level,
+                    level.getLevelCoords().getNPosX() + level.getLevelCoords().getNWidth() / 2 - 2,
+                    level.getLevelCoords().getNPosY() + level.getLevelCoords().getNHeight() / 2 - 2);
+            if (room == null) room = level.getFirstRoomEx();
+            if (room != null) {
+                x[0] = room.getNTileXPos() + room.getNTileWidth() / 2;
+                y[0] = room.getNTileYPos() + room.getNTileHeight() / 2;
+            }
+        }
+        return initializeAndGet(room);
+    }
+
+    /** Native DUNGEON_FindActSpawnLocationEx (subtile coordinates and footprint search). */
+    public static D2ActiveRoom findActSpawnLocationEx(D2DrlgStrc drlg, int levelId,
+            int tileIndex, int[] x, int[] y, int unitSize) {
+        D2ActiveRoom room = findActSpawnLocation(drlg, levelId, tileIndex, x, y);
+        if (room == null || !hasXY(x, y)) return room;
+        x[0] = x[0] * 5 + 3;
+        y[0] = y[0] * 5 + 3;
+        findFreeSpawn(room, x, y, unitSize);
+        D2ActiveRoom containing = room.getAct() != null
+                ? Dungeon.findRoomBySubtileCoordinates(room.getAct(), x[0], y[0]) : null;
+        return containing != null ? containing : room;
+    }
+
+    private static boolean hasXY(int[] x, int[] y) { return x != null && y != null && x.length > 0 && y.length > 0; }
+    private static D2ActiveRoom initializeAndGet(D2DrlgRoom room) {
+        if (room == null) return null;
+        DrlgActivate.initializeRoomEx(room);
+        return room.getRoom();
+    }
+    private static int selectTileInfo(D2DrlgLevel level, int tileIndex) {
+        if (tileIndex < 0 || tileIndex >= SPAWN_TILE_GROUP.length) return -1;
+        int matches = 0;
+        for (int i = 0; i < level.getNTileInfo(); i++) {
+            D2DrlgTileInfoStrc info = level.getPTileInfo(i);
+            if (info != null && (info.getNTileIndex() == tileIndex ||
+                    (SPAWN_TILE_GROUP[tileIndex][0] != 0 && info.getNTileIndex() >= 0
+                            && info.getNTileIndex() < SPAWN_TILE_GROUP.length
+                            && SPAWN_TILE_GROUP[info.getNTileIndex()][1] == SPAWN_TILE_GROUP[tileIndex][1]))) matches++;
+        }
+        if (matches == 0) return -1;
+        int pick = Math.max(0, Math.min(matches - 1,
+                Math.floorMod(level.getSeed() != null ? level.getSeed().getNLowSeed() : 0, matches)));
+        for (int i = 0; i < level.getNTileInfo(); i++) {
+            D2DrlgTileInfoStrc info = level.getPTileInfo(i);
+            if (info != null && (info.getNTileIndex() == tileIndex ||
+                    (SPAWN_TILE_GROUP[tileIndex][0] != 0 && info.getNTileIndex() >= 0
+                            && info.getNTileIndex() < SPAWN_TILE_GROUP.length
+                            && SPAWN_TILE_GROUP[info.getNTileIndex()][1] == SPAWN_TILE_GROUP[tileIndex][1])) && pick-- == 0) return i;
+        }
+        return -1;
+    }
+    private static void findFreeSpawn(D2ActiveRoom room, int[] x, int[] y, int unitSize) {
+        if (room == null || room.getPCollisionGrid() == null) return;
+        int mask = D2Collision.COLLIDE_MASK_SPAWN;
+        for (int radius = 0; radius <= 8; radius++) {
+            for (int dy = -radius; dy <= radius; dy++) for (int dx = -radius; dx <= radius; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
+                int cx = x[0] + dx, cy = y[0] + dy;
+                if (free(room.getPCollisionGrid(), room, cx, cy, unitSize, mask)) { x[0] = cx; y[0] = cy; return; }
+            }
+        }
+    }
+    private static boolean free(D2DrlgGridStrc grid, D2ActiveRoom room, int cx, int cy, int size, int mask) {
+        int width = size == D2Collision.UNIT_SIZE_BIG ? 3 : 1;
+        int height = width;
+        int left = cx - width / 2, bottom = cy - height / 2;
+        int minX = room.getCoords().getNSubtileX();
+        int minY = room.getCoords().getNSubtileY();
+        int maxX = minX + room.getCoords().getNSubtileWidth();
+        int maxY = minY + room.getCoords().getNSubtileHeight();
+        if (size == D2Collision.UNIT_SIZE_SMALL
+                && (cx - 1 < minX || cy - 1 < minY || cx + 1 >= maxX || cy + 1 >= maxY)) return false;
+        if (left < minX || bottom < minY || left + width > maxX || bottom + height > maxY) return false;
+        if (size == D2Collision.UNIT_SIZE_SMALL) {
+            int[][] p = {{0,0},{-1,0},{1,0},{0,-1},{0,1}};
+            for (int[] q : p) if ((grid.getFlag(cx + q[0] - room.getCoords().getNSubtileX(), cy + q[1] - room.getCoords().getNSubtileY()) & mask) != 0) return false;
+            return true;
+        }
+        for (int yy = bottom; yy < bottom + height; yy++) for (int xx = left; xx < left + width; xx++)
+            if ((grid.getFlag(xx - room.getCoords().getNSubtileX(), yy - room.getCoords().getNSubtileY()) & mask) != 0) return false;
+        return true;
+    }
     
     /**
      * D2Common.0x6FD78780
