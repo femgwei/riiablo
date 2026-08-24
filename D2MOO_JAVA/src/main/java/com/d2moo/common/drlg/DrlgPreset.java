@@ -1047,24 +1047,18 @@ public class DrlgPreset {
      * 从房间获取选中的关卡预设文件路径
      */
     public static String getPickedLevelPrestFilePathFromRoomEx(D2DrlgRoom drlgRoom) {
-        if (drlgRoom.getType() == D2DrlgType.PRESET.getValue()) {
-            // 注意：D2DrlgPresetRoomStrc 结构已实现，可以通过 drlgRoom.getMazeOrOutdoor() 获取
-            // 当前实现：返回 null，表示未找到预设文件路径
-            // 实际使用时，可以通过以下方式获取：
-            // Object presetRoom = drlgRoom.getMazeOrOutdoor();
-            // if (presetRoom != null && presetRoom instanceof D2DrlgPresetRoomStrc) {
-            //     D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) presetRoom;
-            //     if (preset.getPMap() != null) {
-            //         Object map = preset.getPMap();
-            //         if (map.getPLvlPrestTxtRecord() != null) {
-            //         int pickedFile = map.getNPickedFile();
-            //         return map.getPLvlPrestTxtRecord().getSzFile(pickedFile);
-            //     }
-            // }
-            return "None";
-        } else {
+        if (drlgRoom == null || drlgRoom.getType() != D2DrlgType.PRESET.getValue()
+                || !(drlgRoom.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) {
             return "None";
         }
+        D2DrlgPresetRoomStrc preset =
+                (D2DrlgPresetRoomStrc) drlgRoom.getMazeOrOutdoor();
+        D2DrlgMapStrc map = preset.getPMap();
+        if (map == null || map.getPLvlPrestTxtRecord() == null) {
+            return "None";
+        }
+        String path = map.getPLvlPrestTxtRecord().getSzFile(map.getNPickedFile());
+        return path != null ? path : "None";
     }
 
     /**

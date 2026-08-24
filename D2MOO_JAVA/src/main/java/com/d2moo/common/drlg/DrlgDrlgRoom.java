@@ -343,6 +343,77 @@ public class DrlgDrlgRoom {
     public static int getLevelId(D2DrlgRoom drlgRoom) {
         return drlgRoom.getLevel().getLevelId();
     }
+
+    /** D2Common.0x6FD779D0. */
+    public static boolean checkLOSDraw(D2DrlgRoom drlgRoom) {
+        if (drlgRoom == null) {
+            return false;
+        }
+        if (drlgRoom.getType() == D2DrlgTypes.DRLGTYPE_MAZE) {
+            return true;
+        }
+        return drlgRoom.getType() == D2DrlgTypes.DRLGTYPE_PRESET
+                && (drlgRoom.getFlags() & D2DrlgRoomFlags.NO_LOS_DRAW) != 0;
+    }
+
+    /** D2Common.0x6FD77A20. */
+    public static int getWarpDestinationLevel(D2DrlgRoom drlgRoom, int sourceLevel) {
+        if (drlgRoom == null) {
+            return 0;
+        }
+        int[] destinationLevel = new int[1];
+        D2LvlWarpTxt[] warpRecord = new D2LvlWarpTxt[1];
+        D2ActiveRoom destination = DrlgDrlgWarp.getDestinationRoom(
+                drlgRoom, sourceLevel, destinationLevel, warpRecord);
+        D2DrlgRoom destinationRoom = destination != null
+                ? destination.getPDrlgRoom() : null;
+        return destinationRoom != null && destinationRoom.getLevel() != null
+                ? destinationRoom.getLevel().getLevelId() : 0;
+    }
+
+    /** D2Common.0x6FD77AB0. */
+    public static int getLevelIdFromPopulatedRoom(D2DrlgRoom drlgRoom) {
+        if (drlgRoom == null || drlgRoom.getLevel() == null
+                || (drlgRoom.getFlags() & D2DrlgRoomFlags.POPULATION_ZERO) != 0) {
+            return 0;
+        }
+        return drlgRoom.getLevel().getLevelId();
+    }
+
+    /** D2Common.0x6FD77B20. */
+    public static String getPickedLevelPrestFilePathFromRoomEx(D2DrlgRoom drlgRoom) {
+        if (drlgRoom == null) {
+            return null;
+        }
+        return drlgRoom.getType() == D2DrlgTypes.DRLGTYPE_PRESET
+                ? DrlgPreset.getPickedLevelPrestFilePathFromRoomEx(drlgRoom)
+                : "None";
+    }
+
+    /**
+     * D2Common.0x6FD77B50. Compacts active near rooms into the caller-owned
+     * array and clears the remaining native-capacity slots.
+     */
+    public static int reorderNearRoomList(
+            D2DrlgRoom drlgRoom, D2ActiveRoom[] roomList) {
+        if (drlgRoom == null || roomList == null) {
+            return 0;
+        }
+        D2DrlgRoom[] nearRooms = drlgRoom.getPpRoomsNear();
+        int nearCount = nearRooms != null
+                ? Math.min(drlgRoom.getNRoomsNear(), nearRooms.length) : 0;
+        int activeCount = 0;
+        for (int i = 0; i < nearCount && activeCount < roomList.length; i++) {
+            D2ActiveRoom activeRoom = nearRooms[i] != null ? nearRooms[i].getRoom() : null;
+            if (activeRoom != null) {
+                roomList[activeCount++] = activeRoom;
+            }
+        }
+        for (int i = activeCount; i < roomList.length; i++) {
+            roomList[i] = null;
+        }
+        return activeCount;
+    }
     
     /**
      * D2Common.0x6FD77AF0

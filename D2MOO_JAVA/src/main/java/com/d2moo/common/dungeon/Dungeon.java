@@ -5,7 +5,12 @@ import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgCoords;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgRoomTilesStrc;
+import com.d2moo.common.drlg.D2DrlgStrc;
+import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.drlg.DrlgDrlg;
+import com.d2moo.common.drlg.DrlgDrlgRoom;
+import com.d2moo.common.drlg.DrlgDrlgWarp;
 import com.d2moo.common.seed.Seed;
 import com.d2moo.common.util.D2Log;
 
@@ -22,24 +27,21 @@ public class Dungeon {
     /** D2Common #10008 wrapper around DRLGWARP_ToggleRoomTilesEnableFlag. */
     public static void toggleRoomTilesEnableFlag(D2ActiveRoom room, boolean enabled) {
         if (room != null) {
-            com.d2moo.common.drlg.DrlgDrlgWarp.toggleRoomTilesEnableFlag(
-                    room.getPDrlgRoom(), enabled);
+            DrlgDrlgWarp.toggleRoomTilesEnableFlag(room.getPDrlgRoom(), enabled);
         }
     }
 
     /** D2Common #10091 wrapper around DRLGWARP_UpdateWarpRoomSelect. */
     public static void updateWarpRoomSelect(D2ActiveRoom room, int levelId) {
         if (room != null) {
-            com.d2moo.common.drlg.DrlgDrlgWarp.updateWarpRoomSelect(
-                    room.getPDrlgRoom(), levelId);
+            DrlgDrlgWarp.updateWarpRoomSelect(room.getPDrlgRoom(), levelId);
         }
     }
 
     /** D2Common #10092 wrapper around DRLGWARP_UpdateWarpRoomDeselect. */
     public static void updateWarpRoomDeselect(D2ActiveRoom room, int levelId) {
         if (room != null) {
-            com.d2moo.common.drlg.DrlgDrlgWarp.updateWarpRoomDeselect(
-                    room.getPDrlgRoom(), levelId);
+            DrlgDrlgWarp.updateWarpRoomDeselect(room.getPDrlgRoom(), levelId);
         }
     }
     
@@ -123,6 +125,66 @@ public class Dungeon {
     /** Native signature alias: active room to its DRLG room. */
     public static D2DrlgRoom getRoomExFromRoom(D2ActiveRoom activeRoom) {
         return activeRoom != null ? activeRoom.getPDrlgRoom() : null;
+    }
+
+    public static D2ActiveRoom getRoomFromAct(D2DrlgAct act) {
+        return act != null ? act.getRoom() : null;
+    }
+
+    public static int getLevelIdFromRoom(D2ActiveRoom room) {
+        return room != null ? DrlgDrlgRoom.getLevelId(room.getPDrlgRoom()) : 0;
+    }
+
+    public static int getWarpDestinationLevel(D2ActiveRoom room, int sourceLevel) {
+        return room != null
+                ? DrlgDrlgRoom.getWarpDestinationLevel(room.getPDrlgRoom(), sourceLevel)
+                : 0;
+    }
+
+    public static int getLevelIdFromPopulatedRoom(D2ActiveRoom room) {
+        return room != null
+                ? DrlgDrlgRoom.getLevelIdFromPopulatedRoom(room.getPDrlgRoom()) : 0;
+    }
+
+    public static boolean hasWaypoint(D2ActiveRoom room) {
+        return room != null && DrlgDrlgRoom.hasWaypoint(room.getPDrlgRoom());
+    }
+
+    public static String getPickedLevelPrestFilePathFromRoom(D2ActiveRoom room) {
+        return room != null
+                ? DrlgDrlgRoom.getPickedLevelPrestFilePathFromRoomEx(room.getPDrlgRoom())
+                : null;
+    }
+
+    public static boolean checkLOSDraw(D2ActiveRoom room) {
+        return room != null && DrlgDrlgRoom.checkLOSDraw(room.getPDrlgRoom());
+    }
+
+    public static D2DrlgStrc getDrlgFromAct(D2DrlgAct act) {
+        return act != null ? act.getDrlg() : null;
+    }
+
+    public static int getInitSeedFromAct(D2DrlgAct act) {
+        return act != null ? act.getInitSeed() : 0;
+    }
+
+    public static boolean isTownLevelId(int levelId) {
+        return DrlgDrlg.isTownLevel(levelId);
+    }
+
+    public static boolean isRoomInTown(D2ActiveRoom room) {
+        return room != null && isTownLevelId(getLevelIdFromRoom(room));
+    }
+
+    public static int getTownLevelIdFromActNo(int act) {
+        if (act < 0 || act >= D2LevelIds.TOWN_LEVEL_IDS.length) {
+            throw new IllegalArgumentException("Invalid act number: " + act);
+        }
+        return D2LevelIds.TOWN_LEVEL_IDS[act];
+    }
+
+    public static int getTownLevelIdFromAct(D2DrlgAct act) {
+        return act != null ? act.getTownId() : 0;
     }
 
     /** Returns a value copy like native {@code DUNGEON_GetRoomCoordinates}. */
@@ -562,11 +624,7 @@ public class Dungeon {
                 ? Math.min(drlgRoom.getNRoomsNear(), nearRooms.length)
                 : 0;
         D2ActiveRoom[] activeRooms = new D2ActiveRoom[capacity];
-        int count = 0;
-        for (int i = 0; i < capacity; i++) {
-            D2ActiveRoom active = nearRooms[i] != null ? nearRooms[i].getRoom() : null;
-            if (active != null) activeRooms[count++] = active;
-        }
+        int count = DrlgDrlgRoom.reorderNearRoomList(drlgRoom, activeRooms);
         room.setPpRoomList(activeRooms);
         room.setNNumRooms(count);
     }
