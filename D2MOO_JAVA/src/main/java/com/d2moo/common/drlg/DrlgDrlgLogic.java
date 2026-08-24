@@ -304,17 +304,8 @@ public class DrlgDrlgLogic {
      * 获取房间坐标列表索引
      */
     public static int getRoomCoordListIndex(D2DrlgRoom drlgRoom, int x, int y) {
-        D2DrlgLogicalRoomInfo logicalRoomInfo = drlgRoom.getLogicalRoomInfo();
-        if (logicalRoomInfo == null || !logicalRoomInfo.hasGridCells()) {
-            return -1;
-        }
-        
-        int relX = x - drlgRoom.getNTileXPos();
-        int relY = y - drlgRoom.getNTileYPos();
-        
-        // 使用 X 索引网格获取索引值
-        int index = DrlgDrlgGrid.getGridEntry(logicalRoomInfo.getPIndexX(), relX, relY);
-        return index & 0xFFFFFFF; // 取低 28 位
+        D2RoomCoordListStrc roomCoordList = sub_6FD77110(drlgRoom, x, y);
+        return roomCoordList != null ? roomCoordList.getNIndex() : -1;
     }
     
     /**

@@ -29,6 +29,7 @@ public class DataTbls {
     private static D2LevelsTxt[] levelsTxtCache;
     private static D2MonStatsTxt[] monStatsTxtCache;
     private static D2SuperUniquesTxt[] superUniquesTxtCache;
+    private static int[] portalLevels = new int[0];
 
     // Native tables are immutable after loading. These indexes retain the first matching row,
     // matching the previous linear lookup behavior when malformed tables contain duplicates.
@@ -64,6 +65,14 @@ public class DataTbls {
      */
     public static D2LevelDefBin getLevelDefRecord(int nLevelId) {
         return levelDefsById == null ? null : levelDefsById.get(nLevelId);
+    }
+
+    /**
+     * D2Common.0x6FD60560. Returns portal-enabled level ids in native table order.
+     * The copy prevents callers from changing the table-derived cache.
+     */
+    public static int[] getPortalLevels() {
+        return portalLevels.clone();
     }
     
     /**
@@ -272,6 +281,7 @@ public class DataTbls {
     public static void setLevelDefBinCache(D2LevelDefBin[] cache) {
         levelDefBinCache = cache;
         levelDefsById = indexLevelDefs(cache);
+        portalLevels = indexPortalLevels(cache);
     }
     
     /**
@@ -1298,6 +1308,24 @@ public class DataTbls {
             }
         }
         return index;
+    }
+
+    private static int[] indexPortalLevels(D2LevelDefBin[] cache) {
+        if (cache == null) return new int[0];
+        int count = 0;
+        for (D2LevelDefBin record : cache) {
+            if (record != null && record.getDwPortal() != 0) count++;
+        }
+        int[] levels = new int[count];
+        int portalIndex = 0;
+        for (D2LevelDefBin record : cache) {
+            if (record != null && record.getDwPortal() != 0) {
+                // Native stores the row index. The Java record's explicit level id is that
+                // identity after the source table has been adapted into a compact cache.
+                levels[portalIndex++] = record.getDwLevelId();
+            }
+        }
+        return levels;
     }
 
     private static Map<Integer, D2LvlPrestTxt> indexLvlPrestByDef(D2LvlPrestTxt[] cache) {

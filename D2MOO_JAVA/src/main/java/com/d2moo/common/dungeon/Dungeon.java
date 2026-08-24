@@ -1,5 +1,6 @@
 package com.d2moo.common.dungeon;
 
+import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.drlg.D2ActiveRoom;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgCoords;
@@ -10,9 +11,11 @@ import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2DrlgTileDataStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2PresetUnit;
+import com.d2moo.common.drlg.D2RoomCoordListStrc;
 import com.d2moo.common.drlg.D2Seed;
 import com.d2moo.common.drlg.DrlgActivate;
 import com.d2moo.common.drlg.DrlgDrlg;
+import com.d2moo.common.drlg.DrlgDrlgLogic;
 import com.d2moo.common.drlg.DrlgDrlgRoom;
 import com.d2moo.common.drlg.DrlgDrlgWarp;
 import com.d2moo.common.seed.Seed;
@@ -320,6 +323,64 @@ public class Dungeon {
 
     public static int getTownLevelIdFromAct(D2DrlgAct act) {
         return act != null ? act.getTownId() : 0;
+    }
+
+    /** D2Common #10095: resolve a logical coordinate-list index across active neighbors. */
+    public static int getRoomCoordListIndex(D2ActiveRoom room, int x, int y) {
+        if (room == null) return 0;
+        if (areSubtileCoordinatesInsideRoom(room.getCoords(), x, y)) {
+            return DrlgDrlgLogic.getRoomCoordListIndex(room.getPDrlgRoom(), x, y);
+        }
+        for (D2ActiveRoom adjacent : getAdjacentRoomsListFromRoom(room)) {
+            if (adjacent != null
+                    && areSubtileCoordinatesInsideRoom(adjacent.getCoords(), x, y)) {
+                return DrlgDrlgLogic.getRoomCoordListIndex(
+                        adjacent.getPDrlgRoom(), x, y);
+            }
+        }
+        return 0;
+    }
+
+    /** D2Common #10096: query this room's logical coordinate list at a subtile position. */
+    public static D2RoomCoordListStrc getRoomCoordListAt(D2ActiveRoom room, int x, int y) {
+        return room != null
+                ? DrlgDrlgLogic.sub_6FD77110(room.getPDrlgRoom(), x, y)
+                : null;
+    }
+
+    /** D2Common #10097: returns the head of this room's native-order coordinate-list chain. */
+    public static D2RoomCoordListStrc getRoomCoordList(D2ActiveRoom room) {
+        return room != null ? DrlgDrlgLogic.getRoomCoordList(room.getPDrlgRoom()) : null;
+    }
+
+    /** D2Common #10098: expands set portal bits in native portal-table order. */
+    public static int[] getPortalLevelArrayFromPortalFlags(int flags) {
+        int[] portalLevels = DataTbls.getPortalLevels();
+        if (portalLevels.length > Integer.SIZE) {
+            throw new IllegalStateException(
+                    "Portal level table exceeds 32-bit native flag capacity: "
+                            + portalLevels.length);
+        }
+        int count = 0;
+        for (int i = 0; i < portalLevels.length; i++) {
+            if ((flags & (1 << i)) != 0) count++;
+        }
+        int[] levels = new int[count];
+        int levelIndex = 0;
+        for (int i = 0; i < portalLevels.length; i++) {
+            if ((flags & (1 << i)) != 0) levels[levelIndex++] = portalLevels[i];
+        }
+        return levels;
+    }
+
+    /** D2Common #10099: maps a portal-enabled level id back to its single native flag bit. */
+    public static int getPortalFlagFromLevelId(int portalLevelId) {
+        int[] portalLevels = DataTbls.getPortalLevels();
+        int count = Math.min(portalLevels.length, Integer.SIZE);
+        for (int i = 0; i < count; i++) {
+            if (portalLevels[i] == portalLevelId) return 1 << i;
+        }
+        return 0;
     }
 
     /** Returns a value copy like native {@code DUNGEON_GetRoomCoordinates}. */

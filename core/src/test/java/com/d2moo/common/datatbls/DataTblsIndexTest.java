@@ -1,5 +1,6 @@
 package com.d2moo.common.datatbls;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -76,5 +77,30 @@ class DataTblsIndexTest {
     DataTbls.unloadLvlMazeTxt();
 
     assertNull(DataTbls.getLvlMazeTxtRecordFromLevelId(8));
+  }
+
+  @Test
+  void buildsPortalLevelsInSourceTableOrderAndReturnsACopy() {
+    D2LevelDefBin normal = levelDef(7, false);
+    D2LevelDefBin firstPortal = levelDef(40, true);
+    D2LevelDefBin secondPortal = levelDef(12, true);
+
+    DataTbls.setLevelDefBinCache(
+        new D2LevelDefBin[] {normal, firstPortal, null, secondPortal});
+
+    int[] levels = DataTbls.getPortalLevels();
+    assertArrayEquals(new int[] {40, 12}, levels);
+    levels[0] = 999;
+    assertArrayEquals(new int[] {40, 12}, DataTbls.getPortalLevels());
+
+    DataTbls.unloadLevelDefsBin();
+    assertArrayEquals(new int[0], DataTbls.getPortalLevels());
+  }
+
+  private static D2LevelDefBin levelDef(int levelId, boolean portal) {
+    D2LevelDefBin levelDef = new D2LevelDefBin();
+    levelDef.setDwLevelId(levelId);
+    levelDef.setDwPortal(portal ? 1 : 0);
+    return levelDef;
   }
 }
