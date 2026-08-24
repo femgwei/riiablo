@@ -1,10 +1,14 @@
 package com.d2moo.common.dungeon;
 
 import com.d2moo.common.datatbls.DataTbls;
+import com.d2moo.common.environment.D2DrlgEnvironment;
+import com.d2moo.common.environment.Environment;
 import com.d2moo.common.drlg.D2ActiveRoom;
+import com.d2moo.common.drlg.D2ActCallback;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgCoords;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
+import com.d2moo.common.drlg.D2DrlgFlags;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgRoomTilesStrc;
@@ -16,11 +20,13 @@ import com.d2moo.common.drlg.D2RoomCoordListStrc;
 import com.d2moo.common.drlg.D2Seed;
 import com.d2moo.common.drlg.DrlgActivate;
 import com.d2moo.common.drlg.DrlgDrlg;
+import com.d2moo.common.drlg.DrlgDrlgAnim;
 import com.d2moo.common.drlg.DrlgDrlgLogic;
 import com.d2moo.common.drlg.DrlgDrlgRoom;
 import com.d2moo.common.drlg.DrlgDrlgWarp;
 import com.d2moo.common.seed.Seed;
 import com.d2moo.common.util.D2Log;
+import com.d2moo.common.util.D2Pool;
 
 import java.util.Arrays;
 
@@ -39,6 +45,71 @@ public class Dungeon {
     @FunctionalInterface
     public interface RoomCallback<T> {
         boolean visit(D2ActiveRoom room, T args);
+    }
+
+    /** D2Common #10038. Act numbers are zero-based. */
+    public static D2DrlgAct allocAct(byte actNo, int initSeed, boolean client,
+            Object game, byte difficulty, Object memPool, int townLevelId,
+            Object autoMap, Object townAutoMap) {
+        D2DrlgAct act = D2Pool.callocStrcPool(memPool, D2DrlgAct.class);
+        if (act == null) return null;
+
+        act.setInitSeed(initSeed);
+        act.setClient(client);
+        act.setAct(actNo);
+        act.setPMemPool(memPool);
+        if (!client) act.setTownId(townLevelId);
+
+        D2DrlgStrc drlg = DrlgDrlg.allocDrlg(
+                act, actNo, null, initSeed,
+                client ? D2LevelIds.LEVEL_NONE : townLevelId,
+                client ? D2DrlgFlags.ONCLIENT : 0,
+                game, difficulty, autoMap, townAutoMap);
+        act.setDrlg(drlg);
+        act.setEnvironment(Environment.allocDrlgEnvironment(memPool));
+        DrlgDrlgAnim.initCache(drlg, act.getTileData());
+        return act;
+    }
+
+    /** D2Common #10039. Clears Java references after native-order release. */
+    public static void freeAct(D2DrlgAct act) {
+        if (act == null) return;
+        Object memPool = act.getPMemPool();
+
+        if (act.getDrlg() != null) {
+            DrlgDrlg.freeDrlg(act.getDrlg());
+            act.setDrlg(null);
+        }
+
+        D2ActiveRoom room = act.getRoom();
+        while (room != null) {
+            D2ActiveRoom next = room.getRoomNext();
+            D2DrlgRoom drlgRoom = room.getPDrlgRoom();
+            if (drlgRoom != null && drlgRoom.getRoom() == room) {
+                drlgRoom.setRoom(null);
+            }
+            room.setPDrlgRoom(null);
+            room.setPpRoomList(null);
+            room.setNNumRooms(0);
+            room.setRoomNext(null);
+            room.setAct(null);
+            D2Pool.freePool(memPool, room);
+            room = next;
+        }
+        act.setRoom(null);
+
+        Environment.freeDrlgEnvironment(memPool, act.getEnvironment());
+        act.setEnvironment(null);
+        act.setPfnActCallBack(null);
+        act.setHasPendingRoomsUpdates(false);
+        act.setHasPendingRoomDeletions(false);
+        act.setHasPendingUnitListUpdates(false);
+        D2Pool.freePool(memPool, act);
+    }
+
+    /** D2Common #10103. The callback runs only for newly allocated rooms. */
+    public static void setActCallbackFunc(D2DrlgAct act, D2ActCallback callback) {
+        if (act != null) act.setPfnActCallBack(callback);
     }
 
     public static Object getMemPoolFromAct(D2DrlgAct act) {
@@ -352,7 +423,7 @@ public class Dungeon {
         return room != null && DrlgDrlgRoom.checkLOSDraw(room.getPDrlgRoom());
     }
 
-    public static Object getEnvironmentFromAct(D2DrlgAct act) {
+    public static D2DrlgEnvironment getEnvironmentFromAct(D2DrlgAct act) {
         return act != null ? act.getEnvironment() : null;
     }
 
@@ -958,7 +1029,7 @@ public class Dungeon {
         for (D2ActiveRoom adjacent : getAdjacentRoomsListFromRoom(room)) {
             if (adjacent != room) rebuildAdjacentRoomList(adjacent);
         }
-        
+
         // 设置房间ID（可以使用房间的哈希值或其他唯一标识）
         int roomId = (room.getNTileXPos() << 16) | room.getNTileYPos();
         room.setNRoomId(roomId);
@@ -971,6 +1042,9 @@ public class Dungeon {
         
         D2Log.debug("DUNGEON_AllocRoom: Allocated active room for drlgRoom at (" + 
                     room.getNTileXPos() + ", " + room.getNTileYPos() + "), ID: " + roomId);
+
+        D2ActCallback callback = act != null ? act.getPfnActCallBack() : null;
+        if (callback != null) callback.onRoomAllocated(room);
         
         return room;
     }

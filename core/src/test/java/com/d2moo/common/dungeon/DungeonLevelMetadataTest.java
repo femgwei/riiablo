@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import com.d2moo.common.drlg.D2ActiveRoom;
+import com.d2moo.common.environment.D2DrlgEnvironment;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgOutdoorRoomStrc;
@@ -19,7 +20,7 @@ import org.junit.jupiter.api.Test;
 class DungeonLevelMetadataTest {
   @Test
   void exposesActEnvironmentAndStaffTombMetadata() {
-    Object environment = new Object();
+    D2DrlgEnvironment environment = new D2DrlgEnvironment();
     D2DrlgStrc drlg = new D2DrlgStrc();
     drlg.setStaffTombLevel(66);
     D2DrlgAct act = new D2DrlgAct();
