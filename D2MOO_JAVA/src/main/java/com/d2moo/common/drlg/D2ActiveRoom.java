@@ -14,6 +14,7 @@ public class D2ActiveRoom {
     private int nNumRooms;
     private D2DrlgRoom pDrlgRoom;        // 关联的 Drlg 房间对象
     private D2Seed seed = new D2Seed();
+    private D2DrlgDeleteStrc pDrlgDelete;
     private D2DrlgAct act;
     private D2ActiveRoom roomNext;
     private int nRoomId;                 // 房间ID
@@ -174,6 +175,14 @@ public class D2ActiveRoom {
 
     public void setSeed(D2Seed seed) {
         this.seed = seed != null ? seed : new D2Seed();
+    }
+
+    public D2DrlgDeleteStrc getPDrlgDelete() {
+        return pDrlgDelete;
+    }
+
+    public void setPDrlgDelete(D2DrlgDeleteStrc pDrlgDelete) {
+        this.pDrlgDelete = pDrlgDelete;
     }
 
     public D2DrlgAct getAct() {

@@ -9,6 +9,7 @@ import com.d2moo.common.drlg.D2ActCallback;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgCoords;
 import com.d2moo.common.drlg.D2Coord;
+import com.d2moo.common.drlg.D2DrlgDeleteStrc;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgFlags;
 import com.d2moo.common.drlg.D2DrlgLevel;
@@ -87,17 +88,7 @@ public class Dungeon {
         D2ActiveRoom room = act.getRoom();
         while (room != null) {
             D2ActiveRoom next = room.getRoomNext();
-            D2CommonCollision.freeRoomCollisionGrid(room);
-            D2DrlgRoom drlgRoom = room.getPDrlgRoom();
-            if (drlgRoom != null && drlgRoom.getRoom() == room) {
-                drlgRoom.setRoom(null);
-            }
-            room.setPDrlgRoom(null);
-            room.setPpRoomList(null);
-            room.setNNumRooms(0);
-            room.setRoomNext(null);
-            room.setAct(null);
-            D2Pool.freePool(memPool, room);
+            freeActiveRoom(memPool, room);
             room = next;
         }
         act.setRoom(null);
@@ -146,6 +137,41 @@ public class Dungeon {
 
     public static D2DrlgTileDataStrc getTileDataFromAct(D2DrlgAct act) {
         return act != null ? act.getTileData() : null;
+    }
+
+    /** D2Common #10066. New deletion records are pushed to the room's list head. */
+    public static void allocDrlgDelete(D2ActiveRoom room, int unitType, int unitGuid) {
+        if (room == null) return;
+        D2DrlgAct act = room.getAct();
+        Object memPool = act != null ? act.getPMemPool() : null;
+        D2DrlgDeleteStrc deletion =
+                D2Pool.callocStrcPool(memPool, D2DrlgDeleteStrc.class);
+        if (deletion == null) deletion = new D2DrlgDeleteStrc();
+        deletion.setUnitType(unitType);
+        deletion.setUnitGuid(unitGuid);
+        deletion.setNext(room.getPDrlgDelete());
+        room.setPDrlgDelete(deletion);
+        if (act != null) act.setHasPendingRoomDeletions(true);
+    }
+
+    /** D2Common #10067. */
+    public static void freeDrlgDelete(D2ActiveRoom room) {
+        if (room == null) return;
+        D2DrlgAct act = room.getAct();
+        Object memPool = act != null ? act.getPMemPool() : null;
+        D2DrlgDeleteStrc deletion = room.getPDrlgDelete();
+        while (deletion != null) {
+            D2DrlgDeleteStrc next = deletion.getNext();
+            deletion.setNext(null);
+            D2Pool.freePool(memPool, deletion);
+            deletion = next;
+        }
+        room.setPDrlgDelete(null);
+    }
+
+    /** D2Common #10068. */
+    public static D2DrlgDeleteStrc getDrlgDeleteFromRoom(D2ActiveRoom room) {
+        return room != null ? room.getPDrlgDelete() : null;
     }
 
     public static D2PresetUnit getPresetUnitsFromRoom(D2ActiveRoom room) {
@@ -413,12 +439,30 @@ public class Dungeon {
                 removeAdjacentRoom(nearRoom, current);
             }
         }
-        D2CommonCollision.freeRoomCollisionGrid(current);
-        current.setPpRoomList(null);
-        current.setNNumRooms(0);
-        current.setRoomNext(null);
-        current.setAct(null);
-        if (current.getPDrlgRoom() != null) current.getPDrlgRoom().setRoom(null);
+
+        D2DrlgRoom drlgRoom = current.getPDrlgRoom();
+        if (drlgRoom != null) {
+            DrlgDrlgRoom.sub_6FD77280(drlgRoom, act.isClient(), current.getDwFlags());
+        }
+        freeActiveRoom(act.getPMemPool(), current);
+    }
+
+    /** Native-order release after an active room has been unlinked from its Act. */
+    private static void freeActiveRoom(Object memPool, D2ActiveRoom room) {
+        if (room == null) return;
+        D2CommonCollision.freeRoomCollisionGrid(room);
+        freeDrlgDelete(room);
+        D2DrlgRoom drlgRoom = room.getPDrlgRoom();
+        if (drlgRoom != null && drlgRoom.getRoom() == room) drlgRoom.setRoom(null);
+        room.setPDrlgRoom(null);
+        room.setPUnits(null);
+        room.setPObjects(null);
+        room.setPRoomTiles(null);
+        room.setPpRoomList(null);
+        room.setNNumRooms(0);
+        room.setRoomNext(null);
+        room.setAct(null);
+        D2Pool.freePool(memPool, room);
     }
     
     /**
