@@ -1,5 +1,6 @@
 package com.riiablo.map.d2moo;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -27,7 +28,9 @@ class D2CmpDt1ParserTest {
     data.putInt(268, 2);
     data.putInt(272, HEADER_SIZE);
 
-    putTile(data, HEADER_SIZE, 0, 2, 3, 160, 80, 4, 0x1234);
+    byte[] collisionFlags = new byte[25];
+    for (int i = 0; i < collisionFlags.length; i++) collisionFlags[i] = (byte) (i + 1);
+    putTile(data, HEADER_SIZE, 0, 2, 3, 160, 80, 4, 0x1234, collisionFlags);
     putTile(data, HEADER_SIZE + TILE_HEADER_SIZE, 13, 7, 9, 320, 160, 11, 0x00A5);
 
     D2TileLibrary library = D2Cmp.parseDT1FileData(data.array(), "synthetic.dt1");
@@ -42,6 +45,8 @@ class D2CmpDt1ParserTest {
     assertEquals(80, floor.getNHeight());
     assertEquals(4, floor.getNRarity());
     assertEquals(0x1234, floor.getDwFlags());
+    assertArrayEquals(collisionFlags, floor.getPSubTileFlags());
+    assertArrayEquals(collisionFlags, D2Cmp.getTileFlagArray(floor));
 
     D2TileData shadow = library.getPTiles()[1];
     assertEquals(13, shadow.getNOrientation());
@@ -63,6 +68,11 @@ class D2CmpDt1ParserTest {
 
   private static void putTile(ByteBuffer data, int offset, int orientation, int style,
       int sequence, int width, int height, int rarity, int flags) {
+    putTile(data, offset, orientation, style, sequence, width, height, rarity, flags, null);
+  }
+
+  private static void putTile(ByteBuffer data, int offset, int orientation, int style,
+      int sequence, int width, int height, int rarity, int flags, byte[] collisionFlags) {
     data.putShort(offset + 4, (short) 0);
     data.putShort(offset + 6, (short) flags);
     data.putInt(offset + 8, height);
@@ -72,5 +82,8 @@ class D2CmpDt1ParserTest {
     data.putInt(offset + 24, style);
     data.putInt(offset + 28, sequence);
     data.putInt(offset + 32, rarity);
+    if (collisionFlags != null) {
+      for (int i = 0; i < collisionFlags.length; i++) data.put(offset + 40 + i, collisionFlags[i]);
+    }
   }
 }

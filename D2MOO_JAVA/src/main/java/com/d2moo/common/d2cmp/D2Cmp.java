@@ -435,6 +435,12 @@ public class D2Cmp {
         return pTileLibraryEntry instanceof D2TileData
                 ? ((D2TileData) pTileLibraryEntry).getDwFlags() : 0;
     }
+
+    /** D2Common #10085. Returns the DT1 tile's native-order 5x5 collision flags. */
+    public static byte[] getTileFlagArray(Object pTileLibraryEntry) {
+        return pTileLibraryEntry instanceof D2TileData
+                ? ((D2TileData) pTileLibraryEntry).getPSubTileFlags() : null;
+    }
     
     /**
      * D2Common.0x10078
@@ -569,6 +575,9 @@ public class D2Cmp {
         tile.setNTileId(D2BinaryReader.readInt32(fileData, offset + 24));
         tile.setNSequence(D2BinaryReader.readInt32(fileData, offset + 28));
         tile.setNRarity(D2BinaryReader.readInt32(fileData, offset + 32));
+        byte[] subTileFlags = new byte[25];
+        System.arraycopy(fileData, offset + 40, subTileFlags, 0, subTileFlags.length);
+        tile.setPSubTileFlags(subTileFlags);
         return tile;
     }
     

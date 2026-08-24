@@ -17,7 +17,8 @@ public class D2TileData {
     private int nImageSize;              // 图像大小
     private int dwFlags;                 // 标志
     private int nOrientation;            // 方向
-    private int nSubTileFlags;           // 子瓦片标志
+    private int nSubTileFlags;           // 兼容旧调用的聚合子瓦片标志
+    private byte[] pSubTileFlags = new byte[25]; // DT1 5x5 子瓦片碰撞标志
     private int nRarity;                 // 稀有度（动画瓦片时为帧号）
     
     public D2TileData() {
@@ -119,6 +120,20 @@ public class D2TileData {
     
     public void setNSubTileFlags(int nSubTileFlags) {
         this.nSubTileFlags = nSubTileFlags;
+    }
+
+    public byte[] getPSubTileFlags() {
+        return pSubTileFlags;
+    }
+
+    public void setPSubTileFlags(byte[] pSubTileFlags) {
+        if (pSubTileFlags == null) {
+            this.pSubTileFlags = new byte[25];
+        } else if (pSubTileFlags.length == 25) {
+            this.pSubTileFlags = pSubTileFlags.clone();
+        } else {
+            throw new IllegalArgumentException("DT1 subtile flags must contain exactly 25 bytes");
+        }
     }
 
     public int getNRarity() {

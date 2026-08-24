@@ -1064,18 +1064,6 @@ public class Dungeon {
             room.setNTileHeight(drlgRoom.getNTileHeight());
         }
         room.setPRoomTiles(tiles);
-        // Native DUNGEON_AllocRoom allocates the collision grid before the
-        // Act callback. Keep the same ordering so spawn/path consumers never
-        // observe an active room without a grid.
-        int collisionWidth = Math.max(1, room.getCoords().getNSubtileWidth());
-        int collisionHeight = Math.max(1, room.getCoords().getNSubtileHeight());
-        com.d2moo.common.drlg.D2DrlgGridStrc collision =
-                new com.d2moo.common.drlg.D2DrlgGridStrc(collisionWidth, collisionHeight);
-        int[] rowOffsets = new int[collisionHeight];
-        for (int row = 0; row < collisionHeight; row++) rowOffsets[row] = row * collisionWidth;
-        collision.setPCellsRowOffsets(rowOffsets);
-        collision.setPCellsFlags(new int[collisionWidth * collisionHeight]);
-        room.setPCollisionGrid(collision);
         D2Seed roomSeed = new D2Seed();
         Seed.initLowSeed(roomSeed, seed);
         room.setSeed(roomSeed);
@@ -1089,6 +1077,9 @@ public class Dungeon {
         for (D2ActiveRoom adjacent : getAdjacentRoomsListFromRoom(room)) {
             if (adjacent != room) rebuildAdjacentRoomList(adjacent);
         }
+        // Native allocation exposes a fully populated static collision grid
+        // before the Act callback can spawn or place units.
+        com.d2moo.common.collision.D2CommonCollision.allocRoomCollisionGrid(room);
 
         // 设置房间ID（可以使用房间的哈希值或其他唯一标识）
         int roomId = (room.getNTileXPos() << 16) | room.getNTileYPos();
