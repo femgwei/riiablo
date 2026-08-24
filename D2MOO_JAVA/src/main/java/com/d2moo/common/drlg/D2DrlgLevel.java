@@ -26,7 +26,7 @@ public class D2DrlgLevel {
     private int[] pJungleDefs;                    // 0x214
     private int nJungleDefsCount;                  // 0x218
     private D2DrlgBuildStrc build;                 // 0x21C D2DrlgBuildStrc*
-    private boolean active;                        // 0x220
+    private int active;                            // 0x220 native activity reference count
     private int inactiveFrames;                    // 0x224
     private int[] presetMaps;                     // 0x228
     private D2DrlgLevel nextLevel;                // 0x22C
@@ -135,8 +135,10 @@ public class D2DrlgLevel {
     public D2DrlgBuildStrc getPBuild() { return build; }
     public void setPBuild(D2DrlgBuildStrc pBuild) { this.build = pBuild; }
     
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
+    public boolean isActive() { return active > 0; }
+    public void setActive(boolean active) { this.active = active ? 1 : 0; }
+    public int getActive() { return active; }
+    public void setActive(int active) { this.active = Math.max(0, active); }
     
     public int getInactiveFrames() { return inactiveFrames; }
     public void setInactiveFrames(int inactiveFrames) { this.inactiveFrames = inactiveFrames; }

@@ -188,6 +188,19 @@ public class Dungeon {
                 newRoom != null ? newRoom.getPDrlgRoom() : null);
     }
 
+    /** D2Common #10077. Updates activity counts when crossing level boundaries. */
+    public static void updateRoomLevelActivity(
+            D2ActiveRoom previousRoom, D2ActiveRoom newRoom) {
+        DrlgDrlg.updateLevelActivity(
+                previousRoom != null ? previousRoom.getPDrlgRoom() : null,
+                newRoom != null ? newRoom.getPDrlgRoom() : null);
+    }
+
+    /** D2Common #10078. Advances delayed inactive-level eviction by one frame. */
+    public static void updateAndFreeInactiveRooms(D2DrlgAct act) {
+        if (act != null) DrlgDrlg.updateAndFreeInactiveRooms(act.getDrlg());
+    }
+
     /** D2Common #10065. Streams the generated room containing the tile position. */
     public static D2ActiveRoom streamRoomAtCoords(D2DrlgAct act, int x, int y) {
         return act != null && act.getDrlg() != null

@@ -231,6 +231,131 @@ public class DrlgDrlg {
             level.setPBuild(null);
         }
     }
+
+    /**
+     * D2Common {@code sub_6FD745C0}: updates native level activity reference
+     * counts when a client changes rooms across a level boundary.
+     */
+    public static void updateLevelActivity(D2DrlgRoom previousRoom, D2DrlgRoom nextRoom) {
+        D2DrlgLevel previousLevel = previousRoom != null ? previousRoom.getLevel() : null;
+        D2DrlgLevel nextLevel = nextRoom != null ? nextRoom.getLevel() : null;
+        if (previousLevel == nextLevel) return;
+
+        alterLevelActivity(previousLevel, -1);
+        alterLevelActivity(nextLevel, 1);
+    }
+
+    /** D2Common {@code DRLG_UpdateAndFreeInactiveRooms}. */
+    public static void updateAndFreeInactiveRooms(D2DrlgStrc drlg) {
+        if (drlg == null) return;
+
+        for (D2DrlgLevel level = drlg.getLevel(); level != null; level = level.getPNextLevel()) {
+            if (level.getActive() != 0 || level.getFirstRoomEx() == null) continue;
+            if (level.getInactiveFrames() > 0) {
+                level.setInactiveFrames(level.getInactiveFrames() - 1);
+                continue;
+            }
+
+            if (hasRetainedRoom(level)) {
+                level.setInactiveFrames(10);
+                continue;
+            }
+
+            boolean retainedByVisibleLevel = false;
+            int[] visibleLevelIds = DrlgDrlgRoom.getVisArrayFromLevelId(drlg, level.getLevelId());
+            int visibleCount = Math.min(8, visibleLevelIds != null ? visibleLevelIds.length : 0);
+            for (int i = 0; i < visibleCount; i++) {
+                int visibleLevelId = visibleLevelIds[i];
+                if (visibleLevelId == 0) continue;
+                D2DrlgLevel visibleLevel = getLevel(drlg, visibleLevelId);
+                if (visibleLevel == null || visibleLevel.getFirstRoomEx() == null) continue;
+
+                int reverseLinkFlags = reverseLinkFlags(visibleLevel, level.getLevelId());
+                if (hasRetainedLinkRoom(visibleLevel, reverseLinkFlags)) {
+                    level.setInactiveFrames(10);
+                    retainedByVisibleLevel = true;
+                    break;
+                }
+                freeUnretainedLinkRoomTiles(drlg, visibleLevel, reverseLinkFlags);
+            }
+
+            if (!retainedByVisibleLevel) {
+                int levelId = level.getLevelId();
+                freeLevel(drlg.getMempool(), level, true);
+                D2Log.debug("DRLG_UPDATE_INACTIVE freed level=%d", levelId);
+            }
+        }
+    }
+
+    private static void alterLevelActivity(D2DrlgLevel level, int delta) {
+        if (level == null) return;
+        level.setActive(level.getActive() + delta);
+        level.setInactiveFrames(10);
+
+        D2DrlgStrc drlg = level.getDrlg();
+        int[] visibleLevelIds = drlg != null
+                ? DrlgDrlgRoom.getVisArrayFromLevelId(drlg, level.getLevelId()) : null;
+        int visibleCount = Math.min(8, visibleLevelIds != null ? visibleLevelIds.length : 0);
+        for (int i = 0; i < visibleCount; i++) {
+            int visibleLevelId = visibleLevelIds[i];
+            if (visibleLevelId == 0) continue;
+            D2DrlgLevel visibleLevel = getLevel(drlg, visibleLevelId);
+            if (visibleLevel == null) continue;
+            visibleLevel.setActive(visibleLevel.getActive() + delta);
+            visibleLevel.setInactiveFrames(10);
+        }
+    }
+
+    private static boolean hasRetainedRoom(D2DrlgLevel level) {
+        for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+                room = room.getDrlgRoomNext()) {
+            if (isRetained(room)) return true;
+        }
+        return false;
+    }
+
+    private static int reverseLinkFlags(D2DrlgLevel level, int destinationLevelId) {
+        int flags = 0;
+        int[] visibleLevelIds = DrlgDrlgRoom.getVisArrayFromLevelId(
+                level.getDrlg(), level.getLevelId());
+        int visibleCount = Math.min(8, visibleLevelIds != null ? visibleLevelIds.length : 0);
+        for (int i = 0; i < visibleCount; i++) {
+            if (visibleLevelIds[i] == destinationLevelId) flags |= 1 << (i + 4);
+        }
+        return flags;
+    }
+
+    private static boolean hasRetainedLinkRoom(D2DrlgLevel level, int linkFlags) {
+        if (linkFlags == 0) return false;
+        for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+                room = room.getDrlgRoomNext()) {
+            if ((room.getFlags() & linkFlags) != 0 && isRetained(room)) return true;
+        }
+        return false;
+    }
+
+    private static void freeUnretainedLinkRoomTiles(
+            D2DrlgStrc drlg, D2DrlgLevel level, int linkFlags) {
+        if (linkFlags == 0) return;
+        for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+                room = room.getDrlgRoomNext()) {
+            if ((room.getFlags() & linkFlags) == 0) continue;
+            DrlgDrlgRoom.freeRoomTiles(drlg.getMempool(), room);
+            if (room.getPpRoomsNear() != null) {
+                D2Pool.freePool(drlg.getMempool(), room.getPpRoomsNear());
+                room.setPpRoomsNear(null);
+                room.setNRoomsNear(0);
+            }
+        }
+    }
+
+    private static boolean isRetained(D2DrlgRoom room) {
+        D2DrlgRoomStatus status = room.getRoomStatus();
+        int statusValue = status != null
+                ? status.getValue() : D2DrlgRoomStatus.COUNT.getValue();
+        return statusValue <= D2DrlgRoomStatus.UNTILE.getValue()
+                || (room.getFlags() & D2DrlgRoomFlags.HAS_ROOM) != 0;
+    }
     
     /**
      * D2Common.0x6FD748D0 (#10013)
