@@ -36,6 +36,11 @@ public class Dungeon {
     private static final int ACTIVE_ROOM_FLAG_2 = 0x2;
     private static final int ACTIVE_ROOM_FLAG_4 = 0x4;
 
+    @FunctionalInterface
+    public interface RoomCallback<T> {
+        boolean visit(D2ActiveRoom room, T args);
+    }
+
     public static Object getMemPoolFromAct(D2DrlgAct act) {
         return act != null ? act.getPMemPool() : null;
     }
@@ -448,6 +453,67 @@ public class Dungeon {
             if (areTileCoordinatesInsideRoom(adjacent, x, y)) return adjacent;
         }
         return null;
+    }
+
+    /** D2Common #10049: visits adjacent rooms in native array order until false. */
+    public static <T> void callRoomCallback(
+            D2ActiveRoom room, RoomCallback<T> callback, T args) {
+        if (room == null || callback == null) return;
+        for (D2ActiveRoom adjacent : getAdjacentRoomsListFromRoom(room)) {
+            if (!callback.visit(adjacent, args)) break;
+        }
+    }
+
+    /**
+     * D2Common #10052 value-copy form. Array order is left, top, right, bottom.
+     */
+    public static int[] getRoomDrawRect(D2ActiveRoom room) {
+        if (room == null) return new int[4];
+        int[] x = new int[1];
+        int[] y = new int[1];
+        int[] rect = new int[4];
+        gameToClientTileDrawPositionCoords(
+                room.getNTileXPos(), room.getNTileYPos(), x, y);
+        rect[1] = y[0];
+        gameToClientTileDrawPositionCoords(
+                room.getNTileXPos(), room.getNTileYPos() + room.getNTileHeight(), x, y);
+        rect[0] = x[0];
+        gameToClientTileDrawPositionCoords(
+                room.getNTileXPos() + room.getNTileWidth(), room.getNTileYPos(), x, y);
+        rect[2] = x[0];
+        gameToClientTileDrawPositionCoords(
+                room.getNTileXPos() + room.getNTileWidth(),
+                room.getNTileYPos() + room.getNTileHeight(), x, y);
+        rect[3] = y[0];
+        return rect;
+    }
+
+    /** D2Common #10053 value-copy form. Array order is left, top, right, bottom. */
+    public static int[] getSubtileRect(D2ActiveRoom room) {
+        if (room == null) return new int[4];
+        D2DrlgCoords coords = room.getCoords();
+        return new int[] {
+            coords.getNSubtileX(),
+            coords.getNSubtileY(),
+            coords.getNSubtileX() + coords.getNSubtileWidth(),
+            coords.getNSubtileY() + coords.getNSubtileHeight()
+        };
+    }
+
+    /** D2Common #10048, retained only for binary-behavior parity with the broken export. */
+    public static int checkRoomsOverlappingBroken(
+            D2ActiveRoom primary, D2ActiveRoom ignoredSecondary) {
+        if (primary == null) return 0;
+        int x = primary.getNTileXPos();
+        int y = primary.getNTileYPos();
+        int right = x + primary.getNTileWidth();
+        int bottom = y + primary.getNTileHeight();
+        if (right >= x && bottom >= y) {
+            if (x == right) return 1;
+            if (y == bottom) return 3;
+            return 4;
+        }
+        return 0;
     }
 
     /** Native header helper: resolve a subtile position from a room and its adjacent rooms. */
