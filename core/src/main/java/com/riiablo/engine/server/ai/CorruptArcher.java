@@ -113,6 +113,14 @@ public class CorruptArcher extends AI {
         && MathUtils.randomBoolean(params[2] / 100f);
   }
 
+  private void castSkillOrAttack(int skillIndex, int targetId, Vector2 targetPos) {
+    if (useMonsterSkill(skillIndex, targetId, targetPos)) return;
+    stateMachine.changeState(State.ATTACK);
+    lookAt(targetId);
+    mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+    mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+  }
+
   @Override
   public void update(float delta) {
     stateMachine.update();
@@ -219,35 +227,23 @@ public class CorruptArcher extends AI {
       // D2MOD: Check skill usage
       if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()
           && params.length > 5 && MathUtils.randomBoolean(params[5] / 100f)) {
-        // D2MOD: Use skill2
-        // TODO: Implement skill casting
         stateMachine.changeState(State.CAST);
-        lookAt(targetId);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+        castSkillOrAttack(1, targetId, targetPos);
         time = MathUtils.random(1f, 2);
         return;
       }
 
       if (monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()
           && params.length > 6 && MathUtils.randomBoolean(params[6] / 100f)) {
-        // D2MOD: Use skill3
-        // TODO: Implement skill casting
         stateMachine.changeState(State.CAST);
-        lookAt(targetId);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+        castSkillOrAttack(2, targetId, targetPos);
         time = MathUtils.random(1f, 2);
         return;
       }
 
       if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-        // D2MOD: Use skill1
-        // TODO: Implement skill casting
         stateMachine.changeState(State.CAST);
-        lookAt(targetId);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+        castSkillOrAttack(0, targetId, targetPos);
         time = MathUtils.random(1f, 2);
         return;
       }

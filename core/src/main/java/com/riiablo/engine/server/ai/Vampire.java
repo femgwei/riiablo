@@ -134,6 +134,13 @@ public class Vampire extends AI {
     return (hitpoints.asFixed() / maxhp.asFixed()) * 100f;
   }
 
+  private boolean castConfiguredSkill(int skillIndex, int targetId, Vector2 targetPos) {
+    if (!useMonsterSkill(skillIndex, targetId, targetPos)) return false;
+    stateMachine.changeState(State.CAST);
+    time = MathUtils.random(1f, 2f);
+    return true;
+  }
+
   @Override
   public void update(float delta) {
     stateMachine.update();
@@ -194,22 +201,10 @@ public class Vampire extends AI {
           // D2MOD: 50% chance skill0, 50% chance skill3
           if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty() && MathUtils.randomBoolean(0.5f)) {
             // D2MOD: Use skill0
-            // TODO: Implement skill casting
-            stateMachine.changeState(State.CAST);
-            lookAt(targetId);
-            mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-            mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-            time = MathUtils.random(1f, 2);
-            return;
+            if (castConfiguredSkill(0, targetId, targetPos)) return;
           } else if (monster.monstats.Skill4 != null && !monster.monstats.Skill4.isEmpty()) {
             // D2MOD: Use skill3
-            // TODO: Implement skill casting
-            stateMachine.changeState(State.CAST);
-            lookAt(targetId);
-            mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-            mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-            time = MathUtils.random(1f, 2);
-            return;
+            if (castConfiguredSkill(3, targetId, targetPos)) return;
           }
         }
 
@@ -268,46 +263,22 @@ public class Vampire extends AI {
             // D2MOD: Check upgrade cast
             if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
               // D2MOD: Use skill1
-              // TODO: Implement skill casting
               aiParam2 = 11;
-              stateMachine.changeState(State.CAST);
-              lookAt(targetId);
-              mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-              mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-              time = MathUtils.random(1f, 2);
-              return;
+              if (castConfiguredSkill(1, targetId, targetPos)) return;
             }
 
             if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
               // D2MOD: Use skill2
-              // TODO: Implement skill casting
               aiParam2 = 11;
-              stateMachine.changeState(State.CAST);
-              lookAt(targetId);
-              mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-              mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-              time = MathUtils.random(1f, 2);
-              return;
+              if (castConfiguredSkill(2, targetId, targetPos)) return;
             }
 
             if ((spellFlags & 1) != 0 && targetDistance <= 20) {
               // D2MOD: Use skill0 or skill3
               if (MathUtils.randomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-                // TODO: Implement skill casting
-                stateMachine.changeState(State.CAST);
-                lookAt(targetId);
-                mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-                mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-                time = MathUtils.random(1f, 2);
-                return;
+                if (castConfiguredSkill(0, targetId, targetPos)) return;
               } else if (monster.monstats.Skill4 != null && !monster.monstats.Skill4.isEmpty()) {
-                // TODO: Implement skill casting
-                stateMachine.changeState(State.CAST);
-                lookAt(targetId);
-                mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-                mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-                time = MathUtils.random(1f, 2);
-                return;
+                if (castConfiguredSkill(3, targetId, targetPos)) return;
               }
             }
           }
@@ -364,46 +335,22 @@ public class Vampire extends AI {
     // D2MOD: Check upgrade cast
     if ((spellFlags & (1 << 1)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
       // D2MOD: Use skill1
-      // TODO: Implement skill casting
       aiParam2 = 11;
-      stateMachine.changeState(State.CAST);
-      lookAt(targetId);
-      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      time = MathUtils.random(1f, 2);
-      return;
+      if (castConfiguredSkill(1, targetId, targetPos)) return;
     }
 
     if ((spellFlags & (1 << 2)) != 0 && aiParam2 <= 0 && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
       // D2MOD: Use skill2
-      // TODO: Implement skill casting
       aiParam2 = 11;
-      stateMachine.changeState(State.CAST);
-      lookAt(targetId);
-      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      time = MathUtils.random(1f, 2);
-      return;
+      if (castConfiguredSkill(2, targetId, targetPos)) return;
     }
 
     // D2MOD: Use basic spell
     if ((spellFlags & 1) != 0 && targetDistance <= 20) {
       if (MathUtils.randomBoolean(0.5f) && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-        // TODO: Implement skill casting
-        stateMachine.changeState(State.CAST);
-        lookAt(targetId);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
-        return;
+        if (castConfiguredSkill(0, targetId, targetPos)) return;
       } else if (monster.monstats.Skill4 != null && !monster.monstats.Skill4.isEmpty()) {
-        // TODO: Implement skill casting
-        stateMachine.changeState(State.CAST);
-        lookAt(targetId);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        time = MathUtils.random(1f, 2);
-        return;
+        if (castConfiguredSkill(3, targetId, targetPos)) return;
       }
     }
 

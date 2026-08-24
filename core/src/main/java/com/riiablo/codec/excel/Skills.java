@@ -1,9 +1,23 @@
 package com.riiablo.codec.excel;
 
+import com.badlogic.gdx.utils.ObjectIntMap;
 import com.riiablo.CharacterClass;
 
 @Excel.Binned
 public class Skills extends Excel<Skills.Entry> {
+  @Override
+  protected void init() {
+    // Skills.txt is keyed by numeric Id, but MonStats references skills by
+    // their textual name. Build the secondary name index required by monster
+    // AI and other data-driven consumers.
+    STRING_TO_ID = new ObjectIntMap<>();
+    for (Entry entry : this) {
+      if (entry.skill != null && !entry.skill.isEmpty()) {
+        STRING_TO_ID.put(entry.skill, entry.Id);
+      }
+    }
+  }
+
   public static int getClassId(String charClass) {
     if (charClass.isEmpty()) return -1;
     switch (charClass.charAt(0)) {

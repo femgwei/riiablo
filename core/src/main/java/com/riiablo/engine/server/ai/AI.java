@@ -20,6 +20,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.Pathfinder;
@@ -224,6 +225,94 @@ public abstract class AI implements Interactable.Interactor {
     }
     // ????3 ????
     return factory.createMissile(missile, angle, position);
+  }
+
+  /**
+   * Native {@code AITACTICS_UseSkill}: resolves a MonStats Skill1..Skill8
+   * slot, enters its configured monster animation mode and lets Actioneer
+   * execute the Skills.txt server function on the animation keyframe.
+   *
+   * @param skillIndex zero-based MonStats skill slot
+   */
+  protected boolean useMonsterSkill(int skillIndex, int targetId, Vector2 targetVec) {
+    if (monster == null || monster.monstats == null) return false;
+    String skillName = monsterSkillName(monster.monstats, skillIndex);
+    if (skillName == null || skillName.isEmpty()) return false;
+    Skills.Entry skill = Riiablo.files.skills.get(skillName);
+    if (skill == null) {
+      log.warn("[MONSTER_SKILL] phase=lookup_failed entity={} monster={} slot={} skill={}",
+          entityId, monster.monstats.Id, skillIndex + 1, skillName);
+      return false;
+    }
+
+    String configuredMode = monsterSkillMode(monster.monstats, skillIndex);
+    int mode = configuredMode != null && !configuredMode.isEmpty()
+        ? Riiablo.files.MonMode.index(configuredMode) : -1;
+    if (mode < 0 && skill.monanim != null && !skill.monanim.isEmpty()) {
+      mode = Riiablo.files.MonMode.index(skill.monanim);
+    }
+    if (mode < 0) mode = Engine.Monster.MODE_S1;
+
+    Vector2 resolvedTarget = targetVec;
+    if (resolvedTarget == null && targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
+      resolvedTarget = mPosition.get(targetId).position;
+    }
+    if (resolvedTarget == null) resolvedTarget = mPosition.get(entityId).position;
+
+    stopMovement();
+    if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) lookAt(targetId);
+    mSequence.create(entityId).sequence((byte) mode, Engine.Monster.MODE_NU);
+    mCasting.create(entityId).set(skill.Id, targetId, resolvedTarget);
+    log.info("[MONSTER_SKILL] phase=cast entity={} monster={} slot={} skillId={} skill={} "
+            + "level={} mode={} target={}",
+        entityId, monster.monstats.Id, skillIndex + 1, skill.Id, skill.skill,
+        monsterSkillLevel(monster.monstats, skillIndex), mode, targetId);
+    return true;
+  }
+
+  private static String monsterSkillName(MonStats.Entry monstats, int index) {
+    switch (index) {
+      case 0: return monstats.Skill1;
+      case 1: return monstats.Skill2;
+      case 2: return monstats.Skill3;
+      case 3: return monstats.Skill4;
+      case 4: return monstats.Skill5;
+      case 5: return monstats.Skill6;
+      case 6: return monstats.Skill7;
+      case 7: return monstats.Skill8;
+      default: return null;
+    }
+  }
+
+  private static String monsterSkillMode(MonStats.Entry monstats, int index) {
+    switch (index) {
+      case 0: return monstats.Sk1mode;
+      case 1: return monstats.Sk2mode;
+      case 2: return monstats.Sk3mode;
+      case 3: return monstats.Sk4mode;
+      case 4: return monstats.Sk5mode;
+      case 5: return monstats.Sk6mode;
+      case 6: return monstats.Sk7mode;
+      case 7: return monstats.Sk8mode;
+      default: return null;
+    }
+  }
+
+  protected static int monsterSkillLevel(MonStats.Entry monstats, int index) {
+    if (monstats == null) return 1;
+    int level;
+    switch (index) {
+      case 0: level = monstats.Sk1lvl; break;
+      case 1: level = monstats.Sk2lvl; break;
+      case 2: level = monstats.Sk3lvl; break;
+      case 3: level = monstats.Sk4lvl; break;
+      case 4: level = monstats.Sk5lvl; break;
+      case 5: level = monstats.Sk6lvl; break;
+      case 6: level = monstats.Sk7lvl; break;
+      case 7: level = monstats.Sk8lvl; break;
+      default: level = 1;
+    }
+    return Math.max(1, level);
   }
 
   private static EntitySubscription enemyEntities;

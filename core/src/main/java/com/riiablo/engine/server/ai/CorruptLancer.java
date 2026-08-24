@@ -30,6 +30,7 @@ import com.riiablo.engine.server.component.Sequence;
  * - params[2] = CORRUPTLANCER_AI_PARAM_STALL_DURATION (idle time)
  * - params[3] = CORRUPTLANCER_AI_PARAM_RUN_CHANCE_PCT (run chance)
  * - params[4] = CORRUPTLANCER_AI_PARAM_ALWAYS_RUN_DISTANCE
+ * - params[5..7] = Skill1..Skill3 use chance
  * 
  * Special: Can run when approaching target.
  */
@@ -39,6 +40,7 @@ public class CorruptLancer extends AI {
     WANDER,
     APPROACH,
     ATTACK,
+    CAST,
     DEAD;
 
     @Override public void enter(Integer entityId) {}
@@ -103,6 +105,20 @@ public class CorruptLancer extends AI {
     float meleeRng = 1f + monster.monstats2.MeleeRng;
     
     return distance <= meleeRng;
+  }
+
+  private boolean tryCombatSkill(int targetId, Vector2 targetPos) {
+    for (int skillIndex = 0; skillIndex < 3; skillIndex++) {
+      int paramIndex = skillIndex + 5;
+      if (params.length <= paramIndex
+          || !MathUtils.randomBoolean(params[paramIndex] / 100f)) continue;
+      if (useMonsterSkill(skillIndex, targetId, targetPos)) {
+        stateMachine.changeState(State.CAST);
+        time = MathUtils.random(1f, 2f);
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -180,6 +196,7 @@ public class CorruptLancer extends AI {
     if (bCombat) {
       if (ranToTarget || (params.length > 1 && MathUtils.randomBoolean(params[1] / 100f))) {
         ranToTarget = false;
+        if (tryCombatSkill(targetId, targetPos)) return;
         stopMovement();
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);

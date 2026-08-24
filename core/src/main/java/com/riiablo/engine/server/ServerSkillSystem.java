@@ -12,6 +12,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillCastEvent;
@@ -45,6 +46,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Missile> mMissile;
@@ -102,7 +104,8 @@ public class ServerSkillSystem extends PassiveSystem {
 
   @Subscribe
   public void onSkillDo(SkillDoEvent event) {
-    if (!mPlayer.has(event.entityId) || !mPosition.has(event.entityId)) return;
+    if (!mPosition.has(event.entityId)) return;
+    if (!mPlayer.has(event.entityId) && !mMonster.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
 
@@ -130,10 +133,10 @@ public class ServerSkillSystem extends PassiveSystem {
 
     String throwableMissile = resolveThrowableMissile(event.entityId, event.skillId, skill);
     String[] missileNames = {
-        skill.cltmissilea,
-        skill.cltmissileb,
-        skill.cltmissilec,
-        skill.cltmissiled
+        firstNonEmpty(skill.srvmissilea, skill.cltmissilea),
+        firstNonEmpty(skill.srvmissileb, skill.cltmissileb),
+        firstNonEmpty(skill.srvmissilec, skill.cltmissilec),
+        firstNonEmpty(skill.srvmissiled, skill.cltmissiled)
     };
     int configuredCount = 0;
     for (String name : missileNames) {
@@ -180,6 +183,12 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       log.debug("Server skill projectile: entity={}, skill={}, missile={}, entityId={}, dir=({}, {})",
           event.entityId, event.skillId, missileName, missileId, direction.x, direction.y);
+      if (mMonster.has(event.entityId)) {
+        log.info("[MONSTER_SKILL] phase=missile entity={} skillId={} missileId={} missile={} "
+                + "speed={} range={} direction=({}, {})",
+            event.entityId, event.skillId, missileId, missile.Missile,
+            missile.Vel, missile.Range, direction.x, direction.y);
+      }
       ordinal++;
     }
   }
@@ -336,8 +345,32 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private int getSkillLevel(int entityId, int skillId) {
-    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return 1;
-    return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId));
+    if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId));
+    }
+    if (mMonster.has(entityId)) {
+      Monster monster = mMonster.get(entityId);
+      if (monster.monstats != null) {
+        String skillName = Riiablo.files.skills.get(skillId) != null
+            ? Riiablo.files.skills.get(skillId).skill : null;
+        String[] names = {
+            monster.monstats.Skill1, monster.monstats.Skill2,
+            monster.monstats.Skill3, monster.monstats.Skill4,
+            monster.monstats.Skill5, monster.monstats.Skill6,
+            monster.monstats.Skill7, monster.monstats.Skill8
+        };
+        int[] levels = {
+            monster.monstats.Sk1lvl, monster.monstats.Sk2lvl,
+            monster.monstats.Sk3lvl, monster.monstats.Sk4lvl,
+            monster.monstats.Sk5lvl, monster.monstats.Sk6lvl,
+            monster.monstats.Sk7lvl, monster.monstats.Sk8lvl
+        };
+        for (int i = 0; i < names.length; i++) {
+          if (skillName != null && skillName.equals(names[i])) return Math.max(1, levels[i]);
+        }
+      }
+    }
+    return 1;
   }
 
   private String resolveThrowableMissile(int entityId, int skillId, Skills.Entry skill) {
@@ -345,6 +378,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 3 && skill.srvdofunc != 5) {
       return null;
     }
+    if (!mPlayer.has(entityId)) return null;
     Player player = mPlayer.get(entityId);
     if (player.data == null || player.data.getItems() == null) return null;
     Item weapon = player.data.getItems().getEquippedThrowableWeapon();

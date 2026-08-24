@@ -446,6 +446,12 @@ public class Actioneer extends PassiveSystem {
         // even though their AI enters the shared Attack skill (srvdofunc=1).
         // Resolve them at the same animation keyframe as melee damage so the
         // server remains authoritative for creation, collision and damage.
+        if (isMonsterProjectileSkill(entityId)) {
+          // ServerSkillSystem consumes the following SkillDoEvent and creates
+          // the Skills.txt projectile. Applying melee damage here as well
+          // would make one monster spell hit twice.
+          break;
+        }
         if (spawnMonsterAttackMissile(entityId, targetId)) {
           break;
         }
@@ -607,6 +613,11 @@ public class Actioneer extends PassiveSystem {
         || !mPosition.has(targetId)) {
       return false;
     }
+    if (mCasting.has(entityId) && mCasting.get(entityId).skillId != SkillCodes.attack) {
+      // Skills.txt projectiles are created by ServerSkillSystem from the
+      // SkillDoEvent. MissA1/MissA2 belong only to the native basic attack.
+      return false;
+    }
 
     Monster monster = mMonster.get(entityId);
     if (monster.monstats == null) return false;
@@ -649,6 +660,21 @@ public class Actioneer extends PassiveSystem {
         monsterAttackMaxDamage(entityId), monsterAttackRating(entityId),
         start.x, start.y, direction.x, direction.y);
     return true;
+  }
+
+  private boolean isMonsterProjectileSkill(int entityId) {
+    if (!mMonster.has(entityId) || !mCasting.has(entityId)) return false;
+    int skillId = mCasting.get(entityId).skillId;
+    if (skillId == SkillCodes.attack) return false;
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    return skill != null && (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
+        || hasText(skill.srvmissilec) || hasText(skill.srvmissiled)
+        || hasText(skill.cltmissilea) || hasText(skill.cltmissileb)
+        || hasText(skill.cltmissilec) || hasText(skill.cltmissiled));
+  }
+
+  private static boolean hasText(String value) {
+    return value != null && !value.isEmpty();
   }
 
   private byte currentMonsterAttackMode(int entityId) {
