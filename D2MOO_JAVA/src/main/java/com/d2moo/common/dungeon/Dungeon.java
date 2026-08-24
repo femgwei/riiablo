@@ -19,6 +19,29 @@ import java.util.Arrays;
  * 当前实现提供基础框架和接口，实际逻辑需要后续实现
  */
 public class Dungeon {
+    /** D2Common #10008 wrapper around DRLGWARP_ToggleRoomTilesEnableFlag. */
+    public static void toggleRoomTilesEnableFlag(D2ActiveRoom room, boolean enabled) {
+        if (room != null) {
+            com.d2moo.common.drlg.DrlgDrlgWarp.toggleRoomTilesEnableFlag(
+                    room.getPDrlgRoom(), enabled);
+        }
+    }
+
+    /** D2Common #10091 wrapper around DRLGWARP_UpdateWarpRoomSelect. */
+    public static void updateWarpRoomSelect(D2ActiveRoom room, int levelId) {
+        if (room != null) {
+            com.d2moo.common.drlg.DrlgDrlgWarp.updateWarpRoomSelect(
+                    room.getPDrlgRoom(), levelId);
+        }
+    }
+
+    /** D2Common #10092 wrapper around DRLGWARP_UpdateWarpRoomDeselect. */
+    public static void updateWarpRoomDeselect(D2ActiveRoom room, int levelId) {
+        if (room != null) {
+            com.d2moo.common.drlg.DrlgDrlgWarp.updateWarpRoomDeselect(
+                    room.getPDrlgRoom(), levelId);
+        }
+    }
     
     /**
      * 从房间移除活动房间

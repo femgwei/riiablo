@@ -1,13 +1,15 @@
 package com.d2moo.common.drlg;
 
 import com.d2moo.common.datatbls.DataTbls;
-import com.d2moo.common.util.D2Log;
+
+import java.util.Arrays;
 
 /**
  * Drlg 传送门模块
  * 对应 C++ 文件：DrlgDrlgWarp.cpp
  */
 public class DrlgDrlgWarp {
+    private static final int MAPTILE_HIDDEN = 0x000008;
     
     /**
      * D2Common.0x6FD78780
@@ -74,6 +76,9 @@ public class DrlgDrlgWarp {
      * 切换房间瓦片启用标志
      */
     public static void toggleRoomTilesEnableFlag(D2DrlgRoom drlgRoom, boolean enabled) {
+        if (drlgRoom == null) {
+            return;
+        }
         D2RoomTile roomTile = drlgRoom.getRoomTiles();
         while (roomTile != null) {
             roomTile.setBEnabled(enabled);
@@ -130,6 +135,46 @@ public class DrlgDrlgWarp {
         return DataTbls.getLvlWarpTxtRecordFromLevelIdAndDirection(
             lvlWarpId, direction);
     }
+
+    /**
+     * D2Common.0x6FD78810
+     * Selects the matching warp's alternate tile chain.
+     */
+    public static void updateWarpRoomSelect(D2DrlgRoom drlgRoom, int levelId) {
+        if (drlgRoom == null) {
+            return;
+        }
+        for (D2RoomTile roomTile = drlgRoom.getRoomTiles(); roomTile != null;
+                roomTile = roomTile.getPNext()) {
+            D2LvlWarpTxt warp = roomTile.getPLvlWarpTxtRecord();
+            if (warp == null || warp.getDwLevelId() != levelId
+                    || roomTile.getUnk0x0C() == null) {
+                continue;
+            }
+            setTileChainHidden(roomTile.getUnk0x0C(), false);
+            setTileChainHidden(roomTile.getUnk0x10(), true);
+        }
+    }
+
+    /**
+     * D2Common.0x6FD78870
+     * Restores the matching warp's default tile chain.
+     */
+    public static void updateWarpRoomDeselect(D2DrlgRoom drlgRoom, int levelId) {
+        if (drlgRoom == null) {
+            return;
+        }
+        for (D2RoomTile roomTile = drlgRoom.getRoomTiles(); roomTile != null;
+                roomTile = roomTile.getPNext()) {
+            D2LvlWarpTxt warp = roomTile.getPLvlWarpTxtRecord();
+            if (warp == null || warp.getDwLevelId() != levelId
+                    || roomTile.getUnk0x10() == null) {
+                continue;
+            }
+            setTileChainHidden(roomTile.getUnk0x10(), false);
+            setTileChainHidden(roomTile.getUnk0x0C(), true);
+        }
+    }
     
     /**
      * D2Common.0x6FD78CC0
@@ -149,7 +194,9 @@ public class DrlgDrlgWarp {
         if (levelDef != null) {
             return levelDef.getDwWarp();
         }
-        return new int[8]; // 返回空数组作为占位符
+        int[] noWarps = new int[8];
+        Arrays.fill(noWarps, -1);
+        return noWarps;
     }
     
     /**
@@ -185,5 +232,30 @@ public class DrlgDrlgWarp {
         }
         
         return null;
+    }
+
+    /** Native unit lookup expressed using its only required field, dwClassId. */
+    public static D2LvlWarpTxt getLvlWarpTxtRecordFromClassId(
+            D2DrlgRoom drlgRoom, int classId) {
+        if (drlgRoom == null) {
+            return null;
+        }
+        for (D2RoomTile roomTile = drlgRoom.getRoomTiles(); roomTile != null;
+                roomTile = roomTile.getPNext()) {
+            D2LvlWarpTxt warp = roomTile.getPLvlWarpTxtRecord();
+            if (warp != null && warp.getDwLevelId() == classId && roomTile.isBEnabled()) {
+                return warp;
+            }
+        }
+        return null;
+    }
+
+    private static void setTileChainHidden(D2DrlgTileDataStrc tile, boolean hidden) {
+        while (tile != null) {
+            tile.setDwFlags(hidden
+                    ? tile.getDwFlags() | MAPTILE_HIDDEN
+                    : tile.getDwFlags() & ~MAPTILE_HIDDEN);
+            tile = tile.getUnk0x20();
+        }
     }
 }
