@@ -35,6 +35,7 @@ public class DrlgDrlgLogic {
             DrlgDrlgGrid.freeGrid(memPool, logicalRoomInfo.getPIndexX());
             DrlgDrlgGrid.freeGrid(memPool, logicalRoomInfo.getPIndexY());
         }
+        logicalRoomInfo.clearCoordListCells();
         
         // 释放坐标列表链表
         D2RoomCoordListStrc pRoomCoordList = logicalRoomInfo.getPCoordList();
@@ -81,24 +82,12 @@ public class DrlgDrlgLogic {
         logicalRoomInfo.setNLists(0);
         drlgRoom.setLogicalRoomInfo(logicalRoomInfo);
         
-        // 2. 处理树木瓦片（MAPTILE_TREES = 0x000004）
-        // 注意：C++ 中使用 pTileGrid->pTiles.pWallTiles 数组
-        // Java 中需要从 pMapLinks 中遍历
-        if (drlgRoom.getTileGrid() != null && drlgRoom.getTileGrid().getPMapLinks() != null) {
-            D2DrlgTileLinkStrc pTileLink = drlgRoom.getTileGrid().getPMapLinks();
-            while (pTileLink != null) {
-                if (!pTileLink.isBFloor()) {
-                    D2DrlgTileDataStrc pTileData = pTileLink.getPMapTile();
-                    while (pTileData != null) {
-                        // 检查是否为树木瓦片且没有层信息
-                        if ((pTileData.getDwFlags() & 0x000004) != 0 && !hasMapTileLayer(pTileData.getDwFlags())) {
-                            DrlgDrlgGrid.alterGridFlag(pWallGrid, pTileData.getNPosX(), pTileData.getNPosY(), 8, 
-                                    DrlgDrlgGrid.FlagOperation.OR);
-                        }
-                        pTileData = pTileData.getUnk0x20();
-                    }
-                }
-                pTileLink = pTileLink.getPNext();
+        // 2. Native iterates the materialized wall array, not map-link chains.
+        for (D2DrlgTileDataStrc tile : wallTiles(drlgRoom)) {
+            if (tile == null) continue;
+            if ((tile.getDwFlags() & 0x000004) != 0 && !hasMapTileLayer(tile.getDwFlags())) {
+                DrlgDrlgGrid.alterGridFlag(pWallGrid, tile.getNPosX(), tile.getNPosY(), 8,
+                        DrlgDrlgGrid.FlagOperation.OR);
             }
         }
         
@@ -125,22 +114,11 @@ public class DrlgDrlgLogic {
         DrlgDrlgGrid.fillGrid(pDrlgGrid, nWidth, nHeight, nCellPositions, nCellFlags);
         
         // 处理当前房间的墙壁瓦片（第1层但不是屋顶且不是对象墙壁）
-        if (drlgRoom.getTileGrid() != null && drlgRoom.getTileGrid().getPMapLinks() != null) {
-            D2DrlgTileLinkStrc pTileLink = drlgRoom.getTileGrid().getPMapLinks();
-            while (pTileLink != null) {
-                if (!pTileLink.isBFloor()) {
-                    D2DrlgTileDataStrc pTileData = pTileLink.getPMapTile();
-                    while (pTileData != null) {
-                        if (getMapTileLayer(pTileData.getDwFlags()) == 1 
-                                && pTileData.getNTileType() != DrlgRoomTile.TILETYPE_ROOF
-                                && (pTileData.getDwFlags() & 0x000800) == 0) { // MAPTILE_OBJECT_WALL
-                            DrlgDrlgGrid.alterGridFlag(pDrlgGrid, pTileData.getNPosX(), pTileData.getNPosY(), 1, 
-                                    DrlgDrlgGrid.FlagOperation.OR);
-                        }
-                        pTileData = pTileData.getUnk0x20();
-                    }
-                }
-                pTileLink = pTileLink.getPNext();
+        for (D2DrlgTileDataStrc tile : wallTiles(drlgRoom)) {
+            if (tile == null) continue;
+            if (checkLayer1ButNotWallObject(tile)) {
+                DrlgDrlgGrid.alterGridFlag(pDrlgGrid, tile.getNPosX(), tile.getNPosY(), 1,
+                        DrlgDrlgGrid.FlagOperation.OR);
             }
         }
         
@@ -206,27 +184,8 @@ public class DrlgDrlgLogic {
         // 7. 计算坐标列表数量并分配
         logicalRoomInfo.setNLists(tDRLGLogicUnkStrc.getField_18() - nLists + 1);
         
-        // 分配坐标列表数组
-        int nCoordLists = logicalRoomInfo.getNLists();
-        if (nCoordLists > 0) {
-            // 注意：C++ 中使用数组，Java 中使用链表
-            // 这里先分配第一个节点，后续在 AssignCoordListsForGrids 中分配
-            D2RoomCoordListStrc[] pCoordListArray = new D2RoomCoordListStrc[nCoordLists];
-            for (int i = 0; i < nCoordLists; ++i) {
-                pCoordListArray[i] = D2Pool.callocStrcPool(memPool, D2RoomCoordListStrc.class);
-                if (pCoordListArray[i] == null) {
-                    pCoordListArray[i] = new D2RoomCoordListStrc();
-                }
-            }
-            // 将数组转换为链表
-            if (nCoordLists > 0) {
-                logicalRoomInfo.setPCoordList(pCoordListArray[0]);
-                for (int i = 0; i < nCoordLists - 1; ++i) {
-                    pCoordListArray[i].setPNext(pCoordListArray[i + 1]);
-                }
-                pCoordListArray[nCoordLists - 1].setPNext(null);
-            }
-        }
+        // Java nodes are allocated while their rectangles are discovered.
+        logicalRoomInfo.setPCoordList(null);
         
         drlgRoom.getLevel().setCoordLists(drlgRoom.getLevel().getCoordLists() + logicalRoomInfo.getNLists());
         
@@ -264,38 +223,9 @@ public class DrlgDrlgLogic {
         if ((logicalRoomInfo.getDwFlags() & DRLGLOGIC_ROOMINFO_HAS_COORD_LIST) != 0) {
             return logicalRoomInfo.getPCoordList();
         } else {
-            // 从索引网格中获取坐标列表指针
-            // 注意：C++ 中这里返回的是指针，Java 中需要从索引网格中查找
             int relX = x / 5 - drlgRoom.getNTileXPos();
             int relY = y / 5 - drlgRoom.getNTileYPos();
-            
-            // 从 pIndexY 网格中获取坐标列表指针（在 C++ 中直接返回指针值）
-            // Java 中需要遍历坐标列表来查找
-            int nIndex = DrlgDrlgGrid.getGridEntry(logicalRoomInfo.getPIndexY(), relX, relY);
-            if (nIndex == 0) {
-                return null;
-            }
-            
-            // 如果 nIndex 是一个有效的索引值，遍历坐标列表查找
-            // 注意：在 C++ 中，pIndexY 存储的是指针值，Java 中需要转换为索引
-            // 这里使用简化的实现，实际需要根据具体情况调整
-            D2RoomCoordListStrc pCoordList = logicalRoomInfo.getPCoordList();
-            while (pCoordList != null) {
-                // 检查坐标是否在坐标列表的范围内
-                D2DrlgCoord coord1 = pCoordList.getPBox(0);
-                D2DrlgCoord coord2 = pCoordList.getPBox(1);
-                if (coord1 != null && coord2 != null) {
-                    int tileX = x / 5;
-                    int tileY = y / 5;
-                    if (tileX >= coord1.getNTileXPos() && tileX <= coord2.getNTileXPos()
-                            && tileY >= coord1.getNTileYPos() && tileY <= coord2.getNTileYPos()) {
-                        return pCoordList;
-                    }
-                }
-                pCoordList = pCoordList.getPNext();
-            }
-            
-            return null;
+            return logicalRoomInfo.getCoordListCell(relX, relY);
         }
     }
     
@@ -313,6 +243,7 @@ public class DrlgDrlgLogic {
      * 获取房间坐标列表
      */
     public static D2RoomCoordListStrc getRoomCoordList(D2DrlgRoom drlgRoom) {
+        if (drlgRoom == null) return null;
         D2DrlgLogicalRoomInfo logicalRoomInfo = drlgRoom.getLogicalRoomInfo();
         if (logicalRoomInfo == null) {
             return null;
@@ -324,115 +255,29 @@ public class DrlgDrlgLogic {
      * D2Common.0x6FD76F90
      * 分配坐标列表
      * 
-     * 功能：
-     * 1. 遍历墙壁网格，找到所有墙壁区域
-     * 2. 为每个墙壁区域分配一个坐标列表节点
-     * 3. 将坐标列表节点链接到逻辑房间信息
+     * Native non-logical rooms receive one coordinate list covering the room.
      */
     public static void allocCoordLists(D2DrlgRoom drlgRoom) {
         if (drlgRoom == null) {
             return;
         }
         
-        D2DrlgLogicalRoomInfo logicalRoomInfo = drlgRoom.getLogicalRoomInfo();
-        if (logicalRoomInfo == null || !logicalRoomInfo.hasGridCells()) {
-            return;
-        }
-        
         Object memPool = drlgRoom.getLevel().getDrlg().getMempool();
-        D2DrlgCoord drlgCoord = drlgRoom.getDrlgCoord();
-        
-        // 获取墙壁网格（从房间的 tileGrid 中获取，或使用传入的网格）
-        // 注意：这里需要从房间的网格中获取墙壁信息
-        // 由于函数签名中没有传入墙壁网格，我们需要从其他地方获取
-        // 暂时使用逻辑：遍历瓦片链接，找到所有墙壁瓦片，然后分配坐标列表
-        
-        // 统计需要分配的坐标列表数量
-        int nLists = 0;
-        if (drlgRoom.getTileGrid() != null && drlgRoom.getTileGrid().getPMapLinks() != null) {
-            D2DrlgTileLinkStrc pTileLink = drlgRoom.getTileGrid().getPMapLinks();
-            while (pTileLink != null) {
-                if (!pTileLink.isBFloor()) {
-                    D2DrlgTileDataStrc pTileData = pTileLink.getPMapTile();
-                    // 统计连续的墙壁区域
-                    // 简化实现：每个墙壁瓦片链接作为一个列表
-                    if (pTileData != null) {
-                        nLists++;
-                    }
-                }
-                pTileLink = pTileLink.getPNext();
-            }
-        }
-        
-        if (nLists == 0) {
-            return;
-        }
-        
-        // 分配坐标列表节点
-        D2RoomCoordListStrc pFirstCoordList = null;
-        D2RoomCoordListStrc pLastCoordList = null;
-        
-        if (drlgRoom.getTileGrid() != null && drlgRoom.getTileGrid().getPMapLinks() != null) {
-            D2DrlgTileLinkStrc pTileLink = drlgRoom.getTileGrid().getPMapLinks();
-            int nIndex = 0;
-            
-            while (pTileLink != null) {
-                if (!pTileLink.isBFloor()) {
-                    D2DrlgTileDataStrc pTileData = pTileLink.getPMapTile();
-                    if (pTileData != null) {
-                        // 分配新的坐标列表节点
-                        D2RoomCoordListStrc pCoordList = D2Pool.callocStrcPool(memPool, D2RoomCoordListStrc.class);
-                        if (pCoordList == null) {
-                            pCoordList = new D2RoomCoordListStrc();
-                        }
-                        
-                        // 初始化坐标列表节点
-                        pCoordList.setBNode(false);
-                        pCoordList.setBRoomActive(false);
-                        pCoordList.setNIndex(nIndex);
-                        pCoordList.setPNext(null);
-                        
-                        // 计算坐标框（使用第一个和最后一个瓦片的坐标）
-                        D2DrlgTileDataStrc pFirstTile = pTileData;
-                        D2DrlgTileDataStrc pLastTile = pTileData;
-                        while (pLastTile.getUnk0x20() != null) {
-                            pLastTile = pLastTile.getUnk0x20();
-                        }
-                        
-                        // 设置坐标框
-                        D2DrlgCoord coord1 = new D2DrlgCoord();
-                        coord1.setNTileXPos(drlgCoord.getNTileXPos() + pFirstTile.getNPosX());
-                        coord1.setNTileYPos(drlgCoord.getNTileYPos() + pFirstTile.getNPosY());
-                        coord1.setNTileWidth(1);
-                        coord1.setNTileHeight(1);
-                        pCoordList.setPBox(0, coord1);
-                        
-                        D2DrlgCoord coord2 = new D2DrlgCoord();
-                        coord2.setNTileXPos(drlgCoord.getNTileXPos() + pLastTile.getNPosX());
-                        coord2.setNTileYPos(drlgCoord.getNTileYPos() + pLastTile.getNPosY());
-                        coord2.setNTileWidth(1);
-                        coord2.setNTileHeight(1);
-                        pCoordList.setPBox(1, coord2);
-                        
-                        // 链接到链表
-                        if (pFirstCoordList == null) {
-                            pFirstCoordList = pCoordList;
-                            pLastCoordList = pCoordList;
-                        } else {
-                            pLastCoordList.setPNext(pCoordList);
-                            pLastCoordList = pCoordList;
-                        }
-                        
-                        nIndex++;
-                    }
-                }
-                pTileLink = pTileLink.getPNext();
-            }
-        }
-        
-        // 设置逻辑房间信息的坐标列表
-        logicalRoomInfo.setPCoordList(pFirstCoordList);
-        logicalRoomInfo.setNLists(nLists);
+        D2DrlgLogicalRoomInfo logicalRoomInfo =
+                D2Pool.callocStrcPool(memPool, D2DrlgLogicalRoomInfo.class);
+        if (logicalRoomInfo == null) logicalRoomInfo = new D2DrlgLogicalRoomInfo();
+        logicalRoomInfo.setHasCoordList(true);
+        logicalRoomInfo.setNLists(1);
+        drlgRoom.setLogicalRoomInfo(logicalRoomInfo);
+        drlgRoom.getLevel().setCoordLists(1);
+
+        D2RoomCoordListStrc list =
+                D2Pool.callocStrcPool(memPool, D2RoomCoordListStrc.class);
+        if (list == null) list = new D2RoomCoordListStrc();
+        list.setNIndex(1);
+        setBox(list.getPBox(0), drlgRoom);
+        setBox(list.getPBox(1), drlgRoom);
+        logicalRoomInfo.setPCoordList(list);
     }
     
     /**
@@ -461,6 +306,7 @@ public class DrlgDrlgLogic {
         
         int nWidth = drlgRoom.getNTileWidth() + 1;
         int nHeight = drlgRoom.getNTileHeight() + 1;
+        pDrlgCoordList.initializeCoordListCells(nWidth, nHeight);
         
         // 2. 遍历网格单元格
         for (int nY = 0; nY < nHeight; ++nY) {
@@ -522,11 +368,9 @@ public class DrlgDrlgLogic {
                     // 这里使用一个映射来存储对象引用，或者使用索引
                     for (int j = coord0.getNTileYPos(); j < coord0.getNTileHeight(); ++j) {
                         for (int i = coord0.getNTileXPos(); i < coord0.getNTileWidth(); ++i) {
-                            // 在 Java 中，我们无法直接存储对象引用到 int 网格中
-                            // 需要使用一个辅助映射或者使用对象的 hashCode
-                            // 这里使用 hashCode 作为临时方案（注意：这不是完美的，但可以工作）
-                            int objHash = System.identityHashCode(pRoomCoordList);
-                            DrlgDrlgGrid.alterGridFlag(pDrlgCoordList.getPIndexY(), i, j, objHash, 
+                            pDrlgCoordList.setCoordListCell(i, j, pRoomCoordList);
+                            DrlgDrlgGrid.alterGridFlag(pDrlgCoordList.getPIndexY(), i, j,
+                                    pRoomCoordList.getNIndex(),
                                     DrlgDrlgGrid.FlagOperation.OVERWRITE);
                         }
                     }
@@ -638,8 +482,7 @@ public class DrlgDrlgLogic {
         if (nLayer == 1) {
             // 检查不是屋顶类型
             if (pTileData.getNTileType() != DrlgRoomTile.TILETYPE_ROOF) {
-                // 检查不是对象墙壁（MAPTILE_OBJECT_WALL = 0x20000000）
-                return (pTileData.getDwFlags() & 0x20000000) == 0;
+                return (pTileData.getDwFlags() & 0x000800) == 0;
             }
         }
         
@@ -654,10 +497,7 @@ public class DrlgDrlgLogic {
      * @return 瓦片层（0-3）
      */
     private static int getMapTileLayer(int dwFlags) {
-        // 从 dwFlags 中提取层信息（通常在第 26-27 位）
-        // 根据 C++ 实现，层信息可能存储在不同的位
-        // 这里使用简化的实现，实际需要根据 C++ 源码确定
-        return (dwFlags >> 26) & 0x03;
+        return ((dwFlags & 0x01C000) >>> 14) - 1;
     }
     
     /**
@@ -668,9 +508,7 @@ public class DrlgDrlgLogic {
      * @return 如果有层信息返回 true，否则返回 false
      */
     private static boolean hasMapTileLayer(int dwFlags) {
-        // 检查是否有层信息（通常通过检查特定位）
-        // 这里使用简化的实现，实际需要根据 C++ 源码确定
-        return (dwFlags & 0x0C000000) != 0;
+        return (dwFlags & 0x01C000) != 0;
     }
     
     /**
@@ -909,5 +747,24 @@ public class DrlgDrlgLogic {
                 }
             }
         }
+    }
+
+    private static D2DrlgTileDataStrc[] wallTiles(D2DrlgRoom room) {
+        D2DrlgRoomTilesStrc tiles = room != null && room.getTileGrid() != null
+                ? room.getTileGrid().getPTiles() : null;
+        if (tiles == null || tiles.getPWallTiles() == null || tiles.getNWalls() <= 0) {
+            return new D2DrlgTileDataStrc[0];
+        }
+        int count = Math.min(tiles.getNWalls(), tiles.getPWallTiles().length);
+        D2DrlgTileDataStrc[] walls = new D2DrlgTileDataStrc[count];
+        System.arraycopy(tiles.getPWallTiles(), 0, walls, 0, count);
+        return walls;
+    }
+
+    private static void setBox(D2DrlgCoord box, D2DrlgRoom room) {
+        box.setNPosX(room.getNTileXPos());
+        box.setNPosY(room.getNTileYPos());
+        box.setNWidth(room.getNTileXPos() + room.getNTileWidth());
+        box.setNHeight(room.getNTileYPos() + room.getNTileHeight());
     }
 }

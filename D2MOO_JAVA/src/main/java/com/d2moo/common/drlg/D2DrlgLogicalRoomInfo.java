@@ -10,6 +10,9 @@ public class D2DrlgLogicalRoomInfo {
     private D2DrlgGridStrc pIndexX;         // 0x08 X 索引网格
     private D2DrlgGridStrc pIndexY;         // 0x1C Y 索引网格
     private D2RoomCoordListStrc pCoordList; // 0x30 坐标列表链表
+    // Java replacement for native pointers stored in pIndexY cells.
+    private D2RoomCoordListStrc[] coordListCells;
+    private int coordListCellsWidth;
     
     // 标志常量
     public static final int DRLGLOGIC_ROOMINFO_HAS_COORD_LIST = 0x1;
@@ -85,5 +88,33 @@ public class D2DrlgLogicalRoomInfo {
     
     public void setPCoordList(D2RoomCoordListStrc pCoordList) {
         this.pCoordList = pCoordList;
+    }
+
+    public void initializeCoordListCells(int width, int height) {
+        coordListCellsWidth = Math.max(0, width);
+        coordListCells = width > 0 && height > 0
+                ? new D2RoomCoordListStrc[width * height] : null;
+    }
+
+    public void setCoordListCell(int x, int y, D2RoomCoordListStrc coordList) {
+        int index = coordListCellIndex(x, y);
+        if (index >= 0) coordListCells[index] = coordList;
+    }
+
+    public D2RoomCoordListStrc getCoordListCell(int x, int y) {
+        int index = coordListCellIndex(x, y);
+        return index >= 0 ? coordListCells[index] : null;
+    }
+
+    public void clearCoordListCells() {
+        coordListCells = null;
+        coordListCellsWidth = 0;
+    }
+
+    private int coordListCellIndex(int x, int y) {
+        if (coordListCells == null || coordListCellsWidth <= 0 || x < 0 || y < 0
+                || x >= coordListCellsWidth) return -1;
+        int index = y * coordListCellsWidth + x;
+        return index < coordListCells.length ? index : -1;
     }
 }
