@@ -5,6 +5,7 @@ import com.d2moo.common.drlg.D2ActiveRoom;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgCoords;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
+import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgRoomTilesStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
@@ -298,6 +299,10 @@ public class Dungeon {
         return room != null && DrlgDrlgRoom.checkLOSDraw(room.getPDrlgRoom());
     }
 
+    public static Object getEnvironmentFromAct(D2DrlgAct act) {
+        return act != null ? act.getEnvironment() : null;
+    }
+
     public static D2DrlgStrc getDrlgFromAct(D2DrlgAct act) {
         return act != null ? act.getDrlg() : null;
     }
@@ -323,6 +328,49 @@ public class Dungeon {
 
     public static int getTownLevelIdFromAct(D2DrlgAct act) {
         return act != null ? act.getTownId() : 0;
+    }
+
+    /** D2Common #10087: returns the native raw 0x80 outdoor-room flag. */
+    public static int getOutdoorRoomFlag80(D2ActiveRoom room) {
+        return room != null
+                ? DrlgDrlgRoom.getOutdoorRoomFlag80(room.getPDrlgRoom())
+                : 0;
+    }
+
+    /** D2Common #10090. The native query initializes an absent level as a side effect. */
+    public static int getNumberOfPopulatedRoomsInLevel(D2DrlgAct act, int levelId) {
+        return act != null && act.getDrlg() != null
+                ? DrlgDrlg.getNumberOfPopulatedRoomsInLevel(act.getDrlg(), levelId)
+                : 0;
+    }
+
+    /**
+     * D2Common #10025 value-copy form. Native exposes 19 contiguous integers:
+     * X coordinates [0..8], Y coordinates [9..17], then the populated count [18].
+     */
+    public static int[] getWarpCoordinatesFromRoom(D2ActiveRoom room) {
+        D2DrlgRoom drlgRoom = room != null ? room.getPDrlgRoom() : null;
+        D2DrlgLevel level = drlgRoom != null ? drlgRoom.getLevel() : null;
+        if (level == null) return null;
+
+        int[] coordinates = new int[19];
+        int[] warpX = level.getNRoomCenterWarpX();
+        int[] warpY = level.getNRoomCenterWarpY();
+        if (warpX != null) {
+            System.arraycopy(warpX, 0, coordinates, 0, Math.min(9, warpX.length));
+        }
+        if (warpY != null) {
+            System.arraycopy(warpY, 0, coordinates, 9, Math.min(9, warpY.length));
+        }
+        coordinates[18] = level.getNRoomCoords();
+        return coordinates;
+    }
+
+    /** D2Common #10047. */
+    public static int getHoradricStaffTombLevelId(D2DrlgAct act) {
+        return act != null
+                ? DrlgDrlg.getHoradricStaffTombLevelId(act.getDrlg())
+                : 0;
     }
 
     /** D2Common #10095: resolve a logical coordinate-list index across active neighbors. */

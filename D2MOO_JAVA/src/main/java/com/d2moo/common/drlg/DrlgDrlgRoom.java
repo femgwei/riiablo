@@ -356,6 +356,17 @@ public class DrlgDrlgRoom {
                 && (drlgRoom.getFlags() & D2DrlgRoomFlags.NO_LOS_DRAW) != 0;
     }
 
+    /** D2Common.0x6FD779F0: preserves the native type check and raw flag value. */
+    public static int getOutdoorRoomFlag80(D2DrlgRoom drlgRoom) {
+        if (drlgRoom == null || drlgRoom.getType() != D2DrlgTypes.DRLGTYPE_MAZE
+                || !(drlgRoom.getMazeOrOutdoor() instanceof D2DrlgOutdoorRoomStrc)) {
+            return 0;
+        }
+        D2DrlgOutdoorRoomStrc outdoorRoom =
+                (D2DrlgOutdoorRoomStrc) drlgRoom.getMazeOrOutdoor();
+        return outdoorRoom.getDwFlags() & 0x80;
+    }
+
     /** D2Common.0x6FD77A20. */
     public static int getWarpDestinationLevel(D2DrlgRoom drlgRoom, int sourceLevel) {
         if (drlgRoom == null) {
