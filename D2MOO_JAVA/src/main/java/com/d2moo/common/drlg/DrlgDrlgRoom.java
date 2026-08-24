@@ -414,6 +414,23 @@ public class DrlgDrlgRoom {
         }
         return activeCount;
     }
+
+    /** D2Common.0x6FD781A0. */
+    public static void getRGBIntensityFromRoomEx(D2DrlgRoom drlgRoom,
+            byte[] intensity, byte[] red, byte[] green, byte[] blue) {
+        D2LevelDefBin levelDef = drlgRoom != null && drlgRoom.getLevel() != null
+                ? DataTbls.getLevelDefRecord(drlgRoom.getLevel().getLevelId()) : null;
+        setByteOutput(intensity, levelDef != null ? levelDef.getNIntensity() : 0);
+        setByteOutput(red, levelDef != null ? levelDef.getNRed() : 0);
+        setByteOutput(green, levelDef != null ? levelDef.getNGreen() : 0);
+        setByteOutput(blue, levelDef != null ? levelDef.getNBlue() : 0);
+    }
+
+    private static void setByteOutput(byte[] output, int value) {
+        if (output != null && output.length > 0) {
+            output[0] = (byte) value;
+        }
+    }
     
     /**
      * D2Common.0x6FD77AF0

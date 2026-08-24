@@ -3,10 +3,13 @@ package com.d2moo.common.dungeon;
 import com.d2moo.common.drlg.D2ActiveRoom;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgCoords;
+import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgRoomTilesStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
+import com.d2moo.common.drlg.D2DrlgTileDataStrc;
 import com.d2moo.common.drlg.D2LevelIds;
+import com.d2moo.common.drlg.D2PresetUnit;
 import com.d2moo.common.drlg.D2Seed;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgDrlgRoom;
@@ -24,6 +27,66 @@ import java.util.Arrays;
  * 当前实现提供基础框架和接口，实际逻辑需要后续实现
  */
 public class Dungeon {
+    public static Object getMemPoolFromAct(D2DrlgAct act) {
+        return act != null ? act.getPMemPool() : null;
+    }
+
+    /** Java array form of D2Common #10030. The backing native-order array is returned. */
+    public static D2DrlgTileDataStrc[] getFloorTilesFromRoom(
+            D2ActiveRoom room, int[] floorCount) {
+        D2DrlgRoomTilesStrc tiles = room != null ? room.getPRoomTiles() : null;
+        setCount(floorCount, tiles != null ? tiles.getNFloors() : 0);
+        return tiles != null ? tiles.getPFloorTiles() : null;
+    }
+
+    /** Java array form of D2Common #10031. The backing native-order array is returned. */
+    public static D2DrlgTileDataStrc[] getWallTilesFromRoom(
+            D2ActiveRoom room, int[] wallCount) {
+        D2DrlgRoomTilesStrc tiles = room != null ? room.getPRoomTiles() : null;
+        setCount(wallCount, tiles != null ? tiles.getNWalls() : 0);
+        return tiles != null ? tiles.getPWallTiles() : null;
+    }
+
+    /** Java array form of D2Common #10032. The backing native-order array is returned. */
+    public static D2DrlgTileDataStrc[] getRoofTilesFromRoom(
+            D2ActiveRoom room, int[] roofCount) {
+        D2DrlgRoomTilesStrc tiles = room != null ? room.getPRoomTiles() : null;
+        setCount(roofCount, tiles != null ? tiles.getNRoofs() : 0);
+        return tiles != null ? tiles.getPRoofTiles() : null;
+    }
+
+    public static D2DrlgTileDataStrc getTileDataFromAct(D2DrlgAct act) {
+        return act != null ? act.getTileData() : null;
+    }
+
+    public static D2PresetUnit getPresetUnitsFromRoom(D2ActiveRoom room) {
+        return room != null ? DrlgDrlgRoom.getPresetUnits(room.getPDrlgRoom()) : null;
+    }
+
+    public static D2DrlgGridStrc getCollisionGridFromRoom(D2ActiveRoom room) {
+        return room != null ? room.getPCollisionGrid() : null;
+    }
+
+    public static void setCollisionGridInRoom(
+            D2ActiveRoom room, D2DrlgGridStrc collisionGrid) {
+        if (room != null) {
+            room.setPCollisionGrid(collisionGrid);
+        }
+    }
+
+    public static void getRGBIntensityFromRoom(D2ActiveRoom room,
+            byte[] intensity, byte[] red, byte[] green, byte[] blue) {
+        DrlgDrlgRoom.getRGBIntensityFromRoomEx(
+                room != null ? room.getPDrlgRoom() : null,
+                intensity, red, green, blue);
+    }
+
+    private static void setCount(int[] output, int count) {
+        if (output != null && output.length > 0) {
+            output[0] = count;
+        }
+    }
+
     /** D2Common #10008 wrapper around DRLGWARP_ToggleRoomTilesEnableFlag. */
     public static void toggleRoomTilesEnableFlag(D2ActiveRoom room, boolean enabled) {
         if (room != null) {

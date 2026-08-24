@@ -16,8 +16,12 @@ public class D2DrlgAct {
     private boolean hasPendingRoomsUpdates;        // 0x20
     private boolean hasPendingRoomDeletions;       // 0x24
     private boolean hasPendingUnitListUpdates;     // 0x28
-    private Object tileData;                       // 0x2C D2DrlgTileDataStrc
+    private D2DrlgTileDataStrc tileData;           // 0x2C embedded D2DrlgTileDataStrc
     private Object memPool;                        // 0x5C
+
+    public D2DrlgAct() {
+        tileData = new D2DrlgTileDataStrc();
+    }
     
     public byte getAct() { return act; }
     public void setAct(byte act) { this.act = act; }
@@ -52,8 +56,10 @@ public class D2DrlgAct {
     public boolean isHasPendingUnitListUpdates() { return hasPendingUnitListUpdates; }
     public void setHasPendingUnitListUpdates(boolean hasPendingUnitListUpdates) { this.hasPendingUnitListUpdates = hasPendingUnitListUpdates; }
     
-    public Object getTileData() { return tileData; }
-    public void setTileData(Object tileData) { this.tileData = tileData; }
+    public D2DrlgTileDataStrc getTileData() { return tileData; }
+    public void setTileData(D2DrlgTileDataStrc tileData) {
+        this.tileData = tileData != null ? tileData : new D2DrlgTileDataStrc();
+    }
     
     public Object getPMemPool() { return memPool; }
     public void setPMemPool(Object memPool) { this.memPool = memPool; }
