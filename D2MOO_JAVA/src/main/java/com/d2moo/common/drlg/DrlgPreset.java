@@ -2,6 +2,7 @@ package com.d2moo.common.drlg;
 
 import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.datatbls.D2LvlPrestTxt;
+import com.d2moo.common.d2cmp.D2Cmp;
 import com.d2moo.common.dungeon.Dungeon;
 import com.d2moo.common.seed.Seed;
 import com.d2moo.common.util.D2Log;
@@ -55,6 +56,7 @@ public class DrlgPreset {
                 addPresetUnitToDrlgMap(memPool, mazeMap, drlgRoom.getSeed());
             }
         }
+        initializePopsFromFile(mazeMap);
         
         // 处理硬编码的特殊单位
         if (mazeMap.isBInited()) {
@@ -927,6 +929,260 @@ public class DrlgPreset {
         } else {
             DrlgDrlgLogic.allocCoordLists(drlgRoom);
         }
+
+        collectTombStoneTileCoords(drlgRoom);
+    }
+
+    /** D2Common {@code DRLGPRESET_GetTombStoneTileCoords}. */
+    public static D2Coord[] getTombStoneTileCoords(
+            D2DrlgRoom drlgRoom, int[] tombStoneTileCount) {
+        if (drlgRoom == null || drlgRoom.getType() != D2DrlgTypes.DRLGTYPE_PRESET
+                || !(drlgRoom.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) {
+            setCount(tombStoneTileCount, 0);
+            return null;
+        }
+        D2DrlgPresetRoomStrc preset =
+                (D2DrlgPresetRoomStrc) drlgRoom.getMazeOrOutdoor();
+        setCount(tombStoneTileCount, preset.getNTombStoneTiles());
+        return preset.getPTombStoneTiles();
+    }
+
+    /** Native Burial Grounds scan, capped at the six allocated coordinates. */
+    static void collectTombStoneTileCoords(D2DrlgRoom drlgRoom) {
+        if (drlgRoom == null || drlgRoom.getLevel() == null
+                || drlgRoom.getLevel().getLevelId() != D2LevelIds.LEVEL_BURIALGROUNDS
+                || !(drlgRoom.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) {
+            return;
+        }
+        D2DrlgPresetRoomStrc preset =
+                (D2DrlgPresetRoomStrc) drlgRoom.getMazeOrOutdoor();
+        if (preset.getPTombStoneTiles() != null) return;
+
+        D2Coord[] tombStones = new D2Coord[6];
+        D2DrlgGridStrc walls = preset.getPWallGrid(0);
+        int count = 0;
+        for (int y = 0; y < drlgRoom.getNTileHeight() && count < tombStones.length; y++) {
+            for (int x = 0; x < drlgRoom.getNTileWidth() && count < tombStones.length; x++) {
+                D2C_PackedTileInformation tile = new D2C_PackedTileInformation(
+                        DrlgDrlgGrid.getGridEntry(walls, x, y));
+                if (tile.getNTileStyle() == 10
+                        && tile.getNTileSequence() >= 23
+                        && tile.getNTileSequence() <= 27) {
+                    tombStones[count++] = new D2Coord(
+                            5 * (drlgRoom.getNTileXPos() + x) + 2,
+                            5 * (drlgRoom.getNTileYPos() + y) + 2);
+                }
+            }
+        }
+        preset.setPTombStoneTiles(tombStones);
+        preset.setNTombStoneTiles(count);
+    }
+
+    /** Scans native pop markers from parsed DS1 wall/type layers. */
+    static void initializePopsFromFile(D2DrlgMapStrc map) {
+        if (map == null || map.getPFile() == null || map.getPLvlPrestTxtRecord() == null
+                || map.getPLvlPrestTxtRecord().getDwPops() <= 0 || map.getNPops() > 0) {
+            return;
+        }
+        int capacity = map.getPLvlPrestTxtRecord().getDwPops();
+        int[] indices = new int[capacity];
+        int[] subIndices = new int[capacity];
+        int[] orientations = new int[capacity];
+        D2DrlgCoord[] locations = new D2DrlgCoord[capacity];
+        int count = 0;
+        D2DrlgFileStrc file = map.getPFile();
+        int stride = file.getNWidth() + 1;
+
+        for (int layer = 0; layer < file.getNWallLayers(); layer++) {
+            int[] types = asIntLayer(file.getPTileTypeLayer(layer));
+            int[] walls = asIntLayer(file.getPWallLayer(layer));
+            if (types == null || walls == null) continue;
+            for (int y = 0; y < file.getNHeight(); y++) {
+                for (int x = 0; x < file.getNWidth(); x++) {
+                    int offset = y * stride + x;
+                    if (offset >= types.length || offset >= walls.length
+                            || (types[offset] != DrlgRoomTile.TILETYPE_WALL_RIGHT_EXIT
+                            && types[offset] != DrlgRoomTile.TILETYPE_WALL_LEFT_EXIT)) {
+                        continue;
+                    }
+                    int packed = walls[offset];
+                    int rawIndex = packed >>> 20 & 0x3F;
+                    if (rawIndex < 8 || rawIndex > 29) continue;
+                    int found = findPop(indices, count, rawIndex);
+                    if (found >= 0) {
+                        locations[found].setNWidth(x);
+                        locations[found].setNHeight(y);
+                    } else if (count < capacity) {
+                        indices[count] = rawIndex;
+                        subIndices[count] = packed >>> 8 & 0xFF;
+                        D2DrlgCoord location = new D2DrlgCoord();
+                        location.setNPosX(x);
+                        location.setNPosY(y);
+                        locations[count] = location;
+                        count++;
+                    }
+                }
+            }
+        }
+
+        D2DrlgCoord mapCoords = map.getPDrlgCoord();
+        for (int i = 0; i < count; i++) {
+            D2DrlgCoord location = locations[i];
+            int minX = Math.min(location.getNPosX(), location.getNWidth());
+            int maxX = Math.max(location.getNPosX(), location.getNWidth());
+            int minY = Math.min(location.getNPosY(), location.getNHeight());
+            int maxY = Math.max(location.getNPosY(), location.getNHeight());
+            location.setNPosX(minX + mapCoords.getNPosX());
+            location.setNPosY(minY + mapCoords.getNPosY());
+            location.setNWidth(maxX - minX + 1);
+            location.setNHeight(maxY - minY + 1);
+            indices[i] = (indices[i] >> 2) - 1;
+        }
+        map.setNPops(count);
+        map.setPPopsIndex(indices);
+        map.setPPopsSubIndex(subIndices);
+        map.setPPopsOrientation(orientations);
+        map.setPPopsLocation(locations);
+    }
+
+    /** D2Common {@code DRLGPRESET_UpdatePops}. Coordinates are subtiles. */
+    public static void updatePops(D2DrlgRoom drlgRoom, int x, int y, boolean otherRoom) {
+        updatePops(drlgRoom, x, y, otherRoom,
+                (int) (System.nanoTime() / 1_000_000L) + 500);
+    }
+
+    static void updatePops(
+            D2DrlgRoom drlgRoom, int x, int y, boolean otherRoom, int tick) {
+        if (drlgRoom == null) return;
+        D2DrlgMapStrc selectedMap = presetMap(drlgRoom);
+        int selectedIndex = 0;
+        if (selectedMap != null) {
+            initializePopsFromFile(selectedMap);
+            for (int i = 0; i < popCount(selectedMap); i++) {
+                D2DrlgCoord location = selectedMap.getPPopsLocation()[i];
+                int pad = selectedMap.getPLvlPrestTxtRecord().getDwPopPad();
+                if (DrlgDrlgRoom.areXYInsideCoordinates(
+                        coord(5 * location.getNPosX(), 5 * location.getNPosY(),
+                                pad + 5 * location.getNWidth(), pad + 5 * location.getNHeight()),
+                        x, y)) {
+                    selectedIndex = selectedMap.getPPopsIndex()[i];
+                    break;
+                }
+            }
+        }
+
+        boolean updated = false;
+        int nearCount = nearCount(drlgRoom);
+        for (int i = 0; i < nearCount; i++) {
+            D2DrlgRoom adjacent = drlgRoom.getPpRoomsNear()[i];
+            D2DrlgMapStrc map = presetMap(adjacent);
+            if (map == null || adjacent.getRoom() == null) continue;
+            initializePopsFromFile(map);
+            for (int pop = 0; pop < popCount(map); pop++) {
+                int orientation = map.getPPopsOrientation()[pop];
+                if (map == selectedMap && map.getPPopsIndex()[pop] == selectedIndex) {
+                    if (orientation == 0 || otherRoom) {
+                        togglePopsVisibility(adjacent, map.getPPopsSubIndex()[pop],
+                                map.getPPopsLocation()[pop], orientation == 0 ? tick : orientation, false);
+                        updated = true;
+                    }
+                } else if (orientation != 0) {
+                    togglePopsVisibility(adjacent, map.getPPopsSubIndex()[pop],
+                            map.getPPopsLocation()[pop], tick, true);
+                    updated = true;
+                }
+            }
+        }
+
+        if (!updated) return;
+        for (int i = 0; i < nearCount; i++) {
+            D2DrlgMapStrc map = presetMap(drlgRoom.getPpRoomsNear()[i]);
+            if (map == null) continue;
+            for (int pop = 0; pop < popCount(map); pop++) {
+                map.getPPopsOrientation()[pop] = map == selectedMap
+                        && map.getPPopsIndex()[pop] == selectedIndex ? tick : 0;
+            }
+        }
+    }
+
+    private static void togglePopsVisibility(D2DrlgRoom room, int subIndex,
+            D2DrlgCoord popLocation, int tick, boolean cellFlags) {
+        D2DrlgRoomTilesStrc tiles = room.getTileGrid() != null
+                ? room.getTileGrid().getPTiles() : null;
+        if (tiles == null || tiles.getPWallTiles() == null) return;
+        D2DrlgCoord area = coord(popLocation.getNPosX() - 1, popLocation.getNPosY() - 1,
+                popLocation.getNWidth() + 2, popLocation.getNHeight() + 2);
+        int count = Math.min(tiles.getNWalls(), tiles.getPWallTiles().length);
+        for (int i = 0; i < count; i++) {
+            D2DrlgTileDataStrc tile = tiles.getPWallTiles()[i];
+            if (tile == null || !DrlgDrlgRoom.areXYInsideCoordinates(area,
+                    room.getNTileXPos() + tile.getNPosX(),
+                    room.getNTileYPos() + tile.getNPosY())) continue;
+            if ((tile.getDwFlags() & 0x200) != 0) {
+                if (cellFlags) {
+                    tile.setUnk0x24(tile.getUnk0x24() | 4);
+                    tile.setUnk0x2C(tick);
+                } else {
+                    tile.setUnk0x24(tile.getUnk0x24() & ~4);
+                    tile.setDwFlags(tile.getDwFlags() & ~0x8);
+                }
+            } else if ((tile.getDwFlags() & 0x100) == 0
+                    && D2Cmp.getTileStyle(tile.getPTile()) == subIndex) {
+                tile.setUnk0x24(tile.getUnk0x24() | 2);
+                if (cellFlags) {
+                    tile.setNGreen((byte) 0);
+                    tile.setNBlue((byte) 0xFF);
+                    tile.setUnk0x2C(tile.getNRed() != 0
+                            ? tick - 500 * (tile.getNRed() & 0xFF) / 255 : tick);
+                } else {
+                    tile.setNGreen((byte) 0xFF);
+                    tile.setNBlue((byte) 0);
+                    tile.setUnk0x2C((tile.getNRed() & 0xFF) == 255
+                            ? tick : tick + 500 * ((tile.getNRed() & 0xFF) - 255) / 255);
+                }
+            }
+        }
+    }
+
+    private static D2DrlgMapStrc presetMap(D2DrlgRoom room) {
+        if (room == null || room.getType() != D2DrlgTypes.DRLGTYPE_PRESET
+                || !(room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) return null;
+        return ((D2DrlgPresetRoomStrc) room.getMazeOrOutdoor()).getPMap();
+    }
+
+    private static int popCount(D2DrlgMapStrc map) {
+        if (map == null || map.getPPopsIndex() == null || map.getPPopsSubIndex() == null
+                || map.getPPopsOrientation() == null || map.getPPopsLocation() == null) return 0;
+        return Math.min(map.getNPops(), Math.min(map.getPPopsIndex().length,
+                Math.min(map.getPPopsSubIndex().length,
+                        Math.min(map.getPPopsOrientation().length, map.getPPopsLocation().length))));
+    }
+
+    private static int nearCount(D2DrlgRoom room) {
+        return room.getPpRoomsNear() != null
+                ? Math.min(room.getNRoomsNear(), room.getPpRoomsNear().length) : 0;
+    }
+
+    private static int findPop(int[] indices, int count, int index) {
+        for (int i = 0; i < count; i++) if (indices[i] == index) return i;
+        return -1;
+    }
+
+    private static int[] asIntLayer(Object layer) {
+        return layer instanceof int[] ? (int[]) layer : null;
+    }
+
+    private static D2DrlgCoord coord(int x, int y, int width, int height) {
+        D2DrlgCoord coord = new D2DrlgCoord();
+        coord.setNPosX(x);
+        coord.setNPosY(y);
+        coord.setNWidth(width);
+        coord.setNHeight(height);
+        return coord;
+    }
+
+    private static void setCount(int[] output, int count) {
+        if (output != null && output.length > 0) output[0] = count;
     }
     
     /**

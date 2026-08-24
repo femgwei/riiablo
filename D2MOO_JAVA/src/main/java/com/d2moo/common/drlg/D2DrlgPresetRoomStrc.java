@@ -14,7 +14,7 @@ public class D2DrlgPresetRoomStrc {
     private D2DrlgGridStrc[] pFloorGrid;        // 0xB0 地板网格数组 [2]
     private D2DrlgGridStrc pCellGrid;           // 0xD8 单元格网格
     private D2DrlgGridStrc pMazeGrid;           // 0xEC 迷宫网格（指针）
-    private Object pTombStoneTiles;             // 0xF0 D2CoordStrc* 墓碑瓦片
+    private D2Coord[] pTombStoneTiles;          // 0xF0 D2CoordStrc* 墓碑瓦片
     private int nTombStoneTiles;                // 0xF4 墓碑瓦片数量
     
     public D2DrlgPresetRoomStrc() {
@@ -150,12 +150,15 @@ public class D2DrlgPresetRoomStrc {
         this.pMazeGrid = pMazeGrid;
     }
     
-    public Object getPTombStoneTiles() {
+    public D2Coord[] getPTombStoneTiles() {
         return pTombStoneTiles;
     }
     
-    public void setPTombStoneTiles(Object pTombStoneTiles) {
+    public void setPTombStoneTiles(D2Coord[] pTombStoneTiles) {
         this.pTombStoneTiles = pTombStoneTiles;
+        if (nTombStoneTiles > (pTombStoneTiles != null ? pTombStoneTiles.length : 0)) {
+            nTombStoneTiles = pTombStoneTiles != null ? pTombStoneTiles.length : 0;
+        }
     }
     
     public int getNTombStoneTiles() {
@@ -163,6 +166,7 @@ public class D2DrlgPresetRoomStrc {
     }
     
     public void setNTombStoneTiles(int nTombStoneTiles) {
-        this.nTombStoneTiles = nTombStoneTiles;
+        this.nTombStoneTiles = Math.max(0, Math.min(nTombStoneTiles,
+                pTombStoneTiles != null ? pTombStoneTiles.length : 0));
     }
 }

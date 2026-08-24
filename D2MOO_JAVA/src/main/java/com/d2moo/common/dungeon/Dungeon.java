@@ -7,6 +7,7 @@ import com.d2moo.common.drlg.D2ActiveRoom;
 import com.d2moo.common.drlg.D2ActCallback;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgCoords;
+import com.d2moo.common.drlg.D2Coord;
 import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgFlags;
 import com.d2moo.common.drlg.D2DrlgLevel;
@@ -24,6 +25,7 @@ import com.d2moo.common.drlg.DrlgDrlgAnim;
 import com.d2moo.common.drlg.DrlgDrlgLogic;
 import com.d2moo.common.drlg.DrlgDrlgRoom;
 import com.d2moo.common.drlg.DrlgDrlgWarp;
+import com.d2moo.common.drlg.DrlgPreset;
 import com.d2moo.common.seed.Seed;
 import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2Pool;
@@ -306,6 +308,18 @@ public class Dungeon {
         if (room != null) {
             DrlgDrlgWarp.updateWarpRoomDeselect(room.getPDrlgRoom(), levelId);
         }
+    }
+
+    /** D2Common #10093. Coordinates are native subtile coordinates. */
+    public static void updatePops(D2ActiveRoom room, int x, int y, boolean otherRoom) {
+        if (room != null) DrlgPreset.updatePops(room.getPDrlgRoom(), x, y, otherRoom);
+    }
+
+    /** D2Common #10094. The native backing coordinate array is returned. */
+    public static D2Coord[] getTombStoneTileCoords(
+            D2ActiveRoom room, int[] tombStoneTileCount) {
+        return DrlgPreset.getTombStoneTileCoords(
+                room != null ? room.getPDrlgRoom() : null, tombStoneTileCount);
     }
     
     /**
