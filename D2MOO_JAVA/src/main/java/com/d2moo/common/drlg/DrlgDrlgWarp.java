@@ -3,6 +3,7 @@ package com.d2moo.common.drlg;
 import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.datatbls.D2LevelDefBin;
 import com.d2moo.common.collision.D2Collision;
+import com.d2moo.common.collision.D2CommonCollision;
 import com.d2moo.common.dungeon.Dungeon;
 
 import java.util.Arrays;
@@ -113,29 +114,13 @@ public class DrlgDrlgWarp {
             for (int dy = -radius; dy <= radius; dy++) for (int dx = -radius; dx <= radius; dx++) {
                 if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
                 int cx = x[0] + dx, cy = y[0] + dy;
-                if (free(room.getPCollisionGrid(), room, cx, cy, unitSize, mask)) { x[0] = cx; y[0] = cy; return; }
+                if (D2CommonCollision.checkMaskWithSize(room, cx, cy, unitSize, mask) == 0) {
+                    x[0] = cx;
+                    y[0] = cy;
+                    return;
+                }
             }
         }
-    }
-    private static boolean free(D2DrlgGridStrc grid, D2ActiveRoom room, int cx, int cy, int size, int mask) {
-        int width = size == D2Collision.UNIT_SIZE_BIG ? 3 : 1;
-        int height = width;
-        int left = cx - width / 2, bottom = cy - height / 2;
-        int minX = room.getCoords().getNSubtileX();
-        int minY = room.getCoords().getNSubtileY();
-        int maxX = minX + room.getCoords().getNSubtileWidth();
-        int maxY = minY + room.getCoords().getNSubtileHeight();
-        if (size == D2Collision.UNIT_SIZE_SMALL
-                && (cx - 1 < minX || cy - 1 < minY || cx + 1 >= maxX || cy + 1 >= maxY)) return false;
-        if (left < minX || bottom < minY || left + width > maxX || bottom + height > maxY) return false;
-        if (size == D2Collision.UNIT_SIZE_SMALL) {
-            int[][] p = {{0,0},{-1,0},{1,0},{0,-1},{0,1}};
-            for (int[] q : p) if ((grid.getFlag(cx + q[0] - room.getCoords().getNSubtileX(), cy + q[1] - room.getCoords().getNSubtileY()) & mask) != 0) return false;
-            return true;
-        }
-        for (int yy = bottom; yy < bottom + height; yy++) for (int xx = left; xx < left + width; xx++)
-            if ((grid.getFlag(xx - room.getCoords().getNSubtileX(), yy - room.getCoords().getNSubtileY()) & mask) != 0) return false;
-        return true;
     }
     
     /**

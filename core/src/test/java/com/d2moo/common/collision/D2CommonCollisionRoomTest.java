@@ -71,6 +71,9 @@ class D2CommonCollisionRoomTest {
         D2CommonCollision.checkMask(first, 5, 2, D2Collision.COLLIDE_WALL));
     assertEquals(D2Collision.COLLIDE_WALL,
         D2CommonCollision.checkMaskWithSizeXY(first, 4, 2, 3, 1, D2Collision.COLLIDE_WALL));
+    assertEquals(D2Collision.COLLIDE_WALL,
+        D2CommonCollision.checkMaskWithSize(
+            first, 4, 2, D2Collision.UNIT_SIZE_SMALL, D2Collision.COLLIDE_MASK_SPAWN));
 
     D2CommonCollision.setMask(first, 5, 3, D2Collision.COLLIDE_OBJECT);
     assertEquals(D2Collision.COLLIDE_OBJECT, second.getPCollisionGrid().getFlag(0, 3));
