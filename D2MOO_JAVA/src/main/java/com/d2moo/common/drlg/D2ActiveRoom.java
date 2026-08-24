@@ -8,15 +8,18 @@ package com.d2moo.common.drlg;
  * D2DrlgRoom 是关卡生成时使用的房间对象，包含房间的生成信息
  */
 public class D2ActiveRoom {
+    private final D2DrlgCoords coords = new D2DrlgCoords();
+    private D2DrlgRoomTilesStrc pRoomTiles;
+    private D2ActiveRoom[] ppRoomList = new D2ActiveRoom[0];
+    private int nNumRooms;
     private D2DrlgRoom pDrlgRoom;        // 关联的 Drlg 房间对象
+    private D2Seed seed = new D2Seed();
+    private D2DrlgAct act;
+    private D2ActiveRoom roomNext;
     private int nRoomId;                 // 房间ID
     private int dwFlags;                  // 房间标志
     private Object pUnits;               // 单位列表（占位符）
     private Object pObjects;              // 对象列表（占位符）
-    private int nTileXPos;               // 瓦片X位置
-    private int nTileYPos;               // 瓦片Y位置
-    private int nTileWidth;              // 瓦片宽度
-    private int nTileHeight;             // 瓦片高度
     private D2DrlgGridStrc pCollisionGrid; // 碰撞网格（用于存储碰撞标志）
     
     public D2ActiveRoom() {
@@ -25,6 +28,39 @@ public class D2ActiveRoom {
     }
     
     // Getters and Setters
+    public D2DrlgCoords getCoords() {
+        return coords;
+    }
+
+    public void setCoords(D2DrlgCoords coords) {
+        this.coords.set(coords);
+    }
+
+    public D2DrlgRoomTilesStrc getPRoomTiles() {
+        return pRoomTiles;
+    }
+
+    public void setPRoomTiles(D2DrlgRoomTilesStrc pRoomTiles) {
+        this.pRoomTiles = pRoomTiles;
+    }
+
+    public D2ActiveRoom[] getPpRoomList() {
+        return ppRoomList;
+    }
+
+    public void setPpRoomList(D2ActiveRoom[] ppRoomList) {
+        this.ppRoomList = ppRoomList != null ? ppRoomList : new D2ActiveRoom[0];
+        if (nNumRooms > this.ppRoomList.length) nNumRooms = this.ppRoomList.length;
+    }
+
+    public int getNNumRooms() {
+        return nNumRooms;
+    }
+
+    public void setNNumRooms(int nNumRooms) {
+        this.nNumRooms = Math.max(0, Math.min(nNumRooms, ppRoomList.length));
+    }
+
     public D2DrlgRoom getPDrlgRoom() {
         return pDrlgRoom;
     }
@@ -70,35 +106,63 @@ public class D2ActiveRoom {
     }
     
     public int getNTileXPos() {
-        return nTileXPos;
+        return coords.getNTileXPos();
     }
     
     public void setNTileXPos(int nTileXPos) {
-        this.nTileXPos = nTileXPos;
+        coords.setNTileXPos(nTileXPos);
+        coords.setNSubtileX(nTileXPos * 5);
     }
     
     public int getNTileYPos() {
-        return nTileYPos;
+        return coords.getNTileYPos();
     }
     
     public void setNTileYPos(int nTileYPos) {
-        this.nTileYPos = nTileYPos;
+        coords.setNTileYPos(nTileYPos);
+        coords.setNSubtileY(nTileYPos * 5);
     }
     
     public int getNTileWidth() {
-        return nTileWidth;
+        return coords.getNTileWidth();
     }
     
     public void setNTileWidth(int nTileWidth) {
-        this.nTileWidth = nTileWidth;
+        coords.setNTileWidth(nTileWidth);
+        coords.setNSubtileWidth(nTileWidth * 5);
     }
     
     public int getNTileHeight() {
-        return nTileHeight;
+        return coords.getNTileHeight();
     }
     
     public void setNTileHeight(int nTileHeight) {
-        this.nTileHeight = nTileHeight;
+        coords.setNTileHeight(nTileHeight);
+        coords.setNSubtileHeight(nTileHeight * 5);
+    }
+
+    public D2Seed getSeed() {
+        return seed;
+    }
+
+    public void setSeed(D2Seed seed) {
+        this.seed = seed != null ? seed : new D2Seed();
+    }
+
+    public D2DrlgAct getAct() {
+        return act;
+    }
+
+    public void setAct(D2DrlgAct act) {
+        this.act = act;
+    }
+
+    public D2ActiveRoom getRoomNext() {
+        return roomNext;
+    }
+
+    public void setRoomNext(D2ActiveRoom roomNext) {
+        this.roomNext = roomNext;
     }
     
     public D2DrlgGridStrc getPCollisionGrid() {

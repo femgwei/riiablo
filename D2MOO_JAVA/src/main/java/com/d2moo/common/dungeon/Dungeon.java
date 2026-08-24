@@ -1,10 +1,15 @@
 package com.d2moo.common.dungeon;
 
-import com.d2moo.common.drlg.D2DrlgLevel;
-
 import com.d2moo.common.drlg.D2ActiveRoom;
+import com.d2moo.common.drlg.D2DrlgAct;
+import com.d2moo.common.drlg.D2DrlgCoords;
 import com.d2moo.common.drlg.D2DrlgRoom;
+import com.d2moo.common.drlg.D2DrlgRoomTilesStrc;
+import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.seed.Seed;
 import com.d2moo.common.util.D2Log;
+
+import java.util.Arrays;
 
 /**
  * DUNGEON 房间和坐标管理模块
@@ -27,48 +32,41 @@ public class Dungeon {
      * @param drlgRoom Drlg 房间对象
      */
     public static void removeRoomFromAct(D2DrlgRoom drlgRoom) {
-        if (drlgRoom == null) {
-            return;
+        if (drlgRoom == null || drlgRoom.getRoom() == null) return;
+        D2DrlgAct act = drlgRoom.getRoom().getAct();
+        if (act == null && drlgRoom.getLevel() != null
+                && drlgRoom.getLevel().getDrlg() != null) {
+            act = drlgRoom.getLevel().getDrlg().getAct();
         }
-        
-        // 获取房间所在的 Level
-        D2DrlgLevel level = drlgRoom.getLevel();
-        if (level == null) {
-            D2Log.debug("DUNGEON_RemoveRoomFromAct: Room has no level, cannot remove from act");
-            return;
+        removeRoomFromAct(act, drlgRoom.getRoom());
+    }
+
+    /** Exact active-room unlink semantics of D2Common {@code DUNGEON_RemoveRoomFromAct}. */
+    public static void removeRoomFromAct(D2DrlgAct act, D2ActiveRoom room) {
+        if (act == null || room == null) return;
+        D2ActiveRoom previous = null;
+        D2ActiveRoom current = act.getRoom();
+        while (current != null && current != room) {
+            previous = current;
+            current = current.getRoomNext();
         }
-        
-        // 获取 Level 的第一个房间（房间链表的头）
-        D2DrlgRoom pFirstRoom = level.getFirstRoomEx();
-        if (pFirstRoom == null) {
-            D2Log.debug("DUNGEON_RemoveRoomFromAct: Level has no rooms, room already removed");
-            return;
+        if (current == null) return;
+
+        if (previous == null) {
+            act.setRoom(current.getRoomNext());
+        } else {
+            previous.setRoomNext(current.getRoomNext());
         }
-        
-        // 如果是要移除的房间就是第一个房间
-        if (pFirstRoom == drlgRoom) {
-            // 将第一个房间设置为下一个房间
-            level.setFirstRoomEx(drlgRoom.getDrlgRoomNext());
-            drlgRoom.setDrlgRoomNext(null);
-            D2Log.debug("DUNGEON_RemoveRoomFromAct: Removed first room from level");
-            return;
-        }
-        
-        // 遍历房间链表，找到要移除的房间的前一个房间
-        D2DrlgRoom pCurrentRoom = pFirstRoom;
-        while (pCurrentRoom != null && pCurrentRoom.getDrlgRoomNext() != null) {
-            if (pCurrentRoom.getDrlgRoomNext() == drlgRoom) {
-                // 找到要移除的房间，更新链表
-                pCurrentRoom.setDrlgRoomNext(drlgRoom.getDrlgRoomNext());
-                drlgRoom.setDrlgRoomNext(null);
-                D2Log.debug("DUNGEON_RemoveRoomFromAct: Removed room from level");
-                return;
+        for (D2ActiveRoom nearRoom : getAdjacentRoomsListFromRoom(current)) {
+            if (nearRoom != null && nearRoom != current) {
+                removeAdjacentRoom(nearRoom, current);
             }
-            pCurrentRoom = pCurrentRoom.getDrlgRoomNext();
         }
-        
-        // 如果没找到房间，说明房间不在链表中
-        D2Log.debug("DUNGEON_RemoveRoomFromAct: Room not found in level's room list");
+        current.setPpRoomList(null);
+        current.setNNumRooms(0);
+        current.setRoomNext(null);
+        current.setAct(null);
+        if (current.getPDrlgRoom() != null) current.getPDrlgRoom().setRoom(null);
     }
     
     /**
@@ -97,6 +95,61 @@ public class Dungeon {
         
         // 从活动房间获取关联的 Drlg 房间
         return activeRoom.getPDrlgRoom();
+    }
+
+    /** Native signature alias: active room to its DRLG room. */
+    public static D2DrlgRoom getRoomExFromRoom(D2ActiveRoom activeRoom) {
+        return activeRoom != null ? activeRoom.getPDrlgRoom() : null;
+    }
+
+    /** Returns a value copy like native {@code DUNGEON_GetRoomCoordinates}. */
+    public static D2DrlgCoords getRoomCoordinates(D2ActiveRoom room) {
+        return room != null ? new D2DrlgCoords(room.getCoords()) : new D2DrlgCoords();
+    }
+
+    /** Returns only the populated prefix of the native adjacent-room array. */
+    public static D2ActiveRoom[] getAdjacentRoomsListFromRoom(D2ActiveRoom room) {
+        if (room == null) return new D2ActiveRoom[0];
+        return Arrays.copyOf(room.getPpRoomList(), room.getNNumRooms());
+    }
+
+    public static D2ActiveRoom getAdjacentRoomByTileCoordinates(
+            D2ActiveRoom room, int x, int y) {
+        for (D2ActiveRoom adjacent : getAdjacentRoomsListFromRoom(room)) {
+            if (areTileCoordinatesInsideRoom(adjacent, x, y)) return adjacent;
+        }
+        return null;
+    }
+
+    /** Native header helper: resolve a subtile position from a room and its adjacent rooms. */
+    public static D2ActiveRoom getRoomAtPosition(D2ActiveRoom room, int x, int y) {
+        if (room == null) return null;
+        if (areSubtileCoordinatesInsideRoom(room.getCoords(), x, y)) return room;
+        for (D2ActiveRoom adjacent : getAdjacentRoomsListFromRoom(room)) {
+            if (adjacent != null
+                    && areSubtileCoordinatesInsideRoom(adjacent.getCoords(), x, y)) {
+                return adjacent;
+            }
+        }
+        return null;
+    }
+
+    public static D2ActiveRoom findRoomByTileCoordinates(D2DrlgAct act, int x, int y) {
+        for (D2ActiveRoom room = act != null ? act.getRoom() : null;
+                room != null;
+                room = room.getRoomNext()) {
+            if (areTileCoordinatesInsideRoom(room, x, y)) return room;
+        }
+        return null;
+    }
+
+    public static D2ActiveRoom findRoomBySubtileCoordinates(D2DrlgAct act, int x, int y) {
+        for (D2ActiveRoom room = act != null ? act.getRoom() : null;
+                room != null;
+                room = room.getRoomNext()) {
+            if (areSubtileCoordinatesInsideRoom(room.getCoords(), x, y)) return room;
+        }
+        return null;
     }
     
     /**
@@ -408,17 +461,17 @@ public class Dungeon {
      * 3. 建立双向关联（DrlgRoom 和 ActiveRoom）
      * 4. 设置房间ID
      * 
-     * @param act Act 对象（可选，当前未使用）
+     * @param act Act 对象；非空时将活动房间挂入 Act 房间链
      * @param drlgRoom Drlg 房间对象
      * @param coords 坐标对象
      * @param tiles 瓦片数据（可选）
-     * @param seed 随机种子（可选，当前未使用）
+     * @param seed 活动房间随机种子
      * @param flags 标志
      * @return 创建的活动房间对象，如果创建失败返回 null
      */
-    public static D2ActiveRoom allocRoom(Object act, D2DrlgRoom drlgRoom, 
-            com.d2moo.common.drlg.D2DrlgCoords coords, 
-            com.d2moo.common.drlg.D2DrlgRoomTilesStrc tiles, 
+    public static D2ActiveRoom allocRoom(D2DrlgAct act, D2DrlgRoom drlgRoom,
+            D2DrlgCoords coords,
+            D2DrlgRoomTilesStrc tiles,
             int seed, int flags) {
         if (drlgRoom == null) {
             D2Log.debug("DUNGEON_AllocRoom: DrlgRoom is null, cannot allocate room");
@@ -439,19 +492,28 @@ public class Dungeon {
         room.setPDrlgRoom(drlgRoom);
         drlgRoom.setRoom(room);
         
-        // 设置坐标
+        // Native memcpy preserves both tile and subtile coordinate systems.
         if (coords != null) {
-            // 从 coords 设置房间的瓦片坐标
-            room.setNTileXPos(coords.getNTileXPos());
-            room.setNTileYPos(coords.getNTileYPos());
-            room.setNTileWidth(coords.getNTileWidth());
-            room.setNTileHeight(coords.getNTileHeight());
-        } else if (drlgRoom != null) {
-            // 如果 coords 为 null，从 drlgRoom 获取坐标
+            room.setCoords(coords);
+        } else {
             room.setNTileXPos(drlgRoom.getNTileXPos());
             room.setNTileYPos(drlgRoom.getNTileYPos());
             room.setNTileWidth(drlgRoom.getNTileWidth());
             room.setNTileHeight(drlgRoom.getNTileHeight());
+        }
+        room.setPRoomTiles(tiles);
+        D2Seed roomSeed = new D2Seed();
+        Seed.initLowSeed(roomSeed, seed);
+        room.setSeed(roomSeed);
+        room.setAct(act);
+        if (act != null) {
+            room.setRoomNext(act.getRoom());
+            act.setRoom(room);
+            act.setHasPendingRoomsUpdates(true);
+        }
+        rebuildAdjacentRoomList(room);
+        for (D2ActiveRoom adjacent : getAdjacentRoomsListFromRoom(room)) {
+            if (adjacent != room) rebuildAdjacentRoomList(adjacent);
         }
         
         // 设置房间ID（可以使用房间的哈希值或其他唯一标识）
@@ -468,5 +530,34 @@ public class Dungeon {
                     room.getNTileXPos() + ", " + room.getNTileYPos() + "), ID: " + roomId);
         
         return room;
+    }
+
+    private static void rebuildAdjacentRoomList(D2ActiveRoom room) {
+        D2DrlgRoom drlgRoom = room != null ? room.getPDrlgRoom() : null;
+        D2DrlgRoom[] nearRooms = drlgRoom != null ? drlgRoom.getPpRoomsNear() : null;
+        int capacity = nearRooms != null
+                ? Math.min(drlgRoom.getNRoomsNear(), nearRooms.length)
+                : 0;
+        D2ActiveRoom[] activeRooms = new D2ActiveRoom[capacity];
+        int count = 0;
+        for (int i = 0; i < capacity; i++) {
+            D2ActiveRoom active = nearRooms[i] != null ? nearRooms[i].getRoom() : null;
+            if (active != null) activeRooms[count++] = active;
+        }
+        room.setPpRoomList(activeRooms);
+        room.setNNumRooms(count);
+    }
+
+    private static void removeAdjacentRoom(D2ActiveRoom room, D2ActiveRoom removed) {
+        D2ActiveRoom[] rooms = room.getPpRoomList();
+        int count = room.getNNumRooms();
+        for (int i = 0; i < count; i++) {
+            if (rooms[i] == removed) {
+                rooms[i] = rooms[count - 1];
+                rooms[count - 1] = null;
+                room.setNNumRooms(count - 1);
+                return;
+            }
+        }
     }
 }
