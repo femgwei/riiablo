@@ -100,6 +100,7 @@ class DungeonActiveRoomTest {
     assertSame(first, act.getRoom());
     assertEquals(1, first.getNNumRooms());
     assertSame(first, first.getPpRoomList()[0]);
+    assertNull(second.getPCollisionGrid());
     assertNull(secondDrlg.getRoom());
     assertSame(firstDrlg, level.getFirstRoomEx());
     assertSame(secondDrlg, firstDrlg.getDrlgRoomNext(),

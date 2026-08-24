@@ -1,5 +1,6 @@
 package com.d2moo.common.dungeon;
 
+import com.d2moo.common.collision.D2CommonCollision;
 import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.environment.D2DrlgEnvironment;
 import com.d2moo.common.environment.Environment;
@@ -86,6 +87,7 @@ public class Dungeon {
         D2ActiveRoom room = act.getRoom();
         while (room != null) {
             D2ActiveRoom next = room.getRoomNext();
+            D2CommonCollision.freeRoomCollisionGrid(room);
             D2DrlgRoom drlgRoom = room.getPDrlgRoom();
             if (drlgRoom != null && drlgRoom.getRoom() == room) {
                 drlgRoom.setRoom(null);
@@ -398,6 +400,7 @@ public class Dungeon {
                 removeAdjacentRoom(nearRoom, current);
             }
         }
+        D2CommonCollision.freeRoomCollisionGrid(current);
         current.setPpRoomList(null);
         current.setNNumRooms(0);
         current.setRoomNext(null);
@@ -1079,7 +1082,7 @@ public class Dungeon {
         }
         // Native allocation exposes a fully populated static collision grid
         // before the Act callback can spawn or place units.
-        com.d2moo.common.collision.D2CommonCollision.allocRoomCollisionGrid(room);
+        D2CommonCollision.allocRoomCollisionGrid(room);
 
         // 设置房间ID（可以使用房间的哈希值或其他唯一标识）
         int roomId = (room.getNTileXPos() << 16) | room.getNTileYPos();

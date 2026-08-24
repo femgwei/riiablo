@@ -88,6 +88,8 @@ class DungeonActLifecycleTest {
     assertFalse(act.isHasPendingUnitListUpdates());
     assertNull(first.getAct());
     assertNull(second.getAct());
+    assertNull(first.getPCollisionGrid());
+    assertNull(second.getPCollisionGrid());
     assertNull(first.getPDrlgRoom());
     assertNull(second.getPDrlgRoom());
     assertNull(firstDrlg.getRoom());
