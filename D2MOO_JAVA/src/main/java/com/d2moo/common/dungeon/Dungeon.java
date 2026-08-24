@@ -11,6 +11,7 @@ import com.d2moo.common.drlg.D2DrlgTileDataStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2PresetUnit;
 import com.d2moo.common.drlg.D2Seed;
+import com.d2moo.common.drlg.DrlgActivate;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgDrlgRoom;
 import com.d2moo.common.drlg.DrlgDrlgWarp;
@@ -27,6 +28,10 @@ import java.util.Arrays;
  * 当前实现提供基础框架和接口，实际逻辑需要后续实现
  */
 public class Dungeon {
+    private static final int ACTIVE_ROOM_FLAG_1 = 0x1;
+    private static final int ACTIVE_ROOM_FLAG_2 = 0x2;
+    private static final int ACTIVE_ROOM_FLAG_4 = 0x4;
+
     public static Object getMemPoolFromAct(D2DrlgAct act) {
         return act != null ? act.getPMemPool() : null;
     }
@@ -79,6 +84,73 @@ public class Dungeon {
         DrlgDrlgRoom.getRGBIntensityFromRoomEx(
                 room != null ? room.getPDrlgRoom() : null,
                 intensity, red, green, blue);
+    }
+
+    /** D2Common #10071: server-side eligibility for releasing a streamed room. */
+    public static boolean testRoomCanUnTile(D2DrlgAct act, D2ActiveRoom room) {
+        if (act == null || room == null || act.isClient()) {
+            return false;
+        }
+        return DrlgActivate.testRoomCanUnTile(room.getPDrlgRoom());
+    }
+
+    /** D2Common #10072 returns true for ROOMSTATUS_UNTILE or the COUNT sentinel. */
+    public static boolean getRoomStatusFlags(D2ActiveRoom room) {
+        return room != null
+                && DrlgActivate.getRoomStatusFlags(room.getPDrlgRoom()) >= 3;
+    }
+
+    /** D2Common #10073. The native meaning of active-room flag bit 0 is unknown. */
+    public static boolean areAllNearRoomsFlagged(D2ActiveRoom room) {
+        if (room == null || room.getPDrlgRoom() == null
+                || room.getNNumRooms() != room.getPDrlgRoom().getNRoomsNear()) {
+            return false;
+        }
+        for (D2ActiveRoom nearRoom : getAdjacentRoomsListFromRoom(room)) {
+            if (nearRoom == null || (nearRoom.getDwFlags() & ACTIVE_ROOM_FLAG_1) == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** D2Common #10074. */
+    public static boolean getActiveRoomFlag2(D2ActiveRoom room) {
+        return room != null && (room.getDwFlags() & ACTIVE_ROOM_FLAG_2) != 0;
+    }
+
+    /** D2Common #10075. */
+    public static void setActiveRoomFlag2(D2ActiveRoom room, boolean set) {
+        if (room == null) {
+            return;
+        }
+        room.setDwFlags(set
+                ? room.getDwFlags() | ACTIVE_ROOM_FLAG_2
+                : room.getDwFlags() & ~ACTIVE_ROOM_FLAG_2);
+    }
+
+    /** D2Common #10084. */
+    public static boolean getActiveRoomFlag4(D2ActiveRoom room) {
+        return room != null && (room.getDwFlags() & ACTIVE_ROOM_FLAG_4) != 0;
+    }
+
+    /** D2Common #10081: inactivity counter used before freeing room tiles. */
+    public static int getTileCountFromRoom(D2ActiveRoom room) {
+        if (room == null) {
+            return 0;
+        }
+        if (room.getNNumClients() != 0) {
+            room.setNTileCount(0);
+            return 0;
+        }
+        room.setNTileCount(room.getNTileCount() + 1);
+        return room.getNTileCount();
+    }
+
+    public static void toggleHasPortalFlag(D2ActiveRoom room, boolean reset) {
+        if (room != null) {
+            DrlgActivate.toggleHasPortalFlag(room.getPDrlgRoom(), reset);
+        }
     }
 
     private static void setCount(int[] output, int count) {

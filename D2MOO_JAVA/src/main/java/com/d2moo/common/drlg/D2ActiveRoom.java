@@ -21,6 +21,9 @@ public class D2ActiveRoom {
     private Object pUnits;               // 单位列表（占位符）
     private Object pObjects;              // 对象列表（占位符）
     private D2DrlgGridStrc pCollisionGrid; // 碰撞网格（用于存储碰撞标志）
+    private int nNumClients;
+    private int nMaxClients;
+    private int nTileCount;
     
     public D2ActiveRoom() {
         this.nRoomId = 0;
@@ -87,6 +90,30 @@ public class D2ActiveRoom {
     
     public void setDwFlags(int dwFlags) {
         this.dwFlags = dwFlags;
+    }
+
+    public int getNNumClients() {
+        return nNumClients;
+    }
+
+    public void setNNumClients(int nNumClients) {
+        this.nNumClients = Math.max(0, nNumClients);
+    }
+
+    public int getNMaxClients() {
+        return nMaxClients;
+    }
+
+    public void setNMaxClients(int nMaxClients) {
+        this.nMaxClients = Math.max(0, nMaxClients);
+    }
+
+    public int getNTileCount() {
+        return nTileCount;
+    }
+
+    public void setNTileCount(int nTileCount) {
+        this.nTileCount = Math.max(0, nTileCount);
     }
     
     public Object getPUnits() {
