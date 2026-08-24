@@ -252,13 +252,6 @@ public class Dungeon {
     }
     
     /**
-     * 等距投影的瓦片尺寸常量（像素）
-     * Diablo 2 使用等距投影，一个瓦片在屏幕上的尺寸
-     */
-    private static final int TILE_WIDTH_PIXELS = 32;   // 瓦片宽度（像素）
-    private static final int TILE_HEIGHT_PIXELS = 16;  // 瓦片高度（像素）
-    
-    /**
      * 坐标转换：从游戏瓦片坐标转换为客户端坐标
      * 对应 C++ DUNGEON_GameTileToClientCoords
      * 
@@ -266,37 +259,128 @@ public class Dungeon {
      * - 游戏瓦片坐标：游戏逻辑使用的瓦片坐标
      * - 客户端坐标：客户端显示使用的坐标（考虑等距投影）
      * 
-     * 等距投影公式：
-     * - clientX = (tileX - tileY) * (tileWidth / 2)
-     * - clientY = (tileX + tileY) * (tileHeight / 2)
-     * 
-     * 在 Diablo 2 中，等距投影使用以下变换：
-     * - X 轴：从左上到右下的对角线方向
-     * - Y 轴：从右上到左下的对角线方向
-     * - 瓦片宽度通常是高度的两倍（32x16 像素）
-     * 
      * @param x X坐标（输入输出参数，输入为游戏瓦片坐标，输出为客户端坐标）
      * @param y Y坐标（输入输出参数，输入为游戏瓦片坐标，输出为客户端坐标）
      */
     public static void gameTileToClientCoords(int[] x, int[] y) {
-        if (x == null || y == null || x.length == 0 || y.length == 0) {
-            return;
-        }
-        
-        // 保存原始瓦片坐标
+        if (!hasCoordinates(x, y)) return;
         int tileX = x[0];
         int tileY = y[0];
-        
-        // 等距投影变换
-        // X 坐标：从左上到右下的对角线方向
-        // Y 坐标：从右上到左下的对角线方向
-        // 使用标准的等距投影公式
-        int clientX = (tileX - tileY) * (TILE_WIDTH_PIXELS / 2);
-        int clientY = (tileX + tileY) * (TILE_HEIGHT_PIXELS / 2);
-        
-        // 更新输出坐标
-        x[0] = clientX;
-        y[0] = clientY;
+        x[0] = 80 * (tileX - tileY);
+        y[0] = 40 * (tileX + tileY);
+    }
+
+    /** D2Common {@code DUNGEON_ClientToGameTileCoords}. */
+    public static void clientToGameTileCoords(int[] x, int[] y) {
+        if (!hasCoordinates(x, y)) return;
+        int clientX = x[0];
+        int clientY = y[0];
+        x[0] = (2 * clientY + clientX) / 160;
+        y[0] = (2 * clientY - clientX) / 160;
+    }
+
+    /** D2Common {@code DUNGEON_GameSubtileToClientCoords}. */
+    public static void gameSubtileToClientCoords(int[] x, int[] y) {
+        if (!hasCoordinates(x, y)) return;
+        int subtileX = x[0];
+        int subtileY = y[0];
+        x[0] = 16 * (subtileX - subtileY);
+        y[0] = 8 * (subtileX + subtileY);
+    }
+
+    /** D2Common {@code DUNGEON_ClientToGameSubtileCoords}. */
+    public static void clientToGameSubtileCoords(int[] x, int[] y) {
+        if (!hasCoordinates(x, y)) return;
+        int clientX = x[0];
+        int clientY = y[0];
+        x[0] = (2 * clientY + clientX) / 32;
+        y[0] = (2 * clientY - clientX) / 32;
+    }
+
+    /** D2Common {@code DUNGEON_GameToClientCoords}. */
+    public static void gameToClientCoords(int[] x, int[] y) {
+        if (!hasCoordinates(x, y)) return;
+        int gameX = x[0];
+        int gameY = y[0];
+        x[0] = (gameX - gameY) / 2;
+        y[0] = (gameX + gameY) / 4;
+    }
+
+    /** D2Common {@code DUNGEON_ClientToGameCoords}. */
+    public static void clientToGameCoords(int[] x, int[] y) {
+        if (!hasCoordinates(x, y)) return;
+        int clientX = x[0];
+        int clientY = y[0];
+        x[0] = 2 * clientY + clientX;
+        y[0] = 2 * clientY - clientX;
+    }
+
+    /** D2Common {@code DUNGEON_ClientTileDrawPositionToGameCoords}. */
+    public static void clientTileDrawPositionToGameCoords(
+            int clientX, int clientY, int[] gameX, int[] gameY) {
+        if (!hasCoordinates(gameX, gameY)) return;
+        gameX[0] = nativeDrawCoordinate(2 * clientY + clientX, 160);
+        gameY[0] = nativeDrawCoordinate(2 * clientY - clientX, 160);
+    }
+
+    /** D2Common {@code DUNGEON_GameToClientTileDrawPositionCoords}. */
+    public static void gameToClientTileDrawPositionCoords(
+            int gameX, int gameY, int[] clientX, int[] clientY) {
+        if (!hasCoordinates(clientX, clientY)) return;
+        clientX[0] = 80 * (gameX - gameY) - 80;
+        clientY[0] = 40 * (gameX + gameY) + 80;
+    }
+
+    /** D2Common {@code DUNGEON_ClientSubileDrawPositionToGameCoords}. */
+    public static void clientSubtileDrawPositionToGameCoords(
+            int clientX, int clientY, int[] gameX, int[] gameY) {
+        if (!hasCoordinates(gameX, gameY)) return;
+        gameX[0] = nativeDrawCoordinate(2 * clientY + clientX, 32);
+        gameY[0] = nativeDrawCoordinate(2 * clientY - clientX, 32);
+    }
+
+    /** D2Common {@code DUNGEON_GameToClientSubtileDrawPositionCoords}. */
+    public static void gameToClientSubtileDrawPositionCoords(
+            int gameX, int gameY, int[] clientX, int[] clientY) {
+        if (!hasCoordinates(clientX, clientY)) return;
+        clientX[0] = 16 * (gameX - gameY) - 16;
+        clientY[0] = 8 * (gameX + gameY) + 16;
+    }
+
+    private static int nativeDrawCoordinate(int value, int divisor) {
+        return value >= 0 ? value / divisor : value / divisor - 1;
+    }
+
+    private static boolean hasCoordinates(int[] x, int[] y) {
+        return x != null && y != null && x.length > 0 && y.length > 0;
+    }
+
+    /** D2Common {@code DUNGEON_DoRoomsTouchOrOverlap}; touching edges count as true. */
+    public static boolean doRoomsTouchOrOverlap(D2ActiveRoom first, D2ActiveRoom second) {
+        if (first == null || second == null) return false;
+        return first.getNTileXPos() <= second.getNTileXPos() + second.getNTileWidth()
+                && first.getNTileXPos() + first.getNTileWidth() >= second.getNTileXPos()
+                && first.getNTileYPos() <= second.getNTileYPos() + second.getNTileHeight()
+                && first.getNTileYPos() + first.getNTileHeight() >= second.getNTileYPos();
+    }
+
+    /** D2Common {@code DUNGEON_AreTileCoordinatesInsideRoom}; maximum edges are exclusive. */
+    public static boolean areTileCoordinatesInsideRoom(D2ActiveRoom room, int x, int y) {
+        if (room == null) return false;
+        return x >= room.getNTileXPos()
+                && x < room.getNTileXPos() + room.getNTileWidth()
+                && y >= room.getNTileYPos()
+                && y < room.getNTileYPos() + room.getNTileHeight();
+    }
+
+    /** D2Common {@code DUNGEON_AreSubtileCoordinatesInsideRoom}. */
+    public static boolean areSubtileCoordinatesInsideRoom(
+            com.d2moo.common.drlg.D2DrlgCoords coords, int x, int y) {
+        if (coords == null) return false;
+        return x >= coords.getNSubtileX()
+                && x < coords.getNSubtileX() + coords.getNSubtileWidth()
+                && y >= coords.getNSubtileY()
+                && y < coords.getNSubtileY() + coords.getNSubtileHeight();
     }
     
     /**
