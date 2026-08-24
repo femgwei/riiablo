@@ -485,6 +485,8 @@ public class DrlgActivate {
      * 更新房间激活状态
      */
     public static void update(D2DrlgStrc drlg) {
+        if (drlg == null) return;
+
         boolean isOnClient = DrlgDrlg.isOnClient(drlg);
         
         if (isOnClient) {
@@ -500,33 +502,39 @@ public class DrlgActivate {
             return;
         }
         
-        drlg.setRoomsInitTimeout((byte)(drlg.getRoomsInitTimeout() - 1));
+        // The native field is uint8_t. Preserve its wraparound instead of
+        // allowing Java's signed byte representation to leak into the logic.
+        int roomsInitTimeout = (Byte.toUnsignedInt(drlg.getRoomsInitTimeout()) - 1) & 0xFF;
+        drlg.setRoomsInitTimeout((byte) roomsInitTimeout);
         
-        if (drlg.getRoomsInitTimeout() == 0) {
+        if (roomsInitTimeout == 0) {
             initRoomsInitTimeout(drlg);
-            
-            if (drlg.getDrlgRoom() == null 
-                || drlg.getDrlgRoom().getRoomStatus() != D2DrlgRoomStatus.CLIENT_OUT_OF_SIGHT) {
-                drlg.setDrlgRoom(drlg.getStatusRoomsLists()[
-                    D2DrlgRoomStatus.CLIENT_OUT_OF_SIGHT.getValue()].getStatusNext());
+
+            D2DrlgRoom statusListHead = drlg.getStatusRoomsLists()[
+                    D2DrlgRoomStatus.CLIENT_OUT_OF_SIGHT.getValue()];
+            D2DrlgRoom cursor = drlg.getDrlgRoom();
+            if (cursor == null
+                    || cursor.getRoomStatus() != D2DrlgRoomStatus.CLIENT_OUT_OF_SIGHT) {
+                cursor = statusListHead.getStatusNext();
             }
-            
-            D2DrlgRoom drlgRoomExListHead = drlg.getDrlgRoom();
-            if (drlgRoomExListHead != null) {
-                D2DrlgRoom curRoomEx;
-                for (curRoomEx = drlgRoomExListHead; 
-                     curRoomEx != drlgRoomExListHead; 
-                     curRoomEx = curRoomEx.getStatusNext()) {
-                    if (curRoomEx != drlg.getStatusRoomsLists()[
-                        D2DrlgRoomStatus.CLIENT_OUT_OF_SIGHT.getValue()]) {
-                        roomEx_EnsureHasRoom(curRoomEx, false);
+
+            if (cursor != null) {
+                // The status list is circular. The reconstructed C++ source
+                // spells this as a for-loop whose initial condition is false;
+                // the native behavior requires processing the starting node
+                // once before testing whether traversal wrapped around.
+                D2DrlgRoom start = cursor;
+                do {
+                    if (cursor != statusListHead) {
+                        roomEx_EnsureHasRoom(cursor, false);
                     }
                     if (drlg.getRoomsInitSinceLastUpdate() != 0) {
                         break;
                     }
-                }
-                
-                drlg.setDrlgRoom(curRoomEx);
+                    cursor = cursor.getStatusNext();
+                } while (cursor != null && cursor != start);
+
+                drlg.setDrlgRoom(cursor);
                 drlg.setRoomsInitSinceLastUpdate((byte)0);
             }
         }
