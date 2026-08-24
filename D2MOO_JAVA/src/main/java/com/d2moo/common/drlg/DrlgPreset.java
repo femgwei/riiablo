@@ -901,6 +901,11 @@ public class DrlgPreset {
 
         // 处理单元格网格
         DrlgRoomTile.countAllTileTypes(drlgRoom, presetRoom.getPCellGrid(), false, bKillEdgeX, bKillEdgeY);
+        if (pLvlPrestTxtRecord.getDwAnimate() != 0) {
+            DrlgDrlgAnim.testLoadAnimatedRoomTiles(drlgRoom, presetRoom.getPCellGrid(),
+                    null, DrlgRoomTile.TILETYPE_SHADOW,
+                    bKillEdgeX ? 1 : 0, bKillEdgeY ? 1 : 0);
+        }
 
         // Counting only reserves sizes. Native DRLGPRESET_AddPresetRoomMapTiles
         // then allocates and materializes every layer into pTileGrid; without
@@ -917,6 +922,14 @@ public class DrlgPreset {
         }
         DrlgRoomTile.loadInitRoomTiles(drlgRoom, presetRoom.getPCellGrid(), null,
                 false, bKillEdgeX, bKillEdgeY);
+
+        if (pLvlPrestTxtRecord.getDwAnimate() != 0) {
+            DrlgDrlgAnim.allocAnimationTileGrids(drlgRoom,
+                    pLvlPrestTxtRecord.getNAnimSpeed(),
+                    presetRoom.getPWallGrid(), mazeMap.getPFile().getNWallLayers(),
+                    presetRoom.getPFloorGrid(), mazeMap.getPFile().getNFloorLayers(),
+                    presetRoom.getPCellGrid());
+        }
 
         if (drlgRoom.getTileGrid() != null && drlgRoom.getTileGrid().getPTiles() != null) {
             drlgRoom.getTileGrid().getPTiles().setNWalls(drlgRoom.getTileGrid().getNWalls());

@@ -283,6 +283,24 @@ public class Dungeon {
         }
     }
 
+    /** D2Common #10104. */
+    public static void animateTiles(D2ActiveRoom room) {
+        if (room != null) DrlgDrlgAnim.animateTiles(room.getPDrlgRoom());
+    }
+
+    /** D2Common #10105; only an active room linked into the Act supplies the source frame. */
+    public static void initRoomTileAnimation(
+            D2DrlgAct act, D2ActiveRoom firstRoom, D2ActiveRoom secondRoom) {
+        D2DrlgRoom firstDrlgRoom = null;
+        if (firstRoom != null && act != null) {
+            D2ActiveRoom room = act.getRoom();
+            while (room != null && room != firstRoom) room = room.getRoomNext();
+            if (room == firstRoom) firstDrlgRoom = firstRoom.getPDrlgRoom();
+        }
+        DrlgDrlgAnim.updateFrameInAdjacentRooms(
+                firstDrlgRoom, secondRoom != null ? secondRoom.getPDrlgRoom() : null);
+    }
+
     private static void setCount(int[] output, int count) {
         if (output != null && output.length > 0) {
             output[0] = count;

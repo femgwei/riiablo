@@ -58,11 +58,9 @@ public class D2DrlgAnimTileGridStrc {
         this.pNext = pNext;
     }
     
-    /**
-     * 获取实际帧数（从8位定点格式转换）
-     */
+    /** Frame count is an integer in native D2Common. */
     public int getActualFrames() {
-        return nFrames >> 8;
+        return nFrames;
     }
     
     /**
@@ -72,18 +70,14 @@ public class D2DrlgAnimTileGridStrc {
         return nCurrentFrame >> 8;
     }
     
-    /**
-     * 获取实际动画速度（从8位定点格式转换）
-     */
+    /** Speed is already expressed in 8-bit fixed-point units per tick. */
     public int getActualAnimationSpeed() {
-        return nAnimationSpeed >> 8;
+        return nAnimationSpeed;
     }
     
-    /**
-     * 设置实际帧数（转换为8位定点格式）
-     */
+    /** Frame count is stored without fixed-point conversion. */
     public void setActualFrames(int frames) {
-        this.nFrames = frames << 8;
+        this.nFrames = frames;
     }
     
     /**
@@ -93,10 +87,8 @@ public class D2DrlgAnimTileGridStrc {
         this.nCurrentFrame = currentFrame << 8;
     }
     
-    /**
-     * 设置实际动画速度（转换为8位定点格式）
-     */
+    /** Speed is already expressed in 8-bit fixed-point units per tick. */
     public void setActualAnimationSpeed(int speed) {
-        this.nAnimationSpeed = speed << 8;
+        this.nAnimationSpeed = speed;
     }
 }

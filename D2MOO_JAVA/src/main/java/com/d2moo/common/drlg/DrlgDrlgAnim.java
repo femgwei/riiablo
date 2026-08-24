@@ -4,326 +4,237 @@ import com.d2moo.common.d2cmp.D2Cmp;
 import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2Pool;
 
-/**
- * Drlg 动画模块
- * 对应 C++ 文件：DrlgDrlgAnim.cpp
- */
-public class DrlgDrlgAnim {
-    
-    /**
-     * D2Common.0x6FD75480
-     * 初始化缓存
-     * 对应 C++ DRLGANIM_InitCache
-     * 
-     * 功能：
-     * 1. 根据 Act 设置不同的瓦片样式和序列
-     * 2. 从瓦片库加载瓦片数据
-     * 3. 初始化瓦片数据
-     */
-    public static void initCache(D2DrlgStrc drlg, D2DrlgTileDataStrc pTileData) {
-        if (drlg == null || pTileData == null) {
+/** Native-parity tile animation routines from D2Common DrlgDrlgAnim.cpp. */
+public final class DrlgDrlgAnim {
+    private static final int TILE_FLAGS_LAVA = 0x100;
+    private static final int MAPTILE_HIDDEN = 0x000008;
+    private static final int MAPTILE_WALL_LAYER_MASK = 0x01C000;
+    private static final int MAPTILE_WALL_LAYER_BIT = 14;
+    private static final int MAX_TILE_ENTRIES = 40;
+
+    private DrlgDrlgAnim() {}
+
+    public static void initCache(D2DrlgStrc drlg, D2DrlgTileDataStrc tileData) {
+        if (drlg == null || tileData == null) return;
+        resetTileData(tileData);
+        int style = 0;
+        int sequence = 0;
+        if (drlg.getActNo() == D2C_Acts.ACT_II) {
+            sequence = 1;
+        } else if (drlg.getActNo() == D2C_Acts.ACT_III) {
+            style = 29;
+            sequence = 12;
+        } else if (drlg.getActNo() != D2C_Acts.ACT_I) {
             return;
         }
-        
-        // 清零瓦片数据（对应 C++ memset）
-        // 注意：Java 中对象默认初始化为 0/null，但为了明确性，可以重置关键字段
-        // pTileData 的字段会在后续初始化中设置
-        
-        // 根据 Act 设置不同的瓦片样式和序列
-        int nSequence = 0;
-        int nStyle = 0;
-        
-        if (drlg.getActNo() == 2) {
-            nSequence = 1;
-        } else if (drlg.getActNo() == 3) {
-            nStyle = 29;
-            nSequence = 12;
-        } else if (drlg.getActNo() != 1) {
+        Object[] entries = new Object[MAX_TILE_ENTRIES];
+        int size = D2Cmp.getTiles(drlg.getTiles(), DrlgRoomTile.TILETYPE_FLOOR,
+                style, sequence, entries, entries.length);
+        if (size <= 0 || entries[0] == null) {
+            D2Log.warning("DRLGANIM_InitCache: missing tile act=%d style=%d sequence=%d",
+                    drlg.getActNo(), style, sequence);
             return;
         }
-        
-        // 从瓦片库加载瓦片数据
-        // 对应 C++ D2CMP_10088_GetTiles(pDrlg->pTiles, 0, nStyle, nSequence, ppTileLibraryEntry, ARRAY_SIZE(ppTileLibraryEntry))
-        Object[] ppTileLibraryEntry = new Object[40]; // 对应 C++ 数组大小
-        Object[] ppTileLibraryHash = drlg.getTiles(); // 瓦片库哈希表数组
-        
-        int nSize = D2Cmp.getTiles(ppTileLibraryHash, 0, nStyle, nSequence, ppTileLibraryEntry, ppTileLibraryEntry.length);
-        if (nSize == 0) {
-            D2Log.warning("DRLGANIM_InitCache: Failed to get tiles for style " + nStyle + ", sequence " + nSequence);
-            return;
-        }
-        
-        // 初始化瓦片数据
-        // 对应 C++ DRLGROOMTILE_InitTileData(NULL, pTileData, 0, 0, 0, ppTileLibraryEntry[0])
-        if (ppTileLibraryEntry[0] != null) {
-            DrlgRoomTile.initTileData(null, pTileData, 0, 0, 0, ppTileLibraryEntry[0]);
-        } else {
-            D2Log.warning("DRLGANIM_InitCache: First tile library entry is null");
-        }
+        DrlgRoomTile.initTileData(null, tileData, 0, 0, 0, entries[0]);
     }
-    
-    /**
-     * D2Common.0x6FD75560
-     * 测试加载动画房间瓦片
-     * 
-     * 功能：
-     * 1. 遍历网格，检查是否有动画瓦片（如熔岩）
-     * 2. 如果有，增加对应的瓦片计数并设置动画标志
-     * 3. 设置房间的 ANIMATED_FLOOR 标志
-     */
-    public static void testLoadAnimatedRoomTiles(D2DrlgRoom drlgRoom, D2DrlgGridStrc pDrlgGrid, 
-            D2DrlgGridStrc pTileTypeGrid, int nTileType, int nTileX, int nTileY) {
-        if (drlgRoom == null || pDrlgGrid == null || pTileTypeGrid == null) {
-            return;
-        }
-        
-        // 检查瓦片类型是否为动画类型（如熔岩）
-        // 动画瓦片类型通常包括：熔岩、火焰等
-        // 简化实现：检查特定瓦片类型或网格标志
-        boolean bIsAnimated = false;
-        
-        // 遍历网格，检查是否有动画瓦片
-        int nWidth = pDrlgGrid.getNWidth();
-        int nHeight = pDrlgGrid.getNHeight();
-        int nAnimatedTiles = 0;
-        
-        for (int y = 0; y < nHeight; ++y) {
-            for (int x = 0; x < nWidth; ++x) {
-                // 检查网格标志，判断是否为动画瓦片
-                int nGridFlag = DrlgDrlgGrid.getGridEntry(pDrlgGrid, x, y);
-                int nTileTypeFlag = DrlgDrlgGrid.getGridEntry(pTileTypeGrid, x, y);
-                
-                // 检查是否为动画瓦片类型（简化实现）
-                // 实际实现可能需要检查特定的瓦片类型或标志位
-                if ((nGridFlag & 0x1) != 0) { // 简化：检查最低位标志
-                    nAnimatedTiles++;
-                    bIsAnimated = true;
+
+    public static void testLoadAnimatedRoomTiles(D2DrlgRoom room, D2DrlgGridStrc grid,
+            D2DrlgGridStrc tileTypeGrid, int tileType, int killEdgeX, int killEdgeY) {
+        if (room == null || grid == null || room.getTileGrid() == null
+                || room.getTileGrid().getPTiles() == null) return;
+        Object[] entries = new Object[MAX_TILE_ENTRIES];
+        int height = room.getNTileHeight() + (killEdgeY == 0 ? 1 : 0);
+        int width = room.getNTileWidth() + (killEdgeX == 0 ? 1 : 0);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                D2C_PackedTileInformation info = new D2C_PackedTileInformation(
+                        DrlgDrlgGrid.getGridEntry(grid, x, y));
+                if (!info.isBShadow() && !info.isBIsWall() && !info.isBIsFloor()) continue;
+                int type = tileTypeGrid != null
+                        ? DrlgDrlgGrid.getGridEntry(tileTypeGrid, x, y) : tileType;
+                int count = D2Cmp.getTiles(room.getTiles(), type,
+                        info.getNTileStyle(), info.getNTileSequence(), entries, entries.length);
+                if (count <= 0 || (D2Cmp.getTileFlags(entries[0]) & TILE_FLAGS_LAVA) == 0) continue;
+                D2DrlgRoomTilesStrc tiles = room.getTileGrid().getPTiles();
+                if (info.isBIsFloor()) {
+                    tiles.setNFloors(tiles.getNFloors() + count - 1);
+                } else if (info.isBIsWall()) {
+                    tiles.setNWalls(tiles.getNWalls() + count - 1);
+                } else {
+                    tiles.setNRoofs(tiles.getNRoofs() + count - 1);
                 }
-            }
-        }
-        
-        // 如果有动画瓦片，设置房间标志并更新瓦片计数
-        if (bIsAnimated && drlgRoom.getTileGrid() != null) {
-            // 设置 ANIMATED_FLOOR 标志
-            drlgRoom.setFlags(drlgRoom.getFlags() | D2DrlgRoomFlags.ANIMATED_FLOOR);
-            
-            // 更新瓦片计数（如果需要）
-            D2DrlgRoomTilesStrc roomTiles = drlgRoom.getTileGrid().getPTiles();
-            if (roomTiles != null) {
-                // 根据瓦片类型更新计数
-                if (nTileType == DrlgRoomTile.TILETYPE_FLOOR) {
-                    // 地板动画瓦片
-                    roomTiles.setNFloors(roomTiles.getNFloors() + nAnimatedTiles);
-                } else if (nTileType >= DrlgRoomTile.TILETYPE_WALL_LEFT 
-                        && nTileType <= DrlgRoomTile.TILETYPE_WALL_BOTTOM_RIGHT) {
-                    // 墙壁动画瓦片
-                    roomTiles.setNWalls(roomTiles.getNWalls() + nAnimatedTiles);
-                }
+                room.setFlags(room.getFlags() | D2DrlgRoomFlags.ANIMATED_FLOOR);
             }
         }
     }
-    
-    /**
-     * D2Common.0x6FD756B0
-     * 动画化瓦片
-     */
-    public static void animateTiles(D2DrlgRoom drlgRoom) {
-        if (drlgRoom == null) {
-            return;
-        }
-        
-        // 遍历附近房间，更新动画帧
-        for (int i = 0; i < drlgRoom.getNRoomsNear(); ++i) {
-            D2DrlgRoom currentRoomEx = drlgRoom.getPpRoomsNear()[i];
-            
-            if (currentRoomEx == null) {
-                continue;
-            }
-            
-            if ((currentRoomEx.getFlags() & D2DrlgRoomFlags.ANIMATED_FLOOR) != 0 
-                    && currentRoomEx.getTileGrid() != null) {
-                // 遍历动画瓦片网格链表，更新帧
-                D2DrlgAnimTileGridStrc animGrid = currentRoomEx.getTileGrid().getPAnimTiles();
-                while (animGrid != null) {
-                    // 更新当前帧
-                    int newFrame = animGrid.getNCurrentFrame() + animGrid.getNAnimationSpeed();
-                    if (newFrame >= animGrid.getNFrames()) {
-                        newFrame = 0; // 循环
-                    }
-                    animGrid.setNCurrentFrame(newFrame);
-                    
-                    animGrid = animGrid.getPNext();
-                }
+
+    public static void animateTiles(D2DrlgRoom room) {
+        if (room == null || room.getPpRoomsNear() == null) return;
+        int nearCount = Math.min(room.getNRoomsNear(), room.getPpRoomsNear().length);
+        for (int i = 0; i < nearCount; i++) {
+            D2DrlgRoom near = room.getPpRoomsNear()[i];
+            if (near == null || (near.getFlags() & D2DrlgRoomFlags.ANIMATED_FLOOR) == 0
+                    || near.getTileGrid() == null) continue;
+            for (D2DrlgAnimTileGridStrc animation = near.getTileGrid().getPAnimTiles();
+                    animation != null; animation = animation.getPNext()) {
+                D2DrlgTileDataStrc[] frames = animation.getPpMapTileData();
+                if (frames == null || animation.getNFrames() <= 0) continue;
+                setHidden(frameAt(frames, animation.getNCurrentFrame()), true);
+                animation.setNCurrentFrame(Math.floorMod(
+                        animation.getNCurrentFrame() + animation.getNAnimationSpeed(),
+                        animation.getNFrames() << 8));
+                setHidden(frameAt(frames, animation.getNCurrentFrame()), false);
             }
         }
     }
-    
-    /**
-     * D2Common.0x6FD75740
-     * 分配动画瓦片网格
-     */
-    public static void allocAnimationTileGrids(D2DrlgRoom drlgRoom, int nAnimationSpeed, 
-            D2DrlgGridStrc pWallGrid, int nWalls, D2DrlgGridStrc pFloorGrid, int nFloors, D2DrlgGridStrc pShadowGrid) {
-        if (drlgRoom == null || drlgRoom.getTileGrid() == null) {
-            return;
-        }
-        
-        D2DrlgRoomTilesStrc roomTiles = drlgRoom.getTileGrid().getPTiles();
-        if (roomTiles == null) {
-            return;
-        }
-        
-        // 分配墙壁动画网格
-        if (nWalls > 0 && roomTiles.getPWallTiles() != null) {
-            allocAnimationTileGrid(drlgRoom, nAnimationSpeed, 
-                roomTiles.getPWallTiles(), 
-                drlgRoom.getTileGrid().getNWalls(), pWallGrid, nWalls);
-        }
-        
-        // 分配地板动画网格
-        if (nFloors > 0 && roomTiles.getPFloorTiles() != null) {
-            allocAnimationTileGrid(drlgRoom, nAnimationSpeed, 
-                roomTiles.getPFloorTiles(), 
-                drlgRoom.getTileGrid().getNFloors(), pFloorGrid, nFloors);
-        }
-        
-        // 分配阴影/屋顶动画网格
-        if (drlgRoom.getTileGrid().getNShadows() > 0 && roomTiles.getPRoofTiles() != null) {
-            allocAnimationTileGrid(drlgRoom, nAnimationSpeed, 
-                roomTiles.getPRoofTiles(), 
-                drlgRoom.getTileGrid().getNShadows(), pShadowGrid, 1);
-        }
+
+    public static void allocAnimationTileGrids(D2DrlgRoom room, int animationSpeed,
+            D2DrlgGridStrc[] wallGrids, int walls,
+            D2DrlgGridStrc[] floorGrids, int floors, D2DrlgGridStrc shadowGrid) {
+        if (room == null || room.getTileGrid() == null
+                || room.getTileGrid().getPTiles() == null) return;
+        D2DrlgRoomTilesStrc tiles = room.getTileGrid().getPTiles();
+        allocAnimationTileGrid(room, animationSpeed, tiles.getPWallTiles(),
+                room.getTileGrid().getNWalls(), wallGrids, walls);
+        allocAnimationTileGrid(room, animationSpeed, tiles.getPFloorTiles(),
+                room.getTileGrid().getNFloors(), floorGrids, floors);
+        allocAnimationTileGrid(room, animationSpeed, tiles.getPRoofTiles(),
+                room.getTileGrid().getNShadows(),
+                shadowGrid != null ? new D2DrlgGridStrc[] {shadowGrid} : null, 1);
     }
-    
-    /**
-     * D2Common.0x6FD757B0
-     * 分配动画瓦片网格（单个）
-     */
-    public static void allocAnimationTileGrid(D2DrlgRoom drlgRoom, int nAnimationSpeed, 
-            D2DrlgTileDataStrc[] pTiles, int nTiles, D2DrlgGridStrc pDrlgGrid, int nUnused) {
-        if (drlgRoom == null || pTiles == null || nTiles <= 0 || pDrlgGrid == null) {
-            return;
-        }
-        
-        Object memPool = drlgRoom.getLevel() != null && drlgRoom.getLevel().getDrlg() != null
-            ? drlgRoom.getLevel().getDrlg().getMempool() : null;
-        
-        // 分配动画瓦片网格
-        D2DrlgAnimTileGridStrc animGrid = D2Pool.callocStrcPool(memPool, D2DrlgAnimTileGridStrc.class);
-        if (animGrid == null) {
-            animGrid = new D2DrlgAnimTileGridStrc();
-        }
-        
-        // 设置瓦片数据数组
-        animGrid.setPpMapTileData(pTiles);
-        
-        // 计算帧数（从瓦片数据中获取）
-        // 遍历瓦片数据数组，找到最大帧数
-        int nMaxFrames = 1; // 默认至少1帧
-        
-        if (pTiles != null) {
-            for (int i = 0; i < Math.min(nTiles, pTiles.length); ++i) {
-                if (pTiles[i] != null && pTiles[i].getPTile() != null) {
-                    // 从瓦片数据中获取帧数（简化实现）
-                    // 实际实现可能需要从 D2CMP 模块获取瓦片的帧数信息
-                    // 这里使用默认值或从瓦片数据中提取
-                    // 假设每个动画瓦片有相同的帧数，或者从第一个瓦片获取
-                    if (i == 0) {
-                        // 简化：假设动画瓦片有固定的帧数（如熔岩通常有多个帧）
-                        // 实际应该从 D2CMP 模块获取
-                        nMaxFrames = 4; // 默认4帧（占位符）
-                    }
+
+    public static void allocAnimationTileGrid(D2DrlgRoom room, int animationSpeed,
+            D2DrlgTileDataStrc[] tiles, int tileCount, D2DrlgGridStrc grid, int unused) {
+        allocAnimationTileGrid(room, animationSpeed, tiles, tileCount,
+                grid != null ? new D2DrlgGridStrc[] {grid} : null, unused);
+    }
+
+    static void allocAnimationTileGrid(D2DrlgRoom room, int animationSpeed,
+            D2DrlgTileDataStrc[] tiles, int tileCount,
+            D2DrlgGridStrc[] grids, int gridCount) {
+        if (room == null || room.getTileGrid() == null || tiles == null || grids == null) return;
+        if (animationSpeed == 0) animationSpeed = 80;
+        Object[] entries = new Object[MAX_TILE_ENTRIES];
+        int count = Math.min(tileCount, tiles.length);
+        for (int i = 0; i < count; i++) {
+            D2DrlgTileDataStrc current = tiles[i];
+            if (current == null || current.getPTile() == null
+                    || (D2Cmp.getTileFlags(current.getPTile()) & TILE_FLAGS_LAVA) == 0) continue;
+            int gridIndex = current.getNTileType() == DrlgRoomTile.TILETYPE_SHADOW
+                    ? 0 : mapTileLayer(current.getDwFlags());
+            if (gridIndex < 0 || gridIndex >= gridCount || gridIndex >= grids.length
+                    || grids[gridIndex] == null) continue;
+            int packed = DrlgDrlgGrid.getGridEntry(
+                    grids[gridIndex], current.getNPosX(), current.getNPosY());
+            D2C_PackedTileInformation info = new D2C_PackedTileInformation(packed);
+            int frames = D2Cmp.getTiles(room.getTiles(), current.getNTileType(),
+                    info.getNTileStyle(), info.getNTileSequence(), entries, entries.length);
+            if (frames <= 0) continue;
+            D2DrlgAnimTileGridStrc animation = D2Pool.callocStrcPool(memPool(room),
+                    D2DrlgAnimTileGridStrc.class);
+            if (animation == null) animation = new D2DrlgAnimTileGridStrc();
+            animation.setPpMapTileData(new D2DrlgTileDataStrc[frames]);
+            animation.setNFrames(frames);
+            animation.setNAnimationSpeed(animationSpeed);
+            animation.setPNext(room.getTileGrid().getPAnimTiles());
+            room.getTileGrid().setPAnimTiles(animation);
+
+            current.setPTile(findAnimatedTileFrame(entries, frames, 0,
+                    info.getNTileStyle(), info.getNTileSequence()));
+            animation.getPpMapTileData()[0] = current;
+            int worldX = current.getNPosX() + room.getNTileXPos();
+            int worldY = current.getNPosY() + room.getNTileYPos();
+            for (int rarity = 1; rarity < frames; rarity++) {
+                Object entry = findAnimatedTileFrame(entries, frames, rarity,
+                        info.getNTileStyle(), info.getNTileSequence());
+                D2DrlgTileDataStrc frame;
+                if (current.getNTileType() == DrlgRoomTile.TILETYPE_FLOOR) {
+                    frame = DrlgRoomTile.initFloorTileData(room, null, worldX, worldY, packed, entry);
+                } else if (current.getNTileType() == DrlgRoomTile.TILETYPE_SHADOW) {
+                    frame = DrlgRoomTile.initShadowTileData(room, null, worldX, worldY, packed, entry);
+                } else {
+                    frame = DrlgRoomTile.initWallTileData(room, null, worldX, worldY,
+                            packed, entry, current.getNTileType());
                 }
-            }
-        }
-        
-        // 设置帧数、当前帧和动画速度
-        animGrid.setActualFrames(nMaxFrames);
-        animGrid.setActualCurrentFrame(0);
-        animGrid.setActualAnimationSpeed(nAnimationSpeed);
-        
-        // 添加到链表
-        if (drlgRoom.getTileGrid() != null) {
-            D2DrlgAnimTileGridStrc current = drlgRoom.getTileGrid().getPAnimTiles();
-            if (current == null) {
-                drlgRoom.getTileGrid().setPAnimTiles(animGrid);
-            } else {
-                while (current.getPNext() != null) {
-                    current = current.getPNext();
-                }
-                current.setPNext(animGrid);
+                animation.getPpMapTileData()[rarity] = frame;
+                setHidden(frame, true);
             }
         }
     }
-    
-    /**
-     * D2Common.0x6FD75B00
-     * 更新相邻房间中的帧
-     * 
-     * 功能：
-     * 1. 同步两个相邻房间的动画帧
-     * 2. 确保共享的动画瓦片（如熔岩）在两个房间中显示相同的帧
-     */
-    public static void updateFrameInAdjacentRooms(D2DrlgRoom drlgRoom1, D2DrlgRoom drlgRoom2) {
-        if (drlgRoom1 == null || drlgRoom2 == null) {
-            return;
+
+    static Object findAnimatedTileFrame(
+            Object[] entries, int count, int rarity, int style, int sequence) {
+        int size = Math.min(count, entries != null ? entries.length : 0);
+        for (int i = 0; i < size; i++) {
+            if (entries[i] != null && D2Cmp.getTileRarity(entries[i]) == rarity) return entries[i];
         }
-        
-        // 检查两个房间是否都有动画地板
-        boolean bRoom1Animated = (drlgRoom1.getFlags() & D2DrlgRoomFlags.ANIMATED_FLOOR) != 0;
-        boolean bRoom2Animated = (drlgRoom2.getFlags() & D2DrlgRoomFlags.ANIMATED_FLOOR) != 0;
-        
-        if (!bRoom1Animated && !bRoom2Animated) {
-            return; // 两个房间都没有动画地板
-        }
-        
-        // 获取两个房间的动画瓦片网格
-        D2DrlgAnimTileGridStrc animGrid1 = null;
-        D2DrlgAnimTileGridStrc animGrid2 = null;
-        
-        if (bRoom1Animated && drlgRoom1.getTileGrid() != null) {
-            animGrid1 = drlgRoom1.getTileGrid().getPAnimTiles();
-        }
-        
-        if (bRoom2Animated && drlgRoom2.getTileGrid() != null) {
-            animGrid2 = drlgRoom2.getTileGrid().getPAnimTiles();
-        }
-        
-        // 同步帧：使用第一个房间的当前帧作为参考
-        if (animGrid1 != null && animGrid2 != null) {
-            // 获取第一个房间的当前帧
-            int nCurrentFrame1 = animGrid1.getActualCurrentFrame();
-            
-            // 同步第二个房间的帧到相同的值
-            animGrid2.setActualCurrentFrame(nCurrentFrame1);
-            
-            // 如果两个房间共享相同的动画瓦片，确保它们的帧数也相同
-            if (animGrid1.getActualFrames() != animGrid2.getActualFrames()) {
-                // 使用较小的帧数，确保同步
-                int nMinFrames = Math.min(animGrid1.getActualFrames(), animGrid2.getActualFrames());
-                if (nCurrentFrame1 >= nMinFrames) {
-                    nCurrentFrame1 = nCurrentFrame1 % nMinFrames;
-                }
-                animGrid1.setActualCurrentFrame(nCurrentFrame1);
-                animGrid2.setActualCurrentFrame(nCurrentFrame1);
-            }
-        } else if (animGrid1 != null) {
-            // 只有第一个房间有动画，同步到第二个房间（如果第二个房间应该也有）
-            if (bRoom2Animated && drlgRoom2.getTileGrid() != null) {
-                // 创建新的动画网格或更新现有的
-                D2DrlgAnimTileGridStrc newGrid = drlgRoom2.getTileGrid().getPAnimTiles();
-                if (newGrid != null) {
-                    newGrid.setActualCurrentFrame(animGrid1.getActualCurrentFrame());
-                }
-            }
-        } else if (animGrid2 != null) {
-            // 只有第二个房间有动画，同步到第一个房间（如果第一个房间应该也有）
-            if (bRoom1Animated && drlgRoom1.getTileGrid() != null) {
-                D2DrlgAnimTileGridStrc newGrid = drlgRoom1.getTileGrid().getPAnimTiles();
-                if (newGrid != null) {
-                    newGrid.setActualCurrentFrame(animGrid2.getActualCurrentFrame());
+        D2Log.warning("Animating tiles missing rarity=%d style=%d sequence=%d",
+                rarity, style, sequence);
+        return size > 0 ? entries[0] : null;
+    }
+
+    public static void updateFrameInAdjacentRooms(D2DrlgRoom first, D2DrlgRoom second) {
+        if (second == null) return;
+        int currentFrame = 0;
+        if (first != null && first.getPpRoomsNear() != null) {
+            int count = Math.min(first.getNRoomsNear(), first.getPpRoomsNear().length);
+            for (int i = 0; i < count; i++) {
+                D2DrlgRoom near = first.getPpRoomsNear()[i];
+                if (near != null && near.getTileGrid() != null
+                        && near.getTileGrid().getPAnimTiles() != null) {
+                    currentFrame = near.getTileGrid().getPAnimTiles().getNCurrentFrame();
+                    break;
                 }
             }
         }
+        if (second.getPpRoomsNear() == null) return;
+        int count = Math.min(second.getNRoomsNear(), second.getPpRoomsNear().length);
+        for (int i = 0; i < count; i++) {
+            D2DrlgRoom near = second.getPpRoomsNear()[i];
+            if (near == null || near.getTileGrid() == null) continue;
+            for (D2DrlgAnimTileGridStrc animation = near.getTileGrid().getPAnimTiles();
+                    animation != null; animation = animation.getPNext()) {
+                animation.setNCurrentFrame(currentFrame);
+            }
+        }
+    }
+
+    private static D2DrlgTileDataStrc frameAt(D2DrlgTileDataStrc[] frames, int fixedFrame) {
+        int index = fixedFrame >> 8;
+        return index >= 0 && index < frames.length ? frames[index] : null;
+    }
+
+    private static void setHidden(D2DrlgTileDataStrc tile, boolean hidden) {
+        if (tile == null) return;
+        tile.setDwFlags(hidden
+                ? tile.getDwFlags() | MAPTILE_HIDDEN
+                : tile.getDwFlags() & ~MAPTILE_HIDDEN);
+    }
+
+    private static int mapTileLayer(int flags) {
+        return ((flags & MAPTILE_WALL_LAYER_MASK) >>> MAPTILE_WALL_LAYER_BIT) - 1;
+    }
+
+    private static Object memPool(D2DrlgRoom room) {
+        return room.getLevel() != null && room.getLevel().getDrlg() != null
+                ? room.getLevel().getDrlg().getMempool() : null;
+    }
+
+    private static void resetTileData(D2DrlgTileDataStrc tile) {
+        tile.setNWidth(0);
+        tile.setNHeight(0);
+        tile.setNPosX(0);
+        tile.setNPosY(0);
+        tile.setUnk0x10(0);
+        tile.setDwFlags(0);
+        tile.setPTile(null);
+        tile.setNTileType(0);
+        tile.setUnk0x20(null);
+        tile.setUnk0x24(0);
+        tile.setNRed((byte) 0);
+        tile.setNGreen((byte) 0);
+        tile.setNBlue((byte) 0);
+        tile.setNIntensity((byte) 0);
+        tile.setUnk0x2C(0);
     }
 }

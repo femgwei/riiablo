@@ -424,10 +424,16 @@ public class D2Cmp {
         }
 
         if (pTileLibraryEntry instanceof D2TileData) {
-            return Math.max(1, ((D2TileData) pTileLibraryEntry).getNRarity());
+            return ((D2TileData) pTileLibraryEntry).getNRarity();
         }
 
         return 1;
+    }
+
+    /** D2Common #10079. */
+    public static int getTileFlags(Object pTileLibraryEntry) {
+        return pTileLibraryEntry instanceof D2TileData
+                ? ((D2TileData) pTileLibraryEntry).getDwFlags() : 0;
     }
     
     /**

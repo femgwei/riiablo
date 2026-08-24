@@ -549,7 +549,7 @@ public class DrlgRoomTile {
      * @param pTileLibraryEntry 瓦片库条目
      * @return 创建的瓦片数据
      */
-    private static D2DrlgTileDataStrc initShadowTileData(D2DrlgRoom drlgRoom, D2DrlgTileDataStrc[] ppTileData,
+    public static D2DrlgTileDataStrc initShadowTileData(D2DrlgRoom drlgRoom, D2DrlgTileDataStrc[] ppTileData,
             int nX, int nY, int nPackedTileInformation, Object pTileLibraryEntry) {
         if (drlgRoom == null || drlgRoom.getTileGrid() == null 
                 || drlgRoom.getTileGrid().getPTiles() == null) {
