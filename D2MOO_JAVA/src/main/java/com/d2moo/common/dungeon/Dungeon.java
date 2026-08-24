@@ -88,6 +88,54 @@ public class Dungeon {
         }
     }
 
+    /** D2Common #10063. Coordinates are native tile coordinates. */
+    public static void setClientIsInSight(
+            D2DrlgAct act, int levelId, int x, int y, D2ActiveRoom roomHint) {
+        if (act == null || act.getDrlg() == null) return;
+        DrlgActivate.setClientIsInSight(
+                act.getDrlg(), levelId, x, y,
+                roomHint != null ? roomHint.getPDrlgRoom() : null);
+    }
+
+    /** D2Common #10064. Coordinates are native tile coordinates. */
+    public static void unsetClientIsInSight(
+            D2DrlgAct act, int levelId, int x, int y, D2ActiveRoom roomHint) {
+        if (act == null || act.getDrlg() == null) return;
+        DrlgActivate.unsetClientIsInSight(
+                act.getDrlg(), levelId, x, y,
+                roomHint != null ? roomHint.getPDrlgRoom() : null);
+    }
+
+    /** D2Common #10062. */
+    public static void changeClientRoom(D2ActiveRoom previousRoom, D2ActiveRoom newRoom) {
+        DrlgActivate.changeClientRoom(
+                previousRoom != null ? previousRoom.getPDrlgRoom() : null,
+                newRoom != null ? newRoom.getPDrlgRoom() : null);
+    }
+
+    /** D2Common #10065. Streams the generated room containing the tile position. */
+    public static D2ActiveRoom streamRoomAtCoords(D2DrlgAct act, int x, int y) {
+        return act != null && act.getDrlg() != null
+                ? DrlgActivate.streamRoomAtCoords(act.getDrlg(), x, y)
+                : null;
+    }
+
+    /** D2Common #10069. Rooms containing a client take priority over sight-only rooms. */
+    public static D2ActiveRoom getARoomInClientSight(D2DrlgAct act) {
+        return act != null && act.getDrlg() != null
+                ? DrlgActivate.getARoomInClientSight(act.getDrlg())
+                : null;
+    }
+
+    /** D2Common #10070: advances the native status-list iteration. */
+    public static D2ActiveRoom getARoomInSightButWithoutClient(
+            D2DrlgAct act, D2ActiveRoom room) {
+        return act != null && act.getDrlg() != null && room != null
+                ? DrlgActivate.getARoomInSightButWithoutClient(
+                        act.getDrlg(), room.getPDrlgRoom())
+                : null;
+    }
+
     public static void getRGBIntensityFromRoom(D2ActiveRoom room,
             byte[] intensity, byte[] red, byte[] green, byte[] blue) {
         DrlgDrlgRoom.getRGBIntensityFromRoomEx(

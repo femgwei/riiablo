@@ -722,7 +722,10 @@ public class DrlgDrlg {
                     nLevelId = currentLevel.getLevelId();
                 }
             }
-            
+
+            if (nLevelId == 0) {
+                return null;
+            }
             level = getLevel(drlg, nLevelId);
         }
         

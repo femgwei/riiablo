@@ -90,15 +90,20 @@ public class DrlgActivate {
     private static boolean updateRoomExStatusImpl(D2DrlgRoom drlgRoom, D2DrlgRoomStatus status) {
         // 注意：较低的值具有更高的优先级
         if (drlgRoom.getRoomStatus().getValue() > status.getValue()) {
-            roomExStatusUnlink(drlgRoom);
-            if (status.getValue() < D2DrlgRoomStatus.COUNT.getValue()) {
-                D2DrlgStrc drlg = drlgRoom.getLevel().getDrlg();
-                roomExStatusLink(drlg.getStatusRoomsLists()[status.getValue()], drlgRoom);
-            }
-            drlgRoom.setRoomStatus(status);
+            moveRoomExToStatus(drlgRoom, status);
             return true;
         }
         return false;
+    }
+
+    private static void moveRoomExToStatus(
+            D2DrlgRoom drlgRoom, D2DrlgRoomStatus status) {
+        roomExStatusUnlink(drlgRoom);
+        if (status.getValue() < D2DrlgRoomStatus.COUNT.getValue()) {
+            D2DrlgStrc drlg = drlgRoom.getLevel().getDrlg();
+            roomExStatusLink(drlg.getStatusRoomsLists()[status.getValue()], drlgRoom);
+        }
+        drlgRoom.setRoomStatus(status);
     }
     
     /**
@@ -203,7 +208,9 @@ public class DrlgActivate {
             D2DrlgRoomStatus firstStatusWithRefCount = roomExFindFirstStatusWithRefCount(
                 drlgRoom, D2DrlgRoomStatus.COUNT);
             if (drlgRoom.getRoomStatus() != firstStatusWithRefCount) {
-                updateRoomExStatusImpl(drlgRoom, firstStatusWithRefCount);
+                // Status removal can move to a lower-priority (larger) value. The regular
+                // update helper intentionally only promotes, so relink explicitly here.
+                moveRoomExToStatus(drlgRoom, firstStatusWithRefCount);
             }
         }
     }
