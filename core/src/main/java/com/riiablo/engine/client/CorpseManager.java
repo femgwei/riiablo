@@ -6,6 +6,7 @@ import com.artemis.systems.IteratingSystem;
 
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.PlayerCorpse;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -18,10 +19,14 @@ public class CorpseManager extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(CorpseManager.class);
 
   protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
 
   @Override
   protected void process(int entityId) {
+    // Player corpses own recoverable equipment and persist until retrieval.
+    if (mPlayerCorpse.has(entityId)) return;
+
     Corpse corpse = mCorpse.get(entityId);
     float delta = world.getDelta();
 

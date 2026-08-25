@@ -9,6 +9,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.PlayerCorpse;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.item.BodyLoc;
+import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.save.ItemData;
@@ -93,38 +94,51 @@ public class PlayerCorpseRetrievalSystem extends IteratingSystem {
     Player player = mPlayer.get(playerId);
     ItemData itemData = player.data.getItems();
     
-    // Restore all equipped items from corpse
+    // Restore all equipped items from corpse. Item identity is stable even if
+    // inventory operations shifted ItemData indices after the player revived.
     int itemsRestored = 0;
-    com.badlogic.gdx.utils.IntIntMap.Keys keys = corpse.equippedItemIndices.keys();
-    while (keys.hasNext) {
-      int bodyLocOrdinal = keys.next();
-      BodyLoc bodyLoc = BodyLoc.valueOf(bodyLocOrdinal);
-      if (bodyLoc == null || bodyLoc == BodyLoc.NONE) continue;
-      
-      int itemIndex = corpse.equippedItemIndices.get(bodyLocOrdinal, ItemData.INVALID_ITEM);
-      if (itemIndex == ItemData.INVALID_ITEM) continue;
-      
-      // Check if item still exists in itemData
-      // Use getItemCount() or check bounds differently
-      // For now, we'll try to equip and catch exceptions
-      
-      // Re-equip the item using public method
+    com.badlogic.gdx.utils.Array<BodyLoc> restoredSlots = new com.badlogic.gdx.utils.Array<>();
+    for (com.badlogic.gdx.utils.ObjectMap.Entry<BodyLoc, Item> entry : corpse.equippedItems) {
+      BodyLoc bodyLoc = entry.key;
+      Item item = entry.value;
+      if (bodyLoc == null || bodyLoc == BodyLoc.NONE || item == null) continue;
+
+      if (!itemData.contains(item)) {
+        log.error("[PLAYER_CORPSE_ITEM] action=missing player={} corpse={} bodyLoc={} code={}",
+            playerId, corpseEntityId, bodyLoc, item.code);
+        continue;
+      }
+
+      if (itemData.getSlot(bodyLoc) != null) {
+        log.info("[PLAYER_CORPSE_ITEM] action=defer player={} corpse={} bodyLoc={} reason=occupied",
+            playerId, corpseEntityId, bodyLoc);
+        continue;
+      }
+
       try {
-        itemData.equipItem(bodyLoc, itemIndex);
+        itemData.equipItem(bodyLoc, item);
+        restoredSlots.add(bodyLoc);
         itemsRestored++;
-        log.debug("Restored item to {}: index={}", bodyLoc, itemIndex);
+        log.info("[PLAYER_CORPSE_ITEM] action=restore player={} corpse={} bodyLoc={} code={}",
+            playerId, corpseEntityId, bodyLoc, item.code);
       } catch (Exception e) {
-        log.warn("Failed to restore item to {}: {}", bodyLoc, e.getMessage());
+        log.warn("[PLAYER_CORPSE_ITEM] action=restore_failed player={} corpse={} bodyLoc={} reason={}",
+            playerId, corpseEntityId, bodyLoc, e.getMessage());
       }
     }
+
+    for (BodyLoc bodyLoc : restoredSlots) corpse.equippedItems.remove(bodyLoc);
     
     log.info("Player {} retrieved {} items from corpse", playerId, itemsRestored);
     
-    // Mark corpse as retrieved
-    corpse.retrieved = true;
-    
-    // Remove corpse entity (or mark it for removal)
-    // For now, we'll just mark it as retrieved and let CorpseManager handle removal
-    // TODO: Remove corpse entity immediately or after a delay
+    if (corpse.equippedItems.size == 0) {
+      corpse.retrieved = true;
+      log.info("[PLAYER_CORPSE] action=retrieved player={} corpse={} items={}",
+          playerId, corpseEntityId, itemsRestored);
+      world.delete(corpseEntityId);
+    } else {
+      log.info("[PLAYER_CORPSE] action=partial player={} corpse={} restored={} remaining={}",
+          playerId, corpseEntityId, itemsRestored, corpse.equippedItems.size);
+    }
   }
 }

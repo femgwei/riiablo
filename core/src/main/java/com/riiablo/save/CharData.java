@@ -32,12 +32,15 @@ import com.riiablo.item.ItemReader;
 import com.riiablo.item.Location;
 import com.riiablo.item.StoreLoc;
 import com.riiablo.item.Type;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.util.BufferUtils;
 
 // TODO: support pooling CharData for multiplayer
 public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   private static final String TAG = "CharData";
+  private static final Logger log = LogManager.getLogger(CharData.class);
   private static final boolean DEBUG       = true;
   private static final boolean DEBUG_ITEMS = DEBUG && !true;
 
@@ -667,13 +670,25 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 //  @Override
   public void bodyToCursor(BodyLoc bodyLoc, boolean merc) {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "bodyToCursor " + bodyLoc + "," + (merc ? "merc" : "player"));
-    assert itemData.cursor == ItemData.INVALID_ITEM;
+    if (itemData.cursor != ItemData.INVALID_ITEM) {
+      log.warn("[ITEM_MOVE_REJECTED] operation=bodyToCursor bodyLoc={} merc={} reason=cursor_occupied",
+          bodyLoc, merc);
+      return;
+    }
     Item item;
     if (merc) {
       int i = mercData.itemData.unequip(bodyLoc);
+      if (i == ItemData.INVALID_ITEM) {
+        log.warn("[ITEM_MOVE_REJECTED] operation=bodyToCursor bodyLoc={} merc=true reason=empty_slot", bodyLoc);
+        return;
+      }
       itemData.cursor = itemData.add(item = mercData.itemData.remove(i));
     } else {
       itemData.cursor = itemData.unequip(bodyLoc);
+      if (itemData.cursor == ItemData.INVALID_ITEM) {
+        log.warn("[ITEM_MOVE_REJECTED] operation=bodyToCursor bodyLoc={} merc=false reason=empty_slot", bodyLoc);
+        return;
+      }
       item = itemData.getItem(itemData.cursor);
     }
     itemData.setLocation(item, Location.CURSOR);
@@ -682,7 +697,11 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 //  @Override
   public void cursorToBody(BodyLoc bodyLoc, boolean merc) {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "cursorToBody " + bodyLoc + "," + (merc ? "merc" : "player"));
-    assert itemData.cursor != ItemData.INVALID_ITEM;
+    if (itemData.cursor == ItemData.INVALID_ITEM) {
+      log.warn("[ITEM_MOVE_REJECTED] operation=cursorToBody bodyLoc={} merc={} reason=empty_cursor",
+          bodyLoc, merc);
+      return;
+    }
     if (merc) {
       Item item = itemData.getItem(itemData.cursor);
       itemData.remove(itemData.cursor);
@@ -703,6 +722,20 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 //  @Override
   public void swapBodyItem(BodyLoc bodyLoc, boolean merc) {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "swapBodyItem " + bodyLoc + "," + (merc ? "merc" : "player"));
+
+    if (itemData.cursor == ItemData.INVALID_ITEM) {
+      log.warn("[ITEM_MOVE_REJECTED] operation=swapBodyItem bodyLoc={} merc={} reason=empty_cursor",
+          bodyLoc, merc);
+      return;
+    }
+
+    ItemData equippedItems = merc ? mercData.itemData : itemData;
+    if (equippedItems.getSlot(bodyLoc) == null) {
+      log.warn("[ITEM_MOVE_RECOVERED] operation=swapBodyItem bodyLoc={} merc={} reason=empty_slot action=cursorToBody",
+          bodyLoc, merc);
+      cursorToBody(bodyLoc, merc);
+      return;
+    }
 
     // #bodyToCursor(BodyLoc,boolean)
     Item newCursorItem;

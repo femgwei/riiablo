@@ -113,6 +113,10 @@ public class ItemData {
     return itemData.indexOf(item, true);
   }
 
+  public boolean contains(Item item) {
+    return itemData.contains(item, true);
+  }
+
   public Item getItem(int i) {
     return itemData.get(i);
   }
@@ -371,6 +375,15 @@ public class ItemData {
       throw new IllegalStateException("Body location " + bodyLoc + " is already occupied by item " + existing);
     }
     equip(bodyLoc, itemIndex);
+  }
+
+  /** Equips an existing item by identity so stored corpse data survives index shifts. */
+  public void equipItem(BodyLoc bodyLoc, Item item) {
+    int itemIndex = indexOf(item);
+    if (itemIndex == INVALID_ITEM) {
+      throw new IllegalArgumentException("Item is no longer owned by this character");
+    }
+    equipItem(bodyLoc, itemIndex);
   }
 
   void updateStats() {

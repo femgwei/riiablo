@@ -74,6 +74,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   protected ItemController itemController;
 
   protected AttributesUpdater updater = new AttributesUpdater(); // TODO: inject
+  final BodyPart[] bodyParts = new BodyPart[BodyLocs.NUM_LOCS];
 
   public InventoryPanel() {
     Riiablo.assets.load(invcharDescriptor);
@@ -133,8 +134,6 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     inv_helm_glove = Riiablo.assets.get(inv_helm_gloveDescriptor);
     inv_ring_amulet = Riiablo.assets.get(inv_ring_amuletDescriptor);
     inv_weapons = Riiablo.assets.get(inv_weaponsDescriptor);
-
-    final BodyPart[] bodyParts = new BodyPart[BodyLocs.NUM_LOCS];
 
     BodyPart torso = bodyParts[BodyLocs.TORS] = new BodyPart(BodyLoc.TORS, inv_armor.getTexture());
     torso.setSize(inventory.torsoWidth, inventory.torsoHeight);
@@ -317,6 +316,14 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public void draw(Batch batch, float a) {
+    // BodyPart caches are UI state only. Equipment may also change through
+    // death/corpse handling, so refresh from the authoritative slot map and
+    // never leave a clickable image for an already detached item.
+    ItemData itemData = Riiablo.charData.getItems();
+    for (BodyPart bodyPart : bodyParts) {
+      if (bodyPart != null) bodyPart.item = itemData.getSlot(bodyPart.bodyLoc);
+    }
+
     batch.draw(invchar, getX(), getY());
     if (Riiablo.charData.getItems().getAlternate() > 0) {
       batch.draw(invcharTabR,
@@ -360,6 +367,10 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       addListener(clickListener = new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+          // A death/corpse transfer can change equipment outside this panel's
+          // click flow. Resolve the slot again before deciding whether this is
+          // an unequip, equip, or swap operation.
+          item = Riiablo.charData.getItems().getSlot(BodyPart.this.bodyLoc);
           Item cursor = Riiablo.cursor.getItem();
           if (cursor != null) {
             if (!ArrayUtils.contains(cursor.typeEntry.BodyLoc, bodyPart)) {
@@ -375,6 +386,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
             }
             item = cursor;
           } else {
+            if (item == null) return;
             item = null;
             itemController.bodyToCursor(BodyPart.this.bodyLoc, false);
           }

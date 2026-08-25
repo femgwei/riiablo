@@ -10,6 +10,9 @@ import com.badlogic.gdx.Gdx;
 
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.client.component.AnimationWrapper;
+import com.riiablo.engine.client.component.BBoxWrapper;
+import com.riiablo.engine.client.component.CofComponentDescriptors;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
@@ -29,6 +32,9 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.CofAlphas;
+import com.riiablo.engine.server.component.CofComponents;
+import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
@@ -66,7 +72,13 @@ public class DeathHandler extends PassiveSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<CofAlphas> mCofAlphas;
+  protected ComponentMapper<CofComponents> mCofComponents;
+  protected ComponentMapper<CofTransforms> mCofTransforms;
   protected ComponentMapper<Size> mSize;
+  protected ComponentMapper<CofComponentDescriptors> mCofComponentDescriptors;
+  protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
   
   protected Box2DPhysics box2d;
   
@@ -138,7 +150,17 @@ public class DeathHandler extends PassiveSystem {
     // Save equipped items before removing them
     Player player = mPlayer.get(playerId);
     com.riiablo.save.ItemData itemData = player.data.getItems();
-    com.badlogic.gdx.utils.IntIntMap equippedItemIndices = new com.badlogic.gdx.utils.IntIntMap();
+    com.badlogic.gdx.utils.ObjectMap<BodyLoc, com.riiablo.item.Item> equippedItems =
+        new com.badlogic.gdx.utils.ObjectMap<>();
+
+    // The live player's COF components are cleared by unequip notifications.
+    // Preserve the death-time appearance for the independent corpse entity.
+    int[] corpseComponents = mCofComponents.has(playerId)
+        ? mCofComponents.get(playerId).component.clone() : null;
+    float[] corpseAlphas = mCofAlphas.has(playerId)
+        ? mCofAlphas.get(playerId).alpha.clone() : null;
+    byte[] corpseTransforms = mCofTransforms.has(playerId)
+        ? mCofTransforms.get(playerId).transform.clone() : null;
     
     // D2MOD: Ensure player HP stays at 0 or below after death
     // Save current HP state before unequipping items (which may trigger updateStats)
@@ -166,8 +188,9 @@ public class DeathHandler extends PassiveSystem {
         // We'll unequip it properly after saving the index
         int itemIndex = itemData.unequipItem(bodyLoc);
         if (itemIndex != com.riiablo.save.ItemData.INVALID_ITEM) {
-          equippedItemIndices.put(bodyLoc.ordinal(), itemIndex);
-          log.debug("Saving equipped item at {}: index={}", bodyLoc, itemIndex);
+          equippedItems.put(bodyLoc, item);
+          log.info("[PLAYER_CORPSE_ITEM] action=detach player={} bodyLoc={} itemIndex={} code={}",
+              playerId, bodyLoc, itemIndex, item.code);
         }
       }
     }
@@ -187,10 +210,11 @@ public class DeathHandler extends PassiveSystem {
     PlayerCorpse playerCorpse = mPlayerCorpse.create(playerId);
     playerCorpse.playerId = playerId;
     playerCorpse.deathLocation.set(deathLocation);
-    playerCorpse.equippedItemIndices = equippedItemIndices;
+    playerCorpse.equippedItems.clear();
+    playerCorpse.equippedItems.putAll(equippedItems);
     
     log.info("Player {} items saved to corpse: {} items unequipped", 
-        playerId, equippedItemIndices.size);
+        playerId, equippedItems.size);
     
     // Create death sequence: MODE_DT (death animation) -> MODE_DD (corpse)
     // Reference: D2MOD - players use MODE_DT -> MODE_DD sequence like monsters
@@ -208,10 +232,12 @@ public class DeathHandler extends PassiveSystem {
     
     // Create independent corpse entity at death location (like d2mod)
     // The corpse entity will remain at death location while player respawns at town
-    createCorpseEntity(playerId, deathLocation, playerCorpse);
+    createCorpseEntity(
+        playerId, deathLocation, playerCorpse,
+        corpseComponents, corpseAlphas, corpseTransforms);
     
     log.info("Player {} died at location: ({}, {}), {} items saved to corpse", 
-        playerId, deathLocation.x, deathLocation.y, equippedItemIndices.size);
+        playerId, deathLocation.x, deathLocation.y, equippedItems.size);
   }
 
   @Subscribe
@@ -321,7 +347,13 @@ public class DeathHandler extends PassiveSystem {
    * Create independent corpse entity at death location
    * Reference: d2mod - corpse is a separate entity that remains at death location
    */
-  private void createCorpseEntity(int playerId, Vector2 deathLocation, PlayerCorpse playerCorpse) {
+  private void createCorpseEntity(
+      int playerId,
+      Vector2 deathLocation,
+      PlayerCorpse playerCorpse,
+      int[] equippedComponents,
+      float[] equippedAlphas,
+      byte[] equippedTransforms) {
     if (!mPlayer.has(playerId) || !mClass.has(playerId)) {
       log.warn("Player {} missing required components for corpse creation", playerId);
       return;
@@ -344,6 +376,28 @@ public class DeathHandler extends PassiveSystem {
     com.riiablo.engine.server.component.CofReference playerCof = mCofReference.get(playerId);
     com.riiablo.engine.server.component.CofReference corpseCof = mCofReference.create(corpseEntityId);
     corpseCof.set(playerCof.token, Engine.Player.MODE_DD); // Corpse mode
+    corpseCof.wclass = Engine.WEAPON_HTH;
+
+    CofComponents corpseComponents = mCofComponents.create(corpseEntityId);
+    if (equippedComponents != null) {
+      System.arraycopy(
+          equippedComponents, 0, corpseComponents.component, 0, corpseComponents.component.length);
+    }
+    CofAlphas corpseAlphas = mCofAlphas.create(corpseEntityId);
+    if (equippedAlphas != null) {
+      System.arraycopy(equippedAlphas, 0, corpseAlphas.alpha, 0, corpseAlphas.alpha.length);
+    }
+    CofTransforms corpseTransforms = mCofTransforms.create(corpseEntityId);
+    if (equippedTransforms != null) {
+      System.arraycopy(
+          equippedTransforms, 0, corpseTransforms.transform, 0, corpseTransforms.transform.length);
+    }
+
+    // This entity is created after the normal client factory path, so attach
+    // the client-side COF/animation components explicitly to make it visible.
+    mCofComponentDescriptors.create(corpseEntityId);
+    AnimationWrapper animation = mAnimationWrapper.create(corpseEntityId);
+    mBBoxWrapper.create(corpseEntityId).box = animation.animation.getBox();
     
     // Set corpse position at death location
     Position corpsePos = mPosition.create(corpseEntityId);
@@ -362,10 +416,13 @@ public class DeathHandler extends PassiveSystem {
     PlayerCorpse corpseComponent = mPlayerCorpse.create(corpseEntityId);
     corpseComponent.playerId = playerId;
     corpseComponent.deathLocation.set(deathLocation);
-    corpseComponent.equippedItemIndices = playerCorpse.equippedItemIndices;
+    corpseComponent.equippedItems.clear();
+    corpseComponent.equippedItems.putAll(playerCorpse.equippedItems);
     
     // Add Corpse component to mark it as a corpse
-    mCorpse.create(corpseEntityId);
+    Corpse corpse = mCorpse.create(corpseEntityId);
+    corpse.timeRemaining = PlayerCorpse.CORPSE_DURATION;
+    corpse.usable = false;
     
     log.info("Created corpse entity {} at death location ({}, {}) for player {}", 
         corpseEntityId, deathLocation.x, deathLocation.y, playerId);
