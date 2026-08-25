@@ -1306,6 +1306,8 @@ public class Map implements Disposable {
     private byte currentMode;
     private boolean opened;
     private boolean activated;
+    /** D2ObjectDataStrc::InteractType; initialized lazily by the server bridge. */
+    private int interactType = -1;
     /** Native shrine/well state retained across ECS room entity recreation. */
     private int shrineId = -1;
     private float shrineCooldownFrames;
@@ -1339,6 +1341,10 @@ public class Map implements Disposable {
       return activated;
     }
 
+    public int interactType() {
+      return interactType;
+    }
+
     public int shrineId() {
       return shrineId;
     }
@@ -1365,6 +1371,10 @@ public class Map implements Disposable {
 
     public void persistActivated(boolean activated) {
       this.activated = activated;
+    }
+
+    public void persistInteractType(int interactType) {
+      this.interactType = interactType & 0xFF;
     }
 
     public void persistShrineId(int shrineId) {

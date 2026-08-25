@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Interactable;
+import com.riiablo.engine.server.object.NativeObjectInteractTypeResolver;
 import com.riiablo.engine.server.object.NativeObjectOperateTable;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.map.Map;
@@ -54,6 +55,7 @@ public class ObjectInitializer extends BaseEntitySystem {
       // object-specific InitFn so doors/chests do not reset to NU on reload.
       cofs.setMode(entityId, nativeState.initialMode);
     }
+    initializeInteractType(entityId, base, nativeState);
     switch (base.InitFn) {
       case 0:
         break;
@@ -89,6 +91,29 @@ public class ObjectInitializer extends BaseEntitySystem {
         Gdx.app.error(TAG, "Invalid InitFn for " + mClassname.get(entityId).classname + ": " + base.InitFn);
     }
     restorePersistentInteractionState(entityId, base, nativeState);
+  }
+
+  private void initializeInteractType(int entityId, Objects.Entry base,
+      NativeObjectState state) {
+    if (state == null || state.interactType >= 0
+        || !NativeObjectInteractTypeResolver.supports(base)) return;
+
+    Levels.Entry level = getLevel(entityId);
+    Position position = mPosition.get(entityId);
+    int normalMonsterLevel = level == null || level.MonLvl == null
+        || level.MonLvl.length == 0 ? 0 : level.MonLvl[0];
+    int levelId = level == null ? 0 : level.Id;
+    int x = state.source != null ? state.source.x
+        : position == null ? 0 : (int) position.position.x;
+    int y = state.source != null ? state.source.y
+        : position == null ? 0 : (int) position.position.y;
+    int seed = map == null ? 0 : map.seed();
+    int interactType = NativeObjectInteractTypeResolver.resolve(base,
+        normalMonsterLevel, seed, levelId, state.currentClassId, x, y);
+    state.persistInteractType(interactType);
+    Gdx.app.debug(TAG, "Native object InteractType initialized: entity=" + entityId
+        + " object=" + base.Id + " initFn=" + base.InitFn
+        + " level=" + levelId + " interactType=" + interactType);
   }
 
   private void restorePersistentInteractionState(int entityId, Objects.Entry base,

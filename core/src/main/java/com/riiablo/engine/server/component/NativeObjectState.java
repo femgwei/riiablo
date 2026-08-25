@@ -19,6 +19,8 @@ public class NativeObjectState extends Component {
   public boolean spawned;
   public boolean opened;
   public boolean activated;
+  /** Persistent D2ObjectDataStrc::InteractType, or -1 before native InitFn runs. */
+  public int interactType = -1;
   public int shrineId = -1;
   public float shrineCooldownFrames;
   public int wellCharges = -1;
@@ -47,6 +49,7 @@ public class NativeObjectState extends Component {
     this.spawned = spawned;
     this.opened = source != null && source.opened();
     this.activated = source != null && source.activated();
+    this.interactType = source == null ? -1 : source.interactType();
     this.shrineId = source == null ? -1 : source.shrineId();
     this.shrineCooldownFrames = source == null ? 0f : source.shrineCooldownFrames();
     this.wellCharges = source == null ? -1 : source.wellCharges();
@@ -68,6 +71,11 @@ public class NativeObjectState extends Component {
   public void persistActivated(boolean activated) {
     this.activated = activated;
     if (source != null) source.persistActivated(activated);
+  }
+
+  public void persistInteractType(int interactType) {
+    this.interactType = interactType & 0xFF;
+    if (source != null) source.persistInteractType(this.interactType);
   }
 
   public void persistShrineId(int shrineId) {

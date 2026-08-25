@@ -18,6 +18,7 @@ import com.riiablo.engine.server.event.NativeTrapInteractionEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
+import com.riiablo.engine.server.object.NativeObjectInteractTypeResolver;
 import com.riiablo.engine.server.object.NativeObjectOperateTable;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
@@ -91,6 +92,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     }
     event.dispatch(ObjectInteractionEvent.obtain(src, entityId, object.base.Id,
         object.base.OperateFn, kind, lifecycle, stateChanged));
+    dispatchContainerTrap(src, entityId, object.base, lifecycle, stateChanged, state);
   }
 
   /**
@@ -297,6 +299,21 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     // D2Game derives the concrete handler from InteractType. Until the
     // trap initializer is bridged, do not mislabel OperateFn as a handler id.
     return -1;
+  }
+
+  private void dispatchContainerTrap(int src, int entityId,
+      com.riiablo.codec.excel.Objects.Entry base, Lifecycle lifecycle,
+      boolean stateChanged, NativeObjectState state) {
+    if (!stateChanged || state == null
+        || (lifecycle != Lifecycle.ANIMATED_CONTAINER
+            && lifecycle != Lifecycle.INSTANT_CONTAINER)) return;
+    int trapType = NativeObjectInteractTypeResolver.trapType(state.interactType);
+    if (trapType == 0) return;
+    event.dispatch(NativeTrapInteractionEvent.obtain(src, entityId, base.Id,
+        base.OperateFn, base.TrapProb, trapType, true));
+    Gdx.app.log(TAG, "Native trapped container triggered: entity=" + entityId
+        + " player=" + src + " object=" + base.Id
+        + " interactType=" + state.interactType + " trapType=" + trapType);
   }
 
   private Levels.Entry getLevel(int entityId) {

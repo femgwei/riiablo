@@ -116,7 +116,9 @@ waypoints, caves, quest rewards and collision boundaries.
     - [ ] Same-level party count wiring and full unique/set property generation.
     - [x] Exploding barrel OperateFn=7 is separated from ordinary container drops.
     - [x] Trap trigger context event exposes player/object/operate/trap type.
-    - [ ] Trap initializer, projectile/damage callback and trapped urn/chest InteractType.
+    - [x] InitFn 2/3/57 trapped urn/chest InteractType and lock-bit initialization.
+    - [x] Persistent InteractType and trapped-container event dispatch.
+    - [ ] Locked-chest key consumption and trap projectile/damage callback.
   - [ ] Shrine and well effects/cooldowns.
     - [x] Shrines.txt table and native effect-class/LevelMin/preset selection.
     - [x] Shrine health/mana effects (Code 1-5) and 1200-frame/minute reset.
