@@ -11,18 +11,28 @@ import com.riiablo.RiiabloTest;
 import com.artemis.World;
 import com.artemis.WorldConfiguration;
 import com.artemis.WorldConfigurationBuilder;
+import com.artemis.ComponentMapper;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
+import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 /** Data-driven, headless audit for the native shaman projectile chain. */
@@ -60,6 +70,61 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       System.out.println("[SHAMAN_FIREBALL_AUDIT] phase=factory_created monster=" + row.Id
           + " skill=" + skill.skill + " missile=" + expected.Missile
           + " missileId=" + factory.missileId + " owner=" + factory.ownerId);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void shamanMissileMovesCollidesAndDamagesPlayer() {
+    MathUtils.random.setSeed(0x5A4A4EL);
+    MonStats.Entry row = Riiablo.files.monstats.get("fallenshaman3");
+    assertNotNull(row);
+    Skills.Entry skill = Riiablo.files.skills.get(row.Skill2);
+    assertNotNull(skill);
+
+    RecordingFactory factory = new RecordingFactory();
+    ServerSkillSystem skills = new ServerSkillSystem();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    Map map = new Map(0, 0);
+    WorldConfiguration config = new WorldConfigurationBuilder()
+        .with(new EventSystem(), skills, factory, collisions)
+        .build()
+        .register("factory", factory)
+        .register("map", map);
+    World world = new World(config);
+    try {
+      int shamanId = world.create();
+      MonStats2.Entry stats2 = Riiablo.files.monstats2.get(row.MonStatsEx);
+      world.getMapper(Monster.class).create(shamanId).set(row, stats2);
+      world.getMapper(Position.class).create(shamanId).position.set(10, 10);
+      Attributes shamanAttrs = combatAttributes(100, 7, 7, 10_000, 1);
+      world.getMapper(AttributesWrapper.class).create(shamanId).attrs = shamanAttrs;
+
+      int playerId = world.create();
+      world.getMapper(Player.class).create(playerId);
+      world.getMapper(Position.class).create(playerId).position.set(15, 10);
+      Attributes playerAttrs = combatAttributes(60, 1, 2, 1, 1);
+      world.getMapper(AttributesWrapper.class).create(playerId).attrs = playerAttrs;
+
+      float hpBefore = hitpoints(playerAttrs);
+      int attempts = 0;
+      while (hitpoints(playerAttrs) >= hpBefore && attempts++ < 16) {
+        skills.onSkillDo(SkillDoEvent.obtain(shamanId, skill.Id, playerId,
+            new Vector2(15, 10), skill.srvdofunc, skill.cltdofunc));
+        world.setDelta(0.1f);
+        for (int frame = 0; frame < 12; frame++) world.process();
+      }
+
+      float hpAfter = hitpoints(playerAttrs);
+      assertTrue(factory.creations > 0, "skill event must create a missile entity");
+      assertTrue(hpAfter < hpBefore,
+          "authoritative shaman missile must eventually hit and damage the player");
+      assertEquals(Riiablo.files.Missiles.get("shafire3").Id, factory.missileId);
+      System.out.println("[SHAMAN_PROJECTILE_SCENARIO] phase=damage_assert monster=" + row.Id
+          + " owner=" + shamanId + " target=" + playerId
+          + " missile=shafire3 attempts=" + attempts
+          + " hpBefore=" + hpBefore + " hpAfter=" + hpAfter);
     } finally {
       world.dispose();
     }
@@ -147,7 +212,31 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     return value != null && !value.isEmpty();
   }
 
+  private static Attributes combatAttributes(float hp, int minDamage, int maxDamage,
+      int attackRating, int level) {
+    Attributes attrs = Attributes.obtainStandard();
+    attrs.base().clear();
+    attrs.base().put(Stat.hitpoints, hp);
+    attrs.base().put(Stat.maxhp, hp);
+    attrs.base().put(Stat.mindamage, minDamage);
+    attrs.base().put(Stat.maxdamage, maxDamage);
+    attrs.base().put(Stat.tohit, attackRating);
+    attrs.base().put(Stat.level, level);
+    attrs.base().put(Stat.armorclass, 0);
+    attrs.reset();
+    return attrs;
+  }
+
+  private static float hitpoints(Attributes attrs) {
+    StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+    return hp != null ? hp.asFixed() : 0f;
+  }
+
   private static final class RecordingFactory extends EntityFactory {
+    protected ComponentMapper<Missile> mMissile;
+    protected ComponentMapper<Position> mPosition;
+    protected ComponentMapper<Velocity> mVelocity;
+
     int creations;
     int missileId = -1;
     int ownerId = -1;
@@ -160,7 +249,12 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       creations++;
       this.missileId = missileId;
       this.ownerId = ownerId;
-      return 9001;
+      Missiles.Entry missile = Riiablo.files.Missiles.get(missileId);
+      int entityId = world.create();
+      mMissile.create(entityId).set(missile, position, missile.Range).setOwner(ownerId);
+      mPosition.create(entityId).position.set(position);
+      mVelocity.create(entityId).velocity.set(angle).setLength(missile.Vel);
+      return entityId;
     }
 
     @Override public int createPlayer(CharData charData, Vector2 position) { return -1; }
