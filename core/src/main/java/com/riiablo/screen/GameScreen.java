@@ -37,6 +37,7 @@ import com.riiablo.Cvars;
 import com.riiablo.Keys;
 import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
+import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Sounds;
@@ -156,6 +157,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   private static final boolean PRECACHE_CURSOR = true;
   private static final boolean PRECACHE_ITEMS = true;
+
+  /**
+   * Deltas above this threshold represent a suspended/backgrounded window,
+   * not a frame the simulation should catch up. Feeding such a delta into
+   * Artemis interval systems leaves several seconds in their accumulators and
+   * makes animations, movement, and AI run fast after focus returns.
+   */
+  static final float BACKGROUND_DELTA_THRESHOLD = 0.25f;
 
   private static final int[] ITEMS = {
       205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223,
@@ -837,6 +846,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   @Override
   public void render(float delta) {
+    float rawDelta = delta;
+    delta = sanitizeSimulationDelta(delta);
+    if (rawDelta != delta) {
+      Gdx.app.debug(TAG, String.format(
+          "Discarding suspended-frame delta: raw=%.3fs simulation=%.3fs",
+          rawDelta, delta));
+    }
+
     // TODO: move to a separate system TouchpadMovementSystem
     if (touchpad != null) {
       tmpVec2.set(touchpad.getKnobPercentX(), touchpad.getKnobPercentY()).nor();
@@ -1263,5 +1280,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     renderer.updatePosition(true);
     Gdx.app.log(TAG, "Waypoint travel complete: level=" + target.LevelName
         + "(" + target.Id + ") position=" + destination);
+  }
+
+  static float sanitizeSimulationDelta(float delta) {
+    if (!Float.isFinite(delta) || delta < 0f
+        || delta > BACKGROUND_DELTA_THRESHOLD) {
+      return Animation.FRAME_DURATION;
+    }
+    return delta;
   }
 }
