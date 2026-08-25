@@ -45,6 +45,7 @@ import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import com.riiablo.codec.Animation;
+import com.riiablo.codec.D2;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.ai.AI;
 import org.junit.jupiter.api.Test;
@@ -87,6 +88,39 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     } finally {
       world.dispose();
     }
+  }
+
+  @Test
+  void fallenShamanNativeSequenceUsesA2MissileKeyframe() {
+    MonStats.Entry row = Riiablo.files.monstats.get("fallenshaman1");
+    assertNotNull(row);
+    assertEquals("seq_shamanresurrect", row.Sk2mode);
+
+    String monSeq = Riiablo.mpqs.resolve("data\\global\\excel\\monseq.txt")
+        .readString("windows-1252");
+    int sequenceFrames = 0;
+    for (String line : monSeq.split("\\r?\\n")) {
+      String[] columns = line.split("\\t", -1);
+      if (columns.length < 2 || !"seq_shamanresurrect".equalsIgnoreCase(columns[0])) continue;
+      sequenceFrames++;
+      assertEquals("A2", columns[1], "native shaman sequence must stay on the A2 COF");
+    }
+    assertTrue(sequenceFrames > 0, "native shaman MonSeq rows are missing");
+
+    D2 animData = D2.loadFromFile(Riiablo.mpqs.resolve("data\\global\\eanimdata.d2"));
+    D2.Entry cast = animData.getEntry("FSA2HTH");
+    assertNotNull(cast, "Fallen Shaman A2 animation data is missing");
+    boolean hasMissileKeyframe = false;
+    for (byte keyframe : cast.data) {
+      if (keyframe == Engine.KEYFRAME_MIS) {
+        hasMissileKeyframe = true;
+        break;
+      }
+    }
+    assertTrue(hasMissileKeyframe,
+        "Fallen Shaman A2 must expose the missile keyframe that launches ShamanFire");
+    System.out.println("[SHAMAN_NATIVE_SEQUENCE] sequence=seq_shamanresurrect mode=A2"
+        + " frames=" + sequenceFrames + " cof=FSA2HTH missileKeyframe=true");
   }
 
   @Test
@@ -287,16 +321,20 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     AIStepper aiStepper = new AIStepper();
     Probe probe = new Probe();
     World previousEngine = Riiablo.engine;
+    D2 previousAnim = Riiablo.anim;
+    Riiablo.anim = D2.loadFromFile(Riiablo.mpqs.resolve("data\\global\\eanimdata.d2"));
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), probe, new CofManager(), actioneer, new Pathfinder(),
-            aiStepper, new AnimStepper(), new ServerSkillSystem(), factory,
-            new MissileCollisionSystem())
+            aiStepper, new AnimDataResolver(), new SequenceHandler(), new AnimStepper(),
+            new ServerSkillSystem(), factory, new MissileCollisionSystem())
         .build()
         .register("factory", factory)
         .register("map", new Map(0, 0)));
     Riiablo.engine = world;
     try {
       int shaman = createMonsterCaster(world, row, 10, 10);
+      world.getMapper(com.riiablo.engine.server.component.CofReference.class)
+          .create(shaman).set(row.Code, Engine.Monster.MODE_NU);
       world.getMapper(Size.class).create(shaman).size = 1;
       world.getMapper(Velocity.class).create(shaman).setMonster(row.Velocity);
       AIWrapper wrapper = world.getMapper(AIWrapper.class).create(shaman);
@@ -318,9 +356,11 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       assertTrue(actioneer.hasCasting(shaman), "AI must acquire the player and choose a cast");
       assertEquals(Riiablo.files.skills.get(row.Skill2).Id,
           world.getMapper(com.riiablo.engine.server.component.Casting.class).get(shaman).skillId);
+      assertEquals(Engine.Monster.MODE_A2,
+          world.getMapper(com.riiablo.engine.server.component.Sequence.class).get(shaman).mode1,
+          "seq_shamanresurrect must request FSA2HTH instead of the nonexistent FSXXHTH");
       aiStepper.setEnabled(false);
-      installAttackAnimation(world, shaman);
-      for (int i = 0; i < 16 && probe.damageEvents == 0; i++) world.process();
+      for (int i = 0; i < 64 && probe.damageEvents == 0; i++) world.process();
 
       float hpAfter = hitpoints(playerAttrs);
       assertEquals(1, probe.skillDoEvents);
@@ -333,6 +373,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
           + " hp=" + hpBefore + "->" + hpAfter);
     } finally {
       Riiablo.engine = previousEngine;
+      Riiablo.anim = previousAnim;
       world.dispose();
     }
   }

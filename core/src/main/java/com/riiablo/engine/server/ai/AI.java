@@ -239,6 +239,18 @@ public abstract class AI implements Interactable.Interactor {
    * @param skillIndex zero-based MonStats skill slot
    */
   protected boolean useMonsterSkill(int skillIndex, int targetId, Vector2 targetVec) {
+    return useMonsterSkill(skillIndex, targetId, targetVec, Engine.INVALID_MODE);
+  }
+
+  /**
+   * Uses a monster skill whose {@code Sk#mode} names a native MonSeq entry.
+   * riiablo does not yet step MonSeq.txt directly, so callers that know the
+   * sequence's backing animation mode provide it here. This prevents a long
+   * sequence name such as {@code seq_shamanresurrect} from being mistaken for
+   * the {@code XX} monster mode and producing a nonexistent COF.
+   */
+  protected boolean useMonsterSkill(
+      int skillIndex, int targetId, Vector2 targetVec, int sequenceMode) {
     if (monster == null || monster.monstats == null) return false;
     String skillName = monsterSkillName(monster.monstats, skillIndex);
     if (skillName == null || skillName.isEmpty()) return false;
@@ -250,10 +262,13 @@ public abstract class AI implements Interactable.Interactor {
     }
 
     String configuredMode = monsterSkillMode(monster.monstats, skillIndex);
-    int mode = configuredMode != null && !configuredMode.isEmpty()
-        ? Riiablo.files.MonMode.index(configuredMode) : -1;
-    if (mode < 0 && skill.monanim != null && !skill.monanim.isEmpty()) {
-      mode = Riiablo.files.MonMode.index(skill.monanim);
+    int mode = sequenceMode;
+    if (mode < 0) {
+      mode = configuredMode != null && !configuredMode.isEmpty()
+          ? Riiablo.files.MonMode.index(configuredMode) : -1;
+      if (mode < 0 && skill.monanim != null && !skill.monanim.isEmpty()) {
+        mode = Riiablo.files.MonMode.index(skill.monanim);
+      }
     }
     if (mode < 0) mode = Engine.Monster.MODE_S1;
 
@@ -268,9 +283,10 @@ public abstract class AI implements Interactable.Interactor {
     mSequence.create(entityId).sequence((byte) mode, Engine.Monster.MODE_NU);
     mCasting.create(entityId).set(skill.Id, targetId, resolvedTarget);
     log.info("[MONSTER_SKILL] phase=cast entity={} monster={} slot={} skillId={} skill={} "
-            + "level={} mode={} target={}",
+            + "level={} mode={} configuredMode={} sequenceOverride={} target={}",
         entityId, monster.monstats.Id, skillIndex + 1, skill.Id, skill.skill,
-        monsterSkillLevel(monster.monstats, skillIndex), mode, targetId);
+        monsterSkillLevel(monster.monstats, skillIndex), mode, configuredMode,
+        sequenceMode, targetId);
     return true;
   }
 

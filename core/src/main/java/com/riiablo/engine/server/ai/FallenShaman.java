@@ -41,6 +41,9 @@ public class FallenShaman extends AI {
   static final int PARAM_RESURRECT_DISTANCE = 3;
   static final int PARAM_SHOOT_DISTANCE = 4;
 
+  /** All frames of native MonSeq {@code seq_shamanresurrect} use A2. */
+  static final byte SHAMAN_SEQUENCE_MODE = Engine.Monster.MODE_A2;
+
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -153,7 +156,7 @@ public class FallenShaman extends AI {
 
   private boolean castFireball(int targetId, Vector2 targetPos) {
     stateMachine.changeState(State.CAST);
-    if (useMonsterSkill(1, targetId, targetPos)) {
+    if (useMonsterSkill(1, targetId, targetPos, SHAMAN_SEQUENCE_MODE)) {
       time = MathUtils.random(1f, 2f);
       return true;
     }
@@ -245,7 +248,8 @@ public class FallenShaman extends AI {
     int corpseId = findNearbyCorpse(params[PARAM_RESURRECT_DISTANCE]);
     if (corpseId != Engine.INVALID_ENTITY
         && MathUtils.randomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f)) {
-      if (useMonsterSkill(0, corpseId, mPosition.get(corpseId).position)) {
+      if (useMonsterSkill(
+          0, corpseId, mPosition.get(corpseId).position, SHAMAN_SEQUENCE_MODE)) {
         stateMachine.changeState(State.CAST);
         time = MathUtils.random(1f, 2f);
         log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} distance={} skill={}",

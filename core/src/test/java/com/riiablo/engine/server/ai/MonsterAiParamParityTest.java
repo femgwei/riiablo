@@ -72,6 +72,8 @@ class MonsterAiParamParityTest {
     assertEquals(2, FallenShaman.PARAM_MELEE_AND_CIRCLE_CHANCE);
     assertEquals(3, FallenShaman.PARAM_RESURRECT_DISTANCE);
     assertEquals(4, FallenShaman.PARAM_SHOOT_DISTANCE);
+    assertEquals(com.riiablo.engine.Engine.Monster.MODE_A2,
+        FallenShaman.SHAMAN_SEQUENCE_MODE);
 
     assertTrue(FallenShaman.withinShootDistance(9.99f, 10));
     assertFalse(FallenShaman.withinShootDistance(10f, 10));
