@@ -15,6 +15,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.event.ModeChangeEvent;
+import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
@@ -22,6 +23,7 @@ import com.riiablo.save.D2SWriter;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.event.common.EventSystem;
 
 public class ObjectInteractor extends PassiveSystem implements Interactable.Interactor {
   private static final String TAG = "ObjectInteractor";
@@ -33,6 +35,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
+  protected EventSystem event;
 
   @Wire(name = "map")
   protected Map map;
@@ -63,8 +66,13 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           + " mode=" + (cof == null ? "none" : cof.mode)
           + " position=" + (position == null ? "none" : position.position));
     }
-    if (handleNativeLifecycle(entityId, object.base)) return;
-    operate(src, entityId, object.base.OperateFn);
+    if (!handleNativeLifecycle(entityId, object.base)) {
+      operate(src, entityId, object.base.OperateFn);
+    }
+    NativeObjectState state = mNativeObjectState.get(entityId);
+    event.dispatch(ObjectInteractionEvent.obtain(src, entityId, object.base.Id,
+        object.base.OperateFn, state == null ? NativePresetObjectResolver.Kind.ORDINARY
+            : state.kind));
   }
 
   /**
