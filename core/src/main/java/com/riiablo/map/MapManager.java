@@ -141,12 +141,13 @@ public class MapManager extends PassiveSystem {
         // again from coordinates: adjacent/overlapping zone bounds can make a
         // waypoint activate the wrong Levels.txt record.
         mMapWrapper.create(id).set(map, zone);
-        mNativeObjectState.create(id).set(object.presetIndex, objectId,
+        NativeObjectState nativeState = mNativeObjectState.create(id).set(object,
+            object.presetIndex, objectId,
             resolvedObjectId, object.mode, object.ds1Raw, object.spawned, resolution.kind);
         CofReference nativeCof = mCofReference.get(id);
-        if (nativeCof != null && object.mode >= Engine.Object.MODE_NU
-            && object.mode <= Engine.Object.MODE_S5) {
-          nativeCof.mode = (byte) object.mode;
+        if (nativeCof != null && nativeState.currentMode >= Engine.Object.MODE_NU
+            && nativeState.currentMode <= Engine.Object.MODE_S5) {
+          nativeCof.mode = nativeState.currentMode;
         }
         prepareWaypointInitialState(id, zone);
         zone.addEntity(id);

@@ -14,12 +14,14 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
 
 public class ObjectInteractor extends PassiveSystem implements Interactable.Interactor {
   private static final String TAG = "ObjectInteractor";
@@ -34,6 +36,16 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
 
   @Wire(name = "map")
   protected Map map;
+
+  @Subscribe
+  public void onModeChanged(ModeChangeEvent event) {
+    NativeObjectState state = mNativeObjectState.get(event.entityId);
+    // OP is an animation transition, not a restorable room state. Persisting
+    // it could recreate an object in OP without its Sequence component.
+    if (state != null && event.mode != Engine.Object.MODE_OP) {
+      state.persistMode(event.mode);
+    }
+  }
 
   @Override
   public void interact(int src, int entityId) {
@@ -85,7 +97,10 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
 
     if (shrine || symbol) {
       if (state != null && state.activated) return true;
-      if (state != null) state.activated = true;
+      if (state != null) {
+        state.persistActivated(true);
+        state.persistMode(Engine.Object.MODE_ON);
+      }
       mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
       Gdx.app.log(TAG, "Native object activated: entity=" + entityId
           + " object=" + base.Id + " kind=" + (state == null ? "SHRINE" : state.kind));
@@ -94,7 +109,10 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
 
     if (chest) {
       if (state != null && state.opened) return true;
-      if (state != null) state.opened = true;
+      if (state != null) {
+        state.persistOpened(true);
+        state.persistMode(Engine.Object.MODE_ON);
+      }
       mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
       Gdx.app.log(TAG, "Native chest opened: entity=" + entityId + " object=" + base.Id);
       return true;
@@ -103,7 +121,10 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     // Doors are reversible. D2Game transitions through OP and then leaves the
     // unit in ON (open) or NU (closed); this also drives ObjectCollisionUpdater.
     boolean close = cof.mode == Engine.Object.MODE_ON;
-    if (state != null) state.opened = !close;
+    if (state != null) {
+      state.persistOpened(!close);
+      state.persistMode(close ? Engine.Object.MODE_NU : Engine.Object.MODE_ON);
+    }
     mSequence.create(entityId).sequence(Engine.Object.MODE_OP,
         close ? Engine.Object.MODE_NU : Engine.Object.MODE_ON);
     Gdx.app.log(TAG, "Native door toggled: entity=" + entityId + " object=" + base.Id

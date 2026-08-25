@@ -26,6 +26,8 @@ import com.d2moo.common.drlg.DrlgExport;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.TileGrid;
+import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.component.NativeObjectState;
 
 class Act1MapBuilderD2MooLayersTest {
 
@@ -68,6 +70,47 @@ class Act1MapBuilderD2MooLayersTest {
         NativePresetObjectResolver.resolve(2, 40, 582, 7, 0, 0);
     assertEquals(NativePresetObjectResolver.Kind.ARCANE_SYMBOL, arcane.kind);
     assertEquals(307, arcane.classId);
+  }
+
+  @Test
+  void restoresNativeObjectStateAfterEntityRecreation() {
+    Map.NativeObject source = new Map.NativeObject(38, Engine.Object.MODE_NU,
+        12, 34, true, false);
+    NativeObjectState firstEntity = new NativeObjectState().set(source,
+        source.presetIndex, 580, 371, source.mode, source.ds1Raw, source.spawned,
+        NativePresetObjectResolver.Kind.SPECIAL_CHEST);
+
+    firstEntity.persistOpened(true);
+    firstEntity.persistActivated(true);
+    firstEntity.persistMode(Engine.Object.MODE_ON);
+
+    NativeObjectState recreatedEntity = new NativeObjectState().set(source,
+        source.presetIndex, 580, 371, source.mode, source.ds1Raw, source.spawned,
+        NativePresetObjectResolver.Kind.SPECIAL_CHEST);
+    assertTrue(recreatedEntity.opened);
+    assertTrue(recreatedEntity.activated);
+    assertEquals(Engine.Object.MODE_ON, recreatedEntity.initialMode);
+    assertEquals(Engine.Object.MODE_ON, recreatedEntity.currentMode);
+  }
+
+  @Test
+  void persistsDoorCloseAfterAnEarlierOpen() {
+    Map.NativeObject source = new Map.NativeObject(10, Engine.Object.MODE_NU,
+        4, 5, true, false);
+    NativeObjectState state = new NativeObjectState().set(source,
+        source.presetIndex, 20, 20, source.mode, source.ds1Raw, source.spawned,
+        NativePresetObjectResolver.Kind.ORDINARY);
+
+    state.persistOpened(true);
+    state.persistMode(Engine.Object.MODE_ON);
+    state.persistOpened(false);
+    state.persistMode(Engine.Object.MODE_NU);
+
+    NativeObjectState restored = new NativeObjectState().set(source,
+        source.presetIndex, 20, 20, source.mode, source.ds1Raw, source.spawned,
+        NativePresetObjectResolver.Kind.ORDINARY);
+    assertTrue(!restored.opened);
+    assertEquals(Engine.Object.MODE_NU, restored.currentMode);
   }
 
   @Test

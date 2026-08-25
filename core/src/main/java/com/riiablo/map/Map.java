@@ -1276,6 +1276,10 @@ public class Map implements Disposable {
     public final boolean ds1Raw;
     /** D2MOO bSpawned flag; spawned units are already materialized by D2Game. */
     public final boolean spawned;
+    /** Persistent logical state retained when the owning ECS entity is rebuilt. */
+    private byte currentMode;
+    private boolean opened;
+    private boolean activated;
 
     NativeObject(int presetIndex, int mode, int x, int y) {
       this(presetIndex, mode, x, y, true, false);
@@ -1289,6 +1293,35 @@ public class Map implements Disposable {
       this.y = y;
       this.ds1Raw = ds1Raw;
       this.spawned = spawned;
+      this.currentMode = validObjectMode(mode) ? (byte) mode : 0;
+    }
+
+    public byte currentMode() {
+      return currentMode;
+    }
+
+    public boolean opened() {
+      return opened;
+    }
+
+    public boolean activated() {
+      return activated;
+    }
+
+    public void persistMode(byte mode) {
+      if (validObjectMode(mode)) currentMode = mode;
+    }
+
+    public void persistOpened(boolean opened) {
+      this.opened = opened;
+    }
+
+    public void persistActivated(boolean activated) {
+      this.activated = activated;
+    }
+
+    private static boolean validObjectMode(int mode) {
+      return mode >= 0 && mode <= 7;
     }
   }
 
