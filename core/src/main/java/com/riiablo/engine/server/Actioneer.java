@@ -585,6 +585,14 @@ public class Actioneer extends PassiveSystem {
     Box2DBody box2dWrapper = mBox2DBody.get(entityId);
         if (box2dWrapper != null) box2dWrapper.body.setTransform(targetVec, 0);
         break;
+      // These server functions are resolved by ServerSkillSystem from the
+      // SkillDoEvent emitted immediately below.  Keep the Actioneer stage
+      // explicitly no-op so native projectile skills are not reported as
+      // unsupported before their authoritative missile is created.
+      case 8:  // MultipleShot/Teeth shock wave
+      case 22: // Nova/radial missile skill
+      case 85: // Fallen Shaman chain missile
+        break;
       case 97: { // native monster Resurrect
         boolean restored = targetId != Engine.INVALID_ENTITY
             && factory != null

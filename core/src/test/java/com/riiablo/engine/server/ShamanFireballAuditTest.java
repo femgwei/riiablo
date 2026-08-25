@@ -12,6 +12,7 @@ import com.artemis.World;
 import com.artemis.WorldConfiguration;
 import com.artemis.WorldConfigurationBuilder;
 import com.artemis.ComponentMapper;
+import com.artemis.BaseSystem;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.attributes.Attributes;
@@ -23,16 +24,26 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
+import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import com.riiablo.codec.Animation;
+import com.riiablo.engine.Engine;
 import org.junit.jupiter.api.Test;
 
 /** Data-driven, headless audit for the native shaman projectile chain. */
@@ -125,6 +136,87 @@ public class ShamanFireballAuditTest extends RiiabloTest {
           + " owner=" + shamanId + " target=" + playerId
           + " missile=shafire3 attempts=" + attempts
           + " hpBefore=" + hpBefore + " hpAfter=" + hpAfter);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  /**
+   * Full authoritative cast chain.  The script invokes Actioneer.cast, the
+   * real AnimStepper emits the attack keyframe, Actioneer turns that keyframe
+   * into SkillDoEvent, and the server missile then resolves DamageEvent and
+   * DeathEvent through the normal collision system.
+   */
+  @Test
+  void actioneerKeyframeProjectileDamageAndDeathScenario() {
+    MathUtils.random.setSeed(0x5A4A4EL);
+    MonStats.Entry row = Riiablo.files.monstats.get("fallenshaman3");
+    assertNotNull(row);
+    Skills.Entry skill = Riiablo.files.skills.get(row.Skill2);
+    assertNotNull(skill);
+
+    RecordingFactory factory = new RecordingFactory();
+    Actioneer actioneer = new Actioneer();
+    Pathfinder pathfinder = new Pathfinder();
+    AnimStepper animStepper = new AnimStepper();
+    ServerSkillSystem skills = new ServerSkillSystem();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    Probe probe = new Probe();
+    factory.logTag = "SHAMAN_FULL_CHAIN";
+    Map map = new Map(0, 0);
+    WorldConfiguration config = new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, actioneer, pathfinder, animStepper, skills, factory, collisions)
+        .build()
+        .register("factory", factory)
+        .register("map", map);
+    World world = new World(config);
+    try {
+      int shamanId = world.create();
+      MonStats2.Entry stats2 = Riiablo.files.monstats2.get(row.MonStatsEx);
+      world.getMapper(Monster.class).create(shamanId).set(row, stats2);
+      world.getMapper(Class.class).create(shamanId).type = Class.Type.MON;
+      world.getMapper(Position.class).create(shamanId).position.set(10, 10);
+      world.getMapper(Angle.class).create(shamanId);
+      world.getMapper(MovementModes.class).create(shamanId).set(
+          (byte) Class.Type.MON.getMode("NU"), (byte) Class.Type.MON.getMode("WL"),
+          (byte) Class.Type.MON.getMode("RN"));
+      world.getMapper(AttributesWrapper.class).create(shamanId).attrs = combatAttributes(100, 7, 7, 10_000, 1);
+
+      int playerId = world.create();
+      world.getMapper(Player.class).create(playerId);
+      world.getMapper(Position.class).create(playerId).position.set(15, 10);
+      Attributes playerAttrs = combatAttributes(7, 1, 2, 1, 1);
+      world.getMapper(AttributesWrapper.class).create(playerId).attrs = playerAttrs;
+
+      // Scripted AI decision: Actioneer owns the cast state and animation.
+      System.out.println("[SHAMAN_FULL_CHAIN] phase=script_cast entity=" + shamanId
+          + " skill=" + skill.skill + " skillId=" + skill.Id + " target=" + playerId);
+      actioneer.cast(shamanId, skill.Id, playerId, new Vector2(15, 10));
+
+      AnimData anim = world.getMapper(AnimData.class).create(shamanId);
+      anim.speed = 128;
+      anim.frame = 0;
+      anim.numFrames = 512;
+      anim.keyframes = new byte[] {Engine.KEYFRAME_ATK};
+
+      world.setDelta(Animation.FRAME_DURATION);
+      for (int frame = 0; frame < 12 && probe.deathEvents == 0; frame++) {
+        world.process();
+      }
+
+      float hpAfter = hitpoints(playerAttrs);
+      System.out.println("[SHAMAN_FULL_CHAIN] phase=summary entity=" + shamanId
+          + " target=" + playerId + " animKeyframes=" + probe.animKeyframes
+          + " skillDo=" + probe.skillDoEvents + " missiles=" + factory.creations
+          + " damage=" + probe.damageEvents + " death=" + probe.deathEvents
+          + " hpAfter=" + hpAfter);
+      assertTrue(probe.animKeyframes >= 1, "Actioneer must receive the attack keyframe");
+      assertEquals(1, probe.skillDoEvents, "keyframe must dispatch exactly one SkillDoEvent");
+      assertTrue(factory.creations > 0, "SkillDoEvent must create a server missile");
+      assertEquals(1, probe.damageEvents, "missile collision must dispatch DamageEvent");
+      assertEquals(1, probe.deathEvents, "lethal missile collision must dispatch DeathEvent");
+      assertEquals(0f, hpAfter, 0.001f, "lethal fireball must reduce target HP to zero");
+      assertEquals(Riiablo.files.Missiles.get("shafire3").Id, factory.missileId);
     } finally {
       world.dispose();
     }
@@ -232,6 +324,43 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     return hp != null ? hp.asFixed() : 0f;
   }
 
+  private static final class Probe extends BaseSystem {
+    int animKeyframes;
+    int skillDoEvents;
+    int damageEvents;
+    int deathEvents;
+
+    @Subscribe
+    public void onAnimKeyframe(AnimDataKeyframeEvent event) {
+      animKeyframes++;
+      System.out.println("[SHAMAN_FULL_CHAIN] phase=anim_keyframe entity=" + event.entityId
+          + " keyframe=" + Engine.getKeyframe(event.keyframe));
+    }
+
+    @Subscribe
+    public void onSkillDo(SkillDoEvent event) {
+      skillDoEvents++;
+      System.out.println("[SHAMAN_FULL_CHAIN] phase=skill_do entity=" + event.entityId
+          + " skillId=" + event.skillId + " srvDoFunc=" + event.srvdofunc);
+    }
+
+    @Subscribe
+    public void onDamage(DamageEvent event) {
+      damageEvents++;
+      System.out.println("[SHAMAN_FULL_CHAIN] phase=damage attacker=" + event.attacker
+          + " victim=" + event.victim + " damage=" + event.damage);
+    }
+
+    @Subscribe
+    public void onDeath(DeathEvent event) {
+      deathEvents++;
+      System.out.println("[SHAMAN_FULL_CHAIN] phase=death killer=" + event.killer
+          + " victim=" + event.victim);
+    }
+
+    @Override protected void processSystem() {}
+  }
+
   private static final class RecordingFactory extends EntityFactory {
     protected ComponentMapper<Missile> mMissile;
     protected ComponentMapper<Position> mPosition;
@@ -240,6 +369,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     int creations;
     int missileId = -1;
     int ownerId = -1;
+    String logTag = "SHAMAN_FIREBALL_AUDIT";
 
     @Override public int createMissile(int missileId, Vector2 angle, Vector2 position) {
       return createMissile(missileId, angle, position, -1);
@@ -254,6 +384,9 @@ public class ShamanFireballAuditTest extends RiiabloTest {
       mMissile.create(entityId).set(missile, position, missile.Range).setOwner(ownerId);
       mPosition.create(entityId).position.set(position);
       mVelocity.create(entityId).velocity.set(angle).setLength(missile.Vel);
+      System.out.println("[" + logTag + "] phase=missile_created missile=" + missile.Missile
+          + " missileId=" + entityId + " owner=" + ownerId + " speed=" + missile.Vel
+          + " range=" + missile.Range);
       return entityId;
     }
 
