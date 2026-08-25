@@ -250,8 +250,13 @@ public class Pathfinder extends IteratingSystem {
     }
     if (pathfind.pendingDirectionFrames < requiredFrames) return false;
 
-    angle.target.set(1f, 0f).setAngleRad(
-        Direction.directionToRadians(proposedDirection, MOVEMENT_DIRECTIONS));
+    // Keep the authoritative facing aligned with the actual movement vector.
+    // Direction.radiansToDirection returns a D2 animation direction id, whose
+    // numeric value is not the same as the index in Direction's radians table.
+    // Converting that id back through directionToRadians therefore points at
+    // a different angle (for example id 9 is not radians-table index 9), which
+    // makes AngularVelocity turn the entity sideways while it is moving.
+    angle.target.set(movement).nor();
     pathfind.pendingDirection = -1;
     pathfind.pendingDirectionFrames = 0;
     return true;

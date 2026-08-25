@@ -13,7 +13,10 @@ public class Angle extends PooledComponent {
 
   @Override
   public void reset() {
-    angle.rotateRad(DEFAULT_ANGLE);
+    // Components are pooled. Re-applying the default rotation to the current
+    // vector accumulates a turn every time an entity is recycled, eventually
+    // spawning players/monsters with an incorrect facing.
+    angle.set(Vector2.X).rotateRad(DEFAULT_ANGLE);
     target.set(angle);
   }
 
