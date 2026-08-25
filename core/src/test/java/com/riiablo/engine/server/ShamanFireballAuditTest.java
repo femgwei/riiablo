@@ -55,6 +55,17 @@ import org.junit.jupiter.api.Test;
 /** Data-driven, headless audit for the native shaman projectile chain. */
 public class ShamanFireballAuditTest extends RiiabloTest {
   @Test
+  void dumpShamanMissileSoundRows() {
+    for (String name : new String[] {"shafire1", "shafire2", "shafire3", "shafire4", "shafire5"}) {
+      Missiles.Entry row = Riiablo.files.Missiles.get(name);
+      assertNotNull(row);
+      System.out.println("[SHAMAN_FIREBALL_SOUND] missile=" + name
+          + " travelSound=" + row.TravelSound + " hitSound=" + row.HitSound
+          + " explosionMissile=" + row.ExplosionMissile);
+    }
+  }
+
+  @Test
   void shamanFireballUsesMissileElementalSnapshotAndFireResistance() {
     Missiles.Entry row = Riiablo.files.Missiles.get("shafire3");
     assertNotNull(row);

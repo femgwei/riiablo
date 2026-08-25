@@ -21,6 +21,7 @@ import com.riiablo.codec.excel.LvlWarp;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
+import com.riiablo.codec.excel.MonPreset;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
@@ -130,7 +131,17 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override
   public int createDynamicObject(int act, int monPresetId, float x, float y) {
-    String objectType = Riiablo.files.MonPreset.getPlace(act, monPresetId);
+    String objectType;
+    try {
+      MonPreset.Entry preset = Riiablo.files.MonPreset.get(act, monPresetId);
+      objectType = preset != null ? preset.Place : null;
+    } catch (RuntimeException ex) {
+      log.error("[MONSTER_PLACEMENT] phase=resolve_failed act={} presetId={} reason={}",
+          act, monPresetId, ex.toString());
+      return Engine.INVALID_ENTITY;
+    }
+    log.info("[MONSTER_PLACEMENT] phase=resolve act={} presetId={} placement={} position=({}, {})",
+        act, monPresetId, objectType, x, y);
     
     // 首先尝试从 MonStats 表查找（普通怪物）
     MonStats.Entry monstats = Riiablo.files.monstats.get(objectType);
@@ -149,9 +160,15 @@ public class ServerEntityFactory extends EntityFactory {
       }
     }
     
-    if (monstats == null) return Engine.INVALID_ENTITY;
+    if (monstats == null) {
+      log.warn("[MONSTER_PLACEMENT] phase=failed act={} presetId={} placement={} reason=unresolved_monstats",
+          act, monPresetId, objectType);
+      return Engine.INVALID_ENTITY;
+    }
 
     int id = createMonster(monstats.hcIdx, x, y);
+    log.info("[MONSTER_PLACEMENT] phase=created act={} presetId={} placement={} monster={} entity={}",
+        act, monPresetId, objectType, monstats.Id, id);
     mNetworked.create(id);
     return id;
   }
@@ -353,6 +370,10 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     mPosition.create(id).position.set(x, y);
+    // Monsters created by map/quest generators must carry their owning zone,
+    // just like players and objects. Without this, quest systems cannot see
+    // the generated boss and clients may resolve the wrong level at a boundary.
+    mMapWrapper.create(id).set(map, map.getZone(x, y));
     // D2Common UNITS_GetBaseVelocity always uses MonStats.Velocity for
     // monsters. MonStats.Run only participates in run-animation-rate table
     // generation; treating it as displacement speed makes animation and

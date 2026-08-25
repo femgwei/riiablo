@@ -27,8 +27,10 @@ public class DamageHandler extends PassiveSystem {
 
   @Subscribe
   public void onDamageEvent(DamageEvent event) {
-    // Debug log disabled to reduce noise
-    // log.warn("onDamageEvent(attacker: {}, victim: {}, damage: {})", event.attacker, event.victim, event.damage);
+    log.info("[DAMAGE_SOUND] attacker={} victim={} damage={} hitSound={} fallback={}",
+        event.attacker, event.victim, event.damage,
+        event.hitSound == null ? "" : event.hitSound,
+        event.hitSound == null || event.hitSound.isEmpty());
     
     // 检查是否是玩家攻击怪物
     boolean isPlayerAttacking = mPlayer.has(event.attacker);
@@ -100,6 +102,8 @@ public class DamageHandler extends PassiveSystem {
       }
     }
     
-    Riiablo.audio.play("impact_blunt_1", true);
+    String sound = event.hitSound;
+    if (sound == null || sound.isEmpty()) sound = "impact_blunt_1";
+    if (Riiablo.audio != null) Riiablo.audio.play(sound, true);
   }
 }

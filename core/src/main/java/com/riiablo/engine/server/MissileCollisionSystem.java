@@ -255,7 +255,13 @@ public class MissileCollisionSystem extends IteratingSystem {
             log.warn("{} has no hitpoints stat", targetId);
             return true; // 返回 true 表示已处理（虽然无法造成伤害）
           }
-          DamageEvent event = DamageEvent.obtain(missile.ownerId, targetId, damage);
+          String hitSound = missile.missile != null ? missile.missile.HitSound : null;
+          log.info("[MISSILE_SOUND] phase=hit missileId={} missile={} target={} hitSound={} playedBy=DamageHandler",
+              missileId,
+              missile.missile != null ? missile.missile.Missile : "unknown",
+              targetId,
+              hitSound == null ? "" : hitSound);
+          DamageEvent event = DamageEvent.obtain(missile.ownerId, targetId, damage, hitSound);
           events.dispatch(event);
           float appliedDamage = Math.max(0f, event.damage);
           hitpoints.sub(appliedDamage);

@@ -205,6 +205,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   /** Random monsters wait until the final native collision layer is available. */
   private final IntMap<Array<PendingMonsterSpawn>> pendingMonsterSpawns = new IntMap<>();
+  /** Native Act I quest bosses spawned once per generated level. */
+  private final IntSet questBossSpawned = new IntSet();
 
   // 实际运行时的 Burial Grounds 关卡 ID（从 Levels.txt 推导），用于避免与 D2MOO 的枚举常量不一致
   private int burialGroundsId = LEVEL_BURIALGROUNDS;
@@ -221,6 +223,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     levelsWithNativeDirtPaths.clear();
     d2MooDt1Masks.clear();
     pendingMonsterSpawns.clear();
+    questBossSpawned.clear();
     lvlSubDs1PlacedCounts.clear();
     MathUtils.random.setSeed(seed);
 
@@ -1592,6 +1595,63 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         rejected, region.size));
   }
 
+  /**
+   * D2Game::MONSTERREGION_SpawnPresetMonster class 5 creates Blood Raven in
+   * Burial Grounds. The native DRLG export contains terrain and ordinary
+   * objects, but this quest boss is created by the region special-spawn path,
+   * so it must not depend on a MonPreset DS1 object being present.
+   */
+  private void spawnBloodRaven(Zone zone) {
+    if (zone == null || zone.level == null || zone.level.Id != burialGroundsId
+        || factory == null || !questBossSpawned.add(zone.level.Id)) return;
+
+    MonStats.Entry bloodRaven = Riiablo.files.monstats.get("bloodraven");
+    if (bloodRaven == null) {
+      Gdx.app.error(TAG, "[BLOODRAVEN_SPAWN] phase=failed reason=missing_monstats row=bloodraven");
+      return;
+    }
+
+    int preferredX = zone.width() / 2;
+    int preferredY = zone.height() / 2;
+    int spawnX = preferredX;
+    int spawnY = preferredY;
+    boolean centerWalkable = (zone.flags(preferredX, preferredY) & DT1.Tile.FLAG_BLOCK_WALK) == 0;
+    if (!centerWalkable) {
+      int radius = Math.max(zone.width(), zone.height());
+      boolean found = false;
+      for (int r = 1; r <= radius && !found; r++) {
+        for (int dy = -r; dy <= r && !found; dy++) {
+          for (int dx = -r; dx <= r; dx++) {
+            if (Math.abs(dx) != r && Math.abs(dy) != r) continue;
+            int x = preferredX + dx;
+            int y = preferredY + dy;
+            if (x < 0 || y < 0 || x >= zone.width() || y >= zone.height()) continue;
+            if ((zone.flags(x, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              spawnX = x;
+              spawnY = y;
+              found = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!found) {
+        Gdx.app.error(TAG, String.format(
+            "[BLOODRAVEN_SPAWN] phase=failed reason=no_walkable_cell level=%s(%d) center=(%d,%d)",
+            zone.level.LevelName, zone.level.Id, preferredX, preferredY));
+        return;
+      }
+    }
+
+    float worldX = zone.x() + spawnX;
+    float worldY = zone.y() + spawnY;
+    int entityId = factory.createMonster(bloodRaven, worldX, worldY);
+    Gdx.app.log(TAG, String.format(
+        "[BLOODRAVEN_SPAWN] phase=%s level=%s(%d) monster=%s entity=%d local=(%d,%d) world=(%.1f,%.1f) centerWalkable=%s",
+        entityId >= 0 ? "created" : "failed", zone.level.LevelName, zone.level.Id,
+        bloodRaven.Id, entityId, spawnX, spawnY, worldX, worldY, centerWalkable));
+  }
+
   static WalkableRegion largestWalkableRegion(
       byte[] flags, int width, int height, int blockMask) {
     int cells = width > 0 && height > 0 ? width * height : 0;
@@ -2860,6 +2920,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (levelsFilledByExport.contains(zone.level.Id)) {
       spawnPendingMonsters(zone);
     }
+    // The quest boss is a region special spawn, independent of whether the
+    // floor export passed its quality gate.
+    spawnBloodRaven(zone);
 
     // Blood Moor 地面调试：grid/zone 尺寸、坐标、ID 分布、解析失败数
     if (DEBUG_GROUND_MAP && zone.level.Id == LEVEL_BLOODMOOR) {
