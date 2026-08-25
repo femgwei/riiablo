@@ -388,6 +388,7 @@ public class ItemData {
 
   void updateStats() {
     StatRef stat;
+    int equippedArmorClass = 0;
     final UpdateSequence update = updater.update(stats, charStats);
     int[] cache = equipped.values();
     for (int i = 0, s = cache.length, j; i < s; i++) {
@@ -396,10 +397,10 @@ public class ItemData {
       Item item = itemData.get(j);
       if (isActive(item)) {
         item.update(updater, stats, charStats, equippedSets);
-        // Add all stat lists (base, aggregate, remaining) to ensure weapon damage is included
-        // Weapon mindamage/maxdamage are in base(), not just remaining()
-        update.add(item.attrs.base());
-        update.add(item.attrs.aggregate());
+        // Item.update() has already folded the selected item property lists into
+        // remaining(). Adding base() or aggregate() here duplicates native item
+        // stats such as armorclass. D2MOO adds equipped armor defense once, then
+        // UNITS_GetDefense adds dexterity / 4.
         update.add(item.attrs.remaining());
         
         // Directly add weapon damage from item base() to character aggregate()
@@ -435,7 +436,9 @@ public class ItemData {
         }
         
         if ((stat = item.attrs.get(Stat.armorclass)) != null) {
-          stats.aggregate().add(stat); // TODO: necessary anymore?
+          // Base armor defense is not part of remaining(), so carry the
+          // item's fully-updated defense into the character once.
+          equippedArmorClass += stat.asInt();
         }
       }
     }
@@ -454,6 +457,10 @@ public class ItemData {
       }
     }
     update.apply();
+
+    if (equippedArmorClass != 0) {
+      stats.aggregate().add(Stat.armorclass, equippedArmorClass);
+    }
     
     // After update.apply(), add throwable weapon damage to aggregate
     // This must be done AFTER apply() because apply() resets and recalculates aggregate
@@ -542,6 +549,7 @@ public class ItemData {
   }
 
   public boolean addUpdateListener(UpdateListener l) {
+    if (updateListeners.contains(l, true)) return false;
     updateListeners.add(l);
     return true;
   }

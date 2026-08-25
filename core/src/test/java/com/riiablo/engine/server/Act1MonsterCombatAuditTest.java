@@ -123,7 +123,7 @@ class Act1MonsterCombatAuditTest extends RiiabloTest {
   }
 
   @Test
-  void reportsNativeAmazonDefenseMismatchThatLowersEveryMonsterHitChance() {
+  void matchesNativeAmazonDefenseAndMonsterHitChance() {
     CharacterClass clazz = CharacterClass.AMAZON;
     CharData player = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "DefenseAudit", (byte) clazz.id);
@@ -150,8 +150,13 @@ class Act1MonsterCombatAuditTest extends RiiabloTest {
         + " expectedChance=" + expectedChance + " actualChance=" + actualChance
         + " status=" + (expectedNativeDefense == actualDefense ? "PASS" : "FAIL"));
 
-    // Characterization of the current defect: equipped shield AC is tripled.
-    assertEquals(start.dex / 4 + shieldDefense * 3, actualDefense);
+    assertEquals(expectedNativeDefense, actualDefense);
+    assertEquals(expectedChance, actualChance);
+
+    // A public character refresh must rebuild item aggregation first; otherwise
+    // dexterity / 4 would be added repeatedly to the previous aggregate.
+    player.update();
+    assertEquals(expectedNativeDefense, statInt(player.getStats(), Stat.armorclass));
   }
 
   private static void auditDamageProfile(MonStats.Entry monster, String mode, int level,

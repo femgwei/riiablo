@@ -149,7 +149,9 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     return this;
   }
 
-  CharData() {}
+  CharData() {
+    itemData.addUpdateListener(this);
+  }
 
   public CharData clear() {
     reset();
@@ -216,6 +218,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     statData.reset();
     skillData.clear();
     itemData.clear();
+    itemData.addUpdateListener(this);
     mercData.statData.base().clear();
     mercData.statData.reset();
     mercData.itemData.clear();
@@ -547,7 +550,10 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   }
 
   public void update() {
-    onUpdated(itemData);
+    // Rebuild equipment-derived stats before applying character-derived values.
+    // Calling onUpdated() directly would add dexterity / 4 to the existing
+    // aggregate on every invocation.
+    itemData.updateStats();
   }
 
   @Override
