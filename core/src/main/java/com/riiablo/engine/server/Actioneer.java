@@ -452,7 +452,16 @@ public class Actioneer extends PassiveSystem {
           // would make one monster spell hit twice.
           break;
         }
-        if (spawnMonsterAttackMissile(entityId, targetId)) {
+        if (hasMonsterAttackMissile(entityId)) {
+          if (spawnMonsterAttackMissile(entityId, targetId)) {
+            break;
+          }
+          // A monster row with MissA1/MissA2 is a ranged native attack. Do
+          // not fall through to melee damage when the projectile could not be
+          // resolved; that would make a failed visual spawn deal an unrelated
+          // hit at arbitrary distance.
+          log.warn("[MONSTER_MISSILE] attack_blocked entity={} target={} reason=projectile_creation_failed",
+              entityId, targetId);
           break;
         }
 
@@ -672,6 +681,13 @@ public class Actioneer extends PassiveSystem {
         monsterAttackMaxDamage(entityId), monsterAttackRating(entityId),
         start.x, start.y, direction.x, direction.y);
     return true;
+  }
+
+  private boolean hasMonsterAttackMissile(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    if (monster.monstats == null) return false;
+    return hasText(monster.monstats.MissA1) || hasText(monster.monstats.MissA2);
   }
 
   private boolean isMonsterProjectileSkill(int entityId) {
