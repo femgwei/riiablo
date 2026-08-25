@@ -621,6 +621,40 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     return skills.get(skill, 0);
   }
 
+  /** Returns the learned/base level, excluding item and default-skill bonuses. */
+  public int getBaseSkillLevel(int skill) {
+    return skillData.get(skill, 0);
+  }
+
+  /** Returns the unspent skill points currently available to this character. */
+  public int getAvailableSkillPoints() {
+    StatRef points = statData.aggregate().get(Stat.newskills);
+    return points == null ? 0 : Math.max(0, points.asInt());
+  }
+
+  /**
+   * Sets the base level of a learned skill and refreshes all skill listeners.
+   * Item-granted and class-default skills remain layered by onUpdated(); this
+   * method is intentionally limited to the saved character skill data.
+   */
+  public boolean setSkillLevel(int skill, int level) {
+    if (skill < 0 || level < 0) return false;
+    int oldBase = skillData.get(skill, 0);
+    int oldEffective = skills.get(skill, 0);
+    int nonBaseBonus = Math.max(0, oldEffective - oldBase);
+    skillData.put(skill, level);
+    // Keep item/default bonuses intact while making the newly learned level
+    // visible immediately. A later equipment refresh recomputes this exactly.
+    skills.put(skill, level + nonBaseBonus);
+    notifySkillChanged(skills, chargedSkills);
+    return true;
+  }
+
+  /** Notifies UI/network listeners after non-item character data changes. */
+  public void notifySkillChanged() {
+    notifySkillChanged(skills, chargedSkills);
+  }
+
   public ItemData getItems() {
     return itemData;
   }

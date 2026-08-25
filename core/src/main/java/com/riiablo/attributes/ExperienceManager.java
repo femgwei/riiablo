@@ -545,15 +545,21 @@ public class ExperienceManager extends PassiveSystem {
     charData.getStats().aggregate().put(Stat.statpts, currentStatPts + statPtsIncrease);
 
     // 增加技能点（每级 1 点）
+    int skillPtsBefore = getInt(stats, Stat.newskills, 0);
     int currentSkillPts = getInt(stats, Stat.newskills, 0);
     stats.put(Stat.newskills, currentSkillPts + levelDiff);
     charData.getStats().aggregate().put(Stat.newskills, currentSkillPts + levelDiff);
 
     // Do not reset the complete aggregate here: reset() copies base only and
     // temporarily drops equipped-item stats. Update just the changed stats.
-    log.info("[XP_LEVEL] character={} level={}->{} maxHp={}->{} lifeGain={} maxMana={} maxStamina={}",
-        charData.name, oldLevel, newLevel, maxHpBefore, newMaxHp, maxHpIncrease,
-        newMaxMana, newMaxStamina);
+    log.info("[XP_LEVEL] character={} level={}->{} skillPoints={}->{} maxHp={}->{} lifeGain={} maxMana={} maxStamina={}",
+        charData.name, oldLevel, newLevel, skillPtsBefore, currentSkillPts + levelDiff,
+        maxHpBefore, newMaxHp, maxHpIncrease, newMaxMana, newMaxStamina);
+
+    // Level-up changes newskills without touching equipment, so CharData's
+    // normal item update callback is not fired. Explicitly notify the skill
+    // tree and quick-bar listeners so the available-point counter updates.
+    charData.notifySkillChanged();
 
     // TODO: 播放升级音效
     // TODO: 触发升级事件

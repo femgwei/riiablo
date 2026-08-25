@@ -1602,8 +1602,21 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
    * so it must not depend on a MonPreset DS1 object being present.
    */
   private void spawnBloodRaven(Zone zone) {
-    if (zone == null || zone.level == null || zone.level.Id != burialGroundsId
-        || factory == null || !questBossSpawned.add(zone.level.Id)) return;
+    if (zone == null || zone.level == null || zone.level.Id != burialGroundsId) return;
+
+    // Map generation is driven through Map.Zone and the factory is injected on
+    // Map itself.  Act1MapBuilderD2MOD is a singleton, but GameScreen injects
+    // the legacy builder, so its own @Wire field is not guaranteed to be set.
+    // Ordinary D2MOO monsters already use zone.map.factory for this reason.
+    EntityFactory spawnFactory = zone.map != null && zone.map.factory != null
+        ? zone.map.factory : factory;
+    if (spawnFactory == null) {
+      Gdx.app.error(TAG, String.format(
+          "[BLOODRAVEN_SPAWN] phase=failed reason=factory_unavailable level=%s(%d)",
+          zone.level.LevelName, zone.level.Id));
+      return;
+    }
+    if (!questBossSpawned.add(zone.level.Id)) return;
 
     MonStats.Entry bloodRaven = Riiablo.files.monstats.get("bloodraven");
     if (bloodRaven == null) {
@@ -1645,7 +1658,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
     float worldX = zone.x() + spawnX;
     float worldY = zone.y() + spawnY;
-    int entityId = factory.createMonster(bloodRaven, worldX, worldY);
+    int entityId = spawnFactory.createMonster(bloodRaven, worldX, worldY);
     Gdx.app.log(TAG, String.format(
         "[BLOODRAVEN_SPAWN] phase=%s level=%s(%d) monster=%s entity=%d local=(%d,%d) world=(%.1f,%.1f) centerWalkable=%s",
         entityId >= 0 ? "created" : "failed", zone.level.LevelName, zone.level.Id,

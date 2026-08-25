@@ -267,7 +267,7 @@ public class PlayerStatsManager {
     }
 
     // 检查技能等级限制
-    int currentLevel = charData.getSkill(skillId);
+    int currentLevel = charData.getBaseSkillLevel(skillId);
     if (currentLevel >= getMaxSkillLevel(skillId)) {
       log.debug("Skill {} already at max level {}", skillId, currentLevel);
       return false;
@@ -287,11 +287,18 @@ public class PlayerStatsManager {
 
     // 扣除技能点
     stats.put(Stat.newskills, availablePoints - 1);
+    charData.getStats().aggregate().put(Stat.newskills, availablePoints - 1);
 
-    // 增加技能等级（直接更新skillData，然后同步到skills）
-    // TODO: 需要在CharData中添加setSkillLevel方法
-    // 暂时通过刷新技能来实现
-    log.debug("Spent point on skill {}: {} -> {}", skillId, currentLevel, currentLevel + 1);
+    // Increase the saved/base skill level and notify the client UI.
+    if (!charData.setSkillLevel(skillId, currentLevel + 1)) {
+      // Keep the point available if the character data rejected the update.
+      stats.put(Stat.newskills, availablePoints);
+      charData.getStats().aggregate().put(Stat.newskills, availablePoints);
+      return false;
+    }
+    log.info("[SKILL_POINT_SPEND] character={} skill={} level={}->{} points={}->{}",
+        charData.name, skillId, currentLevel, currentLevel + 1,
+        availablePoints, availablePoints - 1);
     return true;
   }
 

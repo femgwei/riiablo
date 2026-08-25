@@ -29,6 +29,8 @@ import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.loader.DC6Loader;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
@@ -36,6 +38,7 @@ import com.riiablo.widget.LabelButton;
 
 public class SpellsPanel extends WidgetGroup implements Disposable, CharData.SkillListener {
   private static final String TAG = "SpellsPanel";
+  private static final Logger log = LogManager.getLogger(SpellsPanel.class);
   private static final String SPELLS_PATH = "data\\global\\ui\\SPELLS\\";
 
   final AssetDescriptor<DC6> skltreeDescriptor;
@@ -47,6 +50,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
   final AssetDescriptor<DC6> buysellbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\buysellbtn.DC6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
 
   final SkillButton[] buttons;
+  private final Label skillsRemaining;
 
   static final com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle SMALL_LABEL_STYLE
       = new com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle(Riiablo.fonts.fontformal10, null);
@@ -138,7 +142,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     header.setPosition(x, y + header.getHeight());
     addActor(header);
 
-    Label skillsRemaining = new Label("0", Riiablo.fonts.font16);
+    skillsRemaining = new Label("0", Riiablo.fonts.font16);
     skillsRemaining.setAlignment(Align.center);
     skillsRemaining.setSize(40, 21);
     skillsRemaining.setPosition(256, 348); // 276, 359 middle
@@ -159,14 +163,25 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     //setDebug(true, true);
 
     Riiablo.charData.addSkillListener(this);
+    updateSkillPoints(Riiablo.charData);
   }
 
   @Override
   public void onChanged(CharData client, IntIntMap skills, Array<StatRef> chargedSkills) {
+    updateSkillPoints(client);
     for (int i = client.classId.firstSpell; i < client.classId.lastSpell; i++) {
       SkillButton button = buttons[i - client.classId.firstSpell];
       button.update(skills.get(i, 0));
     }
+  }
+
+  private void updateSkillPoints(CharData client) {
+    if (client == null || client.getStats() == null) return;
+    StatRef points = client.getStats().aggregate().get(com.riiablo.attributes.Stat.newskills);
+    int value = points == null ? 0 : Math.max(0, points.asInt());
+    skillsRemaining.setText(Integer.toString(value));
+    log.debug(
+        "[SKILL_POINTS_UI] character={} available={}", client.name, value);
   }
 
   private static Color getColor(String str) {

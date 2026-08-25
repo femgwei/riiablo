@@ -3,10 +3,12 @@ package com.riiablo.engine.client;
 import com.artemis.ComponentMapper;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.IntIntMap;
 
 import com.riiablo.Riiablo;
+import com.riiablo.audio.Audio;
 import com.riiablo.engine.server.ai.AI;
 import com.riiablo.engine.server.ai.Npc;
 import com.riiablo.codec.excel.LvlWarp;
@@ -276,7 +278,18 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
     Missiles.Entry missile = mMissile.get(id).missile;
     if (!missile.TravelSound.isEmpty()) { // FIXME: how to handle this audio for aoe spell effects?
-//      mSoundEmitter.create(id).set(Riiablo.audio.play(missile.TravelSound, true), Interpolation.pow2OutInverse);
+      // D2 plays TravelSound once when the missile is created.  Keep the
+      // emitter on the missile so the normal distance attenuation applies;
+      // MissileCollisionSystem separately emits HitSound on impact.
+      if (Riiablo.audio != null && mSoundEmitter != null) {
+        Audio.Instance travel = Riiablo.audio.play(missile.TravelSound, true);
+        if (travel != null) {
+          mSoundEmitter.create(id).set(travel, Interpolation.pow2OutInverse);
+        }
+      }
+      com.badlogic.gdx.Gdx.app.log(TAG, String.format(
+          "[MISSILE_SOUND] phase=travel missileId=%d missile=%s travelSound=%s",
+          id, missile.Missile, missile.TravelSound));
     }
 
     return id;
