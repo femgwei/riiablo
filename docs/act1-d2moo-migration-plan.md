@@ -111,7 +111,8 @@ waypoints, caves, quest rewards and collision boundaries.
   - [ ] Native container drops, trap callbacks and exploding-barrel damage events.
     - [x] TreasureClassEx table, native chest selector and weighted raw roll.
     - [x] Recursive TC expansion with native Picks/NoDrop and quality inheritance.
-    - [ ] Authoritative object-drop entities.
+    - [x] First-open event idempotency and authoritative object-drop entities.
+    - [ ] Multiplayer NoDrop scaling and full unique/set property generation.
   - [ ] Shrine and well effects/cooldowns.
   - [ ] Quest-object handlers and room unload/reload integration tests.
 - [ ] Phase 3: A1Q2 and mercenary entry

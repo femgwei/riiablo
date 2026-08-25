@@ -30,6 +30,12 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 public class ObjectInteractor extends PassiveSystem implements Interactable.Interactor {
   private static final String TAG = "ObjectInteractor";
 
+  private enum InteractionResult {
+    NOT_HANDLED,
+    HANDLED_UNCHANGED,
+    HANDLED_CHANGED
+  }
+
   protected ComponentMapper<Object> mObject;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Sequence> mSequence;
@@ -70,13 +76,18 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           + " mode=" + (cof == null ? "none" : cof.mode)
           + " position=" + (position == null ? "none" : position.position));
     }
-    if (!handleNativeLifecycle(entityId, object.base)) {
-      operate(src, entityId, object.base.OperateFn);
-    }
     NativeObjectState state = mNativeObjectState.get(entityId);
+    NativePresetObjectResolver.Kind kind = state == null
+        ? NativePresetObjectResolver.Kind.ORDINARY : state.kind;
+    Lifecycle lifecycle = NativeObjectOperateTable.resolve(
+        object.base.OperateFn, object.base.IsDoor, kind);
+    InteractionResult result = handleNativeLifecycle(entityId, object.base, lifecycle);
+    boolean stateChanged = result == InteractionResult.HANDLED_CHANGED;
+    if (result == InteractionResult.NOT_HANDLED) {
+      stateChanged = operate(src, entityId, object.base.OperateFn);
+    }
     event.dispatch(ObjectInteractionEvent.obtain(src, entityId, object.base.Id,
-        object.base.OperateFn, state == null ? NativePresetObjectResolver.Kind.ORDINARY
-            : state.kind));
+        object.base.OperateFn, kind, lifecycle, stateChanged));
   }
 
   /**
@@ -85,23 +96,21 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
    * object mode/collision lifecycle and is safe on both client and headless
    * server worlds.
    */
-  private boolean handleNativeLifecycle(int entityId, com.riiablo.codec.excel.Objects.Entry base) {
+  private InteractionResult handleNativeLifecycle(int entityId,
+      com.riiablo.codec.excel.Objects.Entry base, Lifecycle lifecycle) {
     NativeObjectState state = mNativeObjectState.get(entityId);
     int operateFn = base.OperateFn;
-    NativePresetObjectResolver.Kind kind = state == null
-        ? NativePresetObjectResolver.Kind.ORDINARY : state.kind;
-    Lifecycle lifecycle = NativeObjectOperateTable.resolve(operateFn, base.IsDoor, kind);
-    if (lifecycle == Lifecycle.NONE) return false;
+    if (lifecycle == Lifecycle.NONE) return InteractionResult.NOT_HANDLED;
 
     CofReference cof = mCofReference.get(entityId);
     if (cof == null) {
       Gdx.app.error(TAG, "Stateful object has no animation state: entity=" + entityId
           + " object=" + base.Id + " operateFn=" + operateFn);
-      return true;
+      return InteractionResult.HANDLED_UNCHANGED;
     }
 
     if (lifecycle == Lifecycle.SHRINE || lifecycle == Lifecycle.ARCANE_SYMBOL) {
-      if (state != null && state.activated) return true;
+      if (state != null && state.activated) return InteractionResult.HANDLED_UNCHANGED;
       if (state != null) {
         state.persistActivated(true);
         state.persistMode(Engine.Object.MODE_ON);
@@ -110,12 +119,12 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       mInteractable.remove(entityId);
       Gdx.app.log(TAG, "Native object activated: entity=" + entityId
           + " object=" + base.Id + " kind=" + (state == null ? "SHRINE" : state.kind));
-      return true;
+      return InteractionResult.HANDLED_CHANGED;
     }
 
     if (lifecycle == Lifecycle.ANIMATED_CONTAINER
         || lifecycle == Lifecycle.INSTANT_CONTAINER) {
-      if (state != null && state.opened) return true;
+      if (state != null && state.opened) return InteractionResult.HANDLED_UNCHANGED;
       if (state != null) {
         state.persistOpened(true);
         state.persistMode(Engine.Object.MODE_ON);
@@ -127,11 +136,13 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       }
       mInteractable.remove(entityId);
       Gdx.app.log(TAG, "Native chest opened: entity=" + entityId + " object=" + base.Id);
-      return true;
+      return InteractionResult.HANDLED_CHANGED;
     }
 
     if (lifecycle == Lifecycle.ONE_WAY_DOOR) {
-      if (cof.mode != Engine.Object.MODE_NU || state != null && state.opened) return true;
+      if (cof.mode != Engine.Object.MODE_NU || state != null && state.opened) {
+        return InteractionResult.HANDLED_UNCHANGED;
+      }
       if (state != null) {
         state.persistOpened(true);
         state.persistMode(Engine.Object.MODE_ON);
@@ -140,7 +151,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       mInteractable.remove(entityId);
       Gdx.app.log(TAG, "Native one-way door opened: entity=" + entityId
           + " object=" + base.Id);
-      return true;
+      return InteractionResult.HANDLED_CHANGED;
     }
 
     // Doors are reversible. D2Game transitions through OP and then leaves the
@@ -154,10 +165,10 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         close ? Engine.Object.MODE_NU : Engine.Object.MODE_ON);
     Gdx.app.log(TAG, "Native door toggled: entity=" + entityId + " object=" + base.Id
         + " open=" + !close);
-    return true;
+    return InteractionResult.HANDLED_CHANGED;
   }
 
-  private void operate(int src, int entityId, int operateFn) {
+  private boolean operate(int src, int entityId, int operateFn) {
     switch (operateFn) {
       case 0:
         break;
@@ -207,8 +218,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           Riiablo.game.waygatePanel.refresh();
           Riiablo.game.setLeftPanel(Riiablo.game.waygatePanel);
         }
+        return newlyActivated;
       }
-        break;
       case 24: case 25: case 26: case 27: case 28: case 29:
       case 30: case 31:
         break;
@@ -224,6 +235,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       default:
         Gdx.app.error(TAG, "Invalid OperateFn for " + entityId + ": " + operateFn);
     }
+    return false;
   }
 
   private Levels.Entry getLevel(int entityId) {
