@@ -66,6 +66,9 @@ class DeathRewardIntegrationTest extends RiiabloTest {
       assertEquals(600L, experienceAfter);
       assertEquals(2, levelAfter);
       assertEquals(2, data.level & 0xFF);
+      assertEquals(1, data.getStats().base().getValue(Stat.newskills, 0),
+          "level 1 -> 2 must grant one unspent skill point");
+      assertEquals(1, data.getStats().aggregate().getValue(Stat.newskills, 0));
       assertTrue(hpAfter >= 60f && hpAfter < 100f,
           "level-up life must use fixed-point units, not become 600+");
       assertTrue(itemsAfter >= 4, "boss reward must create its guaranteed item drops");

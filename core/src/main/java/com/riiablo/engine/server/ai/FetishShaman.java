@@ -15,11 +15,15 @@ import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 /**
  * FetishShaman AI implementation matching D2MOD's AITHINK_Fn065_FetishShaman logic.
@@ -34,6 +38,7 @@ import com.riiablo.engine.server.component.Sequence;
  * Special: Can heal dead allies (raise dead) and has inferno skill.
  */
 public class FetishShaman extends AI {
+  private static final Logger log = LogManager.getLogger(FetishShaman.class);
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -54,12 +59,15 @@ public class FetishShaman extends AI {
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
 
   private static EntitySubscription enemyEntities;
+  private EntitySubscription corpseEntities;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -80,6 +88,8 @@ public class FetishShaman extends AI {
               .all(Class.class)
               .one(Player.class));
     }
+    corpseEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
+        .all(Monster.class, Corpse.class, Position.class, AttributesWrapper.class));
   }
 
   @Override
@@ -106,12 +116,49 @@ public class FetishShaman extends AI {
     return distance <= meleeRng;
   }
 
-  /**
-   * Find nearby dead ally to heal (simplified).
-   */
+  /** Native FetishShaman corpse eligibility used by the raise-dead branch. */
+  static boolean isResurrectableAlly(
+      Monster source, Monster candidate, Corpse corpse, float hitpoints) {
+    if (source == null || source.monstats == null || candidate == null
+        || candidate.monstats == null || candidate.monstats2 == null
+        || corpse == null || !corpse.usable || corpse.fading || hitpoints > 0f) {
+      return false;
+    }
+    if (!candidate.monstats2.revive || candidate.monstats.boss
+        || candidate.monstats.SetBoss || candidate.monstats.primeevil) {
+      return false;
+    }
+    // D2's raise-dead helper only accepts an allied alignment.  Zero is used
+    // by synthetic/headless fixtures, so treat equal zero as allied too.
+    return source.monstats.Align == candidate.monstats.Align;
+  }
+
   private int findNearbyDeadAlly(float maxRange) {
-    // TODO: Implement dead ally finding logic
-    return Engine.INVALID_ENTITY;
+    if (corpseEntities == null || maxRange <= 0f || !mPosition.has(entityId)) {
+      return Engine.INVALID_ENTITY;
+    }
+    Vector2 source = mPosition.get(entityId).position;
+    float bestDistance2 = maxRange * maxRange;
+    int best = Engine.INVALID_ENTITY;
+    IntBag entities = corpseEntities.getEntities();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int candidateId = entities.get(i);
+      if (candidateId == entityId || !mPosition.has(candidateId)
+          || !mMonster.has(candidateId) || !mCorpse.has(candidateId)
+          || !mAttributesWrapper.has(candidateId)) continue;
+      AttributesWrapper wrapper = mAttributesWrapper.get(candidateId);
+      com.riiablo.attributes.StatRef hp = wrapper != null && wrapper.attrs != null
+          ? wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints,
+              com.riiablo.attributes.StatRef.obtain()) : null;
+      float hitpoints = hp == null ? Float.MAX_VALUE : hp.asFixed();
+      if (!isResurrectableAlly(monster, mMonster.get(candidateId),
+          mCorpse.get(candidateId), hitpoints)) continue;
+      float distance2 = source.dst2(mPosition.get(candidateId).position);
+      if (distance2 > bestDistance2) continue;
+      bestDistance2 = distance2;
+      best = candidateId;
+    }
+    return best;
   }
 
   /** Native AI compares target distance with the monster's Skill1 level. */
@@ -146,6 +193,36 @@ public class FetishShaman extends AI {
     int targetId = Engine.INVALID_ENTITY;
     float targetDistance = Float.MAX_VALUE;
     Vector2 entityPos = mPosition.get(entityId).position;
+
+    // Native Resurrect2 is a real server skill. Select an eligible allied
+    // corpse before attacking so Actioneer can execute srvDoFunc=97 at the
+    // configured animation keyframe instead of only changing to a fake attack
+    // animation (the previous port's behavior).
+    float raiseSearchRange = params.length > 4 ? params[4] : 15f;
+    int deadAllyId = findNearbyDeadAlly(raiseSearchRange);
+    if (deadAllyId != Engine.INVALID_ENTITY && monster.monstats.Skill3 != null
+        && !monster.monstats.Skill3.isEmpty() && params.length > 0
+        && MathUtils.randomBoolean(params[0] / 100f)) {
+      Vector2 deadPos = mPosition.get(deadAllyId).position;
+      float deadDistance = entityPos.dst(deadPos);
+      float healRange = params.length > 2 ? params[2] : 5f;
+      if (deadDistance <= healRange) {
+        lookAt(deadAllyId);
+        stateMachine.changeState(State.HEAL);
+        if (useMonsterSkill(2, deadAllyId, deadPos)) {
+          time = MathUtils.random(1f, 2f);
+          log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} skill={}",
+              entityId, deadAllyId, monster.monstats.Id, monster.monstats.Skill3);
+          return;
+        }
+        stateMachine.changeState(State.IDLE);
+      } else {
+        pathfinder.findPath(entityId, deadPos, false, deadAllyId);
+        stateMachine.changeState(State.APPROACH);
+        time = MathUtils.random(1f, 2f);
+        return;
+      }
+    }
     
     IntBag entities = enemyEntities.getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
@@ -176,35 +253,6 @@ public class FetishShaman extends AI {
         return;
       }
       stateMachine.changeState(State.IDLE);
-    }
-
-    // D2MOD: Check heal dead ally
-    float healSearchRange = params.length > 4 ? params[4] : 15f;
-    int deadAllyId = findNearbyDeadAlly(healSearchRange);
-    if (deadAllyId != Engine.INVALID_ENTITY && monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()
-        && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-      // D2MOD: Use heal skill (nSkill[2])
-      float healRange = params.length > 2 ? params[2] : 5f;
-      Vector2 deadPos = mPosition.get(deadAllyId).position;
-      float deadDist = entityPos.dst(deadPos);
-      
-      if (deadDist <= healRange) {
-        // D2MOD: Use sequence skill
-        // TODO: Implement skill casting
-        stateMachine.changeState(State.HEAL);
-        lookAt(deadAllyId);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, deadAllyId, deadPos);
-        time = MathUtils.random(1f, 2);
-        return;
-      } else {
-        // D2MOD: Walk to dead ally
-        // D2MOD: D2GAME_AICORE_WalkToOwner_6FCD0B60(pGame, pUnit, arg.pClosestDeadTarget, 10)
-        pathfinder.findPath(entityId, deadPos, false, deadAllyId);
-        stateMachine.changeState(State.APPROACH);
-        time = MathUtils.random(1f, 2);
-        return;
-      }
     }
 
     // D2MOD: Circle or idle

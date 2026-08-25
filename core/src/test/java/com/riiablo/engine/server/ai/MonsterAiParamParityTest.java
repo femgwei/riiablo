@@ -104,4 +104,30 @@ class MonsterAiParamParityTest {
     stats.BaseId = "fallenshaman1";
     assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 1f));
   }
+
+  @Test
+  void fetishShamanOnlySelectsAlliedReviveCapableCorpses() {
+    MonStats.Entry sourceStats = new MonStats.Entry();
+    sourceStats.Id = "fetishshaman1";
+    sourceStats.Align = 1;
+    Monster source = new Monster().set(sourceStats, new MonStats2.Entry());
+
+    MonStats.Entry candidateStats = new MonStats.Entry();
+    candidateStats.Id = "fetish1";
+    candidateStats.Align = 1;
+    MonStats2.Entry candidateStats2 = new MonStats2.Entry();
+    candidateStats2.revive = true;
+    Monster candidate = new Monster().set(candidateStats, candidateStats2);
+    Corpse corpse = new Corpse();
+
+    assertTrue(FetishShaman.isResurrectableAlly(source, candidate, corpse, 0f));
+    corpse.fading = true;
+    assertFalse(FetishShaman.isResurrectableAlly(source, candidate, corpse, 0f));
+    corpse.fading = false;
+    candidateStats.Align = 2;
+    assertFalse(FetishShaman.isResurrectableAlly(source, candidate, corpse, 0f));
+    candidateStats.Align = 1;
+    candidateStats2.revive = false;
+    assertFalse(FetishShaman.isResurrectableAlly(source, candidate, corpse, 0f));
+  }
 }

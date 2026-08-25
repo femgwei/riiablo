@@ -27,14 +27,44 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.TileGrid;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.EntityFactory;
+import com.badlogic.gdx.math.Vector2;
+import com.riiablo.item.Item;
+import com.riiablo.save.CharData;
 import com.riiablo.engine.server.component.NativeObjectState;
 
 class Act1MapBuilderD2MooLayersTest {
 
   @Test
+  void questBossUsesMapFactoryWhenBuilderWireIsUnset() {
+    Map map = new Map(0, 0);
+    Map.Zone zone = new Map.Zone();
+    zone.map = map;
+    EntityFactory mapFactory = new StubFactory();
+    EntityFactory fallback = new StubFactory();
+    map.factory = mapFactory;
+    assertSame(mapFactory,
+        Act1MapBuilderD2MOD.resolveQuestSpawnFactory(zone, fallback));
+    map.factory = null;
+    assertSame(fallback,
+        Act1MapBuilderD2MOD.resolveQuestSpawnFactory(zone, fallback));
+  }
+
+  @Test
   void keepsNativeRoomMaskWhenZoneAlsoContainsPresets() {
     assertEquals(0x17F, Map.Zone.dependencyDt1Mask(true, 0x40, 0x17F));
     assertEquals(0x57F, Map.Zone.dependencyDt1Mask(false, 0x400, 0x17F));
+  }
+
+  private static final class StubFactory extends EntityFactory {
+    @Override public int createPlayer(CharData data, Vector2 position) { return -1; }
+    @Override public int createDynamicObject(int act, int preset, float x, float y) { return -1; }
+    @Override public int createStaticObject(int act, int object, float x, float y) { return -1; }
+    @Override public int createStaticObjectByClassId(int object, float x, float y) { return -1; }
+    @Override public int createMonster(int monster, float x, float y) { return -1; }
+    @Override public int createWarp(int index, float x, float y) { return -1; }
+    @Override public int createItem(Item item, float x, float y) { return -1; }
+    @Override public int createMissile(int missile, Vector2 angle, Vector2 position) { return -1; }
   }
 
   @Test

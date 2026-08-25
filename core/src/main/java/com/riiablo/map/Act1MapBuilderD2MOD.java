@@ -1608,8 +1608,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     // Map itself.  Act1MapBuilderD2MOD is a singleton, but GameScreen injects
     // the legacy builder, so its own @Wire field is not guaranteed to be set.
     // Ordinary D2MOO monsters already use zone.map.factory for this reason.
-    EntityFactory spawnFactory = zone.map != null && zone.map.factory != null
-        ? zone.map.factory : factory;
+    EntityFactory spawnFactory = resolveQuestSpawnFactory(zone, factory);
     if (spawnFactory == null) {
       Gdx.app.error(TAG, String.format(
           "[BLOODRAVEN_SPAWN] phase=failed reason=factory_unavailable level=%s(%d)",
@@ -1663,6 +1662,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         "[BLOODRAVEN_SPAWN] phase=%s level=%s(%d) monster=%s entity=%d local=(%d,%d) world=(%.1f,%.1f) centerWalkable=%s",
         entityId >= 0 ? "created" : "failed", zone.level.LevelName, zone.level.Id,
         bloodRaven.Id, entityId, spawnX, spawnY, worldX, worldY, centerWalkable));
+  }
+
+  /** Selects the same authoritative factory used by ordinary zone spawns. */
+  static EntityFactory resolveQuestSpawnFactory(Zone zone, EntityFactory fallback) {
+    return zone != null && zone.map != null && zone.map.factory != null
+        ? zone.map.factory : fallback;
   }
 
   static WalkableRegion largestWalkableRegion(
