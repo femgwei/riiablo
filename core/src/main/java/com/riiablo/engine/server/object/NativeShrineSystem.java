@@ -139,8 +139,7 @@ public class NativeShrineSystem extends IteratingSystem {
     NativeObjectState state = mNativeObjectState.get(entityId);
     com.riiablo.engine.server.component.Object object = mObject.get(entityId);
     if (state == null || object == null || object.base == null) return;
-    Lifecycle lifecycle = NativeObjectOperateTable.resolve(
-        object.base.OperateFn, object.base.IsDoor, state.kind);
+    Lifecycle lifecycle = NativeObjectOperateTable.resolve(object.base, state.kind);
     float elapsedFrames = Math.max(0f, world.delta) * NATIVE_FRAMES_PER_SECOND;
 
     if (lifecycle == Lifecycle.SHRINE) {

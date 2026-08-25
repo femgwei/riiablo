@@ -16,8 +16,10 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
+import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.object.NativeObjectOperateTable;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
+import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
@@ -79,9 +81,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     NativeObjectState state = mNativeObjectState.get(entityId);
     NativePresetObjectResolver.Kind kind = state == null
         ? NativePresetObjectResolver.Kind.ORDINARY : state.kind;
-    Lifecycle lifecycle = NativeObjectOperateTable.resolve(
-        object.base.OperateFn, object.base.IsDoor, kind);
-    InteractionResult result = handleNativeLifecycle(entityId, object.base, lifecycle);
+    Lifecycle lifecycle = NativeObjectOperateTable.resolve(object.base, kind);
+    InteractionResult result = handleNativeLifecycle(
+        src, entityId, object.base, lifecycle);
     boolean stateChanged = result == InteractionResult.HANDLED_CHANGED;
     if (result == InteractionResult.NOT_HANDLED) {
       stateChanged = operate(src, entityId, object.base.OperateFn);
@@ -96,7 +98,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
    * object mode/collision lifecycle and is safe on both client and headless
    * server worlds.
    */
-  private InteractionResult handleNativeLifecycle(int entityId,
+  private InteractionResult handleNativeLifecycle(int src, int entityId,
       com.riiablo.codec.excel.Objects.Entry base, Lifecycle lifecycle) {
     NativeObjectState state = mNativeObjectState.get(entityId);
     int operateFn = base.OperateFn;
@@ -107,6 +109,34 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       Gdx.app.error(TAG, "Stateful object has no animation state: entity=" + entityId
           + " object=" + base.Id + " operateFn=" + operateFn);
       return InteractionResult.HANDLED_UNCHANGED;
+    }
+
+    if (lifecycle == Lifecycle.QUEST_OBJECT) {
+      NativeQuestObjectResolver.Type type = NativeQuestObjectResolver.resolve(base);
+      if (state != null && state.activated && type.oneShot) {
+        return InteractionResult.HANDLED_UNCHANGED;
+      }
+
+      QuestObjectInteractionEvent request = QuestObjectInteractionEvent.obtain(
+          src, entityId, base.Id, type);
+      event.dispatch(request);
+      if (!request.accepted) {
+        Gdx.app.debug(TAG, "Native quest object rejected: entity=" + entityId
+            + " player=" + src + " object=" + base.Id + " type=" + type);
+        return InteractionResult.HANDLED_UNCHANGED;
+      }
+
+      if (state != null) {
+        state.persistActivated(request.oneShot);
+        state.persistMode(request.targetMode);
+      }
+      mSequence.create(entityId).sequence(
+          Engine.Object.MODE_OP, request.targetMode);
+      if (request.oneShot) mInteractable.remove(entityId);
+      Gdx.app.log(TAG, "Native quest object activated: entity=" + entityId
+          + " player=" + src + " object=" + base.Id + " type=" + type
+          + " targetMode=" + request.targetMode);
+      return InteractionResult.HANDLED_CHANGED;
     }
 
     if (lifecycle == Lifecycle.SHRINE || lifecycle == Lifecycle.ARCANE_SYMBOL) {

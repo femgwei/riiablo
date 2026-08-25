@@ -1,6 +1,7 @@
 package com.riiablo.engine.server.object;
 
 import com.riiablo.map.NativePresetObjectResolver;
+import com.riiablo.codec.excel.Objects;
 
 /** Stateful lifecycle categories from D2Game's {@code gpObjOperateFnTable}. */
 public final class NativeObjectOperateTable {
@@ -10,12 +11,23 @@ public final class NativeObjectOperateTable {
     INSTANT_CONTAINER,
     SHRINE,
     WELL,
+    QUEST_OBJECT,
     TOGGLE_DOOR,
     ONE_WAY_DOOR,
     ARCANE_SYMBOL
   }
 
   private NativeObjectOperateTable() {}
+
+  public static Lifecycle resolve(Objects.Entry object,
+      NativePresetObjectResolver.Kind kind) {
+    if (NativeQuestObjectResolver.resolve(object)
+        != NativeQuestObjectResolver.Type.NONE) {
+      return Lifecycle.QUEST_OBJECT;
+    }
+    return object == null ? Lifecycle.NONE
+        : resolve(object.OperateFn, object.IsDoor, kind);
+  }
 
   public static Lifecycle resolve(int operateFn, boolean tableDoor,
       NativePresetObjectResolver.Kind kind) {

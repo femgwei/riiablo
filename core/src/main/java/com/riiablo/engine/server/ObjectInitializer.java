@@ -15,6 +15,9 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Interactable;
+import com.riiablo.engine.server.object.NativeObjectOperateTable;
+import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.map.Map;
 
 @All(Object.class)
@@ -27,6 +30,7 @@ public class ObjectInitializer extends BaseEntitySystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
+  protected ComponentMapper<Interactable> mInteractable;
 
   protected CofManager cofs;
   @Wire(name = "map")
@@ -84,6 +88,30 @@ public class ObjectInitializer extends BaseEntitySystem {
       default:
         Gdx.app.error(TAG, "Invalid InitFn for " + mClassname.get(entityId).classname + ": " + base.InitFn);
     }
+    restorePersistentInteractionState(entityId, base, nativeState);
+  }
+
+  private void restorePersistentInteractionState(int entityId, Objects.Entry base,
+      NativeObjectState state) {
+    if (state == null || !mInteractable.has(entityId)) return;
+    Lifecycle lifecycle = NativeObjectOperateTable.resolve(base, state.kind);
+    boolean exhausted;
+    switch (lifecycle) {
+      case ANIMATED_CONTAINER:
+      case INSTANT_CONTAINER:
+      case ONE_WAY_DOOR:
+        exhausted = state.opened;
+        break;
+      case SHRINE:
+      case ARCANE_SYMBOL:
+      case QUEST_OBJECT:
+        exhausted = state.activated;
+        break;
+      default:
+        exhausted = false;
+        break;
+    }
+    if (exhausted) mInteractable.remove(entityId);
   }
 
   private Levels.Entry getLevel(int entityId) {
