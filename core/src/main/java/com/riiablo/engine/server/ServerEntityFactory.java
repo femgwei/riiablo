@@ -202,9 +202,17 @@ public class ServerEntityFactory extends EntityFactory {
   protected static float resolveObjectInteractionRange(Objects.Entry base) {
     if (base == null) return 0;
     if (isWaypointObject(base)) return base.OperateRange > 0 ? base.OperateRange : 5f;
-    return base.OperateRange > 0 && ArrayUtils.contains(base.Selectable, true)
-        ? base.OperateRange
-        : 0;
+    if (base.OperateRange > 0 && ArrayUtils.contains(base.Selectable, true)) {
+      return base.OperateRange;
+    }
+
+    // A number of native Objects.txt rows have a valid D2Game OperateFn but
+    // omit OperateRange/Selectable in converted tables.  D2Game still creates
+    // an interactable unit for these rows (doors, chests, shrines and quest
+    // switches).  Keep invisible/non-operable rows untouched and provide a
+    // conservative fallback only for drawable objects with an operate fn.
+    if (base.Draw && base.OperateFn > 0 && base.OperateFn != 23) return 3f;
+    return 0;
   }
 
   @Override

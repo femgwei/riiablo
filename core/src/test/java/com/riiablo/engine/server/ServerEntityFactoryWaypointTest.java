@@ -29,4 +29,24 @@ class ServerEntityFactoryWaypointTest {
     object.Selectable[Engine.Object.MODE_NU] = true;
     assertEquals(7f, ServerEntityFactory.resolveObjectInteractionRange(object));
   }
+
+  @Test
+  void nativeDrawableOperateFnGetsFallbackInteractionRange() {
+    Objects.Entry chest = new Objects.Entry();
+    chest.Draw = true;
+    chest.OperateFn = 4; // D2Game::OBJECTS_OperateFunction04_Chest
+    chest.Selectable = new boolean[8];
+
+    assertEquals(3f, ServerEntityFactory.resolveObjectInteractionRange(chest));
+  }
+
+  @Test
+  void invisibleOperateFnDoesNotBecomeInteractableByFallback() {
+    Objects.Entry trigger = new Objects.Entry();
+    trigger.Draw = false;
+    trigger.OperateFn = 8;
+    trigger.Selectable = new boolean[8];
+
+    assertEquals(0f, ServerEntityFactory.resolveObjectInteractionRange(trigger));
+  }
 }
