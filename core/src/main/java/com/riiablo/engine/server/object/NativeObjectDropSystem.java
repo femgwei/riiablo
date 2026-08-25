@@ -2,7 +2,9 @@ package com.riiablo.engine.server.object;
 
 import java.util.List;
 
+import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
+import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.RandomXS128;
@@ -20,6 +22,7 @@ import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
+import com.riiablo.item.TreasureClassResolver;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.Map;
@@ -45,7 +48,13 @@ public class NativeObjectDropSystem extends PassiveSystem {
   protected ItemGenerator itemGenerator;
 
   private NativeObjectDropAdapter adapter;
+  private EntitySubscription players;
   private final Vector2 dropPosition = new Vector2();
+
+  @Override
+  protected void initialize() {
+    players = world.getAspectSubscriptionManager().get(Aspect.all(Player.class));
+  }
 
   @Subscribe
   public void onObjectInteraction(ObjectInteractionEvent event) {
@@ -69,8 +78,10 @@ public class NativeObjectDropSystem extends PassiveSystem {
     int itemLevel = NativeObjectDropAdapter.areaLevel(level, difficulty);
     RandomXS128 random = new RandomXS128(objectSeed(event, position));
     if (adapter == null) adapter = new NativeObjectDropAdapter(Riiablo.files);
+    TreasureClassResolver.PlayerContext playerContext = new TreasureClassResolver.PlayerContext(
+        playerCount(), 1);
     List<NativeObjectDropAdapter.Drop> drops = adapter.rollChest(
-        level, difficulty, random::nextInt);
+        level, difficulty, random::nextInt, playerContext);
 
     int created = 0;
     for (int i = 0; i < drops.size(); i++) {
@@ -80,9 +91,10 @@ public class NativeObjectDropSystem extends PassiveSystem {
       if (entityId >= 0) created++;
     }
     log.info("[OBJECT_DROP] opened entity={}, object={}, level={}, difficulty={}, "
-            + "tier={}, rolled={}, created={}",
+            + "tier={}, players={}, effectivePlayers={}, rolled={}, created={}",
         event.entityId, event.objectClassId, level.Id, difficulty,
-        adapter.chestTier(level, difficulty), drops.size(), created);
+        adapter.chestTier(level, difficulty), playerContext.totalPlayers,
+        playerContext.effectivePlayerCount(), drops.size(), created);
   }
 
   private int createItem(NativeObjectDropAdapter.Drop drop, int itemLevel,
@@ -122,6 +134,10 @@ public class NativeObjectDropSystem extends PassiveSystem {
     Player player = mPlayer.get(playerId);
     return player == null || player.data == null ? Riiablo.NORMAL
         : Math.max(0, Math.min(player.data.diff, 2));
+  }
+
+  private int playerCount() {
+    return players == null ? 1 : Math.max(1, Math.min(players.getEntities().size(), 8));
   }
 
   private long objectSeed(ObjectInteractionEvent event, Position position) {

@@ -23,6 +23,25 @@ public final class TreasureClassResolver {
     int nextInt(int bound);
   }
 
+  /** Player counts used by D2Game to reduce NoDrop in multiplayer games. */
+  public static final class PlayerContext {
+    public static final PlayerContext SINGLE_PLAYER = new PlayerContext(1, 1);
+
+    public final int totalPlayers;
+    public final int partyMembersInLevel;
+
+    public PlayerContext(int totalPlayers, int partyMembersInLevel) {
+      this.totalPlayers = Math.max(1, Math.min(totalPlayers, 8));
+      this.partyMembersInLevel = Math.max(1,
+          Math.min(partyMembersInLevel, this.totalPlayers));
+    }
+
+    /** Mirrors (total - same-level party) / 2 + same-level party. */
+    public int effectivePlayerCount() {
+      return (totalPlayers - partyMembersInLevel) / 2 + partyMembersInLevel;
+    }
+  }
+
   public static final class Drop {
     public final String token;
     public final int Magic;
@@ -91,12 +110,19 @@ public final class TreasureClassResolver {
   }
 
   public List<Drop> resolve(String treasureClass, int level, RandomSource random) {
-    return resolve(treasureClass, level, random, NATIVE_MAX_DROPS);
+    return resolve(treasureClass, level, random, NATIVE_MAX_DROPS,
+        PlayerContext.SINGLE_PLAYER);
   }
 
   public List<Drop> resolve(String treasureClass, int level, RandomSource random, int maxDrops) {
+    return resolve(treasureClass, level, random, maxDrops, PlayerContext.SINGLE_PLAYER);
+  }
+
+  public List<Drop> resolve(String treasureClass, int level, RandomSource random,
+      int maxDrops, PlayerContext players) {
     if (treasureClass == null) throw new NullPointerException("treasureClass");
     if (random == null) throw new NullPointerException("random");
+    if (players == null) throw new NullPointerException("players");
     if (maxDrops <= 0) return Collections.emptyList();
 
     int id = table.index(treasureClass);
@@ -104,12 +130,13 @@ public final class TreasureClassResolver {
     if (root == null) return Collections.emptyList();
 
     List<Drop> drops = new ArrayList<>(Math.min(maxDrops, NATIVE_MAX_DROPS));
-    expand(root, Quality.root(root), random, Math.min(maxDrops, NATIVE_MAX_DROPS), 0, drops);
+    expand(root, Quality.root(root), random, Math.min(maxDrops, NATIVE_MAX_DROPS),
+        players.effectivePlayerCount(), 0, drops);
     return Collections.unmodifiableList(drops);
   }
 
   private void expand(TreasureClassEx.Entry entry, Quality quality, RandomSource random,
-      int maxDrops, int depth, List<Drop> drops) {
+      int maxDrops, int effectivePlayers, int depth, List<Drop> drops) {
     if (depth >= NATIVE_MAX_DEPTH || drops.size() >= maxDrops) return;
 
     int picks = nativePickCount(entry.Picks);
@@ -121,10 +148,11 @@ public final class TreasureClassResolver {
         if (deterministicRoll >= entry.itemProbability()) break;
         token = entry.selectItem(deterministicRoll);
       } else {
-        int total = entry.totalProbability();
+        int itemProbability = entry.itemProbability();
+        int noDrop = adjustedNoDrop(entry.NoDrop, itemProbability, effectivePlayers);
+        int total = itemProbability + noDrop;
         if (total <= 0) break;
         int roll = checkedRoll(random, total);
-        int noDrop = Math.max(0, entry.NoDrop);
         if (roll < noDrop) continue;
         token = entry.selectItem(roll - noDrop);
       }
@@ -135,7 +163,8 @@ public final class TreasureClassResolver {
       if (child == null) {
         drops.add(new Drop(token, quality));
       } else {
-        expand(child, quality.child(child), random, maxDrops, depth + 1, drops);
+        expand(child, quality.child(child), random, maxDrops, effectivePlayers,
+            depth + 1, drops);
       }
     }
   }
@@ -151,6 +180,19 @@ public final class TreasureClassResolver {
       throw new IllegalArgumentException("random source returned " + roll + " for bound " + bound);
     }
     return roll;
+  }
+
+  /** Mirrors D2GAME_DropTC_6FC51360's multiplayer NoDrop ratio exponent. */
+  public static int adjustedNoDrop(int noDrop, int itemProbability, int effectivePlayers) {
+    noDrop = Math.max(0, noDrop);
+    itemProbability = Math.max(0, itemProbability);
+    if (noDrop == 0 || itemProbability == 0 || effectivePlayers <= 1) return noDrop;
+
+    double ratio = (double) noDrop / (itemProbability + noDrop);
+    double adjustedRatio = Math.pow(ratio, Math.max(1, effectivePlayers));
+    double inverseRatio = 1.0 - adjustedRatio;
+    if (inverseRatio == 0.0) return 0;
+    return Math.max(0, (int) (itemProbability / inverseRatio * adjustedRatio));
   }
 
   /** Returns the lookup name before native comma arguments and optional quotes. */

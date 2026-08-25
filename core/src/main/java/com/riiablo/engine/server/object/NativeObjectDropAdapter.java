@@ -61,7 +61,14 @@ public final class NativeObjectDropAdapter {
 
   public List<Drop> rollChest(Levels.Entry level, int difficulty,
       TreasureClassResolver.RandomSource random) {
+    return rollChest(level, difficulty, random,
+        TreasureClassResolver.PlayerContext.SINGLE_PLAYER);
+  }
+
+  public List<Drop> rollChest(Levels.Entry level, int difficulty,
+      TreasureClassResolver.RandomSource random, TreasureClassResolver.PlayerContext players) {
     if (level == null || random == null) return Collections.emptyList();
+    if (players == null) throw new NullPointerException("players");
     int safeDifficulty = Math.max(0, Math.min(difficulty, 2));
     int tier = chestTier(level, safeDifficulty);
     TreasureClassEx.Entry treasureClass = files.TreasureClassEx.getChest(
@@ -69,7 +76,7 @@ public final class NativeObjectDropAdapter {
     if (treasureClass == null) return Collections.emptyList();
 
     List<TreasureClassResolver.Drop> leaves = resolver.resolve(
-        treasureClass.TreasureClass, 0, random);
+        treasureClass.TreasureClass, 0, random, TreasureClassResolver.NATIVE_MAX_DROPS, players);
     if (leaves.isEmpty()) return Collections.emptyList();
     List<Drop> drops = new ArrayList<>(leaves.size());
     for (TreasureClassResolver.Drop leaf : leaves) {

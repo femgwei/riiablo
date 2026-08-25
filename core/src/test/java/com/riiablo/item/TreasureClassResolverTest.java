@@ -95,6 +95,42 @@ class TreasureClassResolverTest {
     assertTrue(drops.isEmpty());
   }
 
+  @Test
+  void appliesNativePartyAndRemotePlayerNoDropWeighting() {
+    TreasureClassResolver.PlayerContext solo =
+        new TreasureClassResolver.PlayerContext(1, 1);
+    TreasureClassResolver.PlayerContext twoUnpartied =
+        new TreasureClassResolver.PlayerContext(2, 1);
+    TreasureClassResolver.PlayerContext threeUnpartied =
+        new TreasureClassResolver.PlayerContext(3, 1);
+    TreasureClassResolver.PlayerContext twoPartyMembers =
+        new TreasureClassResolver.PlayerContext(2, 2);
+
+    assertEquals(1, solo.effectivePlayerCount());
+    assertEquals(1, twoUnpartied.effectivePlayerCount());
+    assertEquals(2, threeUnpartied.effectivePlayerCount());
+    assertEquals(2, twoPartyMembers.effectivePlayerCount());
+    assertEquals(100, TreasureClassResolver.adjustedNoDrop(100, 100, 1));
+    assertEquals(33, TreasureClassResolver.adjustedNoDrop(100, 100, 2));
+    assertEquals(14, TreasureClassResolver.adjustedNoDrop(100, 100, 3));
+  }
+
+  @Test
+  void multiplayerContextChangesPositivePickNoDropBoundary() {
+    TestTable table = new TestTable();
+    table.add(0, entry("root", 1, 100, new String[] {"hp1"}, new int[] {100}));
+    TreasureClassResolver resolver = new TreasureClassResolver(table);
+
+    List<TreasureClassResolver.Drop> solo = resolver.resolve(
+        "root", 0, bound -> 50, 6, TreasureClassResolver.PlayerContext.SINGLE_PLAYER);
+    List<TreasureClassResolver.Drop> party = resolver.resolve(
+        "root", 0, bound -> 50, 6, new TreasureClassResolver.PlayerContext(2, 2));
+
+    assertTrue(solo.isEmpty());
+    assertEquals(1, party.size());
+    assertEquals("hp1", party.get(0).token);
+  }
+
   private static TreasureClassEx.Entry entry(String name, int picks, int noDrop,
       String[] items, int[] probabilities) {
     TreasureClassEx.Entry entry = new TreasureClassEx.Entry();
