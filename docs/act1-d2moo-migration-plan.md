@@ -102,8 +102,9 @@ waypoints, caves, quest rewards and collision boundaries.
   - [x] Akara start/reward and one-time skill-point grant.
   - [x] Focused pure-state and headless ECS regression tests.
   - [x] Native Akara message selection and scroll completion before state/reward changes.
+  - [x] Full D2S write/read/load round-trip for all three difficulty records.
   - [ ] Native party eligibility/completion propagation for multiplayer.
-  - [ ] End-to-end D2S save/reload and in-game Den validation.
+  - [ ] End-to-end in-game Den validation.
 - [ ] Phase 2: native map objects
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services
