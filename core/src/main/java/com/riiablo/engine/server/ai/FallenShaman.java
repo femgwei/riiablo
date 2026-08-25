@@ -131,7 +131,7 @@ public class FallenShaman extends AI {
     return best;
   }
 
-  static boolean isResurrectableFallen(Monster monster, Corpse corpse, float hitpoints) {
+  public static boolean isResurrectableFallen(Monster monster, Corpse corpse, float hitpoints) {
     if (monster == null || monster.monstats == null || monster.monstats2 == null
         || corpse == null || !corpse.usable || corpse.fading || hitpoints > 0f) {
       return false;

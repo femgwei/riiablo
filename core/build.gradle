@@ -118,9 +118,21 @@ dependencies {
 
 test {
   useJUnitPlatform()
+  // Combat scenario tests exercise ECS/calculation code only. Keep the test
+  // JVM explicitly headless so a developer machine never opens a LibGDX
+  // window while running the automated combat suite.
+  systemProperty 'java.awt.headless', 'true'
+  systemProperty 'gdx.test.headless', 'true'
   testLogging {
     events "failed"//, "passed", "skipped"
     exceptionFormat "full"
+    // Use -PcombatLogs when a scripted run needs its structured scenario
+    // output in the console and Gradle test report. The default remains quiet
+    // except for failures.
+    if (project.hasProperty('combatLogs')) {
+      showStandardStreams = true
+      events "passed", "failed", "skipped", "standard_out", "standard_error"
+    }
   }
 }
 
