@@ -143,10 +143,14 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   static boolean isInitiallySelectable(Objects.Entry base) {
     if (isWaypoint(base)) return true;
-    return base != null
-        && base.Selectable != null
+    if (base == null) return false;
+    if (base.Selectable != null
         && Engine.Object.MODE_NU < base.Selectable.length
-        && base.Selectable[Engine.Object.MODE_NU];
+        && base.Selectable[Engine.Object.MODE_NU]) return true;
+    // Converted Objects.txt rows may omit Selectable flags while retaining a
+    // valid native OperateFn. Match ServerEntityFactory's interaction-range
+    // fallback so the client can actually target the same object.
+    return base.Draw && base.OperateFn > 0 && base.OperateFn != 23;
   }
 
   @Override

@@ -32,4 +32,16 @@ class SelectableManagerWaypointTest {
     assertFalse(SelectableManager.isSelectable(object, -1));
     assertFalse(SelectableManager.isSelectable(object, object.Selectable.length));
   }
+
+  @Test
+  void nativeDrawableOperateFnRemainsSelectableWithoutTableFlags() {
+    Objects.Entry chest = new Objects.Entry();
+    chest.Draw = true;
+    chest.OperateFn = 4;
+    chest.Selectable = new boolean[8];
+
+    assertTrue(SelectableManager.isSelectable(chest, Engine.Object.MODE_NU));
+    assertTrue(SelectableManager.isSelectable(chest, Engine.Object.MODE_ON));
+    assertFalse(SelectableManager.isSelectable(chest, Engine.Object.MODE_OP));
+  }
 }

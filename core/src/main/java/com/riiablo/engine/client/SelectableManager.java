@@ -43,10 +43,18 @@ public class SelectableManager extends PassiveSystem {
       return true;
     }
 
-    return base.Selectable != null
+    if (base.Selectable != null
         && mode >= 0
         && mode < base.Selectable.length
-        && base.Selectable[mode];
+        && base.Selectable[mode]) return true;
+
+    // Keep converted native doors/chests/shrines targetable when their table
+    // omitted mode-specific Selectable flags. The operation mode remains a
+    // valid target; the object interactor enforces one-shot chest state.
+    return base.Draw
+        && base.OperateFn > 0
+        && base.OperateFn != 23
+        && (mode == Engine.Object.MODE_NU || mode == Engine.Object.MODE_ON);
   }
 
   public void setSelectable(int id, boolean b) {

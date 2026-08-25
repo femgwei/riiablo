@@ -28,4 +28,14 @@ class ClientEntityFactoryWaypointTest {
     object.Selectable[Engine.Object.MODE_NU] = true;
     assertTrue(ClientEntityFactory.isInitiallySelectable(object));
   }
+
+  @Test
+  void nativeDrawableOperateFnIsInitiallySelectableWithoutTableFlags() {
+    Objects.Entry chest = new Objects.Entry();
+    chest.Draw = true;
+    chest.OperateFn = 4;
+    chest.Selectable = new boolean[8];
+
+    assertTrue(ClientEntityFactory.isInitiallySelectable(chest));
+  }
 }
