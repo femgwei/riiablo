@@ -7,7 +7,6 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
-import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Engine;
 
 /**
@@ -43,7 +42,6 @@ public class QuillRat extends AI {
   final StateMachine<Integer, State> stateMachine;
   float nextAction;
   float time;
-  Missiles.Entry missile;
 
   public QuillRat(int entityId) {
     super(entityId);
@@ -54,7 +52,6 @@ public class QuillRat extends AI {
   public void initialize() {
     super.initialize();
     monsound = "spikefiend";
-    missile = Riiablo.files.Missiles.get(monster.monstats.MissA2);
   }
 
   @Override
@@ -185,7 +182,6 @@ public class QuillRat extends AI {
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
         Riiablo.audio.play(monsound + "_shoot_1", true);
-        fire(missile);
       }
       time = MathUtils.random(1f, 2f);
       return;
@@ -219,7 +215,6 @@ public class QuillRat extends AI {
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, mPosition.get(targetId).position);
       Riiablo.audio.play(monsound + "_shoot_1", true);
       time = MathUtils.random(1f, 2);
-      fire(missile);
       return;
     }
 
@@ -271,7 +266,6 @@ public class QuillRat extends AI {
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       Riiablo.audio.play(monsound + "_shoot_1", true);
       time = MathUtils.random(1f, 2);
-      fire(missile);
       return;
     }
 
@@ -287,7 +281,6 @@ public class QuillRat extends AI {
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         Riiablo.audio.play(monsound + "_shoot_1", true);
         time = MathUtils.random(1f, 2);
-        fire(missile);
         return;
       }
 
