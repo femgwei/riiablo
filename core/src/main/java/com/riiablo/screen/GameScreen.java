@@ -166,6 +166,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
    */
   static final float BACKGROUND_DELTA_THRESHOLD = 0.25f;
 
+  /**
+   * D2 advances authoritative game state at 25 Hz and, in its bounded update
+   * path, retains at most one additional 40 ms tick after a delayed frame.
+   * Keep the same upper bound while client and server systems still share one
+   * Artemis world; a multi-step loop here would also repeat input and renders.
+   */
+  static final float MAX_SIMULATION_DELTA = Animation.FRAME_DURATION * 2f;
+
   private static final int[] ITEMS = {
       205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223,
       224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242,
@@ -215,6 +223,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   GameLoadingScreen loadingScreen;
   boolean created;
   boolean isDebug;
+  boolean discardNextSimulationDelta;
   
   // Automap 持续缩放累加器（用于按住键持续放大/缩小）
   private float automapZoomAccumulator = 0f;
@@ -820,8 +829,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   @Override
   public void resume() {
+    discardNextSimulationDelta = true;
     Riiablo.engine = engine;
     Riiablo.game = this;
+  }
+
+  @Override
+  public void pause() {
+    discardNextSimulationDelta = true;
   }
 
   @Override
@@ -847,10 +862,15 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   @Override
   public void render(float delta) {
     float rawDelta = delta;
-    delta = sanitizeSimulationDelta(delta);
+    if (discardNextSimulationDelta) {
+      discardNextSimulationDelta = false;
+      delta = sanitizeResumedSimulationDelta(delta);
+    } else {
+      delta = sanitizeSimulationDelta(delta);
+    }
     if (rawDelta != delta) {
       Gdx.app.debug(TAG, String.format(
-          "Discarding suspended-frame delta: raw=%.3fs simulation=%.3fs",
+          "Adjusting simulation delta: raw=%.3fs simulation=%.3fs",
           rawDelta, delta));
     }
 
@@ -1287,6 +1307,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         || delta > BACKGROUND_DELTA_THRESHOLD) {
       return Animation.FRAME_DURATION;
     }
-    return delta;
+    return Math.min(delta, MAX_SIMULATION_DELTA);
+  }
+
+  static float sanitizeResumedSimulationDelta(float delta) {
+    return Math.min(sanitizeSimulationDelta(delta), Animation.FRAME_DURATION);
   }
 }
