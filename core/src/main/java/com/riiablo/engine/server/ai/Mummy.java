@@ -25,12 +25,19 @@ import com.riiablo.engine.server.component.Sequence;
  * Mummy AI implementation matching D2MOD's AITHINK_Fn021_Mummy logic.
  * 
  * D2MOD AI Parameters:
- * - params[0] = MUMMY_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
- * - params[1] = MUMMY_AI_PARAM_STALL_DURATION (idle time)
+ * - params[0] = MUMMY_AI_PARAM_AWAKE_DISTANCE
+ * - params[1] = MUMMY_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
  * - params[2] = MUMMY_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[3] = MUMMY_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT (A1 vs A2 chance)
+ * - params[4] = MUMMY_AI_PARAM_STALL_DURATION (idle time)
  */
 public class Mummy extends AI {
+  static final int PARAM_AWAKE_DISTANCE = 0;
+  static final int PARAM_APPROACH_CHANCE = 1;
+  static final int PARAM_ATTACK_CHANCE = 2;
+  static final int PARAM_ATTACK1_OR_2_CHANCE = 3;
+  static final int PARAM_STALL_DURATION = 4;
+
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -167,12 +174,12 @@ public class Mummy extends AI {
     // D2MOD: If in combat, check attack chance
     if (bCombat) {
       // D2MOD: MUMMY_AI_PARAM_ATTACK_CHANCE_PCT
-      if (MathUtils.randomBoolean(params[2] / 100f)) {
+      if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         // D2MOD: MUMMY_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT
-        byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+        byte attackMode = MathUtils.randomBoolean(params[PARAM_ATTACK1_OR_2_CHANCE] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         Riiablo.audio.play(monsound + "_attack_1", true);
@@ -182,14 +189,14 @@ public class Mummy extends AI {
         // No attack, idle
         stateMachine.changeState(State.IDLE);
         // D2MOD: MUMMY_AI_PARAM_STALL_DURATION
-        time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+        time = params[PARAM_STALL_DURATION] * com.riiablo.codec.Animation.FRAME_DURATION;
         return;
       }
     }
 
     // D2MOD: Not in combat, check approach chance
     // D2MOD: MUMMY_AI_PARAM_APPROACH_CHANCE_PCT
-    if (MathUtils.randomBoolean(params[0] / 100f)) {
+    if (MathUtils.randomBoolean(params[PARAM_APPROACH_CHANCE] / 100f)) {
       pathfinder.findPath(entityId, targetPos, false, targetId);
       stateMachine.changeState(State.APPROACH);
       time = MathUtils.random(1f, 2);
@@ -198,7 +205,7 @@ public class Mummy extends AI {
       // No approach, idle
       stateMachine.changeState(State.IDLE);
       // D2MOD: MUMMY_AI_PARAM_STALL_DURATION
-      time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+      time = params[PARAM_STALL_DURATION] * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
   }

@@ -20,10 +20,10 @@ import com.riiablo.engine.server.component.Sequence;
  * CorruptArcher AI implementation matching D2MOD's AITHINK_Fn035_CorruptArcher logic.
  * 
  * D2MOD AI Parameters:
- * - params[0] = CORRUPTARCHER_AI_PARAM_SHOOT_CHANCE_PCT (shoot chance)
- * - params[1] = CORRUPTARCHER_AI_PARAM_STALL_DURATION (idle time)
- * - params[2] = CORRUPTARCHER_AI_PARAM_RUN_CHANCE_PCT (close escape chance)
- * - params[3] = CORRUPTARCHER_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
+ * - params[0] = CORRUPTARCHER_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
+ * - params[1] = CORRUPTARCHER_AI_PARAM_SHOOT_CHANCE_PCT (shoot chance)
+ * - params[2] = CORRUPTARCHER_AI_PARAM_STALL_DURATION (idle time)
+ * - params[3] = CORRUPTARCHER_AI_PARAM_RUN_CHANCE_PCT (close escape chance)
  * - params[4] = CORRUPTARCHER_AI_PARAM_ALWAYS_RUN_DISTANCE (always run distance)
  * - params[5] = CORRUPTARCHER_AI_PARAM_USE_SKILL_2_CHANCE_PCT (use skill2 chance)
  * - params[6] = CORRUPTARCHER_AI_PARAM_USE_SKILL_3_CHANCE_PCT (use skill3 chance)
@@ -32,6 +32,15 @@ import com.riiablo.engine.server.component.Sequence;
  * Special: Ranged attack AI with multiple skills. Can run when far.
  */
 public class CorruptArcher extends AI {
+  static final int PARAM_APPROACH_CHANCE = 0;
+  static final int PARAM_SHOOT_CHANCE = 1;
+  static final int PARAM_STALL_DURATION = 2;
+  static final int PARAM_RUN_CHANCE = 3;
+  static final int PARAM_ALWAYS_RUN_DISTANCE = 4;
+  static final int PARAM_USE_SKILL_2_CHANCE = 5;
+  static final int PARAM_USE_SKILL_3_CHANCE = 6;
+  static final int PARAM_WALK_TOW_DISTANCE = 7;
+
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -109,8 +118,7 @@ public class CorruptArcher extends AI {
   private boolean checkSpecialCondition(int targetId, float distance) {
     return targetId != Engine.INVALID_ENTITY
         && distance < 6f
-        && params.length > 2
-        && MathUtils.randomBoolean(params[2] / 100f);
+        && MathUtils.randomBoolean(params[PARAM_RUN_CHANCE] / 100f);
   }
 
   private void castSkillOrAttack(int skillIndex, int targetId, Vector2 targetPos) {
@@ -200,9 +208,9 @@ public class CorruptArcher extends AI {
     }
 
     // D2MOD: If far, walk toward target
-    float walkTowDistance = params.length > 7 ? params[7] : 15f;
+    float walkTowDistance = params[PARAM_WALK_TOW_DISTANCE];
     if (walkTowDistance > 0 && targetDistance > walkTowDistance
-        && params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+        && MathUtils.randomBoolean(params[PARAM_APPROACH_CHANCE] / 100f)) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
       // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_WALK_TOW_DISTANCE))
       walkTo(targetPos, 10, targetId);
@@ -212,7 +220,7 @@ public class CorruptArcher extends AI {
     }
 
     // D2MOD: If very far, always run
-    float alwaysRunDistance = params.length > 4 ? params[4] : 20f;
+    float alwaysRunDistance = params[PARAM_ALWAYS_RUN_DISTANCE];
     if (targetDistance > alwaysRunDistance) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 100, 0)
       // D2MOD: AITACTICS_RunToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, CORRUPTARCHER_AI_PARAM_ALWAYS_RUN_DISTANCE))
@@ -223,10 +231,10 @@ public class CorruptArcher extends AI {
     }
 
     // D2MOD: Check shoot chance
-    if (params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+    if (MathUtils.randomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)) {
       // D2MOD: Check skill usage
       if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()
-          && params.length > 5 && MathUtils.randomBoolean(params[5] / 100f)) {
+          && MathUtils.randomBoolean(params[PARAM_USE_SKILL_2_CHANCE] / 100f)) {
         stateMachine.changeState(State.CAST);
         castSkillOrAttack(1, targetId, targetPos);
         time = MathUtils.random(1f, 2);
@@ -234,7 +242,7 @@ public class CorruptArcher extends AI {
       }
 
       if (monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()
-          && params.length > 6 && MathUtils.randomBoolean(params[6] / 100f)) {
+          && MathUtils.randomBoolean(params[PARAM_USE_SKILL_3_CHANCE] / 100f)) {
         stateMachine.changeState(State.CAST);
         castSkillOrAttack(2, targetId, targetPos);
         time = MathUtils.random(1f, 2);
@@ -260,7 +268,7 @@ public class CorruptArcher extends AI {
     }
 
     stateMachine.changeState(State.IDLE);
-    time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+    time = params[PARAM_STALL_DURATION] * com.riiablo.codec.Animation.FRAME_DURATION;
   }
 
   @Override

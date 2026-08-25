@@ -25,14 +25,21 @@ import com.riiablo.engine.server.component.Sequence;
  * Vulture AI implementation matching D2MOD's AITHINK_Fn019_Vulture logic.
  * 
  * D2MOD AI Parameters:
- * - params[0] = VULTURE_AI_PARAM_MOVE_CHANCE_PCT (move chance)
+ * - params[0] = VULTURE_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
  * - params[1] = VULTURE_AI_PARAM_STALL_DURATION (idle time)
- * - params[2] = VULTURE_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
+ * - params[2] = VULTURE_AI_PARAM_WOUNDED_PCT
  * - params[3] = VULTURE_AI_PARAM_CIRCLE_CHANCE_PCT (circle chance)
+ * - params[4] = VULTURE_AI_PARAM_MOVE_CHANCE_PCT (move chance)
  * 
  * Special: Has complex state machine with special positioning behavior.
  */
 public class Vulture extends AI {
+  static final int PARAM_ATTACK_CHANCE = 0;
+  static final int PARAM_STALL_DURATION = 1;
+  static final int PARAM_WOUNDED_PCT = 2;
+  static final int PARAM_CIRCLE_CHANCE = 3;
+  static final int PARAM_MOVE_CHANCE = 4;
+
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -200,14 +207,14 @@ public class Vulture extends AI {
     // D2MOD: If not in combat
     if (!bCombat) {
       if (aiParam0 != -1) {
-        if (params.length > 0 && !MathUtils.randomBoolean(params[0] / 100f)) {
+        if (!MathUtils.randomBoolean(params[PARAM_MOVE_CHANCE] / 100f)) {
           stateMachine.changeState(State.IDLE);
-          time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+          time = params[PARAM_STALL_DURATION] * com.riiablo.codec.Animation.FRAME_DURATION;
           return;
         }
       }
 
-      if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+      if (MathUtils.randomBoolean(params[PARAM_CIRCLE_CHANCE] / 100f)) {
         // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 6u, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
@@ -225,7 +232,7 @@ public class Vulture extends AI {
     }
 
     // D2MOD: In combat
-    if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+    if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
@@ -236,7 +243,7 @@ public class Vulture extends AI {
       return;
     } else {
       stateMachine.changeState(State.IDLE);
-      time = params.length > 1 ? params[1] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+      time = params[PARAM_STALL_DURATION] * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
   }

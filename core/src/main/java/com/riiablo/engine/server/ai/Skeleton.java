@@ -26,11 +26,16 @@ import com.riiablo.engine.server.component.Sequence;
  * 
  * D2MOD AI Parameters:
  * - params[0] = SKELETON_AI_PARAM_APPROACH_CHANCE_PCT (approach chance)
- * - params[1] = SKELETON_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
- * - params[2] = SKELETON_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT (A1 vs A2 chance)
- * - params[3] = SKELETON_AI_PARAM_STALL_TIME (idle time)
+ * - params[1] = SKELETON_AI_PARAM_STALL_TIME (idle time)
+ * - params[2] = SKELETON_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
+ * - params[3] = SKELETON_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT (A1 vs A2 chance)
  */
 public class Skeleton extends AI {
+  static final int PARAM_APPROACH_CHANCE = 0;
+  static final int PARAM_STALL_TIME = 1;
+  static final int PARAM_ATTACK_CHANCE = 2;
+  static final int PARAM_ATTACK1_OR_2_CHANCE = 3;
+
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -167,12 +172,12 @@ public class Skeleton extends AI {
     // D2MOD: If in combat, check attack chance
     if (bCombat) {
       // D2MOD: SKELETON_AI_PARAM_ATTACK_CHANCE_PCT
-      if (MathUtils.randomBoolean(params[1] / 100f)) {
+      if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         // D2MOD: SKELETON_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT
-        byte attackMode = MathUtils.randomBoolean(params[2] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+        byte attackMode = MathUtils.randomBoolean(params[PARAM_ATTACK1_OR_2_CHANCE] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         Riiablo.audio.play(monsound + "_attack_1", true);
@@ -182,13 +187,13 @@ public class Skeleton extends AI {
         // No attack, idle
         stateMachine.changeState(State.IDLE);
         // D2MOD: SKELETON_AI_PARAM_STALL_TIME
-        time = params.length > 3 ? params[3] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+        time = params[PARAM_STALL_TIME] * com.riiablo.codec.Animation.FRAME_DURATION;
         return;
       }
     }
 
     // D2MOD: Not in combat, check approach chance
-    if (MathUtils.randomBoolean(params[0] / 100f)) {
+    if (MathUtils.randomBoolean(params[PARAM_APPROACH_CHANCE] / 100f)) {
       // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, (4 | 2 | 1))
       // Flags 4|2|1 = 7 means walk with some special behavior, but we'll use normal pathfinding
       pathfinder.findPath(entityId, targetPos, false, targetId);
@@ -199,7 +204,7 @@ public class Skeleton extends AI {
       // No approach, idle
       stateMachine.changeState(State.IDLE);
       // D2MOD: SKELETON_AI_PARAM_STALL_TIME
-      time = params.length > 3 ? params[3] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;
+      time = params[PARAM_STALL_TIME] * com.riiablo.codec.Animation.FRAME_DURATION;
       return;
     }
   }

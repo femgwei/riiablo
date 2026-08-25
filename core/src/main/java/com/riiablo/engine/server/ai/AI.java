@@ -1,6 +1,7 @@
 package com.riiablo.engine.server.ai;
 
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
@@ -120,6 +121,9 @@ public abstract class AI implements Interactable.Interactor {
 
     SLEEP = Animation.FRAME_DURATION * monstats.aidel[0];
     monsound = monstats.MonSound;
+    log.info("[MONSTER_AI_INIT] entity={} monster={} ai={} aidel={} sleep={} params={}",
+        entityId, monstats.Id, getClass().getSimpleName(), monstats.aidel[0], SLEEP,
+        Arrays.toString(params));
   }
 
   @Override

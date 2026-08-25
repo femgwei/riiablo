@@ -21,13 +21,18 @@ import com.riiablo.engine.server.component.AttributesWrapper;
  * 
  * D2MOD AI Parameters:
  * - params[0] = BIGHEAD_AI_PARAM_HURT_PCT (hurt percentage threshold)
- * - params[1] = BIGHEAD_AI_PARAM_FIRE_WHILE_HEALTHY_CHANCE_PCT (fire while healthy chance)
- * - params[2] = BIGHEAD_AI_PARAM_FIRE_WHILE_HURT_CHANCE_PCT (fire while hurt chance)
- * - params[3] = BIGHEAD_AI_PARAM_CIRCLE_CHANCE_PCT (circle chance)
+ * - params[1] = BIGHEAD_AI_PARAM_CIRCLE_CHANCE_PCT (circle chance)
+ * - params[2] = BIGHEAD_AI_PARAM_FIRE_WHILE_HEALTHY_CHANCE_PCT (fire while healthy chance)
+ * - params[3] = BIGHEAD_AI_PARAM_FIRE_WHILE_HURT_CHANCE_PCT (fire while hurt chance)
  * 
  * Special: Has different behavior when healthy vs hurt. Can escape when hurt.
  */
 public class Bighead extends AI {
+  static final int PARAM_HURT_PCT = 0;
+  static final int PARAM_CIRCLE_CHANCE = 1;
+  static final int PARAM_FIRE_WHILE_HEALTHY_CHANCE = 2;
+  static final int PARAM_FIRE_WHILE_HURT_CHANCE = 3;
+
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -182,7 +187,7 @@ public class Bighead extends AI {
     Vector2 entityPos = mPosition.get(entityId).position;
     boolean bCombat = isInCombat(targetId);
     float lifePercent = getLifePercentage();
-    float hurtPct = params.length > 0 ? params[0] : 50f;
+    float hurtPct = params[PARAM_HURT_PCT];
 
     // D2MOD: Check special AI state first
     if (!bCombat && checkSpecialAiState()) {
@@ -210,7 +215,7 @@ public class Bighead extends AI {
       }
 
       // D2MOD: Check if should fire while healthy (distance < 15)
-      if (targetDistance < 15 && params.length > 1 && MathUtils.randomBoolean(params[1] / 100f)) {
+      if (targetDistance < 15 && MathUtils.randomBoolean(params[PARAM_FIRE_WHILE_HEALTHY_CHANCE] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
@@ -238,7 +243,7 @@ public class Bighead extends AI {
       }
 
       // D2MOD: Check if should fire while hurt
-      if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+      if (MathUtils.randomBoolean(params[PARAM_FIRE_WHILE_HURT_CHANCE] / 100f)) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
@@ -249,7 +254,7 @@ public class Bighead extends AI {
       }
 
       // D2MOD: Circle or idle
-      if (params.length > 3 && MathUtils.randomBoolean(params[3] / 100f)) {
+      if (MathUtils.randomBoolean(params[PARAM_CIRCLE_CHANCE] / 100f)) {
         // D2MOD: sub_6FCD0E80(pGame, pUnit, pAiTickParam->pTarget, 3u, 0)
         pathfinder.findPath(entityId, targetPos, false, targetId);
         stateMachine.changeState(State.APPROACH);
