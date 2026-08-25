@@ -159,6 +159,18 @@ class Act1MonsterCombatAuditTest extends RiiabloTest {
     assertEquals(expectedNativeDefense, statInt(player.getStats(), Stat.armorclass));
   }
 
+  @Test
+  void resolvesNativeSingleMonsterPlacementDirectives() {
+    assertEquals("fallen1", ServerEntityFactory.resolvePlacementMonster("place_fallen").Id);
+    assertEquals("fallenshaman1",
+        ServerEntityFactory.resolvePlacementMonster("place_fallenshaman").Id);
+    assertEquals("bloodraven",
+        ServerEntityFactory.resolvePlacementMonster("place_bloodraven").Id);
+    assertTrue(ServerEntityFactory.resolvePlacementMonster("place_unique_pack") == null);
+    System.out.println("[ACT1_PLACEMENT_AUDIT] place_fallen=fallen1 "
+        + "place_fallenshaman=fallenshaman1 place_bloodraven=bloodraven status=PASS");
+  }
+
   private static void auditDamageProfile(MonStats.Entry monster, String mode, int level,
       int attackRating, int minDamage, int maxDamage, boolean missile) {
     Attributes attacker = combatAttributes(100, level, 0, minDamage, maxDamage, attackRating);

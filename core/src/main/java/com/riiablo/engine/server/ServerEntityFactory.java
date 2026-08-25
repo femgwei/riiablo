@@ -134,6 +134,11 @@ public class ServerEntityFactory extends EntityFactory {
     
     // 首先尝试从 MonStats 表查找（普通怪物）
     MonStats.Entry monstats = Riiablo.files.monstats.get(objectType);
+
+    // D2Game's placement directives are not MonStats keys. Resolve the
+    // single-monster directives to their native base rows before giving up;
+    // group directives (unique/champion packs) remain a separate generator.
+    if (monstats == null) monstats = resolvePlacementMonster(objectType);
     
     // 如果找不到，尝试从 SuperUniques 表查找（超级暗金怪）
     if (monstats == null && Riiablo.files.SuperUniques != null) {
@@ -197,6 +202,27 @@ public class ServerEntityFactory extends EntityFactory {
     mSize.create(id); // single size doesn't make any sense in this case because this is a rect
     mNetworked.create(id);
     return id;
+  }
+
+  /** Resolves MonPreset.Place directives that spawn one concrete monster. */
+  static MonStats.Entry resolvePlacementMonster(String placement) {
+    if (placement == null) return null;
+    String normalized = placement.trim().toLowerCase(java.util.Locale.ROOT);
+    String monsterId;
+    switch (normalized) {
+      case "place_fallen":
+        monsterId = "fallen1";
+        break;
+      case "place_fallenshaman":
+        monsterId = "fallenshaman1";
+        break;
+      case "place_bloodraven":
+        monsterId = "bloodraven";
+        break;
+      default:
+        return null;
+    }
+    return Riiablo.files.monstats.get(monsterId);
   }
 
   protected static boolean isWaypointObject(Objects.Entry base) {
