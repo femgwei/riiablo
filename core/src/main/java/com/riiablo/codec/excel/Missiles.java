@@ -97,8 +97,8 @@ public class Missiles extends Excel<Missiles.Entry> {
     @Column public int     SrcMissDmg;
     @Column public int     MinDamage;
     @Column(startIndex = 1, endIndex = 6)
-    public String  MinLevDam[];
-    @Column public String  MaxDamage;
+    public int     MinLevDam[];
+    @Column public int     MaxDamage;
     @Column(startIndex = 1, endIndex = 6)
     public int     MaxLevDam[];
     @Column public String  DmgSymPerCalc;
@@ -106,9 +106,9 @@ public class Missiles extends Excel<Missiles.Entry> {
     @Column public int     EMin;
     @Column(startIndex = 1, endIndex = 6)
     public int     MinELev[];
-    @Column public String  Emax;
+    @Column public int     Emax;
     @Column(startIndex = 1, endIndex = 6)
-    public String  MaxELev[];
+    public int     MaxELev[];
     @Column public String  EDmgSymPerCalc;
     @Column public int     ELen;
     @Column(startIndex = 1, endIndex = 4)

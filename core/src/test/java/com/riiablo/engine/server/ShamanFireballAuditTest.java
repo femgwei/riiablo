@@ -48,10 +48,109 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.D2;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.ai.AI;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.combat.CombatSystem;
 import org.junit.jupiter.api.Test;
 
 /** Data-driven, headless audit for the native shaman projectile chain. */
 public class ShamanFireballAuditTest extends RiiabloTest {
+  @Test
+  void shamanFireballUsesMissileElementalSnapshotAndFireResistance() {
+    Missiles.Entry row = Riiablo.files.Missiles.get("shafire3");
+    assertNotNull(row);
+    Missile projectile = new Missile();
+    projectile.set(row, new Vector2(), row.Range).setOwner(7);
+    Attributes owner = combatAttributes(100, 1, 1, 0, 1);
+    assertTrue(MissileDamageResolver.initialize(projectile, owner, null, -1, 1, 0));
+    assertTrue(projectile.damageSnapshot);
+    assertEquals(0, statInt(projectile.damage, Stat.mindamage));
+    assertEquals(2, statInt(projectile.damage, Stat.firemindam));
+    assertEquals(7, statInt(projectile.damage, Stat.firemaxdam));
+
+    Attributes noResist = combatAttributes(100, 1, 1, 0, 1);
+    Attributes fireResist = combatAttributes(100, 1, 1, 0, 1);
+    fireResist.base().put(Stat.fireresist, 50);
+    fireResist.reset();
+    MathUtils.random.setSeed(0x51EBA1L);
+    CombatSystem.CombatResult full = CombatSystem.INSTANCE.calculateAttack(
+        projectile.damage, noResist, false, false, true, 0, 0, 0, true);
+    MathUtils.random.setSeed(0x51EBA1L);
+    CombatSystem.CombatResult resisted = CombatSystem.INSTANCE.calculateAttack(
+        projectile.damage, fireResist, false, false, true, 0, 0, 0, true);
+    assertTrue(full.hit);
+    assertTrue(resisted.hit);
+    assertTrue(full.totalDamage >= resisted.totalDamage);
+    assertTrue(resisted.totalDamage > 0);
+    System.out.println("[SHAMAN_FIREBALL_DAMAGE] missile=shafire3 snapshot=true "
+        + "fire=2..7 noResist=" + full.totalDamage
+        + " fireResist50=" + resisted.totalDamage + " status=PASS");
+  }
+
+  @Test
+  void dumpNativeProjectileDamageRows() {
+    dumpRows("missiles", "Missile",
+        new String[] {"shafire1", "shafire2", "shafire3", "shafire4",
+            "skmage1", "skmage3", "skmage4", "spike1", "spike2", "spike3", "spike4"},
+        new String[] {"Missile", "Skill", "MissileSkill", "ToHit", "HitShift",
+            "SrcDamage", "SrcMissDmg", "MinDamage", "MinLevDam1", "MinLevDam2",
+            "MinLevDam3", "MinLevDam4", "MinLevDam5", "MaxDamage", "MaxLevDam1",
+            "MaxLevDam2", "MaxLevDam3", "MaxLevDam4", "MaxLevDam5", "EType", "EMin",
+            "MinELev1", "MinELev2", "MinELev3", "MinELev4", "MinELev5", "Emax",
+            "MaxELev1", "MaxELev2", "MaxELev3", "MaxELev4", "MaxELev5", "ELen"});
+    dumpRows("skills", "skill",
+        new String[] {"ShamanFire", "SkeletonMageFire", "SkeletonMageCold",
+            "SkeletonMagePoison", "SkeletonMageLightning"},
+        new String[] {"skill", "Id", "SrcDam", "ToHit", "LevToHit", "HitShift",
+            "MinDam", "MinLevDam1", "MinLevDam2", "MinLevDam3", "MinLevDam4",
+            "MinLevDam5", "MaxDam", "MaxLevDam1", "MaxLevDam2", "MaxLevDam3",
+            "MaxLevDam4", "MaxLevDam5", "EType", "EMin", "EMinLev1", "EMinLev2",
+            "EMinLev3", "EMinLev4", "EMinLev5", "EMax", "EMaxLev1", "EMaxLev2",
+            "EMaxLev3", "EMaxLev4", "EMaxLev5", "ELen", "ELevLen1", "ELevLen2",
+            "ELevLen3"});
+    dumpRows("monstats", "Id",
+        new String[] {"skmage_fire1", "skmage_fire2", "skmage_cold1", "skmage_ltng1",
+            "skmage_pois1", "quillrat1", "fallenshaman1", "fallenshaman3"},
+        new String[] {"Id", "Level", "A1MinD", "A1MaxD", "A1TH", "A2MinD", "A2MaxD",
+            "A2TH", "MissA1", "MissA2", "El1Mode", "El1Type", "El1Pct", "El1MinD",
+            "El1MaxD", "El1Dur", "El2Mode", "El2Type", "El2Pct", "El2MinD", "El2MaxD",
+            "El2Dur"});
+  }
+
+  private static void dumpRows(String table, String keyColumn, String[] keys,
+      String[] wantedColumns) {
+    String text = Riiablo.mpqs.resolve("data\\global\\excel\\" + table + ".txt")
+        .readString("windows-1252");
+    String[] lines = text.split("\\r?\\n");
+    String[] header = lines[0].split("\\t", -1);
+    int keyIndex = columnIndex(header, keyColumn);
+    for (int line = 1; line < lines.length; line++) {
+      String[] row = lines[line].split("\\t", -1);
+      if (keyIndex >= row.length || !containsIgnoreCase(keys, row[keyIndex])) continue;
+      StringBuilder out = new StringBuilder("[NATIVE_DAMAGE_ROW] table=")
+          .append(table).append(" row=").append(row[keyIndex]);
+      for (String column : wantedColumns) {
+        int index = columnIndex(header, column);
+        out.append(' ').append(column).append('=')
+            .append(index >= 0 && index < row.length ? row[index] : "<missing>");
+      }
+      System.out.println(out);
+    }
+  }
+
+  private static int columnIndex(String[] columns, String name) {
+    for (int i = 0; i < columns.length; i++) {
+      if (name.equalsIgnoreCase(columns[i])) return i;
+    }
+    return -1;
+  }
+
+  private static boolean containsIgnoreCase(String[] values, String value) {
+    for (String expected : values) {
+      if (expected.equalsIgnoreCase(value)) return true;
+    }
+    return false;
+  }
+
   @Test
   void fallenShamanSkillEventReachesMissileFactory() {
     MonStats.Entry row = Riiablo.files.monstats.get("fallenshaman3");
@@ -585,6 +684,11 @@ public class ShamanFireballAuditTest extends RiiabloTest {
   private static float hitpoints(Attributes attrs) {
     StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
     return hp != null ? hp.asFixed() : 0f;
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    StatRef ref = attrs.get(stat, StatRef.obtain());
+    return ref != null ? ref.asInt() : 0;
   }
 
   private static final class Probe extends BaseSystem {

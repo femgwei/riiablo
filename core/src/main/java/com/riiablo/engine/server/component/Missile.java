@@ -6,6 +6,7 @@ import com.artemis.annotations.Transient;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntSet;
+import com.riiablo.attributes.Attributes;
 import com.riiablo.codec.DCC;
 import com.riiablo.codec.excel.Missiles;
 
@@ -28,6 +29,15 @@ public class Missile extends PooledComponent {
   public int attackMaxDamage;
   public int attackRating;
 
+  /**
+   * Native-style damage stat list captured at spawn time. D2MOO writes these
+   * stats onto the missile unit before it begins moving, so later owner state
+   * changes cannot alter an in-flight projectile.
+   */
+  public final Attributes damage = Attributes.obtainStandard();
+  public boolean damageSnapshot;
+  public int damageLevel;
+
   /** Targets already resolved by another missile from the same cast. */
   public IntSet sharedHitTargets;
 
@@ -42,6 +52,9 @@ public class Missile extends PooledComponent {
     attackMinDamage = 0;
     attackMaxDamage = 0;
     attackRating = 0;
+    damage.clear();
+    damageSnapshot = false;
+    damageLevel = 0;
     sharedHitTargets = null;
   }
 

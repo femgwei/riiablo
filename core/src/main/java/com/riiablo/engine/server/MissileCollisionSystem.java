@@ -183,6 +183,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
       Attributes ownerAttrs = mAttributesWrapper.get(missile.ownerId).attrs;
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
+      Attributes attackAttrs = missile.damageSnapshot ? missile.damage : ownerAttrs;
       StatRef targetHitpoints = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
       if (targetHitpoints == null || targetHitpoints.asFixed() <= 0f) {
         // A dead entity may remain in the ECS until its death animation and
@@ -195,25 +196,40 @@ public class MissileCollisionSystem extends IteratingSystem {
         return true;
       }
       log.info("[MISSILE_HIT] phase=stats missileId={} owner={} target={} "
-              + "throwMin={} throwMax={} weaponMin={} weaponMax={} attackRating={} "
-              + "profileMin={} profileMax={} profileAr={} targetDefense={} targetHp={}",
+              + "snapshot={} toHit={} throwMin={} throwMax={} weaponMin={} weaponMax={} "
+              + "attackRating={} profileMin={} profileMax={} profileAr={} "
+              + "fire={}..{} lightning={}..{} cold={}..{} poison={}..{} magic={}..{} "
+              + "targetDefense={} targetHp={}",
           missileId, missile.ownerId, targetId,
+          missile.damageSnapshot,
+          missile.missile != null && missile.missile.ToHit,
           statInt(ownerAttrs, Stat.item_throw_mindamage),
           statInt(ownerAttrs, Stat.item_throw_maxdamage),
           statInt(ownerAttrs, Stat.mindamage), statInt(ownerAttrs, Stat.maxdamage),
           statInt(ownerAttrs, Stat.tohit),
           missile.attackMinDamage, missile.attackMaxDamage, missile.attackRating,
+          statInt(attackAttrs, Stat.firemindam), statInt(attackAttrs, Stat.firemaxdam),
+          statInt(attackAttrs, Stat.lightmindam), statInt(attackAttrs, Stat.lightmaxdam),
+          statInt(attackAttrs, Stat.coldmindam), statInt(attackAttrs, Stat.coldmaxdam),
+          statInt(attackAttrs, Stat.poisonmindam), statInt(attackAttrs, Stat.poisonmaxdam),
+          statInt(attackAttrs, Stat.magicmindam), statInt(attackAttrs, Stat.magicmaxdam),
           statInt(targetAttrs, Stat.armorclass),
           targetHitpoints.asFixed());
+      int minOverride = missile.damageSnapshot ? 0 : missile.attackMinDamage;
+      int maxOverride = missile.damageSnapshot ? 0 : missile.attackMaxDamage;
+      int arOverride = missile.damageSnapshot ? 0 : missile.attackRating;
+      boolean alwaysHit = missile.damageSnapshot && missile.missile != null
+          && !missile.missile.ToHit;
       CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
-          ownerAttrs,
+          attackAttrs,
           targetAttrs,
           mPlayer.has(missile.ownerId),
           mPlayer.has(targetId),
           true,
-          missile.attackMinDamage,
-          missile.attackMaxDamage,
-          missile.attackRating);
+          minOverride,
+          maxOverride,
+          arOverride,
+          alwaysHit);
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
             missileId, missile.ownerId, targetId, combat.hitChance);

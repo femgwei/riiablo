@@ -50,6 +50,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.ZoneAware;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
@@ -508,6 +509,16 @@ public class ServerEntityFactory extends EntityFactory {
     int id = super.createEntity(Class.Type.MIS, missile.Missile);
     com.riiablo.engine.server.component.Missile missileComponent = mMissile.create(id);
     missileComponent.set(missile, position, missile.Range).setOwner(ownerId);
+
+    Attributes ownerAttrs = ownerId >= 0 && mAttributesWrapper.has(ownerId)
+        ? mAttributesWrapper.get(ownerId).attrs : null;
+    Monster ownerMonster = ownerId >= 0 && mMonster.has(ownerId)
+        ? mMonster.get(ownerId) : null;
+    int ownerMode = ownerId >= 0 && mCofReference.has(ownerId)
+        ? mCofReference.get(ownerId).mode : -1;
+    int damageLevel = Math.max(1, statInt(ownerAttrs, Stat.level));
+    MissileDamageResolver.initialize(missileComponent, ownerAttrs, ownerMonster,
+        ownerMode, damageLevel, 0);
 
     mPosition.create(id).position.set(position);
     mVelocity.create(id).velocity.set(angle).setLength(missile.Vel);

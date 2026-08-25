@@ -122,9 +122,9 @@ public class Missiles {
   @Format(
       startIndex = 1,
       endIndex = 6)
-  public String MinLevDam[];
+  public int MinLevDam[];
 
-  public String MaxDamage;
+  public int MaxDamage;
 
   @Format(
       startIndex = 1,
@@ -140,12 +140,12 @@ public class Missiles {
       endIndex = 6)
   public int MinELev[];
 
-  public String Emax;
+  public int Emax;
 
   @Format(
       startIndex = 1,
       endIndex = 6)
-  public String MaxELev[];
+  public int MaxELev[];
 
   public String EDmgSymPerCalc;
   public int ELen;

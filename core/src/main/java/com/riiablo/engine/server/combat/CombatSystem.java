@@ -162,6 +162,9 @@ public class CombatSystem {
     /** 攻击是否是远程（投射物） */
     public boolean isMissile;
 
+    /** Missiles.txt ToHit is disabled, so collision itself guarantees a hit. */
+    public boolean alwaysHit;
+
     /** 生命偷取百分比 */
     public int lifeLeech;
 
@@ -340,6 +343,15 @@ public class CombatSystem {
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
       int attackMinDamageOverride, int attackMaxDamageOverride,
       int attackRatingOverride) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false);
+  }
+
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -349,6 +361,7 @@ public class CombatSystem {
     AttackerData a = new AttackerData();
     a.isPlayer = attackerPlayer;
     a.isMissile = missile;
+    a.alwaysHit = alwaysHit;
     a.level = Math.max(1, statInt(attacker, Stat.level, 1));
     a.strength = statInt(attacker, Stat.strength, 0);
     a.dexterity = statInt(attacker, Stat.dexterity, 0);
@@ -450,8 +463,8 @@ public class CombatSystem {
     CombatResult result = new CombatResult();
 
     // 1. 计算命中率并判定命中
-    result.hitChance = calculateHitChance(attacker, defender);
-    result.hit = rollHit(result.hitChance);
+    result.hitChance = attacker.alwaysHit ? 100 : calculateHitChance(attacker, defender);
+    result.hit = attacker.alwaysHit || rollHit(result.hitChance);
 
     if (!result.hit) {
       log.debug("[COMBAT_HIT] result=miss ar={} defense={} attackerLevel={} defenderLevel={} chance={}%",
@@ -661,8 +674,13 @@ public class CombatSystem {
    * 计算基础物理伤害
    */
   private int calculateBaseDamage(AttackerData attacker) {
+    // A native zero-profile melee/ranged attack still deals the one-point
+    // minimum. Snapshot spell missiles mark alwaysHit and may legitimately
+    // carry elemental-only damage, so they keep physical damage at zero.
+    if (attacker.maxDamage <= 0) return attacker.isMissile && attacker.alwaysHit ? 0 : 1;
     // 随机伤害值
-    int damage = MathUtils.random(attacker.minDamage, attacker.maxDamage);
+    int minDamage = Math.max(0, Math.min(attacker.minDamage, attacker.maxDamage));
+    int damage = MathUtils.random(minDamage, attacker.maxDamage);
 
     // 力量加成（仅近战）
     if (!attacker.isMissile) {
@@ -715,6 +733,7 @@ public class CombatSystem {
    * 应用物理伤害减免
    */
   private int applyPhysicalDamageReduction(int damage, DefenderData defender) {
+    if (damage <= 0) return 0;
     if (defender.immunePhysical) {
       return 0;
     }

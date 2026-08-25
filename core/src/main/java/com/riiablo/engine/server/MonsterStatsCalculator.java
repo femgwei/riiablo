@@ -26,6 +26,9 @@ public class MonsterStatsCalculator {
     public int A2MaxD;
     public int S1MinD;
     public int S1MaxD;
+    public int ElMinD;
+    public int ElMaxD;
+    public int ElDur;
   }
   
   /**
@@ -249,8 +252,45 @@ public class MonsterStatsCalculator {
         if (result.S1MaxD < result.S1MinD) result.S1MaxD = result.S1MinD;
       }
     }
+
+    // D2Common uses 0x40, 0x80 and 0x100 for the three MonStats elemental
+    // attack profiles. These values are damage ratios just like A1/A2 and
+    // must be scaled through MonLvl before being attached to an attack.
+    int elementIndex = (flags & 0x40) != 0 ? 0
+        : (flags & 0x80) != 0 ? 1
+        : (flags & 0x100) != 0 ? 2 : -1;
+    if (elementIndex >= 0) {
+      int[] minValues = elementIndex == 0 ? monstats.El1MinD
+          : elementIndex == 1 ? monstats.El2MinD : monstats.El3MinD;
+      int[] maxValues = elementIndex == 0 ? monstats.El1MaxD
+          : elementIndex == 1 ? monstats.El2MaxD : monstats.El3MaxD;
+      int[] durations = elementIndex == 0 ? monstats.El1Dur
+          : elementIndex == 1 ? monstats.El2Dur : monstats.El3Dur;
+      int rawMin = arrayValue(minValues, difficulty);
+      int rawMax = arrayValue(maxValues, difficulty);
+      if (monstats.noRatio) {
+        result.ElMinD = rawMin;
+        result.ElMaxD = rawMax;
+      } else if (useMonLvlTable) {
+        int[] dmArray = offset > 0 ? monLvl.LDM : monLvl.DM;
+        int multiplier = arrayValue(dmArray, difficulty);
+        result.ElMinD = applyRatio(rawMin, multiplier, 100);
+        result.ElMaxD = applyRatio(rawMax, multiplier, 100);
+      } else {
+        float levelMultiplier = calculateLevelMultiplier(level, difficulty, offset);
+        result.ElMinD = (int) (rawMin * levelMultiplier / 100f);
+        result.ElMaxD = (int) (rawMax * levelMultiplier / 100f);
+      }
+      result.ElMinD = Math.max(0, result.ElMinD);
+      result.ElMaxD = Math.max(result.ElMinD, result.ElMaxD);
+      result.ElDur = Math.max(0, arrayValue(durations, difficulty));
+    }
     
     return true;
+  }
+
+  private static int arrayValue(int[] values, int index) {
+    return values != null && index >= 0 && index < values.length ? values[index] : 0;
   }
   
   /**

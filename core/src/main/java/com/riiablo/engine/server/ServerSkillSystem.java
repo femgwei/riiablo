@@ -24,6 +24,7 @@ import com.riiablo.logger.Logger;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -121,6 +122,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (monstersOnly && !mMonster.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
@@ -193,7 +195,7 @@ public class ServerSkillSystem extends PassiveSystem {
         direction.rotateRad(offset);
       }
       int missileId = createMissile(missile, direction, start, event.entityId,
-          sharedHitTargets);
+          sharedHitTargets, skillLevel);
       if (missileId < 0) {
         log.warn("[MISSILE_CREATE] phase=failed entity={} owner={} skillId={} missile={}",
             event.entityId, event.entityId, event.skillId, missile.Missile);
@@ -234,12 +236,13 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     IntSet sharedHitTargets = new IntSet();
+    int skillLevel = getSkillLevel(event.entityId, event.skillId);
     Vector2 direction = new Vector2();
     int created = 0;
     for (int i = 0; i < NOVA_MISSILE_COUNT; i++) {
       radialDirection(i, NOVA_MISSILE_COUNT, direction);
       if (createMissile(missile, direction, start, event.entityId,
-          sharedHitTargets) >= 0) {
+          sharedHitTargets, skillLevel) >= 0) {
         created++;
       }
     }
@@ -299,7 +302,8 @@ public class ServerSkillSystem extends PassiveSystem {
     int created = 0;
     for (int i = 0; i < total; i++) {
       fanDirection(target, i, total, direction);
-      if (createMissile(missile, direction, start, event.entityId, sharedHitTargets) >= 0) {
+      if (createMissile(missile, direction, start, event.entityId, sharedHitTargets,
+          skillLevel) >= 0) {
         created++;
       }
     }
@@ -343,11 +347,18 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private int createMissile(Missiles.Entry missile, Vector2 direction, Vector2 start,
-      int ownerId, IntSet sharedHitTargets) {
+      int ownerId, IntSet sharedHitTargets, int damageLevel) {
     if (factory == null) return -1;
     int missileId = factory.createMissile(missile, direction, start, ownerId);
-    if (missileId >= 0 && sharedHitTargets != null && mMissile.has(missileId)) {
-      mMissile.get(missileId).shareHitTargets(sharedHitTargets);
+    if (missileId >= 0 && mMissile.has(missileId)) {
+      Missile projectile = mMissile.get(missileId);
+      if (sharedHitTargets != null) projectile.shareHitTargets(sharedHitTargets);
+      Attributes ownerAttrs = mAttributesWrapper.has(ownerId)
+          ? mAttributesWrapper.get(ownerId).attrs : null;
+      Monster ownerMonster = mMonster.has(ownerId) ? mMonster.get(ownerId) : null;
+      int ownerMode = mCofReference.has(ownerId) ? mCofReference.get(ownerId).mode : -1;
+      MissileDamageResolver.initialize(projectile, ownerAttrs, ownerMonster,
+          ownerMode, damageLevel, 0);
     }
     return missileId;
   }

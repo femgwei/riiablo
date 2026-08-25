@@ -17,6 +17,7 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.engine.server.component.Angle;
@@ -679,9 +680,8 @@ public class Actioneer extends PassiveSystem {
       // Keep the A2 profile on this projectile; the shared monster attributes
       // represent A1 and must remain unchanged for overlapping attacks.
       com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
-      projectile.attackMinDamage = monster.attack2MinDamage;
-      projectile.attackMaxDamage = monster.attack2MaxDamage;
-      projectile.attackRating = monster.attack2ToHit;
+      MissileDamageResolver.applySourceAttackProfile(projectile,
+          monster.attack2MinDamage, monster.attack2MaxDamage, monster.attack2ToHit);
     }
     log.info("[MONSTER_MISSILE] created entity={} target={} mode={} missileId={} missile={} "
             + "speed={} range={} damage={}..{} ar={} start=({}, {}) direction=({}, {})",
