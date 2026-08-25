@@ -20,6 +20,12 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 public class MapManager extends PassiveSystem {
   private static final String TAG = "MapManager";
+  private static final int PRESET_SPECIAL_CHEST = 580;
+  private static final int TOWER_CELLAR_LEVEL_5 = 25;
+  private static final int GENERIC_CHEST = 371;
+  private static final int[] ACT1_PRESET_CHESTS = {
+      5, 6, 139, 140, 141, 144, 176, 177, 198, 240, 241, 242, 243
+  };
 
   @Wire(name = "map")
   protected Map map;
@@ -90,15 +96,27 @@ public class MapManager extends PassiveSystem {
     for (Map.NativeObject object : zone.nativeObjects) {
       // DS1 stores Act as zero-based in the file and riiablo's loader exposes
       // it as one-based. Act I therefore uses table section 1 here.
-      int id = factory.createObject(1, DS1.Object.STATIC_TYPE, object.presetIndex,
-          zone.x + object.x, zone.y + object.y);
+      int objectId = Riiablo.files.obj.getObjectId(1, object.presetIndex);
+      int resolvedObjectId = resolveNativeObjectClassId(
+          zone.level.Id, objectId, map.seed, object.x, object.y);
+      if (resolvedObjectId != objectId) {
+        Gdx.app.log(TAG, String.format(
+            "Resolved D2MOO native preset object: level=%s(%d) presetIndex=%d objectId=%d -> classId=%d local=(%d,%d)",
+            zone.level.LevelName, zone.level.Id, object.presetIndex, objectId,
+            resolvedObjectId, object.x, object.y));
+      }
+      int id = resolvedObjectId == objectId
+          ? factory.createObject(1, DS1.Object.STATIC_TYPE, object.presetIndex,
+              zone.x + object.x, zone.y + object.y)
+          : factory.createStaticObjectByClassId(
+              resolvedObjectId, zone.x + object.x, zone.y + object.y);
       if (id == Engine.INVALID_ENTITY) {
         failed++;
-        int objectId = Riiablo.files.obj.getObjectId(1, object.presetIndex);
         Gdx.app.error(TAG, String.format(
-            "Unable to create D2MOO native object: level=%s(%d) presetIndex=%d objectId=%d mode=%d "
+            "Unable to create D2MOO native object: level=%s(%d) presetIndex=%d objectId=%d resolvedObjectId=%d mode=%d "
                 + "local=(%d,%d) world=(%d,%d)",
-            zone.level.LevelName, zone.level.Id, object.presetIndex, objectId, object.mode,
+            zone.level.LevelName, zone.level.Id, object.presetIndex, objectId,
+            resolvedObjectId, object.mode,
             object.x, object.y, zone.x + object.x, zone.y + object.y));
       } else {
         // Native exports already tell us the owning level. Do not resolve it
@@ -115,6 +133,19 @@ public class MapManager extends PassiveSystem {
           "D2MOO native objects: level=%s(%d) exported=%d created=%d failed=%d",
           zone.level.LevelName, zone.level.Id, zone.nativeObjects.size, created, failed));
     }
+  }
+
+  /** Resolves D2Game's special-chest preset class into an Objects.txt row. */
+  static int resolveNativeObjectClassId(int levelId, int objectId, int seed,
+      int localX, int localY) {
+    if (objectId != PRESET_SPECIAL_CHEST) return objectId;
+    if (levelId == TOWER_CELLAR_LEVEL_5) return GENERIC_CHEST;
+
+    int hash = seed;
+    hash = 31 * hash + levelId;
+    hash = 31 * hash + localX;
+    hash = 31 * hash + localY;
+    return ACT1_PRESET_CHESTS[(hash & 0x7FFFFFFF) % ACT1_PRESET_CHESTS.length];
   }
 
   private void createEntities(

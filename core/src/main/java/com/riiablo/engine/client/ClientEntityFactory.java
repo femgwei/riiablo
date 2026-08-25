@@ -64,6 +64,16 @@ public class ClientEntityFactory extends ServerEntityFactory {
   @Override
   public int createStaticObject(int act, int objId, float x, float y) {
     int id = super.createStaticObject(act, objId, x, y);
+    return finishStaticObject(id, x, y);
+  }
+
+  @Override
+  public int createStaticObjectByClassId(int objectId, float x, float y) {
+    int id = super.createStaticObjectByClassId(objectId, x, y);
+    return finishStaticObject(id, x, y);
+  }
+
+  private int finishStaticObject(int id, float x, float y) {
     // A DS1 object index is not guaranteed to resolve to a usable Objects.txt
     // row. The server factory reports those entries as INVALID_ENTITY; do not
     // try to attach client-only components to that sentinel entity id.

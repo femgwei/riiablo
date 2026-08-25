@@ -1383,11 +1383,21 @@ public class DrlgRoomTile {
                 linked.append(record instanceof D2LvlWarpTxt
                         ? ((D2LvlWarpTxt) record).getDwLevelId() : "null");
             }
-            D2Log.warning(String.format(
+            String message = String.format(
                     "DRLGROOMTILE_LoadWallWarpTiles: Warp tile not found"
                         + " source=%d room=(%d,%d) style=%d lvlWarpId=%d linked=[%s]",
                     drlgRoom.getLevel().getLevelId(), drlgRoom.getNTileXPos(),
-                    drlgRoom.getNTileYPos(), tileInfo.getNTileStyle(), lvlWarpId, linked));
+                    drlgRoom.getNTileYPos(), tileInfo.getNTileStyle(), lvlWarpId, linked);
+            // DS1 wall-exit graphics are also used as non-linking decoration.
+            // With no LvlWarp mapping and no room link, the native early return
+            // is expected; keep it visible at debug level without flooding the
+            // warning stream. A mapped or partially linked warp remains a real
+            // diagnostic warning.
+            if (lvlWarpId < 0 && linked.length() == 0) {
+                D2Log.debug(message);
+            } else {
+                D2Log.warning(message);
+            }
             return;
         }
         

@@ -1027,8 +1027,10 @@ public class Map implements Disposable {
         // 从 presets 获取依赖项
         for (Preset[] x : presets) for (Preset y : x) if (y != null) dependencies.addAll(y.getDependencies(type));
         
-        // 如果没有 preset，需要为程序生成加载 DT1 文件
-        // 检查是否所有 preset 都是 null
+        // Preset dependencies describe only the DS1-selected libraries. A
+        // native D2MOO export may contain tiles from other rooms in the same
+        // level, so its room-mask libraries must be merged independently of
+        // whether this Zone also has a riiablo Preset.
         boolean hasAnyPreset = false;
         for (Preset[] x : presets) {
           for (Preset y : x) {
@@ -1040,12 +1042,11 @@ public class Map implements Disposable {
           if (hasAnyPreset) break;
         }
         
-        // 如果没有 preset，根据 Level 的 Act 和 LevelType 加载 DT1 文件
-        if (!hasAnyPreset && type != null) {
+        if (type != null) {
           int baseDt1Mask = OutdoorGrid.getDt1MaskForLevel(level);
           int exportedDt1Mask = Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(level.Id)
               ? Act1MapBuilderD2MOD.INSTANCE.getD2MooDt1Mask(level.Id) : 0;
-          int dt1Mask = baseDt1Mask | exportedDt1Mask;
+          int dt1Mask = dependencyDt1Mask(hasAnyPreset, baseDt1Mask, exportedDt1Mask);
           int filesAdded = 0;
           if (DEBUG_BUILD) {
             Gdx.app.debug(TAG, String.format(
@@ -1073,9 +1074,9 @@ public class Map implements Disposable {
               }
             }
           }
-          // D2MOO loads these libraries after the room-mask libraries for
-          // every initialized room, outside LevelTypes.txt. Preserve that
-          // ordering and make exported warp/blank tiles resolvable too.
+          // DRLGROOMTILE_LoadDT1FilesForRoom loads these after the room-mask
+          // libraries for every initialized room, including preset rooms.
+          // They contain native blank/invisible/warp tiles such as style 30.
           if (exportedDt1Mask != 0) {
             String[] d2MooRoomDefaults = {
                 "Act1/Outdoors/Blank.dt1",
@@ -1093,6 +1094,11 @@ public class Map implements Disposable {
         }
       }
       return dependencies;
+    }
+
+    static int dependencyDt1Mask(boolean hasAnyPreset, int baseDt1Mask,
+        int exportedDt1Mask) {
+      return (hasAnyPreset ? 0 : baseDt1Mask) | exportedDt1Mask;
     }
 
     private boolean addDt1Dependency(String filePath) {

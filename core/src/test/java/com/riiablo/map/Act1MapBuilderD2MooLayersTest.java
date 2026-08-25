@@ -30,6 +30,23 @@ import com.riiablo.drlg.TileGrid;
 class Act1MapBuilderD2MooLayersTest {
 
   @Test
+  void keepsNativeRoomMaskWhenZoneAlsoContainsPresets() {
+    assertEquals(0x17F, Map.Zone.dependencyDt1Mask(true, 0x40, 0x17F));
+    assertEquals(0x57F, Map.Zone.dependencyDt1Mask(false, 0x400, 0x17F));
+  }
+
+  @Test
+  void resolvesNativeSpecialChestPresetLikeD2Game() {
+    assertEquals(371, MapManager.resolveNativeObjectClassId(25, 580, 7, 26, 70));
+    assertEquals(119, MapManager.resolveNativeObjectClassId(3, 119, 7, 1, 2));
+
+    int first = MapManager.resolveNativeObjectClassId(2, 580, 7, 67, 59);
+    int again = MapManager.resolveNativeObjectClassId(2, 580, 7, 67, 59);
+    assertEquals(first, again);
+    assertTrue(first != 580 && first >= 0);
+  }
+
+  @Test
   void warpExitTilesAreDrawableWalls() {
     assertTrue(RenderSystem.isDrawableWallOrientation(Orientation.SPECIAL_10));
     assertTrue(RenderSystem.isDrawableWallOrientation(Orientation.SPECIAL_11));

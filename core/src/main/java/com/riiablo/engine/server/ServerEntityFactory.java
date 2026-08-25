@@ -148,7 +148,16 @@ public class ServerEntityFactory extends EntityFactory {
   @Override
   public int createStaticObject(int act, int objId, float x, float y) {
     int objectType = Riiablo.files.obj.getObjectId(act, objId);
-    Objects.Entry base = Riiablo.files.objects.get(objectType);
+    return createStaticObjectBase(objectType, x, y);
+  }
+
+  @Override
+  public int createStaticObjectByClassId(int objectId, float x, float y) {
+    return createStaticObjectBase(objectId, x, y);
+  }
+
+  private int createStaticObjectBase(int objectId, float x, float y) {
+    Objects.Entry base = Riiablo.files.objects.get(objectId);
     if (base == null) return Engine.INVALID_ENTITY;
 
     int id = super.createEntity(Class.Type.OBJ, base.Description);

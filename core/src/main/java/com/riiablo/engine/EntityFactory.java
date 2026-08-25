@@ -87,6 +87,8 @@ public abstract class EntityFactory extends PassiveSystem {
 
   public abstract int createDynamicObject(int act, int monPresetId, float x, float y);
   public abstract int createStaticObject(int act, int objId, float x, float y);
+  /** Creates an object whose id is already resolved against Objects.txt. */
+  public abstract int createStaticObjectByClassId(int objectId, float x, float y);
 
   public final int createMonster(MonStats.Entry monstats, float x, float y) {
     return createMonster(monstats.hcIdx, x, y);
