@@ -106,6 +106,11 @@ waypoints, caves, quest rewards and collision boundaries.
   - [ ] Native party eligibility/completion propagation for multiplayer.
   - [ ] End-to-end in-game Den validation.
 - [ ] Phase 2: native map objects
+  - [x] D2Game OperateFn lifecycle table for Act 1 containers and doors.
+  - [x] One-shot urn/barrel/corpse/rack/bookshelf state and one-way secret doors.
+  - [ ] Native container drops, trap callbacks and exploding-barrel damage events.
+  - [ ] Shrine and well effects/cooldowns.
+  - [ ] Quest-object handlers and room unload/reload integration tests.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services
 - [ ] Phase 5: A1Q6 and Act completion

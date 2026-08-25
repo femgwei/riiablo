@@ -16,6 +16,8 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
+import com.riiablo.engine.server.object.NativeObjectOperateTable;
+import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
@@ -35,7 +37,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
+  protected ComponentMapper<Interactable> mInteractable;
   protected EventSystem event;
+  protected CofManager cofs;
 
   @Wire(name = "map")
   protected Map map;
@@ -84,17 +88,10 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   private boolean handleNativeLifecycle(int entityId, com.riiablo.codec.excel.Objects.Entry base) {
     NativeObjectState state = mNativeObjectState.get(entityId);
     int operateFn = base.OperateFn;
-    boolean door = base.IsDoor || operateFn == 8 || operateFn == 18 || operateFn == 29;
-    boolean chest = operateFn == 1 || operateFn == 4 || operateFn == 6
-        || operateFn == 30 || (operateFn >= 39 && operateFn <= 41)
-        || (operateFn >= 57 && operateFn <= 59)
-        || (state != null && (state.kind == NativePresetObjectResolver.Kind.SPECIAL_CHEST
-            || state.kind == NativePresetObjectResolver.Kind.PRESET_CHEST));
-    boolean shrine = operateFn == 2
-        || (state != null && state.kind == NativePresetObjectResolver.Kind.SHRINE);
-    boolean symbol = state != null
-        && state.kind == NativePresetObjectResolver.Kind.ARCANE_SYMBOL;
-    if (!door && !chest && !shrine && !symbol) return false;
+    NativePresetObjectResolver.Kind kind = state == null
+        ? NativePresetObjectResolver.Kind.ORDINARY : state.kind;
+    Lifecycle lifecycle = NativeObjectOperateTable.resolve(operateFn, base.IsDoor, kind);
+    if (lifecycle == Lifecycle.NONE) return false;
 
     CofReference cof = mCofReference.get(entityId);
     if (cof == null) {
@@ -103,26 +100,46 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       return true;
     }
 
-    if (shrine || symbol) {
+    if (lifecycle == Lifecycle.SHRINE || lifecycle == Lifecycle.ARCANE_SYMBOL) {
       if (state != null && state.activated) return true;
       if (state != null) {
         state.persistActivated(true);
         state.persistMode(Engine.Object.MODE_ON);
       }
       mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+      mInteractable.remove(entityId);
       Gdx.app.log(TAG, "Native object activated: entity=" + entityId
           + " object=" + base.Id + " kind=" + (state == null ? "SHRINE" : state.kind));
       return true;
     }
 
-    if (chest) {
+    if (lifecycle == Lifecycle.ANIMATED_CONTAINER
+        || lifecycle == Lifecycle.INSTANT_CONTAINER) {
       if (state != null && state.opened) return true;
       if (state != null) {
         state.persistOpened(true);
         state.persistMode(Engine.Object.MODE_ON);
       }
-      mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+      if (lifecycle == Lifecycle.INSTANT_CONTAINER) {
+        cofs.setMode(entityId, Engine.Object.MODE_ON);
+      } else {
+        mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+      }
+      mInteractable.remove(entityId);
       Gdx.app.log(TAG, "Native chest opened: entity=" + entityId + " object=" + base.Id);
+      return true;
+    }
+
+    if (lifecycle == Lifecycle.ONE_WAY_DOOR) {
+      if (cof.mode != Engine.Object.MODE_NU || state != null && state.opened) return true;
+      if (state != null) {
+        state.persistOpened(true);
+        state.persistMode(Engine.Object.MODE_ON);
+      }
+      mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+      mInteractable.remove(entityId);
+      Gdx.app.log(TAG, "Native one-way door opened: entity=" + entityId
+          + " object=" + base.Id);
       return true;
     }
 
