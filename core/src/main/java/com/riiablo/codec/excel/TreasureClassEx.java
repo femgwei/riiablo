@@ -17,6 +17,10 @@ public class TreasureClassEx extends Excel<TreasureClassEx.Entry> {
     @Column public int Set;
     @Column public int Rare;
     @Column public int Magic;
+    // Present on D2TCExShortStrc and populated by synthetic/item-type TCs or
+    // per-token modifiers; vanilla TreasureClassEx.txt has no direct columns.
+    public int Superior;
+    public int Normal;
     @Column public int NoDrop;
     @Column(startIndex = 1, endIndex = 11, format = "Item%d")
     public String[] Item;
@@ -30,6 +34,11 @@ public class TreasureClassEx extends Excel<TreasureClassEx.Entry> {
 
     public int totalProbability() {
       int total = Math.max(0, NoDrop);
+      return total + itemProbability();
+    }
+
+    public int itemProbability() {
+      int total = 0;
       if (Prob != null) {
         for (int probability : Prob) total += Math.max(0, probability);
       }
@@ -43,6 +52,15 @@ public class TreasureClassEx extends Excel<TreasureClassEx.Entry> {
       int roll = Math.floorMod(randomValue, total);
       int cursor = Math.max(0, NoDrop);
       if (roll < cursor) return null;
+      return selectItem(roll - cursor);
+    }
+
+    /** Returns one raw item/child-TC token using only the Item/Prob weights. */
+    public String selectItem(int randomValue) {
+      int total = itemProbability();
+      if (total <= 0) return null;
+      int roll = Math.floorMod(randomValue, total);
+      int cursor = 0;
       if (Item == null || Prob == null) return null;
       int count = Math.min(Item.length, Prob.length);
       for (int i = 0; i < count; i++) {
