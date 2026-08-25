@@ -14,6 +14,8 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.ServerSkillSystem;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
@@ -28,6 +30,7 @@ public class SkillCastHandler extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(SkillCastHandler.class);
 
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Monster> mMonster;
 
   protected OverlayManager overlays;
 
@@ -126,6 +129,18 @@ public class SkillCastHandler extends PassiveSystem {
     Riiablo.audio.play(skill.dosound, true);
 
     Vector2 position = mPosition.has(event.entityId) ? mPosition.get(event.entityId).position : null;
+
+    // In a local game ServerSkillSystem creates and renders the authoritative
+    // monster missile in this same ECS world.  Do not create a second,
+    // ownerless client copy at the same keyframe.  Network clients do not
+    // have ServerSkillSystem and retain the presentation path below.
+    if (mMonster.has(event.entityId)
+        && world.getSystem(ServerSkillSystem.class) != null
+        && hasServerMissile(skill)) {
+      log.info("[MONSTER_SKILL] phase=client_visual_reuses_server entity={} skill={} srvDoFunc={}",
+          event.entityId, skill.skill, skill.srvdofunc);
+      return;
+    }
 
     // In the shipped Skills.txt data Throw and Left Hand Throw use
     // cltdofunc=2, while their authoritative server functions are 3 and 5.
@@ -580,5 +595,14 @@ public class SkillCastHandler extends PassiveSystem {
 
     // Lightning bolt from sky at target location
     factory.createMissile(missile, new Vector2(0, -1), event.targetVec);
+  }
+
+  private static boolean hasServerMissile(Skills.Entry skill) {
+    return skill != null && (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
+        || hasText(skill.srvmissilec) || hasText(skill.srvmissiled));
+  }
+
+  private static boolean hasText(String value) {
+    return value != null && !value.isEmpty();
   }
 }

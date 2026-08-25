@@ -114,12 +114,12 @@ public class FetishShaman extends AI {
     return Engine.INVALID_ENTITY;
   }
 
-  /**
-   * Check if in inferno state (simplified).
-   */
-  private boolean isInInfernoState() {
-    // TODO: Implement inferno state check
-    return false;
+  /** Native AI compares target distance with the monster's Skill1 level. */
+  private float infernoRange() {
+    if (monster == null || monster.monstats == null
+        || monster.monstats.Skill1 == null || monster.monstats.Skill1.isEmpty()) return 0f;
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(monster.monstats.Skill1);
+    return hasProjectileMissile(skill) ? Math.max(1, monster.monstats.Sk1lvl) : 0f;
   }
 
   @Override
@@ -134,6 +134,11 @@ public class FetishShaman extends AI {
     if (time > 0) {
       return;
     }
+
+    // Keep the cast/animation transaction intact until Actioneer publishes
+    // its finished event; otherwise the next AI tick can replace it before
+    // the inferno keyframe creates the authoritative missiles.
+    if (mCasting.has(entityId) || mSequence.has(entityId)) return;
 
     time = SLEEP;
 
@@ -155,33 +160,22 @@ public class FetishShaman extends AI {
       }
     }
 
-    // D2MOD: Check inferno state and skill range
-    int skillLevel = 1;
-    // TODO: Get skill level from monster's skill
-    if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-      skillLevel = Math.max(1, 1); // Simplified
-    }
-
-    // D2MOD: If can use inferno skill (distance < skill level) and not in inferno state
-    if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
-        && targetDistance < skillLevel && !isInInfernoState()) {
-      // D2MOD: Use inferno skill (nSkill[0])
-      // TODO: Implement skill casting
+    // FetishInferno is a real server missile skill (not a weapon throw).  The
+    // previous port compared distance with a hard-coded level of one and then
+    // scheduled SkillCodes.attack, so the animation never emitted inferno
+    // missiles.  Resolve the MonStats Skill1 row and let the normal
+    // Actioneer -> SkillDoEvent -> ServerSkillSystem path execute it.
+    float infernoRange = infernoRange();
+    if (targetId != Engine.INVALID_ENTITY && infernoRange > 0f
+        && targetDistance <= infernoRange) {
+      Vector2 targetPos = mPosition.get(targetId).position;
+      lookAt(targetId);
       stateMachine.changeState(State.CAST);
-      if (targetId != Engine.INVALID_ENTITY) {
-        Vector2 targetPos = mPosition.get(targetId).position;
-        lookAt(targetId);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+      if (useMonsterSkill(0, targetId, targetPos)) {
+        time = MathUtils.random(1f, 2f);
+        return;
       }
-      time = MathUtils.random(1f, 2);
-      return;
-    }
-
-    // D2MOD: Check inferno state
-    if (isInInfernoState()) {
-      // D2MOD: Toggle off inferno state
-      // TODO: Implement state toggle
+      stateMachine.changeState(State.IDLE);
     }
 
     // D2MOD: Check heal dead ally

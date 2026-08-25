@@ -274,6 +274,18 @@ public abstract class AI implements Interactable.Interactor {
     return true;
   }
 
+  /** Returns whether a skill row can create at least one projectile. */
+  protected static boolean hasProjectileMissile(Skills.Entry skill) {
+    return skill != null && (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
+        || hasText(skill.srvmissilec) || hasText(skill.srvmissiled)
+        || hasText(skill.cltmissilea) || hasText(skill.cltmissileb)
+        || hasText(skill.cltmissilec) || hasText(skill.cltmissiled));
+  }
+
+  private static boolean hasText(String value) {
+    return value != null && !value.isEmpty();
+  }
+
   private static String monsterSkillName(MonStats.Entry monstats, int index) {
     switch (index) {
       case 0: return monstats.Skill1;

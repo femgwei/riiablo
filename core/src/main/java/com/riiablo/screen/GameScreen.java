@@ -107,6 +107,7 @@ import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.PlayerItemHandler;
 import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.MissileCollisionSystem;
+import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.VelocityModeChanger;
 import com.riiablo.engine.server.WarpInteractor;
@@ -690,6 +691,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new CorpseManager()) // Manages corpse lifetime and removal
         ;
     if (socket == null) {
+      // Local games own the authoritative combat world.  Dedicated servers
+      // already register this system; network clients must not create a
+      // duplicate missile for the same SkillDoEvent.
+      builder.with(new ServerSkillSystem(true));
       builder.with(new ItemGenerator());
       builder.with(new VendorGenerator());
       builder.with(new AIStepper());
