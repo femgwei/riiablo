@@ -13,6 +13,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 
@@ -20,12 +21,6 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 public class MapManager extends PassiveSystem {
   private static final String TAG = "MapManager";
-  private static final int PRESET_SPECIAL_CHEST = 580;
-  private static final int TOWER_CELLAR_LEVEL_5 = 25;
-  private static final int GENERIC_CHEST = 371;
-  private static final int[] ACT1_PRESET_CHESTS = {
-      5, 6, 139, 140, 141, 144, 176, 177, 198, 240, 241, 242, 243
-  };
 
   @Wire(name = "map")
   protected Map map;
@@ -37,6 +32,7 @@ public class MapManager extends PassiveSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
 
   public void createEntities() {
     for (Map.Zone zone : new Array.ArrayIterator<>(map.zones)) {
@@ -93,19 +89,41 @@ public class MapManager extends PassiveSystem {
   private void createNativeObjects(Map.Zone zone) {
     int created = 0;
     int failed = 0;
+    int skipped = 0;
     for (Map.NativeObject object : zone.nativeObjects) {
-      // DS1 stores Act as zero-based in the file and riiablo's loader exposes
-      // it as one-based. Act I therefore uses table section 1 here.
-      int objectId = Riiablo.files.obj.getObjectId(1, object.presetIndex);
-      int resolvedObjectId = resolveNativeObjectClassId(
-          zone.level.Id, objectId, map.seed, object.x, object.y);
-      if (resolvedObjectId != objectId) {
-        Gdx.app.log(TAG, String.format(
-            "Resolved D2MOO native preset object: level=%s(%d) presetIndex=%d objectId=%d -> classId=%d local=(%d,%d)",
-            zone.level.LevelName, zone.level.Id, object.presetIndex, objectId,
-            resolvedObjectId, object.x, object.y));
+      if (object.spawned) {
+        // D2Game::SUNIT_SpawnPresetUnitsInRoom ignores units already marked
+        // as spawned. Creating them again would duplicate generated objects.
+        skipped++;
+        continue;
       }
-      int id = resolvedObjectId == objectId
+
+      // DS1 stores Act as zero-based in the file and riiablo's loader exposes
+      // it as one-based. Act I therefore uses table section 1 here. Units
+      // generated after DS1 loading carry a direct Objects.txt class id.
+      int objectId = object.ds1Raw
+          ? resolveDs1ObjectId(1, object.presetIndex)
+          : object.presetIndex;
+      NativePresetObjectResolver.Resolution resolution =
+          NativePresetObjectResolver.resolve(1, zone.level.Id, objectId,
+              map.seed, object.x, object.y);
+      if (!resolution.shouldCreate()) {
+        skipped++;
+        Gdx.app.debug(TAG, String.format(
+            "Skipping D2MOO native object: level=%s(%d) presetIndex=%d classId=%d ds1Raw=%s spawned=%s",
+            zone.level.LevelName, zone.level.Id, object.presetIndex, objectId,
+            object.ds1Raw, object.spawned));
+        continue;
+      }
+      int resolvedObjectId = resolution.classId;
+      if (resolvedObjectId != objectId
+          || resolution.kind != NativePresetObjectResolver.Kind.ORDINARY) {
+        Gdx.app.log(TAG, String.format(
+            "Resolved D2MOO native preset object: level=%s(%d) presetIndex=%d objectId=%d -> classId=%d kind=%s ds1Raw=%s local=(%d,%d)",
+            zone.level.LevelName, zone.level.Id, object.presetIndex, objectId,
+            resolvedObjectId, resolution.kind, object.ds1Raw, object.x, object.y));
+      }
+      int id = object.ds1Raw && resolvedObjectId == objectId
           ? factory.createObject(1, DS1.Object.STATIC_TYPE, object.presetIndex,
               zone.x + object.x, zone.y + object.y)
           : factory.createStaticObjectByClassId(
@@ -123,6 +141,13 @@ public class MapManager extends PassiveSystem {
         // again from coordinates: adjacent/overlapping zone bounds can make a
         // waypoint activate the wrong Levels.txt record.
         mMapWrapper.create(id).set(map, zone);
+        mNativeObjectState.create(id).set(object.presetIndex, objectId,
+            resolvedObjectId, object.mode, object.ds1Raw, object.spawned, resolution.kind);
+        CofReference nativeCof = mCofReference.get(id);
+        if (nativeCof != null && object.mode >= Engine.Object.MODE_NU
+            && object.mode <= Engine.Object.MODE_S5) {
+          nativeCof.mode = (byte) object.mode;
+        }
         prepareWaypointInitialState(id, zone);
         zone.addEntity(id);
         created++;
@@ -132,20 +157,23 @@ public class MapManager extends PassiveSystem {
       Gdx.app.log(TAG, String.format(
           "D2MOO native objects: level=%s(%d) exported=%d created=%d failed=%d",
           zone.level.LevelName, zone.level.Id, zone.nativeObjects.size, created, failed));
+      if (skipped > 0) {
+        Gdx.app.debug(TAG, String.format(
+            "D2MOO native objects skipped: level=%s(%d) skipped=%d",
+            zone.level.LevelName, zone.level.Id, skipped));
+      }
     }
   }
 
-  /** Resolves D2Game's special-chest preset class into an Objects.txt row. */
+  private static int resolveDs1ObjectId(int act, int presetIndex) {
+    if (presetIndex < 0 || presetIndex >= Riiablo.files.obj.getSize(act)) return 573;
+    return Riiablo.files.obj.getObjectId(act, presetIndex);
+  }
+
+  /** Backwards-compatible test hook for D2Game native object resolution. */
   static int resolveNativeObjectClassId(int levelId, int objectId, int seed,
       int localX, int localY) {
-    if (objectId != PRESET_SPECIAL_CHEST) return objectId;
-    if (levelId == TOWER_CELLAR_LEVEL_5) return GENERIC_CHEST;
-
-    int hash = seed;
-    hash = 31 * hash + levelId;
-    hash = 31 * hash + localX;
-    hash = 31 * hash + localY;
-    return ACT1_PRESET_CHESTS[(hash & 0x7FFFFFFF) % ACT1_PRESET_CHESTS.length];
+    return NativePresetObjectResolver.resolve(1, levelId, objectId, seed, localX, localY).classId;
   }
 
   private void createEntities(

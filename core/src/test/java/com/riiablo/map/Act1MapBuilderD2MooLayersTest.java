@@ -47,6 +47,30 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void dispatchesD2GameReservedPresetObjectClasses() {
+    NativePresetObjectResolver.Resolution invalid =
+        NativePresetObjectResolver.resolve(1, 1, 573, 7, 0, 0);
+    assertEquals(NativePresetObjectResolver.Kind.SKIP, invalid.kind);
+    assertTrue(!invalid.shouldCreate());
+
+    NativePresetObjectResolver.Resolution shrine =
+        NativePresetObjectResolver.resolve(1, 1, 574, 7, 0, 0);
+    assertEquals(NativePresetObjectResolver.Kind.SHRINE, shrine.kind);
+    assertEquals(136, shrine.classId);
+
+    NativePresetObjectResolver.Resolution presetChest =
+        NativePresetObjectResolver.resolve(1, 1, 581, 7, 0, 0);
+    assertEquals(NativePresetObjectResolver.Kind.PRESET_CHEST, presetChest.kind);
+    assertTrue(presetChest.shouldCreate());
+    assertTrue(presetChest.classId != 581);
+
+    NativePresetObjectResolver.Resolution arcane =
+        NativePresetObjectResolver.resolve(2, 40, 582, 7, 0, 0);
+    assertEquals(NativePresetObjectResolver.Kind.ARCANE_SYMBOL, arcane.kind);
+    assertEquals(307, arcane.classId);
+  }
+
+  @Test
   void warpExitTilesAreDrawableWalls() {
     assertTrue(RenderSystem.isDrawableWallOrientation(Orientation.SPECIAL_10));
     assertTrue(RenderSystem.isDrawableWallOrientation(Orientation.SPECIAL_11));

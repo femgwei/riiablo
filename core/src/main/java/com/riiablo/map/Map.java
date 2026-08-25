@@ -1272,12 +1272,23 @@ public class Map implements Disposable {
     public final int mode;
     public final int x;
     public final int y;
+    /** True when presetIndex is an Obj.txt/DS1 preset index. */
+    public final boolean ds1Raw;
+    /** D2MOO bSpawned flag; spawned units are already materialized by D2Game. */
+    public final boolean spawned;
 
     NativeObject(int presetIndex, int mode, int x, int y) {
+      this(presetIndex, mode, x, y, true, false);
+    }
+
+    NativeObject(int presetIndex, int mode, int x, int y,
+        boolean ds1Raw, boolean spawned) {
       this.presetIndex = presetIndex;
       this.mode = mode;
       this.x = x;
       this.y = y;
+      this.ds1Raw = ds1Raw;
+      this.spawned = spawned;
     }
   }
 

@@ -9,11 +9,13 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.map.Map;
+import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 
@@ -28,6 +30,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
 
   @Wire(name = "map")
   protected Map map;
@@ -48,7 +51,64 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           + " mode=" + (cof == null ? "none" : cof.mode)
           + " position=" + (position == null ? "none" : position.position));
     }
+    if (handleNativeLifecycle(entityId, object.base)) return;
     operate(src, entityId, object.base.OperateFn);
+  }
+
+  /**
+   * Applies the stateful part of the D2Game object handlers. Item drops and
+   * quest effects remain in their existing systems; this method only owns the
+   * object mode/collision lifecycle and is safe on both client and headless
+   * server worlds.
+   */
+  private boolean handleNativeLifecycle(int entityId, com.riiablo.codec.excel.Objects.Entry base) {
+    NativeObjectState state = mNativeObjectState.get(entityId);
+    int operateFn = base.OperateFn;
+    boolean door = base.IsDoor || operateFn == 8 || operateFn == 18 || operateFn == 29;
+    boolean chest = operateFn == 1 || operateFn == 4 || operateFn == 6
+        || operateFn == 30 || (operateFn >= 39 && operateFn <= 41)
+        || (operateFn >= 57 && operateFn <= 59)
+        || (state != null && (state.kind == NativePresetObjectResolver.Kind.SPECIAL_CHEST
+            || state.kind == NativePresetObjectResolver.Kind.PRESET_CHEST));
+    boolean shrine = operateFn == 2
+        || (state != null && state.kind == NativePresetObjectResolver.Kind.SHRINE);
+    boolean symbol = state != null
+        && state.kind == NativePresetObjectResolver.Kind.ARCANE_SYMBOL;
+    if (!door && !chest && !shrine && !symbol) return false;
+
+    CofReference cof = mCofReference.get(entityId);
+    if (cof == null) {
+      Gdx.app.error(TAG, "Stateful object has no animation state: entity=" + entityId
+          + " object=" + base.Id + " operateFn=" + operateFn);
+      return true;
+    }
+
+    if (shrine || symbol) {
+      if (state != null && state.activated) return true;
+      if (state != null) state.activated = true;
+      mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+      Gdx.app.log(TAG, "Native object activated: entity=" + entityId
+          + " object=" + base.Id + " kind=" + (state == null ? "SHRINE" : state.kind));
+      return true;
+    }
+
+    if (chest) {
+      if (state != null && state.opened) return true;
+      if (state != null) state.opened = true;
+      mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+      Gdx.app.log(TAG, "Native chest opened: entity=" + entityId + " object=" + base.Id);
+      return true;
+    }
+
+    // Doors are reversible. D2Game transitions through OP and then leaves the
+    // unit in ON (open) or NU (closed); this also drives ObjectCollisionUpdater.
+    boolean close = cof.mode == Engine.Object.MODE_ON;
+    if (state != null) state.opened = !close;
+    mSequence.create(entityId).sequence(Engine.Object.MODE_OP,
+        close ? Engine.Object.MODE_NU : Engine.Object.MODE_ON);
+    Gdx.app.log(TAG, "Native door toggled: entity=" + entityId + " object=" + base.Id
+        + " open=" + !close);
+    return true;
   }
 
   private void operate(int src, int entityId, int operateFn) {

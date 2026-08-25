@@ -23,7 +23,11 @@ public class ObjectCollisionUpdater extends IteratingSystem {
 
   public void setCollision(int entityId, boolean b) {
     Box2DBody bodyWrapper = mBox2DBody.get(entityId);
-//    if (bodyWrapper == null || bodyWrapper.body == null) return;
+    // Object entities can enter the ECS one frame before Box2DPhysics creates
+    // their body (especially after a room is reactivated).  Keep the desired
+    // mode in CofReference and apply it on the next pass instead of throwing
+    // during map loading.
+    if (bodyWrapper == null || bodyWrapper.body == null) return;
     bodyWrapper.body.setActive(b);
   }
 

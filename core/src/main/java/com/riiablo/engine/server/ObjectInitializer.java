@@ -10,7 +10,9 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Classname;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.map.Map;
@@ -20,9 +22,11 @@ public class ObjectInitializer extends BaseEntitySystem {
   private static final String TAG = "ObjectInitializer";
 
   protected ComponentMapper<Object> mObject;
+  protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Classname> mClassname;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
 
   protected CofManager cofs;
   @Wire(name = "map")
@@ -38,6 +42,14 @@ public class ObjectInitializer extends BaseEntitySystem {
 
   public void initialize(int entityId) {
     Objects.Entry base = mObject.get(entityId).base;
+    NativeObjectState nativeState = mNativeObjectState.get(entityId);
+    if (nativeState != null && mCofReference.has(entityId)
+        && nativeState.initialMode >= Engine.Object.MODE_NU
+        && nativeState.initialMode <= Engine.Object.MODE_S5) {
+      // D2MOO exports nMode with the preset unit. Apply it before the
+      // object-specific InitFn so doors/chests do not reset to NU on reload.
+      cofs.setMode(entityId, nativeState.initialMode);
+    }
     switch (base.InitFn) {
       case 0:
         break;
