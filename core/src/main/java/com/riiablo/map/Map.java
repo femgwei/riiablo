@@ -401,6 +401,28 @@ public class Map implements Disposable {
         }
       }
     }
+
+    // Act II native outdoor links are injected by D2Common at runtime rather
+    // than stored in Levels.txt.  Configure and pair them after every zone
+    // has emitted its special-wall cells, but before MapManager creates Warp
+    // entities.  This is deliberately isolated from the Act I post-process
+    // so legacy map builders and combat/entity registration remain untouched.
+    if (act == 1) {
+      boolean useD2MOD = true;
+      if (Riiablo.cvars != null) {
+        com.riiablo.cvar.Cvar<Boolean> cvar =
+            Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
+      }
+      if (useD2MOD) {
+        try {
+          Act2MapBuilderD2MOD.INSTANCE.configureAct2OutdoorWarps(this);
+          Act2MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(this);
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "Error during Act2 native warp post-generation processing", t);
+        }
+      }
+    }
   }
 
   @Override
