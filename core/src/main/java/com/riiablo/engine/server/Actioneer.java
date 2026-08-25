@@ -347,14 +347,14 @@ public class Actioneer extends PassiveSystem {
       return;
     }
     
-    // Only process damage if target is still alive
-    // Animation will continue to play even if target is dead
-    if (!targetDead) {
-    srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
-    events.dispatch(SkillDoEvent.obtain(
-        event.entityId, casting.skillId,
-        casting.targetId, casting.targetVec,
-        skill.srvdofunc, skill.cltdofunc));
+    // Most skills skip dead targets. Native SrvDo097 Resurrect explicitly
+    // requires one, so it must still execute on the animation keyframe.
+    if (!targetDead || allowsDeadTarget(skill)) {
+      srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
+      events.dispatch(SkillDoEvent.obtain(
+          event.entityId, casting.skillId,
+          casting.targetId, casting.targetVec,
+          skill.srvdofunc, skill.cltdofunc));
     } else {
       log.trace("Target {} is dead, skipping damage but continuing attack animation for {}", casting.targetId, event.entityId);
     }
@@ -576,11 +576,23 @@ public class Actioneer extends PassiveSystem {
     Box2DBody box2dWrapper = mBox2DBody.get(entityId);
         if (box2dWrapper != null) box2dWrapper.body.setTransform(targetVec, 0);
         break;
+      case 97: { // native monster Resurrect
+        boolean restored = targetId != Engine.INVALID_ENTITY
+            && factory != null
+            && factory.resurrectMonster(targetId, entityId);
+        log.info("[MONSTER_RAISE] phase=keyframe source={} target={} restored={}",
+            entityId, targetId, restored);
+        break;
+      }
       default:
         log.warn("Unsupported srvdofunc({}) for {}", srvdofunc, entityId);
         // TODO: default case will log an error when all valid cases are enumerated
         //log.error("Invalid srvdofunc({}) for {}", srvdofunc, entityId);
     }
+  }
+
+  static boolean allowsDeadTarget(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 97;
   }
 
   private boolean isPlayerEntity(int entityId) {

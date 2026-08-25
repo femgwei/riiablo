@@ -14,6 +14,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.engine.server.ai.AI;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlWarp;
@@ -31,6 +32,7 @@ import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.CofTransforms;
+import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -42,6 +44,7 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
@@ -76,6 +79,8 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<AIWrapper> mAIWrapper;
+  protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
@@ -330,6 +335,66 @@ public class ServerEntityFactory extends EntityFactory {
 
     mNetworked.create(id);
     return id;
+  }
+
+  @Override
+  public boolean resurrectMonster(int monsterId, int sourceId) {
+    if (!mMonster.has(monsterId) || !mCorpse.has(monsterId)
+        || !mAttributesWrapper.has(monsterId) || !mPosition.has(monsterId)) {
+      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=missing_components",
+          sourceId, monsterId);
+      return false;
+    }
+
+    Corpse corpse = mCorpse.get(monsterId);
+    Monster monster = mMonster.get(monsterId);
+    if (!corpse.usable || corpse.fading || monster.monstats == null || monster.monstats2 == null) {
+      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=unusable_corpse",
+          sourceId, monsterId);
+      return false;
+    }
+
+    Attributes attrs = mAttributesWrapper.get(monsterId).attrs;
+    StatRef hitpoints = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    StatRef maxhp = attrs != null ? attrs.get(Stat.maxhp, StatRef.obtain()) : null;
+    if (hitpoints == null || maxhp == null || hitpoints.asFixed() > 0f) {
+      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=not_dead hp={}",
+          sourceId, monsterId, hitpoints != null ? hitpoints.asFixed() : -1f);
+      return false;
+    }
+
+    hitpoints.set(Math.max(1f, maxhp.asFixed()));
+    if (mUnitStates.has(monsterId) && mUnitStates.get(monsterId).stateList != null) {
+      mUnitStates.get(monsterId).stateList.clearAll();
+    }
+
+    mCorpse.remove(monsterId);
+    mRunning.remove(monsterId);
+    mVelocity.create(monsterId).setMonster(monster.monstats.Velocity);
+    mMovementModes.create(monsterId).set(
+        Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
+
+    AI ai = mAIWrapper.create(monsterId).findAI(monsterId, monster.monstats.AI).ai;
+    world.getInjector().inject(ai);
+    ai.initialize();
+    if (monster.monstats.interact && mSize.has(monsterId)) {
+      mInteractable.create(monsterId).set(mSize.get(monsterId).size, ai);
+    }
+
+    int resurrectMode = Engine.Monster.MODE_NU;
+    String configuredMode = monster.monstats2.ResurrectMode;
+    if (configuredMode != null && !configuredMode.isEmpty()) {
+      int mode = Riiablo.files.MonMode.index(configuredMode);
+      if (mode >= 0 && mode < 16) resurrectMode = mode;
+    }
+    mSequence.create(monsterId).sequence((byte) resurrectMode, Engine.Monster.MODE_NU);
+
+    log.info("[MONSTER_RAISE] phase=restored source={} target={} monster={} hp={} "
+            + "mode={} resurrectSkill={} position=({}, {})",
+        sourceId, monsterId, monster.monstats.Id, hitpoints.asFixed(), resurrectMode,
+        monster.monstats2.ResurrectSkill,
+        mPosition.get(monsterId).position.x, mPosition.get(monsterId).position.y);
+    return true;
   }
 
   @Override

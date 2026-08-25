@@ -96,6 +96,11 @@ public abstract class EntityFactory extends PassiveSystem {
 
   public abstract int createMonster(int monsterId, float x, float y);
 
+  /** Restores a dead monster entity in place; unsupported factories return false. */
+  public boolean resurrectMonster(int monsterId, int sourceId) {
+    return false;
+  }
+
   public abstract int createWarp(int index, float x, float y);
 
   public final int createItem(Item item, Vector2 position) {

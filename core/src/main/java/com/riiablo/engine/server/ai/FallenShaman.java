@@ -1,5 +1,9 @@
 package com.riiablo.engine.server.ai;
 
+import com.artemis.Aspect;
+import com.artemis.ComponentMapper;
+import com.artemis.EntitySubscription;
+import com.artemis.utils.IntBag;
 import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
@@ -7,8 +11,14 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Position;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -50,6 +60,10 @@ public class FallenShaman extends AI {
   final Vector2 tmpVec2 = new Vector2();
   final float[] targetDistance = { Float.MAX_VALUE };
 
+  protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  private EntitySubscription corpseEntities;
+
   final StateMachine<Integer, State> stateMachine;
   float nextAction;
   float time;
@@ -57,6 +71,13 @@ public class FallenShaman extends AI {
   public FallenShaman(int entityId) {
     super(entityId);
     stateMachine = new DefaultStateMachine<>(entityId, State.IDLE);
+  }
+
+  @Override
+  public void initialize() {
+    super.initialize();
+    corpseEntities = Riiablo.engine.getAspectSubscriptionManager().get(
+        Aspect.all(Monster.class, Corpse.class, Position.class, AttributesWrapper.class));
   }
 
   @Override
@@ -84,14 +105,46 @@ public class FallenShaman extends AI {
     return distance <= meleeRng;
   }
 
-  /**
-   * Find nearby corpse to raise (simplified version).
-   * D2MOD: AITHINK_TargetCallback_FallenShaman searches for corpses
-   */
+  /** Native AITHINK_TargetCallback_FallenShaman corpse search. */
   private int findNearbyCorpse(float maxRange) {
-    // TODO: Implement corpse finding logic
-    // For now, return INVALID_ENTITY
-    return Engine.INVALID_ENTITY;
+    if (corpseEntities == null || maxRange <= 0f) return Engine.INVALID_ENTITY;
+    Vector2 source = mPosition.get(entityId).position;
+    float bestDistance2 = maxRange * maxRange;
+    int best = Engine.INVALID_ENTITY;
+    IntBag entities = corpseEntities.getEntities();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int candidateId = entities.get(i);
+      if (candidateId == entityId) continue;
+
+      Attributes attrs = mAttributesWrapper.get(candidateId).attrs;
+      StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+      float hpValue = hp != null ? hp.asFixed() : Float.MAX_VALUE;
+      Monster candidate = mMonster.get(candidateId);
+      Corpse corpse = mCorpse.get(candidateId);
+      if (!isResurrectableFallen(candidate, corpse, hpValue)) continue;
+
+      float distance2 = source.dst2(mPosition.get(candidateId).position);
+      if (distance2 > bestDistance2) continue;
+      bestDistance2 = distance2;
+      best = candidateId;
+    }
+    return best;
+  }
+
+  static boolean isResurrectableFallen(Monster monster, Corpse corpse, float hitpoints) {
+    if (monster == null || monster.monstats == null || monster.monstats2 == null
+        || corpse == null || !corpse.usable || corpse.fading || hitpoints > 0f) {
+      return false;
+    }
+    if (!monster.monstats2.revive || monster.monstats.Align != 1
+        || monster.monstats.boss || monster.monstats.SetBoss || monster.monstats.primeevil) {
+      return false;
+    }
+
+    String baseId = monster.monstats.BaseId;
+    if (baseId == null || baseId.isEmpty()) baseId = monster.monstats.Id;
+    return "fallen1".equalsIgnoreCase(baseId)
+        || "fallenshaman1".equalsIgnoreCase(baseId);
   }
 
   static boolean withinShootDistance(float distance, int shootDistance) {
@@ -192,11 +245,13 @@ public class FallenShaman extends AI {
     int corpseId = findNearbyCorpse(params[PARAM_RESURRECT_DISTANCE]);
     if (corpseId != Engine.INVALID_ENTITY
         && MathUtils.randomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f)) {
-      // The corpse search and resurrection effect are implemented in the next
-      // stage. Keeping this branch after melee preserves the native ordering.
       if (useMonsterSkill(0, corpseId, mPosition.get(corpseId).position)) {
         stateMachine.changeState(State.CAST);
         time = MathUtils.random(1f, 2f);
+        log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} distance={} skill={}",
+            entityId, corpseId, mMonster.get(corpseId).monstats.Id,
+            mPosition.get(entityId).position.dst(mPosition.get(corpseId).position),
+            monster.monstats.Skill1);
         return;
       }
     }

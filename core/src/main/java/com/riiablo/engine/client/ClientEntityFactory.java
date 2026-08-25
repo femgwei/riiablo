@@ -187,6 +187,17 @@ public class ClientEntityFactory extends ServerEntityFactory {
   }
 
   @Override
+  public boolean resurrectMonster(int monsterId, int sourceId) {
+    if (!super.resurrectMonster(monsterId, sourceId)) return false;
+    Monster monster = mMonster.get(monsterId);
+    if (monster.monstats2 != null && monster.monstats2.isSel) {
+      mSelectable.create(monsterId);
+    }
+    mBox2DBody.create(monsterId);
+    return true;
+  }
+
+  @Override
   public int createWarp(int index, float x, float y) {
     final int mainIndex   = DT1.Tile.Index.mainIndex(index);
     final int subIndex    = DT1.Tile.Index.subIndex(index);

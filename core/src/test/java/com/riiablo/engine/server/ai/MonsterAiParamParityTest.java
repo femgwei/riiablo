@@ -6,6 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.Monster;
+
 /** Locks MonStats aip column meanings to the native D2MOO AI enums. */
 class MonsterAiParamParityTest {
   @Test
@@ -71,5 +76,30 @@ class MonsterAiParamParityTest {
     assertTrue(FallenShaman.withinShootDistance(9.99f, 10));
     assertFalse(FallenShaman.withinShootDistance(10f, 10));
     assertFalse(FallenShaman.withinShootDistance(1f, 0));
+  }
+
+  @Test
+  void fallenShamanOnlySelectsUsableNormalFallenCorpses() {
+    MonStats.Entry stats = new MonStats.Entry();
+    stats.Id = "fallen2";
+    stats.BaseId = "fallen1";
+    stats.Align = 1;
+    MonStats2.Entry stats2 = new MonStats2.Entry();
+    stats2.revive = true;
+    Monster monster = new Monster().set(stats, stats2);
+    Corpse corpse = new Corpse();
+
+    assertTrue(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+
+    corpse.fading = true;
+    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    corpse.fading = false;
+    stats.boss = true;
+    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    stats.boss = false;
+    stats.BaseId = "skeleton1";
+    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    stats.BaseId = "fallenshaman1";
+    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 1f));
   }
 }
