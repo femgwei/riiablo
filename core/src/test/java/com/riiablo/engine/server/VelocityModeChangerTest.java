@@ -40,4 +40,17 @@ class VelocityModeChangerTest {
     velocity.setModeSpeedBonusPercent(-100f);
     assertEquals(2f, velocity.speed(false));
   }
+
+  @Test
+  void derivesVariantWalkAndRunAnimationRatesLikeD2Common() {
+    assertEquals(300, VelocityModeChanger.deriveVariantAnimationSpeed(200, 9, 6));
+    assertEquals(100, VelocityModeChanger.deriveVariantAnimationSpeed(200, 3, 6));
+  }
+
+  @Test
+  void keepsRawAnimationRateWhenMovementReferenceIsUnavailable() {
+    assertEquals(200, VelocityModeChanger.deriveVariantAnimationSpeed(200, 0, 6));
+    assertEquals(200, VelocityModeChanger.deriveVariantAnimationSpeed(200, 6, 0));
+    assertEquals(0, VelocityModeChanger.deriveVariantAnimationSpeed(0, 6, 6));
+  }
 }
