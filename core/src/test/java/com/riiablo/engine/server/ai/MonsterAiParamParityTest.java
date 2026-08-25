@@ -1,6 +1,8 @@
 package com.riiablo.engine.server.ai;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -56,5 +58,18 @@ class MonsterAiParamParityTest {
     assertEquals(2, Vulture.PARAM_WOUNDED_PCT);
     assertEquals(3, Vulture.PARAM_CIRCLE_CHANCE);
     assertEquals(4, Vulture.PARAM_MOVE_CHANCE);
+  }
+
+  @Test
+  void fallenShamanParamsAndShootBoundaryMatchD2Moo() {
+    assertEquals(0, FallenShaman.PARAM_RESURRECT_AND_COMMAND_CHANCE);
+    assertEquals(1, FallenShaman.PARAM_SHOOT_CHANCE);
+    assertEquals(2, FallenShaman.PARAM_MELEE_AND_CIRCLE_CHANCE);
+    assertEquals(3, FallenShaman.PARAM_RESURRECT_DISTANCE);
+    assertEquals(4, FallenShaman.PARAM_SHOOT_DISTANCE);
+
+    assertTrue(FallenShaman.withinShootDistance(9.99f, 10));
+    assertFalse(FallenShaman.withinShootDistance(10f, 10));
+    assertFalse(FallenShaman.withinShootDistance(1f, 0));
   }
 }

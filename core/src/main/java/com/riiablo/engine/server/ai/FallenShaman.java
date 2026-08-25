@@ -1,10 +1,5 @@
 package com.riiablo.engine.server.ai;
 
-import com.artemis.Aspect;
-import com.artemis.ComponentMapper;
-import com.artemis.EntitySubscription;
-import com.artemis.utils.IntBag;
-
 import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
@@ -13,24 +8,29 @@ import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.server.component.Class;
-import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.Player;
-import com.riiablo.engine.server.component.Position;
-import com.riiablo.engine.server.component.Running;
-import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 /**
  * FallenShaman AI implementation matching D2MOD's AITHINK_Fn013_FallenShaman logic.
  * 
  * D2MOD AI Parameters:
- * - params[0] = FALLENSHAMAN_AI_PARAM_RAISE_CHANCE_PCT (raise dead chance)
- * - params[1] = FALLENSHAMAN_AI_PARAM_RAISE_RANGE (raise range)
- * - params[2] = FALLENSHAMAN_AI_PARAM_ATTACK_CHANCE_PCT (attack chance)
- * - params[3] = FALLENSHAMAN_AI_PARAM_ATTACK1_OR_2_CHANCE_PCT (A1 vs A2 chance)
+ * - params[0] = FALLENSHAMAN_AI_PARAM_RESURRECT_AND_COMMAND_CHANCE_PCT
+ * - params[1] = FALLENSHAMAN_AI_PARAM_SHOOT_CHANCE_PCT
+ * - params[2] = FALLENSHAMAN_AI_PARAM_MELEE_AND_CIRCLE_CHANCE_PCT
+ * - params[3] = FALLENSHAMAN_AI_PARAM_RESURRECT_DISTANCE
+ * - params[4] = FALLENSHAMAN_AI_PARAM_SHOOT_DISTANCE
  */
 public class FallenShaman extends AI {
+  private static final Logger log = LogManager.getLogger(FallenShaman.class);
+
+  static final int PARAM_RESURRECT_AND_COMMAND_CHANCE = 0;
+  static final int PARAM_SHOOT_CHANCE = 1;
+  static final int PARAM_MELEE_AND_CIRCLE_CHANCE = 2;
+  static final int PARAM_RESURRECT_DISTANCE = 3;
+  static final int PARAM_SHOOT_DISTANCE = 4;
+
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -47,17 +47,8 @@ public class FallenShaman extends AI {
     }
   }
 
-  protected ComponentMapper<Class> mClass;
-  protected ComponentMapper<CofReference> mCofReference;
-  protected ComponentMapper<Monster> mMonster;
-  protected ComponentMapper<Position> mPosition;
-  protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
-  protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
-  protected ComponentMapper<Running> mRunning;
-
-  private static EntitySubscription enemyEntities;
-
   final Vector2 tmpVec2 = new Vector2();
+  final float[] targetDistance = { Float.MAX_VALUE };
 
   final StateMachine<Integer, State> stateMachine;
   float nextAction;
@@ -66,16 +57,6 @@ public class FallenShaman extends AI {
   public FallenShaman(int entityId) {
     super(entityId);
     stateMachine = new DefaultStateMachine<>(entityId, State.IDLE);
-  }
-
-  @Override
-  public void initialize() {
-    super.initialize();
-    if (enemyEntities == null) {
-      enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
-              .all(Class.class)
-              .one(Player.class));
-    }
   }
 
   @Override
@@ -113,6 +94,41 @@ public class FallenShaman extends AI {
     return Engine.INVALID_ENTITY;
   }
 
+  static boolean withinShootDistance(float distance, int shootDistance) {
+    return shootDistance > 0 && distance < shootDistance;
+  }
+
+  private boolean castFireball(int targetId, Vector2 targetPos) {
+    stateMachine.changeState(State.CAST);
+    if (useMonsterSkill(1, targetId, targetPos)) {
+      time = MathUtils.random(1f, 2f);
+      return true;
+    }
+
+    Monster current = mMonster.get(entityId);
+    String configuredSkill = current.monstats != null ? current.monstats.Skill2 : null;
+    log.warn(
+        "[MONSTER_SKILL] phase=shoot_failed entity={} monster={} slot=2 skill={} target={}",
+        entityId,
+        current.monstats != null ? current.monstats.Id : "unknown",
+        configuredSkill,
+        targetId);
+    stateMachine.changeState(State.IDLE);
+    return false;
+  }
+
+  /** Approximation of native sub_6FCD0E80: pick a short lateral step around the target. */
+  private void circleTarget(int targetId) {
+    Vector2 entityPos = mPosition.get(entityId).position;
+    Vector2 targetPos = mPosition.get(targetId).position;
+    tmpVec2.set(entityPos).sub(targetPos);
+    if (tmpVec2.isZero(0.0001f)) tmpVec2.set(1f, 0f);
+    tmpVec2.setLength(3f).rotate90(MathUtils.randomBoolean() ? 1 : -1).add(targetPos);
+    walkTo(tmpVec2, Engine.INVALID_ENTITY);
+    stateMachine.changeState(State.APPROACH);
+    time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
+  }
+
   @Override
   public void update(float delta) {
     stateMachine.update();
@@ -128,23 +144,8 @@ public class FallenShaman extends AI {
 
     time = SLEEP;
 
-    // Find target
-    int targetId = Engine.INVALID_ENTITY;
-    float targetDistance = Float.MAX_VALUE;
-    Vector2 entityPos = mPosition.get(entityId).position;
-    
-    IntBag entities = enemyEntities.getEntities();
-    for (int i = 0, size = entities.size(); i < size; i++) {
-      int ent = entities.get(i);
-      if (mClass.get(ent).type == Class.Type.PLR) {
-        Vector2 targetPos = mPosition.get(ent).position;
-        float dst = entityPos.dst(targetPos);
-        if (dst < targetDistance) {
-          targetDistance = dst;
-          targetId = ent;
-        }
-      }
-    }
+    targetDistance[0] = Float.MAX_VALUE;
+    int targetId = findNearestTargetWithAidist(targetDistance);
 
     if (targetId == Engine.INVALID_ENTITY) {
       // No target, idle behavior
@@ -175,45 +176,45 @@ public class FallenShaman extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOD: Check if should raise dead (if not in combat and has skill)
-    if (!bCombat && params.length > 1) {
-      float raiseRange = params[1];
-      int corpseId = findNearbyCorpse(raiseRange);
-      if (corpseId != Engine.INVALID_ENTITY && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-        // D2MOD: Use raise dead skill (nSkill[0])
-        // TODO: Implement skill casting for raise dead
+    // Native checks melee first, but a failed melee roll continues into
+    // resurrection and shooting instead of forcing an idle action.
+    if (bCombat && MathUtils.randomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
+      stopMovement();
+      lookAt(targetId);
+      stateMachine.changeState(State.ATTACK);
+      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+      Riiablo.audio.play(monsound + "_attack_1", true);
+      time = MathUtils.random(1f, 2f);
+      return;
+    }
+
+    int corpseId = findNearbyCorpse(params[PARAM_RESURRECT_DISTANCE]);
+    if (corpseId != Engine.INVALID_ENTITY
+        && MathUtils.randomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f)) {
+      // The corpse search and resurrection effect are implemented in the next
+      // stage. Keeping this branch after melee preserves the native ordering.
+      if (useMonsterSkill(0, corpseId, mPosition.get(corpseId).position)) {
         stateMachine.changeState(State.CAST);
-        time = MathUtils.random(1f, 2);
+        time = MathUtils.random(1f, 2f);
         return;
       }
     }
 
-    // D2MOD: If in combat, check attack chance
-    if (bCombat) {
-      // D2MOD: FALLENSHAMAN_AI_PARAM_ATTACK_CHANCE_PCT
-      if (params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-        pathfinder.findPath(entityId, null);
-        lookAt(targetId);
-        stateMachine.changeState(State.ATTACK);
-        // D2MOD: FALLENSHAMAN_AI_PARAM_ATTACK1_OR_2_CHANCE_PCT
-        byte attackMode = params.length > 3 && MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
-        mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        Riiablo.audio.play(monsound + "_attack_1", true);
-        time = MathUtils.random(1f, 2);
-        return;
-      } else {
-        // No attack, idle
-        stateMachine.changeState(State.IDLE);
-        time = 15f * com.riiablo.codec.Animation.FRAME_DURATION;
-        return;
-      }
+    if (withinShootDistance(targetDistance[0], params[PARAM_SHOOT_DISTANCE])
+        && MathUtils.randomBoolean(params[PARAM_SHOOT_CHANCE] / 100f)
+        && castFireball(targetId, targetPos)) {
+      return;
     }
 
-    // D2MOD: Not in combat, approach target
-    pathfinder.findPath(entityId, targetPos, false, targetId);
-    stateMachine.changeState(State.APPROACH);
-    time = MathUtils.random(1f, 2);
+    if (MathUtils.randomBoolean(params[PARAM_MELEE_AND_CIRCLE_CHANCE] / 100f)) {
+      circleTarget(targetId);
+      return;
+    }
+
+    stopMovement();
+    stateMachine.changeState(State.IDLE);
+    time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
   }
 
   @Override
