@@ -70,6 +70,7 @@ import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInitializer;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.object.NativeObjectDropSystem;
+import com.riiablo.engine.server.object.NativeShrineSystem;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.ServerEntityFactory;
@@ -278,6 +279,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new ObjectInitializer())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new NativeObjectDropSystem())
+        .with(new NativeShrineSystem())
 
         .with(new Actioneer())
         .with(new ServerSkillSystem())

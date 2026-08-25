@@ -425,6 +425,10 @@ public class Map implements Disposable {
     }
   }
 
+  public int seed() {
+    return seed;
+  }
+
   @Override
   public void dispose() {
     for (Zone zone : zones) Zone.free(zone);
@@ -1302,6 +1306,11 @@ public class Map implements Disposable {
     private byte currentMode;
     private boolean opened;
     private boolean activated;
+    /** Native shrine/well state retained across ECS room entity recreation. */
+    private int shrineId = -1;
+    private float shrineCooldownFrames;
+    private int wellCharges = -1;
+    private float wellRegenFrames;
 
     NativeObject(int presetIndex, int mode, int x, int y) {
       this(presetIndex, mode, x, y, true, false);
@@ -1330,6 +1339,22 @@ public class Map implements Disposable {
       return activated;
     }
 
+    public int shrineId() {
+      return shrineId;
+    }
+
+    public float shrineCooldownFrames() {
+      return shrineCooldownFrames;
+    }
+
+    public int wellCharges() {
+      return wellCharges;
+    }
+
+    public float wellRegenFrames() {
+      return wellRegenFrames;
+    }
+
     public void persistMode(byte mode) {
       if (validObjectMode(mode)) currentMode = mode;
     }
@@ -1340,6 +1365,22 @@ public class Map implements Disposable {
 
     public void persistActivated(boolean activated) {
       this.activated = activated;
+    }
+
+    public void persistShrineId(int shrineId) {
+      this.shrineId = shrineId;
+    }
+
+    public void persistShrineCooldownFrames(float frames) {
+      shrineCooldownFrames = Math.max(0f, frames);
+    }
+
+    public void persistWellCharges(int charges) {
+      wellCharges = charges;
+    }
+
+    public void persistWellRegenFrames(float frames) {
+      wellRegenFrames = Math.max(0f, frames);
     }
 
     private static boolean validObjectMode(int mode) {

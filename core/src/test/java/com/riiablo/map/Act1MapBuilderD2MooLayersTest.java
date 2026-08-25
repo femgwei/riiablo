@@ -83,6 +83,10 @@ class Act1MapBuilderD2MooLayersTest {
     firstEntity.persistOpened(true);
     firstEntity.persistActivated(true);
     firstEntity.persistMode(Engine.Object.MODE_ON);
+    firstEntity.persistShrineId(12);
+    firstEntity.persistShrineCooldownFrames(2400f);
+    firstEntity.persistWellCharges(3);
+    firstEntity.persistWellRegenFrames(100f);
 
     NativeObjectState recreatedEntity = new NativeObjectState().set(source,
         source.presetIndex, 580, 371, source.mode, source.ds1Raw, source.spawned,
@@ -91,6 +95,10 @@ class Act1MapBuilderD2MooLayersTest {
     assertTrue(recreatedEntity.activated);
     assertEquals(Engine.Object.MODE_ON, recreatedEntity.initialMode);
     assertEquals(Engine.Object.MODE_ON, recreatedEntity.currentMode);
+    assertEquals(12, recreatedEntity.shrineId);
+    assertEquals(2400f, recreatedEntity.shrineCooldownFrames);
+    assertEquals(3, recreatedEntity.wellCharges);
+    assertEquals(100f, recreatedEntity.wellRegenFrames);
   }
 
   @Test

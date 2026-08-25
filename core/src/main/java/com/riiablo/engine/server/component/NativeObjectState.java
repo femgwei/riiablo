@@ -19,6 +19,10 @@ public class NativeObjectState extends Component {
   public boolean spawned;
   public boolean opened;
   public boolean activated;
+  public int shrineId = -1;
+  public float shrineCooldownFrames;
+  public int wellCharges = -1;
+  public float wellRegenFrames;
   public NativePresetObjectResolver.Kind kind = NativePresetObjectResolver.Kind.ORDINARY;
   /** Map-owned record that survives destruction/recreation of the ECS entity. */
   public Map.NativeObject source;
@@ -43,6 +47,10 @@ public class NativeObjectState extends Component {
     this.spawned = spawned;
     this.opened = source != null && source.opened();
     this.activated = source != null && source.activated();
+    this.shrineId = source == null ? -1 : source.shrineId();
+    this.shrineCooldownFrames = source == null ? 0f : source.shrineCooldownFrames();
+    this.wellCharges = source == null ? -1 : source.wellCharges();
+    this.wellRegenFrames = source == null ? 0f : source.wellRegenFrames();
     this.kind = kind == null ? NativePresetObjectResolver.Kind.ORDINARY : kind;
     return this;
   }
@@ -60,5 +68,25 @@ public class NativeObjectState extends Component {
   public void persistActivated(boolean activated) {
     this.activated = activated;
     if (source != null) source.persistActivated(activated);
+  }
+
+  public void persistShrineId(int shrineId) {
+    this.shrineId = shrineId;
+    if (source != null) source.persistShrineId(shrineId);
+  }
+
+  public void persistShrineCooldownFrames(float frames) {
+    shrineCooldownFrames = Math.max(0f, frames);
+    if (source != null) source.persistShrineCooldownFrames(shrineCooldownFrames);
+  }
+
+  public void persistWellCharges(int charges) {
+    wellCharges = charges;
+    if (source != null) source.persistWellCharges(charges);
+  }
+
+  public void persistWellRegenFrames(float frames) {
+    wellRegenFrames = Math.max(0f, frames);
+    if (source != null) source.persistWellRegenFrames(wellRegenFrames);
   }
 }

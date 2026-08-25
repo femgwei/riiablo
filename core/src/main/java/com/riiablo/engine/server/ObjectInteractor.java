@@ -122,6 +122,12 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       return InteractionResult.HANDLED_CHANGED;
     }
 
+    // Wells own a charge-based lifecycle in NativeShrineSystem. They stay
+    // selectable while empty because D2Game regenerates charges over time.
+    if (lifecycle == Lifecycle.WELL) {
+      return InteractionResult.HANDLED_UNCHANGED;
+    }
+
     if (lifecycle == Lifecycle.ANIMATED_CONTAINER
         || lifecycle == Lifecycle.INSTANT_CONTAINER) {
       if (state != null && state.opened) return InteractionResult.HANDLED_UNCHANGED;

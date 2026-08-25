@@ -115,6 +115,11 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Native multiplayer NoDrop scaling from total/effective player counts.
     - [ ] Same-level party count wiring and full unique/set property generation.
   - [ ] Shrine and well effects/cooldowns.
+    - [x] Shrines.txt table and native effect-class/LevelMin/preset selection.
+    - [x] Shrine health/mana effects (Code 1-5) and 1200-frame/minute reset.
+    - [x] Well health/mana/stamina charges, visual modes and regeneration.
+    - [x] Structured event boundary for combat/item/portal shrine effects.
+    - [ ] Shrine buffs, portal/gem/monster effects and well status/pet cleansing.
   - [ ] Quest-object handlers and room unload/reload integration tests.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services

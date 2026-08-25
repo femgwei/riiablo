@@ -9,6 +9,7 @@ public final class NativeObjectOperateTable {
     ANIMATED_CONTAINER,
     INSTANT_CONTAINER,
     SHRINE,
+    WELL,
     TOGGLE_DOOR,
     ONE_WAY_DOOR,
     ARCANE_SYMBOL
@@ -42,6 +43,8 @@ public final class NativeObjectOperateTable {
       // Secret doors clear targetability and never return to NU.
       case 18:
         return Lifecycle.ONE_WAY_DOOR;
+      case 22:
+        return Lifecycle.WELL;
       case 8: case 29:
         return Lifecycle.TOGGLE_DOOR;
       default:

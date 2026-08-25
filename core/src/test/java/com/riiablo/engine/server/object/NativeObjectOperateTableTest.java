@@ -7,6 +7,7 @@ import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycl
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.ONE_WAY_DOOR;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.SHRINE;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TOGGLE_DOOR;
+import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.WELL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.riiablo.map.NativePresetObjectResolver;
@@ -30,6 +31,11 @@ class NativeObjectOperateTableTest {
     assertEquals(TOGGLE_DOOR, resolve(8));
     assertEquals(TOGGLE_DOOR, NativeObjectOperateTable.resolve(
         0, true, NativePresetObjectResolver.Kind.ORDINARY));
+  }
+
+  @Test
+  void classifiesNativeWellOperateFunctionSeparately() {
+    assertEquals(WELL, resolve(22));
   }
 
   @Test
