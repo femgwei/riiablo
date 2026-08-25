@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.Direction;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.DT1;
@@ -30,6 +31,9 @@ import java.util.Iterator;
 @All({Pathfind.class, Position.class, Velocity.class})
 public class Pathfinder extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(Pathfinder.class);
+  static final int MOVEMENT_DIRECTIONS = 16;
+  static final int ADJACENT_DIRECTION_STABLE_FRAMES = 3;
+  static final float IMMEDIATE_TURN_COS = MathUtils.cosDeg(45f);
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Pathfind> mPathfind;
@@ -192,17 +196,65 @@ public class Pathfinder extends IteratingSystem {
       }
     }
 
-    /**
-     * FIXME: there is a lot of jitter here in the direction for shorter movements because of
-     *        repathing every frame-- need to create some kind of target component which is a target
-     *        entity or target point and if it's down to the last remaining waypoint, set angle to
-     *        the actual point or entity.
-     */
     tmpVec2.sub(position0);
-    
-    mAngle.get(entityId).target.set(tmpVec2).nor();
+
+    Angle angle = mAngle.get(entityId);
+    int oldDirection = Direction.radiansToDirection(
+        angle.target.angleRad(), MOVEMENT_DIRECTIONS);
+    if (updateMovementFacing(angle, pathfind, tmpVec2) && mMonster.has(entityId)) {
+      int newDirection = Direction.radiansToDirection(
+          angle.target.angleRad(), MOVEMENT_DIRECTIONS);
+      Monster monster = mMonster.get(entityId);
+      log.info(
+          "[MONSTER_DIRECTION_SYNC] entity={} monster={} direction={}->{} speed={} target={}",
+          entityId,
+          monster.monstats != null ? monster.monstats.Id : "unknown",
+          oldDirection,
+          newDirection,
+          speed,
+          targetId);
+    }
 
     velocity.velocity.set(tmpVec2).setLength(speed);
+  }
+
+  /**
+   * Applies hysteresis only to neighboring movement facings. Large turns are
+   * accepted immediately, while small boundary crossings must remain stable
+   * for several ticks. The authoritative movement vector is never modified.
+   */
+  static boolean updateMovementFacing(Angle angle, Pathfind pathfind, Vector2 movement) {
+    if (angle == null || pathfind == null || movement == null || movement.isZero(0.0001f)) {
+      return false;
+    }
+
+    int proposedDirection = Direction.radiansToDirection(
+        movement.angleRad(), MOVEMENT_DIRECTIONS);
+    int currentDirection = Direction.radiansToDirection(
+        angle.target.angleRad(), MOVEMENT_DIRECTIONS);
+    if (proposedDirection == currentDirection) {
+      pathfind.pendingDirection = -1;
+      pathfind.pendingDirectionFrames = 0;
+      return false;
+    }
+
+    float alignment = MathUtils.clamp(
+        angle.target.dot(movement) / movement.len(), -1f, 1f);
+    int requiredFrames = alignment < IMMEDIATE_TURN_COS
+        ? 1 : ADJACENT_DIRECTION_STABLE_FRAMES;
+    if (pathfind.pendingDirection == proposedDirection) {
+      pathfind.pendingDirectionFrames++;
+    } else {
+      pathfind.pendingDirection = proposedDirection;
+      pathfind.pendingDirectionFrames = 1;
+    }
+    if (pathfind.pendingDirectionFrames < requiredFrames) return false;
+
+    angle.target.set(1f, 0f).setAngleRad(
+        Direction.directionToRadians(proposedDirection, MOVEMENT_DIRECTIONS));
+    pathfind.pendingDirection = -1;
+    pathfind.pendingDirectionFrames = 0;
+    return true;
   }
 
   public boolean findPath(int src, Vector2 target) {

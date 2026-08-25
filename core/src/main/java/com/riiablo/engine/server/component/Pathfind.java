@@ -22,6 +22,11 @@ public class Pathfind extends PooledComponent {
   public float repathTimer = 0f;  // Timer for periodic repathing when following player
   public static final float REPATH_INTERVAL = 0.5f;  // Repath every 0.5 seconds when following player
 
+  // Adjacent animation directions require a few consistent movement ticks.
+  // This prevents repeated repaths from flipping a unit across a direction boundary.
+  public int pendingDirection = -1;
+  public int pendingDirectionFrames;
+
   public void reset() {
     path = null;
     target.setZero();
@@ -29,6 +34,8 @@ public class Pathfind extends PooledComponent {
     targetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
     lastTargetPosition.setZero();
     repathTimer = 0f;
+    pendingDirection = -1;
+    pendingDirectionFrames = 0;
   }
 
   public Pathfind set(GraphPath path) {
