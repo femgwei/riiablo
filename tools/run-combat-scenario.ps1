@@ -11,6 +11,7 @@ Set-Location $repoRoot
 $gradleArgs = @(
   ':core:test',
   '--tests', 'com.riiablo.engine.server.combat.CombatScenarioTest',
+  '--tests', 'com.riiablo.engine.server.combat.CombatEcsEventScenarioTest',
   '--no-daemon'
 )
 if ($Logs) {
