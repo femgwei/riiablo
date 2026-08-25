@@ -95,6 +95,7 @@ import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
+import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.Box2DDisposer;
 import com.riiablo.engine.server.Box2DSynchronizerPost;
 import com.riiablo.engine.server.Box2DSynchronizerPre;
@@ -712,6 +713,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // Local games own the authoritative combat world.  Dedicated servers
       // already register this system; network clients must not create a
       // duplicate missile for the same SkillDoEvent.
+      builder.with(new Act1QuestSystem());
       builder.with(new ServerSkillSystem(true));
       builder.with(new ItemGenerator());
       builder.with(new VendorGenerator());

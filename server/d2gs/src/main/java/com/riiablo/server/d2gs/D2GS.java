@@ -77,6 +77,7 @@ import com.riiablo.engine.server.ServerNetworkIdManager;
 import com.riiablo.engine.server.VelocityAdder;
 import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.map.Act1MapBuilder;
@@ -266,6 +267,7 @@ public class D2GS extends ApplicationAdapter {
     sync = new NetworkSynchronizer();
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem())
+        .with(new Act1QuestSystem())
         .with(new ServerNetworkIdManager())
         .with(new SerializationManager())
         .with(mapManager)

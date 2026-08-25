@@ -46,16 +46,6 @@ public final class GenericMonster extends AI {
       if (hp != null && hp.asFixed() <= 0f) return;
     }
 
-    // Native D2 data uses zero velocity for stationary objects (for example
-    // Foul Crow nests). Keep those entities rooted instead of feeding them
-    // through the generic chase loop, which would otherwise create movement
-    // commands and make a static monster appear to slide toward the player.
-    if (monster.monstats != null && monster.monstats.Velocity <= 0) {
-      state = "IDLE";
-      stopMovement();
-      return;
-    }
-
     nextThink -= delta;
     if (nextThink > 0f) return;
     nextThink = Math.max(0.15f, SLEEP);
@@ -75,6 +65,7 @@ public final class GenericMonster extends AI {
     Vector2 target = mPosition.get(targetId).position;
     float distance = outDistance[0];
     int skillSlot = resolveProjectileSkillSlot();
+    boolean stationary = monster.monstats != null && monster.monstats.Velocity <= 0;
     float skillRange = skillSlot >= 0 ? resolveSkillRange(skillSlot) : 0f;
     if (skillSlot >= 0 && skillRange > 0f && distance <= skillRange) {
       stopMovement();
@@ -85,6 +76,15 @@ public final class GenericMonster extends AI {
       // normal attack path below remains available when lookup/animation data
       // cannot be resolved.
       state = "ATTACK";
+    }
+
+    // D2MOO's stationary traps/nests remain rooted, but a stationary unit with
+    // a projectile skill is still allowed to acquire a target and cast. Only
+    // suppress the chase/melee fallback after the skill decision has run.
+    if (stationary) {
+      stopMovement();
+      if (state.equals("IDLE")) state = "CAST_WAIT";
+      return;
     }
 
     float attackRange = resolveAttackRange();
