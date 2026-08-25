@@ -74,6 +74,19 @@ public final class GenericMonster extends AI {
 
     Vector2 target = mPosition.get(targetId).position;
     float distance = outDistance[0];
+    int skillSlot = resolveProjectileSkillSlot();
+    float skillRange = skillSlot >= 0 ? resolveSkillRange(skillSlot) : 0f;
+    if (skillSlot >= 0 && skillRange > 0f && distance <= skillRange) {
+      stopMovement();
+      lookAt(targetId);
+      state = "CAST";
+      if (useMonsterSkill(skillSlot, targetId, target)) return;
+      // A malformed skill row must not leave the fallback AI stalled. The
+      // normal attack path below remains available when lookup/animation data
+      // cannot be resolved.
+      state = "ATTACK";
+    }
+
     float attackRange = resolveAttackRange();
     if (distance <= attackRange) {
       stopMovement();
@@ -107,6 +120,72 @@ public final class GenericMonster extends AI {
     Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
     if (missile == null || missile.Range <= 0) return melee;
     return Math.max(melee, missile.Range - 2f);
+  }
+
+  /**
+   * Finds the first native monster skill that has a server/client missile.
+   * Generic fallback AIs must not guess resurrect/heal/buff skills: those need
+   * a target/state-specific implementation. Projectile skills, however, can
+   * use the same Actioneer -> ServerSkillSystem chain as specialized AIs.
+   */
+  private int resolveProjectileSkillSlot() {
+    if (monster == null || monster.monstats == null) return -1;
+    String[] names = {
+        monster.monstats.Skill1, monster.monstats.Skill2,
+        monster.monstats.Skill3, monster.monstats.Skill4,
+        monster.monstats.Skill5, monster.monstats.Skill6,
+        monster.monstats.Skill7, monster.monstats.Skill8
+    };
+    for (int i = 0; i < names.length; i++) {
+      String name = names[i];
+      if (name == null || name.isEmpty()) continue;
+      com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(name);
+      if (skill == null || skill.srvdofunc == 97) continue;
+      if (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
+          || hasText(skill.srvmissilec) || hasText(skill.srvmissiled)
+          || hasText(skill.cltmissilea) || hasText(skill.cltmissileb)
+          || hasText(skill.cltmissilec) || hasText(skill.cltmissiled)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  private float resolveSkillRange(int skillSlot) {
+    String name = monsterSkillName(skillSlot);
+    if (name == null || name.isEmpty()) return 0f;
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(name);
+    if (skill == null) return 0f;
+    String[] missiles = {skill.srvmissilea, skill.srvmissileb,
+        skill.srvmissilec, skill.srvmissiled, skill.cltmissilea,
+        skill.cltmissileb, skill.cltmissilec, skill.cltmissiled};
+    float range = 0f;
+    for (String missileName : missiles) {
+      if (!hasText(missileName)) continue;
+      Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+      if (missile != null && missile.Range > 0) range = Math.max(range, missile.Range);
+    }
+    // Some converted missile rows omit Range. Keep a useful native-like
+    // fallback so the monster can still cast instead of silently using melee.
+    return range > 0f ? Math.max(2f, range - 2f) : 12f;
+  }
+
+  private String monsterSkillName(int index) {
+    switch (index) {
+      case 0: return monster.monstats.Skill1;
+      case 1: return monster.monstats.Skill2;
+      case 2: return monster.monstats.Skill3;
+      case 3: return monster.monstats.Skill4;
+      case 4: return monster.monstats.Skill5;
+      case 5: return monster.monstats.Skill6;
+      case 6: return monster.monstats.Skill7;
+      case 7: return monster.monstats.Skill8;
+      default: return null;
+    }
+  }
+
+  private static boolean hasText(String value) {
+    return value != null && !value.isEmpty();
   }
 
   private static String firstNonEmpty(String first, String second) {
