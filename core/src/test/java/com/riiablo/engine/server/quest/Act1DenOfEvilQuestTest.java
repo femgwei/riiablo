@@ -44,4 +44,26 @@ class Act1DenOfEvilQuestTest {
     assertEquals(completed, Act1DenOfEvilQuest.enterDen(completed));
     assertEquals(completed, Act1DenOfEvilQuest.completeObjective(completed));
   }
+
+  @Test
+  void selectsNativeAkaraMessageSequence() {
+    short record = 0;
+    assertEquals(Act1DenOfEvilQuest.MESSAGE_INIT,
+        Act1DenOfEvilQuest.selectAkaraMessage(record));
+    assertEquals("akara_act1_q1_init",
+        Act1DenOfEvilQuest.getAkaraSpeech(Act1DenOfEvilQuest.MESSAGE_INIT));
+
+    record = Act1DenOfEvilQuest.start(record);
+    assertEquals(Act1DenOfEvilQuest.MESSAGE_AFTER_INIT,
+        Act1DenOfEvilQuest.selectAkaraMessage(record));
+    record = Act1DenOfEvilQuest.leaveTown(record);
+    assertEquals(Act1DenOfEvilQuest.MESSAGE_EARLY_RETURN,
+        Act1DenOfEvilQuest.selectAkaraMessage(record));
+    record = Act1DenOfEvilQuest.completeObjective(record);
+    assertEquals(Act1DenOfEvilQuest.MESSAGE_SUCCESS,
+        Act1DenOfEvilQuest.selectAkaraMessage(record));
+    record = Act1DenOfEvilQuest.claimReward(record);
+    assertEquals(Act1DenOfEvilQuest.MESSAGE_NONE,
+        Act1DenOfEvilQuest.selectAkaraMessage(record));
+  }
 }

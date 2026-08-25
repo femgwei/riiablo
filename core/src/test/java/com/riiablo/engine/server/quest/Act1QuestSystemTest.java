@@ -19,7 +19,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DeathEvent;
-import com.riiablo.engine.server.event.NpcInteractionEvent;
+import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
@@ -38,14 +38,16 @@ class Act1QuestSystemTest extends RiiabloTest {
       int akara = harness.createAkara();
       harness.process();
 
-      harness.events.dispatch(NpcInteractionEvent.obatin(firstId, akara));
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          firstId, akara, Act1DenOfEvilQuest.MESSAGE_INIT));
 
       assertTrue(NativeQuestRecord.has(record(first), NativeQuestRecord.STARTED));
       assertEquals(0, Short.toUnsignedInt(record(second)));
 
       first.diff = Riiablo.NIGHTMARE;
       assertEquals(0, Short.toUnsignedInt(record(first)));
-      harness.events.dispatch(NpcInteractionEvent.obatin(firstId, akara));
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          firstId, akara, Act1DenOfEvilQuest.MESSAGE_INIT));
       assertTrue(NativeQuestRecord.has(record(first), NativeQuestRecord.STARTED));
 
       first.diff = Riiablo.NORMAL;
@@ -101,8 +103,10 @@ class Act1QuestSystemTest extends RiiabloTest {
       int akara = harness.createAkara();
       harness.process();
 
-      harness.events.dispatch(NpcInteractionEvent.obatin(player, akara));
-      harness.events.dispatch(NpcInteractionEvent.obatin(player, akara));
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, akara, Act1DenOfEvilQuest.MESSAGE_SUCCESS));
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, akara, Act1DenOfEvilQuest.MESSAGE_SUCCESS));
 
       short claimed = record(data);
       assertTrue(NativeQuestRecord.has(claimed, NativeQuestRecord.REWARD_GRANTED));

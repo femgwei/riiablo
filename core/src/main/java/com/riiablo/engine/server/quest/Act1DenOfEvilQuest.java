@@ -7,6 +7,13 @@ public final class Act1DenOfEvilQuest {
   /** Act-local D2S record index; index 0 is the Warriv gossip quest. */
   public static final int RECORD = 1;
 
+  // gpAct1Q1NpcMessages / ACT1Q1_Callback11_ScrollMessage.
+  public static final int MESSAGE_NONE = -1;
+  public static final int MESSAGE_INIT = 64;
+  public static final int MESSAGE_AFTER_INIT = 65;
+  public static final int MESSAGE_EARLY_RETURN = 71;
+  public static final int MESSAGE_SUCCESS = 76;
+
   public static short start(short record) {
     if (isFinished(record)) return record;
     return NativeQuestRecord.set(record, NativeQuestRecord.STARTED);
@@ -47,5 +54,24 @@ public final class Act1DenOfEvilQuest {
   public static boolean isFinished(short record) {
     return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
         || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+  }
+
+  /** Selects Akara's A1Q1 speech from the native message-state sequence. */
+  public static int selectAkaraMessage(short record) {
+    if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return MESSAGE_NONE;
+    if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) return MESSAGE_SUCCESS;
+    if (!NativeQuestRecord.has(record, NativeQuestRecord.STARTED)) return MESSAGE_INIT;
+    if (!NativeQuestRecord.has(record, NativeQuestRecord.LEFT_TOWN)) return MESSAGE_AFTER_INIT;
+    return MESSAGE_EARLY_RETURN;
+  }
+
+  public static String getAkaraSpeech(int messageIndex) {
+    switch (messageIndex) {
+      case MESSAGE_INIT: return "akara_act1_q1_init";
+      case MESSAGE_AFTER_INIT: return "akara_act1_q1_after";
+      case MESSAGE_EARLY_RETURN: return "akara_act1_q1_early";
+      case MESSAGE_SUCCESS: return "akara_act1_q1_success";
+      default: return null;
+    }
   }
 }

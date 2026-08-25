@@ -101,7 +101,7 @@ waypoints, caves, quest rewards and collision boundaries.
   - [x] Den live-monster counting, including revived Fallen.
   - [x] Akara start/reward and one-time skill-point grant.
   - [x] Focused pure-state and headless ECS regression tests.
-  - [ ] Native scroll-message callback before applying the Akara reward.
+  - [x] Native Akara message selection and scroll completion before state/reward changes.
   - [ ] Native party eligibility/completion propagation for multiplayer.
   - [ ] End-to-end D2S save/reload and in-game Den validation.
 - [ ] Phase 2: native map objects

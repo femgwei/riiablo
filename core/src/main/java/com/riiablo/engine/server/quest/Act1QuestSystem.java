@@ -16,7 +16,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DeathEvent;
-import com.riiablo.engine.server.event.NpcInteractionEvent;
+import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.logger.LogManager;
@@ -79,15 +79,18 @@ public class Act1QuestSystem extends PassiveSystem {
   }
 
   @Subscribe
-  public void onNpcActivated(NpcInteractionEvent event) {
+  public void onNpcQuestMessage(NpcQuestMessageEvent event) {
     if (event == null || !mPlayer.has(event.entityId) || !mMonster.has(event.npcId)) return;
     Monster npc = mMonster.get(event.npcId);
     if (npc.monstats == null || npc.monstats.hcIdx != MonsterType.AKARA) return;
     Player player = mPlayer.get(event.entityId);
     if (player.data == null) return;
 
-    short record = getRecord(player.data);
-    if (Act1DenOfEvilQuest.canClaimReward(record)) {
+    if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_INIT) {
+      updateRecord(player.data, Act1DenOfEvilQuest::start, "akara-init-message");
+    } else if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_SUCCESS) {
+      short record = getRecord(player.data);
+      if (!Act1DenOfEvilQuest.canClaimReward(record)) return;
       short claimed = Act1DenOfEvilQuest.claimReward(record);
       if (claimed != record) {
         setRecord(player.data, claimed);
@@ -95,8 +98,6 @@ public class Act1QuestSystem extends PassiveSystem {
         persist(player.data);
         log.info("[A1Q1] Akara reward granted: player={}", event.entityId);
       }
-    } else {
-      updateRecord(player.data, Act1DenOfEvilQuest::start, "akara-start");
     }
   }
 
