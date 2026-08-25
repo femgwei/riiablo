@@ -54,6 +54,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.codec.excel.Speech;
 import com.riiablo.codec.excel.SuperUniques;
+import com.riiablo.codec.excel.TreasureClassEx;
 import com.riiablo.codec.excel.UniqueItems;
 import com.riiablo.codec.excel.WeaponClass;
 import com.riiablo.codec.excel.Weapons;
@@ -122,6 +123,7 @@ public class Files {
   public final SkillDesc        skilldesc;
   public final Sounds           Sounds;
   public final SuperUniques     SuperUniques;
+  public final TreasureClassEx  TreasureClassEx;
   public final UniqueItems      UniqueItems;
   //public final UniquePrefix   UniquePrefix;
   //public final UniqueSuffix   UniqueSuffix;
@@ -186,6 +188,7 @@ public class Files {
     skilldesc        = load(SkillDesc.class);
     Sounds           = load(Sounds.class);
     SuperUniques     = load(SuperUniques.class, Excel.EXPANSION);
+    TreasureClassEx  = load(TreasureClassEx.class, Excel.EXPANSION);
     UniqueItems      = load(UniqueItems.class, Excel.EXPANSION);
     //UniquePrefix   = load(UniquePrefix.class);
     //UniqueSuffix   = load(UniqueSuffix.class);

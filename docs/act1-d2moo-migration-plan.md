@@ -109,6 +109,8 @@ waypoints, caves, quest rewards and collision boundaries.
   - [x] D2Game OperateFn lifecycle table for Act 1 containers and doors.
   - [x] One-shot urn/barrel/corpse/rack/bookshelf state and one-way secret doors.
   - [ ] Native container drops, trap callbacks and exploding-barrel damage events.
+    - [x] TreasureClassEx table, native chest selector and weighted raw roll.
+    - [ ] Recursive TC expansion and authoritative object-drop entities.
   - [ ] Shrine and well effects/cooldowns.
   - [ ] Quest-object handlers and room unload/reload integration tests.
 - [ ] Phase 3: A1Q2 and mercenary entry
