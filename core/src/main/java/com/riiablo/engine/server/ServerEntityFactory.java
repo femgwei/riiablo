@@ -246,6 +246,25 @@ public class ServerEntityFactory extends EntityFactory {
       
       boolean calculated = MonsterStatsCalculator.calculateMonsterStatsByLevel(
           monsterId, gameType, difficulty, monsterLevel, flags, statsInit);
+
+      // A2 values in MonStats are ratios, just like A1. They must be scaled
+      // through MonLvl before Actioneer attaches them to a ranged/native A2
+      // attack. Passing the raw table values made a quill rat's 1..2 damage
+      // spike resolve for roughly 18..22 damage with an inflated to-hit value.
+      MonsterStatsCalculator.MonsterStatsInit attack2Init =
+          new MonsterStatsCalculator.MonsterStatsInit();
+      boolean calculatedAttack2 = MonsterStatsCalculator.calculateMonsterStatsByLevel(
+          monsterId, gameType, difficulty, monsterLevel, (short) 0x10, attack2Init);
+      Monster monster = mMonster.get(id);
+      if (calculatedAttack2) {
+        monster.setAttack2Profile(
+            attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
+      } else {
+        monster.setAttack2Profile(
+            arrayValue(monstats.A2MinD, difficulty),
+            arrayValue(monstats.A2MaxD, difficulty),
+            arrayValue(monstats.A2TH, difficulty));
+      }
       
       if (calculated) {
         // Use calculated HP values
@@ -295,6 +314,15 @@ public class ServerEntityFactory extends EntityFactory {
       attrs.reset(); // propagate base changes
       mAttributesWrapper.create(id).attrs = attrs;
       mUnitStates.create(id).init(id);
+      log.debug("[MONSTER_COMBAT_STATS] entity={} monster={} level={} "
+              + "a1={}..{} ar={} a2={}..{} ar={} rawA2={}..{} rawA2Ar={}",
+          id, monstats.Id, monsterLevel,
+          statInt(attrs, Stat.mindamage), statInt(attrs, Stat.maxdamage),
+          statInt(attrs, Stat.tohit),
+          monster.attack2MinDamage, monster.attack2MaxDamage, monster.attack2ToHit,
+          arrayValue(monstats.A2MinD, difficulty),
+          arrayValue(monstats.A2MaxD, difficulty),
+          arrayValue(monstats.A2TH, difficulty));
     }
 
     mPosition.create(id).position.set(x, y);
@@ -335,6 +363,16 @@ public class ServerEntityFactory extends EntityFactory {
 
     mNetworked.create(id);
     return id;
+  }
+
+  private static int arrayValue(int[] values, int index) {
+    return values != null && index >= 0 && index < values.length
+        ? Math.max(0, values[index]) : 0;
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    StatRef ref = attrs != null ? attrs.get(stat, StatRef.obtain()) : null;
+    return ref != null ? ref.asInt() : 0;
   }
 
   @Override

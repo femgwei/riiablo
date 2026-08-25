@@ -679,9 +679,9 @@ public class Actioneer extends PassiveSystem {
       // Keep the A2 profile on this projectile; the shared monster attributes
       // represent A1 and must remain unchanged for overlapping attacks.
       com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
-      projectile.attackMinDamage = arrayValue(monster.monstats.A2MinD);
-      projectile.attackMaxDamage = arrayValue(monster.monstats.A2MaxD);
-      projectile.attackRating = arrayValue(monster.monstats.A2TH);
+      projectile.attackMinDamage = monster.attack2MinDamage;
+      projectile.attackMaxDamage = monster.attack2MaxDamage;
+      projectile.attackRating = monster.attack2ToHit;
     }
     log.info("[MONSTER_MISSILE] created entity={} target={} mode={} missileId={} missile={} "
             + "speed={} range={} damage={}..{} ar={} start=({}, {}) direction=({}, {})",
@@ -722,25 +722,18 @@ public class Actioneer extends PassiveSystem {
   private int monsterAttackMinDamage(int entityId) {
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
     return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
-        && monster != null && monster.monstats != null
-        ? arrayValue(monster.monstats.A2MinD) : 0;
+        && monster != null ? monster.attack2MinDamage : 0;
   }
 
   private int monsterAttackMaxDamage(int entityId) {
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
     return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
-        && monster != null && monster.monstats != null
-        ? arrayValue(monster.monstats.A2MaxD) : 0;
+        && monster != null ? monster.attack2MaxDamage : 0;
   }
 
   private int monsterAttackRating(int entityId) {
     Monster monster = mMonster.has(entityId) ? mMonster.get(entityId) : null;
     return currentMonsterAttackMode(entityId) == Engine.Monster.MODE_A2
-        && monster != null && monster.monstats != null
-        ? arrayValue(monster.monstats.A2TH) : 0;
-  }
-
-  private static int arrayValue(int[] values) {
-    return values != null && values.length > 0 ? Math.max(0, values[0]) : 0;
+        && monster != null ? monster.attack2ToHit : 0;
   }
 }

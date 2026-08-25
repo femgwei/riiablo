@@ -63,4 +63,31 @@ public class CombatSystemTest {
 
     assertTrue(combat.calculateHitChance(attacker, defender) > CombatSystem.MIN_TO_HIT_CHANCE);
   }
+
+  @Test
+  public void monsterAttackingPlayerDoesNotReceiveAnExtraPvpHitFactor() {
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.level = 1;
+    attacker.attackRating = 100;
+
+    CombatSystem.DefenderData player = new CombatSystem.DefenderData();
+    player.isPlayer = true;
+    player.level = 1;
+    player.defense = 100;
+
+    assertEquals(50, combat.calculateHitChance(attacker, player));
+  }
+
+  @Test
+  public void nativeHitFormulaIncludesAttackerAndDefenderLevels() {
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.level = 1;
+    attacker.attackRating = 100;
+
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.level = 2;
+    defender.defense = 100;
+
+    assertEquals(33, combat.calculateHitChance(attacker, defender));
+  }
 }

@@ -70,7 +70,7 @@ public class CombatSystem {
   /** 最高命中率（95%） */
   public static final int MAX_TO_HIT_CHANCE = 95;
 
-  /** PvP 命中率调整因子 */
+  /** Native chance-to-hit numerator factor (applies to every unit type). */
   public static final int PVP_HIT_FACTOR = 2;
 
   /** 等级差异每级影响（用于命中计算） */
@@ -352,6 +352,8 @@ public class CombatSystem {
     a.level = Math.max(1, statInt(attacker, Stat.level, 1));
     a.strength = statInt(attacker, Stat.strength, 0);
     a.dexterity = statInt(attacker, Stat.dexterity, 0);
+    boolean hasAttackProfileOverride = attackMinDamageOverride > 0
+        || attackMaxDamageOverride > 0 || attackRatingOverride > 0;
     a.attackRating = attackRatingOverride > 0
         ? attackRatingOverride : statInt(attacker, Stat.tohit, 0);
     // A newly-created character may not have a tohit entry until an item/stat
@@ -362,10 +364,10 @@ public class CombatSystem {
       a.attackRating = Math.max(1, a.dexterity * 5 + Math.max(1, a.level) * 2);
     }
     a.attackRatingPercent = statInt(attacker, Stat.item_tohit_percent, 0);
-    a.minDamage = attackMinDamageOverride > 0
-        ? attackMinDamageOverride : statInt(attacker, Stat.mindamage, 1);
-    a.maxDamage = attackMaxDamageOverride > 0
-        ? attackMaxDamageOverride
+    a.minDamage = hasAttackProfileOverride
+        ? Math.max(0, attackMinDamageOverride) : statInt(attacker, Stat.mindamage, 1);
+    a.maxDamage = hasAttackProfileOverride
+        ? Math.max(a.minDamage, attackMaxDamageOverride)
         : statInt(attacker, Stat.maxdamage, Math.max(2, a.minDamage));
     if (missile) {
       int throwMin = statInt(attacker, Stat.item_throw_mindamage, 0);
@@ -532,11 +534,13 @@ public class CombatSystem {
    * 
    * <p>暗黑 II 命中公式：
    * <pre>
-   * PvM: Chance to hit = 100 * AR / (AR + DR)
+   * Chance to hit = 200 * AR / (AR + DR) * attackerLevel /
+   *                 (attackerLevel + defenderLevel)
    *      AR = AttackerAR * (100 + ToHitPercent) / 100
    *      DR = DefenderDefense * clvl / (clvl + alvl)
    * 
-   * PvP: Chance to hit = 100 * 2 * AR / (AR + DR)
+   * This is the native D2 formula for every attacker/defender type; whether
+   * the defender is a player does not introduce an additional PvP factor.
    * </pre>
    */
   public int calculateHitChance(AttackerData attacker, DefenderData defender) {
@@ -556,8 +560,11 @@ public class CombatSystem {
     if (attackRating + defense == 0) {
       hitChance = BASE_TO_HIT_CHANCE;
     } else {
-      int factor = defender.isPlayer ? PVP_HIT_FACTOR : 1;
-      hitChance = 100 * factor * attackRating / (attackRating + defense);
+      int attackerLevel = Math.max(1, attacker.level);
+      int defenderLevel = Math.max(1, defender.level);
+      int toHitFactor = 100 * attackRating / (attackRating + defense);
+      hitChance = PVP_HIT_FACTOR * attackerLevel * toHitFactor
+          / (attackerLevel + defenderLevel);
     }
 
     // 限制范围
@@ -604,13 +611,6 @@ public class CombatSystem {
       defense = defender.defense + defender.defenseVsMissile;
     } else {
       defense = defender.defense + defender.defenseVsMelee;
-    }
-
-    // 等级差异调整
-    int levelDiff = defender.level - attacker.level;
-    if (levelDiff > 0) {
-      // 防御者等级高，防御更有效
-      defense = defense * (defender.level + levelDiff * LEVEL_DIFF_MODIFIER) / defender.level;
     }
 
     return Math.max(0, defense);

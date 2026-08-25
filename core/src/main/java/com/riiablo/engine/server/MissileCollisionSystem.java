@@ -196,12 +196,14 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       log.info("[MISSILE_HIT] phase=stats missileId={} owner={} target={} "
               + "throwMin={} throwMax={} weaponMin={} weaponMax={} attackRating={} "
-              + "targetDefense={} targetHp={}",
+              + "profileMin={} profileMax={} profileAr={} targetDefense={} targetHp={}",
           missileId, missile.ownerId, targetId,
           statInt(ownerAttrs, Stat.item_throw_mindamage),
           statInt(ownerAttrs, Stat.item_throw_maxdamage),
           statInt(ownerAttrs, Stat.mindamage), statInt(ownerAttrs, Stat.maxdamage),
-          statInt(ownerAttrs, Stat.tohit), statInt(targetAttrs, Stat.armorclass),
+          statInt(ownerAttrs, Stat.tohit),
+          missile.attackMinDamage, missile.attackMaxDamage, missile.attackRating,
+          statInt(targetAttrs, Stat.armorclass),
           targetHitpoints.asFixed());
       CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
           ownerAttrs,
