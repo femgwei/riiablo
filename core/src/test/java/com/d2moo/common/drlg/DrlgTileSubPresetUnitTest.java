@@ -25,6 +25,7 @@ class DrlgTileSubPresetUnitTest {
     assertEquals(40, copy.getNXpos());
     assertEquals(45, copy.getNYpos());
     assertTrue(copy.isDs1Raw());
+    assertTrue(copy.isExternalEntity());
   }
 
   @Test
@@ -55,7 +56,8 @@ class DrlgTileSubPresetUnitTest {
     D2PresetUnit copy = DrlgTileSub.copySubstitutionPresetUnit(
         new D2DrlgRoom(), null, unit(15, 20), 7, 8,
         group(2, 3, 6, 6), false);
-    org.junit.jupiter.api.Assertions.assertFalse(copy.isDs1Raw());
+    assertTrue(copy.isDs1Raw());
+    org.junit.jupiter.api.Assertions.assertFalse(copy.isExternalEntity());
   }
 
   private static D2PresetUnit unit(int x, int y) {

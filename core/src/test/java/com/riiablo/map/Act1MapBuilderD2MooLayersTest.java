@@ -330,6 +330,12 @@ class Act1MapBuilderD2MooLayersTest {
     unit.setNXpos(7);
     unit.setNYpos(9);
     unit.setDs1Raw(true);
+    D2PresetUnit decorativeLvlSubObject = new D2PresetUnit();
+    decorativeLvlSubObject.setNUnitType(D2UnitTypes.UNIT_OBJECT);
+    decorativeLvlSubObject.setNIndex(43);
+    decorativeLvlSubObject.setDs1Raw(true);
+    decorativeLvlSubObject.setExternalEntity(false);
+    unit.setPNext(decorativeLvlSubObject);
     room.setPresetUnits(unit);
 
     int[] exported = new int[8];

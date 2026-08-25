@@ -1275,6 +1275,7 @@ public class DrlgPreset {
         newPresetUnit.setNYpos(y + presetUnit.getNYpos());
         newPresetUnit.setBSpawned(presetUnit.isBSpawned());
         newPresetUnit.setDs1Raw(presetUnit.isDs1Raw());
+        newPresetUnit.setExternalEntity(presetUnit.isExternalEntity());
         
         // 复制 MapAI（如果存在）
         if (presetUnit.getPMapAI() != null) {

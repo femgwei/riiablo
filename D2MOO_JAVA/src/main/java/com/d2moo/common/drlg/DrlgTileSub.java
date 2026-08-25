@@ -750,10 +750,12 @@ public class DrlgTileSub {
                 source.getNUnitType(), source.getNIndex(), source.getNMode(),
                 subtileX + unitX - minSubtileX,
                 subtileY + unitY - minSubtileY);
-        // ds1Raw is Java-only provenance used by the riiablo export bridge.
-        // Native units allocated here still carry the DS1 Obj/MonPreset index
-        // contract, so preserve it across the substitution copy.
-        copy.setDs1Raw(exportDs1Origin && source.isDs1Raw());
+        // Index provenance and external visibility are separate concerns.
+        // Every LvlSub copy still carries the DS1 Obj/MonPreset index
+        // contract. Only waypoint substitutions are currently safe to expose
+        // to riiablo's ECS; decorative substitutions stay native-only.
+        copy.setDs1Raw(source.isDs1Raw());
+        copy.setExternalEntity(exportDs1Origin);
         return copy;
     }
 

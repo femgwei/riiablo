@@ -101,6 +101,7 @@ public final class DrlgExport {
         int levelOriginX = level.getLevelCoords().getNPosX();
         int levelOriginY = level.getLevelCoords().getNPosY();
         int count = 0;
+        int suppressed = 0;
         for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
                 room = room.getDrlgRoomNext()) {
             if (room.getTileGrid() == null) DrlgActivate.initializeRoomEx(room);
@@ -108,13 +109,18 @@ public final class DrlgExport {
             int roomY = (room.getNTileYPos() - levelOriginY) * 5;
             for (D2PresetUnit unit = room.getPresetUnits(); unit != null;
                     unit = unit.getPNext()) {
+                if (!unit.isExternalEntity()) {
+                    suppressed++;
+                    continue;
+                }
                 exporter.onPresetUnit(levelId, unit.getNUnitType(), unit.getNIndex(),
                     unit.getNMode(), roomX + unit.getNXpos(), roomY + unit.getNYpos(),
                     unit.isDs1Raw(), unit.isBSpawned());
                 count++;
             }
         }
-        D2Log.debug("DRLG_EXPORT_UNITS level=%d count=%d", levelId, count);
+        D2Log.debug("DRLG_EXPORT_UNITS level=%d count=%d suppressed=%d",
+                levelId, count, suppressed);
         return count;
     }
 
