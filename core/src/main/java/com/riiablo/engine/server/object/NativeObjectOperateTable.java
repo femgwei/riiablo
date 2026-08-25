@@ -11,6 +11,7 @@ public final class NativeObjectOperateTable {
     INSTANT_CONTAINER,
     SHRINE,
     WELL,
+    TRAP,
     QUEST_OBJECT,
     TOGGLE_DOOR,
     ONE_WAY_DOOR,
@@ -41,6 +42,8 @@ public final class NativeObjectOperateTable {
         || kind == NativePresetObjectResolver.Kind.PRESET_CHEST) {
       return Lifecycle.ANIMATED_CONTAINER;
     }
+
+    if (operateFn == 7) return Lifecycle.TRAP;
 
     switch (operateFn) {
       // Casket, urn/jar, chest, barrel, Tower Tome, exploding barrel,

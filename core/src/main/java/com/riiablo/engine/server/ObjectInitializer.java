@@ -104,6 +104,7 @@ public class ObjectInitializer extends BaseEntitySystem {
         break;
       case SHRINE:
       case ARCANE_SYMBOL:
+      case TRAP:
       case QUEST_OBJECT:
         exhausted = state.activated;
         break;

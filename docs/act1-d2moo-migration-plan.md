@@ -114,6 +114,9 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] First-open event idempotency and authoritative object-drop entities.
     - [x] Native multiplayer NoDrop scaling from total/effective player counts.
     - [ ] Same-level party count wiring and full unique/set property generation.
+    - [x] Exploding barrel OperateFn=7 is separated from ordinary container drops.
+    - [x] Trap trigger context event exposes player/object/operate/trap type.
+    - [ ] Trap initializer, projectile/damage callback and trapped urn/chest InteractType.
   - [ ] Shrine and well effects/cooldowns.
     - [x] Shrines.txt table and native effect-class/LevelMin/preset selection.
     - [x] Shrine health/mana effects (Code 1-5) and 1200-frame/minute reset.

@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.event.NativeTrapInteractionEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
@@ -137,6 +138,24 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           + " player=" + src + " object=" + base.Id + " type=" + type
           + " targetMode=" + request.targetMode);
       return InteractionResult.HANDLED_CHANGED;
+    }
+
+    if (lifecycle == Lifecycle.TRAP) {
+      boolean first = state == null || !state.activated;
+      if (first && state != null) {
+        state.persistActivated(true);
+        state.persistMode(Engine.Object.MODE_ON);
+      }
+      if (first) {
+        mSequence.create(entityId).sequence(
+            Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+        mInteractable.remove(entityId);
+      }
+      event.dispatch(NativeTrapInteractionEvent.obtain(src, entityId, base.Id,
+          base.OperateFn, base.TrapProb, trapType(base), first));
+      Gdx.app.log(TAG, "Native trap triggered: entity=" + entityId
+          + " player=" + src + " object=" + base.Id + " first=" + first);
+      return first ? InteractionResult.HANDLED_CHANGED : InteractionResult.HANDLED_UNCHANGED;
     }
 
     if (lifecycle == Lifecycle.SHRINE || lifecycle == Lifecycle.ARCANE_SYMBOL) {
@@ -272,6 +291,12 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         Gdx.app.error(TAG, "Invalid OperateFn for " + entityId + ": " + operateFn);
     }
     return false;
+  }
+
+  private static int trapType(com.riiablo.codec.excel.Objects.Entry base) {
+    // D2Game derives the concrete handler from InteractType. Until the
+    // trap initializer is bridged, do not mislabel OperateFn as a handler id.
+    return -1;
   }
 
   private Levels.Entry getLevel(int entityId) {
