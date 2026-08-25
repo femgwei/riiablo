@@ -592,6 +592,7 @@ public class Actioneer extends PassiveSystem {
       case 8:  // MultipleShot/Teeth shock wave
       case 22: // Nova/radial missile skill
       case 85: // Fallen Shaman chain missile
+      case 95: // Fetish Shaman inferno missile
         break;
       case 97: { // native monster Resurrect
         boolean restored = targetId != Engine.INVALID_ENTITY

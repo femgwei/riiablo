@@ -445,7 +445,30 @@ public class ServerSkillSystem extends PassiveSystem {
     Player player = mPlayer.get(entityId);
     if (player.data == null || player.data.getItems() == null) return null;
     Item weapon = player.data.getItems().getEquippedThrowableWeapon();
-    return weapon != null ? weapon.code : null;
+    if (weapon == null || !hasText(weapon.code)) return null;
+
+    // Item codes (for example "jav") are not necessarily Missiles.txt row
+    // names.  Use the same native-data candidates as the presentation path,
+    // but only return a name that actually resolves on the authoritative
+    // server.  Returning the raw item code made Throw consume quantity while
+    // silently failing to create a missile.
+    String[] candidates = {
+        weapon.code,
+        weapon.code + "s",
+        "electric" + weapon.code,
+        "electric " + weapon.code,
+        "throwing" + weapon.code,
+        weapon.code + "throw",
+        "javelin",
+        "javelins"
+    };
+    for (String candidate : candidates) {
+      Missiles.Entry missile = Riiablo.files.Missiles.get(candidate);
+      if (missile != null) return missile.Missile;
+    }
+    log.warn("[THROW_ATTACK] phase=missile_resolve_failed entity={} skill={} weaponCode={}",
+        entityId, skillId, weapon.code);
+    return null;
   }
 
   private void reject(SkillCastEvent event, int resultCode, String reason) {

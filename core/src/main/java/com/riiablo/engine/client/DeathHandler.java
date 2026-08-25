@@ -45,8 +45,8 @@ import com.riiablo.map.Box2DPhysics;
 import com.riiablo.map.Map;
 import com.riiablo.attributes.Stat;
 import com.artemis.annotations.Wire;
-import com.riiablo.engine.server.ServerEntityFactory;
 
+@Wire(failOnNull = false)
 public class DeathHandler extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(DeathHandler.class);
 
@@ -85,9 +85,6 @@ public class DeathHandler extends PassiveSystem {
   @Wire(name = "map")
   protected Map map;
   
-  @Wire(name = "factory")
-  protected ServerEntityFactory factory;
-
   @Subscribe
   public void onDeathEvent(DeathEvent event) {
     log.traceEntry("onDeathEvent(killer: {}, victim: {})", event.killer, event.victim);

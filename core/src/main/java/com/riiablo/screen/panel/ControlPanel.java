@@ -496,13 +496,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       long currentLevelExp = getCurrentLevelExperience(currentLevel, charClass);
 
       // 计算百分比（0.0 到 1.0）
-      float percentage = 0;
-      if (currentLevel >= ExperienceTable.MAX_LEVEL) {
-        percentage = 1.0f;
-      } else if (nextLevelExp > currentLevelExp && currentExp >= currentLevelExp) {
-        percentage = (float) (currentExp - currentLevelExp) / (nextLevelExp - currentLevelExp);
-        percentage = Math.min(1.0f, Math.max(0.0f, percentage));
-      }
+      float percentage = ExperienceTable.getInstance().getProgress(
+          currentLevel, charClass, currentExp);
 
       if (currentExp != lastLoggedExperience || currentLevel != lastLoggedLevel
           || currentLevelExp != lastLoggedCurrentLevelExp

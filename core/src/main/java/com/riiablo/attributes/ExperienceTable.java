@@ -186,4 +186,15 @@ public class ExperienceTable {
       default: return amazon[reached];
     }
   }
+
+  /** Returns normalized progress within the supplied level, clamped to [0, 1]. */
+  public float getProgress(int level, int classId, long experience) {
+    int clampedLevel = Math.max(1, Math.min(MAX_LEVEL, level));
+    if (clampedLevel >= MAX_LEVEL) return 1f;
+    long start = getExperienceForCurrentLevel(clampedLevel, classId);
+    long end = getExperienceForNextLevel(clampedLevel, classId);
+    if (end <= start) return 0f;
+    double progress = (double) (experience - start) / (double) (end - start);
+    return (float) Math.max(0d, Math.min(1d, progress));
+  }
 }

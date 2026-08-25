@@ -25,6 +25,7 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Missile;
@@ -32,6 +33,7 @@ import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
@@ -44,6 +46,7 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.ai.AI;
 import org.junit.jupiter.api.Test;
 
 /** Data-driven, headless audit for the native shaman projectile chain. */
@@ -223,6 +226,118 @@ public class ShamanFireballAuditTest extends RiiabloTest {
   }
 
   @Test
+  void fetishInfernoKeyframeCreatesMissileAndDamagesPlayer() {
+    MathUtils.random.setSeed(0x5A4A4EL);
+    MonStats.Entry row = Riiablo.files.monstats.get("fetishshaman3");
+    assertNotNull(row);
+    Skills.Entry skill = Riiablo.files.skills.get(row.Skill1);
+    assertNotNull(skill);
+
+    RecordingFactory factory = new RecordingFactory();
+    factory.logTag = "FETISH_INFERNO_CHAIN";
+    Actioneer actioneer = new Actioneer();
+    Probe probe = new Probe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, actioneer, new Pathfinder(), new AnimStepper(),
+            new ServerSkillSystem(), factory, new MissileCollisionSystem())
+        .build()
+        .register("factory", factory)
+        .register("map", new Map(0, 0)));
+    try {
+      int shaman = createMonsterCaster(world, row, 10, 10);
+      int player = world.create();
+      world.getMapper(Player.class).create(player);
+      world.getMapper(Position.class).create(player).position.set(15, 10);
+      Attributes playerAttrs = combatAttributes(20, 1, 1, 1, 1);
+      world.getMapper(AttributesWrapper.class).create(player).attrs = playerAttrs;
+      float hpBefore = hitpoints(playerAttrs);
+
+      System.out.println("[FETISH_INFERNO_CHAIN] phase=script_cast entity=" + shaman
+          + " skill=" + skill.skill + " target=" + player);
+      actioneer.cast(shaman, skill.Id, player, new Vector2(15, 10));
+      installAttackAnimation(world, shaman);
+      world.setDelta(Animation.FRAME_DURATION);
+      for (int i = 0; i < 16 && probe.damageEvents == 0; i++) world.process();
+
+      float hpAfter = hitpoints(playerAttrs);
+      assertTrue(probe.animKeyframes >= 1);
+      assertEquals(1, probe.skillDoEvents);
+      assertEquals(1, factory.creations);
+      assertEquals(Riiablo.files.Missiles.get("fetishinferno1").Id, factory.missileId);
+      assertEquals(1, probe.damageEvents);
+      assertTrue(hpAfter < hpBefore);
+      System.out.println("[FETISH_INFERNO_CHAIN] phase=summary keyframes="
+          + probe.animKeyframes + " skillDo=" + probe.skillDoEvents
+          + " missiles=" + factory.creations + " damage=" + probe.damageEvents
+          + " hp=" + hpBefore + "->" + hpAfter);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void fallenShamanAiAcquiresPlayerAndCastsFireball() {
+    MathUtils.random.setSeed(0x5A4A4EL);
+    MonStats.Entry row = Riiablo.files.monstats.get("fallenshaman3");
+    assertNotNull(row);
+
+    RecordingFactory factory = new RecordingFactory();
+    factory.logTag = "SHAMAN_AI_CHAIN";
+    Actioneer actioneer = new Actioneer();
+    AIStepper aiStepper = new AIStepper();
+    Probe probe = new Probe();
+    World previousEngine = Riiablo.engine;
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new CofManager(), actioneer, new Pathfinder(),
+            aiStepper, new AnimStepper(), new ServerSkillSystem(), factory,
+            new MissileCollisionSystem())
+        .build()
+        .register("factory", factory)
+        .register("map", new Map(0, 0)));
+    Riiablo.engine = world;
+    try {
+      int shaman = createMonsterCaster(world, row, 10, 10);
+      world.getMapper(Size.class).create(shaman).size = 1;
+      world.getMapper(Velocity.class).create(shaman).setMonster(row.Velocity);
+      AIWrapper wrapper = world.getMapper(AIWrapper.class).create(shaman);
+      wrapper.ai = AI.findAI(shaman, row.AI);
+      world.getInjector().inject(wrapper.ai);
+      wrapper.ai.initialize();
+
+      int player = world.create();
+      world.getMapper(Player.class).create(player);
+      world.getMapper(Class.class).create(player).type = Class.Type.PLR;
+      world.getMapper(Position.class).create(player).position.set(15, 10);
+      Attributes playerAttrs = combatAttributes(20, 1, 1, 1, 1);
+      world.getMapper(AttributesWrapper.class).create(player).attrs = playerAttrs;
+      float hpBefore = hitpoints(playerAttrs);
+
+      world.setDelta(Animation.FRAME_DURATION);
+      int decisionFrames = 0;
+      while (!actioneer.hasCasting(shaman) && decisionFrames++ < 1000) world.process();
+      assertTrue(actioneer.hasCasting(shaman), "AI must acquire the player and choose a cast");
+      assertEquals(Riiablo.files.skills.get(row.Skill2).Id,
+          world.getMapper(com.riiablo.engine.server.component.Casting.class).get(shaman).skillId);
+      aiStepper.setEnabled(false);
+      installAttackAnimation(world, shaman);
+      for (int i = 0; i < 16 && probe.damageEvents == 0; i++) world.process();
+
+      float hpAfter = hitpoints(playerAttrs);
+      assertEquals(1, probe.skillDoEvents);
+      assertEquals(1, factory.creations);
+      assertEquals(1, probe.damageEvents);
+      assertTrue(hpAfter < hpBefore);
+      System.out.println("[SHAMAN_AI_CHAIN] phase=summary decisionFrames=" + decisionFrames
+          + " state=" + wrapper.ai.getState() + " skillDo=" + probe.skillDoEvents
+          + " missiles=" + factory.creations + " damage=" + probe.damageEvents
+          + " hp=" + hpBefore + "->" + hpAfter);
+    } finally {
+      Riiablo.engine = previousEngine;
+      world.dispose();
+    }
+  }
+
+  @Test
   void shamanRowsResolveSkillsAndMissiles() {
     int matched = 0;
     for (MonStats.Entry row : Riiablo.files.monstats) {
@@ -293,6 +408,90 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     assertTrue(matched > 0, "D2 data did not contain any shaman rows");
   }
 
+  @Test
+  void skeletonMageNativeAttackCreatesMissileAndDamagesPlayer() {
+    MathUtils.random.setSeed(0x5CE1E7L);
+    MonStats.Entry row = null;
+    for (MonStats.Entry candidate : Riiablo.files.monstats) {
+      if (candidate.AI != null && candidate.AI.equalsIgnoreCase("SkeletonMage")
+          && candidate.MissA1 != null && !candidate.MissA1.isEmpty()) {
+        row = candidate;
+        break;
+      }
+    }
+    assertNotNull(row, "D2 data must contain a SkeletonMage native missile row");
+    Missiles.Entry expected = Riiablo.files.Missiles.get(row.MissA1);
+    assertNotNull(expected, "SkeletonMage MissA1 must resolve in Missiles.txt");
+
+    RecordingFactory factory = new RecordingFactory();
+    factory.logTag = "SKELETON_MAGE_CHAIN";
+    Probe probe = new Probe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new Actioneer(), new Pathfinder(), new AnimStepper(),
+            factory, new MissileCollisionSystem())
+        .build()
+        .register("factory", factory)
+        .register("map", new Map(0, 0)));
+    try {
+      int mage = createMonsterCaster(world, row, 10, 10);
+      int player = world.create();
+      world.getMapper(Player.class).create(player);
+      world.getMapper(Position.class).create(player).position.set(15, 10);
+      Attributes playerAttrs = combatAttributes(30, 1, 2, 1, 1);
+      world.getMapper(AttributesWrapper.class).create(player).attrs = playerAttrs;
+
+      Actioneer actioneer = world.getSystem(Actioneer.class);
+      actioneer.attack(mage, (byte) -1, (byte) -1, player, new Vector2(15, 10));
+      installAttackAnimation(world, mage);
+      float hpBefore = hitpoints(playerAttrs);
+      world.setDelta(Animation.FRAME_DURATION);
+      for (int frame = 0; frame < 24 && probe.damageEvents == 0; frame++) world.process();
+
+      assertTrue(factory.creations > 0, "native SkeletonMage attack must create a missile");
+      assertEquals(expected.Id, factory.missileId);
+      assertTrue(hitpoints(playerAttrs) < hpBefore,
+          "native SkeletonMage missile must damage its target after collision");
+      System.out.println("[SKELETON_MAGE_CHAIN] phase=summary monster=" + row.Id
+          + " missile=" + row.MissA1 + " creations=" + factory.creations
+          + " hp=" + hpBefore + "->" + hitpoints(playerAttrs));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void goblinShamanDataIsAuditedWhenPresent() {
+    int goblinRows = 0;
+    for (MonStats.Entry row : Riiablo.files.monstats) {
+      String id = row.Id == null ? "" : row.Id.toLowerCase(Locale.ROOT);
+      String name = row.NameStr == null ? "" : row.NameStr.toLowerCase(Locale.ROOT);
+      String ai = row.AI == null ? "" : row.AI.toLowerCase(Locale.ROOT);
+      if (!(id.contains("goblin") || name.contains("goblin"))) continue;
+      goblinRows++;
+      boolean shamanLike = id.contains("shaman") || name.contains("shaman") || ai.contains("shaman");
+      if (!shamanLike) continue;
+
+      String[] skillNames = {row.Skill1, row.Skill2, row.Skill3, row.Skill4,
+          row.Skill5, row.Skill6, row.Skill7, row.Skill8};
+      boolean projectile = false;
+      for (String skillName : skillNames) {
+        if (skillName == null || skillName.isEmpty()) continue;
+        Skills.Entry skill = Riiablo.files.skills.get(skillName);
+        assertNotNull(skill, "Goblin Shaman skill row missing: " + skillName);
+        projectile |= hasProjectile(skill);
+      }
+      assertTrue(projectile, "Goblin Shaman must expose at least one projectile skill: " + row.Id);
+      System.out.println("[GOBLIN_SHAMAN_AUDIT] monster=" + row.Id
+          + " ai=" + row.AI + " skill1=" + row.Skill1 + " skill2=" + row.Skill2
+          + " projectileConfigured=true");
+    }
+    // Vanilla D2 1.10 has no Goblin Shaman row; this diagnostic keeps that
+    // distinction explicit while still validating any modded row that exists.
+    if (goblinRows == 0) {
+      System.out.println("[GOBLIN_SHAMAN_AUDIT] no Goblin rows in current MonStats dataset");
+    }
+  }
+
   private static boolean hasProjectile(Skills.Entry skill) {
     return skill != null && (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
         || hasText(skill.srvmissilec) || hasText(skill.srvmissiled)
@@ -317,6 +516,29 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     attrs.base().put(Stat.armorclass, 0);
     attrs.reset();
     return attrs;
+  }
+
+  private static int createMonsterCaster(World world, MonStats.Entry row, float x, float y) {
+    int id = world.create();
+    MonStats2.Entry stats2 = Riiablo.files.monstats2.get(row.MonStatsEx);
+    world.getMapper(Monster.class).create(id).set(row, stats2);
+    world.getMapper(Class.class).create(id).type = Class.Type.MON;
+    world.getMapper(Position.class).create(id).position.set(x, y);
+    world.getMapper(Angle.class).create(id);
+    world.getMapper(MovementModes.class).create(id).set(
+        (byte) Class.Type.MON.getMode("NU"), (byte) Class.Type.MON.getMode("WL"),
+        (byte) Class.Type.MON.getMode("RN"));
+    world.getMapper(AttributesWrapper.class).create(id).attrs =
+        combatAttributes(100, 7, 7, 10_000, 1);
+    return id;
+  }
+
+  private static void installAttackAnimation(World world, int entityId) {
+    AnimData anim = world.getMapper(AnimData.class).create(entityId);
+    anim.speed = 128;
+    anim.frame = 0;
+    anim.numFrames = 512;
+    anim.keyframes = new byte[] {Engine.KEYFRAME_ATK};
   }
 
   private static float hitpoints(Attributes attrs) {

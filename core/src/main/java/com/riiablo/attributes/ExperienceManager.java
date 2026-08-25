@@ -4,6 +4,7 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.CharacterClass;
 import com.riiablo.attributes.Stat;
@@ -44,6 +45,8 @@ public class ExperienceManager extends PassiveSystem {
   
   /** 队伍管理器（可选注入） */
   private PartyManager partyManager;
+  /** A victim can be observed by more than one lethal combat path in a frame. */
+  private final IntSet rewardedVictims = new IntSet();
 
   //==========================================================================
   // 经验值系数常量（来自 D2MOD）
@@ -94,6 +97,13 @@ public class ExperienceManager extends PassiveSystem {
   @Subscribe
   public void onDeathEvent(DeathEvent event) {
     log.traceEntry("onDeathEvent(killer: {}, victim: {})", event.killer, event.victim);
+
+    if (event == null || event.victim < 0) return;
+    if (!rewardedVictims.add(event.victim)) {
+      log.warn("[XP_SYNC] duplicate death ignored: killer={}, victim={}",
+          event.killer, event.victim);
+      return;
+    }
 
     // 检查受害者是否为怪物
     Monster monster = world.getMapper(Monster.class).get(event.victim);
