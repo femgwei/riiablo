@@ -6,6 +6,7 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.Riiablo;
@@ -28,10 +29,12 @@ import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MovementModes;
+import com.riiablo.engine.server.component.Leap;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
@@ -44,6 +47,7 @@ import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.skill.SkillCodes;
+import com.riiablo.map.Map;
 
 public class Actioneer extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(Actioneer.class);
@@ -59,6 +63,8 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<Leap> mLeap;
+  protected ComponentMapper<Size> mSize;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<CofReference> mCofReference;
 
@@ -71,6 +77,7 @@ public class Actioneer extends PassiveSystem {
 
   protected EventSystem events;
   protected Pathfinder pathfinder;
+  protected Map map;
 
   /** Entity IDs for whom the last attack target died; must release before next attack. */
   private final IntSet lastAttackTargetDied = new IntSet();
@@ -430,6 +437,12 @@ public class Actioneer extends PassiveSystem {
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
         break;
+      case 40: // native Leap validates and reserves its landing point on skill start
+        log.info("[MONSTER_LEAP] phase=start_check entity={} target={} requested=({}, {})",
+            entityId, targetId,
+            targetVec != null ? targetVec.x : Float.NaN,
+            targetVec != null ? targetVec.y : Float.NaN);
+        break;
       default:
         log.warn("Unsupported srvstfunc({}) for {}", srvstfunc, entityId);
         // TODO: default case will log an error when all valid cases are enumerated
@@ -566,6 +579,10 @@ public class Actioneer extends PassiveSystem {
       }
       case 83: { // native Fire Hit: S1 physical + mode-matched MonStats elemental profile
         resolveFireHit(entityId, targetId);
+        break;
+      }
+      case 77: { // native Leap: mirrored landing point and collision-free airborne travel
+        startLeap(entityId, targetId, targetVec);
         break;
       }
       case 3: { // throw (srvdofunc for throw attacks)
@@ -714,6 +731,59 @@ public class Actioneer extends PassiveSystem {
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
     applyCombatStates(entityId, targetId, combat);
     if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+  }
+
+  private void startLeap(int entityId, int targetId, Vector2 requestedTarget) {
+    if (!mPosition.has(entityId) || mLeap.has(entityId)) {
+      log.info("[MONSTER_LEAP] phase=rejected entity={} target={} reason={}",
+          entityId, targetId,
+          mLeap.has(entityId) ? "already_airborne" : "missing_position");
+      return;
+    }
+    Vector2 start = mPosition.get(entityId).position;
+    Vector2 target = null;
+    if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
+      target = mPosition.get(targetId).position;
+    } else if (requestedTarget != null) {
+      target = requestedTarget;
+    }
+    if (target == null) {
+      log.info("[MONSTER_LEAP] phase=rejected entity={} target={} reason=missing_target",
+          entityId, targetId);
+      return;
+    }
+
+    // D2MOO SrvSt40 uses 2 * target - unit for monsters, making a sand
+    // leaper vault across the target instead of landing on top of it.
+    Vector2 desired = new Vector2(target).scl(2f).sub(start);
+    int size = mSize.has(entityId) ? mSize.get(entityId).size : 0;
+    Vector2 landing = new Vector2();
+    if (!LeapSystem.findLanding(map, desired, size, landing)) {
+      log.info("[MONSTER_LEAP] phase=rejected entity={} target={} reason=no_free_landing "
+              + "desired=({}, {}) size={}",
+          entityId, targetId, desired.x, desired.y, size);
+      return;
+    }
+
+    pathfinder.findPath(entityId, null);
+    if (mAngle.has(entityId)) mAngle.get(entityId).target.set(landing).sub(start).nor();
+    float distance = start.dst(landing);
+    float nativeRun = 0f;
+    String monsterId = "unknown";
+    if (mMonster.has(entityId) && mMonster.get(entityId).monstats != null) {
+      nativeRun = mMonster.get(entityId).monstats.Run;
+      monsterId = mMonster.get(entityId).monstats.Id;
+    }
+    if (nativeRun <= 0f && mVelocity.has(entityId)) {
+      nativeRun = Math.max(mVelocity.get(entityId).runSpeed, mVelocity.get(entityId).walkSpeed);
+    }
+    float duration = MathUtils.clamp(distance / Math.max(8f, nativeRun), 0.18f, 0.65f);
+    mLeap.create(entityId).set(start, landing, duration, targetId);
+    log.info("[MONSTER_LEAP] phase=takeoff entity={} monster={} target={} start=({}, {}) "
+            + "targetPos=({}, {}) desired=({}, {}) landing=({}, {}) distance={} "
+            + "nativeRun={} duration={} size={}",
+        entityId, monsterId, targetId, start.x, start.y, target.x, target.y,
+        desired.x, desired.y, landing.x, landing.y, distance, nativeRun, duration, size);
   }
 
   private boolean spawnMonsterAttackMissile(int entityId, int targetId) {

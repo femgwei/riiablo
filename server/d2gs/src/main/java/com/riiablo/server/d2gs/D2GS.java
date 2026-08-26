@@ -72,6 +72,7 @@ import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.object.NativeObjectDropSystem;
 import com.riiablo.engine.server.object.NativeShrineSystem;
 import com.riiablo.engine.server.Pathfinder;
+import com.riiablo.engine.server.LeapSystem;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.ServerEntityFactory;
 import com.riiablo.engine.server.ServerItemManager;
@@ -295,6 +296,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new Pathfinder())
 
         .with(new VelocityAdder()) // FIXME: temp until proper physics implemented
+        .with(new LeapSystem())
 
         .with(factory)
         .with(sync)

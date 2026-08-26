@@ -109,6 +109,7 @@ import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.object.NativeObjectDropSystem;
 import com.riiablo.engine.server.object.NativeShrineSystem;
 import com.riiablo.engine.server.Pathfinder;
+import com.riiablo.engine.server.LeapSystem;
 import com.riiablo.engine.server.PlayerItemHandler;
 import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.MissileCollisionSystem;
@@ -730,6 +731,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     builder
         .with(new Pathfinder())
+        .with(new LeapSystem())
 
         .with(new SoundEmitterHandler())
 

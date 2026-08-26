@@ -69,6 +69,8 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 42: // Fire Hit performs its native pre-hit setup on the server
         break;
+      case 40: // Leap landing/path setup is server-authoritative
+        break;
       default:
         log.warn("Unsupported srvstfunc({}) for {} casting {}", event.srvstfunc, event.entityId, event.skillId);
     }
@@ -322,6 +324,9 @@ public class SkillCastHandler extends PassiveSystem {
 
       case 33: // Psychic Hammer visual
         cltDoSingleMissile(event, skill, position);
+        break;
+
+      case 43: // Native Leap movement uses the server-synchronized unit position
         break;
 
       case 55: // Corpse Explosion

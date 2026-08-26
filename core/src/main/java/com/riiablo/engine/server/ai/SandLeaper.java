@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.Leap;
 
 /**
  * SandLeaper AI implementation matching D2MOD's AITHINK_Fn017_SandLeaper logic.
@@ -49,6 +50,7 @@ public class SandLeaper extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<Leap> mLeap;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -96,6 +98,12 @@ public class SandLeaper extends AI {
     if (stateMachine.getCurrentState() == State.DEAD) {
       return;
     }
+    if (stateMachine.getCurrentState() == State.LEAP) {
+      // Remain in the leap state from cast start through the authoritative
+      // airborne component. Resume ordinary AI only after both lifecycles end.
+      if (mCasting.has(entityId) || mLeap.has(entityId)) return;
+      stateMachine.changeState(State.IDLE);
+    }
 
     nextAction -= delta;
     time -= delta;
@@ -110,8 +118,9 @@ public class SandLeaper extends AI {
         && stateMachine.getCurrentState() != State.LEAP) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
-      stateMachine.changeState(State.ATTACK);
       Vector2 targetPos = mPosition.get(targetId).position;
+      if (tryLeap(targetId, targetDistance, targetPos)) return;
+      stateMachine.changeState(State.ATTACK);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A2, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
       Riiablo.audio.play(monsound + "_attack_1", true);
@@ -154,19 +163,7 @@ public class SandLeaper extends AI {
     Vector2 targetPos = mPosition.get(targetId).position;
     boolean bCombat = isInCombat(targetId);
 
-    // D2MOD: Check if should use leap skill (distance < 5)
-    if (targetDistance < 5 && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
-        && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
-      // D2MOD: Use leap skill (nSkill[0])
-      // TODO: Implement skill casting for leap
-      stateMachine.changeState(State.LEAP);
-      lookAt(targetId);
-      // For now, use normal attack as placeholder
-      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      time = MathUtils.random(1f, 2);
-      return;
-    }
+    if (tryLeap(targetId, targetDistance, targetPos)) return;
 
     // D2MOD: If in combat
     if (bCombat) {
@@ -210,6 +207,19 @@ public class SandLeaper extends AI {
 
     stateMachine.changeState(State.IDLE);
     time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
+  }
+
+  private boolean tryLeap(int targetId, float targetDistance, Vector2 targetPos) {
+    if (targetDistance >= 5f || monster.monstats.Skill1 == null
+        || monster.monstats.Skill1.isEmpty() || params.length == 0
+        || !MathUtils.randomBoolean(params[0] / 100f)) {
+      return false;
+    }
+    lookAt(targetId);
+    if (!useMonsterSkill(0, targetId, targetPos)) return false;
+    stateMachine.changeState(State.LEAP);
+    time = MathUtils.random(1f, 2f);
+    return true;
   }
 
   @Override
