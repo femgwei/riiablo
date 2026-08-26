@@ -22,6 +22,7 @@ import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.engine.server.quest.Act1CainQuest;
 import com.riiablo.engine.server.quest.Act1MalusQuest;
+import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -61,8 +62,16 @@ public class NativeObjectDropSystem extends PassiveSystem {
 
   @Subscribe
   public void onCainQuestObject(NativeCainQuestEvent event) {
-    if (event == null || event.action != NativeCainQuestEvent.INIFUSS_TREE
-        || !mPosition.has(event.objectEntityId)) return;
+    if (event == null || !mPosition.has(event.objectEntityId)) return;
+    if (event.action == NativeCainQuestEvent.PORTAL_TO_TRISTRAM) {
+      createCainPortal(event);
+      return;
+    }
+    if (event.action == NativeCainQuestEvent.CAIN_GIBBET) {
+      releaseCain(event);
+      return;
+    }
+    if (event.action != NativeCainQuestEvent.INIFUSS_TREE) return;
     Position position = mPosition.get(event.objectEntityId);
     int difficulty = difficulty(event.playerId);
     int itemLevel = 1;
@@ -78,6 +87,66 @@ public class NativeObjectDropSystem extends PassiveSystem {
       log.info("[A1Q4] Scroll of Inifuss dropped: object={}, player={}",
           event.objectEntityId, event.playerId);
     }
+  }
+
+  private void releaseCain(NativeCainQuestEvent event) {
+    if (factory == null) return;
+    Position gibbet = mPosition.get(event.objectEntityId);
+    MapWrapper wrapper = mMapWrapper.get(event.objectEntityId);
+    if (gibbet == null || wrapper == null || wrapper.zone == null
+        || wrapper.zone.level == null
+        || wrapper.zone.level.Id != com.d2moo.common.drlg.D2LevelIds.LEVEL_TRISTRAM) {
+      return;
+    }
+    Vector2 spawn = findDropPosition(wrapper.map, gibbet.position, 0).add(3f, 3f);
+    int cain = factory.createMonster(
+        com.riiablo.engine.server.monster.MonsterType.DECKARDCAIN, spawn.x, spawn.y);
+    if (cain == Engine.INVALID_ENTITY) {
+      log.error("[A1Q4] Cain creation failed: gibbet={}, player={}, position={}",
+          event.objectEntityId, event.playerId, spawn);
+      return;
+    }
+    event.accept();
+    log.info("[A1Q4] Cain released in Tristram: entity={}, gibbet={}, player={}, position={}",
+        cain, event.objectEntityId, event.playerId, spawn);
+  }
+
+  private void createCainPortal(NativeCainQuestEvent event) {
+    if (factory == null || event.destinationLevelId <= 0) return;
+    Position stone = mPosition.get(event.objectEntityId);
+    MapWrapper wrapper = mMapWrapper.get(event.objectEntityId);
+    if (stone == null || wrapper == null || wrapper.map == null || wrapper.zone == null) return;
+
+    Vector2 portalPosition = findPortalPosition(wrapper.map, stone.position);
+    int visual = factory.createStaticObjectByClassId(60, portalPosition.x, portalPosition.y);
+    int warp = factory.createQuestWarp(
+        event.destinationLevelId, portalPosition.x, portalPosition.y);
+    if (warp == Engine.INVALID_ENTITY) {
+      if (visual != Engine.INVALID_ENTITY) world.delete(visual);
+      log.error("[A1Q4] Tristram portal creation failed: stone={}, player={}, position={}",
+          event.objectEntityId, event.playerId, portalPosition);
+      return;
+    }
+    wrapper.zone.addWarp(warp);
+    event.accept();
+    log.info("[A1Q4] permanent Tristram portal created: visual={}, warp={}, stone={}, "
+            + "player={}, destination={}, position={}",
+        visual, warp, event.objectEntityId, event.playerId,
+        event.destinationLevelId, portalPosition);
+  }
+
+  private Vector2 findPortalPosition(Map map, Vector2 stone) {
+    dropPosition.set(stone).add(4f, 4f);
+    if (map.flags(dropPosition) == 0) return dropPosition;
+    for (int radius = 1; radius <= 8; radius++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        dropPosition.set(stone.x + 4 + dx, stone.y + 4 - radius);
+        if (map.flags(dropPosition) == 0) return dropPosition;
+        dropPosition.set(stone.x + 4 + dx, stone.y + 4 + radius);
+        if (map.flags(dropPosition) == 0) return dropPosition;
+      }
+    }
+    return dropPosition.set(stone).add(4f, 4f);
   }
 
   @Subscribe

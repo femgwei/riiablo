@@ -5,8 +5,11 @@ public final class Act1CainQuest {
   public static final int RECORD = 4;
   public static final String BARK_SCROLL_CODE = "skb";
   public static final String DECIPHERED_SCROLL_CODE = "dkb";
+  public static final int MESSAGE_DECIPHER_SCROLL = 112;
+  public static final int MESSAGE_REWARD = 118;
   public static final int FIRST_STONE_OBJECT = 17;
-  public static final int LAST_STONE_OBJECT = 22;
+  public static final int LAST_STONE_OBJECT = 21;
+  public static final int STONE_COUNT = 5;
 
   private Act1CainQuest() {}
 
@@ -29,6 +32,11 @@ public final class Act1CainQuest {
   public static short acquireScroll(short record) {
     if (isFinished(record)) return record;
     return leaveTown(record);
+  }
+
+  public static boolean canDecipherScroll(short record, boolean hasBarkScroll,
+      boolean hasDecipheredScroll) {
+    return !isFinished(record) && hasBarkScroll && !hasDecipheredScroll;
   }
 
   public static short openTristramPortal(short record) {
@@ -62,10 +70,14 @@ public final class Act1CainQuest {
   }
 
   public static int[] normalizeOrder(int[] order) {
-    if (order == null || order.length != 5) return new int[0];
+    if (order == null || order.length != STONE_COUNT) return new int[0];
     int[] copy = order.clone();
+    int seen = 0;
     for (int id : copy) {
       if (id < FIRST_STONE_OBJECT || id > LAST_STONE_OBJECT) return new int[0];
+      int bit = 1 << (id - FIRST_STONE_OBJECT);
+      if ((seen & bit) != 0) return new int[0];
+      seen |= bit;
     }
     return copy;
   }

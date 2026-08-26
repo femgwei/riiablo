@@ -16,6 +16,8 @@ public class NativeCainQuestEvent implements Event {
   public int objectClassId;
   public int action;
   public int stoneObjectId;
+  public int stoneIndex;
+  public int destinationLevelId;
   public boolean accepted;
 
   public static NativeCainQuestEvent obtain(int playerId, int objectEntityId,

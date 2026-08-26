@@ -14,6 +14,7 @@ union ComponentP {
   MonsterP,
   ItemP,
   StateP,
+  ObjectP,
 }
 
 enum EntityFlags:uint8 (bit_flags) {
@@ -84,6 +85,12 @@ table MonsterP {
 
 table ItemP {
   data:[ubyte];
+}
+
+// Objects created by D2Game at runtime have no backing DS1 row. Carry their
+// already-resolved Objects.txt class id so network clients can rebuild them.
+table ObjectP {
+  objectId:uint16;
 }
 
 // Authoritative server status snapshot. The three vectors share the same

@@ -3,6 +3,7 @@ package com.riiablo.engine.server.quest;
 import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
+import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.Riiablo;
@@ -24,6 +25,9 @@ import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
+import com.riiablo.item.Item;
+import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Quality;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.Map;
@@ -34,6 +38,7 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Event adapter for native Act 1 quest scripts. */
+@Wire(failOnNull = false)
 public class Act1QuestSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(Act1QuestSystem.class);
 
@@ -43,8 +48,11 @@ public class Act1QuestSystem extends PassiveSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Corpse> mCorpse;
   protected EventSystem event;
+  @Wire(failOnNull = false)
+  protected ItemGenerator itemGenerator;
 
   private EntitySubscription monstersByZone;
+  private final Act1CainRuntime cainRuntime = new Act1CainRuntime();
 
   @Override
   protected void initialize() {
@@ -98,6 +106,11 @@ public class Act1QuestSystem extends PassiveSystem {
       return;
     }
     if (npc.monstats.hcIdx != MonsterType.AKARA) return;
+
+    if (event.messageIndex == Act1CainQuest.MESSAGE_DECIPHER_SCROLL) {
+      decipherInifussScroll(event.entityId, player);
+      return;
+    }
 
     if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_INIT) {
       updateRecord(player.data, Act1DenOfEvilQuest::start, "akara-init-message");
@@ -175,10 +188,43 @@ public class Act1QuestSystem extends PassiveSystem {
     NativeCainQuestEvent request;
     if (interaction.type == NativeQuestObjectResolver.Type.CAIRN_STONE) {
       if (!player.data.getItems().containsItemCode(Act1CainQuest.DECIPHERED_SCROLL_CODE)) return;
-      next = Act1CainQuest.enterDarkWood(record);
+      MapWrapper wrapper = mMapWrapper.get(interaction.entityId);
+      long gameSeed = wrapper == null || wrapper.map == null ? 0L : wrapper.map.seed();
+      cainRuntime.initialize(gameSeed);
+      Act1CainRuntime.StoneResult result = cainRuntime.inspect(interaction.objectClassId);
+      if (result == Act1CainRuntime.StoneResult.WRONG
+          || result == Act1CainRuntime.StoneResult.COMPLETE) {
+        log.info("[A1Q4] Cairn stone ignored: player={}, object={}, operated={}, expected={}",
+            interaction.playerId, interaction.objectClassId, cainRuntime.operated(),
+            expectedCainStone());
+        return;
+      }
+
       request = NativeCainQuestEvent.obtain(interaction.playerId, interaction.entityId,
           interaction.objectClassId, NativeCainQuestEvent.CAIRN_STONE);
       request.stoneObjectId = interaction.objectClassId;
+      request.stoneIndex = cainRuntime.operated();
+      if (result == Act1CainRuntime.StoneResult.LAST_STONE) {
+        NativeCainQuestEvent portal = NativeCainQuestEvent.obtain(interaction.playerId,
+            interaction.entityId, interaction.objectClassId,
+            NativeCainQuestEvent.PORTAL_TO_TRISTRAM);
+        portal.stoneObjectId = interaction.objectClassId;
+        portal.stoneIndex = cainRuntime.operated();
+        portal.destinationLevelId = D2LevelIds.LEVEL_TRISTRAM;
+        event.dispatch(portal);
+        if (!portal.accepted
+            || !player.data.getItems().removeItemCode(Act1CainQuest.DECIPHERED_SCROLL_CODE)) {
+          log.warn("[A1Q4] final Cairn stone waiting for portal service: player={}, object={}",
+              interaction.playerId, interaction.objectClassId);
+          return;
+        }
+        cainRuntime.markPortalOpened();
+        next = Act1CainQuest.openTristramPortal(record);
+      } else {
+        cainRuntime.advance();
+        next = Act1CainQuest.enterDarkWood(record);
+      }
+      request.accept();
     } else if (interaction.type == NativeQuestObjectResolver.Type.INIFUSS_TREE) {
       if (Act1CainQuest.isFinished(record)
           || player.data.getItems().containsItemCode(Act1CainQuest.BARK_SCROLL_CODE)
@@ -187,12 +233,15 @@ public class Act1QuestSystem extends PassiveSystem {
       request = NativeCainQuestEvent.obtain(interaction.playerId, interaction.entityId,
           interaction.objectClassId, NativeCainQuestEvent.INIFUSS_TREE);
     } else {
+      if (!NativeQuestRecord.has(record, NativeQuestRecord.ENTERED_AREA)
+          || !isPlayerInLevel(interaction.playerId, D2LevelIds.LEVEL_TRISTRAM)) return;
       next = Act1CainQuest.releaseCain(record);
       request = NativeCainQuestEvent.obtain(interaction.playerId, interaction.entityId,
           interaction.objectClassId, NativeCainQuestEvent.CAIN_GIBBET);
     }
     event.dispatch(request);
     if (!request.accepted) return;
+    if (request.action == NativeCainQuestEvent.CAIN_GIBBET) cainRuntime.markCainReleased();
     player.data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = next;
     persist(player.data);
     interaction.accepted = request.accepted;
@@ -203,11 +252,56 @@ public class Act1QuestSystem extends PassiveSystem {
 
   @Subscribe
   public void onQuestItemPickedUp(QuestItemPickedUpEvent event) {
-    if (event == null || !Act1MalusQuest.MALUS_CODE.equalsIgnoreCase(event.itemCode)
-        || !mPlayer.has(event.playerId)) return;
+    if (event == null || !mPlayer.has(event.playerId)) return;
     Player player = mPlayer.get(event.playerId);
     if (player.data == null) return;
-    updateMalusRecord(player.data, Act1MalusQuest::markMalusPickedUp, "malus-picked-up");
+    if (Act1MalusQuest.MALUS_CODE.equalsIgnoreCase(event.itemCode)) {
+      updateMalusRecord(player.data, Act1MalusQuest::markMalusPickedUp, "malus-picked-up");
+    } else if (Act1CainQuest.BARK_SCROLL_CODE.equalsIgnoreCase(event.itemCode)
+        || Act1CainQuest.DECIPHERED_SCROLL_CODE.equalsIgnoreCase(event.itemCode)) {
+      updateCainRecord(player.data, Act1CainQuest::acquireScroll, "inifuss-scroll-picked-up");
+    }
+  }
+
+  private void decipherInifussScroll(int playerId, Player player) {
+    short record = getCainRecord(player.data);
+    boolean hasBark = player.data.getItems().containsItemCode(Act1CainQuest.BARK_SCROLL_CODE);
+    boolean hasKey = player.data.getItems().containsItemCode(Act1CainQuest.DECIPHERED_SCROLL_CODE);
+    if (!Act1CainQuest.canDecipherScroll(record, hasBark, hasKey)) return;
+    if (itemGenerator == null) {
+      log.warn("[A1Q4] cannot decipher Scroll of Inifuss: item generator unavailable, player={}",
+          playerId);
+      return;
+    }
+
+    final Item deciphered;
+    try {
+      deciphered = itemGenerator.generate(Act1CainQuest.DECIPHERED_SCROLL_CODE);
+      deciphered.version = Item.VERSION_110;
+      deciphered.ilvl = 1;
+      deciphered.quality = Quality.NORMAL;
+      deciphered.flags |= Item.ITEMFLAG_IDENTIFIED;
+      deciphered.attrs.base().put(Stat.questitemdifficulty,
+          Math.max(0, Math.min(player.data.diff, 2)));
+      deciphered.attrs.reset();
+    } catch (Throwable t) {
+      log.error("[A1Q4] failed to create deciphered Scroll of Inifuss: player={}", playerId, t);
+      return;
+    }
+
+    if (!player.data.getItems().replaceItemCode(Act1CainQuest.BARK_SCROLL_CODE, deciphered)) {
+      log.warn("[A1Q4] bark scroll disappeared before conversion: player={}", playerId);
+      return;
+    }
+    setCainRecord(player.data, Act1CainQuest.acquireScroll(record));
+    persist(player.data);
+    log.info("[A1Q4] Akara deciphered Scroll of Inifuss: player={}", playerId);
+  }
+
+  private int expectedCainStone() {
+    int[] order = cainRuntime.stoneOrder();
+    int operated = cainRuntime.operated();
+    return operated >= 0 && operated < order.length ? order[operated] : -1;
   }
 
   int countLivingMonsters(int levelId) {
@@ -245,6 +339,13 @@ public class Act1QuestSystem extends PassiveSystem {
     return zone != null && zone.level != null && zone.level.Id == levelId;
   }
 
+  private boolean isPlayerInLevel(int entityId, int levelId) {
+    if (!mMapWrapper.has(entityId)) return false;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper != null && wrapper.zone != null && wrapper.zone.level != null
+        && wrapper.zone.level.Id == levelId;
+  }
+
   private void grantSkillPoint(int playerId, CharData data) {
     Attributes attrs = mAttributesWrapper.has(playerId)
         ? mAttributesWrapper.get(playerId).attrs : data.getStats();
@@ -279,6 +380,25 @@ public class Act1QuestSystem extends PassiveSystem {
 
   private static short getMalusRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
+  }
+
+  private static short getCainRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD];
+  }
+
+  private static void setCainRecord(CharData data, short record) {
+    data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = record;
+  }
+
+  private void updateCainRecord(CharData data, RecordUpdate update, String reason) {
+    short previous = getCainRecord(data);
+    short next = update.apply(previous);
+    if (previous == next) return;
+    setCainRecord(data, next);
+    persist(data);
+    log.info("[A1Q4] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   private static void setMalusRecord(CharData data, short record) {

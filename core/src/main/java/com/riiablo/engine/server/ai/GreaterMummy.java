@@ -1,18 +1,24 @@
 package com.riiablo.engine.server.ai;
 
+import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
 import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.artemis.EntitySubscription;
+import com.artemis.utils.IntBag;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 import com.riiablo.engine.server.component.Sequence;
 
 /**
@@ -28,6 +34,7 @@ import com.riiablo.engine.server.component.Sequence;
  * Special: Can raise dead, heal allies, and shoot projectiles.
  */
 public class GreaterMummy extends AI {
+  private static final Logger log = LogManager.getLogger(GreaterMummy.class);
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -52,6 +59,9 @@ public class GreaterMummy extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+
+  private EntitySubscription allyEntities;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -67,6 +77,8 @@ public class GreaterMummy extends AI {
   @Override
   public void initialize() {
     super.initialize();
+    allyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect.all(
+        Monster.class, Position.class, AttributesWrapper.class));
   }
 
   @Override
@@ -101,12 +113,39 @@ public class GreaterMummy extends AI {
     return Engine.INVALID_ENTITY;
   }
 
-  /**
-   * Find nearby ally to heal (simplified).
-   */
+  /** Native Greater Mummy callback: choose the nearest wounded allied undead. */
   private int findNearbyAlly(float maxRange) {
-    // TODO: Implement ally finding logic
-    return Engine.INVALID_ENTITY;
+    if (allyEntities == null || !mPosition.has(entityId) || maxRange <= 0f) {
+      return Engine.INVALID_ENTITY;
+    }
+    Vector2 source = mPosition.get(entityId).position;
+    float bestDistance2 = maxRange * maxRange;
+    int best = Engine.INVALID_ENTITY;
+    IntBag entities = allyEntities.getEntities();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int candidateId = entities.get(i);
+      if (candidateId == entityId || !mMonster.has(candidateId)
+          || !mAttributesWrapper.has(candidateId)) continue;
+      Monster candidate = mMonster.get(candidateId);
+      if (!isBestowEligible(candidate, mAttributesWrapper.get(candidateId).attrs)) continue;
+      float distance2 = source.dst2(mPosition.get(candidateId).position);
+      if (distance2 > bestDistance2) continue;
+      bestDistance2 = distance2;
+      best = candidateId;
+    }
+    return best;
+  }
+
+  public static boolean isBestowEligible(Monster candidate, com.riiablo.attributes.Attributes attrs) {
+    if (candidate == null || candidate.monstats == null || attrs == null) return false;
+    // D2MOO's callback filters to undead unless the special Radament branch is
+    // active. Greater Mummy itself is always the undead healer in this AI.
+    if (!candidate.monstats.lUndead && !candidate.monstats.hUndead) return false;
+    com.riiablo.attributes.StatRef hp = attrs.get(com.riiablo.attributes.Stat.hitpoints,
+        com.riiablo.attributes.StatRef.obtain());
+    com.riiablo.attributes.StatRef max = attrs.get(com.riiablo.attributes.Stat.maxhp,
+        com.riiablo.attributes.StatRef.obtain());
+    return hp != null && max != null && hp.asFixed() > 0f && hp.asFixed() < max.asFixed();
   }
 
   @Override
@@ -201,14 +240,21 @@ public class GreaterMummy extends AI {
 
     // D2MOD: Check heal chance
     if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()) {
-      int healTargetId = findNearbyAlly(20f);
+      float healRange = params.length > 4 && params[4] > 0 ? params[4] : 20f;
+      int healTargetId = findNearbyAlly(healRange);
       if (healTargetId != Engine.INVALID_ENTITY && params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
-        // D2MOD: Use heal skill (nSkill[1])
-        // TODO: Implement skill casting
+        // D2MOO AITACTICS_UseSkill(nSkill[1]) -> srvDoFunc=96 Bestow.
         stateMachine.changeState(State.HEAL);
         lookAt(healTargetId);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, healTargetId, mPosition.get(healTargetId).position);
+        if (!useMonsterSkill(1, healTargetId, mPosition.get(healTargetId).position,
+            Engine.Monster.MODE_A1)) {
+          stateMachine.changeState(State.IDLE);
+          return;
+        }
+        log.info("[MONSTER_BESTOW] phase=cast source={} target={} monster={} distance={} skill={}",
+            entityId, healTargetId, monster.monstats.Id,
+            mPosition.get(entityId).position.dst(mPosition.get(healTargetId).position),
+            monster.monstats.Skill2);
         time = MathUtils.random(1f, 2);
         return;
       }

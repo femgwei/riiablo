@@ -17,6 +17,7 @@ import com.riiablo.item.Item;
 import com.riiablo.map.DS1;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
+import com.riiablo.engine.server.quest.QuestWarp;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -102,6 +103,11 @@ public abstract class EntityFactory extends PassiveSystem {
   }
 
   public abstract int createWarp(int index, float x, float y);
+
+  /** Creates a network-serializable warp whose destination is owned by a quest. */
+  public int createQuestWarp(int destinationLevelId, float x, float y) {
+    return createWarp(QuestWarp.encode(destinationLevelId), x, y);
+  }
 
   public final int createItem(Item item, Vector2 position) {
     return createItem(item, position.x, position.y);

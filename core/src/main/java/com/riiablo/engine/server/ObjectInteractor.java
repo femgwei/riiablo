@@ -1,7 +1,10 @@
 package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
+import com.artemis.Aspect;
+import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
+import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
@@ -14,6 +17,7 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.event.NativeTrapInteractionEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
@@ -27,11 +31,13 @@ import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
+import com.riiablo.engine.server.quest.QuestWarp;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
+@Wire(failOnNull = false)
 public class ObjectInteractor extends PassiveSystem implements Interactable.Interactor {
   private static final String TAG = "ObjectInteractor";
 
@@ -49,11 +55,22 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<Interactable> mInteractable;
+  protected ComponentMapper<Warp> mWarp;
   protected EventSystem event;
   protected CofManager cofs;
 
+  @Wire(failOnNull = false)
+  protected WarpInteractor warpInteractor;
+
+  private EntitySubscription warps;
+
   @Wire(name = "map")
   protected Map map;
+
+  @Override
+  protected void initialize() {
+    warps = world.getAspectSubscriptionManager().get(Aspect.all(Warp.class, Position.class));
+  }
 
   @Subscribe
   public void onModeChanged(ModeChangeEvent event) {
@@ -73,6 +90,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           + " player=" + src);
       return;
     }
+    if (object.base.Id == 60 && interactQuestPortal(src, entityId)) return;
     if (object.base.OperateFn == 23) {
       CofReference cof = mCofReference.get(entityId);
       Position position = mPosition.get(entityId);
@@ -94,6 +112,28 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     event.dispatch(ObjectInteractionEvent.obtain(src, entityId, object.base.Id,
         object.base.OperateFn, kind, lifecycle, stateChanged));
     dispatchContainerTrap(src, entityId, object.base, lifecycle, stateChanged, state);
+  }
+
+  private boolean interactQuestPortal(int playerId, int visualEntityId) {
+    if (warpInteractor == null || warps == null || !mPosition.has(visualEntityId)) return false;
+    Position visual = mPosition.get(visualEntityId);
+    IntBag entities = warps.getEntities();
+    int[] ids = entities.getData();
+    int nearest = Engine.INVALID_ENTITY;
+    float nearestDistance = 36f;
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int candidate = ids[i];
+      Warp warp = mWarp.get(candidate);
+      if (warp == null || !QuestWarp.isQuestWarp(warp.index)) continue;
+      float distance = mPosition.get(candidate).position.dst2(visual.position);
+      if (distance <= nearestDistance) {
+        nearestDistance = distance;
+        nearest = candidate;
+      }
+    }
+    if (nearest == Engine.INVALID_ENTITY) return false;
+    warpInteractor.interact(playerId, nearest);
+    return true;
   }
 
   /**

@@ -19,12 +19,23 @@ class Act1CainQuestTest {
 
   @Test
   void validatesNativeFiveStoneOrder() {
-    int[] order = {17, 21, 18, 22, 19};
+    int[] order = {17, 21, 18, 20, 19};
     assertTrue(Act1CainQuest.isExpectedStone(17, order, 0));
     assertFalse(Act1CainQuest.isExpectedStone(18, order, 0));
     assertTrue(Act1CainQuest.isExpectedStone(19, order, 4));
     assertEquals(0, Act1CainQuest.normalizeOrder(new int[] {17, 18}).length);
     assertEquals(5, Act1CainQuest.normalizeOrder(order).length);
+    assertEquals(0, Act1CainQuest.normalizeOrder(new int[] {17, 18, 19, 20, 22}).length);
+    assertEquals(0, Act1CainQuest.normalizeOrder(new int[] {17, 18, 19, 20, 20}).length);
+  }
+
+  @Test
+  void onlyDeciphersAnOwnedBarkScrollBeforeCompletion() {
+    assertTrue(Act1CainQuest.canDecipherScroll((short) 0, true, false));
+    assertFalse(Act1CainQuest.canDecipherScroll((short) 0, false, false));
+    assertFalse(Act1CainQuest.canDecipherScroll((short) 0, true, true));
+    assertFalse(Act1CainQuest.canDecipherScroll(
+        Act1CainQuest.releaseCain((short) 0), true, false));
   }
 
   @Test

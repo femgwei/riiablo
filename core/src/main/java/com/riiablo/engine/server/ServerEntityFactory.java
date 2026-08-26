@@ -485,6 +485,26 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override
   public int createWarp(int index, float x, float y) {
+    if (com.riiablo.engine.server.quest.QuestWarp.isQuestWarp(index)) {
+      int destination = com.riiablo.engine.server.quest.QuestWarp.destinationLevelId(index);
+      Map.Zone zone = map.getZone(x, y);
+      Levels.Entry destinationLevel = Riiablo.files.Levels.get(destination);
+      LvlWarp.Entry portalBounds = Riiablo.files.LvlWarp.get(0);
+      if (zone == null || destinationLevel == null || portalBounds == null) {
+        log.error("[QUEST_WARP] creation failed: sourceZone={} destination={} bounds={}",
+            zone, destination, portalBounds);
+        return Engine.INVALID_ENTITY;
+      }
+      int id = super.createEntity(Class.Type.WRP, "quest-warp");
+      mWarp.create(id).set(index, portalBounds, destinationLevel);
+      mMapWrapper.create(id).set(map, zone);
+      mPosition.create(id).position.set(x, y);
+      mInteractable.create(id).set(3.0f, warpInteractor);
+      mNetworked.create(id);
+      log.info("[QUEST_WARP] created: entity={} source={} destination={} position=({}, {})",
+          id, zone.level.Id, destination, x, y);
+      return id;
+    }
     final int mainIndex   = DT1.Tile.Index.mainIndex(index);
     final int subIndex    = DT1.Tile.Index.subIndex(index);
     final int orientation = DT1.Tile.Index.orientation(index);

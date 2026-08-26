@@ -145,6 +145,33 @@ public class ItemData {
     return false;
   }
 
+  /**
+   * Atomically replaces one owned item while preserving its inventory/cursor
+   * placement. The source remains untouched when no match or replacement is
+   * supplied, which prevents a failed quest-item generation from losing the
+   * original item.
+   */
+  public boolean replaceItemCode(String code, Item replacement) {
+    if (code == null || replacement == null) return false;
+    for (int i = 0; i < itemData.size; i++) {
+      Item source = itemData.get(i);
+      if (source == null || !code.equalsIgnoreCase(source.code)
+          || source.location == Location.GROUND) continue;
+
+      Location location = source.location;
+      replacement.location = location;
+      replacement.bodyLoc = source.bodyLoc;
+      replacement.storeLoc = source.storeLoc;
+      replacement.gridX = source.gridX;
+      replacement.gridY = source.gridY;
+      if (location == Location.STORED) notifyStoreRemoved(source);
+      itemData.set(i, replacement);
+      if (location == Location.STORED) notifyStoreAdded(replacement);
+      return true;
+    }
+    return false;
+  }
+
   public Item getItem(int i) {
     return itemData.get(i);
   }

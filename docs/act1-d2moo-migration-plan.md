@@ -137,7 +137,13 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] A1Q3 Charsi Malus turn-in and asynchronous imbue reward boundary.
     - [x] A1Q4 native record/stone-order foundation and Inifuss/Cairn/Gibbet event boundary.
     - [x] A1Q4 Inifuss tree creates the `skb` quest-item through the authoritative drop adapter.
-    - [ ] A1Q3 imbue item transformation, A1Q4 decipher/stone portal/Cain NPC, and A1Q5 quest script.
+    - [x] A1Q4 Akara message 112 atomically converts `skb` to `dkb` without changing its inventory slot.
+    - [x] A1Q4 uses one game-scoped, seed-stable permutation of native stones 17..21; wrong stones do not advance.
+    - [x] The fifth stone consumes `dkb` only after a permanent quest warp to Tristram was created.
+    - [x] Runtime Objects.txt-class synchronization lets multiplayer clients rebuild D2Game-created portal objects.
+    - [x] Cain's gibbet creates Tristram Cain before setting the player's primary-goal/reward-pending flags.
+    - [ ] Cain's delayed Tristram removal/town NPC visibility switch and party reward propagation.
+    - [ ] A1Q3 imbue item transformation and A1Q5 quest script.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services
 - [ ] Phase 5: A1Q6 and Act completion

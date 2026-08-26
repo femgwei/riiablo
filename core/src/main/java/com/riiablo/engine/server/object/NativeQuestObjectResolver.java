@@ -29,6 +29,8 @@ public final class NativeQuestObjectResolver {
 
   public static final int TOWER_TOME = 8;
   public static final int FIRST_CAIRN_STONE = 17;
+  // StoneTheta (22) uses the same native handler, although A1Q4's generated
+  // five-stone solution contains only class ids 17..21.
   public static final int LAST_CAIRN_STONE = 22;
   public static final int CAIN_GIBBET = 26;
   public static final int INIFUSS_TREE = 30;

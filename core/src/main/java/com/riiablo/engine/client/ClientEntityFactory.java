@@ -201,6 +201,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   @Override
   public int createWarp(int index, float x, float y) {
+    boolean questWarp = com.riiablo.engine.server.quest.QuestWarp.isQuestWarp(index);
     final int mainIndex   = DT1.Tile.Index.mainIndex(index);
     final int subIndex    = DT1.Tile.Index.subIndex(index);
     final int orientation = DT1.Tile.Index.orientation(index);
@@ -214,17 +215,17 @@ public class ClientEntityFactory extends ServerEntityFactory {
     LvlWarp.Entry entry = warp.warp;
 
     BBox box = new BBox();
-    box.xMin = entry.SelectX;
-    box.yMin = entry.SelectY;
-    box.width = entry.SelectDX;
-    box.height = entry.SelectDY;
+    box.xMin = questWarp ? -2 : entry.SelectX;
+    box.yMin = questWarp ? -2 : entry.SelectY;
+    box.width = questWarp ? 4 : entry.SelectDX;
+    box.height = questWarp ? 4 : entry.SelectDY;
     box.xMax = box.width + box.xMin;
     box.yMax = box.height + box.yMin;
 
     String name = Riiablo.string.lookup(warp.dstLevel.LevelWarp);
 
     IntIntMap substs = warp.substs;
-    if (entry.LitVersion) {
+    if (!questWarp && entry.LitVersion) {
       // FIXME: Below will cover overwhelming majority of cases -- need to solve act 5 ice cave case where 3 tiles are used
       //        I think this can be done by checking if there's a texture with the same id, else it's a floor warp
       if (subIndex < 2) {

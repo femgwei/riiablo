@@ -18,8 +18,9 @@ public final class ComponentP {
   public static final byte MonsterP = 11;
   public static final byte ItemP = 12;
   public static final byte StateP = 13;
+  public static final byte ObjectP = 14;
 
-  public static final String[] names = { "NONE", "ClassP", "CofComponentsP", "CofTransformsP", "CofAlphasP", "PositionP", "VelocityP", "AngleP", "PlayerP", "DS1ObjectWrapperP", "WarpP", "MonsterP", "ItemP", "StateP", };
+  public static final String[] names = { "NONE", "ClassP", "CofComponentsP", "CofTransformsP", "CofAlphasP", "PositionP", "VelocityP", "AngleP", "PlayerP", "DS1ObjectWrapperP", "WarpP", "MonsterP", "ItemP", "StateP", "ObjectP", };
 
   public static String name(int e) { return names[e]; }
 }

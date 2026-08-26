@@ -292,6 +292,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
           return factory.createObject(ds1ObjectWrapper.act(), ds1ObjectWrapper.type(), ds1ObjectWrapper.id(), position.x(), position.y());
         }
 
+        com.riiablo.net.packet.d2gs.ObjectP object = findTable(
+            sync, ComponentP.ObjectP, new com.riiablo.net.packet.d2gs.ObjectP());
+        PositionP position = findTable(sync, ComponentP.PositionP, new PositionP());
+        if (object != null && position != null) {
+          return factory.createStaticObjectByClassId(
+              object.objectId(), position.x(), position.y());
+        }
+
         return Engine.INVALID_ENTITY;
       }
       case MON: {
