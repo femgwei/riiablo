@@ -133,6 +133,14 @@ public class ServerSkillSystem extends PassiveSystem {
       spawnMultipleShotTeethShockWave(event, skill, start);
       return;
     }
+    if (event.srvdofunc == 24 || skill.srvdofunc == 24) {
+      spawnFireWall(event, skill, start);
+      return;
+    }
+    if (event.srvdofunc == 28 || skill.srvdofunc == 28) {
+      spawnMeteor(event, skill, start);
+      return;
+    }
 
     Vector2 target = new Vector2();
     if (event.targetId >= 0 && mPosition.has(event.targetId)) {
@@ -248,6 +256,59 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     log.debug("Server nova projectiles: entity={}, skill={}, missile={}, created={}",
         event.entityId, event.skillId, missileName, created);
+  }
+
+  /** D2MOO SKILLS_SrvDo024_FireWall: create only the maker at the target. */
+  private void spawnFireWall(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[MONSTER_VAMPIRE] phase=firewall_rejected source={} reason=missing_missile missile={}",
+          event.entityId, missileName);
+      return;
+    }
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    Vector2 direction = firewallDirection(caster, target, new Vector2());
+    int missileId = createMissile(missile, direction, target, event.entityId, null,
+        getSkillLevel(event.entityId, event.skillId));
+    log.info("[MONSTER_VAMPIRE] phase=firewall source={} target={} missile={} missileId={} "
+            + "position=({}, {}) direction=({}, {})",
+        event.entityId, event.targetId, missileName, missileId,
+        target.x, target.y, direction.x, direction.y);
+  }
+
+  /** D2MOO SKILLS_SrvDo028_Meteor: create the centre missile at the target. */
+  private void spawnMeteor(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[MONSTER_VAMPIRE] phase=meteor_rejected source={} reason=missing_missile missile={}",
+          event.entityId, missileName);
+      return;
+    }
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    Vector2 direction = new Vector2(target).sub(caster);
+    if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+    direction.nor();
+    int missileId = createMissile(missile, direction, target, event.entityId, null,
+        getSkillLevel(event.entityId, event.skillId));
+    log.info("[MONSTER_VAMPIRE] phase=meteor source={} target={} missile={} missileId={} position=({}, {})",
+        event.entityId, event.targetId, missileName, missileId, target.x, target.y);
+  }
+
+  private Vector2 resolveTargetPoint(SkillDoEvent event, Vector2 fallback, Vector2 out) {
+    if (event.targetId >= 0 && mPosition.has(event.targetId)) {
+      return out.set(mPosition.get(event.targetId).position);
+    }
+    if (event.targetVec != null) return out.set(event.targetVec);
+    return out.set(fallback).add(1f, 0f);
+  }
+
+  static Vector2 firewallDirection(Vector2 caster, Vector2 target, Vector2 out) {
+    out.set(target).sub(caster);
+    if (out.isZero(0.0001f)) out.set(1f, 0f);
+    // Native SrvDo024 sets the maker target perpendicular to caster -> target.
+    return out.rotate90(1).nor();
   }
 
   /**

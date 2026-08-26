@@ -69,4 +69,13 @@ public class ServerSkillSystemTest {
     assertEquals(0f, centre.y, EPSILON);
     assertEquals(left.y, -right.y, EPSILON);
   }
+
+  @Test
+  public void fireWallMakerRunsPerpendicularThroughTarget() {
+    Vector2 direction = ServerSkillSystem.firewallDirection(
+        new Vector2(2, 3), new Vector2(7, 3), new Vector2());
+    assertEquals(0f, direction.x, EPSILON);
+    assertEquals(1f, Math.abs(direction.y), EPSILON);
+    assertEquals(1f, direction.len(), EPSILON);
+  }
 }
