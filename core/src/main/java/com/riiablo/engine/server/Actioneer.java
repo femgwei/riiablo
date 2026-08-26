@@ -445,6 +445,12 @@ public class Actioneer extends PassiveSystem {
       case 45: // MaggotDown start: native code enters the burrowed collision state
         log.info("[MONSTER_MAGGOT] phase=down_start entity={} target={}", entityId, targetId);
         break;
+      case 48: // Swarm Move: prefer a short toward path, then fall back to A*
+        prepareSwarmMove(entityId, targetId, targetVec);
+        break;
+      case 49: // Nest: native code reserves the spawn point and collision mask
+        log.info("[MONSTER_NEST] phase=prepare entity={} target={}", entityId, targetId);
+        break;
       case 40: // native Leap validates and reserves its landing point on skill start
         log.info("[MONSTER_LEAP] phase=start_check entity={} target={} requested=({}, {})",
             entityId, targetId,
@@ -599,6 +605,14 @@ public class Actioneer extends PassiveSystem {
       }
       case 87: { // native MaggotLay: spawn the configured egg at a directional offset
         resolveMaggotLay(entityId, targetId);
+        break;
+      }
+      case 90: { // native SwarmMove: advance animation to the configured frame
+        resolveSwarmMove(entityId);
+        break;
+      }
+      case 91: { // native Nest: spawn the configured monster at the reserved point
+        resolveNest(entityId);
         break;
       }
       case 96: { // native ZakarumHeal/Bestow: percentage heal on an allied target
@@ -950,6 +964,73 @@ public class Actioneer extends PassiveSystem {
     }
     log.info("[MONSTER_MAGGOT] phase=lay_spawn source={} target={} spawn={} entity={} direction={} offset=({}, {}) position=({}, {})",
         entityId, targetId, spawnId, spawned, direction, offsetX, offsetY, spawnX, spawnY);
+  }
+
+  /** D2MOO SKILLS_SrvSt48_SwarmMove. */
+  private void prepareSwarmMove(int entityId, int targetId, Vector2 targetVec) {
+    if (targetId == Engine.INVALID_ENTITY || !mPosition.has(entityId)
+        || !mPosition.has(targetId)) {
+      log.info("[MONSTER_SWARM] phase=prepare_rejected source={} target={} reason=missing_target",
+          entityId, targetId);
+      return;
+    }
+    Vector2 target = targetVec != null ? targetVec : mPosition.get(targetId).position;
+    boolean found = pathfinder.findPath(entityId, target, false, targetId);
+    log.info("[MONSTER_SWARM] phase=prepare source={} target={} pathFound={} targetPos=({}, {})",
+        entityId, targetId, found, target.x, target.y);
+  }
+
+  /** D2MOO SKILLS_SrvDo090_SwarmMove. */
+  private void resolveSwarmMove(int entityId) {
+    if (!mAnimData.has(entityId) || !mCasting.has(entityId)) return;
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    if (skill == null) return;
+    int level = monsterSkillLevelFor(entityId, skill);
+    int frame = SkillFormula.evaluate(skill.calc1, skill, level);
+    if (frame <= 0) frame = SkillFormula.evaluate(skill.calc2, skill, level);
+    if (frame > 0) {
+      AnimData anim = mAnimData.get(entityId);
+      anim.frame = Math.min(anim.numFrames > 0 ? anim.numFrames - 1 : frame << 8, frame << 8);
+      log.info("[MONSTER_SWARM] phase=frame source={} skill={} level={} frame={}",
+          entityId, skill.skill, level, frame);
+    }
+  }
+
+  /** D2MOO SKILLS_SrvDo091_Nest_EvilHutSpawner. */
+  private void resolveNest(int entityId) {
+    if (!mMonster.has(entityId) || factory == null || !mPosition.has(entityId)) {
+      log.info("[MONSTER_NEST] phase=spawn_rejected source={} reason=missing_components", entityId);
+      return;
+    }
+    Monster source = mMonster.get(entityId);
+    String spawnId = source.monstats != null ? source.monstats.spawn : null;
+    if (spawnId == null || spawnId.isEmpty()) {
+      log.info("[MONSTER_NEST] phase=spawn_rejected source={} reason=missing_spawn_row", entityId);
+      return;
+    }
+    MonStats.Entry spawn = Riiablo.files.monstats.get(spawnId);
+    if (spawn == null) {
+      log.warn("[MONSTER_NEST] phase=spawn_rejected source={} reason=spawn_lookup_failed spawn={}",
+          entityId, spawnId);
+      return;
+    }
+    Vector2 position = mPosition.get(entityId).position;
+    int spawned;
+    try {
+      spawned = factory.createMonster(spawn, position.x, position.y);
+    } catch (RuntimeException ex) {
+      log.warn("[MONSTER_NEST] phase=spawn_rejected source={} reason=spawn_exception spawn={} error={}",
+          entityId, spawnId, ex.toString());
+      return;
+    }
+    if (spawned == Engine.INVALID_ENTITY) {
+      log.info("[MONSTER_NEST] phase=spawn_rejected source={} reason=spawn_failed spawn={}",
+          entityId, spawnId);
+      return;
+    }
+    log.info("[MONSTER_NEST] phase=spawn source={} spawn={} entity={} position=({}, {})",
+        entityId, spawnId, spawned, position.x, position.y);
   }
 
   private static final int[] MAGGOT_OFFSET_X = {
