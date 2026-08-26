@@ -113,7 +113,8 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Recursive TC expansion with native Picks/NoDrop and quality inheritance.
     - [x] First-open event idempotency and authoritative object-drop entities.
     - [x] Native multiplayer NoDrop scaling from total/effective player counts.
-    - [ ] Same-level party count wiring and full unique/set property generation.
+    - [x] Same-level ECS player count wired into native NoDrop context.
+    - [ ] Party-manager membership/living-state wiring and full unique/set property generation.
     - [x] Exploding barrel OperateFn=7 is separated from ordinary container drops.
     - [x] Trap trigger context event exposes player/object/operate/trap type.
     - [x] InitFn 2/3/57 trapped urn/chest InteractType and lock-bit initialization.

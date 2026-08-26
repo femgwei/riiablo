@@ -78,8 +78,7 @@ public class NativeObjectDropSystem extends PassiveSystem {
     int itemLevel = NativeObjectDropAdapter.areaLevel(level, difficulty);
     RandomXS128 random = new RandomXS128(objectSeed(event, position));
     if (adapter == null) adapter = new NativeObjectDropAdapter(Riiablo.files);
-    TreasureClassResolver.PlayerContext playerContext = new TreasureClassResolver.PlayerContext(
-        playerCount(), 1);
+    TreasureClassResolver.PlayerContext playerContext = playerContext(level.Id);
     List<NativeObjectDropAdapter.Drop> drops = adapter.rollChest(
         level, difficulty, random::nextInt, playerContext);
 
@@ -91,9 +90,10 @@ public class NativeObjectDropSystem extends PassiveSystem {
       if (entityId >= 0) created++;
     }
     log.info("[OBJECT_DROP] opened entity={}, object={}, level={}, difficulty={}, "
-            + "tier={}, players={}, effectivePlayers={}, rolled={}, created={}",
+            + "tier={}, players={}, sameLevelPlayers={}, effectivePlayers={}, rolled={}, created={}",
         event.entityId, event.objectClassId, level.Id, difficulty,
         adapter.chestTier(level, difficulty), playerContext.totalPlayers,
+        playerContext.partyMembersInLevel,
         playerContext.effectivePlayerCount(), drops.size(), created);
   }
 
@@ -136,8 +136,36 @@ public class NativeObjectDropSystem extends PassiveSystem {
         : Math.max(0, Math.min(player.data.diff, 2));
   }
 
-  private int playerCount() {
-    return players == null ? 1 : Math.max(1, Math.min(players.getEntities().size(), 8));
+  /**
+   * Builds the native NoDrop context for the object's level.
+   *
+   * <p>D2Game uses all connected players for the total count, but only living
+   * party members in the object's level for the local-party component. The
+   * party manager is not currently registered in the client world, so the
+   * authoritative ECS level membership is used as the conservative fallback;
+   * this fixes the previous hard-coded value of one.</p>
+   */
+  private TreasureClassResolver.PlayerContext playerContext(int levelId) {
+    int total = players == null ? 1 : players.getEntities().size();
+    int sameLevel = 0;
+    if (players != null) {
+      int[] ids = players.getEntities().getData();
+      for (int i = 0, s = players.getEntities().size(); i < s; i++) {
+        MapWrapper wrapper = mMapWrapper.get(ids[i]);
+        if (wrapper != null && wrapper.zone != null && wrapper.zone.level != null
+            && wrapper.zone.level.Id == levelId) {
+          sameLevel++;
+        }
+      }
+    }
+    return playerContextForCounts(total, sameLevel);
+  }
+
+  /** Testable normalization for native total/same-level player counts. */
+  static TreasureClassResolver.PlayerContext playerContextForCounts(
+      int totalPlayers, int sameLevelPlayers) {
+    return new TreasureClassResolver.PlayerContext(totalPlayers,
+        Math.max(1, sameLevelPlayers));
   }
 
   private long objectSeed(ObjectInteractionEvent event, Position position) {
