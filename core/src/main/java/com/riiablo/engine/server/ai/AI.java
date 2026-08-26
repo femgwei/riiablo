@@ -24,6 +24,8 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.CofManager;
+import com.riiablo.engine.server.event.SkillCastEvent;
+import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Interactable;
@@ -38,6 +40,7 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import net.mostlyoriginal.api.event.common.EventSystem;
 
 public abstract class AI implements Interactable.Interactor {
   private static final Logger log = LogManager.getLogger(AI.class);
@@ -81,6 +84,9 @@ public abstract class AI implements Interactable.Interactor {
 
   protected CofManager cofs;
   protected Pathfinder pathfinder;
+  /** Shared event bus used to expose monster casts to server and client systems. */
+  @Wire(failOnNull = false)
+  protected EventSystem events;
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -278,10 +284,36 @@ public abstract class AI implements Interactable.Interactor {
     }
     if (resolvedTarget == null) resolvedTarget = mPosition.get(entityId).position;
 
+    // Keep monster skills on the same public cast lifecycle as player skills.
+    // ServerSkillSystem ignores SkillCastEvent for monsters, while the client
+    // SkillCastHandler consumes SkillStartEvent for stsound/castoverlay.  The
+    // old path skipped both events, making native shaman presentation silent.
+    if (events != null) {
+      SkillCastEvent castEvent = SkillCastEvent.obtain(
+          entityId, skill.Id, targetId, resolvedTarget.cpy());
+      events.dispatch(castEvent);
+      if (!castEvent.accepted) {
+        log.info("[MONSTER_SKILL] phase=reject entity={} monster={} skillId={} skill={} "
+                + "resultCode={}",
+            entityId, monster.monstats.Id, skill.Id, skill.skill, castEvent.resultCode);
+        return false;
+      }
+    } else {
+      // A detached AI can still run in headless/unit contexts. Runtime worlds
+      // always inject EventSystem; make the missing bus visible instead of
+      // silently losing the presentation event.
+      log.warn("[MONSTER_SKILL] phase=event_bus_missing entity={} skillId={} skill={}",
+          entityId, skill.Id, skill.skill);
+    }
+
     stopMovement();
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) lookAt(targetId);
     mSequence.create(entityId).sequence((byte) mode, Engine.Monster.MODE_NU);
     mCasting.create(entityId).set(skill.Id, targetId, resolvedTarget);
+    if (events != null) {
+      events.dispatch(SkillStartEvent.obtain(
+          entityId, skill.Id, targetId, resolvedTarget.cpy(), skill.srvstfunc, skill.cltstfunc));
+    }
     log.info("[MONSTER_SKILL] phase=cast entity={} monster={} slot={} skillId={} skill={} "
             + "level={} mode={} configuredMode={} sequenceOverride={} target={}",
         entityId, monster.monstats.Id, skillIndex + 1, skill.Id, skill.skill,

@@ -95,10 +95,35 @@ public class SkillCastHandler extends PassiveSystem {
     log.traceEntry("cltstfunc(entityId: {}, cltstfunc: {}, targetId: {}, targetVec: {})",
         event.entityId, event.cltstfunc, event.targetId, event.targetVec);
     final Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
-    Riiablo.audio.play(skill.stsound, true);
+    if (skill == null) {
+      log.warn("[SKILL_PRESENTATION] phase=start_missing_skill entity={} skillId={}",
+          event.entityId, event.skillId);
+      return;
+    }
 
-    if (!skill.castoverlay.isEmpty()) {
+    String presentationMarker = mMonster.has(event.entityId)
+        ? "[MONSTER_SKILL_PRESENTATION]" : "[SKILL_PRESENTATION]";
+    log.info("{} phase=start entity={} skillId={} skill={} "
+            + "stsound={} castoverlay={} srvstfunc={} cltstfunc={}",
+        presentationMarker, event.entityId, event.skillId, skill.skill,
+        skill.stsound, skill.castoverlay, event.srvstfunc, event.cltstfunc);
+    if (skill.stsound == null || skill.stsound.isEmpty()) {
+      log.debug("{} phase=sound_skipped entity={} skill={} reason=empty_stsound",
+          presentationMarker,
+          event.entityId, skill.skill);
+    } else {
+      Riiablo.audio.play(skill.stsound, true);
+    }
+
+    if (skill.castoverlay != null && !skill.castoverlay.isEmpty()) {
       overlays.set(event.entityId, skill.castoverlay);
+      log.info("{} phase=overlay_requested entity={} skill={} overlay={}",
+          presentationMarker,
+          event.entityId, skill.skill, skill.castoverlay);
+    } else {
+      log.debug("{} phase=overlay_skipped entity={} skill={} reason=empty_castoverlay",
+          presentationMarker,
+          event.entityId, skill.skill);
     }
 
     switch (event.cltstfunc) {
