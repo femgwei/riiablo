@@ -131,6 +131,9 @@ public class SandMaggot extends AI {
         && stateMachine.getCurrentState() != State.BURROW
         && stateMachine.getCurrentState() != State.UNBURROW
         && stateMachine.getCurrentState() != State.LAY_EGG
+        // Once the native AI has reached the ready-to-lay phase, let the
+        // configured MaggotLay sequence win over the generic proximity attack.
+        && aiParam0 != 2
         && targetDistance < 15f) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
@@ -162,16 +165,18 @@ public class SandMaggot extends AI {
 
       if (aiParam0 == 3) {
         // D2MOD: Check if can unburrow and use skill
-        // TODO: Check game frame vs aiParam1
         if (monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()) {
-          // D2MOD: Use skill (nSkill[0]) - unburrow and attack
-          // TODO: Implement skill casting
-          stateMachine.changeState(State.UNBURROW);
-          aiParam0 = 1;
-          int minUpDownTime = params.length > 4 ? params[4] : 30;
-          aiParam1 = minUpDownTime; // Set frame counter
-          time = 25f * com.riiablo.codec.Animation.FRAME_DURATION;
-          return;
+          // D2MOD: Use skill (nSkill[0]) - unburrow and attack.
+          Vector2 targetPos = targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
+              ? mPosition.get(targetId).position : null;
+          if (useMonsterSkill(0, targetId, targetPos, Engine.Monster.MODE_S2)) {
+            stateMachine.changeState(State.UNBURROW);
+            aiParam0 = 1;
+            int minUpDownTime = params.length > 4 ? params[4] : 30;
+            aiParam1 = minUpDownTime;
+            time = 25f * com.riiablo.codec.Animation.FRAME_DURATION;
+            return;
+          }
         }
 
         stateMachine.changeState(State.BURROW);
@@ -184,14 +189,18 @@ public class SandMaggot extends AI {
         // D2MOD: Check if should burrow (use skill[1])
         // TODO: Check game frame vs aiParam1
         if (monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()) {
-          // D2MOD: Use burrow skill (nSkill[1])
-          // TODO: Implement skill casting
-          stateMachine.changeState(State.BURROW);
-          aiParam0 = 3;
-          int minUpDownTime = params.length > 4 ? params[4] : 30;
-          aiParam1 = minUpDownTime; // Set frame counter
-          time = 30f * com.riiablo.codec.Animation.FRAME_DURATION;
-          return;
+          // D2MOD: Use burrow skill (nSkill[1]). The skill's keyframe applies
+          // the native self-heal and the start function marks the transition.
+          Vector2 targetPos = targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
+              ? mPosition.get(targetId).position : null;
+          if (useMonsterSkill(1, targetId, targetPos, Engine.Monster.MODE_S1)) {
+            stateMachine.changeState(State.BURROW);
+            aiParam0 = 3;
+            int minUpDownTime = params.length > 4 ? params[4] : 30;
+            aiParam1 = minUpDownTime;
+            time = 30f * com.riiablo.codec.Animation.FRAME_DURATION;
+            return;
+          }
         }
       }
     }
@@ -229,14 +238,15 @@ public class SandMaggot extends AI {
     // D2MOD: If hurt (< 25%) and close (< 7), try to burrow
     if (lifePercent < 25 && targetDistance < 7 && monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()
         && MathUtils.randomBoolean(0.2f)) {
-      // D2MOD: Use burrow skill (nSkill[1])
-      // TODO: Implement skill casting
-      stateMachine.changeState(State.BURROW);
-      aiParam0 = 3;
-      int minUpDownTime = params.length > 4 ? params[4] : 30;
-      aiParam1 = minUpDownTime;
-      time = 30f * com.riiablo.codec.Animation.FRAME_DURATION;
-      return;
+      // D2MOD: Use burrow skill (nSkill[1]).
+      if (useMonsterSkill(1, targetId, targetPos, Engine.Monster.MODE_S1)) {
+        stateMachine.changeState(State.BURROW);
+        aiParam0 = 3;
+        int minUpDownTime = params.length > 4 ? params[4] : 30;
+        aiParam1 = minUpDownTime;
+        time = 30f * com.riiablo.codec.Animation.FRAME_DURATION;
+        return;
+      }
     }
 
     // D2MOD: If in combat, melee attack
@@ -283,13 +293,15 @@ public class SandMaggot extends AI {
 
     // D2MOD: Prepare to lay egg
     if (aiParam0 == 2 && monster.monstats.Skill3 != null && !monster.monstats.Skill3.isEmpty()) {
-      // D2MOD: Use lay egg skill (nSkill[2])
-      // TODO: Implement skill casting
-      aiParam0 = 1;
-      aiParam2++;
-      stateMachine.changeState(State.LAY_EGG);
-      time = 20f * com.riiablo.codec.Animation.FRAME_DURATION;
-      return;
+      // D2MOD: Use lay egg skill (nSkill[2]); increment only after the cast
+      // was accepted so a missing Skills row cannot consume an egg slot.
+      if (useMonsterSkill(2, targetId, targetPos, Engine.Monster.MODE_S3)) {
+        aiParam0 = 1;
+        aiParam2++;
+        stateMachine.changeState(State.LAY_EGG);
+        time = 20f * com.riiablo.codec.Animation.FRAME_DURATION;
+        return;
+      }
     }
 
     // D2MOD: Start preparing to lay egg

@@ -15,6 +15,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
@@ -438,6 +439,12 @@ public class Actioneer extends PassiveSystem {
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
         break;
+      case 44: // MaggotUp start: native code prepares the unburrow transition
+        log.info("[MONSTER_MAGGOT] phase=up_start entity={} target={}", entityId, targetId);
+        break;
+      case 45: // MaggotDown start: native code enters the burrowed collision state
+        log.info("[MONSTER_MAGGOT] phase=down_start entity={} target={}", entityId, targetId);
+        break;
       case 40: // native Leap validates and reserves its landing point on skill start
         log.info("[MONSTER_LEAP] phase=start_check entity={} target={} requested=({}, {})",
             entityId, targetId,
@@ -584,6 +591,14 @@ public class Actioneer extends PassiveSystem {
       }
       case 77: { // native Leap: mirrored landing point and collision-free airborne travel
         startLeap(entityId, targetId, targetVec);
+        break;
+      }
+      case 86: { // native MaggotDown: heal current life by calc1 percent
+        resolveMaggotDown(entityId);
+        break;
+      }
+      case 87: { // native MaggotLay: spawn the configured egg at a directional offset
+        resolveMaggotLay(entityId, targetId);
         break;
       }
       case 96: { // native ZakarumHeal/Bestow: percentage heal on an allied target
@@ -863,6 +878,106 @@ public class Actioneer extends PassiveSystem {
         entityId, targetId, damage, before, hitpoints.asFixed(), combat.hitChance,
         stunFrames, minDamage, maxDamage, attackRating);
     if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+  }
+
+  /** D2MOO SKILLS_SrvDo086_MaggotDown. */
+  private void resolveMaggotDown(int entityId) {
+    if (!mMonster.has(entityId) || !mAttributesWrapper.has(entityId)) {
+      log.info("[MONSTER_MAGGOT] phase=down_heal source={} result=skipped reason=missing_components",
+          entityId);
+      return;
+    }
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    StatRef maxHp = attrs != null ? attrs.get(Stat.maxhp, StatRef.obtain()) : null;
+    if (hp == null || maxHp == null || maxHp.asFixed() <= 0f || hp.asFixed() <= 0f) {
+      log.info("[MONSTER_MAGGOT] phase=down_heal source={} result=skipped reason=invalid_life hp={} maxHp={}",
+          entityId, hp != null ? hp.asFixed() : -1f, maxHp != null ? maxHp.asFixed() : -1f);
+      return;
+    }
+    Skills.Entry skill = mCasting.has(entityId)
+        ? Riiablo.files.skills.get(mCasting.get(entityId).skillId) : null;
+    int level = monsterSkillLevelFor(entityId, skill);
+    int percent = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, level);
+    percent = Math.max(0, percent);
+    float before = hp.asFixed();
+    float after = calculateMaggotHeal(before, maxHp.asFixed(), percent);
+    hp.set(after);
+    log.info("[MONSTER_MAGGOT] phase=down_heal source={} result=healed level={} percent={} hp={} -> {} maxHp={}",
+        entityId, level, percent, before, after, maxHp.asFixed());
+  }
+
+  /** D2MOO SKILLS_SrvDo087_MaggotLay. */
+  private void resolveMaggotLay(int entityId, int targetId) {
+    if (!mMonster.has(entityId) || factory == null || !mPosition.has(entityId)
+        || targetId == Engine.INVALID_ENTITY || !mPosition.has(targetId)) {
+      log.info("[MONSTER_MAGGOT] phase=lay_rejected source={} target={} reason=missing_components",
+          entityId, targetId);
+      return;
+    }
+    Monster source = mMonster.get(entityId);
+    String spawnId = source.monstats != null ? source.monstats.spawn : null;
+    if (spawnId == null || spawnId.isEmpty()) {
+      log.info("[MONSTER_MAGGOT] phase=lay_rejected source={} target={} reason=missing_spawn_row",
+          entityId, targetId);
+      return;
+    }
+    MonStats.Entry egg = Riiablo.files.monstats.get(spawnId);
+    if (egg == null) {
+      log.warn("[MONSTER_MAGGOT] phase=lay_rejected source={} target={} reason=spawn_lookup_failed spawn={}",
+          entityId, targetId, spawnId);
+      return;
+    }
+    Vector2 origin = mPosition.get(entityId).position;
+    Vector2 target = mPosition.get(targetId).position;
+    int direction = maggotDirectionIndex(target.x - origin.x, target.y - origin.y);
+    int offsetX = MAGGOT_OFFSET_X[direction];
+    int offsetY = MAGGOT_OFFSET_Y[direction];
+    float spawnX = origin.x + offsetX;
+    float spawnY = origin.y + offsetY;
+    int spawned;
+    try {
+      spawned = factory.createMonster(egg, spawnX, spawnY);
+    } catch (RuntimeException ex) {
+      log.warn("[MONSTER_MAGGOT] phase=lay_rejected source={} target={} reason=spawn_exception spawn={} error={}",
+          entityId, targetId, spawnId, ex.toString());
+      return;
+    }
+    if (spawned == Engine.INVALID_ENTITY) {
+      log.info("[MONSTER_MAGGOT] phase=lay_rejected source={} target={} reason=spawn_failed spawn={} position=({}, {})",
+          entityId, targetId, spawnId, spawnX, spawnY);
+      return;
+    }
+    log.info("[MONSTER_MAGGOT] phase=lay_spawn source={} target={} spawn={} entity={} direction={} offset=({}, {}) position=({}, {})",
+        entityId, targetId, spawnId, spawned, direction, offsetX, offsetY, spawnX, spawnY);
+  }
+
+  private static final int[] MAGGOT_OFFSET_X = {
+      0, -1, -1, -1, 0, 1, 1, 1,
+      0, -1, -2, -2, -2, -2, -2, -1,
+      0, 1, 2, 2, 2, 2, 2, 1,
+      0, -3, -3, -3, 0, 3, 3, 3};
+  private static final int[] MAGGOT_OFFSET_Y = {
+      -1, -1, 0, 1, 1, 1, 0, -1,
+      -2, -2, -2, -1, 0, 1, 2, 2,
+      2, 2, 2, 1, 0, -1, -2, -2,
+      -3, -3, 0, 3, 3, 3, 0, -3};
+
+  static float calculateMaggotHeal(float currentHp, float maxHp, int percent) {
+    if (currentHp <= 0f || maxHp <= 0f) return Math.max(0f, currentHp);
+    float healed = currentHp + currentHp * Math.max(0, percent) / 100f;
+    return Math.min(maxHp, healed);
+  }
+
+  /** Maps world direction to the D2Common_11055 lookup index used by MaggotLay. */
+  static int maggotDirectionIndex(float dx, float dy) {
+    if (Math.abs(dx) < 0.0001f && Math.abs(dy) < 0.0001f) return 0;
+    // D2's direction 0 points north and direction numbers advance clockwise;
+    // world Y therefore uses the opposite sign from the usual atan2 X axis.
+    double angle = Math.atan2(-dx, -dy);
+    int direction = ((int) Math.round(angle / (Math.PI / 4.0))) & 7;
+    // D2MOO byte_6FD296C8: direction -> D2Common_11055 argument.
+    return new int[] {10, 8, 22, 20, 18, 16, 14, 12}[direction];
   }
 
   /** Returns {minPercent, maxPercent, fallbackToZakarumHeal(0/1)}. */
