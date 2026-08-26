@@ -126,6 +126,7 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Shrine health/mana effects (Code 1-5) and 1200-frame/minute reset.
     - [x] Well health/mana/stamina charges, visual modes and regeneration.
     - [x] Structured event boundary for combat/item/portal shrine effects.
+    - [x] Synchronous well cleanse/pet-heal request and charge acknowledgement boundary.
     - [ ] Shrine buffs, portal/gem/monster effects and well status/pet cleansing.
   - [ ] Quest-object handlers and room unload/reload integration tests.
     - [x] Act 1 quest-object classifier for tome, cairns, cage, tree, Malus and Countess emitters.

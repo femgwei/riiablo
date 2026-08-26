@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.event.ShrineInteractionEvent;
+import com.riiablo.engine.server.event.WellInteractionEvent;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -125,13 +126,22 @@ public class NativeShrineSystem extends IteratingSystem {
     if (state.wellCharges <= 0) return;
 
     Attributes attrs = attributes(interaction.playerId);
-    if (!applyWellEffect(attrs, base)) return;
+    int restorationMask = applyWellEffects(attrs, base);
+    WellInteractionEvent wellEvent = WellInteractionEvent.obtain(
+        interaction.playerId, interaction.entityId, interaction.objectClassId,
+        parm(base, 1), restorationMask);
+    // EventSystem dispatch is synchronous. State/pet consumers acknowledge a
+    // real cleanse or heal before the charge decision below.
+    event.dispatch(wellEvent);
+    if (!wellEvent.applied()) return;
 
     state.persistWellCharges(state.wellCharges - 1);
     state.persistWellRegenFrames(wellRegenDelay(base));
     updateWellMode(interaction.entityId, state, base);
-    log.info("[WELL] used: entity={}, player={}, charges={}/{}, regenFrames={}",
-        interaction.entityId, interaction.playerId, state.wellCharges,
+    log.info("[WELL] used: entity={}, player={}, localMask={}, externalEffect={}, "
+            + "charges={}/{}, regenFrames={}",
+        interaction.entityId, interaction.playerId, restorationMask,
+        wellEvent.appliedByConsumer, state.wellCharges,
         maxCharges, state.wellRegenFrames);
   }
 
@@ -234,20 +244,28 @@ public class NativeShrineSystem extends IteratingSystem {
   }
 
   static boolean applyWellEffect(Attributes attrs, Objects.Entry base) {
-    if (attrs == null || base == null) return false;
+    return applyWellEffects(attrs, base) != 0;
+  }
+
+  static int applyWellEffects(Attributes attrs, Objects.Entry base) {
+    if (attrs == null || base == null) return 0;
     float fraction = Math.max(0, parm(base, 1)) / 256f;
     int mask = parm(base, 3);
-    boolean used = false;
+    int restored = 0;
     if ((mask & 2) != 0) {
-      used |= restoreFraction(attrs, Stat.hitpoints, Stat.maxhp, fraction);
+      if (restoreFraction(attrs, Stat.hitpoints, Stat.maxhp, fraction)) {
+        restored |= WellInteractionEvent.RESTORED_LIFE;
+      }
     }
     if ((mask & 1) != 0) {
-      used |= restoreFraction(attrs, Stat.mana, Stat.maxmana, fraction);
+      if (restoreFraction(attrs, Stat.mana, Stat.maxmana, fraction)) {
+        restored |= WellInteractionEvent.RESTORED_MANA;
+      }
     }
-    used |= restoreFraction(attrs, Stat.stamina, Stat.maxstamina, fraction);
-    // Native wells also cleanse poison/freeze/curse states and heal pets.
-    // Those effects remain behind ShrineInteractionEvent/combat ownership.
-    return used;
+    if (restoreFraction(attrs, Stat.stamina, Stat.maxstamina, fraction)) {
+      restored |= WellInteractionEvent.RESTORED_STAMINA;
+    }
+    return restored;
   }
 
   private static boolean restoreFraction(Attributes attrs, short currentStat,

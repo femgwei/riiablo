@@ -21,6 +21,7 @@ import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.event.WellInteractionEvent;
 import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
 
@@ -95,6 +96,11 @@ class NativeShrineSystemTest extends RiiabloTest {
     Attributes attrs = attributes(50f, 100f, 10f, 80f, 20f, 100f);
 
     assertTrue(NativeShrineSystem.applyWellEffect(attrs, well));
+    assertEquals(WellInteractionEvent.RESTORED_LIFE
+            | WellInteractionEvent.RESTORED_MANA
+            | WellInteractionEvent.RESTORED_STAMINA,
+        NativeShrineSystem.applyWellEffects(
+            attributes(50f, 100f, 10f, 80f, 20f, 100f), well));
     assertStats(attrs, 75f, 30f, 45f);
     assertEquals(6, NativeShrineSystem.wellMaxCharges(well));
     assertEquals(101, NativeShrineSystem.wellRegenDelay(well));
