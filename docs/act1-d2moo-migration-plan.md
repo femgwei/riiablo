@@ -135,7 +135,9 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Tower Tome is routed to A1Q5 instead of the ordinary chest drop path.
     - [x] A1Q3 Malus level gate, `mdh` quest-item drop and pickup event bridge.
     - [x] A1Q3 Charsi Malus turn-in and asynchronous imbue reward boundary.
-    - [ ] A1Q3 imbue item transformation and A1Q4/A1Q5 scripts consume object requests and create their quest items/portal.
+    - [x] A1Q4 native record/stone-order foundation and Inifuss/Cairn/Gibbet event boundary.
+    - [x] A1Q4 Inifuss tree creates the `skb` quest-item through the authoritative drop adapter.
+    - [ ] A1Q3 imbue item transformation, A1Q4 decipher/stone portal/Cain NPC, and A1Q5 quest script.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services
 - [ ] Phase 5: A1Q6 and Act completion

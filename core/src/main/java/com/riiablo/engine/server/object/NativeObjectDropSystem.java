@@ -17,8 +17,10 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.event.NativeCainQuestEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
+import com.riiablo.engine.server.quest.Act1CainQuest;
 import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
@@ -58,6 +60,27 @@ public class NativeObjectDropSystem extends PassiveSystem {
   }
 
   @Subscribe
+  public void onCainQuestObject(NativeCainQuestEvent event) {
+    if (event == null || event.action != NativeCainQuestEvent.INIFUSS_TREE
+        || !mPosition.has(event.objectEntityId)) return;
+    Position position = mPosition.get(event.objectEntityId);
+    int difficulty = difficulty(event.playerId);
+    int itemLevel = 1;
+    MapWrapper wrapper = mMapWrapper.get(event.objectEntityId);
+    if (wrapper != null && wrapper.zone != null && wrapper.zone.level != null) {
+      itemLevel = NativeObjectDropAdapter.areaLevel(wrapper.zone.level, difficulty);
+    }
+    Vector2 target = findDropPosition(wrapper == null ? null : wrapper.map,
+        position.position, 0);
+    if (createQuestItem(Act1CainQuest.BARK_SCROLL_CODE, difficulty, itemLevel,
+        target.x, target.y)) {
+      event.accept();
+      log.info("[A1Q4] Scroll of Inifuss dropped: object={}, player={}",
+          event.objectEntityId, event.playerId);
+    }
+  }
+
+  @Subscribe
   public void onObjectInteraction(ObjectInteractionEvent event) {
     if (event == null || !event.firstActivation()) return;
     boolean malus = event.objectClassId == NativeQuestObjectResolver.HORADRIC_MALUS
@@ -82,10 +105,11 @@ public class NativeObjectDropSystem extends PassiveSystem {
     int itemLevel = NativeObjectDropAdapter.areaLevel(level, difficulty);
     if (malus) {
       Vector2 target = findDropPosition(wrapper.map, position.position, 0);
-      createQuestItem(Act1MalusQuest.MALUS_CODE, difficulty, itemLevel,
-          target.x, target.y);
-      log.info("[A1Q3] Horadric Malus dropped: object={}, player={}, level={}",
-          event.entityId, event.playerId, level.Id);
+      if (createQuestItem(Act1MalusQuest.MALUS_CODE, difficulty, itemLevel,
+          target.x, target.y)) {
+        log.info("[A1Q3] Horadric Malus dropped: object={}, player={}, level={}",
+            event.entityId, event.playerId, level.Id);
+      }
       return;
     }
     RandomXS128 random = new RandomXS128(objectSeed(event, position));
@@ -109,7 +133,7 @@ public class NativeObjectDropSystem extends PassiveSystem {
         playerContext.effectivePlayerCount(), drops.size(), created);
   }
 
-  private void createQuestItem(String code, int difficulty, int itemLevel,
+  private boolean createQuestItem(String code, int difficulty, int itemLevel,
       float x, float y) {
     try {
       Item item = itemGenerator.generate(code);
@@ -121,8 +145,10 @@ public class NativeObjectDropSystem extends PassiveSystem {
       item.attrs.reset();
       int entityId = factory.createItem(item, x, y);
       item.id = entityId;
+      return entityId >= 0;
     } catch (Throwable t) {
-      log.error("[A1Q3] Horadric Malus item creation failed: code={}", code, t);
+      log.error("[QUEST_ITEM] creation failed: code={}", code, t);
+      return false;
     }
   }
 

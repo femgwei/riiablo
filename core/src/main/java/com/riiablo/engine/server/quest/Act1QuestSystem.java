@@ -18,6 +18,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
+import com.riiablo.engine.server.event.NativeCainQuestEvent;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
@@ -146,10 +147,19 @@ public class Act1QuestSystem extends PassiveSystem {
   @Subscribe
   public void onQuestObjectInteraction(QuestObjectInteractionEvent event) {
     if (event == null
-        || event.type != NativeQuestObjectResolver.Type.HORADRIC_MALUS
+        || (event.type != NativeQuestObjectResolver.Type.HORADRIC_MALUS
+            && event.type != NativeQuestObjectResolver.Type.CAIRN_STONE
+            && event.type != NativeQuestObjectResolver.Type.INIFUSS_TREE
+            && event.type != NativeQuestObjectResolver.Type.CAIN_GIBBET)
         || !mPlayer.has(event.playerId)) return;
     Player player = mPlayer.get(event.playerId);
     if (player.data == null) return;
+    if (event.type == NativeQuestObjectResolver.Type.CAIRN_STONE
+        || event.type == NativeQuestObjectResolver.Type.INIFUSS_TREE
+        || event.type == NativeQuestObjectResolver.Type.CAIN_GIBBET) {
+      handleCainObject(event, player);
+      return;
+    }
     short record = getMalusRecord(player.data);
     if (!Act1MalusQuest.canOpenMalus(record, level(event.playerId, player))) return;
     setMalusRecord(player.data, Act1MalusQuest.leaveTown(record));
@@ -157,6 +167,38 @@ public class Act1QuestSystem extends PassiveSystem {
     event.accept();
     log.info("[A1Q3] Malus stand accepted: player={} record=0x{}",
         event.playerId, Integer.toHexString(Short.toUnsignedInt(getMalusRecord(player.data))));
+  }
+
+  private void handleCainObject(QuestObjectInteractionEvent interaction, Player player) {
+    short record = player.data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD];
+    short next;
+    NativeCainQuestEvent request;
+    if (interaction.type == NativeQuestObjectResolver.Type.CAIRN_STONE) {
+      if (!player.data.getItems().containsItemCode(Act1CainQuest.DECIPHERED_SCROLL_CODE)) return;
+      next = Act1CainQuest.enterDarkWood(record);
+      request = NativeCainQuestEvent.obtain(interaction.playerId, interaction.entityId,
+          interaction.objectClassId, NativeCainQuestEvent.CAIRN_STONE);
+      request.stoneObjectId = interaction.objectClassId;
+    } else if (interaction.type == NativeQuestObjectResolver.Type.INIFUSS_TREE) {
+      if (Act1CainQuest.isFinished(record)
+          || player.data.getItems().containsItemCode(Act1CainQuest.BARK_SCROLL_CODE)
+          || player.data.getItems().containsItemCode(Act1CainQuest.DECIPHERED_SCROLL_CODE)) return;
+      next = Act1CainQuest.acquireScroll(record);
+      request = NativeCainQuestEvent.obtain(interaction.playerId, interaction.entityId,
+          interaction.objectClassId, NativeCainQuestEvent.INIFUSS_TREE);
+    } else {
+      next = Act1CainQuest.releaseCain(record);
+      request = NativeCainQuestEvent.obtain(interaction.playerId, interaction.entityId,
+          interaction.objectClassId, NativeCainQuestEvent.CAIN_GIBBET);
+    }
+    event.dispatch(request);
+    if (!request.accepted) return;
+    player.data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = next;
+    persist(player.data);
+    interaction.accepted = request.accepted;
+    log.info("[A1Q4] object action: player={}, object={}, action={}, accepted={}, record=0x{}",
+        interaction.playerId, interaction.objectClassId, request.action, request.accepted,
+        Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   @Subscribe
