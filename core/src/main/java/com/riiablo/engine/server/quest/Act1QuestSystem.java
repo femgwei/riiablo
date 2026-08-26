@@ -5,6 +5,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
+import com.badlogic.gdx.utils.IntSet;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
@@ -25,6 +26,8 @@ import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
+import com.riiablo.engine.server.party.Party;
+import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -50,6 +53,8 @@ public class Act1QuestSystem extends PassiveSystem {
   protected EventSystem event;
   @Wire(failOnNull = false)
   protected ItemGenerator itemGenerator;
+  @Wire(failOnNull = false)
+  protected PartyManager partyManager;
 
   private EntitySubscription monstersByZone;
   private EntitySubscription playersByZone;
@@ -71,6 +76,11 @@ public class Act1QuestSystem extends PassiveSystem {
 
     int levelId = event.zone.level.Id;
     if (levelId == D2LevelIds.LEVEL_ROGUEENCAMPMENT) return;
+    updateBloodRavenRecord(player.data, Act1BloodRavenQuest::leaveTown, "left-town");
+    if (levelId == D2LevelIds.LEVEL_BURIALGROUNDS) {
+      updateBloodRavenRecord(player.data, Act1BloodRavenQuest::enterBurialGrounds,
+          "entered-burial-grounds");
+    }
     updateRecord(player.data, Act1DenOfEvilQuest::leaveTown, "left-town");
     if (levelId == D2LevelIds.LEVEL_DENOFEVIL) {
       updateRecord(player.data, Act1DenOfEvilQuest::enterDen, "entered-den");
@@ -79,6 +89,10 @@ public class Act1QuestSystem extends PassiveSystem {
 
   @Subscribe
   public void onMonsterKilled(DeathEvent event) {
+    if (isBloodRaven(event == null ? -1 : event.victim)) {
+      propagateBloodRavenDeath(event.victim);
+      return;
+    }
     if (event == null || !isMonsterInLevel(event.victim, D2LevelIds.LEVEL_DENOFEVIL)) return;
     // DeathEvent is dispatched before the death animation installs Corpse.
     // Exclude this victim explicitly, while deriving every other monster's
@@ -104,6 +118,10 @@ public class Act1QuestSystem extends PassiveSystem {
     Player player = mPlayer.get(event.entityId);
     if (player.data == null) return;
 
+    if (npc.monstats.hcIdx == MonsterType.KASHYA) {
+      onKashyaMessage(event, player);
+      return;
+    }
     if (npc.monstats.hcIdx == MonsterType.CHARSI) {
       onCharsiMessage(event, player);
       return;
@@ -137,6 +155,20 @@ public class Act1QuestSystem extends PassiveSystem {
         log.info("[A1Q1] Akara reward granted: player={}", event.entityId);
       }
     }
+  }
+
+  private void onKashyaMessage(NpcQuestMessageEvent message, Player player) {
+    if (message.messageIndex == Act1BloodRavenQuest.MESSAGE_INIT) {
+      updateBloodRavenRecord(player.data, Act1BloodRavenQuest::start,
+          "kashya-init-message");
+      return;
+    }
+    if (message.messageIndex != Act1BloodRavenQuest.MESSAGE_REWARD) return;
+    short record = getBloodRavenRecord(player.data);
+    if (!Act1BloodRavenQuest.canClaimReward(record)) return;
+    event.dispatch(NativeQuestRewardEvent.available(message.entityId,
+        QuestId.A1Q2_BLOOD_RAVEN, NativeQuestRewardEvent.BLOOD_RAVEN_FREE_ROGUE));
+    log.info("[A1Q2] Kashya free Rogue reward requested: player={}", message.entityId);
   }
 
   /** Cain's town greeting updates native dialogue state but does not award the ring. */
@@ -214,12 +246,17 @@ public class Act1QuestSystem extends PassiveSystem {
   @Subscribe
   public void onNativeQuestReward(NativeQuestRewardEvent reward) {
     if (reward == null || reward.phase != NativeQuestRewardEvent.GRANTED
-        || reward.questId != QuestId.A1Q3_MALUS
-        || reward.rewardKind != NativeQuestRewardEvent.CHARSI_IMBUE
         || !mPlayer.has(reward.playerId)) return;
     Player player = mPlayer.get(reward.playerId);
     if (player.data == null) return;
-    updateMalusRecord(player.data, Act1MalusQuest::claimReward, "charsi-imbue-granted");
+    if (reward.questId == QuestId.A1Q2_BLOOD_RAVEN
+        && reward.rewardKind == NativeQuestRewardEvent.BLOOD_RAVEN_FREE_ROGUE) {
+      updateBloodRavenRecord(player.data, Act1BloodRavenQuest::claimReward,
+          "free-rogue-granted");
+    } else if (reward.questId == QuestId.A1Q3_MALUS
+        && reward.rewardKind == NativeQuestRewardEvent.CHARSI_IMBUE) {
+      updateMalusRecord(player.data, Act1MalusQuest::claimReward, "charsi-imbue-granted");
+    }
   }
 
   @Subscribe
@@ -414,6 +451,83 @@ public class Act1QuestSystem extends PassiveSystem {
         && wrapper.zone.level.Id == levelId;
   }
 
+  private boolean isBloodRaven(int entityId) {
+    if (entityId < 0 || !mMonster.has(entityId)
+        || !isMonsterInLevel(entityId, D2LevelIds.LEVEL_BURIALGROUNDS)) return false;
+    Monster monster = mMonster.get(entityId);
+    return monster.monstats != null && monster.monstats.hcIdx == MonsterType.BLOODRAVEN;
+  }
+
+  /**
+   * D2MOO grants nearby players first, then their party members in Act 1.
+   * MapWrapper currently exposes level zones rather than native DRLG rooms,
+   * so all players in the Burial Grounds are treated as same/adjacent-room.
+   */
+  private void propagateBloodRavenDeath(int victimId) {
+    if (playersByZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    IntSet eligibleParties = new IntSet();
+
+    for (int i = 0, size = players.size(); i < size; i++) {
+      int playerId = ids[i];
+      if (!isPlayerInLevel(playerId, D2LevelIds.LEVEL_BURIALGROUNDS)) continue;
+      completeBloodRavenFor(playerId, "near-blood-raven");
+      if (partyManager != null) {
+        short partyId = partyManager.getPartyId(playerId);
+        if (partyId != Party.INVALID_ID) eligibleParties.add(partyId);
+      }
+    }
+
+    if (partyManager != null && eligibleParties.size > 0) {
+      for (int i = 0, size = players.size(); i < size; i++) {
+        int playerId = ids[i];
+        short partyId = partyManager.getPartyId(playerId);
+        if (partyId == Party.INVALID_ID || !eligibleParties.contains(partyId)
+            || !isPlayerInAct1OutsideTown(playerId)) continue;
+        markBloodRavenPartyMember(playerId);
+      }
+    }
+
+    for (int i = 0, size = players.size(); i < size; i++) {
+      int playerId = ids[i];
+      Player player = mPlayer.get(playerId);
+      if (player == null || player.data == null) continue;
+      updateBloodRavenRecord(player.data, Act1BloodRavenQuest::markCompletedNow,
+          "blood-raven-died-this-game");
+    }
+    log.info("[A1Q2] Blood Raven killed: victim={}, players={}, partyService={}",
+        victimId, players.size(), partyManager != null);
+  }
+
+  private void completeBloodRavenFor(int playerId, String reason) {
+    if (!mPlayer.has(playerId)) return;
+    Player player = mPlayer.get(playerId);
+    if (player == null || player.data == null) return;
+    updateBloodRavenRecord(player.data, Act1BloodRavenQuest::completeObjective, reason);
+  }
+
+  /** Native party propagation sets the primary-goal bit; reward pending is
+   * granted later when that member enters the Blood Moor/Burial Grounds room. */
+  private void markBloodRavenPartyMember(int playerId) {
+    if (!mPlayer.has(playerId)) return;
+    Player player = mPlayer.get(playerId);
+    if (player == null || player.data == null) return;
+    updateBloodRavenRecord(player.data, record ->
+        NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+            || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+                ? record : NativeQuestRecord.set(record, NativeQuestRecord.PRIMARY_GOAL_DONE),
+        "eligible-party-member");
+  }
+
+  private boolean isPlayerInAct1OutsideTown(int playerId) {
+    if (!mMapWrapper.has(playerId)) return false;
+    MapWrapper wrapper = mMapWrapper.get(playerId);
+    if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null) return false;
+    int levelId = wrapper.zone.level.Id;
+    return levelId > D2LevelIds.LEVEL_ROGUEENCAMPMENT && levelId < D2LevelIds.LEVEL_LUTGHOLEIN;
+  }
+
   private void propagateCainRelease(int rescuerId) {
     if (playersByZone == null) return;
     IntBag entities = playersByZone.getEntities();
@@ -468,6 +582,25 @@ public class Act1QuestSystem extends PassiveSystem {
 
   private static short getMalusRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
+  }
+
+  private static short getBloodRavenRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
+  }
+
+  private static void setBloodRavenRecord(CharData data, short record) {
+    data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] = record;
+  }
+
+  private void updateBloodRavenRecord(CharData data, RecordUpdate update, String reason) {
+    short previous = getBloodRavenRecord(data);
+    short next = update.apply(previous);
+    if (previous == next) return;
+    setBloodRavenRecord(data, next);
+    persist(data);
+    log.info("[A1Q2] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   private static short getCainRecord(CharData data) {

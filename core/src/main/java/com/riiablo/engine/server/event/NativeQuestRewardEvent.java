@@ -10,6 +10,7 @@ import net.mostlyoriginal.api.event.common.Event;
  */
 public class NativeQuestRewardEvent implements Event {
   public static final int CHARSI_IMBUE = 1;
+  public static final int BLOOD_RAVEN_FREE_ROGUE = 2;
   public static final int AVAILABLE = 1;
   public static final int GRANTED = 2;
 

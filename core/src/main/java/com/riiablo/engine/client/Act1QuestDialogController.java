@@ -9,6 +9,7 @@ import com.riiablo.engine.server.event.NpcInteractionEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.quest.Act1DenOfEvilQuest;
+import com.riiablo.engine.server.quest.Act1BloodRavenQuest;
 import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
@@ -48,6 +49,10 @@ public class Act1QuestDialogController extends PassiveSystem {
       boolean hasMalus = data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE);
       messageIndex = Act1MalusQuest.selectCharsiMessage(record, level, hasMalus);
       speech = Act1MalusQuest.getCharsiSpeech(messageIndex);
+    } else if (npc.monstats.hcIdx == MonsterType.KASHYA) {
+      short record = data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
+      messageIndex = Act1BloodRavenQuest.selectKashyaMessage(record);
+      speech = Act1BloodRavenQuest.getKashyaSpeech(messageIndex);
     } else {
       return;
     }

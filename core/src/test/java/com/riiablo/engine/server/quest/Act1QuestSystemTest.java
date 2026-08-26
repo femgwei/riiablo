@@ -176,6 +176,52 @@ class Act1QuestSystemTest extends RiiabloTest {
   }
 
   @Test
+  void completesBloodRavenForPlayerInBurialGrounds() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("BloodRavenHero", Riiablo.NORMAL);
+      int player = harness.createPlayer(data);
+      harness.setPlayerLevel(player, D2LevelIds.LEVEL_BURIALGROUNDS);
+      int kashya = harness.createKashya();
+      int bloodRaven = harness.createBloodRaven();
+      harness.process();
+
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, kashya, Act1BloodRavenQuest.MESSAGE_INIT));
+      harness.events.dispatch(DeathEvent.obtain(player, bloodRaven));
+
+      short record = data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.COMPLETED_NOW));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void KashyaRewardEmitsFreeRogueRequestWithoutCommittingEarly() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("BloodRavenReward", Riiablo.NORMAL);
+      data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] =
+          Act1BloodRavenQuest.completeObjective((short) 0);
+      int player = harness.createPlayer(data);
+      int kashya = harness.createKashya();
+      harness.process();
+
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, kashya, Act1BloodRavenQuest.MESSAGE_REWARD));
+
+      short record = data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
   void createsPersistableCainMagicAndRareRings() {
     ItemGenerator generator = new ItemGenerator();
     Item normal = generator.generateQuestReward("rin", 7, Quality.MAGIC, 0x1001);
@@ -309,6 +355,27 @@ class Act1QuestSystemTest extends RiiabloTest {
       monstats.hcIdx = MonsterType.AKARA;
       int entityId = world.create();
       world.getMapper(Monster.class).create(entityId).monstats = monstats;
+      return entityId;
+    }
+
+    int createKashya() {
+      MonStats.Entry monstats = new MonStats.Entry();
+      monstats.hcIdx = MonsterType.KASHYA;
+      int entityId = world.create();
+      world.getMapper(Monster.class).create(entityId).monstats = monstats;
+      return entityId;
+    }
+
+    int createBloodRaven() {
+      Levels.Entry level = new Levels.Entry();
+      level.Id = D2LevelIds.LEVEL_BURIALGROUNDS;
+      Map.Zone zone = new Map.Zone();
+      zone.level = level;
+      MonStats.Entry monstats = new MonStats.Entry();
+      monstats.hcIdx = MonsterType.BLOODRAVEN;
+      int entityId = world.create();
+      world.getMapper(Monster.class).create(entityId).monstats = monstats;
+      world.getMapper(MapWrapper.class).create(entityId).zone = zone;
       return entityId;
     }
 
