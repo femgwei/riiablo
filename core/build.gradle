@@ -117,7 +117,17 @@ dependencies {
 }
 
 test {
-  useJUnitPlatform()
+  useJUnitPlatform {
+    // A few legacy decoder tests are interactive resource previews backed by
+    // LWJGL. They render until a developer closes the window and therefore
+    // are not part of unattended CI. Opt in explicitly with -PvisualTests.
+    if (!project.hasProperty('visualTests')) excludeTags 'visual'
+  }
+  // AssetManagerTest initializes a pool of full DCC pixel buffers. Gradle's
+  // default 512 MiB test-worker heap can fail before the assertions run, so
+  // give the isolated test JVM enough room without increasing game runtime
+  // memory or the Gradle daemon heap.
+  maxHeapSize = '2g'
   // Combat scenario tests exercise ECS/calculation code only. Keep the test
   // JVM explicitly headless so a developer machine never opens a LibGDX
   // window while running the automated combat suite.

@@ -42,6 +42,7 @@ public class Dc6DecoderTest {
   }
 
   @ParameterizedTest
+  @Tag("visual")
   @ValueSource(strings = {
       "data\\global\\monsters\\ty\\ra\\tyralitnuhth.dc6",
   })

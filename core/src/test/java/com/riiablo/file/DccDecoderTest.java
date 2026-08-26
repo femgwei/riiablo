@@ -145,6 +145,7 @@ public class DccDecoderTest {
   }
 
   @ParameterizedTest
+  @Tag("visual")
   @ValueSource(strings = {
       "data\\global\\missiles\\DopplezonExplode.dcc",
       "data\\global\\chars\\ba\\hd\\bahdbhma11hs.dcc",
@@ -250,6 +251,7 @@ public class DccDecoderTest {
   }
 
   @ParameterizedTest
+  @Tag("visual")
   @ValueSource(strings = {
       "data\\global\\missiles\\DopplezonExplode.dcc",
       "data\\global\\chars\\ba\\hd\\bahdbhma11hs.dcc",

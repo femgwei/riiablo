@@ -69,6 +69,7 @@ public class Dc6LoaderTest {
   }
 
   @ParameterizedTest
+  @Tag("visual")
   @CsvSource(value = {
       "data\\global\\monsters\\ty\\ra\\tyralitnuhth.dc6,0,0",
       "data\\global\\ui\\panel\\invchar6.dc6,0,1",

@@ -79,6 +79,7 @@ public class DccLoaderTest {
    * Tests that loading DCC with combine frames flag throws IllegalParams exception
    */
   @ParameterizedTest
+  @Tag("visual")
   @ValueSource(strings = {
       "data\\global\\chars\\ba\\hd\\bahdbhma11hs.dcc",
       "data\\global\\chars\\ba\\lg\\balglittnhth.dcc",
@@ -130,6 +131,7 @@ public class DccLoaderTest {
   }
 
   @ParameterizedTest
+  @Tag("visual")
   @ValueSource(strings = {
       "data\\global\\chars\\ba\\hd\\bahdbhma11hs.dcc",
       "data\\global\\chars\\ba\\lg\\balglittnhth.dcc",
