@@ -438,7 +438,12 @@ public class Actioneer extends PassiveSystem {
     switch (srvdofunc) {
       case 0:
         break;
-      case 1: { // attack
+      case 1: // attack
+      case 7: { // native Jab: same authoritative hit path, skill-specific animation
+        if (srvdofunc == 7) {
+          log.info("[MONSTER_SKILL] phase=jab entity={} target={} using=melee_hit_pipeline",
+              entityId, targetId);
+        }
         if (targetId == Engine.INVALID_ENTITY) break;
         if (!mAttributesWrapper.has(targetId)) break;
         log.debug("{} attack {}", entityId, targetId);
