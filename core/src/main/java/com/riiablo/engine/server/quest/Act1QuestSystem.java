@@ -20,6 +20,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NativeCountessQuestEvent;
+import com.riiablo.engine.server.event.NativeActTransitionEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.NativeCainQuestEvent;
@@ -101,10 +102,24 @@ public class Act1QuestSystem extends PassiveSystem {
       updateCountessRecord(player.data, Act1CountessQuest::enterCountessLevel,
           "entered-countess-level");
     }
+    if (levelId >= D2LevelIds.LEVEL_CATACOMBSLVL1
+        && levelId <= D2LevelIds.LEVEL_CATACOMBSLVL4) {
+      if (levelId == D2LevelIds.LEVEL_CATACOMBSLVL4) {
+        updateAndarielRecord(player.data, Act1AndarielQuest::enterCatacombs,
+            "entered-andariel-level");
+      } else {
+        updateAndarielRecord(player.data, Act1AndarielQuest::leaveTown,
+            "entered-catacombs");
+      }
+    }
   }
 
   @Subscribe
   public void onMonsterKilled(DeathEvent event) {
+    if (isAndariel(event == null ? -1 : event.victim)) {
+      completeAndariel(event);
+      return;
+    }
     if (isCountess(event == null ? -1 : event.victim)) {
       completeCountess(event);
       return;
@@ -148,6 +163,10 @@ public class Act1QuestSystem extends PassiveSystem {
     }
     if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN_TOWN) {
       onCainTownMessage(event, player);
+      return;
+    }
+    if (npc.monstats.hcIdx == MonsterType.WARRIV) {
+      onWarrivMessage(event, player);
       return;
     }
     if (npc.monstats.hcIdx != MonsterType.AKARA) return;
@@ -202,6 +221,23 @@ public class Act1QuestSystem extends PassiveSystem {
       log.debug("[A1Q4] Cain town message ignored before rescue: player={}, record=0x{}",
           message.entityId, Integer.toHexString(Short.toUnsignedInt(record)));
     }
+  }
+
+  private void onWarrivMessage(NpcQuestMessageEvent message, Player player) {
+    if (message.messageIndex != Act1AndarielQuest.MESSAGE_WARRIV_REWARD) return;
+    short record = getAndarielRecord(player.data);
+    if (!NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+        || !NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return;
+
+    short claimed = Act1AndarielQuest.claimReward(record);
+    setAndarielRecord(player.data, claimed);
+    persist(player.data);
+    NativeActTransitionEvent transition = NativeActTransitionEvent.obtain(
+        message.entityId, D2LevelIds.LEVEL_LUTGHOLEIN);
+    event.dispatch(transition);
+    log.info("[A1Q6] Warriv reward claimed: player={} destination={} accepted={}",
+        message.entityId, transition.destinationLevelId, transition.accepted);
   }
 
   /** Creates and places the native ring before committing REWARD_GRANTED. */
@@ -491,6 +527,43 @@ public class Act1QuestSystem extends PassiveSystem {
         && isMonsterInLevel(entityId, D2LevelIds.LEVEL_TOWERCELLARLVL5);
   }
 
+  private boolean isAndariel(int entityId) {
+    return entityId >= 0 && mMonster.has(entityId) && mMapWrapper.has(entityId)
+        && mMonster.get(entityId).monstats != null
+        && mMonster.get(entityId).monstats.hcIdx == MonsterType.ANDARIEL
+        && isMonsterInLevel(entityId, D2LevelIds.LEVEL_CATACOMBSLVL4);
+  }
+
+  private void completeAndariel(DeathEvent death) {
+    if (playersByZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    IntSet eligibleParties = new IntSet();
+    for (int i = 0, size = players.size(); i < size; i++) {
+      int playerId = ids[i];
+      if (!isPlayerInLevel(playerId, D2LevelIds.LEVEL_CATACOMBSLVL4)) continue;
+      updateAndarielRecord(mPlayer.get(playerId).data, Act1AndarielQuest::completePending,
+          "andariel-room");
+      if (partyManager != null) {
+        short party = partyManager.getPartyId(playerId);
+        if (party != Party.INVALID_ID) eligibleParties.add(party);
+      }
+    }
+    for (int i = 0, size = players.size(); i < size; i++) {
+      int playerId = ids[i];
+      if (!isPlayerInAct1OutsideTown(playerId)) continue;
+      if (partyManager != null && eligibleParties.contains(partyManager.getPartyId(playerId))) {
+        updateAndarielRecord(mPlayer.get(playerId).data, Act1AndarielQuest::completePending,
+            "eligible-party-member");
+      } else {
+        updateAndarielRecord(mPlayer.get(playerId).data, Act1AndarielQuest::markCompletedNow,
+            "andariel-died-this-game");
+      }
+    }
+    log.info("[A1Q6] Andariel killed: victim={} killer={} players={}",
+        death.victim, death.killer, players.size());
+  }
+
   /** Mirrors A1Q5's room grant, Act I party propagation and completion flag. */
   private void completeCountess(DeathEvent death) {
     if (!completedCountesses.add(death.victim)) {
@@ -723,6 +796,25 @@ public class Act1QuestSystem extends PassiveSystem {
 
   private static short getCountessRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD];
+  }
+
+  private static short getAndarielRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD];
+  }
+
+  private static void setAndarielRecord(CharData data, short record) {
+    data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD] = record;
+  }
+
+  private void updateAndarielRecord(CharData data, RecordUpdate update, String reason) {
+    short previous = getAndarielRecord(data);
+    short next = update.apply(previous);
+    if (previous == next) return;
+    setAndarielRecord(data, next);
+    persist(data);
+    log.info("[A1Q6] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   private static void setCountessRecord(CharData data, short record) {

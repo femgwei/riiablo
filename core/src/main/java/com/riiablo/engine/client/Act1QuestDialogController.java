@@ -11,6 +11,8 @@ import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.quest.Act1DenOfEvilQuest;
 import com.riiablo.engine.server.quest.Act1BloodRavenQuest;
 import com.riiablo.engine.server.quest.Act1MalusQuest;
+import com.riiablo.engine.server.quest.Act1AndarielQuest;
+import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -53,6 +55,14 @@ public class Act1QuestDialogController extends PassiveSystem {
       short record = data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
       messageIndex = Act1BloodRavenQuest.selectKashyaMessage(record);
       speech = Act1BloodRavenQuest.getKashyaSpeech(messageIndex);
+    } else if (npc.monstats.hcIdx == MonsterType.WARRIV) {
+      short record = data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD];
+      if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) {
+        messageIndex = Act1AndarielQuest.MESSAGE_WARRIV_REWARD;
+        speech = "warriv_act1_q6_reward";
+      } else {
+        return;
+      }
     } else {
       return;
     }
