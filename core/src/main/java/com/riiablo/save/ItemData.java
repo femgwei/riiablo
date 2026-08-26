@@ -172,6 +172,23 @@ public class ItemData {
     return false;
   }
 
+  /** Atomically replaces an exact owned item while preserving its placement. */
+  public boolean replaceItem(Item source, Item replacement) {
+    if (source == null || replacement == null) return false;
+    int index = itemData.indexOf(source, true);
+    if (index < 0 || source.location == Location.GROUND) return false;
+    Location location = source.location;
+    replacement.location = location;
+    replacement.bodyLoc = source.bodyLoc;
+    replacement.storeLoc = source.storeLoc;
+    replacement.gridX = source.gridX;
+    replacement.gridY = source.gridY;
+    if (location == Location.STORED) notifyStoreRemoved(source);
+    itemData.set(index, replacement);
+    if (location == Location.STORED) notifyStoreAdded(replacement);
+    return true;
+  }
+
   public Item getItem(int i) {
     return itemData.get(i);
   }

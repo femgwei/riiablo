@@ -83,6 +83,7 @@ import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
+import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.map.Act1MapBuilder;
@@ -275,6 +276,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new Act1QuestSystem())
         .with(new NativeMercenaryRewardSystem())
         .with(new NativeCountessRewardSystem())
+        .with(new NativeCharsiImbueSystem())
         .with(new ServerNetworkIdManager())
         .with(new SerializationManager())
         .with(mapManager)

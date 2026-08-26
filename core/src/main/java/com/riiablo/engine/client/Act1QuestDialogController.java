@@ -7,6 +7,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.NpcInteractionEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.NativeImbueRequestEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.quest.Act1DenOfEvilQuest;
 import com.riiablo.engine.server.quest.Act1BloodRavenQuest;
@@ -47,6 +48,13 @@ public class Act1QuestDialogController extends PassiveSystem {
       speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
     } else if (npc.monstats.hcIdx == MonsterType.CHARSI) {
       short record = data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
+      if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) {
+        com.riiablo.item.Item cursor = data.getItems().getCursor();
+        if (cursor != null) {
+          events.dispatch(NativeImbueRequestEvent.obtain(event.entityId, cursor.id));
+        }
+        return;
+      }
       int level = data.getStats().aggregate().getValue(Stat.level, 0);
       boolean hasMalus = data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE);
       messageIndex = Act1MalusQuest.selectCharsiMessage(record, level, hasMalus);

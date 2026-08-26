@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.ItemEntry;
@@ -19,7 +20,6 @@ import com.riiablo.codec.excel.MagicSuffix;
 import com.riiablo.codec.excel.RarePrefix;
 import com.riiablo.codec.excel.RareSuffix;
 import com.riiablo.attributes.PropertiesGenerator;
-import com.riiablo.attributes.StatListRef;
 
 public class ItemGenerator extends PassiveSystem {
   private static final String TAG = "ItemGenerator";
@@ -70,13 +70,49 @@ public class ItemGenerator extends PassiveSystem {
       addMagicAffix(magic, Riiablo.files.MagicPrefix.get(prefix));
       addMagicAffix(magic, Riiablo.files.MagicSuffix.get(suffix));
     } else if (quality == Quality.RARE) {
-      int prefix = findRareAffix(Riiablo.files.RarePrefix, item);
-      int suffix = findRareAffix(Riiablo.files.RareSuffix, item);
-      item.qualityId = prefix | (suffix << Item.RARE_AFFIX_SIZE);
-      item.qualityData = new RareQualityData(prefix, suffix);
+      int rarePrefix = findRareAffix(Riiablo.files.RarePrefix, item);
+      int rareSuffix = findRareAffix(Riiablo.files.RareSuffix, item);
+      item.qualityId = rarePrefix | (rareSuffix << Item.RARE_AFFIX_SIZE);
+      // RarePrefix/RareSuffix supply only the generated rare name. The six
+      // persisted RareQualityData slots reference MagicPrefix/MagicSuffix;
+      // storing rare-name ids there corrupts the property stream on reload.
+      int magicPrefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel);
+      int magicSuffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel);
+      item.qualityData = new RareQualityData(magicPrefix, magicSuffix);
+      addMagicAffix(magic, Riiablo.files.MagicPrefix.get(magicPrefix));
+      addMagicAffix(magic, Riiablo.files.MagicSuffix.get(magicSuffix));
     }
     item.attrs.reset();
     return item;
+  }
+
+  /** Creates Charsi's rare replacement while preserving native item traits. */
+  public Item generateImbuedItem(Item source, int playerLevel) {
+    if (source == null || source.base == null) throw new NullPointerException("source");
+    int itemLevel = Math.max(1, Math.min(99, playerLevel > 5 ? playerLevel + 4 : playerLevel));
+    Item output = generateQuestReward(source.code, itemLevel, Quality.RARE, source.id);
+    output.flags |= source.flags & (Item.ITEMFLAG_ETHEREAL | Item.ITEMFLAG_INSCRIBED);
+    output.inscription = source.inscription;
+    copyBaseStat(source, output, Stat.armorclass);
+    copyBaseStat(source, output, Stat.maxdurability);
+    repairDurability(source, output);
+    copyBaseStat(source, output, Stat.quantity);
+    output.attrs.reset();
+    return output;
+  }
+
+  private static void copyBaseStat(Item source, Item destination, short stat) {
+    StatRef value = source.attrs.base().get(stat);
+    if (value != null) {
+      destination.attrs.base().putEncoded(stat, value.encodedParams(), value.encodedValues());
+    }
+  }
+
+  private static void repairDurability(Item source, Item destination) {
+    StatRef maxDurability = source.attrs.base().get(Stat.maxdurability);
+    if (maxDurability != null && maxDurability.asInt() > 0) {
+      destination.attrs.base().put(Stat.durability, maxDurability.asInt());
+    }
   }
 
   private static int findMagicAffix(MagicPrefix entries, Item item, int itemLevel) {

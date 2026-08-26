@@ -99,6 +99,7 @@ import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
+import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
 import com.riiablo.engine.server.Box2DDisposer;
 import com.riiablo.engine.server.Box2DSynchronizerPost;
 import com.riiablo.engine.server.Box2DSynchronizerPre;
@@ -723,6 +724,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new Act1QuestSystem());
       builder.with(new NativeMercenaryRewardSystem());
       builder.with(new NativeCountessRewardSystem());
+      builder.with(new NativeCharsiImbueSystem());
       builder.with(new ServerSkillSystem(true));
       builder.with(new ItemGenerator());
       builder.with(new NativeObjectDropSystem());
