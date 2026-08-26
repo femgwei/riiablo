@@ -947,6 +947,18 @@ public class Actioneer extends PassiveSystem {
     }
     Monster source = mMonster.get(entityId);
     String spawnId = source.monstats != null ? source.monstats.spawn : null;
+    // D2GAME_GetSummonIdFromSkill falls back to the monster minion chain when
+    // the row has no explicit spawn column (common for crow nests).
+    if (!hasText(spawnId) && source.monstats != null) {
+      spawnId = hasText(source.monstats.minion1) ? source.monstats.minion1
+          : source.monstats.minion2;
+    }
+    // D2GAME_GetSummonIdFromSkill falls back to the monster minion chain when
+    // the row has no explicit spawn column (common for crow nests).
+    if (!hasText(spawnId) && source.monstats != null) {
+      spawnId = hasText(source.monstats.minion1) ? source.monstats.minion1
+          : source.monstats.minion2;
+    }
     if (spawnId == null || spawnId.isEmpty()) {
       log.info("[MONSTER_MAGGOT] phase=lay_rejected source={} target={} reason=missing_spawn_row",
           entityId, targetId);
@@ -1021,6 +1033,12 @@ public class Actioneer extends PassiveSystem {
     }
     Monster source = mMonster.get(entityId);
     String spawnId = source.monstats != null ? source.monstats.spawn : null;
+    // Native MONSTERS_GetSpawnMode_XY falls back to the minion chain when a
+    // nest row has no explicit spawn field.
+    if (!hasText(spawnId) && source.monstats != null) {
+      spawnId = hasText(source.monstats.minion1) ? source.monstats.minion1
+          : source.monstats.minion2;
+    }
     if (spawnId == null || spawnId.isEmpty()) {
       log.info("[MONSTER_NEST] phase=spawn_rejected source={} reason=missing_spawn_row", entityId);
       return;
@@ -1034,7 +1052,15 @@ public class Actioneer extends PassiveSystem {
     Vector2 sourcePosition = mPosition.get(entityId).position;
     float preferredX = sourcePosition.x + source.monstats.spawnx;
     float preferredY = sourcePosition.y + source.monstats.spawny;
-    Vector2 position = findNestSpawnPosition(map, preferredX, preferredY, new Vector2());
+    Vector2 position = map != null
+        ? findNestSpawnPosition(map, preferredX, preferredY, new Vector2())
+        // Detached/headless worlds may not register a Map; preserve the
+        // native spawn request while making the degraded collision check
+        // explicit in the log.
+        : new Vector2(preferredX, preferredY);
+    if (map == null) {
+      log.warn("[MONSTER_NEST] phase=collision_check_skipped source={} reason=map_missing", entityId);
+    }
     if (position == null) {
       log.info("[MONSTER_NEST] phase=spawn_rejected source={} reason=no_free_position "
               + "spawn={} preferred=({}, {}) offset=({}, {})",
