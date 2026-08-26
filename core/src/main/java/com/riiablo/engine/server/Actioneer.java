@@ -50,6 +50,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.map.Map;
+import com.riiablo.map.DT1;
 
 public class Actioneer extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(Actioneer.class);
@@ -1030,7 +1031,17 @@ public class Actioneer extends PassiveSystem {
           entityId, spawnId);
       return;
     }
-    Vector2 position = mPosition.get(entityId).position;
+    Vector2 sourcePosition = mPosition.get(entityId).position;
+    float preferredX = sourcePosition.x + source.monstats.spawnx;
+    float preferredY = sourcePosition.y + source.monstats.spawny;
+    Vector2 position = findNestSpawnPosition(map, preferredX, preferredY, new Vector2());
+    if (position == null) {
+      log.info("[MONSTER_NEST] phase=spawn_rejected source={} reason=no_free_position "
+              + "spawn={} preferred=({}, {}) offset=({}, {})",
+          entityId, spawnId, preferredX, preferredY,
+          source.monstats.spawnx, source.monstats.spawny);
+      return;
+    }
     int spawned;
     try {
       spawned = factory.createMonster(spawn, position.x, position.y);
@@ -1046,6 +1057,36 @@ public class Actioneer extends PassiveSystem {
     }
     log.info("[MONSTER_NEST] phase=spawn source={} spawn={} entity={} position=({}, {})",
         entityId, spawnId, spawned, position.x, position.y);
+  }
+
+  static Vector2 findNestSpawnPosition(Map map, float preferredX, float preferredY, Vector2 out) {
+    if (map == null) return null;
+    return findNestSpawnPosition(preferredX, preferredY, out,
+        (x, y) -> (map.flags(x, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0);
+  }
+
+  interface NestWalkability {
+    boolean isWalkable(int x, int y);
+  }
+
+  static Vector2 findNestSpawnPosition(float preferredX, float preferredY, Vector2 out,
+      NestWalkability walkability) {
+    if (out == null || walkability == null) return null;
+    int centerX = MathUtils.round(preferredX);
+    int centerY = MathUtils.round(preferredY);
+    for (int radius = 0; radius <= 3; radius++) {
+      for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+          if (radius > 0 && Math.abs(dx) != radius && Math.abs(dy) != radius) continue;
+          int x = centerX + dx;
+          int y = centerY + dy;
+          if (walkability.isWalkable(x, y)) {
+            return out.set(x, y);
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /** D2MOO SKILLS_SrvDo067_Charge (monster branch). */
