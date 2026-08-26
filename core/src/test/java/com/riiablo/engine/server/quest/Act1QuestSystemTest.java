@@ -2,6 +2,7 @@ package com.riiablo.engine.server.quest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
@@ -25,6 +26,9 @@ import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.NativeCainQuestEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
+import com.riiablo.item.Item;
+import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Quality;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -122,6 +126,64 @@ class Act1QuestSystemTest extends RiiabloTest {
     } finally {
       harness.dispose();
     }
+  }
+
+  @Test
+  void keepsCainRewardPendingWhenItemServiceCannotCreateReward() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("CainRewardPending", Riiablo.NORMAL);
+      data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = Act1CainQuest.releaseCain((short) 0);
+      int player = harness.createPlayer(data);
+      int akara = harness.createAkara();
+      harness.process();
+
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, akara, Act1CainQuest.MESSAGE_REWARD));
+
+      short record = data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void CainTownMessageDoesNotTriggerAkaraReward() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("CainDialogue", Riiablo.NORMAL);
+      data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = Act1CainQuest.releaseCain((short) 0);
+      int player = harness.createPlayer(data);
+      int cain = harness.createCainTown();
+      harness.process();
+
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, cain, Act1CainQuest.MESSAGE_CAIN_TOWN));
+
+      short record = data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void createsPersistableCainMagicAndRareRings() {
+    ItemGenerator generator = new ItemGenerator();
+    Item normal = generator.generateQuestReward("rin", 7, Quality.MAGIC, 0x1001);
+    assertEquals("rin", normal.code);
+    assertEquals(7, normal.ilvl);
+    assertEquals(Quality.MAGIC, normal.quality);
+    assertTrue(normal.qualityId != 0);
+
+    Item nightmare = generator.generateQuestReward("rin", 30, Quality.RARE, 0x1002);
+    assertEquals(30, nightmare.ilvl);
+    assertEquals(Quality.RARE, nightmare.quality);
+    assertNotNull(nightmare.qualityData);
+    assertNotNull(nightmare.getNameString());
   }
 
   @Test
@@ -232,6 +294,14 @@ class Act1QuestSystemTest extends RiiabloTest {
     int createAkara() {
       MonStats.Entry monstats = new MonStats.Entry();
       monstats.hcIdx = MonsterType.AKARA;
+      int entityId = world.create();
+      world.getMapper(Monster.class).create(entityId).monstats = monstats;
+      return entityId;
+    }
+
+    int createCainTown() {
+      MonStats.Entry monstats = new MonStats.Entry();
+      monstats.hcIdx = MonsterType.DECKARDCAIN_TOWN;
       int entityId = world.create();
       world.getMapper(Monster.class).create(entityId).monstats = monstats;
       return entityId;

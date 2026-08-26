@@ -282,6 +282,61 @@ public class ItemData {
   }
 
   /**
+   * Atomically packs an item into the 10x4 character inventory.  The item is
+   * not added or mutated when no rectangle is available.  This is the server
+   * side equivalent of the native inventory placement used by quest rewards.
+   */
+  public boolean addToInventory(Item item) {
+    if (item == null || contains(item) || item.base == null
+        || item.base.invwidth <= 0 || item.base.invheight <= 0
+        || item.base.invwidth > 10 || item.base.invheight > 4) return false;
+
+    boolean[][] occupied = new boolean[4][10];
+    IntArray inventory = getStore(StoreLoc.INVENTORY);
+    for (int n = 0; n < inventory.size; n++) {
+      Item stored = getItem(inventory.get(n));
+      if (stored == null || stored.base == null) continue;
+      int x = stored.gridX;
+      int y = stored.gridY;
+      int width = stored.base.invwidth;
+      int height = stored.base.invheight;
+      // Treat malformed existing coordinates as occupied/unsafe instead of
+      // risking that a quest reward overwrites a persisted item.
+      if (x < 0 || y < 0 || width <= 0 || height <= 0
+          || x + width > 10 || y + height > 4) return false;
+      for (int dy = 0; dy < height; dy++) {
+        for (int dx = 0; dx < width; dx++) occupied[y + dy][x + dx] = true;
+      }
+    }
+
+    int x = -1, y = -1;
+    outer:
+    for (int candidateY = 0; candidateY <= 4 - item.base.invheight; candidateY++) {
+      for (int candidateX = 0; candidateX <= 10 - item.base.invwidth; candidateX++) {
+        boolean free = true;
+        for (int dy = 0; dy < item.base.invheight && free; dy++) {
+          for (int dx = 0; dx < item.base.invwidth; dx++) {
+            if (occupied[candidateY + dy][candidateX + dx]) {
+              free = false;
+              break;
+            }
+          }
+        }
+        if (free) {
+          x = candidateX;
+          y = candidateY;
+          break outer;
+        }
+      }
+    }
+    if (x < 0) return false;
+
+    int index = add(item);
+    store(StoreLoc.INVENTORY, index, x, y);
+    return true;
+  }
+
+  /**
    * Consumes one unit from the first matching stack on a stored inventory page.
    * The final unit removes the item and emits the normal store-removal event.
    */

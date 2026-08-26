@@ -1,5 +1,7 @@
 package com.riiablo.engine.server.quest;
 
+import com.riiablo.item.Quality;
+
 /** Native save-record transitions and stone-sequence rules for Act 1 Quest 4. */
 public final class Act1CainQuest {
   public static final int RECORD = 4;
@@ -7,11 +9,35 @@ public final class Act1CainQuest {
   public static final String DECIPHERED_SCROLL_CODE = "dkb";
   public static final int MESSAGE_DECIPHER_SCROLL = 112;
   public static final int MESSAGE_REWARD = 118;
+  public static final int MESSAGE_CAIN_TOWN = 125;
+  public static final String REWARD_RING_CODE = "rin";
   public static final int FIRST_STONE_OBJECT = 17;
   public static final int LAST_STONE_OBJECT = 21;
   public static final int STONE_COUNT = 5;
 
   private Act1CainQuest() {}
+
+  /** Native A1Q4 reward parameters selected from the character difficulty. */
+  public static RewardSpec rewardSpec(int difficulty) {
+    switch (difficulty) {
+      case 0: return new RewardSpec(REWARD_RING_CODE, 7, Quality.MAGIC);
+      case 1: return new RewardSpec(REWARD_RING_CODE, 30, Quality.RARE);
+      case 2: return new RewardSpec(REWARD_RING_CODE, 60, Quality.RARE);
+      default: throw new IllegalArgumentException("Unsupported difficulty: " + difficulty);
+    }
+  }
+
+  public static final class RewardSpec {
+    public final String code;
+    public final int itemLevel;
+    public final Quality quality;
+
+    private RewardSpec(String code, int itemLevel, Quality quality) {
+      this.code = code;
+      this.itemLevel = itemLevel;
+      this.quality = quality;
+    }
+  }
 
   public static short start(short record) {
     if (isFinished(record)) return record;

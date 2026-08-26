@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.riiablo.Riiablo;
+import com.riiablo.item.Quality;
 import org.junit.jupiter.api.Test;
 
 class Act1CainQuestTest {
@@ -45,5 +47,30 @@ class Act1CainQuestTest {
     record = Act1CainQuest.claimReward(record);
     assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
     assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
+  }
+
+  @Test
+  void usesNativeDifficultyRewardSpecifications() {
+    Act1CainQuest.RewardSpec normal = Act1CainQuest.rewardSpec(Riiablo.NORMAL);
+    assertEquals("rin", normal.code);
+    assertEquals(7, normal.itemLevel);
+    assertEquals(Quality.MAGIC, normal.quality);
+
+    Act1CainQuest.RewardSpec nightmare = Act1CainQuest.rewardSpec(Riiablo.NIGHTMARE);
+    assertEquals(30, nightmare.itemLevel);
+    assertEquals(Quality.RARE, nightmare.quality);
+
+    Act1CainQuest.RewardSpec hell = Act1CainQuest.rewardSpec(Riiablo.HELL);
+    assertEquals(60, hell.itemLevel);
+    assertEquals(Quality.RARE, hell.quality);
+  }
+
+  @Test
+  void repeatedRewardMessageCannotClaimTwice() {
+    short claimed = Act1CainQuest.claimReward(
+        Act1CainQuest.claimReward(Act1CainQuest.releaseCain((short) 0)));
+    assertTrue(NativeQuestRecord.has(claimed, NativeQuestRecord.REWARD_GRANTED));
+    assertFalse(NativeQuestRecord.has(claimed, NativeQuestRecord.REWARD_PENDING));
+    assertEquals(claimed, Act1CainQuest.claimReward(claimed));
   }
 }

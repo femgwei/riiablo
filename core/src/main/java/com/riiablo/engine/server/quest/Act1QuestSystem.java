@@ -108,10 +108,19 @@ public class Act1QuestSystem extends PassiveSystem {
       onCharsiMessage(event, player);
       return;
     }
+    if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN_TOWN) {
+      onCainTownMessage(event, player);
+      return;
+    }
     if (npc.monstats.hcIdx != MonsterType.AKARA) return;
 
     if (event.messageIndex == Act1CainQuest.MESSAGE_DECIPHER_SCROLL) {
       decipherInifussScroll(event.entityId, player);
+      return;
+    }
+
+    if (event.messageIndex == Act1CainQuest.MESSAGE_REWARD) {
+      claimCainReward(event.entityId, player);
       return;
     }
 
@@ -128,6 +137,59 @@ public class Act1QuestSystem extends PassiveSystem {
         log.info("[A1Q1] Akara reward granted: player={}", event.entityId);
       }
     }
+  }
+
+  /** Cain's town greeting updates native dialogue state but does not award the ring. */
+  private void onCainTownMessage(NpcQuestMessageEvent message, Player player) {
+    if (message.messageIndex != Act1CainQuest.MESSAGE_CAIN_TOWN) return;
+    short record = getCainRecord(player.data);
+    if (Act1CainQuest.isFinished(record)) {
+      log.debug("[A1Q4] Cain town message acknowledged: player={}, record=0x{}",
+          message.entityId, Integer.toHexString(Short.toUnsignedInt(record)));
+    } else {
+      log.debug("[A1Q4] Cain town message ignored before rescue: player={}, record=0x{}",
+          message.entityId, Integer.toHexString(Short.toUnsignedInt(record)));
+    }
+  }
+
+  /** Creates and places the native ring before committing REWARD_GRANTED. */
+  private void claimCainReward(int playerId, Player player) {
+    CharData data = player.data;
+    short record = getCainRecord(data);
+    if (!NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return;
+    if (itemGenerator == null) {
+      log.warn("[A1Q4] Cain reward unavailable: item generator is not wired, player={}", playerId);
+      return;
+    }
+
+    Act1CainQuest.RewardSpec spec;
+    try {
+      spec = Act1CainQuest.rewardSpec(data.diff);
+    } catch (IllegalArgumentException e) {
+      log.warn("[A1Q4] Cain reward unavailable: unsupported difficulty={}, player={}", data.diff, playerId);
+      return;
+    }
+
+    final Item reward;
+    try {
+      int id = data.mapSeed + data.getItems().getItems().size + 1;
+      reward = itemGenerator.generateQuestReward(spec.code, spec.itemLevel, spec.quality, id);
+    } catch (Throwable t) {
+      log.error("[A1Q4] failed to create Cain reward: player={}, code={}", playerId, spec.code, t);
+      return;
+    }
+    if (!data.getItems().addToInventory(reward)) {
+      log.warn("[A1Q4] Cain reward inventory full; keeping pending: player={}", playerId);
+      return;
+    }
+
+    short claimed = Act1CainQuest.claimReward(record);
+    setCainRecord(data, claimed);
+    persist(data);
+    log.info("[A1Q4] Cain ring reward granted: player={}, code={}, ilvl={}, quality={}, record=0x{}",
+        playerId, spec.code, spec.itemLevel, spec.quality,
+        Integer.toHexString(Short.toUnsignedInt(claimed)));
   }
 
   private void onCharsiMessage(NpcQuestMessageEvent message, Player player) {

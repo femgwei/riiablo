@@ -13,6 +13,13 @@ import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Weapons;
+import com.riiablo.codec.excel.MagicAffix;
+import com.riiablo.codec.excel.MagicPrefix;
+import com.riiablo.codec.excel.MagicSuffix;
+import com.riiablo.codec.excel.RarePrefix;
+import com.riiablo.codec.excel.RareSuffix;
+import com.riiablo.attributes.PropertiesGenerator;
+import com.riiablo.attributes.StatListRef;
 
 public class ItemGenerator extends PassiveSystem {
   private static final String TAG = "ItemGenerator";
@@ -42,6 +49,95 @@ public class ItemGenerator extends PassiveSystem {
     }
 
     throw new AssertionError();
+  }
+
+  /** Creates a native quest reward with valid persisted magic/rare metadata. */
+  public Item generateQuestReward(String code, int itemLevel, Quality quality, int id) {
+    Item item = generate(code);
+    item.id = id;
+    item.version = Item.VERSION_110;
+    item.ilvl = (byte) Math.max(1, Math.min(127, itemLevel));
+    item.quality = quality;
+    item.flags |= Item.ITEMFLAG_IDENTIFIED;
+
+    if (quality == Quality.MAGIC) {
+      int prefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel);
+      int suffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel);
+      item.qualityId = prefix | (suffix << Item.MAGIC_AFFIX_SIZE);
+      StatListRef magic = item.attrs.buildList();
+      addMagicAffix(magic, Riiablo.files.MagicPrefix.get(prefix));
+      addMagicAffix(magic, Riiablo.files.MagicSuffix.get(suffix));
+    } else if (quality == Quality.RARE) {
+      int prefix = findRareAffix(Riiablo.files.RarePrefix, item);
+      int suffix = findRareAffix(Riiablo.files.RareSuffix, item);
+      item.qualityId = prefix | (suffix << Item.RARE_AFFIX_SIZE);
+      item.qualityData = new RareQualityData(prefix, suffix);
+    }
+    item.attrs.reset();
+    return item;
+  }
+
+  private static int findMagicAffix(MagicPrefix entries, Item item, int itemLevel) {
+    for (MagicAffix affix : entries) {
+      if (!affix.spawnable || affix.level > itemLevel || (affix.maxlevel > 0 && affix.maxlevel < itemLevel)) continue;
+      MagicPrefix.Entry e = (MagicPrefix.Entry) affix;
+      if (!supports(e.itype1, e.itype2, e.itype3, e.itype4, e.itype5, e.itype6, e.itype7, item)) continue;
+      return entries.index(affix.name);
+    }
+    throw new IllegalStateException("No valid prefix for " + item.code + " at ilvl " + itemLevel);
+  }
+
+  private static int findMagicAffix(MagicSuffix entries, Item item, int itemLevel) {
+    for (MagicAffix affix : entries) {
+      if (!affix.spawnable || affix.level > itemLevel || (affix.maxlevel > 0 && affix.maxlevel < itemLevel)) continue;
+      MagicSuffix.Entry e = (MagicSuffix.Entry) affix;
+      if (!supports(e.itype1, e.itype2, e.itype3, e.itype4, e.itype5, e.itype6, e.itype7, item)) continue;
+      return entries.index(affix.name);
+    }
+    throw new IllegalStateException("No valid suffix for " + item.code + " at ilvl " + itemLevel);
+  }
+
+  private static int findRareAffix(RarePrefix entries, Item item) {
+    for (RarePrefix.Entry affix : entries) {
+      if (!supports(affix.itype1, affix.itype2, affix.itype3, affix.itype4,
+          affix.itype5, affix.itype6, affix.itype7, item)) continue;
+      return entries.index(affix.name);
+    }
+    throw new IllegalStateException("No valid rare affix for " + item.code);
+  }
+
+  private static int findRareAffix(RareSuffix entries, Item item) {
+    for (RareSuffix.Entry affix : entries) {
+      if (!supports(affix.itype1, affix.itype2, affix.itype3, affix.itype4,
+          affix.itype5, affix.itype6, affix.itype7, item)) continue;
+      return entries.index(affix.name);
+    }
+    throw new IllegalStateException("No valid rare affix for " + item.code);
+  }
+
+  private static boolean supports(String a, String b, String c, String d, String e, String f, String g, Item item) {
+    String[] types = {a, b, c, d, e, f, g};
+    for (String type : types) if (type != null && !type.isEmpty() && item.typeEntry.is(type)) return true;
+    return false;
+  }
+
+  private static void addMagicAffix(StatListRef magic, MagicAffix affix) {
+    if (!(affix instanceof MagicPrefix.Entry) && !(affix instanceof MagicSuffix.Entry)) return;
+    if (affix instanceof MagicPrefix.Entry) {
+      MagicPrefix.Entry e = (MagicPrefix.Entry) affix;
+      new PropertiesGenerator().add(magic,
+          new String[] {e.mod1code, e.mod2code, e.mod3code},
+          new int[] {e.mod1param, e.mod2param, e.mod3param},
+          new int[] {e.mod1min, e.mod2min, e.mod3min},
+          new int[] {e.mod1max, e.mod2max, e.mod3max});
+    } else {
+      MagicSuffix.Entry e = (MagicSuffix.Entry) affix;
+      new PropertiesGenerator().add(magic,
+          new String[] {e.mod1code, e.mod2code, e.mod3code},
+          new int[] {e.mod1param, e.mod2param, e.mod3param},
+          new int[] {e.mod1min, e.mod2min, e.mod3min},
+          new int[] {e.mod1max, e.mod2max, e.mod3max});
+    }
   }
 
   /**

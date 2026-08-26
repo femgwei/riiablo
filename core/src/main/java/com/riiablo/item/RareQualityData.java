@@ -5,9 +5,15 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import com.riiablo.io.BitInput;
 import com.riiablo.io.BitOutput;
 
-class RareQualityData {
-  static final int NUM_AFFIXES = 3;
-  int[] prefixes, suffixes;
+public class RareQualityData {
+  public static final int NUM_AFFIXES = 3;
+  public final int[] prefixes, suffixes;
+  public RareQualityData(int prefix, int suffix) {
+    prefixes = new int[NUM_AFFIXES];
+    suffixes = new int[NUM_AFFIXES];
+    prefixes[0] = prefix;
+    suffixes[0] = suffix;
+  }
   RareQualityData(BitInput bitStream) {
     prefixes = new int[NUM_AFFIXES];
     suffixes = new int[NUM_AFFIXES];
