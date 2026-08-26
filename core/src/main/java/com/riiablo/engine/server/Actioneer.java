@@ -20,6 +20,7 @@ import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.engine.server.component.Angle;
@@ -585,6 +586,10 @@ public class Actioneer extends PassiveSystem {
         startLeap(entityId, targetId, targetVec);
         break;
       }
+      case 96: { // native ZakarumHeal/Bestow: percentage heal on an allied target
+        resolveBestow(entityId, targetId);
+        break;
+      }
       case 3: { // throw (srvdofunc for throw attacks)
         // Consume quantity FIRST - this should happen regardless of whether there's a target
         // Check if this is a throwing attack and consume quantity
@@ -731,6 +736,98 @@ public class Actioneer extends PassiveSystem {
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
     applyCombatStates(entityId, targetId, combat);
     if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+  }
+
+  /**
+   * D2MOO SKILLS_SrvDo096_ZakarumHeal_Bestow.  Bestow is intentionally not
+   * modelled as a state/buff: it immediately restores a random percentage of
+   * the target's maximum life at the animation keyframe.  The native function
+   * uses calc1/calc2 as the inclusive percentage range; the hidden monster
+   * row has those columns empty in some data exports, so fall back to the
+   * shared ZakarumHeal formulas (15 + 5 * level .. 50) used by the original
+   * binary table.
+   */
+  private void resolveBestow(int entityId, int targetId) {
+    if (targetId == Engine.INVALID_ENTITY || !mMonster.has(entityId)
+        || !mAttributesWrapper.has(targetId)) {
+      log.info("[MONSTER_BESTOW] phase=skipped source={} target={} reason=missing_entity_data",
+          entityId, targetId);
+      return;
+    }
+    Attributes target = mAttributesWrapper.get(targetId).attrs;
+    if (target == null) {
+      log.info("[MONSTER_BESTOW] phase=skipped source={} target={} reason=missing_attributes",
+          entityId, targetId);
+      return;
+    }
+    StatRef currentRef = target.get(Stat.hitpoints, StatRef.obtain());
+    StatRef maxRef = target.get(Stat.maxhp, StatRef.obtain());
+    if (currentRef == null || maxRef == null || maxRef.asFixed() <= 0f) {
+      log.info("[MONSTER_BESTOW] phase=skipped source={} target={} reason=missing_life_stats",
+          entityId, targetId);
+      return;
+    }
+    float current = Math.max(0f, currentRef.asFixed());
+    float max = Math.max(0f, maxRef.asFixed());
+    if (current <= 0f || current >= max) {
+      log.info("[MONSTER_BESTOW] phase=skipped source={} target={} reason=target_not_wounded hp={} maxHp={}",
+          entityId, targetId, current, max);
+      return;
+    }
+
+    Skills.Entry skill = mCasting.has(entityId)
+        ? Riiablo.files.skills.get(mCasting.get(entityId).skillId) : null;
+    int level = monsterSkillLevelFor(entityId, skill);
+    int[] range = resolveBestowPercentRange(skill, level);
+    int minPercent = range[0];
+    int maxPercent = range[1];
+    boolean fallback = range[2] != 0;
+    minPercent = Math.max(0, Math.min(100, minPercent));
+    maxPercent = Math.max(minPercent, Math.min(100, maxPercent));
+    int percent = maxPercent > minPercent
+        ? MathUtils.random(minPercent, maxPercent) : minPercent;
+    float before = current;
+    float restored = max * percent / 100f;
+    float after = Math.min(max, current + restored);
+    currentRef.set(after);
+    log.info("[MONSTER_BESTOW] phase=result source={} target={} level={} percent={} range={}..{} "
+            + "fallbackZakarumHeal={} restored={} hp={} -> {} maxHp={}",
+        entityId, targetId, level, percent, minPercent, maxPercent, fallback,
+        after - before, before, after, max);
+  }
+
+  /** Returns {minPercent, maxPercent, fallbackToZakarumHeal(0/1)}. */
+  static int[] resolveBestowPercentRange(Skills.Entry skill, int level) {
+    int min = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, level);
+    int max = SkillFormula.evaluate(skill != null ? skill.calc2 : null, skill, level);
+    int fallback = 0;
+    if (min <= 0 && max <= 0) {
+      Skills.Entry heal = Riiablo.files.skills.get("ZakarumHeal");
+      min = SkillFormula.evaluate(heal != null ? heal.calc1 : "15+5*lvl", heal, level);
+      max = SkillFormula.evaluate(heal != null ? heal.calc2 : "50", heal, level);
+      fallback = 1;
+    }
+    min = Math.max(0, Math.min(100, min));
+    max = Math.max(min, Math.min(100, max));
+    return new int[] {min, max, fallback};
+  }
+
+  private int monsterSkillLevelFor(int entityId, Skills.Entry skill) {
+    if (!mMonster.has(entityId) || skill == null || mMonster.get(entityId).monstats == null) {
+      return 1;
+    }
+    Monster row = mMonster.get(entityId);
+    String name = skill.skill;
+    String[] skills = {row.monstats.Skill1, row.monstats.Skill2, row.monstats.Skill3,
+        row.monstats.Skill4, row.monstats.Skill5, row.monstats.Skill6,
+        row.monstats.Skill7, row.monstats.Skill8};
+    int[] levels = {row.monstats.Sk1lvl, row.monstats.Sk2lvl, row.monstats.Sk3lvl,
+        row.monstats.Sk4lvl, row.monstats.Sk5lvl, row.monstats.Sk6lvl,
+        row.monstats.Sk7lvl, row.monstats.Sk8lvl};
+    for (int i = 0; i < skills.length; i++) {
+      if (name != null && name.equals(skills[i])) return Math.max(1, levels[i]);
+    }
+    return 1;
   }
 
   private void startLeap(int entityId, int targetId, Vector2 requestedTarget) {
