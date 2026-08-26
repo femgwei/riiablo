@@ -28,6 +28,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofAlphas;
@@ -50,6 +51,7 @@ import com.riiablo.net.packet.d2gs.ClassP;
 import com.riiablo.net.packet.d2gs.CofAlphasP;
 import com.riiablo.net.packet.d2gs.CofComponentsP;
 import com.riiablo.net.packet.d2gs.CofTransformsP;
+import com.riiablo.net.packet.d2gs.CofReferenceP;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.CursorToBelt;
@@ -73,6 +75,7 @@ import com.riiablo.net.packet.d2gs.SwapBeltItem;
 import com.riiablo.net.packet.d2gs.SwapBodyItem;
 import com.riiablo.net.packet.d2gs.SwapStoreItem;
 import com.riiablo.net.packet.d2gs.VelocityP;
+import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.net.packet.d2gs.WarpP;
 import com.riiablo.net.packet.d2gs.StateP;
 import com.riiablo.save.CharData;
@@ -95,6 +98,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Box2DBody> mBox2DBody;
@@ -365,11 +369,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
     // future packets before writing to avoid assertion failures in StatList.
     long experience = wireExperience < 0 ? 0L : Math.min(wireExperience, 0xFFFFFFFFL);
     int level = Math.max(1, data.level());
+    int skillPoints = data.skillPoints();
 
     long oldExperience = Riiablo.charData.getStats().aggregate()
         .getValue(Stat.experience, 0L);
     int oldLevel = Riiablo.charData.getStats().aggregate()
         .getValue(Stat.level, Riiablo.charData.level & 0xFF);
+    int oldSkillPoints = Riiablo.charData.getStats().aggregate()
+        .getValue(Stat.newskills, 0);
 
     // The HUD reads aggregate stats, while save/load and server award code use
     // the base list. Keep both in lockstep so a later refresh cannot erase the
@@ -378,12 +385,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
     Riiablo.charData.getStats().aggregate().put(Stat.experience, experience);
     Riiablo.charData.getStats().base().put(Stat.level, level);
     Riiablo.charData.getStats().aggregate().put(Stat.level, level);
+    Riiablo.charData.getStats().base().put(Stat.newskills, skillPoints);
+    Riiablo.charData.getStats().aggregate().put(Stat.newskills, skillPoints);
     Riiablo.charData.level = (byte) level;
 
-    if (oldExperience != experience || oldLevel != level) {
+    if (oldExperience != experience || oldLevel != level || oldSkillPoints != skillPoints) {
       Gdx.app.log(TAG, String.format(
-          "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d",
-          entityId, experience, oldExperience, level, oldLevel));
+          "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d skillPoints=%d oldSkillPoints=%d",
+          entityId, experience, oldExperience, level, oldLevel, skillPoints, oldSkillPoints));
     }
   }
 
@@ -426,6 +435,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
         case ComponentP.StateP: {
           StateP data = (StateP) entityData.component(new StateP(), i);
           applyStateSnapshot(entityId, data);
+          break;
+        }
+        case ComponentP.VitalsP: {
+          VitalsP data = (VitalsP) entityData.component(new VitalsP(), i);
+          applyVitalsSnapshot(entityId, data);
+          break;
+        }
+        case ComponentP.CofReferenceP: {
+          CofReferenceP data = (CofReferenceP) entityData.component(new CofReferenceP(), i);
+          applyCofReferenceSnapshot(entityId, data);
           break;
         }
         case ComponentP.CofComponentsP: {
@@ -503,6 +522,37 @@ public class ClientNetworkReceiver extends IntervalSystem {
       levels[i] = i < data.levelLength() ? data.level(i) : 1;
     }
     unitStates.stateList.replaceFromSnapshot(stateIds, durations, levels);
+  }
+
+  private void applyVitalsSnapshot(int entityId, VitalsP data) {
+    if (!mAttributesWrapper.has(entityId)) {
+      Gdx.app.debug(TAG, "Ignoring vitals snapshot for entity without attributes: " + entityId);
+      return;
+    }
+    AttributesWrapper wrapper = mAttributesWrapper.get(entityId);
+    float oldHitpoints = wrapper.attrs.aggregate().getValue(Stat.hitpoints, 0f);
+    com.riiablo.engine.server.component.serializer.VitalsSerializer.apply(wrapper, data);
+    float hitpoints = wrapper.attrs.aggregate().getValue(Stat.hitpoints, 0f);
+    if (oldHitpoints != hitpoints || data.dead()) {
+      Gdx.app.log(TAG, String.format(
+          "[VITALS_SYNC] entity=%d hp=%.3f oldHp=%.3f maxHp=%.3f mana=%.3f maxMana=%.3f dead=%s",
+          entityId, hitpoints, oldHitpoints, data.maxHitpoints(), data.mana(),
+          data.maxMana(), data.dead()));
+    }
+  }
+
+  private void applyCofReferenceSnapshot(int entityId, CofReferenceP data) {
+    if (!mCofReference.has(entityId)) return;
+    CofReference old = mCofReference.get(entityId);
+    byte oldMode = old.mode;
+    byte oldWClass = old.wclass;
+    cofs.setMode(entityId, (byte) data.mode());
+    cofs.setWClass(entityId, (byte) data.weaponClass());
+    if (oldMode != (byte) data.mode() || oldWClass != (byte) data.weaponClass()) {
+      Gdx.app.log(TAG, String.format(
+          "[COF_SYNC] entity=%d mode=%d oldMode=%d weaponClass=%d oldWeaponClass=%d",
+          entityId, data.mode(), oldMode & 0xFF, data.weaponClass(), oldWClass & 0xFF));
+    }
   }
 
   private void GroundToCursor(D2GS packet) {

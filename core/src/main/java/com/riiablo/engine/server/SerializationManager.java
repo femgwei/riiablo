@@ -11,9 +11,11 @@ import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.riiablo.engine.Dirty;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofTransforms;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.DS1ObjectWrapper;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Item;
@@ -25,9 +27,11 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.serializer.AngleSerializer;
+import com.riiablo.engine.server.component.serializer.VitalsSerializer;
 import com.riiablo.engine.server.component.serializer.CofAlphasSerializer;
 import com.riiablo.engine.server.component.serializer.CofComponentsSerializer;
 import com.riiablo.engine.server.component.serializer.CofTransformsSerializer;
+import com.riiablo.engine.server.component.serializer.CofReferenceSerializer;
 import com.riiablo.engine.server.component.serializer.DS1ObjectWrapperSerializer;
 import com.riiablo.engine.server.component.serializer.FlatBuffersSerializer;
 import com.riiablo.engine.server.component.serializer.ItemSerializer;
@@ -41,10 +45,12 @@ import com.riiablo.engine.server.component.serializer.StateSerializer;
 import com.riiablo.net.packet.d2gs.CofAlphasP;
 import com.riiablo.net.packet.d2gs.CofComponentsP;
 import com.riiablo.net.packet.d2gs.CofTransformsP;
+import com.riiablo.net.packet.d2gs.CofReferenceP;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.packet.d2gs.EntitySync;
+import com.riiablo.net.packet.d2gs.VitalsP;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -73,6 +79,8 @@ public class SerializationManager extends PassiveSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<DS1ObjectWrapper> mDS1ObjectWrapper;
   protected ComponentMapper[] cm;
 
@@ -90,6 +98,8 @@ public class SerializationManager extends PassiveSystem {
     serializers.put(Position.class, new PositionSerializer());
     serializers.put(Velocity.class, new VelocitySerializer());
     serializers.put(Angle.class, new AngleSerializer());
+    serializers.put(AttributesWrapper.class, new VitalsSerializer());
+    serializers.put(CofReference.class, new CofReferenceSerializer());
     serializers.put(Player.class, new PlayerSerializer());
     serializers.put(DS1ObjectWrapper.class, new DS1ObjectWrapperSerializer());
     serializers.put(Warp.class, new WarpSerializer());
@@ -106,6 +116,8 @@ public class SerializationManager extends PassiveSystem {
     deserializers[ComponentP.PositionP] = Position.class;
     deserializers[ComponentP.VelocityP] = Velocity.class;
     deserializers[ComponentP.AngleP] = Angle.class;
+    deserializers[ComponentP.VitalsP] = AttributesWrapper.class;
+    deserializers[ComponentP.CofReferenceP] = CofReference.class;
     deserializers[ComponentP.PlayerP] = Player.class;
     deserializers[ComponentP.DS1ObjectWrapperP] = DS1ObjectWrapper.class;
     deserializers[ComponentP.WarpP] = Warp.class;
@@ -122,6 +134,8 @@ public class SerializationManager extends PassiveSystem {
     cm[ComponentP.PositionP] = mPosition;
     cm[ComponentP.VelocityP] = mVelocity;
     cm[ComponentP.AngleP] = mAngle;
+    cm[ComponentP.VitalsP] = mAttributesWrapper;
+    cm[ComponentP.CofReferenceP] = mCofReference;
     cm[ComponentP.PlayerP] = null;
     cm[ComponentP.DS1ObjectWrapperP] = mDS1ObjectWrapper;
     cm[ComponentP.WarpP] = null;
@@ -213,6 +227,17 @@ public class SerializationManager extends PassiveSystem {
             aFlags |= cofs.setAlpha(entityId, j, table.alpha(j) / 255f);
           }
 //          if (DEBUG_DESERIALIZE) Gdx.app.log(TAG, "  " + Arrays.toString(mCofAlphas.get(entityId).alpha));
+          break;
+        }
+        case ComponentP.VitalsP: {
+          VitalsP table = (VitalsP) sync.component(new VitalsP(), i);
+          VitalsSerializer.apply(mAttributesWrapper.get(entityId), table);
+          break;
+        }
+        case ComponentP.CofReferenceP: {
+          CofReferenceP table = (CofReferenceP) sync.component(new CofReferenceP(), i);
+          cofs.setMode(entityId, (byte) table.mode());
+          cofs.setWClass(entityId, (byte) table.weaponClass());
           break;
         }
         case ComponentP.ClassP:

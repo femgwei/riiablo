@@ -15,6 +15,8 @@ union ComponentP {
   ItemP,
   StateP,
   ObjectP,
+  VitalsP,
+  CofReferenceP,
 }
 
 enum EntityFlags:uint8 (bit_flags) {
@@ -67,6 +69,7 @@ table PlayerP {
   // character file after the server awards experience or a level-up.
   experience:ulong;
   level:uint8;
+  skillPoints:uint16;
 }
 
 table DS1ObjectWrapperP {
@@ -99,4 +102,21 @@ table StateP {
   stateId:[uint16];
   duration:[int32];
   level:[uint8];
+}
+
+// Compact authoritative combat state. Attribute modifiers remain server-side;
+// clients only need the resolved resources used by HUD and death presentation.
+table VitalsP {
+  hitpoints:float32;
+  maxHitpoints:float32;
+  mana:float32;
+  maxMana:float32;
+  dead:bool;
+}
+
+// Animation identity is authoritative because attack/death transitions are
+// resolved by the server combat pipeline, not predicted by network clients.
+table CofReferenceP {
+  mode:uint8;
+  weaponClass:uint8;
 }
