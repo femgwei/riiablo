@@ -3,6 +3,7 @@ package com.riiablo.engine.server.pet;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 
+import com.riiablo.engine.Engine;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -391,6 +392,89 @@ public class MercenaryManager {
   }
 
   /**
+   * Grants Kashya's Blood Raven reward without charging the player.
+   *
+   * <p>The reward is transactional: a logical mercenary is recorded only
+   * after the owning runtime has created a real entity. This prevents the
+   * quest from acknowledging the reward when entity creation is unavailable
+   * or fails.
+   *
+   * @param playerId owner entity id
+   * @param playerLevel owner level used to build Kashya's available list
+   * @return {@code true} only when the Rogue entity and manager record exist
+   */
+  public boolean grantFreeRogue(int playerId, int playerLevel) {
+    if (playerMercs.containsKey(playerId)) {
+      log.debug("Player {} already has a mercenary; free Rogue not consumed", playerId);
+      return false;
+    }
+    if (callback == null) {
+      log.warn("Cannot grant free Rogue without an entity callback: player={}", playerId);
+      return false;
+    }
+
+    Array<AvailableMercenary> available =
+        getAvailableMercenaries(NPC_KASHYA, Math.max(1, playerLevel));
+    AvailableMercenary rogue = firstAvailable(available, MERC_TYPE_ROGUE);
+    if (rogue == null) {
+      // Native NPC mercenary pools are replenished after their available
+      // names are exhausted. Do the same here so multiplayer quest rewards
+      // cannot become permanently blocked by earlier players.
+      NpcMercenaryList kashya = npcLists.get(NPC_KASHYA);
+      refreshMercenaryList(kashya, Math.max(1, playerLevel));
+      available = kashya.available;
+      rogue = firstAvailable(available, MERC_TYPE_ROGUE);
+    }
+    if (rogue == null) {
+      log.warn("Kashya has no available Rogue for quest reward: player={}", playerId);
+      return false;
+    }
+
+    int entityId = callback.createMercenaryEntity(playerId, rogue.definition,
+        rogue.level, rogue.seed, rogue.nameId);
+    if (entityId == Engine.INVALID_ENTITY) {
+      log.warn("Free Rogue entity creation failed; reward remains pending: player={}", playerId);
+      return false;
+    }
+
+    ActiveMercenary merc = createActiveMercenary(playerId, rogue, entityId);
+    playerMercs.put(playerId, merc);
+    rogue.hired = true;
+    callback.onMercenaryHired(playerId, merc);
+    log.info("Granted free Rogue: player={} entity={} level={} name={}",
+        playerId, entityId, merc.level, merc.nameId);
+    return true;
+  }
+
+  private ActiveMercenary createActiveMercenary(int playerId,
+      AvailableMercenary available, int entityId) {
+    ActiveMercenary merc = new ActiveMercenary();
+    merc.ownerId = playerId;
+    merc.entityId = entityId;
+    merc.definition = available.definition;
+    merc.nameId = available.nameId;
+    merc.seed = available.seed;
+    merc.level = available.level;
+    merc.experience = getExpForLevel(available.level);
+    merc.state = STATE_HIRED;
+    merc.hireTime = System.currentTimeMillis();
+    merc.maxLife = calculateMercLife(available.definition, available.level);
+    merc.currentLife = merc.maxLife;
+    return merc;
+  }
+
+  private static AvailableMercenary firstAvailable(
+      Array<AvailableMercenary> available, int mercType) {
+    for (AvailableMercenary candidate : available) {
+      if (!candidate.hired && candidate.definition != null
+          && candidate.definition.mercType == mercType) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  /**
    * 解雇雇佣兵
    * 
    * @param playerId 玩家 ID
@@ -602,7 +686,7 @@ public class MercenaryManager {
 
     // 生成 3-6 个可用雇佣兵
     int count = 3 + (int)(Math.random() * 4);
-    for (int i = 0; i < count && i < defs.size; i++) {
+    for (int i = 0; i < count; i++) {
       MercenaryDefinition def = defs.get((int)(Math.random() * defs.size));
 
       AvailableMercenary available = new AvailableMercenary();

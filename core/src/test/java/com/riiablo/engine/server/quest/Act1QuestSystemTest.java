@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.NativeCainQuestEvent;
@@ -216,6 +217,27 @@ class Act1QuestSystemTest extends RiiabloTest {
       short record = data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
       assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
       assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void commitsBloodRavenRewardAfterMercenaryServiceAcknowledges() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("BloodRavenGranted", Riiablo.NORMAL);
+      data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] =
+          Act1BloodRavenQuest.completeObjective((short) 0);
+      int player = harness.createPlayer(data);
+      harness.process();
+
+      harness.events.dispatch(NativeQuestRewardEvent.granted(player,
+          QuestId.A1Q2_BLOOD_RAVEN, NativeQuestRewardEvent.BLOOD_RAVEN_FREE_ROGUE));
+
+      short record = data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
+      assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
     } finally {
       harness.dispose();
     }
