@@ -451,6 +451,12 @@ public class Actioneer extends PassiveSystem {
       case 49: // Nest: native code reserves the spawn point and collision mask
         log.info("[MONSTER_NEST] phase=prepare entity={} target={}", entityId, targetId);
         break;
+      case 31: // Charge: reserve the target path; damage is applied at keyframe
+        if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
+          pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);
+        }
+        log.info("[MONSTER_CHARGE] phase=start entity={} target={}", entityId, targetId);
+        break;
       case 40: // native Leap validates and reserves its landing point on skill start
         log.info("[MONSTER_LEAP] phase=start_check entity={} target={} requested=({}, {})",
             entityId, targetId,
@@ -615,6 +621,15 @@ public class Actioneer extends PassiveSystem {
         resolveNest(entityId);
         break;
       }
+      case 67: { // native Charge: authoritative melee hit with skill damage bonus
+        resolveCharge(entityId, targetId);
+        break;
+      }
+      case 24: // Vampire Firewall projectile; emitted through SkillDoEvent
+      case 28: // Vampire Meteor projectile; emitted through SkillDoEvent
+        log.info("[MONSTER_VAMPIRE] phase=keyframe entity={} target={} srvdofunc={} delegated=ServerSkillSystem",
+            entityId, targetId, srvdofunc);
+        break;
       case 96: { // native ZakarumHeal/Bestow: percentage heal on an allied target
         resolveBestow(entityId, targetId);
         break;
@@ -1031,6 +1046,42 @@ public class Actioneer extends PassiveSystem {
     }
     log.info("[MONSTER_NEST] phase=spawn source={} spawn={} entity={} position=({}, {})",
         entityId, spawnId, spawned, position.x, position.y);
+  }
+
+  /** D2MOO SKILLS_SrvDo067_Charge (monster branch). */
+  private void resolveCharge(int entityId, int targetId) {
+    if (targetId == Engine.INVALID_ENTITY || !mMonster.has(entityId)
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)) {
+      log.info("[MONSTER_CHARGE] phase=hit_rejected source={} target={} reason=missing_components",
+          entityId, targetId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, false, isPlayerEntity(targetId), false,
+        statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
+        statInt(attacker, Stat.tohit));
+    if (!combat.hit || combat.blocked) {
+      log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result={} chance={}",
+          entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
+      return;
+    }
+    Skills.Entry skill = mCasting.has(entityId)
+        ? Riiablo.files.skills.get(mCasting.get(entityId).skillId) : null;
+    int level = monsterSkillLevelFor(entityId, skill);
+    int bonusPercent = Math.max(0, SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, level));
+    float damage = combat.totalDamage * (100f + bonusPercent) / 100f;
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hp == null || hp.asFixed() <= 0f) return;
+    float before = hp.asFixed();
+    DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
+    events.dispatch(event);
+    hp.sub(Math.max(0f, event.damage));
+    if (hp.asFixed() < 0f) hp.set(0f);
+    log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result=hit baseDamage={} bonusPct={} damage={} hp={} -> {}",
+        entityId, targetId, combat.totalDamage, bonusPercent, event.damage, before, hp.asFixed());
+    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
   }
 
   private static final int[] MAGGOT_OFFSET_X = {

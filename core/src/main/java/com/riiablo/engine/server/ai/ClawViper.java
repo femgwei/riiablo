@@ -202,12 +202,13 @@ public class ClawViper extends AI {
     if (targetDistance < chargeDistance && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty()
         && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
       // D2MOD: Use charge skill (nSkill[0])
-      // TODO: Implement skill casting for charge
-      stateMachine.changeState(State.CHARGE);
       lookAt(targetId);
-      // For now, use normal attack as placeholder
-      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+      if (!useMonsterSkill(0, targetId, targetPos, Engine.Monster.MODE_S1)) {
+        // Keep a safe fallback for malformed Skills.txt rows.
+        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+      }
+      stateMachine.changeState(State.CHARGE);
       
       if (chargeColor != 0) {
         // D2MOD: STATES_ToggleState(pUnit, nChargeColor == 2 ? STATE_RED : STATE_BLUE, 0)
