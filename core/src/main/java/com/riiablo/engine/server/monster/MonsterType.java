@@ -123,6 +123,8 @@ public final class MonsterType {
   /** 雅克修 (Act 1) */
   public static final int AKARA = 148;
   /** 查西 (Act 1) */
+  public static final int CHARSI = 154;
+  /** 凯夏 (Act 1) */
   public static final int KASHYA = 150;
   /** 迪卡·凯恩 */
   public static final int DECKARDCAIN = 146;

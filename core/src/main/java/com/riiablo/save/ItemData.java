@@ -117,6 +117,34 @@ public class ItemData {
     return itemData.contains(item, true);
   }
 
+  /** Returns whether a non-ground item with the supplied native code exists. */
+  public boolean containsItemCode(String code) {
+    if (code == null) return false;
+    for (int i = 0; i < itemData.size; i++) {
+      Item item = itemData.get(i);
+      if (item != null && code.equalsIgnoreCase(item.code)
+          && item.location != Location.GROUND) return true;
+    }
+    return false;
+  }
+
+  /** Removes one non-ground quest item and keeps cursor/store bookkeeping valid. */
+  public boolean removeItemCode(String code) {
+    if (code == null) return false;
+    for (int i = itemData.size - 1; i >= 0; i--) {
+      Item item = itemData.get(i);
+      if (item == null || !code.equalsIgnoreCase(item.code)
+          || item.location == Location.GROUND) continue;
+      if (item.location == Location.STORED) notifyStoreRemoved(item);
+      if (cursor == i) cursor = INVALID_ITEM;
+      else if (cursor > i) cursor--;
+      setLocation(item, null);
+      remove(i);
+      return true;
+    }
+    return false;
+  }
+
   public Item getItem(int i) {
     return itemData.get(i);
   }

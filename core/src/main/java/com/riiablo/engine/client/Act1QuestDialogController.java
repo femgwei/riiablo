@@ -2,12 +2,14 @@ package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.NpcInteractionEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.quest.Act1DenOfEvilQuest;
+import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -29,14 +31,26 @@ public class Act1QuestDialogController extends PassiveSystem {
     }
 
     Monster npc = mMonster.get(event.npcId);
-    if (npc.monstats == null || npc.monstats.hcIdx != MonsterType.AKARA) return;
+    if (npc.monstats == null) return;
     Player player = mPlayer.get(event.entityId);
     CharData data = player.data;
     if (data == null) return;
 
-    short record = data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
-    int messageIndex = Act1DenOfEvilQuest.selectAkaraMessage(record);
-    String speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
+    int messageIndex;
+    String speech;
+    if (npc.monstats.hcIdx == MonsterType.AKARA) {
+      short record = data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
+      messageIndex = Act1DenOfEvilQuest.selectAkaraMessage(record);
+      speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
+    } else if (npc.monstats.hcIdx == MonsterType.CHARSI) {
+      short record = data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
+      int level = data.getStats().aggregate().getValue(Stat.level, 0);
+      boolean hasMalus = data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE);
+      messageIndex = Act1MalusQuest.selectCharsiMessage(record, level, hasMalus);
+      speech = Act1MalusQuest.getCharsiSpeech(messageIndex);
+    } else {
+      return;
+    }
     if (speech == null) return;
 
     final int playerId = event.entityId;

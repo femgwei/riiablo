@@ -44,4 +44,12 @@ class Act1MalusQuestTest {
     assertEquals(Act1MalusQuest.MESSAGE_MALUS,
         Act1MalusQuest.selectCharsiMessage(record, 8, true));
   }
+
+  @Test
+  void nativeRewardEventIsRequiredAfterTurnIn() {
+    short pending = Act1MalusQuest.completeObjective(
+        Act1MalusQuest.markMalusPickedUp((short) 0));
+    assertTrue(NativeQuestRecord.has(pending, NativeQuestRecord.REWARD_PENDING));
+    assertFalse(Act1MalusQuest.isRewarded(pending));
+  }
 }

@@ -134,7 +134,8 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Room entity recreation restores mode and disables exhausted interaction.
     - [x] Tower Tome is routed to A1Q5 instead of the ordinary chest drop path.
     - [x] A1Q3 Malus level gate, `mdh` quest-item drop and pickup event bridge.
-    - [ ] A1Q3 Charsi turn-in/reward and A1Q4/A1Q5 scripts consume object requests and create their quest items/portal.
+    - [x] A1Q3 Charsi Malus turn-in and asynchronous imbue reward boundary.
+    - [ ] A1Q3 imbue item transformation and A1Q4/A1Q5 scripts consume object requests and create their quest items/portal.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services
 - [ ] Phase 5: A1Q6 and Act completion

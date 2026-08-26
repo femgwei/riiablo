@@ -17,15 +17,18 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
+import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -38,6 +41,7 @@ public class Act1QuestSystem extends PassiveSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Corpse> mCorpse;
+  protected EventSystem event;
 
   private EntitySubscription monstersByZone;
 
@@ -84,9 +88,15 @@ public class Act1QuestSystem extends PassiveSystem {
   public void onNpcQuestMessage(NpcQuestMessageEvent event) {
     if (event == null || !mPlayer.has(event.entityId) || !mMonster.has(event.npcId)) return;
     Monster npc = mMonster.get(event.npcId);
-    if (npc.monstats == null || npc.monstats.hcIdx != MonsterType.AKARA) return;
+    if (npc.monstats == null) return;
     Player player = mPlayer.get(event.entityId);
     if (player.data == null) return;
+
+    if (npc.monstats.hcIdx == MonsterType.CHARSI) {
+      onCharsiMessage(event, player);
+      return;
+    }
+    if (npc.monstats.hcIdx != MonsterType.AKARA) return;
 
     if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_INIT) {
       updateRecord(player.data, Act1DenOfEvilQuest::start, "akara-init-message");
@@ -103,10 +113,40 @@ public class Act1QuestSystem extends PassiveSystem {
     }
   }
 
+  private void onCharsiMessage(NpcQuestMessageEvent message, Player player) {
+    CharData data = player.data;
+    short record = getMalusRecord(data);
+    boolean hasMalus = data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE);
+    if (message.messageIndex != Act1MalusQuest.MESSAGE_MALUS
+        || !Act1MalusQuest.canTurnIn(record, level(message.entityId, player), hasMalus)) {
+      return;
+    }
+    if (!data.getItems().removeItemCode(Act1MalusQuest.MALUS_CODE)) return;
+    short pending = Act1MalusQuest.completeObjective(record);
+    setMalusRecord(data, pending);
+    persist(data);
+    event.dispatch(NativeQuestRewardEvent.available(message.entityId,
+        QuestId.A1Q3_MALUS, NativeQuestRewardEvent.CHARSI_IMBUE));
+    log.info("[A1Q3] Charsi accepted Malus: player={}, rewardPending={}",
+        message.entityId,
+        NativeQuestRecord.has(pending, NativeQuestRecord.REWARD_PENDING));
+  }
+
+  @Subscribe
+  public void onNativeQuestReward(NativeQuestRewardEvent reward) {
+    if (reward == null || reward.phase != NativeQuestRewardEvent.GRANTED
+        || reward.questId != QuestId.A1Q3_MALUS
+        || reward.rewardKind != NativeQuestRewardEvent.CHARSI_IMBUE
+        || !mPlayer.has(reward.playerId)) return;
+    Player player = mPlayer.get(reward.playerId);
+    if (player.data == null) return;
+    updateMalusRecord(player.data, Act1MalusQuest::claimReward, "charsi-imbue-granted");
+  }
+
   @Subscribe
   public void onQuestObjectInteraction(QuestObjectInteractionEvent event) {
     if (event == null
-        || event.type != com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_MALUS
+        || event.type != NativeQuestObjectResolver.Type.HORADRIC_MALUS
         || !mPlayer.has(event.playerId)) return;
     Player player = mPlayer.get(event.playerId);
     if (player.data == null) return;
