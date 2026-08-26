@@ -47,6 +47,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
@@ -86,6 +87,7 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<SuperUnique> mSuperUnique;
 
   protected ObjectInteractor objectInteractor;
   protected WarpInteractor warpInteractor;
@@ -152,8 +154,9 @@ public class ServerEntityFactory extends EntityFactory {
     if (monstats == null) monstats = resolvePlacementMonster(objectType);
     
     // 如果找不到，尝试从 SuperUniques 表查找（超级暗金怪）
+    com.riiablo.codec.excel.SuperUniques.Entry superUnique = null;
     if (monstats == null && Riiablo.files.SuperUniques != null) {
-      com.riiablo.codec.excel.SuperUniques.Entry superUnique = Riiablo.files.SuperUniques.get(objectType);
+      superUnique = Riiablo.files.SuperUniques.get(objectType);
       if (superUnique != null) {
         // SuperUnique 的 MonClass 字段指向实际的 MonStats 记录
         monstats = Riiablo.files.monstats.get(superUnique.MonClass);
@@ -167,6 +170,9 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     int id = createMonster(monstats.hcIdx, x, y);
+    if (superUnique != null) {
+      mSuperUnique.create(id).set(superUnique.hcIdx, superUnique.Superunique);
+    }
     log.info("[MONSTER_PLACEMENT] phase=created act={} presetId={} placement={} monster={} entity={}",
         act, monPresetId, objectType, monstats.Id, id);
     mNetworked.create(id);

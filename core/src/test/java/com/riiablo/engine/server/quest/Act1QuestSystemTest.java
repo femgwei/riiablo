@@ -19,13 +19,16 @@ import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.event.NativeCountessQuestEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.NativeCainQuestEvent;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.d2moo.common.drlg.D2SuperUniques;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
@@ -244,6 +247,59 @@ class Act1QuestSystemTest extends RiiabloTest {
   }
 
   @Test
+  void towerTomeStartsCountessQuest() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("TowerReader", Riiablo.NORMAL);
+      int player = harness.createPlayer(data);
+      harness.process();
+
+      QuestObjectInteractionEvent tome = QuestObjectInteractionEvent.obtain(
+          player, 80, NativeQuestObjectResolver.TOWER_TOME,
+          NativeQuestObjectResolver.Type.TOWER_TOME);
+      harness.events.dispatch(tome);
+
+      assertTrue(tome.accepted);
+      assertTrue(NativeQuestRecord.has(
+          data.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD],
+          NativeQuestRecord.STARTED));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void countessDeathRewardsPlayersInCellarAndEmitsTreasureRequest() {
+    Harness harness = new Harness();
+    try {
+      CharData nearby = character("CountessHunter", Riiablo.NORMAL);
+      CharData outside = character("CountessOutside", Riiablo.NORMAL);
+      int hunter = harness.createPlayer(nearby);
+      int observer = harness.createPlayer(outside);
+      harness.setPlayerLevel(hunter, D2LevelIds.LEVEL_TOWERCELLARLVL5);
+      harness.setPlayerLevel(observer, D2LevelIds.LEVEL_BLOODMOOR);
+      int countess = harness.createCountess();
+      harness.process();
+
+      harness.events.dispatch(DeathEvent.obtain(hunter, countess));
+
+      short hunterRecord = nearby.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD];
+      short observerRecord = outside.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(hunterRecord, NativeQuestRecord.REWARD_GRANTED));
+      assertTrue(NativeQuestRecord.has(hunterRecord, NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(observerRecord, NativeQuestRecord.COMPLETED_NOW));
+      assertFalse(NativeQuestRecord.has(observerRecord, NativeQuestRecord.REWARD_GRANTED));
+      assertEquals(1, harness.countessConsumer.requests);
+      assertEquals(countess, harness.countessConsumer.victim);
+
+      harness.events.dispatch(DeathEvent.obtain(hunter, countess));
+      assertEquals(1, harness.countessConsumer.requests);
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
   void createsPersistableCainMagicAndRareRings() {
     ItemGenerator generator = new ItemGenerator();
     Item normal = generator.generateQuestReward("rin", 7, Quality.MAGIC, 0x1001);
@@ -361,8 +417,9 @@ class Act1QuestSystemTest extends RiiabloTest {
     final EventSystem events = new EventSystem();
     final Act1QuestSystem quests = new Act1QuestSystem();
     final CainQuestConsumer cainConsumer = new CainQuestConsumer();
+    final CountessQuestConsumer countessConsumer = new CountessQuestConsumer();
     final World world = new World(new WorldConfigurationBuilder()
-        .with(events, quests, cainConsumer)
+        .with(events, quests, cainConsumer, countessConsumer)
         .build());
 
     int createPlayer(CharData data) {
@@ -397,6 +454,21 @@ class Act1QuestSystemTest extends RiiabloTest {
       monstats.hcIdx = MonsterType.BLOODRAVEN;
       int entityId = world.create();
       world.getMapper(Monster.class).create(entityId).monstats = monstats;
+      world.getMapper(MapWrapper.class).create(entityId).zone = zone;
+      return entityId;
+    }
+
+    int createCountess() {
+      Levels.Entry level = new Levels.Entry();
+      level.Id = D2LevelIds.LEVEL_TOWERCELLARLVL5;
+      Map.Zone zone = new Map.Zone();
+      zone.level = level;
+      MonStats.Entry monstats = new MonStats.Entry();
+      monstats.hcIdx = 45;
+      int entityId = world.create();
+      world.getMapper(Monster.class).create(entityId).monstats = monstats;
+      world.getMapper(SuperUnique.class).create(entityId).id =
+          D2SuperUniques.SUPERUNIQUE_THE_COUNTESS;
       world.getMapper(MapWrapper.class).create(entityId).zone = zone;
       return entityId;
     }
@@ -451,6 +523,17 @@ class Act1QuestSystemTest extends RiiabloTest {
     @Subscribe
     public void onCainQuest(NativeCainQuestEvent event) {
       if (event != null && event.action == NativeCainQuestEvent.CAIN_GIBBET) event.accept();
+    }
+  }
+
+  private static final class CountessQuestConsumer extends PassiveSystem {
+    int requests;
+    int victim = -1;
+
+    @Subscribe
+    public void onCountessQuest(NativeCountessQuestEvent event) {
+      requests++;
+      victim = event.countessId;
     }
   }
 }

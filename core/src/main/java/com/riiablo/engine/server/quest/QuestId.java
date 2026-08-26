@@ -186,9 +186,9 @@ public final class QuestId {
     switch (questId) {
       case A1Q1_DEN_OF_EVIL: return "Den of Evil";
       case A1Q2_BLOOD_RAVEN: return "Blood Raven";
-      case A1Q3_MALUS: return "The Search for Cain";
-      case A1Q4_CAIN: return "The Forgotten Tower";
-      case A1Q5_COUNTESS: return "Tools of the Trade";
+      case A1Q3_MALUS: return "Tools of the Trade";
+      case A1Q4_CAIN: return "The Search for Cain";
+      case A1Q5_COUNTESS: return "The Forgotten Tower";
       case A1Q6_ANDARIEL: return "Sisters to the Slaughter";
       case A2Q1_RADAMENT: return "Radament's Lair";
       case A2Q2_HORADRIC_STAFF: return "The Horadric Staff";

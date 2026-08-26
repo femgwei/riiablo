@@ -17,7 +17,9 @@ import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.event.NativeCountessQuestEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.NativeCainQuestEvent;
@@ -25,6 +27,7 @@ import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.d2moo.common.drlg.D2SuperUniques;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
@@ -50,6 +53,7 @@ public class Act1QuestSystem extends PassiveSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<SuperUnique> mSuperUnique;
   protected EventSystem event;
   @Wire(failOnNull = false)
   protected ItemGenerator itemGenerator;
@@ -59,6 +63,7 @@ public class Act1QuestSystem extends PassiveSystem {
   private EntitySubscription monstersByZone;
   private EntitySubscription playersByZone;
   private final Act1CainRuntime cainRuntime = new Act1CainRuntime();
+  private final IntSet completedCountesses = new IntSet();
 
   @Override
   protected void initialize() {
@@ -85,10 +90,25 @@ public class Act1QuestSystem extends PassiveSystem {
     if (levelId == D2LevelIds.LEVEL_DENOFEVIL) {
       updateRecord(player.data, Act1DenOfEvilQuest::enterDen, "entered-den");
     }
+    if (levelId == D2LevelIds.LEVEL_FORGOTTENTOWER) {
+      updateCountessRecord(player.data, Act1CountessQuest::enterForgottenTower,
+          "entered-forgotten-tower");
+    } else if (levelId >= D2LevelIds.LEVEL_TOWERCELLARLVL1
+        && levelId < D2LevelIds.LEVEL_TOWERCELLARLVL5) {
+      updateCountessRecord(player.data, Act1CountessQuest::enterCellar,
+          "entered-tower-cellar");
+    } else if (levelId == D2LevelIds.LEVEL_TOWERCELLARLVL5) {
+      updateCountessRecord(player.data, Act1CountessQuest::enterCountessLevel,
+          "entered-countess-level");
+    }
   }
 
   @Subscribe
   public void onMonsterKilled(DeathEvent event) {
+    if (isCountess(event == null ? -1 : event.victim)) {
+      completeCountess(event);
+      return;
+    }
     if (isBloodRaven(event == null ? -1 : event.victim)) {
       propagateBloodRavenDeath(event.victim);
       return;
@@ -262,13 +282,20 @@ public class Act1QuestSystem extends PassiveSystem {
   @Subscribe
   public void onQuestObjectInteraction(QuestObjectInteractionEvent event) {
     if (event == null
-        || (event.type != NativeQuestObjectResolver.Type.HORADRIC_MALUS
+        || (event.type != NativeQuestObjectResolver.Type.TOWER_TOME
+            && event.type != NativeQuestObjectResolver.Type.HORADRIC_MALUS
             && event.type != NativeQuestObjectResolver.Type.CAIRN_STONE
             && event.type != NativeQuestObjectResolver.Type.INIFUSS_TREE
             && event.type != NativeQuestObjectResolver.Type.CAIN_GIBBET)
         || !mPlayer.has(event.playerId)) return;
     Player player = mPlayer.get(event.playerId);
     if (player.data == null) return;
+    if (event.type == NativeQuestObjectResolver.Type.TOWER_TOME) {
+      updateCountessRecord(player.data, Act1CountessQuest::discover,
+          "tower-tome-message-127");
+      event.accept();
+      return;
+    }
     if (event.type == NativeQuestObjectResolver.Type.CAIRN_STONE
         || event.type == NativeQuestObjectResolver.Type.INIFUSS_TREE
         || event.type == NativeQuestObjectResolver.Type.CAIN_GIBBET) {
@@ -458,6 +485,74 @@ public class Act1QuestSystem extends PassiveSystem {
     return monster.monstats != null && monster.monstats.hcIdx == MonsterType.BLOODRAVEN;
   }
 
+  private boolean isCountess(int entityId) {
+    return entityId >= 0 && mSuperUnique.has(entityId)
+        && mSuperUnique.get(entityId).id == D2SuperUniques.SUPERUNIQUE_THE_COUNTESS
+        && isMonsterInLevel(entityId, D2LevelIds.LEVEL_TOWERCELLARLVL5);
+  }
+
+  /** Mirrors A1Q5's room grant, Act I party propagation and completion flag. */
+  private void completeCountess(DeathEvent death) {
+    if (!completedCountesses.add(death.victim)) {
+      log.warn("[A1Q5] Duplicate Countess death ignored: victim={} killer={}",
+          death.victim, death.killer);
+      return;
+    }
+    if (playersByZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    IntSet eligibleParties = new IntSet();
+    int rewardPlayer = mPlayer.has(death.killer) ? death.killer : -1;
+
+    for (int i = 0, size = players.size(); i < size; i++) {
+      int playerId = ids[i];
+      if (!isPlayerInLevel(playerId, D2LevelIds.LEVEL_TOWERCELLARLVL5)) continue;
+      completeCountessFor(playerId, true, "countess-room");
+      if (rewardPlayer < 0) rewardPlayer = playerId;
+      if (partyManager != null) {
+        short partyId = partyManager.getPartyId(playerId);
+        if (partyId != Party.INVALID_ID) eligibleParties.add(partyId);
+      }
+    }
+
+    if (partyManager != null && eligibleParties.size > 0) {
+      for (int i = 0, size = players.size(); i < size; i++) {
+        int playerId = ids[i];
+        short partyId = partyManager.getPartyId(playerId);
+        if (partyId != Party.INVALID_ID && eligibleParties.contains(partyId)
+            && isPlayerInAct1OutsideTown(playerId)) {
+          completeCountessFor(playerId, false, "eligible-party-member");
+        }
+      }
+    }
+
+    for (int i = 0, size = players.size(); i < size; i++) {
+      int playerId = ids[i];
+      Player player = mPlayer.get(playerId);
+      if (player == null || player.data == null) continue;
+      updateCountessRecord(player.data, Act1CountessQuest::markCompletedNow,
+          "countess-died-this-game");
+    }
+
+    int difficulty = Riiablo.NORMAL;
+    if (rewardPlayer >= 0 && mPlayer.has(rewardPlayer)
+        && mPlayer.get(rewardPlayer).data != null) {
+      difficulty = Math.max(0, Math.min(mPlayer.get(rewardPlayer).data.diff, 2));
+    }
+    event.dispatch(NativeCountessQuestEvent.obtain(
+        rewardPlayer, death.victim, difficulty));
+    log.info("[A1Q5] Countess killed: victim={} killer={} rewardPlayer={} players={}",
+        death.victim, death.killer, rewardPlayer, players.size());
+  }
+
+  private void completeCountessFor(int playerId, boolean completedNow, String reason) {
+    if (!mPlayer.has(playerId)) return;
+    Player player = mPlayer.get(playerId);
+    if (player == null || player.data == null) return;
+    updateCountessRecord(player.data,
+        record -> Act1CountessQuest.complete(record, completedNow), reason);
+  }
+
   /**
    * D2MOO grants nearby players first, then their party members in Act 1.
    * MapWrapper currently exposes level zones rather than native DRLG rooms,
@@ -624,6 +719,25 @@ public class Act1QuestSystem extends PassiveSystem {
 
   private static void setMalusRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD] = record;
+  }
+
+  private static short getCountessRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD];
+  }
+
+  private static void setCountessRecord(CharData data, short record) {
+    data.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD] = record;
+  }
+
+  private void updateCountessRecord(CharData data, RecordUpdate update, String reason) {
+    short previous = getCountessRecord(data);
+    short next = update.apply(previous);
+    if (previous == next) return;
+    setCountessRecord(data, next);
+    persist(data);
+    log.info("[A1Q5] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   private void updateMalusRecord(CharData data, RecordUpdate update, String reason) {
