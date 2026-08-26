@@ -352,6 +352,19 @@ public class CombatSystem {
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
       int attackMinDamageOverride, int attackMaxDamageOverride,
       int attackRatingOverride, boolean alwaysHit) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        null, null, 0, 0);
+  }
+
+  /** Resolves an attack with a per-animation native monster elemental profile. */
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -408,6 +421,16 @@ public class CombatSystem {
     a.manaLeech = statInt(attacker, Stat.manadrainmindam, 0);
     a.coldLength = statInt(attacker, Stat.coldlength, 0);
     a.poisonLength = statInt(attacker, Stat.poisonlength, 0);
+    if (elementalMinOverride != null && elementalMaxOverride != null) {
+      for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
+        int min = i < elementalMinOverride.length ? elementalMinOverride[i] : 0;
+        int max = i < elementalMaxOverride.length ? elementalMaxOverride[i] : 0;
+        a.elementalMinDamage[i] = Math.max(0, min);
+        a.elementalMaxDamage[i] = Math.max(a.elementalMinDamage[i], max);
+      }
+      a.coldLength = Math.max(0, coldLengthOverride);
+      a.poisonLength = Math.max(0, poisonLengthOverride);
+    }
     a.ignoreTargetDefense = statInt(attacker, Stat.item_ignoretargetac, 0) > 0;
 
     DefenderData d = new DefenderData();

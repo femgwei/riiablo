@@ -16,6 +16,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.Engine;
@@ -425,6 +426,10 @@ public class Actioneer extends PassiveSystem {
       case 5: // left hand throw
       case 65: // Throw skill (skillId=2)
         break;
+      case 42: // native Fire Hit pre-hit setup; resolved authoritatively at the keyframe
+        log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
+            entityId, targetId);
+        break;
       default:
         log.warn("Unsupported srvstfunc({}) for {}", srvstfunc, entityId);
         // TODO: default case will log an error when all valid cases are enumerated
@@ -559,6 +564,10 @@ public class Actioneer extends PassiveSystem {
         }
                   break;
       }
+      case 83: { // native Fire Hit: S1 physical + mode-matched MonStats elemental profile
+        resolveFireHit(entityId, targetId);
+        break;
+      }
       case 3: { // throw (srvdofunc for throw attacks)
         // Consume quantity FIRST - this should happen regardless of whether there's a target
         // Check if this is a throwing attack and consume quantity
@@ -642,6 +651,69 @@ public class Actioneer extends PassiveSystem {
         && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
       StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
     }
+  }
+
+  private void resolveFireHit(int entityId, int targetId) {
+    if (targetId == Engine.INVALID_ENTITY || !mMonster.has(entityId)
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)) {
+      log.info("[MONSTER_SKILL] phase=fire_hit_skipped entity={} target={} reason=missing_entity_data",
+          entityId, targetId);
+      return;
+    }
+    Monster monster = mMonster.get(entityId);
+    if (monster.monstats == null) return;
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    int level = Math.max(1, statInt(attacker, Stat.level));
+    MonsterModeDamageResolver.Profile profile = MonsterModeDamageResolver.resolve(
+        monster.monstats, level, 0, Engine.Monster.MODE_S1);
+    log.info("[MONSTER_SKILL] phase=fire_hit_profile entity={} monster={} target={} "
+            + "source=monstats_s1 physical={}..{} ar={} fire={}..{} lightning={}..{} "
+            + "cold={}..{} poison={}..{} magic={}..{} elements={}",
+        entityId, monster.monstats.Id, targetId,
+        profile.minDamage, profile.maxDamage, profile.attackRating,
+        profile.elementalMin[CombatSystem.DAMAGE_FIRE],
+        profile.elementalMax[CombatSystem.DAMAGE_FIRE],
+        profile.elementalMin[CombatSystem.DAMAGE_LIGHTNING],
+        profile.elementalMax[CombatSystem.DAMAGE_LIGHTNING],
+        profile.elementalMin[CombatSystem.DAMAGE_COLD],
+        profile.elementalMax[CombatSystem.DAMAGE_COLD],
+        profile.elementalMin[CombatSystem.DAMAGE_POISON],
+        profile.elementalMax[CombatSystem.DAMAGE_POISON],
+        profile.elementalMin[CombatSystem.DAMAGE_MAGIC],
+        profile.elementalMax[CombatSystem.DAMAGE_MAGIC],
+        profile.matchedElementProfiles);
+
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, false, isPlayerEntity(targetId), false,
+        profile.minDamage, profile.maxDamage, profile.attackRating, false,
+        profile.elementalMin, profile.elementalMax,
+        profile.coldLength, profile.poisonLength);
+    if (!combat.hit) {
+      log.info("[MONSTER_SKILL] phase=fire_hit_result entity={} target={} result=miss chance={}",
+          entityId, targetId, combat.hitChance);
+      return;
+    }
+    if (combat.blocked) {
+      log.info("[MONSTER_SKILL] phase=fire_hit_result entity={} target={} result=blocked chance={}",
+          entityId, targetId, combat.hitChance);
+      return;
+    }
+    float damage = combat.totalDamage;
+    log.info("[MONSTER_SKILL] phase=fire_hit_result entity={} target={} result=hit chance={} "
+            + "physical={} fire={} total={}",
+        entityId, targetId, combat.hitChance, combat.physicalDamage,
+        combat.elementalDamage[CombatSystem.DAMAGE_FIRE], damage);
+    if (damage <= 0) return;
+
+    StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
+    DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
+    events.dispatch(event);
+    hitpoints.sub(Math.max(0f, event.damage));
+    if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
+    applyCombatStates(entityId, targetId, combat);
+    if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
   }
 
   private boolean spawnMonsterAttackMissile(int entityId, int targetId) {

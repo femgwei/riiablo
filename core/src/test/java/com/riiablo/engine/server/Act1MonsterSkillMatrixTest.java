@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 /** Emits the data-driven Act I monster skill surface before native porting. */
 class Act1MonsterSkillMatrixTest extends RiiabloTest {
   private static final Set<Integer> IMPLEMENTED_SRV_DO = Set.of(
-      0, 1, 3, 5, 7, 8, 22, 27, 85, 95, 97);
+      0, 1, 3, 5, 7, 8, 22, 27, 83, 85, 95, 97);
 
   @Test
   void dumpAct1MonsterSkillMatrix() {
@@ -44,7 +44,8 @@ class Act1MonsterSkillMatrixTest extends RiiabloTest {
         }
         rows.put(monster.Id + "#" + slot,
             "monster=" + monster.Id + " slot=" + slot + " skill=" + skill.skill
-                + " srvdofunc=" + skill.srvdofunc + " cltdofunc=" + skill.cltdofunc
+                + " srvstfunc=" + skill.srvstfunc + " srvdofunc=" + skill.srvdofunc
+                + " cltdofunc=" + skill.cltdofunc
                 + " monanim=" + skill.monanim + " srvmissilea=" + skill.srvmissilea
                 + " srvmissileb=" + skill.srvmissileb + " stsound=" + skill.stsound
                 + " dosound=" + skill.dosound + " status="

@@ -67,6 +67,8 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 65: // Throw skill (skillId=2) - same as case 3
         break;
+      case 42: // Fire Hit performs its native pre-hit setup on the server
+        break;
       default:
         log.warn("Unsupported srvstfunc({}) for {} casting {}", event.srvstfunc, event.entityId, event.skillId);
     }
