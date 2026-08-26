@@ -84,20 +84,21 @@ public class NativeShrineSystem extends IteratingSystem {
       return;
     }
 
+    NativeShrineEffectResolver.Effect effect = NativeShrineEffectResolver.resolve(shrine);
     Attributes attrs = attributes(interaction.playerId);
     boolean appliedLocally = applyBasicEffect(
         attrs, shrine.Code, shrine.Arg0, shrine.Arg1);
     int resetFrames = resetFrames(shrine.ResetTimeInMinutes);
     state.persistShrineCooldownFrames(resetFrames);
     event.dispatch(ShrineInteractionEvent.obtain(
-        interaction.playerId, interaction.entityId, shrineId, shrine.Code,
-        shrine.Arg0, shrine.Arg1, shrine.DurationInFrames, resetFrames,
-        appliedLocally));
+        interaction.playerId, interaction.entityId, shrineId, effect.code,
+        effect.effectClass, effect.kind, effect.arg0, effect.arg1,
+        effect.durationFrames, resetFrames, appliedLocally));
 
     log.info("[SHRINE] activated: entity={}, player={}, shrineId={}, code={}, "
-            + "localEffect={}, resetFrames={}",
+            + "kind={}, effectClass={}, localEffect={}, resetFrames={}",
         interaction.entityId, interaction.playerId, shrineId, shrine.Code,
-        appliedLocally, resetFrames);
+        effect.kind, effect.effectClass, appliedLocally, resetFrames);
   }
 
   private int resolveShrineId(NativeObjectState state, Objects.Entry object, int entityId) {
