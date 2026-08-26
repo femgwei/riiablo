@@ -59,6 +59,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Missile missile = mMissile.get(entityId);
+    if (!missile.authoritative) return;
     Position position = mPosition.get(entityId);
     Velocity velocity = mVelocity.get(entityId);
     

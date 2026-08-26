@@ -5,6 +5,7 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -19,6 +20,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.DC6;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.event.InteractEvent;
+import com.riiablo.engine.client.NetworkedActionSender;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Position;
@@ -38,6 +40,9 @@ public class MobileControls extends WidgetGroup implements Disposable {
 
   protected EventSystem events;
   protected Actioneer actioneer;
+
+  @com.artemis.annotations.Wire(name = "client.socket", failOnNull = false)
+  protected Socket socket;
 
   Button interact;
   HotkeyButton skills[];
@@ -102,7 +107,11 @@ public class MobileControls extends WidgetGroup implements Disposable {
         if (skillId == -1) return;
         final int player = Riiablo.game.player;
         tmpVec2.set(mAngle.get(player).target).scl(12).add(mPosition.get(player).position);
-        actioneer.cast(player, skillId, Engine.INVALID_ENTITY, tmpVec2);
+        if (socket == null) {
+          actioneer.cast(player, skillId, Engine.INVALID_ENTITY, tmpVec2);
+        } else {
+          NetworkedActionSender.cast(socket, skillId, Engine.INVALID_ENTITY, tmpVec2);
+        }
         // TODO: above target is placeholder
       }
     };

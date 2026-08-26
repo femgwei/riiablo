@@ -62,6 +62,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       return;
     }
 
+    // Network clients render the server snapshot. They must not independently
+    // tick DOT, expire states, or emit DeathEvent and rewards a second time.
+    if (unitStates.snapshotOnly) {
+      if (mVelocity.has(entityId)) applyVelocityModifiers(entityId, unitStates.stateList);
+      return;
+    }
+
     StateList stateList = unitStates.stateList;
     
     // Resolve this tick before decrementing duration. A one-frame state must

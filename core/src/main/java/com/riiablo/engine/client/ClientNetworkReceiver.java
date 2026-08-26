@@ -40,6 +40,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
@@ -76,6 +77,7 @@ import com.riiablo.net.packet.d2gs.SwapBodyItem;
 import com.riiablo.net.packet.d2gs.SwapStoreItem;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.VitalsP;
+import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.WarpP;
 import com.riiablo.net.packet.d2gs.StateP;
 import com.riiablo.save.CharData;
@@ -100,6 +102,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -344,7 +347,24 @@ public class ClientNetworkReceiver extends IntervalSystem {
         return entityId;
       }
       case MIS: {
-        return Engine.INVALID_ENTITY;
+        MissileP missile = findTable(sync, ComponentP.MissileP, new MissileP());
+        PositionP position = findTable(sync, ComponentP.PositionP, new PositionP());
+        AngleP angle = findTable(sync, ComponentP.AngleP, new AngleP());
+        if (missile == null || position == null) return Engine.INVALID_ENTITY;
+        Vector2 direction = angle == null ? new Vector2(1, 0) : new Vector2(angle.x(), angle.y());
+        int localOwnerId = missile.ownerId() == Engine.INVALID_ENTITY
+            ? Engine.INVALID_ENTITY : syncIds.get(missile.ownerId());
+        int entityId = factory.createMissile(missile.missileId(), direction,
+            new Vector2(position.x(), position.y()), localOwnerId);
+        if (entityId != Engine.INVALID_ENTITY && mMissile.has(entityId)) {
+          Missile local = mMissile.get(entityId);
+          local.authoritative = false;
+          local.range = missile.range();
+        }
+        Gdx.app.log(TAG, String.format(
+            "[MISSILE_SYNC] phase=create serverEntity=%d missileId=%d owner=%d position=(%.2f,%.2f)",
+            sync.entityId(), missile.missileId(), missile.ownerId(), position.x(), position.y()));
+        return entityId;
       }
       default:
         return Engine.INVALID_ENTITY;
@@ -496,6 +516,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
           //Gdx.app.log(TAG, "  " + angle);
           break;
         }
+        case ComponentP.MissileP:
+          // Identity is consumed during createEntity; later packets only
+          // update position, velocity and angle.
+          break;
         default:
           Gdx.app.error(TAG, "Unknown packet type: " + ComponentP.name(entityData.componentType(i)));
       }
@@ -522,6 +546,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       levels[i] = i < data.levelLength() ? data.level(i) : 1;
     }
     unitStates.stateList.replaceFromSnapshot(stateIds, durations, levels);
+    unitStates.snapshotOnly = true;
   }
 
   private void applyVitalsSnapshot(int entityId, VitalsP data) {

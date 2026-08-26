@@ -20,6 +20,7 @@ import com.riiablo.engine.server.component.DS1ObjectWrapper;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Object;
@@ -36,6 +37,7 @@ import com.riiablo.engine.server.component.serializer.DS1ObjectWrapperSerializer
 import com.riiablo.engine.server.component.serializer.FlatBuffersSerializer;
 import com.riiablo.engine.server.component.serializer.ItemSerializer;
 import com.riiablo.engine.server.component.serializer.MonsterSerializer;
+import com.riiablo.engine.server.component.serializer.MissileSerializer;
 import com.riiablo.engine.server.component.serializer.PlayerSerializer;
 import com.riiablo.engine.server.component.serializer.PositionSerializer;
 import com.riiablo.engine.server.component.serializer.ObjectSerializer;
@@ -50,6 +52,7 @@ import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.packet.d2gs.EntitySync;
+import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.VitalsP;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -104,6 +107,7 @@ public class SerializationManager extends PassiveSystem {
     serializers.put(DS1ObjectWrapper.class, new DS1ObjectWrapperSerializer());
     serializers.put(Warp.class, new WarpSerializer());
     serializers.put(Monster.class, new MonsterSerializer());
+    serializers.put(Missile.class, new MissileSerializer());
     serializers.put(Item.class, new ItemSerializer());
     serializers.put(UnitStates.class, new StateSerializer());
     serializers.put(Object.class, new ObjectSerializer());
@@ -122,6 +126,7 @@ public class SerializationManager extends PassiveSystem {
     deserializers[ComponentP.DS1ObjectWrapperP] = DS1ObjectWrapper.class;
     deserializers[ComponentP.WarpP] = Warp.class;
     deserializers[ComponentP.MonsterP] = Monster.class;
+    deserializers[ComponentP.MissileP] = Missile.class;
     deserializers[ComponentP.ItemP] = Item.class;
     deserializers[ComponentP.StateP] = UnitStates.class;
     deserializers[ComponentP.ObjectP] = Object.class;
@@ -140,6 +145,7 @@ public class SerializationManager extends PassiveSystem {
     cm[ComponentP.DS1ObjectWrapperP] = mDS1ObjectWrapper;
     cm[ComponentP.WarpP] = null;
     cm[ComponentP.MonsterP] = null;
+    cm[ComponentP.MissileP] = null;
     cm[ComponentP.ItemP] = null;
     cm[ComponentP.StateP] = null; // state snapshots are server-authoritative
     cm[ComponentP.ObjectP] = null;
@@ -240,6 +246,9 @@ public class SerializationManager extends PassiveSystem {
           cofs.setWClass(entityId, (byte) table.weaponClass());
           break;
         }
+        case ComponentP.MissileP:
+          // EntityFactory resolves missile identity on creation.
+          break;
         case ComponentP.ClassP:
         case ComponentP.PlayerP:
         case ComponentP.DS1ObjectWrapperP:

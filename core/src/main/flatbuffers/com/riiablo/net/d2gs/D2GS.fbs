@@ -2,6 +2,7 @@ include "Networking.fbs";
 include "PlayerController.fbs";
 include "Sync.fbs";
 include "ItemManagement.fbs";
+include "SkillRequest.fbs";
 
 namespace com.riiablo.net.packet.d2gs;
 
@@ -25,6 +26,7 @@ union D2GSData {
   BeltToCursor,
   CursorToBelt,
   SwapBeltItem,
+  CastSkillRequest,
 }
 
 table D2GS {

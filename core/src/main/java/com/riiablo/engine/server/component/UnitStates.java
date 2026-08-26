@@ -27,6 +27,8 @@ import com.riiablo.engine.server.state.StateList;
  */
 @PooledWeaver
 public class UnitStates extends Component {
+  /** Client replicas receive state snapshots but never tick authoritative DOT. */
+  public boolean snapshotOnly;
 
   /** 状态列表 */
   public StateList stateList;
@@ -38,6 +40,7 @@ public class UnitStates extends Component {
    * @return this
    */
   public UnitStates init(int entityId) {
+    snapshotOnly = false;
     if (stateList == null) {
       stateList = new StateList(entityId);
     } else {

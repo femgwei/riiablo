@@ -273,6 +273,10 @@ public class ClientEntityFactory extends ServerEntityFactory {
   @Override
   public int createMissile(int missileId, Vector2 angle, Vector2 position, int ownerId) {
     int id = super.createMissile(missileId, angle, position, ownerId);
+    // The client replica is registered by ClientNetworkReceiver with the
+    // server entity id after creation. Do not expose the temporary -1 id to
+    // NetworkIdManager or it will alias every local projectile.
+    if (id != Engine.INVALID_ENTITY && mNetworked.has(id)) mNetworked.remove(id);
     Missile missileWrapper = mMissile.get(id);
     Riiablo.assets.load(missileWrapper.missileDescriptor);
     mBox2DBody.create(id);

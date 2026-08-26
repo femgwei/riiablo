@@ -24,8 +24,9 @@ public final class D2GSData {
   public static final byte BeltToCursor = 17;
   public static final byte CursorToBelt = 18;
   public static final byte SwapBeltItem = 19;
+  public static final byte CastSkillRequest = 20;
 
-  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", };
+  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", };
 
   public static String name(int e) { return names[e]; }
 }

@@ -33,6 +33,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Leap;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
@@ -64,6 +65,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Leap> mLeap;
@@ -169,7 +171,7 @@ public class Actioneer extends PassiveSystem {
     // missile collision or damage-calculation problem without changing combat
     // behaviour.
     if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-      Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+      Item weapon = getThrowableWeapon(entityId);
       int quantity = -1;
       int itemThrowMin = 0;
       int itemThrowMax = 0;
@@ -191,7 +193,7 @@ public class Actioneer extends PassiveSystem {
     
     // For players, check if equipped weapon is throwable and has quantity
     if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-      Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+      Item weapon = getThrowableWeapon(entityId);
       
       if (weapon != null && weapon.base != null) {
         // Check quantity. The helper already selected a throwable weapon from
@@ -519,7 +521,7 @@ public class Actioneer extends PassiveSystem {
           
           boolean isThrowAttack = isThrowSkill || isThrowFunc;
           if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-            Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+            Item weapon = getThrowableWeapon(entityId);
             
             if (weapon != null && weapon.base != null) {
               StatRef quantity = weapon.attrs.base().get(Stat.quantity);
@@ -648,7 +650,7 @@ public class Actioneer extends PassiveSystem {
           
           // Check weapon type even if not a throw skill (might be equipped throwable weapon)
           if (mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
-            Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
+            Item weapon = getThrowableWeapon(entityId);
             
             if (weapon != null && weapon.base != null) {
               // Consume quantity if a throwable weapon is active
@@ -701,6 +703,15 @@ public class Actioneer extends PassiveSystem {
 
   private boolean isPlayerEntity(int entityId) {
     return mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
+  }
+
+  private Item getThrowableWeapon(int entityId) {
+    if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      return mPlayer.get(entityId).data.getItems().getEquippedThrowableWeapon();
+    }
+    // Legacy local tests may construct a player without the Player component.
+    return Riiablo.charData == null ? null
+        : Riiablo.charData.getItems().getEquippedThrowableWeapon();
   }
 
   private static int statInt(Attributes attrs, short stat) {

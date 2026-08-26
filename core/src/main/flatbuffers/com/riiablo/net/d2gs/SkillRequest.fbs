@@ -1,0 +1,10 @@
+namespace com.riiablo.net.packet.d2gs;
+
+// Client input only. The server resolves the source entity from the
+// authenticated connection and validates the requested skill/target.
+table CastSkillRequest {
+  skillId:uint16;
+  targetId:int32;
+  targetX:float32;
+  targetY:float32;
+}

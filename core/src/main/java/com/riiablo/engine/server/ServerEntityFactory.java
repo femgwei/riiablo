@@ -597,6 +597,9 @@ public class ServerEntityFactory extends EntityFactory {
     mVelocity.create(id).velocity.set(angle).setLength(missile.Vel);
     mAngle.create(id).set(angle);
     mSize.create(id).size = Size.SMALL;
+    // Missiles are authoritative network entities. Their deletion is then
+    // announced by NetworkSynchronizer when collision/range removes them.
+    mNetworked.create(id);
     
     // Preload missile asset so it's ready when MissileLoader processes it
     if (missileComponent.missileDescriptor != null) {

@@ -20,6 +20,9 @@ public class Missile extends PooledComponent {
   
   /** 导弹拥有者实体 ID（用于伤害计算和敌人判断） */
   public int ownerId = -1;
+
+  /** False for client-side replicas; only the server may resolve collisions. */
+  public boolean authoritative = true;
   
   /** 已移动距离（用于范围检查，与 d2mod 一致） */
   public float distanceTraveled = 0f;
@@ -48,6 +51,7 @@ public class Missile extends PooledComponent {
     missileDescriptor = null;
     start.setZero();
     ownerId = -1;
+    authoritative = true;
     distanceTraveled = 0f;
     attackMinDamage = 0;
     attackMaxDamage = 0;

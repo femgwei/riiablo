@@ -10,6 +10,7 @@ import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
@@ -25,6 +26,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
@@ -42,6 +44,7 @@ public class CursorMovementSystem extends BaseSystem {
   private static final String TAG = "CursorMovementSystem";
 
   protected ComponentMapper<Target> mTarget;
+  protected ComponentMapper<Networked> mNetworked;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
@@ -57,6 +60,9 @@ public class CursorMovementSystem extends BaseSystem {
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
+
+  @Wire(name = "client.socket", failOnNull = false)
+  protected Socket socket;
 
   @Wire(name = "map")
   protected Map map;
@@ -136,7 +142,7 @@ public class CursorMovementSystem extends BaseSystem {
               + " skill=" + skillId + " target=" + targetId + " mode=melee");
           actioneer.moveTo(playerId, targetId);
         } else {
-          actioneer.cast(playerId, skillId, targetId, tmpVec2);
+          requestCast(playerId, skillId, targetId, tmpVec2);
         }
       }
     } else {
@@ -235,11 +241,23 @@ public class CursorMovementSystem extends BaseSystem {
 
           // Allow attack if in melee range or can throw
           if (inMeleeRange || canThrow) {
-            actioneer.cast(src, selectedSkillId, targetId, targetPos);
+            requestCast(src, selectedSkillId, targetId, targetPos);
           }
         }
       }
     }
+  }
+
+  private void requestCast(int sourceId, int skillId, int targetId, Vector2 targetVec) {
+    if (socket == null) {
+      actioneer.cast(sourceId, skillId, targetId, targetVec);
+      return;
+    }
+    int targetServerId = Engine.INVALID_ENTITY;
+    if (targetId != Engine.INVALID_ENTITY && mNetworked.has(targetId)) {
+      targetServerId = mNetworked.get(targetId).serverId;
+    }
+    NetworkedActionSender.cast(socket, skillId, targetServerId, targetVec);
   }
 
   private int getHovered(int src) {
@@ -380,7 +398,7 @@ public class CursorMovementSystem extends BaseSystem {
 
       // Allow attack if in melee range or can throw
       if (inMeleeRange || canThrow) {
-        actioneer.cast(src, selectedSkillId, target, targetPos);
+        requestCast(src, selectedSkillId, target, targetPos);
         return true;
       }
     }

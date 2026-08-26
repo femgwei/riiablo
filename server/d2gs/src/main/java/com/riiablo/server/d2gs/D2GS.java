@@ -97,6 +97,7 @@ import com.riiablo.mpq.MPQFileHandleResolver;
 import com.riiablo.net.packet.d2gs.BeltToCursor;
 import com.riiablo.net.packet.d2gs.BodyToCursor;
 import com.riiablo.net.packet.d2gs.Connection;
+import com.riiablo.net.packet.d2gs.CastSkillRequest;
 import com.riiablo.net.packet.d2gs.CursorToBelt;
 import com.riiablo.net.packet.d2gs.CursorToBody;
 import com.riiablo.net.packet.d2gs.CursorToGround;
@@ -459,6 +460,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.CursorToBelt:
         CursorToBelt(packet);
         break;
+      case D2GSData.CastSkillRequest:
+        CastSkillRequest(packet);
+        break;
       case D2GSData.SwapBeltItem:
         SwapBeltItem(packet);
         break;
@@ -583,6 +587,79 @@ public class D2GS extends ApplicationAdapter {
     int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
     assert entityId != Engine.INVALID_ENTITY;
     sync.sync(entityId, packet.data);
+  }
+
+  /** Handles untrusted combat input; all damage and projectile creation stays on the server. */
+  private void CastSkillRequest(Packet packet) {
+    int entityId = getPlayerEntityId(packet);
+    CastSkillRequest request = (CastSkillRequest) packet.data.data(new CastSkillRequest());
+    int targetId = request.targetId();
+    if (targetId != Engine.INVALID_ENTITY
+        && !world.getMapper(com.riiablo.engine.server.component.Class.class).has(targetId)) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+          + " skill=" + request.skillId() + " reason=unknown_target target=" + targetId);
+      return;
+    }
+    if (Riiablo.files.skills.get(request.skillId()) == null) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+          + " skill=" + request.skillId() + " reason=unknown_skill");
+      return;
+    }
+    com.riiablo.engine.server.component.Player playerComponent =
+        world.getMapper(com.riiablo.engine.server.component.Player.class).get(entityId);
+    if (playerComponent == null || playerComponent.data == null
+        || playerComponent.data.getSkill(request.skillId()) <= 0) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+          + " skill=" + request.skillId() + " reason=skill_not_owned");
+      return;
+    }
+    float x = request.targetX();
+    float y = request.targetY();
+    if (!Float.isFinite(x) || !Float.isFinite(y)) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+          + " skill=" + request.skillId() + " reason=invalid_target_position");
+      return;
+    }
+    if (targetId != Engine.INVALID_ENTITY) {
+      com.riiablo.engine.server.component.Position targetPosition = world.getMapper(
+          com.riiablo.engine.server.component.Position.class).get(targetId);
+      if (targetPosition == null) {
+        Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+            + " skill=" + request.skillId() + " reason=target_has_no_position");
+        return;
+      }
+      // Never trust a client-supplied aim point for an entity target.
+      x = targetPosition.position.x;
+      y = targetPosition.position.y;
+    }
+    Vector2 playerPosition = world.getMapper(
+        com.riiablo.engine.server.component.Position.class).get(entityId).position;
+    if (playerPosition.dst2(x, y) > 2500f) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+          + " skill=" + request.skillId() + " reason=target_position_out_of_bounds");
+      return;
+    }
+    if (request.skillId() == com.riiablo.skill.SkillCodes.attack
+        && targetId != Engine.INVALID_ENTITY) {
+      com.riiablo.item.Item weapon = playerComponent.data.getItems().getEquipped(
+          com.riiablo.item.BodyLoc.RARM);
+      if (weapon == null) {
+        weapon = playerComponent.data.getItems().getEquipped(com.riiablo.item.BodyLoc.LARM);
+      }
+      boolean rangedWeapon = weapon != null && weapon.type != null
+          && (weapon.type.is(com.riiablo.item.Type.BOW)
+              || weapon.type.is(com.riiablo.item.Type.XBOW));
+      if (!rangedWeapon && !world.getSystem(Actioneer.class)
+          .isInMeleeRange(entityId, targetId, 3)) {
+        Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+            + " skill=" + request.skillId() + " reason=melee_out_of_range target=" + targetId);
+        return;
+      }
+    }
+    Gdx.app.log(TAG, String.format(
+        "[NET_CAST] phase=accept player=%d skill=%d target=%d targetPos=(%.2f,%.2f)",
+        entityId, request.skillId(), targetId, x, y));
+    world.getSystem(Actioneer.class).cast(entityId, request.skillId(), targetId, new Vector2(x, y));
   }
 
   private int getPlayerEntityId(Packet packet) {

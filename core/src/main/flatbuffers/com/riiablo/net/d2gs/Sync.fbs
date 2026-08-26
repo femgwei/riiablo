@@ -17,6 +17,7 @@ union ComponentP {
   ObjectP,
   VitalsP,
   CofReferenceP,
+  MissileP,
 }
 
 enum EntityFlags:uint8 (bit_flags) {
@@ -119,4 +120,12 @@ table VitalsP {
 table CofReferenceP {
   mode:uint8;
   weaponClass:uint8;
+}
+
+// Authoritative projectile identity. Position, velocity and angle are sent
+// as regular ECS components in the same EntitySync packet.
+table MissileP {
+  missileId:uint16;
+  ownerId:int32;
+  range:float32;
 }
