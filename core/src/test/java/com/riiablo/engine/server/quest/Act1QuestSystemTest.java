@@ -22,11 +22,14 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
+import com.riiablo.engine.server.event.NativeCainQuestEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.system.core.PassiveSystem;
 import org.junit.jupiter.api.Test;
 
 class Act1QuestSystemTest extends RiiabloTest {
@@ -167,6 +170,39 @@ class Act1QuestSystemTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void releasesCainForEveryEligiblePlayerInTristram() {
+    Harness harness = new Harness();
+    try {
+      CharData rescuerData = character("CainRescuer", Riiablo.NORMAL);
+      CharData witnessData = character("CainWitness", Riiablo.NORMAL);
+      rescuerData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] =
+          Act1CainQuest.openTristramPortal((short) 0);
+      witnessData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] =
+          Act1CainQuest.openTristramPortal((short) 0);
+      int rescuer = harness.createPlayer(rescuerData);
+      int witness = harness.createPlayer(witnessData);
+      harness.setPlayerLevel(rescuer, D2LevelIds.LEVEL_TRISTRAM);
+      harness.setPlayerLevel(witness, D2LevelIds.LEVEL_TRISTRAM);
+      harness.process();
+
+      QuestObjectInteractionEvent gibbet = QuestObjectInteractionEvent.obtain(
+          rescuer, 71, NativeQuestObjectResolver.CAIN_GIBBET,
+          NativeQuestObjectResolver.Type.CAIN_GIBBET);
+      harness.events.dispatch(gibbet);
+
+      assertTrue(gibbet.accepted);
+      assertTrue(NativeQuestRecord.has(
+          rescuerData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD],
+          NativeQuestRecord.REWARD_PENDING));
+      assertTrue(NativeQuestRecord.has(
+          witnessData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD],
+          NativeQuestRecord.REWARD_PENDING));
+    } finally {
+      harness.dispose();
+    }
+  }
+
   private static CharData character(String name, int difficulty) {
     CharData data = CharData.obtain().set(difficulty, false, name, Riiablo.AMAZON);
     data.getStats().base().put(Stat.newskills, 0);
@@ -181,8 +217,9 @@ class Act1QuestSystemTest extends RiiabloTest {
   private static final class Harness {
     final EventSystem events = new EventSystem();
     final Act1QuestSystem quests = new Act1QuestSystem();
+    final CainQuestConsumer cainConsumer = new CainQuestConsumer();
     final World world = new World(new WorldConfigurationBuilder()
-        .with(events, quests)
+        .with(events, quests, cainConsumer)
         .build());
 
     int createPlayer(CharData data) {
@@ -198,6 +235,14 @@ class Act1QuestSystemTest extends RiiabloTest {
       int entityId = world.create();
       world.getMapper(Monster.class).create(entityId).monstats = monstats;
       return entityId;
+    }
+
+    void setPlayerLevel(int entityId, int levelId) {
+      Levels.Entry level = new Levels.Entry();
+      level.Id = levelId;
+      Map.Zone zone = new Map.Zone();
+      zone.level = level;
+      world.getMapper(MapWrapper.class).create(entityId).zone = zone;
     }
 
     int createDenMonster(float life) {
@@ -227,6 +272,13 @@ class Act1QuestSystemTest extends RiiabloTest {
 
     void dispose() {
       world.dispose();
+    }
+  }
+
+  private static final class CainQuestConsumer extends PassiveSystem {
+    @Subscribe
+    public void onCainQuest(NativeCainQuestEvent event) {
+      if (event != null && event.action == NativeCainQuestEvent.CAIN_GIBBET) event.accept();
     }
   }
 }

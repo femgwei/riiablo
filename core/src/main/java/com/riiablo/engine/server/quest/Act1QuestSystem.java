@@ -52,12 +52,15 @@ public class Act1QuestSystem extends PassiveSystem {
   protected ItemGenerator itemGenerator;
 
   private EntitySubscription monstersByZone;
+  private EntitySubscription playersByZone;
   private final Act1CainRuntime cainRuntime = new Act1CainRuntime();
 
   @Override
   protected void initialize() {
     monstersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Monster.class, MapWrapper.class));
+    playersByZone = world.getAspectSubscriptionManager().get(
+        Aspect.all(Player.class, MapWrapper.class));
   }
 
   @Subscribe
@@ -241,7 +244,10 @@ public class Act1QuestSystem extends PassiveSystem {
     }
     event.dispatch(request);
     if (!request.accepted) return;
-    if (request.action == NativeCainQuestEvent.CAIN_GIBBET) cainRuntime.markCainReleased();
+    if (request.action == NativeCainQuestEvent.CAIN_GIBBET) {
+      cainRuntime.markCainReleased();
+      propagateCainRelease(interaction.playerId);
+    }
     player.data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = next;
     persist(player.data);
     interaction.accepted = request.accepted;
@@ -344,6 +350,26 @@ public class Act1QuestSystem extends PassiveSystem {
     MapWrapper wrapper = mMapWrapper.get(entityId);
     return wrapper != null && wrapper.zone != null && wrapper.zone.level != null
         && wrapper.zone.level.Id == levelId;
+  }
+
+  private void propagateCainRelease(int rescuerId) {
+    if (playersByZone == null) return;
+    IntBag entities = playersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int entityId = ids[i];
+      if (entityId == rescuerId
+          || !isPlayerInLevel(entityId, D2LevelIds.LEVEL_TRISTRAM)) continue;
+      Player member = mPlayer.get(entityId);
+      if (member == null || member.data == null) continue;
+      short previous = getCainRecord(member.data);
+      short next = Act1CainQuest.releaseCain(previous);
+      if (previous == next) continue;
+      setCainRecord(member.data, next);
+      persist(member.data);
+      log.info("[A1Q4] Cain release propagated: rescuer={}, player={}, record=0x{}",
+          rescuerId, entityId, Integer.toHexString(Short.toUnsignedInt(next)));
+    }
   }
 
   private void grantSkillPoint(int playerId, CharData data) {

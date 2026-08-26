@@ -3,9 +3,11 @@ package com.riiablo.engine.server.object;
 import java.util.List;
 
 import com.artemis.Aspect;
+import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
+import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.RandomXS128;
 import com.badlogic.gdx.math.Vector2;
@@ -14,7 +16,9 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.NativeCainQuestEvent;
@@ -32,11 +36,12 @@ import com.riiablo.logger.Logger;
 import com.riiablo.map.Map;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
-import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Creates authoritative ground-item entities for first-time native container opens. */
-public class NativeObjectDropSystem extends PassiveSystem {
+public class NativeObjectDropSystem extends BaseSystem {
   private static final Logger log = LogManager.getLogger(NativeObjectDropSystem.class);
+  private static final int CAIN_START_POSITION = 385;
+  private static final float CAIN_TRANSFER_DELAY = 1f;
   private static final int[][] DROP_OFFSETS = {
       {2, 3}, {-2, 3}, {2, -3}, {-2, -3},
       {0, 2}, {2, 0}, {0, -2}, {-2, 0}, {0, 0}
@@ -44,7 +49,9 @@ public class NativeObjectDropSystem extends PassiveSystem {
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
+  protected ComponentMapper<Object> mObject;
   protected ComponentMapper<Player> mPlayer;
 
   @Wire(name = "factory")
@@ -53,11 +60,37 @@ public class NativeObjectDropSystem extends PassiveSystem {
 
   private NativeObjectDropAdapter adapter;
   private EntitySubscription players;
+  private EntitySubscription monsters;
+  private EntitySubscription objects;
   private final Vector2 dropPosition = new Vector2();
+  private int tristramCain = Engine.INVALID_ENTITY;
+  private int townCain = Engine.INVALID_ENTITY;
+  private float cainTransferTimer;
 
   @Override
   protected void initialize() {
     players = world.getAspectSubscriptionManager().get(Aspect.all(Player.class));
+    monsters = world.getAspectSubscriptionManager().get(
+        Aspect.all(Monster.class, MapWrapper.class));
+    objects = world.getAspectSubscriptionManager().get(
+        Aspect.all(Object.class, Position.class, MapWrapper.class));
+  }
+
+  @Override
+  protected void processSystem() {
+    if (tristramCain == Engine.INVALID_ENTITY || townCain != Engine.INVALID_ENTITY) return;
+    cainTransferTimer -= world.getDelta();
+    if (cainTransferTimer > 0f) return;
+    townCain = findTownCain();
+    if (townCain == Engine.INVALID_ENTITY) townCain = spawnTownCain();
+    if (townCain == Engine.INVALID_ENTITY) {
+      cainTransferTimer = CAIN_TRANSFER_DELAY;
+      return;
+    }
+    if (world.getEntityManager().isActive(tristramCain)) world.delete(tristramCain);
+    log.info("[A1Q4] Cain transferred to Rogue Encampment: tristramCain={}, townCain={}",
+        tristramCain, townCain);
+    tristramCain = Engine.INVALID_ENTITY;
   }
 
   @Subscribe
@@ -106,9 +139,60 @@ public class NativeObjectDropSystem extends PassiveSystem {
           event.objectEntityId, event.playerId, spawn);
       return;
     }
+    tristramCain = cain;
+    cainTransferTimer = CAIN_TRANSFER_DELAY;
     event.accept();
     log.info("[A1Q4] Cain released in Tristram: entity={}, gibbet={}, player={}, position={}",
         cain, event.objectEntityId, event.playerId, spawn);
+  }
+
+  private int findTownCain() {
+    if (monsters == null) return Engine.INVALID_ENTITY;
+    IntBag entities = monsters.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int entityId = ids[i];
+      Monster monster = mMonster.get(entityId);
+      MapWrapper wrapper = mMapWrapper.get(entityId);
+      if (monster != null && monster.monstats != null
+          && monster.monstats.hcIdx
+              == com.riiablo.engine.server.monster.MonsterType.DECKARDCAIN_TOWN
+          && isLevel(wrapper, com.d2moo.common.drlg.D2LevelIds.LEVEL_ROGUEENCAMPMENT)) {
+        return entityId;
+      }
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  private int spawnTownCain() {
+    if (factory == null || objects == null) return Engine.INVALID_ENTITY;
+    IntBag entities = objects.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int entityId = ids[i];
+      Object object = mObject.get(entityId);
+      MapWrapper wrapper = mMapWrapper.get(entityId);
+      if (object == null || object.base == null || object.base.Id != CAIN_START_POSITION
+          || !isLevel(wrapper,
+              com.d2moo.common.drlg.D2LevelIds.LEVEL_ROGUEENCAMPMENT)) continue;
+      Vector2 position = mPosition.get(entityId).position;
+      int cain = factory.createMonster(
+          com.riiablo.engine.server.monster.MonsterType.DECKARDCAIN_TOWN,
+          position.x, position.y);
+      if (cain != Engine.INVALID_ENTITY) {
+        log.info("[A1Q4] town Cain spawned: entity={}, marker={}, position={}",
+            cain, entityId, position);
+      }
+      return cain;
+    }
+    log.warn("[A1Q4] Cain start-position object {} is not loaded; transfer deferred",
+        CAIN_START_POSITION);
+    return Engine.INVALID_ENTITY;
+  }
+
+  private static boolean isLevel(MapWrapper wrapper, int levelId) {
+    return wrapper != null && wrapper.zone != null && wrapper.zone.level != null
+        && wrapper.zone.level.Id == levelId;
   }
 
   private void createCainPortal(NativeCainQuestEvent event) {

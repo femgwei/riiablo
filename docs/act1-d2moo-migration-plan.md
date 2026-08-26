@@ -142,7 +142,9 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] The fifth stone consumes `dkb` only after a permanent quest warp to Tristram was created.
     - [x] Runtime Objects.txt-class synchronization lets multiplayer clients rebuild D2Game-created portal objects.
     - [x] Cain's gibbet creates Tristram Cain before setting the player's primary-goal/reward-pending flags.
-    - [ ] Cain's delayed Tristram removal/town NPC visibility switch and party reward propagation.
+    - [x] Cain1 is transferred after the native delay to Cain5 at object 385 in Rogue Encampment.
+    - [x] Cain release is propagated to every eligible player currently in Tristram.
+    - [ ] PartyManager registration/state updates for eligible Act I party members outside Tristram.
     - [ ] A1Q3 imbue item transformation and A1Q5 quest script.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services

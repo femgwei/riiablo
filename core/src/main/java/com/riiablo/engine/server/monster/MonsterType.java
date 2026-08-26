@@ -128,6 +128,8 @@ public final class MonsterType {
   public static final int KASHYA = 150;
   /** 迪卡·凯恩 */
   public static final int DECKARDCAIN = 146;
+  /** 被营救后出现在第一幕营地的迪卡·凯恩（D2MOO MONSTER_CAIN5） */
+  public static final int DECKARDCAIN_TOWN = 265;
   /** 格瑞兹 (Act 1) */
   public static final int GHEED = 147;
   /** 沃瑞夫 (Act 1) */

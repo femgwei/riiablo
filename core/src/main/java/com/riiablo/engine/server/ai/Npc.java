@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.MenuWrapper;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.event.NpcInteractionEvent;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.item.Item;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.logger.LogManager;
@@ -43,7 +44,9 @@ public class Npc extends AI {
   static final IntSet HIRERERS   = new IntSet();
   static {
     // Act 1
-    TALKERS.addAll(146, 147, 148, 150, 154, 155);
+    TALKERS.addAll(MonsterType.DECKARDCAIN, MonsterType.DECKARDCAIN_TOWN,
+        MonsterType.GHEED, MonsterType.AKARA, MonsterType.KASHYA,
+        MonsterType.CHARSI, MonsterType.WARRIV);
     REPAIRERS.addAll(154);
     TRADERS.addAll(147, 148, 154);
     GAMBLERS.addAll(147);
