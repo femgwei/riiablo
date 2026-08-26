@@ -19,6 +19,7 @@ import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.object.NativeObjectInteractTypeResolver;
+import com.riiablo.engine.server.object.NativeObjectKeyResolver;
 import com.riiablo.engine.server.object.NativeObjectOperateTable;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
@@ -182,6 +183,15 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     if (lifecycle == Lifecycle.ANIMATED_CONTAINER
         || lifecycle == Lifecycle.INSTANT_CONTAINER) {
       if (state != null && state.opened) return InteractionResult.HANDLED_UNCHANGED;
+      NativeObjectKeyResolver.Result keyResult = state == null
+          ? NativeObjectKeyResolver.Result.NOT_LOCKED
+          : NativeObjectKeyResolver.unlock(state.interactType,
+              mPlayer.has(src) ? mPlayer.get(src).data : null);
+      if (!keyResult.allowsOpen) {
+        Gdx.app.log(TAG, "Native locked chest rejected: entity=" + entityId
+            + " player=" + src + " object=" + base.Id);
+        return InteractionResult.HANDLED_UNCHANGED;
+      }
       if (state != null) {
         state.persistOpened(true);
         state.persistMode(Engine.Object.MODE_ON);
@@ -192,7 +202,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
       }
       mInteractable.remove(entityId);
-      Gdx.app.log(TAG, "Native chest opened: entity=" + entityId + " object=" + base.Id);
+      Gdx.app.log(TAG, "Native chest opened: entity=" + entityId + " object=" + base.Id
+          + " keyResult=" + keyResult);
       return InteractionResult.HANDLED_CHANGED;
     }
 

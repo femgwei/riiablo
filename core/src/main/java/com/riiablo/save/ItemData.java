@@ -226,6 +226,31 @@ public class ItemData {
     return item;
   }
 
+  /**
+   * Consumes one unit from the first matching stack on a stored inventory page.
+   * The final unit removes the item and emits the normal store-removal event.
+   */
+  public boolean consumeStoredItemQuantity(StoreLoc storeLoc, int itemType) {
+    IntArray stored = getStore(storeLoc);
+    for (int n = 0; n < stored.size; n++) {
+      int index = stored.get(n);
+      Item item = getItem(index);
+      if (item == null || item.type == null || !item.type.is(itemType)) continue;
+
+      StatRef quantity = item.attrs == null ? null : item.attrs.base().get(Stat.quantity);
+      int current = quantity == null ? 0 : quantity.asInt();
+      if (current <= 1) {
+        notifyStoreRemoved(item);
+        remove(index);
+      } else {
+        item.attrs.base().put(Stat.quantity, current - 1);
+        item.attrs.reset();
+      }
+      return true;
+    }
+    return false;
+  }
+
   public void addAll(Array<? extends Item> items) {
     itemData.addAll(items);
   }

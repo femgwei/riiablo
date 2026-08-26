@@ -118,7 +118,8 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Trap trigger context event exposes player/object/operate/trap type.
     - [x] InitFn 2/3/57 trapped urn/chest InteractType and lock-bit initialization.
     - [x] Persistent InteractType and trapped-container event dispatch.
-    - [ ] Locked-chest key consumption and trap projectile/damage callback.
+    - [x] Locked-chest inventory key consumption and Assassin bypass.
+    - [ ] Trap projectile/damage callback.
   - [ ] Shrine and well effects/cooldowns.
     - [x] Shrines.txt table and native effect-class/LevelMin/preset selection.
     - [x] Shrine health/mana effects (Code 1-5) and 1200-frame/minute reset.
