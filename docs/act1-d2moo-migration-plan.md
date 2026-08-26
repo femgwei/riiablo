@@ -128,12 +128,13 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Structured event boundary for combat/item/portal shrine effects.
     - [x] Synchronous well cleanse/pet-heal request and charge acknowledgement boundary.
     - [ ] Shrine buffs, portal/gem/monster effects and well status/pet cleansing.
-  - [ ] Quest-object handlers and room unload/reload integration tests.
+    - [ ] Quest-object handlers and room unload/reload integration tests.
     - [x] Act 1 quest-object classifier for tome, cairns, cage, tree, Malus and Countess emitters.
     - [x] Synchronous quest acceptance event and persistent one-shot lifecycle.
     - [x] Room entity recreation restores mode and disables exhausted interaction.
     - [x] Tower Tome is routed to A1Q5 instead of the ordinary chest drop path.
-    - [ ] A1Q3/A1Q4/A1Q5 scripts consume object requests and create their quest items/portal.
+    - [x] A1Q3 Malus level gate, `mdh` quest-item drop and pickup event bridge.
+    - [ ] A1Q3 Charsi turn-in/reward and A1Q4/A1Q5 scripts consume object requests and create their quest items/portal.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services
 - [ ] Phase 5: A1Q6 and Act completion

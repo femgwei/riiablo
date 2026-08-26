@@ -20,7 +20,10 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
+import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -113,6 +116,52 @@ class Act1QuestSystemTest extends RiiabloTest {
       assertFalse(NativeQuestRecord.has(claimed, NativeQuestRecord.REWARD_PENDING));
       assertEquals(1, data.getStats().base().getValue(Stat.newskills, 0));
       assertEquals(1, data.getStats().aggregate().getValue(Stat.newskills, 0));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void marksMalusRecordWhenQuestItemIsPickedUp() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("MalusHero", Riiablo.NORMAL);
+      int player = harness.createPlayer(data);
+      harness.process();
+
+      harness.events.dispatch(QuestItemPickedUpEvent.obtain(player, 77,
+          Act1MalusQuest.MALUS_CODE));
+      short record = data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.STARTED));
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.CUSTOM2));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void acceptsMalusStandOnlyAtNativeMinimumLevel() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("MalusLevelHero", Riiablo.NORMAL);
+      data.getStats().base().put(Stat.level, 7);
+      data.getStats().reset();
+      int player = harness.createPlayer(data);
+      harness.process();
+
+      QuestObjectInteractionEvent tooLow = QuestObjectInteractionEvent.obtain(
+          player, 70, 108, NativeQuestObjectResolver.Type.HORADRIC_MALUS);
+      harness.events.dispatch(tooLow);
+      assertFalse(tooLow.accepted);
+
+      data.getStats().base().put(Stat.level, 8);
+      data.getStats().reset();
+      QuestObjectInteractionEvent eligible = QuestObjectInteractionEvent.obtain(
+          player, 70, 108, NativeQuestObjectResolver.Type.HORADRIC_MALUS);
+      harness.events.dispatch(eligible);
+      assertTrue(eligible.accepted);
+      short record = data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.LEFT_TOWN));
     } finally {
       harness.dispose();
     }

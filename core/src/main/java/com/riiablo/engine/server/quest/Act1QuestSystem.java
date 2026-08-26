@@ -17,6 +17,8 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
+import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.logger.LogManager;
@@ -101,6 +103,31 @@ public class Act1QuestSystem extends PassiveSystem {
     }
   }
 
+  @Subscribe
+  public void onQuestObjectInteraction(QuestObjectInteractionEvent event) {
+    if (event == null
+        || event.type != com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_MALUS
+        || !mPlayer.has(event.playerId)) return;
+    Player player = mPlayer.get(event.playerId);
+    if (player.data == null) return;
+    short record = getMalusRecord(player.data);
+    if (!Act1MalusQuest.canOpenMalus(record, level(event.playerId, player))) return;
+    setMalusRecord(player.data, Act1MalusQuest.leaveTown(record));
+    persist(player.data);
+    event.accept();
+    log.info("[A1Q3] Malus stand accepted: player={} record=0x{}",
+        event.playerId, Integer.toHexString(Short.toUnsignedInt(getMalusRecord(player.data))));
+  }
+
+  @Subscribe
+  public void onQuestItemPickedUp(QuestItemPickedUpEvent event) {
+    if (event == null || !Act1MalusQuest.MALUS_CODE.equalsIgnoreCase(event.itemCode)
+        || !mPlayer.has(event.playerId)) return;
+    Player player = mPlayer.get(event.playerId);
+    if (player.data == null) return;
+    updateMalusRecord(player.data, Act1MalusQuest::markMalusPickedUp, "malus-picked-up");
+  }
+
   int countLivingMonsters(int levelId) {
     return countLivingMonsters(levelId, -1);
   }
@@ -166,6 +193,33 @@ public class Act1QuestSystem extends PassiveSystem {
 
   private static short getRecord(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
+  }
+
+  private static short getMalusRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
+  }
+
+  private static void setMalusRecord(CharData data, short record) {
+    data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD] = record;
+  }
+
+  private void updateMalusRecord(CharData data, RecordUpdate update, String reason) {
+    short previous = getMalusRecord(data);
+    short next = update.apply(previous);
+    if (previous == next) return;
+    setMalusRecord(data, next);
+    persist(data);
+    log.info("[A1Q3] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private int level(int playerId, Player player) {
+    Attributes attrs = mAttributesWrapper.has(playerId)
+        ? mAttributesWrapper.get(playerId).attrs : player.data.getStats();
+    if (attrs == null) return 0;
+    StatRef level = attrs.get(Stat.level, StatRef.obtain());
+    return level == null ? 0 : level.asInt();
   }
 
   private static void setRecord(CharData data, short record) {

@@ -6,10 +6,12 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.StoreLoc;
 import com.riiablo.save.CharData;
 
+import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 public class ItemManager extends PassiveSystem {
@@ -18,6 +20,7 @@ public class ItemManager extends PassiveSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Position> mPosition;
+  protected EventSystem event;
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -25,6 +28,9 @@ public class ItemManager extends PassiveSystem {
   public void groundToCursor(int entityId, int dst) {
     com.riiablo.item.Item item = mItem.get(dst).item;
     mPlayer.get(entityId).data.groundToCursor(item);
+    if (item.code != null) {
+      event.dispatch(QuestItemPickedUpEvent.obtain(entityId, dst, item.code));
+    }
   }
 
   public void cursorToGround(int entityId) {

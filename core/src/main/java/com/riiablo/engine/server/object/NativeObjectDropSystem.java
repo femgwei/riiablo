@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
+import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -58,7 +59,10 @@ public class NativeObjectDropSystem extends PassiveSystem {
 
   @Subscribe
   public void onObjectInteraction(ObjectInteractionEvent event) {
-    if (event == null || !event.firstActivation() || !isContainer(event.lifecycle)) return;
+    if (event == null || !event.firstActivation()) return;
+    boolean malus = event.objectClassId == NativeQuestObjectResolver.HORADRIC_MALUS
+        && event.lifecycle == Lifecycle.QUEST_OBJECT;
+    if (!malus && !isContainer(event.lifecycle)) return;
     if (factory == null || itemGenerator == null || Riiablo.files == null) {
       log.warn("[OBJECT_DROP] item creation unavailable: object={}, factory={}, generator={}",
           event.entityId, factory != null, itemGenerator != null);
@@ -76,6 +80,14 @@ public class NativeObjectDropSystem extends PassiveSystem {
 
     int difficulty = difficulty(event.playerId);
     int itemLevel = NativeObjectDropAdapter.areaLevel(level, difficulty);
+    if (malus) {
+      Vector2 target = findDropPosition(wrapper.map, position.position, 0);
+      createQuestItem(Act1MalusQuest.MALUS_CODE, difficulty, itemLevel,
+          target.x, target.y);
+      log.info("[A1Q3] Horadric Malus dropped: object={}, player={}, level={}",
+          event.entityId, event.playerId, level.Id);
+      return;
+    }
     RandomXS128 random = new RandomXS128(objectSeed(event, position));
     if (adapter == null) adapter = new NativeObjectDropAdapter(Riiablo.files);
     TreasureClassResolver.PlayerContext playerContext = playerContext(level.Id);
@@ -95,6 +107,23 @@ public class NativeObjectDropSystem extends PassiveSystem {
         adapter.chestTier(level, difficulty), playerContext.totalPlayers,
         playerContext.partyMembersInLevel,
         playerContext.effectivePlayerCount(), drops.size(), created);
+  }
+
+  private void createQuestItem(String code, int difficulty, int itemLevel,
+      float x, float y) {
+    try {
+      Item item = itemGenerator.generate(code);
+      item.ilvl = (byte) MathUtils.clamp(itemLevel, 1, 99);
+      item.version = Item.VERSION_110;
+      item.quality = Quality.NORMAL;
+      item.flags |= Item.ITEMFLAG_IDENTIFIED;
+      item.attrs.base().put(Stat.questitemdifficulty, difficulty);
+      item.attrs.reset();
+      int entityId = factory.createItem(item, x, y);
+      item.id = entityId;
+    } catch (Throwable t) {
+      log.error("[A1Q3] Horadric Malus item creation failed: code={}", code, t);
+    }
   }
 
   private int createItem(NativeObjectDropAdapter.Drop drop, int itemLevel,
