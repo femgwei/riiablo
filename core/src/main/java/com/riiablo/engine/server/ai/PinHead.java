@@ -20,6 +20,8 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 /**
  * PinHead AI implementation matching D2MOD's AITHINK_Fn039_PinHead logic.
@@ -33,6 +35,8 @@ import com.riiablo.engine.server.component.Sequence;
  * Special: Simple melee AI.
  */
 public class PinHead extends AI {
+  private static final Logger log = LogManager.getLogger(PinHead.class);
+  static final int PARAM_SMITE_CHANCE = 4;
   enum State implements com.badlogic.gdx.ai.fsm.State<Integer> {
     IDLE,
     WANDER,
@@ -171,9 +175,17 @@ public class PinHead extends AI {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
-        mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-        mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        Riiablo.audio.play(monsound + "_attack_1", true);
+        boolean smite = params.length > PARAM_SMITE_CHANCE
+            && MathUtils.randomBoolean(params[PARAM_SMITE_CHANCE] / 100f)
+            && monster.monstats.Skill1 != null && !monster.monstats.Skill1.isEmpty();
+        if (smite && useMonsterSkill(0, targetId, targetPos, Engine.Monster.MODE_A2)) {
+          log.info("[MONSTER_SMITE] phase=cast source={} target={} monster={} skill={}",
+              entityId, targetId, monster.monstats.Id, monster.monstats.Skill1);
+        } else {
+          mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+          mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
+          Riiablo.audio.play(monsound + "_attack_1", true);
+        }
         time = MathUtils.random(1f, 2);
         return;
       } else {

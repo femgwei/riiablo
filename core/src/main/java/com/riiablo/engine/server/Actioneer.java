@@ -590,6 +590,10 @@ public class Actioneer extends PassiveSystem {
         resolveBestow(entityId, targetId);
         break;
       }
+      case 150: { // native monster Smite: A2 physical hit with stun
+        resolveSmite(entityId, targetId);
+        break;
+      }
       case 3: { // throw (srvdofunc for throw attacks)
         // Consume quantity FIRST - this should happen regardless of whether there's a target
         // Check if this is a throwing attack and consume quantity
@@ -797,6 +801,68 @@ public class Actioneer extends PassiveSystem {
             + "fallbackZakarumHeal={} restored={} hp={} -> {} maxHp={}",
         entityId, targetId, level, percent, minPercent, maxPercent, fallback,
         after - before, before, after, max);
+  }
+
+  /** D2MOO SKILLS_SrvDo150_Smite monster branch. */
+  private void resolveSmite(int entityId, int targetId) {
+    if (targetId == Engine.INVALID_ENTITY || !mMonster.has(entityId)
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !mPosition.has(entityId) || !mPosition.has(targetId)) {
+      log.info("[MONSTER_SMITE] phase=skipped source={} target={} reason=missing_entity_data",
+          entityId, targetId);
+      return;
+    }
+    Monster monster = mMonster.get(entityId);
+    float distance = mPosition.get(entityId).position.dst(mPosition.get(targetId).position);
+    float meleeRange = 1f + (monster.monstats2 != null ? monster.monstats2.MeleeRng : 0);
+    if (distance > meleeRange) {
+      log.info("[MONSTER_SMITE] phase=skipped source={} target={} reason=out_of_melee_range distance={} range={}",
+          entityId, targetId, distance, meleeRange);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    if (attacker == null || defender == null) return;
+    int minDamage = monster.attack2MinDamage;
+    int maxDamage = monster.attack2MaxDamage;
+    int attackRating = monster.attack2ToHit;
+    if (maxDamage <= 0) {
+      minDamage = statInt(attacker, Stat.mindamage);
+      maxDamage = statInt(attacker, Stat.maxdamage);
+      attackRating = statInt(attacker, Stat.tohit);
+    }
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, false, isPlayerEntity(targetId), false,
+        minDamage, maxDamage, attackRating);
+    if (!combat.hit) {
+      log.info("[MONSTER_SMITE] phase=result source={} target={} result=miss chance={} distance={}",
+          entityId, targetId, combat.hitChance, distance);
+      return;
+    }
+    if (combat.blocked) {
+      log.info("[MONSTER_SMITE] phase=result source={} target={} result=blocked chance={}",
+          entityId, targetId, combat.hitChance);
+      return;
+    }
+    StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
+    float before = hitpoints.asFixed();
+    DamageEvent event = DamageEvent.obtain(entityId, targetId, Math.max(0f, combat.totalDamage));
+    events.dispatch(event);
+    float damage = Math.max(0f, event.damage);
+    hitpoints.sub(damage);
+    if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
+
+    Skills.Entry skill = mCasting.has(entityId)
+        ? Riiablo.files.skills.get(mCasting.get(entityId).skillId) : null;
+    int stunFrames = SkillFormula.evaluate(skill != null ? skill.calc2 : null, skill,
+        monsterSkillLevelFor(entityId, skill));
+    if (stunFrames > 0) StatusEffectApplier.INSTANCE.applyStun(targetId, stunFrames);
+    log.info("[MONSTER_SMITE] phase=result source={} target={} result=hit damage={} hp={} -> {} "
+            + "chance={} stunFrames={} a2Profile={}..{} ar={}",
+        entityId, targetId, damage, before, hitpoints.asFixed(), combat.hitChance,
+        stunFrames, minDamage, maxDamage, attackRating);
+    if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
   }
 
   /** Returns {minPercent, maxPercent, fallbackToZakarumHeal(0/1)}. */
