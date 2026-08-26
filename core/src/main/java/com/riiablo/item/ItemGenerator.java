@@ -59,12 +59,14 @@ public class ItemGenerator extends PassiveSystem {
     item.ilvl = (byte) Math.max(1, Math.min(127, itemLevel));
     item.quality = quality;
     item.flags |= Item.ITEMFLAG_IDENTIFIED;
+    // Every non-compact standard item serializes the magic property list,
+    // including rare rewards whose generated affix list is currently empty.
+    StatListRef magic = item.attrs.buildList();
 
     if (quality == Quality.MAGIC) {
       int prefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel);
       int suffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel);
       item.qualityId = prefix | (suffix << Item.MAGIC_AFFIX_SIZE);
-      StatListRef magic = item.attrs.buildList();
       addMagicAffix(magic, Riiablo.files.MagicPrefix.get(prefix));
       addMagicAffix(magic, Riiablo.files.MagicSuffix.get(suffix));
     } else if (quality == Quality.RARE) {

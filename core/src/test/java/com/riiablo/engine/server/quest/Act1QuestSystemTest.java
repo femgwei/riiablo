@@ -28,7 +28,12 @@ import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.ItemReader;
+import com.riiablo.item.ItemWriter;
 import com.riiablo.item.Quality;
+import com.riiablo.io.ByteInput;
+import com.riiablo.io.ByteOutput;
+import io.netty.buffer.Unpooled;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -184,6 +189,14 @@ class Act1QuestSystemTest extends RiiabloTest {
     assertEquals(Quality.RARE, nightmare.quality);
     assertNotNull(nightmare.qualityData);
     assertNotNull(nightmare.getNameString());
+
+    ByteOutput encoded = ByteOutput.wrap(Unpooled.buffer());
+    new ItemWriter().writeItem(nightmare, encoded);
+    Item decoded = new ItemReader().readItem(ByteInput.wrap(encoded.buffer()));
+    assertEquals("rin", decoded.code);
+    assertEquals(30, decoded.ilvl);
+    assertEquals(Quality.RARE, decoded.quality);
+    assertNotNull(decoded.qualityData);
   }
 
   @Test
