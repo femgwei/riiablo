@@ -103,6 +103,13 @@ class MonsterAiParamParityTest {
     assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
     stats.BaseId = "fallenshaman1";
     assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 1f));
+
+    // Native D2MOO does not gate this callback on MonStats2.revive.  Some
+    // shipped Fallen rows leave that column unset while remaining valid
+    // resurrection targets.
+    stats.BaseId = "fallen1";
+    stats2.revive = false;
+    assertTrue(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
   }
 
   @Test

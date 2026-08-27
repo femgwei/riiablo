@@ -139,7 +139,11 @@ public class FallenShaman extends AI {
         || corpse == null || !corpse.usable || corpse.fading || hitpoints > 0f) {
       return false;
     }
-    if (!monster.monstats2.revive || monster.monstats.Align != 1
+    // D2MOO's AITHINK_TargetCallback_FallenShaman does not consult the
+    // MonStats2.revive column.  Fallen resurrection is determined by the
+    // base id/alignment/dead-mode/targetability checks; requiring revive here
+    // incorrectly filters normal Fallen rows in several data sets.
+    if (monster.monstats.Align != 1
         || monster.monstats.boss || monster.monstats.SetBoss || monster.monstats.primeevil) {
       return false;
     }
