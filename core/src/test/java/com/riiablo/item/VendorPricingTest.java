@@ -9,6 +9,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Misc;
+import com.riiablo.codec.excel.Npc;
 import com.riiablo.save.CharData;
 
 class VendorPricingTest extends RiiabloTest {
@@ -40,6 +41,27 @@ class VendorPricingTest extends RiiabloTest {
     assertTrue(VendorPricing.sell(character, character.getItems().indexOf(item)));
     assertEquals(value, character.getStats().get(Stat.gold).asInt());
     assertTrue(!character.getItems().contains(item));
+  }
+
+  @Test
+  void nativeCostAndNpcMultiplierAreApplied() {
+    Item item = item("hp1", 1, 1);
+    item.base.cost = 400;
+    Npc.Entry npc = new Npc.Entry();
+    npc.sellMult = 2048;
+    npc.buyMult = 512;
+    assertEquals(800, VendorPricing.transactionCost(item, npc, VendorPricing.Transaction.BUY, 0));
+    assertEquals(50, VendorPricing.transactionCost(item, npc, VendorPricing.Transaction.SELL, 0));
+  }
+
+  @Test
+  void reducedPriceAndRepairUseNativeScaling() {
+    Item item = item("hp1", 1, 1);
+    item.base.cost = 1000;
+    item.attrs.base().put(Stat.maxdurability, 100);
+    item.attrs.base().put(Stat.durability, 25);
+    assertEquals(750, VendorPricing.transactionCost(item, null, VendorPricing.Transaction.REPAIR, 0));
+    assertEquals(500, VendorPricing.transactionCost(item, null, VendorPricing.Transaction.BUY, 50));
   }
 
   private static Item item(String code, int width, int height) {

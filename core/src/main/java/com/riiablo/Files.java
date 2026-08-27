@@ -28,6 +28,7 @@ import com.riiablo.codec.excel.LvlWarp;
 import com.riiablo.codec.excel.MagicPrefix;
 import com.riiablo.codec.excel.MagicSuffix;
 import com.riiablo.codec.excel.Misc;
+import com.riiablo.codec.excel.Npc;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonAI;
 import com.riiablo.codec.excel.MonLvl;
@@ -99,6 +100,7 @@ public class Files {
    */
   public final LvlSub           LvlSub;
   public final Misc             misc;
+  public final Npc              Npc;
   public final Missiles         Missiles;
   public final MagicPrefix      MagicPrefix;
   public final MagicSuffix      MagicSuffix;
@@ -165,6 +167,7 @@ public class Files {
     LvlWarp          = load(LvlWarp.class, Excel.EXPANSION);
     LvlSub           = load(LvlSub.class);
     misc             = load(Misc.class, Excel.EXPANSION);
+    Npc              = load(Npc.class);
     Missiles         = load(Missiles.class);
     MagicPrefix      = load(MagicPrefix.class, Excel.EXPANSION);
     MagicSuffix      = load(MagicSuffix.class, Excel.EXPANSION);

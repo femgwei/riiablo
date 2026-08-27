@@ -33,6 +33,10 @@ public class ItemEntry extends Excel.Entry {
   @Column public int     minstack;
   @Column public int     maxstack;
   @Column public int     spawnstack;
+  /** Native Items.txt base transaction cost (dwCost). */
+  @Column public int     cost;
+  /** Native Items.txt gambling base cost (dwGambleCost). */
+  @Column(format = "gamble cost") public int gambleCost;
   @Column public boolean useable;
   @Column public String  usesound;
   @Column public int     quest;
