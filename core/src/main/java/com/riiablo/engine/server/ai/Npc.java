@@ -207,8 +207,15 @@ public class Npc extends AI {
       menu.addItem(3398, new ClickListener() { // gamble
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          // TODO: generate special gamble inventory each time
-          Riiablo.game.vendorPanel.config(VendorPanel.GAMBLER, new Array<Item>(false, 0, Item.class));
+          Array<Item> items;
+          try {
+            items = vendors.generateGamble();
+          } catch (Throwable t) {
+            items = new Array<>(false, 0, Item.class);
+            log.error("Failed to generate gamble items: entityId={}, monsterId={}, error={}",
+                entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
+          }
+          Riiablo.game.vendorPanel.config(VendorPanel.GAMBLER, items);
           Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
         }
       });

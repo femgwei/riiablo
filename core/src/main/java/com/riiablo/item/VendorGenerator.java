@@ -25,6 +25,45 @@ public class VendorGenerator extends PassiveSystem {
     return items;
   }
 
+  /** Generates a compact native-style gambling page for Gheed. */
+  public Array<Item> generateGamble() {
+    Array<ItemEntry> candidates = new Array<>(false, 128, ItemEntry.class);
+    collectGambleCandidates(candidates, Riiablo.files.armor);
+    collectGambleCandidates(candidates, Riiablo.files.weapons);
+    collectGambleCandidates(candidates, Riiablo.files.misc);
+    Array<Item> items = new Array<>(true, 10, Item.class);
+    int count = Math.min(10, candidates.size);
+    for (int i = 0; i < count; i++) {
+      ItemEntry base = candidates.get(MathUtils.random(candidates.size - 1));
+      int roll = MathUtils.random(99);
+      Item item;
+      if (roll < 5) {
+        try {
+          item = generator.generateQuestReward(base.code, Math.max(1, base.level), Quality.RARE, nextId());
+        } catch (RuntimeException ignored) {
+          item = createNormal(base);
+        }
+      } else if (roll < 35) {
+        item = createMagic(base, Math.max(1, base.level));
+      } else {
+        item = createNormal(base);
+      }
+      item.flags2 |= Item.ITEMFLAG2_INSTORE;
+      items.add(item);
+    }
+    return items;
+  }
+
+  private static void collectGambleCandidates(Array<ItemEntry> candidates,
+      Excel<? extends ItemEntry> excel) {
+    for (ItemEntry base : excel) {
+      if (base == null || base.code == null || base.code.isEmpty()
+          || base.quest != 0 || base.invwidth <= 0 || base.invheight <= 0
+          || base.level <= 0) continue;
+      candidates.add(base);
+    }
+  }
+
   public void generate(String vendor, Array<Item> items, Excel<? extends ItemEntry> excel) throws Exception {
     Class<? extends ItemEntry> entryClass = excel.getEntryClass();
     Field field = entryClass.getField(vendor);
