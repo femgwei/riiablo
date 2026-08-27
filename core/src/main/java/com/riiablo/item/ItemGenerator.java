@@ -19,6 +19,8 @@ import com.riiablo.codec.excel.MagicPrefix;
 import com.riiablo.codec.excel.MagicSuffix;
 import com.riiablo.codec.excel.RarePrefix;
 import com.riiablo.codec.excel.RareSuffix;
+import com.riiablo.codec.excel.UniqueItems;
+import com.riiablo.codec.excel.SetItems;
 import com.riiablo.attributes.PropertiesGenerator;
 
 public class ItemGenerator extends PassiveSystem {
@@ -49,6 +51,96 @@ public class ItemGenerator extends PassiveSystem {
     }
 
     throw new AssertionError();
+  }
+
+  /** Creates a drop with native quality metadata and persisted affix data. */
+  public Item generateLootItem(String code, int itemLevel, Quality requested) {
+    if (requested == Quality.MAGIC || requested == Quality.RARE) {
+      return generateQuestReward(code, itemLevel, requested, 0);
+    }
+    Item item = generate(code);
+    item.version = Item.VERSION_110;
+    item.ilvl = (byte) Math.max(1, Math.min(99, itemLevel));
+    item.flags |= Item.ITEMFLAG_IDENTIFIED;
+    item.quality = requested == null ? Quality.NORMAL : requested;
+    if (item.quality == Quality.UNIQUE) {
+      UniqueItems.Entry entry = findUnique(code, itemLevel);
+      if (entry == null) return generateQuestReward(code, itemLevel, Quality.MAGIC, 0);
+      item.qualityId = Riiablo.files.UniqueItems.index(entry.index);
+      item.qualityData = entry;
+      addUniqueProperties(item, entry);
+    } else if (item.quality == Quality.SET) {
+      SetItems.Entry entry = findSet(code, itemLevel);
+      if (entry == null) return generateQuestReward(code, itemLevel, Quality.MAGIC, 0);
+      item.qualityId = Riiablo.files.SetItems.index(entry.index);
+      item.qualityData = entry;
+      addSetProperties(item, entry);
+    }
+    // ItemWriter always emits a serialized magic/set/unique property list for
+    // non-compact standard items.  Keep one list even for NORMAL, LOW and
+    // HIGH drops; an absent list produces a malformed D2S item stream.
+    if ((item.flags & Item.ITEMFLAG_COMPACT) == 0 && item.attrs.list().numLists() == 0) {
+      item.attrs.buildList();
+    }
+    item.attrs.reset();
+    return item;
+  }
+
+  private static UniqueItems.Entry findUnique(String code, int itemLevel) {
+    if (Riiablo.files.UniqueItems == null) return null;
+    Array<UniqueItems.Entry> candidates = new Array<>();
+    int totalRarity = 0;
+    for (UniqueItems.Entry entry : Riiablo.files.UniqueItems) {
+      if (entry.enabled && code.equals(entry.code) && (entry.lvl <= 0 || entry.lvl <= itemLevel)) {
+        candidates.add(entry);
+        totalRarity += Math.max(1, entry.rarity);
+      }
+    }
+    if (candidates.size == 0) return null;
+    int roll = MathUtils.random(Math.max(0, totalRarity - 1));
+    for (UniqueItems.Entry entry : candidates) {
+      roll -= Math.max(1, entry.rarity);
+      if (roll < 0) return entry;
+    }
+    return candidates.peek();
+  }
+
+  private static SetItems.Entry findSet(String code, int itemLevel) {
+    if (Riiablo.files.SetItems == null) return null;
+    Array<SetItems.Entry> candidates = new Array<>();
+    int totalRarity = 0;
+    for (SetItems.Entry entry : Riiablo.files.SetItems) {
+      String itemCode = entry._item != null && !entry._item.isEmpty() ? entry._item : entry.item;
+      if (code.equals(itemCode) && (entry.lvl <= 0 || entry.lvl <= itemLevel)) {
+        candidates.add(entry);
+        totalRarity += Math.max(1, entry.rarity);
+      }
+    }
+    if (candidates.size == 0) return null;
+    int roll = MathUtils.random(Math.max(0, totalRarity - 1));
+    for (SetItems.Entry entry : candidates) {
+      roll -= Math.max(1, entry.rarity);
+      if (roll < 0) return entry;
+    }
+    return candidates.peek();
+  }
+
+  private static void addUniqueProperties(Item item, UniqueItems.Entry e) {
+    StatListRef list = item.attrs.buildList();
+    new PropertiesGenerator().add(list,
+        new String[] {e.prop1,e.prop2,e.prop3,e.prop4,e.prop5,e.prop6,e.prop7,e.prop8,e.prop9,e.prop10,e.prop11,e.prop12},
+        new int[] {e.par1,e.par2,e.par3,e.par4,e.par5,e.par6,e.par7,e.par8,e.par9,e.par10,e.par11,e.par12},
+        new int[] {e.min1,e.min2,e.min3,e.min4,e.min5,e.min6,e.min7,e.min8,e.min9,e.min10,e.min11,e.min12},
+        new int[] {e.max1,e.max2,e.max3,e.max4,e.max5,e.max6,e.max7,e.max8,e.max9,e.max10,e.max11,e.max12});
+  }
+
+  private static void addSetProperties(Item item, SetItems.Entry e) {
+    StatListRef list = item.attrs.buildList();
+    new PropertiesGenerator().add(list,
+        new String[] {e.prop1,e.prop2,e.prop3,e.prop4,e.prop5,e.prop6,e.prop7,e.prop8,e.prop9},
+        new int[] {e.par1,e.par2,e.par3,e.par4,e.par5,e.par6,e.par7,e.par8,e.par9},
+        new int[] {e.min1,e.min2,e.min3,e.min4,e.min5,e.min6,e.min7,e.min8,e.min9},
+        new int[] {e.max1,e.max2,e.max3,e.max4,e.max5,e.max6,e.max7,e.max8,e.max9});
   }
 
   /** Creates a native quest reward with valid persisted magic/rare metadata. */

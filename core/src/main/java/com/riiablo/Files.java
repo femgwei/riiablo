@@ -17,6 +17,7 @@ import com.riiablo.codec.excel.Excel;
 import com.riiablo.codec.excel.Gems;
 import com.riiablo.codec.excel.Inventory;
 import com.riiablo.codec.excel.ItemStatCost;
+import com.riiablo.codec.excel.ItemRatio;
 import com.riiablo.codec.excel.ItemTypes;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LowQualityItems;
@@ -80,6 +81,7 @@ public class Files {
   public final Gems             Gems;
   public final Inventory        inventory;
   public final ItemStatCost     ItemStatCost;
+  public final ItemRatio        ItemRatio;
   public final ItemTypes        ItemTypes;
   public final Levels           Levels;
   /**
@@ -156,6 +158,7 @@ public class Files {
     Gems             = load(Gems.class, Excel.EXPANSION);
     inventory        = load(Inventory.class);
     ItemStatCost     = load(ItemStatCost.class);
+    ItemRatio        = load(ItemRatio.class);
     ItemTypes        = load(ItemTypes.class);
     Levels           = load(Levels.class, Excel.EXPANSION);
     // 加载 AutoMap.txt（不区分是否为资料片，使用原始表即可）

@@ -27,7 +27,10 @@ public class PropertiesGenerator {
     log.traceEntry("add(stats: {}, code: {}, param: {}, min: {}, max: {})", stats, code, param, min, max);
     for (int i = 0; i < code.length; i++) {
       final String c = code[i];
-      if (c.isEmpty()) break;
+      // Excel leaves unused property columns null on some UniqueItems and
+      // SetItems rows.  Treat both null and empty as the end of the list;
+      // native item generation must not fail while walking optional props.
+      if (c == null || c.isEmpty()) break;
       try {
         MDC.put("propCode", c);
         log.trace("Adding {}", c);

@@ -1,10 +1,16 @@
 package com.riiablo.engine.server.item;
 
+import java.util.List;
+
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.ItemEntry;
+import com.riiablo.item.TreasureClassResolver;
+import com.riiablo.item.NativeItemQualityResolver;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -157,6 +163,12 @@ public class LootManager {
     /** 玩家数量（影响掉落） */
     public int playerCount = 1;
 
+    /** Same-level party count used by the native NoDrop exponent. */
+    public int partyMembersInLevel = 1;
+
+    /** Native MonStats/SuperUniques TreasureClass name, when available. */
+    public String treasureClass;
+
     /** 重置配置 */
     public void reset() {
       monsterLevel = 1;
@@ -169,6 +181,8 @@ public class LootManager {
       magicFind = 0;
       goldFind = 0;
       playerCount = 1;
+      partyMembersInLevel = 1;
+      treasureClass = null;
     }
   }
 
@@ -237,6 +251,17 @@ public class LootManager {
   public LootResult calculateLoot(LootConfig config) {
     cachedResult.reset();
 
+    if (config == null) return cachedResult;
+
+    // Monster drops use the native TC graph when a class is available. The
+    // legacy procedural table remains a compatibility fallback for custom
+    // monsters or test environments without Excel data.
+    if (calculateTreasureClassDrop(config, cachedResult)) {
+      log.debug("Calculated native TC loot: tc={}, items={}, gold={}",
+          config.treasureClass, cachedResult.getItemCount(), cachedResult.goldAmount);
+      return cachedResult;
+    }
+
     // 计算金币掉落
     calculateGoldDrop(config, cachedResult);
 
@@ -252,6 +277,95 @@ public class LootManager {
         cachedResult.getItemCount(), cachedResult.goldAmount);
 
     return cachedResult;
+  }
+
+  private boolean calculateTreasureClassDrop(LootConfig config, LootResult result) {
+    if (config.treasureClass == null || config.treasureClass.trim().isEmpty()
+        || Riiablo.files == null || Riiablo.files.TreasureClassEx == null) return false;
+    if (Riiablo.files.TreasureClassEx.index(config.treasureClass) < 0
+        && Riiablo.files.TreasureClassEx.get(config.treasureClass) == null) return false;
+    int itemLevel = calculateItemLevel(config);
+    TreasureClassResolver.PlayerContext players = new TreasureClassResolver.PlayerContext(
+        config.playerCount, config.partyMembersInLevel);
+    List<TreasureClassResolver.Drop> drops;
+    try {
+      TreasureClassResolver resolver = new TreasureClassResolver(Riiablo.files.TreasureClassEx);
+      drops = resolver.resolve(config.treasureClass, itemLevel,
+          bound -> MathUtils.random(bound - 1), TreasureClassResolver.NATIVE_MAX_DROPS, players);
+    } catch (RuntimeException ex) {
+      log.warn("[LOOT_TC] failed to resolve {}: {}", config.treasureClass, ex.toString());
+      return false;
+    }
+    if (drops.isEmpty()) return true;
+    for (TreasureClassResolver.Drop drop : drops) {
+      String token = TreasureClassResolver.baseToken(drop.token);
+      if (token == null || token.isEmpty()) continue;
+      if ("gld".equalsIgnoreCase(token)) {
+        result.goldAmount += nativeGoldAmount(itemLevel, config, drop.token);
+        continue;
+      }
+      String code = token;
+      int quality = forcedTreasureQuality(token);
+      if (quality == ItemQuality.NORMAL) {
+        ItemEntry base = findBase(token);
+        if (base == null) {
+          log.debug("[LOOT_TC] unresolved leaf {}, skipping", drop.token);
+          continue;
+        }
+        quality = rollTreasureQuality(drop, base, itemLevel, config);
+      } else {
+        if (quality == ItemQuality.UNIQUE) {
+          com.riiablo.codec.excel.UniqueItems.Entry unique = Riiablo.files.UniqueItems.get(token);
+          code = unique.code;
+        } else if (quality == ItemQuality.SET) {
+          com.riiablo.codec.excel.SetItems.Entry set = Riiablo.files.SetItems.get(token);
+          code = set._item != null && !set._item.isEmpty() ? set._item : set.item;
+        }
+      }
+      if (findBase(code) != null) result.addItem(code, quality, itemLevel);
+    }
+    return true;
+  }
+
+  private int forcedTreasureQuality(String token) {
+    if (Riiablo.files.UniqueItems != null && Riiablo.files.UniqueItems.get(token) != null)
+      return ItemQuality.UNIQUE;
+    if (Riiablo.files.SetItems != null && Riiablo.files.SetItems.get(token) != null)
+      return ItemQuality.SET;
+    return ItemQuality.NORMAL;
+  }
+
+  private ItemEntry findBase(String code) {
+    if (code == null || code.isEmpty()) return null;
+    ItemEntry entry = Riiablo.files.armor.get(code);
+    if (entry != null) return entry;
+    entry = Riiablo.files.weapons.get(code);
+    if (entry != null) return entry;
+    return Riiablo.files.misc.get(code);
+  }
+
+  /** Applies ItemRatio, MF diminishing returns, and inherited TC modifiers. */
+  private int rollTreasureQuality(TreasureClassResolver.Drop drop, ItemEntry base, int itemLevel,
+                                  LootConfig config) {
+    com.riiablo.codec.excel.ItemTypes.Entry type =
+        base == null ? null : Riiablo.files.ItemTypes.get(base.type);
+    com.riiablo.codec.excel.ItemRatio.Entry ratio = Riiablo.files.ItemRatio == null
+        ? null : Riiablo.files.ItemRatio.get(base, type, 100);
+    if (ratio == null) return rollItemQuality(config, itemLevel);
+    return NativeItemQualityResolver.roll(ratio, base, type, itemLevel, config.magicFind,
+        drop.Unique, drop.Set, drop.Rare, drop.Magic, drop.Superior, drop.Normal,
+        bound -> MathUtils.random(bound - 1));
+  }
+
+  private int nativeGoldAmount(int itemLevel, LootConfig config, String token) {
+    int min = Math.max(1, itemLevel / 2 + 1);
+    int max = Math.max(min, itemLevel * 2 + 5);
+    int amount = MathUtils.random(min, max);
+    if (config.isBoss) amount *= 3;
+    else if (config.isElite) amount *= 2;
+    if (config.goldFind > 0) amount = amount * (100 + config.goldFind) / 100;
+    int multiplier = com.riiablo.engine.server.object.NativeObjectDropAdapter.multiplier(token);
+    return Math.max(1, (int) (((long) amount * multiplier) / 256L));
   }
 
   /**
