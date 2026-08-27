@@ -101,6 +101,23 @@ public class DeathRewardSystem extends PassiveSystem {
     }
 
     LootManager.LootResult result = lootManager.calculateLoot(config);
+    // Native TreasureClassEx rows for regular Fallen can contain several
+    // nested Picks (the original game still applies a per-monster drop cap).
+    // The resolver intentionally preserves those Picks for elite/boss tables,
+    // so apply the normal-monster cap at the reward boundary instead of
+    // globally reducing TreasureClassResolver.NATIVE_MAX_DROPS.
+    if (!config.isElite && !config.isBoss && !config.isSuperUnique
+        && result.getItemCount() > 1) {
+      int before = result.getItemCount();
+      while (result.getItemCount() > 1) {
+        int last = result.getItemCount() - 1;
+        result.itemCodes.removeIndex(last);
+        result.itemQualities.removeIndex(last);
+        result.itemLevels.removeIndex(last);
+      }
+      log.info("[DEATH_REWARD] normal_drop_cap victim={} monster={} before={} after=1",
+          event.victim, monster.monstats != null ? monster.monstats.Id : "unknown", before);
+    }
     int createdItems = 0;
     for (int i = 0; i < result.getItemCount(); i++) {
       String code = result.itemCodes.get(i);

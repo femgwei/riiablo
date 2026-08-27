@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.codec.excel.Skills;
 
 /**
  * FallenShaman AI implementation matching D2MOD's AITHINK_Fn013_FallenShaman logic.
@@ -110,10 +111,15 @@ public class FallenShaman extends AI {
 
   /** Native AITHINK_TargetCallback_FallenShaman corpse search. */
   private int findNearbyCorpse(float maxRange) {
-    if (corpseEntities == null || maxRange <= 0f) return Engine.INVALID_ENTITY;
+    if (corpseEntities == null || maxRange <= 0f) {
+      log.debug("[MONSTER_RAISE] phase=search source={} range={} candidates=0 reason=subscription_unavailable",
+          entityId, maxRange);
+      return Engine.INVALID_ENTITY;
+    }
     Vector2 source = mPosition.get(entityId).position;
     float bestDistance2 = maxRange * maxRange;
     int best = Engine.INVALID_ENTITY;
+    int eligible = 0;
     IntBag entities = corpseEntities.getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int candidateId = entities.get(i);
@@ -124,14 +130,45 @@ public class FallenShaman extends AI {
       float hpValue = hp != null ? hp.asFixed() : Float.MAX_VALUE;
       Monster candidate = mMonster.get(candidateId);
       Corpse corpse = mCorpse.get(candidateId);
-      if (!isResurrectableFallen(candidate, corpse, hpValue)) continue;
-
       float distance2 = source.dst2(mPosition.get(candidateId).position);
+      boolean resurrectable = isResurrectableFallen(candidate, corpse, hpValue);
+      if (!resurrectable) {
+        log.debug("[MONSTER_RAISE] phase=candidate_rejected source={} candidate={} monster={} "
+                + "hp={} usable={} fading={} distance={} align={} revive={}",
+            entityId, candidateId,
+            candidate != null && candidate.monstats != null ? candidate.monstats.Id : "unknown",
+            hpValue, corpse != null && corpse.usable, corpse != null && corpse.fading,
+            (float) Math.sqrt(distance2),
+            candidate != null && candidate.monstats != null ? candidate.monstats.Align : -1,
+            candidate != null && candidate.monstats2 != null && candidate.monstats2.revive);
+        continue;
+      }
       if (distance2 > bestDistance2) continue;
+      eligible++;
       bestDistance2 = distance2;
       best = candidateId;
     }
+    log.debug("[MONSTER_RAISE] phase=search source={} range={} subscribed={} eligible={} selected={}",
+        entityId, maxRange, entities.size(), eligible, best);
     return best;
+  }
+
+  /** Finds the native resurrection skill instead of assuming it is Skill1. */
+  private int findResurrectionSkillIndex() {
+    if (monster == null || monster.monstats == null || Riiablo.files == null
+        || Riiablo.files.skills == null) return -1;
+    String[] names = {
+        monster.monstats.Skill1, monster.monstats.Skill2, monster.monstats.Skill3,
+        monster.monstats.Skill4, monster.monstats.Skill5, monster.monstats.Skill6,
+        monster.monstats.Skill7, monster.monstats.Skill8 };
+    for (int i = 0; i < names.length; i++) {
+      String name = names[i];
+      if (name == null || name.isEmpty()) continue;
+      Skills.Entry skill = Riiablo.files.skills.get(name);
+      if (skill != null && skill.srvdofunc == 97) return i;
+      if (name.toLowerCase().contains("resurrect") || name.toLowerCase().contains("raise")) return i;
+    }
+    return -1;
   }
 
   public static boolean isResurrectableFallen(Monster monster, Corpse corpse, float hitpoints) {
@@ -250,18 +287,41 @@ public class FallenShaman extends AI {
     }
 
     int corpseId = findNearbyCorpse(params[PARAM_RESURRECT_DISTANCE]);
-    if (corpseId != Engine.INVALID_ENTITY
-        && MathUtils.randomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f)) {
+    int resurrectSkill = findResurrectionSkillIndex();
+    boolean resurrectionRoll = corpseId != Engine.INVALID_ENTITY
+        && MathUtils.randomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f);
+    if (corpseId != Engine.INVALID_ENTITY && resurrectSkill < 0) {
+      log.warn("[MONSTER_RAISE] phase=skill_missing source={} target={} monster={} "
+              + "skills=[{}, {}, {}, {}, {}, {}, {}, {}]",
+          entityId, corpseId, monster.monstats.Id,
+          monster.monstats.Skill1, monster.monstats.Skill2, monster.monstats.Skill3,
+          monster.monstats.Skill4, monster.monstats.Skill5, monster.monstats.Skill6,
+          monster.monstats.Skill7, monster.monstats.Skill8);
+    }
+    log.debug("[MONSTER_RAISE] phase=decision source={} target={} skillSlot={} roll={}",
+        entityId, corpseId, resurrectSkill + 1, resurrectionRoll);
+    if (corpseId != Engine.INVALID_ENTITY && resurrectSkill >= 0 && resurrectionRoll) {
       if (useMonsterSkill(
-          0, corpseId, mPosition.get(corpseId).position, SHAMAN_SEQUENCE_MODE)) {
+          resurrectSkill, corpseId, mPosition.get(corpseId).position, SHAMAN_SEQUENCE_MODE)) {
         stateMachine.changeState(State.CAST);
         time = MathUtils.random(1f, 2f);
+        // Some headless/server animation paths do not emit the native
+        // AnimDataFinished keyframe for seq_shamanresurrect.  Apply the
+        // authoritative state transition immediately as a safe fallback;
+        // Actioneer's srvdofunc=97 remains idempotent and will simply reject
+        // a second restore after the corpse has been removed.
+        boolean restored = factory != null && factory.resurrectMonster(corpseId, entityId);
+        log.info("[MONSTER_RAISE] phase=immediate_fallback source={} target={} restored={}",
+            entityId, corpseId, restored);
         log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} distance={} skill={}",
             entityId, corpseId, mMonster.get(corpseId).monstats.Id,
             mPosition.get(entityId).position.dst(mPosition.get(corpseId).position),
-            monster.monstats.Skill1);
+            resurrectionSkillName(resurrectSkill));
         return;
       }
+      log.warn("[MONSTER_RAISE] phase=skill_rejected source={} target={} skillSlot={} skill={}",
+          entityId, corpseId, resurrectSkill + 1,
+          resurrectionSkillName(resurrectSkill));
     }
 
     if (withinShootDistance(targetDistance[0], params[PARAM_SHOOT_DISTANCE])
@@ -278,6 +338,21 @@ public class FallenShaman extends AI {
     stopMovement();
     stateMachine.changeState(State.IDLE);
     time = 10f * com.riiablo.codec.Animation.FRAME_DURATION;
+  }
+
+  private String resurrectionSkillName(int index) {
+    if (monster == null || monster.monstats == null) return "unknown";
+    switch (index) {
+      case 0: return monster.monstats.Skill1;
+      case 1: return monster.monstats.Skill2;
+      case 2: return monster.monstats.Skill3;
+      case 3: return monster.monstats.Skill4;
+      case 4: return monster.monstats.Skill5;
+      case 5: return monster.monstats.Skill6;
+      case 6: return monster.monstats.Skill7;
+      case 7: return monster.monstats.Skill8;
+      default: return "unknown";
+    }
   }
 
   @Override

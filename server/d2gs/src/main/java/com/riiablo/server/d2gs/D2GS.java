@@ -1181,6 +1181,10 @@ public class D2GS extends ApplicationAdapter {
         request.itemId(), request.groundEntityId(), request.storeLoc(), request.x(), request.y(),
         request.bodyLoc(), request.merc());
     ItemMoveRequestCache.Entry cached = itemMoveRequestCache.lookup(packet.id, request.requestId());
+    Gdx.app.log(TAG, "[ITEM_PICKUP] phase=request client=" + packet.id
+        + " request=" + request.requestId() + " op=" + operation
+        + " item=" + request.itemId() + " ground=" + request.groundEntityId()
+        + " revision=" + request.revision());
     if (cached != null) {
       if (cached.matches(intent)) {
         outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response)));
@@ -1206,9 +1210,17 @@ public class D2GS extends ApplicationAdapter {
           ? null : world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerEntityId);
       if (groundItem != null && (groundPosition == null || playerPosition == null
           || playerPosition.position.dst2(groundPosition.position) > 100f)) {
+        Gdx.app.log(TAG, "[ITEM_PICKUP] phase=distance_check client=" + packet.id
+            + " ground=" + groundEntity + " distance="
+            + (groundPosition != null && playerPosition != null
+                ? playerPosition.position.dst(groundPosition.position) : Float.NaN)
+            + " result=too_far");
         outcome = new AuthoritativeItemMoveService.Outcome(false, ItemMoveFailure.GROUND_ITEM_TOO_FAR,
             authoritativeItems.revision(playerEntityId));
       } else {
+        Gdx.app.log(TAG, "[ITEM_PICKUP] phase=resolve_ground client=" + packet.id
+            + " player=" + playerEntityId + " ground=" + groundEntity
+            + " itemCode=" + (groundItem != null ? groundItem.code : "null"));
         outcome = authoritativeItems.pickup(playerEntityId, character, intent, groundItem);
       }
       if (outcome.success && outcome.consumeGroundEntity) world.delete(groundEntity);
@@ -1226,6 +1238,9 @@ public class D2GS extends ApplicationAdapter {
     } else {
       outcome = authoritativeItems.apply(playerEntityId, character, intent);
     }
+    Gdx.app.log(TAG, "[ITEM_PICKUP] phase=result client=" + packet.id
+        + " success=" + outcome.success + " failure=" + outcome.failure
+        + " revision=" + outcome.revision + " consumeGround=" + outcome.consumeGroundEntity);
     sendItemMoveResult(packet.id, intent, outcome.success, outcome.failure, outcome.revision, true,
         operation == ItemMoveOperation.GROUND_TO_CURSOR && !outcome.consumeGroundEntity);
   }

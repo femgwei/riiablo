@@ -131,11 +131,23 @@ public final class AuthoritativeItemMoveService {
       revisions.put(playerEntityId, next);
       return new Outcome(true, ItemMoveFailure.NONE, next, grant.remaining == 0, grant.remaining);
     }
+    // Ground clicks in the native game attempt an automatic inventory
+    // placement.  The old path only marked the item CURSOR, leaving it
+    // visually attached to the mouse and making a normal pickup appear to
+    // fail in multiplayer.  Pack it into the first authoritative free
+    // inventory rectangle; the explicit cursor operations remain available
+    // for items moved from panels.
+    boolean stored;
     try {
-      character.groundToCursor(groundItem);
+      stored = character.getItems().addToInventory(groundItem);
     } catch (Throwable t) {
       GroundDropOwnership.release(intent.groundEntityId);
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+    }
+    if (!stored) {
+      GroundDropOwnership.release(intent.groundEntityId);
+      return new Outcome(false, ItemMoveFailure.INVENTORY_OCCUPIED, current,
+          false, 0);
     }
     long next = current + 1L;
     revisions.put(playerEntityId, next);
