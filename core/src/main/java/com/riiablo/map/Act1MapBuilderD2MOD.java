@@ -692,7 +692,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                   // entries).  Generate them once per pack so shaman and
                   // corrupt rogue groups include their native minions.
                   int partyCount = partySize(monster.PartyMin, monster.PartyMax,
-                      MathUtils.random(Integer.MAX_VALUE));
+                      // libGDX's random(int max) computes nextInt(max + 1);
+                      // passing Integer.MAX_VALUE overflows that bound and
+                      // crashes map generation before D2GS can bind 6114.
+                      MathUtils.random(Integer.MAX_VALUE - 1));
                   for (int k = 0; k < partyCount; k++) {
                     String minionId = partyMinion(monster, k);
                     if (minionId == null) continue;
