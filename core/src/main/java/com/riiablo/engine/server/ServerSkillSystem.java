@@ -1,6 +1,8 @@
 package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
+import com.artemis.Aspect;
+import com.artemis.utils.IntBag;
 import com.artemis.annotations.Wire;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
@@ -29,6 +31,7 @@ import com.riiablo.logger.Logger;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -50,6 +53,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(ServerSkillSystem.class);
   private static final float MULTI_MISSILE_SPREAD_RADIANS = 0.12f;
   private static final int NOVA_MISSILE_COUNT = 64;
+  private static final float CHAIN_LIGHTNING_JUMP_RANGE2 = 13f * 13f;
   private final boolean monstersOnly;
 
   public ServerSkillSystem() {
@@ -155,6 +159,12 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.srvdofunc == 28 || skill.srvdofunc == 28) {
       spawnMeteor(event, skill, start);
+      return;
+    }
+    if (event.skillId == SkillId.CHAIN_LIGHTNING
+        || (skill.skill != null
+            && skill.skill.toLowerCase(java.util.Locale.ROOT).contains("chain lightning"))) {
+      spawnChainLightning(event, skill, start);
       return;
     }
 
@@ -347,6 +357,72 @@ public class ServerSkillSystem extends PassiveSystem {
         getSkillLevel(event.entityId, event.skillId));
     log.info("[MONSTER_VAMPIRE] phase=meteor source={} target={} missile={} missileId={} position=({}, {})",
         event.entityId, event.targetId, missileName, missileId, target.x, target.y);
+  }
+
+  /**
+   * Native chain lightning walks the nearby hostile-unit list, never revisits
+   * a target, and emits one authoritative segment per jump.  Each segment is
+   * represented by the normal missile/collision path, preserving resistance,
+   * hit and death event handling instead of applying damage directly here.
+   */
+  private void spawnChainLightning(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[CHAIN_LIGHTNING] phase=reject source={} reason=missing_missile name={}",
+          event.entityId, missileName);
+      return;
+    }
+    int maxHits = Math.min(12, Math.max(1,
+        5 + getSkillLevel(event.entityId, event.skillId) / 5));
+    IntSet visited = new IntSet();
+    Vector2 from = new Vector2(start);
+    int created = 0;
+    boolean sourcePlayer = mPlayer.has(event.entityId);
+    for (int jump = 0; jump < maxHits; jump++) {
+      int next = jump == 0 && event.targetId >= 0 && mPosition.has(event.targetId)
+          && isHostile(sourcePlayer, event.targetId)
+          ? event.targetId : findNearestHostile(event.entityId, from, visited);
+      if (next < 0 || !mPosition.has(next)) break;
+      Vector2 destination = mPosition.get(next).position;
+      Vector2 direction = new Vector2(destination).sub(from);
+      if (direction.isZero(0.0001f)) {
+        visited.add(next);
+        continue;
+      }
+      direction.nor();
+      // Each segment owns its collision set. Sharing the target-selection set
+      // would pre-mark every intended victim and make collision skip them.
+      if (createMissile(missile, direction, from, event.entityId, null,
+          getSkillLevel(event.entityId, event.skillId)) >= 0) created++;
+      visited.add(next);
+      from.set(destination);
+    }
+    log.info("[CHAIN_LIGHTNING] phase=spawn source={} initialTarget={} hits={} missile={} status={}",
+        event.entityId, event.targetId, created, missileName, created > 0 ? "PASS" : "EMPTY");
+  }
+
+  private int findNearestHostile(int sourceId, Vector2 origin, IntSet visited) {
+    boolean sourcePlayer = mPlayer.has(sourceId);
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class)).getEntities();
+    int nearest = Engine.INVALID_ENTITY;
+    float nearestDistance = Float.MAX_VALUE;
+    for (int i = 0; i < entities.size(); i++) {
+      int candidate = entities.get(i);
+      if (candidate == sourceId || visited.contains(candidate) || !isHostile(sourcePlayer, candidate)
+          || !mPosition.has(candidate)) continue;
+      float distance = origin.dst2(mPosition.get(candidate).position);
+      if (distance <= CHAIN_LIGHTNING_JUMP_RANGE2 && distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = candidate;
+      }
+    }
+    return nearest;
+  }
+
+  private boolean isHostile(boolean sourcePlayer, int candidate) {
+    return sourcePlayer ? mMonster.has(candidate) : mPlayer.has(candidate);
   }
 
   private Vector2 resolveTargetPoint(SkillDoEvent event, Vector2 fallback, Vector2 out) {

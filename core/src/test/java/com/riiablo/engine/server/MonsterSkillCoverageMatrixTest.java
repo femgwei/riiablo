@@ -26,7 +26,8 @@ import org.junit.jupiter.api.Test;
  */
 class MonsterSkillCoverageMatrixTest extends RiiabloTest {
   private static final Set<Integer> SUPPORTED_SRV_DO = Set.of(
-      0, 1, 3, 5, 7, 8, 22, 23, 24, 27, 28, 67, 77, 83, 85, 86, 87, 90, 91, 95, 96, 97, 150);
+      0, 1, 3, 5, 7, 8, 22, 23, 24, 26, 27, 28, 67, 77, 83, 85, 86, 87,
+      90, 91, 95, 96, 97, 98, 109, 129, 150);
 
   @Test
   void dumpAllActsMonsterSkillMatrix() {

@@ -130,7 +130,8 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
   void stateSerializerRoundTripsAuthoritativeSnapshot() {
     UnitStates source = new UnitStates().init(42);
     source.stateList.addState(StateId.POISON, 90, 2, 7);
-    source.stateList.addState(StateId.COLD, 20, 3, 8);
+    UnitState coldSource = source.stateList.addState(StateId.COLD, 20, 3, 8);
+    coldSource.velocityModifier = -35;
     StateSerializer serializer = new StateSerializer();
     FlatBufferBuilder builder = new FlatBufferBuilder(256);
     int stateOffset = serializer.putData(builder, source);
@@ -152,6 +153,7 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
     assertEquals(2, client.stateList.getStateLevel(StateId.POISON));
     assertEquals(20, client.stateList.getStateDuration(StateId.COLD));
     assertEquals(3, client.stateList.getStateLevel(StateId.COLD));
+    assertEquals(-35, client.stateList.getState(StateId.COLD).velocityModifier);
     System.out.println("[STATE_SYNC_CHAIN] entity=42 states=2 poison=90/2 cold=20/3"
         + " staleRemoved=true status=PASS");
   }

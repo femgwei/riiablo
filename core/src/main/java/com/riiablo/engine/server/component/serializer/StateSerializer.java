@@ -20,24 +20,29 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
   @Override
   public int putData(FlatBufferBuilder builder, UnitStates component) {
     if (component.stateList == null || component.stateList.isEmpty()) {
-      return StateP.createStateP(builder, 0, 0, 0);
+      return StateP.createStateP(builder, 0, 0, 0, 0);
     }
 
     int count = component.stateList.size();
     short[] stateIds = new short[count];
     int[] durations = new int[count];
     byte[] levels = new byte[count];
+    short[] velocityModifiers = new short[count];
     for (int i = 0; i < count; i++) {
       UnitState state = component.stateList.getStates().get(i);
       stateIds[i] = (short) Math.max(0, Math.min(0xFFFF, state.stateId));
       durations[i] = state.duration;
       levels[i] = (byte) Math.max(0, Math.min(255, state.level));
+      velocityModifiers[i] = (short) Math.max(Short.MIN_VALUE,
+          Math.min(Short.MAX_VALUE, state.velocityModifier));
     }
 
     int stateIdOffset = StateP.createStateIdVector(builder, stateIds);
     int durationOffset = StateP.createDurationVector(builder, durations);
     int levelOffset = StateP.createLevelVector(builder, levels);
-    return StateP.createStateP(builder, stateIdOffset, durationOffset, levelOffset);
+    int velocityModifierOffset = StateP.createVelocityModifierVector(builder, velocityModifiers);
+    return StateP.createStateP(builder, stateIdOffset, durationOffset, levelOffset,
+        velocityModifierOffset);
   }
 
   @Override
@@ -60,6 +65,13 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
     }
     if (component.stateList == null) component.init(-1);
     component.stateList.replaceFromSnapshot(stateIds, durations, levels);
+    for (int i = 0; i < count; i++) {
+      UnitState state = component.stateList.getState(stateIds[i]);
+      if (state != null) {
+        state.velocityModifier = i < data.velocityModifierLength()
+            ? data.velocityModifier(i) : 0;
+      }
+    }
     return component;
   }
 }

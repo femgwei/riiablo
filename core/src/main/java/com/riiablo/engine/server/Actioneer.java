@@ -35,6 +35,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Leap;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
@@ -76,6 +77,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<Pathfind> mPathfind;
 
   @com.artemis.annotations.Wire(name = "factory")
   protected EntityFactory factory;
@@ -86,6 +88,7 @@ public class Actioneer extends PassiveSystem {
 
   protected EventSystem events;
   protected Pathfinder pathfinder;
+  @com.artemis.annotations.Wire(name = "map")
   protected Map map;
 
   /** Entity IDs for whom the last attack target died; must release before next attack. */
@@ -490,7 +493,9 @@ public class Actioneer extends PassiveSystem {
       case 0:
         break;
       case 1: // attack
-      case 7: { // native Jab: same authoritative hit path, skill-specific animation
+      case 7: // native Jab: same authoritative hit path, skill-specific animation
+      case 9: // player Frenzy
+      case 109: { // monster Frenzy / BloodLordFrenzy
         if (srvdofunc == 7) {
           log.info("[MONSTER_SKILL] phase=jab entity={} target={} using=melee_hit_pipeline",
               entityId, targetId);
@@ -499,8 +504,9 @@ public class Actioneer extends PassiveSystem {
         if (!mAttributesWrapper.has(targetId)) break;
         log.debug("{} attack {}", entityId, targetId);
 
-        if (srvdofunc == 1 && mCasting.has(entityId)
-            && mCasting.get(entityId).skillId == SkillCodes.attack) {
+        if (mCasting.has(entityId)
+            && ((srvdofunc == 1 && mCasting.get(entityId).skillId == SkillCodes.attack)
+                || srvdofunc == 9 || srvdofunc == 109)) {
           if (isPlayerRangedNormalAttack(entityId)) {
             // ServerSkillSystem creates the Arrow/Bolt at this keyframe.
             break;
@@ -620,6 +626,36 @@ public class Actioneer extends PassiveSystem {
 
         applyCombatStates(entityId, targetId, combat);
 
+        // Native Frenzy applies a short-lived stacking state to the attacker
+        // at the successful hit frame.  Keep this server authoritative so the
+        // speed bonus cannot be faked by a client animation.
+        if (mCasting.has(entityId)) {
+          Casting casting = mCasting.get(entityId);
+          Skills.Entry attackSkill = Riiablo.files.skills.get(casting.skillId);
+          if (attackSkill != null && isFrenzySkill(attackSkill)
+              && mUnitStates.has(entityId)) {
+            UnitStates attackerStates = mUnitStates.get(entityId);
+            if (attackerStates.stateList == null) attackerStates.init(entityId);
+            int level = Math.max(1, skillLevel(entityId, casting.skillId));
+            int stateId = mMonster.has(entityId) ? StateId.MONFRENZY : StateId.FRENZY;
+            int duration = SkillFormula.evaluate(attackSkill.auralencalc,
+                attackSkill, level);
+            if (duration <= 0) duration = 100;
+            UnitState existingFrenzy = attackerStates.stateList.getState(stateId);
+            UnitState frenzy = attackerStates.stateList.addState(
+                stateId, duration, level, entityId);
+            if (frenzy != null) {
+              frenzy.skillId = casting.skillId;
+              frenzy.velocityModifier = Math.min(8,
+                  existingFrenzy != null ? existingFrenzy.velocityModifier + 1 : 1);
+              frenzy.needsSync = true;
+            }
+            log.info("[FRENZY] phase=apply source={} target={} state={} level={} stacks={} duration={}",
+                entityId, targetId, StateId.getName(stateId), level,
+                frenzy != null ? frenzy.velocityModifier : 0, duration);
+          }
+        }
+
         if (hitpoints.asFixed() <= 0f) {
           log.debug("{} is dead!", targetId);
           events.dispatch(DeathEvent.obtain(entityId, targetId));
@@ -698,10 +734,10 @@ public class Actioneer extends PassiveSystem {
         // We only consume quantity here, and let the missile handle damage on collision.
         break;
       }
-      case 27: // teleport
-    mPosition.get(entityId).position.set(targetVec);
-    Box2DBody box2dWrapper = mBox2DBody.get(entityId);
-        if (box2dWrapper != null) box2dWrapper.body.setTransform(targetVec, 0);
+      case 27:  // player Teleport
+      case 98:  // monster Teleport
+      case 129: // imp Teleport
+        resolveTeleport(entityId, targetVec);
         break;
       // These server functions are resolved by ServerSkillSystem from the
       // SkillDoEvent emitted immediately below.  Keep the Actioneer stage
@@ -731,6 +767,39 @@ public class Actioneer extends PassiveSystem {
     return skill != null && skill.srvdofunc == 97;
   }
 
+  /** D2MOO SrvDo027: validate the landing subtile, warp, and clear stale movement intent. */
+  boolean resolveTeleport(int entityId, Vector2 targetVec) {
+    if (!mPosition.has(entityId) || targetVec == null
+        || !Float.isFinite(targetVec.x) || !Float.isFinite(targetVec.y)) {
+      log.warn("[TELEPORT] phase=reject entity={} target={} reason=invalid_target",
+          entityId, targetVec);
+      return false;
+    }
+    int flags = map != null ? map.flags(targetVec) : 0xFF;
+    if ((flags & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+      log.info("[TELEPORT] phase=reject entity={} target=({}, {}) flags={} reason=blocked",
+          entityId, targetVec.x, targetVec.y, flags);
+      return false;
+    }
+    Vector2 from = new Vector2(mPosition.get(entityId).position);
+    mPosition.get(entityId).position.set(targetVec);
+    if (mPathfind.has(entityId)) mPathfind.remove(entityId);
+    if (mTarget.has(entityId)) mTarget.remove(entityId);
+    if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+    Box2DBody box2dWrapper = mBox2DBody.get(entityId);
+    if (box2dWrapper != null && box2dWrapper.body != null) {
+      box2dWrapper.body.setTransform(targetVec, 0);
+    }
+    if (mUnitStates.has(entityId)) {
+      UnitStates states = mUnitStates.get(entityId);
+      if (states.stateList == null) states.init(entityId);
+      states.stateList.addState(StateId.SYNC_WARPED, 2, 1, entityId);
+    }
+    log.info("[TELEPORT] phase=warp entity={} from=({}, {}) to=({}, {}) flags={} status=PASS",
+        entityId, from.x, from.y, targetVec.x, targetVec.y, flags);
+    return true;
+  }
+
   /** Applies the target state selected by the Skills.txt curse row. */
   private void resolveMonsterCurse(int entityId, int targetId) {
     if (targetId == Engine.INVALID_ENTITY || !mUnitStates.has(targetId)
@@ -758,6 +827,9 @@ public class Actioneer extends PassiveSystem {
   }
 
   private int skillLevel(int entityId, int skillId) {
+    if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId));
+    }
     if (mMonster.has(entityId) && mMonster.get(entityId).monstats != null) {
       MonStats.Entry row = mMonster.get(entityId).monstats;
       String name = Riiablo.files.skills.get(skillId) != null
@@ -786,6 +858,11 @@ public class Actioneer extends PassiveSystem {
     if (name.contains("terror")) return StateId.TERROR;
     if (name.contains("attract")) return StateId.ATTRACT;
     return StateId.NONE;
+  }
+
+  private static boolean isFrenzySkill(Skills.Entry skill) {
+    return skill != null && skill.skill != null
+        && skill.skill.toLowerCase(java.util.Locale.ROOT).contains("frenzy");
   }
 
   private boolean isPlayerEntity(int entityId) {

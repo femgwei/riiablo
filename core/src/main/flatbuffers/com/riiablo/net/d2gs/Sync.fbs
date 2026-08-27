@@ -102,11 +102,13 @@ table ObjectP {
 }
 
 // Authoritative server status snapshot. The three vectors share the same
-// indices: stateId[i], duration[i], and level[i] describe one active state.
+// indices: stateId[i], duration[i], level[i], and velocityModifier[i] describe
+// one active state. velocityModifier carries runtime stacks such as Frenzy.
 table StateP {
   stateId:[uint16];
   duration:[int32];
   level:[uint8];
+  velocityModifier:[int16];
 }
 
 // Compact authoritative combat state. Attribute modifiers remain server-side;

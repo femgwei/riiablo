@@ -33,19 +33,27 @@ public final class StateP extends Table {
   public ByteVector levelVector(ByteVector obj) { int o = __offset(8); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
   public ByteBuffer levelAsByteBuffer() { return __vector_as_bytebuffer(8, 1); }
   public ByteBuffer levelInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 8, 1); }
+  public short velocityModifier(int j) { int o = __offset(10); return o != 0 ? bb.getShort(__vector(o) + j * 2) : 0; }
+  public int velocityModifierLength() { int o = __offset(10); return o != 0 ? __vector_len(o) : 0; }
+  public ShortVector velocityModifierVector() { return velocityModifierVector(new ShortVector()); }
+  public ShortVector velocityModifierVector(ShortVector obj) { int o = __offset(10); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer velocityModifierAsByteBuffer() { return __vector_as_bytebuffer(10, 2); }
+  public ByteBuffer velocityModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 10, 2); }
 
   public static int createStateP(FlatBufferBuilder builder,
       int stateIdOffset,
       int durationOffset,
-      int levelOffset) {
-    builder.startTable(3);
+      int levelOffset,
+      int velocityModifierOffset) {
+    builder.startTable(4);
+    StateP.addVelocityModifier(builder, velocityModifierOffset);
     StateP.addLevel(builder, levelOffset);
     StateP.addDuration(builder, durationOffset);
     StateP.addStateId(builder, stateIdOffset);
     return StateP.endStateP(builder);
   }
 
-  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(3); }
+  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(4); }
   public static void addStateId(FlatBufferBuilder builder, int stateIdOffset) { builder.addOffset(0, stateIdOffset, 0); }
   public static int createStateIdVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startStateIdVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
@@ -56,6 +64,9 @@ public final class StateP extends Table {
   public static int createLevelVector(FlatBufferBuilder builder, byte[] data) { return builder.createByteVector(data); }
   public static int createLevelVector(FlatBufferBuilder builder, ByteBuffer data) { return builder.createByteVector(data); }
   public static void startLevelVector(FlatBufferBuilder builder, int numElems) { builder.startVector(1, numElems, 1); }
+  public static void addVelocityModifier(FlatBufferBuilder builder, int velocityModifierOffset) { builder.addOffset(3, velocityModifierOffset, 0); }
+  public static int createVelocityModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
+  public static void startVelocityModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
   public static int endStateP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

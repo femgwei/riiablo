@@ -127,6 +127,17 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     
     // 计算减速效果
     int slowPercent = 0;
+
+    // Frenzy is an additive movement/attack speed state in the native game.
+    // Keep it on the authoritative velocity component so both simulation and
+    // serialized snapshots observe the same multiplier.
+    int frenzyPercent = 0;
+    UnitState frenzy = stateList.getState(StateId.FRENZY);
+    if (frenzy == null) frenzy = stateList.getState(StateId.MONFRENZY);
+    if (frenzy != null) {
+      int stacks = frenzy.velocityModifier > 0 ? frenzy.velocityModifier : 1;
+      frenzyPercent = Math.min(100, Math.max(0, stacks * 7));
+    }
     
     // 寒冷减速
     if (stateList.hasState(StateId.COLD)) {
@@ -149,6 +160,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (slowPercent > 0) {
       slowPercent = Math.min(slowPercent, 90);
       velocity.stateSpeedMultiplier = 1.0f - (slowPercent / 100.0f);
+    }
+    if (frenzyPercent > 0 && !velocity.stateMovementLocked) {
+      velocity.stateSpeedMultiplier *= 1.0f + frenzyPercent / 100.0f;
     }
   }
 
