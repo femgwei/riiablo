@@ -18,6 +18,8 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.pet.MercenaryManager;
+import com.riiablo.item.VendorPricing;
+import com.badlogic.gdx.utils.Array;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -81,6 +83,28 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     return mercenaries;
   }
 
+  /** Hires the first available Act I Rogue through the same entity transaction as A1Q2. */
+  public boolean hireAct1Rogue(int playerId) {
+    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null
+        || mPlayer.get(playerId).data.hasMerc()) {
+      log.warn("[ACT1_HIRE] player already owns a persisted mercenary: player={}", playerId);
+      return false;
+    }
+    int level = getPlayerLevel(playerId);
+    Array<MercenaryManager.AvailableMercenary> available = mercenaries.getAvailableMercenaries(
+        MercenaryManager.NPC_KASHYA, level);
+    for (int i = 0; i < available.size; i++) {
+      if (!available.get(i).hired
+          && mercenaries.hireMercenary(playerId, MercenaryManager.NPC_KASHYA, i)) {
+        log.info("[ACT1_HIRE] paid Rogue hired: player={} slot={} level={}", playerId, i,
+            available.get(i).level);
+        return true;
+      }
+    }
+    log.warn("[ACT1_HIRE] no affordable/available Rogue: player={} level={}", playerId, level);
+    return false;
+  }
+
   @Override
   public int createMercenaryEntity(int playerId, MercenaryManager.MercenaryDefinition def,
       int level, int seed, int nameId) {
@@ -122,8 +146,25 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     if (entityId != Engine.INVALID_ENTITY) world.delete(entityId);
   }
 
-  @Override public void onMercenaryHired(int playerId, MercenaryManager.ActiveMercenary merc) {}
-  @Override public void onMercenaryDismissed(int playerId, MercenaryManager.ActiveMercenary merc) {}
+  @Override
+  public void onMercenaryHired(int playerId, MercenaryManager.ActiveMercenary merc) {
+    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null || merc == null) return;
+    com.riiablo.save.CharData.MercData data = mPlayer.get(playerId).data.getMerc();
+    data.seed = merc.seed;
+    data.name = (short) merc.nameId;
+    data.type = (short) merc.definition.mercType;
+    data.xp = merc.experience;
+  }
+
+  @Override
+  public void onMercenaryDismissed(int playerId, MercenaryManager.ActiveMercenary merc) {
+    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null) return;
+    com.riiablo.save.CharData.MercData data = mPlayer.get(playerId).data.getMerc();
+    data.seed = 0;
+    data.name = 0;
+    data.type = 0;
+    data.xp = 0;
+  }
   @Override public void onMercenaryDeath(int playerId, MercenaryManager.ActiveMercenary merc) {}
   @Override public void onMercenaryResurrected(int playerId, MercenaryManager.ActiveMercenary merc) {}
   @Override public void onMercenaryLevelUp(int playerId, MercenaryManager.ActiveMercenary merc,
@@ -131,12 +172,14 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   @Override
   public int getPlayerGold(int playerId) {
-    return 0;
+    return mPlayer.has(playerId) && mPlayer.get(playerId).data != null
+        ? VendorPricing.availableGold(mPlayer.get(playerId).data) : 0;
   }
 
   @Override
   public boolean deductPlayerGold(int playerId, int amount) {
-    return false;
+    return mPlayer.has(playerId) && mPlayer.get(playerId).data != null
+        && VendorPricing.chargeGold(mPlayer.get(playerId).data, amount);
   }
 
   @Override
@@ -153,6 +196,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   @Override
   public int getDifficulty() {
+    if (com.riiablo.Riiablo.charData != null) return com.riiablo.Riiablo.charData.diff;
     return 0;
   }
 }

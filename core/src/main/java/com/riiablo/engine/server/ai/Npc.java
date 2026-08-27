@@ -21,6 +21,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.DialogManager;
 import com.riiablo.engine.client.MenuManager;
 import com.riiablo.engine.client.Act1QuestDialogController;
+import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.component.MenuWrapper;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
@@ -200,7 +201,16 @@ public class Npc extends AI {
     }
 
     if (HIRERERS.contains(entType)) {
-      menu.addItem(3397, new ClickListener()); // hire
+      menu.addItem(3397, new ClickListener() { // hire
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          NativeMercenaryRewardSystem mercenaries =
+              Riiablo.engine.getSystem(NativeMercenaryRewardSystem.class);
+          if (mercenaries != null && Riiablo.game != null) {
+            mercenaries.hireAct1Rogue(Riiablo.game.player);
+          }
+        }
+      });
     }
 
     if (GAMBLERS.contains(entType)) {

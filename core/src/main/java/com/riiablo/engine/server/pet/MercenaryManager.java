@@ -352,7 +352,7 @@ public class MercenaryManager {
 
     // 计算雇佣费用
     int cost = calculateHireCost(available.definition, available.level);
-    if (callback != null && !callback.deductPlayerGold(playerId, cost)) {
+    if (callback != null && callback.getPlayerGold(playerId) < cost) {
       log.debug("Player {} cannot afford mercenary (cost: {})", playerId, cost);
       return false;
     }
@@ -376,6 +376,15 @@ public class MercenaryManager {
     if (callback != null) {
       merc.entityId = callback.createMercenaryEntity(playerId, available.definition, 
           available.level, available.seed, available.nameId);
+      if (merc.entityId == Engine.INVALID_ENTITY) {
+        log.warn("Mercenary entity creation failed before payment: player={}", playerId);
+        return false;
+      }
+      if (!callback.deductPlayerGold(playerId, cost)) {
+        callback.removeMercenaryEntity(merc.entityId);
+        log.warn("Mercenary payment failed after entity reservation: player={}", playerId);
+        return false;
+      }
     }
 
     playerMercs.put(playerId, merc);
@@ -691,7 +700,7 @@ public class MercenaryManager {
 
       AvailableMercenary available = new AvailableMercenary();
       available.definition = def;
-      available.seed = 0;
+      available.seed = 1 + (int) (Math.random() * (Integer.MAX_VALUE - 1));
       available.nameId = def.nameId + (int)(Math.random() * 10);
       available.hired = false;
       available.level = Math.max(1, playerLevel - 5 + (int)(Math.random() * 10));
