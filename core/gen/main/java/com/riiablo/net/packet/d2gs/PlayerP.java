@@ -22,18 +22,19 @@ public final class PlayerP extends Table {
   public long experience() { int o = __offset(8); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
   public int level() { int o = __offset(10); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
   public int skillPoints() { int o = __offset(12); return o != 0 ? bb.getShort(o + bb_pos) & 0xFFFF : 0; }
-  public int skillIds(int j) { int o = __offset(14); return o != 0 ? bb.getShort(__vector(o) + j * 2) & 0xFFFF : 0; }
-  public int skillIdsLength() { int o = __offset(14); return o != 0 ? __vector_len(o) : 0; }
+  public int statPoints() { int o = __offset(14); return o != 0 ? bb.getShort(o + bb_pos) & 0xFFFF : 0; }
+  public int skillIds(int j) { int o = __offset(16); return o != 0 ? bb.getShort(__vector(o) + j * 2) & 0xFFFF : 0; }
+  public int skillIdsLength() { int o = __offset(16); return o != 0 ? __vector_len(o) : 0; }
   public ShortVector skillIdsVector() { return skillIdsVector(new ShortVector()); }
-  public ShortVector skillIdsVector(ShortVector obj) { int o = __offset(14); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
-  public ByteBuffer skillIdsAsByteBuffer() { return __vector_as_bytebuffer(14, 2); }
-  public ByteBuffer skillIdsInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 14, 2); }
-  public int skillLevels(int j) { int o = __offset(16); return o != 0 ? bb.get(__vector(o) + j * 1) & 0xFF : 0; }
-  public int skillLevelsLength() { int o = __offset(16); return o != 0 ? __vector_len(o) : 0; }
+  public ShortVector skillIdsVector(ShortVector obj) { int o = __offset(16); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer skillIdsAsByteBuffer() { return __vector_as_bytebuffer(16, 2); }
+  public ByteBuffer skillIdsInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 16, 2); }
+  public int skillLevels(int j) { int o = __offset(18); return o != 0 ? bb.get(__vector(o) + j * 1) & 0xFF : 0; }
+  public int skillLevelsLength() { int o = __offset(18); return o != 0 ? __vector_len(o) : 0; }
   public ByteVector skillLevelsVector() { return skillLevelsVector(new ByteVector()); }
-  public ByteVector skillLevelsVector(ByteVector obj) { int o = __offset(16); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
-  public ByteBuffer skillLevelsAsByteBuffer() { return __vector_as_bytebuffer(16, 1); }
-  public ByteBuffer skillLevelsInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 16, 1); }
+  public ByteVector skillLevelsVector(ByteVector obj) { int o = __offset(18); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer skillLevelsAsByteBuffer() { return __vector_as_bytebuffer(18, 1); }
+  public ByteBuffer skillLevelsInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 18, 1); }
 
   public static int createPlayerP(FlatBufferBuilder builder,
       int charClass,
@@ -41,29 +42,32 @@ public final class PlayerP extends Table {
       long experience,
       int level,
       int skillPoints,
+      int statPoints,
       int skillIdsOffset,
       int skillLevelsOffset) {
-    builder.startTable(7);
+    builder.startTable(8);
     PlayerP.addExperience(builder, experience);
     PlayerP.addSkillLevels(builder, skillLevelsOffset);
     PlayerP.addSkillIds(builder, skillIdsOffset);
     PlayerP.addCharName(builder, charNameOffset);
+    PlayerP.addStatPoints(builder, statPoints);
     PlayerP.addSkillPoints(builder, skillPoints);
     PlayerP.addLevel(builder, level);
     PlayerP.addCharClass(builder, charClass);
     return PlayerP.endPlayerP(builder);
   }
 
-  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(7); }
+  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(8); }
   public static void addCharClass(FlatBufferBuilder builder, int charClass) { builder.addByte(0, (byte)charClass, (byte)0); }
   public static void addCharName(FlatBufferBuilder builder, int charNameOffset) { builder.addOffset(1, charNameOffset, 0); }
   public static void addExperience(FlatBufferBuilder builder, long experience) { builder.addLong(2, experience, 0L); }
   public static void addLevel(FlatBufferBuilder builder, int level) { builder.addByte(3, (byte)level, (byte)0); }
   public static void addSkillPoints(FlatBufferBuilder builder, int skillPoints) { builder.addShort(4, (short)skillPoints, (short)0); }
-  public static void addSkillIds(FlatBufferBuilder builder, int skillIdsOffset) { builder.addOffset(5, skillIdsOffset, 0); }
+  public static void addStatPoints(FlatBufferBuilder builder, int statPoints) { builder.addShort(5, (short)statPoints, (short)0); }
+  public static void addSkillIds(FlatBufferBuilder builder, int skillIdsOffset) { builder.addOffset(6, skillIdsOffset, 0); }
   public static int createSkillIdsVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startSkillIdsVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
-  public static void addSkillLevels(FlatBufferBuilder builder, int skillLevelsOffset) { builder.addOffset(6, skillLevelsOffset, 0); }
+  public static void addSkillLevels(FlatBufferBuilder builder, int skillLevelsOffset) { builder.addOffset(7, skillLevelsOffset, 0); }
   public static int createSkillLevelsVector(FlatBufferBuilder builder, byte[] data) { return builder.createByteVector(data); }
   public static int createSkillLevelsVector(FlatBufferBuilder builder, ByteBuffer data) { return builder.createByteVector(data); }
   public static void startSkillLevelsVector(FlatBufferBuilder builder, int numElems) { builder.startVector(1, numElems, 1); }

@@ -430,6 +430,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     long experience = wireExperience < 0 ? 0L : Math.min(wireExperience, 0xFFFFFFFFL);
     int level = Math.max(1, data.level());
     int skillPoints = data.skillPoints();
+    int statPoints = data.statPoints();
 
     long oldExperience = Riiablo.charData.getStats().aggregate()
         .getValue(Stat.experience, 0L);
@@ -437,6 +438,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
         .getValue(Stat.level, Riiablo.charData.level & 0xFF);
     int oldSkillPoints = Riiablo.charData.getStats().aggregate()
         .getValue(Stat.newskills, 0);
+    int oldStatPoints = Riiablo.charData.getStats().aggregate()
+        .getValue(Stat.statpts, 0);
 
     // The HUD reads aggregate stats, while save/load and server award code use
     // the base list. Keep both in lockstep so a later refresh cannot erase the
@@ -447,6 +450,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
     Riiablo.charData.getStats().aggregate().put(Stat.level, level);
     Riiablo.charData.getStats().base().put(Stat.newskills, skillPoints);
     Riiablo.charData.getStats().aggregate().put(Stat.newskills, skillPoints);
+    Riiablo.charData.getStats().base().put(Stat.statpts, statPoints);
+    Riiablo.charData.getStats().aggregate().put(Stat.statpts, statPoints);
     Riiablo.charData.level = (byte) level;
 
     int wireSkills = Math.min(data.skillIdsLength(), data.skillLevelsLength());
@@ -472,11 +477,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
     }
 
-    if (oldExperience != experience || oldLevel != level || oldSkillPoints != skillPoints) {
+    if (oldExperience != experience || oldLevel != level || oldSkillPoints != skillPoints
+        || oldStatPoints != statPoints) {
       Gdx.app.log(TAG, String.format(
-          "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d skillPoints=%d oldSkillPoints=%d learnedSkills=%d",
+          "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d skillPoints=%d oldSkillPoints=%d statPoints=%d oldStatPoints=%d learnedSkills=%d",
           entityId, experience, oldExperience, level, oldLevel, skillPoints, oldSkillPoints,
-          wireSkills));
+          statPoints, oldStatPoints, wireSkills));
     }
   }
 

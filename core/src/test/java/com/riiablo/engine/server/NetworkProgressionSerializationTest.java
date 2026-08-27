@@ -29,6 +29,8 @@ class NetworkProgressionSerializationTest extends RiiabloTest {
     data.getStats().aggregate().put(Stat.level, 3);
     data.getStats().base().put(Stat.newskills, 2);
     data.getStats().aggregate().put(Stat.newskills, 2);
+    data.getStats().base().put(Stat.statpts, 5);
+    data.getStats().aggregate().put(Stat.statpts, 5);
     data.setSkillLevel(6, 3);
 
     Player player = new Player();
@@ -44,6 +46,7 @@ class NetworkProgressionSerializationTest extends RiiabloTest {
     assertEquals(1234L, snapshot.experience());
     assertEquals(3, snapshot.level());
     assertEquals(2, snapshot.skillPoints());
+    assertEquals(5, snapshot.statPoints());
     assertEquals(1, snapshot.skillIdsLength());
     assertEquals(1, snapshot.skillLevelsLength());
     assertEquals(6, snapshot.skillIds(0));

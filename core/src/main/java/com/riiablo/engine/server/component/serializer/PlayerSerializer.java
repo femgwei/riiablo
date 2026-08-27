@@ -30,6 +30,8 @@ public class PlayerSerializer implements FlatBuffersSerializer<Player, PlayerP> 
         com.riiablo.attributes.Stat.level, data.level & 0xFF);
     int skillPoints = data.getStats().aggregate().getValue(
         com.riiablo.attributes.Stat.newskills, 0);
+    int statPoints = data.getStats().aggregate().getValue(
+        com.riiablo.attributes.Stat.statpts, 0);
 
     com.riiablo.CharacterClass characterClass = data.classId != null
         ? data.classId : com.riiablo.CharacterClass.get(data.charClass & 0xFF);
@@ -54,6 +56,7 @@ public class PlayerSerializer implements FlatBuffersSerializer<Player, PlayerP> 
     PlayerP.addSkillLevels(builder, skillLevelsOffset);
     PlayerP.addSkillIds(builder, skillIdsOffset);
     PlayerP.addSkillPoints(builder, Math.max(0, Math.min(0xFFFF, skillPoints)));
+    PlayerP.addStatPoints(builder, Math.max(0, Math.min(0xFFFF, statPoints)));
     PlayerP.addLevel(builder, level);
     PlayerP.addExperience(builder, Math.max(0L, experience));
     PlayerP.addCharName(builder, charNameOffset);
