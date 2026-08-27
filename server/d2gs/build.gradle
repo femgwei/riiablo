@@ -15,6 +15,25 @@ run {
   setIgnoreExitValue(true)
 }
 
+tasks.register('headlessCombat', JavaExec) {
+  group = 'verification'
+  description = 'Runs a windowless D2GS plus one real protocol client combat smoke test.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) {
+    args '--home', d2Home.get()
+  }
+  if (project.hasProperty('d2Save')) {
+    args '--save', project.property('d2Save')
+  }
+  if (project.hasProperty('combatSkill')) {
+    args '--skill', project.property('combatSkill')
+  }
+}
+
 jar {
   archiveBaseName = project.name
 	// These can be excluded because they add to the jar size but libGDX 1.9.11 can't use them.
