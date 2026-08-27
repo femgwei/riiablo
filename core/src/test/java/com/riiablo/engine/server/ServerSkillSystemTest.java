@@ -78,4 +78,20 @@ public class ServerSkillSystemTest {
     assertEquals(1f, Math.abs(direction.y), EPSILON);
     assertEquals(1f, direction.len(), EPSILON);
   }
+
+  @Test
+  public void manaCostUsesNativeLevelDeltaAndMinimum() throws Exception {
+    Skills.Entry skill = new Skills.Entry();
+    skill.mana = 12;
+    skill.lvlmana = -1;
+    skill.minmana = 5;
+    skill.manashift = 8;
+    java.lang.reflect.Method method = ServerSkillSystem.class
+        .getDeclaredMethod("getManaCost", Skills.Entry.class, int.class);
+    method.setAccessible(true);
+    assertEquals(12f, (Float) method.invoke(new ServerSkillSystem(), skill, 1), EPSILON);
+    assertEquals(10f, (Float) method.invoke(new ServerSkillSystem(), skill, 3), EPSILON);
+    skill.lvlmana = -10;
+    assertEquals(5f, (Float) method.invoke(new ServerSkillSystem(), skill, 3), EPSILON);
+  }
 }

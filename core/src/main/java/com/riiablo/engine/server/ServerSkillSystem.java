@@ -520,9 +520,14 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private float getManaCost(Skills.Entry skill, int level) {
+    if (skill == null) return 0f;
     int shift = Math.max(0, Math.min(30, skill.manashift));
-    float base = (1 << shift) / 256f * skill.mana;
-    return Math.max(0, base + skill.lvlmana * level);
+    int clampedLevel = Math.max(1, level);
+    // D2MOO: (mana + (level - 1) * lvlmana) << manashift,
+    // clamped to minmana << 8, then shifted back to display units.
+    float scale = (1 << shift) / 256f;
+    float calculated = (skill.mana + (clampedLevel - 1) * skill.lvlmana) * scale;
+    return Math.max(Math.max(0, skill.minmana), calculated);
   }
 
   private int getSkillLevel(int entityId, int skillId) {
