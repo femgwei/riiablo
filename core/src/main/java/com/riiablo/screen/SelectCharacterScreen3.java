@@ -77,7 +77,8 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
           Riiablo.client.pushScreen(new NetworkedGameScreen(
               Riiablo.charData.clear().load(selected.getD2S()), socket, localHost));
         } else if (actor == btnCreateNewCharacter) {
-          //Riiablo.client.pushScreen(new CreateCharacterScreen());
+          Riiablo.client.pushScreen(new CreateCharacterScreen(() ->
+              Riiablo.client.clearAndSet(new SelectCharacterScreen3(socket, localHost))));
         } else if (actor == btnDeleteCharacter) {
           toggleDeleteCharacterDialog(true);
         } else if (actor == btnDeleteYes) {

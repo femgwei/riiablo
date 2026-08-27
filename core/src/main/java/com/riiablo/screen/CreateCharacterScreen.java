@@ -75,8 +75,21 @@ public class CreateCharacterScreen extends ScreenAdapter {
 
   private CharacterCreateButton amazon, assassin, necromancer, barbarian, paladin, sorceress, druid;
   private AnimationWrapper fireWrapper;
+  /** Optional flow callback used by online character selection screens. */
+  private final Runnable onCreated;
 
   public CreateCharacterScreen() {
+    this(null);
+  }
+
+  /**
+   * Creates the character editor with a completion callback.  The default
+   * constructor keeps the original single-player behavior; online callers
+   * provide a callback so the active socket/session is not replaced by a
+   * local GameScreen after writing the D2S file.
+   */
+  public CreateCharacterScreen(Runnable onCreated) {
+    this.onCreated = onCreated;
     Riiablo.assets.load(CharacterCreateDescriptor);
     Riiablo.assets.load(fireDescriptor);
     /*
@@ -201,7 +214,11 @@ public class CreateCharacterScreen extends ScreenAdapter {
           // Save character to file
           boolean saved = D2SWriter.INSTANCE.save(charData);
           if (saved) {
-            Riiablo.client.clearAndSet(new GameScreen(charData));
+            if (onCreated != null) {
+              onCreated.run();
+            } else {
+              Riiablo.client.clearAndSet(new GameScreen(charData));
+            }
           } else {
             // TODO: Show error message to user
             Gdx.app.error("CreateCharacterScreen", "Failed to save character!");
