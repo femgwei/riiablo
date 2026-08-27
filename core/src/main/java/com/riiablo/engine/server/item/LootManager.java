@@ -284,7 +284,9 @@ public class LootManager {
         || Riiablo.files == null || Riiablo.files.TreasureClassEx == null) return false;
     if (Riiablo.files.TreasureClassEx.index(config.treasureClass) < 0
         && Riiablo.files.TreasureClassEx.get(config.treasureClass) == null) return false;
-    int itemLevel = calculateItemLevel(config);
+    // Native TC quality uses the monster's already rank-adjusted level. The
+    // legacy fallback below retains its historical procedural bonuses.
+    int itemLevel = Math.max(1, Math.min(99, config.monsterLevel));
     TreasureClassResolver.PlayerContext players = new TreasureClassResolver.PlayerContext(
         config.playerCount, config.partyMembersInLevel);
     List<TreasureClassResolver.Drop> drops;

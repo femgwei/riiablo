@@ -97,6 +97,15 @@ public abstract class EntityFactory extends PassiveSystem {
 
   public abstract int createMonster(int monsterId, float x, float y);
 
+  /**
+   * Creates a ranked monster. Client/test factories may ignore server-only
+   * quality metadata; the authoritative server overrides this method.
+   */
+  public int createMonster(int monsterId, float x, float y,
+      int rank, long affixes, int championType, int uniqueId) {
+    return createMonster(monsterId, x, y);
+  }
+
   /** Restores a dead monster entity in place; unsupported factories return false. */
   public boolean resurrectMonster(int monsterId, int sourceId) {
     return false;

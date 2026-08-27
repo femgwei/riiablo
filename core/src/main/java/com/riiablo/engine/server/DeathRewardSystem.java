@@ -17,6 +17,7 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.item.ItemQuality;
 import com.riiablo.engine.server.item.LootManager;
 import com.riiablo.engine.server.item.GroundDropOwnership;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -76,15 +77,16 @@ public class DeathRewardSystem extends PassiveSystem {
     }
 
     int difficulty = Math.max(0, Math.min(2, player.data.diff));
-    int monsterLevel = monsterLevel(monster.monstats, difficulty);
+    int monsterLevel = monsterLevel(monster.monstats, difficulty, monster.rank);
     LootManager.LootConfig config = new LootManager.LootConfig();
     config.monsterLevel = monsterLevel;
     config.areaLevel = monsterLevel;
     config.difficulty = difficulty;
-    config.isBoss = monster.monstats != null
-        && (monster.monstats.boss || monster.monstats.SetBoss || monster.monstats.primeevil);
-    config.isSuperUnique = monster.monstats != null && monster.monstats.SetBoss;
-    config.isElite = config.isBoss || config.isSuperUnique;
+    config.isBoss = monster.rank == MonsterRank.BOSS || monster.monstats != null
+        && (monster.monstats.boss || monster.monstats.primeevil);
+    config.isSuperUnique = monster.rank == MonsterRank.SUPER_UNIQUE
+        || mSuperUnique != null && mSuperUnique.has(event.victim);
+    config.isElite = isEliteRank(monster.rank) || config.isBoss || config.isSuperUnique;
     config.playerCount = 1;
     if (mAttributesWrapper.has(event.victim) && mAttributesWrapper.get(event.victim).attrs != null) {
       com.riiablo.attributes.StatRef monsterPlayers =
@@ -92,7 +94,7 @@ public class DeathRewardSystem extends PassiveSystem {
       if (monsterPlayers != null) config.playerCount = Math.max(1, monsterPlayers.asInt());
     }
     config.treasureClass = treasureClass(event.victim, monster.monstats, difficulty,
-        config.isBoss, config.isSuperUnique);
+        monster.rank, config.isSuperUnique);
     if (mAttributesWrapper.has(event.killer)) {
       Attributes attrs = mAttributesWrapper.get(event.killer).attrs;
       lootManager.applyPlayerBonuses(attrs, config);
@@ -119,14 +121,24 @@ public class DeathRewardSystem extends PassiveSystem {
         config.isBoss, result.goldAmount, goldEntity, result.getItemCount(), createdItems);
   }
 
-  private int monsterLevel(MonStats.Entry stats, int difficulty) {
+  static int monsterLevel(MonStats.Entry stats, int difficulty, int rank) {
     if (stats == null || stats.Level == null || stats.Level.length == 0) return 1;
-    return Math.max(1, stats.Level[Math.min(difficulty, stats.Level.length - 1)]);
+    int level = stats.Level[Math.min(difficulty, stats.Level.length - 1)];
+    // D2Game creates champions at area level +2 and random/super uniques at
+    // area level +3. Story bosses retain their explicit MonStats level.
+    if (rank == MonsterRank.CHAMPION) level += 2;
+    else if (rank == MonsterRank.UNIQUE || rank == MonsterRank.SUPER_UNIQUE) level += 3;
+    return Math.max(1, level);
+  }
+
+  static boolean isEliteRank(int rank) {
+    return rank == MonsterRank.CHAMPION || rank == MonsterRank.UNIQUE
+        || rank == MonsterRank.SUPER_UNIQUE;
   }
 
   /** Selects the native MonStats TC column: normal, champion/unique or quest. */
   private String treasureClass(int victim, MonStats.Entry stats, int difficulty,
-                               boolean boss, boolean superUnique) {
+                               int rank, boolean superUnique) {
     if (superUnique && mSuperUnique != null && mSuperUnique.has(victim)
         && Riiablo.files != null && Riiablo.files.SuperUniques != null) {
       com.riiablo.codec.excel.SuperUniques.Entry entry =
@@ -137,12 +149,18 @@ public class DeathRewardSystem extends PassiveSystem {
       }
     }
     if (stats == null) return null;
-    int index = boss || superUnique ? 2 : 0;
-    String[] values = index == 0 ? stats.TreasureClass1 : index == 1
-        ? stats.TreasureClass2 : stats.TreasureClass3;
+    String[] values = treasureClassColumn(stats, rank, superUnique);
     if (values == null || values.length == 0) return null;
     String tc = values[Math.min(Math.max(0, difficulty), values.length - 1)];
     return tc == null || tc.trim().isEmpty() ? null : tc;
+  }
+
+  static String[] treasureClassColumn(MonStats.Entry stats, int rank, boolean superUnique) {
+    if (stats == null) return null;
+    if (superUnique || rank == MonsterRank.UNIQUE || rank == MonsterRank.BOSS
+        || rank == MonsterRank.SUPER_UNIQUE) return stats.TreasureClass3;
+    if (rank == MonsterRank.CHAMPION) return stats.TreasureClass2;
+    return stats.TreasureClass1;
   }
 
   private int createItem(String code, int rolledQuality, int itemLevel, float x, float y, int ownerId) {

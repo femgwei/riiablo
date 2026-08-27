@@ -3,6 +3,7 @@ package com.riiablo.engine.server.monster;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 
+import com.riiablo.engine.EntityFactory;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -369,6 +370,18 @@ public class MonsterSpawner {
 
   public void setCreateCallback(MonsterCreateCallback callback) {
     this.createCallback = callback;
+  }
+
+  /** Connects rank-aware spawns directly to the authoritative entity factory. */
+  public void setCreateFactory(final EntityFactory factory) {
+    createCallback = factory == null ? null : new MonsterCreateCallback() {
+      @Override
+      public int onMonsterCreate(int monsterId, float posX, float posY,
+          int rank, long affixes, int championType, int uniqueId) {
+        return factory.createMonster(monsterId, posX, posY,
+            rank, affixes, championType, uniqueId);
+      }
+    };
   }
 
   public void setDifficulty(int difficulty) {

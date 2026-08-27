@@ -177,6 +177,8 @@ public class ServerEntityFactory extends EntityFactory {
     int id = createMonster(monstats.hcIdx, x, y);
     if (superUnique != null) {
       mSuperUnique.create(id).set(superUnique.hcIdx, superUnique.Superunique);
+      mMonster.get(id).setRank(
+          com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE, 0L, -1, -1);
     }
     log.info("[MONSTER_PLACEMENT] phase=created act={} presetId={} placement={} monster={} entity={}",
         act, monPresetId, objectType, monstats.Id, id);
@@ -277,11 +279,32 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override
   public int createMonster(int monsterId, float x, float y) {
+    return createMonster(monsterId, x, y, 0, 0L, -1, -1);
+  }
+
+  /**
+   * Creates a monster while preserving the native quality context used by
+   * D2Game's drop pipeline. Existing callers keep the normal-rank overload.
+   */
+  @Override
+  public int createMonster(int monsterId, float x, float y,
+      int rank, long affixes, int championType, int uniqueId) {
     MonStats.Entry monstats = Riiablo.files.monstats.get(monsterId);
     MonStats2.Entry monstats2 = Riiablo.files.monstats2.get(monstats.MonStatsEx);
 
+    // Direct map and quest spawns only know the MonStats id. Preserve their
+    // native boss quality even when no explicit MonsterSpawner rank was used.
+    if (rank == com.riiablo.engine.server.monster.MonsterRank.NORMAL) {
+      if (monstats.SetBoss) {
+        rank = com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE;
+      } else if (monstats.boss || monstats.primeevil) {
+        rank = com.riiablo.engine.server.monster.MonsterRank.BOSS;
+      }
+    }
+
     int id = super.createEntity(Class.Type.MON, monstats.Id);
-    mMonster.create(id).set(monstats, monstats2);
+    mMonster.create(id).set(monstats, monstats2)
+        .setRank(rank, affixes, championType, uniqueId);
 
     // TODO: move this somewhere else (a special class?)
     {
