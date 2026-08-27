@@ -145,10 +145,10 @@ public class ItemGrid extends Group {
     gridListener.onDrop(x, y);
   }
 
-  void onPickup(Item item) {
-    if (gridListener == null) return;
+  boolean onPickup(Item item) {
+    if (gridListener == null) return false;
     int i = itemData.indexOf(item);
-    gridListener.onPickup(i);
+    return gridListener.onPickup(i);
   }
 
   void onSwap(Item item, int x, int y) {
@@ -279,7 +279,7 @@ public class ItemGrid extends Group {
 
   public interface GridListener {
     void onDrop(int x, int y);
-    void onPickup(int i);
+    boolean onPickup(int i);
     void onSwap(int i, int x, int y);
   }
 
@@ -301,8 +301,7 @@ public class ItemGrid extends Group {
             return;
           }
           if (itemData.getCursor() == null) {
-            onPickup(StoredItem.this.item);
-            removeActor(StoredItem.this);
+            if (onPickup(StoredItem.this.item)) removeActor(StoredItem.this);
             event.handle();
           } else {
             ItemGrid.this.clickListener.clicked(event, x, y);

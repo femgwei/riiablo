@@ -63,6 +63,16 @@ public final class VendorPricing {
         + Math.max(0, value(character.getStats().get(Stat.goldbank)));
   }
 
+  public static boolean chargeGold(CharData character, int amount) {
+    if (character == null || amount < 0 || !canSpend(character, amount)) return false;
+    spend(character, amount);
+    return true;
+  }
+
+  public static void grantGold(CharData character, int amount) {
+    if (character != null && amount > 0) addGold(character, amount);
+  }
+
   private static boolean canSpend(CharData character, int amount) {
     return amount >= 0 && availableGold(character) >= amount;
   }

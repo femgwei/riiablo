@@ -342,10 +342,16 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   }
 
   @Override
-  public void onPickup(int i) {
+  public boolean onPickup(int i) {
     if (Riiablo.game != null && Riiablo.game.vendorPanel != null
-        && Riiablo.game.vendorPanel.sellItem(i)) return;
+        && Riiablo.game.vendorPanel.sellItem(i)) return true;
+    if (Riiablo.game != null && Riiablo.game.vendorPanel != null
+        && Riiablo.game.vendorPanel.isRepairing()) {
+      Riiablo.game.vendorPanel.repairItem(i);
+      return false;
+    }
     itemController.storeToCursor(i);
+    return true;
   }
 
   @Override

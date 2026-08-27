@@ -112,8 +112,9 @@ public class CubePanel extends WidgetGroup implements Disposable, ItemGrid.GridL
   }
 
   @Override
-  public void onPickup(int i) {
+  public boolean onPickup(int i) {
     itemController.storeToCursor(i);
+    return true;
   }
 
   @Override

@@ -23,6 +23,7 @@ import com.riiablo.codec.excel.Inventory;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.item.Item;
 import com.riiablo.item.VendorPricing;
+import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
@@ -76,6 +77,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   VendorGrid activeGrid = null;
   private Label goldLabel;
   private boolean selling;
+  private boolean repairing;
 
   public VendorPanel() {
     Riiablo.assets.load(buysellDescriptor);
@@ -141,6 +143,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     btnBuy.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        repairing = false;
         selling = false;
         if (btnBuy.isChecked()) {
           Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 3);
@@ -161,6 +164,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     btnSell.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        repairing = false;
         selling = btnSell.isChecked();
         if (btnSell.isChecked()) {
           Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 4);
@@ -181,6 +185,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     btnRepair.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        repairing = btnRepair.isChecked();
+        selling = false;
         if (btnRepair.isChecked()) {
           Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 1);
         } else {
@@ -199,7 +205,9 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     btnRepairAll.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-
+        repairing = true;
+        selling = false;
+        repairAll();
       }
     });
     btnRepairAll.setVisible(false);
@@ -330,6 +338,34 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   public boolean isSelling() {
     return isVisible() && selling;
+  }
+
+  public boolean isRepairing() {
+    return isVisible() && repairing;
+  }
+
+  public boolean repairItem(int itemIndex) {
+    if (!isVisible() || !repairing || Riiablo.charData == null) return false;
+    if (itemIndex < 0 || itemIndex >= Riiablo.charData.getItems().getItems().size) return false;
+    Item item = Riiablo.charData.getItems().getItem(itemIndex);
+    int cost = ItemDurabilityManager.INSTANCE.calculateRepairCost(item);
+    if (cost <= 0 || !VendorPricing.chargeGold(Riiablo.charData, cost)) return false;
+    ItemDurabilityManager.INSTANCE.repairItem(item, cost);
+    refreshGold();
+    Gdx.app.debug(TAG, "Repaired " + item.code + " for " + cost + " gold");
+    return true;
+  }
+
+  private void repairAll() {
+    if (Riiablo.charData == null) return;
+    int available = VendorPricing.availableGold(Riiablo.charData);
+    int cost = ItemDurabilityManager.INSTANCE.repairAllEquipment(Riiablo.charData.getItems(), available);
+    if (cost > 0) {
+      // repairAllEquipment mutates durability but does not own the wallet.
+      VendorPricing.chargeGold(Riiablo.charData, cost);
+      refreshGold();
+      Gdx.app.debug(TAG, "Repaired all equipment for " + cost + " gold");
+    }
   }
 
   /** Called by the inventory grid when the Sell mode is active. */

@@ -620,8 +620,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     }
 
     @Override
-    public void onPickup(int i) {
+    public boolean onPickup(int i) {
       itemController.beltToCursor(i);
+      return true;
     }
 
     @Override
