@@ -19,10 +19,20 @@ public final class AuthoritativeItemMoveService {
     public final boolean success;
     public final byte failure;
     public final long revision;
+    /** Whether the transport should remove the ground entity after this result. */
+    public final boolean consumeGroundEntity;
+    /** Remaining quantity for a partially picked stack (zero for normal items). */
+    public final int groundQuantityRemaining;
     public Outcome(boolean success, byte failure, long revision) {
+      this(success, failure, revision, true, 0);
+    }
+    public Outcome(boolean success, byte failure, long revision,
+                   boolean consumeGroundEntity, int groundQuantityRemaining) {
       this.success = success;
       this.failure = failure;
       this.revision = revision;
+      this.consumeGroundEntity = consumeGroundEntity;
+      this.groundQuantityRemaining = Math.max(0, groundQuantityRemaining);
     }
   }
 
@@ -96,21 +106,35 @@ public final class AuthoritativeItemMoveService {
     if (groundItem == null) return new Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_FOUND, current);
     if (intent.itemId >= 0 && groundItem.id != intent.itemId)
       return new Outcome(false, ItemMoveFailure.GROUND_ITEM_CHANGED, current);
-    if (!GroundDropOwnership.canPickup(intent.groundEntityId, playerEntityId))
+    if (!GroundDropOwnership.claim(intent.groundEntityId, playerEntityId))
       return new Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_OWNED, current);
     if ("gld".equalsIgnoreCase(groundItem.code)) {
       int amount = groundItem.attrs == null || groundItem.attrs.base().get(com.riiablo.attributes.Stat.quantity) == null
           ? 0 : groundItem.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt();
-      if (amount <= 0) return new Outcome(false, ItemMoveFailure.GROUND_ITEM_CHANGED, current);
-      VendorPricing.grantGold(character, amount);
+      if (amount <= 0) {
+        GroundDropOwnership.release(intent.groundEntityId);
+        return new Outcome(false, ItemMoveFailure.GROUND_ITEM_CHANGED, current);
+      }
+      VendorPricing.GoldGrant grant = VendorPricing.grantCarriedGold(character, amount);
+      if (grant.credited <= 0) {
+        GroundDropOwnership.release(intent.groundEntityId);
+        return new Outcome(false, ItemMoveFailure.GOLD_LIMIT_REACHED, current, false, amount);
+      }
+      if (grant.remaining > 0) {
+        groundItem.attrs.base().put(com.riiablo.attributes.Stat.quantity, grant.remaining);
+        groundItem.attrs.aggregate().put(com.riiablo.attributes.Stat.quantity, grant.remaining);
+        GroundDropOwnership.release(intent.groundEntityId);
+      } else {
+        GroundDropOwnership.clear(intent.groundEntityId);
+      }
       long next = current + 1L;
       revisions.put(playerEntityId, next);
-      GroundDropOwnership.clear(intent.groundEntityId);
-      return new Outcome(true, ItemMoveFailure.NONE, next);
+      return new Outcome(true, ItemMoveFailure.NONE, next, grant.remaining == 0, grant.remaining);
     }
     try {
       character.groundToCursor(groundItem);
     } catch (Throwable t) {
+      GroundDropOwnership.release(intent.groundEntityId);
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
     }
     long next = current + 1L;

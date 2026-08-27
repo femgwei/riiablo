@@ -12,18 +12,34 @@ public class ServerItemManager extends ItemManager {
   public void groundToCursor(int entityId, int dst) {
     com.riiablo.item.Item ground = mItem.get(dst).item;
     if (ground != null && "gld".equalsIgnoreCase(ground.code)) {
-      if (!GroundDropOwnership.canPickup(dst, entityId)) return;
+      if (!GroundDropOwnership.claim(dst, entityId)) return;
       int amount = ground.attrs == null || ground.attrs.base().get(com.riiablo.attributes.Stat.quantity) == null
           ? 0 : ground.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt();
-      if (amount > 0) VendorPricing.grantGold(mPlayer.get(entityId).data, amount);
-      world.delete(dst);
+      VendorPricing.GoldGrant grant = VendorPricing.grantCarriedGold(mPlayer.get(entityId).data, amount);
+      if (grant.remaining > 0 && ground.attrs != null) {
+        ground.attrs.base().put(com.riiablo.attributes.Stat.quantity, grant.remaining);
+        ground.attrs.aggregate().put(com.riiablo.attributes.Stat.quantity, grant.remaining);
+        GroundDropOwnership.release(dst);
+      } else if (grant.credited > 0) {
+        world.delete(dst);
+        GroundDropOwnership.clear(dst);
+      } else {
+        GroundDropOwnership.release(dst);
+      }
       com.riiablo.logger.LogManager.getLogger(ServerItemManager.class).info(
-          "[GOLD_PICKUP] player={} entity={} amount={}", entityId, dst, amount);
+          "[GOLD_PICKUP] player={} entity={} amount={} credited={} remaining={}",
+          entityId, dst, amount, grant.credited, grant.remaining);
       return;
     }
-    super.groundToCursor(entityId, dst);
-    GroundDropOwnership.clear(dst);
-    world.delete(dst);
+    if (!GroundDropOwnership.claim(dst, entityId)) return;
+    try {
+      super.groundToCursor(entityId, dst);
+      GroundDropOwnership.clear(dst);
+      world.delete(dst);
+    } catch (RuntimeException | Error t) {
+      GroundDropOwnership.release(dst);
+      throw t;
+    }
   }
 
   @Override

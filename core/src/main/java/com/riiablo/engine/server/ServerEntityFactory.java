@@ -561,6 +561,7 @@ public class ServerEntityFactory extends EntityFactory {
   @Override
   public int createItem(com.riiablo.item.Item item, float x, float y) {
     int id = super.createEntity(Class.Type.ITM, "item");
+    com.riiablo.engine.server.item.GroundDropOwnership.created(id);
     mItem.create(id).set(item);
 
     mPosition.create(id).position.set(x, y);

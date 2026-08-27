@@ -109,6 +109,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<MapWrapper> mMapWrapper;
 
@@ -746,6 +747,22 @@ public class ClientNetworkReceiver extends IntervalSystem {
         }
       }
       Riiablo.charData.getItems().replaceFromAuthoritativeSnapshot(snapshot);
+    }
+    if (result.groundEntityId() >= 0 && result.groundItemDataLength() > 0) {
+      int localEntityId = syncIds.get(result.groundEntityId());
+      if (localEntityId != Engine.INVALID_ENTITY && mItem.has(localEntityId)) {
+        try {
+          byte[] encoded = new byte[result.groundItemDataLength()];
+          for (int i = 0; i < encoded.length; i++) encoded[i] = (byte) result.groundItemData(i);
+          mItem.get(localEntityId).item = itemReader.readItem(ByteInput.wrap(encoded));
+          if (mPosition.has(localEntityId)) {
+            mPosition.get(localEntityId).position.set(result.groundX(), result.groundY());
+          }
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "[ITEM_MOVE_GROUND] failed to apply ground correction "
+              + result.groundEntityId(), t);
+        }
+      }
     }
     if (!result.success()) {
       Gdx.app.log(TAG, "[ITEM_MOVE_REJECTED] request=" + result.requestId()

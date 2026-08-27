@@ -41,7 +41,8 @@ enum ItemMoveFailure:byte {
   GROUND_ITEM_CHANGED,
   MERC_NOT_SUPPORTED,
   MUTATION_FAILED,
-  GROUND_ITEM_NOT_OWNED
+  GROUND_ITEM_NOT_OWNED,
+  GOLD_LIMIT_REACHED
 }
 
 /** Player identity is resolved from the authenticated connection. */

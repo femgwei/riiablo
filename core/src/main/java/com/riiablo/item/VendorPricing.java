@@ -12,8 +12,19 @@ import com.riiablo.save.ItemData;
 /** Native-style transaction pricing shared by local UI and the game server. */
 public final class VendorPricing {
   public static final int MULTIPLIER_SCALE = 1024;
+  /** Maximum vendor transaction price (kept separate from wallet capacity). */
   public static final int MAX_GOLD = 50000;
+  public static final int MAX_CARRIED_GOLD = 990000;
   public enum Transaction { BUY, SELL, REPAIR, GAMBLE }
+  /** Result of depositing a ground gold pile into the character's carried wallet. */
+  public static final class GoldGrant {
+    public final int credited;
+    public final int remaining;
+    GoldGrant(int credited, int remaining) {
+      this.credited = credited;
+      this.remaining = remaining;
+    }
+  }
   private VendorPricing() {}
 
   public static int buyPrice(Item item) {
@@ -185,6 +196,26 @@ public final class VendorPricing {
   }
   public static boolean chargeGold(CharData character, int amount) { if (character == null || amount < 0 || !canSpend(character, amount)) return false; spend(character, amount); return true; }
   public static void grantGold(CharData character, int amount) { if (character != null && amount > 0) addGold(character, amount); }
+  /**
+   * Credits as much of a ground pile as the native carried-gold limit allows.
+   * The uncredited remainder must stay on the ground for a later pickup.
+   */
+  public static GoldGrant grantCarriedGold(CharData character, int amount) {
+    if (character == null || amount <= 0) return new GoldGrant(0, Math.max(0, amount));
+    int carried = Math.max(0, value(character.getStats().get(Stat.gold)));
+    int capacity = Math.max(0, carriedGoldLimit(character) - carried);
+    int credited = Math.min(amount, capacity);
+    if (credited > 0) setGold(character, carried + credited,
+        Math.max(0, value(character.getStats().get(Stat.goldbank))));
+    return new GoldGrant(credited, amount - credited);
+  }
+  /** Native-style carried wallet cap: level * 10,000, up to level 99. */
+  public static int carriedGoldLimit(CharData character) {
+    if (character == null) return 0;
+    int level = character.level;
+    if (level <= 0 && character.getStats() != null) level = value(character.getStats().get(Stat.level));
+    return Math.min(MAX_CARRIED_GOLD, Math.max(1, level) * 10_000);
+  }
   /** Applies an authoritative wallet snapshot received from D2GS. */
   public static void setGoldSnapshot(CharData character, int carried, int bank) {
     if (character == null) return;

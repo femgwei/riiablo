@@ -1139,7 +1139,7 @@ public class D2GS extends ApplicationAdapter {
         outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response)));
       } else {
         sendItemMoveResult(packet.id, intent, false, ItemMoveFailure.REQUEST_ID_REUSED,
-            authoritativeItems.revision(player.get(packet.id, Engine.INVALID_ENTITY)), false);
+            authoritativeItems.revision(player.get(packet.id, Engine.INVALID_ENTITY)), false, false);
       }
       return;
     }
@@ -1153,11 +1153,6 @@ public class D2GS extends ApplicationAdapter {
     if (operation == ItemMoveOperation.GROUND_TO_CURSOR) {
       com.riiablo.engine.server.component.Item ground = groundEntity < 0 ? null : mItemSafe(groundEntity);
       com.riiablo.item.Item groundItem = ground == null ? null : ground.item;
-      if (ground != null && ground.dropOwnerId >= 0 && ground.dropOwnerId != playerEntityId
-          && System.currentTimeMillis() < ground.dropOwnerUntilMillis) {
-        outcome = new AuthoritativeItemMoveService.Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_OWNED,
-            authoritativeItems.revision(playerEntityId));
-      } else {
       com.riiablo.engine.server.component.Position groundPosition = groundEntity < 0 ? null
           : world.getMapper(com.riiablo.engine.server.component.Position.class).get(groundEntity);
       com.riiablo.engine.server.component.Position playerPosition = playerEntityId == Engine.INVALID_ENTITY
@@ -1169,18 +1164,23 @@ public class D2GS extends ApplicationAdapter {
       } else {
         outcome = authoritativeItems.pickup(playerEntityId, character, intent, groundItem);
       }
-      }
-      if (outcome.success) world.delete(groundEntity);
+      if (outcome.success && outcome.consumeGroundEntity) world.delete(groundEntity);
     } else if (operation == ItemMoveOperation.CURSOR_TO_GROUND) {
       com.riiablo.engine.server.component.Position position = playerEntityId == Engine.INVALID_ENTITY
           ? null : world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerEntityId);
       outcome = authoritativeItems.drop(playerEntityId, character, intent, item -> {
-        if (position != null) factory.createItem(item, position.position.x, position.position.y);
+        if (position != null) {
+          int droppedEntity = factory.createItem(item, position.position.x, position.position.y);
+          if (droppedEntity >= 0) {
+            com.riiablo.engine.server.item.GroundDropOwnership.register(droppedEntity, playerEntityId, 10_000L);
+          }
+        }
       });
     } else {
       outcome = authoritativeItems.apply(playerEntityId, character, intent);
     }
-    sendItemMoveResult(packet.id, intent, outcome.success, outcome.failure, outcome.revision, true);
+    sendItemMoveResult(packet.id, intent, outcome.success, outcome.failure, outcome.revision, true,
+        operation == ItemMoveOperation.GROUND_TO_CURSOR && !outcome.consumeGroundEntity);
   }
 
   private com.riiablo.engine.server.component.Item mItemSafe(int entityId) {
@@ -1192,7 +1192,8 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private void sendItemMoveResult(int clientId, ItemMoveIntent intent, boolean success,
-                                  byte failure, long revision, boolean cacheResponse) {
+                                  byte failure, long revision, boolean cacheResponse,
+                                  boolean includeGroundCorrection) {
     FlatBufferBuilder builder = new FlatBufferBuilder(8192);
     int[] entries = new int[0];
     int playerEntityId = player.get(clientId, Engine.INVALID_ENTITY);
@@ -1214,8 +1215,23 @@ public class D2GS extends ApplicationAdapter {
       if (entryCount != entries.length) entries = java.util.Arrays.copyOf(entries, entryCount);
     }
     int snapshot = ItemMoveResult.createSnapshotVector(builder, entries);
+    int groundEntityId = -1;
+    int groundItemData = 0;
+    float groundX = 0f;
+    float groundY = 0f;
+    if (includeGroundCorrection && intent.groundEntityId >= 0) {
+      com.riiablo.engine.server.component.Item ground = mItemSafe(intent.groundEntityId);
+      com.riiablo.engine.server.component.Position position =
+          world.getMapper(com.riiablo.engine.server.component.Position.class).get(intent.groundEntityId);
+      if (ground != null && ground.item != null && position != null) {
+        groundEntityId = intent.groundEntityId;
+        groundItemData = serializeItemVector(builder, ground.item);
+        groundX = position.position.x;
+        groundY = position.position.y;
+      }
+    }
     int result = ItemMoveResult.createItemMoveResult(builder, intent.requestId, success, failure,
-        revision, intent.operation, snapshot, -1, 0, 0, 0);
+        revision, intent.operation, snapshot, groundEntityId, groundItemData, groundX, groundY);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder, D2GSData.ItemMoveResult, result);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     ByteBuffer response = builder.dataBuffer();
