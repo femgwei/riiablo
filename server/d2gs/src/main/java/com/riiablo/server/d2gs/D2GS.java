@@ -218,6 +218,7 @@ public class D2GS extends ApplicationAdapter {
   final Collection<Packet> cache = new ArrayList<>(1024);
   final BlockingQueue<Packet> outPackets = new ArrayBlockingQueue<>(8192);
   final IntIntMap player = new IntIntMap();
+  final long[] nextMovementLogTime = new long[MAX_CLIENTS];
 
   static final BitVector ignoredPackets = new BitVector(D2GSData.names.length); {
     ignoredPackets.set(D2GSData.EntitySync);
@@ -339,6 +340,11 @@ public class D2GS extends ApplicationAdapter {
         .with(new VendorGenerator())
         .with(new AIStepper())
         .with(new Pathfinder())
+
+        // D2GS is the authoritative owner of player/monster movement modes.
+        // Without this, client movement changes position and velocity while
+        // the server keeps broadcasting the initial TN/NU mode.
+        .with(new com.riiablo.engine.server.VelocityModeChanger(false, true))
 
         .with(new VelocityAdder()) // FIXME: temp until proper physics implemented
         .with(new LeapSystem())
@@ -661,6 +667,25 @@ public class D2GS extends ApplicationAdapter {
     int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
     assert entityId != Engine.INVALID_ENTITY;
     sync.sync(entityId, packet.data);
+    long now = TimeUtils.millis();
+    if (now >= nextMovementLogTime[packet.id]) {
+      nextMovementLogTime[packet.id] = now + 1000L;
+      com.riiablo.engine.server.component.Position position = world.getMapper(
+          com.riiablo.engine.server.component.Position.class).get(entityId);
+      com.riiablo.engine.server.component.Velocity velocity = world.getMapper(
+          com.riiablo.engine.server.component.Velocity.class).get(entityId);
+      com.riiablo.engine.server.component.CofReference cof = world.getMapper(
+          com.riiablo.engine.server.component.CofReference.class).get(entityId);
+      Gdx.app.log(TAG, String.format(
+          "[NET_MOVE] phase=server_receive connection=%d player=%d pos=(%.2f,%.2f) "
+              + "velocity=(%.2f,%.2f) mode=%d",
+          packet.id, entityId,
+          position != null ? position.position.x : Float.NaN,
+          position != null ? position.position.y : Float.NaN,
+          velocity != null ? velocity.velocity.x : Float.NaN,
+          velocity != null ? velocity.velocity.y : Float.NaN,
+          cof != null ? cof.mode & 0xFF : -1));
+    }
   }
 
   /** Handles untrusted combat input; all damage and projectile creation stays on the server. */

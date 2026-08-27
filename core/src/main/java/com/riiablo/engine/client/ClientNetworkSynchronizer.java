@@ -14,6 +14,7 @@ import com.artemis.systems.IntervalSystem;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.net.Socket;
+import com.badlogic.gdx.utils.TimeUtils;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.server.component.Angle;
@@ -59,6 +60,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
 
   boolean init = false;
   private long nextNpcRequestId = 1;
+  private long nextMovementLogTime;
   @Wire(name="client.socket") Socket socket;
 
   public ClientNetworkSynchronizer() {
@@ -151,6 +153,16 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
     Vector2 position = mPosition.get(entityId).position;
     Vector2 velocity = mVelocity.get(entityId).velocity;
     Vector2 angle = mAngle.get(entityId).target;
+
+    long now = TimeUtils.millis();
+    if (now >= nextMovementLogTime) {
+      nextMovementLogTime = now + 1000L;
+      Gdx.app.log(TAG, String.format(
+          "[NET_MOVE] phase=client_send local=%d server=%d pos=(%.2f,%.2f) "
+              + "velocity=(%.2f,%.2f) angle=(%.2f,%.2f)",
+          entityId, mNetworked.get(entityId).serverId,
+          position.x, position.y, velocity.x, velocity.y, angle.x, angle.y));
+    }
 
     int cofComponents = CofComponentsP.createComponentVector(builder, component);
     int cofTransforms = CofTransformsP.createTransformVector(builder, transform);

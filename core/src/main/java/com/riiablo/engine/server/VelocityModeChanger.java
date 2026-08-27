@@ -18,6 +18,7 @@ import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MovementModes;
+import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Velocity;
@@ -39,13 +40,32 @@ public class VelocityModeChanger extends IteratingSystem {
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<MovementModes> mMovementModes;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Networked> mNetworked;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
 
   protected CofManager cofs;
 
+  private final boolean applyLocalRunInput;
+  private final boolean updateNetworkedModes;
+
+  /** Local single-player configuration. */
+  public VelocityModeChanger() {
+    this(true, true);
+  }
+
+  /**
+   * @param applyLocalRunInput whether this world reads Shift and adjusts the local player's speed
+   * @param updateNetworkedModes whether this world owns COF modes for Networked entities
+   */
+  public VelocityModeChanger(boolean applyLocalRunInput, boolean updateNetworkedModes) {
+    this.applyLocalRunInput = applyLocalRunInput;
+    this.updateNetworkedModes = updateNetworkedModes;
+  }
+
   @Override
   protected void begin() {
+    if (!applyLocalRunInput || Riiablo.game == null) return;
     Velocity velocityComp = mVelocity.get(Riiablo.game.player);
     if (velocityComp == null) return; // Player may be dead (Velocity component removed)
     Vector2 velocity = velocityComp.velocity;
@@ -67,6 +87,12 @@ public class VelocityModeChanger extends IteratingSystem {
    */
   @Override
   protected void process(int entityId) {
+    // A network client renders the authoritative CofReferenceP sent by D2GS.
+    // Re-deriving a mode locally from a slightly older VelocityP changes
+    // NU/WL/RN (and attack modes) back every frame, forcing COF reloads and
+    // producing the visible animation flash. The D2GS uses the same system
+    // with updateNetworkedModes=true and remains the sole mode owner.
+    if (!updateNetworkedModes && mNetworked.has(entityId)) return;
     Velocity velocity = mVelocity.get(entityId);
     Vector2 currentVelocity = velocity.velocity;
     if (currentVelocity.isZero()) {

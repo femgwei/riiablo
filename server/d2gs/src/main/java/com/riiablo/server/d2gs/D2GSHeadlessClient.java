@@ -8,6 +8,8 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.engine.Engine;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
+import com.riiablo.net.packet.d2gs.AngleP;
+import com.riiablo.net.packet.d2gs.CofReferenceP;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.D2GSData;
@@ -16,6 +18,7 @@ import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.PositionP;
+import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter96;
@@ -59,6 +62,7 @@ public final class D2GSHeadlessClient {
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
   private final Set<Integer> playerMissiles = new HashSet<>();
   private int playerId = Engine.INVALID_ENTITY;
+  private boolean sawAttackMode;
 
   private D2GSHeadlessClient(Config config) {
     this.config = config;
@@ -100,7 +104,7 @@ public final class D2GSHeadlessClient {
            OutputStream output = new BufferedOutputStream(socket.getOutputStream())) {
         send(output, connectionPacket(character, d2s));
         awaitConnection(input, System.currentTimeMillis() + config.testTimeoutMillis);
-        if (config.requirePeer) verifyPeerVisibility(character, d2s, input);
+        if (config.requirePeer) verifyPeerVisibility(character, d2s, input, output);
 
         Snapshot target = awaitTarget(input, System.currentTimeMillis() + config.testTimeoutMillis);
         if (config.requireMonsterMovement) {
@@ -114,16 +118,20 @@ public final class D2GSHeadlessClient {
             playerId, target.entityId, target.monsterClass, target.x, target.y, initialLife));
 
         boolean damaged = attackUntilDamaged(input, output, target, initialLife);
-        if (!damaged) {
+        if (!damaged && !config.requirePeer) {
           throw new IllegalStateException("authoritative target life did not decrease after "
               + config.attempts + " cast attempts");
+        }
+        if (!sawAttackMode) {
+          throw new IllegalStateException(
+              "authoritative player attack mode was not synchronized to the client");
         }
 
         Snapshot result = monsters.get(target.entityId);
         log("pass", String.format(
-            "player=%d target=%d skill=%d life=%.2f->%.2f missiles=%d",
+            "player=%d target=%d skill=%d life=%.2f->%.2f damaged=%s attackMode=%s missiles=%d",
             playerId, target.entityId, config.skillId, initialLife,
-            result == null ? 0f : result.life, playerMissiles.size()));
+            result == null ? 0f : result.life, damaged, sawAttackMode, playerMissiles.size()));
       }
     }
   }
@@ -162,7 +170,8 @@ public final class D2GSHeadlessClient {
   }
 
   private void verifyPeerVisibility(
-      CharacterHeader character, byte[] d2s, DataInputStream firstInput) throws Exception {
+      CharacterHeader character, byte[] d2s, DataInputStream firstInput,
+      OutputStream firstOutput) throws Exception {
     try (Socket peer = new Socket()) {
       peer.connect(new InetSocketAddress(config.host, config.port), config.connectTimeoutMillis);
       peer.setTcpNoDelay(true);
@@ -176,6 +185,8 @@ public final class D2GSHeadlessClient {
         boolean firstSawPeer = false;
         boolean peerSawFirst = false;
         boolean peerReceivedFirstEntity = false;
+        float firstX = Float.NaN;
+        float firstY = Float.NaN;
         int peerEntitySyncs = 0;
         long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
         while (System.currentTimeMillis() < deadline && (!firstSawPeer || !peerSawFirst)) {
@@ -195,6 +206,12 @@ public final class D2GSHeadlessClient {
             peerEntitySyncs++;
             if (sync.entityId() == playerId) {
               peerReceivedFirstEntity = true;
+              int positionIndex = findComponent(sync, ComponentP.PositionP);
+              if (positionIndex >= 0) {
+                PositionP position = (PositionP) sync.component(new PositionP(), positionIndex);
+                firstX = position.x();
+                firstY = position.y();
+              }
               log("peer_snapshot", "entity=" + sync.entityId() + " type=" + sync.type()
                   + " components=" + componentTypes(sync));
             }
@@ -210,6 +227,46 @@ public final class D2GSHeadlessClient {
         }
         log("peer_pass", "first=" + playerId + " peer=" + peerId
             + " firstSawPeer=true peerSawFirst=true");
+
+        if (!Float.isFinite(firstX) || !Float.isFinite(firstY)) {
+          throw new IllegalStateException("peer baseline omitted first player position");
+        }
+
+        // Regression: joining the second client must not freeze the first
+        // player's input stream. Send a real movement snapshot after the peer
+        // is fully visible and require D2GS to echo both movement and RN mode.
+        send(firstOutput, movementPacket(playerId, firstX, firstY, 1f, 0f));
+        boolean positionAdvanced = false;
+        boolean movementMode = false;
+        deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+        while (System.currentTimeMillis() < deadline && (!positionAdvanced || !movementMode)) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(peerInput);
+          if (packet == null || packet.dataType() != D2GSData.EntitySync) continue;
+          EntitySync sync = (EntitySync) packet.data(new EntitySync());
+          if (sync.entityId() != playerId) continue;
+          int positionIndex = findComponent(sync, ComponentP.PositionP);
+          if (positionIndex >= 0) {
+            PositionP position = (PositionP) sync.component(new PositionP(), positionIndex);
+            positionAdvanced |= position.x() > firstX + 0.001f;
+          }
+          int cofIndex = findComponent(sync, ComponentP.CofReferenceP);
+          if (cofIndex >= 0) {
+            CofReferenceP cof = (CofReferenceP) sync.component(new CofReferenceP(), cofIndex);
+            movementMode |= cof.mode() == Engine.Player.MODE_RN
+                || cof.mode() == Engine.Player.MODE_TW
+                || cof.mode() == Engine.Player.MODE_WL;
+          }
+        }
+        if (!positionAdvanced || !movementMode) {
+          throw new IllegalStateException("first player movement failed after peer joined: "
+              + "positionAdvanced=" + positionAdvanced + " movementMode=" + movementMode);
+        }
+        log("peer_movement_pass", "first=" + playerId + " peer=" + peerId
+            + " positionAdvanced=true movementMode=true");
+        // Leave the first client in the same stopped state as a real client
+        // after releasing movement input. Otherwise this synthetic velocity
+        // remains authoritative and drags the later combat target forever.
+        send(firstOutput, movementPacket(playerId, firstX, firstY, 0f, 0f));
       }
     }
   }
@@ -305,6 +362,10 @@ public final class D2GSHeadlessClient {
         com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
         if (packet == null) continue;
         consume(packet);
+        // The multiplayer task specifically verifies presentation-state
+        // synchronization. Damage has its own headlessCombat task and can be
+        // nondeterministic here when the selected AI is already fleeing.
+        if (config.requirePeer && sawAttackMode) return false;
         Snapshot current = monsters.get(selected.entityId);
         boolean damaged = current != null && (current.life < initialLife || current.dead);
         if (damaged && (!config.requireMissile || !playerMissiles.isEmpty())) return true;
@@ -316,6 +377,18 @@ public final class D2GSHeadlessClient {
   private void consume(com.riiablo.net.packet.d2gs.D2GS packet) {
     if (packet.dataType() != D2GSData.EntitySync) return;
     EntitySync sync = (EntitySync) packet.data(new EntitySync());
+    if (sync.entityId() == playerId) {
+      int cofIndex = findComponent(sync, ComponentP.CofReferenceP);
+      if (cofIndex >= 0) {
+        CofReferenceP cof = (CofReferenceP) sync.component(new CofReferenceP(), cofIndex);
+        if (cof.mode() >= Engine.Player.MODE_A1 && cof.mode() <= Engine.Player.MODE_S4) {
+          if (!sawAttackMode) {
+            log("attack_mode", "player=" + playerId + " mode=" + cof.mode());
+          }
+          sawAttackMode = true;
+        }
+      }
+    }
     if (sync.type() == 5) {
       int missileIndex = findComponent(sync, ComponentP.MissileP);
       if (missileIndex >= 0) {
@@ -434,6 +507,23 @@ public final class D2GSHeadlessClient {
     int types = EntitySync.createComponentTypeVector(builder,
         new byte[] {ComponentP.PositionP});
     int components = EntitySync.createComponentVector(builder, new int[] {position});
+    int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.EntitySync, sync);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    return builder.dataBuffer();
+  }
+
+  private static ByteBuffer movementPacket(
+      int playerId, float x, float y, float velocityX, float velocityY) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(192);
+    int position = PositionP.createPositionP(builder, x, y);
+    int velocity = VelocityP.createVelocityP(builder, velocityX, velocityY);
+    int angle = AngleP.createAngleP(builder, velocityX, velocityY);
+    int types = EntitySync.createComponentTypeVector(builder, new byte[] {
+        ComponentP.PositionP, ComponentP.VelocityP, ComponentP.AngleP});
+    int components = EntitySync.createComponentVector(
+        builder, new int[] {position, velocity, angle});
     int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.EntitySync, sync);

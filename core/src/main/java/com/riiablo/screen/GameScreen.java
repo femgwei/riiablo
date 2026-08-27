@@ -772,7 +772,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new AnimationStepper())
         .with(new ObjectCollisionUpdater())
 
-        .with(new VelocityModeChanger());
+        // In multiplayer, D2GS owns CofReference modes. The client still
+        // computes local movement velocity, but must not overwrite server
+        // attack/walk/neutral modes for Networked replicas.
+        .with(socket == null
+            ? new VelocityModeChanger()
+            : new VelocityModeChanger(true, false));
 //        .with(new VelocityAdder());
     if (socket != null) {
       // FIXME: crash when changing acts in multiplayer
