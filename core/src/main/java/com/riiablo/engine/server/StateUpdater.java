@@ -2,11 +2,18 @@ package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
+import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 
+import com.badlogic.gdx.math.Vector2;
+
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Missiles;
+import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Position;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
@@ -42,6 +49,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<Position> mPosition;
+
+  @Wire(name = "factory")
+  protected EntityFactory factory;
 
   protected EventSystem events;
 
@@ -70,6 +81,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
 
     StateList stateList = unitStates.stateList;
+
+    processSpiderLayTrail(entityId, stateList);
     
     // Resolve this tick before decrementing duration. A one-frame state must
     // still deal its final DOT tick, then expire.
@@ -201,6 +214,28 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       log.trace("Entity {} takes {} damage from state {} (hp={})", entityId,
           appliedDamage, StateId.getName(stateId), hpAfter);
     }
+  }
+
+  /** Emits the native SpiderLay movement trail into the authoritative missile pipeline. */
+  private void processSpiderLayTrail(int entityId, StateList stateList) {
+    if (!stateList.hasState(StateId.SPIDERLAY) || factory == null
+        || !mVelocity.has(entityId) || !mPosition.has(entityId)) return;
+    Velocity velocity = mVelocity.get(entityId);
+    if (velocity.velocity.isZero(0.0001f)) return;
+    UnitState state = stateList.getState(StateId.SPIDERLAY);
+    int elapsed = Math.max(0, state.initialDuration - state.duration);
+    if ((elapsed & 3) != 0) return;
+    Missiles.Entry missile = Riiablo.files.Missiles.get("spidergoolay");
+    if (missile == null) {
+      log.warn("[SPIDER_LAY] phase=reject entity={} reason=missing_spidergoolay", entityId);
+      state.expired = true;
+      return;
+    }
+    Vector2 direction = new Vector2(velocity.velocity).nor();
+    Vector2 position = new Vector2(mPosition.get(entityId).position).mulAdd(direction, -0.5f);
+    int missileId = factory.createMissile(missile, direction, position, entityId);
+    log.info("[SPIDER_LAY] phase=missile entity={} skill={} missileId={} position=({}, {})",
+        entityId, state.skillId, missileId, position.x, position.y);
   }
 
   //==========================================================================

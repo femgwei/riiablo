@@ -251,6 +251,20 @@ public class ItemDurabilityManager {
     return Math.max(1, totalCost);
   }
 
+  /** Returns whether an NPC repair operation may restore this item. */
+  public boolean isRepairable(Item item) {
+    if (item == null || isIndestructible(item) || isEthereal(item)) return false;
+    int max = getMaxDurability(item);
+    return max > 0 && getCurrentDurability(item) < max;
+  }
+
+  /** Restores a previously validated repair target to full durability. */
+  public boolean restoreDurability(Item item) {
+    if (!isRepairable(item)) return false;
+    setCurrentDurability(item, getMaxDurability(item));
+    return true;
+  }
+
   /**
    * 修理物品
    * 
@@ -353,6 +367,7 @@ public class ItemDurabilityManager {
       return 0;
     }
     StatRef ref = item.attrs.get(Stat.durability);
+    if (ref == null) ref = item.attrs.base().get(Stat.durability);
     return ref != null ? ref.asInt() : 0;
   }
 
@@ -364,6 +379,7 @@ public class ItemDurabilityManager {
       return;
     }
     item.attrs.base().put(Stat.durability, value);
+    item.attrs.aggregate().put(Stat.durability, value);
   }
 
   /**
@@ -374,6 +390,7 @@ public class ItemDurabilityManager {
       return 0;
     }
     StatRef ref = item.attrs.get(Stat.maxdurability);
+    if (ref == null) ref = item.attrs.base().get(Stat.maxdurability);
     return ref != null ? ref.asInt() : 0;
   }
 
@@ -418,8 +435,7 @@ public class ItemDurabilityManager {
    * 检查物品是否是无形的
    */
   private boolean isEthereal(Item item) {
-    // TODO: 检查物品的无形标志
-    return false;
+    return item != null && item.hasFlag(Item.ITEMFLAG_ETHEREAL);
   }
 
   //==========================================================================

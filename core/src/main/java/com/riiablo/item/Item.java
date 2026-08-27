@@ -146,7 +146,8 @@ public class Item {
   Table header; // TODO: decouple
   public ItemWrapper wrapper; // TODO: decouple
 
-  Item() {}
+  /** Public constructor for server-side/test item fabrication. */
+  public Item() {}
 
   @Deprecated
   public byte[] data() {
@@ -154,7 +155,7 @@ public class Item {
     return data;
   }
 
-  void reset() {
+  public void reset() {
     flags         = 0;
     vendorPrice   = -1;
     version       = 0;
@@ -209,7 +210,7 @@ public class Item {
     return ItemUtils.getBaseIndex(code);
   }
 
-  void setBase(ItemEntry base) {
+  public void setBase(ItemEntry base) {
     setBase(base.code);
   }
 

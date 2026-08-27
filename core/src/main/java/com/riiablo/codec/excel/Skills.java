@@ -52,6 +52,8 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  stsoundclass;
     @Column public String  dosound;
     @Column public String  castoverlay;
+    @Column public String  aurastate;
+    @Column public String  auralencalc;
     @Column public String  anim;
     @Column public String  seqtrans;
     @Column public String  monanim;

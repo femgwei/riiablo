@@ -87,6 +87,7 @@ import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
 import com.riiablo.engine.server.npc.NpcVendorSessionManager;
 import com.riiablo.engine.server.npc.NpcServiceRequestCache;
+import com.riiablo.engine.server.npc.NpcRepairService;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.ItemWriter;
@@ -596,6 +597,7 @@ public class D2GS extends ApplicationAdapter {
       Packet broadcast = Packet.obtain(~(1 << id), builder.dataBuffer());
       outPackets.offer(broadcast);
       npcRequestCache.clear(id);
+      npcVendors.clearPlayer(entityId);
 
       world.delete(entityId);
       player.remove(id, Engine.INVALID_ENTITY);
@@ -792,7 +794,8 @@ public class D2GS extends ApplicationAdapter {
         session = npcVendors.open(npcId, npc.monstats.Id,
             world.getSystem(VendorGenerator.class),
             service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.GAMBLE,
-            Riiablo.files.Npc.get(npc.monstats.Id), diff);
+            Riiablo.files.Npc.get(npc.monstats.Id), diff, playerId,
+            operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN);
       } catch (Throwable t) {
         reason = "STOCK_GENERATION_FAILED";
         Gdx.app.error(TAG, "[NPC_SERVICE] stock generation failed for npc=" + npcId, t);
@@ -818,6 +821,30 @@ public class D2GS extends ApplicationAdapter {
         else if (npcVendors.sell(session, playerComponent.data, request.itemIndex()) <= 0) reason = "SELL_REJECTED";
       } else if (reason == null && operation != com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
         reason = "OPERATION_NOT_IMPLEMENTED";
+      }
+    } else if (reason == null
+        && service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.REPAIR) {
+      if (playerComponent == null || playerComponent.data == null) {
+        reason = "PLAYER_NOT_FOUND";
+      } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
+        // The combined trade/repair panel already owns its trade stock. OPEN
+        // only establishes that the repair service is valid for this NPC.
+      } else {
+        NpcRepairService.Result result;
+        com.riiablo.codec.excel.Npc.Entry pricing = Riiablo.files.Npc.get(npc.monstats.Id);
+        if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.REPAIR_ITEM) {
+          result = NpcRepairService.repairItem(
+              playerComponent.data, pricing, request.itemIndex(), request.itemId());
+        } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.REPAIR_ALL) {
+          result = NpcRepairService.repairAll(playerComponent.data, pricing);
+        } else {
+          result = null;
+        }
+        if (result == null) reason = "OPERATION_NOT_IMPLEMENTED";
+        else {
+          reason = result.reason;
+          resultItemId = result.itemId;
+        }
       }
     } else if (reason == null) {
       reason = "OPERATION_NOT_IMPLEMENTED";
@@ -848,7 +875,7 @@ public class D2GS extends ApplicationAdapter {
         byte[] data = serializeItem(item);
         int dataOffset = NpcServiceStock.createItemDataVector(builder, data);
         stockEntries[i] = NpcServiceStock.createNpcServiceStock(builder, item.id, dataOffset,
-            com.riiablo.item.VendorPricing.buyPrice(item, session.pricing, character));
+            npcVendors.price(session, item, character));
       }
       stockOffset = NpcServiceResult.createStockVector(builder, stockEntries);
     }

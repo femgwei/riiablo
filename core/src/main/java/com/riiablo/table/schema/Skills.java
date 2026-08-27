@@ -40,6 +40,8 @@ public class Skills {
   public String stsoundclass;
   public String dosound;
   public String castoverlay;
+  public String aurastate;
+  public String auralencalc;
   public String anim;
   public String seqtrans;
   public String monanim;

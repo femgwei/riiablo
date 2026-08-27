@@ -16,6 +16,9 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.item.Item;
@@ -62,6 +65,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   /** Registered as "factory" by D2GS. */
   @Wire(name = "factory")
@@ -130,6 +134,11 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if ((event.srvdofunc == 23 || skill.srvdofunc == 23)
+        && "SpiderLay".equalsIgnoreCase(skill.skill)) {
+      applySpiderLayState(event, skill, skillLevel);
+      return;
+    }
     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
       spawnNova(event, skill, start);
       return;
@@ -244,6 +253,26 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       ordinal++;
     }
+  }
+
+  /** D2MOO SrvDo023: SpiderLay installs a movement state; StateUpdater emits its trail. */
+  private void applySpiderLayState(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId)) {
+      log.warn("[SPIDER_LAY] phase=reject entity={} reason=no_unit_states", event.entityId);
+      return;
+    }
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, skillLevel);
+    if (duration <= 0) duration = 250;
+    UnitState state = states.stateList.addState(
+        StateId.SPIDERLAY, duration, skillLevel, event.entityId);
+    if (state != null) {
+      state.skillId = event.skillId;
+      state.needsSync = true;
+    }
+    log.info("[SPIDER_LAY] phase=state entity={} skill={} level={} duration={}",
+        event.entityId, event.skillId, skillLevel, duration);
   }
 
   private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {

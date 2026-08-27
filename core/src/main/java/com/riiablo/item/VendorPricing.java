@@ -22,6 +22,12 @@ public final class VendorPricing {
   }
   public static int sellPrice(Item item) { return transactionCost(item, null, Transaction.SELL, 0); }
   public static int gamblePrice(Item item) { return transactionCost(item, null, Transaction.GAMBLE, 0); }
+  public static int gamblePrice(Item item, CharData character) {
+    return transactionCost(item, null, Transaction.GAMBLE, reducedPrices(character));
+  }
+  public static int repairPrice(Item item, Npc.Entry npc, CharData character) {
+    return transactionCost(item, npc, Transaction.REPAIR, reducedPrices(character));
+  }
   public static int buyPrice(Item item, Npc.Entry npc, CharData character) {
     return transactionCost(item, npc, Transaction.BUY, reducedPrices(character));
   }
@@ -38,6 +44,8 @@ public final class VendorPricing {
                                     int reducedPrices, int difficulty) {
     if (item == null || item.base == null || transaction == null) return 0;
     if (item.hasFlag(Item.ITEMFLAG_BEGINNER)) return 1;
+    if (transaction == Transaction.REPAIR
+        && (item.hasFlag(Item.ITEMFLAG_ETHEREAL) || item.base.nodurability)) return 0;
     ItemEntry base = item.base;
     if (transaction == Transaction.GAMBLE) {
       int gamble = base.gambleCost > 0 ? base.gambleCost : baseCost(base);
@@ -140,6 +148,16 @@ public final class VendorPricing {
   public static boolean buy(CharData character, Item item, Npc.Entry npc) {
     if (character == null || item == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return false;
     int price = buyPrice(item, npc, character);
+    if (!canSpend(character, price)) return false;
+    ItemData items = character.getItems();
+    if (!items.addToInventory(item)) return false;
+    item.flags2 &= ~Item.ITEMFLAG2_INSTORE;
+    spend(character, price);
+    return true;
+  }
+  public static boolean gamble(CharData character, Item item) {
+    if (character == null || item == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return false;
+    int price = gamblePrice(item, character);
     if (!canSpend(character, price)) return false;
     ItemData items = character.getItems();
     if (!items.addToInventory(item)) return false;

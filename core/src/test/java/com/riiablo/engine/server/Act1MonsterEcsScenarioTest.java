@@ -25,6 +25,9 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -39,10 +42,37 @@ import org.junit.jupiter.api.Test;
 /** Real ECS event-chain scenarios for representative Act I monster skills. */
 class Act1MonsterEcsScenarioTest extends RiiabloTest {
   @Test
+  void spiderLayInstallsStateAndMovingSpiderEmitsAuthoritativeGoo() {
+    MonStats.Entry row = Riiablo.files.monstats.get("arach1");
+    assertNotNull(row);
+    Skills.Entry skill = skillFor(row, 23);
+    assertNotNull(skill);
+    Scenario scenario = new Scenario(row, new ServerSkillSystem(true), new StateUpdater());
+    try {
+      scenario.actioneer.cast(scenario.source, skill.Id, Engine.INVALID_ENTITY,
+          scenario.position(13, 10));
+      scenario.keyframe(scenario.source);
+      UnitStates states = scenario.world.getMapper(UnitStates.class).get(scenario.source);
+      assertTrue(states.stateList.hasState(StateId.SPIDERLAY));
+      scenario.world.getMapper(Velocity.class).create(scenario.source).setMonster(6f)
+          .velocity.set(1, 0);
+      scenario.world.setDelta(1f / 25f);
+      scenario.world.process();
+      assertEquals(1, scenario.factory.missilesCreated);
+      assertEquals("spidergoolay", scenario.factory.lastMissile.toLowerCase());
+      assertEquals(scenario.source, scenario.factory.lastMissileOwner);
+      System.out.println("[ACT1_ECS_CHAIN] skill=SpiderLay state=SPIDERLAY missile="
+          + scenario.factory.lastMissile + " owner=" + scenario.source + " status=PASS");
+    } finally {
+      scenario.close();
+    }
+  }
+
+  @Test
   void maggotDownKeyframeHealsThroughActioneer() {
     MonStats.Entry row = Riiablo.files.monstats.get("sandmaggot1");
     Skills.Entry skill = Riiablo.files.skills.get(row.Skill2);
-    Scenario scenario = new Scenario(row, null);
+    Scenario scenario = new Scenario(row);
     try {
       Attributes life = scenario.attributes(100, 200);
       scenario.attributes(scenario.source).attrs = life;
@@ -61,7 +91,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
   void nestKeyframeCreatesConfiguredSpawnThroughFactory() {
     MonStats.Entry row = Riiablo.files.monstats.get("crownest3");
     Skills.Entry skill = Riiablo.files.skills.get(row.Skill1);
-    Scenario scenario = new Scenario(row, null);
+    Scenario scenario = new Scenario(row);
     try {
       System.out.println("[ACT1_ECS_DEBUG] nest row=" + row.Id + " skill1=" + row.Skill1
           + " skillId=" + skill.Id + " spawn=" + row.spawn + " minion1=" + row.minion1
@@ -105,7 +135,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     assertNotNull(row);
     Skills.Entry skill = Riiablo.files.skills.get(row.Skill1);
     assertNotNull(skill);
-    Scenario scenario = new Scenario(row, null);
+    Scenario scenario = new Scenario(row);
     try {
       Attributes targetAttrs = combatAttributes(100, 100, 0, 1, 1, 1);
       scenario.attributes(scenario.source).attrs = combatAttributes(100, 100, 10, 20, 10000, 1);
@@ -131,7 +161,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     assertNotNull(skill);
     MonStats.Entry row = findMonsterWithSkill(skill.skill);
     assertNotNull(row, "No monster exposes Charge in the current MonStats data");
-    Scenario scenario = new Scenario(row, null);
+    Scenario scenario = new Scenario(row);
     try {
       Attributes targetAttrs = combatAttributes(80, 80, 0, 1, 1, 1);
       scenario.attributes(scenario.source).attrs = combatAttributes(100, 100, 20, 20, 10000, 1);
@@ -157,7 +187,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     assertNotNull(row);
     Skills.Entry skill = skillFor(row, 87);
     assertNotNull(skill, "Sand Maggot must expose MaggotLay");
-    Scenario scenario = new Scenario(row, null);
+    Scenario scenario = new Scenario(row);
     try {
       int target = scenario.target(13, 10);
       scenario.actioneer.cast(scenario.source, skill.Id, target, scenario.position(13, 10));
@@ -271,10 +301,10 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     final World world;
     final int source;
 
-    Scenario(MonStats.Entry row, BaseSystem extra) {
+    Scenario(MonStats.Entry row, BaseSystem... extras) {
       WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
           .with(new EventSystem(), probe, actioneer, new Pathfinder(), factory);
-      if (extra != null) builder.with(extra);
+      if (extras != null) for (BaseSystem extra : extras) if (extra != null) builder.with(extra);
       world = new World(builder.build().register("map", new WalkableMap())
           .register("factory", factory));
       factory.world = world;
@@ -287,6 +317,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       world.getMapper(MovementModes.class).create(source).set(
           Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
       world.getMapper(AttributesWrapper.class).create(source).attrs = attributes(100, 100);
+      world.getMapper(UnitStates.class).create(source).init(source);
     }
 
     AttributesWrapper attributes(int entity) {

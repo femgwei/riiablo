@@ -31,6 +31,7 @@ import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.net.packet.d2gs.NpcServiceOperation;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.NpcServiceStock;
+import com.riiablo.net.packet.d2gs.NpcServiceType;
 import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
@@ -378,7 +379,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     return clientSocket != null && networkSynchronizer != null;
   }
 
-  /** Applies an authoritative OPEN/BUY/SELL response to the visible vendor UI. */
+  /** Applies an authoritative vendor/repair response to the visible UI. */
   public void applyNetworkResult(NpcServiceResult result) {
     if (result == null) return;
     VendorPricing.setGoldSnapshot(Riiablo.charData,
@@ -393,11 +394,23 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         }
       } else if (result.success() && pendingOperation == NpcServiceOperation.SELL) {
         Riiablo.charData.getItems().removeOwnedItem(pendingItemIndex);
+      } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ITEM) {
+        Item repaired = findOwnedItem(result.itemId(), pendingItemIndex);
+        if (repaired != null) ItemDurabilityManager.INSTANCE.restoreDurability(repaired);
+      } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ALL) {
+        applyRepairAllResult();
       }
       pendingRequestId = 0;
       pendingItemIndex = -1;
     }
     if (networkFlags == 0) return;
+    // REPAIR and early validation failures carry no vendor-stock snapshot.
+    // Preserve the already visible trade page instead of replacing it with an
+    // empty list when only durability or wallet state changed.
+    if (result.stockRevision() == 0 && result.stockLength() == 0) {
+      if (!result.success()) Gdx.app.log(TAG, "[NPC_SERVICE] " + result.reason());
+      return;
+    }
     networkStockRevision = result.stockRevision();
     Array<Item> stock = new Array<>(true, result.stockLength(), Item.class);
     for (int i = 0; i < result.stockLength(); i++) {
@@ -439,6 +452,17 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     if (!isVisible() || !repairing || Riiablo.charData == null) return false;
     if (itemIndex < 0 || itemIndex >= Riiablo.charData.getItems().getItems().size) return false;
     Item item = Riiablo.charData.getItems().getItem(itemIndex);
+    if (networkFlags != 0 && networkSynchronizer != null) {
+      if (pendingRequestId != 0 || item == null) return false;
+      long requestId = networkSynchronizer.requestNpcService(networkNpcEntityId,
+          NpcServiceType.REPAIR, NpcServiceOperation.REPAIR_ITEM,
+          item.id, itemIndex, 0);
+      if (requestId == 0) return false;
+      pendingRequestId = requestId;
+      pendingOperation = NpcServiceOperation.REPAIR_ITEM;
+      pendingItemIndex = itemIndex;
+      return false;
+    }
     int cost = ItemDurabilityManager.INSTANCE.calculateRepairCost(item);
     if (cost <= 0 || !VendorPricing.chargeGold(Riiablo.charData, cost)) return false;
     ItemDurabilityManager.INSTANCE.repairItem(item, cost);
@@ -449,6 +473,16 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   private void repairAll() {
     if (Riiablo.charData == null) return;
+    if (networkFlags != 0 && networkSynchronizer != null) {
+      if (pendingRequestId != 0) return;
+      long requestId = networkSynchronizer.requestNpcService(networkNpcEntityId,
+          NpcServiceType.REPAIR, NpcServiceOperation.REPAIR_ALL, 0, -1, 0);
+      if (requestId == 0) return;
+      pendingRequestId = requestId;
+      pendingOperation = NpcServiceOperation.REPAIR_ALL;
+      pendingItemIndex = -1;
+      return;
+    }
     int available = VendorPricing.availableGold(Riiablo.charData);
     int cost = ItemDurabilityManager.INSTANCE.repairAllEquipment(Riiablo.charData.getItems(), available);
     if (cost > 0) {
@@ -456,6 +490,24 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       VendorPricing.chargeGold(Riiablo.charData, cost);
       refreshGold();
       Gdx.app.debug(TAG, "Repaired all equipment for " + cost + " gold");
+    }
+  }
+
+  private Item findOwnedItem(int itemId, int fallbackIndex) {
+    if (Riiablo.charData == null) return null;
+    Array<Item> items = Riiablo.charData.getItems().getItems();
+    if (itemId != 0) {
+      for (Item item : items) if (item != null && item.id == itemId) return item;
+    }
+    return fallbackIndex >= 0 && fallbackIndex < items.size ? items.get(fallbackIndex) : null;
+  }
+
+  private void applyRepairAllResult() {
+    if (Riiablo.charData == null) return;
+    for (Item item : Riiablo.charData.getItems().getItems()) {
+      if (item != null && item.location == com.riiablo.item.Location.EQUIPPED) {
+        ItemDurabilityManager.INSTANCE.restoreDurability(item);
+      }
     }
   }
 

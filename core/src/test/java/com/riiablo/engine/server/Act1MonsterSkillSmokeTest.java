@@ -24,13 +24,13 @@ import org.junit.jupiter.api.Test;
  */
 class Act1MonsterSkillSmokeTest extends RiiabloTest {
   private static final Set<Integer> SUPPORTED = Set.of(
-      0, 1, 3, 5, 7, 8, 22, 24, 27, 28, 67, 77, 83, 85, 86, 87, 90, 91, 95, 96, 97, 150);
+      0, 1, 3, 5, 7, 8, 22, 23, 24, 27, 28, 67, 77, 83, 85, 86, 87, 90, 91, 95, 96, 97, 150);
 
   @Test
   void everyAct1MonsterSkillHasExecutableServerWiring() {
     Set<String> monsterIds = new LinkedHashSet<>();
     for (Levels.Entry level : Riiablo.files.Levels) {
-      if (level.Act != 1) continue;
+      if (level.Act != 0) continue;
       addAll(monsterIds, level.mon);
       addAll(monsterIds, level.nmon);
       addAll(monsterIds, level.umon);

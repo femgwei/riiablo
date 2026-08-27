@@ -9,6 +9,9 @@ class NpcServiceProtocolTest {
     assertTrue(NpcServiceProtocol.inRange(new Vector2(0, 0), new Vector2(8, 0)));
     assertFalse(NpcServiceProtocol.inRange(new Vector2(0, 0), new Vector2(9, 0)));
     assertTrue(NpcServiceProtocol.supports(NpcServiceProtocol.Service.TRADE, NpcServiceProtocol.Operation.BUY));
+    assertTrue(NpcServiceProtocol.supports(NpcServiceProtocol.Service.REPAIR, NpcServiceProtocol.Operation.REPAIR_ITEM));
+    assertTrue(NpcServiceProtocol.supports(NpcServiceProtocol.Service.REPAIR, NpcServiceProtocol.Operation.REPAIR_ALL));
+    assertTrue(NpcServiceProtocol.supports(NpcServiceProtocol.Service.GAMBLE, NpcServiceProtocol.Operation.BUY));
     assertFalse(NpcServiceProtocol.supports(NpcServiceProtocol.Service.REPAIR, NpcServiceProtocol.Operation.BUY));
   }
 

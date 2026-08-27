@@ -159,6 +159,8 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Server-owned vendor stock snapshots and atomic BUY/SELL mutation.
       - [x] Network VendorPanel consumes server stock/prices and commits wallet/item changes on acknowledgement.
       - [x] Per-connection bounded request idempotency cache with exact-intent replay protection.
+      - [x] Authoritative atomic REPAIR_ITEM/REPAIR_ALL with ownership and wallet validation.
+      - [x] Player-private GAMBLE stock refresh and native-price purchase.
       - [ ] Reconnect/session recovery.
 - [ ] Phase 5: A1Q6 and Act completion
 - [ ] Phase 6: remaining Act 1 quests
