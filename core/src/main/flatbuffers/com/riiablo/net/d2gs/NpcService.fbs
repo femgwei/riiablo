@@ -1,0 +1,37 @@
+namespace com.riiablo.net.packet.d2gs;
+
+/** Services exposed by an NPC. */
+enum NpcServiceType:byte { TRADE, GAMBLE, REPAIR, HIRE, RESURRECT }
+
+/** A single atomic operation inside a service session. */
+enum NpcServiceOperation:byte { OPEN, BUY, SELL, REPAIR_ITEM, REPAIR_ALL, HIRE, RESURRECT }
+
+/** Client request. The server resolves playerEntityId from the connection. */
+table NpcServiceRequest {
+  requestId:uint32;
+  npcEntityId:int32;
+  serviceType:NpcServiceType;
+  operation:NpcServiceOperation;
+  itemId:int32;
+  itemIndex:int32;
+  stockRevision:uint32;
+}
+
+/** Authoritative item offered by an NPC. */
+table NpcServiceStock {
+  itemId:int32;
+  itemData:[ubyte];
+  price:uint32;
+}
+
+/** Server response and optional refreshed stock snapshot. */
+table NpcServiceResult {
+  requestId:uint32;
+  success:bool;
+  reason:string;
+  gold:uint32;
+  stockRevision:uint32;
+  itemId:int32;
+  itemData:[ubyte];
+  stock:[NpcServiceStock];
+}

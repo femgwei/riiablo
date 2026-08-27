@@ -106,6 +106,8 @@ import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.Disconnect;
 import com.riiablo.net.packet.d2gs.GroundToCursor;
 import com.riiablo.net.packet.d2gs.Ping;
+import com.riiablo.net.packet.d2gs.NpcServiceRequest;
+import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.StoreToCursor;
 import com.riiablo.net.packet.d2gs.SwapBeltItem;
 import com.riiablo.net.packet.d2gs.SwapBodyItem;
@@ -463,6 +465,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.CastSkillRequest:
         CastSkillRequest(packet);
         break;
+      case D2GSData.NpcServiceRequest:
+        NpcServiceRequest(packet);
+        break;
       case D2GSData.SwapBeltItem:
         SwapBeltItem(packet);
         break;
@@ -660,6 +665,81 @@ public class D2GS extends ApplicationAdapter {
         "[NET_CAST] phase=accept player=%d skill=%d target=%d targetPos=(%.2f,%.2f)",
         entityId, request.skillId(), targetId, x, y));
     world.getSystem(Actioneer.class).cast(entityId, request.skillId(), targetId, new Vector2(x, y));
+  }
+
+  /**
+   * Authenticated multiplayer NPC boundary. Player identity and gold are
+   * resolved on the server; client supplied prices or item payloads are never
+   * accepted. Atomic service mutations are enabled incrementally after OPEN.
+   */
+  private void NpcServiceRequest(Packet packet) {
+    NpcServiceRequest request = (NpcServiceRequest) packet.data.data(new NpcServiceRequest());
+    int playerId = player.get(packet.id, Engine.INVALID_ENTITY);
+    int npcId = request.npcEntityId();
+    com.riiablo.engine.server.component.Position playerPosition = playerId == Engine.INVALID_ENTITY
+        ? null : world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerId);
+    com.riiablo.engine.server.component.Position npcPosition =
+        world.getMapper(com.riiablo.engine.server.component.Position.class).get(npcId);
+    com.riiablo.engine.server.component.Monster npc =
+        world.getMapper(com.riiablo.engine.server.component.Monster.class).get(npcId);
+
+    com.riiablo.engine.server.npc.NpcServiceProtocol.Service service = decodeNpcService(request.serviceType());
+    com.riiablo.engine.server.npc.NpcServiceProtocol.Operation operation = decodeNpcOperation(request.operation());
+    com.riiablo.engine.server.npc.NpcDialogManager.NpcDefinition definition = npc == null || npc.monstats == null
+        ? null : new com.riiablo.engine.server.npc.NpcDialogManager().getNpcDefinition(npc.monstats.hcIdx);
+    boolean serviceAvailable = definition != null && service != null && operation != null
+        && npcOffers(definition, service)
+        && com.riiablo.engine.server.npc.NpcServiceProtocol.supports(service, operation);
+    boolean inRange = playerPosition != null && npcPosition != null
+        && com.riiablo.engine.server.npc.NpcServiceProtocol.inRange(playerPosition.position, npcPosition.position);
+    String reason = com.riiablo.engine.server.npc.NpcServiceProtocol.rejectReason(
+        playerId != Engine.INVALID_ENTITY, definition != null, inRange, serviceAvailable, true);
+    boolean success = reason == null && operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN;
+    if (reason == null && !success) reason = "OPERATION_NOT_IMPLEMENTED";
+
+    com.riiablo.engine.server.component.Player playerComponent = playerId == Engine.INVALID_ENTITY
+        ? null : world.getMapper(com.riiablo.engine.server.component.Player.class).get(playerId);
+    int gold = playerComponent == null || playerComponent.data == null ? 0
+        : com.riiablo.item.VendorPricing.availableGold(playerComponent.data);
+    sendNpcServiceResult(packet.id, request.requestId(), success, reason, gold);
+    Gdx.app.log(TAG, "[NPC_SERVICE] player=" + playerId + " npc=" + npcId
+        + " service=" + service + " operation=" + operation + " result="
+        + (success ? "OK" : reason));
+  }
+
+  private void sendNpcServiceResult(int clientId, long requestId, boolean success, String reason, int gold) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int resultOffset = NpcServiceResult.createNpcServiceResult(
+        builder, requestId, success, reasonOffset, Math.max(0, gold), 0, 0, 0, 0);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.NpcServiceResult, resultOffset);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    outPackets.offer(Packet.obtain(1 << clientId, builder.dataBuffer()));
+  }
+
+  private static com.riiablo.engine.server.npc.NpcServiceProtocol.Service decodeNpcService(byte value) {
+    com.riiablo.engine.server.npc.NpcServiceProtocol.Service[] values =
+        com.riiablo.engine.server.npc.NpcServiceProtocol.Service.values();
+    return value >= 0 && value < values.length ? values[value] : null;
+  }
+
+  private static com.riiablo.engine.server.npc.NpcServiceProtocol.Operation decodeNpcOperation(byte value) {
+    com.riiablo.engine.server.npc.NpcServiceProtocol.Operation[] values =
+        com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.values();
+    return value >= 0 && value < values.length ? values[value] : null;
+  }
+
+  private static boolean npcOffers(com.riiablo.engine.server.npc.NpcDialogManager.NpcDefinition npc,
+                                   com.riiablo.engine.server.npc.NpcServiceProtocol.Service service) {
+    switch (service) {
+      case TRADE: return npc.isVendor;
+      case GAMBLE: return npc.canGamble;
+      case REPAIR: return npc.canRepair;
+      case HIRE:
+      case RESURRECT: return npc.canHire;
+      default: return false;
+    }
   }
 
   private int getPlayerEntityId(Packet packet) {

@@ -51,7 +51,7 @@ class VendorPricingTest extends RiiabloTest {
     npc.sellMult = 2048;
     npc.buyMult = 512;
     assertEquals(800, VendorPricing.transactionCost(item, npc, VendorPricing.Transaction.BUY, 0));
-    assertEquals(50, VendorPricing.transactionCost(item, npc, VendorPricing.Transaction.SELL, 0));
+    assertEquals(200, VendorPricing.transactionCost(item, npc, VendorPricing.Transaction.SELL, 0));
   }
 
   @Test

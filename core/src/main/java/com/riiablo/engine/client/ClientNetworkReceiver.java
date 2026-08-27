@@ -69,6 +69,7 @@ import com.riiablo.net.packet.d2gs.GroundToCursor;
 import com.riiablo.net.packet.d2gs.ItemP;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.Ping;
+import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.PlayerP;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.StoreToCursor;
@@ -204,6 +205,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.SwapBeltItem:
         SwapBeltItem(packet);
+        break;
+      case D2GSData.NpcServiceResult:
+        NpcServiceResult(packet);
         break;
       default:
         Gdx.app.error(TAG, "Unknown packet type: " + packet.dataType());
@@ -414,6 +418,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
           "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d skillPoints=%d oldSkillPoints=%d",
           entityId, experience, oldExperience, level, oldLevel, skillPoints, oldSkillPoints));
     }
+  }
+
+  private void NpcServiceResult(D2GS packet) {
+    NpcServiceResult result = (NpcServiceResult) packet.data(new NpcServiceResult());
+    Gdx.app.log(TAG, "[NPC_SERVICE] request=" + result.requestId()
+        + " success=" + result.success() + " reason=" + result.reason()
+        + " gold=" + result.gold() + " stockRevision=" + result.stockRevision()
+        + " stockCount=" + result.stockLength());
   }
 
   private void Synchronize(D2GS packet) {

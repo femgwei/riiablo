@@ -35,6 +35,7 @@ import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.EntitySync;
+import com.riiablo.net.packet.d2gs.NpcServiceRequest;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.save.CharData;
@@ -59,6 +60,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   protected ClientNetworkReceiver receiver;
 
   boolean init = false;
+  private long nextNpcRequestId = 1;
   @Wire(name="client.socket") Socket socket;
 
   public ClientNetworkSynchronizer() {
@@ -208,6 +210,27 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       channelOut.write(builder.dataBuffer());
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
+    }
+  }
+
+  /** Sends an untrusted NPC intent; the D2GS resolves player, price and stock. */
+  public long requestNpcService(int localNpcEntityId, byte service, byte operation,
+                                int itemId, int itemIndex, long stockRevision) {
+    if (socket == null || !mNetworked.has(localNpcEntityId)) return 0;
+    long requestId = nextNpcRequestId++;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int request = NpcServiceRequest.createNpcServiceRequest(builder, requestId,
+        mNetworked.get(localNpcEntityId).serverId, service, operation,
+        itemId, itemIndex, stockRevision);
+    int root = D2GS.createD2GS(builder, D2GSData.NpcServiceRequest, request);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
+      channel.write(builder.dataBuffer());
+      return requestId;
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "Failed to send NPC service request", t);
+      return 0;
     }
   }
 }

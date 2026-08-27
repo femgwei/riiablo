@@ -22,7 +22,13 @@ public final class VendorPricing {
 
   /** Calculates cost using Items.txt/Npc.txt values. reducedPrices is a percent. */
   public static int transactionCost(Item item, Npc.Entry npc, Transaction transaction, int reducedPrices) {
+    return transactionCost(item, npc, transaction, reducedPrices, 0);
+  }
+
+  public static int transactionCost(Item item, Npc.Entry npc, Transaction transaction,
+                                    int reducedPrices, int difficulty) {
     if (item == null || item.base == null || transaction == null) return 0;
+    if (item.hasFlag(Item.ITEMFLAG_BEGINNER)) return 1;
     ItemEntry base = item.base;
     if (transaction == Transaction.GAMBLE) {
       int gamble = base.gambleCost > 0 ? base.gambleCost : baseCost(base);
@@ -37,7 +43,8 @@ public final class VendorPricing {
     }
     if (base.stackable && quantity > 1) cost = safeMultiply(cost, quantity);
     cost = applyQuality(cost, item);
-    if (item.hasFlag(Item.ITEMFLAG_ETHEREAL) && transaction == Transaction.BUY) cost /= 4;
+    // Native nBuyCost is the amount paid by an NPC to the player.
+    if (item.hasFlag(Item.ITEMFLAG_ETHEREAL) && transaction == Transaction.SELL) cost /= 4;
 
     int multiplier = MULTIPLIER_SCALE;
     if (npc != null) {
@@ -50,12 +57,16 @@ public final class VendorPricing {
     }
     cost = scale(cost, multiplier);
     if (transaction == Transaction.BUY || transaction == Transaction.REPAIR) cost = applyReduced(cost, reducedPrices);
-    else if (transaction == Transaction.SELL) cost /= 4;
+    else if (transaction == Transaction.SELL && npc == null) cost /= 4;
     if (transaction == Transaction.REPAIR) {
       int max = stat(item, Stat.maxdurability, 0);
       int current = stat(item, Stat.durability, max);
       if (max <= 0 || current >= max) return 0;
       cost = Math.max(1, cost * (max - Math.max(0, current)) / max);
+    }
+    if (transaction == Transaction.SELL && npc != null) {
+      int maxBuy = difficulty <= 0 ? npc.maxBuy : difficulty == 1 ? npc.maxBuyNormal : npc.maxBuyHell;
+      if (maxBuy > 0) cost = Math.min(cost, maxBuy);
     }
     return Math.min(MAX_GOLD, Math.max(1, cost));
   }
@@ -85,14 +96,17 @@ public final class VendorPricing {
       case UNIQUE:
         if (item.qualityData instanceof com.riiablo.codec.excel.UniqueItems.Entry) {
           com.riiablo.codec.excel.UniqueItems.Entry e = (com.riiablo.codec.excel.UniqueItems.Entry) item.qualityData;
-          mult = e.cost_mult; add = e.cost_add;
+          mult += e.cost_mult; add = e.cost_add;
         }
         break;
       case SET:
         if (item.qualityData instanceof com.riiablo.codec.excel.SetItems.Entry) {
           com.riiablo.codec.excel.SetItems.Entry e = (com.riiablo.codec.excel.SetItems.Entry) item.qualityData;
-          mult = e.cost_mult; add = e.cost_add;
+          mult += e.cost_mult; add = e.cost_add;
         }
+        break;
+      case LOW:
+        mult = MULTIPLIER_SCALE / 2;
         break;
       default: break;
     }
