@@ -147,7 +147,15 @@ waypoints, caves, quest rewards and collision boundaries.
     - [ ] PartyManager registration/state updates for eligible Act I party members outside Tristram.
     - [ ] A1Q3 imbue item transformation and A1Q5 quest script.
 - [ ] Phase 3: A1Q2 and mercenary entry
-- [ ] Phase 4: Act 1 NPC services
+- [ ] Phase 4: Act 1 NPC services (local single-player loop complete)
+  - [x] Vendor stock receives persistent item ids and valid in-store flags.
+  - [x] Buy/sell transaction loop, inventory placement and live gold display.
+  - [x] Single-item and repair-all actions with durability and gold updates.
+  - [x] Gheed gambling stock generation and purchase handoff.
+  - [x] Paid Kashya Rogue creation reuses the A1Q2 mercenary entity path.
+  - [ ] Native `Items.txt`/`Npc.txt` transaction-cost multipliers.
+  - [ ] Hire-selection panel, resurrection dialog and restored-save entity recreation.
+  - [ ] Authoritative multiplayer NPC-service request/snapshot protocol.
 - [ ] Phase 5: A1Q6 and Act completion
 - [ ] Phase 6: remaining Act 1 quests
 - [ ] Phase 7: portals, drops and persistence
