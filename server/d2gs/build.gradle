@@ -34,6 +34,20 @@ tasks.register('headlessCombat', JavaExec) {
   }
 }
 
+tasks.register('headlessMissileCombat', JavaExec) {
+  group = 'verification'
+  description = 'Runs a generated Amazon Throw through D2GS missile sync and collision.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--skill', '2', '--require-missile'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) {
+    args '--home', d2Home.get()
+  }
+}
+
 jar {
   archiveBaseName = project.name
 	// These can be excluded because they add to the jar size but libGDX 1.9.11 can't use them.

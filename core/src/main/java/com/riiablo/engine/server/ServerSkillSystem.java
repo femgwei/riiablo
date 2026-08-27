@@ -117,6 +117,11 @@ public class ServerSkillSystem extends PassiveSystem {
 
   @Subscribe
   public void onSkillDo(SkillDoEvent event) {
+    if (mPlayer.has(event.entityId)) {
+      com.badlogic.gdx.Gdx.app.log("ServerSkillSystem", String.format(
+          "[SKILL_DO] phase=receive entity=%d skill=%d target=%d srvDoFunc=%d cltDoFunc=%d",
+          event.entityId, event.skillId, event.targetId, event.srvdofunc, event.cltdofunc));
+    }
     if (!mPosition.has(event.entityId)) return;
     if (!mPlayer.has(event.entityId) && !mMonster.has(event.entityId)) return;
     if (monstersOnly && !mMonster.has(event.entityId)) return;
@@ -178,6 +183,12 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
         || event.srvdofunc == 3 || event.srvdofunc == 5) {
+      com.badlogic.gdx.Gdx.app.log("ServerSkillSystem", String.format(
+          "[MISSILE_CREATE] phase=resolve entity=%d skill=%d weaponMissile=%s configured=%d",
+          event.entityId, event.skillId, throwableMissile, configuredCount));
+    }
+    if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
+        || event.srvdofunc == 3 || event.srvdofunc == 5) {
       log.info("[THROW_ATTACK] phase=missile_resolve entity={} skill={} srvDoFunc={} "
               + "weaponCode={} configuredMissiles={} missileA={} missileB={} missileC={} missileD={}",
           event.entityId, event.skillId, event.srvdofunc, throwableMissile, configuredCount,
@@ -204,6 +215,12 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       int missileId = createMissile(missile, direction, start, event.entityId,
           sharedHitTargets, skillLevel);
+      if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
+          || event.srvdofunc == 3 || event.srvdofunc == 5) {
+        com.badlogic.gdx.Gdx.app.log("ServerSkillSystem", String.format(
+            "[MISSILE_CREATE] phase=create entity=%d skill=%d missile=%s missileId=%d owner=%d",
+            event.entityId, event.skillId, missile.Missile, missileId, event.entityId));
+      }
       if (missileId < 0) {
         log.warn("[MISSILE_CREATE] phase=failed entity={} owner={} skillId={} missile={}",
             event.entityId, event.entityId, event.skillId, missile.Missile);

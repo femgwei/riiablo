@@ -746,6 +746,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
         .with(factory)
         .with(new AnimDataResolver())
+        // A queued sequence must select its attack/cast COF before AnimStepper
+        // advances the previous neutral animation. Otherwise a neutral wrap
+        // can finish and remove the new sequence without firing its keyframe.
+        .with(new SequenceHandler())
         .with(new AnimStepper())
         .with(new CofUnloader(), new CofResolver(), new CofLoader())
         .with(new CofLayerUnloader(), new CofLayerLoader(), new CofLayerCacher())
@@ -786,8 +790,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     builder
         .with(new PlayerItemHandler())
-
-        .with(new SequenceHandler())
 
         .with(new AngularVelocity())
         .with(new DirectionResolver())

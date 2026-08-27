@@ -365,6 +365,12 @@ public class Actioneer extends PassiveSystem {
     // requires one, so it must still execute on the animation keyframe.
     if (!targetDead || allowsDeadTarget(skill)) {
       srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
+      if (mPlayer.has(event.entityId)) {
+        com.badlogic.gdx.Gdx.app.log("Actioneer", String.format(
+            "[SKILL_DO] phase=dispatch entity=%d skill=%d target=%d keyframe=%s srvDoFunc=%d cltDoFunc=%d",
+            event.entityId, casting.skillId, casting.targetId,
+            Engine.getKeyframe(event.keyframe), skill.srvdofunc, skill.cltdofunc));
+      }
       events.dispatch(SkillDoEvent.obtain(
           event.entityId, casting.skillId,
           casting.targetId, casting.targetVec,

@@ -81,42 +81,17 @@ public class PlayerItemHandler extends BaseEntitySystem implements ItemData.Equi
       Gdx.app.debug(TAG, "SH = " + SH);
     }
 
-    if (LH != null && RH != null) {
-      Weapons.Entry LHEntry = LH.getBase();
-      Weapons.Entry RHEntry = RH.getBase();
-      if (       LHEntry.wclass.equals("1hs") && RHEntry.wclass.equals("1hs")) {
-        cofs.setWClass(entityId, Engine.WEAPON_1SS); // Left Swing Right Swing
-      } else if (LHEntry.wclass.equals("1hs") && RHEntry.wclass.equals("1ht")) {
-        cofs.setWClass(entityId, Engine.WEAPON_1ST); // Left Swing Right Thrust
-      } else if (LHEntry.wclass.equals("1ht") && RHEntry.wclass.equals("1hs")) {
-        cofs.setWClass(entityId, Engine.WEAPON_1JS); // Left Jab Right Swing
-      } else if (LHEntry.wclass.equals("1ht") && RHEntry.wclass.equals("1ht")) {
-        cofs.setWClass(entityId, Engine.WEAPON_1JT); // Left Jab Right Thrust
-      } else if (LH.type.is(com.riiablo.item.Type.MISS) || RH.type.is(com.riiablo.item.Type.MISS)) {
-        cofs.setWClass(entityId, (byte) Riiablo.files.WeaponClass.index(LH.type.is(com.riiablo.item.Type.MISS) ? LHEntry.wclass : RHEntry.wclass));
-      } else if (LH.type.is(com.riiablo.item.Type.H2H)  || RH.type.is(com.riiablo.item.Type.H2H)) {
-        cofs.setWClass(entityId, Engine.WEAPON_HT2); // Two Hand-to-Hand
-      } else {
-        cofs.setWClass(entityId, Engine.WEAPON_HTH);
-        Gdx.app.error(TAG, String.format(
-            "Unknown weapon combination: LH=%s RH=%s", LHEntry.wclass, RHEntry.wclass));
-      }
-    } else if (LH != null || RH != null) {
-      RH = ObjectUtils.firstNonNull(RH, LH);
-      LH = null;
-      if (RH.type.is(com.riiablo.item.Type.BOW)) {
-        LH = RH;
+    cofs.setWClass(entityId, resolveWeaponClass(LH, RH));
+
+    // Preserve the native composite hand used by bows. The original inline
+    // resolver normalized a single bow to LH before updating COF components;
+    // keep that presentation behavior after extracting the pure resolver.
+    if ((LH == null) != (RH == null)) {
+      Item weapon = ObjectUtils.firstNonNull(RH, LH);
+      if (weapon.type.is(com.riiablo.item.Type.BOW)) {
+        LH = weapon;
         RH = null;
-        Weapons.Entry LHEntry = LH.getBase();
-        cofs.setWClass(entityId, (byte) Riiablo.files.WeaponClass.index(LHEntry.wclass));
-      } else if (RH.type.is(com.riiablo.item.Type.WEAP)) { // make sure weap and not e.g. misl, might not be required
-        Weapons.Entry RHEntry = RH.getBase();
-        cofs.setWClass(entityId, (byte) Riiablo.files.WeaponClass.index(RHEntry.wclass));
-      } else {
-        cofs.setWClass(entityId, Engine.WEAPON_HTH);
       }
-    } else {
-      cofs.setWClass(entityId, Engine.WEAPON_HTH);
     }
 
     cofs.setComponent(entityId, COF.Component.RH, RH != null ? Class.Type.PLR.getComponent(RH.base.alternateGfx) : CofComponents.COMPONENT_NIL);
@@ -128,6 +103,50 @@ public class PlayerItemHandler extends BaseEntitySystem implements ItemData.Equi
     alphaFlags |= cofs.setAlpha(entityId, COF.Component.LH, LH != null && LH.isEthereal() ? Item.ETHEREAL_ALPHA : CofAlphas.ALPHA_NULL);
     alphaFlags |= cofs.setAlpha(entityId, COF.Component.SH, SH != null && SH.isEthereal() ? Item.ETHEREAL_ALPHA : CofAlphas.ALPHA_NULL);
     cofs.updateAlpha(entityId, alphaFlags);
+  }
+
+  /** Resolves the active D2 weapon class without loading client presentation assets. */
+  static byte resolveWeaponClass(ItemData itemData) {
+    Item right = itemData.getEquipped(BodyLoc.RARM);
+    Item left = itemData.getEquipped(BodyLoc.LARM);
+    Item RH = right != null && right.type.is(com.riiablo.item.Type.WEAP) ? right : null;
+    Item LH = left != null && left.type.is(com.riiablo.item.Type.WEAP) ? left : null;
+    return resolveWeaponClass(LH, RH);
+  }
+
+  private static byte resolveWeaponClass(Item LH, Item RH) {
+    if (LH != null && RH != null) {
+      Weapons.Entry LHEntry = LH.getBase();
+      Weapons.Entry RHEntry = RH.getBase();
+      if (       LHEntry.wclass.equals("1hs") && RHEntry.wclass.equals("1hs")) {
+        return Engine.WEAPON_1SS; // Left Swing Right Swing
+      } else if (LHEntry.wclass.equals("1hs") && RHEntry.wclass.equals("1ht")) {
+        return Engine.WEAPON_1ST; // Left Swing Right Thrust
+      } else if (LHEntry.wclass.equals("1ht") && RHEntry.wclass.equals("1hs")) {
+        return Engine.WEAPON_1JS; // Left Jab Right Swing
+      } else if (LHEntry.wclass.equals("1ht") && RHEntry.wclass.equals("1ht")) {
+        return Engine.WEAPON_1JT; // Left Jab Right Thrust
+      } else if (LH.type.is(com.riiablo.item.Type.MISS) || RH.type.is(com.riiablo.item.Type.MISS)) {
+        return (byte) Riiablo.files.WeaponClass.index(
+            LH.type.is(com.riiablo.item.Type.MISS) ? LHEntry.wclass : RHEntry.wclass);
+      } else if (LH.type.is(com.riiablo.item.Type.H2H)  || RH.type.is(com.riiablo.item.Type.H2H)) {
+        return Engine.WEAPON_HT2; // Two Hand-to-Hand
+      } else {
+        Gdx.app.error(TAG, String.format(
+            "Unknown weapon combination: LH=%s RH=%s", LHEntry.wclass, RHEntry.wclass));
+        return Engine.WEAPON_HTH;
+      }
+    } else if (LH != null || RH != null) {
+      RH = ObjectUtils.firstNonNull(RH, LH);
+      if (RH.type.is(com.riiablo.item.Type.BOW)) {
+        return (byte) Riiablo.files.WeaponClass.index(RH.<Weapons.Entry>getBase().wclass);
+      } else if (RH.type.is(com.riiablo.item.Type.WEAP)) { // make sure weap and not e.g. misl, might not be required
+        return (byte) Riiablo.files.WeaponClass.index(RH.<Weapons.Entry>getBase().wclass);
+      } else {
+        return Engine.WEAPON_HTH;
+      }
+    }
+    return Engine.WEAPON_HTH;
   }
 
   private void updateArmorClass(int entityId, ItemData itemData) {

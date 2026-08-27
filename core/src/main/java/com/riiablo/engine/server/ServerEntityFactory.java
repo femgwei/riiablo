@@ -116,7 +116,12 @@ public class ServerEntityFactory extends EntityFactory {
     mVelocity.create(id).set(walkSpeed, runSpeed);
     mAngle.create(id);
 
-    mCofReference.create(id).set(Engine.Player.getToken(charData.charClass), Class.Type.PLR.DEFAULT_MODE);
+    CofReference playerCof = mCofReference.create(id)
+        .set(Engine.Player.getToken(charData.charClass), Class.Type.PLR.DEFAULT_MODE);
+    // A headless D2GS has no PlayerItemHandler presentation lifecycle. Resolve
+    // the equipped weapon class here so TH/SC attack animations use their
+    // native keyframes and can dispatch authoritative missile creation.
+    playerCof.wclass = PlayerItemHandler.resolveWeaponClass(charData.getItems());
     mCofComponents.create(id);
     mCofAlphas.create(id);
     mCofTransforms.create(id);
@@ -600,11 +605,6 @@ public class ServerEntityFactory extends EntityFactory {
     // Missiles are authoritative network entities. Their deletion is then
     // announced by NetworkSynchronizer when collision/range removes them.
     mNetworked.create(id);
-    
-    // Preload missile asset so it's ready when MissileLoader processes it
-    if (missileComponent.missileDescriptor != null) {
-      Riiablo.assets.load(missileComponent.missileDescriptor);
-    }
     
     com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(ServerEntityFactory.class);
     log.debug("Created missile {} with ownerId={}, range={}, pos=({}, {}), asset={}", 

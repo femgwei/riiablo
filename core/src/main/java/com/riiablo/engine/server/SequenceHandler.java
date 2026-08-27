@@ -36,7 +36,14 @@ public class SequenceHandler extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Sequence sequence = mSequence.get(entityId);
-    if (mCofReference.get(entityId).mode != sequence.mode1) {
+    if (!sequence.started) {
+      sequence.started = true;
+      // D2 starts each action at frame zero. Force the COF event even when a
+      // repeated action uses the same mode (for example consecutive Throws),
+      // otherwise it inherits the previous frame and can skip its keyframe.
+      cofs.setMode(entityId, sequence.mode1, true);
+      mAnimData.get(entityId).override = -1;
+    } else if (mCofReference.get(entityId).mode != sequence.mode1) {
       // Log sequence start for debugging
       com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(SequenceHandler.class);
       log.trace("Starting sequence for entity {}: setting mode to {}", entityId, sequence.mode1);

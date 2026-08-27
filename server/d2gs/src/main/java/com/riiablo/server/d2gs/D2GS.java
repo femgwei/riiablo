@@ -302,8 +302,11 @@ public class D2GS extends ApplicationAdapter {
         .with(new Actioneer())
         .with(new ServerSkillSystem())
         .with(new DeathRewardSystem())
-        .with(new AnimStepper())
         .with(new SequenceHandler())
+        // Apply a newly queued attack mode before advancing animation. If the
+        // old neutral animation wraps first, its Finished event can otherwise
+        // consume the fresh attack sequence before the attack keyframe runs.
+        .with(new AnimStepper())
         .with(new MissileCollisionSystem())
         .with(new StateUpdater())
         .with(new ExperienceManager())
@@ -517,6 +520,11 @@ public class D2GS extends ApplicationAdapter {
 
     ByteBuffer d2sData = connection.d2sAsByteBuffer();
     CharData charData = CharData.loadFromBuffer(diff, d2sData);
+    // Rebuild equipment-derived attributes and native skills after loading a
+    // remote save.  Without this, a valid starting Amazon has a javelin in her
+    // hand but the authoritative skill map never gains Throw, causing every
+    // network throw request to be rejected as skill_not_owned.
+    charData.update();
     Gdx.app.log(TAG, "  " + charData);
 
     Vector2 origin = map.find(Map.ID.TOWN_ENTRY_1);
@@ -691,7 +699,36 @@ public class D2GS extends ApplicationAdapter {
     Gdx.app.log(TAG, String.format(
         "[NET_CAST] phase=accept player=%d skill=%d target=%d targetPos=(%.2f,%.2f)",
         entityId, request.skillId(), targetId, x, y));
-    world.getSystem(Actioneer.class).cast(entityId, request.skillId(), targetId, new Vector2(x, y));
+    Actioneer actioneer = world.getSystem(Actioneer.class);
+    actioneer.cast(entityId, request.skillId(), targetId, new Vector2(x, y));
+    com.riiablo.engine.server.component.CofReference cof = world.getMapper(
+        com.riiablo.engine.server.component.CofReference.class).get(entityId);
+    com.riiablo.engine.server.component.AnimData anim = world.getMapper(
+        com.riiablo.engine.server.component.AnimData.class).get(entityId);
+    com.riiablo.engine.server.component.Sequence sequence = world.getMapper(
+        com.riiablo.engine.server.component.Sequence.class).get(entityId);
+    Gdx.app.log(TAG, String.format(
+        "[NET_CAST] phase=queued player=%d casting=%s sequence=%s token=%s mode=%d wclass=%s "
+            + "animFrame=%d animFrames=%d animSpeed=%d lastKeyframe=%d keyframes=%d activeKeyframes=%s",
+        entityId, actioneer.hasCasting(entityId), sequence != null,
+        cof != null ? cof.token : "none", cof != null ? cof.mode : -1,
+        cof != null ? com.riiablo.engine.Engine.getWClass(cof.wclass) : "none",
+        anim != null ? anim.frame : -1, anim != null ? anim.numFrames : -1,
+        anim != null ? anim.speed : -1, anim != null ? anim.lastKeyframeIndex : -1,
+        anim != null && anim.keyframes != null ? anim.keyframes.length : 0,
+        summarizeKeyframes(anim)));
+  }
+
+  private static String summarizeKeyframes(com.riiablo.engine.server.component.AnimData anim) {
+    if (anim == null || anim.keyframes == null) return "none";
+    int frames = Math.min(anim.numFrames >>> 8, anim.keyframes.length);
+    StringBuilder out = new StringBuilder();
+    for (int i = 0; i < frames; i++) {
+      if (anim.keyframes[i] == com.riiablo.engine.Engine.KEYFRAME_NIL) continue;
+      if (out.length() > 0) out.append(',');
+      out.append(i).append(':').append((int) anim.keyframes[i]);
+    }
+    return out.length() == 0 ? "none" : out.toString();
   }
 
   /**

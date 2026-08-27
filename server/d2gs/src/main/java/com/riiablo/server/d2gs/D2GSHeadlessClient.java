@@ -2,15 +2,23 @@ package com.riiablo.server.d2gs;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.badlogic.gdx.Gdx;
+import com.riiablo.CharacterClass;
+import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatListRef;
 import com.riiablo.engine.Engine;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.EntitySync;
+import com.riiablo.net.packet.d2gs.EntityFlags;
+import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.VitalsP;
+import com.riiablo.save.CharData;
+import com.riiablo.save.D2SWriter96;
 import com.riiablo.skill.SkillCodes;
 
 import java.io.BufferedInputStream;
@@ -28,7 +36,9 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Windowless protocol client for an authoritative D2GS combat smoke test.
@@ -47,8 +57,8 @@ public final class D2GSHeadlessClient {
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
+  private final Set<Integer> playerMissiles = new HashSet<>();
   private int playerId = Engine.INVALID_ENTITY;
-  private int missileSnapshots;
 
   private D2GSHeadlessClient(Config config) {
     this.config = config;
@@ -75,7 +85,9 @@ public final class D2GSHeadlessClient {
 
   private void run() throws Exception {
     waitForServer();
-    byte[] d2s = Files.readAllBytes(config.save.toPath());
+    byte[] d2s = config.generatedAmazon
+        ? createGeneratedAmazonSave()
+        : Files.readAllBytes(config.save.toPath());
     CharacterHeader character = CharacterHeader.read(d2s);
     log("connect", "server=" + config.host + ':' + config.port
         + " character=" + character.name + " class=" + character.charClass);
@@ -105,7 +117,7 @@ public final class D2GSHeadlessClient {
         log("pass", String.format(
             "player=%d target=%d skill=%d life=%.2f->%.2f missiles=%d",
             playerId, target.entityId, config.skillId, initialLife,
-            result == null ? 0f : result.life, missileSnapshots));
+            result == null ? 0f : result.life, playerMissiles.size()));
       }
     }
   }
@@ -163,7 +175,9 @@ public final class D2GSHeadlessClient {
          attempt++) {
       Snapshot target = monsters.get(selected.entityId);
       if (target == null || !target.hasPosition) break;
-      float playerX = target.x - 1f;
+      // Give authoritative missiles enough flight time to be synchronized
+      // before collision deletes them. Melee smoke tests remain point-blank.
+      float playerX = target.x - (config.requireMissile ? 6f : 1f);
       float playerY = target.y;
       send(output, positionPacket(playerId, playerX, playerY));
       send(output, castPacket(config.skillId, target.entityId, target.x, target.y));
@@ -177,7 +191,8 @@ public final class D2GSHeadlessClient {
         if (packet == null) continue;
         consume(packet);
         Snapshot current = monsters.get(selected.entityId);
-        if (current != null && (current.life < initialLife || current.dead)) return true;
+        boolean damaged = current != null && (current.life < initialLife || current.dead);
+        if (damaged && (!config.requireMissile || !playerMissiles.isEmpty())) return true;
       }
     }
     return false;
@@ -186,8 +201,15 @@ public final class D2GSHeadlessClient {
   private void consume(com.riiablo.net.packet.d2gs.D2GS packet) {
     if (packet.dataType() != D2GSData.EntitySync) return;
     EntitySync sync = (EntitySync) packet.data(new EntitySync());
-    if (sync.type() == 5 && findComponent(sync, ComponentP.MissileP) >= 0) {
-      missileSnapshots++;
+    if (sync.type() == 5) {
+      int missileIndex = findComponent(sync, ComponentP.MissileP);
+      if (missileIndex >= 0) {
+        MissileP missile = (MissileP) sync.component(new MissileP(), missileIndex);
+        if (missile.ownerId() == playerId && playerMissiles.add(sync.entityId())) {
+          log("missile", "entity=" + sync.entityId() + " owner=" + missile.ownerId()
+              + " missile=" + missile.missileId());
+        }
+      }
       return;
     }
     if (sync.type() != 1) return;
@@ -196,6 +218,12 @@ public final class D2GSHeadlessClient {
     if (snapshot == null) {
       snapshot = new Snapshot(sync.entityId());
       monsters.put(sync.entityId(), snapshot);
+    }
+    if ((sync.flags() & EntityFlags.deleted) != 0) {
+      snapshot.life = 0f;
+      snapshot.dead = true;
+      snapshot.hasVitals = true;
+      return;
     }
     int index = findComponent(sync, ComponentP.MonsterP);
     if (index >= 0) {
@@ -299,6 +327,38 @@ public final class D2GSHeadlessClient {
     return builder.dataBuffer();
   }
 
+  /** Creates a normal level-one Amazon whose native starting javelin owns Throw. */
+  private static byte[] createGeneratedAmazonSave() {
+    CharData character = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "HeadlessAma", Riiablo.AMAZON);
+    com.riiablo.codec.excel.CharStats.Entry stats = CharacterClass.AMAZON.entry();
+    StatListRef base = character.getStats().base();
+    base.put(Stat.strength, stats.str);
+    base.put(Stat.energy, stats._int);
+    base.put(Stat.dexterity, stats.dex);
+    base.put(Stat.vitality, stats.vit);
+    base.put(Stat.statpts, 0);
+    base.put(Stat.newskills, 0);
+    int maxHp = stats.vit + stats.hpadd;
+    base.put(Stat.hitpoints, maxHp);
+    base.put(Stat.maxhp, maxHp);
+    base.put(Stat.mana, stats._int);
+    base.put(Stat.maxmana, stats._int);
+    base.put(Stat.stamina, stats.stamina);
+    base.put(Stat.maxstamina, stats.stamina);
+    base.put(Stat.level, 1);
+    base.put(Stat.experience, 0);
+    base.put(Stat.gold, 0);
+    base.put(Stat.goldbank, 0);
+    character.getStats().reset();
+    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
+    character.mapSeed = 0x48434D41; // "HCMA", stable for reproducible item ids.
+    character.initializeStartItems(stats);
+    byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
+    log("character_generated", "name=HeadlessAma class=amazon skill=throw bytes=" + data.length);
+    return data;
+  }
+
   private static void send(OutputStream output, ByteBuffer buffer) throws IOException {
     byte[] bytes = new byte[buffer.remaining()];
     buffer.get(bytes);
@@ -356,6 +416,8 @@ public final class D2GSHeadlessClient {
     int seed = 12345;
     int difficulty;
     int skillId = SkillCodes.attack;
+    boolean generatedAmazon;
+    boolean requireMissile;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -372,6 +434,8 @@ public final class D2GSHeadlessClient {
         else if ("--seed".equals(arg)) config.seed = integer(args, ++i, arg);
         else if ("--difficulty".equals(arg)) config.difficulty = integer(args, ++i, arg);
         else if ("--skill".equals(arg)) config.skillId = integer(args, ++i, arg);
+        else if ("--generated-amazon".equals(arg)) config.generatedAmazon = true;
+        else if ("--require-missile".equals(arg)) config.requireMissile = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;
@@ -396,10 +460,10 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("embedded D2GS currently listens on port "
             + DEFAULT_PORT + "; omit --home when testing an external server port");
       }
-      if (config.save == null && config.home != null) {
+      if (!config.generatedAmazon && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
-      if (config.save == null || !config.save.isFile()) {
+      if (!config.generatedAmazon && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
       return config;
@@ -421,7 +485,8 @@ public final class D2GSHeadlessClient {
 
     private static void usage() {
       System.out.println("Usage: D2GSHeadlessClient [--home <D2 dir>] [--save <file.d2s>]"
-          + " [--host 127.0.0.1] [--port 6114] [--skill 0] [--attempts 20]");
+          + " [--generated-amazon] [--host 127.0.0.1] [--port 6114]"
+          + " [--skill 0] [--require-missile] [--attempts 20]");
     }
   }
 }

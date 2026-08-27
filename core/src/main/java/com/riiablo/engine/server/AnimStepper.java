@@ -8,6 +8,8 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.logger.LogManager;
@@ -18,6 +20,8 @@ public class AnimStepper extends IntervalIteratingSystem {
   private static final Logger log = LogManager.getLogger(AnimStepper.class);
 
   protected ComponentMapper<AnimData> mAnimData;
+  protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<Player> mPlayer;
 
   protected EventSystem events;
 
@@ -40,6 +44,11 @@ public class AnimStepper extends IntervalIteratingSystem {
     while (nextFrame >= animData.numFrames) {
       nextFrame -= animData.numFrames;
       dispatchKeyframes(entityId, animData, true);
+      if (mCasting.has(entityId) && mPlayer.has(entityId)) {
+        com.badlogic.gdx.Gdx.app.log("AnimStepper", String.format(
+            "[ATTACK_ANIM] phase=finished entity=%d frame=%d frames=%d lastKeyframe=%d",
+            entityId, animData.frame, animData.numFrames, animData.lastKeyframeIndex));
+      }
       events.dispatch(AnimDataFinishedEvent.obtain(entityId));
       animData.lastKeyframeIndex = -1;
     }
@@ -73,6 +82,11 @@ public class AnimStepper extends IntervalIteratingSystem {
       byte keyframe = keyframes[i];
       if (keyframe > Engine.KEYFRAME_NIL) {
         log.debug("broadcasting AnimDataKeyframeEvent({},{})", entityId, Engine.getKeyframe(keyframe));
+        if (mCasting.has(entityId) && mPlayer.has(entityId)) {
+          com.badlogic.gdx.Gdx.app.log("AnimStepper", String.format(
+              "[ATTACK_ANIM] phase=keyframe entity=%d frame=%d keyframe=%s",
+              entityId, i, Engine.getKeyframe(keyframe)));
+        }
         events.dispatch(AnimDataKeyframeEvent.obtain(entityId, keyframe));
       }
     }
