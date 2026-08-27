@@ -24,6 +24,8 @@ import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
+import com.riiablo.item.BodyLoc;
+import com.riiablo.item.Type;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
@@ -497,6 +499,22 @@ public class Actioneer extends PassiveSystem {
         if (!mAttributesWrapper.has(targetId)) break;
         log.debug("{} attack {}", entityId, targetId);
 
+        if (srvdofunc == 1 && mCasting.has(entityId)
+            && mCasting.get(entityId).skillId == SkillCodes.attack) {
+          if (isPlayerRangedNormalAttack(entityId)) {
+            // ServerSkillSystem creates the Arrow/Bolt at this keyframe.
+            break;
+          }
+          int bonus = isPlayerEntity(entityId) ? 3 : 0;
+          if (!isInMeleeRange(entityId, targetId, bonus)) {
+            log.info("[MELEE_RANGE] phase=reject source={} target={} distance={} range={}",
+                entityId, targetId,
+                mPosition.get(entityId).position.dst(mPosition.get(targetId).position),
+                getMeleeRange(entityId) + bonus + 1);
+            break;
+          }
+        }
+
         // Native monster attacks with MissA1/MissA2 are projectile attacks,
         // even though their AI enters the shared Attack skill (srvdofunc=1).
         // Resolve them at the same animation keyframe as melee damage so the
@@ -781,6 +799,14 @@ public class Actioneer extends PassiveSystem {
     // Legacy local tests may construct a player without the Player component.
     return Riiablo.charData == null ? null
         : Riiablo.charData.getItems().getEquippedThrowableWeapon();
+  }
+
+  private boolean isPlayerRangedNormalAttack(int entityId) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return false;
+    Item weapon = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.RARM);
+    if (weapon == null) weapon = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.LARM);
+    return weapon != null && weapon.type != null
+        && (weapon.type.is(Type.BOW) || weapon.type.is(Type.XBOW));
   }
 
   private static int statInt(Attributes attrs, short stat) {

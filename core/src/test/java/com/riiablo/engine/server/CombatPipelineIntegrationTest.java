@@ -130,6 +130,55 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void javelinNormalAttackRemainsMeleeAndCannotHitAtThrowRange() {
+    CharData data = newCharacter(CharacterClass.AMAZON);
+    assertNotNull(data.getItems().getEquippedThrowableWeapon());
+    Harness harness = new Harness(true);
+    try {
+      int player = harness.createPlayer(data, 10, 10, combatAttributes(60, 8, 8, 10_000));
+      int monster = harness.createMonster(20, 10, combatAttributes(20, 1, 1, 1));
+      float before = hitpoints(harness.attributes(monster));
+      harness.actioneer.cast(player, SkillCodes.attack, monster, new Vector2(20, 10));
+      harness.installAttackAnimation(player);
+      harness.processFrames(4);
+      assertEquals(before, hitpoints(harness.attributes(monster)), 0.001f);
+      assertEquals(0, harness.factory.creations);
+      assertEquals(0, harness.probe.damageEvents);
+      System.out.println("[WEAPON_ATTACK_MATRIX] weapon=javelin skill=Attack type=MELEE "
+          + "distance=10 damage=0 missiles=0 status=PASS");
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void bowNormalAttackCreatesArrowAndDamagesAtRange() {
+    CharData data = newCharacter(CharacterClass.AMAZON);
+    data.getItems().unequipItem(BodyLoc.RARM);
+    data.getItems().unequipItem(BodyLoc.LARM);
+    Item bow = new Item();
+    bow.reset();
+    bow.setBase(Riiablo.files.weapons.get("sbw"));
+    data.getItems().equipItem(BodyLoc.RARM, data.getItems().add(bow));
+    Harness harness = new Harness(true);
+    try {
+      int player = harness.createPlayer(data, 10, 10, combatAttributes(60, 8, 8, 10_000));
+      int monster = harness.createMonster(15, 10, combatAttributes(20, 1, 1, 1));
+      float before = hitpoints(harness.attributes(monster));
+      harness.actioneer.cast(player, SkillCodes.attack, monster, new Vector2(15, 10));
+      harness.installAttackAnimation(player);
+      harness.processFrames(32);
+      assertEquals(1, harness.factory.creations);
+      assertEquals(1, harness.probe.damageEvents);
+      assertTrue(hitpoints(harness.attributes(monster)) < before);
+      System.out.println("[WEAPON_ATTACK_MATRIX] weapon=bow skill=Attack type=RANGED "
+          + "missile=arrow damageEvents=1 status=PASS");
+    } finally {
+      harness.dispose();
+    }
+  }
+
   private static CharData newCharacter(CharacterClass clazz) {
     CharData data = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "CombatHero", (byte) clazz.id);

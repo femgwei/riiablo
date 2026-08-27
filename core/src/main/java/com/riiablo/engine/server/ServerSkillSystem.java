@@ -22,6 +22,8 @@ import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.item.Item;
+import com.riiablo.item.BodyLoc;
+import com.riiablo.item.Type;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.skill.SkillCodes;
@@ -169,6 +171,7 @@ public class ServerSkillSystem extends PassiveSystem {
     target.nor();
 
     String throwableMissile = resolveThrowableMissile(event.entityId, event.skillId, skill);
+    String normalAttackMissile = resolveNormalAttackMissile(event.entityId, event.skillId);
     boolean hasServerMissile = hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
         || hasText(skill.srvmissilec) || hasText(skill.srvmissiled);
     // Client missiles are presentation fallbacks, not additional
@@ -188,6 +191,10 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (configuredCount == 0 && throwableMissile != null && !throwableMissile.isEmpty()) {
       missileNames[0] = throwableMissile;
+      configuredCount = 1;
+    }
+    if (configuredCount == 0 && normalAttackMissile != null) {
+      missileNames[0] = normalAttackMissile;
       configuredCount = 1;
     }
     if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
@@ -592,6 +599,19 @@ public class ServerSkillSystem extends PassiveSystem {
     log.warn("[THROW_ATTACK] phase=missile_resolve_failed entity={} skill={} weaponCode={}",
         entityId, skillId, weapon.code);
     return null;
+  }
+
+  /** Native normal Attack uses the equipped bow's ammunition missile. */
+  private String resolveNormalAttackMissile(int entityId, int skillId) {
+    if (skillId != SkillCodes.attack || !mPlayer.has(entityId)) return null;
+    Player player = mPlayer.get(entityId);
+    if (player.data == null || player.data.getItems() == null) return null;
+    Item weapon = player.data.getItems().getEquipped(BodyLoc.RARM);
+    if (weapon == null) weapon = player.data.getItems().getEquipped(BodyLoc.LARM);
+    if (weapon == null || weapon.type == null) return null;
+    String name = weapon.type.is(Type.BOW) ? "arrow"
+        : weapon.type.is(Type.XBOW) ? "bolt" : null;
+    return name != null && Riiablo.files.Missiles.get(name) != null ? name : null;
   }
 
   private void reject(SkillCastEvent event, int resultCode, String reason) {
