@@ -77,10 +77,14 @@ import com.riiablo.engine.server.LeapSystem;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.ServerEntityFactory;
 import com.riiablo.engine.server.ServerItemManager;
+import com.riiablo.engine.server.item.AuthoritativeItemMoveService;
+import com.riiablo.engine.server.item.ItemMoveIntent;
+import com.riiablo.engine.server.item.ItemMoveRequestCache;
 import com.riiablo.engine.server.ServerNetworkIdManager;
 import com.riiablo.engine.server.VelocityAdder;
 import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
@@ -120,6 +124,11 @@ import com.riiablo.net.packet.d2gs.StoreToCursor;
 import com.riiablo.net.packet.d2gs.SwapBeltItem;
 import com.riiablo.net.packet.d2gs.SwapBodyItem;
 import com.riiablo.net.packet.d2gs.SwapStoreItem;
+import com.riiablo.net.packet.d2gs.ItemMoveRequest;
+import com.riiablo.net.packet.d2gs.ItemMoveResult;
+import com.riiablo.net.packet.d2gs.ItemMoveSnapshotEntry;
+import com.riiablo.net.packet.d2gs.ItemMoveOperation;
+import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.save.CharData;
 import com.riiablo.util.DebugUtils;
 
@@ -219,6 +228,8 @@ public class D2GS extends ApplicationAdapter {
   NetworkSynchronizer sync;
   final NpcVendorSessionManager npcVendors = new NpcVendorSessionManager();
   final NpcServiceRequestCache npcRequestCache = new NpcServiceRequestCache();
+  final AuthoritativeItemMoveService authoritativeItems = new AuthoritativeItemMoveService();
+  final ItemMoveRequestCache itemMoveRequestCache = new ItemMoveRequestCache();
 
   protected ComponentMapper<Networked> mNetworked;
 
@@ -494,6 +505,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.SwapBeltItem:
         SwapBeltItem(packet);
         break;
+      case D2GSData.ItemMoveRequest:
+        ItemMoveRequest(packet);
+        break;
       case D2GSData.Ping:
         Ping(packet);
         break;
@@ -598,6 +612,8 @@ public class D2GS extends ApplicationAdapter {
       outPackets.offer(broadcast);
       npcRequestCache.clear(id);
       npcVendors.clearPlayer(entityId);
+      itemMoveRequestCache.clearConnection(id);
+      authoritativeItems.reset(entityId);
 
       world.delete(entityId);
       player.remove(id, Engine.INVALID_ENTITY);
@@ -1043,6 +1059,103 @@ public class D2GS extends ApplicationAdapter {
 
     packet.id = (1 << packet.id);
     outPackets.offer(packet);
+  }
+
+  /** Handles the unified server-authoritative item protocol. */
+  private void ItemMoveRequest(Packet packet) {
+    ItemMoveRequest request = (ItemMoveRequest) packet.data.data(new ItemMoveRequest());
+    byte operation = request.operation();
+    ItemMoveIntent intent = new ItemMoveIntent(request.requestId(), request.revision(), operation,
+        request.itemId(), request.groundEntityId(), request.storeLoc(), request.x(), request.y(),
+        request.bodyLoc(), request.merc());
+    ItemMoveRequestCache.Entry cached = itemMoveRequestCache.lookup(packet.id, request.requestId());
+    if (cached != null) {
+      if (cached.matches(intent)) {
+        outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response)));
+      } else {
+        sendItemMoveResult(packet.id, intent, false, ItemMoveFailure.REQUEST_ID_REUSED,
+            authoritativeItems.revision(player.get(packet.id, Engine.INVALID_ENTITY)), false);
+      }
+      return;
+    }
+
+    int playerEntityId = player.get(packet.id, Engine.INVALID_ENTITY);
+    Player playerComponent = playerEntityId == Engine.INVALID_ENTITY ? null
+        : world.getMapper(Player.class).get(playerEntityId);
+    CharData character = playerComponent == null ? null : playerComponent.data;
+    AuthoritativeItemMoveService.Outcome outcome;
+    int groundEntity = request.groundEntityId();
+    if (operation == ItemMoveOperation.GROUND_TO_CURSOR) {
+      com.riiablo.engine.server.component.Item ground = groundEntity < 0 ? null : mItemSafe(groundEntity);
+      com.riiablo.item.Item groundItem = ground == null ? null : ground.item;
+      com.riiablo.engine.server.component.Position groundPosition = groundEntity < 0 ? null
+          : world.getMapper(com.riiablo.engine.server.component.Position.class).get(groundEntity);
+      com.riiablo.engine.server.component.Position playerPosition = playerEntityId == Engine.INVALID_ENTITY
+          ? null : world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerEntityId);
+      if (groundItem != null && (groundPosition == null || playerPosition == null
+          || playerPosition.position.dst2(groundPosition.position) > 100f)) {
+        outcome = new AuthoritativeItemMoveService.Outcome(false, ItemMoveFailure.GROUND_ITEM_TOO_FAR,
+            authoritativeItems.revision(playerEntityId));
+      } else {
+        outcome = authoritativeItems.pickup(playerEntityId, character, intent, groundItem);
+      }
+      if (outcome.success) world.delete(groundEntity);
+    } else if (operation == ItemMoveOperation.CURSOR_TO_GROUND) {
+      com.riiablo.engine.server.component.Position position = playerEntityId == Engine.INVALID_ENTITY
+          ? null : world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerEntityId);
+      outcome = authoritativeItems.drop(playerEntityId, character, intent, item -> {
+        if (position != null) factory.createItem(item, position.position.x, position.position.y);
+      });
+    } else {
+      outcome = authoritativeItems.apply(playerEntityId, character, intent);
+    }
+    sendItemMoveResult(packet.id, intent, outcome.success, outcome.failure, outcome.revision, true);
+  }
+
+  private com.riiablo.engine.server.component.Item mItemSafe(int entityId) {
+    try {
+      return world.getMapper(com.riiablo.engine.server.component.Item.class).get(entityId);
+    } catch (Throwable ignored) {
+      return null;
+    }
+  }
+
+  private void sendItemMoveResult(int clientId, ItemMoveIntent intent, boolean success,
+                                  byte failure, long revision, boolean cacheResponse) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(8192);
+    int[] entries = new int[0];
+    int playerEntityId = player.get(clientId, Engine.INVALID_ENTITY);
+    Player playerComponent = playerEntityId == Engine.INVALID_ENTITY ? null
+        : world.getMapper(Player.class).get(playerEntityId);
+    if (playerComponent != null && playerComponent.data != null) {
+      com.riiablo.save.ItemData data = playerComponent.data.getItems();
+      entries = new int[data.getItems().size];
+      int entryCount = 0;
+      for (int i = 0; i < data.getItems().size; i++) {
+        com.riiablo.item.Item item = data.getItems().get(i);
+        if (item == null) continue;
+        int itemData = serializeItemVector(builder, item);
+        entries[entryCount++] = ItemMoveSnapshotEntry.createItemMoveSnapshotEntry(builder,
+            item.id, itemData, item.location == null ? -1 : item.location.ordinal(),
+            item.storeLoc == null ? -1 : item.storeLoc.ordinal(),
+            item.bodyLoc == null ? -1 : item.bodyLoc.ordinal(), item.gridX, item.gridY, false);
+      }
+      if (entryCount != entries.length) entries = java.util.Arrays.copyOf(entries, entryCount);
+    }
+    int snapshot = ItemMoveResult.createSnapshotVector(builder, entries);
+    int result = ItemMoveResult.createItemMoveResult(builder, intent.requestId, success, failure,
+        revision, intent.operation, snapshot, -1, 0, 0, 0);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder, D2GSData.ItemMoveResult, result);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer response = builder.dataBuffer();
+    byte[] bytes = new byte[response.remaining()];
+    response.duplicate().get(bytes);
+    if (cacheResponse) itemMoveRequestCache.put(clientId, intent, bytes);
+    outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
+  }
+
+  private static int serializeItemVector(FlatBufferBuilder builder, com.riiablo.item.Item item) {
+    return builder.createByteVector(serializeItem(item));
   }
 
   static String generateClientName() {

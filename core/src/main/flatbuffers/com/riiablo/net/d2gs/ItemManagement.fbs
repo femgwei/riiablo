@@ -1,5 +1,88 @@
 namespace com.riiablo.net.packet.d2gs;
 
+/** Unified server-authoritative item operation. Legacy tables below remain wire-compatible. */
+enum ItemMoveOperation:byte {
+  GROUND_TO_CURSOR,
+  CURSOR_TO_GROUND,
+  STORE_TO_CURSOR,
+  CURSOR_TO_STORE,
+  SWAP_STORE_ITEM,
+  BODY_TO_CURSOR,
+  CURSOR_TO_BODY,
+  SWAP_BODY_ITEM,
+  BELT_TO_CURSOR,
+  CURSOR_TO_BELT,
+  SWAP_BELT_ITEM
+}
+
+enum ItemMoveFailure:byte {
+  NONE,
+  PLAYER_NOT_FOUND,
+  STALE_INVENTORY,
+  REQUEST_ID_REUSED,
+  INVALID_OPERATION,
+  INVALID_ITEM,
+  ITEM_NOT_OWNED,
+  CURSOR_EMPTY,
+  CURSOR_OCCUPIED,
+  INVALID_STORE,
+  INVALID_POSITION,
+  INVENTORY_OCCUPIED,
+  INVALID_BODY_LOC,
+  BODY_LOC_MISMATCH,
+  REQUIREMENTS_NOT_MET,
+  BODY_SLOT_OCCUPIED,
+  BODY_SLOT_EMPTY,
+  INVALID_BELT_SLOT,
+  BELT_SLOT_OCCUPIED,
+  ITEM_NOT_BELTABLE,
+  GROUND_ITEM_NOT_FOUND,
+  GROUND_ITEM_TOO_FAR,
+  GROUND_ITEM_CHANGED,
+  MERC_NOT_SUPPORTED,
+  MUTATION_FAILED
+}
+
+/** Player identity is resolved from the authenticated connection. */
+table ItemMoveRequest {
+  requestId:uint32;
+  revision:uint32;
+  operation:ItemMoveOperation;
+  itemId:int32 = -1;
+  groundEntityId:int32 = -1;
+  storeLoc:int32 = -1;
+  x:int32 = -1;
+  y:int32 = -1;
+  bodyLoc:int32 = -1;
+  merc:bool;
+}
+
+/** One serialized item in the complete authoritative ownership snapshot. */
+table ItemMoveSnapshotEntry {
+  itemId:int32;
+  itemData:[ubyte];
+  location:int32;
+  storeLoc:int32;
+  bodyLoc:int32;
+  x:int32;
+  y:int32;
+  merc:bool;
+}
+
+/** Every response carries a full snapshot so rejected requests repair client drift. */
+table ItemMoveResult {
+  requestId:uint32;
+  success:bool;
+  failure:ItemMoveFailure;
+  revision:uint32;
+  operation:ItemMoveOperation;
+  snapshot:[ItemMoveSnapshotEntry];
+  groundEntityId:int32 = -1;
+  groundItemData:[ubyte];
+  groundX:float;
+  groundY:float;
+}
+
 table GroundToCursor {
   // request
   itemId:int32;

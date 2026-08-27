@@ -77,6 +77,7 @@ import com.riiablo.net.packet.d2gs.StoreToCursor;
 import com.riiablo.net.packet.d2gs.SwapBeltItem;
 import com.riiablo.net.packet.d2gs.SwapBodyItem;
 import com.riiablo.net.packet.d2gs.SwapStoreItem;
+import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.net.packet.d2gs.MissileP;
@@ -211,6 +212,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.NpcServiceResult:
         NpcServiceResult(packet);
+        break;
+      case D2GSData.ItemMoveResult:
+        ItemMoveResult(packet);
         break;
       default:
         Gdx.app.error(TAG, "Unknown packet type: " + packet.dataType());
@@ -672,5 +676,38 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void SwapBeltItem(D2GS packet) {
     SwapBeltItem swapBeltItem = (SwapBeltItem) packet.data(new SwapBeltItem());
     items.swapBeltItem(Riiablo.game.player, swapBeltItem.itemId());
+  }
+
+  private void ItemMoveResult(D2GS packet) {
+    ItemMoveResult result = (ItemMoveResult) packet.data(new ItemMoveResult());
+    if (world.getSystem(NetworkedClientItemManager.class) != null) {
+      world.getSystem(NetworkedClientItemManager.class).onAuthoritativeResult(result);
+    }
+    if (Riiablo.charData != null) {
+      com.badlogic.gdx.utils.Array<Item> snapshot = new com.badlogic.gdx.utils.Array<>(false,
+          result.snapshotLength(), Item.class);
+      for (int i = 0; i < result.snapshotLength(); i++) {
+        com.riiablo.net.packet.d2gs.ItemMoveSnapshotEntry entry = result.snapshot(i);
+        try {
+          byte[] encoded = new byte[entry.itemDataLength()];
+          for (int j = 0; j < encoded.length; j++) encoded[j] = (byte) entry.itemData(j);
+          Item item = itemReader.readItem(ByteInput.wrap(encoded));
+          item.id = entry.itemId();
+          item.location = com.riiablo.item.Location.valueOf(entry.location());
+          item.storeLoc = com.riiablo.item.StoreLoc.valueOf(entry.storeLoc());
+          item.bodyLoc = com.riiablo.item.BodyLoc.valueOf(entry.bodyLoc());
+          item.gridX = (byte) entry.x();
+          item.gridY = (byte) entry.y();
+          snapshot.add(item);
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "[ITEM_MOVE_SNAPSHOT] failed to decode item " + entry.itemId(), t);
+        }
+      }
+      Riiablo.charData.getItems().replaceFromAuthoritativeSnapshot(snapshot);
+    }
+    if (!result.success()) {
+      Gdx.app.log(TAG, "[ITEM_MOVE_REJECTED] request=" + result.requestId()
+          + " failure=" + result.failure() + " revision=" + result.revision());
+    }
   }
 }

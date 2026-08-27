@@ -30,6 +30,8 @@ union D2GSData {
   CastSkillRequest,
   NpcServiceRequest,
   NpcServiceResult,
+  ItemMoveRequest,
+  ItemMoveResult,
 }
 
 table D2GS {

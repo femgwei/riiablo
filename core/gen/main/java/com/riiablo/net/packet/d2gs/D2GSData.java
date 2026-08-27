@@ -27,8 +27,10 @@ public final class D2GSData {
   public static final byte CastSkillRequest = 20;
   public static final byte NpcServiceRequest = 21;
   public static final byte NpcServiceResult = 22;
+  public static final byte ItemMoveRequest = 23;
+  public static final byte ItemMoveResult = 24;
 
-  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", "NpcServiceRequest", "NpcServiceResult", };
+  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", "NpcServiceRequest", "NpcServiceResult", "ItemMoveRequest", "ItemMoveResult", };
 
   public static String name(int e) { return names[e]; }
 }

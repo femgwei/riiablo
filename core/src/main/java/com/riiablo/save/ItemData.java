@@ -109,6 +109,44 @@ public class ItemData {
     return itemData;
   }
 
+  /** Replaces this ownership set from a server-authoritative snapshot. */
+  public void replaceFromAuthoritativeSnapshot(Array<Item> snapshot) {
+    itemData.clear();
+    equipped.clear();
+    equippedSets.clear();
+    setItemsOwned.clear();
+    cursor = INVALID_ITEM;
+    if (snapshot != null) {
+      for (Item item : snapshot) {
+        if (item == null) continue;
+        int index = itemData.size;
+        itemData.add(item);
+        if (item.location == null) item.location = Location.STORED;
+        switch (item.location) {
+          case EQUIPPED:
+            if (item.bodyLoc != null && item.bodyLoc != BodyLoc.NONE) {
+              equipped.put(item.bodyLoc, index);
+              if (item.quality == Quality.SET && isActive(item)) updateSet(item, 1);
+            }
+            break;
+          case CURSOR:
+            if (cursor == INVALID_ITEM) cursor = index;
+            else item.location = Location.STORED;
+            break;
+          default:
+            break;
+        }
+        if (item.quality == Quality.SET) setItemsOwned.getAndIncrement(item.qualityId, 0, 1);
+      }
+    }
+    updateStats();
+    for (BodyLoc bodyLoc : BodyLoc.values()) {
+      int index = equipped.get(bodyLoc);
+      if (index != INVALID_ITEM) notifyEquip(bodyLoc, itemData.get(index));
+    }
+    notifyUpdated();
+  }
+
   public int indexOf(Item item) {
     return itemData.indexOf(item, true);
   }
