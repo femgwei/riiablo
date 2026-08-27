@@ -54,6 +54,7 @@ import com.riiablo.engine.client.AutoInteracter;
 import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.ClientEntityFactory;
 import com.riiablo.engine.client.ClientItemManager;
+import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.engine.client.CofAlphaHandler;
 import com.riiablo.engine.client.CofLayerCacher;
 import com.riiablo.engine.client.CofLayerLoader;
@@ -685,6 +686,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     engine.inject(cubePanel);
     engine.inject(stashPanel);
     engine.inject(vendorPanel);
+    if (socket != null) {
+      vendorPanel.setNetworkSynchronizer(engine.getSystem(ClientNetworkSynchronizer.class));
+    }
 // TODO: maybe it would be better to do more like?:
 //    for (Actor actor : stage.getActors()) {
 //      engine.inject(actor);

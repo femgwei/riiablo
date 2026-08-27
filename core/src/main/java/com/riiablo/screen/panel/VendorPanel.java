@@ -89,7 +89,10 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private boolean repairing;
   @com.artemis.annotations.Wire(name = "client.socket", failOnNull = false)
   private Socket clientSocket;
-  @com.artemis.annotations.Wire(failOnNull = false)
+  // Artemis 2.3 treats a field-level @Wire system dependency as mandatory,
+  // even when failOnNull=false. GameScreen assigns this only for a networked
+  // world so the local vendor panel remains usable without the system.
+  @com.artemis.annotations.SkipWire
   private ClientNetworkSynchronizer networkSynchronizer;
   private int networkFlags;
   private int networkNpcEntityId;
@@ -357,6 +360,10 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     }
 
     setTab(TAB_MISC);
+  }
+
+  public void setNetworkSynchronizer(ClientNetworkSynchronizer networkSynchronizer) {
+    this.networkSynchronizer = networkSynchronizer;
   }
 
   /** Opens a server-owned vendor session. Local inventory generation is skipped. */
