@@ -41,8 +41,11 @@ direct transaction path.
 
 ## Idempotency and revisions
 
-The server must cache the last completed request ids per connection/session.
-Repeating a completed request returns its original result. Vendor and gamble
+The server caches up to 128 completed request ids per connection using LRU
+eviction. Repeating an id with the exact same intent returns the original raw
+result without executing the operation again. Reusing an id with different
+fields returns `REQUEST_ID_REUSED`, and disconnect clears that connection's
+cache. Vendor and gamble
 stocks receive monotonically increasing revisions; stale BUY requests return
 `STALE_STOCK` with a refreshed snapshot. SELL and REPAIR additionally validate
 that the referenced item still belongs to the authenticated player.
@@ -54,4 +57,4 @@ that the referenced item still belongs to the authenticated player.
 3. REPAIR_ITEM and REPAIR_ALL.
 4. GAMBLE inventory refresh and purchase.
 5. HIRE and RESURRECT.
-6. Request-result idempotency cache and reconnect/session recovery.
+6. Request-result idempotency cache (implemented) and reconnect/session recovery.

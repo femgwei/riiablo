@@ -158,7 +158,8 @@ waypoints, caves, quest rewards and collision boundaries.
   - [x] Authoritative multiplayer NPC-service request/result/stock protocol and D2GS validation boundary.
     - [x] Server-owned vendor stock snapshots and atomic BUY/SELL mutation.
       - [x] Network VendorPanel consumes server stock/prices and commits wallet/item changes on acknowledgement.
-      - [ ] Request idempotency cache and reconnect/session recovery.
+      - [x] Per-connection bounded request idempotency cache with exact-intent replay protection.
+      - [ ] Reconnect/session recovery.
 - [ ] Phase 5: A1Q6 and Act completion
 - [ ] Phase 6: remaining Act 1 quests
 - [ ] Phase 7: portals, drops and persistence

@@ -85,6 +85,7 @@ import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
 import com.riiablo.engine.server.npc.NpcVendorSessionManager;
+import com.riiablo.engine.server.npc.NpcServiceRequestCache;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.ItemWriter;
@@ -215,6 +216,7 @@ public class D2GS extends ApplicationAdapter {
   MapManager mapManager;
   NetworkSynchronizer sync;
   final NpcVendorSessionManager npcVendors = new NpcVendorSessionManager();
+  final NpcServiceRequestCache npcRequestCache = new NpcServiceRequestCache();
 
   protected ComponentMapper<Networked> mNetworked;
 
@@ -583,6 +585,7 @@ public class D2GS extends ApplicationAdapter {
       com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, offset);
       Packet broadcast = Packet.obtain(~(1 << id), builder.dataBuffer());
       outPackets.offer(broadcast);
+      npcRequestCache.clear(id);
 
       world.delete(entityId);
       player.remove(id, Engine.INVALID_ENTITY);
@@ -698,6 +701,27 @@ public class D2GS extends ApplicationAdapter {
    */
   private void NpcServiceRequest(Packet packet) {
     NpcServiceRequest request = (NpcServiceRequest) packet.data.data(new NpcServiceRequest());
+    NpcServiceRequestCache.Intent requestIntent = NpcServiceRequestCache.intent(
+        request.npcEntityId(), request.serviceType(), request.operation(),
+        request.itemId(), request.itemIndex(), request.stockRevision());
+    NpcServiceRequestCache.Entry completed = npcRequestCache.lookup(packet.id, request.requestId());
+    if (completed != null) {
+      if (completed.matches(requestIntent)) {
+        outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(completed.response())));
+        Gdx.app.log(TAG, "[NPC_SERVICE] phase=replay client=" + packet.id
+            + " request=" + request.requestId());
+      } else {
+        int cachedPlayerId = player.get(packet.id, Engine.INVALID_ENTITY);
+        com.riiablo.engine.server.component.Player cachedPlayer = cachedPlayerId == Engine.INVALID_ENTITY
+            ? null : world.getMapper(com.riiablo.engine.server.component.Player.class).get(cachedPlayerId);
+        sendNpcServiceResult(packet.id, request.requestId(), false, "REQUEST_ID_REUSED",
+            wallet(cachedPlayer, com.riiablo.attributes.Stat.gold),
+            wallet(cachedPlayer, com.riiablo.attributes.Stat.goldbank),
+            null, 0, null, cachedPlayer == null ? null : cachedPlayer.data,
+            requestIntent, false);
+      }
+      return;
+    }
     int playerId = player.get(packet.id, Engine.INVALID_ENTITY);
     int npcId = request.npcEntityId();
     com.riiablo.engine.server.component.Position playerPosition = playerId == Engine.INVALID_ENTITY
@@ -763,7 +787,8 @@ public class D2GS extends ApplicationAdapter {
     int gold = wallet(playerComponent, com.riiablo.attributes.Stat.gold);
     int goldBank = wallet(playerComponent, com.riiablo.attributes.Stat.goldbank);
     sendNpcServiceResult(packet.id, request.requestId(), success, reason, gold, goldBank,
-        session, resultItemId, resultItemData, playerComponent == null ? null : playerComponent.data);
+        session, resultItemId, resultItemData, playerComponent == null ? null : playerComponent.data,
+        requestIntent, true);
     Gdx.app.log(TAG, "[NPC_SERVICE] player=" + playerId + " npc=" + npcId
         + " service=" + service + " operation=" + operation + " result="
         + (success ? "OK" : reason));
@@ -771,7 +796,8 @@ public class D2GS extends ApplicationAdapter {
 
   private void sendNpcServiceResult(int clientId, long requestId, boolean success, String reason,
                                      int gold, int goldBank, NpcVendorSessionManager.Session session,
-                                     int itemId, byte[] itemData, CharData character) {
+                                     int itemId, byte[] itemData, CharData character,
+                                     NpcServiceRequestCache.Intent requestIntent, boolean cacheResponse) {
     FlatBufferBuilder builder = new FlatBufferBuilder(4096);
     int reasonOffset = builder.createString(reason == null ? "" : reason);
     int itemDataOffset = itemData == null ? 0 : NpcServiceResult.createItemDataVector(builder, itemData);
@@ -794,7 +820,11 @@ public class D2GS extends ApplicationAdapter {
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.NpcServiceResult, resultOffset);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
-    outPackets.offer(Packet.obtain(1 << clientId, builder.dataBuffer()));
+    ByteBuffer response = builder.dataBuffer();
+    byte[] bytes = new byte[response.remaining()];
+    response.duplicate().get(bytes);
+    if (cacheResponse) npcRequestCache.put(clientId, requestId, requestIntent, bytes);
+    outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
   }
 
   private static int wallet(com.riiablo.engine.server.component.Player player, short stat) {
