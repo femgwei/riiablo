@@ -7,6 +7,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.engine.server.state.StateList;
 
 /**
  * 战斗系统 - 基于 D2MOD SUnitDmg.cpp 移植
@@ -347,6 +348,17 @@ public class CombatSystem {
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false);
   }
 
+  /** Variant of the native attack-profile overload with runtime states. */
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, StateList attackerStates, StateList defenderStates) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
+        null, null, 0, 0, attackerStates, defenderStates);
+  }
+
   public CombatResult calculateAttack(
       Attributes attacker, Attributes defender,
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
@@ -365,6 +377,25 @@ public class CombatSystem {
       int attackRatingOverride, boolean alwaysHit,
       int[] elementalMinOverride, int[] elementalMaxOverride,
       int coldLengthOverride, int poisonLengthOverride) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        null, null);
+  }
+
+  /**
+   * Resolves an attack while applying authoritative runtime state modifiers.
+   * StateList is optional to preserve compatibility with callers that only
+   * have the aggregated Attributes component.
+   */
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -404,6 +435,10 @@ public class CombatSystem {
       }
     }
     a.enhancedDamagePercent = statInt(attacker, Stat.damagepercent, 0);
+    if (attackerStates != null) {
+      a.enhancedDamagePercent += attackerStates.getTotalDamageModifier();
+      a.attackRatingPercent += attackerStates.getTotalAttackModifier();
+    }
     a.elementalMinDamage[DAMAGE_FIRE] = statInt(attacker, Stat.firemindam, 0);
     a.elementalMaxDamage[DAMAGE_FIRE] = statInt(attacker, Stat.firemaxdam, 0);
     a.elementalMinDamage[DAMAGE_LIGHTNING] = statInt(attacker, Stat.lightmindam, 0);
@@ -444,6 +479,9 @@ public class CombatSystem {
     if (d.defense == 0) {
       d.defense = alternateDefense;
     }
+    if (defenderStates != null) {
+      d.defense = Math.max(0, d.defense * (100 + defenderStates.getTotalDefenseModifier()) / 100);
+    }
     d.currentLife = Math.max(0, statInt(defender, Stat.hitpoints, 0));
     d.maxLife = Math.max(d.currentLife, statInt(defender, Stat.maxhp, d.currentLife));
     d.blockChance = statInt(defender, Stat.toblock, 0);
@@ -454,6 +492,13 @@ public class CombatSystem {
     d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
     d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
     d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
+    if (defenderStates != null) {
+      d.resistances[DAMAGE_FIRE] += defenderStates.getTotalResistModifier(0);
+      d.resistances[DAMAGE_COLD] += defenderStates.getTotalResistModifier(1);
+      d.resistances[DAMAGE_LIGHTNING] += defenderStates.getTotalResistModifier(2);
+      d.resistances[DAMAGE_POISON] += defenderStates.getTotalResistModifier(3);
+      d.resistances[DAMAGE_MAGIC] += defenderStates.getTotalResistModifier(4);
+    }
     d.damageReducedPercent = Math.max(0, d.resistances[DAMAGE_PHYSICAL]);
     d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
     d.immunePhysical = d.resistances[DAMAGE_PHYSICAL] >= 100;

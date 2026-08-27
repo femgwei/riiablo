@@ -34,6 +34,7 @@ union D2GSData {
   NpcServiceResult,
   ItemMoveRequest,
   ItemMoveResult,
+  SelectSkillRequest,
 }
 
 table D2GS {

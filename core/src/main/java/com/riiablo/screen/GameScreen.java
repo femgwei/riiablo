@@ -423,12 +423,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         stage.getHeight() - spellsPanel.getHeight());
     stage.addActor(spellsPanel);
 
-    spellsQuickPanelL = new SpellsQuickPanel(controlPanel.getLeftSkill(), true);
+    spellsQuickPanelL = new SpellsQuickPanel(controlPanel.getLeftSkill(), true, socket);
     spellsQuickPanelL.setPosition(0, 100, Align.bottomLeft);
     spellsQuickPanelL.setVisible(false);
     stage.addActor(spellsQuickPanelL);
 
-    spellsQuickPanelR = new SpellsQuickPanel(controlPanel.getRightSkill(), false);
+    spellsQuickPanelR = new SpellsQuickPanel(controlPanel.getRightSkill(), false, socket);
     spellsQuickPanelR.setPosition(stage.getWidth(), 100, Align.bottomRight);
     spellsQuickPanelR.setVisible(false);
     stage.addActor(spellsQuickPanelR);
@@ -731,6 +731,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new NativeCountessRewardSystem());
       builder.with(new NativeCharsiImbueSystem());
       builder.with(new ServerSkillSystem(true));
+      builder.with(new com.riiablo.engine.server.AuraEcsSystem());
       builder.with(new ItemGenerator());
       builder.with(new NativeObjectDropSystem());
       builder.with(new NativeShrineSystem());

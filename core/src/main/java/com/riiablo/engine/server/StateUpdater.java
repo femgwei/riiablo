@@ -164,6 +164,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (frenzyPercent > 0 && !velocity.stateMovementLocked) {
       velocity.stateSpeedMultiplier *= 1.0f + frenzyPercent / 100.0f;
     }
+    int auraVelocityPercent = stateList.getTotalVelocityModifier();
+    if (auraVelocityPercent != 0 && !velocity.stateMovementLocked) {
+      // Aura velocity modifiers are percentages; unlike Frenzy they are not
+      // stack counts and are therefore applied independently.
+      auraVelocityPercent = Math.max(-90, Math.min(200, auraVelocityPercent));
+      velocity.stateSpeedMultiplier *= 1.0f + auraVelocityPercent / 100.0f;
+    }
   }
 
   /**

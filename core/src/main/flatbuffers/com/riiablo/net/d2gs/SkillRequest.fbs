@@ -9,6 +9,14 @@ table CastSkillRequest {
   targetY:float32;
 }
 
+// Changes the authoritative left/right action. Aura activation is derived
+// from the selected right action on the server, never from client state.
+table SelectSkillRequest {
+  requestId:uint32;
+  button:uint8;
+  skillId:uint16;
+}
+
 // A client may only request allocation. The server resolves the authenticated
 // character and validates class, level, prerequisites, cap and available points.
 table SpendSkillPointRequest {

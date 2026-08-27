@@ -56,6 +56,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.AIStepper;
 import com.riiablo.engine.server.Actioneer;
+import com.riiablo.engine.server.AuraEcsSystem;
 import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerSkillSystem;
@@ -112,6 +113,7 @@ import com.riiablo.net.packet.d2gs.BodyToCursor;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
 import com.riiablo.net.packet.d2gs.SpendSkillPointRequest;
+import com.riiablo.net.packet.d2gs.SelectSkillRequest;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import com.riiablo.net.packet.d2gs.CursorToBelt;
 import com.riiablo.net.packet.d2gs.CursorToBody;
@@ -318,6 +320,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new NativeShrineSystem())
 
         .with(new Actioneer())
+        .with(new AuraEcsSystem())
         .with(new ServerPlayerDeathSystem())
         .with(new ServerSkillSystem())
         .with(new DeathRewardSystem())
@@ -503,6 +506,9 @@ public class D2GS extends ApplicationAdapter {
         break;
       case D2GSData.CastSkillRequest:
         CastSkillRequest(packet);
+        break;
+      case D2GSData.SelectSkillRequest:
+        SelectSkillRequest(packet);
         break;
       case D2GSData.SpendSkillPointRequest:
         SpendSkillPointRequest(packet);
@@ -746,6 +752,45 @@ public class D2GS extends ApplicationAdapter {
         anim != null ? anim.speed : -1, anim != null ? anim.lastKeyframeIndex : -1,
         anim != null && anim.keyframes != null ? anim.keyframes.length : 0,
         summarizeKeyframes(anim)));
+  }
+
+  /** Handles server-authoritative action selection and aura activation. */
+  private void SelectSkillRequest(Packet packet) {
+    int entityId = getPlayerEntityId(packet);
+    SelectSkillRequest request = (SelectSkillRequest) packet.data.data(new SelectSkillRequest());
+    int button = request.button();
+    int skillId = request.skillId();
+    Player playerComponent = entityId == Engine.INVALID_ENTITY ? null
+        : world.getMapper(Player.class).get(entityId);
+    CharData data = playerComponent != null ? playerComponent.data : null;
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    boolean builtIn = skillId == com.riiablo.skill.SkillCodes.attack;
+    String reason = null;
+    if (data == null) reason = "PLAYER_NOT_FOUND";
+    else if (button != com.badlogic.gdx.Input.Buttons.LEFT
+        && button != com.badlogic.gdx.Input.Buttons.RIGHT) reason = "INVALID_BUTTON";
+    else if (skill == null) reason = "UNKNOWN_SKILL";
+    else if (!builtIn && data.getSkill(skillId) <= 0) reason = "SKILL_NOT_OWNED";
+    else if (button == com.badlogic.gdx.Input.Buttons.LEFT && !skill.leftskill) {
+      reason = "LEFT_SKILL_FORBIDDEN";
+    }
+    if (reason != null) {
+      Gdx.app.log(TAG, "[SKILL_SELECT_NET] phase=reject connection=" + packet.id
+          + " request=" + request.requestId() + " player=" + entityId
+          + " button=" + button + " skill=" + skillId + " reason=" + reason);
+      return;
+    }
+
+    data.setAction(button, skillId);
+    AuraEcsSystem auraSystem = world.getSystem(AuraEcsSystem.class);
+    boolean auraActive = false;
+    if (button == com.badlogic.gdx.Input.Buttons.RIGHT) {
+      if (skill.aura) auraActive = auraSystem.selectAura(entityId, skillId);
+      else auraSystem.clearAura(entityId);
+    }
+    Gdx.app.log(TAG, "[SKILL_SELECT_NET] phase=accept connection=" + packet.id
+        + " request=" + request.requestId() + " player=" + entityId
+        + " button=" + button + " skill=" + skillId + " aura=" + auraActive);
   }
 
   /** Handles an idempotent, server-authoritative skill allocation request. */

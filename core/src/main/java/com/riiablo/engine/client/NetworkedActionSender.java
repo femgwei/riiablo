@@ -8,6 +8,7 @@ import com.riiablo.net.packet.d2gs.CastSkillRequest;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.SpendSkillPointRequest;
+import com.riiablo.net.packet.d2gs.SelectSkillRequest;
 import java.util.concurrent.atomic.AtomicLong;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
@@ -61,6 +62,29 @@ public final class NetworkedActionSender {
       return true;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "[SKILL_POINT_NET] phase=send_failed skill=" + skillId, t);
+      return false;
+    }
+  }
+
+  /** Sends a left/right skill selection; aura state remains server-owned. */
+  public static boolean selectSkill(Socket socket, int button, int skillId) {
+    if (socket == null || button < 0 || button > 1 || skillId < 0 || skillId > 0xFFFF) {
+      return false;
+    }
+    long requestId = REQUEST_IDS.getAndIncrement() & 0xFFFF_FFFFL;
+    FlatBufferBuilder builder = new FlatBufferBuilder(96);
+    int request = SelectSkillRequest.createSelectSkillRequest(
+        builder, requestId, button, skillId);
+    int root = D2GS.createD2GS(builder, D2GSData.SelectSkillRequest, request);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
+      channel.write(builder.dataBuffer());
+      Gdx.app.log(TAG, "[SKILL_SELECT_NET] phase=send request=" + requestId
+          + " button=" + button + " skill=" + skillId);
+      return true;
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "[SKILL_SELECT_NET] phase=send_failed skill=" + skillId, t);
       return false;
     }
   }

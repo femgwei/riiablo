@@ -374,6 +374,12 @@ public class StateList {
   public int getTotalVelocityModifier() {
     int total = 0;
     for (UnitState state : states) {
+      // Frenzy stores its stack count in velocityModifier for network
+      // compatibility; it is converted to a speed percentage by StateUpdater
+      // and must not be summed as an aura percentage here.
+      if (state.stateId == StateId.FRENZY || state.stateId == StateId.MONFRENZY) {
+        continue;
+      }
       total += state.velocityModifier;
     }
     return total;
@@ -410,6 +416,18 @@ public class StateList {
    */
   public Array<UnitState> getStates() {
     return states;
+  }
+
+  /**
+   * Calculates the aggregate attack-rating modifier supplied by active
+   * states (percentage points).
+   */
+  public int getTotalAttackModifier() {
+    int total = 0;
+    for (UnitState state : states) {
+      total += state.attackModifier;
+    }
+    return total;
   }
 
   /**

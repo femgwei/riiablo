@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.engine.server.state.StateId;
+import com.riiablo.attributes.Stat;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -142,6 +143,9 @@ public class AuraManager {
     /** 上次更新时间 */
     public float lastUpdateTime;
 
+    /** Fractional per-second mana cost carried between simulation ticks. */
+    public float manaCostAccumulator;
+
     /** 是否激活 */
     public boolean active;
   }
@@ -214,7 +218,8 @@ public class AuraManager {
     /**
      * 应用状态效果
      */
-    void applyState(int targetId, int stateId, int duration, int[] statValues);
+    void applyState(int targetId, int stateId, int duration,
+        int[] statIds, int[] statValues);
 
     /**
      * 移除状态效果
@@ -273,13 +278,17 @@ public class AuraManager {
     if (existing != null) {
       // 检查是否是同一个光环
       if (existing.definition.skillId == skillId) {
-        // 切换关闭
+        // Selecting the already-active aura is idempotent. This is important
+        // for retransmitted network requests and matches the action-bar
+        // semantics: choosing a skill does not toggle it off.
+        if (existing.skillLevel == skillLevel) return true;
+        // A learned-level change must replace already-applied values on every
+        // target; rebuilding the aura provides that clean refresh.
         deactivateAura(casterId);
-        return false;
       }
 
       // 检查互斥组
-      if (existing.definition.exclusiveGroup != EXCLUSIVE_NONE &&
+      else if (existing.definition.exclusiveGroup != EXCLUSIVE_NONE &&
           existing.definition.exclusiveGroup == def.exclusiveGroup) {
         // 替换光环
         deactivateAura(casterId);
@@ -369,8 +378,19 @@ public class AuraManager {
   public void update(float deltaTime) {
     gameTime += deltaTime;
 
+    Array<Integer> invalidCasters = new Array<>();
     for (IntMap.Entry<ActiveAura> entry : activeAuras) {
-      updateAura(entry.value, deltaTime);
+      if (callback == null || callback.getEntityPosition(entry.key) == null) {
+        invalidCasters.add(entry.key);
+      } else {
+        updateAura(entry.value, deltaTime);
+        if (!entry.value.active) invalidCasters.add(entry.key);
+      }
+    }
+    // Never mutate IntMap while its iterator is active. Removing after the
+    // pass also guarantees effects are cleaned up when a caster dies/leaves.
+    for (int casterId : invalidCasters) {
+      deactivateAura(casterId);
     }
   }
 
@@ -384,12 +404,14 @@ public class AuraManager {
 
     // 检查法力消耗
     if (aura.definition.manaCostPerSecond > 0) {
-      int manaCost = MathUtils.ceil(aura.definition.manaCostPerSecond * deltaTime);
-      if (!callback.consumeMana(aura.casterId, manaCost)) {
-        // 法力不足，关闭光环
-        deactivateAura(aura.casterId);
+      aura.manaCostAccumulator += aura.definition.manaCostPerSecond * deltaTime;
+      int manaCost = MathUtils.floor(aura.manaCostAccumulator);
+      if (manaCost > 0 && !callback.consumeMana(aura.casterId, manaCost)) {
+        // Mark now and remove after the IntMap update pass completes.
+        aura.active = false;
         return;
       }
+      aura.manaCostAccumulator -= manaCost;
     }
 
     // 获取施放者位置
@@ -499,7 +521,8 @@ public class AuraManager {
 
     if (callback != null) {
       callback.onEntityEnterAura(entityId, aura.casterId, aura.definition.skillId, aura.statValues);
-      callback.applyState(entityId, aura.definition.stateId, -1, aura.statValues);
+      callback.applyState(entityId, aura.definition.stateId, -1,
+          aura.definition.statIds, aura.statValues);
     }
   }
 
@@ -558,67 +581,68 @@ public class AuraManager {
     // 力量光环
     registerAura(SkillId.MIGHT, "Might", AURA_TYPE_BUFF, StateId.MIGHT,
         EXCLUSIVE_OFFENSE, 320, 20, 0,
-        new int[]{/* damagepercent */}, new int[]{40}, new int[]{10},
-        false, true, true, false);
+        new int[]{Stat.damagepercent}, new int[]{40}, new int[]{10},
+        true, true, true, false);
 
     // 祈祷光环
     registerAura(SkillId.PRAYER, "Prayer", AURA_TYPE_BUFF, StateId.PRAYER,
         EXCLUSIVE_NONE, 320, 20, 0.5f,
-        new int[]{/* hpregen */}, new int[]{2}, new int[]{1},
+        new int[]{Stat.hpregen}, new int[]{2}, new int[]{1},
         true, true, true, false);
 
     // 抵抗闪电
     registerAura(SkillId.RESIST_LIGHTNING, "Resist Lightning", AURA_TYPE_BUFF, StateId.RESISTLIGHT,
         EXCLUSIVE_DEFENSE, 320, 20, 0,
-        new int[]{/* lightresist */}, new int[]{30}, new int[]{5},
+        new int[]{Stat.lightresist}, new int[]{30}, new int[]{5},
         true, true, true, false);
 
     // 抵抗火焰
     registerAura(SkillId.RESIST_FIRE, "Resist Fire", AURA_TYPE_BUFF, StateId.RESISTFIRE,
         EXCLUSIVE_DEFENSE, 320, 20, 0,
-        new int[]{/* fireresist */}, new int[]{30}, new int[]{5},
+        new int[]{Stat.fireresist}, new int[]{30}, new int[]{5},
         true, true, true, false);
 
     // 抵抗冰冷
     registerAura(SkillId.RESIST_COLD, "Resist Cold", AURA_TYPE_BUFF, StateId.RESISTCOLD,
         EXCLUSIVE_DEFENSE, 320, 20, 0,
-        new int[]{/* coldresist */}, new int[]{30}, new int[]{5},
+        new int[]{Stat.coldresist}, new int[]{30}, new int[]{5},
         true, true, true, false);
 
     // 反抗光环
     registerAura(SkillId.DEFIANCE, "Defiance", AURA_TYPE_BUFF, StateId.DEFIANCE,
         EXCLUSIVE_DEFENSE, 320, 20, 0,
-        new int[]{/* armorpercent */}, new int[]{70}, new int[]{15},
+        new int[]{Stat.item_armor_percent}, new int[]{70}, new int[]{15},
         true, true, true, false);
 
     // 专注光环
     registerAura(SkillId.CONCENTRATION, "Concentration", AURA_TYPE_BUFF, StateId.CONCENTRATION,
         EXCLUSIVE_OFFENSE, 320, 20, 0,
-        new int[]{/* damagepercent, arbonus */}, new int[]{60, 20}, new int[]{10, 5},
+        new int[]{Stat.damagepercent, Stat.item_tohit_percent}, new int[]{60, 20}, new int[]{10, 5},
         true, true, true, false);
 
     // 狂热光环
     registerAura(SkillId.FANATICISM, "Fanaticism", AURA_TYPE_BUFF, StateId.FANATICISM,
         EXCLUSIVE_OFFENSE, 200, 10, 0,
-        new int[]{/* damagepercent, attackrate, ias */}, new int[]{180, 56, 15}, new int[]{20, 8, 1},
+        new int[]{Stat.damagepercent, Stat.item_tohit_percent, Stat.velocitypercent}, new int[]{180, 56, 15}, new int[]{20, 8, 1},
         true, true, true, false);
 
     // 定罪光环
     registerAura(SkillId.CONVICTION, "Conviction", AURA_TYPE_DEBUFF, StateId.CONVICTION,
         EXCLUSIVE_CURSE, 400, 20, 0,
-        new int[]{/* allres, defense */}, new int[]{-30, -50}, new int[]{-5, -10},
+        new int[]{Stat.fireresist, Stat.coldresist, Stat.lightresist, Stat.armorclass},
+        new int[]{-30, -30, -30, -50}, new int[]{-5, -5, -5, -10},
         false, false, false, true);
 
     // 救赎光环
     registerAura(SkillId.REDEMPTION, "Redemption", AURA_TYPE_BUFF, StateId.REDEMPTION,
         EXCLUSIVE_NONE, 320, 10, 0,
-        new int[]{/* redemption chance */}, new int[]{25}, new int[]{5},
+        new int[]{Stat.hpregen}, new int[]{25}, new int[]{5},
         true, false, false, false);
 
     // 冥想光环
     registerAura(SkillId.MEDITATION, "Meditation", AURA_TYPE_BUFF, StateId.MEDITATION,
         EXCLUSIVE_NONE, 320, 20, 0,
-        new int[]{/* manarecovery */}, new int[]{60}, new int[]{15},
+        new int[]{Stat.manarecoverybonus}, new int[]{60}, new int[]{15},
         true, true, true, false);
 
     log.debug("Registered {} default auras", auraDefinitions.size);

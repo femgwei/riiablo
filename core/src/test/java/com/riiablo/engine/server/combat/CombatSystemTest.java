@@ -3,9 +3,14 @@ package com.riiablo.engine.server.combat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.RiiabloTest;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
 import org.junit.jupiter.api.Test;
 
-public class CombatSystemTest {
+public class CombatSystemTest extends RiiabloTest {
   private final CombatSystem combat = new CombatSystem();
 
   @Test
@@ -89,5 +94,76 @@ public class CombatSystemTest {
     defender.defense = 100;
 
     assertEquals(33, combat.calculateHitChance(attacker, defender));
+  }
+
+  @Test
+  public void runtimeMightStateIncreasesAuthoritativePhysicalDamage() {
+    Attributes attacker = attrs(100, 1, 0, 10, 10, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    CombatSystem.CombatResult base = combat.calculateAttack(attacker, defender,
+        true, false, false, 10, 10, 1000, true, null, null, 0, 0, null, null);
+
+    StateList states = new StateList(1);
+    states.addState(StateId.MIGHT, 0);
+    states.getState(StateId.MIGHT).damageModifier = 40;
+    CombatSystem.CombatResult buffed = combat.calculateAttack(attacker, defender,
+        true, false, false, 10, 10, 1000, true, null, null, 0, 0, states, null);
+
+    assertEquals(10, base.totalDamage);
+    assertEquals(14, buffed.totalDamage);
+    System.out.println("[AURA_COMBAT] aura=MIGHT base=10 buffed=14 status=PASS");
+  }
+
+  @Test
+  public void runtimeResistFireStateReducesElementalDamage() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 20;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 20;
+    CombatSystem.CombatResult base = combat.calculateAttack(attacker, defender,
+        true, false, false, 1, 1, 1000, true, fireMin, fireMax, 0, 0, null, null);
+
+    StateList states = new StateList(2);
+    states.addState(StateId.RESISTFIRE, 0);
+    states.getState(StateId.RESISTFIRE).fireResistModifier = 30;
+    CombatSystem.CombatResult resisted = combat.calculateAttack(attacker, defender,
+        true, false, false, 1, 1, 1000, true, fireMin, fireMax, 0, 0, null, states);
+
+    assertEquals(20, base.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(14, resisted.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    System.out.println("[AURA_COMBAT] aura=RESIST_FIRE baseFire=20 resistedFire=14 status=PASS");
+  }
+
+  @Test
+  public void runtimeDefianceStateChangesHitChance() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 100);
+    Attributes defender = attrs(100, 1, 100, 1, 1, 100);
+    int base = combat.calculateAttack(attacker, defender, true, false, false,
+        1, 1, 100, false, null, null, 0, 0, null, null).hitChance;
+    StateList states = new StateList(2);
+    states.addState(StateId.DEFIANCE, 0);
+    states.getState(StateId.DEFIANCE).defenseModifier = 70;
+    int buffed = combat.calculateAttack(attacker, defender, true, false, false,
+        1, 1, 100, false, null, null, 0, 0, null, states).hitChance;
+    assertTrue(buffed < base);
+    System.out.println("[AURA_COMBAT] aura=DEFIANCE hitChance=" + base + "->" + buffed
+        + " status=PASS");
+  }
+
+  private static Attributes attrs(int hp, int level, int defense,
+      int minDamage, int maxDamage, int attackRating) {
+    Attributes attrs = Attributes.obtainStandard();
+    attrs.base().clear();
+    attrs.base().put(Stat.hitpoints, hp);
+    attrs.base().put(Stat.maxhp, hp);
+    attrs.base().put(Stat.level, level);
+    attrs.base().put(Stat.armorclass, defense);
+    attrs.base().put(Stat.mindamage, minDamage);
+    attrs.base().put(Stat.maxdamage, maxDamage);
+    attrs.base().put(Stat.tohit, attackRating);
+    attrs.reset();
+    return attrs;
   }
 }

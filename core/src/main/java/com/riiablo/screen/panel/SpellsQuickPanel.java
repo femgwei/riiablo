@@ -5,6 +5,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -33,6 +34,8 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.CharData;
 import com.riiablo.save.ItemData;
 import com.riiablo.widget.HotkeyButton;
+import com.riiablo.engine.client.NetworkedActionSender;
+import com.riiablo.engine.server.AuraEcsSystem;
 
 public class SpellsQuickPanel extends Table implements Disposable, CharData.SkillListener {
   private static final String SPELLS_PATH = "data\\global\\ui\\SPELLS\\";
@@ -71,11 +74,17 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
   final int ALIGN;
   IntMap<HotkeyButton> buttons;
   final int buttonId;
+  final Socket socket;
 
   public SpellsQuickPanel(final HotkeyButton o, final boolean leftSkills) {
+    this(o, leftSkills, null);
+  }
+
+  public SpellsQuickPanel(final HotkeyButton o, final boolean leftSkills, Socket socket) {
     this.observer = o;
     this.leftSkills = leftSkills;
     this.buttonId = leftSkills ? Input.Buttons.LEFT : Input.Buttons.RIGHT;
+    this.socket = socket;
 
     Riiablo.assets.load(SkilliconDescriptor);
     Riiablo.assets.finishLoadingAsset(SkilliconDescriptor);
@@ -109,7 +118,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         HotkeyButton button = keyMappings.get(key);
         if (button == null) return;
         observer.copy(button);
-        Riiablo.charData.setAction(buttonId, button.getSkill());
+        selectSkill(button.getSkill());
       }
     };
     for (MappedKey Skill : Keys.Skill) Skill.addStateListener(mappedKeyListener);
@@ -167,7 +176,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         @Override
         public void clicked(InputEvent event, float x, float y) {
           observer.copy(button);
-          Riiablo.charData.setAction(buttonId, button.getSkill());
+          selectSkill(button.getSkill());
           SpellsQuickPanel.this.setVisible(false);
         }
       });
@@ -207,7 +216,7 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
         @Override
         public void clicked(InputEvent event, float x, float y) {
           observer.copy(button);
-          Riiablo.charData.setAction(buttonId, button.getSkill());
+          selectSkill(button.getSkill());
           SpellsQuickPanel.this.setVisible(false);
         }
       });
@@ -222,6 +231,23 @@ public class SpellsQuickPanel extends Table implements Disposable, CharData.Skil
 
   public void setObserver(HotkeyButton observer) {
     this.observer = observer;
+  }
+
+  private void selectSkill(int skillId) {
+    Riiablo.charData.setAction(buttonId, skillId);
+    if (socket != null) {
+      NetworkedActionSender.selectSkill(socket, buttonId, skillId);
+      return;
+    }
+    if (Riiablo.engine == null || Riiablo.game == null || Riiablo.game.player < 0) return;
+    AuraEcsSystem auraSystem = Riiablo.engine.getSystem(AuraEcsSystem.class);
+    if (auraSystem == null || leftSkills) return;
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill != null && skill.aura) {
+      auraSystem.selectAura(Riiablo.game.player, skillId);
+    } else {
+      auraSystem.clearAura(Riiablo.game.player);
+    }
   }
 
   @Override
