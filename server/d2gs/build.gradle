@@ -50,6 +50,9 @@ tasks.register('headlessMissileCombat', JavaExec) {
 
 jar {
   archiveBaseName = project.name
+	// assets are present in both this project's resource set and the unpacked
+	// :core runtime jar. Keep the first copy, matching the desktop fat-jar task.
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 	// These can be excluded because they add to the jar size but libGDX 1.9.11 can't use them.
 	// If your libGDX version is 1.9.10 or earlier, or is 1.9.12-SNAPSHOT or later, you can leave
 	// the following line commented; if you use 1.9.11 exactly, or if you use 1.9.12-SNAPSHOT but
