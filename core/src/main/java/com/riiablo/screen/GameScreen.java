@@ -121,6 +121,7 @@ import com.riiablo.engine.server.PlayerItemHandler;
 import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerSkillSystem;
+import com.riiablo.engine.server.DeathRewardSystem;
 import com.riiablo.engine.server.player.PlayerStatsManager;
 import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.VelocityModeChanger;
@@ -737,6 +738,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new ServerSkillSystem(true));
       builder.with(new com.riiablo.engine.server.AuraEcsSystem());
       builder.with(new ItemGenerator());
+      // Local games dispatch authoritative DeathEvent in this world. Without
+      // the reward subscriber, XP still advances but no monster drop is ever
+      // rolled or materialized. Network clients receive D2GS-created items.
+      builder.with(new DeathRewardSystem());
       builder.with(new NativeObjectDropSystem());
       builder.with(new NativeShrineSystem());
       builder.with(new VendorGenerator());
