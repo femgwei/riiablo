@@ -153,9 +153,10 @@ waypoints, caves, quest rewards and collision boundaries.
   - [x] Single-item and repair-all actions with durability and gold updates.
   - [x] Gheed gambling stock generation and purchase handoff.
   - [x] Paid Kashya Rogue creation reuses the A1Q2 mercenary entity path.
-  - [ ] Native `Items.txt`/`Npc.txt` transaction-cost multipliers.
+  - [x] Native `Items.txt`/`Npc.txt` transaction-cost fields and 1024-scale price calculation.
   - [ ] Hire-selection panel, resurrection dialog and restored-save entity recreation.
-  - [ ] Authoritative multiplayer NPC-service request/snapshot protocol.
+  - [x] Authoritative multiplayer NPC-service request/result/stock protocol and D2GS validation boundary.
+    - [ ] Server-owned vendor stock snapshots and atomic BUY/SELL mutation.
 - [ ] Phase 5: A1Q6 and Act completion
 - [ ] Phase 6: remaining Act 1 quests
 - [ ] Phase 7: portals, drops and persistence
