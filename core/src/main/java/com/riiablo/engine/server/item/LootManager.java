@@ -166,6 +166,12 @@ public class LootManager {
     /** Same-level party count used by the native NoDrop exponent. */
     public int partyMembersInLevel = 1;
 
+    /** Player count captured on the monster at spawn; caps PlayersX. */
+    public int monsterPlayerCount = 1;
+
+    /** Native MonStats NoRatio flag suppresses grouped root-TC upgrades. */
+    public boolean noRatio = false;
+
     /** Native MonStats/SuperUniques TreasureClass name, when available. */
     public String treasureClass;
 
@@ -182,6 +188,8 @@ public class LootManager {
       goldFind = 0;
       playerCount = 1;
       partyMembersInLevel = 1;
+      monsterPlayerCount = 1;
+      noRatio = false;
       treasureClass = null;
     }
   }
@@ -287,18 +295,37 @@ public class LootManager {
     // Native TC quality uses the monster's already rank-adjusted level. The
     // legacy fallback below retains its historical procedural bonuses.
     int itemLevel = Math.max(1, Math.min(99, config.monsterLevel));
+    int tcLookupLevel = TreasureClassResolver.nativeMonsterRootLevel(
+        config.difficulty, itemLevel, config.noRatio, config.isBoss);
     TreasureClassResolver.PlayerContext players = new TreasureClassResolver.PlayerContext(
-        config.playerCount, config.partyMembersInLevel);
+        config.playerCount, config.partyMembersInLevel, config.monsterPlayerCount);
+    int rootId = Riiablo.files.TreasureClassEx.index(config.treasureClass);
+    com.riiablo.codec.excel.TreasureClassEx.Entry root = rootId < 0
+        ? Riiablo.files.TreasureClassEx.get(config.treasureClass)
+        : Riiablo.files.TreasureClassEx.getForLevel(rootId, tcLookupLevel);
+    log.debug("[LOOT_TC] phase=root requested={} selected={} difficulty={} "
+            + "monsterLevel={} lookupLevel={} picks={} noDrop={} itemProbability={} "
+            + "totalPlayers={} partyInLevel={} monsterPlayerCount={} effectivePlayers={}",
+        config.treasureClass, root != null ? root.TreasureClass : "missing",
+        config.difficulty, itemLevel, tcLookupLevel,
+        root != null ? root.Picks : 0, root != null ? root.NoDrop : 0,
+        root != null ? root.itemProbability() : 0,
+        players.totalPlayers, players.partyMembersInLevel,
+        players.monsterPlayerCount, players.effectivePlayerCount());
     List<TreasureClassResolver.Drop> drops;
     try {
       TreasureClassResolver resolver = new TreasureClassResolver(Riiablo.files.TreasureClassEx);
-      drops = resolver.resolve(config.treasureClass, itemLevel,
+      drops = resolver.resolve(config.treasureClass, tcLookupLevel,
           bound -> MathUtils.random(bound - 1), TreasureClassResolver.NATIVE_MAX_DROPS, players);
     } catch (RuntimeException ex) {
       log.warn("[LOOT_TC] failed to resolve {}: {}", config.treasureClass, ex.toString());
       return false;
     }
-    if (drops.isEmpty()) return true;
+    if (drops.isEmpty()) {
+      log.debug("[LOOT_TC] phase=result root={} rawDrops=0 items=0 gold=0",
+          config.treasureClass);
+      return true;
+    }
     for (TreasureClassResolver.Drop drop : drops) {
       String token = TreasureClassResolver.baseToken(drop.token);
       if (token == null || token.isEmpty()) continue;
@@ -326,6 +353,8 @@ public class LootManager {
       }
       if (findBase(code) != null) result.addItem(code, quality, itemLevel);
     }
+    log.debug("[LOOT_TC] phase=result root={} rawDrops={} items={} gold={}",
+        config.treasureClass, drops.size(), result.getItemCount(), result.goldAmount);
     return true;
   }
 

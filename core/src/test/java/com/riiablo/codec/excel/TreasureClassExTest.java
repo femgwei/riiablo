@@ -61,4 +61,22 @@ class TreasureClassExTest extends RiiabloTest {
           "unexpanded child TC " + drop.token);
     }
   }
+
+  @Test
+  void loadsNativeActOneFallenNoDropWeights() {
+    TreasureClassEx.Entry fallen = Riiablo.files.TreasureClassEx.get("Act 1 H2H A");
+
+    assertNotNull(fallen);
+    assertEquals(1, fallen.Picks);
+    assertEquals(100, fallen.NoDrop);
+    assertEquals(60, fallen.itemProbability());
+    assertEquals(160, fallen.totalProbability());
+
+    TreasureClassResolver resolver = new TreasureClassResolver(Riiablo.files.TreasureClassEx);
+    assertTrue(resolver.resolve("Act 1 H2H A", 0, bound -> 99).isEmpty());
+    List<TreasureClassResolver.Drop> firstDrop =
+        resolver.resolve("Act 1 H2H A", 0, bound -> 100);
+    assertEquals(1, firstDrop.size());
+    assertEquals("gld", TreasureClassResolver.baseToken(firstDrop.get(0).token));
+  }
 }

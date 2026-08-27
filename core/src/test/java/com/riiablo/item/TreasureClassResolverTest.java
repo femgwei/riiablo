@@ -105,14 +105,26 @@ class TreasureClassResolverTest {
         new TreasureClassResolver.PlayerContext(3, 1);
     TreasureClassResolver.PlayerContext twoPartyMembers =
         new TreasureClassResolver.PlayerContext(2, 2);
+    TreasureClassResolver.PlayerContext cappedAtSpawn =
+        new TreasureClassResolver.PlayerContext(8, 1, 1);
 
     assertEquals(1, solo.effectivePlayerCount());
     assertEquals(1, twoUnpartied.effectivePlayerCount());
     assertEquals(2, threeUnpartied.effectivePlayerCount());
     assertEquals(2, twoPartyMembers.effectivePlayerCount());
+    assertEquals(1, cappedAtSpawn.effectivePlayerCount());
     assertEquals(100, TreasureClassResolver.adjustedNoDrop(100, 100, 1));
     assertEquals(33, TreasureClassResolver.adjustedNoDrop(100, 100, 2));
     assertEquals(14, TreasureClassResolver.adjustedNoDrop(100, 100, 3));
+  }
+
+  @Test
+  void usesNativeMonsterRootTcLevelPolicy() {
+    assertEquals(0, TreasureClassResolver.nativeMonsterRootLevel(0, 12, false, false));
+    assertEquals(12, TreasureClassResolver.nativeMonsterRootLevel(1, 12, false, false));
+    assertEquals(12, TreasureClassResolver.nativeMonsterRootLevel(2, 12, false, false));
+    assertEquals(0, TreasureClassResolver.nativeMonsterRootLevel(1, 12, true, false));
+    assertEquals(0, TreasureClassResolver.nativeMonsterRootLevel(1, 12, false, true));
   }
 
   @Test

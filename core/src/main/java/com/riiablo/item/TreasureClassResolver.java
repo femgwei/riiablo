@@ -29,17 +29,43 @@ public final class TreasureClassResolver {
 
     public final int totalPlayers;
     public final int partyMembersInLevel;
+    public final int monsterPlayerCount;
 
     public PlayerContext(int totalPlayers, int partyMembersInLevel) {
+      this(totalPlayers, partyMembersInLevel, 8);
+    }
+
+    /**
+     * @param monsterPlayerCount player count captured when the monster spawned;
+     *     D2Game uses it as an upper bound, never as the current game count
+     */
+    public PlayerContext(int totalPlayers, int partyMembersInLevel,
+        int monsterPlayerCount) {
       this.totalPlayers = Math.max(1, Math.min(totalPlayers, 8));
       this.partyMembersInLevel = Math.max(1,
           Math.min(partyMembersInLevel, this.totalPlayers));
+      this.monsterPlayerCount = Math.max(1, Math.min(monsterPlayerCount, 8));
     }
 
-    /** Mirrors (total - same-level party) / 2 + same-level party. */
+    /**
+     * Mirrors D2GAME_DropTC_6FC51360:
+     * min((total - same-level party) / 2 + same-level party, monster players).
+     */
     public int effectivePlayerCount() {
-      return (totalPlayers - partyMembersInLevel) / 2 + partyMembersInLevel;
+      int current = (totalPlayers - partyMembersInLevel) / 2 + partyMembersInLevel;
+      return Math.min(current, monsterPlayerCount);
     }
+  }
+
+  /**
+   * Root TC level passed to DATATBLS_GetTreasureClassExRecordFromIdAndLevel.
+   * Expansion monsters only upgrade a grouped TC outside Normal difficulty,
+   * and never upgrade NoRatio monsters or bosses.
+   */
+  public static int nativeMonsterRootLevel(int difficulty, int monsterLevel,
+      boolean noRatio, boolean boss) {
+    if (difficulty <= 0 || noRatio || boss) return 0;
+    return Math.max(0, monsterLevel);
   }
 
   public static final class Drop {
