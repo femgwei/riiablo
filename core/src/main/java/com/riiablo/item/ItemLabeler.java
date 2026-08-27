@@ -134,7 +134,7 @@ public class ItemLabeler {
     table.setBackground(PaletteIndexedColorDrawable.MODAL_FONT16);
 
     if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
-      table.add(new Label(Riiablo.string.lookup("cost") + 0, font, name.getColor())).center().space(SPACING).row();
+      table.add(new Label(Riiablo.string.lookup("cost") + VendorPricing.buyPrice(item), font, name.getColor())).center().space(SPACING).row();
     }
     table.add(name).center().space(SPACING).row();
     if (item.quality.ordinal() > Quality.MAGIC.ordinal() || (item.flags & Item.ITEMFLAG_RUNEWORD) == Item.ITEMFLAG_RUNEWORD) {

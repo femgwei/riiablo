@@ -135,6 +135,11 @@ public class ItemGrid extends Group {
     return true;
   }
 
+  /** Hook for grids that represent a non-player store (for example vendors). */
+  protected boolean onStoredItemClicked(Item item) {
+    return false;
+  }
+
   void onDrop(int x, int y) {
     if (gridListener == null) return;
     gridListener.onDrop(x, y);
@@ -291,6 +296,7 @@ public class ItemGrid extends Group {
         @Override
         public void clicked(InputEvent event, float x, float y) {
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
+            if (onStoredItemClicked(item)) removeActor(StoredItem.this);
             event.handle();
             return;
           }

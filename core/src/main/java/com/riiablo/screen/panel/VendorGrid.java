@@ -19,6 +19,8 @@ public class VendorGrid extends ItemGrid {
     }
   };
 
+  private PurchaseListener purchaseListener;
+
   public VendorGrid(Inventory.Entry inv, GridListener gridListener) {
     super(inv, gridListener);
     showFill = false;
@@ -27,6 +29,19 @@ public class VendorGrid extends ItemGrid {
   @Override
   protected boolean accept(Item item) {
     return false;
+  }
+
+  public void setPurchaseListener(PurchaseListener listener) {
+    this.purchaseListener = listener;
+  }
+
+  @Override
+  protected boolean onStoredItemClicked(Item item) {
+    return purchaseListener != null && purchaseListener.onPurchase(item);
+  }
+
+  public interface PurchaseListener {
+    boolean onPurchase(Item item);
   }
 
   public static Array<Item> sort(Array<Item> items) {

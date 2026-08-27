@@ -22,6 +22,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Inventory;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.item.Item;
+import com.riiablo.item.VendorPricing;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
@@ -73,6 +74,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   final Inventory.Entry inventory;
   VendorGrid activeGrid = null;
+  private Label goldLabel;
+  private boolean selling;
 
   public VendorPanel() {
     Riiablo.assets.load(buysellDescriptor);
@@ -138,6 +141,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     btnBuy.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        selling = false;
         if (btnBuy.isChecked()) {
           Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 3);
         } else {
@@ -157,6 +161,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     btnSell.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
+        selling = btnSell.isChecked();
         if (btnSell.isChecked()) {
           Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 4);
         } else {
@@ -226,15 +231,21 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     addActor(goldbankLabel);
 
     StatRef goldbankStat = Riiablo.charData.getStats().get(Stat.goldbank);
-    Label goldbank = new Label(Integer.toString(goldbankStat != null ? goldbankStat.asInt() : 0), Riiablo.fonts.font16);
-    goldbank.setSize(goldbankLabel.getWidth(), goldbankLabel.getHeight());
-    goldbank.setPosition(goldbankLabel.getX(), goldbankLabel.getY());
-    goldbank.setAlignment(Align.right);
-    addActor(goldbank);
+    goldLabel = new Label(Integer.toString(goldbankStat != null ? goldbankStat.asInt() : 0), Riiablo.fonts.font16);
+    goldLabel.setSize(goldbankLabel.getWidth(), goldbankLabel.getHeight());
+    goldLabel.setPosition(goldbankLabel.getX(), goldbankLabel.getY());
+    goldLabel.setAlignment(Align.right);
+    addActor(goldLabel);
 
     inventory = Riiablo.files.inventory.get("Monster");
     for (int i = 0; i < tabs.length; i++) {
       VendorGrid grid = tabs[i].grid = new VendorGrid(inventory, null);
+      grid.setPurchaseListener(new VendorGrid.PurchaseListener() {
+        @Override
+        public boolean onPurchase(Item item) {
+          return purchase(item);
+        }
+      });
       grid.setPosition(
           inventory.gridLeft - inventory.invLeft,
           getHeight() - inventory.gridTop - grid.getHeight());
@@ -260,6 +271,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   @Override
   public void draw(Batch batch, float a) {
+    refreshGold();
     batch.draw(buysell, getX(), getY());
     super.draw(batch, a);
   }
@@ -277,6 +289,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   }
 
   public void config(int flags, Array<Item> items) {
+    selling = false;
     buttonGroup.uncheckAll();
     btnBuy.setVisible((flags & BUY) == BUY);
     btnSell.setVisible((flags & SELL) == SELL);
@@ -313,6 +326,41 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     }
 
     setTab(TAB_MISC);
+  }
+
+  public boolean isSelling() {
+    return isVisible() && selling;
+  }
+
+  /** Called by the inventory grid when the Sell mode is active. */
+  public boolean sellItem(int itemIndex) {
+    if (!isSelling() || Riiablo.charData == null) return false;
+    Item item = itemIndex >= 0 && itemIndex < Riiablo.charData.getItems().getItems().size
+        ? Riiablo.charData.getItems().getItem(itemIndex) : null;
+    int value = VendorPricing.sellPrice(item);
+    boolean sold = VendorPricing.sell(Riiablo.charData, itemIndex);
+    if (sold) {
+      Gdx.app.debug(TAG, "Sold " + item.code + " for " + value + " gold");
+      refreshGold();
+    }
+    return sold;
+  }
+
+  private boolean purchase(Item item) {
+    if (selling || Riiablo.charData == null) return false;
+    int value = VendorPricing.buyPrice(item);
+    boolean bought = VendorPricing.buy(Riiablo.charData, item);
+    if (bought) {
+      Gdx.app.debug(TAG, "Bought " + item.code + " for " + value + " gold");
+      refreshGold();
+    }
+    return bought;
+  }
+
+  private void refreshGold() {
+    if (goldLabel != null && Riiablo.charData != null) {
+      goldLabel.setText(Integer.toString(VendorPricing.availableGold(Riiablo.charData)));
+    }
   }
 
   private static Array<Item> collect(Array<Item> items, Array<Item> to, String page) {

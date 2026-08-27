@@ -298,6 +298,20 @@ public class ItemData {
     return item;
   }
 
+  /** Removes an owned inventory item and emits the normal store lifecycle events. */
+  public boolean removeOwnedItem(int i) {
+    if (i < 0 || i >= itemData.size) return false;
+    Item item = itemData.get(i);
+    if (item == null || item.location != Location.STORED) return false;
+    if (item.storeLoc != StoreLoc.INVENTORY) return false;
+    notifyStoreRemoved(item);
+    if (cursor == i) cursor = INVALID_ITEM;
+    else if (cursor > i) cursor--;
+    setLocation(item, null);
+    remove(i);
+    return true;
+  }
+
   /**
    * Atomically packs an item into the 10x4 character inventory.  The item is
    * not added or mutated when no rectangle is available.  This is the server
