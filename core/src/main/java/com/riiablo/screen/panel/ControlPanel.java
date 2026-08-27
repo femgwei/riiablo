@@ -344,7 +344,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       
       batch.draw(overlay, x + 28, y +  6);
       super.draw(batch, a);
-      if (label.isVisible()) {
+      if (label.isVisible() && !hasVisibleSidePanel()) {
         label.setX(getX());
         label.setText(Riiablo.string.format("panelhealth",
             (int) currentHP,
@@ -397,7 +397,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       
       batch.draw(overlay, x + 8, y + 10);
       super.draw(batch, a);
-      if (label.isVisible()) {
+      if (label.isVisible() && !hasVisibleSidePanel()) {
         label.setX(getX() - 32);
         label.setText(Riiablo.string.format("panelmana",
             (int) currentMana,
@@ -405,6 +405,10 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         label.draw(batch, a);
       }
     }
+  }
+
+  private boolean hasVisibleSidePanel() {
+    return Riiablo.game != null && Riiablo.game.hasVisibleSidePanel();
   }
 
   private class ExperienceWidget extends Actor {

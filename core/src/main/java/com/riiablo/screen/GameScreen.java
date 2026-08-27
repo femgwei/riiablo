@@ -48,6 +48,7 @@ import com.riiablo.engine.EngineConfig;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.client.AnimationStepper;
 import com.riiablo.engine.client.Act1QuestDialogController;
+import com.riiablo.engine.client.Act1QuestIndicatorSystem;
 import com.riiablo.engine.client.AutoInteracter;
 import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.ClientEntityFactory;
@@ -720,7 +721,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // Local games own the authoritative combat world.  Dedicated servers
       // already register this system; network clients must not create a
       // duplicate missile for the same SkillDoEvent.
-      builder.with(new Act1QuestDialogController());
+      builder.with(new Act1QuestDialogController(), new Act1QuestIndicatorSystem());
       builder.with(new Act1QuestSystem());
       builder.with(new NativeMercenaryRewardSystem());
       builder.with(new NativeCountessRewardSystem());
@@ -1225,6 +1226,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     if (actor == null) return;
     actor.setVisible(true);
     left = actor;
+  }
+
+  /** True when an inventory/character/quest/vendor panel is actually visible. */
+  public boolean hasVisibleSidePanel() {
+    return (left != null && left.isVisible()) || (right != null && right.isVisible());
   }
 
   // TODO: #90

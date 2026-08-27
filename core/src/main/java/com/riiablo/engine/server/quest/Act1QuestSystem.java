@@ -283,6 +283,12 @@ public class Act1QuestSystem extends PassiveSystem {
   private void onCharsiMessage(NpcQuestMessageEvent message, Player player) {
     CharData data = player.data;
     short record = getMalusRecord(data);
+    if (message.messageIndex == Act1MalusQuest.MESSAGE_INIT) {
+      setMalusRecord(data, Act1MalusQuest.start(record));
+      persist(data);
+      log.info("[A1Q3] Charsi started Horadric Malus quest: player={}", message.entityId);
+      return;
+    }
     boolean hasMalus = data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE);
     if (message.messageIndex != Act1MalusQuest.MESSAGE_MALUS
         || !Act1MalusQuest.canTurnIn(record, level(message.entityId, player), hasMalus)) {

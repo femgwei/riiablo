@@ -29,6 +29,7 @@ import com.riiablo.widget.TextButton;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.io.IOException;
 
 public class TCPIPScreen extends ScreenAdapter {
   private static final String TAG = "MultiplayerScreen";
@@ -123,6 +124,7 @@ public class TCPIPScreen extends ScreenAdapter {
       public void clicked(InputEvent event, float x, float y) {
         Actor actor = event.getListenerActor();
         if (actor == btnHostGame) {
+          hostLocalGame();
         } else if (actor == btnJoinGame) {
           try {
             Gdx.input.getTextInput(new Input.TextInputListener() {
@@ -195,6 +197,42 @@ public class TCPIPScreen extends ScreenAdapter {
     btnCancel.addListener(clickListener);
     btnCancel.setPosition(20, 20, Align.bottomLeft);
     stage.addActor(btnCancel);
+  }
+
+  private void hostLocalGame() {
+    btnHostGame.setDisabled(true);
+    lbDescription.setText("Starting local game server...");
+    Thread launcher = new Thread(() -> {
+      try {
+        HostedD2GS.start();
+        final Socket socket = connectLocalServer(15000L);
+        Gdx.app.postRunnable(() ->
+            Riiablo.client.clearAndSet(new SelectCharacterScreen3(socket, true)));
+      } catch (Throwable t) {
+        HostedD2GS.stop();
+        Gdx.app.error(TAG, "Unable to host local game", t);
+        Gdx.app.postRunnable(() -> {
+          btnHostGame.setDisabled(false);
+          lbDescription.setText("Unable to start local game server.");
+        });
+      }
+    }, "d2gs-launcher");
+    launcher.setDaemon(true);
+    launcher.start();
+  }
+
+  private static Socket connectLocalServer(long timeoutMillis) throws Exception {
+    long deadline = System.currentTimeMillis() + timeoutMillis;
+    Throwable last = null;
+    while (System.currentTimeMillis() < deadline) {
+      try {
+        return Gdx.net.newClientSocket(Net.Protocol.TCP, "127.0.0.1", 6114, null);
+      } catch (Throwable t) {
+        last = t;
+        Thread.sleep(100L);
+      }
+    }
+    throw new IOException("D2GS did not open port 6114", last);
   }
 
   @Override

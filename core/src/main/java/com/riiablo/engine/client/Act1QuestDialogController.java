@@ -19,9 +19,12 @@ import com.riiablo.widget.NpcDialogBox;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 /** Presents the native Act 1 quest speech selected by the authoritative record. */
 public class Act1QuestDialogController extends PassiveSystem {
+  private static final Logger log = LogManager.getLogger(Act1QuestDialogController.class);
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected DialogManager dialogManager;
@@ -29,16 +32,19 @@ public class Act1QuestDialogController extends PassiveSystem {
 
   @Subscribe
   public void onNpcInteraction(NpcInteractionEvent event) {
-    if (event == null || dialogManager.getDialog() != null
-        || !mPlayer.has(event.entityId) || !mMonster.has(event.npcId)) {
-      return;
-    }
+    if (event != null) openQuestDialog(event.entityId, event.npcId);
+  }
 
-    Monster npc = mMonster.get(event.npcId);
-    if (npc.monstats == null) return;
-    Player player = mPlayer.get(event.entityId);
+  /** Opens the currently authoritative quest speech for an Act I NPC. */
+  public boolean openQuestDialog(int playerId, int npcId) {
+    if (dialogManager.getDialog() != null
+        || !mPlayer.has(playerId) || !mMonster.has(npcId)) return false;
+
+    Monster npc = mMonster.get(npcId);
+    if (npc.monstats == null) return false;
+    Player player = mPlayer.get(playerId);
     CharData data = player.data;
-    if (data == null) return;
+    if (data == null) return false;
 
     int messageIndex;
     String speech;
@@ -51,9 +57,9 @@ public class Act1QuestDialogController extends PassiveSystem {
       if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) {
         com.riiablo.item.Item cursor = data.getItems().getCursor();
         if (cursor != null) {
-          events.dispatch(NativeImbueRequestEvent.obtain(event.entityId, cursor.id));
+          events.dispatch(NativeImbueRequestEvent.obtain(playerId, cursor.id));
         }
-        return;
+        return cursor != null;
       }
       int level = data.getStats().aggregate().getValue(Stat.level, 0);
       boolean hasMalus = data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE);
@@ -67,20 +73,22 @@ public class Act1QuestDialogController extends PassiveSystem {
       short record = data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD];
       if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) {
         messageIndex = Act1AndarielQuest.MESSAGE_WARRIV_REWARD;
-        speech = "warriv_act1_q6_reward";
+        speech = "warriv_act1_q6_success";
       } else {
-        return;
+        return false;
       }
     } else {
-      return;
+      return false;
     }
-    if (speech == null) return;
+    if (speech == null) return false;
 
-    final int playerId = event.entityId;
-    final int npcId = event.npcId;
+    final int selectedMessage = messageIndex;
+    log.info("[ACT1_QUEST_DIALOG] player={} npc={} message={} speech={}",
+        playerId, npc.monstats.Id, messageIndex, speech);
     dialogManager.setDialog(new NpcDialogBox(speech, dialog -> {
       dialogManager.setDialog(null);
-      events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, messageIndex));
+      events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, selectedMessage));
     }));
+    return true;
   }
 }

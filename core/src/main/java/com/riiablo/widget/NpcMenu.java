@@ -53,6 +53,13 @@ public class NpcMenu extends Table {
     return this;
   }
 
+  public NpcMenu addItem(String text, ClickListener clickListener) {
+    LabelButton button = new LabelButton(text, Riiablo.fonts.font16);
+    button.addListener(clickListener);
+    add(button).space(SPACING).row();
+    return this;
+  }
+
   public NpcMenu addItem(int id, final NpcMenu menu) {
     menu.parent = this;
     menu.owner = owner;

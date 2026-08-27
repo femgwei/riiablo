@@ -19,15 +19,15 @@ import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.Cvars;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
-import com.riiablo.attributes.ExperienceTable;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
-import com.riiablo.widget.ProgressBar;
+import com.riiablo.widget.LabelButton;
 import com.riiablo.widget.StatLabel;
+import com.riiablo.engine.server.player.PlayerStatsManager;
 
 public class CharacterPanel extends WidgetGroup implements Disposable {
 
@@ -36,6 +36,10 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
 
   final AssetDescriptor<DC6> buysellbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\buysellbtn.DC6", DC6.class);
   Button btnExit;
+  private Label statPoints;
+  private Label levelValue;
+  private Label experienceValue;
+  private final LabelButton[] statButtons = new LabelButton[4];
 
   public CharacterPanel() {
     Riiablo.assets.load(invcharDescriptor);
@@ -60,6 +64,12 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     });
     addActor(btnExit);
 
+    statPoints = new Label("0", Riiablo.fonts.font16, Riiablo.colors.gold);
+    statPoints.setPosition(275, getHeight() - 65);
+    statPoints.setSize(36, 16);
+    statPoints.setAlignment(Align.center);
+    addActor(statPoints);
+
     Label name = new Label(Riiablo.charData.name, Riiablo.fonts.font16);
     name.setPosition(12, getHeight() - 24);
     name.setSize(168, 13);
@@ -70,14 +80,16 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     level.setPosition(12, getHeight() - 65);
     level.setSize(42, 33);
     level.add(new Label(4057, Riiablo.fonts.ReallyTheLastSucker)).row();
-    level.add(new Label(Integer.toString(Riiablo.charData.getStats().get(Stat.level).asInt()), Riiablo.fonts.font16)).growY().row();
+    levelValue = new Label("0", Riiablo.fonts.font16);
+    level.add(levelValue).growY().row();
     addActor(level);
 
     Table exp = new Table();
     exp.setPosition(66, getHeight() - 65);
     exp.setSize(114, 33);
     exp.add(new Label(4058, Riiablo.fonts.ReallyTheLastSucker)).row();
-    exp.add(new Label(NumberFormat.getInstance(Cvars.Client.Locale.get()).format(Riiablo.charData.getStats().get(Stat.experience).asLong()), Riiablo.fonts.font16)).growY().row();
+    experienceValue = new Label("0", Riiablo.fonts.font16);
+    exp.add(experienceValue).growY().row();
     addActor(exp);
 
     Label clazz = new Label(Riiablo.charData.classId.name, Riiablo.fonts.font16);
@@ -103,6 +115,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     str.setPosition(78, getHeight() - 100);
     str.setSize(36, 16);
     addActor(str);
+    addStatButton(PlayerStatsManager.STAT_TYPE_STRENGTH, 118, getHeight() - 100);
 
     Label dexLabel = new Label(4062, Riiablo.fonts.ReallyTheLastSucker);
     dexLabel.setPosition(11, getHeight() - 162);
@@ -114,6 +127,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     dex.setPosition(78, getHeight() - 162);
     dex.setSize(36, 16);
     addActor(dex);
+    addStatButton(PlayerStatsManager.STAT_TYPE_DEXTERITY, 118, getHeight() - 162);
 
     Label defenseLabel = Label.i18n("strchrdef", Riiablo.fonts.ReallyTheLastSucker);
     defenseLabel.setPosition(165, getHeight() - 210);
@@ -136,6 +150,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     vit.setPosition(78, getHeight() - 248);
     vit.setSize(36, 16);
     addActor(vit);
+    addStatButton(PlayerStatsManager.STAT_TYPE_VITALITY, 118, getHeight() - 248);
 
     Label staminaLabel = Label.i18n("strchrstm", Riiablo.fonts.ReallyTheLastSucker);
     staminaLabel.setPosition(165, getHeight() - 248);
@@ -179,6 +194,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     ene.setPosition(78, getHeight() - 310);
     ene.setSize(36, 16);
     addActor(ene);
+    addStatButton(PlayerStatsManager.STAT_TYPE_ENERGY, 118, getHeight() - 310);
 
     Label manaLabel = Label.i18n("strchrman", Riiablo.fonts.ReallyTheLastSucker);
     manaLabel.setPosition(165, getHeight() - 310);
@@ -250,6 +266,44 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   private Label createStatLabel(short statId, StatLabel.Colorizer colorizer) {
     Attributes attrs = Riiablo.charData.getStats();
     return new StatLabel(attrs, statId, colorizer);
+  }
+
+  private void addStatButton(final int statType, float x, float y) {
+    LabelButton button = new LabelButton("+", Riiablo.fonts.font16, Riiablo.colors.gold);
+    button.setAlignment(Align.center);
+    button.setSize(18, 18);
+    button.setPosition(x, y);
+    button.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        PlayerStatsManager.INSTANCE.spendStatPoint(Riiablo.charData, statType);
+        updateStatPointControls();
+      }
+    });
+    statButtons[statType] = button;
+    addActor(button);
+  }
+
+  private void updateStatPointControls() {
+    int available = PlayerStatsManager.INSTANCE.getAvailableStatPoints(Riiablo.charData);
+    if (statPoints != null) statPoints.setText(Integer.toString(available));
+    if (levelValue != null) {
+      levelValue.setText(Integer.toString(
+          Riiablo.charData.getStats().get(Stat.level).asInt()));
+    }
+    if (experienceValue != null) {
+      experienceValue.setText(NumberFormat.getInstance(Cvars.Client.Locale.get()).format(
+          Riiablo.charData.getStats().get(Stat.experience).asLong()));
+    }
+    for (LabelButton button : statButtons) {
+      if (button != null) button.setVisible(isVisible() && available > 0);
+    }
+  }
+
+  @Override
+  public void act(float delta) {
+    super.act(delta);
+    updateStatPointControls();
   }
 
   private BitmapFont getFont(int length) {

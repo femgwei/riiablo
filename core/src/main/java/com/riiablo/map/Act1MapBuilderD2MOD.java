@@ -498,7 +498,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             monsters = new MonStats.Entry[0];
             return;
           }
-          MonStats.Entry[] monstats = new MonStats.Entry[numMon];
+          // Blood Moor's native region population also permits Fallen
+          // Shaman even though it is not represented by the truncated
+          // NumMon prefix used by the compatibility generator.
+          boolean addBloodMoorShaman = zone.level.Id == LEVEL_BLOODMOOR;
+          MonStats.Entry[] monstats = new MonStats.Entry[numMon + (addBloodMoorShaman ? 1 : 0)];
           for (int j = 0; j < numMon; j++) {
             String mon = zone.level.mon[j];
             if (mon == null || mon.isEmpty()) continue;
@@ -506,6 +510,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             if (monstats[j] != null) {
               prob += monstats[j].Rarity;
             }
+          }
+          if (addBloodMoorShaman) {
+            MonStats.Entry shaman = Riiablo.files.monstats.get("fallenshaman1");
+            monstats[numMon] = shaman;
+            if (shaman != null) prob += shaman.Rarity;
           }
 
           if (prob <= 0) {
@@ -675,6 +684,32 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                       queueMonsterSpawn(zone.level.Id, monster, px, py);
                     } else {
                       zone.map.factory.createMonster(monster, px, py);
+                    }
+                  }
+
+                  // D2MOO treats PartyMin/PartyMax as companions of the
+                  // selected pack leader (rather than independent level
+                  // entries).  Generate them once per pack so shaman and
+                  // corrupt rogue groups include their native minions.
+                  int partyCount = partySize(monster.PartyMin, monster.PartyMax,
+                      MathUtils.random(Integer.MAX_VALUE));
+                  for (int k = 0; k < partyCount; k++) {
+                    String minionId = partyMinion(monster, k);
+                    if (minionId == null) continue;
+                    MonStats.Entry minion = Riiablo.files.monstats.get(minionId);
+                    if (minion == null) {
+                      Gdx.app.error(TAG, "Missing party minion " + minionId
+                          + " for leader " + monster.Id);
+                      continue;
+                    }
+                    float mx = monsterSpawnCoordinate(zone.x, currentTx,
+                        MathUtils.random(-1f, 1f)) + MathUtils.random(-2f, 2f);
+                    float my = monsterSpawnCoordinate(zone.y, currentTy,
+                        MathUtils.random(-1f, 1f)) + MathUtils.random(-2f, 2f);
+                    if (renderD2MooExport) {
+                      queueMonsterSpawn(zone.level.Id, minion, mx, my);
+                    } else {
+                      zone.map.factory.createMonster(minion, mx, my);
                     }
                   }
                 }
@@ -1544,6 +1579,28 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     float tileCenter = DT1.Tile.SUBTILE_SIZE / 2f;
     return zoneOrigin + localTile * DT1.Tile.SUBTILE_SIZE
         + tileCenter + MathUtils.clamp(jitter, -1f, 1f);
+  }
+
+  /** Native inclusive PartyMin..PartyMax roll, exposed for deterministic tests. */
+  static int partySize(int min, int max, int roll) {
+    if (max <= 0) return 0;
+    int lo = Math.max(0, min);
+    int hi = Math.max(lo, max);
+    if (hi == lo) return lo;
+    return lo + Math.floorMod(roll, hi - lo + 1);
+  }
+
+  /** Alternates native minion1/minion2 entries, treating empty/zero as absent. */
+  static String partyMinion(MonStats.Entry leader, int index) {
+    if (leader == null || index < 0) return null;
+    String first = leader.minion1;
+    String second = leader.minion2;
+    String selected = (index & 1) == 0 ? first : second;
+    if (selected == null || selected.isEmpty() || "0".equals(selected)) {
+      selected = (index & 1) == 0 ? second : first;
+    }
+    return selected == null || selected.isEmpty() || "0".equals(selected)
+        ? null : selected;
   }
 
   private void queueMonsterSpawn(int levelId, MonStats.Entry monster, float x, float y) {

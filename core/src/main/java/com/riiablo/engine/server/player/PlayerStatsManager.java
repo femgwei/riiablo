@@ -81,6 +81,7 @@ public class PlayerStatsManager {
     }
 
     StatListRef stats = charData.getStats().base();
+    StatListRef aggregate = charData.getStats().aggregate();
 
     // 检查是否有可用属性点
     int availablePoints = getInt(stats, Stat.statpts, 0);
@@ -105,16 +106,16 @@ public class PlayerStatsManager {
     // 根据属性类型进行分配
     switch (statType) {
       case STAT_TYPE_STRENGTH:
-        return spendStrength(stats);
+        return spendStrength(stats, aggregate);
 
       case STAT_TYPE_ENERGY:
-        return spendEnergy(stats, charStats);
+        return spendEnergy(stats, aggregate, charStats);
 
       case STAT_TYPE_DEXTERITY:
-        return spendDexterity(stats);
+        return spendDexterity(stats, aggregate);
 
       case STAT_TYPE_VITALITY:
-        return spendVitality(stats, charStats);
+        return spendVitality(stats, aggregate, charStats);
 
       default:
         log.warn("Invalid stat type: {}", statType);
@@ -128,16 +129,17 @@ public class PlayerStatsManager {
    * @param stats 属性列表
    * @return 分配结果
    */
-  private int spendStrength(StatListRef stats) {
+  private int spendStrength(StatListRef stats, StatListRef aggregate) {
     int currentStr = getInt(stats, Stat.strength, 0);
     if (currentStr >= MAX_STAT_VALUE) {
       return RESULT_MAX_REACHED;
     }
 
     // 扣除属性点
-    stats.put(Stat.statpts, getInt(stats, Stat.statpts, 0) - 1);
+    spendPoint(stats, aggregate);
     // 增加力量
     stats.put(Stat.strength, currentStr + 1);
+    addInt(aggregate, Stat.strength, 1);
 
     log.debug("Spent point on Strength: {} -> {}", currentStr, currentStr + 1);
     return RESULT_SUCCESS;
@@ -152,26 +154,29 @@ public class PlayerStatsManager {
    * @param charStats 职业配置
    * @return 分配结果
    */
-  private int spendEnergy(StatListRef stats, CharStats.Entry charStats) {
+  private int spendEnergy(StatListRef stats, StatListRef aggregate, CharStats.Entry charStats) {
     int currentEnergy = getInt(stats, Stat.energy, 0);
     if (currentEnergy >= MAX_STAT_VALUE) {
       return RESULT_MAX_REACHED;
     }
 
     // 扣除属性点
-    stats.put(Stat.statpts, getInt(stats, Stat.statpts, 0) - 1);
+    spendPoint(stats, aggregate);
     // 增加精力
     stats.put(Stat.energy, currentEnergy + 1);
+    addInt(aggregate, Stat.energy, 1);
 
     // 增加法力（使用固定数 << 6）
-    int manaPerMagic = charStats.ManaPerMagic << 6;
-    int currentMana = getInt(stats, Stat.mana, 0);
-    int currentMaxMana = getInt(stats, Stat.maxmana, 0);
+    float manaPerMagic = charStats.ManaPerMagic / 4f;
+    float currentMana = getFixed(stats, Stat.mana, 0);
+    float currentMaxMana = getFixed(stats, Stat.maxmana, 0);
     stats.put(Stat.mana, currentMana + manaPerMagic);
     stats.put(Stat.maxmana, currentMaxMana + manaPerMagic);
+    addFixed(aggregate, Stat.mana, manaPerMagic);
+    addFixed(aggregate, Stat.maxmana, manaPerMagic);
 
     log.debug("Spent point on Energy: {} -> {}, +{} mana", 
-        currentEnergy, currentEnergy + 1, manaPerMagic >> 6);
+        currentEnergy, currentEnergy + 1, manaPerMagic);
     return RESULT_SUCCESS;
   }
 
@@ -181,16 +186,17 @@ public class PlayerStatsManager {
    * @param stats 属性列表
    * @return 分配结果
    */
-  private int spendDexterity(StatListRef stats) {
+  private int spendDexterity(StatListRef stats, StatListRef aggregate) {
     int currentDex = getInt(stats, Stat.dexterity, 0);
     if (currentDex >= MAX_STAT_VALUE) {
       return RESULT_MAX_REACHED;
     }
 
     // 扣除属性点
-    stats.put(Stat.statpts, getInt(stats, Stat.statpts, 0) - 1);
+    spendPoint(stats, aggregate);
     // 增加敏捷
     stats.put(Stat.dexterity, currentDex + 1);
+    addInt(aggregate, Stat.dexterity, 1);
 
     log.debug("Spent point on Dexterity: {} -> {}", currentDex, currentDex + 1);
     return RESULT_SUCCESS;
@@ -205,33 +211,38 @@ public class PlayerStatsManager {
    * @param charStats 职业配置
    * @return 分配结果
    */
-  private int spendVitality(StatListRef stats, CharStats.Entry charStats) {
+  private int spendVitality(StatListRef stats, StatListRef aggregate, CharStats.Entry charStats) {
     int currentVit = getInt(stats, Stat.vitality, 0);
     if (currentVit >= MAX_STAT_VALUE) {
       return RESULT_MAX_REACHED;
     }
 
     // 扣除属性点
-    stats.put(Stat.statpts, getInt(stats, Stat.statpts, 0) - 1);
+    spendPoint(stats, aggregate);
     // 增加体力
     stats.put(Stat.vitality, currentVit + 1);
+    addInt(aggregate, Stat.vitality, 1);
 
     // 增加生命值（使用固定数 << 6）
-    int lifePerVit = charStats.LifePerVitality << 6;
-    int currentHp = getInt(stats, Stat.hitpoints, 0);
-    int currentMaxHp = getInt(stats, Stat.maxhp, 0);
+    float lifePerVit = charStats.LifePerVitality / 4f;
+    float currentHp = getFixed(stats, Stat.hitpoints, 0);
+    float currentMaxHp = getFixed(stats, Stat.maxhp, 0);
     stats.put(Stat.hitpoints, Math.min(currentHp + lifePerVit, currentMaxHp + lifePerVit));
     stats.put(Stat.maxhp, currentMaxHp + lifePerVit);
+    addFixed(aggregate, Stat.hitpoints, lifePerVit);
+    addFixed(aggregate, Stat.maxhp, lifePerVit);
 
     // 增加体力值
-    int stamPerVit = charStats.StaminaPerVitality << 6;
-    int currentStam = getInt(stats, Stat.stamina, 0);
-    int currentMaxStam = getInt(stats, Stat.maxstamina, 0);
+    float stamPerVit = charStats.StaminaPerVitality / 4f;
+    float currentStam = getFixed(stats, Stat.stamina, 0);
+    float currentMaxStam = getFixed(stats, Stat.maxstamina, 0);
     stats.put(Stat.stamina, Math.min(currentStam + stamPerVit, currentMaxStam + stamPerVit));
     stats.put(Stat.maxstamina, currentMaxStam + stamPerVit);
+    addFixed(aggregate, Stat.stamina, stamPerVit);
+    addFixed(aggregate, Stat.maxstamina, stamPerVit);
 
     log.debug("Spent point on Vitality: {} -> {}, +{} life, +{} stamina", 
-        currentVit, currentVit + 1, lifePerVit >> 6, stamPerVit >> 6);
+        currentVit, currentVit + 1, lifePerVit, stamPerVit);
     return RESULT_SUCCESS;
   }
 
@@ -410,5 +421,24 @@ public class PlayerStatsManager {
   private int getInt(StatListRef stats, short stat, int defaultValue) {
     StatRef ref = stats.get(stat);
     return ref != null ? ref.asInt() : defaultValue;
+  }
+
+  private float getFixed(StatListRef stats, short stat, float defaultValue) {
+    StatRef ref = stats.get(stat);
+    return ref != null ? ref.asFixed() : defaultValue;
+  }
+
+  private void spendPoint(StatListRef base, StatListRef aggregate) {
+    int remaining = getInt(base, Stat.statpts, 0) - 1;
+    base.put(Stat.statpts, remaining);
+    if (aggregate != null) aggregate.put(Stat.statpts, remaining);
+  }
+
+  private void addInt(StatListRef stats, short stat, int delta) {
+    if (stats != null) stats.put(stat, getInt(stats, stat, 0) + delta);
+  }
+
+  private void addFixed(StatListRef stats, short stat, float delta) {
+    if (stats != null) stats.put(stat, getFixed(stats, stat, 0) + delta);
   }
 }

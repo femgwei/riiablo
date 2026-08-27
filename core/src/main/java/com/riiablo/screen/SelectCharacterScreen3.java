@@ -50,8 +50,14 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
   private Table deleteConfirm;
   private Button btnDeleteYes;
   private Button btnDeleteNo;
+  private final boolean localHost;
 
   public SelectCharacterScreen3(final Socket socket) {
+    this(socket, false);
+  }
+
+  public SelectCharacterScreen3(final Socket socket, boolean localHost) {
+    this.localHost = localHost;
     load();
 
     stage = new Stage(Riiablo.viewport, Riiablo.batch);
@@ -63,10 +69,13 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
       @Override
       public void changed(ChangeEvent event, Actor actor) {
         if (actor == btnExit) {
+          socket.dispose();
+          if (localHost) HostedD2GS.stop();
           Riiablo.client.popScreen();
         } else if (actor == btnOK) {
           assert selected != null;
-          Riiablo.client.pushScreen(new NetworkedGameScreen(Riiablo.charData.clear().load(selected.getD2S()), socket));
+          Riiablo.client.pushScreen(new NetworkedGameScreen(
+              Riiablo.charData.clear().load(selected.getD2S()), socket, localHost));
         } else if (actor == btnCreateNewCharacter) {
           //Riiablo.client.pushScreen(new CreateCharacterScreen());
         } else if (actor == btnDeleteCharacter) {

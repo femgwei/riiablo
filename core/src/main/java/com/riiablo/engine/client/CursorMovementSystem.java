@@ -136,6 +136,9 @@ public class CursorMovementSystem extends BaseSystem {
         // Shift-click/right-click bypasses updateLeft(). Keep the same melee
         // range contract here so normal Attack cannot damage a distant target.
         // Bows and crossbows are the exception: their normal Attack is ranged.
+        if (!canStartCast(playerId)) {
+          return;
+        }
         if (targetId != Engine.INVALID_ENTITY && isMeleeNormalAttack(skillId)
             && !actioneer.isInMeleeRange(playerId, targetId, 3)) {
           Gdx.app.log(TAG, "[ATTACK_RANGE] rejected remote normal attack player=" + playerId
@@ -242,6 +245,10 @@ public class CursorMovementSystem extends BaseSystem {
           // Allow attack if in melee range or can throw
           if (inMeleeRange || canThrow) {
             requestCast(src, selectedSkillId, targetId, targetPos);
+            // A release is a single attack request.  Clear the interaction
+            // target immediately; retaining it caused every subsequent
+            // interruptible frame to replay the attack animation forever.
+            actioneer.moveTo(src, Engine.INVALID_ENTITY);
           }
         }
       }
@@ -258,6 +265,13 @@ public class CursorMovementSystem extends BaseSystem {
       targetServerId = mNetworked.get(targetId).serverId;
     }
     NetworkedActionSender.cast(socket, skillId, targetServerId, targetVec);
+  }
+
+  /** Returns whether a new cast may be submitted this frame. */
+  private boolean canStartCast(int entityId) {
+    return actioneer.canInterrupt(entityId)
+        && !actioneer.hasCasting(entityId)
+        && !actioneer.hasSequence(entityId);
   }
 
   private int getHovered(int src) {

@@ -15,10 +15,16 @@ public class NetworkedGameScreen extends GameScreen {
   private static final boolean DEBUG = true;
 
   private Socket socket;
+  private final boolean localHost;
 
   public NetworkedGameScreen(CharData charData, Socket socket) {
+    this(charData, socket, false);
+  }
+
+  public NetworkedGameScreen(CharData charData, Socket socket, boolean localHost) {
     super(charData, socket);
     this.socket = socket;
+    this.localHost = localHost;
   }
 
   @Override
@@ -35,5 +41,6 @@ public class NetworkedGameScreen extends GameScreen {
   public void dispose() {
     super.dispose();
     socket.dispose();
+    if (localHost) HostedD2GS.stop();
   }
 }
