@@ -69,6 +69,28 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
+  void monsterCurseKeyframeAppliesD2MooTargetState() {
+    MonStats.Entry row = Riiablo.files.monstats.get("dkmag1");
+    assertNotNull(row);
+    Skills.Entry skill = skillFor(row, 30);
+    assertNotNull(skill, "Doom Knight Mage must expose a curse skill");
+    Scenario scenario = new Scenario(row);
+    try {
+      int target = scenario.target(11, 10);
+      scenario.actioneer.cast(scenario.source, skill.Id, target, scenario.position(11, 10));
+      scenario.keyframe(scenario.source);
+      UnitStates states = scenario.world.getMapper(UnitStates.class).get(target);
+      assertTrue(states.stateList.hasState(StateId.DECREPIFY)
+          || states.stateList.hasState(StateId.AMPLIFYDAMAGE)
+          || states.stateList.hasState(StateId.WEAKEN));
+      System.out.println("[ACT1_ECS_CHAIN] skill=" + skill.skill + " curseTarget=" + target
+          + " stateCount=" + states.stateList.size() + " status=PASS");
+    } finally {
+      scenario.close();
+    }
+  }
+
+  @Test
   void maggotDownKeyframeHealsThroughActioneer() {
     MonStats.Entry row = Riiablo.files.monstats.get("sandmaggot1");
     Skills.Entry skill = Riiablo.files.skills.get(row.Skill2);
@@ -344,6 +366,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       world.getMapper(Position.class).create(id).position.set(x, y);
       if (!player) world.getMapper(Monster.class).create(id);
       world.getMapper(AttributesWrapper.class).create(id).attrs = attrs;
+      world.getMapper(UnitStates.class).create(id).init(id);
       return id;
     }
 
