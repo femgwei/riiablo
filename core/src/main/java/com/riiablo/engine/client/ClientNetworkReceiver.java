@@ -422,6 +422,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void NpcServiceResult(D2GS packet) {
     NpcServiceResult result = (NpcServiceResult) packet.data(new NpcServiceResult());
+    if (Riiablo.game != null && Riiablo.game.vendorPanel != null) {
+      Riiablo.game.vendorPanel.applyNetworkResult(result);
+    }
     Gdx.app.log(TAG, "[NPC_SERVICE] request=" + result.requestId()
         + " success=" + result.success() + " reason=" + result.reason()
         + " gold=" + result.gold() + " stockRevision=" + result.stockRevision()

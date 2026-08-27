@@ -216,11 +216,13 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   /** Sends an untrusted NPC intent; the D2GS resolves player, price and stock. */
   public long requestNpcService(int localNpcEntityId, byte service, byte operation,
                                 int itemId, int itemIndex, long stockRevision) {
-    if (socket == null || !mNetworked.has(localNpcEntityId)) return 0;
+    if (socket == null) return 0;
     long requestId = nextNpcRequestId++;
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int serverNpcId = mNetworked.has(localNpcEntityId)
+        ? mNetworked.get(localNpcEntityId).serverId : localNpcEntityId;
     int request = NpcServiceRequest.createNpcServiceRequest(builder, requestId,
-        mNetworked.get(localNpcEntityId).serverId, service, operation,
+        serverNpcId, service, operation,
         itemId, itemIndex, stockRevision);
     int root = D2GS.createD2GS(builder, D2GSData.NpcServiceRequest, request);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);

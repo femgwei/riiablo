@@ -168,34 +168,14 @@ public class Npc extends AI {
       menu.addItem(3334, new ClickListener() { // trade/repair
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          // TODO: create inventory component
-          Array<Item> items;
-          try {
-            items = vendors.generate(monstats.Id);
-          } catch (Throwable t) {
-            items = new Array<>(false, 0, Item.class);
-            log.error("Failed to generate vendor items: entityId={}, monsterId={}, error={}", 
-                entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
-          }
-          Riiablo.game.vendorPanel.config(VendorPanel.SMITHY, items);
-          Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
+          openVendor(VendorPanel.SMITHY, com.riiablo.net.packet.d2gs.NpcServiceType.TRADE);
         }
       });
     } else if (TRADERS.contains(entType)) {
       menu.addItem(3396, new ClickListener() { // trade
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          // TODO: create inventory component
-          Array<Item> items;
-          try {
-            items = vendors.generate(monstats.Id);
-          } catch (Throwable t) {
-            items = new Array<>(false, 0, Item.class);
-            log.error("Failed to generate vendor items: entityId={}, monsterId={}, error={}", 
-                entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
-          }
-          Riiablo.game.vendorPanel.config(VendorPanel.TRADER, items);
-          Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
+          openVendor(VendorPanel.TRADER, com.riiablo.net.packet.d2gs.NpcServiceType.TRADE);
         }
       });
     }
@@ -217,16 +197,7 @@ public class Npc extends AI {
       menu.addItem(3398, new ClickListener() { // gamble
         @Override
         public void clicked(InputEvent event, float x, float y) {
-          Array<Item> items;
-          try {
-            items = vendors.generateGamble();
-          } catch (Throwable t) {
-            items = new Array<>(false, 0, Item.class);
-            log.error("Failed to generate gamble items: entityId={}, monsterId={}, error={}",
-                entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
-          }
-          Riiablo.game.vendorPanel.config(VendorPanel.GAMBLER, items);
-          Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
+          openVendor(VendorPanel.GAMBLER, com.riiablo.net.packet.d2gs.NpcServiceType.GAMBLE);
         }
       });
     }
@@ -239,6 +210,25 @@ public class Npc extends AI {
         }
       })
       .build();
+  }
+
+  private void openVendor(int flags, byte service) {
+    if (Riiablo.game.vendorPanel.isNetworked()) {
+      Riiablo.game.vendorPanel.configNetwork(flags, entityId, service);
+      Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
+      return;
+    }
+    Array<Item> items;
+    try {
+      items = service == com.riiablo.net.packet.d2gs.NpcServiceType.GAMBLE
+          ? vendors.generateGamble() : vendors.generate(monstats.Id);
+    } catch (Throwable t) {
+      items = new Array<>(false, 0, Item.class);
+      log.error("Failed to generate vendor items: entityId={}, monsterId={}, error={}",
+          entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
+    }
+    Riiablo.game.vendorPanel.config(flags, items);
+    Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
   }
 
   @Override

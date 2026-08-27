@@ -16,9 +16,18 @@ public final class VendorPricing {
   public enum Transaction { BUY, SELL, REPAIR, GAMBLE }
   private VendorPricing() {}
 
-  public static int buyPrice(Item item) { return transactionCost(item, null, Transaction.BUY, 0); }
+  public static int buyPrice(Item item) {
+    if (item != null && item.hasFlag2(Item.ITEMFLAG2_INSTORE) && item.vendorPrice >= 0) return item.vendorPrice;
+    return transactionCost(item, null, Transaction.BUY, 0);
+  }
   public static int sellPrice(Item item) { return transactionCost(item, null, Transaction.SELL, 0); }
   public static int gamblePrice(Item item) { return transactionCost(item, null, Transaction.GAMBLE, 0); }
+  public static int buyPrice(Item item, Npc.Entry npc, CharData character) {
+    return transactionCost(item, npc, Transaction.BUY, reducedPrices(character));
+  }
+  public static int sellPrice(Item item, Npc.Entry npc, CharData character, int difficulty) {
+    return transactionCost(item, npc, Transaction.SELL, reducedPrices(character), difficulty);
+  }
 
   /** Calculates cost using Items.txt/Npc.txt values. reducedPrices is a percent. */
   public static int transactionCost(Item item, Npc.Entry npc, Transaction transaction, int reducedPrices) {
@@ -126,8 +135,11 @@ public final class VendorPricing {
   private static int safeMultiply(int a, int b) { long result = (long) a * b; return result > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result; }
 
   public static boolean buy(CharData character, Item item) {
+    return buy(character, item, null);
+  }
+  public static boolean buy(CharData character, Item item, Npc.Entry npc) {
     if (character == null || item == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return false;
-    int price = buyPrice(item);
+    int price = buyPrice(item, npc, character);
     if (!canSpend(character, price)) return false;
     ItemData items = character.getItems();
     if (!items.addToInventory(item)) return false;
@@ -136,12 +148,15 @@ public final class VendorPricing {
     return true;
   }
   public static boolean sell(CharData character, int itemIndex) {
+    return sell(character, itemIndex, null, 0);
+  }
+  public static boolean sell(CharData character, int itemIndex, Npc.Entry npc, int difficulty) {
     if (character == null) return false;
     ItemData items = character.getItems();
     if (itemIndex < 0 || itemIndex >= items.getItems().size) return false;
     Item item = items.getItem(itemIndex);
     if (item == null || item.location != Location.STORED || item.storeLoc != StoreLoc.INVENTORY) return false;
-    int value = sellPrice(item);
+    int value = sellPrice(item, npc, character, difficulty);
     if (!items.removeOwnedItem(itemIndex)) return false;
     addGold(character, value);
     return true;
@@ -152,6 +167,15 @@ public final class VendorPricing {
   }
   public static boolean chargeGold(CharData character, int amount) { if (character == null || amount < 0 || !canSpend(character, amount)) return false; spend(character, amount); return true; }
   public static void grantGold(CharData character, int amount) { if (character != null && amount > 0) addGold(character, amount); }
+  /** Applies an authoritative wallet snapshot received from D2GS. */
+  public static void setGoldSnapshot(CharData character, int carried, int bank) {
+    if (character == null) return;
+    setGold(character, Math.max(0, carried), Math.max(0, bank));
+  }
+  public static int reducedPrices(CharData character) {
+    return character == null || character.getStats() == null ? 0
+        : Math.max(0, Math.min(99, value(character.getStats().get(Stat.item_reducedprices))));
+  }
   private static boolean canSpend(CharData character, int amount) { return amount >= 0 && availableGold(character) >= amount; }
   private static void spend(CharData character, int amount) { int carried = Math.max(0, value(character.getStats().get(Stat.gold))); int fromCarried = Math.min(carried, amount); setGold(character, carried - fromCarried, Math.max(0, value(character.getStats().get(Stat.goldbank))) - (amount - fromCarried)); }
   private static void addGold(CharData character, int amount) { int carried = Math.max(0, value(character.getStats().get(Stat.gold))); setGold(character, Math.min(MAX_GOLD, carried + Math.max(0, amount)), Math.max(0, value(character.getStats().get(Stat.goldbank)))); }

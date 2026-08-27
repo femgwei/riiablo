@@ -157,6 +157,7 @@ waypoints, caves, quest rewards and collision boundaries.
   - [ ] Hire-selection panel, resurrection dialog and restored-save entity recreation.
   - [x] Authoritative multiplayer NPC-service request/result/stock protocol and D2GS validation boundary.
     - [x] Server-owned vendor stock snapshots and atomic BUY/SELL mutation.
+      - [x] Network VendorPanel consumes server stock/prices and commits wallet/item changes on acknowledgement.
       - [ ] Request idempotency cache and reconnect/session recovery.
 - [ ] Phase 5: A1Q6 and Act completion
 - [ ] Phase 6: remaining Act 1 quests

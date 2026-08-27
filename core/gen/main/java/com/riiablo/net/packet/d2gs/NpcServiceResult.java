@@ -34,6 +34,7 @@ public final class NpcServiceResult extends Table {
   public int stockLength() { int o = __offset(18); return o != 0 ? __vector_len(o) : 0; }
   public com.riiablo.net.packet.d2gs.NpcServiceStock.Vector stockVector() { return stockVector(new com.riiablo.net.packet.d2gs.NpcServiceStock.Vector()); }
   public com.riiablo.net.packet.d2gs.NpcServiceStock.Vector stockVector(com.riiablo.net.packet.d2gs.NpcServiceStock.Vector obj) { int o = __offset(18); return o != 0 ? obj.__assign(__vector(o), 4, bb) : null; }
+  public long goldBank() { int o = __offset(20); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
 
   public static int createNpcServiceResult(FlatBufferBuilder builder,
       long requestId,
@@ -43,8 +44,10 @@ public final class NpcServiceResult extends Table {
       long stockRevision,
       int itemId,
       int itemDataOffset,
-      int stockOffset) {
-    builder.startTable(8);
+      int stockOffset,
+      long goldBank) {
+    builder.startTable(9);
+    NpcServiceResult.addGoldBank(builder, goldBank);
     NpcServiceResult.addStock(builder, stockOffset);
     NpcServiceResult.addItemData(builder, itemDataOffset);
     NpcServiceResult.addItemId(builder, itemId);
@@ -56,7 +59,7 @@ public final class NpcServiceResult extends Table {
     return NpcServiceResult.endNpcServiceResult(builder);
   }
 
-  public static void startNpcServiceResult(FlatBufferBuilder builder) { builder.startTable(8); }
+  public static void startNpcServiceResult(FlatBufferBuilder builder) { builder.startTable(9); }
   public static void addRequestId(FlatBufferBuilder builder, long requestId) { builder.addInt(0, (int)requestId, (int)0L); }
   public static void addSuccess(FlatBufferBuilder builder, boolean success) { builder.addBoolean(1, success, false); }
   public static void addReason(FlatBufferBuilder builder, int reasonOffset) { builder.addOffset(2, reasonOffset, 0); }
@@ -70,6 +73,7 @@ public final class NpcServiceResult extends Table {
   public static void addStock(FlatBufferBuilder builder, int stockOffset) { builder.addOffset(7, stockOffset, 0); }
   public static int createStockVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]); return builder.endVector(); }
   public static void startStockVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addGoldBank(FlatBufferBuilder builder, long goldBank) { builder.addInt(8, (int)goldBank, (int)0L); }
   public static int endNpcServiceResult(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

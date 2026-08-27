@@ -107,6 +107,8 @@ public class Item {
   // Basic fields
   public int         flags;
   public int         flags2; // riiablo-specific
+  /** Server supplied display price for an in-store network snapshot. */
+  public int         vendorPrice;
   public int         version;
   public Location    location;
   public BodyLoc     bodyLoc;
@@ -154,6 +156,7 @@ public class Item {
 
   void reset() {
     flags         = 0;
+    vendorPrice   = -1;
     version       = 0;
     location      = Location.STORED;
     bodyLoc       = BodyLoc.NONE;

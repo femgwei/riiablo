@@ -33,6 +33,12 @@ updates the authenticated player's wallet. Unsupported operations return
 `OPERATION_NOT_IMPLEMENTED` instead of falling back to unsafe client-side
 mutation.
 
+Network clients open `VendorPanel` from the server stock snapshot and keep one
+pending mutation at a time. Client inventory and the carried/bank gold split
+are changed only after a successful result; rejection rebuilds the panel from
+the authoritative snapshot. Local single-player vendors keep their existing
+direct transaction path.
+
 ## Idempotency and revisions
 
 The server must cache the last completed request ids per connection/session.

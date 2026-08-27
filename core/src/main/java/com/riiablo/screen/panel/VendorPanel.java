@@ -13,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.net.Socket;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
@@ -23,6 +24,13 @@ import com.riiablo.codec.excel.Inventory;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.item.Item;
 import com.riiablo.item.VendorPricing;
+import com.riiablo.item.ItemReader;
+import com.riiablo.io.ByteInput;
+import com.riiablo.util.BufferUtils;
+import com.riiablo.engine.client.ClientNetworkSynchronizer;
+import com.riiablo.net.packet.d2gs.NpcServiceOperation;
+import com.riiablo.net.packet.d2gs.NpcServiceResult;
+import com.riiablo.net.packet.d2gs.NpcServiceStock;
 import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
@@ -78,6 +86,18 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private Label goldLabel;
   private boolean selling;
   private boolean repairing;
+  @com.artemis.annotations.Wire(name = "client.socket", failOnNull = false)
+  private Socket clientSocket;
+  @com.artemis.annotations.Wire(failOnNull = false)
+  private ClientNetworkSynchronizer networkSynchronizer;
+  private int networkFlags;
+  private int networkNpcEntityId;
+  private byte networkService;
+  private long networkStockRevision;
+  private final ItemReader networkItemReader = new ItemReader();
+  private long pendingRequestId;
+  private byte pendingOperation;
+  private int pendingItemIndex = -1;
 
   public VendorPanel() {
     Riiablo.assets.load(buysellDescriptor);
@@ -290,6 +310,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     if (visible) {
       Riiablo.game.setRightPanel(Riiablo.game.inventoryPanel);
     } else {
+      networkFlags = 0;
       if (buttonGroup != null && buttonGroup.getCheckedIndex() >= 0) {
         Riiablo.cursor.resetCursor();
       }
@@ -297,6 +318,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   }
 
   public void config(int flags, Array<Item> items) {
+    networkFlags = 0;
     selling = false;
     buttonGroup.uncheckAll();
     btnBuy.setVisible((flags & BUY) == BUY);
@@ -336,6 +358,75 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     setTab(TAB_MISC);
   }
 
+  /** Opens a server-owned vendor session. Local inventory generation is skipped. */
+  public void configNetwork(int flags, int npcEntityId, byte service) {
+    config(flags, new Array<Item>(false, 0, Item.class));
+    networkFlags = flags;
+    networkNpcEntityId = npcEntityId;
+    networkService = service;
+    networkStockRevision = 0;
+    if (networkSynchronizer != null) {
+      pendingRequestId = networkSynchronizer.requestNpcService(npcEntityId, service, NpcServiceOperation.OPEN,
+          0, -1, 0);
+      pendingOperation = NpcServiceOperation.OPEN;
+    } else {
+      Gdx.app.error(TAG, "Network vendor requested without ClientNetworkSynchronizer");
+    }
+  }
+
+  public boolean isNetworked() {
+    return clientSocket != null && networkSynchronizer != null;
+  }
+
+  /** Applies an authoritative OPEN/BUY/SELL response to the visible vendor UI. */
+  public void applyNetworkResult(NpcServiceResult result) {
+    if (result == null) return;
+    VendorPricing.setGoldSnapshot(Riiablo.charData,
+        (int) Math.min(Integer.MAX_VALUE, result.gold()),
+        (int) Math.min(Integer.MAX_VALUE, result.goldBank()));
+    if (result.requestId() == pendingRequestId) {
+      if (result.success() && pendingOperation == NpcServiceOperation.BUY
+          && result.itemDataLength() > 0) {
+        Item purchased = decodeItem(result.itemId(), result.itemDataAsByteBuffer(), false);
+        if (purchased != null && !Riiablo.charData.getItems().contains(purchased)) {
+          Riiablo.charData.getItems().addToInventory(purchased);
+        }
+      } else if (result.success() && pendingOperation == NpcServiceOperation.SELL) {
+        Riiablo.charData.getItems().removeOwnedItem(pendingItemIndex);
+      }
+      pendingRequestId = 0;
+      pendingItemIndex = -1;
+    }
+    if (networkFlags == 0) return;
+    networkStockRevision = result.stockRevision();
+    Array<Item> stock = new Array<>(true, result.stockLength(), Item.class);
+    for (int i = 0; i < result.stockLength(); i++) {
+      NpcServiceStock entry = result.stock(i);
+      if (entry == null || entry.itemDataLength() == 0) continue;
+      try {
+        Item item = decodeItem(entry.itemId(), entry.itemDataAsByteBuffer(), true);
+        if (item != null) item.vendorPrice = (int) Math.min(Integer.MAX_VALUE, entry.price());
+        if (item != null) stock.add(item);
+      } catch (Throwable t) {
+        Gdx.app.error(TAG, "Failed to decode server vendor item " + entry.itemId(), t);
+      }
+    }
+    int flags = networkFlags;
+    config(flags, stock);
+    networkFlags = flags;
+    if (!result.success()) Gdx.app.log(TAG, "[NPC_SERVICE] " + result.reason());
+  }
+
+  private Item decodeItem(int itemId, java.nio.ByteBuffer data, boolean inStore) {
+    if (data == null) return null;
+    byte[] bytes = BufferUtils.readRemaining(data);
+    Item item = networkItemReader.readItem(ByteInput.wrap(bytes));
+    item.id = itemId;
+    if (inStore) item.flags2 |= Item.ITEMFLAG2_INSTORE;
+    item.load();
+    return item;
+  }
+
   public boolean isSelling() {
     return isVisible() && selling;
   }
@@ -371,6 +462,14 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   /** Called by the inventory grid when the Sell mode is active. */
   public boolean sellItem(int itemIndex) {
     if (!isSelling() || Riiablo.charData == null) return false;
+    if (networkFlags != 0 && networkSynchronizer != null) {
+      if (pendingRequestId != 0) return false;
+      pendingRequestId = networkSynchronizer.requestNpcService(networkNpcEntityId, networkService,
+          NpcServiceOperation.SELL, 0, itemIndex, networkStockRevision);
+      pendingOperation = NpcServiceOperation.SELL;
+      pendingItemIndex = itemIndex;
+      return false;
+    }
     Item item = itemIndex >= 0 && itemIndex < Riiablo.charData.getItems().getItems().size
         ? Riiablo.charData.getItems().getItem(itemIndex) : null;
     int value = VendorPricing.sellPrice(item);
@@ -384,6 +483,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   private boolean purchase(Item item) {
     if (selling || Riiablo.charData == null) return false;
+    if (networkFlags != 0 && networkSynchronizer != null) {
+      if (pendingRequestId != 0) return false;
+      pendingRequestId = networkSynchronizer.requestNpcService(networkNpcEntityId, networkService,
+          NpcServiceOperation.BUY, item.id, -1, networkStockRevision);
+      pendingOperation = NpcServiceOperation.BUY;
+      return false;
+    }
     int value = VendorPricing.buyPrice(item);
     boolean bought = VendorPricing.buy(Riiablo.charData, item);
     if (bought) {

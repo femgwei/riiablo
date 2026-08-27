@@ -343,7 +343,16 @@ public class D2GS extends ApplicationAdapter {
       public void run() {
         while (!kill) {
           Gdx.app.log(TAG, "waiting...");
-          Socket socket = server.accept(null);
+          Socket socket;
+          try {
+            socket = server.accept(null);
+          } catch (Throwable t) {
+            // dispose() closes the listening socket to wake accept(). That is
+            // an ordinary shutdown path, not a server failure.
+            if (kill) break;
+            Gdx.app.error(TAG, "Unable to accept client", t);
+            continue;
+          }
           Gdx.app.log(TAG, "connection from " + socket.getRemoteAddress());
           if (numClients >= MAX_CLIENTS) {
             // TODO: send server is full message
@@ -567,16 +576,19 @@ public class D2GS extends ApplicationAdapter {
 
   private void Disconnect(int id) {
     int entityId = player.get(id, Engine.INVALID_ENTITY);
-    assert entityId != Engine.INVALID_ENTITY;
-    FlatBufferBuilder builder = new FlatBufferBuilder();
-    int disconnectOffset = Disconnect.createDisconnect(builder, entityId);
-    int offset = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder, D2GSData.Disconnect, disconnectOffset);
-    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, offset);
-    Packet broadcast = Packet.obtain(~(1 << id), builder.dataBuffer());
-    outPackets.offer(broadcast);
+    if (entityId != Engine.INVALID_ENTITY) {
+      FlatBufferBuilder builder = new FlatBufferBuilder();
+      int disconnectOffset = Disconnect.createDisconnect(builder, entityId);
+      int offset = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder, D2GSData.Disconnect, disconnectOffset);
+      com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, offset);
+      Packet broadcast = Packet.obtain(~(1 << id), builder.dataBuffer());
+      outPackets.offer(broadcast);
 
-    world.delete(entityId);
-    player.remove(id, Engine.INVALID_ENTITY);
+      world.delete(entityId);
+      player.remove(id, Engine.INVALID_ENTITY);
+    } else {
+      Gdx.app.log(TAG, "client " + id + " disconnected before character handshake");
+    }
     synchronized (clients) {
       clients[id] = null;
       numClients--;
@@ -618,8 +630,14 @@ public class D2GS extends ApplicationAdapter {
     }
     com.riiablo.engine.server.component.Player playerComponent =
         world.getMapper(com.riiablo.engine.server.component.Player.class).get(entityId);
+    // Normal attack is a native D2 action (skill id 0), not a learned row in
+    // the character's skill table.  Remote CharData instances can therefore
+    // legitimately report zero for getSkill(attack) until their local item
+    // listeners have rebuilt the derived skill map.  Keep the server
+    // authoritative, but accept this built-in action explicitly.
+    boolean builtInSkill = request.skillId() == com.riiablo.skill.SkillCodes.attack;
     if (playerComponent == null || playerComponent.data == null
-        || playerComponent.data.getSkill(request.skillId()) <= 0) {
+        || (!builtInSkill && playerComponent.data.getSkill(request.skillId()) <= 0)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
           + " skill=" + request.skillId() + " reason=skill_not_owned");
       return;
@@ -710,7 +728,8 @@ public class D2GS extends ApplicationAdapter {
       try {
         session = npcVendors.open(npcId, npc.monstats.Id,
             world.getSystem(VendorGenerator.class),
-            service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.GAMBLE);
+            service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.GAMBLE,
+            Riiablo.files.Npc.get(npc.monstats.Id), diff);
       } catch (Throwable t) {
         reason = "STOCK_GENERATION_FAILED";
         Gdx.app.error(TAG, "[NPC_SERVICE] stock generation failed for npc=" + npcId, t);
@@ -733,7 +752,7 @@ public class D2GS extends ApplicationAdapter {
         }
       } else if (reason == null && operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.SELL) {
         if (playerComponent == null || playerComponent.data == null) reason = "PLAYER_NOT_FOUND";
-        else if (npcVendors.sell(playerComponent.data, request.itemIndex()) <= 0) reason = "SELL_REJECTED";
+        else if (npcVendors.sell(session, playerComponent.data, request.itemIndex()) <= 0) reason = "SELL_REJECTED";
       } else if (reason == null && operation != com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
         reason = "OPERATION_NOT_IMPLEMENTED";
       }
@@ -741,17 +760,18 @@ public class D2GS extends ApplicationAdapter {
       reason = "OPERATION_NOT_IMPLEMENTED";
     }
     boolean success = reason == null;
-    int gold = playerComponent == null || playerComponent.data == null ? 0
-        : com.riiablo.item.VendorPricing.availableGold(playerComponent.data);
-    sendNpcServiceResult(packet.id, request.requestId(), success, reason, gold,
-        session, resultItemId, resultItemData);
+    int gold = wallet(playerComponent, com.riiablo.attributes.Stat.gold);
+    int goldBank = wallet(playerComponent, com.riiablo.attributes.Stat.goldbank);
+    sendNpcServiceResult(packet.id, request.requestId(), success, reason, gold, goldBank,
+        session, resultItemId, resultItemData, playerComponent == null ? null : playerComponent.data);
     Gdx.app.log(TAG, "[NPC_SERVICE] player=" + playerId + " npc=" + npcId
         + " service=" + service + " operation=" + operation + " result="
         + (success ? "OK" : reason));
   }
 
-  private void sendNpcServiceResult(int clientId, long requestId, boolean success, String reason, int gold,
-                                     NpcVendorSessionManager.Session session, int itemId, byte[] itemData) {
+  private void sendNpcServiceResult(int clientId, long requestId, boolean success, String reason,
+                                     int gold, int goldBank, NpcVendorSessionManager.Session session,
+                                     int itemId, byte[] itemData, CharData character) {
     FlatBufferBuilder builder = new FlatBufferBuilder(4096);
     int reasonOffset = builder.createString(reason == null ? "" : reason);
     int itemDataOffset = itemData == null ? 0 : NpcServiceResult.createItemDataVector(builder, itemData);
@@ -763,17 +783,24 @@ public class D2GS extends ApplicationAdapter {
         byte[] data = serializeItem(item);
         int dataOffset = NpcServiceStock.createItemDataVector(builder, data);
         stockEntries[i] = NpcServiceStock.createNpcServiceStock(builder, item.id, dataOffset,
-            com.riiablo.item.VendorPricing.buyPrice(item));
+            com.riiablo.item.VendorPricing.buyPrice(item, session.pricing, character));
       }
       stockOffset = NpcServiceResult.createStockVector(builder, stockEntries);
     }
     int resultOffset = NpcServiceResult.createNpcServiceResult(
         builder, requestId, success, reasonOffset, Math.max(0, gold),
-        session == null ? 0 : session.revision, itemId, itemDataOffset, stockOffset);
+        session == null ? 0 : session.revision, itemId, itemDataOffset, stockOffset,
+        Math.max(0, goldBank));
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.NpcServiceResult, resultOffset);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     outPackets.offer(Packet.obtain(1 << clientId, builder.dataBuffer()));
+  }
+
+  private static int wallet(com.riiablo.engine.server.component.Player player, short stat) {
+    if (player == null || player.data == null || player.data.getStats() == null
+        || player.data.getStats().get(stat) == null) return 0;
+    return Math.max(0, player.data.getStats().get(stat).asInt());
   }
 
   private static byte[] serializeItem(com.riiablo.item.Item item) {
