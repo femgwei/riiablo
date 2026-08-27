@@ -175,8 +175,6 @@ public final class D2GSHeadlessClient {
          attempt++) {
       Snapshot target = monsters.get(selected.entityId);
       if (target == null || !target.hasPosition) break;
-      // Give authoritative missiles enough flight time to be synchronized
-      // before collision deletes them. Melee smoke tests remain point-blank.
       float playerX = target.x - (config.requireMissile ? 6f : 1f);
       float playerY = target.y;
       send(output, positionPacket(playerId, playerX, playerY));

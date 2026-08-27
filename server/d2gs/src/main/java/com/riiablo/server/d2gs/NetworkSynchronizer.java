@@ -67,8 +67,12 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   protected void process(int entityId) {
     FlatBufferBuilder builder = sync(new FlatBufferBuilder(0), entityId);
-    int id = players.findKey(entityId, -1); // TODO: replace with component referencing player id
-    Packet packet = Packet.obtain(id != -1 ? ~(1 << id) : 0xFFFFFFFF, builder.dataBuffer());
+    // The server is authoritative for player vitals, death, progression and
+    // movement correction. Excluding the owning connection meant a client
+    // could see every other entity update while never receiving its own HP=0
+    // or death mode. Echo every authoritative entity snapshot to all clients;
+    // input packets remain intents and are never mirrored as trusted state.
+    Packet packet = Packet.obtain(0xFFFFFFFF, builder.dataBuffer());
     boolean success = outPackets.offer(packet);
     assert success;
   }

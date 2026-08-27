@@ -41,6 +41,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
@@ -86,6 +87,7 @@ import com.riiablo.util.ArrayUtils;
 import com.riiablo.util.BufferUtils;
 import com.riiablo.util.DebugUtils;
 import com.riiablo.widget.TextArea;
+import net.mostlyoriginal.api.event.common.EventSystem;
 
 @All
 public class ClientNetworkReceiver extends IntervalSystem {
@@ -112,6 +114,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected NetworkIdManager syncIds;
   protected ItemManager items;
   protected Pinger pinger;
+  protected EventSystem events;
 
   @Wire(name="client.socket")
   protected Socket socket;
@@ -578,6 +581,15 @@ public class ClientNetworkReceiver extends IntervalSystem {
           "[VITALS_SYNC] entity=%d hp=%.3f oldHp=%.3f maxHp=%.3f mana=%.3f maxMana=%.3f dead=%s",
           entityId, hitpoints, oldHitpoints, data.maxHitpoints(), data.mana(),
           data.maxMana(), data.dead()));
+    }
+    if (oldHitpoints > 0f && data.dead()) {
+      Gdx.app.log(TAG, String.format(
+          "[PLAYER_DEATH_SYNC] phase=client entity=%d hp=%.3f dispatch=DeathEvent",
+          entityId, hitpoints));
+      // VitalsP currently has no killer id. Use the victim as a safe local
+      // sentinel; presentation handlers only need the victim and this avoids
+      // negative entity-id mapper lookups in legacy subscribers.
+      events.dispatch(DeathEvent.obtain(entityId, entityId));
     }
   }
 

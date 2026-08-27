@@ -59,6 +59,7 @@ import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerSkillSystem;
+import com.riiablo.engine.server.ServerPlayerDeathSystem;
 import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.attributes.ExperienceManager;
@@ -300,6 +301,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new NativeShrineSystem())
 
         .with(new Actioneer())
+        .with(new ServerPlayerDeathSystem())
         .with(new ServerSkillSystem())
         .with(new DeathRewardSystem())
         .with(new SequenceHandler())
