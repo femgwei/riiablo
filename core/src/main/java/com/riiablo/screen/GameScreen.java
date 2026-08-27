@@ -49,6 +49,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.client.AnimationStepper;
 import com.riiablo.engine.client.Act1QuestDialogController;
 import com.riiablo.engine.client.Act1QuestIndicatorSystem;
+import com.riiablo.engine.client.ActTransitionSystem;
 import com.riiablo.engine.client.AutoInteracter;
 import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.ClientEntityFactory;
@@ -721,7 +722,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // Local games own the authoritative combat world.  Dedicated servers
       // already register this system; network clients must not create a
       // duplicate missile for the same SkillDoEvent.
-      builder.with(new Act1QuestDialogController(), new Act1QuestIndicatorSystem());
+      builder.with(new Act1QuestDialogController(), new Act1QuestIndicatorSystem(),
+          new ActTransitionSystem());
       builder.with(new Act1QuestSystem());
       builder.with(new NativeMercenaryRewardSystem());
       builder.with(new NativeCountessRewardSystem());

@@ -18,6 +18,7 @@ import com.riiablo.engine.server.quest.Act1AndarielQuest;
 import com.riiablo.engine.server.quest.Act1BloodRavenQuest;
 import com.riiablo.engine.server.quest.Act1DenOfEvilQuest;
 import com.riiablo.engine.server.quest.Act1MalusQuest;
+import com.riiablo.engine.server.quest.Act1CainQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.save.CharData;
@@ -87,6 +88,12 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
       case MonsterType.WARRIV:
         record = quests[Act1AndarielQuest.RECORD];
         return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+      case MonsterType.DECKARDCAIN:
+      case MonsterType.DECKARDCAIN_TOWN:
+        record = quests[Act1CainQuest.RECORD];
+        return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+            || (!NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
+                && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
       default:
         return false;
     }

@@ -165,6 +165,12 @@ public class Act1QuestSystem extends PassiveSystem {
       onCainTownMessage(event, player);
       return;
     }
+    if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN) {
+      if (event.messageIndex == Act1CainQuest.MESSAGE_INIT) {
+        updateAndarielRecord(player.data, Act1AndarielQuest::start, "cain-act1q6-init");
+      }
+      return;
+    }
     if (npc.monstats.hcIdx == MonsterType.WARRIV) {
       onWarrivMessage(event, player);
       return;
@@ -183,6 +189,8 @@ public class Act1QuestSystem extends PassiveSystem {
 
     if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_INIT) {
       updateRecord(player.data, Act1DenOfEvilQuest::start, "akara-init-message");
+    } else if (event.messageIndex == Act1CainQuest.MESSAGE_INIT) {
+      updateCainRecord(player.data, Act1CainQuest::start, "akara-act1q4-init");
     } else if (event.messageIndex == Act1DenOfEvilQuest.MESSAGE_SUCCESS) {
       short record = getRecord(player.data);
       if (!Act1DenOfEvilQuest.canClaimReward(record)) return;

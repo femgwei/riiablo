@@ -19,6 +19,7 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Quests;
+import com.riiablo.engine.client.Act1QuestPresentation;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.AnimationWrapper;
@@ -137,8 +138,10 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     final Tab[] tabs = new Tab[5];
     for (int i = 0, q = 0; i < tabs.length; i++) {
       Tab tab = tabs[i] = new Tab();
+      int orderInAct = 0;
       for (Quests.Entry quest : quests[i]) {
-        tab.addQuest(quest, q++);
+        tab.addQuest(quest, q++, i == 0 ? orderInAct + 1 : -1);
+        orderInAct++;
       }
 
       tab.pack();
@@ -187,8 +190,11 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     btnPlayQuest.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        if (activeTab != null) {
-          activeTab.questDialog.play("akara_act1_q1_init");
+        if (activeTab != null && activeTab.selected != null) {
+          String speech = activeTab.selected.replaySpeech();
+          if (speech != null && Riiablo.files.speech.get(speech) != null) {
+            activeTab.questDialog.play(speech);
+          }
         }
       }
     });
@@ -200,6 +206,12 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
   public void draw(Batch batch, float parentAlpha) {
     batch.draw(questbackground, getX(), getY());
     super.draw(batch, parentAlpha);
+  }
+
+  @Override
+  public void act(float delta) {
+    super.act(delta);
+    if (activeTab != null) activeTab.refresh();
   }
 
   @Override
@@ -235,7 +247,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
       questDialog = new DialogScroller(new DialogScroller.DialogCompletionListener() {
         @Override
         public void onCompleted(DialogScroller d) {
-          questDialog.setTextId(selected.quest.qsts[0]);
+          if (selected != null) setQuestText(selected);
         }
       });
       add(questDialog).grow().row();
@@ -259,16 +271,30 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
         quest.setSelected(true);
         questName.setText(Riiablo.string.lookup(quest.getName()));
         questDialog.dispose();
-        questDialog.setTextId(quest.quest.qsts[0]);
+        setQuestText(quest);
       }
     }
 
-    void addQuest(Quests.Entry quest, int q) {
-      QuestButton button = new QuestButton(this, quest, q);
+    void addQuest(Quests.Entry quest, int q, int nativeRecordIndex) {
+      QuestButton button = new QuestButton(this, quest, q, nativeRecordIndex);
       questIcons.add(button);
       if (questIcons.getCells().size % QUEST_COLS == 0) {
         questIcons.row();
       }
+    }
+
+    void refresh() {
+      for (com.badlogic.gdx.scenes.scene2d.Actor actor : questIcons.getChildren()) {
+        if (actor instanceof QuestButton) ((QuestButton) actor).refresh();
+      }
+      if (selected != null && selected.consumeRecordChanged()) setQuestText(selected);
+    }
+
+    private void setQuestText(QuestButton quest) {
+      String textId = quest.textId();
+      questDialog.dispose();
+      if (textId == null) questDialog.setText("");
+      else questDialog.setTextId(textId);
     }
   }
 
@@ -280,19 +306,25 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     final Quests.Entry quest;
     final Tab parent;
     final Animation anim;
+    final DCWrapper completed;
     final DCWrapper overlay;
     final ClickListener clickListener;
+    final int nativeRecordIndex;
+    short lastRecord = Short.MIN_VALUE;
+    boolean recordChanged;
 
-    QuestButton(Tab tab, Quests.Entry quest, int q) {
+    QuestButton(Tab tab, Quests.Entry quest, int q, int nativeRecordIndex) {
       this.parent = tab;
       this.quest = quest;
+      this.nativeRecordIndex = nativeRecordIndex;
       setName(quest.qstr);
 
-      DCWrapper background = new DCWrapper();
-      background.setDrawable(questdone.getTexture(quest.questdone));
-      background.setPosition(5, 4);
-      background.setSize(72, 86);
-      addActor(background);
+      completed = new DCWrapper();
+      completed.setDrawable(questdone.getTexture(quest.questdone));
+      completed.setPosition(5, 4);
+      completed.setSize(72, 86);
+      completed.setVisible(false);
+      addActor(completed);
 
       anim = Animation.newAnimation(questicons[q]);
       anim.setClamp(FRAME_UP, FRAME_DOWN);
@@ -312,6 +344,7 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
           parent.setSelected(QuestsPanel.QuestButton.this);
         }
       });
+      refresh();
     }
 
     void setSelected(boolean b) {
@@ -321,11 +354,53 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     @Override
     public void act(float delta) {
       super.act(delta);
-      if (clickListener.isVisualPressed()) {
+      if (nativeRecordIndex > 0 && !isAvailable()) {
+        anim.setFrame(FRAME_DISABLED);
+      } else if (clickListener.isVisualPressed()) {
         anim.setFrame(FRAME_DOWN);
       } else {
         anim.setFrame(FRAME_UP);
       }
+    }
+
+    void refresh() {
+      if (nativeRecordIndex <= 0 || Riiablo.charData == null) return;
+      short record = record();
+      if (record != lastRecord) {
+        lastRecord = record;
+        recordChanged = true;
+      }
+      boolean available = isAvailable();
+      setTouchable(available ? Touchable.enabled : Touchable.disabled);
+      completed.setVisible(Act1QuestPresentation.isComplete(record));
+    }
+
+    boolean consumeRecordChanged() {
+      boolean changed = recordChanged;
+      recordChanged = false;
+      return changed;
+    }
+
+    boolean isAvailable() {
+      return nativeRecordIndex <= 0
+          || Act1QuestPresentation.isAvailable(nativeRecordIndex, record());
+    }
+
+    short record() {
+      short[] records = Riiablo.charData.getQuests(Riiablo.ACT1);
+      return nativeRecordIndex > 0 && nativeRecordIndex < records.length
+          ? records[nativeRecordIndex] : 0;
+    }
+
+    String textId() {
+      return nativeRecordIndex > 0
+          ? Act1QuestPresentation.textId(quest, record())
+          : quest.qsts[0];
+    }
+
+    String replaySpeech() {
+      return nativeRecordIndex > 0
+          ? Act1QuestPresentation.replaySpeech(nativeRecordIndex, record()) : null;
     }
   }
 }

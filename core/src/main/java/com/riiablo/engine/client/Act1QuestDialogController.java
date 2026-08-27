@@ -13,6 +13,7 @@ import com.riiablo.engine.server.quest.Act1DenOfEvilQuest;
 import com.riiablo.engine.server.quest.Act1BloodRavenQuest;
 import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.engine.server.quest.Act1AndarielQuest;
+import com.riiablo.engine.server.quest.Act1CainQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
@@ -50,8 +51,20 @@ public class Act1QuestDialogController extends PassiveSystem {
     String speech;
     if (npc.monstats.hcIdx == MonsterType.AKARA) {
       short record = data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
-      messageIndex = Act1DenOfEvilQuest.selectAkaraMessage(record);
-      speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
+      short cainRecord = data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD];
+      if (Act1QuestPresentation.isComplete(record)) {
+        messageIndex = NativeQuestRecord.has(cainRecord, NativeQuestRecord.REWARD_PENDING)
+            ? Act1CainQuest.MESSAGE_REWARD
+            : NativeQuestRecord.has(cainRecord, NativeQuestRecord.STARTED)
+                ? Act1CainQuest.MESSAGE_EARLY : Act1CainQuest.MESSAGE_INIT;
+        speech = NativeQuestRecord.has(cainRecord, NativeQuestRecord.REWARD_PENDING)
+            ? "akara_act1_q4_success"
+            : NativeQuestRecord.has(cainRecord, NativeQuestRecord.STARTED)
+                ? "akara_act1_q4_early" : "akara_act1_q4_init";
+      } else {
+        messageIndex = Act1DenOfEvilQuest.selectAkaraMessage(record);
+        speech = Act1DenOfEvilQuest.getAkaraSpeech(messageIndex);
+      }
     } else if (npc.monstats.hcIdx == MonsterType.CHARSI) {
       short record = data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
       if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) {
@@ -77,6 +90,12 @@ public class Act1QuestDialogController extends PassiveSystem {
       } else {
         return false;
       }
+    } else if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN
+        || npc.monstats.hcIdx == MonsterType.DECKARDCAIN_TOWN) {
+      short cainRecord = data.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD];
+      messageIndex = Act1CainQuest.MESSAGE_CAIN_TOWN;
+      speech = NativeQuestRecord.has(cainRecord, NativeQuestRecord.REWARD_PENDING)
+          ? "cain_act1_q4_success" : "cain_act1_q4_rescued_hero";
     } else {
       return false;
     }

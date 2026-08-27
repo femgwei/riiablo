@@ -8,6 +8,9 @@ public final class Act1CainQuest {
   public static final String BARK_SCROLL_CODE = "skb";
   public static final String DECIPHERED_SCROLL_CODE = "dkb";
   public static final int MESSAGE_DECIPHER_SCROLL = 112;
+  public static final int MESSAGE_INIT = 97;
+  public static final int MESSAGE_AFTER_INIT = 99;
+  public static final int MESSAGE_EARLY = 113;
   public static final int MESSAGE_REWARD = 118;
   public static final int MESSAGE_CAIN_TOWN = 125;
   public static final String REWARD_RING_CODE = "rin";
