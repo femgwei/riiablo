@@ -84,8 +84,12 @@ import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
+import com.riiablo.engine.server.npc.NpcVendorSessionManager;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.VendorGenerator;
+import com.riiablo.item.ItemWriter;
+import com.riiablo.io.ByteOutput;
+import io.netty.buffer.Unpooled;
 import com.riiablo.map.Act1MapBuilder;
 import com.riiablo.map.DS1;
 import com.riiablo.map.DS1Loader;
@@ -108,6 +112,7 @@ import com.riiablo.net.packet.d2gs.GroundToCursor;
 import com.riiablo.net.packet.d2gs.Ping;
 import com.riiablo.net.packet.d2gs.NpcServiceRequest;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
+import com.riiablo.net.packet.d2gs.NpcServiceStock;
 import com.riiablo.net.packet.d2gs.StoreToCursor;
 import com.riiablo.net.packet.d2gs.SwapBeltItem;
 import com.riiablo.net.packet.d2gs.SwapBodyItem;
@@ -209,6 +214,7 @@ public class D2GS extends ApplicationAdapter {
   ItemManager itemManager;
   MapManager mapManager;
   NetworkSynchronizer sync;
+  final NpcVendorSessionManager npcVendors = new NpcVendorSessionManager();
 
   protected ComponentMapper<Networked> mNetworked;
 
@@ -694,28 +700,97 @@ public class D2GS extends ApplicationAdapter {
         && com.riiablo.engine.server.npc.NpcServiceProtocol.inRange(playerPosition.position, npcPosition.position);
     String reason = com.riiablo.engine.server.npc.NpcServiceProtocol.rejectReason(
         playerId != Engine.INVALID_ENTITY, definition != null, inRange, serviceAvailable, true);
-    boolean success = reason == null && operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN;
-    if (reason == null && !success) reason = "OPERATION_NOT_IMPLEMENTED";
-
     com.riiablo.engine.server.component.Player playerComponent = playerId == Engine.INVALID_ENTITY
         ? null : world.getMapper(com.riiablo.engine.server.component.Player.class).get(playerId);
+    com.riiablo.engine.server.npc.NpcVendorSessionManager.Session session = null;
+    int resultItemId = 0;
+    byte[] resultItemData = null;
+    if (reason == null && (service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.TRADE
+        || service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.GAMBLE)) {
+      try {
+        session = npcVendors.open(npcId, npc.monstats.Id,
+            world.getSystem(VendorGenerator.class),
+            service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.GAMBLE);
+      } catch (Throwable t) {
+        reason = "STOCK_GENERATION_FAILED";
+        Gdx.app.error(TAG, "[NPC_SERVICE] stock generation failed for npc=" + npcId, t);
+      }
+      if (reason == null && session.revision != request.stockRevision()
+          && operation != com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
+        reason = "STALE_STOCK";
+      }
+      if (reason == null && operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.BUY) {
+        if (playerComponent == null || playerComponent.data == null) reason = "PLAYER_NOT_FOUND";
+        else {
+          com.riiablo.item.Item item = npcVendors.find(session, request.itemId());
+          if (item == null) reason = "UNKNOWN_STOCK_ITEM";
+          else {
+            resultItemId = item.id;
+            int price = npcVendors.buy(session, playerComponent.data, request.itemId());
+            if (price <= 0) reason = "BUY_REJECTED";
+            else resultItemData = serializeItem(item);
+          }
+        }
+      } else if (reason == null && operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.SELL) {
+        if (playerComponent == null || playerComponent.data == null) reason = "PLAYER_NOT_FOUND";
+        else if (npcVendors.sell(playerComponent.data, request.itemIndex()) <= 0) reason = "SELL_REJECTED";
+      } else if (reason == null && operation != com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
+        reason = "OPERATION_NOT_IMPLEMENTED";
+      }
+    } else if (reason == null) {
+      reason = "OPERATION_NOT_IMPLEMENTED";
+    }
+    boolean success = reason == null;
     int gold = playerComponent == null || playerComponent.data == null ? 0
         : com.riiablo.item.VendorPricing.availableGold(playerComponent.data);
-    sendNpcServiceResult(packet.id, request.requestId(), success, reason, gold);
+    sendNpcServiceResult(packet.id, request.requestId(), success, reason, gold,
+        session, resultItemId, resultItemData);
     Gdx.app.log(TAG, "[NPC_SERVICE] player=" + playerId + " npc=" + npcId
         + " service=" + service + " operation=" + operation + " result="
         + (success ? "OK" : reason));
   }
 
-  private void sendNpcServiceResult(int clientId, long requestId, boolean success, String reason, int gold) {
-    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+  private void sendNpcServiceResult(int clientId, long requestId, boolean success, String reason, int gold,
+                                     NpcVendorSessionManager.Session session, int itemId, byte[] itemData) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(4096);
     int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int itemDataOffset = itemData == null ? 0 : NpcServiceResult.createItemDataVector(builder, itemData);
+    int stockOffset = 0;
+    if (session != null) {
+      int[] stockEntries = new int[session.stock.size];
+      for (int i = 0; i < session.stock.size; i++) {
+        com.riiablo.item.Item item = session.stock.get(i);
+        byte[] data = serializeItem(item);
+        int dataOffset = NpcServiceStock.createItemDataVector(builder, data);
+        stockEntries[i] = NpcServiceStock.createNpcServiceStock(builder, item.id, dataOffset,
+            com.riiablo.item.VendorPricing.buyPrice(item));
+      }
+      stockOffset = NpcServiceResult.createStockVector(builder, stockEntries);
+    }
     int resultOffset = NpcServiceResult.createNpcServiceResult(
-        builder, requestId, success, reasonOffset, Math.max(0, gold), 0, 0, 0, 0);
+        builder, requestId, success, reasonOffset, Math.max(0, gold),
+        session == null ? 0 : session.revision, itemId, itemDataOffset, stockOffset);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.NpcServiceResult, resultOffset);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     outPackets.offer(Packet.obtain(1 << clientId, builder.dataBuffer()));
+  }
+
+  private static byte[] serializeItem(com.riiablo.item.Item item) {
+    if (item == null) return new byte[0];
+    io.netty.buffer.ByteBuf buffer = Unpooled.buffer(512);
+    try {
+      ByteOutput out = ByteOutput.wrap(buffer);
+      new ItemWriter().writeItem(item, out);
+      byte[] data = new byte[out.bytesWritten()];
+      buffer.getBytes(0, data);
+      return data;
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "Failed to serialize NPC stock item " + item.id, t);
+      return new byte[0];
+    } finally {
+      buffer.release();
+    }
   }
 
   private static com.riiablo.engine.server.npc.NpcServiceProtocol.Service decodeNpcService(byte value) {

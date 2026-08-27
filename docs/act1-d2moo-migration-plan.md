@@ -156,7 +156,8 @@ waypoints, caves, quest rewards and collision boundaries.
   - [x] Native `Items.txt`/`Npc.txt` transaction-cost fields and 1024-scale price calculation.
   - [ ] Hire-selection panel, resurrection dialog and restored-save entity recreation.
   - [x] Authoritative multiplayer NPC-service request/result/stock protocol and D2GS validation boundary.
-    - [ ] Server-owned vendor stock snapshots and atomic BUY/SELL mutation.
+    - [x] Server-owned vendor stock snapshots and atomic BUY/SELL mutation.
+      - [ ] Request idempotency cache and reconnect/session recovery.
 - [ ] Phase 5: A1Q6 and Act completion
 - [ ] Phase 6: remaining Act 1 quests
 - [ ] Phase 7: portals, drops and persistence

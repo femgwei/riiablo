@@ -26,9 +26,12 @@ and server-calculated price.
    state on the server.
 7. Apply one atomic mutation and return the new authoritative snapshot.
 
-`OPEN` is implemented as the first protocol slice. Mutation requests currently
-return `OPERATION_NOT_IMPLEMENTED` after validation; this makes unsupported
-operations explicit instead of falling back to unsafe client-side mutation.
+`OPEN`, `BUY`, and `SELL` are implemented as the first protocol slice. BUY
+removes an item from the game-scoped NPC stock only after server-side gold and
+inventory placement succeeds. SELL validates the owned inventory slot and
+updates the authenticated player's wallet. Unsupported operations return
+`OPERATION_NOT_IMPLEMENTED` instead of falling back to unsafe client-side
+mutation.
 
 ## Idempotency and revisions
 
@@ -41,7 +44,7 @@ that the referenced item still belongs to the authenticated player.
 ## Rollout order
 
 1. Server-owned OPEN stock snapshots.
-2. BUY and SELL atomic mutations.
+2. BUY and SELL atomic mutations. (implemented)
 3. REPAIR_ITEM and REPAIR_ALL.
 4. GAMBLE inventory refresh and purchase.
 5. HIRE and RESURRECT.
