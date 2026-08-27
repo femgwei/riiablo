@@ -51,7 +51,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Position> mPosition;
 
-  @Wire(name = "factory")
+  @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
 
   protected EventSystem events;
