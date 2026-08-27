@@ -138,10 +138,8 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     final Tab[] tabs = new Tab[5];
     for (int i = 0, q = 0; i < tabs.length; i++) {
       Tab tab = tabs[i] = new Tab();
-      int orderInAct = 0;
       for (Quests.Entry quest : quests[i]) {
-        tab.addQuest(quest, q++, i == 0 ? orderInAct + 1 : -1);
-        orderInAct++;
+        tab.addQuest(quest, q++, Act1QuestPresentation.recordIndex(quest));
       }
 
       tab.pack();

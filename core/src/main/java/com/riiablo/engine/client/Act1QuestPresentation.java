@@ -9,6 +9,18 @@ public final class Act1QuestPresentation {
 
   private Act1QuestPresentation() {}
 
+  /** Resolves a visual quest row to its native Act I D2S record index. */
+  public static int recordIndex(Quests.Entry quest) {
+    if (quest == null || quest.act != 0) return -1;
+    if (quest.id >= 1 && quest.id <= QUEST_COUNT) return quest.id;
+    String qstr = quest.qstr;
+    if (qstr == null) return -1;
+    for (int i = 1; i <= QUEST_COUNT; i++) {
+      if (("qstsa1q" + i).equalsIgnoreCase(qstr)) return i;
+    }
+    return -1;
+  }
+
   public static boolean isAvailable(int recordIndex, short record) {
     return recordIndex == 1 || record != 0;
   }

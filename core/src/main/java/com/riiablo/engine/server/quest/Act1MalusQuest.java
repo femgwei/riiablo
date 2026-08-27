@@ -72,7 +72,7 @@ public final class Act1MalusQuest {
   public static String getCharsiSpeech(int messageIndex) {
     switch (messageIndex) {
       case MESSAGE_INIT: return "charsi_act1_q3_init";
-      case MESSAGE_MALUS: return "charsi_act1_q3_successful";
+      case MESSAGE_MALUS: return "charsi_act1_q3_success";
       default: return null;
     }
   }
