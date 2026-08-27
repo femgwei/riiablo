@@ -50,6 +50,7 @@ public class Pinger extends IntervalBaseSystem {
       channelOut.write(builder.dataBuffer());
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
+      setEnabled(false);
     }
   }
 

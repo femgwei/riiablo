@@ -1,12 +1,9 @@
 package com.riiablo.engine.client;
 
-import com.google.flatbuffers.ByteBufferUtil;
 import com.google.flatbuffers.FlatBufferBuilder;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 import com.artemis.ComponentMapper;
@@ -38,6 +35,7 @@ import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.NpcServiceRequest;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.VelocityP;
+import com.riiablo.net.SizePrefixedPacketReader;
 import com.riiablo.save.CharData;
 import com.riiablo.util.ArrayUtils;
 
@@ -111,50 +109,30 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
 
       OutputStream out = socket.getOutputStream();
       WritableByteChannel channelOut = Channels.newChannel(out);
-      channelOut.write(builder.dataBuffer());
+      ByteBuffer connectionFrame = builder.dataBuffer();
+      while (connectionFrame.hasRemaining()) channelOut.write(connectionFrame);
 
-      // Before we can connect, we need to wait for our connection ack to be received
-      boolean connected = false;
-      ByteBuffer buffer = ByteBuffer.allocate(1 << 20).order(ByteOrder.LITTLE_ENDIAN);
-      while (!connected) {
-        try {
-          buffer.clear();
-          ReadableByteChannel channelIn = Channels.newChannel(socket.getInputStream());
-          int i = channelIn.read(buffer);
-          buffer.rewind().limit(i);
-          D2GS d2gs = new D2GS();
-          while (buffer.hasRemaining()) {
-            int size = ByteBufferUtil.getSizePrefix(buffer);
-            D2GS.getRootAsD2GS(ByteBufferUtil.removeSizePrefix(buffer), d2gs);
-            if (DEBUG_PACKET) Gdx.app.debug(TAG, "packet type " + D2GSData.name(d2gs.dataType()) + ":" + size + "B");
-            connected = d2gs.dataType() == D2GSData.Connection;
-            if (!connected) {
-              if (DEBUG_CONNECT) Gdx.app.debug(TAG, "dropping... ");
-//              System.out.println(buffer.position() + "->" + (buffer.position() + size + 4));
-              buffer.position(buffer.position() + size + 4); // advance position passed current packet + size prefix of next packet
-              continue;
-            }
-            Connection connection = (Connection) d2gs.data(new Connection());
-            connected = connection.charName() == null;
-            if (!connected) {
-              if (DEBUG_CONNECT) Gdx.app.debug(TAG, "dropping... ");
-//              System.out.println(buffer.position() + "->" + (buffer.position() + size + 4));
-              buffer.position(buffer.position() + size + 4); // advance position passed current packet + size prefix of next packet
-              continue;
-            }
-
-            int serverId = connection.entityId();
-            Gdx.app.log(TAG, "assign " + entityId + " to " + serverId);
-            idManager.put(connection.entityId(), Riiablo.game.player);
-            break;
-          }
-        } catch (Throwable t) {
-          Gdx.app.error(TAG, t.getMessage(), t);
-        }
+      // Read exactly the ACK frame. Reading an arbitrary TCP chunk here can
+      // also consume the first EntitySync frames and silently discard them
+      // before ClientNetworkReceiver is enabled.
+      ByteBuffer frame = SizePrefixedPacketReader.readFrame(
+          socket.getInputStream(), 1 << 22);
+      D2GS d2gs = D2GS.getRootAsD2GS(frame);
+      if (d2gs.dataType() != D2GSData.Connection) {
+        throw new IllegalStateException("Expected Connection ACK, got "
+            + D2GSData.name(d2gs.dataType()));
       }
+      Connection connection = (Connection) d2gs.data(new Connection());
+      if (connection.charName() != null) {
+        throw new IllegalStateException("Connection ACK contained a character name");
+      }
+      int serverId = connection.entityId();
+      Gdx.app.log(TAG, "assign " + entityId + " to " + serverId);
+      idManager.put(serverId, Riiablo.game.player);
       receiver.setEnabled(true);
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
+      setEnabled(false);
     }
   }
 
@@ -210,6 +188,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       channelOut.write(builder.dataBuffer());
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
+      setEnabled(false);
     }
   }
 

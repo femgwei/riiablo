@@ -140,6 +140,7 @@ import com.riiablo.item.VendorGenerator;
 import com.riiablo.key.MappedKey;
 import com.riiablo.key.MappedKeyStateAdapter;
 import com.riiablo.map.Act1MapBuilder;
+import com.riiablo.map.Act1MapBuilderD2MOD;
 import com.riiablo.map.Box2DPhysics;
 import com.riiablo.map.Map;
 import com.riiablo.map.MapManager;
@@ -632,10 +633,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // - 新角色：CreateCharacterScreen 用 System.currentTimeMillis() 初始化 mapSeed
     // - 加载角色：D2SReader 从 d2s 读取 mapSeed
     // 同一角色每次进入游戏地图相同；不同角色/新游戏地图不同
-    int mapSeed = charData.mapSeed;
-    if (mapSeed == 0) {
-      mapSeed = (int) (System.nanoTime() & 0x7FFF_FFFF); // 兜底：mapSeed 未设置时随机
-    }
+    int mapSeed = resolveMapSeed(charData);
     config = new EngineConfig(mapSeed, charData.diff);
     map = new Map(config.seed(), config.diff());
     mapManager = new MapManager();
@@ -664,7 +662,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     // hacked until I can rewrite into proper system
     engine.inject(map);
+    map.setEntityFactory(factory);
     engine.inject(Act1MapBuilder.INSTANCE);
+    engine.inject(Act1MapBuilderD2MOD.INSTANCE);
 
     if (mobileControls != null) engine.inject(mobileControls);
 
@@ -866,6 +866,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     discardNextSimulationDelta = true;
     Riiablo.engine = engine;
     Riiablo.game = this;
+  }
+
+  protected int resolveMapSeed(CharData charData) {
+    int mapSeed = charData.mapSeed;
+    if (mapSeed == 0) {
+      mapSeed = (int) (System.nanoTime() & 0x7FFF_FFFF);
+    }
+    return mapSeed;
   }
 
   /** Allocates locally in single-player or sends intent to the authoritative D2GS. */

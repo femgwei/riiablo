@@ -100,8 +100,14 @@ public final class D2GSHeadlessClient {
            OutputStream output = new BufferedOutputStream(socket.getOutputStream())) {
         send(output, connectionPacket(character, d2s));
         awaitConnection(input, System.currentTimeMillis() + config.testTimeoutMillis);
+        if (config.requirePeer) verifyPeerVisibility(character, d2s, input);
 
         Snapshot target = awaitTarget(input, System.currentTimeMillis() + config.testTimeoutMillis);
+        if (config.requireMonsterMovement) {
+          Snapshot movingTarget = awaitMeleeTarget(
+              input, System.currentTimeMillis() + config.testTimeoutMillis);
+          verifyMonsterMovement(input, output, movingTarget);
+        }
         float initialLife = target.life;
         log("target", String.format(
             "player=%d monster=%d monsterClass=%d position=(%.2f,%.2f) life=%.2f",
@@ -155,16 +161,127 @@ public final class D2GSHeadlessClient {
     throw new IOException("timed out waiting for the D2GS connection acknowledgement");
   }
 
+  private void verifyPeerVisibility(
+      CharacterHeader character, byte[] d2s, DataInputStream firstInput) throws Exception {
+    try (Socket peer = new Socket()) {
+      peer.connect(new InetSocketAddress(config.host, config.port), config.connectTimeoutMillis);
+      peer.setTcpNoDelay(true);
+      peer.setSoTimeout(500);
+      try (DataInputStream peerInput =
+               new DataInputStream(new BufferedInputStream(peer.getInputStream()));
+           OutputStream peerOutput = new BufferedOutputStream(peer.getOutputStream())) {
+        send(peerOutput, connectionPacket(character, d2s));
+        int peerId = awaitConnectionId(
+            peerInput, System.currentTimeMillis() + config.testTimeoutMillis);
+        boolean firstSawPeer = false;
+        boolean peerSawFirst = false;
+        boolean peerReceivedFirstEntity = false;
+        int peerEntitySyncs = 0;
+        long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+        while (System.currentTimeMillis() < deadline && (!firstSawPeer || !peerSawFirst)) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+          if (packet != null) {
+            if (packet.dataType() == D2GSData.Connection) {
+              Connection connection = (Connection) packet.data(new Connection());
+              firstSawPeer |= connection.charName() != null
+                  && connection.entityId() == peerId;
+            }
+            consume(packet);
+          }
+
+          packet = readPacket(peerInput);
+          if (packet != null && packet.dataType() == D2GSData.EntitySync) {
+            EntitySync sync = (EntitySync) packet.data(new EntitySync());
+            peerEntitySyncs++;
+            if (sync.entityId() == playerId) {
+              peerReceivedFirstEntity = true;
+              log("peer_snapshot", "entity=" + sync.entityId() + " type=" + sync.type()
+                  + " components=" + componentTypes(sync));
+            }
+            peerSawFirst |= sync.entityId() == playerId
+                && findComponent(sync, ComponentP.PlayerP) >= 0;
+          }
+        }
+        if (!firstSawPeer || !peerSawFirst) {
+          throw new IllegalStateException("multiplayer visibility failed: firstSawPeer="
+              + firstSawPeer + " peerSawFirst=" + peerSawFirst
+              + " peerReceivedFirstEntity=" + peerReceivedFirstEntity
+              + " peerEntitySyncs=" + peerEntitySyncs);
+        }
+        log("peer_pass", "first=" + playerId + " peer=" + peerId
+            + " firstSawPeer=true peerSawFirst=true");
+      }
+    }
+  }
+
+  private static int awaitConnectionId(DataInputStream input, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null || packet.dataType() != D2GSData.Connection) continue;
+      Connection connection = (Connection) packet.data(new Connection());
+      if (connection.charName() == null) return connection.entityId();
+    }
+    throw new IOException("timed out waiting for peer connection acknowledgement");
+  }
+
   private Snapshot awaitTarget(DataInputStream input, long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
       if (packet == null) continue;
       consume(packet);
       for (Snapshot snapshot : monsters.values()) {
-        if (snapshot.hasPosition && snapshot.hasVitals && snapshot.life > 0f) return snapshot;
+        if (snapshot.hasPosition && snapshot.hasVitals && snapshot.life > 0f
+            && isHostileMonster(snapshot, false)) return snapshot;
       }
     }
     throw new IOException("timed out waiting for a live monster snapshot");
+  }
+
+  private Snapshot awaitMeleeTarget(DataInputStream input, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      for (Snapshot snapshot : monsters.values()) {
+        if (snapshot.hasPosition && snapshot.hasVitals && snapshot.life > 0f
+            && isHostileMonster(snapshot, true)) return snapshot;
+      }
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+    }
+    throw new IOException("timed out waiting for a live melee monster snapshot");
+  }
+
+  private boolean isHostileMonster(Snapshot snapshot, boolean requireMelee) {
+    if (snapshot.monsterClass < 0 || Riiablo.files == null
+        || Riiablo.files.monstats == null) return true;
+    com.riiablo.codec.excel.MonStats.Entry monster =
+        Riiablo.files.monstats.get(snapshot.monsterClass);
+    return monster != null && !monster.npc && monster.killable
+        && (!requireMelee || monster.isMelee);
+  }
+
+  private void verifyMonsterMovement(
+      DataInputStream input, OutputStream output, Snapshot selected) throws Exception {
+    float startX = selected.x;
+    float startY = selected.y;
+    send(output, positionPacket(playerId, startX - 8f, startY));
+    long deadline = System.currentTimeMillis() + Math.min(config.testTimeoutMillis, 8000L);
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      Snapshot current = monsters.get(selected.entityId);
+      if (current == null || !current.hasPosition) continue;
+      float dx = current.x - startX;
+      float dy = current.y - startY;
+      if (dx * dx + dy * dy >= 0.01f) {
+        log("monster_move_pass", String.format(
+            "monster=%d class=%d from=(%.2f,%.2f) to=(%.2f,%.2f)",
+            current.entityId, current.monsterClass, startX, startY, current.x, current.y));
+        return;
+      }
+    }
+    throw new IllegalStateException(String.format(
+        "hostile monster did not move after player approached: monster=%d class=%d position=(%.2f,%.2f)",
+        selected.entityId, selected.monsterClass, startX, startY));
   }
 
   private boolean attackUntilDamaged(
@@ -249,6 +366,15 @@ public final class D2GSHeadlessClient {
       if (sync.componentType(i) == type) return i;
     }
     return -1;
+  }
+
+  private static String componentTypes(EntitySync sync) {
+    StringBuilder builder = new StringBuilder("[");
+    for (int i = 0; i < sync.componentLength(); i++) {
+      if (i > 0) builder.append(',');
+      builder.append(ComponentP.name(sync.componentType(i)));
+    }
+    return builder.append(']').toString();
   }
 
   private static com.riiablo.net.packet.d2gs.D2GS readPacket(DataInputStream input)
@@ -416,6 +542,8 @@ public final class D2GSHeadlessClient {
     int skillId = SkillCodes.attack;
     boolean generatedAmazon;
     boolean requireMissile;
+    boolean requirePeer;
+    boolean requireMonsterMovement;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -434,6 +562,8 @@ public final class D2GSHeadlessClient {
         else if ("--skill".equals(arg)) config.skillId = integer(args, ++i, arg);
         else if ("--generated-amazon".equals(arg)) config.generatedAmazon = true;
         else if ("--require-missile".equals(arg)) config.requireMissile = true;
+        else if ("--require-peer".equals(arg)) config.requirePeer = true;
+        else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;

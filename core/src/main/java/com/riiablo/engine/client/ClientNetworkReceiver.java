@@ -14,6 +14,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
@@ -138,6 +139,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           NETWORK_READ_BUFFER_SIZE, MAX_NETWORK_PACKET_SIZE,
           MAX_NETWORK_PACKET_SIZE + NETWORK_READ_BUFFER_SIZE + Integer.BYTES);
   private final EntitySync sync = new EntitySync();
+  private final IntSet deferredServerEntities = new IntSet();
 
   public ClientNetworkReceiver() {
     super(null, 1 / 60f);
@@ -165,11 +167,18 @@ public class ClientNetworkReceiver extends IntervalSystem {
           bytesRead += read;
           packets.append(networkReadBuffer, 0, read);
           packetsProcessed += packets.drain(frame -> {
-            D2GS d2gs = D2GS.getRootAsD2GS(frame);
-            if (DEBUG_PACKET) Gdx.app.debug(TAG,
-                "[NET_FRAME] phase=packet size=" + frame.remaining()
-                    + " type=" + D2GSData.name(d2gs.dataType()));
-            process(d2gs);
+            try {
+              D2GS d2gs = D2GS.getRootAsD2GS(frame);
+              if (DEBUG_PACKET) Gdx.app.debug(TAG,
+                  "[NET_FRAME] phase=packet size=" + frame.remaining()
+                      + " type=" + D2GSData.name(d2gs.dataType()));
+              process(d2gs);
+            } catch (Throwable t) {
+              // One unsupported entity must not block every valid packet
+              // already following it in the same TCP read.
+              Gdx.app.error(TAG, "[NET_FRAME] phase=packet_error size="
+                  + frame.remaining() + " action=skip", t);
+            }
           });
         } while (available > 0);
 
@@ -382,7 +391,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
         WarpP warp = findTable(sync, ComponentP.WarpP, new WarpP());
         PositionP position = findTable(sync, ComponentP.PositionP, new PositionP());
         int entityId = factory.createWarp(warp.index(), position.x(), position.y());
+        if (entityId == Engine.INVALID_ENTITY || !mMapWrapper.has(entityId)) {
+          return Engine.INVALID_ENTITY;
+        }
         Map.Zone zone = mMapWrapper.get(entityId).zone;
+        if (zone == null) return Engine.INVALID_ENTITY;
         zone.addWarp(entityId);
         return entityId;
       }
@@ -519,6 +532,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void Synchronize(EntitySync entityData) {
     int entityId = syncIds.get(entityData.entityId());
     if ((entityData.flags() & EntityFlags.deleted) == EntityFlags.deleted) {
+      deferredServerEntities.remove(entityData.entityId());
       if (entityId != Engine.INVALID_ENTITY) {
         world.delete(entityId);
       }
@@ -526,9 +540,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
       return;
     }
 
+    if (deferredServerEntities.contains(entityData.entityId())) return;
+
     if (entityId == Engine.INVALID_ENTITY) {
       entityId = createEntity(entityData);
       if (entityId == Engine.INVALID_ENTITY) {
+        deferredServerEntities.add(entityData.entityId());
         Gdx.app.log(TAG, "[ENTITY_SYNC] phase=skip serverEntity=" + entityData.entityId()
             + " type=" + entityData.type() + " reason=client_factory_rejected");
         return;

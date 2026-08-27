@@ -6,7 +6,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -102,6 +101,7 @@ import com.riiablo.item.ItemWriter;
 import com.riiablo.io.ByteOutput;
 import io.netty.buffer.Unpooled;
 import com.riiablo.map.Act1MapBuilder;
+import com.riiablo.map.Act1MapBuilderD2MOD;
 import com.riiablo.map.DS1;
 import com.riiablo.map.DS1Loader;
 import com.riiablo.map.DT1;
@@ -136,6 +136,7 @@ import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.ItemMoveSnapshotEntry;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
+import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.save.CharData;
 import com.riiablo.util.DebugUtils;
 
@@ -215,7 +216,7 @@ public class D2GS extends ApplicationAdapter {
 
   final BlockingQueue<Packet> packets = new ArrayBlockingQueue<>(32);
   final Collection<Packet> cache = new ArrayList<>(1024);
-  final BlockingQueue<Packet> outPackets = new ArrayBlockingQueue<>(1024);
+  final BlockingQueue<Packet> outPackets = new ArrayBlockingQueue<>(8192);
   final IntIntMap player = new IntIntMap();
 
   static final BitVector ignoredPackets = new BitVector(D2GSData.names.length); {
@@ -355,7 +356,9 @@ public class D2GS extends ApplicationAdapter {
     Riiablo.engine = world = new World(config);
 
     world.inject(map);
+    map.setEntityFactory(factory);
     world.inject(Act1MapBuilder.INSTANCE);
+    world.inject(Act1MapBuilderD2MOD.INSTANCE);
 
     map.generate();
     mapManager.createEntities();
@@ -582,7 +585,7 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private void Synchronize(int id, int entityId) {
-
+    sync.syncAllTo(id);
   }
 
   private void BroadcastConnect(int id, Connection connection, CharData charData, int entityId) {
@@ -1316,7 +1319,10 @@ public class D2GS extends ApplicationAdapter {
 
     int id;
     Socket socket;
-    ByteBuffer buffer = ByteBuffer.allocate(8192);
+    final byte[] readBuffer = new byte[1 << 16];
+    final SizePrefixedPacketAccumulator inbound =
+        new SizePrefixedPacketAccumulator(1 << 16, 1 << 22,
+            (1 << 22) + (1 << 16) + Integer.BYTES);
     volatile boolean kill = false;
 
     Client(int id, Socket socket) {
@@ -1326,11 +1332,11 @@ public class D2GS extends ApplicationAdapter {
       this.socket = socket;
     }
 
-    public void send(Packet packet) throws IOException {
+    public synchronized void send(Packet packet) throws IOException {
       if (!socket.isConnected()) return;
       WritableByteChannel out = Channels.newChannel(socket.getOutputStream());
       packet.buffer.mark();
-      out.write(packet.buffer);
+      while (packet.buffer.hasRemaining()) out.write(packet.buffer);
       packet.buffer.reset();
       if ((connected & (1 << id)) == 0 && packet.data.dataType() == D2GSData.Connection) {
         connected |= (1 << id);
@@ -1341,39 +1347,16 @@ public class D2GS extends ApplicationAdapter {
     public void run() {
       while (!kill) {
         try {
-          buffer.clear();
-          buffer.mark();
-          ReadableByteChannel in = Channels.newChannel(socket.getInputStream());
-          if (in.read(buffer) == -1) {
+          int read = socket.getInputStream().read(readBuffer);
+          if (read == -1) {
             kill = true;
             break;
           }
-          buffer.limit(buffer.position());
-          buffer.reset();
-
-          ByteBuffer copy = (ByteBuffer) ByteBuffer.wrap(new byte[buffer.limit()]).put(buffer).rewind();
-          Packet packet = Packet.obtain(id, copy);
-          if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) Gdx.app.log(TAG, "received " + D2GSData.name(packet.data.dataType()) + " packet from " + socket.getRemoteAddress());
-          boolean success = packets.offer(packet, 5, TimeUnit.MILLISECONDS);
-          if (!success) {
-            Gdx.app.log(TAG, "failed to add to queue -- closing " + socket.getRemoteAddress());
-            kill = true;
-          } else if (packet.data.dataType() == D2GSData.Ping) {
-            try {
-              Ping ping = (Ping) packet.data.data(new Ping());
-              FlatBufferBuilder builder = new FlatBufferBuilder(0);
-              int dataOffset = Ping.createPing(builder, ping.tickCount(), ping.sendTime(), 0, true);
-              int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder, D2GSData.Ping, dataOffset);
-              com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
-              Packet response = Packet.obtain(1 << packet.id, builder.dataBuffer());
-              if (DEBUG_SENT_PACKETS && !ignoredPackets.get(packet.data.dataType())) Gdx.app.log(TAG, "dispatching " + D2GSData.name(packet.data.dataType()) + " ACK packet to " + String.format("0x%08X", packet.id));
-              send(response);
-            } catch (Throwable t) {
-              Gdx.app.log(TAG, t.getMessage(), t);
-            }
-          }
+          if (read == 0) continue;
+          inbound.append(readBuffer, 0, read);
+          inbound.drain(this::receive);
         } catch (Throwable t) {
-          Gdx.app.log(TAG, t.getMessage(), t);
+          Gdx.app.log(TAG, "[NET_FRAME] phase=server_receive_error action=disconnect", t);
           kill = true;
         }
       }
@@ -1381,6 +1364,43 @@ public class D2GS extends ApplicationAdapter {
       Gdx.app.log(TAG, "closing socket to " + socket.getRemoteAddress());
       if (socket != null) socket.dispose();
       Disconnect(id);
+    }
+
+    private void receive(ByteBuffer frame) {
+      ByteBuffer copy = ByteBuffer.allocate(frame.remaining());
+      copy.put(frame.duplicate()).flip();
+      Packet packet = Packet.obtainPayload(id, copy);
+      if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) {
+        Gdx.app.log(TAG, "received " + D2GSData.name(packet.data.dataType())
+            + " packet from " + socket.getRemoteAddress());
+      }
+      try {
+        boolean success = packets.offer(packet, 5, TimeUnit.MILLISECONDS);
+        if (!success) {
+          Gdx.app.log(TAG, "failed to add to queue -- closing " + socket.getRemoteAddress());
+          kill = true;
+          return;
+        }
+        if (packet.data.dataType() != D2GSData.Ping) return;
+
+        Ping ping = (Ping) packet.data.data(new Ping());
+        FlatBufferBuilder builder = new FlatBufferBuilder(0);
+        int dataOffset = Ping.createPing(builder, ping.tickCount(), ping.sendTime(), 0, true);
+        int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+            builder, D2GSData.Ping, dataOffset);
+        com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+        Packet response = Packet.obtain(1 << packet.id, builder.dataBuffer());
+        if (DEBUG_SENT_PACKETS && !ignoredPackets.get(packet.data.dataType())) {
+          Gdx.app.log(TAG, "dispatching " + D2GSData.name(packet.data.dataType())
+              + " ACK packet to " + String.format("0x%08X", packet.id));
+        }
+        send(response);
+      } catch (InterruptedException t) {
+        Thread.currentThread().interrupt();
+        kill = true;
+      } catch (IOException t) {
+        throw new GdxRuntimeException("Unable to send ping ACK", t);
+      }
     }
   }
 }

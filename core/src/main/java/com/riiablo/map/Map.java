@@ -340,6 +340,11 @@ public class Map implements Disposable {
     return act;
   }
 
+  /** Binds the ECS entity factory used by zone generation. */
+  public void setEntityFactory(EntityFactory factory) {
+    this.factory = factory;
+  }
+
   public void setAct(int act) {
     if (this.act != act) {
       this.act = act;
@@ -370,9 +375,19 @@ public class Map implements Disposable {
     
     // Act1 + D2MOD 实现下：在所有 zone 生成完成后，统一调用 addSecondaryBorder
     // 注意：这必须在所有 zone.generate() 完成后调用，因为 applyTileGridToZone 会在 zone.generate() 中被调用
-    if (act == 0 && Riiablo.cvars != null) {
-      com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
-      boolean useD2MOD = cvar != null && Boolean.TRUE.equals(cvar.get());
+    if (act == 0) {
+      // Headless D2GS does not create the client cvar registry. Act I already
+      // defaults to the D2MOD builder in generate(int), so post-generation
+      // must use the same default or the server never flushes the pending
+      // outdoor monster spawns (and never applies the final native collision
+      // footprint). Network clients then render monsters that have no
+      // authoritative server entity and therefore never move.
+      boolean useD2MOD = true;
+      if (Riiablo.cvars != null) {
+        com.riiablo.cvar.Cvar<Boolean> cvar =
+            Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
+      }
       
       if (useD2MOD) {
         try {
@@ -446,6 +461,11 @@ public class Map implements Disposable {
   }
 
   public void generate(int act) {
+    // Dedicated servers call generate(act) directly instead of setAct(act).
+    // Keep the map state authoritative for act-specific post-processing and
+    // systems that query getAct(); leaving this at -1 skips native collision,
+    // warp linking, and pending outdoor monster creation.
+    this.act = act;
     MathUtils.random.setSeed(seed);
     Riiablo.cofs.active = updateCofs(act);
     switch (act) {

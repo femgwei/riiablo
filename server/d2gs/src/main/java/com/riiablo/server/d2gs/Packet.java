@@ -21,4 +21,14 @@ public class Packet {
       packet.data = D2GS.getRootAsD2GS(ByteBufferUtil.removeSizePrefix(buffer));
       return packet;
     }
+
+    /** Creates a received packet whose buffer no longer contains a size prefix. */
+    public static Packet obtainPayload(int id, ByteBuffer payload) {
+      Packet packet = new Packet();
+      packet.id = id;
+      packet.time = TimeUtils.millis();
+      packet.buffer = payload;
+      packet.data = D2GS.getRootAsD2GS(payload.duplicate());
+      return packet;
+    }
   }

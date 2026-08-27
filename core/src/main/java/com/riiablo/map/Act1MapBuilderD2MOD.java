@@ -496,6 +496,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           int numMon = zone.level.NumMon;
           if (numMon <= 0) {
             monsters = new MonStats.Entry[0];
+            Gdx.app.log(TAG, String.format(
+                "[MONSTER_SPAWN] phase=generator_init level=%s(%d) candidates=0 "
+                    + "clientSocket=%s factory=%s reason=no_level_monsters",
+                zone.level.LevelName, zone.level.Id, finalSocket != null,
+                zone.map.factory != null));
             return;
           }
           // Blood Moor's native region population also permits Fallen
@@ -519,6 +524,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
           if (prob <= 0) {
             monsters = new MonStats.Entry[0];
+            Gdx.app.log(TAG, String.format(
+                "[MONSTER_SPAWN] phase=generator_init level=%s(%d) candidates=0 "
+                    + "clientSocket=%s factory=%s reason=no_weighted_monsters",
+                zone.level.LevelName, zone.level.Id, finalSocket != null,
+                zone.map.factory != null));
             return;
           }
 
@@ -531,6 +541,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               }
             }
           }
+          Gdx.app.log(TAG, String.format(
+              "[MONSTER_SPAWN] phase=generator_init level=%s(%d) candidates=%d "
+                  + "clientSocket=%s factory=%s",
+              zone.level.LevelName, zone.level.Id, monsters.length,
+              finalSocket != null, zone.map.factory != null));
         }
 
         @Override
@@ -1619,7 +1634,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   private void spawnPendingMonsters(Zone zone) {
     Array<PendingMonsterSpawn> pending = pendingMonsterSpawns.remove(zone.level.Id);
-    if (pending == null || pending.size == 0 || zone.map.factory == null) return;
+    if (pending == null || pending.size == 0 || zone.map.factory == null) {
+      Gdx.app.log(TAG, String.format(
+          "[MONSTER_SPAWN] phase=pending_flush level=%s(%d) queued=%d factory=%s action=skip",
+          zone.level.LevelName, zone.level.Id, pending == null ? 0 : pending.size,
+          zone.map.factory != null));
+      return;
+    }
 
     WalkableRegion region = largestWalkableRegion(
         zone.flags, zone.width, zone.height, DT1.Tile.FLAG_BLOCK_WALK);

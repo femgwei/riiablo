@@ -48,6 +48,20 @@ tasks.register('headlessMissileCombat', JavaExec) {
   }
 }
 
+tasks.register('headlessMultiplayer', JavaExec) {
+  group = 'verification'
+  description = 'Runs two windowless clients and verifies bidirectional player visibility.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-peer', '--require-monster-movement'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) {
+    args '--home', d2Home.get()
+  }
+}
+
 jar {
   archiveBaseName = project.name
 	// assets are present in both this project's resource set and the unpacked
