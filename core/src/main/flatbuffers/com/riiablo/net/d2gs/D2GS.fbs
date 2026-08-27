@@ -28,6 +28,8 @@ union D2GSData {
   CursorToBelt,
   SwapBeltItem,
   CastSkillRequest,
+  SpendSkillPointRequest,
+  SpendSkillPointResult,
   NpcServiceRequest,
   NpcServiceResult,
   ItemMoveRequest,

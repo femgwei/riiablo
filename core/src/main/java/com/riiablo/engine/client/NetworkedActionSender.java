@@ -7,6 +7,8 @@ import com.badlogic.gdx.net.Socket;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
+import com.riiablo.net.packet.d2gs.SpendSkillPointRequest;
+import java.util.concurrent.atomic.AtomicLong;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
@@ -14,6 +16,7 @@ import java.nio.channels.WritableByteChannel;
 /** Sends player combat input to the authoritative D2GS server. */
 public final class NetworkedActionSender {
   private static final String TAG = "NetworkedActionSender";
+  private static final AtomicLong REQUEST_IDS = new AtomicLong(1);
 
   private NetworkedActionSender() {}
 
@@ -37,6 +40,27 @@ public final class NetworkedActionSender {
       return true;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "[NET_CAST] phase=send_failed skill=" + skillId, t);
+      return false;
+    }
+  }
+
+  /** Sends allocation intent only; the server owns validation and mutation. */
+  public static boolean spendSkillPoint(Socket socket, int skillId) {
+    if (socket == null || skillId < 0 || skillId > 0xFFFF) return false;
+    long requestId = REQUEST_IDS.getAndIncrement() & 0xFFFF_FFFFL;
+    FlatBufferBuilder builder = new FlatBufferBuilder(96);
+    int request = SpendSkillPointRequest.createSpendSkillPointRequest(
+        builder, requestId, skillId);
+    int root = D2GS.createD2GS(builder, D2GSData.SpendSkillPointRequest, request);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
+      channel.write(builder.dataBuffer());
+      Gdx.app.log(TAG, "[SKILL_POINT_NET] phase=send request=" + requestId
+          + " skill=" + skillId);
+      return true;
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "[SKILL_POINT_NET] phase=send_failed skill=" + skillId, t);
       return false;
     }
   }

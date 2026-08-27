@@ -79,6 +79,7 @@ import com.riiablo.engine.client.MissileLoader;
 import com.riiablo.engine.client.MonsterLabelManager;
 import com.riiablo.engine.client.NetworkIdManager;
 import com.riiablo.engine.client.NetworkedClientItemManager;
+import com.riiablo.engine.client.NetworkedActionSender;
 import com.riiablo.engine.client.OverlayManager;
 import com.riiablo.engine.client.OverlayStepper;
 import com.riiablo.engine.client.SelectableManager;
@@ -119,6 +120,7 @@ import com.riiablo.engine.server.PlayerItemHandler;
 import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerSkillSystem;
+import com.riiablo.engine.server.player.PlayerStatsManager;
 import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.VelocityModeChanger;
 import com.riiablo.engine.server.WarpInteractor;
@@ -853,6 +855,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     discardNextSimulationDelta = true;
     Riiablo.engine = engine;
     Riiablo.game = this;
+  }
+
+  /** Allocates locally in single-player or sends intent to the authoritative D2GS. */
+  public boolean spendSkillPoint(int skillId) {
+    if (socket != null) return NetworkedActionSender.spendSkillPoint(socket, skillId);
+    return PlayerStatsManager.INSTANCE.spendSkillPoint(charData, skillId);
   }
 
   @Override

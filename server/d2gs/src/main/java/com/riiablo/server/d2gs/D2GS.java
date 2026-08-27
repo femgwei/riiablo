@@ -80,6 +80,8 @@ import com.riiablo.engine.server.ServerItemManager;
 import com.riiablo.engine.server.item.AuthoritativeItemMoveService;
 import com.riiablo.engine.server.item.ItemMoveIntent;
 import com.riiablo.engine.server.item.ItemMoveRequestCache;
+import com.riiablo.engine.server.player.PlayerStatsManager;
+import com.riiablo.engine.server.player.SkillPointRequestCache;
 import com.riiablo.engine.server.ServerNetworkIdManager;
 import com.riiablo.engine.server.VelocityAdder;
 import com.riiablo.engine.server.WarpInteractor;
@@ -109,6 +111,8 @@ import com.riiablo.net.packet.d2gs.BeltToCursor;
 import com.riiablo.net.packet.d2gs.BodyToCursor;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
+import com.riiablo.net.packet.d2gs.SpendSkillPointRequest;
+import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import com.riiablo.net.packet.d2gs.CursorToBelt;
 import com.riiablo.net.packet.d2gs.CursorToBody;
 import com.riiablo.net.packet.d2gs.CursorToGround;
@@ -230,6 +234,7 @@ public class D2GS extends ApplicationAdapter {
   final NpcServiceRequestCache npcRequestCache = new NpcServiceRequestCache();
   final AuthoritativeItemMoveService authoritativeItems = new AuthoritativeItemMoveService();
   final ItemMoveRequestCache itemMoveRequestCache = new ItemMoveRequestCache();
+  final SkillPointRequestCache skillPointRequestCache = new SkillPointRequestCache();
 
   protected ComponentMapper<Networked> mNetworked;
 
@@ -499,6 +504,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.CastSkillRequest:
         CastSkillRequest(packet);
         break;
+      case D2GSData.SpendSkillPointRequest:
+        SpendSkillPointRequest(packet);
+        break;
       case D2GSData.NpcServiceRequest:
         NpcServiceRequest(packet);
         break;
@@ -613,6 +621,7 @@ public class D2GS extends ApplicationAdapter {
       npcRequestCache.clear(id);
       npcVendors.clearPlayer(entityId);
       itemMoveRequestCache.clearConnection(id);
+      skillPointRequestCache.clearConnection(id);
       authoritativeItems.reset(entityId);
 
       world.delete(entityId);
@@ -737,6 +746,62 @@ public class D2GS extends ApplicationAdapter {
         anim != null ? anim.speed : -1, anim != null ? anim.lastKeyframeIndex : -1,
         anim != null && anim.keyframes != null ? anim.keyframes.length : 0,
         summarizeKeyframes(anim)));
+  }
+
+  /** Handles an idempotent, server-authoritative skill allocation request. */
+  private void SpendSkillPointRequest(Packet packet) {
+    SpendSkillPointRequest request = (SpendSkillPointRequest) packet.data.data(
+        new SpendSkillPointRequest());
+    SkillPointRequestCache.Entry cached = skillPointRequestCache.lookup(
+        packet.id, request.requestId());
+    if (cached != null) {
+      if (cached.skillId == request.skillId()) {
+        outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response())));
+        Gdx.app.log(TAG, "[SKILL_POINT_NET] phase=replay connection=" + packet.id
+            + " request=" + request.requestId() + " skill=" + request.skillId());
+      } else {
+        sendSkillPointResult(packet.id, request.requestId(), false, "REQUEST_ID_REUSED",
+            request.skillId(), 0, 0, false);
+      }
+      return;
+    }
+
+    int entityId = getPlayerEntityId(packet);
+    Player playerComponent = entityId == Engine.INVALID_ENTITY ? null
+        : world.getMapper(Player.class).get(entityId);
+    CharData data = playerComponent != null ? playerComponent.data : null;
+    String reason = PlayerStatsManager.INSTANCE.validateSkillPoint(data, request.skillId());
+    boolean success = PlayerStatsManager.SKILL_OK.equals(reason)
+        && PlayerStatsManager.INSTANCE.spendSkillPoint(data, request.skillId());
+    if (!success && PlayerStatsManager.SKILL_OK.equals(reason)) reason = "UPDATE_REJECTED";
+    int level = data != null ? data.getBaseSkillLevel(request.skillId()) : 0;
+    int points = data != null
+        ? PlayerStatsManager.INSTANCE.getAvailableSkillPoints(data) : 0;
+    sendSkillPointResult(packet.id, request.requestId(), success, reason,
+        request.skillId(), level, points, true);
+    if (success && entityId != Engine.INVALID_ENTITY) sync.process(entityId);
+    Gdx.app.log(TAG, "[SKILL_POINT_NET] phase=" + (success ? "accept" : "reject")
+        + " connection=" + packet.id + " player=" + entityId
+        + " request=" + request.requestId() + " skill=" + request.skillId()
+        + " level=" + level + " points=" + points + " reason=" + reason);
+  }
+
+  private void sendSkillPointResult(int clientId, long requestId, boolean success,
+      String reason, int skillId, int skillLevel, int skillPoints, boolean cache) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int result = SpendSkillPointResult.createSpendSkillPointResult(builder,
+        requestId, success, reasonOffset, skillId,
+        Math.max(0, Math.min(0xFF, skillLevel)),
+        Math.max(0, Math.min(0xFFFF, skillPoints)));
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.SpendSkillPointResult, result);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer response = builder.dataBuffer();
+    byte[] bytes = new byte[response.remaining()];
+    response.duplicate().get(bytes);
+    if (cache) skillPointRequestCache.put(clientId, requestId, skillId, bytes);
+    outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
   }
 
   private static String summarizeKeyframes(com.riiablo.engine.server.component.AnimData anim) {
@@ -1088,6 +1153,11 @@ public class D2GS extends ApplicationAdapter {
     if (operation == ItemMoveOperation.GROUND_TO_CURSOR) {
       com.riiablo.engine.server.component.Item ground = groundEntity < 0 ? null : mItemSafe(groundEntity);
       com.riiablo.item.Item groundItem = ground == null ? null : ground.item;
+      if (ground != null && ground.dropOwnerId >= 0 && ground.dropOwnerId != playerEntityId
+          && System.currentTimeMillis() < ground.dropOwnerUntilMillis) {
+        outcome = new AuthoritativeItemMoveService.Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_OWNED,
+            authoritativeItems.revision(playerEntityId));
+      } else {
       com.riiablo.engine.server.component.Position groundPosition = groundEntity < 0 ? null
           : world.getMapper(com.riiablo.engine.server.component.Position.class).get(groundEntity);
       com.riiablo.engine.server.component.Position playerPosition = playerEntityId == Engine.INVALID_ENTITY
@@ -1098,6 +1168,7 @@ public class D2GS extends ApplicationAdapter {
             authoritativeItems.revision(playerEntityId));
       } else {
         outcome = authoritativeItems.pickup(playerEntityId, character, intent, groundItem);
+      }
       }
       if (outcome.success) world.delete(groundEntity);
     } else if (operation == ItemMoveOperation.CURSOR_TO_GROUND) {

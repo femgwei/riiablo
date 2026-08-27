@@ -7,6 +7,7 @@ import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
+import com.riiablo.item.VendorPricing;
 
 /**
  * Small transaction boundary around CharData's legacy item methods. All
@@ -95,6 +96,18 @@ public final class AuthoritativeItemMoveService {
     if (groundItem == null) return new Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_FOUND, current);
     if (intent.itemId >= 0 && groundItem.id != intent.itemId)
       return new Outcome(false, ItemMoveFailure.GROUND_ITEM_CHANGED, current);
+    if (!GroundDropOwnership.canPickup(intent.groundEntityId, playerEntityId))
+      return new Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_OWNED, current);
+    if ("gld".equalsIgnoreCase(groundItem.code)) {
+      int amount = groundItem.attrs == null || groundItem.attrs.base().get(com.riiablo.attributes.Stat.quantity) == null
+          ? 0 : groundItem.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt();
+      if (amount <= 0) return new Outcome(false, ItemMoveFailure.GROUND_ITEM_CHANGED, current);
+      VendorPricing.grantGold(character, amount);
+      long next = current + 1L;
+      revisions.put(playerEntityId, next);
+      GroundDropOwnership.clear(intent.groundEntityId);
+      return new Outcome(true, ItemMoveFailure.NONE, next);
+    }
     try {
       character.groundToCursor(groundItem);
     } catch (Throwable t) {
@@ -102,6 +115,7 @@ public final class AuthoritativeItemMoveService {
     }
     long next = current + 1L;
     revisions.put(playerEntityId, next);
+    if (intent.operation == ItemMoveOperation.GROUND_TO_CURSOR) GroundDropOwnership.clear(intent.groundEntityId);
     return new Outcome(true, ItemMoveFailure.NONE, next);
   }
 

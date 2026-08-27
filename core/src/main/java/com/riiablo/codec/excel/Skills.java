@@ -60,6 +60,10 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public int     seqnum;
     @Column public int     seqinput;
     @Column public int     reqlevel;
+    @Column public int     maxlvl;
+    @Column public String  reqskill1;
+    @Column public String  reqskill2;
+    @Column public String  reqskill3;
     @Column public int     startmana;
     @Column public int     minmana;
     @Column public int     manashift;

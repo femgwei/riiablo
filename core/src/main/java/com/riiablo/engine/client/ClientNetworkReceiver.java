@@ -72,6 +72,7 @@ import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.Ping;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.PlayerP;
+import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.StoreToCursor;
 import com.riiablo.net.packet.d2gs.SwapBeltItem;
@@ -215,6 +216,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.ItemMoveResult:
         ItemMoveResult(packet);
+        break;
+      case D2GSData.SpendSkillPointResult:
+        SpendSkillPointResult(packet);
         break;
       default:
         Gdx.app.error(TAG, "Unknown packet type: " + packet.dataType());
@@ -420,10 +424,34 @@ public class ClientNetworkReceiver extends IntervalSystem {
     Riiablo.charData.getStats().aggregate().put(Stat.newskills, skillPoints);
     Riiablo.charData.level = (byte) level;
 
+    int wireSkills = Math.min(data.skillIdsLength(), data.skillLevelsLength());
+    if (Riiablo.charData.classId != null) {
+      boolean[] present = new boolean[Math.max(0,
+          Riiablo.charData.classId.lastSpell - Riiablo.charData.classId.firstSpell)];
+      for (int i = 0; i < wireSkills; i++) {
+        int skillId = data.skillIds(i);
+        int skillLevel = data.skillLevels(i);
+        if (skillId < Riiablo.charData.classId.firstSpell
+            || skillId >= Riiablo.charData.classId.lastSpell) continue;
+        present[skillId - Riiablo.charData.classId.firstSpell] = true;
+        if (Riiablo.charData.getBaseSkillLevel(skillId) != skillLevel) {
+          Riiablo.charData.setSkillLevel(skillId, skillLevel);
+        }
+      }
+      for (int skillId = Riiablo.charData.classId.firstSpell;
+          skillId < Riiablo.charData.classId.lastSpell; skillId++) {
+        if (!present[skillId - Riiablo.charData.classId.firstSpell]
+            && Riiablo.charData.getBaseSkillLevel(skillId) != 0) {
+          Riiablo.charData.setSkillLevel(skillId, 0);
+        }
+      }
+    }
+
     if (oldExperience != experience || oldLevel != level || oldSkillPoints != skillPoints) {
       Gdx.app.log(TAG, String.format(
-          "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d skillPoints=%d oldSkillPoints=%d",
-          entityId, experience, oldExperience, level, oldLevel, skillPoints, oldSkillPoints));
+          "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d skillPoints=%d oldSkillPoints=%d learnedSkills=%d",
+          entityId, experience, oldExperience, level, oldLevel, skillPoints, oldSkillPoints,
+          wireSkills));
     }
   }
 
@@ -436,6 +464,20 @@ public class ClientNetworkReceiver extends IntervalSystem {
         + " success=" + result.success() + " reason=" + result.reason()
         + " gold=" + result.gold() + " stockRevision=" + result.stockRevision()
         + " stockCount=" + result.stockLength());
+  }
+
+  private void SpendSkillPointResult(D2GS packet) {
+    SpendSkillPointResult result = (SpendSkillPointResult) packet.data(
+        new SpendSkillPointResult());
+    if (Riiablo.charData != null && result.success()) {
+      Riiablo.charData.setSkillLevel(result.skillId(), result.skillLevel());
+      Riiablo.charData.getStats().base().put(Stat.newskills, result.skillPoints());
+      Riiablo.charData.getStats().aggregate().put(Stat.newskills, result.skillPoints());
+    }
+    Gdx.app.log(TAG, "[SKILL_POINT_NET] phase=result request=" + result.requestId()
+        + " success=" + result.success() + " reason=" + result.reason()
+        + " skill=" + result.skillId() + " level=" + result.skillLevel()
+        + " points=" + result.skillPoints());
   }
 
   private void Synchronize(D2GS packet) {

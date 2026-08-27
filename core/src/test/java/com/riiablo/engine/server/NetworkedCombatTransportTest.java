@@ -22,11 +22,46 @@ import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.MissileP;
+import com.riiablo.net.packet.d2gs.SpendSkillPointRequest;
+import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import java.nio.ByteBuffer;
 import org.junit.jupiter.api.Test;
 
 /** Headless transport regressions for the multiplayer combat boundary. */
 class NetworkedCombatTransportTest extends RiiabloTest {
+  @Test
+  void skillPointPacketsCarryIntentAndAuthoritativeResult() {
+    FlatBufferBuilder requestBuilder = new FlatBufferBuilder(128);
+    int requestData = SpendSkillPointRequest.createSpendSkillPointRequest(
+        requestBuilder, 99, 6);
+    int requestRoot = D2GS.createD2GS(
+        requestBuilder, D2GSData.SpendSkillPointRequest, requestData);
+    D2GS.finishSizePrefixedD2GSBuffer(requestBuilder, requestRoot);
+    D2GS requestPacket = D2GS.getRootAsD2GS(com.google.flatbuffers.ByteBufferUtil
+        .removeSizePrefix(requestBuilder.dataBuffer()));
+    SpendSkillPointRequest request = (SpendSkillPointRequest) requestPacket.data(
+        new SpendSkillPointRequest());
+    assertEquals(99, request.requestId());
+    assertEquals(6, request.skillId());
+
+    FlatBufferBuilder resultBuilder = new FlatBufferBuilder(128);
+    int reason = resultBuilder.createString("OK");
+    int resultData = SpendSkillPointResult.createSpendSkillPointResult(
+        resultBuilder, 99, true, reason, 6, 2, 3);
+    int resultRoot = D2GS.createD2GS(
+        resultBuilder, D2GSData.SpendSkillPointResult, resultData);
+    D2GS.finishSizePrefixedD2GSBuffer(resultBuilder, resultRoot);
+    D2GS resultPacket = D2GS.getRootAsD2GS(com.google.flatbuffers.ByteBufferUtil
+        .removeSizePrefix(resultBuilder.dataBuffer()));
+    SpendSkillPointResult result = (SpendSkillPointResult) resultPacket.data(
+        new SpendSkillPointResult());
+    assertTrue(result.success());
+    assertEquals(6, result.skillId());
+    assertEquals(2, result.skillLevel());
+    assertEquals(3, result.skillPoints());
+    System.out.println("[SKILL_POINT_NET] request=99 skill=6 result=OK level=2 points=3 status=PASS");
+  }
+
   @Test
   void castRequestCarriesOnlyClientIntent() {
     FlatBufferBuilder builder = new FlatBufferBuilder(128);

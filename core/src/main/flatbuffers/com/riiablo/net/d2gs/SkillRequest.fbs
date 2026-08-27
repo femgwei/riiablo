@@ -8,3 +8,19 @@ table CastSkillRequest {
   targetX:float32;
   targetY:float32;
 }
+
+// A client may only request allocation. The server resolves the authenticated
+// character and validates class, level, prerequisites, cap and available points.
+table SpendSkillPointRequest {
+  requestId:uint32;
+  skillId:uint16;
+}
+
+table SpendSkillPointResult {
+  requestId:uint32;
+  success:bool;
+  reason:string;
+  skillId:uint16;
+  skillLevel:uint8;
+  skillPoints:uint16;
+}

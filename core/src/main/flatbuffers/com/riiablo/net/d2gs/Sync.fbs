@@ -71,6 +71,10 @@ table PlayerP {
   experience:ulong;
   level:uint8;
   skillPoints:uint16;
+  // Learned/base class skills only. Equipment/default skills are derived from
+  // authoritative item data and must not be persisted into the skill tree.
+  skillIds:[uint16];
+  skillLevels:[uint8];
 }
 
 table DS1ObjectWrapperP {

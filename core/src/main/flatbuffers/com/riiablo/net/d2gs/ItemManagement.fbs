@@ -40,7 +40,8 @@ enum ItemMoveFailure:byte {
   GROUND_ITEM_TOO_FAR,
   GROUND_ITEM_CHANGED,
   MERC_NOT_SUPPORTED,
-  MUTATION_FAILED
+  MUTATION_FAILED,
+  GROUND_ITEM_NOT_OWNED
 }
 
 /** Player identity is resolved from the authenticated connection. */

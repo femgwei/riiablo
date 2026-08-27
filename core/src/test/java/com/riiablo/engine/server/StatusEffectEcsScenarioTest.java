@@ -17,6 +17,8 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
+import com.riiablo.engine.Engine;
+import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -31,6 +33,9 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
+import com.riiablo.item.Item;
+import com.riiablo.map.Map;
+import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import org.junit.jupiter.api.Test;
@@ -41,9 +46,10 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
   void purePoisonMissileAppliesDotRespectsResistanceAndExpires() {
     MathUtils.random.setSeed(0x5707EFL);
     Probe probe = new Probe();
+    NoopFactory factory = new NoopFactory();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, new StateUpdater(), new MissileCollisionSystem())
-        .build());
+        .with(new EventSystem(), probe, new StateUpdater(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
     try {
       int owner = createPlayer(world, 0, 0);
       int target = createMonster(world, 10, 10, 20, 50);
@@ -84,8 +90,10 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
   @Test
   void poisonDeathFiresOnceAndColdMovementRecoversOnExpiry() {
     Probe probe = new Probe();
+    NoopFactory factory = new NoopFactory();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, new StateUpdater()).build());
+        .with(new EventSystem(), probe, new StateUpdater(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
     try {
       int source = createPlayer(world, 0, 0);
       int target = createMonster(world, 10, 10, 5, 0);
@@ -212,5 +220,16 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
     @Subscribe public void onDamage(DamageEvent event) { damageEvents++; }
     @Subscribe public void onDeath(DeathEvent event) { deathEvents++; }
     @Override protected void processSystem() {}
+  }
+
+  private static final class NoopFactory extends EntityFactory {
+    @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }
+    @Override public int createDynamicObject(int act, int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createStaticObject(int act, int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createStaticObjectByClassId(int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createMonster(int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createWarp(int index, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createItem(Item item, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createMissile(int id, Vector2 angle, Vector2 position) { return Engine.INVALID_ENTITY; }
   }
 }

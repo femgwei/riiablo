@@ -48,6 +48,10 @@ public class Skills {
   public int seqnum;
   public int seqinput;
   public int reqlevel;
+  public int maxlvl;
+  public String reqskill1;
+  public String reqskill2;
+  public String reqskill3;
   public int startmana;
   public int minmana;
   public int manashift;

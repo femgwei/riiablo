@@ -1,10 +1,12 @@
 package com.riiablo.engine.server.player;
 
 import com.riiablo.CharacterClass;
+import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.CharStats;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.save.CharData;
@@ -58,6 +60,14 @@ public class PlayerStatsManager {
   public static final int RESULT_INVALID_STAT = 2;
   /** 属性已达上限 */
   public static final int RESULT_MAX_REACHED = 3;
+
+  public static final String SKILL_OK = "OK";
+  public static final String SKILL_NO_POINTS = "NO_SKILL_POINTS";
+  public static final String SKILL_INVALID = "INVALID_SKILL";
+  public static final String SKILL_WRONG_CLASS = "WRONG_CLASS";
+  public static final String SKILL_MAX_LEVEL = "MAX_SKILL_LEVEL";
+  public static final String SKILL_PREREQUISITE = "PREREQUISITE_NOT_MET";
+  public static final String SKILL_LEVEL_REQUIRED = "LEVEL_REQUIREMENT_NOT_MET";
 
   /** 每个属性的最大值 */
   public static final int MAX_STAT_VALUE = 1023;
@@ -258,43 +268,12 @@ public class PlayerStatsManager {
    * @return 是否成功
    */
   public boolean spendSkillPoint(CharData charData, int skillId) {
-    if (charData == null) {
-      return false;
-    }
+    String validation = validateSkillPoint(charData, skillId);
+    if (!SKILL_OK.equals(validation)) return false;
 
     StatListRef stats = charData.getStats().base();
-
-    // 检查是否有可用技能点
     int availablePoints = getInt(stats, Stat.newskills, 0);
-    if (availablePoints <= 0) {
-      log.debug("No skill points available");
-      return false;
-    }
-
-    // 检查技能是否有效
-    if (!isValidSkillForClass(charData.charClass & 0xFF, skillId)) {
-      log.debug("Invalid skill {} for class {}", skillId, charData.charClass);
-      return false;
-    }
-
-    // 检查技能等级限制
     int currentLevel = charData.getBaseSkillLevel(skillId);
-    if (currentLevel >= getMaxSkillLevel(skillId)) {
-      log.debug("Skill {} already at max level {}", skillId, currentLevel);
-      return false;
-    }
-
-    // 检查技能前置条件
-    if (!checkSkillPrerequisites(charData, skillId)) {
-      log.debug("Skill {} prerequisites not met", skillId);
-      return false;
-    }
-
-    // 检查等级需求
-    if (!checkLevelRequirement(charData, skillId)) {
-      log.debug("Level requirement not met for skill {}", skillId);
-      return false;
-    }
 
     // 扣除技能点
     stats.put(Stat.newskills, availablePoints - 1);
@@ -313,37 +292,71 @@ public class PlayerStatsManager {
     return true;
   }
 
+  /** Returns a stable network-safe rejection reason without mutating character data. */
+  public String validateSkillPoint(CharData charData, int skillId) {
+    if (charData == null || charData.getStats() == null) return SKILL_INVALID;
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill == null) return SKILL_INVALID;
+    int classId = charData.charClass & 0xFF;
+    if (!isValidSkillForClass(classId, skillId)) return SKILL_WRONG_CLASS;
+    if (getInt(charData.getStats().base(), Stat.newskills, 0) <= 0) return SKILL_NO_POINTS;
+    if (charData.getBaseSkillLevel(skillId) >= getMaxSkillLevel(skillId)) {
+      return SKILL_MAX_LEVEL;
+    }
+    if (!checkSkillPrerequisites(charData, skillId)) return SKILL_PREREQUISITE;
+    if (!checkLevelRequirement(charData, skillId)) return SKILL_LEVEL_REQUIRED;
+    return SKILL_OK;
+  }
+
   /**
    * 检查技能是否对该职业有效
    */
   private boolean isValidSkillForClass(int classId, int skillId) {
-    // TODO: 从 Skills.txt 读取技能职业限制
-    // 简化实现：假设所有技能都有效
-    return skillId >= 0 && skillId < 500;
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill == null || skill.charclass == null || skill.charclass.isEmpty()) return false;
+    CharacterClass characterClass;
+    try {
+      characterClass = CharacterClass.get(classId);
+    } catch (RuntimeException ignored) {
+      return false;
+    }
+    return skillId >= characterClass.firstSpell && skillId < characterClass.lastSpell
+        && Skills.getClassId(skill.charclass) == classId;
   }
 
   /**
    * 获取技能最大等级
    */
   private int getMaxSkillLevel(int skillId) {
-    // TODO: 从 Skills.txt 读取
-    return 20; // 默认最大20级
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    return skill != null && skill.maxlvl > 0 ? skill.maxlvl : 20;
   }
 
   /**
    * 检查技能前置条件
    */
   private boolean checkSkillPrerequisites(CharData charData, int skillId) {
-    // TODO: 从 Skills.txt 读取前置技能并验证
-    return true;
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill == null) return false;
+    return hasPrerequisite(charData, skill.reqskill1)
+        && hasPrerequisite(charData, skill.reqskill2)
+        && hasPrerequisite(charData, skill.reqskill3);
   }
 
   /**
    * 检查等级需求
    */
   private boolean checkLevelRequirement(CharData charData, int skillId) {
-    // TODO: 从 Skills.txt 读取等级需求
-    return true;
+    Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill == null) return false;
+    int level = getInt(charData.getStats().aggregate(), Stat.level, charData.level & 0xFF);
+    return level >= Math.max(1, skill.reqlevel);
+  }
+
+  private boolean hasPrerequisite(CharData charData, String prerequisite) {
+    if (prerequisite == null || prerequisite.isEmpty()) return true;
+    Skills.Entry required = Riiablo.files.skills.get(prerequisite);
+    return required != null && charData.getBaseSkillLevel(required.Id) > 0;
   }
 
   //==========================================================================

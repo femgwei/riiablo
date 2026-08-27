@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.item.ItemQuality;
 import com.riiablo.engine.server.item.LootManager;
+import com.riiablo.engine.server.item.GroundDropOwnership;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -38,6 +39,7 @@ public class DeathRewardSystem extends PassiveSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.Item> mGroundItem;
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -94,14 +96,14 @@ public class DeathRewardSystem extends PassiveSystem {
       String code = result.itemCodes.get(i);
       int quality = result.itemQualities.get(i);
       int itemLevel = result.itemLevels.get(i);
-      int itemId = createItem(code, quality, itemLevel, position.position.x, position.position.y);
+      int itemId = createItem(code, quality, itemLevel, position.position.x, position.position.y, event.killer);
       if (itemId >= 0) createdItems++;
       log.debug("[DEATH_REWARD] item: killer={}, victim={}, code={}, rolledQuality={}, "
               + "ilvl={}, entity={}", event.killer, event.victim, code, quality, itemLevel, itemId);
     }
 
     int goldEntity = createGold(result.goldAmount, monsterLevel,
-        position.position.x, position.position.y);
+        position.position.x, position.position.y, event.killer);
     log.info("[DEATH_REWARD] killer={}, victim={}, monster={}, level={}, difficulty={}, "
             + "boss={}, gold={}, goldEntity={}, itemsRolled={}, itemsCreated={}",
         event.killer, event.victim,
@@ -114,7 +116,7 @@ public class DeathRewardSystem extends PassiveSystem {
     return Math.max(1, stats.Level[Math.min(difficulty, stats.Level.length - 1)]);
   }
 
-  private int createItem(String code, int rolledQuality, int itemLevel, float x, float y) {
+  private int createItem(String code, int rolledQuality, int itemLevel, float x, float y, int ownerId) {
     if (factory == null || itemGenerator == null || code == null || code.isEmpty()) {
       log.warn("[DEATH_REWARD] item creation unavailable: factory={}, generator={}, code={}",
           factory != null, itemGenerator != null, code);
@@ -127,6 +129,8 @@ public class DeathRewardSystem extends PassiveSystem {
       item.flags |= Item.ITEMFLAG_IDENTIFIED;
       int entityId = factory.createItem(item, x + MathUtils.random(-2f, 2f),
           y + MathUtils.random(-2f, 2f));
+      markDrop(entityId, ownerId);
+      GroundDropOwnership.register(entityId, ownerId, 10_000L);
       // Item ids are serialized from the same object held by the component.
       // The entity id is a stable server-side fallback when no item id service
       // is available yet.
@@ -139,7 +143,7 @@ public class DeathRewardSystem extends PassiveSystem {
     }
   }
 
-  private int createGold(int amount, int itemLevel, float x, float y) {
+  private int createGold(int amount, int itemLevel, float x, float y, int ownerId) {
     if (amount <= 0 || factory == null || itemGenerator == null) return -1;
     try {
       Item gold = itemGenerator.generate("gld");
@@ -149,12 +153,21 @@ public class DeathRewardSystem extends PassiveSystem {
       gold.attrs.base().put(Stat.quantity, amount);
       int entityId = factory.createItem(gold, x + MathUtils.random(-1f, 1f),
           y + MathUtils.random(-1f, 1f));
+      markDrop(entityId, ownerId);
+      GroundDropOwnership.register(entityId, ownerId, 10_000L);
       gold.id = entityId;
       return entityId;
     } catch (Throwable t) {
       log.error("[DEATH_REWARD] gold creation failed: amount={}, level={}", amount, itemLevel, t);
       return -1;
     }
+  }
+
+  private void markDrop(int entityId, int ownerId) {
+    if (entityId < 0 || mGroundItem == null || !mGroundItem.has(entityId)) return;
+    com.riiablo.engine.server.component.Item item = mGroundItem.get(entityId);
+    item.dropOwnerId = ownerId;
+    item.dropOwnerUntilMillis = System.currentTimeMillis() + 10_000L;
   }
 
   /**

@@ -5,6 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -156,6 +157,14 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       final SkillDesc.Entry desc = Riiablo.files.skilldesc.get(skill.skilldesc);
       SkillButton button = buttons[i - charClass.firstSpell] = new SkillButton(skill, desc);
       button.setPosition(X[desc.SkillColumn], Y[desc.SkillRow]);
+      button.addListener(new ClickListener(Input.Buttons.LEFT) {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          if (Riiablo.game == null) return;
+          boolean accepted = Riiablo.game.spendSkillPoint(skill.Id);
+          log.info("[SKILL_POINT_UI] phase=request skill={} accepted={}", skill.Id, accepted);
+        }
+      });
       tabs[desc.SkillPage].addActor(button);
     }
 
@@ -244,7 +253,10 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
   }
 
   private float getManaCost(Skills.Entry skill, int lvl) {
-    return (1 << skill.manashift) / 256f * skill.mana + skill.lvlmana * lvl;
+    int level = Math.max(1, lvl);
+    float calculated = (1 << Math.max(0, Math.min(30, skill.manashift))) / 256f
+        * (skill.mana + (level - 1) * skill.lvlmana);
+    return Math.max(Math.max(0, skill.minmana), calculated);
   }
 
   @Override
