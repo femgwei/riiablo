@@ -1,12 +1,8 @@
 package com.riiablo.engine.client;
 
-import com.google.flatbuffers.ByteBufferUtil;
 import com.google.flatbuffers.Table;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.util.Arrays;
 
 import com.artemis.ComponentMapper;
@@ -84,6 +80,7 @@ import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.WarpP;
 import com.riiablo.net.packet.d2gs.StateP;
+import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.save.CharData;
 import com.riiablo.util.ArrayUtils;
 import com.riiablo.util.BufferUtils;
@@ -133,7 +130,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   protected static final ItemReader itemReader = new ItemReader(); // TODO: inject
 
-  private final ByteBuffer buffer = ByteBuffer.allocate(1 << 20).order(ByteOrder.LITTLE_ENDIAN);
+  private static final int NETWORK_READ_BUFFER_SIZE = 1 << 16;
+  private static final int MAX_NETWORK_PACKET_SIZE = 1 << 22;
+  private final byte[] networkReadBuffer = new byte[NETWORK_READ_BUFFER_SIZE];
+  private final SizePrefixedPacketAccumulator packets =
+      new SizePrefixedPacketAccumulator(
+          NETWORK_READ_BUFFER_SIZE, MAX_NETWORK_PACKET_SIZE,
+          MAX_NETWORK_PACKET_SIZE + NETWORK_READ_BUFFER_SIZE + Integer.BYTES);
   private final EntitySync sync = new EntitySync();
 
   public ClientNetworkReceiver() {
@@ -145,21 +148,42 @@ public class ClientNetworkReceiver extends IntervalSystem {
     InputStream in = socket.getInputStream();
     try {
       if (in.available() > 0) {
-        ReadableByteChannel channel = Channels.newChannel(in);
-        buffer.clear();
-        int i = channel.read(buffer);
-        buffer.rewind().limit(i);
-        D2GS d2gs = new D2GS();
-        int p = 0;
-        while (buffer.hasRemaining()) {
-          int size = ByteBufferUtil.getSizePrefix(buffer);
-          D2GS.getRootAsD2GS(ByteBufferUtil.removeSizePrefix(buffer), d2gs);
-          if (DEBUG_PACKET) Gdx.app.debug(TAG, p++ + " packet type " + D2GSData.name(d2gs.dataType()) + ":" + size + "B");
-          process(d2gs);
-//          System.out.println(buffer.position() + "->" + (buffer.position() + size + 4));
-          buffer.position(buffer.position() + size + 4); // advance position passed current packet + size prefix of next packet
+        int packetsProcessed = 0;
+        int bytesRead = 0;
+        int available;
+        do {
+          available = in.available();
+          if (available <= 0) break;
+          int read = in.read(networkReadBuffer, 0,
+              Math.min(available, networkReadBuffer.length));
+          if (read < 0) {
+            Gdx.app.log(TAG, "[NET_FRAME] phase=closed reason=end_of_stream");
+            setEnabled(false);
+            return;
+          }
+          if (read == 0) break;
+          bytesRead += read;
+          packets.append(networkReadBuffer, 0, read);
+          packetsProcessed += packets.drain(frame -> {
+            D2GS d2gs = D2GS.getRootAsD2GS(frame);
+            if (DEBUG_PACKET) Gdx.app.debug(TAG,
+                "[NET_FRAME] phase=packet size=" + frame.remaining()
+                    + " type=" + D2GSData.name(d2gs.dataType()));
+            process(d2gs);
+          });
+        } while (available > 0);
+
+        if (packets.pendingBytes() > 0) {
+          Gdx.app.debug(TAG, "[NET_FRAME] phase=partial bytesRead=" + bytesRead
+              + " buffered=" + packets.pendingBytes()
+              + " expected=" + packets.expectedFrameSize()
+              + " packets=" + packetsProcessed);
         }
       }
+    } catch (SizePrefixedPacketAccumulator.InvalidFrameException t) {
+      Gdx.app.error(TAG, "[NET_FRAME] phase=reject size=" + t.frameSize
+          + " action=disconnect", t);
+      setEnabled(false);
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
     }
@@ -497,7 +521,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
 
     if (entityId == Engine.INVALID_ENTITY) {
-      syncIds.put(entityData.entityId(), entityId = createEntity(entityData));
+      entityId = createEntity(entityData);
+      if (entityId == Engine.INVALID_ENTITY) {
+        Gdx.app.log(TAG, "[ENTITY_SYNC] phase=skip serverEntity=" + entityData.entityId()
+            + " type=" + entityData.type() + " reason=client_factory_rejected");
+        return;
+      }
+      syncIds.put(entityData.entityId(), entityId);
     }
 
     int tFlags = Dirty.NONE;
@@ -512,6 +542,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           applyPlayerSnapshot(entityId, data);
           break;
         }
+        case ComponentP.ObjectP:
         case ComponentP.DS1ObjectWrapperP:
         case ComponentP.WarpP:
         case ComponentP.MonsterP:

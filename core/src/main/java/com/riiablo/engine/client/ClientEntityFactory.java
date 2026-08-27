@@ -87,10 +87,22 @@ public class ClientEntityFactory extends ServerEntityFactory {
     String name;
     if (waypoint) {
       Map.Zone zone = map.getZone(x, y);
-      mMapWrapper.create(id).set(map, zone);
-      String levelName = Riiablo.string.lookup(zone.level.LevelName);
       String objectName = Riiablo.string.lookup(base.Name);
-      name = String.format("%s\n%s", levelName, objectName);
+      if (zone == null) {
+        // A network server may own static objects for acts/levels that this
+        // client has not loaded. Keep the harmless visual replica, but do not
+        // attach a MapWrapper whose null zone would crash interaction systems.
+        mMapWrapper.remove(id);
+        name = objectName;
+        com.badlogic.gdx.Gdx.app.log(TAG, String.format(
+            "[ENTITY_SYNC] phase=static_object_deferred entity=%d object=%d "
+                + "waypoint=true position=(%.2f,%.2f) reason=zone_unavailable",
+            id, base.Id, x, y));
+      } else {
+        mMapWrapper.get(id).set(map, zone);
+        String levelName = Riiablo.string.lookup(zone.level.LevelName);
+        name = String.format("%s\n%s", levelName, objectName);
+      }
     } else {
       name = base.Name.equalsIgnoreCase("dummy") ? base.Description : Riiablo.string.lookup(base.Name);
     }
@@ -127,7 +139,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
     mBox2DBody.create(id);
     if (waypoint) {
-      Map.Zone zone = mMapWrapper.get(id).zone;
+      Map.Zone zone = mMapWrapper.has(id) ? mMapWrapper.get(id).zone : null;
       float interactionRange = mInteractable.has(id) ? mInteractable.get(id).range : 0;
       com.badlogic.gdx.Gdx.app.log(TAG, "Waypoint client entity wired: entity=" + id
           + " object=" + base.Id + " operateFn=" + base.OperateFn
@@ -201,6 +213,16 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   @Override
   public int createWarp(int index, float x, float y) {
+    if (map.getZone(x, y) == null) {
+      // The server currently sends static entities outside the client's
+      // loaded map. ServerEntityFactory.createWarp dereferences the source
+      // zone immediately, so reject this remote replica before delegating.
+      com.badlogic.gdx.Gdx.app.log(TAG, String.format(
+          "[ENTITY_SYNC] phase=warp_deferred index=0x%08X position=(%.2f,%.2f) "
+              + "reason=zone_unavailable",
+          index, x, y));
+      return Engine.INVALID_ENTITY;
+    }
     boolean questWarp = com.riiablo.engine.server.quest.QuestWarp.isQuestWarp(index);
     final int mainIndex   = DT1.Tile.Index.mainIndex(index);
     final int subIndex    = DT1.Tile.Index.subIndex(index);
