@@ -563,6 +563,17 @@ public class ClientNetworkReceiver extends IntervalSystem {
       durations[i] = i < data.durationLength() ? data.duration(i) : 0;
       levels[i] = i < data.levelLength() ? data.level(i) : 1;
     }
+    if (count > 0) {
+      StringBuilder snapshot = new StringBuilder();
+      for (int i = 0; i < count; i++) {
+        if (i > 0) snapshot.append(',');
+        snapshot.append(stateIds[i]).append(':').append(durations[i])
+            .append('@').append(levels[i]);
+      }
+      Gdx.app.log(TAG, String.format(
+          "[STATE_SYNC] entity=%d count=%d states=%s source=server",
+          entityId, count, snapshot));
+    }
     unitStates.stateList.replaceFromSnapshot(stateIds, durations, levels);
     unitStates.snapshotOnly = true;
   }
