@@ -154,6 +154,8 @@ public class ExperienceManager extends PassiveSystem {
     
     StatListRef killerStats = killerData.getStats().base();
     int killerLevel = getInt(killerStats, Stat.level, killerData.level);
+    int killerAddExperience = getInt(
+        killerData.getStats().aggregate(), Stat.item_addexperience, 0);
 
     // TODO: 处理佣兵经验值
     // 如果有佣兵，计算佣兵应得经验（33.6%，如果击杀者不是佣兵）
@@ -165,7 +167,8 @@ public class ExperienceManager extends PassiveSystem {
     if (partyId < 0 || partyManager == null) {
       // 不在队伍中，直接给击杀者经验
       long experienceGained = computeExperienceGain(
-          killerData.charClass, killerLevel, defenderLevel, defenderExp);
+          killerData.charClass, killerLevel, defenderLevel, defenderExp,
+          killerAddExperience);
       if (experienceGained > 0) {
         addExperienceForPlayer(killerData, killerLevel, experienceGained);
       }
@@ -177,7 +180,8 @@ public class ExperienceManager extends PassiveSystem {
     if (party == null || party.getMemberCount() <= 1) {
       // 队伍无效或只有自己
       long experienceGained = computeExperienceGain(
-          killerData.charClass, killerLevel, defenderLevel, defenderExp);
+          killerData.charClass, killerLevel, defenderLevel, defenderExp,
+          killerAddExperience);
       if (experienceGained > 0) {
         addExperienceForPlayer(killerData, killerLevel, experienceGained);
       }
@@ -200,7 +204,8 @@ public class ExperienceManager extends PassiveSystem {
     if (memberCount <= 1 || levelSum <= 0) {
       // 只有击杀者，直接给经验
       long experienceGained = computeExperienceGain(
-          killerData.charClass, killerLevel, defenderLevel, defenderExp);
+          killerData.charClass, killerLevel, defenderLevel, defenderExp,
+          killerAddExperience);
       if (experienceGained > 0) {
         addExperienceForPlayer(killerData, killerLevel, experienceGained);
       }
@@ -230,7 +235,8 @@ public class ExperienceManager extends PassiveSystem {
       // TODO: 需要获取成员的CharData来计算，这里暂时只处理击杀者
       if (member.entityId == killerEntityId) {
         long experienceGained = computeExperienceGain(
-            killerData.charClass, killerLevel, defenderLevel, memberShare);
+            killerData.charClass, killerLevel, defenderLevel, memberShare,
+            killerAddExperience);
         if (experienceGained > 0) {
           addExperienceForPlayer(killerData, killerLevel, experienceGained);
         }
@@ -259,53 +265,13 @@ public class ExperienceManager extends PassiveSystem {
       byte charClass,
       int attackerLevel,
       int defenderLevel,
-      int defenderExperience) {
-
-    if (defenderExperience <= 0) {
-      return 1; // 最小经验值
-    }
-
-    // 限制经验值范围，防止溢出
-    long exp = Math.min(defenderExperience, Integer.MAX_VALUE >> 8);
-
-    // 检查是否已达到最大等级
-    if (attackerLevel >= ExperienceTable.MAX_LEVEL) {
-      return 0; // 已达到最大等级，不再获得经验
-    }
-
-    long result = exp;
-
-    // 计算等级差经验值调整
-    if (defenderLevel <= attackerLevel) {
-      // 防御者等级 <= 攻击者等级：应用惩罚
-      int levelDiff = attackerLevel - defenderLevel;
-      int index = Math.min(levelDiff, EXPERIENCE_PENALTY_FACTORS.length - 1);
-      int factor = EXPERIENCE_PENALTY_FACTORS[index];
-      if (factor != 256) {
-        result = calculatePercentage(exp, factor, 256);
-      }
-    } else if (attackerLevel < 25 || defenderLevel <= 0) {
-      // 攻击者等级 < 25 且防御者等级 > 攻击者等级：应用奖励系数
-      int levelDiff = defenderLevel - attackerLevel;
-      int index = Math.min(levelDiff, EXPERIENCE_BONUS_FACTORS.length - 1);
-      int factor = EXPERIENCE_BONUS_FACTORS[index];
-      if (factor != 256) {
-        result = calculatePercentage(exp, factor, 256);
-      }
-    } else {
-      // 攻击者等级 >= 25 且防御者等级 > 攻击者等级：按比例计算
-      result = calculatePercentage(exp, attackerLevel, defenderLevel);
-    }
-
-    // 应用难度系数（ExpRatio）
-    // D2MOD: 使用 DATATBLS_GetExpRatio 获取难度经验比例
-    result = applyDifficultyRatio(result, attackerLevel);
-
-    // TODO: 应用装备经验值加成（STAT_ITEM_ADDEXPERIENCE）
-    // int addExpPct = stats.get(Stat.item_addexperience);
-    // if (addExpPct > 0) result += calculatePercentage(result, addExpPct, 100);
-
-    return Math.max(result, 0);
+      int defenderExperience,
+      int addExperiencePercent) {
+    int classId = charClass & 0xFF;
+    return computeNativeExperienceGain(
+        expTable.getMaxLevel(classId), attackerLevel, defenderLevel,
+        defenderExperience, expTable.getExpRatio(attackerLevel),
+        expTable.getExpRatioShift(), addExperiencePercent);
   }
 
   /**
@@ -317,50 +283,49 @@ public class ExperienceManager extends PassiveSystem {
    * @param level 玩家等级
    * @return 调整后的经验值
    */
-  private long applyDifficultyRatio(long experience, int level) {
-    // 难度经验系数表（简化版）
-    // 实际游戏中这个值来自 Experience.txt
-    // 等级越高，经验比例越低
-    int ratio = getExpRatioForLevel(level);
-    int divisor = getExpDivisor();
-    
-    if (divisor > 0 && divisor < 32 && experience > 0) {
-      if (experience <= Integer.MAX_VALUE >> (divisor + (ratio >> divisor))) {
-        return (experience * ratio) >> divisor;
+  static long computeNativeExperienceGain(
+      int maxLevel,
+      int attackerLevel,
+      int defenderLevel,
+      int defenderExperience,
+      int expRatio,
+      int expRatioShift,
+      int addExperiencePercent) {
+    // SUNITDMG_ComputeExperienceGain returns one before checking max level.
+    if (defenderExperience <= 0) return 1;
+
+    long baseExperience = Math.min(
+        (long) defenderExperience, Integer.MAX_VALUE >> 8);
+    if (attackerLevel >= maxLevel) return 0;
+
+    long result = baseExperience;
+    if (defenderLevel <= attackerLevel) {
+      int index = Math.min(Math.max(0, attackerLevel - defenderLevel),
+          EXPERIENCE_PENALTY_FACTORS.length - 1);
+      int factor = EXPERIENCE_PENALTY_FACTORS[index];
+      if (factor != 256) result = result * factor / 256;
+    } else if (attackerLevel < 25 || defenderLevel <= 0) {
+      int index = Math.min(Math.max(0, defenderLevel - attackerLevel),
+          EXPERIENCE_BONUS_FACTORS.length - 1);
+      int factor = EXPERIENCE_BONUS_FACTORS[index];
+      if (factor != 256) result = result * factor / 256;
+    } else {
+      result = result * attackerLevel / defenderLevel;
+    }
+
+    if (result > 0 && expRatioShift > 0 && expRatioShift < 32) {
+      int shift = expRatioShift + (expRatio >> expRatioShift);
+      if (shift < 63 && result <= ((long) Integer.MAX_VALUE >> shift)) {
+        result = result * expRatio >> expRatioShift;
       } else {
-        return ratio * (experience >> divisor);
+        result = expRatio * (result >> expRatioShift);
       }
     }
-    
-    return experience;
-  }
 
-  /**
-   * 获取等级对应的经验比例
-   * 
-   * @param level 等级
-   * @return 经验比例（用于位移计算）
-   */
-  private int getExpRatioForLevel(int level) {
-    // 简化实现：等级越高，系数越接近1
-    // 实际应从 Experience.txt 读取
-    if (level < 8) return 256;      // 100%
-    if (level < 15) return 230;     // 90%
-    if (level < 25) return 204;     // 80%
-    if (level < 40) return 179;     // 70%
-    if (level < 60) return 153;     // 60%
-    if (level < 80) return 128;     // 50%
-    return 102;                      // 40%
-  }
-
-  /**
-   * 获取经验除数
-   * 
-   * @return 除数（用于位移计算）
-   */
-  private int getExpDivisor() {
-    // 固定为8（即除以256）
-    return 8;
+    if (addExperiencePercent != 0) {
+      result += result * addExperiencePercent / 100;
+    }
+    return Math.max(0, result);
   }
 
   /**
@@ -379,7 +344,7 @@ public class ExperienceManager extends PassiveSystem {
     
     // 计算佣兵应得经验
     long baseExp = computeExperienceGain(
-        (byte) 0, hirelingLevel, defenderLevel, defenderExp);
+        (byte) 0, hirelingLevel, defenderLevel, defenderExp, 0);
     
     // 如果击杀者不是佣兵，只获得33.6%经验
     if (!isKiller) {
@@ -393,21 +358,6 @@ public class ExperienceManager extends PassiveSystem {
     // TODO: 更新佣兵经验值
     // 需要访问 MercData 并更新其经验和等级
     log.debug("Hireling gained {} experience", baseExp);
-  }
-
-  /**
-   * 计算百分比值（参考 D2MOD MONSTERUNIQUE_CalculatePercentage）
-   * 
-   * @param value 基础值
-   * @param numerator 分子
-   * @param denominator 分母
-   * @return 计算后的值
-   */
-  private long calculatePercentage(long value, int numerator, int denominator) {
-    if (denominator == 0) {
-      return value;
-    }
-    return (value * numerator) / denominator;
   }
 
   /**

@@ -1,10 +1,17 @@
 package com.riiablo.attributes;
 
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Experience;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
+
 /**
  * Experience table for calculating experience required for each level.
- * Uses hardcoded values from Diablo 2.
+ * Uses native Experience.txt data when available; the embedded values are an
+ * explicitly logged compatibility fallback for table-less tests/tools.
  */
 public class ExperienceTable {
+  private static final Logger log = LogManager.getLogger(ExperienceTable.class);
 
   private static ExperienceTable instance;
 
@@ -18,6 +25,7 @@ public class ExperienceTable {
   private final long[] barbarian;
   private final long[] druid;
   private final long[] assassin;
+  private boolean warnedFallback;
 
   private ExperienceTable() {
     // Initialize arrays
@@ -150,6 +158,9 @@ public class ExperienceTable {
     if (level >= MAX_LEVEL) {
       return Long.MAX_VALUE; // Max level reached
     }
+    Experience.Entry nativeEntry = nativeLevel(level);
+    if (nativeEntry != null) return nativeEntry.threshold(classId);
+    warnFallback();
     // The table stores the amount required to reach level n + 1 at index n:
     // level 1 -> 500, level 2 -> 1500, ...
     int nextLevel = Math.max(1, level);
@@ -175,6 +186,9 @@ public class ExperienceTable {
     if (level < 1) level = 1;
     if (level == 1) return 0;
     int reached = level - 1;
+    Experience.Entry nativeEntry = nativeLevel(reached);
+    if (nativeEntry != null) return nativeEntry.threshold(classId);
+    warnFallback();
     switch (classId) {
       case 0: return amazon[reached];
       case 1: return sorceress[reached];
@@ -196,5 +210,60 @@ public class ExperienceTable {
     if (end <= start) return 0f;
     double progress = (double) (experience - start) / (double) (end - start);
     return (float) Math.max(0d, Math.min(1d, progress));
+  }
+
+  /** Mirrors DATATBLS_GetExpRatio(level). */
+  public int getExpRatio(int level) {
+    Experience table = nativeTable();
+    Experience.Entry entry = table == null ? null
+        : level > 0 ? table.level(level) : table.max();
+    if (entry != null && entry.ExpRatio > 0) return entry.ExpRatio;
+    warnFallback();
+    return fallbackExpRatio(level);
+  }
+
+  /** Experience.txt stores the ratio divisor as a shift in the MaxLvl row. */
+  public int getExpRatioShift() {
+    Experience table = nativeTable();
+    Experience.Entry max = table == null ? null : table.max();
+    if (max != null && max.ExpRatio > 0) return max.ExpRatio;
+    warnFallback();
+    return 10;
+  }
+
+  public int getMaxLevel(int classId) {
+    Experience table = nativeTable();
+    Experience.Entry max = table == null ? null : table.max();
+    if (max == null) return MAX_LEVEL;
+    long value = max.threshold(classId);
+    return value > 0 && value <= Integer.MAX_VALUE ? (int) value : MAX_LEVEL;
+  }
+
+  private Experience.Entry nativeLevel(int level) {
+    Experience table = nativeTable();
+    return table == null ? null : table.level(level);
+  }
+
+  private Experience nativeTable() {
+    return Riiablo.files == null ? null : Riiablo.files.Experience;
+  }
+
+  private void warnFallback() {
+    if (warnedFallback) return;
+    warnedFallback = true;
+    log.warn("[XP_NATIVE] Experience.txt unavailable/incomplete; using compatibility fallback");
+  }
+
+  /** Canonical 1.10 ExpRatio fallback; valid native tables take precedence. */
+  static int fallbackExpRatio(int level) {
+    if (level <= 0) return 10;
+    if (level <= 69) return 1024;
+    final int[] ratios = {
+        976, 928, 880, 832, 784, 736, 688, 640,
+        592, 544, 496, 448, 400, 352, 304, 256,
+        192, 144, 108, 81, 61, 46, 35, 26,
+        20, 15, 11, 8, 6, 5
+    };
+    return ratios[Math.min(level - 70, ratios.length - 1)];
   }
 }

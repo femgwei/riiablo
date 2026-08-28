@@ -13,6 +13,7 @@ import com.riiablo.codec.excel.Colors;
 import com.riiablo.codec.excel.CompCode;
 import com.riiablo.codec.excel.Composit;
 import com.riiablo.codec.excel.DifficultyLevels;
+import com.riiablo.codec.excel.Experience;
 import com.riiablo.codec.excel.Excel;
 import com.riiablo.codec.excel.Gems;
 import com.riiablo.codec.excel.Inventory;
@@ -78,6 +79,7 @@ public class Files {
   public final Composit         Composit;
   public final CompCode         compcode;
   public final DifficultyLevels DifficultyLevels;
+  public final Experience       Experience;
   public final Gems             Gems;
   public final Inventory        inventory;
   public final ItemStatCost     ItemStatCost;
@@ -155,6 +157,7 @@ public class Files {
     Composit         = load(Composit.class);
     compcode         = load(CompCode.class);
     DifficultyLevels = load(DifficultyLevels.class);
+    Experience       = load(Experience.class);
     Gems             = load(Gems.class, Excel.EXPANSION);
     inventory        = load(Inventory.class);
     ItemStatCost     = load(ItemStatCost.class);
