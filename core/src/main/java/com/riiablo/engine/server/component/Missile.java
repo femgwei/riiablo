@@ -21,6 +21,9 @@ public class Missile extends PooledComponent {
   /** 导弹拥有者实体 ID（用于伤害计算和敌人判断） */
   public int ownerId = -1;
 
+  /** Current native RoomEx id, updated as the missile crosses room borders. */
+  public int roomId = -1;
+
   /** False for client-side replicas; only the server may resolve collisions. */
   public boolean authoritative = true;
   
@@ -51,6 +54,7 @@ public class Missile extends PooledComponent {
     missileDescriptor = null;
     start.setZero();
     ownerId = -1;
+    roomId = -1;
     authoritative = true;
     distanceTraveled = 0f;
     attackMinDamage = 0;

@@ -1639,7 +1639,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   private void spawnPendingMonsters(Zone zone) {
     Array<PendingMonsterSpawn> pending = pendingMonsterSpawns.remove(zone.level.Id);
-    if (pending == null || pending.size == 0 || zone.map.factory == null) {
+    if (pending == null || pending.size == 0) {
       Gdx.app.log(TAG, String.format(
           "[MONSTER_SPAWN] phase=pending_flush level=%s(%d) queued=%d factory=%s action=skip",
           zone.level.LevelName, zone.level.Id, pending == null ? 0 : pending.size,
@@ -1650,6 +1650,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     WalkableRegion region = largestWalkableRegion(
         zone.flags, zone.width, zone.height, DT1.Tile.FLAG_BLOCK_WALK);
     int spawned = 0;
+    int deferred = 0;
     int relocated = 0;
     int rejected = 0;
     int[] local = new int[2];
@@ -1670,14 +1671,22 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         spawnY = zone.y + local[1];
         relocated++;
       }
-      zone.map.factory.createMonster(candidate.monsterId, spawnX, spawnY);
-      spawned++;
+      Map.RoomEx room = zone.findRoomEx(spawnX, spawnY);
+      if (zone.hasNativeRoomTopology() && room != null) {
+        room.addMonsterSpawn(candidate.monsterId, spawnX, spawnY);
+        deferred++;
+      } else if (zone.map.factory != null) {
+        zone.map.factory.createMonster(candidate.monsterId, spawnX, spawnY);
+        spawned++;
+      } else {
+        rejected++;
+      }
     }
 
     Gdx.app.log(TAG, String.format(
-        "D2MOO monster placement: level=%s(%d) queued=%d spawned=%d relocated=%d "
+        "D2MOO monster placement: level=%s(%d) queued=%d spawned=%d deferred=%d relocated=%d "
             + "rejected=%d mainWalkableRegion=%d",
-        zone.level.LevelName, zone.level.Id, pending.size, spawned, relocated,
+        zone.level.LevelName, zone.level.Id, pending.size, spawned, deferred, relocated,
         rejected, region.size));
   }
 

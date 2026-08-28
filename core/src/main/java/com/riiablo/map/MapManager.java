@@ -6,6 +6,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Objects;
@@ -90,6 +91,7 @@ public class MapManager extends PassiveSystem {
     int created = 0;
     int failed = 0;
     int skipped = 0;
+    IntSet roomsInBatch = new IntSet();
     for (Map.NativeObject object : zone.nativeObjects) {
       if (object.spawned) {
         // D2Game::SUNIT_SpawnPresetUnitsInRoom ignores units already marked
@@ -97,6 +99,15 @@ public class MapManager extends PassiveSystem {
         skipped++;
         continue;
       }
+
+      int worldX = zone.x + object.x;
+      int worldY = zone.y + object.y;
+      Map.RoomEx room = zone.findRoomEx(worldX, worldY);
+      if (room != null && room.isPresetUnitsSpawned() && !roomsInBatch.contains(room.id)) {
+        skipped++;
+        continue;
+      }
+      if (room != null) roomsInBatch.add(room.id);
 
       // DS1 stores Act as zero-based in the file and riiablo's loader exposes
       // it as one-based. Act I therefore uses table section 1 here. Units
@@ -125,9 +136,9 @@ public class MapManager extends PassiveSystem {
       }
       int id = object.ds1Raw && resolvedObjectId == objectId
           ? factory.createObject(1, DS1.Object.STATIC_TYPE, object.presetIndex,
-              zone.x + object.x, zone.y + object.y)
+              worldX, worldY)
           : factory.createStaticObjectByClassId(
-              resolvedObjectId, zone.x + object.x, zone.y + object.y);
+              resolvedObjectId, worldX, worldY);
       if (id == Engine.INVALID_ENTITY) {
         failed++;
         Gdx.app.error(TAG, String.format(
@@ -152,6 +163,12 @@ public class MapManager extends PassiveSystem {
         prepareWaypointInitialState(id, zone);
         zone.addEntity(id);
         created++;
+      }
+    }
+    for (IntSet.IntSetIterator it = roomsInBatch.iterator(); it.hasNext; ) {
+      int roomId = it.next();
+      if (roomId >= 0 && roomId < zone.roomsEx.size) {
+        zone.roomsEx.get(roomId).markPresetUnitsSpawned();
       }
     }
     if (zone.nativeObjects.size > 0) {

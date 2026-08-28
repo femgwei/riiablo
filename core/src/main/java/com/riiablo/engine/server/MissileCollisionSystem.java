@@ -15,6 +15,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
@@ -27,6 +28,7 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import com.riiablo.map.Map;
 
 /**
  * 导弹碰撞和伤害系统
@@ -50,6 +52,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
   
   protected EventSystem events;
   
@@ -69,6 +72,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）
     float moveDistance = velocity.velocity.len() * world.delta;
     position.position.add(velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
+
+    if (!updateNativeRoom(entityId, missile, position)) return;
     
     // 更新已移动距离（与 d2mod 一致，使用 distanceTraveled）
     missile.distanceTraveled += moveDistance;
@@ -83,6 +88,43 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
+  }
+
+  /**
+   * D2MOO keeps missile events authoritative even outside client sight, but
+   * UNITS_GetRoom follows every room crossing. Town entry removes missiles
+   * whose Missiles.txt Town flag is not set (MISSMODE_SrvDo02).
+   */
+  private boolean updateNativeRoom(int entityId, Missile missile, Position position) {
+    if (!mMapWrapper.has(entityId)) return true;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    Map map = wrapper.map;
+    if (map == null) return true;
+
+    Map.Zone zone = wrapper.zone;
+    Map.RoomEx room = zone != null
+        ? zone.findRoomEx(position.position.x, position.position.y) : null;
+    if (room == null) {
+      zone = map.getZone(position.position);
+      room = zone != null ? zone.findRoomEx(position.position.x, position.position.y) : null;
+      wrapper.zone = zone;
+    }
+    int nextRoomId = room != null ? room.id : -1;
+    if (nextRoomId != missile.roomId) {
+      log.debug("[MISSILE_ROOM] missileId={} missile={} level={} fromRoom={} toRoom={} pos=({}, {})",
+          entityId, missile.missile != null ? missile.missile.Missile : "unknown",
+          zone != null && zone.level != null ? zone.level.Id : -1,
+          missile.roomId, nextRoomId, position.position.x, position.position.y);
+      missile.roomId = nextRoomId;
+    }
+    if (zone != null && zone.isTown() && missile.missile != null && !missile.missile.Town) {
+      log.debug("[MISSILE_ROOM] missileId={} missile={} level={} room={} action=remove_town",
+          entityId, missile.missile.Missile,
+          zone.level != null ? zone.level.Id : -1, missile.roomId);
+      world.delete(entityId);
+      return false;
+    }
+    return true;
   }
   
   /**

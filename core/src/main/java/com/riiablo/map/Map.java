@@ -1515,6 +1515,9 @@ public class Map implements Disposable {
     private int clientOutOfSightRefs;
     private int untileRefs;
     private int activationStatus = COUNT;
+    private final Array<MonsterSpawn> pendingMonsterSpawns = new Array<>();
+    private boolean monsterPopulationSpawned;
+    private boolean presetUnitsSpawned;
 
     RoomEx(int id, int x, int y, int width, int height) {
       this.id = id;
@@ -1559,6 +1562,36 @@ public class Map implements Disposable {
       return untileRefs;
     }
 
+    public void addMonsterSpawn(int monsterId, float worldX, float worldY) {
+      if (!monsterPopulationSpawned) {
+        pendingMonsterSpawns.add(new MonsterSpawn(monsterId, worldX, worldY));
+      }
+    }
+
+    public Array<MonsterSpawn> getPendingMonsterSpawns() {
+      return pendingMonsterSpawns;
+    }
+
+    /** D2MOO room population is consumed only once when the room activates. */
+    public boolean claimMonsterPopulation() {
+      if (monsterPopulationSpawned) return false;
+      monsterPopulationSpawned = true;
+      return true;
+    }
+
+    public boolean isMonsterPopulationSpawned() {
+      return monsterPopulationSpawned;
+    }
+
+    public boolean isPresetUnitsSpawned() {
+      return presetUnitsSpawned;
+    }
+
+    /** Mirrors D2DrlgRoomFlags.PRESET_UNITS_SPAWNED. */
+    public void markPresetUnitsSpawned() {
+      presetUnitsSpawned = true;
+    }
+
     private void adjustClientRef(int depth, int delta) {
       if (depth == 0) clientInRoomRefs = Math.max(0, clientInRoomRefs + delta);
       else if (depth == 1) clientInSightRefs = Math.max(0, clientInSightRefs + delta);
@@ -1590,6 +1623,19 @@ public class Map implements Disposable {
           && x + width + margin > other.x
           && y - margin < other.y + other.height
           && y + height + margin > other.y;
+    }
+  }
+
+  /** Deferred native room population entry in world subtile coordinates. */
+  public static final class MonsterSpawn {
+    public final int monsterId;
+    public final float x;
+    public final float y;
+
+    MonsterSpawn(int monsterId, float x, float y) {
+      this.monsterId = monsterId;
+      this.x = x;
+      this.y = y;
     }
   }
 

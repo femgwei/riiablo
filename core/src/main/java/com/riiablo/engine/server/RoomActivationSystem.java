@@ -6,9 +6,12 @@ import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.map.Map;
+import com.riiablo.engine.Engine;
+import com.riiablo.engine.EntityFactory;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -24,6 +27,9 @@ public class RoomActivationSystem extends IteratingSystem {
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Monster> mMonster;
+  @Wire(name = "factory", failOnNull = false)
+  protected EntityFactory factory;
   private final IntMap<ClientRoom> clients = new IntMap<>();
 
   @Override
@@ -47,6 +53,7 @@ public class RoomActivationSystem extends IteratingSystem {
     if (zone != null && roomId >= 0 && zone.hasNativeRoomTopology()) {
       zone.enterClientRoom(roomId);
       clients.put(entityId, new ClientRoom(map, zone, roomId));
+      spawnActiveRoomPopulations(zone);
       log.debug("[ROOM_ACTIVATE] player={} toLevel={} toRoom={} action=enter",
           entityId, levelId(zone), roomId);
     } else {
@@ -66,6 +73,26 @@ public class RoomActivationSystem extends IteratingSystem {
 
   private static int levelId(Map.Zone zone) {
     return zone != null && zone.level != null ? zone.level.Id : -1;
+  }
+
+  private void spawnActiveRoomPopulations(Map.Zone zone) {
+    if (factory == null || zone == null) return;
+    for (Map.RoomEx room : zone.getRoomsEx()) {
+      if (room.getActivationStatus() > Map.RoomEx.CLIENT_IN_SIGHT
+          || !room.claimMonsterPopulation()) continue;
+      int spawned = 0;
+      for (Map.MonsterSpawn spawn : room.getPendingMonsterSpawns()) {
+        int monsterId = factory.createMonster(spawn.monsterId, spawn.x, spawn.y);
+        if (monsterId == Engine.INVALID_ENTITY) continue;
+        mMapWrapper.create(monsterId).set(zone.map, zone);
+        if (mMonster.has(monsterId)) {
+          mMonster.get(monsterId).setSpawnAnchor(zone, spawn.x, spawn.y);
+        }
+        spawned++;
+      }
+      log.info("[ROOM_MONSTER_POPULATION] level={} room={} queued={} spawned={} action=first_activate",
+          levelId(zone), room.id, room.getPendingMonsterSpawns().size, spawned);
+    }
   }
 
   private static final class ClientRoom {

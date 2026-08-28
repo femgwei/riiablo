@@ -617,6 +617,15 @@ public class ServerEntityFactory extends EntityFactory {
         ownerMode, damageLevel, 0);
 
     mPosition.create(id).position.set(position);
+    MapWrapper ownerMap = ownerId >= 0 && mMapWrapper.has(ownerId)
+        ? mMapWrapper.get(ownerId) : null;
+    Map.Zone missileZone = ownerMap != null && ownerMap.zone != null
+        && ownerMap.zone.findRoomEx(position.x, position.y) != null
+        ? ownerMap.zone : map.getZone(position);
+    mMapWrapper.create(id).set(map, missileZone);
+    Map.RoomEx missileRoom = missileZone != null
+        ? missileZone.findRoomEx(position.x, position.y) : null;
+    missileComponent.roomId = missileRoom != null ? missileRoom.id : -1;
     mVelocity.create(id).velocity.set(angle).setLength(missile.Vel);
     mAngle.create(id).set(angle);
     mSize.create(id).size = Size.SMALL;
