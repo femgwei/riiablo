@@ -92,7 +92,8 @@ Progress:
 - [x] Native per-class thresholds, maximum-level metadata and `ExpRatio` lookup.
 - [x] Pure `SUNITDMG_ComputeExperienceGain` ordering and boundary tests.
 - [x] Authoritative `STAT_ITEM_ADDEXPERIENCE` application for the killer.
-- [ ] Monster `STAT_LEVEL`/`STAT_EXPERIENCE` must come from native spawn stats;
-  current death handling can still fall back to raw `MonStats` columns.
+- [x] Monster `STAT_LEVEL`/`STAT_EXPERIENCE` are initialized at spawn and the
+  authoritative death/loot paths consume those unit stats rather than raw
+  `MonStats` columns.
 - [ ] Same-level living party-member iteration and awards.
 - [ ] Mercenary experience persistence and level-up.

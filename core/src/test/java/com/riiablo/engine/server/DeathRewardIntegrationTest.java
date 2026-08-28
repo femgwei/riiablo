@@ -48,12 +48,20 @@ class DeathRewardIntegrationTest extends RiiabloTest {
 
       MonStats.Entry boss = new MonStats.Entry();
       boss.Id = "headless_reward_boss";
-      boss.Level = new int[] {1, 1, 1};
-      boss.Exp = new int[] {600, 600, 600};
+      // Deliberately disagree with the entity stats below. Native death
+      // consumers must use STAT_LEVEL/STAT_EXPERIENCE, not recompute from this
+      // row and thereby lose spawn-time modifiers.
+      boss.Level = new int[] {50, 50, 50};
+      boss.Exp = new int[] {999, 999, 999};
       boss.boss = true;
       int monster = world.create();
       world.getMapper(Monster.class).create(monster).set(boss, new MonStats2.Entry());
       world.getMapper(Position.class).create(monster).position.set(20, 30);
+      Attributes monsterAttrs = Attributes.obtainStandard();
+      monsterAttrs.base().put(Stat.level, 1);
+      monsterAttrs.base().put(Stat.experience, 600);
+      monsterAttrs.reset();
+      world.getMapper(AttributesWrapper.class).create(monster).attrs = monsterAttrs;
 
       System.out.println("[DEATH_REWARD_CHAIN] phase=death killer=" + player
           + " victim=" + monster + " expBefore=0");

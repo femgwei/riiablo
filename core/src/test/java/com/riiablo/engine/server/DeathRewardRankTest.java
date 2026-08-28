@@ -1,6 +1,5 @@
 package com.riiablo.engine.server;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,15 +27,7 @@ class DeathRewardRankTest {
   }
 
   @Test
-  void appliesNativeEliteMonsterLevelOffsets() {
-    MonStats.Entry stats = stats();
-    stats.Level = new int[] {5, 35, 70};
-
-    assertEquals(5, DeathRewardSystem.monsterLevel(stats, 0, MonsterRank.NORMAL));
-    assertEquals(7, DeathRewardSystem.monsterLevel(stats, 0, MonsterRank.CHAMPION));
-    assertEquals(8, DeathRewardSystem.monsterLevel(stats, 0, MonsterRank.UNIQUE));
-    assertEquals(8, DeathRewardSystem.monsterLevel(stats, 0, MonsterRank.SUPER_UNIQUE));
-    assertEquals(5, DeathRewardSystem.monsterLevel(stats, 0, MonsterRank.BOSS));
+  void identifiesEliteRanksWithoutRecomputingAuthoritativeLevel() {
     assertTrue(DeathRewardSystem.isEliteRank(MonsterRank.CHAMPION));
     assertTrue(DeathRewardSystem.isEliteRank(MonsterRank.UNIQUE));
   }

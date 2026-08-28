@@ -101,6 +101,8 @@ class CombatDeathProgressionEcsScenarioTest extends RiiabloTest {
       world.getMapper(Class.class).create(monster).type = Class.Type.MON;
       world.getMapper(Position.class).create(monster).position.set(20, 30);
       Attributes monsterAttrs = combatAttributes(5, 5, 0, 0, 1, 1);
+      monsterAttrs.base().put(Stat.experience, 600);
+      monsterAttrs.reset();
       world.getMapper(AttributesWrapper.class).create(monster).attrs = monsterAttrs;
 
       Missiles.Entry missileRow = Riiablo.files.Missiles.get("shafire3");

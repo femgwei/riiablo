@@ -10,6 +10,7 @@ import com.riiablo.CharacterClass;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -117,23 +118,21 @@ public class ExperienceManager extends PassiveSystem {
       return; // 不是玩家角色
     }
 
-    // 获取怪物经验值（根据难度）
-    // Exp[0] = Normal, Exp[1] = Nightmare, Exp[2] = Hell
-    int expIndex = player.data.diff; // 使用角色当前难度
-    if (expIndex < 0 || expIndex >= monster.monstats.Exp.length) {
-      expIndex = 0; // 默认普通难度
+    // SUNITDMG_DistributeExperience reads the stats initialized on the unit,
+    // not raw MonStats columns. Those values already contain area-level,
+    // player-count and unique/champion modifiers.
+    AttributesWrapper wrapper = world.getMapper(AttributesWrapper.class).get(event.victim);
+    StatListRef defenderStats = wrapper == null || wrapper.attrs == null
+        ? null : wrapper.attrs.base();
+    if (defenderStats == null || defenderStats.get(Stat.level) == null
+        || defenderStats.get(Stat.experience) == null) {
+      log.error("[XP_NATIVE] victim lacks authoritative level/experience stats: victim={} monster={}",
+          event.victim, monster.monstats.Id);
+      return;
     }
-    int defenderExp = monster.monstats.Exp[expIndex];
-
-    if (defenderExp <= 0) {
-      return; // 无经验值
-    }
-
-    // 获取怪物等级（根据难度）
-    int defenderLevel = 1;
-    if (monster.monstats.Level != null && expIndex < monster.monstats.Level.length) {
-      defenderLevel = monster.monstats.Level[expIndex];
-    }
+    int defenderLevel = getInt(defenderStats, Stat.level, 1);
+    int defenderExp = getInt(defenderStats, Stat.experience, 0);
+    if (defenderExp <= 0) return;
 
     // 分配经验值（参考 D2MOD SUNITDMG_DistributeExperience）
     distributeExperience(player.data, event.killer, defenderLevel, defenderExp);

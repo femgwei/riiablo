@@ -85,7 +85,16 @@ public class DeathRewardSystem extends PassiveSystem {
     }
 
     int difficulty = Math.max(0, Math.min(2, player.data.diff));
-    int monsterLevel = monsterLevel(monster.monstats, difficulty, monster.rank);
+    Attributes victimAttrs = mAttributesWrapper.has(event.victim)
+        ? mAttributesWrapper.get(event.victim).attrs : null;
+    com.riiablo.attributes.StatRef levelStat = victimAttrs == null
+        ? null : victimAttrs.get(Stat.level);
+    if (levelStat == null) {
+      log.error("[DEATH_REWARD] victim lacks authoritative level stat: victim={} monster={}",
+          event.victim, monster.monstats == null ? "unknown" : monster.monstats.Id);
+      return;
+    }
+    int monsterLevel = Math.max(1, levelStat.asInt());
     LootManager.LootConfig config = new LootManager.LootConfig();
     config.monsterLevel = monsterLevel;
     config.areaLevel = monsterLevel;
@@ -140,16 +149,6 @@ public class DeathRewardSystem extends PassiveSystem {
             config.playerCount, config.partyMembersInLevel,
             config.monsterPlayerCount).effectivePlayerCount(),
         config.isBoss, result.goldAmount, goldEntity, result.getItemCount(), createdItems);
-  }
-
-  static int monsterLevel(MonStats.Entry stats, int difficulty, int rank) {
-    if (stats == null || stats.Level == null || stats.Level.length == 0) return 1;
-    int level = stats.Level[Math.min(difficulty, stats.Level.length - 1)];
-    // D2Game creates champions at area level +2 and random/super uniques at
-    // area level +3. Story bosses retain their explicit MonStats level.
-    if (rank == MonsterRank.CHAMPION) level += 2;
-    else if (rank == MonsterRank.UNIQUE || rank == MonsterRank.SUPER_UNIQUE) level += 3;
-    return Math.max(1, level);
   }
 
   static boolean isEliteRank(int rank) {
