@@ -340,6 +340,11 @@ public class Map implements Disposable {
     return act;
   }
 
+  /** Returns the game difficulty used to build this map (Normal..Hell). */
+  public int getDifficulty() {
+    return MathUtils.clamp(diff, 0, 2);
+  }
+
   /** Binds the ECS entity factory used by zone generation. */
   public void setEntityFactory(EntityFactory factory) {
     this.factory = factory;

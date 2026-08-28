@@ -4,6 +4,7 @@ import java.util.Arrays;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 
 import com.badlogic.gdx.Gdx;
@@ -290,7 +291,16 @@ public class ServerEntityFactory extends EntityFactory {
   public int createMonster(int monsterId, float x, float y,
       int rank, long affixes, int championType, int uniqueId) {
     MonStats.Entry monstats = Riiablo.files.monstats.get(monsterId);
+    if (monstats == null) {
+      log.error("[MONSTER_NATIVE_STATS] monster row missing: id={}", monsterId);
+      return Engine.INVALID_ENTITY;
+    }
     MonStats2.Entry monstats2 = Riiablo.files.monstats2.get(monstats.MonStatsEx);
+    if (monstats2 == null) {
+      log.error("[MONSTER_NATIVE_STATS] MonStats2 row missing: monster={} row={}",
+          monstats.Id, monstats.MonStatsEx);
+      return Engine.INVALID_ENTITY;
+    }
 
     // Direct map and quest spawns only know the MonStats id. Preserve their
     // native boss quality even when no explicit MonsterSpawner rank was used.
@@ -302,112 +312,91 @@ public class ServerEntityFactory extends EntityFactory {
       }
     }
 
-    int id = super.createEntity(Class.Type.MON, monstats.Id);
-    mMonster.create(id).set(monstats, monstats2)
-        .setRank(rank, affixes, championType, uniqueId);
+    Map.Zone zone = map.getZone(x, y);
+    int difficulty = map.getDifficulty();
+    int gameType = 1; // This fork currently runs the LoD ruleset.
+    int baseMonsterLevel = MonsterStatsCalculator.resolveMonsterLevel(
+        monstats, zone == null ? null : zone.level, difficulty, true);
 
-    // TODO: move this somewhere else (a special class?)
-    {
-      Attributes attrs = Attributes.obtainStandard();
-      StatListRef base = attrs.base();
-      base.clear();
-      
-      // Calculate monster stats based on level using D2MOD logic
-      // Reference: D2MOD DATATBLS_CalculateMonsterStatsByLevel
-      MonsterStatsCalculator.MonsterStatsInit statsInit = new MonsterStatsCalculator.MonsterStatsInit();
-      int monsterLevel = (monstats.Level != null && monstats.Level.length > 0) ? monstats.Level[0] : 1;
-      int gameType = 1; // Assume expansion (can be made configurable)
-      int difficulty = 0; // Normal difficulty (can be made configurable)
-      // Calculate all stats: HP (1), AC (2), Exp (4), A1 (8)
-      // Flags: 1=HP, 2=AC, 4=Exp, 8=A1 (Attack 1: TH, MinD, MaxD)
-      short flags = (short)(1 | 2 | 4 | 8); // Calculate HP, AC, Exp, and A1 stats
-      
-      boolean calculated = MonsterStatsCalculator.calculateMonsterStatsByLevel(
-          monsterId, gameType, difficulty, monsterLevel, flags, statsInit);
-
-      // A2 values in MonStats are ratios, just like A1. They must be scaled
-      // through MonLvl before Actioneer attaches them to a ranged/native A2
-      // attack. Passing the raw table values made a quill rat's 1..2 damage
-      // spike resolve for roughly 18..22 damage with an inflated to-hit value.
-      MonsterStatsCalculator.MonsterStatsInit attack2Init =
-          new MonsterStatsCalculator.MonsterStatsInit();
-      boolean calculatedAttack2 = MonsterStatsCalculator.calculateMonsterStatsByLevel(
-          monsterId, gameType, difficulty, monsterLevel, (short) 0x10, attack2Init);
-      Monster monster = mMonster.get(id);
-      if (calculatedAttack2) {
-        monster.setAttack2Profile(
-            attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
-      } else {
-        monster.setAttack2Profile(
-            arrayValue(monstats.A2MinD, difficulty),
-            arrayValue(monstats.A2MaxD, difficulty),
-            arrayValue(monstats.A2TH, difficulty));
-      }
-      
-      if (calculated) {
-        // Use calculated HP values
-        // Monsters spawn at full HP (maxHP), not random HP
-        final float maxHp = statsInit.maxHP;
-        base.put(Stat.hitpoints, maxHp);
-        base.put(Stat.maxhp, maxHp);
-        
-        // Use calculated AC (Armor Class)
-        base.put(Stat.armorclass, statsInit.AC);
-        
-        // Use calculated A1 (Attack 1) stats: TH (To Hit), MinD (Min Damage), MaxD (Max Damage)
-        base.put(Stat.tohit, statsInit.TH);
-        base.put(Stat.mindamage, statsInit.A1MinD);
-        base.put(Stat.maxdamage, statsInit.A1MaxD);
-      } else {
-        // Fallback to direct MonStats values if calculation fails
-        // Monsters spawn at full HP (maxHP), not random HP
-        final float maxHp = monstats.maxHP[0];
-        base.put(Stat.hitpoints, maxHp);
-        base.put(Stat.maxhp, maxHp);
-        
-        // Set monster damage attributes (A1MinD/A1MaxD for attack 1)
-        // Reference D2MOD: Monsters use A1MinD/A1MaxD for their base damage
-        if (monstats.A1MinD != null && monstats.A1MaxD != null && 
-            monstats.A1MinD.length > 0 && monstats.A1MaxD.length > 0) {
-          base.put(Stat.mindamage, monstats.A1MinD[0]);
-          base.put(Stat.maxdamage, monstats.A1MaxD[0]);
-        }
-        
-        // Set attack rating (A1TH - Attack 1 To Hit)
-        if (monstats.A1TH != null && monstats.A1TH.length > 0) {
-          base.put(Stat.tohit, monstats.A1TH[0]);
-        }
-        
-        // Set armor class
-        if (monstats.AC != null && monstats.AC.length > 0) {
-          base.put(Stat.armorclass, monstats.AC[0]);
-        }
-      }
-      
-      // Set monster level (for damage calculation and hit chance)
-      if (monstats.Level != null && monstats.Level.length > 0) {
-        base.put(Stat.level, monstats.Level[0]);
-      }
-
-      attrs.reset(); // propagate base changes
-      mAttributesWrapper.create(id).attrs = attrs;
-      mUnitStates.create(id).init(id);
-      log.debug("[MONSTER_COMBAT_STATS] entity={} monster={} level={} "
-              + "a1={}..{} ar={} a2={}..{} ar={} rawA2={}..{} rawA2Ar={}",
-          id, monstats.Id, monsterLevel,
-          statInt(attrs, Stat.mindamage), statInt(attrs, Stat.maxdamage),
-          statInt(attrs, Stat.tohit),
-          monster.attack2MinDamage, monster.attack2MaxDamage, monster.attack2ToHit,
-          arrayValue(monstats.A2MinD, difficulty),
-          arrayValue(monstats.A2MaxD, difficulty),
-          arrayValue(monstats.A2TH, difficulty));
+    MonsterStatsCalculator.MonsterStatsInit statsInit =
+        new MonsterStatsCalculator.MonsterStatsInit();
+    MonsterStatsCalculator.MonsterStatsInit attack1Init =
+        new MonsterStatsCalculator.MonsterStatsInit();
+    MonsterStatsCalculator.MonsterStatsInit attack2Init =
+        new MonsterStatsCalculator.MonsterStatsInit();
+    boolean calculated = MonsterStatsCalculator.calculateMonsterStatsByLevel(
+        monsterId, gameType, difficulty, baseMonsterLevel, (short) 7, statsInit)
+        && MonsterStatsCalculator.calculateMonsterStatsByLevel(
+            monsterId, gameType, difficulty, baseMonsterLevel, (short) 8, attack1Init)
+        && MonsterStatsCalculator.calculateMonsterStatsByLevel(
+            monsterId, gameType, difficulty, baseMonsterLevel, (short) 0x10, attack2Init);
+    if (!calculated) {
+      log.error("[MONSTER_NATIVE_STATS] calculation failed: monster={} level={} difficulty={}",
+          monstats.Id, baseMonsterLevel, difficulty);
+      return Engine.INVALID_ENTITY;
     }
+
+    int connectedPlayers = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Player.class)).getEntities().size();
+    int playerCount = MonsterStatsCalculator.nativePlayerCount(monstats, connectedPlayers);
+    int hpBonus = MonsterStatsCalculator.nativeHpBonus(playerCount);
+    int expBonus = MonsterStatsCalculator.nativeExperienceBonus(playerCount);
+    int minHp = Math.min(statsInit.minHP, statsInit.maxHP);
+    int maxHp = Math.max(statsInit.minHP, statsInit.maxHP);
+    int baseHp = minHp == maxHp ? minHp : MathUtils.random(minHp, maxHp);
+    int hitpoints = Math.min(
+        baseHp + percentage(baseHp, hpBonus, 100), (1 << 23) - 1);
+    int experience = statsInit.Exp + percentage(statsInit.Exp, expBonus, 100);
+    experience = MonsterStatsCalculator.nativeRankExperience(experience, rank);
+    int monsterLevel = baseMonsterLevel
+        + MonsterStatsCalculator.nativeRankLevelBonus(rank);
+
+    int id = super.createEntity(Class.Type.MON, monstats.Id);
+    Monster monster = mMonster.create(id).set(monstats, monstats2)
+        .setRank(rank, affixes, championType, uniqueId);
+    monster.setAttack2Profile(attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
+
+    Attributes attrs = Attributes.obtainStandard();
+    StatListRef base = attrs.base();
+    base.clear();
+    base.put(Stat.level, monsterLevel);
+    base.put(Stat.monster_playercount, playerCount);
+    base.put(Stat.damageresist, arrayValue(monstats.ResDm, difficulty));
+    base.put(Stat.magicresist, arrayValue(monstats.ResMa, difficulty));
+    base.put(Stat.fireresist, arrayValue(monstats.ResFi, difficulty));
+    base.put(Stat.lightresist, arrayValue(monstats.ResLi, difficulty));
+    base.put(Stat.coldresist, arrayValue(monstats.ResCo, difficulty));
+    base.put(Stat.poisonresist, arrayValue(monstats.ResPo, difficulty));
+    base.put(Stat.toblock, arrayValue(monstats.ToBlock, difficulty));
+    base.put(Stat.attackrate, 100);
+    base.put(Stat.velocitypercent, 75);
+    base.put(Stat.other_animrate, 100);
+    base.put(Stat.last_sent_hp_pct, 128);
+    base.put(Stat.hitpoints, (float) hitpoints);
+    base.put(Stat.maxhp, (float) hitpoints);
+    base.put(Stat.armorclass, statsInit.AC);
+    base.put(Stat.experience, experience);
+    base.putEncoded(Stat.hpregen,
+        (int) ((((long) hitpoints << 8) * monstats.DamageRegen) >> 12));
+    base.put(Stat.tohit, attack1Init.TH);
+    base.put(Stat.mindamage, attack1Init.A1MinD);
+    base.put(Stat.maxdamage, attack1Init.A1MaxD);
+    attrs.reset();
+    mAttributesWrapper.create(id).attrs = attrs;
+    mUnitStates.create(id).init(id);
+    log.debug("[MONSTER_NATIVE_STATS] entity={} monster={} level={} baseLevel={} "
+            + "difficulty={} players={} hp={} baseHpRange={}..{} exp={} "
+            + "a1={}..{} ar={} a2={}..{} ar={}",
+        id, monstats.Id, monsterLevel, baseMonsterLevel, difficulty, playerCount,
+        hitpoints, statsInit.minHP, statsInit.maxHP, experience,
+        attack1Init.A1MinD, attack1Init.A1MaxD, attack1Init.TH,
+        attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
 
     mPosition.create(id).position.set(x, y);
     // Monsters created by map/quest generators must carry their owning zone,
     // just like players and objects. Without this, quest systems cannot see
     // the generated boss and clients may resolve the wrong level at a boundary.
-    mMapWrapper.create(id).set(map, map.getZone(x, y));
+    mMapWrapper.create(id).set(map, zone);
     // D2Common UNITS_GetBaseVelocity always uses MonStats.Velocity for
     // monsters. MonStats.Run only participates in run-animation-rate table
     // generation; treating it as displacement speed makes animation and
@@ -449,7 +438,11 @@ public class ServerEntityFactory extends EntityFactory {
 
   private static int arrayValue(int[] values, int index) {
     return values != null && index >= 0 && index < values.length
-        ? Math.max(0, values[index]) : 0;
+        ? values[index] : 0;
+  }
+
+  private static int percentage(int value, int multiplier, int divisor) {
+    return divisor == 0 ? 0 : (int) ((long) value * multiplier / divisor);
   }
 
   private static int statInt(Attributes attrs, short stat) {
