@@ -56,7 +56,7 @@ public class MaggotLarva extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
 
-  private static EntitySubscription enemyEntities;
+  private EntitySubscription enemyEntities;
 
   final Vector2 tmpVec2 = new Vector2();
 
@@ -75,11 +75,9 @@ public class MaggotLarva extends AI {
   @Override
   public void initialize() {
     super.initialize();
-    if (enemyEntities == null) {
-      enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
-              .all(Class.class)
-              .one(Player.class));
-    }
+    enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
+            .all(Class.class)
+            .one(Player.class));
   }
 
   @Override
@@ -129,7 +127,7 @@ public class MaggotLarva extends AI {
     IntBag entities = enemyEntities.getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int ent = entities.get(i);
-      if (mClass.get(ent).type == Class.Type.PLR) {
+      if (isValidEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
         float dst = entityPos.dst(targetPos);
         if (dst < targetDistance) {

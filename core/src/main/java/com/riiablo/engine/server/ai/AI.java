@@ -460,6 +460,24 @@ public abstract class AI implements Interactable.Interactor {
       MapWrapper target = mMapWrapper.get(targetId);
       if (source.map != null && target.map != null && source.map != target.map) return false;
     }
+    // Reuse the native aiDist limit for legacy AI implementations that still
+    // iterate their own subscription. This keeps their behavior bounded while
+    // they are migrated to findNearestTargetWithAidist().
+    if (monster != null && monster.monstats != null
+        && monster.monstats.aidist != null && monster.monstats.aidist.length > 0) {
+      int difficulty = 0;
+      if (mMapWrapper.has(entityId) && mMapWrapper.get(entityId).map != null) {
+        difficulty = mMapWrapper.get(entityId).map.getDifficulty();
+      }
+      int index = Math.min(difficulty, monster.monstats.aidist.length - 1);
+      int maxDistance = monster.monstats.aidist[index];
+      if (maxDistance > 0 && mPosition.has(entityId)) {
+        float max = maxDistance;
+        if (mPosition.get(entityId).position.dst2(mPosition.get(targetId).position) > max * max) {
+          return false;
+        }
+      }
+    }
     return true;
   }
 }
