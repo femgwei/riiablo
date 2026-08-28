@@ -1,5 +1,6 @@
 package com.riiablo.engine.server;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,6 +31,18 @@ class DeathRewardRankTest {
   void identifiesEliteRanksWithoutRecomputingAuthoritativeLevel() {
     assertTrue(DeathRewardSystem.isEliteRank(MonsterRank.CHAMPION));
     assertTrue(DeathRewardSystem.isEliteRank(MonsterRank.UNIQUE));
+  }
+
+  @Test
+  void SetBossDoesNotPromoteOrdinaryMonsterToUniqueTreasureClass() {
+    MonStats.Entry stats = new MonStats.Entry();
+    stats.SetBoss = true;
+    assertEquals(MonsterRank.NORMAL,
+        ServerEntityFactory.normalizeNativeRank(MonsterRank.NORMAL, stats));
+
+    stats.boss = true;
+    assertEquals(MonsterRank.BOSS,
+        ServerEntityFactory.normalizeNativeRank(MonsterRank.NORMAL, stats));
   }
 
   private static MonStats.Entry stats() {

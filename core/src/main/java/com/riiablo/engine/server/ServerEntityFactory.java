@@ -302,15 +302,13 @@ public class ServerEntityFactory extends EntityFactory {
       return Engine.INVALID_ENTITY;
     }
 
-    // Direct map and quest spawns only know the MonStats id. Preserve their
-    // native boss quality even when no explicit MonsterSpawner rank was used.
-    if (rank == com.riiablo.engine.server.monster.MonsterRank.NORMAL) {
-      if (monstats.SetBoss) {
-        rank = com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE;
-      } else if (monstats.boss || monstats.primeevil) {
-        rank = com.riiablo.engine.server.monster.MonsterRank.BOSS;
-      }
-    }
+    // Direct map and quest spawns only know the MonStats id. Preserve native
+    // story-boss quality when no explicit MonsterSpawner rank was supplied.
+    // SetBoss is *not* a quality flag: D2MOO uses it for boss/minion ownership
+    // setup (MonsterSpawn.cpp), and ordinary Fallen/Skeleton rows commonly set
+    // it. Promoting SetBoss rows to SUPER_UNIQUE selects TreasureClass3 and
+    // causes every normal monster to roll the unique multi-pick table.
+    rank = normalizeNativeRank(rank, monstats);
 
     Map.Zone zone = map.getZone(x, y);
     int difficulty = map.getDifficulty();
@@ -435,6 +433,15 @@ public class ServerEntityFactory extends EntityFactory {
 
     mNetworked.create(id);
     return id;
+  }
+
+  /** Applies only rank information encoded by the monster row itself. */
+  static int normalizeNativeRank(int requestedRank, MonStats.Entry monstats) {
+    if (requestedRank == com.riiablo.engine.server.monster.MonsterRank.NORMAL
+        && monstats != null && (monstats.boss || monstats.primeevil)) {
+      return com.riiablo.engine.server.monster.MonsterRank.BOSS;
+    }
+    return requestedRank;
   }
 
   private static int arrayValue(int[] values, int index) {
