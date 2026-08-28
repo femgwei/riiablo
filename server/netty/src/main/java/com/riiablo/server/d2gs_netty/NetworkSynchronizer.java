@@ -16,6 +16,9 @@ import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.map.Map;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.EntityFlags;
@@ -39,6 +42,8 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Flags> mFlags;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Position> mPosition;
 
   @Override
   protected boolean checkProcessing() {
@@ -70,10 +75,28 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   protected void process(int entityId) {
     FlatBufferBuilder builder = sync(new FlatBufferBuilder(0), entityId);
-    int id = players.findKey(entityId, -1); // TODO: replace with component referencing player id
-    OutboundPacket packet = D2GSOutboundPacketFactory.obtain(id != -1 ? ~(1 << id) : OutboundPacket.BROADCAST, D2GSData.EntitySync, builder.dataBuffer());
+    int recipients = recipientMask(entityId);
+    if (recipients == 0) return;
+    OutboundPacket packet = D2GSOutboundPacketFactory.obtain(recipients, D2GSData.EntitySync, builder.dataBuffer());
     boolean success = outPackets.offer(packet);
     assert success;
+  }
+
+  private int recipientMask(int entityId) {
+    MapWrapper source = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    if (source == null || source.zone == null || !source.zone.hasNativeRoomTopology()) return OutboundPacket.BROADCAST;
+    if (!mPosition.has(entityId)) return OutboundPacket.BROADCAST;
+    int mask = 0;
+    for (IntIntMap.Entry entry : players.entries()) {
+      MapWrapper target = mMapWrapper.has(entry.value) ? mMapWrapper.get(entry.value) : null;
+      if (target == null || target.zone != source.zone || !mPosition.has(entry.value)) continue;
+      if (source.zone.areRoomsAdjacent(mPosition.get(entityId).position.x,
+          mPosition.get(entityId).position.y, mPosition.get(entry.value).position.x,
+          mPosition.get(entry.value).position.y)) mask |= 1 << entry.key;
+    }
+    Gdx.app.debug(TAG, "[ROOM_NET_SYNC] entity=" + entityId + " recipients=0x"
+        + Integer.toHexString(mask));
+    return mask;
   }
 
   public FlatBufferBuilder sync(FlatBufferBuilder builder, int entityId) {

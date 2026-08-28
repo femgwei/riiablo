@@ -13,6 +13,9 @@ import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.map.Map;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.EntityFlags;
@@ -38,7 +41,10 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Flags> mFlags;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Position> mPosition;
   private final EntitySnapshotCache snapshots = new EntitySnapshotCache();
+  private final IntIntMap lastRecipients = new IntIntMap();
 
   @Override
   protected boolean checkProcessing() {
@@ -49,6 +55,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   @Override
   protected void removed(int entityId) {
     snapshots.remove(entityId);
+    lastRecipients.remove(entityId, 0);
     Class.Type type = mClass.get(entityId).type;
     switch (type) {
       case PLR:
@@ -71,13 +78,16 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   protected void process(int entityId) {
     byte[] snapshot = serialize(entityId);
+    int recipients = recipientMask(entityId);
+    if (recipients == 0) return;
+    int previousRecipients = lastRecipients.get(entityId, Integer.MIN_VALUE);
+    if (previousRecipients != recipients) {
+      // A newly visible client needs the unchanged baseline too.
+      snapshots.remove(entityId);
+      lastRecipients.put(entityId, recipients);
+    }
     if (!snapshots.update(entityId, snapshot)) return;
-    // The server is authoritative for player vitals, death, progression and
-    // movement correction. Excluding the owning connection meant a client
-    // could see every other entity update while never receiving its own HP=0
-    // or death mode. Echo every authoritative entity snapshot to all clients;
-    // input packets remain intents and are never mirrored as trusted state.
-    Packet packet = Packet.obtain(0xFFFFFFFF, ByteBuffer.wrap(snapshot));
+    Packet packet = Packet.obtain(recipients, ByteBuffer.wrap(snapshot));
     boolean success = outPackets.offer(packet);
     if (!success) {
       // Do not suppress the next frame after a queue failure. Removing the
@@ -86,6 +96,26 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       Gdx.app.error(TAG, "[NET_SYNC] phase=runtime_drop entity=" + entityId
           + " reason=out_queue_full");
     }
+  }
+
+  /** D2MOO sends unit updates only to clients in the current/adjacent RoomEx. */
+  private int recipientMask(int entityId) {
+    MapWrapper source = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    if (source == null || source.zone == null || !source.zone.hasNativeRoomTopology()) {
+      return 0xFFFFFFFF;
+    }
+    int mask = 0;
+    if (!mPosition.has(entityId)) return 0xFFFFFFFF;
+    for (IntIntMap.Entry entry : players.entries()) {
+      MapWrapper target = mMapWrapper.has(entry.value) ? mMapWrapper.get(entry.value) : null;
+      if (target == null || target.zone != source.zone || !mPosition.has(entry.value)) continue;
+      if (source.zone.areRoomsAdjacent(
+          mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
+          mPosition.get(entry.value).position.x, mPosition.get(entry.value).position.y)) {
+        mask |= 1 << entry.key;
+      }
+    }
+    return mask;
   }
 
   /** Sends one complete authoritative baseline to a newly connected client. */
