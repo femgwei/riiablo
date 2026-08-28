@@ -27,6 +27,13 @@ class ExperienceManagerNativeTest {
         99, 99, 99, 1000, 1024, 10, 0));
   }
 
+  @Test
+  void mirrorsNativePartyBonusAndLevelWeightedShare() {
+    assertEquals(673, ExperienceManager.computeNativePartyShare(1000, 10, 2, 20));
+    assertEquals(269, ExperienceManager.computeNativePartyShare(1000, 4, 2, 20));
+    assertEquals(1000, ExperienceManager.computeNativePartyShare(1000, 10, 1, 10));
+  }
+
   private static long gain(int attackerLevel, int defenderLevel,
       int defenderExperience, int ratio, int itemBonus) {
     return ExperienceManager.computeNativeExperienceGain(

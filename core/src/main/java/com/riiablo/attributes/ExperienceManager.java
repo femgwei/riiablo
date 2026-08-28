@@ -13,6 +13,7 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
@@ -46,6 +47,9 @@ public class ExperienceManager extends PassiveSystem {
   
   /** 队伍管理器（可选注入） */
   private PartyManager partyManager;
+  private com.artemis.ComponentMapper<Player> mPlayer;
+  private com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  private com.artemis.ComponentMapper<MapWrapper> mMapWrapper;
   /** A victim can be observed by more than one lethal combat path in a frame. */
   private final IntSet rewardedVictims = new IntSet();
 
@@ -174,7 +178,8 @@ public class ExperienceManager extends PassiveSystem {
       return;
     }
 
-    // 在队伍中，分配经验给同场景的队友
+    // 在队伍中，按 D2MOO PARTY_IteratePartyMembersInSameLevel 收集真实 ECS
+    // 玩家。PartyMember 是网络/UI 快照，不能作为等级、场景或存活状态的权威来源。
     Party party = partyManager.getParty(partyId);
     if (party == null || party.getMemberCount() <= 1) {
       // 队伍无效或只有自己
@@ -187,14 +192,16 @@ public class ExperienceManager extends PassiveSystem {
       return;
     }
 
-    // 获取同场景存活队友
     Array<PartyMember> membersInRange = party.getMembers();
+    Array<PartyMember> eligible = new Array<>();
     int memberCount = 0;
     int levelSum = 0;
-    
-    // 收集有效队友信息
+
+    int killerLevelId = levelId(killerEntityId);
     for (PartyMember member : membersInRange) {
-      if (member.alive && member.online) {
+      if (isEligibleMember(member, killerLevelId)) {
+        member.level = memberLevel(member.entityId, member.level);
+        eligible.add(member);
         memberCount++;
         levelSum += member.level;
       }
@@ -213,35 +220,67 @@ public class ExperienceManager extends PassiveSystem {
 
     // 计算组队经验加成（D2MOD公式）
     // totalExp = baseExp + 89 * baseExp * (members - 1) / 256
-    long totalExp = defenderExp + 
-        (long) PARTY_EXP_BONUS_NUMERATOR * defenderExp * (memberCount - 1) / PARTY_EXP_BONUS_DENOMINATOR;
+    long totalExp = defenderExp +
+        (long) PARTY_EXP_BONUS_NUMERATOR * defenderExp * (memberCount - 1)
+            / PARTY_EXP_BONUS_DENOMINATOR;
     
     log.debug("Party exp distribution: {} members, base={}, total={}", 
         memberCount, defenderExp, totalExp);
 
     // 按等级比例分配经验
-    float multiplier = (float) totalExp / (float) levelSum;
-    
-    for (PartyMember member : membersInRange) {
-      if (!member.alive || !member.online) {
-        continue;
-      }
-      
-      // 每个成员按等级比例获得经验
-      int memberShare = (int) (member.level * multiplier);
-      
-      // 应用等级差系数
-      // TODO: 需要获取成员的CharData来计算，这里暂时只处理击杀者
-      if (member.entityId == killerEntityId) {
-        long experienceGained = computeExperienceGain(
-            killerData.charClass, killerLevel, defenderLevel, memberShare,
-            killerAddExperience);
-        if (experienceGained > 0) {
-          addExperienceForPlayer(killerData, killerLevel, experienceGained);
+    for (PartyMember member : eligible) {
+      Player target = mPlayer == null ? null : mPlayer.get(member.entityId);
+      if (target == null || target.data == null) continue;
+      int targetLevel = memberLevel(member.entityId, member.level);
+      int targetBonus = 0;
+      if (mAttributesWrapper != null && mAttributesWrapper.has(member.entityId)) {
+        Attributes attrs = mAttributesWrapper.get(member.entityId).attrs;
+        if (attrs != null) {
+          targetBonus = getInt(attrs.aggregate(), Stat.item_addexperience, 0);
         }
       }
-      // TODO: 其他队友的经验分配需要通过网络同步
+      long memberShare = computeNativePartyShare(defenderExp, targetLevel,
+          memberCount, levelSum);
+      int share = (int) Math.min(Integer.MAX_VALUE, memberShare);
+      long experienceGained = computeExperienceGain(
+          target.data.charClass, targetLevel, defenderLevel, share,
+          targetBonus);
+      if (experienceGained > 0) addExperienceForPlayer(target.data, targetLevel, experienceGained);
     }
+  }
+
+  private boolean isEligibleMember(PartyMember member, int killerLevelId) {
+    if (member == null || !member.online || !member.alive || mPlayer == null
+        || !mPlayer.has(member.entityId) || mPlayer.get(member.entityId).data == null) return false;
+    int memberLevelId = levelId(member.entityId);
+    return killerLevelId < 0 || memberLevelId < 0 || memberLevelId == killerLevelId;
+  }
+
+  private int memberLevel(int entityId, int fallback) {
+    if (mAttributesWrapper != null && mAttributesWrapper.has(entityId)) {
+      Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+      if (attrs != null) return Math.max(1, getInt(attrs.aggregate(), Stat.level, fallback));
+    }
+    Player player = mPlayer == null || !mPlayer.has(entityId) ? null : mPlayer.get(entityId);
+    return player == null || player.data == null
+        ? Math.max(1, fallback) : Math.max(1, player.data.level & 0xFF);
+  }
+
+  private int levelId(int entityId) {
+    if (mMapWrapper == null || !mMapWrapper.has(entityId)) return -1;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+        ? -1 : wrapper.zone.level.Id;
+  }
+
+  /** Mirrors D2MOO's total-exp bonus and level-weighted party share. */
+  static long computeNativePartyShare(int defenderExperience, int memberLevel,
+      int memberCount, int levelSum) {
+    if (memberCount <= 1 || levelSum <= 0) return defenderExperience;
+    long total = defenderExperience
+        + (long) PARTY_EXP_BONUS_NUMERATOR * defenderExperience * (memberCount - 1)
+            / PARTY_EXP_BONUS_DENOMINATOR;
+    return (long) ((double) memberLevel * total / (double) levelSum);
   }
 
   /**
