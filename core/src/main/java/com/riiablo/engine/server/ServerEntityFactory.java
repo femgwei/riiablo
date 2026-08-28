@@ -397,6 +397,7 @@ public class ServerEntityFactory extends EntityFactory {
     // just like players and objects. Without this, quest systems cannot see
     // the generated boss and clients may resolve the wrong level at a boundary.
     mMapWrapper.create(id).set(map, zone);
+    monster.setSpawnAnchor(zone, x, y);
     // D2Common UNITS_GetBaseVelocity always uses MonStats.Velocity for
     // monsters. MonStats.Run only participates in run-animation-rate table
     // generation; treating it as displacement speed makes animation and

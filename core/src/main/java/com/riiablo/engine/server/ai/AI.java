@@ -459,6 +459,9 @@ public abstract class AI implements Interactable.Interactor {
       MapWrapper source = mMapWrapper.get(entityId);
       MapWrapper target = mMapWrapper.get(targetId);
       if (source.map != null && target.map != null && source.map != target.map) return false;
+      if (monster != null && monster.spawnZone != null
+          && (source.zone != monster.spawnZone || target.zone != monster.spawnZone)) return false;
+      if (source.zone != null && target.zone != null && source.zone != target.zone) return false;
     }
     // Reuse the native aiDist limit for legacy AI implementations that still
     // iterate their own subscription. This keeps their behavior bounded while
