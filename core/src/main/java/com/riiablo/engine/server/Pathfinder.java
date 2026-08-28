@@ -18,6 +18,7 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.Direction;
 import com.riiablo.logger.LogManager;
@@ -43,6 +44,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
 
   @Wire(name = "map")
   protected Map map;
@@ -367,12 +369,55 @@ public class Pathfinder extends IteratingSystem {
   }
 
   protected boolean findPath(int src, Vector2 srcPos, Vector2 targetPos, int flags, int size, GraphPath path) {
+    if (!isNativeMonsterRoomPathAllowed(src, srcPos, targetPos)) {
+      if (mMonster.has(src)) {
+        Monster monster = mMonster.get(src);
+        log.debug("[MONSTER_ROOM_PATH] entity={} monster={} source=({}, {}) target=({}, {}) action=reject",
+            src, monster.monstats != null ? monster.monstats.Id : "unknown",
+            srcPos.x, srcPos.y, targetPos.x, targetPos.y);
+      }
+      return false;
+    }
     boolean success = map.findPath(srcPos, targetPos, flags, size, path);
     if (success) {
+      if (!pathWithinNativeMonsterRooms(src, path)) {
+        path.clear();
+        log.debug("[MONSTER_ROOM_PATH] entity={} source=({}, {}) target=({}, {}) action=reject_path",
+            src, srcPos.x, srcPos.y, targetPos.x, targetPos.y);
+        return false;
+      }
       map.smoothPath(flags, size, path);
       mPathfind.create(src).set(path);
     }
 
     return success;
+  }
+
+  static boolean isRoomPathAllowed(Map.Zone zone, Vector2 source, Vector2 target) {
+    return zone == null || !zone.hasNativeRoomTopology()
+        || zone.areRoomsAdjacent(source.x, source.y, target.x, target.y);
+  }
+
+  private boolean isNativeMonsterRoomPathAllowed(int src, Vector2 source, Vector2 target) {
+    if (!mMonster.has(src) || !mMapWrapper.has(src)) return true;
+    MapWrapper wrapper = mMapWrapper.get(src);
+    if (wrapper == null || wrapper.zone == null) return true;
+    return isRoomPathAllowed(wrapper.zone, source, target);
+  }
+
+  private boolean pathWithinNativeMonsterRooms(int src, GraphPath path) {
+    if (!mMonster.has(src) || !mMapWrapper.has(src)) return true;
+    MapWrapper wrapper = mMapWrapper.get(src);
+    Map.Zone zone = wrapper != null ? wrapper.zone : null;
+    if (zone == null || !zone.hasNativeRoomTopology()) return true;
+    Map.RoomEx sourceRoom = zone.findRoomEx(mPosition.get(src).position.x,
+        mPosition.get(src).position.y);
+    if (sourceRoom == null) return false;
+    for (int i = 0; i < path.getCount(); i++) {
+      Vector2 point = path.getNodePosition(i);
+      Map.RoomEx room = zone.findRoomEx(point.x, point.y);
+      if (room == null || (room != sourceRoom && !sourceRoom.isAdjacentTo(room.id))) return false;
+    }
+    return true;
   }
 }

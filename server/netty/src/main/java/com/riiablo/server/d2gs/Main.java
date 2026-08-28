@@ -40,6 +40,7 @@ import com.riiablo.codec.StringTBLs;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.AIStepper;
 import com.riiablo.engine.server.RoomActivationSystem;
+import com.riiablo.engine.server.RoomEntityTrackingSystem;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ItemInteractor;
@@ -214,6 +215,7 @@ public class Main extends ApplicationAdapter {
         .with(new ObjectInitializer())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
 
+        .with(new RoomEntityTrackingSystem())
         .with(new RoomActivationSystem())
         .with(new AIStepper())
         .with(new Pathfinder())

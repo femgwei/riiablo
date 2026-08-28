@@ -1612,7 +1612,7 @@ public class Map implements Disposable {
       return adjacentRoomIds != null;
     }
 
-    boolean isAdjacentTo(int roomId) {
+    public boolean isAdjacentTo(int roomId) {
       if (adjacentRoomIds == null) return false;
       for (int id : adjacentRoomIds) if (id == roomId) return true;
       return false;

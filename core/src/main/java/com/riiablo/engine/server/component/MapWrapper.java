@@ -10,10 +10,13 @@ import com.riiablo.map.Map;
 public class MapWrapper extends Component {
   public Map      map;
   public Map.Zone zone;
+  /** Native RoomEx id containing the entity, or -1 when outside exported rooms. */
+  public int roomId = -1;
 
   public MapWrapper set(Map map, Map.Zone zone) {
     this.map = map;
     this.zone = zone;
+    this.roomId = -1;
     return this;
   }
 }
