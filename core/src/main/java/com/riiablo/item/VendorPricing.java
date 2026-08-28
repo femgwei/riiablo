@@ -56,7 +56,8 @@ public final class VendorPricing {
     if (item == null || item.base == null || transaction == null) return 0;
     if (item.hasFlag(Item.ITEMFLAG_BEGINNER)) return 1;
     if (transaction == Transaction.REPAIR
-        && (item.hasFlag(Item.ITEMFLAG_ETHEREAL) || item.base.nodurability)) return 0;
+        && (item.hasFlag(Item.ITEMFLAG_ETHEREAL) || item.base.nodurability
+            || stat(item, Stat.item_indesctructible, 0) > 0)) return 0;
     ItemEntry base = item.base;
     if (transaction == Transaction.GAMBLE) {
       int gamble = base.gambleCost > 0 ? base.gambleCost : baseCost(base);
@@ -83,15 +84,23 @@ public final class VendorPricing {
         default: break;
       }
     }
-    cost = scale(cost, multiplier);
-    if (transaction == Transaction.BUY || transaction == Transaction.REPAIR) cost = applyReduced(cost, reducedPrices);
-    else if (transaction == Transaction.SELL && npc == null) cost /= 4;
+    // D2Common applies the missing-durability fraction to nRepCost before
+    // the NPC multiplier and quest discounts. Replenishing-durability items
+    // leave one point for the replenish event and therefore use max-1.
     if (transaction == Transaction.REPAIR) {
       int max = stat(item, Stat.maxdurability, 0);
       int current = stat(item, Stat.durability, max);
       if (max <= 0 || current >= max) return 0;
-      cost = Math.max(1, cost * (max - Math.max(0, current)) / max);
+      boolean replenishes = stat(item, Stat.item_replenish_durability, 0) > 0;
+      int missing = replenishes ? Math.max(0, max - 1 - Math.max(0, current))
+          : max - Math.max(0, current);
+      if (missing <= 0) return 0;
+      cost = (int) ((long) cost * missing / max);
     }
+    cost = scale(cost, multiplier);
+    if (transaction == Transaction.BUY || transaction == Transaction.REPAIR) cost = applyReduced(cost, reducedPrices);
+    else if (transaction == Transaction.SELL && npc == null) cost /= 4;
+    if (transaction == Transaction.REPAIR && cost <= 0) return 0;
     if (transaction == Transaction.SELL && npc != null) {
       int maxBuy = difficulty <= 0 ? npc.maxBuy : difficulty == 1 ? npc.maxBuyNormal : npc.maxBuyHell;
       if (maxBuy > 0) cost = Math.min(cost, maxBuy);

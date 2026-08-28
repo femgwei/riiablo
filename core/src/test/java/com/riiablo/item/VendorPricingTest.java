@@ -79,6 +79,26 @@ class VendorPricingTest extends RiiabloTest {
   }
 
   @Test
+  void nativeRepairLeavesOnePointForReplenishingDurability() {
+    Item item = item("hp1", 1, 1);
+    item.base.cost = 1000;
+    item.attrs.base().put(Stat.maxdurability, 10);
+    item.attrs.base().put(Stat.durability, 9);
+    item.attrs.base().put(Stat.item_replenish_durability, 1);
+    assertEquals(0, VendorPricing.transactionCost(
+        item, null, VendorPricing.Transaction.REPAIR, 0));
+  }
+
+  @Test
+  void indestructiblePropertyCannotBeRepaired() {
+    Item item = item("hp1", 1, 1);
+    item.attrs.base().put(Stat.maxdurability, 10);
+    item.attrs.base().put(Stat.durability, 1);
+    item.attrs.base().put(Stat.item_indesctructible, 1);
+    assertEquals(0, VendorPricing.repairPrice(item, null, null));
+  }
+
+  @Test
   void gamblePurchaseAtomicallyUsesGamblePrice() {
     CharData character = CharData.obtain().clear().set(
         Riiablo.NORMAL, false, "GambleHero", Riiablo.AMAZON);
