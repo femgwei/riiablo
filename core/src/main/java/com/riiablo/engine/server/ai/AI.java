@@ -407,7 +407,12 @@ public abstract class AI implements Interactable.Interactor {
     float best = Float.MAX_VALUE;
     float maxSearchDist = 35f;
     if (monster.monstats.aidist != null && monster.monstats.aidist.length > 0) {
-      int aidist = monster.monstats.aidist[0];
+      int difficulty = 0;
+      if (mMapWrapper.has(entityId) && mMapWrapper.get(entityId).map != null) {
+        difficulty = mMapWrapper.get(entityId).map.getDifficulty();
+      }
+      int index = Math.min(difficulty, monster.monstats.aidist.length - 1);
+      int aidist = monster.monstats.aidist[index];
       if (aidist > 0) maxSearchDist = aidist;
     }
     float maxSearchDistSq = maxSearchDist * maxSearchDist;
