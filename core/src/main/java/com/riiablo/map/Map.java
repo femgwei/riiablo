@@ -1000,7 +1000,12 @@ public class Map implements Disposable {
       if (roomsEx.isEmpty()) return true;
       RoomEx a = findRoomEx(ax, ay), b = findRoomEx(bx, by);
       if (a == null || b == null) return false;
-      return a == b || a.touches(b, DT1.Tile.SUBTILE_SIZE);
+      // D2MOO's authoritative scope is the current RoomEx plus the rooms in
+      // pRoomsNear.  Geometry is only a compatibility fallback for maps that
+      // predate native topology export (or rooms whose native list is empty).
+      return a == b || (a.hasNativeAdjacency() && a.isAdjacentTo(b.id))
+          || (!a.hasNativeAdjacency() && !b.hasNativeAdjacency()
+              && a.touches(b, DT1.Tile.SUBTILE_SIZE));
     }
 
     static int index(int width, int x, int y) {
@@ -1454,6 +1459,7 @@ public class Map implements Disposable {
     public final int y;
     public final int width;
     public final int height;
+    private int[] adjacentRoomIds;
 
     RoomEx(int id, int x, int y, int width, int height) {
       this.id = id;
@@ -1465,6 +1471,27 @@ public class Map implements Disposable {
 
     public boolean contains(float px, float py) {
       return px >= x && py >= y && px < x + width && py < y + height;
+    }
+
+    /** Stores a stable copy of native D2MOO pRoomsNear IDs. */
+    public void setAdjacentRoomIds(int[] ids) {
+      // null means the native topology was not exported; an empty array is a
+      // valid native topology for an isolated room and must remain authoritative.
+      adjacentRoomIds = ids == null ? null : ids.clone();
+    }
+
+    public int[] getAdjacentRoomIds() {
+      return adjacentRoomIds == null ? new int[0] : adjacentRoomIds.clone();
+    }
+
+    boolean hasNativeAdjacency() {
+      return adjacentRoomIds != null;
+    }
+
+    boolean isAdjacentTo(int roomId) {
+      if (adjacentRoomIds == null) return false;
+      for (int id : adjacentRoomIds) if (id == roomId) return true;
+      return false;
     }
 
     boolean touches(RoomEx other, int margin) {

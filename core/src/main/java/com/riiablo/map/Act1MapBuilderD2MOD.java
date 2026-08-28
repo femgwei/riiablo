@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.IntSet;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
@@ -2977,8 +2978,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int levelX = level.getLevelCoords().getNPosX();
     int levelY = level.getLevelCoords().getNPosY();
     zone.roomsEx.clear();
+    IdentityHashMap<D2DrlgRoom, Integer> nativeIds = new IdentityHashMap<>();
+    Array<D2DrlgRoom> nativeRooms = new Array<>();
     for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
         room = room.getDrlgRoomNext()) {
+      nativeIds.put(room, nativeRooms.size);
+      nativeRooms.add(room);
       int localTileX = room.getNTileXPos() - levelX;
       int localTileY = room.getNTileYPos() - levelY;
       zone.addRoomEx(
@@ -2987,8 +2992,26 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           room.getNTileWidth() * DT1.Tile.SUBTILE_SIZE,
           room.getNTileHeight() * DT1.Tile.SUBTILE_SIZE);
     }
-    Gdx.app.log(TAG, String.format("D2MOO RoomEx export: levelId=%d rooms=%d",
-        levelId, zone.roomsEx.size));
+    int links = 0;
+    for (int i = 0; i < nativeRooms.size; i++) {
+      D2DrlgRoom room = nativeRooms.get(i);
+      D2DrlgRoom[] near = room.getPpRoomsNear();
+      int count = near == null ? 0 : Math.min(room.getNRoomsNear(), near.length);
+      IntArray adjacent = new IntArray(count);
+      for (int j = 0; j < count; j++) {
+        D2DrlgRoom neighbor = near[j];
+        Integer id = neighbor == null ? null : nativeIds.get(neighbor);
+        if (id != null && id != i) {
+          adjacent.add(id);
+        }
+      }
+      // Preserve an empty native list: it is different from a legacy room for
+      // which no topology was exported and geometry fallback is still allowed.
+      zone.roomsEx.get(i).setAdjacentRoomIds(adjacent.toArray());
+      links += adjacent.size;
+    }
+    Gdx.app.log(TAG, String.format("D2MOO RoomEx topology: levelId=%d rooms=%d links=%d",
+        levelId, zone.roomsEx.size, links));
   }
 
   private static DS1.Cell findReverseWarp(Map map, Zone destination, int sourceLevelId) {
