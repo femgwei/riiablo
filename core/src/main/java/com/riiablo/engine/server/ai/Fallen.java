@@ -18,7 +18,6 @@ import com.riiablo.logger.Logger;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
@@ -59,8 +58,7 @@ public class Fallen extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
 
-  private static EntitySubscription enemyEntities;
-  private static EntitySubscription monsterEntities;  // All monsters to check for death animation
+  private EntitySubscription monsterEntities;  // All monsters to check for death animation
 
   final Vector2 tmpVec2 = new Vector2();
   final Vector2 tmpVec2_2 = new Vector2();  // Second temporary vector for escape calculation
@@ -89,15 +87,8 @@ public class Fallen extends AI {
   @Override
   public void initialize() {
     super.initialize();
-    if (enemyEntities == null) {
-      enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
-              .all(Class.class)
-              .one(Player.class));
-    }
-    if (monsterEntities == null) {
-      monsterEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
-              .all(Class.class, Monster.class, Position.class, CofReference.class));
-    }
+    monsterEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
+            .all(Class.class, Monster.class, Position.class, CofReference.class));
   }
 
   /**
@@ -117,11 +108,15 @@ public class Fallen extends AI {
       if (monsterId == entityId) continue; // Skip self
       if (!mPosition.has(monsterId)) continue;
       if (!mMonster.has(monsterId)) continue;
+      if (mMapWrapper.has(entityId) && mMapWrapper.has(monsterId)) {
+        com.riiablo.map.Map.Zone sourceZone = mMapWrapper.get(entityId).zone;
+        com.riiablo.map.Map.Zone corpseZone = mMapWrapper.get(monsterId).zone;
+        if (sourceZone != null && corpseZone != null && sourceZone != corpseZone) continue;
+      }
       
-      // Check if this is a Fallen (same AI type)
-      Monster otherMonster = mMonster.get(monsterId);
-      if (!otherMonster.monstats.AI.equals("Fallen")) continue;
-      
+      // Native D2 checks the room's last-dead list without restricting the
+      // corpse to the Fallen AI class. Any nearby monster death can trigger
+      // the flee reaction (the room list itself is the scope limiter).
       // Check if monster is in death animation (MODE_DT)
       if (mCofReference.has(monsterId)) {
         byte mode = mCofReference.get(monsterId).mode;
@@ -263,15 +258,8 @@ public class Fallen extends AI {
       aiParam0 = true;  // Set flag like D2MOD's dwAiParam[0] = 1
       
       // Find target to escape from (player)
-      int targetId = Engine.INVALID_ENTITY;
-      IntBag entities = enemyEntities.getEntities();
-      for (int i = 0, size = entities.size(); i < size; i++) {
-        int ent = entities.get(i);
-        if (mClass.get(ent).type == Class.Type.PLR) {
-          targetId = ent;
-          break;
-        }
-      }
+      float[] escapeDistance = { Float.MAX_VALUE };
+      int targetId = findNearestTargetWithAidist(escapeDistance);
       
       // D2MOD: AIGENERAL_FreeCurrentAiCommand - clear any current AI command
       // We don't have AI commands yet, so skip this
@@ -316,23 +304,12 @@ public class Fallen extends AI {
       }
     }
 
-    // Find target
-    int targetId = Engine.INVALID_ENTITY;
-    float targetDistance = Float.MAX_VALUE;
-    Vector2 entityPos = mPosition.get(entityId).position;
-    
-    IntBag entities = enemyEntities.getEntities();
-    for (int i = 0, size = entities.size(); i < size; i++) {
-      int ent = entities.get(i);
-      if (mClass.get(ent).type == Class.Type.PLR) {
-        Vector2 targetPos = mPosition.get(ent).position;
-        float dst = entityPos.dst(targetPos);
-        if (dst < targetDistance) {
-          targetDistance = dst;
-          targetId = ent;
-        }
-      }
-    }
+    // D2MOO resolves targets from the active target-node list and applies
+    // aiDist/town/dead/map filtering. Never scan every player globally here:
+    // that makes Fallen groups pursue a player through the Rogue Encampment.
+    float[] nativeTargetDistance = { Float.MAX_VALUE };
+    int targetId = findNearestTargetWithAidist(nativeTargetDistance);
+    float targetDistance = nativeTargetDistance[0];
 
     if (targetId == Engine.INVALID_ENTITY) {
       // No target, idle behavior

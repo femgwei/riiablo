@@ -124,6 +124,19 @@ public class FallenShaman extends AI {
     for (int i = 0, size = entities.size(); i < size; i++) {
       int candidateId = entities.get(i);
       if (candidateId == entityId) continue;
+      // Native callback only considers a corpse that has completed its death
+      // animation (MONMODE_DEAD). In this ECS the equivalent terminal mode is
+      // MODE_DD; MODE_DT is still a live death animation and must not be
+      // resurrected early.
+      if (!mCofReference.has(candidateId)
+          || mCofReference.get(candidateId).mode != Engine.Monster.MODE_DD) {
+        continue;
+      }
+      if (mMapWrapper.has(entityId) && mMapWrapper.has(candidateId)) {
+        com.riiablo.map.Map.Zone sourceZone = mMapWrapper.get(entityId).zone;
+        com.riiablo.map.Map.Zone corpseZone = mMapWrapper.get(candidateId).zone;
+        if (sourceZone != null && corpseZone != null && sourceZone != corpseZone) continue;
+      }
 
       Attributes attrs = mAttributesWrapper.get(candidateId).attrs;
       StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
@@ -197,6 +210,9 @@ public class FallenShaman extends AI {
 
   private boolean castFireball(int targetId, Vector2 targetPos) {
     stateMachine.changeState(State.CAST);
+    // D2MOO uses MonStats.Skill2 together with Sk2mode. Fallen Shaman data
+    // names seq_shamanresurrect there; every native MonSeq frame is A2. Until
+    // MonSeq.txt has a generic runtime stepper, this is its exact backing COF.
     if (useMonsterSkill(1, targetId, targetPos, SHAMAN_SEQUENCE_MODE)) {
       time = MathUtils.random(1f, 2f);
       return true;
@@ -287,7 +303,11 @@ public class FallenShaman extends AI {
     }
 
     int corpseId = findNearbyCorpse(params[PARAM_RESURRECT_DISTANCE]);
-    int resurrectSkill = findResurrectionSkillIndex();
+    // D2MOO always invokes MonStats.Skill1 for Fallen Shaman resurrection.
+    // Searching arbitrary skill slots can select a non-native helper row and
+    // diverges from the original AI table contract.
+    int resurrectSkill = (monster.monstats.Skill1 == null
+        || monster.monstats.Skill1.isEmpty()) ? -1 : 0;
     boolean resurrectionRoll = corpseId != Engine.INVALID_ENTITY
         && MathUtils.randomBoolean(params[PARAM_RESURRECT_AND_COMMAND_CHANCE] / 100f);
     if (corpseId != Engine.INVALID_ENTITY && resurrectSkill < 0) {
@@ -305,18 +325,12 @@ public class FallenShaman extends AI {
           resurrectSkill, corpseId, mPosition.get(corpseId).position, SHAMAN_SEQUENCE_MODE)) {
         stateMachine.changeState(State.CAST);
         time = MathUtils.random(1f, 2f);
-        // Some headless/server animation paths do not emit the native
-        // AnimDataFinished keyframe for seq_shamanresurrect.  Apply the
-        // authoritative state transition immediately as a safe fallback;
-        // Actioneer's srvdofunc=97 remains idempotent and will simply reject
-        // a second restore after the corpse has been removed.
-        boolean restored = factory != null && factory.resurrectMonster(corpseId, entityId);
-        log.info("[MONSTER_RAISE] phase=immediate_fallback source={} target={} restored={}",
-            entityId, corpseId, restored);
-        log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} distance={} skill={}",
+        // Restoration is deliberately deferred to Actioneer.srvdofunc=97 on
+        // the animation keyframe, exactly as D2MOO's sequence skill does.
+        log.info("[MONSTER_RAISE] phase=cast source={} target={} monster={} distance={} skill={} mode={} deferred=keyframe",
             entityId, corpseId, mMonster.get(corpseId).monstats.Id,
             mPosition.get(entityId).position.dst(mPosition.get(corpseId).position),
-            resurrectionSkillName(resurrectSkill));
+            resurrectionSkillName(resurrectSkill), SHAMAN_SEQUENCE_MODE);
         return;
       }
       log.warn("[MONSTER_RAISE] phase=skill_rejected source={} target={} skillSlot={} skill={}",

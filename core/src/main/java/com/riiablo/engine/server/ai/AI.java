@@ -18,6 +18,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
@@ -35,9 +36,13 @@ import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Running;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -78,9 +83,11 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<PathWrapper> mPathWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
+  protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
   protected CofManager cofs;
   protected Pathfinder pathfinder;
@@ -379,17 +386,15 @@ public abstract class AI implements Interactable.Interactor {
     return Math.max(1, level);
   }
 
-  private static EntitySubscription enemyEntities;
-
   /**
    * 获取玩家实体订阅（用于远程怪查找目标）。懒初始化，与 D2MOD pTargetNodes 等价。
    */
-  protected static EntitySubscription getEnemyEntities() {
-    if (enemyEntities == null) {
-      enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(
-          Aspect.all(Class.class).one(Player.class));
-    }
-    return enemyEntities;
+  protected EntitySubscription getEnemyEntities() {
+    // Do not cache this globally. Dedicated server, local server and headless
+    // tests can own separate ECS worlds; a static subscription makes later
+    // worlds read the first world's target nodes and breaks authority.
+    return Riiablo.engine.getAspectSubscriptionManager().get(
+        Aspect.all(Class.class).one(Player.class));
   }
 
   /**
@@ -409,7 +414,7 @@ public abstract class AI implements Interactable.Interactor {
     IntBag entities = getEnemyEntities().getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int ent = entities.get(i);
-      if (mClass.get(ent).type == Class.Type.PLR) {
+      if (isValidEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
         float dx = targetPos.x - entityPos.x;
         float dy = targetPos.y - entityPos.y;
@@ -425,5 +430,31 @@ public abstract class AI implements Interactable.Interactor {
     }
     outDistance[0] = best;
     return targetId;
+  }
+
+  /**
+   * Native AI target-node filtering.  D2MOO never lets an evil monster target
+   * a player whose room is town, a dead player, or a player outside the
+   * monster's active map.  Keeping this in one helper prevents individual
+   * monster AIs from accidentally reverting to global nearest-player scans.
+   */
+  protected boolean isValidEnemyTarget(int targetId) {
+    if (!mClass.has(targetId) || mClass.get(targetId).type != Class.Type.PLR
+        || !mPosition.has(targetId)) return false;
+    if (mMapWrapper.has(targetId) && mMapWrapper.get(targetId).zone != null
+        && mMapWrapper.get(targetId).zone.isTown()) {
+      return false;
+    }
+    if (mAttributesWrapper.has(targetId)) {
+      Attributes attrs = mAttributesWrapper.get(targetId).attrs;
+      StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+      if (hp != null && hp.asFixed() <= 0f) return false;
+    }
+    if (mMapWrapper.has(entityId) && mMapWrapper.has(targetId)) {
+      MapWrapper source = mMapWrapper.get(entityId);
+      MapWrapper target = mMapWrapper.get(targetId);
+      if (source.map != null && target.map != null && source.map != target.map) return false;
+    }
+    return true;
   }
 }
