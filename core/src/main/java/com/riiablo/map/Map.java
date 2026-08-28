@@ -836,6 +836,8 @@ public class Map implements Disposable {
 
     /** Persistent copies of native RoomEx DS1 objects. */
     final Array<NativeObject> nativeObjects = new Array<>();
+    /** Native D2MOO RoomEx rectangles in world subtiles. */
+    final Array<RoomEx> roomsEx = new Array<>();
 
     static final IntMap<DS1.Cell> EMPTY_INT_CELL_MAP = new IntMap<>();
     IntMap<DS1.Cell> specials = EMPTY_INT_CELL_MAP;
@@ -930,6 +932,7 @@ public class Map implements Disposable {
       dependencies = EMPTY_ASSET_ARRAY;
 
       nativeObjects.clear();
+      roomsEx.clear();
 
       dt1s = null; // TODO: setting null -- depending on Map dispose to clear DT1s on act change
       town = false;
@@ -977,6 +980,27 @@ public class Map implements Disposable {
 
     public Array<NativeObject> getNativeObjects() {
       return nativeObjects;
+    }
+
+    public Array<RoomEx> getRoomsEx() { return roomsEx; }
+
+    public RoomEx addRoomEx(int x, int y, int width, int height) {
+      RoomEx room = new RoomEx(roomsEx.size, x, y, width, height);
+      roomsEx.add(room);
+      return room;
+    }
+
+    public RoomEx findRoomEx(float worldX, float worldY) {
+      for (RoomEx room : roomsEx) if (room.contains(worldX, worldY)) return room;
+      return null;
+    }
+
+    /** D2MOO current-room plus adjacent-room target scope. */
+    public boolean areRoomsAdjacent(float ax, float ay, float bx, float by) {
+      if (roomsEx.isEmpty()) return true;
+      RoomEx a = findRoomEx(ax, ay), b = findRoomEx(bx, by);
+      if (a == null || b == null) return false;
+      return a == b || a.touches(b, DT1.Tile.SUBTILE_SIZE);
     }
 
     static int index(int width, int x, int y) {
@@ -1420,6 +1444,34 @@ public class Map implements Disposable {
 
     private static boolean validObjectMode(int mode) {
       return mode >= 0 && mode <= 7;
+    }
+  }
+
+  /** Immutable world-space projection of a native D2DrlgRoom/RoomEx. */
+  public static final class RoomEx {
+    public final int id;
+    public final int x;
+    public final int y;
+    public final int width;
+    public final int height;
+
+    RoomEx(int id, int x, int y, int width, int height) {
+      this.id = id;
+      this.x = x;
+      this.y = y;
+      this.width = Math.max(1, width);
+      this.height = Math.max(1, height);
+    }
+
+    public boolean contains(float px, float py) {
+      return px >= x && py >= y && px < x + width && py < y + height;
+    }
+
+    boolean touches(RoomEx other, int margin) {
+      return x - margin < other.x + other.width
+          && x + width + margin > other.x
+          && y - margin < other.y + other.height
+          && y + height + margin > other.y;
     }
   }
 

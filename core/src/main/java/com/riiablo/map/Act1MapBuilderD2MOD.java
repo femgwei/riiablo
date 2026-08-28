@@ -15,6 +15,7 @@ import java.util.HashMap;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.drlg.D2DrlgLevel;
+import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2UnitTypes;
@@ -1386,7 +1387,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         if (acceptedForRendering) {
           levelsFilledByExport.add(levelId);
           Zone nativeZone = findZoneByLevelId(map, levelId);
-          if (nativeZone != null) nativeZone.nativeObjects.addAll(nativeObjects);
+          if (nativeZone != null) {
+            nativeZone.nativeObjects.addAll(nativeObjects);
+            exportNativeRooms(drlg, levelId, nativeZone);
+          }
           D2DrlgLevel nativeLevel = DrlgDrlg.getLevel(drlg, levelId);
           D2DrlgOutdoorInfoStrc nativeOutdoors =
               nativeLevel != null ? nativeLevel.getOutdoors() : null;
@@ -2963,6 +2967,28 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
     }
     return null;
+  }
+
+  /** Projects D2MOO RoomEx tile rectangles into riiablo world subtiles. */
+  private static void exportNativeRooms(D2DrlgStrc drlg, int levelId, Zone zone) {
+    if (drlg == null || zone == null) return;
+    D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+    if (level == null || level.getLevelCoords() == null) return;
+    int levelX = level.getLevelCoords().getNPosX();
+    int levelY = level.getLevelCoords().getNPosY();
+    zone.roomsEx.clear();
+    for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+        room = room.getDrlgRoomNext()) {
+      int localTileX = room.getNTileXPos() - levelX;
+      int localTileY = room.getNTileYPos() - levelY;
+      zone.addRoomEx(
+          zone.x + localTileX * DT1.Tile.SUBTILE_SIZE,
+          zone.y + localTileY * DT1.Tile.SUBTILE_SIZE,
+          room.getNTileWidth() * DT1.Tile.SUBTILE_SIZE,
+          room.getNTileHeight() * DT1.Tile.SUBTILE_SIZE);
+    }
+    Gdx.app.log(TAG, String.format("D2MOO RoomEx export: levelId=%d rooms=%d",
+        levelId, zone.roomsEx.size));
   }
 
   private static DS1.Cell findReverseWarp(Map map, Zone destination, int sourceLevelId) {

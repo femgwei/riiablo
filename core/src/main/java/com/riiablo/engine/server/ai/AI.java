@@ -462,6 +462,12 @@ public abstract class AI implements Interactable.Interactor {
       if (monster != null && monster.spawnZone != null
           && (source.zone != monster.spawnZone || target.zone != monster.spawnZone)) return false;
       if (source.zone != null && target.zone != null && source.zone != target.zone) return false;
+      if (source.zone != null && target.zone == source.zone
+          && !source.zone.areRoomsAdjacent(
+              mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
+              mPosition.get(targetId).position.x, mPosition.get(targetId).position.y)) {
+        return false;
+      }
     }
     // Reuse the native aiDist limit for legacy AI implementations that still
     // iterate their own subscription. This keeps their behavior bounded while
