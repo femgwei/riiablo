@@ -81,7 +81,12 @@ public class RoomActivationSystem extends IteratingSystem {
 
   private void spawnActiveRoomPopulations(Map.Zone zone) {
     if (factory == null || zone == null) return;
-    for (Map.RoomEx room : zone.getRoomsEx()) {
+    // Entity creation may resolve the owning RoomEx and therefore iterate the
+    // same LibGDX Array. Array's reusable iterator rejects nested iteration,
+    // so keep this activation pass iterator-free.
+    final int roomCount = zone.getRoomsEx().size;
+    for (int roomIndex = 0; roomIndex < roomCount; roomIndex++) {
+      Map.RoomEx room = zone.getRoomsEx().get(roomIndex);
       if (room.getActivationStatus() > Map.RoomEx.CLIENT_IN_SIGHT
           || !room.claimMonsterPopulation()) continue;
       int spawned = 0;
@@ -101,7 +106,12 @@ public class RoomActivationSystem extends IteratingSystem {
 
   private void spawnActiveRoomObjects(Map.Zone zone) {
     if (mapManager == null || zone == null) return;
-    for (Map.RoomEx room : zone.getRoomsEx()) {
+    // createNativeObjects calls Zone.findRoomEx for each preset. Using an
+    // Array iterator here would nest iteration of Zone.roomsEx and crash on
+    // first room activation (#iterator() cannot be used nested).
+    final int roomCount = zone.getRoomsEx().size;
+    for (int roomIndex = 0; roomIndex < roomCount; roomIndex++) {
+      Map.RoomEx room = zone.getRoomsEx().get(roomIndex);
       if (room.getActivationStatus() > Map.RoomEx.CLIENT_IN_SIGHT
           || room.isPresetUnitsSpawned()) continue;
       mapManager.createNativeObjects(zone, room);

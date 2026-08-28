@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.map.Map;
+import com.riiablo.map.MapManager;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import org.junit.jupiter.api.Test;
@@ -166,6 +167,41 @@ class MonsterRoomActivationTest {
     }
   }
 
+  @Test
+  void presetObjectSpawnMayResolveRoomDuringActivationAndRunsOnlyOnce() {
+    Map map = new Map(0, 0);
+    Map.Zone zone = nativeThreeRoomZone();
+    zone.map = map;
+    RoomActivationSystem activation = new RoomActivationSystem();
+    ResolvingMapManager mapManager = new ResolvingMapManager();
+    World world = new World(new WorldConfigurationBuilder().with(activation).build());
+    activation.mapManager = mapManager;
+    try {
+      int playerId = world.create();
+      world.getMapper(Player.class).create(playerId);
+      Position playerPosition = world.getMapper(Position.class).create(playerId);
+      playerPosition.position.set(10, 10);
+      world.getMapper(MapWrapper.class).create(playerId).set(map, zone);
+
+      world.process();
+      assertEquals(2, mapManager.roomsSpawned,
+          "CLIENT_IN_ROOM and CLIENT_IN_SIGHT rooms must activate together");
+      assertFalse(zone.getRoomsEx().get(2).isPresetUnitsSpawned());
+
+      playerPosition.position.set(50, 10);
+      world.process();
+      assertEquals(3, mapManager.roomsSpawned,
+          "newly visible room must activate without duplicating earlier rooms");
+
+      playerPosition.position.set(10, 10);
+      world.process();
+      assertEquals(3, mapManager.roomsSpawned,
+          "reactivation must not duplicate native preset units");
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static Map.Zone nativeThreeRoomZone() {
     Map.Zone zone = new Map.Zone();
     Map.RoomEx first = zone.addRoomEx(0, 0, 40, 40);
@@ -217,6 +253,19 @@ class MonsterRoomActivationTest {
       world.getMapper(Monster.class).create(id);
       world.getMapper(Position.class).create(id).position.set(x, y);
       return id;
+    }
+  }
+
+  private static final class ResolvingMapManager extends MapManager {
+    int roomsSpawned;
+
+    @Override
+    public void createNativeObjects(Map.Zone zone, Map.RoomEx room) {
+      // MapManager's real implementation resolves each object's owning room.
+      // Keep that nested roomsEx traversal in this regression test.
+      assertEquals(room, zone.findRoomEx(room.x + 1, room.y + 1));
+      room.markPresetUnitsSpawned();
+      roomsSpawned++;
     }
   }
 }
