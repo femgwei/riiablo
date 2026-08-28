@@ -10,6 +10,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.map.Map;
+import com.riiablo.map.MapManager;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.logger.LogManager;
@@ -30,6 +31,8 @@ public class RoomActivationSystem extends IteratingSystem {
   protected ComponentMapper<Monster> mMonster;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
+  @Wire(failOnNull = false)
+  protected MapManager mapManager;
   private final IntMap<ClientRoom> clients = new IntMap<>();
 
   @Override
@@ -53,6 +56,7 @@ public class RoomActivationSystem extends IteratingSystem {
     if (zone != null && roomId >= 0 && zone.hasNativeRoomTopology()) {
       zone.enterClientRoom(roomId);
       clients.put(entityId, new ClientRoom(map, zone, roomId));
+      spawnActiveRoomObjects(zone);
       spawnActiveRoomPopulations(zone);
       log.debug("[ROOM_ACTIVATE] player={} toLevel={} toRoom={} action=enter",
           entityId, levelId(zone), roomId);
@@ -92,6 +96,17 @@ public class RoomActivationSystem extends IteratingSystem {
       }
       log.info("[ROOM_MONSTER_POPULATION] level={} room={} queued={} spawned={} action=first_activate",
           levelId(zone), room.id, room.getPendingMonsterSpawns().size, spawned);
+    }
+  }
+
+  private void spawnActiveRoomObjects(Map.Zone zone) {
+    if (mapManager == null || zone == null) return;
+    for (Map.RoomEx room : zone.getRoomsEx()) {
+      if (room.getActivationStatus() > Map.RoomEx.CLIENT_IN_SIGHT
+          || room.isPresetUnitsSpawned()) continue;
+      mapManager.createNativeObjects(zone, room);
+      log.info("[ROOM_PRESET_UNITS] level={} room={} action=first_activate",
+          levelId(zone), room.id);
     }
   }
 

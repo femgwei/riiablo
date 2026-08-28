@@ -63,7 +63,14 @@ public class MapManager extends PassiveSystem {
   }
 
   public void createEntities(Map.Zone zone) {
-    createNativeObjects(zone);
+    if (shouldCreateNativeObjectsImmediately(zone)) {
+      createNativeObjects(zone);
+    } else {
+      // Native D2Game calls SUNIT_SpawnPresetUnitsInRoom as RoomEx enters
+      // the active client ring. Only malformed exports outside every RoomEx
+      // need an eager compatibility pass here.
+      createNativeObjects(zone, null, true);
+    }
 
     // 只对城镇区域创建 NPC 和其他对象
     // 野外区域的对象应该通过 generator 或其他方式创建
@@ -87,12 +94,35 @@ public class MapManager extends PassiveSystem {
     }
   }
 
-  private void createNativeObjects(Map.Zone zone) {
+  static boolean shouldCreateNativeObjectsImmediately(Map.Zone zone) {
+    return zone == null || zone.town || !zone.hasNativeRoomTopology();
+  }
+
+  public void createNativeObjects(Map.Zone zone) {
+    createNativeObjects(zone, null, false);
+  }
+
+  /** D2Game SUNIT_SpawnPresetUnitsInRoom equivalent for one activated RoomEx. */
+  public void createNativeObjects(Map.Zone zone, Map.RoomEx onlyRoom) {
+    if (zone == null || onlyRoom == null || onlyRoom.isPresetUnitsSpawned()) return;
+    createNativeObjects(zone, onlyRoom, false);
+    // The native flag records that the room was processed, including rooms
+    // which contained no preset objects.
+    onlyRoom.markPresetUnitsSpawned();
+  }
+
+  private void createNativeObjects(
+      Map.Zone zone, Map.RoomEx onlyRoom, boolean outsideRoomsOnly) {
     int created = 0;
     int failed = 0;
     int skipped = 0;
     IntSet roomsInBatch = new IntSet();
     for (Map.NativeObject object : zone.nativeObjects) {
+      int worldX = zone.x + object.x;
+      int worldY = zone.y + object.y;
+      Map.RoomEx room = zone.findRoomEx(worldX, worldY);
+      if (outsideRoomsOnly && room != null) continue;
+      if (!outsideRoomsOnly && onlyRoom != null && room != onlyRoom) continue;
       if (object.spawned) {
         // D2Game::SUNIT_SpawnPresetUnitsInRoom ignores units already marked
         // as spawned. Creating them again would duplicate generated objects.
@@ -100,9 +130,6 @@ public class MapManager extends PassiveSystem {
         continue;
       }
 
-      int worldX = zone.x + object.x;
-      int worldY = zone.y + object.y;
-      Map.RoomEx room = zone.findRoomEx(worldX, worldY);
       if (room != null && room.isPresetUnitsSpawned() && !roomsInBatch.contains(room.id)) {
         skipped++;
         continue;
@@ -171,10 +198,11 @@ public class MapManager extends PassiveSystem {
         zone.roomsEx.get(roomId).markPresetUnitsSpawned();
       }
     }
-    if (zone.nativeObjects.size > 0) {
+    if (zone.nativeObjects.size > 0 && (onlyRoom == null || created + failed + skipped > 0)) {
       Gdx.app.log(TAG, String.format(
-          "D2MOO native objects: level=%s(%d) exported=%d created=%d failed=%d",
-          zone.level.LevelName, zone.level.Id, zone.nativeObjects.size, created, failed));
+          "D2MOO native objects: level=%s(%d) room=%d exported=%d created=%d failed=%d",
+          zone.level.LevelName, zone.level.Id, onlyRoom != null ? onlyRoom.id : -1,
+          zone.nativeObjects.size, created, failed));
       if (skipped > 0) {
         Gdx.app.debug(TAG, String.format(
             "D2MOO native objects skipped: level=%s(%d) skipped=%d",

@@ -1,7 +1,9 @@
 package com.riiablo.map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.badlogic.gdx.math.Vector2;
 import org.junit.jupiter.api.Test;
@@ -23,5 +25,21 @@ class MapManagerWaypointTest {
     assertSame(out, MapManager.copyWaypointCenter(waypoint, out));
     assertEquals(waypoint.x, out.x);
     assertEquals(waypoint.y, out.y);
+  }
+
+  @Test
+  void nativeOutdoorPresetUnitsWaitForRoomActivation() {
+    Map.Zone zone = new Map.Zone();
+    Map.RoomEx room = zone.addRoomEx(0, 0, 40, 40);
+    room.setAdjacentRoomIds(new int[0]);
+
+    assertFalse(MapManager.shouldCreateNativeObjectsImmediately(zone));
+
+    zone.town = true;
+    assertTrue(MapManager.shouldCreateNativeObjectsImmediately(zone));
+
+    Map.Zone legacy = new Map.Zone();
+    legacy.addRoomEx(0, 0, 40, 40);
+    assertTrue(MapManager.shouldCreateNativeObjectsImmediately(legacy));
   }
 }
