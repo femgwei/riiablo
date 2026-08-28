@@ -15,6 +15,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
@@ -193,8 +194,18 @@ public class FallenShaman extends AI {
     // MonStats2.revive column.  Fallen resurrection is determined by the
     // base id/alignment/dead-mode/targetability checks; requiring revive here
     // incorrectly filters normal Fallen rows in several data sets.
-    if (monster.monstats.Align != 1
-        || monster.monstats.boss || monster.monstats.SetBoss || monster.monstats.primeevil) {
+    // D2MOO Units.h defines UNIT_ALIGNMENT_EVIL = 0, NEUTRAL = 1,
+    // GOOD = 2.  The previous port treated neutral (1) as evil, which
+    // rejected every real Fallen row (the log showed align=0) before the
+    // resurrection roll could ever run.
+    if (monster.monstats.Align != 0) {
+      return false;
+    }
+
+    // AITHINK_TargetCallback_FallenShaman rejects unique/champion targets at
+    // runtime.  MonStats flags alone do not capture generated quality, so use
+    // the spawn-time rank when available as the ECS equivalent.
+    if (monster.rank == MonsterRank.CHAMPION || monster.rank == MonsterRank.UNIQUE) {
       return false;
     }
 

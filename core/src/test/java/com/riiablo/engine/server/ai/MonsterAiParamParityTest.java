@@ -10,6 +10,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.monster.MonsterRank;
 
 /** Locks MonStats aip column meanings to the native D2MOO AI enums. */
 class MonsterAiParamParityTest {
@@ -85,7 +86,8 @@ class MonsterAiParamParityTest {
     MonStats.Entry stats = new MonStats.Entry();
     stats.Id = "fallen2";
     stats.BaseId = "fallen1";
-    stats.Align = 1;
+    // D2MOO UNIT_ALIGNMENT_EVIL is zero (neutral is one).
+    stats.Align = 0;
     MonStats2.Entry stats2 = new MonStats2.Entry();
     stats2.revive = true;
     Monster monster = new Monster().set(stats, stats2);
@@ -96,9 +98,9 @@ class MonsterAiParamParityTest {
     corpse.fading = true;
     assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
     corpse.fading = false;
-    stats.boss = true;
+    monster.rank = MonsterRank.CHAMPION;
     assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
-    stats.boss = false;
+    monster.rank = MonsterRank.NORMAL;
     stats.BaseId = "skeleton1";
     assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
     stats.BaseId = "fallenshaman1";
@@ -110,6 +112,15 @@ class MonsterAiParamParityTest {
     stats.BaseId = "fallen1";
     stats2.revive = false;
     assertTrue(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+
+    stats.Align = 1; // neutral, not UNIT_ALIGNMENT_EVIL
+    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    stats.Align = 0;
+
+    // Runtime champion/unique quality is checked in addition to MonStats
+    // flags, matching MONSTERUNIQUE_CheckMonTypeFlag in D2MOO.
+    monster.rank = MonsterRank.CHAMPION;
+    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
   }
 
   @Test

@@ -140,7 +140,8 @@ class CombatScenarioTest {
       MonStats.Entry stats = new MonStats.Entry();
       stats.Id = "fallen2";
       stats.BaseId = "fallen1";
-      stats.Align = 1;
+      // D2MOO UNIT_ALIGNMENT_EVIL is zero (neutral is one).
+      stats.Align = 0;
       MonStats2.Entry stats2 = new MonStats2.Entry();
       stats2.revive = true;
       Monster fallen = new Monster().set(stats, stats2);
