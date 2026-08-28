@@ -984,6 +984,13 @@ public class Map implements Disposable {
 
     public Array<RoomEx> getRoomsEx() { return roomsEx; }
 
+    /** True only when every room carries an exported D2MOO pRoomsNear list. */
+    public boolean hasNativeRoomTopology() {
+      if (roomsEx.isEmpty()) return false;
+      for (RoomEx room : roomsEx) if (!room.hasNativeAdjacency()) return false;
+      return true;
+    }
+
     public RoomEx addRoomEx(int x, int y, int width, int height) {
       RoomEx room = new RoomEx(roomsEx.size, x, y, width, height);
       roomsEx.add(room);
