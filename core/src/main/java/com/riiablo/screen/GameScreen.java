@@ -94,6 +94,7 @@ import com.riiablo.engine.client.debug.PathDebugger;
 import com.riiablo.engine.client.debug.PathfindDebugger;
 import com.riiablo.engine.client.debug.RenderSystemDebugger;
 import com.riiablo.engine.server.AIStepper;
+import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.AngularVelocity;
 import com.riiablo.engine.server.AnimDataResolver;
@@ -746,7 +747,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new NativeObjectDropSystem());
       builder.with(new NativeShrineSystem());
       builder.with(new VendorGenerator());
-      builder.with(new AIStepper());
+      builder.with(new RoomActivationSystem(), new AIStepper());
     } else {
       builder.with(new ItemGenerator()); // TODO: #89
       builder.with(new VendorGenerator()); // TODO: #89

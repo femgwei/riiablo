@@ -54,6 +54,7 @@ import com.riiablo.codec.StringTBLs;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.AIStepper;
+import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.AuraEcsSystem;
 import com.riiablo.engine.server.AnimStepper;
@@ -338,6 +339,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new ExperienceManager())
 
         .with(new VendorGenerator())
+        .with(new RoomActivationSystem())
         .with(new AIStepper())
         .with(new Pathfinder())
 

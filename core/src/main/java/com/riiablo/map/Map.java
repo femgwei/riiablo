@@ -838,6 +838,7 @@ public class Map implements Disposable {
     final Array<NativeObject> nativeObjects = new Array<>();
     /** Native D2MOO RoomEx rectangles in world subtiles. */
     final Array<RoomEx> roomsEx = new Array<>();
+    private boolean roomActivationTracking;
 
     static final IntMap<DS1.Cell> EMPTY_INT_CELL_MAP = new IntMap<>();
     IntMap<DS1.Cell> specials = EMPTY_INT_CELL_MAP;
@@ -933,6 +934,7 @@ public class Map implements Disposable {
 
       nativeObjects.clear();
       roomsEx.clear();
+      roomActivationTracking = false;
 
       dt1s = null; // TODO: setting null -- depending on Map dispose to clear DT1s on act change
       town = false;
@@ -989,6 +991,42 @@ public class Map implements Disposable {
       if (roomsEx.isEmpty()) return false;
       for (RoomEx room : roomsEx) if (!room.hasNativeAdjacency()) return false;
       return true;
+    }
+
+    /** True after the server has started tracking CLIENT_IN_ROOM references. */
+    public boolean isRoomActivationTracking() {
+      return roomActivationTracking;
+    }
+
+    /** D2MOO DRLGACTIVATE_ChangeClientRoom equivalent. */
+    public void enterClientRoom(int roomId) {
+      if (!hasNativeRoomTopology()) return;
+      roomActivationTracking = true;
+      applyClientRoomRefs(roomId, 0, 1);
+    }
+
+    /** D2MOO DRLGACTIVATE_ChangeClientRoom removal equivalent. */
+    public void leaveClientRoom(int roomId) {
+      if (!hasNativeRoomTopology()) return;
+      roomActivationTracking = true;
+      applyClientRoomRefs(roomId, 0, -1);
+    }
+
+    /** AI-relevant projection of D2MOO room status (CLIENT_IN_ROOM/SIGHT). */
+    public boolean isRoomActiveForAI(float worldX, float worldY) {
+      if (!hasNativeRoomTopology() || !roomActivationTracking) return true;
+      RoomEx room = findRoomEx(worldX, worldY);
+      return room != null && room.getActivationStatus() <= RoomEx.CLIENT_IN_SIGHT;
+    }
+
+    private void applyClientRoomRefs(int roomId, int depth, int delta) {
+      if (depth > RoomEx.UNTILE) return;
+      RoomEx room = roomId >= 0 && roomId < roomsEx.size ? roomsEx.get(roomId) : null;
+      if (room == null) return;
+      room.adjustClientRef(depth, delta);
+      if (depth == RoomEx.UNTILE) return;
+      int[] adjacent = room.getAdjacentRoomIds();
+      for (int adjacentId : adjacent) applyClientRoomRefs(adjacentId, depth + 1, delta);
     }
 
     public RoomEx addRoomEx(int x, int y, int width, int height) {
@@ -1461,12 +1499,22 @@ public class Map implements Disposable {
 
   /** Immutable world-space projection of a native D2DrlgRoom/RoomEx. */
   public static final class RoomEx {
+    public static final int CLIENT_IN_ROOM = 0;
+    public static final int CLIENT_IN_SIGHT = 1;
+    public static final int CLIENT_OUT_OF_SIGHT = 2;
+    public static final int UNTILE = 3;
+    public static final int COUNT = 4;
     public final int id;
     public final int x;
     public final int y;
     public final int width;
     public final int height;
     private int[] adjacentRoomIds;
+    private int clientInRoomRefs;
+    private int clientInSightRefs;
+    private int clientOutOfSightRefs;
+    private int untileRefs;
+    private int activationStatus = COUNT;
 
     RoomEx(int id, int x, int y, int width, int height) {
       this.id = id;
@@ -1489,6 +1537,42 @@ public class Map implements Disposable {
 
     public int[] getAdjacentRoomIds() {
       return adjacentRoomIds == null ? new int[0] : adjacentRoomIds.clone();
+    }
+
+    public int getActivationStatus() {
+      return activationStatus;
+    }
+
+    public int getClientInRoomRefs() {
+      return clientInRoomRefs;
+    }
+
+    public int getClientInSightRefs() {
+      return clientInSightRefs;
+    }
+
+    public int getClientOutOfSightRefs() {
+      return clientOutOfSightRefs;
+    }
+
+    public int getUntileRefs() {
+      return untileRefs;
+    }
+
+    private void adjustClientRef(int depth, int delta) {
+      if (depth == 0) clientInRoomRefs = Math.max(0, clientInRoomRefs + delta);
+      else if (depth == 1) clientInSightRefs = Math.max(0, clientInSightRefs + delta);
+      else if (depth == 2) clientOutOfSightRefs = Math.max(0, clientOutOfSightRefs + delta);
+      else untileRefs = Math.max(0, untileRefs + delta);
+      activationStatus = clientInRoomRefs > 0 ? CLIENT_IN_ROOM
+          : clientInSightRefs > 0 ? CLIENT_IN_SIGHT
+          : clientOutOfSightRefs > 0 ? CLIENT_OUT_OF_SIGHT
+          : untileRefs > 0 ? UNTILE : COUNT;
+    }
+
+    private void resetActivation() {
+      clientInRoomRefs = clientInSightRefs = clientOutOfSightRefs = untileRefs = 0;
+      activationStatus = COUNT;
     }
 
     boolean hasNativeAdjacency() {

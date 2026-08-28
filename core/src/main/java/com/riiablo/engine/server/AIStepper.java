@@ -141,6 +141,10 @@ public class AIStepper extends IteratingSystem {
     if (!mMapWrapper.has(entityId)) return true;
     MapWrapper source = mMapWrapper.get(entityId);
     if (source.zone == null || !source.zone.hasNativeRoomTopology()) return true;
+    if (source.zone.isRoomActivationTracking()) {
+      return source.zone.isRoomActiveForAI(
+          mPosition.get(entityId).position.x, mPosition.get(entityId).position.y);
+    }
 
     IntBag entities = players.getEntities();
     int[] data = entities.getData();
