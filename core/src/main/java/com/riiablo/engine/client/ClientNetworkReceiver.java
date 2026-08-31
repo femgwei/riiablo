@@ -68,6 +68,7 @@ import com.riiablo.net.packet.d2gs.ItemP;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.Ping;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
+import com.riiablo.net.packet.d2gs.PartyResult;
 import com.riiablo.net.packet.d2gs.PlayerP;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import com.riiablo.net.packet.d2gs.PositionP;
@@ -140,6 +141,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           MAX_NETWORK_PACKET_SIZE + NETWORK_READ_BUFFER_SIZE + Integer.BYTES);
   private final EntitySync sync = new EntitySync();
   private final IntSet deferredServerEntities = new IntSet();
+  private final ClientPartyState partyState = new ClientPartyState();
 
   public ClientNetworkReceiver() {
     super(null, 1 / 60f);
@@ -247,6 +249,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.NpcServiceResult:
         NpcServiceResult(packet);
+        break;
+      case D2GSData.PartyResult:
+        PartyResult(packet);
         break;
       case D2GSData.ItemMoveResult:
         ItemMoveResult(packet);
@@ -508,6 +513,20 @@ public class ClientNetworkReceiver extends IntervalSystem {
         + " success=" + result.success() + " reason=" + result.reason()
         + " gold=" + result.gold() + " stockRevision=" + result.stockRevision()
         + " stockCount=" + result.stockLength());
+  }
+
+  private void PartyResult(D2GS packet) {
+    PartyResult result = (PartyResult) packet.data(new PartyResult());
+    partyState.apply(result);
+    Gdx.app.log(TAG, "[PARTY] request=" + result.requestId()
+        + " operation=" + result.operation() + " success=" + result.success()
+        + " reason=" + result.reason() + " source=" + result.sourceEntityId()
+        + " target=" + result.targetEntityId() + " party=" + result.partyId()
+        + " players=" + result.membersLength());
+  }
+
+  public ClientPartyState partyState() {
+    return partyState;
   }
 
   private void SpendSkillPointResult(D2GS packet) {

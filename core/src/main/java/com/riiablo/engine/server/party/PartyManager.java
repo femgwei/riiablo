@@ -404,6 +404,12 @@ public class PartyManager {
     }
   }
 
+  /** Returns the authoritative inviter for an invitee, or {@code -1}. */
+  public int getInviter(int inviteeId) {
+    Integer inviterId = invitations.get(inviteeId);
+    return inviterId == null ? -1 : inviterId;
+  }
+
   //==========================================================================
   // 敌对系统
   //==========================================================================

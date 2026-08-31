@@ -1,0 +1,55 @@
+namespace com.riiablo.net.packet.d2gs;
+
+/** Authoritative multiplayer party action. */
+enum PartyOperation:byte {
+  INVITE,
+  ACCEPT,
+  DECLINE,
+  CANCEL,
+  LEAVE,
+  HOSTILE,
+  UNHOSTILE,
+  SNAPSHOT
+}
+
+/**
+ * Client party intent. The source player is deliberately absent: D2GS must
+ * resolve it from the authenticated connection.
+ */
+table PartyRequest {
+  requestId:uint32;
+  operation:PartyOperation;
+  targetEntityId:int32;
+}
+
+/** One online player as seen by the receiving client. */
+table PartyMemberSnapshot {
+  entityId:int32;
+  name:string;
+  classId:int32;
+  level:int32;
+  hp:int32;
+  maxHp:int32;
+  mana:int32;
+  maxMana:int32;
+  levelId:int32;
+  x:int32;
+  y:int32;
+  alive:bool;
+  online:bool;
+  leader:bool;
+  partyId:int32 = -1;
+  relation:int32;
+}
+
+/** Request acknowledgement plus a personalized authoritative roster. */
+table PartyResult {
+  requestId:uint32;
+  success:bool;
+  reason:string;
+  operation:PartyOperation;
+  sourceEntityId:int32;
+  targetEntityId:int32;
+  partyId:int32 = -1;
+  members:[PartyMemberSnapshot];
+}

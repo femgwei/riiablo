@@ -34,6 +34,8 @@ import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.NpcServiceRequest;
+import com.riiablo.net.packet.d2gs.PartyOperation;
+import com.riiablo.net.packet.d2gs.PartyRequest;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.SizePrefixedPacketReader;
@@ -60,6 +62,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
 
   boolean init = false;
   private long nextNpcRequestId = 1;
+  private long nextPartyRequestId = 1;
   private long nextMovementLogTime;
   @Wire(name="client.socket") Socket socket;
 
@@ -223,6 +226,30 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       return requestId;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "Failed to send NPC service request", t);
+      return 0;
+    }
+  }
+
+  /** Sends a party intent. D2GS derives the source player from this connection. */
+  public long requestParty(byte operation, int localTargetEntityId) {
+    if (socket == null) return 0;
+    long requestId = nextPartyRequestId++;
+    int serverTargetId = localTargetEntityId >= 0 && mNetworked.has(localTargetEntityId)
+        ? mNetworked.get(localTargetEntityId).serverId : localTargetEntityId;
+    if (operation == PartyOperation.SNAPSHOT) serverTargetId = -1;
+
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int request = PartyRequest.createPartyRequest(
+        builder, requestId, operation, serverTargetId);
+    int root = D2GS.createD2GS(builder, D2GSData.PartyRequest, request);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
+      ByteBuffer frame = builder.dataBuffer();
+      while (frame.hasRemaining()) channel.write(frame);
+      return requestId;
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "Failed to send party request", t);
       return 0;
     }
   }

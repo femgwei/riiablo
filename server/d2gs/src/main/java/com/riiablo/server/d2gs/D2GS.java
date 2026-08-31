@@ -97,6 +97,12 @@ import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
 import com.riiablo.engine.server.npc.NpcVendorSessionManager;
 import com.riiablo.engine.server.npc.NpcServiceRequestCache;
 import com.riiablo.engine.server.npc.NpcRepairService;
+import com.riiablo.engine.server.party.Party;
+import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.party.PartyMember;
+import com.riiablo.engine.server.party.PartyRelation;
+import com.riiablo.engine.server.party.PartyRequestCache;
+import com.riiablo.engine.server.party.PartyServiceProtocol;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.ItemWriter;
@@ -138,6 +144,10 @@ import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.ItemMoveSnapshotEntry;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
+import com.riiablo.net.packet.d2gs.PartyOperation;
+import com.riiablo.net.packet.d2gs.PartyRequest;
+import com.riiablo.net.packet.d2gs.PartyResult;
+import com.riiablo.net.packet.d2gs.PartyMemberSnapshot;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.save.CharData;
 import com.riiablo.util.DebugUtils;
@@ -244,6 +254,7 @@ public class D2GS extends ApplicationAdapter {
   final AuthoritativeItemMoveService authoritativeItems = new AuthoritativeItemMoveService();
   final ItemMoveRequestCache itemMoveRequestCache = new ItemMoveRequestCache();
   final SkillPointRequestCache skillPointRequestCache = new SkillPointRequestCache();
+  final PartyRequestCache partyRequestCache = new PartyRequestCache();
 
   protected ComponentMapper<Networked> mNetworked;
 
@@ -535,6 +546,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.NpcServiceRequest:
         NpcServiceRequest(packet);
         break;
+      case D2GSData.PartyRequest:
+        PartyRequest(packet);
+        break;
       case D2GSData.SwapBeltItem:
         SwapBeltItem(packet);
         break;
@@ -596,6 +610,7 @@ public class D2GS extends ApplicationAdapter {
     Synchronize(packet.id, entityId);
 
     BroadcastConnect(packet.id, connection, charData, entityId);
+    broadcastPartySnapshots(PartyOperation.SNAPSHOT, entityId, -1, -1);
   }
 
   private void Synchronize(int id, int entityId) {
@@ -647,6 +662,7 @@ public class D2GS extends ApplicationAdapter {
       npcVendors.clearPlayer(entityId);
       itemMoveRequestCache.clearConnection(id);
       skillPointRequestCache.clearConnection(id);
+      partyRequestCache.clear(id);
       authoritativeItems.reset(entityId);
       partyManager.removePlayer(entityId);
 
@@ -660,6 +676,7 @@ public class D2GS extends ApplicationAdapter {
       numClients--;
       connected &= ~(1 << id);
     }
+    broadcastPartySnapshots(PartyOperation.LEAVE, entityId, -1, -1);
   }
 
   private void Ping(Packet packet) {
@@ -905,6 +922,115 @@ public class D2GS extends ApplicationAdapter {
    * resolved on the server; client supplied prices or item payloads are never
    * accepted. Atomic service mutations are enabled incrementally after OPEN.
    */
+  /** Authenticated party boundary. Source identity is always derived from the connection. */
+  private void PartyRequest(Packet packet) {
+    PartyRequest request = (PartyRequest) packet.data.data(new PartyRequest());
+    PartyRequestCache.Intent intent = new PartyRequestCache.Intent(
+        request.operation(), request.targetEntityId());
+    PartyRequestCache.Entry cached = partyRequestCache.lookup(packet.id, request.requestId());
+    if (cached != null) {
+      if (cached.matches(intent)) {
+        outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response())));
+      } else {
+        int source = player.get(packet.id, Engine.INVALID_ENTITY);
+        sendPartyResult(packet.id, request.requestId(), request.operation(), source,
+            request.targetEntityId(), PartyServiceProtocol.Result.reject("REQUEST_ID_REUSED"), false);
+      }
+      return;
+    }
+
+    int source = player.get(packet.id, Engine.INVALID_ENTITY);
+    PartyServiceProtocol.Result result = PartyServiceProtocol.execute(
+        partyManager, source, request.operation(), request.targetEntityId(),
+        entityId -> clientForEntity(entityId) >= 0);
+    sendPartyResult(packet.id, request.requestId(), request.operation(), source,
+        request.targetEntityId(), result, true, intent);
+
+    if (result.success && request.operation() != PartyOperation.SNAPSHOT) {
+      // Every client receives a personalized roster; relations and pending
+      // invitations are intentionally evaluated from that client's viewpoint.
+      broadcastPartySnapshots(request.operation(), source, request.targetEntityId(), packet.id);
+    }
+    Gdx.app.log(TAG, "[PARTY] source=" + source + " target=" + request.targetEntityId()
+        + " operation=" + request.operation() + " success=" + result.success
+        + " reason=" + result.reason);
+  }
+
+  private int clientForEntity(int entityId) {
+    for (IntIntMap.Entry entry : player.entries()) {
+      if (entry.value == entityId && (connected & (1 << entry.key)) != 0) return entry.key;
+    }
+    return -1;
+  }
+
+  private void broadcastPartySnapshots(byte operation, int sourceEntityId,
+                                       int targetEntityId, int excludedClientId) {
+    for (int clientId = 0; clientId < MAX_CLIENTS; clientId++) {
+      if (clientId == excludedClientId || (connected & (1 << clientId)) == 0
+          || player.get(clientId, Engine.INVALID_ENTITY) == Engine.INVALID_ENTITY) continue;
+      sendPartyResult(clientId, 0, operation, sourceEntityId, targetEntityId,
+          PartyServiceProtocol.Result.success(), false);
+    }
+  }
+
+  private void sendPartyResult(int clientId, long requestId, byte operation,
+                               int sourceEntityId, int targetEntityId,
+                               PartyServiceProtocol.Result result, boolean cacheResponse) {
+    sendPartyResult(clientId, requestId, operation, sourceEntityId, targetEntityId,
+        result, cacheResponse, new PartyRequestCache.Intent(operation, targetEntityId));
+  }
+
+  private void sendPartyResult(int clientId, long requestId, byte operation,
+                               int sourceEntityId, int targetEntityId,
+                               PartyServiceProtocol.Result result, boolean cacheResponse,
+                               PartyRequestCache.Intent intent) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(4096);
+    int reasonOffset = builder.createString(result.reason == null ? "" : result.reason);
+    int viewerEntityId = player.get(clientId, Engine.INVALID_ENTITY);
+    int[] members = new int[player.size];
+    int count = 0;
+    for (IntIntMap.Entry entry : player.entries()) {
+      int entityId = entry.value;
+      if (entityId == Engine.INVALID_ENTITY || (connected & (1 << entry.key)) == 0) continue;
+      com.riiablo.engine.server.component.Player playerComponent = world.getMapper(Player.class).get(entityId);
+      com.riiablo.save.CharData data = playerComponent == null ? null : playerComponent.data;
+      String name = data == null || data.name == null ? "" : data.name;
+      int classId = data == null ? 0 : data.charClass;
+      PartyMember member = null;
+      Party party = partyManager.getPartyForPlayer(entityId);
+      if (party != null) member = party.getMember(entityId);
+      int level = member == null ? (data == null ? 1 : data.level) : member.level;
+      int hp = member == null ? 0 : member.currentHp;
+      int maxHp = member == null ? 0 : member.maxHp;
+      int mana = member == null ? 0 : member.currentMana;
+      int maxMana = member == null ? 0 : member.maxMana;
+      int levelId = member == null ? -1 : member.levelId;
+      int x = member == null ? 0 : member.x;
+      int y = member == null ? 0 : member.y;
+      boolean alive = member == null || member.alive;
+      boolean online = member == null || member.online;
+      int partyId = partyManager.getPartyId(entityId);
+      int relation = partyManager.getRelation(viewerEntityId, entityId);
+      int nameOffset = builder.createString(name);
+      members[count++] = PartyMemberSnapshot.createPartyMemberSnapshot(builder, entityId,
+          nameOffset, classId, level, hp, maxHp, mana, maxMana, levelId, x, y,
+          alive, online, party != null && party.isLeader(entityId), partyId, relation);
+    }
+    int[] roster = java.util.Arrays.copyOf(members, count);
+    int membersOffset = PartyResult.createMembersVector(builder, roster);
+    int resultOffset = PartyResult.createPartyResult(builder, requestId, result.success,
+        reasonOffset, operation, sourceEntityId, targetEntityId,
+        partyManager.getPartyId(viewerEntityId), membersOffset);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
+        D2GSData.PartyResult, resultOffset);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer response = builder.dataBuffer();
+    byte[] bytes = new byte[response.remaining()];
+    response.duplicate().get(bytes);
+    if (cacheResponse) partyRequestCache.put(clientId, requestId, intent, bytes);
+    outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
+  }
+
   private void NpcServiceRequest(Packet packet) {
     NpcServiceRequest request = (NpcServiceRequest) packet.data.data(new NpcServiceRequest());
     NpcServiceRequestCache.Intent requestIntent = NpcServiceRequestCache.intent(
