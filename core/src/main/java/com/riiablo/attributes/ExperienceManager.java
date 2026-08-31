@@ -46,6 +46,7 @@ public class ExperienceManager extends PassiveSystem {
   private ExperienceTable expTable;
   
   /** 队伍管理器（可选注入） */
+  @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   private PartyManager partyManager;
   private com.artemis.ComponentMapper<Player> mPlayer;
   private com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;

@@ -512,7 +512,13 @@ public class Actioneer extends PassiveSystem {
             break;
           }
           int bonus = isPlayerEntity(entityId) ? 3 : 0;
-          if (!isInMeleeRange(entityId, targetId, bonus)) {
+          // Native monster basic attacks backed by MonStats.MissA1/MissA2
+          // are ranged even though they use the shared Attack skill.  The
+          // melee-range rejection must not run before their projectile is
+          // created at this keyframe.
+          boolean rangedMonsterAttack = isMonsterProjectileSkill(entityId)
+              || hasMonsterAttackMissile(entityId);
+          if (!rangedMonsterAttack && !isInMeleeRange(entityId, targetId, bonus)) {
             log.info("[MELEE_RANGE] phase=reject source={} target={} distance={} range={}",
                 entityId, targetId,
                 mPosition.get(entityId).position.dst(mPosition.get(targetId).position),

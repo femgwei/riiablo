@@ -624,7 +624,7 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     Probe probe = new Probe();
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), probe, new Actioneer(), new Pathfinder(), new AnimStepper(),
-            factory, new MissileCollisionSystem())
+            new ServerSkillSystem(), factory, new MissileCollisionSystem())
         .build()
         .register("factory", factory)
         .register("map", new Map(0, 0)));

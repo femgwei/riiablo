@@ -7,6 +7,7 @@ import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycl
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.ONE_WAY_DOOR;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.SHRINE;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TOGGLE_DOOR;
+import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TRAP;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.WELL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -16,13 +17,14 @@ import org.junit.jupiter.api.Test;
 class NativeObjectOperateTableTest {
   @Test
   void classifiesAct1ContainersFromTheNativeOperateTable() {
-    int[] animated = {1, 3, 4, 5, 6, 7, 14, 30, 33};
+    int[] animated = {1, 3, 4, 5, 6, 14, 30, 33};
     for (int operateFn : animated) {
       assertEquals(ANIMATED_CONTAINER, resolve(operateFn));
     }
     assertEquals(INSTANT_CONTAINER, resolve(19));
     assertEquals(INSTANT_CONTAINER, resolve(20));
     assertEquals(INSTANT_CONTAINER, resolve(26));
+    assertEquals(TRAP, resolve(7));
   }
 
   @Test

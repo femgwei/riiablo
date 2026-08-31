@@ -1,6 +1,7 @@
 package com.riiablo.engine.server.party;
 
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.logger.LogManager;
@@ -235,6 +236,57 @@ public class PartyManager {
     if (party.getMemberCount() <= 1) {
       destroyParty(partyId);
     }
+  }
+
+  /** Updates the authoritative runtime snapshot used by party XP and quests. */
+  public void updateMember(int entityId, int level, int hp, int maxHp,
+      int mana, int maxMana, int levelId, int x, int y, boolean alive) {
+    Party party = getPartyForPlayer(entityId);
+    if (party == null) return;
+    PartyMember member = party.getMember(entityId);
+    if (member == null) return;
+    member.level = Math.max(1, level);
+    member.online = true;
+    member.update(hp, maxHp, mana, maxMana, levelId, x, y, alive);
+  }
+
+  /** Marks a member online/offline without changing party membership. */
+  public void setOnline(int entityId, boolean online) {
+    Party party = getPartyForPlayer(entityId);
+    if (party == null) return;
+    PartyMember member = party.getMember(entityId);
+    if (member != null) member.online = online;
+  }
+
+  /**
+   * Removes all runtime state owned by a player connection.
+   *
+   * <p>D2GS entity ids are connection-scoped, so invitations, asymmetric
+   * hostility and party membership must not survive deletion and attach to a
+   * later entity that reuses the same id.</p>
+   */
+  public void removePlayer(int entityId) {
+    declineInvitation(entityId);
+
+    IntArray invitedPlayers = new IntArray();
+    for (IntMap.Entry<Integer> invitation : invitations.entries()) {
+      if (invitation.value != null && invitation.value == entityId) {
+        invitedPlayers.add(invitation.key);
+      }
+    }
+    for (int i = 0; i < invitedPlayers.size; i++) {
+      cancelInvitation(entityId, invitedPlayers.get(i));
+    }
+
+    leaveParty(entityId);
+
+    IntArray relationKeys = new IntArray();
+    for (IntMap.Entry<Integer> relation : relationMap.entries()) {
+      int source = relation.key / MAX_PLAYER_ID;
+      int target = relation.key % MAX_PLAYER_ID;
+      if (source == entityId || target == entityId) relationKeys.add(relation.key);
+    }
+    for (int i = 0; i < relationKeys.size; i++) relationMap.remove(relationKeys.get(i));
   }
 
   //==========================================================================

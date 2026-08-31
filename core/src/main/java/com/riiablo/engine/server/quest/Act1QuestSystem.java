@@ -58,7 +58,7 @@ public class Act1QuestSystem extends PassiveSystem {
   protected EventSystem event;
   @Wire(failOnNull = false)
   protected ItemGenerator itemGenerator;
-  @Wire(failOnNull = false)
+  @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
 
   private EntitySubscription monstersByZone;

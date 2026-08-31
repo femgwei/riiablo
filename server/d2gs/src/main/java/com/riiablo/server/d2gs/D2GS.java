@@ -237,6 +237,8 @@ public class D2GS extends ApplicationAdapter {
   ItemManager itemManager;
   MapManager mapManager;
   NetworkSynchronizer sync;
+  final com.riiablo.engine.server.party.PartyManager partyManager =
+      new com.riiablo.engine.server.party.PartyManager();
   final NpcVendorSessionManager npcVendors = new NpcVendorSessionManager();
   final NpcServiceRequestCache npcRequestCache = new NpcServiceRequestCache();
   final AuthoritativeItemMoveService authoritativeItems = new AuthoritativeItemMoveService();
@@ -338,6 +340,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new MissileCollisionSystem())
         .with(new StateUpdater())
         .with(new ExperienceManager())
+        .with(new com.riiablo.engine.server.party.PartyMemberSyncSystem())
 
         .with(new VendorGenerator())
         .with(new RoomEntityTrackingSystem())
@@ -362,6 +365,7 @@ public class D2GS extends ApplicationAdapter {
         .register("factory", factory)
         .register("player", player)
         .register("outPackets", outPackets)
+        .register("partyManager", partyManager)
         ;
     Riiablo.engine = world = new World(config);
 
@@ -644,6 +648,7 @@ public class D2GS extends ApplicationAdapter {
       itemMoveRequestCache.clearConnection(id);
       skillPointRequestCache.clearConnection(id);
       authoritativeItems.reset(entityId);
+      partyManager.removePlayer(entityId);
 
       world.delete(entityId);
       player.remove(id, Engine.INVALID_ENTITY);

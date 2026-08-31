@@ -264,6 +264,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   EngineConfig config;
   Map map;
   MapManager mapManager;
+  com.riiablo.engine.server.party.PartyManager partyManager;
   Levels.Entry pendingWaypointTarget;
   IsometricCamera iso;
   InputProcessor testingInputProcessor;
@@ -639,6 +640,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     config = new EngineConfig(mapSeed, charData.diff);
     map = new Map(config.seed(), config.diff());
     mapManager = new MapManager();
+    partyManager = new com.riiablo.engine.server.party.PartyManager();
     renderer = new RenderSystem(Riiablo.batch, map);
     iso = renderer.iso();
     scaledStage = new Stage(new ScreenViewport(iso), Riiablo.batch);
@@ -652,6 +654,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("map", map)
         .register("factory", factory)
         .register("itemController", itemController)
+        .register("partyManager", partyManager)
         .register("batch", Riiablo.batch)
         .register("shapes", Riiablo.shapes)
         .register("stage", stage)
@@ -749,6 +752,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new NativeShrineSystem());
       builder.with(new VendorGenerator());
       builder.with(new RoomEntityTrackingSystem(), new RoomActivationSystem(), new AIStepper());
+      builder.with(new com.riiablo.engine.server.party.PartyMemberSyncSystem());
     } else {
       builder.with(new ItemGenerator()); // TODO: #89
       builder.with(new VendorGenerator()); // TODO: #89
