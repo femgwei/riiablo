@@ -370,6 +370,51 @@ public class ShamanFireballAuditTest extends RiiabloTest {
   }
 
   @Test
+  void fallenShamanResurrectRunsOnAnimationKeyframeAgainstDeadFallen() {
+    MonStats.Entry row = Riiablo.files.monstats.get("fallenshaman1");
+    assertNotNull(row);
+    Skills.Entry resurrect = Riiablo.files.skills.get(row.Skill1);
+    assertNotNull(resurrect, "Fallen Shaman Skill1 must resolve to native Resurrect");
+    assertEquals(97, resurrect.srvdofunc);
+
+    RecordingFactory factory = new RecordingFactory();
+    Probe probe = new Probe();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, actioneer, new Pathfinder(), new AnimStepper(), factory)
+        .build()
+        .register("factory", factory)
+        .register("map", new Map(0, 0)));
+    try {
+      int shaman = createMonsterCaster(world, row, 10, 10);
+      int fallen = world.create();
+      world.getMapper(Position.class).create(fallen).position.set(12, 10);
+      Attributes dead = combatAttributes(1, 1, 1, 1, 1);
+      dead.get(Stat.hitpoints, StatRef.obtain()).set(0f);
+      world.getMapper(AttributesWrapper.class).create(fallen).attrs = dead;
+
+      actioneer.cast(shaman, resurrect.Id, fallen,
+          world.getMapper(Position.class).get(fallen).position);
+      installAttackAnimation(world, shaman);
+      world.setDelta(Animation.FRAME_DURATION);
+      for (int frame = 0; frame < 8 && factory.resurrections == 0; frame++) {
+        world.process();
+      }
+
+      assertTrue(probe.animKeyframes > 0,
+          "native resurrection must reach the animation attack keyframe");
+      assertEquals(1, factory.resurrections,
+          "srvdofunc 97 must invoke the authoritative factory exactly once");
+      assertEquals(shaman, factory.resurrectionSource);
+      assertEquals(fallen, factory.resurrectionTarget);
+      System.out.println("[MONSTER_RAISE] phase=keyframe_assert source=" + shaman
+          + " target=" + fallen + " skill=" + resurrect.skill + " restored=true");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void fetishInfernoKeyframeCreatesMissileAndDamagesPlayer() {
     MathUtils.random.setSeed(0x5A4A4EL);
     MonStats.Entry row = Riiablo.files.monstats.get("fetishshaman3");
@@ -747,6 +792,9 @@ public class ShamanFireballAuditTest extends RiiabloTest {
     int creations;
     int missileId = -1;
     int ownerId = -1;
+    int resurrections;
+    int resurrectionSource = -1;
+    int resurrectionTarget = -1;
     String logTag = "SHAMAN_FIREBALL_AUDIT";
 
     @Override public int createMissile(int missileId, Vector2 angle, Vector2 position) {
@@ -766,6 +814,13 @@ public class ShamanFireballAuditTest extends RiiabloTest {
           + " missileId=" + entityId + " owner=" + ownerId + " speed=" + missile.Vel
           + " range=" + missile.Range);
       return entityId;
+    }
+
+    @Override public boolean resurrectMonster(int monsterId, int sourceId) {
+      resurrections++;
+      resurrectionTarget = monsterId;
+      resurrectionSource = sourceId;
+      return true;
     }
 
     @Override public int createPlayer(CharData charData, Vector2 position) { return -1; }
