@@ -235,6 +235,24 @@ public class ItemData {
     return cursor == INVALID_ITEM ? null : getItem(cursor);
   }
 
+  /** Detaches the mouse item without deleting ownership so a corpse can hold it. */
+  public Item detachCursorItem() {
+    if (cursor == INVALID_ITEM) return null;
+    Item item = getItem(cursor);
+    cursor = INVALID_ITEM;
+    setLocation(item, null);
+    return item;
+  }
+
+  /** Restores a corpse-owned item to the mouse when the cursor is free. */
+  public boolean restoreCursorItem(Item item) {
+    int index = indexOf(item);
+    if (item == null || index == INVALID_ITEM || cursor != INVALID_ITEM) return false;
+    cursor = index;
+    setLocation(item, Location.CURSOR);
+    return true;
+  }
+
   public Item getSlot(BodyLoc bodyLoc) {
     int i = equipped.get(bodyLoc);
     return i == INVALID_ITEM ? null : getItem(i);
@@ -403,6 +421,50 @@ public class ItemData {
     int index = add(item);
     store(StoreLoc.INVENTORY, index, x, y);
     return true;
+  }
+
+  /** Packs an already-owned corpse item into the first free inventory rectangle. */
+  public boolean moveOwnedToInventory(Item item) {
+    int itemIndex = indexOf(item);
+    if (item == null || itemIndex == INVALID_ITEM || item.base == null
+        || item.base.invwidth <= 0 || item.base.invheight <= 0
+        || item.base.invwidth > 10 || item.base.invheight > 4) return false;
+
+    boolean[][] occupied = new boolean[4][10];
+    IntArray inventory = getStore(StoreLoc.INVENTORY);
+    for (int n = 0; n < inventory.size; n++) {
+      int storedIndex = inventory.get(n);
+      if (storedIndex == itemIndex) continue;
+      Item stored = getItem(storedIndex);
+      if (stored == null || stored.base == null) continue;
+      int x = stored.gridX;
+      int y = stored.gridY;
+      int width = stored.base.invwidth;
+      int height = stored.base.invheight;
+      if (x < 0 || y < 0 || width <= 0 || height <= 0
+          || x + width > 10 || y + height > 4) return false;
+      for (int dy = 0; dy < height; dy++) {
+        for (int dx = 0; dx < width; dx++) occupied[y + dy][x + dx] = true;
+      }
+    }
+
+    for (int y = 0; y <= 4 - item.base.invheight; y++) {
+      for (int x = 0; x <= 10 - item.base.invwidth; x++) {
+        boolean free = true;
+        for (int dy = 0; dy < item.base.invheight && free; dy++) {
+          for (int dx = 0; dx < item.base.invwidth; dx++) {
+            if (occupied[y + dy][x + dx]) {
+              free = false;
+              break;
+            }
+          }
+        }
+        if (!free) continue;
+        store(StoreLoc.INVENTORY, itemIndex, x, y);
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

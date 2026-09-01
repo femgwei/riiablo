@@ -461,7 +461,15 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
               boolean ready = deathHandler.canRespawnPlayer(Riiablo.game.player);
               Gdx.app.log(TAG, "[PLAYER_REVIVE_INPUT] entity=" + Riiablo.game.player
                   + " ready=" + ready);
-              if (ready) deathHandler.respawnPlayerAtTown(Riiablo.game.player);
+              if (ready) {
+                if (socket == null) {
+                  deathHandler.respawnPlayerAtTown(Riiablo.game.player);
+                } else {
+                  ClientNetworkSynchronizer network = engine.getSystem(
+                      ClientNetworkSynchronizer.class);
+                  if (network != null) network.requestPlayerRespawn();
+                }
+              }
               return; // Never show the menu during DT/DD
             }
           }

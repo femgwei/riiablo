@@ -5,6 +5,7 @@ include "ItemManagement.fbs";
 include "SkillRequest.fbs";
 include "NpcService.fbs";
 include "PartyService.fbs";
+include "PlayerLifecycle.fbs";
 
 namespace com.riiablo.net.packet.d2gs;
 
@@ -38,6 +39,8 @@ union D2GSData {
   SelectSkillRequest,
   PartyRequest,
   PartyResult,
+  PlayerLifecycleRequest,
+  PlayerLifecycleResult,
 }
 
 table D2GS {

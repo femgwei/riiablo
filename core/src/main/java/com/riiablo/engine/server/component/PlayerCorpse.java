@@ -3,6 +3,7 @@ package com.riiablo.engine.server.component;
 import com.artemis.PooledComponent;
 import com.artemis.annotations.PooledWeaver;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.IntSet;
 import com.badlogic.gdx.utils.ObjectMap;
 
 import com.riiablo.item.BodyLoc;
@@ -27,6 +28,12 @@ public class PlayerCorpse extends PooledComponent {
   
   /** Player equipment owned by this corpse, keyed by its original body location. */
   public final ObjectMap<BodyLoc, Item> equippedItems = new ObjectMap<>();
+
+  /** Mouse item preserved by the corpse, matching D2Inventory corpse creation. */
+  public Item cursorItem;
+
+  /** Explicit PlayerList corpse-loot grants. Hostility alone never grants access. */
+  public final IntSet authorizedLooters = new IntSet();
   
   /**
    * Whether the corpse has been retrieved (items returned to player)
@@ -44,11 +51,27 @@ public class PlayerCorpse extends PooledComponent {
    */
   public float timeRemaining = CORPSE_DURATION;
 
+  public boolean canRetrieve(int candidatePlayerId) {
+    return candidatePlayerId == playerId || authorizedLooters.contains(candidatePlayerId);
+  }
+
+  public void grantLootPermission(int candidatePlayerId) {
+    if (candidatePlayerId >= 0 && candidatePlayerId != playerId) {
+      authorizedLooters.add(candidatePlayerId);
+    }
+  }
+
+  public void revokeLootPermission(int candidatePlayerId) {
+    authorizedLooters.remove(candidatePlayerId);
+  }
+
   @Override
   protected void reset() {
     playerId = -1;
     deathLocation.setZero();
     equippedItems.clear();
+    cursorItem = null;
+    authorizedLooters.clear();
     retrieved = false;
     timeRemaining = CORPSE_DURATION;
   }

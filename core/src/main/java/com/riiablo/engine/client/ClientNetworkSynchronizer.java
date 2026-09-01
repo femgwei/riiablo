@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.PlayerCorpse;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.net.packet.d2gs.AngleP;
 import com.riiablo.net.packet.d2gs.CofAlphasP;
@@ -36,6 +37,8 @@ import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.NpcServiceRequest;
 import com.riiablo.net.packet.d2gs.PartyOperation;
 import com.riiablo.net.packet.d2gs.PartyRequest;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.SizePrefixedPacketReader;
@@ -56,6 +59,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
 
   protected NetworkIdManager idManager;
   protected ClientNetworkReceiver receiver;
@@ -63,6 +67,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   boolean init = false;
   private long nextNpcRequestId = 1;
   private long nextPartyRequestId = 1;
+  private long nextLifecycleRequestId = 1;
   private long nextMovementLogTime;
   @Wire(name="client.socket") Socket socket;
 
@@ -144,6 +149,14 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   @Override
   protected void processSystem() {
     int entityId = Riiablo.game.player;
+
+    // A dead local player intentionally has no Velocity. Do not dereference
+    // it or keep sending stale movement while waiting for server respawn.
+    if (socket == null || entityId < 0 || mPlayerCorpse.has(entityId)
+        || !mNetworked.has(entityId) || !mPosition.has(entityId)
+        || !mVelocity.has(entityId) || !mAngle.has(entityId)
+        || !mCofComponents.has(entityId) || !mCofTransforms.has(entityId)
+        || !mCofAlphas.has(entityId)) return;
 
     FlatBufferBuilder builder = new FlatBufferBuilder(0);
 
@@ -250,6 +263,27 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       return requestId;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "Failed to send party request", t);
+      return 0;
+    }
+  }
+
+  /** Requests an authenticated server-authoritative town respawn. */
+  public long requestPlayerRespawn() {
+    if (socket == null) return 0;
+    long requestId = nextLifecycleRequestId++;
+    FlatBufferBuilder builder = new FlatBufferBuilder(64);
+    int request = PlayerLifecycleRequest.createPlayerLifecycleRequest(
+        builder, requestId, PlayerLifecycleOperation.RESPAWN);
+    int root = D2GS.createD2GS(builder, D2GSData.PlayerLifecycleRequest, request);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
+      ByteBuffer frame = builder.dataBuffer();
+      while (frame.hasRemaining()) channel.write(frame);
+      Gdx.app.log(TAG, "[PLAYER_RESPAWN] phase=request request=" + requestId);
+      return requestId;
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "Failed to send player respawn request", t);
       return 0;
     }
   }

@@ -62,7 +62,7 @@ public class PlayerCorpseRetrievalSystem extends IteratingSystem {
       PlayerCorpse corpse = mPlayerCorpse.get(corpseEntityId);
       
       // Check if this corpse belongs to this player
-      if (corpse.playerId != playerId) continue;
+      if (!corpse.canRetrieve(playerId)) continue;
       
       // Check if corpse has already been retrieved
       if (corpse.retrieved) continue;
@@ -109,29 +109,43 @@ public class PlayerCorpseRetrievalSystem extends IteratingSystem {
         continue;
       }
 
-      if (itemData.getSlot(bodyLoc) != null) {
-        log.info("[PLAYER_CORPSE_ITEM] action=defer player={} corpse={} bodyLoc={} reason=occupied",
-            playerId, corpseEntityId, bodyLoc);
-        continue;
-      }
-
+      boolean restored = false;
       try {
-        itemData.equipItem(bodyLoc, item);
-        restoredSlots.add(bodyLoc);
-        itemsRestored++;
-        log.info("[PLAYER_CORPSE_ITEM] action=restore player={} corpse={} bodyLoc={} code={}",
-            playerId, corpseEntityId, bodyLoc, item.code);
+        if (itemData.getSlot(bodyLoc) == null) {
+          itemData.equipItem(bodyLoc, item);
+          restored = true;
+          log.info("[PLAYER_CORPSE_ITEM] action=equip player={} corpse={} bodyLoc={} code={}",
+              playerId, corpseEntityId, bodyLoc, item.code);
+        } else if (itemData.moveOwnedToInventory(item)) {
+          restored = true;
+          log.info("[PLAYER_CORPSE_ITEM] action=inventory player={} corpse={} bodyLoc={} code={}",
+              playerId, corpseEntityId, bodyLoc, item.code);
+        }
       } catch (Exception e) {
         log.warn("[PLAYER_CORPSE_ITEM] action=restore_failed player={} corpse={} bodyLoc={} reason={}",
             playerId, corpseEntityId, bodyLoc, e.getMessage());
       }
+      if (restored) {
+        restoredSlots.add(bodyLoc);
+        itemsRestored++;
+      }
     }
 
     for (BodyLoc bodyLoc : restoredSlots) corpse.equippedItems.remove(bodyLoc);
+
+    if (corpse.cursorItem != null) {
+      Item cursorItem = corpse.cursorItem;
+      if (itemData.restoreCursorItem(cursorItem) || itemData.moveOwnedToInventory(cursorItem)) {
+        corpse.cursorItem = null;
+        itemsRestored++;
+        log.info("[PLAYER_CORPSE_ITEM] action=restore_cursor player={} corpse={} code={}",
+            playerId, corpseEntityId, cursorItem.code);
+      }
+    }
     
     log.info("Player {} retrieved {} items from corpse", playerId, itemsRestored);
     
-    if (corpse.equippedItems.size == 0) {
+    if (corpse.equippedItems.size == 0 && corpse.cursorItem == null) {
       corpse.retrieved = true;
       log.info("[PLAYER_CORPSE] action=retrieved player={} corpse={} items={}",
           playerId, corpseEntityId, itemsRestored);

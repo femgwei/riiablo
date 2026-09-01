@@ -1,0 +1,22 @@
+namespace com.riiablo.net.packet.d2gs;
+
+enum PlayerLifecycleOperation:byte {
+  RESPAWN
+}
+
+/** Authenticated player lifecycle intent. Player identity comes from the connection. */
+table PlayerLifecycleRequest {
+  requestId:uint32;
+  operation:PlayerLifecycleOperation;
+}
+
+/** Authoritative lifecycle acknowledgement and corrected world position. */
+table PlayerLifecycleResult {
+  requestId:uint32;
+  success:bool;
+  reason:string;
+  operation:PlayerLifecycleOperation;
+  playerEntityId:int32 = -1;
+  x:float;
+  y:float;
+}

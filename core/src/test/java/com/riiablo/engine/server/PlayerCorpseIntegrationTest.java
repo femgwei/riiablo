@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -30,6 +31,18 @@ import org.junit.jupiter.api.Test;
 
 /** Headless authority test for D2-style player death, corpse loot and respawn. */
 class PlayerCorpseIntegrationTest extends RiiabloTest {
+  @Test
+  void corpsePermissionIsExplicitAndNotImpliedByAnotherPlayer() {
+    PlayerCorpse corpse = new PlayerCorpse();
+    corpse.playerId = 7;
+    assertTrue(corpse.canRetrieve(7));
+    assertFalse(corpse.canRetrieve(9));
+    corpse.grantLootPermission(9);
+    assertTrue(corpse.canRetrieve(9));
+    corpse.revokeLootPermission(9);
+    assertFalse(corpse.canRetrieve(9));
+  }
+
   @Test
   void deathDetachesEquipmentRespawnRestoresStateAndCorpseRetrievalRestoresItems() {
     EventSystem events = new EventSystem();

@@ -70,6 +70,7 @@ import com.riiablo.net.packet.d2gs.Ping;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.PartyResult;
 import com.riiablo.net.packet.d2gs.PlayerP;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.StoreToCursor;
@@ -258,6 +259,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.SpendSkillPointResult:
         SpendSkillPointResult(packet);
+        break;
+      case D2GSData.PlayerLifecycleResult:
+        PlayerLifecycleResult(packet);
         break;
       default:
         Gdx.app.error(TAG, "Unknown packet type: " + packet.dataType());
@@ -644,7 +648,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           break;
         }
         case ComponentP.VelocityP: {
-          Vector2 velocity = mVelocity.get(entityId).velocity;
+          Vector2 velocity = mVelocity.create(entityId).velocity;
           VelocityP data = (VelocityP) entityData.component(new VelocityP(), i);
           velocity.x = data.x();
           velocity.y = data.y();
@@ -727,6 +731,32 @@ public class ClientNetworkReceiver extends IntervalSystem {
       // negative entity-id mapper lookups in legacy subscribers.
       events.dispatch(DeathEvent.obtain(entityId, entityId));
     }
+  }
+
+  private void PlayerLifecycleResult(D2GS packet) {
+    PlayerLifecycleResult result = (PlayerLifecycleResult) packet.data(
+        new PlayerLifecycleResult());
+    if (!result.success()) {
+      Gdx.app.log(TAG, "[PLAYER_RESPAWN] phase=reject request=" + result.requestId()
+          + " reason=" + result.reason());
+      return;
+    }
+    if (Riiablo.game == null || Riiablo.game.player < 0) return;
+    int localPlayerId = Riiablo.game.player;
+    DeathHandler death = world.getSystem(DeathHandler.class);
+    if (death != null && death.isPlayerDead(localPlayerId)) {
+      death.respawnPlayerAtTown(localPlayerId);
+    }
+    if (mPosition.has(localPlayerId)) {
+      mPosition.get(localPlayerId).position.set(result.x(), result.y());
+    }
+    if (mMapWrapper.has(localPlayerId)) {
+      Vector2 position = mPosition.get(localPlayerId).position;
+      mMapWrapper.get(localPlayerId).set(map, map.getZone(position));
+    }
+    Gdx.app.log(TAG, String.format(
+        "[PLAYER_RESPAWN] phase=confirmed request=%d serverPlayer=%d position=(%.2f,%.2f)",
+        result.requestId(), result.playerEntityId(), result.x(), result.y()));
   }
 
   private void applyCofReferenceSnapshot(int entityId, CofReferenceP data) {

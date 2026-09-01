@@ -62,6 +62,7 @@ import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.server.MissileCollisionSystem;
 import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.ServerPlayerDeathSystem;
+import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
 import com.riiablo.engine.server.ServerMonsterCorpseSystem;
 import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.StateUpdater;
@@ -150,6 +151,9 @@ import com.riiablo.net.packet.d2gs.PartyOperation;
 import com.riiablo.net.packet.d2gs.PartyRequest;
 import com.riiablo.net.packet.d2gs.PartyResult;
 import com.riiablo.net.packet.d2gs.PartyMemberSnapshot;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.save.CharData;
 import com.riiablo.util.DebugUtils;
@@ -343,6 +347,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new ServerMonsterCorpseSystem())
         .with(new AuraEcsSystem())
         .with(new ServerPlayerDeathSystem())
+        .with(new PlayerCorpseRetrievalSystem())
         .with(new ServerSkillSystem())
         .with(new DeathRewardSystem())
         .with(new SequenceHandler())
@@ -499,6 +504,14 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private void process(Packet packet) {
+    byte dataType = packet.data.dataType();
+    int authenticatedPlayer = player.get(packet.id, Engine.INVALID_ENTITY);
+    if (isLegacyItemRequest(dataType) && isPlayerDead(authenticatedPlayer)) {
+      Gdx.app.log(TAG, "[ITEM_MOVE] phase=reject_legacy connection=" + packet.id
+          + " player=" + authenticatedPlayer + " reason=player_dead type="
+          + D2GSData.name(dataType));
+      return;
+    }
     switch (packet.data.dataType()) {
       case D2GSData.Connection:
         Connection(packet);
@@ -556,6 +569,9 @@ public class D2GS extends ApplicationAdapter {
         break;
       case D2GSData.ItemMoveRequest:
         ItemMoveRequest(packet);
+        break;
+      case D2GSData.PlayerLifecycleRequest:
+        PlayerLifecycleRequest(packet);
         break;
       case D2GSData.Ping:
         Ping(packet);
@@ -694,6 +710,11 @@ public class D2GS extends ApplicationAdapter {
   private void Synchronize(Packet packet) {
     int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
     assert entityId != Engine.INVALID_ENTITY;
+    if (isPlayerDead(entityId)) {
+      Gdx.app.log(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
+          + " player=" + entityId + " reason=player_dead");
+      return;
+    }
     sync.sync(entityId, packet.data);
     long now = TimeUtils.millis();
     if (now >= nextMovementLogTime[packet.id]) {
@@ -720,6 +741,11 @@ public class D2GS extends ApplicationAdapter {
   private void CastSkillRequest(Packet packet) {
     int entityId = getPlayerEntityId(packet);
     CastSkillRequest request = (CastSkillRequest) packet.data.data(new CastSkillRequest());
+    if (isPlayerDead(entityId)) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+          + " skill=" + request.skillId() + " reason=player_dead");
+      return;
+    }
     int targetId = request.targetId();
     if (targetId != Engine.INVALID_ENTITY
         && !world.getMapper(com.riiablo.engine.server.component.Class.class).has(targetId)) {
@@ -1261,6 +1287,53 @@ public class D2GS extends ApplicationAdapter {
     return entityId;
   }
 
+  private boolean isPlayerDead(int entityId) {
+    return entityId != Engine.INVALID_ENTITY
+        && world.getMapper(com.riiablo.engine.server.component.PlayerCorpse.class)
+            .has(entityId);
+  }
+
+  private static boolean isLegacyItemRequest(byte dataType) {
+    return dataType >= D2GSData.GroundToCursor && dataType <= D2GSData.SwapBeltItem;
+  }
+
+  /** Authenticated RESPAWN request; all position and vitals mutation remains on D2GS. */
+  private void PlayerLifecycleRequest(Packet packet) {
+    PlayerLifecycleRequest request = (PlayerLifecycleRequest) packet.data.data(
+        new PlayerLifecycleRequest());
+    int entityId = getPlayerEntityId(packet);
+    ServerPlayerDeathSystem deaths = world.getSystem(ServerPlayerDeathSystem.class);
+    String reason = null;
+    boolean success = false;
+    if (request.operation() != PlayerLifecycleOperation.RESPAWN) {
+      reason = "INVALID_OPERATION";
+    } else if (!deaths.isPlayerDead(entityId)) {
+      reason = "PLAYER_NOT_DEAD";
+    } else if (!deaths.canRespawn(entityId)) {
+      reason = "DEATH_ANIMATION_ACTIVE";
+    } else if (!(success = deaths.respawnAtTown(entityId))) {
+      reason = "RESPAWN_FAILED";
+    }
+
+    com.riiablo.engine.server.component.Position position = world.getMapper(
+        com.riiablo.engine.server.component.Position.class).get(entityId);
+    float x = position != null ? position.position.x : 0f;
+    float y = position != null ? position.position.y : 0f;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reasonOffset = builder.createString(reason == null ? "OK" : reason);
+    int result = PlayerLifecycleResult.createPlayerLifecycleResult(builder,
+        request.requestId(), success, reasonOffset, request.operation(), entityId, x, y);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.PlayerLifecycleResult, result);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    outPackets.offer(Packet.obtain(1 << packet.id, builder.dataBuffer()));
+    if (success) sync.process(entityId);
+    Gdx.app.log(TAG, "[PLAYER_RESPAWN] phase=" + (success ? "accept" : "reject")
+        + " connection=" + packet.id + " player=" + entityId
+        + " request=" + request.requestId() + " reason="
+        + (reason == null ? "OK" : reason));
+  }
+
   private void GroundToCursor(Packet packet) {
     int entityId = getPlayerEntityId(packet);
     GroundToCursor groundToCursor = (GroundToCursor) packet.data.data(new GroundToCursor());
@@ -1367,6 +1440,14 @@ public class D2GS extends ApplicationAdapter {
     ItemMoveIntent intent = new ItemMoveIntent(request.requestId(), request.revision(), operation,
         request.itemId(), request.groundEntityId(), request.storeLoc(), request.x(), request.y(),
         request.bodyLoc(), request.merc());
+    int authenticatedPlayerId = player.get(packet.id, Engine.INVALID_ENTITY);
+    if (isPlayerDead(authenticatedPlayerId)) {
+      sendItemMoveResult(packet.id, intent, false, ItemMoveFailure.PLAYER_DEAD,
+          authoritativeItems.revision(authenticatedPlayerId), false, false);
+      Gdx.app.log(TAG, "[ITEM_MOVE] phase=reject connection=" + packet.id
+          + " player=" + authenticatedPlayerId + " reason=player_dead");
+      return;
+    }
     ItemMoveRequestCache.Entry cached = itemMoveRequestCache.lookup(packet.id, request.requestId());
     Gdx.app.log(TAG, "[ITEM_PICKUP] phase=request client=" + packet.id
         + " request=" + request.requestId() + " op=" + operation
