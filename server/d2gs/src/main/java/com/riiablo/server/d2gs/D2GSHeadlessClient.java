@@ -99,9 +99,11 @@ public final class D2GSHeadlessClient {
     waitForServer();
     byte[] d2s = config.generatedAmazon
         ? createGeneratedAmazonSave(
-            config.requireMercenarySkill || config.requireMercenaryRestore ? 8 : 1,
+            config.requireMercenarySkill || config.requireMercenaryRestore
+                || config.requireMercenaryTravel ? 8 : 1,
             config.requireMercenaryLifecycle || config.requireMercenaryRestore ? 10_000 : 0,
-            config.requireMercenaryRestore, config.requireMercenaryRestore)
+            config.requireMercenaryRestore || config.requireMercenaryTravel,
+            config.requireMercenaryRestore)
         : Files.readAllBytes(config.save.toPath());
     CharacterHeader character = CharacterHeader.read(d2s);
     log("connect", "server=" + config.host + ':' + config.port
@@ -113,6 +115,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireMercenaryRestore) {
       runMercenaryRestore(d2s, character);
+      return;
+    }
+    if (config.requireMercenaryTravel) {
+      runMercenaryTravel(d2s, character);
       return;
     }
     if (config.requireMercenarySkill) {
@@ -514,6 +520,142 @@ public final class D2GSHeadlessClient {
             + " idReused=" + (firstMercenaryId == restored.entityId)
             + " staleRemoved=true clients=true,true");
       }
+    }
+  }
+
+  /** Two real sockets observe ordinary following plus three cross-zone relocations. */
+  private void runMercenaryTravel(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave();
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket ownerSocket = openSocket(); Socket peerSocket = openSocket();
+         DataInputStream ownerInput = input(ownerSocket);
+         DataInputStream peerInput = input(peerSocket);
+         OutputStream ownerOutput = output(ownerSocket);
+         OutputStream peerOutput = output(peerSocket)) {
+      send(ownerOutput, connectionPacket(character, d2s));
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      owner.awaitConnection(ownerInput, deadline());
+      peer.awaitConnection(peerInput, deadline());
+      Snapshot ownerMercenary = owner.awaitMercenary(ownerInput, deadline());
+      int mercenaryId = ownerMercenary.entityId;
+      peer.awaitEntity(peerInput, mercenaryId, deadline());
+
+      int[] initial = D2GS.headlessMercenaryTravelState(owner.playerId);
+      requireMercenaryTravelState(initial, owner.playerId, mercenaryId, 1, false);
+      Vector2 followTarget = D2GS.headlessMercenaryFollowPosition(1,
+          Float.intBitsToFloat(initial[5]), Float.intBitsToFloat(initial[6]));
+      if (followTarget == null) {
+        throw new IOException("Rogue Encampment has no native point in the hireling follow band");
+      }
+      float initialMercenaryX = Float.intBitsToFloat(initial[7]);
+      float initialMercenaryY = Float.intBitsToFloat(initial[8]);
+      int initialFollowCount = initial[4];
+      send(ownerOutput, positionPacket(owner.playerId, followTarget.x, followTarget.y));
+      send(peerOutput, positionPacket(peer.playerId, followTarget.x, followTarget.y));
+      int[] followed = awaitMercenaryTravel(owner, peer, ownerInput, peerInput,
+          owner.playerId, mercenaryId, 1, initialFollowCount, false, deadline());
+      float followedX = Float.intBitsToFloat(followed[7]);
+      float followedY = Float.intBitsToFloat(followed[8]);
+      if (Vector2.dst(initialMercenaryX, initialMercenaryY, followedX, followedY) < 0.1f) {
+        throw new IllegalStateException("hireling follow request did not produce movement");
+      }
+      log("mercenary_follow_pass", "owner=" + owner.playerId + " entity=" + mercenaryId
+          + " level=1 count=" + initialFollowCount + "->" + followed[4]
+          + " position=(" + initialMercenaryX + ',' + initialMercenaryY + ")->("
+          + followedX + ',' + followedY + ") clients=true,true");
+
+      int teleportCount = followed[3];
+      int[] levels = {2, 4, 27};
+      String[] names = {"Blood Moor", "Stony Field", "Outer Cloister"};
+      for (int i = 0; i < levels.length; i++) {
+        Vector2 destination = D2GS.headlessLevelPosition(levels[i]);
+        if (destination == null) {
+          throw new IOException("level unavailable for hireling travel: " + names[i]);
+        }
+        send(ownerOutput, positionPacket(owner.playerId, destination.x, destination.y));
+        send(peerOutput, positionPacket(peer.playerId, destination.x, destination.y));
+        int[] traveled = awaitMercenaryTravel(owner, peer, ownerInput, peerInput,
+            owner.playerId, mercenaryId, levels[i], teleportCount, true, deadline());
+        teleportCount = traveled[3];
+        assertClientMercenaryPosition(owner, peer, mercenaryId, traveled);
+        log("mercenary_travel_stage_pass", "owner=" + owner.playerId
+            + " entity=" + mercenaryId + " level=" + levels[i] + " name=" + names[i]
+            + " teleports=" + teleportCount + " room=" + traveled[10]
+            + " flags=0x" + Integer.toHexString(traveled[9]) + " clients=true,true");
+      }
+      log("mercenary_travel_pass", "owner=" + owner.playerId + " entity=" + mercenaryId
+          + " sameEntity=true followCount=" + followed[4] + " teleportCount="
+          + teleportCount + " levels=1,2,4,27 clients=true,true");
+    }
+  }
+
+  private int[] awaitMercenaryTravel(D2GSHeadlessClient owner, D2GSHeadlessClient peer,
+      DataInputStream ownerInput, DataInputStream peerInput, int ownerId, int mercenaryId,
+      int expectedLevel, int previousCount, boolean teleport, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+      if (packet != null) owner.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      int[] state = D2GS.headlessMercenaryTravelState(ownerId);
+      int count = teleport ? state[3] : state[4];
+      if (state[0] == mercenaryId && state[1] == expectedLevel
+          && state[2] == expectedLevel && count > previousCount) {
+        requireMercenaryTravelState(state, ownerId, mercenaryId, expectedLevel, true);
+        Snapshot ownerSnapshot = owner.monsters.get(mercenaryId);
+        Snapshot peerSnapshot = peer.monsters.get(mercenaryId);
+        float authoritativeX = Float.intBitsToFloat(state[7]);
+        float authoritativeY = Float.intBitsToFloat(state[8]);
+        if (ownerSnapshot != null && peerSnapshot != null
+            && !ownerSnapshot.deleted && !peerSnapshot.deleted
+            && ownerSnapshot.hasPosition && peerSnapshot.hasPosition
+            && Vector2.dst(ownerSnapshot.x, ownerSnapshot.y,
+                authoritativeX, authoritativeY) <= 0.5f
+            && Vector2.dst(peerSnapshot.x, peerSnapshot.y,
+                authoritativeX, authoritativeY) <= 0.5f) return state;
+      }
+    }
+    int[] state = D2GS.headlessMercenaryTravelState(ownerId);
+    throw new IOException("timed out waiting for hireling "
+        + (teleport ? "teleport" : "follow") + ": level=" + expectedLevel
+        + " stateLevel=" + state[1] + ',' + state[2] + " counts=" + state[3] + ','
+        + state[4] + " previous=" + previousCount);
+  }
+
+  private static void requireMercenaryTravelState(int[] state, int ownerId, int mercenaryId,
+      int expectedLevel, boolean requireMotion) {
+    float life = Float.intBitsToFloat(state[11]);
+    float mercenaryX = Float.intBitsToFloat(state[7]);
+    float mercenaryY = Float.intBitsToFloat(state[8]);
+    float bodyX = Float.intBitsToFloat(state[12]);
+    float bodyY = Float.intBitsToFloat(state[13]);
+    if (state[0] != mercenaryId || state[1] != expectedLevel || state[2] != expectedLevel
+        || (state[9] & com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK) != 0
+        || (state[17] == 1 && state[10] < 0) || life <= 0f || state[14] != 1
+        || !Float.isFinite(mercenaryX) || !Float.isFinite(mercenaryY)
+        || (Float.isFinite(bodyX) && Vector2.dst(mercenaryX, mercenaryY, bodyX, bodyY) > 0.01f)
+        || (requireMotion && (state[15] != mercenaryId || state[16] != ownerId))) {
+      throw new IllegalStateException("invalid authoritative hireling travel state: entity="
+          + state[0] + " owner=" + ownerId + " levels=" + state[1] + ',' + state[2]
+          + " counts=" + state[3] + ',' + state[4] + " flags=0x"
+          + Integer.toHexString(state[9]) + " room=" + state[10] + " life=" + life
+          + " map=" + state[14] + " last=" + state[15] + ',' + state[16]);
+    }
+  }
+
+  private static void assertClientMercenaryPosition(D2GSHeadlessClient owner,
+      D2GSHeadlessClient peer, int mercenaryId, int[] state) {
+    Snapshot ownerSnapshot = owner.monsters.get(mercenaryId);
+    Snapshot peerSnapshot = peer.monsters.get(mercenaryId);
+    float x = Float.intBitsToFloat(state[7]);
+    float y = Float.intBitsToFloat(state[8]);
+    if (ownerSnapshot == null || peerSnapshot == null
+        || ownerSnapshot.deleted || peerSnapshot.deleted
+        || Vector2.dst(ownerSnapshot.x, ownerSnapshot.y, x, y) > 0.5f
+        || Vector2.dst(peerSnapshot.x, peerSnapshot.y, x, y) > 0.5f) {
+      throw new IllegalStateException("hireling position not synchronized to both clients");
     }
   }
 
@@ -1411,6 +1553,7 @@ public final class D2GSHeadlessClient {
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
     boolean requireMercenaryRestore;
+    boolean requireMercenaryTravel;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -1435,6 +1578,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
         else if ("--require-mercenary-restore".equals(arg)) config.requireMercenaryRestore = true;
+        else if ("--require-mercenary-travel".equals(arg)) config.requireMercenaryTravel = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;

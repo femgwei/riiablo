@@ -757,6 +757,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           new ActTransitionSystem());
       builder.with(new Act1QuestSystem());
       builder.with(new NativeMercenaryRewardSystem());
+      builder.with(new com.riiablo.engine.server.MercenaryFollowSystem());
       builder.with(new NativeCountessRewardSystem());
       builder.with(new NativeCharsiImbueSystem());
       builder.with(new ServerSkillSystem(true));

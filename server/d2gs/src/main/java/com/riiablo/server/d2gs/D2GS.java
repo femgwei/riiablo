@@ -169,7 +169,28 @@ public class D2GS extends ApplicationAdapter {
 
   static Vector2 headlessLevelPosition(int levelId) {
     D2GS server = activeHeadlessInstance;
-    if (server == null || server.map == null || Riiablo.files == null) return null;
+    if (server == null || server.map == null || Riiablo.files == null || Gdx.app == null) {
+      return null;
+    }
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<Vector2> result =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        result.set(findHeadlessLevelPosition(server, levelId));
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : null;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    }
+  }
+
+  private static Vector2 findHeadlessLevelPosition(D2GS server, int levelId) {
     com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
     Map.Zone zone = level == null ? null : server.map.findZone(level);
     if (zone == null) return null;
@@ -189,6 +210,62 @@ public class D2GS extends ApplicationAdapter {
       }
     }
     return new Vector2(centerX, centerY);
+  }
+
+  /** Finds a walkable same-room point in the native hireling follow band. */
+  static Vector2 headlessMercenaryFollowPosition(int levelId, float originX, float originY) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null || Gdx.app == null) {
+      return null;
+    }
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<Vector2> result =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        result.set(findHeadlessMercenaryFollowPosition(
+            server, levelId, originX, originY));
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : null;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    }
+  }
+
+  private static Vector2 findHeadlessMercenaryFollowPosition(
+      D2GS server, int levelId, float originX, float originY) {
+    com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+    Map.Zone zone = level == null ? null : server.map.findZone(level);
+    Map.RoomEx originRoom = zone == null ? null : zone.findRoomEx(originX, originY);
+    if (zone == null) return null;
+    Vector2 best = null;
+    float bestDistance2 = Float.MAX_VALUE;
+    int minX = originRoom != null ? originRoom.x : zone.x();
+    int minY = originRoom != null ? originRoom.y : zone.y();
+    int maxX = originRoom != null ? originRoom.x + originRoom.width : zone.x() + zone.width();
+    int maxY = originRoom != null ? originRoom.y + originRoom.height : zone.y() + zone.height();
+    for (int y = minY; y < maxY; y++) {
+      for (int x = minX; x < maxX; x++) {
+        float dx = x - originX;
+        float dy = y - originY;
+        float distance2 = dx * dx + dy * dy;
+        if (distance2 < 30f * 30f || distance2 > 60f * 60f) continue;
+        if (server.map.getZone(x, y) != zone
+            || (server.map.flags(x, y) & DT1.Tile.FLAG_BLOCK_WALK) != 0) continue;
+        if (originRoom != null && zone.findRoomEx(x, y) != originRoom) continue;
+        if (distance2 < bestDistance2) {
+          bestDistance2 = distance2;
+          if (best == null) best = new Vector2();
+          best.set(x, y);
+        }
+      }
+    }
+    return best;
   }
 
   /** Finds a native Blood Moor room whose deferred population contains a raisable pair. */
@@ -358,6 +435,98 @@ public class D2GS extends ApplicationAdapter {
             player == null || player.data == null ? 0
                 : com.riiablo.item.VendorPricing.availableGold(player.data),
             rewards.persistedMercenaryFlags(playerId)};
+  }
+
+  /**
+   * Stable render-thread snapshot for the two-client hireling travel test.
+   * Integer slots carry float bit patterns so the hook has no mutable ECS references.
+   */
+  static int[] headlessMercenaryTravelState(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) {
+      return emptyHeadlessMercenaryTravelState();
+    }
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(emptyHeadlessMercenaryTravelState());
+    Gdx.app.postRunnable(() -> {
+      try {
+        NativeMercenaryRewardSystem rewards =
+            server.world.getSystem(NativeMercenaryRewardSystem.class);
+        com.riiablo.engine.server.MercenaryFollowSystem follow = server.world.getSystem(
+            com.riiablo.engine.server.MercenaryFollowSystem.class);
+        int mercenaryId = rewards == null ? Engine.INVALID_ENTITY
+            : rewards.mercenaryEntityId(playerId);
+        com.riiablo.engine.server.component.Position playerPosition = server.world.getMapper(
+            com.riiablo.engine.server.component.Position.class).get(playerId);
+        com.riiablo.engine.server.component.Position mercenaryPosition = mercenaryId < 0 ? null
+            : server.world.getMapper(com.riiablo.engine.server.component.Position.class)
+                .get(mercenaryId);
+        com.riiablo.engine.server.component.MapWrapper playerMap = server.world.getMapper(
+            com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        com.riiablo.engine.server.component.MapWrapper mercenaryMap = mercenaryId < 0 ? null
+            : server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+                .get(mercenaryId);
+        com.riiablo.engine.server.component.AttributesWrapper attributes = mercenaryId < 0 ? null
+            : server.world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class)
+                .get(mercenaryId);
+        com.riiablo.attributes.StatRef life = attributes == null || attributes.attrs == null
+            ? null : attributes.attrs.get(com.riiablo.attributes.Stat.hitpoints,
+                com.riiablo.attributes.StatRef.obtain());
+        com.riiablo.engine.server.component.Box2DBody box = mercenaryId < 0 ? null
+            : server.world.getMapper(com.riiablo.engine.server.component.Box2DBody.class)
+                .get(mercenaryId);
+        float mercenaryX = mercenaryPosition == null ? Float.NaN : mercenaryPosition.position.x;
+        float mercenaryY = mercenaryPosition == null ? Float.NaN : mercenaryPosition.position.y;
+        int flags = mercenaryPosition == null || server.map == null ? -1
+            : server.map.flags(mercenaryPosition.position);
+        result.set(new int[] {
+            mercenaryId,
+            levelId(playerMap),
+            levelId(mercenaryMap),
+            follow == null ? 0 : follow.teleportCount(),
+            follow == null ? 0 : follow.followCount(),
+            Float.floatToIntBits(playerPosition == null ? Float.NaN : playerPosition.position.x),
+            Float.floatToIntBits(playerPosition == null ? Float.NaN : playerPosition.position.y),
+            Float.floatToIntBits(mercenaryX),
+            Float.floatToIntBits(mercenaryY),
+            flags,
+            mercenaryMap == null ? -1 : mercenaryMap.roomId,
+            Float.floatToIntBits(life == null ? 0f : life.asFixed()),
+            Float.floatToIntBits(box == null || box.body == null
+                ? Float.NaN : box.body.getPosition().x),
+            Float.floatToIntBits(box == null || box.body == null
+                ? Float.NaN : box.body.getPosition().y),
+            playerMap != null && mercenaryMap != null && playerMap.map == mercenaryMap.map ? 1 : 0,
+            follow == null ? Engine.INVALID_ENTITY : follow.lastMercenary(),
+            follow == null ? Engine.INVALID_ENTITY : follow.lastOwner(),
+            mercenaryMap != null && mercenaryMap.zone != null
+                && mercenaryMap.zone.hasNativeRoomTopology() ? 1 : 0
+        });
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : emptyHeadlessMercenaryTravelState();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return emptyHeadlessMercenaryTravelState();
+    }
+  }
+
+  private static int levelId(com.riiablo.engine.server.component.MapWrapper wrapper) {
+    return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+        ? -1 : wrapper.zone.level.Id;
+  }
+
+  private static int[] emptyHeadlessMercenaryTravelState() {
+    return new int[] {Engine.INVALID_ENTITY, -1, -1, 0, 0,
+        Float.floatToIntBits(Float.NaN), Float.floatToIntBits(Float.NaN),
+        Float.floatToIntBits(Float.NaN), Float.floatToIntBits(Float.NaN),
+        -1, -1, 0, Float.floatToIntBits(Float.NaN), Float.floatToIntBits(Float.NaN),
+        0, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, 0};
   }
 
   static int[] headlessMercenaryCastState() {
@@ -576,6 +745,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new NativeShrineSystem())
 
         .with(new Actioneer())
+        .with(new com.riiablo.engine.server.MercenaryFollowSystem())
         .with(new com.riiablo.engine.server.MercenarySkillSystem())
         .with(new ServerMonsterCorpseSystem())
         .with(new AuraEcsSystem())
