@@ -17,6 +17,9 @@ public final class NativeHirelingExperienceTable {
     public final int strength, strengthPerLevel, dexterity, dexterityPerLevel;
     public final int attackRate, attackRatePerLevel, damageMin, damageMax, damagePerLevel;
     public final int resist, resistPerLevel;
+    /** Native Hireling.txt default chance before any skill is considered. */
+    public int defaultChance;
+    public final int[] chances = new int[6], chancePerLevels = new int[6];
     public final int[] skills, skillModes, skillLevels, skillLevelsPerLevel;
 
     public Row(int hirelingId, int level, int experiencePerLevel) {
@@ -62,6 +65,19 @@ public final class NativeHirelingExperienceTable {
         System.arraycopy(values, 0, result, 0, Math.min(6, values.length));
       }
       return result;
+    }
+
+    public Row withChances(int[] chances, int[] chancePerLevels) {
+      if (chances != null) System.arraycopy(chances, 0, this.chances, 0,
+          Math.min(6, chances.length));
+      if (chancePerLevels != null) System.arraycopy(chancePerLevels, 0, this.chancePerLevels, 0,
+          Math.min(6, chancePerLevels.length));
+      return this;
+    }
+
+    public Row withDefaultChance(int defaultChance) {
+      this.defaultChance = Math.max(0, defaultChance);
+      return this;
     }
   }
 
@@ -142,7 +158,10 @@ public final class NativeHirelingExperienceTable {
                 intValue(parser, "Resist", "Resistance"),
                 intValue(parser, "Resist/Lvl", "ResistPerLvl", "Resistance/Lvl"),
                 indexedSkillValues(parser), indexedValues(parser, "Mode"),
-                indexedValues(parser, "Level"), indexedValues(parser, "LvlPerLvl")));
+                indexedValues(parser, "Level"), indexedValues(parser, "LvlPerLvl"))
+                .withDefaultChance(intValue(parser, "DefaultChance", "Default Chance"))
+                .withChances(indexedValues(parser, "Chance"),
+                    indexedValues(parser, "ChancePerLvl", "Chance/Lvl")));
           }
         }
         log.info("[XP_MERC_TABLE] loaded {} Hireling.txt rows (idColumn={}, levelColumn={}, expColumn={})",
@@ -171,12 +190,17 @@ public final class NativeHirelingExperienceTable {
     return column < 0 ? 0 : parser.getInt(column);
   }
 
-  private static int[] indexedValues(TxtParser parser, String prefix) {
+  private static int[] indexedValues(TxtParser parser, String... prefixes) {
     int[] values = new int[6];
     for (int i = 0; i < values.length; i++) {
       int n = i + 1;
-      int column = firstColumn(parser, prefix + " " + n, prefix + n,
-          prefix + "_" + n);
+      String[] names = new String[prefixes.length * 3];
+      for (int j = 0; j < prefixes.length; j++) {
+        names[j * 3] = prefixes[j] + " " + n;
+        names[j * 3 + 1] = prefixes[j] + n;
+        names[j * 3 + 2] = prefixes[j] + "_" + n;
+      }
+      int column = firstColumn(parser, names);
       values[i] = column < 0 ? 0 : parser.getInt(column);
     }
     return values;
@@ -295,6 +319,35 @@ public final class NativeHirelingExperienceTable {
       stats.skillLevels[i] = Math.max(0, Math.min(32, skillLevel));
     }
     return stats;
+  }
+
+  /** Selects one native skill slot using Hireling.txt Chance/ChancePerLvl. */
+  public int selectSkill(int hirelingId, int level, int roll) {
+    Row row = row(hirelingId, level);
+    if (row == null) return -1;
+    int levelUps = Math.max(0, level - row.level);
+    int total = row.defaultChance;
+    for (int i = 0; i < row.skills.length; i++) {
+      if (row.skills[i] < 0 || row.skillModes[i] >= 16 || row.skillLevels[i] <= 0) continue;
+      // D2Game scales ChancePerLvl by one quarter before adding it to the
+      // cumulative roll range (sub_6FCE4830).
+      int chance = Math.max(0, row.chances[i] + levelUps * row.chancePerLevels[i] / 4);
+      total += chance;
+    }
+    if (total <= 0) return -1;
+    // The native random helper rolls in [0, nChance], hence the inclusive
+    // upper bound here. Values below DefaultChance intentionally mean that
+    // no hireling skill was selected.
+    int value = Math.floorMod(roll, total + 1);
+    if (value < row.defaultChance) return -1;
+    int cumulative = row.defaultChance;
+    for (int i = 0; i < row.skills.length; i++) {
+      if (row.skills[i] < 0 || row.skillModes[i] >= 16 || row.skillLevels[i] <= 0) continue;
+      int chance = Math.max(0, row.chances[i] + levelUps * row.chancePerLevels[i] / 4);
+      cumulative += chance;
+      if (value <= cumulative) return i;
+    }
+    return -1;
   }
 
   public int size() { return rows.size; }

@@ -148,6 +148,16 @@ public class Actioneer extends PassiveSystem {
   }
 
   public void cast(int entityId, int skillId, int targetId, Vector2 targetVec) {
+    castInternal(entityId, skillId, targetId, targetVec, (byte) Engine.INVALID_MODE);
+  }
+
+  /** Casts with an explicit native animation mode (used by hireling AI). */
+  public void castWithMode(int entityId, int skillId, byte mode, int targetId, Vector2 targetVec) {
+    castInternal(entityId, skillId, targetId, targetVec, mode);
+  }
+
+  private void castInternal(int entityId, int skillId, int targetId, Vector2 targetVec,
+      byte requestedMode) {
     if (!canCast(entityId)) {
       log.info("[SKILL_CAST] rejected_busy entity={} skill={} casting={} sequence={}",
           entityId, skillId, mCasting.has(entityId), mSequence.has(entityId));
@@ -226,7 +236,8 @@ public class Actioneer extends PassiveSystem {
 
     targetVec = targetVec != null ? targetVec.cpy() : Vector2.Zero;
     final Class.Type type = mClass.get(entityId).type;
-    byte mode = (byte) getMode(skill, type);
+    byte mode = requestedMode != Engine.INVALID_MODE
+        ? requestedMode : (byte) getMode(skill, type);
     log.trace("mode: {}", mode);
     if (mode == Engine.INVALID_MODE) {
       mode = (byte) type.getMode("SC");

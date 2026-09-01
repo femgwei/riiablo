@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
@@ -70,6 +71,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Missile> mMissile;
@@ -636,6 +638,12 @@ public class ServerSkillSystem extends PassiveSystem {
       return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId));
     }
     if (mMonster.has(entityId)) {
+      if (mMercenary.has(entityId)) {
+        Mercenary merc = mMercenary.get(entityId);
+        for (int i = 0; i < merc.skills.length; i++) {
+          if (merc.skills[i] == skillId) return Math.max(1, merc.skillLevels[i]);
+        }
+      }
       Monster monster = mMonster.get(entityId);
       if (monster.monstats != null) {
         String skillName = Riiablo.files.skills.get(skillId) != null
