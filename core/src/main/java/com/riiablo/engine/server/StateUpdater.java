@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
@@ -23,6 +24,8 @@ import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
+import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -50,6 +53,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Player> mPlayer;
+
+  @Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
 
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
@@ -214,6 +221,15 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void applyDamageOverTime(int entityId, int sourceEntityId, float damage,
       StateList stateList, int stateId) {
     if (damage <= 0 || !mAttributesWrapper.has(entityId)) return;
+    if (mPlayer.has(sourceEntityId) && mPlayer.has(entityId)
+        && !PvpCombatRules.canDamage(partyManager, sourceEntityId, entityId, true, true)) {
+      // Hostility may be removed while poison/open-wounds is active.  Native
+      // friendly checks must still prevent later DOT ticks from bypassing the
+      // current authoritative relation.
+      log.info("[PVP] phase=dot_reject source={} target={} state={} reason=not_hostile",
+          sourceEntityId, entityId, StateId.getName(stateId));
+      return;
+    }
     Attributes attrs = mAttributesWrapper.get(entityId).attrs;
     if (attrs == null) return;
     StatRef hitpoints = attrs.get(Stat.hitpoints, StatRef.obtain());

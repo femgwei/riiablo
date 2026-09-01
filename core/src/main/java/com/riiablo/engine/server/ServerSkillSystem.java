@@ -32,6 +32,8 @@ import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -73,6 +75,9 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
 
+  @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
+
   /** Registered as "factory" by D2GS. */
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -90,6 +95,14 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     Player player = mPlayer.get(event.entityId);
+    if (event.targetId >= 0 && mPlayer.has(event.targetId)
+        && !PvpCombatRules.canTarget(partyManager, event.entityId, event.targetId,
+            true, true)) {
+      reject(event, 8, "target player is not hostile");
+      log.info("[PVP] phase=skill_reject source={} target={} skill={} reason=not_hostile",
+          event.entityId, event.targetId, event.skillId);
+      return;
+    }
     int skillLevel = player.data != null ? player.data.getSkill(event.skillId) : 1;
     skillLevel = Math.max(1, skillLevel);
     int casterLevel = 1;
@@ -378,10 +391,9 @@ public class ServerSkillSystem extends PassiveSystem {
     IntSet visited = new IntSet();
     Vector2 from = new Vector2(start);
     int created = 0;
-    boolean sourcePlayer = mPlayer.has(event.entityId);
     for (int jump = 0; jump < maxHits; jump++) {
       int next = jump == 0 && event.targetId >= 0 && mPosition.has(event.targetId)
-          && isHostile(sourcePlayer, event.targetId)
+          && isHostile(event.entityId, event.targetId)
           ? event.targetId : findNearestHostile(event.entityId, from, visited);
       if (next < 0 || !mPosition.has(next)) break;
       Vector2 destination = mPosition.get(next).position;
@@ -410,7 +422,7 @@ public class ServerSkillSystem extends PassiveSystem {
     float nearestDistance = Float.MAX_VALUE;
     for (int i = 0; i < entities.size(); i++) {
       int candidate = entities.get(i);
-      if (candidate == sourceId || visited.contains(candidate) || !isHostile(sourcePlayer, candidate)
+      if (candidate == sourceId || visited.contains(candidate) || !isHostile(sourceId, candidate)
           || !mPosition.has(candidate)) continue;
       float distance = origin.dst2(mPosition.get(candidate).position);
       if (distance <= CHAIN_LIGHTNING_JUMP_RANGE2 && distance < nearestDistance) {
@@ -421,8 +433,14 @@ public class ServerSkillSystem extends PassiveSystem {
     return nearest;
   }
 
-  private boolean isHostile(boolean sourcePlayer, int candidate) {
-    return sourcePlayer ? mMonster.has(candidate) : mPlayer.has(candidate);
+  private boolean isHostile(int sourceId, int candidate) {
+    boolean sourcePlayer = mPlayer.has(sourceId);
+    if (sourcePlayer) {
+      if (mMonster.has(candidate)) return true;
+      return mPlayer.has(candidate) && PvpCombatRules.canTarget(
+          partyManager, sourceId, candidate, true, true);
+    }
+    return mPlayer.has(candidate);
   }
 
   private Vector2 resolveTargetPoint(SkillDoEvent event, Vector2 fallback, Vector2 out) {

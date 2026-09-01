@@ -23,6 +23,8 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
+import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.logger.LogManager;
@@ -53,6 +55,9 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+
+  @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
   
   protected EventSystem events;
   
@@ -380,25 +385,19 @@ public class MissileCollisionSystem extends IteratingSystem {
    * 判断两个实体是否是敌人
    */
   private boolean isEnemy(int entityId1, int entityId2) {
-    // 玩家 vs 怪物 = 敌人
-    if (mPlayer.has(entityId1) && mMonster.has(entityId2)) {
-      return true;
+    boolean sourcePlayer = mPlayer.has(entityId1);
+    boolean targetPlayer = mPlayer.has(entityId2);
+    boolean sourceMonster = mMonster.has(entityId1);
+    boolean targetMonster = mMonster.has(entityId2);
+    if (!sourcePlayer && !sourceMonster) return false;
+    if (!targetPlayer && !targetMonster) return false;
+    boolean enemy = PvpCombatRules.canDamage(partyManager, entityId1, entityId2,
+        sourcePlayer, targetPlayer);
+    if (sourcePlayer && targetPlayer && !enemy) {
+      log.info("[PVP] phase=missile_reject source={} target={} reason=not_hostile",
+          entityId1, entityId2);
     }
-    if (mMonster.has(entityId1) && mPlayer.has(entityId2)) {
-      return true;
-    }
-    
-    // 怪物 vs 怪物 = 不是敌人（同一阵营）
-    if (mMonster.has(entityId1) && mMonster.has(entityId2)) {
-      return false;
-    }
-    
-    // 玩家 vs 玩家 = 不是敌人（同一阵营，除非是 PvP）
-    if (mPlayer.has(entityId1) && mPlayer.has(entityId2)) {
-      return false; // TODO: 支持 PvP
-    }
-    
-    return false;
+    return enemy;
   }
   
   /**

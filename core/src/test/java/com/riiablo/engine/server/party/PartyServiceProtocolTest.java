@@ -40,4 +40,19 @@ class PartyServiceProtocolTest {
     assertEquals("HOSTILE_REJECTED", PartyServiceProtocol.execute(
         parties, 1, com.riiablo.net.packet.d2gs.PartyOperation.HOSTILE, 2, online).reason);
   }
+
+  @Test
+  void hostilityAndRemovalAreVisibleToBothPlayers() {
+    PartyManager parties = new PartyManager();
+    java.util.function.IntPredicate online = id -> id == 1 || id == 2;
+    assertTrue(PartyServiceProtocol.execute(parties, 1,
+        com.riiablo.net.packet.d2gs.PartyOperation.HOSTILE, 2, online).success);
+    assertEquals(PartyRelation.HOSTILE, parties.getRelation(1, 2));
+    assertEquals(PartyRelation.HOSTILE, parties.getRelation(2, 1));
+
+    assertTrue(PartyServiceProtocol.execute(parties, 2,
+        com.riiablo.net.packet.d2gs.PartyOperation.UNHOSTILE, 1, online).success);
+    assertEquals(PartyRelation.NONE, parties.getRelation(1, 2));
+    assertEquals(PartyRelation.NONE, parties.getRelation(2, 1));
+  }
 }

@@ -104,6 +104,7 @@ import com.riiablo.engine.server.party.PartyRelation;
 import com.riiablo.engine.server.party.PartyRequestCache;
 import com.riiablo.engine.server.party.PartyServiceProtocol;
 import com.riiablo.engine.server.party.PartyGoldShareService;
+import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.ItemWriter;
@@ -941,9 +942,16 @@ public class D2GS extends ApplicationAdapter {
     }
 
     int source = player.get(packet.id, Engine.INVALID_ENTITY);
-    PartyServiceProtocol.Result result = PartyServiceProtocol.execute(
-        partyManager, source, request.operation(), request.targetEntityId(),
-        entityId -> clientForEntity(entityId) >= 0);
+    PartyServiceProtocol.Result result;
+    if ((request.operation() == PartyOperation.HOSTILE
+        || request.operation() == PartyOperation.UNHOSTILE)
+        && !hostilityRequestAllowed(source, request.targetEntityId())) {
+      result = PartyServiceProtocol.Result.reject("HOSTILE_REJECTED");
+    } else {
+      result = PartyServiceProtocol.execute(
+          partyManager, source, request.operation(), request.targetEntityId(),
+          entityId -> clientForEntity(entityId) >= 0);
+    }
     sendPartyResult(packet.id, request.requestId(), request.operation(), source,
         request.targetEntityId(), result, true, intent);
 
@@ -962,6 +970,21 @@ public class D2GS extends ApplicationAdapter {
       if (entry.value == entityId && (connected & (1 << entry.key)) != 0) return entry.key;
     }
     return -1;
+  }
+
+  /** D2MOO PARTYSCREEN_ToggleHostile gate: both players level 9+ and source
+   * must currently be in a town room. */
+  private boolean hostilityRequestAllowed(int sourceEntityId, int targetEntityId) {
+    if (sourceEntityId < 0 || targetEntityId < 0 || sourceEntityId == targetEntityId) return false;
+    Player source = world.getMapper(Player.class).get(sourceEntityId);
+    Player target = world.getMapper(Player.class).get(targetEntityId);
+    if (source == null || target == null || source.data == null || target.data == null) return false;
+    int sourceLevel = Math.max(1, source.data.level);
+    int targetLevel = Math.max(1, target.data.level);
+    com.riiablo.engine.server.component.MapWrapper wrapper = world.getMapper(
+        com.riiablo.engine.server.component.MapWrapper.class).get(sourceEntityId);
+    return PvpCombatRules.canDeclareHostility(sourceLevel, targetLevel,
+        wrapper != null && wrapper.zone != null && wrapper.zone.isTown());
   }
 
   private void broadcastPartySnapshots(byte operation, int sourceEntityId,

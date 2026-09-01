@@ -201,8 +201,10 @@ public class PartyManager {
     // 清除与队伍成员的敌对状态
     for (PartyMember other : party.getMembers()) {
       if (other.entityId != entityId) {
-        removeHostility(entityId, other.entityId);
-        removeHostility(other.entityId, entityId);
+        // getRelation() intentionally reports PARTY_MEMBER once joined, so
+        // remove the bilateral stale player-list flags directly.
+        setRelation(entityId, other.entityId, PartyRelation.NONE);
+        setRelation(other.entityId, entityId, PartyRelation.NONE);
       }
     }
     
@@ -228,6 +230,12 @@ public class PartyManager {
       return;
     }
     
+    for (PartyMember other : party.getMembers()) {
+      if (other != null && other.entityId != entityId) {
+        setRelation(entityId, other.entityId, PartyRelation.NONE);
+        setRelation(other.entityId, entityId, PartyRelation.NONE);
+      }
+    }
     party.removeMember(entityId);
     
     log.info("玩家离开队伍: entityId={}, partyId={}", entityId, partyId);
@@ -428,7 +436,11 @@ public class PartyManager {
       return false;
     }
     
+    // D2MOO FRIENDLY_OpenHostility toggles the player-list flag in both
+    // directions so the challenged player may retaliate immediately and both
+    // clients render the same hostile relation.
     setRelation(attackerId, targetId, PartyRelation.HOSTILE);
+    setRelation(targetId, attackerId, PartyRelation.HOSTILE);
     log.info("声明敌对: attackerId={}, targetId={}", attackerId, targetId);
     return true;
   }
@@ -440,10 +452,18 @@ public class PartyManager {
    * @param entityId2 玩家 2 实体 ID
    */
   public void removeHostility(int entityId1, int entityId2) {
-    int relation = getRelation(entityId1, entityId2);
-    if (relation == PartyRelation.HOSTILE) {
+    if (getRelation(entityId1, entityId2) == PartyRelation.HOSTILE
+        || getRelation(entityId2, entityId1) == PartyRelation.HOSTILE) {
       setRelation(entityId1, entityId2, PartyRelation.NONE);
+      setRelation(entityId2, entityId1, PartyRelation.NONE);
     }
+  }
+
+  /** Returns the bilateral D2MOO hostility flag, excluding party members. */
+  public boolean areHostile(int entityId1, int entityId2) {
+    if (entityId1 == entityId2 || areInSameParty(entityId1, entityId2)) return false;
+    return getRelation(entityId1, entityId2) == PartyRelation.HOSTILE
+        || getRelation(entityId2, entityId1) == PartyRelation.HOSTILE;
   }
 
   //==========================================================================

@@ -42,6 +42,8 @@ import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofReference;
@@ -78,6 +80,9 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Pathfind> mPathfind;
+
+  @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
 
   @com.artemis.annotations.Wire(name = "factory")
   protected EntityFactory factory;
@@ -502,6 +507,21 @@ public class Actioneer extends PassiveSystem {
         }
         if (targetId == Engine.INVALID_ENTITY) break;
         if (!mAttributesWrapper.has(targetId)) break;
+        // Player components are authoritative for PvP identity.  Some native
+        // monster tests intentionally omit the presentation Class component,
+        // so using isPlayerEntity() here would misclassify a valid player
+        // target and block an otherwise normal monster attack.
+        boolean attackerPlayerUnit = mPlayer.has(entityId);
+        boolean targetPlayerUnit = mPlayer.has(targetId);
+        if ((attackerPlayerUnit && targetPlayerUnit)
+            && !PvpCombatRules.canDamage(partyManager, entityId, targetId, true, true)) {
+          if (attackerPlayerUnit && targetPlayerUnit) {
+            log.info("[PVP] phase=reject source={} target={} reason=not_hostile", entityId, targetId);
+          }
+          break;
+        }
+        boolean attackerPlayer = isPlayerEntity(entityId);
+        boolean targetPlayer = isPlayerEntity(targetId);
         log.debug("{} attack {}", entityId, targetId);
 
         if (mCasting.has(entityId)
@@ -588,8 +608,8 @@ public class Actioneer extends PassiveSystem {
         CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
             attackerAttrs,
             attrs,
-            isPlayerEntity(entityId),
-            isPlayerEntity(targetId),
+            attackerPlayer,
+            targetPlayer,
             false,
             monsterAttackMinDamage(entityId),
             monsterAttackMaxDamage(entityId),
