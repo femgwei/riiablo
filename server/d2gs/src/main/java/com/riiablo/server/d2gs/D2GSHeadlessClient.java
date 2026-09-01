@@ -16,6 +16,10 @@ import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.packet.d2gs.MissileP;
+import com.riiablo.net.packet.d2gs.ItemP;
+import com.riiablo.net.packet.d2gs.ItemMoveRequest;
+import com.riiablo.net.packet.d2gs.ItemMoveResult;
+import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.VelocityP;
@@ -96,6 +100,11 @@ public final class D2GSHeadlessClient {
     log("connect", "server=" + config.host + ':' + config.port
         + " character=" + character.name + " class=" + character.charClass);
 
+    if (config.requireFallenScenario) {
+      runFallenDual(d2s, character);
+      return;
+    }
+
     try (Socket socket = new Socket()) {
       socket.connect(new InetSocketAddress(config.host, config.port), config.connectTimeoutMillis);
       socket.setTcpNoDelay(true);
@@ -134,6 +143,184 @@ public final class D2GSHeadlessClient {
             result == null ? 0f : result.life, damaged, sawAttackMode, playerMissiles.size()));
       }
     }
+  }
+
+  /**
+   * Real two-socket regression: client A kills a Fallen, both clients observe
+   * the death and subsequent Shaman resurrection, then client B picks up one
+   * of the resulting ground drops after the native owner window expires.
+   */
+  private void runFallenDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    try (Socket socketA = openSocket(); Socket socketB = openSocket()) {
+      DataInputStream inA = input(socketA);
+      DataInputStream inB = input(socketB);
+      OutputStream outA = output(socketA);
+      OutputStream outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(character, d2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      Snapshot fallenA = a.awaitNamedMonster(inA, "fallen1", false, deadline());
+      Snapshot fallenB = b.awaitEntity(inB, fallenA.entityId, deadline());
+      log("dual_target", "fallen=" + fallenA.entityId + " class=" + fallenA.monsterClass
+          + " clients=" + a.playerId + "," + b.playerId);
+
+      a.attackUntilDead(inA, outA, fallenA, deadline());
+      b.awaitDead(inB, fallenA.entityId, deadline());
+      Snapshot shamanA = a.awaitNamedMonster(inA, "fallenshaman1", true, deadline());
+      Snapshot shamanB = b.awaitEntity(inB, shamanA.entityId, deadline());
+      a.awaitRevived(inA, fallenA.entityId, deadline());
+      b.awaitRevived(inB, fallenA.entityId, deadline());
+      log("dual_revive_pass", "fallen=" + fallenA.entityId + " shaman="
+          + shamanA.entityId + " clientA=true clientB=true");
+
+      Snapshot drop = b.awaitGroundItem(inB, deadline());
+      if (drop == null) throw new IOException("no ground drop observed after Fallen death");
+      // Native D2 protects the killer's drop for a short owner window.  Verify
+      // the peer path after that window rather than bypassing ownership rules.
+      Thread.sleep(10_200L);
+      send(outB, positionPacket(b.playerId, drop.x, drop.y));
+      send(outB, itemMovePacket(1L, 0L, drop.entityId));
+      ItemMoveResult result = b.awaitItemMoveResult(inB, deadline());
+      if (result == null || !result.success()) {
+        throw new IllegalStateException("peer pickup failed: result="
+            + (result == null ? "timeout" : result.failure()));
+      }
+      log("dual_pickup_pass", "peer=" + b.playerId + " ground=" + drop.entityId
+          + " revision=" + result.revision() + " inventorySnapshot="
+          + result.snapshotLength());
+    }
+  }
+
+  private Socket openSocket() throws IOException {
+    Socket socket = new Socket();
+    socket.connect(new InetSocketAddress(config.host, config.port), config.connectTimeoutMillis);
+    socket.setTcpNoDelay(true);
+    socket.setSoTimeout(500);
+    return socket;
+  }
+
+  private static DataInputStream input(Socket socket) throws IOException {
+    return new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+  }
+
+  private static OutputStream output(Socket socket) {
+    return new BufferedOutputStream(socketOutput(socket));
+  }
+
+  private static OutputStream socketOutput(Socket socket) {
+    try {
+      return socket.getOutputStream();
+    } catch (IOException e) {
+      throw new IllegalStateException("cannot open D2GS output", e);
+    }
+  }
+
+  private long deadline() {
+    return System.currentTimeMillis() + config.testTimeoutMillis;
+  }
+
+  private Snapshot awaitNamedMonster(DataInputStream input, String name, boolean allowDead,
+                                     long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      for (Snapshot snapshot : monsters.values()) {
+        if (!snapshot.hasPosition || !snapshot.hasVitals) continue;
+        if (!allowDead && snapshot.life <= 0f) continue;
+        if (snapshot.monsterClass < 0 || Riiablo.files == null || Riiablo.files.monstats == null) continue;
+        com.riiablo.codec.excel.MonStats.Entry row = Riiablo.files.monstats.get(snapshot.monsterClass);
+        if (row != null && name.equalsIgnoreCase(row.Id)) return snapshot;
+      }
+    }
+    throw new IOException("timed out waiting for monster " + name);
+  }
+
+  private Snapshot awaitEntity(DataInputStream input, int entityId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      Snapshot snapshot = monsters.get(entityId);
+      if (snapshot != null && snapshot.hasPosition && snapshot.hasVitals) return snapshot;
+    }
+    throw new IOException("timed out waiting for entity " + entityId);
+  }
+
+  private void attackUntilDead(DataInputStream input, OutputStream output, Snapshot target,
+                               long deadline) throws Exception {
+    for (int attempt = 1; attempt <= Math.max(config.attempts, 40)
+        && System.currentTimeMillis() < deadline; attempt++) {
+      Snapshot current = monsters.get(target.entityId);
+      if (current != null && (current.dead || current.life <= 0f)) return;
+      float x = current == null ? target.x : current.x;
+      float y = current == null ? target.y : current.y;
+      send(output, positionPacket(playerId, x - 1f, y));
+      send(output, castPacket(config.skillId, target.entityId, x, y));
+      long attemptDeadline = Math.min(deadline, System.currentTimeMillis() + 1800L);
+      while (System.currentTimeMillis() < attemptDeadline) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+        if (packet == null) continue;
+        consume(packet);
+        Snapshot after = monsters.get(target.entityId);
+        if (after != null && (after.dead || after.life <= 0f)) {
+          log("dual_death_pass", "killer=" + playerId + " fallen=" + target.entityId
+              + " attempts=" + attempt);
+          return;
+        }
+      }
+    }
+    throw new IOException("Fallen did not die after automatic attacks");
+  }
+
+  private void awaitDead(DataInputStream input, int entityId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      Snapshot snapshot = monsters.get(entityId);
+      if (snapshot != null && (snapshot.dead || snapshot.life <= 0f)) return;
+    }
+    throw new IOException("peer did not observe Fallen death " + entityId);
+  }
+
+  private void awaitRevived(DataInputStream input, int entityId, long deadline) throws Exception {
+    boolean deadSeen = false;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      Snapshot snapshot = monsters.get(entityId);
+      if (snapshot == null) continue;
+      deadSeen |= snapshot.dead || snapshot.life <= 0f;
+      if (deadSeen && snapshot.life > 0f && !snapshot.dead) return;
+    }
+    throw new IOException("client did not observe Fallen resurrection " + entityId);
+  }
+
+  private Snapshot awaitGroundItem(DataInputStream input, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      for (Snapshot snapshot : monsters.values()) if (snapshot.groundItem) return snapshot;
+    }
+    return null;
+  }
+
+  private ItemMoveResult awaitItemMoveResult(DataInputStream input, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      if (packet.dataType() == D2GSData.ItemMoveResult) {
+        return (ItemMoveResult) packet.data(new ItemMoveResult());
+      }
+      consume(packet);
+    }
+    return null;
   }
 
   private void waitForServer() throws Exception {
@@ -389,6 +576,22 @@ public final class D2GSHeadlessClient {
         }
       }
     }
+    if (sync.type() == 3) {
+      Snapshot snapshot = monsters.get(sync.entityId());
+      if (snapshot == null) {
+        snapshot = new Snapshot(sync.entityId());
+        monsters.put(sync.entityId(), snapshot);
+      }
+      snapshot.groundItem = findComponent(sync, ComponentP.ItemP) >= 0;
+      int positionIndex = findComponent(sync, ComponentP.PositionP);
+      if (positionIndex >= 0) {
+        PositionP position = (PositionP) sync.component(new PositionP(), positionIndex);
+        snapshot.x = position.x();
+        snapshot.y = position.y();
+        snapshot.hasPosition = true;
+      }
+      return;
+    }
     if (sync.type() == 5) {
       int missileIndex = findComponent(sync, ComponentP.MissileP);
       if (missileIndex >= 0) {
@@ -541,6 +744,16 @@ public final class D2GSHeadlessClient {
     return builder.dataBuffer();
   }
 
+  private static ByteBuffer itemMovePacket(long requestId, long revision, int groundEntityId) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int request = ItemMoveRequest.createItemMoveRequest(builder, requestId, revision,
+        ItemMoveOperation.GROUND_TO_CURSOR, -1, groundEntityId, -1, -1, -1, -1, false);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.ItemMoveRequest, request);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    return builder.dataBuffer();
+  }
+
   /** Creates a normal level-one Amazon whose native starting javelin owns Throw. */
   private static byte[] createGeneratedAmazonSave() {
     CharData character = CharData.obtain().clear()
@@ -591,6 +804,7 @@ public final class D2GSHeadlessClient {
     float y;
     float life;
     boolean dead;
+    boolean groundItem;
     boolean hasPosition;
     boolean hasVitals;
 
@@ -634,6 +848,7 @@ public final class D2GSHeadlessClient {
     boolean requireMissile;
     boolean requirePeer;
     boolean requireMonsterMovement;
+    boolean requireFallenScenario;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -654,6 +869,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-missile".equals(arg)) config.requireMissile = true;
         else if ("--require-peer".equals(arg)) config.requirePeer = true;
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
+        else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;
@@ -704,7 +920,7 @@ public final class D2GSHeadlessClient {
     private static void usage() {
       System.out.println("Usage: D2GSHeadlessClient [--home <D2 dir>] [--save <file.d2s>]"
           + " [--generated-amazon] [--host 127.0.0.1] [--port 6114]"
-          + " [--skill 0] [--require-missile] [--attempts 20]");
+          + " [--skill 0] [--require-missile] [--require-fallen-scenario] [--attempts 20]");
     }
   }
 }

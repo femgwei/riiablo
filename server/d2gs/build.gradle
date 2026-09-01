@@ -62,6 +62,18 @@ tasks.register('headlessMultiplayer', JavaExec) {
   }
 }
 
+tasks.register('headlessFallenDual', JavaExec) {
+  group = 'verification'
+  description = 'Runs two real D2GS sockets through Fallen death, Shaman resurrection and peer loot pickup.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-fallen-scenario', '--attempts', '40'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 jar {
   archiveBaseName = project.name
 	// assets are present in both this project's resource set and the unpacked
