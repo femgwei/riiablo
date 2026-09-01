@@ -111,6 +111,48 @@ class MercenaryManagerTest {
     assertEquals(0, callback.deductCalls);
   }
 
+  @Test
+  void restoresDeadSavedMercenaryWithoutChargingOrRewritingSave() {
+    MercenaryManager manager = new MercenaryManager();
+    Callback callback = new Callback();
+    callback.entityId = 93;
+    manager.setCallback(callback);
+
+    assertTrue(manager.restoreMercenary(12, MercenaryManager.MERC_TYPE_ROGUE,
+        17, 123_456L, 0x12345678, 13, true));
+
+    MercenaryManager.ActiveMercenary merc = manager.getPlayerMercenary(12);
+    assertNotNull(merc);
+    assertEquals(93, merc.entityId);
+    assertEquals(17, merc.level);
+    assertEquals(123_456L, merc.experience);
+    assertEquals(13, merc.nameId);
+    assertEquals(MercenaryManager.STATE_DEAD, merc.state);
+    assertEquals(0, merc.currentLife);
+    assertEquals(0, callback.deductCalls);
+    assertEquals(0, callback.hiredCalls);
+  }
+
+  @Test
+  void logoutUnloadPreservesPersistentCallbacksAndAllowsReconnect() {
+    MercenaryManager manager = new MercenaryManager();
+    Callback callback = new Callback();
+    callback.entityId = 101;
+    manager.setCallback(callback);
+    assertTrue(manager.restoreMercenary(14, MercenaryManager.MERC_TYPE_ROGUE,
+        8, 12_000L, 99, 2, false));
+
+    manager.unloadMercenary(14);
+
+    assertFalse(manager.hasMercenary(14));
+    assertEquals(1, callback.removeCalls);
+    assertEquals(0, callback.dismissedCalls);
+    callback.entityId = 102;
+    assertTrue(manager.restoreMercenary(14, MercenaryManager.MERC_TYPE_ROGUE,
+        8, 12_000L, 99, 2, false));
+    assertEquals(102, manager.getPlayerMercenary(14).entityId);
+  }
+
   private static class Callback implements MercenaryManager.MercenaryCallback {
     int entityId;
     int deductCalls;
@@ -118,6 +160,8 @@ class MercenaryManagerTest {
     int hiredCalls;
     int gold;
     int resurrectCalls;
+    int removeCalls;
+    int dismissedCalls;
     boolean resurrectResult;
 
     @Override
@@ -139,12 +183,14 @@ class MercenaryManagerTest {
       return true;
     }
 
-    @Override public void onMercenaryDismissed(int playerId, MercenaryManager.ActiveMercenary merc) {}
+    @Override public void onMercenaryDismissed(int playerId, MercenaryManager.ActiveMercenary merc) {
+      dismissedCalls++;
+    }
     @Override public void onMercenaryDeath(int playerId, MercenaryManager.ActiveMercenary merc) {}
     @Override public void onMercenaryResurrected(int playerId, MercenaryManager.ActiveMercenary merc) {}
     @Override public void onMercenaryLevelUp(int playerId, MercenaryManager.ActiveMercenary merc,
         int oldLevel, int newLevel) {}
-    @Override public void removeMercenaryEntity(int entityId) {}
+    @Override public void removeMercenaryEntity(int entityId) { removeCalls++; }
     @Override public boolean resurrectMercenaryEntity(int entityId, int playerId) {
       resurrectCalls++;
       return resurrectResult;

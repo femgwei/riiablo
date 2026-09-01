@@ -11,6 +11,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
@@ -36,6 +37,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<AIWrapper> mAIWrapper;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Selectable> mSelectable;
@@ -147,6 +149,67 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
         ? mPlayer.get(playerId).data.getMerc().flags : 0;
   }
 
+  /**
+   * Reconstructs the D2S hireling before the player's initial world snapshot.
+   * Mirrors {@code PLRSAVE2_ReadMercData}: level comes from saved experience,
+   * identity comes from type/name/seed, and the dead flag creates a persistent
+   * dead pet rather than silently replacing it with a living hireling.
+   */
+  public boolean restorePersistedMercenary(int playerId) {
+    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null) return false;
+    com.riiablo.save.CharData owner = mPlayer.get(playerId).data;
+    if (!owner.hasMerc()) return false;
+    com.riiablo.save.CharData.MercData data = owner.getMerc();
+    int mercType = data.type & 0xFFFF;
+    int nameId = data.name & 0xFFFF;
+    int level = hirelingTable == null ? 1
+        : hirelingTable.levelForStoredExperience(mercType, data.xp);
+    com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
+        hirelingTable == null ? null : hirelingTable.stats(mercType, level);
+    if (nativeStats == null) {
+      log.warn("[MERC_RESTORE] phase=reject player={} type={} xp={} reason=hireling_row_missing",
+          playerId, mercType, data.xp);
+      return false;
+    }
+
+    com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(data.getStats(), nativeStats);
+    int encodedExperience = (int) Math.min(Integer.MAX_VALUE, Math.max(0L, data.xp));
+    data.getStats().base().put(Stat.experience, encodedExperience);
+    // Rebuild aggregate values after native base stats so equipped mercenary
+    // items remain authoritative instead of being overwritten by the loader.
+    data.getItems().updateStats();
+    boolean dead = (data.flags & MercenaryManager.FLAG_DEAD) != 0;
+    if (!mercenaries.restoreMercenary(playerId, mercType, level, data.xp,
+        data.seed, nameId, dead)) return false;
+
+    MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
+    if (merc == null || !mAttributesWrapper.has(merc.entityId)) {
+      mercenaries.unloadMercenary(playerId);
+      return false;
+    }
+    // The runtime entity and persistent equipment share one Attributes object;
+    // later equipment and level updates therefore affect authoritative combat.
+    mAttributesWrapper.get(merc.entityId).attrs = data.getStats();
+    if (dead) {
+      data.getStats().aggregate().put(Stat.hitpoints, 0);
+      // PLRSAVE2_ReadMercData restores a dead hireling directly in MONMODE_DEAD.
+      // Reserve its corpse immediately so an NPC resurrection request cannot
+      // race the presentation DT -> DD sequence during the first server ticks.
+      mCorpse.create(merc.entityId).reset(Corpse.DEFAULT_DURATION, true);
+      event.dispatch(DeathEvent.obtain(playerId, merc.entityId));
+    }
+    log.info("[MERC_RESTORE] phase=restored player={} entity={} type={} level={} xp={} "
+            + "dead={} items={}",
+        playerId, merc.entityId, mercType, level, data.xp, dead,
+        data.getItems().getItems().size);
+    return true;
+  }
+
+  /** Logout-only cleanup. Unlike dismissal, this never clears D2S MercData. */
+  public void unloadPersistedMercenary(int playerId) {
+    mercenaries.unloadMercenary(playerId);
+  }
+
   /** Persists D2's dead-hireling flag as soon as authoritative life reaches zero. */
   @Subscribe
   public void onDeath(DeathEvent death) {
@@ -247,6 +310,10 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
         (int) Math.min(Integer.MAX_VALUE, data.xp));
     data.getStats().aggregate().put(Stat.experience,
         (int) Math.min(Integer.MAX_VALUE, data.xp));
+    data.getItems().updateStats();
+    if (mAttributesWrapper.has(merc.entityId)) {
+      mAttributesWrapper.get(merc.entityId).attrs = data.getStats();
+    }
   }
 
   @Override

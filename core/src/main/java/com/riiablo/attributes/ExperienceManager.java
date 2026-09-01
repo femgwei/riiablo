@@ -474,6 +474,7 @@ public class ExperienceManager extends PassiveSystem {
               : hirelingExperience.stats(hireling.mercType, newLevel);
       com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(
           owner.getMerc().getStats(), nativeStats);
+      owner.getMerc().getItems().updateStats();
       com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(hireling, nativeStats);
       log.info("[XP_MERC_LEVEL] owner={} merc={} level={}->{} xp={}",
           owner.name, hirelingId, hirelingLevel, newLevel, newExperience);
@@ -489,9 +490,14 @@ public class ExperienceManager extends PassiveSystem {
     attrs.aggregate().put(Stat.experience, encodedExperience);
     attrs.aggregate().put(Stat.lastexp, encodedGain);
     if (newLevel > hirelingLevel) {
-      com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(attrs,
-          hirelingExperience == null ? null
-              : hirelingExperience.stats(hireling.mercType, newLevel));
+      // Restored and newly hired mercenaries share the persistent mercenary
+      // Attributes instance, including equipment modifiers. Avoid applying
+      // native base values to that same aggregate a second time.
+      if (attrs != owner.getMerc().getStats()) {
+        com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(attrs,
+            hirelingExperience == null ? null
+                : hirelingExperience.stats(hireling.mercType, newLevel));
+      }
       // Applying native base stats rebuilds aggregate stats; restore the
       // experience values written by this award afterwards.
       attrs.base().put(Stat.experience, encodedExperience);

@@ -36,4 +36,27 @@ class NativeHirelingExperienceTableTest {
     // default chance is non-zero; with a zero default chance both are valid.
     assertEquals(0, table.selectSkill(0, 5, 3));
   }
+
+  @Test
+  void rebuildsSavedLevelWithoutOwnerLevelCap() {
+    NativeHirelingExperienceTable table = new NativeHirelingExperienceTable()
+        .add(new NativeHirelingExperienceTable.Row(0, 1, 100));
+
+    assertEquals(1, table.levelForStoredExperience(0, 0));
+    assertEquals(5, table.levelForStoredExperience(
+        0, NativeHirelingExperienceTable.threshold(5, 100)));
+    assertEquals(98, table.levelForStoredExperience(0, 0xFFFFFFFFL));
+  }
+
+  @Test
+  void nativeLookupFallsBackToFirstRowBelowMinimumHirelingLevel() {
+    NativeHirelingExperienceTable.Row first =
+        new NativeHirelingExperienceTable.Row(0, 3, 100);
+    NativeHirelingExperienceTable table = new NativeHirelingExperienceTable()
+        .add(first)
+        .add(new NativeHirelingExperienceTable.Row(0, 10, 200));
+
+    assertEquals(first, table.row(0, 1));
+    assertEquals(first, table.row(0, 9));
+  }
 }

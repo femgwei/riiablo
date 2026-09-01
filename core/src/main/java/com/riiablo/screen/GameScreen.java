@@ -1232,6 +1232,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     player = factory.createPlayer(charData, origin);
     engine.getSystem(EventSystem.class).dispatch(ZoneChangeEvent.obtain(player, zone));
+    if (socket == null && charData.hasMerc()) {
+      NativeMercenaryRewardSystem mercenaries =
+          engine.getSystem(NativeMercenaryRewardSystem.class);
+      if (mercenaries == null || !mercenaries.restorePersistedMercenary(player)) {
+        Gdx.app.error(TAG, "Failed to restore persisted mercenary for " + charData.name);
+      }
+    }
     pendingWaypointTarget = null;
 
     renderer.setSrc(player);

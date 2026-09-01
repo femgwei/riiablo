@@ -652,7 +652,8 @@ public class ItemData {
     equipItem(bodyLoc, itemIndex);
   }
 
-  void updateStats() {
+  /** Rebuilds aggregate attributes from base stats and currently equipped items. */
+  public void updateStats() {
     StatRef stat;
     int equippedArmorClass = 0;
     final UpdateSequence update = updater.update(stats, charStats);

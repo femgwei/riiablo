@@ -241,12 +241,17 @@ public final class NativeHirelingExperienceTable {
   }
 
   public Row row(int hirelingId, int level) {
+    Row first = null;
     Row best = null;
     for (Row row : rows) {
-      if (row.hirelingId != hirelingId || row.level > level) continue;
+      if (row.hirelingId != hirelingId) continue;
+      if (first == null || row.level < first.level) first = row;
+      if (row.level > level) continue;
       if (best == null || row.level > best.level) best = row;
     }
-    return best;
+    // D2Common DATATBLS_GetHirelingTxtRecordFromIdAndLevel returns the first
+    // record for the id even when its Hireling Level is above the request.
+    return best != null ? best : first;
   }
 
   /** Mirrors MONSTERS_GetHirelingExpForNextLevel without 32-bit overflow. */
@@ -289,6 +294,24 @@ public final class NativeHirelingExperienceTable {
       // beginning of the award while checking all levels reached by it.
       long next = threshold(level + 1, currentRow.experiencePerLevel);
       if (next <= 0L || experience < next) break;
+      level++;
+    }
+    return level;
+  }
+
+  /**
+   * Rebuilds a saved hireling level from its unsigned D2S experience value.
+   * Mirrors the level walk in D2Game {@code PLRSAVE2_ReadMercData} without the
+   * owner-level cap used when awarding experience during play.
+   */
+  public int levelForStoredExperience(int hirelingId, long experience) {
+    long safeExperience = Math.max(0L, Math.min(0xFFFFFFFFL, experience));
+    int level = 1;
+    while (level < 98) {
+      Row row = row(hirelingId, level);
+      if (row == null) break;
+      long next = threshold(level + 1, row.experiencePerLevel);
+      if (next <= 0L || safeExperience < next) break;
       level++;
     }
     return level;

@@ -859,6 +859,15 @@ public class D2GS extends ApplicationAdapter {
     player.put(packet.id, entityId);
     Gdx.app.log(TAG, "  entityId=" + entityId);
 
+    NativeMercenaryRewardSystem mercenaryRewards =
+        world.getSystem(NativeMercenaryRewardSystem.class);
+    if (charData.hasMerc() && (mercenaryRewards == null
+        || !mercenaryRewards.restorePersistedMercenary(entityId))) {
+      Gdx.app.error(TAG, "[MERC_RESTORE] phase=failed player=" + entityId
+          + " type=" + (charData.getMerc().type & 0xFFFF)
+          + " seed=" + Integer.toUnsignedString(charData.getMerc().seed));
+    }
+
     FlatBufferBuilder builder = new FlatBufferBuilder();
     Connection.startConnection(builder);
     Connection.addEntityId(builder, entityId);
@@ -927,6 +936,10 @@ public class D2GS extends ApplicationAdapter {
       questRequestCache.clear(id);
       authoritativeItems.reset(entityId);
       partyManager.removePlayer(entityId);
+
+      NativeMercenaryRewardSystem mercenaryRewards =
+          world.getSystem(NativeMercenaryRewardSystem.class);
+      if (mercenaryRewards != null) mercenaryRewards.unloadPersistedMercenary(entityId);
 
       world.delete(entityId);
       player.remove(id, Engine.INVALID_ENTITY);

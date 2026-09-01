@@ -98,8 +98,10 @@ public final class D2GSHeadlessClient {
   private void run() throws Exception {
     waitForServer();
     byte[] d2s = config.generatedAmazon
-        ? createGeneratedAmazonSave(config.requireMercenarySkill ? 8 : 1,
-            config.requireMercenaryLifecycle ? 10_000 : 0)
+        ? createGeneratedAmazonSave(
+            config.requireMercenarySkill || config.requireMercenaryRestore ? 8 : 1,
+            config.requireMercenaryLifecycle || config.requireMercenaryRestore ? 10_000 : 0,
+            config.requireMercenaryRestore, config.requireMercenaryRestore)
         : Files.readAllBytes(config.save.toPath());
     CharacterHeader character = CharacterHeader.read(d2s);
     log("connect", "server=" + config.host + ':' + config.port
@@ -107,6 +109,10 @@ public final class D2GSHeadlessClient {
 
     if (config.requireFallenScenario) {
       runFallenDual(d2s, character);
+      return;
+    }
+    if (config.requireMercenaryRestore) {
+      runMercenaryRestore(d2s, character);
       return;
     }
     if (config.requireMercenarySkill) {
@@ -419,6 +425,98 @@ public final class D2GSHeadlessClient {
         + " sameEntity=true clients=true,true");
   }
 
+  /**
+   * Two-client D2S regression for a dead persisted Rogue. The owner connects,
+   * logs out, reconnects from the same save, and pays to resurrect while the
+   * peer must observe removal, reconstruction, and revival.
+   */
+  private void runMercenaryRestore(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient first = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave();
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket peerSocket = openSocket();
+         DataInputStream peerInput = input(peerSocket);
+         OutputStream peerOutput = output(peerSocket)) {
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      peer.awaitConnection(peerInput, deadline());
+
+      int firstMercenaryId;
+      try (Socket firstSocket = openSocket();
+           DataInputStream firstInput = input(firstSocket);
+           OutputStream firstOutput = output(firstSocket)) {
+        send(firstOutput, connectionPacket(character, d2s));
+        first.awaitConnection(firstInput, deadline());
+        Snapshot firstMercenary = first.awaitMercenary(firstInput, deadline());
+        firstMercenaryId = firstMercenary.entityId;
+        peer.awaitEntity(peerInput, firstMercenaryId, deadline());
+        first.awaitDead(firstInput, firstMercenaryId, deadline());
+        peer.awaitDead(peerInput, firstMercenaryId, deadline());
+        int[] state = D2GS.headlessMercenaryLifecycleState(first.playerId);
+        if (state[0] != firstMercenaryId || state[1]
+            != com.riiablo.engine.server.pet.MercenaryManager.STATE_DEAD
+            || (state[4] & com.riiablo.engine.server.pet.MercenaryManager.FLAG_DEAD) == 0) {
+          throw new IllegalStateException("saved dead mercenary was not restored: entity="
+              + state[0] + " state=" + state[1] + " flags=0x"
+              + Integer.toHexString(state[4]));
+        }
+        log("mercenary_restore_login_pass", "owner=" + first.playerId
+            + " entity=" + firstMercenaryId + " clients=true,true flags=0x"
+            + Integer.toHexString(state[4]));
+      }
+
+      peer.awaitDeleted(peerInput, firstMercenaryId, deadline());
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(character, d2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        Snapshot restored = reconnected.awaitMercenary(reconnectInput, deadline());
+        // Artemis may recycle the numeric id after the peer has observed the
+        // authoritative deleted snapshot. ID reuse is safe and expected; the
+        // deletion-before-reconnect assertion above detects stale entities.
+        peer.awaitEntity(peerInput, restored.entityId, deadline());
+        reconnected.awaitDead(reconnectInput, restored.entityId, deadline());
+        peer.awaitDead(peerInput, restored.entityId, deadline());
+        int[] before = D2GS.headlessMercenaryLifecycleState(reconnected.playerId);
+        if (before[0] != restored.entityId || before[1]
+            != com.riiablo.engine.server.pet.MercenaryManager.STATE_DEAD
+            || before[2] <= 0 || before[3] < before[2]) {
+          throw new IllegalStateException("reconnected mercenary state invalid: entity="
+              + before[0] + " state=" + before[1] + " cost=" + before[2]
+              + " gold=" + before[3]);
+        }
+
+        boolean resurrected = false;
+        long resurrectDeadline = deadline();
+        while (!resurrected && System.currentTimeMillis() < resurrectDeadline) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(reconnectInput);
+          if (packet != null) reconnected.consume(packet);
+          packet = readPacket(peerInput);
+          if (packet != null) peer.consume(packet);
+          resurrected = D2GS.headlessResurrectMercenary(reconnected.playerId);
+          if (!resurrected) Thread.sleep(100L);
+        }
+        if (!resurrected) throw new IllegalStateException("restored mercenary resurrection failed");
+        reconnected.awaitRevived(reconnectInput, restored.entityId, deadline());
+        peer.awaitRevived(peerInput, restored.entityId, deadline());
+        int[] after = D2GS.headlessMercenaryLifecycleState(reconnected.playerId);
+        if (after[0] != restored.entityId || after[1]
+            != com.riiablo.engine.server.pet.MercenaryManager.STATE_HIRED
+            || after[3] != before[3] - before[2]
+            || (after[4] & com.riiablo.engine.server.pet.MercenaryManager.FLAG_DEAD) != 0) {
+          throw new IllegalStateException("restored mercenary resurrection mismatch");
+        }
+        log("mercenary_restore_reconnect_pass", "oldEntity=" + firstMercenaryId
+            + " entity=" + restored.entityId + " owner=" + reconnected.playerId
+            + " cost=" + before[2] + " gold=" + before[3] + "->" + after[3]
+            + " idReused=" + (firstMercenaryId == restored.entityId)
+            + " staleRemoved=true clients=true,true");
+      }
+    }
+  }
+
   private Snapshot awaitMercenary(DataInputStream input, long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
@@ -632,6 +730,17 @@ public final class D2GSHeadlessClient {
       if (!snapshot.deleted && snapshot.life > 0f && !snapshot.dead) return;
     }
     throw new IOException("client did not observe Fallen resurrection " + entityId);
+  }
+
+  private void awaitDeleted(DataInputStream input, int entityId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      Snapshot snapshot = monsters.get(entityId);
+      if (snapshot != null && snapshot.deleted) return;
+    }
+    throw new IOException("peer did not observe entity removal " + entityId);
   }
 
   private Snapshot awaitGroundItem(DataInputStream input, long deadline) throws Exception {
@@ -1148,6 +1257,11 @@ public final class D2GSHeadlessClient {
   }
 
   private static byte[] createGeneratedAmazonSave(int level, int gold) {
+    return createGeneratedAmazonSave(level, gold, false, false);
+  }
+
+  private static byte[] createGeneratedAmazonSave(int level, int gold,
+      boolean persistedMercenary, boolean deadMercenary) {
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "HeadlessAma", Riiablo.AMAZON);
     com.riiablo.codec.excel.CharStats.Entry stats = CharacterClass.AMAZON.entry();
@@ -1176,6 +1290,23 @@ public final class D2GSHeadlessClient {
     character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
     character.mapSeed = 0x48434D41; // "HCMA", stable for reproducible item ids.
     character.initializeStartItems(stats);
+    if (persistedMercenary) {
+      com.riiablo.engine.server.NativeHirelingExperienceTable hirelings =
+          com.riiablo.engine.server.NativeHirelingExperienceTable.load();
+      long experience = hirelings.thresholdForHireling(
+          com.riiablo.engine.server.pet.MercenaryManager.MERC_TYPE_ROGUE,
+          Math.max(1, level));
+      if (experience <= 0L) {
+        throw new IllegalStateException("native Rogue Hireling.txt row unavailable");
+      }
+      CharData.MercData mercenary = character.getMerc();
+      mercenary.seed = 0x4D455243; // "MERC"
+      mercenary.name = 0;
+      mercenary.type = com.riiablo.engine.server.pet.MercenaryManager.MERC_TYPE_ROGUE;
+      mercenary.xp = experience;
+      mercenary.flags = deadMercenary
+          ? com.riiablo.engine.server.pet.MercenaryManager.FLAG_DEAD : 0;
+    }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
     log("character_generated", "name=HeadlessAma class=amazon skill=throw bytes=" + data.length);
     return data;
@@ -1279,6 +1410,7 @@ public final class D2GSHeadlessClient {
     boolean requireFallenScenario;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
+    boolean requireMercenaryRestore;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -1302,6 +1434,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
+        else if ("--require-mercenary-restore".equals(arg)) config.requireMercenaryRestore = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;

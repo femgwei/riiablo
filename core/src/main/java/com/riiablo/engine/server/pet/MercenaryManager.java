@@ -461,6 +461,69 @@ public class MercenaryManager {
     return true;
   }
 
+  /**
+   * Reconstructs the runtime record represented by a D2S mercenary header.
+   *
+   * <p>This deliberately does not invoke {@link MercenaryCallback#onMercenaryHired};
+   * loading an existing hireling must not rewrite its persistent identity or
+   * charge the player. The caller remains responsible for applying persisted
+   * equipment attributes and the native dead-unit presentation after this
+   * transaction succeeds.</p>
+   */
+  public boolean restoreMercenary(int playerId, int mercType, int level,
+      long experience, int seed, int nameId, boolean dead) {
+    if (playerMercs.containsKey(playerId) || callback == null || seed == 0) return false;
+    MercenaryDefinition definition = definitionForSavedMercenary(mercType, nameId);
+    if (definition == null) {
+      log.warn("Cannot restore unknown hireling type: player={} type={}", playerId, mercType);
+      return false;
+    }
+
+    int safeLevel = Math.max(1, Math.min(98, level));
+    int entityId = callback.createMercenaryEntity(
+        playerId, definition, safeLevel, seed, nameId);
+    if (entityId == Engine.INVALID_ENTITY) {
+      log.warn("Persisted mercenary entity creation failed: player={} type={} level={}",
+          playerId, mercType, safeLevel);
+      return false;
+    }
+
+    ActiveMercenary merc = new ActiveMercenary();
+    merc.ownerId = playerId;
+    merc.entityId = entityId;
+    merc.definition = definition;
+    merc.nameId = nameId;
+    merc.seed = seed;
+    merc.level = safeLevel;
+    merc.experience = Math.max(0L, Math.min(0xFFFFFFFFL, experience));
+    merc.state = dead ? STATE_DEAD : STATE_HIRED;
+    merc.hireTime = System.currentTimeMillis();
+    merc.maxLife = calculateMercLife(definition, safeLevel);
+    merc.currentLife = dead ? 0 : merc.maxLife;
+    playerMercs.put(playerId, merc);
+    log.info("Restored persisted mercenary: player={} entity={} type={} level={} dead={}",
+        playerId, entityId, mercType, safeLevel, dead);
+    return true;
+  }
+
+  /** Removes only the runtime pet record during logout; persistent data is retained. */
+  public void unloadMercenary(int playerId) {
+    ActiveMercenary merc = playerMercs.remove(playerId);
+    if (merc != null && callback != null) callback.removeMercenaryEntity(merc.entityId);
+  }
+
+  private MercenaryDefinition definitionForSavedMercenary(int mercType, int nameId) {
+    Array<MercenaryDefinition> definitions = mercDefinitions.get(mercType);
+    if (definitions == null || definitions.size == 0) return null;
+    MercenaryDefinition selected = definitions.first();
+    for (MercenaryDefinition candidate : definitions) {
+      if (candidate.nameId <= nameId && candidate.nameId >= selected.nameId) {
+        selected = candidate;
+      }
+    }
+    return selected;
+  }
+
   private ActiveMercenary createActiveMercenary(int playerId,
       AvailableMercenary available, int entityId) {
     ActiveMercenary merc = new ActiveMercenary();
