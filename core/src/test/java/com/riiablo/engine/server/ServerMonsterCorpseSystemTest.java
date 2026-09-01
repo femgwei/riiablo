@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,6 +60,10 @@ class ServerMonsterCorpseSystemTest {
       Corpse corpse = world.getMapper(Corpse.class).get(monsterId);
       assertNotNull(corpse);
       assertTrue(corpse.usable);
+      assertEquals(Float.POSITIVE_INFINITY, corpse.timeRemaining,
+          "native monster corpses persist while their RoomEx remains active");
+      assertFalse(corpse.fading);
+      assertEquals(0f, corpse.fadeTime);
       assertFalse(world.getMapper(Velocity.class).has(monsterId));
       assertFalse(world.getMapper(MovementModes.class).has(monsterId));
       assertFalse(world.getMapper(Pathfind.class).has(monsterId));

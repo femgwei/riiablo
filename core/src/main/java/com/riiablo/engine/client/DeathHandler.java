@@ -285,12 +285,11 @@ public class DeathHandler extends PassiveSystem {
         mSelectable.remove(entityId);
       }
 
-      // Add Corpse component to track lifetime and enable corpse removal after timeout
-      // The CorpseManager system will handle the countdown and eventual deletion
-      // This also prevents VelocityModeChanger from processing the corpse
+      // Add the persistent native corpse marker. RoomEx lifecycle/explicit
+      // corpse-consuming skills own removal; this is not a ten-second timer.
       if (!mCorpse.has(entityId)) {
-        mCorpse.create(entityId);
-        log.debug("Monster {} died, corpse will remain for {} seconds", entityId, Corpse.DEFAULT_DURATION);
+        mCorpse.create(entityId).reset(Corpse.DEFAULT_DURATION, true);
+        log.debug("Monster {} entered persistent native corpse state", entityId);
       }
     }
   }
@@ -417,9 +416,7 @@ public class DeathHandler extends PassiveSystem {
     corpseComponent.equippedItems.putAll(playerCorpse.equippedItems);
     
     // Add Corpse component to mark it as a corpse
-    Corpse corpse = mCorpse.create(corpseEntityId);
-    corpse.timeRemaining = PlayerCorpse.CORPSE_DURATION;
-    corpse.usable = false;
+    mCorpse.create(corpseEntityId).reset(PlayerCorpse.CORPSE_DURATION, false);
     
     log.info("Created corpse entity {} at death location ({}, {}) for player {}", 
         corpseEntityId, deathLocation.x, deathLocation.y, playerId);

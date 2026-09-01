@@ -47,7 +47,7 @@ public class CorpseManager extends IteratingSystem {
         log.debug("Corpse {} fade complete, removing entity", entityId);
         world.delete(entityId);
       }
-    } else {
+    } else if (Float.isFinite(corpse.timeRemaining)) {
       // Count down the corpse timer
       corpse.timeRemaining -= delta;
       

@@ -4,16 +4,15 @@ import com.artemis.Component;
 import com.artemis.annotations.PooledWeaver;
 
 /**
- * Component that marks an entity as a corpse and tracks its lifetime.
- * Corpses will be removed after a certain duration.
+ * Component that marks an entity as a corpse and tracks its presentation state.
  */
 @PooledWeaver
 public class Corpse extends Component {
   /**
-   * Default corpse duration in seconds (similar to original Diablo 2).
-   * In D2, corpses typically last around 8-10 seconds before fading.
+   * Native monster corpses remain server units while their RoomEx is active;
+   * D2MOO does not apply the old port's fixed ten-second removal timer.
    */
-  public static final float DEFAULT_DURATION = 10.0f;
+  public static final float DEFAULT_DURATION = Float.POSITIVE_INFINITY;
 
   /**
    * Time remaining before the corpse is removed (in seconds).
@@ -39,5 +38,14 @@ public class Corpse extends Component {
    * Time spent fading (0 to FADE_DURATION).
    */
   public float fadeTime = 0f;
+
+  /** Fully initializes a pooled corpse marker for a new lifecycle. */
+  public Corpse reset(float duration, boolean usable) {
+    timeRemaining = duration;
+    this.usable = usable;
+    fading = false;
+    fadeTime = 0f;
+    return this;
+  }
 
 }

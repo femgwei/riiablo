@@ -460,30 +460,58 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override
   public boolean resurrectMonster(int monsterId, int sourceId) {
-    if (!mMonster.has(monsterId) || !mCorpse.has(monsterId)
-        || !mAttributesWrapper.has(monsterId) || !mPosition.has(monsterId)) {
-      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=missing_components",
+    boolean hasMonster = mMonster.has(monsterId);
+    boolean hasAttributes = mAttributesWrapper.has(monsterId);
+    boolean hasPosition = mPosition.has(monsterId);
+    if (!hasMonster || !hasAttributes || !hasPosition) {
+      log.warn("[MONSTER_RAISE] phase=reject source={} target={} "
+              + "reason=structural_components monster={} attributes={} position={}",
+          sourceId, monsterId, hasMonster, hasAttributes, hasPosition);
+      return false;
+    }
+
+    Monster monster = mMonster.get(monsterId);
+    Attributes attrs = mAttributesWrapper.get(monsterId).attrs;
+    StatRef hitpoints = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    StatRef maxhp = attrs != null ? attrs.get(Stat.maxhp, StatRef.obtain()) : null;
+    if (hitpoints == null || maxhp == null) {
+      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=vitals_missing hp={} maxhp={}",
+          sourceId, monsterId, hitpoints != null, maxhp != null);
+      return false;
+    }
+    if (hitpoints.asFixed() > 0f) {
+      // Native SrvDo097 returns 0 when a second animation keyframe reaches an
+      // already resurrected target. This is an expected idempotent rejection,
+      // not evidence that the corpse entity lost structural components.
+      log.debug("[MONSTER_RAISE] phase=reject source={} target={} reason=already_alive hp={}",
+          sourceId, monsterId, hitpoints.asFixed());
+      return false;
+    }
+    if (!mCorpse.has(monsterId)) {
+      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=corpse_marker_missing",
           sourceId, monsterId);
       return false;
     }
 
     Corpse corpse = mCorpse.get(monsterId);
-    Monster monster = mMonster.get(monsterId);
     if (!corpse.usable || corpse.fading || monster.monstats == null || monster.monstats2 == null) {
-      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=unusable_corpse",
-          sourceId, monsterId);
+      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=unusable_corpse "
+              + "usable={} fading={} monsterData={}",
+          sourceId, monsterId, corpse.usable, corpse.fading,
+          monster.monstats != null && monster.monstats2 != null);
+      return false;
+    }
+    Position corpsePosition = mPosition.get(monsterId);
+    if (map != null && (map.flags(corpsePosition.position) & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+      log.debug("[MONSTER_RAISE] phase=reject source={} target={} reason=blocked_position "
+              + "position=({}, {})",
+          sourceId, monsterId, corpsePosition.position.x, corpsePosition.position.y);
       return false;
     }
 
-    Attributes attrs = mAttributesWrapper.get(monsterId).attrs;
-    StatRef hitpoints = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
-    StatRef maxhp = attrs != null ? attrs.get(Stat.maxhp, StatRef.obtain()) : null;
-    if (hitpoints == null || maxhp == null || hitpoints.asFixed() > 0f) {
-      log.warn("[MONSTER_RAISE] phase=reject source={} target={} reason=not_dead hp={}",
-          sourceId, monsterId, hitpoints != null ? hitpoints.asFixed() : -1f);
-      return false;
-    }
-
+    // Reserve the corpse before restoring life so another Shaman processed in
+    // the same frame cannot start a second authoritative resurrection.
+    corpse.usable = false;
     hitpoints.set(Math.max(1f, maxhp.asFixed()));
     if (mUnitStates.has(monsterId) && mUnitStates.get(monsterId).stateList != null) {
       mUnitStates.get(monsterId).stateList.clearAll();

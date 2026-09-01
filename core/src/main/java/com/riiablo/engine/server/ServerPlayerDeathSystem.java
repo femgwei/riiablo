@@ -101,9 +101,7 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
     corpse.deathLocation.set(position.position);
     corpse.equippedItems.putAll(marker.equippedItems);
     corpse.cursorItem = marker.cursorItem;
-    Corpse corpseState = mCorpse.create(corpseId);
-    corpseState.timeRemaining = PlayerCorpse.CORPSE_DURATION;
-    corpseState.usable = false;
+    mCorpse.create(corpseId).reset(PlayerCorpse.CORPSE_DURATION, false);
 
     setLife(playerId, 0f);
     if (mVelocity.has(playerId)) mVelocity.remove(playerId);

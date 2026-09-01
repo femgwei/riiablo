@@ -68,7 +68,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
 
     final int entityId = event.entityId;
     if (!mCorpse.has(entityId)) {
-      mCorpse.create(entityId);
+      mCorpse.create(entityId).reset(Corpse.DEFAULT_DURATION, true);
       Monster monster = mMonster.get(entityId);
       log.info("[MONSTER_CORPSE] phase=created entity={} monster={} usable={} duration={}",
           entityId,
