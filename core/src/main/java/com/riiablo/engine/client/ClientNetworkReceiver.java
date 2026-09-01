@@ -481,6 +481,22 @@ public class ClientNetworkReceiver extends IntervalSystem {
     Riiablo.charData.getStats().aggregate().put(Stat.statpts, statPoints);
     Riiablo.charData.level = (byte) level;
 
+    int questCount = Math.min(data.questRecordsLength(), com.riiablo.Riiablo.NUM_ACTS * 8);
+    if (questCount > 0) {
+      int currentDifficulty = Riiablo.charData.diff;
+      // The server serializes all acts for the character's current
+      // difficulty; diff is not an act index.
+      for (int act = 0; act < com.riiablo.Riiablo.NUM_ACTS; act++) {
+        short[] records = Riiablo.charData.getQuests(act);
+        int actOffset = act * 8;
+        for (int i = 0; i < records.length && actOffset + i < questCount; i++) {
+          records[i] = (short) data.questRecords(actOffset + i);
+        }
+      }
+      Gdx.app.log(TAG, "[QUEST_SYNC] entity=" + entityId + " revision="
+          + data.questRevision() + " records=" + questCount + " difficulty=" + currentDifficulty);
+    }
+
     int wireSkills = Math.min(data.skillIdsLength(), data.skillLevelsLength());
     if (Riiablo.charData.classId != null) {
       boolean[] present = new boolean[Math.max(0,

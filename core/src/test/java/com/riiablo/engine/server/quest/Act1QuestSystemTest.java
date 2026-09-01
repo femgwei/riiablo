@@ -18,6 +18,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -28,6 +29,7 @@ import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.NativeCainQuestEvent;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.riiablo.engine.server.party.PartyManager;
 import com.d2moo.common.drlg.D2SuperUniques;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.item.Item;
@@ -106,6 +108,52 @@ class Act1QuestSystemTest extends RiiabloTest {
       assertTrue(NativeQuestRecord.has(completed, NativeQuestRecord.PRIMARY_GOAL_DONE));
       assertTrue(NativeQuestRecord.has(completed, NativeQuestRecord.REWARD_PENDING));
       assertTrue(NativeQuestRecord.has(completed, NativeQuestRecord.COMPLETED_NOW));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void creditsDenCompletionToMercenaryOwner() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("MercOwner", Riiablo.NORMAL);
+      int player = harness.createPlayer(data);
+      int merc = harness.createMercenary(player);
+      int monster = harness.createDenMonster(1f);
+      harness.process();
+      harness.setLife(monster, 0f);
+      harness.events.dispatch(DeathEvent.obtain(merc, monster));
+      assertTrue(NativeQuestRecord.has(record(data), NativeQuestRecord.PRIMARY_GOAL_DONE));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void creditsSameLevelPartyMemberButNotDifferentLevelMember() {
+    Harness harness = new Harness();
+    try {
+      CharData ownerData = character("DenOwner", Riiablo.NORMAL);
+      CharData nearbyData = character("DenNearby", Riiablo.NORMAL);
+      CharData remoteData = character("DenRemote", Riiablo.NORMAL);
+      int owner = harness.createPlayer(ownerData);
+      int nearby = harness.createPlayer(nearbyData);
+      int remote = harness.createPlayer(remoteData);
+      harness.setPlayerLevel(owner, D2LevelIds.LEVEL_DENOFEVIL);
+      harness.setPlayerLevel(nearby, D2LevelIds.LEVEL_DENOFEVIL);
+      harness.setPlayerLevel(remote, D2LevelIds.LEVEL_BLOODMOOR);
+      assertTrue(harness.parties.sendInvitation(owner, nearby));
+      assertTrue(harness.parties.acceptInvitation(nearby));
+      assertTrue(harness.parties.sendInvitation(owner, remote));
+      assertTrue(harness.parties.acceptInvitation(remote));
+      int monster = harness.createDenMonster(1f);
+      harness.process();
+      harness.setLife(monster, 0f);
+      harness.events.dispatch(DeathEvent.obtain(owner, monster));
+      assertTrue(NativeQuestRecord.has(record(ownerData), NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(record(nearbyData), NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertFalse(NativeQuestRecord.has(record(remoteData), NativeQuestRecord.PRIMARY_GOAL_DONE));
     } finally {
       harness.dispose();
     }
@@ -418,9 +466,11 @@ class Act1QuestSystemTest extends RiiabloTest {
     final Act1QuestSystem quests = new Act1QuestSystem();
     final CainQuestConsumer cainConsumer = new CainQuestConsumer();
     final CountessQuestConsumer countessConsumer = new CountessQuestConsumer();
+    final PartyManager parties = new PartyManager();
     final World world = new World(new WorldConfigurationBuilder()
         .with(events, quests, cainConsumer, countessConsumer)
-        .build());
+        .build()
+        .register("partyManager", parties));
 
     int createPlayer(CharData data) {
       int entityId = world.create();
@@ -502,6 +552,12 @@ class Act1QuestSystemTest extends RiiabloTest {
       attrs.base().put(Stat.hitpoints, life);
       attrs.reset();
       world.getMapper(AttributesWrapper.class).create(entityId).attrs = attrs;
+      return entityId;
+    }
+
+    int createMercenary(int ownerId) {
+      int entityId = world.create();
+      world.getMapper(Mercenary.class).create(entityId).ownerId = ownerId;
       return entityId;
     }
 

@@ -81,6 +81,10 @@ table PlayerP {
   goldBank:uint32;
   // Distinguishes a current wallet snapshot from an older server payload.
   walletPresent:bool;
+  // Current-difficulty quest records (NUM_ACTS * 8 entries) and a stable
+  // content revision used by reconnecting clients to detect a new snapshot.
+  questRecords:[uint16];
+  questRevision:ulong;
 }
 
 table DS1ObjectWrapperP {

@@ -74,6 +74,11 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     switch (monsterType) {
       case MonsterType.AKARA:
         record = quests[Act1DenOfEvilQuest.RECORD];
+        if (!Act1QuestPresentation.isComplete(record)) {
+          return !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
+              || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+        }
+        record = quests[Act1CainQuest.RECORD];
         return !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
             || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
       case MonsterType.KASHYA:
@@ -90,10 +95,7 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
         return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
       case MonsterType.DECKARDCAIN:
       case MonsterType.DECKARDCAIN_TOWN:
-        record = quests[Act1CainQuest.RECORD];
-        return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
-            || (!NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
-                && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
+        return false;
       default:
         return false;
     }

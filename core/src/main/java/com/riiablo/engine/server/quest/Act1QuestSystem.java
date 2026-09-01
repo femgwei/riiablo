@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -51,6 +52,7 @@ public class Act1QuestSystem extends PassiveSystem {
 
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Corpse> mCorpse;
@@ -65,6 +67,9 @@ public class Act1QuestSystem extends PassiveSystem {
   private EntitySubscription playersByZone;
   private final Act1CainRuntime cainRuntime = new Act1CainRuntime();
   private final IntSet completedCountesses = new IntSet();
+  private final IntSet completedAndariels = new IntSet();
+  private final IntSet completedBloodRavens = new IntSet();
+  private QuestKillCreditResolver killCredits;
 
   @Override
   protected void initialize() {
@@ -72,6 +77,7 @@ public class Act1QuestSystem extends PassiveSystem {
         Aspect.all(Monster.class, MapWrapper.class));
     playersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Player.class, MapWrapper.class));
+    killCredits = new QuestKillCreditResolver(mPlayer, mMercenary, mMapWrapper, partyManager);
   }
 
   @Subscribe
@@ -136,12 +142,17 @@ public class Act1QuestSystem extends PassiveSystem {
     int remaining = countLivingMonsters(D2LevelIds.LEVEL_DENOFEVIL, event.victim);
     log.info("[A1Q1] Den monster killed: killer={} victim={} remaining={}",
         event.killer, event.victim, remaining);
-    if (remaining != 0 || !mPlayer.has(event.killer)) return;
-
-    Player player = mPlayer.get(event.killer);
-    if (player.data != null) {
-      updateRecord(player.data, Act1DenOfEvilQuest::completeObjective,
-          "objective-complete");
+    if (remaining != 0) return;
+    int owner = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
+    if (owner < 0) return;
+    com.badlogic.gdx.utils.IntArray credits = killCredits.eligiblePlayers(owner,
+        D2LevelIds.LEVEL_DENOFEVIL, playersByZone);
+    for (int i = 0; i < credits.size; i++) {
+      Player player = mPlayer.get(credits.get(i));
+      if (player != null && player.data != null) {
+        updateRecord(player.data, Act1DenOfEvilQuest::completeObjective,
+            credits.get(i) == owner ? "objective-complete" : "eligible-party-member");
+      }
     }
   }
 
@@ -549,6 +560,10 @@ public class Act1QuestSystem extends PassiveSystem {
   }
 
   private void completeAndariel(DeathEvent death) {
+    if (death == null || !completedAndariels.add(death.victim)) {
+      if (death != null) log.warn("[A1Q6] Duplicate Andariel death ignored: victim={}", death.victim);
+      return;
+    }
     if (playersByZone == null) return;
     IntBag players = playersByZone.getEntities();
     int[] ids = players.getData();
@@ -646,6 +661,10 @@ public class Act1QuestSystem extends PassiveSystem {
    * so all players in the Burial Grounds are treated as same/adjacent-room.
    */
   private void propagateBloodRavenDeath(int victimId) {
+    if (!completedBloodRavens.add(victimId)) {
+      log.warn("[A1Q2] Duplicate Blood Raven death ignored: victim={}", victimId);
+      return;
+    }
     if (playersByZone == null) return;
     IntBag players = playersByZone.getEntities();
     int[] ids = players.getData();

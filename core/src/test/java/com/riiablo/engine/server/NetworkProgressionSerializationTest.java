@@ -37,6 +37,8 @@ class NetworkProgressionSerializationTest extends RiiabloTest {
     data.getStats().base().put(Stat.goldbank, 6543);
     data.getStats().aggregate().put(Stat.goldbank, 6543);
     data.setSkillLevel(6, 3);
+    data.getQuests(Riiablo.ACT1)[1] = (short) 0x1234;
+    data.getQuests(Riiablo.ACT1)[6] = (short) 0x8001;
 
     Player player = new Player();
     player.data = data;
@@ -59,6 +61,10 @@ class NetworkProgressionSerializationTest extends RiiabloTest {
     assertEquals(1, snapshot.skillLevelsLength());
     assertEquals(6, snapshot.skillIds(0));
     assertEquals(3, snapshot.skillLevels(0));
+    assertEquals(Riiablo.NUM_ACTS * 8, snapshot.questRecordsLength());
+    assertEquals(0x1234, snapshot.questRecords(1));
+    assertEquals(0x8001, snapshot.questRecords(6));
+    assertTrue(snapshot.questRevision() != 0L);
     System.out.println("[XP_NETWORK_CHAIN] phase=serialize character=" + snapshot.charName()
         + " experience=" + snapshot.experience() + " level=" + snapshot.level()
         + " skillPoints=" + snapshot.skillPoints() + " skill=6@3");

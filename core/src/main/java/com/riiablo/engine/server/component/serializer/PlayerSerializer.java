@@ -52,6 +52,20 @@ public class PlayerSerializer implements FlatBuffersSerializer<Player, PlayerP> 
     int skillIdsOffset = PlayerP.createSkillIdsVector(builder, skillIds);
     int skillLevelsOffset = PlayerP.createSkillLevelsVector(builder, skillLevels);
 
+    short[] questRecords = new short[com.riiablo.Riiablo.NUM_ACTS * 8];
+    long questRevision = 1469598103934665603L;
+    int questIndex = 0;
+    for (int act = 0; act < com.riiablo.Riiablo.NUM_ACTS; act++) {
+      short[] records = data.getQuests(act);
+      for (int i = 0; i < 8; i++) {
+        short record = records[i];
+        questRecords[questIndex++] = record;
+        questRevision ^= (record & 0xFFFFL) + ((long) act << 8) + i;
+        questRevision *= 1099511628211L;
+      }
+    }
+    int questRecordsOffset = PlayerP.createQuestRecordsVector(builder, questRecords);
+
     PlayerP.startPlayerP(builder);
     PlayerP.addSkillLevels(builder, skillLevelsOffset);
     PlayerP.addSkillIds(builder, skillIdsOffset);
@@ -66,6 +80,8 @@ public class PlayerSerializer implements FlatBuffersSerializer<Player, PlayerP> 
         data.getStats().aggregate().getValue(com.riiablo.attributes.Stat.goldbank, 0L))));
     PlayerP.addGold(builder, Math.max(0, Math.min(0xFFFFFFFFL,
         data.getStats().aggregate().getValue(com.riiablo.attributes.Stat.gold, 0L))));
+    PlayerP.addQuestRecords(builder, questRecordsOffset);
+    PlayerP.addQuestRevision(builder, questRevision);
     return PlayerP.endPlayerP(builder);
   }
 

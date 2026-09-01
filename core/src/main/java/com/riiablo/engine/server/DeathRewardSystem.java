@@ -13,6 +13,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -23,6 +24,7 @@ import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PartyMember;
+import com.riiablo.engine.server.quest.QuestKillCreditResolver;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -42,6 +44,7 @@ public class DeathRewardSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(DeathRewardSystem.class);
 
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
@@ -61,18 +64,21 @@ public class DeathRewardSystem extends PassiveSystem {
   private final LootManager lootManager = new LootManager();
   private final IntSet rewardedVictims = new IntSet();
   private EntitySubscription players;
+  private QuestKillCreditResolver killCredits;
 
   @Override
   protected void initialize() {
     players = world.getAspectSubscriptionManager().get(Aspect.all(Player.class));
+    killCredits = new QuestKillCreditResolver(mPlayer, mMercenary, mMapWrapper, partyManager);
   }
 
   @Subscribe
   public void onDeath(DeathEvent event) {
     if (event == null || event.victim < 0) return;
     if (!mMonster.has(event.victim)) return;
-    if (!mPlayer.has(event.killer) || mPlayer.get(event.killer).data == null) {
-      log.debug("[DEATH_REWARD] skip non-player killer: killer={}, victim={}",
+    int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
+    if (ownerId < 0 || !mPlayer.has(ownerId) || mPlayer.get(ownerId).data == null) {
+      log.debug("[DEATH_REWARD] skip unowned killer: killer={}, victim={}",
           event.killer, event.victim);
       return;
     }
@@ -83,7 +89,7 @@ public class DeathRewardSystem extends PassiveSystem {
     }
 
     Monster monster = mMonster.get(event.victim);
-    Player player = mPlayer.get(event.killer);
+    Player player = mPlayer.get(ownerId);
     Position position = mPosition.has(event.victim) ? mPosition.get(event.victim) : null;
     if (position == null) {
       log.warn("[DEATH_REWARD] victim has no position: killer={}, victim={}",
@@ -115,7 +121,7 @@ public class DeathRewardSystem extends PassiveSystem {
     // D2Game starts with the current connected-player count. The value stored
     // on the monster is only an upper bound captured at spawn time.
     config.playerCount = players == null ? 1 : Math.max(1, players.getEntities().size());
-    config.partyMembersInLevel = partyMembersInLevel(event.killer);
+    config.partyMembersInLevel = partyMembersInLevel(ownerId);
     config.monsterPlayerCount = config.playerCount;
     if (mAttributesWrapper.has(event.victim) && mAttributesWrapper.get(event.victim).attrs != null) {
       com.riiablo.attributes.StatRef monsterPlayers =
@@ -126,8 +132,8 @@ public class DeathRewardSystem extends PassiveSystem {
     }
     config.treasureClass = treasureClass(event.victim, monster.monstats, difficulty,
         monster.rank, config.isSuperUnique);
-    if (mAttributesWrapper.has(event.killer)) {
-      Attributes attrs = mAttributesWrapper.get(event.killer).attrs;
+    if (mAttributesWrapper.has(ownerId)) {
+      Attributes attrs = mAttributesWrapper.get(ownerId).attrs;
       lootManager.applyPlayerBonuses(attrs, config);
     }
 
@@ -137,18 +143,18 @@ public class DeathRewardSystem extends PassiveSystem {
       String code = result.itemCodes.get(i);
       int quality = result.itemQualities.get(i);
       int itemLevel = result.itemLevels.get(i);
-      int itemId = createItem(code, quality, itemLevel, position.position.x, position.position.y, event.killer);
+      int itemId = createItem(code, quality, itemLevel, position.position.x, position.position.y, ownerId);
       if (itemId >= 0) createdItems++;
       log.debug("[DEATH_REWARD] item: killer={}, victim={}, code={}, rolledQuality={}, "
               + "ilvl={}, entity={}", event.killer, event.victim, code, quality, itemLevel, itemId);
     }
 
     int goldEntity = createGold(result.goldAmount, monsterLevel,
-        position.position.x, position.position.y, event.killer);
+        position.position.x, position.position.y, ownerId);
     log.info("[DEATH_REWARD] killer={}, victim={}, monster={}, rank={}, tc={}, level={}, "
             + "difficulty={}, players={}, partyInLevel={}, monsterPlayers={}, "
             + "effectivePlayers={}, boss={}, gold={}, goldEntity={}, itemsRolled={}, itemsCreated={}",
-        event.killer, event.victim,
+        ownerId, event.victim,
         monster.monstats != null ? monster.monstats.Id : "unknown", monster.rank,
         config.treasureClass, monsterLevel, difficulty,
         config.playerCount, config.partyMembersInLevel, config.monsterPlayerCount,
