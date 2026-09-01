@@ -14,22 +14,37 @@ public final class NativeHirelingStatsUpdater {
   public static boolean apply(Attributes attrs, NativeHirelingExperienceTable.Stats stats) {
     if (attrs == null || stats == null) return false;
     StatListRef base = attrs.base();
+    StatListRef aggregate = attrs.aggregate();
     base.put(Stat.level, stats.level);
+    aggregate.put(Stat.level, stats.level);
     base.put(Stat.nextexp, (int) Math.min(Integer.MAX_VALUE, stats.nextExperience));
+    aggregate.put(Stat.nextexp, (int) Math.min(Integer.MAX_VALUE, stats.nextExperience));
     base.put(Stat.strength, stats.strength);
+    aggregate.put(Stat.strength, stats.strength);
     base.put(Stat.dexterity, stats.dexterity);
+    aggregate.put(Stat.dexterity, stats.dexterity);
     base.put(Stat.maxhp, (float) stats.hitpoints);
+    aggregate.put(Stat.maxhp, (float) stats.hitpoints);
     base.put(Stat.hitpoints, (float) stats.hitpoints);
+    aggregate.put(Stat.hitpoints, (float) stats.hitpoints);
     base.put(Stat.armorclass, stats.defense);
+    aggregate.put(Stat.armorclass, stats.defense);
     base.put(Stat.secondary_mindamage, stats.damageMin);
+    aggregate.put(Stat.secondary_mindamage, stats.damageMin);
     base.put(Stat.secondary_maxdamage, stats.damageMax);
+    aggregate.put(Stat.secondary_maxdamage, stats.damageMax);
     base.put(Stat.tohit, stats.attackRate);
+    aggregate.put(Stat.tohit, stats.attackRate);
     base.put(Stat.fireresist, stats.resist);
+    aggregate.put(Stat.fireresist, stats.resist);
     base.put(Stat.lightresist, stats.resist);
+    aggregate.put(Stat.lightresist, stats.resist);
     base.put(Stat.coldresist, stats.resist);
+    aggregate.put(Stat.coldresist, stats.resist);
     base.put(Stat.poisonresist, stats.resist);
+    aggregate.put(Stat.poisonresist, stats.resist);
     base.putEncoded(Stat.hpregen, stats.hpRegenEncoded);
-    attrs.reset();
+    aggregate.putEncoded(Stat.hpregen, stats.hpRegenEncoded);
     return true;
   }
 
