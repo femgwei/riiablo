@@ -76,6 +76,9 @@ public class DeathRewardSystem extends PassiveSystem {
   public void onDeath(DeathEvent event) {
     if (event == null || event.victim < 0) return;
     if (!mMonster.has(event.victim)) return;
+    // Hirelings retain Monster presentation data, but their death is a pet
+    // lifecycle transition and must never roll hostile monster XP or loot.
+    if (mMercenary.has(event.victim)) return;
     int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
     if (ownerId < 0 || !mPlayer.has(ownerId) || mPlayer.get(ownerId).data == null) {
       log.debug("[DEATH_REWARD] skip unowned killer: killer={}, victim={}",

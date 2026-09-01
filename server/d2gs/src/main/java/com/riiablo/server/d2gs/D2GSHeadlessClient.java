@@ -98,7 +98,8 @@ public final class D2GSHeadlessClient {
   private void run() throws Exception {
     waitForServer();
     byte[] d2s = config.generatedAmazon
-        ? createGeneratedAmazonSave(config.requireMercenarySkill ? 8 : 1)
+        ? createGeneratedAmazonSave(config.requireMercenarySkill ? 8 : 1,
+            config.requireMercenaryLifecycle ? 10_000 : 0)
         : Files.readAllBytes(config.save.toPath());
     CharacterHeader character = CharacterHeader.read(d2s);
     log("connect", "server=" + config.host + ':' + config.port
@@ -338,6 +339,9 @@ public final class D2GSHeadlessClient {
               + combatTargetId + " serverLife=" + serverDamageBefore + "->"
               + serverDamageAfter + " clientLife=" + targetA.life + ',' + targetB.life
               + " clients=true,true");
+          if (config.requireMercenaryLifecycle) {
+            verifyMercenaryLifecycle(a, b, inA, inB, a.playerId, mercA.entityId);
+          }
           return;
         }
         if (System.currentTimeMillis() >= diagnosticDeadline) {
@@ -363,6 +367,56 @@ public final class D2GSHeadlessClient {
           + (targetB == null ? "missing" : targetB.life) + " distance="
           + (targetA == null || mercA == null ? "unknown" : distance(targetA, mercA)));
     }
+  }
+
+  private void verifyMercenaryLifecycle(D2GSHeadlessClient a, D2GSHeadlessClient b,
+      DataInputStream inA, DataInputStream inB, int ownerId, int mercenaryId) throws Exception {
+    int[] before = D2GS.headlessMercenaryLifecycleState(ownerId);
+    if (before[0] != mercenaryId || before[1]
+        != com.riiablo.engine.server.pet.MercenaryManager.STATE_HIRED || before[2] <= 0) {
+      throw new IllegalStateException("invalid pre-death mercenary lifecycle state: entity="
+          + before[0] + " state=" + before[1] + " cost=" + before[2]);
+    }
+    if (!D2GS.headlessKillMercenary(ownerId)) {
+      throw new IllegalStateException("authoritative mercenary death trigger failed");
+    }
+    a.awaitDead(inA, mercenaryId, deadline());
+    b.awaitDead(inB, mercenaryId, deadline());
+    int[] dead = D2GS.headlessMercenaryLifecycleState(ownerId);
+    if (dead[0] != mercenaryId || dead[1]
+        != com.riiablo.engine.server.pet.MercenaryManager.STATE_DEAD
+        || (dead[4] & com.riiablo.engine.server.pet.MercenaryManager.FLAG_DEAD) == 0) {
+      throw new IllegalStateException("mercenary death state was not persisted: entity="
+          + dead[0] + " state=" + dead[1] + " flags=0x" + Integer.toHexString(dead[4]));
+    }
+    log("mercenary_death_pass", "owner=" + ownerId + " entity=" + mercenaryId
+        + " clients=true,true flags=0x" + Integer.toHexString(dead[4]));
+
+    boolean resurrected = false;
+    long resurrectDeadline = deadline();
+    while (System.currentTimeMillis() < resurrectDeadline && !resurrected) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+      if (packet != null) a.consume(packet);
+      packet = readPacket(inB);
+      if (packet != null) b.consume(packet);
+      resurrected = D2GS.headlessResurrectMercenary(ownerId);
+      if (!resurrected) Thread.sleep(100L);
+    }
+    if (!resurrected) throw new IllegalStateException("paid mercenary resurrection failed");
+    a.awaitRevived(inA, mercenaryId, deadline());
+    b.awaitRevived(inB, mercenaryId, deadline());
+    int[] after = D2GS.headlessMercenaryLifecycleState(ownerId);
+    if (after[0] != mercenaryId || after[1]
+        != com.riiablo.engine.server.pet.MercenaryManager.STATE_HIRED
+        || (after[4] & com.riiablo.engine.server.pet.MercenaryManager.FLAG_DEAD) != 0
+        || after[3] != before[3] - before[2]) {
+      throw new IllegalStateException("mercenary resurrection state mismatch: entity="
+          + after[0] + " state=" + after[1] + " gold=" + before[3] + "->" + after[3]
+          + " expectedCost=" + before[2] + " flags=0x" + Integer.toHexString(after[4]));
+    }
+    log("mercenary_resurrect_pass", "owner=" + ownerId + " entity=" + mercenaryId
+        + " cost=" + before[2] + " gold=" + before[3] + "->" + after[3]
+        + " sameEntity=true clients=true,true");
   }
 
   private Snapshot awaitMercenary(DataInputStream input, long deadline) throws Exception {
@@ -1086,10 +1140,14 @@ public final class D2GSHeadlessClient {
 
   /** Creates a normal level-one Amazon whose native starting javelin owns Throw. */
   private static byte[] createGeneratedAmazonSave() {
-    return createGeneratedAmazonSave(1);
+    return createGeneratedAmazonSave(1, 0);
   }
 
   private static byte[] createGeneratedAmazonSave(int level) {
+    return createGeneratedAmazonSave(level, 0);
+  }
+
+  private static byte[] createGeneratedAmazonSave(int level, int gold) {
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "HeadlessAma", Riiablo.AMAZON);
     com.riiablo.codec.excel.CharStats.Entry stats = CharacterClass.AMAZON.entry();
@@ -1111,7 +1169,7 @@ public final class D2GSHeadlessClient {
     base.put(Stat.maxstamina, stats.stamina);
     base.put(Stat.level, Math.max(1, level));
     base.put(Stat.experience, 0);
-    base.put(Stat.gold, 0);
+    base.put(Stat.gold, Math.max(0, gold));
     base.put(Stat.goldbank, 0);
     base.put(Stat.armorclass, 1_000_000);
     character.getStats().reset();
@@ -1220,6 +1278,7 @@ public final class D2GSHeadlessClient {
     boolean requireMonsterMovement;
     boolean requireFallenScenario;
     boolean requireMercenarySkill;
+    boolean requireMercenaryLifecycle;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -1242,6 +1301,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
+        else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;

@@ -7,9 +7,11 @@ import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -32,6 +34,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(ServerMonsterCorpseSystem.class);
 
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<AIWrapper> mAIWrapper;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<Velocity> mVelocity;
@@ -39,6 +42,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Interactable> mInteractable;
 
@@ -50,7 +54,15 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
     // idempotent: every native AI guards its DEAD state in kill().  D2GS uses
     // this system as the authoritative replacement for DeathHandler's monster
     // branch.
-    if (mAIWrapper.has(event.victim) && mAIWrapper.get(event.victim).ai != null) {
+    if (mMercenary.has(event.victim)) {
+      // Hirelings intentionally have no hostile AIWrapper. They still use the
+      // native monster DT -> DD lifecycle and remain as a persistent dead pet
+      // entity until an NPC resurrects them.
+      mSequence.create(event.victim).sequence(
+          Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
+      log.info("[MERC_LIFECYCLE] phase=death_sequence entity={} owner={} killer={}",
+          event.victim, mMercenary.get(event.victim).ownerId, event.killer);
+    } else if (mAIWrapper.has(event.victim) && mAIWrapper.get(event.victim).ai != null) {
       log.debug("[MONSTER_CORPSE] phase=death_event entity={} killer={} ai={}",
           event.victim, event.killer,
           mAIWrapper.get(event.victim).ai.getClass().getSimpleName());

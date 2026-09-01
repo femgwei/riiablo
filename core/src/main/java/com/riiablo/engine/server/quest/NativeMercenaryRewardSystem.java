@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.pet.MercenaryManager;
 import com.riiablo.item.VendorPricing;
@@ -116,6 +117,46 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     return mPlayer.has(playerId) && mercenaries.grantFreeRogue(playerId, getPlayerLevel(playerId));
   }
 
+  /** Server-authoritative NPC resurrection transaction. */
+  public boolean resurrectMercenary(int playerId) {
+    return mPlayer.has(playerId) && mercenaries.resurrectMercenary(playerId);
+  }
+
+  public boolean hasDeadMercenary(int playerId) {
+    MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
+    return merc != null && merc.state == MercenaryManager.STATE_DEAD;
+  }
+
+  public int mercenaryEntityId(int playerId) {
+    MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
+    return merc == null ? Engine.INVALID_ENTITY : merc.entityId;
+  }
+
+  public int resurrectionCost(int playerId) {
+    MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
+    return merc == null ? 0 : MercenaryManager.nativeResurrectionCost(merc.level);
+  }
+
+  public int mercenaryState(int playerId) {
+    MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
+    return merc == null ? MercenaryManager.STATE_AVAILABLE : merc.state;
+  }
+
+  public int persistedMercenaryFlags(int playerId) {
+    return mPlayer.has(playerId) && mPlayer.get(playerId).data != null
+        ? mPlayer.get(playerId).data.getMerc().flags : 0;
+  }
+
+  /** Persists D2's dead-hireling flag as soon as authoritative life reaches zero. */
+  @Subscribe
+  public void onDeath(DeathEvent death) {
+    if (death == null || death.victim < 0 || !mMercenary.has(death.victim)) return;
+    Mercenary merc = mMercenary.get(death.victim);
+    mercenaries.onMercenaryDeath(merc.ownerId);
+    log.info("[MERC_LIFECYCLE] phase=death owner={} entity={} killer={}",
+        merc.ownerId, death.victim, death.killer);
+  }
+
   @Override
   public int createMercenaryEntity(int playerId, MercenaryManager.MercenaryDefinition def,
       int level, int seed, int nameId) {
@@ -173,6 +214,22 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   }
 
   @Override
+  public boolean resurrectMercenaryEntity(int entityId, int playerId) {
+    if (factory == null || entityId == Engine.INVALID_ENTITY
+        || !mMercenary.has(entityId) || mMercenary.get(entityId).ownerId != playerId) {
+      return false;
+    }
+    if (!factory.resurrectMonster(entityId, playerId)) return false;
+    // The generic monster resurrection helper reconstructs MonStats AI and
+    // interaction components. Hirelings retain monster presentation only;
+    // their friendly skill/follow systems remain authoritative.
+    if (mAIWrapper.has(entityId)) mAIWrapper.remove(entityId);
+    if (mInteractable.has(entityId)) mInteractable.remove(entityId);
+    if (mSelectable.has(entityId)) mSelectable.remove(entityId);
+    return true;
+  }
+
+  @Override
   public void onMercenaryHired(int playerId, MercenaryManager.ActiveMercenary merc) {
     if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null || merc == null) return;
     com.riiablo.save.CharData.MercData data = mPlayer.get(playerId).data.getMerc();
@@ -201,8 +258,24 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     data.type = 0;
     data.xp = 0;
   }
-  @Override public void onMercenaryDeath(int playerId, MercenaryManager.ActiveMercenary merc) {}
-  @Override public void onMercenaryResurrected(int playerId, MercenaryManager.ActiveMercenary merc) {}
+  @Override
+  public void onMercenaryDeath(int playerId, MercenaryManager.ActiveMercenary merc) {
+    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null) return;
+    mPlayer.get(playerId).data.getMerc().flags |= MercenaryManager.FLAG_DEAD;
+  }
+
+  @Override
+  public void onMercenaryResurrected(int playerId, MercenaryManager.ActiveMercenary merc) {
+    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null) return;
+    com.riiablo.save.CharData.MercData data = mPlayer.get(playerId).data.getMerc();
+    data.flags &= ~MercenaryManager.FLAG_DEAD;
+    StatRef maxhp = data.getStats().get(Stat.maxhp, StatRef.obtain());
+    StatRef hitpoints = data.getStats().get(Stat.hitpoints, StatRef.obtain());
+    if (hitpoints != null && maxhp != null) hitpoints.set(Math.max(1f, maxhp.asFixed()));
+    log.info("[MERC_LIFECYCLE] phase=resurrect owner={} entity={} level={} cost={}",
+        playerId, merc.entityId, merc.level,
+        MercenaryManager.nativeResurrectionCost(merc.level));
+  }
   @Override public void onMercenaryLevelUp(int playerId, MercenaryManager.ActiveMercenary merc,
       int oldLevel, int newLevel) {}
 

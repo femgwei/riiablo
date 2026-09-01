@@ -17,9 +17,11 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -29,6 +31,29 @@ import org.junit.jupiter.api.Test;
 
 /** Verifies the server-only monster death -> corpse lifecycle. */
 class ServerMonsterCorpseSystemTest {
+  @Test
+  void hirelingWithoutHostileAiStillEntersNativeDeathSequence() {
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, new ServerMonsterCorpseSystem())
+        .build());
+    try {
+      int mercenaryId = world.create();
+      world.getMapper(Monster.class).create(mercenaryId)
+          .set(new MonStats.Entry(), new MonStats2.Entry());
+      world.getMapper(Mercenary.class).create(mercenaryId).set(3, 0, 8, 7, 2);
+
+      events.dispatch(DeathEvent.obtain(9, mercenaryId));
+
+      Sequence sequence = world.getMapper(Sequence.class).get(mercenaryId);
+      assertNotNull(sequence);
+      assertEquals(Engine.Monster.MODE_DT, sequence.mode1);
+      assertEquals(Engine.Monster.MODE_DD, sequence.mode2);
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void deathEventKillsAiAndDeadModeCreatesUsableCorpse() {
     EventSystem events = new EventSystem();

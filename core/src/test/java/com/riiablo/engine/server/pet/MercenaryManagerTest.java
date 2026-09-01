@@ -66,10 +66,59 @@ class MercenaryManagerTest {
     assertEquals(0, callback.deductCalls);
   }
 
+  @Test
+  void mirrorsNativeResurrectionCost() {
+    assertEquals(7, MercenaryManager.nativeResurrectionCost(1));
+    assertEquals(750, MercenaryManager.nativeResurrectionCost(10));
+    assertEquals(50_000, MercenaryManager.nativeResurrectionCost(99));
+  }
+
+  @Test
+  void resurrectsDeadMercenaryInPlaceAndChargesOnce() {
+    MercenaryManager manager = new MercenaryManager();
+    Callback callback = new Callback();
+    callback.entityId = 73;
+    callback.gold = 10_000;
+    callback.resurrectResult = true;
+    manager.setCallback(callback);
+    assertTrue(manager.grantFreeRogue(5, 10));
+    MercenaryManager.ActiveMercenary merc = manager.getPlayerMercenary(5);
+    merc.level = 10;
+    manager.onMercenaryDeath(5);
+
+    assertTrue(manager.resurrectMercenary(5));
+    assertEquals(73, merc.entityId);
+    assertEquals(MercenaryManager.STATE_HIRED, merc.state);
+    assertEquals(1, callback.resurrectCalls);
+    assertEquals(1, callback.deductCalls);
+    assertEquals(750, callback.lastDeductAmount);
+  }
+
+  @Test
+  void failedEntityResurrectionDoesNotChargeOrChangeState() {
+    MercenaryManager manager = new MercenaryManager();
+    Callback callback = new Callback();
+    callback.entityId = 81;
+    callback.gold = 10_000;
+    callback.resurrectResult = false;
+    manager.setCallback(callback);
+    assertTrue(manager.grantFreeRogue(6, 10));
+    manager.onMercenaryDeath(6);
+
+    assertFalse(manager.resurrectMercenary(6));
+    assertEquals(MercenaryManager.STATE_DEAD,
+        manager.getPlayerMercenary(6).state);
+    assertEquals(0, callback.deductCalls);
+  }
+
   private static class Callback implements MercenaryManager.MercenaryCallback {
     int entityId;
     int deductCalls;
+    int lastDeductAmount;
     int hiredCalls;
+    int gold;
+    int resurrectCalls;
+    boolean resurrectResult;
 
     @Override
     public int createMercenaryEntity(int playerId, MercenaryManager.MercenaryDefinition def,
@@ -85,6 +134,8 @@ class MercenaryManagerTest {
     @Override
     public boolean deductPlayerGold(int playerId, int amount) {
       deductCalls++;
+      lastDeductAmount = amount;
+      gold -= amount;
       return true;
     }
 
@@ -94,7 +145,11 @@ class MercenaryManagerTest {
     @Override public void onMercenaryLevelUp(int playerId, MercenaryManager.ActiveMercenary merc,
         int oldLevel, int newLevel) {}
     @Override public void removeMercenaryEntity(int entityId) {}
-    @Override public int getPlayerGold(int playerId) { return 0; }
+    @Override public boolean resurrectMercenaryEntity(int entityId, int playerId) {
+      resurrectCalls++;
+      return resurrectResult;
+    }
+    @Override public int getPlayerGold(int playerId) { return gold; }
     @Override public int getPlayerLevel(int playerId) { return 1; }
     @Override public int getDifficulty() { return 0; }
   }

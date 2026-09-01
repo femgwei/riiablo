@@ -59,6 +59,9 @@ public class MercenaryManager {
   /** 已死亡 */
   public static final int STATE_DEAD = 2;
 
+  /** D2 unit/save flag persisted for a dead hireling. */
+  public static final int FLAG_DEAD = 0x00010000;
+
   //==========================================================================
   // 常量 - 雇佣兵 NPC
   //==========================================================================
@@ -240,6 +243,9 @@ public class MercenaryManager {
      * 移除雇佣兵实体
      */
     void removeMercenaryEntity(int entityId);
+
+    /** Restores the existing dead hireling entity in place. */
+    boolean resurrectMercenaryEntity(int entityId, int playerId);
 
     /**
      * 获取玩家金币
@@ -524,23 +530,32 @@ public class MercenaryManager {
       return false;
     }
 
-    // 计算复活费用
+    // D2Common MONSTERS_GetHirelingResurrectionCost uses only hireling level.
     int cost = calculateResurrectCost(merc.definition, merc.level);
-    if (callback != null && !callback.deductPlayerGold(playerId, cost)) {
+    if (callback == null || callback.getPlayerGold(playerId) < cost) {
       log.debug("Player {} cannot afford resurrection (cost: {})", playerId, cost);
       return false;
     }
 
-    // 恢复雇佣兵
+    // Native D2 keeps the dead hireling entity/pet record and revives it in
+    // place. Validate that transition before charging; gold mutation is then
+    // deterministic on the same authoritative server thread.
+    if (!callback.resurrectMercenaryEntity(merc.entityId, playerId)) {
+      log.warn("Player {} mercenary entity could not be resurrected: entity={}",
+          playerId, merc.entityId);
+      return false;
+    }
+    if (!callback.deductPlayerGold(playerId, cost)) {
+      // getPlayerGold and deduction execute on one server thread, so this is
+      // an invariant failure rather than an ordinary insufficient-gold path.
+      log.error("Player {} resurrection charge failed after affordability check: cost={}",
+          playerId, cost);
+      return false;
+    }
+
     merc.state = STATE_HIRED;
     merc.currentLife = merc.maxLife;
-
-    // 重新创建实体
-    if (callback != null) {
-      merc.entityId = callback.createMercenaryEntity(playerId, merc.definition, 
-          merc.level, merc.seed, merc.nameId);
-      callback.onMercenaryResurrected(playerId, merc);
-    }
+    callback.onMercenaryResurrected(playerId, merc);
 
     log.debug("Player {} resurrected mercenary", playerId);
 
@@ -622,12 +637,13 @@ public class MercenaryManager {
    * 计算复活费用
    */
   public int calculateResurrectCost(MercenaryDefinition def, int level) {
-    int baseCost = 50 + level * level;
-    if (callback != null) {
-      int difficulty = callback.getDifficulty();
-      baseCost = baseCost * (100 + difficulty * 50) / 100;
-    }
-    return baseCost * def.resurrectCostMultiplier / 100;
+    return nativeResurrectionCost(level);
+  }
+
+  /** Mirrors D2Common #11083 MONSTERS_GetHirelingResurrectionCost. */
+  public static int nativeResurrectionCost(int level) {
+    long safeLevel = Math.max(0, level);
+    return (int) Math.min(50_000L, 15L * safeLevel * safeLevel / 2L);
   }
 
   /**

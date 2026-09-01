@@ -283,6 +283,83 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only authoritative death trigger for the hireling lifecycle test. */
+  static boolean headlessKillMercenary(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean killed = new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        NativeMercenaryRewardSystem rewards =
+            server.world.getSystem(NativeMercenaryRewardSystem.class);
+        int entityId = rewards == null ? Engine.INVALID_ENTITY
+            : rewards.mercenaryEntityId(playerId);
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = entityId < 0 ? null
+            : server.world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class)
+                .get(entityId);
+        com.riiablo.attributes.StatRef life = wrapper == null || wrapper.attrs == null ? null
+            : wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints,
+                com.riiablo.attributes.StatRef.obtain());
+        if (life != null && life.asFixed() > 0f) {
+          life.set(0);
+          server.world.getSystem(EventSystem.class).dispatch(
+              com.riiablo.engine.server.event.DeathEvent.obtain(playerId, entityId));
+          killed.set(true);
+        }
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && killed.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Test-only NPC-equivalent paid resurrection on the render thread. */
+  static boolean headlessResurrectMercenary(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean resurrected =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        NativeMercenaryRewardSystem rewards =
+            server.world.getSystem(NativeMercenaryRewardSystem.class);
+        resurrected.set(rewards != null && rewards.resurrectMercenary(playerId));
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && resurrected.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  static int[] headlessMercenaryLifecycleState(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null) {
+      return new int[] {Engine.INVALID_ENTITY, 0, 0, 0, 0};
+    }
+    NativeMercenaryRewardSystem rewards =
+        server.world.getSystem(NativeMercenaryRewardSystem.class);
+    com.riiablo.engine.server.component.Player player =
+        server.world.getMapper(com.riiablo.engine.server.component.Player.class).get(playerId);
+    return rewards == null ? new int[] {Engine.INVALID_ENTITY, 0, 0, 0, 0}
+        : new int[] {rewards.mercenaryEntityId(playerId), rewards.mercenaryState(playerId),
+            rewards.resurrectionCost(playerId),
+            player == null || player.data == null ? 0
+                : com.riiablo.item.VendorPricing.availableGold(player.data),
+            rewards.persistedMercenaryFlags(playerId)};
+  }
+
   static int[] headlessMercenaryCastState() {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.world == null) {
@@ -1293,6 +1370,7 @@ public class D2GS extends ApplicationAdapter {
         playerId != Engine.INVALID_ENTITY, definition != null, inRange, serviceAvailable, true);
     com.riiablo.engine.server.component.Player playerComponent = playerId == Engine.INVALID_ENTITY
         ? null : world.getMapper(com.riiablo.engine.server.component.Player.class).get(playerId);
+    if (reason == null && isPlayerDead(playerId)) reason = "PLAYER_DEAD";
     com.riiablo.engine.server.npc.NpcVendorSessionManager.Session session = null;
     int resultItemId = 0;
     byte[] resultItemData = null;
@@ -1353,6 +1431,42 @@ public class D2GS extends ApplicationAdapter {
           reason = result.reason;
           resultItemId = result.itemId;
         }
+      }
+    } else if (reason == null
+        && service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.HIRE) {
+      NativeMercenaryRewardSystem mercenaries =
+          world.getSystem(NativeMercenaryRewardSystem.class);
+      if (mercenaries == null) {
+        reason = "MERCENARY_SERVICE_UNAVAILABLE";
+      } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
+        // The client may open Kashya's hire panel before choosing a candidate.
+      } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.HIRE) {
+        if (!mercenaries.hireAct1Rogue(playerId)) reason = "HIRE_REJECTED";
+        else resultItemId = mercenaries.mercenaryEntityId(playerId);
+      } else {
+        reason = "OPERATION_NOT_IMPLEMENTED";
+      }
+    } else if (reason == null
+        && service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.RESURRECT) {
+      NativeMercenaryRewardSystem mercenaries =
+          world.getSystem(NativeMercenaryRewardSystem.class);
+      if (mercenaries == null) {
+        reason = "MERCENARY_SERVICE_UNAVAILABLE";
+      } else if (!mercenaries.hasDeadMercenary(playerId)) {
+        reason = "MERCENARY_NOT_DEAD";
+      } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
+        resultItemId = mercenaries.mercenaryEntityId(playerId);
+      } else if (operation
+          == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.RESURRECT) {
+        int cost = mercenaries.resurrectionCost(playerId);
+        if (!mercenaries.resurrectMercenary(playerId)) reason = "RESURRECT_REJECTED";
+        else {
+          resultItemId = mercenaries.mercenaryEntityId(playerId);
+          Gdx.app.log(TAG, "[MERC_LIFECYCLE] phase=npc_resurrect player=" + playerId
+              + " npc=" + npcId + " entity=" + resultItemId + " cost=" + cost);
+        }
+      } else {
+        reason = "OPERATION_NOT_IMPLEMENTED";
       }
     } else if (reason == null) {
       reason = "OPERATION_NOT_IMPLEMENTED";

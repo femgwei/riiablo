@@ -88,6 +88,19 @@ tasks.register('headlessMercenarySkill', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessMercenaryLifecycle', JavaExec) {
+  group = 'verification'
+  description = 'Runs a two-client windowless Rogue death and paid resurrection test.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-mercenary-skill',
+       '--require-mercenary-lifecycle', '--attempts', '40', '--test-timeout', '90'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 jar {
   archiveBaseName = project.name
 	// assets are present in both this project's resource set and the unpacked
