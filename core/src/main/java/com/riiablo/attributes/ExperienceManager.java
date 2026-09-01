@@ -467,18 +467,14 @@ public class ExperienceManager extends PassiveSystem {
     int newLevel = hirelingExperience == null ? hirelingLevel
         : hirelingExperience.levelForExperience(hireling.mercType, hirelingLevel,
             newExperience, ownerLevel);
-    long nextThreshold = hirelingExperience == null ? 0L
-        : hirelingExperience.nextThreshold(hireling.mercType, newLevel);
     if (newLevel > hirelingLevel) {
       hireling.level = newLevel;
-      owner.getMerc().getStats().base().put(Stat.level, newLevel);
-      owner.getMerc().getStats().aggregate().put(Stat.level, newLevel);
-      if (nextThreshold > 0L) {
-        owner.getMerc().getStats().base().put(Stat.nextexp,
-            (int) Math.min(Integer.MAX_VALUE, nextThreshold));
-        owner.getMerc().getStats().aggregate().put(Stat.nextexp,
-            (int) Math.min(Integer.MAX_VALUE, nextThreshold));
-      }
+      com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
+          hirelingExperience == null ? null
+              : hirelingExperience.stats(hireling.mercType, newLevel);
+      com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(
+          owner.getMerc().getStats(), nativeStats);
+      com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(hireling, nativeStats);
       log.info("[XP_MERC_LEVEL] owner={} merc={} level={}->{} xp={}",
           owner.name, hirelingId, hirelingLevel, newLevel, newExperience);
     }
@@ -493,13 +489,15 @@ public class ExperienceManager extends PassiveSystem {
     attrs.aggregate().put(Stat.experience, encodedExperience);
     attrs.aggregate().put(Stat.lastexp, encodedGain);
     if (newLevel > hirelingLevel) {
-      attrs.base().put(Stat.level, newLevel);
-      attrs.aggregate().put(Stat.level, newLevel);
-      if (nextThreshold > 0L) {
-        int encodedNext = (int) Math.min(Integer.MAX_VALUE, nextThreshold);
-        attrs.base().put(Stat.nextexp, encodedNext);
-        attrs.aggregate().put(Stat.nextexp, encodedNext);
-      }
+      com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(attrs,
+          hirelingExperience == null ? null
+              : hirelingExperience.stats(hireling.mercType, newLevel));
+      // Applying native base stats rebuilds aggregate stats; restore the
+      // experience values written by this award afterwards.
+      attrs.base().put(Stat.experience, encodedExperience);
+      attrs.base().put(Stat.lastexp, encodedGain);
+      attrs.aggregate().put(Stat.experience, encodedExperience);
+      attrs.aggregate().put(Stat.lastexp, encodedGain);
     }
   }
 

@@ -13,10 +13,69 @@ public final class NativeHirelingExperienceTable {
 
   public static final class Row {
     public final int hirelingId, level, experiencePerLevel;
+    public final int hitpoints, hitpointsPerLevel, defense, defensePerLevel;
+    public final int strength, strengthPerLevel, dexterity, dexterityPerLevel;
+    public final int attackRate, attackRatePerLevel, damageMin, damageMax, damagePerLevel;
+    public final int resist, resistPerLevel;
+    public final int[] skills, skillModes, skillLevels, skillLevelsPerLevel;
+
     public Row(int hirelingId, int level, int experiencePerLevel) {
+      this(hirelingId, level, experiencePerLevel,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0,
+          new int[6], new int[6], new int[6], new int[6]);
+    }
+
+    public Row(int hirelingId, int level, int experiencePerLevel,
+        int hitpoints, int hitpointsPerLevel, int defense, int defensePerLevel,
+        int strength, int strengthPerLevel, int dexterity, int dexterityPerLevel,
+        int attackRate, int attackRatePerLevel, int damageMin, int damageMax,
+        int damagePerLevel, int resist, int resistPerLevel,
+        int[] skills, int[] skillModes, int[] skillLevels, int[] skillLevelsPerLevel) {
       this.hirelingId = hirelingId;
       this.level = level;
       this.experiencePerLevel = Math.max(0, experiencePerLevel);
+      this.hitpoints = hitpoints;
+      this.hitpointsPerLevel = hitpointsPerLevel;
+      this.defense = defense;
+      this.defensePerLevel = defensePerLevel;
+      this.strength = strength;
+      this.strengthPerLevel = strengthPerLevel;
+      this.dexterity = dexterity;
+      this.dexterityPerLevel = dexterityPerLevel;
+      this.attackRate = attackRate;
+      this.attackRatePerLevel = attackRatePerLevel;
+      this.damageMin = damageMin;
+      this.damageMax = damageMax;
+      this.damagePerLevel = damagePerLevel;
+      this.resist = resist;
+      this.resistPerLevel = resistPerLevel;
+      this.skills = copy(skills);
+      this.skillModes = copy(skillModes);
+      this.skillLevels = copy(skillLevels);
+      this.skillLevelsPerLevel = copy(skillLevelsPerLevel);
+    }
+
+    private static int[] copy(int[] values) {
+      int[] result = new int[6];
+      if (values != null) {
+        System.arraycopy(values, 0, result, 0, Math.min(6, values.length));
+      }
+      return result;
+    }
+  }
+
+  /** Values produced by D2Game MONSTERAI_UpdateMercStatsAndSkills. */
+  public static final class Stats {
+    public int level, strength, dexterity, hitpoints, defense;
+    public int damageMin, damageMax, attackRate, resist, hpRegenEncoded;
+    public long nextExperience;
+    public final int[] skills = new int[6];
+    public final int[] skillModes = new int[6];
+    public final int[] skillLevels = new int[6];
+
+    Stats() {
+      java.util.Arrays.fill(skills, -1);
     }
   }
 
@@ -24,6 +83,11 @@ public final class NativeHirelingExperienceTable {
 
   public NativeHirelingExperienceTable add(int hirelingId, int level, int expPerLevel) {
     rows.add(new Row(hirelingId, level, expPerLevel));
+    return this;
+  }
+
+  public NativeHirelingExperienceTable add(Row row) {
+    if (row != null) rows.add(row);
     return this;
   }
 
@@ -43,6 +107,7 @@ public final class NativeHirelingExperienceTable {
       TxtParser parser = TxtParser.loadFromFile(file);
       try {
         int idColumn = firstColumn(parser, "Id", "HirelingId", "Hireling Id", "Hireling", "Class");
+        int versionColumn = firstColumn(parser, "Version");
         int levelColumn = firstColumn(parser, "Hireling Level", "HirelingLevel", "Level");
         int expColumn = firstColumn(parser, "Exp/Lvl", "ExpPerLvl", "Exp Per Lvl",
             "Exp per Level");
@@ -51,12 +116,34 @@ public final class NativeHirelingExperienceTable {
           return table;
         }
         while (parser.nextLine() != null) {
+          // This server creates expansion characters; D2Common selects only
+          // version 100 Hireling.txt records for them.
+          if (versionColumn >= 0 && parser.getInt(versionColumn) != 100) continue;
           // TxtParser indexes data rows from zero; native hireling levels start at one.
           int rowIndex = parser.getIndex() + 1;
           int id = idColumn < 0 ? rowIndex : parseHirelingId(parser.getString(idColumn), rowIndex);
           int level = levelColumn < 0 ? rowIndex : parser.getInt(levelColumn);
           int expPerLevel = parser.getInt(expColumn);
-          if (level > 0 && expPerLevel > 0) table.add(id, level, expPerLevel);
+          if (level > 0 && expPerLevel > 0) {
+            table.add(new Row(id, level, expPerLevel,
+                intValue(parser, "HP", "Hitpoints", "Hit Points"),
+                intValue(parser, "HP/Lvl", "Hitpoints/Lvl", "HitpointsPerLvl", "Hit Points/Lvl"),
+                intValue(parser, "Defense", "Def"),
+                intValue(parser, "Def/Lvl", "Defense/Lvl", "DefensePerLvl"),
+                intValue(parser, "Str", "Strength"),
+                intValue(parser, "Str/Lvl", "StrPerLvl", "Strength/Lvl"),
+                intValue(parser, "Dex", "Dexterity"),
+                intValue(parser, "Dex/Lvl", "DexPerLvl", "Dexterity/Lvl"),
+                intValue(parser, "AR", "Attack Rate", "AttackRate"),
+                intValue(parser, "AR/Lvl", "Attack Rate/Lvl", "AttackRatePerLvl"),
+                intValue(parser, "Dmg-Min", "Dmg Min", "Damage Min"),
+                intValue(parser, "Dmg-Max", "Dmg Max", "Damage Max"),
+                intValue(parser, "Dmg/Lvl", "DmgPerLvl", "Damage/Lvl"),
+                intValue(parser, "Resist", "Resistance"),
+                intValue(parser, "Resist/Lvl", "ResistPerLvl", "Resistance/Lvl"),
+                indexedSkillValues(parser), indexedValues(parser, "Mode"),
+                indexedValues(parser, "Level"), indexedValues(parser, "LvlPerLvl")));
+          }
         }
         log.info("[XP_MERC_TABLE] loaded {} Hireling.txt rows (idColumn={}, levelColumn={}, expColumn={})",
             table.size(), idColumn, levelColumn, expColumn);
@@ -77,6 +164,42 @@ public final class NativeHirelingExperienceTable {
       if (column >= 0) return column;
     }
     return -1;
+  }
+
+  private static int intValue(TxtParser parser, String... names) {
+    int column = firstColumn(parser, names);
+    return column < 0 ? 0 : parser.getInt(column);
+  }
+
+  private static int[] indexedValues(TxtParser parser, String prefix) {
+    int[] values = new int[6];
+    for (int i = 0; i < values.length; i++) {
+      int n = i + 1;
+      int column = firstColumn(parser, prefix + " " + n, prefix + n,
+          prefix + "_" + n);
+      values[i] = column < 0 ? 0 : parser.getInt(column);
+    }
+    return values;
+  }
+
+  private static int[] indexedSkillValues(TxtParser parser) {
+    int[] values = new int[6];
+    java.util.Arrays.fill(values, -1);
+    for (int i = 0; i < values.length; i++) {
+      int n = i + 1;
+      int column = firstColumn(parser, "Skill" + n, "Skill " + n, "Skill_" + n);
+      if (column < 0) continue;
+      String value = parser.getString(column);
+      if (value == null || value.trim().isEmpty()) continue;
+      try {
+        values[i] = Integer.parseInt(value.trim());
+      } catch (NumberFormatException ignored) {
+        if (Riiablo.files != null && Riiablo.files.skills != null) {
+          values[i] = Riiablo.files.skills.index(value.trim());
+        }
+      }
+    }
+    return values;
   }
 
   private static int parseHirelingId(String value, int fallback) {
@@ -145,6 +268,33 @@ public final class NativeHirelingExperienceTable {
       level++;
     }
     return level;
+  }
+
+  public Stats stats(int hirelingId, int level) {
+    Row row = row(hirelingId, level);
+    if (row == null) return null;
+    int levelUps = Math.max(0, level - row.level);
+    Stats stats = new Stats();
+    stats.level = level;
+    stats.nextExperience = level < 98
+        ? threshold(level + 1, row.experiencePerLevel) : 0L;
+    stats.strength = Math.max(row.strength + levelUps * row.strengthPerLevel / 8, 10);
+    stats.dexterity = Math.max(row.dexterity + levelUps * row.dexterityPerLevel / 8, 10);
+    stats.hitpoints = Math.max(row.hitpoints + levelUps * row.hitpointsPerLevel, 40);
+    stats.defense = Math.max(row.defense + levelUps * row.defensePerLevel, 0);
+    stats.damageMin = Math.max(row.damageMin + levelUps * row.damagePerLevel / 8, 0);
+    stats.damageMax = Math.max(row.damageMax + levelUps * row.damagePerLevel / 8, 1);
+    stats.attackRate = Math.max(row.attackRate + levelUps * row.attackRatePerLevel, 0);
+    stats.resist = Math.max(row.resist + levelUps * row.resistPerLevel / 4, 0);
+    stats.hpRegenEncoded = Math.max((stats.hitpoints << 8) / 2000, 0);
+    for (int i = 0; i < stats.skills.length; i++) {
+      int skillLevel = row.skillLevels[i]
+          + ((levelUps * row.skillLevelsPerLevel[i]) >> 5);
+      stats.skills[i] = row.skills[i];
+      stats.skillModes[i] = row.skillModes[i];
+      stats.skillLevels[i] = Math.max(0, Math.min(32, skillLevel));
+    }
+    return stats;
   }
 
   public int size() { return rows.size; }

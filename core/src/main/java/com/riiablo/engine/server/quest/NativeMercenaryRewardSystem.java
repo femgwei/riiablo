@@ -43,6 +43,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   protected EntityFactory factory;
 
   private final MercenaryManager mercenaries;
+  private com.riiablo.engine.server.NativeHirelingExperienceTable hirelingTable;
 
   public NativeMercenaryRewardSystem() {
     this(new MercenaryManager());
@@ -56,6 +57,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   protected void initialize() {
     factory = world.getSystem(EntityFactory.class);
     mercenaries.setCallback(this);
+    hirelingTable = com.riiablo.engine.server.NativeHirelingExperienceTable.load();
   }
 
   @Subscribe
@@ -124,7 +126,15 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
     // Hirelings use monster presentation data, but must never run hostile
     // monster AI or expose the hostile click target installed by that factory.
-    mMercenary.create(entityId).set(playerId, def.mercType, level, seed, nameId);
+    Mercenary component = mMercenary.create(entityId)
+        .set(playerId, def.mercType, level, seed, nameId);
+    com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
+        hirelingTable == null ? null : hirelingTable.stats(def.mercType, level);
+    if (mAttributesWrapper.has(entityId)) {
+      com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(
+          mAttributesWrapper.get(entityId).attrs, nativeStats);
+    }
+    com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(component, nativeStats);
     if (mAIWrapper.has(entityId)) mAIWrapper.remove(entityId);
     if (mInteractable.has(entityId)) mInteractable.remove(entityId);
     if (mSelectable.has(entityId)) mSelectable.remove(entityId);
@@ -153,7 +163,17 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     data.seed = merc.seed;
     data.name = (short) merc.nameId;
     data.type = (short) merc.definition.mercType;
+    long nativeXp = hirelingTable == null ? 0L
+        : hirelingTable.thresholdForHireling(merc.definition.mercType, merc.level);
+    if (nativeXp > 0L) merc.experience = nativeXp;
     data.xp = merc.experience;
+    com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(data.getStats(),
+        hirelingTable == null ? null
+            : hirelingTable.stats(merc.definition.mercType, merc.level));
+    data.getStats().base().put(Stat.experience,
+        (int) Math.min(Integer.MAX_VALUE, data.xp));
+    data.getStats().aggregate().put(Stat.experience,
+        (int) Math.min(Integer.MAX_VALUE, data.xp));
   }
 
   @Override
