@@ -22,6 +22,18 @@ application {
   mainClass = 'com.riiablo.DesktopLauncher'
 }
 
+task offscreenRender(type: JavaExec) {
+  group = 'verification'
+  description = 'Render production client visual scenarios into build/visual-tests.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  // Supply -Pd2Home and -PsavesDir when invoking this task.
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests'
+  ignoreExitValue = false
+}
+
 run {
   workingDir = rootProject.file('assets').path
   setIgnoreExitValue(true)

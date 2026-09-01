@@ -361,7 +361,10 @@ public class Client extends Game {
 
     bindCvars();
 
-    if ((Gdx.app.getType() == Application.ApplicationType.Android && !home.child("data").exists()) || DEBUG_AUDIO_UNPACKER) {
+    if (Boolean.getBoolean("riiablo.offscreen-render")) {
+      setScreen(new com.riiablo.screen.OffscreenRenderScreen(
+          System.getProperty("riiablo.offscreen-output", "build/visual-tests")));
+    } else if ((Gdx.app.getType() == Application.ApplicationType.Android && !home.child("data").exists()) || DEBUG_AUDIO_UNPACKER) {
       setScreen(new AudioUnpackerScreen());
     } else {
       setScreen(new SplashScreen());
