@@ -45,10 +45,12 @@ public final class ClientPartyState {
       members.put(member.entityId, member);
       if (member.relation == PartyRelation.INVITED) incomingInviterId = member.entityId;
     }
-    lastRequestId = result.requestId();
-    lastSuccess = result.success();
-    lastReason = result.reason() == null ? "" : result.reason();
-    lastOperation = result.operation();
+    if (result.requestId() != 0) {
+      lastRequestId = result.requestId();
+      lastSuccess = result.success();
+      lastReason = result.reason() == null ? "" : result.reason();
+      lastOperation = result.operation();
+    }
     sourceEntityId = result.sourceEntityId();
     targetEntityId = result.targetEntityId();
     partyId = result.partyId();

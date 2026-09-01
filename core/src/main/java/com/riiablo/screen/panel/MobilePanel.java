@@ -45,7 +45,8 @@ public class MobilePanel extends Table implements Disposable, EscapeController {
           Actor panel = Riiablo.game.spellsPanel;
           Riiablo.game.setRightPanel(panel.isVisible() ? null : panel);
         } else if (actor == btnParty) {
-
+          Actor panel = Riiablo.game.partyPanel;
+          Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
         } else if (actor == btnMap) {
 
         } else if (actor == btnMessages) {

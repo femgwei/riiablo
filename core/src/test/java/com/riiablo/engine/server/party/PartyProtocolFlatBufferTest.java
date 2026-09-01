@@ -56,5 +56,21 @@ class PartyProtocolFlatBufferTest {
     assertEquals("Amazon", state.get(77).name);
     assertEquals(30, state.get(77).hp);
     assertEquals(1, state.revision());
+
+    FlatBufferBuilder refreshBuilder = new FlatBufferBuilder(128);
+    int refreshReason = refreshBuilder.createString("");
+    int refreshResult = PartyResult.createPartyResult(refreshBuilder, 0, true,
+        refreshReason, PartyOperation.SNAPSHOT, 88, -1, -1, 0);
+    int refreshRoot = D2GS.createD2GS(
+        refreshBuilder, D2GSData.PartyResult, refreshResult);
+    D2GS.finishSizePrefixedD2GSBuffer(refreshBuilder, refreshRoot);
+    ByteBuffer refreshFrame = refreshBuilder.dataBuffer();
+    refreshFrame.position(refreshFrame.position() + Integer.BYTES);
+    PartyResult refresh = (PartyResult) D2GS.getRootAsD2GS(refreshFrame)
+        .data(new PartyResult());
+    state.apply(refresh);
+    assertEquals(4, state.lastRequestId());
+    assertEquals(PartyOperation.INVITE, state.lastOperation());
+    assertEquals(2, state.revision());
   }
 }

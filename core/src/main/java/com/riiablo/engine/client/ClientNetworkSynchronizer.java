@@ -253,4 +253,12 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       return 0;
     }
   }
+
+  /** Server entity id assigned to this client during the authenticated handshake. */
+  public int serverPlayerId() {
+    if (Riiablo.game == null || Riiablo.game.player < 0) return -1;
+    int localEntityId = Riiablo.game.player;
+    return mNetworked.has(localEntityId)
+        ? mNetworked.get(localEntityId).serverId : -1;
+  }
 }

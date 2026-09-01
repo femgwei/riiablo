@@ -159,6 +159,7 @@ import com.riiablo.screen.panel.InventoryPanel;
 import com.riiablo.screen.panel.MobileControls;
 import com.riiablo.screen.panel.MobilePanel;
 import com.riiablo.screen.panel.QuestsPanel;
+import com.riiablo.screen.panel.PartyPanel;
 import com.riiablo.screen.panel.SpellsPanel;
 import com.riiablo.screen.panel.SpellsQuickPanel;
 import com.riiablo.screen.panel.StashPanel;
@@ -290,6 +291,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   public HirelingPanel hirelingPanel;
   public WaygatePanel waygatePanel;
   public QuestsPanel questsPanel;
+  public PartyPanel partyPanel;
   public CubePanel cubePanel;
   public VendorPanel vendorPanel;
   public SpellsQuickPanel spellsQuickPanelL;
@@ -419,6 +421,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     questsPanel.setPosition(0, stage.getHeight() - questsPanel.getHeight());
     stage.addActor(questsPanel);
 
+    partyPanel = new PartyPanel();
+    partyPanel.setPosition(0, stage.getHeight() - partyPanel.getHeight());
+    stage.addActor(partyPanel);
+
     waygatePanel = new WaygatePanel(charData);
     waygatePanel.setPosition(0, stage.getHeight() - waygatePanel.getHeight());
     stage.addActor(waygatePanel);
@@ -502,6 +508,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           setRightPanel(spellsPanel.isVisible() ? null : spellsPanel);
         } else if (key == Keys.Quests) {
           setLeftPanel(questsPanel.isVisible() ? null : questsPanel);
+        } else if (key == Keys.Party) {
+          setLeftPanel(partyPanel.isVisible() ? null : partyPanel);
         } else if (key == Keys.Vendor) {
           setLeftPanel(vendorPanel.isVisible() ? null : vendorPanel);
         } else if (key == Keys.SwapWeapons) {
@@ -694,6 +702,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     engine.inject(vendorPanel);
     if (socket != null) {
       vendorPanel.setNetworkSynchronizer(engine.getSystem(ClientNetworkSynchronizer.class));
+      partyPanel.setNetworkSystems(engine.getSystem(ClientNetworkSynchronizer.class),
+          engine.getSystem(com.riiablo.engine.client.ClientNetworkReceiver.class));
     }
 // TODO: maybe it would be better to do more like?:
 //    for (Actor actor : stage.getActors()) {
