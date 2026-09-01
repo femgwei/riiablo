@@ -449,6 +449,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
     int level = Math.max(1, data.level());
     int skillPoints = data.skillPoints();
     int statPoints = data.statPoints();
+    if (data.walletPresent()) {
+      com.riiablo.item.VendorPricing.setGoldSnapshot(Riiablo.charData,
+          (int) Math.min(Integer.MAX_VALUE, data.gold()),
+          (int) Math.min(Integer.MAX_VALUE, data.goldBank()));
+    }
 
     long oldExperience = Riiablo.charData.getStats().aggregate()
         .getValue(Stat.experience, 0L);

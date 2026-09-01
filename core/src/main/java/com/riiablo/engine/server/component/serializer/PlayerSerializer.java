@@ -61,6 +61,11 @@ public class PlayerSerializer implements FlatBuffersSerializer<Player, PlayerP> 
     PlayerP.addExperience(builder, Math.max(0L, experience));
     PlayerP.addCharName(builder, charNameOffset);
     PlayerP.addCharClass(builder, data.charClass);
+    PlayerP.addWalletPresent(builder, true);
+    PlayerP.addGoldBank(builder, Math.max(0, Math.min(0xFFFFFFFFL,
+        data.getStats().aggregate().getValue(com.riiablo.attributes.Stat.goldbank, 0L))));
+    PlayerP.addGold(builder, Math.max(0, Math.min(0xFFFFFFFFL,
+        data.getStats().aggregate().getValue(com.riiablo.attributes.Stat.gold, 0L))));
     return PlayerP.endPlayerP(builder);
   }
 

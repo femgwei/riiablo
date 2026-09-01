@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.Riiablo;
@@ -31,6 +32,10 @@ class NetworkProgressionSerializationTest extends RiiabloTest {
     data.getStats().aggregate().put(Stat.newskills, 2);
     data.getStats().base().put(Stat.statpts, 5);
     data.getStats().aggregate().put(Stat.statpts, 5);
+    data.getStats().base().put(Stat.gold, 321);
+    data.getStats().aggregate().put(Stat.gold, 321);
+    data.getStats().base().put(Stat.goldbank, 6543);
+    data.getStats().aggregate().put(Stat.goldbank, 6543);
     data.setSkillLevel(6, 3);
 
     Player player = new Player();
@@ -47,6 +52,9 @@ class NetworkProgressionSerializationTest extends RiiabloTest {
     assertEquals(3, snapshot.level());
     assertEquals(2, snapshot.skillPoints());
     assertEquals(5, snapshot.statPoints());
+    assertEquals(321L, snapshot.gold());
+    assertEquals(6543L, snapshot.goldBank());
+    assertTrue(snapshot.walletPresent());
     assertEquals(1, snapshot.skillIdsLength());
     assertEquals(1, snapshot.skillLevelsLength());
     assertEquals(6, snapshot.skillIds(0));

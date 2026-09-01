@@ -76,6 +76,11 @@ table PlayerP {
   // authoritative item data and must not be persisted into the skill tree.
   skillIds:[uint16];
   skillLevels:[uint8];
+  // Authoritative carried and bank gold used by Party_ShareGoldDrop.
+  gold:uint32;
+  goldBank:uint32;
+  // Distinguishes a current wallet snapshot from an older server payload.
+  walletPresent:bool;
 }
 
 table DS1ObjectWrapperP {

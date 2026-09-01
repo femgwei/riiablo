@@ -20,6 +20,9 @@ import com.riiablo.engine.server.item.ItemQuality;
 import com.riiablo.engine.server.item.LootManager;
 import com.riiablo.engine.server.item.GroundDropOwnership;
 import com.riiablo.engine.server.monster.MonsterRank;
+import com.riiablo.engine.server.party.Party;
+import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.party.PartyMember;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -42,11 +45,15 @@ public class DeathRewardSystem extends PassiveSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.MapWrapper> mMapWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mGroundItem;
   protected ComponentMapper<com.riiablo.engine.server.component.SuperUnique> mSuperUnique;
 
   @Wire(name = "factory")
   protected EntityFactory factory;
+
+  @Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
 
   /** ItemGenerator is registered as a world system by D2GS. */
   protected ItemGenerator itemGenerator;
@@ -108,7 +115,7 @@ public class DeathRewardSystem extends PassiveSystem {
     // D2Game starts with the current connected-player count. The value stored
     // on the monster is only an upper bound captured at spawn time.
     config.playerCount = players == null ? 1 : Math.max(1, players.getEntities().size());
-    config.partyMembersInLevel = 1; // party membership is not authoritative here yet
+    config.partyMembersInLevel = partyMembersInLevel(event.killer);
     config.monsterPlayerCount = config.playerCount;
     if (mAttributesWrapper.has(event.victim) && mAttributesWrapper.get(event.victim).attrs != null) {
       com.riiablo.attributes.StatRef monsterPlayers =
@@ -195,7 +202,8 @@ public class DeathRewardSystem extends PassiveSystem {
       int entityId = factory.createItem(item, x + MathUtils.random(-2f, 2f),
           y + MathUtils.random(-2f, 2f));
       markDrop(entityId, ownerId);
-      GroundDropOwnership.register(entityId, ownerId, 10_000L);
+      GroundDropOwnership.register(entityId, ownerId, dropPartyId(ownerId),
+          10_000L, 10_000L, "gld".equalsIgnoreCase(item.code));
       // Item ids are serialized from the same object held by the component.
       // The entity id is a stable server-side fallback when no item id service
       // is available yet.
@@ -219,7 +227,8 @@ public class DeathRewardSystem extends PassiveSystem {
       int entityId = factory.createItem(gold, x + MathUtils.random(-1f, 1f),
           y + MathUtils.random(-1f, 1f));
       markDrop(entityId, ownerId);
-      GroundDropOwnership.register(entityId, ownerId, 10_000L);
+      GroundDropOwnership.register(entityId, ownerId, dropPartyId(ownerId),
+          10_000L, 10_000L, true);
       gold.id = entityId;
       return entityId;
     } catch (Throwable t) {
@@ -233,6 +242,35 @@ public class DeathRewardSystem extends PassiveSystem {
     com.riiablo.engine.server.component.Item item = mGroundItem.get(entityId);
     item.dropOwnerId = ownerId;
     item.dropOwnerUntilMillis = System.currentTimeMillis() + 10_000L;
+  }
+
+  private int dropPartyId(int ownerId) {
+    return partyManager == null ? Party.INVALID_ID : partyManager.getPartyId(ownerId);
+  }
+
+  /** Counts living party members in the killer's current native level. */
+  private int partyMembersInLevel(int killerId) {
+    if (partyManager == null || killerId < 0) return 1;
+    short partyId = partyManager.getPartyId(killerId);
+    if (partyId == Party.INVALID_ID) return 1;
+    Party party = partyManager.getParty(partyId);
+    if (party == null) return 1;
+    int killerLevelId = levelId(killerId);
+    if (killerLevelId < 0) return 1;
+    int count = 0;
+    for (PartyMember member : party.getMembers()) {
+      if (member == null || !member.online || !member.alive || !mPlayer.has(member.entityId)) continue;
+      if (levelId(member.entityId) != killerLevelId) continue;
+      count++;
+    }
+    return Math.max(1, count);
+  }
+
+  private int levelId(int entityId) {
+    if (mMapWrapper == null || !mMapWrapper.has(entityId)) return -1;
+    com.riiablo.engine.server.component.MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+        ? -1 : wrapper.zone.level.Id;
   }
 
   private Quality safeQuality(int rolledQuality) {

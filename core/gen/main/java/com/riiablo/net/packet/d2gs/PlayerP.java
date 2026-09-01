@@ -35,6 +35,9 @@ public final class PlayerP extends Table {
   public ByteVector skillLevelsVector(ByteVector obj) { int o = __offset(18); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
   public ByteBuffer skillLevelsAsByteBuffer() { return __vector_as_bytebuffer(18, 1); }
   public ByteBuffer skillLevelsInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 18, 1); }
+  public long gold() { int o = __offset(20); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
+  public long goldBank() { int o = __offset(22); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
+  public boolean walletPresent() { int o = __offset(24); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
   public static int createPlayerP(FlatBufferBuilder builder,
       int charClass,
@@ -44,20 +47,26 @@ public final class PlayerP extends Table {
       int skillPoints,
       int statPoints,
       int skillIdsOffset,
-      int skillLevelsOffset) {
-    builder.startTable(8);
+      int skillLevelsOffset,
+      long gold,
+      long goldBank,
+      boolean walletPresent) {
+    builder.startTable(11);
     PlayerP.addExperience(builder, experience);
+    PlayerP.addGoldBank(builder, goldBank);
+    PlayerP.addGold(builder, gold);
     PlayerP.addSkillLevels(builder, skillLevelsOffset);
     PlayerP.addSkillIds(builder, skillIdsOffset);
     PlayerP.addCharName(builder, charNameOffset);
     PlayerP.addStatPoints(builder, statPoints);
     PlayerP.addSkillPoints(builder, skillPoints);
+    PlayerP.addWalletPresent(builder, walletPresent);
     PlayerP.addLevel(builder, level);
     PlayerP.addCharClass(builder, charClass);
     return PlayerP.endPlayerP(builder);
   }
 
-  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(8); }
+  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(11); }
   public static void addCharClass(FlatBufferBuilder builder, int charClass) { builder.addByte(0, (byte)charClass, (byte)0); }
   public static void addCharName(FlatBufferBuilder builder, int charNameOffset) { builder.addOffset(1, charNameOffset, 0); }
   public static void addExperience(FlatBufferBuilder builder, long experience) { builder.addLong(2, experience, 0L); }
@@ -71,6 +80,9 @@ public final class PlayerP extends Table {
   public static int createSkillLevelsVector(FlatBufferBuilder builder, byte[] data) { return builder.createByteVector(data); }
   public static int createSkillLevelsVector(FlatBufferBuilder builder, ByteBuffer data) { return builder.createByteVector(data); }
   public static void startSkillLevelsVector(FlatBufferBuilder builder, int numElems) { builder.startVector(1, numElems, 1); }
+  public static void addGold(FlatBufferBuilder builder, long gold) { builder.addInt(8, (int)gold, (int)0L); }
+  public static void addGoldBank(FlatBufferBuilder builder, long goldBank) { builder.addInt(9, (int)goldBank, (int)0L); }
+  public static void addWalletPresent(FlatBufferBuilder builder, boolean walletPresent) { builder.addBoolean(10, walletPresent, false); }
   public static int endPlayerP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

@@ -103,6 +103,7 @@ import com.riiablo.engine.server.party.PartyMember;
 import com.riiablo.engine.server.party.PartyRelation;
 import com.riiablo.engine.server.party.PartyRequestCache;
 import com.riiablo.engine.server.party.PartyServiceProtocol;
+import com.riiablo.engine.server.party.PartyGoldShareService;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.ItemWriter;
@@ -1384,7 +1385,19 @@ public class D2GS extends ApplicationAdapter {
         Gdx.app.log(TAG, "[ITEM_PICKUP] phase=resolve_ground client=" + packet.id
             + " player=" + playerEntityId + " ground=" + groundEntity
             + " itemCode=" + (groundItem != null ? groundItem.code : "null"));
-        outcome = authoritativeItems.pickup(playerEntityId, character, intent, groundItem);
+        int playerPartyId = partyManager.getPartyId(playerEntityId);
+        com.badlogic.gdx.utils.Array<PartyGoldShareService.Recipient> recipients =
+            groundItem != null && "gld".equalsIgnoreCase(groundItem.code)
+                && com.riiablo.engine.server.item.GroundDropOwnership
+                    .isPartyShareGold(groundEntity)
+                ? partyGoldRecipients(playerEntityId) : null;
+        if (recipients != null && recipients.size > 1) {
+          outcome = authoritativeItems.pickupSharedGold(playerEntityId, playerPartyId,
+              character, intent, groundItem, recipients);
+        } else {
+          outcome = authoritativeItems.pickup(playerEntityId, playerPartyId,
+              character, intent, groundItem);
+        }
       }
       if (outcome.success && outcome.consumeGroundEntity) world.delete(groundEntity);
     } else if (operation == ItemMoveOperation.CURSOR_TO_GROUND) {
@@ -1394,7 +1407,8 @@ public class D2GS extends ApplicationAdapter {
         if (position != null) {
           int droppedEntity = factory.createItem(item, position.position.x, position.position.y);
           if (droppedEntity >= 0) {
-            com.riiablo.engine.server.item.GroundDropOwnership.register(droppedEntity, playerEntityId, 10_000L);
+            com.riiablo.engine.server.item.GroundDropOwnership.register(droppedEntity,
+                playerEntityId, partyManager.getPartyId(playerEntityId), 10_000L, 10_000L);
           }
         }
       });
@@ -1414,6 +1428,37 @@ public class D2GS extends ApplicationAdapter {
     } catch (Throwable ignored) {
       return null;
     }
+  }
+
+  private com.badlogic.gdx.utils.Array<PartyGoldShareService.Recipient> partyGoldRecipients(
+      int pickerEntityId) {
+    com.badlogic.gdx.utils.Array<PartyGoldShareService.Recipient> recipients =
+        new com.badlogic.gdx.utils.Array<>();
+    short partyId = partyManager.getPartyId(pickerEntityId);
+    if (partyId == com.riiablo.engine.server.party.Party.INVALID_ID) return recipients;
+    com.riiablo.engine.server.party.Party party = partyManager.getParty(partyId);
+    if (party == null) return recipients;
+    Player picker = world.getMapper(Player.class).get(pickerEntityId);
+    if (picker == null || picker.data == null) return recipients;
+    recipients.add(new PartyGoldShareService.Recipient(pickerEntityId, picker.data, true));
+    int levelId = levelIdOf(pickerEntityId);
+    if (levelId < 0) return recipients;
+    for (com.riiablo.engine.server.party.PartyMember member : party.getMembers()) {
+      if (member == null || member.entityId == pickerEntityId
+          || !member.online || !member.alive) continue;
+      if (levelIdOf(member.entityId) != levelId) continue;
+      Player target = world.getMapper(Player.class).get(member.entityId);
+      if (target == null || target.data == null) continue;
+      recipients.add(new PartyGoldShareService.Recipient(member.entityId, target.data, true));
+    }
+    return recipients;
+  }
+
+  private int levelIdOf(int entityId) {
+    com.riiablo.engine.server.component.MapWrapper wrapper =
+        world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
+    return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+        ? -1 : wrapper.zone.level.Id;
   }
 
   private void sendItemMoveResult(int clientId, ItemMoveIntent intent, boolean success,

@@ -8,6 +8,8 @@ import com.riiablo.save.CharData;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.item.VendorPricing;
+import com.badlogic.gdx.utils.Array;
+import com.riiablo.engine.server.party.PartyGoldShareService;
 
 /**
  * Small transaction boundary around CharData's legacy item methods. All
@@ -96,6 +98,13 @@ public final class AuthoritativeItemMoveService {
   /** Applies a validated pickup after the ECS has resolved the ground item. */
   public synchronized Outcome pickup(int playerEntityId, CharData character,
                                      ItemMoveIntent intent, Item groundItem) {
+    return pickup(playerEntityId, -1, character, intent, groundItem);
+  }
+
+  /** Applies a pickup using the player's authoritative Party id. */
+  public synchronized Outcome pickup(int playerEntityId, int playerPartyId,
+                                     CharData character, ItemMoveIntent intent,
+                                     Item groundItem) {
     long current = revision(playerEntityId);
     if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
     if (intent == null || intent.operation != ItemMoveOperation.GROUND_TO_CURSOR)
@@ -106,7 +115,7 @@ public final class AuthoritativeItemMoveService {
     if (groundItem == null) return new Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_FOUND, current);
     if (intent.itemId >= 0 && groundItem.id != intent.itemId)
       return new Outcome(false, ItemMoveFailure.GROUND_ITEM_CHANGED, current);
-    if (!GroundDropOwnership.claim(intent.groundEntityId, playerEntityId))
+    if (!GroundDropOwnership.claim(intent.groundEntityId, playerEntityId, playerPartyId))
       return new Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_OWNED, current);
     if ("gld".equalsIgnoreCase(groundItem.code)) {
       int amount = groundItem.attrs == null || groundItem.attrs.base().get(com.riiablo.attributes.Stat.quantity) == null
@@ -153,6 +162,55 @@ public final class AuthoritativeItemMoveService {
     revisions.put(playerEntityId, next);
     if (intent.operation == ItemMoveOperation.GROUND_TO_CURSOR) GroundDropOwnership.clear(intent.groundEntityId);
     return new Outcome(true, ItemMoveFailure.NONE, next);
+  }
+
+  /** Atomically picks up a gold pile and distributes it to same-level party members. */
+  public synchronized Outcome pickupSharedGold(int playerEntityId, int playerPartyId,
+                                               CharData character, ItemMoveIntent intent,
+                                               Item groundItem,
+                                               Array<PartyGoldShareService.Recipient> recipients) {
+    long current = revision(playerEntityId);
+    if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
+    if (intent == null || intent.operation != ItemMoveOperation.GROUND_TO_CURSOR)
+      return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
+    if (intent.revision != current) return new Outcome(false, ItemMoveFailure.STALE_INVENTORY, current);
+    byte failure = ItemMoveValidator.validate(character, intent);
+    if (failure != ItemMoveFailure.NONE) return new Outcome(false, failure, current);
+    if (groundItem == null || !"gld".equalsIgnoreCase(groundItem.code))
+      return pickup(playerEntityId, playerPartyId, character, intent, groundItem);
+    if (intent.itemId >= 0 && groundItem.id != intent.itemId)
+      return new Outcome(false, ItemMoveFailure.GROUND_ITEM_CHANGED, current);
+    int amount = groundItem.attrs == null
+        || groundItem.attrs.base().get(com.riiablo.attributes.Stat.quantity) == null
+        ? 0 : groundItem.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt();
+    if (amount <= 0) return new Outcome(false, ItemMoveFailure.GROUND_ITEM_CHANGED, current);
+    if (!GroundDropOwnership.claim(intent.groundEntityId, playerEntityId, playerPartyId))
+      return new Outcome(false, ItemMoveFailure.GROUND_ITEM_NOT_OWNED, current);
+
+    PartyGoldShareService.Result share = PartyGoldShareService.distribute(
+        groundItem, playerEntityId, recipients);
+    int totalCredited = 0;
+    for (PartyGoldShareService.Grant grant : share.grants) {
+      totalCredited += Math.max(0, grant.credited);
+    }
+    if (totalCredited <= 0) {
+      GroundDropOwnership.release(intent.groundEntityId);
+      return new Outcome(false, ItemMoveFailure.GOLD_LIMIT_REACHED, current, false, amount);
+    }
+    int remaining = share.remaining;
+    groundItem.attrs.base().put(com.riiablo.attributes.Stat.quantity, remaining);
+    groundItem.attrs.aggregate().put(com.riiablo.attributes.Stat.quantity, remaining);
+    if (remaining == 0) GroundDropOwnership.clear(intent.groundEntityId);
+    else GroundDropOwnership.release(intent.groundEntityId);
+
+    for (PartyGoldShareService.Grant grant : share.grants) {
+      if (grant.entityId != playerEntityId && grant.credited > 0) {
+        revisions.put(grant.entityId, revision(grant.entityId) + 1L);
+      }
+    }
+    long next = current + 1L;
+    revisions.put(playerEntityId, next);
+    return new Outcome(true, ItemMoveFailure.NONE, next, remaining == 0, remaining);
   }
 
   /** Applies a validated drop and invokes the ECS creator with the detached item. */

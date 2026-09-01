@@ -4,15 +4,18 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
+import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
+import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.item.Item;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
+import com.riiablo.engine.server.party.PartyGoldShareService;
 import com.riiablo.save.CharData;
 
-class GoldPickupServiceTest {
+class GoldPickupServiceTest extends RiiabloTest {
   @Test
   void goldIsCreditedInsteadOfPlacedOnCursor() {
     CharData character = CharData.obtain()
@@ -124,5 +127,71 @@ class GoldPickupServiceTest {
   void expiredOwnershipAllowsAnotherPlayerToClaim() {
     GroundDropOwnership.register(903, 21, 0L);
     assertTrue(GroundDropOwnership.claim(903, 22));
+  }
+
+  @Test
+  void partyWindowAllowsTeammateBeforePublicWindow() {
+    GroundDropOwnership.register(904, 31, 7, 0L, 10_000L);
+    assertFalse(GroundDropOwnership.isPartyShareGold(904));
+    assertFalse(GroundDropOwnership.claim(904, 32, 8));
+    assertTrue(GroundDropOwnership.claim(904, 33, 7));
+  }
+
+  @Test
+  void sharedPickupAdvancesEveryCreditedWalletRevision() {
+    CharData picker = CharData.obtain().set(Riiablo.NORMAL, false, "Picker", Riiablo.AMAZON);
+    CharData teammate = CharData.obtain().set(Riiablo.NORMAL, false, "Teammate", Riiablo.AMAZON);
+    Item gold = new Item();
+    gold.id = 46;
+    gold.code = "gld";
+    gold.attrs = Attributes.obtainStandard();
+    gold.attrs.base().put(Stat.quantity, 100);
+    GroundDropOwnership.register(905, 41, 9, 0L, 10_000L, true);
+    Array<PartyGoldShareService.Recipient> recipients = new Array<>();
+    recipients.add(new PartyGoldShareService.Recipient(41, picker, true));
+    recipients.add(new PartyGoldShareService.Recipient(42, teammate, true));
+
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+    AuthoritativeItemMoveService.Outcome result = service.pickupSharedGold(
+        41, 9, picker,
+        new ItemMoveIntent(7, 0, ItemMoveOperation.GROUND_TO_CURSOR,
+            46, 905, -1, -1, -1, -1, false), gold, recipients);
+    assertTrue(result.success);
+    assertTrue(result.consumeGroundEntity);
+    assertEquals(50, picker.getStats().get(Stat.gold).asInt());
+    assertEquals(50, teammate.getStats().get(Stat.gold).asInt());
+    assertEquals(1, service.revision(41));
+    assertEquals(1, service.revision(42));
+  }
+
+  @Test
+  void sharedPickupLeavesPileWhenEveryWalletIsFull() {
+    CharData picker = CharData.obtain().set(Riiablo.NORMAL, false, "FullPicker", Riiablo.AMAZON);
+    CharData teammate = CharData.obtain().set(Riiablo.NORMAL, false, "FullMate", Riiablo.AMAZON);
+    picker.getStats().base().put(Stat.gold, 10_000);
+    picker.getStats().aggregate().put(Stat.gold, 10_000);
+    teammate.getStats().base().put(Stat.gold, 10_000);
+    teammate.getStats().aggregate().put(Stat.gold, 10_000);
+    Item gold = new Item();
+    gold.id = 47;
+    gold.code = "gld";
+    gold.attrs = Attributes.obtainStandard();
+    gold.attrs.base().put(Stat.quantity, 20);
+    GroundDropOwnership.register(906, 51, 10, 0L, 10_000L, true);
+    Array<PartyGoldShareService.Recipient> recipients = new Array<>();
+    recipients.add(new PartyGoldShareService.Recipient(51, picker, true));
+    recipients.add(new PartyGoldShareService.Recipient(52, teammate, true));
+
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+    AuthoritativeItemMoveService.Outcome result = service.pickupSharedGold(
+        51, 10, picker,
+        new ItemMoveIntent(8, 0, ItemMoveOperation.GROUND_TO_CURSOR,
+            47, 906, -1, -1, -1, -1, false), gold, recipients);
+    assertFalse(result.success);
+    assertEquals(ItemMoveFailure.GOLD_LIMIT_REACHED, result.failure);
+    assertFalse(result.consumeGroundEntity);
+    assertEquals(20, result.groundQuantityRemaining);
+    assertEquals(0, service.revision(51));
+    assertEquals(0, service.revision(52));
   }
 }
