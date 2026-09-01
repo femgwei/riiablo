@@ -159,6 +159,97 @@ import com.riiablo.save.CharData;
 import com.riiablo.util.DebugUtils;
 
 public class D2GS extends ApplicationAdapter {
+  /** Embedded headless verification hook; normal dedicated-server clients never use it. */
+  static volatile D2GS activeHeadlessInstance;
+
+  static Vector2 headlessLevelPosition(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null) return null;
+    com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+    Map.Zone zone = level == null ? null : server.map.findZone(level);
+    if (zone == null) return null;
+    int centerX = zone.x() + zone.width() / 2;
+    int centerY = zone.y() + zone.height() / 2;
+    for (int radius = 0; radius <= 64; radius++) {
+      for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
+          int x = centerX + dx;
+          int y = centerY + dy;
+          if (server.map.getZone(x, y) == zone
+              && (server.map.flags(x, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+            return new Vector2(x, y);
+          }
+        }
+      }
+    }
+    return new Vector2(centerX, centerY);
+  }
+
+  /** Finds a native Blood Moor room whose deferred population contains a raisable pair. */
+  static Vector2 headlessFallenShamanPosition(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null
+        || Riiablo.files.monstats == null) return null;
+    com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+    Map.Zone zone = level == null ? null : server.map.findZone(level);
+    if (zone == null) return null;
+    for (Map.RoomEx room : zone.getRoomsEx()) {
+      for (Map.MonsterSpawn shaman : room.getPendingMonsterSpawns()) {
+        com.riiablo.codec.excel.MonStats.Entry shamanRow =
+            Riiablo.files.monstats.get(shaman.monsterId);
+        if (shamanRow == null || !"fallenshaman1".equalsIgnoreCase(shamanRow.Id)) continue;
+        for (Map.MonsterSpawn fallen : room.getPendingMonsterSpawns()) {
+          com.riiablo.codec.excel.MonStats.Entry fallenRow =
+              Riiablo.files.monstats.get(fallen.monsterId);
+          if (fallenRow == null || !"fallen1".equalsIgnoreCase(fallenRow.Id)) continue;
+          float dx = fallen.x - shaman.x;
+          float dy = fallen.y - shaman.y;
+          if (dx * dx + dy * dy > 14f * 14f) continue;
+          for (int radius = 1; radius <= 4; radius++) {
+            for (int oy = -radius; oy <= radius; oy++) {
+              for (int ox = -radius; ox <= radius; ox++) {
+                int x = Math.round(fallen.x) + ox;
+                int y = Math.round(fallen.y) + oy;
+                if (room.contains(x, y)
+                    && (server.map.flags(x, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+                  return new Vector2(x, y);
+                }
+              }
+            }
+          }
+          return new Vector2(fallen.x, fallen.y);
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Returns a walkable observation point in the same native room as a corpse. */
+  static Vector2 headlessRoomObservationPosition(int levelId, float originX, float originY) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null) return null;
+    com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+    Map.Zone zone = level == null ? null : server.map.findZone(level);
+    Map.RoomEx room = zone == null ? null : zone.findRoomEx(originX, originY);
+    if (room == null) return null;
+    Vector2 best = null;
+    float bestDistance2 = 0f;
+    for (int y = room.y; y < room.y + room.height; y++) {
+      for (int x = room.x; x < room.x + room.width; x++) {
+        if ((server.map.flags(x, y) & DT1.Tile.FLAG_BLOCK_WALK) != 0) continue;
+        float dx = x - originX;
+        float dy = y - originY;
+        float distance2 = dx * dx + dy * dy;
+        if (distance2 >= 8f * 8f && distance2 > bestDistance2) {
+          bestDistance2 = distance2;
+          if (best == null) best = new Vector2();
+          best.set(x, y);
+        }
+      }
+    }
+    return best;
+  }
   private static final String TAG = "D2GS";
 
   private static final boolean DEBUG                  = true;
@@ -272,6 +363,7 @@ public class D2GS extends ApplicationAdapter {
 
   @Override
   public void create() {
+    activeHeadlessInstance = this;
     Gdx.app.setLogLevel(Application.LOG_DEBUG);
 
     final Calendar calendar = Calendar.getInstance();
@@ -440,16 +532,22 @@ public class D2GS extends ApplicationAdapter {
         }
 
         Gdx.app.log(TAG, "killing child threads...");
+        Client[] shuttingDown;
         synchronized (clients) {
-          for (Client client : clients) {
-            if (client != null) {
-              client.kill = true;
-              client.socket.dispose();
-              try {
-                client.join();
-              } catch (Throwable ignored) {}
-            }
+          shuttingDown = clients.clone();
+        }
+        // Never join while holding the clients monitor: Client.run() enters
+        // Disconnect(), which also updates that array during normal shutdown.
+        for (Client client : shuttingDown) {
+          if (client != null) {
+            client.kill = true;
+            client.closeSocket();
+            try {
+              client.join();
+            } catch (Throwable ignored) {}
           }
+        }
+        synchronized (clients) {
           numClients = 0;
           connected = 0;
         }
@@ -465,11 +563,12 @@ public class D2GS extends ApplicationAdapter {
   public void dispose() {
     Gdx.app.log(TAG, "Shutting down...");
     kill = true;
-    server.dispose();
+    if (server != null) server.dispose();
     try {
-      connectionListener.join();
+      if (connectionListener != null) connectionListener.join();
     } catch (Throwable ignored) {}
-    Riiablo.assets.dispose();
+    if (Riiablo.assets != null) Riiablo.assets.dispose();
+    if (activeHeadlessInstance == this) activeHeadlessInstance = null;
   }
 
   @Override
@@ -667,7 +766,7 @@ public class D2GS extends ApplicationAdapter {
     assert success;
   }
 
-  private void Disconnect(int id) {
+  private synchronized void Disconnect(int id) {
     int entityId = player.get(id, Engine.INVALID_ENTITY);
     if (entityId != Engine.INVALID_ENTITY) {
       FlatBufferBuilder builder = new FlatBufferBuilder();
@@ -1642,7 +1741,7 @@ public class D2GS extends ApplicationAdapter {
     }
 
     public synchronized void send(Packet packet) throws IOException {
-      if (!socket.isConnected()) return;
+      if (kill || socket == null || !socket.isConnected()) return;
       WritableByteChannel out = Channels.newChannel(socket.getOutputStream());
       packet.buffer.mark();
       while (packet.buffer.hasRemaining()) out.write(packet.buffer);
@@ -1670,9 +1769,16 @@ public class D2GS extends ApplicationAdapter {
         }
       }
 
-      Gdx.app.log(TAG, "closing socket to " + socket.getRemoteAddress());
-      if (socket != null) socket.dispose();
+      closeSocket();
       Disconnect(id);
+    }
+
+    /** Serializes disposal against send() so the libGDX socket cannot vanish mid-write. */
+    private synchronized void closeSocket() {
+      if (socket == null) return;
+      Gdx.app.log(TAG, "closing socket to " + socket.getRemoteAddress());
+      socket.dispose();
+      socket = null;
     }
 
     private void receive(ByteBuffer frame) {

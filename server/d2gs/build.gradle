@@ -68,7 +68,8 @@ tasks.register('headlessFallenDual', JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
   workingDir = rootProject.file('assets').path
-  args '--generated-amazon', '--require-fallen-scenario', '--attempts', '40'
+  args '--generated-amazon', '--require-fallen-scenario', '--attempts', '40',
+       '--test-timeout', '180'
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
