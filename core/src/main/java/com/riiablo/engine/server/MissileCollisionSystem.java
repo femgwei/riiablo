@@ -15,6 +15,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -52,6 +53,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -63,6 +65,11 @@ public class MissileCollisionSystem extends IteratingSystem {
   
   private final Vector2 tmpVec = new Vector2();
   private final Vector2 lastPos = new Vector2();
+  private volatile int mercenaryCollisionCount;
+  private volatile int mercenaryDamageCount;
+  private volatile int mercenaryLastDamageTarget = Engine.INVALID_ENTITY;
+  private volatile float mercenaryLastDamageBefore;
+  private volatile float mercenaryLastDamageAfter;
   
   @Override
   protected void process(int entityId) {
@@ -209,6 +216,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (!isEnemy(missile.ownerId, targetId)) {
         return false;
       }
+      if (mMercenary.has(missile.ownerId)) mercenaryCollisionCount++;
 
       log.info("[MISSILE_HIT] phase=collision missileId={} missile={} owner={} target={} "
               + "distance={} radius={} position=({}, {}) traveled={} range={}",
@@ -314,12 +322,19 @@ public class MissileCollisionSystem extends IteratingSystem {
           DamageEvent event = DamageEvent.obtain(missile.ownerId, targetId, damage, hitSound);
           events.dispatch(event);
           float appliedDamage = Math.max(0f, event.damage);
+          boolean mercenaryDamage = appliedDamage > 0f && mMercenary.has(missile.ownerId);
+          if (mercenaryDamage) {
+            mercenaryDamageCount++;
+            mercenaryLastDamageTarget = targetId;
+            mercenaryLastDamageBefore = hitpoints.asFixed();
+          }
           hitpoints.sub(appliedDamage);
           float hpAfter = hitpoints.asFixed();
           if (hpAfter < 0) {
             hitpoints.set(0);
             hpAfter = 0;
           }
+          if (mercenaryDamage) mercenaryLastDamageAfter = hpAfter;
           applyCombatStates(missile.ownerId, targetId, combat);
           if (hpAfter <= 0) {
             log.debug("{} killed by missile from {}", targetId, missile.ownerId);
@@ -333,6 +348,26 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  public int mercenaryCollisionCount() {
+    return mercenaryCollisionCount;
+  }
+
+  public int mercenaryDamageCount() {
+    return mercenaryDamageCount;
+  }
+
+  public int mercenaryLastDamageTarget() {
+    return mercenaryLastDamageTarget;
+  }
+
+  public float mercenaryLastDamageBefore() {
+    return mercenaryLastDamageBefore;
+  }
+
+  public float mercenaryLastDamageAfter() {
+    return mercenaryLastDamageAfter;
   }
 
   /** Returns authoritative runtime modifiers for the owner or target. */
@@ -385,8 +420,12 @@ public class MissileCollisionSystem extends IteratingSystem {
    * 判断两个实体是否是敌人
    */
   private boolean isEnemy(int entityId1, int entityId2) {
-    boolean sourcePlayer = mPlayer.has(entityId1);
-    boolean targetPlayer = mPlayer.has(entityId2);
+    // Hirelings retain Monster presentation/components, but D2MOO assigns
+    // them their owner's good alignment. Treat them as player-aligned for
+    // combat relations so their missiles can hit hostile monsters without
+    // becoming hostile to players.
+    boolean sourcePlayer = mPlayer.has(entityId1) || mMercenary.has(entityId1);
+    boolean targetPlayer = mPlayer.has(entityId2) || mMercenary.has(entityId2);
     boolean sourceMonster = mMonster.has(entityId1);
     boolean targetMonster = mMonster.has(entityId2);
     if (!sourcePlayer && !sourceMonster) return false;

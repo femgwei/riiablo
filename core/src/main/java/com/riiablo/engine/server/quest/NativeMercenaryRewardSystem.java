@@ -55,7 +55,11 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   @Override
   protected void initialize() {
-    factory = world.getSystem(EntityFactory.class);
+    // The D2GS registers EntityFactory as an injected interface. Artemis
+    // system lookup is concrete-class based, so looking it up by this
+    // interface returns null and used to overwrite the valid injection.
+    EntityFactory systemFactory = world.getSystem(EntityFactory.class);
+    if (systemFactory != null) factory = systemFactory;
     mercenaries.setCallback(this);
     hirelingTable = com.riiablo.engine.server.NativeHirelingExperienceTable.load();
   }
@@ -107,10 +111,22 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     return false;
   }
 
+  /** Test/integration entry that exercises the native free Rogue reward path. */
+  public boolean grantFreeRogue(int playerId) {
+    return mPlayer.has(playerId) && mercenaries.grantFreeRogue(playerId, getPlayerLevel(playerId));
+  }
+
   @Override
   public int createMercenaryEntity(int playerId, MercenaryManager.MercenaryDefinition def,
       int level, int seed, int nameId) {
-    if (factory == null || !mPosition.has(playerId)) return Engine.INVALID_ENTITY;
+    if (factory == null) {
+      log.error("[A1Q2] Failed to create Rogue entity: entity factory unavailable");
+      return Engine.INVALID_ENTITY;
+    }
+    if (!mPosition.has(playerId)) {
+      log.error("[A1Q2] Failed to create Rogue entity: owner position missing player={}", playerId);
+      return Engine.INVALID_ENTITY;
+    }
     Vector2 owner = mPosition.get(playerId).position;
     int monsterId = monsterId(def.mercType);
     if (monsterId == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;

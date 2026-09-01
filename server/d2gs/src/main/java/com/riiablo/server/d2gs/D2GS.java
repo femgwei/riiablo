@@ -255,6 +255,63 @@ public class D2GS extends ApplicationAdapter {
     }
     return best;
   }
+
+  /** Test-only hook used by the windowless mercenary integration client. */
+  static boolean headlessGrantFreeRogue(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean granted =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    // Artemis worlds are single-threaded. The protocol driver runs on the
+    // JavaExec main thread, so entity creation must be marshalled onto the
+    // headless application's render thread just like an ordinary packet.
+    Gdx.app.postRunnable(() -> {
+      try {
+        NativeMercenaryRewardSystem rewards =
+            server.world.getSystem(NativeMercenaryRewardSystem.class);
+        granted.set(rewards != null && rewards.grantFreeRogue(playerId));
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && granted.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  static int[] headlessMercenaryCastState() {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null) {
+      return emptyHeadlessMercenaryState();
+    }
+    com.riiablo.engine.server.MercenarySkillSystem skills =
+        server.world.getSystem(com.riiablo.engine.server.MercenarySkillSystem.class);
+    com.riiablo.engine.server.ServerSkillSystem skillServer =
+        server.world.getSystem(com.riiablo.engine.server.ServerSkillSystem.class);
+    com.riiablo.engine.server.MissileCollisionSystem collisions =
+        server.world.getSystem(com.riiablo.engine.server.MissileCollisionSystem.class);
+    return skills == null ? emptyHeadlessMercenaryState()
+        : new int[] {skills.castCount(), skills.lastTarget(), skills.processCount(),
+            skills.blockStage(), skills.lastSkill(),
+            skillServer == null ? 0 : skillServer.mercenaryMissileCount(),
+            collisions == null ? 0 : collisions.mercenaryCollisionCount(),
+            collisions == null ? 0 : collisions.mercenaryDamageCount(),
+            skillServer == null ? 0 : skillServer.mercenarySkillDoCount(),
+            skillServer == null ? 0 : skillServer.mercenaryConfiguredMissiles(),
+            skillServer == null ? 0 : skillServer.mercenaryLastSrvDoFunc(),
+            collisions == null ? Engine.INVALID_ENTITY : collisions.mercenaryLastDamageTarget(),
+            Float.floatToIntBits(collisions == null ? 0f : collisions.mercenaryLastDamageBefore()),
+            Float.floatToIntBits(collisions == null ? 0f : collisions.mercenaryLastDamageAfter())};
+  }
+
+  private static int[] emptyHeadlessMercenaryState() {
+    return new int[] {0, Engine.INVALID_ENTITY, 0, 0, Engine.INVALID_ENTITY,
+        0, 0, 0, 0, 0, 0, Engine.INVALID_ENTITY, 0, 0};
+  }
   private static final String TAG = "D2GS";
 
   private static final boolean DEBUG                  = true;

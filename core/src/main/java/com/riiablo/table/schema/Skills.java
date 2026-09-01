@@ -72,12 +72,14 @@ public class Skills {
   public String calc2;
   public String calc3;
   public String calc4;
+  public String srvmissile;
   public String srvmissilea;
   public String srvmissileb;
   public String srvmissilec;
   public String srvmissiled;
   public int cltstfunc;
   public int cltdofunc;
+  public String cltmissile;
   public String cltmissilea;
   public String cltmissileb;
   public String cltmissilec;

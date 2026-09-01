@@ -81,12 +81,15 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  calc2;
     @Column public String  calc3;
     @Column public String  calc4;
+    /** Generic server missile spawned by D2GAME_SKILLS_Handler after SrvDoFunc. */
+    @Column public String  srvmissile;
     @Column public String  srvmissilea;
     @Column public String  srvmissileb;
     @Column public String  srvmissilec;
     @Column public String  srvmissiled;
     @Column public int     cltstfunc;
     @Column public int     cltdofunc;
+    @Column public String  cltmissile;
     @Column public String  cltmissilea;
     @Column public String  cltmissileb;
     @Column public String  cltmissilec;

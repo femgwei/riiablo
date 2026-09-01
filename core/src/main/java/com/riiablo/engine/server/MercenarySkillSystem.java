@@ -43,6 +43,11 @@ public final class MercenarySkillSystem extends IteratingSystem {
 
   private EntitySubscription targets;
   private NativeHirelingExperienceTable table;
+  private volatile int castCount;
+  private volatile int lastTarget = Engine.INVALID_ENTITY;
+  private volatile int lastSkill = Engine.INVALID_ENTITY;
+  private volatile int processCount;
+  private volatile int blockStage;
 
   public MercenarySkillSystem() {
     super(Aspect.all(Mercenary.class, Monster.class, Position.class));
@@ -57,6 +62,7 @@ public final class MercenarySkillSystem extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
+    processCount++;
     Float remaining = cooldown.get(entityId);
     if (remaining != null) {
       remaining -= world.getDelta();
@@ -66,24 +72,63 @@ public final class MercenarySkillSystem extends IteratingSystem {
       }
       cooldown.remove(entityId);
     }
-    if (mCasting.has(entityId) || mSequence.has(entityId) || actioneer == null
-        || table == null || table.size() == 0) return;
+    if (mCasting.has(entityId) || mSequence.has(entityId)) {
+      blockStage = 1;
+      return;
+    }
+    if (actioneer == null || table == null || table.size() == 0) {
+      blockStage = 2;
+      return;
+    }
 
     Mercenary merc = mMercenary.get(entityId);
     int target = nearestHostile(entityId, merc.ownerId);
-    if (target < 0) return;
+    if (target < 0) {
+      blockStage = 3;
+      return;
+    }
     NativeHirelingExperienceTable.Row row = table.row(merc.mercType, merc.level);
-    if (row == null) return;
+    if (row == null) {
+      blockStage = 4;
+      return;
+    }
     int slot = table.selectSkill(merc.mercType, merc.level,
         entityId * 1103515245 + decisionTick++);
     if (slot < 0 || slot >= row.skills.length || row.skills[slot] < 0
-        || row.skillModes[slot] >= 16 || row.skillLevels[slot] <= 0) return;
+        || row.skillModes[slot] >= 16 || row.skillLevels[slot] <= 0) {
+      blockStage = 5;
+      return;
+    }
     actioneer.castWithMode(entityId, row.skills[slot], (byte) row.skillModes[slot], target,
         mPosition.get(target).position.cpy());
+    castCount++;
+    lastTarget = target;
+    lastSkill = row.skills[slot];
+    blockStage = 6;
     cooldown.put(entityId, RETRY_SECONDS);
     log.info("[MERC_SKILL] phase=cast entity={} owner={} target={} slot={} skill={} level={} mode={}",
         entityId, merc.ownerId, target, slot + 1, row.skills[slot], row.skillLevels[slot],
         row.skillModes[slot]);
+  }
+
+  public int castCount() {
+    return castCount;
+  }
+
+  public int lastTarget() {
+    return lastTarget;
+  }
+
+  public int processCount() {
+    return processCount;
+  }
+
+  public int lastSkill() {
+    return lastSkill;
+  }
+
+  public int blockStage() {
+    return blockStage;
   }
 
   private int nearestHostile(int entityId, int ownerId) {

@@ -98,7 +98,7 @@ public final class D2GSHeadlessClient {
   private void run() throws Exception {
     waitForServer();
     byte[] d2s = config.generatedAmazon
-        ? createGeneratedAmazonSave()
+        ? createGeneratedAmazonSave(config.requireMercenarySkill ? 8 : 1)
         : Files.readAllBytes(config.save.toPath());
     CharacterHeader character = CharacterHeader.read(d2s);
     log("connect", "server=" + config.host + ':' + config.port
@@ -106,6 +106,10 @@ public final class D2GSHeadlessClient {
 
     if (config.requireFallenScenario) {
       runFallenDual(d2s, character);
+      return;
+    }
+    if (config.requireMercenarySkill) {
+      runMercenarySkill(d2s, character);
       return;
     }
 
@@ -243,6 +247,138 @@ public final class D2GSHeadlessClient {
           + " revision=" + result.revision() + " inventorySnapshot="
           + result.snapshotLength() + " nativeKills=" + lootKills);
     }
+  }
+
+  /** Two-client integration path for an actual native Rogue hireling cast. */
+  private void runMercenarySkill(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave();
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = openSocket(); Socket socketB = openSocket()) {
+      DataInputStream inA = input(socketA);
+      DataInputStream inB = input(socketB);
+      OutputStream outA = output(socketA);
+      OutputStream outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      Vector2 anchor = D2GS.headlessFallenShamanPosition(2);
+      if (anchor == null) throw new IOException("Blood Moor Fallen/Shaman test room unavailable");
+      send(outA, positionPacket(a.playerId, anchor.x, anchor.y));
+      send(outB, positionPacket(b.playerId, anchor.x, anchor.y));
+      // Let D2GS consume the real movement packet before the render-thread
+      // test hook creates the hireling beside its owner.
+      Thread.sleep(500L);
+      Snapshot[] pairA = a.awaitFallenShamanPair(inA, deadline());
+      Snapshot fallenA = pairA[0];
+      Snapshot fallenB = b.awaitEntity(inB, fallenA.entityId, deadline());
+      if (!D2GS.headlessGrantFreeRogue(a.playerId)) {
+        throw new IllegalStateException("native free Rogue hire failed for player " + a.playerId);
+      }
+      Snapshot mercA = a.awaitMercenary(inA, deadline());
+      Snapshot mercB = b.awaitEntity(inB, mercA.entityId, deadline());
+      send(outA, positionPacket(a.playerId, fallenA.x - 1f, fallenA.y));
+      send(outB, positionPacket(b.playerId, fallenB.x - 1f, fallenB.y));
+      log("mercenary_target", "owner=" + a.playerId + " peer=" + b.playerId
+          + " merc=" + mercA.entityId + " fallen=" + fallenA.entityId
+          + " initialModes=" + mercA.lastMode + ',' + mercB.lastMode);
+
+      long castDeadline = deadline();
+      long diagnosticDeadline = System.currentTimeMillis() + 5_000L;
+      int combatTargetId = Engine.INVALID_ENTITY;
+      float serverDamageBefore = Float.NaN;
+      float serverDamageAfter = Float.NaN;
+      long damageDeadline = Long.MAX_VALUE;
+      Snapshot targetA = null;
+      Snapshot targetB = null;
+      while (System.currentTimeMillis() < castDeadline) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet != null) a.consume(packet);
+        packet = readPacket(inB);
+        if (packet != null) b.consume(packet);
+        mercA = a.monsters.get(mercA.entityId);
+        mercB = b.monsters.get(mercB.entityId);
+        int[] state = D2GS.headlessMercenaryCastState();
+        // The arrow can hit an intervening hostile rather than the AI's
+        // selected target. Assert against the entity actually damaged by the
+        // authoritative missile collision, matching D2's first-hit behavior.
+        if (combatTargetId == Engine.INVALID_ENTITY && state[7] > 0
+            && state[11] != Engine.INVALID_ENTITY) {
+          int nextTargetId = state[11];
+          Snapshot nextTargetA = a.monsters.get(nextTargetId);
+          Snapshot nextTargetB = b.monsters.get(nextTargetId);
+          targetA = nextTargetA;
+          targetB = nextTargetB;
+          if (targetA != null && targetB != null && targetA.hasVitals && targetB.hasVitals) {
+            combatTargetId = nextTargetId;
+            serverDamageBefore = Float.intBitsToFloat(state[12]);
+            serverDamageAfter = Float.intBitsToFloat(state[13]);
+            damageDeadline = System.currentTimeMillis() + 10_000L;
+            log("mercenary_server_target", "entity=" + combatTargetId
+                + " serverLife=" + serverDamageBefore + "->" + serverDamageAfter
+                + " casts=" + state[0]);
+          }
+        } else if (combatTargetId != Engine.INVALID_ENTITY) {
+          targetA = a.monsters.get(combatTargetId);
+          targetB = b.monsters.get(combatTargetId);
+        }
+        boolean serverDamaged = Float.isFinite(serverDamageBefore)
+            && Float.isFinite(serverDamageAfter) && serverDamageAfter < serverDamageBefore;
+        boolean damagedA = targetA != null && targetA.hasVitals
+            && (targetA.dead || targetA.life <= serverDamageAfter + 0.001f);
+        boolean damagedB = targetB != null && targetB.hasVitals
+            && (targetB.dead || targetB.life <= serverDamageAfter + 0.001f);
+        if (mercA != null && mercA.sawActionMode && mercB != null && mercB.sawActionMode
+            && serverDamaged && damagedA && damagedB) {
+          log("mercenary_skill_pass", "merc=" + mercA.entityId + " mode="
+              + mercA.lastMode + " peerMode=" + mercB.lastMode + " target="
+              + combatTargetId + " serverLife=" + serverDamageBefore + "->"
+              + serverDamageAfter + " clientLife=" + targetA.life + ',' + targetB.life
+              + " clients=true,true");
+          return;
+        }
+        if (System.currentTimeMillis() >= diagnosticDeadline) {
+          if (state[0] == 0) break;
+          diagnosticDeadline = Long.MAX_VALUE;
+        }
+        if (System.currentTimeMillis() >= damageDeadline) break;
+      }
+      int[] serverCast = D2GS.headlessMercenaryCastState();
+      throw new IllegalStateException("native mercenary skill/damage did not synchronize to both clients: "
+          + "serverCasts=" + serverCast[0] + " lastTarget=" + serverCast[1]
+          + " processCount=" + serverCast[2] + " blockStage=" + serverCast[3]
+          + " lastSkill=" + serverCast[4]
+          + " missiles=" + serverCast[5] + " collisions=" + serverCast[6]
+          + " damageEvents=" + serverCast[7] + " skillDo=" + serverCast[8]
+          + " configuredMissiles=" + serverCast[9] + " srvDoFunc=" + serverCast[10]
+          + " damageTarget=" + serverCast[11] + " serverLife="
+          + Float.intBitsToFloat(serverCast[12]) + "->"
+          + Float.intBitsToFloat(serverCast[13])
+          + " actions=" + (mercA != null && mercA.sawActionMode) + ','
+          + (mercB != null && mercB.sawActionMode) + " clientLife="
+          + (targetA == null ? "missing" : targetA.life) + ','
+          + (targetB == null ? "missing" : targetB.life) + " distance="
+          + (targetA == null || mercA == null ? "unknown" : distance(targetA, mercA)));
+    }
+  }
+
+  private Snapshot awaitMercenary(DataInputStream input, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      for (Snapshot snapshot : monsters.values()) {
+        if (snapshot.deleted || snapshot.monsterClass < 0 || !snapshot.hasPosition) continue;
+        com.riiablo.codec.excel.MonStats.Entry row = Riiablo.files.monstats.get(snapshot.monsterClass);
+        if (row != null && snapshot.monsterClass == com.riiablo.engine.server.monster.MonsterType.HIRELING_ROGUE) {
+          return snapshot;
+        }
+      }
+    }
+    throw new IOException("timed out waiting for spawned Rogue hireling");
   }
 
   private Socket openSocket() throws IOException {
@@ -809,6 +945,15 @@ public final class D2GSHeadlessClient {
       snapshot.dead = vitals.dead();
       snapshot.hasVitals = true;
     }
+    int cofIndex = findComponent(sync, ComponentP.CofReferenceP);
+    if (cofIndex >= 0 && snapshot.monsterClass
+        == com.riiablo.engine.server.monster.MonsterType.HIRELING_ROGUE) {
+      CofReferenceP cof = (CofReferenceP) sync.component(new CofReferenceP(), cofIndex);
+      snapshot.lastMode = cof.mode();
+      snapshot.sawActionMode = cof.mode() != Engine.Monster.MODE_NU
+          && cof.mode() != Engine.Monster.MODE_WL
+          && cof.mode() != Engine.Monster.MODE_RN;
+    }
   }
 
   private static int findComponent(EntitySync sync, byte type) {
@@ -941,6 +1086,10 @@ public final class D2GSHeadlessClient {
 
   /** Creates a normal level-one Amazon whose native starting javelin owns Throw. */
   private static byte[] createGeneratedAmazonSave() {
+    return createGeneratedAmazonSave(1);
+  }
+
+  private static byte[] createGeneratedAmazonSave(int level) {
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "HeadlessAma", Riiablo.AMAZON);
     com.riiablo.codec.excel.CharStats.Entry stats = CharacterClass.AMAZON.entry();
@@ -960,7 +1109,7 @@ public final class D2GSHeadlessClient {
     base.put(Stat.maxmana, stats._int);
     base.put(Stat.stamina, stats.stamina);
     base.put(Stat.maxstamina, stats.stamina);
-    base.put(Stat.level, 1);
+    base.put(Stat.level, Math.max(1, level));
     base.put(Stat.experience, 0);
     base.put(Stat.gold, 0);
     base.put(Stat.goldbank, 0);
@@ -1026,6 +1175,8 @@ public final class D2GSHeadlessClient {
     boolean groundItem;
     boolean hasPosition;
     boolean hasVitals;
+    boolean sawActionMode;
+    int lastMode = -1;
 
     Snapshot(int entityId) {
       this.entityId = entityId;
@@ -1068,6 +1219,7 @@ public final class D2GSHeadlessClient {
     boolean requirePeer;
     boolean requireMonsterMovement;
     boolean requireFallenScenario;
+    boolean requireMercenarySkill;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -1089,6 +1241,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-peer".equals(arg)) config.requirePeer = true;
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
+        else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;

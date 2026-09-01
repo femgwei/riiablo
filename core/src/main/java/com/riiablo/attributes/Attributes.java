@@ -25,7 +25,11 @@ public final class Attributes implements Iterable<StatRef> {
     final Attributes attributes = obtain();
     attributes.reset(Type.LARGE);
     attributes.list = new StatList().reset(StatList.MAX_LISTS);
-    attributes.base = new StatList().reset(1).buildList();
+    // Player and hireling base stats can exceed the compact 32-entry default
+    // once native progression fields (experience/last experience) are added.
+    // Keep every backing list of LARGE attributes large; otherwise inserting
+    // the 33rd base stat corrupts the render thread during a hireling kill.
+    attributes.base = new StatList(StatList.MAX_SIZE).reset(1).buildList();
     attributes.agg = new StatList(StatList.MAX_SIZE).reset(1).buildList();
     attributes.rem = new StatList(StatList.MAX_SIZE).reset(1).buildList();
     return attributes;

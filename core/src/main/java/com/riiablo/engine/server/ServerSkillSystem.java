@@ -75,6 +75,10 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Missile> mMissile;
+  private volatile int mercenaryMissileCount;
+  private volatile int mercenarySkillDoCount;
+  private volatile int mercenaryConfiguredMissiles;
+  private volatile int mercenaryLastSrvDoFunc;
   protected ComponentMapper<UnitStates> mUnitStates;
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
@@ -142,6 +146,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
   @Subscribe
   public void onSkillDo(SkillDoEvent event) {
+    if (mMercenary.has(event.entityId)) mercenarySkillDoCount++;
     if (mPlayer.has(event.entityId)) {
       com.badlogic.gdx.Gdx.app.log("ServerSkillSystem", String.format(
           "[SKILL_DO] phase=receive entity=%d skill=%d target=%d srvDoFunc=%d cltDoFunc=%d",
@@ -197,14 +202,22 @@ public class ServerSkillSystem extends PassiveSystem {
 
     String throwableMissile = resolveThrowableMissile(event.entityId, event.skillId, skill);
     String normalAttackMissile = resolveNormalAttackMissile(event.entityId, event.skillId);
+    boolean hasGenericServerMissile = hasText(skill.srvmissile);
     boolean hasServerMissile = hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
         || hasText(skill.srvmissilec) || hasText(skill.srvmissiled);
+    // D2MOO's D2GAME_SKILLS_Handler always creates Skills.txt/SrvMissile
+    // after dispatching SrvDoFunc. SrvMissileA-D are parameters consumed by
+    // individual SrvDo functions and must not replace that generic missile.
     // Client missiles are presentation fallbacks, not additional
     // authoritative projectiles.  Mixing cltMissileB with srvMissileA made
     // skills such as FetishInferno spawn an extra damaging stream.
-    String[] missileNames = hasServerMissile
+    String[] missileNames = hasGenericServerMissile
+        ? new String[] {skill.srvmissile, null, null, null}
+        : hasServerMissile
         ? new String[] {skill.srvmissilea, skill.srvmissileb,
             skill.srvmissilec, skill.srvmissiled}
+        : hasText(skill.cltmissile)
+        ? new String[] {skill.cltmissile, null, null, null}
         : new String[] {skill.cltmissilea, skill.cltmissileb,
             skill.cltmissilec, skill.cltmissiled};
     if ((event.srvdofunc == 85 || skill.srvdofunc == 85) && mMonster.has(event.entityId)) {
@@ -213,6 +226,10 @@ public class ServerSkillSystem extends PassiveSystem {
     int configuredCount = 0;
     for (String name : missileNames) {
       if (name != null && !name.isEmpty()) configuredCount++;
+    }
+    if (mMercenary.has(event.entityId)) {
+      mercenaryConfiguredMissiles = configuredCount;
+      mercenaryLastSrvDoFunc = event.srvdofunc;
     }
     if (configuredCount == 0 && throwableMissile != null && !throwableMissile.isEmpty()) {
       missileNames[0] = throwableMissile;
@@ -560,6 +577,7 @@ public class ServerSkillSystem extends PassiveSystem {
       int ownerId, IntSet sharedHitTargets, int damageLevel) {
     if (factory == null) return -1;
     int missileId = factory.createMissile(missile, direction, start, ownerId);
+    if (missileId >= 0 && mMercenary.has(ownerId)) mercenaryMissileCount++;
     if (missileId >= 0 && mMissile.has(missileId)) {
       Missile projectile = mMissile.get(missileId);
       if (sharedHitTargets != null) projectile.shareHitTargets(sharedHitTargets);
@@ -571,6 +589,22 @@ public class ServerSkillSystem extends PassiveSystem {
           ownerMode, damageLevel, 0);
     }
     return missileId;
+  }
+
+  public int mercenaryMissileCount() {
+    return mercenaryMissileCount;
+  }
+
+  public int mercenarySkillDoCount() {
+    return mercenarySkillDoCount;
+  }
+
+  public int mercenaryConfiguredMissiles() {
+    return mercenaryConfiguredMissiles;
+  }
+
+  public int mercenaryLastSrvDoFunc() {
+    return mercenaryLastSrvDoFunc;
   }
 
   static Vector2 radialDirection(int index, int count, Vector2 out) {
