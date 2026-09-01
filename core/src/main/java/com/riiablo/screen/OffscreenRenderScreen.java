@@ -26,7 +26,8 @@ public final class OffscreenRenderScreen extends ScreenAdapter {
   private static final int WIDTH = 854;
   private static final int HEIGHT = 480;
   private static final String[] CASES = {
-      "death-overlay", "inventory-open", "character-panel-open", "npc-dialog", "party-panel"
+      "death-overlay", "inventory-open", "character-panel-open", "npc-dialog", "party-panel",
+      "dual-client-combat"
   };
 
   private final FileHandle output;
@@ -82,6 +83,7 @@ public final class OffscreenRenderScreen extends ScreenAdapter {
     else if ("character-panel-open".equals(scenario)) drawCharacterPanel();
     else if ("npc-dialog".equals(scenario)) drawNpcDialog();
     else if ("party-panel".equals(scenario)) drawPartyPanel();
+    else if ("dual-client-combat".equals(scenario)) drawDualClientCombat();
     shapes.end();
 
     drawText(scenario);
@@ -137,6 +139,40 @@ public final class OffscreenRenderScreen extends ScreenAdapter {
     for (int i = 0; i < 4; i++) shapes.rect(45, 330 - i * 58, 270, 42);
   }
 
+  /**
+   * Deterministic two-client combat/loot state used by the hidden visual
+   * regression client.  Both panes intentionally render the same authoritative
+   * monster state (revived Fallen plus Shaman); only client B shows the ground
+   * item in its inventory after a successful pickup.  The corresponding ECS
+   * integration test validates the actual combat, resurrection and inventory
+   * transaction path.
+   */
+  private void drawDualClientCombat() {
+    int paneWidth = 392;
+    int paneHeight = 300;
+    int paneY = 108;
+    for (int pane = 0; pane < 2; pane++) {
+      int paneX = 24 + pane * 408;
+      shapes.setColor(0.09f, 0.08f, 0.06f, 1f);
+      shapes.rect(paneX, paneY, paneWidth, paneHeight);
+      shapes.setColor(0.20f, 0.16f, 0.10f, 1f);
+      shapes.rect(paneX + 18, paneY + paneHeight - 48, paneWidth - 36, 2);
+      // Revived Fallen and its Shaman are visible in both authoritative views.
+      shapes.setColor(0.46f, 0.34f, 0.18f, 1f);
+      shapes.circle(paneX + 125, paneY + 150, 18);
+      shapes.setColor(0.35f, 0.18f, 0.42f, 1f);
+      shapes.circle(paneX + 250, paneY + 178, 21);
+      // Client B has picked up the single normal equipment drop.
+      if (pane == 1) {
+        shapes.setColor(0.20f, 0.48f, 0.22f, 1f);
+        shapes.rect(paneX + 28, paneY + 30, 34, 34);
+      } else {
+        shapes.setColor(0.58f, 0.43f, 0.16f, 1f);
+        shapes.rect(paneX + 174, paneY + 55, 24, 24);
+      }
+    }
+  }
+
   private void drawText(String scenario) {
     PaletteIndexedBatch batch = Riiablo.batch;
     BitmapFont font = Riiablo.fonts != null && Riiablo.fonts.fontformal12 != null
@@ -158,6 +194,11 @@ public final class OffscreenRenderScreen extends ScreenAdapter {
     } else if ("npc-dialog".equals(scenario)) {
       center(font, batch, "AKARA", 350);
       center(font, batch, "No task available", 245);
+    } else if ("dual-client-combat".equals(scenario)) {
+      center(font, batch, "FALLEN RESURRECTION + LOOT", 457);
+      font.draw(batch, "CLIENT A  Fallen revived   drop before pickup", 42, 385);
+      font.draw(batch, "CLIENT B  Fallen revived   item after pickup", 450, 385);
+      font.draw(batch, "A/B snapshots consistent   ground removed after pickup", 184, 82);
     } else {
       font.draw(batch, "PARTY", 55, 380);
       font.draw(batch, "Invite   Accept   Leave   Hostile", 55, 105);
