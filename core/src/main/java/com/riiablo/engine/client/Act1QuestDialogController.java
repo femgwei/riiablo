@@ -30,6 +30,8 @@ public class Act1QuestDialogController extends PassiveSystem {
   protected ComponentMapper<Monster> mMonster;
   protected DialogManager dialogManager;
   protected EventSystem events;
+  @com.artemis.annotations.Wire(failOnNull = false)
+  protected ClientNetworkSynchronizer network;
 
   @Subscribe
   public void onNpcInteraction(NpcInteractionEvent event) {
@@ -106,6 +108,10 @@ public class Act1QuestDialogController extends PassiveSystem {
         playerId, npc.monstats.Id, messageIndex, speech);
     dialogManager.setDialog(new NpcDialogBox(speech, dialog -> {
       dialogManager.setDialog(null);
+      if (network != null && network.requestQuest(
+          com.riiablo.net.packet.d2gs.QuestOperation.NPC_MESSAGE,
+          npcId, selectedMessage) != 0) return;
+      // Offline/single-player worlds retain the local event path.
       events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, selectedMessage));
     }));
     return true;

@@ -60,6 +60,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   protected CofManager cofs;
 
   @Wire(failOnNull = false)
+  protected com.riiablo.engine.client.ClientNetworkSynchronizer clientNetwork;
+
+  @Wire(failOnNull = false)
   protected WarpInteractor warpInteractor;
 
   private EntitySubscription warps;
@@ -90,6 +93,13 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           + " player=" + src);
       return;
     }
+    NativeQuestObjectResolver.Type networkQuest = NativeQuestObjectResolver.resolve(object.base);
+    if (clientNetwork != null && isNetworkQuestObject(networkQuest)
+        && clientNetwork.requestQuest(
+            com.riiablo.net.packet.d2gs.QuestOperation.OBJECT_INTERACTION,
+            entityId, -1) != 0) {
+      return;
+    }
     if (object.base.Id == 60 && interactQuestPortal(src, entityId)) return;
     if (object.base.OperateFn == 23) {
       CofReference cof = mCofReference.get(entityId);
@@ -112,6 +122,14 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     event.dispatch(ObjectInteractionEvent.obtain(src, entityId, object.base.Id,
         object.base.OperateFn, kind, lifecycle, stateChanged));
     dispatchContainerTrap(src, entityId, object.base, lifecycle, stateChanged, state);
+  }
+
+  private static boolean isNetworkQuestObject(NativeQuestObjectResolver.Type type) {
+    return type == NativeQuestObjectResolver.Type.TOWER_TOME
+        || type == NativeQuestObjectResolver.Type.CAIRN_STONE
+        || type == NativeQuestObjectResolver.Type.CAIN_GIBBET
+        || type == NativeQuestObjectResolver.Type.INIFUSS_TREE
+        || type == NativeQuestObjectResolver.Type.HORADRIC_MALUS;
   }
 
   private boolean interactQuestPortal(int playerId, int visualEntityId) {

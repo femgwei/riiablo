@@ -13,6 +13,8 @@ import com.riiablo.net.packet.d2gs.PlayerP;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.SelectSkillRequest;
+import com.riiablo.net.packet.d2gs.QuestOperation;
+import com.riiablo.net.packet.d2gs.QuestResult;
 import com.riiablo.save.CharData;
 import java.nio.ByteBuffer;
 import org.junit.jupiter.api.Test;
@@ -85,5 +87,32 @@ class NetworkProgressionSerializationTest extends RiiabloTest {
     assertEquals(1, request.button());
     assertEquals(com.riiablo.engine.server.skill.SkillId.MIGHT, request.skillId());
     System.out.println("[AURA_SYNC] request=270544960 button=RIGHT aura=MIGHT status=PASS");
+  }
+
+  @Test
+  void questResultRoundTripsAuthoritativeSnapshot() {
+    FlatBufferBuilder builder = new FlatBufferBuilder(256);
+    short[] records = new short[Riiablo.NUM_ACTS * 8];
+    records[1] = (short) 0x8001;
+    int reason = builder.createString("OK");
+    int recordsOffset = QuestResult.createQuestRecordsVector(builder, records);
+    int resultOffset = QuestResult.createQuestResult(builder,
+        0x1020304050607080L, true, reason, QuestOperation.NPC_MESSAGE,
+        77, 2, 0x1122334455667788L, recordsOffset);
+    int root = D2GS.createD2GS(builder, D2GSData.QuestResult, resultOffset);
+    D2GS.finishD2GSBuffer(builder, root);
+
+    D2GS packet = D2GS.getRootAsD2GS(builder.dataBuffer());
+    QuestResult result = (QuestResult) packet.data(new QuestResult());
+    assertEquals(D2GSData.QuestResult, packet.dataType());
+    assertEquals(0x1020304050607080L, result.requestId());
+    assertTrue(result.success());
+    assertEquals("OK", result.reason());
+    assertEquals(QuestOperation.NPC_MESSAGE, result.operation());
+    assertEquals(77, result.targetEntityId());
+    assertEquals(2, result.messageIndex());
+    assertEquals(0x1122334455667788L, result.questRevision());
+    assertEquals(records.length, result.questRecordsLength());
+    assertEquals(0x8001, result.questRecords(1));
   }
 }

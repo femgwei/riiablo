@@ -36,8 +36,10 @@ public final class D2GSData {
   public static final byte PartyResult = 29;
   public static final byte PlayerLifecycleRequest = 30;
   public static final byte PlayerLifecycleResult = 31;
+  public static final byte QuestRequest = 32;
+  public static final byte QuestResult = 33;
 
-  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", "SpendSkillPointRequest", "SpendSkillPointResult", "NpcServiceRequest", "NpcServiceResult", "ItemMoveRequest", "ItemMoveResult", "SelectSkillRequest", "PartyRequest", "PartyResult", "PlayerLifecycleRequest", "PlayerLifecycleResult", };
+  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", "SpendSkillPointRequest", "SpendSkillPointResult", "NpcServiceRequest", "NpcServiceResult", "ItemMoveRequest", "ItemMoveResult", "SelectSkillRequest", "PartyRequest", "PartyResult", "PlayerLifecycleRequest", "PlayerLifecycleResult", "QuestRequest", "QuestResult", };
 
   public static String name(int e) { return names[e]; }
 }

@@ -34,6 +34,13 @@ class ExperienceManagerNativeTest {
     assertEquals(1000, ExperienceManager.computeNativePartyShare(1000, 10, 1, 10));
   }
 
+  @Test
+  void mirrorsNativeHirelingKillerAndOwnerShares() {
+    assertEquals(1000, ExperienceManager.computeNativeHirelingAward(1000, true));
+    assertEquals(335, ExperienceManager.computeNativeHirelingAward(1000, false));
+    assertEquals(0, ExperienceManager.computeNativeHirelingAward(0, false));
+  }
+
   private static long gain(int attackerLevel, int defenderLevel,
       int defenderExperience, int ratio, int itemBonus) {
     return ExperienceManager.computeNativeExperienceGain(

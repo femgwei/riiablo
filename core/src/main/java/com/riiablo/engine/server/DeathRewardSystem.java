@@ -24,7 +24,6 @@ import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PartyMember;
-import com.riiablo.engine.server.quest.QuestKillCreditResolver;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -64,12 +63,13 @@ public class DeathRewardSystem extends PassiveSystem {
   private final LootManager lootManager = new LootManager();
   private final IntSet rewardedVictims = new IntSet();
   private EntitySubscription players;
-  private QuestKillCreditResolver killCredits;
+  private KillCreditResolver killCredits;
 
   @Override
   protected void initialize() {
     players = world.getAspectSubscriptionManager().get(Aspect.all(Player.class));
-    killCredits = new QuestKillCreditResolver(mPlayer, mMercenary, mMapWrapper, partyManager);
+    killCredits = new KillCreditResolver(
+        mPlayer, mMercenary, mMapWrapper, mPosition, partyManager);
   }
 
   @Subscribe

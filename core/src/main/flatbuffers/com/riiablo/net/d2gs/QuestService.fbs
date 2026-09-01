@@ -1,0 +1,25 @@
+namespace com.riiablo.net.packet.d2gs;
+
+enum QuestOperation:uint8 {
+  SNAPSHOT,
+  NPC_MESSAGE,
+  OBJECT_INTERACTION,
+}
+
+table QuestRequest {
+  requestId:ulong;
+  operation:QuestOperation;
+  targetEntityId:int32 = -1;
+  messageIndex:int32 = -1;
+}
+
+table QuestResult {
+  requestId:ulong;
+  success:bool;
+  reason:string;
+  operation:QuestOperation;
+  targetEntityId:int32 = -1;
+  messageIndex:int32 = -1;
+  questRevision:ulong;
+  questRecords:[uint16];
+}

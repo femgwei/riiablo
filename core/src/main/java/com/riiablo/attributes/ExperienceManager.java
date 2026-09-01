@@ -3,7 +3,9 @@ package com.riiablo.attributes;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
-import com.badlogic.gdx.utils.Array;
+import com.artemis.Aspect;
+import com.artemis.EntitySubscription;
+import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.CharacterClass;
@@ -11,13 +13,16 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.KillCreditResolver;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
-import com.riiablo.engine.server.party.PartyMember;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.save.CharData;
@@ -49,8 +54,14 @@ public class ExperienceManager extends PassiveSystem {
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   private PartyManager partyManager;
   private com.artemis.ComponentMapper<Player> mPlayer;
+  private com.artemis.ComponentMapper<Mercenary> mMercenary;
+  private com.artemis.ComponentMapper<Corpse> mCorpse;
   private com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;
   private com.artemis.ComponentMapper<MapWrapper> mMapWrapper;
+  private com.artemis.ComponentMapper<Position> mPosition;
+  private EntitySubscription players;
+  private EntitySubscription mercenaries;
+  private KillCreditResolver killCredits;
   /** A victim can be observed by more than one lethal combat path in a frame. */
   private final IntSet rewardedVictims = new IntSet();
 
@@ -84,11 +95,16 @@ public class ExperienceManager extends PassiveSystem {
   private static final int PARTY_EXP_BONUS_NUMERATOR = 89;
   private static final int PARTY_EXP_BONUS_DENOMINATOR = 256;
 
-  /** 经验共享距离（子格）*/
-  private static final int EXP_SHARE_RANGE = 2 * 10; // 约两个屏幕距离
-
   public ExperienceManager() {
     expTable = ExperienceTable.getInstance();
+  }
+
+  @Override
+  protected void initialize() {
+    players = world.getAspectSubscriptionManager().get(Aspect.all(Player.class));
+    mercenaries = world.getAspectSubscriptionManager().get(Aspect.all(Mercenary.class));
+    killCredits = new KillCreditResolver(
+        mPlayer, mMercenary, mMapWrapper, mPosition, partyManager);
   }
 
   /**
@@ -117,10 +133,12 @@ public class ExperienceManager extends PassiveSystem {
       return; // 不是怪物，或无统计数据
     }
 
-    // 检查击杀者是否为玩家
-    Player player = world.getMapper(Player.class).get(event.killer);
+    // D2Game resolves player, hireling and owned minion kills to the owning
+    // player before distributing either player or hireling experience.
+    int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
+    Player player = ownerId < 0 ? null : mPlayer.get(ownerId);
     if (player == null || player.data == null) {
-      return; // 不是玩家角色
+      return; // unowned hostile or unsupported summon
     }
 
     // SUNITDMG_DistributeExperience reads the stats initialized on the unit,
@@ -139,8 +157,10 @@ public class ExperienceManager extends PassiveSystem {
     int defenderExp = getInt(defenderStats, Stat.experience, 0);
     if (defenderExp <= 0) return;
 
+    awardHirelingExperience(ownerId, event.killer, defenderLevel, defenderExp);
+
     // 分配经验值（参考 D2MOD SUNITDMG_DistributeExperience）
-    distributeExperience(player.data, event.killer, defenderLevel, defenderExp);
+    distributeExperience(player.data, ownerId, event.victim, defenderLevel, defenderExp);
   }
 
   /**
@@ -153,20 +173,16 @@ public class ExperienceManager extends PassiveSystem {
    * @param defenderLevel 被杀怪物等级
    * @param defenderExp 被杀怪物基础经验值
    */
-  private void distributeExperience(CharData killerData, int killerEntityId,
-      int defenderLevel, int defenderExp) {
+  private void distributeExperience(CharData killerData, int ownerEntityId,
+      int victimEntityId, int defenderLevel, int defenderExp) {
     
     StatListRef killerStats = killerData.getStats().base();
     int killerLevel = getInt(killerStats, Stat.level, killerData.level);
     int killerAddExperience = getInt(
         killerData.getStats().aggregate(), Stat.item_addexperience, 0);
 
-    // TODO: 处理佣兵经验值
-    // 如果有佣兵，计算佣兵应得经验（33.6%，如果击杀者不是佣兵）
-    // addExperienceForHireling(...)
-
     // 检查是否在队伍中
-    short partyId = partyManager != null ? partyManager.getPartyId(killerEntityId) : -1;
+    short partyId = partyManager != null ? partyManager.getPartyId(ownerEntityId) : -1;
     
     if (partyId < 0 || partyManager == null) {
       // 不在队伍中，直接给击杀者经验
@@ -182,8 +198,8 @@ public class ExperienceManager extends PassiveSystem {
     // 在队伍中，按 D2MOO PARTY_IteratePartyMembersInSameLevel 收集真实 ECS
     // 玩家。PartyMember 是网络/UI 快照，不能作为等级、场景或存活状态的权威来源。
     Party party = partyManager.getParty(partyId);
-    if (party == null || party.getMemberCount() <= 1) {
-      // 队伍无效或只有自己
+    if (party == null) {
+      // Stale party id: fall back to the owning player.
       long experienceGained = computeExperienceGain(
           killerData.charClass, killerLevel, defenderLevel, defenderExp,
           killerAddExperience);
@@ -193,28 +209,32 @@ public class ExperienceManager extends PassiveSystem {
       return;
     }
 
-    Array<PartyMember> membersInRange = party.getMembers();
-    Array<PartyMember> eligible = new Array<>();
-    int memberCount = 0;
+    int victimLevelId = levelId(victimEntityId);
+    IntArray eligible = killCredits == null ? new IntArray()
+        : killCredits.eligibleExperiencePlayers(
+            ownerEntityId, victimEntityId, victimLevelId, players);
+    int memberCount = eligible.size;
     int levelSum = 0;
-
-    int killerLevelId = levelId(killerEntityId);
-    for (PartyMember member : membersInRange) {
-      if (isEligibleMember(member, killerLevelId)) {
-        member.level = memberLevel(member.entityId, member.level);
-        eligible.add(member);
-        memberCount++;
-        levelSum += member.level;
-      }
+    for (int i = 0; i < eligible.size; i++) {
+      levelSum += memberLevel(eligible.get(i), 1);
     }
 
-    if (memberCount <= 1 || levelSum <= 0) {
-      // 只有击杀者，直接给经验
+    if (memberCount <= 0 || levelSum <= 0) {
+      // Native party iteration can reject every member when nobody is alive,
+      // in the victim's level and within 80 subtiles.
+      return;
+    }
+
+    if (memberCount == 1) {
+      int targetId = eligible.first();
+      Player target = mPlayer.get(targetId);
+      if (target == null || target.data == null) return;
+      int targetLevel = memberLevel(targetId, 1);
+      int targetBonus = itemExperienceBonus(targetId);
       long experienceGained = computeExperienceGain(
-          killerData.charClass, killerLevel, defenderLevel, defenderExp,
-          killerAddExperience);
+          target.data.charClass, targetLevel, defenderLevel, defenderExp, targetBonus);
       if (experienceGained > 0) {
-        addExperienceForPlayer(killerData, killerLevel, experienceGained);
+        addExperienceForPlayer(target.data, targetLevel, experienceGained);
       }
       return;
     }
@@ -229,17 +249,12 @@ public class ExperienceManager extends PassiveSystem {
         memberCount, defenderExp, totalExp);
 
     // 按等级比例分配经验
-    for (PartyMember member : eligible) {
-      Player target = mPlayer == null ? null : mPlayer.get(member.entityId);
+    for (int i = 0; i < eligible.size; i++) {
+      int targetId = eligible.get(i);
+      Player target = mPlayer == null ? null : mPlayer.get(targetId);
       if (target == null || target.data == null) continue;
-      int targetLevel = memberLevel(member.entityId, member.level);
-      int targetBonus = 0;
-      if (mAttributesWrapper != null && mAttributesWrapper.has(member.entityId)) {
-        Attributes attrs = mAttributesWrapper.get(member.entityId).attrs;
-        if (attrs != null) {
-          targetBonus = getInt(attrs.aggregate(), Stat.item_addexperience, 0);
-        }
-      }
+      int targetLevel = memberLevel(targetId, 1);
+      int targetBonus = itemExperienceBonus(targetId);
       long memberShare = computeNativePartyShare(defenderExp, targetLevel,
           memberCount, levelSum);
       int share = (int) Math.min(Integer.MAX_VALUE, memberShare);
@@ -250,11 +265,10 @@ public class ExperienceManager extends PassiveSystem {
     }
   }
 
-  private boolean isEligibleMember(PartyMember member, int killerLevelId) {
-    if (member == null || !member.online || !member.alive || mPlayer == null
-        || !mPlayer.has(member.entityId) || mPlayer.get(member.entityId).data == null) return false;
-    int memberLevelId = levelId(member.entityId);
-    return killerLevelId < 0 || memberLevelId < 0 || memberLevelId == killerLevelId;
+  private int itemExperienceBonus(int entityId) {
+    if (mAttributesWrapper == null || !mAttributesWrapper.has(entityId)) return 0;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    return attrs == null ? 0 : getInt(attrs.aggregate(), Stat.item_addexperience, 0);
   }
 
   private int memberLevel(int entityId, int fallback) {
@@ -380,23 +394,82 @@ public class ExperienceManager extends PassiveSystem {
    */
   public void addExperienceForHireling(CharData playerData, int hirelingLevel,
       int defenderLevel, int defenderExp, boolean isKiller) {
-    
+    if (playerData == null || !playerData.hasMerc()) return;
+    int playerLevel = Math.max(1,
+        getInt(playerData.getStats().aggregate(), Stat.level, playerData.level & 0xFF));
+    // SUNITDMG_AddExperienceForHireling refuses to level a hireling to or
+    // beyond its owner.
+    if (hirelingLevel >= playerLevel) return;
+
     // 计算佣兵应得经验
     long baseExp = computeExperienceGain(
         (byte) 0, hirelingLevel, defenderLevel, defenderExp, 0);
+    baseExp = computeNativeHirelingAward(baseExp, isKiller);
     
-    // 如果击杀者不是佣兵，只获得33.6%经验
-    if (!isKiller) {
-      baseExp = baseExp * HIRELING_EXP_NUMERATOR / HIRELING_EXP_DENOMINATOR;
+    if (baseExp <= 0) return;
+
+    CharData.MercData mercData = playerData.getMerc();
+    long oldExperience = Math.max(0L, mercData.xp);
+    long newExperience = Math.min(0xFFFFFFFFL, oldExperience + baseExp);
+    mercData.xp = newExperience;
+    int encodedExperience = (int) Math.min(Integer.MAX_VALUE, newExperience);
+    int encodedGain = (int) Math.min(Integer.MAX_VALUE, newExperience - oldExperience);
+    mercData.getStats().base().put(Stat.experience, encodedExperience);
+    mercData.getStats().base().put(Stat.lastexp, encodedGain);
+    mercData.getStats().aggregate().put(Stat.experience, encodedExperience);
+    mercData.getStats().aggregate().put(Stat.lastexp, encodedGain);
+    log.info("[XP_MERC] owner={} level={} killer={} gained={} total={}",
+        playerData.name, hirelingLevel, isKiller, encodedGain, newExperience);
+  }
+
+  static long computeNativeHirelingAward(long experienceGain, boolean isKiller) {
+    if (experienceGain <= 0) return 0;
+    return isKiller ? experienceGain
+        : experienceGain * HIRELING_EXP_NUMERATOR / HIRELING_EXP_DENOMINATOR;
+  }
+
+  private void awardHirelingExperience(int ownerId, int killerId,
+      int defenderLevel, int defenderExp) {
+    int hirelingId = findLivingHireling(ownerId);
+    if (hirelingId < 0 || !mPlayer.has(ownerId) || mPlayer.get(ownerId).data == null) return;
+    Mercenary hireling = mMercenary.get(hirelingId);
+    int hirelingLevel = Math.max(1, hireling.level);
+    if (mAttributesWrapper.has(hirelingId)) {
+      Attributes attrs = mAttributesWrapper.get(hirelingId).attrs;
+      if (attrs != null) {
+        hirelingLevel = Math.max(1,
+            getInt(attrs.aggregate(), Stat.level, hirelingLevel));
+      }
     }
-    
-    if (baseExp <= 0) {
-      return;
+
+    CharData owner = mPlayer.get(ownerId).data;
+    long oldExperience = owner.getMerc().xp;
+    addExperienceForHireling(owner, hirelingLevel, defenderLevel, defenderExp,
+        killerId == hirelingId);
+    long newExperience = owner.getMerc().xp;
+    if (newExperience == oldExperience || !mAttributesWrapper.has(hirelingId)) return;
+
+    Attributes attrs = mAttributesWrapper.get(hirelingId).attrs;
+    if (attrs == null) return;
+    int encodedExperience = (int) Math.min(Integer.MAX_VALUE, newExperience);
+    int encodedGain = (int) Math.min(Integer.MAX_VALUE, newExperience - oldExperience);
+    attrs.base().put(Stat.experience, encodedExperience);
+    attrs.base().put(Stat.lastexp, encodedGain);
+    attrs.aggregate().put(Stat.experience, encodedExperience);
+    attrs.aggregate().put(Stat.lastexp, encodedGain);
+  }
+
+  private int findLivingHireling(int ownerId) {
+    if (mercenaries == null || mMercenary == null) return -1;
+    com.artemis.utils.IntBag ids = mercenaries.getEntities();
+    int[] data = ids.getData();
+    for (int i = 0; i < ids.size(); i++) {
+      int id = data[i];
+      Mercenary mercenary = mMercenary.get(id);
+      if (mercenary != null && mercenary.ownerId == ownerId
+          && (mCorpse == null || !mCorpse.has(id))) return id;
     }
-    
-    // TODO: 更新佣兵经验值
-    // 需要访问 MercData 并更新其经验和等级
-    log.debug("Hireling gained {} experience", baseExp);
+    return -1;
   }
 
   /**

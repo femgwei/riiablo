@@ -95,6 +95,8 @@ import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
+import com.riiablo.engine.server.quest.QuestRequestCache;
+import com.riiablo.engine.server.quest.QuestSnapshot;
 import com.riiablo.engine.server.npc.NpcVendorSessionManager;
 import com.riiablo.engine.server.npc.NpcServiceRequestCache;
 import com.riiablo.engine.server.npc.NpcRepairService;
@@ -154,6 +156,9 @@ import com.riiablo.net.packet.d2gs.PartyMemberSnapshot;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
+import com.riiablo.net.packet.d2gs.QuestOperation;
+import com.riiablo.net.packet.d2gs.QuestRequest;
+import com.riiablo.net.packet.d2gs.QuestResult;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.save.CharData;
 import com.riiablo.util.DebugUtils;
@@ -352,6 +357,7 @@ public class D2GS extends ApplicationAdapter {
   final ItemMoveRequestCache itemMoveRequestCache = new ItemMoveRequestCache();
   final SkillPointRequestCache skillPointRequestCache = new SkillPointRequestCache();
   final PartyRequestCache partyRequestCache = new PartyRequestCache();
+  final QuestRequestCache questRequestCache = new QuestRequestCache();
 
   protected ComponentMapper<Networked> mNetworked;
 
@@ -672,6 +678,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.PlayerLifecycleRequest:
         PlayerLifecycleRequest(packet);
         break;
+      case D2GSData.QuestRequest:
+        QuestRequest(packet);
+        break;
       case D2GSData.Ping:
         Ping(packet);
         break;
@@ -780,6 +789,7 @@ public class D2GS extends ApplicationAdapter {
       itemMoveRequestCache.clearConnection(id);
       skillPointRequestCache.clearConnection(id);
       partyRequestCache.clear(id);
+      questRequestCache.clear(id);
       authoritativeItems.reset(entityId);
       partyManager.removePlayer(entityId);
 
@@ -1298,6 +1308,128 @@ public class D2GS extends ApplicationAdapter {
     Gdx.app.log(TAG, "[NPC_SERVICE] player=" + playerId + " npc=" + npcId
         + " service=" + service + " operation=" + operation + " result="
         + (success ? "OK" : reason));
+  }
+
+  /** Handles idempotent server-authoritative quest dialogue and object intents. */
+  private void QuestRequest(Packet packet) {
+    QuestRequest request = (QuestRequest) packet.data.data(new QuestRequest());
+    QuestRequestCache.Intent intent = new QuestRequestCache.Intent(
+        (byte) request.operation(), request.targetEntityId(), request.messageIndex());
+    QuestRequestCache.Entry completed = questRequestCache.lookup(packet.id, request.requestId());
+    if (completed != null) {
+      if (completed.matches(intent)) {
+        outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(completed.response())));
+        Gdx.app.log(TAG, "[QUEST_NET] phase=replay client=" + packet.id
+            + " request=" + request.requestId());
+      } else {
+        sendQuestResult(packet.id, request.requestId(), false, "REQUEST_ID_REUSED",
+            intent, false);
+      }
+      return;
+    }
+
+    int playerId = player.get(packet.id, Engine.INVALID_ENTITY);
+    String reason = null;
+    if (playerId == Engine.INVALID_ENTITY) reason = "PLAYER_NOT_FOUND";
+    else if (isPlayerDead(playerId)) reason = "PLAYER_DEAD";
+    else if (request.operation() == QuestOperation.SNAPSHOT) {
+      // A result snapshot is useful after reconnect or client-side correction.
+    } else if (request.operation() == QuestOperation.NPC_MESSAGE) {
+      reason = validateQuestNpc(playerId, request.targetEntityId(), request.messageIndex());
+      if (reason == null) {
+        world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.NpcQuestMessageEvent.obtain(
+                playerId, request.targetEntityId(), request.messageIndex()));
+      }
+    } else if (request.operation() == QuestOperation.OBJECT_INTERACTION) {
+      reason = validateQuestObject(playerId, request.targetEntityId());
+      if (reason == null) {
+        world.getSystem(ObjectInteractor.class).interact(playerId, request.targetEntityId());
+      }
+    } else {
+      reason = "UNSUPPORTED_OPERATION";
+    }
+
+    boolean success = reason == null;
+    sendQuestResult(packet.id, request.requestId(), success, reason, intent, true);
+    Gdx.app.log(TAG, "[QUEST_NET] player=" + playerId + " request="
+        + request.requestId() + " operation=" + request.operation()
+        + " target=" + request.targetEntityId() + " message=" + request.messageIndex()
+        + " result=" + (success ? "OK" : reason));
+  }
+
+  private String validateQuestNpc(int playerId, int npcId, int messageIndex) {
+    if (messageIndex < 0 || messageIndex > 255) return "INVALID_MESSAGE";
+    com.riiablo.engine.server.component.Monster npc =
+        world.getMapper(com.riiablo.engine.server.component.Monster.class).get(npcId);
+    if (npc == null || npc.monstats == null || !npc.monstats.npc || !npc.monstats.interact) {
+      return "NPC_NOT_FOUND";
+    }
+    if (levelIdOf(playerId) < 0 || levelIdOf(playerId) != levelIdOf(npcId)) {
+      return "NPC_WRONG_LEVEL";
+    }
+    com.riiablo.engine.server.component.Position source =
+        world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerId);
+    com.riiablo.engine.server.component.Position target =
+        world.getMapper(com.riiablo.engine.server.component.Position.class).get(npcId);
+    if (source == null || target == null
+        || !com.riiablo.engine.server.npc.NpcServiceProtocol.inRange(
+            source.position, target.position)) return "NPC_OUT_OF_RANGE";
+    return null;
+  }
+
+  private String validateQuestObject(int playerId, int objectId) {
+    com.riiablo.engine.server.component.Object object =
+        world.getMapper(com.riiablo.engine.server.component.Object.class).get(objectId);
+    if (object == null || object.base == null
+        || !isNetworkQuestObject(
+            com.riiablo.engine.server.object.NativeQuestObjectResolver.resolve(object.base))) {
+      return "QUEST_OBJECT_NOT_FOUND";
+    }
+    if (levelIdOf(playerId) < 0 || levelIdOf(playerId) != levelIdOf(objectId)) {
+      return "QUEST_OBJECT_WRONG_LEVEL";
+    }
+    com.riiablo.engine.server.component.Interactable interactable =
+        world.getMapper(com.riiablo.engine.server.component.Interactable.class).get(objectId);
+    com.riiablo.engine.server.component.Position source =
+        world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerId);
+    com.riiablo.engine.server.component.Position target =
+        world.getMapper(com.riiablo.engine.server.component.Position.class).get(objectId);
+    if (interactable == null || source == null || target == null) return "QUEST_OBJECT_INACTIVE";
+    float range = Math.max(1f, interactable.range) + 2f;
+    return source.position.dst2(target.position) <= range * range
+        ? null : "QUEST_OBJECT_OUT_OF_RANGE";
+  }
+
+  private static boolean isNetworkQuestObject(
+      com.riiablo.engine.server.object.NativeQuestObjectResolver.Type type) {
+    return type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.TOWER_TOME
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.CAIRN_STONE
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.CAIN_GIBBET
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.INIFUSS_TREE
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_MALUS;
+  }
+
+  private void sendQuestResult(int clientId, long requestId, boolean success, String reason,
+                               QuestRequestCache.Intent intent, boolean cacheResponse) {
+    int playerId = player.get(clientId, Engine.INVALID_ENTITY);
+    Player component = playerId == Engine.INVALID_ENTITY ? null
+        : world.getMapper(Player.class).get(playerId);
+    short[] records = QuestSnapshot.records(component == null ? null : component.data);
+    long revision = QuestSnapshot.revision(records);
+    FlatBufferBuilder builder = new FlatBufferBuilder(256);
+    int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int recordsOffset = QuestResult.createQuestRecordsVector(builder, records);
+    int result = QuestResult.createQuestResult(builder, requestId, success, reasonOffset,
+        intent.operation, intent.targetEntityId, intent.messageIndex, revision, recordsOffset);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.QuestResult, result);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer response = builder.dataBuffer();
+    byte[] bytes = new byte[response.remaining()];
+    response.duplicate().get(bytes);
+    if (cacheResponse) questRequestCache.put(clientId, requestId, intent, bytes);
+    outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
   }
 
   private void sendNpcServiceResult(int clientId, long requestId, boolean success, String reason,

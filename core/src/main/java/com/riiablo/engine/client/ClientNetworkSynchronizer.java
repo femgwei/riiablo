@@ -39,6 +39,7 @@ import com.riiablo.net.packet.d2gs.PartyOperation;
 import com.riiablo.net.packet.d2gs.PartyRequest;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
+import com.riiablo.net.packet.d2gs.QuestRequest;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.SizePrefixedPacketReader;
@@ -68,6 +69,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   private long nextNpcRequestId = 1;
   private long nextPartyRequestId = 1;
   private long nextLifecycleRequestId = 1;
+  private long nextQuestRequestId = 1;
   private long nextMovementLogTime;
   @Wire(name="client.socket") Socket socket;
 
@@ -284,6 +286,31 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       return requestId;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "Failed to send player respawn request", t);
+      return 0;
+    }
+  }
+
+  /** Sends an authenticated, idempotent Act I quest intent to D2GS. */
+  public long requestQuest(byte operation, int localTargetEntityId, int messageIndex) {
+    if (socket == null) return 0;
+    long requestId = nextQuestRequestId++;
+    int serverTargetId = localTargetEntityId >= 0 && mNetworked.has(localTargetEntityId)
+        ? mNetworked.get(localTargetEntityId).serverId : localTargetEntityId;
+    FlatBufferBuilder builder = new FlatBufferBuilder(96);
+    int request = QuestRequest.createQuestRequest(builder, requestId, operation,
+        serverTargetId, messageIndex);
+    int root = D2GS.createD2GS(builder, D2GSData.QuestRequest, request);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
+      ByteBuffer frame = builder.dataBuffer();
+      while (frame.hasRemaining()) channel.write(frame);
+      Gdx.app.log(TAG, "[QUEST_NET] phase=request request=" + requestId
+          + " operation=" + operation + " target=" + serverTargetId
+          + " message=" + messageIndex);
+      return requestId;
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "Failed to send quest request", t);
       return 0;
     }
   }

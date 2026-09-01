@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SuperUnique;
+import com.riiablo.engine.server.KillCreditResolver;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NativeCountessQuestEvent;
 import com.riiablo.engine.server.event.NativeActTransitionEvent;
@@ -69,7 +70,7 @@ public class Act1QuestSystem extends PassiveSystem {
   private final IntSet completedCountesses = new IntSet();
   private final IntSet completedAndariels = new IntSet();
   private final IntSet completedBloodRavens = new IntSet();
-  private QuestKillCreditResolver killCredits;
+  private KillCreditResolver killCredits;
 
   @Override
   protected void initialize() {
@@ -77,7 +78,8 @@ public class Act1QuestSystem extends PassiveSystem {
         Aspect.all(Monster.class, MapWrapper.class));
     playersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Player.class, MapWrapper.class));
-    killCredits = new QuestKillCreditResolver(mPlayer, mMercenary, mMapWrapper, partyManager);
+    killCredits = new KillCreditResolver(
+        mPlayer, mMercenary, mMapWrapper, null, partyManager);
   }
 
   @Subscribe

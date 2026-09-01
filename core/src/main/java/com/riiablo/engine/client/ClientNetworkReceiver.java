@@ -71,6 +71,7 @@ import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.PartyResult;
 import com.riiablo.net.packet.d2gs.PlayerP;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
+import com.riiablo.net.packet.d2gs.QuestResult;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.StoreToCursor;
@@ -262,6 +263,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.PlayerLifecycleResult:
         PlayerLifecycleResult(packet);
+        break;
+      case D2GSData.QuestResult:
+        QuestResult(packet);
         break;
       default:
         Gdx.app.error(TAG, "Unknown packet type: " + packet.dataType());
@@ -566,6 +570,24 @@ public class ClientNetworkReceiver extends IntervalSystem {
         + " success=" + result.success() + " reason=" + result.reason()
         + " skill=" + result.skillId() + " level=" + result.skillLevel()
         + " points=" + result.skillPoints());
+  }
+
+  private void QuestResult(D2GS packet) {
+    QuestResult result = (QuestResult) packet.data(new QuestResult());
+    if (Riiablo.charData != null && result.questRecordsLength() > 0) {
+      int count = Math.min(result.questRecordsLength(), Riiablo.NUM_ACTS * 8);
+      for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
+        short[] records = Riiablo.charData.getQuests(act);
+        int offset = act * 8;
+        for (int i = 0; i < records.length && offset + i < count; i++) {
+          records[i] = (short) result.questRecords(offset + i);
+        }
+      }
+    }
+    Gdx.app.log(TAG, "[QUEST_NET] phase=result request=" + result.requestId()
+        + " operation=" + result.operation() + " success=" + result.success()
+        + " reason=" + result.reason() + " target=" + result.targetEntityId()
+        + " message=" + result.messageIndex() + " revision=" + result.questRevision());
   }
 
   private void Synchronize(D2GS packet) {

@@ -23,6 +23,9 @@ import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.PositionP;
+import com.riiablo.net.packet.d2gs.QuestOperation;
+import com.riiablo.net.packet.d2gs.QuestRequest;
+import com.riiablo.net.packet.d2gs.QuestResult;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.save.CharData;
@@ -165,6 +168,7 @@ public final class D2GSHeadlessClient {
       send(outB, connectionPacket(peerCharacter, peerD2s));
       a.awaitConnection(inA, deadline());
       b.awaitConnection(inB, deadline());
+      verifyDualQuestSnapshots(a, b, inA, inB, outA, outB);
       Vector2 bloodMoor = D2GS.headlessFallenShamanPosition(2);
       if (bloodMoor == null) {
         throw new IOException("Blood Moor Fallen/Shaman test room unavailable");
@@ -267,6 +271,56 @@ public final class D2GSHeadlessClient {
 
   private long deadline() {
     return System.currentTimeMillis() + config.testTimeoutMillis;
+  }
+
+  private static void verifyDualQuestSnapshots(D2GSHeadlessClient a,
+      D2GSHeadlessClient b, DataInputStream inA, DataInputStream inB,
+      OutputStream outA, OutputStream outB) throws Exception {
+    send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+    send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+    QuestResult first = a.awaitQuestResult(inA, 1L, a.deadline());
+    QuestResult peer = b.awaitQuestResult(inB, 1L, b.deadline());
+    int expectedRecords = Riiablo.NUM_ACTS * 8;
+    if (!first.success() || !peer.success()
+        || first.questRecordsLength() != expectedRecords
+        || peer.questRecordsLength() != expectedRecords) {
+      throw new IllegalStateException("dual quest snapshot failed: first="
+          + first.success() + '/' + first.questRecordsLength() + " peer="
+          + peer.success() + '/' + peer.questRecordsLength());
+    }
+
+    // Same request id and intent must replay the cached authoritative result.
+    long revision = first.questRevision();
+    send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+    QuestResult replay = a.awaitQuestResult(inA, 1L, a.deadline());
+    if (!replay.success() || replay.questRevision() != revision) {
+      throw new IllegalStateException("quest request replay changed its result");
+    }
+
+    // A conflicting intent with the same id must not execute.
+    send(outA, questRequestPacket(1L, QuestOperation.NPC_MESSAGE, -1, 0));
+    QuestResult conflict = a.awaitQuestResult(inA, 1L, a.deadline());
+    if (conflict.success() || !"REQUEST_ID_REUSED".equals(conflict.reason())) {
+      throw new IllegalStateException("quest request id reuse was not rejected: "
+          + conflict.reason());
+    }
+    log("dual_quest_pass", "clients=" + a.playerId + ',' + b.playerId
+        + " records=" + expectedRecords + " revision=" + revision
+        + " replay=true conflictRejected=true");
+  }
+
+  private QuestResult awaitQuestResult(DataInputStream input, long requestId,
+                                       long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      if (packet.dataType() == D2GSData.QuestResult) {
+        QuestResult result = (QuestResult) packet.data(new QuestResult());
+        if (result.requestId() == requestId) return result;
+      }
+      consume(packet);
+    }
+    throw new IOException("timed out waiting for quest result " + requestId);
   }
 
   private Snapshot awaitNamedMonster(DataInputStream input, String name, boolean allowDead,
@@ -870,6 +924,17 @@ public final class D2GSHeadlessClient {
         ItemMoveOperation.GROUND_TO_CURSOR, -1, groundEntityId, -1, -1, -1, -1, false);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.ItemMoveRequest, request);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    return builder.dataBuffer();
+  }
+
+  private static ByteBuffer questRequestPacket(long requestId, int operation,
+      int targetEntityId, int messageIndex) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(96);
+    int request = QuestRequest.createQuestRequest(builder, requestId, operation,
+        targetEntityId, messageIndex);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.QuestRequest, request);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     return builder.dataBuffer();
   }
