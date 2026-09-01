@@ -62,6 +62,7 @@ public class ExperienceManager extends PassiveSystem {
   private EntitySubscription players;
   private EntitySubscription mercenaries;
   private KillCreditResolver killCredits;
+  private com.riiablo.engine.server.NativeHirelingExperienceTable hirelingExperience;
   /** A victim can be observed by more than one lethal combat path in a frame. */
   private final IntSet rewardedVictims = new IntSet();
 
@@ -105,6 +106,7 @@ public class ExperienceManager extends PassiveSystem {
     mercenaries = world.getAspectSubscriptionManager().get(Aspect.all(Mercenary.class));
     killCredits = new KillCreditResolver(
         mPlayer, mMercenary, mMapWrapper, mPosition, partyManager);
+    hirelingExperience = com.riiablo.engine.server.NativeHirelingExperienceTable.load();
   }
 
   /**
@@ -394,6 +396,12 @@ public class ExperienceManager extends PassiveSystem {
    */
   public void addExperienceForHireling(CharData playerData, int hirelingLevel,
       int defenderLevel, int defenderExp, boolean isKiller) {
+    addExperienceForHireling(playerData, -1, hirelingLevel, defenderLevel,
+        defenderExp, isKiller);
+  }
+
+  private void addExperienceForHireling(CharData playerData, int hirelingId,
+      int hirelingLevel, int defenderLevel, int defenderExp, boolean isKiller) {
     if (playerData == null || !playerData.hasMerc()) return;
     int playerLevel = Math.max(1,
         getInt(playerData.getStats().aggregate(), Stat.level, playerData.level & 0xFF));
@@ -404,6 +412,11 @@ public class ExperienceManager extends PassiveSystem {
     // 计算佣兵应得经验
     long baseExp = computeExperienceGain(
         (byte) 0, hirelingLevel, defenderLevel, defenderExp, 0);
+    if (hirelingExperience != null && hirelingId >= 0 && hirelingExperience.size() > 0) {
+      long maximumAward = hirelingExperience.maximumAward(hirelingId, hirelingLevel);
+      // Native code clamps even to zero when the selected record has no span.
+      baseExp = Math.min(baseExp, maximumAward);
+    }
     baseExp = computeNativeHirelingAward(baseExp, isKiller);
     
     if (baseExp <= 0) return;
@@ -444,10 +457,32 @@ public class ExperienceManager extends PassiveSystem {
 
     CharData owner = mPlayer.get(ownerId).data;
     long oldExperience = owner.getMerc().xp;
-    addExperienceForHireling(owner, hirelingLevel, defenderLevel, defenderExp,
-        killerId == hirelingId);
+    addExperienceForHireling(owner, hireling.mercType, hirelingLevel,
+        defenderLevel, defenderExp, killerId == hirelingId);
     long newExperience = owner.getMerc().xp;
-    if (newExperience == oldExperience || !mAttributesWrapper.has(hirelingId)) return;
+    if (newExperience == oldExperience) return;
+
+    int ownerLevel = Math.max(1,
+        getInt(owner.getStats().aggregate(), Stat.level, owner.level & 0xFF));
+    int newLevel = hirelingExperience == null ? hirelingLevel
+        : hirelingExperience.levelForExperience(hireling.mercType, hirelingLevel,
+            newExperience, ownerLevel);
+    long nextThreshold = hirelingExperience == null ? 0L
+        : hirelingExperience.nextThreshold(hireling.mercType, newLevel);
+    if (newLevel > hirelingLevel) {
+      hireling.level = newLevel;
+      owner.getMerc().getStats().base().put(Stat.level, newLevel);
+      owner.getMerc().getStats().aggregate().put(Stat.level, newLevel);
+      if (nextThreshold > 0L) {
+        owner.getMerc().getStats().base().put(Stat.nextexp,
+            (int) Math.min(Integer.MAX_VALUE, nextThreshold));
+        owner.getMerc().getStats().aggregate().put(Stat.nextexp,
+            (int) Math.min(Integer.MAX_VALUE, nextThreshold));
+      }
+      log.info("[XP_MERC_LEVEL] owner={} merc={} level={}->{} xp={}",
+          owner.name, hirelingId, hirelingLevel, newLevel, newExperience);
+    }
+    if (!mAttributesWrapper.has(hirelingId)) return;
 
     Attributes attrs = mAttributesWrapper.get(hirelingId).attrs;
     if (attrs == null) return;
@@ -457,6 +492,15 @@ public class ExperienceManager extends PassiveSystem {
     attrs.base().put(Stat.lastexp, encodedGain);
     attrs.aggregate().put(Stat.experience, encodedExperience);
     attrs.aggregate().put(Stat.lastexp, encodedGain);
+    if (newLevel > hirelingLevel) {
+      attrs.base().put(Stat.level, newLevel);
+      attrs.aggregate().put(Stat.level, newLevel);
+      if (nextThreshold > 0L) {
+        int encodedNext = (int) Math.min(Integer.MAX_VALUE, nextThreshold);
+        attrs.base().put(Stat.nextexp, encodedNext);
+        attrs.aggregate().put(Stat.nextexp, encodedNext);
+      }
+    }
   }
 
   private int findLivingHireling(int ownerId) {
