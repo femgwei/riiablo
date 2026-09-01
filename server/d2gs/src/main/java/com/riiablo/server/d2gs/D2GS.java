@@ -21,6 +21,7 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.ArrayUtils;
 
+import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.artemis.World;
 import com.artemis.WorldConfiguration;
@@ -331,6 +332,45 @@ public class D2GS extends ApplicationAdapter {
       }
     }
     return best;
+  }
+
+  /** Player XP, native reward flags and ground-item count for the Fallen regression. */
+  static int[] headlessMonsterRewardState(int playerId, int monsterId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) {
+      return new int[] {0, 0, 0};
+    }
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[] {0, 0, 0});
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        int experience = player == null || player.data == null ? 0
+            : statInt(player.data.getStats(), com.riiablo.attributes.Stat.experience);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MonsterRewardState>
+            rewardStates = server.world.getMapper(
+                com.riiablo.engine.server.component.MonsterRewardState.class);
+        com.riiablo.engine.server.component.MonsterRewardState rewardState =
+            rewardStates.get(monsterId);
+        int groundItems = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Item.class)).getEntities().size();
+        result.set(new int[] {
+            experience,
+            rewardState == null ? 0 : rewardState.flags(),
+            groundItems
+        });
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[] {0, 0, 0};
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[] {0, 0, 0};
+    }
   }
 
   /** Test-only hook used by the windowless mercenary integration client. */

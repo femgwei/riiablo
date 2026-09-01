@@ -5,7 +5,6 @@ import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
@@ -13,6 +12,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.MonsterRewardState;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -36,8 +36,8 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
  * Applies server-authoritative rewards after a monster dies.
  *
  * <p>Death can be reported by both the melee and missile paths in the same
- * frame.  The victim set makes reward processing idempotent, so experience
- * and loot cannot be granted twice when both paths observe the final hit.</p>
+ * frame. Per-entity reward state makes processing idempotent without leaking
+ * a numeric entity id into a later Artemis lifecycle.</p>
  */
 public class DeathRewardSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(DeathRewardSystem.class);
@@ -50,6 +50,7 @@ public class DeathRewardSystem extends PassiveSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.MapWrapper> mMapWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mGroundItem;
   protected ComponentMapper<com.riiablo.engine.server.component.SuperUnique> mSuperUnique;
+  protected ComponentMapper<MonsterRewardState> mMonsterRewardState;
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -61,7 +62,6 @@ public class DeathRewardSystem extends PassiveSystem {
   protected ItemGenerator itemGenerator;
 
   private final LootManager lootManager = new LootManager();
-  private final IntSet rewardedVictims = new IntSet();
   private EntitySubscription players;
   private KillCreditResolver killCredits;
 
@@ -79,18 +79,25 @@ public class DeathRewardSystem extends PassiveSystem {
     // Hirelings retain Monster presentation data, but their death is a pet
     // lifecycle transition and must never roll hostile monster XP or loot.
     if (mMercenary.has(event.victim)) return;
+    MonsterRewardState rewards = mMonsterRewardState.has(event.victim)
+        ? mMonsterRewardState.get(event.victim)
+        : mMonsterRewardState.create(event.victim).reset();
+    if (!rewards.claimTreasureClass()) {
+      if (rewards.noTreasureClass()) {
+        log.debug("[DEATH_REWARD] native NOTC suppresses resurrected monster: victim={}",
+            event.victim);
+      } else {
+        log.warn("[DEATH_REWARD] duplicate death ignored: killer={}, victim={}",
+            event.killer, event.victim);
+      }
+      return;
+    }
     int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
     if (ownerId < 0 || !mPlayer.has(ownerId) || mPlayer.get(ownerId).data == null) {
       log.debug("[DEATH_REWARD] skip unowned killer: killer={}, victim={}",
           event.killer, event.victim);
       return;
     }
-    if (!rewardedVictims.add(event.victim)) {
-      log.warn("[DEATH_REWARD] duplicate death ignored: killer={}, victim={}",
-          event.killer, event.victim);
-      return;
-    }
-
     Monster monster = mMonster.get(event.victim);
     Player player = mPlayer.get(ownerId);
     Position position = mPosition.has(event.victim) ? mPosition.get(event.victim) : null;

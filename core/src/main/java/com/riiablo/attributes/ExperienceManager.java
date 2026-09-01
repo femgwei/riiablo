@@ -6,7 +6,6 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 import com.artemis.Aspect;
 import com.artemis.EntitySubscription;
 import com.badlogic.gdx.utils.IntArray;
-import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.CharacterClass;
 import com.riiablo.attributes.Stat;
@@ -16,6 +15,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.MonsterRewardState;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
@@ -60,14 +60,13 @@ public class ExperienceManager extends PassiveSystem {
   private com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;
   private com.artemis.ComponentMapper<MapWrapper> mMapWrapper;
   private com.artemis.ComponentMapper<Position> mPosition;
+  private com.artemis.ComponentMapper<MonsterRewardState> mMonsterRewardState;
   private EntitySubscription players;
   private EntitySubscription mercenaries;
   private KillCreditResolver killCredits;
   private com.riiablo.engine.server.NativeHirelingExperienceTable hirelingExperience;
+  @com.artemis.annotations.SkipWire
   private NativeMercenaryRewardSystem mercenaryRewards;
-  /** A victim can be observed by more than one lethal combat path in a frame. */
-  private final IntSet rewardedVictims = new IntSet();
-
   //==========================================================================
   // 经验值系数常量（来自 D2MOD）
   //==========================================================================
@@ -126,16 +125,22 @@ public class ExperienceManager extends PassiveSystem {
     log.traceEntry("onDeathEvent(killer: {}, victim: {})", event.killer, event.victim);
 
     if (event == null || event.victim < 0) return;
-    if (!rewardedVictims.add(event.victim)) {
-      log.warn("[XP_SYNC] duplicate death ignored: killer={}, victim={}",
-          event.killer, event.victim);
-      return;
-    }
-
     // 检查受害者是否为怪物
     Monster monster = world.getMapper(Monster.class).get(event.victim);
     if (monster == null || monster.monstats == null) {
       return; // 不是怪物，或无统计数据
+    }
+    MonsterRewardState rewards = mMonsterRewardState.has(event.victim)
+        ? mMonsterRewardState.get(event.victim)
+        : mMonsterRewardState.create(event.victim).reset();
+    if (!rewards.claimExperience()) {
+      if (rewards.noExperience()) {
+        log.debug("[XP_NATIVE] no experience for resurrected monster: victim={}", event.victim);
+      } else {
+        log.warn("[XP_SYNC] duplicate death ignored: killer={}, victim={}",
+            event.killer, event.victim);
+      }
+      return;
     }
 
     // D2Game resolves player, hireling and owned minion kills to the owning

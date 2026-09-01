@@ -40,6 +40,7 @@ import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.MonsterRewardState;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Object;
@@ -79,6 +80,7 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<ZoneAware> mZoneAware;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<MonsterRewardState> mMonsterRewardState;
   protected ComponentMapper<Warp> mWarp;
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Missile> mMissile;
@@ -513,6 +515,10 @@ public class ServerEntityFactory extends EntityFactory {
     // the same frame cannot start a second authoritative resurrection.
     corpse.usable = false;
     hitpoints.set(Math.max(1f, maxhp.asFixed()));
+    MonsterRewardState rewards = mMonsterRewardState.has(monsterId)
+        ? mMonsterRewardState.get(monsterId)
+        : mMonsterRewardState.create(monsterId).reset();
+    rewards.markNativeResurrection();
     if (mUnitStates.has(monsterId) && mUnitStates.get(monsterId).stateList != null) {
       mUnitStates.get(monsterId).stateList.clearAll();
     }

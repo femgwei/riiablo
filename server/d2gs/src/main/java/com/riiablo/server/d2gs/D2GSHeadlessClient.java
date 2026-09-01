@@ -221,6 +221,34 @@ public final class D2GSHeadlessClient {
       log("dual_revive_pass", "fallen=" + fallenA.entityId + " shaman="
           + shamanA.entityId + " clientA=true clientB=true");
 
+      // D2Game SKILLS_ResurrectUnit marks resurrected monsters NOXP | NOTC.
+      // Kill the same Fallen once more and verify the server retains that
+      // native anti-farming state while both clients still observe its death.
+      int[] rewardsBefore = D2GS.headlessMonsterRewardState(a.playerId, fallenA.entityId);
+      Snapshot revived = a.monsters.get(fallenA.entityId);
+      if (revived == null || revived.dead || revived.life <= 0f) {
+        throw new IllegalStateException("revived Fallen snapshot is not alive");
+      }
+      send(outB, positionPacket(b.playerId, revived.x - 1f, revived.y));
+      a.attackUntilDead(inA, outA, revived, deadline());
+      b.awaitDead(inB, revived.entityId, deadline());
+      b.consumeFor(inB, 1_000L);
+      int[] rewardsAfter = D2GS.headlessMonsterRewardState(a.playerId, fallenA.entityId);
+      int nativeNoRewards =
+          com.riiablo.engine.server.component.MonsterRewardState.NO_EXPERIENCE
+          | com.riiablo.engine.server.component.MonsterRewardState.NO_TREASURE_CLASS;
+      if (rewardsAfter[0] != rewardsBefore[0]
+          || rewardsAfter[2] != rewardsBefore[2]
+          || (rewardsAfter[1] & nativeNoRewards) != nativeNoRewards) {
+        throw new IllegalStateException("resurrected Fallen granted a native reward: xp="
+            + rewardsBefore[0] + "->" + rewardsAfter[0] + " items="
+            + rewardsBefore[2] + "->" + rewardsAfter[2] + " flags=0x"
+            + Integer.toHexString(rewardsAfter[1]));
+      }
+      log("dual_native_no_reward_pass", "fallen=" + fallenA.entityId + " xp="
+          + rewardsAfter[0] + " groundItems=" + rewardsAfter[2] + " flags=0x"
+          + Integer.toHexString(rewardsAfter[1]) + " clients=true,true");
+
       Snapshot drop = b.firstGroundItem();
       int lootKills = 1;
       Set<Integer> killedForLoot = new HashSet<>();
@@ -956,6 +984,14 @@ public final class D2GSHeadlessClient {
       if (snapshot.groundItem && !snapshot.deleted) return snapshot;
     }
     return null;
+  }
+
+  private void consumeFor(DataInputStream input, long durationMillis) throws Exception {
+    long until = System.currentTimeMillis() + Math.max(0L, durationMillis);
+    while (System.currentTimeMillis() < until) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+    }
   }
 
   private Snapshot awaitNextLivingFallen(DataInputStream input, Set<Integer> excluded,
