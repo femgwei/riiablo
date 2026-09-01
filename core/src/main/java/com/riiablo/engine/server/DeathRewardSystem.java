@@ -13,6 +13,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MonsterRewardState;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -51,6 +52,7 @@ public class DeathRewardSystem extends PassiveSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mGroundItem;
   protected ComponentMapper<com.riiablo.engine.server.component.SuperUnique> mSuperUnique;
   protected ComponentMapper<MonsterRewardState> mMonsterRewardState;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -79,17 +81,18 @@ public class DeathRewardSystem extends PassiveSystem {
     // Hirelings retain Monster presentation data, but their death is a pet
     // lifecycle transition and must never roll hostile monster XP or loot.
     if (mMercenary.has(event.victim)) return;
+    NativeUnitFlags unitFlags = mNativeUnitFlags.get(event.victim);
+    if (unitFlags != null && unitFlags.has(NativeUnitFlags.NO_TREASURE_CLASS)) {
+      log.debug("[DEATH_REWARD] UNITFLAG_NOTC suppresses treasure class: victim={} flags=0x{}",
+          event.victim, Integer.toHexString(unitFlags.flags()));
+      return;
+    }
     MonsterRewardState rewards = mMonsterRewardState.has(event.victim)
         ? mMonsterRewardState.get(event.victim)
         : mMonsterRewardState.create(event.victim).reset();
     if (!rewards.claimTreasureClass()) {
-      if (rewards.noTreasureClass()) {
-        log.debug("[DEATH_REWARD] native NOTC suppresses resurrected monster: victim={}",
-            event.victim);
-      } else {
-        log.warn("[DEATH_REWARD] duplicate death ignored: killer={}, victim={}",
-            event.killer, event.victim);
-      }
+      log.warn("[DEATH_REWARD] duplicate death ignored: killer={}, victim={}",
+          event.killer, event.victim);
       return;
     }
     int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);

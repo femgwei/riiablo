@@ -40,7 +40,7 @@ import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.MonsterRewardState;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Object;
@@ -80,7 +80,7 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<ZoneAware> mZoneAware;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Monster> mMonster;
-  protected ComponentMapper<MonsterRewardState> mMonsterRewardState;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<Warp> mWarp;
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Missile> mMissile;
@@ -352,6 +352,7 @@ public class ServerEntityFactory extends EntityFactory {
         + MonsterStatsCalculator.nativeRankLevelBonus(rank);
 
     int id = super.createEntity(Class.Type.MON, monstats.Id);
+    mNativeUnitFlags.create(id).reset();
     Monster monster = mMonster.create(id).set(monstats, monstats2)
         .setRank(rank, affixes, championType, uniqueId);
     monster.setAttack2Profile(attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
@@ -515,10 +516,7 @@ public class ServerEntityFactory extends EntityFactory {
     // the same frame cannot start a second authoritative resurrection.
     corpse.usable = false;
     hitpoints.set(Math.max(1f, maxhp.asFixed()));
-    MonsterRewardState rewards = mMonsterRewardState.has(monsterId)
-        ? mMonsterRewardState.get(monsterId)
-        : mMonsterRewardState.create(monsterId).reset();
-    rewards.markNativeResurrection();
+    applyNativeUnitFlags(monsterId, NativeUnitFlags.MONSTER_RESURRECTION);
     if (mUnitStates.has(monsterId) && mUnitStates.get(monsterId).stateList != null) {
       mUnitStates.get(monsterId).stateList.clearAll();
     }
@@ -550,6 +548,15 @@ public class ServerEntityFactory extends EntityFactory {
         monster.monstats2.ResurrectSkill,
         mPosition.get(monsterId).position.x, mPosition.get(monsterId).position.y);
     return true;
+  }
+
+  @Override
+  public void applyNativeUnitFlags(int entityId, int flags) {
+    if (entityId == Engine.INVALID_ENTITY || flags == 0) return;
+    NativeUnitFlags unitFlags = mNativeUnitFlags.has(entityId)
+        ? mNativeUnitFlags.get(entityId)
+        : mNativeUnitFlags.create(entityId).reset();
+    unitFlags.set(flags);
   }
 
   @Override

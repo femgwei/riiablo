@@ -235,8 +235,7 @@ public final class D2GSHeadlessClient {
       b.consumeFor(inB, 1_000L);
       int[] rewardsAfter = D2GS.headlessMonsterRewardState(a.playerId, fallenA.entityId);
       int nativeNoRewards =
-          com.riiablo.engine.server.component.MonsterRewardState.NO_EXPERIENCE
-          | com.riiablo.engine.server.component.MonsterRewardState.NO_TREASURE_CLASS;
+          com.riiablo.engine.server.component.NativeUnitFlags.MONSTER_RESURRECTION;
       if (rewardsAfter[0] != rewardsBefore[0]
           || rewardsAfter[2] != rewardsBefore[2]
           || (rewardsAfter[1] & nativeNoRewards) != nativeNoRewards) {

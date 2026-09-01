@@ -14,6 +14,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
@@ -274,6 +275,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
       return Engine.INVALID_ENTITY;
     }
     if (entityId == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;
+    factory.applyNativeUnitFlags(entityId, NativeUnitFlags.MERCENARY);
 
     // Hirelings use monster presentation data, but must never run hostile
     // monster AI or expose the hostile click target installed by that factory.

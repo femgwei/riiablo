@@ -348,16 +348,14 @@ public class D2GS extends ApplicationAdapter {
         Player player = server.world.getMapper(Player.class).get(playerId);
         int experience = player == null || player.data == null ? 0
             : statInt(player.data.getStats(), com.riiablo.attributes.Stat.experience);
-        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MonsterRewardState>
-            rewardStates = server.world.getMapper(
-                com.riiablo.engine.server.component.MonsterRewardState.class);
-        com.riiablo.engine.server.component.MonsterRewardState rewardState =
-            rewardStates.get(monsterId);
+        com.riiablo.engine.server.component.NativeUnitFlags unitFlags =
+            server.world.getMapper(com.riiablo.engine.server.component.NativeUnitFlags.class)
+                .get(monsterId);
         int groundItems = server.world.getAspectSubscriptionManager().get(
             Aspect.all(com.riiablo.engine.server.component.Item.class)).getEntities().size();
         result.set(new int[] {
             experience,
-            rewardState == null ? 0 : rewardState.flags(),
+            unitFlags == null ? 0 : unitFlags.flags(),
             groundItems
         });
       } finally {

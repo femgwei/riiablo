@@ -32,6 +32,7 @@ import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Leap;
 import com.riiablo.engine.server.component.Position;
@@ -1220,6 +1221,7 @@ public class Actioneer extends PassiveSystem {
           entityId, targetId, spawnId, spawnX, spawnY);
       return;
     }
+    factory.applyNativeUnitFlags(spawned, NativeUnitFlags.MAGGOT_LAY_SUMMON);
     log.info("[MONSTER_MAGGOT] phase=lay_spawn source={} target={} spawn={} entity={} direction={} offset=({}, {}) position=({}, {})",
         entityId, targetId, spawnId, spawned, direction, offsetX, offsetY, spawnX, spawnY);
   }
@@ -1311,6 +1313,7 @@ public class Actioneer extends PassiveSystem {
           entityId, spawnId);
       return;
     }
+    factory.applyNativeUnitFlags(spawned, NativeUnitFlags.NEST_SUMMON);
     log.info("[MONSTER_NEST] phase=spawn source={} spawn={} entity={} position=({}, {})",
         entityId, spawnId, spawned, position.x, position.y);
   }

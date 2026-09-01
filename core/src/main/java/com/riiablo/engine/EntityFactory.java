@@ -111,6 +111,9 @@ public abstract class EntityFactory extends PassiveSystem {
     return false;
   }
 
+  /** Applies native D2UnitStrc flags; client-only and test factories may ignore them. */
+  public void applyNativeUnitFlags(int entityId, int flags) {}
+
   public abstract int createWarp(int index, float x, float y);
 
   /** Creates a network-serializable warp whose destination is owned by a quest. */

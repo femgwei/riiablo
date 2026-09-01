@@ -23,18 +23,6 @@ class MonsterRewardStateTest {
   }
 
   @Test
-  void nativeResurrectionSuppressesExperienceAndTreasureClass() {
-    MonsterRewardState state = new MonsterRewardState().reset().markNativeResurrection();
-
-    assertFalse(state.claimExperience());
-    assertFalse(state.claimTreasureClass());
-    assertTrue(state.noExperience());
-    assertTrue(state.noTreasureClass());
-    assertEquals(MonsterRewardState.NO_EXPERIENCE
-        | MonsterRewardState.NO_TREASURE_CLASS, state.flags());
-  }
-
-  @Test
   void entityDeletionRemovesClaimsBeforeNumericIdCanBeReused() {
     World world = new World(new WorldConfigurationBuilder().build());
     try {

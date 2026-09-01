@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MovementModes;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.UnitStates;
@@ -125,6 +126,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       String expectedSpawn = row.spawn != null && !row.spawn.isEmpty() ? row.spawn
           : (row.minion1 != null && !row.minion1.isEmpty() ? row.minion1 : row.minion2);
       assertEquals(expectedSpawn, scenario.factory.lastMonster);
+      assertEquals(NativeUnitFlags.NEST_SUMMON, scenario.factory.lastNativeFlags);
       assertEquals(1, scenario.probe.skillDo);
       System.out.println("[ACT1_ECS_CHAIN] skill=Nest spawn=" + row.spawn
           + " created=" + scenario.factory.monstersCreated + " status=PASS");
@@ -217,6 +219,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       String expected = row.spawn != null && !row.spawn.isEmpty() ? row.spawn : row.minion1;
       assertEquals(expected, scenario.factory.lastMonster);
       assertEquals(1, scenario.factory.monstersCreated);
+      assertEquals(NativeUnitFlags.MAGGOT_LAY_SUMMON, scenario.factory.lastNativeFlags);
       // D2Common_11055 uses the native 32-entry orientation table; an eastward
       // target maps to lookup index 14 and therefore offset (-2, +2).
       assertEquals(8f, scenario.factory.lastMonsterX, 0.01f);
@@ -403,6 +406,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     float lastMonsterY;
     String lastMissile;
     int lastMissileOwner = -1;
+    int lastNativeFlags;
 
     @Override public int createPlayer(CharData data, Vector2 position) { return -1; }
     @Override public int createDynamicObject(int act, int preset, float x, float y) { return -1; }
@@ -417,6 +421,9 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       return 9000 + monstersCreated;
     }
     @Override public int createWarp(int index, float x, float y) { return -1; }
+    @Override public void applyNativeUnitFlags(int entityId, int flags) {
+      lastNativeFlags |= flags;
+    }
     @Override public int createItem(Item item, float x, float y) { return -1; }
     @Override public int createMissile(int missile, Vector2 angle, Vector2 position) {
       missilesCreated++;
