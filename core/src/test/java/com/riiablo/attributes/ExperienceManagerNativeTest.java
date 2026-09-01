@@ -51,7 +51,9 @@ class ExperienceManagerNativeTest {
     assertEquals(2_400L,
         com.riiablo.engine.server.NativeHirelingExperienceTable.threshold(2, 200));
     assertEquals(2, table.levelForExperience(0, 1, 2_400L, 5));
-    assertEquals(2, table.levelForExperience(0, 1, 100_000L, 3));
+    assertEquals(3, table.levelForExperience(0, 1, 100_000L, 3));
+    assertEquals(2, table.levelForExperience(0, 1, 2_400L, 2),
+        "an accepted award may advance a hireling to its owner's level");
     assertEquals(31L, table.maximumAward(0, 1));
     assertEquals(2_400L, table.nextThreshold(0, 1));
   }

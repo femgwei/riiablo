@@ -99,7 +99,8 @@ public final class D2GSHeadlessClient {
     waitForServer();
     byte[] d2s = config.generatedAmazon
         ? createGeneratedAmazonSave(
-            config.requireMercenarySkill || config.requireMercenaryRestore
+            config.requireMercenarySkill || config.requireMercenaryProgression
+                || config.requireMercenaryRestore
                 || config.requireMercenaryTravel ? 8 : 1,
             config.requireMercenaryLifecycle || config.requireMercenaryRestore ? 10_000 : 0,
             config.requireMercenaryRestore || config.requireMercenaryTravel,
@@ -121,7 +122,7 @@ public final class D2GSHeadlessClient {
       runMercenaryTravel(d2s, character);
       return;
     }
-    if (config.requireMercenarySkill) {
+    if (config.requireMercenarySkill || config.requireMercenaryProgression) {
       runMercenarySkill(d2s, character);
       return;
     }
@@ -354,6 +355,10 @@ public final class D2GSHeadlessClient {
           if (config.requireMercenaryLifecycle) {
             verifyMercenaryLifecycle(a, b, inA, inB, a.playerId, mercA.entityId);
           }
+          if (config.requireMercenaryProgression) {
+            verifyMercenaryProgression(a, b, inA, inB, a.playerId,
+                mercA.entityId, combatTargetId);
+          }
           return;
         }
         if (System.currentTimeMillis() >= diagnosticDeadline) {
@@ -429,6 +434,54 @@ public final class D2GSHeadlessClient {
     log("mercenary_resurrect_pass", "owner=" + ownerId + " entity=" + mercenaryId
         + " cost=" + before[2] + " gold=" + before[3] + "->" + after[3]
         + " sameEntity=true clients=true,true");
+  }
+
+  private void verifyMercenaryProgression(D2GSHeadlessClient a, D2GSHeadlessClient b,
+      DataInputStream inA, DataInputStream inB, int ownerId, int mercenaryId,
+      int targetId) throws Exception {
+    if (!D2GS.headlessPrepareMercenaryProgression(ownerId, targetId)) {
+      throw new IllegalStateException("failed to prepare native hireling level-up boundary");
+    }
+    int[] before = D2GS.headlessMercenaryProgressionState(ownerId);
+    int oldLevel = before[1];
+    int expectedLevel = oldLevel + 1;
+    long progressionDeadline = deadline();
+    while (System.currentTimeMillis() < progressionDeadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+      if (packet != null) a.consume(packet);
+      packet = readPacket(inB);
+      if (packet != null) b.consume(packet);
+      int[] after = D2GS.headlessMercenaryProgressionState(ownerId);
+      Snapshot targetA = a.monsters.get(targetId);
+      Snapshot targetB = b.monsters.get(targetId);
+      Snapshot mercenaryA = a.monsters.get(mercenaryId);
+      Snapshot mercenaryB = b.monsters.get(mercenaryId);
+      float maxHp = Float.intBitsToFloat(after[9]);
+      if (targetA != null && targetB != null && targetA.dead && targetB.dead
+          && after[0] == mercenaryId && after[1] == expectedLevel
+          && after[2] == expectedLevel && after[6] == expectedLevel
+          && after[14] == expectedLevel && after[3] > before[3]
+          && after[3] == after[4] && after[3] == after[5]
+          && after[17] == after[3] - before[3]
+          && Float.intBitsToFloat(after[15]) == maxHp
+          && after[16] == com.riiablo.engine.server.pet.MercenaryManager
+              .nativeResurrectionCost(expectedLevel)
+          && mercenaryA != null && mercenaryB != null
+          && Math.abs(mercenaryA.maxLife - maxHp) <= 0.001f
+          && Math.abs(mercenaryB.maxLife - maxHp) <= 0.001f) {
+        log("mercenary_progression_pass", "owner=" + ownerId + " entity=" + mercenaryId
+            + " target=" + targetId + " level=" + oldLevel + "->" + expectedLevel
+            + " xp=" + before[3] + "->" + after[3] + " strength=" + after[7]
+            + " dexterity=" + after[8] + " maxHp=" + maxHp + " defense=" + after[10]
+            + " nextExp=" + after[11] + " skill=" + after[12] + ':' + after[13]
+            + " lifecycleSynced=true d2sSynced=true clients=true,true");
+        return;
+      }
+    }
+    int[] after = D2GS.headlessMercenaryProgressionState(ownerId);
+    throw new IllegalStateException("native hireling progression did not complete: entity="
+        + after[0] + " level=" + before[1] + "->" + after[1] + ',' + after[2]
+        + " xp=" + before[3] + "->" + after[3] + ',' + after[4] + ',' + after[5]);
   }
 
   /**
@@ -1247,6 +1300,7 @@ public final class D2GSHeadlessClient {
     if (index >= 0) {
       VitalsP vitals = (VitalsP) sync.component(new VitalsP(), index);
       snapshot.life = vitals.hitpoints();
+      snapshot.maxLife = vitals.maxHitpoints();
       snapshot.dead = vitals.dead();
       snapshot.hasVitals = true;
     }
@@ -1501,6 +1555,7 @@ public final class D2GSHeadlessClient {
     float x;
     float y;
     float life;
+    float maxLife;
     boolean dead;
     boolean deleted;
     boolean groundItem;
@@ -1552,6 +1607,7 @@ public final class D2GSHeadlessClient {
     boolean requireFallenScenario;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
+    boolean requireMercenaryProgression;
     boolean requireMercenaryRestore;
     boolean requireMercenaryTravel;
     int attempts = 20;
@@ -1577,6 +1633,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
+        else if ("--require-mercenary-progression".equals(arg)) config.requireMercenaryProgression = true;
         else if ("--require-mercenary-restore".equals(arg)) config.requireMercenaryRestore = true;
         else if ("--require-mercenary-travel".equals(arg)) config.requireMercenaryTravel = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);

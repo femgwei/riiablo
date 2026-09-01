@@ -437,6 +437,145 @@ public class D2GS extends ApplicationAdapter {
             rewards.persistedMercenaryFlags(playerId)};
   }
 
+  /** Places a live target one hit from death and the hireling one XP below level-up. */
+  static boolean headlessPrepareMercenaryProgression(int playerId, int targetId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean prepared =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        NativeMercenaryRewardSystem rewards =
+            server.world.getSystem(NativeMercenaryRewardSystem.class);
+        int mercenaryId = rewards == null ? Engine.INVALID_ENTITY
+            : rewards.mercenaryEntityId(playerId);
+        com.riiablo.engine.server.component.Mercenary mercenary = mercenaryId < 0 ? null
+            : server.world.getMapper(com.riiablo.engine.server.component.Mercenary.class)
+                .get(mercenaryId);
+        com.riiablo.engine.server.component.Player player = server.world.getMapper(
+            com.riiablo.engine.server.component.Player.class).get(playerId);
+        com.riiablo.engine.server.component.AttributesWrapper target = server.world.getMapper(
+            com.riiablo.engine.server.component.AttributesWrapper.class).get(targetId);
+        com.riiablo.engine.server.component.AttributesWrapper mercenaryAttributes =
+            mercenaryId < 0 ? null : server.world.getMapper(
+                com.riiablo.engine.server.component.AttributesWrapper.class).get(mercenaryId);
+        if (mercenary == null || player == null || player.data == null
+            || target == null || target.attrs == null || mercenaryAttributes == null
+            || mercenaryAttributes.attrs == null) return;
+        int ownerLevel = Math.max(1, player.data.getStats().aggregate()
+            .getValue(com.riiablo.attributes.Stat.level, player.data.level & 0xFF));
+        if (mercenary.level >= ownerLevel || mercenary.level >= 98) return;
+        com.riiablo.engine.server.NativeHirelingExperienceTable table =
+            com.riiablo.engine.server.NativeHirelingExperienceTable.load();
+        long nextExperience = table.nextThreshold(mercenary.mercType, mercenary.level);
+        if (nextExperience <= 0L || nextExperience > Integer.MAX_VALUE) return;
+        long seededExperience = nextExperience - 1L;
+        com.riiablo.save.CharData.MercData saved = player.data.getMerc();
+        saved.xp = seededExperience;
+        saved.getStats().base().put(com.riiablo.attributes.Stat.experience,
+            (int) seededExperience);
+        saved.getStats().base().put(com.riiablo.attributes.Stat.lastexp, 0);
+        saved.getStats().aggregate().put(com.riiablo.attributes.Stat.experience,
+            (int) seededExperience);
+        saved.getStats().aggregate().put(com.riiablo.attributes.Stat.lastexp, 0);
+        if (!rewards.synchronizeMercenaryProgress(
+            playerId, mercenaryId, seededExperience, mercenary.level)) return;
+        com.riiablo.attributes.StatRef life = target.attrs.get(
+            com.riiablo.attributes.Stat.hitpoints, com.riiablo.attributes.StatRef.obtain());
+        if (life == null || life.asFixed() <= 0f) return;
+        life.set(1f);
+        prepared.set(true);
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && prepared.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Stable progression snapshot used by the two-client native kill test. */
+  static int[] headlessMercenaryProgressionState(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) {
+      return emptyHeadlessMercenaryProgressionState();
+    }
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(emptyHeadlessMercenaryProgressionState());
+    Gdx.app.postRunnable(() -> {
+      try {
+        NativeMercenaryRewardSystem rewards =
+            server.world.getSystem(NativeMercenaryRewardSystem.class);
+        int mercenaryId = rewards == null ? Engine.INVALID_ENTITY
+            : rewards.mercenaryEntityId(playerId);
+        com.riiablo.engine.server.component.Mercenary mercenary = mercenaryId < 0 ? null
+            : server.world.getMapper(com.riiablo.engine.server.component.Mercenary.class)
+                .get(mercenaryId);
+        com.riiablo.engine.server.component.Player player = server.world.getMapper(
+            com.riiablo.engine.server.component.Player.class).get(playerId);
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = mercenaryId < 0 ? null
+            : server.world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class)
+                .get(mercenaryId);
+        com.riiablo.attributes.Attributes attrs = wrapper == null ? null : wrapper.attrs;
+        com.riiablo.save.CharData.MercData saved =
+            player == null || player.data == null ? null : player.data.getMerc();
+        result.set(new int[] {
+            mercenaryId,
+            mercenary == null ? 0 : mercenary.level,
+            rewards == null ? 0 : rewards.mercenaryLevel(playerId),
+            saved == null ? 0 : (int) saved.xp,
+            rewards == null ? 0 : (int) rewards.mercenaryExperience(playerId),
+            statInt(attrs, com.riiablo.attributes.Stat.experience),
+            statInt(attrs, com.riiablo.attributes.Stat.level),
+            statInt(attrs, com.riiablo.attributes.Stat.strength),
+            statInt(attrs, com.riiablo.attributes.Stat.dexterity),
+            Float.floatToIntBits(statFixed(attrs, com.riiablo.attributes.Stat.maxhp)),
+            statInt(attrs, com.riiablo.attributes.Stat.armorclass),
+            statInt(attrs, com.riiablo.attributes.Stat.nextexp),
+            mercenary == null ? -1 : mercenary.skills[0],
+            mercenary == null ? 0 : mercenary.skillLevels[0],
+            saved == null ? 0 : statInt(saved.getStats(), com.riiablo.attributes.Stat.level),
+            Float.floatToIntBits(saved == null ? 0f
+                : statFixed(saved.getStats(), com.riiablo.attributes.Stat.maxhp)),
+            rewards == null ? 0 : rewards.resurrectionCost(playerId),
+            saved == null ? 0 : statInt(saved.getStats(), com.riiablo.attributes.Stat.lastexp),
+            Float.floatToIntBits(statFixed(attrs, com.riiablo.attributes.Stat.hitpoints))
+        });
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : emptyHeadlessMercenaryProgressionState();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return emptyHeadlessMercenaryProgressionState();
+    }
+  }
+
+  private static int statInt(com.riiablo.attributes.Attributes attrs, short stat) {
+    com.riiablo.attributes.StatRef value = attrs == null ? null
+        : attrs.get(stat, com.riiablo.attributes.StatRef.obtain());
+    return value == null ? 0 : value.asInt();
+  }
+
+  private static float statFixed(com.riiablo.attributes.Attributes attrs, short stat) {
+    com.riiablo.attributes.StatRef value = attrs == null ? null
+        : attrs.get(stat, com.riiablo.attributes.StatRef.obtain());
+    return value == null ? 0f : value.asFixed();
+  }
+
+  private static int[] emptyHeadlessMercenaryProgressionState() {
+    return new int[] {Engine.INVALID_ENTITY, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, -1, 0, 0, 0, 0, 0, 0};
+  }
+
   /**
    * Stable render-thread snapshot for the two-client hireling travel test.
    * Integer slots carry float bit patterns so the hook has no mutable ECS references.

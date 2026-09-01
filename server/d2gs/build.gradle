@@ -101,6 +101,19 @@ tasks.register('headlessMercenaryLifecycle', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessMercenaryProgression', JavaExec) {
+  group = 'verification'
+  description = 'Runs a two-client native hireling kill, XP and level-up test.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-mercenary-progression',
+       '--attempts', '40', '--test-timeout', '120'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessMercenaryRestore', JavaExec) {
   group = 'verification'
   description = 'Runs two clients through dead D2S hireling login, logout, reconnect and paid revival.'

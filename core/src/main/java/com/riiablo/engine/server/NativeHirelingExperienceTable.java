@@ -286,7 +286,10 @@ public final class NativeHirelingExperienceTable {
   public int levelForExperience(int hirelingId, int currentLevel,
       long experience, int ownerLevel) {
     int level = Math.max(1, currentLevel);
-    int maxLevel = Math.max(level, Math.min(98, ownerLevel - 1));
+    // SUNITDMG_AddExperienceForHireling rejects an award only when the
+    // hireling is already at its owner's level. An accepted final award may
+    // therefore advance it to exactly the owner's level.
+    int maxLevel = Math.max(level, Math.min(98, ownerLevel));
     Row currentRow = row(hirelingId, level);
     if (currentRow == null) return level;
     while (level < maxLevel) {

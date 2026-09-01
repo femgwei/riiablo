@@ -782,7 +782,14 @@ public class MercenaryManager {
       available.seed = 1 + (int) (Math.random() * (Integer.MAX_VALUE - 1));
       available.nameId = def.nameId + (int)(Math.random() * 10);
       available.hired = false;
-      available.level = Math.max(1, playerLevel - 5 + (int)(Math.random() * 10));
+      // MONSTERS_HirelingInit never creates a hireling above its owner: it
+      // starts from the difficulty row and applies at most four level-ups.
+      // This legacy pool lacks the row context, but must preserve that native
+      // upper bound so a newly hired mercenary can earn experience normally.
+      int minimumLevel = Math.max(1, playerLevel - 5);
+      int maximumLevel = Math.max(1, playerLevel - 1);
+      available.level = minimumLevel + (int) (Math.random()
+          * (maximumLevel - minimumLevel + 1));
 
       list.available.add(available);
     }

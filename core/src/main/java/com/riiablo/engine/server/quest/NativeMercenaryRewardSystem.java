@@ -144,9 +144,40 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     return merc == null ? MercenaryManager.STATE_AVAILABLE : merc.state;
   }
 
+  public int mercenaryLevel(int playerId) {
+    MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
+    return merc == null ? 0 : merc.level;
+  }
+
+  public long mercenaryExperience(int playerId) {
+    MercenaryManager.ActiveMercenary merc = mercenaries.getPlayerMercenary(playerId);
+    return merc == null ? 0L : merc.experience;
+  }
+
   public int persistedMercenaryFlags(int playerId) {
     return mPlayer.has(playerId) && mPlayer.get(playerId).data != null
         ? mPlayer.get(playerId).data.getMerc().flags : 0;
+  }
+
+  /** Keeps the lifecycle record used by resurrection in lockstep with ECS/D2S XP. */
+  public boolean synchronizeMercenaryProgress(int playerId, int entityId,
+      long experience, int level) {
+    MercenaryManager.ActiveMercenary active = mercenaries.getPlayerMercenary(playerId);
+    if (active == null || active.entityId != entityId || level < active.level) return false;
+    int oldLevel = active.level;
+    active.experience = Math.max(0L, Math.min(0xFFFFFFFFL, experience));
+    active.level = Math.max(1, Math.min(98, level));
+    com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
+        hirelingTable == null ? null
+            : hirelingTable.stats(active.definition.mercType, active.level);
+    if (nativeStats != null) {
+      active.maxLife = nativeStats.hitpoints;
+      if (active.state != MercenaryManager.STATE_DEAD) active.currentLife = nativeStats.hitpoints;
+    }
+    if (active.level > oldLevel) {
+      onMercenaryLevelUp(playerId, active, oldLevel, active.level);
+    }
+    return true;
   }
 
   /**

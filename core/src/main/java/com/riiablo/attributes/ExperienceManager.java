@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.KillCreditResolver;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.logger.LogManager;
@@ -63,6 +64,7 @@ public class ExperienceManager extends PassiveSystem {
   private EntitySubscription mercenaries;
   private KillCreditResolver killCredits;
   private com.riiablo.engine.server.NativeHirelingExperienceTable hirelingExperience;
+  private NativeMercenaryRewardSystem mercenaryRewards;
   /** A victim can be observed by more than one lethal combat path in a frame. */
   private final IntSet rewardedVictims = new IntSet();
 
@@ -107,6 +109,7 @@ public class ExperienceManager extends PassiveSystem {
     killCredits = new KillCreditResolver(
         mPlayer, mMercenary, mMapWrapper, mPosition, partyManager);
     hirelingExperience = com.riiablo.engine.server.NativeHirelingExperienceTable.load();
+    mercenaryRewards = world.getSystem(NativeMercenaryRewardSystem.class);
   }
 
   /**
@@ -402,16 +405,26 @@ public class ExperienceManager extends PassiveSystem {
 
   private void addExperienceForHireling(CharData playerData, int hirelingId,
       int hirelingLevel, int defenderLevel, int defenderExp, boolean isKiller) {
+    addExperienceForHireling(playerData, hirelingId, hirelingLevel,
+        defenderLevel, defenderExp, isKiller, 0);
+  }
+
+  private void addExperienceForHireling(CharData playerData, int hirelingId,
+      int hirelingLevel, int defenderLevel, int defenderExp, boolean isKiller,
+      int addExperiencePercent) {
     if (playerData == null || !playerData.hasMerc()) return;
     int playerLevel = Math.max(1,
         getInt(playerData.getStats().aggregate(), Stat.level, playerData.level & 0xFF));
-    // SUNITDMG_AddExperienceForHireling refuses to level a hireling to or
-    // beyond its owner.
+    // SUNITDMG_AddExperienceForHireling refuses a new award once the hireling
+    // has already reached its owner's level.
     if (hirelingLevel >= playerLevel) return;
+    // D2Game caps hirelings one level below DATATBLS_GetMaxLevel. Unlike
+    // players, a level-98 hireling must not continue accumulating experience.
+    if (hirelingLevel >= Math.max(1, expTable.getMaxLevel(0) - 1)) return;
 
     // 计算佣兵应得经验
     long baseExp = computeExperienceGain(
-        (byte) 0, hirelingLevel, defenderLevel, defenderExp, 0);
+        (byte) 0, hirelingLevel, defenderLevel, defenderExp, addExperiencePercent);
     if (hirelingExperience != null && hirelingId >= 0 && hirelingExperience.size() > 0) {
       long maximumAward = hirelingExperience.maximumAward(hirelingId, hirelingLevel);
       // Native code clamps even to zero when the selected record has no span.
@@ -457,8 +470,16 @@ public class ExperienceManager extends PassiveSystem {
 
     CharData owner = mPlayer.get(ownerId).data;
     long oldExperience = owner.getMerc().xp;
+    int addExperiencePercent = 0;
+    if (mAttributesWrapper.has(hirelingId)) {
+      Attributes attrs = mAttributesWrapper.get(hirelingId).attrs;
+      if (attrs != null) {
+        addExperiencePercent = getInt(
+            attrs.aggregate(), Stat.item_addexperience, 0);
+      }
+    }
     addExperienceForHireling(owner, hireling.mercType, hirelingLevel,
-        defenderLevel, defenderExp, killerId == hirelingId);
+        defenderLevel, defenderExp, killerId == hirelingId, addExperiencePercent);
     long newExperience = owner.getMerc().xp;
     if (newExperience == oldExperience) return;
 
@@ -478,6 +499,12 @@ public class ExperienceManager extends PassiveSystem {
       com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(hireling, nativeStats);
       log.info("[XP_MERC_LEVEL] owner={} merc={} level={}->{} xp={}",
           owner.name, hirelingId, hirelingLevel, newLevel, newExperience);
+    }
+    if (mercenaryRewards != null
+        && !mercenaryRewards.synchronizeMercenaryProgress(
+            ownerId, hirelingId, newExperience, newLevel)) {
+      log.warn("[XP_MERC] owner={} merc={} failed to synchronize lifecycle progress",
+          ownerId, hirelingId);
     }
     if (!mAttributesWrapper.has(hirelingId)) return;
 
