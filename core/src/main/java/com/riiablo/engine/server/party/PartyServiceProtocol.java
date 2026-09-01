@@ -66,6 +66,14 @@ public final class PartyServiceProtocol {
         if (!validTarget(sourceEntityId, targetEntityId, onlinePlayer)) {
           return invalidTarget(sourceEntityId, targetEntityId, onlinePlayer);
         }
+        if (parties.areHostile(sourceEntityId, targetEntityId)) {
+          return Result.success();
+        }
+        long retryAfterMillis = parties.hostilityCooldownRemaining(
+            sourceEntityId, targetEntityId);
+        if (retryAfterMillis > 0L) {
+          return Result.reject("HOSTILE_COOLDOWN", retryAfterMillis);
+        }
         return parties.declareHostility(sourceEntityId, targetEntityId)
             ? Result.success() : Result.reject("HOSTILE_REJECTED");
 
@@ -101,18 +109,24 @@ public final class PartyServiceProtocol {
   public static final class Result {
     public final boolean success;
     public final String reason;
+    public final long retryAfterMillis;
 
-    private Result(boolean success, String reason) {
+    private Result(boolean success, String reason, long retryAfterMillis) {
       this.success = success;
       this.reason = reason;
+      this.retryAfterMillis = Math.max(0L, retryAfterMillis);
     }
 
     public static Result success() {
-      return new Result(true, "");
+      return new Result(true, "", 0L);
     }
 
     public static Result reject(String reason) {
-      return new Result(false, reason);
+      return reject(reason, 0L);
+    }
+
+    public static Result reject(String reason, long retryAfterMillis) {
+      return new Result(false, reason, retryAfterMillis);
     }
   }
 }

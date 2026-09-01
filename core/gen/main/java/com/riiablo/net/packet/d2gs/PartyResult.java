@@ -29,6 +29,7 @@ public final class PartyResult extends Table {
   public int membersLength() { int o = __offset(18); return o != 0 ? __vector_len(o) : 0; }
   public com.riiablo.net.packet.d2gs.PartyMemberSnapshot.Vector membersVector() { return membersVector(new com.riiablo.net.packet.d2gs.PartyMemberSnapshot.Vector()); }
   public com.riiablo.net.packet.d2gs.PartyMemberSnapshot.Vector membersVector(com.riiablo.net.packet.d2gs.PartyMemberSnapshot.Vector obj) { int o = __offset(18); return o != 0 ? obj.__assign(__vector(o), 4, bb) : null; }
+  public long retryAfterMillis() { int o = __offset(20); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
 
   public static int createPartyResult(FlatBufferBuilder builder,
       long requestId,
@@ -38,8 +39,10 @@ public final class PartyResult extends Table {
       int sourceEntityId,
       int targetEntityId,
       int partyId,
-      int membersOffset) {
-    builder.startTable(8);
+      int membersOffset,
+      long retryAfterMillis) {
+    builder.startTable(9);
+    PartyResult.addRetryAfterMillis(builder, retryAfterMillis);
     PartyResult.addMembers(builder, membersOffset);
     PartyResult.addPartyId(builder, partyId);
     PartyResult.addTargetEntityId(builder, targetEntityId);
@@ -51,7 +54,7 @@ public final class PartyResult extends Table {
     return PartyResult.endPartyResult(builder);
   }
 
-  public static void startPartyResult(FlatBufferBuilder builder) { builder.startTable(8); }
+  public static void startPartyResult(FlatBufferBuilder builder) { builder.startTable(9); }
   public static void addRequestId(FlatBufferBuilder builder, long requestId) { builder.addInt(0, (int)requestId, (int)0L); }
   public static void addSuccess(FlatBufferBuilder builder, boolean success) { builder.addBoolean(1, success, false); }
   public static void addReason(FlatBufferBuilder builder, int reasonOffset) { builder.addOffset(2, reasonOffset, 0); }
@@ -62,6 +65,7 @@ public final class PartyResult extends Table {
   public static void addMembers(FlatBufferBuilder builder, int membersOffset) { builder.addOffset(7, membersOffset, 0); }
   public static int createMembersVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]); return builder.endVector(); }
   public static void startMembersVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addRetryAfterMillis(FlatBufferBuilder builder, long retryAfterMillis) { builder.addInt(8, (int)retryAfterMillis, (int)0L); }
   public static int endPartyResult(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

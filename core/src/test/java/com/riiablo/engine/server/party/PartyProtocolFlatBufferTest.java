@@ -42,7 +42,7 @@ class PartyProtocolFlatBufferTest {
     int members = PartyResult.createMembersVector(builder, new int[] {member});
     int reason = builder.createString("");
     int result = PartyResult.createPartyResult(builder, 4, true, reason,
-        PartyOperation.INVITE, 77, 88, -1, members);
+        PartyOperation.INVITE, 77, 88, -1, members, 12_345L);
     int root = D2GS.createD2GS(builder, D2GSData.PartyResult, result);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     ByteBuffer frame = builder.dataBuffer();
@@ -55,12 +55,13 @@ class PartyProtocolFlatBufferTest {
     assertEquals(77, state.incomingInviterId());
     assertEquals("Amazon", state.get(77).name);
     assertEquals(30, state.get(77).hp);
+    assertEquals(12_345L, state.lastRetryAfterMillis());
     assertEquals(1, state.revision());
 
     FlatBufferBuilder refreshBuilder = new FlatBufferBuilder(128);
     int refreshReason = refreshBuilder.createString("");
     int refreshResult = PartyResult.createPartyResult(refreshBuilder, 0, true,
-        refreshReason, PartyOperation.SNAPSHOT, 88, -1, -1, 0);
+        refreshReason, PartyOperation.SNAPSHOT, 88, -1, -1, 0, 0L);
     int refreshRoot = D2GS.createD2GS(
         refreshBuilder, D2GSData.PartyResult, refreshResult);
     D2GS.finishSizePrefixedD2GSBuffer(refreshBuilder, refreshRoot);
@@ -71,6 +72,7 @@ class PartyProtocolFlatBufferTest {
     state.apply(refresh);
     assertEquals(4, state.lastRequestId());
     assertEquals(PartyOperation.INVITE, state.lastOperation());
+    assertEquals(12_345L, state.lastRetryAfterMillis());
     assertEquals(2, state.revision());
   }
 }

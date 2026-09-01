@@ -103,7 +103,7 @@ public class PartyPanel extends Table {
       status.setColor(state.lastSuccess() ? Riiablo.colors.green : Riiablo.colors.red);
       status.setText(state.lastSuccess()
           ? operationLabel(state.lastOperation()) + " completed"
-          : humanize(state.lastReason()));
+          : failureMessage(state.lastReason(), state.lastRetryAfterMillis()));
     }
   }
 
@@ -270,5 +270,17 @@ public class PartyPanel extends Table {
     if (reason == null || reason.isEmpty()) return "Request rejected";
     String text = reason.replace('_', ' ').toLowerCase(java.util.Locale.ROOT);
     return Character.toUpperCase(text.charAt(0)) + text.substring(1);
+  }
+
+  static String failureMessage(String reason, long retryAfterMillis) {
+    if ("HOSTILE_COOLDOWN".equals(reason)) {
+      long seconds = Math.max(1L, (Math.max(0L, retryAfterMillis) + 999L) / 1000L);
+      return "Please wait " + seconds + (seconds == 1L ? " second" : " seconds")
+          + " before declaring hostility.";
+    }
+    if ("HOSTILE_REJECTED".equals(reason)) {
+      return "Hostility requires both players at level 9, you in town, and no shared party.";
+    }
+    return humanize(reason);
   }
 }

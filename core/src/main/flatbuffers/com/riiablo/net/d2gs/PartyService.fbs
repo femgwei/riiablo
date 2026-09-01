@@ -52,4 +52,6 @@ table PartyResult {
   targetEntityId:int32;
   partyId:int32 = -1;
   members:[PartyMemberSnapshot];
+  /** Server-authoritative retry delay for a rejected operation. */
+  retryAfterMillis:uint32;
 }

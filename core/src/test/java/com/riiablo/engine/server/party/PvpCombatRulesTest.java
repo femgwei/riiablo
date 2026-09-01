@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.junit.jupiter.api.Test;
 
 /** Regression tests for the single authoritative PvP target policy. */
@@ -61,5 +63,47 @@ class PvpCombatRulesTest {
     assertFalse(PvpCombatRules.canDeclareHostility(9, 8, true));
     assertFalse(PvpCombatRules.canDeclareHostility(9, 9, false));
     assertTrue(PvpCombatRules.canDeclareHostility(9, 9, true));
+  }
+
+  @Test
+  void nativeHostilityDelaySurvivesRemovalAndExpiresAfterSixtySeconds() {
+    AtomicLong now = new AtomicLong(1_000L);
+    PartyManager parties = new PartyManager(now::get);
+    assertTrue(parties.declareHostility(1, 2));
+    parties.removeHostility(1, 2);
+
+    assertEquals(60_000L, parties.hostilityCooldownRemaining(1, 2));
+    assertFalse(parties.declareHostility(1, 2));
+    now.addAndGet(59_999L);
+    assertEquals(1L, parties.hostilityCooldownRemaining(1, 2));
+    assertFalse(parties.declareHostility(1, 2));
+    now.incrementAndGet();
+    assertEquals(0L, parties.hostilityCooldownRemaining(1, 2));
+    assertTrue(parties.declareHostility(1, 2));
+  }
+
+  @Test
+  void nativeHostilityDelayIsDirectional() {
+    AtomicLong now = new AtomicLong(1_000L);
+    PartyManager parties = new PartyManager(now::get);
+    assertTrue(parties.declareHostility(1, 2));
+    parties.removeHostility(1, 2);
+
+    assertEquals(60_000L, parties.hostilityCooldownRemaining(1, 2));
+    assertEquals(0L, parties.hostilityCooldownRemaining(2, 1));
+    assertTrue(parties.declareHostility(2, 1));
+  }
+
+  @Test
+  void idempotentRequestDoesNotRestartDelayAndDisconnectClearsIt() {
+    AtomicLong now = new AtomicLong(1_000L);
+    PartyManager parties = new PartyManager(now::get);
+    assertTrue(parties.declareHostility(1, 2));
+    now.addAndGet(10_000L);
+
+    assertTrue(parties.declareHostility(1, 2));
+    assertEquals(50_000L, parties.hostilityCooldownRemaining(1, 2));
+    parties.removePlayer(1);
+    assertEquals(0L, parties.hostilityCooldownRemaining(1, 2));
   }
 }

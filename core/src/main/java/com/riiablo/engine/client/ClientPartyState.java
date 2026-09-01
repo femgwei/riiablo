@@ -15,6 +15,7 @@ public final class ClientPartyState {
   private boolean lastSuccess;
   private String lastReason = "";
   private byte lastOperation;
+  private long lastRetryAfterMillis;
   private int sourceEntityId = -1;
   private int targetEntityId = -1;
   private int partyId = Party.INVALID_ID;
@@ -50,6 +51,7 @@ public final class ClientPartyState {
       lastSuccess = result.success();
       lastReason = result.reason() == null ? "" : result.reason();
       lastOperation = result.operation();
+      lastRetryAfterMillis = result.retryAfterMillis();
     }
     sourceEntityId = result.sourceEntityId();
     targetEntityId = result.targetEntityId();
@@ -64,6 +66,7 @@ public final class ClientPartyState {
   public boolean lastSuccess() { return lastSuccess; }
   public String lastReason() { return lastReason; }
   public byte lastOperation() { return lastOperation; }
+  public long lastRetryAfterMillis() { return lastRetryAfterMillis; }
   public int sourceEntityId() { return sourceEntityId; }
   public int targetEntityId() { return targetEntityId; }
   public int partyId() { return partyId; }

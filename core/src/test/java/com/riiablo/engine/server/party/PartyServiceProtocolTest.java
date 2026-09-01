@@ -3,6 +3,8 @@ package com.riiablo.engine.server.party;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.junit.jupiter.api.Test;
 
 class PartyServiceProtocolTest {
@@ -54,5 +56,25 @@ class PartyServiceProtocolTest {
         com.riiablo.net.packet.d2gs.PartyOperation.UNHOSTILE, 1, online).success);
     assertEquals(PartyRelation.NONE, parties.getRelation(1, 2));
     assertEquals(PartyRelation.NONE, parties.getRelation(2, 1));
+  }
+
+  @Test
+  void repeatedHostilityReturnsAuthoritativeRetryDelay() {
+    AtomicLong now = new AtomicLong(5_000L);
+    PartyManager parties = new PartyManager(now::get);
+    java.util.function.IntPredicate online = id -> id == 1 || id == 2;
+    assertTrue(PartyServiceProtocol.execute(parties, 1,
+        com.riiablo.net.packet.d2gs.PartyOperation.HOSTILE, 2, online).success);
+    assertTrue(PartyServiceProtocol.execute(parties, 1,
+        com.riiablo.net.packet.d2gs.PartyOperation.UNHOSTILE, 2, online).success);
+
+    PartyServiceProtocol.Result rejected = PartyServiceProtocol.execute(parties, 1,
+        com.riiablo.net.packet.d2gs.PartyOperation.HOSTILE, 2, online);
+    assertEquals("HOSTILE_COOLDOWN", rejected.reason);
+    assertEquals(60_000L, rejected.retryAfterMillis);
+    now.addAndGet(12_345L);
+    rejected = PartyServiceProtocol.execute(parties, 1,
+        com.riiablo.net.packet.d2gs.PartyOperation.HOSTILE, 2, online);
+    assertEquals(47_655L, rejected.retryAfterMillis);
   }
 }

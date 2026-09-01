@@ -962,7 +962,7 @@ public class D2GS extends ApplicationAdapter {
     }
     Gdx.app.log(TAG, "[PARTY] source=" + source + " target=" + request.targetEntityId()
         + " operation=" + request.operation() + " success=" + result.success
-        + " reason=" + result.reason);
+        + " reason=" + result.reason + " retryAfterMillis=" + result.retryAfterMillis);
   }
 
   private int clientForEntity(int entityId) {
@@ -1044,7 +1044,7 @@ public class D2GS extends ApplicationAdapter {
     int membersOffset = PartyResult.createMembersVector(builder, roster);
     int resultOffset = PartyResult.createPartyResult(builder, requestId, result.success,
         reasonOffset, operation, sourceEntityId, targetEntityId,
-        partyManager.getPartyId(viewerEntityId), membersOffset);
+        partyManager.getPartyId(viewerEntityId), membersOffset, result.retryAfterMillis);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
         D2GSData.PartyResult, resultOffset);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);

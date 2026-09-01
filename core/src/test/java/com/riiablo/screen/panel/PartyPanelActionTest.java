@@ -1,6 +1,7 @@
 package com.riiablo.screen.panel;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyRelation;
@@ -26,5 +27,15 @@ class PartyPanelActionTest {
         PartyPanel.actionsFor(false, Party.INVALID_ID, 4, PartyRelation.NONE));
     assertArrayEquals(new byte[0],
         PartyPanel.actionsFor(false, 3, 3, PartyRelation.PARTY_MEMBER));
+  }
+
+  @Test
+  void displaysNativeHostilityCooldownAndGateFailures() {
+    assertEquals("Please wait 60 seconds before declaring hostility.",
+        PartyPanel.failureMessage("HOSTILE_COOLDOWN", 59_001L));
+    assertEquals("Please wait 1 second before declaring hostility.",
+        PartyPanel.failureMessage("HOSTILE_COOLDOWN", 1L));
+    assertEquals("Hostility requires both players at level 9, you in town, and no shared party.",
+        PartyPanel.failureMessage("HOSTILE_REJECTED", 0L));
   }
 }

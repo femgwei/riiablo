@@ -3,6 +3,9 @@ package com.riiablo.engine.server.party;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.TimeUtils;
+
+import java.util.function.LongSupplier;
 
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -26,6 +29,9 @@ public class PartyManager {
   /** 最大队伍数量 */
   public static final int MAX_PARTIES = 64;
 
+  /** D2MOO PLAYERLIST hostile delay applied after opening hostility. */
+  public static final long HOSTILITY_COOLDOWN_MILLIS = 60_000L;
+
   //==========================================================================
   // 数据
   //==========================================================================
@@ -38,6 +44,12 @@ public class PartyManager {
   
   /** 玩家之间的关系映射（玩家A的ID * MAX + 玩家B的ID -> 关系） */
   private final IntMap<Integer> relationMap;
+
+  /** Directional PLAYERLIST hostile-delay deadline (attacker -> target). */
+  private final IntMap<Long> hostilityDelayUntil;
+
+  /** Monotonic time source, injectable for deterministic protocol tests. */
+  private final LongSupplier clock;
   
   /** 下一个可用的队伍 ID */
   private short nextPartyId;
@@ -60,9 +72,16 @@ public class PartyManager {
    * 创建队伍管理器
    */
   public PartyManager() {
+    this(TimeUtils::millis);
+  }
+
+  PartyManager(LongSupplier clock) {
+    if (clock == null) throw new IllegalArgumentException("clock cannot be null");
+    this.clock = clock;
     this.parties = new IntMap<>(MAX_PARTIES);
     this.playerPartyMap = new IntMap<>(64);
     this.relationMap = new IntMap<>(256);
+    this.hostilityDelayUntil = new IntMap<>(64);
     this.invitations = new IntMap<>(32);
     this.nextPartyId = Party.MIN_PARTY_ID;
   }
@@ -295,6 +314,14 @@ public class PartyManager {
       if (source == entityId || target == entityId) relationKeys.add(relation.key);
     }
     for (int i = 0; i < relationKeys.size; i++) relationMap.remove(relationKeys.get(i));
+
+    IntArray delayKeys = new IntArray();
+    for (IntMap.Entry<Long> delay : hostilityDelayUntil.entries()) {
+      int source = delay.key / MAX_PLAYER_ID;
+      int target = delay.key % MAX_PLAYER_ID;
+      if (source == entityId || target == entityId) delayKeys.add(delay.key);
+    }
+    for (int i = 0; i < delayKeys.size; i++) hostilityDelayUntil.remove(delayKeys.get(i));
   }
 
   //==========================================================================
@@ -435,6 +462,20 @@ public class PartyManager {
       log.warn("无法敌对队友: attackerId={}, targetId={}", attackerId, targetId);
       return false;
     }
+
+    // PARTYSCREEN_ToggleHostile treats requesting an already active flag as
+    // an idempotent roster refresh and does not restart the timer.
+    if (areHostile(attackerId, targetId)) return true;
+
+    long remaining = hostilityCooldownRemaining(attackerId, targetId);
+    if (remaining > 0) {
+      log.info("敌对冷却中: attackerId={}, targetId={}, remainingMillis={}",
+          attackerId, targetId, remaining);
+      return false;
+    }
+
+    hostilityDelayUntil.put(relationKey(attackerId, targetId),
+        clock.getAsLong() + HOSTILITY_COOLDOWN_MILLIS);
     
     // D2MOO FRIENDLY_OpenHostility toggles the player-list flag in both
     // directions so the challenged player may retaliate immediately and both
@@ -443,6 +484,22 @@ public class PartyManager {
     setRelation(targetId, attackerId, PartyRelation.HOSTILE);
     log.info("声明敌对: attackerId={}, targetId={}", attackerId, targetId);
     return true;
+  }
+
+  /**
+   * Returns the remaining native hostile delay for this directional request.
+   * Removing hostility does not clear the deadline.
+   */
+  public long hostilityCooldownRemaining(int attackerId, int targetId) {
+    int key = relationKey(attackerId, targetId);
+    Long deadline = hostilityDelayUntil.get(key);
+    if (deadline == null) return 0L;
+    long remaining = deadline - clock.getAsLong();
+    if (remaining <= 0L) {
+      hostilityDelayUntil.remove(key);
+      return 0L;
+    }
+    return remaining;
   }
 
   /**
@@ -478,7 +535,7 @@ public class PartyManager {
    * @param relation 关系类型
    */
   public void setRelation(int entityId1, int entityId2, int relation) {
-    int key = entityId1 * MAX_PLAYER_ID + entityId2;
+    int key = relationKey(entityId1, entityId2);
     if (relation == PartyRelation.NONE) {
       relationMap.remove(key);
     } else {
@@ -499,8 +556,12 @@ public class PartyManager {
       return PartyRelation.PARTY_MEMBER;
     }
     
-    int key = entityId1 * MAX_PLAYER_ID + entityId2;
+    int key = relationKey(entityId1, entityId2);
     return relationMap.get(key, PartyRelation.NONE);
+  }
+
+  private static int relationKey(int sourceEntityId, int targetEntityId) {
+    return sourceEntityId * MAX_PLAYER_ID + targetEntityId;
   }
 
   /**
