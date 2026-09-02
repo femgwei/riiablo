@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.NativeTargeting;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
@@ -84,6 +85,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private volatile int mercenaryLastSrvDoFunc;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
@@ -110,6 +112,13 @@ public class ServerSkillSystem extends PassiveSystem {
             true, true)) {
       reject(event, 8, "target player is not hostile");
       log.info("[PVP] phase=skill_reject source={} target={} skill={} reason=not_hostile",
+          event.entityId, event.targetId, event.skillId);
+      return;
+    }
+    if (event.targetId >= 0
+        && (mMercenary.has(event.targetId) || mSummonedPet.has(event.targetId))) {
+      reject(event, 8, "target is a friendly owned unit");
+      log.info("[SKILL_CAST] phase=reject source={} target={} skill={} reason=friendly_pet",
           event.entityId, event.targetId, event.skillId);
       return;
     }
@@ -179,9 +188,14 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (!mPosition.has(event.entityId)) return;
     if (!mPlayer.has(event.entityId) && !mMonster.has(event.entityId)) return;
-    if (monstersOnly && !mMonster.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    // Local games retain their legacy player projectile presentation, but
+    // native summons are server entities rather than visual projectiles and
+    // must still be created in the local authoritative world.
+    if (monstersOnly && !mMonster.has(event.entityId)
+        && event.srvdofunc != 15 && event.srvdofunc != 16
+        && skill.srvdofunc != 15 && skill.srvdofunc != 16) return;
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
@@ -204,6 +218,14 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.srvdofunc == 14 || skill.srvdofunc == 14) {
       spawnLightningStrike(event, skill);
+      return;
+    }
+    if (event.srvdofunc == 15 || skill.srvdofunc == 15) {
+      spawnAmazonSummon(event, skill, start, false);
+      return;
+    }
+    if (event.srvdofunc == 16 || skill.srvdofunc == 16) {
+      spawnAmazonSummon(event, skill, start, true);
       return;
     }
     if (event.srvdofunc == 24 || skill.srvdofunc == 24) {
@@ -540,6 +562,78 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, event.targetId, skillLevel, range, maxJumps, created, missileName);
   }
 
+  /** Native Amazon SrvDo015/SrvDo016: create an owned Decoy or Valkyrie. */
+  private void spawnAmazonSummon(SkillDoEvent event, Skills.Entry skill,
+      Vector2 caster, boolean valkyrie) {
+    if (!mPlayer.has(event.entityId)) return;
+    MonStats.Entry summon = skill.summon == null || skill.summon.isEmpty()
+        ? null : Riiablo.files.monstats.get(skill.summon);
+    if (summon == null) {
+      log.warn("[AMAZON_{}] phase=reject owner={} skill={} reason=missing_summon row={}",
+          valkyrie ? "VALKYRIE" : "DECOY", event.entityId, event.skillId, skill.summon);
+      return;
+    }
+    int skillLevel = getSkillLevel(event.entityId, event.skillId);
+    int petMax = SkillFormula.evaluate(skill.petmax, skill, skillLevel);
+    if (petMax <= 0) petMax = 1;
+    int duration = valkyrie ? 0 : Math.max(0,
+        SkillFormula.evaluate(skill.calc2, skill, skillLevel));
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    int petId = factory.createSummonedPet(
+        event.entityId, summon, skill.pettype, event.skillId, skillLevel,
+        petMax, !valkyrie, duration, target.x, target.y);
+    if (petId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(petId)) {
+      log.warn("[AMAZON_{}] phase=reject owner={} skill={} reason=create_failed target=({}, {})",
+          valkyrie ? "VALKYRIE" : "DECOY", event.entityId, event.skillId,
+          target.x, target.y);
+      return;
+    }
+
+    Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    Attributes petAttrs = mAttributesWrapper.get(petId).attrs;
+    int ownerLevel = Math.max(1, statInt(ownerAttrs, Stat.level));
+    int petLevel = summonBaseLevel(ownerLevel, skillLevel);
+    StatRef level = petAttrs != null ? petAttrs.get(Stat.level, StatRef.obtain()) : null;
+    if (level != null) level.set(petLevel);
+
+    if (!valkyrie && ownerAttrs != null && petAttrs != null) {
+      int hpPercent = Math.max(1, SkillFormula.evaluate(skill.calc3, skill, skillLevel));
+      float ownerMaxHp = statFixed(ownerAttrs, Stat.maxhp);
+      float hitpoints = Math.max(1f, ownerMaxHp * hpPercent / 100f);
+      StatRef hp = petAttrs.get(Stat.hitpoints, StatRef.obtain());
+      StatRef maxHp = petAttrs.get(Stat.maxhp, StatRef.obtain());
+      if (hp != null) hp.set(hitpoints);
+      if (maxHp != null) maxHp.set(hitpoints);
+    } else if (valkyrie && mUnitStates.has(petId)) {
+      UnitStates states = mUnitStates.get(petId);
+      if (states.stateList == null) states.init(petId);
+      states.stateList.addState(StateId.VALKYRIE, 0, skillLevel, event.entityId);
+    }
+
+    log.info("[AMAZON_{}] phase=spawn owner={} entity={} summon={} petType={} "
+            + "skill={} level={} petLevel={} max={} duration={} target=({}, {})",
+        valkyrie ? "VALKYRIE" : "DECOY", event.entityId, petId, summon.Id,
+        skill.pettype, event.skillId, skillLevel, petLevel, petMax, duration,
+        target.x, target.y);
+  }
+
+  static int summonBaseLevel(int ownerLevel, int skillLevel) {
+    int normalizedOwner = Math.max(1, ownerLevel);
+    int level = Math.max(1, skillLevel) + 3 * normalizedOwner / 4;
+    return Math.max(1, Math.min(normalizedOwner, level));
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    StatRef ref = attrs != null ? attrs.get(stat, StatRef.obtain()) : null;
+    return ref != null ? ref.asInt() : 0;
+  }
+
+  private static float statFixed(Attributes attrs, short stat) {
+    StatRef ref = attrs != null ? attrs.get(stat, StatRef.obtain()) : null;
+    return ref != null ? ref.asFixed() : 0f;
+  }
+
   private int findNearestHostile(int sourceId, Vector2 origin, IntSet visited, float range2) {
     IntBag entities = world.getAspectSubscriptionManager()
         .get(Aspect.all(Position.class)).getEntities();
@@ -590,9 +684,11 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private boolean isHostile(int sourceId, int candidate) {
-    boolean sourcePlayer = mPlayer.has(sourceId);
+    boolean sourcePlayer = mPlayer.has(sourceId) || mMercenary.has(sourceId)
+        || mSummonedPet.has(sourceId);
     if (sourcePlayer) {
-      if (mMonster.has(candidate)) return true;
+      if (mMonster.has(candidate) && !mMercenary.has(candidate)
+          && !mSummonedPet.has(candidate)) return true;
       return mPlayer.has(candidate) && PvpCombatRules.canTarget(
           partyManager, sourceId, candidate, true, true);
     }

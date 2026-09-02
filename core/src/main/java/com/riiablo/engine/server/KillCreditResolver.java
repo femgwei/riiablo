@@ -9,6 +9,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PartyMember;
@@ -20,6 +21,7 @@ public final class KillCreditResolver {
 
   private final ComponentMapper<Player> players;
   private final ComponentMapper<Mercenary> mercenaries;
+  private final ComponentMapper<SummonedPet> summonedPets;
   private final ComponentMapper<MapWrapper> maps;
   private final ComponentMapper<Position> positions;
   private final PartyManager parties;
@@ -27,8 +29,16 @@ public final class KillCreditResolver {
   public KillCreditResolver(ComponentMapper<Player> players,
       ComponentMapper<Mercenary> mercenaries, ComponentMapper<MapWrapper> maps,
       ComponentMapper<Position> positions, PartyManager parties) {
+    this(players, mercenaries, null, maps, positions, parties);
+  }
+
+  public KillCreditResolver(ComponentMapper<Player> players,
+      ComponentMapper<Mercenary> mercenaries, ComponentMapper<SummonedPet> summonedPets,
+      ComponentMapper<MapWrapper> maps, ComponentMapper<Position> positions,
+      PartyManager parties) {
     this.players = players;
     this.mercenaries = mercenaries;
+    this.summonedPets = summonedPets;
     this.maps = maps;
     this.positions = positions;
     this.parties = parties;
@@ -40,6 +50,10 @@ public final class KillCreditResolver {
     if (validPlayer(killerId)) return killerId;
     if (mercenaries != null && mercenaries.has(killerId)) {
       int owner = mercenaries.get(killerId).ownerId;
+      if (validPlayer(owner)) return owner;
+    }
+    if (summonedPets != null && summonedPets.has(killerId)) {
+      int owner = summonedPets.get(killerId).ownerId;
       if (validPlayer(owner)) return owner;
     }
     return -1;

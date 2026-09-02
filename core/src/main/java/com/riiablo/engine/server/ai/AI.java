@@ -32,11 +32,13 @@ import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.NativeTargeting;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Size;
@@ -76,6 +78,7 @@ public abstract class AI implements Interactable.Interactor {
   }
 
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Angle> mAngle;
@@ -91,6 +94,8 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
 
   protected CofManager cofs;
   protected Pathfinder pathfinder;
@@ -390,18 +395,17 @@ public abstract class AI implements Interactable.Interactor {
   }
 
   /**
-   * 获取玩家实体订阅（用于远程怪查找目标）。懒初始化，与 D2MOD pTargetNodes 等价。
+   * 获取可参与目标筛选的实体订阅。具体阵营由 isValidEnemyTarget 判定。
    */
   protected EntitySubscription getEnemyEntities() {
     // Do not cache this globally. Dedicated server, local server and headless
     // tests can own separate ECS worlds; a static subscription makes later
     // worlds read the first world's target nodes and breaks authority.
-    return Riiablo.engine.getAspectSubscriptionManager().get(
-        Aspect.all(Class.class).one(Player.class));
+    return Riiablo.engine.getAspectSubscriptionManager().get(Aspect.all(Position.class));
   }
 
   /**
-   * 查找最近玩家，返回 targetId；outDistance[0] 为距离。
+   * 查找最近敌对目标，返回 targetId；outDistance[0] 为距离。
    * 优化：使用 aidist 限制查找范围，平方距离避免开方。D2MOD 使用 nAiDist 限制查找。
    */
   protected int findNearestTargetWithAidist(float[] outDistance) {
@@ -447,8 +451,13 @@ public abstract class AI implements Interactable.Interactor {
    * monster AIs from accidentally reverting to global nearest-player scans.
    */
   protected boolean isValidEnemyTarget(int targetId) {
-    if (!mClass.has(targetId) || mClass.get(targetId).type != Class.Type.PLR
-        || !mPosition.has(targetId)) return false;
+    if (!mPosition.has(targetId) || targetId == entityId) return false;
+    SummonedPet sourcePet = mSummonedPet.has(entityId) ? mSummonedPet.get(entityId) : null;
+    if (sourcePet != null && sourcePet.passive) return false;
+    boolean targetFriendly = mPlayer.has(targetId) || mMercenary.has(targetId)
+        || mSummonedPet.has(targetId);
+    boolean targetHostileMonster = mMonster.has(targetId) && !targetFriendly;
+    if (sourcePet != null ? !targetHostileMonster : !targetFriendly) return false;
     if (mMapWrapper.has(targetId) && mMapWrapper.get(targetId).zone != null
         && mMapWrapper.get(targetId).zone.isTown()) {
       return false;
@@ -470,7 +479,7 @@ public abstract class AI implements Interactable.Interactor {
       MapWrapper source = mMapWrapper.get(entityId);
       MapWrapper target = mMapWrapper.get(targetId);
       if (source.map != null && target.map != null && source.map != target.map) return false;
-      if (monster != null && monster.spawnZone != null
+      if (sourcePet == null && monster != null && monster.spawnZone != null
           && (source.zone != monster.spawnZone || target.zone != monster.spawnZone)) return false;
       if (source.zone != null && target.zone != null && source.zone != target.zone) return false;
       if (source.zone != null && target.zone == source.zone

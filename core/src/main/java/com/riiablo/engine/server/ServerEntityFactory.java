@@ -53,6 +53,7 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.SuperUnique;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
@@ -98,6 +99,9 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<SuperUnique> mSuperUnique;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
+
+  private final Vector2 summonPosition = new Vector2();
 
   protected ObjectInteractor objectInteractor;
   protected WarpInteractor warpInteractor;
@@ -445,6 +449,65 @@ public class ServerEntityFactory extends EntityFactory {
 
     mNetworked.create(id);
     return id;
+  }
+
+  @Override
+  public int createSummonedPet(int ownerId, MonStats.Entry summon, String petType,
+      int skillId, int skillLevel, int petMax, boolean passive, int durationFrames,
+      float x, float y) {
+    if (ownerId < 0 || summon == null || petType == null || petType.isEmpty()
+        || !mPlayer.has(ownerId)) {
+      log.warn("[SUMMON_PET] phase=reject owner={} summon={} petType={} reason=invalid_request",
+          ownerId, summon != null ? summon.Id : "null", petType);
+      return Engine.INVALID_ENTITY;
+    }
+
+    int maximum = Math.max(1, petMax);
+    com.artemis.utils.IntBag pets = world.getAspectSubscriptionManager()
+        .get(Aspect.all(SummonedPet.class)).getEntities();
+    int matching = 0;
+    com.badlogic.gdx.utils.IntArray matchingIds = new com.badlogic.gdx.utils.IntArray();
+    for (int i = 0; i < pets.size(); i++) {
+      SummonedPet pet = mSummonedPet.get(pets.get(i));
+      if (pet != null && pet.ownerId == ownerId && petType.equalsIgnoreCase(pet.petType)) {
+        matching++;
+        matchingIds.add(pets.get(i));
+      }
+    }
+
+    MonStats2.Entry summonStats2 = Riiablo.files.monstats2.get(summon.MonStatsEx);
+    int footprint = summonStats2 != null ? Math.max(1, summonStats2.SizeX) : 1;
+    summonPosition.set(x, y);
+    Map.Zone zone = map != null ? map.getZone(x, y) : null;
+    if (zone == null && mMapWrapper.has(ownerId)) {
+      zone = mMapWrapper.get(ownerId).zone;
+      if (mPosition.has(ownerId)) summonPosition.set(mPosition.get(ownerId).position);
+    }
+    if (zone == null || !zone.findFreeCoordinates(
+        summonPosition, footprint, 8, true, summonPosition)) {
+      log.warn("[SUMMON_PET] phase=reject owner={} summon={} petType={} "
+              + "position=({}, {}) reason=no_free_position",
+          ownerId, summon.Id, petType, x, y);
+      return Engine.INVALID_ENTITY;
+    }
+
+    int entityId = createMonster(summon.hcIdx, summonPosition.x, summonPosition.y);
+    if (entityId == Engine.INVALID_ENTITY) return entityId;
+    mSummonedPet.create(entityId).set(ownerId, petType, skillId, skillLevel,
+        passive, durationFrames);
+    mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
+    int replacements = Math.max(0, matching + 1 - maximum);
+    for (int i = 0; i < replacements && i < matchingIds.size; i++) {
+      int oldId = matchingIds.get(i);
+      world.delete(oldId);
+      log.info("[SUMMON_PET] phase=replace owner={} petType={} oldEntity={} newEntity={}",
+          ownerId, petType, oldId, entityId);
+    }
+    log.info("[SUMMON_PET] phase=created owner={} entity={} summon={} petType={} "
+            + "skill={} level={} max={} passive={} duration={} position=({}, {})",
+        ownerId, entityId, summon.Id, petType, skillId, skillLevel, maximum,
+        passive, durationFrames, summonPosition.x, summonPosition.y);
+    return entityId;
   }
 
   /** Applies only rank information encoded by the monster row itself. */

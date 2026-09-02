@@ -15,6 +15,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
@@ -33,6 +34,25 @@ class KillCreditResolverTest {
       assertEquals(owner, resolver.ownerOf(owner));
       assertEquals(owner, resolver.ownerOf(hireling));
       assertEquals(-1, resolver.ownerOf(world.create()));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void resolvesSummonedPetToItsPlayerOwner() {
+    World world = new World(new WorldConfigurationBuilder().build());
+    try {
+      int owner = createPlayer(world, 1, 0f, 0f);
+      int pet = world.create();
+      world.getMapper(SummonedPet.class).create(pet)
+          .set(owner, "valkyrie", 32, 7, false, 0);
+      KillCreditResolver resolver = new KillCreditResolver(
+          world.getMapper(Player.class), world.getMapper(Mercenary.class),
+          world.getMapper(SummonedPet.class), world.getMapper(MapWrapper.class),
+          world.getMapper(Position.class), null);
+
+      assertEquals(owner, resolver.ownerOf(pet));
     } finally {
       world.dispose();
     }

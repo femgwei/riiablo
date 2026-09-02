@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SuperUnique;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.KillCreditResolver;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NativeCountessQuestEvent;
@@ -54,6 +55,7 @@ public class Act1QuestSystem extends PassiveSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Corpse> mCorpse;
@@ -79,7 +81,7 @@ public class Act1QuestSystem extends PassiveSystem {
     playersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Player.class, MapWrapper.class));
     killCredits = new KillCreditResolver(
-        mPlayer, mMercenary, mMapWrapper, null, partyManager);
+        mPlayer, mMercenary, mSummonedPet, mMapWrapper, null, partyManager);
   }
 
   @Subscribe

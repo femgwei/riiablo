@@ -77,6 +77,8 @@ class NativeUnitFlagsTest {
     assertEquals(NativeUnitFlags.NO_EXPERIENCE, NativeUnitFlags.MAGGOT_LAY_SUMMON);
     assertEquals(NativeUnitFlags.NO_EXPERIENCE | NativeUnitFlags.NO_TREASURE_CLASS,
         NativeUnitFlags.NEST_SUMMON);
+    assertEquals(NativeUnitFlags.MONSTER_TARGET | NativeUnitFlags.NO_RESURRECTION_REWARD,
+        NativeUnitFlags.PLAYER_SUMMON);
   }
 
   @Test

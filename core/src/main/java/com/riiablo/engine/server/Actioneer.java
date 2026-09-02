@@ -32,6 +32,7 @@ import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Leap;
@@ -39,6 +40,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.StateId;
@@ -75,6 +77,8 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Leap> mLeap;
@@ -567,13 +571,15 @@ public class Actioneer extends PassiveSystem {
         // monster tests intentionally omit the presentation Class component,
         // so using isPlayerEntity() here would misclassify a valid player
         // target and block an otherwise normal monster attack.
-        boolean attackerPlayerUnit = mPlayer.has(entityId);
-        boolean targetPlayerUnit = mPlayer.has(targetId);
-        if ((attackerPlayerUnit && targetPlayerUnit)
-            && !PvpCombatRules.canDamage(partyManager, entityId, targetId, true, true)) {
-          if (attackerPlayerUnit && targetPlayerUnit) {
-            log.info("[PVP] phase=reject source={} target={} reason=not_hostile", entityId, targetId);
-          }
+        boolean attackerPlayerUnit = mPlayer.has(entityId) || mMercenary.has(entityId)
+            || mSummonedPet.has(entityId);
+        boolean targetPlayerUnit = mPlayer.has(targetId) || mMercenary.has(targetId)
+            || mSummonedPet.has(targetId);
+        if (!PvpCombatRules.canDamage(
+            partyManager, entityId, targetId, attackerPlayerUnit, targetPlayerUnit)) {
+          log.info("[COMBAT_RELATION] phase=reject source={} target={} "
+                  + "sourcePlayerAligned={} targetPlayerAligned={}",
+              entityId, targetId, attackerPlayerUnit, targetPlayerUnit);
           break;
         }
         boolean attackerPlayer = isPlayerEntity(entityId);

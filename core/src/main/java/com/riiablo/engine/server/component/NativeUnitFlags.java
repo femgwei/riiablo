@@ -34,6 +34,8 @@ public class NativeUnitFlags extends Component {
   public static final int SELF_RESURRECTION = NO_RESURRECTION_REWARD;
   /** D2Game {@code MONSTERAI_InitializeHireling}. */
   public static final int MERCENARY = NO_RESURRECTION_REWARD | IS_MERCENARY;
+  /** Player-owned monster-shaped summons are hostile targets but grant no rewards. */
+  public static final int PLAYER_SUMMON = MONSTER_TARGET | NO_RESURRECTION_REWARD;
   /** D2Game {@code SKILLS_SrvDo087_MaggotLay}. */
   public static final int MAGGOT_LAY_SUMMON = NO_EXPERIENCE;
   /** D2Game {@code SKILLS_SrvDo091_Nest_EvilHutSpawner}. */

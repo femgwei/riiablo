@@ -25,6 +25,7 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.UnitStates;
@@ -63,6 +64,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
@@ -517,8 +519,10 @@ public class MissileCollisionSystem extends IteratingSystem {
     // them their owner's good alignment. Treat them as player-aligned for
     // combat relations so their missiles can hit hostile monsters without
     // becoming hostile to players.
-    boolean sourcePlayer = mPlayer.has(entityId1) || mMercenary.has(entityId1);
-    boolean targetPlayer = mPlayer.has(entityId2) || mMercenary.has(entityId2);
+    boolean sourcePlayer = mPlayer.has(entityId1) || mMercenary.has(entityId1)
+        || mSummonedPet.has(entityId1);
+    boolean targetPlayer = mPlayer.has(entityId2) || mMercenary.has(entityId2)
+        || mSummonedPet.has(entityId2);
     boolean sourceMonster = mMonster.has(entityId1);
     boolean targetMonster = mMonster.has(entityId2);
     if (!sourcePlayer && !sourceMonster) return false;

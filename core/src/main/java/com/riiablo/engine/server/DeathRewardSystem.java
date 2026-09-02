@@ -17,6 +17,7 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.item.ItemQuality;
 import com.riiablo.engine.server.item.LootManager;
@@ -45,6 +46,7 @@ public class DeathRewardSystem extends PassiveSystem {
 
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
@@ -71,7 +73,7 @@ public class DeathRewardSystem extends PassiveSystem {
   protected void initialize() {
     players = world.getAspectSubscriptionManager().get(Aspect.all(Player.class));
     killCredits = new KillCreditResolver(
-        mPlayer, mMercenary, mMapWrapper, mPosition, partyManager);
+        mPlayer, mMercenary, mSummonedPet, mMapWrapper, mPosition, partyManager);
   }
 
   @Subscribe
@@ -81,6 +83,7 @@ public class DeathRewardSystem extends PassiveSystem {
     // Hirelings retain Monster presentation data, but their death is a pet
     // lifecycle transition and must never roll hostile monster XP or loot.
     if (mMercenary.has(event.victim)) return;
+    if (mSummonedPet.has(event.victim)) return;
     NativeUnitFlags unitFlags = mNativeUnitFlags.get(event.victim);
     if (unitFlags != null && unitFlags.has(NativeUnitFlags.NO_TREASURE_CLASS)) {
       log.debug("[DEATH_REWARD] UNITFLAG_NOTC suppresses treasure class: victim={} flags=0x{}",

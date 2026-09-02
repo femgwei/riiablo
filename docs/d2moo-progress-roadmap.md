@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-02  
+更新时间：2026-09-03
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -55,7 +55,7 @@
 
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
-| 亚马逊 Amazon | 50% | 50% | 弓/标枪技能的原生导弹、穿透、攻速和目标分支 |
+| 亚马逊 Amazon | 62% | 38% | Guided Arrow/Strafe、穿透与 Dodge/Avoid/Evade 被动判定 |
 | 刺客 Assassin | 45% | 55% | 聚气、陷阱生命周期、影子/踢击和状态分支 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
@@ -102,6 +102,8 @@
 - [ ] 完成 TreasureClassEx 的嵌套 TC、唯一/套装属性和掉落位置规则。
 - [ ] 对齐命中结果、格挡/闪避、抗性/吸收、穿透、持续伤害和状态生命周期。
 - [ ] 补齐第一章怪物技能、导弹碰撞和特殊 AI 的原生分支。
+- [x] ~~完成亚马逊 Decoy/Dopplezon 与 Valkyrie 原生召唤专项~~
+  - `SrvDo015/016` 使用 `Skills.txt` 的 `summon/pettype/petmax/calc`；召唤物具有主人、阵营、限额替换、可通行落点、Decoy 时限与 Valkyrie 状态；召唤物击杀奖励归主人，自身死亡无经验和掉落。
 
 ### P2：世界交互和多人闭环
 
@@ -122,11 +124,12 @@
 - 2026-09-02：为 `ItemData.updateStats` 和 `CharData.onUpdated` 增加不完整物品/角色记录保护；
   `NativeGemShrineServiceTest` 及地图、神殿、Fallen Shaman、双客户端掉落回归集合全部通过。
 - 2026-09-02：完成 P1 原生物品生成首项；新增纯数据和真实 Excel/MPQ 双层测试，物品、掉落、修理、交易与 Countess 回归共 35 个用例通过。
+- 2026-09-03：完成亚马逊召唤专项；Decoy/Valkyrie 原生数据、ECS 创建、生命周期、奖励归属及战斗/导弹回归集合共 28 个用例通过，D2GS 编译通过。
 
 ## 当前下一项
 
-下一项是 **P1 装备/背包/腰带/尸体/交易栏统一移动协议和派生属性刷新**。
-先统一所有权、BodyLoc、占用格、revision 和幂等失败快照，再接通装备外观与属性重算，避免继续在各入口复制不一致的移动逻辑。
+下一项是 **亚马逊弓系专项：Guided Arrow、Strafe 与 Pierce 命中链**。
+先对齐 `SrvDo010` 的追踪目标/失效行为，再实现 Strafe 的原生目标序列和 Pierce 的重复碰撞规则；随后补 Dodge/Avoid/Evade 被动判定，完成亚马逊专项收尾。
 
 ## 记录规则
 

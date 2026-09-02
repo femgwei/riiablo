@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.KillCreditResolver;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
@@ -58,6 +59,7 @@ public class ExperienceManager extends PassiveSystem {
   private PartyManager partyManager;
   private com.artemis.ComponentMapper<Player> mPlayer;
   private com.artemis.ComponentMapper<Mercenary> mMercenary;
+  private com.artemis.ComponentMapper<SummonedPet> mSummonedPet;
   private com.artemis.ComponentMapper<Corpse> mCorpse;
   private com.artemis.ComponentMapper<AttributesWrapper> mAttributesWrapper;
   private com.artemis.ComponentMapper<MapWrapper> mMapWrapper;
@@ -110,7 +112,7 @@ public class ExperienceManager extends PassiveSystem {
     players = world.getAspectSubscriptionManager().get(Aspect.all(Player.class));
     mercenaries = world.getAspectSubscriptionManager().get(Aspect.all(Mercenary.class));
     killCredits = new KillCreditResolver(
-        mPlayer, mMercenary, mMapWrapper, mPosition, partyManager);
+        mPlayer, mMercenary, mSummonedPet, mMapWrapper, mPosition, partyManager);
     hirelingExperience = com.riiablo.engine.server.NativeHirelingExperienceTable.load();
     mercenaryRewards = world.getSystem(NativeMercenaryRewardSystem.class);
   }
@@ -134,6 +136,7 @@ public class ExperienceManager extends PassiveSystem {
     if (monster == null || monster.monstats == null) {
       return; // 不是怪物，或无统计数据
     }
+    if (mSummonedPet.has(event.victim)) return;
     NativeUnitFlags unitFlags = mNativeUnitFlags.get(event.victim);
     if (unitFlags != null && unitFlags.has(NativeUnitFlags.NO_EXPERIENCE)) {
       log.debug("[XP_NATIVE] UNITFLAG_NOXP suppresses experience: victim={} flags=0x{}",

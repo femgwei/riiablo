@@ -930,6 +930,7 @@ public class D2GS extends ApplicationAdapter {
 
         .with(new Actioneer())
         .with(new com.riiablo.engine.server.MercenaryFollowSystem())
+        .with(new com.riiablo.engine.server.SummonedPetSystem())
         .with(new com.riiablo.engine.server.MercenarySkillSystem())
         .with(new ServerMonsterCorpseSystem())
         .with(new AuraEcsSystem())

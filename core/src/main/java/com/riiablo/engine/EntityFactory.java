@@ -106,6 +106,16 @@ public abstract class EntityFactory extends PassiveSystem {
     return createMonster(monsterId, x, y);
   }
 
+  /**
+   * Creates a player-owned monster-shaped summon. Client and detached test
+   * factories may decline this server-authoritative operation.
+   */
+  public int createSummonedPet(int ownerId, MonStats.Entry summon, String petType,
+      int skillId, int skillLevel, int petMax, boolean passive, int durationFrames,
+      float x, float y) {
+    return Engine.INVALID_ENTITY;
+  }
+
   /** Restores a dead monster entity in place; unsupported factories return false. */
   public boolean resurrectMonster(int monsterId, int sourceId) {
     return false;
