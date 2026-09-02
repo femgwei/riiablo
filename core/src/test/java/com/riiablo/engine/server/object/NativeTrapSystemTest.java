@@ -1,6 +1,7 @@
 package com.riiablo.engine.server.object;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,9 @@ import com.badlogic.gdx.math.Vector2;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.NativeUnitFlags;
+import com.riiablo.engine.server.component.NativeTrapFire;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.event.NativeTrapInteractionEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.item.Item;
@@ -69,7 +72,7 @@ class NativeTrapSystemTest {
   }
 
   @Test
-  void repeatedActivationAndFireObjectCallbacksDoNotSpawnPermanentUnits() {
+  void repeatedActivationIsIgnoredAndFireCallbacksCreateExpiringObjects() {
     Harness harness = new Harness(true);
     try {
       int objectId = harness.objectAt(4, 5);
@@ -82,6 +85,9 @@ class NativeTrapSystemTest {
 
       assertEquals(0, harness.factory.monstersCreated);
       assertEquals(0, harness.factory.nativeFlagApplications);
+      assertEquals(4, harness.factory.staticObjectsCreated);
+      assertTrue(harness.world.getMapper(NativeTrapFire.class)
+          .has(harness.factory.lastStaticObject));
     } finally {
       harness.dispose();
     }
@@ -135,6 +141,7 @@ class NativeTrapSystemTest {
           .register("map", new Map(0, 0));
       if (factory != null) configuration.register("factory", factory);
       world = new World(configuration);
+      if (factory != null) factory.world = world;
       events = world.getSystem(EventSystem.class);
       world.process();
     }
@@ -151,12 +158,15 @@ class NativeTrapSystemTest {
   }
 
   private static final class TestFactory extends EntityFactory {
+    World world;
     int monstersCreated;
     int lastMonsterId = -1;
     float firstX;
     float firstY;
     int nativeFlagApplications;
     int lastNativeFlags;
+    int staticObjectsCreated;
+    int lastStaticObject = Engine.INVALID_ENTITY;
 
     @Override public int createPlayer(CharData data, Vector2 position) {
       return Engine.INVALID_ENTITY;
@@ -171,7 +181,16 @@ class NativeTrapSystemTest {
     }
 
     @Override public int createStaticObjectByClassId(int object, float x, float y) {
-      return Engine.INVALID_ENTITY;
+      staticObjectsCreated++;
+      int id = world.create();
+      world.getMapper(Position.class).create(id).position.set(x, y);
+      world.getMapper(MapWrapper.class).create(id).set(map, map.getZone(x, y));
+      com.riiablo.codec.excel.Objects.Entry base = new com.riiablo.codec.excel.Objects.Entry();
+      base.Id = object;
+      base.Damage = 100;
+      world.getMapper(com.riiablo.engine.server.component.Object.class).create(id).base = base;
+      lastStaticObject = id;
+      return id;
     }
 
     @Override public int createMonster(int monsterId, float x, float y) {

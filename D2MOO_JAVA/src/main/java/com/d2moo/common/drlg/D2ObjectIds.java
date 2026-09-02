@@ -36,6 +36,9 @@ public class D2ObjectIds {
     public static final int OBJECT_RIVER2 = 41;
     public static final int OBJECT_RIVER3 = 42;
     public static final int OBJECT_INVISIBLE_RIVER_SOUND1 = 65;
+    public static final int OBJECT_FIRE_SMALL = 160;
+    public static final int OBJECT_FIRE_MEDIUM = 161;
+    public static final int OBJECT_FIRE_LARGE = 162;
     public static final int OBJECT_FLOORTRAP = 196;
     public static final int OBJECT_TOMBFLOORTRAP = 261;
 }

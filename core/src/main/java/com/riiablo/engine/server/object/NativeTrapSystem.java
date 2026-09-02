@@ -5,11 +5,15 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.math.RandomXS128;
 import com.badlogic.gdx.math.Vector2;
+import com.d2moo.common.drlg.D2ObjectIds;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.NativeTrapFire;
+import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.event.NativeTrapInteractionEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.logger.LogManager;
@@ -35,6 +39,9 @@ public class NativeTrapSystem extends BaseSystem {
 
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<NativeTrapFire> mFire;
+  protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<Interactable> mInteractable;
 
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
@@ -62,11 +69,12 @@ public class NativeTrapSystem extends BaseSystem {
     int monsterId = monsterForTrapType(handlerType);
     int count = monsterCount(handlerType, trapSeed(event, position));
     if (monsterId < 0 || count <= 0) {
-      // Fire-object handlers are intentionally not materialized as permanent
-      // ECS objects. They need an expiry event and collision-free visual path;
-      // retaining the event is safer than leaving immortal fire in the room.
-      log.info("[OBJECT_TRAP] no persistent spawn mapping: entity={} trapType={} ",
-          event.entityId, event.trapType);
+      if (handlerType == 5 || handlerType == 7) {
+        spawnFireObjects(event, position, handlerType);
+      } else {
+        log.info("[OBJECT_TRAP] no persistent spawn mapping: entity={} trapType={} ",
+            event.entityId, event.trapType);
+      }
       return;
     }
 
@@ -83,6 +91,52 @@ public class NativeTrapSystem extends BaseSystem {
             + "monster={} requested={} spawned={} zone={}",
         event.entityId, event.playerId, event.trapType, handlerType, monsterId,
         count, spawned, levelId);
+  }
+
+  private void spawnFireObjects(NativeTrapInteractionEvent event, Position position,
+      int handlerType) {
+    MapWrapper sourceWrapper = mMapWrapper.get(event.entityId);
+    Map.Zone sourceZone = sourceWrapper == null ? null : sourceWrapper.zone;
+    int large = factory.createStaticObjectByClassId(
+        D2ObjectIds.OBJECT_FIRE_LARGE, position.position.x, position.position.y);
+    attachFireLifetime(large, 3f, event.entityId, sourceZone);
+    int small = factory.createStaticObjectByClassId(D2ObjectIds.OBJECT_FIRE_SMALL,
+        position.position.x + 1f, position.position.y);
+    attachFireLifetime(small, 1.5f, event.entityId, sourceZone);
+    log.info("[OBJECT_TRAP_FIRE] triggered entity={} trapType={} large={} small={}",
+        event.entityId, handlerType, large, small);
+  }
+
+  private void attachFireLifetime(int fireId, float radius, int sourceEntityId,
+      Map.Zone sourceZone) {
+    if (fireId == Engine.INVALID_ENTITY || !world.getEntityManager().isActive(fireId)) {
+      log.warn("[OBJECT_TRAP_FIRE] creation failed source={} fire={}", sourceEntityId, fireId);
+      return;
+    }
+    Position firePosition = mPosition.get(fireId);
+    MapWrapper fireWrapper = mMapWrapper.get(fireId);
+    if (firePosition == null || sourceZone != null
+        && (fireWrapper == null || fireWrapper.zone != sourceZone)) {
+      world.delete(fireId);
+      return;
+    }
+    CofReference cof = mCofReference.get(fireId);
+    if (cof != null) cof.mode = Engine.Object.MODE_OP;
+    mInteractable.remove(fireId);
+    com.riiablo.engine.server.component.Object object =
+        world.getMapper(com.riiablo.engine.server.component.Object.class).get(fireId);
+    int damage = object == null || object.base == null ? 0 : object.base.Damage;
+    float duration = NativeTrapFire.DEFAULT_DURATION;
+    if (object != null && object.base != null && object.base.FrameCnt != null
+        && Engine.Object.MODE_OP < object.base.FrameCnt.length
+        && object.base.FrameCnt[Engine.Object.MODE_OP] > 0) {
+      duration = Math.max(1f,
+          (object.base.FrameCnt[Engine.Object.MODE_OP] >> 8) / 25f);
+    }
+    int seed = 31 * sourceEntityId + fireId;
+    seed = 31 * seed + Float.floatToIntBits(firePosition.position.x);
+    seed = 31 * seed + Float.floatToIntBits(firePosition.position.y);
+    mFire.create(fireId).reset(duration, radius, damage, seed);
   }
 
   /** D2Game's level compatibility branches in {@code sub_6FC74DF0}. */
