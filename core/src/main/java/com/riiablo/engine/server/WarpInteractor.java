@@ -13,6 +13,7 @@ import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.Map;
 import com.riiablo.engine.server.quest.QuestWarp;
@@ -24,6 +25,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Box2DBody> mBox2DBody;
+  protected ComponentMapper<Size> mSize;
 
   protected Pathfinder pathfinder;
   protected Actioneer actioneer;
@@ -45,7 +47,14 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
       return;
     }
     if (QuestWarp.isQuestWarp(warp.index)) {
-      Vector2 arrival = findQuestArrival(dst);
+      int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
+      Vector2 arrival = findQuestArrival(dst, unitSize);
+      if (arrival == null) {
+        Gdx.app.error(TAG, "Quest warp destination has no free coordinates: player=" + src
+            + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
+            + " unitSize=" + unitSize);
+        return;
+      }
       Vector2 position = mPosition.get(src).position;
       position.set(arrival);
       Box2DBody box2dWrapper = mBox2DBody.get(src);
@@ -66,6 +75,17 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
       return;
     }
     Vector2 dstWarpPos = mPosition.get(dstWarpEntity).position;
+    int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
+    if (!dst.findFreeCoordinates(dstWarpPos, unitSize, 50, true, tmpVec2)) {
+      Gdx.app.error(TAG, "Warp destination has no free coordinates: source="
+          + source.level.LevelName + "(" + source.level.Id + ")"
+          + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
+          + " reverseSpecial=0x" + Integer.toHexString(dstIndex)
+          + " destinationPosition=" + dstWarpPos + " unitSize=" + unitSize);
+      return;
+    }
+    float arrivalX = tmpVec2.x;
+    float arrivalY = tmpVec2.y;
     Vector2 position = mPosition.get(src).position;
     Gdx.app.log(TAG, "Warp interaction: player=" + src
         + " source=" + source.level.LevelName + "(" + source.level.Id + ")"
@@ -73,37 +93,24 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
         + " sourcePosition=" + position
         + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
         + " reverseSpecial=0x" + Integer.toHexString(dstIndex)
-        + " destinationPosition=" + dstWarpPos);
-    position.set(dstWarpPos);
+        + " destinationPosition=" + dstWarpPos
+        + " freeArrival=(" + arrivalX + "," + arrivalY + ")");
+    position.set(arrivalX, arrivalY);
 
     Box2DBody box2dWrapper = mBox2DBody.get(src);
     if (box2dWrapper != null) box2dWrapper.body.setTransform(position, 0);
 
     Warp dstWarp = mWarp.get(dstWarpEntity);
     LvlWarp.Entry dstWarpEntry = dstWarp.warp;
-    tmpVec2.set(dstWarpPos).add(dstWarpEntry.ExitWalkX, dstWarpEntry.ExitWalkY);
+    tmpVec2.set(arrivalX, arrivalY).add(dstWarpEntry.ExitWalkX, dstWarpEntry.ExitWalkY);
     actioneer.moveTo(src, tmpVec2);
   }
 
-  private Vector2 findQuestArrival(Map.Zone destination) {
+  private Vector2 findQuestArrival(Map.Zone destination, int unitSize) {
     int centerX = destination.x() + destination.width() / 2;
     int centerY = destination.y() + destination.height() / 2;
-    for (int radius = 0; radius < 32; radius++) {
-      for (int dx = -radius; dx <= radius; dx++) {
-        int x = centerX + dx;
-        int top = centerY - radius;
-        int bottom = centerY + radius;
-        if (map.flags(x, top) == 0) return tmpVec2.set(x, top);
-        if (map.flags(x, bottom) == 0) return tmpVec2.set(x, bottom);
-      }
-      for (int dy = -radius + 1; dy < radius; dy++) {
-        int y = centerY + dy;
-        int left = centerX - radius;
-        int right = centerX + radius;
-        if (map.flags(left, y) == 0) return tmpVec2.set(left, y);
-        if (map.flags(right, y) == 0) return tmpVec2.set(right, y);
-      }
-    }
-    return tmpVec2.set(centerX, centerY);
+    return destination.findFreeCoordinates(
+        tmpVec2.set(centerX, centerY), unitSize, 50, true, tmpVec2)
+        ? tmpVec2 : null;
   }
 }

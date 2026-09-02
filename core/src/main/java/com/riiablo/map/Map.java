@@ -1070,6 +1070,100 @@ public class Map implements Disposable {
       return flags[index(width, x, y)] & 0xFF;
     }
 
+    /**
+     * D2Common {@code COLLISION_GetFreeCoordinates} projection for one level.
+     *
+     * <p>The supplied coordinates and result use world subtiles.  The search
+     * keeps the complete unit footprint inside this Zone and, when native
+     * RoomEx topology is available, inside the source room or one of its
+     * native neighbours.  This prevents a warp arrival from selecting the
+     * rectangular void around an irregular cave/maze RoomEx.</p>
+     */
+    public boolean findFreeCoordinates(Vector2 coordinates, int unitSize,
+        int maxDistance, boolean allowNeighborRooms, Vector2 result) {
+      if (coordinates == null || result == null || flags == null) return false;
+      final int originX = Map.round(coordinates.x);
+      final int originY = Map.round(coordinates.y);
+      final RoomEx sourceRoom = findRoomEx(originX, originY);
+      final int limit = Math.max(0, maxDistance);
+
+      for (int radius = 0; radius <= limit; radius++) {
+        if (radius == 0) {
+          if (isFreeCoordinate(originX, originY, unitSize, sourceRoom,
+              allowNeighborRooms)) {
+            result.set(originX, originY);
+            return true;
+          }
+          continue;
+        }
+
+        // Evaluate the complete Chebyshev ring. D2Common searches expanding
+        // boxes and selects the closest valid coordinate in the first box.
+        for (int dx = -radius; dx <= radius; dx++) {
+          if (isFreeCoordinate(originX + dx, originY - radius, unitSize,
+              sourceRoom, allowNeighborRooms)) {
+            result.set(originX + dx, originY - radius);
+            return true;
+          }
+          if (isFreeCoordinate(originX + dx, originY + radius, unitSize,
+              sourceRoom, allowNeighborRooms)) {
+            result.set(originX + dx, originY + radius);
+            return true;
+          }
+        }
+        for (int dy = -radius + 1; dy < radius; dy++) {
+          if (isFreeCoordinate(originX - radius, originY + dy, unitSize,
+              sourceRoom, allowNeighborRooms)) {
+            result.set(originX - radius, originY + dy);
+            return true;
+          }
+          if (isFreeCoordinate(originX + radius, originY + dy, unitSize,
+              sourceRoom, allowNeighborRooms)) {
+            result.set(originX + radius, originY + dy);
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    private boolean isFreeCoordinate(int worldX, int worldY, int unitSize,
+        RoomEx sourceRoom, boolean allowNeighborRooms) {
+      if (!contains(worldX, worldY)) return false;
+      RoomEx candidateRoom = findRoomEx(worldX, worldY);
+      if (!roomsEx.isEmpty()) {
+        if (candidateRoom == null) return false;
+        if (sourceRoom != null && candidateRoom != sourceRoom
+            && (!allowNeighborRooms || !sourceRoom.isAdjacentTo(candidateRoom.id))) {
+          return false;
+        }
+      }
+
+      // Size.MEDIUM (the native player size) occupies a 3x3 subtile square.
+      // The existing server movement systems use the same size-to-radius
+      // projection, so landing and subsequent path checks agree.
+      int radius = Math.max(0, unitSize - 1);
+      for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+          int x = worldX + dx;
+          int y = worldY + dy;
+          if (!contains(x, y)) return false;
+          if ((flags(x - this.x, y - this.y) & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+            return false;
+          }
+          if (!roomsEx.isEmpty()) {
+            RoomEx footprintRoom = findRoomEx(x, y);
+            if (footprintRoom == null) return false;
+            if (sourceRoom != null && footprintRoom != sourceRoom
+                && (!allowNeighborRooms || !sourceRoom.isAdjacentTo(footprintRoom.id))) {
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    }
+
     public int or(int x, int y, int flags) {
       return (this.flags[index(width, x, y)] |= flags) & 0xFF;
     }

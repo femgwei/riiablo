@@ -461,6 +461,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
 
     Levels.Entry levelEntry = Riiablo.files.Levels.get(levelId);
     boolean reverseWarp = false;
+    int warpX = -1;
+    int warpY = -1;
     for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS && !reverseWarp; layer++) {
       for (int y = 0; y < grid.height && !reverseWarp; y++) {
         for (int x = 0; x < grid.width; x++) {
@@ -472,12 +474,53 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           if (subIndex != 1 && mainIndex < levelEntry.Vis.length
               && levelEntry.Vis[mainIndex] == sourceLevelId) {
             reverseWarp = true;
+            warpX = x;
+            warpY = y;
             break;
           }
         }
       }
     }
     assertTrue(reverseWarp, "linked level has no reverse warp to " + sourceLevelId);
+    assertWarpHasFloorAndRoom(level, grid, warpX, warpY, sourceLevelId);
+  }
+
+  private static void assertWarpHasFloorAndRoom(
+      D2DrlgLevel level, TileGrid grid, int warpX, int warpY, int sourceLevelId) {
+    boolean nearbyFloor = false;
+    for (int radius = 0; radius <= 2 && !nearbyFloor; radius++) {
+      for (int y = Math.max(0, warpY - radius);
+          y <= Math.min(grid.height - 1, warpY + radius) && !nearbyFloor; y++) {
+        for (int x = Math.max(0, warpX - radius);
+            x <= Math.min(grid.width - 1, warpX + radius); x++) {
+          if (grid.exportedFloorCells[y][x] && grid.floorIds[y][x] != -1) {
+            nearbyFloor = true;
+            break;
+          }
+        }
+      }
+    }
+    assertTrue(nearbyFloor, "warp has no native floor within two tiles: level="
+        + level.getLevelId() + " source=" + sourceLevelId
+        + " warp=(" + warpX + "," + warpY + ")");
+
+    D2DrlgCoord levelCoords = level.getLevelCoords();
+    int worldTileX = levelCoords.getNPosX() + warpX;
+    int worldTileY = levelCoords.getNPosY() + warpY;
+    boolean roomBoundary = false;
+    for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+        room = room.getDrlgRoomNext()) {
+      if (worldTileX >= room.getNTileXPos()
+          && worldTileX <= room.getNTileXPos() + room.getNTileWidth()
+          && worldTileY >= room.getNTileYPos()
+          && worldTileY <= room.getNTileYPos() + room.getNTileHeight()) {
+        roomBoundary = true;
+        break;
+      }
+    }
+    assertTrue(roomBoundary, "warp lies outside every native RoomEx: level="
+        + level.getLevelId() + " source=" + sourceLevelId
+        + " warp=(" + warpX + "," + warpY + ")");
   }
 
   private static int findLevelId(String name) {
