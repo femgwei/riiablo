@@ -686,6 +686,20 @@ public class Map implements Disposable {
     return zone.flags(x - zone.x, y - zone.y);
   }
 
+  /**
+   * Returns only collision emitted by the DT1/DS1 map layers.
+   *
+   * <p>Dynamic object collision is deliberately excluded. Box2D uses this
+   * view when baking its immutable terrain bodies; doors and other objects
+   * keep their own mode-dependent bodies and must never become permanent
+   * pieces of terrain merely because they were closed during map loading.</p>
+   */
+  public int staticFlags(int x, int y) {
+    Zone zone = getZone(x, y);
+    if (zone == null) return 0xFF;
+    return zone.staticFlags(x - zone.x, y - zone.y);
+  }
+
   void or(Vector2 position, int width, int height, int flags) {
     if (width == 0 || height == 0) return;
     int x0 = round(position.x - width  / 2f);
@@ -822,6 +836,8 @@ public class Map implements Disposable {
     LvlTypes.Entry type;
     DT1s           dt1s;
     byte           flags[];
+    /** Per-subtile references contributed by colliding object units. */
+    short          objectBlockWalkRefs[];
     final DT1.Tile tiles[][] = new DT1.Tile[Map.MAX_LAYERS][];
     Preset         presets[][];
 
@@ -922,6 +938,7 @@ public class Map implements Disposable {
 
       free(flags);
       flags = null;
+      objectBlockWalkRefs = null;
 
       for (DT1.Tile[] layer : tiles) free(layer);
       Arrays.fill(tiles, null);
@@ -1067,7 +1084,51 @@ public class Map implements Disposable {
     }
 
     public int flags(int x, int y) {
+      int index = index(width, x, y);
+      int value = flags[index] & 0xFF;
+      if (objectBlockWalkRefs != null && objectBlockWalkRefs[index] > 0) {
+        value |= DT1.Tile.FLAG_BLOCK_WALK;
+      }
+      return value;
+    }
+
+    /** Returns collision supplied by the generated map, excluding units. */
+    public int staticFlags(int x, int y) {
       return flags[index(width, x, y)] & 0xFF;
+    }
+
+    /**
+     * Adds or removes one object's world-subtile collision footprint.
+     *
+     * <p>A reference layer is required because native objects can overlap.
+     * Clearing a boolean bit when one of them opens or despawns would also
+     * incorrectly clear the remaining object's collision (or a wall's static
+     * flag). Calls are balanced by {@code ObjectCollisionUpdater}.</p>
+     */
+    public void adjustObjectCollision(
+        int worldX, int worldY, int objectWidth, int objectHeight, int delta) {
+      if (delta == 0 || objectWidth <= 0 || objectHeight <= 0 || flags == null) return;
+      int startX = Math.max(worldX, x);
+      int startY = Math.max(worldY, y);
+      int endX = Math.min(worldX + objectWidth, x + width);
+      int endY = Math.min(worldY + objectHeight, y + height);
+      if (startX >= endX || startY >= endY) return;
+      if (delta > 0 && objectBlockWalkRefs == null) {
+        objectBlockWalkRefs = new short[width * height];
+      }
+      if (objectBlockWalkRefs == null) return;
+
+      for (int dy = startY; dy < endY; dy++) {
+        for (int dx = startX; dx < endX; dx++) {
+          int index = index(width, dx - x, dy - y);
+          int references = objectBlockWalkRefs[index] + delta;
+          // A negative value means a lifecycle caller became unbalanced. Do
+          // not turn that into a permanently blocked subtile.
+          if (references < 0) references = 0;
+          if (references > Short.MAX_VALUE) references = Short.MAX_VALUE;
+          objectBlockWalkRefs[index] = (short) references;
+        }
+      }
     }
 
     /**

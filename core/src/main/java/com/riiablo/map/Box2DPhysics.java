@@ -3,12 +3,10 @@ package com.riiablo.map;
 import java.util.Arrays;
 import org.apache.commons.lang3.Validate;
 
-import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IntervalSystem;
-import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
@@ -28,7 +26,6 @@ import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Class;
-import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
@@ -47,7 +44,6 @@ public class Box2DPhysics extends IntervalSystem {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Object> mObject;
-  protected ComponentMapper<Interactable> mInteractable;
 
   @Wire(name = "map")
   protected Map map;
@@ -152,9 +148,6 @@ public class Box2DPhysics extends IntervalSystem {
             // visibility, but do not let it block movement.
             fixture.setSensor(isNonBlockingObject(object.base));
           } shape.dispose();
-          if (map != null && !mInteractable.has(entityId)) { // FIXME: need to tune this to allow pathing to entity that's solid
-            map.or(position, object.base.SizeX, object.base.SizeY, DT1.Tile.FLAG_BLOCK_WALK);
-          }
         }
         break;
       case MON: {
@@ -214,12 +207,12 @@ public class Box2DPhysics extends IntervalSystem {
       for (int y = 0, ty = zone.y, height = zone.height; y < height; y++, ty++) {
         for (int x = 0, tx = zone.x, width = zone.width; x < width; x++, tx++) {
           if (handled[y][x]) continue;
-          int flags = map.flags(tx, ty);
+          int flags = map.staticFlags(tx, ty);
           short unitMask = unitMaskForTileFlags(flags);
           if (unitMask != 0) {
             int endX = tx + 1;
             while (endX < zoneEndX
-                && unitMaskForTileFlags(map.flags(endX, ty)) == unitMask) {
+                && unitMaskForTileFlags(map.staticFlags(endX, ty)) == unitMask) {
               endX++;
             }
 
@@ -260,16 +253,6 @@ public class Box2DPhysics extends IntervalSystem {
       }
     }
 
-    IntBag objectEntities = world.getAspectSubscriptionManager()
-        .get(Aspect.all(Object.class, Position.class))
-        .getEntities();
-    for (int i = 0, size = objectEntities.size(); i < size; i++) {
-      int id = objectEntities.get(i);
-      if (mInteractable.has(id)) continue; // FIXME: need to tune this to allow pathing to entity that's solid
-      Vector2 position = mPosition.get(id).position;
-      Objects.Entry base = mObject.get(id).base;
-      map.or(position, base.SizeX, base.SizeY, DT1.Tile.FLAG_BLOCK_WALK);
-    }
   }
 
   static short unitMaskForTileFlags(int flags) {
@@ -291,7 +274,7 @@ public class Box2DPhysics extends IntervalSystem {
 
   private static boolean allEqualMovementMask(Map map, int x, int y, int len, short mask) {
     len += x;
-    while (x < len && unitMaskForTileFlags(map.flags(x, y)) == mask) x++;
+    while (x < len && unitMaskForTileFlags(map.staticFlags(x, y)) == mask) x++;
     return x == len;
   }
 }

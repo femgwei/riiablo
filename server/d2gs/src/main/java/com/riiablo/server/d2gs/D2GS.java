@@ -74,6 +74,7 @@ import com.riiablo.engine.server.DeathRewardSystem;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInitializer;
+import com.riiablo.engine.server.ObjectCollisionUpdater;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.object.NativeObjectDropSystem;
 import com.riiablo.engine.server.object.NativeShrineSystem;
@@ -935,6 +936,7 @@ public class D2GS extends ApplicationAdapter {
         // old neutral animation wraps first, its Finished event can otherwise
         // consume the fresh attack sequence before the attack keyframe runs.
         .with(new AnimStepper())
+        .with(new ObjectCollisionUpdater())
         .with(new MissileCollisionSystem())
         .with(new StateUpdater())
         .with(new ExperienceManager())

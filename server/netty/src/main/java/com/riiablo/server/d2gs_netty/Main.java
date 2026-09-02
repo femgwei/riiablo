@@ -45,6 +45,7 @@ import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInitializer;
+import com.riiablo.engine.server.ObjectCollisionUpdater;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.SerializationManager;
@@ -214,6 +215,7 @@ public class Main extends ApplicationAdapter {
         .with(new ItemGenerator())
         .with(new CofManager())
         .with(new ObjectInitializer())
+        .with(new ObjectCollisionUpdater())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
 
         .with(new VendorGenerator())
