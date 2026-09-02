@@ -1101,9 +1101,9 @@ public class D2GS extends ApplicationAdapter {
   private void process(Packet packet) {
     byte dataType = packet.data.dataType();
     int authenticatedPlayer = player.get(packet.id, Engine.INVALID_ENTITY);
-    if (isLegacyItemRequest(dataType) && isPlayerDead(authenticatedPlayer)) {
+    if (isLegacyItemRequest(dataType)) {
       Gdx.app.log(TAG, "[ITEM_MOVE] phase=reject_legacy connection=" + packet.id
-          + " player=" + authenticatedPlayer + " reason=player_dead type="
+          + " player=" + authenticatedPlayer + " reason=unified_protocol_required type="
           + D2GSData.name(dataType));
       return;
     }
@@ -2279,13 +2279,12 @@ public class D2GS extends ApplicationAdapter {
       com.riiablo.engine.server.component.Position position = playerEntityId == Engine.INVALID_ENTITY
           ? null : world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerEntityId);
       outcome = authoritativeItems.drop(playerEntityId, character, intent, item -> {
-        if (position != null) {
-          int droppedEntity = factory.createItem(item, position.position.x, position.position.y);
-          if (droppedEntity >= 0) {
-            com.riiablo.engine.server.item.GroundDropOwnership.register(droppedEntity,
-                playerEntityId, partyManager.getPartyId(playerEntityId), 10_000L, 10_000L);
-          }
-        }
+        if (position == null) return false;
+        int droppedEntity = factory.createItem(item, position.position.x, position.position.y);
+        if (droppedEntity < 0) return false;
+        com.riiablo.engine.server.item.GroundDropOwnership.register(droppedEntity,
+            playerEntityId, partyManager.getPartyId(playerEntityId), 10_000L, 10_000L);
+        return true;
       });
     } else {
       outcome = authoritativeItems.apply(playerEntityId, character, intent);

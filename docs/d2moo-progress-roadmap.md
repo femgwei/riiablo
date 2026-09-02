@@ -97,6 +97,8 @@
 - [x] ~~完成原生物品种子、词缀资格、属性范围、Socket/Ethereal/Durability~~
   - 死亡掉落为每个物品派生独立种子；词缀按原生 affix level、spawnable/version/rare/type/exclude/class/frequency 过滤并加权选择；属性范围使用同一物品 RNG；基础防御、初始耐久、堆叠数量、难度/等级孔数和 5% 无形规则均接通。
 - [ ] 完成装备/背包/腰带/尸体/交易栏的统一移动协议和派生属性刷新。
+  - 已完成第一轮权威协议加固：只接受稳定物品 ID；修正 Swap 目标占用；按 Inventory 10x4、Cube 3x4、Stash 6x8 校验；丢地创建失败原子回滚；D2GS 拒绝绕过 revision/幂等/快照校正的旧移动包。
+  - 待完成：腰带容量随装备变化、尸体取回接入同一 revision、NPC/任务外部物品变更同步 revision，以及玩家交易栏协议。
 - [ ] 完成 TreasureClassEx 的嵌套 TC、唯一/套装属性和掉落位置规则。
 - [ ] 对齐命中结果、格挡/闪避、抗性/吸收、穿透、持续伤害和状态生命周期。
 - [ ] 补齐第一章怪物技能、导弹碰撞和特殊 AI 的原生分支。

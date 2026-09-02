@@ -220,9 +220,10 @@ public final class AuthoritativeItemMoveService {
     return new Outcome(true, ItemMoveFailure.NONE, next, remaining == 0, remaining);
   }
 
-  /** Applies a validated drop and invokes the ECS creator with the detached item. */
+  /** Applies a validated drop and rolls ownership back unless ECS creation succeeds. */
   public synchronized Outcome drop(int playerEntityId, CharData character,
-                                   ItemMoveIntent intent, java.util.function.Consumer<Item> createGround) {
+                                   ItemMoveIntent intent,
+                                   java.util.function.Function<Item, Boolean> createGround) {
     long current = revision(playerEntityId);
     if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
     if (intent == null || intent.operation != ItemMoveOperation.CURSOR_TO_GROUND)
@@ -233,8 +234,14 @@ public final class AuthoritativeItemMoveService {
     Item item = character.getItems().getCursor();
     try {
       character.cursorToGround();
-      if (createGround != null) createGround.accept(item);
+      boolean created = createGround != null && Boolean.TRUE.equals(createGround.apply(item));
+      if (!created) {
+        character.groundToCursor(item);
+        return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+      }
     } catch (Throwable t) {
+      if (character.getItems().getCursor() == null
+          && !character.getItems().contains(item)) character.groundToCursor(item);
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
     }
     long next = current + 1L;
@@ -247,6 +254,6 @@ public final class AuthoritativeItemMoveService {
       Item item = character.getItems().getItems().get(i);
       if (item != null && item.id == idOrIndex) return i;
     }
-    return idOrIndex;
+    return com.riiablo.save.ItemData.INVALID_ITEM;
   }
 }

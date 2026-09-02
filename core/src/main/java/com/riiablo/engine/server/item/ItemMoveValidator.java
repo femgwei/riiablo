@@ -28,7 +28,7 @@ public final class ItemMoveValidator {
       case ItemMoveOperation.CURSOR_TO_GROUND:
         return cursor == null ? ItemMoveFailure.CURSOR_EMPTY : ItemMoveFailure.NONE;
       case ItemMoveOperation.STORE_TO_CURSOR: {
-        Item item = ownedByIdOrIndex(data, intent.itemId);
+        Item item = ownedById(data, intent.itemId);
         if (item == null) return ItemMoveFailure.ITEM_NOT_OWNED;
         if (item.location != Location.STORED || item.storeLoc == StoreLoc.NONE)
           return ItemMoveFailure.ITEM_NOT_OWNED;
@@ -41,11 +41,14 @@ public final class ItemMoveValidator {
         return validateGrid(cursor, data, store, intent.x, intent.y, -1);
       case ItemMoveOperation.SWAP_STORE_ITEM: {
         if (cursor == null) return ItemMoveFailure.CURSOR_EMPTY;
-        Item target = ownedByIdOrIndex(data, intent.itemId);
+        Item target = ownedById(data, intent.itemId);
         if (target == null || target.location != Location.STORED)
           return ItemMoveFailure.ITEM_NOT_OWNED;
         StoreLoc targetStore = StoreLoc.valueOf(intent.storeLoc);
         if (targetStore == null || targetStore == StoreLoc.NONE) return ItemMoveFailure.INVALID_STORE;
+        if (target.storeLoc != targetStore
+            || !overlaps(target, cursor, intent.x, intent.y))
+          return ItemMoveFailure.ITEM_NOT_OWNED;
         return validateGrid(cursor, data, targetStore, intent.x, intent.y, data.indexOf(target));
       }
       case ItemMoveOperation.BODY_TO_CURSOR: {
@@ -69,7 +72,7 @@ public final class ItemMoveValidator {
         return validateEquip(character, cursor, body, old);
       }
       case ItemMoveOperation.BELT_TO_CURSOR: {
-        Item item = ownedByIdOrIndex(data, intent.itemId);
+        Item item = ownedById(data, intent.itemId);
         if (item == null || item.location != Location.BELT) return ItemMoveFailure.ITEM_NOT_OWNED;
         return cursor != null ? ItemMoveFailure.CURSOR_OCCUPIED : ItemMoveFailure.NONE;
       }
@@ -86,7 +89,7 @@ public final class ItemMoveValidator {
       case ItemMoveOperation.SWAP_BELT_ITEM: {
         if (cursor == null) return ItemMoveFailure.CURSOR_EMPTY;
         if (cursor.typeEntry == null || !cursor.typeEntry.Beltable) return ItemMoveFailure.ITEM_NOT_BELTABLE;
-        Item target = ownedByIdOrIndex(data, intent.itemId);
+        Item target = ownedById(data, intent.itemId);
         return target == null || target.location != Location.BELT
             ? ItemMoveFailure.ITEM_NOT_OWNED : ItemMoveFailure.NONE;
       }
@@ -94,12 +97,13 @@ public final class ItemMoveValidator {
     }
   }
 
-  private static Item ownedByIdOrIndex(ItemData data, int idOrIndex) {
+  private static Item ownedById(ItemData data, int itemId) {
+    if (itemId < 0) return null;
     for (int i = 0; i < data.getItems().size; i++) {
       Item item = data.getItems().get(i);
-      if (item != null && item.id == idOrIndex) return item;
+      if (item != null && item.id == itemId) return item;
     }
-    return idOrIndex >= 0 && idOrIndex < data.getItems().size ? data.getItems().get(idOrIndex) : null;
+    return null;
   }
 
   private static byte validateGrid(Item item, ItemData data, StoreLoc store,
@@ -108,11 +112,12 @@ public final class ItemMoveValidator {
       return ItemMoveFailure.INVALID_STORE;
     if (x < 0 || y < 0 || item.base == null || item.base.invwidth <= 0 || item.base.invheight <= 0)
       return ItemMoveFailure.INVALID_POSITION;
-    int width = store == StoreLoc.INVENTORY ? 10 : 10;
-    int height = store == StoreLoc.INVENTORY ? 4 : 4;
+    int width = store == StoreLoc.CUBE ? 3 : store == StoreLoc.STASH ? 6 : 10;
+    int height = store == StoreLoc.CUBE ? 4 : store == StoreLoc.STASH ? 8 : 4;
     if (x + item.base.invwidth > width || y + item.base.invheight > height)
       return ItemMoveFailure.INVALID_POSITION;
     for (int i = 0; i < data.getItems().size; i++) {
+      if (i == ignoredIndex) continue;
       Item other = data.getItems().get(i);
       if (other == null || other == item || other.location != Location.STORED || other.storeLoc != store
           || other.base == null) continue;
@@ -121,6 +126,14 @@ public final class ItemMoveValidator {
         return ItemMoveFailure.INVENTORY_OCCUPIED;
     }
     return ItemMoveFailure.NONE;
+  }
+
+  private static boolean overlaps(Item target, Item moving, int x, int y) {
+    return target != null && target.base != null && moving != null && moving.base != null
+        && x < target.gridX + target.base.invwidth
+        && x + moving.base.invwidth > target.gridX
+        && y < target.gridY + target.base.invheight
+        && y + moving.base.invheight > target.gridY;
   }
 
   private static BodyLoc body(int ordinal) {
