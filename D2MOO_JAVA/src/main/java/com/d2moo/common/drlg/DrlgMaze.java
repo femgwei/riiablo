@@ -889,8 +889,10 @@ public class DrlgMaze {
             }
         }
         
+        // Native code continues from the north chain; it does not restart
+        // each direction at the first room. Together the four passes form a
+        // perimeter that is closed explicitly at the end.
         // 在 WEST 方向创建房间链（方向0）
-        drlgRoom = firstRoomEx;
         for (int i = roomsPerDirection - 1; i > 0; --i) {
             D2DrlgRoom newRoomEx = DrlgDrlgRoom.allocRoomEx(drlgRoom.getLevel(), D2DrlgType.PRESET.getValue());
             if (newRoomEx == null) {
@@ -916,7 +918,6 @@ public class DrlgMaze {
         }
         
         // 在 SOUTH 方向创建房间链（方向3）
-        drlgRoom = firstRoomEx;
         for (int i = roomsPerDirection - 1; i > 0; --i) {
             D2DrlgRoom newRoomEx = DrlgDrlgRoom.allocRoomEx(drlgRoom.getLevel(), D2DrlgType.PRESET.getValue());
             if (newRoomEx == null) {
@@ -941,9 +942,10 @@ public class DrlgMaze {
             }
         }
         
+        // Native loop starts at roomsPerDirection - 2. For the Act 1 value
+        // of two this adds no east room; the final orth closes the 2x2 ring.
         // 在 EAST 方向创建房间链（方向2）
-        drlgRoom = firstRoomEx;
-        for (int i = roomsPerDirection - 1; i > 0; --i) {
+        for (int i = roomsPerDirection - 2; i > 0; --i) {
             D2DrlgRoom newRoomEx = DrlgDrlgRoom.allocRoomEx(drlgRoom.getLevel(), D2DrlgType.PRESET.getValue());
             if (newRoomEx == null) {
                 continue;
@@ -965,6 +967,12 @@ public class DrlgMaze {
             if (newRoomEx != null) {
                 drlgRoom = newRoomEx;
             }
+        }
+
+        if (drlgRoom != null) {
+            allocDrlgOrthsForRooms(drlgRoom, firstRoomEx, 2);
+            pickRoomPreset(drlgRoom, true);
+            pickRoomPreset(firstRoomEx, true);
         }
     }
     
