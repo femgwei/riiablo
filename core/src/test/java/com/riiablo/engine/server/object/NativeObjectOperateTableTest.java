@@ -1,7 +1,6 @@
 package com.riiablo.engine.server.object;
 
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.ANIMATED_CONTAINER;
-import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.ARCANE_SYMBOL;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.INSTANT_CONTAINER;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.NONE;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.ONE_WAY_DOOR;
@@ -48,7 +47,7 @@ class NativeObjectOperateTableTest {
         0, false, NativePresetObjectResolver.Kind.SPECIAL_CHEST));
     assertEquals(ANIMATED_CONTAINER, NativeObjectOperateTable.resolve(
         0, false, NativePresetObjectResolver.Kind.PRESET_CHEST));
-    assertEquals(ARCANE_SYMBOL, NativeObjectOperateTable.resolve(
+    assertEquals(NONE, NativeObjectOperateTable.resolve(
         0, false, NativePresetObjectResolver.Kind.ARCANE_SYMBOL));
     assertEquals(NONE, resolve(23));
   }

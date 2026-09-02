@@ -119,6 +119,13 @@ public class ObjectInitializer extends BaseEntitySystem {
   private void restorePersistentInteractionState(int entityId, Objects.Entry base,
       NativeObjectState state) {
     if (state == null || !mInteractable.has(entityId)) return;
+    if (state.kind == com.riiablo.map.NativePresetObjectResolver.Kind.ARCANE_SYMBOL) {
+      // Act II tomb symbols are scenery selected by A2Q6, not activatable
+      // objects. The generic factory may have made the Objects.txt row
+      // selectable before NativeObjectState was attached, so remove it here.
+      mInteractable.remove(entityId);
+      return;
+    }
     Lifecycle lifecycle = NativeObjectOperateTable.resolve(base, state.kind);
     boolean exhausted;
     switch (lifecycle) {
@@ -128,7 +135,6 @@ public class ObjectInitializer extends BaseEntitySystem {
         exhausted = state.opened;
         break;
       case SHRINE:
-      case ARCANE_SYMBOL:
       case TRAP:
       case QUEST_OBJECT:
         exhausted = state.activated;

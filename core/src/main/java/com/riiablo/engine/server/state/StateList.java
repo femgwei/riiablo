@@ -430,6 +430,18 @@ public class StateList {
     return total;
   }
 
+  public int getTotalSkillModifier() {
+    int total = 0;
+    for (UnitState state : states) total += state.skillModifier;
+    return total;
+  }
+
+  public int getTotalExperienceModifier() {
+    int total = 0;
+    for (UnitState state : states) total += state.experienceModifier;
+    return total;
+  }
+
   /**
    * Replaces the runtime state list with an authoritative network snapshot.
    * This is intentionally a small, allocation-free-at-steady-state bridge

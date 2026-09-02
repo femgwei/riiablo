@@ -904,7 +904,10 @@ public class Actioneer extends PassiveSystem {
 
   private int skillLevel(int entityId, int skillId) {
     if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
-      return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId));
+      int bonus = mUnitStates.has(entityId)
+          && mUnitStates.get(entityId).stateList != null
+          ? mUnitStates.get(entityId).stateList.getTotalSkillModifier() : 0;
+      return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId) + bonus);
     }
     if (mMonster.has(entityId) && mMonster.get(entityId).monstats != null) {
       MonStats.Entry row = mMonster.get(entityId).monstats;

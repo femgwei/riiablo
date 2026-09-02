@@ -74,6 +74,21 @@ public class UnitState {
   /** 魔法抗性修正 */
   public int magicResistModifier;
 
+  /** 所有技能等级修正。 */
+  public int skillModifier;
+
+  /** 获得经验值修正（百分比）。 */
+  public int experienceModifier;
+
+  /** 法力恢复修正（百分比）。 */
+  public int manaRecoveryModifier;
+
+  /** 最大体力修正。 */
+  public int maxStaminaModifier;
+
+  /** 体力恢复修正（百分比）。 */
+  public int staminaRecoveryModifier;
+
   //==========================================================================
   // 持续伤害数据
   //==========================================================================
@@ -144,7 +159,19 @@ public class UnitState {
     initialDuration = 0;
     sourceEntityId = -1;
     skillId = -1;
-    
+
+    clearModifiers();
+
+    damagePerFrame = 0;
+    damageType = 0;
+
+    isNew = true;
+    needsSync = false;
+    expired = false;
+  }
+
+  /** Clears stat-list values while retaining state identity and lifetime. */
+  public void clearModifiers() {
     damageModifier = 0;
     defenseModifier = 0;
     attackModifier = 0;
@@ -154,13 +181,11 @@ public class UnitState {
     lightResistModifier = 0;
     poisonResistModifier = 0;
     magicResistModifier = 0;
-    
-    damagePerFrame = 0;
-    damageType = 0;
-    
-    isNew = true;
-    needsSync = false;
-    expired = false;
+    skillModifier = 0;
+    experienceModifier = 0;
+    manaRecoveryModifier = 0;
+    maxStaminaModifier = 0;
+    staminaRecoveryModifier = 0;
   }
 
   /**
@@ -310,6 +335,11 @@ public class UnitState {
     this.lightResistModifier = other.lightResistModifier;
     this.poisonResistModifier = other.poisonResistModifier;
     this.magicResistModifier = other.magicResistModifier;
+    this.skillModifier = other.skillModifier;
+    this.experienceModifier = other.experienceModifier;
+    this.manaRecoveryModifier = other.manaRecoveryModifier;
+    this.maxStaminaModifier = other.maxStaminaModifier;
+    this.staminaRecoveryModifier = other.staminaRecoveryModifier;
     
     this.damagePerFrame = other.damagePerFrame;
     this.damageType = other.damageType;

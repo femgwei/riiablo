@@ -121,6 +121,10 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     int skillLevel = player.data != null ? player.data.getSkill(event.skillId) : 1;
+    if (mUnitStates.has(event.entityId)
+        && mUnitStates.get(event.entityId).stateList != null) {
+      skillLevel += mUnitStates.get(event.entityId).stateList.getTotalSkillModifier();
+    }
     skillLevel = Math.max(1, skillLevel);
     int casterLevel = 1;
     Attributes attrs = mAttributesWrapper.has(event.entityId)
@@ -680,7 +684,10 @@ public class ServerSkillSystem extends PassiveSystem {
 
   private int getSkillLevel(int entityId, int skillId) {
     if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
-      return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId));
+      int bonus = mUnitStates.has(entityId)
+          && mUnitStates.get(entityId).stateList != null
+          ? mUnitStates.get(entityId).stateList.getTotalSkillModifier() : 0;
+      return Math.max(1, mPlayer.get(entityId).data.getSkill(skillId) + bonus);
     }
     if (mMonster.has(entityId)) {
       if (mMercenary.has(entityId)) {

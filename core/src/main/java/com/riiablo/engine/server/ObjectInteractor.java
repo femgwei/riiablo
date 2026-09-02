@@ -222,7 +222,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       return first ? InteractionResult.HANDLED_CHANGED : InteractionResult.HANDLED_UNCHANGED;
     }
 
-    if (lifecycle == Lifecycle.SHRINE || lifecycle == Lifecycle.ARCANE_SYMBOL) {
+    if (lifecycle == Lifecycle.SHRINE) {
       if (state != null && state.activated) return InteractionResult.HANDLED_UNCHANGED;
       if (state != null) {
         state.persistActivated(true);

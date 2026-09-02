@@ -39,6 +39,9 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     if (!mPlayer.has(entityId)) return false;
     Player player = mPlayer.get(entityId);
     int level = player.data != null ? player.data.getSkill(skillId) : 0;
+    if (mUnitStates.has(entityId) && mUnitStates.get(entityId).stateList != null) {
+      level += mUnitStates.get(entityId).stateList.getTotalSkillModifier();
+    }
     if (level <= 0) return false;
     boolean activated = auras.activateAura(entityId, skillId, level);
     if (activated) {

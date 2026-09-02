@@ -117,6 +117,7 @@ import com.riiablo.engine.server.ObjectInitializer;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.object.NativeObjectDropSystem;
 import com.riiablo.engine.server.object.NativeShrineSystem;
+import com.riiablo.engine.server.object.NativeShrineEffectSystem;
 import com.riiablo.engine.server.object.NativeTrapSystem;
 import com.riiablo.engine.server.object.NativeTrapFireSystem;
 import com.riiablo.engine.server.Pathfinder;
@@ -770,6 +771,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // rolled or materialized. Network clients receive D2GS-created items.
       builder.with(new DeathRewardSystem());
       builder.with(new NativeObjectDropSystem());
+      builder.with(new NativeShrineEffectSystem());
       builder.with(new NativeShrineSystem());
       builder.with(new NativeTrapSystem());
       builder.with(new NativeTrapFireSystem());

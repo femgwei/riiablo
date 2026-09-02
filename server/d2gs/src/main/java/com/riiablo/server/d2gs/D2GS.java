@@ -78,6 +78,7 @@ import com.riiablo.engine.server.ObjectCollisionUpdater;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.object.NativeObjectDropSystem;
 import com.riiablo.engine.server.object.NativeShrineSystem;
+import com.riiablo.engine.server.object.NativeShrineEffectSystem;
 import com.riiablo.engine.server.object.NativeTrapSystem;
 import com.riiablo.engine.server.object.NativeTrapFireSystem;
 import com.riiablo.engine.server.Pathfinder;
@@ -922,6 +923,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new ObjectInitializer())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new NativeObjectDropSystem())
+        .with(new NativeShrineEffectSystem())
         .with(new NativeShrineSystem())
         .with(new NativeTrapSystem())
         .with(new NativeTrapFireSystem())

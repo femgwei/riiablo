@@ -20,6 +20,7 @@ import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.KillCreditResolver;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
@@ -63,6 +64,7 @@ public class ExperienceManager extends PassiveSystem {
   private com.artemis.ComponentMapper<Position> mPosition;
   private com.artemis.ComponentMapper<MonsterRewardState> mMonsterRewardState;
   private com.artemis.ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  private com.artemis.ComponentMapper<UnitStates> mUnitStates;
   private EntitySubscription players;
   private EntitySubscription mercenaries;
   private KillCreditResolver killCredits;
@@ -192,8 +194,7 @@ public class ExperienceManager extends PassiveSystem {
     
     StatListRef killerStats = killerData.getStats().base();
     int killerLevel = getInt(killerStats, Stat.level, killerData.level);
-    int killerAddExperience = getInt(
-        killerData.getStats().aggregate(), Stat.item_addexperience, 0);
+    int killerAddExperience = itemExperienceBonus(ownerEntityId);
 
     // 检查是否在队伍中
     short partyId = partyManager != null ? partyManager.getPartyId(ownerEntityId) : -1;
@@ -280,9 +281,16 @@ public class ExperienceManager extends PassiveSystem {
   }
 
   private int itemExperienceBonus(int entityId) {
-    if (mAttributesWrapper == null || !mAttributesWrapper.has(entityId)) return 0;
-    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
-    return attrs == null ? 0 : getInt(attrs.aggregate(), Stat.item_addexperience, 0);
+    int bonus = 0;
+    if (mAttributesWrapper != null && mAttributesWrapper.has(entityId)) {
+      Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+      if (attrs != null) bonus = getInt(attrs.aggregate(), Stat.item_addexperience, 0);
+    }
+    if (mUnitStates != null && mUnitStates.has(entityId)
+        && mUnitStates.get(entityId).stateList != null) {
+      bonus += mUnitStates.get(entityId).stateList.getTotalExperienceModifier();
+    }
+    return bonus;
   }
 
   private int memberLevel(int entityId, int fallback) {

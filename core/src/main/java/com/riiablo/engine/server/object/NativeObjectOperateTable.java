@@ -14,8 +14,7 @@ public final class NativeObjectOperateTable {
     TRAP,
     QUEST_OBJECT,
     TOGGLE_DOOR,
-    ONE_WAY_DOOR,
-    ARCANE_SYMBOL
+    ONE_WAY_DOOR
   }
 
   private NativeObjectOperateTable() {}
@@ -33,7 +32,10 @@ public final class NativeObjectOperateTable {
   public static Lifecycle resolve(int operateFn, boolean tableDoor,
       NativePresetObjectResolver.Kind kind) {
     if (kind == NativePresetObjectResolver.Kind.ARCANE_SYMBOL) {
-      return Lifecycle.ARCANE_SYMBOL;
+      // OBJECTS_SpawnArcaneSymbol creates one of the static tomb-symbol
+      // display objects (307..313). It has no operate callback or activation
+      // lifecycle in D2Game.
+      return Lifecycle.NONE;
     }
     if (kind == NativePresetObjectResolver.Kind.SHRINE || operateFn == 2) {
       return Lifecycle.SHRINE;

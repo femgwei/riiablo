@@ -219,6 +219,8 @@ public class Main extends ApplicationAdapter {
         .with(new ObjectInitializer())
         .with(new ObjectCollisionUpdater())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
+        .with(new com.riiablo.engine.server.object.NativeShrineEffectSystem())
+        .with(new com.riiablo.engine.server.object.NativeShrineSystem())
         .with(new NativeTrapSystem())
         .with(new NativeTrapFireSystem())
 
