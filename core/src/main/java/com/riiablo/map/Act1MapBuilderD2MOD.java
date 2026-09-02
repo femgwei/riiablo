@@ -15,7 +15,9 @@ import java.util.IdentityHashMap;
 
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
+import com.d2moo.common.drlg.D2DrlgGridStrc;
 import com.d2moo.common.drlg.D2DrlgLevel;
+import com.d2moo.common.drlg.D2DrlgOutdoorRoomStrc;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
@@ -1393,9 +1395,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             exportNativeRooms(drlg, levelId, nativeZone);
           }
           D2DrlgLevel nativeLevel = DrlgDrlg.getLevel(drlg, levelId);
-          D2DrlgOutdoorInfoStrc nativeOutdoors =
-              nativeLevel != null ? nativeLevel.getOutdoors() : null;
-          if (hasNativeDirtPath(nativeOutdoors)) {
+          if (hasNativeDirtPath(nativeLevel)) {
             levelsWithNativeDirtPaths.add(levelId);
           }
         } else {
@@ -3380,11 +3380,31 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int voidTiles;
   }
 
-  private static boolean hasNativeDirtPath(D2DrlgOutdoorInfoStrc outdoors) {
+  static boolean hasNativeDirtPath(D2DrlgLevel level) {
+    D2DrlgOutdoorInfoStrc outdoors = level != null ? level.getOutdoors() : null;
     if (outdoors == null || outdoors.getNVertices() <= 0) return false;
     int count = Math.min(outdoors.getNVertices(), outdoors.getPPathStarts().length);
+    boolean hasTopology = false;
     for (int i = 0; i < count; i++) {
-      if (outdoors.getPPathStarts(i) != null) return true;
+      if (outdoors.getPPathStarts(i) != null) {
+        hasTopology = true;
+        break;
+      }
+    }
+    if (!hasTopology) return false;
+
+    // pPathStarts is only the coarse route. The native path is renderable
+    // only after DRLG_OUTDOORS_GenerateDirtPath has rasterized that route into
+    // at least one RoomEx floor grid using the native 0x82 floor flags.
+    for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+        room = room.getDrlgRoomNext()) {
+      if (!(room.getMazeOrOutdoor() instanceof D2DrlgOutdoorRoomStrc)) continue;
+      D2DrlgGridStrc floor =
+          ((D2DrlgOutdoorRoomStrc) room.getMazeOrOutdoor()).getPFloorGrid();
+      if (floor == null || floor.getPCellsFlags() == null) continue;
+      for (int flags : floor.getPCellsFlags()) {
+        if ((flags & 0xFF) == 0x82 && ((flags >>> 8) & 0xFF) != 0) return true;
+      }
     }
     return false;
   }

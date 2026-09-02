@@ -498,11 +498,10 @@ public class DrlgOutPlace {
         PathSearchState state = new PathSearchState(outdoors, goalX, goalY);
         PathNode found = null;
         while (bound < maxBound && found == null) {
-            state.nodes = 1;
             PathNode root = new PathNode(startX, startY, null);
             root.cost = 0;
             root.direction = nativeCardinalDirection(startX, startY, goalX, goalY);
-            found = searchAct1DirtPath(state, root, bound, 0, -1);
+            found = searchAct1DirtPath(state, root, bound, 0, -1, 1);
             bound += 5;
         }
         if (found == null) {
@@ -523,9 +522,13 @@ public class DrlgOutPlace {
     }
 
     private static PathNode searchAct1DirtPath(PathSearchState state, PathNode current,
-            int bound, int turnBase, int attemptStart) {
+            int bound, int turnBase, int attemptStart, int depth) {
         if (current.x == state.goalX && current.y == state.goalY) return current;
-        if (state.nodes >= 900) return null;
+        // The native 900-entry array is a reusable node at each path depth,
+        // not a budget for every coordinate considered during the search.
+        // Counting all explored branches rejects valid paths much earlier
+        // than sub_6FD80750 when presets force substantial backtracking.
+        if (depth >= 900) return null;
 
         int direction = current.direction;
         int turnIndex = turnBase;
@@ -551,8 +554,8 @@ public class DrlgOutPlace {
             int goalDirection = nativeCardinalDirection(testX, testY, state.goalX, state.goalY);
             int childBase = 4 * ((direction - goalDirection) & 3);
             child.direction = (goalDirection + DIRT_PATH_TURN_ORDER[childBase]) & 3;
-            state.nodes++;
-            PathNode found = searchAct1DirtPath(state, child, bound, childBase, 0);
+            PathNode found = searchAct1DirtPath(
+                    state, child, bound, childBase, 0, depth + 1);
             if (found != null) return found;
         }
         return null;
@@ -609,7 +612,6 @@ public class DrlgOutPlace {
         final D2DrlgOutdoorInfoStrc outdoors;
         final int goalX;
         final int goalY;
-        int nodes;
 
         PathSearchState(D2DrlgOutdoorInfoStrc outdoors, int goalX, int goalY) {
             this.outdoors = outdoors;

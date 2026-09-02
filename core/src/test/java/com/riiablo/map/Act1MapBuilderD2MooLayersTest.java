@@ -1,6 +1,7 @@
 package com.riiablo.map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -17,6 +18,9 @@ import org.junit.jupiter.api.Test;
 import com.badlogic.gdx.utils.IntMap;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgCoord;
+import com.d2moo.common.drlg.D2DrlgGridStrc;
+import com.d2moo.common.drlg.D2DrlgOutdoorInfoStrc;
+import com.d2moo.common.drlg.D2DrlgOutdoorRoomStrc;
 import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2DrlgTileGrid;
@@ -34,6 +38,32 @@ import com.riiablo.save.CharData;
 import com.riiablo.engine.server.component.NativeObjectState;
 
 class Act1MapBuilderD2MooLayersTest {
+
+  @Test
+  void acceptsNativeDirtPathOnlyAfterRoomFloorRasterization() {
+    D2DrlgLevel level = new D2DrlgLevel();
+    D2DrlgOutdoorInfoStrc outdoors = new D2DrlgOutdoorInfoStrc();
+    outdoors.setNVertices(1);
+    outdoors.setPPathStarts(0, new com.d2moo.common.drlg.D2DrlgVertexStrc());
+    level.setPresetOrOutdoorsOrMaze(outdoors);
+
+    assertFalse(Act1MapBuilderD2MOD.hasNativeDirtPath(level),
+        "coarse topology alone must not suppress the compatibility path");
+
+    D2DrlgGridStrc floor = new D2DrlgGridStrc(2, 1);
+    floor.setPCellsFlags(new int[] {0x00000082, 0x00000101});
+    floor.setPCellsRowOffsets(new int[] {0});
+    D2DrlgOutdoorRoomStrc outdoorRoom = new D2DrlgOutdoorRoomStrc();
+    outdoorRoom.setPFloorGrid(floor);
+    D2DrlgRoom room = new D2DrlgRoom();
+    room.setMazeOrOutdoor(outdoorRoom);
+    level.setFirstRoomEx(room);
+
+    assertFalse(Act1MapBuilderD2MOD.hasNativeDirtPath(level),
+        "ordinary floor flags must not be mistaken for dirt-path output");
+    floor.setPCellsFlags(new int[] {0x00000082, 0x00000182});
+    assertTrue(Act1MapBuilderD2MOD.hasNativeDirtPath(level));
+  }
 
   @Test
   void questBossUsesMapFactoryWhenBuilderWireIsUnset() {

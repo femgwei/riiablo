@@ -113,6 +113,73 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
   }
 
   @Test
+  public void nativeDirtPathsRasterizeBeforeFloorExport() {
+    int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
+    int burialId = findLevelId("Burial Grounds");
+    int[] dirtPathLevels = {
+        D2LevelIds.LEVEL_BLOODMOOR,
+        D2LevelIds.LEVEL_COLDPLAINS,
+        D2LevelIds.LEVEL_STONYFIELD,
+        D2LevelIds.LEVEL_DARKWOOD,
+        D2LevelIds.LEVEL_BLACKMARSH,
+        D2LevelIds.LEVEL_TAMOEHIGHLAND };
+    String[] firstSignatures = new String[dirtPathLevels.length];
+    Act1D2MOOLayoutBridge.LayoutAndDrlg generated =
+        Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, DEFAULT_DIFFICULTY, burialId);
+    assertNotNull(generated, "D2MOO Act1 layout failed");
+    try {
+      D2MooTileApplier applier = new D2MooTileApplier();
+      for (int i = 0; i < dirtPathLevels.length; i++) {
+        int levelId = dirtPathLevels[i];
+        D2DrlgLevel level = DrlgDrlg.getLevel(generated.drlg, levelId);
+        assertNativeDirtPaths(level, false);
+        firstSignatures[i] = nativeDirtPathSignature(level);
+        TileGrid target = new TileGrid(
+            level.getLevelCoords().getNWidth(), level.getLevelCoords().getNHeight());
+        applier.putGrid(levelId, target);
+        applier.resetLastExportedFloorCount();
+        assertTrue(DrlgExport.exportLevelTiles(generated.drlg, levelId, applier) > 0,
+            "native floor export was empty for level " + levelId);
+        assertNativeDirtPaths(level, true);
+        assertTrue(applier.getLastExportedFloorCount() > 0,
+            "native floor callbacks were not applied for level " + levelId);
+      }
+    } finally {
+      DrlgDrlg.freeDrlg(generated.drlg);
+      Act1D2MOOLayoutBridge.releaseDataTables();
+    }
+
+    Act1D2MOOLayoutBridge.LayoutAndDrlg repeated =
+        Act1D2MOOLayoutBridge.getLayoutAndDrlg(seed, DEFAULT_DIFFICULTY, burialId);
+    assertNotNull(repeated, "repeated D2MOO Act1 layout failed");
+    try {
+      for (int i = 0; i < dirtPathLevels.length; i++) {
+        assertEquals(firstSignatures[i], nativeDirtPathSignature(
+                DrlgDrlg.getLevel(repeated.drlg, dirtPathLevels[i])),
+            "same seed changed native dirt-path topology for level " + dirtPathLevels[i]);
+      }
+    } finally {
+      DrlgDrlg.freeDrlg(repeated.drlg);
+      Act1D2MOOLayoutBridge.releaseDataTables();
+    }
+  }
+
+  private static String nativeDirtPathSignature(D2DrlgLevel level) {
+    StringBuilder signature = new StringBuilder();
+    D2DrlgOutdoorInfoStrc outdoors = level.getOutdoors();
+    for (int i = 0; i < outdoors.getNVertices(); i++) {
+      signature.append(i).append(':');
+      for (D2DrlgVertexStrc vertex = outdoors.getPPathStarts(i); vertex != null;
+          vertex = vertex.getPNext()) {
+        signature.append(vertex.getNPosX()).append(',')
+            .append(vertex.getNPosY()).append(';');
+      }
+      signature.append('|');
+    }
+    return signature.toString();
+  }
+
+  @Test
   public void mapBuilderCreatesDiscoveredAct1SublevelZones() {
     int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
     Map map = new Map(seed, DEFAULT_DIFFICULTY);
