@@ -3,6 +3,8 @@ package com.riiablo.engine.server.object;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.List;
 
@@ -42,5 +44,23 @@ class NativeObjectDropAdapterTest extends RiiabloTest {
       assertNotNull(drop.code);
       assertFalse(drop.code.isEmpty());
     }
+  }
+
+  @Test
+  void matchesNativeContainerDropGates() {
+    assertFalse(NativeObjectDropSystem.shouldDropContainer(4, false, false, 24));
+    assertTrue(NativeObjectDropSystem.shouldDropContainer(4, false, false, 25));
+    assertTrue(NativeObjectDropSystem.shouldDropContainer(4, true, false, 0));
+    assertTrue(NativeObjectDropSystem.shouldDropContainer(4, false, true, 0));
+    assertFalse(NativeObjectDropSystem.shouldDropContainer(3, false, false, 21));
+    assertTrue(NativeObjectDropSystem.shouldDropContainer(3, false, false, 20));
+  }
+
+  @Test
+  void matchesNativeSparkChestQualityDistributionBoundaries() {
+    assertEquals(com.riiablo.item.Quality.RARE,
+        NativeObjectDropSystem.sparkChestQuality(4));
+    assertEquals(com.riiablo.item.Quality.MAGIC,
+        NativeObjectDropSystem.sparkChestQuality(5));
   }
 }

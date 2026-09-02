@@ -266,6 +266,31 @@ public class NativeObjectDropSystem extends BaseSystem {
       return;
     }
     RandomXS128 random = new RandomXS128(objectSeed(event, position));
+    NativeObjectState state = mNativeObjectState.get(event.entityId);
+    int interactType = state == null ? 0 : state.interactType;
+    boolean locked = NativeObjectInteractTypeResolver.locked(interactType);
+    boolean specialChest = state != null
+        && state.kind == com.riiablo.map.NativePresetObjectResolver.Kind.SPECIAL_CHEST;
+
+    // D2Game's handlers do not all use the chest routine.  In particular,
+    // urns/jars roll only 21% of the time, while an ordinary chest has a 25%
+    // no-drop branch. Locked and spark chests bypass that branch.
+    if (!shouldDropContainer(event.operateFn, locked, specialChest,
+        random.nextInt(100))) {
+      log.info("[OBJECT_DROP] container opened without drop: entity={}, object={}, "
+              + "operateFn={}, locked={}, sparkChest={}",
+          event.entityId, event.objectClassId, event.operateFn, locked, specialChest);
+      return;
+    }
+
+    Quality forcedContainerQuality = Quality.NONE;
+    if (specialChest) {
+      // OBJECTS_SpawnSpecialChest marks a spark chest; the opening handler
+      // then chooses 5% RARE and otherwise MAGIC. The spawn RNG stream is not
+      // exported, so use the stable per-object stream while preserving the
+      // native quality distribution.
+      forcedContainerQuality = sparkChestQuality(random.nextInt(100));
+    }
     if (adapter == null) adapter = new NativeObjectDropAdapter(Riiablo.files);
     TreasureClassResolver.PlayerContext playerContext = playerContext(level.Id);
     List<NativeObjectDropAdapter.Drop> drops = adapter.rollChest(
@@ -275,7 +300,8 @@ public class NativeObjectDropSystem extends BaseSystem {
     for (int i = 0; i < drops.size(); i++) {
       NativeObjectDropAdapter.Drop drop = drops.get(i);
       Vector2 target = findDropPosition(wrapper.map, position.position, i);
-      int entityId = createItem(drop, itemLevel, target.x, target.y, random);
+      int entityId = createItem(drop, itemLevel, target.x, target.y, random,
+          forcedContainerQuality);
       if (entityId >= 0) created++;
     }
     log.info("[OBJECT_DROP] opened entity={}, object={}, level={}, difficulty={}, "
@@ -284,6 +310,27 @@ public class NativeObjectDropSystem extends BaseSystem {
         adapter.chestTier(level, difficulty), playerContext.totalPlayers,
         playerContext.partyMembersInLevel,
         playerContext.effectivePlayerCount(), drops.size(), created);
+  }
+
+  /** Testable projection of D2Game's per-OperateFn container roll gate. */
+  static boolean shouldDropContainer(int operateFn, boolean locked,
+      boolean sparkChest, int percentRoll) {
+    int roll = Math.max(0, Math.min(percentRoll, 99));
+    if (operateFn == 3) {
+      // OBJECTS_OperateFunction03_Urn_Basket_Jar: %100 <= 20.
+      return roll <= 20;
+    }
+    if (operateFn == 4 && !locked && !sparkChest) {
+      // OBJECTS_OperateFunction04_Chest: %100 >= 25 enters the drop branch.
+      return roll >= 25;
+    }
+    return true;
+  }
+
+  /** Testable native spark-chest quality roll (5% rare, 95% magic). */
+  static Quality sparkChestQuality(int percentRoll) {
+    return Math.max(0, Math.min(percentRoll, 99)) < 5
+        ? Quality.RARE : Quality.MAGIC;
   }
 
   private boolean createQuestItem(String code, int difficulty, int itemLevel,
@@ -306,11 +353,12 @@ public class NativeObjectDropSystem extends BaseSystem {
   }
 
   private int createItem(NativeObjectDropAdapter.Drop drop, int itemLevel,
-      float x, float y, RandomXS128 random) {
+      float x, float y, RandomXS128 random, Quality forcedContainerQuality) {
     try {
       Item item = itemGenerator.generate(drop.code);
       item.ilvl = (byte) MathUtils.clamp(itemLevel, 1, 99);
-      item.quality = safeQuality(drop);
+      item.quality = forcedContainerQuality != Quality.NONE
+          ? forcedContainerQuality : safeQuality(drop);
       item.flags |= Item.ITEMFLAG_IDENTIFIED;
       if (drop.isGold()) {
         int baseGold = itemLevel + random.nextInt(Math.max(1, 5 * itemLevel));
