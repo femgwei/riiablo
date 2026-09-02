@@ -48,6 +48,7 @@ import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInitializer;
 import com.riiablo.engine.server.ObjectCollisionUpdater;
 import com.riiablo.engine.server.ObjectInteractor;
+import com.riiablo.engine.server.object.NativeTrapSystem;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.ServerEntityFactory;
@@ -216,6 +217,7 @@ public class Main extends ApplicationAdapter {
         .with(new ObjectInitializer())
         .with(new ObjectCollisionUpdater())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
+        .with(new NativeTrapSystem())
 
         .with(new RoomEntityTrackingSystem())
         .with(new RoomActivationSystem())

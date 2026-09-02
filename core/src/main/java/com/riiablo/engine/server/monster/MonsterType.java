@@ -54,6 +54,12 @@ public final class MonsterType {
   /** 骷髅法师 */
   public static final int SKELETONMAGE = 183;
 
+  // Native D2Game object-trap monsters (MonsterIds.h).
+  public static final int TRAP_FIREBOLT = 326;
+  public static final int TRAP_POISONCLOUD = 329;
+  public static final int TRAP_LIGHTNING = 330;
+  public static final int TRAP_NOVA = 369;
+
   //==========================================================================
   // BOSS 怪物
   //==========================================================================

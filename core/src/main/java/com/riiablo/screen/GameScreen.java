@@ -117,6 +117,7 @@ import com.riiablo.engine.server.ObjectInitializer;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.object.NativeObjectDropSystem;
 import com.riiablo.engine.server.object.NativeShrineSystem;
+import com.riiablo.engine.server.object.NativeTrapSystem;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.LeapSystem;
 import com.riiablo.engine.server.PlayerItemHandler;
@@ -769,6 +770,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new DeathRewardSystem());
       builder.with(new NativeObjectDropSystem());
       builder.with(new NativeShrineSystem());
+      builder.with(new NativeTrapSystem());
       builder.with(new VendorGenerator());
       builder.with(new RoomEntityTrackingSystem(), new RoomActivationSystem(), new AIStepper());
       builder.with(new com.riiablo.engine.server.party.PartyMemberSyncSystem());

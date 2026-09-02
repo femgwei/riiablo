@@ -207,15 +207,18 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         state.persistActivated(true);
         state.persistMode(Engine.Object.MODE_ON);
       }
+      int resolvedTrapType = state == null
+          ? 0 : NativeObjectInteractTypeResolver.trapType(state.interactType);
       if (first) {
         mSequence.create(entityId).sequence(
             Engine.Object.MODE_OP, Engine.Object.MODE_ON);
         mInteractable.remove(entityId);
       }
       event.dispatch(NativeTrapInteractionEvent.obtain(src, entityId, base.Id,
-          base.OperateFn, base.TrapProb, trapType(base), first));
+          base.OperateFn, base.TrapProb, resolvedTrapType, first));
       Gdx.app.log(TAG, "Native trap triggered: entity=" + entityId
-          + " player=" + src + " object=" + base.Id + " first=" + first);
+          + " player=" + src + " object=" + base.Id + " trapType=" + resolvedTrapType
+          + " first=" + first);
       return first ? InteractionResult.HANDLED_CHANGED : InteractionResult.HANDLED_UNCHANGED;
     }
 
@@ -362,12 +365,6 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         Gdx.app.error(TAG, "Invalid OperateFn for " + entityId + ": " + operateFn);
     }
     return false;
-  }
-
-  private static int trapType(com.riiablo.codec.excel.Objects.Entry base) {
-    // D2Game derives the concrete handler from InteractType. Until the
-    // trap initializer is bridged, do not mislabel OperateFn as a handler id.
-    return -1;
   }
 
   private void dispatchContainerTrap(int src, int entityId,
