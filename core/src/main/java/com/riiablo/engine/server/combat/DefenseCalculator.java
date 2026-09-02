@@ -153,6 +153,40 @@ public class DefenseCalculator {
   }
 
   /**
+   * Evaluates only passive/weapon defenses for a pre-built combat context.
+   * CombatSystem uses this overload so it can preserve native attack type and
+   * movement information without rebuilding an Attributes object.
+   */
+  public int checkPassiveDefense(int attackType, boolean isMoving,
+      int dodgeChance, int avoidChance, int evadeChance, int weaponBlockChance) {
+    if (weaponBlockChance > 0 && rollPassive(weaponBlockChance)) {
+      log.debug("Weapon block successful: {}%", weaponBlockChance);
+      return DEFENSE_WEAPON_BLOCK;
+    }
+    if (isMoving) {
+      if (evadeChance > 0 && rollPassive(evadeChance)) {
+        log.debug("Evade successful: {}%", evadeChance);
+        return DEFENSE_EVADE;
+      }
+      return DEFENSE_NONE;
+    }
+    if (attackType == ATTACK_MELEE && dodgeChance > 0 && rollPassive(dodgeChance)) {
+      log.debug("Dodge successful: {}%", dodgeChance);
+      return DEFENSE_DODGE;
+    }
+    if (attackType == ATTACK_RANGED && avoidChance > 0 && rollPassive(avoidChance)) {
+      log.debug("Avoid successful: {}%", avoidChance);
+      return DEFENSE_AVOID;
+    }
+    return DEFENSE_NONE;
+  }
+
+  private boolean rollPassive(int chance) {
+    if (chance >= 100) return true;
+    return MathUtils.random(99) < Math.min(Math.max(chance, 0), MAX_DODGE_CHANCE);
+  }
+
+  /**
    * 计算格挡几率
    * 
    * <p>格挡公式（来自 D2MOD）：

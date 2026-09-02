@@ -223,6 +223,14 @@ public class CombatSystem {
     /** 是否正在格挡（持盾） */
     public boolean canBlock;
 
+    /** Native passive-defense context. Callers may set isMoving for Evade. */
+    public int attackType = DefenseCalculator.ATTACK_MELEE;
+    public boolean isMoving;
+    public int passiveDodge;
+    public int passiveAvoid;
+    public int passiveEvade;
+    public int passiveWeaponBlock;
+
     /** 各元素抗性 */
     public int[] resistances = new int[DAMAGE_TYPE_COUNT];
 
@@ -486,6 +494,11 @@ public class CombatSystem {
     d.maxLife = Math.max(d.currentLife, statInt(defender, Stat.maxhp, d.currentLife));
     d.blockChance = statInt(defender, Stat.toblock, 0);
     d.canBlock = d.blockChance > 0 && !missile;
+    d.attackType = missile ? DefenseCalculator.ATTACK_RANGED : DefenseCalculator.ATTACK_MELEE;
+    d.passiveDodge = statInt(defender, Stat.passive_dodge, 0);
+    d.passiveAvoid = statInt(defender, Stat.passive_avoid, 0);
+    d.passiveEvade = statInt(defender, Stat.passive_evade, 0);
+    d.passiveWeaponBlock = statInt(defender, Stat.passive_weaponblock, 0);
     d.resistances[DAMAGE_PHYSICAL] = statInt(defender, Stat.damageresist, 0);
     d.resistances[DAMAGE_FIRE] = statInt(defender, Stat.fireresist, 0);
     d.resistances[DAMAGE_LIGHTNING] = statInt(defender, Stat.lightresist, 0);
@@ -539,6 +552,23 @@ public class CombatSystem {
           calculateEffectiveAttackRating(attacker, defender),
           calculateEffectiveDefense(attacker, defender), attacker.level, defender.level,
           result.hitChance);
+      return result;
+    }
+
+    // D2MOO applies Amazon Dodge/Avoid/Evade after a successful to-hit roll
+    // and before damage/block resolution.  Shield block remains in the native
+    // block branch below; this call therefore only evaluates passive weapon
+    // block and the three Amazon defensive skills.
+    int passiveDefense = DefenseCalculator.INSTANCE.checkPassiveDefense(
+        defender.attackType, defender.isMoving, defender.passiveDodge,
+        defender.passiveAvoid, defender.passiveEvade, defender.passiveWeaponBlock);
+    if (passiveDefense == DefenseCalculator.DEFENSE_DODGE
+        || passiveDefense == DefenseCalculator.DEFENSE_AVOID
+        || passiveDefense == DefenseCalculator.DEFENSE_EVADE
+        || passiveDefense == DefenseCalculator.DEFENSE_WEAPON_BLOCK) {
+      result.blocked = true;
+      log.debug("[COMBAT_DEFENSE] passive={} attackType={} moving={}",
+          passiveDefense, defender.attackType, defender.isMoving);
       return result;
     }
 

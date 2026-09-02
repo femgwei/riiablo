@@ -25,6 +25,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.combat.DefenseCalculator;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
@@ -138,6 +139,17 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     } finally {
       world.dispose();
     }
+  }
+
+  @Test
+  void passiveDodgeAvoidEvadeUseNativeAttackContext() {
+    DefenseCalculator defense = DefenseCalculator.INSTANCE;
+    assertEquals(DefenseCalculator.DEFENSE_DODGE,
+        defense.checkPassiveDefense(DefenseCalculator.ATTACK_MELEE, false, 100, 0, 0, 0));
+    assertEquals(DefenseCalculator.DEFENSE_AVOID,
+        defense.checkPassiveDefense(DefenseCalculator.ATTACK_RANGED, false, 0, 100, 0, 0));
+    assertEquals(DefenseCalculator.DEFENSE_EVADE,
+        defense.checkPassiveDefense(DefenseCalculator.ATTACK_MELEE, true, 0, 0, 100, 0));
   }
 
   private static int monster(World world, float x, float y) {
