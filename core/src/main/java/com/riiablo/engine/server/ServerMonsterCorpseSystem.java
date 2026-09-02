@@ -9,6 +9,7 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MovementModes;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
@@ -39,6 +40,7 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<MovementModes> mMovementModes;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<Running> mRunning;
@@ -79,6 +81,9 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
         || !mMonster.has(event.entityId)) return;
 
     final int entityId = event.entityId;
+    if (mNativeUnitFlags.has(entityId)) {
+      mNativeUnitFlags.get(entityId).clear(NativeUnitFlags.MONSTER_TARGET);
+    }
     if (!mCorpse.has(entityId)) {
       mCorpse.create(entityId).reset(Corpse.DEFAULT_DURATION, true);
       Monster monster = mMonster.get(entityId);

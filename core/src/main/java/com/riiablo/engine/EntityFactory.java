@@ -111,6 +111,14 @@ public abstract class EntityFactory extends PassiveSystem {
     return false;
   }
 
+  /** Executes native Skills.txt SrvSt61 for a monster's resurrection animation. */
+  public boolean selfResurrectMonster(int monsterId) {
+    return false;
+  }
+
+  /** Restores native monster target flags when a SrvSt61 animation completes. */
+  public void finishSelfResurrection(int monsterId) {}
+
   /** Applies native D2UnitStrc flags; client-only and test factories may ignore them. */
   public void applyNativeUnitFlags(int entityId, int flags) {}
 

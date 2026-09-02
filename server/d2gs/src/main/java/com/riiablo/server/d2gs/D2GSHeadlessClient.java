@@ -225,6 +225,12 @@ public final class D2GSHeadlessClient {
       // Kill the same Fallen once more and verify the server retains that
       // native anti-farming state while both clients still observe its death.
       int[] rewardsBefore = D2GS.headlessMonsterRewardState(a.playerId, fallenA.entityId);
+      int livingResurrectionFlags =
+          com.riiablo.engine.server.component.NativeUnitFlags.MONSTER_RESURRECTION;
+      if ((rewardsBefore[1] & livingResurrectionFlags) != livingResurrectionFlags) {
+        throw new IllegalStateException("revived Fallen is missing native live target/reward flags: flags=0x"
+            + Integer.toHexString(rewardsBefore[1]));
+      }
       Snapshot revived = a.monsters.get(fallenA.entityId);
       if (revived == null || revived.dead || revived.life <= 0f) {
         throw new IllegalStateException("revived Fallen snapshot is not alive");
@@ -235,10 +241,13 @@ public final class D2GSHeadlessClient {
       b.consumeFor(inB, 1_000L);
       int[] rewardsAfter = D2GS.headlessMonsterRewardState(a.playerId, fallenA.entityId);
       int nativeNoRewards =
-          com.riiablo.engine.server.component.NativeUnitFlags.MONSTER_RESURRECTION;
+          com.riiablo.engine.server.component.NativeUnitFlags.NO_RESURRECTION_REWARD;
+      int monsterTarget =
+          com.riiablo.engine.server.component.NativeUnitFlags.MONSTER_TARGET;
       if (rewardsAfter[0] != rewardsBefore[0]
           || rewardsAfter[2] != rewardsBefore[2]
-          || (rewardsAfter[1] & nativeNoRewards) != nativeNoRewards) {
+          || (rewardsAfter[1] & nativeNoRewards) != nativeNoRewards
+          || (rewardsAfter[1] & monsterTarget) != 0) {
         throw new IllegalStateException("resurrected Fallen granted a native reward: xp="
             + rewardsBefore[0] + "->" + rewardsAfter[0] + " items="
             + rewardsBefore[2] + "->" + rewardsAfter[2] + " flags=0x"

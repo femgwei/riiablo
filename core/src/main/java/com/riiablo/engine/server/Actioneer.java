@@ -73,6 +73,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<UnitStates> mUnitStates;
@@ -259,8 +260,14 @@ public class Actioneer extends PassiveSystem {
       return;
     }
 
-    srvstfunc(entityId, skill.srvstfunc, targetId, targetVec);
     events.dispatch(SkillStartEvent.obtain(entityId, skillId, targetId, targetVec, skill.srvstfunc, skill.cltstfunc));
+  }
+
+  /** Runs Skills.txt server-start functions for both player and AI cast entry points. */
+  @Subscribe
+  public void onSkillStart(SkillStartEvent event) {
+    if (event == null || event.entityId == Engine.INVALID_ENTITY) return;
+    srvstfunc(event.entityId, event.srvstfunc, event.targetId, event.targetVec);
   }
 
   int getMode(Skills.Entry skill, Class.Type type) {
@@ -373,6 +380,11 @@ public class Actioneer extends PassiveSystem {
           // Target is already dead, skip damage but continue animation
           targetDead = true;
         }
+        NativeUnitFlags targetFlags = mNativeUnitFlags.get(casting.targetId);
+        if (targetFlags != null
+            && !targetFlags.has(NativeUnitFlags.CAN_BE_ATTACKED)) {
+          targetDead = true;
+        }
       }
     }
     
@@ -409,6 +421,7 @@ public class Actioneer extends PassiveSystem {
     if (!mCasting.has(event.entityId)) return;
     log.traceEntry("onAnimDataFinished(entityId: {})", event.entityId);
     final Casting casting = mCasting.get(event.entityId);
+    Skills.Entry completedSkill = Riiablo.files.skills.get(casting.skillId);
     
     // D2MOD: Check if target is dead after attack animation completes
     boolean targetDead = false;
@@ -424,6 +437,9 @@ public class Actioneer extends PassiveSystem {
       }
     }
     
+    if (completedSkill != null && completedSkill.srvstfunc == 61 && factory != null) {
+      factory.finishSelfResurrection(event.entityId);
+    }
     mCasting.remove(event.entityId);
     
     if (targetDead && mSequence.has(event.entityId)) {
@@ -484,6 +500,13 @@ public class Actioneer extends PassiveSystem {
       case 49: // Nest: native code reserves the spawn point and collision mask
         log.info("[MONSTER_NEST] phase=prepare entity={} target={}", entityId, targetId);
         break;
+      case 61: { // SKILLS_SrvSt61_SelfResurrect
+        boolean restored = mMonster.has(entityId) && factory != null
+            && factory.selfResurrectMonster(entityId);
+        log.info("[MONSTER_SELF_RESURRECT] phase=skill_start entity={} restored={}",
+            entityId, restored);
+        break;
+      }
       case 31: // Charge: reserve the target path; damage is applied at keyframe
         if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
           pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);

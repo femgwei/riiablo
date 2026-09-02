@@ -11,16 +11,22 @@ import org.junit.jupiter.api.Test;
 
 class NativeUnitFlagsTest {
   @Test
-  void regularMonsterStartsWithoutRewardSuppression() {
-    NativeUnitFlags flags = new NativeUnitFlags().reset();
+  void regularMonsterStartsTargetableWithoutRewardSuppression() {
+    NativeUnitFlags flags = new NativeUnitFlags().reset().set(NativeUnitFlags.MONSTER_TARGET);
 
-    assertEquals(0, flags.flags());
+    assertEquals(NativeUnitFlags.MONSTER_TARGET, flags.flags());
+    assertTrue(flags.has(NativeUnitFlags.TARGETABLE));
+    assertTrue(flags.has(NativeUnitFlags.CAN_BE_ATTACKED));
+    assertTrue(flags.has(NativeUnitFlags.IS_VALID_TARGET));
     assertFalse(flags.has(NativeUnitFlags.NO_EXPERIENCE));
     assertFalse(flags.has(NativeUnitFlags.NO_TREASURE_CLASS));
   }
 
   @Test
   void valuesMatchD2CommonUnitFlags() {
+    assertEquals(0x00000002, NativeUnitFlags.TARGETABLE);
+    assertEquals(0x00000004, NativeUnitFlags.CAN_BE_ATTACKED);
+    assertEquals(0x00000008, NativeUnitFlags.IS_VALID_TARGET);
     assertEquals(0x00000200, NativeUnitFlags.IS_MERCENARY);
     assertEquals(0x00020000, NativeUnitFlags.NO_TREASURE_CLASS);
     assertEquals(0x01000000, NativeUnitFlags.IS_INITIALIZED);
@@ -39,8 +45,22 @@ class NativeUnitFlagsTest {
     assertEquals(NativeUnitFlags.MONSTER_RESURRECTION, flags.flags());
 
     flags.reset().markSelfResurrection();
-    assertEquals(NativeUnitFlags.MONSTER_RESURRECTION, flags.flags());
+    assertEquals(NativeUnitFlags.SELF_RESURRECTION, flags.flags());
+    assertFalse(flags.has(NativeUnitFlags.TARGETABLE));
+    assertFalse(flags.has(NativeUnitFlags.CAN_BE_ATTACKED));
+    assertFalse(flags.has(NativeUnitFlags.IS_VALID_TARGET));
     assertFalse(flags.has(NativeUnitFlags.IS_RESURRECT));
+  }
+
+  @Test
+  void completingSelfResurrectionRestoresOnlyMonsterTargetBits() {
+    NativeUnitFlags flags = new NativeUnitFlags().reset().markSelfResurrection();
+
+    flags.set(NativeUnitFlags.MONSTER_TARGET);
+
+    assertEquals(NativeUnitFlags.MONSTER_RESURRECTION, flags.flags());
+    assertTrue(flags.has(NativeUnitFlags.MONSTER_TARGET));
+    assertTrue(flags.has(NativeUnitFlags.NO_RESURRECTION_REWARD));
   }
 
   @Test

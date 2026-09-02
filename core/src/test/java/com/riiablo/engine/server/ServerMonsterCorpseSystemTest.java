@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.MovementModes;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
@@ -77,11 +78,15 @@ class ServerMonsterCorpseSystemTest {
       world.getMapper(Running.class).create(monsterId);
       world.getMapper(Target.class).create(monsterId);
       world.getMapper(Interactable.class).create(monsterId);
+      NativeUnitFlags nativeFlags = world.getMapper(NativeUnitFlags.class).create(monsterId)
+          .reset().markMonsterResurrection();
 
       events.dispatch(DeathEvent.obtain(1, monsterId));
       assertTrue(ai.killed, "server death event must transition the monster AI");
 
       events.dispatch(ModeChangeEvent.obtain(monsterId, Engine.Monster.MODE_DD));
+      assertEquals(NativeUnitFlags.NO_RESURRECTION_REWARD, nativeFlags.flags(),
+          "native corpse mode must clear target bits without restoring XP or treasure rewards");
       Corpse corpse = world.getMapper(Corpse.class).get(monsterId);
       assertNotNull(corpse);
       assertTrue(corpse.usable);

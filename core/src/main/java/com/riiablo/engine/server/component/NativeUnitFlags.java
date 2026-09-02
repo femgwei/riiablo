@@ -15,6 +15,9 @@ import com.artemis.annotations.Transient;
 @Transient
 @PooledWeaver
 public class NativeUnitFlags extends Component {
+  public static final int TARGETABLE = 0x00000002;
+  public static final int CAN_BE_ATTACKED = 0x00000004;
+  public static final int IS_VALID_TARGET = 0x00000008;
   public static final int IS_MERCENARY = 0x00000200;
   public static final int NO_TREASURE_CLASS = 0x00020000;
   public static final int IS_INITIALIZED = 0x01000000;
@@ -22,12 +25,15 @@ public class NativeUnitFlags extends Component {
   public static final int NO_EXPERIENCE = 0x04000000;
   public static final int IS_REVIVE = 0x80000000;
 
-  /** D2Game {@code SKILLS_ResurrectUnit}, including self-resurrection. */
-  public static final int MONSTER_RESURRECTION = NO_EXPERIENCE | NO_TREASURE_CLASS;
-  /** D2Game {@code SKILLS_SrvSt61_SelfResurrect} delegates to the same helper. */
-  public static final int SELF_RESURRECTION = MONSTER_RESURRECTION;
+  public static final int MONSTER_TARGET = TARGETABLE | CAN_BE_ATTACKED | IS_VALID_TARGET;
+  /** Final anti-farming state shared by native external and self resurrection. */
+  public static final int NO_RESURRECTION_REWARD = NO_EXPERIENCE | NO_TREASURE_CLASS;
+  /** D2Game {@code SKILLS_ResurrectUnit} restores target bits and suppresses rewards. */
+  public static final int MONSTER_RESURRECTION = MONSTER_TARGET | NO_RESURRECTION_REWARD;
+  /** SrvSt61 clears target bits again while the self-resurrection animation runs. */
+  public static final int SELF_RESURRECTION = NO_RESURRECTION_REWARD;
   /** D2Game {@code MONSTERAI_InitializeHireling}. */
-  public static final int MERCENARY = MONSTER_RESURRECTION | IS_MERCENARY;
+  public static final int MERCENARY = NO_RESURRECTION_REWARD | IS_MERCENARY;
   /** D2Game {@code SKILLS_SrvDo087_MaggotLay}. */
   public static final int MAGGOT_LAY_SUMMON = NO_EXPERIENCE;
   /** D2Game {@code SKILLS_SrvDo091_Nest_EvilHutSpawner}. */
@@ -63,7 +69,7 @@ public class NativeUnitFlags extends Component {
   }
 
   public NativeUnitFlags markSelfResurrection() {
-    return set(SELF_RESURRECTION);
+    return set(MONSTER_RESURRECTION).clear(MONSTER_TARGET);
   }
 
   public NativeUnitFlags markMercenary() {

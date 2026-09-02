@@ -33,6 +33,7 @@ import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
@@ -42,6 +43,24 @@ import org.junit.jupiter.api.Test;
 
 /** Real ECS event-chain scenarios for representative Act I monster skills. */
 class Act1MonsterEcsScenarioTest extends RiiabloTest {
+  @Test
+  void selfResurrectServerStartUsesUnifiedFactoryLifecycle() {
+    Skills.Entry skill = findSkillWithServerStart(61);
+    assertNotNull(skill, "Skills.txt must contain native SrvSt61 SelfResurrect");
+    MonStats.Entry row = Riiablo.files.monstats.get("fallen1");
+    Scenario scenario = new Scenario(row);
+    try {
+      scenario.world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          scenario.source, skill.Id, scenario.source, scenario.position(10, 10),
+          skill.srvstfunc, skill.cltstfunc));
+
+      assertEquals(1, scenario.factory.selfResurrections);
+      assertEquals(scenario.source, scenario.factory.lastSelfResurrected);
+    } finally {
+      scenario.close();
+    }
+  }
+
   @Test
   void spiderLayInstallsStateAndMovingSpiderEmitsAuthoritativeGoo() {
     MonStats.Entry row = Riiablo.files.monstats.get("arach1");
@@ -407,6 +426,8 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     String lastMissile;
     int lastMissileOwner = -1;
     int lastNativeFlags;
+    int selfResurrections;
+    int lastSelfResurrected = Engine.INVALID_ENTITY;
 
     @Override public int createPlayer(CharData data, Vector2 position) { return -1; }
     @Override public int createDynamicObject(int act, int preset, float x, float y) { return -1; }
@@ -421,6 +442,11 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       return 9000 + monstersCreated;
     }
     @Override public int createWarp(int index, float x, float y) { return -1; }
+    @Override public boolean selfResurrectMonster(int monsterId) {
+      selfResurrections++;
+      lastSelfResurrected = monsterId;
+      return true;
+    }
     @Override public void applyNativeUnitFlags(int entityId, int flags) {
       lastNativeFlags |= flags;
     }
@@ -458,6 +484,13 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       if (name == null || name.isEmpty()) continue;
       Skills.Entry skill = Riiablo.files.skills.get(name);
       if (skill != null && skill.srvdofunc == srvdofunc) return skill;
+    }
+    return null;
+  }
+
+  private static Skills.Entry findSkillWithServerStart(int srvstfunc) {
+    for (Skills.Entry skill : Riiablo.files.skills) {
+      if (skill.srvstfunc == srvstfunc) return skill;
     }
     return null;
   }

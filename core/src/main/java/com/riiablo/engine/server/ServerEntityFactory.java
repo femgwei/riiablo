@@ -24,6 +24,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.MonPreset;
 import com.riiablo.codec.excel.Objects;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AIWrapper;
@@ -35,6 +36,7 @@ import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -55,11 +57,13 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.component.ZoneAware;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import net.mostlyoriginal.api.event.common.EventSystem;
 
 public class ServerEntityFactory extends EntityFactory {
   private static final String TAG = "ServerEntityFactory";
@@ -85,6 +89,7 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<AIWrapper> mAIWrapper;
+  protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -95,6 +100,8 @@ public class ServerEntityFactory extends EntityFactory {
   protected ObjectInteractor objectInteractor;
   protected WarpInteractor warpInteractor;
   protected ItemInteractor itemInteractor;
+  @com.artemis.annotations.Wire(failOnNull = false)
+  protected EventSystem events;
 
   @Override
   public int createPlayer(CharData charData, Vector2 position) {
@@ -352,7 +359,7 @@ public class ServerEntityFactory extends EntityFactory {
         + MonsterStatsCalculator.nativeRankLevelBonus(rank);
 
     int id = super.createEntity(Class.Type.MON, monstats.Id);
-    mNativeUnitFlags.create(id).reset();
+    mNativeUnitFlags.create(id).reset().set(NativeUnitFlags.MONSTER_TARGET);
     Monster monster = mMonster.create(id).set(monstats, monstats2)
         .setRank(rank, affixes, championType, uniqueId);
     monster.setAttack2Profile(attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
@@ -542,12 +549,82 @@ public class ServerEntityFactory extends EntityFactory {
     }
     mSequence.create(monsterId).sequence((byte) resurrectMode, Engine.Monster.MODE_NU);
 
+    String configuredSkill = monster.monstats2.ResurrectSkill;
+    Skills.Entry resurrectSkill = configuredSkill == null || configuredSkill.isEmpty()
+        ? null : Riiablo.files.skills.get(configuredSkill);
+    if (resurrectSkill != null) {
+      Vector2 position = mPosition.get(monsterId).position;
+      mCasting.create(monsterId).set(
+          resurrectSkill.Id, monsterId, position);
+      if (events != null) {
+        events.dispatch(SkillStartEvent.obtain(
+            monsterId, resurrectSkill.Id, monsterId, position.cpy(),
+            resurrectSkill.srvstfunc, resurrectSkill.cltstfunc));
+      } else {
+        log.warn("[MONSTER_SELF_RESURRECT] phase=event_bus_missing entity={} skill={} srvStFunc={}",
+            monsterId, configuredSkill, resurrectSkill.srvstfunc);
+      }
+    } else if (configuredSkill != null && !configuredSkill.isEmpty()) {
+      log.warn("[MONSTER_SELF_RESURRECT] phase=skill_lookup_failed entity={} skill={}",
+          monsterId, configuredSkill);
+    }
+
     log.info("[MONSTER_RAISE] phase=restored source={} target={} monster={} hp={} "
             + "mode={} resurrectSkill={} position=({}, {})",
         sourceId, monsterId, monster.monstats.Id, hitpoints.asFixed(), resurrectMode,
         monster.monstats2.ResurrectSkill,
         mPosition.get(monsterId).position.x, mPosition.get(monsterId).position.y);
     return true;
+  }
+
+  @Override
+  public boolean selfResurrectMonster(int monsterId) {
+    if (!mMonster.has(monsterId) || !mAttributesWrapper.has(monsterId)
+        || !mPosition.has(monsterId)) {
+      log.warn("[MONSTER_SELF_RESURRECT] phase=reject entity={} reason=missing_components",
+          monsterId);
+      return false;
+    }
+    Attributes attrs = mAttributesWrapper.get(monsterId).attrs;
+    StatRef hp = attrs == null ? null : attrs.get(Stat.hitpoints, StatRef.obtain());
+    StatRef maxHp = attrs == null ? null : attrs.get(Stat.maxhp, StatRef.obtain());
+    if (hp == null || maxHp == null || maxHp.asFixed() <= 0f) {
+      log.warn("[MONSTER_SELF_RESURRECT] phase=reject entity={} reason=vitals_missing",
+          monsterId);
+      return false;
+    }
+    if (hp.asFixed() <= 0f) {
+      // Keep the native skill entry point complete for scripted callers that
+      // begin directly from a corpse rather than an already restored unit.
+      return resurrectMonster(monsterId, monsterId);
+    }
+
+    hp.set(Math.max(1f, maxHp.asFixed()));
+    NativeUnitFlags flags = mNativeUnitFlags.has(monsterId)
+        ? mNativeUnitFlags.get(monsterId)
+        : mNativeUnitFlags.create(monsterId).reset();
+    flags.markSelfResurrection();
+    log.info("[MONSTER_SELF_RESURRECT] phase=applied entity={} hp={} flags=0x{}",
+        monsterId, hp.asFixed(), Integer.toHexString(flags.flags()));
+    return true;
+  }
+
+  @Override
+  public void finishSelfResurrection(int monsterId) {
+    if (!mMonster.has(monsterId) || !mAttributesWrapper.has(monsterId)
+        || !mNativeUnitFlags.has(monsterId)) return;
+    Attributes attrs = mAttributesWrapper.get(monsterId).attrs;
+    StatRef hp = attrs == null ? null : attrs.get(Stat.hitpoints, StatRef.obtain());
+    NativeUnitFlags flags = mNativeUnitFlags.get(monsterId);
+    if (hp == null || hp.asFixed() <= 0f
+        || !flags.has(NativeUnitFlags.NO_RESURRECTION_REWARD)) {
+      log.debug("[MONSTER_SELF_RESURRECT] phase=animation_complete_ignored entity={} hp={} flags=0x{}",
+          monsterId, hp != null ? hp.asFixed() : -1f, Integer.toHexString(flags.flags()));
+      return;
+    }
+    applyNativeUnitFlags(monsterId, NativeUnitFlags.MONSTER_TARGET);
+    log.info("[MONSTER_SELF_RESURRECT] phase=animation_complete entity={} flags=0x{}",
+        monsterId, Integer.toHexString(mNativeUnitFlags.get(monsterId).flags()));
   }
 
   @Override
