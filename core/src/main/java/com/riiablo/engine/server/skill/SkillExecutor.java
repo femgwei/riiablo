@@ -6,6 +6,8 @@ import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Skills;
 
 /**
  * 技能执行器 - 基于 D2MOD Skills.cpp 移植
@@ -561,6 +563,33 @@ public class SkillExecutor {
    */
   public void registerSkill(SkillData skillData) {
     skillTable.put(skillData.skillId, skillData);
+  }
+
+  /**
+   * Replaces the small legacy fallback table with native Skills.txt rows.
+   * This is intentionally explicit because the executor is also used by
+   * headless tests before the global data tables have been loaded.
+   *
+   * @return number of rows imported
+   */
+  public int registerNativeSkills(Iterable<Skills.Entry> entries) {
+    if (entries == null) return 0;
+    int imported = 0;
+    for (Skills.Entry entry : entries) {
+      SkillData data = NativeSkillResolver.toSkillData(entry);
+      if (data != null) {
+        registerSkill(data);
+        imported++;
+      }
+    }
+    log.debug("Registered {} native Skills.txt rows", imported);
+    return imported;
+  }
+
+  /** Imports the loaded global Skills table when available. */
+  public int registerNativeSkillsFromTables() {
+    if (Riiablo.files == null || Riiablo.files.skills == null) return 0;
+    return registerNativeSkills(Riiablo.files.skills);
   }
 
   /**

@@ -35,6 +35,7 @@ import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
@@ -135,8 +136,17 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     StatRef level = attrs.get(Stat.level, StatRef.obtain());
     if (level != null) casterLevel = Math.max(1, level.asInt());
-    if (casterLevel < skill.reqlevel) {
-      reject(event, 5, "caster level is below skill requirement");
+    int validation = NativeSkillResolver.validatePlayerCast(
+        player.data, skill, skillLevel, casterLevel);
+    if (validation != NativeSkillResolver.OK) {
+      String reason;
+      switch (validation) {
+        case NativeSkillResolver.WRONG_CLASS: reason = "skill does not belong to character class"; break;
+        case NativeSkillResolver.MISSING_PREREQUISITE: reason = "skill prerequisite is missing"; break;
+        case NativeSkillResolver.LEVEL_TOO_LOW: reason = "caster level is below skill requirement"; break;
+        default: reason = "skill has not been learned"; break;
+      }
+      reject(event, validation, reason);
       return;
     }
 
@@ -146,7 +156,7 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
-    float manaCost = getManaCost(skill, skillLevel);
+    float manaCost = NativeSkillResolver.manaCost(skill, skillLevel);
     event.manaCost = manaCost;
     if (manaCost > 0 && mana.asFixed() + 0.0001f < manaCost) {
       reject(event, 1, "not enough mana");
@@ -671,17 +681,6 @@ public class ServerSkillSystem extends PassiveSystem {
     return 0;
   }
 
-  private float getManaCost(Skills.Entry skill, int level) {
-    if (skill == null) return 0f;
-    int shift = Math.max(0, Math.min(30, skill.manashift));
-    int clampedLevel = Math.max(1, level);
-    // D2MOO: (mana + (level - 1) * lvlmana) << manashift,
-    // clamped to minmana << 8, then shifted back to display units.
-    float scale = (1 << shift) / 256f;
-    float calculated = (skill.mana + (clampedLevel - 1) * skill.lvlmana) * scale;
-    return Math.max(Math.max(0, skill.minmana), calculated);
-  }
-
   private int getSkillLevel(int entityId, int skillId) {
     if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
       int bonus = mUnitStates.has(entityId)
@@ -718,6 +717,11 @@ public class ServerSkillSystem extends PassiveSystem {
       }
     }
     return 1;
+  }
+
+  /** Kept as a narrow compatibility wrapper for existing diagnostics/tests. */
+  private float getManaCost(Skills.Entry skill, int level) {
+    return NativeSkillResolver.manaCost(skill, level);
   }
 
   private String resolveThrowableMissile(int entityId, int skillId, Skills.Entry skill) {
