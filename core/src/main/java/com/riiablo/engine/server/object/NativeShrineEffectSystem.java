@@ -176,12 +176,16 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
     }
     Player player = mPlayer.get(event.playerId);
     if (player == null || player.data == null) return;
-    Vector2 origin = mPosition.get(event.entityId).position;
+    if (!mPosition.has(event.playerId)) return;
+    // sub_6FC76A60 searches free space around the player, not the shrine.
+    Vector2 origin = mPosition.get(event.playerId).position;
+    int itemLevel = player.data.getStats().aggregate().getValue(Stat.level,
+        player.data.level & 0xFF);
     NativeGemShrineService.Result result = NativeGemShrineService.apply(
         player.data.getItems(), itemGenerator,
         item -> factory.createItem(item, origin.x, origin.y),
         created -> { if (created >= 0) world.delete(created); },
-        Math.floorMod(event.playerId + event.shrineId, 7));
+        Math.floorMod(event.playerId + event.shrineId, 6), itemLevel);
     if (result.mutated() && authoritativeItems != null) {
       authoritativeItems.markExternalMutation(event.playerId);
     }

@@ -39,7 +39,9 @@ public final class NativeGemShrineService {
     }
   }
 
-  private static final String[] CHIPPED = {"gcr", "gcg", "gcb", "gcw", "gcy", "gcv", "skc"};
+  // D2GAME_SHRINES_Gem rolls exactly six colored chipped gems. Skulls are
+  // ITEMTYPE_GEM too and can be upgraded, but are not part of the fallback.
+  private static final String[] CHIPPED = {"gcw", "gcr", "gcg", "gcb", "gcy", "gcv"};
 
   public enum Outcome {
     UPGRADED,
@@ -85,22 +87,27 @@ public final class NativeGemShrineService {
    */
   public static Result apply(ItemData items, ItemGenerator generator,
       Function<Item, Integer> createGround, IntConsumer rollbackGround) {
-    return apply(items, generator, createGround, rollbackGround, 0);
+    return apply(items, generator, createGround, rollbackGround, 0, 1);
   }
 
   public static Result apply(ItemData items, ItemGenerator generator,
       Function<Item, Integer> createGround, IntConsumer rollbackGround,
       int chippedIndex) {
+    return apply(items, generator, createGround, rollbackGround, chippedIndex, 1);
+  }
+
+  public static Result apply(ItemData items, ItemGenerator generator,
+      Function<Item, Integer> createGround, IntConsumer rollbackGround,
+      int chippedIndex, int itemLevel) {
     if (items == null || generator == null || createGround == null) {
       return new Result(Outcome.GENERATION_FAILED, null, null, -1);
     }
 
-    Item candidate = firstInventoryGem(items);
-    String sourceCode = candidate == null ? null : candidate.code;
-    String outputCode = candidate == null ? CHIPPED[0] : betterCode(candidate.code);
-    // A perfect gem is still a valid GEM item, but native dwBetterGem is
-    // zero for it: leave it untouched and use the chipped-gem fallback.
-    Item source = outputCode == null ? null : candidate;
+    // INVENTORY_GetBackPackItemByType continues after a perfect gem whose
+    // dwBetterGem is 'none'; select the first gem that actually upgrades.
+    Item source = firstUpgradeableInventoryGem(items);
+    String sourceCode = source == null ? null : source.code;
+    String outputCode = source == null ? null : betterCode(source.code);
     if (source == null) {
       // D2MOO drops one random chipped gem when no upgradeable gem exists.
       // A stable first entry is used here; callers may randomize CHIPPED via
@@ -116,7 +123,7 @@ public final class NativeGemShrineService {
       output.version = Item.VERSION_110;
       output.quality = com.riiablo.item.Quality.NORMAL;
       output.flags |= Item.ITEMFLAG_IDENTIFIED;
-      if (source != null && source.ilvl > 0) output.ilvl = source.ilvl;
+      output.ilvl = (byte) Math.max(1, Math.min(99, itemLevel));
     } catch (Throwable t) {
       return new Result(Outcome.GENERATION_FAILED, sourceCode, outputCode, -1);
     }
@@ -144,11 +151,11 @@ public final class NativeGemShrineService {
     return CHIPPED[Math.floorMod(index, CHIPPED.length)];
   }
 
-  private static Item firstInventoryGem(ItemData items) {
+  private static Item firstUpgradeableInventoryGem(ItemData items) {
     for (Item item : items.getItems()) {
       if (item == null || !isGemCode(item.code)
           || item.location != Location.STORED || item.storeLoc != StoreLoc.INVENTORY) continue;
-      return item;
+      if (betterCode(item.code) != null) return item;
     }
     return null;
   }

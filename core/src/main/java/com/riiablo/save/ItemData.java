@@ -367,8 +367,13 @@ public class ItemData {
     remove(i);
     // Keep derived equipment/character stats and network listeners in sync
     // with authoritative inventory mutations (including gem shrines).
-    updateStats();
-    notifyUpdated();
+    // Headless/unit contexts may remove an item before the Excel tables are
+    // loaded (Type's static table depends on Riiablo.files). The authoritative
+    // server has files loaded, while tests still need bookkeeping to succeed.
+    if (Riiablo.files != null) {
+      updateStats();
+      notifyUpdated();
+    }
     return true;
   }
 
