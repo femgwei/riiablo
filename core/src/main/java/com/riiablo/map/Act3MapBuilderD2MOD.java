@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
+import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
@@ -90,8 +91,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       Levels.Entry level = Riiablo.files.Levels.get(levelId);
       if (level == null) continue;
 
-      int sizeX = level.SizeX[diff];
-      int sizeY = level.SizeY[diff];
+    int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+    int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
       posY -= sizeY * 5; // tile to sub-tile
 
       int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
@@ -127,8 +128,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
               level.OffsetX, level.OffsetY, false);
         }
       } else {
-        int sizeX = level.SizeX[diff];
-        int sizeY = level.SizeY[diff];
+        int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+        int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
         int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
         posY -= sizeY * 5;
         Zone zone = base.createZoneWithGenerator(map, level, diff, posX, posY + townZone.y);

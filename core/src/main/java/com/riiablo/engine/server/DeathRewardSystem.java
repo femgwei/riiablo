@@ -123,6 +123,7 @@ public class DeathRewardSystem extends PassiveSystem {
     int monsterLevel = Math.max(1, levelStat.asInt());
     LootManager.LootConfig config = new LootManager.LootConfig();
     config.monsterLevel = monsterLevel;
+    config.rngSeed = Riiablo.gameSeed ^ (event.victim * 0x45D9F3B);
     config.areaLevel = monsterLevel;
     config.difficulty = difficulty;
     config.isBoss = monster.rank == MonsterRank.BOSS || monster.monstats != null

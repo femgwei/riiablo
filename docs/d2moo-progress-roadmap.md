@@ -81,11 +81,16 @@
 
 ### P0：基础数据和怪物生成
 
-- [ ] 统一 `MonStats/MonLvl/Levels/Experience/TreasureClassEx` 的运行时读取。
-- [ ] 统一固定点数值、种子归属和 RNG 消耗顺序。
-- [ ] 完成第一章区域怪物池、`MinGrp/MaxGrp`、`PartyMin/PartyMax` 校准。
-- [ ] 完成 Fallen Shaman 真实地图双客户端回归：复活可见、不重复经验、不重复掉落。
-- [ ] 完成怪物生成位置约束：RoomEx 外、墙体、悬崖后和不可行走区均禁止生成。
+- [x] ~~统一 `MonStats/MonLvl/Levels/Experience/TreasureClassEx` 的运行时读取~~
+  - `NativeDataTables` 集中处理难度列、缺失列和群组边界，并接入地图尺寸/区域等级、MonsterStatsCalculator、对象等级、Countess、Act1 D2MOO 缓存和 TC 掉落。
+- [x] ~~统一固定点数值、种子归属和 RNG 消耗顺序~~
+  - 新增 `NativeRng`；TC 掉落和死亡奖励使用按游戏种子/单位实体派生的独立流，避免全局 LibGDX RNG 串扰；固定点概率仍沿用原生整数分母。
+- [x] ~~完成第一章区域怪物池、`MinGrp/MaxGrp`、`PartyMin/PartyMax` 校准~~
+  - `NativeMonsterRegion` 现在按 Normal/Nightmare/Hell 列选择、过滤空槽、限制 13 个候选并提供原生密度；生成器统一使用安全群组边界。
+- [x] ~~完成 Fallen Shaman 真实地图双客户端回归：复活可见、不重复经验、不重复掉落~~
+  - `DualClientFallenLootIntegrationTest` 先构造固定种子原生 Blood Moor 导出，再验证两份客户端快照同时看到复活、单次掉落和对端拾取；`FallenShamanAutoCombatIntegrationTest` 覆盖真实 ECS 复活事件、尸体消费和生命恢复。
+- [x] ~~完成怪物生成位置约束：RoomEx 外、墙体、悬崖后和不可行走区均禁止生成~~
+  - 固定种子层测试覆盖主可行走连通区、孤立悬崖口袋、地图边界和完整怪物 footprint；`spawnPendingMonsters` 在最终碰撞层生成/延迟到 RoomEx。
 
 ### P1：物品、掉落和战斗
 

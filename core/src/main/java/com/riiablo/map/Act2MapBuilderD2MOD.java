@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
+import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
@@ -148,8 +149,8 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         Gdx.app.error(TAG, "Level not found: " + act2Links[i].level);
         continue;
       }
-      int sizeX = level.SizeX[diff];
-      int sizeY = level.SizeY[diff];
+      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
       linkData.coords[i].width = sizeX * 5;  // tile to sub-tile
       linkData.coords[i].height = sizeY * 5;
     }

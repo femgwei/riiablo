@@ -95,7 +95,7 @@ public class NativeCountessRewardSystem extends PassiveSystem {
     MonStats.Entry stats = mMonster.get(entityId).monstats;
     if (stats == null || stats.Level == null || stats.Level.length == 0) return 1;
     int index = Math.max(0, Math.min(difficulty, stats.Level.length - 1));
-    return Math.max(1, stats.Level[index]);
+    return Math.max(1, com.riiablo.engine.server.NativeDataTables.value(stats.Level, index, 1));
   }
 
   private int createItem(String code, int itemLevel, float x, float y,

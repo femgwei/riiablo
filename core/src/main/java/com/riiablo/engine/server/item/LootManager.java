@@ -11,6 +11,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.item.TreasureClassResolver;
 import com.riiablo.item.NativeItemQualityResolver;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -175,6 +176,9 @@ public class LootManager {
     /** Native MonStats/SuperUniques TreasureClass name, when available. */
     public String treasureClass;
 
+    /** Authoritative unit seed. Zero means derive from the global game seed. */
+    public int rngSeed;
+
     /** 重置配置 */
     public void reset() {
       monsterLevel = 1;
@@ -191,6 +195,7 @@ public class LootManager {
       monsterPlayerCount = 1;
       noRatio = false;
       treasureClass = null;
+      rngSeed = 0;
     }
   }
 
@@ -315,8 +320,9 @@ public class LootManager {
     List<TreasureClassResolver.Drop> drops;
     try {
       TreasureClassResolver resolver = new TreasureClassResolver(Riiablo.files.TreasureClassEx);
+      NativeRng rng = new NativeRng(config.rngSeed == 0 ? Riiablo.gameSeed : config.rngSeed);
       drops = resolver.resolve(config.treasureClass, tcLookupLevel,
-          bound -> MathUtils.random(bound - 1), TreasureClassResolver.NATIVE_MAX_DROPS, players);
+          rng::nextInt, TreasureClassResolver.NATIVE_MAX_DROPS, players);
     } catch (RuntimeException ex) {
       log.warn("[LOOT_TC] failed to resolve {}: {}", config.treasureClass, ex.toString());
       return false;

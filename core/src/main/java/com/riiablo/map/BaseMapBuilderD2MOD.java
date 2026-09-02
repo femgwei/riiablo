@@ -10,6 +10,8 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.NativeDataTables;
+import com.riiablo.engine.server.monster.NativeMonsterRegion;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
@@ -203,8 +205,8 @@ public class BaseMapBuilderD2MOD {
     int gridSizeY = OutdoorGrid.GRID_SIZE_TILES;  // 每个网格 8 tiles
     
     // 计算网格数量
-    int tilesX = level.SizeX[diff];
-    int tilesY = level.SizeY[diff];
+    int tilesX = NativeDataTables.levelSizeX(level, diff, 1);
+    int tilesY = NativeDataTables.levelSizeY(level, diff, 1);
     int gridsX = tilesX / gridSizeX;  // 例如：80 / 8 = 10
     int gridsY = tilesY / gridSizeY;  // 例如：80 / 8 = 10
     
@@ -321,13 +323,15 @@ public class BaseMapBuilderD2MOD {
             
             // 生成怪物（仅在客户端）
             if (finalSocket == null && zone.map.factory != null && monsters != null && monsters.length > 0) {
-              if (MathUtils.randomBoolean(SPAWN_MULT * zone.level.MonDen[zone.diff] / 100000f)) {
+              if (MathUtils.randomBoolean(SPAWN_MULT
+                  * NativeMonsterRegion.density(zone.level, zone.diff) / 100000f)) {
                 int idx = MathUtils.random(monsters.length - 1);
                 MonStats.Entry monster = monsters[idx];
                 if (monster == null) continue;
                 int count = monster.MinGrp == monster.MaxGrp
                     ? monster.MaxGrp
-                    : MathUtils.random(monster.MinGrp, monster.MaxGrp);
+                    : MathUtils.random(NativeDataTables.minGroup(monster),
+                        NativeDataTables.maxGroup(monster));
                 for (int j = 0; j < count; j++) {
                   float px = zone.getGlobalX((currentTx - zone.tx) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
                   float py = zone.getGlobalY((currentTy - zone.ty) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);

@@ -15,6 +15,10 @@ import com.riiablo.item.Item;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.save.CharData;
+import com.d2moo.common.drlg.D2DrlgLevel;
+import com.d2moo.common.drlg.D2LevelIds;
+import com.d2moo.common.drlg.DrlgDrlg;
+import com.riiablo.map.d2moo.Act1D2MOOLayoutBridge;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -28,6 +32,27 @@ import org.junit.jupiter.api.Test;
 class DualClientFallenLootIntegrationTest extends RiiabloTest {
   @Test
   void bothClientsSeeReviveAndPeerPicksSingleNormalDrop() {
+    // Build the authoritative native Act1 topology first.  The replica part
+    // below must never be able to pass when the Blood Moor level/export is
+    // missing or has no floor; this guards the real map input to the flow.
+    int burialId = 0;
+    for (com.riiablo.codec.excel.Levels.Entry entry : Riiablo.files.Levels) {
+      if (entry != null && "Burial Grounds".equals(entry.LevelName)) {
+        burialId = entry.Id;
+        break;
+      }
+    }
+    assertTrue(burialId > 0, "Burial Grounds must exist in the native level table");
+    Act1D2MOOLayoutBridge.LayoutAndDrlg nativeLayout =
+        Act1D2MOOLayoutBridge.getLayoutAndDrlg(0xD2C1, Riiablo.NORMAL, burialId);
+    assertTrue(nativeLayout != null, "native Act1 layout must initialize before multiplayer flow");
+    D2DrlgLevel bloodMoor = DrlgDrlg.getLevel(nativeLayout.drlg, D2LevelIds.LEVEL_BLOODMOOR);
+    assertTrue(bloodMoor != null && bloodMoor.getLevelCoords().getNWidth() > 0
+        && bloodMoor.getLevelCoords().getNHeight() > 0,
+        "Blood Moor native export must have a renderable footprint");
+    DrlgDrlg.freeDrlg(nativeLayout.drlg);
+    Act1D2MOOLayoutBridge.releaseDataTables();
+
     MathUtils.random.setSeed(0xD2C1L);
     ClientReplica clientA = new ClientReplica("A");
     ClientReplica clientB = new ClientReplica("B");

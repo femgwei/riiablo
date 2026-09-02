@@ -900,8 +900,8 @@ public class Map implements Disposable {
 
     Zone set(Map map, Levels.Entry level, int diff, int gridSizeX, int gridSizeY) {
       setInternal(map, level, diff, gridSizeX, gridSizeY);
-      tilesX   = level.SizeX[diff];
-      tilesY   = level.SizeY[diff];
+      tilesX   = NativeDataTables.levelSizeX(level, diff, 1);
+      tilesY   = NativeDataTables.levelSizeY(level, diff, 1);
       width    = tilesX * DT1.Tile.SUBTILE_SIZE;
       height   = tilesY * DT1.Tile.SUBTILE_SIZE;
       gridsX   = tilesX / gridSizeX;

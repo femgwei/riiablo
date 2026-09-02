@@ -8,6 +8,7 @@ import com.badlogic.gdx.net.Socket;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.EntityFactory;
@@ -113,7 +114,8 @@ public enum Act1MapBuilder implements MapBuilder {
             // TODO: Zone.index() can be replaced with incrementer
             zone.getLayer(Map.FLOOR_OFFSET)[Zone.index(zone.tilesX, tx, ty)] = dt1s.get(0);
             if (socket != null) continue;
-            if (MathUtils.randomBoolean(SPAWN_MULT * zone.level.MonDen[zone.diff] / 100000f)) {
+            if (MathUtils.randomBoolean(SPAWN_MULT
+                * NativeDataTables.value(zone.level.MonDen, zone.diff, 0) / 100000f)) {
               int i = MathUtils.random(monsters.length - 1);
               MonStats.Entry monster = monsters[i];
               int count = monster.MinGrp == monster.MaxGrp

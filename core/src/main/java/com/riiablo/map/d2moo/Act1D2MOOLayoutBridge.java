@@ -20,6 +20,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlTypes;
 import com.riiablo.map.Map;
+import com.riiablo.engine.server.NativeDataTables;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -441,8 +442,14 @@ public final class Act1D2MOOLayoutBridge {
             bin.setDwPosition(entry.Position ? 1 : 0);
             bin.setDwSaveMonsters(entry.SaveMonsters ? 1 : 0);
             bin.setDwLOSDraw(entry.LOSDraw ? 1 : 0);
-            int[] sx = new int[] { entry.SizeX[0], entry.SizeX[1], entry.SizeX[2] };
-            int[] sy = new int[] { entry.SizeY[0], entry.SizeY[1], entry.SizeY[2] };
+            int[] sx = new int[] {
+                NativeDataTables.levelSizeX(entry, 0, 1),
+                NativeDataTables.levelSizeX(entry, 1, 1),
+                NativeDataTables.levelSizeX(entry, 2, 1) };
+            int[] sy = new int[] {
+                NativeDataTables.levelSizeY(entry, 0, 1),
+                NativeDataTables.levelSizeY(entry, 1, 1),
+                NativeDataTables.levelSizeY(entry, 2, 1) };
             bin.setDwSizeX(sx);
             bin.setDwSizeY(sy);
             records.add(bin);

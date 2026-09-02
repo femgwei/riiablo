@@ -26,7 +26,16 @@ class NativeMonsterRegionTest {
     Levels.Entry level = new Levels.Entry();
     level.NumMon = 25;
     level.mon = new String[20];
+    for (int i = 0; i < level.mon.length; i++) level.mon[i] = "monster" + i;
     assertEquals(13, NativeMonsterRegion.selectedEntryCount(level, 0));
+  }
+
+  @Test
+  void ignoresEmptyDeclaredMonsterSlots() {
+    Levels.Entry level = new Levels.Entry();
+    level.NumMon = 5;
+    level.mon = new String[] {"fallen1", "", null, "0", "zombie1"};
+    assertEquals(2, NativeMonsterRegion.selectedEntryCount(level, 0));
   }
 
   @Test

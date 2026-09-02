@@ -27,6 +27,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
+import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
 import com.riiablo.drlg.DrlgContext;
@@ -147,15 +148,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (stony == null || cold == null || blood == null || town == null || burial == null
         || black == null || tamoe == null || dark == null || underground == null) return null;
 
-    int sw = stony.SizeX[diff], sh = stony.SizeY[diff];
-    int cw = cold.SizeX[diff], ch = cold.SizeY[diff];
+    int sw = NativeDataTables.levelSizeX(stony, diff, 1), sh = NativeDataTables.levelSizeY(stony, diff, 1);
+    int cw = NativeDataTables.levelSizeX(cold, diff, 1), ch = NativeDataTables.levelSizeY(cold, diff, 1);
     int bw = 56, bh = 96; // Blood Moor 固定 56x96
-    int tw = town.SizeX[diff], th = town.SizeY[diff];
-    int burw = burial.SizeX[diff], burh = burial.SizeY[diff];
-    int blw = black.SizeX[diff], blh = black.SizeY[diff];
-    int taw = tamoe.SizeX[diff], tah = tamoe.SizeY[diff];
-    int daw = dark.SizeX[diff], dah = dark.SizeY[diff];
-    int unw = underground.SizeX[diff], unh = underground.SizeY[diff];
+    int tw = NativeDataTables.levelSizeX(town, diff, 1), th = NativeDataTables.levelSizeY(town, diff, 1);
+    int burw = NativeDataTables.levelSizeX(burial, diff, 1), burh = NativeDataTables.levelSizeY(burial, diff, 1);
+    int blw = NativeDataTables.levelSizeX(black, diff, 1), blh = NativeDataTables.levelSizeY(black, diff, 1);
+    int taw = NativeDataTables.levelSizeX(tamoe, diff, 1), tah = NativeDataTables.levelSizeY(tamoe, diff, 1);
+    int daw = NativeDataTables.levelSizeX(dark, diff, 1), dah = NativeDataTables.levelSizeY(dark, diff, 1);
+    int unw = NativeDataTables.levelSizeX(underground, diff, 1), unh = NativeDataTables.levelSizeY(underground, diff, 1);
 
     // The fallback only covers the original nine-map outdoor bootstrap; the
     // native bridge extends its default result with the monastery mainline.
@@ -313,8 +314,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           // 理论上城镇应当是 PRESET；若数据不一致，则退回到随机生成，防止读图错乱
           int gridSizeX = OutdoorGrid.GRID_SIZE_TILES;
           int gridSizeY = OutdoorGrid.GRID_SIZE_TILES;
-          int tilesX = level.SizeX[diff];
-          int tilesY = level.SizeY[diff];
+          int tilesX = NativeDataTables.levelSizeX(level, diff, 1);
+          int tilesY = NativeDataTables.levelSizeY(level, diff, 1);
           int gridsX = tilesX / gridSizeX;
           int gridsY = tilesY / gridSizeY;
           townZone = map.addZone(level, gridSizeX, gridSizeY, gridsX, gridsY);
@@ -689,13 +690,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               
               // 生成怪物（仅在客户端）
               if (finalSocket == null && zone.map.factory != null && monsters != null && monsters.length > 0) {
-                if (MathUtils.randomBoolean(SPAWN_MULT * zone.level.MonDen[zone.diff] / 100000f)) {
+                if (MathUtils.randomBoolean(SPAWN_MULT
+                    * NativeMonsterRegion.density(zone.level, zone.diff) / 100000f)) {
                   int idx = MathUtils.random(monsters.length - 1);
                   MonStats.Entry monster = monsters[idx];
                   if (monster == null) continue;
                   int count = monster.MinGrp == monster.MaxGrp
                       ? monster.MaxGrp
-                      : MathUtils.random(monster.MinGrp, monster.MaxGrp);
+                      : MathUtils.random(NativeDataTables.minGroup(monster),
+                          NativeDataTables.maxGroup(monster));
                   for (int j = 0; j < count; j++) {
                     // currentTx/currentTy identify the top-left subtile of a 5x5
                     // floor tile. Jittering around that corner used to push half

@@ -101,7 +101,7 @@ public class ObjectInitializer extends BaseEntitySystem {
     Levels.Entry level = getLevel(entityId);
     Position position = mPosition.get(entityId);
     int normalMonsterLevel = level == null || level.MonLvl == null
-        || level.MonLvl.length == 0 ? 0 : level.MonLvl[0];
+        || level.MonLvl == null ? 0 : NativeDataTables.value(level.MonLvl, 0, 0);
     int levelId = level == null ? 0 : level.Id;
     int x = state.source != null ? state.source.x
         : position == null ? 0 : (int) position.position.x;
