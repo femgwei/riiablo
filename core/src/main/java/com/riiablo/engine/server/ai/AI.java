@@ -32,6 +32,8 @@ import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeTargeting;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
@@ -88,6 +90,7 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<PathWrapper> mPathWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Casting> mCasting;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
 
   protected CofManager cofs;
   protected Pathfinder pathfinder;
@@ -455,6 +458,14 @@ public abstract class AI implements Interactable.Interactor {
       StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
       if (hp != null && hp.asFixed() <= 0f) return false;
     }
+    // Player entities created by older/local worlds may not yet carry the
+    // transient native flag component; preserve their established targeting
+    // behavior until flags are available. Monster flags are always populated
+    // by ServerEntityFactory and are checked by their own callers.
+    NativeUnitFlags targetFlags = mNativeUnitFlags.has(targetId)
+        ? mNativeUnitFlags.get(targetId) : null;
+    if (targetFlags != null && (!NativeTargeting.isTargetable(targetFlags)
+        || !NativeTargeting.canBeAttacked(targetFlags))) return false;
     if (mMapWrapper.has(entityId) && mMapWrapper.has(targetId)) {
       MapWrapper source = mMapWrapper.get(entityId);
       MapWrapper target = mMapWrapper.get(targetId);

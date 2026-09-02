@@ -16,6 +16,8 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.NativeTargeting;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -56,6 +58,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<MapWrapper> mMapWrapper;
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
@@ -188,6 +191,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       
       if (mMonster.has(targetId) && mPosition.has(targetId)) {
+        if (mNativeUnitFlags.has(targetId)
+            && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) {
+          continue;
+        }
         Position targetPos = mPosition.get(targetId);
         if (checkCollisionWithEntity(missileId, missile, lastPos, currentPos, targetId, targetPos)) {
           return; // 已命中，导弹将被销毁
@@ -214,6 +221,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (distance <= collisionRadius) {
       // 检查是否是敌人
       if (!isEnemy(missile.ownerId, targetId)) {
+        return false;
+      }
+      if (mNativeUnitFlags.has(targetId)
+          && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) {
+        log.debug("[MISSILE_HIT] phase=skip_native_target missileId={} owner={} target={} flags=0x{}",
+            missileId, missile.ownerId, targetId,
+            Integer.toHexString(mNativeUnitFlags.get(targetId).flags()));
         return false;
       }
       if (mMercenary.has(missile.ownerId)) mercenaryCollisionCount++;

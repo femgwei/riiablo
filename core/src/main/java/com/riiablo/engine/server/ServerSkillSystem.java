@@ -17,6 +17,8 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.NativeTargeting;
+import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
@@ -80,6 +82,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private volatile int mercenaryConfiguredMissiles;
   private volatile int mercenaryLastSrvDoFunc;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
@@ -106,6 +109,14 @@ public class ServerSkillSystem extends PassiveSystem {
             true, true)) {
       reject(event, 8, "target player is not hostile");
       log.info("[PVP] phase=skill_reject source={} target={} skill={} reason=not_hostile",
+          event.entityId, event.targetId, event.skillId);
+      return;
+    }
+    if (event.targetId >= 0 && mMonster.has(event.targetId)
+        && mNativeUnitFlags.has(event.targetId)
+        && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(event.targetId))) {
+      reject(event, 8, "target is not a native combat target");
+      log.info("[SKILL_CAST] phase=reject source={} target={} skill={} reason=native_target_flags",
           event.entityId, event.targetId, event.skillId);
       return;
     }
