@@ -62,6 +62,29 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
+  void submergeAndEmergeServerStartsToggleNativeTargetLifecycle() {
+    Skills.Entry submerge = findSkillWithServerStart(51);
+    Skills.Entry emerge = findSkillWithServerStart(52);
+    assertNotNull(submerge, "Skills.txt must contain native SrvSt51 Submerge");
+    assertNotNull(emerge, "Skills.txt must contain native SrvSt52 Emerge");
+    Scenario scenario = new Scenario(Riiablo.files.monstats.get("fallen1"));
+    try {
+      EventSystem events = scenario.world.getSystem(EventSystem.class);
+      events.dispatch(SkillStartEvent.obtain(
+          scenario.source, submerge.Id, scenario.source, scenario.position(10, 10),
+          submerge.srvstfunc, submerge.cltstfunc));
+      events.dispatch(SkillStartEvent.obtain(
+          scenario.source, emerge.Id, scenario.source, scenario.position(10, 10),
+          emerge.srvstfunc, emerge.cltstfunc));
+
+      assertEquals(1, scenario.factory.submerges);
+      assertEquals(1, scenario.factory.emerges);
+    } finally {
+      scenario.close();
+    }
+  }
+
+  @Test
   void spiderLayInstallsStateAndMovingSpiderEmitsAuthoritativeGoo() {
     MonStats.Entry row = Riiablo.files.monstats.get("arach1");
     assertNotNull(row);
@@ -428,6 +451,8 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     int lastNativeFlags;
     int selfResurrections;
     int lastSelfResurrected = Engine.INVALID_ENTITY;
+    int submerges;
+    int emerges;
 
     @Override public int createPlayer(CharData data, Vector2 position) { return -1; }
     @Override public int createDynamicObject(int act, int preset, float x, float y) { return -1; }
@@ -445,6 +470,14 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     @Override public boolean selfResurrectMonster(int monsterId) {
       selfResurrections++;
       lastSelfResurrected = monsterId;
+      return true;
+    }
+    @Override public boolean submergeMonster(int monsterId) {
+      submerges++;
+      return true;
+    }
+    @Override public boolean emergeMonster(int monsterId) {
+      emerges++;
       return true;
     }
     @Override public void applyNativeUnitFlags(int entityId, int flags) {

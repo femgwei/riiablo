@@ -33,6 +33,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.component.CofComponents;
+import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.Corpse;
@@ -90,6 +91,7 @@ public class ServerEntityFactory extends EntityFactory {
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<AIWrapper> mAIWrapper;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -625,6 +627,33 @@ public class ServerEntityFactory extends EntityFactory {
     applyNativeUnitFlags(monsterId, NativeUnitFlags.MONSTER_TARGET);
     log.info("[MONSTER_SELF_RESURRECT] phase=animation_complete entity={} flags=0x{}",
         monsterId, Integer.toHexString(mNativeUnitFlags.get(monsterId).flags()));
+  }
+
+  @Override
+  public boolean submergeMonster(int monsterId) {
+    if (!mMonster.has(monsterId) || !mNativeUnitFlags.has(monsterId)) return false;
+    NativeUnitFlags flags = mNativeUnitFlags.get(monsterId);
+    flags.clear(NativeUnitFlags.MONSTER_TARGET);
+    if (mVelocity.has(monsterId)) mVelocity.get(monsterId).velocity.setZero();
+    if (mBox2DBody.has(monsterId) && mBox2DBody.get(monsterId).body != null) {
+      mBox2DBody.get(monsterId).body.setActive(false);
+    }
+    log.info("[MONSTER_SUBMERGE] phase=applied entity={} flags=0x{}",
+        monsterId, Integer.toHexString(flags.flags()));
+    return true;
+  }
+
+  @Override
+  public boolean emergeMonster(int monsterId) {
+    if (!mMonster.has(monsterId) || !mNativeUnitFlags.has(monsterId)) return false;
+    NativeUnitFlags flags = mNativeUnitFlags.get(monsterId);
+    flags.set(NativeUnitFlags.MONSTER_TARGET);
+    if (mBox2DBody.has(monsterId) && mBox2DBody.get(monsterId).body != null) {
+      mBox2DBody.get(monsterId).body.setActive(true);
+    }
+    log.info("[MONSTER_EMERGE] phase=applied entity={} flags=0x{}",
+        monsterId, Integer.toHexString(flags.flags()));
+    return true;
   }
 
   @Override

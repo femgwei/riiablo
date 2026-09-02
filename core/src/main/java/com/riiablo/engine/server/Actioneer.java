@@ -507,6 +507,20 @@ public class Actioneer extends PassiveSystem {
             entityId, restored);
         break;
       }
+      case 51: { // SKILLS_SrvSt51_Submerge
+        boolean submerged = mMonster.has(entityId) && factory != null
+            && factory.submergeMonster(entityId);
+        log.info("[MONSTER_SUBMERGE] phase=skill_start entity={} applied={}",
+            entityId, submerged);
+        break;
+      }
+      case 52: { // SKILLS_SrvSt52_Emerge
+        boolean emerged = mMonster.has(entityId) && factory != null
+            && factory.emergeMonster(entityId);
+        log.info("[MONSTER_EMERGE] phase=skill_start entity={} applied={}",
+            entityId, emerged);
+        break;
+      }
       case 31: // Charge: reserve the target path; damage is applied at keyframe
         if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
           pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);
