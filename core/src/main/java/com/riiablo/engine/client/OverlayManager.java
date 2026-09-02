@@ -31,13 +31,13 @@ public class OverlayManager extends IteratingSystem {
       animation.edit()
           .layer(dc, overlay.entry.Trans == 3 ? BlendMode.LUMINOSITY : BlendMode.ID)
           .build();
-      animation.setMode(Animation.Mode.ONCE);
+      animation.setMode(overlay.persistent ? Animation.Mode.LOOP : Animation.Mode.ONCE);
       // FIXME: set frame to elapsed time since creation
       overlay.isLoaded = true;
       log.debug("Loaded {}", overlay.assetDescriptor.fileName);
     }
 
-    if (animation.isFinished()) {
+    if (!overlay.persistent && animation.isFinished()) {
       dispose(overlay);
       mOverlay.remove(entityId);
     }
@@ -49,8 +49,41 @@ public class OverlayManager extends IteratingSystem {
     }
 
     Overlay.Entry overlay = Riiablo.files.Overlay.get(overlayId);
+    if (overlay == null) {
+      log.warn("[OVERLAY] entity={} id={} result=missing", entityId, overlayId);
+      return;
+    }
     com.riiablo.engine.client.component.Overlay overlayC = mOverlay.create(entityId).set(overlay);
     Riiablo.assets.load(overlayC.assetDescriptor);
+  }
+
+  /** Installs a looping overlay owned by a synchronized state. */
+  public void setPersistent(int entityId, int stateId, String overlayId) {
+    if (overlayId == null || overlayId.isEmpty()) return;
+    com.riiablo.engine.client.component.Overlay current =
+        mOverlay.has(entityId) ? mOverlay.get(entityId) : null;
+    if (current != null && current.persistent && current.stateId == stateId
+        && current.entry != null && overlayId.equals(current.entry.overlay)) return;
+    Overlay.Entry overlay = Riiablo.files.Overlay.get(overlayId);
+    if (overlay == null) {
+      log.warn("[STATE_OVERLAY] entity={} state={} id={} result=missing", entityId, stateId, overlayId);
+      return;
+    }
+    if (current != null) dispose(current);
+    com.riiablo.engine.client.component.Overlay overlayC = mOverlay.create(entityId).set(overlay);
+    overlayC.persistent = true;
+    overlayC.stateId = stateId;
+    Riiablo.assets.load(overlayC.assetDescriptor);
+    log.info("[STATE_OVERLAY] entity={} state={} id={} result=queued", entityId, stateId, overlayId);
+  }
+
+  public void clearPersistent(int entityId, int stateId) {
+    if (!mOverlay.has(entityId)) return;
+    com.riiablo.engine.client.component.Overlay overlay = mOverlay.get(entityId);
+    if (!overlay.persistent || overlay.stateId != stateId) return;
+    dispose(overlay);
+    mOverlay.remove(entityId);
+    log.info("[STATE_OVERLAY] entity={} state={} result=cleared", entityId, stateId);
   }
 
   void dispose(com.riiablo.engine.client.component.Overlay overlay) {

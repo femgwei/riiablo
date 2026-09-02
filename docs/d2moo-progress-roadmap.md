@@ -128,11 +128,12 @@
 - 2026-09-03：完成亚马逊 Guided Arrow/Strafe/Pierce 首轮移植；导引箭追踪、Strafe 原生目标序列、穿透命中去重与技能穿透概率接入，技能/导弹回归集合通过，D2GS 编译通过。
 - 2026-09-03：接入 Dodge/Avoid/Evade 被动防御判定到统一 CombatSystem；按近战/远程/移动上下文复用原生 75% 上限，补充 100% 确定性测试。实际移动状态传递和动画反馈仍待补齐。
 - 2026-09-03：把真实 Velocity 移动状态传入近战与导弹战斗上下文；补齐 Magic/Fire/Cold/Exploding/Ice/Immolation/Freezing Arrow 的 `CltMissile` 创建、目标方向和资源验证，并阻止多人客户端重复创建 D2GS 已同步的导弹。
+- 2026-09-03：完成多人技能表现同步首项；服务端接入原生 `SrvDo047` 暗影斗篷范围状态（`DIMVISION`、持续时间和防御降低），客户端通过 `StateP` 快照自动恢复状态 Overlay，并补充原生数据/ECS 回归测试。
 
 ## 当前下一项
 
-已完成 **真实移动状态驱动的 Evade 和亚马逊元素箭客户端资源接线**。
-下一项调整为 **多人技能表现同步层**：复用服务器 `StateP`/Missile 快照，补状态到 Overlay、目标头顶图标和全屏效果的客户端映射；先以刺客 Cloak of Shadows 和法师持续/范围法术为验收样例，再进入刺客陷阱生命周期专项。
+已完成 **多人技能表现同步层的暗影斗篷首项**：服务端权威 `DIMVISION` 状态与客户端 Overlay 重同步已接通。
+下一项调整为 **法师持续/范围法术的多人表现同步**：优先检查 Thunder Storm、Inferno、Fire Wall、Meteor、Blizzard、Frozen Orb 的权威导弹/区域对象与客户端动画一致性，再进入刺客陷阱生命周期专项。
 
 ## 记录规则
 

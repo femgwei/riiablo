@@ -25,9 +25,11 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.combat.DefenseCalculator;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -39,7 +41,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   void auditNativeAmazonSpecialRows() {
     String[] names = {"Magic Arrow", "Fire Arrow", "Cold Arrow", "Multiple Shot",
         "Exploding Arrow", "Ice Arrow", "Guided Arrow", "Strafe", "Immolation Arrow",
-        "Freezing Arrow", "Pierce", "Charged Strike",
+        "Freezing Arrow", "Pierce", "Charged Strike", "Cloak of Shadows",
         "Dopplezon", "Valkyrie", "Lightning Strike", "Lightning Fury"};
     for (String name : names) {
       Skills.Entry skill = Riiablo.files.skills.get(name);
@@ -141,6 +143,39 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
         assertTrue(!arrow.homing);
         if (arrow.targetId >= 0) assertTrue(strafeTargets.add(arrow.targetId));
       }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void cloakOfShadowsAppliesNativeDimVisionToHostiles() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int assassin = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry cloak = Riiablo.files.skills.get("Cloak of Shadows");
+      assertNotNull(cloak);
+      data.setSkillLevel(cloak.Id, 1);
+      world.getMapper(Player.class).create(assassin).data = data;
+      world.getMapper(Position.class).create(assassin).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(assassin).attrs = attributes(20, 200);
+      int target = monster(world, 4, 0);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          assassin, cloak.Id, Engine.INVALID_ENTITY, new Vector2(4, 0), cloak.srvdofunc, 0));
+
+      UnitStates states = world.getMapper(UnitStates.class).get(target);
+      assertNotNull(states);
+      assertTrue(states.stateList.hasState(StateId.DIMVISION));
+      UnitState dimVision = states.stateList.getState(StateId.DIMVISION);
+      assertEquals(1, dimVision.level);
+      assertEquals(-AssassinSkills.calculateCloakOfShadowsDefenseReduce(1),
+          dimVision.defenseModifier);
+      assertEquals(assassin, dimVision.sourceEntityId);
     } finally {
       world.dispose();
     }

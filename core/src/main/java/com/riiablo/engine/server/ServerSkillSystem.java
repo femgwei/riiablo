@@ -38,6 +38,7 @@ import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.AmazonSkills;
+import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
@@ -203,6 +204,13 @@ public class ServerSkillSystem extends PassiveSystem {
     if ((event.srvdofunc == 23 || skill.srvdofunc == 23)
         && "SpiderLay".equalsIgnoreCase(skill.skill)) {
       applySpiderLayState(event, skill, skillLevel);
+      return;
+    }
+    // D2MOO SKILLS_SrvDo047_CloakOfShadows applies Dim Vision through an
+    // aura callback.  It does not create a projectile; the state snapshot is
+    // the authoritative multiplayer effect and is consumed by clients.
+    if (event.srvdofunc == 47 || skill.srvdofunc == 47 || isCloakOfShadows(skill)) {
+      applyCloakOfShadows(event, skill, skillLevel, start);
       return;
     }
     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
@@ -388,6 +396,55 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     log.info("[SPIDER_LAY] phase=state entity={} skill={} level={} duration={}",
         event.entityId, event.skillId, skillLevel, duration);
+  }
+
+  /** Native SrvDo047: apply DIMVISION and defense reduction to hostile units in range. */
+  private void applyCloakOfShadows(SkillDoEvent event, Skills.Entry skill, int skillLevel,
+      Vector2 caster) {
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, skillLevel);
+    if (duration <= 0) {
+      int base = firstParam(skill, 3, 200);
+      int step = firstParam(skill, 4, 25);
+      duration = base + skillLevel * step;
+    }
+    duration = Math.max(1, duration);
+    int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
+    if (range <= 0) {
+      int base = firstParam(skill, 1, 30);
+      int step = firstParam(skill, 2, 30);
+      range = base + skillLevel * step;
+    }
+    range = Math.max(1, Math.min(128, range));
+    int defenseReduction = -AssassinSkills.calculateCloakOfShadowsDefenseReduce(skillLevel);
+    int affected = 0;
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class)).getEntities();
+    float range2 = range * (float) range;
+    for (int i = 0; i < entities.size(); i++) {
+      int targetId = entities.get(i);
+      if (targetId == event.entityId || !isHostile(event.entityId, targetId)
+          || !mPosition.has(targetId)
+          || caster.dst2(mPosition.get(targetId).position) > range2) continue;
+      if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+      UnitStates states = mUnitStates.get(targetId);
+      if (states.stateList == null) states.init(targetId);
+      UnitState state = states.stateList.addState(
+          StateId.DIMVISION, duration, skillLevel, event.entityId);
+      if (state != null) {
+        state.skillId = event.skillId;
+        state.defenseModifier = defenseReduction;
+        state.needsSync = true;
+        affected++;
+      }
+    }
+    log.info("[CLOAK_OF_SHADOWS] phase=apply source={} skill={} level={} range={} duration={} "
+            + "defense={} affected={} status=PASS",
+        event.entityId, event.skillId, skillLevel, range, duration, defenseReduction, affected);
+  }
+
+  static boolean isCloakOfShadows(Skills.Entry skill) {
+    return skill != null && skill.skill != null
+        && "cloak of shadows".equalsIgnoreCase(skill.skill.trim());
   }
 
   private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
