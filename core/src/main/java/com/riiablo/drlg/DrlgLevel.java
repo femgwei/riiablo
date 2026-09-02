@@ -1,6 +1,7 @@
 package com.riiablo.drlg;
 
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.engine.server.NativeDataTables;
 
 /**
  * 单个关卡的 DRLG 视图（简化版），对应 D2MOO 的 D2DrlgLevelStrc。
@@ -30,7 +31,9 @@ public class DrlgLevel {
   public final TileGrid grid;
 
   public DrlgLevel(Levels.Entry entry, int diff) {
-    this(entry, diff, entry.SizeX[diff], entry.SizeY[diff]);
+    this(entry, diff,
+        NativeDataTables.levelSizeX(entry, diff, 1),
+        NativeDataTables.levelSizeY(entry, diff, 1));
   }
 
   /**

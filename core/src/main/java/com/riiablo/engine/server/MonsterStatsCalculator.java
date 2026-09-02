@@ -41,11 +41,11 @@ public class MonsterStatsCalculator {
     MonStats.Entry monstats = Riiablo.files.monstats.get(monsterId);
     if (monstats == null || level < 0 || Riiablo.files.MonLvl.size() <= 0) return false;
 
-    level = Math.min(level, Riiablo.files.MonLvl.size() - 1);
+    level = Math.max(0, Math.min(level, Riiablo.files.MonLvl.size() - 1));
     MonLvl.Entry monLvl = Riiablo.files.MonLvl.get(level);
     if (monLvl == null) return false;
 
-    difficulty = MathUtils.clamp(difficulty, 0, 2);
+    difficulty = NativeDataTables.difficulty(difficulty);
     boolean expansion = gameType != 0;
     int[] hp = expansion ? monLvl.LHP : monLvl.HP;
     int[] ac = expansion ? monLvl.LAC : monLvl.AC;
@@ -101,11 +101,11 @@ public class MonsterStatsCalculator {
   static int resolveMonsterLevel(
       MonStats.Entry monster, Levels.Entry level, int difficulty, boolean expansion) {
     if (monster == null) return 1;
-    difficulty = MathUtils.clamp(difficulty, 0, 2);
-    int monsterLevel = Math.max(1, value(monster.Level, difficulty));
+    difficulty = NativeDataTables.difficulty(difficulty);
+    int monsterLevel = NativeDataTables.monsterLevel(monster, difficulty);
     if (expansion && difficulty > 0 && !monster.noRatio && !monster.boss
         && level != null) {
-      int areaLevel = value(level.MonLvlEx, difficulty);
+      int areaLevel = NativeDataTables.areaLevel(level, difficulty, true);
       if (areaLevel > 0) monsterLevel = areaLevel;
     }
     return monsterLevel;

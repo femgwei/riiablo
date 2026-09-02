@@ -27,6 +27,7 @@ import com.badlogic.gdx.utils.Pools;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.COFD2;
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.LvlTypes;
 import com.riiablo.engine.Engine;
@@ -746,7 +747,9 @@ public class Map implements Disposable {
 
   Zone addZone(Levels.Entry level, LvlPrest.Entry preset, int ds1) {
     assert preset.LevelId != 0 : "presets should have an assigned level id";
-    Zone zone = addZone(level, level.SizeX[diff], level.SizeY[diff]);
+    Zone zone = addZone(level,
+        NativeDataTables.levelSizeX(level, diff, 1),
+        NativeDataTables.levelSizeY(level, diff, 1));
     zone.presets[0][0] = Preset.of(preset, ds1);
     return zone;
   }

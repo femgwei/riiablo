@@ -76,7 +76,8 @@
   - 验收：`NativeGemShrineServiceTest` 全部通过；非法/旧存档物品不会使服务端崩溃。
 - [x] ~~运行第一章核心回归集合，并清理生成文件噪声~~
   - 2026-09-02：5 组测试、18 个用例全部通过；FlatBuffers 生成空行已清理。
-- [ ] 为后续每个模块建立“原版数据 + ECS 集成”双层测试门槛。
+- [x] ~~为后续每个模块建立“原版数据 + ECS 集成”双层测试门槛~~
+  - `docs/d2moo-test-gate.md` 记录统一命名、资源注入和 headless 运行约定；新增 `NativeDataTablesTest` 作为纯数据门槛，现有 UnitFlags、Fallen Shaman 和双客户端测试作为 ECS/集成门槛。
 
 ### P0：基础数据和怪物生成
 
