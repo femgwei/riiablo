@@ -11,6 +11,17 @@ import com.riiablo.logger.MDC;
 
 public class PropertiesGenerator {
   private static final Logger log = LogManager.getLogger(PropertiesGenerator.class);
+  public interface RandomSource { int betweenInclusive(int min, int max); }
+  private final RandomSource random;
+
+  public PropertiesGenerator() {
+    this(MathUtils::random);
+  }
+
+  public PropertiesGenerator(RandomSource random) {
+    if (random == null) throw new NullPointerException("random");
+    this.random = random;
+  }
 
   /**
    * @param code properties file keys (res-all, ac/lvl, str, etc)
@@ -199,7 +210,7 @@ public class PropertiesGenerator {
     }
   }
 
-  static final int random(int min, int max) {
-    return MathUtils.random(min, max);
+  final int random(int min, int max) {
+    return random.betweenInclusive(min, max);
   }
 }

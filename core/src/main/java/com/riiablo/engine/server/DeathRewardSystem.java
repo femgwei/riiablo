@@ -157,7 +157,9 @@ public class DeathRewardSystem extends PassiveSystem {
       String code = result.itemCodes.get(i);
       int quality = result.itemQualities.get(i);
       int itemLevel = result.itemLevels.get(i);
-      int itemId = createItem(code, quality, itemLevel, position.position.x, position.position.y, ownerId);
+      int itemSeed = config.rngSeed ^ ((i + 1) * 0x9E3779B9);
+      int itemId = createItem(code, quality, itemLevel, itemSeed, difficulty,
+          position.position.x, position.position.y, ownerId);
       if (itemId >= 0) createdItems++;
       log.debug("[DEATH_REWARD] item: killer={}, victim={}, code={}, rolledQuality={}, "
               + "ilvl={}, entity={}", event.killer, event.victim, code, quality, itemLevel, itemId);
@@ -210,7 +212,8 @@ public class DeathRewardSystem extends PassiveSystem {
     return stats.TreasureClass1;
   }
 
-  private int createItem(String code, int rolledQuality, int itemLevel, float x, float y, int ownerId) {
+  private int createItem(String code, int rolledQuality, int itemLevel,
+      int itemSeed, int difficulty, float x, float y, int ownerId) {
     if (factory == null || itemGenerator == null || code == null || code.isEmpty()) {
       log.warn("[DEATH_REWARD] item creation unavailable: factory={}, generator={}, code={}",
           factory != null, itemGenerator != null, code);
@@ -218,7 +221,8 @@ public class DeathRewardSystem extends PassiveSystem {
     }
     try {
       Quality quality = safeQuality(rolledQuality);
-      Item item = itemGenerator.generateLootItem(code, itemLevel, quality);
+      Item item = itemGenerator.generateLootItem(code, itemLevel, quality,
+          itemSeed, difficulty);
       int entityId = factory.createItem(item, x + MathUtils.random(-2f, 2f),
           y + MathUtils.random(-2f, 2f));
       markDrop(entityId, ownerId);

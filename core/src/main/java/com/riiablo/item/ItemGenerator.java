@@ -3,7 +3,6 @@ package com.riiablo.item;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 
 import com.riiablo.Riiablo;
@@ -21,15 +20,14 @@ import com.riiablo.codec.excel.RarePrefix;
 import com.riiablo.codec.excel.RareSuffix;
 import com.riiablo.codec.excel.UniqueItems;
 import com.riiablo.codec.excel.SetItems;
+import com.riiablo.codec.excel.Excel;
 import com.riiablo.attributes.PropertiesGenerator;
+import com.riiablo.engine.server.NativeRng;
 
 public class ItemGenerator extends PassiveSystem {
   private static final String TAG = "ItemGenerator";
 
   private static final boolean DEBUG = true;
-
-  private static final float SOCKETED_CHANCE = 1 / 3f;
-  private static final float ETHEREAL_CHANCE = 1 / 20f;
 
 //  public Item generate(TreasureClass tc) {
 //    return null;
@@ -55,26 +53,42 @@ public class ItemGenerator extends PassiveSystem {
 
   /** Creates a drop with native quality metadata and persisted affix data. */
   public Item generateLootItem(String code, int itemLevel, Quality requested) {
+    int seed = Riiablo.gameSeed ^ code.hashCode() ^ (itemLevel * 0x45D9F3B);
+    return generateLootItem(code, itemLevel, requested, seed, Riiablo.NORMAL);
+  }
+
+  /** Authoritative seeded item creation used by server drops. */
+  public Item generateLootItem(String code, int itemLevel, Quality requested,
+      int seed, int difficulty) {
+    NativeRng rng = new NativeRng(seed);
     if (requested == Quality.MAGIC || requested == Quality.RARE) {
-      return generateQuestReward(code, itemLevel, requested, 0);
+      Item item = generateQuestReward(code, itemLevel, requested, seed, rng);
+      applyNativeTraits(item, requested, itemLevel, difficulty, seed, rng);
+      item.attrs.reset();
+      return item;
     }
     Item item = generate(code);
+    item.id = seed;
     item.version = Item.VERSION_110;
     item.ilvl = (byte) Math.max(1, Math.min(99, itemLevel));
     item.flags |= Item.ITEMFLAG_IDENTIFIED;
     item.quality = requested == null ? Quality.NORMAL : requested;
+    NativeItemGeneration.initializeBaseStats(item, rng::nextInt);
+    PropertiesGenerator properties = properties(rng);
     if (item.quality == Quality.UNIQUE) {
-      UniqueItems.Entry entry = findUnique(code, itemLevel);
-      if (entry == null) return generateQuestReward(code, itemLevel, Quality.MAGIC, 0);
+      UniqueItems.Entry entry = findUnique(code, itemLevel, rng);
+      if (entry == null) return generateLootItem(code, itemLevel, Quality.MAGIC,
+          seed, difficulty);
       item.qualityId = Riiablo.files.UniqueItems.index(entry.index);
       item.qualityData = entry;
-      addUniqueProperties(item, entry);
+      addUniqueProperties(item, entry, properties);
     } else if (item.quality == Quality.SET) {
-      SetItems.Entry entry = findSet(code, itemLevel);
-      if (entry == null) return generateQuestReward(code, itemLevel, Quality.MAGIC, 0);
+      SetItems.Entry entry = findSet(code, itemLevel, rng);
+      if (entry == null) return generateLootItem(code, itemLevel, Quality.MAGIC,
+          seed, difficulty);
       item.qualityId = Riiablo.files.SetItems.index(entry.index);
       item.qualityData = entry;
-      addSetProperties(item, entry);
+      addSetProperties(item, entry, properties);
     }
     // ItemWriter always emits a serialized magic/set/unique property list for
     // non-compact standard items.  Keep one list even for NORMAL, LOW and
@@ -82,11 +96,12 @@ public class ItemGenerator extends PassiveSystem {
     if ((item.flags & Item.ITEMFLAG_COMPACT) == 0 && item.attrs.list().numLists() == 0) {
       item.attrs.buildList();
     }
+    applyNativeTraits(item, item.quality, itemLevel, difficulty, seed, rng);
     item.attrs.reset();
     return item;
   }
 
-  private static UniqueItems.Entry findUnique(String code, int itemLevel) {
+  private static UniqueItems.Entry findUnique(String code, int itemLevel, NativeRng rng) {
     if (Riiablo.files.UniqueItems == null) return null;
     Array<UniqueItems.Entry> candidates = new Array<>();
     int totalRarity = 0;
@@ -97,7 +112,7 @@ public class ItemGenerator extends PassiveSystem {
       }
     }
     if (candidates.size == 0) return null;
-    int roll = MathUtils.random(Math.max(0, totalRarity - 1));
+    int roll = rng.nextInt(Math.max(1, totalRarity));
     for (UniqueItems.Entry entry : candidates) {
       roll -= Math.max(1, entry.rarity);
       if (roll < 0) return entry;
@@ -105,7 +120,7 @@ public class ItemGenerator extends PassiveSystem {
     return candidates.peek();
   }
 
-  private static SetItems.Entry findSet(String code, int itemLevel) {
+  private static SetItems.Entry findSet(String code, int itemLevel, NativeRng rng) {
     if (Riiablo.files.SetItems == null) return null;
     Array<SetItems.Entry> candidates = new Array<>();
     int totalRarity = 0;
@@ -117,7 +132,7 @@ public class ItemGenerator extends PassiveSystem {
       }
     }
     if (candidates.size == 0) return null;
-    int roll = MathUtils.random(Math.max(0, totalRarity - 1));
+    int roll = rng.nextInt(Math.max(1, totalRarity));
     for (SetItems.Entry entry : candidates) {
       roll -= Math.max(1, entry.rarity);
       if (roll < 0) return entry;
@@ -125,18 +140,20 @@ public class ItemGenerator extends PassiveSystem {
     return candidates.peek();
   }
 
-  private static void addUniqueProperties(Item item, UniqueItems.Entry e) {
+  private static void addUniqueProperties(
+      Item item, UniqueItems.Entry e, PropertiesGenerator properties) {
     StatListRef list = item.attrs.buildList();
-    new PropertiesGenerator().add(list,
+    properties.add(list,
         new String[] {e.prop1,e.prop2,e.prop3,e.prop4,e.prop5,e.prop6,e.prop7,e.prop8,e.prop9,e.prop10,e.prop11,e.prop12},
         new int[] {e.par1,e.par2,e.par3,e.par4,e.par5,e.par6,e.par7,e.par8,e.par9,e.par10,e.par11,e.par12},
         new int[] {e.min1,e.min2,e.min3,e.min4,e.min5,e.min6,e.min7,e.min8,e.min9,e.min10,e.min11,e.min12},
         new int[] {e.max1,e.max2,e.max3,e.max4,e.max5,e.max6,e.max7,e.max8,e.max9,e.max10,e.max11,e.max12});
   }
 
-  private static void addSetProperties(Item item, SetItems.Entry e) {
+  private static void addSetProperties(
+      Item item, SetItems.Entry e, PropertiesGenerator properties) {
     StatListRef list = item.attrs.buildList();
-    new PropertiesGenerator().add(list,
+    properties.add(list,
         new String[] {e.prop1,e.prop2,e.prop3,e.prop4,e.prop5,e.prop6,e.prop7,e.prop8,e.prop9},
         new int[] {e.par1,e.par2,e.par3,e.par4,e.par5,e.par6,e.par7,e.par8,e.par9},
         new int[] {e.min1,e.min2,e.min3,e.min4,e.min5,e.min6,e.min7,e.min8,e.min9},
@@ -145,34 +162,43 @@ public class ItemGenerator extends PassiveSystem {
 
   /** Creates a native quest reward with valid persisted magic/rare metadata. */
   public Item generateQuestReward(String code, int itemLevel, Quality quality, int id) {
+    NativeRng rng = new NativeRng(id == 0
+        ? Riiablo.gameSeed ^ code.hashCode() ^ (itemLevel * 0x45D9F3B) : id);
+    return generateQuestReward(code, itemLevel, quality, id, rng);
+  }
+
+  private Item generateQuestReward(String code, int itemLevel, Quality quality,
+      int id, NativeRng rng) {
     Item item = generate(code);
     item.id = id;
     item.version = Item.VERSION_110;
     item.ilvl = (byte) Math.max(1, Math.min(127, itemLevel));
     item.quality = quality;
     item.flags |= Item.ITEMFLAG_IDENTIFIED;
+    NativeItemGeneration.initializeBaseStats(item, rng::nextInt);
     // Every non-compact standard item serializes the magic property list,
     // including rare rewards whose generated affix list is currently empty.
     StatListRef magic = item.attrs.buildList();
+    PropertiesGenerator properties = properties(rng);
 
     if (quality == Quality.MAGIC) {
-      int prefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel);
-      int suffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel);
+      int prefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel, rng);
+      int suffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel, rng);
       item.qualityId = prefix | (suffix << Item.MAGIC_AFFIX_SIZE);
-      addMagicAffix(magic, Riiablo.files.MagicPrefix.get(prefix));
-      addMagicAffix(magic, Riiablo.files.MagicSuffix.get(suffix));
+      addMagicAffix(magic, Riiablo.files.MagicPrefix.get(prefix), properties);
+      addMagicAffix(magic, Riiablo.files.MagicSuffix.get(suffix), properties);
     } else if (quality == Quality.RARE) {
-      int rarePrefix = findRareAffix(Riiablo.files.RarePrefix, item);
-      int rareSuffix = findRareAffix(Riiablo.files.RareSuffix, item);
+      int rarePrefix = findRareAffix(Riiablo.files.RarePrefix, item, rng);
+      int rareSuffix = findRareAffix(Riiablo.files.RareSuffix, item, rng);
       item.qualityId = rarePrefix | (rareSuffix << Item.RARE_AFFIX_SIZE);
       // RarePrefix/RareSuffix supply only the generated rare name. The six
       // persisted RareQualityData slots reference MagicPrefix/MagicSuffix;
       // storing rare-name ids there corrupts the property stream on reload.
-      int magicPrefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel);
-      int magicSuffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel);
+      int magicPrefix = findMagicAffix(Riiablo.files.MagicPrefix, item, itemLevel, rng);
+      int magicSuffix = findMagicAffix(Riiablo.files.MagicSuffix, item, itemLevel, rng);
       item.qualityData = new RareQualityData(magicPrefix, magicSuffix);
-      addMagicAffix(magic, Riiablo.files.MagicPrefix.get(magicPrefix));
-      addMagicAffix(magic, Riiablo.files.MagicSuffix.get(magicSuffix));
+      addMagicAffix(magic, Riiablo.files.MagicPrefix.get(magicPrefix), properties);
+      addMagicAffix(magic, Riiablo.files.MagicSuffix.get(magicSuffix), properties);
     }
     item.attrs.reset();
     return item;
@@ -207,42 +233,108 @@ public class ItemGenerator extends PassiveSystem {
     }
   }
 
-  private static int findMagicAffix(MagicPrefix entries, Item item, int itemLevel) {
+  private static int findMagicAffix(
+      MagicPrefix entries, Item item, int itemLevel, NativeRng rng) {
+    Array<MagicAffix> candidates = new Array<>();
+    int totalFrequency = 0;
+    int affixLevel = NativeItemGeneration.affixLevel(itemLevel, item.base.level, 0);
     for (MagicAffix affix : entries) {
-      if (!affix.spawnable || affix.level > itemLevel || (affix.maxlevel > 0 && affix.maxlevel < itemLevel)) continue;
+      if (!eligible(affix, item, affixLevel)) continue;
       MagicPrefix.Entry e = (MagicPrefix.Entry) affix;
       if (!supports(e.itype1, e.itype2, e.itype3, e.itype4, e.itype5, e.itype6, e.itype7, item)) continue;
-      return entries.index(affix.name);
+      if (excludes(item, e.etype1, e.etype2, e.etype3, e.etype4, e.etype5)) continue;
+      candidates.add(affix);
+      totalFrequency += Math.max(0, affix.frequency);
     }
-    throw new IllegalStateException("No valid prefix for " + item.code + " at ilvl " + itemLevel);
+    return selectMagicAffix(entries, candidates, totalFrequency, rng,
+        "prefix", item, itemLevel);
   }
 
-  private static int findMagicAffix(MagicSuffix entries, Item item, int itemLevel) {
+  private static int findMagicAffix(
+      MagicSuffix entries, Item item, int itemLevel, NativeRng rng) {
+    Array<MagicAffix> candidates = new Array<>();
+    int totalFrequency = 0;
+    int affixLevel = NativeItemGeneration.affixLevel(itemLevel, item.base.level, 0);
     for (MagicAffix affix : entries) {
-      if (!affix.spawnable || affix.level > itemLevel || (affix.maxlevel > 0 && affix.maxlevel < itemLevel)) continue;
+      if (!eligible(affix, item, affixLevel)) continue;
       MagicSuffix.Entry e = (MagicSuffix.Entry) affix;
       if (!supports(e.itype1, e.itype2, e.itype3, e.itype4, e.itype5, e.itype6, e.itype7, item)) continue;
-      return entries.index(affix.name);
+      if (excludes(item, e.etype1, e.etype2, e.etype3)) continue;
+      candidates.add(affix);
+      totalFrequency += Math.max(0, affix.frequency);
     }
-    throw new IllegalStateException("No valid suffix for " + item.code + " at ilvl " + itemLevel);
+    return selectMagicAffix(entries, candidates, totalFrequency, rng,
+        "suffix", item, itemLevel);
   }
 
-  private static int findRareAffix(RarePrefix entries, Item item) {
+  private static boolean eligible(MagicAffix affix, Item item, int affixLevel) {
+    if (affix == null || !affix.spawnable || affix.frequency <= 0
+        || affix.level > affixLevel
+        || affix.maxlevel > 0 && affixLevel > affix.maxlevel) return false;
+    if (affix.version >= 100 && item.version != Item.VERSION_110 && item.version < 100) return false;
+    if ((item.quality == Quality.RARE || item.quality == Quality.CRAFTED) && !affix.rare) {
+      return false;
+    }
+    if (affix.classspecific != null && !affix.classspecific.isEmpty()
+        && item.typeEntry != null && item.typeEntry.Class != null
+        && !item.typeEntry.Class.isEmpty()
+        && !affix.classspecific.equalsIgnoreCase(item.typeEntry.Class)) return false;
+    return true;
+  }
+
+  private static int selectMagicAffix(
+      Excel<? extends MagicAffix> entries, Array<MagicAffix> candidates,
+      int totalFrequency, NativeRng rng, String kind, Item item, int itemLevel) {
+    if (candidates.size == 0 || totalFrequency <= 0) {
+      throw new IllegalStateException("No valid " + kind + " for " + item.code
+          + " at ilvl " + itemLevel);
+    }
+    int roll = rng.nextInt(totalFrequency + 1);
+    MagicAffix selected = candidates.peek();
+    for (MagicAffix affix : candidates) {
+      selected = affix;
+      roll -= Math.max(0, affix.frequency);
+      if (roll < 0) break;
+    }
+    return entries.index(selected.name);
+  }
+
+  private static boolean excludes(Item item, String... types) {
+    if (item == null || item.typeEntry == null || types == null) return false;
+    for (String type : types) {
+      if (type != null && !type.isEmpty() && item.typeEntry.is(type)) return true;
+    }
+    return false;
+  }
+
+  private static int findRareAffix(RarePrefix entries, Item item, NativeRng rng) {
+    Array<RarePrefix.Entry> candidates = new Array<>();
     for (RarePrefix.Entry affix : entries) {
+      if (affix.version >= 100 && item.version != Item.VERSION_110 && item.version < 100) continue;
       if (!supports(affix.itype1, affix.itype2, affix.itype3, affix.itype4,
           affix.itype5, affix.itype6, affix.itype7, item)) continue;
-      return entries.index(affix.name);
+      if (excludes(item, affix.etype1, affix.etype2, affix.etype3,
+          affix.etype4)) continue;
+      candidates.add(affix);
     }
-    throw new IllegalStateException("No valid rare affix for " + item.code);
+    if (candidates.size == 0) throw new IllegalStateException(
+        "No valid rare prefix for " + item.code);
+    return entries.index(candidates.get(rng.nextInt(candidates.size)).name);
   }
 
-  private static int findRareAffix(RareSuffix entries, Item item) {
+  private static int findRareAffix(RareSuffix entries, Item item, NativeRng rng) {
+    Array<RareSuffix.Entry> candidates = new Array<>();
     for (RareSuffix.Entry affix : entries) {
+      if (affix.version >= 100 && item.version != Item.VERSION_110 && item.version < 100) continue;
       if (!supports(affix.itype1, affix.itype2, affix.itype3, affix.itype4,
           affix.itype5, affix.itype6, affix.itype7, item)) continue;
-      return entries.index(affix.name);
+      if (excludes(item, affix.etype1, affix.etype2, affix.etype3,
+          affix.etype4)) continue;
+      candidates.add(affix);
     }
-    throw new IllegalStateException("No valid rare affix for " + item.code);
+    if (candidates.size == 0) throw new IllegalStateException(
+        "No valid rare suffix for " + item.code);
+    return entries.index(candidates.get(rng.nextInt(candidates.size)).name);
   }
 
   private static boolean supports(String a, String b, String c, String d, String e, String f, String g, Item item) {
@@ -251,23 +343,39 @@ public class ItemGenerator extends PassiveSystem {
     return false;
   }
 
-  private static void addMagicAffix(StatListRef magic, MagicAffix affix) {
+  private static void addMagicAffix(
+      StatListRef magic, MagicAffix affix, PropertiesGenerator properties) {
     if (!(affix instanceof MagicPrefix.Entry) && !(affix instanceof MagicSuffix.Entry)) return;
     if (affix instanceof MagicPrefix.Entry) {
       MagicPrefix.Entry e = (MagicPrefix.Entry) affix;
-      new PropertiesGenerator().add(magic,
+      properties.add(magic,
           new String[] {e.mod1code, e.mod2code, e.mod3code},
           new int[] {e.mod1param, e.mod2param, e.mod3param},
           new int[] {e.mod1min, e.mod2min, e.mod3min},
           new int[] {e.mod1max, e.mod2max, e.mod3max});
     } else {
       MagicSuffix.Entry e = (MagicSuffix.Entry) affix;
-      new PropertiesGenerator().add(magic,
+      properties.add(magic,
           new String[] {e.mod1code, e.mod2code, e.mod3code},
           new int[] {e.mod1param, e.mod2param, e.mod3param},
           new int[] {e.mod1min, e.mod2min, e.mod3min},
           new int[] {e.mod1max, e.mod2max, e.mod3max});
     }
+  }
+
+  private static PropertiesGenerator properties(NativeRng rng) {
+    return new PropertiesGenerator((min, max) -> {
+      int lower = Math.min(min, max);
+      int upper = Math.max(min, max);
+      return upper <= lower ? lower : lower + rng.nextInt(upper - lower + 1);
+    });
+  }
+
+  private static void applyNativeTraits(Item item, Quality quality, int itemLevel,
+      int difficulty, int seed, NativeRng rng) {
+    NativeItemGeneration.rollEthereal(item, quality, rng::nextInt);
+    NativeItemGeneration.rollSockets(item, quality, itemLevel, difficulty,
+        seed, rng::nextInt);
   }
 
   /**
@@ -325,35 +433,6 @@ public class ItemGenerator extends PassiveSystem {
     }
   }
 
-  private static void socket(Item item) {
-    // TODO: include difficulty
-    if (item.base.gemsockets > 0 && MathUtils.randomBoolean(SOCKETED_CHANCE)) {
-      Gdx.app.debug(TAG, "Item is socketed");
-      item.flags |= Item.ITEMFLAG_SOCKETED;
-      int diff = Riiablo.NORMAL;
-      int maxSockets = Math.min(item.base.gemsockets, item.typeEntry.MaxSock[diff]);
-      int numSockets = MathUtils.random(1, maxSockets);
-      Gdx.app.debug(TAG, "Setting sockets to: " + numSockets);
-      item.attrs.base().put(Stat.item_numsockets, numSockets);
-      item.sockets = new Array<>(numSockets);
-    }
-  }
-
-  private static void ethereal(Item item) {
-    if (!item.base.nodurability && MathUtils.randomBoolean(ETHEREAL_CHANCE)) {
-      Gdx.app.debug(TAG, "Item is ethereal");
-      item.flags |= Item.ITEMFLAG_ETHEREAL;
-    }
-  }
-
-  private static void durability(Item item) {
-    if (item.base.nodurability) {
-      item.attrs.base().put(Stat.maxdurability, 0);
-    } else {
-      // TODO: assign random int up to item.base.durability
-    }
-  }
-
   public Item generate(Armor.Entry base) {
     Item item = new Item();
     item.reset();
@@ -361,10 +440,6 @@ public class ItemGenerator extends PassiveSystem {
     if (base.compactsave) item.flags |= Item.ITEMFLAG_COMPACT;
 
     item.setBase(base);
-
-//    socket(item);
-//    ethereal(item);
-//    durability(item);
 
     return item;
   }
@@ -376,10 +451,6 @@ public class ItemGenerator extends PassiveSystem {
     if (base.compactsave) item.flags |= Item.ITEMFLAG_COMPACT;
 
     item.setBase(base);
-
-//    socket(item);
-//    ethereal(item);
-//    durability(item);
 
     // Set quantity for stackable weapons (javelins, throwing knives, throwing axes)
     if (base.stackable) {
