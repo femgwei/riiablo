@@ -76,7 +76,14 @@ public final class NativeSkillResolver {
       int effectiveLevel, int casterLevel) {
     if (data == null || skill == null) return NOT_LEARNED;
     int characterClassId = data.charClass & 0xFF;
-    if (!belongsToClass(skill, characterClassId)) return WRONG_CLASS;
+    // Native oskills (effective level supplied by an item) are usable across
+    // classes.  A base/learned level, however, must still belong to the
+    // character's class.  This distinction is why the resolver receives both
+    // CharData and effectiveLevel rather than only a class id.
+    if (!belongsToClass(skill, characterClassId)
+        && (data.getBaseSkillLevel(skill.Id) > 0 || effectiveLevel <= 0)) {
+      return WRONG_CLASS;
+    }
     if (casterLevel < Math.max(1, skill.reqlevel)) return LEVEL_TOO_LOW;
 
     int level = Math.max(0, effectiveLevel);

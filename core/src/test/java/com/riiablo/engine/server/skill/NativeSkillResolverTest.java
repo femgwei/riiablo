@@ -57,9 +57,16 @@ public class NativeSkillResolverTest {
         NativeSkillResolver.validatePlayerCast(amazon, skill, 1, 1));
     assertEquals(NativeSkillResolver.NOT_LEARNED,
         NativeSkillResolver.validatePlayerCast(amazon, skill, 0, 6));
+    CharData sorc = CharData.createRemote("sorc", (byte) Riiablo.SORCERESS);
+    sorc.setSkillLevel(skill.Id, 1);
     assertEquals(NativeSkillResolver.WRONG_CLASS,
-        NativeSkillResolver.validatePlayerCast(
-            CharData.createRemote("sorc", (byte) Riiablo.SORCERESS), skill, 1, 6));
+        NativeSkillResolver.validatePlayerCast(sorc, skill, 1, 6));
+
+    // An effective level without a base level represents an item-granted
+    // cross-class skill (oskill) and is legal in the native rules.
+    CharData oskill = CharData.createRemote("oskill", (byte) Riiablo.SORCERESS);
+    assertEquals(NativeSkillResolver.OK,
+        NativeSkillResolver.validatePlayerCast(oskill, skill, 1, 6));
   }
 
   @Test
