@@ -44,6 +44,18 @@ public class Missile extends PooledComponent {
   public boolean damageSnapshot;
   public int damageLevel;
 
+  /** Optional native homing target (Guided Arrow/Bone Spirit). */
+  public int targetId = -1;
+  public boolean homing;
+
+  /** Skill damage multiplier captured when the missile is spawned. */
+  public float damageMultiplier = 1f;
+
+  /** Native Pierce state. A missile may survive a hit and continue travelling. */
+  public boolean pierceEnabled;
+  public int pierceChance;
+  public final IntSet hitTargets = new IntSet();
+
   /** Targets already resolved by another missile from the same cast. */
   public IntSet sharedHitTargets;
 
@@ -63,6 +75,12 @@ public class Missile extends PooledComponent {
     damage.clear();
     damageSnapshot = false;
     damageLevel = 0;
+    targetId = -1;
+    homing = false;
+    damageMultiplier = 1f;
+    pierceEnabled = false;
+    pierceChance = 0;
+    hitTargets.clear();
     sharedHitTargets = null;
   }
 

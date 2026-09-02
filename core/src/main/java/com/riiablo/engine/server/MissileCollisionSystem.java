@@ -91,6 +91,21 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (!missile.authoritative) return;
     Position position = mPosition.get(entityId);
     Velocity velocity = mVelocity.get(entityId);
+
+    // Guided Arrow/Bone Spirit tracks its native target every server tick.
+    // Keep the current speed while steering; when the target disappears the
+    // missile continues along its last heading, matching D2MOO's fallback.
+    if (missile.homing && missile.targetId >= 0 && mPosition.has(missile.targetId)) {
+      Attributes targetAttrs = mAttributesWrapper.has(missile.targetId)
+          ? mAttributesWrapper.get(missile.targetId).attrs : null;
+      boolean alive = targetAttrs == null || targetAttrs.get(Stat.hitpoints) == null
+          || targetAttrs.get(Stat.hitpoints).asFixed() > 0f;
+      if (alive) {
+        float speed = velocity.velocity.len();
+        tmpVec.set(mPosition.get(missile.targetId).position).sub(position.position);
+        if (!tmpVec.isZero(0.0001f) && speed > 0f) velocity.velocity.set(tmpVec).setLength(speed);
+      }
+    }
     
     // 保存上一帧位置
     lastPos.set(position.position);
@@ -241,6 +256,11 @@ public class MissileCollisionSystem extends IteratingSystem {
             Integer.toHexString(mNativeUnitFlags.get(targetId).flags()));
         return false;
       }
+      if (!missile.hitTargets.add(targetId)) {
+        // A piercing projectile must never repeatedly damage the same unit on
+        // consecutive frames while its swept segment overlaps the target.
+        return false;
+      }
       if (mMercenary.has(missile.ownerId)) mercenaryCollisionCount++;
 
       log.info("[MISSILE_HIT] phase=collision missileId={} missile={} owner={} target={} "
@@ -317,6 +337,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           alwaysHit,
           null, null, 0, 0,
           stateList(missile.ownerId), stateList(targetId));
+      boolean damageHit = combat.hit && !combat.blocked;
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
             missileId, missile.ownerId, targetId, combat.hitChance);
@@ -327,7 +348,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             missileId, missile.ownerId, targetId, combat.hitChance);
         log.debug("Missile {} attack blocked by {} (owner={})", missileId, targetId, missile.ownerId);
       } else {
-        float damage = combat.totalDamage;
+        float damage = combat.totalDamage * Math.max(0.01f, missile.damageMultiplier);
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit chance={} "
                 + "physical={} total={} critical={} deadly={} crushing={}",
             missileId, missile.ownerId, targetId, combat.hitChance,
@@ -372,6 +393,15 @@ public class MissileCollisionSystem extends IteratingSystem {
         }
       }
       
+      // Native Pierce keeps the missile alive after a successful collision.
+      // A miss/block still consumes the projectile, while a dead target is
+      // handled by the normal death path above.
+      if (damageHit && missile.pierceEnabled && missile.pierceChance > 0
+          && com.badlogic.gdx.math.MathUtils.random(99) < missile.pierceChance) {
+        log.info("[MISSILE_PIERCE] phase=continue missileId={} target={} chance={} hitCount={}",
+            missileId, targetId, missile.pierceChance, missile.hitTargets.size);
+        return true;
+      }
       world.delete(missileId);
       return true;
     }

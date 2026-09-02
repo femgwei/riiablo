@@ -37,6 +37,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
+import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
@@ -210,6 +211,16 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.srvdofunc == 8 || skill.srvdofunc == 8) {
       spawnMultipleShotTeethShockWave(event, skill, start);
+      return;
+    }
+    if (event.srvdofunc == 10 || skill.srvdofunc == 10
+        || event.skillId == SkillId.GUIDED_ARROW) {
+      spawnGuidedArrow(event, skill, start, skillLevel);
+      return;
+    }
+    if (event.srvdofunc == 12 || skill.srvdofunc == 12
+        || event.skillId == SkillId.STRAFE) {
+      spawnStrafe(event, skill, start, skillLevel);
       return;
     }
     if (event.srvdofunc == 11 || skill.srvdofunc == 11) {
@@ -783,6 +794,124 @@ public class ServerSkillSystem extends PassiveSystem {
       if (missile != null) return missile;
     }
     return firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+  }
+
+  /** Native SKILLS_SrvDo010_GuidedArrow_BoneSpirit. */
+  private void spawnGuidedArrow(SkillDoEvent event, Skills.Entry skill,
+      Vector2 start, int skillLevel) {
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
+    if (missileName == null) missileName = firstNonEmpty(skill.srvmissile, skill.cltmissilea);
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[GUIDED_ARROW] phase=reject entity={} skill={} reason=missing_missile name={}",
+          event.entityId, event.skillId, missileName);
+      return;
+    }
+    Vector2 direction = new Vector2();
+    int targetId = event.targetId;
+    if (targetId >= 0 && mPosition.has(targetId)) {
+      direction.set(mPosition.get(targetId).position).sub(start);
+    } else if (event.targetVec != null) {
+      direction.set(event.targetVec).sub(start);
+    } else {
+      direction.set(1f, 0f);
+    }
+    if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+    int id = createMissile(missile, direction.nor(), start, event.entityId, null, skillLevel);
+    if (id >= 0 && mMissile.has(id)) {
+      Missile projectile = mMissile.get(id);
+      projectile.targetId = targetId;
+      projectile.homing = targetId >= 0 && mPosition.has(targetId);
+      int bonus = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
+      if (bonus <= 0) bonus = AmazonSkills.calculateGuidedArrowDamageBonus(skillLevel);
+      projectile.damageMultiplier = 1f + Math.max(0, bonus) / 100f;
+      configurePierce(projectile, event.entityId, skillLevel, true);
+      log.info("[GUIDED_ARROW] phase=create entity={} missileId={} target={} homing={} "
+              + "level={} damageBonus={} pierceChance={}", event.entityId, id, targetId,
+          projectile.homing, skillLevel, bonus, projectile.pierceChance);
+    }
+  }
+
+  /** Native SKILLS_SrvDo012_Strafe: one arrow per selected hostile target. */
+  private void spawnStrafe(SkillDoEvent event, Skills.Entry skill,
+      Vector2 start, int skillLevel) {
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
+    if (missileName == null) missileName = firstNonEmpty(skill.srvmissile, skill.cltmissilea);
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[STRAFE] phase=reject entity={} reason=missing_missile name={}",
+          event.entityId, missileName);
+      return;
+    }
+    int count = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
+    if (count <= 0) count = AmazonSkills.getStrafeArrowCount(skillLevel);
+    count = Math.max(1, Math.min(24, count));
+    int range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
+    if (range <= 0) range = firstParam(skill, 5, 50);
+    range = Math.max(1, Math.min(64, range));
+    java.util.ArrayList<Integer> targets = new java.util.ArrayList<>();
+    com.artemis.EntitySubscription subscription = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Monster.class, Position.class));
+    IntBag bag = subscription.getEntities();
+    for (int i = 0; i < bag.size(); i++) {
+      int candidate = bag.get(i);
+      if (isHostile(event.entityId, candidate) && mNativeUnitFlagsValid(candidate)
+          && mPosition.get(candidate).position.dst(start) <= range) targets.add(candidate);
+    }
+    if (event.targetId >= 0 && mPosition.has(event.targetId) && !targets.contains(event.targetId)) {
+      targets.add(0, event.targetId);
+    }
+    final Vector2 origin = start;
+    targets.sort((a, b) -> Float.compare(mPosition.get(a).position.dst2(origin),
+        mPosition.get(b).position.dst2(origin)));
+    int created = 0;
+    for (int i = 0; i < targets.size() && created < count; i++) {
+      int targetId = targets.get(i);
+      Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(start);
+      if (direction.isZero(0.0001f)) continue;
+      int id = createMissile(missile, direction.nor(), start, event.entityId, null, skillLevel);
+      if (id >= 0 && mMissile.has(id)) {
+        Missile arrow = mMissile.get(id);
+        arrow.targetId = targetId;
+        configurePierce(arrow, event.entityId, skillLevel, false);
+        created++;
+      }
+    }
+    if (created == 0) {
+      Vector2 direction = resolveTargetPoint(event, start, new Vector2()).sub(start).nor();
+      int id = createMissile(missile, direction, start, event.entityId, null, skillLevel);
+      if (id >= 0 && mMissile.has(id)) {
+        configurePierce(mMissile.get(id), event.entityId, skillLevel, false);
+        created = 1;
+      }
+    }
+    log.info("[STRAFE] phase=create entity={} level={} requested={} targets={} created={} missile={}",
+        event.entityId, skillLevel, count, targets.size(), created, missileName);
+  }
+
+  private boolean mNativeUnitFlagsValid(int entityId) {
+    return !mNativeUnitFlags.has(entityId)
+        || NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(entityId));
+  }
+
+  private void configurePierce(Missile projectile, int ownerId, int skillLevel,
+      boolean guided) {
+    if (projectile == null || projectile.missile == null) return;
+    int chance = projectile.missile.Pierce ? 100 : 0;
+    if (mAttributesWrapper.has(ownerId)) {
+      chance = Math.max(chance, statInt(mAttributesWrapper.get(ownerId).attrs, Stat.skill_pierce));
+    }
+    if (mPlayer.has(ownerId)) {
+      Player player = mPlayer.get(ownerId);
+      if (player.data != null) {
+        int pierceLevel = player.data.getSkill(SkillId.PIERCE);
+        if (pierceLevel > 0) {
+          chance = Math.max(chance, AmazonSkills.getPierceChance(pierceLevel));
+        }
+      }
+    }
+    projectile.pierceChance = Math.max(0, Math.min(100, chance));
+    projectile.pierceEnabled = projectile.pierceChance > 0;
   }
 
   static int firstParam(Skills.Entry skill, int index, int fallback) {

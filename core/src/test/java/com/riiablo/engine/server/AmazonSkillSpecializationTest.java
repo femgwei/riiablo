@@ -19,8 +19,12 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
@@ -31,7 +35,7 @@ import org.junit.jupiter.api.Test;
 class AmazonSkillSpecializationTest extends RiiabloTest {
   @Test
   void auditNativeAmazonSpecialRows() {
-    String[] names = {"Multiple Shot", "Guided Arrow", "Charged Strike",
+    String[] names = {"Multiple Shot", "Guided Arrow", "Strafe", "Pierce", "Charged Strike",
         "Dopplezon", "Valkyrie", "Lightning Strike", "Lightning Fury"};
     for (String name : names) {
       Skills.Entry skill = Riiablo.files.skills.get(name);
@@ -94,6 +98,53 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertEquals(15, MissileCollisionSystem.lightningFuryRange(missile, skill, 1));
     assertEquals(3, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 1));
     assertEquals(12, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 10));
+  }
+
+  @Test
+  void guidedArrowCapturesTargetAndStrafeSelectsUniqueTargets() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      data.setSkillLevel(SkillId.GUIDED_ARROW, 5);
+      data.setSkillLevel(SkillId.STRAFE, 5);
+      data.setSkillLevel(SkillId.PIERCE, 1);
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attributes(20, 200);
+      int target = monster(world, 3, 0);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, SkillId.GUIDED_ARROW, target, null, 10, 0));
+      assertEquals(1, factory.created.size());
+      Missile guided = factory.created.get(0);
+      assertEquals(target, guided.targetId);
+      assertTrue(guided.homing);
+      assertTrue(guided.pierceEnabled);
+      assertTrue(guided.damageMultiplier > 1f);
+
+      factory.created.clear();
+      for (int i = 4; i <= 10; i++) monster(world, i, 0);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, SkillId.STRAFE, Engine.INVALID_ENTITY, new Vector2(6, 0), 12, 0));
+      assertTrue(factory.created.size() >= 3 && factory.created.size() <= 8);
+      java.util.HashSet<Integer> strafeTargets = new java.util.HashSet<>();
+      for (Missile arrow : factory.created) {
+        assertTrue(!arrow.homing);
+        if (arrow.targetId >= 0) assertTrue(strafeTargets.add(arrow.targetId));
+      }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  private static int monster(World world, float x, float y) {
+    int id = world.create();
+    world.getMapper(Monster.class).create(id);
+    world.getMapper(Position.class).create(id).position.set(x, y);
+    return id;
   }
 
   @Test
@@ -191,6 +242,33 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     @Override public int createItem(Item item, float x, float y) { return Engine.INVALID_ENTITY; }
     @Override public int createMissile(int id, Vector2 angle, Vector2 position) {
       return Engine.INVALID_ENTITY;
+    }
+  }
+
+  private static final class RecordingMissileFactory extends EntityFactory {
+    final java.util.ArrayList<Missile> created = new java.util.ArrayList<>();
+
+    @Override public int createMissile(int id, Vector2 angle, Vector2 position, int ownerId) {
+      Missiles.Entry row = Riiablo.files.Missiles.get(id);
+      if (row == null) return Engine.INVALID_ENTITY;
+      int entity = world.create();
+      Missile missile = world.getMapper(Missile.class).create(entity)
+          .set(row, position, row.Range).setOwner(ownerId);
+      world.getMapper(Position.class).create(entity).position.set(position);
+      world.getMapper(Velocity.class).create(entity).velocity.set(angle).setLength(row.Vel);
+      created.add(missile);
+      return entity;
+    }
+
+    @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }
+    @Override public int createDynamicObject(int act, int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createStaticObject(int act, int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createStaticObjectByClassId(int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createMonster(int id, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createWarp(int index, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createItem(Item item, float x, float y) { return Engine.INVALID_ENTITY; }
+    @Override public int createMissile(int id, Vector2 angle, Vector2 position) {
+      return createMissile(id, angle, position, -1);
     }
   }
 }
