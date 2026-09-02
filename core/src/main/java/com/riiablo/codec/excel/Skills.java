@@ -54,6 +54,7 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  castoverlay;
     @Column public String  aurastate;
     @Column public String  auralencalc;
+    @Column public String  aurarangecalc;
     @Column public String  anim;
     @Column public String  seqtrans;
     @Column public String  monanim;
@@ -81,6 +82,10 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  calc2;
     @Column public String  calc3;
     @Column public String  calc4;
+    /** Native summon and pet limit fields used by class summon handlers. */
+    @Column public String  summon;
+    @Column public String  pettype;
+    @Column public String  petmax;
     /** Generic server missile spawned by D2GAME_SKILLS_Handler after SrvDoFunc. */
     @Column public String  srvmissile;
     @Column public String  srvmissilea;

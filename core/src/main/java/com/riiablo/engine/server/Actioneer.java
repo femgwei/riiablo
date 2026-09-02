@@ -484,6 +484,11 @@ public class Actioneer extends PassiveSystem {
       case 5: // left hand throw
       case 65: // Throw skill (skillId=2)
         break;
+      case 6: // Amazon Power/Charged Strike; combat resolves at the keyframe
+      case 10: // Amazon Lightning Strike; chain resolves at the keyframe
+        log.debug("[AMAZON_SKILL] phase=start entity={} target={} srvStFunc={} delegated=keyframe",
+            entityId, targetId, srvstfunc);
+        break;
       case 42: // native Fire Hit pre-hit setup; resolved authoritatively at the keyframe
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
@@ -548,6 +553,8 @@ public class Actioneer extends PassiveSystem {
         break;
       case 1: // attack
       case 7: // native Jab: same authoritative hit path, skill-specific animation
+      case 11: // native Charged Strike: melee hit plus bolts from ServerSkillSystem
+      case 14: // native Lightning Strike: melee hit plus chain from ServerSkillSystem
       case 9: // player Frenzy
       case 109: { // monster Frenzy / BloodLordFrenzy
         if (srvdofunc == 7) {
@@ -575,7 +582,8 @@ public class Actioneer extends PassiveSystem {
 
         if (mCasting.has(entityId)
             && ((srvdofunc == 1 && mCasting.get(entityId).skillId == SkillCodes.attack)
-                || srvdofunc == 9 || srvdofunc == 109)) {
+                || srvdofunc == 9 || srvdofunc == 11 || srvdofunc == 14
+                || srvdofunc == 109)) {
           if (isPlayerRangedNormalAttack(entityId)) {
             // ServerSkillSystem creates the Arrow/Bolt at this keyframe.
             break;

@@ -12,6 +12,10 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.EntityFactory;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -28,6 +32,8 @@ import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.logger.LogManager;
@@ -46,6 +52,7 @@ import com.riiablo.map.Map;
  * </ul>
  */
 @All({Missile.class, Position.class, Velocity.class})
+@com.artemis.annotations.Wire(failOnNull = false)
 public class MissileCollisionSystem extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(MissileCollisionSystem.class);
   
@@ -63,6 +70,8 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
+  @com.artemis.annotations.Wire(name = "factory", failOnNull = false)
+  protected EntityFactory factory;
   
   protected EventSystem events;
   
@@ -245,6 +254,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         return false;
       }
 
+      if (missile.missile != null && missile.missile.pSrvHitFunc == 20) {
+        spawnLightningFuryBolts(missile, missilePos, targetId);
+      }
+
       if (!mAttributesWrapper.has(missile.ownerId) || !mAttributesWrapper.has(targetId)) {
         log.warn("Missile {} collided with entity {} without complete combat attributes", missileId, targetId);
         world.delete(missileId);
@@ -362,6 +375,72 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /** D2MOO MISSMODE_SrvHit20_LightningFury. */
+  private void spawnLightningFuryBolts(Missile source, Vector2 origin, int struckTarget) {
+    if (factory == null || source == null || source.missile == null
+        || source.missile.HitSubMissile == null
+        || source.missile.HitSubMissile.length == 0) return;
+    String subMissileName = source.missile.HitSubMissile[0];
+    if (subMissileName == null || subMissileName.isEmpty()) return;
+    Missiles.Entry subMissile = Riiablo.files.Missiles.get(subMissileName);
+    if (subMissile == null) {
+      log.warn("[AMAZON_LIGHTNING_FURY] phase=reject owner={} reason=missing_submissile name={}",
+          source.ownerId, subMissileName);
+      return;
+    }
+    Skills.Entry skill = source.missile.Skill == null || source.missile.Skill.isEmpty()
+        ? Riiablo.files.skills.get("Lightning Fury")
+        : Riiablo.files.skills.get(source.missile.Skill);
+    int level = Math.max(1, source.damageLevel);
+    int range = lightningFuryRange(source.missile, skill, level);
+    int maximum = lightningFuryBoltCount(source.missile, skill, level);
+
+    Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, range);
+    targets.sort((left, right) -> Float.compare(
+        mPosition.get(left).position.dst2(origin), mPosition.get(right).position.dst2(origin)));
+    int created = 0;
+    for (int i = 0; i < targets.size && created < maximum; i++) {
+      int targetId = targets.get(i);
+      if (targetId == struckTarget || targetId == source.ownerId
+          || !mPosition.has(targetId) || !isEnemy(source.ownerId, targetId)) continue;
+      if (mNativeUnitFlags.has(targetId)
+          && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) continue;
+      Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(origin);
+      if (direction.isZero(0.0001f)) continue;
+      int boltId = factory.createMissile(subMissile, direction.nor(), origin, source.ownerId);
+      if (boltId < 0) continue;
+      if (mMissile.has(boltId)) {
+        Missile bolt = mMissile.get(boltId);
+        Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+            ? mAttributesWrapper.get(source.ownerId).attrs : null;
+        Monster ownerMonster = mMonster.has(source.ownerId) ? mMonster.get(source.ownerId) : null;
+        MissileDamageResolver.initialize(bolt, ownerAttrs, ownerMonster, -1, level, 0);
+      }
+      created++;
+    }
+    log.info("[AMAZON_LIGHTNING_FURY] phase=split owner={} struckTarget={} level={} "
+            + "range={} maximum={} created={} missile={}",
+        source.ownerId, struckTarget, level, range, maximum, created, subMissileName);
+  }
+
+  static int lightningFuryRange(Missiles.Entry missile, Skills.Entry skill, int level) {
+    int configured = arrayValue(missile != null ? missile.sHitPar : null, 0);
+    int calculated = configured > 0 ? configured
+        : SkillFormula.evaluate(skill != null ? skill.aurarangecalc : null, skill, level);
+    return Math.max(1, Math.min(64, calculated));
+  }
+
+  static int lightningFuryBoltCount(Missiles.Entry missile, Skills.Entry skill, int level) {
+    int configured = arrayValue(missile != null ? missile.sHitPar : null, 1);
+    int calculated = configured > 0 ? configured
+        : SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, level);
+    return Math.max(1, Math.min(64, calculated));
+  }
+
+  private static int arrayValue(int[] values, int index) {
+    return values != null && index >= 0 && index < values.length ? values[index] : 0;
   }
 
   public int mercenaryCollisionCount() {

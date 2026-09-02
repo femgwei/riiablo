@@ -42,6 +42,7 @@ public class Skills {
   public String castoverlay;
   public String aurastate;
   public String auralencalc;
+  public String aurarangecalc;
   public String anim;
   public String seqtrans;
   public String monanim;
@@ -72,6 +73,9 @@ public class Skills {
   public String calc2;
   public String calc3;
   public String calc4;
+  public String summon;
+  public String pettype;
+  public String petmax;
   public String srvmissile;
   public String srvmissilea;
   public String srvmissileb;

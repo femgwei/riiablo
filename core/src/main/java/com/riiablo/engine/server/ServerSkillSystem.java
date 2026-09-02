@@ -198,6 +198,14 @@ public class ServerSkillSystem extends PassiveSystem {
       spawnMultipleShotTeethShockWave(event, skill, start);
       return;
     }
+    if (event.srvdofunc == 11 || skill.srvdofunc == 11) {
+      spawnChargedStrike(event, skill, start);
+      return;
+    }
+    if (event.srvdofunc == 14 || skill.srvdofunc == 14) {
+      spawnLightningStrike(event, skill);
+      return;
+    }
     if (event.srvdofunc == 24 || skill.srvdofunc == 24) {
       spawnFireWall(event, skill, start);
       return;
@@ -438,7 +446,8 @@ public class ServerSkillSystem extends PassiveSystem {
     for (int jump = 0; jump < maxHits; jump++) {
       int next = jump == 0 && event.targetId >= 0 && mPosition.has(event.targetId)
           && isHostile(event.entityId, event.targetId)
-          ? event.targetId : findNearestHostile(event.entityId, from, visited);
+          ? event.targetId : findNearestHostile(
+              event.entityId, from, visited, CHAIN_LIGHTNING_JUMP_RANGE2);
       if (next < 0 || !mPosition.has(next)) break;
       Vector2 destination = mPosition.get(next).position;
       Vector2 direction = new Vector2(destination).sub(from);
@@ -458,8 +467,80 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, event.targetId, created, missileName, created > 0 ? "PASS" : "EMPTY");
   }
 
-  private int findNearestHostile(int sourceId, Vector2 origin, IntSet visited) {
-    boolean sourcePlayer = mPlayer.has(sourceId);
+  /** Native Amazon SrvDo011: release Calc1 charged bolts from the hit target. */
+  private void spawnChargedStrike(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
+    if (event.targetId < 0 || !mPosition.has(event.targetId)) {
+      log.debug("[AMAZON_CHARGED_STRIKE] phase=reject source={} target={} reason=no_target",
+          event.entityId, event.targetId);
+      return;
+    }
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[AMAZON_CHARGED_STRIKE] phase=reject source={} reason=missing_missile name={}",
+          event.entityId, missileName);
+      return;
+    }
+    int skillLevel = getSkillLevel(event.entityId, event.skillId);
+    int count = chargedStrikeBoltCount(skill, skillLevel);
+    Vector2 origin = mPosition.get(event.targetId).position;
+    Vector2 base = new Vector2(origin).sub(caster);
+    if (base.isZero(0.0001f)) base.set(1f, 0f);
+    base.nor();
+    IntSet hitTargets = new IntSet();
+    // The melee stage resolves the struck target. Native charged bolts start
+    // on that target but do not immediately re-hit it.
+    hitTargets.add(event.targetId);
+    int created = 0;
+    Vector2 direction = new Vector2();
+    for (int i = 0; i < count; i++) {
+      chargedStrikeDirection(base, i, count, direction);
+      if (createMissile(missile, direction, origin, event.entityId,
+          hitTargets, skillLevel) >= 0) created++;
+    }
+    log.info("[AMAZON_CHARGED_STRIKE] phase=spawn source={} target={} level={} "
+            + "missile={} requested={} created={}",
+        event.entityId, event.targetId, skillLevel, missileName, count, created);
+  }
+
+  /** Native Amazon SrvDo014: chain from the melee victim to nearby enemies. */
+  private void spawnLightningStrike(SkillDoEvent event, Skills.Entry skill) {
+    if (event.targetId < 0 || !mPosition.has(event.targetId)) return;
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.srvmissileb);
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[AMAZON_LIGHTNING_STRIKE] phase=reject source={} reason=missing_missile name={}",
+          event.entityId, missileName);
+      return;
+    }
+    int skillLevel = getSkillLevel(event.entityId, event.skillId);
+    int maxJumps = lightningStrikeJumpCount(skill, skillLevel);
+    float range = lightningStrikeRange(skill, skillLevel);
+    float range2 = range * range;
+    IntSet visited = new IntSet();
+    visited.add(event.targetId);
+    Vector2 from = new Vector2(mPosition.get(event.targetId).position);
+    int created = 0;
+    for (int jump = 0; jump < maxJumps; jump++) {
+      int next = findNearestHostile(event.entityId, from, visited, range2);
+      if (next < 0 || !mPosition.has(next)) break;
+      Vector2 destination = mPosition.get(next).position;
+      Vector2 direction = new Vector2(destination).sub(from);
+      IntSet segmentHits = copySet(visited);
+      if (!direction.isZero(0.0001f)
+          && createMissile(missile, direction.nor(), from, event.entityId,
+              segmentHits, skillLevel) >= 0) {
+        created++;
+      }
+      visited.add(next);
+      from.set(destination);
+    }
+    log.info("[AMAZON_LIGHTNING_STRIKE] phase=spawn source={} initialTarget={} "
+            + "level={} range={} maxJumps={} created={} missile={}",
+        event.entityId, event.targetId, skillLevel, range, maxJumps, created, missileName);
+  }
+
+  private int findNearestHostile(int sourceId, Vector2 origin, IntSet visited, float range2) {
     IntBag entities = world.getAspectSubscriptionManager()
         .get(Aspect.all(Position.class)).getEntities();
     int nearest = Engine.INVALID_ENTITY;
@@ -469,12 +550,43 @@ public class ServerSkillSystem extends PassiveSystem {
       if (candidate == sourceId || visited.contains(candidate) || !isHostile(sourceId, candidate)
           || !mPosition.has(candidate)) continue;
       float distance = origin.dst2(mPosition.get(candidate).position);
-      if (distance <= CHAIN_LIGHTNING_JUMP_RANGE2 && distance < nearestDistance) {
+      if (distance <= range2 && distance < nearestDistance) {
         nearestDistance = distance;
         nearest = candidate;
       }
     }
     return nearest;
+  }
+
+  static int chargedStrikeBoltCount(Skills.Entry skill, int skillLevel) {
+    int count = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, skillLevel);
+    return Math.max(1, Math.min(64, count));
+  }
+
+  static Vector2 chargedStrikeDirection(Vector2 base, int index, int count, Vector2 out) {
+    if (count <= 1) return out.set(base).nor();
+    // Native SKILLS_MissileInit_ChargedBolt seeds each bolt by ordinal. A
+    // deterministic 180-degree fan preserves that separation on this engine's
+    // direction-based missile API.
+    float offset = MathUtils.PI * (index / (float) (count - 1) - 0.5f);
+    return out.set(base).rotateRad(offset).nor();
+  }
+
+  static int lightningStrikeJumpCount(Skills.Entry skill, int skillLevel) {
+    int count = SkillFormula.evaluate(skill != null ? skill.calc2 : null, skill, skillLevel);
+    return Math.max(1, Math.min(64, count));
+  }
+
+  static float lightningStrikeRange(Skills.Entry skill, int skillLevel) {
+    int range = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, skillLevel);
+    return Math.max(1, Math.min(64, range));
+  }
+
+  private static IntSet copySet(IntSet source) {
+    IntSet copy = new IntSet(source != null ? source.size : 0);
+    if (source == null) return copy;
+    for (IntSet.IntSetIterator it = source.iterator(); it.hasNext; ) copy.add(it.next());
+    return copy;
   }
 
   private boolean isHostile(int sourceId, int candidate) {
