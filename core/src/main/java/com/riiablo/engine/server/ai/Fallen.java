@@ -18,6 +18,8 @@ import com.riiablo.logger.Logger;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeAiCommand;
+import com.riiablo.engine.server.component.NativeTargeting;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
@@ -57,6 +59,7 @@ public class Fallen extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Sequence> mSequence;
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<NativeAiCommand> mNativeAiCommand;
 
   private EntitySubscription monsterEntities;  // All monsters to check for death animation
 
@@ -78,6 +81,7 @@ public class Fallen extends AI {
   @Override
   public void kill() {
     if (stateMachine.getCurrentState() == State.DEAD) return;
+    if (mNativeAiCommand.has(entityId)) mNativeAiCommand.remove(entityId);
     pathfinder.findPath(entityId, null);
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
@@ -141,10 +145,92 @@ public class Fallen extends AI {
    * For now, we'll use a simplified check based on monster type.
    */
   private boolean isLeader() {
-    // TODO: Implement proper minion system check
-    // For now, assume Fallen Shaman or unique Fallen are leaders
-    // This is a simplified check - full implementation would check minion list
-    return false;  // Simplified: most Fallen are not leaders
+    return electedLeader() == entityId;
+  }
+
+  /**
+   * D2MOO stores an explicit minion owner. Legacy map exports currently retain
+   * the native clustered placement but not that pointer, so elect the lowest
+   * entity id in the local Fallen cluster as its stable owner.
+   */
+  private int electedLeader() {
+    if (!mPosition.has(entityId)) return Engine.INVALID_ENTITY;
+    int leader = entityId;
+    int members = 0;
+    Vector2 position = mPosition.get(entityId).position;
+    IntBag candidates = monsterEntities.getEntities();
+    for (int i = 0, size = candidates.size(); i < size; i++) {
+      int candidate = candidates.get(i);
+      if (!isFallenPackMember(candidate) || !sameNativeZone(candidate)) continue;
+      if (position.dst2(mPosition.get(candidate).position) > 15f * 15f) continue;
+      members++;
+      leader = Math.min(leader, candidate);
+    }
+    return members > 1 ? leader : Engine.INVALID_ENTITY;
+  }
+
+  private boolean isFallenPackMember(int candidate) {
+    if (!mMonster.has(candidate) || !mPosition.has(candidate)) return false;
+    Monster value = mMonster.get(candidate);
+    return value.monstats != null && "Fallen".equalsIgnoreCase(value.monstats.AI)
+        && (!mNativeUnitFlags.has(candidate)
+            || NativeTargeting.canBeAttacked(mNativeUnitFlags.get(candidate)));
+  }
+
+  private boolean sameNativeZone(int candidate) {
+    if (!mMapWrapper.has(entityId) || !mMapWrapper.has(candidate)) return true;
+    return mMapWrapper.get(entityId).zone == mMapWrapper.get(candidate).zone;
+  }
+
+  private int commandMinions(int targetId) {
+    int commanded = 0;
+    Vector2 position = mPosition.get(entityId).position;
+    IntBag candidates = monsterEntities.getEntities();
+    for (int i = 0, size = candidates.size(); i < size; i++) {
+      int candidate = candidates.get(i);
+      if (!isFallenPackMember(candidate) || !sameNativeZone(candidate)) continue;
+      if (position.dst2(mPosition.get(candidate).position) > 15f * 15f) continue;
+      mNativeAiCommand.create(candidate).set(
+          entityId, NativeAiCommand.ATTACK, targetId);
+      commanded++;
+    }
+    log.info("[FALLEN_COMMAND] phase=attack owner={} target={} members={}",
+        entityId, targetId, commanded);
+    return commanded;
+  }
+
+  private boolean executeCommand(int targetId, Vector2 targetPos, boolean inCombat) {
+    if (!mNativeAiCommand.has(entityId)) return false;
+    NativeAiCommand command = mNativeAiCommand.get(entityId);
+    if (!command.isAttack() || !mPosition.has(targetId)
+        || !isLivingCommandOwner(command.ownerId)) {
+      mNativeAiCommand.remove(entityId);
+      return false;
+    }
+    if (!inCombat) {
+      if (!moveTo(targetPos, false, 0, true, targetId)) {
+        mNativeAiCommand.remove(entityId);
+      }
+      stateMachine.changeState(State.APPROACH);
+      return true;
+    }
+    if (!MathUtils.randomBoolean(params[2] / 100f)) {
+      time = 5f * com.riiablo.codec.Animation.FRAME_DURATION;
+      return true;
+    }
+    mNativeAiCommand.remove(entityId);
+    aiParam0 = true;
+    return false;
+  }
+
+  private boolean isLivingCommandOwner(int ownerId) {
+    if (ownerId == Engine.INVALID_ENTITY || !mMonster.has(ownerId)) return false;
+    if (!mAttributesWrapper.has(ownerId)) return true;
+    com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(ownerId).attrs;
+    com.riiablo.attributes.StatRef hp = attrs == null ? null
+        : attrs.get(com.riiablo.attributes.Stat.hitpoints,
+            com.riiablo.attributes.StatRef.obtain());
+    return hp == null || hp.asFixed() > 0f;
   }
 
   /**
@@ -256,6 +342,7 @@ public class Fallen extends AI {
     // This check happens every AI update, so it will catch nearby Fallen deaths quickly
     if (checkNearbyCorpse()) {
       aiParam0 = true;  // Set flag like D2MOD's dwAiParam[0] = 1
+      if (mNativeAiCommand.has(entityId)) mNativeAiCommand.remove(entityId);
       
       // Find target to escape from (player)
       float[] escapeDistance = { Float.MAX_VALUE };
@@ -362,6 +449,8 @@ public class Fallen extends AI {
       }
     }
 
+    if (executeCommand(targetId, targetPos, bCombat)) return;
+
     // D2MOD: If not in combat and checkSpecialAiState, walk to target
     if (!bCombat && checkSpecialAiState()) {
       // Remove Sequence component if exists to allow VelocityModeChanger to set walk/run mode
@@ -380,8 +469,7 @@ public class Fallen extends AI {
 
     // D2MOD: If distance < 15 and is leader, command minions to attack (30% chance)
     if (targetDistance < 15f && isLeader() && MathUtils.randomBoolean(params[0] / 100f)) {
-      // TODO: Implement command minions logic
-      // For now, just use skill2 mode
+      commandMinions(targetId);
       aiParam0 = true;
       lookAt(targetId);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_S2, Engine.Monster.MODE_NU);
