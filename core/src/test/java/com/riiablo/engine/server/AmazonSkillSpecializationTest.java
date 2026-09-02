@@ -26,6 +26,7 @@ import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.combat.DefenseCalculator;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
@@ -36,7 +37,9 @@ import org.junit.jupiter.api.Test;
 class AmazonSkillSpecializationTest extends RiiabloTest {
   @Test
   void auditNativeAmazonSpecialRows() {
-    String[] names = {"Multiple Shot", "Guided Arrow", "Strafe", "Pierce", "Charged Strike",
+    String[] names = {"Magic Arrow", "Fire Arrow", "Cold Arrow", "Multiple Shot",
+        "Exploding Arrow", "Ice Arrow", "Guided Arrow", "Strafe", "Immolation Arrow",
+        "Freezing Arrow", "Pierce", "Charged Strike",
         "Dopplezon", "Valkyrie", "Lightning Strike", "Lightning Fury"};
     for (String name : names) {
       Skills.Entry skill = Riiablo.files.skills.get(name);
@@ -45,6 +48,8 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           + " srvSt=" + skill.srvstfunc + " srvDo=" + skill.srvdofunc + " calc1=" + skill.calc1
           + " calc2=" + skill.calc2 + " srv=" + skill.srvmissile
           + " srvA=" + skill.srvmissilea + " srvB=" + skill.srvmissileb
+          + " cltDo=" + skill.cltdofunc + " clt=" + skill.cltmissile
+          + " cltA=" + skill.cltmissilea + " cltB=" + skill.cltmissileb
           + " auraRange=" + skill.aurarangecalc + " summon=" + skill.summon
           + " pettype=" + skill.pettype + " petmax=" + skill.petmax
           + " params=" + java.util.Arrays.toString(skill.Param));
@@ -150,6 +155,21 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
         defense.checkPassiveDefense(DefenseCalculator.ATTACK_RANGED, false, 0, 100, 0, 0));
     assertEquals(DefenseCalculator.DEFENSE_EVADE,
         defense.checkPassiveDefense(DefenseCalculator.ATTACK_MELEE, true, 0, 0, 100, 0));
+
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.alwaysHit = true;
+    attacker.level = 1;
+    attacker.minDamage = attacker.maxDamage = 10;
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.level = 1;
+    defender.currentLife = defender.maxLife = 100;
+    defender.attackType = DefenseCalculator.ATTACK_RANGED;
+    defender.isMoving = true;
+    defender.passiveEvade = 100;
+    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(attacker, defender);
+    assertTrue(result.hit);
+    assertTrue(result.blocked);
+    assertEquals(0, result.totalDamage);
   }
 
   private static int monster(World world, float x, float y) {

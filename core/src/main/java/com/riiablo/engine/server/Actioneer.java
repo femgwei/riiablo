@@ -677,7 +677,7 @@ public class Actioneer extends PassiveSystem {
             monsterAttackMinDamage(entityId),
             monsterAttackMaxDamage(entityId),
             monsterAttackRating(entityId),
-            stateList(entityId), stateList(targetId));
+            stateList(entityId), stateList(targetId), isEntityMoving(targetId));
         if (!combat.hit) {
           log.info("[COMBAT_HIT] entity={} target={} result=miss chance={}% attackerLevel={} targetLevel={} ar={} defense={}",
               entityId, targetId, combat.hitChance,
@@ -992,6 +992,10 @@ public class Actioneer extends PassiveSystem {
     return states != null ? states.stateList : null;
   }
 
+  private boolean isEntityMoving(int entityId) {
+    return mVelocity.has(entityId) && !mVelocity.get(entityId).velocity.isZero(0.0001f);
+  }
+
   private void applyCombatStates(int attackerId, int targetId,
       CombatSystem.CombatResult combat) {
     if (!mUnitStates.has(targetId)) return;
@@ -1043,7 +1047,7 @@ public class Actioneer extends PassiveSystem {
         profile.minDamage, profile.maxDamage, profile.attackRating, false,
         profile.elementalMin, profile.elementalMax,
         profile.coldLength, profile.poisonLength,
-        stateList(entityId), stateList(targetId));
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
     if (!combat.hit) {
       log.info("[MONSTER_SKILL] phase=fire_hit_result entity={} target={} result=miss chance={}",
           entityId, targetId, combat.hitChance);
@@ -1163,7 +1167,7 @@ public class Actioneer extends PassiveSystem {
     CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
         attacker, defender, false, isPlayerEntity(targetId), false,
         minDamage, maxDamage, attackRating,
-        stateList(entityId), stateList(targetId));
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
     if (!combat.hit) {
       log.info("[MONSTER_SMITE] phase=result source={} target={} result=miss chance={} distance={}",
           entityId, targetId, combat.hitChance, distance);
@@ -1416,7 +1420,7 @@ public class Actioneer extends PassiveSystem {
         attacker, defender, false, isPlayerEntity(targetId), false,
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
         statInt(attacker, Stat.tohit),
-        stateList(entityId), stateList(targetId));
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
     if (!combat.hit || combat.blocked) {
       log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result={} chance={}",
           entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);

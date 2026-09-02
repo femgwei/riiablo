@@ -336,7 +336,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           arOverride,
           alwaysHit,
           null, null, 0, 0,
-          stateList(missile.ownerId), stateList(targetId));
+          stateList(missile.ownerId), stateList(targetId), isEntityMoving(targetId));
       boolean damageHit = combat.hit && !combat.blocked;
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
@@ -500,6 +500,10 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (!mUnitStates.has(entityId)) return null;
     UnitStates states = mUnitStates.get(entityId);
     return states != null ? states.stateList : null;
+  }
+
+  private boolean isEntityMoving(int entityId) {
+    return mVelocity.has(entityId) && !mVelocity.get(entityId).velocity.isZero(0.0001f);
   }
 
   private static float distanceToSegment(Vector2 point, Vector2 start, Vector2 end) {

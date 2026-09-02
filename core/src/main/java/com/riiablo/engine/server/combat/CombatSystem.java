@@ -367,6 +367,18 @@ public class CombatSystem {
         null, null, 0, 0, attackerStates, defenderStates);
   }
 
+  /** Attack-profile overload carrying movement context for Evade. */
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
+        null, null, 0, 0, attackerStates, defenderStates, defenderMoving);
+  }
+
   public CombatResult calculateAttack(
       Attributes attacker, Attributes defender,
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
@@ -404,6 +416,22 @@ public class CombatSystem {
       int[] elementalMinOverride, int[] elementalMaxOverride,
       int coldLengthOverride, int poisonLengthOverride,
       StateList attackerStates, StateList defenderStates) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, false);
+  }
+
+  /** Full native combat context including movement for Amazon Evade. */
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -495,6 +523,7 @@ public class CombatSystem {
     d.blockChance = statInt(defender, Stat.toblock, 0);
     d.canBlock = d.blockChance > 0 && !missile;
     d.attackType = missile ? DefenseCalculator.ATTACK_RANGED : DefenseCalculator.ATTACK_MELEE;
+    d.isMoving = defenderMoving;
     d.passiveDodge = statInt(defender, Stat.passive_dodge, 0);
     d.passiveAvoid = statInt(defender, Stat.passive_avoid, 0);
     d.passiveEvade = statInt(defender, Stat.passive_evade, 0);

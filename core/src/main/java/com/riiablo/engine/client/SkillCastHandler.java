@@ -159,15 +159,18 @@ public class SkillCastHandler extends PassiveSystem {
 
     Vector2 position = mPosition.has(event.entityId) ? mPosition.get(event.entityId).position : null;
 
-    // In a local game ServerSkillSystem creates and renders the authoritative
-    // monster missile in this same ECS world.  Do not create a second,
-    // ownerless client copy at the same keyframe.  Network clients do not
-    // have ServerSkillSystem and retain the presentation path below.
-    if (mMonster.has(event.entityId)
-        && world.getSystem(ServerSkillSystem.class) != null
-        && hasServerMissile(skill)) {
-      log.info("[MONSTER_SKILL] phase=client_visual_reuses_server entity={} skill={} srvDoFunc={}",
-          event.entityId, skill.skill, skill.srvdofunc);
+    // Network clients receive the authoritative D2GS missile entity shortly
+    // after this event. Creating another local visual here produces doubled
+    // arrows and travel sounds. Local games still need the legacy player
+    // projectile because their ServerSkillSystem runs in monsters-only mode.
+    boolean serverMissile = hasServerMissile(skill);
+    boolean networkClient = world.getSystem(ClientNetworkReceiver.class) != null;
+    boolean localMonsterServer = mMonster.has(event.entityId)
+        && world.getSystem(ServerSkillSystem.class) != null;
+    if (serverMissile && (networkClient || localMonsterServer)) {
+      log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} "
+              + "srvDoFunc={} networkClient={} localMonster={}",
+          event.entityId, skill.skill, skill.srvdofunc, networkClient, localMonsterServer);
       return;
     }
 
@@ -189,6 +192,7 @@ public class SkillCastHandler extends PassiveSystem {
 
     switch (event.cltdofunc) {
       case 0:
+        cltDoGenericMissile(event, skill, position);
         break;
 
       case 1: // Attack - play weapon swing sound
@@ -497,7 +501,7 @@ public class SkillCastHandler extends PassiveSystem {
       return;
     }
 
-    Vector2 angle = tmpVec.set(event.targetVec).sub(position).nor();
+    Vector2 angle = resolveTargetDirection(event, position, tmpVec);
     // Pass event.entityId as ownerId so the missile can properly check collisions
     factory.createMissile(missile, angle, position, event.entityId);
   }
@@ -629,8 +633,40 @@ public class SkillCastHandler extends PassiveSystem {
     factory.createMissile(missile, new Vector2(0, -1), event.targetVec);
   }
 
+  /** Skills.txt/CltMissile path used by Fire/Cold/Ice/Freezing Arrow. */
+  private void cltDoGenericMissile(SkillDoEvent event, Skills.Entry skill, Vector2 position) {
+    if (skill == null || position == null) return;
+    String missileName = hasText(skill.cltmissile) ? skill.cltmissile
+        : hasText(skill.cltmissilea) ? skill.cltmissilea : null;
+    if (!hasText(missileName)) return;
+    Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
+    if (missile == null) {
+      log.warn("[SKILL_PRESENTATION] phase=missing_missile entity={} skill={} missile={}",
+          event.entityId, skill.skill, missileName);
+      return;
+    }
+    Vector2 angle = resolveTargetDirection(event, position, tmpVec);
+    int missileId = factory.createMissile(missile, angle, position, event.entityId);
+    log.info("[SKILL_PRESENTATION] phase=generic_missile entity={} skill={} missile={} "
+            + "missileId={} direction=({}, {})",
+        event.entityId, skill.skill, missileName, missileId, angle.x, angle.y);
+  }
+
+  private Vector2 resolveTargetDirection(SkillDoEvent event, Vector2 position, Vector2 out) {
+    if (event.targetId >= 0 && mPosition.has(event.targetId)) {
+      out.set(mPosition.get(event.targetId).position).sub(position);
+    } else if (event.targetVec != null) {
+      out.set(event.targetVec).sub(position);
+    } else {
+      out.set(1f, 0f);
+    }
+    if (out.isZero(0.0001f)) out.set(1f, 0f);
+    return out.nor();
+  }
+
   private static boolean hasServerMissile(Skills.Entry skill) {
-    return skill != null && (hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
+    return skill != null && (hasText(skill.srvmissile)
+        || hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
         || hasText(skill.srvmissilec) || hasText(skill.srvmissiled));
   }
 
