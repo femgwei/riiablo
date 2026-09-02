@@ -28,6 +28,7 @@ import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.monster.NativeMonsterRegion;
 import com.riiablo.drlg.DrlgContext;
 import com.riiablo.drlg.DrlgLevel;
 import com.riiablo.drlg.DrlgGrid;
@@ -491,13 +492,15 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       final com.badlogic.gdx.net.Socket finalSocket = socket;
       final int finalSeed = seed;
       zone.generator = new Zone.Generator() {
-        final float SPAWN_MULT = 2f;
+        // D2MOO compares one 0..99999 game-seed roll directly with MonDen;
+        // do not multiply density in the compatibility generator.
+        final float SPAWN_MULT = 1f;
         MonStats.Entry[] monsters;
 
         @Override
         public void init(Zone zone) {
           int prob = 0;
-          int numMon = zone.level.NumMon;
+          int numMon = NativeMonsterRegion.selectedEntryCount(zone.level, zone.diff);
           if (numMon <= 0) {
             monsters = new MonStats.Entry[0];
             Gdx.app.log(TAG, String.format(
@@ -511,9 +514,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           // Shaman even though it is not represented by the truncated
           // NumMon prefix used by the compatibility generator.
           boolean addBloodMoorShaman = zone.level.Id == LEVEL_BLOODMOOR;
+          String[] monsterColumns = NativeMonsterRegion.monsterColumns(zone.level, zone.diff);
           MonStats.Entry[] monstats = new MonStats.Entry[numMon + (addBloodMoorShaman ? 1 : 0)];
           for (int j = 0; j < numMon; j++) {
-            String mon = zone.level.mon[j];
+            String mon = monsterColumns[j];
             if (mon == null || mon.isEmpty()) continue;
             monstats[j] = Riiablo.files.monstats.get(mon);
             if (monstats[j] != null) {
