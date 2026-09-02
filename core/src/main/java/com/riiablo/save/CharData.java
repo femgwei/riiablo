@@ -560,6 +560,22 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   public void onUpdated(ItemData itemData) {
     assert itemData.stats == statData;
 
+    // ItemData can be mutated while a character is still being assembled
+    // (for example when a legacy/remote record has no stat section yet).
+    // Native characters always contain these core vitals; skip the derived
+    // refresh until they are present instead of throwing from StatListRef.set.
+    if (statData.get(Stat.stamina) == null
+        || statData.get(Stat.maxstamina) == null
+        || statData.get(Stat.hitpoints) == null
+        || statData.get(Stat.maxhp) == null
+        || statData.get(Stat.mana) == null
+        || statData.get(Stat.maxmana) == null
+        || statData.get(Stat.dexterity) == null
+        || statData.get(Stat.armorclass) == null) {
+      log.debug("Skipping derived stat refresh for incomplete character stat list");
+      return;
+    }
+
     // FIXME: This corrects a mismatch between max and current, algorithm should be tested later for correctness in other cases
     statData.set(Stat.stamina, Stat.maxstamina);
     statData.set(Stat.hitpoints, Stat.maxhp);

@@ -679,7 +679,11 @@ public class ItemData {
       j = cache[i];
       if (j == INVALID_ITEM) continue;
       Item item = itemData.get(j);
-      if (isActive(item)) {
+      // Native item records always carry a type.  Keep malformed/partially
+      // constructed records out of the aggregate pass so a failed item
+      // transaction cannot crash the authoritative server while rebuilding
+      // stats (test fixtures and legacy saves may omit the type).
+      if (isActive(item) && item.type != null) {
         item.update(updater, stats, charStats, equippedSets);
         // Item.update() has already folded the selected item property lists into
         // remaining(). Adding base() or aggregate() here duplicates native item
@@ -733,6 +737,7 @@ public class ItemData {
       j = cache[i];
       if (j == INVALID_ITEM) continue;
       Item item = itemData.get(j);
+      if (item == null || item.type == null) continue;
       if (item.type.is(Type.CHAR)) {
         item.update(updater, stats, charStats, equippedSets);
         update.add(item.attrs.remaining());
@@ -754,7 +759,7 @@ public class ItemData {
       j = equippedCache[i];
       if (j == INVALID_ITEM) continue;
       Item item = itemData.get(j);
-      if (isActive(item) && item.type.is(Type.WEAP)) {
+      if (isActive(item) && item.type != null && item.type.is(Type.WEAP)) {
         // Check if this is a throwable weapon (javelin, throwing knife, throwing axe)
         boolean isThrowable = item.type.is(com.riiablo.item.Type.JAVE) || 
                              item.type.is(com.riiablo.item.Type.TKNI) || 
