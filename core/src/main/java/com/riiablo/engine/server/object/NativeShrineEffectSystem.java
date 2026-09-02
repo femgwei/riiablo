@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -33,6 +34,8 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.engine.server.item.AuthoritativeItemMoveService;
+import com.riiablo.engine.server.item.NativeGemShrineService;
 
 /**
  * Applies the server-authoritative unit effects emitted by native shrines and
@@ -53,12 +56,24 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Player> mPlayer;
 
   @com.artemis.annotations.Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
   @com.artemis.annotations.Wire(name = "itemGenerator", failOnNull = false)
   protected ItemGenerator itemGenerator;
   protected net.mostlyoriginal.api.event.common.EventSystem events;
+
+  private final AuthoritativeItemMoveService authoritativeItems;
+
+  public NativeShrineEffectSystem() {
+    this(null);
+  }
+
+  /** Dedicated servers pass their item transaction service for revision sync. */
+  public NativeShrineEffectSystem(AuthoritativeItemMoveService authoritativeItems) {
+    this.authoritativeItems = authoritativeItems;
+  }
 
   private EntitySubscription mercenaries;
   private EntitySubscription monsters;
@@ -132,12 +147,7 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
         createTownPortal(event);
         break;
       case 18:
-        // Gem shrine inventory mutation requires the same item transaction
-        // lock as multiplayer item moves. Until that service is available,
-        // leave the authoritative inventory untouched and make the omission
-        // observable rather than silently creating a duplicate gem.
-        log.warn("[SHRINE_SPECIAL] gem shrine deferred: player={} shrine={} reason=item_transaction_bridge",
-            event.playerId, event.entityId);
+        gem(event);
         break;
       case 19:
         storm(event);
@@ -155,6 +165,30 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
       default:
         break;
     }
+  }
+
+  private void gem(ShrineInteractionEvent event) {
+    if (mPlayer == null || !mPlayer.has(event.playerId) || factory == null
+        || itemGenerator == null || !mPosition.has(event.entityId)) {
+      log.warn("[SHRINE_SPECIAL] gem rejected player={} shrine={} reason=missing_bridge",
+          event.playerId, event.entityId);
+      return;
+    }
+    Player player = mPlayer.get(event.playerId);
+    if (player == null || player.data == null) return;
+    Vector2 origin = mPosition.get(event.entityId).position;
+    NativeGemShrineService.Result result = NativeGemShrineService.apply(
+        player.data.getItems(), itemGenerator,
+        item -> factory.createItem(item, origin.x, origin.y),
+        created -> { if (created >= 0) world.delete(created); },
+        Math.floorMod(event.playerId + event.shrineId, 7));
+    if (result.mutated() && authoritativeItems != null) {
+      authoritativeItems.markExternalMutation(event.playerId);
+    }
+    log.info("[SHRINE_SPECIAL] gem player={} shrine={} outcome={} source={} output={} entity={} revision={}",
+        event.playerId, event.entityId, result.outcome, result.sourceCode,
+        result.outputCode, result.groundEntityId,
+        authoritativeItems == null ? -1L : authoritativeItems.revision(event.playerId));
   }
 
   private void createTownPortal(ShrineInteractionEvent event) {

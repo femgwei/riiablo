@@ -365,7 +365,19 @@ public class ItemData {
     else if (cursor > i) cursor--;
     setLocation(item, null);
     remove(i);
+    // Keep derived equipment/character stats and network listeners in sync
+    // with authoritative inventory mutations (including gem shrines).
+    updateStats();
+    notifyUpdated();
     return true;
+  }
+
+  /** Removes an exact inventory item without relying on a stale array index. */
+  public boolean removeInventoryItem(Item item) {
+    if (item == null) return false;
+    int index = indexOf(item);
+    return index != INVALID_ITEM && itemData.get(index) == item
+        && removeOwnedItem(index);
   }
 
   /**

@@ -923,7 +923,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new ObjectInitializer())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new NativeObjectDropSystem())
-        .with(new NativeShrineEffectSystem())
+        .with(new NativeShrineEffectSystem(authoritativeItems))
         .with(new NativeShrineSystem())
         .with(new NativeTrapSystem())
         .with(new NativeTrapFireSystem())

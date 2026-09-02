@@ -47,6 +47,13 @@ public final class AuthoritativeItemMoveService {
 
   public synchronized void reset(int playerEntityId) { revisions.remove(playerEntityId); }
 
+  /** Advances the inventory revision for a mutation performed outside an item packet. */
+  public synchronized long markExternalMutation(int playerEntityId) {
+    long next = revision(playerEntityId) + 1L;
+    revisions.put(playerEntityId, next);
+    return next;
+  }
+
   public synchronized Outcome apply(int playerEntityId, CharData character, ItemMoveIntent intent) {
     long current = revision(playerEntityId);
     if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
