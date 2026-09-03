@@ -20,6 +20,12 @@ public class Casting extends PooledComponent {
   public boolean dragonTalonInitialized;
   public boolean dragonTalonProgressiveReleased;
   public boolean dragonTalonKickProcessed;
+  /** Server-only state for native Dragon Claw's A2/S4 two-hit sequence. */
+  public int dragonClawRemainingStrikes;
+  public int dragonClawStrikeIndex;
+  public boolean dragonClawInitialized;
+  public boolean dragonClawProgressiveReleased;
+  public boolean dragonClawStrikeProcessed;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     this.skillId = skillId;
@@ -30,6 +36,11 @@ public class Casting extends PooledComponent {
     dragonTalonInitialized = false;
     dragonTalonProgressiveReleased = false;
     dragonTalonKickProcessed = false;
+    dragonClawRemainingStrikes = 0;
+    dragonClawStrikeIndex = 0;
+    dragonClawInitialized = false;
+    dragonClawProgressiveReleased = false;
+    dragonClawStrikeProcessed = false;
     return this;
   }
 
@@ -43,5 +54,10 @@ public class Casting extends PooledComponent {
     dragonTalonInitialized = false;
     dragonTalonProgressiveReleased = false;
     dragonTalonKickProcessed = false;
+    dragonClawRemainingStrikes = 0;
+    dragonClawStrikeIndex = 0;
+    dragonClawInitialized = false;
+    dragonClawProgressiveReleased = false;
+    dragonClawStrikeProcessed = false;
   }
 }

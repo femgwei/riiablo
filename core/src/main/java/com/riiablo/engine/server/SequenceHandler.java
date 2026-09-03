@@ -35,6 +35,17 @@ public class SequenceHandler extends IteratingSystem {
           event.entityId, casting.dragonTalonRemainingKicks);
       return;
     }
+    if (casting != null && casting.dragonClawInitialized
+        && casting.dragonClawRemainingStrikes > 0
+        && casting.dragonClawStrikeProcessed) {
+      byte nextMode = com.riiablo.engine.Engine.Player.MODE_S4;
+      sequence.sequence(nextMode, sequence.mode2);
+      mAnimData.get(event.entityId).override = -1;
+      com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).info(
+          "[ASSASSIN_DRAGON_CLAW] phase=second_animation entity={} remaining={} mode={}",
+          event.entityId, casting.dragonClawRemainingStrikes, (int) nextMode);
+      return;
+    }
     // Log sequence transition for debugging
     com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(SequenceHandler.class);
     log.trace("Sequence finished for entity {}: mode1={} -> mode2={}", event.entityId, sequence.mode1, sequence.mode2);
@@ -53,6 +64,9 @@ public class SequenceHandler extends IteratingSystem {
       Casting casting = mCasting.get(entityId);
       if (casting != null && casting.dragonTalonInitialized) {
         casting.dragonTalonKickProcessed = false;
+      }
+      if (casting != null && casting.dragonClawInitialized) {
+        casting.dragonClawStrikeProcessed = false;
       }
       sequence.started = true;
       // D2 starts each action at frame zero. Force the COF event even when a

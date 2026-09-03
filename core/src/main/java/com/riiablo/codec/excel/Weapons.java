@@ -18,6 +18,9 @@ public class Weapons extends Excel<Weapons.Entry> {
     @Column public int     maxmisdam;
     @Column public int     reqstr;
     @Column public int     reqdex;
+    /** Native strength/dexterity scaling used by hand-specific attacks. */
+    @Column public int     StrBonus;
+    @Column public int     DexBonus;
     @Column public int     durability;
   }
 }

@@ -9,6 +9,8 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Weapons;
+import com.riiablo.item.Item;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
@@ -607,8 +609,42 @@ public final class AssassinSkills {
    * @return 伤害加成百分比
    */
   public static int calculateDragonClawDamageBonus(int skillLevel) {
-    // 每级 +5%
-    return 5 * skillLevel;
+    return 50 + Math.max(1, skillLevel) * 5;
+  }
+
+  /** D2MOO sub_6FCF8C70: calc1 is added to the selected claw's ED. */
+  public static int calculateDragonClawDamageBonus(Skills.Entry skill, int skillLevel) {
+    int value = SkillFormula.evaluate(skill != null ? skill.calc1 : null,
+        skill, Math.max(1, skillLevel));
+    return value != 0 ? value : calculateDragonClawDamageBonus(skillLevel);
+  }
+
+  public static int dragonClawAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker) {
+    return dragonTalonAttackRating(skill, skillLevel, attacker);
+  }
+
+  /** Fully scaled physical range for one hand of native Dragon Claw. */
+  public static int[] calculateDragonClawDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item claw) {
+    if (claw == null || !(claw.base instanceof Weapons.Entry)) return null;
+    Weapons.Entry weapon = (Weapons.Entry) claw.base;
+    int min = itemStatInt(claw, Stat.mindamage, weapon.mindam);
+    int max = itemStatInt(claw, Stat.maxdamage, Math.max(min, weapon.maxdam));
+    int percent = calculateDragonClawDamageBonus(skill, skillLevel)
+        + weapon.StrBonus * statInt(attacker, Stat.strength) / 100
+        + weapon.DexBonus * statInt(attacker, Stat.dexterity) / 100
+        + statInt(attacker, Stat.damagepercent)
+        + statInt(attacker, Stat.item_maxdamage_percent);
+    percent = Math.max(-90, percent);
+    return new int[] {scale(min, percent), scale(Math.max(min, max), percent)};
+  }
+
+  private static int itemStatInt(Item item, short stat, int fallback) {
+    if (item == null || item.attrs == null) return fallback;
+    StatRef ref = item.attrs.get(stat, StatRef.obtain());
+    if (ref == null) ref = item.attrs.base().get(stat, StatRef.obtain());
+    return ref == null ? fallback : ref.asInt();
   }
 
   /**

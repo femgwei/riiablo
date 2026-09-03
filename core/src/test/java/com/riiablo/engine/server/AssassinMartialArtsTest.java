@@ -23,8 +23,11 @@ import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
@@ -44,6 +47,130 @@ import org.junit.jupiter.api.Test;
 
 /** Native SrvDo034/SrvDo035 regression coverage. */
 class AssassinMartialArtsTest extends RiiabloTest {
+  @Test
+  void dragonClawUsesNativeSkillAndHandSpecificDamageData() {
+    Skills.Entry claw = Riiablo.files.skills.get("Dragon Claw");
+    assertNotNull(claw);
+    assertEquals(25, claw.srvstfunc);
+    assertEquals(46, claw.srvdofunc);
+    assertEquals(com.riiablo.engine.server.skill.SkillFormula.evaluate(
+            claw.calc1, claw, 7),
+        AssassinSkills.calculateDragonClawDamageBonus(claw, 7));
+
+    Attributes attrs = attributes(100, 1, 1, 1000);
+    attrs.base().put(Stat.strength, 100);
+    attrs.base().put(Stat.dexterity, 100);
+    attrs.reset();
+    Item right = testClaw("ktr", 10);
+    Item left = testClaw("wrb", 40);
+    int[] rightDamage = AssassinSkills.calculateDragonClawDamage(claw, 7, attrs, right);
+    int[] leftDamage = AssassinSkills.calculateDragonClawDamage(claw, 7, attrs, left);
+    assertNotNull(rightDamage);
+    assertNotNull(leftDamage);
+    assertTrue(leftDamage[0] > rightDamage[0]);
+    assertTrue(rightDamage[1] >= rightDamage[0]);
+    assertTrue(AssassinSkills.dragonClawAttackRating(claw, 7, attrs) > 0);
+  }
+
+  @Test
+  void dragonClawRunsA2ThenS4AndConsumesProgressiveChargesOnce() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    SequenceHandler sequenceHandler = new SequenceHandler();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), actioneer, sequenceHandler,
+            new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      Attributes assassinAttrs = attributes(1000, 1, 1, 100000);
+      assassinAttrs.base().put(Stat.strength, 100);
+      assassinAttrs.base().put(Stat.dexterity, 100);
+      assassinAttrs.reset();
+      int assassin = createPlayer(world, 0, 0, assassinAttrs);
+      int target = createMonster(world, 1, 0, attributes(100000, 0, 0, 0));
+      Skills.Entry claw = Riiablo.files.skills.get("Dragon Claw");
+      Skills.Entry tiger = Riiablo.files.skills.get("Tiger Strike");
+      CharData data = CharData.createRemote("claw", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(claw.Id, 7);
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM,
+          data.getItems().add(testClaw("ktr", 10)));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM,
+          data.getItems().add(testClaw("wrb", 40)));
+      world.getMapper(Player.class).get(assassin).data = data;
+      world.getMapper(MovementModes.class).create(assassin).set(
+          Engine.Player.MODE_NU, Engine.Player.MODE_WL, Engine.Player.MODE_RN);
+      world.getMapper(Sequence.class).create(assassin).sequence(
+          Engine.Player.MODE_SC, Engine.Player.MODE_NU);
+      world.getMapper(AnimData.class).create(assassin).override = -1;
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      AssassinSkills.addProgressiveCharge(states, tiger, 5, assassin);
+      Casting casting = world.getMapper(Casting.class).get(assassin)
+          .set(claw.Id, target, world.getMapper(Position.class).get(target).position);
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, claw.Id, target, casting.targetVec, claw.srvstfunc, claw.cltstfunc));
+      assertEquals(2, casting.dragonClawRemainingStrikes);
+      assertEquals(Engine.Player.MODE_A2,
+          world.getMapper(Sequence.class).get(assassin).mode1);
+
+      MathUtils.random.setSeed(0xD2C1A0L);
+      Attributes targetAttrs = world.getMapper(AttributesWrapper.class).get(target).attrs;
+      float initialHp = targetAttrs.get(Stat.hitpoints).asFixed();
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+      float afterRight = targetAttrs.get(Stat.hitpoints).asFixed();
+      assertTrue(afterRight < initialHp);
+      assertEquals(1, casting.dragonClawRemainingStrikes);
+      assertNull(states.getState(StateId.PROGRESSIVE_DAMAGE));
+      AssassinSkills.addProgressiveCharge(states, tiger, 5, assassin);
+
+      world.getSystem(EventSystem.class).dispatch(AnimDataFinishedEvent.obtain(assassin));
+      assertTrue(world.getMapper(Casting.class).has(assassin));
+      assertEquals(Engine.Player.MODE_S4,
+          world.getMapper(Sequence.class).get(assassin).mode1);
+
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+      float afterLeft = targetAttrs.get(Stat.hitpoints).asFixed();
+      assertTrue(afterRight - afterLeft > initialHp - afterRight,
+          "the stronger left claw must provide the second hit's physical profile");
+      assertEquals(0, casting.dragonClawRemainingStrikes);
+      assertEquals(1, AssassinSkills.progressiveCharges(
+          states, StateId.PROGRESSIVE_DAMAGE));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void sharedSrvSt25DoesNotApplyDragonClawEquipmentRulesToMonFrenzy() {
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new Actioneer(), new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int monster = createMonster(world, 0, 0, attributes(100, 1, 1, 100));
+      int target = createPlayer(world, 1, 0, attributes(100, 1, 1, 100));
+      Skills.Entry monFrenzy = Riiablo.files.skills.get("MonFrenzy");
+      assertNotNull(monFrenzy);
+      assertEquals(64, monFrenzy.srvstfunc);
+      assertEquals(109, monFrenzy.srvdofunc);
+      Casting casting = world.getMapper(Casting.class).create(monster)
+          .set(monFrenzy.Id, target, world.getMapper(Position.class).get(target).position);
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          monster, monFrenzy.Id, target, casting.targetVec,
+          monFrenzy.srvstfunc, monFrenzy.cltstfunc));
+
+      assertTrue(world.getMapper(Casting.class).has(monster),
+          "native shared SrvSt25 only requires a target for MonFrenzy");
+      assertTrue(!casting.dragonClawInitialized,
+          "MonFrenzy must not enter the player-only Dragon Claw sequence");
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void dragonTalonUsesNativeCountDamageAndKnockbackFormulas() {
     Skills.Entry talon = Riiablo.files.skills.get("Dragon Talon");
@@ -1008,6 +1135,16 @@ class AssassinMartialArtsTest extends RiiabloTest {
     attrs.base().put(Stat.armorclass, 0);
     attrs.reset();
     return attrs;
+  }
+
+  private static Item testClaw(String code, int damage) {
+    Item item = new Item();
+    item.reset();
+    item.setBase(Riiablo.files.weapons.get(code));
+    item.attrs.base().get(Stat.mindamage).set(damage);
+    item.attrs.base().get(Stat.maxdamage).set(damage);
+    item.attrs.reset();
+    return item;
   }
 
   private static final class DummyFactory extends EntityFactory {

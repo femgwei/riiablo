@@ -484,6 +484,15 @@ public class Actioneer extends PassiveSystem {
           casting.dragonTalonSuccessfulKicks);
       return;
     }
+    if (casting.dragonClawInitialized
+        && casting.dragonClawRemainingStrikes > 0
+        && casting.dragonClawStrikeProcessed
+        && !targetDead) {
+      log.info("[ASSASSIN_DRAGON_CLAW] phase=continue entity={} target={} remaining={} nextStrike={}",
+          event.entityId, completedTargetId, casting.dragonClawRemainingStrikes,
+          casting.dragonClawStrikeIndex + 1);
+      return;
+    }
     mCasting.remove(event.entityId);
     
     if (targetDead && mSequence.has(event.entityId)) {
@@ -555,6 +564,41 @@ public class Actioneer extends PassiveSystem {
             entityId, targetId, level, casting.dragonTalonRemainingKicks);
         break;
       }
+      case 25: { // SKILLS_SrvSt25_64_DragonClaw_MonFrenzy (Dragon Claw table entry)
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        Item right = equippedClaw(entityId, BodyLoc.RARM);
+        Item left = equippedClaw(entityId, BodyLoc.LARM);
+        if (casting == null || skill == null || targetId == Engine.INVALID_ENTITY) {
+          log.info("[ASSASSIN_DRAGON_CLAW] phase=start_reject entity={} target={} reason=target",
+              entityId, targetId);
+          if (mCasting.has(entityId)) mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        casting.dragonClawRemainingStrikes = right != null && left != null ? 2 : 1;
+        casting.dragonClawStrikeIndex = 0;
+        casting.dragonClawInitialized = true;
+        casting.dragonClawProgressiveReleased = false;
+        casting.dragonClawStrikeProcessed = false;
+        if (mSequence.has(entityId)) {
+          mSequence.get(entityId).sequence(
+              Engine.Player.MODE_A2, mMovementModes.get(entityId).NU);
+        }
+        log.info("[ASSASSIN_DRAGON_CLAW] phase=start entity={} target={} strikes={} right={} left={}",
+            entityId, targetId, casting.dragonClawRemainingStrikes,
+            right != null ? right.code : "none", left != null ? left.code : "none");
+        break;
+      }
+      case 64: // SKILLS_SrvSt25_64_DragonClaw_MonFrenzy (MonFrenzy table entry)
+        // The native shared start function only requires a live target.
+        // MonFrenzy owns its alternating sequence state in SrvDo109 and must
+        // never inherit Dragon Claw's player inventory/hand requirements.
+        if (targetId == Engine.INVALID_ENTITY) {
+          if (mCasting.has(entityId)) mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+        }
+        break;
       case 42: // native Fire Hit pre-hit setup; resolved authoritatively at the keyframe
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
@@ -640,6 +684,9 @@ public class Actioneer extends PassiveSystem {
             ? Math.max(1, skillLevel(entityId, activeCasting.skillId)) : 1;
         boolean dragonTalon = srvdofunc == 42;
         boolean dragonTalonLastKick = false;
+        boolean dragonClaw = srvdofunc == 46;
+        int dragonClawStrike = -1;
+        Item dragonClawWeapon = null;
         if (dragonTalon) {
           if (activeCasting == null || activeSkill == null) break;
           if (!activeCasting.dragonTalonInitialized) {
@@ -651,6 +698,21 @@ public class Actioneer extends PassiveSystem {
           activeCasting.dragonTalonKickProcessed = true;
           activeCasting.dragonTalonRemainingKicks--;
           dragonTalonLastKick = activeCasting.dragonTalonRemainingKicks == 0;
+        }
+        if (dragonClaw) {
+          if (activeCasting == null || activeSkill == null) break;
+          if (!activeCasting.dragonClawInitialized) {
+            // Legacy/synthetic callers may dispatch the keyframe without
+            // SrvSt25 or inventory data. Preserve one generic finisher hit.
+            activeCasting.dragonClawRemainingStrikes = 1;
+            activeCasting.dragonClawStrikeIndex = 0;
+            activeCasting.dragonClawInitialized = true;
+          }
+          if (activeCasting.dragonClawRemainingStrikes <= 0) break;
+          dragonClawStrike = activeCasting.dragonClawStrikeIndex++;
+          activeCasting.dragonClawStrikeProcessed = true;
+          activeCasting.dragonClawRemainingStrikes--;
+          dragonClawWeapon = dragonClawWeapon(entityId, dragonClawStrike);
         }
         if (targetId == Engine.INVALID_ENTITY) break;
         if (!mAttributesWrapper.has(targetId)) break;
@@ -772,6 +834,21 @@ public class Actioneer extends PassiveSystem {
               entityId, targetId, activeCasting.dragonTalonSuccessfulKicks + 1,
               activeCasting.dragonTalonRemainingKicks,
               kickDamage[0], kickDamage[1], attackRating, dragonTalonLastKick);
+        } else if (dragonClaw && dragonClawWeapon != null) {
+          int[] clawDamage = AssassinSkills.calculateDragonClawDamage(
+              activeSkill, activeSkillLevel, attackerAttrs, dragonClawWeapon);
+          int attackRating = AssassinSkills.dragonClawAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs);
+          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+              attackerAttrs, attrs, attackerPlayer, targetPlayer,
+              clawDamage[0], clawDamage[1], attackRating,
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+          log.info("[ASSASSIN_DRAGON_CLAW] phase=strike entity={} target={} index={} hand={} "
+                  + "weapon={} damageRange={}..{} attackRating={} remaining={}",
+              entityId, targetId, dragonClawStrike + 1,
+              dragonClawStrike == 0 ? "right" : "left", dragonClawWeapon.code,
+              clawDamage[0], clawDamage[1], attackRating,
+              activeCasting.dragonClawRemainingStrikes);
         } else {
           combat = CombatSystem.INSTANCE.calculateAttack(
               attackerAttrs,
@@ -798,7 +875,8 @@ public class Actioneer extends PassiveSystem {
 
         AssassinSkills.ProgressiveRelease progressiveRelease = null;
         if (AssassinSkills.isFinishingMove(srvdofunc) && mUnitStates.has(entityId)
-            && (!dragonTalon || !activeCasting.dragonTalonProgressiveReleased)) {
+            && (!dragonTalon || !activeCasting.dragonTalonProgressiveReleased)
+            && (!dragonClaw || !activeCasting.dragonClawProgressiveReleased)) {
           UnitStates unitStates = mUnitStates.get(entityId);
           if (unitStates.stateList != null) {
             progressiveRelease = AssassinSkills.resolveProgressiveRelease(
@@ -820,11 +898,13 @@ public class Actioneer extends PassiveSystem {
           }
         }
         if (dragonTalon) activeCasting.dragonTalonProgressiveReleased = true;
+        if (dragonClaw) activeCasting.dragonClawProgressiveReleased = true;
         log.info("[COMBAT_HIT] entity={} target={} result=hit damage={} chance={}% critical={} deadly={} crushing={}",
             entityId, targetId, combat.totalDamage, combat.hitChance,
             combat.critical, combat.deadlyStrike, combat.crushingBlow);
         if (dragonTalon) activeCasting.dragonTalonSuccessfulKicks++;
         if (dragonTalon) drainDragonTalonDurability(entityId, targetId);
+        if (dragonClaw) drainDragonClawDurability(dragonClawWeapon, targetId);
 
         // D2MOO SrvDo034/SrvDo035 adds a progressive state only after the
         // shared combat record reports a successful, unblocked hit. The
@@ -1143,6 +1223,27 @@ public class Actioneer extends PassiveSystem {
     Item item = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.FEET);
     return item != null && item.base instanceof Armor.Entry
         ? (Armor.Entry) item.base : null;
+  }
+
+  private Item equippedClaw(int entityId, BodyLoc bodyLoc) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return null;
+    Item item = mPlayer.get(entityId).data.getItems().getEquipped(bodyLoc);
+    return item != null && item.type != null && item.type.is(Type.H2H) ? item : null;
+  }
+
+  private Item dragonClawWeapon(int entityId, int strikeIndex) {
+    Item right = equippedClaw(entityId, BodyLoc.RARM);
+    Item left = equippedClaw(entityId, BodyLoc.LARM);
+    if (strikeIndex <= 0) return right != null ? right : left;
+    return left != null ? left : right;
+  }
+
+  private void drainDragonClawDurability(Item weapon, int targetId) {
+    ItemDurabilityManager.INSTANCE.drainWeaponDurability(weapon, true);
+    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
+      ItemDurabilityManager.INSTANCE.drainArmorDurability(
+          mPlayer.get(targetId).data.getItems());
+    }
   }
 
   /** One native durability resolution for each successful kick combat record. */
