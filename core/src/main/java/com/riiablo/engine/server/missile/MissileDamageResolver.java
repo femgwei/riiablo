@@ -124,9 +124,9 @@ public final class MissileDamageResolver {
   /** Builds the native Skills.txt damage snapshot used by elemental arrows. */
   public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {
-    boolean impactCreatesArea = projectile != null && projectile.missile != null
-        && (projectile.missile.pSrvHitFunc == 4 || projectile.missile.pSrvHitFunc == 9);
-    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesArea);
+    boolean impactCreatesExplosion = projectile != null && projectile.missile != null
+        && projectile.missile.pSrvHitFunc == 4;
+    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion);
   }
 
   /** Builds the elemental-only snapshot inherited by an explosion sub-missile. */

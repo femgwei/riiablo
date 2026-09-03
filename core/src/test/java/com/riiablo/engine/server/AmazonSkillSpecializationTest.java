@@ -137,6 +137,57 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void immolationArrowCreatesPersistentFireField() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), collisions, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(-2, 0);
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+
+      int target = monster(world, 1.2f, 0);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(1, 100);
+      Skills.Entry skill = Riiablo.files.skills.get("Immolation Arrow");
+      Missiles.Entry row = Riiablo.files.Missiles.get("immolationarrow");
+      int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
+      Missile source = world.getMapper(Missile.class).get(sourceId);
+      MissileDamageResolver.initializeSkill(source, skill, owner, 1);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 3; i++) world.process();
+
+      Missile fire = null;
+      for (Missile candidate : factory.created) {
+        if (candidate.missile != null && "immolationfire".equalsIgnoreCase(candidate.missile.Missile)) {
+          fire = candidate;
+          break;
+        }
+      }
+      assertTrue(fire != null, "SrvHit09 must create immolationfire fields");
+      assertTrue(fire.persistent);
+      assertTrue(fire.remainingFrames <= 100 && fire.remainingFrames >= 95);
+      assertEquals(41, fire.tickInterval);
+      float before = world.getMapper(AttributesWrapper.class).get(target).attrs
+          .get(Stat.hitpoints).asFixed();
+      for (int i = 0; i < 42; i++) world.process();
+      float after = world.getMapper(AttributesWrapper.class).get(target).attrs
+          .get(Stat.hitpoints).asFixed();
+      assertTrue(after < before, "persistent fire field must tick damage at DamageRate");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void auditNativeAmazonSpecialRows() {
     String[] names = {"Magic Arrow", "Fire Arrow", "Cold Arrow", "Multiple Shot",
         "Exploding Arrow", "Ice Arrow", "Guided Arrow", "Strafe", "Immolation Arrow",

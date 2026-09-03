@@ -55,7 +55,7 @@
 
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
-| 亚马逊 Amazon | 96% | 4% | 元素伤害、爆炸范围、冰冻与弹药闭环已完成；Immolation 持续火场和完整命中动画仍待补齐 |
+| 亚马逊 Amazon | 98% | 2% | 元素伤害、爆炸范围、冰冻、持续火场与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 48% | 52% | 聚气、陷阱生命周期、踢击和更多状态分支 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
@@ -110,7 +110,8 @@
   - [x] ~~完成弓/弩与箭袋类型匹配、施放前校验、发射扣量、耗尽拒绝及多人余量同步~~
   - [x] ~~完成 `item_replenish_quantity` 原生间隔、逐点恢复、上限停止及多人余量同步~~
   - [x] ~~完成 Skills.txt 物理/元素伤害快照、Magic/Fire/Cold 转伤、Ice/Freezing 冰冻及 Exploding/Freezing 范围子导弹~~
-  - 待补：Immolation Arrow 持续火场伤害周期，以及完整命中与受击动画反馈；当前专项完成度约 96%，不能整体划掉。
+  - [x] ~~完成 Immolation Arrow 原生持续火场：SrvHit09 圆形布点、100 帧生命周期、DamageRate 周期伤害及多人同步~~
+  - 待补：完整命中与受击动画反馈；当前专项完成度约 98%，不能整体划掉。
 - [x] ~~完成刺客技能表审计与 Shadow Warrior/Shadow Master 原生召唤首项~~
   - 核对 `Skills.txt` 实际 ID（Shadow Warrior=268、Shadow Master=279、SrvDo049），按 `summon/pettype/petmax` 创建玩家所有权召唤物，并同步 `SHADOWWARRIOR` 状态；`AssassinSkillSpecializationTest` 已加入数据和 ECS 门槛。
 - [ ] 完成刺客陷阱生命周期（SrvDo044/SrvDo045）
@@ -143,11 +144,12 @@
 - 2026-09-03：接入 D2MOO `EVENTTYPE_STATREGEN` 的 `item_replenish_quantity` 分支；按 `max(125, 2500/rate+1)` 帧恢复 1 点并在 `maxstack` 停止，专用 2 个用例及 D2GS 编译通过。
 - 2026-09-03：完成多人技能表现同步首项；服务端接入原生 `SrvDo047` 暗影斗篷范围状态（`DIMVISION`、持续时间和防御降低），客户端通过 `StateP` 快照自动恢复状态 Overlay，并补充原生数据/ECS 回归测试。
 - 2026-09-03：完成亚马逊元素箭服务端伤害首项；Skills.txt 快照接入所有技能导弹，Magic/Fire/Cold 转伤、Ice/Freezing 冰冻、Exploding/Freezing 的 SrvHit04→SrvHit01 范围子导弹及 Lightning Fury 子导弹元素伤害均加入回归门槛。
+- 2026-09-03：完成 Immolation Arrow 火场生命周期；按 D2MOO `SrvHit09/SrvDmg03` 生成 immolationfire 圆形区域，保留 100 帧并按 `DamageRate=41` 周期伤害，火场导弹通过统一同步管线广播。
 
 ## 当前下一项
 
-已完成 **亚马逊元素箭服务端伤害、范围爆炸和冰冻状态首项**。
-下一项调整为 **Immolation Arrow 原生持续火场生命周期与多人表现**；完成后补命中/受击动画，再回到刺客陷阱生命周期（SrvDo044/SrvDo045）。
+已完成 **亚马逊元素箭服务端伤害、范围爆炸、冰冻状态和 Immolation 火场生命周期**。
+下一项调整为 **亚马逊命中/受击动画反馈**；完成后再回到刺客陷阱生命周期（SrvDo044/SrvDo045）。
 
 ## 记录规则
 

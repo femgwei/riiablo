@@ -118,6 +118,19 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 更新已移动距离（与 d2mod 一致，使用 distanceTraveled）
     missile.distanceTraveled += moveDistance;
+
+    if (missile.persistent) {
+      missile.remainingFrames -= Math.max(1, Math.round(world.delta * 25f));
+      missile.tickFrames++;
+      if (missile.remainingFrames <= 0) {
+        world.delete(entityId);
+        return;
+      }
+      if (missile.tickFrames < Math.max(1, missile.tickInterval)) return;
+      missile.tickFrames = 0;
+      // Native area missiles may damage a target once per damage-rate window.
+      missile.hitTargets.clear();
+    }
     
     // 检查范围限制
     if (missile.range > 0 && missile.distanceTraveled >= missile.range) {
@@ -179,7 +192,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 获取导弹当前位置
     Vector2 currentPos = missilePos.position;
-    boolean areaEffect = isNativeAreaEffect(missile);
+    boolean areaEffect = isNativeAreaEffect(missile) || missile.persistent;
     log.trace("Missile {} checking collisions at ({}, {}), ownerId={}", missileId, currentPos.x, currentPos.y, missile.ownerId);
     
     // 检查与玩家的碰撞
@@ -282,6 +295,9 @@ public class MissileCollisionSystem extends IteratingSystem {
 
       if (missile.missile != null && missile.missile.pSrvHitFunc == 4) {
         spawnAmazonExplosion(missile, missilePos);
+      }
+      if (missile.missile != null && missile.missile.pSrvHitFunc == 9) {
+        spawnImmolationFire(missile, missilePos);
       }
 
       if (missile.missile != null && missile.missile.pSrvHitFunc == 20) {
@@ -410,7 +426,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             missileId, targetId, missile.pierceChance, missile.hitTargets.size);
         return true;
       }
-      world.delete(missileId);
+      if (!missile.persistent) world.delete(missileId);
       return true;
     }
     
@@ -447,9 +463,57 @@ public class MissileCollisionSystem extends IteratingSystem {
         && missile.missile.pSrvHitFunc == 1 && nativeAreaRadius(missile) > 0;
   }
 
+  /** D2MOO SrvHit09 creates a circular grid of stationary Immolation Fire missiles. */
+  private void spawnImmolationFire(Missile source, Vector2 origin) {
+    if (factory == null || source == null || source.missile == null) return;
+    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId)
+        : Riiablo.files.skills.get("Immolation Arrow");
+    int level = Math.max(1, source.damageLevel);
+    int radius = skill != null ? Math.max(1, SkillFormula.evaluate(skill.calc1, skill, level)) : 3;
+    if (radius <= 0) radius = 3;
+    String name = source.missile.HitSubMissile != null
+        && source.missile.HitSubMissile.length > 0
+        ? source.missile.HitSubMissile[0] : "immolationfire";
+    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    if (row == null) return;
+    Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+        ? mAttributesWrapper.get(source.ownerId).attrs : null;
+    int spawned = 0;
+    for (int x = -radius; x <= radius; x++) {
+      for (int y = -radius; y <= radius; y++) {
+        if (x * x + y * y > radius * radius) continue;
+        Vector2 position = new Vector2(origin).add(x, y);
+        int id = factory.createMissile(row, new Vector2(1f, 0f), position, source.ownerId);
+        if (id < 0 || !mMissile.has(id)) continue;
+        Missile fire = mMissile.get(id);
+        MissileDamageResolver.initialize(fire, ownerAttrs, null, -1, level, 0);
+        fire.skillId = source.skillId;
+        fire.damageLevel = level;
+        fire.persistent = true;
+        fire.remainingFrames = Math.max(1, row.Range);
+        fire.tickInterval = Math.max(1, row.DamageRate > 0 ? row.DamageRate : 1);
+        fire.pierceEnabled = true;
+        // HitShift=2 stores sub-1-point fixed damage in D2; retain at least
+        // one integer point in this engine's integer combat representation.
+        if (fire.damage.get(Stat.firemaxdam) == null
+            || fire.damage.get(Stat.firemaxdam).asInt() <= 0) {
+          fire.damage.base().put(Stat.firemindam, Math.max(1, row.EMin));
+          fire.damage.base().put(Stat.firemaxdam, Math.max(row.EMin, row.Emax));
+          fire.damage.reset();
+          fire.damageSnapshot = true;
+        }
+        spawned++;
+      }
+    }
+    log.info("[AMAZON_IMMOLATION_FIRE] phase=spawn owner={} skill={} level={} radius={} "
+            + "missile={} count={} duration={} tick={}", source.ownerId, source.skillId,
+        level, radius, name, spawned, row.Range, row.DamageRate);
+  }
+
   private static int nativeAreaRadius(Missile missile) {
-    return missile != null && missile.missile != null
-        ? Math.max(0, arrayValue(missile.missile.sHitPar, 0)) : 0;
+    if (missile == null || missile.missile == null) return 0;
+    if (missile.persistent) return 1;
+    return Math.max(0, arrayValue(missile.missile.sHitPar, 0));
   }
 
   /** D2MOO MISSMODE_SrvHit20_LightningFury. */

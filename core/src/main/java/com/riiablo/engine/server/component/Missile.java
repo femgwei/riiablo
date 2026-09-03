@@ -49,6 +49,11 @@ public class Missile extends PooledComponent {
   public boolean freezesTarget;
   /** Weapon-source skills still perform the native attack-rating check. */
   public boolean usesAttackRating;
+  /** Stationary native area missile (Immolation Fire) remains for its range. */
+  public boolean persistent;
+  public int remainingFrames;
+  public int tickInterval = 1;
+  public int tickFrames;
 
   /** Optional native homing target (Guided Arrow/Bone Spirit). */
   public int targetId = -1;
@@ -84,6 +89,10 @@ public class Missile extends PooledComponent {
     skillId = -1;
     freezesTarget = false;
     usesAttackRating = false;
+    persistent = false;
+    remainingFrames = 0;
+    tickInterval = 1;
+    tickFrames = 0;
     targetId = -1;
     homing = false;
     damageMultiplier = 1f;
