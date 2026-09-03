@@ -766,6 +766,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new NativeCountessRewardSystem());
       builder.with(new NativeCharsiImbueSystem());
       builder.with(new ServerSkillSystem(true));
+      builder.with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem());
       builder.with(new com.riiablo.engine.server.AuraEcsSystem());
       builder.with(new ItemGenerator());
       // Local games dispatch authoritative DeathEvent in this world. Without

@@ -85,7 +85,7 @@ table PlayerP {
   // content revision used by reconnecting clients to detect a new snapshot.
   questRecords:[uint16];
   questRevision:ulong;
-  // Active arrow/bolt quiver state. Item layout remains owned by the item
+  // Active arrow/bolt quiver or throwable-stack state. Item layout remains owned by the item
   // protocol; these fields let normal player snapshots propagate the frequent
   // server-authoritative quantity decrement without a synthetic move request.
   ammoItemId:int32 = -1;

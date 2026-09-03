@@ -465,6 +465,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (data.ammoPresent()) {
       com.riiablo.item.Item ammo = Riiablo.charData.getItems().findItemById(data.ammoItemId());
       if (ammo == null) ammo = Riiablo.charData.getItems().getEquippedRangedAmmo();
+      if (ammo == null) ammo = Riiablo.charData.getItems().getEquippedThrowableWeapon();
       if (ammo != null && ammo.attrs != null) {
         int quantity = data.ammoQuantity();
         ammo.attrs.base().put(Stat.quantity, quantity);

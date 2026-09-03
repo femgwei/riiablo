@@ -946,6 +946,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new ObjectCollisionUpdater())
         .with(new MissileCollisionSystem())
         .with(new StateUpdater())
+        .with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem())
         .with(new ExperienceManager())
         .with(new com.riiablo.engine.server.party.PartyMemberSyncSystem())
 
