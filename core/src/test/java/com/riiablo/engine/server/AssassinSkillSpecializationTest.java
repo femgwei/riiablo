@@ -18,6 +18,7 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
@@ -54,7 +55,11 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
             + " skill2=" + summon.Skill2 + " level2=" + summon.Sk2lvl
             + " missA1=" + summon.MissA1 + " missA2=" + summon.MissA2
             + " missS1=" + summon.MissS1 + " missS2=" + summon.MissS2
-            + " missS3=" + summon.MissS3 + " missS4=" + summon.MissS4);
+            + " missS3=" + summon.MissS3 + " missS4=" + summon.MissS4
+            + " ai1=" + java.util.Arrays.toString(summon.aip1)
+            + " ai2=" + java.util.Arrays.toString(summon.aip2)
+            + " ai3=" + java.util.Arrays.toString(summon.aip3)
+            + " ai4=" + java.util.Arrays.toString(summon.aip4));
         Skills.Entry attack = summon.Skill1 == null || summon.Skill1.isEmpty()
             ? null : Riiablo.files.skills.get(summon.Skill1);
         if (attack != null) {
@@ -62,7 +67,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
               + attack.skill + " srvDo=" + attack.srvdofunc + " srvA=" + attack.srvmissilea
               + " srvB=" + attack.srvmissileb + " cltA=" + attack.cltmissilea
               + " calc1=" + attack.calc1 + " calc2=" + attack.calc2
-              + " calc3=" + attack.calc3 + " calc4=" + attack.calc4 + " params="
+              + " calc3=" + attack.calc3 + " calc4=" + attack.calc4
+              + " auraRange=" + attack.aurarangecalc + " eType=" + attack.EType + " params="
               + java.util.Arrays.toString(attack.Param));
           Missiles.Entry serverMissile = attack.srvmissilea == null
               || attack.srvmissilea.isEmpty() ? null
@@ -360,6 +366,100 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void deathSentrySrvDo055ConsumesOneCorpseAndDamagesNearbyEnemies() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry deathSentry = Riiablo.files.skills.get("Death Sentry");
+      Skills.Entry fireBlast = Riiablo.files.skills.get("Fire Trauma");
+      assertNotNull(deathSentry);
+      assertNotNull(fireBlast);
+      data.setSkillLevel(deathSentry.Id, 4);
+      data.setSkillLevel(fireBlast.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, deathSentry.Id, Engine.INVALID_ENTITY, new Vector2(8, 3),
+          deathSentry.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      assertEquals(7, trap.maxShots,
+          "calc4 includes one shot per three base Fire Blast levels");
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+
+      com.riiablo.codec.excel.MonStats.Entry fallen = Riiablo.files.monstats.get("fallen1");
+      assertNotNull(fallen);
+      int corpseId = world.create();
+      Monster corpseMonster = world.getMapper(Monster.class).create(corpseId);
+      corpseMonster.monstats = fallen;
+      corpseMonster.monstats2 = Riiablo.files.monstats2.get(fallen.MonStatsEx);
+      assertNotNull(corpseMonster.monstats2);
+      assertTrue(corpseMonster.monstats2.corpseSel);
+      world.getMapper(Position.class).create(corpseId).position.set(11, 3);
+      Attributes corpseAttrs = attributes(100);
+      corpseAttrs.get(Stat.hitpoints).set(0);
+      world.getMapper(AttributesWrapper.class).create(corpseId).attrs = corpseAttrs;
+      Corpse corpse = world.getMapper(Corpse.class).create(corpseId).reset(
+          Corpse.DEFAULT_DURATION, true);
+      world.getMapper(UnitStates.class).create(corpseId).init(corpseId);
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target).monstats = fallen;
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(1000);
+      int outerTarget = world.create();
+      world.getMapper(Monster.class).create(outerTarget).monstats = fallen;
+      world.getMapper(Position.class).create(outerTarget).position.set(18.2f, 3);
+      world.getMapper(AttributesWrapper.class).create(outerTarget).attrs = attributes(1000);
+
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertFalse(corpse.usable, "SrvDo55 reserves and consumes the selected corpse");
+      assertTrue(world.getMapper(UnitStates.class).get(corpseId).stateList
+          .hasState(StateId.CORPSE_NODRAW));
+      assertEquals(corpseId, trap.deathLastCorpseId);
+      assertEquals(1, trap.shotsFired, "one corpse explosion consumes one sentry shot");
+      float innerHp = world.getMapper(AttributesWrapper.class).get(target).attrs
+          .get(Stat.hitpoints).asFixed();
+      assertTrue(innerHp >= 920f && innerHp <= 960f,
+          "the inner radius receives the native 40%-80% corpse-life roll");
+      float outerHp = world.getMapper(AttributesWrapper.class).get(outerTarget).attrs
+          .get(Stat.hitpoints).asFixed();
+      assertTrue(outerHp >= 960f && outerHp <= 980f,
+          "the outer half-tile ring retains the native elemental portion");
+      assertEquals(1, java.util.Collections.frequency(factory.missileNames, "corpseexplosion"),
+          "the consumed corpse creates one synchronized explosion visual");
+
+      for (int i = 0; i < 5; i++) {
+        trap.attackCooldownFrames = 0;
+        world.process();
+      }
+      assertEquals(1, java.util.Collections.frequency(factory.missileNames, "corpseexplosion"),
+          "an already hidden corpse cannot be selected or exploded again");
+
+      Skills.Entry fallback = AssassinTrapSystem.resolveAttackSkill(
+          world.getMapper(Monster.class).get(factory.entityId), deathSentry);
+      assertNotNull(fallback);
+      assertEquals("death sentry ltng", fallback.skill,
+          "without a legal corpse Fn104 falls back to Skill2 lightning");
+      assertTrue(hasText(fallback.srvmissile) || hasText(fallback.srvmissilea)
+              || hasText(fallback.cltmissile) || hasText(fallback.cltmissilea),
+          "the fallback row must provide an authoritative lightning missile");
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static final class RecordingFactory extends EntityFactory {
     int created;
     int entityId = Engine.INVALID_ENTITY;
@@ -430,5 +530,9 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     attrs.base().put(Stat.tohit, 1000);
     attrs.reset();
     return attrs;
+  }
+
+  private static boolean hasText(String value) {
+    return value != null && !value.isEmpty();
   }
 }

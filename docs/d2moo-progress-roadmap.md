@@ -56,7 +56,7 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
-| 刺客 Assassin | 58% | 42% | 陷阱召唤、所有权、数量上限、Wake of Fire 双波与 Inferno Sentry 持续喷射已完成；Death Sentry、聚气、踢击和更多状态分支仍待补齐 |
+| 刺客 Assassin | 62% | 38% | 陷阱召唤、Wake/Inferno/Death Sentry 权威攻击首项已完成；Charged Bolt/Lightning、聚气、踢击和更多状态分支仍待补齐 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
@@ -120,7 +120,8 @@
   - [x] ~~完成 Blade Sentinel / Blade Creeper（AI Fn102、Missile SrvDo20）首项~~：控制实体在施法起点与目标端点间往返，只创建一个附着的 `blade creeper` 导弹；导弹跟随控制实体、保留玩家伤害归属、按 `NextHit/NextDelay` 去重，并在控制实体消失时清理。
   - [x] ~~完成 Wake of Fire `SrvDo125/SrvDo31` 首项~~：服务端创建 `wake of destruction maker`，沿目标方向移动到终点后生成相反方向的两个 `wake of destruction` 火焰波，并把伤害归属解析回施法者。
   - [x] ~~完成 Inferno Sentry `SrvDo95` 首项~~：按 `calc2`（含 Wake of Fire 协同等级）设置喷射窗口，按 `calc3` 重复创建火焰导弹，并在每次喷射时重新追踪目标方向；单枚导弹按 `calc1` 设置原生路径长度。
-  - 待补：Charged Bolt/Lightning/Death Sentry 的目标选择、导弹/区域表现和拆除。
+  - [x] ~~完成 Death Sentry `SrvDo55` 首项~~：按原生 `CorpseSel`/可用状态筛选尸体并原子保留，防止同一尸体重复引爆；按尸体最大生命和 `calc1/calc2` 生成伤害，依据 `calc3` 拆分物理/火焰并在 `AuraRange/2` 范围结算，创建同步爆炸表现；无尸体时回退 `Skill2` 闪电攻击，`calc4` 正确计入 Fire Blast 基础等级的射击次数协同。
+  - 待补：Charged Bolt/Lightning Sentry 的专用目标选择、导弹表现和双客户端验证。
 
 ### P2：世界交互和多人闭环
 
@@ -155,11 +156,12 @@
 - 2026-09-03：完成 Blade Sentinel 的原生 `AI Fn102` / `Missile SrvDo20` 首轮移植；Blade Creeper 控制实体在起点/目标点间往返，单一附着导弹继承施法者伤害并按 `NextHit` 去重，补充双向路径、导弹跟随、控制实体清理测试。
 - 2026-09-03：完成 Wake of Fire 的原生 `SrvDo125` / `SrvDo31` 首轮移植；maker 到达目标端点后生成相反方向的双 `wake of destruction` 火焰波，继承施法者伤害归属并加入 maker/子导弹 ECS 回归。
 - 2026-09-03：完成 Inferno Sentry 的原生 `SrvDo95` 首轮移植；按 `calc2` 维持喷射窗口、按 `calc3` 重复发射并更新目标朝向，单枚导弹路径按 `calc1` 计算，协同技能等级由陷阱所有者解析，并加入路径/节拍/朝向 ECS 回归。
+- 2026-09-03：完成 Death Sentry 的原生 AI Fn104 / `SrvDo55` 首轮移植；合法尸体筛选和保留、同尸体防重、40%–80% 尸体生命伤害、50% 物理/火焰拆分、范围结算、爆炸表现、闪电回退及 Fire Blast 射击次数协同均接入权威陷阱生命周期。
 
 ## 当前下一项
 
-已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20`、Wake of Fire `SrvDo125/SrvDo31` 双波，以及 Inferno Sentry `SrvDo95` 持续喷射首项。
-下一项为 **Death Sentry `SrvDo55`**：补齐合法尸体筛选、同一尸体防重复使用、尸体爆炸范围伤害和无尸体时闪电回退；随后进行双客户端陷阱动画与导弹画面验证。
+已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20`、Wake of Fire `SrvDo125/SrvDo31`、Inferno Sentry `SrvDo95`，以及 Death Sentry AI Fn104 / `SrvDo55` 首项。
+下一项为 **Charged Bolt Sentry / Lightning Sentry 专项**：核对原生射线数量、目标选择、射击次数和导弹客户端表现；随后进行双客户端陷阱动画、尸体消失和伤害一致性验证。
 
 ## 记录规则
 

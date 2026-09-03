@@ -573,7 +573,8 @@ public class ServerSkillSystem extends PassiveSystem {
       Skills.Entry attackSkill = summon.Skill1 == null || summon.Skill1.isEmpty()
           ? null : Riiablo.files.skills.get(summon.Skill1);
       int shots = attackSkill != null
-          ? SkillFormula.evaluate(attackSkill.calc4, attackSkill, skillLevel) : 0;
+          ? SkillFormula.evaluate(attackSkill.calc4, attackSkill, skillLevel,
+              name -> getBaseSkillLevel(event.entityId, name)) : 0;
       if (shots <= 0) shots = attackSkill != null
           ? firstParam(attackSkill, 7, firstParam(skill, 0, 5))
           : firstParam(skill, 0, 5);
@@ -600,6 +601,13 @@ public class ServerSkillSystem extends PassiveSystem {
 
   private static int normalAiParam(int[] values, int fallback) {
     return values != null && values.length > 0 && values[0] > 0 ? values[0] : fallback;
+  }
+
+  private int getBaseSkillLevel(int entityId, String name) {
+    if (name == null || name.isEmpty() || !mPlayer.has(entityId)
+        || mPlayer.get(entityId).data == null) return 0;
+    Skills.Entry skill = Riiablo.files.skills.get(name);
+    return skill != null ? mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id) : 0;
   }
 
   private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {

@@ -9,19 +9,29 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -47,11 +57,15 @@ public class AssassinTrapSystem extends IteratingSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributes;
+  protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Velocity> mVelocity;
   @com.artemis.annotations.Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
+  protected net.mostlyoriginal.api.event.common.EventSystem events;
 
   @Override
   protected void process(int entityId) {
@@ -77,16 +91,29 @@ public class AssassinTrapSystem extends IteratingSystem {
     if (trap.attackCooldownFrames > 0) return;
     Monster monster = mMonster.get(entityId);
     Skills.Entry placementSkill = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
-    Skills.Entry attackSkill = resolveAttackSkill(monster, placementSkill);
     int target = nearestHostile(entityId, monster);
     if (target < 0) {
       trap.attackCooldownFrames = inactiveInterval(monster);
       return;
     }
+    Skills.Entry corpseSkill = resolveCorpseSkill(monster);
+    if (corpseSkill != null) {
+      int corpseId = findDeathSentryCorpse(entityId, target, trap, corpseSkill);
+      if (corpseId >= 0 && explodeCorpse(entityId, corpseId, trap, corpseSkill)) {
+        trap.deathLastCorpseId = corpseId;
+        trap.shotsFired++;
+        trap.attackCooldownFrames = attackInterval(monster);
+        log.info("[DEATH_SENTRY] phase=corpse_attack entity={} owner={} target={} corpse={} "
+                + "shot={}/{} status=PASS",
+            entityId, trap.ownerId, target, corpseId, trap.shotsFired, trap.maxShots);
+        return;
+      }
+    }
     if (MathUtils.random(99) >= attackChance(monster)) {
       trap.attackCooldownFrames = attackInterval(monster);
       return;
     }
+    Skills.Entry attackSkill = resolveAttackSkill(monster, placementSkill);
     String missileName = resolveMissile(attackSkill, monster);
     Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
     if (missile == null || factory == null) {
@@ -119,6 +146,169 @@ public class AssassinTrapSystem extends IteratingSystem {
     log.info("[ASSASSIN_TRAP] phase=fire entity={} owner={} skill={} target={} missile={} "
             + "shot={}/{}", entityId, trap.ownerId, trap.skillId, target, missileName,
         trap.shotsFired, trap.maxShots);
+  }
+
+  private static Skills.Entry resolveCorpseSkill(Monster monster) {
+    if (!isDeathSentry(monster) || monster.monstats.Skill1 == null
+        || monster.monstats.Skill1.isEmpty()) return null;
+    Skills.Entry skill = Riiablo.files.skills.get(monster.monstats.Skill1);
+    return skill != null && skill.srvdofunc == 55 ? skill : null;
+  }
+
+  private static boolean isDeathSentry(Monster monster) {
+    return monster != null && monster.monstats != null
+        && "DeathSentry".equalsIgnoreCase(monster.monstats.AI);
+  }
+
+  /** Native sub_6FD15210 plus the Fn104 corpse-to-hostile distance gate. */
+  private int findDeathSentryCorpse(int sentryId, int hostileId, SummonedPet trap,
+      Skills.Entry skill) {
+    if (!mPosition.has(hostileId)) return Engine.INVALID_ENTITY;
+    Vector2 target = mPosition.get(hostileId).position;
+    int level = Math.max(1, trap.skillLevel);
+    int nativeRange = skillParam(skill, 3, 10)
+        + (level - 1) * skillParam(skill, 4, 0);
+    // sub_6FD15210 first performs a radius-10 unit search; Fn104 then applies
+    // the tighter skill-specific corpse-to-hostile distance gate.
+    float maximum = Math.min(10f, Math.max(1f, nativeRange / 2f));
+    float bestDistance = maximum * maximum;
+    int best = Engine.INVALID_ENTITY;
+    IntBag corpses = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Corpse.class, Monster.class, Position.class, AttributesWrapper.class))
+        .getEntities();
+    for (int i = 0; i < corpses.size(); i++) {
+      int corpseId = corpses.get(i);
+      if (corpseId == trap.deathLastCorpseId || !selectableCorpse(corpseId)) continue;
+      if (mMapWrapper.has(sentryId) && mMapWrapper.has(corpseId)
+          && mMapWrapper.get(sentryId).zone != null
+          && mMapWrapper.get(corpseId).zone != null
+          && mMapWrapper.get(sentryId).zone != mMapWrapper.get(corpseId).zone) continue;
+      float distance = target.dst2(mPosition.get(corpseId).position);
+      if (distance >= bestDistance) continue;
+      bestDistance = distance;
+      best = corpseId;
+    }
+    return best;
+  }
+
+  /** D2COMMON_11021 / SKILLS_CanUnitCorpseBeSelected. */
+  private boolean selectableCorpse(int entityId) {
+    Corpse corpse = mCorpse.get(entityId);
+    Monster monster = mMonster.get(entityId);
+    Attributes attrs = mAttributes.get(entityId).attrs;
+    StatRef hp = attrs != null ? attrs.get(Stat.hitpoints) : null;
+    boolean hidden = mUnitStates.has(entityId)
+        && mUnitStates.get(entityId).stateList != null
+        && mUnitStates.get(entityId).stateList.hasState(StateId.CORPSE_NODRAW);
+    return corpse != null && corpse.usable && !corpse.fading && !hidden
+        && monster != null && monster.monstats2 != null && monster.monstats2.corpseSel
+        && hp != null && hp.asFixed() <= 0f;
+  }
+
+  /** Native SKILLS_SrvDo055_CorpseExplosion. */
+  private boolean explodeCorpse(int sentryId, int corpseId, SummonedPet trap,
+      Skills.Entry skill) {
+    if (!selectableCorpse(corpseId) || !mPosition.has(corpseId)) return false;
+    Corpse corpse = mCorpse.get(corpseId);
+    corpse.usable = false; // reserve before damage so another sentry cannot consume it
+    UnitStates states = mUnitStates.has(corpseId)
+        ? mUnitStates.get(corpseId) : mUnitStates.create(corpseId).init(corpseId);
+    if (states.stateList == null) states.init(corpseId);
+    UnitState hidden = states.stateList.addState(StateId.CORPSE_NODRAW, 0,
+        Math.max(1, trap.skillLevel), sentryId);
+    if (hidden != null) {
+      hidden.skillId = skill.Id;
+      hidden.needsSync = true;
+    }
+
+    Attributes corpseAttrs = mAttributes.get(corpseId).attrs;
+    int corpseMaxHp = Math.max(1, statInt(corpseAttrs, Stat.maxhp, 1));
+    int minPercent = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, trap.skillLevel));
+    int maxPercent = Math.max(minPercent,
+        SkillFormula.evaluate(skill.calc2, skill, trap.skillLevel));
+    int baseDamage = MathUtils.random(
+        corpseMaxHp * minPercent / 100, corpseMaxHp * maxPercent / 100);
+    int corpseLevel = Math.max(1, statInt(corpseAttrs, Stat.level, 1));
+    Attributes sentryAttrs = mAttributes.has(sentryId) ? mAttributes.get(sentryId).attrs : null;
+    int sentryLevel = Math.max(1, statInt(sentryAttrs, Stat.level, 1));
+    if (sentryLevel < corpseLevel) baseDamage = baseDamage * sentryLevel / corpseLevel;
+
+    int firePercent = Math.max(0, Math.min(100,
+        SkillFormula.evaluate(skill.calc3, skill, trap.skillLevel)));
+    int fireDamage = baseDamage * firePercent / 100;
+    int physicalDamage = baseDamage - fireDamage;
+    int auraRange = Math.max(1,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, trap.skillLevel));
+    float physicalRadius = Math.max(1f, auraRange / 2);
+    float damageRadius = Math.max(1f, (auraRange + 1) / 2f);
+    Vector2 origin = mPosition.get(corpseId).position;
+    int hit = damageCorpseExplosion(sentryId, sentryLevel, origin, physicalRadius,
+        damageRadius, physicalDamage, fireDamage);
+    spawnCorpseExplosionVisual(sentryId, origin, skill);
+    log.info("[DEATH_SENTRY] phase=corpse_explode entity={} owner={} corpse={} level={} "
+            + "corpseMaxHp={} percent={}..{} damage={} physical={} fire={} radius={} hit={}",
+        sentryId, trap.ownerId, corpseId, trap.skillLevel, corpseMaxHp,
+        minPercent, maxPercent, baseDamage, physicalDamage, fireDamage, damageRadius, hit);
+    return true;
+  }
+
+  private int damageCorpseExplosion(int sentryId, int sentryLevel, Vector2 origin,
+      float physicalRadius, float damageRadius, int physicalDamage, int fireDamage) {
+    IntBag targets = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Monster.class, Position.class, AttributesWrapper.class)).getEntities();
+    int hit = 0;
+    for (int i = 0; i < targets.size(); i++) {
+      int targetId = targets.get(i);
+      if (targetId == sentryId || mCorpse.has(targetId) || mTrap.has(targetId)) continue;
+      float distance2 = origin.dst2(mPosition.get(targetId).position);
+      if (distance2 > damageRadius * damageRadius) continue;
+      Attributes targetAttrs = mAttributes.get(targetId).attrs;
+      StatRef hp = targetAttrs != null
+          ? targetAttrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+      if (hp == null || hp.asFixed() <= 0f) continue;
+
+      int physical = distance2 <= physicalRadius * physicalRadius ? physicalDamage : 0;
+      int[] elementalMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+      int[] elementalMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+      elementalMin[CombatSystem.DAMAGE_FIRE] = fireDamage;
+      elementalMax[CombatSystem.DAMAGE_FIRE] = fireDamage;
+      Attributes attack = Attributes.obtainStandard();
+      attack.base().put(Stat.level, Math.max(1, sentryLevel));
+      attack.base().put(Stat.mindamage, physical);
+      attack.base().put(Stat.maxdamage, physical);
+      attack.reset();
+      CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(
+          attack, targetAttrs, false, false, true, 0, 0, 0, true,
+          elementalMin, elementalMax, 0, 0);
+      if (!result.hit || result.blocked || result.totalDamage <= 0) continue;
+      DamageEvent event = DamageEvent.obtain(sentryId, targetId, result.totalDamage);
+      if (events != null) events.dispatch(event);
+      hp.sub(Math.max(0f, event.damage));
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        if (events != null) events.dispatch(DeathEvent.obtain(sentryId, targetId));
+      }
+      hit++;
+    }
+    return hit;
+  }
+
+  private void spawnCorpseExplosionVisual(int sentryId, Vector2 origin, Skills.Entry skill) {
+    if (factory == null || skill.cltmissilea == null || skill.cltmissilea.isEmpty()) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(skill.cltmissilea);
+    if (row == null) return;
+    int missileId = factory.createMissile(row, Vector2.X, origin, sentryId);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+    Missile visual = mMissile.get(missileId);
+    visual.persistent = true;
+    visual.remainingFrames = Math.max(1, row.Range);
+    visual.tickInterval = visual.remainingFrames + 1;
+    visual.skillId = skill.Id;
+  }
+
+  private static int statInt(Attributes attrs, short stat, int fallback) {
+    StatRef value = attrs != null ? attrs.get(stat) : null;
+    return value != null ? value.asInt() : fallback;
   }
 
   /** Starts the SrvSt53/SrvDo095 repeat window after its first missile. */
@@ -334,7 +524,7 @@ public class AssassinTrapSystem extends IteratingSystem {
         : BLADE_FALLBACK_SPEED;
   }
 
-  private static Skills.Entry resolveAttackSkill(Monster monster, Skills.Entry fallback) {
+  static Skills.Entry resolveAttackSkill(Monster monster, Skills.Entry fallback) {
     if (monster != null && monster.monstats != null
         && "DeathSentry".equalsIgnoreCase(monster.monstats.AI)
         && monster.monstats.Skill2 != null && !monster.monstats.Skill2.isEmpty()) {
@@ -352,6 +542,11 @@ public class AssassinTrapSystem extends IteratingSystem {
   }
 
   private static int attackChance(Monster monster) {
+    if (isDeathSentry(monster)) {
+      // Fn104 uses AI parameter 2 (MonStats Aip3) only for the lightning
+      // fallback. A valid corpse always takes priority and skips this roll.
+      return Math.max(0, Math.min(100, aiParam(monster.monstats.aip3, 100)));
+    }
     return Math.max(0, Math.min(100, aiParam(monster != null && monster.monstats != null
         ? monster.monstats.aip1 : null, 100)));
   }

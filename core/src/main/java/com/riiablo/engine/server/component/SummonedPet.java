@@ -38,6 +38,8 @@ public class SummonedPet extends Component {
   public int infernoPulseFrames;
   public int infernoPulseCooldownFrames;
   public int infernoTargetId;
+  /** Last corpse consumed by Death Sentry AI Fn104. */
+  public int deathLastCorpseId;
 
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
@@ -64,6 +66,7 @@ public class SummonedPet extends Component {
     infernoPulseFrames = 0;
     infernoPulseCooldownFrames = 0;
     infernoTargetId = -1;
+    deathLastCorpseId = -1;
     return this;
   }
 }
