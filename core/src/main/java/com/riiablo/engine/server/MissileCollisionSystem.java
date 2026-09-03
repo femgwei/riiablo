@@ -115,6 +115,16 @@ public class MissileCollisionSystem extends IteratingSystem {
     position.position.add(velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
 
     if (!updateNativeRoom(entityId, missile, position)) return;
+
+    if (!missile.persistent && isStationaryPoisonCloud(missile, velocity)) {
+      configurePersistentPoisonCloud(missile, null);
+    }
+
+    if (missile.missile != null && missile.missile.pSrvDoFunc == 2) {
+      // Native SrvDo02 emits a cloud child at every missile update, producing
+      // the Poison Javelin trail rather than a single impact puff.
+      spawnPoisonCloud(missile, position.position);
+    }
     
     // 更新已移动距离（与 d2mod 一致，使用 distanceTraveled）
     missile.distanceTraveled += moveDistance;
@@ -242,7 +252,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         }
       }
     }
-    if (areaEffect) world.delete(missileId);
+    if (areaEffect && !missile.persistent) world.delete(missileId);
   }
   
   /**
@@ -298,6 +308,9 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
       if (missile.missile != null && missile.missile.pSrvHitFunc == 9) {
         spawnImmolationFire(missile, missilePos);
+      }
+      if (missile.missile != null && missile.missile.pSrvHitFunc == 2) {
+        spawnPoisonCloud(missile, missilePos);
       }
 
       if (missile.missile != null && missile.missile.pSrvHitFunc == 20) {
@@ -409,12 +422,15 @@ public class MissileCollisionSystem extends IteratingSystem {
             hpAfter = 0;
           }
           if (mercenaryDamage) mercenaryLastDamageAfter = hpAfter;
-          applyCombatStates(missile, targetId, combat);
           if (hpAfter <= 0) {
             log.debug("{} killed by missile from {}", targetId, missile.ownerId);
             events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));
           }
         }
+        // Poison is intentionally excluded from immediate totalDamage and is
+        // resolved by StateUpdater over poisonDuration.  Apply hit states even
+        // when this is a pure poison cloud whose immediate damage is zero.
+        applyCombatStates(missile, targetId, combat);
       }
       
       // Native Pierce keeps the missile alive after a successful collision.
@@ -508,6 +524,101 @@ public class MissileCollisionSystem extends IteratingSystem {
     log.info("[AMAZON_IMMOLATION_FIRE] phase=spawn owner={} skill={} level={} radius={} "
             + "missile={} count={} duration={} tick={}", source.ownerId, source.skillId,
         level, radius, name, spawned, row.Range, row.DamageRate);
+  }
+
+  /** D2MOO SrvDo02/SrvHit02 poison-javelin cloud creation. */
+  private void spawnPoisonCloud(Missile source, Vector2 origin) {
+    if (factory == null || source == null || source.missile == null) return;
+    String name = source.missile.SubMissile != null
+        && source.missile.SubMissile.length > 0 ? source.missile.SubMissile[0] : null;
+    if ((name == null || name.isEmpty()) && source.missile.HitSubMissile != null
+        && source.missile.HitSubMissile.length > 0) {
+      name = source.missile.HitSubMissile[0];
+    }
+    if ((name == null || name.isEmpty()) && source.missile.CltSubMissile != null
+        && source.missile.CltSubMissile.length > 0) {
+      // Trap poison balls carry the same native cloud row in CltSubMissile;
+      // the authoritative server still creates it so every client agrees.
+      name = source.missile.CltSubMissile[0];
+    }
+    if (name == null || name.isEmpty()) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    if (row == null) return;
+    int id = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile cloud = mMissile.get(id);
+    cloud.skillId = source.skillId;
+    cloud.damageLevel = Math.max(1, source.damageLevel);
+    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    configurePersistentPoisonCloud(cloud, skill);
+    log.info("[AMAZON_POISON_CLOUD] phase=create owner={} skill={} source={} child={} "
+            + "missile={} duration={} tick={} poison={}..{} length={}",
+        source.ownerId, source.skillId, source.missile.Missile, id, name,
+        cloud.remainingFrames, cloud.tickInterval,
+        statInt(cloud.damage, Stat.poisonmindam), statInt(cloud.damage, Stat.poisonmaxdam),
+        statInt(cloud.damage, Stat.poisonlength));
+  }
+
+  private void configurePersistentPoisonCloud(Missile cloud, Skills.Entry sourceSkill) {
+    if (cloud == null || cloud.missile == null) return;
+    Attributes ownerAttrs = mAttributesWrapper.has(cloud.ownerId)
+        ? mAttributesWrapper.get(cloud.ownerId).attrs : null;
+    Skills.Entry damageSkill = sourceSkill;
+    if ((damageSkill == null || !"pois".equalsIgnoreCase(damageSkill.EType))
+        && cloud.missile.Skill != null && !cloud.missile.Skill.isEmpty()) {
+      Skills.Entry missileSkill = Riiablo.files.skills.get(cloud.missile.Skill);
+      if (missileSkill != null) damageSkill = missileSkill;
+    }
+    if (!cloud.damageSnapshot && damageSkill != null) {
+      MissileDamageResolver.initializeSkillArea(
+          cloud, damageSkill, ownerAttrs, Math.max(1, cloud.damageLevel));
+    }
+    if (!cloud.damageSnapshot) {
+      int min = Math.max(1, cloud.missile.EMin);
+      int max = Math.max(min, cloud.missile.Emax);
+      int length = cloud.missile.ELen;
+      if (damageSkill != null) {
+        length = Math.max(length, damageSkill.ELen
+            + skillDamageLengthBonus(damageSkill, cloud.damageLevel));
+      }
+      if (ownerAttrs != null) {
+        cloud.damage.base().put(Stat.level, Math.max(1, statInt(ownerAttrs, Stat.level)));
+        cloud.damage.base().put(Stat.tohit, Math.max(0, statInt(ownerAttrs, Stat.tohit)));
+        cloud.damage.base().put(Stat.strength, Math.max(0, statInt(ownerAttrs, Stat.strength)));
+        cloud.damage.base().put(Stat.dexterity, Math.max(0, statInt(ownerAttrs, Stat.dexterity)));
+      }
+      cloud.damage.base().put(Stat.poisonmindam, min);
+      cloud.damage.base().put(Stat.poisonmaxdam, max);
+      cloud.damage.base().put(Stat.poisonlength, Math.max(1, length));
+      cloud.damage.reset();
+      cloud.damageSnapshot = true;
+    }
+    cloud.persistent = true;
+    cloud.remainingFrames = Math.max(1, cloud.missile.Range);
+    cloud.tickInterval = Math.max(1,
+        cloud.missile.DamageRate > 0 ? cloud.missile.DamageRate : 10);
+    cloud.pierceEnabled = true;
+  }
+
+  private static boolean isStationaryPoisonCloud(Missile missile, Velocity velocity) {
+    if (missile == null || missile.missile == null || velocity == null
+        || !velocity.velocity.isZero(0.0001f) || missile.missile.pSrvDoFunc != 3) return false;
+    String name = missile.missile.Missile;
+    String type = missile.missile.EType;
+    String skill = missile.missile.Skill;
+    return "pois".equalsIgnoreCase(type)
+        || name != null && name.toLowerCase(java.util.Locale.ROOT).contains("poisoncloud")
+        || skill != null && skill.toLowerCase(java.util.Locale.ROOT).contains("poison");
+  }
+
+  private static int skillDamageLengthBonus(Skills.Entry skill, int level) {
+    if (skill == null || skill.ELevLen == null || level <= 1) return 0;
+    int first = arrayValue(skill.ELevLen, 0);
+    int second = arrayValue(skill.ELevLen, 1);
+    int third = arrayValue(skill.ELevLen, 2);
+    if (level > 16) return 7 * first + 8 * second + (level - 16) * third;
+    if (level > 8) return 7 * first + (level - 8) * second;
+    return (level - 1) * first;
   }
 
   private static int nativeAreaRadius(Missile missile) {

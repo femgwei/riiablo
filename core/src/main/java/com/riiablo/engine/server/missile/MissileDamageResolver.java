@@ -168,7 +168,10 @@ public final class MissileDamageResolver {
       elementalMin[type] += convertedMin;
       elementalMax[type] += convertedMax;
     }
-    if (physicalMax <= 0 && elementalMax[type] <= 0) return false;
+    if (physicalMax <= 0 && elementalMax[type] <= 0) {
+      projectile.damageSnapshot = false;
+      return false;
+    }
     writeSnapshot(projectile, ownerAttrs, includeSource, level, physicalMin, physicalMax,
         statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, 0);
     log.info("[SKILL_DAMAGE_SNAPSHOT] missile={} skill={} level={} physical={}..{} element={}..{} "

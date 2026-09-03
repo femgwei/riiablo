@@ -137,6 +137,48 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
   }
 
   @Test
+  void freezingArrowFreezesEveryHostileInsideNativeExplosionRadius() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    StateUpdater states = new StateUpdater();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), states, new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(states);
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(-2, 0);
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+      int primary = monster(world, 1.2f, 0);
+      int nearby = monster(world, 4f, 0);
+      for (int target : new int[] {primary, nearby}) {
+        world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(1, 100);
+        world.getMapper(UnitStates.class).create(target).init(target);
+      }
+      Skills.Entry skill = Riiablo.files.skills.get("Freezing Arrow");
+      int sourceId = factory.createMissile(Riiablo.files.Missiles.get("freezingarrow"),
+          new Vector2(1, 0), new Vector2(0, 0), amazon);
+      MissileDamageResolver.initializeSkill(
+          world.getMapper(Missile.class).get(sourceId), skill, owner, 1);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 4; i++) world.process();
+      assertTrue(world.getMapper(UnitStates.class).get(primary).stateList.hasState(StateId.FREEZE));
+      assertTrue(world.getMapper(UnitStates.class).get(nearby).stateList.hasState(StateId.FREEZE));
+      assertTrue(factory.createdNames.stream().anyMatch(
+          name -> "freezingarrowexp3".equalsIgnoreCase(name)));
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
   void immolationArrowCreatesPersistentFireField() {
     RecordingMissileFactory factory = new RecordingMissileFactory();
     MissileCollisionSystem collisions = new MissileCollisionSystem();
@@ -162,6 +204,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
       Missile source = world.getMapper(Missile.class).get(sourceId);
       MissileDamageResolver.initializeSkill(source, skill, owner, 1);
+      assertEquals(skill.Id, source.skillId);
       world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
       for (int i = 0; i < 3; i++) world.process();
 
@@ -184,6 +227,149 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertTrue(after < before, "persistent fire field must tick damage at DamageRate");
     } finally {
       world.dispose();
+    }
+  }
+
+  @Test
+  void poisonJavelinCreatesPersistentPoisonCloud() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    StateUpdater states = new StateUpdater();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), states, collisions, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(states);
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(-2, 0);
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+      Skills.Entry skill = Riiablo.files.skills.get("Poison Javelin");
+      assertEquals("pois", skill.EType);
+      assertTrue(skill.EMax > 0);
+      Missiles.Entry row = Riiablo.files.Missiles.get("poisonjav");
+      int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
+      Missile source = world.getMapper(Missile.class).get(sourceId);
+      MissileDamageResolver.initializeSkill(source, skill, owner, 1);
+      assertEquals(skill.Id, source.skillId);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      world.process();
+      assertTrue(factory.createdNames.stream().anyMatch(
+          name -> "poisonjavcloud".equalsIgnoreCase(name)));
+      Missile cloud = null;
+      for (Missile candidate : factory.created) {
+        if (candidate.missile != null && "poisonjavcloud".equalsIgnoreCase(candidate.missile.Missile)) {
+          cloud = candidate;
+          break;
+        }
+      }
+      assertNotNull(cloud);
+      assertTrue(cloud.persistent);
+      assertEquals(60, cloud.remainingFrames);
+      assertEquals(10, cloud.tickInterval);
+      assertEquals(skill.Id, cloud.skillId);
+      assertTrue(cloud.damageSnapshot);
+      assertTrue(cloud.damage.get(Stat.poisonmaxdam).asInt() > 0);
+      assertTrue(cloud.damage.get(Stat.poisonlength).asInt() > 0);
+
+      int cloudId = factory.createdIds.get(factory.created.indexOf(cloud));
+      int target = monster(world, 0, 0);
+      world.getMapper(Position.class).get(target).position.set(
+          world.getMapper(Position.class).get(cloudId).position);
+      Attributes targetAttrs = attributes(1, 100);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = targetAttrs;
+      world.getMapper(UnitStates.class).create(target).init(target);
+      CombatSystem.CombatResult poisonPreview = CombatSystem.INSTANCE.calculateAttack(
+          cloud.damage, targetAttrs, true, false, true, 0, 0, 0, true,
+          null, null, 0, 0, null, null, false);
+      assertEquals(1, poisonPreview.elementalDamage[CombatSystem.DAMAGE_POISON]);
+      assertEquals(200, poisonPreview.poisonDuration);
+      world.delete(sourceId);
+      for (int i = 0; i < cloud.tickInterval * 4
+          && !world.getMapper(UnitStates.class).get(target).stateList.hasState(StateId.POISON); i++) {
+        world.process();
+      }
+      assertTrue(world.getMapper(UnitStates.class).get(target).stateList.hasState(StateId.POISON),
+          "Poison Javelin cloud must apply the shared poison-area state; tick=" + cloud.tickFrames
+              + " hits=" + cloud.hitTargets.size + " cloudPos="
+              + world.getMapper(Position.class).get(cloudId).position
+              + " targetPos=" + world.getMapper(Position.class).get(target).position
+              + " rowToHit=" + cloud.missile.ToHit + " usesAR=" + cloud.usesAttackRating
+              + " ar=" + cloud.damage.get(Stat.tohit).asInt()
+              + " poison=" + cloud.damage.get(Stat.poisonmaxdam).asInt()
+              + " length=" + cloud.damage.get(Stat.poisonlength).asInt());
+      float poisonedHp = world.getMapper(AttributesWrapper.class).get(target).attrs
+          .get(Stat.hitpoints).asFixed();
+      world.process();
+      assertTrue(world.getMapper(AttributesWrapper.class).get(target).attrs
+          .get(Stat.hitpoints).asFixed() < poisonedHp,
+          "the shared poison state must deal damage on the following server tick");
+
+      Skills.Entry plague = Riiablo.files.skills.get("Plague Javelin");
+      Missiles.Entry plagueMissile = Riiablo.files.Missiles.get(plague.srvmissile);
+      assertEquals(2, plagueMissile.pSrvHitFunc);
+      assertEquals("plaguejavcloud", plagueMissile.HitSubMissile[0]);
+      assertNotNull(Riiablo.files.Missiles.get(plagueMissile.HitSubMissile[0]));
+      Missiles.Entry trapPoison = Riiablo.files.Missiles.get("trap poison ball left");
+      assertEquals(2, trapPoison.pSrvDoFunc);
+      assertEquals("plaguejavcloud", trapPoison.CltSubMissile[0]);
+      int trapStart = factory.createdNames.size();
+      factory.createMissile(
+          trapPoison, new Vector2(1, 0), new Vector2(20, 20), amazon);
+      world.process();
+      assertTrue(factory.createdNames.subList(trapStart + 1, factory.createdNames.size()).stream()
+          .anyMatch(name -> "plaguejavcloud".equalsIgnoreCase(name)),
+          "poison trap must use the same authoritative persistent cloud pipeline");
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void corpsePoisonCloudUsesSharedPersistentAreaLifecycle() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    StateUpdater states = new StateUpdater();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), states, new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(states);
+    try {
+      int ownerId = world.create();
+      world.getMapper(Monster.class).create(ownerId);
+      world.getMapper(Position.class).create(ownerId).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(ownerId).attrs = attributes(10, 100);
+      int targetId = world.create();
+      world.getMapper(Player.class).create(targetId).data =
+          CharData.createRemote("target", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(targetId).position.set(2, 2);
+      world.getMapper(AttributesWrapper.class).create(targetId).attrs = attributes(1, 100);
+      world.getMapper(UnitStates.class).create(targetId).init(targetId);
+      int cloudId = factory.createMissile(Riiablo.files.Missiles.get("corpsepoisoncloud"),
+          new Vector2(1, 0), new Vector2(2, 2), ownerId);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      world.process();
+      Missile cloud = world.getMapper(Missile.class).get(cloudId);
+      assertTrue(cloud.persistent);
+      assertTrue(cloud.damageSnapshot);
+      assertEquals(cloud.missile.Range - 1, cloud.remainingFrames,
+          "the creation tick is the first native lifetime frame");
+      assertEquals(175, cloud.damage.get(Stat.poisonlength).asInt());
+      for (int i = 1; i < cloud.tickInterval * 4
+          && !world.getMapper(UnitStates.class).get(targetId).stateList.hasState(StateId.POISON); i++) {
+        world.process();
+      }
+      assertTrue(world.getMapper(UnitStates.class).get(targetId).stateList.hasState(StateId.POISON),
+          "corpse poison cloud must apply the same persistent area state as javelins and traps");
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
     }
   }
 
@@ -612,6 +798,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
 
   private static final class RecordingMissileFactory extends EntityFactory {
     final java.util.ArrayList<Missile> created = new java.util.ArrayList<>();
+    final java.util.ArrayList<Integer> createdIds = new java.util.ArrayList<>();
     final java.util.ArrayList<String> createdNames = new java.util.ArrayList<>();
 
     @Override public int createMissile(int id, Vector2 angle, Vector2 position, int ownerId) {
@@ -623,6 +810,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       world.getMapper(Position.class).create(entity).position.set(position);
       world.getMapper(Velocity.class).create(entity).velocity.set(angle).setLength(row.Vel);
       created.add(missile);
+      createdIds.add(entity);
       createdNames.add(row.Missile);
       return entity;
     }

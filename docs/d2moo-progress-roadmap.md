@@ -55,7 +55,7 @@
 
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
-| 亚马逊 Amazon | 98% | 2% | 元素伤害、爆炸范围、冰冻、持续火场与弹药闭环已完成；完整命中/受击动画仍待补齐 |
+| 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 48% | 52% | 聚气、陷阱生命周期、踢击和更多状态分支 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
@@ -111,7 +111,8 @@
   - [x] ~~完成 `item_replenish_quantity` 原生间隔、逐点恢复、上限停止及多人余量同步~~
   - [x] ~~完成 Skills.txt 物理/元素伤害快照、Magic/Fire/Cold 转伤、Ice/Freezing 冰冻及 Exploding/Freezing 范围子导弹~~
   - [x] ~~完成 Immolation Arrow 原生持续火场：SrvHit09 圆形布点、100 帧生命周期、DamageRate 周期伤害及多人同步~~
-  - 待补：完整命中与受击动画反馈；当前专项完成度约 98%，不能整体划掉。
+  - [x] ~~完成 Poison Javelin/Plague Javelin 毒云子导弹，并统一毒雾陷阱、毒尸体的持续区域生命周期和区域施毒管线~~
+  - 待补：完整命中与受击动画反馈；当前专项完成度约 99%，不能整体划掉。
 - [x] ~~完成刺客技能表审计与 Shadow Warrior/Shadow Master 原生召唤首项~~
   - 核对 `Skills.txt` 实际 ID（Shadow Warrior=268、Shadow Master=279、SrvDo049），按 `summon/pettype/petmax` 创建玩家所有权召唤物，并同步 `SHADOWWARRIOR` 状态；`AssassinSkillSpecializationTest` 已加入数据和 ECS 门槛。
 - [ ] 完成刺客陷阱生命周期（SrvDo044/SrvDo045）
@@ -145,6 +146,7 @@
 - 2026-09-03：完成多人技能表现同步首项；服务端接入原生 `SrvDo047` 暗影斗篷范围状态（`DIMVISION`、持续时间和防御降低），客户端通过 `StateP` 快照自动恢复状态 Overlay，并补充原生数据/ECS 回归测试。
 - 2026-09-03：完成亚马逊元素箭服务端伤害首项；Skills.txt 快照接入所有技能导弹，Magic/Fire/Cold 转伤、Ice/Freezing 冰冻、Exploding/Freezing 的 SrvHit04→SrvHit01 范围子导弹及 Lightning Fury 子导弹元素伤害均加入回归门槛。
 - 2026-09-03：完成 Immolation Arrow 火场生命周期；按 D2MOO `SrvHit09/SrvDmg03` 生成 immolationfire 圆形区域，保留 100 帧并按 `DamageRate=41` 周期伤害，火场导弹通过统一同步管线广播。
+- 2026-09-03：接入统一持续毒云管线；Poison Javelin 按 `SrvDo02` 沿途生成 poisonjavcloud，Plague Javelin 按 `SrvHit02` 生成 plaguejavcloud，毒雾陷阱与 corpsepoisoncloud 复用同一生命周期、区域施毒和多人导弹同步；冰冻箭增加区域内多目标冻结 ECS 回归。
 
 ## 当前下一项
 
