@@ -31,6 +31,10 @@ public class Casting extends PooledComponent {
   public CombatSystem.CombatResult dragonTailCombat;
   @EntityId public int dragonTailTargetId;
   public boolean dragonTailPrepared;
+  /** Native Dragon Flight SQ sequence: first event warps, second event kicks. */
+  public boolean dragonFlightInitialized;
+  public boolean dragonFlightWarped;
+  public boolean dragonFlightKickProcessed;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     this.skillId = skillId;
@@ -49,6 +53,9 @@ public class Casting extends PooledComponent {
     dragonTailCombat = null;
     dragonTailTargetId = Engine.INVALID_ENTITY;
     dragonTailPrepared = false;
+    dragonFlightInitialized = false;
+    dragonFlightWarped = false;
+    dragonFlightKickProcessed = false;
     return this;
   }
 
@@ -70,5 +77,8 @@ public class Casting extends PooledComponent {
     dragonTailCombat = null;
     dragonTailTargetId = Engine.INVALID_ENTITY;
     dragonTailPrepared = false;
+    dragonFlightInitialized = false;
+    dragonFlightWarped = false;
+    dragonFlightKickProcessed = false;
   }
 }

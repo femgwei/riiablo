@@ -702,8 +702,26 @@ public final class AssassinSkills {
    * @return 伤害加成百分比
    */
   public static int calculateDragonFlightDamageBonus(int skillLevel) {
-    // 每级 +20%
-    return 20 * skillLevel;
+    return 100 + (Math.max(1, skillLevel) - 1) * 25;
+  }
+
+  /** D2MOO SrvDo052: Param1 + (level - 1) * Param2 kick ED. */
+  public static int calculateDragonFlightDamageBonus(Skills.Entry skill, int skillLevel) {
+    return param(skill, 0, 100)
+        + (Math.max(1, skillLevel) - 1) * param(skill, 1, 25);
+  }
+
+  /** Native Dragon Flight uses the shared Assassin KICK damage composition. */
+  public static int[] calculateDragonFlightKickDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Armor.Entry boots) {
+    return calculateNativeKickDamage(attacker, boots,
+        calculateDragonFlightDamageBonus(skill, skillLevel));
+  }
+
+  /** Native SrvDo052 includes progressive_tohit plus SKILLS_GetToHitFactor. */
+  public static int dragonFlightAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker) {
+    return dragonTalonAttackRating(skill, skillLevel, attacker);
   }
 
   //==========================================================================

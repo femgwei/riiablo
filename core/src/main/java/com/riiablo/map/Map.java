@@ -1145,6 +1145,17 @@ public class Map implements Disposable {
      */
     public boolean findFreeCoordinates(Vector2 coordinates, int unitSize,
         int maxDistance, boolean allowNeighborRooms, Vector2 result) {
+      return findFreeCoordinates(coordinates, unitSize, maxDistance,
+          DT1.Tile.FLAG_BLOCK_WALK, allowNeighborRooms, result);
+    }
+
+    /**
+     * Variant used by native callers whose collision mask is stricter than
+     * ordinary walking. The mask is expressed in the DT1 low collision bits;
+     * dynamic object/door references are folded into FLAG_BLOCK_WALK.
+     */
+    public boolean findFreeCoordinates(Vector2 coordinates, int unitSize,
+        int maxDistance, int collisionMask, boolean allowNeighborRooms, Vector2 result) {
       if (coordinates == null || result == null || flags == null) return false;
       final int originX = Map.round(coordinates.x);
       final int originY = Map.round(coordinates.y);
@@ -1153,7 +1164,7 @@ public class Map implements Disposable {
 
       for (int radius = 0; radius <= limit; radius++) {
         if (radius == 0) {
-          if (isFreeCoordinate(originX, originY, unitSize, sourceRoom,
+          if (isFreeCoordinate(originX, originY, unitSize, collisionMask, sourceRoom,
               allowNeighborRooms)) {
             result.set(originX, originY);
             return true;
@@ -1164,24 +1175,24 @@ public class Map implements Disposable {
         // Evaluate the complete Chebyshev ring. D2Common searches expanding
         // boxes and selects the closest valid coordinate in the first box.
         for (int dx = -radius; dx <= radius; dx++) {
-          if (isFreeCoordinate(originX + dx, originY - radius, unitSize,
+          if (isFreeCoordinate(originX + dx, originY - radius, unitSize, collisionMask,
               sourceRoom, allowNeighborRooms)) {
             result.set(originX + dx, originY - radius);
             return true;
           }
-          if (isFreeCoordinate(originX + dx, originY + radius, unitSize,
+          if (isFreeCoordinate(originX + dx, originY + radius, unitSize, collisionMask,
               sourceRoom, allowNeighborRooms)) {
             result.set(originX + dx, originY + radius);
             return true;
           }
         }
         for (int dy = -radius + 1; dy < radius; dy++) {
-          if (isFreeCoordinate(originX - radius, originY + dy, unitSize,
+          if (isFreeCoordinate(originX - radius, originY + dy, unitSize, collisionMask,
               sourceRoom, allowNeighborRooms)) {
             result.set(originX - radius, originY + dy);
             return true;
           }
-          if (isFreeCoordinate(originX + radius, originY + dy, unitSize,
+          if (isFreeCoordinate(originX + radius, originY + dy, unitSize, collisionMask,
               sourceRoom, allowNeighborRooms)) {
             result.set(originX + radius, originY + dy);
             return true;
@@ -1191,7 +1202,7 @@ public class Map implements Disposable {
       return false;
     }
 
-    private boolean isFreeCoordinate(int worldX, int worldY, int unitSize,
+    private boolean isFreeCoordinate(int worldX, int worldY, int unitSize, int collisionMask,
         RoomEx sourceRoom, boolean allowNeighborRooms) {
       if (!contains(worldX, worldY)) return false;
       RoomEx candidateRoom = findRoomEx(worldX, worldY);
@@ -1212,7 +1223,7 @@ public class Map implements Disposable {
           int x = worldX + dx;
           int y = worldY + dy;
           if (!contains(x, y)) return false;
-          if ((flags(x - this.x, y - this.y) & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+          if ((flags(x - this.x, y - this.y) & collisionMask) != 0) {
             return false;
           }
           if (!roomsEx.isEmpty()) {

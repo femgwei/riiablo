@@ -493,6 +493,14 @@ public class Actioneer extends PassiveSystem {
           casting.dragonClawStrikeIndex + 1);
       return;
     }
+    if (casting.dragonFlightInitialized
+        && casting.dragonFlightWarped
+        && !casting.dragonFlightKickProcessed
+        && !targetDead) {
+      log.info("[ASSASSIN_DRAGON_FLIGHT] phase=continue entity={} target={} next=kick",
+          event.entityId, completedTargetId);
+      return;
+    }
     mCasting.remove(event.entityId);
     
     if (targetDead && mSequence.has(event.entityId)) {
@@ -542,6 +550,35 @@ public class Actioneer extends PassiveSystem {
         log.debug("[AMAZON_SKILL] phase=start entity={} target={} srvStFunc={} delegated=keyframe",
             entityId, targetId, srvstfunc);
         break;
+      case 12: { // SKILLS_SrvSt12_Telekinesis_DragonFlight
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        // Telekinesis shares SrvSt12 but does not use the Dragon Flight
+        // sequence or melee target rules.
+        if (skill == null || skill.srvdofunc != 52) break;
+        String reject = dragonFlightStartRejection(entityId, targetId, skill,
+            Math.max(1, skillLevel(entityId, casting.skillId)));
+        if (reject != null) {
+          log.info("[ASSASSIN_DRAGON_FLIGHT] phase=start_reject entity={} target={} reason={}",
+              entityId, targetId, reject);
+          mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        casting.dragonFlightInitialized = true;
+        casting.dragonFlightWarped = false;
+        casting.dragonFlightKickProcessed = false;
+        int level = Math.max(1, skillLevel(entityId, casting.skillId));
+        int range = Math.max(0,
+            SkillFormula.evaluate(skill.aurarangecalc, skill, level));
+        log.info("[ASSASSIN_DRAGON_FLIGHT] phase=start entity={} target={} skillLevel={} "
+                + "range={} damagePercent={} attackRating={}",
+            entityId, targetId, level, range,
+            AssassinSkills.calculateDragonFlightDamageBonus(skill, level),
+            AssassinSkills.dragonFlightAttackRating(
+                skill, level, mAttributesWrapper.get(entityId).attrs));
+        break;
+      }
       case 24: { // SKILLS_SrvSt24_DragonTalon
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
@@ -741,10 +778,32 @@ public class Actioneer extends PassiveSystem {
         int dragonClawStrike = -1;
         Item dragonClawWeapon = null;
         boolean dragonTail = srvdofunc == 50;
+        boolean dragonFlight = srvdofunc == 52;
         CombatSystem.CombatResult dragonTailCombat = dragonTail && activeCasting != null
             && activeCasting.dragonTailPrepared
             && activeCasting.dragonTailTargetId == targetId
             ? activeCasting.dragonTailCombat : null;
+        if (dragonFlight) {
+          if (activeCasting == null || activeSkill == null
+              || !activeCasting.dragonFlightInitialized) {
+            log.info("[ASSASSIN_DRAGON_FLIGHT] phase=reject entity={} target={} reason=not_initialized",
+                entityId, targetId);
+            break;
+          }
+          if (!activeCasting.dragonFlightWarped) {
+            if (resolveDragonFlightWarp(entityId, targetId)) {
+              activeCasting.dragonFlightWarped = true;
+            } else {
+              log.info("[ASSASSIN_DRAGON_FLIGHT] phase=warp_reject entity={} target={}",
+                  entityId, targetId);
+              mCasting.remove(entityId);
+              if (mSequence.has(entityId)) mSequence.remove(entityId);
+            }
+            break;
+          }
+          if (activeCasting.dragonFlightKickProcessed) break;
+          activeCasting.dragonFlightKickProcessed = true;
+        }
         if (dragonTalon) {
           if (activeCasting == null || activeSkill == null) break;
           if (!activeCasting.dragonTalonInitialized) {
@@ -810,7 +869,7 @@ public class Actioneer extends PassiveSystem {
           // created at this keyframe.
           boolean rangedMonsterAttack = isMonsterProjectileSkill(entityId)
               || hasMonsterAttackMissile(entityId);
-          if (!rangedMonsterAttack && dragonTailCombat == null
+          if (!rangedMonsterAttack && dragonTailCombat == null && !dragonFlight
               && !isInMeleeRange(entityId, targetId, bonus)) {
             log.info("[MELEE_RANGE] phase=reject source={} target={} distance={} range={}",
                 entityId, targetId,
@@ -914,6 +973,19 @@ public class Actioneer extends PassiveSystem {
               entityId, targetId, activeCasting.dragonTalonSuccessfulKicks + 1,
               activeCasting.dragonTalonRemainingKicks,
               kickDamage[0], kickDamage[1], attackRating, dragonTalonLastKick);
+        } else if (dragonFlight) {
+          int[] kickDamage = AssassinSkills.calculateDragonFlightKickDamage(
+              activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
+          int attackRating = AssassinSkills.dragonFlightAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs);
+          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+              attackerAttrs, attrs, attackerPlayer, targetPlayer,
+              kickDamage[0], kickDamage[1], attackRating,
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+          log.info("[ASSASSIN_DRAGON_FLIGHT] phase=kick entity={} target={} "
+                  + "damageRange={}..{} attackRating={} chance={}",
+              entityId, targetId, kickDamage[0], kickDamage[1], attackRating,
+              combat.hitChance);
         } else if (dragonClaw && dragonClawWeapon != null) {
           int[] clawDamage = AssassinSkills.calculateDragonClawDamage(
               activeSkill, activeSkillLevel, attackerAttrs, dragonClawWeapon);
@@ -984,6 +1056,7 @@ public class Actioneer extends PassiveSystem {
             combat.critical, combat.deadlyStrike, combat.crushingBlow);
         if (dragonTalon) activeCasting.dragonTalonSuccessfulKicks++;
         if (dragonTalon) drainDragonTalonDurability(entityId, targetId);
+        if (dragonFlight) drainDragonTalonDurability(entityId, targetId);
         if (dragonClaw) drainDragonClawDurability(dragonClawWeapon, targetId);
         if (dragonTail) drainDragonTalonDurability(entityId, targetId);
 
@@ -1206,6 +1279,97 @@ public class Actioneer extends PassiveSystem {
 
   static boolean allowsDeadTarget(Skills.Entry skill) {
     return skill != null && skill.srvdofunc == 97;
+  }
+
+  /** D2MOO SKILLS_SrvSt12 validation for the Dragon Flight table row. */
+  private String dragonFlightStartRejection(
+      int entityId, int targetId, Skills.Entry skill, int skillLevel) {
+    if (targetId == Engine.INVALID_ENTITY || !mPosition.has(entityId)
+        || !mPosition.has(targetId) || !isAlive(entityId) || !isAlive(targetId)) {
+      return "invalid_target";
+    }
+    if (!mPlayer.has(targetId) && !mMonster.has(targetId)
+        && !mMercenary.has(targetId) && !mSummonedPet.has(targetId)) {
+      return "invalid_unit_type";
+    }
+    if (mNativeUnitFlags.has(targetId)
+        && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) {
+      return "not_attackable";
+    }
+    int range = Math.max(0,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, Math.max(1, skillLevel)));
+    if (mPosition.get(entityId).position.dst2(mPosition.get(targetId).position)
+        > (float) range * range) {
+      return "out_of_range";
+    }
+    boolean sourcePlayerAligned = mPlayer.has(entityId) || mMercenary.has(entityId)
+        || mSummonedPet.has(entityId);
+    boolean targetPlayerAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
+        || mSummonedPet.has(targetId);
+    if (!PvpCombatRules.canDamage(
+        partyManager, entityId, targetId, sourcePlayerAligned, targetPlayerAligned)) {
+      return "relation";
+    }
+    Map.Zone sourceZone = map != null ? map.getZone(mPosition.get(entityId).position) : null;
+    Map.Zone targetZone = map != null ? map.getZone(mPosition.get(targetId).position) : null;
+    if ((sourceZone != null && sourceZone.isTown())
+        || (targetZone != null && targetZone.isTown())) {
+      return "town";
+    }
+    return null;
+  }
+
+  /** First SrvDo052 sequence event: find a native free coordinate and warp. */
+  private boolean resolveDragonFlightWarp(int entityId, int targetId) {
+    if (map == null || !mPosition.has(entityId) || !mPosition.has(targetId)
+        || !isAlive(entityId) || !isAlive(targetId)) {
+      return false;
+    }
+    Vector2 source = mPosition.get(entityId).position;
+    Vector2 target = mPosition.get(targetId).position;
+    Map.Zone sourceZone = map.getZone(source);
+    Map.Zone targetZone = map.getZone(target);
+    if (sourceZone == null || sourceZone.level == null || targetZone == null
+        || sourceZone.level.Teleport == 0) {
+      log.info("[ASSASSIN_DRAGON_FLIGHT] phase=warp_reject entity={} target={} "
+              + "reason=level_teleport sourceLevel={} teleport={}",
+          entityId, targetId,
+          sourceZone != null && sourceZone.level != null ? sourceZone.level.Id : -1,
+          sourceZone != null && sourceZone.level != null ? sourceZone.level.Teleport : -1);
+      return false;
+    }
+    int targetFlags = map.flags(target);
+    if (sourceZone.level.Teleport == 2
+        && (targetFlags & (DT1.Tile.FLAG_BLOCK_JUMP | DT1.Tile.FLAG_BLOCK_WALK)) != 0) {
+      log.info("[ASSASSIN_DRAGON_FLIGHT] phase=warp_reject entity={} target={} "
+              + "reason=flying_collision flags={}",
+          entityId, targetId, targetFlags);
+      return false;
+    }
+    int unitSize = mSize.has(entityId) ? mSize.get(entityId).size : Size.MEDIUM;
+    Vector2 landing = new Vector2();
+    // Native sub_6FCBDFE0 searches with mask 0x1C09. Its DT1 portion is wall
+    // plus no-player collision; dynamic objects/doors are represented by the
+    // map's walk-block references. The mask deliberately excludes unit
+    // presence, so the selected enemy itself does not invalidate the search.
+    int collisionMask = DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_PLAYER_WALK;
+    if (!targetZone.findFreeCoordinates(
+        target, unitSize, 50, collisionMask, false, landing)) {
+      log.info("[ASSASSIN_DRAGON_FLIGHT] phase=warp_reject entity={} target={} "
+              + "reason=no_free_coordinate level={} requested=({}, {}) size={}",
+          entityId, targetId, targetZone.level != null ? targetZone.level.Id : -1,
+          target.x, target.y, unitSize);
+      return false;
+    }
+    if (!resolveTeleport(entityId, landing)) return false;
+    if (mAngle.has(entityId)) {
+      mAngle.get(entityId).target.set(target).sub(landing).nor();
+    }
+    log.info("[ASSASSIN_DRAGON_FLIGHT] phase=warp entity={} target={} "
+            + "requested=({}, {}) landing=({}, {}) level={} size={}",
+        entityId, targetId, target.x, target.y, landing.x, landing.y,
+        targetZone.level != null ? targetZone.level.Id : -1, unitSize);
+    return true;
   }
 
   /** D2MOO SrvDo027: validate the landing subtile, warp, and clear stale movement intent. */

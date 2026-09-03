@@ -16,6 +16,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -28,6 +29,7 @@ import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
@@ -36,6 +38,7 @@ import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.AssassinSkills;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
@@ -207,6 +210,184 @@ class AssassinMartialArtsTest extends RiiabloTest {
       assertEquals("dragontail missile", factory.missileNames.get(0));
     } finally {
       world.dispose();
+    }
+  }
+
+  @Test
+  void dragonFlightUsesNativeSequenceRangeAttackAndKickData() {
+    Skills.Entry flight = Riiablo.files.skills.get("Dragon Flight");
+    assertNotNull(flight);
+    assertEquals(275, flight.Id);
+    assertEquals(12, flight.srvstfunc);
+    assertEquals(52, flight.srvdofunc);
+    assertEquals("SQ", flight.anim);
+    assertEquals("A1", flight.seqtrans);
+    assertEquals(21, flight.seqnum);
+    assertEquals(27, SkillFormula.evaluate(flight.aurarangecalc, flight, 1));
+    assertEquals(100, AssassinSkills.calculateDragonFlightDamageBonus(flight, 1));
+    assertEquals(200, AssassinSkills.calculateDragonFlightDamageBonus(flight, 5));
+
+    Attributes attrs = attributes(100, 1, 1, 1000);
+    attrs.base().put(Stat.strength, 100);
+    attrs.base().put(Stat.dexterity, 80);
+    attrs.base().put(Stat.progressive_tohit, 30);
+    attrs.reset();
+    int[] damage = AssassinSkills.calculateDragonFlightKickDamage(
+        flight, 5, attrs, Riiablo.files.armor.get("lbt"));
+    assertTrue(damage[0] > 0);
+    assertTrue(damage[1] >= damage[0]);
+    assertEquals(1000 + 30 + flight.ToHit + 4 * flight.LevToHit,
+        AssassinSkills.dragonFlightAttackRating(flight, 5, attrs));
+  }
+
+  @Test
+  void dragonFlightWarpsOnFirstEventThenKicksAndReleasesChargesOnSecond() {
+    DummyFactory factory = new DummyFactory();
+    DragonFlightMap map = new DragonFlightMap(1, false, new Vector2(19, 5));
+    Actioneer actioneer = new Actioneer();
+    SequenceHandler sequenceHandler = new SequenceHandler();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), actioneer, sequenceHandler,
+            new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      Attributes assassinAttrs = attributes(1000, 1, 1, 100000);
+      assassinAttrs.base().put(Stat.strength, 120);
+      assassinAttrs.base().put(Stat.dexterity, 100);
+      assassinAttrs.reset();
+      int assassin = createPlayer(world, 5, 5, assassinAttrs);
+      world.getMapper(Size.class).create(assassin).size = Size.MEDIUM;
+      world.getMapper(MovementModes.class).create(assassin).set(
+          Engine.Player.MODE_NU, Engine.Player.MODE_WL, Engine.Player.MODE_RN);
+      world.getMapper(Sequence.class).create(assassin).sequence(
+          Engine.Player.MODE_SC, Engine.Player.MODE_NU);
+      world.getMapper(AnimData.class).create(assassin).override = -1;
+      int target = createMonster(world, 20, 5, attributes(100000, 0, 0, 0));
+      Skills.Entry flight = Riiablo.files.skills.get("Dragon Flight");
+      Skills.Entry tiger = Riiablo.files.skills.get("Tiger Strike");
+      CharData data = CharData.createRemote("flight", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(flight.Id, 5);
+      world.getMapper(Player.class).get(assassin).data = data;
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      AssassinSkills.addProgressiveCharge(states, tiger, 5, assassin);
+      Casting casting = world.getMapper(Casting.class).get(assassin)
+          .set(flight.Id, target, world.getMapper(Position.class).get(target).position);
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, flight.Id, target, casting.targetVec,
+          flight.srvstfunc, flight.cltstfunc));
+      assertTrue(casting.dragonFlightInitialized);
+      float hpBefore = world.getMapper(AttributesWrapper.class).get(target)
+          .attrs.get(Stat.hitpoints).asFixed();
+
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+
+      assertTrue(map.freeCoordinateRequested);
+      assertEquals(new Vector2(19, 5),
+          world.getMapper(Position.class).get(assassin).position);
+      assertTrue(casting.dragonFlightWarped);
+      assertTrue(!casting.dragonFlightKickProcessed);
+      assertEquals(hpBefore, world.getMapper(AttributesWrapper.class).get(target)
+          .attrs.get(Stat.hitpoints).asFixed(), 0.001f);
+      assertEquals(1, AssassinSkills.progressiveCharges(
+          states, StateId.PROGRESSIVE_DAMAGE));
+      assertTrue(states.hasState(StateId.SYNC_WARPED));
+
+      world.getSystem(EventSystem.class).dispatch(AnimDataFinishedEvent.obtain(assassin));
+      assertTrue(world.getMapper(Casting.class).has(assassin));
+      assertEquals(Engine.Player.MODE_KK,
+          world.getMapper(Sequence.class).get(assassin).mode1);
+
+      MathUtils.random.setSeed(0xD2F1157L);
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+
+      assertTrue(casting.dragonFlightKickProcessed);
+      assertTrue(world.getMapper(AttributesWrapper.class).get(target)
+          .attrs.get(Stat.hitpoints).asFixed() < hpBefore);
+      assertNull(states.getState(StateId.PROGRESSIVE_DAMAGE));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void dragonFlightRejectsRangeTownAndNonTeleportLevels() {
+    Skills.Entry flight = Riiablo.files.skills.get("Dragon Flight");
+
+    World rangedWorld = dragonFlightWorld(new DragonFlightMap(
+        1, false, new Vector2(50, 0)));
+    try {
+      int assassin = createPlayer(rangedWorld, 1, 1, attributes(100, 1, 1, 1000));
+      int target = createMonster(rangedWorld, 50, 1, attributes(100, 0, 0, 0));
+      Casting casting = rangedWorld.getMapper(Casting.class).get(assassin)
+          .set(flight.Id, target, rangedWorld.getMapper(Position.class).get(target).position);
+      rangedWorld.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, flight.Id, target, casting.targetVec,
+          flight.srvstfunc, flight.cltstfunc));
+      assertTrue(!rangedWorld.getMapper(Casting.class).has(assassin));
+    } finally {
+      rangedWorld.dispose();
+    }
+
+    World townWorld = dragonFlightWorld(new DragonFlightMap(
+        1, true, new Vector2(10, 1)));
+    try {
+      int assassin = createPlayer(townWorld, 1, 1, attributes(100, 1, 1, 1000));
+      int target = createMonster(townWorld, 10, 1, attributes(100, 0, 0, 0));
+      Casting casting = townWorld.getMapper(Casting.class).get(assassin)
+          .set(flight.Id, target, townWorld.getMapper(Position.class).get(target).position);
+      townWorld.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, flight.Id, target, casting.targetVec,
+          flight.srvstfunc, flight.cltstfunc));
+      assertTrue(!townWorld.getMapper(Casting.class).has(assassin));
+    } finally {
+      townWorld.dispose();
+    }
+
+    DragonFlightMap disabledMap = new DragonFlightMap(
+        0, false, new Vector2(10, 1));
+    World disabledWorld = dragonFlightWorld(disabledMap);
+    try {
+      int assassin = createPlayer(disabledWorld, 1, 1, attributes(100, 1, 1, 1000));
+      int target = createMonster(disabledWorld, 10, 1, attributes(100, 0, 0, 0));
+      Casting casting = disabledWorld.getMapper(Casting.class).get(assassin)
+          .set(flight.Id, target, disabledWorld.getMapper(Position.class).get(target).position);
+      disabledWorld.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, flight.Id, target, casting.targetVec,
+          flight.srvstfunc, flight.cltstfunc));
+      assertTrue(casting.dragonFlightInitialized);
+      disabledWorld.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+      assertTrue(!disabledWorld.getMapper(Casting.class).has(assassin));
+      assertEquals(new Vector2(1, 1),
+          disabledWorld.getMapper(Position.class).get(assassin).position);
+      assertTrue(!disabledMap.freeCoordinateRequested);
+    } finally {
+      disabledWorld.dispose();
+    }
+
+    DragonFlightMap flyingBlockedMap = new DragonFlightMap(
+        2, false, new Vector2(10, 1), com.riiablo.map.DT1.Tile.FLAG_BLOCK_JUMP);
+    World flyingBlockedWorld = dragonFlightWorld(flyingBlockedMap);
+    try {
+      int assassin = createPlayer(
+          flyingBlockedWorld, 1, 1, attributes(100, 1, 1, 1000));
+      int target = createMonster(
+          flyingBlockedWorld, 10, 1, attributes(100, 0, 0, 0));
+      Casting casting = flyingBlockedWorld.getMapper(Casting.class).get(assassin)
+          .set(flight.Id, target,
+              flyingBlockedWorld.getMapper(Position.class).get(target).position);
+      flyingBlockedWorld.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, flight.Id, target, casting.targetVec,
+          flight.srvstfunc, flight.cltstfunc));
+      flyingBlockedWorld.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+      assertTrue(!flyingBlockedWorld.getMapper(Casting.class).has(assassin));
+      assertTrue(!flyingBlockedMap.freeCoordinateRequested);
+    } finally {
+      flyingBlockedWorld.dispose();
     }
   }
 
@@ -1261,6 +1442,52 @@ class AssassinMartialArtsTest extends RiiabloTest {
           AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
     }
     assertNull(states.getState(stateId));
+  }
+
+  private static World dragonFlightWorld(Map map) {
+    DummyFactory factory = new DummyFactory();
+    return new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new Actioneer(), new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", map));
+  }
+
+  private static final class DragonFlightMap extends Map {
+    final Map.Zone zone;
+    final Vector2 landing;
+    final int flags;
+    boolean freeCoordinateRequested;
+
+    DragonFlightMap(int teleport, boolean town, Vector2 landing) {
+      this(teleport, town, landing, 0);
+    }
+
+    DragonFlightMap(int teleport, boolean town, Vector2 landing, int flags) {
+      super(0, 0);
+      this.landing = new Vector2(landing);
+      this.flags = flags;
+      Levels.Entry level = new Levels.Entry();
+      level.Id = 2;
+      level.Teleport = teleport;
+      zone = new Map.Zone() {
+        @Override public boolean isTown() { return town; }
+
+        @Override public boolean findFreeCoordinates(Vector2 coordinates, int unitSize,
+            int maxDistance, int collisionMask, boolean allowNeighborRooms, Vector2 result) {
+          freeCoordinateRequested = true;
+          assertEquals(Size.MEDIUM, unitSize);
+          assertEquals(50, maxDistance);
+          assertEquals(com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK
+              | com.riiablo.map.DT1.Tile.FLAG_BLOCK_PLAYER_WALK, collisionMask);
+          assertTrue(!allowNeighborRooms);
+          result.set(DragonFlightMap.this.landing);
+          return true;
+        }
+      };
+      zone.level = level;
+    }
+
+    @Override public Map.Zone getZone(Vector2 point) { return zone; }
+    @Override public int flags(Vector2 point) { return flags; }
   }
 
   private static int createPlayer(World world, float x, float y, Attributes attrs) {

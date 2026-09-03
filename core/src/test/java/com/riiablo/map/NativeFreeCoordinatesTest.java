@@ -65,6 +65,22 @@ class NativeFreeCoordinatesTest {
         new Vector2(29, 39), 1, 50, true, result));
   }
 
+  @Test
+  void callerMaskCanIncludeNativeNoPlayerCollision() {
+    Map.Zone zone = zone(0, 0, 7, 7);
+    zone.or(3, 3, DT1.Tile.FLAG_BLOCK_PLAYER_WALK);
+    Vector2 result = new Vector2();
+
+    assertTrue(zone.findFreeCoordinates(
+        new Vector2(3, 3), 1, 0, true, result));
+    assertEquals(new Vector2(3, 3), result);
+    assertTrue(zone.findFreeCoordinates(
+        new Vector2(3, 3), 1, 2,
+        DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_PLAYER_WALK,
+        true, result));
+    assertFalse(new Vector2(3, 3).equals(result));
+  }
+
   private static Map.Zone zone(int x, int y, int width, int height) {
     Map.Zone zone = new Map.Zone();
     zone.x = x;

@@ -46,6 +46,17 @@ public class SequenceHandler extends IteratingSystem {
           event.entityId, casting.dragonClawRemainingStrikes, (int) nextMode);
       return;
     }
+    if (casting != null && casting.dragonFlightInitialized
+        && casting.dragonFlightWarped
+        && !casting.dragonFlightKickProcessed) {
+      byte nextMode = com.riiablo.engine.Engine.Player.MODE_KK;
+      sequence.sequence(nextMode, sequence.mode2);
+      mAnimData.get(event.entityId).override = -1;
+      com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).info(
+          "[ASSASSIN_DRAGON_FLIGHT] phase=kick_animation entity={} mode={}",
+          event.entityId, (int) nextMode);
+      return;
+    }
     // Log sequence transition for debugging
     com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(SequenceHandler.class);
     log.trace("Sequence finished for entity {}: mode1={} -> mode2={}", event.entityId, sequence.mode1, sequence.mode2);

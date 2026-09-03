@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-03
+更新时间：2026-09-04
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -56,7 +56,7 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
-| 刺客 Assassin | 96% | 4% | 陷阱、三层聚气、四套元素聚气释放及 Dragon Talon/Claw/Tail 已接通；位移完成技和暗影系细节仍待补齐 |
+| 刺客 Assassin | 98% | 2% | 陷阱、三层聚气、四套元素聚气释放及 Dragon Talon/Claw/Tail/Flight 已接通；暗影系运行时细节仍待补齐 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
@@ -122,7 +122,7 @@
   - [x] ~~完成 Inferno Sentry `SrvDo95` 首项~~：按 `calc2`（含 Wake of Fire 协同等级）设置喷射窗口，按 `calc3` 重复创建火焰导弹，并在每次喷射时重新追踪目标方向；单枚导弹按 `calc1` 设置原生路径长度。
   - [x] ~~完成 Death Sentry `SrvDo55` 首项~~：按原生 `CorpseSel`/可用状态筛选尸体并原子保留，防止同一尸体重复引爆；按尸体最大生命和 `calc1/calc2` 生成伤害，依据 `calc3` 拆分物理/火焰并在 `AuraRange/2` 范围结算，创建同步爆炸表现；无尸体时回退 `Skill2` 闪电攻击，`calc4` 正确计入 Fire Blast 基础等级的射击次数协同。
   - [x] ~~完成 Charged Bolt/Lightning Sentry 首项~~：对照 D2MOO `SrvDo017_ChargedBolt_BoltSentry`、`PATH_ComputePathChargedBolt` 与 AI `Fn101_AssassinSentry`，Charged Bolt Sentry 按 `calc1` 一次生成多枚独立 `sentrychargedbolt`，使用原生种子公式和每 2 子格左偏/直行/右偏折线路径；Lightning Sentry 复用原生 `Aip1/Aip2/Aip3/Aip4` 目标距离、攻击概率和停顿节拍，并按每次攻击重新追踪目标。两者均解析 Missiles.txt 关联的玩家技能伤害并通过现有 EntitySync 权威广播，补充专项 ECS 回归。
-- [ ] 完成刺客聚气和完成技专项
+- [x] ~~完成刺客聚气和完成技专项~~
   - [x] ~~完成 `SrvDo034/035` 聚气命中与多人状态首项~~：Tiger Strike、Cobra Strike、Fists of Fire 等技能只在成功且未格挡的近战命中后叠层，按 `AuraState/AuraLenCalc` 保存技能来源和等级，最多三层并刷新期限；阻止 `SrvMissileA-D` 在蓄力阶段被误生成为普通导弹；`StateP.velocityModifier` 兼容传输层数且客户端恢复后不影响移动速度。
   - [x] ~~完成 Tiger/Cobra/Fists 的完成技直接释放与统一消费~~：完成技成功且未格挡时读取全部聚气状态；Tiger 按 `calc1 × 层数` 增强物理伤害，Cobra 严格按 1 层生命、2 层生命/法力、3 层双倍生命/法力吸取，Fists 按 Skills.txt 等级段伤害和 `calc1` 完成火焰直击/物理转火；实际 `DamageEvent` 结算后才恢复生命和法力，未命中、格挡、越距均保留聚气。
   - [x] ~~完成 Fists of Fire 二层范围冲击与三层火焰场导弹表现~~：补入 `PrgStack/SrvPrgFunc/PrgCalc` 原生列；二层按 `PrgCalc2` 在完成技目标周围结算一次共享物理/火焰伤害，三层继续叠加二层并按 `PrgCalc3` 圆形随机布置 `fistsoffirefirewall`。火场导弹由服务端持有、保存技能伤害快照、按 Range 帧退出并通过既有导弹实体同步给多人客户端。
@@ -130,11 +130,11 @@
     - [x] ~~完成 Claws of Thunder 三阶段释放~~：一层按 `PrgDam=4` 将 Skills.txt 闪电伤害加入完成技；二层对照 `SrvDo036/sub_6FD14170` 从目标位置创建 64 路量化方向 `clawsofthundernova`；三层按 `PrgStack` 继续叠加 Nova，并对照 `SrvDo037/sub_6FCF6600` 以 `PrgCalc3=4` 创建 16 条 `clawsofthunderbolt` Charged Bolt 路径。所有导弹由服务端持有、保存技能伤害快照并进入多人同步。
     - [x] ~~完成 Blades of Ice 范围冰伤、冻结和三层冰弹~~：按 `PrgDam=4` 将 Skills.txt 冰冷伤害加入完成技；二层复用 `SrvDo038` 的单次共享物理/冰冷伤害记录并在半径 6 内施加冰冷；三层按 `PrgStack` 叠加二层，在半径 3 内执行 9 次原生随机布点并创建 `bladesoficecubes`。主目标按 `Param5` 冻结，冰块按 `SrvDmg10` 冻结命中目标，并以原生 Range 帧到期。
     - [x] ~~完成 Phoenix Strike 三阶段元素导弹与叠加规则~~：严格按 `PrgStack=false` 只释放当前层；一层 `SrvDo040` 创建 Meteor Center，并由 `SrvHit04/14` 生成陨石范围伤害与原生 18 点持续火场；二层 `SrvDo143` 以 `PrgCalc2=10` 创建 7 路 Chain Lightning 并按 `Param2+1` 权威续跳；三层 `SrvDo041` 以 `PrgCalc3=16` 创建 16 枚 Chaos Ice，按 `SrvDo35` 周期转向并冻结命中目标。
-  - [ ] 完成 Dragon Talon/Claw/Tail/Flight 的多段、双爪、范围火焰和目标位移。
+  - [x] ~~完成 Dragon Talon/Claw/Tail/Flight 的多段、双爪、范围火焰和目标位移。~~
     - [x] ~~完成 Dragon Talon `SrvSt24/SrvDo042` 原生连续踢击~~：严格按 `calc1=lvl/6+1` 初始化踢击次数，每次动画独立命中、伤害和耐久结算；聚气只在首个成功踢击释放一次，目标死亡立即终止后续动作；末击按普通/Unique/Boss/玩家与佣兵分别读取 100%/`calc2`/`calc3`/`calc4` 击退概率，并用地图碰撞限制服务端位移。靴子 `mindam/maxdam/StrBonus/DexBonus`、`item_kickdamage`、技能 ED 和原生 `dmXY` 衰减公式已纳入伤害/概率计算。
     - [x] ~~完成 Dragon Claw `SrvSt25/SrvDo046` 原生双爪序列~~：按原生 HT2 命中帧以 `A2 → S4` 执行左右爪独立攻击，分别读取当前爪伤害、力量/敏捷缩放、`calc1` 增伤并各自消耗耐久；首个成功命中统一释放聚气，第二爪不会再次消费；单爪/徒手保留原生单命中退化路径。补齐共享 `SrvSt64` 的 MonFrenzy 目标校验，避免套用玩家装备规则。
     - [x] ~~完成 Dragon Tail `SrvSt27/SrvDo050` 主目标踢击与范围火焰爆炸~~：起手阶段生成并保存一次原生命中记录，命中帧不再重复掷骰；修正共用 KICK 力量/敏捷基础伤害，主目标踢击后按经物理减伤及 Tiger Strike 增幅后的实际物理伤害乘以 `calc1 + passive_fire_mastery`，在 `AuraRangeCalc` 范围内按各目标火抗独立结算。服务端创建一次性 `dragontail missile` 表现实体供多人同步，失败命中不释放聚气、不爆炸。
-    - [ ] 完成 Dragon Flight 目标旁安全落点、位移同步和到达后的完成技命中。
+    - [x] ~~完成 Dragon Flight `SrvSt12/SrvDo052` 两阶段位移完成技~~：按 `AuraRangeCalc=par7` 校验目标距离、敌对与城镇边界；第一序列事件检查当前 `Levels.Teleport` 和飞行碰撞，以玩家完整 footprint 在目标 RoomEx 内寻找安全坐标并服务端位移，写入 `SYNC_WARPED` 供多人同步；第二事件切换 `KK` 踢击动画，按 `Param1 + (level-1) * Param2`、`progressive_tohit + ToHitFactor` 和共用 KICK 公式结算，成功命中才释放聚气并消耗耐久。
 
 ### P2：世界交互和多人闭环
 
@@ -180,11 +180,12 @@
 - 2026-09-04：完成 Dragon Talon `SrvSt24/SrvDo042` 连续踢击；接入 `calc1` 次数、靴子力量/敏捷踢击伤害、每击独立命中和耐久、聚气单次消费、末击分类概率与碰撞安全击退；刺客、战斗、状态与原生公式 6 组共 51 个用例通过，D2GS 编译通过。
 - 2026-09-04：完成 Dragon Claw `SrvSt25/SrvDo046` 双爪序列；左右爪按 `A2 → S4` 分别结算命中、当前手伤害和耐久，聚气仅首个成功命中消费，单爪/徒手退化为单击；补齐 MonFrenzy 共用原生函数的 `SrvSt64` 目标校验。刺客、战斗、状态与原生公式 6 组共 54 个用例通过，D2GS 编译通过。
 - 2026-09-04：完成 Dragon Tail `SrvSt27/SrvDo050`；保存起手踢击记录到命中帧，补齐 KICK 力量/敏捷基础伤害、主目标物理结算、Tiger Strike 后实际物理伤害到范围火焰的转换、Fire Mastery、逐目标火抗和 `dragontail missile` 多人表现。刺客、战斗、状态、原生公式和客户端表现 8 组共 60 个用例通过，D2GS 编译通过。
+- 2026-09-04：完成 Dragon Flight `SrvSt12/SrvDo052`；按原生 SQ 序列拆分 SC 传送与 KK 踢击事件，接入目标距离/敌对/城镇校验、`Levels.Teleport`、RoomEx 安全落点、服务端 `SYNC_WARPED` 位移，以及 Param/ToHit/KICK 完成技伤害和聚气消费。刺客、动作、序列、地图碰撞、战斗与状态 9 组共 71 个用例通过，D2GS 编译通过。
 
 ## 当前下一项
 
 已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20`、Wake of Fire `SrvDo125/SrvDo31`、Inferno Sentry `SrvDo95`，以及 Death Sentry AI Fn104 / `SrvDo55` 首项。
-Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态、四套元素聚气释放及 Dragon Talon/Dragon Claw/Dragon Tail 原生序列已完成。下一项为 **Dragon Flight 位移完成技**：对照 `SrvSt12/SrvDo052` 补齐目标位置验证、目标旁碰撞安全落点、服务端位移与多人同步，以及到达后的完成技命中。
+Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态、四套元素聚气释放及 Dragon Talon/Dragon Claw/Dragon Tail/Dragon Flight 原生序列已完成。下一项建议为 **Blade Shield 与 Venom 运行时闭环**：优先对照 `SrvSt28/SrvDo054`、状态伤害注入和持续时间，补齐环绕刃表现、周期近战伤害、毒伤覆盖规则与多人状态/导弹同步。
 
 ## 记录规则
 

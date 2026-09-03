@@ -64,6 +64,7 @@ public class SkillCastHandler extends PassiveSystem {
       case 4: // unsummon
       case 5: // left hand throw
       case 6: // left hand swing
+      case 12: // Telekinesis / Dragon Flight target validation is server-authoritative
         break;
       case 65: // Throw skill (skillId=2) - same as case 3
         break;
