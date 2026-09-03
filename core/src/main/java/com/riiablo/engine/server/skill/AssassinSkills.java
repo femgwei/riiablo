@@ -1,6 +1,8 @@
 package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
+import java.util.function.IntFunction;
+import java.util.function.IntUnaryOperator;
 
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.state.StateId;
@@ -41,6 +43,11 @@ public final class AssassinSkills {
   /** Returns whether the native server function is an Assassin charge-up strike. */
   public static boolean isProgressiveStrike(int srvDoFunc) {
     return srvDoFunc == 34 || srvDoFunc == 35;
+  }
+
+  /** Native Assassin finishing moves which call sub_6FCF77E0. */
+  public static boolean isFinishingMove(int srvDoFunc) {
+    return srvDoFunc == 42 || srvDoFunc == 46 || srvDoFunc == 50 || srvDoFunc == 52;
   }
 
   /**
@@ -131,6 +138,100 @@ public final class AssassinSkills {
       states.removeState(stateId);
     }
     return consumed;
+  }
+
+  /** Immutable aggregate read before a successful finisher consumes all charge states. */
+  public static final class ProgressiveRelease {
+    public int totalCharges;
+    public int tigerDamagePercent;
+    public int lifeLeechPercent;
+    public int manaLeechPercent;
+    public int fireMinDamage;
+    public int fireMaxDamage;
+    public int fireConversionPercent;
+
+    public boolean hasEffects() {
+      return totalCharges > 0;
+    }
+  }
+
+  /**
+   * D2MOO sub_6FCF5680/sub_6FCF5870 preparation for Tiger, Cobra and Fists.
+   * State removal remains a separate operation so misses and blocks can never
+   * consume charges.
+   */
+  public static ProgressiveRelease resolveProgressiveRelease(StateList states,
+      IntFunction<Skills.Entry> skillResolver, IntUnaryOperator skillLevelResolver) {
+    ProgressiveRelease release = new ProgressiveRelease();
+    if (states == null || skillResolver == null) return release;
+    for (int stateId : PROGRESSIVE_STATES) {
+      UnitState state = states.getState(stateId);
+      int charges = progressiveCharges(state);
+      if (charges <= 0) continue;
+      release.totalCharges += charges;
+      Skills.Entry skill = skillResolver.apply(state.skillId);
+      if (skill == null) continue;
+      int currentLevel = skillLevelResolver != null
+          ? skillLevelResolver.applyAsInt(state.skillId) : 0;
+      int level = Math.max(1, Math.max(state.level, currentLevel));
+      switch (stateId) {
+        case StateId.PROGRESSIVE_DAMAGE:
+          release.tigerDamagePercent += calculateTigerStrikeDamageBonus(
+              skill, level, charges);
+          break;
+        case StateId.PROGRESSIVE_STEAL:
+          int[] steal = calculateCobraStrikeSteal(skill, level, charges);
+          release.lifeLeechPercent += steal[0];
+          release.manaLeechPercent += steal[1];
+          break;
+        case StateId.PROGRESSIVE_FIRE:
+          release.fireMinDamage += shiftedSkillDamage(
+              skill.EMin, skill.EMinLev, level, skill.HitShift);
+          release.fireMaxDamage += shiftedSkillDamage(
+              skill.EMax, skill.EMaxLev, level, skill.HitShift);
+          release.fireConversionPercent = Math.max(release.fireConversionPercent,
+              Math.min(100, Math.max(0, SkillFormula.evaluate(skill.calc1, skill, level))));
+          break;
+        default:
+          // Cold, lightning and Phoenix stage functions are handled by the
+          // following martial-arts module; they are still counted so the
+          // native consume-all operation remains observable in logs/tests.
+          break;
+      }
+    }
+    release.fireMaxDamage = Math.max(release.fireMinDamage, release.fireMaxDamage);
+    return release;
+  }
+
+  public static int rollFireDamage(ProgressiveRelease release) {
+    if (release == null || release.fireMaxDamage <= 0) return 0;
+    return MathUtils.random(Math.max(0, release.fireMinDamage), release.fireMaxDamage);
+  }
+
+  static int shiftedSkillDamage(int base, int[] perLevel, int level, int hitShift) {
+    long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
+    int shift = hitShift - 8;
+    if (shift > 0) value <<= Math.min(shift, 30);
+    else if (shift < 0) value >>= Math.min(-shift, 30);
+    return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+  }
+
+  static int damageBonusByLevel(int level, int[] values) {
+    if (level <= 1 || values == null || values.length == 0) return 0;
+    int l1 = arrayValue(values, 0);
+    int l2 = arrayValue(values, 1);
+    int l3 = arrayValue(values, 2);
+    int l4 = arrayValue(values, 3);
+    int l5 = arrayValue(values, 4);
+    if (level > 28) return 7 * l1 + 8 * l2 + 6 * (l3 + l4) + (level - 28) * l5;
+    if (level > 22) return 7 * l1 + 8 * l2 + 6 * l3 + (level - 22) * l4;
+    if (level > 16) return 7 * l1 + 8 * l2 + (level - 16) * l3;
+    if (level > 8) return 7 * l1 + (level - 8) * l2;
+    return (level - 1) * l1;
+  }
+
+  private static int arrayValue(int[] values, int index) {
+    return values != null && index >= 0 && index < values.length ? values[index] : 0;
   }
 
   /** Native Tiger Strike enhanced-damage contribution (calc1 per charge). */

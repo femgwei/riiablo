@@ -136,6 +136,137 @@ class AssassinMartialArtsTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void tigerCobraAndFistsResolveNativeReleaseData() {
+    Skills.Entry tiger = Riiablo.files.skills.get("Tiger Strike");
+    Skills.Entry cobra = Riiablo.files.skills.get("Cobra Strike");
+    Skills.Entry fists = Riiablo.files.skills.get("Fists of Fire");
+    StateList states = new StateList(12);
+    for (int i = 0; i < 3; i++) {
+      AssassinSkills.addProgressiveCharge(states, tiger, 5, 12);
+      AssassinSkills.addProgressiveCharge(states, cobra, 5, 12);
+      AssassinSkills.addProgressiveCharge(states, fists, 5, 12);
+    }
+
+    AssassinSkills.ProgressiveRelease release = AssassinSkills.resolveProgressiveRelease(
+        states, id -> Riiablo.files.skills.get(id), id -> 5);
+    assertEquals(9, release.totalCharges);
+    assertTrue(release.tigerDamagePercent > 0);
+    assertTrue(release.lifeLeechPercent > 0);
+    assertTrue(release.manaLeechPercent > 0);
+    assertTrue(release.fireMaxDamage >= release.fireMinDamage);
+    assertTrue(release.fireMaxDamage > 0);
+    assertTrue(release.fireConversionPercent >= 0 && release.fireConversionPercent <= 100);
+  }
+
+  @Test
+  void successfulDragonClawReleasesAndConsumesTigerCobraCharges() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      Attributes assassinAttrs = attributes(100, 10, 10, 100000);
+      assassinAttrs.base().get(Stat.hitpoints).set(20f);
+      assassinAttrs.base().get(Stat.mana).set(0f);
+      assassinAttrs.reset();
+      int assassin = createPlayer(world, 0, 0, assassinAttrs);
+      int target = createMonster(world, 1, 0, attributes(10000, 0, 0, 0));
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry tiger = Riiablo.files.skills.get("Tiger Strike");
+      Skills.Entry cobra = Riiablo.files.skills.get("Cobra Strike");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      assertNotNull(finisher);
+      assertEquals(46, finisher.srvdofunc);
+      for (int i = 0; i < 3; i++) {
+        AssassinSkills.addProgressiveCharge(states, tiger, 5, assassin);
+        AssassinSkills.addProgressiveCharge(states, cobra, 5, assassin);
+      }
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, target, world.getMapper(Position.class).get(target).position);
+
+      MathUtils.random.setSeed(0xF1A15EEL);
+      for (int i = 0; i < 20 && states.hasState(StateId.PROGRESSIVE_DAMAGE); i++) {
+        world.getSystem(EventSystem.class).dispatch(
+            AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+      }
+
+      assertNull(states.getState(StateId.PROGRESSIVE_DAMAGE));
+      assertNull(states.getState(StateId.PROGRESSIVE_STEAL));
+      assertTrue(assassinAttrs.get(Stat.hitpoints).asFixed() > 20f);
+      assertTrue(assassinAttrs.get(Stat.mana).asFixed() > 0f);
+      assertTrue(world.getMapper(AttributesWrapper.class).get(target).attrs
+          .get(Stat.hitpoints).asFixed() < 10000f);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void failedFinisherDoesNotConsumeCharges() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(100, 10, 10, 100000));
+      int target = createMonster(world, 30, 30, attributes(100, 0, 0, 0));
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry tiger = Riiablo.files.skills.get("Tiger Strike");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      AssassinSkills.addProgressiveCharge(states, tiger, 3, assassin);
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, target, world.getMapper(Position.class).get(target).position);
+
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+
+      assertEquals(1, AssassinSkills.progressiveCharges(
+          states, StateId.PROGRESSIVE_DAMAGE));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void fistsOfFireReleaseDamagesPhysicalImmuneTargetWithSkillFire() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(100, 10, 10, 100000));
+      Attributes targetAttrs = attributes(1000, 0, 0, 0);
+      targetAttrs.base().put(Stat.damageresist, 100);
+      targetAttrs.base().put(Stat.fireresist, 0);
+      targetAttrs.reset();
+      int target = createMonster(world, 1, 0, targetAttrs);
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry fists = Riiablo.files.skills.get("Fists of Fire");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      for (int i = 0; i < 3; i++) {
+        AssassinSkills.addProgressiveCharge(states, fists, 5, assassin);
+      }
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, target, world.getMapper(Position.class).get(target).position);
+
+      MathUtils.random.setSeed(0xF1575F1EL);
+      for (int i = 0; i < 20 && states.hasState(StateId.PROGRESSIVE_FIRE); i++) {
+        world.getSystem(EventSystem.class).dispatch(
+            AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+      }
+
+      assertNull(states.getState(StateId.PROGRESSIVE_FIRE));
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 1000f,
+          "Fists skill fire must survive a target's physical immunity");
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static void buildToThreeCharges(
       World world, int assassin, int target, Skills.Entry skill) {
     world.getMapper(Casting.class).get(assassin)

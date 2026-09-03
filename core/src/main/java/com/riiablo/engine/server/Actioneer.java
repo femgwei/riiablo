@@ -582,6 +582,10 @@ public class Actioneer extends PassiveSystem {
       case 14: // native Lightning Strike: melee hit plus chain from ServerSkillSystem
       case 34: // Assassin physical/leech charge-up strikes
       case 35: // Assassin elemental charge-up strikes
+      case 42: // Dragon Talon finisher
+      case 46: // Dragon Claw finisher
+      case 50: // Dragon Tail finisher
+      case 52: // Dragon Flight finisher hit
       case 9: // player Frenzy
       case 109: { // monster Frenzy / BloodLordFrenzy
         if (srvdofunc == 7) {
@@ -613,6 +617,7 @@ public class Actioneer extends PassiveSystem {
             && ((srvdofunc == 1 && mCasting.get(entityId).skillId == SkillCodes.attack)
                 || srvdofunc == 9 || srvdofunc == 11 || srvdofunc == 14
                 || srvdofunc == 34 || srvdofunc == 35
+                || AssassinSkills.isFinishingMove(srvdofunc)
                 || srvdofunc == 109)) {
           if (isPlayerRangedNormalAttack(entityId)) {
             // ServerSkillSystem creates the Arrow/Bolt at this keyframe.
@@ -713,6 +718,29 @@ public class Actioneer extends PassiveSystem {
           log.debug("{} melee attack blocked by {}", entityId, targetId);
           break;
         }
+
+        AssassinSkills.ProgressiveRelease progressiveRelease = null;
+        if (AssassinSkills.isFinishingMove(srvdofunc) && mUnitStates.has(entityId)) {
+          UnitStates unitStates = mUnitStates.get(entityId);
+          if (unitStates.stateList != null) {
+            progressiveRelease = AssassinSkills.resolveProgressiveRelease(
+                unitStates.stateList, id -> Riiablo.files.skills.get(id),
+                id -> skillLevel(entityId, id));
+            if (progressiveRelease.hasEffects()) {
+              applyAssassinProgressiveDamage(progressiveRelease, combat, attrs,
+                  stateList(targetId));
+              int consumed = AssassinSkills.consumeProgressiveCharges(unitStates.stateList);
+              log.info("[ASSASSIN_FINISHER] phase=release source={} target={} srvDoFunc={} "
+                      + "charges={} consumed={} tigerPct={} lifeLeechPct={} manaLeechPct={} "
+                      + "fire={} totalDamage={}",
+                  entityId, targetId, srvdofunc, progressiveRelease.totalCharges, consumed,
+                  progressiveRelease.tigerDamagePercent,
+                  progressiveRelease.lifeLeechPercent,
+                  progressiveRelease.manaLeechPercent,
+                  combat.elementalDamage[CombatSystem.DAMAGE_FIRE], combat.totalDamage);
+            }
+          }
+        }
         log.info("[COMBAT_HIT] entity={} target={} result=hit damage={} chance={}% critical={} deadly={} crushing={}",
             entityId, targetId, combat.totalDamage, combat.hitChance,
             combat.critical, combat.deadlyStrike, combat.crushingBlow);
@@ -758,6 +786,10 @@ public class Actioneer extends PassiveSystem {
         }
         log.debug("{} hp after {} attack: damage={}, hp: {} -> {}", targetId,
             entityId, appliedDamage, hpBefore, hpAfter);
+
+        if (progressiveRelease != null && progressiveRelease.hasEffects()) {
+          applyAssassinProgressiveLeech(entityId, progressiveRelease, combat, appliedDamage);
+        }
 
         applyCombatStates(entityId, targetId, combat);
 
@@ -1054,6 +1086,73 @@ public class Actioneer extends PassiveSystem {
         && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
       StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
     }
+  }
+
+  /** D2MOO sub_6FCF5680/sub_6FCF5BC0 progressive damage preparation. */
+  private static void applyAssassinProgressiveDamage(
+      AssassinSkills.ProgressiveRelease release, CombatSystem.CombatResult combat,
+      Attributes defender, com.riiablo.engine.server.state.StateList defenderStates) {
+    if (release == null || combat == null) return;
+    if (release.tigerDamagePercent > 0 && combat.physicalDamage > 0) {
+      int extra = combat.physicalDamage * release.tigerDamagePercent / 100;
+      combat.physicalDamage += Math.max(0, extra);
+    }
+
+    int converted = 0;
+    if (release.fireConversionPercent > 0 && combat.physicalDamage > 0) {
+      converted = Math.min(combat.physicalDamage,
+          combat.physicalDamage * release.fireConversionPercent / 100);
+      combat.physicalDamage -= converted;
+    }
+    int rawFire = converted + AssassinSkills.rollFireDamage(release);
+    if (rawFire > 0) {
+      int resistance = statInt(defender, Stat.fireresist);
+      if (defenderStates != null) resistance += defenderStates.getTotalResistModifier(0);
+      int fire = resistance >= 100 ? 0
+          : Math.max(0, rawFire * (100 - Math.min(75, resistance)) / 100);
+      combat.elementalDamage[CombatSystem.DAMAGE_FIRE] += fire;
+    }
+
+    combat.totalDamage = combat.physicalDamage;
+    for (int i = 1; i < CombatSystem.DAMAGE_TYPE_COUNT; i++) {
+      if (i != CombatSystem.DAMAGE_POISON || combat.poisonDuration <= 0) {
+        combat.totalDamage += combat.elementalDamage[i];
+      }
+    }
+  }
+
+  /** Applies Cobra Strike steal after DamageEvent has finalized actual damage. */
+  private void applyAssassinProgressiveLeech(int entityId,
+      AssassinSkills.ProgressiveRelease release, CombatSystem.CombatResult combat,
+      float appliedDamage) {
+    if (!mAttributesWrapper.has(entityId) || combat.totalDamage <= 0 || appliedDamage <= 0f) {
+      return;
+    }
+    float physicalApplied = appliedDamage * combat.physicalDamage / combat.totalDamage;
+    float life = physicalApplied * Math.max(0, release.lifeLeechPercent) / 100f;
+    float mana = physicalApplied * Math.max(0, release.manaLeechPercent) / 100f;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    float lifeAdded = restoreUpToMaximum(attrs, Stat.hitpoints, Stat.maxhp, life);
+    float manaAdded = restoreUpToMaximum(attrs, Stat.mana, Stat.maxmana, mana);
+    if (lifeAdded > 0f || manaAdded > 0f) {
+      log.info("[ASSASSIN_FINISHER] phase=leech source={} physicalApplied={} "
+              + "lifePct={} manaPct={} lifeAdded={} manaAdded={}",
+          entityId, physicalApplied, release.lifeLeechPercent,
+          release.manaLeechPercent, lifeAdded, manaAdded);
+    }
+  }
+
+  private static float restoreUpToMaximum(
+      Attributes attrs, short currentStat, short maximumStat, float amount) {
+    if (attrs == null || amount <= 0f) return 0f;
+    StatRef current = attrs.get(currentStat, StatRef.obtain());
+    StatRef maximum = attrs.get(maximumStat, StatRef.obtain());
+    if (current == null || maximum == null) return 0f;
+    float before = current.asFixed();
+    float after = Math.min(maximum.asFixed(), before + amount);
+    if (after <= before) return 0f;
+    current.add(after - before);
+    return after - before;
   }
 
   private void resolveFireHit(int entityId, int targetId) {
