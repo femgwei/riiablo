@@ -32,6 +32,12 @@ public class SummonedPet extends Component {
   public boolean bladeMovingToTarget;
   /** The single SrvDo20 missile attached to this Blade Creeper controller. */
   public int bladeMissileId;
+  /** Native SrvDo095 repeatedly emits inferno missiles during one attack. */
+  public boolean infernoChanneling;
+  public int infernoRemainingFrames;
+  public int infernoPulseFrames;
+  public int infernoPulseCooldownFrames;
+  public int infernoTargetId;
 
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
@@ -53,6 +59,11 @@ public class SummonedPet extends Component {
     bladeOriginY = 0f;
     bladeMovingToTarget = true;
     bladeMissileId = -1;
+    infernoChanneling = false;
+    infernoRemainingFrames = 0;
+    infernoPulseFrames = 0;
+    infernoPulseCooldownFrames = 0;
+    infernoTargetId = -1;
     return this;
   }
 }

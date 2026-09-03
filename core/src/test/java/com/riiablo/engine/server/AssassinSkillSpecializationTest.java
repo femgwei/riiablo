@@ -61,7 +61,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           System.out.println("[ASSASSIN_SUMMON_SKILL] monster=" + summon.Id + " skill="
               + attack.skill + " srvDo=" + attack.srvdofunc + " srvA=" + attack.srvmissilea
               + " srvB=" + attack.srvmissileb + " cltA=" + attack.cltmissilea
-              + " calc4=" + attack.calc4 + " params="
+              + " calc1=" + attack.calc1 + " calc2=" + attack.calc2
+              + " calc3=" + attack.calc3 + " calc4=" + attack.calc4 + " params="
               + java.util.Arrays.toString(attack.Param));
           Missiles.Entry serverMissile = attack.srvmissilea == null
               || attack.srvmissilea.isEmpty() ? null
@@ -295,6 +296,65 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
           "the maker is consumed after spawning its waves");
       assertTrue(factory.missileEntityIds.get(1) != factory.missileEntityIds.get(2),
           "the two wave missiles are distinct authoritative entities");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void infernoSentrySrvDo095RepeatsMissilesAndTracksTarget() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry inferno = Riiablo.files.skills.get("Inferno Sentry");
+      Skills.Entry wake = Riiablo.files.skills.get("Wake of Fire Sentry");
+      assertNotNull(inferno);
+      assertNotNull(wake);
+      data.setSkillLevel(inferno.Id, 4);
+      data.setSkillLevel(wake.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, inferno.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), inferno.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(12, 3);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(1, factory.missiles);
+      assertEquals("inferno sentry 1", factory.missileName);
+      Missile channel = world.getMapper(Missile.class).get(factory.missileEntityId);
+      assertNotNull(channel);
+      assertFalse(channel.persistent,
+          "SrvDo95 emits separate missiles instead of one synthetic persistent area");
+      assertEquals(23f, channel.range, 0.0001f,
+          "calc1 = ln34/2 + Wake of Fire synergy controls each missile path");
+      assertTrue(trap.infernoChanneling);
+      assertEquals(18, trap.infernoRemainingFrames,
+          "calc2 = par1 + Wake of Fire synergy controls the repeat window");
+      assertEquals(3, trap.infernoPulseFrames,
+          "calc3 controls the native inferno repeat cadence");
+
+      world.getMapper(Position.class).get(target).position.set(12, 8);
+      for (int i = 0; i < 3; i++) world.process();
+      assertEquals(2, factory.missiles,
+          "SrvDo95 creates another missile on the calc3 animation event");
+      assertTrue(factory.missileDirections.get(1).y > 0f,
+          "each inferno pulse updates its direction toward the moving target");
     } finally {
       world.dispose();
     }

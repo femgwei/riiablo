@@ -17,9 +17,11 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -45,6 +47,7 @@ public class AssassinTrapSystem extends IteratingSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributes;
+  protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Velocity> mVelocity;
   @com.artemis.annotations.Wire(name = "factory", failOnNull = false)
@@ -58,6 +61,10 @@ public class AssassinTrapSystem extends IteratingSystem {
     if (!mMonster.has(entityId) || !mPosition.has(entityId)) return;
     if (trap.bladeSentinel) {
       processBladeSentinel(entityId, trap, mMonster.get(entityId));
+      return;
+    }
+    if (trap.infernoChanneling) {
+      processInfernoChannel(entityId, trap, mMonster.get(entityId));
       return;
     }
     if (!trap.bladeSentinel && trap.maxShots > 0 && trap.shotsFired >= trap.maxShots) {
@@ -100,6 +107,8 @@ public class AssassinTrapSystem extends IteratingSystem {
             : new Vector2(origin).add(direction);
         configureWakeMaker(mMissile.get(missileId), attackSkill, trap, entityId,
             origin, targetPoint, direction);
+      } else if (attackSkill.srvdofunc == 95) {
+        startInfernoChannel(mMissile.get(missileId), attackSkill, trap, target);
       }
       MissileDamageResolver.initializeSkill(
           mMissile.get(missileId), attackSkill, mAttributes.get(entityId).attrs,
@@ -110,6 +119,117 @@ public class AssassinTrapSystem extends IteratingSystem {
     log.info("[ASSASSIN_TRAP] phase=fire entity={} owner={} skill={} target={} missile={} "
             + "shot={}/{}", entityId, trap.ownerId, trap.skillId, target, missileName,
         trap.shotsFired, trap.maxShots);
+  }
+
+  /** Starts the SrvSt53/SrvDo095 repeat window after its first missile. */
+  private void startInfernoChannel(Missile missile, Skills.Entry attackSkill,
+      SummonedPet trap, int targetId) {
+    if (missile == null || attackSkill == null) return;
+    int level = Math.max(1, trap.skillLevel);
+    int duration = SkillFormula.evaluate(attackSkill.calc2, attackSkill, level,
+        name -> resolveOwnerSkillLevel(trap.ownerId, name));
+    if (duration <= 0) duration = Math.max(1, skillParam(attackSkill, 1, 15));
+    int tick = SkillFormula.evaluate(attackSkill.calc3, attackSkill, level,
+        name -> resolveOwnerSkillLevel(trap.ownerId, name));
+    if (tick <= 0) tick = 1;
+    configureInfernoMissile(missile, attackSkill, trap);
+    trap.infernoChanneling = true;
+    trap.infernoRemainingFrames = Math.max(1, duration);
+    trap.infernoPulseFrames = Math.max(1, tick);
+    trap.infernoPulseCooldownFrames = trap.infernoPulseFrames;
+    trap.infernoTargetId = targetId;
+    log.info("[INFERNO_SENTRY] phase=channel_start owner={} target={} missile={} duration={} "
+            + "pulse={} path={} status=PASS",
+        trap.ownerId, targetId,
+        missile.missile != null ? missile.missile.Missile : "unknown",
+        trap.infernoRemainingFrames, trap.infernoPulseFrames, missile.range);
+  }
+
+  /** D2MOO SKILLS_UpdateInfernoAnimationParameters: calc1 is path length. */
+  private void configureInfernoMissile(Missile missile, Skills.Entry attackSkill,
+      SummonedPet trap) {
+    int level = Math.max(1, trap.skillLevel);
+    int path = SkillFormula.evaluate(attackSkill.calc1, attackSkill, level,
+        name -> resolveOwnerSkillLevel(trap.ownerId, name));
+    if (path <= 0 && missile.missile != null) {
+      path = skillParam(missile.missile.Param, 2, 0) + level - 1;
+    }
+    missile.range = Math.max(1, Math.min(255, path));
+    missile.pierceEnabled = true;
+    missile.pierceChance = 100;
+    missile.skillId = attackSkill.Id;
+    missile.damageLevel = level;
+  }
+
+  /** Repeats SrvDo095 every calc3 frames and tracks the moving target direction. */
+  private void processInfernoChannel(int entityId, SummonedPet trap, Monster monster) {
+    int elapsed = Math.max(1, Math.round(Math.max(0f, world.delta) * 25f));
+    trap.infernoRemainingFrames -= elapsed;
+    trap.infernoPulseCooldownFrames -= elapsed;
+    if (trap.infernoRemainingFrames <= 0 || !validTarget(trap.infernoTargetId)) {
+      log.info("[INFERNO_SENTRY] phase=channel_end entity={} owner={} target={} "
+              + "remaining={} reason={}",
+          entityId, trap.ownerId, trap.infernoTargetId, trap.infernoRemainingFrames,
+          trap.infernoRemainingFrames <= 0 ? "duration" : "target_lost");
+      trap.infernoChanneling = false;
+      trap.infernoTargetId = Engine.INVALID_ENTITY;
+      trap.attackCooldownFrames = attackInterval(monster);
+      return;
+    }
+    if (trap.infernoPulseCooldownFrames > 0) return;
+    trap.infernoPulseCooldownFrames += Math.max(1, trap.infernoPulseFrames);
+
+    Skills.Entry placement = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
+    Skills.Entry attackSkill = resolveAttackSkill(monster, placement);
+    String missileName = resolveMissile(attackSkill, monster);
+    Missiles.Entry missileRow = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (attackSkill == null || attackSkill.srvdofunc != 95 || missileRow == null || factory == null) {
+      trap.infernoChanneling = false;
+      trap.attackCooldownFrames = attackInterval(monster);
+      log.warn("[INFERNO_SENTRY] phase=channel_stall entity={} owner={} reason=missing_skill_or_missile",
+          entityId, trap.ownerId);
+      return;
+    }
+    Vector2 origin = mPosition.get(entityId).position;
+    Vector2 direction = new Vector2(mPosition.get(trap.infernoTargetId).position).sub(origin);
+    if (direction.isZero(0.0001f)) return;
+    int missileId = factory.createMissile(missileRow, direction.nor(), origin, entityId);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+    Missile missile = mMissile.get(missileId);
+    configureInfernoMissile(missile, attackSkill, trap);
+    Attributes attrs = mAttributes.has(entityId) ? mAttributes.get(entityId).attrs : null;
+    MissileDamageResolver.initializeSkill(missile, attackSkill, attrs,
+        Math.max(1, trap.skillLevel));
+    log.debug("[INFERNO_SENTRY] phase=pulse entity={} owner={} target={} missileId={} "
+            + "remaining={} direction=({}, {})",
+        entityId, trap.ownerId, trap.infernoTargetId, missileId,
+        trap.infernoRemainingFrames, direction.x, direction.y);
+  }
+
+  private boolean validTarget(int targetId) {
+    if (targetId < 0 || !mPosition.has(targetId) || !mAttributes.has(targetId)) return false;
+    Attributes attrs = mAttributes.get(targetId).attrs;
+    com.riiablo.attributes.StatRef hp = attrs != null
+        ? attrs.get(com.riiablo.attributes.Stat.hitpoints) : null;
+    return hp != null && hp.asFixed() > 0f;
+  }
+
+  private int resolveOwnerSkillLevel(int ownerId, String name) {
+    if (name == null || name.isEmpty() || ownerId < 0 || !mPlayer.has(ownerId)
+        || mPlayer.get(ownerId).data == null) return 0;
+    Skills.Entry skill = Riiablo.files.skills.get(name);
+    return skill != null ? mPlayer.get(ownerId).data.getSkill(skill.Id) : 0;
+  }
+
+  private static int skillParam(Skills.Entry skill, int index, int fallback) {
+    return skill != null && skill.Param != null && index > 0
+        && index <= skill.Param.length && skill.Param[index - 1] > 0
+        ? skill.Param[index - 1] : fallback;
+  }
+
+  private static int skillParam(int[] params, int index, int fallback) {
+    return params != null && index > 0 && index <= params.length && params[index - 1] > 0
+        ? params[index - 1] : fallback;
   }
 
   /** Configures the SrvDo125 maker to emit the two perpendicular fire waves. */
