@@ -37,6 +37,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.io.ByteInput;
@@ -754,6 +755,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
           entityId, count, snapshot));
     }
     unitStates.stateList.replaceFromSnapshot(stateIds, durations, levels);
+    for (int i = 0; i < count; i++) {
+      UnitState state = unitStates.stateList.getState(stateIds[i]);
+      if (state != null) {
+        state.velocityModifier = i < data.velocityModifierLength()
+            ? data.velocityModifier(i) : 0;
+      }
+    }
     unitStates.snapshotOnly = true;
   }
 

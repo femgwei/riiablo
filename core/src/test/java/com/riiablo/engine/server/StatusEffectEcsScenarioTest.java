@@ -132,6 +132,9 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
     source.stateList.addState(StateId.POISON, 90, 2, 7);
     UnitState coldSource = source.stateList.addState(StateId.COLD, 20, 3, 8);
     coldSource.velocityModifier = -35;
+    UnitState chargeSource = source.stateList.addState(
+        StateId.PROGRESSIVE_FIRE, 80, 4, 42);
+    chargeSource.velocityModifier = 3;
     StateSerializer serializer = new StateSerializer();
     FlatBufferBuilder builder = new FlatBufferBuilder(256);
     int stateOffset = serializer.putData(builder, source);
@@ -147,15 +150,18 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
     serializer.getData(packet, 0, client);
 
     assertEquals(ComponentP.StateP, serializer.getDataType());
-    assertEquals(2, client.stateList.size());
+    assertEquals(3, client.stateList.size());
     assertFalse(client.stateList.hasState(StateId.FREEZE));
     assertEquals(90, client.stateList.getStateDuration(StateId.POISON));
     assertEquals(2, client.stateList.getStateLevel(StateId.POISON));
     assertEquals(20, client.stateList.getStateDuration(StateId.COLD));
     assertEquals(3, client.stateList.getStateLevel(StateId.COLD));
     assertEquals(-35, client.stateList.getState(StateId.COLD).velocityModifier);
-    System.out.println("[STATE_SYNC_CHAIN] entity=42 states=2 poison=90/2 cold=20/3"
-        + " staleRemoved=true status=PASS");
+    assertEquals(3, client.stateList.getState(StateId.PROGRESSIVE_FIRE).velocityModifier);
+    assertEquals(-35, client.stateList.getTotalVelocityModifier(),
+        "progressive charges must not be interpreted as movement speed");
+    System.out.println("[STATE_SYNC_CHAIN] entity=42 states=3 poison=90/2 cold=20/3"
+        + " progressiveFireCharges=3 staleRemoved=true status=PASS");
   }
 
   private static int createPlayer(World world, float x, float y) {

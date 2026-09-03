@@ -22,6 +22,7 @@ import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
@@ -579,6 +580,8 @@ public class Actioneer extends PassiveSystem {
       case 7: // native Jab: same authoritative hit path, skill-specific animation
       case 11: // native Charged Strike: melee hit plus bolts from ServerSkillSystem
       case 14: // native Lightning Strike: melee hit plus chain from ServerSkillSystem
+      case 34: // Assassin physical/leech charge-up strikes
+      case 35: // Assassin elemental charge-up strikes
       case 9: // player Frenzy
       case 109: { // monster Frenzy / BloodLordFrenzy
         if (srvdofunc == 7) {
@@ -609,6 +612,7 @@ public class Actioneer extends PassiveSystem {
         if (mCasting.has(entityId)
             && ((srvdofunc == 1 && mCasting.get(entityId).skillId == SkillCodes.attack)
                 || srvdofunc == 9 || srvdofunc == 11 || srvdofunc == 14
+                || srvdofunc == 34 || srvdofunc == 35
                 || srvdofunc == 109)) {
           if (isPlayerRangedNormalAttack(entityId)) {
             // ServerSkillSystem creates the Arrow/Bolt at this keyframe.
@@ -712,6 +716,27 @@ public class Actioneer extends PassiveSystem {
         log.info("[COMBAT_HIT] entity={} target={} result=hit damage={} chance={}% critical={} deadly={} crushing={}",
             entityId, targetId, combat.totalDamage, combat.hitChance,
             combat.critical, combat.deadlyStrike, combat.crushingBlow);
+
+        // D2MOO SrvDo034/SrvDo035 adds a progressive state only after the
+        // shared combat record reports a successful, unblocked hit. The
+        // state stores its originating skill and caps the charge stat at 3.
+        if (AssassinSkills.isProgressiveStrike(srvdofunc) && mCasting.has(entityId)
+            && mUnitStates.has(entityId)) {
+          Casting casting = mCasting.get(entityId);
+          Skills.Entry chargeSkill = Riiablo.files.skills.get(casting.skillId);
+          UnitStates unitStates = mUnitStates.get(entityId);
+          if (unitStates.stateList == null) unitStates.init(entityId);
+          UnitState charge = AssassinSkills.addProgressiveCharge(unitStates.stateList,
+              chargeSkill, Math.max(1, skillLevel(entityId, casting.skillId)), entityId);
+          if (charge == null) {
+            log.warn("[ASSASSIN_CHARGE] phase=reject source={} target={} skill={} reason=unresolved_state",
+                entityId, targetId, casting.skillId);
+          } else {
+            log.info("[ASSASSIN_CHARGE] phase=hit source={} target={} skill={} state={} charges={}",
+                entityId, targetId, casting.skillId, StateId.getName(charge.stateId),
+                AssassinSkills.progressiveCharges(charge));
+          }
+        }
 
         float damage = combat.totalDamage;
         if (log.debugEnabled()) {

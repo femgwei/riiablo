@@ -56,7 +56,7 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
-| 刺客 Assassin | 66% | 34% | 陷阱召唤、Wake/Inferno/Death Sentry、Charged Bolt/Lightning Sentry 权威攻击首项已完成；聚气、踢击和更多状态分支仍待补齐 |
+| 刺客 Assassin | 70% | 30% | 陷阱权威攻击及聚气命中/三层状态/多人快照首项已完成；完成技释放、元素阶段表现和踢击仍待补齐 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
@@ -122,6 +122,11 @@
   - [x] ~~完成 Inferno Sentry `SrvDo95` 首项~~：按 `calc2`（含 Wake of Fire 协同等级）设置喷射窗口，按 `calc3` 重复创建火焰导弹，并在每次喷射时重新追踪目标方向；单枚导弹按 `calc1` 设置原生路径长度。
   - [x] ~~完成 Death Sentry `SrvDo55` 首项~~：按原生 `CorpseSel`/可用状态筛选尸体并原子保留，防止同一尸体重复引爆；按尸体最大生命和 `calc1/calc2` 生成伤害，依据 `calc3` 拆分物理/火焰并在 `AuraRange/2` 范围结算，创建同步爆炸表现；无尸体时回退 `Skill2` 闪电攻击，`calc4` 正确计入 Fire Blast 基础等级的射击次数协同。
   - [x] ~~完成 Charged Bolt/Lightning Sentry 首项~~：对照 D2MOO `SrvDo017_ChargedBolt_BoltSentry`、`PATH_ComputePathChargedBolt` 与 AI `Fn101_AssassinSentry`，Charged Bolt Sentry 按 `calc1` 一次生成多枚独立 `sentrychargedbolt`，使用原生种子公式和每 2 子格左偏/直行/右偏折线路径；Lightning Sentry 复用原生 `Aip1/Aip2/Aip3/Aip4` 目标距离、攻击概率和停顿节拍，并按每次攻击重新追踪目标。两者均解析 Missiles.txt 关联的玩家技能伤害并通过现有 EntitySync 权威广播，补充专项 ECS 回归。
+- [ ] 完成刺客聚气和完成技专项
+  - [x] ~~完成 `SrvDo034/035` 聚气命中与多人状态首项~~：Tiger Strike、Cobra Strike、Fists of Fire 等技能只在成功且未格挡的近战命中后叠层，按 `AuraState/AuraLenCalc` 保存技能来源和等级，最多三层并刷新期限；阻止 `SrvMissileA-D` 在蓄力阶段被误生成为普通导弹；`StateP.velocityModifier` 兼容传输层数且客户端恢复后不影响移动速度。
+  - [ ] 完成 Tiger/Cobra/Fists 的完成技伤害、吸血和元素阶段释放，并在成功命中后统一消费聚气状态。
+  - [ ] 完成 Claws of Thunder、Blades of Ice、Phoenix Strike 的阶段导弹、范围/冻结效果。
+  - [ ] 完成 Dragon Talon/Claw/Tail/Flight 的多段、双爪、范围火焰和目标位移。
 
 ### P2：世界交互和多人闭环
 
@@ -158,11 +163,12 @@
 - 2026-09-03：完成 Inferno Sentry 的原生 `SrvDo95` 首轮移植；按 `calc2` 维持喷射窗口、按 `calc3` 重复发射并更新目标朝向，单枚导弹路径按 `calc1` 计算，协同技能等级由陷阱所有者解析，并加入路径/节拍/朝向 ECS 回归。
 - 2026-09-03：完成 Death Sentry 的原生 AI Fn104 / `SrvDo55` 首轮移植；合法尸体筛选和保留、同尸体防重、40%–80% 尸体生命伤害、50% 物理/火焰拆分、范围结算、爆炸表现、闪电回退及 Fire Blast 射击次数协同均接入权威陷阱生命周期。
 - 2026-09-03：完成 Charged Bolt/Lightning Sentry 首轮移植；Charged Bolt Sentry 按原生 `calc1` 生成多枚导弹，并按 D2Common 种子和 `PATHTYPE_CHARGEDBOLT` 每 2 子格更新折线路径；Lightning Sentry 按 `Fn101` 的目标距离、攻击几率和 stall 参数运行；两者补齐关联玩家技能的元素伤害快照，以及多导弹、射击消耗和网络同步 ECS 回归。
+- 2026-09-03：完成刺客聚气状态首项；`SrvDo034/035` 接入统一近战命中记录，失败/格挡/越距不蓄力，Tiger/Cobra/Fists 等原生 `AuraState` 最多三层并刷新生命周期；层数通过既有 `StateP` 同步到多人客户端且不污染移动速度。
 
 ## 当前下一项
 
 已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20`、Wake of Fire `SrvDo125/SrvDo31`、Inferno Sentry `SrvDo95`，以及 Death Sentry AI Fn104 / `SrvDo55` 首项。
-Charged Bolt/Lightning Sentry 首项已完成。下一项为 **刺客聚气/踢击技能专项**：对照原生 `SrvDo034/042/046/050/052` 的充能层数、释放阶段、目标位移和多人状态同步；随后继续补齐双客户端陷阱动画、尸体消失和伤害一致性验证。
+Charged Bolt/Lightning Sentry 首项及 `SrvDo034/035` 聚气命中/状态首项已完成。下一项为 **刺客完成技释放阶段**：对照原生 `sub_6FCF5680/sub_6FCF5870/sub_6FCF77E0`，先接通 Tiger/Cobra/Fists 的增强伤害、生命/法力吸取、火焰阶段效果和成功命中后统一消费；再继续 `SrvDo042/046/050/052` 踢击、双爪、范围火焰和目标位移。
 
 ## 记录规则
 

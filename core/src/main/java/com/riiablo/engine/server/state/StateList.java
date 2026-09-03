@@ -377,7 +377,9 @@ public class StateList {
       // Frenzy stores its stack count in velocityModifier for network
       // compatibility; it is converted to a speed percentage by StateUpdater
       // and must not be summed as an aura percentage here.
-      if (state.stateId == StateId.FRENZY || state.stateId == StateId.MONFRENZY) {
+      if (state.stateId == StateId.FRENZY || state.stateId == StateId.MONFRENZY
+          || (state.stateId >= StateId.PROGRESSIVE_DAMAGE
+              && state.stateId <= StateId.PROGRESSIVE_LIGHTNING)) {
         continue;
       }
       total += state.velocityModifier;

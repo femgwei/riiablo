@@ -235,6 +235,16 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    // D2MOO SrvDo034/SrvDo035 are melee combat records. Actioneer resolves
+    // their hit and progressive-state update at this same keyframe. Their
+    // SrvMissileA-D columns describe charge-release stages and must not be
+    // spawned as generic projectiles while building a charge.
+    if (AssassinSkills.isProgressiveStrike(event.srvdofunc)
+        || AssassinSkills.isProgressiveStrike(skill.srvdofunc)) {
+      log.info("[ASSASSIN_CHARGE] phase=projectile_skip source={} skill={} srvDoFunc={} reason=charge_up",
+          event.entityId, event.skillId, event.srvdofunc);
+      return;
+    }
     if ((event.srvdofunc == 23 || skill.srvdofunc == 23)
         && "SpiderLay".equalsIgnoreCase(skill.skill)) {
       applySpiderLayState(event, skill, skillLevel);

@@ -2,6 +2,10 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.codec.excel.Skills;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -16,12 +20,151 @@ import com.riiablo.logger.Logger;
  */
 public final class AssassinSkills {
   private static final Logger log = LogManager.getLogger(AssassinSkills.class);
+  public static final int MAX_PROGRESSIVE_CHARGES = 3;
+  private static final int DEFAULT_PROGRESSIVE_DURATION = 250;
+
+  private static final int[] PROGRESSIVE_STATES = {
+      StateId.PROGRESSIVE_DAMAGE,
+      StateId.PROGRESSIVE_STEAL,
+      StateId.PROGRESSIVE_OTHER,
+      StateId.PROGRESSIVE_FIRE,
+      StateId.PROGRESSIVE_COLD,
+      StateId.PROGRESSIVE_LIGHTNING
+  };
 
   private AssassinSkills() {} // 不可实例化
 
   //==========================================================================
   // 武技 - 充能技
   //==========================================================================
+
+  /** Returns whether the native server function is an Assassin charge-up strike. */
+  public static boolean isProgressiveStrike(int srvDoFunc) {
+    return srvDoFunc == 34 || srvDoFunc == 35;
+  }
+
+  /**
+   * Resolves Skills.txt AuraState to the native progressive state id.
+   *
+   * <p>The textual lookup is preferred because it preserves modded Skills.txt
+   * rows. Skill-name fallbacks only cover the original rows whose older bin
+   * cache did not expose AuraState.</p>
+   */
+  public static int progressiveStateId(Skills.Entry skill) {
+    if (skill == null) return StateId.NONE;
+    String auraState = normalize(skill.aurastate);
+    if (auraState.contains("progressivedamage")) return StateId.PROGRESSIVE_DAMAGE;
+    if (auraState.contains("progressivesteal")) return StateId.PROGRESSIVE_STEAL;
+    if (auraState.contains("progressiveother")) return StateId.PROGRESSIVE_OTHER;
+    if (auraState.contains("progressivefire")) return StateId.PROGRESSIVE_FIRE;
+    if (auraState.contains("progressivecold")) return StateId.PROGRESSIVE_COLD;
+    if (auraState.contains("progressivelightning")) return StateId.PROGRESSIVE_LIGHTNING;
+
+    String name = normalize(skill.skill);
+    if (name.contains("tigerstrike")) return StateId.PROGRESSIVE_DAMAGE;
+    if (name.contains("cobrastrike")) return StateId.PROGRESSIVE_STEAL;
+    if (name.contains("royalstrike") || name.contains("phoenixstrike")) {
+      return StateId.PROGRESSIVE_OTHER;
+    }
+    if (name.contains("fistsoffire")) return StateId.PROGRESSIVE_FIRE;
+    if (name.contains("bladesofice")) return StateId.PROGRESSIVE_COLD;
+    if (name.contains("clawsofthunder")) return StateId.PROGRESSIVE_LIGHTNING;
+    return StateId.NONE;
+  }
+
+  /**
+   * D2MOO SrvDo034/SrvDo035 charge-list update.
+   *
+   * <p>The generic {@link UnitState#velocityModifier} network scalar carries
+   * the charge count. Progressive states are explicitly excluded from movement
+   * aggregation by {@code StateList}; this keeps the existing StateP wire
+   * format compatible while making the authoritative stage available to
+   * every client renderer.</p>
+   */
+  public static UnitState addProgressiveCharge(StateList states, Skills.Entry skill,
+      int skillLevel, int sourceEntityId) {
+    if (states == null || skill == null) return null;
+    int stateId = progressiveStateId(skill);
+    if (stateId == StateId.NONE) return null;
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, skillLevel);
+    if (duration <= 0) duration = DEFAULT_PROGRESSIVE_DURATION;
+    UnitState old = states.getState(stateId);
+    int oldCharges = old != null ? progressiveCharges(old) : 0;
+    UnitState state = states.addState(stateId, duration, Math.max(1, skillLevel), sourceEntityId);
+    if (state == null) return null;
+    state.duration = duration;
+    state.initialDuration = duration;
+    state.sourceEntityId = sourceEntityId;
+    state.skillId = skill.Id;
+    state.velocityModifier = Math.min(MAX_PROGRESSIVE_CHARGES, oldCharges + 1);
+    state.needsSync = true;
+    log.info("[ASSASSIN_CHARGE] phase=apply source={} skill={} state={} level={} charges={} duration={}",
+        sourceEntityId, skill.skill, StateId.getName(stateId), skillLevel,
+        state.velocityModifier, duration);
+    return state;
+  }
+
+  public static int progressiveCharges(UnitState state) {
+    if (state == null || !isProgressiveState(state.stateId)) return 0;
+    return Math.max(0, Math.min(MAX_PROGRESSIVE_CHARGES, state.velocityModifier));
+  }
+
+  public static int progressiveCharges(StateList states, int stateId) {
+    return states == null ? 0 : progressiveCharges(states.getState(stateId));
+  }
+
+  public static boolean isProgressiveState(int stateId) {
+    for (int progressiveState : PROGRESSIVE_STATES) {
+      if (progressiveState == stateId) return true;
+    }
+    return false;
+  }
+
+  /** Removes every charge-up state after a successful finishing-move hit. */
+  public static int consumeProgressiveCharges(StateList states) {
+    if (states == null) return 0;
+    int consumed = 0;
+    for (int stateId : PROGRESSIVE_STATES) {
+      UnitState state = states.getState(stateId);
+      if (state == null) continue;
+      consumed += progressiveCharges(state);
+      states.removeState(stateId);
+    }
+    return consumed;
+  }
+
+  /** Native Tiger Strike enhanced-damage contribution (calc1 per charge). */
+  public static int calculateTigerStrikeDamageBonus(
+      Skills.Entry skill, int skillLevel, int chargeLevel) {
+    int perCharge = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, skillLevel);
+    if (perCharge <= 0) perCharge = 100 + (Math.max(1, skillLevel) - 1) * 20;
+    return perCharge * Math.max(0, Math.min(MAX_PROGRESSIVE_CHARGES, chargeLevel));
+  }
+
+  /** Returns {lifeLeechPercent, manaLeechPercent} for Cobra Strike charges. */
+  public static int[] calculateCobraStrikeSteal(
+      Skills.Entry skill, int skillLevel, int chargeLevel) {
+    int base = param(skill, 0, 40) + (Math.max(1, skillLevel) - 1) * param(skill, 1, 5);
+    int charges = Math.max(0, Math.min(MAX_PROGRESSIVE_CHARGES, chargeLevel));
+    switch (charges) {
+      case 1: return new int[] {base, 0};
+      case 2: return new int[] {base, base};
+      case 3: return new int[] {base * 2, base * 2};
+      default: return new int[] {0, 0};
+    }
+  }
+
+  private static int param(Skills.Entry skill, int index, int fallback) {
+    if (skill == null || skill.Param == null || index < 0 || index >= skill.Param.length) {
+      return fallback;
+    }
+    return skill.Param[index];
+  }
+
+  private static String normalize(String value) {
+    if (value == null) return "";
+    return value.toLowerCase(java.util.Locale.ROOT).replace("_", "").replace(" ", "");
+  }
 
   /**
    * 虎击 - 累积充能
@@ -31,9 +174,7 @@ public final class AssassinSkills {
    * @return 伤害加成百分比
    */
   public static int calculateTigerStrikeDamageBonus(int skillLevel, int chargeLevel) {
-    // 充能级别影响伤害
-    int baseBonus = 100 + (skillLevel - 1) * 20;
-    return baseBonus * chargeLevel;
+    return calculateTigerStrikeDamageBonus(null, skillLevel, chargeLevel);
   }
 
   /**
@@ -62,7 +203,7 @@ public final class AssassinSkills {
    */
   public static int calculateCobraStrikeSteal(int skillLevel, int chargeLevel) {
     int baseSteal = 40 + (skillLevel - 1) * 5;
-    return baseSteal * chargeLevel / 3;
+    return chargeLevel >= 3 ? baseSteal * 2 : chargeLevel > 0 ? baseSteal : 0;
   }
 
   /**
