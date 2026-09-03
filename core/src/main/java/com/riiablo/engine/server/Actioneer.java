@@ -1162,6 +1162,7 @@ public class Actioneer extends PassiveSystem {
     applyFistsOfFireStageEffects(sourceId, primaryTargetId, release, sourceAttrs);
     applyClawsOfThunderStageEffects(sourceId, primaryTargetId, release, sourceAttrs);
     applyBladesOfIceStageEffects(sourceId, primaryTargetId, release, sourceAttrs);
+    applyPhoenixStrikeStageEffect(sourceId, primaryTargetId, release, sourceAttrs);
   }
 
   /**
@@ -1491,6 +1492,118 @@ public class Actioneer extends PassiveSystem {
             + "range={} attempts={} created={} lifetime={} seed={}",
         sourceId, release.coldSkillId, release.coldCubeMissile,
         range, area, created, Math.max(1, row.Range), rng.state());
+    return created;
+  }
+
+  /** D2MOO SrvDo040/143/041. Royal Strike deliberately has PrgStack disabled. */
+  private void applyPhoenixStrikeStageEffect(int sourceId, int primaryTargetId,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    if (release == null || release.phoenixCharges <= 0
+        || !mPosition.has(primaryTargetId)
+        || release.phoenixStageMissile == null
+        || release.phoenixStageMissile.isEmpty()) return;
+    Vector2 origin = mPosition.get(primaryTargetId).position;
+    int created;
+    switch (release.phoenixCharges) {
+      case 1:
+        created = createPhoenixMeteor(sourceId, origin, release);
+        break;
+      case 2:
+        created = createPhoenixChainLightning(sourceId, origin, release, sourceAttrs);
+        break;
+      default:
+        created = createPhoenixChaosIce(sourceId, origin, release, sourceAttrs);
+        break;
+    }
+    log.info("[ASSASSIN_PHOENIX] phase=release source={} primary={} charges={} "
+            + "missile={} stageValue={} created={} prgStack=false",
+        sourceId, primaryTargetId, release.phoenixCharges,
+        release.phoenixStageMissile, release.phoenixStageValue, created);
+  }
+
+  /** SrvDo040 creates one meteor-center controller at the finishing target. */
+  private int createPhoenixMeteor(int sourceId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release) {
+    Missiles.Entry row = Riiablo.files.Missiles.get(release.phoenixStageMissile);
+    if (row == null) return 0;
+    int missileId = factory.createMissile(row, Vector2.X, origin, sourceId);
+    if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) return 0;
+    com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+    projectile.skillId = release.phoenixSkillId;
+    projectile.damageLevel = Math.max(1, release.phoenixSkillLevel);
+    projectile.nativeLifetimeFrames = Math.max(1, row.Range);
+    return 1;
+  }
+
+  /** SrvDo143/sub_6FCF6D70 emits every PrgCalc2-th direction in the 64 table. */
+  private int createPhoenixChainLightning(int sourceId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    Missiles.Entry row = Riiablo.files.Missiles.get(release.phoenixStageMissile);
+    if (row == null) return 0;
+    Skills.Entry skill = Riiablo.files.skills.get(release.phoenixSkillId);
+    int step = Math.max(1, Math.min(64, release.phoenixStageValue));
+    int seed = assassinProgressiveSeeds.get(sourceId,
+        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.phoenixSkillId * 31);
+    NativeRng rng = new NativeRng(seed);
+    int created = 0;
+    for (int i = 0; i < 64; i += step) {
+      Vector2 direction = clawsRadialDirection(i, new Vector2());
+      int missileId = factory.createMissile(row, direction, origin, sourceId);
+      if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) continue;
+      com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+      projectile.skillId = release.phoenixSkillId;
+      projectile.damageLevel = Math.max(1, release.phoenixSkillLevel);
+      MissileDamageResolver.initialize(projectile, sourceAttrs, null,
+          -1, projectile.damageLevel, 0);
+      projectile.chainHitsRemaining = skill != null && skill.Param != null
+          && skill.Param.length > 1 ? Math.max(1, skill.Param[1] + 1) : 1;
+      projectile.shareHitTargets(new IntSet());
+      int seedLow = rng.nextInt();
+      long rolled = AssassinTrapSystem.chargedBoltRoll(seedLow, 666);
+      projectile.chargedBoltPath = true;
+      projectile.chargedBoltMainDirection =
+          AssassinTrapSystem.chargedBoltMainDirection(direction);
+      projectile.chargedBoltSeedLow = (int) rolled;
+      projectile.chargedBoltSeedHigh = (int) (rolled >>> 32);
+      projectile.chargedBoltNextTurnDistance = 2f;
+      created++;
+    }
+    assassinProgressiveSeeds.put(sourceId, rng.state());
+    return created;
+  }
+
+  /** SrvDo041 creates PrgCalc3 chaos-ice missiles with independent target offsets. */
+  private int createPhoenixChaosIce(int sourceId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    Missiles.Entry row = Riiablo.files.Missiles.get(release.phoenixStageMissile);
+    if (row == null) return 0;
+    int count = Math.max(0, release.phoenixStageValue);
+    int seed = assassinProgressiveSeeds.get(sourceId,
+        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.phoenixSkillId * 31);
+    NativeRng rng = new NativeRng(seed);
+    int created = 0;
+    for (int i = 0; i < count; i++) {
+      int dx = rng.nextInt(40) - 20;
+      int dy = rng.nextInt(40) - 20;
+      if (dx == 0 && dy == 0) dx = 20;
+      Vector2 direction = new Vector2(dx, dy).nor();
+      int missileId = factory.createMissile(row, direction, origin, sourceId);
+      if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) continue;
+      com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+      projectile.skillId = release.phoenixSkillId;
+      projectile.damageLevel = Math.max(1, release.phoenixSkillLevel);
+      MissileDamageResolver.initialize(projectile, sourceAttrs, null,
+          -1, projectile.damageLevel, 0);
+      projectile.freezesTarget = true;
+      projectile.chaosIcePath = true;
+      projectile.chaosIceSeed = rng.nextInt();
+      projectile.chaosIceX = dx;
+      projectile.chaosIceY = dy;
+      projectile.chaosIceNextTurnFrame = Math.max(1,
+          row.Param != null && row.Param.length > 0 ? row.Param[0] : 1);
+      created++;
+    }
+    assassinProgressiveSeeds.put(sourceId, rng.state());
     return created;
   }
 

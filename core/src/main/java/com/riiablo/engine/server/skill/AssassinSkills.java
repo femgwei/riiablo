@@ -179,6 +179,11 @@ public final class AssassinSkills {
     public int coldAreaRange;
     public int coldCubeRange;
     public String coldCubeMissile;
+    public int phoenixCharges;
+    public int phoenixSkillId = -1;
+    public int phoenixSkillLevel;
+    public int phoenixStageValue;
+    public String phoenixStageMissile;
 
     public boolean hasEffects() {
       return totalCharges > 0;
@@ -282,10 +287,16 @@ public final class AssassinSkills {
             release.coldCubeMissile = progressiveMissile(skill, 3);
           }
           break;
+        case StateId.PROGRESSIVE_OTHER:
+          release.phoenixCharges = charges;
+          release.phoenixSkillId = skill.Id;
+          release.phoenixSkillLevel = level;
+          release.phoenixStageValue = progressiveRange(skill, level, charges);
+          release.phoenixStageMissile = progressiveMissile(skill, charges);
+          break;
         default:
-          // Phoenix stage functions are handled by the
-          // following martial-arts module; they are still counted so the
-          // native consume-all operation remains observable in logs/tests.
+          // Unknown progressive states are still counted so the native
+          // consume-all operation remains observable in logs/tests.
           break;
       }
     }

@@ -29,6 +29,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
@@ -41,6 +42,22 @@ import org.junit.jupiter.api.Test;
 
 /** Native SrvDo034/SrvDo035 regression coverage. */
 class AssassinMartialArtsTest extends RiiabloTest {
+  @Test
+  void phoenixStrikeExposesNativeNonStackingStages() {
+    Skills.Entry phoenix = Riiablo.files.skills.get("Royal Strike");
+    assertNotNull(phoenix);
+    assertTrue(!phoenix.prgstack);
+    assertEquals(40, phoenix.srvprgfunc[0]);
+    assertEquals(143, phoenix.srvprgfunc[1]);
+    assertEquals(41, phoenix.srvprgfunc[2]);
+    assertEquals("royalstrikemeteorcenter", AssassinSkills.progressiveMissile(phoenix, 1));
+    assertEquals("royalstrikechainlightning", AssassinSkills.progressiveMissile(phoenix, 2));
+    assertEquals("royalstrikechaosice", AssassinSkills.progressiveMissile(phoenix, 3));
+    assertEquals(8, AssassinSkills.progressiveRange(phoenix, 5, 1));
+    assertEquals(10, AssassinSkills.progressiveRange(phoenix, 5, 2));
+    assertEquals(16, AssassinSkills.progressiveRange(phoenix, 5, 3));
+  }
+
   @Test
   void bladesOfIceExposesNativeProgressiveColumns() {
     Skills.Entry blades = Riiablo.files.skills.get("Blades of Ice");
@@ -564,6 +581,148 @@ class AssassinMartialArtsTest extends RiiabloTest {
   }
 
   @Test
+  void phoenixStrikeReleasesOnlyTheSelectedNativeStage() {
+    String[] expectedNames = {
+        "royalstrikemeteorcenter",
+        "royalstrikechainlightning",
+        "royalstrikechaosice"
+    };
+    int[] expectedCounts = {1, 7, 16};
+    for (int charges = 1; charges <= 3; charges++) {
+      DummyFactory factory = new DummyFactory();
+      Actioneer actioneer = new Actioneer();
+      World world = new World(new WorldConfigurationBuilder()
+          .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+          .build().register("factory", factory).register("map", new Map(0, 0)));
+      try {
+        int assassin = createPlayer(world, 0, 0, attributes(1000, 10, 10, 100000));
+        int target = createMonster(world, 1, 0, attributes(100000, 0, 0, 0));
+        StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+        Skills.Entry phoenix = Riiablo.files.skills.get("Royal Strike");
+        Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+        for (int i = 0; i < charges; i++) {
+          AssassinSkills.addProgressiveCharge(states, phoenix, 5, assassin);
+        }
+        world.getMapper(Casting.class).get(assassin)
+            .set(finisher.Id, target, world.getMapper(Position.class).get(target).position);
+
+        MathUtils.random.setSeed(0xA110000L + charges);
+        dispatchUntilConsumed(world, assassin, states, StateId.PROGRESSIVE_OTHER);
+
+        assertEquals(expectedCounts[charges - 1], factory.missilesCreated);
+        for (int missileId : factory.missileEntityIds) {
+          Missile missile = world.getMapper(Missile.class).get(missileId);
+          assertEquals(expectedNames[charges - 1], missile.missile.Missile,
+              "PrgStack=false must not emit an earlier charge stage");
+          assertEquals(assassin, missile.ownerId);
+          assertEquals(phoenix.Id, missile.skillId);
+          if (charges == 2) {
+            assertTrue(missile.damageSnapshot);
+            assertEquals(7, missile.chainHitsRemaining);
+            assertTrue(missile.chargedBoltPath);
+          } else if (charges == 3) {
+            assertTrue(missile.damageSnapshot);
+            assertTrue(missile.freezesTarget);
+            assertTrue(missile.chaosIcePath);
+          }
+        }
+      } finally {
+        world.dispose();
+      }
+    }
+  }
+
+  @Test
+  void phoenixMeteorImpactCreatesNativeFirePattern() {
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, -5, 0, attributes(1000, 1, 1, 100000));
+      Attributes targetAttrs = attributes(10000, 0, 0, 0);
+      createMonster(world, 0, 0, targetAttrs);
+      Skills.Entry phoenix = Riiablo.files.skills.get("Royal Strike");
+      Missiles.Entry meteorRow = Riiablo.files.Missiles.get("royalstrikemeteor");
+      int meteorId = factory.createMissile(meteorRow, Vector2.X, Vector2.Zero, assassin);
+      Missile meteor = world.getMapper(Missile.class).get(meteorId);
+      MissileDamageResolver.initialize(meteor,
+          world.getMapper(AttributesWrapper.class).get(assassin).attrs, null, -1, 5, 0);
+      meteor.skillId = phoenix.Id;
+      meteor.damageLevel = 5;
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+
+      world.process();
+
+      assertTrue(factory.missileNames.stream()
+          .filter("royalstrikemeteorfire"::equals).count() == 18);
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 10000f);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void phoenixChainLightningCreatesAnAuthoritativeContinuation() {
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, -2, 0, attributes(1000, 1, 1, 100000));
+      createMonster(world, 1, 0, attributes(10000, 0, 0, 0));
+      createMonster(world, 5, 0, attributes(10000, 0, 0, 0));
+      Skills.Entry phoenix = Riiablo.files.skills.get("Royal Strike");
+      Missiles.Entry row = Riiablo.files.Missiles.get("royalstrikechainlightning");
+      int rootId = factory.createMissile(row, Vector2.X, Vector2.Zero, assassin);
+      Missile root = world.getMapper(Missile.class).get(rootId);
+      MissileDamageResolver.initialize(root,
+          world.getMapper(AttributesWrapper.class).get(assassin).attrs, null, -1, 5, 0);
+      root.skillId = phoenix.Id;
+      root.damageLevel = 5;
+      root.chainHitsRemaining = 3;
+      root.shareHitTargets(new IntSet());
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+
+      world.process();
+
+      assertTrue(factory.missileNames.stream()
+          .filter("royalstrikechainlightning"::equals).count() >= 2);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void phoenixChaosIceBendsAtNativeMissileInterval() {
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 50, 50, attributes(1000, 1, 1, 100));
+      Missiles.Entry row = Riiablo.files.Missiles.get("royalstrikechaosice");
+      int missileId = factory.createMissile(row, new Vector2(2, 1).nor(), Vector2.Zero, assassin);
+      Missile missile = world.getMapper(Missile.class).get(missileId);
+      missile.chaosIcePath = true;
+      missile.chaosIceSeed = 0x13572468;
+      missile.chaosIceX = 10;
+      missile.chaosIceY = 5;
+      missile.chaosIceNextTurnFrame = Math.max(1, row.Param[0]);
+      Vector2 initial = world.getMapper(Velocity.class).get(missileId).velocity.cpy().nor();
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+
+      for (int i = 0; i < row.Param[0]; i++) world.process();
+
+      Vector2 bent = world.getMapper(Velocity.class).get(missileId).velocity.cpy().nor();
+      assertTrue(!initial.epsilonEquals(bent, 0.0001f));
+      assertTrue(missile.chaosIceNextTurnFrame > row.Param[0]);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void clawsOfThunderSecondChargeCreatesNativeSixtyFourPathNova() {
     DummyFactory factory = new DummyFactory();
     Actioneer actioneer = new Actioneer();
@@ -719,6 +878,7 @@ class AssassinMartialArtsTest extends RiiabloTest {
   private static final class DummyFactory extends EntityFactory {
     int missilesCreated;
     final java.util.ArrayList<Integer> missileEntityIds = new java.util.ArrayList<>();
+    final java.util.ArrayList<String> missileNames = new java.util.ArrayList<>();
 
     @Override public int createPlayer(CharData charData, Vector2 position) { return -1; }
     @Override public int createDynamicObject(int act, int preset, float x, float y) { return -1; }
@@ -742,6 +902,7 @@ class AssassinMartialArtsTest extends RiiabloTest {
       world.getMapper(Velocity.class).create(entityId).velocity.set(angle).setLength(row.Vel);
       missilesCreated++;
       missileEntityIds.add(entityId);
+      missileNames.add(row.Missile);
       return entityId;
     }
   }

@@ -152,6 +152,31 @@ public class MissileCollisionSystem extends IteratingSystem {
       velocity.velocity.set(tmpVec).setLength(speed);
       if (mAngle.has(entityId)) mAngle.get(entityId).target.set(tmpVec);
     }
+
+    if (missile.chaosIcePath && !missile.attached
+        && missile.nativeFrame >= missile.chaosIceNextTurnFrame) {
+      int interval = Math.max(1, missile.missile != null
+          && missile.missile.Param != null && missile.missile.Param.length > 0
+          ? missile.missile.Param[0] : 1);
+      while (missile.nativeFrame >= missile.chaosIceNextTurnFrame) {
+        NativeRng rng = new NativeRng(missile.chaosIceSeed);
+        int xParam = missile.chaosIceX;
+        int yParam = missile.chaosIceY;
+        if ((rng.nextInt() & 1) != 0) xParam = -xParam;
+        else yParam = -yParam;
+        int nextX = (yParam + 4 * missile.chaosIceX) / 4;
+        int nextY = (xParam + 4 * missile.chaosIceY) / 4;
+        if (nextX == 0) nextX = 1;
+        if (nextY == 0) nextY = 1;
+        missile.chaosIceSeed = rng.state();
+        missile.chaosIceX = nextX;
+        missile.chaosIceY = nextY;
+        missile.chaosIceNextTurnFrame += interval;
+      }
+      float speed = velocity.velocity.len();
+      velocity.velocity.set(missile.chaosIceX, missile.chaosIceY).nor().setLength(speed);
+      if (mAngle.has(entityId)) mAngle.get(entityId).target.set(velocity.velocity);
+    }
     
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）
     float moveDistance;
@@ -441,6 +466,12 @@ public class MissileCollisionSystem extends IteratingSystem {
         spawnLightningFuryBolts(missile, missilePos, targetId);
       }
 
+      if (missile.missile != null && missile.missile.pSrvHitFunc == 14
+          && !missile.hitFunctionTriggered) {
+        missile.hitFunctionTriggered = true;
+        spawnRoyalStrikeMeteorFire(missile, missilePos);
+      }
+
       if (!mAttributesWrapper.has(missile.ownerId) || !mAttributesWrapper.has(targetId)) {
         log.warn("Missile {} collided with entity {} without complete combat attributes", missileId, targetId);
         if (!missile.attached) world.delete(missileId);
@@ -556,6 +587,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         // when this is a pure poison cloud whose immediate damage is zero.
         applyCombatStates(missile, targetId, combat);
       }
+
+      if (damageHit && isChainLightningMissile(missile)) {
+        spawnChainLightningContinuation(missile, targetId, targetPos.position);
+      }
       
       // Native Pierce keeps the missile alive after a successful collision.
       // A miss/block still consumes the projectile, while a dead target is
@@ -589,8 +624,12 @@ public class MissileCollisionSystem extends IteratingSystem {
       if (skill != null) {
         Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
             ? mAttributesWrapper.get(source.ownerId).attrs : null;
-        MissileDamageResolver.initializeSkillArea(
-            child, skill, ownerAttrs, Math.max(1, source.damageLevel));
+        int level = Math.max(1, source.damageLevel);
+        if (!MissileDamageResolver.initializeSkillArea(child, skill, ownerAttrs, level)) {
+          MissileDamageResolver.initialize(child, ownerAttrs, null, -1, level, 0);
+        }
+        child.skillId = source.skillId;
+        child.damageLevel = level;
       }
       log.info("[AMAZON_ARROW_EXPLOSION] phase=create owner={} skill={} source={} child={} "
               + "missile={} radius={} freeze={}",
@@ -601,7 +640,99 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   private static boolean isNativeAreaEffect(Missile missile) {
     return missile != null && missile.missile != null
-        && missile.missile.pSrvHitFunc == 1 && nativeAreaRadius(missile) > 0;
+        && (missile.missile.pSrvHitFunc == 1 || missile.missile.pSrvHitFunc == 14)
+        && nativeAreaRadius(missile) > 0;
+  }
+
+  /** D2MOO SrvHit14 creates the Royal Strike meteor's 18-position fire field. */
+  private void spawnRoyalStrikeMeteorFire(Missile source, Vector2 origin) {
+    if (factory == null || source == null || source.missile == null
+        || source.missile.HitSubMissile == null
+        || source.missile.HitSubMissile.length == 0) return;
+    String name = source.missile.HitSubMissile[0];
+    Missiles.Entry row = name != null ? Riiablo.files.Missiles.get(name) : null;
+    if (row == null) return;
+    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    int level = Math.max(1, source.damageLevel);
+    int lifetime = row.Range;
+    if (skill != null && skill.Param != null && skill.Param.length > 3) {
+      lifetime = skill.Param[2] + (level - 1) * skill.Param[3];
+    }
+    int step = Math.max(1, arrayValue(source.missile.sHitPar, 1));
+    int[] xs = {2, -2, 0, 0, -3, 0, 3, -1, 1, -1, 2, -4, -3, -1, 0, 1, 3, 4};
+    int[] ys = {-2, -2, 2, 5, 3, 3, 3, 2, 1, -1, -1, -2, -2, -3, -4, -3, -3, -2};
+    Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+        ? mAttributesWrapper.get(source.ownerId).attrs : null;
+    int created = 0;
+    for (int i = 0; i < xs.length; i += step) {
+      int id = factory.createMissile(row, Vector2.X,
+          new Vector2(origin).add(xs[i], ys[i]), source.ownerId);
+      if (id < 0 || !mMissile.has(id)) continue;
+      Missile fire = mMissile.get(id);
+      MissileDamageResolver.initialize(fire, ownerAttrs, null, -1, level, 0);
+      fire.skillId = source.skillId;
+      fire.damageLevel = level;
+      fire.persistent = true;
+      fire.remainingFrames = Math.max(1, lifetime);
+      fire.tickInterval = Math.max(1, row.DamageRate > 0 ? row.DamageRate : 1);
+      created++;
+    }
+    log.info("[ASSASSIN_PHOENIX] phase=meteor_fire owner={} skill={} level={} "
+            + "missile={} step={} created={} lifetime={}",
+        source.ownerId, source.skillId, level, name, step, created, lifetime);
+  }
+
+  private static boolean isChainLightningMissile(Missile missile) {
+    if (missile == null || missile.missile == null || missile.chainHitsRemaining <= 1) {
+      return false;
+    }
+    String name = missile.missile.Missile;
+    return missile.missile.pSrvHitFunc == 12
+        || "royalstrikechainlightning".equalsIgnoreCase(name);
+  }
+
+  /** D2MOO SrvHit12 selects a new nearby hostile and decrements TargetX. */
+  private void spawnChainLightningContinuation(
+      Missile source, int struckTarget, Vector2 origin) {
+    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    int level = Math.max(1, source.damageLevel);
+    int range = skill != null
+        ? Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill, level)) : 8;
+    int nextTarget = Engine.INVALID_ENTITY;
+    float best = Float.MAX_VALUE;
+    Array<Integer> candidates = getEntitiesInRange(origin.x, origin.y, range);
+    for (int i = 0; i < candidates.size; i++) {
+      int candidate = candidates.get(i);
+      if (candidate == struckTarget || candidate == source.ownerId
+          || !mPosition.has(candidate) || !isEnemy(source.ownerId, candidate)
+          || source.sharedHitTargets != null && source.sharedHitTargets.contains(candidate)) continue;
+      Attributes attrs = mAttributesWrapper.has(candidate)
+          ? mAttributesWrapper.get(candidate).attrs : null;
+      StatRef hp = attrs != null ? attrs.get(Stat.hitpoints) : null;
+      if (hp != null && hp.asFixed() <= 0f) continue;
+      float distance = mPosition.get(candidate).position.dst2(origin);
+      if (distance < best) {
+        best = distance;
+        nextTarget = candidate;
+      }
+    }
+    if (nextTarget == Engine.INVALID_ENTITY) return;
+    Vector2 direction = new Vector2(mPosition.get(nextTarget).position).sub(origin);
+    if (direction.isZero(0.0001f)) return;
+    int id = factory.createMissile(source.missile, direction.nor(), origin, source.ownerId);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile child = mMissile.get(id);
+    Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+        ? mAttributesWrapper.get(source.ownerId).attrs : null;
+    MissileDamageResolver.initialize(child, ownerAttrs, null, -1, level, 0);
+    child.skillId = source.skillId;
+    child.damageLevel = level;
+    child.chainHitsRemaining = source.chainHitsRemaining - 1;
+    child.shareHitTargets(source.sharedHitTargets != null
+        ? source.sharedHitTargets : new com.badlogic.gdx.utils.IntSet());
+    log.info("[ASSASSIN_PHOENIX] phase=chain_continue owner={} fromTarget={} "
+            + "toTarget={} remaining={} missile={}",
+        source.ownerId, struckTarget, nextTarget, child.chainHitsRemaining, id);
   }
 
   /** D2MOO SrvHit09 creates a circular grid of stationary Immolation Fire missiles. */

@@ -56,7 +56,7 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
-| 刺客 Assassin | 86% | 14% | 陷阱、三层聚气及 Fists/Claws/Blades 三阶段释放已接通；Phoenix 阶段、完整踢击和暗影系仍待补齐 |
+| 刺客 Assassin | 90% | 10% | 陷阱、三层聚气及四套元素聚气释放已接通；完整踢击、双爪完成技和暗影系仍待补齐 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
@@ -126,10 +126,10 @@
   - [x] ~~完成 `SrvDo034/035` 聚气命中与多人状态首项~~：Tiger Strike、Cobra Strike、Fists of Fire 等技能只在成功且未格挡的近战命中后叠层，按 `AuraState/AuraLenCalc` 保存技能来源和等级，最多三层并刷新期限；阻止 `SrvMissileA-D` 在蓄力阶段被误生成为普通导弹；`StateP.velocityModifier` 兼容传输层数且客户端恢复后不影响移动速度。
   - [x] ~~完成 Tiger/Cobra/Fists 的完成技直接释放与统一消费~~：完成技成功且未格挡时读取全部聚气状态；Tiger 按 `calc1 × 层数` 增强物理伤害，Cobra 严格按 1 层生命、2 层生命/法力、3 层双倍生命/法力吸取，Fists 按 Skills.txt 等级段伤害和 `calc1` 完成火焰直击/物理转火；实际 `DamageEvent` 结算后才恢复生命和法力，未命中、格挡、越距均保留聚气。
   - [x] ~~完成 Fists of Fire 二层范围冲击与三层火焰场导弹表现~~：补入 `PrgStack/SrvPrgFunc/PrgCalc` 原生列；二层按 `PrgCalc2` 在完成技目标周围结算一次共享物理/火焰伤害，三层继续叠加二层并按 `PrgCalc3` 圆形随机布置 `fistsoffirefirewall`。火场导弹由服务端持有、保存技能伤害快照、按 Range 帧退出并通过既有导弹实体同步给多人客户端。
-  - [ ] 完成 Claws of Thunder、Blades of Ice、Phoenix Strike 的阶段导弹、范围/冻结效果。
+  - [x] ~~完成 Claws of Thunder、Blades of Ice、Phoenix Strike 的阶段导弹、范围/冻结效果~~。
     - [x] ~~完成 Claws of Thunder 三阶段释放~~：一层按 `PrgDam=4` 将 Skills.txt 闪电伤害加入完成技；二层对照 `SrvDo036/sub_6FD14170` 从目标位置创建 64 路量化方向 `clawsofthundernova`；三层按 `PrgStack` 继续叠加 Nova，并对照 `SrvDo037/sub_6FCF6600` 以 `PrgCalc3=4` 创建 16 条 `clawsofthunderbolt` Charged Bolt 路径。所有导弹由服务端持有、保存技能伤害快照并进入多人同步。
     - [x] ~~完成 Blades of Ice 范围冰伤、冻结和三层冰弹~~：按 `PrgDam=4` 将 Skills.txt 冰冷伤害加入完成技；二层复用 `SrvDo038` 的单次共享物理/冰冷伤害记录并在半径 6 内施加冰冷；三层按 `PrgStack` 叠加二层，在半径 3 内执行 9 次原生随机布点并创建 `bladesoficecubes`。主目标按 `Param5` 冻结，冰块按 `SrvDmg10` 冻结命中目标，并以原生 Range 帧到期。
-    - [ ] 完成 Phoenix Strike 三阶段元素导弹与叠加规则。
+    - [x] ~~完成 Phoenix Strike 三阶段元素导弹与叠加规则~~：严格按 `PrgStack=false` 只释放当前层；一层 `SrvDo040` 创建 Meteor Center，并由 `SrvHit04/14` 生成陨石范围伤害与原生 18 点持续火场；二层 `SrvDo143` 以 `PrgCalc2=10` 创建 7 路 Chain Lightning 并按 `Param2+1` 权威续跳；三层 `SrvDo041` 以 `PrgCalc3=16` 创建 16 枚 Chaos Ice，按 `SrvDo35` 周期转向并冻结命中目标。
   - [ ] 完成 Dragon Talon/Claw/Tail/Flight 的多段、双爪、范围火焰和目标位移。
 
 ### P2：世界交互和多人闭环
@@ -172,11 +172,12 @@
 - 2026-09-03：完成 Fists of Fire `SrvDo038/039` 阶段效果；三层按 `PrgStack` 同时释放二层范围伤害和随机 `fistsoffirefirewall` 火场，服务端导弹保留所有权、伤害快照和 64 帧生命周期；刺客武技、陷阱、战斗与状态 5 组共 30 个用例通过，D2GS 编译通过。
 - 2026-09-03：完成 Claws of Thunder `SrvDo036/037` 三阶段释放；直接闪电伤害、64 路 Nova 和 16 条 Charged Bolt 路径均按原生 `PrgStack/SrvPrgFunc/PrgCalc` 接入，服务端导弹共享 Nova 命中去重并保留技能伤害快照；5 组共 34 个用例通过，D2GS 编译通过。
 - 2026-09-03：完成 Blades of Ice `SrvDo038/039` 三阶段释放；直接冰伤、二层半径 6 范围冰伤/减速、三层主目标冻结及半径 3 随机冰块均按原生数据接入；零速度冰块增加 Range 帧权威回收，5 组共 38 个用例通过，D2GS 编译通过。
+- 2026-09-04：完成 Phoenix Strike `SrvDo040/143/041` 三阶段释放；按非叠加规则分别创建 Meteor、7 路 Chain Lightning 和 16 枚 Chaos Ice，补齐陨石 18 点火场、闪电续跳、冰弹转向及冻结伤害快照；5 组共 43 个用例通过，D2GS 编译通过。
 
 ## 当前下一项
 
 已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20`、Wake of Fire `SrvDo125/SrvDo31`、Inferno Sentry `SrvDo95`，以及 Death Sentry AI Fn104 / `SrvDo55` 首项。
-Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态以及 Fists of Fire、Claws of Thunder、Blades of Ice 三阶段释放已完成。下一项为 **Phoenix Strike 三阶段元素释放**：对照 `SrvDo040/041` 和 `SrvMissileA-C/PrgCalc` 补齐 Meteor、Chain Lightning、Chaos Ice Bolt 及 `PrgStack` 差异；随后处理 `SrvDo042/046/050/052` 的多段踢击、双爪、范围火焰和目标位移。
+Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态及 Fists of Fire、Claws of Thunder、Blades of Ice、Phoenix Strike 三阶段释放已完成。下一项为 **Dragon Talon 原生连续踢击**：对照 `SrvSt24/SrvDo042` 补齐 `Calc1` 踢击次数、最后一击击退、每击命中/伤害与聚气只消费一次；随后依次处理 Dragon Claw、Dragon Tail 和 Dragon Flight。
 
 ## 记录规则
 

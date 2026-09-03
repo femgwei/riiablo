@@ -90,6 +90,19 @@ public class Missile extends PooledComponent {
   public int chargedBoltSeedHigh;
   public float chargedBoltNextTurnDistance;
 
+  /** Remaining targets for native SrvHit12 chain-lightning continuation. */
+  public int chainHitsRemaining;
+
+  /** D2MOO SrvDo35 periodically bends Royal Strike's chaos-ice path. */
+  public boolean chaosIcePath;
+  public int chaosIceSeed;
+  public int chaosIceX;
+  public int chaosIceY;
+  public int chaosIceNextTurnFrame;
+
+  /** Prevents impact sub-effects from being emitted once per area target. */
+  public boolean hitFunctionTriggered;
+
   /** Skill damage multiplier captured when the missile is spawned. */
   public float damageMultiplier = 1f;
 
@@ -143,6 +156,13 @@ public class Missile extends PooledComponent {
     chargedBoltSeedLow = 0;
     chargedBoltSeedHigh = 0;
     chargedBoltNextTurnDistance = 0f;
+    chainHitsRemaining = 0;
+    chaosIcePath = false;
+    chaosIceSeed = 0;
+    chaosIceX = 0;
+    chaosIceY = 0;
+    chaosIceNextTurnFrame = 0;
+    hitFunctionTriggered = false;
     damageMultiplier = 1f;
     pierceEnabled = false;
     pierceChance = 0;
