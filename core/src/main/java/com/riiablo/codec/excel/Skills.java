@@ -80,6 +80,12 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public boolean decquant;
     @Column public int     srvstfunc;
     @Column public int     srvdofunc;
+    /** Native progressive release callbacks and per-stage formulas. */
+    @Column public boolean prgstack;
+    @Column(startIndex = 1, endIndex = 4)
+    public int     srvprgfunc[];
+    @Column(startIndex = 1, endIndex = 4)
+    public String  prgcalc[];
     @Column public int     HitShift;
     @Column public int     SrcDam;
     @Column public int     MinDam;

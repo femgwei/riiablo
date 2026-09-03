@@ -14,15 +14,18 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.AssassinSkills;
@@ -37,6 +40,30 @@ import org.junit.jupiter.api.Test;
 
 /** Native SrvDo034/SrvDo035 regression coverage. */
 class AssassinMartialArtsTest extends RiiabloTest {
+  @Test
+  void fistsOfFireExposesNativeProgressiveColumns() {
+    Skills.Entry fists = Riiablo.files.skills.get("Fists of Fire");
+    assertNotNull(fists);
+    assertTrue(fists.prgstack);
+    assertNotNull(fists.srvprgfunc);
+    assertEquals(3, fists.srvprgfunc.length);
+    assertEquals(143, fists.srvprgfunc[0]);
+    assertEquals(38, fists.srvprgfunc[1]);
+    assertEquals(39, fists.srvprgfunc[2]);
+    assertNotNull(fists.prgcalc);
+    assertEquals(3, fists.prgcalc.length);
+    assertEquals(4, AssassinSkills.progressiveRange(fists, 5, 2));
+    assertEquals(4, AssassinSkills.progressiveRange(fists, 5, 3));
+    assertEquals(128, fists.SrcDam);
+    assertNotNull(AssassinSkills.progressiveMissile(fists, 3));
+    Missiles.Entry field = Riiablo.files.Missiles.get(
+        AssassinSkills.progressiveMissile(fists, 3));
+    assertNotNull(field);
+    assertEquals("fistsoffirefirewall", field.Missile);
+    assertEquals(0, field.Vel);
+    assertTrue(field.Range > 0);
+  }
+
   @Test
   void progressiveStateUsesAuraStateCapsAtThreeAndDoesNotChangeMovementSpeed() {
     Skills.Entry tiger = new Skills.Entry();
@@ -267,6 +294,88 @@ class AssassinMartialArtsTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void fistsOfFireSecondChargeDamagesNearbyEnemiesOnly() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      Attributes assassinAttrs = attributes(1000, 10, 10, 100000);
+      int assassin = createPlayer(world, 0, 0, assassinAttrs);
+      Attributes primaryAttrs = attributes(10000, 0, 0, 0);
+      Attributes nearbyAttrs = attributes(10000, 0, 0, 0);
+      Attributes distantAttrs = attributes(10000, 0, 0, 0);
+      int primary = createMonster(world, 1, 0, primaryAttrs);
+      createMonster(world, 2, 0, nearbyAttrs);
+      createMonster(world, 30, 30, distantAttrs);
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry fists = Riiablo.files.skills.get("Fists of Fire");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      AssassinSkills.addProgressiveCharge(states, fists, 5, assassin);
+      AssassinSkills.addProgressiveCharge(states, fists, 5, assassin);
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, primary, world.getMapper(Position.class).get(primary).position);
+
+      MathUtils.random.setSeed(0xF157200L);
+      dispatchUntilConsumed(world, assassin, states, StateId.PROGRESSIVE_FIRE);
+
+      assertTrue(primaryAttrs.get(Stat.hitpoints).asFixed() < 10000f);
+      assertTrue(nearbyAttrs.get(Stat.hitpoints).asFixed() < 10000f,
+          "charge two must apply the SrvDo038 area record");
+      assertEquals(10000f, distantAttrs.get(Stat.hitpoints).asFixed());
+      assertEquals(1000f, assassinAttrs.get(Stat.hitpoints).asFixed());
+      assertEquals(0, factory.missilesCreated,
+          "charge two must not create the charge-three field");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void fistsOfFireThirdChargeCreatesOwnedDamageSnapshotField() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(1000, 10, 10, 100000));
+      int primary = createMonster(world, 1, 0, attributes(10000, 0, 0, 0));
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry fists = Riiablo.files.skills.get("Fists of Fire");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      for (int i = 0; i < 3; i++) {
+        AssassinSkills.addProgressiveCharge(states, fists, 5, assassin);
+      }
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, primary, world.getMapper(Position.class).get(primary).position);
+
+      MathUtils.random.setSeed(0xF157300L);
+      dispatchUntilConsumed(world, assassin, states, StateId.PROGRESSIVE_FIRE);
+
+      assertTrue(factory.missilesCreated > 0,
+          "charge three must create at least one valid SrvDo039 field missile");
+      int range = AssassinSkills.progressiveRange(fists, 5, 3);
+      Vector2 origin = world.getMapper(Position.class).get(primary).position;
+      for (int i = 0; i < factory.missileEntityIds.size(); i++) {
+        int missileId = factory.missileEntityIds.get(i);
+        Missile missile = world.getMapper(Missile.class).get(missileId);
+        Vector2 position = world.getMapper(Position.class).get(missileId).position;
+        assertEquals(assassin, missile.ownerId);
+        assertEquals(fists.Id, missile.skillId);
+        assertTrue(missile.damageSnapshot);
+        assertTrue(missile.persistent);
+        assertEquals(missile.missile.Range, missile.remainingFrames);
+        assertTrue(missile.tickInterval > missile.remainingFrames);
+        assertTrue(position.dst2(origin) <= range * range);
+      }
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static void buildToThreeCharges(
       World world, int assassin, int target, Skills.Entry skill) {
     world.getMapper(Casting.class).get(assassin)
@@ -280,6 +389,15 @@ class AssassinMartialArtsTest extends RiiabloTest {
     }
     assertEquals(3, AssassinSkills.progressiveCharges(
         world.getMapper(UnitStates.class).get(assassin).stateList, stateId));
+  }
+
+  private static void dispatchUntilConsumed(
+      World world, int assassin, StateList states, int stateId) {
+    for (int i = 0; i < 20 && states.hasState(stateId); i++) {
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+    }
+    assertNull(states.getState(stateId));
   }
 
   private static int createPlayer(World world, float x, float y, Attributes attrs) {
@@ -321,6 +439,7 @@ class AssassinMartialArtsTest extends RiiabloTest {
 
   private static final class DummyFactory extends EntityFactory {
     int missilesCreated;
+    final java.util.ArrayList<Integer> missileEntityIds = new java.util.ArrayList<>();
 
     @Override public int createPlayer(CharData charData, Vector2 position) { return -1; }
     @Override public int createDynamicObject(int act, int preset, float x, float y) { return -1; }
@@ -330,8 +449,21 @@ class AssassinMartialArtsTest extends RiiabloTest {
     @Override public int createWarp(int index, float x, float y) { return -1; }
     @Override public int createItem(Item item, float x, float y) { return -1; }
     @Override public int createMissile(int missile, Vector2 angle, Vector2 position) {
+      return createMissile(missile, angle, position, Engine.INVALID_ENTITY);
+    }
+
+    @Override public int createMissile(
+        int missileId, Vector2 angle, Vector2 position, int ownerId) {
+      Missiles.Entry row = Riiablo.files.Missiles.get(missileId);
+      if (row == null) return Engine.INVALID_ENTITY;
+      int entityId = world.create();
+      world.getMapper(Missile.class).create(entityId)
+          .set(row, position, row.Range).setOwner(ownerId);
+      world.getMapper(Position.class).create(entityId).position.set(position);
+      world.getMapper(Velocity.class).create(entityId).velocity.set(angle).setLength(row.Vel);
       missilesCreated++;
-      return -1;
+      missileEntityIds.add(entityId);
+      return entityId;
     }
   }
 }

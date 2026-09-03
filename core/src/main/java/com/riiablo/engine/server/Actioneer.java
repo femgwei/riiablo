@@ -1,6 +1,8 @@
 package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
+import com.artemis.Aspect;
+import com.artemis.utils.IntBag;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -8,6 +10,7 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.IntSet;
+import com.badlogic.gdx.utils.IntIntMap;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
@@ -35,6 +38,7 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.NativeUnitFlags;
+import com.riiablo.engine.server.component.NativeTargeting;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Leap;
 import com.riiablo.engine.server.component.Position;
@@ -105,6 +109,8 @@ public class Actioneer extends PassiveSystem {
 
   /** Entity IDs for whom the last attack target died; must release before next attack. */
   private final IntSet lastAttackTargetDied = new IntSet();
+  /** Advancing per-unit stream used by native progressive field placement. */
+  private final IntIntMap assassinProgressiveSeeds = new IntIntMap();
 
   public boolean didLastAttackTargetDie(int entityId) {
     return lastAttackTargetDied.contains(entityId);
@@ -772,6 +778,10 @@ public class Actioneer extends PassiveSystem {
         }
         if (damage <= 0) {
           log.debug("{} melee hit on {} caused no damage", entityId, targetId);
+          if (progressiveRelease != null && progressiveRelease.hasEffects()) {
+            applyFistsOfFireStageEffects(
+                entityId, targetId, progressiveRelease, attackerAttrs);
+          }
           break;
         }
         float hpBefore = hitpoints.asFixed();
@@ -789,6 +799,8 @@ public class Actioneer extends PassiveSystem {
 
         if (progressiveRelease != null && progressiveRelease.hasEffects()) {
           applyAssassinProgressiveLeech(entityId, progressiveRelease, combat, appliedDamage);
+          applyFistsOfFireStageEffects(
+              entityId, targetId, progressiveRelease, attackerAttrs);
         }
 
         applyCombatStates(entityId, targetId, combat);
@@ -1119,6 +1131,158 @@ public class Actioneer extends PassiveSystem {
         combat.totalDamage += combat.elementalDamage[i];
       }
     }
+  }
+
+  /**
+   * D2MOO SrvDo038/SrvDo039. Fists of Fire has PrgStack enabled, therefore
+   * charge three releases both the charge-two blast and charge-three field.
+   */
+  private void applyFistsOfFireStageEffects(int sourceId, int primaryTargetId,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    if (release == null || release.fireCharges < 2 || !mPosition.has(primaryTargetId)) return;
+    Vector2 origin = mPosition.get(primaryTargetId).position;
+    applyFistsOfFireArea(sourceId, primaryTargetId, origin, release, sourceAttrs);
+    if (release.fireCharges >= 3) {
+      createFistsOfFireField(sourceId, origin, release, sourceAttrs);
+    }
+  }
+
+  /** Applies one rolled physical/elemental record to every valid nearby enemy. */
+  private void applyFistsOfFireArea(int sourceId, int primaryTargetId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    int range = Math.max(0, release.fireAreaRange);
+    if (range <= 0) return;
+    int sourceMin = statInt(sourceAttrs, Stat.mindamage);
+    int sourceMax = Math.max(sourceMin, statInt(sourceAttrs, Stat.maxdamage));
+    int physicalMin = release.firePhysicalMinDamage
+        + sourceMin * release.fireSourceDamageScale / 128;
+    int physicalMax = release.firePhysicalMaxDamage
+        + sourceMax * release.fireSourceDamageScale / 128;
+    int rawPhysical = rollRange(physicalMin, physicalMax);
+    int rawFire = rollRange(release.fireMinDamage, release.fireMaxDamage);
+    if (rawPhysical <= 0 && rawFire <= 0) return;
+
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    int affected = 0;
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int targetId = ids[i];
+      if (targetId == sourceId) continue;
+      if (!isValidFistsTarget(sourceId, targetId)) continue;
+      if (mPosition.get(targetId).position.dst2(origin) > range * range) continue;
+      Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
+      int physical = resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
+          Stat.damageresist, -1);
+      int fire = resistedDamage(rawFire, targetAttrs, stateList(targetId),
+          Stat.fireresist, 0);
+      float damage = physical + fire;
+      if (damage <= 0f) continue;
+      DamageEvent event = DamageEvent.obtain(sourceId, targetId, damage);
+      events.dispatch(event);
+      float applied = Math.max(0f, event.damage);
+      StatRef hp = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
+      if (hp == null || applied <= 0f) continue;
+      hp.sub(applied);
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        // The caller owns the primary finishing target's single DeathEvent.
+        if (targetId != primaryTargetId) {
+          events.dispatch(DeathEvent.obtain(sourceId, targetId));
+        }
+      }
+      affected++;
+      log.info("[ASSASSIN_FISTS] phase=stage2_area source={} primary={} target={} "
+              + "range={} physical={} fire={} applied={}",
+          sourceId, primaryTargetId, targetId, range, physical, fire, applied);
+    }
+    log.info("[ASSASSIN_FISTS] phase=stage2_complete source={} primary={} range={} "
+            + "rawPhysical={} rawFire={} affected={}",
+        sourceId, primaryTargetId, range, rawPhysical, rawFire, affected);
+  }
+
+  /** Creates the charge-three random fire field as server-owned missile entities. */
+  private void createFistsOfFireField(int sourceId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    int range = Math.max(0, release.fireFieldRange);
+    if (range <= 0 || release.fireStageMissile == null
+        || release.fireStageMissile.isEmpty()) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(release.fireStageMissile);
+    Skills.Entry skill = Riiablo.files.skills.get(release.fireSkillId);
+    if (row == null || skill == null) {
+      log.warn("[ASSASSIN_FISTS] phase=stage3_reject source={} missile={} reason=missing_data",
+          sourceId, release.fireStageMissile);
+      return;
+    }
+
+    int seed = assassinProgressiveSeeds.get(sourceId,
+        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.fireSkillId * 31);
+    NativeRng rng = new NativeRng(seed);
+    int area = range * range;
+    int created = 0;
+    for (int i = 0; i < area; i++) {
+      int dx = range - rng.nextInt(2 * range);
+      int dy = range - rng.nextInt(2 * range);
+      if (dx * dx + dy * dy > area) continue;
+      Vector2 position = new Vector2(origin.x + dx, origin.y + dy);
+      // D2MOO checks that the coordinate resolves to an active room. Empty
+      // maps used by isolated tests have no act and intentionally skip this.
+      if (map != null && map.getAct() >= 0) {
+        Map.Zone zone = map.getZone(position);
+        if (zone == null || zone.findRoomEx(position.x, position.y) == null) continue;
+      }
+      int missileId = factory.createMissile(row, Vector2.X, position, sourceId);
+      if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) continue;
+      com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+      MissileDamageResolver.initializeSkillArea(
+          projectile, skill, sourceAttrs, release.fireSkillLevel);
+      // Vel=0 basic missiles still advance their native frame lifetime. Mark
+      // them persistent so the ECS expires them after Range frames; retaining
+      // hitTargets for that whole lifetime matches NextHit=false semantics.
+      projectile.persistent = true;
+      projectile.remainingFrames = Math.max(1, row.Range);
+      projectile.tickInterval = projectile.remainingFrames + 1;
+      created++;
+    }
+    assassinProgressiveSeeds.put(sourceId, rng.state());
+    log.info("[ASSASSIN_FISTS] phase=stage3_field source={} skill={} missile={} "
+            + "range={} attempts={} created={} seed={}",
+        sourceId, release.fireSkillId, release.fireStageMissile,
+        range, area, created, rng.state());
+  }
+
+  private boolean isValidFistsTarget(int sourceId, int targetId) {
+    Attributes attrs = mAttributesWrapper.get(targetId).attrs;
+    StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    if (hp == null || hp.asFixed() <= 0f) return false;
+    if (mMonster.has(targetId) && mNativeUnitFlags.has(targetId)
+        && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) {
+      return false;
+    }
+    boolean sourcePlayerAligned = mPlayer.has(sourceId) || mMercenary.has(sourceId)
+        || mSummonedPet.has(sourceId);
+    boolean targetPlayerAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
+        || mSummonedPet.has(targetId);
+    return PvpCombatRules.canDamage(
+        partyManager, sourceId, targetId, sourcePlayerAligned, targetPlayerAligned);
+  }
+
+  private static int rollRange(int min, int max) {
+    min = Math.max(0, min);
+    max = Math.max(min, max);
+    return max > min ? MathUtils.random(min, max) : min;
+  }
+
+  private static int resistedDamage(int rawDamage, Attributes defender,
+      com.riiablo.engine.server.state.StateList defenderStates,
+      short resistStat, int stateResistType) {
+    if (rawDamage <= 0 || defender == null) return 0;
+    int resistance = statInt(defender, resistStat);
+    if (stateResistType >= 0 && defenderStates != null) {
+      resistance += defenderStates.getTotalResistModifier(stateResistType);
+    }
+    if (resistance >= 100) return 0;
+    return Math.max(0, rawDamage * (100 - Math.min(75, resistance)) / 100);
   }
 
   /** Applies Cobra Strike steal after DamageEvent has finalized actual damage. */

@@ -149,6 +149,15 @@ public final class AssassinSkills {
     public int fireMinDamage;
     public int fireMaxDamage;
     public int fireConversionPercent;
+    public int fireCharges;
+    public int fireSkillId = -1;
+    public int fireSkillLevel;
+    public int firePhysicalMinDamage;
+    public int firePhysicalMaxDamage;
+    public int fireSourceDamageScale;
+    public int fireAreaRange;
+    public int fireFieldRange;
+    public String fireStageMissile;
 
     public boolean hasEffects() {
       return totalCharges > 0;
@@ -185,12 +194,28 @@ public final class AssassinSkills {
           release.manaLeechPercent += steal[1];
           break;
         case StateId.PROGRESSIVE_FIRE:
+          release.fireCharges = charges;
+          release.fireSkillId = skill.Id;
+          release.fireSkillLevel = level;
           release.fireMinDamage += shiftedSkillDamage(
               skill.EMin, skill.EMinLev, level, skill.HitShift);
           release.fireMaxDamage += shiftedSkillDamage(
               skill.EMax, skill.EMaxLev, level, skill.HitShift);
+          release.firePhysicalMinDamage += shiftedSkillDamage(
+              skill.MinDam, skill.MinLevDam, level, skill.HitShift);
+          release.firePhysicalMaxDamage += shiftedSkillDamage(
+              skill.MaxDam, skill.MaxLevDam, level, skill.HitShift);
+          release.fireSourceDamageScale = Math.max(
+              release.fireSourceDamageScale, Math.max(0, skill.SrcDam));
           release.fireConversionPercent = Math.max(release.fireConversionPercent,
               Math.min(100, Math.max(0, SkillFormula.evaluate(skill.calc1, skill, level))));
+          if (charges >= 2) {
+            release.fireAreaRange = progressiveRange(skill, level, 2);
+          }
+          if (charges >= 3) {
+            release.fireFieldRange = progressiveRange(skill, level, 3);
+            release.fireStageMissile = progressiveMissile(skill, 3);
+          }
           break;
         default:
           // Cold, lightning and Phoenix stage functions are handled by the
@@ -200,7 +225,32 @@ public final class AssassinSkills {
       }
     }
     release.fireMaxDamage = Math.max(release.fireMinDamage, release.fireMaxDamage);
+    release.firePhysicalMaxDamage = Math.max(
+        release.firePhysicalMinDamage, release.firePhysicalMaxDamage);
     return release;
+  }
+
+  /** D2MOO SKILLS_EvaluateProgressiveSkillCalc with AuraRangeCalc fallback. */
+  public static int progressiveRange(Skills.Entry skill, int skillLevel, int chargeLevel) {
+    if (skill == null) return 0;
+    int index = Math.max(1, Math.min(MAX_PROGRESSIVE_CHARGES, chargeLevel)) - 1;
+    String expression = skill.prgcalc != null && index < skill.prgcalc.length
+        ? skill.prgcalc[index] : null;
+    int range = SkillFormula.evaluate(expression, skill, skillLevel);
+    if (range <= 0) range = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
+    // Original rows always provide one of these formulas. Keep legacy bin
+    // caches playable until they are regenerated with PrgCalc columns.
+    return range > 0 ? range : 3;
+  }
+
+  /** D2MOO SKILLS_GetProgressiveSkillMissileId stage lookup. */
+  public static String progressiveMissile(Skills.Entry skill, int chargeLevel) {
+    if (skill == null) return null;
+    switch (Math.max(1, Math.min(MAX_PROGRESSIVE_CHARGES, chargeLevel))) {
+      case 1: return firstNonEmpty(skill.srvmissilea, skill.srvmissile);
+      case 2: return firstNonEmpty(skill.srvmissileb, skill.srvmissilea);
+      default: return firstNonEmpty(skill.srvmissilec, skill.srvmissileb);
+    }
   }
 
   public static int rollFireDamage(ProgressiveRelease release) {
@@ -232,6 +282,10 @@ public final class AssassinSkills {
 
   private static int arrayValue(int[] values, int index) {
     return values != null && index >= 0 && index < values.length ? values[index] : 0;
+  }
+
+  private static String firstNonEmpty(String preferred, String fallback) {
+    return preferred != null && !preferred.isEmpty() ? preferred : fallback;
   }
 
   /** Native Tiger Strike enhanced-damage contribution (calc1 per charge). */
