@@ -689,6 +689,36 @@ public class Actioneer extends PassiveSystem {
             AssassinSkills.getDragonTailRadius(skill, level));
         break;
       }
+      case 28: { // SKILLS_SrvSt28_BladeShield
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (casting == null || skill == null || !mUnitStates.has(entityId)) {
+          log.info("[ASSASSIN_BLADE_SHIELD] phase=start_reject entity={} reason=missing_state_or_skill",
+              entityId);
+          if (mCasting.has(entityId)) mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        UnitStates states = mUnitStates.get(entityId);
+        if (states.stateList == null) states.init(entityId);
+        int level = Math.max(1, skillLevel(entityId, casting.skillId));
+        UnitState bladeShield = AssassinSkills.applyBladeShieldState(
+            states.stateList, skill, level, entityId);
+        if (bladeShield == null) {
+          log.info("[ASSASSIN_BLADE_SHIELD] phase=start_reject entity={} skill={} reason=native_validation",
+              entityId, casting.skillId);
+          mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        int[] damage = AssassinSkills.bladeShieldDamageRange(skill, level);
+        log.info("[ASSASSIN_BLADE_SHIELD] phase=start entity={} skill={} level={} duration={} "
+                + "delay={} range={} damage={}..{} srcDam={}",
+            entityId, skill.Id, level, bladeShield.duration,
+            bladeShield.periodicDelayFrames, AssassinSkills.bladeShieldRange(skill, level),
+            damage[0], damage[1], skill.SrcDam);
+        break;
+      }
       case 42: // native Fire Hit pre-hit setup; resolved authoritatively at the keyframe
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
@@ -1258,7 +1288,9 @@ public class Actioneer extends PassiveSystem {
       // explicitly no-op so native projectile skills are not reported as
       // unsupported before their authoritative missile is created.
       case 8:  // MultipleShot/Teeth shock wave
+      case 18: // DefensiveBuff; Venom state is applied by ServerSkillSystem
       case 22: // Nova/radial missile skill
+      case 54: // Blade Shield periodic pulse is applied by StateUpdater
       case 85: // Fallen Shaman chain missile
       case 95: // Fetish Shaman inferno missile
         break;

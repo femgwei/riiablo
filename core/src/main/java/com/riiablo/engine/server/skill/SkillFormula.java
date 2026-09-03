@@ -119,7 +119,10 @@ public final class SkillFormula {
             long numerator = 110L * level * (step - base);
             return base + (int) (numerator / (100L * (level + 6)));
           }
-          return base + level * step;
+          // D2Common SKILLS_GetSpecialParamValue (lnXY) uses the first
+          // parameter at skill level one, then adds the second parameter for
+          // each subsequent level.
+          return base + (level - 1) * step;
         }
       }
       return 0;

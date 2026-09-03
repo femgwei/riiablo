@@ -56,8 +56,8 @@ class AssassinMartialArtsTest extends RiiabloTest {
     assertNotNull(tail);
     assertEquals(27, tail.srvstfunc);
     assertEquals(50, tail.srvdofunc);
-    assertEquals(60, AssassinSkills.getDragonTailFirePercent(tail, 1));
-    assertEquals(150, AssassinSkills.getDragonTailFirePercent(tail, 10));
+    assertEquals(50, AssassinSkills.getDragonTailFirePercent(tail, 1));
+    assertEquals(140, AssassinSkills.getDragonTailFirePercent(tail, 10));
     assertEquals(6, AssassinSkills.getDragonTailRadius(tail, 1));
     assertNotNull(Riiablo.files.Missiles.get("dragontail missile"));
 

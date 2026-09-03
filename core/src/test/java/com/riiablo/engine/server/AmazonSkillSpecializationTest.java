@@ -454,8 +454,8 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     Skills.Entry skill = Riiablo.files.skills.get("Lightning Strike");
     assertNotNull(skill);
     assertEquals(20f, ServerSkillSystem.lightningStrikeRange(skill, 1), 0.0001f);
-    assertEquals(3, ServerSkillSystem.lightningStrikeJumpCount(skill, 1));
-    assertEquals(12, ServerSkillSystem.lightningStrikeJumpCount(skill, 10));
+    assertEquals(2, ServerSkillSystem.lightningStrikeJumpCount(skill, 1));
+    assertEquals(11, ServerSkillSystem.lightningStrikeJumpCount(skill, 10));
   }
 
   @Test
@@ -466,8 +466,8 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertEquals(20, missile.pSrvHitFunc);
     assertEquals("furylightning", missile.HitSubMissile[0]);
     assertEquals(15, MissileCollisionSystem.lightningFuryRange(missile, skill, 1));
-    assertEquals(3, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 1));
-    assertEquals(12, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 10));
+    assertEquals(2, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 1));
+    assertEquals(11, MissileCollisionSystem.lightningFuryBoltCount(missile, skill, 10));
   }
 
   @Test

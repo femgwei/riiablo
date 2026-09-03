@@ -226,15 +226,25 @@ public class ServerSkillSystem extends PassiveSystem {
     // must still be created in the local authoritative world.
     if (monstersOnly && !mMonster.has(event.entityId)
         && event.srvdofunc != 15 && event.srvdofunc != 16
-        && event.srvdofunc != 44 && event.srvdofunc != 45 && event.srvdofunc != 49
+        && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
+        && event.srvdofunc != 49 && event.srvdofunc != 54
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
-        && skill.srvdofunc != 44 && skill.srvdofunc != 45 && skill.srvdofunc != 49) {
+        && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
+        && skill.srvdofunc != 49 && skill.srvdofunc != 54) {
       consumeRangedAmmoForSkill(event, skill);
       return;
     }
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if ((event.srvdofunc == 18 || skill.srvdofunc == 18) && isVenom(skill)) {
+      applyVenom(event, skill, skillLevel);
+      return;
+    }
+    if (event.srvdofunc == 54 || skill.srvdofunc == 54) {
+      armBladeShield(event, skill, skillLevel);
+      return;
+    }
     // D2MOO SrvDo034/SrvDo035 are melee combat records. Actioneer resolves
     // their hit and progressive-state update at this same keyframe. Their
     // SrvMissileA-D columns describe charge-release stages and must not be
@@ -460,6 +470,50 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     log.info("[SPIDER_LAY] phase=state entity={} skill={} level={} duration={}",
         event.entityId, event.skillId, skillLevel, duration);
+  }
+
+  private void applyVenom(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId)) return;
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    UnitState venom = AssassinSkills.applyVenomState(
+        states.stateList, skill, skillLevel, event.entityId);
+    if (venom == null) {
+      log.warn("[ASSASSIN_VENOM] phase=reject entity={} skill={} reason=native_state_data",
+          event.entityId, event.skillId);
+      return;
+    }
+    log.info("[ASSASSIN_VENOM] phase=apply entity={} skill={} level={} duration={} "
+            + "poison={}..{} poisonLength={}",
+        event.entityId, event.skillId, skillLevel, venom.duration,
+        venom.poisonMinDamage, venom.poisonMaxDamage, venom.poisonLengthOverride);
+  }
+
+  private void armBladeShield(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId)) return;
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    UnitState bladeShield = states.stateList.getState(StateId.BLADESHIELD);
+    if (bladeShield == null || bladeShield.skillId != event.skillId) {
+      // Synthetic/server-only event paths may not have run Actioneer's start
+      // callback. Recreate the same native stat list before arming it.
+      bladeShield = AssassinSkills.applyBladeShieldState(
+          states.stateList, skill, skillLevel, event.entityId);
+    }
+    if (bladeShield == null) {
+      log.warn("[ASSASSIN_BLADE_SHIELD] phase=do_reject entity={} skill={} reason=missing_state",
+          event.entityId, event.skillId);
+      return;
+    }
+    bladeShield.periodicCountdownFrames = 0;
+    bladeShield.needsSync = true;
+    log.info("[ASSASSIN_BLADE_SHIELD] phase=armed entity={} skill={} level={} delay={}",
+        event.entityId, event.skillId, bladeShield.level, bladeShield.periodicDelayFrames);
+  }
+
+  private static boolean isVenom(Skills.Entry skill) {
+    return skill != null && skill.aurastate != null
+        && "venomclaws".equalsIgnoreCase(skill.aurastate.trim());
   }
 
   /** Native SrvDo047: apply DIMVISION and defense reduction to hostile units in range. */

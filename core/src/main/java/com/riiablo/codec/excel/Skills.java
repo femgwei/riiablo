@@ -55,6 +55,11 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  aurastate;
     @Column public String  auralencalc;
     @Column public String  aurarangecalc;
+    @Column public int     aurafilter;
+    @Column(startIndex = 1, endIndex = 7)
+    public String  aurastat[];
+    @Column(startIndex = 1, endIndex = 7)
+    public String  aurastatcalc[];
     @Column public String  anim;
     @Column public String  seqtrans;
     @Column public String  monanim;
@@ -75,6 +80,8 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public boolean leftskill;
     @Column public boolean passive;
     @Column public boolean aura;
+    @Column public boolean periodic;
+    @Column public String  perdelay;
     /** Native Skills.txt ammunition flags used by bow/crossbow attacks. */
     @Column public boolean noammo;
     @Column public boolean decquant;
@@ -92,23 +99,26 @@ public class Skills extends Excel<Skills.Entry> {
     /** Native flat attack-rating factor and per-level increment. */
     @Column public int     ToHit;
     @Column public int     LevToHit;
+    @Column public int     ResultFlags;
+    @Column public int     HitFlags;
+    @Column public int     HitClass;
     @Column public int     MinDam;
     @Column public int     MaxDam;
-    @Column(startIndex = 1, endIndex = 5)
+    @Column(startIndex = 1, endIndex = 6)
     public int     MinLevDam[];
-    @Column(startIndex = 1, endIndex = 5)
+    @Column(startIndex = 1, endIndex = 6)
     public int     MaxLevDam[];
     @Column public String  DmgSymPerCalc;
     @Column public String  EType;
     @Column public int     EMin;
     @Column public int     EMax;
-    @Column(startIndex = 1, endIndex = 5)
+    @Column(startIndex = 1, endIndex = 6)
     public int     EMinLev[];
-    @Column(startIndex = 1, endIndex = 5)
+    @Column(startIndex = 1, endIndex = 6)
     public int     EMaxLev[];
     @Column public String  EDmgSymPerCalc;
     @Column public int     ELen;
-    @Column(startIndex = 1, endIndex = 3)
+    @Column(startIndex = 1, endIndex = 4)
     public int     ELevLen[];
     @Column public String  ELenSymPerCalc;
     /** D2 skill formula expressions (calc1..calc4). */

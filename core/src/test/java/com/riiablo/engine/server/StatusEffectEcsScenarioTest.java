@@ -16,6 +16,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Missiles;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
@@ -120,6 +121,54 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
           .stateList.hasState(StateId.COLD));
       System.out.println("[STATUS_ECS_CHAIN] state=POISON lethalDeathEvents=1 state=COLD"
           + " slowed=true recovered=true status=PASS");
+    } finally {
+      world.dispose();
+      StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void strongerDotReplacesWeakerButWeakerDotCannotReplaceStronger() {
+    NoopFactory factory = new NoopFactory();
+    StateUpdater updater = new StateUpdater();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), updater, factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int source = createPlayer(world, 0, 0);
+      int target = createMonster(world, 10, 10, 100, 0);
+
+      updater.applyState(target, StateId.POISON, 100, 1, source,
+          4, CombatSystem.DAMAGE_POISON);
+      updater.applyState(target, StateId.POISON, 10, 2, source,
+          12, CombatSystem.DAMAGE_POISON);
+      UnitState poison = world.getMapper(UnitStates.class).get(target)
+          .stateList.getState(StateId.POISON);
+      assertEquals(12, poison.damagePerFrame,
+          "a stronger poison must replace the old per-frame rate");
+      assertEquals(10, poison.duration,
+          "native replacement assigns the new expiry even when it is shorter");
+      assertEquals(10, poison.initialDuration);
+      assertEquals(2, poison.level);
+
+      updater.applyState(target, StateId.POISON, 200, 3, source,
+          6, CombatSystem.DAMAGE_POISON);
+      assertEquals(12, poison.damagePerFrame,
+          "a weaker poison must not replace the stronger active poison");
+      assertEquals(10, poison.duration,
+          "a rejected weaker poison must not extend the active duration");
+      assertEquals(2, poison.level);
+
+      updater.applyState(target, StateId.BURNING, 80, 1, source,
+          3, CombatSystem.DAMAGE_FIRE);
+      updater.applyState(target, StateId.BURNING, 20, 2, source,
+          3, CombatSystem.DAMAGE_FIRE);
+      UnitState burning = world.getMapper(UnitStates.class).get(target)
+          .stateList.getState(StateId.BURNING);
+      assertEquals(3, burning.damagePerFrame);
+      assertEquals(20, burning.duration,
+          "an equal-rate burn follows the same native replacement rule");
+      assertEquals(2, burning.level);
     } finally {
       world.dispose();
       StatusEffectApplier.INSTANCE.setStateSink(null);

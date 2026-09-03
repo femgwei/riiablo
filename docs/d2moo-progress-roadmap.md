@@ -56,14 +56,15 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
-| 刺客 Assassin | 98% | 2% | 陷阱、三层聚气、四套元素聚气释放及 Dragon Talon/Claw/Tail/Flight 已接通；暗影系运行时细节仍待补齐 |
+| 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
-职业技能专项整体按 **约 50% 完成、约 50% 剩余** 计入战斗模块，暂不标记为完成。
+职业技能专项整体按 **约 63% 完成、约 37% 剩余** 计入战斗模块；刺客专项已完成，
+其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
 
@@ -135,6 +136,10 @@
     - [x] ~~完成 Dragon Claw `SrvSt25/SrvDo046` 原生双爪序列~~：按原生 HT2 命中帧以 `A2 → S4` 执行左右爪独立攻击，分别读取当前爪伤害、力量/敏捷缩放、`calc1` 增伤并各自消耗耐久；首个成功命中统一释放聚气，第二爪不会再次消费；单爪/徒手保留原生单命中退化路径。补齐共享 `SrvSt64` 的 MonFrenzy 目标校验，避免套用玩家装备规则。
     - [x] ~~完成 Dragon Tail `SrvSt27/SrvDo050` 主目标踢击与范围火焰爆炸~~：起手阶段生成并保存一次原生命中记录，命中帧不再重复掷骰；修正共用 KICK 力量/敏捷基础伤害，主目标踢击后按经物理减伤及 Tiger Strike 增幅后的实际物理伤害乘以 `calc1 + passive_fire_mastery`，在 `AuraRangeCalc` 范围内按各目标火抗独立结算。服务端创建一次性 `dragontail missile` 表现实体供多人同步，失败命中不释放聚气、不爆炸。
     - [x] ~~完成 Dragon Flight `SrvSt12/SrvDo052` 两阶段位移完成技~~：按 `AuraRangeCalc=par7` 校验目标距离、敌对与城镇边界；第一序列事件检查当前 `Levels.Teleport` 和飞行碰撞，以玩家完整 footprint 在目标 RoomEx 内寻找安全坐标并服务端位移，写入 `SYNC_WARPED` 供多人同步；第二事件切换 `KK` 踢击动画，按 `Param1 + (level-1) * Param2`、`progressive_tohit + ToHitFactor` 和共用 KICK 公式结算，成功命中才释放聚气并消耗耐久。
+- [x] ~~完成 Blade Shield / Venom 原生运行时闭环~~
+  - Blade Shield 接入 `SrvSt28/SrvDo054`、`AuraLen/AuraRange/PerDelay/AuraFilter`，按 25 帧周期对范围内每个敌对目标独立结算；完整物理包和来源元素伤害均按 `SrcDam=32` 缩放，城镇禁伤、耐久、死亡、状态到期及失去技能停止均纳入服务端权威链。
+  - Venom 接入 `SrvDo018` 和 `venomclaws` 状态，按 Skills.txt 注入每帧毒伤并以 `skill_poison_override_length=10` 覆盖物品毒素时长；强 DOT 替换弱 DOT、弱 DOT 不覆盖强 DOT 的 D2MOO 规则已统一到状态系统。
+  - 客户端根据权威 `StateP` 显示 `bladeshield` Overlay 和双手 `cgrn` 染色，状态结束恢复装备原色，适用于本地与双客户端快照。
 
 ### P2：世界交互和多人闭环
 
@@ -181,11 +186,15 @@
 - 2026-09-04：完成 Dragon Claw `SrvSt25/SrvDo046` 双爪序列；左右爪按 `A2 → S4` 分别结算命中、当前手伤害和耐久，聚气仅首个成功命中消费，单爪/徒手退化为单击；补齐 MonFrenzy 共用原生函数的 `SrvSt64` 目标校验。刺客、战斗、状态与原生公式 6 组共 54 个用例通过，D2GS 编译通过。
 - 2026-09-04：完成 Dragon Tail `SrvSt27/SrvDo050`；保存起手踢击记录到命中帧，补齐 KICK 力量/敏捷基础伤害、主目标物理结算、Tiger Strike 后实际物理伤害到范围火焰的转换、Fire Mastery、逐目标火抗和 `dragontail missile` 多人表现。刺客、战斗、状态、原生公式和客户端表现 8 组共 60 个用例通过，D2GS 编译通过。
 - 2026-09-04：完成 Dragon Flight `SrvSt12/SrvDo052`；按原生 SQ 序列拆分 SC 传送与 KK 踢击事件，接入目标距离/敌对/城镇校验、`Levels.Teleport`、RoomEx 安全落点、服务端 `SYNC_WARPED` 位移，以及 Param/ToHit/KICK 完成技伤害和聚气消费。刺客、动作、序列、地图碰撞、战斗与状态 9 组共 71 个用例通过，D2GS 编译通过。
+- 2026-09-04：完成 Blade Shield / Venom；补齐 Skills.txt 缺失列、原生 `lnXY` 等级公式、周期范围伤害、`SrcDam` 缩放、毒伤覆盖、持续 Overlay/武器染色及多人状态快照。刺客专项回归集合 6 组共 64 个用例通过，D2GS 编译通过；刺客职业专项更新为 100%。
 
 ## 当前下一项
 
-已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20`、Wake of Fire `SrvDo125/SrvDo31`、Inferno Sentry `SrvDo95`，以及 Death Sentry AI Fn104 / `SrvDo55` 首项。
-Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态、四套元素聚气释放及 Dragon Talon/Dragon Claw/Dragon Tail/Dragon Flight 原生序列已完成。下一项建议为 **Blade Shield 与 Venom 运行时闭环**：优先对照 `SrvSt28/SrvDo054`、状态伤害注入和持续时间，补齐环绕刃表现、周期近战伤害、毒伤覆盖规则与多人状态/导弹同步。
+刺客专项已经完成：陷阱、暗影召唤与控制、三层聚气、四套元素释放、四项龙系完成技，
+以及 Blade Shield / Venom 的服务端状态、伤害和多人表现快照均已接通。
+
+下一项建议进入 **野蛮人职业技能专项**，优先顺序为 Frenzy 双持连续命中与速度状态、
+Whirlwind 路径/周期攻击、Berserk 物理转魔法及防御归零，再处理战吼范围状态与多人表现。
 
 ## 记录规则
 

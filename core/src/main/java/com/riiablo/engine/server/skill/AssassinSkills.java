@@ -667,7 +667,7 @@ public final class AssassinSkills {
    */
   public static int getDragonTailFirePercent(int skillLevel) {
     // Native calc1=ln12 with Param1=50 and Param2=10.
-    return 50 + Math.max(1, skillLevel) * 10;
+    return 50 + (Math.max(1, skillLevel) - 1) * 10;
   }
 
   public static int getDragonTailFirePercent(Skills.Entry skill, int skillLevel) {
@@ -841,17 +841,38 @@ public final class AssassinSkills {
     return 40 + (skillLevel - 1) * 4;
   }
 
-  /**
-   * 刃之护盾 - 旋转飞刃护盾
-   * 
-   * @param skillLevel 技能等级
-   * @return 每刃伤害
-   */
-  public static int calculateBladeShieldDamage(int skillLevel) {
-    // 基础 10-15，每级 +5-6
-    int minDamage = 10 + (skillLevel - 1) * 5;
-    int maxDamage = 15 + (skillLevel - 1) * 6;
-    return MathUtils.random(minDamage, maxDamage);
+  /** D2MOO SrvSt28: replace the old Blade Shield stat list on cast start. */
+  public static UnitState applyBladeShieldState(StateList states, Skills.Entry skill,
+      int skillLevel, int sourceEntityId) {
+    if (states == null || skill == null || skill.srvstfunc != 28
+        || !hasText(progressiveMissile(skill, 1))) return null;
+    int level = Math.max(1, skillLevel);
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, level);
+    if (duration <= 0) return null;
+    states.removeState(StateId.BLADESHIELD);
+    UnitState state = states.addState(
+        StateId.BLADESHIELD, duration, level, sourceEntityId);
+    if (state == null) return null;
+    state.skillId = skill.Id;
+    state.periodicDelayFrames = Math.max(5,
+        SkillFormula.evaluate(skill.perdelay, skill, level));
+    state.periodicCountdownFrames = -1;
+    state.needsSync = true;
+    return state;
+  }
+
+  public static int bladeShieldRange(Skills.Entry skill, int skillLevel) {
+    return Math.max(0, SkillFormula.evaluate(
+        skill != null ? skill.aurarangecalc : null, skill, Math.max(1, skillLevel)));
+  }
+
+  /** Returns the native flat physical damage before SrvDo142 applies SrcDam. */
+  public static int[] bladeShieldDamageRange(Skills.Entry skill, int skillLevel) {
+    if (skill == null) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    int min = shiftedSkillDamage(skill.MinDam, skill.MinLevDam, level, skill.HitShift);
+    int max = shiftedSkillDamage(skill.MaxDam, skill.MaxLevDam, level, skill.HitShift);
+    return new int[] {Math.max(0, min), Math.max(Math.max(0, min), max)};
   }
 
   /**
@@ -990,27 +1011,49 @@ public final class AssassinSkills {
     return 0.4f + (skillLevel - 1) * 0.2f;
   }
 
-  /**
-   * 毒素蔓延 - 武器附加毒素伤害
-   * 
-   * @param skillLevel 技能等级
-   * @return 总毒素伤害
-   */
-  public static int calculateVenomDamage(int skillLevel) {
-    // 基础 100-125，每级 +20-25
-    int minDamage = 100 + (skillLevel - 1) * 20;
-    int maxDamage = 125 + (skillLevel - 1) * 25;
-    return MathUtils.random(minDamage, maxDamage);
+  /** D2MOO SrvDo018: build Venom's three AuraStat entries on the caster. */
+  public static UnitState applyVenomState(StateList states, Skills.Entry skill,
+      int skillLevel, int sourceEntityId) {
+    if (states == null || skill == null || skill.srvdofunc != 18
+        || !"venomclaws".equals(normalizeState(skill.aurastate))) return null;
+    int level = Math.max(1, skillLevel);
+    int duration = SkillFormula.evaluate(skill.auralencalc, skill, level);
+    int[] damage = venomDamageRange(skill, level);
+    int poisonLength = venomPoisonLength(skill, level);
+    if (duration <= 0 || damage[1] <= 0 || poisonLength <= 0) return null;
+    states.removeState(StateId.VENOMCLAWS);
+    UnitState state = states.addState(
+        StateId.VENOMCLAWS, duration, level, sourceEntityId);
+    if (state == null) return null;
+    state.skillId = skill.Id;
+    state.poisonMinDamage = damage[0];
+    state.poisonMaxDamage = damage[1];
+    state.poisonLengthOverride = poisonLength;
+    state.needsSync = true;
+    return state;
   }
 
-  /**
-   * 获取毒素蔓延持续时间
-   * 
-   * @return 持续时间（秒）
-   */
-  public static float getVenomDuration() {
-    // 固定 0.4 秒
-    return 0.4f;
+  /** Venom poison damage is stored as per-frame fixed damage in Skills.txt. */
+  public static int[] venomDamageRange(Skills.Entry skill, int skillLevel) {
+    if (skill == null) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    int min = shiftedSkillDamage(skill.EMin, skill.EMinLev, level, skill.HitShift);
+    int max = shiftedSkillDamage(skill.EMax, skill.EMaxLev, level, skill.HitShift);
+    return new int[] {Math.max(0, min), Math.max(Math.max(0, min), max)};
+  }
+
+  public static int venomPoisonLength(Skills.Entry skill, int skillLevel) {
+    if (skill == null) return 0;
+    return Math.max(0, skill.ELen
+        + damageBonusByLevel(Math.max(1, skillLevel), skill.ELevLen));
+  }
+
+  private static String normalizeState(String value) {
+    return value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
+  }
+
+  private static boolean hasText(String value) {
+    return value != null && !value.trim().isEmpty();
   }
 
   /**

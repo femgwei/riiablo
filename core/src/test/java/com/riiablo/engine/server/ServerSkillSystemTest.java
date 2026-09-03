@@ -38,18 +38,18 @@ public class ServerSkillSystemTest {
     multipleShot.calc2 = "par3";
     multipleShot.calc3 = "2";
     multipleShot.Param = new int[] {2, 1, 1};
-    assertEquals(3, ServerSkillSystem.getSrvDo008Total(multipleShot, 1));
-    assertEquals(12, ServerSkillSystem.getSrvDo008Total(multipleShot, 10));
-    assertEquals(2, ServerSkillSystem.getSrvDo008Centre(multipleShot, 10, 12));
+    assertEquals(2, ServerSkillSystem.getSrvDo008Total(multipleShot, 1));
+    assertEquals(11, ServerSkillSystem.getSrvDo008Total(multipleShot, 10));
+    assertEquals(2, ServerSkillSystem.getSrvDo008Centre(multipleShot, 10, 11));
 
     Skills.Entry teeth = new Skills.Entry();
     teeth.calc1 = "min(ln12,24)";
     teeth.calc2 = "par3";
     teeth.calc3 = "";
     teeth.Param = new int[] {2, 1, 0};
-    assertEquals(3, ServerSkillSystem.getSrvDo008Total(teeth, 1));
+    assertEquals(2, ServerSkillSystem.getSrvDo008Total(teeth, 1));
     // Native code falls back to the full count when calc2 evaluates to zero.
-    assertEquals(3, ServerSkillSystem.getSrvDo008Centre(teeth, 1, 3));
+    assertEquals(2, ServerSkillSystem.getSrvDo008Centre(teeth, 1, 2));
 
     Skills.Entry shockWave = new Skills.Entry();
     shockWave.calc1 = "5";

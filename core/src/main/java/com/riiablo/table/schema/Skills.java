@@ -43,6 +43,17 @@ public class Skills {
   public String aurastate;
   public String auralencalc;
   public String aurarangecalc;
+  public int aurafilter;
+
+  @Format(
+      startIndex = 1,
+      endIndex = 7)
+  public String aurastat[];
+
+  @Format(
+      startIndex = 1,
+      endIndex = 7)
+  public String aurastatcalc[];
   public String anim;
   public String seqtrans;
   public String monanim;
@@ -67,8 +78,38 @@ public class Skills {
   public boolean leftskill;
   public boolean passive;
   public boolean aura;
+  public boolean periodic;
+  public String perdelay;
   public int srvstfunc;
   public int srvdofunc;
+  public int HitShift;
+  public int SrcDam;
+  public int ToHit;
+  public int LevToHit;
+  public int ResultFlags;
+  public int HitFlags;
+  public int HitClass;
+  public int MinDam;
+  public int MaxDam;
+
+  @Format(startIndex = 1, endIndex = 6)
+  public int MinLevDam[];
+
+  @Format(startIndex = 1, endIndex = 6)
+  public int MaxLevDam[];
+  public String EType;
+  public int EMin;
+  public int EMax;
+
+  @Format(startIndex = 1, endIndex = 6)
+  public int EMinLev[];
+
+  @Format(startIndex = 1, endIndex = 6)
+  public int EMaxLev[];
+  public int ELen;
+
+  @Format(startIndex = 1, endIndex = 4)
+  public int ELevLen[];
   public String calc1;
   public String calc2;
   public String calc3;

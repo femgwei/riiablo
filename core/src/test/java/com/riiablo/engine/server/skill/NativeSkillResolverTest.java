@@ -41,7 +41,7 @@ public class NativeSkillResolverTest {
     Skills.Entry skill = new Skills.Entry();
     skill.calc1 = "ln12";
     skill.Param = new int[] {3, 2};
-    assertEquals(7, NativeSkillResolver.calc(skill, 2, 1));
+    assertEquals(5, NativeSkillResolver.calc(skill, 2, 1));
     assertEquals(0, NativeSkillResolver.calc(skill, 2, 4));
   }
 

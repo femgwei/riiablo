@@ -99,6 +99,16 @@ public class UnitState {
   /** 伤害类型（0=物理, 1=火焰, 2=闪电, 3=冰冷, 4=毒素, 5=魔法） */
   public int damageType;
 
+  /** Skill stat-list poison damage in native per-frame units. */
+  public int poisonMinDamage;
+  public int poisonMaxDamage;
+  /** Positive values replace the combined item poison length (Venom = 10). */
+  public int poisonLengthOverride;
+
+  /** Native periodic-skill cadence; -1 means waiting for the cast keyframe. */
+  public int periodicDelayFrames;
+  public int periodicCountdownFrames;
+
   //==========================================================================
   // 状态标志
   //==========================================================================
@@ -164,6 +174,11 @@ public class UnitState {
 
     damagePerFrame = 0;
     damageType = 0;
+    poisonMinDamage = 0;
+    poisonMaxDamage = 0;
+    poisonLengthOverride = 0;
+    periodicDelayFrames = 0;
+    periodicCountdownFrames = -1;
 
     isNew = true;
     needsSync = false;
@@ -343,6 +358,11 @@ public class UnitState {
     
     this.damagePerFrame = other.damagePerFrame;
     this.damageType = other.damageType;
+    this.poisonMinDamage = other.poisonMinDamage;
+    this.poisonMaxDamage = other.poisonMaxDamage;
+    this.poisonLengthOverride = other.poisonLengthOverride;
+    this.periodicDelayFrames = other.periodicDelayFrames;
+    this.periodicCountdownFrames = other.periodicCountdownFrames;
     
     this.isNew = other.isNew;
     this.needsSync = other.needsSync;

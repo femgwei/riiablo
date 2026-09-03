@@ -8,6 +8,8 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 
 /**
  * 战斗系统 - 基于 D2MOD SUnitDmg.cpp 移植
@@ -453,6 +455,63 @@ public class CombatSystem {
         null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true);
   }
 
+  /**
+   * Resolves Blade Shield's native flat skill damage plus SrcDam-scaled
+   * weapon and elemental stats. Poison length is deliberately not scaled:
+   * SUnitDmg uses skill_poison_override_length directly when Venom is active.
+   */
+  public CombatResult calculateBladeShieldAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int skillMinDamage, int skillMaxDamage, int sourceDamageScale,
+      int skillToHitPercent, boolean alwaysHit,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving) {
+    int scale = Math.max(0, sourceDamageScale);
+    int sourceMin = statInt(attacker, Stat.mindamage, 0);
+    int sourceMax = Math.max(sourceMin, statInt(attacker, Stat.maxdamage, sourceMin));
+    // SUNITDMG_FillDamageValues applies nSrcDam to the completed physical
+    // packet, including the damage already rolled from Skills.txt.  Scaling
+    // only the weapon portion makes Blade Shield considerably stronger than
+    // D2MOO at low levels.
+    int physicalMin = (Math.max(0, skillMinDamage) + sourceMin) * scale / 128;
+    int physicalMax = Math.max(physicalMin,
+        (Math.max(0, skillMaxDamage) + sourceMax) * scale / 128);
+    int[] elementalMin = new int[DAMAGE_TYPE_COUNT];
+    int[] elementalMax = new int[DAMAGE_TYPE_COUNT];
+    short[] minStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
+        Stat.poisonmindam, Stat.magicmindam};
+    short[] maxStats = {0, Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam,
+        Stat.poisonmaxdam, Stat.magicmaxdam};
+    for (int type = DAMAGE_FIRE; type < DAMAGE_TYPE_COUNT; type++) {
+      int min = statInt(attacker, minStats[type], 0);
+      int max = Math.max(min, statInt(attacker, maxStats[type], min));
+      if (type == DAMAGE_POISON && attackerStates != null) {
+        UnitState venom = attackerStates.getState(StateId.VENOMCLAWS);
+        if (venom != null) {
+          min += Math.max(0, venom.poisonMinDamage);
+          max += Math.max(0, venom.poisonMaxDamage);
+        }
+      }
+      elementalMin[type] = min * scale / 128;
+      elementalMax[type] = Math.max(elementalMin[type], max * scale / 128);
+    }
+    int coldLength = statInt(attacker, Stat.coldlength, 0) * scale / 128;
+    int poisonLength = statInt(attacker, Stat.poisonlength, 0);
+    if (attackerStates != null) {
+      UnitState venom = attackerStates.getState(StateId.VENOMCLAWS);
+      if (venom != null && venom.poisonLengthOverride > 0) {
+        poisonLength = venom.poisonLengthOverride;
+      }
+    }
+    int attackRating = statInt(attacker, Stat.tohit, 0);
+    attackRating = attackRating * Math.max(0, 100 + skillToHitPercent) / 100;
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
+        physicalMin, physicalMax, attackRating, alwaysHit,
+        elementalMin, elementalMax, coldLength, poisonLength,
+        attackerStates, defenderStates, defenderMoving, true);
+  }
+
   private CombatResult calculateAttackInternal(
       Attributes attacker, Attributes defender,
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
@@ -528,6 +587,19 @@ public class CombatSystem {
     a.manaLeech = statInt(attacker, Stat.manadrainmindam, 0);
     a.coldLength = statInt(attacker, Stat.coldlength, 0);
     a.poisonLength = statInt(attacker, Stat.poisonlength, 0);
+    // DefensiveBuff SrvDo018 installs Venom as a state stat-list. It adds to
+    // item poison damage but overrides (rather than averages with) the normal
+    // poison duration.
+    if (attackerStates != null) {
+      UnitState venom = attackerStates.getState(StateId.VENOMCLAWS);
+      if (venom != null) {
+        a.elementalMinDamage[DAMAGE_POISON] += Math.max(0, venom.poisonMinDamage);
+        a.elementalMaxDamage[DAMAGE_POISON] += Math.max(0, venom.poisonMaxDamage);
+        if (venom.poisonLengthOverride > 0) {
+          a.poisonLength = venom.poisonLengthOverride;
+        }
+      }
+    }
     if (elementalMinOverride != null && elementalMaxOverride != null) {
       for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
         int min = i < elementalMinOverride.length ? elementalMinOverride[i] : 0;
