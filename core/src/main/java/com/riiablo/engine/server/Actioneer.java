@@ -599,6 +599,59 @@ public class Actioneer extends PassiveSystem {
           if (mSequence.has(entityId)) mSequence.remove(entityId);
         }
         break;
+      case 27: { // SKILLS_SrvSt27_DragonTail
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (casting == null || skill == null || targetId == Engine.INVALID_ENTITY
+            || !mPosition.has(entityId) || !mPosition.has(targetId)
+            || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+            || !isAlive(entityId) || !isAlive(targetId)
+            || !isInMeleeRange(entityId, targetId, 0)) {
+          log.info("[ASSASSIN_DRAGON_TAIL] phase=start_reject entity={} target={} reason=range_or_target",
+              entityId, targetId);
+          if (mCasting.has(entityId)) mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        boolean sourcePlayerAligned = mPlayer.has(entityId) || mMercenary.has(entityId)
+            || mSummonedPet.has(entityId);
+        boolean targetPlayerAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
+            || mSummonedPet.has(targetId);
+        if (!PvpCombatRules.canDamage(
+            partyManager, entityId, targetId, sourcePlayerAligned, targetPlayerAligned)) {
+          log.info("[ASSASSIN_DRAGON_TAIL] phase=start_reject entity={} target={} reason=relation",
+              entityId, targetId);
+          mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        int level = Math.max(1, skillLevel(entityId, casting.skillId));
+        Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+        Attributes defender = mAttributesWrapper.get(targetId).attrs;
+        int[] kickDamage = AssassinSkills.calculateDragonTailKickDamage(
+            skill, level, attacker, equippedBoots(entityId));
+        int attackRating = AssassinSkills.dragonTailAttackRating(skill, level, attacker);
+        CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+            attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
+            kickDamage[0], kickDamage[1], attackRating,
+            stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        if (!combat.hit || combat.blocked) {
+          log.info("[ASSASSIN_DRAGON_TAIL] phase=start_reject entity={} target={} reason={} chance={} ",
+              entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
+          mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        casting.dragonTailCombat = combat;
+        casting.dragonTailTargetId = targetId;
+        casting.dragonTailPrepared = true;
+        log.info("[ASSASSIN_DRAGON_TAIL] phase=start entity={} target={} skillLevel={} "
+                + "damageRange={}..{} rolledPhysical={} attackRating={} firePercent={} radius={}",
+            entityId, targetId, level, kickDamage[0], kickDamage[1], combat.physicalDamage,
+            attackRating, AssassinSkills.getDragonTailFirePercent(skill, level),
+            AssassinSkills.getDragonTailRadius(skill, level));
+        break;
+      }
       case 42: // native Fire Hit pre-hit setup; resolved authoritatively at the keyframe
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
@@ -687,6 +740,11 @@ public class Actioneer extends PassiveSystem {
         boolean dragonClaw = srvdofunc == 46;
         int dragonClawStrike = -1;
         Item dragonClawWeapon = null;
+        boolean dragonTail = srvdofunc == 50;
+        CombatSystem.CombatResult dragonTailCombat = dragonTail && activeCasting != null
+            && activeCasting.dragonTailPrepared
+            && activeCasting.dragonTailTargetId == targetId
+            ? activeCasting.dragonTailCombat : null;
         if (dragonTalon) {
           if (activeCasting == null || activeSkill == null) break;
           if (!activeCasting.dragonTalonInitialized) {
@@ -752,7 +810,8 @@ public class Actioneer extends PassiveSystem {
           // created at this keyframe.
           boolean rangedMonsterAttack = isMonsterProjectileSkill(entityId)
               || hasMonsterAttackMissile(entityId);
-          if (!rangedMonsterAttack && !isInMeleeRange(entityId, targetId, bonus)) {
+          if (!rangedMonsterAttack && dragonTailCombat == null
+              && !isInMeleeRange(entityId, targetId, bonus)) {
             log.info("[MELEE_RANGE] phase=reject source={} target={} distance={} range={}",
                 entityId, targetId,
                 mPosition.get(entityId).position.dst(mPosition.get(targetId).position),
@@ -820,7 +879,28 @@ public class Actioneer extends PassiveSystem {
         }
         Attributes attackerAttrs = mAttributesWrapper.get(entityId).attrs;
         CombatSystem.CombatResult combat;
-        if (dragonTalon) {
+        if (dragonTail) {
+          if (activeCasting == null || activeSkill == null) break;
+          if (dragonTailCombat == null) {
+            int[] kickDamage = AssassinSkills.calculateDragonTailKickDamage(
+                activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
+            int attackRating = AssassinSkills.dragonTailAttackRating(
+                activeSkill, activeSkillLevel, attackerAttrs);
+            dragonTailCombat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+                attackerAttrs, attrs, attackerPlayer, targetPlayer,
+                kickDamage[0], kickDamage[1], attackRating,
+                stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+          }
+          combat = dragonTailCombat;
+          activeCasting.dragonTailCombat = null;
+          activeCasting.dragonTailTargetId = Engine.INVALID_ENTITY;
+          activeCasting.dragonTailPrepared = false;
+          log.info("[ASSASSIN_DRAGON_TAIL] phase=primary entity={} target={} physical={} "
+                  + "total={} attackRating={} chance={}",
+              entityId, targetId, combat.physicalDamage, combat.totalDamage,
+              AssassinSkills.dragonTailAttackRating(activeSkill, activeSkillLevel, attackerAttrs),
+              combat.hitChance);
+        } else if (dragonTalon) {
           int[] kickDamage = AssassinSkills.calculateDragonTalonKickDamage(
               activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
           int attackRating = AssassinSkills.dragonTalonAttackRating(
@@ -905,6 +985,7 @@ public class Actioneer extends PassiveSystem {
         if (dragonTalon) activeCasting.dragonTalonSuccessfulKicks++;
         if (dragonTalon) drainDragonTalonDurability(entityId, targetId);
         if (dragonClaw) drainDragonClawDurability(dragonClawWeapon, targetId);
+        if (dragonTail) drainDragonTalonDurability(entityId, targetId);
 
         // D2MOO SrvDo034/SrvDo035 adds a progressive state only after the
         // shared combat record reports a successful, unblocked hit. The
@@ -937,6 +1018,14 @@ public class Actioneer extends PassiveSystem {
             applyAssassinProgressiveStageEffects(
                 entityId, targetId, progressiveRelease, attackerAttrs);
           }
+          // SrvDo050 still emits the Dragon Tail explosion presentation when
+          // the primary target nullifies all physical damage; its fire amount
+          // is simply zero in that case.
+          if (dragonTail && isAlive(entityId)) {
+            applyDragonTailExplosion(
+                entityId, targetId, activeSkill, activeSkillLevel,
+                attackerAttrs, combat.physicalDamage);
+          }
           break;
         }
         float hpBefore = hitpoints.asFixed();
@@ -956,6 +1045,12 @@ public class Actioneer extends PassiveSystem {
           applyAssassinProgressiveLeech(entityId, progressiveRelease, combat, appliedDamage);
           applyAssassinProgressiveStageEffects(
               entityId, targetId, progressiveRelease, attackerAttrs);
+        }
+
+        if (dragonTail && isAlive(entityId)) {
+          applyDragonTailExplosion(
+              entityId, targetId, activeSkill, activeSkillLevel,
+              attackerAttrs, combat.physicalDamage);
         }
 
         applyCombatStates(entityId, targetId, combat);
@@ -1853,6 +1948,82 @@ public class Actioneer extends PassiveSystem {
     }
     assassinProgressiveSeeds.put(sourceId, rng.state());
     return created;
+  }
+
+  /**
+   * D2MOO SKILLS_SrvDo050_DragonTail. The kick's resolved physical damage is
+   * copied before the primary combat record is applied, then converted into
+   * an always-hit fire record around the primary target.
+   */
+  private void applyDragonTailExplosion(int sourceId, int primaryTargetId,
+      Skills.Entry skill, int skillLevel, Attributes sourceAttrs, int physicalDamage) {
+    if (skill == null || !mPosition.has(primaryTargetId)) return;
+    Vector2 origin = mPosition.get(primaryTargetId).position;
+    int radius = AssassinSkills.getDragonTailRadius(skill, skillLevel);
+    int rawFire = AssassinSkills.calculateDragonTailExplosionDamage(
+        skill, skillLevel, sourceAttrs, physicalDamage);
+    int visualId = createDragonTailExplosionVisual(sourceId, origin);
+    if (radius <= 0 || rawFire <= 0) {
+      log.info("[ASSASSIN_DRAGON_TAIL] phase=explosion source={} primary={} "
+              + "physical={} rawFire={} radius={} visual={} affected=0",
+          sourceId, primaryTargetId, physicalDamage, rawFire, radius, visualId);
+      return;
+    }
+
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    int affected = 0;
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int targetId = ids[i];
+      if (targetId == sourceId || !isValidFistsTarget(sourceId, targetId)) continue;
+      if (mPosition.get(targetId).position.dst2(origin) > radius * radius) continue;
+      Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
+      int fire = resistedDamage(rawFire, targetAttrs, stateList(targetId),
+          Stat.fireresist, 0);
+      if (fire <= 0) continue;
+      DamageEvent event = DamageEvent.obtain(sourceId, targetId, fire);
+      events.dispatch(event);
+      float applied = Math.max(0f, event.damage);
+      StatRef hp = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
+      if (hp == null || applied <= 0f) continue;
+      hp.sub(applied);
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        // The shared melee path emits the primary target's DeathEvent once.
+        if (targetId != primaryTargetId) {
+          events.dispatch(DeathEvent.obtain(sourceId, targetId));
+        }
+      }
+      affected++;
+      log.info("[ASSASSIN_DRAGON_TAIL] phase=area_hit source={} primary={} target={} "
+              + "radius={} rawFire={} fire={} applied={}",
+          sourceId, primaryTargetId, targetId, radius, rawFire, fire, applied);
+    }
+    log.info("[ASSASSIN_DRAGON_TAIL] phase=explosion source={} primary={} "
+            + "physical={} firePercent={} fireMastery={} rawFire={} radius={} visual={} affected={}",
+        sourceId, primaryTargetId, physicalDamage,
+        AssassinSkills.getDragonTailFirePercent(skill, skillLevel),
+        statInt(sourceAttrs, Stat.passive_fire_mastery), rawFire, radius, visualId, affected);
+  }
+
+  /** Server-owned one-shot visual so every connected client sees the same blast. */
+  private int createDragonTailExplosionVisual(int sourceId, Vector2 origin) {
+    Missiles.Entry row = Riiablo.files.Missiles.get("dragontail missile");
+    if (row == null || factory == null) return Engine.INVALID_ENTITY;
+    int missileId = factory.createMissile(row, Vector2.X, origin, sourceId);
+    if (missileId != Engine.INVALID_ENTITY && mMissile.has(missileId)) {
+      com.riiablo.engine.server.component.Missile visual = mMissile.get(missileId);
+      visual.nativeLifetimeFrames = Math.max(1, row.Range);
+    }
+    return missileId;
+  }
+
+  private boolean isAlive(int entityId) {
+    if (!mAttributesWrapper.has(entityId)) return false;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    return hp != null && hp.asFixed() > 0f;
   }
 
   private boolean isValidFistsTarget(int sourceId, int targetId) {

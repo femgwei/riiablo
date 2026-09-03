@@ -547,14 +547,34 @@ public final class AssassinSkills {
   public static int[] calculateDragonTalonKickDamage(
       Skills.Entry skill, int skillLevel, Attributes attacker, Armor.Entry boots) {
     int level = Math.max(1, skillLevel);
-    int skillPercent = calculateDragonTalonDamageBonus(skill, level);
+    return calculateNativeKickDamage(
+        attacker, boots, calculateDragonTalonDamageBonus(skill, level));
+  }
+
+  /**
+   * D2Common SKILLS_GetMin/MaxPhysDamage(KICK) plus SKILLS_CalculateKickDamage.
+   * Dragon Tail enters this helper with zero skill ED; its calc1 belongs to
+   * the later fire explosion, not the primary kick.
+   */
+  public static int[] calculateDragonTailKickDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Armor.Entry boots) {
+    return calculateNativeKickDamage(attacker, boots, 0);
+  }
+
+  private static int[] calculateNativeKickDamage(
+      Attributes attacker, Armor.Entry boots, int initialEnhancedPercent) {
+    int strength = statInt(attacker, Stat.strength);
+    int dexterity = statInt(attacker, Stat.dexterity);
+    int kickAttribute = Math.max(1, strength + dexterity - 20);
+    int baseMin = kickAttribute / 4;
+    int baseMax = kickAttribute / 3;
     int itemKick = statInt(attacker, Stat.item_kickdamage);
 
     // SKILLS_CalculateKickDamage adds ITEM_KICKDAMAGE once unconditionally
     // and a second time as part of the equipped boot damage record.
     int kickMin = itemKick;
     int kickMax = itemKick;
-    int kickPercent = skillPercent;
+    int kickPercent = initialEnhancedPercent;
     if (boots != null) {
       kickMin += itemKick + boots.mindam;
       kickMax += itemKick + boots.maxdam;
@@ -565,16 +585,8 @@ public final class AssassinSkills {
       kickPercent += statInt(attacker, Stat.item_maxdamage_percent) + attributePercent;
     }
 
-    int skillMin = shiftedSkillDamage(
-        skill != null ? skill.MinDam : 0,
-        skill != null ? skill.MinLevDam : null, level,
-        skill != null ? skill.HitShift : 8);
-    int skillMax = shiftedSkillDamage(
-        skill != null ? skill.MaxDam : 0,
-        skill != null ? skill.MaxLevDam : null, level,
-        skill != null ? skill.HitShift : 8);
-    int min = scale(skillMin, skillPercent) + scale(kickMin, kickPercent);
-    int max = scale(Math.max(skillMin, skillMax), skillPercent)
+    int min = scale(baseMin, initialEnhancedPercent) + scale(kickMin, kickPercent);
+    int max = scale(Math.max(baseMin, baseMax), initialEnhancedPercent)
         + scale(Math.max(kickMin, kickMax), kickPercent);
     return new int[] {Math.max(0, min), Math.max(Math.max(0, min), max)};
   }
@@ -654,8 +666,33 @@ public final class AssassinSkills {
    * @return 火焰伤害百分比（物理伤害的）
    */
   public static int getDragonTailFirePercent(int skillLevel) {
-    // 基础 50%，每级 +15%
-    return 50 + (skillLevel - 1) * 15;
+    // Native calc1=ln12 with Param1=50 and Param2=10.
+    return 50 + Math.max(1, skillLevel) * 10;
+  }
+
+  public static int getDragonTailFirePercent(Skills.Entry skill, int skillLevel) {
+    int value = SkillFormula.evaluate(skill != null ? skill.calc1 : null,
+        skill, Math.max(1, skillLevel));
+    return value != 0 ? value : getDragonTailFirePercent(skillLevel);
+  }
+
+  public static int getDragonTailRadius(Skills.Entry skill, int skillLevel) {
+    return Math.max(0, SkillFormula.evaluate(
+        skill != null ? skill.aurarangecalc : null, skill, Math.max(1, skillLevel)));
+  }
+
+  public static int dragonTailAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker) {
+    return dragonTalonAttackRating(skill, skillLevel, attacker);
+  }
+
+  /** SrvDo050: (resolved physical kick damage * (calc1 + Fire Mastery)) / 100. */
+  public static int calculateDragonTailExplosionDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, int physicalDamage) {
+    int percentage = getDragonTailFirePercent(skill, skillLevel)
+        + statInt(attacker, Stat.passive_fire_mastery);
+    long damage = (long) Math.max(0, physicalDamage) * Math.max(0, percentage) / 100L;
+    return damage >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) damage;
   }
 
   /**

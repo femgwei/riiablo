@@ -223,9 +223,14 @@ public class SkillCastHandler extends PassiveSystem {
         cltDoDebuffAuraVisual(event, skill, position);
         break;
 
-      case 7: // Jab - multiple hit sounds
-        for (int i = 0; i < 3; i++) {
-          Riiablo.audio.play("weapon_1hs_small_1", true);
+      case 7: // Jab / Dragon Tail share this client callback
+        // Dragon Tail already played its Skills.txt do sound above and uses
+        // the authoritative dragontail missile entity for the explosion.
+        // Only Jab owns the callback's three additional weapon impacts.
+        if (event.srvdofunc == 7 || skill.srvdofunc == 7) {
+          for (int i = 0; i < 3; i++) {
+            Riiablo.audio.play("weapon_1hs_small_1", true);
+          }
         }
         break;
 

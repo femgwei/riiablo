@@ -56,7 +56,7 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
-| 刺客 Assassin | 94% | 6% | 陷阱、三层聚气、四套元素聚气释放及 Dragon Talon/Claw 已接通；范围踢、位移完成技和暗影系仍待补齐 |
+| 刺客 Assassin | 96% | 4% | 陷阱、三层聚气、四套元素聚气释放及 Dragon Talon/Claw/Tail 已接通；位移完成技和暗影系细节仍待补齐 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
@@ -133,7 +133,7 @@
   - [ ] 完成 Dragon Talon/Claw/Tail/Flight 的多段、双爪、范围火焰和目标位移。
     - [x] ~~完成 Dragon Talon `SrvSt24/SrvDo042` 原生连续踢击~~：严格按 `calc1=lvl/6+1` 初始化踢击次数，每次动画独立命中、伤害和耐久结算；聚气只在首个成功踢击释放一次，目标死亡立即终止后续动作；末击按普通/Unique/Boss/玩家与佣兵分别读取 100%/`calc2`/`calc3`/`calc4` 击退概率，并用地图碰撞限制服务端位移。靴子 `mindam/maxdam/StrBonus/DexBonus`、`item_kickdamage`、技能 ED 和原生 `dmXY` 衰减公式已纳入伤害/概率计算。
     - [x] ~~完成 Dragon Claw `SrvSt25/SrvDo046` 原生双爪序列~~：按原生 HT2 命中帧以 `A2 → S4` 执行左右爪独立攻击，分别读取当前爪伤害、力量/敏捷缩放、`calc1` 增伤并各自消耗耐久；首个成功命中统一释放聚气，第二爪不会再次消费；单爪/徒手保留原生单命中退化路径。补齐共享 `SrvSt64` 的 MonFrenzy 目标校验，避免套用玩家装备规则。
-    - [ ] 完成 Dragon Tail 主目标踢击和按实际物理伤害生成范围火焰爆炸。
+    - [x] ~~完成 Dragon Tail `SrvSt27/SrvDo050` 主目标踢击与范围火焰爆炸~~：起手阶段生成并保存一次原生命中记录，命中帧不再重复掷骰；修正共用 KICK 力量/敏捷基础伤害，主目标踢击后按经物理减伤及 Tiger Strike 增幅后的实际物理伤害乘以 `calc1 + passive_fire_mastery`，在 `AuraRangeCalc` 范围内按各目标火抗独立结算。服务端创建一次性 `dragontail missile` 表现实体供多人同步，失败命中不释放聚气、不爆炸。
     - [ ] 完成 Dragon Flight 目标旁安全落点、位移同步和到达后的完成技命中。
 
 ### P2：世界交互和多人闭环
@@ -179,11 +179,12 @@
 - 2026-09-04：完成 Phoenix Strike `SrvDo040/143/041` 三阶段释放；按非叠加规则分别创建 Meteor、7 路 Chain Lightning 和 16 枚 Chaos Ice，补齐陨石 18 点火场、闪电续跳、冰弹转向及冻结伤害快照；5 组共 43 个用例通过，D2GS 编译通过。
 - 2026-09-04：完成 Dragon Talon `SrvSt24/SrvDo042` 连续踢击；接入 `calc1` 次数、靴子力量/敏捷踢击伤害、每击独立命中和耐久、聚气单次消费、末击分类概率与碰撞安全击退；刺客、战斗、状态与原生公式 6 组共 51 个用例通过，D2GS 编译通过。
 - 2026-09-04：完成 Dragon Claw `SrvSt25/SrvDo046` 双爪序列；左右爪按 `A2 → S4` 分别结算命中、当前手伤害和耐久，聚气仅首个成功命中消费，单爪/徒手退化为单击；补齐 MonFrenzy 共用原生函数的 `SrvSt64` 目标校验。刺客、战斗、状态与原生公式 6 组共 54 个用例通过，D2GS 编译通过。
+- 2026-09-04：完成 Dragon Tail `SrvSt27/SrvDo050`；保存起手踢击记录到命中帧，补齐 KICK 力量/敏捷基础伤害、主目标物理结算、Tiger Strike 后实际物理伤害到范围火焰的转换、Fire Mastery、逐目标火抗和 `dragontail missile` 多人表现。刺客、战斗、状态、原生公式和客户端表现 8 组共 60 个用例通过，D2GS 编译通过。
 
 ## 当前下一项
 
 已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20`、Wake of Fire `SrvDo125/SrvDo31`、Inferno Sentry `SrvDo95`，以及 Death Sentry AI Fn104 / `SrvDo55` 首项。
-Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态、四套元素聚气释放及 Dragon Talon/Dragon Claw 原生序列已完成。下一项为 **Dragon Tail 范围完成技**：对照 `SrvSt27/SrvDo047` 补齐主目标踢击，以及仅在成功命中后按实际物理伤害生成范围火焰爆炸；随后处理 Dragon Flight。
+Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态、四套元素聚气释放及 Dragon Talon/Dragon Claw/Dragon Tail 原生序列已完成。下一项为 **Dragon Flight 位移完成技**：对照 `SrvSt12/SrvDo052` 补齐目标位置验证、目标旁碰撞安全落点、服务端位移与多人同步，以及到达后的完成技命中。
 
 ## 记录规则
 

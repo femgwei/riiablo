@@ -48,6 +48,169 @@ import org.junit.jupiter.api.Test;
 /** Native SrvDo034/SrvDo035 regression coverage. */
 class AssassinMartialArtsTest extends RiiabloTest {
   @Test
+  void dragonTailUsesNativeKickFireAndRadiusFormulas() {
+    Skills.Entry tail = Riiablo.files.skills.get("Dragon Tail");
+    assertNotNull(tail);
+    assertEquals(27, tail.srvstfunc);
+    assertEquals(50, tail.srvdofunc);
+    assertEquals(60, AssassinSkills.getDragonTailFirePercent(tail, 1));
+    assertEquals(150, AssassinSkills.getDragonTailFirePercent(tail, 10));
+    assertEquals(6, AssassinSkills.getDragonTailRadius(tail, 1));
+    assertNotNull(Riiablo.files.Missiles.get("dragontail missile"));
+
+    Attributes attrs = attributes(100, 1, 1, 1000);
+    attrs.base().put(Stat.strength, 100);
+    attrs.base().put(Stat.dexterity, 80);
+    attrs.reset();
+    int[] barefoot = AssassinSkills.calculateDragonTailKickDamage(tail, 1, attrs, null);
+    assertEquals(40, barefoot[0]);
+    assertEquals(53, barefoot[1]);
+    int[] booted = AssassinSkills.calculateDragonTailKickDamage(
+        tail, 1, attrs, Riiablo.files.armor.get("lbt"));
+    assertTrue(booted[0] > barefoot[0]);
+    assertTrue(booted[1] > barefoot[1]);
+  }
+
+  @Test
+  void dragonTailAppliesPreparedKickThenResistedAreaFireAndSharedVisual() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      Attributes assassinAttrs = attributes(1000, 1, 1, 100000);
+      assassinAttrs.base().put(Stat.strength, 120);
+      assassinAttrs.base().put(Stat.dexterity, 100);
+      assassinAttrs.base().put(Stat.passive_fire_mastery, 20);
+      assassinAttrs.reset();
+      int assassin = createPlayer(world, 0, 0, assassinAttrs);
+      int primary = createMonster(world, 1, 0, attributes(100000, 0, 0, 0));
+      Attributes resistedAttrs = attributes(100000, 0, 0, 0);
+      resistedAttrs.base().put(Stat.fireresist, 50);
+      resistedAttrs.reset();
+      int resisted = createMonster(world, 4, 0, resistedAttrs);
+      int outside = createMonster(world, 8, 0, attributes(100000, 0, 0, 0));
+      Skills.Entry tail = Riiablo.files.skills.get("Dragon Tail");
+      CharData data = CharData.createRemote("tail", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(tail.Id, 5);
+      Item boots = new Item();
+      boots.reset();
+      boots.setBase(Riiablo.files.armor.get("lbt"));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.FEET, data.getItems().add(boots));
+      world.getMapper(Player.class).get(assassin).data = data;
+      Skills.Entry tiger = Riiablo.files.skills.get("Tiger Strike");
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      AssassinSkills.addProgressiveCharge(states, tiger, 5, assassin);
+      Casting casting = world.getMapper(Casting.class).get(assassin)
+          .set(tail.Id, primary, world.getMapper(Position.class).get(primary).position);
+
+      MathUtils.random.setSeed(0xD2A10L);
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, tail.Id, primary, casting.targetVec,
+          tail.srvstfunc, tail.cltstfunc));
+      assertTrue(casting.dragonTailPrepared);
+      assertNotNull(casting.dragonTailCombat);
+      int physical = casting.dragonTailCombat.physicalDamage;
+      assertTrue(physical > 0);
+      AssassinSkills.ProgressiveRelease release = AssassinSkills.resolveProgressiveRelease(
+          states, id -> Riiablo.files.skills.get(id), id -> 0);
+      int releasedPhysical = physical + physical * release.tigerDamagePercent / 100;
+      int rawFire = AssassinSkills.calculateDragonTailExplosionDamage(
+          tail, 5, assassinAttrs, releasedPhysical);
+      float primaryBefore = world.getMapper(AttributesWrapper.class).get(primary)
+          .attrs.get(Stat.hitpoints).asFixed();
+      float resistedBefore = resistedAttrs.get(Stat.hitpoints).asFixed();
+      float outsideBefore = world.getMapper(AttributesWrapper.class).get(outside)
+          .attrs.get(Stat.hitpoints).asFixed();
+
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+
+      float primaryAfter = world.getMapper(AttributesWrapper.class).get(primary)
+          .attrs.get(Stat.hitpoints).asFixed();
+      assertEquals(primaryBefore - releasedPhysical - rawFire, primaryAfter, 0.001f);
+      assertEquals(resistedBefore - rawFire / 2, resistedAttrs.get(Stat.hitpoints).asFixed(),
+          0.001f);
+      assertEquals(outsideBefore, world.getMapper(AttributesWrapper.class).get(outside)
+          .attrs.get(Stat.hitpoints).asFixed(), 0.001f);
+      assertTrue(!casting.dragonTailPrepared);
+      assertNull(states.getState(StateId.PROGRESSIVE_DAMAGE));
+      assertEquals(1, factory.missilesCreated);
+      assertEquals("dragontail missile", factory.missileNames.get(0));
+      Missile visual = world.getMapper(Missile.class).get(factory.missileEntityIds.get(0));
+      assertTrue(visual.nativeLifetimeFrames > 0);
+      assertEquals(assassin, visual.ownerId);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void dragonTailRejectsTargetOutsideNativeMeleeRange() {
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new Actioneer(), new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(100, 1, 1, 1000));
+      int target = createMonster(world, 30, 0, attributes(100, 0, 0, 0));
+      Skills.Entry tail = Riiablo.files.skills.get("Dragon Tail");
+      Casting casting = world.getMapper(Casting.class).get(assassin)
+          .set(tail.Id, target, world.getMapper(Position.class).get(target).position);
+
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, tail.Id, target, casting.targetVec,
+          tail.srvstfunc, tail.cltstfunc));
+
+      assertTrue(!world.getMapper(Casting.class).has(assassin));
+      assertEquals(100f, world.getMapper(AttributesWrapper.class).get(target)
+          .attrs.get(Stat.hitpoints).asFixed(), 0.001f);
+      assertEquals(0, factory.missilesCreated);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void dragonTailStillCreatesExplosionVisualWhenPrimaryIsPhysicalImmune() {
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new Actioneer(), new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      Attributes assassinAttrs = attributes(100, 1, 1, 100000);
+      assassinAttrs.base().put(Stat.strength, 100);
+      assassinAttrs.base().put(Stat.dexterity, 100);
+      assassinAttrs.reset();
+      int assassin = createPlayer(world, 0, 0, assassinAttrs);
+      Attributes immuneAttrs = attributes(100, 0, 0, 0);
+      immuneAttrs.base().put(Stat.damageresist, 100);
+      immuneAttrs.reset();
+      int target = createMonster(world, 1, 0, immuneAttrs);
+      Skills.Entry tail = Riiablo.files.skills.get("Dragon Tail");
+      Casting casting = world.getMapper(Casting.class).get(assassin)
+          .set(tail.Id, target, world.getMapper(Position.class).get(target).position);
+
+      MathUtils.random.setSeed(0xD2A10L);
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, tail.Id, target, casting.targetVec,
+          tail.srvstfunc, tail.cltstfunc));
+      assertTrue(casting.dragonTailPrepared);
+      assertEquals(0, casting.dragonTailCombat.physicalDamage);
+
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+
+      assertEquals(100f, immuneAttrs.get(Stat.hitpoints).asFixed(), 0.001f);
+      assertEquals(1, factory.missilesCreated);
+      assertEquals("dragontail missile", factory.missileNames.get(0));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void dragonClawUsesNativeSkillAndHandSpecificDamageData() {
     Skills.Entry claw = Riiablo.files.skills.get("Dragon Claw");
     assertNotNull(claw);

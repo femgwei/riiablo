@@ -7,6 +7,7 @@ import com.artemis.annotations.PooledWeaver;
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.combat.CombatSystem;
 
 @PooledWeaver
 public class Casting extends PooledComponent {
@@ -26,6 +27,10 @@ public class Casting extends PooledComponent {
   public boolean dragonClawInitialized;
   public boolean dragonClawProgressiveReleased;
   public boolean dragonClawStrikeProcessed;
+  /** Native Dragon Tail keeps the SrvSt27 combat record until SrvDo050. */
+  public CombatSystem.CombatResult dragonTailCombat;
+  @EntityId public int dragonTailTargetId;
+  public boolean dragonTailPrepared;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     this.skillId = skillId;
@@ -41,6 +46,9 @@ public class Casting extends PooledComponent {
     dragonClawInitialized = false;
     dragonClawProgressiveReleased = false;
     dragonClawStrikeProcessed = false;
+    dragonTailCombat = null;
+    dragonTailTargetId = Engine.INVALID_ENTITY;
+    dragonTailPrepared = false;
     return this;
   }
 
@@ -59,5 +67,8 @@ public class Casting extends PooledComponent {
     dragonClawInitialized = false;
     dragonClawProgressiveReleased = false;
     dragonClawStrikeProcessed = false;
+    dragonTailCombat = null;
+    dragonTailTargetId = Engine.INVALID_ENTITY;
+    dragonTailPrepared = false;
   }
 }
