@@ -400,6 +400,7 @@ public class ServerSkillSystem extends PassiveSystem {
         continue;
       }
       created++;
+      initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
       if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
           || event.srvdofunc == 3 || event.srvdofunc == 5) {
         log.info("[MISSILE_CREATE] phase=throw entity={} missileId={} owner={} missile={} "
@@ -549,8 +550,10 @@ public class ServerSkillSystem extends PassiveSystem {
     int created = 0;
     for (int i = 0; i < NOVA_MISSILE_COUNT; i++) {
       radialDirection(i, NOVA_MISSILE_COUNT, direction);
-      if (createMissile(missile, direction, start, event.entityId,
-          sharedHitTargets, skillLevel) >= 0) {
+      int missileId = createMissile(missile, direction, start, event.entityId,
+          sharedHitTargets, skillLevel);
+      if (missileId >= 0) {
+        initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
         created++;
       }
     }
@@ -667,8 +670,12 @@ public class ServerSkillSystem extends PassiveSystem {
     Vector2 direction = new Vector2();
     for (int i = 0; i < count; i++) {
       chargedStrikeDirection(base, i, count, direction);
-      if (createMissile(missile, direction, origin, event.entityId,
-          hitTargets, skillLevel) >= 0) created++;
+      int missileId = createMissile(missile, direction, origin, event.entityId,
+          hitTargets, skillLevel);
+      if (missileId >= 0) {
+        initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+        created++;
+      }
     }
     log.info("[AMAZON_CHARGED_STRIKE] phase=spawn source={} target={} level={} "
             + "missile={} requested={} created={}",
@@ -699,10 +706,13 @@ public class ServerSkillSystem extends PassiveSystem {
       Vector2 destination = mPosition.get(next).position;
       Vector2 direction = new Vector2(destination).sub(from);
       IntSet segmentHits = copySet(visited);
-      if (!direction.isZero(0.0001f)
-          && createMissile(missile, direction.nor(), from, event.entityId,
-              segmentHits, skillLevel) >= 0) {
-        created++;
+      if (!direction.isZero(0.0001f)) {
+        int missileId = createMissile(missile, direction.nor(), from, event.entityId,
+            segmentHits, skillLevel);
+        if (missileId >= 0) {
+          initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+          created++;
+        }
       }
       visited.add(next);
       from.set(destination);
@@ -912,8 +922,10 @@ public class ServerSkillSystem extends PassiveSystem {
     int created = 0;
     for (int i = 0; i < total; i++) {
       fanDirection(target, i, total, direction);
-      if (createMissile(missile, direction, start, event.entityId, sharedHitTargets,
-          skillLevel) >= 0) {
+      int missileId = createMissile(missile, direction, start, event.entityId,
+          sharedHitTargets, skillLevel);
+      if (missileId >= 0) {
+        initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
         created++;
       }
     }
@@ -959,6 +971,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (direction.isZero(0.0001f)) direction.set(1f, 0f);
     int id = createMissile(missile, direction.nor(), start, event.entityId, null, skillLevel);
     if (id >= 0 && mMissile.has(id)) {
+      initializeSkillDamage(id, skill, event.entityId, skillLevel);
       Missile projectile = mMissile.get(id);
       projectile.targetId = targetId;
       projectile.homing = targetId >= 0 && mPosition.has(targetId);
@@ -1012,6 +1025,7 @@ public class ServerSkillSystem extends PassiveSystem {
       if (direction.isZero(0.0001f)) continue;
       int id = createMissile(missile, direction.nor(), start, event.entityId, null, skillLevel);
       if (id >= 0 && mMissile.has(id)) {
+        initializeSkillDamage(id, skill, event.entityId, skillLevel);
         Missile arrow = mMissile.get(id);
         arrow.targetId = targetId;
         configurePierce(arrow, event.entityId, skillLevel, false);
@@ -1022,6 +1036,7 @@ public class ServerSkillSystem extends PassiveSystem {
       Vector2 direction = resolveTargetPoint(event, start, new Vector2()).sub(start).nor();
       int id = createMissile(missile, direction, start, event.entityId, null, skillLevel);
       if (id >= 0 && mMissile.has(id)) {
+        initializeSkillDamage(id, skill, event.entityId, skillLevel);
         configurePierce(mMissile.get(id), event.entityId, skillLevel, false);
         created = 1;
       }
@@ -1093,6 +1108,15 @@ public class ServerSkillSystem extends PassiveSystem {
           ownerMode, damageLevel, 0);
     }
     return missileId;
+  }
+
+  /** Applies the Skills.txt damage profile after generic missile initialization. */
+  private void initializeSkillDamage(int missileId, Skills.Entry skill,
+      int ownerId, int skillLevel) {
+    if (missileId < 0 || skill == null || !mMissile.has(missileId)
+        || !mAttributesWrapper.has(ownerId)) return;
+    MissileDamageResolver.initializeSkill(mMissile.get(missileId), skill,
+        mAttributesWrapper.get(ownerId).attrs, skillLevel);
   }
 
   public int mercenaryMissileCount() {

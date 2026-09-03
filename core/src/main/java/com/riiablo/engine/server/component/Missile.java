@@ -43,6 +43,12 @@ public class Missile extends PooledComponent {
   public final Attributes damage = Attributes.obtainStandard();
   public boolean damageSnapshot;
   public int damageLevel;
+  /** Skills.txt row used to build this projectile's authoritative snapshot. */
+  public int skillId = -1;
+  /** Ice Arrow and freeze-element explosions convert cold length to freeze. */
+  public boolean freezesTarget;
+  /** Weapon-source skills still perform the native attack-rating check. */
+  public boolean usesAttackRating;
 
   /** Optional native homing target (Guided Arrow/Bone Spirit). */
   public int targetId = -1;
@@ -75,6 +81,9 @@ public class Missile extends PooledComponent {
     damage.clear();
     damageSnapshot = false;
     damageLevel = 0;
+    skillId = -1;
+    freezesTarget = false;
+    usesAttackRating = false;
     targetId = -1;
     homing = false;
     damageMultiplier = 1f;

@@ -29,6 +29,7 @@ import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.combat.DefenseCalculator;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.item.Item;
@@ -40,6 +41,101 @@ import org.junit.jupiter.api.Test;
 
 /** Native-data regression coverage for Amazon specialist skill handlers. */
 class AmazonSkillSpecializationTest extends RiiabloTest {
+  @Test
+  void elementalArrowsCaptureNativeSkillDamageAndFreezeSemantics() {
+    Attributes owner = attributes(20, 200);
+    owner.base().put(Stat.mindamage, 10);
+    owner.base().put(Stat.maxdamage, 20);
+    owner.base().put(Stat.tohit, 100);
+    owner.reset();
+
+    Skills.Entry fire = Riiablo.files.skills.get("Fire Arrow");
+    Missile fireMissile = new Missile().set(Riiablo.files.Missiles.get("firearrow"),
+        new Vector2(), 40).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkill(fireMissile, fire, owner, 10));
+    assertTrue(fireMissile.damageSnapshot);
+    assertTrue(fireMissile.usesAttackRating);
+    assertTrue(fireMissile.damage.get(Stat.firemindam).asInt() >= 1);
+    assertTrue(fireMissile.damage.get(Stat.mindamage).asInt() < 10,
+        "native SrvDmg01 converts part of physical damage to fire");
+
+    Skills.Entry cold = Riiablo.files.skills.get("Cold Arrow");
+    Missile coldMissile = new Missile().set(Riiablo.files.Missiles.get("coldarrow"),
+        new Vector2(), 20).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkill(coldMissile, cold, owner, 5));
+    assertEquals(220, coldMissile.damage.get(Stat.coldlength).asInt());
+    assertTrue(!coldMissile.freezesTarget);
+
+    Skills.Entry exploding = Riiablo.files.skills.get("Exploding Arrow");
+    Missile arrow = new Missile().set(Riiablo.files.Missiles.get("explodingarrow"),
+        new Vector2(), 40).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkill(arrow, exploding, owner, 1));
+    assertTrue(arrow.damage.get(Stat.firemaxdam) == null,
+        "the travelling arrow carries weapon damage; its sub-missile carries the explosion");
+    Missile explosion = new Missile().set(Riiablo.files.Missiles.get("explodingarrowexp2"),
+        new Vector2(), 1).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkillArea(explosion, exploding, owner, 1));
+    assertEquals(0, explosion.damage.get(Stat.maxdamage).asInt());
+    assertEquals(6, explosion.damage.get(Stat.firemaxdam).asInt());
+
+    Skills.Entry freezing = Riiablo.files.skills.get("Freezing Arrow");
+    Missile freezeExplosion = new Missile().set(Riiablo.files.Missiles.get("freezingarrowexp3"),
+        new Vector2(), 1).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkillArea(
+        freezeExplosion, freezing, owner, 1));
+    assertTrue(freezeExplosion.freezesTarget);
+    assertEquals(50, freezeExplosion.damage.get(Stat.coldlength).asInt());
+    assertEquals(50, freezeExplosion.damage.get(Stat.coldmaxdam).asInt());
+
+    Skills.Entry ice = Riiablo.files.skills.get("Ice Arrow");
+    Missile iceMissile = new Missile().set(Riiablo.files.Missiles.get("icearrow"),
+        new Vector2(), 40).setOwner(1);
+    assertTrue(MissileDamageResolver.initializeSkill(iceMissile, ice, owner, 1));
+    assertTrue(iceMissile.freezesTarget);
+  }
+
+  @Test
+  void explodingArrowCreatesAuthoritativeAreaSubMissile() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    MissileCollisionSystem collisions = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), collisions, factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data =
+          CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      world.getMapper(Position.class).create(amazon).position.set(-2, 0);
+      Attributes owner = attributes(20, 200);
+      owner.base().put(Stat.mindamage, 10);
+      owner.base().put(Stat.maxdamage, 10);
+      owner.base().put(Stat.tohit, 100);
+      owner.reset();
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = owner;
+
+      int primary = monster(world, 1.2f, 0);
+      int nearby = monster(world, 4f, 0);
+      world.getMapper(AttributesWrapper.class).create(primary).attrs = attributes(1, 100);
+      world.getMapper(AttributesWrapper.class).create(nearby).attrs = attributes(1, 100);
+
+      Skills.Entry skill = Riiablo.files.skills.get("Exploding Arrow");
+      Missiles.Entry row = Riiablo.files.Missiles.get("explodingarrow");
+      int sourceId = factory.createMissile(row, new Vector2(1, 0), new Vector2(0, 0), amazon);
+      MissileDamageResolver.initializeSkill(
+          world.getMapper(Missile.class).get(sourceId), skill, owner, 1);
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+      for (int i = 0; i < 4; i++) world.process();
+
+      assertTrue(factory.createdNames.stream().anyMatch(
+          name -> "explodingarrowexp2".equalsIgnoreCase(name)));
+      assertTrue(world.getMapper(AttributesWrapper.class).get(nearby).attrs
+          .get(Stat.hitpoints).asFixed() < 100f,
+          "SrvHit01 must apply the explosion snapshot to every hostile in radius");
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void auditNativeAmazonSpecialRows() {
     String[] names = {"Magic Arrow", "Fire Arrow", "Cold Arrow", "Multiple Shot",
@@ -58,6 +154,14 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           + " auraRange=" + skill.aurarangecalc + " summon=" + skill.summon
           + " pettype=" + skill.pettype + " petmax=" + skill.petmax
           + " noammo=" + skill.noammo + " decquant=" + skill.decquant
+          + " hitShift=" + skill.HitShift + " srcDam=" + skill.SrcDam
+          + " min=" + skill.MinDam + " max=" + skill.MaxDam
+          + " minLev=" + java.util.Arrays.toString(skill.MinLevDam)
+          + " maxLev=" + java.util.Arrays.toString(skill.MaxLevDam)
+          + " eType=" + skill.EType + " eMin=" + skill.EMin + " eMax=" + skill.EMax
+          + " eMinLev=" + java.util.Arrays.toString(skill.EMinLev)
+          + " eMaxLev=" + java.util.Arrays.toString(skill.EMaxLev)
+          + " eLen=" + skill.ELen + " eLevLen=" + java.util.Arrays.toString(skill.ELevLen)
           + " params=" + java.util.Arrays.toString(skill.Param));
       String[] missiles = {skill.srvmissile, skill.srvmissilea, skill.srvmissileb};
       for (String missileName : missiles) {
@@ -68,7 +172,24 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
             + " srvDo=" + missile.pSrvDoFunc + " srvHit=" + missile.pSrvHitFunc
             + " sHitPar=" + java.util.Arrays.toString(missile.sHitPar)
             + " sub=" + java.util.Arrays.toString(missile.SubMissile)
-            + " hitSub=" + java.util.Arrays.toString(missile.HitSubMissile));
+            + " hitSub=" + java.util.Arrays.toString(missile.HitSubMissile)
+            + " srvDmg=" + missile.pSrvDmgFunc + " min=" + missile.MinDamage
+            + " max=" + missile.MaxDamage + " minLev=" + java.util.Arrays.toString(missile.MinLevDam)
+            + " maxLev=" + java.util.Arrays.toString(missile.MaxLevDam)
+            + " eType=" + missile.EType + " eMin=" + missile.EMin + " eMax=" + missile.Emax
+            + " eLen=" + missile.ELen + " srcDam=" + missile.SrcDamage
+            + " hitFlags=" + missile.HitFlags + " resultFlags=" + missile.ResultFlags);
+        for (String hitSub : missile.HitSubMissile) {
+          if (hitSub == null || hitSub.isEmpty()) continue;
+          Missiles.Entry sub = Riiablo.files.Missiles.get(hitSub);
+          assertNotNull(sub, name + ":" + hitSub);
+          System.out.println("[AMAZON_HIT_SUB] skill=" + name + " missile=" + hitSub
+              + " srvDo=" + sub.pSrvDoFunc + " srvHit=" + sub.pSrvHitFunc
+              + " srvDmg=" + sub.pSrvDmgFunc + " vel=" + sub.Vel + " range=" + sub.Range
+              + " param=" + java.util.Arrays.toString(sub.Param)
+              + " hitPar=" + java.util.Arrays.toString(sub.sHitPar)
+              + " dmgPar=" + java.util.Arrays.toString(sub.dParam));
+        }
       }
     }
   }
@@ -136,6 +257,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       assertTrue(guided.homing);
       assertTrue(guided.pierceEnabled);
       assertTrue(guided.damageMultiplier > 1f);
+      assertTrue(!guided.usesAttackRating, "Guided Arrow keeps its native always-hit behavior");
 
       factory.created.clear();
       for (int i = 4; i <= 10; i++) monster(world, i, 0);
@@ -439,6 +561,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
 
   private static final class RecordingMissileFactory extends EntityFactory {
     final java.util.ArrayList<Missile> created = new java.util.ArrayList<>();
+    final java.util.ArrayList<String> createdNames = new java.util.ArrayList<>();
 
     @Override public int createMissile(int id, Vector2 angle, Vector2 position, int ownerId) {
       Missiles.Entry row = Riiablo.files.Missiles.get(id);
@@ -449,6 +572,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       world.getMapper(Position.class).create(entity).position.set(position);
       world.getMapper(Velocity.class).create(entity).velocity.set(angle).setLength(row.Vel);
       created.add(missile);
+      createdNames.add(row.Missile);
       return entity;
     }
 

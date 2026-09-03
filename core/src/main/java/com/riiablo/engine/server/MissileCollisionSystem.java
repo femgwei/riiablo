@@ -179,6 +179,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 获取导弹当前位置
     Vector2 currentPos = missilePos.position;
+    boolean areaEffect = isNativeAreaEffect(missile);
     log.trace("Missile {} checking collisions at ({}, {}), ownerId={}", missileId, currentPos.x, currentPos.y, missile.ownerId);
     
     // 检查与玩家的碰撞
@@ -197,7 +198,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       float distance = currentPos.dst(playerPos.position);
       log.trace("Missile {} checking player {} at distance {}", missileId, playerId, distance);
       if (checkCollisionWithEntity(missileId, missile, lastPos, currentPos, playerId, playerPos)) {
-        return; // 已命中，导弹将被销毁
+        if (!areaEffect) return; // 普通导弹命中后销毁；爆炸会遍历完整半径
       }
     }
     
@@ -207,7 +208,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     // Include the whole swept segment in the broad-phase query. Without this,
     // a fast missile can pass a target between ticks while the target is no
     // longer within the radius of the missile's end point.
-    float checkRadius = 2.0f + currentPos.dst(lastPos);
+    float checkRadius = (areaEffect ? nativeAreaRadius(missile) : 2.0f)
+        + currentPos.dst(lastPos);
     Array<Integer> nearbyEntities = getEntitiesInRange(currentPos.x, currentPos.y, checkRadius);
     
     for (int i = 0; i < nearbyEntities.size; i++) {
@@ -223,10 +225,11 @@ public class MissileCollisionSystem extends IteratingSystem {
         }
         Position targetPos = mPosition.get(targetId);
         if (checkCollisionWithEntity(missileId, missile, lastPos, currentPos, targetId, targetPos)) {
-          return; // 已命中，导弹将被销毁
+          if (!areaEffect) return; // 爆炸子导弹必须命中范围内的每个敌人
         }
       }
     }
+    if (areaEffect) world.delete(missileId);
   }
   
   /**
@@ -237,7 +240,8 @@ public class MissileCollisionSystem extends IteratingSystem {
       int targetId, Position targetPos) {
     // Use swept segment collision so fast missiles cannot jump over a target.
     float distance = distanceToSegment(targetPos.position, previousPos, missilePos);
-    float collisionRadius = 2.0f; // 碰撞半径（增大以更容易命中）
+    float collisionRadius = isNativeAreaEffect(missile)
+        ? nativeAreaRadius(missile) : 2.0f;
     
     // Debug log disabled to reduce noise
     // log.debug("Missile {} checking collision with {}: distance={}, radius={}, missilePos=({}, {}), targetPos=({}, {})", 
@@ -274,6 +278,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       // multiply the same hit dozens of times.
       if (missile.sharedHitTargets != null && !missile.sharedHitTargets.add(targetId)) {
         return false;
+      }
+
+      if (missile.missile != null && missile.missile.pSrvHitFunc == 4) {
+        spawnAmazonExplosion(missile, missilePos);
       }
 
       if (missile.missile != null && missile.missile.pSrvHitFunc == 20) {
@@ -324,7 +332,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       int maxOverride = missile.damageSnapshot ? 0 : missile.attackMaxDamage;
       int arOverride = missile.damageSnapshot ? 0 : missile.attackRating;
       boolean alwaysHit = missile.damageSnapshot && missile.missile != null
-          && !missile.missile.ToHit;
+          && !missile.missile.ToHit && !missile.usesAttackRating;
       CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
           attackAttrs,
           targetAttrs,
@@ -385,7 +393,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             hpAfter = 0;
           }
           if (mercenaryDamage) mercenaryLastDamageAfter = hpAfter;
-          applyCombatStates(missile.ownerId, targetId, combat);
+          applyCombatStates(missile, targetId, combat);
           if (hpAfter <= 0) {
             log.debug("{} killed by missile from {}", targetId, missile.ownerId);
             events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));
@@ -407,6 +415,41 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /** D2MOO SrvHit04 creates a zero-velocity SrvHit01 explosion sub-missile. */
+  private void spawnAmazonExplosion(Missile source, Vector2 origin) {
+    if (factory == null || source == null || source.missile == null
+        || source.missile.HitSubMissile == null) return;
+    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    for (String name : source.missile.HitSubMissile) {
+      if (name == null || name.isEmpty()) continue;
+      Missiles.Entry row = Riiablo.files.Missiles.get(name);
+      if (row == null) continue;
+      int childId = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId);
+      if (childId < 0 || !mMissile.has(childId)) continue;
+      Missile child = mMissile.get(childId);
+      if (skill != null) {
+        Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+            ? mAttributesWrapper.get(source.ownerId).attrs : null;
+        MissileDamageResolver.initializeSkillArea(
+            child, skill, ownerAttrs, Math.max(1, source.damageLevel));
+      }
+      log.info("[AMAZON_ARROW_EXPLOSION] phase=create owner={} skill={} source={} child={} "
+              + "missile={} radius={} freeze={}",
+          source.ownerId, source.skillId, source.missile.Missile, childId, name,
+          nativeAreaRadius(child), child.freezesTarget);
+    }
+  }
+
+  private static boolean isNativeAreaEffect(Missile missile) {
+    return missile != null && missile.missile != null
+        && missile.missile.pSrvHitFunc == 1 && nativeAreaRadius(missile) > 0;
+  }
+
+  private static int nativeAreaRadius(Missile missile) {
+    return missile != null && missile.missile != null
+        ? Math.max(0, arrayValue(missile.missile.sHitPar, 0)) : 0;
   }
 
   /** D2MOO MISSMODE_SrvHit20_LightningFury. */
@@ -447,8 +490,12 @@ public class MissileCollisionSystem extends IteratingSystem {
         Missile bolt = mMissile.get(boltId);
         Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
             ? mAttributesWrapper.get(source.ownerId).attrs : null;
-        Monster ownerMonster = mMonster.has(source.ownerId) ? mMonster.get(source.ownerId) : null;
-        MissileDamageResolver.initialize(bolt, ownerAttrs, ownerMonster, -1, level, 0);
+        if (skill != null) {
+          MissileDamageResolver.initializeSkillArea(bolt, skill, ownerAttrs, level);
+        } else {
+          Monster ownerMonster = mMonster.has(source.ownerId) ? mMonster.get(source.ownerId) : null;
+          MissileDamageResolver.initialize(bolt, ownerAttrs, ownerMonster, -1, level, 0);
+        }
       }
       created++;
     }
@@ -518,9 +565,10 @@ public class MissileCollisionSystem extends IteratingSystem {
     return point.dst(closestX, closestY);
   }
 
-  private void applyCombatStates(int attackerId, int targetId,
+  private void applyCombatStates(Missile missile, int targetId,
       CombatSystem.CombatResult combat) {
     if (!mUnitStates.has(targetId)) return;
+    int attackerId = missile != null ? missile.ownerId : Engine.INVALID_ENTITY;
     if (combat.poisonDuration > 0
         && combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0) {
       StatusEffectApplier.INSTANCE.applyPoison(targetId,
@@ -529,7 +577,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     if (combat.coldDuration > 0
         && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0) {
-      StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+      if (missile != null && missile.freezesTarget) {
+        StatusEffectApplier.INSTANCE.applyFreeze(targetId, combat.coldDuration, attackerId);
+      } else {
+        StatusEffectApplier.INSTANCE.applyCold(targetId, combat.coldDuration, attackerId);
+      }
     }
   }
 

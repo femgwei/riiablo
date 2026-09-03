@@ -80,6 +80,27 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public boolean decquant;
     @Column public int     srvstfunc;
     @Column public int     srvdofunc;
+    @Column public int     HitShift;
+    @Column public int     SrcDam;
+    @Column public int     MinDam;
+    @Column public int     MaxDam;
+    @Column(startIndex = 1, endIndex = 5)
+    public int     MinLevDam[];
+    @Column(startIndex = 1, endIndex = 5)
+    public int     MaxLevDam[];
+    @Column public String  DmgSymPerCalc;
+    @Column public String  EType;
+    @Column public int     EMin;
+    @Column public int     EMax;
+    @Column(startIndex = 1, endIndex = 5)
+    public int     EMinLev[];
+    @Column(startIndex = 1, endIndex = 5)
+    public int     EMaxLev[];
+    @Column public String  EDmgSymPerCalc;
+    @Column public int     ELen;
+    @Column(startIndex = 1, endIndex = 3)
+    public int     ELevLen[];
+    @Column public String  ELenSymPerCalc;
     /** D2 skill formula expressions (calc1..calc4). */
     @Column public String  calc1;
     @Column public String  calc2;

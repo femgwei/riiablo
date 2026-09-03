@@ -9,6 +9,7 @@ import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.MonsterStatsCalculator;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -117,6 +118,69 @@ public final class MissileDamageResolver {
         elementalMin[COLD], elementalMax[COLD],
         elementalMin[POISON], elementalMax[POISON],
         elementalMin[MAGIC], elementalMax[MAGIC], coldLength, poisonLength);
+    return true;
+  }
+
+  /** Builds the native Skills.txt damage snapshot used by elemental arrows. */
+  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level) {
+    boolean impactCreatesArea = projectile != null && projectile.missile != null
+        && (projectile.missile.pSrvHitFunc == 4 || projectile.missile.pSrvHitFunc == 9);
+    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesArea);
+  }
+
+  /** Builds the elemental-only snapshot inherited by an explosion sub-missile. */
+  public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level) {
+    return initializeSkill(projectile, skill, ownerAttrs, level, false, true);
+  }
+
+  private static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level, boolean includeSource, boolean includeElement) {
+    if (projectile == null || skill == null) return false;
+    level = Math.max(1, level);
+    projectile.skillId = skill.Id;
+    int sourceScale = includeSource ? Math.max(0, skill.SrcDam) : 0;
+    int sourceMin = statInt(ownerAttrs, Stat.mindamage);
+    int sourceMax = statInt(ownerAttrs, Stat.maxdamage);
+    int physicalMin = (sourceScale > 0 ? sourceMin * sourceScale / 128 : 0)
+        + (includeSource ? shiftedDamage(skill.MinDam, skill.MinLevDam, level, skill.HitShift) : 0);
+    int physicalMax = (sourceScale > 0 ? sourceMax * sourceScale / 128 : 0)
+        + (includeSource ? shiftedDamage(skill.MaxDam, skill.MaxLevDam, level, skill.HitShift) : 0);
+    int type = damageType(hasText(skill.EType) ? skill.EType
+        : projectile.missile != null ? projectile.missile.EType : null);
+    int[] elementalMin = new int[DAMAGE_TYPES];
+    int[] elementalMax = new int[DAMAGE_TYPES];
+    if (includeElement && type > PHYSICAL) {
+      elementalMin[type] = shiftedDamage(skill.EMin, skill.EMinLev, level, skill.HitShift);
+      elementalMax[type] = shiftedDamage(skill.EMax, skill.EMaxLev, level, skill.HitShift);
+    }
+    int coldLength = includeElement && type == COLD ? Math.max(0, skill.ELen
+        + damageBonusByLevel(level, skill.ELevLen)) : 0;
+    if (includeSource && projectile.missile != null
+        && projectile.missile.pSrvDmgFunc == 1 && type > PHYSICAL) {
+      int conversion = Math.min(100, Math.max(0,
+          damageConversionPercent(projectile.missile, level)));
+      int convertedMin = physicalMin * conversion / 100;
+      int convertedMax = physicalMax * conversion / 100;
+      physicalMin -= convertedMin;
+      physicalMax -= convertedMax;
+      elementalMin[type] += convertedMin;
+      elementalMax[type] += convertedMax;
+    }
+    if (physicalMax <= 0 && elementalMax[type] <= 0) return false;
+    writeSnapshot(projectile, ownerAttrs, includeSource, level, physicalMin, physicalMax,
+        statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, coldLength, 0);
+    log.info("[SKILL_DAMAGE_SNAPSHOT] missile={} skill={} level={} physical={}..{} element={}..{} "
+            + "coldLength={} srcDam={}", projectile.missile != null ? projectile.missile.Missile : "",
+        skill.skill, level, physicalMin, physicalMax, elementalMin[type], elementalMax[type],
+        coldLength, sourceScale);
+    projectile.freezesTarget = projectile.missile != null
+        && (projectile.missile.pSrvDmgFunc == 2
+            || "freeze".equalsIgnoreCase(projectile.missile.EType)
+            || "frze".equalsIgnoreCase(projectile.missile.EType));
+    projectile.usesAttackRating = includeSource && skill.SrcDam > 0
+        && !"Guided Arrow".equalsIgnoreCase(skill.skill);
     return true;
   }
 
@@ -270,7 +334,8 @@ public final class MissileDamageResolver {
     if (!hasText(type)) return PHYSICAL;
     if ("fire".equalsIgnoreCase(type)) return FIRE;
     if ("ltng".equalsIgnoreCase(type) || "lightning".equalsIgnoreCase(type)) return LIGHTNING;
-    if ("cold".equalsIgnoreCase(type) || "freeze".equalsIgnoreCase(type)) return COLD;
+    if ("cold".equalsIgnoreCase(type) || "freeze".equalsIgnoreCase(type)
+        || "frze".equalsIgnoreCase(type)) return COLD;
     if ("pois".equalsIgnoreCase(type) || "poison".equalsIgnoreCase(type)) return POISON;
     if ("mag".equalsIgnoreCase(type) || "magic".equalsIgnoreCase(type)) return MAGIC;
     return PHYSICAL;
@@ -306,6 +371,20 @@ public final class MissileDamageResolver {
 
   private static int arrayValue(int[] values, int index) {
     return values != null && index >= 0 && index < values.length ? values[index] : 0;
+  }
+
+  private static int damageConversionPercent(Missiles.Entry missile, int level) {
+    int base = arrayValue(missile != null ? missile.dParam : null, 0);
+    int perLevel = arrayValue(missile != null ? missile.dParam : null, 1);
+    // The legacy bin reader used by some installations does not expose the
+    // dParam columns, although DmgCalc1 survives. Native dl12 means
+    // dParam1 + level * dParam2; all three Amazon conversion arrows use 1,1.
+    if (base == 0 && perLevel == 0 && missile != null
+        && "dl12".equalsIgnoreCase(missile.DmgCalc1)) {
+      base = 1;
+      perLevel = 1;
+    }
+    return base + Math.max(1, level) * perLevel;
   }
 
   private static boolean hasText(String value) {
