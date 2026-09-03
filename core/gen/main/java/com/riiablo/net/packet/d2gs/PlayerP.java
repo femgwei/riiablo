@@ -45,6 +45,9 @@ public final class PlayerP extends Table {
   public ByteBuffer questRecordsAsByteBuffer() { return __vector_as_bytebuffer(26, 2); }
   public ByteBuffer questRecordsInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 26, 2); }
   public long questRevision() { int o = __offset(28); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public int ammoItemId() { int o = __offset(30); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
+  public int ammoQuantity() { int o = __offset(32); return o != 0 ? bb.getShort(o + bb_pos) & 0xFFFF : 0; }
+  public boolean ammoPresent() { int o = __offset(34); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
   public static int createPlayerP(FlatBufferBuilder builder,
       int charClass,
@@ -59,25 +62,31 @@ public final class PlayerP extends Table {
       long goldBank,
       boolean walletPresent,
       int questRecordsOffset,
-      long questRevision) {
-    builder.startTable(13);
+      long questRevision,
+      int ammoItemId,
+      int ammoQuantity,
+      boolean ammoPresent) {
+    builder.startTable(16);
     PlayerP.addQuestRevision(builder, questRevision);
     PlayerP.addExperience(builder, experience);
+    PlayerP.addAmmoItemId(builder, ammoItemId);
     PlayerP.addQuestRecords(builder, questRecordsOffset);
     PlayerP.addGoldBank(builder, goldBank);
     PlayerP.addGold(builder, gold);
     PlayerP.addSkillLevels(builder, skillLevelsOffset);
     PlayerP.addSkillIds(builder, skillIdsOffset);
     PlayerP.addCharName(builder, charNameOffset);
+    PlayerP.addAmmoQuantity(builder, ammoQuantity);
     PlayerP.addStatPoints(builder, statPoints);
     PlayerP.addSkillPoints(builder, skillPoints);
+    PlayerP.addAmmoPresent(builder, ammoPresent);
     PlayerP.addWalletPresent(builder, walletPresent);
     PlayerP.addLevel(builder, level);
     PlayerP.addCharClass(builder, charClass);
     return PlayerP.endPlayerP(builder);
   }
 
-  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(13); }
+  public static void startPlayerP(FlatBufferBuilder builder) { builder.startTable(16); }
   public static void addCharClass(FlatBufferBuilder builder, int charClass) { builder.addByte(0, (byte)charClass, (byte)0); }
   public static void addCharName(FlatBufferBuilder builder, int charNameOffset) { builder.addOffset(1, charNameOffset, 0); }
   public static void addExperience(FlatBufferBuilder builder, long experience) { builder.addLong(2, experience, 0L); }
@@ -98,6 +107,9 @@ public final class PlayerP extends Table {
   public static int createQuestRecordsVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startQuestRecordsVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
   public static void addQuestRevision(FlatBufferBuilder builder, long questRevision) { builder.addLong(12, questRevision, 0L); }
+  public static void addAmmoItemId(FlatBufferBuilder builder, int ammoItemId) { builder.addInt(13, ammoItemId, -1); }
+  public static void addAmmoQuantity(FlatBufferBuilder builder, int ammoQuantity) { builder.addShort(14, (short)ammoQuantity, (short)0); }
+  public static void addAmmoPresent(FlatBufferBuilder builder, boolean ammoPresent) { builder.addBoolean(15, ammoPresent, false); }
   public static int endPlayerP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

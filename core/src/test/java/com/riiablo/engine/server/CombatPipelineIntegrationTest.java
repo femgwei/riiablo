@@ -161,6 +161,12 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
     bow.reset();
     bow.setBase(Riiablo.files.weapons.get("sbw"));
     data.getItems().equipItem(BodyLoc.RARM, data.getItems().add(bow));
+    Item arrows = new Item();
+    arrows.reset();
+    arrows.setBase(Riiablo.files.misc.get("aqv"));
+    arrows.attrs.base().put(Stat.quantity, 10);
+    arrows.attrs.reset();
+    data.getItems().equipItem(BodyLoc.LARM, data.getItems().add(arrows));
     Harness harness = new Harness(true);
     try {
       int player = harness.createPlayer(data, 10, 10, combatAttributes(60, 8, 8, 10_000));
@@ -171,6 +177,7 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
       harness.processFrames(32);
       assertEquals(1, harness.factory.creations);
       assertEquals(1, harness.probe.damageEvents);
+      assertEquals(9, arrows.attrs.base().get(Stat.quantity).asInt());
       assertTrue(hitpoints(harness.attributes(monster)) < before);
       System.out.println("[WEAPON_ATTACK_MATRIX] weapon=bow skill=Attack type=RANGED "
           + "missile=arrow damageEvents=1 status=PASS");

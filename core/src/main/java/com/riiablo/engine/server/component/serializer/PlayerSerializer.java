@@ -56,7 +56,18 @@ public class PlayerSerializer implements FlatBuffersSerializer<Player, PlayerP> 
     long questRevision = com.riiablo.engine.server.quest.QuestSnapshot.revision(questRecords);
     int questRecordsOffset = PlayerP.createQuestRecordsVector(builder, questRecords);
 
+    com.riiablo.item.Item ammo = data.getItems().getEquippedRangedAmmo();
+    int ammoQuantity = 0;
+    if (ammo != null && ammo.attrs != null) {
+      com.riiablo.attributes.StatRef quantity = ammo.attrs.base().get(
+          com.riiablo.attributes.Stat.quantity, com.riiablo.attributes.StatRef.obtain());
+      if (quantity != null) ammoQuantity = Math.max(0, Math.min(0xFFFF, quantity.asInt()));
+    }
+
     PlayerP.startPlayerP(builder);
+    PlayerP.addAmmoPresent(builder, ammo != null);
+    PlayerP.addAmmoQuantity(builder, ammoQuantity);
+    PlayerP.addAmmoItemId(builder, ammo != null ? ammo.id : -1);
     PlayerP.addSkillLevels(builder, skillLevelsOffset);
     PlayerP.addSkillIds(builder, skillIdsOffset);
     PlayerP.addSkillPoints(builder, Math.max(0, Math.min(0xFFFF, skillPoints)));

@@ -462,6 +462,17 @@ public class ClientNetworkReceiver extends IntervalSystem {
           (int) Math.min(Integer.MAX_VALUE, data.gold()),
           (int) Math.min(Integer.MAX_VALUE, data.goldBank()));
     }
+    if (data.ammoPresent()) {
+      com.riiablo.item.Item ammo = Riiablo.charData.getItems().findItemById(data.ammoItemId());
+      if (ammo == null) ammo = Riiablo.charData.getItems().getEquippedRangedAmmo();
+      if (ammo != null && ammo.attrs != null) {
+        int quantity = data.ammoQuantity();
+        ammo.attrs.base().put(Stat.quantity, quantity);
+        ammo.attrs.aggregate().put(Stat.quantity, quantity);
+        Gdx.app.log(TAG, "[RANGED_AMMO_SYNC] itemId=" + data.ammoItemId()
+            + " code=" + ammo.code + " quantity=" + quantity);
+      }
+    }
 
     long oldExperience = Riiablo.charData.getStats().aggregate()
         .getValue(Stat.experience, 0L);

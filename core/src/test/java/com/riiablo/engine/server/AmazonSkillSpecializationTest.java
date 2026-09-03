@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.component.serializer.PlayerSerializer;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.AssassinSkills;
@@ -32,6 +33,8 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
+import com.riiablo.net.packet.d2gs.PlayerP;
+import com.google.flatbuffers.FlatBufferBuilder;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
@@ -54,6 +57,7 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
           + " cltA=" + skill.cltmissilea + " cltB=" + skill.cltmissileb
           + " auraRange=" + skill.aurarangecalc + " summon=" + skill.summon
           + " pettype=" + skill.pettype + " petmax=" + skill.petmax
+          + " noammo=" + skill.noammo + " decquant=" + skill.decquant
           + " params=" + java.util.Arrays.toString(skill.Param));
       String[] missiles = {skill.srvmissile, skill.srvmissilea, skill.srvmissileb};
       for (String missileName : missiles) {
@@ -265,6 +269,127 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertEquals(8, ServerSkillSystem.summonBaseLevel(10, 1));
     assertEquals(10, ServerSkillSystem.summonBaseLevel(10, 5));
     assertEquals(1, ServerSkillSystem.summonBaseLevel(1, 1));
+  }
+
+  @Test
+  void bowUsesMatchingArrowQuiverAndConsumesOnePerCast() {
+    CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+    data.getItems().unequipItem(com.riiablo.item.BodyLoc.RARM);
+    data.getItems().unequipItem(com.riiablo.item.BodyLoc.LARM);
+    Item bow = new Item();
+    bow.reset();
+    bow.setBase(Riiablo.files.weapons.get("sbw"));
+    data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM, data.getItems().add(bow));
+    Item arrows = new Item();
+    arrows.reset();
+    arrows.setBase(Riiablo.files.misc.get("aqv"));
+    arrows.id = 9001;
+    arrows.attrs.base().put(Stat.quantity, 2);
+    arrows.attrs.reset();
+    data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(arrows));
+
+    assertEquals(arrows, data.getItems().getEquippedAmmo(bow));
+    assertTrue(ServerSkillSystem.consumeRangedAmmo(data.getItems(), bow));
+    assertEquals(1, arrows.attrs.base().get(Stat.quantity).asInt());
+    assertTrue(ServerSkillSystem.consumeRangedAmmo(data.getItems(), bow));
+    assertEquals(0, arrows.attrs.base().get(Stat.quantity).asInt());
+    assertTrue(!ServerSkillSystem.consumeRangedAmmo(data.getItems(), bow));
+  }
+
+  @Test
+  void bowRejectsCrossbowBolts() {
+    CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+    data.getItems().unequipItem(com.riiablo.item.BodyLoc.RARM);
+    data.getItems().unequipItem(com.riiablo.item.BodyLoc.LARM);
+    Item bow = new Item();
+    bow.reset();
+    bow.setBase(Riiablo.files.weapons.get("sbw"));
+    data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM, data.getItems().add(bow));
+    Item bolts = new Item();
+    bolts.reset();
+    bolts.setBase(Riiablo.files.misc.get("cqv"));
+    bolts.attrs.base().put(Stat.quantity, 50);
+    bolts.attrs.reset();
+    data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(bolts));
+
+    assertTrue(data.getItems().getEquippedAmmo(bow) == null);
+    assertTrue(!ServerSkillSystem.consumeRangedAmmo(data.getItems(), bow));
+  }
+
+  @Test
+  void authoritativeArrowAndStrafeConsumeOneAmmoAndStopAtZero() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      Skills.Entry fireArrow = Riiablo.files.skills.get("Fire Arrow");
+      Skills.Entry strafe = Riiablo.files.skills.get("Strafe");
+      data.setSkillLevel(fireArrow.Id, 1);
+      data.setSkillLevel(strafe.Id, 1);
+      Item bow = new Item();
+      bow.reset();
+      bow.setBase(Riiablo.files.weapons.get("sbw"));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM, data.getItems().add(bow));
+      Item arrows = new Item();
+      arrows.reset();
+      arrows.setBase(Riiablo.files.misc.get("aqv"));
+      arrows.attrs.base().put(Stat.quantity, 2);
+      arrows.attrs.reset();
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(arrows));
+
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attributes(20, 200);
+      int target = monster(world, 4, 0);
+      monster(world, 5, 1);
+      monster(world, 6, -1);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, fireArrow.Id, target, null, fireArrow.srvdofunc, fireArrow.cltdofunc));
+      assertEquals(1, arrows.attrs.base().get(Stat.quantity).asInt());
+      assertEquals(1, factory.created.size());
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, strafe.Id, target, null, strafe.srvdofunc, strafe.cltdofunc));
+      assertEquals(0, arrows.attrs.base().get(Stat.quantity).asInt());
+      int createdAtEmpty = factory.created.size();
+      assertTrue(createdAtEmpty > 1, "one Strafe sequence should create several missiles");
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, fireArrow.Id, target, null, fireArrow.srvdofunc, fireArrow.cltdofunc));
+      assertEquals(createdAtEmpty, factory.created.size(), "empty quiver must not create a missile");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void playerSnapshotCarriesAuthoritativeAmmoQuantity() {
+    CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+    Item bow = new Item();
+    bow.reset();
+    bow.setBase(Riiablo.files.weapons.get("sbw"));
+    data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM, data.getItems().add(bow));
+    Item arrows = new Item();
+    arrows.reset();
+    arrows.setBase(Riiablo.files.misc.get("aqv"));
+    arrows.id = 4242;
+    arrows.attrs.base().put(Stat.quantity, 17);
+    arrows.attrs.reset();
+    data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(arrows));
+
+    Player player = new Player();
+    player.data = data;
+    FlatBufferBuilder builder = new FlatBufferBuilder(256);
+    int root = new PlayerSerializer().putData(builder, player);
+    builder.finish(root);
+    PlayerP snapshot = PlayerP.getRootAsPlayerP(builder.dataBuffer());
+    assertTrue(snapshot.ammoPresent());
+    assertEquals(4242, snapshot.ammoItemId());
+    assertEquals(17, snapshot.ammoQuantity());
   }
 
   private static Attributes attributes(int level, float hp) {

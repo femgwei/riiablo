@@ -284,6 +284,55 @@ public class ItemData {
     return isThrowableWeapon(left) ? left : null;
   }
 
+  /** Returns the active bow/crossbow, independent of which hand owns it. */
+  public Item getEquippedRangedWeapon() {
+    Item right = getEquipped(BodyLoc.RARM);
+    if (isRangedWeapon(right)) return right;
+    Item left = getEquipped(BodyLoc.LARM);
+    return isRangedWeapon(left) ? left : null;
+  }
+
+  /** Returns whether the item is a bow or crossbow using ItemTypes ancestry. */
+  public static boolean isRangedWeapon(Item item) {
+    return item != null && item.type != null
+        && (item.type.is(Type.BOW) || item.type.is(Type.XBOW));
+  }
+
+  /**
+   * Finds the active quiver paired with {@code weapon}. D2MOO resolves the
+   * weapon ItemTypes.Shoots code and requires the opposite hand to contain
+   * that ammunition type; a bow therefore cannot consume crossbow bolts.
+   */
+  public Item getEquippedAmmo(Item weapon) {
+    if (!isRangedWeapon(weapon)) return null;
+    Item right = getEquipped(BodyLoc.RARM);
+    Item left = getEquipped(BodyLoc.LARM);
+    Item candidate = weapon == right ? left : weapon == left ? right : null;
+    if (candidate == null || candidate.type == null) return null;
+
+    String shoots = weapon.typeEntry != null ? weapon.typeEntry.Shoots : null;
+    if (shoots != null && !shoots.isEmpty()) {
+      int ammoType = Riiablo.files.ItemTypes.index(shoots);
+      return ammoType >= 0 && candidate.type.is(ammoType) ? candidate : null;
+    }
+    if (weapon.type.is(Type.BOW)) return candidate.type.is(Type.BOWQ) ? candidate : null;
+    if (weapon.type.is(Type.XBOW)) return candidate.type.is(Type.XBOQ) ? candidate : null;
+    return null;
+  }
+
+  public Item getEquippedRangedAmmo() {
+    return getEquippedAmmo(getEquippedRangedWeapon());
+  }
+
+  /** Finds an owned item by its stable D2 item id. */
+  public Item findItemById(int id) {
+    for (int i = 0; i < itemData.size; i++) {
+      Item item = itemData.get(i);
+      if (item != null && item.id == id) return item;
+    }
+    return null;
+  }
+
   public boolean isActive(Item item) {
     if (item == null) return false;
     return item.bodyLoc == BodyLoc.getAlternate(item.bodyLoc, alternate);

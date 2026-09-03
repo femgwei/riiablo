@@ -194,6 +194,26 @@ public class Actioneer extends PassiveSystem {
     // in Skills.txt) create a missile and consume quantity here.
     boolean isThrowAttack = isThrowSkill || isThrowFunc;
 
+    if (mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR
+        && mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      com.riiablo.save.ItemData items = mPlayer.get(entityId).data.getItems();
+      Item rangedWeapon = items.getEquippedRangedWeapon();
+      if (ServerSkillSystem.isAmazonBowSkill(skill) && rangedWeapon == null) {
+        log.info("[RANGED_AMMO] phase=cast_reject entity={} skill={} reason=no_ranged_weapon",
+            entityId, skillId);
+        return;
+      }
+      if (ServerSkillSystem.requiresRangedAmmo(skill, rangedWeapon)) {
+        Item ammo = items.getEquippedAmmo(rangedWeapon);
+        if (!ServerSkillSystem.hasQuantity(ammo)) {
+          log.info("[RANGED_AMMO] phase=cast_reject entity={} skill={} weapon={} ammo={} reason={}",
+              entityId, skillId, rangedWeapon.code, ammo != null ? ammo.code : "none",
+              ammo == null ? "missing" : "empty");
+          return;
+        }
+      }
+    }
+
     // Keep one authoritative snapshot in the log before the animation starts.
     // This lets us distinguish an equipment/stat aggregation problem from a
     // missile collision or damage-calculation problem without changing combat

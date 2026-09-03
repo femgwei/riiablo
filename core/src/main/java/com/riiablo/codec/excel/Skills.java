@@ -75,6 +75,9 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public boolean leftskill;
     @Column public boolean passive;
     @Column public boolean aura;
+    /** Native Skills.txt ammunition flags used by bow/crossbow attacks. */
+    @Column public boolean noammo;
+    @Column public boolean decquant;
     @Column public int     srvstfunc;
     @Column public int     srvdofunc;
     /** D2 skill formula expressions (calc1..calc4). */

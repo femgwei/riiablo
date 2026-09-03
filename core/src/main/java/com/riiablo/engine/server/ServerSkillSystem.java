@@ -32,6 +32,7 @@ import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Type;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.save.ItemData;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.skill.SkillFormula;
@@ -161,6 +162,25 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
+    ItemData items = player.data != null ? player.data.getItems() : null;
+    Item rangedWeapon = items != null ? items.getEquippedRangedWeapon() : null;
+    if (isAmazonBowSkill(skill) && rangedWeapon == null) {
+      reject(event, 9, "skill requires an equipped bow or crossbow");
+      return;
+    }
+    if (requiresRangedAmmo(skill, rangedWeapon)) {
+      Item ammo = items.getEquippedAmmo(rangedWeapon);
+      if (!hasQuantity(ammo)) {
+        reject(event, 9, ammo == null
+            ? "matching arrow or bolt quiver is not equipped"
+            : "equipped arrow or bolt quiver is empty");
+        log.info("[RANGED_AMMO] phase=cast_reject entity={} skill={} weapon={} ammo={} reason={}",
+            event.entityId, event.skillId, rangedWeapon.code,
+            ammo != null ? ammo.code : "none", ammo == null ? "missing" : "empty");
+        return;
+      }
+    }
+
     StatRef mana = attrs.get(Stat.mana, StatRef.obtain());
     if (mana == null) {
       reject(event, 1, "caster has no mana stat");
@@ -192,12 +212,24 @@ public class ServerSkillSystem extends PassiveSystem {
     if (!mPlayer.has(event.entityId) && !mMonster.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    if (mPlayer.has(event.entityId) && mPlayer.get(event.entityId).data != null) {
+      ItemData items = mPlayer.get(event.entityId).data.getItems();
+      Item weapon = items.getEquippedRangedWeapon();
+      if (requiresRangedAmmo(skill, weapon) && !hasQuantity(items.getEquippedAmmo(weapon))) {
+        log.info("[RANGED_AMMO] phase=do_reject entity={} skill={} weapon={} reason=missing_or_empty",
+            event.entityId, event.skillId, weapon != null ? weapon.code : "none");
+        return;
+      }
+    }
     // Local games retain their legacy player projectile presentation, but
     // native summons are server entities rather than visual projectiles and
     // must still be created in the local authoritative world.
     if (monstersOnly && !mMonster.has(event.entityId)
         && event.srvdofunc != 15 && event.srvdofunc != 16
-        && skill.srvdofunc != 15 && skill.srvdofunc != 16) return;
+        && skill.srvdofunc != 15 && skill.srvdofunc != 16) {
+      consumeRangedAmmoForSkill(event, skill);
+      return;
+    }
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
@@ -337,6 +369,7 @@ public class ServerSkillSystem extends PassiveSystem {
 
     IntSet sharedHitTargets = configuredCount > 1 ? new IntSet() : null;
     int ordinal = 0;
+    int created = 0;
     for (String missileName : missileNames) {
       if (missileName == null || missileName.isEmpty()) continue;
       Missiles.Entry missile = Riiablo.files.Missiles.get(missileName);
@@ -366,6 +399,7 @@ public class ServerSkillSystem extends PassiveSystem {
         ordinal++;
         continue;
       }
+      created++;
       if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
           || event.srvdofunc == 3 || event.srvdofunc == 5) {
         log.info("[MISSILE_CREATE] phase=throw entity={} missileId={} owner={} missile={} "
@@ -383,6 +417,7 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       ordinal++;
     }
+    if (created > 0) consumeRangedAmmoForSkill(event, skill);
   }
 
   /** D2MOO SrvDo023: SpiderLay installs a movement state; StateUpdater emits its trail. */
@@ -882,6 +917,7 @@ public class ServerSkillSystem extends PassiveSystem {
         created++;
       }
     }
+    if (created > 0) consumeRangedAmmoForSkill(event, skill);
     log.debug("Server SrvDo008 projectiles: entity={}, skill={}, missile={}, level={}, total={}, "
             + "left={}, centre={}, right={}, created={}",
         event.entityId, event.skillId, missileName, skillLevel, total, left, centre, right, created);
@@ -930,6 +966,7 @@ public class ServerSkillSystem extends PassiveSystem {
       if (bonus <= 0) bonus = AmazonSkills.calculateGuidedArrowDamageBonus(skillLevel);
       projectile.damageMultiplier = 1f + Math.max(0, bonus) / 100f;
       configurePierce(projectile, event.entityId, skillLevel, true);
+      consumeRangedAmmoForSkill(event, skill);
       log.info("[GUIDED_ARROW] phase=create entity={} missileId={} target={} homing={} "
               + "level={} damageBonus={} pierceChance={}", event.entityId, id, targetId,
           projectile.homing, skillLevel, bonus, projectile.pierceChance);
@@ -989,6 +1026,7 @@ public class ServerSkillSystem extends PassiveSystem {
         created = 1;
       }
     }
+    if (created > 0) consumeRangedAmmoForSkill(event, skill);
     log.info("[STRAFE] phase=create entity={} level={} requested={} targets={} created={} missile={}",
         event.entityId, skillLevel, count, targets.size(), created, missileName);
   }
@@ -1211,6 +1249,64 @@ public class ServerSkillSystem extends PassiveSystem {
     String name = weapon.type.is(Type.BOW) ? "arrow"
         : weapon.type.is(Type.XBOW) ? "bolt" : null;
     return name != null && Riiablo.files.Missiles.get(name) != null ? name : null;
+  }
+
+  static boolean isAmazonBowSkill(Skills.Entry skill) {
+    if (skill == null || skill.skill == null) return false;
+    switch (skill.skill.trim().toLowerCase(java.util.Locale.ROOT)) {
+      case "magic arrow":
+      case "fire arrow":
+      case "cold arrow":
+      case "multiple shot":
+      case "exploding arrow":
+      case "ice arrow":
+      case "guided arrow":
+      case "strafe":
+      case "immolation arrow":
+      case "freezing arrow":
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  static boolean requiresRangedAmmo(Skills.Entry skill, Item weapon) {
+    if (!ItemData.isRangedWeapon(weapon) || skill == null || skill.noammo) return false;
+    return skill.Id == SkillCodes.attack || skill.decquant || isAmazonBowSkill(skill);
+  }
+
+  static boolean hasQuantity(Item item) {
+    if (item == null || item.attrs == null) return false;
+    StatRef quantity = item.attrs.base().get(Stat.quantity, StatRef.obtain());
+    return quantity != null && quantity.asInt() > 0;
+  }
+
+  static boolean consumeRangedAmmo(ItemData items, Item weapon) {
+    if (items == null || weapon == null) return false;
+    Item ammo = items.getEquippedAmmo(weapon);
+    if (!hasQuantity(ammo)) return false;
+    StatRef quantity = ammo.attrs.base().get(Stat.quantity);
+    int before = quantity.asInt();
+    quantity.sub(1);
+    // Aggregate is normally rebuilt by ItemData, but quantity is not an
+    // equipped combat modifier. Keep the item's display/save lists aligned
+    // without rebuilding the character's derived attributes every shot.
+    StatRef aggregate = ammo.attrs.aggregate().get(Stat.quantity);
+    if (aggregate != null) aggregate.set(before - 1);
+    log.info("[RANGED_AMMO] phase=consume weapon={} ammo={} itemId={} before={} after={}",
+        weapon.code, ammo.code, ammo.id, before, before - 1);
+    return true;
+  }
+
+  private void consumeRangedAmmoForSkill(SkillDoEvent event, Skills.Entry skill) {
+    if (!mPlayer.has(event.entityId) || !requiresRangedAmmo(skill,
+        mPlayer.get(event.entityId).data != null
+            ? mPlayer.get(event.entityId).data.getItems().getEquippedRangedWeapon() : null)) {
+      return;
+    }
+    ItemData items = mPlayer.get(event.entityId).data.getItems();
+    Item weapon = items.getEquippedRangedWeapon();
+    consumeRangedAmmo(items, weapon);
   }
 
   private void reject(SkillCastEvent event, int resultCode, String reason) {
