@@ -158,6 +158,14 @@ public final class AssassinSkills {
     public int fireAreaRange;
     public int fireFieldRange;
     public String fireStageMissile;
+    public int lightningCharges;
+    public int lightningSkillId = -1;
+    public int lightningSkillLevel;
+    public int lightningMinDamage;
+    public int lightningMaxDamage;
+    public String lightningNovaMissile;
+    public String lightningBoltMissile;
+    public int lightningBoltStep;
 
     public boolean hasEffects() {
       return totalCharges > 0;
@@ -217,8 +225,24 @@ public final class AssassinSkills {
             release.fireStageMissile = progressiveMissile(skill, 3);
           }
           break;
+        case StateId.PROGRESSIVE_LIGHTNING:
+          release.lightningCharges = charges;
+          release.lightningSkillId = skill.Id;
+          release.lightningSkillLevel = level;
+          release.lightningMinDamage += shiftedSkillDamage(
+              skill.EMin, skill.EMinLev, level, skill.HitShift);
+          release.lightningMaxDamage += shiftedSkillDamage(
+              skill.EMax, skill.EMaxLev, level, skill.HitShift);
+          if (charges >= 2) {
+            release.lightningNovaMissile = progressiveMissile(skill, 2);
+          }
+          if (charges >= 3) {
+            release.lightningBoltMissile = progressiveMissile(skill, 3);
+            release.lightningBoltStep = progressiveRange(skill, level, 3);
+          }
+          break;
         default:
-          // Cold, lightning and Phoenix stage functions are handled by the
+          // Cold and Phoenix stage functions are handled by the
           // following martial-arts module; they are still counted so the
           // native consume-all operation remains observable in logs/tests.
           break;
@@ -227,6 +251,8 @@ public final class AssassinSkills {
     release.fireMaxDamage = Math.max(release.fireMinDamage, release.fireMaxDamage);
     release.firePhysicalMaxDamage = Math.max(
         release.firePhysicalMinDamage, release.firePhysicalMaxDamage);
+    release.lightningMaxDamage = Math.max(
+        release.lightningMinDamage, release.lightningMaxDamage);
     return release;
   }
 
@@ -256,6 +282,12 @@ public final class AssassinSkills {
   public static int rollFireDamage(ProgressiveRelease release) {
     if (release == null || release.fireMaxDamage <= 0) return 0;
     return MathUtils.random(Math.max(0, release.fireMinDamage), release.fireMaxDamage);
+  }
+
+  public static int rollLightningDamage(ProgressiveRelease release) {
+    if (release == null || release.lightningMaxDamage <= 0) return 0;
+    return MathUtils.random(
+        Math.max(0, release.lightningMinDamage), release.lightningMaxDamage);
   }
 
   static int shiftedSkillDamage(int base, int[] perLevel, int level, int hitShift) {

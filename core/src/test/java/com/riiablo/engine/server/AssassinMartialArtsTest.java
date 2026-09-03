@@ -9,6 +9,7 @@ import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
@@ -40,6 +41,25 @@ import org.junit.jupiter.api.Test;
 
 /** Native SrvDo034/SrvDo035 regression coverage. */
 class AssassinMartialArtsTest extends RiiabloTest {
+  @Test
+  void clawsOfThunderExposesNativeProgressiveColumns() {
+    Skills.Entry claws = Riiablo.files.skills.get("Claws of Thunder");
+    assertNotNull(claws);
+    assertTrue(claws.prgstack);
+    assertEquals(4, claws.prgdam);
+    assertEquals(0, claws.srvprgfunc[0]);
+    assertEquals(36, claws.srvprgfunc[1]);
+    assertEquals(37, claws.srvprgfunc[2]);
+    assertEquals("clawsofthundernova", AssassinSkills.progressiveMissile(claws, 2));
+    assertEquals("clawsofthunderbolt", AssassinSkills.progressiveMissile(claws, 3));
+    assertEquals(4, AssassinSkills.progressiveRange(claws, 5, 3));
+    assertEquals("ltng", claws.EType);
+    assertEquals(128, claws.SrcDam);
+    Vector2 quantized = Actioneer.clawsRadialDirection(1, new Vector2());
+    assertEquals(new Vector2(29, 2).nor().x, quantized.x, 0.0001f);
+    assertEquals(new Vector2(29, 2).nor().y, quantized.y, 0.0001f);
+  }
+
   @Test
   void fistsOfFireExposesNativeProgressiveColumns() {
     Skills.Entry fists = Riiablo.files.skills.get("Fists of Fire");
@@ -371,6 +391,130 @@ class AssassinMartialArtsTest extends RiiabloTest {
         assertTrue(missile.tickInterval > missile.remainingFrames);
         assertTrue(position.dst2(origin) <= range * range);
       }
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void clawsOfThunderFirstChargeAddsLightningToPhysicalImmuneTarget() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(1000, 10, 10, 100000));
+      Attributes targetAttrs = attributes(10000, 0, 0, 0);
+      targetAttrs.base().put(Stat.damageresist, 100);
+      targetAttrs.base().put(Stat.lightresist, 0);
+      targetAttrs.reset();
+      int target = createMonster(world, 1, 0, targetAttrs);
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry claws = Riiablo.files.skills.get("Claws of Thunder");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      AssassinSkills.addProgressiveCharge(states, claws, 5, assassin);
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, target, world.getMapper(Position.class).get(target).position);
+
+      MathUtils.random.setSeed(0xC1A0501L);
+      dispatchUntilConsumed(world, assassin, states, StateId.PROGRESSIVE_LIGHTNING);
+
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 10000f,
+          "charge one lightning must survive physical immunity");
+      assertEquals(0, factory.missilesCreated);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void clawsOfThunderSecondChargeCreatesNativeSixtyFourPathNova() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(1000, 10, 10, 100000));
+      int target = createMonster(world, 1, 0, attributes(10000, 0, 0, 0));
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry claws = Riiablo.files.skills.get("Claws of Thunder");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      AssassinSkills.addProgressiveCharge(states, claws, 5, assassin);
+      AssassinSkills.addProgressiveCharge(states, claws, 5, assassin);
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, target, world.getMapper(Position.class).get(target).position);
+
+      MathUtils.random.setSeed(0xC1A0502L);
+      dispatchUntilConsumed(world, assassin, states, StateId.PROGRESSIVE_LIGHTNING);
+
+      assertEquals(64, factory.missilesCreated);
+      IntSet sharedHits = null;
+      for (int missileId : factory.missileEntityIds) {
+        Missile missile = world.getMapper(Missile.class).get(missileId);
+        assertEquals("clawsofthundernova", missile.missile.Missile);
+        assertEquals(assassin, missile.ownerId);
+        assertEquals(claws.Id, missile.skillId);
+        assertTrue(missile.damageSnapshot);
+        if (sharedHits == null) sharedHits = missile.sharedHitTargets;
+        assertTrue(sharedHits == missile.sharedHitTargets,
+            "nova paths must share one-hit-per-target state");
+      }
+      Vector2 east = world.getMapper(Velocity.class)
+          .get(factory.missileEntityIds.get(0)).velocity.cpy().nor();
+      Vector2 north = world.getMapper(Velocity.class)
+          .get(factory.missileEntityIds.get(16)).velocity.cpy().nor();
+      assertEquals(1f, east.x, 0.0001f);
+      assertEquals(0f, east.y, 0.0001f);
+      assertEquals(0f, north.x, 0.0001f);
+      assertEquals(1f, north.y, 0.0001f);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void clawsOfThunderThirdChargeStacksNovaAndChargedBoltPaths() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(1000, 10, 10, 100000));
+      int target = createMonster(world, 1, 0, attributes(10000, 0, 0, 0));
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry claws = Riiablo.files.skills.get("Claws of Thunder");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      for (int i = 0; i < 3; i++) {
+        AssassinSkills.addProgressiveCharge(states, claws, 5, assassin);
+      }
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, target, world.getMapper(Position.class).get(target).position);
+
+      MathUtils.random.setSeed(0xC1A0503L);
+      dispatchUntilConsumed(world, assassin, states, StateId.PROGRESSIVE_LIGHTNING);
+
+      int novas = 0;
+      int bolts = 0;
+      for (int missileId : factory.missileEntityIds) {
+        Missile missile = world.getMapper(Missile.class).get(missileId);
+        if ("clawsofthundernova".equals(missile.missile.Missile)) {
+          novas++;
+        } else if ("clawsofthunderbolt".equals(missile.missile.Missile)) {
+          bolts++;
+          assertTrue(missile.chargedBoltPath);
+          assertEquals(2f, missile.chargedBoltNextTurnDistance);
+          assertTrue(missile.range <= 77f);
+          assertEquals(claws.Id, missile.skillId);
+          assertTrue(missile.damageSnapshot);
+        }
+        assertEquals(assassin, missile.ownerId);
+      }
+      assertEquals(64, novas);
+      assertEquals(16, bolts);
+      assertEquals(80, factory.missilesCreated);
     } finally {
       world.dispose();
     }

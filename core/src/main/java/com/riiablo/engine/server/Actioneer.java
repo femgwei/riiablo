@@ -779,7 +779,7 @@ public class Actioneer extends PassiveSystem {
         if (damage <= 0) {
           log.debug("{} melee hit on {} caused no damage", entityId, targetId);
           if (progressiveRelease != null && progressiveRelease.hasEffects()) {
-            applyFistsOfFireStageEffects(
+            applyAssassinProgressiveStageEffects(
                 entityId, targetId, progressiveRelease, attackerAttrs);
           }
           break;
@@ -799,7 +799,7 @@ public class Actioneer extends PassiveSystem {
 
         if (progressiveRelease != null && progressiveRelease.hasEffects()) {
           applyAssassinProgressiveLeech(entityId, progressiveRelease, combat, appliedDamage);
-          applyFistsOfFireStageEffects(
+          applyAssassinProgressiveStageEffects(
               entityId, targetId, progressiveRelease, attackerAttrs);
         }
 
@@ -1125,12 +1125,25 @@ public class Actioneer extends PassiveSystem {
       combat.elementalDamage[CombatSystem.DAMAGE_FIRE] += fire;
     }
 
+    int rawLightning = AssassinSkills.rollLightningDamage(release);
+    if (rawLightning > 0) {
+      int lightning = resistedDamage(rawLightning, defender, defenderStates,
+          Stat.lightresist, 2);
+      combat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING] += lightning;
+    }
+
     combat.totalDamage = combat.physicalDamage;
     for (int i = 1; i < CombatSystem.DAMAGE_TYPE_COUNT; i++) {
       if (i != CombatSystem.DAMAGE_POISON || combat.poisonDuration <= 0) {
         combat.totalDamage += combat.elementalDamage[i];
       }
     }
+  }
+
+  private void applyAssassinProgressiveStageEffects(int sourceId, int primaryTargetId,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    applyFistsOfFireStageEffects(sourceId, primaryTargetId, release, sourceAttrs);
+    applyClawsOfThunderStageEffects(sourceId, primaryTargetId, release, sourceAttrs);
   }
 
   /**
@@ -1249,6 +1262,107 @@ public class Actioneer extends PassiveSystem {
             + "range={} attempts={} created={} seed={}",
         sourceId, release.fireSkillId, release.fireStageMissile,
         range, area, created, rng.state());
+  }
+
+  /** D2MOO SrvDo036/SrvDo037 stacked Claws of Thunder missile stages. */
+  private void applyClawsOfThunderStageEffects(int sourceId, int primaryTargetId,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    if (release == null || release.lightningCharges < 2
+        || !mPosition.has(primaryTargetId)) return;
+    Vector2 origin = mPosition.get(primaryTargetId).position;
+    int novaCount = createClawsNova(
+        sourceId, origin, release, sourceAttrs);
+    int boltCount = release.lightningCharges >= 3
+        ? createClawsChargedBolts(sourceId, origin, release, sourceAttrs) : 0;
+    log.info("[ASSASSIN_CLAWS] phase=release source={} primary={} charges={} "
+            + "nova={} chargedBolts={}",
+        sourceId, primaryTargetId, release.lightningCharges, novaCount, boltCount);
+  }
+
+  /** Native sub_6FD14170 emits all 64 quantized radial nova paths. */
+  private int createClawsNova(int sourceId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    if (release.lightningNovaMissile == null || release.lightningNovaMissile.isEmpty()) return 0;
+    Missiles.Entry row = Riiablo.files.Missiles.get(release.lightningNovaMissile);
+    Skills.Entry skill = Riiablo.files.skills.get(release.lightningSkillId);
+    if (row == null || skill == null) {
+      log.warn("[ASSASSIN_CLAWS] phase=stage2_reject source={} missile={} reason=missing_data",
+          sourceId, release.lightningNovaMissile);
+      return 0;
+    }
+    IntSet sharedHits = new IntSet();
+    int velocity = row.Vel + Math.max(0,
+        SkillFormula.evaluate(skill.calc1, skill, release.lightningSkillLevel));
+    int created = 0;
+    for (int i = 0; i < 64; i++) {
+      Vector2 direction = clawsRadialDirection(i, new Vector2());
+      int missileId = factory.createMissile(row, direction, origin, sourceId);
+      if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) continue;
+      com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+      projectile.shareHitTargets(sharedHits);
+      MissileDamageResolver.initializeSkill(
+          projectile, skill, sourceAttrs, release.lightningSkillLevel);
+      if (velocity > 0 && mVelocity.has(missileId)) {
+        mVelocity.get(missileId).velocity.set(direction).setLength(velocity);
+      }
+      created++;
+    }
+    log.info("[ASSASSIN_CLAWS] phase=stage2_nova source={} skill={} missile={} "
+            + "requested=64 created={} velocity={}",
+        sourceId, release.lightningSkillId, release.lightningNovaMissile,
+        created, velocity);
+    return created;
+  }
+
+  /** Native sub_6FCF6600 emits every PrgCalc3-th path with charged-bolt motion. */
+  private int createClawsChargedBolts(int sourceId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    if (release.lightningBoltMissile == null || release.lightningBoltMissile.isEmpty()) return 0;
+    Missiles.Entry row = Riiablo.files.Missiles.get(release.lightningBoltMissile);
+    Skills.Entry skill = Riiablo.files.skills.get(release.lightningSkillId);
+    if (row == null || skill == null) {
+      log.warn("[ASSASSIN_CLAWS] phase=stage3_reject source={} missile={} reason=missing_data",
+          sourceId, release.lightningBoltMissile);
+      return 0;
+    }
+    int step = Math.max(1, Math.min(64, release.lightningBoltStep));
+    int seed = assassinProgressiveSeeds.get(sourceId,
+        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.lightningSkillId * 31);
+    NativeRng rng = new NativeRng(seed);
+    int created = 0;
+    for (int i = 0; i < 64; i += step) {
+      Vector2 direction = clawsRadialDirection(i, new Vector2());
+      int missileId = factory.createMissile(row, direction, origin, sourceId);
+      if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) continue;
+      com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+      int seedLow = rng.nextInt();
+      long rolled = AssassinTrapSystem.chargedBoltRoll(seedLow, 666);
+      projectile.chargedBoltPath = true;
+      projectile.chargedBoltMainDirection =
+          AssassinTrapSystem.chargedBoltMainDirection(direction);
+      projectile.chargedBoltSeedLow = (int) rolled;
+      projectile.chargedBoltSeedHigh = (int) (rolled >>> 32);
+      projectile.chargedBoltNextTurnDistance = 2f;
+      projectile.range = Math.min(77f, Math.max(1f, projectile.range));
+      MissileDamageResolver.initializeSkill(
+          projectile, skill, sourceAttrs, release.lightningSkillLevel);
+      created++;
+    }
+    assassinProgressiveSeeds.put(sourceId, rng.state());
+    log.info("[ASSASSIN_CLAWS] phase=stage3_bolts source={} skill={} missile={} "
+            + "step={} requested={} created={} seed={}",
+        sourceId, release.lightningSkillId, release.lightningBoltMissile,
+        step, (64 + step - 1) / step, created, rng.state());
+    return created;
+  }
+
+  /** Unit vector corresponding to D2MOO's 64-entry radius-30 offset table. */
+  static Vector2 clawsRadialDirection(int index, Vector2 out) {
+    float radians = MathUtils.PI2 * (index & 63) / 64f;
+    // Native table entries are trunc(30*cos/sin), not ideal continuous angles.
+    int x = (int) (30f * MathUtils.cos(radians));
+    int y = (int) (30f * MathUtils.sin(radians));
+    return out.set(x, y).nor();
   }
 
   private boolean isValidFistsTarget(int sourceId, int targetId) {
