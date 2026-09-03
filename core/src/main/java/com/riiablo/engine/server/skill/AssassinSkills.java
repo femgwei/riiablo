@@ -4,6 +4,10 @@ import com.badlogic.gdx.math.MathUtils;
 import java.util.function.IntFunction;
 import java.util.function.IntUnaryOperator;
 
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
+import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
@@ -494,15 +498,15 @@ public final class AssassinSkills {
   // 武技 - 完成技
   //==========================================================================
 
-  /**
-   * 龙爪 - 双爪攻击
-   * 
-   * @param skillLevel 技能等级
-   * @return 伤害加成百分比
-   */
+  /** D2MOO sub_6FCF7BC0: Param1 + (level - 1) * Param2. */
+  public static int calculateDragonTalonDamageBonus(Skills.Entry skill, int skillLevel) {
+    return param(skill, 0, 0)
+        + (Math.max(1, skillLevel) - 1) * param(skill, 1, 0);
+  }
+
+  /** Kept for callers which only have the original Skills.txt constants. */
   public static int calculateDragonTalonDamageBonus(int skillLevel) {
-    // 每级 +10%
-    return 10 * skillLevel;
+    return 5 + (Math.max(1, skillLevel) - 1) * 7;
   }
 
   /**
@@ -511,9 +515,89 @@ public final class AssassinSkills {
    * @param skillLevel 技能等级
    * @return 踢击次数
    */
+  public static int getDragonTalonKickCount(Skills.Entry skill, int skillLevel) {
+    int kicks = SkillFormula.evaluate(skill != null ? skill.calc1 : null,
+        skill, Math.max(1, skillLevel));
+    // The original row is lvl/6+1. A fallback keeps older bin caches usable.
+    if (kicks <= 0) kicks = Math.max(1, skillLevel) / 6 + 1;
+    return Math.max(1, kicks);
+  }
+
   public static int getDragonTalonKickCount(int skillLevel) {
-    // 基础 2 次，每 6 级 +1（最高 7）
-    return Math.min(7, 2 + skillLevel / 6);
+    return Math.max(1, skillLevel) / 6 + 1;
+  }
+
+  /** Native SKILLS_GetToHitFactor contribution for Dragon Talon. */
+  public static int dragonTalonAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker) {
+    int base = statInt(attacker, Stat.tohit);
+    int progressive = statInt(attacker, Stat.progressive_tohit);
+    int level = Math.max(1, skillLevel);
+    int skillFactor = skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
+    return Math.max(1, base + progressive + skillFactor);
+  }
+
+  /**
+   * D2MOO SKILLS_CalculateKickDamage plus sub_6FCF7CE0 physical composition.
+   * Returned values are already fully enhanced and must use the combat
+   * pipeline's precomputed-physical entry point.
+   */
+  public static int[] calculateDragonTalonKickDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Armor.Entry boots) {
+    int level = Math.max(1, skillLevel);
+    int skillPercent = calculateDragonTalonDamageBonus(skill, level);
+    int itemKick = statInt(attacker, Stat.item_kickdamage);
+
+    // SKILLS_CalculateKickDamage adds ITEM_KICKDAMAGE once unconditionally
+    // and a second time as part of the equipped boot damage record.
+    int kickMin = itemKick;
+    int kickMax = itemKick;
+    int kickPercent = skillPercent;
+    if (boots != null) {
+      kickMin += itemKick + boots.mindam;
+      kickMax += itemKick + boots.maxdam;
+      int attributePercent = boots.StrBonus * statInt(attacker, Stat.strength) / 100
+          + boots.DexBonus * statInt(attacker, Stat.dexterity) / 100
+          + statInt(attacker, Stat.damagepercent);
+      attributePercent = Math.max(-90, attributePercent);
+      kickPercent += statInt(attacker, Stat.item_maxdamage_percent) + attributePercent;
+    }
+
+    int skillMin = shiftedSkillDamage(
+        skill != null ? skill.MinDam : 0,
+        skill != null ? skill.MinLevDam : null, level,
+        skill != null ? skill.HitShift : 8);
+    int skillMax = shiftedSkillDamage(
+        skill != null ? skill.MaxDam : 0,
+        skill != null ? skill.MaxLevDam : null, level,
+        skill != null ? skill.HitShift : 8);
+    int min = scale(skillMin, skillPercent) + scale(kickMin, kickPercent);
+    int max = scale(Math.max(skillMin, skillMax), skillPercent)
+        + scale(Math.max(kickMin, kickMax), kickPercent);
+    return new int[] {Math.max(0, min), Math.max(Math.max(0, min), max)};
+  }
+
+  /** Native last-kick target class selects calc2/calc3/calc4. */
+  public static int dragonTalonKnockbackChance(
+      Skills.Entry skill, int skillLevel, boolean playerOrHireling,
+      boolean boss, boolean unique) {
+    if (skill == null) return 0;
+    String expression = playerOrHireling ? skill.calc4
+        : boss ? skill.calc3 : unique ? skill.calc2 : null;
+    if (expression == null || expression.isEmpty()) return 100;
+    return Math.max(0, Math.min(100,
+        SkillFormula.evaluate(expression, skill, Math.max(1, skillLevel))));
+  }
+
+  private static int scale(int damage, int percent) {
+    long result = (long) damage + (long) damage * percent / 100L;
+    return result <= 0 ? 0 : result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    if (attrs == null) return 0;
+    StatRef ref = attrs.get(stat, StatRef.obtain());
+    return ref == null ? 0 : ref.asInt();
   }
 
   /**

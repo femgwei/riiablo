@@ -113,8 +113,12 @@ public final class SkillFormula {
         if (first >= 1 && first <= 9 && second >= 1 && second <= 9) {
           int base = param(first);
           int step = param(second);
-          // ln12 is Param1 + level * Param2 in the native evaluator.  dmXY
-          // is used by a few legacy rows with the same level convention.
+          if (identifier.regionMatches(true, 0, "dm", 0, 2)) {
+            // Native diminishing-return macro:
+            // a + 110 * level * (b - a) / (100 * (level + 6)).
+            long numerator = 110L * level * (step - base);
+            return base + (int) (numerator / (100L * (level + 6)));
+          }
           return base + level * step;
         }
       }

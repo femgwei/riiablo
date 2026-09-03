@@ -28,7 +28,9 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
+import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.state.StateId;
@@ -42,6 +44,139 @@ import org.junit.jupiter.api.Test;
 
 /** Native SrvDo034/SrvDo035 regression coverage. */
 class AssassinMartialArtsTest extends RiiabloTest {
+  @Test
+  void dragonTalonUsesNativeCountDamageAndKnockbackFormulas() {
+    Skills.Entry talon = Riiablo.files.skills.get("Dragon Talon");
+    assertNotNull(talon);
+    assertEquals(24, talon.srvstfunc);
+    assertEquals(42, talon.srvdofunc);
+    assertEquals(1, AssassinSkills.getDragonTalonKickCount(talon, 1));
+    assertEquals(2, AssassinSkills.getDragonTalonKickCount(talon, 6));
+    assertEquals(3, AssassinSkills.getDragonTalonKickCount(talon, 12));
+    assertEquals(4, AssassinSkills.getDragonTalonKickCount(talon, 18));
+    assertEquals(talon.Param[0] + 11 * talon.Param[1],
+        AssassinSkills.calculateDragonTalonDamageBonus(talon, 12));
+
+    Attributes attrs = attributes(100, 1, 1, 1000);
+    attrs.base().put(Stat.strength, 100);
+    attrs.base().put(Stat.dexterity, 80);
+    attrs.base().put(Stat.item_kickdamage, 2);
+    attrs.reset();
+    com.riiablo.codec.excel.Armor.Entry boots = Riiablo.files.armor.get("lbt");
+    assertNotNull(boots);
+    int[] barefoot = AssassinSkills.calculateDragonTalonKickDamage(talon, 12, attrs, null);
+    int[] booted = AssassinSkills.calculateDragonTalonKickDamage(talon, 12, attrs, boots);
+    assertTrue(booted[0] > barefoot[0]);
+    assertTrue(booted[1] >= booted[0]);
+    assertEquals(100, AssassinSkills.dragonTalonKnockbackChance(
+        talon, 12, false, false, false));
+    assertEquals(86, AssassinSkills.dragonTalonKnockbackChance(
+        talon, 12, false, false, true));
+    assertEquals(79, AssassinSkills.dragonTalonKnockbackChance(
+        talon, 12, false, true, false));
+    assertEquals(79, AssassinSkills.dragonTalonKnockbackChance(
+        talon, 12, true, false, false));
+  }
+
+  @Test
+  void dragonTalonChainsKicksConsumesChargesOnceAndKnocksBackOnlyAtEnd() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    Map openMap = new Map(0, 0) {
+      @Override public int flags(Vector2 point) { return 0; }
+    };
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", openMap));
+    try {
+      Attributes assassinAttrs = attributes(1000, 1, 1, 100000);
+      assassinAttrs.base().put(Stat.strength, 100);
+      assassinAttrs.base().put(Stat.dexterity, 100);
+      assassinAttrs.reset();
+      int assassin = createPlayer(world, 0, 0, assassinAttrs);
+      int target = createMonster(world, 1, 0, attributes(100000, 0, 0, 0));
+      Skills.Entry talon = Riiablo.files.skills.get("Dragon Talon");
+      Skills.Entry tiger = Riiablo.files.skills.get("Tiger Strike");
+      CharData data = CharData.createRemote("talon", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(talon.Id, 12);
+      Item boots = new Item();
+      boots.reset();
+      boots.setBase(Riiablo.files.armor.get("lbt"));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.FEET, data.getItems().add(boots));
+      world.getMapper(Player.class).get(assassin).data = data;
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      AssassinSkills.addProgressiveCharge(states, tiger, 5, assassin);
+
+      Casting casting = world.getMapper(Casting.class).get(assassin)
+          .set(talon.Id, target, world.getMapper(Position.class).get(target).position);
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, talon.Id, target, casting.targetVec, talon.srvstfunc, talon.cltstfunc));
+      assertEquals(3, casting.dragonTalonRemainingKicks);
+
+      MathUtils.random.setSeed(0xD2A10L);
+      float previousHp = world.getMapper(AttributesWrapper.class).get(target)
+          .attrs.get(Stat.hitpoints).asFixed();
+      for (int kick = 1; kick <= 3; kick++) {
+        world.getSystem(EventSystem.class).dispatch(
+            AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+        float currentHp = world.getMapper(AttributesWrapper.class).get(target)
+            .attrs.get(Stat.hitpoints).asFixed();
+        assertTrue(currentHp < previousHp, "each Dragon Talon kick must resolve independently");
+        previousHp = currentHp;
+        assertEquals(3 - kick, casting.dragonTalonRemainingKicks);
+        if (kick == 1) {
+          assertNull(states.getState(StateId.PROGRESSIVE_DAMAGE));
+          AssassinSkills.addProgressiveCharge(states, tiger, 5, assassin);
+        }
+        if (kick < 3) {
+          assertEquals(1f, world.getMapper(Position.class).get(target).position.x, 0.001f,
+              "knockback is restricted to the final kick");
+          world.getSystem(EventSystem.class).dispatch(
+              AnimDataFinishedEvent.obtain(assassin));
+          assertTrue(world.getMapper(Casting.class).has(assassin));
+        }
+      }
+      assertTrue(world.getMapper(Position.class).get(target).position.x > 1f);
+      assertEquals(1, AssassinSkills.progressiveCharges(
+          states, StateId.PROGRESSIVE_DAMAGE),
+          "the multi-kick sequence must release progressive charges only once");
+      world.getSystem(EventSystem.class).dispatch(AnimDataFinishedEvent.obtain(assassin));
+      assertTrue(!world.getMapper(Casting.class).has(assassin));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void dragonTalonStopsRemainingKicksWhenTargetDies() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(1000, 100, 100, 100000));
+      int target = createMonster(world, 1, 0, attributes(1, 0, 0, 0));
+      Skills.Entry talon = Riiablo.files.skills.get("Dragon Talon");
+      CharData data = CharData.createRemote("talon", (byte) Riiablo.ASSASSIN);
+      data.setSkillLevel(talon.Id, 12);
+      world.getMapper(Player.class).get(assassin).data = data;
+      Casting casting = world.getMapper(Casting.class).get(assassin)
+          .set(talon.Id, target, world.getMapper(Position.class).get(target).position);
+      world.getSystem(EventSystem.class).dispatch(SkillStartEvent.obtain(
+          assassin, talon.Id, target, casting.targetVec, talon.srvstfunc, talon.cltstfunc));
+
+      MathUtils.random.setSeed(0xD2A11L);
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(assassin, Engine.KEYFRAME_ATK));
+      world.getSystem(EventSystem.class).dispatch(AnimDataFinishedEvent.obtain(assassin));
+
+      assertTrue(!world.getMapper(Casting.class).has(assassin));
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void phoenixStrikeExposesNativeNonStackingStages() {
     Skills.Entry phoenix = Riiablo.files.skills.get("Royal Strike");

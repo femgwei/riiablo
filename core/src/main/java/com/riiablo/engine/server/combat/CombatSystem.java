@@ -432,6 +432,36 @@ public class CombatSystem {
       int coldLengthOverride, int poisonLengthOverride,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, false);
+  }
+
+  /**
+   * Resolves a melee attack whose physical min/max were already fully scaled
+   * by a native skill formula (for example Assassin kick damage).
+   */
+  public CombatResult calculatePrecomputedMeleeAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
+        attackMinDamage, attackMaxDamage, attackRating, false,
+        null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true);
+  }
+
+  private CombatResult calculateAttackInternal(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, boolean precomputedPhysicalDamage) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -445,7 +475,7 @@ public class CombatSystem {
     a.level = Math.max(1, statInt(attacker, Stat.level, 1));
     a.strength = statInt(attacker, Stat.strength, 0);
     a.dexterity = statInt(attacker, Stat.dexterity, 0);
-    boolean hasAttackProfileOverride = attackMinDamageOverride > 0
+    boolean hasAttackProfileOverride = precomputedPhysicalDamage || attackMinDamageOverride > 0
         || attackMaxDamageOverride > 0 || attackRatingOverride > 0;
     a.attackRating = attackRatingOverride > 0
         ? attackRatingOverride : statInt(attacker, Stat.tohit, 0);
@@ -474,6 +504,12 @@ public class CombatSystem {
     if (attackerStates != null) {
       a.enhancedDamagePercent += attackerStates.getTotalDamageModifier();
       a.attackRatingPercent += attackerStates.getTotalAttackModifier();
+    }
+    if (precomputedPhysicalDamage) {
+      // The caller has already applied strength/dexterity, skill ED,
+      // damagepercent and item_maxdamage_percent exactly as D2Common does.
+      a.strength = 0;
+      a.enhancedDamagePercent = 0;
     }
     a.elementalMinDamage[DAMAGE_FIRE] = statInt(attacker, Stat.firemindam, 0);
     a.elementalMaxDamage[DAMAGE_FIRE] = statInt(attacker, Stat.firemaxdam, 0);

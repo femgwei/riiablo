@@ -17,12 +17,14 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
+import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.AssassinSkills;
@@ -52,6 +54,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofReference;
@@ -452,6 +455,7 @@ public class Actioneer extends PassiveSystem {
     if (!mCasting.has(event.entityId)) return;
     log.traceEntry("onAnimDataFinished(entityId: {})", event.entityId);
     final Casting casting = mCasting.get(event.entityId);
+    final int completedTargetId = casting.targetId;
     Skills.Entry completedSkill = Riiablo.files.skills.get(casting.skillId);
     
     // D2MOD: Check if target is dead after attack animation completes
@@ -471,10 +475,19 @@ public class Actioneer extends PassiveSystem {
     if (completedSkill != null && completedSkill.srvstfunc == 61 && factory != null) {
       factory.finishSelfResurrection(event.entityId);
     }
+    if (casting.dragonTalonInitialized
+        && casting.dragonTalonRemainingKicks > 0
+        && casting.dragonTalonKickProcessed
+        && !targetDead) {
+      log.info("[ASSASSIN_DRAGON_TALON] phase=continue entity={} target={} remaining={} successes={}",
+          event.entityId, completedTargetId, casting.dragonTalonRemainingKicks,
+          casting.dragonTalonSuccessfulKicks);
+      return;
+    }
     mCasting.remove(event.entityId);
     
     if (targetDead && mSequence.has(event.entityId)) {
-      log.trace("Target {} is dead, stopping attack sequence for {}", casting.targetId, event.entityId);
+      log.trace("Target {} is dead, stopping attack sequence for {}", completedTargetId, event.entityId);
       mSequence.remove(event.entityId);
       if (mTarget.has(event.entityId)) {
         mTarget.remove(event.entityId);
@@ -520,6 +533,28 @@ public class Actioneer extends PassiveSystem {
         log.debug("[AMAZON_SKILL] phase=start entity={} target={} srvStFunc={} delegated=keyframe",
             entityId, targetId, srvstfunc);
         break;
+      case 24: { // SKILLS_SrvSt24_DragonTalon
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (casting == null || skill == null || targetId == Engine.INVALID_ENTITY
+            || !isInMeleeRange(entityId, targetId, 0)) {
+          log.info("[ASSASSIN_DRAGON_TALON] phase=start_reject entity={} target={} reason=range_or_target",
+              entityId, targetId);
+          if (mCasting.has(entityId)) mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        int level = Math.max(1, skillLevel(entityId, casting.skillId));
+        casting.dragonTalonRemainingKicks =
+            AssassinSkills.getDragonTalonKickCount(skill, level);
+        casting.dragonTalonSuccessfulKicks = 0;
+        casting.dragonTalonInitialized = true;
+        casting.dragonTalonProgressiveReleased = false;
+        casting.dragonTalonKickProcessed = false;
+        log.info("[ASSASSIN_DRAGON_TALON] phase=start entity={} target={} skillLevel={} kicks={}",
+            entityId, targetId, level, casting.dragonTalonRemainingKicks);
+        break;
+      }
       case 42: // native Fire Hit pre-hit setup; resolved authoritatively at the keyframe
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
@@ -597,6 +632,25 @@ public class Actioneer extends PassiveSystem {
         if (srvdofunc == 7) {
           log.info("[MONSTER_SKILL] phase=jab entity={} target={} using=melee_hit_pipeline",
               entityId, targetId);
+        }
+        Casting activeCasting = mCasting.get(entityId);
+        Skills.Entry activeSkill = activeCasting != null
+            ? Riiablo.files.skills.get(activeCasting.skillId) : null;
+        int activeSkillLevel = activeCasting != null
+            ? Math.max(1, skillLevel(entityId, activeCasting.skillId)) : 1;
+        boolean dragonTalon = srvdofunc == 42;
+        boolean dragonTalonLastKick = false;
+        if (dragonTalon) {
+          if (activeCasting == null || activeSkill == null) break;
+          if (!activeCasting.dragonTalonInitialized) {
+            activeCasting.dragonTalonRemainingKicks =
+                AssassinSkills.getDragonTalonKickCount(activeSkill, activeSkillLevel);
+            activeCasting.dragonTalonInitialized = true;
+          }
+          if (activeCasting.dragonTalonRemainingKicks <= 0) break;
+          activeCasting.dragonTalonKickProcessed = true;
+          activeCasting.dragonTalonRemainingKicks--;
+          dragonTalonLastKick = activeCasting.dragonTalonRemainingKicks == 0;
         }
         if (targetId == Engine.INVALID_ENTITY) break;
         if (!mAttributesWrapper.has(targetId)) break;
@@ -703,16 +757,33 @@ public class Actioneer extends PassiveSystem {
           break;
         }
         Attributes attackerAttrs = mAttributesWrapper.get(entityId).attrs;
-        CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
-            attackerAttrs,
-            attrs,
-            attackerPlayer,
-            targetPlayer,
-            false,
-            monsterAttackMinDamage(entityId),
-            monsterAttackMaxDamage(entityId),
-            monsterAttackRating(entityId),
-            stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        CombatSystem.CombatResult combat;
+        if (dragonTalon) {
+          int[] kickDamage = AssassinSkills.calculateDragonTalonKickDamage(
+              activeSkill, activeSkillLevel, attackerAttrs, equippedBoots(entityId));
+          int attackRating = AssassinSkills.dragonTalonAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs);
+          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+              attackerAttrs, attrs, attackerPlayer, targetPlayer,
+              kickDamage[0], kickDamage[1], attackRating,
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+          log.info("[ASSASSIN_DRAGON_TALON] phase=kick entity={} target={} index={} remaining={} "
+                  + "damageRange={}..{} attackRating={} last={}",
+              entityId, targetId, activeCasting.dragonTalonSuccessfulKicks + 1,
+              activeCasting.dragonTalonRemainingKicks,
+              kickDamage[0], kickDamage[1], attackRating, dragonTalonLastKick);
+        } else {
+          combat = CombatSystem.INSTANCE.calculateAttack(
+              attackerAttrs,
+              attrs,
+              attackerPlayer,
+              targetPlayer,
+              false,
+              monsterAttackMinDamage(entityId),
+              monsterAttackMaxDamage(entityId),
+              monsterAttackRating(entityId),
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        }
         if (!combat.hit) {
           log.info("[COMBAT_HIT] entity={} target={} result=miss chance={}% attackerLevel={} targetLevel={} ar={} defense={}",
               entityId, targetId, combat.hitChance,
@@ -726,7 +797,8 @@ public class Actioneer extends PassiveSystem {
         }
 
         AssassinSkills.ProgressiveRelease progressiveRelease = null;
-        if (AssassinSkills.isFinishingMove(srvdofunc) && mUnitStates.has(entityId)) {
+        if (AssassinSkills.isFinishingMove(srvdofunc) && mUnitStates.has(entityId)
+            && (!dragonTalon || !activeCasting.dragonTalonProgressiveReleased)) {
           UnitStates unitStates = mUnitStates.get(entityId);
           if (unitStates.stateList != null) {
             progressiveRelease = AssassinSkills.resolveProgressiveRelease(
@@ -747,9 +819,12 @@ public class Actioneer extends PassiveSystem {
             }
           }
         }
+        if (dragonTalon) activeCasting.dragonTalonProgressiveReleased = true;
         log.info("[COMBAT_HIT] entity={} target={} result=hit damage={} chance={}% critical={} deadly={} crushing={}",
             entityId, targetId, combat.totalDamage, combat.hitChance,
             combat.critical, combat.deadlyStrike, combat.crushingBlow);
+        if (dragonTalon) activeCasting.dragonTalonSuccessfulKicks++;
+        if (dragonTalon) drainDragonTalonDurability(entityId, targetId);
 
         // D2MOO SrvDo034/SrvDo035 adds a progressive state only after the
         // shared combat record reports a successful, unblocked hit. The
@@ -847,6 +922,9 @@ public class Actioneer extends PassiveSystem {
         if (hitpoints.asFixed() <= 0f) {
           log.debug("{} is dead!", targetId);
           events.dispatch(DeathEvent.obtain(entityId, targetId));
+        } else if (dragonTalonLastKick
+            && shouldDragonTalonKnockback(activeSkill, activeSkillLevel, targetId)) {
+          applyDragonTalonKnockback(entityId, targetId);
         }
                   break;
       }
@@ -1058,6 +1136,75 @@ public class Actioneer extends PassiveSystem {
 
   private boolean isPlayerEntity(int entityId) {
     return mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
+  }
+
+  private Armor.Entry equippedBoots(int entityId) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return null;
+    Item item = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.FEET);
+    return item != null && item.base instanceof Armor.Entry
+        ? (Armor.Entry) item.base : null;
+  }
+
+  /** One native durability resolution for each successful kick combat record. */
+  private void drainDragonTalonDurability(int attackerId, int targetId) {
+    if (mPlayer.has(attackerId) && mPlayer.get(attackerId).data != null) {
+      Item boots = mPlayer.get(attackerId).data.getItems().getEquipped(BodyLoc.FEET);
+      ItemDurabilityManager.INSTANCE.drainWeaponDurability(boots, true);
+    }
+    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
+      ItemDurabilityManager.INSTANCE.drainArmorDurability(
+          mPlayer.get(targetId).data.getItems());
+    }
+  }
+
+  private boolean shouldDragonTalonKnockback(
+      Skills.Entry skill, int skillLevel, int targetId) {
+    boolean playerOrHireling = mPlayer.has(targetId) || mMercenary.has(targetId);
+    Monster monster = mMonster.get(targetId);
+    boolean boss = monster != null && (monster.rank == MonsterRank.BOSS
+        || monster.monstats != null && (monster.monstats.boss || monster.monstats.primeevil));
+    boolean unique = monster != null && MonsterRank.isUnique(monster.rank);
+    int chance = AssassinSkills.dragonTalonKnockbackChance(
+        skill, skillLevel, playerOrHireling, boss, unique);
+    boolean applied = chance > 0 && MathUtils.random(99) < chance;
+    log.info("[ASSASSIN_DRAGON_TALON] phase=knockback_roll target={} class={} chance={} applied={}",
+        targetId, playerOrHireling ? "player_or_hireling" : boss ? "boss" : unique ? "unique" : "normal",
+        chance, applied);
+    return applied;
+  }
+
+  /** Collision-clamped authoritative displacement for Dragon Talon's final kick. */
+  private boolean applyDragonTalonKnockback(int attackerId, int targetId) {
+    if (!mPosition.has(attackerId) || !mPosition.has(targetId)) return false;
+    Vector2 attacker = mPosition.get(attackerId).position;
+    Vector2 target = mPosition.get(targetId).position;
+    Vector2 direction = new Vector2(target).sub(attacker);
+    if (direction.isZero(0.0001f)) return false;
+    direction.nor();
+    Vector2 destination = new Vector2();
+    boolean found = false;
+    for (float distance = StatusEffectApplier.KNOCKBACK_DISTANCE;
+         distance >= 0.5f; distance -= 0.5f) {
+      destination.set(target).mulAdd(direction, distance);
+      int flags = map != null ? map.flags(destination) : 0;
+      if ((flags & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      log.info("[ASSASSIN_DRAGON_TALON] phase=knockback_blocked source={} target={}",
+          attackerId, targetId);
+      return false;
+    }
+    target.set(destination);
+    if (mPathfind.has(targetId)) mPathfind.remove(targetId);
+    if (mVelocity.has(targetId)) mVelocity.get(targetId).velocity.setZero();
+    Box2DBody body = mBox2DBody.get(targetId);
+    if (body != null && body.body != null) body.body.setTransform(destination, 0);
+    log.info("[ASSASSIN_DRAGON_TALON] phase=knockback source={} target={} destination=({}, {})",
+        attackerId, targetId, destination.x, destination.y);
+    return true;
   }
 
   private Item getThrowableWeapon(int entityId) {

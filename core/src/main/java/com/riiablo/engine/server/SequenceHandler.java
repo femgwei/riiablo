@@ -4,6 +4,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
 import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
@@ -15,6 +16,7 @@ public class SequenceHandler extends IteratingSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<AnimData> mAnimData;
+  protected ComponentMapper<Casting> mCasting;
 
   protected CofManager cofs;
 
@@ -22,6 +24,17 @@ public class SequenceHandler extends IteratingSystem {
   public void onAnimDataFinished(AnimDataFinishedEvent event) {
     if (!mSequence.has(event.entityId)) return;
     Sequence sequence = mSequence.get(event.entityId);
+    Casting casting = mCasting.get(event.entityId);
+    if (casting != null && casting.dragonTalonInitialized
+        && casting.dragonTalonRemainingKicks > 0
+        && casting.dragonTalonKickProcessed) {
+      sequence.sequence(sequence.mode1, sequence.mode2);
+      mAnimData.get(event.entityId).override = -1;
+      com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).info(
+          "[ASSASSIN_DRAGON_TALON] phase=repeat_animation entity={} remaining={}",
+          event.entityId, casting.dragonTalonRemainingKicks);
+      return;
+    }
     // Log sequence transition for debugging
     com.riiablo.logger.Logger log = com.riiablo.logger.LogManager.getLogger(SequenceHandler.class);
     log.trace("Sequence finished for entity {}: mode1={} -> mode2={}", event.entityId, sequence.mode1, sequence.mode2);
@@ -37,6 +50,10 @@ public class SequenceHandler extends IteratingSystem {
   protected void process(int entityId) {
     Sequence sequence = mSequence.get(entityId);
     if (!sequence.started) {
+      Casting casting = mCasting.get(entityId);
+      if (casting != null && casting.dragonTalonInitialized) {
+        casting.dragonTalonKickProcessed = false;
+      }
       sequence.started = true;
       // D2 starts each action at frame zero. Force the COF event even when a
       // repeated action uses the same mode (for example consecutive Throws),

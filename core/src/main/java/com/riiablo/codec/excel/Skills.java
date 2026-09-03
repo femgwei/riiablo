@@ -89,6 +89,9 @@ public class Skills extends Excel<Skills.Entry> {
     public String  prgcalc[];
     @Column public int     HitShift;
     @Column public int     SrcDam;
+    /** Native flat attack-rating factor and per-level increment. */
+    @Column public int     ToHit;
+    @Column public int     LevToHit;
     @Column public int     MinDam;
     @Column public int     MaxDam;
     @Column(startIndex = 1, endIndex = 5)

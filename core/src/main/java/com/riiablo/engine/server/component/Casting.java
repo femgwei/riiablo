@@ -14,11 +14,22 @@ public class Casting extends PooledComponent {
   @EntityId
   public int targetId;
   public final Vector2 targetVec = new Vector2();
+  /** Server-only state for native Dragon Talon SrvSt24/SrvDo042 chaining. */
+  public int dragonTalonRemainingKicks;
+  public int dragonTalonSuccessfulKicks;
+  public boolean dragonTalonInitialized;
+  public boolean dragonTalonProgressiveReleased;
+  public boolean dragonTalonKickProcessed;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     this.skillId = skillId;
     this.targetId = targetId;
     this.targetVec.set(targetVec);
+    dragonTalonRemainingKicks = 0;
+    dragonTalonSuccessfulKicks = 0;
+    dragonTalonInitialized = false;
+    dragonTalonProgressiveReleased = false;
+    dragonTalonKickProcessed = false;
     return this;
   }
 
@@ -27,5 +38,10 @@ public class Casting extends PooledComponent {
     skillId = -1;
     targetId = Engine.INVALID_ENTITY;
     targetVec.setZero();
+    dragonTalonRemainingKicks = 0;
+    dragonTalonSuccessfulKicks = 0;
+    dragonTalonInitialized = false;
+    dragonTalonProgressiveReleased = false;
+    dragonTalonKickProcessed = false;
   }
 }

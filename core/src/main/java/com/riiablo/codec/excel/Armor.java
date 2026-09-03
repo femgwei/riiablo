@@ -12,6 +12,9 @@ public class Armor extends Excel<Armor.Entry> {
     @Column public int     minac;
     @Column public int     maxac;
     @Column public int     reqstr;
+    /** Native weapon-style stat scaling used by kick damage. */
+    @Column public int     StrBonus;
+    @Column public int     DexBonus;
     @Column public int     durability;
     @Column public int     block;
   }

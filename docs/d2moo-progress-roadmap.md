@@ -56,7 +56,7 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
-| 刺客 Assassin | 90% | 10% | 陷阱、三层聚气及四套元素聚气释放已接通；完整踢击、双爪完成技和暗影系仍待补齐 |
+| 刺客 Assassin | 92% | 8% | 陷阱、三层聚气、四套元素聚气释放及 Dragon Talon 连续踢击已接通；双爪/范围踢、位移完成技和暗影系仍待补齐 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
@@ -131,6 +131,10 @@
     - [x] ~~完成 Blades of Ice 范围冰伤、冻结和三层冰弹~~：按 `PrgDam=4` 将 Skills.txt 冰冷伤害加入完成技；二层复用 `SrvDo038` 的单次共享物理/冰冷伤害记录并在半径 6 内施加冰冷；三层按 `PrgStack` 叠加二层，在半径 3 内执行 9 次原生随机布点并创建 `bladesoficecubes`。主目标按 `Param5` 冻结，冰块按 `SrvDmg10` 冻结命中目标，并以原生 Range 帧到期。
     - [x] ~~完成 Phoenix Strike 三阶段元素导弹与叠加规则~~：严格按 `PrgStack=false` 只释放当前层；一层 `SrvDo040` 创建 Meteor Center，并由 `SrvHit04/14` 生成陨石范围伤害与原生 18 点持续火场；二层 `SrvDo143` 以 `PrgCalc2=10` 创建 7 路 Chain Lightning 并按 `Param2+1` 权威续跳；三层 `SrvDo041` 以 `PrgCalc3=16` 创建 16 枚 Chaos Ice，按 `SrvDo35` 周期转向并冻结命中目标。
   - [ ] 完成 Dragon Talon/Claw/Tail/Flight 的多段、双爪、范围火焰和目标位移。
+    - [x] ~~完成 Dragon Talon `SrvSt24/SrvDo042` 原生连续踢击~~：严格按 `calc1=lvl/6+1` 初始化踢击次数，每次动画独立命中、伤害和耐久结算；聚气只在首个成功踢击释放一次，目标死亡立即终止后续动作；末击按普通/Unique/Boss/玩家与佣兵分别读取 100%/`calc2`/`calc3`/`calc4` 击退概率，并用地图碰撞限制服务端位移。靴子 `mindam/maxdam/StrBonus/DexBonus`、`item_kickdamage`、技能 ED 和原生 `dmXY` 衰减公式已纳入伤害/概率计算。
+    - [ ] 完成 Dragon Claw 双爪两次命中、左右爪伤害与聚气单次释放。
+    - [ ] 完成 Dragon Tail 主目标踢击和按实际物理伤害生成范围火焰爆炸。
+    - [ ] 完成 Dragon Flight 目标旁安全落点、位移同步和到达后的完成技命中。
 
 ### P2：世界交互和多人闭环
 
@@ -173,11 +177,12 @@
 - 2026-09-03：完成 Claws of Thunder `SrvDo036/037` 三阶段释放；直接闪电伤害、64 路 Nova 和 16 条 Charged Bolt 路径均按原生 `PrgStack/SrvPrgFunc/PrgCalc` 接入，服务端导弹共享 Nova 命中去重并保留技能伤害快照；5 组共 34 个用例通过，D2GS 编译通过。
 - 2026-09-03：完成 Blades of Ice `SrvDo038/039` 三阶段释放；直接冰伤、二层半径 6 范围冰伤/减速、三层主目标冻结及半径 3 随机冰块均按原生数据接入；零速度冰块增加 Range 帧权威回收，5 组共 38 个用例通过，D2GS 编译通过。
 - 2026-09-04：完成 Phoenix Strike `SrvDo040/143/041` 三阶段释放；按非叠加规则分别创建 Meteor、7 路 Chain Lightning 和 16 枚 Chaos Ice，补齐陨石 18 点火场、闪电续跳、冰弹转向及冻结伤害快照；5 组共 43 个用例通过，D2GS 编译通过。
+- 2026-09-04：完成 Dragon Talon `SrvSt24/SrvDo042` 连续踢击；接入 `calc1` 次数、靴子力量/敏捷踢击伤害、每击独立命中和耐久、聚气单次消费、末击分类概率与碰撞安全击退；刺客、战斗、状态与原生公式 6 组共 51 个用例通过，D2GS 编译通过。
 
 ## 当前下一项
 
 已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20`、Wake of Fire `SrvDo125/SrvDo31`、Inferno Sentry `SrvDo95`，以及 Death Sentry AI Fn104 / `SrvDo55` 首项。
-Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态及 Fists of Fire、Claws of Thunder、Blades of Ice、Phoenix Strike 三阶段释放已完成。下一项为 **Dragon Talon 原生连续踢击**：对照 `SrvSt24/SrvDo042` 补齐 `Calc1` 踢击次数、最后一击击退、每击命中/伤害与聚气只消费一次；随后依次处理 Dragon Claw、Dragon Tail 和 Dragon Flight。
+Charged Bolt/Lightning Sentry、`SrvDo034/035` 聚气状态、四套元素聚气释放及 Dragon Talon 原生连续踢击已完成。下一项为 **Dragon Claw 双爪完成技**：对照 `SrvSt25/SrvDo046` 补齐左右爪独立命中与伤害、第二爪动画/耐久，以及整套双击只消费一次聚气；随后依次处理 Dragon Tail 和 Dragon Flight。
 
 ## 记录规则
 
