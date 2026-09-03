@@ -584,6 +584,10 @@ public class ServerSkillSystem extends PassiveSystem {
       trap.trapTargetX = target.x;
       trap.trapTargetY = target.y;
       if (bladeSentinel) {
+        trap.bladeOriginX = caster.x;
+        trap.bladeOriginY = caster.y;
+        trap.bladeMovingToTarget = true;
+        trap.bladeMissileId = Engine.INVALID_ENTITY;
         int duration = Math.max(1, SkillFormula.evaluate(skill.calc4, skill, skillLevel));
         trap.durationFrames = duration;
       }

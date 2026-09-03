@@ -25,6 +25,13 @@ public class SummonedPet extends Component {
   public boolean hasTrapTarget;
   public float trapTargetX;
   public float trapTargetY;
+  /** Blade Creeper AI command origin (the caster position at placement). */
+  public float bladeOriginX;
+  public float bladeOriginY;
+  /** True while Blade Creeper is travelling from its origin to the cast target. */
+  public boolean bladeMovingToTarget;
+  /** The single SrvDo20 missile attached to this Blade Creeper controller. */
+  public int bladeMissileId;
 
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
@@ -42,6 +49,10 @@ public class SummonedPet extends Component {
     hasTrapTarget = false;
     trapTargetX = 0f;
     trapTargetY = 0f;
+    bladeOriginX = 0f;
+    bladeOriginY = 0f;
+    bladeMovingToTarget = true;
+    bladeMissileId = -1;
     return this;
   }
 }

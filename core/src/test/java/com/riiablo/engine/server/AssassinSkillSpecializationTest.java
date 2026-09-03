@@ -2,6 +2,7 @@ package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.riiablo.Riiablo;
@@ -101,7 +102,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   void sentrySrvDo045CreatesOwnedTrapWithNativeShotBudget() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(), factory)
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
     try {
       int owner = world.create();
@@ -147,7 +149,8 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
   void bladeSentinelSrvDo044StartsAtCasterAndLaunchesTowardTarget() {
     RecordingFactory factory = new RecordingFactory();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(), factory)
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
         .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
     try {
       int owner = world.create();
@@ -157,7 +160,11 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       data.setSkillLevel(blade.Id, 3);
       world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
       world.getMapper(Position.class).create(owner).position.set(2, 3);
-      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      Attributes ownerAttrs = attributes(100);
+      ownerAttrs.base().put(Stat.mindamage, 10);
+      ownerAttrs.base().put(Stat.maxdamage, 20);
+      ownerAttrs.reset();
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = ownerAttrs;
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           owner, blade.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), blade.srvdofunc, 0));
 
@@ -175,8 +182,47 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.process();
       assertEquals(1, factory.missiles);
       assertEquals("blade creeper", factory.missileName);
+      Missile bladeMissile = world.getMapper(Missile.class).get(factory.missileEntityId);
+      assertNotNull(bladeMissile);
+      assertTrue(bladeMissile.attached);
+      assertEquals(factory.entityId, bladeMissile.attachedEntityId);
+      assertEquals(owner, bladeMissile.ownerId,
+          "the player remains the authoritative damage owner");
+      assertEquals(blade.Id, bladeMissile.skillId);
+      assertTrue(bladeMissile.damageSnapshot,
+          "Blade Sentinel must inherit the caster's weapon damage snapshot");
       assertTrue(world.getMapper(SummonedPet.class).has(factory.entityId),
           "Blade Sentinel controller survives until its native duration expires");
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(5, 3);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+
+      boolean reachedTarget = false;
+      boolean startedReturn = false;
+      for (int i = 0; i < 80; i++) {
+        world.process();
+        float controllerX = world.getMapper(Position.class).get(factory.entityId).position.x;
+        float missileX = world.getMapper(Position.class).get(factory.missileEntityId).position.x;
+        assertEquals(controllerX, missileX, 0.0001f,
+            "SrvDo20 keeps the blade missile attached to its controller");
+        if (controllerX >= 7.99f) reachedTarget = true;
+        if (reachedTarget && controllerX < 7f) startedReturn = true;
+      }
+      assertTrue(reachedTarget, "Blade Creeper must reach the selected endpoint");
+      assertTrue(startedReturn, "Blade Creeper must switch back toward its cast origin");
+      assertEquals(1, factory.missiles, "Blade Creeper creates one attached missile only");
+      assertTrue(bladeMissile.nextHitFrame.containsKey(target),
+          "the attached blade applies native per-target NextHit suppression");
+      assertTrue(world.getEntityManager().isActive(factory.missileEntityId),
+          "SrvHit37 unit collisions must not destroy Blade Creeper");
+
+      world.delete(factory.entityId);
+      world.process();
+      world.process();
+      assertFalse(world.getEntityManager().isActive(factory.missileEntityId),
+          "SrvDo20 removes the blade when its controller disappears");
     } finally {
       world.dispose();
     }
@@ -189,6 +235,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     String petType;
     int petMaximum;
     int missiles;
+    int missileEntityId = Engine.INVALID_ENTITY;
     String missileName;
     String attackSkill;
 
@@ -214,6 +261,7 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       Missiles.Entry row = Riiablo.files.Missiles.get(id);
       if (row == null) return Engine.INVALID_ENTITY;
       int missileId = world.create();
+      missileEntityId = missileId;
       world.getMapper(Missile.class).create(missileId)
           .set(row, position, row.Range).setOwner(ownerId);
       world.getMapper(Position.class).create(missileId).position.set(position);

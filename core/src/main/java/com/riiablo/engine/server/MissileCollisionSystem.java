@@ -91,6 +91,33 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (!missile.authoritative) return;
     Position position = mPosition.get(entityId);
     Velocity velocity = mVelocity.get(entityId);
+    int elapsedFrames = Math.max(1, Math.round(Math.max(0f, world.delta) * 25f));
+    missile.nativeFrame += elapsedFrames;
+
+    // D2MOO SrvDo20 retargets Blade Creeper's missile path to its controller
+    // every frame. The stored damage owner remains the casting player.
+    lastPos.set(position.position);
+    if (missile.attached) {
+      if (missile.attachedEntityId < 0
+          || !world.getEntityManager().isActive(missile.attachedEntityId)
+          || !mPosition.has(missile.attachedEntityId)) {
+        log.info("[BLADE_SENTINEL] phase=missile_remove missileId={} owner={} controller={} "
+                + "reason=controller_missing",
+            entityId, missile.ownerId, missile.attachedEntityId);
+        world.delete(entityId);
+        return;
+      }
+      AttributesWrapper controllerAttrs = mAttributesWrapper.has(missile.attachedEntityId)
+          ? mAttributesWrapper.get(missile.attachedEntityId) : null;
+      StatRef controllerHp = controllerAttrs != null && controllerAttrs.attrs != null
+          ? controllerAttrs.attrs.get(Stat.hitpoints) : null;
+      if (controllerHp != null && controllerHp.asFixed() <= 0f) {
+        world.delete(entityId);
+        return;
+      }
+      position.position.set(mPosition.get(missile.attachedEntityId).position);
+      velocity.velocity.setZero();
+    }
 
     // Guided Arrow/Bone Spirit tracks its native target every server tick.
     // Keep the current speed while steering; when the target disappears the
@@ -107,12 +134,14 @@ public class MissileCollisionSystem extends IteratingSystem {
       }
     }
     
-    // 保存上一帧位置
-    lastPos.set(position.position);
-    
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）
-    float moveDistance = velocity.velocity.len() * world.delta;
-    position.position.add(velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
+    float moveDistance;
+    if (missile.attached) {
+      moveDistance = lastPos.dst(position.position);
+    } else {
+      moveDistance = velocity.velocity.len() * world.delta;
+      position.position.add(velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
+    }
 
     if (!updateNativeRoom(entityId, missile, position)) return;
 
@@ -283,7 +312,16 @@ public class MissileCollisionSystem extends IteratingSystem {
             Integer.toHexString(mNativeUnitFlags.get(targetId).flags()));
         return false;
       }
-      if (!missile.hitTargets.add(targetId)) {
+      if (missile.attached) {
+        int nextFrame = missile.nextHitFrame.get(targetId, Integer.MIN_VALUE);
+        if (missile.nativeFrame < nextFrame) return false;
+        // With NextHit set, D2MOO installs JUSTHIT for NextDelay frames. If
+        // it is clear, the collision may be evaluated again on the next game
+        // frame (the blade still needs to be able to hit on its return pass).
+        int delay = missile.missile != null && missile.missile.NextHit
+            ? Math.max(1, missile.missile.NextDelay) : 1;
+        missile.nextHitFrame.put(targetId, missile.nativeFrame + delay);
+      } else if (!missile.hitTargets.add(targetId)) {
         // A piercing projectile must never repeatedly damage the same unit on
         // consecutive frames while its swept segment overlaps the target.
         return false;
@@ -319,7 +357,7 @@ public class MissileCollisionSystem extends IteratingSystem {
 
       if (!mAttributesWrapper.has(missile.ownerId) || !mAttributesWrapper.has(targetId)) {
         log.warn("Missile {} collided with entity {} without complete combat attributes", missileId, targetId);
-        world.delete(missileId);
+        if (!missile.attached) world.delete(missileId);
         return true;
       }
 
@@ -334,7 +372,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         log.info("[MISSILE_HIT] phase=skip_dead missileId={} owner={} target={} targetHp={}",
             missileId, missile.ownerId, targetId,
             targetHitpoints != null ? targetHitpoints.asFixed() : 0f);
-        world.delete(missileId);
+        if (!missile.attached) world.delete(missileId);
         return true;
       }
       log.info("[MISSILE_HIT] phase=stats missileId={} owner={} target={} "
@@ -436,6 +474,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       // Native Pierce keeps the missile alive after a successful collision.
       // A miss/block still consumes the projectile, while a dead target is
       // handled by the normal death path above.
+      if (missile.attached) return true;
       if (damageHit && missile.pierceEnabled && missile.pierceChance > 0
           && com.badlogic.gdx.math.MathUtils.random(99) < missile.pierceChance) {
         log.info("[MISSILE_PIERCE] phase=continue missileId={} target={} chance={} hitCount={}",

@@ -59,6 +59,18 @@ public class Missile extends PooledComponent {
   public int targetId = -1;
   public boolean homing;
 
+  /**
+   * D2MOO Missile SrvDo20 attaches Blade Creeper's visual/damage missile to
+   * its moving Blade Sentinel monster controller. Damage ownership remains
+   * with the player, so this is deliberately separate from {@link #ownerId}.
+   */
+  public int attachedEntityId = -1;
+  public boolean attached;
+  /** Native frame clock used by NextHit/NextDelay for attached missiles. */
+  public int nativeFrame;
+  public final com.badlogic.gdx.utils.IntIntMap nextHitFrame =
+      new com.badlogic.gdx.utils.IntIntMap();
+
   /** Skill damage multiplier captured when the missile is spawned. */
   public float damageMultiplier = 1f;
 
@@ -95,6 +107,10 @@ public class Missile extends PooledComponent {
     tickFrames = 0;
     targetId = -1;
     homing = false;
+    attachedEntityId = -1;
+    attached = false;
+    nativeFrame = 0;
+    nextHitFrame.clear();
     damageMultiplier = 1f;
     pierceEnabled = false;
     pierceChance = 0;
