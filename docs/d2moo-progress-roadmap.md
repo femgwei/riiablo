@@ -56,7 +56,7 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
-| 刺客 Assassin | 48% | 52% | 聚气、陷阱生命周期、踢击和更多状态分支 |
+| 刺客 Assassin | 55% | 45% | SrvDo044/SrvDo045 陷阱召唤、所有权、数量上限和基础攻击生命周期已完成；聚气、踢击和更多状态分支仍待补齐 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
@@ -115,7 +115,8 @@
   - 待补：完整命中与受击动画反馈；当前专项完成度约 99%，不能整体划掉。
 - [x] ~~完成刺客技能表审计与 Shadow Warrior/Shadow Master 原生召唤首项~~
   - 核对 `Skills.txt` 实际 ID（Shadow Warrior=268、Shadow Master=279、SrvDo049），按 `summon/pettype/petmax` 创建玩家所有权召唤物，并同步 `SHADOWWARRIOR` 状态；`AssassinSkillSpecializationTest` 已加入数据和 ECS 门槛。
-- [ ] 完成刺客陷阱生命周期（SrvDo044/SrvDo045）
+- [x] ~~完成刺客陷阱生命周期（SrvDo044/SrvDo045）~~
+  - 对照 D2MOO `SKILLS_SrvDo044_BladeSentinel` / `SKILLS_SrvDo045_Sentry`，由服务端创建有所有权的 `assassintrap` 召唤体，按 `petmax` 替换旧实例；新增权威 `AssassinTrapSystem` 负责目标搜索、15 帧攻击节拍、技能导弹快照和原生射击次数耗尽移除，避免陷阱攻击再次递归触发 SrvDo045。
   - 待补：Blade Sentinel、Charged Bolt/Wake/Lightning/Inferno/Death Sentry 的部署上限、持续时间、目标选择、导弹/区域表现和拆除。
 
 ### P2：世界交互和多人闭环
@@ -147,11 +148,14 @@
 - 2026-09-03：完成亚马逊元素箭服务端伤害首项；Skills.txt 快照接入所有技能导弹，Magic/Fire/Cold 转伤、Ice/Freezing 冰冻、Exploding/Freezing 的 SrvHit04→SrvHit01 范围子导弹及 Lightning Fury 子导弹元素伤害均加入回归门槛。
 - 2026-09-03：完成 Immolation Arrow 火场生命周期；按 D2MOO `SrvHit09/SrvDmg03` 生成 immolationfire 圆形区域，保留 100 帧并按 `DamageRate=41` 周期伤害，火场导弹通过统一同步管线广播。
 - 2026-09-03：接入统一持续毒云管线；Poison Javelin 按 `SrvDo02` 沿途生成 poisonjavcloud，Plague Javelin 按 `SrvHit02` 生成 plaguejavcloud，毒雾陷阱与 corpsepoisoncloud 复用同一生命周期、区域施毒和多人导弹同步；冰冻箭增加区域内多目标冻结 ECS 回归。
+- 2026-09-03：完成刺客 `SrvDo044/SrvDo045` 陷阱召唤首项；服务端按原生 `summon/pettype/petmax` 创建并替换 `assassintrap`，新增 `AssassinTrapSystem` 实现权威目标搜索、攻击节拍、导弹快照和射击耗尽生命周期，补充 SrvDo045 ECS 回归。
 
 ## 当前下一项
 
-已完成 **亚马逊元素箭服务端伤害、范围爆炸、冰冻状态和 Immolation 火场生命周期**。
-下一项调整为 **亚马逊命中/受击动画反馈**；完成后再回到刺客陷阱生命周期（SrvDo044/SrvDo045）。
+已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**。
+下一项为 **刺客陷阱攻击专项**：依次补齐 Blade Creeper `SrvDo20` 往返路径、Wake of Fire
+`SrvDo125` 火焰波、Inferno Sentry `SrvDo95` 持续喷射，以及 Death Sentry `SrvDo55`
+尸体筛选/爆炸；随后进行双客户端陷阱动画与导弹画面验证。
 
 ## 记录规则
 

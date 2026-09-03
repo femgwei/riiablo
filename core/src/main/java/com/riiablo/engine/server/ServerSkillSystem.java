@@ -226,7 +226,9 @@ public class ServerSkillSystem extends PassiveSystem {
     // must still be created in the local authoritative world.
     if (monstersOnly && !mMonster.has(event.entityId)
         && event.srvdofunc != 15 && event.srvdofunc != 16
-        && skill.srvdofunc != 15 && skill.srvdofunc != 16) {
+        && event.srvdofunc != 44 && event.srvdofunc != 45 && event.srvdofunc != 49
+        && skill.srvdofunc != 15 && skill.srvdofunc != 16
+        && skill.srvdofunc != 44 && skill.srvdofunc != 45 && skill.srvdofunc != 49) {
       consumeRangedAmmoForSkill(event, skill);
       return;
     }
@@ -250,6 +252,15 @@ public class ServerSkillSystem extends PassiveSystem {
     // ids 268/279 rather than the legacy SkillId constants.
     if (event.srvdofunc == 49 || skill.srvdofunc == 49) {
       spawnAssassinShadow(event, skill, skillLevel, start);
+      return;
+    }
+    // D2MOO SrvDo044/SrvDo045 create an owned Blade Sentinel/Sentry unit.
+    // The trap entity owns its later attack cadence; do not treat this as a
+    // normal player missile or the trap would recursively summon itself.
+    if ((event.srvdofunc == 44 || skill.srvdofunc == 44
+        || event.srvdofunc == 45 || skill.srvdofunc == 45)
+        && mPlayer.has(event.entityId)) {
+      spawnAssassinTrap(event, skill, skillLevel, start);
       return;
     }
     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
@@ -528,6 +539,63 @@ public class ServerSkillSystem extends PassiveSystem {
     log.info("[ASSASSIN_SHADOW] phase=spawn owner={} entity={} summon={} petType={} level={} max={} "
             + "position=({}, {}) status=PASS",
         event.entityId, petId, summon.Id, petType, skillLevel, petMax, target.x, target.y);
+  }
+
+  /** Native SKILLS_SrvDo044/SrvDo045 summon path (sub_6FCF8610). */
+  private void spawnAssassinTrap(SkillDoEvent event, Skills.Entry skill, int skillLevel,
+      Vector2 caster) {
+    if (!mPlayer.has(event.entityId) || skill.summon == null || skill.summon.isEmpty()) {
+      log.warn("[ASSASSIN_TRAP] phase=reject owner={} skill={} reason=missing_owner_or_summon",
+          event.entityId, event.skillId);
+      return;
+    }
+    MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+    if (summon == null) {
+      log.warn("[ASSASSIN_TRAP] phase=reject owner={} skill={} row={} reason=missing_monstats",
+          event.entityId, event.skillId, skill.summon);
+      return;
+    }
+    String petType = skill.pettype == null || skill.pettype.isEmpty()
+        ? "assassintrap" : skill.pettype;
+    int petMax = Math.max(1, SkillFormula.evaluate(skill.petmax, skill, skillLevel));
+    boolean bladeSentinel = event.srvdofunc == 44 || skill.srvdofunc == 44;
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    Vector2 spawn = bladeSentinel ? caster : target;
+    int petId = factory.createSummonedPet(event.entityId, summon, petType, event.skillId,
+        skillLevel, petMax, false, 0, spawn.x, spawn.y);
+    if (petId < 0) {
+      log.warn("[ASSASSIN_TRAP] phase=reject owner={} skill={} reason=create_failed",
+          event.entityId, event.skillId);
+      return;
+    }
+    if (mSummonedPet.has(petId)) {
+      com.riiablo.engine.server.component.SummonedPet trap = mSummonedPet.get(petId);
+      Skills.Entry attackSkill = summon.Skill1 == null || summon.Skill1.isEmpty()
+          ? null : Riiablo.files.skills.get(summon.Skill1);
+      int shots = attackSkill != null
+          ? SkillFormula.evaluate(attackSkill.calc4, attackSkill, skillLevel) : 0;
+      if (shots <= 0) shots = attackSkill != null
+          ? firstParam(attackSkill, 7, firstParam(skill, 0, 5))
+          : firstParam(skill, 0, 5);
+      trap.maxShots = bladeSentinel ? 1 : Math.max(1, shots);
+      trap.attackCooldownFrames = bladeSentinel ? 1 : normalAiParam(summon.aip3, 1);
+      trap.bladeSentinel = bladeSentinel;
+      trap.hasTrapTarget = true;
+      trap.trapTargetX = target.x;
+      trap.trapTargetY = target.y;
+      if (bladeSentinel) {
+        int duration = Math.max(1, SkillFormula.evaluate(skill.calc4, skill, skillLevel));
+        trap.durationFrames = duration;
+      }
+    }
+    log.info("[ASSASSIN_TRAP] phase=spawn owner={} entity={} skill={} summon={} petType={} "
+            + "level={} max={} shots={} position=({}, {}) status=PASS",
+        event.entityId, petId, event.skillId, summon.Id, petType, skillLevel, petMax,
+        mSummonedPet.has(petId) ? mSummonedPet.get(petId).maxShots : 0, spawn.x, spawn.y);
+  }
+
+  private static int normalAiParam(int[] values, int fallback) {
+    return values != null && values.length > 0 && values[0] > 0 ? values[0] : fallback;
   }
 
   private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {

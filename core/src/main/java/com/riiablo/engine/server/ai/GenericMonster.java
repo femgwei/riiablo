@@ -39,6 +39,17 @@ public final class GenericMonster extends AI {
   @Override
   public void update(float delta) {
     if (monster == null || !mPosition.has(entityId)) return;
+    if (mSummonedPet.has(entityId)) {
+      com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);
+      if (pet != null && pet.petType != null
+          && pet.petType.toLowerCase(java.util.Locale.ROOT).contains("assassintrap")) {
+        // SrvDo044/SrvDo045 traps are driven by AssassinTrapSystem. Letting
+        // GenericMonster also cast Skill1 doubles shots and bypasses budgets.
+        stopMovement();
+        state = "TRAP";
+        return;
+      }
+    }
     if (mAttributesWrapper.has(entityId)) {
       com.riiablo.attributes.StatRef hp = mAttributesWrapper.get(entityId).attrs
           .get(com.riiablo.attributes.Stat.hitpoints,

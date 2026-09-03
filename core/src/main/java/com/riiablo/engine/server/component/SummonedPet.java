@@ -17,6 +17,14 @@ public class SummonedPet extends Component {
   /** Native duration in 25 Hz game frames; zero means permanent. */
   public int durationFrames;
   public float elapsedFrames;
+  /** Native assassin-trap shot budget; zero means unlimited/non-sentry summon. */
+  public int maxShots;
+  public int shotsFired;
+  public int attackCooldownFrames;
+  public boolean bladeSentinel;
+  public boolean hasTrapTarget;
+  public float trapTargetX;
+  public float trapTargetY;
 
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
@@ -27,6 +35,13 @@ public class SummonedPet extends Component {
     this.passive = passive;
     this.durationFrames = Math.max(0, durationFrames);
     elapsedFrames = 0f;
+    maxShots = 0;
+    shotsFired = 0;
+    attackCooldownFrames = 0;
+    bladeSentinel = false;
+    hasTrapTarget = false;
+    trapTargetX = 0f;
+    trapTargetY = 0f;
     return this;
   }
 }
