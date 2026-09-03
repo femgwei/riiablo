@@ -158,6 +158,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     // 更新已移动距离（与 d2mod 一致，使用 distanceTraveled）
     missile.distanceTraveled += moveDistance;
 
+    // Wake maker movement is ordinary path travel; SrvDo31 is evaluated
+    // after the step so it can detect arrival at the configured endpoint.
+    if (missile.wakeMaker) {
+      processWakeMaker(entityId, missile, position, velocity);
+      return;
+    }
+
     if (missile.persistent) {
       missile.remainingFrames -= Math.max(1, Math.round(world.delta * 25f));
       missile.tickFrames++;
@@ -181,6 +188,59 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
+  }
+
+  /** D2MOO MISSMODE_SrvDo31: a maker reaching its path end emits two waves. */
+  private void processWakeMaker(int entityId, Missile maker, Position position,
+      Velocity velocity) {
+    if (maker.wakeSpawned) return;
+    float dx = maker.wakeTargetX - position.position.x;
+    float dy = maker.wakeTargetY - position.position.y;
+    float distance = (float) Math.sqrt(dx * dx + dy * dy);
+    float step = velocity.velocity.len() * Math.max(0f, world.delta);
+    if (distance > Math.max(0.35f, step)) return;
+    maker.wakeSpawned = true;
+    if (factory == null || maker.missile == null
+        || maker.missile.SubMissile == null || maker.missile.SubMissile.length == 0) {
+      log.warn("[WAKE_OF_FIRE] phase=maker_stall missileId={} owner={} reason=missing_submissile",
+          entityId, maker.ownerId);
+      world.delete(entityId);
+      return;
+    }
+    String waveName = maker.missile.SubMissile[0];
+    Missiles.Entry wave = waveName != null && !waveName.isEmpty()
+        ? Riiablo.files.Missiles.get(waveName) : null;
+    if (wave == null) {
+      log.warn("[WAKE_OF_FIRE] phase=maker_stall missileId={} owner={} reason=unknown_submissile name={}",
+          entityId, maker.ownerId, waveName);
+      world.delete(entityId);
+      return;
+    }
+    Vector2 direction = new Vector2(maker.wakeDirectionX, maker.wakeDirectionY);
+    if (direction.isZero(0.0001f)) direction.set(Vector2.Y);
+    direction.nor();
+    int spawned = 0;
+    Skills.Entry skill = maker.skillId >= 0 ? Riiablo.files.skills.get(maker.skillId) : null;
+    int damageOwnerId = maker.damageOwnerId >= 0 ? maker.damageOwnerId : maker.ownerId;
+    Attributes ownerAttrs = damageOwnerId >= 0 && mAttributesWrapper.has(damageOwnerId)
+        ? mAttributesWrapper.get(damageOwnerId).attrs : null;
+    for (int sign : new int[] {1, -1}) {
+      int childId = factory.createMissile(wave,
+          new Vector2(direction).scl(sign), position.position, damageOwnerId);
+      if (childId < 0 || !mMissile.has(childId)) continue;
+      Missile child = mMissile.get(childId);
+      child.skillId = maker.skillId;
+      child.damageLevel = Math.max(1, maker.damageLevel);
+      if (skill != null) {
+        MissileDamageResolver.initializeSkill(child, skill, ownerAttrs, child.damageLevel);
+      }
+      spawned++;
+    }
+    log.info("[WAKE_OF_FIRE] phase=wave_spawn maker={} owner={} wave={} origin=({}, {}) "
+            + "directions=2 spawned={} skill={}",
+        entityId, damageOwnerId, wave.Missile, position.position.x, position.position.y,
+        spawned, maker.skillId);
+    world.delete(entityId);
   }
 
   /**

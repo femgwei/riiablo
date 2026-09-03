@@ -95,6 +95,12 @@ public class AssassinTrapSystem extends IteratingSystem {
     int missileId = factory.createMissile(missile, direction.nor(), origin, entityId);
     if (missileId >= 0 && attackSkill != null && mAttributes.has(entityId)
         && mMissile.has(missileId)) {
+      if (attackSkill.srvdofunc == 125) {
+        Vector2 targetPoint = mPosition.has(target) ? mPosition.get(target).position
+            : new Vector2(origin).add(direction);
+        configureWakeMaker(mMissile.get(missileId), attackSkill, trap, entityId,
+            origin, targetPoint, direction);
+      }
       MissileDamageResolver.initializeSkill(
           mMissile.get(missileId), attackSkill, mAttributes.get(entityId).attrs,
           Math.max(1, trap.skillLevel));
@@ -104,6 +110,28 @@ public class AssassinTrapSystem extends IteratingSystem {
     log.info("[ASSASSIN_TRAP] phase=fire entity={} owner={} skill={} target={} missile={} "
             + "shot={}/{}", entityId, trap.ownerId, trap.skillId, target, missileName,
         trap.shotsFired, trap.maxShots);
+  }
+
+  /** Configures the SrvDo125 maker to emit the two perpendicular fire waves. */
+  private void configureWakeMaker(Missile maker, Skills.Entry attackSkill,
+      SummonedPet trap, int entityId, Vector2 origin, Vector2 target, Vector2 travel) {
+    if (maker == null || attackSkill == null) return;
+    Vector2 direction = new Vector2(travel);
+    if (direction.isZero(0.0001f)) direction.set(Vector2.X);
+    direction.nor();
+    maker.wakeMaker = true;
+    maker.wakeSpawned = false;
+    maker.wakeTargetX = target.x;
+    maker.wakeTargetY = target.y;
+    maker.wakeDirectionX = -direction.y;
+    maker.wakeDirectionY = direction.x;
+    maker.damageOwnerId = trap.ownerId;
+    maker.skillId = attackSkill.Id;
+    maker.damageLevel = Math.max(1, trap.skillLevel);
+    log.info("[WAKE_OF_FIRE] phase=maker_create entity={} owner={} missile={} target=({}, {}) "
+            + "waveDirection=({}, {}) skill={} status=PASS",
+        entityId, trap.ownerId, maker.missile != null ? maker.missile.Missile : "unknown",
+        target.x, target.y, maker.wakeDirectionX, maker.wakeDirectionY, attackSkill.skill);
   }
 
   /**

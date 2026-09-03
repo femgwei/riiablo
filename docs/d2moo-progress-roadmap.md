@@ -118,7 +118,8 @@
 - [x] ~~完成刺客陷阱生命周期（SrvDo044/SrvDo045）~~
   - 对照 D2MOO `SKILLS_SrvDo044_BladeSentinel` / `SKILLS_SrvDo045_Sentry`，由服务端创建有所有权的 `assassintrap` 召唤体，按 `petmax` 替换旧实例；新增权威 `AssassinTrapSystem` 负责目标搜索、15 帧攻击节拍、技能导弹快照和原生射击次数耗尽移除，避免陷阱攻击再次递归触发 SrvDo045。
   - [x] ~~完成 Blade Sentinel / Blade Creeper（AI Fn102、Missile SrvDo20）首项~~：控制实体在施法起点与目标端点间往返，只创建一个附着的 `blade creeper` 导弹；导弹跟随控制实体、保留玩家伤害归属、按 `NextHit/NextDelay` 去重，并在控制实体消失时清理。
-  - 待补：Charged Bolt/Wake/Lightning/Inferno/Death Sentry 的部署上限、持续时间、目标选择、导弹/区域表现和拆除。
+  - [x] ~~完成 Wake of Fire `SrvDo125/SrvDo31` 首项~~：服务端创建 `wake of destruction maker`，沿目标方向移动到终点后生成相反方向的两个 `wake of destruction` 火焰波，并把伤害归属解析回施法者。
+  - 待补：Charged Bolt/Lightning/Inferno/Death Sentry 的部署上限、持续时间、目标选择、导弹/区域表现和拆除。
 
 ### P2：世界交互和多人闭环
 
@@ -151,12 +152,12 @@
 - 2026-09-03：接入统一持续毒云管线；Poison Javelin 按 `SrvDo02` 沿途生成 poisonjavcloud，Plague Javelin 按 `SrvHit02` 生成 plaguejavcloud，毒雾陷阱与 corpsepoisoncloud 复用同一生命周期、区域施毒和多人导弹同步；冰冻箭增加区域内多目标冻结 ECS 回归。
 - 2026-09-03：完成刺客 `SrvDo044/SrvDo045` 陷阱召唤首项；服务端按原生 `summon/pettype/petmax` 创建并替换 `assassintrap`，新增 `AssassinTrapSystem` 实现权威目标搜索、攻击节拍、导弹快照和射击耗尽生命周期，补充 SrvDo045 ECS 回归。
 - 2026-09-03：完成 Blade Sentinel 的原生 `AI Fn102` / `Missile SrvDo20` 首轮移植；Blade Creeper 控制实体在起点/目标点间往返，单一附着导弹继承施法者伤害并按 `NextHit` 去重，补充双向路径、导弹跟随、控制实体清理测试。
+- 2026-09-03：完成 Wake of Fire 的原生 `SrvDo125` / `SrvDo31` 首轮移植；maker 到达目标端点后生成相反方向的双 `wake of destruction` 火焰波，继承施法者伤害归属并加入 maker/子导弹 ECS 回归。
 
 ## 当前下一项
 
-已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**，以及 Blade Sentinel / Blade Creeper `SrvDo20` 首轮攻击路径。
-下一项为 **刺客陷阱攻击专项**：继续补齐 Wake of Fire
-`SrvDo125` 火焰波、Inferno Sentry `SrvDo95` 持续喷射，以及 Death Sentry `SrvDo55`
+已完成 **刺客 SrvDo044/SrvDo045 陷阱召唤与基础权威生命周期**、Blade Sentinel / Blade Creeper `SrvDo20` 首轮攻击路径，以及 Wake of Fire `SrvDo125/SrvDo31` 双波首项。
+下一项为 **刺客陷阱攻击专项**：继续补齐 Inferno Sentry `SrvDo95` 持续喷射，以及 Death Sentry `SrvDo55`
 尸体筛选/爆炸；随后进行双客户端陷阱动画与导弹画面验证。
 
 ## 记录规则

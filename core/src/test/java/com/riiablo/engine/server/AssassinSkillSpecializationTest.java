@@ -63,6 +63,32 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
               + " srvB=" + attack.srvmissileb + " cltA=" + attack.cltmissilea
               + " calc4=" + attack.calc4 + " params="
               + java.util.Arrays.toString(attack.Param));
+          Missiles.Entry serverMissile = attack.srvmissilea == null
+              || attack.srvmissilea.isEmpty() ? null
+              : Riiablo.files.Missiles.get(attack.srvmissilea);
+          if (serverMissile != null) {
+            System.out.println("[ASSASSIN_SUMMON_MISSILE] skill=" + attack.skill
+                + " missile=" + serverMissile.Missile
+                + " srvDo=" + serverMissile.pSrvDoFunc
+                + " srvHit=" + serverMissile.pSrvHitFunc
+                + " velocity=" + serverMissile.Vel + " range=" + serverMissile.Range
+                + " params=" + java.util.Arrays.toString(serverMissile.Param)
+                + " sub=" + java.util.Arrays.toString(serverMissile.SubMissile));
+            String subName = serverMissile.SubMissile != null
+                && serverMissile.SubMissile.length > 0 ? serverMissile.SubMissile[0] : null;
+            Missiles.Entry subMissile = subName == null || subName.isEmpty()
+                ? null : Riiablo.files.Missiles.get(subName);
+            if (subMissile != null) {
+              System.out.println("[ASSASSIN_SUMMON_SUBMISSILE] parent=" + serverMissile.Missile
+                  + " missile=" + subMissile.Missile
+                  + " srvDo=" + subMissile.pSrvDoFunc
+                  + " srvHit=" + subMissile.pSrvHitFunc
+                  + " velocity=" + subMissile.Vel + " range=" + subMissile.Range
+                  + " size=" + subMissile.Size + " damageRate=" + subMissile.DamageRate
+                  + " nextHit=" + subMissile.NextHit
+                  + " nextDelay=" + subMissile.NextDelay);
+            }
+          }
         }
       }
     }
@@ -228,6 +254,52 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void wakeOfFireSrvDo125CreatesMakerThenOppositeFireWaves() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry wake = Riiablo.files.skills.get("Wake of Fire Sentry");
+      assertNotNull(wake);
+      data.setSkillLevel(wake.Id, 3);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, wake.Id, Engine.INVALID_ENTITY, new Vector2(8, 3), wake.srvdofunc, 0));
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+      world.getMapper(SummonedPet.class).get(factory.entityId).maxShots = 1;
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      // Wake traps are deployed at the clicked point (8,3); keep the hostile
+      // unit a few tiles away so the maker has a real travel segment.
+      world.getMapper(Position.class).create(target).position.set(14, 3);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+      world.setDelta(1f / 25f);
+      for (int i = 0; i < 30; i++) world.process();
+
+      assertEquals(3, factory.missileNames.size(),
+          "SrvDo125 creates one maker and two SrvDo31 wave missiles");
+      assertEquals("wake of destruction maker", factory.missileNames.get(0));
+      assertEquals("wake of destruction", factory.missileNames.get(1));
+      assertEquals("wake of destruction", factory.missileNames.get(2));
+      assertEquals(-factory.missileDirections.get(1).x, factory.missileDirections.get(2).x, 0.0001f);
+      assertEquals(-factory.missileDirections.get(1).y, factory.missileDirections.get(2).y, 0.0001f);
+      assertFalse(world.getEntityManager().isActive(factory.missileEntityIds.get(0)),
+          "the maker is consumed after spawning its waves");
+      assertTrue(factory.missileEntityIds.get(1) != factory.missileEntityIds.get(2),
+          "the two wave missiles are distinct authoritative entities");
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static final class RecordingFactory extends EntityFactory {
     int created;
     int entityId = Engine.INVALID_ENTITY;
@@ -238,6 +310,9 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
     int missileEntityId = Engine.INVALID_ENTITY;
     String missileName;
     String attackSkill;
+    final java.util.ArrayList<String> missileNames = new java.util.ArrayList<>();
+    final java.util.ArrayList<Vector2> missileDirections = new java.util.ArrayList<>();
+    final java.util.ArrayList<Integer> missileEntityIds = new java.util.ArrayList<>();
 
     @Override
     public int createSummonedPet(int ownerId, com.riiablo.codec.excel.MonStats.Entry summon,
@@ -268,6 +343,9 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       world.getMapper(Velocity.class).create(missileId).velocity.set(angle).setLength(row.Vel);
       missiles++;
       missileName = row.Missile;
+      missileNames.add(row.Missile);
+      missileDirections.add(new Vector2(angle));
+      missileEntityIds.add(missileId);
       Monster trapMonster = world.getMapper(Monster.class).get(ownerId);
       attackSkill = trapMonster != null && trapMonster.monstats != null
           ? trapMonster.monstats.Skill1 : null;

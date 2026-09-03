@@ -71,6 +71,16 @@ public class Missile extends PooledComponent {
   public final com.badlogic.gdx.utils.IntIntMap nextHitFrame =
       new com.badlogic.gdx.utils.IntIntMap();
 
+  /** Native Wake of Fire maker (SrvDo31) control missile. */
+  public boolean wakeMaker;
+  public boolean wakeSpawned;
+  public float wakeTargetX;
+  public float wakeTargetY;
+  public float wakeDirectionX;
+  public float wakeDirectionY;
+  /** Root player owner resolved through a summoned trap ownership chain. */
+  public int damageOwnerId = -1;
+
   /** Skill damage multiplier captured when the missile is spawned. */
   public float damageMultiplier = 1f;
 
@@ -111,6 +121,13 @@ public class Missile extends PooledComponent {
     attached = false;
     nativeFrame = 0;
     nextHitFrame.clear();
+    wakeMaker = false;
+    wakeSpawned = false;
+    wakeTargetX = 0f;
+    wakeTargetY = 0f;
+    wakeDirectionX = 0f;
+    wakeDirectionY = 0f;
+    damageOwnerId = -1;
     damageMultiplier = 1f;
     pierceEnabled = false;
     pierceChance = 0;
