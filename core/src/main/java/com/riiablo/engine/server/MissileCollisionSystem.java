@@ -28,6 +28,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
@@ -60,6 +61,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
@@ -132,6 +134,23 @@ public class MissileCollisionSystem extends IteratingSystem {
         tmpVec.set(mPosition.get(missile.targetId).position).sub(position.position);
         if (!tmpVec.isZero(0.0001f) && speed > 0f) velocity.velocity.set(tmpVec).setLength(speed);
       }
+    }
+
+    if (missile.chargedBoltPath && !missile.attached
+        && missile.distanceTraveled >= missile.chargedBoltNextTurnDistance) {
+      while (missile.distanceTraveled >= missile.chargedBoltNextTurnDistance) {
+        long rolled = AssassinTrapSystem.chargedBoltRoll(
+            missile.chargedBoltSeedLow, missile.chargedBoltSeedHigh);
+        missile.chargedBoltSeedLow = (int) rolled;
+        missile.chargedBoltSeedHigh = (int) (rolled >>> 32);
+        missile.chargedBoltNextTurnDistance += 2f;
+      }
+      int direction = AssassinTrapSystem.chargedBoltDirection(
+          missile.chargedBoltMainDirection, missile.chargedBoltSeedLow);
+      float speed = velocity.velocity.len();
+      AssassinTrapSystem.chargedBoltVector(direction, tmpVec);
+      velocity.velocity.set(tmpVec).setLength(speed);
+      if (mAngle.has(entityId)) mAngle.get(entityId).target.set(tmpVec);
     }
     
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）

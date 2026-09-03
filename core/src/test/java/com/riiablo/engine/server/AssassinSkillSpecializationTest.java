@@ -169,10 +169,94 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertEquals(1, factory.missiles);
       assertEquals("sentry lightning", factory.attackSkill);
       assertEquals(1, trap.shotsFired);
+      Missile lightning = world.getMapper(Missile.class).get(factory.missileEntityId);
+      assertNotNull(lightning);
+      assertEquals(sentry.Id, lightning.skillId,
+          "Missiles.txt links the trap projectile to Lightning Sentry damage data");
+      assertTrue(lightning.damageSnapshot,
+          "Lightning Sentry creates an authoritative elemental damage snapshot");
       world.process();
       world.process();
       assertTrue(!world.getMapper(SummonedPet.class).has(factory.entityId),
           "a native sentry must be removed after its shot budget is exhausted");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void chargedBoltSentrySrvDo017EmitsNativeBoltBurst() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new AssassinTrapSystem(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int owner = world.create();
+      CharData data = CharData.createRemote("assassin", (byte) Riiablo.ASSASSIN);
+      Skills.Entry charged = Riiablo.files.skills.get("Charged Bolt Sentry");
+      Skills.Entry shockField = Riiablo.files.skills.get("Shock Field");
+      assertNotNull(charged);
+      assertNotNull(shockField);
+      data.setSkillLevel(charged.Id, 3);
+      data.setSkillLevel(shockField.Id, 6);
+      world.getMapper(com.riiablo.engine.server.component.Player.class).create(owner).data = data;
+      world.getMapper(Position.class).create(owner).position.set(2, 3);
+      world.getMapper(AttributesWrapper.class).create(owner).attrs = attributes(100);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, charged.Id, Engine.INVALID_ENTITY, new Vector2(5, 3), charged.srvdofunc, 0));
+
+      SummonedPet trap = world.getMapper(SummonedPet.class).get(factory.entityId);
+      assertNotNull(trap);
+      assertEquals(5, trap.maxShots);
+      trap.maxShots = 1;
+      trap.attackCooldownFrames = 0;
+      world.getMapper(AttributesWrapper.class).create(factory.entityId).attrs = attributes(100);
+
+      int target = world.create();
+      world.getMapper(Monster.class).create(target);
+      world.getMapper(Position.class).create(target).position.set(10, 3);
+      world.getMapper(AttributesWrapper.class).create(target).attrs = attributes(10000);
+      world.setDelta(1f / 25f);
+      world.process();
+
+      assertEquals(7, factory.missiles,
+          "SrvDo017 calc1 emits five base bolts plus one per three Shock Field base levels");
+      assertEquals(7, java.util.Collections.frequency(factory.missileNames, "sentrychargedbolt"));
+      Skills.Entry boltSentry = Riiablo.files.skills.get("BoltSentry");
+      assertNotNull(boltSentry);
+      assertEquals(1, trap.shotsFired,
+          "the burst consumes one sentry attack, not one shot per projectile");
+      float firstX = factory.missileDirections.get(0).x;
+      boolean spread = false;
+      for (Vector2 direction : factory.missileDirections) {
+        if (Math.abs(direction.x - firstX) > 0.01f) {
+          spread = true;
+          break;
+        }
+      }
+      assertTrue(spread, "charged bolts use independent native fan paths");
+      for (int i = 0; i < factory.missileEntityIds.size(); i++) {
+        Missile bolt = world.getMapper(Missile.class).get(factory.missileEntityIds.get(i));
+        assertNotNull(bolt);
+        assertEquals(factory.entityId, bolt.ownerId,
+            "sentry bolts retain the trap as native missile owner for hostile filtering");
+        assertEquals(charged.Id, bolt.skillId,
+            "Missiles.txt links each bolt to Charged Bolt Sentry damage data");
+        assertTrue(bolt.damageSnapshot,
+            "each charged bolt carries authoritative lightning damage");
+        assertTrue(bolt.chargedBoltPath);
+        assertEquals(77f, bolt.range, 0.0001f,
+            "native Charged Bolt path length is capped at 77");
+      }
+
+      Missile firstBolt = world.getMapper(Missile.class).get(factory.missileEntityIds.get(0));
+      int initialSeed = firstBolt.chargedBoltSeedLow;
+      world.delete(target);
+      for (int i = 0; i < 5; i++) world.process();
+      assertTrue(firstBolt.chargedBoltSeedLow != initialSeed,
+          "PATHTYPE_CHARGEDBOLT rolls a new left/straight/right segment every two tiles");
+      assertTrue(firstBolt.chargedBoltNextTurnDistance >= 4f);
     } finally {
       world.dispose();
     }

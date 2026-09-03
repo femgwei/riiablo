@@ -81,6 +81,13 @@ public class Missile extends PooledComponent {
   /** Root player owner resolved through a summoned trap ownership chain. */
   public int damageOwnerId = -1;
 
+  /** D2Common PATHTYPE_CHARGEDBOLT deterministic two-tile zig-zag path. */
+  public boolean chargedBoltPath;
+  public int chargedBoltMainDirection;
+  public int chargedBoltSeedLow;
+  public int chargedBoltSeedHigh;
+  public float chargedBoltNextTurnDistance;
+
   /** Skill damage multiplier captured when the missile is spawned. */
   public float damageMultiplier = 1f;
 
@@ -128,6 +135,11 @@ public class Missile extends PooledComponent {
     wakeDirectionX = 0f;
     wakeDirectionY = 0f;
     damageOwnerId = -1;
+    chargedBoltPath = false;
+    chargedBoltMainDirection = 0;
+    chargedBoltSeedLow = 0;
+    chargedBoltSeedHigh = 0;
+    chargedBoltNextTurnDistance = 0f;
     damageMultiplier = 1f;
     pierceEnabled = false;
     pierceChance = 0;

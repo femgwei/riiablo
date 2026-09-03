@@ -114,6 +114,16 @@ public class AssassinTrapSystem extends IteratingSystem {
       return;
     }
     Skills.Entry attackSkill = resolveAttackSkill(monster, placementSkill);
+    if (attackSkill != null && attackSkill.srvdofunc == 17) {
+      if (fireChargedBoltSentry(entityId, trap, monster, target, attackSkill)) {
+        trap.shotsFired++;
+        trap.attackCooldownFrames = attackInterval(monster);
+        log.info("[CHARGED_BOLT_SENTRY] phase=fire entity={} owner={} target={} "
+                + "shot={}/{}", entityId, trap.ownerId, target,
+            trap.shotsFired, trap.maxShots);
+        return;
+      }
+    }
     String missileName = resolveMissile(attackSkill, monster);
     Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
     if (missile == null || factory == null) {
@@ -138,7 +148,8 @@ public class AssassinTrapSystem extends IteratingSystem {
         startInfernoChannel(mMissile.get(missileId), attackSkill, trap, target);
       }
       MissileDamageResolver.initializeSkill(
-          mMissile.get(missileId), attackSkill, mAttributes.get(entityId).attrs,
+          mMissile.get(missileId), resolveDamageSkill(missile, attackSkill, placementSkill),
+          mAttributes.get(entityId).attrs,
           Math.max(1, trap.skillLevel));
     }
     trap.shotsFired++;
@@ -146,6 +157,102 @@ public class AssassinTrapSystem extends IteratingSystem {
     log.info("[ASSASSIN_TRAP] phase=fire entity={} owner={} skill={} target={} missile={} "
             + "shot={}/{}", entityId, trap.ownerId, trap.skillId, target, missileName,
         trap.shotsFired, trap.maxShots);
+  }
+
+  /**
+   * Native {@code SKILLS_SrvDo017_ChargedBolt_BoltSentry}.  One sentry attack
+   * emits {@code calc1} independent charged-bolt missiles.  D2MOO gives each
+   * missile the same target point, then the Charged Bolt path initializer
+   * derives a deterministic per-ordinal path from the unit seed.  We retain
+   * that seed and advance its left/straight/right segment every two subtiles;
+   * all clients receive the resulting position, velocity and facing through
+   * the normal EntitySync stream.
+   */
+  private boolean fireChargedBoltSentry(int entityId, SummonedPet trap, Monster monster,
+      int targetId, Skills.Entry attackSkill) {
+    if (factory == null || !mPosition.has(entityId) || !mPosition.has(targetId)) return false;
+    String missileName = resolveMissile(attackSkill, monster);
+    Missiles.Entry missileRow = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missileRow == null) {
+      log.warn("[CHARGED_BOLT_SENTRY] phase=stall entity={} owner={} target={} reason=missing_missile name={}",
+          entityId, trap.ownerId, targetId, missileName);
+      return false;
+    }
+    int count = SkillFormula.evaluate(attackSkill.calc1, attackSkill,
+        Math.max(1, trap.skillLevel),
+        name -> resolveOwnerSkillLevel(trap.ownerId, name));
+    if (count <= 0) count = skillParam(attackSkill, 1, 1);
+    count = Math.max(1, Math.min(32, count));
+
+    Vector2 origin = mPosition.get(entityId).position;
+    Vector2 base = new Vector2(mPosition.get(targetId).position).sub(origin);
+    if (base.isZero(0.0001f)) return false;
+    base.nor();
+    Attributes attrs = mAttributes.has(entityId) ? mAttributes.get(entityId).attrs : null;
+    int created = 0;
+    int mainDirection = chargedBoltMainDirection(base);
+    for (int i = 0; i < count; i++) {
+      int seedLow = i + MathUtils.floor(origin.x);
+      int seedHigh = 666;
+      long rolled = chargedBoltRoll(seedLow, seedHigh);
+      seedLow = (int) rolled;
+      seedHigh = (int) (rolled >>> 32);
+      int directionIndex = chargedBoltDirection(mainDirection, seedLow);
+      Vector2 direction = chargedBoltVector(directionIndex, new Vector2());
+      int missileId = factory.createMissile(missileRow, direction, origin, entityId);
+      if (missileId < 0 || !mMissile.has(missileId)) continue;
+      Missile bolt = mMissile.get(missileId);
+      bolt.skillId = attackSkill.Id;
+      bolt.damageLevel = Math.max(1, trap.skillLevel);
+      bolt.chargedBoltPath = true;
+      bolt.chargedBoltMainDirection = mainDirection;
+      bolt.chargedBoltSeedLow = seedLow;
+      bolt.chargedBoltSeedHigh = seedHigh;
+      bolt.chargedBoltNextTurnDistance = 2f;
+      // SKILLS_MissileInit_ChargedBolt caps the native path length at 77.
+      bolt.range = Math.min(77f, Math.max(1f, bolt.range));
+      Skills.Entry placement = trap.skillId >= 0 ? Riiablo.files.skills.get(trap.skillId) : null;
+      MissileDamageResolver.initializeSkill(
+          bolt, resolveDamageSkill(missileRow, attackSkill, placement), attrs, bolt.damageLevel);
+      created++;
+    }
+    log.debug("[CHARGED_BOLT_SENTRY] phase=burst entity={} owner={} target={} missile={} "
+            + "requested={} created={} level={} baseDirection=({}, {})",
+        entityId, trap.ownerId, targetId, missileName, count, created, trap.skillLevel,
+        base.x, base.y);
+    return created > 0;
+  }
+
+  static int chargedBoltMainDirection(Vector2 direction) {
+    if (direction == null || direction.isZero(0.0001f)) return 0;
+    int octant = Math.round(direction.angleDeg() / 45f) & 7;
+    return octant;
+  }
+
+  static long chargedBoltRoll(int low, int high) {
+    return Integer.toUnsignedLong(high) + 0x6AC690C5L * Integer.toUnsignedLong(low);
+  }
+
+  static int chargedBoltDirection(int mainDirection, int randomLow) {
+    // D2Common's 32-entry sequence is -1,0,1 repeated, with the historical
+    // missing zero before the final +1 retained because fixing it narrows the spread.
+    int slot = randomLow & 31;
+    int offset = slot == 31 ? 1 : slot % 3 - 1;
+    return (mainDirection + offset + 8) & 7;
+  }
+
+  static Vector2 chargedBoltVector(int direction, Vector2 out) {
+    float radians = MathUtils.PI / 4f * (direction & 7);
+    return out.set(MathUtils.cos(radians), MathUtils.sin(radians)).nor();
+  }
+
+  static Skills.Entry resolveDamageSkill(Missiles.Entry missile, Skills.Entry attack,
+      Skills.Entry placement) {
+    if (missile != null && missile.Skill != null && !missile.Skill.isEmpty()) {
+      Skills.Entry linked = Riiablo.files.skills.get(missile.Skill);
+      if (linked != null) return linked;
+    }
+    return attack != null ? attack : placement;
   }
 
   private static Skills.Entry resolveCorpseSkill(Monster monster) {
@@ -388,7 +495,8 @@ public class AssassinTrapSystem extends IteratingSystem {
     Missile missile = mMissile.get(missileId);
     configureInfernoMissile(missile, attackSkill, trap);
     Attributes attrs = mAttributes.has(entityId) ? mAttributes.get(entityId).attrs : null;
-    MissileDamageResolver.initializeSkill(missile, attackSkill, attrs,
+    MissileDamageResolver.initializeSkill(missile,
+        resolveDamageSkill(missileRow, attackSkill, placement), attrs,
         Math.max(1, trap.skillLevel));
     log.debug("[INFERNO_SENTRY] phase=pulse entity={} owner={} target={} missileId={} "
             + "remaining={} direction=({}, {})",
@@ -408,7 +516,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     if (name == null || name.isEmpty() || ownerId < 0 || !mPlayer.has(ownerId)
         || mPlayer.get(ownerId).data == null) return 0;
     Skills.Entry skill = Riiablo.files.skills.get(name);
-    return skill != null ? mPlayer.get(ownerId).data.getSkill(skill.Id) : 0;
+    return skill != null ? mPlayer.get(ownerId).data.getBaseSkillLevel(skill.Id) : 0;
   }
 
   private static int skillParam(Skills.Entry skill, int index, int fallback) {
