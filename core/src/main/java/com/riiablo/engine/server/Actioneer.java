@@ -804,6 +804,15 @@ public class Actioneer extends PassiveSystem {
         }
 
         applyCombatStates(entityId, targetId, combat);
+        if (progressiveRelease != null
+            && progressiveRelease.coldFreezeDuration > 0
+            && combat.elementalDamage[CombatSystem.DAMAGE_COLD] > 0
+            && mUnitStates.has(targetId)) {
+          StatusEffectApplier.INSTANCE.applyFreeze(
+              targetId, progressiveRelease.coldFreezeDuration, entityId);
+          log.info("[ASSASSIN_BLADES] phase=primary_freeze source={} target={} duration={}",
+              entityId, targetId, progressiveRelease.coldFreezeDuration);
+        }
 
         // Native Frenzy applies a short-lived stacking state to the attacker
         // at the successful hit frame.  Keep this server authoritative so the
@@ -1132,6 +1141,14 @@ public class Actioneer extends PassiveSystem {
       combat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING] += lightning;
     }
 
+    int rawCold = AssassinSkills.rollColdDamage(release);
+    if (rawCold > 0) {
+      int cold = resistedDamage(rawCold, defender, defenderStates,
+          Stat.coldresist, 1);
+      combat.elementalDamage[CombatSystem.DAMAGE_COLD] += cold;
+      if (cold > 0) combat.coldDuration = Math.max(combat.coldDuration, release.coldLength);
+    }
+
     combat.totalDamage = combat.physicalDamage;
     for (int i = 1; i < CombatSystem.DAMAGE_TYPE_COUNT; i++) {
       if (i != CombatSystem.DAMAGE_POISON || combat.poisonDuration <= 0) {
@@ -1144,6 +1161,7 @@ public class Actioneer extends PassiveSystem {
       AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
     applyFistsOfFireStageEffects(sourceId, primaryTargetId, release, sourceAttrs);
     applyClawsOfThunderStageEffects(sourceId, primaryTargetId, release, sourceAttrs);
+    applyBladesOfIceStageEffects(sourceId, primaryTargetId, release, sourceAttrs);
   }
 
   /**
@@ -1363,6 +1381,117 @@ public class Actioneer extends PassiveSystem {
     int x = (int) (30f * MathUtils.cos(radians));
     int y = (int) (30f * MathUtils.sin(radians));
     return out.set(x, y).nor();
+  }
+
+  /** D2MOO SrvDo038/SrvDo039 stacked Blades of Ice release stages. */
+  private void applyBladesOfIceStageEffects(int sourceId, int primaryTargetId,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    if (release == null || release.coldCharges <= 0 || !mPosition.has(primaryTargetId)) return;
+    if (release.coldCharges < 2) return;
+    Vector2 origin = mPosition.get(primaryTargetId).position;
+    applyBladesOfIceArea(sourceId, primaryTargetId, origin, release, sourceAttrs);
+    int cubes = release.coldCharges >= 3
+        ? createBladesOfIceCubes(sourceId, origin, release, sourceAttrs) : 0;
+    log.info("[ASSASSIN_BLADES] phase=release source={} primary={} charges={} cubes={}",
+        sourceId, primaryTargetId, release.coldCharges, cubes);
+  }
+
+  /** Native SrvDo038 rolls one physical/cold record shared by all targets in range. */
+  private void applyBladesOfIceArea(int sourceId, int primaryTargetId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    int range = Math.max(0, release.coldAreaRange);
+    if (range <= 0) return;
+    int sourceMin = statInt(sourceAttrs, Stat.mindamage);
+    int sourceMax = Math.max(sourceMin, statInt(sourceAttrs, Stat.maxdamage));
+    int rawPhysical = rollRange(
+        release.coldPhysicalMinDamage + sourceMin * release.coldSourceDamageScale / 128,
+        release.coldPhysicalMaxDamage + sourceMax * release.coldSourceDamageScale / 128);
+    int rawCold = rollRange(release.coldMinDamage, release.coldMaxDamage);
+    if (rawPhysical <= 0 && rawCold <= 0) return;
+
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    int affected = 0;
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int targetId = ids[i];
+      if (targetId == sourceId || !isValidFistsTarget(sourceId, targetId)) continue;
+      if (mPosition.get(targetId).position.dst2(origin) > range * range) continue;
+      Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
+      int physical = resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
+          Stat.damageresist, -1);
+      int cold = resistedDamage(rawCold, targetAttrs, stateList(targetId),
+          Stat.coldresist, 1);
+      float damage = physical + cold;
+      if (damage <= 0f) continue;
+      DamageEvent event = DamageEvent.obtain(sourceId, targetId, damage);
+      events.dispatch(event);
+      float applied = Math.max(0f, event.damage);
+      StatRef hp = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
+      if (hp == null || applied <= 0f) continue;
+      hp.sub(applied);
+      if (cold > 0 && release.coldLength > 0) {
+        StatusEffectApplier.INSTANCE.applyCold(targetId, release.coldLength, sourceId);
+      }
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        if (targetId != primaryTargetId) {
+          events.dispatch(DeathEvent.obtain(sourceId, targetId));
+        }
+      }
+      affected++;
+      log.info("[ASSASSIN_BLADES] phase=stage2_area source={} primary={} target={} "
+              + "range={} physical={} cold={} coldLength={} applied={}",
+          sourceId, primaryTargetId, targetId, range, physical, cold,
+          release.coldLength, applied);
+    }
+    log.info("[ASSASSIN_BLADES] phase=stage2_complete source={} primary={} range={} "
+            + "rawPhysical={} rawCold={} affected={}",
+        sourceId, primaryTargetId, range, rawPhysical, rawCold, affected);
+  }
+
+  /** Native SrvDo039 scatters Range^2 freeze-cube attempts inside a circle. */
+  private int createBladesOfIceCubes(int sourceId, Vector2 origin,
+      AssassinSkills.ProgressiveRelease release, Attributes sourceAttrs) {
+    int range = Math.max(0, release.coldCubeRange);
+    if (range <= 0 || release.coldCubeMissile == null
+        || release.coldCubeMissile.isEmpty()) return 0;
+    Missiles.Entry row = Riiablo.files.Missiles.get(release.coldCubeMissile);
+    Skills.Entry skill = Riiablo.files.skills.get(release.coldSkillId);
+    if (row == null || skill == null) {
+      log.warn("[ASSASSIN_BLADES] phase=stage3_reject source={} missile={} reason=missing_data",
+          sourceId, release.coldCubeMissile);
+      return 0;
+    }
+    int seed = assassinProgressiveSeeds.get(sourceId,
+        Riiablo.gameSeed ^ sourceId * 0x45D9F3B ^ release.coldSkillId * 31);
+    NativeRng rng = new NativeRng(seed);
+    int area = range * range;
+    int created = 0;
+    for (int i = 0; i < area; i++) {
+      int dx = range - rng.nextInt(2 * range);
+      int dy = range - rng.nextInt(2 * range);
+      if (dx * dx + dy * dy > area) continue;
+      Vector2 position = new Vector2(origin.x + dx, origin.y + dy);
+      if (map != null && map.getAct() >= 0) {
+        Map.Zone zone = map.getZone(position);
+        if (zone == null || zone.findRoomEx(position.x, position.y) == null) continue;
+      }
+      int missileId = factory.createMissile(row, Vector2.X, position, sourceId);
+      if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) continue;
+      com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+      MissileDamageResolver.initializeSkillArea(
+          projectile, skill, sourceAttrs, release.coldSkillLevel);
+      projectile.freezesTarget = true; // MISSMODE_SrvDmg10_BladesOfIceCubes
+      projectile.nativeLifetimeFrames = Math.max(1, row.Range);
+      created++;
+    }
+    assassinProgressiveSeeds.put(sourceId, rng.state());
+    log.info("[ASSASSIN_BLADES] phase=stage3_cubes source={} skill={} missile={} "
+            + "range={} attempts={} created={} lifetime={} seed={}",
+        sourceId, release.coldSkillId, release.coldCubeMissile,
+        range, area, created, Math.max(1, row.Range), rng.state());
+    return created;
   }
 
   private boolean isValidFistsTarget(int sourceId, int targetId) {

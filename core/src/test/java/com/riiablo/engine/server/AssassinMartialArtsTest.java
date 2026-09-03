@@ -42,6 +42,29 @@ import org.junit.jupiter.api.Test;
 /** Native SrvDo034/SrvDo035 regression coverage. */
 class AssassinMartialArtsTest extends RiiabloTest {
   @Test
+  void bladesOfIceExposesNativeProgressiveColumns() {
+    Skills.Entry blades = Riiablo.files.skills.get("Blades of Ice");
+    assertNotNull(blades);
+    assertTrue(blades.prgstack);
+    assertEquals(4, blades.prgdam);
+    assertEquals(0, blades.srvprgfunc[0]);
+    assertEquals(38, blades.srvprgfunc[1]);
+    assertEquals(39, blades.srvprgfunc[2]);
+    assertEquals(6, AssassinSkills.progressiveRange(blades, 5, 2));
+    assertEquals(3, AssassinSkills.progressiveRange(blades, 5, 3));
+    assertEquals("bladesoficecubes", AssassinSkills.progressiveMissile(blades, 3));
+    assertEquals("cold", blades.EType);
+    assertEquals(128, blades.SrcDam);
+    assertEquals(1, blades.Param[4]);
+    Missiles.Entry cubes = Riiablo.files.Missiles.get(
+        AssassinSkills.progressiveMissile(blades, 3));
+    assertNotNull(cubes);
+    assertEquals(10, cubes.pSrvDmgFunc);
+    assertEquals("frze", cubes.EType);
+    assertEquals(30, cubes.Range);
+  }
+
+  @Test
   void clawsOfThunderExposesNativeProgressiveColumns() {
     Skills.Entry claws = Riiablo.files.skills.get("Claws of Thunder");
     assertNotNull(claws);
@@ -423,6 +446,118 @@ class AssassinMartialArtsTest extends RiiabloTest {
       assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 10000f,
           "charge one lightning must survive physical immunity");
       assertEquals(0, factory.missilesCreated);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void bladesOfIceSecondChargeDamagesNearbyEnemiesWithSharedColdRecord() {
+    DummyFactory factory = new DummyFactory();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(1000, 10, 10, 100000));
+      Attributes primaryAttrs = attributes(10000, 0, 0, 0);
+      Attributes nearbyAttrs = attributes(10000, 0, 0, 0);
+      Attributes distantAttrs = attributes(10000, 0, 0, 0);
+      int primary = createMonster(world, 1, 0, primaryAttrs);
+      createMonster(world, 5, 0, nearbyAttrs);
+      createMonster(world, 20, 0, distantAttrs);
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry blades = Riiablo.files.skills.get("Blades of Ice");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      AssassinSkills.addProgressiveCharge(states, blades, 5, assassin);
+      AssassinSkills.addProgressiveCharge(states, blades, 5, assassin);
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, primary, world.getMapper(Position.class).get(primary).position);
+
+      MathUtils.random.setSeed(0xB1ADE502L);
+      dispatchUntilConsumed(world, assassin, states, StateId.PROGRESSIVE_COLD);
+
+      assertTrue(primaryAttrs.get(Stat.hitpoints).asFixed() < 10000f);
+      assertTrue(nearbyAttrs.get(Stat.hitpoints).asFixed() < 10000f,
+          "charge two must apply the SrvDo038 cold area record");
+      assertEquals(10000f, distantAttrs.get(Stat.hitpoints).asFixed());
+      assertEquals(0, factory.missilesCreated,
+          "charge two must not create charge-three cubes");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void bladesOfIceThirdChargeFreezesPrimaryAndCreatesNativeCubes() {
+    DummyFactory factory = new DummyFactory();
+    StateUpdater stateUpdater = new StateUpdater();
+    Actioneer actioneer = new Actioneer();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), stateUpdater, actioneer, new Pathfinder(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(stateUpdater);
+    try {
+      int assassin = createPlayer(world, 0, 0, attributes(1000, 10, 10, 100000));
+      Attributes targetAttrs = attributes(10000, 0, 0, 0);
+      targetAttrs.base().put(Stat.damageresist, 100);
+      targetAttrs.base().put(Stat.coldresist, 0);
+      targetAttrs.reset();
+      int target = createMonster(world, 1, 0, targetAttrs);
+      StateList states = world.getMapper(UnitStates.class).get(assassin).stateList;
+      Skills.Entry blades = Riiablo.files.skills.get("Blades of Ice");
+      Skills.Entry finisher = Riiablo.files.skills.get("Dragon Claw");
+      for (int i = 0; i < 3; i++) {
+        AssassinSkills.addProgressiveCharge(states, blades, 5, assassin);
+      }
+      world.getMapper(Casting.class).get(assassin)
+          .set(finisher.Id, target, world.getMapper(Position.class).get(target).position);
+
+      MathUtils.random.setSeed(0xB1ADE503L);
+      dispatchUntilConsumed(world, assassin, states, StateId.PROGRESSIVE_COLD);
+
+      assertTrue(targetAttrs.get(Stat.hitpoints).asFixed() < 10000f,
+          "skill cold damage must survive physical immunity");
+      assertTrue(world.getMapper(UnitStates.class).get(target)
+          .stateList.hasState(StateId.FREEZE));
+      assertTrue(factory.missilesCreated > 0 && factory.missilesCreated <= 9);
+      int range = AssassinSkills.progressiveRange(blades, 5, 3);
+      Vector2 origin = world.getMapper(Position.class).get(target).position;
+      for (int missileId : factory.missileEntityIds) {
+        Missile missile = world.getMapper(Missile.class).get(missileId);
+        assertEquals("bladesoficecubes", missile.missile.Missile);
+        assertEquals(assassin, missile.ownerId);
+        assertEquals(blades.Id, missile.skillId);
+        assertTrue(missile.damageSnapshot);
+        assertTrue(missile.freezesTarget);
+        assertEquals(missile.missile.Range, missile.nativeLifetimeFrames);
+        assertTrue(world.getMapper(Position.class).get(missileId)
+            .position.dst2(origin) <= range * range);
+      }
+    } finally {
+      world.dispose();
+      com.riiablo.engine.server.combat.StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void stationaryBladesCubeExpiresByNativeFrameRange() {
+    DummyFactory factory = new DummyFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int assassin = createPlayer(world, 50, 50, attributes(1000, 1, 1, 100));
+      Missiles.Entry row = Riiablo.files.Missiles.get("bladesoficecubes");
+      int cubeId = factory.createMissile(row, Vector2.X, Vector2.Zero, assassin);
+      Missile cube = world.getMapper(Missile.class).get(cubeId);
+      cube.nativeLifetimeFrames = row.Range;
+      world.setDelta(com.riiablo.codec.Animation.FRAME_DURATION);
+
+      for (int i = 0; i < row.Range - 1; i++) world.process();
+      assertTrue(world.getEntityManager().isActive(cubeId));
+      world.process();
+      assertTrue(!world.getEntityManager().isActive(cubeId));
     } finally {
       world.dispose();
     }

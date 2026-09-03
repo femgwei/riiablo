@@ -166,6 +166,19 @@ public final class AssassinSkills {
     public String lightningNovaMissile;
     public String lightningBoltMissile;
     public int lightningBoltStep;
+    public int coldCharges;
+    public int coldSkillId = -1;
+    public int coldSkillLevel;
+    public int coldMinDamage;
+    public int coldMaxDamage;
+    public int coldPhysicalMinDamage;
+    public int coldPhysicalMaxDamage;
+    public int coldSourceDamageScale;
+    public int coldLength;
+    public int coldFreezeDuration;
+    public int coldAreaRange;
+    public int coldCubeRange;
+    public String coldCubeMissile;
 
     public boolean hasEffects() {
       return totalCharges > 0;
@@ -241,8 +254,36 @@ public final class AssassinSkills {
             release.lightningBoltStep = progressiveRange(skill, level, 3);
           }
           break;
+        case StateId.PROGRESSIVE_COLD:
+          release.coldCharges = charges;
+          release.coldSkillId = skill.Id;
+          release.coldSkillLevel = level;
+          release.coldMinDamage += shiftedSkillDamage(
+              skill.EMin, skill.EMinLev, level, skill.HitShift);
+          release.coldMaxDamage += shiftedSkillDamage(
+              skill.EMax, skill.EMaxLev, level, skill.HitShift);
+          release.coldPhysicalMinDamage += shiftedSkillDamage(
+              skill.MinDam, skill.MinLevDam, level, skill.HitShift);
+          release.coldPhysicalMaxDamage += shiftedSkillDamage(
+              skill.MaxDam, skill.MaxLevDam, level, skill.HitShift);
+          release.coldSourceDamageScale = Math.max(
+              release.coldSourceDamageScale, Math.max(0, skill.SrcDam));
+          release.coldLength = Math.max(release.coldLength,
+              Math.max(0, skill.ELen + damageBonusByLevel(level, skill.ELevLen)));
+          // sub_6FCF5BC0 freezes only the charge-three primary hit. Param5
+          // divides cold length; the original Blades row uses one.
+          if (charges == 3) {
+            int divisor = param(skill, 4, 0);
+            if (divisor > 0) release.coldFreezeDuration = release.coldLength / divisor;
+          }
+          if (charges >= 2) release.coldAreaRange = progressiveRange(skill, level, 2);
+          if (charges >= 3) {
+            release.coldCubeRange = progressiveRange(skill, level, 3);
+            release.coldCubeMissile = progressiveMissile(skill, 3);
+          }
+          break;
         default:
-          // Cold and Phoenix stage functions are handled by the
+          // Phoenix stage functions are handled by the
           // following martial-arts module; they are still counted so the
           // native consume-all operation remains observable in logs/tests.
           break;
@@ -253,6 +294,9 @@ public final class AssassinSkills {
         release.firePhysicalMinDamage, release.firePhysicalMaxDamage);
     release.lightningMaxDamage = Math.max(
         release.lightningMinDamage, release.lightningMaxDamage);
+    release.coldMaxDamage = Math.max(release.coldMinDamage, release.coldMaxDamage);
+    release.coldPhysicalMaxDamage = Math.max(
+        release.coldPhysicalMinDamage, release.coldPhysicalMaxDamage);
     return release;
   }
 
@@ -288,6 +332,11 @@ public final class AssassinSkills {
     if (release == null || release.lightningMaxDamage <= 0) return 0;
     return MathUtils.random(
         Math.max(0, release.lightningMinDamage), release.lightningMaxDamage);
+  }
+
+  public static int rollColdDamage(ProgressiveRelease release) {
+    if (release == null || release.coldMaxDamage <= 0) return 0;
+    return MathUtils.random(Math.max(0, release.coldMinDamage), release.coldMaxDamage);
   }
 
   static int shiftedSkillDamage(int base, int[] perLevel, int level, int hitShift) {

@@ -207,6 +207,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
+    // D2MOO still advances Range for stationary basic missiles. Riiablo's
+    // ordinary range is distance-based, so these explicit one-shot visuals
+    // need a frame clock or they remain in the world forever when they miss.
+    if (missile.nativeLifetimeFrames > 0
+        && missile.nativeFrame >= missile.nativeLifetimeFrames) {
+      world.delete(entityId);
+    }
   }
 
   /** D2MOO MISSMODE_SrvDo31: a maker reaching its path end emits two waves. */
