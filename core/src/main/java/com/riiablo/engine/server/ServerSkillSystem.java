@@ -213,6 +213,13 @@ public class ServerSkillSystem extends PassiveSystem {
       applyCloakOfShadows(event, skill, skillLevel, start);
       return;
     }
+    // D2MOO SrvDo049 creates one owned Shadow Warrior/Master pet.  Keep the
+    // summon data-driven because this project’s Skills.txt uses the native
+    // ids 268/279 rather than the legacy SkillId constants.
+    if (event.srvdofunc == 49 || skill.srvdofunc == 49) {
+      spawnAssassinShadow(event, skill, skillLevel, start);
+      return;
+    }
     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
       spawnNova(event, skill, start);
       return;
@@ -445,6 +452,46 @@ public class ServerSkillSystem extends PassiveSystem {
   static boolean isCloakOfShadows(Skills.Entry skill) {
     return skill != null && skill.skill != null
         && "cloak of shadows".equalsIgnoreCase(skill.skill.trim());
+  }
+
+  private void spawnAssassinShadow(SkillDoEvent event, Skills.Entry skill, int skillLevel,
+      Vector2 caster) {
+    if (!mPlayer.has(event.entityId) || skill.summon == null || skill.summon.isEmpty()) {
+      log.warn("[ASSASSIN_SHADOW] phase=reject owner={} skill={} reason=missing_owner_or_summon",
+          event.entityId, event.skillId);
+      return;
+    }
+    MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+    if (summon == null) {
+      log.warn("[ASSASSIN_SHADOW] phase=reject owner={} skill={} row={} reason=missing_monstats",
+          event.entityId, event.skillId, skill.summon);
+      return;
+    }
+    String petType = skill.pettype == null || skill.pettype.isEmpty()
+        ? "shadowwarrior" : skill.pettype;
+    int petMax = SkillFormula.evaluate(skill.petmax, skill, skillLevel);
+    if (petMax <= 0) petMax = 1;
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    int petId = factory.createSummonedPet(event.entityId, summon, petType, event.skillId,
+        skillLevel, petMax, false, 0, target.x, target.y);
+    if (petId < 0) {
+      log.warn("[ASSASSIN_SHADOW] phase=reject owner={} skill={} reason=create_failed",
+          event.entityId, event.skillId);
+      return;
+    }
+    if (mUnitStates.has(petId)) {
+      UnitStates states = mUnitStates.get(petId);
+      if (states.stateList == null) states.init(petId);
+      UnitState state = states.stateList.addState(StateId.SHADOWWARRIOR, 0, skillLevel,
+          event.entityId);
+      if (state != null) {
+        state.skillId = event.skillId;
+        state.needsSync = true;
+      }
+    }
+    log.info("[ASSASSIN_SHADOW] phase=spawn owner={} entity={} summon={} petType={} level={} max={} "
+            + "position=({}, {}) status=PASS",
+        event.entityId, petId, summon.Id, petType, skillLevel, petMax, target.x, target.y);
   }
 
   private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {

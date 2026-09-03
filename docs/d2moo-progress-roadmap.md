@@ -56,7 +56,7 @@
 | 职业 | 当前完成 | 剩余 | 主要缺口 |
 |---|---:|---:|---|
 | 亚马逊 Amazon | 82% | 18% | 弓系弹药消耗、命中/受击动画反馈和少量持续效果仍待补齐 |
-| 刺客 Assassin | 45% | 55% | 聚气、陷阱生命周期、影子/踢击和状态分支 |
+| 刺客 Assassin | 48% | 52% | 聚气、陷阱生命周期、踢击和更多状态分支 |
 | 野蛮人 Barbarian | 50% | 50% | Frenzy/Whirlwind/Berserk 状态、双持和命中序列 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
@@ -104,6 +104,14 @@
 - [ ] 补齐第一章怪物技能、导弹碰撞和特殊 AI 的原生分支。
 - [x] ~~完成亚马逊 Decoy/Dopplezon 与 Valkyrie 原生召唤专项~~
   - `SrvDo015/016` 使用 `Skills.txt` 的 `summon/pettype/petmax/calc`；召唤物具有主人、阵营、限额替换、可通行落点、Decoy 时限与 Valkyrie 状态；召唤物击杀奖励归主人，自身死亡无经验和掉落。
+- [x] ~~完成亚马逊导引箭、Strafe、Pierce、闪避被动和元素箭表现专项~~
+  - `SrvDo010/012` 目标追踪、原生箭数/范围、穿透命中去重和 Dodge/Avoid/Evade 已接入；Magic/Fire/Cold/Exploding/Ice/Immolation/Freezing Arrow 的多人客户端资源和权威导弹去重测试通过。
+- [ ] 完成亚马逊剩余弓系运行时细节
+  - 待补：弹药消耗/恢复、完整命中与受击动画反馈、少量持续火焰/冰冻效果；当前专项完成度约 82%，不能整体划掉。
+- [x] ~~完成刺客技能表审计与 Shadow Warrior/Shadow Master 原生召唤首项~~
+  - 核对 `Skills.txt` 实际 ID（Shadow Warrior=268、Shadow Master=279、SrvDo049），按 `summon/pettype/petmax` 创建玩家所有权召唤物，并同步 `SHADOWWARRIOR` 状态；`AssassinSkillSpecializationTest` 已加入数据和 ECS 门槛。
+- [ ] 完成刺客陷阱生命周期（SrvDo044/SrvDo045）
+  - 待补：Blade Sentinel、Charged Bolt/Wake/Lightning/Inferno/Death Sentry 的部署上限、持续时间、目标选择、导弹/区域表现和拆除。
 
 ### P2：世界交互和多人闭环
 
@@ -133,7 +141,7 @@
 ## 当前下一项
 
 已完成 **多人技能表现同步层的暗影斗篷首项**：服务端权威 `DIMVISION` 状态与客户端 Overlay 重同步已接通。
-下一项调整为 **法师持续/范围法术的多人表现同步**：优先检查 Thunder Storm、Inferno、Fire Wall、Meteor、Blizzard、Frozen Orb 的权威导弹/区域对象与客户端动画一致性，再进入刺客陷阱生命周期专项。
+下一项调整为 **刺客陷阱生命周期（SrvDo044/SrvDo045）**：先完成 Blade Sentinel 和五种 Sentry 的部署上限、持续时间、目标选择与多人表现；刺客聚气/踢击随后处理，法师范围法术再按职业顺序推进。
 
 ## 记录规则
 
