@@ -121,6 +121,8 @@ public class UnitState {
 
   /** 每帧伤害（用于 DOT 效果） */
   public int damagePerFrame;
+  /** Fractional authoritative DOT rate; native poison uses 8.8 fixed units. */
+  public float exactDamagePerFrame;
   
   /** 伤害类型（0=物理, 1=火焰, 2=闪电, 3=冰冷, 4=毒素, 5=魔法） */
   public int damageType;
@@ -199,6 +201,7 @@ public class UnitState {
     clearModifiers();
 
     damagePerFrame = 0;
+    exactDamagePerFrame = 0f;
     damageType = 0;
     poisonMinDamage = 0;
     poisonMaxDamage = 0;
@@ -405,6 +408,7 @@ public class UnitState {
     this.masteryCriticalChance = other.masteryCriticalChance;
     
     this.damagePerFrame = other.damagePerFrame;
+    this.exactDamagePerFrame = other.exactDamagePerFrame;
     this.damageType = other.damageType;
     this.poisonMinDamage = other.poisonMinDamage;
     this.poisonMaxDamage = other.poisonMaxDamage;

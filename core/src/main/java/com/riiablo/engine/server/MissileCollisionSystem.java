@@ -106,6 +106,11 @@ public class MissileCollisionSystem extends IteratingSystem {
     int elapsedFrames = Math.max(1, Math.round(Math.max(0f, world.delta) * 25f));
     missile.nativeFrame += elapsedFrames;
 
+    if (missile.rabiesController) {
+      processRabiesController(entityId, missile, position, elapsedFrames);
+      return;
+    }
+
     // D2MOO SrvDo20 retargets Blade Creeper's missile path to its controller
     // every frame. The stored damage owner remains the casting player.
     lastPos.set(position.position);
@@ -249,6 +254,109 @@ public class MissileCollisionSystem extends IteratingSystem {
         && missile.nativeFrame >= missile.nativeLifetimeFrames) {
       world.delete(entityId);
     }
+  }
+
+  /** D2MOO SrvDo30/SrvHit53: infected units periodically pass remaining poison. */
+  private void processRabiesController(
+      int entityId, Missile controller, Position position, int elapsedFrames) {
+    int infectedId = controller.attachedEntityId;
+    if (infectedId < 0 || !world.getEntityManager().isActive(infectedId)
+        || !mPosition.has(infectedId) || !mUnitStates.has(infectedId)
+        || mUnitStates.get(infectedId).stateList == null
+        || !mUnitStates.get(infectedId).stateList.hasState(StateId.RABIES)) {
+      log.info("[DRUID_RABIES] phase=controller_remove missileId={} infected={} reason=state_missing",
+          entityId, infectedId);
+      world.delete(entityId);
+      return;
+    }
+    position.position.set(mPosition.get(infectedId).position);
+    controller.remainingFrames -= Math.max(1, elapsedFrames);
+    if (controller.remainingFrames <= 0) {
+      world.delete(entityId);
+      return;
+    }
+    int interval = controller.missile != null && controller.missile.Param != null
+        && controller.missile.Param.length > 0 && controller.missile.Param[0] > 0
+        ? controller.missile.Param[0] : 5;
+    if (controller.nativeFrame < controller.rabiesNextPulseFrame) return;
+    controller.rabiesNextPulseFrame = controller.nativeFrame + interval;
+    int radius = controller.missile != null && controller.missile.Param != null
+        && controller.missile.Param.length > 1 && controller.missile.Param[1] > 0
+        ? controller.missile.Param[1] : 3;
+    Array<Integer> targets = getEntitiesInRange(
+        position.position.x, position.position.y, radius);
+    for (int i = 0; i < targets.size; i++) {
+      int targetId = targets.get(i);
+      if (targetId == infectedId || targetId == controller.rabiesSourceId
+          || !mPosition.has(targetId) || !mUnitStates.has(targetId)
+          || !mAttributesWrapper.has(targetId)
+          || !isEnemy(controller.rabiesSourceId, targetId)) continue;
+      UnitStates targetStates = mUnitStates.get(targetId);
+      if (targetStates.stateList == null) targetStates.init(targetId);
+      if (targetStates.stateList.hasState(StateId.RABIES)) continue;
+      Attributes attrs = mAttributesWrapper.get(targetId).attrs;
+      StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+      if (hp == null || hp.asFixed() <= 0f) continue;
+      int duration = Math.max(10, controller.remainingFrames);
+      float damage = Math.max(1f / 256f, controller.damageMultiplier);
+      UnitState infected = targetStates.stateList.addState(
+          StateId.RABIES, duration, Math.max(1, controller.damageLevel),
+          controller.rabiesSourceId);
+      if (infected == null) continue;
+      infected.skillId = controller.skillId;
+      infected.needsSync = true;
+      StatusEffectApplier.INSTANCE.applyPoison(
+          targetId, damage, duration, controller.rabiesSourceId);
+      spawnRabiesContagionVisual(controller, position.position,
+          targetId, mPosition.get(targetId).position);
+      createRabiesControllerChild(controller, targetId, duration);
+      log.info("[DRUID_RABIES] phase=spread source={} from={} target={} remaining={} "
+              + "damage={} radius={}", controller.rabiesSourceId, infectedId,
+          targetId, duration, damage, radius);
+    }
+  }
+
+  private void spawnRabiesContagionVisual(
+      Missile controller, Vector2 origin, int targetId, Vector2 target) {
+    if (factory == null || controller == null || controller.missile == null
+        || controller.missile.SubMissile == null
+        || controller.missile.SubMissile.length == 0) return;
+    String name = controller.missile.SubMissile[0];
+    Missiles.Entry row = name != null ? Riiablo.files.Missiles.get(name) : null;
+    if (row == null) return;
+    Vector2 direction = new Vector2(target).sub(origin);
+    if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+    int id = factory.createMissile(row, direction.nor(), origin, controller.rabiesSourceId);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile visual = mMissile.get(id);
+    visual.skillId = controller.skillId;
+    visual.damageLevel = controller.damageLevel;
+    visual.rabiesContagionVisual = true;
+    visual.attachedEntityId = controller.attachedEntityId;
+    visual.targetId = targetId;
+    visual.homing = true;
+    log.info("[DRUID_RABIES] phase=contagion_create source={} missileId={} missile={} "
+            + "origin=({}, {}) target=({}, {})", controller.rabiesSourceId, id,
+        row.Missile, origin.x, origin.y, target.x, target.y);
+  }
+
+  private void createRabiesControllerChild(Missile parent, int infectedId, int duration) {
+    if (factory == null || parent == null || parent.missile == null || !mPosition.has(infectedId)) {
+      return;
+    }
+    int id = factory.createMissile(parent.missile, Vector2.X,
+        mPosition.get(infectedId).position, parent.rabiesSourceId);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile child = mMissile.get(id);
+    child.skillId = parent.skillId;
+    child.damageLevel = parent.damageLevel;
+    child.attached = true;
+    child.attachedEntityId = infectedId;
+    child.rabiesController = true;
+    child.rabiesSourceId = parent.rabiesSourceId;
+    child.remainingFrames = duration;
+    child.rabiesNextPulseFrame = child.nativeFrame + 1;
+    child.damageMultiplier = parent.damageMultiplier;
   }
 
   /** D2MOO MISSMODE_SrvDo31: a maker reaching its path end emits two waves. */
@@ -439,6 +547,15 @@ public class MissileCollisionSystem extends IteratingSystem {
             missileId, missile.ownerId, targetId,
             Integer.toHexString(mNativeUnitFlags.get(targetId).flags()));
         return false;
+      }
+      if (missile.rabiesContagionVisual && targetId != missile.targetId) {
+        return false;
+      }
+      if (missile.rabiesContagionVisual) {
+        log.info("[DRUID_RABIES] phase=contagion_arrive source={} missileId={} target={}",
+            missile.ownerId, missileId, targetId);
+        world.delete(missileId);
+        return true;
       }
       if (missile.attached) {
         int nextFrame = missile.nextHitFrame.get(targetId, Integer.MIN_VALUE);

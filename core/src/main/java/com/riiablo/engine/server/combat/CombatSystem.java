@@ -302,6 +302,8 @@ public class CombatSystem {
     /** 状态效果持续时间（帧） */
     public int coldDuration;
     public int poisonDuration;
+    /** Fractional poison rate used by native 8.8 fixed-point skill damage. */
+    public float poisonDamagePerFrame;
 
     /** 重置结果 */
     public void reset() {
@@ -320,6 +322,7 @@ public class CombatSystem {
       hitChance = 0;
       coldDuration = 0;
       poisonDuration = 0;
+      poisonDamagePerFrame = 0f;
     }
   }
 
@@ -484,6 +487,46 @@ public class CombatSystem {
     return calculatePrecomputedMeleeAttack(attacker, defender, attackerPlayer, defenderPlayer,
         attackMinDamage, attackMaxDamage, attackRating, 0, DAMAGE_PHYSICAL,
         attackerStates, defenderStates, defenderMoving, null);
+  }
+
+  /** Native shape attack with a precomputed physical packet and elemental range. */
+  public CombatResult calculatePrecomputedMeleeElementalAttack(
+      Attributes attacker, Attributes defender, boolean attackerPlayer,
+      boolean defenderPlayer, int physicalMin, int physicalMax, int attackRating,
+      int[] elementalMin, int[] elementalMax, int coldLength, int poisonLength,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving) {
+    int[] combinedMin = new int[DAMAGE_TYPE_COUNT];
+    int[] combinedMax = new int[DAMAGE_TYPE_COUNT];
+    short[] minStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
+        Stat.poisonmindam, Stat.magicmindam};
+    short[] maxStats = {0, Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam,
+        Stat.poisonmaxdam, Stat.magicmaxdam};
+    for (int type = DAMAGE_FIRE; type < DAMAGE_TYPE_COUNT; type++) {
+      int skillMin = elementalMin != null && type < elementalMin.length
+          ? elementalMin[type] : 0;
+      int skillMax = elementalMax != null && type < elementalMax.length
+          ? elementalMax[type] : skillMin;
+      combinedMin[type] = Math.max(0, statInt(attacker, minStats[type], 0))
+          + Math.max(0, skillMin);
+      combinedMax[type] = Math.max(combinedMin[type],
+          Math.max(0, statInt(attacker, maxStats[type], 0)) + Math.max(0, skillMax));
+    }
+    if (attackerStates != null) {
+      UnitState venom = attackerStates.getState(StateId.VENOMCLAWS);
+      if (venom != null) {
+        combinedMin[DAMAGE_POISON] += Math.max(0, venom.poisonMinDamage);
+        combinedMax[DAMAGE_POISON] += Math.max(0, venom.poisonMaxDamage);
+        if (poisonLength <= 0 && venom.poisonLengthOverride > 0) {
+          poisonLength = venom.poisonLengthOverride;
+        }
+      }
+    }
+    if (coldLength <= 0) coldLength = statInt(attacker, Stat.coldlength, 0);
+    if (poisonLength <= 0) poisonLength = statInt(attacker, Stat.poisonlength, 0);
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
+        physicalMin, physicalMax, attackRating, false, combinedMin, combinedMax,
+        coldLength, poisonLength, attackerStates, defenderStates, defenderMoving, true,
+        0, DAMAGE_PHYSICAL, null);
   }
 
   /** Native Barbarian weapon mastery context for one concrete weapon hand. */

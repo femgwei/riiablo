@@ -205,6 +205,68 @@ class DruidFeralMaulTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void rabiesConsumesPreparedHitAndMarksTargetInfected() {
+    Actioneer actioneer = new Actioneer();
+    DummyFactory factory = new DummyFactory();
+    World world = world(actioneer, factory);
+    try {
+      Skills.Entry rabies = Riiablo.files.skills.get(SkillId.RABIES);
+      int druid = player(world, 0, 0, attributes(1000, 20, 20, 100000));
+      CharData data = CharData.createRemote("rabies", (byte) Riiablo.DRUID);
+      data.setSkillLevel(rabies.Id, 1);
+      world.getMapper(Player.class).get(druid).data = data;
+      world.getMapper(UnitStates.class).get(druid).stateList
+          .addState(StateId.WOLF, 2000, 1, druid);
+      int target = monster(world, 1, 0, attributes(1000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(druid)
+          .set(rabies.Id, target, new Vector2(1, 0));
+      actioneer.onSkillStart(SkillStartEvent.obtain(
+          druid, rabies.Id, target, new Vector2(1, 0), rabies.srvstfunc, rabies.cltstfunc));
+      assertNotNull(casting.rabiesCombat);
+      casting.rabiesCombat.hit = true;
+      casting.rabiesCombat.blocked = false;
+      casting.rabiesPrepared = true;
+      actioneer.onAnimDataKeyframe(AnimDataKeyframeEvent.obtain(druid, Engine.KEYFRAME_ATK));
+      assertTrue(world.getMapper(UnitStates.class).get(target)
+          .stateList.hasState(StateId.RABIES));
+      assertFalse(casting.rabiesPrepared);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void fireClawsConsumesSrvSt58RecordWithoutGenericSecondHit() {
+    Actioneer actioneer = new Actioneer();
+    DummyFactory factory = new DummyFactory();
+    World world = world(actioneer, factory);
+    try {
+      Skills.Entry claws = Riiablo.files.skills.get(SkillId.FIRE_CLAWS);
+      int druid = player(world, 0, 0, attributes(1000, 10, 10, 100000));
+      CharData data = CharData.createRemote("claws", (byte) Riiablo.DRUID);
+      data.setSkillLevel(claws.Id, 1);
+      world.getMapper(Player.class).get(druid).data = data;
+      world.getMapper(UnitStates.class).get(druid).stateList
+          .addState(StateId.BEAR, 2000, 1, druid);
+      int target = monster(world, 1, 0, attributes(1000, 0, 0, 0));
+      Casting casting = world.getMapper(Casting.class).create(druid)
+          .set(claws.Id, target, new Vector2(1, 0));
+      actioneer.onSkillStart(SkillStartEvent.obtain(
+          druid, claws.Id, target, new Vector2(1, 0), claws.srvstfunc, claws.cltstfunc));
+      assertNotNull(casting.fireClawsCombat);
+      casting.fireClawsCombat.hit = true;
+      casting.fireClawsCombat.blocked = false;
+      casting.fireClawsPrepared = true;
+      float expected = casting.fireClawsCombat.totalDamage;
+      actioneer.onAnimDataKeyframe(AnimDataKeyframeEvent.obtain(druid, Engine.KEYFRAME_ATK));
+      assertEquals(1000f - expected, hp(world, target));
+      assertFalse(casting.fireClawsPrepared);
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static World world(Actioneer actioneer, DummyFactory factory) {
     return new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), actioneer, new Pathfinder(), factory)

@@ -764,6 +764,14 @@ public class Actioneer extends PassiveSystem {
         prepareFeralMaul(entityId, targetId);
         break;
       }
+      case 57: { // SKILLS_SrvSt57_Rabies
+        prepareDruidElementalMelee(entityId, targetId, true);
+        break;
+      }
+      case 58: { // SKILLS_SrvSt58_FireClaws
+        prepareDruidElementalMelee(entityId, targetId, false);
+        break;
+      }
       case 44: // MaggotUp start: native code prepares the unburrow transition
         log.info("[MONSTER_MAGGOT] phase=up_start entity={} target={}", entityId, targetId);
         break;
@@ -858,6 +866,10 @@ public class Actioneer extends PassiveSystem {
         resolveFeralMaul(entityId, targetId);
         break;
       }
+      case 121: { // SKILLS_SrvDo121_Rabies
+        resolveRabies(entityId, targetId);
+        break;
+      }
       case 1: // attack
       case 7: // native Jab: same authoritative hit path, skill-specific animation
       case 11: // native Charged Strike: melee hit plus bolts from ServerSkillSystem
@@ -892,6 +904,7 @@ public class Actioneer extends PassiveSystem {
         boolean dragonFlight = srvdofunc == 52;
         boolean berserk = activeSkill != null && activeSkill.srvstfunc == 39
             && activeSkill.srvdofunc == 2;
+        boolean fireClaws = activeSkill != null && DruidSkills.isFireClaws(activeSkill);
         Item berserkWeapon = null;
         CombatSystem.CombatResult dragonTailCombat = dragonTail && activeCasting != null
             && activeCasting.dragonTailPrepared
@@ -992,6 +1005,10 @@ public class Actioneer extends PassiveSystem {
           activeCasting.dragonClawStrikeProcessed = true;
           activeCasting.dragonClawRemainingStrikes--;
           dragonClawWeapon = dragonClawWeapon(entityId, dragonClawStrike);
+        }
+        if (fireClaws) {
+          resolveFireClaws(entityId, targetId);
+          break;
         }
         if (targetId == Engine.INVALID_ENTITY) break;
         if (!mAttributesWrapper.has(targetId)) break;
@@ -1633,6 +1650,180 @@ public class Actioneer extends PassiveSystem {
         hitpoints.asFixed(), feralState != null ? feralState.runtimeValue : 0,
         feralState != null ? StateId.getName(feralState.stateId) : "none",
         lifeStolen, stunFrames);
+  }
+
+  /** Native SrvSt57/SrvSt58: validate shape/range and retain one hit roll. */
+  private void prepareDruidElementalMelee(int entityId, int targetId, boolean rabies) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    boolean matching = rabies ? DruidSkills.isRabies(skill) : DruidSkills.isFireClaws(skill);
+    if (casting == null || !matching || targetId == Engine.INVALID_ENTITY
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !mUnitStates.has(entityId) || !isAlive(entityId) || !isAlive(targetId)
+        || !isInMeleeRange(entityId, targetId, isPlayerEntity(entityId) ? 3 : 0)) {
+      log.info("[DRUID_{}] phase=start_reject source={} target={} reason=invalid_context",
+          rabies ? "RABIES" : "FIRE_CLAWS", entityId, targetId);
+      return;
+    }
+    UnitStates unitStates = mUnitStates.get(entityId);
+    if (unitStates.stateList == null) unitStates.init(entityId);
+    if (!DruidSkills.isSkillAllowedInCurrentShape(skill, unitStates.stateList)) {
+      log.info("[DRUID_{}] phase=start_reject source={} target={} reason=shape_restriction",
+          rabies ? "RABIES" : "FIRE_CLAWS", entityId, targetId);
+      return;
+    }
+    boolean sourceAligned = mPlayer.has(entityId) || mMercenary.has(entityId)
+        || mSummonedPet.has(entityId);
+    boolean targetAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
+        || mSummonedPet.has(targetId);
+    if (!PvpCombatRules.canDamage(partyManager, entityId, targetId,
+        sourceAligned, targetAligned)) return;
+
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    Item weapon = activeAttackWeapon(entityId);
+    int[] physical = DruidSkills.calculateShapeWeaponDamage(
+        skill, level, attacker, weapon, unitStates.stateList);
+    int[] elemental = rabies
+        ? DruidSkills.getRabiesPoisonDamage(
+            skill, level, name -> baseSkillLevel(entityId, name))
+        : DruidSkills.getFireClawsFireDamage(
+            skill, level, name -> baseSkillLevel(entityId, name));
+    int[] elementalMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] elementalMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int type = rabies ? CombatSystem.DAMAGE_POISON : CombatSystem.DAMAGE_FIRE;
+    if (!rabies) {
+      elementalMin[type] = elemental[0];
+      elementalMax[type] = elemental[1];
+    }
+    int duration = rabies ? DruidSkills.getRabiesPoisonDuration(
+        skill, level, name -> baseSkillLevel(entityId, name)) : 0;
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE
+        .calculatePrecomputedMeleeElementalAttack(
+            attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
+            physical[0], physical[1], DruidSkills.getShapeAttackRating(
+                skill, level, attacker, isPlayerEntity(entityId)),
+            elementalMin, elementalMax, 0, duration,
+            unitStates.stateList, stateList(targetId), isEntityMoving(targetId));
+    if (rabies && combat.hit && !combat.blocked) {
+      int rawFixed = MathUtils.random(elemental[0], elemental[1]);
+      int resistedFixed = resistedDamage(rawFixed, defender, stateList(targetId),
+          Stat.poisonresist, 3);
+      combat.poisonDamagePerFrame = resistedFixed / 256f
+          + combat.elementalDamage[CombatSystem.DAMAGE_POISON];
+    }
+    if (rabies) {
+      casting.rabiesCombat = combat;
+      casting.rabiesTargetId = targetId;
+      casting.rabiesPrepared = combat.hit && !combat.blocked;
+    } else {
+      casting.fireClawsCombat = combat;
+      casting.fireClawsTargetId = targetId;
+      casting.fireClawsPrepared = true;
+    }
+    log.info("[DRUID_{}] phase=start source={} target={} level={} physical={}..{} "
+            + "element={}..{} duration={} chance={} hit={} blocked={}",
+        rabies ? "RABIES" : "FIRE_CLAWS", entityId, targetId, level,
+        physical[0], physical[1], elemental[0], elemental[1], duration,
+        combat.hitChance, combat.hit, combat.blocked);
+  }
+
+  private void resolveRabies(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    if (casting == null || !casting.rabiesPrepared || casting.rabiesTargetId != targetId
+        || casting.rabiesCombat == null) {
+      log.info("[DRUID_RABIES] phase=keyframe_reject source={} target={} reason=not_prepared",
+          entityId, targetId);
+      return;
+    }
+    CombatSystem.CombatResult combat = casting.rabiesCombat;
+    casting.rabiesCombat = null;
+    casting.rabiesTargetId = Engine.INVALID_ENTITY;
+    casting.rabiesPrepared = false;
+    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    resolveDruidElementalMeleeDamage(entityId, targetId, combat, "RABIES");
+    if (!mUnitStates.has(targetId) || !isAlive(targetId)) return;
+    UnitStates targetStates = mUnitStates.get(targetId);
+    if (targetStates.stateList == null) targetStates.init(targetId);
+    if (!targetStates.stateList.hasState(StateId.RABIES)) {
+      UnitState infected = targetStates.stateList.addState(
+          StateId.RABIES, Math.max(10, combat.poisonDuration),
+          Math.max(1, skillLevel(entityId, casting.skillId)), entityId);
+      if (infected != null) {
+        infected.skillId = casting.skillId;
+        infected.needsSync = true;
+      }
+      createRabiesController(entityId, targetId, skill,
+          Math.max(1, skillLevel(entityId, casting.skillId)), combat);
+    }
+  }
+
+  private void resolveFireClaws(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    if (casting == null || !casting.fireClawsPrepared
+        || casting.fireClawsTargetId != targetId || casting.fireClawsCombat == null) {
+      log.info("[DRUID_FIRE_CLAWS] phase=keyframe_reject source={} target={} reason=not_prepared",
+          entityId, targetId);
+      return;
+    }
+    CombatSystem.CombatResult combat = casting.fireClawsCombat;
+    casting.fireClawsCombat = null;
+    casting.fireClawsTargetId = Engine.INVALID_ENTITY;
+    casting.fireClawsPrepared = false;
+    resolveDruidElementalMeleeDamage(entityId, targetId, combat, "FIRE_CLAWS");
+  }
+
+  private void resolveDruidElementalMeleeDamage(int sourceId, int targetId,
+      CombatSystem.CombatResult combat, String tag) {
+    if (combat == null || !combat.hit || combat.blocked
+        || !mAttributesWrapper.has(targetId)) {
+      if (combat != null && combat.blocked) queueHitReaction(targetId, true);
+      return;
+    }
+    Item weapon = activeAttackWeapon(sourceId);
+    if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hp == null || hp.asFixed() <= 0f) return;
+    float before = hp.asFixed();
+    DamageEvent event = DamageEvent.obtain(sourceId, targetId, Math.max(0, combat.totalDamage));
+    events.dispatch(event);
+    hp.sub(Math.max(0f, event.damage));
+    if (hp.asFixed() < 0f) hp.set(0f);
+    applyCombatStates(sourceId, targetId, combat);
+    if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
+    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(sourceId, targetId));
+    log.info("[DRUID_{}] phase=keyframe source={} target={} physical={} fire={} "
+            + "poison={} poisonDuration={} hp={} -> {}",
+        tag, sourceId, targetId, combat.physicalDamage,
+        combat.elementalDamage[CombatSystem.DAMAGE_FIRE],
+        combat.elementalDamage[CombatSystem.DAMAGE_POISON], combat.poisonDuration,
+        before, hp.asFixed());
+  }
+
+  private void createRabiesController(int sourceId, int infectedId, Skills.Entry skill,
+      int level, CombatSystem.CombatResult combat) {
+    if (factory == null || skill == null || !mPosition.has(infectedId)
+        || skill.srvmissilea == null || skill.srvmissilea.isEmpty()) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    if (row == null) return;
+    int missileId = factory.createMissile(
+        row, Vector2.X, mPosition.get(infectedId).position, sourceId);
+    if (missileId == Engine.INVALID_ENTITY || !mMissile.has(missileId)) return;
+    com.riiablo.engine.server.component.Missile controller = mMissile.get(missileId);
+    controller.skillId = skill.Id;
+    controller.damageLevel = level;
+    controller.attached = true;
+    controller.attachedEntityId = infectedId;
+    controller.rabiesController = true;
+    controller.rabiesSourceId = sourceId;
+    controller.remainingFrames = Math.max(10, combat.poisonDuration);
+    controller.rabiesNextPulseFrame = 0;
+    controller.damageMultiplier = Math.max(0f, combat.poisonDamagePerFrame);
+    log.info("[DRUID_RABIES] phase=controller_create source={} infected={} missileId={} "
+            + "missile={} duration={}", sourceId, infectedId, missileId,
+        row.Missile, controller.remainingFrames);
   }
 
   static boolean allowsDeadTarget(Skills.Entry skill) {
@@ -2333,9 +2524,11 @@ public class Actioneer extends PassiveSystem {
       CombatSystem.CombatResult combat) {
     if (!mUnitStates.has(targetId)) return;
     if (combat.poisonDuration > 0
-        && combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0) {
+        && (combat.poisonDamagePerFrame > 0f
+            || combat.elementalDamage[CombatSystem.DAMAGE_POISON] > 0)) {
       StatusEffectApplier.INSTANCE.applyPoison(targetId,
-          combat.elementalDamage[CombatSystem.DAMAGE_POISON],
+          combat.poisonDamagePerFrame > 0f ? combat.poisonDamagePerFrame
+              : combat.elementalDamage[CombatSystem.DAMAGE_POISON],
           combat.poisonDuration, attackerId);
     }
     if (combat.coldDuration > 0

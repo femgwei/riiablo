@@ -33,6 +33,12 @@ public class StatusEffectApplier {
   public interface StateSink {
     void applyState(int targetEntityId, int stateId, int duration, int level,
         int sourceEntityId, int damagePerFrame, int damageType);
+
+    default void applyStateExact(int targetEntityId, int stateId, int duration, int level,
+        int sourceEntityId, float damagePerFrame, int damageType) {
+      applyState(targetEntityId, stateId, duration, level, sourceEntityId,
+          Math.max(0, Math.round(damagePerFrame)), damageType);
+    }
   }
 
   private StateSink stateSink;
@@ -76,13 +82,18 @@ public class StatusEffectApplier {
    */
   public void applyPoison(int targetEntityId, int poisonDamage, int poisonDuration, 
       int attackerEntityId) {
+    applyPoison(targetEntityId, (float) poisonDamage, poisonDuration, attackerEntityId);
+  }
+
+  public void applyPoison(int targetEntityId, float poisonDamage, int poisonDuration,
+      int attackerEntityId) {
     
     if (poisonDamage <= 0 || poisonDuration <= 0) {
       return;
     }
 
     if (stateSink != null) {
-      stateSink.applyState(targetEntityId, StateId.POISON, poisonDuration, 1,
+      stateSink.applyStateExact(targetEntityId, StateId.POISON, poisonDuration, 1,
           attackerEntityId, poisonDamage, 4);
     }
     

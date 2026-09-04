@@ -309,6 +309,10 @@ public class ServerSkillSystem extends PassiveSystem {
       armBladeShield(event, skill, skillLevel);
       return;
     }
+    // Actioneer owns Rabies' precomputed melee packet and creates its
+    // target-attached SrvDo30 controller. Generic projectile creation would
+    // incorrectly launch rabiesplague from the caster a second time.
+    if (event.srvdofunc == 121 || skill.srvdofunc == 121) return;
     // D2MOO SrvDo034/SrvDo035 are melee combat records. Actioneer resolves
     // their hit and progressive-state update at this same keyframe. Their
     // SrvMissileA-D columns describe charge-release stages and must not be

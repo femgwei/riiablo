@@ -107,6 +107,13 @@ public class Missile extends PooledComponent {
   /** Prevents impact sub-effects from being emitted once per area target. */
   public boolean hitFunctionTriggered;
 
+  /** D2MOO SrvDo30 Rabies controller attached to the infected unit. */
+  public boolean rabiesController;
+  public int rabiesSourceId = -1;
+  public int rabiesNextPulseFrame;
+  /** Presentation carrier; infection is committed by the authoritative controller. */
+  public boolean rabiesContagionVisual;
+
   /** Skill damage multiplier captured when the missile is spawned. */
   public float damageMultiplier = 1f;
 
@@ -170,6 +177,10 @@ public class Missile extends PooledComponent {
     chaosIceY = 0;
     chaosIceNextTurnFrame = 0;
     hitFunctionTriggered = false;
+    rabiesController = false;
+    rabiesSourceId = -1;
+    rabiesNextPulseFrame = 0;
+    rabiesContagionVisual = false;
     damageMultiplier = 1f;
     pierceEnabled = false;
     pierceChance = 0;

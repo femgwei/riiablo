@@ -515,10 +515,35 @@ public final class DruidSkills {
    * @return 总毒素伤害
    */
   public static int calculateRabiesDamage(int skillLevel) {
-    // 基础 100-150，每级 +50-75
-    int minDamage = 100 + (skillLevel - 1) * 50;
-    int maxDamage = 150 + (skillLevel - 1) * 75;
-    return MathUtils.random(minDamage, maxDamage);
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.RABIES) : null;
+    int[] damage = getRabiesPoisonDamage(skill, skillLevel, name -> 0);
+    int duration = getRabiesPoisonDuration(skill, skillLevel, name -> 0);
+    return Math.round(MathUtils.random(damage[0], damage[1]) / 256f * duration);
+  }
+
+  public static boolean isRabies(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 57 && skill.srvdofunc == 121;
+  }
+
+  public static boolean isFireClaws(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 58 && skill.srvdofunc == 2;
+  }
+
+  /** Native Skills.txt EMin/EMax + level increments + EDmgSymPerCalc. */
+  public static int[] getRabiesPoisonDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isRabies(skill)) return new int[] {0, 0};
+    return elementalFixedDamageRange(skill, skillLevel, baseSkillLevel);
+  }
+
+  /** SKILLS_GetElementalLength, including ELenSymPerCalc when present. */
+  public static int getRabiesPoisonDuration(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isRabies(skill)) return 0;
+    int level = Math.max(1, skillLevel);
+    return Math.max(10, skill.ELen + damageBonusByLevel(level, skill.ELevLen)
+        + SkillFormula.evaluate(skill.ELenSymPerCalc, skill, level, baseSkillLevel));
   }
 
   /**
@@ -528,10 +553,97 @@ public final class DruidSkills {
    * @return 火焰伤害
    */
   public static int calculateFireClawsDamage(int skillLevel) {
-    // 基础 15-20，每级 +10-12
-    int minDamage = 15 + (skillLevel - 1) * 10;
-    int maxDamage = 20 + (skillLevel - 1) * 12;
-    return MathUtils.random(minDamage, maxDamage);
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.FIRE_CLAWS) : null;
+    int[] damage = getFireClawsFireDamage(skill, skillLevel, name -> 0);
+    return MathUtils.random(damage[0], damage[1]);
+  }
+
+  public static int[] getFireClawsFireDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isFireClaws(skill)) return new int[] {0, 0};
+    return elementalDamageRange(skill, skillLevel, baseSkillLevel);
+  }
+
+  public static int getDruidElementalSkillLevel(
+      ToIntFunction<String> baseSkillLevel, String skillName) {
+    return baseSkillLevel == null || skillName == null ? 0
+        : Math.max(0, baseSkillLevel.applyAsInt(skillName));
+  }
+
+  public static int getFireClawsSynergyLevel(ToIntFunction<String> baseSkillLevel) {
+    return getDruidElementalSkillLevel(baseSkillLevel, "Firestorm")
+        + getDruidElementalSkillLevel(baseSkillLevel, "Molten Boulder")
+        + getDruidElementalSkillLevel(baseSkillLevel, "Volcano")
+        + getDruidElementalSkillLevel(baseSkillLevel, "Eruption");
+  }
+
+  /** Native player AR applies ToHit/LevToHit as item_tohit_percent. */
+  public static int getShapeAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker, boolean player) {
+    int base = statInt(attacker, Stat.tohit);
+    int factor = skill == null ? 0
+        : skill.ToHit + (Math.max(1, skillLevel) - 1) * skill.LevToHit;
+    return player ? Math.max(1, base * Math.max(0, 100 + factor) / 100)
+        : Math.max(1, base + factor);
+  }
+
+  public static int[] calculateShapeWeaponDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon, StateList states) {
+    return calculateFeralMaulWeaponDamage(skill, skillLevel, attacker, weapon, states);
+  }
+
+  private static int[] elementalDamageRange(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    int level = Math.max(1, skillLevel);
+    int min = shiftedDamage(skill.EMin, skill.EMinLev, level, skill.HitShift);
+    int max = shiftedDamage(skill.EMax, skill.EMaxLev, level, skill.HitShift);
+    int synergy = SkillFormula.evaluate(
+        skill.EDmgSymPerCalc, skill, level, baseSkillLevel);
+    min += min * Math.max(0, synergy) / 100;
+    max += max * Math.max(0, synergy) / 100;
+    return new int[] {min, Math.max(min, max)};
+  }
+
+  /** D2Common SKILLS_GetMin/MaxElemDamage result in native 8.8 fixed units. */
+  private static int[] elementalFixedDamageRange(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    int level = Math.max(1, skillLevel);
+    long min = Math.max(0L,
+        (long) skill.EMin + damageBonusByLevel(level, skill.EMinLev));
+    long max = Math.max(min,
+        (long) skill.EMax + damageBonusByLevel(level, skill.EMaxLev));
+    min <<= Math.min(Math.max(0, skill.HitShift), 30);
+    max <<= Math.min(Math.max(0, skill.HitShift), 30);
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        skill.EDmgSymPerCalc, skill, level, baseSkillLevel));
+    min += min * synergy / 100;
+    max += max * synergy / 100;
+    return new int[] {
+        min > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) min,
+        max > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) max};
+  }
+
+  private static int damageBonusByLevel(int level, int[] values) {
+    if (level <= 1 || values == null || values.length == 0) return 0;
+    int l1 = values.length > 0 ? values[0] : 0;
+    int l2 = values.length > 1 ? values[1] : 0;
+    int l3 = values.length > 2 ? values[2] : 0;
+    int l4 = values.length > 3 ? values[3] : 0;
+    int l5 = values.length > 4 ? values[4] : 0;
+    if (level > 28) return 7 * l1 + 8 * l2 + 6 * (l3 + l4) + (level - 28) * l5;
+    if (level > 22) return 7 * l1 + 8 * l2 + 6 * l3 + (level - 22) * l4;
+    if (level > 16) return 7 * l1 + 8 * l2 + (level - 16) * l3;
+    if (level > 8) return 7 * l1 + (level - 8) * l2;
+    return (level - 1) * l1;
+  }
+
+  private static int shiftedDamage(int base, int[] perLevel, int level, int hitShift) {
+    long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
+    int shift = hitShift - 8;
+    if (shift > 0) value <<= Math.min(shift, 30);
+    else if (shift < 0) value >>= Math.min(-shift, 30);
+    return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
   }
 
   /**

@@ -44,6 +44,14 @@ public class Casting extends PooledComponent {
   @EntityId public int feralMaulTargetId;
   public int feralMaulStunFrames;
   public boolean feralMaulPrepared;
+  /** Native Druid SrvSt57/SrvDo121 Rabies combat record. */
+  public CombatSystem.CombatResult rabiesCombat;
+  @EntityId public int rabiesTargetId;
+  public boolean rabiesPrepared;
+  /** Native Druid SrvSt58 Fire Claws combat record consumed by SrvDo002. */
+  public CombatSystem.CombatResult fireClawsCombat;
+  @EntityId public int fireClawsTargetId;
+  public boolean fireClawsPrepared;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     this.skillId = skillId;
@@ -72,6 +80,12 @@ public class Casting extends PooledComponent {
     feralMaulTargetId = Engine.INVALID_ENTITY;
     feralMaulStunFrames = 0;
     feralMaulPrepared = false;
+    rabiesCombat = null;
+    rabiesTargetId = Engine.INVALID_ENTITY;
+    rabiesPrepared = false;
+    fireClawsCombat = null;
+    fireClawsTargetId = Engine.INVALID_ENTITY;
+    fireClawsPrepared = false;
     return this;
   }
 
@@ -103,5 +117,11 @@ public class Casting extends PooledComponent {
     feralMaulTargetId = Engine.INVALID_ENTITY;
     feralMaulStunFrames = 0;
     feralMaulPrepared = false;
+    rabiesCombat = null;
+    rabiesTargetId = Engine.INVALID_ENTITY;
+    rabiesPrepared = false;
+    fireClawsCombat = null;
+    fireClawsTargetId = Engine.INVALID_ENTITY;
+    fireClawsPrepared = false;
   }
 }

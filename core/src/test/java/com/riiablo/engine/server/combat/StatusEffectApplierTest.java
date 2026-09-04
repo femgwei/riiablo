@@ -35,4 +35,29 @@ public class StatusEffectApplierTest {
     assertEquals(7, values[5]);
     assertEquals(4, values[6]);
   }
+
+  @Test
+  public void fractionalNativePoisonUsesExactRuntimeSink() {
+    float[] exact = {-1f};
+    StatusEffectApplier.StateSink sink = new StatusEffectApplier.StateSink() {
+      @Override
+      public void applyState(int target, int state, int duration, int level,
+          int source, int damage, int type) {
+        exact[0] = damage;
+      }
+
+      @Override
+      public void applyStateExact(int target, int state, int duration, int level,
+          int source, float damage, int type) {
+        exact[0] = damage;
+      }
+    };
+    StatusEffectApplier.INSTANCE.setStateSink(sink);
+    try {
+      StatusEffectApplier.INSTANCE.applyPoison(12, 0.1875f, 100, 4);
+    } finally {
+      StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+    assertEquals(0.1875f, exact[0]);
+  }
 }

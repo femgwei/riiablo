@@ -340,18 +340,22 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // 处理中毒
     if (stateList.hasState(StateId.POISON)) {
       UnitState poisonState = stateList.getState(StateId.POISON);
-      if (poisonState.damagePerFrame > 0) {
+      if (poisonState.exactDamagePerFrame > 0f || poisonState.damagePerFrame > 0) {
         applyDamageOverTime(entityId, poisonState.sourceEntityId,
-            poisonState.damagePerFrame, stateList, StateId.POISON);
+            poisonState.exactDamagePerFrame > 0f
+                ? poisonState.exactDamagePerFrame : poisonState.damagePerFrame,
+            stateList, StateId.POISON);
       }
     }
     
     // 处理燃烧
     if (stateList.hasState(StateId.BURNING)) {
       UnitState burningState = stateList.getState(StateId.BURNING);
-      if (burningState.damagePerFrame > 0) {
+      if (burningState.exactDamagePerFrame > 0f || burningState.damagePerFrame > 0) {
         applyDamageOverTime(entityId, burningState.sourceEntityId,
-            burningState.damagePerFrame, stateList, StateId.BURNING);
+            burningState.exactDamagePerFrame > 0f
+                ? burningState.exactDamagePerFrame : burningState.damagePerFrame,
+            stateList, StateId.BURNING);
       }
     }
     
@@ -588,6 +592,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   @Override
   public void applyState(int entityId, int stateId, int duration, int level,
       int sourceId, int damagePerFrame, int damageType) {
+    applyStateExact(entityId, stateId, duration, level, sourceId,
+        damagePerFrame, damageType);
+  }
+
+  @Override
+  public void applyStateExact(int entityId, int stateId, int duration, int level,
+      int sourceId, float damagePerFrame, int damageType) {
     if (!mUnitStates.has(entityId)) {
       log.warn("Entity {} has no UnitStates component; state {} ignored", entityId, stateId);
       return;
@@ -601,12 +612,15 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       // only when the new per-frame rate is at least as strong. The new
       // expire frame is assigned directly, so Venom can intentionally
       // shorten an older item poison to its ten-frame override length.
-      if (existing.damagePerFrame > damagePerFrame) return;
+      float existingRate = existing.exactDamagePerFrame > 0f
+          ? existing.exactDamagePerFrame : existing.damagePerFrame;
+      if (existingRate > damagePerFrame) return;
       existing.duration = Math.max(1, duration);
       existing.initialDuration = existing.duration;
       existing.level = Math.max(1, level);
       existing.sourceEntityId = sourceId;
-      existing.damagePerFrame = damagePerFrame;
+      existing.damagePerFrame = (int) damagePerFrame;
+      existing.exactDamagePerFrame = damagePerFrame;
       existing.damageType = damageType;
       existing.expired = false;
       existing.needsSync = true;
@@ -614,7 +628,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
     UnitState state = unitStates.stateList.addState(stateId, duration, level, sourceId);
     if (state == null) return;
-    if (damagePerFrame > state.damagePerFrame) state.damagePerFrame = damagePerFrame;
+    if (damagePerFrame > state.damagePerFrame) state.damagePerFrame = (int) damagePerFrame;
+    state.exactDamagePerFrame = Math.max(state.exactDamagePerFrame, damagePerFrame);
     state.damageType = damageType;
     state.needsSync = true;
   }
