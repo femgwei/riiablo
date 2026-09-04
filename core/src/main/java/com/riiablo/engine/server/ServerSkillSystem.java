@@ -23,12 +23,18 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.item.Item;
+import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Quality;
+import com.riiablo.engine.server.item.LootManager;
+import com.riiablo.engine.server.item.GroundDropOwnership;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Type;
 import com.riiablo.logger.LogManager;
@@ -91,6 +97,12 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<SummonedPet> mSummonedPet;
+  protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
+
+  /** Item generator is wired by both local and dedicated server worlds. */
+  protected ItemGenerator itemGenerator;
+  private final LootManager barbarianLoot = new LootManager();
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
@@ -127,7 +139,9 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.targetId, event.skillId);
       return;
     }
-    if (event.targetId >= 0 && mMonster.has(event.targetId)
+    boolean corpseSkill = skill.srvdofunc == 69 || skill.srvdofunc == 72
+        || skill.srvdofunc == 75;
+    if (event.targetId >= 0 && mMonster.has(event.targetId) && !corpseSkill
         && mNativeUnitFlags.has(event.targetId)
         && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(event.targetId))) {
       reject(event, 8, "target is not a native combat target");
@@ -162,6 +176,19 @@ public class ServerSkillSystem extends PassiveSystem {
       }
       reject(event, validation, reason);
       return;
+    }
+
+    if (corpseSkill) {
+      Corpse corpse = event.targetId >= 0 && mCorpse.has(event.targetId)
+          ? mCorpse.get(event.targetId) : null;
+      boolean requiresMonster = skill.srvdofunc == 72 || skill.srvdofunc == 75;
+      if (corpse == null || !corpse.usable || corpse.fading || hasCorpseNoSelect(event.targetId)
+          || requiresMonster && !mMonster.has(event.targetId)) {
+        reject(event, 3, "skill requires a selectable monster corpse");
+        log.info("[BARBARIAN_CORPSE] phase=cast_reject source={} target={} skill={} reason=corpse_eligibility",
+            event.entityId, event.targetId, skill.skill);
+        return;
+      }
     }
 
     ItemData items = player.data != null ? player.data.getItems() : null;
@@ -241,6 +268,7 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if (handleBarbarianCorpseSkill(event, skill, skillLevel)) return;
     if (event.srvdofunc == 71 || skill.srvdofunc == 71) {
       applyTaunt(event, skill, skillLevel, start);
       return;
@@ -1454,6 +1482,164 @@ public class ServerSkillSystem extends PassiveSystem {
   /** Kept as a narrow compatibility wrapper for existing diagnostics/tests. */
   private float getManaCost(Skills.Entry skill, int level) {
     return NativeSkillResolver.manaCost(skill, level);
+  }
+
+  /** Native SrvDo069/SrvDo072/SrvDo075 corpse-tool dispatch. */
+  private boolean handleBarbarianCorpseSkill(SkillDoEvent event, Skills.Entry skill, int level) {
+    if (!mPlayer.has(event.entityId) || skill == null) return false;
+    int function = event.srvdofunc != 0 ? event.srvdofunc : skill.srvdofunc;
+    if (function != 69 && function != 72 && function != 75) return false;
+    int target = event.targetId;
+    if (target < 0 || !mCorpse.has(target) || !mPosition.has(target)) {
+      log.info("[BARBARIAN_CORPSE] phase=reject source={} target={} skill={} reason=invalid_corpse",
+          event.entityId, target, skill.skill);
+      return true;
+    }
+    Corpse corpse = mCorpse.get(target);
+    if (corpse == null || !corpse.usable || corpse.fading || hasCorpseNoSelect(target)) {
+      log.info("[BARBARIAN_CORPSE] phase=reject source={} target={} skill={} reason=corpse_unusable",
+          event.entityId, target, skill.skill);
+      return true;
+    }
+    markCorpseConsumed(target, corpse, function == 75);
+    NativeRng rng = new NativeRng(Riiablo.gameSeed ^ event.entityId * 0x45D9F3B ^ target * 31);
+    int chance = function == 69
+        ? BarbarianSkills.getFindPotionChance(skill, level)
+        : function == 72 ? BarbarianSkills.getFindItemChance(skill, level) : 100;
+    int roll = rng.nextInt(100);
+    if (function == 75) {
+      spawnGrimWard(event.entityId, target, skill, level);
+      return true;
+    }
+    if (roll >= chance) {
+      log.info("[BARBARIAN_CORPSE] phase=roll source={} target={} skill={} chance={} roll={} success=false",
+          event.entityId, target, skill.skill, chance, roll);
+      return true;
+    }
+    if (function == 69) spawnFindPotion(event.entityId, target, skill, level, rng);
+    else spawnFindItem(event.entityId, target, skill, level, rng);
+    return true;
+  }
+
+  private boolean hasCorpseNoSelect(int entityId) {
+    return mUnitStates.has(entityId) && mUnitStates.get(entityId).stateList != null
+        && mUnitStates.get(entityId).stateList.hasState(StateId.CORPSE_NOSELECT);
+  }
+
+  private void markCorpseConsumed(int entityId, Corpse corpse, boolean hide) {
+    corpse.usable = false;
+    UnitStates states = mUnitStates.has(entityId)
+        ? mUnitStates.get(entityId) : mUnitStates.create(entityId);
+    if (states.stateList == null) states.init(entityId);
+    states.stateList.addState(StateId.CORPSE_NOSELECT, Integer.MAX_VALUE, 1, entityId);
+    if (hide) states.stateList.addState(StateId.CORPSE_NODRAW, Integer.MAX_VALUE, 1, entityId);
+    log.debug("[BARBARIAN_CORPSE] phase=consume entity={} hide={}", entityId, hide);
+  }
+
+  private void spawnFindPotion(int source, int corpseId, Skills.Entry skill, int level, NativeRng rng) {
+    if (factory == null || itemGenerator == null) return;
+    String[] health = {"hp2", "hp3", "hp3", "hp4", "hp4", "hp4", "hp5", "hp5", "hp5", "hp5", "hp5", "hp5", "hp5", "hp5", "hp5"};
+    String[] mana = {"mp2", "mp3", "mp3", "mp4", "mp4", "mp4", "mp5", "mp5", "mp5", "mp5", "mp5", "mp5", "mp5", "mp5", "mp5"};
+    String[] rejuv = {"rvs", "rvs", "rvs", "rvl", "rvl", "rvl", "rvl", "rvl", "rvl", "rvl", "rvl", "rvl", "rvl", "rvl", "rvl"};
+    int index = potionTableIndex(source, corpseId);
+    int bucket = rng.nextInt(100);
+    int manaChance = skill.Param != null && skill.Param.length > 2 ? skill.Param[2] : 60;
+    int rejuvChance = skill.Param != null && skill.Param.length > 3 ? skill.Param[3] : 30;
+    String code = bucket < manaChance ? mana[index]
+        : bucket < manaChance + rejuvChance ? rejuv[index] : health[index];
+    createCorpseDrop(source, corpseId, code, Quality.NORMAL, level, rng);
+    log.info("[BARBARIAN_FIND_POTION] source={} corpse={} code={} tableIndex={}", source, corpseId, code, index);
+  }
+
+  private int potionTableIndex(int source, int corpseId) {
+    if (!mMapWrapper.has(corpseId) || mMapWrapper.get(corpseId).zone == null
+        || mMapWrapper.get(corpseId).zone.level == null) return 0;
+    int act = Math.max(0, Math.min(4, mMapWrapper.get(corpseId).zone.level.Act));
+    int difficulty = mPlayer.has(source) && mPlayer.get(source).data != null
+        ? Math.max(0, Math.min(2, mPlayer.get(source).data.diff)) : 0;
+    return act + difficulty * 5;
+  }
+
+  private void spawnFindItem(int source, int corpseId, Skills.Entry skill, int level, NativeRng rng) {
+    if (factory == null || itemGenerator == null || !mMonster.has(corpseId)) return;
+    Monster monster = mMonster.get(corpseId);
+    String tc = monster.monstats != null && monster.monstats.TreasureClass1 != null
+        ? monster.monstats.TreasureClass1[Math.max(0, Math.min(2,
+            mPlayer.get(source).data != null ? mPlayer.get(source).data.diff : 0))] : null;
+    if (tc == null || tc.isEmpty()) return;
+    LootManager.LootConfig config = new LootManager.LootConfig();
+    config.treasureClass = tc;
+    StatRef monsterLevel = mAttributesWrapper.has(corpseId)
+        ? mAttributesWrapper.get(corpseId).attrs.get(Stat.level, StatRef.obtain()) : null;
+    config.monsterLevel = monsterLevel != null ? Math.max(1, monsterLevel.asInt()) : 1;
+    config.areaLevel = config.monsterLevel;
+    config.difficulty = Math.max(0, Math.min(2,
+        mPlayer.get(source).data != null ? mPlayer.get(source).data.diff : 0));
+    config.playerCount = 1;
+    config.rngSeed = rng.nextInt(Integer.MAX_VALUE);
+    if (mAttributesWrapper.has(source)) {
+      barbarianLoot.applyPlayerBonuses(mAttributesWrapper.get(source).attrs, config);
+    }
+    LootManager.LootResult result = barbarianLoot.calculateLoot(config);
+    for (int i = 0; i < result.getItemCount(); i++) {
+      Quality quality = Quality.valueOf(result.itemQualities.get(i));
+      createCorpseDrop(source, corpseId, result.itemCodes.get(i),
+          quality != null ? quality : Quality.NORMAL, result.itemLevels.get(i), rng);
+    }
+    if (result.goldAmount > 0) createCorpseGold(source, corpseId, result.goldAmount, rng);
+    log.info("[BARBARIAN_FIND_ITEM] source={} corpse={} tc={} drops={} gold={}",
+        source, corpseId, tc, result.getItemCount(), result.goldAmount);
+  }
+
+  private void spawnGrimWard(int source, int corpseId, Skills.Entry skill, int level) {
+    if (factory == null || !mPosition.has(corpseId)) return;
+    String missileName = skill.srvmissilea;
+    if (mMonster.has(corpseId) && mMonster.get(corpseId).monstats2 != null) {
+      if (mMonster.get(corpseId).monstats2.large && hasText(skill.srvmissilec)) {
+        missileName = skill.srvmissilec;
+      } else if (mMonster.get(corpseId).monstats2.small && hasText(skill.srvmissileb)) {
+        missileName = skill.srvmissileb;
+      }
+    }
+    Missiles.Entry missile = missileName == null ? null : Riiablo.files.Missiles.get(missileName);
+    if (missile == null) return;
+    int id = createMissile(missile, new Vector2(1, 0), mPosition.get(corpseId).position,
+        source, null, level);
+    log.info("[BARBARIAN_GRIM_WARD] source={} corpse={} missile={} entity={}", source, corpseId, missileName, id);
+  }
+
+  private void createCorpseDrop(int source, int corpseId, String code, Quality quality,
+      int level, NativeRng rng) {
+    try {
+      com.riiablo.item.Item item = itemGenerator.generateLootItem(code, Math.max(1, level), quality,
+          rng.nextInt(Integer.MAX_VALUE), mPlayer.get(source).data != null ? mPlayer.get(source).data.diff : 0);
+      int id = factory.createItem(item, mPosition.get(corpseId).position.x,
+          mPosition.get(corpseId).position.y);
+      if (id >= 0) {
+        item.id = id;
+        GroundDropOwnership.register(id, source, (short) -1, 10_000L, 10_000L, false);
+      }
+    } catch (Throwable t) {
+      log.error("[BARBARIAN_CORPSE] drop failed source={} corpse={} code={}", source, corpseId, code, t);
+    }
+  }
+
+  private void createCorpseGold(int source, int corpseId, int amount, NativeRng rng) {
+    try {
+      com.riiablo.item.Item gold = itemGenerator.generate("gld");
+      gold.quality = Quality.NORMAL;
+      gold.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
+      gold.attrs.base().put(Stat.quantity, amount);
+      int id = factory.createItem(gold, mPosition.get(corpseId).position.x,
+          mPosition.get(corpseId).position.y);
+      if (id >= 0) {
+        gold.id = id;
+        GroundDropOwnership.register(id, source, -1, 10_000L, 10_000L, true);
+      }
+    } catch (Throwable t) {
+      log.error("[BARBARIAN_FIND_ITEM] gold drop failed source={} corpse={} amount={}",
+          source, corpseId, amount, t);
+    }
   }
 
   private String resolveThrowableMissile(int entityId, int skillId, Skills.Entry skill) {

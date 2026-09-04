@@ -596,8 +596,14 @@ public final class BarbarianSkills {
    * @return 成功概率百分比
    */
   public static int getFindPotionChance(int skillLevel) {
-    // 基础 16%，每级 +3%
-    return 16 + (skillLevel - 1) * 3;
+    return 16 + (Math.max(1, skillLevel) - 1) * 3;
+  }
+
+  /** Native Find Potion success chance (Skills.txt calc1, percent). */
+  public static int getFindPotionChance(Skills.Entry skill, int skillLevel) {
+    int value = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill,
+        Math.max(1, skillLevel));
+    return value > 0 ? Math.min(100, value) : getFindPotionChance(skillLevel);
   }
 
   /**
@@ -640,8 +646,25 @@ public final class BarbarianSkills {
    * @return 成功概率百分比
    */
   public static int getFindItemChance(int skillLevel) {
-    // 基础 13%，每级 +2%
-    return 13 + (skillLevel - 1) * 2;
+    return 13 + (Math.max(1, skillLevel) - 1) * 2;
+  }
+
+  /** Native Find Item success chance (Skills.txt calc1, percent). */
+  public static int getFindItemChance(Skills.Entry skill, int skillLevel) {
+    int value = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill,
+        Math.max(1, skillLevel));
+    return value > 0 ? Math.min(100, value) : getFindItemChance(skillLevel);
+  }
+
+  /** Native Find Item quality bucket selected from Param[0..3]. */
+  public static int resolveFindItemBucket(Skills.Entry skill, int roll) {
+    if (skill == null || skill.Param == null || skill.Param.length < 4) return 1;
+    int cursor = 0;
+    for (int bucket = 1; bucket <= 4; bucket++) {
+      cursor += Math.max(0, skill.Param[bucket - 1]);
+      if (roll < cursor) return bucket;
+    }
+    return 1;
   }
 
   /**

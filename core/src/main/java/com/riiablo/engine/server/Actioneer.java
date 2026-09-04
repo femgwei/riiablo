@@ -749,6 +749,11 @@ public class Actioneer extends PassiveSystem {
             damage[0], damage[1], skill.SrcDam);
         break;
       }
+      case 33: // Find Potion / Grim Ward corpse eligibility is authoritative in ServerSkillSystem
+      case 34: // Find Item corpse eligibility is authoritative in ServerSkillSystem
+        log.debug("[BARBARIAN_CORPSE] phase=start entity={} target={} srvStFunc={}",
+            entityId, targetId, srvstfunc);
+        break;
       case 42: // native Fire Hit pre-hit setup; resolved authoritatively at the keyframe
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
@@ -1455,7 +1460,11 @@ public class Actioneer extends PassiveSystem {
   }
 
   static boolean allowsDeadTarget(Skills.Entry skill) {
-    return skill != null && skill.srvdofunc == 97;
+    // Native corpse skills deliberately target a completed death unit.  Keep
+    // the animation/keyframe alive so ServerSkillSystem can consume the corpse
+    // exactly once (SrvDo069/072/075), just like native Resurrect (097).
+    return skill != null && (skill.srvdofunc == 97 || skill.srvdofunc == 69
+        || skill.srvdofunc == 72 || skill.srvdofunc == 75);
   }
 
   /** D2MOO SKILLS_SrvSt12 validation for the Dragon Flight table row. */
