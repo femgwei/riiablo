@@ -825,6 +825,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
         .with(new MissileCollisionSystem()) // 处理导弹的碰撞和伤害
         .with(new StateUpdater())
+        .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
         .with(new ExperienceManager())
         .with(new PlayerCorpseRetrievalSystem())
 

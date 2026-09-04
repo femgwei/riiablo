@@ -36,14 +36,18 @@ public class CofResolver extends PassiveSystem {
   }
 
   private void updateCof(int entityId) {
-    Class.Type type = mClass.get(entityId).type;
+    Class.Type logicalType = mClass.get(entityId).type;
     CofReference reference = mCofReference.get(entityId);
-    String name = reference.token + type.getMode(reference.mode) + Engine.getWClass(reference.wclass);
+    Class.Type type = reference.effectiveType(logicalType);
+    String token = reference.effectiveToken();
+    byte mode = reference.effectiveMode(logicalType);
+    byte wclass = reference.effectiveWClass();
+    String name = token + type.getMode(mode) + Engine.getWClass(wclass);
     COF cof = null;//type.getCOFs().lookup(name);
     if (cof == null) {
       mCofWrapper.remove(entityId);
       CofDescriptor cofDescriptor = mCofDescriptor.create(entityId);
-      cofDescriptor.descriptor = new AssetDescriptor<>(formatCofPath(type, reference, name), COF.class);
+      cofDescriptor.descriptor = new AssetDescriptor<>(formatCofPath(type, token, name), COF.class);
       if (DEBUG) Gdx.app.debug(TAG, name + "=" + cofDescriptor.descriptor.fileName);
       return;
     }
@@ -52,7 +56,7 @@ public class CofResolver extends PassiveSystem {
     mCofWrapper.create(entityId).cof = cof;
   }
 
-  private static String formatCofPath(Class.Type type, CofReference reference, String name) {
-    return type.PATH + '\\' + reference.token + "\\cof\\" + name + ".cof";
+  private static String formatCofPath(Class.Type type, String token, String name) {
+    return type.PATH + '\\' + token + "\\cof\\" + name + ".cof";
   }
 }

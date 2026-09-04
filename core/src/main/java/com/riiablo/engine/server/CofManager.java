@@ -10,6 +10,7 @@ import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.event.AlphaChangeEvent;
+import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.engine.server.event.TransformChangeEvent;
 import com.riiablo.engine.server.event.WClassChangeEvent;
@@ -56,6 +57,36 @@ public class CofManager extends BaseEntitySystem {
     if (reference.wclass == wclass && !force) return;
     reference.wclass = wclass;
     event.dispatch(WClassChangeEvent.obtain(id, wclass));
+  }
+
+  public void setVisualOverride(
+      int id, com.riiablo.engine.server.component.Class.Type type,
+      String token, byte wclass) {
+    setVisualOverride(id, type, token, wclass, null);
+  }
+
+  public void setVisualOverride(
+      int id, com.riiablo.engine.server.component.Class.Type type,
+      String token, byte wclass, boolean[] supportedModes) {
+    CofReference reference = mCofReference.get(id);
+    if (reference.visualType == type
+        && java.util.Objects.equals(reference.visualToken, token)
+        && reference.visualWClass == wclass
+        && reference.visualModes == supportedModes) return;
+    reference.setVisualOverride(type, token, wclass, supportedModes);
+    CofChangeEvent changed = new CofChangeEvent();
+    changed.entityId = id;
+    event.dispatch(changed);
+  }
+
+  public void clearVisualOverride(int id) {
+    CofReference reference = mCofReference.get(id);
+    if (reference.visualType == null && reference.visualToken == null
+        && reference.visualWClass < 0) return;
+    reference.clearVisualOverride();
+    CofChangeEvent changed = new CofChangeEvent();
+    changed.entityId = id;
+    event.dispatch(changed);
   }
 
   public int setComponent(int id, int c, int code) {

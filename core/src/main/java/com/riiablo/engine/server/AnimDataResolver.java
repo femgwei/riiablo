@@ -39,11 +39,15 @@ public class AnimDataResolver extends PassiveSystem {
    * and keyframes stay null (default); see log.warn for failed lookups.
    */
   private void updateAnimData(int entityId) {
-    Class.Type t = mClass.get(entityId).type;
+    Class.Type logicalType = mClass.get(entityId).type;
     CofReference c = mCofReference.get(entityId);
-    String modeStr = t.MODE[c.mode];
-    String wclassStr = Engine.getWClass(c.wclass);
-    String cof = c.token + modeStr + wclassStr;
+    Class.Type t = c.effectiveType(logicalType);
+    byte mode = c.effectiveMode(logicalType);
+    String token = c.effectiveToken();
+    byte wclass = c.effectiveWClass();
+    String modeStr = t.MODE[mode];
+    String wclassStr = Engine.getWClass(wclass);
+    String cof = token + modeStr + wclassStr;
     D2.Entry entry = Riiablo.anim.getEntry(cof);
     if (DEBUG) Gdx.app.debug(TAG, cof + "=" + entry);
     
@@ -56,7 +60,7 @@ public class AnimDataResolver extends PassiveSystem {
       // Log failed lookup so we can check for typos or missing COF data
       log.warn(
         "COF lookup failed -> keyframes=null | entity={} cof=\"{}\" (token=\"{}\" mode={} \"{}\" wclass={} \"{}\")",
-        entityId, cof, c.token, (int) c.mode, modeStr, (int) c.wclass, wclassStr
+        entityId, cof, token, (int) mode, modeStr, (int) wclass, wclassStr
       );
       animData.speed     = 256;  // D2MOD: dwAnimSpeed = 256
       animData.frame     = 0;

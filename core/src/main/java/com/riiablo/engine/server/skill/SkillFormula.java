@@ -1,6 +1,7 @@
 package com.riiablo.engine.server.skill;
 
 import com.riiablo.codec.excel.Skills;
+import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
 /**
@@ -19,11 +20,21 @@ public final class SkillFormula {
   private SkillFormula() {}
 
   public static int evaluate(String expression, Skills.Entry skill, int skillLevel) {
-    return evaluate(expression, skill, skillLevel, name -> 0);
+    return evaluate(expression, skill, skillLevel, name -> 0, name -> null);
   }
 
   public static int evaluate(String expression, Skills.Entry skill, int skillLevel,
       ToIntFunction<String> skillLevelResolver) {
+    return evaluate(expression, skill, skillLevel, skillLevelResolver, name -> null);
+  }
+
+  /**
+   * Evaluates formulas whose {@code skill('name'.lnXY)} operands need both
+   * the referenced skill's hard level and its own Param columns.
+   */
+  public static int evaluate(String expression, Skills.Entry skill, int skillLevel,
+      ToIntFunction<String> skillLevelResolver,
+      Function<String, Skills.Entry> skillResolver) {
     if (expression == null || expression.trim().isEmpty()) return 0;
     String normalized = expression.trim();
     // Excel exports occasionally quote an entire formula (for example
@@ -35,7 +46,8 @@ public final class SkillFormula {
       normalized = normalized.substring(1, normalized.length() - 1).trim();
     }
     Parser parser = new Parser(normalized, skill, Math.max(1, skillLevel),
-        skillLevelResolver == null ? name -> 0 : skillLevelResolver);
+        skillLevelResolver == null ? name -> 0 : skillLevelResolver,
+        skillResolver == null ? name -> null : skillResolver);
     return parser.parse();
   }
 
@@ -44,14 +56,17 @@ public final class SkillFormula {
     private final Skills.Entry skill;
     private final int level;
     private final ToIntFunction<String> skillLevelResolver;
+    private final Function<String, Skills.Entry> skillResolver;
     private int index;
 
     Parser(String expression, Skills.Entry skill, int level,
-        ToIntFunction<String> skillLevelResolver) {
+        ToIntFunction<String> skillLevelResolver,
+        Function<String, Skills.Entry> skillResolver) {
       text = expression.trim();
       this.skill = skill;
       this.level = level;
       this.skillLevelResolver = skillLevelResolver;
+      this.skillResolver = skillResolver;
     }
 
     int parse() {
@@ -111,6 +126,9 @@ public final class SkillFormula {
       }
       if ("skill".equalsIgnoreCase(identifier)) return skillCall();
       if ("lvl".equalsIgnoreCase(identifier)) return level;
+      if ("toht".equalsIgnoreCase(identifier)) {
+        return skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
+      }
       if (identifier.regionMatches(true, 0, "par", 0, 3)) {
         return param(parseDigits(identifier, 3));
       }
@@ -144,11 +162,32 @@ public final class SkillFormula {
       String name = readQuoted();
       // Native expressions commonly append .blvl/.ln12 to the quoted name.
       skipWhitespace();
-      if (consume('.')) identifier();
+      String special = null;
+      if (consume('.')) special = identifier();
       skipWhitespace();
       consume(')');
       if (name == null || name.isEmpty()) return 0;
-      return skillLevelResolver.applyAsInt(name);
+      int referencedLevel = Math.max(0, skillLevelResolver.applyAsInt(name));
+      if (referencedLevel <= 0 || special == null || special.isEmpty()
+          || "blvl".equalsIgnoreCase(special)) {
+        return referencedLevel;
+      }
+      Skills.Entry referencedSkill = skillResolver.apply(name);
+      if (referencedSkill == null || special.length() != 4) return 0;
+      if (special.regionMatches(true, 0, "ln", 0, 2)
+          || special.regionMatches(true, 0, "dm", 0, 2)) {
+        int first = special.charAt(2) - '0';
+        int second = special.charAt(3) - '0';
+        if (first < 1 || first > 9 || second < 1 || second > 9) return 0;
+        int base = param(referencedSkill, first);
+        int step = param(referencedSkill, second);
+        if (special.regionMatches(true, 0, "dm", 0, 2)) {
+          long numerator = 110L * referencedLevel * (step - base);
+          return base + (int) (numerator / (100L * (referencedLevel + 6)));
+        }
+        return base + (referencedLevel - 1) * step;
+      }
+      return 0;
     }
 
     private String readQuoted() {
@@ -191,6 +230,10 @@ public final class SkillFormula {
     }
 
     private int param(int number) {
+      return param(skill, number);
+    }
+
+    private static int param(Skills.Entry skill, int number) {
       if (skill == null || skill.Param == null || number < 1 || number > skill.Param.length) return 0;
       return skill.Param[number - 1];
     }

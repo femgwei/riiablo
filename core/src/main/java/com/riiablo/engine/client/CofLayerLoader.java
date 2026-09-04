@@ -64,8 +64,11 @@ public class CofLayerLoader extends IteratingSystem {
   private int loadDcs(int entityId, int flags) {
     int requiresReload = Dirty.NONE;
 
-    Class.Type type = mClass.get(entityId).type;
+    Class.Type logicalType = mClass.get(entityId).type;
     CofReference reference = mCofReference.get(entityId);
+    Class.Type type = reference.effectiveType(logicalType);
+    String token = reference.effectiveToken();
+    byte mode = reference.effectiveMode(logicalType);
     COF cof = mCofWrapper.get(entityId).cof;
     int[] component = mCofComponents.get(entityId).component;
     AssetDescriptor<? extends DC>[] descriptors = mCofComponentDescriptors.get(entityId).descriptors;
@@ -75,9 +78,9 @@ public class CofLayerLoader extends IteratingSystem {
     builder.setLength(0);
     builder
         .append(type.PATH).append('\\')
-        .append(reference.token).append('\\')
+        .append(token).append('\\')
         .append("AA").append('\\')
-        .append(reference.token).append("AABBB").append(type.getMode(reference.mode)).append("CCC").append('.');
+        .append(token).append("AABBB").append(type.getMode(mode)).append("CCC").append('.');
     for (int l = 0, size = cof.getNumLayers(); l < size; l++) {
       COF.Layer layer = cof.getLayer(l);
       int c = layer.component;

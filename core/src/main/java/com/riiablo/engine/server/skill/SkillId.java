@@ -253,15 +253,15 @@ public final class SkillId {
   //==========================================================================
   
   public static final int FIRESTORM = 225;
-  public static final int MOLTEN_BOULDER = 226;
-  public static final int ARCTIC_BLAST = 227;
-  public static final int FISSURE = 228;
-  public static final int CYCLONE_ARMOR = 229;
-  public static final int TWISTER = 230;
-  public static final int VOLCANO = 231;
-  public static final int TORNADO = 232;
-  public static final int ARMAGEDDON = 233;
-  public static final int HURRICANE = 234;
+  public static final int MOLTEN_BOULDER = 229;
+  public static final int ARCTIC_BLAST = 230;
+  public static final int FISSURE = 234;
+  public static final int CYCLONE_ARMOR = 235;
+  public static final int TWISTER = 240;
+  public static final int VOLCANO = 244;
+  public static final int TORNADO = 245;
+  public static final int ARMAGEDDON = 249;
+  public static final int HURRICANE = 250;
 
   //==========================================================================
   // 德鲁伊技能 - 变形
@@ -269,14 +269,14 @@ public final class SkillId {
   
   public static final int WEREWOLF = 223;
   public static final int LYCANTHROPY = 224;
-  public static final int WEREBEAR = 235;
-  public static final int FERAL_RAGE = 236;
-  public static final int MAUL = 237;
+  public static final int WEREBEAR = 228;
+  public static final int FERAL_RAGE = 232;
+  public static final int MAUL = 233;
   public static final int RABIES = 238;
   public static final int FIRE_CLAWS = 239;
-  public static final int HUNGER = 240;
-  public static final int SHOCK_WAVE = 241;
-  public static final int FURY = 242;
+  public static final int HUNGER = 242;
+  public static final int SHOCK_WAVE = 243;
+  public static final int FURY = 248;
 
   //==========================================================================
   // 德鲁伊技能 - 召唤
@@ -284,14 +284,14 @@ public final class SkillId {
   
   public static final int RAVEN = 221;
   public static final int POISON_CREEPER = 222;
-  public static final int OAK_SAGE = 243;
-  public static final int SUMMON_SPIRIT_WOLF = 244;
-  public static final int CARRION_VINE = 245;
-  public static final int HEART_OF_WOLVERINE = 246;
-  public static final int SUMMON_DIRE_WOLF = 247;
-  public static final int SOLAR_CREEPER = 248;
-  public static final int SPIRIT_OF_BARBS = 249;
-  public static final int SUMMON_GRIZZLY = 250;
+  public static final int OAK_SAGE = 226;
+  public static final int SUMMON_SPIRIT_WOLF = 227;
+  public static final int CARRION_VINE = 231;
+  public static final int HEART_OF_WOLVERINE = 236;
+  public static final int SUMMON_DIRE_WOLF = 237;
+  public static final int SOLAR_CREEPER = 241;
+  public static final int SPIRIT_OF_BARBS = 246;
+  public static final int SUMMON_GRIZZLY = 247;
 
   //==========================================================================
   // 刺客技能 - 武技

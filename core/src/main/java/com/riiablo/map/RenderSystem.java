@@ -1620,17 +1620,18 @@ public class RenderSystem extends BaseEntitySystem {
 
             builder.append(mClassname.get(id).classname).append('\n');
 
-            Class.Type type = mClass.get(id).type;
-            builder.append(type).append('\n');
+            Class.Type logicalType = mClass.get(id).type;
+            builder.append(logicalType).append('\n');
 
             CofReference reference = mCofReference.get(id);
             if (reference != null) {
+              Class.Type type = reference.effectiveType(logicalType);
               builder
-                  .append(reference.token.toUpperCase())
+                  .append(reference.effectiveToken().toUpperCase())
                   .append(' ')
-                  .append(type.getMode(reference.mode))
+                  .append(type.getMode(reference.effectiveMode(logicalType)))
                   .append(' ')
-                  .append(Engine.getWClass(reference.wclass))
+                  .append(Engine.getWClass(reference.effectiveWClass()))
                   .append('\n');
             }
             Angle angle = mAngle.get(id);

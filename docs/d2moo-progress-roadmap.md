@@ -58,7 +58,7 @@
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
-| 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
+| 德鲁伊 Druid | 50% | 50% | 狼/熊基础变形已完成；变形攻击、召唤物、持续区域技能和协同公式待补 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
@@ -172,6 +172,14 @@
 - [x] ~~完成野蛮人受击/格挡模式与状态 Overlay 同步~~
   - 近战、旋风斩和投射物命中/格挡由服务端切换原生 `GH/BL` 模式，经 `CofReference` 同步到所有客户端并由 `SequenceHandler` 自动返回 `NU`；死亡和进行中的多段技能不会被错误打断。
   - Frenzy、Berserk、Battle Orders、Battle Command、Shout、Battle Cry 的 States.txt Overlay 映射已接入 `StateOverlaySystem`；状态生命周期来自权威 `StateP`，新增 Overlay 数据与状态启停回归。
+- [x] ~~完成德鲁伊 Werewolf / Werebear 原生基础变形~~
+  - 修正 221–250 全部德鲁伊技能常量为 Skills.txt 的原生交错 ID；`SrvDo116` 按 `AuraLenCalc/AuraStatCalc` 创建 wolf/bear 互斥状态，Lycanthropy 的 `skill(...lnXY)`、`toht`、攻速、命中、伤害、防御及生命/体力加成均由原生公式计算。
+  - 保持实体逻辑类型为玩家，仅按权威 `StateP` 派生 `40/TG` 怪物形态；使用 D2Common 玩家→怪物模式转换和 MonStats2 模式回退，状态到期、死亡及重连后均恢复或重建正确外观。
+  - 原生数据、状态生命周期、执行器关键帧和表现专项纳入回归；相关 8 组共 71 个用例通过，D2GS 编译通过。
+- [ ] 完成德鲁伊 Feral Rage / Maul 聚能攻击和形态技能限制。
+- [ ] 完成德鲁伊 Rabies / Fire Claws / Hunger / Shock Wave / Fury 变形攻击。
+- [ ] 完成德鲁伊 Raven、藤蔓、灵魂、狼群和灰熊召唤所有权及生命周期。
+- [ ] 完成德鲁伊 Firestorm、Fissure、Volcano、Armageddon、Hurricane 等元素区域技能。
 
 ### P2：世界交互和多人闭环
 
@@ -228,12 +236,14 @@
 - 2026-09-04：完成野蛮人 Sword/Axe/Mace/Pole Arm/Throwing/Spear Mastery；按 D2Common ItemTypes 层逐手匹配，AR/伤害/暴击分别取最大值，投掷导弹发射时保存精通快照并通过 CombatSystem 权威结算；新增六类状态、换装上下文、预计算技能和真实 ECS 导弹快照测试，相关回归及 D2GS 编译通过。
 - 2026-09-04：完成野蛮人 GH/BL 受击与状态 Overlay 表现首项；服务端近战、旋风斩、导弹命中/格挡切换原生动画模式并经 `CofReference` 广播，客户端恢复 Frenzy/Berserk/Battle Orders/Battle Command/Shout/Battle Cry 持续 Overlay；状态启停、原生 Overlay 数据和战斗回归通过，D2GS 编译通过。
 
+- 2026-09-04：完成德鲁伊 Werewolf/Werebear `SrvDo116` 基础变形；纠正德鲁伊全部原生技能 ID，接入 Lycanthropy `skill(...lnXY)`、狼/熊互斥状态、原生属性、`40/TG` 形态 COF、模式回退及多人状态派生表现。相关 8 组共 71 个用例通过，D2GS 编译通过；德鲁伊专项更新为约 50%。
+
 ## 当前下一项
 
-刺客专项已经完成；野蛮人主动技能、战吼、尸体工具链及四项通用被动已经接通。
+Werewolf/Werebear 基础变形已经完成，德鲁伊技能 ID、状态、属性、形态动画和多人派生表现已对齐。
 
-下一项建议进入 **德鲁伊职业技能专项**：从变形（Werewolf/Werebear）状态、攻击模式和
-召唤物所有权开始，按 Skills.txt 的 `srvstfunc/srvdofunc`、状态修正和多人快照逐项对齐。
+下一项建议继续 **Feral Rage / Maul 聚能攻击**：实现 `SrvSt56` 命中预判、聚能层数、
+状态持续时间和速度/伤害修正，并把 Skills.txt 的形态限制接到统一施法校验。
 
 ## 记录规则
 

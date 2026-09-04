@@ -2,8 +2,15 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.codec.excel.Skills;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import java.util.Locale;
+import java.util.function.Function;
+import java.util.function.ToIntFunction;
 
 /**
  * 德鲁伊技能实现 - 基于 D2MOD SkillDruid.cpp 移植
@@ -155,6 +162,100 @@ public final class DruidSkills {
   // 变形技能
   //==========================================================================
 
+  /** Result of native SrvDo116: an existing group state is toggled off first. */
+  public static final class ShapeShiftResult {
+    public final int removedStateId;
+    public final UnitState appliedState;
+
+    ShapeShiftResult(int removedStateId, UnitState appliedState) {
+      this.removedStateId = removedStateId;
+      this.appliedState = appliedState;
+    }
+
+    public boolean transformed() {
+      return appliedState != null;
+    }
+  }
+
+  public static int getShapeStateId(Skills.Entry skill) {
+    if (skill == null || skill.aurastate == null) return StateId.NONE;
+    switch (skill.aurastate.trim().toLowerCase(Locale.ROOT)) {
+      case "wolf": return StateId.WOLF;
+      case "bear": return StateId.BEAR;
+      default: return StateId.NONE;
+    }
+  }
+
+  /** D2Game SrvDo116 evaluates AuraLenCalc using hard-point synergies. */
+  public static int getShapeDuration(
+      Skills.Entry skill, int skillLevel,
+      ToIntFunction<String> baseSkillLevel,
+      Function<String, Skills.Entry> skillResolver) {
+    if (skill == null) return 0;
+    return Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill,
+        Math.max(1, skillLevel), baseSkillLevel, skillResolver));
+  }
+
+  /**
+   * D2Game {@code SKILLS_SrvDo116_Wearwolf_Wearbear}. Wolf and bear belong
+   * to one States.txt group: casting either while transformed removes the
+   * current form; a subsequent cast establishes the requested form.
+   */
+  public static ShapeShiftResult applyShapeShiftState(
+      StateList states, Skills.Entry skill, int skillLevel, int sourceEntityId,
+      ToIntFunction<String> baseSkillLevel,
+      Function<String, Skills.Entry> skillResolver) {
+    if (states == null || skill == null || skill.srvdofunc != 116) {
+      return new ShapeShiftResult(StateId.NONE, null);
+    }
+
+    int active = states.hasState(StateId.WOLF) ? StateId.WOLF
+        : states.hasState(StateId.BEAR) ? StateId.BEAR : StateId.NONE;
+    if (active != StateId.NONE) {
+      states.removeState(active);
+      return new ShapeShiftResult(active, null);
+    }
+
+    int stateId = getShapeStateId(skill);
+    if (stateId == StateId.NONE) return new ShapeShiftResult(StateId.NONE, null);
+    int level = Math.max(1, skillLevel);
+    int duration = getShapeDuration(skill, level, baseSkillLevel, skillResolver);
+    UnitState state = states.addState(stateId, duration, level, sourceEntityId);
+    if (state == null) return new ShapeShiftResult(StateId.NONE, null);
+
+    // D2COMMON_10476 replaces the expire frame and sub_6FCFE0E0 rebuilds the
+    // stat list. Never retain stronger values from an earlier cast.
+    state.duration = duration;
+    state.initialDuration = duration;
+    state.level = level;
+    state.sourceEntityId = sourceEntityId;
+    state.skillId = skill.Id;
+    state.clearModifiers();
+    int count = Math.min(
+        skill.aurastat != null ? skill.aurastat.length : 0,
+        skill.aurastatcalc != null ? skill.aurastatcalc.length : 0);
+    for (int i = 0; i < count; i++) {
+      String stat = skill.aurastat[i];
+      if (stat == null || stat.isEmpty()) continue;
+      int value = SkillFormula.evaluate(skill.aurastatcalc[i], skill, level,
+          baseSkillLevel, skillResolver);
+      switch (stat.toLowerCase(Locale.ROOT)) {
+        case "damagepercent": state.damageModifier += value; break;
+        case "skill_armor_percent":
+        case "item_armor_percent": state.defenseModifier += value; break;
+        case "item_tohit_percent": state.attackModifier += value; break;
+        case "attackrate": state.animationRateModifier += value; break;
+        case "item_maxhp_percent": state.maxLifeModifier += value; break;
+        case "skill_staminapercent": state.maxStaminaModifier += value; break;
+        default:
+          log.warn("[DRUID_SHAPE] ignored AuraStat skill={} stat={}", skill.skill, stat);
+          break;
+      }
+    }
+    state.needsSync = true;
+    return new ShapeShiftResult(StateId.NONE, state);
+  }
+
   /**
    * 狼人形态 - 变身为狼人
    * 
@@ -162,8 +263,8 @@ public final class DruidSkills {
    * @return 攻击等级加成百分比
    */
   public static int calculateWerewolfAttackRatingBonus(int skillLevel) {
-    // 基础 50%，每级 +20%
-    return 50 + (skillLevel - 1) * 20;
+    // Skills.txt ToHit=50, LevToHit=15 (the native "toht" operand).
+    return 50 + (Math.max(1, skillLevel) - 1) * 15;
   }
 
   /**
@@ -173,8 +274,9 @@ public final class DruidSkills {
    * @return 攻击速度加成百分比
    */
   public static int getWerewolfIasBonus(int skillLevel) {
-    // 固定 +20%
-    return 20;
+    // Skills.txt dm34 with Param3=10 and Param4=80.
+    int level = Math.max(1, skillLevel);
+    return 10 + (int) (110L * level * 70 / (100L * (level + 6)));
   }
 
   /**
@@ -184,8 +286,8 @@ public final class DruidSkills {
    * @return 生命加成百分比
    */
   public static int calculateLycanthropyLifeBonus(int skillLevel) {
-    // 每级 +25%
-    return 25 * skillLevel;
+    // Shape Shifting (Lycanthropy) Skills.txt ln34: 20 + 5/level.
+    return skillLevel <= 0 ? 0 : 20 + (skillLevel - 1) * 5;
   }
 
   /**
@@ -195,8 +297,8 @@ public final class DruidSkills {
    * @return 伤害加成百分比
    */
   public static int calculateWerebearDamageBonus(int skillLevel) {
-    // 基础 50%，每级 +15%
-    return 50 + (skillLevel - 1) * 15;
+    // Skills.txt ln12: 55 + 8/level.
+    return 55 + (Math.max(1, skillLevel) - 1) * 8;
   }
 
   /**
@@ -206,8 +308,8 @@ public final class DruidSkills {
    * @return 防御加成百分比
    */
   public static int calculateWerebearDefenseBonus(int skillLevel) {
-    // 每级 +25%
-    return 25 * skillLevel;
+    // Skills.txt ln34: 25 + 6/level.
+    return 25 + (Math.max(1, skillLevel) - 1) * 6;
   }
 
   /**

@@ -30,6 +30,7 @@ import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
+import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
@@ -1459,6 +1460,39 @@ public class Actioneer extends PassiveSystem {
             && factory.resurrectMonster(targetId, entityId);
         log.info("[MONSTER_RAISE] phase=keyframe source={} target={} restored={}",
             entityId, targetId, restored);
+        break;
+      }
+      case 116: { // SKILLS_SrvDo116_Wearwolf_Wearbear
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry shapeSkill = casting != null
+            ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (shapeSkill == null || !mUnitStates.has(entityId)) {
+          log.info("[DRUID_SHAPE] phase=reject entity={} skill={} reason=missing_skill_or_state",
+              entityId, casting != null ? casting.skillId : -1);
+          break;
+        }
+        UnitStates unitStates = mUnitStates.get(entityId);
+        if (unitStates.stateList == null) unitStates.init(entityId);
+        int level = Math.max(1, skillLevel(entityId, shapeSkill.Id));
+        DruidSkills.ShapeShiftResult result = DruidSkills.applyShapeShiftState(
+            unitStates.stateList, shapeSkill, level, entityId,
+            name -> baseSkillLevel(entityId, name),
+            name -> Riiablo.files.skills.get(name));
+        UnitState state = result.appliedState;
+        log.info("[DRUID_SHAPE] phase={} entity={} skill={} level={} state={} removed={} "
+                + "duration={} damage={} defense={} attackRating={} animationRate={} "
+                + "maxLife={} maxStamina={}",
+            result.transformed() ? "apply" : result.removedStateId != StateId.NONE
+                ? "remove" : "reject",
+            entityId, shapeSkill.skill, level,
+            state != null ? StateId.getName(state.stateId) : "none",
+            StateId.getName(result.removedStateId), state != null ? state.duration : 0,
+            state != null ? state.damageModifier : 0,
+            state != null ? state.defenseModifier : 0,
+            state != null ? state.attackModifier : 0,
+            state != null ? state.animationRateModifier : 0,
+            state != null ? state.maxLifeModifier : 0,
+            state != null ? state.maxStaminaModifier : 0);
         break;
       }
       default:
