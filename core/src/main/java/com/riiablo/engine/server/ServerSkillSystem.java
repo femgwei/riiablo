@@ -1178,7 +1178,15 @@ public class ServerSkillSystem extends PassiveSystem {
     target.nor();
 
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
-    int total = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
+    int total = DruidSkills.isShockWave(skill)
+        ? DruidSkills.getShockWaveMissileCount(skill, skillLevel)
+        : SkillFormula.evaluate(skill.calc1, skill, skillLevel);
+    if (DruidSkills.isShockWave(skill) && total <= 0) {
+      log.warn("[DRUID_SHOCK_WAVE] phase=spawn_reject entity={} skill={} level={} "
+              + "reason=invalid_calc1 formula={}",
+          event.entityId, skill.skill, skillLevel, skill.calc1);
+      return;
+    }
     if (total <= 0) total = firstParam(skill, 1, 1);
     total = Math.max(1, Math.min(64, total));
 
@@ -1214,6 +1222,14 @@ public class ServerSkillSystem extends PassiveSystem {
       }
     }
     if (created > 0) consumeRangedAmmoForSkill(event, skill);
+    if (DruidSkills.isShockWave(skill)) {
+      int[] damage = DruidSkills.getShockWaveDamageRange(skill, skillLevel);
+      log.info("[DRUID_SHOCK_WAVE] phase=spawn entity={} skill={} missile={} level={} "
+              + "total={} centre={} left={} right={} created={} damage={}..{} stunFrames={}",
+          event.entityId, skill.skill, missileName, skillLevel, total, centre, left, right,
+          created, damage[0], damage[1],
+          DruidSkills.getShockWaveStunDuration(skill, skillLevel));
+    }
     log.debug("Server SrvDo008 projectiles: entity={}, skill={}, missile={}, level={}, total={}, "
             + "left={}, centre={}, right={}, created={}",
         event.entityId, event.skillId, missileName, skillLevel, total, left, centre, right, created);

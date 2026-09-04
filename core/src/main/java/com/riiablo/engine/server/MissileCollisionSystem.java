@@ -39,6 +39,7 @@ import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.BarbarianSkills;
+import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
@@ -787,8 +788,13 @@ public class MissileCollisionSystem extends IteratingSystem {
   private void applyNativeMissileDamageState(int missileId, Missile missile, int targetId) {
     if (missile == null || missile.missile == null || missile.missile.pSrvDmgFunc != 7) return;
     Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
-    int duration = BarbarianSkills.getWarCryStunDuration(
-        missile.missile, skill, Math.max(1, missile.damageLevel));
+    boolean shockWave = DruidSkills.isShockWave(skill);
+    int duration = shockWave
+        ? DruidSkills.getShockWaveStunDuration(
+            missile.missile, skill, Math.max(1, missile.damageLevel))
+        : BarbarianSkills.getWarCryStunDuration(
+            missile.missile, skill, Math.max(1, missile.damageLevel));
+    String tag = shockWave ? "[DRUID_SHOCK_WAVE]" : "[BARBARIAN_WAR_CRY]";
     Monster monster = mMonster.has(targetId) ? mMonster.get(targetId) : null;
     int uniqueRoll = monster != null && MonsterRank.isUnique(monster.rank)
         ? com.badlogic.gdx.math.MathUtils.random(99) : 99;
@@ -796,7 +802,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         monster, mPlayer.has(targetId), mMercenary.has(targetId), duration,
         uniqueRoll);
     if (duration <= 0) {
-      log.info("[BARBARIAN_WAR_CRY] phase=stun_reject missile={} source={} target={} skill={}",
+      log.info("{} phase=stun_reject missile={} source={} target={} skill={}", tag,
           missileId, missile.ownerId, targetId, missile.skillId);
       return;
     }
@@ -811,9 +817,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     stun.sourceEntityId = missile.ownerId;
     stun.skillId = missile.skillId;
     stun.needsSync = true;
-    log.info("[BARBARIAN_WAR_CRY] phase=stun_apply missile={} source={} target={} "
+    log.info("{} phase=stun_apply missile={} source={} target={} "
             + "skill={} level={} duration={}",
-        missileId, missile.ownerId, targetId, missile.skillId,
+        tag, missileId, missile.ownerId, targetId, missile.skillId,
         Math.max(1, missile.damageLevel), duration);
   }
 

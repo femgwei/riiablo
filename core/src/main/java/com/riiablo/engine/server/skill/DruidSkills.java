@@ -5,6 +5,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.engine.server.state.StateId;
@@ -661,6 +662,50 @@ public final class DruidSkills {
     return skill != null && skill.srvdofunc == 122;
   }
 
+  /** Native D2Game SrvDo008 Shock Wave discriminator. */
+  public static boolean isShockWave(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 8
+        && ("shockwave".equalsIgnoreCase(skill.srvmissilea)
+            || "shockwave".equalsIgnoreCase(skill.srvmissileb));
+  }
+
+  /** SrvDo008 evaluates Shock Wave's calc1 as a fixed five-projectile count. */
+  public static int getShockWaveMissileCount(Skills.Entry skill, int skillLevel) {
+    if (!isShockWave(skill)) return 0;
+    int count = SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel));
+    return Math.max(0, Math.min(64, count));
+  }
+
+  /**
+   * Native SrvDmg07 reads Shock Wave's Param1/Param2 in animation frames.
+   * Values are deliberately kept in frames (25 Hz), not converted to seconds.
+   */
+  public static int getShockWaveStunDuration(Skills.Entry skill, int skillLevel) {
+    return getShockWaveStunDuration(null, skill, skillLevel);
+  }
+
+  /** SrvDmg07 gives a positive Missiles.txt dParam1 precedence over Skills.txt. */
+  public static int getShockWaveStunDuration(
+      Missiles.Entry missile, Skills.Entry skill, int skillLevel) {
+    if (!isShockWave(skill)) return 0;
+    if (missile != null && missile.dParam != null && missile.dParam.length > 0
+        && missile.dParam[0] > 0) return missile.dParam[0];
+    int level = Math.max(1, skillLevel);
+    if (skill.Param != null && skill.Param.length >= 2) {
+      return Math.max(0, skill.Param[0] + (level - 1) * skill.Param[1]);
+    }
+    return 0;
+  }
+
+  /** Native physical damage packet carried by each Shock Wave missile. */
+  public static int[] getShockWaveDamageRange(Skills.Entry skill, int skillLevel) {
+    if (!isShockWave(skill)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    int min = shiftedDamage(skill.MinDam, skill.MinLevDam, level, skill.HitShift);
+    int max = shiftedDamage(skill.MaxDam, skill.MaxLevDam, level, skill.HitShift);
+    return new int[] {Math.max(0, min), Math.max(Math.max(0, min), max)};
+  }
+
   public static int getHungerLifeLeech(
       Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
     return isHunger(skill) ? Math.max(0, SkillFormula.evaluate(
@@ -674,14 +719,15 @@ public final class DruidSkills {
   }
 
   /**
-   * 冲击波 - 熊人眩晕攻击
-   * 
-   * @param skillLevel 技能等级
-   * @return 眩晕持续时间（秒）
+   * Compatibility API returning the native data-driven duration in seconds.
+   * @deprecated use {@link #getShockWaveStunDuration(Skills.Entry, int)} for server frames.
    */
+  @Deprecated
   public static float getShockWaveStunDuration(int skillLevel) {
-    // 基础 2 秒，每级 +0.2 秒
-    return 2.0f + (skillLevel - 1) * 0.2f;
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.SHOCK_WAVE) : null;
+    int frames = getShockWaveStunDuration(skill, skillLevel);
+    return frames > 0 ? frames / 25f : 0f;
   }
 
   /**
