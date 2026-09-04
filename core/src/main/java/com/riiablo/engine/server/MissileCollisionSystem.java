@@ -36,6 +36,8 @@ import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.skill.BarbarianSkills;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.logger.LogManager;
@@ -412,6 +414,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     //     missilePos.x, missilePos.y, targetPos.position.x, targetPos.position.y);
     
     if (distance <= collisionRadius) {
+      int hitFunction = missile.missile != null ? missile.missile.pSrvHitFunc : 0;
+      if (hitFunction == 17 || hitFunction == 18 || hitFunction == 21) {
+        handleWarCryCollision(missileId, missile, targetId, hitFunction);
+        // Howl and shout waves have CollideKill=0 and continue through the
+        // whole ring. They are state carriers, never ordinary damage packets.
+        return false;
+      }
       // 检查是否是敌人
       if (!isEnemy(missile.ownerId, targetId)) {
         return false;
@@ -607,6 +616,100 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /** D2MOO SrvHit17/18/21 state-only war-cry missile dispatch. */
+  private void handleWarCryCollision(
+      int missileId, Missile missile, int targetId, int hitFunction) {
+    if (missile == null || missile.ownerId < 0 || targetId == missile.ownerId) return;
+    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    if (skill == null) return;
+
+    boolean accepted;
+    if (hitFunction == 17) {
+      accepted = mMonster.has(targetId) && !mMercenary.has(targetId)
+          && !mSummonedPet.has(targetId) && isEnemy(missile.ownerId, targetId)
+          && canSwitchWarCryAi(targetId);
+    } else if (hitFunction == 18) {
+      accepted = areAligned(missile.ownerId, targetId);
+    } else {
+      accepted = isEnemy(missile.ownerId, targetId)
+          && (!mNativeUnitFlags.has(targetId)
+              || NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId)));
+    }
+    if (!accepted || !isAlive(targetId) || !missile.hitTargets.add(targetId)) return;
+    if (missile.sharedHitTargets != null && !missile.sharedHitTargets.add(targetId)) return;
+
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    UnitStates states = mUnitStates.get(targetId);
+    if (states.stateList == null) states.init(targetId);
+    int skillLevel = Math.max(1, missile.damageLevel);
+    com.riiablo.engine.server.state.UnitState state;
+    if (hitFunction == 17) {
+      state = BarbarianSkills.applyHowlState(
+          states.stateList, skill, skillLevel, entityLevel(missile.ownerId),
+          entityLevel(targetId), missile.ownerId, true);
+    } else {
+      state = BarbarianSkills.applyWarCryState(
+          states.stateList, skill, skillLevel, missile.ownerId, true,
+          name -> baseSkillLevel(missile.ownerId, name));
+    }
+    if (state == null) return;
+    log.info("[BARBARIAN_WAR_CRY] phase=missile_apply missile={} hitFunc={} source={} "
+            + "target={} skill={} level={} state={} duration={} damage={} defense={} attack={}",
+        missileId, hitFunction, missile.ownerId, targetId, skill.Id, skillLevel,
+        com.riiablo.engine.server.state.StateId.getName(state.stateId), state.duration,
+        state.damageModifier, state.defenseModifier, state.attackModifier);
+  }
+
+  private boolean canSwitchWarCryAi(int targetId) {
+    if (!mMonster.has(targetId)) return false;
+    Monster monster = mMonster.get(targetId);
+    StateList stateList = mUnitStates.has(targetId) ? mUnitStates.get(targetId).stateList : null;
+    return BarbarianSkills.canSwitchWarCryAi(monster, stateList);
+  }
+
+  private boolean isAlive(int entityId) {
+    if (!mAttributesWrapper.has(entityId)) return true;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    return hp == null || hp.asFixed() > 0f;
+  }
+
+  private int entityLevel(int entityId) {
+    if (!mAttributesWrapper.has(entityId)) return 1;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    StatRef level = attrs != null ? attrs.get(Stat.level, StatRef.obtain()) : null;
+    return level != null ? Math.max(1, level.asInt()) : 1;
+  }
+
+  /** Skills.txt .blvl reads hard points and deliberately excludes +skills. */
+  private int baseSkillLevel(int entityId, String skillName) {
+    Skills.Entry skill = skillName != null ? Riiablo.files.skills.get(skillName) : null;
+    if (skill == null || !mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return 0;
+    return Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id));
+  }
+
+  private boolean areAligned(int sourceId, int targetId) {
+    boolean sourceGood = mPlayer.has(sourceId) || mMercenary.has(sourceId)
+        || mSummonedPet.has(sourceId);
+    boolean targetGood = mPlayer.has(targetId) || mMercenary.has(targetId)
+        || mSummonedPet.has(targetId);
+    if (sourceGood != targetGood) return false;
+    if (!sourceGood) return mMonster.has(sourceId) && mMonster.has(targetId);
+    int sourceOwner = alignmentOwner(sourceId);
+    int targetOwner = alignmentOwner(targetId);
+    if (sourceOwner == targetOwner) return true;
+    if (!mPlayer.has(sourceOwner) || !mPlayer.has(targetOwner) || partyManager == null) return false;
+    short sourceParty = partyManager.getPartyId(sourceOwner);
+    return sourceParty != com.riiablo.engine.server.party.Party.INVALID_ID
+        && sourceParty == partyManager.getPartyId(targetOwner);
+  }
+
+  private int alignmentOwner(int entityId) {
+    if (mMercenary.has(entityId)) return mMercenary.get(entityId).ownerId;
+    if (mSummonedPet.has(entityId)) return mSummonedPet.get(entityId).ownerId;
+    return entityId;
   }
 
   /** D2MOO SrvHit04 creates a zero-velocity SrvHit01 explosion sub-missile. */

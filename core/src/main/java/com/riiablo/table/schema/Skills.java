@@ -41,6 +41,7 @@ public class Skills {
   public String dosound;
   public String castoverlay;
   public String aurastate;
+  public String auratargetstate;
   public String auralencalc;
   public String aurarangecalc;
   public int aurafilter;

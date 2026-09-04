@@ -7,6 +7,9 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Weapons;
+import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
@@ -422,6 +425,134 @@ public final class BarbarianSkills {
   //==========================================================================
   // 战吼
   //==========================================================================
+
+  /**
+   * Exact Java-side gate for D2MOO {@code AIUTIL_CanUnitSwitchAi} when the
+   * requested special state is terror or taunt.
+   */
+  public static boolean canSwitchWarCryAi(Monster monster, StateList states) {
+    return monster != null && monster.monstats != null && monster.monstats2 != null
+        && monster.monstats2.mMode != null
+        && monster.monstats2.mMode.length > Engine.Monster.MODE_WL
+        && monster.monstats2.mMode[Engine.Monster.MODE_WL]
+        && monster.monstats.switchai && !monster.monstats.boss
+        && !MonsterRank.isUnique(monster.rank) && monster.rank != MonsterRank.BOSS
+        && (states == null || !states.hasState(StateId.UNINTERRUPTABLE));
+  }
+
+  /** Resolves the native Skills.txt aura/target-state name used by war cries. */
+  public static int getWarCryStateId(Skills.Entry skill, boolean targetState) {
+    if (skill == null) return StateId.NONE;
+    String value = targetState ? skill.auratargetstate : skill.aurastate;
+    if (value == null) return StateId.NONE;
+    switch (value.trim().toLowerCase(Locale.ROOT)) {
+      case "shout": return StateId.SHOUT;
+      case "taunt": return StateId.TAUNT;
+      case "terror": return StateId.TERROR;
+      case "battlecry": return StateId.BATTLECRY;
+      case "battleorders": return StateId.BATTLEORDERS;
+      case "battlecommand": return StateId.BATTLECOMMAND;
+      default: return StateId.NONE;
+    }
+  }
+
+  /** D2MOO {@code SKILLS_ApplyWarcryStats}: evaluate the data-driven lifetime. */
+  public static int getWarCryDuration(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (skill == null) return 0;
+    return Math.max(0, SkillFormula.evaluate(
+        skill.auralencalc, skill, Math.max(1, skillLevel), baseSkillLevel));
+  }
+
+  /**
+   * Builds the runtime equivalent of the native war-cry stat list. A zero
+   * duration is intentional: Taunt's AuraLenCalc is empty and the native AI
+   * ownership remains in force until its special state is replaced.
+   */
+  public static UnitState applyWarCryState(
+      StateList states, Skills.Entry skill, int skillLevel, int sourceEntityId,
+      boolean targetState, ToIntFunction<String> baseSkillLevel) {
+    int stateId = getWarCryStateId(skill, targetState);
+    if (states == null || stateId == StateId.NONE) return null;
+    int level = Math.max(1, skillLevel);
+    int duration = getWarCryDuration(skill, level, baseSkillLevel);
+    UnitState state = states.addState(stateId, duration, level, sourceEntityId);
+    if (state == null) return null;
+
+    // Native D2COMMON_10476 replaces the expire frame on every application;
+    // StateList's ordinary strongest-duration merge is not correct here.
+    state.duration = duration;
+    state.initialDuration = duration;
+    state.level = level;
+    state.sourceEntityId = sourceEntityId;
+    state.skillId = skill.Id;
+    state.clearModifiers();
+    int count = Math.min(
+        skill.aurastat != null ? skill.aurastat.length : 0,
+        skill.aurastatcalc != null ? skill.aurastatcalc.length : 0);
+    for (int i = 0; i < count; i++) {
+      String stat = skill.aurastat[i];
+      if (stat == null || stat.isEmpty()) continue;
+      int value = SkillFormula.evaluate(
+          skill.aurastatcalc[i], skill, level, baseSkillLevel);
+      switch (stat.toLowerCase(Locale.ROOT)) {
+        case "damagepercent": state.damageModifier += value; break;
+        case "item_tohit_percent": state.attackModifier += value; break;
+        case "skill_armor_percent":
+        case "item_armor_percent":
+        case "armorclass": state.defenseModifier += value; break;
+        case "item_allskills": state.skillModifier += value; break;
+        case "skill_staminapercent": state.maxStaminaModifier += value; break;
+        default: break;
+      }
+    }
+    state.needsSync = true;
+    return state;
+  }
+
+  public static int getHowlAiRange(Skills.Entry skill, int skillLevel) {
+    return linearParam(skill, skillLevel, 2, 3);
+  }
+
+  public static int getHowlDuration(Skills.Entry skill, int skillLevel) {
+    return linearParam(skill, skillLevel, 4, 5);
+  }
+
+  /** Native SrvHit17 strictly compares caster skill+level against target level. */
+  public static boolean canHowlTarget(
+      Skills.Entry skill, int skillLevel, int casterLevel, int targetLevel) {
+    int levelBonus = skill != null && skill.Param != null && skill.Param.length > 1
+        ? skill.Param[1] : 0;
+    return Math.max(1, skillLevel) + levelBonus + Math.max(1, casterLevel)
+        > Math.max(1, targetLevel);
+  }
+
+  /** D2MOO {@code AIUTIL_ApplyTerrorCurseState} runtime bridge. */
+  public static UnitState applyHowlState(
+      StateList states, Skills.Entry skill, int skillLevel, int casterLevel,
+      int targetLevel, int sourceEntityId, boolean canSwitchAi) {
+    if (states == null || skill == null || !canSwitchAi
+        || states.hasState(getWarCryStateId(skill, true))
+        || !canHowlTarget(skill, skillLevel, casterLevel, targetLevel)) return null;
+    int stateId = getWarCryStateId(skill, true);
+    if (stateId == StateId.NONE) return null;
+    UnitState state = states.addState(
+        stateId, Math.max(1, getHowlDuration(skill, skillLevel)), 1, sourceEntityId);
+    if (state == null) return null;
+    state.skillId = skill.Id;
+    // This is dwAiParam[0] in the native terror AI: outside this distance the
+    // monster idles; inside it, it takes a 30-subtile escape path.
+    state.runtimeValue = Math.max(1, getHowlAiRange(skill, skillLevel));
+    state.needsSync = true;
+    return state;
+  }
+
+  private static int linearParam(
+      Skills.Entry skill, int skillLevel, int baseIndex, int stepIndex) {
+    if (skill == null || skill.Param == null || skill.Param.length <= stepIndex) return 0;
+    return skill.Param[baseIndex]
+        + (Math.max(1, skillLevel) - 1) * skill.Param[stepIndex];
+  }
 
   /**
    * 嚎叫 - 使敌人逃跑

@@ -53,6 +53,8 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  dosound;
     @Column public String  castoverlay;
     @Column public String  aurastate;
+    /** State applied to affected targets by curses and war-cry missiles. */
+    @Column public String  auratargetstate;
     @Column public String  auralencalc;
     @Column public String  aurarangecalc;
     @Column public int     aurafilter;

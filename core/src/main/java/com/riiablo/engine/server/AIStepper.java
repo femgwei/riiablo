@@ -105,7 +105,7 @@ public class AIStepper extends IteratingSystem {
     int previousTarget = hadCasting ? mCasting.get(entityId).targetId : -1;
 
     AIWrapper wrapper = mAIWrapper.get(entityId);
-    wrapper.ai.update(world.delta);
+    if (!wrapper.ai.updateWarCryControl(world.delta)) wrapper.ai.update(world.delta);
 
     if (!mCasting.has(entityId)) return;
     Casting casting = mCasting.get(entityId);

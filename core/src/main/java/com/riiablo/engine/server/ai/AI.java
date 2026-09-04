@@ -44,11 +44,15 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Running;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.skill.SkillCodes;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 public abstract class AI implements Interactable.Interactor {
@@ -96,6 +100,7 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<SummonedPet> mSummonedPet;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   protected CofManager cofs;
   protected Pathfinder pathfinder;
@@ -119,6 +124,7 @@ public abstract class AI implements Interactable.Interactor {
   private boolean movementActive;
   private boolean lastMovementRunning;
   private int lastMovementVelocityBonus = Integer.MIN_VALUE;
+  private float nextWarCryThink;
 
   public AI(int entityId) {
     this.entityId = entityId;
@@ -151,6 +157,102 @@ public abstract class AI implements Interactable.Interactor {
   public void interact(int src, int entityId) {}
 
   public void update(float delta) {}
+
+  /**
+   * Shared D2MOO AI special-state bridge for Howl/Taunt. Native code swaps
+   * every switchable monster to AISPECIALSTATE_TERROR/TAUNT, independently
+   * of its ordinary AI function; keeping this in the base class preserves
+   * that behavior for both specialized and fallback Java AIs.
+   */
+  public boolean updateWarCryControl(float delta) {
+    if (!mUnitStates.has(entityId) || mUnitStates.get(entityId).stateList == null) {
+      nextWarCryThink = 0f;
+      return false;
+    }
+    UnitState terror = mUnitStates.get(entityId).stateList.getState(StateId.TERROR);
+    UnitState taunt = mUnitStates.get(entityId).stateList.getState(StateId.TAUNT);
+    UnitState control = terror != null ? terror : taunt;
+    if (control == null) {
+      nextWarCryThink = 0f;
+      return false;
+    }
+
+    int sourceId = control.sourceEntityId;
+    if (sourceId < 0 || !mPosition.has(sourceId) || !mPosition.has(entityId)) {
+      mUnitStates.get(entityId).stateList.removeState(control.stateId);
+      stopMovement();
+      return true;
+    }
+    if (terror != null) {
+      if (mCasting.has(entityId)) mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+    } else if (mCasting.has(entityId)) {
+      if (mCasting.get(entityId).targetId == sourceId) return true;
+      mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+    } else if (mSequence.has(entityId)) {
+      mSequence.remove(entityId);
+    }
+    nextWarCryThink -= Math.max(0f, delta);
+    if (nextWarCryThink > 0f) return true;
+    nextWarCryThink = 0.2f;
+
+    Vector2 source = mPosition.get(sourceId).position;
+    Vector2 position = mPosition.get(entityId).position;
+    float distance = position.dst(source);
+    if (terror != null) {
+      int activeRange = terror.runtimeValue > 0 ? terror.runtimeValue : 30;
+      if (distance > activeRange) {
+        stopMovement();
+        return true;
+      }
+      Vector2 escape = new Vector2(position).sub(source);
+      if (escape.isZero(0.0001f) && mAngle.has(entityId)) {
+        escape.set(mAngle.get(entityId).target).scl(-1f);
+      }
+      if (escape.isZero(0.0001f)) escape.set(1f, 0f);
+      escape.nor().scl(30f).add(position);
+      runTo(escape, 0, Engine.INVALID_ENTITY);
+      return true;
+    }
+
+    if (!isLiveTauntSource(sourceId)) {
+      mUnitStates.get(entityId).stateList.removeState(StateId.TAUNT);
+      stopMovement();
+      return true;
+    }
+    float melee = 1f + (monster != null && monster.monstats2 != null
+        ? monster.monstats2.MeleeRng : 0);
+    if (distance <= melee) {
+      stopMovement();
+      lookAt(sourceId);
+      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+      mCasting.create(entityId).set(SkillCodes.attack, sourceId, source);
+      Riiablo.audio.play(monsound + "_attack_1", true);
+    } else {
+      walkTo(source, sourceId);
+    }
+    return true;
+  }
+
+  private boolean isLiveTauntSource(int sourceId) {
+    if (!mPlayer.has(sourceId) || !mPosition.has(sourceId)) return false;
+    if (mAttributesWrapper.has(sourceId)) {
+      Attributes attrs = mAttributesWrapper.get(sourceId).attrs;
+      StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+      if (hp != null && hp.asFixed() <= 0f) return false;
+    }
+    if (mMapWrapper.has(sourceId)) {
+      MapWrapper target = mMapWrapper.get(sourceId);
+      if (target.zone != null && target.zone.isTown()) return false;
+      if (mMapWrapper.has(entityId)) {
+        MapWrapper source = mMapWrapper.get(entityId);
+        if (source.map != null && target.map != null && source.map != target.map) return false;
+        if (source.zone != null && target.zone != null && source.zone != target.zone) return false;
+      }
+    }
+    return true;
+  }
 
   public String getState() {
     return "";

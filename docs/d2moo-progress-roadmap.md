@@ -57,7 +57,7 @@
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
-| 野蛮人 Barbarian | 85% | 15% | Frenzy、Whirlwind、Berserk 已完成；战吼范围状态仍待补齐 |
+| 野蛮人 Barbarian | 90% | 10% | Howl、Taunt、Shout、Battle Cry 第一阶段已完成；Battle Orders、Battle Command、War Cry 及完整友方聚合仍待补齐 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
@@ -152,6 +152,10 @@
   - 对齐 `calc1` 伤害及 Howl/Shout 基础点协同、`calc4=100` 物理转魔法和原生命中率；转换在物理/魔法抗性前完成，保留武器元素伤害并按成功命中结算耐久。
   - 按 `calc2` 创建并刷新 `berserk` 状态，期间提供 `-100%` 防御修正，死亡时清理；状态通过既有权威多人快照同步。
   - `SkillFormula` 支持 Skills.txt 整体带引号公式；补充真实数据和 ECS 起手/关键帧回归。
+- [x] ~~完成野蛮人 Howl / Taunt / Shout / Battle Cry 战吼第一阶段~~
+  - 按原生 `SrvDo022/SrvHit17`、`SrvDo071`、`SrvDo068/SrvHit18/21` 接入状态导弹与 Taunt 直接目标路径；Howl 等级门槛、恐惧范围/持续时间、Taunt 攻击/伤害降低、Shout/Battle Cry 防御/伤害降低均读取 Skills.txt 原生公式。
+  - 统一 `UNITS_CanSwitchAI` 规则：MonStats2 必须支持 WALK、MonStats 必须有 SwitchAI、拒绝 Boss/Unique/SuperUnique/不可打断单位；TERROR/TAUNT 由基类 AI 控制，跨所有怪物 AI 生效并在死亡、进城或跨地图时解除。
+  - 状态导弹保持原生穿透/阵营筛选，不走普通伤害路径；补充真实数据、公式、状态与 AI 门槛回归测试。
 
 ### P2：世界交互和多人闭环
 
@@ -202,13 +206,14 @@
 - 2026-09-04：完成 Frenzy / MonFrenzy 原生序列；接入双持左右手独立命中、GUID 邻近换目标、上一击触发状态、技能等级层数上限、AuraStat 速度、Double Swing/Taunt 协同、Berserk 物理转魔法、耐久及多人状态快照。相关 9 组回归通过，D2GS 编译通过；野蛮人职业专项更新为约 63%。
 - 2026-09-04：完成 Whirlwind `SrvSt038/SrvDo076`；接入直线路径/碰撞终点、近战距离拒绝、原生攻速断点周期扫描、双持交替命中、耐久、状态生命周期及多人权威位置表现。旋风斩专项回归与既有职业回归通过，D2GS 编译通过；野蛮人职业专项更新为约 75%。
 - 2026-09-04：完成 Berserk `SrvSt039/SrvDo002`；接入带引号 `calc2`、Howl/Shout 协同、100% 物理转魔法、防御归零状态、单次命中和耐久结算。相关 11 组 64 个回归用例通过，D2GS 编译通过；野蛮人职业专项更新为约 85%。
+- 2026-09-04：完成 Howl / Taunt / Shout / Battle Cry 战吼第一阶段；对齐原生 `SrvDo022/SrvHit17`、`SrvDo071`、`SrvDo068/SrvHit18/21`、AuraTargetState 和 Skills.txt 公式，统一 `UNITS_CanSwitchAI` 的 WALK/SwitchAI/Boss/Unique/不可打断门槛，并由基类 AI 接管 TERROR/TAUNT 特殊行为。新增 5 个原生数据、状态、导弹和门槛专项用例通过，D2GS 编译通过；野蛮人职业专项更新为约 90%。
 
 ## 当前下一项
 
 刺客专项已经完成；野蛮人 Frenzy、Whirlwind 与 Berserk 的服务端权威命中、状态和多人快照也已接通。
 
-下一项进入 **野蛮人战吼链**：先完成 Howl / Taunt / Battle Cry 的原生目标筛选、
-范围状态和 AI 行为，再补 Shout / Battle Orders / Battle Command 的友方增益、刷新规则与多人表现。
+Howl / Taunt / Shout / Battle Cry 第一阶段已完成。下一项进入 **野蛮人战吼链第二阶段**：
+补 Battle Orders / Battle Command / War Cry 的友方增益、最大生命/法力聚合、刷新规则与多人表现。
 
 ## 记录规则
 

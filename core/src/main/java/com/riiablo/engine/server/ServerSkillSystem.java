@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
@@ -40,6 +41,7 @@ import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.AssassinSkills;
+import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
@@ -227,16 +229,27 @@ public class ServerSkillSystem extends PassiveSystem {
     if (monstersOnly && !mMonster.has(event.entityId)
         && event.srvdofunc != 15 && event.srvdofunc != 16
         && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
-        && event.srvdofunc != 49 && event.srvdofunc != 54
+        && event.srvdofunc != 22 && event.srvdofunc != 49 && event.srvdofunc != 54
+        && event.srvdofunc != 68 && event.srvdofunc != 71
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
-        && skill.srvdofunc != 49 && skill.srvdofunc != 54) {
+        && skill.srvdofunc != 22 && skill.srvdofunc != 49 && skill.srvdofunc != 54
+        && skill.srvdofunc != 68 && skill.srvdofunc != 71) {
       consumeRangedAmmoForSkill(event, skill);
       return;
     }
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if (event.srvdofunc == 71 || skill.srvdofunc == 71) {
+      applyTaunt(event, skill, skillLevel, start);
+      return;
+    }
+    if (event.srvdofunc == 68 || skill.srvdofunc == 68) {
+      applyBasicWarCry(event, skill, skillLevel);
+      spawnNova(event, skill, start);
+      return;
+    }
     if ((event.srvdofunc == 18 || skill.srvdofunc == 18) && isVenom(skill)) {
       applyVenom(event, skill, skillLevel);
       return;
@@ -674,8 +687,80 @@ public class ServerSkillSystem extends PassiveSystem {
     return skill != null ? mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id) : 0;
   }
 
+  /** D2MOO SrvDo071: target a switchable hostile, falling back to radius 20. */
+  private void applyTaunt(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 caster) {
+    int targetId = isTauntTarget(event.entityId, event.targetId)
+        ? event.targetId : Engine.INVALID_ENTITY;
+    if (targetId == Engine.INVALID_ENTITY) {
+      float nearest = Float.MAX_VALUE;
+      IntBag entities = world.getAspectSubscriptionManager()
+          .get(Aspect.all(Monster.class, Position.class)).getEntities();
+      for (int i = 0; i < entities.size(); i++) {
+        int candidate = entities.get(i);
+        if (!isTauntTarget(event.entityId, candidate)) continue;
+        float distance = caster.dst2(mPosition.get(candidate).position);
+        if (distance <= 20f * 20f && distance < nearest) {
+          nearest = distance;
+          targetId = candidate;
+        }
+      }
+    }
+    log.info("[BARBARIAN_TAUNT] phase=select source={} requested={} selected={}",
+        event.entityId, event.targetId, targetId);
+    if (targetId == Engine.INVALID_ENTITY) {
+      log.info("[BARBARIAN_TAUNT] phase=reject source={} skill={} reason=no_switchable_target",
+          event.entityId, event.skillId);
+      return;
+    }
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    UnitStates states = mUnitStates.get(targetId);
+    if (states.stateList == null) states.init(targetId);
+    UnitState state = BarbarianSkills.applyWarCryState(
+        states.stateList, skill, skillLevel, event.entityId, true,
+        name -> getBaseSkillLevel(event.entityId, name));
+    if (state == null) {
+      log.warn("[BARBARIAN_TAUNT] phase=reject source={} target={} skill={} reason=state_data",
+          event.entityId, targetId, event.skillId);
+      return;
+    }
+    log.info("[BARBARIAN_TAUNT] phase=apply source={} target={} skill={} level={} duration={} "
+            + "attack={} damage={} status=PASS",
+        event.entityId, targetId, event.skillId, skillLevel, state.duration,
+        state.attackModifier, state.damageModifier);
+  }
+
+  private boolean isTauntTarget(int sourceId, int targetId) {
+    if (targetId < 0 || !mMonster.has(targetId) || !mPosition.has(targetId)
+        || mMercenary.has(targetId) || mSummonedPet.has(targetId)
+        || !isHostile(sourceId, targetId) || !mNativeUnitFlagsValid(targetId)) return false;
+    Monster monster = mMonster.get(targetId);
+    StateList stateList = mUnitStates.has(targetId) ? mUnitStates.get(targetId).stateList : null;
+    if (!BarbarianSkills.canSwitchWarCryAi(monster, stateList)) return false;
+    Attributes attrs = mAttributesWrapper.has(targetId)
+        ? mAttributesWrapper.get(targetId).attrs : null;
+    StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    return hp == null || hp.asFixed() > 0f;
+  }
+
+  /** SrvDo068 applies AuraState to the caster before its 64-way shout wave. */
+  private void applyBasicWarCry(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(event.entityId);
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    UnitState state = BarbarianSkills.applyWarCryState(
+        states.stateList, skill, skillLevel, event.entityId, false,
+        name -> getBaseSkillLevel(event.entityId, name));
+    log.info("[BARBARIAN_WAR_CRY] phase=self source={} skill={} level={} state={} duration={}",
+        event.entityId, event.skillId, skillLevel,
+        state != null ? StateId.getName(state.stateId) : "none",
+        state != null ? state.duration : 0);
+  }
+
   private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
-    String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+    String missileName = firstNonEmpty(skill.srvmissile,
+        firstNonEmpty(skill.srvmissilea,
+            firstNonEmpty(skill.cltmissile, skill.cltmissilea)));
     if (missileName == null) {
       log.warn("Server nova has no missile configured: entity={}, skill={}",
           event.entityId, event.skillId);
