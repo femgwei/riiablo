@@ -47,6 +47,11 @@ public class Skills extends Excel<Skills.Entry> {
     public int     Id;
     @Column public String  skill;
     @Column public String  charclass;
+    /** Native shape-state gate used by D2Common_SKILLS_CheckShapeRestriction. */
+    @Column public int     restrict;
+    @Column public String  state1;
+    @Column public String  state2;
+    @Column public String  state3;
     @Column public String  skilldesc;
     @Column public String  stsound;
     @Column public String  stsoundclass;

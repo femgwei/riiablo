@@ -438,6 +438,18 @@ public class StateList {
     return Math.max(-90, Math.min(200, total));
   }
 
+  public int getTotalLifeLeechModifier() {
+    int total = 0;
+    for (UnitState state : states) total += state.lifeLeechModifier;
+    return Math.max(0, total);
+  }
+
+  public int getTotalStunLength() {
+    int maximum = 0;
+    for (UnitState state : states) maximum = Math.max(maximum, state.stunLength);
+    return maximum;
+  }
+
   public int getTotalSkillModifier() {
     int total = 0;
     for (UnitState state : states) total += state.skillModifier;

@@ -58,7 +58,7 @@
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
-| 德鲁伊 Druid | 50% | 50% | 狼/熊基础变形已完成；变形攻击、召唤物、持续区域技能和协同公式待补 |
+| 德鲁伊 Druid | 60% | 40% | 狼/熊基础变形及 Feral Rage/Maul 聚能已完成；其余变形攻击、召唤物、持续区域技能和协同公式待补 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
@@ -176,7 +176,10 @@
   - 修正 221–250 全部德鲁伊技能常量为 Skills.txt 的原生交错 ID；`SrvDo116` 按 `AuraLenCalc/AuraStatCalc` 创建 wolf/bear 互斥状态，Lycanthropy 的 `skill(...lnXY)`、`toht`、攻速、命中、伤害、防御及生命/体力加成均由原生公式计算。
   - 保持实体逻辑类型为玩家，仅按权威 `StateP` 派生 `40/TG` 怪物形态；使用 D2Common 玩家→怪物模式转换和 MonStats2 模式回退，状态到期、死亡及重连后均恢复或重建正确外观。
   - 原生数据、状态生命周期、执行器关键帧和表现专项纳入回归；相关 8 组共 71 个用例通过，D2GS 编译通过。
-- [ ] 完成德鲁伊 Feral Rage / Maul 聚能攻击和形态技能限制。
+- [x] ~~完成德鲁伊 Feral Rage / Maul 聚能攻击和形态技能限制~~
+  - 按 D2MOO `SrvSt56/SrvDo120` 拆分起手命中记录与关键帧结算；失败、格挡、错误形态和越距均不增加层数，成功命中按 `calc2` 增层并刷新 `AuraLenCalc`。
+  - Feral Rage 的移动速度/吸血和 Maul 的增强伤害/眩晕均按当前 `STAT_SKILL_FRENZY` 层数重算，首击新层不反向增强本次攻击；状态在失去所需狼/熊形态时清理。
+  - 补齐 Skills.txt `restrict/state1/state2/state3`，统一施法入口执行原生形态限制；状态 ID、持续时间、技能等级、层数和移动速度通过既有 `StateP` 广播给多人客户端。
 - [ ] 完成德鲁伊 Rabies / Fire Claws / Hunger / Shock Wave / Fury 变形攻击。
 - [ ] 完成德鲁伊 Raven、藤蔓、灵魂、狼群和灰熊召唤所有权及生命周期。
 - [ ] 完成德鲁伊 Firestorm、Fissure、Volcano、Armageddon、Hurricane 等元素区域技能。
@@ -237,13 +240,13 @@
 - 2026-09-04：完成野蛮人 GH/BL 受击与状态 Overlay 表现首项；服务端近战、旋风斩、导弹命中/格挡切换原生动画模式并经 `CofReference` 广播，客户端恢复 Frenzy/Berserk/Battle Orders/Battle Command/Shout/Battle Cry 持续 Overlay；状态启停、原生 Overlay 数据和战斗回归通过，D2GS 编译通过。
 
 - 2026-09-04：完成德鲁伊 Werewolf/Werebear `SrvDo116` 基础变形；纠正德鲁伊全部原生技能 ID，接入 Lycanthropy `skill(...lnXY)`、狼/熊互斥状态、原生属性、`40/TG` 形态 COF、模式回退及多人状态派生表现。相关 8 组共 71 个用例通过，D2GS 编译通过；德鲁伊专项更新为约 50%。
+- 2026-09-04：完成德鲁伊 Feral Rage/Maul `SrvSt56/SrvDo120`；接入原生命中预判、武器伤害、耐久时序、层数上限/刷新、Feral 移速与吸血、Maul 增伤与眩晕、Skills.txt 形态限制和失去形态清理。相关 6 组共 23 个用例通过，D2GS 编译通过；德鲁伊专项更新为约 60%。
 
 ## 当前下一项
 
-Werewolf/Werebear 基础变形已经完成，德鲁伊技能 ID、状态、属性、形态动画和多人派生表现已对齐。
+Werewolf/Werebear 基础变形和 Feral Rage/Maul 聚能攻击已经完成，德鲁伊形态限制、层数状态及多人快照已对齐。
 
-下一项建议继续 **Feral Rage / Maul 聚能攻击**：实现 `SrvSt56` 命中预判、聚能层数、
-状态持续时间和速度/伤害修正，并把 Skills.txt 的形态限制接到统一施法校验。
+下一项建议继续 **Rabies / Fire Claws 变形攻击**：优先接通 Rabies 的目标感染、邻近传播和持续毒伤，再实现 Fire Claws 的 Skills.txt 元素伤害、协同公式与多人导弹/Overlay 表现。
 
 ## 记录规则
 

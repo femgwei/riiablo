@@ -39,6 +39,11 @@ public class Casting extends PooledComponent {
   public boolean frenzyInitialized;
   public int frenzyStrikeIndex;
   @EntityId public int frenzyOriginalTargetId;
+  /** Native Feral Rage/Maul SrvSt56 combat record consumed by SrvDo120. */
+  public CombatSystem.CombatResult feralMaulCombat;
+  @EntityId public int feralMaulTargetId;
+  public int feralMaulStunFrames;
+  public boolean feralMaulPrepared;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     this.skillId = skillId;
@@ -63,6 +68,10 @@ public class Casting extends PooledComponent {
     frenzyInitialized = false;
     frenzyStrikeIndex = 0;
     frenzyOriginalTargetId = Engine.INVALID_ENTITY;
+    feralMaulCombat = null;
+    feralMaulTargetId = Engine.INVALID_ENTITY;
+    feralMaulStunFrames = 0;
+    feralMaulPrepared = false;
     return this;
   }
 
@@ -90,5 +99,9 @@ public class Casting extends PooledComponent {
     frenzyInitialized = false;
     frenzyStrikeIndex = 0;
     frenzyOriginalTargetId = Engine.INVALID_ENTITY;
+    feralMaulCombat = null;
+    feralMaulTargetId = Engine.INVALID_ENTITY;
+    feralMaulStunFrames = 0;
+    feralMaulPrepared = false;
   }
 }

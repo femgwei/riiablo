@@ -48,6 +48,7 @@ import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
+import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
@@ -181,6 +182,22 @@ public class ServerSkillSystem extends PassiveSystem {
         default: reason = "skill has not been learned"; break;
       }
       reject(event, validation, reason);
+      return;
+    }
+
+    UnitStates casterStates = mUnitStates.has(event.entityId)
+        ? mUnitStates.get(event.entityId) : null;
+    StateList casterStateList = casterStates != null ? casterStates.stateList : null;
+    boolean transformed = casterStateList != null
+        && (casterStateList.hasState(StateId.WOLF) || casterStateList.hasState(StateId.BEAR));
+    if ((skill.restrict == 2 || transformed)
+        && !DruidSkills.isSkillAllowedInCurrentShape(skill, casterStateList)) {
+      reject(event, 10, "skill is restricted to the current druid shape");
+      log.info("[DRUID_SHAPE_RESTRICT] phase=cast_reject source={} skill={} restrict={} "
+              + "wolf={} bear={}",
+          event.entityId, skill.skill, skill.restrict,
+          casterStateList != null && casterStateList.hasState(StateId.WOLF),
+          casterStateList != null && casterStateList.hasState(StateId.BEAR));
       return;
     }
 

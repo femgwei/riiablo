@@ -2,10 +2,15 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Weapons;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import java.util.Locale;
@@ -213,6 +218,7 @@ public final class DruidSkills {
         : states.hasState(StateId.BEAR) ? StateId.BEAR : StateId.NONE;
     if (active != StateId.NONE) {
       states.removeState(active);
+      removeInvalidFeralMaulStates(states);
       return new ShapeShiftResult(active, null);
     }
 
@@ -312,26 +318,194 @@ public final class DruidSkills {
     return 25 + (Math.max(1, skillLevel) - 1) * 6;
   }
 
-  /**
-   * 野性狂暴 - 狼人生命偷取攻击
-   * 
-   * @param skillLevel 技能等级
-   * @return 生命偷取百分比
-   */
-  public static int getFeralRageLifeSteal(int skillLevel) {
-    // 基础 5%，每级 +3%
-    return 5 + (skillLevel - 1) * 3;
+  public static boolean isFeralRageOrMaul(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 56 && skill.srvdofunc == 120;
+  }
+
+  /** Removes charge states whose required transform is no longer active. */
+  public static int removeInvalidFeralMaulStates(StateList states) {
+    if (states == null) return 0;
+    int removed = 0;
+    if (!states.hasState(StateId.WOLF) && states.removeState(StateId.FERALRAGE)) removed++;
+    if (!states.hasState(StateId.BEAR) && states.removeState(StateId.MAUL)) removed++;
+    return removed;
+  }
+
+  public static int getFeralMaulStateId(Skills.Entry skill) {
+    if (skill == null || skill.aurastate == null) return StateId.NONE;
+    switch (skill.aurastate.trim().toLowerCase(Locale.ROOT)) {
+      case "feralrage": return StateId.FERALRAGE;
+      case "maul": return StateId.MAUL;
+      default: return StateId.NONE;
+    }
   }
 
   /**
-   * 重击 - 熊人强力攻击
-   * 
-   * @param skillLevel 技能等级
-   * @return 伤害加成百分比
+   * D2Common_SKILLS_CheckShapeRestriction. This project currently models the
+   * native restrict state mask through the two player shape states.
    */
-  public static int calculateMaulDamageBonus(int skillLevel) {
-    // 基础 20%，每级 +10%
-    return 20 + (skillLevel - 1) * 10;
+  public static boolean isSkillAllowedInCurrentShape(Skills.Entry skill, StateList states) {
+    if (skill == null) return false;
+    boolean wolf = states != null && states.hasState(StateId.WOLF);
+    boolean bear = states != null && states.hasState(StateId.BEAR);
+    boolean restrictedState = wolf || bear;
+    if (skill.restrict == 0) return !restrictedState;
+    if (skill.restrict != 2) return true;
+    if (!restrictedState) return false;
+    return matchesShape(skill.state1, wolf, bear)
+        || matchesShape(skill.state2, wolf, bear)
+        || matchesShape(skill.state3, wolf, bear);
+  }
+
+  private static boolean matchesShape(String state, boolean wolf, boolean bear) {
+    if (state == null || state.isEmpty()) return false;
+    return wolf && "wolf".equalsIgnoreCase(state)
+        || bear && "bear".equalsIgnoreCase(state);
+  }
+
+  /** Native SrvDo120 calc2: the maximum STAT_SKILL_FRENZY value. */
+  public static int getFeralMaulMaxStacks(Skills.Entry skill, int skillLevel) {
+    if (!isFeralRageOrMaul(skill)) return 0;
+    return Math.max(0, SkillFormula.evaluate(skill.calc2, skill, Math.max(1, skillLevel)));
+  }
+
+  public static int getFeralMaulDuration(Skills.Entry skill, int skillLevel) {
+    if (!isFeralRageOrMaul(skill)) return 0;
+    return Math.max(1,
+        SkillFormula.evaluate(skill.auralencalc, skill, Math.max(1, skillLevel)));
+  }
+
+  public static int getFeralMaulAuraStat(
+      Skills.Entry skill, int stacks, String statName) {
+    if (skill == null || skill.aurastat == null || skill.aurastatcalc == null
+        || statName == null || stacks <= 0) return 0;
+    int count = Math.min(skill.aurastat.length, skill.aurastatcalc.length);
+    for (int i = 0; i < count; i++) {
+      if (statName.equalsIgnoreCase(skill.aurastat[i])) {
+        return SkillFormula.evaluate(skill.aurastatcalc[i], skill, stacks);
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * D2Game SKILLS_SrvDo120_FeralRage_Maul. The caller invokes this only for
+   * an unblocked successful SrvSt56 combat record. AuraStatCalc intentionally
+   * receives the stack count rather than the learned skill level.
+   */
+  public static UnitState applyFeralMaulState(
+      StateList states, Skills.Entry skill, int skillLevel, int sourceEntityId) {
+    int stateId = getFeralMaulStateId(skill);
+    if (states == null || stateId == StateId.NONE
+        || !isSkillAllowedInCurrentShape(skill, states)) return null;
+    UnitState existing = states.getState(stateId);
+    int previous = existing != null ? Math.max(0, existing.runtimeValue) : 0;
+    int stacks = Math.min(getFeralMaulMaxStacks(skill, skillLevel), previous + 1);
+    if (stacks <= 0) return null;
+    int duration = getFeralMaulDuration(skill, skillLevel);
+    UnitState state = states.addState(
+        stateId, duration, Math.max(1, skillLevel), sourceEntityId);
+    if (state == null) return null;
+    state.duration = duration;
+    state.initialDuration = duration;
+    state.level = Math.max(1, skillLevel);
+    state.sourceEntityId = sourceEntityId;
+    state.skillId = skill.Id;
+    state.clearModifiers();
+    state.runtimeValue = stacks;
+
+    int count = Math.min(
+        skill.aurastat != null ? skill.aurastat.length : 0,
+        skill.aurastatcalc != null ? skill.aurastatcalc.length : 0);
+    for (int i = 0; i < count; i++) {
+      String stat = skill.aurastat[i];
+      if (stat == null || stat.isEmpty()) continue;
+      int value = SkillFormula.evaluate(skill.aurastatcalc[i], skill, stacks);
+      switch (stat.toLowerCase(Locale.ROOT)) {
+        case "velocitypercent": state.velocityModifier += value; break;
+        case "lifedrainmindam":
+        case "lifedrainmaxdam":
+          state.lifeLeechModifier = Math.max(state.lifeLeechModifier, value);
+          break;
+        case "damagepercent": state.damageModifier += value; break;
+        case "stunlength": state.stunLength = Math.max(state.stunLength, value); break;
+        default:
+          log.warn("[DRUID_FERAL_MAUL] ignored AuraStat skill={} stat={}", skill.skill, stat);
+          break;
+      }
+    }
+    state.needsSync = true;
+    return state;
+  }
+
+  /** SrvSt56 SKILLS_GetToHitFactor applied to the player's base AR. */
+  public static int getFeralMaulAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker, boolean player) {
+    int base = statInt(attacker, Stat.tohit);
+    int level = Math.max(1, skillLevel);
+    int factor = skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
+    if (player) return Math.max(1, base * Math.max(0, 100 + factor) / 100);
+    return Math.max(1, base + factor);
+  }
+
+  /** Complete physical packet stored by SrvSt56 before SrvDo120 executes. */
+  public static int[] calculateFeralMaulWeaponDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      StateList states) {
+    int min;
+    int max;
+    int attributePercent;
+    if (weapon != null && weapon.base instanceof Weapons.Entry) {
+      Weapons.Entry base = (Weapons.Entry) weapon.base;
+      min = itemStatInt(weapon, Stat.mindamage, base.mindam);
+      max = itemStatInt(weapon, Stat.maxdamage, Math.max(min, base.maxdam));
+      attributePercent = base.StrBonus * statInt(attacker, Stat.strength) / 100
+          + base.DexBonus * statInt(attacker, Stat.dexterity) / 100;
+    } else {
+      min = Math.max(0, statInt(attacker, Stat.mindamage));
+      max = Math.max(min, statInt(attacker, Stat.maxdamage));
+      attributePercent = statInt(attacker, Stat.strength);
+    }
+    int percent = SkillFormula.evaluate(
+        skill != null ? skill.calc1 : null, skill, Math.max(1, skillLevel))
+        + attributePercent
+        + statInt(attacker, Stat.damagepercent)
+        + statInt(attacker, Stat.item_maxdamage_percent);
+    if (states != null) {
+      percent += states.getTotalDamageModifier();
+      StateList.WeaponMasteryBonus mastery = states.getWeaponMastery(
+          weapon, false, new StateList.WeaponMasteryBonus());
+      percent += mastery.damagePercent;
+    }
+    int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
+    return new int[] {
+        scale(scale(min, percent), sourceDamage, 128),
+        scale(scale(max, percent), sourceDamage, 128)
+    };
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    if (attrs == null) return 0;
+    StatRef ref = attrs.get(stat, StatRef.obtain());
+    return ref == null ? 0 : ref.asInt();
+  }
+
+  private static int itemStatInt(Item item, short stat, int fallback) {
+    if (item == null || item.attrs == null) return fallback;
+    StatRef ref = item.attrs.get(stat, StatRef.obtain());
+    if (ref == null) ref = item.attrs.base().get(stat, StatRef.obtain());
+    return ref == null ? fallback : ref.asInt();
+  }
+
+  private static int scale(int value, int enhancedPercent) {
+    long result = (long) Math.max(0, value) * Math.max(0, 100 + enhancedPercent) / 100L;
+    return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
+  }
+
+  private static int scale(int value, int numerator, int denominator) {
+    if (value <= 0 || numerator <= 0 || denominator <= 0) return 0;
+    long result = (long) value * numerator / denominator;
+    return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
   }
 
   /**

@@ -664,6 +664,9 @@ public class CombatSystem {
     a.crushingBlow = statInt(attacker, Stat.item_crushingblow, 0);
     a.lifeLeech = statInt(attacker, Stat.lifedrainmindam, 0);
     a.manaLeech = statInt(attacker, Stat.manadrainmindam, 0);
+    if (attackerStates != null) {
+      a.lifeLeech += attackerStates.getTotalLifeLeechModifier();
+    }
     a.coldLength = statInt(attacker, Stat.coldlength, 0);
     a.poisonLength = statInt(attacker, Stat.poisonlength, 0);
     // DefensiveBuff SrvDo018 installs Venom as a state stat-list. It adds to

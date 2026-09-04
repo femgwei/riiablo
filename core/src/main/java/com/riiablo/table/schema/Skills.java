@@ -35,6 +35,10 @@ public class Skills {
   public int Id;
   public String skill;
   public String charclass;
+  public int restrict;
+  public String state1;
+  public String state2;
+  public String state3;
   public String skilldesc;
   public String stsound;
   public String stsoundclass;

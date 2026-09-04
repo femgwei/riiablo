@@ -38,6 +38,7 @@ import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
+import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -130,6 +131,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // still deal its final DOT tick, then expire.
     processDamageOverTime(entityId, stateList);
     stateList.update();
+    int removedDruidStates = DruidSkills.removeInvalidFeralMaulStates(stateList);
+    if (removedDruidStates > 0) {
+      log.info("[DRUID_FERAL_MAUL] phase=shape_dependency_cleanup entity={} removed={}",
+          entityId, removedDruidStates);
+    }
 
     applyMaximumResourceModifiers(entityId, unitStates, stateList);
 

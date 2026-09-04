@@ -64,6 +64,12 @@ public class UnitState {
 
   /** Native attackrate/other_animrate percentage used by animation stepping. */
   public int animationRateModifier;
+
+  /** Native lifedrainmindam/lifedrainmaxdam supplied by a skill stat-list. */
+  public int lifeLeechModifier;
+
+  /** Native stunlength supplied by an attacker state, measured in frames. */
+  public int stunLength;
   
   /** 火焰抗性修正 */
   public int fireResistModifier;
@@ -213,6 +219,8 @@ public class UnitState {
     velocityModifier = 0;
     runtimeValue = 0;
     animationRateModifier = 0;
+    lifeLeechModifier = 0;
+    stunLength = 0;
     fireResistModifier = 0;
     coldResistModifier = 0;
     lightResistModifier = 0;
@@ -376,6 +384,8 @@ public class UnitState {
     this.velocityModifier = other.velocityModifier;
     this.runtimeValue = other.runtimeValue;
     this.animationRateModifier = other.animationRateModifier;
+    this.lifeLeechModifier = other.lifeLeechModifier;
+    this.stunLength = other.stunLength;
     this.fireResistModifier = other.fireResistModifier;
     this.coldResistModifier = other.coldResistModifier;
     this.lightResistModifier = other.lightResistModifier;

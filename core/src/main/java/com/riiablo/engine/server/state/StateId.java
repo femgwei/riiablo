@@ -544,6 +544,8 @@ public final class StateId {
       case TERROR: return "terror";
       case WOLF: return "wolf";
       case BEAR: return "bear";
+      case MAUL: return "maul";
+      case FERALRAGE: return "feralrage";
       // ... 可以根据需要添加更多
       default: return "state_" + stateId;
     }

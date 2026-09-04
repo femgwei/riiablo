@@ -760,6 +760,10 @@ public class Actioneer extends PassiveSystem {
         log.info("[MONSTER_SKILL] phase=fire_hit_start entity={} target={} mode=S1",
             entityId, targetId);
         break;
+      case 56: { // SKILLS_SrvSt56_FeralRage_Maul
+        prepareFeralMaul(entityId, targetId);
+        break;
+      }
       case 44: // MaggotUp start: native code prepares the unburrow transition
         log.info("[MONSTER_MAGGOT] phase=up_start entity={} target={}", entityId, targetId);
         break;
@@ -850,6 +854,10 @@ public class Actioneer extends PassiveSystem {
     switch (srvdofunc) {
       case 0:
         break;
+      case 120: { // SKILLS_SrvDo120_FeralRage_Maul
+        resolveFeralMaul(entityId, targetId);
+        break;
+      }
       case 1: // attack
       case 7: // native Jab: same authoritative hit path, skill-specific animation
       case 11: // native Charged Strike: melee hit plus bolts from ServerSkillSystem
@@ -1500,6 +1508,131 @@ public class Actioneer extends PassiveSystem {
         // TODO: default case will log an error when all valid cases are enumerated
         //log.error("Invalid srvdofunc({}) for {}", srvdofunc, entityId);
     }
+  }
+
+  /** Native SrvSt56: resolve hit once and retain the combat record for SrvDo120. */
+  private void prepareFeralMaul(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || !DruidSkills.isFeralRageOrMaul(skill)
+        || !mUnitStates.has(entityId) || targetId == Engine.INVALID_ENTITY
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !isAlive(entityId) || !isAlive(targetId)) {
+      log.info("[DRUID_FERAL_MAUL] phase=start_reject source={} target={} reason=invalid_context",
+          entityId, targetId);
+      return;
+    }
+    UnitStates states = mUnitStates.get(entityId);
+    if (states.stateList == null) states.init(entityId);
+    if (!DruidSkills.isSkillAllowedInCurrentShape(skill, states.stateList)) {
+      log.info("[DRUID_FERAL_MAUL] phase=start_reject source={} skill={} reason=shape_restriction",
+          entityId, skill.skill);
+      return;
+    }
+    if (!isInMeleeRange(entityId, targetId, isPlayerEntity(entityId) ? 3 : 0)) {
+      log.info("[DRUID_FERAL_MAUL] phase=start_reject source={} target={} reason=out_of_range",
+          entityId, targetId);
+      return;
+    }
+    boolean attackerPlayer = isPlayerEntity(entityId);
+    boolean targetPlayer = isPlayerEntity(targetId);
+    boolean sourceAligned = mPlayer.has(entityId) || mMercenary.has(entityId)
+        || mSummonedPet.has(entityId);
+    boolean targetAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
+        || mSummonedPet.has(targetId);
+    if (!PvpCombatRules.canDamage(partyManager, entityId, targetId, sourceAligned, targetAligned)) {
+      log.info("[DRUID_FERAL_MAUL] phase=start_reject source={} target={} reason=relation",
+          entityId, targetId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    Item weapon = activeAttackWeapon(entityId);
+    int[] damage = DruidSkills.calculateFeralMaulWeaponDamage(
+        skill, level, attacker, weapon, states.stateList);
+    int attackRating = DruidSkills.getFeralMaulAttackRating(
+        skill, level, attacker, attackerPlayer);
+    casting.feralMaulCombat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, attackerPlayer, targetPlayer,
+        damage[0], damage[1], attackRating,
+        states.stateList, stateList(targetId), isEntityMoving(targetId),
+        weaponMastery(entityId, weapon, false));
+    casting.feralMaulTargetId = targetId;
+    // The SrvSt56 combat record sees the old Maul stat-list. The stack gained
+    // by SrvDo120 must not stun or enhance the strike that created it.
+    casting.feralMaulStunFrames = states.stateList.getTotalStunLength();
+    casting.feralMaulPrepared = true;
+    log.info("[DRUID_FERAL_MAUL] phase=start source={} target={} skill={} level={} weapon={} "
+            + "damage={}..{} attackRating={} chance={} hit={} blocked={}",
+        entityId, targetId, skill.skill, level, weapon != null ? weapon.code : "unarmed",
+        damage[0], damage[1], attackRating, casting.feralMaulCombat.hitChance,
+        casting.feralMaulCombat.hit, casting.feralMaulCombat.blocked);
+  }
+
+  /** Native SrvDo120: consume the SrvSt56 result, then build/refresh stacks. */
+  private void resolveFeralMaul(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    if (casting == null || !casting.feralMaulPrepared
+        || casting.feralMaulTargetId != targetId
+        || casting.feralMaulCombat == null) {
+      log.info("[DRUID_FERAL_MAUL] phase=keyframe_reject source={} target={} reason=not_prepared",
+          entityId, targetId);
+      return;
+    }
+    CombatSystem.CombatResult combat = casting.feralMaulCombat;
+    int stunFrames = casting.feralMaulStunFrames;
+    casting.feralMaulPrepared = false;
+    casting.feralMaulCombat = null;
+    casting.feralMaulTargetId = Engine.INVALID_ENTITY;
+    casting.feralMaulStunFrames = 0;
+    // Native SrvDo120 calls SUNITDMG_DrainItemDurability before Param1.
+    Item weapon = activeAttackWeapon(entityId);
+    if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    if (!combat.hit || combat.blocked || !mAttributesWrapper.has(targetId)) {
+      log.info("[DRUID_FERAL_MAUL] phase=keyframe source={} target={} result={} blocked={}",
+          entityId, targetId, combat.hit ? "blocked" : "miss", combat.blocked);
+      if (combat.blocked) queueHitReaction(targetId, true);
+      return;
+    }
+    UnitStates states = mUnitStates.get(entityId);
+    if (states == null) return;
+    if (states.stateList == null) states.init(entityId);
+    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
+    int level = Math.max(1, skillLevel(entityId, casting.skillId));
+    UnitState feralState = DruidSkills.applyFeralMaulState(
+        states.stateList, skill, level, entityId);
+    if (feralState == null) {
+      log.warn("[DRUID_FERAL_MAUL] phase=state_reject source={} skill={} reason=invalid_shape_or_formula",
+          entityId, skill != null ? skill.skill : "none");
+    }
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
+    float before = hitpoints.asFixed();
+    DamageEvent event = DamageEvent.obtain(entityId, targetId, Math.max(0, combat.totalDamage));
+    events.dispatch(event);
+    float applied = Math.max(0f, event.damage);
+    hitpoints.sub(applied);
+    if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
+    float lifeStolen = combat.totalDamage > 0
+        ? combat.lifeStolen * applied / combat.totalDamage : 0f;
+    if (lifeStolen > 0 && mAttributesWrapper.has(entityId)) {
+      restoreUpToMaximum(mAttributesWrapper.get(entityId).attrs, Stat.hitpoints,
+          Stat.maxhp, lifeStolen);
+    }
+    if (stunFrames > 0) {
+      StatusEffectApplier.INSTANCE.applyStun(targetId, stunFrames);
+    }
+    applyCombatStates(entityId, targetId, combat);
+    if (hitpoints.asFixed() > 0f) queueHitReaction(targetId, false);
+    if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    log.info("[DRUID_FERAL_MAUL] phase=keyframe source={} target={} skill={} "
+            + "result=hit damage={} hp={} -> {} stacks={} state={} leech={} stun={}",
+        entityId, targetId, skill != null ? skill.skill : "none", applied, before,
+        hitpoints.asFixed(), feralState != null ? feralState.runtimeValue : 0,
+        feralState != null ? StateId.getName(feralState.stateId) : "none",
+        lifeStolen, stunFrames);
   }
 
   static boolean allowsDeadTarget(Skills.Entry skill) {
