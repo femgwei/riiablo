@@ -339,6 +339,9 @@ public class SkillCastHandler extends PassiveSystem {
       case 43: // Native Leap movement uses the server-synchronized unit position
         break;
 
+      case 45: // Whirlwind uses the synchronized SQ animation and position
+        break;
+
       case 55: // Corpse Explosion
         cltDoCorpseExplosionVisual(event, skill);
         break;

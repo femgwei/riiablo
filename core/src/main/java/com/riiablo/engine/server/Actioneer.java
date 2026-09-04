@@ -39,6 +39,7 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.FrenzyRuntime;
+import com.riiablo.engine.server.component.WhirlwindRuntime;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
@@ -82,6 +83,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<MovementModes> mMovementModes;
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<FrenzyRuntime> mFrenzyRuntime;
+  protected ComponentMapper<WhirlwindRuntime> mWhirlwindRuntime;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Target> mTarget;
@@ -513,6 +515,11 @@ public class Actioneer extends PassiveSystem {
           event.entityId, completedTargetId);
       return;
     }
+    if (mWhirlwindRuntime.has(event.entityId)) {
+      log.debug("[WHIRLWIND] phase=repeat_animation entity={} skill={}",
+          event.entityId, casting.skillId);
+      return;
+    }
     mCasting.remove(event.entityId);
     
     if (targetDead && mSequence.has(event.entityId)) {
@@ -536,6 +543,15 @@ public class Actioneer extends PassiveSystem {
       if (mSequence.has(event.victim)) mSequence.remove(event.victim);
       if (mTarget.has(event.victim)) mTarget.remove(event.victim);
       if (mFrenzyRuntime.has(event.victim)) mFrenzyRuntime.remove(event.victim);
+      if (mWhirlwindRuntime.has(event.victim)) mWhirlwindRuntime.remove(event.victim);
+      if (mPathfind.has(event.victim)) mPathfind.remove(event.victim);
+      if (mVelocity.has(event.victim)) mVelocity.get(event.victim).velocity.setZero();
+      if (mUnitStates.has(event.victim)) {
+        UnitStates states = mUnitStates.get(event.victim);
+        if (states != null && states.stateList != null) {
+          states.stateList.removeState(StateId.WHIRLWIND);
+        }
+      }
       log.info("[PLAYER_DEATH] action state cleared entity={} killer={}", event.victim, event.killer);
     }
     if (mTarget.has(event.killer)) {
@@ -794,6 +810,13 @@ public class Actioneer extends PassiveSystem {
         }
         log.info("[FRENZY] phase=bloodlord_start entity={} skill={} target={}",
             entityId, casting.skillId, resolvedTarget);
+        break;
+      }
+      case 38: { // SKILLS_SrvSt38_Whirlwind
+        // A network client renders the D2GS-owned runtime and must not start
+        // a second movement or damage loop from its local cast prediction.
+        if (world.getSystem(WhirlwindSystem.class) == null) break;
+        startWhirlwind(entityId, targetId, targetVec);
         break;
       }
       case 40: // native Leap validates and reserves its landing point on skill start
@@ -1379,6 +1402,7 @@ public class Actioneer extends PassiveSystem {
       case 18: // DefensiveBuff; Venom state is applied by ServerSkillSystem
       case 22: // Nova/radial missile skill
       case 54: // Blade Shield periodic pulse is applied by StateUpdater
+      case 76: // Whirlwind periodic hits are applied by WhirlwindSystem
       case 85: // Fallen Shaman chain missile
       case 95: // Fetish Shaman inferno missile
         break;
@@ -1620,6 +1644,198 @@ public class Actioneer extends PassiveSystem {
     Item item = mPlayer.get(entityId).data.getItems().getEquipped(bodyLoc);
     if (item == null || !(item.base instanceof Weapons.Entry) || item.type == null) return null;
     return item.type.is(Type.BOW) || item.type.is(Type.XBOW) ? null : item;
+  }
+
+  private void startWhirlwind(int entityId, int targetId, Vector2 targetVec) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || skill == null || !mPosition.has(entityId)
+        || !mVelocity.has(entityId) || !isAlive(entityId)) {
+      rejectWhirlwind(entityId, "missing_runtime_data");
+      return;
+    }
+    if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
+        && isInMeleeRange(entityId, targetId, 0)) {
+      rejectWhirlwind(entityId, "target_in_melee_range");
+      return;
+    }
+
+    Vector2 requested = targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)
+        ? mPosition.get(targetId).position : targetVec;
+    Vector2 start = mPosition.get(entityId).position;
+    Vector2 destination = new Vector2();
+    int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
+    if (!WhirlwindSystem.resolveDestination(map, start, requested, size, destination)) {
+      rejectWhirlwind(entityId, "invalid_straight_path");
+      return;
+    }
+
+    if (mPathfind.has(entityId)) mPathfind.remove(entityId);
+    if (mTarget.has(entityId)) mTarget.remove(entityId);
+    int level = Math.max(1, skillLevel(entityId, casting.skillId));
+    mWhirlwindRuntime.create(entityId).set(
+        casting.skillId, level, destination, start);
+    if (mUnitStates.has(entityId)) {
+      UnitStates states = mUnitStates.get(entityId);
+      if (states.stateList == null) states.init(entityId);
+      UnitState state = states.stateList.addState(
+          StateId.WHIRLWIND, 0, level, entityId);
+      state.skillId = casting.skillId;
+      state.needsSync = true;
+    }
+    Vector2 direction = new Vector2(destination).sub(start).nor();
+    mVelocity.get(entityId).velocity.set(direction)
+        .setLength(mVelocity.get(entityId).speed(false));
+    if (mAngle.has(entityId)) mAngle.get(entityId).target.set(direction);
+    log.info("[WHIRLWIND] phase=start entity={} skill={} level={} target={} "
+            + "start=({}, {}) requested=({}, {}) destination=({}, {}) interval={}",
+        entityId, casting.skillId, level, targetId,
+        start.x, start.y, requested.x, requested.y, destination.x, destination.y,
+        whirlwindAttackInterval(entityId));
+  }
+
+  private void rejectWhirlwind(int entityId, String reason) {
+    if (mWhirlwindRuntime.has(entityId)) mWhirlwindRuntime.remove(entityId);
+    if (mCasting.has(entityId)) mCasting.remove(entityId);
+    if (mSequence.has(entityId)) mSequence.remove(entityId);
+    if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+    log.info("[WHIRLWIND] phase=start_reject entity={} reason={}", entityId, reason);
+  }
+
+  /** One native SrvDo076 attack window; dual wielding resolves two hands. */
+  void resolveWhirlwindPulse(int entityId, WhirlwindRuntime runtime) {
+    if (runtime == null || !mAttributesWrapper.has(entityId)) return;
+    Skills.Entry skill = Riiablo.files.skills.get(runtime.skillId);
+    if (skill == null) return;
+    int count = hasTwoWhirlwindWeapons(entityId) ? 2 : 1;
+    for (int i = 0; i < count; i++) {
+      int targetId = findNextWhirlwindTarget(entityId, runtime.previousTargetId);
+      if (targetId == Engine.INVALID_ENTITY) {
+        runtime.previousTargetId = Engine.INVALID_ENTITY;
+        break;
+      }
+      runtime.previousTargetId = targetId;
+      Item weapon = whirlwindWeapon(entityId, runtime.strikeIndex);
+      int strike = ++runtime.strikeIndex;
+      resolveWhirlwindStrike(entityId, targetId, skill, runtime.skillLevel, weapon, strike);
+    }
+  }
+
+  private void resolveWhirlwindStrike(
+      int entityId, int targetId, Skills.Entry skill, int level,
+      Item weapon, int strike) {
+    if (!mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !isAlive(entityId) || !isAlive(targetId)) return;
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    int[] damage = BarbarianSkills.calculateWhirlwindDamage(
+        skill, level, attacker, weapon, name -> baseSkillLevel(entityId, name));
+    int attackRating = BarbarianSkills.getWhirlwindAttackRating(
+        skill, level, attacker, isPlayerEntity(entityId));
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
+        damage[0], damage[1], attackRating,
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+    if (!combat.hit) {
+      log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
+              + "result=miss chance={}",
+          entityId, targetId, strike, whirlwindHand(entityId, strike - 1), combat.hitChance);
+      return;
+    }
+    if (combat.blocked) {
+      log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} result=blocked",
+          entityId, targetId, strike, whirlwindHand(entityId, strike - 1));
+      return;
+    }
+    if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hp == null || hp.asFixed() <= 0f) return;
+    float before = hp.asFixed();
+    DamageEvent event = DamageEvent.obtain(entityId, targetId,
+        Math.max(0f, combat.totalDamage));
+    events.dispatch(event);
+    float applied = Math.max(0f, event.damage);
+    hp.sub(applied);
+    if (hp.asFixed() < 0f) hp.set(0f);
+    applyCombatStates(entityId, targetId, combat);
+    log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
+            + "weapon={} result=hit damage={} hp={} -> {} chance={}",
+        entityId, targetId, strike, whirlwindHand(entityId, strike - 1),
+        weapon != null ? weapon.code : "unarmed", applied, before, hp.asFixed(),
+        combat.hitChance);
+    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+  }
+
+  int whirlwindAttackInterval(int entityId) {
+    Item weapon = whirlwindPrimaryWeapon(entityId);
+    if (weapon == null) return 10;
+    int nativeAttackSpeed = 45;
+    if (Riiablo.anim != null && mCofReference.has(entityId)) {
+      CofReference cof = mCofReference.get(entityId);
+      com.riiablo.codec.D2.Entry anim = Riiablo.anim.getEntry(
+          cof.token + "A1" + Engine.getWClass(cof.wclass));
+      if (anim != null && anim.framesPerDir > 0 && anim.speed > 0) {
+        int baseAttackRate = weapon.base instanceof Weapons.Entry
+            ? -((Weapons.Entry) weapon.base).speed : 0;
+        int attackRate = 100
+            + itemStatInt(weapon, Stat.attackrate, baseAttackRate)
+            + itemStatInt(weapon, Stat.item_fasterattackrate, 0);
+        int scaledAnimSpeed = Math.max(1, anim.speed * Math.max(1, attackRate) / 100);
+        nativeAttackSpeed = Math.max(1, (anim.framesPerDir << 8) / scaledAnimSpeed);
+      }
+    }
+    return BarbarianSkills.getWhirlwindAttackInterval(nativeAttackSpeed);
+  }
+
+  private int findNextWhirlwindTarget(int sourceId, int previousTargetId) {
+    if (!mPosition.has(sourceId)) return Engine.INVALID_ENTITY;
+    Vector2 source = mPosition.get(sourceId).position;
+    int next = Engine.INVALID_ENTITY;
+    int wrapped = Engine.INVALID_ENTITY;
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int candidate = ids[i];
+      if (candidate == sourceId || !isAlive(candidate)
+          || source.dst2(mPosition.get(candidate).position) > 25f
+          || !isValidFrenzyTarget(sourceId, candidate)) continue;
+      if (candidate > previousTargetId) {
+        if (next == Engine.INVALID_ENTITY || candidate < next) next = candidate;
+      } else if (wrapped == Engine.INVALID_ENTITY || candidate < wrapped) {
+        wrapped = candidate;
+      }
+    }
+    return next != Engine.INVALID_ENTITY ? next : wrapped;
+  }
+
+  private Item whirlwindPrimaryWeapon(int entityId) {
+    Item right = equippedFrenzyWeapon(entityId, BodyLoc.RARM);
+    return right != null ? right : equippedFrenzyWeapon(entityId, BodyLoc.LARM);
+  }
+
+  private boolean hasTwoWhirlwindWeapons(int entityId) {
+    return equippedFrenzyWeapon(entityId, BodyLoc.RARM) != null
+        && equippedFrenzyWeapon(entityId, BodyLoc.LARM) != null;
+  }
+
+  private Item whirlwindWeapon(int entityId, int strikeIndex) {
+    Item right = equippedFrenzyWeapon(entityId, BodyLoc.RARM);
+    Item left = equippedFrenzyWeapon(entityId, BodyLoc.LARM);
+    if (right != null && left != null) return (strikeIndex & 1) == 0 ? right : left;
+    return right != null ? right : left;
+  }
+
+  private String whirlwindHand(int entityId, int strikeIndex) {
+    if (!hasTwoWhirlwindWeapons(entityId)) return "primary";
+    return (strikeIndex & 1) == 0 ? "right" : "left";
+  }
+
+  private static int itemStatInt(Item item, short stat, int fallback) {
+    if (item == null || item.attrs == null) return fallback;
+    StatRef ref = item.attrs.get(stat, StatRef.obtain());
+    if (ref == null) ref = item.attrs.base().get(stat, StatRef.obtain());
+    return ref == null ? fallback : ref.asInt();
   }
 
   private boolean hasTwoFrenzyWeapons(int entityId) {

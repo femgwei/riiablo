@@ -963,6 +963,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new com.riiablo.engine.server.VelocityModeChanger(false, true))
 
         .with(new VelocityAdder()) // FIXME: temp until proper physics implemented
+        .with(new com.riiablo.engine.server.WhirlwindSystem())
         .with(new LeapSystem())
 
         .with(factory)

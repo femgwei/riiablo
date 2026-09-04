@@ -838,6 +838,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new HoveredManager())
         .with(new WarpSubstManager())
         ;
+    if (socket == null) {
+      // Local games own Whirlwind movement and periodic damage. Multiplayer
+      // clients render the authoritative D2GS position/mode/state snapshots.
+      builder.with(new com.riiablo.engine.server.WhirlwindSystem());
+    }
     if (DEBUG_TOUCHPAD || Gdx.app.getType() == Application.ApplicationType.Android) {
       builder.with(new AutoInteracter());
     }

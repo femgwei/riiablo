@@ -7,6 +7,7 @@ import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.WhirlwindRuntime;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -17,6 +18,7 @@ public class SequenceHandler extends IteratingSystem {
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<WhirlwindRuntime> mWhirlwindRuntime;
 
   protected CofManager cofs;
 
@@ -55,6 +57,13 @@ public class SequenceHandler extends IteratingSystem {
       com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).info(
           "[ASSASSIN_DRAGON_FLIGHT] phase=kick_animation entity={} mode={}",
           event.entityId, (int) nextMode);
+      return;
+    }
+    if (casting != null && mWhirlwindRuntime.has(event.entityId)) {
+      sequence.sequence(sequence.mode1, sequence.mode2);
+      mAnimData.get(event.entityId).override = -1;
+      com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).debug(
+          "[WHIRLWIND] phase=repeat_animation entity={}", event.entityId);
       return;
     }
     // Log sequence transition for debugging

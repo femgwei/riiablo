@@ -289,8 +289,62 @@ public final class BarbarianSkills {
    * @return 伤害加成百分比
    */
   public static int calculateWhirlwindDamageBonus(int skillLevel) {
-    // 每级 +5%
-    return 5 * skillLevel;
+    return -50 + (Math.max(1, skillLevel) - 1) * 8;
+  }
+
+  /** D2MOO SrvDo076 {@code damage.dwEnDmgPct = calc1}. */
+  public static int calculateWhirlwindDamageBonus(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (skill == null || skill.calc1 == null || skill.calc1.trim().isEmpty()) {
+      return calculateWhirlwindDamageBonus(skillLevel);
+    }
+    return SkillFormula.evaluate(
+        skill.calc1, skill, Math.max(1, skillLevel), baseSkillLevel);
+  }
+
+  /** Fully scaled physical range for one Whirlwind hand. */
+  public static int[] calculateWhirlwindDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      ToIntFunction<String> baseSkillLevel) {
+    int min;
+    int max;
+    int attributePercent = 0;
+    if (weapon != null && weapon.base instanceof Weapons.Entry) {
+      Weapons.Entry base = (Weapons.Entry) weapon.base;
+      min = itemStatInt(weapon, Stat.mindamage, base.mindam);
+      max = itemStatInt(weapon, Stat.maxdamage, Math.max(min, base.maxdam));
+      attributePercent = base.StrBonus * statInt(attacker, Stat.strength) / 100
+          + base.DexBonus * statInt(attacker, Stat.dexterity) / 100;
+    } else {
+      min = Math.max(0, statInt(attacker, Stat.mindamage));
+      max = Math.max(min, statInt(attacker, Stat.maxdamage));
+    }
+    int percent = calculateWhirlwindDamageBonus(
+        skill, skillLevel, baseSkillLevel)
+        + attributePercent
+        + statInt(attacker, Stat.damagepercent)
+        + statInt(attacker, Stat.item_maxdamage_percent);
+    int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
+    return new int[] {
+        scale(scale(min, percent), sourceDamage, 128),
+        scale(scale(max, percent), sourceDamage, 128)
+    };
+  }
+
+  public static int getWhirlwindAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker, boolean player) {
+    return getFrenzyAttackRating(skill, skillLevel, attacker, player);
+  }
+
+  /** Expansion SrvDo076 weapon-speed breakpoints, expressed in game frames. */
+  public static int getWhirlwindAttackInterval(int nativeWeaponAttackSpeed) {
+    if (nativeWeaponAttackSpeed < 12) return 4;
+    if (nativeWeaponAttackSpeed < 15) return 6;
+    if (nativeWeaponAttackSpeed < 18) return 8;
+    if (nativeWeaponAttackSpeed < 20) return 10;
+    if (nativeWeaponAttackSpeed < 23) return 12;
+    if (nativeWeaponAttackSpeed < 26) return 14;
+    return 16;
   }
 
   /**
