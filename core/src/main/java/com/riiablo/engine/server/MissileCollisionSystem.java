@@ -29,6 +29,8 @@ import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
@@ -68,6 +70,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Class> mClass;
+  protected ComponentMapper<com.riiablo.engine.server.component.CofReference> mCofReference;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
@@ -76,6 +79,8 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<AnimData> mAnimData;
+  protected ComponentMapper<Sequence> mSequence;
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
@@ -552,6 +557,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=blocked chance={} damage=0",
             missileId, missile.ownerId, targetId, combat.hitChance);
         log.debug("Missile {} attack blocked by {} (owner={})", missileId, targetId, missile.ownerId);
+        queueHitReaction(targetId, true);
       } else {
         float damage = combat.totalDamage * Math.max(0.01f, missile.damageMultiplier);
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit chance={} "
@@ -589,6 +595,7 @@ public class MissileCollisionSystem extends IteratingSystem {
             hitpoints.set(0);
             hpAfter = 0;
           }
+          if (hpAfter > 0f) queueHitReaction(targetId, false);
           if (mercenaryDamage) mercenaryLastDamageAfter = hpAfter;
           if (hpAfter <= 0) {
             log.debug("{} killed by missile from {}", targetId, missile.ownerId);
@@ -632,6 +639,31 @@ public class MissileCollisionSystem extends IteratingSystem {
     mastery.damagePercent = missile.masteryDamagePercent;
     mastery.criticalChance = missile.masteryCriticalChance;
     return mastery;
+  }
+
+  /** Replicate native player/monster GH and BL reactions through CofReference. */
+  private void queueHitReaction(int victimId, boolean blocked) {
+    CofManager cofs = world.getSystem(CofManager.class);
+    if (cofs == null || !mClass.has(victimId) || !mCofReference.has(victimId)
+        || !mAnimData.has(victimId)) return;
+    Class.Type type = mClass.get(victimId).type;
+    if (type != Class.Type.PLR && type != Class.Type.MON) return;
+    byte current = mCofReference.get(victimId).mode;
+    if (type == Class.Type.PLR
+        && (current == Engine.Player.MODE_DT || current == Engine.Player.MODE_DD)) return;
+    if (type == Class.Type.MON
+        && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
+    // Preserve an in-progress native skill sequence; Actioneer will restore
+    // the reaction for idle victims only, matching D2MOO's soft-hit behavior.
+    if (mSequence.has(victimId) && mSequence.get(victimId).started) return;
+    byte reaction = type == Class.Type.PLR
+        ? (blocked ? Engine.Player.MODE_BL : Engine.Player.MODE_GH)
+        : (blocked ? Engine.Monster.MODE_BL : Engine.Monster.MODE_GH);
+    byte neutral = type == Class.Type.PLR ? Engine.Player.MODE_NU : Engine.Monster.MODE_NU;
+    mSequence.create(victimId).sequence(reaction, neutral);
+    cofs.setMode(victimId, reaction, true);
+    log.info("[HIT_REACTION] victim={} type={} mode={} blocked={} source=missile",
+        victimId, type, blocked ? "BL" : "GH", blocked);
   }
 
   /** Applies post-damage state carried by native missile SrvDmg functions. */

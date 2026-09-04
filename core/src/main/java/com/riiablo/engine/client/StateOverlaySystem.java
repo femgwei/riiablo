@@ -46,6 +46,17 @@ public class StateOverlaySystem extends IteratingSystem {
     reconcile(entityId, StateId.DIMVISION, states.stateList.getState(StateId.DIMVISION));
     reconcile(entityId, StateId.BLADESHIELD,
         states.stateList.getState(StateId.BLADESHIELD));
+    // Barbarian states use the native States.txt overlay records.  The
+    // server remains authoritative for state lifetime; this client system
+    // only restores the corresponding visual from StateP snapshots.
+    reconcile(entityId, StateId.FRENZY, states.stateList.getState(StateId.FRENZY));
+    reconcile(entityId, StateId.BERSERK, states.stateList.getState(StateId.BERSERK));
+    reconcile(entityId, StateId.BATTLEORDERS,
+        states.stateList.getState(StateId.BATTLEORDERS));
+    reconcile(entityId, StateId.BATTLECOMMAND,
+        states.stateList.getState(StateId.BATTLECOMMAND));
+    reconcile(entityId, StateId.SHOUT, states.stateList.getState(StateId.SHOUT));
+    reconcile(entityId, StateId.BATTLECRY, states.stateList.getState(StateId.BATTLECRY));
     reconcileVenomTransform(entityId,
         states.stateList.getState(StateId.VENOMCLAWS));
   }
@@ -127,6 +138,24 @@ public class StateOverlaySystem extends IteratingSystem {
         break;
       case StateId.BLADESHIELD:
         candidates = new String[] {"bladeshield"};
+        break;
+      case StateId.FRENZY:
+        candidates = new String[] {"frenzy"};
+        break;
+      case StateId.BERSERK:
+        candidates = new String[] {"berserkfront", "berserkback"};
+        break;
+      case StateId.BATTLEORDERS:
+        candidates = new String[] {"battleorders"};
+        break;
+      case StateId.BATTLECOMMAND:
+        candidates = new String[] {"battlecommand"};
+        break;
+      case StateId.SHOUT:
+        candidates = new String[] {"shout"};
+        break;
+      case StateId.BATTLECRY:
+        candidates = new String[] {"battlecry"};
         break;
       default:
         return null;

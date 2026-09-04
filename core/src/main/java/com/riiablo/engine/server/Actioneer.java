@@ -1230,6 +1230,7 @@ public class Actioneer extends PassiveSystem {
         }
         if (combat.blocked) {
           log.debug("{} melee attack blocked by {}", entityId, targetId);
+          queueHitReaction(targetId, true);
           break;
         }
 
@@ -1329,6 +1330,7 @@ public class Actioneer extends PassiveSystem {
         }
         log.debug("{} hp after {} attack: damage={}, hp: {} -> {}", targetId,
             entityId, appliedDamage, hpBefore, hpAfter);
+        if (hpAfter > 0f) queueHitReaction(targetId, false);
 
         if (progressiveRelease != null && progressiveRelease.hasEffects()) {
           applyAssassinProgressiveLeech(entityId, progressiveRelease, combat, appliedDamage);
@@ -1846,6 +1848,7 @@ public class Actioneer extends PassiveSystem {
     if (combat.blocked) {
       log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} result=blocked",
           entityId, targetId, strike, whirlwindHand(entityId, strike - 1));
+      queueHitReaction(targetId, true);
       return;
     }
     if (weapon != null) drainFrenzyDurability(weapon, targetId);
@@ -1858,6 +1861,7 @@ public class Actioneer extends PassiveSystem {
     float applied = Math.max(0f, event.damage);
     hp.sub(applied);
     if (hp.asFixed() < 0f) hp.set(0f);
+    if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
     applyCombatStates(entityId, targetId, combat);
     log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
             + "weapon={} result=hit damage={} hp={} -> {} chance={}",
@@ -2126,6 +2130,36 @@ public class Actioneer extends PassiveSystem {
 
   private boolean isEntityMoving(int entityId) {
     return mVelocity.has(entityId) && !mVelocity.get(entityId).velocity.isZero(0.0001f);
+  }
+
+  /**
+   * Native SUNITDMG_ExecuteDamage switches the victim to GH/BL and lets the
+   * animation sequence return to NU.  The mode is serialized through
+   * CofReference, so remote clients render the same reaction without a local
+   * combat re-roll.  Entities without animation data (lightweight tests and
+   * non-rendered helpers) are intentionally ignored.
+   */
+  private void queueHitReaction(int victimId, boolean blocked) {
+    CofManager cofs = world.getSystem(CofManager.class);
+    if (cofs == null || !mClass.has(victimId) || !mCofReference.has(victimId)
+        || !mAnimData.has(victimId)) return;
+    Class.Type type = mClass.get(victimId).type;
+    if (type != Class.Type.PLR && type != Class.Type.MON) return;
+    // Do not interrupt a native death or an already-running multi-stage skill.
+    byte current = mCofReference.get(victimId).mode;
+    if (type == Class.Type.PLR
+        && (current == Engine.Player.MODE_DT || current == Engine.Player.MODE_DD)) return;
+    if (type == Class.Type.MON
+        && (current == Engine.Monster.MODE_DT || current == Engine.Monster.MODE_DD)) return;
+    if (mCasting.has(victimId)) return;
+    byte reaction = type == Class.Type.PLR
+        ? (blocked ? Engine.Player.MODE_BL : Engine.Player.MODE_GH)
+        : (blocked ? Engine.Monster.MODE_BL : Engine.Monster.MODE_GH);
+    byte neutral = type == Class.Type.PLR ? Engine.Player.MODE_NU : Engine.Monster.MODE_NU;
+    mSequence.create(victimId).sequence(reaction, neutral);
+    cofs.setMode(victimId, reaction, true);
+    log.info("[HIT_REACTION] victim={} type={} mode={} blocked={} source=server",
+        victimId, type, blocked ? "BL" : "GH", blocked);
   }
 
   private void applyCombatStates(int attackerId, int targetId,
