@@ -389,6 +389,17 @@ public class CombatSystem {
       Attributes attacker, Attributes defender,
       boolean attackerPlayer, boolean defenderPlayer, boolean missile,
       int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
+        null, null, 0, 0, attackerStates, defenderStates, defenderMoving, mastery);
+  }
+
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
       int attackRatingOverride, boolean alwaysHit) {
     return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
@@ -438,10 +449,26 @@ public class CombatSystem {
       int coldLengthOverride, int poisonLengthOverride,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
+    return calculateAttack(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, null);
+  }
+
+  /** Full context plus the native item-layered mastery selected for this attack. */
+  public CombatResult calculateAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery) {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL);
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery);
   }
 
   /**
@@ -456,7 +483,19 @@ public class CombatSystem {
       boolean defenderMoving) {
     return calculatePrecomputedMeleeAttack(attacker, defender, attackerPlayer, defenderPlayer,
         attackMinDamage, attackMaxDamage, attackRating, 0, DAMAGE_PHYSICAL,
-        attackerStates, defenderStates, defenderMoving);
+        attackerStates, defenderStates, defenderMoving, null);
+  }
+
+  /** Native Barbarian weapon mastery context for one concrete weapon hand. */
+  public CombatResult calculatePrecomputedMeleeAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      StateList attackerStates, StateList defenderStates, boolean defenderMoving,
+      StateList.WeaponMasteryBonus mastery) {
+    return calculatePrecomputedMeleeAttack(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, 0, DAMAGE_PHYSICAL,
+        attackerStates, defenderStates, defenderMoving, mastery);
   }
 
   public CombatResult calculatePrecomputedMeleeAttack(
@@ -466,10 +505,22 @@ public class CombatSystem {
       int physicalConversionPercent, int physicalConversionType,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
+    return calculatePrecomputedMeleeAttack(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, physicalConversionPercent,
+        physicalConversionType, attackerStates, defenderStates, defenderMoving, null);
+  }
+
+  public CombatResult calculatePrecomputedMeleeAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery) {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         attackMinDamage, attackMaxDamage, attackRating, false,
         null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true,
-        physicalConversionPercent, physicalConversionType);
+        physicalConversionPercent, physicalConversionType, mastery);
   }
 
   /**
@@ -526,7 +577,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, alwaysHit,
         elementalMin, elementalMax, coldLength, poisonLength,
-        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL);
+        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null);
   }
 
   private CombatResult calculateAttackInternal(
@@ -538,7 +589,8 @@ public class CombatSystem {
       int coldLengthOverride, int poisonLengthOverride,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving, boolean precomputedPhysicalDamage,
-      int physicalConversionPercent, int physicalConversionType) {
+      int physicalConversionPercent, int physicalConversionType,
+      StateList.WeaponMasteryBonus mastery) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -584,6 +636,12 @@ public class CombatSystem {
       a.enhancedDamagePercent += attackerStates.getTotalDamageModifier();
       a.attackRatingPercent += attackerStates.getTotalAttackModifier();
     }
+    if (mastery != null) {
+      if (!precomputedPhysicalDamage) {
+        a.attackRatingPercent += mastery.attackRatingPercent;
+        a.enhancedDamagePercent += mastery.damagePercent;
+      }
+    }
     if (precomputedPhysicalDamage) {
       // The caller has already applied strength/dexterity, skill ED,
       // damagepercent and item_maxdamage_percent exactly as D2Common does.
@@ -602,6 +660,7 @@ public class CombatSystem {
     a.elementalMaxDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmaxdam, 0);
     a.deadlyStrike = statInt(attacker, Stat.item_deadlystrike, 0);
     a.criticalStrike = statInt(attacker, Stat.passive_critical_strike, 0);
+    if (mastery != null) a.criticalStrike += mastery.criticalChance;
     a.crushingBlow = statInt(attacker, Stat.item_crushingblow, 0);
     a.lifeLeech = statInt(attacker, Stat.lifedrainmindam, 0);
     a.manaLeech = statInt(attacker, Stat.manadrainmindam, 0);

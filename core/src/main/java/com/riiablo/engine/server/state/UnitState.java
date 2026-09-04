@@ -101,6 +101,14 @@ public class UnitState {
   /** 体力恢复修正（百分比）。 */
   public int staminaRecoveryModifier;
 
+  /** ItemTypes.txt layer used by native passive weapon mastery stats. */
+  public String masteryItemType;
+  /** True for passive_mastery_throw_*; false for passive_mastery_melee_*. */
+  public boolean throwingMastery;
+  public int masteryAttackRatingModifier;
+  public int masteryDamageModifier;
+  public int masteryCriticalChance;
+
   //==========================================================================
   // 持续伤害数据
   //==========================================================================
@@ -217,6 +225,11 @@ public class UnitState {
     maxLifeModifier = 0;
     maxManaModifier = 0;
     staminaRecoveryModifier = 0;
+    masteryItemType = null;
+    throwingMastery = false;
+    masteryAttackRatingModifier = 0;
+    masteryDamageModifier = 0;
+    masteryCriticalChance = 0;
   }
 
   /**
@@ -375,6 +388,11 @@ public class UnitState {
     this.maxLifeModifier = other.maxLifeModifier;
     this.maxManaModifier = other.maxManaModifier;
     this.staminaRecoveryModifier = other.staminaRecoveryModifier;
+    this.masteryItemType = other.masteryItemType;
+    this.throwingMastery = other.throwingMastery;
+    this.masteryAttackRatingModifier = other.masteryAttackRatingModifier;
+    this.masteryDamageModifier = other.masteryDamageModifier;
+    this.masteryCriticalChance = other.masteryCriticalChance;
     
     this.damagePerFrame = other.damagePerFrame;
     this.damageType = other.damageType;

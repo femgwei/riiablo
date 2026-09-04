@@ -83,6 +83,11 @@ public class ServerSkillSystem extends PassiveSystem {
     this.monstersOnly = monstersOnly;
   }
 
+  @Override
+  protected void initialize() {
+    itemGenerator = world.getSystem(ItemGenerator.class);
+  }
+
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
@@ -101,6 +106,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
 
   /** Item generator is wired by both local and dedicated server worlds. */
+  @com.artemis.annotations.SkipWire
   protected ItemGenerator itemGenerator;
   private final LootManager barbarianLoot = new LootManager();
 
@@ -1374,6 +1380,29 @@ public class ServerSkillSystem extends PassiveSystem {
         || !mAttributesWrapper.has(ownerId)) return;
     MissileDamageResolver.initializeSkill(mMissile.get(missileId), skill,
         mAttributesWrapper.get(ownerId).attrs, skillLevel);
+    captureThrowingMastery(mMissile.get(missileId), skill, ownerId);
+  }
+
+  /** D2Common D2Common_11024: throwing mastery is fixed at launch time. */
+  private void captureThrowingMastery(Missile missile, Skills.Entry skill, int ownerId) {
+    if (missile == null || skill == null || !mPlayer.has(ownerId)
+        || mPlayer.get(ownerId).data == null || !mUnitStates.has(ownerId)) return;
+    boolean throwingAttack = skill.Id == SkillCodes.throw_
+        || skill.Id == SkillCodes.left_hand_throw
+        || skill.srvdofunc == 3 || skill.srvdofunc == 5;
+    if (!throwingAttack) return;
+    Item weapon = mPlayer.get(ownerId).data.getItems().getEquippedThrowableWeapon();
+    UnitStates unitStates = mUnitStates.get(ownerId);
+    if (weapon == null || unitStates.stateList == null) return;
+    StateList.WeaponMasteryBonus mastery = unitStates.stateList.getWeaponMastery(
+        weapon, true, new StateList.WeaponMasteryBonus());
+    missile.masteryAttackRatingPercent = mastery.attackRatingPercent;
+    missile.masteryDamagePercent = mastery.damagePercent;
+    missile.masteryCriticalChance = mastery.criticalChance;
+    log.info("[BARBARIAN_MASTERY] phase=throw_snapshot entity={} skill={} weapon={} "
+            + "attackRating={} damage={} critical={}",
+        ownerId, skill.Id, weapon.code, mastery.attackRatingPercent,
+        mastery.damagePercent, mastery.criticalChance);
   }
 
   public int mercenaryMissileCount() {

@@ -30,10 +30,13 @@ import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.skill.BarbarianSkills;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.map.Map;
@@ -125,6 +128,61 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
           + " missiles=" + harness.factory.creations + " damage="
           + harness.probe.damageEvents + " quantity=" + quantityBefore + "->"
           + quantityAfter + " targetHp=" + hpBefore + "->" + hpAfter);
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void barbarianThrowingMasteryIsSnapshottedBeforeImpact() {
+    MathUtils.random.setSeed(0x5A4A4EL);
+    CharData data = newCharacter(CharacterClass.BARBARIAN);
+    data.setSkillLevel(SkillCodes.throw_, 1);
+    // Replace the starter melee weapon with a real javelin so the server
+    // resolves the native `thro` ItemTypes layer at launch time.
+    data.getItems().unequipItem(BodyLoc.RARM);
+    data.getItems().unequipItem(BodyLoc.LARM);
+    Item javelin = new Item();
+    javelin.reset();
+    javelin.setBase(Riiablo.files.weapons.get("jav"));
+    javelin.attrs.base().put(Stat.quantity, 10);
+    javelin.attrs.reset();
+    data.getItems().equipItem(BodyLoc.RARM, data.getItems().add(javelin));
+
+    Harness harness = new Harness(true);
+    try {
+      Attributes playerAttrs = combatAttributes(100, 20, 20, 100);
+      playerAttrs.base().put(Stat.item_throw_mindamage, 20);
+      playerAttrs.base().put(Stat.item_throw_maxdamage, 20);
+      playerAttrs.reset();
+      int player = harness.createPlayer(data, 10, 10, playerAttrs);
+      UnitStates states = harness.world.getMapper(UnitStates.class).create(player).init(player);
+      BarbarianSkills.applyPassiveState(states.stateList,
+          Riiablo.files.skills.get("Throwing Mastery"), 2, player);
+      int monster = harness.createMonster(15, 10, combatAttributes(1000, 1, 1, 1));
+
+      harness.actioneer.cast(player, SkillCodes.throw_, monster, new Vector2(15, 10));
+      harness.installAttackAnimation(player);
+      // Advance until the missile has been created, then remove the source
+      // state before impact.  Native D2Common snapshots mastery at launch.
+      for (int i = 0; i < 16 && harness.factory.creations == 0; i++) {
+        harness.world.setDelta(Animation.FRAME_DURATION);
+        harness.world.process();
+      }
+      assertEquals(1, harness.factory.creations);
+      Missile snapshot = harness.world.getMapper(Missile.class).get(harness.factory.lastMissileId);
+      assertNotNull(snapshot);
+      assertEquals(38, snapshot.masteryAttackRatingPercent);
+      assertEquals(33, snapshot.masteryDamagePercent);
+      assertEquals(9, snapshot.masteryCriticalChance);
+      assertEquals(0, harness.probe.damageEvents,
+          "mastery state must be removed while the projectile is still in flight");
+      states.stateList.removeState(StateId.THROWINGMASTERY);
+
+      harness.processFrames(32);
+      assertTrue(harness.probe.damageEvents >= 1, "missile should still hit after state removal");
+      assertTrue(hitpoints(harness.attributes(monster)) < 1000,
+          "snapshotted throwing mastery must affect the eventual impact");
     } finally {
       harness.dispose();
     }
@@ -299,6 +357,7 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
     protected ComponentMapper<Position> mPosition;
     protected ComponentMapper<Velocity> mVelocity;
     int creations;
+    int lastMissileId = -1;
 
     @Override public int createMissile(int missileId, Vector2 angle, Vector2 position) {
       return createMissile(missileId, angle, position, -1);
@@ -309,6 +368,7 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
       Missiles.Entry missile = Riiablo.files.Missiles.get(missileId);
       int id = world.create();
       creations++;
+      lastMissileId = id;
       mMissile.create(id).set(missile, position, missile.Range).setOwner(ownerId);
       mPosition.create(id).position.set(position);
       mVelocity.create(id).velocity.set(angle).setLength(missile.Vel);

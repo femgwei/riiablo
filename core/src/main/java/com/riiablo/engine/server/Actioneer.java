@@ -55,6 +55,7 @@ import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
@@ -1094,16 +1095,18 @@ public class Actioneer extends PassiveSystem {
           berserkWeapon = whirlwindPrimaryWeapon(entityId);
           int[] weaponDamage = BarbarianSkills.calculateBerserkWeaponDamage(
               activeSkill, activeSkillLevel, attackerAttrs, berserkWeapon,
-              name -> baseSkillLevel(entityId, name));
-          int attackRating = BarbarianSkills.getFrenzyAttackRating(
-              activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
+              name -> baseSkillLevel(entityId, name), stateList(entityId));
+          int attackRating = BarbarianSkills.getWeaponMasteryAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer,
+              berserkWeapon, stateList(entityId));
           int conversion = BarbarianSkills.getBerserkMagicConversion(
               activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
           combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
               conversion, CombatSystem.DAMAGE_MAGIC,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+              weaponMastery(entityId, berserkWeapon, false));
           log.info("[BERSERK] phase=roll source={} target={} skill={} weapon={} "
                   + "damageRange={}..{} enhancedPercent={} conversion={} chance={}",
               entityId, targetId, activeCasting != null ? activeCasting.skillId : -1,
@@ -1114,16 +1117,18 @@ public class Actioneer extends PassiveSystem {
         } else if (frenzyAttack && srvdofunc == 9 && frenzyWeapon != null) {
           int[] weaponDamage = BarbarianSkills.calculateFrenzyWeaponDamage(
               activeSkill, activeSkillLevel, attackerAttrs, frenzyWeapon,
-              name -> baseSkillLevel(entityId, name));
-          int attackRating = BarbarianSkills.getFrenzyAttackRating(
-              activeSkill, activeSkillLevel, attackerAttrs, true);
+              name -> baseSkillLevel(entityId, name), stateList(entityId));
+          int attackRating = BarbarianSkills.getWeaponMasteryAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs, true,
+              frenzyWeapon, stateList(entityId));
           int conversion = BarbarianSkills.getFrenzyMagicConversion(
               activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
           combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
               attackerAttrs, attrs, attackerPlayer, targetPlayer,
               weaponDamage[0], weaponDamage[1], attackRating,
               conversion, CombatSystem.DAMAGE_MAGIC,
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+              weaponMastery(entityId, frenzyWeapon, false));
           log.info("[FRENZY] phase=roll source={} target={} index={} weapon={} "
                   + "damageRange={}..{} enhancedPercent={} attackRating={} conversion={}",
               entityId, targetId, frenzyStrike + 1, frenzyWeapon.code,
@@ -1203,6 +1208,7 @@ public class Actioneer extends PassiveSystem {
               clawDamage[0], clawDamage[1], attackRating,
               activeCasting.dragonClawRemainingStrikes);
         } else {
+          Item attackWeapon = activeAttackWeapon(entityId);
           combat = CombatSystem.INSTANCE.calculateAttack(
               attackerAttrs,
               attrs,
@@ -1212,7 +1218,8 @@ public class Actioneer extends PassiveSystem {
               monsterAttackMinDamage(entityId),
               monsterAttackMaxDamage(entityId),
               monsterAttackRating(entityId),
-              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+              weaponMastery(entityId, attackWeapon, false));
         }
         if (!combat.hit) {
           log.info("[COMBAT_HIT] entity={} target={} result=miss chance={}% attackerLevel={} targetLevel={} ar={} defense={}",
@@ -1821,13 +1828,15 @@ public class Actioneer extends PassiveSystem {
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
     int[] damage = BarbarianSkills.calculateWhirlwindDamage(
-        skill, level, attacker, weapon, name -> baseSkillLevel(entityId, name));
-    int attackRating = BarbarianSkills.getWhirlwindAttackRating(
-        skill, level, attacker, isPlayerEntity(entityId));
+        skill, level, attacker, weapon, name -> baseSkillLevel(entityId, name),
+        stateList(entityId));
+    int attackRating = BarbarianSkills.getWeaponMasteryAttackRating(
+        skill, level, attacker, isPlayerEntity(entityId), weapon, stateList(entityId));
     CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
         attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
         damage[0], damage[1], attackRating,
-        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+        weaponMastery(entityId, weapon, false));
     if (!combat.hit) {
       log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
               + "result=miss chance={}",
@@ -2090,6 +2099,29 @@ public class Actioneer extends PassiveSystem {
     if (!mUnitStates.has(entityId)) return null;
     UnitStates states = mUnitStates.get(entityId);
     return states != null ? states.stateList : null;
+  }
+
+  private StateList.WeaponMasteryBonus weaponMastery(
+      int entityId, Item weapon, boolean throwingAttack) {
+    StateList states = stateList(entityId);
+    if (states == null || weapon == null) return null;
+    StateList.WeaponMasteryBonus mastery = states.getWeaponMastery(
+        weapon, throwingAttack, new StateList.WeaponMasteryBonus());
+    return mastery.isEmpty() ? null : mastery;
+  }
+
+  /** Resolves the concrete hand whose weapon supplies this melee packet. */
+  private Item activeAttackWeapon(int entityId) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return null;
+    int skillId = mCasting.has(entityId) ? mCasting.get(entityId).skillId : SkillCodes.attack;
+    BodyLoc preferred = skillId == SkillCodes.left_hand_swing
+        || skillId == SkillCodes.left_hand_throw ? BodyLoc.LARM : BodyLoc.RARM;
+    Item weapon = mPlayer.get(entityId).data.getItems().getEquipped(preferred);
+    if (weapon == null) {
+      BodyLoc alternate = preferred == BodyLoc.RARM ? BodyLoc.LARM : BodyLoc.RARM;
+      weapon = mPlayer.get(entityId).data.getItems().getEquipped(alternate);
+    }
+    return weapon != null && weapon.base instanceof Weapons.Entry ? weapon : null;
   }
 
   private boolean isEntityMoving(int entityId) {

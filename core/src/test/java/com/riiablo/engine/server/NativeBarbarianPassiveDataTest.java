@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.serializer.StateSerializer;
 import com.riiablo.engine.server.skill.BarbarianSkills;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
@@ -45,6 +46,167 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     assertEquals(40, BarbarianSkills.calculateIronSkinDefenseBonus(2));
     assertEquals(18, BarbarianSkills.calculateIncreasedSpeedBonus(2));
     assertEquals(22, BarbarianSkills.calculateNaturalResistanceBonus(2));
+  }
+
+  @Test
+  void nativeWeaponMasteryRowsCarryItemLayersAndAuthoritativeFormulas() {
+    int[] ids = {127, 128, 129, 134, 135, 136};
+    String[] states = {"swordmastery", "axemastery", "macemastery",
+        "polearmmastery", "throwingmastery", "spearmastery"};
+    String[] itemTypes = {"swor", "axe", "blun", "pole", "thro", "spea"};
+    for (int i = 0; i < ids.length; i++) {
+      int id = ids[i];
+      Skills.Entry skill = Riiablo.files.skills.get(id);
+      assertNotNull(skill, "skill " + id);
+      assertTrue(skill.passive);
+      assertEquals(states[i], skill.passivestate);
+      assertEquals(itemTypes[i], skill.passiveitype);
+      boolean throwing = id == 135;
+      assertEquals(throwing ? "passive_mastery_throw_th" : "passive_mastery_melee_th",
+          skill.passivestat[0]);
+      assertEquals(throwing ? "passive_mastery_throw_dmg" : "passive_mastery_melee_dmg",
+          skill.passivestat[1]);
+      assertEquals(throwing ? "passive_mastery_throw_crit" : "passive_mastery_melee_crit",
+          skill.passivestat[2]);
+      assertEquals(i < 3 ? 28 : 30, SkillFormula.evaluate(skill.passivecalc[0], skill, 1));
+      assertEquals(i < 3 ? 36 : 38, SkillFormula.evaluate(skill.passivecalc[0], skill, 2));
+      assertEquals(28, SkillFormula.evaluate(skill.passivecalc[1], skill, 1));
+      assertEquals(33, SkillFormula.evaluate(skill.passivecalc[1], skill, 2));
+      assertEquals(5, SkillFormula.evaluate(skill.passivecalc[2], skill, 1));
+      assertEquals(9, SkillFormula.evaluate(skill.passivecalc[2], skill, 2));
+    }
+    assertEquals(36, BarbarianSkills.calculateWeaponMasteryAttackRatingBonus(2));
+    assertEquals(33, BarbarianSkills.calculateWeaponMasteryDamageBonus(2));
+    assertEquals(9, BarbarianSkills.getWeaponMasteryCriticalChance(2));
+  }
+
+  @Test
+  void weaponTypeAndThrowContextSelectOnlyTheHighestMatchingMastery() {
+    StateList states = new StateList(7);
+    BarbarianSkills.applyPassiveState(states, skill("Sword Mastery"), 2, 7);
+    BarbarianSkills.applyPassiveState(states, skill("Axe Mastery"), 1, 7);
+    BarbarianSkills.applyPassiveState(states, skill("Throwing Mastery"), 2, 7);
+
+    StateList.WeaponMasteryBonus bonus = new StateList.WeaponMasteryBonus();
+    states.getWeaponMastery(weapon("ssd"), false, bonus);
+    assertEquals(36, bonus.attackRatingPercent);
+    assertEquals(33, bonus.damagePercent);
+    assertEquals(9, bonus.criticalChance);
+
+    states.getWeaponMastery(weapon("hax"), false, bonus);
+    assertEquals(28, bonus.attackRatingPercent);
+    assertEquals(28, bonus.damagePercent);
+    assertEquals(5, bonus.criticalChance);
+
+    Item javelin = weapon("jav");
+    states.getWeaponMastery(javelin, true, bonus);
+    assertEquals(38, bonus.attackRatingPercent);
+    assertEquals(33, bonus.damagePercent);
+    assertEquals(9, bonus.criticalChance);
+    states.getWeaponMastery(javelin, false, bonus);
+    assertTrue(bonus.isEmpty(), "throw mastery must not leak into a melee jab");
+
+    states.getWeaponMastery(weapon("sbw"), false, bonus);
+    assertTrue(bonus.isEmpty(), "a non-matching weapon must receive no mastery stats");
+
+    Skills.Entry frenzy = skill("Frenzy");
+    Attributes attacker = combatAttributes(100, 0, 1, 100);
+    Item sword = weapon("ssd");
+    int[] withoutMastery = BarbarianSkills.calculateFrenzyWeaponDamage(
+        frenzy, 1, attacker, sword, name -> 0);
+    int[] withMastery = BarbarianSkills.calculateFrenzyWeaponDamage(
+        frenzy, 1, attacker, sword, name -> 0, states);
+    assertTrue(withMastery[0] > withoutMastery[0]);
+    int skillPercent = frenzy.ToHit;
+    assertEquals(100 * (100 + skillPercent + 36) / 100,
+        BarbarianSkills.getWeaponMasteryAttackRating(
+            frenzy, 1, attacker, true, sword, states));
+  }
+
+  @Test
+  void ecsCreatesRefreshesAndRemovesAllSixMasteryStatLists() {
+    NoopFactory factory = new NoopFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new StateUpdater(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      CharData data = CharData.obtain().clear().set(
+          Riiablo.NORMAL, false, "MasteryBarbarian", Riiablo.BARBARIAN);
+      int[] skillIds = {127, 128, 129, 134, 135, 136};
+      for (int skillId : skillIds) data.setSkillLevel(skillId, 2);
+      int entityId = world.create();
+      world.getMapper(Player.class).create(entityId).data = data;
+      world.getMapper(AttributesWrapper.class).create(entityId).attrs = attributes();
+      UnitStates component = world.getMapper(UnitStates.class).create(entityId).init(entityId);
+
+      world.setDelta(1f / 25f);
+      world.process();
+      StateList states = component.stateList;
+      assertEquals(6, states.size());
+      UnitState sword = states.getState(StateId.SWORDMASTERY);
+      assertNotNull(sword);
+      assertEquals("swor", sword.masteryItemType);
+      assertFalse(sword.throwingMastery);
+      assertEquals(36, sword.masteryAttackRatingModifier);
+      assertEquals(33, sword.masteryDamageModifier);
+      assertEquals(9, sword.masteryCriticalChance);
+      UnitState throwing = states.getState(StateId.THROWINGMASTERY);
+      assertNotNull(throwing);
+      assertTrue(throwing.throwingMastery);
+      assertEquals("thro", throwing.masteryItemType);
+
+      UnitState command = states.addState(StateId.BATTLECOMMAND, 100, 1, entityId);
+      command.skillModifier = 1;
+      world.process();
+      assertSame(sword, states.getState(StateId.SWORDMASTERY));
+      assertEquals(3, sword.level);
+      assertEquals(SkillFormula.evaluate(
+          skill("Sword Mastery").passivecalc[2], skill("Sword Mastery"), 3),
+          sword.masteryCriticalChance);
+
+      data.setSkillLevel(127, 0);
+      world.process();
+      assertFalse(states.hasState(StateId.SWORDMASTERY),
+          "+allskills must not retain a mastery after its owned level reaches zero");
+      assertEquals(6, states.size(), "five masteries plus Battle Command must remain");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void selectedMasteryChangesAuthoritativeDamageHitChanceAndCriticalRoll() {
+    Attributes attacker = combatAttributes(100, 0, 100, 100);
+    Attributes defender = combatAttributes(100, 100, 1, 1);
+    StateList.WeaponMasteryBonus mastery = new StateList.WeaponMasteryBonus();
+    mastery.attackRatingPercent = 36;
+    mastery.damagePercent = 33;
+
+    CombatSystem.CombatResult base = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, true, false, false, 100, 100, 100, true,
+        null, null, 0, 0, null, null, false, null);
+    CombatSystem.CombatResult enhanced = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, true, false, false, 100, 100, 100, true,
+        null, null, 0, 0, null, null, false, mastery);
+    assertEquals(100, base.physicalDamage);
+    assertEquals(133, enhanced.physicalDamage);
+
+    base = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, true, false, false, 100, 100, 100, false,
+        null, null, 0, 0, null, null, false, null);
+    enhanced = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, true, false, false, 100, 100, 100, false,
+        null, null, 0, 0, null, null, false, mastery);
+    assertTrue(enhanced.hitChance > base.hitChance);
+
+    mastery.attackRatingPercent = 0;
+    mastery.damagePercent = 0;
+    mastery.criticalChance = 100;
+    CombatSystem.CombatResult critical = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, true, false, false, 100, 100, 100, true,
+        null, null, 0, 0, null, null, false, mastery);
+    assertTrue(critical.critical);
+    assertEquals(200, critical.physicalDamage);
   }
 
   @Test
@@ -231,6 +393,14 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     attributes.base().put(Stat.tohit, attackRating);
     attributes.reset();
     return attributes;
+  }
+
+  private static Item weapon(String code) {
+    Item item = new Item();
+    item.reset();
+    item.setBase(Riiablo.files.weapons.get(code));
+    item.attrs.reset();
+    return item;
   }
 
   private static final class NoopFactory extends EntityFactory {

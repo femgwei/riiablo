@@ -540,7 +540,8 @@ public class MissileCollisionSystem extends IteratingSystem {
           arOverride,
           alwaysHit,
           null, null, 0, 0,
-          stateList(missile.ownerId), stateList(targetId), isEntityMoving(targetId));
+          stateList(missile.ownerId), stateList(targetId), isEntityMoving(targetId),
+          missileMastery(missile));
       boolean damageHit = combat.hit && !combat.blocked;
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
@@ -621,6 +622,16 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  private static StateList.WeaponMasteryBonus missileMastery(Missile missile) {
+    if (missile == null || missile.masteryAttackRatingPercent == 0
+        && missile.masteryDamagePercent == 0 && missile.masteryCriticalChance == 0) return null;
+    StateList.WeaponMasteryBonus mastery = new StateList.WeaponMasteryBonus();
+    mastery.attackRatingPercent = missile.masteryAttackRatingPercent;
+    mastery.damagePercent = missile.masteryDamagePercent;
+    mastery.criticalChance = missile.masteryCriticalChance;
+    return mastery;
   }
 
   /** Applies post-damage state carried by native missile SrvDmg functions. */

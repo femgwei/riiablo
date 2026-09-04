@@ -236,10 +236,34 @@ public final class BarbarianSkills {
     return Math.max(1, base + factor);
   }
 
+  /** Native SKILLS_GetWeaponMasteryBonus(type=0) applied to one attack. */
+  public static int getWeaponMasteryAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker, boolean player,
+      Item weapon, StateList states) {
+    int base = statInt(attacker, Stat.tohit);
+    int level = Math.max(1, skillLevel);
+    int skillPercent = skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
+    if (!player) return Math.max(1, base + skillPercent);
+    if (states == null || weapon == null) {
+      return Math.max(1, base * Math.max(0, 100 + skillPercent) / 100);
+    }
+    StateList.WeaponMasteryBonus mastery = states.getWeaponMastery(
+        weapon, false, new StateList.WeaponMasteryBonus());
+    return Math.max(1,
+        base * Math.max(0, 100 + skillPercent + mastery.attackRatingPercent) / 100);
+  }
+
   /** Fully scaled physical range for one hand of SKILLS_RollFrenzyDamage. */
   public static int[] calculateFrenzyWeaponDamage(
       Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
       ToIntFunction<String> baseSkillLevel) {
+    return calculateFrenzyWeaponDamage(skill, skillLevel, attacker, weapon,
+        baseSkillLevel, null);
+  }
+
+  public static int[] calculateFrenzyWeaponDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      ToIntFunction<String> baseSkillLevel, StateList states) {
     if (weapon == null || !(weapon.base instanceof Weapons.Entry)) return null;
     Weapons.Entry base = (Weapons.Entry) weapon.base;
     int min = itemStatInt(weapon, Stat.mindamage, base.mindam);
@@ -249,6 +273,11 @@ public final class BarbarianSkills {
         + base.DexBonus * statInt(attacker, Stat.dexterity) / 100
         + statInt(attacker, Stat.damagepercent)
         + statInt(attacker, Stat.item_maxdamage_percent);
+    if (states != null) {
+      StateList.WeaponMasteryBonus mastery = states.getWeaponMastery(
+          weapon, false, new StateList.WeaponMasteryBonus());
+      percent += mastery.damagePercent;
+    }
     int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
     return new int[] {
         scale(scale(min, percent), sourceDamage, 128),
@@ -311,6 +340,13 @@ public final class BarbarianSkills {
   public static int[] calculateWhirlwindDamage(
       Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
       ToIntFunction<String> baseSkillLevel) {
+    return calculateWhirlwindDamage(skill, skillLevel, attacker, weapon,
+        baseSkillLevel, null);
+  }
+
+  public static int[] calculateWhirlwindDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      ToIntFunction<String> baseSkillLevel, StateList states) {
     int min;
     int max;
     int attributePercent = 0;
@@ -329,6 +365,11 @@ public final class BarbarianSkills {
         + attributePercent
         + statInt(attacker, Stat.damagepercent)
         + statInt(attacker, Stat.item_maxdamage_percent);
+    if (states != null) {
+      StateList.WeaponMasteryBonus mastery = states.getWeaponMastery(
+          weapon, false, new StateList.WeaponMasteryBonus());
+      percent += mastery.damagePercent;
+    }
     int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
     return new int[] {
         scale(scale(min, percent), sourceDamage, 128),
@@ -390,6 +431,13 @@ public final class BarbarianSkills {
   public static int[] calculateBerserkWeaponDamage(
       Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
       ToIntFunction<String> baseSkillLevel) {
+    return calculateBerserkWeaponDamage(skill, skillLevel, attacker, weapon,
+        baseSkillLevel, null);
+  }
+
+  public static int[] calculateBerserkWeaponDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      ToIntFunction<String> baseSkillLevel, StateList states) {
     int min;
     int max;
     int attributePercent = 0;
@@ -406,6 +454,11 @@ public final class BarbarianSkills {
     int percent = calculateBerserkDamageBonus(skill, skillLevel, baseSkillLevel)
         + attributePercent + statInt(attacker, Stat.damagepercent)
         + statInt(attacker, Stat.item_maxdamage_percent);
+    if (states != null) {
+      StateList.WeaponMasteryBonus mastery = states.getWeaponMastery(
+          weapon, false, new StateList.WeaponMasteryBonus());
+      percent += mastery.damagePercent;
+    }
     int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
     return new int[] {
         scale(scale(min, percent), sourceDamage, 128),
@@ -758,8 +811,7 @@ public final class BarbarianSkills {
    * @return 伤害加成百分比
    */
   public static int calculateWeaponMasteryDamageBonus(int skillLevel) {
-    // 基础 28%，每级 +5%
-    return 28 + (skillLevel - 1) * 5;
+    return passiveValue("Sword Mastery", skillLevel, 1);
   }
 
   /**
@@ -769,8 +821,7 @@ public final class BarbarianSkills {
    * @return 攻击等级加成百分比
    */
   public static int calculateWeaponMasteryAttackRatingBonus(int skillLevel) {
-    // 基础 28%，每级 +8%
-    return 28 + (skillLevel - 1) * 8;
+    return passiveValue("Sword Mastery", skillLevel, 0);
   }
 
   /**
@@ -780,8 +831,7 @@ public final class BarbarianSkills {
    * @return 暴击概率百分比
    */
   public static int getWeaponMasteryCriticalChance(int skillLevel) {
-    // 基础 3%，每级 +0.8%
-    return (int)(3.0f + (skillLevel - 1) * 0.8f);
+    return passiveValue("Sword Mastery", skillLevel, 2);
   }
 
   /**
@@ -825,10 +875,15 @@ public final class BarbarianSkills {
   }
 
   private static int passiveValue(String skillName, int skillLevel) {
+    return passiveValue(skillName, skillLevel, 0);
+  }
+
+  private static int passiveValue(String skillName, int skillLevel, int index) {
     if (skillLevel <= 0 || Riiablo.files == null || Riiablo.files.skills == null) return 0;
     Skills.Entry skill = Riiablo.files.skills.get(skillName);
-    if (skill == null || skill.passivecalc == null || skill.passivecalc.length == 0) return 0;
-    return SkillFormula.evaluate(skill.passivecalc[0], skill, skillLevel);
+    if (skill == null || skill.passivecalc == null
+        || index < 0 || index >= skill.passivecalc.length) return 0;
+    return SkillFormula.evaluate(skill.passivecalc[index], skill, skillLevel);
   }
 
   /** Maps the four Barbarian passive states present in the native States.txt order. */
@@ -839,6 +894,12 @@ public final class BarbarianSkills {
       case "ironskin": return StateId.IRONSKIN;
       case "increasedspeed": return StateId.INCREASEDSPEED;
       case "naturalresistance": return StateId.NATURALRESISTANCE;
+      case "swordmastery": return StateId.SWORDMASTERY;
+      case "axemastery": return StateId.AXEMASTERY;
+      case "macemastery": return StateId.MACEMASTERY;
+      case "polearmmastery": return StateId.POLEARMMASTERY;
+      case "throwingmastery": return StateId.THROWINGMASTERY;
+      case "spearmastery": return StateId.SPEARMASTERY;
       default: return StateId.NONE;
     }
   }
@@ -859,6 +920,8 @@ public final class BarbarianSkills {
     state.sourceEntityId = ownerId;
     state.skillId = skill.Id;
     state.clearModifiers();
+    state.masteryItemType = skill.passiveitype == null
+        ? null : skill.passiveitype.trim().toLowerCase(Locale.ROOT);
     int count = Math.min(skill.passivestat != null ? skill.passivestat.length : 0,
         skill.passivecalc != null ? skill.passivecalc.length : 0);
     for (int i = 0; i < count; i++) {
@@ -876,6 +939,30 @@ public final class BarbarianSkills {
         case "lightresist": state.lightResistModifier += value; break;
         case "poisonresist": state.poisonResistModifier += value; break;
         case "magicresist": state.magicResistModifier += value; break;
+        case "passive_mastery_melee_th":
+          state.masteryAttackRatingModifier = value;
+          state.throwingMastery = false;
+          break;
+        case "passive_mastery_melee_dmg":
+          state.masteryDamageModifier = value;
+          state.throwingMastery = false;
+          break;
+        case "passive_mastery_melee_crit":
+          state.masteryCriticalChance = value;
+          state.throwingMastery = false;
+          break;
+        case "passive_mastery_throw_th":
+          state.masteryAttackRatingModifier = value;
+          state.throwingMastery = true;
+          break;
+        case "passive_mastery_throw_dmg":
+          state.masteryDamageModifier = value;
+          state.throwingMastery = true;
+          break;
+        case "passive_mastery_throw_crit":
+          state.masteryCriticalChance = value;
+          state.throwingMastery = true;
+          break;
         default:
           log.warn("[BARBARIAN_PASSIVE] unsupported stat skill={} stat={}", skill.skill, stat);
           break;

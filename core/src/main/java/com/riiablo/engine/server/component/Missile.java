@@ -34,6 +34,10 @@ public class Missile extends PooledComponent {
   public int attackMinDamage;
   public int attackMaxDamage;
   public int attackRating;
+  /** Item-layered Throwing Mastery snapshot captured when the missile is fired. */
+  public int masteryAttackRatingPercent;
+  public int masteryDamagePercent;
+  public int masteryCriticalChance;
 
   /**
    * Native-style damage stat list captured at spawn time. D2MOO writes these
@@ -127,6 +131,9 @@ public class Missile extends PooledComponent {
     attackMinDamage = 0;
     attackMaxDamage = 0;
     attackRating = 0;
+    masteryAttackRatingPercent = 0;
+    masteryDamagePercent = 0;
+    masteryCriticalChance = 0;
     damage.clear();
     damageSnapshot = false;
     damageLevel = 0;

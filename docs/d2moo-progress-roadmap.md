@@ -166,6 +166,9 @@
 - [x] ~~完成野蛮人 Increased Stamina / Iron Skin / Increased Speed / Natural Resistance 原生被动~~
   - 补齐 Skills.txt 的 `passivestate/passivestat/passivecalc/passiveevent` 数据列，按 D2Common `SKILLS_RefreshSkill` 创建和刷新永久状态列表，不再使用线性近似公式。
   - 最大耐力、防御、移动速度及火/冰/电/毒抗性进入现有权威聚合；支持技能降级、移除、Battle Command 加级但不凭空授予未学技能，并通过 `StateP` 同步状态身份及客户端移动表现。
+- [x] ~~完成野蛮人六类武器精通原生对齐~~
+  - Sword/Axe/Mace/Pole Arm/Throwing/Spear Mastery 按 `passiveitype` 绑定 ItemTypes；每次攻击按实际武器（双持逐手）选择匹配精通，AR/伤害/暴击分别取最大值，不跨近战与投掷上下文叠加。
+  - Frenzy/Whirlwind/Berserk 预计算伤害和普通攻击接入精通；投掷导弹在发射时冻结 AR/伤害/暴击快照，飞行中换装或状态变化不影响原生结果；新增 ECS 与多人状态回归。
 
 ### P2：世界交互和多人闭环
 
@@ -219,14 +222,15 @@
 - 2026-09-04：完成 Howl / Taunt / Shout / Battle Cry 战吼第一阶段；对齐原生 `SrvDo022/SrvHit17`、`SrvDo071`、`SrvDo068/SrvHit18/21`、AuraTargetState 和 Skills.txt 公式，统一 `UNITS_CanSwitchAI` 的 WALK/SwitchAI/Boss/Unique/不可打断门槛，并由基类 AI 接管 TERROR/TAUNT 特殊行为。新增 5 个原生数据、状态、导弹和门槛专项用例通过，D2GS 编译通过；野蛮人职业专项更新为约 90%。
 - 2026-09-04：完成 Battle Orders / Battle Command / War Cry 战吼第二阶段；最大生命/法力/体力百分比聚合支持重算与到期恢复，War Cry 对齐 Skills.txt 伤害及 `SrvDmg07` 眩晕资格，`StateP` 补齐技能和最大资源修正快照。原生数据、导弹伤害、友方召唤、资源重算和多人序列化专项回归通过；野蛮人职业专项更新为约 95%。
 - 2026-09-04：完成 Increased Stamina / Iron Skin / Increased Speed / Natural Resistance；接入 Skills.txt 原生被动状态、属性和 `ln12/dm12` 递减公式，修复 Natural Resistance 线性近似及 Battle Command 激活未学被动问题。新增数据、ECS 生命周期、非复利、战斗与多人快照回归；野蛮人职业专项更新为约 99%。
+- 2026-09-04：完成野蛮人 Sword/Axe/Mace/Pole Arm/Throwing/Spear Mastery；按 D2Common ItemTypes 层逐手匹配，AR/伤害/暴击分别取最大值，投掷导弹发射时保存精通快照并通过 CombatSystem 权威结算；新增六类状态、换装上下文、预计算技能和真实 ECS 导弹快照测试，相关回归及 D2GS 编译通过。
 
 ## 当前下一项
 
 刺客专项已经完成；野蛮人主动技能、战吼、尸体工具链及四项通用被动已经接通。
 
-下一项建议进入 **野蛮人武器精通专项**：依次审计 Sword/Axe/Mace/Pole Arm/Throwing/Spear
-Mastery 的 `passiveitype` 武器类型门槛、伤害/命中/暴击原生公式、换装即时刷新及多人权威命中结果；
-完成后再统一验收野蛮人受击、闪避和技能 Overlay 表现。
+下一项建议进入 **野蛮人客户端表现收尾**：对齐受击、格挡/暴击反馈、状态 Overlay 和双客户端
+一致性；重点验证 Frenzy/Whirlwind/Berserk、六类武器精通及 Battle Command 状态在本地与远端
+客户端的动画、颜色和状态图标，不再重复计算服务端伤害。
 
 ## 记录规则
 

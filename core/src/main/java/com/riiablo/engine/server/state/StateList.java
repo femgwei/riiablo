@@ -3,6 +3,7 @@ package com.riiablo.engine.server.state;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
+import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -465,6 +466,45 @@ public class StateList {
     int total = 0;
     for (UnitState state : states) total += state.maxStaminaModifier;
     return total;
+  }
+
+  /** Result of D2Common SKILLS_GetWeaponMasteryBonus for one attack weapon. */
+  public static final class WeaponMasteryBonus {
+    public int attackRatingPercent;
+    public int damagePercent;
+    public int criticalChance;
+
+    public WeaponMasteryBonus clear() {
+      attackRatingPercent = 0;
+      damagePercent = 0;
+      criticalChance = 0;
+      return this;
+    }
+
+    public boolean isEmpty() {
+      return attackRatingPercent == 0 && damagePercent == 0 && criticalChance == 0;
+    }
+  }
+
+  /**
+   * Selects the highest layered mastery value matching the actual attack
+   * weapon. Native stat layers do not stack Sword/Axe/etc. mastery values.
+   */
+  public WeaponMasteryBonus getWeaponMastery(
+      Item weapon, boolean throwingAttack, WeaponMasteryBonus out) {
+    if (out == null) out = new WeaponMasteryBonus();
+    out.clear();
+    if (weapon == null || weapon.typeEntry == null) return out;
+    for (UnitState state : states) {
+      if (state.masteryItemType == null || state.masteryItemType.isEmpty()
+          || state.throwingMastery != throwingAttack
+          || !weapon.typeEntry.is(state.masteryItemType)) continue;
+      out.attackRatingPercent = Math.max(
+          out.attackRatingPercent, state.masteryAttackRatingModifier);
+      out.damagePercent = Math.max(out.damagePercent, state.masteryDamageModifier);
+      out.criticalChance = Math.max(out.criticalChance, state.masteryCriticalChance);
+    }
+    return out;
   }
 
   /**

@@ -64,6 +64,15 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 @All(UnitStates.class)
 public class StateUpdater extends IteratingSystem implements StatusEffectApplier.StateSink {
   private static final Logger log = LogManager.getLogger(StateUpdater.class);
+  private static final int[] BARBARIAN_PASSIVE_SKILLS = {
+      127, 128, 129, 134, 135, 136, 141, 145, 148, 153
+  };
+  private static final int[] BARBARIAN_PASSIVE_STATES = {
+      StateId.SWORDMASTERY, StateId.AXEMASTERY, StateId.MACEMASTERY,
+      StateId.POLEARMMASTERY, StateId.THROWINGMASTERY, StateId.SPEARMASTERY,
+      StateId.INCREASEDSTAMINA, StateId.IRONSKIN,
+      StateId.INCREASEDSPEED, StateId.NATURALRESISTANCE
+  };
 
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Velocity> mVelocity;
@@ -183,23 +192,22 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return;
     if (mPlayer.get(entityId).data.classId != CharacterClass.BARBARIAN) return;
     int skillBonus = states.getTotalSkillModifier();
-    int[] skillIds = {141, 145, 148, 153};
-    int[] stateIds = {StateId.INCREASEDSTAMINA, StateId.IRONSKIN,
-        StateId.INCREASEDSPEED, StateId.NATURALRESISTANCE};
-    for (int i = 0; i < skillIds.length; i++) {
-      Skills.Entry skill = Riiablo.files.skills.get(skillIds[i]);
+    for (int i = 0; i < BARBARIAN_PASSIVE_SKILLS.length; i++) {
+      int skillId = BARBARIAN_PASSIVE_SKILLS[i];
+      int stateId = BARBARIAN_PASSIVE_STATES[i];
+      Skills.Entry skill = Riiablo.files.skills.get(skillId);
       int ownedLevel = skill != null
-          ? Math.max(0, mPlayer.get(entityId).data.getSkill(skillIds[i])) : 0;
+          ? Math.max(0, mPlayer.get(entityId).data.getSkill(skillId)) : 0;
       // Native SKILLS_GetHighestLevelSkillFromSkillId first requires an
       // owned skill instance. +allskills can raise that instance, but cannot
       // create an unlearned passive by itself.
       int level = ownedLevel > 0 ? ownedLevel + skillBonus : 0;
-      UnitState current = states.getState(stateIds[i]);
+      UnitState current = states.getState(stateId);
       if (level <= 0 || skill == null || !skill.passive) {
         if (current != null) {
-          states.removeState(stateIds[i]);
+          states.removeState(stateId);
           log.info("[BARBARIAN_PASSIVE] phase=remove entity={} skill={} state={}",
-              entityId, skillIds[i], StateId.getName(stateIds[i]));
+              entityId, skillId, StateId.getName(stateId));
         }
         continue;
       }
@@ -207,11 +215,15 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       UnitState applied = BarbarianSkills.applyPassiveState(states, skill, level, entityId);
       if (applied != null) {
         log.info("[BARBARIAN_PASSIVE] phase=refresh entity={} skill={} level={} state={} "
-                + "stamina={} defense={} velocity={} resists={}/{}/{}/{}",
+                + "stamina={} defense={} velocity={} resists={}/{}/{}/{} "
+                + "itype={} masteryAr={} masteryDamage={} masteryCrit={} throwing={}",
             entityId, skill.skill, level, StateId.getName(applied.stateId),
             applied.maxStaminaModifier, applied.defenseModifier, applied.velocityModifier,
             applied.fireResistModifier, applied.coldResistModifier,
-            applied.lightResistModifier, applied.poisonResistModifier);
+            applied.lightResistModifier, applied.poisonResistModifier,
+            applied.masteryItemType, applied.masteryAttackRatingModifier,
+            applied.masteryDamageModifier, applied.masteryCriticalChance,
+            applied.throwingMastery);
       }
     }
   }
