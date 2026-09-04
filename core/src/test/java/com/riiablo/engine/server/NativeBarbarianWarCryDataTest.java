@@ -65,6 +65,42 @@ class NativeBarbarianWarCryDataTest extends RiiabloTest {
     assertEquals(360, BarbarianSkills.getWarCryDuration(battleCry, 2, name -> 0));
   }
 
+  @Test
+  void secondStageUsesNativeBuffAndDamageProfiles() {
+    Skills.Entry orders = skill("Battle Orders");
+    assertEquals(149, orders.Id);
+    assertEquals(68, orders.srvdofunc);
+    assertEquals("battleorders", orders.aurastate);
+    assertEquals("battleorders", orders.auratargetstate);
+    assertEquals("item_maxmana_percent", orders.aurastat[0]);
+    assertEquals("item_maxhp_percent", orders.aurastat[1]);
+    assertEquals("skill_staminapercent", orders.aurastat[2]);
+    assertMissile(orders.srvmissilea, 1, 18, false, true);
+
+    Skills.Entry command = skill("Battle Command");
+    assertEquals(155, command.Id);
+    assertEquals(68, command.srvdofunc);
+    assertEquals("battlecommand", command.aurastate);
+    assertEquals("item_allskills", command.aurastat[0]);
+    assertEquals("1", command.aurastatcalc[0]);
+    assertMissile(command.srvmissilea, 1, 18, false, true);
+
+    Skills.Entry warCry = skill("War Cry");
+    assertEquals(154, warCry.Id);
+    assertEquals(68, warCry.srvdofunc);
+    assertEquals(20, warCry.MinDam);
+    assertEquals(30, warCry.MaxDam);
+    Missiles.Entry missile = Riiablo.files.Missiles.get(warCry.srvmissilea);
+    assertNotNull(missile);
+    assertEquals(1, missile.pSrvDoFunc);
+    assertEquals(0, missile.pSrvHitFunc);
+    assertEquals(7, missile.pSrvDmgFunc);
+    assertEquals(false, missile.CollideKill);
+    assertEquals(false, missile.CollideFriend);
+    assertEquals(25, BarbarianSkills.getWarCryStunDuration(missile, warCry, 1));
+    assertEquals(45, BarbarianSkills.getWarCryStunDuration(missile, warCry, 5));
+  }
+
   private static Skills.Entry skill(String name) {
     Skills.Entry skill = Riiablo.files.skills.get(name);
     assertNotNull(skill, name);

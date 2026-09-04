@@ -33,6 +33,14 @@ public class UnitStates extends Component {
   /** 状态列表 */
   public StateList stateList;
 
+  /** Last state-derived resource percentages folded into aggregate stats. */
+  public int appliedMaxLifePercent;
+  public int appliedMaxManaPercent;
+  public int appliedMaxStaminaPercent;
+  public float resolvedMaxLife;
+  public float resolvedMaxMana;
+  public float resolvedMaxStamina;
+
   /**
    * 初始化状态组件
    * 
@@ -41,6 +49,12 @@ public class UnitStates extends Component {
    */
   public UnitStates init(int entityId) {
     snapshotOnly = false;
+    appliedMaxLifePercent = 0;
+    appliedMaxManaPercent = 0;
+    appliedMaxStaminaPercent = 0;
+    resolvedMaxLife = Float.NaN;
+    resolvedMaxMana = Float.NaN;
+    resolvedMaxStamina = Float.NaN;
     if (stateList == null) {
       stateList = new StateList(entityId);
     } else {
@@ -50,8 +64,15 @@ public class UnitStates extends Component {
   }
 
   protected void reset() {
+    snapshotOnly = false;
     if (stateList != null) {
       stateList.clearAll();
     }
+    appliedMaxLifePercent = 0;
+    appliedMaxManaPercent = 0;
+    appliedMaxStaminaPercent = 0;
+    resolvedMaxLife = Float.NaN;
+    resolvedMaxMana = Float.NaN;
+    resolvedMaxStamina = Float.NaN;
   }
 }

@@ -127,6 +127,10 @@ table StateP {
   velocityModifier:[int16];
   runtimeValue:[int16];
   animationRateModifier:[int16];
+  skillModifier:[int16];
+  maxLifeModifier:[int16];
+  maxManaModifier:[int16];
+  maxStaminaModifier:[int16];
 }
 
 // Compact authoritative combat state. Attribute modifiers remain server-side;

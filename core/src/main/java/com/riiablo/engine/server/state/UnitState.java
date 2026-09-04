@@ -92,6 +92,12 @@ public class UnitState {
   /** 最大体力修正。 */
   public int maxStaminaModifier;
 
+  /** 最大生命百分比修正（Battle Orders 的 item_maxhp_percent）。 */
+  public int maxLifeModifier;
+
+  /** 最大法力百分比修正（Battle Orders 的 item_maxmana_percent）。 */
+  public int maxManaModifier;
+
   /** 体力恢复修正（百分比）。 */
   public int staminaRecoveryModifier;
 
@@ -208,6 +214,8 @@ public class UnitState {
     experienceModifier = 0;
     manaRecoveryModifier = 0;
     maxStaminaModifier = 0;
+    maxLifeModifier = 0;
+    maxManaModifier = 0;
     staminaRecoveryModifier = 0;
   }
 
@@ -364,6 +372,8 @@ public class UnitState {
     this.experienceModifier = other.experienceModifier;
     this.manaRecoveryModifier = other.manaRecoveryModifier;
     this.maxStaminaModifier = other.maxStaminaModifier;
+    this.maxLifeModifier = other.maxLifeModifier;
+    this.maxManaModifier = other.maxManaModifier;
     this.staminaRecoveryModifier = other.staminaRecoveryModifier;
     
     this.damagePerFrame = other.damagePerFrame;

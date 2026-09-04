@@ -118,6 +118,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     processDamageOverTime(entityId, stateList);
     stateList.update();
 
+    applyMaximumResourceModifiers(entityId, unitStates, stateList);
+
     // Apply movement/control effects only while the state remains active.
     if (mVelocity.has(entityId)) {
       applyVelocityModifiers(entityId, stateList);
@@ -127,6 +129,74 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   //==========================================================================
   // 状态效果应用
   //==========================================================================
+
+  /**
+   * Folds native percentage max-resource stats into the authoritative
+   * aggregate without compounding them every tick. Removing or refreshing a
+   * state first divides out the previously applied percentage, then applies
+   * the new total exactly once.
+   */
+  private void applyMaximumResourceModifiers(
+      int entityId, UnitStates unitStates, StateList stateList) {
+    if (!mAttributesWrapper.has(entityId)) return;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    if (attrs == null) return;
+    int previousMaxLifePercent = unitStates.appliedMaxLifePercent;
+    int previousMaxManaPercent = unitStates.appliedMaxManaPercent;
+    int previousMaxStaminaPercent = unitStates.appliedMaxStaminaPercent;
+    int maxLifePercent = stateList.getTotalMaxLifeModifier();
+    unitStates.resolvedMaxLife = applyMaximumResourceModifier(attrs,
+        Stat.hitpoints, Stat.maxhp, unitStates.appliedMaxLifePercent,
+        maxLifePercent, unitStates.resolvedMaxLife);
+    unitStates.appliedMaxLifePercent = maxLifePercent;
+    int maxManaPercent = stateList.getTotalMaxManaModifier();
+    unitStates.resolvedMaxMana = applyMaximumResourceModifier(attrs,
+        Stat.mana, Stat.maxmana, unitStates.appliedMaxManaPercent,
+        maxManaPercent, unitStates.resolvedMaxMana);
+    unitStates.appliedMaxManaPercent = maxManaPercent;
+    int maxStaminaPercent = stateList.getTotalMaxStaminaModifier();
+    unitStates.resolvedMaxStamina = applyMaximumResourceModifier(attrs,
+        Stat.stamina, Stat.maxstamina, unitStates.appliedMaxStaminaPercent,
+        maxStaminaPercent, unitStates.resolvedMaxStamina);
+    unitStates.appliedMaxStaminaPercent = maxStaminaPercent;
+    if (previousMaxLifePercent != maxLifePercent
+        || previousMaxManaPercent != maxManaPercent
+        || previousMaxStaminaPercent != maxStaminaPercent) {
+      log.info("[BARBARIAN_BATTLE_ORDERS] phase=resource_refresh entity={} "
+              + "lifePercent={}=>{} manaPercent={}=>{} staminaPercent={}=>{} "
+              + "maxHp={} maxMana={} maxStamina={}",
+          entityId, previousMaxLifePercent, maxLifePercent,
+          previousMaxManaPercent, maxManaPercent,
+          previousMaxStaminaPercent, maxStaminaPercent,
+          attrs.aggregate().getValue(Stat.maxhp, 0f),
+          attrs.aggregate().getValue(Stat.maxmana, 0f),
+          attrs.aggregate().getValue(Stat.maxstamina, 0f));
+    }
+  }
+
+  static float applyMaximumResourceModifier(
+      Attributes attrs, short currentStat, short maximumStat,
+      int previousPercent, int nextPercent, float previousResolved) {
+    StatRef maximum = attrs.get(maximumStat, StatRef.obtain());
+    if (maximum == null) return Float.NaN;
+    int oldScale = Math.max(1, 100 + previousPercent);
+    int newScale = Math.max(1, 100 + nextPercent);
+    float currentMaximum = maximum.asFixed();
+    // Item/stat reaggregation replaces the aggregate with a fresh unmodified
+    // maximum. Detect that external change instead of dividing the new base
+    // by the stale state percentage.
+    boolean stillOwnsPreviousValue = previousPercent != 0 && Float.isFinite(previousResolved)
+        && Math.abs(currentMaximum - previousResolved) <= 0.001f;
+    float unmodified = stillOwnsPreviousValue
+        ? currentMaximum * 100f / oldScale : currentMaximum;
+    float resolved = Math.max(0f, unmodified * newScale / 100f);
+    attrs.aggregate().put(maximumStat, resolved);
+    StatRef current = attrs.get(currentStat, StatRef.obtain());
+    if (current != null && current.asFixed() > resolved) {
+      attrs.aggregate().put(currentStat, resolved);
+    }
+    return resolved;
+  }
 
   /**
    * 应用移动速度修正

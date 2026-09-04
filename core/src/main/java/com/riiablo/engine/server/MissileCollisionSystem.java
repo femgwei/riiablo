@@ -37,7 +37,10 @@ import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.BarbarianSkills;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.logger.LogManager;
@@ -597,6 +600,8 @@ public class MissileCollisionSystem extends IteratingSystem {
         applyCombatStates(missile, targetId, combat);
       }
 
+      if (damageHit) applyNativeMissileDamageState(missileId, missile, targetId);
+
       if (damageHit && isChainLightningMissile(missile)) {
         spawnChainLightningContinuation(missile, targetId, targetPos.position);
       }
@@ -616,6 +621,40 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /** Applies post-damage state carried by native missile SrvDmg functions. */
+  private void applyNativeMissileDamageState(int missileId, Missile missile, int targetId) {
+    if (missile == null || missile.missile == null || missile.missile.pSrvDmgFunc != 7) return;
+    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    int duration = BarbarianSkills.getWarCryStunDuration(
+        missile.missile, skill, Math.max(1, missile.damageLevel));
+    Monster monster = mMonster.has(targetId) ? mMonster.get(targetId) : null;
+    int uniqueRoll = monster != null && MonsterRank.isUnique(monster.rank)
+        ? com.badlogic.gdx.math.MathUtils.random(99) : 99;
+    duration = BarbarianSkills.resolveWarCryStunDuration(
+        monster, mPlayer.has(targetId), mMercenary.has(targetId), duration,
+        uniqueRoll);
+    if (duration <= 0) {
+      log.info("[BARBARIAN_WAR_CRY] phase=stun_reject missile={} source={} target={} skill={}",
+          missileId, missile.ownerId, targetId, missile.skillId);
+      return;
+    }
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    StateList states = mUnitStates.get(targetId).stateList;
+    UnitState stun = states.addState(
+        StateId.STUNNED, duration, Math.max(1, missile.damageLevel), missile.ownerId);
+    if (stun == null) return;
+    // SUNITDMG replaces the expire frame even when a later stun is shorter.
+    stun.duration = duration;
+    stun.initialDuration = duration;
+    stun.sourceEntityId = missile.ownerId;
+    stun.skillId = missile.skillId;
+    stun.needsSync = true;
+    log.info("[BARBARIAN_WAR_CRY] phase=stun_apply missile={} source={} target={} "
+            + "skill={} level={} duration={}",
+        missileId, missile.ownerId, targetId, missile.skillId,
+        Math.max(1, missile.damageLevel), duration);
   }
 
   /** D2MOO SrvHit17/18/21 state-only war-cry missile dispatch. */

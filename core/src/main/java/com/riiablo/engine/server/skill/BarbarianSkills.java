@@ -6,6 +6,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Weapons;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Monster;
@@ -502,12 +503,35 @@ public final class BarbarianSkills {
         case "item_armor_percent":
         case "armorclass": state.defenseModifier += value; break;
         case "item_allskills": state.skillModifier += value; break;
+        case "item_maxhp_percent": state.maxLifeModifier += value; break;
+        case "item_maxmana_percent": state.maxManaModifier += value; break;
         case "skill_staminapercent": state.maxStaminaModifier += value; break;
         default: break;
       }
     }
     state.needsSync = true;
     return state;
+  }
+
+  /** D2MOO MISSMODE_SrvDmg07_Warcry_ShockWave stun length. */
+  public static int getWarCryStunDuration(
+      Missiles.Entry missile, Skills.Entry skill, int skillLevel) {
+    if (missile != null && missile.dParam != null && missile.dParam.length > 0
+        && missile.dParam[0] > 0) return missile.dParam[0];
+    if (skill == null || skill.Param == null || skill.Param.length < 2) return 0;
+    return Math.max(0, skill.Param[0]
+        + (Math.max(1, skillLevel) - 1) * skill.Param[1]);
+  }
+
+  /** D2Game SUNITDMG stun eligibility/caps used after SrvDmg07. */
+  public static int resolveWarCryStunDuration(
+      Monster target, boolean player, boolean hireling, int duration, int uniqueRoll) {
+    if (duration <= 0) return 0;
+    if (player) return Math.min(duration, 250);
+    if (target == null || target.monstats == null || target.monstats.boss
+        || target.monstats.Velocity <= 0) return 0;
+    if (MonsterRank.isUnique(target.rank) && uniqueRoll < 90) return 0;
+    return Math.min(duration, hireling ? 13 : 250);
   }
 
   public static int getHowlAiRange(Skills.Entry skill, int skillLevel) {

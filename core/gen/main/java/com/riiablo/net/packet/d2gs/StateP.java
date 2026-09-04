@@ -51,6 +51,30 @@ public final class StateP extends Table {
   public ShortVector animationRateModifierVector(ShortVector obj) { int o = __offset(14); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
   public ByteBuffer animationRateModifierAsByteBuffer() { return __vector_as_bytebuffer(14, 2); }
   public ByteBuffer animationRateModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 14, 2); }
+  public short skillModifier(int j) { int o = __offset(16); return o != 0 ? bb.getShort(__vector(o) + j * 2) : 0; }
+  public int skillModifierLength() { int o = __offset(16); return o != 0 ? __vector_len(o) : 0; }
+  public ShortVector skillModifierVector() { return skillModifierVector(new ShortVector()); }
+  public ShortVector skillModifierVector(ShortVector obj) { int o = __offset(16); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer skillModifierAsByteBuffer() { return __vector_as_bytebuffer(16, 2); }
+  public ByteBuffer skillModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 16, 2); }
+  public short maxLifeModifier(int j) { int o = __offset(18); return o != 0 ? bb.getShort(__vector(o) + j * 2) : 0; }
+  public int maxLifeModifierLength() { int o = __offset(18); return o != 0 ? __vector_len(o) : 0; }
+  public ShortVector maxLifeModifierVector() { return maxLifeModifierVector(new ShortVector()); }
+  public ShortVector maxLifeModifierVector(ShortVector obj) { int o = __offset(18); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer maxLifeModifierAsByteBuffer() { return __vector_as_bytebuffer(18, 2); }
+  public ByteBuffer maxLifeModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 18, 2); }
+  public short maxManaModifier(int j) { int o = __offset(20); return o != 0 ? bb.getShort(__vector(o) + j * 2) : 0; }
+  public int maxManaModifierLength() { int o = __offset(20); return o != 0 ? __vector_len(o) : 0; }
+  public ShortVector maxManaModifierVector() { return maxManaModifierVector(new ShortVector()); }
+  public ShortVector maxManaModifierVector(ShortVector obj) { int o = __offset(20); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer maxManaModifierAsByteBuffer() { return __vector_as_bytebuffer(20, 2); }
+  public ByteBuffer maxManaModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 20, 2); }
+  public short maxStaminaModifier(int j) { int o = __offset(22); return o != 0 ? bb.getShort(__vector(o) + j * 2) : 0; }
+  public int maxStaminaModifierLength() { int o = __offset(22); return o != 0 ? __vector_len(o) : 0; }
+  public ShortVector maxStaminaModifierVector() { return maxStaminaModifierVector(new ShortVector()); }
+  public ShortVector maxStaminaModifierVector(ShortVector obj) { int o = __offset(22); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer maxStaminaModifierAsByteBuffer() { return __vector_as_bytebuffer(22, 2); }
+  public ByteBuffer maxStaminaModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 22, 2); }
 
   public static int createStateP(FlatBufferBuilder builder,
       int stateIdOffset,
@@ -58,8 +82,16 @@ public final class StateP extends Table {
       int levelOffset,
       int velocityModifierOffset,
       int runtimeValueOffset,
-      int animationRateModifierOffset) {
-    builder.startTable(6);
+      int animationRateModifierOffset,
+      int skillModifierOffset,
+      int maxLifeModifierOffset,
+      int maxManaModifierOffset,
+      int maxStaminaModifierOffset) {
+    builder.startTable(10);
+    StateP.addMaxStaminaModifier(builder, maxStaminaModifierOffset);
+    StateP.addMaxManaModifier(builder, maxManaModifierOffset);
+    StateP.addMaxLifeModifier(builder, maxLifeModifierOffset);
+    StateP.addSkillModifier(builder, skillModifierOffset);
     StateP.addAnimationRateModifier(builder, animationRateModifierOffset);
     StateP.addRuntimeValue(builder, runtimeValueOffset);
     StateP.addVelocityModifier(builder, velocityModifierOffset);
@@ -69,7 +101,7 @@ public final class StateP extends Table {
     return StateP.endStateP(builder);
   }
 
-  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(6); }
+  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(10); }
   public static void addStateId(FlatBufferBuilder builder, int stateIdOffset) { builder.addOffset(0, stateIdOffset, 0); }
   public static int createStateIdVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startStateIdVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
@@ -89,6 +121,18 @@ public final class StateP extends Table {
   public static void addAnimationRateModifier(FlatBufferBuilder builder, int animationRateModifierOffset) { builder.addOffset(5, animationRateModifierOffset, 0); }
   public static int createAnimationRateModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startAnimationRateModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
+  public static void addSkillModifier(FlatBufferBuilder builder, int skillModifierOffset) { builder.addOffset(6, skillModifierOffset, 0); }
+  public static int createSkillModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
+  public static void startSkillModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
+  public static void addMaxLifeModifier(FlatBufferBuilder builder, int maxLifeModifierOffset) { builder.addOffset(7, maxLifeModifierOffset, 0); }
+  public static int createMaxLifeModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
+  public static void startMaxLifeModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
+  public static void addMaxManaModifier(FlatBufferBuilder builder, int maxManaModifierOffset) { builder.addOffset(8, maxManaModifierOffset, 0); }
+  public static int createMaxManaModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
+  public static void startMaxManaModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
+  public static void addMaxStaminaModifier(FlatBufferBuilder builder, int maxStaminaModifierOffset) { builder.addOffset(9, maxStaminaModifierOffset, 0); }
+  public static int createMaxStaminaModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
+  public static void startMaxStaminaModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
   public static int endStateP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

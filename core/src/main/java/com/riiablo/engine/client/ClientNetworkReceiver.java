@@ -763,6 +763,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
         state.runtimeValue = i < data.runtimeValueLength() ? data.runtimeValue(i) : 0;
         state.animationRateModifier = i < data.animationRateModifierLength()
             ? data.animationRateModifier(i) : 0;
+        state.skillModifier = i < data.skillModifierLength() ? data.skillModifier(i) : 0;
+        state.maxLifeModifier = i < data.maxLifeModifierLength() ? data.maxLifeModifier(i) : 0;
+        state.maxManaModifier = i < data.maxManaModifierLength() ? data.maxManaModifier(i) : 0;
+        state.maxStaminaModifier = i < data.maxStaminaModifierLength()
+            ? data.maxStaminaModifier(i) : 0;
       }
     }
     unitStates.snapshotOnly = true;

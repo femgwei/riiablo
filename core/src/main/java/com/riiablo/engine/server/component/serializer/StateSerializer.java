@@ -20,7 +20,7 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
   @Override
   public int putData(FlatBufferBuilder builder, UnitStates component) {
     if (component.stateList == null || component.stateList.isEmpty()) {
-      return StateP.createStateP(builder, 0, 0, 0, 0, 0, 0);
+      return StateP.createStateP(builder, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     int count = component.stateList.size();
@@ -30,6 +30,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
     short[] velocityModifiers = new short[count];
     short[] runtimeValues = new short[count];
     short[] animationRateModifiers = new short[count];
+    short[] skillModifiers = new short[count];
+    short[] maxLifeModifiers = new short[count];
+    short[] maxManaModifiers = new short[count];
+    short[] maxStaminaModifiers = new short[count];
     for (int i = 0; i < count; i++) {
       UnitState state = component.stateList.getStates().get(i);
       stateIds[i] = (short) Math.max(0, Math.min(0xFFFF, state.stateId));
@@ -41,6 +45,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
           Math.min(Short.MAX_VALUE, state.runtimeValue));
       animationRateModifiers[i] = (short) Math.max(Short.MIN_VALUE,
           Math.min(Short.MAX_VALUE, state.animationRateModifier));
+      skillModifiers[i] = clampShort(state.skillModifier);
+      maxLifeModifiers[i] = clampShort(state.maxLifeModifier);
+      maxManaModifiers[i] = clampShort(state.maxManaModifier);
+      maxStaminaModifiers[i] = clampShort(state.maxStaminaModifier);
     }
 
     int stateIdOffset = StateP.createStateIdVector(builder, stateIds);
@@ -50,8 +58,15 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
     int runtimeValueOffset = StateP.createRuntimeValueVector(builder, runtimeValues);
     int animationRateModifierOffset =
         StateP.createAnimationRateModifierVector(builder, animationRateModifiers);
+    int skillModifierOffset = StateP.createSkillModifierVector(builder, skillModifiers);
+    int maxLifeModifierOffset = StateP.createMaxLifeModifierVector(builder, maxLifeModifiers);
+    int maxManaModifierOffset = StateP.createMaxManaModifierVector(builder, maxManaModifiers);
+    int maxStaminaModifierOffset =
+        StateP.createMaxStaminaModifierVector(builder, maxStaminaModifiers);
     return StateP.createStateP(builder, stateIdOffset, durationOffset, levelOffset,
-        velocityModifierOffset, runtimeValueOffset, animationRateModifierOffset);
+        velocityModifierOffset, runtimeValueOffset, animationRateModifierOffset,
+        skillModifierOffset, maxLifeModifierOffset, maxManaModifierOffset,
+        maxStaminaModifierOffset);
   }
 
   @Override
@@ -82,8 +97,17 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
         state.runtimeValue = i < data.runtimeValueLength() ? data.runtimeValue(i) : 0;
         state.animationRateModifier = i < data.animationRateModifierLength()
             ? data.animationRateModifier(i) : 0;
+        state.skillModifier = i < data.skillModifierLength() ? data.skillModifier(i) : 0;
+        state.maxLifeModifier = i < data.maxLifeModifierLength() ? data.maxLifeModifier(i) : 0;
+        state.maxManaModifier = i < data.maxManaModifierLength() ? data.maxManaModifier(i) : 0;
+        state.maxStaminaModifier = i < data.maxStaminaModifierLength()
+            ? data.maxStaminaModifier(i) : 0;
       }
     }
     return component;
+  }
+
+  private static short clampShort(int value) {
+    return (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, value));
   }
 }

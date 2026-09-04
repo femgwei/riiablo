@@ -140,6 +140,7 @@ public final class MissileDamageResolver {
     if (projectile == null || skill == null) return false;
     level = Math.max(1, level);
     projectile.skillId = skill.Id;
+    projectile.damageLevel = level;
     int sourceScale = includeSource ? Math.max(0, skill.SrcDam) : 0;
     int sourceMin = statInt(ownerAttrs, Stat.mindamage);
     int sourceMax = statInt(ownerAttrs, Stat.maxdamage);

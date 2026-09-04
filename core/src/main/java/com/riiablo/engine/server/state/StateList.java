@@ -449,6 +449,24 @@ public class StateList {
     return total;
   }
 
+  public int getTotalMaxLifeModifier() {
+    int total = 0;
+    for (UnitState state : states) total += state.maxLifeModifier;
+    return total;
+  }
+
+  public int getTotalMaxManaModifier() {
+    int total = 0;
+    for (UnitState state : states) total += state.maxManaModifier;
+    return total;
+  }
+
+  public int getTotalMaxStaminaModifier() {
+    int total = 0;
+    for (UnitState state : states) total += state.maxStaminaModifier;
+    return total;
+  }
+
   /**
    * Replaces the runtime state list with an authoritative network snapshot.
    * This is intentionally a small, allocation-free-at-steady-state bridge
