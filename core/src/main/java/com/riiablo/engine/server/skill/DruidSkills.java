@@ -657,6 +657,22 @@ public final class DruidSkills {
     return 30 + (skillLevel - 1) * 5;
   }
 
+  public static boolean isHunger(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 122;
+  }
+
+  public static int getHungerLifeLeech(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    return isHunger(skill) ? Math.max(0, SkillFormula.evaluate(
+        skill.calc2, skill, Math.max(1, skillLevel), baseSkillLevel)) : 0;
+  }
+
+  public static int getHungerManaLeech(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    return isHunger(skill) ? Math.max(0, SkillFormula.evaluate(
+        skill.calc3, skill, Math.max(1, skillLevel), baseSkillLevel)) : 0;
+  }
+
   /**
    * 冲击波 - 熊人眩晕攻击
    * 

@@ -58,7 +58,7 @@
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
-| 德鲁伊 Druid | 68% | 32% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws 已完成；Hunger、Shock Wave、Fury、召唤物和持续区域技能待补 |
+| 德鲁伊 Druid | 72% | 28% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger 已完成；Shock Wave、Fury、召唤物和持续区域技能待补 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
@@ -183,7 +183,9 @@
 - [x] ~~完成德鲁伊 Rabies / Fire Claws 变形攻击~~
   - `SrvSt57/SrvDo121` 使用狼形态门槛、一次命中记录、原生 8.8 定点毒伤、Rabies 状态和附着感染控制体；控制体按剩余毒伤时间传播并保留初始施法者归属。
   - `SrvSt58/SrvDo002` 使用狼/熊双形态门槛，同一预计算近战记录只结算一次武器物理伤害，并按 `EDmgSymPerCalc` 叠加 Firestorm/Molten Boulder/Volcano/Eruption 硬点协同火伤。
-- [ ] 完成德鲁伊 Hunger / Shock Wave / Fury 变形攻击。
+- [x] ~~完成德鲁伊 Hunger 变形攻击~~
+  - `SrvDo122` 按 `calc1/calc2/calc3` 计算武器伤害、生命偷取和法力偷取，复用一次权威命中记录并在关键帧扣耐久。
+- [ ] 完成德鲁伊 Shock Wave / Fury 变形攻击。
 - [ ] 完成德鲁伊 Raven、藤蔓、灵魂、狼群和灰熊召唤所有权及生命周期。
 - [ ] 完成德鲁伊 Firestorm、Fissure、Volcano、Armageddon、Hurricane 等元素区域技能。
 
@@ -245,12 +247,13 @@
 - 2026-09-04：完成德鲁伊 Werewolf/Werebear `SrvDo116` 基础变形；纠正德鲁伊全部原生技能 ID，接入 Lycanthropy `skill(...lnXY)`、狼/熊互斥状态、原生属性、`40/TG` 形态 COF、模式回退及多人状态派生表现。相关 8 组共 71 个用例通过，D2GS 编译通过；德鲁伊专项更新为约 50%。
 - 2026-09-04：完成德鲁伊 Feral Rage/Maul `SrvSt56/SrvDo120`；接入原生命中预判、武器伤害、耐久时序、层数上限/刷新、Feral 移速与吸血、Maul 增伤与眩晕、Skills.txt 形态限制和失去形态清理。相关 6 组共 23 个用例通过，D2GS 编译通过；德鲁伊专项更新为约 60%。
 - 2026-09-04：完成德鲁伊 Rabies/Fire Claws；接入 `SrvSt57/58` 预计算战斗记录、`SrvDo121/002` 单次消费、Rabies 原生定点毒伤/目标状态/附着控制体/邻近传播，以及 Fire Claws 双形态、元素伤害和四技能硬点协同。德鲁伊专项更新为约 68%。
+- 2026-09-04：完成德鲁伊 Hunger `SrvDo122`；接入狼/熊形态校验、原生 `calc1/calc2/calc3` 伤害与双吸、命中/格挡/耐久/状态/死亡时序及调试日志。德鲁伊专项更新为约 72%。
 
 ## 当前下一项
 
-Werewolf/Werebear、Feral Rage/Maul 和 Rabies/Fire Claws 已完成，德鲁伊形态限制、聚能状态、感染传播及多人权威状态已接通。
+Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws 和 Hunger 已完成，德鲁伊形态限制、聚能状态、感染传播及多人权威状态已接通。
 
-下一项建议继续 **Hunger / Shock Wave / Fury 变形攻击**：先完成 Hunger 的物理伤害惩罚与双吸，再处理 Shock Wave 的锥形导弹/眩晕和 Fury 的多目标连续攻击。
+下一项建议继续 **Shock Wave / Fury 变形攻击**：先接入 Shock Wave 的范围导弹与眩晕，再处理 Fury 的多目标连续攻击和目标选择。
 
 ## 记录规则
 

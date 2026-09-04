@@ -870,6 +870,10 @@ public class Actioneer extends PassiveSystem {
         resolveRabies(entityId, targetId);
         break;
       }
+      case 122: { // SKILLS_SrvDo122_Hunger
+        resolveHunger(entityId, targetId);
+        break;
+      }
       case 1: // attack
       case 7: // native Jab: same authoritative hit path, skill-specific animation
       case 11: // native Charged Strike: melee hit plus bolts from ServerSkillSystem
@@ -1772,6 +1776,71 @@ public class Actioneer extends PassiveSystem {
     casting.fireClawsTargetId = Engine.INVALID_ENTITY;
     casting.fireClawsPrepared = false;
     resolveDruidElementalMeleeDamage(entityId, targetId, combat, "FIRE_CLAWS");
+  }
+
+  /** Native SrvDo122: wolf/bear melee hit with post-hit life/mana steal. */
+  private void resolveHunger(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || !DruidSkills.isHunger(skill)
+        || targetId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)
+        || !mAttributesWrapper.has(targetId) || !mUnitStates.has(entityId)
+        || !isAlive(entityId) || !isAlive(targetId)) {
+      log.info("[DRUID_HUNGER] phase=reject source={} target={} reason=invalid_context",
+          entityId, targetId);
+      return;
+    }
+    UnitStates states = mUnitStates.get(entityId);
+    if (states.stateList == null) states.init(entityId);
+    if (!DruidSkills.isSkillAllowedInCurrentShape(skill, states.stateList)
+        || !isInMeleeRange(entityId, targetId, isPlayerEntity(entityId) ? 3 : 0)) {
+      log.info("[DRUID_HUNGER] phase=reject source={} target={} reason=shape_or_range",
+          entityId, targetId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    Item weapon = activeAttackWeapon(entityId);
+    int[] damage = DruidSkills.calculateShapeWeaponDamage(
+        skill, level, attacker, weapon, states.stateList);
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE
+        .calculatePrecomputedMeleeAttack(attacker, defender,
+            isPlayerEntity(entityId), isPlayerEntity(targetId), damage[0], damage[1],
+            DruidSkills.getShapeAttackRating(skill, level, attacker, isPlayerEntity(entityId)),
+            states.stateList, stateList(targetId), isEntityMoving(targetId));
+    if (!combat.hit || combat.blocked) {
+      if (combat.blocked) queueHitReaction(targetId, true);
+      log.info("[DRUID_HUNGER] phase=result source={} target={} result={} chance={}",
+          entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
+      return;
+    }
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hp == null || hp.asFixed() <= 0f) return;
+    float before = hp.asFixed();
+    DamageEvent event = DamageEvent.obtain(entityId, targetId,
+        Math.max(0, combat.totalDamage));
+    events.dispatch(event);
+    float applied = Math.max(0f, event.damage);
+    hp.sub(applied);
+    if (hp.asFixed() < 0f) hp.set(0f);
+    int lifePct = DruidSkills.getHungerLifeLeech(
+        skill, level, name -> baseSkillLevel(entityId, name));
+    int manaPct = DruidSkills.getHungerManaLeech(
+        skill, level, name -> baseSkillLevel(entityId, name));
+    float physical = combat.totalDamage > 0
+        ? applied * combat.physicalDamage / combat.totalDamage : 0f;
+    float life = restoreUpToMaximum(attacker, Stat.hitpoints, Stat.maxhp,
+        physical * lifePct / 100f);
+    float mana = restoreUpToMaximum(attacker, Stat.mana, Stat.maxmana,
+        physical * manaPct / 100f);
+    if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    applyCombatStates(entityId, targetId, combat);
+    if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
+    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    log.info("[DRUID_HUNGER] phase=result source={} target={} damage={} hp={} -> {} "
+            + "lifePct={} manaPct={} lifeGain={} manaGain={}", entityId, targetId,
+        applied, before, hp.asFixed(), lifePct, manaPct, life, mana);
   }
 
   private void resolveDruidElementalMeleeDamage(int sourceId, int targetId,
