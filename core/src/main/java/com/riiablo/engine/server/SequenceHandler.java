@@ -59,6 +59,16 @@ public class SequenceHandler extends IteratingSystem {
           event.entityId, (int) nextMode);
       return;
     }
+    if (casting != null && casting.furyInitialized
+        && casting.furyRemainingStrikes > 0
+        && casting.furyStrikeProcessed) {
+      sequence.sequence(sequence.mode1, sequence.mode2);
+      mAnimData.get(event.entityId).override = -1;
+      com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).info(
+          "[DRUID_FURY] phase=repeat_animation source={} remaining={} nextTarget={}",
+          event.entityId, casting.furyRemainingStrikes, casting.furyCurrentTargetId);
+      return;
+    }
     if (casting != null && mWhirlwindRuntime.has(event.entityId)) {
       sequence.sequence(sequence.mode1, sequence.mode2);
       mAnimData.get(event.entityId).override = -1;
@@ -87,6 +97,9 @@ public class SequenceHandler extends IteratingSystem {
       }
       if (casting != null && casting.dragonClawInitialized) {
         casting.dragonClawStrikeProcessed = false;
+      }
+      if (casting != null && casting.furyInitialized) {
+        casting.furyStrikeProcessed = false;
       }
       sequence.started = true;
       // D2 starts each action at frame zero. Force the COF event even when a

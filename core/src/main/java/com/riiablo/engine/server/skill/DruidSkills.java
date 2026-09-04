@@ -453,6 +453,22 @@ public final class DruidSkills {
   public static int[] calculateFeralMaulWeaponDamage(
       Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
       StateList states) {
+    return calculateShapeWeaponDamageWithCalc(
+        skill, skillLevel, attacker, weapon, states, skill != null ? skill.calc1 : null);
+  }
+
+  /** SrvDo013 uses calc2 (ln34), while the other shape attacks use calc1. */
+  public static int[] calculateFuryWeaponDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      StateList states) {
+    if (!isFury(skill)) return new int[] {0, 0};
+    return calculateShapeWeaponDamageWithCalc(
+        skill, skillLevel, attacker, weapon, states, skill.calc2);
+  }
+
+  private static int[] calculateShapeWeaponDamageWithCalc(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      StateList states, String damageCalc) {
     int min;
     int max;
     int attributePercent;
@@ -467,8 +483,7 @@ public final class DruidSkills {
       max = Math.max(min, statInt(attacker, Stat.maxdamage));
       attributePercent = statInt(attacker, Stat.strength);
     }
-    int percent = SkillFormula.evaluate(
-        skill != null ? skill.calc1 : null, skill, Math.max(1, skillLevel))
+    int percent = SkillFormula.evaluate(damageCalc, skill, Math.max(1, skillLevel))
         + attributePercent
         + statInt(attacker, Stat.damagepercent)
         + statInt(attacker, Stat.item_maxdamage_percent);
@@ -730,6 +745,31 @@ public final class DruidSkills {
     return frames > 0 ? frames / 25f : 0f;
   }
 
+  /** Native SrvSt37/SrvDo013 Fury discriminator. */
+  public static boolean isFury(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 37 && skill.srvdofunc == 13
+        && "wolf".equalsIgnoreCase(skill.state1);
+  }
+
+  /** Native calc1: min(Param5 + level - 1, Param6), yielding 2..5 strikes. */
+  public static int getFuryHitCount(Skills.Entry skill, int skillLevel) {
+    if (!isFury(skill)) return 0;
+    return Math.max(0, Math.min(64,
+        SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel))));
+  }
+
+  /** Native calc2 (ln34) enhanced physical damage percentage. */
+  public static int getFuryDamagePercent(Skills.Entry skill, int skillLevel) {
+    return isFury(skill) ? SkillFormula.evaluate(
+        skill.calc2, skill, Math.max(1, skillLevel)) : 0;
+  }
+
+  /** Temporary attack-rate stat installed between native Fury strikes. */
+  public static int getFuryRepeatAttackRate(Skills.Entry skill) {
+    return isFury(skill) && skill.Param != null && skill.Param.length > 1
+        ? skill.Param[1] : 0;
+  }
+
   /**
    * 狂怒 - 狼人多目标攻击
    * 
@@ -737,8 +777,9 @@ public final class DruidSkills {
    * @return 伤害加成百分比
    */
   public static int calculateFuryDamageBonus(int skillLevel) {
-    // 每级 +7%
-    return 7 * skillLevel;
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.FURY) : null;
+    return getFuryDamagePercent(skill, skillLevel);
   }
 
   /**
@@ -747,8 +788,9 @@ public final class DruidSkills {
    * @return 攻击次数
    */
   public static int getFuryHitCount() {
-    // 固定 5 次
-    return 5;
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.FURY) : null;
+    return getFuryHitCount(skill, 20);
   }
 
   //==========================================================================

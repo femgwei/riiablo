@@ -39,6 +39,12 @@ public class Casting extends PooledComponent {
   public boolean frenzyInitialized;
   public int frenzyStrikeIndex;
   @EntityId public int frenzyOriginalTargetId;
+  /** Server-only SrvSt37/SrvDo013 Fury target chain. */
+  public boolean furyInitialized;
+  public boolean furyStrikeProcessed;
+  public int furyRemainingStrikes;
+  public int furyStrikeIndex;
+  @EntityId public int furyCurrentTargetId;
   /** Native Feral Rage/Maul SrvSt56 combat record consumed by SrvDo120. */
   public CombatSystem.CombatResult feralMaulCombat;
   @EntityId public int feralMaulTargetId;
@@ -76,6 +82,11 @@ public class Casting extends PooledComponent {
     frenzyInitialized = false;
     frenzyStrikeIndex = 0;
     frenzyOriginalTargetId = Engine.INVALID_ENTITY;
+    furyInitialized = false;
+    furyStrikeProcessed = false;
+    furyRemainingStrikes = 0;
+    furyStrikeIndex = 0;
+    furyCurrentTargetId = Engine.INVALID_ENTITY;
     feralMaulCombat = null;
     feralMaulTargetId = Engine.INVALID_ENTITY;
     feralMaulStunFrames = 0;
@@ -113,6 +124,11 @@ public class Casting extends PooledComponent {
     frenzyInitialized = false;
     frenzyStrikeIndex = 0;
     frenzyOriginalTargetId = Engine.INVALID_ENTITY;
+    furyInitialized = false;
+    furyStrikeProcessed = false;
+    furyRemainingStrikes = 0;
+    furyStrikeIndex = 0;
+    furyCurrentTargetId = Engine.INVALID_ENTITY;
     feralMaulCombat = null;
     feralMaulTargetId = Engine.INVALID_ENTITY;
     feralMaulStunFrames = 0;

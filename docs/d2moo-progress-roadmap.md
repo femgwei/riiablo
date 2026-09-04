@@ -58,7 +58,7 @@
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
-| 德鲁伊 Druid | 76% | 24% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave 已完成；Fury、召唤物和持续区域技能待补 |
+| 德鲁伊 Druid | 80% | 20% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 已完成；召唤物和持续区域技能待补 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
@@ -188,7 +188,9 @@
 - [x] ~~完成德鲁伊 Shock Wave 范围导弹与眩晕~~
   - 对齐 `SrvDo008` 的 `calc1=5` 五路投射物、一次施法共享命中集合、Skills.txt 物理伤害快照和 `SrvDmg07` 眩晕；眩晕优先读取 Missiles.txt `dParam1`，否则按 Skills.txt `Param1 + (level - 1) * Param2` 计算。
   - 保留原生熊形态限制、Boss/不可移动/Unique/雇佣兵眩晕资格与时长上限，并通过既有 `StateP` 同步 `STUNNED` 权威状态。
-- [ ] 完成德鲁伊 Fury 多目标连续攻击。
+- [x] ~~完成德鲁伊 Fury 多目标连续攻击~~
+  - 对齐 `SrvSt37/SrvDo013` 的 `calc1` 攻击次数（2–5 击）、`calc2=ln34` 技能增伤、`ToHit/LevToHit`、狼形态限制和每击武器耐久。
+  - 每击按原生 GUID 邻近规则在 `UNITS_GetMeleeRange + 4` 范围内重选目标；目标死亡、离开范围、形态丢失或无敌对目标时安全结束，重复动画由服务端序列控制并通过日志同步。
 - [ ] 完成德鲁伊 Raven、藤蔓、灵魂、狼群和灰熊召唤所有权及生命周期。
 - [ ] 完成德鲁伊 Firestorm、Fissure、Volcano、Armageddon、Hurricane 等元素区域技能。
 
@@ -252,12 +254,13 @@
 - 2026-09-04：完成德鲁伊 Rabies/Fire Claws；接入 `SrvSt57/58` 预计算战斗记录、`SrvDo121/002` 单次消费、Rabies 原生定点毒伤/目标状态/附着控制体/邻近传播，以及 Fire Claws 双形态、元素伤害和四技能硬点协同。德鲁伊专项更新为约 68%。
 - 2026-09-04：完成德鲁伊 Hunger `SrvDo122`；接入狼/熊形态校验、原生 `calc1/calc2/calc3` 伤害与双吸、命中/格挡/耐久/状态/死亡时序及调试日志。德鲁伊专项更新为约 72%。
 - 2026-09-04：完成德鲁伊 Shock Wave `SrvDo008/SrvDmg07`；接入五路导弹、共享命中去重、Skills.txt 物理伤害、40+15/级帧眩晕、原生目标资格与权威状态同步日志。专项及通用回归共 17 个用例通过；德鲁伊专项更新为约 76%。
+- 2026-09-04：完成德鲁伊 Fury `SrvSt37/SrvDo013`；接入原生 2–5 击公式、狼形态门槛、`ln34` 增伤、每击独立命中/耐久和 GUID 邻近目标链，修正多击动画音效重复播放；德鲁伊专项回归与既有变形回归通过，D2GS 编译通过，专项更新为约 80%。
 
 ## 当前下一项
 
-Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger 和 Shock Wave 已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害及多人权威眩晕状态已接通。
+Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave 和 Fury 已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕和多目标连续攻击已接通。
 
-下一项建议继续 **Fury 多目标连续攻击**：对齐 `SrvSt37/SrvDo013` 的攻击次数、邻近目标选择、逐击命中与耐久时序，并验证狼形态限制和多人攻击序列表现。
+下一项建议继续 **德鲁伊召唤物所有权与生命周期**：按 Raven/Vine/Spirit/Wolf/Bear 的 PetType、PetMax、召唤等级、主人归属、死亡/替换和多人同步逐项对齐。
 
 ## 记录规则
 

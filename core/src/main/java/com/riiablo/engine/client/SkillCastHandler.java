@@ -258,9 +258,10 @@ public class SkillCastHandler extends PassiveSystem {
         break;
 
       case 13: // Zeal / Fend / Fury - multi-hit sounds
-        for (int i = 0; i < 4; i++) {
-          Riiablo.audio.play("weapon_1hs_small_1", true);
-        }
+        // The server emits one authoritative SkillDo/keyframe for each
+        // repeated strike. Playing four impacts per event multiplied Fury's
+        // audio while its animation sequence was already repeating.
+        Riiablo.audio.play("weapon_1hs_small_1", true);
         break;
 
       case 14: // Lightning Strike - chain lightning visual

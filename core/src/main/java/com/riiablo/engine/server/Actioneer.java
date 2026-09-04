@@ -449,7 +449,9 @@ public class Actioneer extends PassiveSystem {
     // requires one, so it must still execute on the animation keyframe.
     boolean frenzyRetarget = BarbarianSkills.isFrenzy(skill)
         && casting.frenzyInitialized && (casting.frenzyStrikeIndex & 1) != 0;
-    if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget) {
+    boolean furyRetarget = DruidSkills.isFury(skill)
+        && casting.furyInitialized && casting.furyRemainingStrikes > 0;
+    if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget) {
       srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
       if (mPlayer.has(event.entityId)) {
         com.badlogic.gdx.Gdx.app.log("Actioneer", String.format(
@@ -515,6 +517,14 @@ public class Actioneer extends PassiveSystem {
         && !targetDead) {
       log.info("[ASSASSIN_DRAGON_FLIGHT] phase=continue entity={} target={} next=kick",
           event.entityId, completedTargetId);
+      return;
+    }
+    if (casting.furyInitialized
+        && casting.furyRemainingStrikes > 0
+        && casting.furyStrikeProcessed) {
+      log.info("[DRUID_FURY] phase=continue source={} nextTarget={} remaining={} nextStrike={}",
+          event.entityId, casting.furyCurrentTargetId,
+          casting.furyRemainingStrikes, casting.furyStrikeIndex + 1);
       return;
     }
     if (mWhirlwindRuntime.has(event.entityId)) {
@@ -814,6 +824,40 @@ public class Actioneer extends PassiveSystem {
       case 37: { // Zeal/Fury/BloodLordFrenzy shared start function
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (DruidSkills.isFury(skill)) {
+          UnitStates unitStates = mUnitStates.get(entityId);
+          StateList states = unitStates != null ? unitStates.stateList : null;
+          int resolvedTarget = targetId != Engine.INVALID_ENTITY
+              && isAlive(targetId) && isValidFrenzyTarget(entityId, targetId)
+              ? targetId : findNextFrenzyTarget(entityId, Engine.INVALID_ENTITY);
+          int level = Math.max(1, skillLevel(entityId, casting.skillId));
+          int strikes = DruidSkills.getFuryHitCount(skill, level);
+          if (!DruidSkills.isSkillAllowedInCurrentShape(skill, states)
+              || resolvedTarget == Engine.INVALID_ENTITY || strikes <= 0) {
+            log.info("[DRUID_FURY] phase=start_reject source={} skill={} target={} "
+                    + "wolf={} strikes={} reason=shape_target_or_formula",
+                entityId, casting.skillId, resolvedTarget,
+                states != null && states.hasState(StateId.WOLF), strikes);
+            mCasting.remove(entityId);
+            if (mSequence.has(entityId)) mSequence.remove(entityId);
+            break;
+          }
+          casting.furyInitialized = true;
+          casting.furyStrikeProcessed = false;
+          casting.furyRemainingStrikes = strikes;
+          casting.furyStrikeIndex = 0;
+          casting.furyCurrentTargetId = resolvedTarget;
+          casting.targetId = resolvedTarget;
+          if (mPosition.has(resolvedTarget)) {
+            casting.targetVec.set(mPosition.get(resolvedTarget).position);
+          }
+          log.info("[DRUID_FURY] phase=start source={} skill={} level={} target={} "
+                  + "strikes={} damagePercent={} attackRate={}",
+              entityId, casting.skillId, level, resolvedTarget, strikes,
+              DruidSkills.getFuryDamagePercent(skill, level),
+              DruidSkills.getFuryRepeatAttackRate(skill));
+          break;
+        }
         if (skill == null || skill.srvdofunc != 109) break;
         int resolvedTarget = targetId != Engine.INVALID_ENTITY
             ? targetId : findNextFrenzyTarget(entityId, Engine.INVALID_ENTITY);
@@ -872,6 +916,14 @@ public class Actioneer extends PassiveSystem {
       }
       case 122: { // SKILLS_SrvDo122_Hunger
         resolveHunger(entityId, targetId);
+        break;
+      }
+      case 13: { // SKILLS_SrvDo013_Fend_Zeal_Fury
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (DruidSkills.isFury(skill)) resolveFury(entityId);
+        else log.warn("Unsupported shared srvdofunc(13) for {} skill={}",
+            entityId, skill != null ? skill.skill : "none");
         break;
       }
       case 1: // attack
@@ -1776,6 +1828,103 @@ public class Actioneer extends PassiveSystem {
     casting.fireClawsTargetId = Engine.INVALID_ENTITY;
     casting.fireClawsPrepared = false;
     resolveDruidElementalMeleeDamage(entityId, targetId, combat, "FIRE_CLAWS");
+  }
+
+  /**
+   * Native SrvDo013 Fury: resolve one combat record, decrement Param1, then
+   * select the next GUID in melee+4 range. The animation sequence repeats
+   * while Param1 remains positive and a valid hostile target exists.
+   */
+  private void resolveFury(int entityId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || !casting.furyInitialized || !DruidSkills.isFury(skill)
+        || casting.furyRemainingStrikes <= 0 || !mAttributesWrapper.has(entityId)
+        || !mUnitStates.has(entityId) || !isAlive(entityId)) {
+      log.info("[DRUID_FURY] phase=strike_reject source={} reason=invalid_context", entityId);
+      return;
+    }
+    UnitStates unitStates = mUnitStates.get(entityId);
+    if (unitStates.stateList == null) unitStates.init(entityId);
+    if (!DruidSkills.isSkillAllowedInCurrentShape(skill, unitStates.stateList)) {
+      casting.furyRemainingStrikes = 0;
+      log.info("[DRUID_FURY] phase=strike_reject source={} reason=shape_lost", entityId);
+      return;
+    }
+
+    int current = casting.furyCurrentTargetId;
+    if (current == Engine.INVALID_ENTITY || !isAlive(current)
+        || !mAttributesWrapper.has(current) || !isValidFrenzyTarget(entityId, current)
+        || !isInMeleeRange(entityId, current, 0)) {
+      current = findNextFrenzyTarget(entityId, current);
+    }
+    if (current == Engine.INVALID_ENTITY || !mAttributesWrapper.has(current)) {
+      casting.furyRemainingStrikes = 0;
+      casting.furyStrikeProcessed = true;
+      casting.furyCurrentTargetId = Engine.INVALID_ENTITY;
+      log.info("[DRUID_FURY] phase=strike_reject source={} index={} reason=no_target",
+          entityId, casting.furyStrikeIndex + 1);
+      return;
+    }
+    if (mAngle.has(entityId) && mPosition.has(current)) {
+      mAngle.get(entityId).target.set(mPosition.get(current).position)
+          .sub(mPosition.get(entityId).position).nor();
+    }
+
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(current).attrs;
+    Item weapon = activeAttackWeapon(entityId);
+    int[] damage = DruidSkills.calculateFuryWeaponDamage(
+        skill, level, attacker, weapon, unitStates.stateList);
+    int attackRating = DruidSkills.getShapeAttackRating(
+        skill, level, attacker, isPlayerEntity(entityId));
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, isPlayerEntity(entityId), isPlayerEntity(current),
+        damage[0], damage[1], attackRating,
+        unitStates.stateList, stateList(current), isEntityMoving(current),
+        weaponMastery(entityId, weapon, false));
+
+    int strike = ++casting.furyStrikeIndex;
+    casting.furyRemainingStrikes--;
+    casting.furyStrikeProcessed = true;
+    if (weapon != null) drainFrenzyDurability(weapon, current);
+
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    float before = hp != null ? hp.asFixed() : 0f;
+    float applied = 0f;
+    if (combat.blocked) {
+      queueHitReaction(current, true);
+    } else if (combat.hit && hp != null && before > 0f) {
+      DamageEvent damageEvent = DamageEvent.obtain(
+          entityId, current, Math.max(0, combat.totalDamage));
+      events.dispatch(damageEvent);
+      applied = Math.max(0f, damageEvent.damage);
+      hp.sub(applied);
+      if (hp.asFixed() < 0f) hp.set(0f);
+      applyCombatStates(entityId, current, combat);
+      if (hp.asFixed() > 0f) queueHitReaction(current, false);
+      if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, current));
+    }
+
+    int next = Engine.INVALID_ENTITY;
+    if (casting.furyRemainingStrikes > 0) {
+      next = findNextFrenzyTarget(entityId, current);
+      if (next == Engine.INVALID_ENTITY) casting.furyRemainingStrikes = 0;
+    }
+    casting.furyCurrentTargetId = next;
+    if (next != Engine.INVALID_ENTITY) {
+      casting.targetId = next;
+      if (mPosition.has(next)) casting.targetVec.set(mPosition.get(next).position);
+    }
+    log.info("[DRUID_FURY] phase=strike source={} index={} target={} result={} "
+            + "damage={} hp={} -> {} damageRange={}..{} attackRating={} chance={} "
+            + "remaining={} nextTarget={} attackRate={}",
+        entityId, strike, current,
+        combat.blocked ? "blocked" : combat.hit ? "hit" : "miss",
+        applied, before, hp != null ? hp.asFixed() : before,
+        damage[0], damage[1], attackRating, combat.hitChance,
+        casting.furyRemainingStrikes, next, DruidSkills.getFuryRepeatAttackRate(skill));
   }
 
   /** Native SrvDo122: wolf/bear melee hit with post-hit life/mana steal. */
