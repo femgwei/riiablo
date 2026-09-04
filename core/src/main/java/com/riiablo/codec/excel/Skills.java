@@ -81,6 +81,15 @@ public class Skills extends Excel<Skills.Entry> {
     public int     Param[];
     @Column public boolean leftskill;
     @Column public boolean passive;
+    /** Native passive stat-list state and its five data-driven modifiers. */
+    @Column public String  passivestate;
+    @Column public String  passiveitype;
+    @Column(startIndex = 1, endIndex = 6)
+    public String  passivestat[];
+    @Column(startIndex = 1, endIndex = 6)
+    public String  passivecalc[];
+    @Column public String  passiveevent;
+    @Column public int     passiveeventfunc;
     @Column public boolean aura;
     @Column public boolean periodic;
     @Column public String  perdelay;

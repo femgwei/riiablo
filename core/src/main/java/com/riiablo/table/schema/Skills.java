@@ -78,6 +78,16 @@ public class Skills {
 
   public boolean leftskill;
   public boolean passive;
+  public String passivestate;
+  public String passiveitype;
+
+  @Format(startIndex = 1, endIndex = 6)
+  public String passivestat[];
+
+  @Format(startIndex = 1, endIndex = 6)
+  public String passivecalc[];
+  public String passiveevent;
+  public int passiveeventfunc;
   public boolean aura;
   public boolean periodic;
   public String perdelay;

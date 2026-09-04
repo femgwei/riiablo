@@ -2,6 +2,7 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
@@ -790,8 +791,7 @@ public final class BarbarianSkills {
    * @return 耐力加成百分比
    */
   public static int calculateIncreasedStaminaBonus(int skillLevel) {
-    // 基础 30%，每级 +15%
-    return 30 + (skillLevel - 1) * 15;
+    return passiveValue("Increased Stamina", skillLevel);
   }
 
   /**
@@ -801,8 +801,7 @@ public final class BarbarianSkills {
    * @return 防御加成百分比
    */
   public static int calculateIronSkinDefenseBonus(int skillLevel) {
-    // 基础 30%，每级 +10%
-    return 30 + (skillLevel - 1) * 10;
+    return passiveValue("Iron Skin", skillLevel);
   }
 
   /**
@@ -812,8 +811,7 @@ public final class BarbarianSkills {
    * @return 速度加成百分比
    */
   public static int calculateIncreasedSpeedBonus(int skillLevel) {
-    // 基础 13%，每级 +4%
-    return 13 + (skillLevel - 1) * 4;
+    return passiveValue("Increased Speed", skillLevel);
   }
 
   /**
@@ -823,7 +821,67 @@ public final class BarbarianSkills {
    * @return 所有抗性加成
    */
   public static int calculateNaturalResistanceBonus(int skillLevel) {
-    // 基础 12%，每级 +1%
-    return 12 + (skillLevel - 1);
+    return passiveValue("Natural Resistance", skillLevel);
+  }
+
+  private static int passiveValue(String skillName, int skillLevel) {
+    if (skillLevel <= 0 || Riiablo.files == null || Riiablo.files.skills == null) return 0;
+    Skills.Entry skill = Riiablo.files.skills.get(skillName);
+    if (skill == null || skill.passivecalc == null || skill.passivecalc.length == 0) return 0;
+    return SkillFormula.evaluate(skill.passivecalc[0], skill, skillLevel);
+  }
+
+  /** Maps the four Barbarian passive states present in the native States.txt order. */
+  public static int getPassiveStateId(Skills.Entry skill) {
+    if (skill == null || skill.passivestate == null) return StateId.NONE;
+    switch (skill.passivestate.trim().toLowerCase(Locale.ROOT)) {
+      case "increasedstamina": return StateId.INCREASEDSTAMINA;
+      case "ironskin": return StateId.IRONSKIN;
+      case "increasedspeed": return StateId.INCREASEDSPEED;
+      case "naturalresistance": return StateId.NATURALRESISTANCE;
+      default: return StateId.NONE;
+    }
+  }
+
+  /**
+   * D2Common {@code SKILLS_RefreshSkill} passive-stat bridge. Values are read
+   * from Skills.txt rather than the old linear approximation helpers above.
+   */
+  public static UnitState applyPassiveState(
+      StateList states, Skills.Entry skill, int skillLevel, int ownerId) {
+    int stateId = getPassiveStateId(skill);
+    if (states == null || skill == null || skillLevel <= 0 || stateId == StateId.NONE) return null;
+    UnitState state = states.addState(stateId, 0, skillLevel, ownerId);
+    if (state == null) return null;
+    state.duration = 0;
+    state.initialDuration = 0;
+    state.level = skillLevel;
+    state.sourceEntityId = ownerId;
+    state.skillId = skill.Id;
+    state.clearModifiers();
+    int count = Math.min(skill.passivestat != null ? skill.passivestat.length : 0,
+        skill.passivecalc != null ? skill.passivecalc.length : 0);
+    for (int i = 0; i < count; i++) {
+      String stat = skill.passivestat[i];
+      if (stat == null || stat.isEmpty()) continue;
+      int value = SkillFormula.evaluate(skill.passivecalc[i], skill, skillLevel);
+      switch (stat.trim().toLowerCase(Locale.ROOT)) {
+        case "skill_passive_staminapercent":
+        case "skill_staminapercent": state.maxStaminaModifier += value; break;
+        case "item_armor_percent":
+        case "skill_armor_percent": state.defenseModifier += value; break;
+        case "velocitypercent": state.velocityModifier += value; break;
+        case "fireresist": state.fireResistModifier += value; break;
+        case "coldresist": state.coldResistModifier += value; break;
+        case "lightresist": state.lightResistModifier += value; break;
+        case "poisonresist": state.poisonResistModifier += value; break;
+        case "magicresist": state.magicResistModifier += value; break;
+        default:
+          log.warn("[BARBARIAN_PASSIVE] unsupported stat skill={} stat={}", skill.skill, stat);
+          break;
+      }
+    }
+    state.needsSync = true;
+    return state;
   }
 }

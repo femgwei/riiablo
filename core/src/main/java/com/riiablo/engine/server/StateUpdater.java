@@ -10,6 +10,7 @@ import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
+import com.riiablo.CharacterClass;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.UnitStates;
@@ -36,6 +37,7 @@ import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.skill.AssassinSkills;
+import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -110,6 +112,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
     StateList stateList = unitStates.stateList;
 
+    synchronizeBarbarianPassives(entityId, stateList);
+
     processBladeShield(entityId, stateList);
     processSpiderLayTrail(entityId, stateList);
     
@@ -171,6 +175,44 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
           attrs.aggregate().getValue(Stat.maxhp, 0f),
           attrs.aggregate().getValue(Stat.maxmana, 0f),
           attrs.aggregate().getValue(Stat.maxstamina, 0f));
+    }
+  }
+
+  /** Keeps D2Common passive stat lists aligned with the authoritative skill table. */
+  private void synchronizeBarbarianPassives(int entityId, StateList states) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return;
+    if (mPlayer.get(entityId).data.classId != CharacterClass.BARBARIAN) return;
+    int skillBonus = states.getTotalSkillModifier();
+    int[] skillIds = {141, 145, 148, 153};
+    int[] stateIds = {StateId.INCREASEDSTAMINA, StateId.IRONSKIN,
+        StateId.INCREASEDSPEED, StateId.NATURALRESISTANCE};
+    for (int i = 0; i < skillIds.length; i++) {
+      Skills.Entry skill = Riiablo.files.skills.get(skillIds[i]);
+      int ownedLevel = skill != null
+          ? Math.max(0, mPlayer.get(entityId).data.getSkill(skillIds[i])) : 0;
+      // Native SKILLS_GetHighestLevelSkillFromSkillId first requires an
+      // owned skill instance. +allskills can raise that instance, but cannot
+      // create an unlearned passive by itself.
+      int level = ownedLevel > 0 ? ownedLevel + skillBonus : 0;
+      UnitState current = states.getState(stateIds[i]);
+      if (level <= 0 || skill == null || !skill.passive) {
+        if (current != null) {
+          states.removeState(stateIds[i]);
+          log.info("[BARBARIAN_PASSIVE] phase=remove entity={} skill={} state={}",
+              entityId, skillIds[i], StateId.getName(stateIds[i]));
+        }
+        continue;
+      }
+      if (current != null && current.level == level && !current.expired) continue;
+      UnitState applied = BarbarianSkills.applyPassiveState(states, skill, level, entityId);
+      if (applied != null) {
+        log.info("[BARBARIAN_PASSIVE] phase=refresh entity={} skill={} level={} state={} "
+                + "stamina={} defense={} velocity={} resists={}/{}/{}/{}",
+            entityId, skill.skill, level, StateId.getName(applied.stateId),
+            applied.maxStaminaModifier, applied.defenseModifier, applied.velocityModifier,
+            applied.fireResistModifier, applied.coldResistModifier,
+            applied.lightResistModifier, applied.poisonResistModifier);
+      }
     }
   }
 

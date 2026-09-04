@@ -57,7 +57,7 @@
 |---|---:|---:|---|
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
-| 野蛮人 Barbarian | 97% | 3% | 战吼、尸体工具链和多人掉落已接入；被动专精和少量受击表现仍待专项审计 |
+| 野蛮人 Barbarian | 99% | 1% | 战吼、尸体工具链和四项通用被动已接入；武器精通与少量受击表现仍待专项审计 |
 | 德鲁伊 Druid | 40% | 60% | 变形、召唤物、持续区域技能和协同公式 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
@@ -163,6 +163,9 @@
 - [x] ~~完成野蛮人 Find Potion / Find Item / Grim Ward 尸体工具链首项~~
   - `SrvDo069/072/075` 由服务端关键帧统一处理，死亡目标保留、尸体一次性占用及 `CORPSE_NOSELECT/NODRAW` 状态均与 D2MOO 对齐。
   - Find Potion 使用原生 15 格 Act/难度药水表和 `Param[2]/Param[3]` 分布；Find Item 重用尸体怪物的 TreasureClassEx 并同步额外物品/金币掉落；Grim Ward 按目标体型选择 `SrvMissileA/B/C` 并在尸体坐标生成导弹。
+- [x] ~~完成野蛮人 Increased Stamina / Iron Skin / Increased Speed / Natural Resistance 原生被动~~
+  - 补齐 Skills.txt 的 `passivestate/passivestat/passivecalc/passiveevent` 数据列，按 D2Common `SKILLS_RefreshSkill` 创建和刷新永久状态列表，不再使用线性近似公式。
+  - 最大耐力、防御、移动速度及火/冰/电/毒抗性进入现有权威聚合；支持技能降级、移除、Battle Command 加级但不凭空授予未学技能，并通过 `StateP` 同步状态身份及客户端移动表现。
 
 ### P2：世界交互和多人闭环
 
@@ -215,13 +218,15 @@
 - 2026-09-04：完成 Berserk `SrvSt039/SrvDo002`；接入带引号 `calc2`、Howl/Shout 协同、100% 物理转魔法、防御归零状态、单次命中和耐久结算。相关 11 组 64 个回归用例通过，D2GS 编译通过；野蛮人职业专项更新为约 85%。
 - 2026-09-04：完成 Howl / Taunt / Shout / Battle Cry 战吼第一阶段；对齐原生 `SrvDo022/SrvHit17`、`SrvDo071`、`SrvDo068/SrvHit18/21`、AuraTargetState 和 Skills.txt 公式，统一 `UNITS_CanSwitchAI` 的 WALK/SwitchAI/Boss/Unique/不可打断门槛，并由基类 AI 接管 TERROR/TAUNT 特殊行为。新增 5 个原生数据、状态、导弹和门槛专项用例通过，D2GS 编译通过；野蛮人职业专项更新为约 90%。
 - 2026-09-04：完成 Battle Orders / Battle Command / War Cry 战吼第二阶段；最大生命/法力/体力百分比聚合支持重算与到期恢复，War Cry 对齐 Skills.txt 伤害及 `SrvDmg07` 眩晕资格，`StateP` 补齐技能和最大资源修正快照。原生数据、导弹伤害、友方召唤、资源重算和多人序列化专项回归通过；野蛮人职业专项更新为约 95%。
+- 2026-09-04：完成 Increased Stamina / Iron Skin / Increased Speed / Natural Resistance；接入 Skills.txt 原生被动状态、属性和 `ln12/dm12` 递减公式，修复 Natural Resistance 线性近似及 Battle Command 激活未学被动问题。新增数据、ECS 生命周期、非复利、战斗与多人快照回归；野蛮人职业专项更新为约 99%。
 
 ## 当前下一项
 
-刺客专项已经完成；野蛮人 Frenzy、Whirlwind 与 Berserk 的服务端权威命中、状态和多人快照也已接通。
+刺客专项已经完成；野蛮人主动技能、战吼、尸体工具链及四项通用被动已经接通。
 
-野蛮人战吼链已完成。下一项建议进入 **野蛮人尸体工具链**：依次审计 Find Potion、
-Find Item、Grim Ward 的尸体资格、掉落调用、尸体占用状态和多人对象/状态同步。
+下一项建议进入 **野蛮人武器精通专项**：依次审计 Sword/Axe/Mace/Pole Arm/Throwing/Spear
+Mastery 的 `passiveitype` 武器类型门槛、伤害/命中/暴击原生公式、换装即时刷新及多人权威命中结果；
+完成后再统一验收野蛮人受击、闪避和技能 Overlay 表现。
 
 ## 记录规则
 
