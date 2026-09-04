@@ -25,7 +25,16 @@ public final class SkillFormula {
   public static int evaluate(String expression, Skills.Entry skill, int skillLevel,
       ToIntFunction<String> skillLevelResolver) {
     if (expression == null || expression.trim().isEmpty()) return 0;
-    Parser parser = new Parser(expression, skill, Math.max(1, skillLevel),
+    String normalized = expression.trim();
+    // Excel exports occasionally quote an entire formula (for example
+    // Berserk's calc2 duration). Native Skills.txt evaluates the contents,
+    // not the quote characters themselves.
+    if (normalized.length() >= 2
+        && ((normalized.charAt(0) == '"' && normalized.charAt(normalized.length() - 1) == '"')
+            || (normalized.charAt(0) == '\'' && normalized.charAt(normalized.length() - 1) == '\''))) {
+      normalized = normalized.substring(1, normalized.length() - 1).trim();
+    }
+    Parser parser = new Parser(normalized, skill, Math.max(1, skillLevel),
         skillLevelResolver == null ? name -> 0 : skillLevelResolver);
     return parser.parse();
   }

@@ -550,6 +550,7 @@ public class Actioneer extends PassiveSystem {
         UnitStates states = mUnitStates.get(event.victim);
         if (states != null && states.stateList != null) {
           states.stateList.removeState(StateId.WHIRLWIND);
+          states.stateList.removeState(StateId.BERSERK);
         }
       }
       log.info("[PLAYER_DEATH] action state cleared entity={} killer={}", event.victim, event.killer);
@@ -819,6 +820,10 @@ public class Actioneer extends PassiveSystem {
         startWhirlwind(entityId, targetId, targetVec);
         break;
       }
+      case 39: { // SKILLS_SrvSt39_Berserk
+        startBerserk(entityId, targetId);
+        break;
+      }
       case 40: // native Leap validates and reserves its landing point on skill start
         log.info("[MONSTER_LEAP] phase=start_check entity={} target={} requested=({}, {})",
             entityId, targetId,
@@ -848,6 +853,7 @@ public class Actioneer extends PassiveSystem {
       case 46: // Dragon Claw finisher
       case 50: // Dragon Tail finisher
       case 52: // Dragon Flight finisher hit
+      case 2: // Berserk and other native SrvDo002 melee skills
       case 9: // player Frenzy
       case 109: { // monster Frenzy / BloodLordFrenzy
         if (srvdofunc == 7) {
@@ -869,6 +875,9 @@ public class Actioneer extends PassiveSystem {
         Item dragonClawWeapon = null;
         boolean dragonTail = srvdofunc == 50;
         boolean dragonFlight = srvdofunc == 52;
+        boolean berserk = activeSkill != null && activeSkill.srvstfunc == 39
+            && activeSkill.srvdofunc == 2;
+        Item berserkWeapon = null;
         CombatSystem.CombatResult dragonTailCombat = dragonTail && activeCasting != null
             && activeCasting.dragonTailPrepared
             && activeCasting.dragonTailTargetId == targetId
@@ -992,7 +1001,7 @@ public class Actioneer extends PassiveSystem {
 
         if (mCasting.has(entityId)
             && ((srvdofunc == 1 && mCasting.get(entityId).skillId == SkillCodes.attack)
-                || srvdofunc == 9 || srvdofunc == 11 || srvdofunc == 14
+                || srvdofunc == 2 || srvdofunc == 9 || srvdofunc == 11 || srvdofunc == 14
                 || srvdofunc == 34 || srvdofunc == 35
                 || AssassinSkills.isFinishingMove(srvdofunc)
                 || srvdofunc == 109)) {
@@ -1076,7 +1085,28 @@ public class Actioneer extends PassiveSystem {
         }
         Attributes attackerAttrs = mAttributesWrapper.get(entityId).attrs;
         CombatSystem.CombatResult combat;
-        if (frenzyAttack && srvdofunc == 9 && frenzyWeapon != null) {
+        if (berserk) {
+          berserkWeapon = whirlwindPrimaryWeapon(entityId);
+          int[] weaponDamage = BarbarianSkills.calculateBerserkWeaponDamage(
+              activeSkill, activeSkillLevel, attackerAttrs, berserkWeapon,
+              name -> baseSkillLevel(entityId, name));
+          int attackRating = BarbarianSkills.getFrenzyAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
+          int conversion = BarbarianSkills.getBerserkMagicConversion(
+              activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
+          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+              attackerAttrs, attrs, attackerPlayer, targetPlayer,
+              weaponDamage[0], weaponDamage[1], attackRating,
+              conversion, CombatSystem.DAMAGE_MAGIC,
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+          log.info("[BERSERK] phase=roll source={} target={} skill={} weapon={} "
+                  + "damageRange={}..{} enhancedPercent={} conversion={} chance={}",
+              entityId, targetId, activeCasting != null ? activeCasting.skillId : -1,
+              berserkWeapon != null ? berserkWeapon.code : "unarmed", weaponDamage[0], weaponDamage[1],
+              BarbarianSkills.calculateBerserkDamageBonus(
+                  activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name)),
+              conversion, combat.hitChance);
+        } else if (frenzyAttack && srvdofunc == 9 && frenzyWeapon != null) {
           int[] weaponDamage = BarbarianSkills.calculateFrenzyWeaponDamage(
               activeSkill, activeSkillLevel, attackerAttrs, frenzyWeapon,
               name -> baseSkillLevel(entityId, name));
@@ -1194,6 +1224,9 @@ public class Actioneer extends PassiveSystem {
         if (frenzyAttack) {
           mFrenzyRuntime.create(entityId).set(activeCasting.skillId, true);
           if (frenzyWeapon != null) drainFrenzyDurability(frenzyWeapon, targetId);
+        }
+        if (berserk && berserkWeapon != null) {
+          drainFrenzyDurability(berserkWeapon, targetId);
         }
 
         AssassinSkills.ProgressiveRelease progressiveRelease = null;
@@ -1692,6 +1725,56 @@ public class Actioneer extends PassiveSystem {
         entityId, casting.skillId, level, targetId,
         start.x, start.y, requested.x, requested.y, destination.x, destination.y,
         whirlwindAttackInterval(entityId));
+  }
+
+  private void startBerserk(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || skill == null || skill.srvdofunc != 2
+        || targetId == Engine.INVALID_ENTITY || !mPosition.has(entityId)
+        || !mPosition.has(targetId) || !isAlive(entityId) || !isAlive(targetId)) {
+      rejectBerserk(entityId, "invalid_target");
+      return;
+    }
+    if (!PvpCombatRules.canDamage(
+        partyManager, entityId, targetId,
+        mPlayer.has(entityId) || mMercenary.has(entityId) || mSummonedPet.has(entityId),
+        mPlayer.has(targetId) || mMercenary.has(targetId) || mSummonedPet.has(targetId))) {
+      rejectBerserk(entityId, "invalid_combat_relation");
+      return;
+    }
+    if (!isInMeleeRange(entityId, targetId, mPlayer.has(entityId) ? 3 : 0)) {
+      rejectBerserk(entityId, "target_out_of_melee_range");
+      return;
+    }
+    int level = Math.max(1, skillLevel(entityId, casting.skillId));
+    int duration = BarbarianSkills.getBerserkDuration(
+        skill, level, name -> baseSkillLevel(entityId, name));
+    if (mUnitStates.has(entityId)) {
+      UnitStates states = mUnitStates.get(entityId);
+      if (states.stateList == null) states.init(entityId);
+      UnitState state = states.stateList.addState(
+          StateId.BERSERK, duration, level, entityId);
+      if (state != null) {
+        state.skillId = casting.skillId;
+        // D2MOO's berserk stat list contributes -100% defense while active.
+        state.defenseModifier = -100;
+        state.needsSync = true;
+      }
+    }
+    log.info("[BERSERK] phase=start entity={} target={} level={} duration={} "
+            + "damagePercent={} conversion={}",
+        entityId, targetId, level, duration,
+        BarbarianSkills.calculateBerserkDamageBonus(
+            skill, level, name -> baseSkillLevel(entityId, name)),
+        BarbarianSkills.getBerserkMagicConversion(
+            skill, level, name -> baseSkillLevel(entityId, name)));
+  }
+
+  private void rejectBerserk(int entityId, String reason) {
+    if (mCasting.has(entityId)) mCasting.remove(entityId);
+    if (mSequence.has(entityId)) mSequence.remove(entityId);
+    log.info("[BERSERK] phase=start_reject entity={} reason={}", entityId, reason);
   }
 
   private void rejectWhirlwind(int entityId, String reason) {

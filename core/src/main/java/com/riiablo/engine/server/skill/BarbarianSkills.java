@@ -354,8 +354,58 @@ public final class BarbarianSkills {
    * @return 伤害加成百分比
    */
   public static int calculateBerserkDamageBonus(int skillLevel) {
-    // 基础 150%，每级 +15%
-    return 150 + (skillLevel - 1) * 15;
+    return 150 + (Math.max(1, skillLevel) - 1) * 15;
+  }
+
+  /** D2MOO SrvDo002 uses Berserk's calc1, including Howl/Shout hard points. */
+  public static int calculateBerserkDamageBonus(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    int value = SkillFormula.evaluate(skill != null ? skill.calc1 : null,
+        skill, Math.max(1, skillLevel), baseSkillLevel);
+    return value != 0 ? value : calculateBerserkDamageBonus(skillLevel);
+  }
+
+  /** D2MOO SrvSt39 calc2 duration for the berserk defense-zero state. */
+  public static int getBerserkDuration(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    int value = SkillFormula.evaluate(skill != null ? skill.calc2 : null,
+        skill, Math.max(1, skillLevel), baseSkillLevel);
+    return Math.max(1, value);
+  }
+
+  /** Berserk converts the complete physical packet to magic before resistances. */
+  public static int getBerserkMagicConversion(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (skill == null || skill.EType == null || !"mag".equalsIgnoreCase(skill.EType)) return 0;
+    int value = SkillFormula.evaluate(skill.calc4, skill, Math.max(1, skillLevel), baseSkillLevel);
+    return Math.max(0, Math.min(100, value));
+  }
+
+  /** D2MOO uses the normal weapon packet plus Berserk's calc1 enhancement. */
+  public static int[] calculateBerserkWeaponDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      ToIntFunction<String> baseSkillLevel) {
+    int min;
+    int max;
+    int attributePercent = 0;
+    if (weapon != null && weapon.base instanceof Weapons.Entry) {
+      Weapons.Entry base = (Weapons.Entry) weapon.base;
+      min = itemStatInt(weapon, Stat.mindamage, base.mindam);
+      max = itemStatInt(weapon, Stat.maxdamage, Math.max(min, base.maxdam));
+      attributePercent = base.StrBonus * statInt(attacker, Stat.strength) / 100
+          + base.DexBonus * statInt(attacker, Stat.dexterity) / 100;
+    } else {
+      min = statInt(attacker, Stat.mindamage);
+      max = Math.max(min, statInt(attacker, Stat.maxdamage));
+    }
+    int percent = calculateBerserkDamageBonus(skill, skillLevel, baseSkillLevel)
+        + attributePercent + statInt(attacker, Stat.damagepercent)
+        + statInt(attacker, Stat.item_maxdamage_percent);
+    int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
+    return new int[] {
+        scale(scale(min, percent), sourceDamage, 128),
+        scale(scale(max, percent), sourceDamage, 128)
+    };
   }
 
   /**
