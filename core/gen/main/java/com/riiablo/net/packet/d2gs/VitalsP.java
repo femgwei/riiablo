@@ -54,3 +54,4 @@ public final class VitalsP extends Table {
     public VitalsP get(VitalsP obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

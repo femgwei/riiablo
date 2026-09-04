@@ -38,3 +38,4 @@ public final class ObjectP extends Table {
     public ObjectP get(ObjectP obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

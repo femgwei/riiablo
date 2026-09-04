@@ -42,3 +42,4 @@ public final class CofReferenceP extends Table {
     public CofReferenceP get(CofReferenceP obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

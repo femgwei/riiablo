@@ -100,3 +100,4 @@ public final class PartyMemberSnapshot extends Table {
     public PartyMemberSnapshot get(PartyMemberSnapshot obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

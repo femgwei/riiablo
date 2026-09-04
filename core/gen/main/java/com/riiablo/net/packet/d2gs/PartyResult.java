@@ -78,3 +78,4 @@ public final class PartyResult extends Table {
     public PartyResult get(PartyResult obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

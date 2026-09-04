@@ -50,3 +50,4 @@ public final class CastSkillRequest extends Table {
     public CastSkillRequest get(CastSkillRequest obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

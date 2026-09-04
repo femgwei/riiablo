@@ -46,3 +46,4 @@ public final class MissileP extends Table {
     public MissileP get(MissileP obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

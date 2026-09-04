@@ -17,3 +17,4 @@ public final class PartyOperation {
 
   public static String name(int e) { return names[e]; }
 }
+

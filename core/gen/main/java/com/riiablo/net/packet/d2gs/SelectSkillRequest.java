@@ -46,3 +46,4 @@ public final class SelectSkillRequest extends Table {
     public SelectSkillRequest get(SelectSkillRequest obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+

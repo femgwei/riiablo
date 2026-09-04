@@ -46,3 +46,4 @@ public final class PartyRequest extends Table {
     public PartyRequest get(PartyRequest obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+
