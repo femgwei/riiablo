@@ -2,8 +2,19 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
+import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.Weapons;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import java.util.Locale;
+import java.util.function.ToIntFunction;
 
 /**
  * 野蛮人技能实现 - 基于 D2MOD SkillBar.cpp 移植
@@ -129,29 +140,146 @@ public final class BarbarianSkills {
    * @return 伤害加成百分比
    */
   public static int calculateFrenzyDamageBonus(int skillLevel) {
-    // 每级 +5%
-    return 5 * skillLevel;
+    return 90 + (Math.max(1, skillLevel) - 1) * 5;
   }
 
-  /**
-   * 狂乱速度加成
-   * 
-   * @param skillLevel 技能等级
-   * @return 攻击/移动速度加成百分比（每次攻击叠加）
-   */
-  public static int getFrenzySpeedBonusPerHit(int skillLevel) {
-    // 每次攻击 +7% 速度
-    return 7;
+  /** D2MOO {@code damage.dwEnDmgPct = calc1}, including hard-point synergies. */
+  public static int calculateFrenzyDamageBonus(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    int value = SkillFormula.evaluate(skill != null ? skill.calc1 : null,
+        skill, Math.max(1, skillLevel), baseSkillLevel);
+    return value != 0 ? value : calculateFrenzyDamageBonus(skillLevel);
   }
 
-  /**
-   * 获取狂乱最大叠加数
-   * 
-   * @return 最大叠加数
-   */
+  /** Native Frenzy caps {@code STAT_SKILL_FRENZY} at the current skill level. */
+  public static int getFrenzyMaxStacks(int skillLevel) {
+    return Math.max(1, skillLevel);
+  }
+
+  /** Retained for callers compiled against the earlier helper. */
+  @Deprecated
   public static int getFrenzyMaxStacks() {
-    // 最多叠加 8 次
-    return 8;
+    return getFrenzyMaxStacks(1);
+  }
+
+  public static int getFrenzyDuration(Skills.Entry skill, int skillLevel) {
+    int duration = SkillFormula.evaluate(
+        skill != null ? skill.auralencalc : null, skill, Math.max(1, skillLevel));
+    return Math.max(1, duration);
+  }
+
+  /** Evaluates one AuraStat formula with the native Frenzy stack as formula level. */
+  public static int getFrenzyAuraStat(
+      Skills.Entry skill, int stacks, String statName) {
+    if (skill == null || skill.aurastat == null || skill.aurastatcalc == null
+        || statName == null) return 0;
+    int count = Math.min(skill.aurastat.length, skill.aurastatcalc.length);
+    for (int i = 0; i < count; i++) {
+      if (statName.equalsIgnoreCase(skill.aurastat[i])) {
+        return SkillFormula.evaluate(skill.aurastatcalc[i], skill, Math.max(1, stacks));
+      }
+    }
+    return 0;
+  }
+
+  public static int getFrenzyMovementPercent(Skills.Entry skill, int stacks) {
+    return Math.max(0, getFrenzyAuraStat(skill, stacks, "velocitypercent"));
+  }
+
+  public static int getFrenzyAnimationRatePercent(Skills.Entry skill, int stacks) {
+    int attackRate = getFrenzyAuraStat(skill, stacks, "attackrate");
+    int otherRate = getFrenzyAuraStat(skill, stacks, "other_animrate");
+    // sub_6FCFE0E0 mirrors attackrate into other_animrate automatically.
+    return Math.max(0, Math.max(attackRate, otherRate));
+  }
+
+  /**
+   * D2MOO SKILLS_ApplyFrenzyStats. The caller invokes this only when the
+   * used skill's Param1 says that the previous strike connected.
+   */
+  public static UnitState applyFrenzyState(
+      StateList states, Skills.Entry skill, int skillLevel, int sourceEntityId) {
+    if (states == null || skill == null || !isFrenzy(skill)) return null;
+    int stateId = "frenzy".equalsIgnoreCase(skill.aurastate)
+        ? StateId.FRENZY : StateId.MONFRENZY;
+    UnitState existing = states.getState(stateId);
+    int oldStacks = existing != null ? Math.max(0, existing.runtimeValue) : 0;
+    int stacks = Math.min(getFrenzyMaxStacks(skillLevel), oldStacks + 1);
+    UnitState state = states.addState(
+        stateId, getFrenzyDuration(skill, skillLevel), Math.max(1, skillLevel), sourceEntityId);
+    if (state == null) return null;
+    state.skillId = skill.Id;
+    state.runtimeValue = stacks;
+    state.velocityModifier = getFrenzyMovementPercent(skill, stacks);
+    state.animationRateModifier = getFrenzyAnimationRatePercent(skill, stacks);
+    state.needsSync = true;
+    return state;
+  }
+
+  public static boolean isFrenzy(Skills.Entry skill) {
+    return skill != null && skill.skill != null
+        && skill.skill.toLowerCase(Locale.ROOT).contains("frenzy");
+  }
+
+  /** Native player/monster interpretation of SKILLS_GetToHitFactor. */
+  public static int getFrenzyAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker, boolean player) {
+    int base = statInt(attacker, Stat.tohit);
+    int level = Math.max(1, skillLevel);
+    int factor = skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
+    if (player) return Math.max(1, base * Math.max(0, 100 + factor) / 100);
+    return Math.max(1, base + factor);
+  }
+
+  /** Fully scaled physical range for one hand of SKILLS_RollFrenzyDamage. */
+  public static int[] calculateFrenzyWeaponDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      ToIntFunction<String> baseSkillLevel) {
+    if (weapon == null || !(weapon.base instanceof Weapons.Entry)) return null;
+    Weapons.Entry base = (Weapons.Entry) weapon.base;
+    int min = itemStatInt(weapon, Stat.mindamage, base.mindam);
+    int max = itemStatInt(weapon, Stat.maxdamage, Math.max(min, base.maxdam));
+    int percent = calculateFrenzyDamageBonus(skill, skillLevel, baseSkillLevel)
+        + base.StrBonus * statInt(attacker, Stat.strength) / 100
+        + base.DexBonus * statInt(attacker, Stat.dexterity) / 100
+        + statInt(attacker, Stat.damagepercent)
+        + statInt(attacker, Stat.item_maxdamage_percent);
+    int sourceDamage = skill == null || skill.SrcDam == 0 ? 128 : skill.SrcDam;
+    return new int[] {
+        scale(scale(min, percent), sourceDamage, 128),
+        scale(scale(Math.max(min, max), percent), sourceDamage, 128)
+    };
+  }
+
+  public static int getFrenzyMagicConversion(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (skill == null || skill.EType == null || !"mag".equalsIgnoreCase(skill.EType)) return 0;
+    return Math.max(0, Math.min(100, SkillFormula.evaluate(
+        skill.calc4, skill, Math.max(1, skillLevel), baseSkillLevel)));
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    if (attrs == null) return 0;
+    StatRef ref = attrs.get(stat, StatRef.obtain());
+    return ref == null ? 0 : ref.asInt();
+  }
+
+  private static int itemStatInt(Item item, short stat, int fallback) {
+    if (item == null || item.attrs == null) return fallback;
+    StatRef ref = item.attrs.get(stat, StatRef.obtain());
+    if (ref == null) ref = item.attrs.base().get(stat, StatRef.obtain());
+    return ref == null ? fallback : ref.asInt();
+  }
+
+  private static int scale(int value, int percent, int divisor) {
+    if (value <= 0 || percent <= 0 || divisor <= 0) return 0;
+    long result = (long) value * percent / divisor;
+    return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
+  }
+
+  private static int scale(int value, int enhancedPercent) {
+    long result = (long) value * Math.max(0, 100 + enhancedPercent) / 100L;
+    return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
   }
 
   /**

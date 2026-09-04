@@ -140,6 +140,10 @@ public class CombatSystem {
     /** 增强伤害百分比 */
     public int enhancedDamagePercent;
 
+    /** Skill-owned physical conversion applied before target resistances. */
+    public int physicalConversionPercent;
+    public int physicalConversionType = DAMAGE_PHYSICAL;
+
     /** 各元素伤害（火/电/冰/毒/魔法） */
     public int[] elementalMinDamage = new int[DAMAGE_TYPE_COUNT];
     public int[] elementalMaxDamage = new int[DAMAGE_TYPE_COUNT];
@@ -437,7 +441,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, defenderMoving, false);
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL);
   }
 
   /**
@@ -450,9 +454,22 @@ public class CombatSystem {
       int attackMinDamage, int attackMaxDamage, int attackRating,
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving) {
+    return calculatePrecomputedMeleeAttack(attacker, defender, attackerPlayer, defenderPlayer,
+        attackMinDamage, attackMaxDamage, attackRating, 0, DAMAGE_PHYSICAL,
+        attackerStates, defenderStates, defenderMoving);
+  }
+
+  public CombatResult calculatePrecomputedMeleeAttack(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer,
+      int attackMinDamage, int attackMaxDamage, int attackRating,
+      int physicalConversionPercent, int physicalConversionType,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving) {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         attackMinDamage, attackMaxDamage, attackRating, false,
-        null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true);
+        null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true,
+        physicalConversionPercent, physicalConversionType);
   }
 
   /**
@@ -509,7 +526,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, alwaysHit,
         elementalMin, elementalMax, coldLength, poisonLength,
-        attackerStates, defenderStates, defenderMoving, true);
+        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL);
   }
 
   private CombatResult calculateAttackInternal(
@@ -520,7 +537,8 @@ public class CombatSystem {
       int[] elementalMinOverride, int[] elementalMaxOverride,
       int coldLengthOverride, int poisonLengthOverride,
       StateList attackerStates, StateList defenderStates,
-      boolean defenderMoving, boolean precomputedPhysicalDamage) {
+      boolean defenderMoving, boolean precomputedPhysicalDamage,
+      int physicalConversionPercent, int physicalConversionType) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -560,6 +578,8 @@ public class CombatSystem {
       }
     }
     a.enhancedDamagePercent = statInt(attacker, Stat.damagepercent, 0);
+    a.physicalConversionPercent = Math.max(0, Math.min(100, physicalConversionPercent));
+    a.physicalConversionType = physicalConversionType;
     if (attackerStates != null) {
       a.enhancedDamagePercent += attackerStates.getTotalDamageModifier();
       a.attackRatingPercent += attackerStates.getTotalAttackModifier();
@@ -739,7 +759,15 @@ public class CombatSystem {
       baseDamage += crushDamage;
     }
 
-    // 6. 应用伤害减免
+    // 6. Skill conversion occurs before either resistance branch. Frenzy's
+    // calc4 converts physical damage to magic without losing item elements.
+    int convertedDamage = 0;
+    if (attacker.physicalConversionPercent > 0
+        && attacker.physicalConversionType > DAMAGE_PHYSICAL
+        && attacker.physicalConversionType < DAMAGE_TYPE_COUNT) {
+      convertedDamage = baseDamage * attacker.physicalConversionPercent / 100;
+      baseDamage -= convertedDamage;
+    }
     result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender);
 
     // 7. 计算元素伤害
@@ -747,6 +775,7 @@ public class CombatSystem {
     result.poisonDuration = Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);
+      if (i == attacker.physicalConversionType) elemDamage += convertedDamage;
       if (elemDamage > 0) {
         result.elementalDamage[i] = applyElementalResistance(elemDamage, defender, i);
       }

@@ -10,6 +10,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.logger.LogManager;
@@ -22,6 +23,7 @@ public class AnimStepper extends IntervalIteratingSystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   protected EventSystem events;
 
@@ -35,6 +37,11 @@ public class AnimStepper extends IntervalIteratingSystem {
     if (animData.numFrames <= 0) return;
 
     int delta = animData.override >= 0 ? animData.override : animData.speed;
+    UnitStates states = mUnitStates.get(entityId);
+    if (states != null && states.stateList != null) {
+      delta = scaleStateAnimationSpeed(
+          delta, states.stateList.getTotalAnimationRateModifier());
+    }
     if (delta < 0) delta = 0;
     int nextFrame = animData.frame + delta;
     if (delta == 0) {
@@ -58,6 +65,12 @@ public class AnimStepper extends IntervalIteratingSystem {
       return;
     }
     dispatchKeyframes(entityId, animData, false);
+  }
+
+  static int scaleStateAnimationSpeed(int baseSpeed, int modifierPercent) {
+    if (baseSpeed <= 0) return 0;
+    int percent = Math.max(10, Math.min(300, 100 + modifierPercent));
+    return Math.max(1, (int) ((long) baseSpeed * percent / 100L));
   }
 
   private void dispatchKeyframes(int entityId, AnimData animData, boolean beforeWrap) {

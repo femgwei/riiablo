@@ -760,6 +760,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
       if (state != null) {
         state.velocityModifier = i < data.velocityModifierLength()
             ? data.velocityModifier(i) : 0;
+        state.runtimeValue = i < data.runtimeValueLength() ? data.runtimeValue(i) : 0;
+        state.animationRateModifier = i < data.animationRateModifierLength()
+            ? data.animationRateModifier(i) : 0;
       }
     }
     unitStates.snapshotOnly = true;

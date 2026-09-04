@@ -157,15 +157,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // 计算减速效果
     int slowPercent = 0;
 
-    // Frenzy is an additive movement/attack speed state in the native game.
-    // Keep it on the authoritative velocity component so both simulation and
-    // serialized snapshots observe the same multiplier.
+    // Frenzy velocitypercent has already been evaluated from AuraStatCalc at
+    // its native runtime stack. It is not a fixed percentage per hit.
     int frenzyPercent = 0;
     UnitState frenzy = stateList.getState(StateId.FRENZY);
     if (frenzy == null) frenzy = stateList.getState(StateId.MONFRENZY);
     if (frenzy != null) {
-      int stacks = frenzy.velocityModifier > 0 ? frenzy.velocityModifier : 1;
-      frenzyPercent = Math.min(100, Math.max(0, stacks * 7));
+      frenzyPercent = Math.min(200, Math.max(0, frenzy.velocityModifier));
     }
     
     // 寒冷减速

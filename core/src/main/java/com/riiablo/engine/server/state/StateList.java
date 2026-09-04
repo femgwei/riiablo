@@ -374,9 +374,8 @@ public class StateList {
   public int getTotalVelocityModifier() {
     int total = 0;
     for (UnitState state : states) {
-      // Frenzy stores its stack count in velocityModifier for network
-      // compatibility; it is converted to a speed percentage by StateUpdater
-      // and must not be summed as an aura percentage here.
+      // Frenzy is applied explicitly by StateUpdater so it can be composed
+      // with slows before ordinary aura velocity modifiers.
       if (state.stateId == StateId.FRENZY || state.stateId == StateId.MONFRENZY
           || (state.stateId >= StateId.PROGRESSIVE_DAMAGE
               && state.stateId <= StateId.PROGRESSIVE_LIGHTNING)) {
@@ -430,6 +429,12 @@ public class StateList {
       total += state.attackModifier;
     }
     return total;
+  }
+
+  public int getTotalAnimationRateModifier() {
+    int total = 0;
+    for (UnitState state : states) total += state.animationRateModifier;
+    return Math.max(-90, Math.min(200, total));
   }
 
   public int getTotalSkillModifier() {

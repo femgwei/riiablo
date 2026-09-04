@@ -58,6 +58,12 @@ public class UnitState {
   
   /** 移动速度修正（百分比） */
   public int velocityModifier;
+
+  /** Generic state runtime scalar, e.g. native STAT_SKILL_FRENZY stacks. */
+  public int runtimeValue;
+
+  /** Native attackrate/other_animrate percentage used by animation stepping. */
+  public int animationRateModifier;
   
   /** 火焰抗性修正 */
   public int fireResistModifier;
@@ -191,6 +197,8 @@ public class UnitState {
     defenseModifier = 0;
     attackModifier = 0;
     velocityModifier = 0;
+    runtimeValue = 0;
+    animationRateModifier = 0;
     fireResistModifier = 0;
     coldResistModifier = 0;
     lightResistModifier = 0;
@@ -345,6 +353,8 @@ public class UnitState {
     this.defenseModifier = other.defenseModifier;
     this.attackModifier = other.attackModifier;
     this.velocityModifier = other.velocityModifier;
+    this.runtimeValue = other.runtimeValue;
+    this.animationRateModifier = other.animationRateModifier;
     this.fireResistModifier = other.fireResistModifier;
     this.coldResistModifier = other.coldResistModifier;
     this.lightResistModifier = other.lightResistModifier;

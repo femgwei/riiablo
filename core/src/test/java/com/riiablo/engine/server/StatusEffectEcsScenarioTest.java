@@ -184,6 +184,8 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
     UnitState chargeSource = source.stateList.addState(
         StateId.PROGRESSIVE_FIRE, 80, 4, 42);
     chargeSource.velocityModifier = 3;
+    chargeSource.runtimeValue = 3;
+    chargeSource.animationRateModifier = 17;
     StateSerializer serializer = new StateSerializer();
     FlatBufferBuilder builder = new FlatBufferBuilder(256);
     int stateOffset = serializer.putData(builder, source);
@@ -207,6 +209,9 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
     assertEquals(3, client.stateList.getStateLevel(StateId.COLD));
     assertEquals(-35, client.stateList.getState(StateId.COLD).velocityModifier);
     assertEquals(3, client.stateList.getState(StateId.PROGRESSIVE_FIRE).velocityModifier);
+    assertEquals(3, client.stateList.getState(StateId.PROGRESSIVE_FIRE).runtimeValue);
+    assertEquals(17,
+        client.stateList.getState(StateId.PROGRESSIVE_FIRE).animationRateModifier);
     assertEquals(-35, client.stateList.getTotalVelocityModifier(),
         "progressive charges must not be interpreted as movement speed");
     System.out.println("[STATE_SYNC_CHAIN] entity=42 states=3 poison=90/2 cold=20/3"

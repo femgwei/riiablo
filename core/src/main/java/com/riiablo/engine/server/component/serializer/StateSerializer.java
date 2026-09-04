@@ -20,7 +20,7 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
   @Override
   public int putData(FlatBufferBuilder builder, UnitStates component) {
     if (component.stateList == null || component.stateList.isEmpty()) {
-      return StateP.createStateP(builder, 0, 0, 0, 0);
+      return StateP.createStateP(builder, 0, 0, 0, 0, 0, 0);
     }
 
     int count = component.stateList.size();
@@ -28,6 +28,8 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
     int[] durations = new int[count];
     byte[] levels = new byte[count];
     short[] velocityModifiers = new short[count];
+    short[] runtimeValues = new short[count];
+    short[] animationRateModifiers = new short[count];
     for (int i = 0; i < count; i++) {
       UnitState state = component.stateList.getStates().get(i);
       stateIds[i] = (short) Math.max(0, Math.min(0xFFFF, state.stateId));
@@ -35,14 +37,21 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
       levels[i] = (byte) Math.max(0, Math.min(255, state.level));
       velocityModifiers[i] = (short) Math.max(Short.MIN_VALUE,
           Math.min(Short.MAX_VALUE, state.velocityModifier));
+      runtimeValues[i] = (short) Math.max(Short.MIN_VALUE,
+          Math.min(Short.MAX_VALUE, state.runtimeValue));
+      animationRateModifiers[i] = (short) Math.max(Short.MIN_VALUE,
+          Math.min(Short.MAX_VALUE, state.animationRateModifier));
     }
 
     int stateIdOffset = StateP.createStateIdVector(builder, stateIds);
     int durationOffset = StateP.createDurationVector(builder, durations);
     int levelOffset = StateP.createLevelVector(builder, levels);
     int velocityModifierOffset = StateP.createVelocityModifierVector(builder, velocityModifiers);
+    int runtimeValueOffset = StateP.createRuntimeValueVector(builder, runtimeValues);
+    int animationRateModifierOffset =
+        StateP.createAnimationRateModifierVector(builder, animationRateModifiers);
     return StateP.createStateP(builder, stateIdOffset, durationOffset, levelOffset,
-        velocityModifierOffset);
+        velocityModifierOffset, runtimeValueOffset, animationRateModifierOffset);
   }
 
   @Override
@@ -70,6 +79,9 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
       if (state != null) {
         state.velocityModifier = i < data.velocityModifierLength()
             ? data.velocityModifier(i) : 0;
+        state.runtimeValue = i < data.runtimeValueLength() ? data.runtimeValue(i) : 0;
+        state.animationRateModifier = i < data.animationRateModifierLength()
+            ? data.animationRateModifier(i) : 0;
       }
     }
     return component;

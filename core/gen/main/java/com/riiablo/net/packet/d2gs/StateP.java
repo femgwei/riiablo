@@ -39,13 +39,29 @@ public final class StateP extends Table {
   public ShortVector velocityModifierVector(ShortVector obj) { int o = __offset(10); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
   public ByteBuffer velocityModifierAsByteBuffer() { return __vector_as_bytebuffer(10, 2); }
   public ByteBuffer velocityModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 10, 2); }
+  public short runtimeValue(int j) { int o = __offset(12); return o != 0 ? bb.getShort(__vector(o) + j * 2) : 0; }
+  public int runtimeValueLength() { int o = __offset(12); return o != 0 ? __vector_len(o) : 0; }
+  public ShortVector runtimeValueVector() { return runtimeValueVector(new ShortVector()); }
+  public ShortVector runtimeValueVector(ShortVector obj) { int o = __offset(12); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer runtimeValueAsByteBuffer() { return __vector_as_bytebuffer(12, 2); }
+  public ByteBuffer runtimeValueInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 12, 2); }
+  public short animationRateModifier(int j) { int o = __offset(14); return o != 0 ? bb.getShort(__vector(o) + j * 2) : 0; }
+  public int animationRateModifierLength() { int o = __offset(14); return o != 0 ? __vector_len(o) : 0; }
+  public ShortVector animationRateModifierVector() { return animationRateModifierVector(new ShortVector()); }
+  public ShortVector animationRateModifierVector(ShortVector obj) { int o = __offset(14); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer animationRateModifierAsByteBuffer() { return __vector_as_bytebuffer(14, 2); }
+  public ByteBuffer animationRateModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 14, 2); }
 
   public static int createStateP(FlatBufferBuilder builder,
       int stateIdOffset,
       int durationOffset,
       int levelOffset,
-      int velocityModifierOffset) {
-    builder.startTable(4);
+      int velocityModifierOffset,
+      int runtimeValueOffset,
+      int animationRateModifierOffset) {
+    builder.startTable(6);
+    StateP.addAnimationRateModifier(builder, animationRateModifierOffset);
+    StateP.addRuntimeValue(builder, runtimeValueOffset);
     StateP.addVelocityModifier(builder, velocityModifierOffset);
     StateP.addLevel(builder, levelOffset);
     StateP.addDuration(builder, durationOffset);
@@ -53,7 +69,7 @@ public final class StateP extends Table {
     return StateP.endStateP(builder);
   }
 
-  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(4); }
+  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(6); }
   public static void addStateId(FlatBufferBuilder builder, int stateIdOffset) { builder.addOffset(0, stateIdOffset, 0); }
   public static int createStateIdVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startStateIdVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
@@ -67,6 +83,12 @@ public final class StateP extends Table {
   public static void addVelocityModifier(FlatBufferBuilder builder, int velocityModifierOffset) { builder.addOffset(3, velocityModifierOffset, 0); }
   public static int createVelocityModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startVelocityModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
+  public static void addRuntimeValue(FlatBufferBuilder builder, int runtimeValueOffset) { builder.addOffset(4, runtimeValueOffset, 0); }
+  public static int createRuntimeValueVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
+  public static void startRuntimeValueVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
+  public static void addAnimationRateModifier(FlatBufferBuilder builder, int animationRateModifierOffset) { builder.addOffset(5, animationRateModifierOffset, 0); }
+  public static int createAnimationRateModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
+  public static void startAnimationRateModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
   public static int endStateP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

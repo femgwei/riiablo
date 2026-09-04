@@ -20,6 +20,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Armor;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.Weapons;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
@@ -28,6 +29,7 @@ import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.AssassinSkills;
+import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
@@ -36,6 +38,7 @@ import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Casting;
+import com.riiablo.engine.server.component.FrenzyRuntime;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
@@ -78,6 +81,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<MovementModes> mMovementModes;
   protected ComponentMapper<Casting> mCasting;
+  protected ComponentMapper<FrenzyRuntime> mFrenzyRuntime;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Target> mTarget;
@@ -222,6 +226,12 @@ public class Actioneer extends PassiveSystem {
           return;
         }
       }
+    }
+
+    if (skill != null && skill.srvdofunc == 9 && !hasTwoFrenzyWeapons(entityId)) {
+      log.info("[FRENZY] phase=cast_reject entity={} skill={} reason=requires_two_melee_weapons",
+          entityId, skillId);
+      return;
     }
 
     // Keep one authoritative snapshot in the log before the animation starts.
@@ -433,7 +443,9 @@ public class Actioneer extends PassiveSystem {
     
     // Most skills skip dead targets. Native SrvDo097 Resurrect explicitly
     // requires one, so it must still execute on the animation keyframe.
-    if (!targetDead || allowsDeadTarget(skill)) {
+    boolean frenzyRetarget = BarbarianSkills.isFrenzy(skill)
+        && casting.frenzyInitialized && (casting.frenzyStrikeIndex & 1) != 0;
+    if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget) {
       srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
       if (mPlayer.has(event.entityId)) {
         com.badlogic.gdx.Gdx.app.log("Actioneer", String.format(
@@ -523,6 +535,7 @@ public class Actioneer extends PassiveSystem {
       if (mCasting.has(event.victim)) mCasting.remove(event.victim);
       if (mSequence.has(event.victim)) mSequence.remove(event.victim);
       if (mTarget.has(event.victim)) mTarget.remove(event.victim);
+      if (mFrenzyRuntime.has(event.victim)) mFrenzyRuntime.remove(event.victim);
       log.info("[PLAYER_DEATH] action state cleared entity={} killer={}", event.victim, event.killer);
     }
     if (mTarget.has(event.killer)) {
@@ -762,6 +775,27 @@ public class Actioneer extends PassiveSystem {
         }
         log.info("[MONSTER_CHARGE] phase=start entity={} target={}", entityId, targetId);
         break;
+      case 37: { // Zeal/Fury/BloodLordFrenzy shared start function
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (skill == null || skill.srvdofunc != 109) break;
+        int resolvedTarget = targetId != Engine.INVALID_ENTITY
+            ? targetId : findNextFrenzyTarget(entityId, Engine.INVALID_ENTITY);
+        if (resolvedTarget == Engine.INVALID_ENTITY) {
+          log.info("[FRENZY] phase=start_reject entity={} skill={} reason=no_target",
+              entityId, casting.skillId);
+          mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        casting.targetId = resolvedTarget;
+        if (mPosition.has(resolvedTarget)) {
+          casting.targetVec.set(mPosition.get(resolvedTarget).position);
+        }
+        log.info("[FRENZY] phase=bloodlord_start entity={} skill={} target={}",
+            entityId, casting.skillId, resolvedTarget);
+        break;
+      }
       case 40: // native Leap validates and reserves its landing point on skill start
         log.info("[MONSTER_LEAP] phase=start_check entity={} target={} requested=({}, {})",
             entityId, targetId,
@@ -802,6 +836,9 @@ public class Actioneer extends PassiveSystem {
             ? Riiablo.files.skills.get(activeCasting.skillId) : null;
         int activeSkillLevel = activeCasting != null
             ? Math.max(1, skillLevel(entityId, activeCasting.skillId)) : 1;
+        boolean frenzyAttack = srvdofunc == 9 || srvdofunc == 109;
+        int frenzyStrike = -1;
+        Item frenzyWeapon = null;
         boolean dragonTalon = srvdofunc == 42;
         boolean dragonTalonLastKick = false;
         boolean dragonClaw = srvdofunc == 46;
@@ -813,6 +850,54 @@ public class Actioneer extends PassiveSystem {
             && activeCasting.dragonTailPrepared
             && activeCasting.dragonTailTargetId == targetId
             ? activeCasting.dragonTailCombat : null;
+        if (frenzyAttack) {
+          if (activeCasting == null || activeSkill == null) break;
+          if (!activeCasting.frenzyInitialized) {
+            if (srvdofunc == 9 && !hasTwoFrenzyWeapons(entityId)) {
+              log.info("[FRENZY] phase=reject entity={} skill={} reason=requires_two_melee_weapons",
+                  entityId, activeCasting.skillId);
+              mCasting.remove(entityId);
+              if (mSequence.has(entityId)) mSequence.remove(entityId);
+              break;
+            }
+            activeCasting.frenzyInitialized = true;
+            activeCasting.frenzyStrikeIndex = 0;
+            activeCasting.frenzyOriginalTargetId = targetId;
+          }
+          FrenzyRuntime runtime = mFrenzyRuntime.create(entityId);
+          if (runtime.skillId != activeCasting.skillId) {
+            runtime.set(activeCasting.skillId, false);
+          }
+          if (runtime.previousStrikeHit && mUnitStates.has(entityId)) {
+            UnitStates states = mUnitStates.get(entityId);
+            if (states.stateList == null) states.init(entityId);
+            UnitState state = BarbarianSkills.applyFrenzyState(
+                states.stateList, activeSkill, activeSkillLevel, entityId);
+            log.info("[FRENZY] phase=apply_previous source={} skill={} state={} level={} "
+                    + "stacks={} velocityPercent={} animationRatePercent={} duration={}",
+                entityId, activeCasting.skillId,
+                state != null ? StateId.getName(state.stateId) : "none", activeSkillLevel,
+                state != null ? state.runtimeValue : 0,
+                state != null ? state.velocityModifier : 0,
+                state != null ? state.animationRateModifier : 0,
+                state != null ? state.duration : 0);
+          }
+          frenzyStrike = activeCasting.frenzyStrikeIndex++;
+          if ((frenzyStrike & 1) != 0) {
+            targetId = findNextFrenzyTarget(
+                entityId, activeCasting.frenzyOriginalTargetId);
+          } else {
+            targetId = activeCasting.frenzyOriginalTargetId;
+          }
+          frenzyWeapon = frenzyWeapon(entityId, frenzyStrike);
+          runtime.previousStrikeHit = false;
+          log.info("[FRENZY] phase=strike_start source={} skill={} index={} hand={} "
+                  + "originalTarget={} resolvedTarget={} weapon={}",
+              entityId, activeCasting.skillId, frenzyStrike + 1,
+              (frenzyStrike & 1) == 0 ? "right" : "left",
+              activeCasting.frenzyOriginalTargetId, targetId,
+              frenzyWeapon != null ? frenzyWeapon.code : "monster_profile");
+        }
         if (dragonFlight) {
           if (activeCasting == null || activeSkill == null
               || !activeCasting.dragonFlightInitialized) {
@@ -968,7 +1053,35 @@ public class Actioneer extends PassiveSystem {
         }
         Attributes attackerAttrs = mAttributesWrapper.get(entityId).attrs;
         CombatSystem.CombatResult combat;
-        if (dragonTail) {
+        if (frenzyAttack && srvdofunc == 9 && frenzyWeapon != null) {
+          int[] weaponDamage = BarbarianSkills.calculateFrenzyWeaponDamage(
+              activeSkill, activeSkillLevel, attackerAttrs, frenzyWeapon,
+              name -> baseSkillLevel(entityId, name));
+          int attackRating = BarbarianSkills.getFrenzyAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs, true);
+          int conversion = BarbarianSkills.getFrenzyMagicConversion(
+              activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name));
+          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+              attackerAttrs, attrs, attackerPlayer, targetPlayer,
+              weaponDamage[0], weaponDamage[1], attackRating,
+              conversion, CombatSystem.DAMAGE_MAGIC,
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+          log.info("[FRENZY] phase=roll source={} target={} index={} weapon={} "
+                  + "damageRange={}..{} enhancedPercent={} attackRating={} conversion={}",
+              entityId, targetId, frenzyStrike + 1, frenzyWeapon.code,
+              weaponDamage[0], weaponDamage[1],
+              BarbarianSkills.calculateFrenzyDamageBonus(
+                  activeSkill, activeSkillLevel, name -> baseSkillLevel(entityId, name)),
+              attackRating,
+              conversion);
+        } else if (frenzyAttack) {
+          int attackRating = BarbarianSkills.getFrenzyAttackRating(
+              activeSkill, activeSkillLevel, attackerAttrs, attackerPlayer);
+          combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+              attackerAttrs, attrs, attackerPlayer, targetPlayer,
+              monsterAttackMinDamage(entityId), monsterAttackMaxDamage(entityId), attackRating,
+              stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+        } else if (dragonTail) {
           if (activeCasting == null || activeSkill == null) break;
           if (dragonTailCombat == null) {
             int[] kickDamage = AssassinSkills.calculateDragonTailKickDamage(
@@ -1053,6 +1166,11 @@ public class Actioneer extends PassiveSystem {
         if (combat.blocked) {
           log.debug("{} melee attack blocked by {}", entityId, targetId);
           break;
+        }
+
+        if (frenzyAttack) {
+          mFrenzyRuntime.create(entityId).set(activeCasting.skillId, true);
+          if (frenzyWeapon != null) drainFrenzyDurability(frenzyWeapon, targetId);
         }
 
         AssassinSkills.ProgressiveRelease progressiveRelease = null;
@@ -1165,36 +1283,6 @@ public class Actioneer extends PassiveSystem {
               targetId, progressiveRelease.coldFreezeDuration, entityId);
           log.info("[ASSASSIN_BLADES] phase=primary_freeze source={} target={} duration={}",
               entityId, targetId, progressiveRelease.coldFreezeDuration);
-        }
-
-        // Native Frenzy applies a short-lived stacking state to the attacker
-        // at the successful hit frame.  Keep this server authoritative so the
-        // speed bonus cannot be faked by a client animation.
-        if (mCasting.has(entityId)) {
-          Casting casting = mCasting.get(entityId);
-          Skills.Entry attackSkill = Riiablo.files.skills.get(casting.skillId);
-          if (attackSkill != null && isFrenzySkill(attackSkill)
-              && mUnitStates.has(entityId)) {
-            UnitStates attackerStates = mUnitStates.get(entityId);
-            if (attackerStates.stateList == null) attackerStates.init(entityId);
-            int level = Math.max(1, skillLevel(entityId, casting.skillId));
-            int stateId = mMonster.has(entityId) ? StateId.MONFRENZY : StateId.FRENZY;
-            int duration = SkillFormula.evaluate(attackSkill.auralencalc,
-                attackSkill, level);
-            if (duration <= 0) duration = 100;
-            UnitState existingFrenzy = attackerStates.stateList.getState(stateId);
-            UnitState frenzy = attackerStates.stateList.addState(
-                stateId, duration, level, entityId);
-            if (frenzy != null) {
-              frenzy.skillId = casting.skillId;
-              frenzy.velocityModifier = Math.min(8,
-                  existingFrenzy != null ? existingFrenzy.velocityModifier + 1 : 1);
-              frenzy.needsSync = true;
-            }
-            log.info("[FRENZY] phase=apply source={} target={} state={} level={} stacks={} duration={}",
-                entityId, targetId, StateId.getName(stateId), level,
-                frenzy != null ? frenzy.velocityModifier : 0, duration);
-          }
         }
 
         if (hitpoints.asFixed() <= 0f) {
@@ -1485,6 +1573,16 @@ public class Actioneer extends PassiveSystem {
     return 1;
   }
 
+  /** Skills.txt .blvl references hard points and deliberately excludes +skills. */
+  private int baseSkillLevel(int entityId, String skillName) {
+    Skills.Entry skill = skillName == null ? null : Riiablo.files.skills.get(skillName);
+    if (skill == null) return 0;
+    if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      return Math.max(0, mPlayer.get(entityId).data.getSkill(skill.Id));
+    }
+    return Math.max(0, skillLevel(entityId, skill.Id));
+  }
+
   private static int curseStateId(String skillName) {
     if (skillName == null) return StateId.NONE;
     String name = skillName.toLowerCase(java.util.Locale.ROOT);
@@ -1498,11 +1596,6 @@ public class Actioneer extends PassiveSystem {
     if (name.contains("terror")) return StateId.TERROR;
     if (name.contains("attract")) return StateId.ATTRACT;
     return StateId.NONE;
-  }
-
-  private static boolean isFrenzySkill(Skills.Entry skill) {
-    return skill != null && skill.skill != null
-        && skill.skill.toLowerCase(java.util.Locale.ROOT).contains("frenzy");
   }
 
   private boolean isPlayerEntity(int entityId) {
@@ -1520,6 +1613,68 @@ public class Actioneer extends PassiveSystem {
     if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return null;
     Item item = mPlayer.get(entityId).data.getItems().getEquipped(bodyLoc);
     return item != null && item.type != null && item.type.is(Type.H2H) ? item : null;
+  }
+
+  private Item equippedFrenzyWeapon(int entityId, BodyLoc bodyLoc) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return null;
+    Item item = mPlayer.get(entityId).data.getItems().getEquipped(bodyLoc);
+    if (item == null || !(item.base instanceof Weapons.Entry) || item.type == null) return null;
+    return item.type.is(Type.BOW) || item.type.is(Type.XBOW) ? null : item;
+  }
+
+  private boolean hasTwoFrenzyWeapons(int entityId) {
+    return equippedFrenzyWeapon(entityId, BodyLoc.RARM) != null
+        && equippedFrenzyWeapon(entityId, BodyLoc.LARM) != null;
+  }
+
+  private Item frenzyWeapon(int entityId, int strikeIndex) {
+    if (!mPlayer.has(entityId)) return null;
+    return equippedFrenzyWeapon(entityId,
+        (strikeIndex & 1) == 0 ? BodyLoc.RARM : BodyLoc.LARM);
+  }
+
+  private void drainFrenzyDurability(Item weapon, int targetId) {
+    ItemDurabilityManager.INSTANCE.drainWeaponDurability(weapon, true);
+    if (mPlayer.has(targetId) && mPlayer.get(targetId).data != null) {
+      ItemDurabilityManager.INSTANCE.drainArmorDurability(
+          mPlayer.get(targetId).data.getItems());
+    }
+  }
+
+  /** D2MOO sub_6FD107F0: next GUID in melee+4 range, wrapping to the first. */
+  private int findNextFrenzyTarget(int sourceId, int previousTargetId) {
+    if (!mPosition.has(sourceId)) return Engine.INVALID_ENTITY;
+    Vector2 source = mPosition.get(sourceId).position;
+    float range = getMeleeRange(sourceId) + 4f;
+    float range2 = range * range;
+    int next = Engine.INVALID_ENTITY;
+    int wrapped = Engine.INVALID_ENTITY;
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int candidate = ids[i];
+      if (candidate == sourceId || !isAlive(candidate)
+          || source.dst2(mPosition.get(candidate).position) > range2
+          || !isValidFrenzyTarget(sourceId, candidate)) continue;
+      if (candidate > previousTargetId) {
+        if (next == Engine.INVALID_ENTITY || candidate < next) next = candidate;
+      } else if (wrapped == Engine.INVALID_ENTITY || candidate < wrapped) {
+        wrapped = candidate;
+      }
+    }
+    return next != Engine.INVALID_ENTITY ? next : wrapped;
+  }
+
+  private boolean isValidFrenzyTarget(int sourceId, int targetId) {
+    NativeUnitFlags flags = mNativeUnitFlags.get(targetId);
+    if (flags != null && !NativeTargeting.isValidCombatTarget(flags)) return false;
+    boolean sourcePlayerAligned = mPlayer.has(sourceId) || mMercenary.has(sourceId)
+        || mSummonedPet.has(sourceId);
+    boolean targetPlayerAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
+        || mSummonedPet.has(targetId);
+    return PvpCombatRules.canDamage(
+        partyManager, sourceId, targetId, sourcePlayerAligned, targetPlayerAligned);
   }
 
   private Item dragonClawWeapon(int entityId, int strikeIndex) {

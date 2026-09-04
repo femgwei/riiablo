@@ -77,10 +77,10 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
       Velocity velocity = world.getMapper(Velocity.class).create(entity);
       velocity.velocity.set(1, 0);
       world.process();
-      assertEquals(1.14f, velocity.stateSpeedMultiplier, 0.001f);
+      assertEquals(1.02f, velocity.stateSpeedMultiplier, 0.001f);
       world.process();
       assertEquals(1f, velocity.stateSpeedMultiplier, 0.001f);
-      System.out.println("[FRENZY_ECS] entity=" + entity + " level=2 multiplier=1.14"
+      System.out.println("[FRENZY_ECS] entity=" + entity + " level=2 multiplier=1.02"
           + " expired=true status=PASS");
     } finally {
       world.dispose();
@@ -132,6 +132,10 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
     try {
       CharData data = CharData.createRemote("frenzy", (byte) 4);
       data.setSkillLevel(com.riiablo.engine.server.skill.SkillId.FRENZY, 3);
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM,
+          data.getItems().add(testWeapon("hax", 3)));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM,
+          data.getItems().add(testWeapon("hax", 4)));
       int player = world.create();
       world.getMapper(Player.class).create(player).data = data;
       world.getMapper(Class.class).create(player).type = Class.Type.PLR;
@@ -152,13 +156,20 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
       world.getSystem(EventSystem.class).dispatch(
           AnimDataKeyframeEvent.obtain(player, Engine.KEYFRAME_ATK));
 
+      assertTrue(world.getMapper(UnitStates.class).get(player)
+          .stateList.getState(StateId.FRENZY) == null,
+          "native Frenzy applies the successful first strike at the next event");
+      world.getSystem(EventSystem.class).dispatch(
+          AnimDataKeyframeEvent.obtain(player, Engine.KEYFRAME_ATK));
+
       com.riiablo.engine.server.state.UnitState frenzy = world.getMapper(UnitStates.class)
           .get(player).stateList.getState(StateId.FRENZY);
       assertTrue(frenzy != null);
       assertEquals(3, frenzy.level);
-      assertEquals(1, frenzy.velocityModifier);
+      assertEquals(1, frenzy.runtimeValue);
+      assertEquals(48, frenzy.velocityModifier);
       System.out.println("[FRENZY_HIT_ECS] entity=" + player + " skillLevel=" + frenzy.level
-          + " stacks=" + frenzy.velocityModifier + " srvDo=9 status=PASS");
+          + " stacks=" + frenzy.runtimeValue + " srvDo=9 status=PASS");
     } finally {
       world.dispose();
     }
@@ -183,6 +194,16 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
     attrs.base().put(Stat.tohit, 10000);
     attrs.reset();
     return attrs;
+  }
+
+  private static Item testWeapon(String code, int damage) {
+    Item item = new Item();
+    item.reset();
+    item.setBase(Riiablo.files.weapons.get(code));
+    item.attrs.base().get(Stat.mindamage).set(damage);
+    item.attrs.base().get(Stat.maxdamage).set(damage);
+    item.attrs.reset();
+    return item;
   }
 
   private static final class RecordingFactory extends EntityFactory {

@@ -35,6 +35,10 @@ public class Casting extends PooledComponent {
   public boolean dragonFlightInitialized;
   public boolean dragonFlightWarped;
   public boolean dragonFlightKickProcessed;
+  /** Per-animation phase for native Frenzy's two sequence hit events. */
+  public boolean frenzyInitialized;
+  public int frenzyStrikeIndex;
+  @EntityId public int frenzyOriginalTargetId;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     this.skillId = skillId;
@@ -56,6 +60,9 @@ public class Casting extends PooledComponent {
     dragonFlightInitialized = false;
     dragonFlightWarped = false;
     dragonFlightKickProcessed = false;
+    frenzyInitialized = false;
+    frenzyStrikeIndex = 0;
+    frenzyOriginalTargetId = Engine.INVALID_ENTITY;
     return this;
   }
 
@@ -80,5 +87,8 @@ public class Casting extends PooledComponent {
     dragonFlightInitialized = false;
     dragonFlightWarped = false;
     dragonFlightKickProcessed = false;
+    frenzyInitialized = false;
+    frenzyStrikeIndex = 0;
+    frenzyOriginalTargetId = Engine.INVALID_ENTITY;
   }
 }
