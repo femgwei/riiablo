@@ -82,15 +82,19 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   }
 
   protected void process(int entityId) {
-    byte[] state = serialize(entityId, false);
     int recipients = recipientMask(entityId);
-    if (recipients == 0) return;
     int previousRecipients = lastRecipients.get(entityId, Integer.MIN_VALUE);
+    if (previousRecipients != Integer.MIN_VALUE && previousRecipients != recipients) {
+      int departed = previousRecipients & ~recipients;
+      if (departed != 0) sendVisibilityDeletion(entityId, departed);
+    }
     if (previousRecipients != recipients) {
       // A newly visible client needs the unchanged baseline too.
       snapshots.remove(entityId);
       lastRecipients.put(entityId, recipients);
     }
+    if (recipients == 0) return;
+    byte[] state = serialize(entityId, false);
     if (!snapshots.update(entityId, state)) return;
     byte[] snapshot = serialize(entityId, true);
     Packet packet = Packet.obtain(recipients, ByteBuffer.wrap(snapshot));
@@ -102,6 +106,27 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       Gdx.app.error(TAG, "[NET_SYNC] phase=runtime_drop entity=" + entityId
           + " reason=out_queue_full");
     }
+  }
+
+  /** Sends a deletion only to clients that just lost room visibility. */
+  private void sendVisibilityDeletion(int entityId, int recipients) {
+    AuthoritativeSimulation simulation = AuthoritativeSimulation.current();
+    long tick = simulation == null ? 0L : simulation.tickNumber();
+    long serverTimeMillis = simulation == null ? 0L : simulation.serverTimeMillis();
+    FlatBufferBuilder builder = new FlatBufferBuilder(0);
+    int syncOffset = serializer.serializeDeleted(builder, entityId, tick, serverTimeMillis);
+    int root = D2GS.createD2GS(builder, D2GSData.EntitySync, syncOffset);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    byte[] bytes = new byte[builder.dataBuffer().remaining()];
+    builder.dataBuffer().duplicate().get(bytes);
+    if (!outPackets.offer(Packet.obtain(recipients, ByteBuffer.wrap(bytes)))) {
+      Gdx.app.error(TAG, "[NET_SYNC] phase=visibility_delete_drop entity=" + entityId
+          + " recipients=0x" + Integer.toHexString(recipients));
+      return;
+    }
+    Gdx.app.log(TAG, "[NET_SYNC] phase=visibility_delete entity=" + entityId
+        + " recipients=0x" + Integer.toHexString(recipients)
+        + " tick=" + tick);
   }
 
   /** D2MOO sends unit updates only to clients in the current/adjacent RoomEx. */
@@ -135,17 +160,13 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   public void syncAllTo(int clientId) {
     IntBag entities = subscription.getEntities();
     int[] entityIds = entities.getData();
-    int playerEntityId = players.get(clientId, Engine.INVALID_ENTITY);
-    MapWrapper playerWrapper = playerEntityId == Engine.INVALID_ENTITY
-        || !mMapWrapper.has(playerEntityId) ? null : mMapWrapper.get(playerEntityId);
+    int recipient = 1 << clientId;
     int queued = 0;
     int failed = 0;
     long bytes = 0;
     for (int i = 0, size = entities.size(); i < size; i++) {
       int entityId = entityIds[i];
-      MapWrapper entityWrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
-      if (playerWrapper != null && entityWrapper != null
-          && !sameLevel(playerWrapper, entityWrapper)) continue;
+      if ((recipientMask(entityId) & recipient) == 0) continue;
       byte[] state = serialize(entityId, false);
       byte[] snapshot = serialize(entityId, true);
       // Prime the global change cache. Existing clients already know these
@@ -171,17 +192,12 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   /** Number of entities in the requesting player's authoritative level. */
   public int visibleCount(int clientId) {
-    int playerEntityId = players.get(clientId, Engine.INVALID_ENTITY);
-    if (playerEntityId == Engine.INVALID_ENTITY || !mMapWrapper.has(playerEntityId)) {
-      return subscription.getEntities().size();
-    }
-    MapWrapper playerWrapper = mMapWrapper.get(playerEntityId);
+    int recipient = 1 << clientId;
     IntBag entities = subscription.getEntities();
     int count = 0;
     int[] entityIds = entities.getData();
     for (int i = 0; i < entities.size(); i++) {
-      MapWrapper entityWrapper = mMapWrapper.has(entityIds[i]) ? mMapWrapper.get(entityIds[i]) : null;
-      if (entityWrapper == null || sameLevel(playerWrapper, entityWrapper)) count++;
+      if ((recipientMask(entityIds[i]) & recipient) != 0) count++;
     }
     return count;
   }

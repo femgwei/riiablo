@@ -388,6 +388,164 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Finds two walkable native rooms that are outside each other's network sight. */
+  static int[] headlessNonAdjacentRoomPair(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null || Gdx.app == null) {
+      return new int[0];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null || !zone.hasNativeRoomTopology()) return;
+        for (int firstIndex = 0; firstIndex < zone.getRoomsEx().size; firstIndex++) {
+          Map.RoomEx first = zone.getRoomsEx().get(firstIndex);
+          if (findHeadlessRoomPosition(server, zone, first) == null) continue;
+          for (int secondIndex = 0; secondIndex < zone.getRoomsEx().size; secondIndex++) {
+            Map.RoomEx second = zone.getRoomsEx().get(secondIndex);
+            if (first == second || first.isAdjacentTo(second.id)
+                || second.isAdjacentTo(first.id)) continue;
+            if (findHeadlessRoomPosition(server, zone, second) == null) continue;
+            result.set(new int[] {first.id, second.id});
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[0];
+    }
+  }
+
+  /** Test-only relocation to an exact native RoomEx for subscription lifecycle checks. */
+  static boolean headlessMovePlayerToRoom(int playerId, int levelId, int roomId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || Riiablo.files == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean moved = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        Vector2 destination = findHeadlessRoomPosition(server, zone, room);
+        Position position = server.world.getMapper(Position.class).get(playerId);
+        if (destination == null || position == null) return;
+        position.position.set(destination);
+        com.riiablo.engine.server.component.Box2DBody body = server.world
+            .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+        if (body != null && body.body != null) {
+          body.body.setTransform(destination, body.body.getAngle());
+        }
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        if (wrapper == null) return;
+        wrapper.set(server.map, zone);
+        wrapper.roomId = room.id;
+        com.riiablo.engine.server.component.UnitStates states = server.world
+            .getMapper(com.riiablo.engine.server.component.UnitStates.class).get(playerId);
+        if (states != null) {
+          if (states.stateList == null) states.init(playerId);
+          states.stateList.addState(com.riiablo.engine.server.state.StateId.SYNC_WARPED,
+              2, 1, playerId);
+        }
+        moved.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && moved.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Returns live networked objects, monsters and items owned by one exact RoomEx. */
+  static int[] headlessRoomDynamicEntities(int levelId, int roomId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || Riiablo.files == null || Gdx.app == null) return new int[0];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Class> classes =
+            server.world.getMapper(com.riiablo.engine.server.component.Class.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.ComponentMapper<Position> positions = server.world.getMapper(Position.class);
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(Networked.class, com.riiablo.engine.server.component.Class.class,
+                Position.class, com.riiablo.engine.server.component.MapWrapper.class))
+            .getEntities();
+        com.badlogic.gdx.utils.IntArray ids = new com.badlogic.gdx.utils.IntArray();
+        int[] data = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int entityId = data[i];
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entityId);
+          com.riiablo.engine.server.component.Class type = classes.get(entityId);
+          Map.RoomEx room = zone.findRoomEx(positions.get(entityId).position.x,
+              positions.get(entityId).position.y);
+          if (wrapper == null || wrapper.zone != zone || type == null || room == null
+              || room.id != roomId) continue;
+          if (type.type == com.riiablo.engine.server.component.Class.Type.OBJ
+              || type.type == com.riiablo.engine.server.component.Class.Type.MON
+              || type.type == com.riiablo.engine.server.component.Class.Type.ITM) {
+            ids.add(entityId);
+          }
+        }
+        result.set(ids.toArray());
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[0];
+    }
+  }
+
+  private static Vector2 findHeadlessRoomPosition(
+      D2GS server, Map.Zone zone, Map.RoomEx room) {
+    if (server == null || zone == null || room == null) return null;
+    int centerX = room.x + room.width / 2;
+    int centerY = room.y + room.height / 2;
+    int radiusLimit = Math.max(room.width, room.height);
+    for (int radius = 0; radius <= radiusLimit; radius++) {
+      for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
+          int x = centerX + dx;
+          int y = centerY + dy;
+          if (!room.contains(x, y) || server.map.getZone(x, y) != zone) continue;
+          if ((server.map.flags(x, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+            return new Vector2(x, y);
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   private static Vector2 findHeadlessLevelPosition(D2GS server, int levelId) {
     com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
     Map.Zone zone = level == null ? null : server.map.findZone(level);

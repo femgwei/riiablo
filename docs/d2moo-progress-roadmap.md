@@ -380,7 +380,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 每次权威切换均验证目标 Level、有效 RoomEx、坐标所属 Zone、出口落点无 `BLOCK_WALK`，并等待客户端收到同一目标 `levelId` 快照，避免只验证服务端内存状态。
   - 1.10f `headlessSnapshotResync` 完整通过：request 910–914 的五次 Warp 均返回 `OK`，旧区域包过滤计数为 7，原有死亡/复活、基线幂等和双客户端定向隔离继续通过。
 
-下一项建议进入 **多人快照重同步第十二阶段（地下动态实体订阅生命周期）**：验证两个玩家分别位于同一地下层和不同地下层时，怪物、对象、掉落物的激活、卸载、重新进入恢复及 recipient-scoped 删除包不会泄漏到错误 Level。
+- [x] ~~完成多人快照重同步第十二阶段（地下动态实体订阅生命周期）~~
+  - D2GS 与 Netty 运行时同步器记录每个实体上一帧的接收者集合；客户端离开原生 RoomEx 可见范围时，仅向刚离开的连接发送带 `deleted` 标志的定向快照，不删除服务端权威实体，也不影响仍处于可见范围的客户端；初次连接及重同步基线也使用相同 RoomEx 可见范围，不再发送同层远端实体。
+  - 客户端重新进入同一 RoomEx 时清除该实体的内容快照缓存，强制向新增接收者发送完整实体状态；即使实体当前没有接收者也保留空集合，避免下一次进入丢失生命周期边沿。
+  - 隐藏双客户端在地下通道一层自动选择两个不相邻且可行走的 RoomEx，验证同房玩家和动态实体互相可见、离开后玩家及对象/怪物定向删除、返回后完整恢复，随后继续完成地下通道一层到黑暗森林的真实 Warp。
+  - 1.10f `headlessSnapshotResync` 完整通过：输出 `room_subscription_pass`，`delete=true`、`restore=true`；D2GS/Netty 编译、`MonsterRoomActivationTest` 与 `Act1MapBuilderD2MooLayersTest` 回归通过。
+
+下一项建议进入 **多人快照重同步第十三阶段（RoomEx 激活引用计数与实体状态持久性）**：验证两个客户端分离、重合和跨层时不会重复生成或提前卸载地下怪物/对象；怪物死亡、地面掉落及门/箱状态在取消订阅再返回后仍保持权威一致。
 
 ## 记录规则
 

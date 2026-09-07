@@ -215,6 +215,24 @@ public class SerializationManager extends PassiveSystem {
         levelId(entityId));
   }
 
+  /**
+   * Serializes a recipient-scoped deletion without changing the authoritative
+   * entity flags.  Room visibility can end while an entity is still alive;
+   * clients must receive the same deletion envelope used for real removals so
+   * they do not retain stale monsters, objects or drops after leaving a room.
+   */
+  public int serializeDeleted(FlatBufferBuilder builder, int entityId, long tick,
+      long serverTimeMillis) {
+    Flags flags = mFlags.get(entityId);
+    int previous = flags.flags;
+    flags.flags = previous | EntityFlags.deleted;
+    try {
+      return serialize(builder, entityId, tick, serverTimeMillis, 0L, 0L);
+    } finally {
+      flags.flags = previous;
+    }
+  }
+
   private int levelId(int entityId) {
     MapWrapper wrapper = mMapWrapper == null ? null
         : (mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null);

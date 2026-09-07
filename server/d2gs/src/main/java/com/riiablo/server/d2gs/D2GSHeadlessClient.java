@@ -75,6 +75,7 @@ public final class D2GSHeadlessClient {
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
+  private final Map<Integer, Visibility> visibility = new HashMap<>();
   private final Set<Integer> playerMissiles = new HashSet<>();
   private final Set<Long> snapshotTicks = new HashSet<>();
   private int playerId = Engine.INVALID_ENTITY;
@@ -478,6 +479,7 @@ public final class D2GSHeadlessClient {
       // Level 2 is a dead-end branch in the native Act 1 topology. Return to
       // level 1 before using its second outdoor exit to Dark Wood.
       warpAndAssert(a, inA, outA, 913L, 10); // Underground Passage level 1
+      verifyUndergroundVisibilityLifecycle(a, b, inA, inB);
       warpAndAssert(a, inA, outA, 914L, 5); // Dark Wood
       log("snapshot_resync_pass", "request=77 warp=true death=true respawn=true crossMap=true corpse=true baseline=" + baselineId
           + " entities=" + entityFrames + " waypoints=" + waypointCount
@@ -485,6 +487,117 @@ public final class D2GSHeadlessClient {
           + " duplicateBaseline=" + duplicateBaseline
           + " peerUnaffected=true pausedMillis=2500 oldLevelDrops=" + a.wrongLevelDrops);
     }
+  }
+
+  private void verifyUndergroundVisibilityLifecycle(D2GSHeadlessClient first,
+      D2GSHeadlessClient peer, DataInputStream firstInput, DataInputStream peerInput)
+      throws Exception {
+    int[] rooms = D2GS.headlessNonAdjacentRoomPair(10);
+    if (rooms.length < 2) {
+      throw new IOException("Underground Passage has no non-adjacent walkable RoomEx pair");
+    }
+    if (!D2GS.headlessMovePlayerToRoom(first.playerId, 10, rooms[0])
+        || !D2GS.headlessMovePlayerToRoom(peer.playerId, 10, rooms[0])) {
+      throw new IOException("failed to stage clients in Underground Passage room " + rooms[0]);
+    }
+
+    long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+      if (packet != null) first.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      Visibility firstOnPeer = peer.visibility.get(first.playerId);
+      Visibility peerOnFirst = first.visibility.get(peer.playerId);
+      if (first.currentLevelId == 10 && peer.currentLevelId == 10
+          && firstOnPeer != null && !firstOnPeer.deleted
+          && peerOnFirst != null && !peerOnFirst.deleted) break;
+    }
+    Visibility firstOnPeer = peer.visibility.get(first.playerId);
+    Visibility peerOnFirst = first.visibility.get(peer.playerId);
+    if (first.currentLevelId != 10 || peer.currentLevelId != 10
+        || firstOnPeer == null || firstOnPeer.deleted
+        || peerOnFirst == null || peerOnFirst.deleted) {
+      throw new IOException("same-room clients did not become mutually visible");
+    }
+
+    Set<Integer> dynamicCandidates = new HashSet<>();
+    deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (dynamicCandidates.isEmpty() && System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+      if (packet != null) first.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      int[] roomEntities = D2GS.headlessRoomDynamicEntities(10, rooms[0]);
+      for (int entityId : roomEntities) {
+        Visibility peerState = peer.visibility.get(entityId);
+        Visibility firstState = first.visibility.get(entityId);
+        if (peerState != null && peerState.levelId == 10 && !peerState.deleted
+            && firstState != null && firstState.levelId == 10 && !firstState.deleted) {
+          dynamicCandidates.add(entityId);
+        }
+      }
+    }
+    if (dynamicCandidates.isEmpty()) {
+      throw new IOException("same-room underground activation exposed no dynamic entities");
+    }
+
+    if (!D2GS.headlessMovePlayerToRoom(peer.playerId, 10, rooms[1])) {
+      throw new IOException("failed to move peer to non-adjacent room " + rooms[1]);
+    }
+    int deletedDynamic = Engine.INVALID_ENTITY;
+    deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+      if (packet != null) first.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      firstOnPeer = peer.visibility.get(first.playerId);
+      for (int entityId : dynamicCandidates) {
+        Visibility state = peer.visibility.get(entityId);
+        if (state != null && state.deleted) {
+          deletedDynamic = entityId;
+          break;
+        }
+      }
+      if (firstOnPeer != null && firstOnPeer.deleted
+          && deletedDynamic != Engine.INVALID_ENTITY) break;
+    }
+    if (firstOnPeer == null || !firstOnPeer.deleted
+        || deletedDynamic == Engine.INVALID_ENTITY) {
+      throw new IOException("non-adjacent room did not receive scoped deletions: player="
+          + (firstOnPeer != null && firstOnPeer.deleted)
+          + " dynamic=" + deletedDynamic + " candidates=" + dynamicCandidates.size());
+    }
+    Visibility retainedDynamic = first.visibility.get(deletedDynamic);
+    Visibility peerOnSelf = peer.visibility.get(peer.playerId);
+    if (retainedDynamic == null || retainedDynamic.deleted
+        || peerOnSelf == null || peerOnSelf.deleted) {
+      throw new IOException("scoped deletion leaked to an active recipient or local player");
+    }
+
+    if (!D2GS.headlessMovePlayerToRoom(peer.playerId, 10, rooms[0])) {
+      throw new IOException("failed to return peer to room " + rooms[0]);
+    }
+    deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+      if (packet != null) first.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      firstOnPeer = peer.visibility.get(first.playerId);
+      Visibility dynamic = peer.visibility.get(deletedDynamic);
+      if (firstOnPeer != null && !firstOnPeer.deleted
+          && dynamic != null && !dynamic.deleted) break;
+    }
+    Visibility dynamic = peer.visibility.get(deletedDynamic);
+    if (firstOnPeer == null || firstOnPeer.deleted || dynamic == null || dynamic.deleted) {
+      throw new IOException("returning to room did not restore full entity visibility");
+    }
+    log("room_subscription_pass", "level=10 sameRoom=" + rooms[0]
+        + " remoteRoom=" + rooms[1] + " dynamic=" + deletedDynamic
+        + " candidates=" + dynamicCandidates.size()
+        + " delete=true restore=true");
   }
 
   private void warpAndAssert(D2GSHeadlessClient observer, DataInputStream input,
@@ -1740,6 +1853,14 @@ public final class D2GSHeadlessClient {
         }
       }
     }
+    Visibility visible = visibility.get(sync.entityId());
+    if (visible == null) {
+      visible = new Visibility(sync.entityId());
+      visibility.put(sync.entityId(), visible);
+    }
+    visible.type = sync.type();
+    visible.levelId = packetLevelId;
+    visible.deleted = (sync.flags() & EntityFlags.deleted) != 0;
     if (sync.type() == 3) {
       Snapshot snapshot = monsters.get(sync.entityId());
       if (snapshot == null) {
@@ -2072,6 +2193,17 @@ public final class D2GSHeadlessClient {
 
   private static void log(String phase, String details) {
     System.out.println(TAG + " phase=" + phase + ' ' + details);
+  }
+
+  private static final class Visibility {
+    final int entityId;
+    int type = -1;
+    int levelId = -1;
+    boolean deleted;
+
+    Visibility(int entityId) {
+      this.entityId = entityId;
+    }
   }
 
   private static final class Snapshot {

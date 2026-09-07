@@ -42,6 +42,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   protected ComponentMapper<Flags> mFlags;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
+  private final IntIntMap lastRecipients = new IntIntMap();
 
   @Override
   protected boolean checkProcessing() {
@@ -51,6 +52,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   // FIXME: this assumes that removing Networked component implies deletion -- may not always be case
   @Override
   protected void removed(int entityId) {
+    lastRecipients.remove(entityId, 0);
     Class.Type type = mClass.get(entityId).type;
     switch (type) {
       case PLR:
@@ -72,12 +74,34 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   }
 
   protected void process(int entityId) {
-    FlatBufferBuilder builder = sync(new FlatBufferBuilder(0), entityId);
     int recipients = recipientMask(entityId);
+    int previousRecipients = lastRecipients.get(entityId, Integer.MIN_VALUE);
+    if (previousRecipients != Integer.MIN_VALUE && previousRecipients != recipients) {
+      int departed = previousRecipients & ~recipients;
+      if (departed != 0) sendVisibilityDeletion(entityId, departed);
+    }
+    lastRecipients.put(entityId, recipients);
     if (recipients == 0) return;
+    FlatBufferBuilder builder = sync(new FlatBufferBuilder(0), entityId);
     D2GSPacket packet = D2GSPacket.obtain(recipients, D2GSData.EntitySync, builder.dataBuffer());
     boolean success = outPackets.offer(packet);
     assert success;
+  }
+
+  /** Sends a recipient-scoped deletion when a client leaves the entity's room scope. */
+  private void sendVisibilityDeletion(int entityId, int recipients) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(0);
+    int syncOffset = serializer.serializeDeleted(builder, entityId, 0L, 0L);
+    int root = D2GS.createD2GS(builder, D2GSData.EntitySync, syncOffset);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    if (!outPackets.offer(D2GSPacket.obtain(recipients, D2GSData.EntitySync,
+        builder.dataBuffer()))) {
+      Gdx.app.error(TAG, "[ROOM_NET_SYNC] phase=visibility_delete_drop entity=" + entityId
+          + " recipients=0x" + Integer.toHexString(recipients));
+      return;
+    }
+    Gdx.app.log(TAG, "[ROOM_NET_SYNC] phase=visibility_delete entity=" + entityId
+        + " recipients=0x" + Integer.toHexString(recipients));
   }
 
   private int recipientMask(int entityId) {
