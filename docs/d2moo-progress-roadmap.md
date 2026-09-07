@@ -369,7 +369,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - `SnapshotBaseline.entityCount` 改为当前客户端实际可见实体数量，双客户端测试验证城镇/室外基线 22 个实体、邪恶洞窟基线 2 个实体，声明数量与收到数量一致。
   - 保留同 Zone 的原生 RoomEx 邻接筛选，区域切换后旧区域延迟包只剩故障注入路径可见并被客户端丢弃。
 
-下一项建议进入 **多人快照重同步第十阶段（Warp 目标与地下入口原子切换）**：将 Warp 请求、目标 Level、出生点和碰撞层绑定为同一事务，验证地下通道/洞穴入口不会出现短帧错图或错误阻挡。
+- [x] ~~完成多人快照重同步第十阶段（Warp 目标与地下入口原子切换）~~
+  - 多人客户端 Warp 不再本地直接改坐标；通过新增的幂等 `WARP_INTERACTION` 意图把入口实体交给 D2GS，服务端验证玩家身份、同 Level、交互距离和目标区域。
+  - `WarpInteractor` 在一次事务中清理旧移动目标，提交 Position、Box2D、`MapWrapper.zone/roomId` 和 `SYNC_WARPED`，随后才创建出口步行路径；失败时不产生半完成切换。
+  - 隐藏双客户端使用真实鲜血荒地洞穴入口进入邪恶洞窟，验证目标 Level=8、有效 RoomEx、坐标所属 Zone 一致、落点无 `BLOCK_WALK`，并重放同一 requestId 确认不会执行第二次 Warp。
+  - 核心任务协议/幂等缓存测试、D2GS 编译及 1.10f `headlessSnapshotResync` 均通过；邪恶洞窟基线包含 63 个已激活房间实体。
+
+下一项建议进入 **多人快照重同步第十一阶段（双向 Warp 与连续地下层）**：验证邪恶洞窟返回鲜血荒地、地下通道一层双出口及一层→二层→一层连续切换，确认反向 Warp 索引、出口步行方向和房间引用计数一致。
 
 ## 记录规则
 

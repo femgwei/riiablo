@@ -302,6 +302,92 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /** Places the test player on a real Warp whose authoritative destination matches. */
+  static int headlessPrepareWarpToLevel(int playerId, int destinationLevelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper playerWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        Position playerPosition = server.world.getMapper(Position.class).get(playerId);
+        if (playerWrapper == null || playerWrapper.zone == null || playerPosition == null) return;
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager()
+            .get(Aspect.all(com.riiablo.engine.server.component.Warp.class,
+                Position.class, com.riiablo.engine.server.component.MapWrapper.class))
+            .getEntities();
+        int[] ids = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int warpId = ids[i];
+          com.riiablo.engine.server.component.Warp warp = server.world
+              .getMapper(com.riiablo.engine.server.component.Warp.class).get(warpId);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(warpId);
+          if (warp == null || warp.dstLevel == null || wrapper == null
+              || wrapper.zone != playerWrapper.zone
+              || warp.dstLevel.Id != destinationLevelId) continue;
+          Vector2 warpPosition = server.world.getMapper(Position.class).get(warpId).position;
+          playerPosition.position.set(warpPosition);
+          com.riiablo.engine.server.component.Box2DBody body = server.world
+              .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+          if (body != null && body.body != null) {
+            body.body.setTransform(playerPosition.position, body.body.getAngle());
+          }
+          playerWrapper.roomId = wrapper.zone.findRoomEx(
+              warpPosition.x, warpPosition.y) == null ? -1
+              : wrapper.zone.findRoomEx(warpPosition.x, warpPosition.y).id;
+          result.set(warpId);
+          return;
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Returns level, RoomEx, zone consistency and walk-collision state after a Warp. */
+  static int[] headlessWarpState(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new int[0];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Position position = server.world.getMapper(Position.class).get(playerId);
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        if (position == null || wrapper == null || wrapper.zone == null) return;
+        Map.Zone coordinateZone = server.map.getZone(position.position);
+        result.set(new int[] {
+            wrapper.zone.level == null ? -1 : wrapper.zone.level.Id,
+            wrapper.roomId,
+            coordinateZone == wrapper.zone ? 1 : 0,
+            server.map.flags(Math.round(position.position.x), Math.round(position.position.y))
+                & DT1.Tile.FLAG_BLOCK_WALK
+        });
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[0];
+    }
+  }
+
   private static Vector2 findHeadlessLevelPosition(D2GS server, int levelId) {
     com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
     Map.Zone zone = level == null ? null : server.map.findZone(level);
@@ -2520,6 +2606,12 @@ public class D2GS extends ApplicationAdapter {
       if (reason == null) {
         world.getSystem(ObjectInteractor.class).interact(playerId, request.targetEntityId());
       }
+    } else if (request.operation() == QuestOperation.WARP_INTERACTION) {
+      reason = validateWarpInteraction(playerId, request.targetEntityId());
+      if (reason == null && !world.getSystem(WarpInteractor.class)
+          .warp(playerId, request.targetEntityId())) {
+        reason = "WARP_TRANSITION_FAILED";
+      }
     } else {
       reason = "UNSUPPORTED_OPERATION";
     }
@@ -2573,6 +2665,26 @@ public class D2GS extends ApplicationAdapter {
     float range = Math.max(1f, interactable.range) + 2f;
     return source.position.dst2(target.position) <= range * range
         ? null : "QUEST_OBJECT_OUT_OF_RANGE";
+  }
+
+  private String validateWarpInteraction(int playerId, int warpId) {
+    com.riiablo.engine.server.component.Warp warp =
+        world.getMapper(com.riiablo.engine.server.component.Warp.class).get(warpId);
+    com.riiablo.engine.server.component.Interactable interactable =
+        world.getMapper(com.riiablo.engine.server.component.Interactable.class).get(warpId);
+    if (warp == null || interactable == null || warp.dstLevel == null) {
+      return "WARP_NOT_FOUND";
+    }
+    if (levelIdOf(playerId) < 0 || levelIdOf(playerId) != levelIdOf(warpId)) {
+      return "WARP_WRONG_LEVEL";
+    }
+    Position source = world.getMapper(Position.class).get(playerId);
+    Position target = world.getMapper(Position.class).get(warpId);
+    if (source == null || target == null) return "WARP_INACTIVE";
+    float range = Math.max(1f, interactable.range) + 2f;
+    if (source.position.dst2(target.position) > range * range) return "WARP_OUT_OF_RANGE";
+    Map.Zone destination = map.findZone(warp.dstLevel);
+    return destination == null ? "WARP_DESTINATION_MISSING" : null;
   }
 
   private static boolean isNetworkQuestObject(

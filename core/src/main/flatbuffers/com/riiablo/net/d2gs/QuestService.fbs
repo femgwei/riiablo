@@ -4,6 +4,9 @@ enum QuestOperation:uint8 {
   SNAPSHOT,
   NPC_MESSAGE,
   OBJECT_INTERACTION,
+  // Authenticated/idempotent interaction with a Warp entity. Appended to
+  // preserve existing operation values.
+  WARP_INTERACTION,
 }
 
 table QuestRequest {

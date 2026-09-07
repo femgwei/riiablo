@@ -410,11 +410,38 @@ public final class D2GSHeadlessClient {
             + respawn.success() + " reason=" + respawn.reason());
       }
       float townX = liveState[3], townY = liveState[4];
-      if (!D2GS.headlessMovePlayerToLevel(a.playerId, 8)) { // Den of Evil
-        throw new IOException("cross-map relocation trigger unavailable");
+      if (!D2GS.headlessMovePlayerToLevel(a.playerId, 2)) { // Blood Moor staging
+        throw new IOException("outdoor warp staging unavailable");
+      }
+      int caveWarpId = D2GS.headlessPrepareWarpToLevel(a.playerId, 8); // Den of Evil
+      if (caveWarpId == Engine.INVALID_ENTITY) {
+        throw new IOException("native Blood Moor cave warp unavailable");
+      }
+      send(outA, questRequestPacket(
+          900L, QuestOperation.WARP_INTERACTION, caveWarpId, -1));
+      QuestResult warpResult = a.awaitQuestResult(
+          inA, 900L, System.currentTimeMillis() + config.testTimeoutMillis);
+      if (!warpResult.success()) {
+        throw new IOException("native cave warp rejected: " + warpResult.reason());
+      }
+      int[] warpState = D2GS.headlessWarpState(a.playerId);
+      if (warpState.length < 4 || warpState[0] != 8 || warpState[1] < 0
+          || warpState[2] != 1 || warpState[3] != 0) {
+        throw new IOException("native cave warp was not atomic: "
+            + java.util.Arrays.toString(warpState));
+      }
+      // Exact request replay must return the cached success without executing
+      // the now wrong-level source Warp a second time.
+      send(outA, questRequestPacket(
+          900L, QuestOperation.WARP_INTERACTION, caveWarpId, -1));
+      QuestResult replayedWarp = a.awaitQuestResult(
+          inA, 900L, System.currentTimeMillis() + config.testTimeoutMillis);
+      if (!replayedWarp.success()) {
+        throw new IOException("native cave warp replay was not idempotent: "
+            + replayedWarp.reason());
       }
       send(outA, ByteBuffer.wrap(snapshotResyncPacket(99L, a.lastSnapshotTick,
-          "cross_map")));
+          "native_cave_warp")));
       boolean crossMapBegin = false, crossMapEnd = false;
       long crossMapDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
       while (System.currentTimeMillis() < crossMapDeadline && !crossMapEnd) {

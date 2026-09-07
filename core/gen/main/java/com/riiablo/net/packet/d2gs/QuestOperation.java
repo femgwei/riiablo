@@ -7,8 +7,9 @@ public final class QuestOperation {
   public static final byte SNAPSHOT = 0;
   public static final byte NPC_MESSAGE = 1;
   public static final byte OBJECT_INTERACTION = 2;
+  public static final byte WARP_INTERACTION = 3;
 
-  public static final String[] names = { "SNAPSHOT", "NPC_MESSAGE", "OBJECT_INTERACTION", };
+  public static final String[] names = { "SNAPSHOT", "NPC_MESSAGE", "OBJECT_INTERACTION", "WARP_INTERACTION", };
 
   public static String name(int e) { return names[e]; }
 }

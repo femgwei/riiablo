@@ -14,10 +14,16 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Warp;
+import com.riiablo.engine.server.event.ZoneChangeEvent;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.Map;
 import com.riiablo.engine.server.quest.QuestWarp;
+import com.riiablo.net.packet.d2gs.QuestOperation;
+import net.mostlyoriginal.api.event.common.EventSystem;
 
+@Wire(failOnNull = false)
 public class WarpInteractor extends PassiveSystem implements Interactable.Interactor {
   private static final String TAG = "WarpInteractor";
 
@@ -26,9 +32,13 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Size> mSize;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   protected Pathfinder pathfinder;
   protected Actioneer actioneer;
+  protected EventSystem events;
+  @Wire(failOnNull = false)
+  protected com.riiablo.engine.client.ClientNetworkSynchronizer clientNetwork;
 
   @Wire(name = "map")
   protected Map map;
@@ -37,6 +47,20 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
 
   @Override
   public void interact(int src, int entity) {
+    if (clientNetwork != null) {
+      long requestId = clientNetwork.requestQuest(
+          QuestOperation.WARP_INTERACTION, entity, -1);
+      if (requestId != 0L) {
+        Gdx.app.log(TAG, "Warp interaction requested: player=" + src
+            + " entity=" + entity + " request=" + requestId);
+      }
+      return;
+    }
+    warp(src, entity);
+  }
+
+  /** Performs one validated server/local authoritative warp transaction. */
+  public boolean warp(int src, int entity) {
     Warp warp = mWarp.get(entity);
     MapWrapper sourceWrapper = mMapWrapper.get(entity);
     Map.Zone source = sourceWrapper == null ? null : sourceWrapper.zone;
@@ -44,7 +68,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     if (warp == null || source == null || dst == null) {
       Gdx.app.error(TAG, "Warp interaction missing map data: player=" + src
           + " entity=" + entity + " warp=" + warp + " source=" + source + " dst=" + dst);
-      return;
+      return false;
     }
     if (QuestWarp.isQuestWarp(warp.index)) {
       int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
@@ -53,17 +77,14 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
         Gdx.app.error(TAG, "Quest warp destination has no free coordinates: player=" + src
             + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
             + " unitSize=" + unitSize);
-        return;
+        return false;
       }
-      Vector2 position = mPosition.get(src).position;
-      position.set(arrival);
-      Box2DBody box2dWrapper = mBox2DBody.get(src);
-      if (box2dWrapper != null) box2dWrapper.body.setTransform(position, 0);
+      commitTransition(src, dst, arrival);
       Gdx.app.log(TAG, "Quest warp interaction: player=" + src
           + " source=" + source.level.LevelName + "(" + source.level.Id + ")"
           + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
           + " arrival=" + arrival);
-      return;
+      return true;
     }
     int dstIndex = source.getWarp(warp.index);
     int dstWarpEntity = dst.findWarp(dstIndex);
@@ -72,7 +93,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
           + "(" + source.level.Id + ") special=0x" + Integer.toHexString(warp.index)
           + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
           + " reverseSpecial=0x" + Integer.toHexString(dstIndex));
-      return;
+      return false;
     }
     Vector2 dstWarpPos = mPosition.get(dstWarpEntity).position;
     int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
@@ -82,7 +103,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
           + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
           + " reverseSpecial=0x" + Integer.toHexString(dstIndex)
           + " destinationPosition=" + dstWarpPos + " unitSize=" + unitSize);
-      return;
+      return false;
     }
     float arrivalX = tmpVec2.x;
     float arrivalY = tmpVec2.y;
@@ -95,15 +116,42 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
         + " reverseSpecial=0x" + Integer.toHexString(dstIndex)
         + " destinationPosition=" + dstWarpPos
         + " freeArrival=(" + arrivalX + "," + arrivalY + ")");
-    position.set(arrivalX, arrivalY);
-
-    Box2DBody box2dWrapper = mBox2DBody.get(src);
-    if (box2dWrapper != null) box2dWrapper.body.setTransform(position, 0);
+    commitTransition(src, dst, tmpVec2.set(arrivalX, arrivalY));
 
     Warp dstWarp = mWarp.get(dstWarpEntity);
     LvlWarp.Entry dstWarpEntry = dstWarp.warp;
     tmpVec2.set(arrivalX, arrivalY).add(dstWarpEntry.ExitWalkX, dstWarpEntry.ExitWalkY);
     actioneer.moveTo(src, tmpVec2);
+    return true;
+  }
+
+  /**
+   * Commits every authoritative warp side effect before the next network
+   * snapshot: movement intent, position/body, level/RoomEx and warp marker.
+   */
+  private void commitTransition(int entityId, Map.Zone destination, Vector2 arrival) {
+    actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
+
+    Vector2 position = mPosition.get(entityId).position;
+    position.set(arrival);
+
+    MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    if (wrapper == null) wrapper = mMapWrapper.create(entityId);
+    wrapper.set(map, destination);
+    Map.RoomEx room = destination.findRoomEx(arrival.x, arrival.y);
+    wrapper.roomId = room == null ? -1 : room.id;
+
+    Box2DBody box2dWrapper = mBox2DBody.has(entityId) ? mBox2DBody.get(entityId) : null;
+    if (box2dWrapper != null && box2dWrapper.body != null) {
+      box2dWrapper.body.setTransform(position, box2dWrapper.body.getAngle());
+    }
+
+    UnitStates states = mUnitStates.has(entityId) ? mUnitStates.get(entityId) : null;
+    if (states != null) {
+      if (states.stateList == null) states.init(entityId);
+      states.stateList.addState(StateId.SYNC_WARPED, 2, 1, entityId);
+    }
+    if (events != null) events.dispatch(ZoneChangeEvent.obtain(entityId, destination));
   }
 
   private Vector2 findQuestArrival(Map.Zone destination, int unitSize) {
