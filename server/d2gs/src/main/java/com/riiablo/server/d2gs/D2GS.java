@@ -534,7 +534,7 @@ public class D2GS extends ApplicationAdapter {
         if (wrapper != null && wrapper.attrs != null) {
           wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints).set(0f);
           server.world.getSystem(EventSystem.class).dispatch(
-              com.riiablo.engine.server.event.DeathEvent.obtain(Engine.INVALID_ENTITY, playerId));
+              com.riiablo.engine.server.event.DeathEvent.obtain(playerId, playerId));
           killed.set(true);
         }
       } finally { done.countDown(); }
