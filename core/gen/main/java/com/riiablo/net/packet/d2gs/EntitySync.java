@@ -30,6 +30,9 @@ public final class EntitySync extends Table {
   public UnionVector componentVector(UnionVector obj) { int o = __offset(12); return o != 0 ? obj.__assign(__vector(o), 4, bb) : null; }
   public long tick() { int o = __offset(14); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
   public long serverTimeMillis() { int o = __offset(16); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long inputSequence() { int o = __offset(18); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long acknowledgedInputSequence() { int o = __offset(20); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long rejectedInputSequence() { int o = __offset(22); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
 
   public static int createEntitySync(FlatBufferBuilder builder,
       int entityId,
@@ -38,8 +41,14 @@ public final class EntitySync extends Table {
       int component_typeOffset,
       int componentOffset,
       long tick,
-      long serverTimeMillis) {
-    builder.startTable(7);
+      long serverTimeMillis,
+      long inputSequence,
+      long acknowledgedInputSequence,
+      long rejectedInputSequence) {
+    builder.startTable(10);
+    EntitySync.addRejectedInputSequence(builder, rejectedInputSequence);
+    EntitySync.addAcknowledgedInputSequence(builder, acknowledgedInputSequence);
+    EntitySync.addInputSequence(builder, inputSequence);
     EntitySync.addServerTimeMillis(builder, serverTimeMillis);
     EntitySync.addTick(builder, tick);
     EntitySync.addComponent(builder, componentOffset);
@@ -50,7 +59,7 @@ public final class EntitySync extends Table {
     return EntitySync.endEntitySync(builder);
   }
 
-  public static void startEntitySync(FlatBufferBuilder builder) { builder.startTable(7); }
+  public static void startEntitySync(FlatBufferBuilder builder) { builder.startTable(10); }
   public static void addEntityId(FlatBufferBuilder builder, int entityId) { builder.addInt(0, entityId, 0); }
   public static void addType(FlatBufferBuilder builder, int type) { builder.addByte(1, (byte)type, (byte)0); }
   public static void addFlags(FlatBufferBuilder builder, int flags) { builder.addByte(2, (byte)flags, (byte)0); }
@@ -62,6 +71,9 @@ public final class EntitySync extends Table {
   public static void startComponentVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
   public static void addTick(FlatBufferBuilder builder, long tick) { builder.addLong(5, tick, 0L); }
   public static void addServerTimeMillis(FlatBufferBuilder builder, long serverTimeMillis) { builder.addLong(6, serverTimeMillis, 0L); }
+  public static void addInputSequence(FlatBufferBuilder builder, long inputSequence) { builder.addLong(7, inputSequence, 0L); }
+  public static void addAcknowledgedInputSequence(FlatBufferBuilder builder, long acknowledgedInputSequence) { builder.addLong(8, acknowledgedInputSequence, 0L); }
+  public static void addRejectedInputSequence(FlatBufferBuilder builder, long rejectedInputSequence) { builder.addLong(9, rejectedInputSequence, 0L); }
   public static int endEntitySync(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

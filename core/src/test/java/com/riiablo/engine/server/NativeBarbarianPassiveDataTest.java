@@ -332,7 +332,8 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
         builder, new byte[] {ComponentP.StateP});
     int componentOffset = EntitySync.createComponentVector(builder, new int[] {stateOffset});
     builder.finish(EntitySync.createEntitySync(
-        builder, 7, 0, 0, typeOffset, componentOffset, 0L, 0L));
+        builder, 7, 0, 0, typeOffset, componentOffset,
+        0L, 0L, 0L, 0L, 0L));
 
     EntitySync packet = EntitySync.getRootAsEntitySync(builder.dataBuffer());
     UnitStates client = new UnitStates().init(7);

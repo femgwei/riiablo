@@ -18,6 +18,9 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
 
   private final IntMap<Entry> entries = new IntMap<>();
   private final IntArray applied = new IntArray();
+  private final IntMap<LocalCorrection> localCorrections = new IntMap<>();
+  private final IntArray localApplied = new IntArray();
+  private final IntArray expiredLocalCorrections = new IntArray();
   private final Vector2 tmp = new Vector2();
   private boolean rendering;
 
@@ -49,12 +52,32 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
 
   public void remove(int entityId) {
     entries.remove(entityId);
+    localCorrections.remove(entityId);
+  }
+
+  /** Keeps simulation corrected immediately while fading the visual offset. */
+  public void correctLocal(int entityId, float renderOffsetX, float renderOffsetY,
+      boolean hardCorrection) {
+    if (hardCorrection || renderOffsetX * renderOffsetX + renderOffsetY * renderOffsetY
+        <= ClientPredictionBuffer.SMALL_ERROR * ClientPredictionBuffer.SMALL_ERROR) {
+      localCorrections.remove(entityId);
+      return;
+    }
+    LocalCorrection correction = localCorrections.get(entityId);
+    if (correction == null) {
+      correction = new LocalCorrection();
+      localCorrections.put(entityId, correction);
+    }
+    correction.offset.set(renderOffsetX, renderOffsetY);
+    correction.remaining = LocalCorrection.DURATION;
   }
 
   public void beginRender(float renderDelta) {
     if (rendering) throw new IllegalStateException("render interpolation already active");
     rendering = true;
     applied.clear();
+    localApplied.clear();
+    expiredLocalCorrections.clear();
     for (IntMap.Entry<Entry> mapEntry : entries) {
       int entityId = mapEntry.key;
       Entry entry = mapEntry.value;
@@ -89,6 +112,21 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
       }
       if (changed) applied.add(entityId);
     }
+    for (IntMap.Entry<LocalCorrection> mapEntry : localCorrections) {
+      int entityId = mapEntry.key;
+      LocalCorrection correction = mapEntry.value;
+      if (!mPosition.has(entityId)) {
+        expiredLocalCorrections.add(entityId);
+        continue;
+      }
+      Position position = mPosition.get(entityId);
+      correction.authoritative.set(position.position);
+      float alpha = Math.max(0f, correction.remaining / LocalCorrection.DURATION);
+      position.position.mulAdd(correction.offset, alpha);
+      correction.remaining -= Math.max(0f, renderDelta);
+      localApplied.add(entityId);
+      if (correction.remaining <= 0f) expiredLocalCorrections.add(entityId);
+    }
   }
 
   public void endRender() {
@@ -117,6 +155,18 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
       entry.directionApplied = false;
     }
     applied.clear();
+    for (int i = 0; i < localApplied.size; i++) {
+      int entityId = localApplied.get(i);
+      LocalCorrection correction = localCorrections.get(entityId);
+      if (correction != null && mPosition.has(entityId)) {
+        mPosition.get(entityId).position.set(correction.authoritative);
+      }
+    }
+    for (int i = 0; i < expiredLocalCorrections.size; i++) {
+      localCorrections.remove(expiredLocalCorrections.get(i));
+    }
+    localApplied.clear();
+    expiredLocalCorrections.clear();
     rendering = false;
   }
 
@@ -134,5 +184,12 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
     boolean angleApplied;
     boolean directionApplied;
     int authoritativeDirection;
+  }
+
+  private static final class LocalCorrection {
+    static final float DURATION = 0.12f;
+    final Vector2 offset = new Vector2();
+    final Vector2 authoritative = new Vector2();
+    float remaining;
   }
 }

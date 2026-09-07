@@ -123,6 +123,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected Pinger pinger;
   protected EventSystem events;
   protected AuthoritativeInterpolationSystem interpolation;
+  protected ClientNetworkSynchronizer networkSynchronizer;
 
   @Wire(name="client.socket")
   protected Socket socket;
@@ -663,6 +664,46 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
     }
 
+    boolean applyLocalPositionNormally = true;
+    if (localPlayer) {
+      PositionP authoritative = findTable(entityData, ComponentP.PositionP, new PositionP());
+      if (authoritative != null && networkSynchronizer != null) {
+        long acknowledged = entityData.acknowledgedInputSequence();
+        if (acknowledged == 0L) {
+          // Compatible pre-prediction baseline.
+          networkSynchronizer.rebaseLegacyPrediction(authoritative.x(), authoritative.y());
+          if (interpolation != null) interpolation.correctLocal(entityId, 0f, 0f, true);
+        } else {
+          StateP states = findTable(entityData, ComponentP.StateP, new StateP());
+          VitalsP vitals = findTable(entityData, ComponentP.VitalsP, new VitalsP());
+          boolean rejected = entityData.rejectedInputSequence() == acknowledged;
+          boolean hard = rejected || containsState(states, StateId.SYNC_WARPED)
+              || (vitals != null && vitals.dead());
+          Vector2 predicted = mPosition.get(entityId).position;
+          ClientPredictionBuffer.Reconciliation correction =
+              networkSynchronizer.reconcileMovement(acknowledged,
+                  authoritative.x(), authoritative.y(), predicted.x, predicted.y, hard);
+          applyLocalPositionNormally = false;
+          if (!correction.stale) {
+            predicted.set(correction.x, correction.y);
+            if (mBox2DBody.has(entityId)) {
+              Body body = mBox2DBody.get(entityId).body;
+              if (body != null) body.setTransform(predicted, body.getAngle());
+            }
+            if (interpolation != null) {
+              interpolation.correctLocal(entityId, correction.renderOffsetX,
+                  correction.renderOffsetY, correction.hard);
+            }
+            Gdx.app.log(TAG, String.format(
+                "[NET_PREDICTION] ack=%d rejected=%s hard=%s smooth=%s "
+                    + "authority=(%.2f,%.2f) replay=(%.2f,%.2f)",
+                acknowledged, rejected, correction.hard, correction.smooth,
+                authoritative.x(), authoritative.y(), correction.x, correction.y));
+          }
+        }
+      }
+    }
+
     int tFlags = Dirty.NONE;
     int aFlags = Dirty.NONE;
     if (DEBUG_SYNC) Gdx.app.debug(TAG, "syncing " + entityId);
@@ -718,6 +759,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           break;
         }
         case ComponentP.PositionP: {
+          if (localPlayer && !applyLocalPositionNormally) break;
           Vector2 position = mPosition.get(entityId).position;
           PositionP data = (PositionP) entityData.component(new PositionP(), i);
           position.x = data.x();
@@ -854,6 +896,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
     if (mPosition.has(localPlayerId)) {
       mPosition.get(localPlayerId).position.set(result.x(), result.y());
+      if (networkSynchronizer != null) {
+        networkSynchronizer.resetPrediction(result.x(), result.y());
+      }
+      if (interpolation != null) interpolation.correctLocal(localPlayerId, 0f, 0f, true);
     }
     if (mMapWrapper.has(localPlayerId)) {
       Vector2 position = mPosition.get(localPlayerId).position;

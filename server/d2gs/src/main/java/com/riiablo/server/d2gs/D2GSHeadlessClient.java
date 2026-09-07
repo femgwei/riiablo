@@ -74,6 +74,8 @@ public final class D2GSHeadlessClient {
   private boolean sawAttackMode;
   private long lastSnapshotTick = -1L;
   private long lastSnapshotServerTime = -1L;
+  private long lastMovementAcknowledgement;
+  private long lastRejectedMovementSequence;
   private float playerX = Float.NaN;
   private float playerY = Float.NaN;
 
@@ -207,8 +209,18 @@ public final class D2GSHeadlessClient {
       if (!Float.isFinite(a.playerX) || !Float.isFinite(b.playerX)) {
         throw new IOException("snapshot baseline omitted one player position");
       }
-      send(outA, movementPacket(a.playerId, a.playerX, a.playerY, 1f, 0f));
-      send(outB, movementPacket(b.playerId, b.playerX, b.playerY, 1f, 0f));
+      send(outA, movementPacket(a.playerId, a.playerX, a.playerY, 1f, 0f, 1L));
+      // Starting at sequence 3 models two lost client samples before the
+      // first packet reaches D2GS.
+      send(outB, movementPacket(b.playerId, b.playerX, b.playerY, 1f, 0f, 3L));
+      // A new but impossible displacement must be processed as a rejected
+      // input so the real client can hard-correct and discard prediction.
+      send(outA, movementPacket(a.playerId, a.playerX + 100f, a.playerY,
+          1f, 0f, 2L));
+      // Duplicate input must be ignored before its deliberately invalid
+      // position can overwrite the authoritative entity.
+      send(outA, movementPacket(a.playerId, a.playerX + 100f, a.playerY,
+          1f, 0f, 1L));
 
       long observationDeadline = System.currentTimeMillis() + 2_000L;
       while (System.currentTimeMillis() < observationDeadline) {
@@ -224,10 +236,19 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("snapshot ordering sample too small: clientA="
             + a.snapshotTicks + " clientB=" + b.snapshotTicks);
       }
+      if (a.lastMovementAcknowledgement != 2L || b.lastMovementAcknowledgement != 3L
+          || a.lastRejectedMovementSequence != 2L
+          || b.lastRejectedMovementSequence != 0L) {
+        throw new IllegalStateException("movement acknowledgement failed: clientA="
+            + a.lastMovementAcknowledgement + "/" + a.lastRejectedMovementSequence
+            + " clientB=" + b.lastMovementAcknowledgement + "/"
+            + b.lastRejectedMovementSequence);
+      }
       log("snapshot_order_pass", "clientA=" + a.playerId + " clientB=" + b.playerId
           + " commonTicks=" + commonTicks.size() + " tickA=" + a.lastSnapshotTick
           + " tickB=" + b.lastSnapshotTick + " serverTimeA=" + a.lastSnapshotServerTime
-          + " serverTimeB=" + b.lastSnapshotServerTime);
+          + " serverTimeB=" + b.lastSnapshotServerTime + " ackA="
+          + a.lastMovementAcknowledgement + " ackB=" + b.lastMovementAcknowledgement);
     }
   }
 
@@ -1376,6 +1397,10 @@ public final class D2GSHeadlessClient {
       snapshotTicks.add(snapshotTick);
     }
     if (sync.entityId() == playerId) {
+      if (sync.acknowledgedInputSequence() > 0L) {
+        lastMovementAcknowledgement = sync.acknowledgedInputSequence();
+        lastRejectedMovementSequence = sync.rejectedInputSequence();
+      }
       int positionIndex = findComponent(sync, ComponentP.PositionP);
       if (positionIndex >= 0) {
         PositionP position = (PositionP) sync.component(new PositionP(), positionIndex);
@@ -1544,7 +1569,8 @@ public final class D2GSHeadlessClient {
     int types = EntitySync.createComponentTypeVector(builder,
         new byte[] {ComponentP.PositionP});
     int components = EntitySync.createComponentVector(builder, new int[] {position});
-    int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components, 0L, 0L);
+    int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components,
+        0L, 0L, 0L, 0L, 0L);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.EntitySync, sync);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
@@ -1553,6 +1579,12 @@ public final class D2GSHeadlessClient {
 
   private static ByteBuffer movementPacket(
       int playerId, float x, float y, float velocityX, float velocityY) {
+    return movementPacket(playerId, x, y, velocityX, velocityY, 0L);
+  }
+
+  private static ByteBuffer movementPacket(
+      int playerId, float x, float y, float velocityX, float velocityY,
+      long inputSequence) {
     FlatBufferBuilder builder = new FlatBufferBuilder(192);
     int position = PositionP.createPositionP(builder, x, y);
     int velocity = VelocityP.createVelocityP(builder, velocityX, velocityY);
@@ -1561,7 +1593,8 @@ public final class D2GSHeadlessClient {
         ComponentP.PositionP, ComponentP.VelocityP, ComponentP.AngleP});
     int components = EntitySync.createComponentVector(
         builder, new int[] {position, velocity, angle});
-    int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components, 0L, 0L);
+    int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components,
+        0L, 0L, inputSequence, 0L, 0L);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.EntitySync, sync);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);

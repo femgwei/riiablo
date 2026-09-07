@@ -9,7 +9,9 @@ import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.IntIntMap;
+import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.engine.server.SerializationManager;
+import com.riiablo.engine.server.AuthoritativeSimulation;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Networked;
@@ -45,6 +47,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   protected ComponentMapper<Position> mPosition;
   private final EntitySnapshotCache snapshots = new EntitySnapshotCache();
   private final IntIntMap lastRecipients = new IntIntMap();
+  private final IntMap<MovementAcknowledgement> movementAcknowledgements = new IntMap<>();
 
   @Override
   protected boolean checkProcessing() {
@@ -56,6 +59,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   protected void removed(int entityId) {
     snapshots.remove(entityId);
     lastRecipients.remove(entityId, 0);
+    movementAcknowledgements.remove(entityId);
     Class.Type type = mClass.get(entityId).type;
     switch (type) {
       case PLR:
@@ -148,9 +152,15 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   private byte[] serialize(int entityId, boolean includeClock) {
     FlatBufferBuilder builder = new FlatBufferBuilder(0);
-    int syncOffset = includeClock
-        ? serializer.serialize(builder, entityId)
-        : serializer.serialize(builder, entityId, 0L, 0L);
+    MovementAcknowledgement movement = movementAcknowledgements.get(entityId);
+    long acknowledged = movement == null ? 0L : movement.acknowledged;
+    long rejected = movement == null ? 0L : movement.rejected;
+    AuthoritativeSimulation simulation = AuthoritativeSimulation.current();
+    long tick = includeClock && simulation != null ? simulation.tickNumber() : 0L;
+    long serverTimeMillis = includeClock && simulation != null
+        ? simulation.serverTimeMillis() : 0L;
+    int syncOffset = serializer.serialize(builder, entityId, tick, serverTimeMillis,
+        acknowledged, rejected);
     int root = D2GS.createD2GS(builder, D2GSData.EntitySync, syncOffset);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     ByteBuffer buffer = builder.dataBuffer();
@@ -160,7 +170,13 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   }
 
   public FlatBufferBuilder sync(FlatBufferBuilder builder, int entityId) {
-    int syncOffset = serializer.serialize(builder, entityId);
+    MovementAcknowledgement movement = movementAcknowledgements.get(entityId);
+    AuthoritativeSimulation simulation = AuthoritativeSimulation.current();
+    int syncOffset = serializer.serialize(builder, entityId,
+        simulation == null ? 0L : simulation.tickNumber(),
+        simulation == null ? 0L : simulation.serverTimeMillis(),
+        movement == null ? 0L : movement.acknowledged,
+        movement == null ? 0L : movement.rejected);
     int root = D2GS.createD2GS(builder, D2GSData.EntitySync, syncOffset);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     return builder;
@@ -169,5 +185,26 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   public void sync(int entityId, D2GS packet) {
     if (DEBUG_SYNC) Gdx.app.log(TAG, "syncing " + entityId);
     serializer.deserialize(entityId, packet);
+  }
+
+  /** Publishes the latest processed input even when movement was rejected. */
+  public void acknowledgeMovement(int entityId, long sequence, boolean rejected) {
+    MovementAcknowledgement movement = movementAcknowledgements.get(entityId);
+    if (movement == null) {
+      movement = new MovementAcknowledgement();
+      movementAcknowledgements.put(entityId, movement);
+    }
+    movement.acknowledged = sequence;
+    if (rejected) movement.rejected = sequence;
+  }
+
+  public void clearMovementAcknowledgement(int entityId) {
+    movementAcknowledgements.remove(entityId);
+    snapshots.remove(entityId);
+  }
+
+  private static final class MovementAcknowledgement {
+    long acknowledged;
+    long rejected;
   }
 }

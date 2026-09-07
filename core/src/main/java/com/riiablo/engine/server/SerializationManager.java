@@ -156,13 +156,21 @@ public class SerializationManager extends PassiveSystem {
     AuthoritativeSimulation simulation = AuthoritativeSimulation.current();
     return serialize(builder, entityId,
         simulation == null ? 0L : simulation.tickNumber(),
-        simulation == null ? 0L : simulation.serverTimeMillis());
+        simulation == null ? 0L : simulation.serverTimeMillis(), 0L, 0L);
   }
 
   /** Serializes with an explicit clock, allowing change detection to use zero clock fields. */
   @SuppressWarnings("unchecked")
   public int serialize(FlatBufferBuilder builder, int entityId, long tick,
       long serverTimeMillis) {
+    return serialize(builder, entityId, tick, serverTimeMillis, 0L, 0L);
+  }
+
+  /** Serializes the authoritative clock and movement acknowledgement. */
+  @SuppressWarnings("unchecked")
+  public int serialize(FlatBufferBuilder builder, int entityId, long tick,
+      long serverTimeMillis, long acknowledgedInputSequence,
+      long rejectedInputSequence) {
     dataType.clear();
     data.clear();
     components.clear();
@@ -174,7 +182,7 @@ public class SerializationManager extends PassiveSystem {
       int dataTypeOffset = EntitySync.createComponentTypeVector(builder, ArrayUtils.EMPTY_BYTE_ARRAY);
       int dataOffset = EntitySync.createComponentVector(builder, ArrayUtils.EMPTY_INT_ARRAY);
       return createEntitySync(builder, entityId, type, flags, dataTypeOffset, dataOffset,
-          tick, serverTimeMillis);
+          tick, serverTimeMillis, acknowledgedInputSequence, rejectedInputSequence);
     }
 
     componentManager.getComponentsFor(entityId, components);
@@ -200,13 +208,15 @@ public class SerializationManager extends PassiveSystem {
     int dataOffset = builder.endVector();
 
     return createEntitySync(builder, entityId, type, flags, dataTypeOffset, dataOffset,
-        tick, serverTimeMillis);
+        tick, serverTimeMillis, acknowledgedInputSequence, rejectedInputSequence);
   }
 
   private static int createEntitySync(FlatBufferBuilder builder, int entityId, int type,
-      int flags, int dataTypeOffset, int dataOffset, long tick, long serverTimeMillis) {
+      int flags, int dataTypeOffset, int dataOffset, long tick, long serverTimeMillis,
+      long acknowledgedInputSequence, long rejectedInputSequence) {
     return EntitySync.createEntitySync(builder, entityId, type, flags, dataTypeOffset,
-        dataOffset, tick, serverTimeMillis);
+        dataOffset, tick, serverTimeMillis, 0L, acknowledgedInputSequence,
+        rejectedInputSequence);
   }
 
   public void deserialize(int entityId, D2GS packet) {

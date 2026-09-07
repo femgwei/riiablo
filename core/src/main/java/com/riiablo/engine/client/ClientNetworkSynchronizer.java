@@ -72,6 +72,8 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   private long nextLifecycleRequestId = 1;
   private long nextQuestRequestId = 1;
   private long nextMovementLogTime;
+  private long nextMovementSequence = 1L;
+  private final ClientPredictionBuffer prediction = new ClientPredictionBuffer();
   @Wire(name="client.socket") Socket socket;
 
   public ClientNetworkSynchronizer() {
@@ -142,6 +144,9 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       int serverId = connection.entityId();
       Gdx.app.log(TAG, "assign " + entityId + " to " + serverId);
       idManager.put(serverId, Riiablo.game.player);
+      Vector2 initialPosition = mPosition.get(entityId).position;
+      prediction.reset(initialPosition.x, initialPosition.y);
+      nextMovementSequence = 1L;
       receiver.setEnabled(true);
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
@@ -173,14 +178,16 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
     Vector2 velocity = mVelocity.get(entityId).velocity;
     Vector2 angle = mAngle.get(entityId).target;
 
+    final long inputSequence = nextMovementSequence;
     long now = TimeUtils.millis();
     if (now >= nextMovementLogTime) {
       nextMovementLogTime = now + 1000L;
       Gdx.app.log(TAG, String.format(
           "[NET_MOVE] phase=client_send local=%d server=%d pos=(%.2f,%.2f) "
-              + "velocity=(%.2f,%.2f) angle=(%.2f,%.2f)",
+              + "velocity=(%.2f,%.2f) angle=(%.2f,%.2f) sequence=%d",
           entityId, mNetworked.get(entityId).serverId,
-          position.x, position.y, velocity.x, velocity.y, angle.x, angle.y));
+          position.x, position.y, velocity.x, velocity.y, angle.x, angle.y,
+          inputSequence));
     }
 
     int cofComponents = CofComponentsP.createComponentVector(builder, component);
@@ -209,6 +216,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
     EntitySync.addEntityId(builder, mNetworked.get(entityId).serverId);
     EntitySync.addComponentType(builder, dataTypesOffset);
     EntitySync.addComponent(builder, dataOffset);
+    EntitySync.addInputSequence(builder, inputSequence);
     int syncOffset = EntitySync.endEntitySync(builder);
     int root = D2GS.createD2GS(builder, D2GSData.EntitySync, syncOffset);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
@@ -216,11 +224,31 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
     try {
       OutputStream out = socket.getOutputStream();
       WritableByteChannel channelOut = Channels.newChannel(out);
-      channelOut.write(builder.dataBuffer());
+      ByteBuffer frame = builder.dataBuffer();
+      while (frame.hasRemaining()) channelOut.write(frame);
+      prediction.recordSent(inputSequence, position.x, position.y);
+      nextMovementSequence++;
     } catch (Throwable t) {
       Gdx.app.error(TAG, t.getMessage(), t);
+      prediction.reset(position.x, position.y);
       setEnabled(false);
     }
+  }
+
+  ClientPredictionBuffer.Reconciliation reconcileMovement(long acknowledgedSequence,
+      float authoritativeX, float authoritativeY, float predictedX, float predictedY,
+      boolean hardCorrection) {
+    return prediction.reconcile(acknowledgedSequence, authoritativeX, authoritativeY,
+        predictedX, predictedY, hardCorrection);
+  }
+
+  void resetPrediction(float x, float y) {
+    prediction.reset(x, y);
+    nextMovementSequence = 1L;
+  }
+
+  void rebaseLegacyPrediction(float x, float y) {
+    prediction.rebaseLegacy(x, y);
   }
 
   /** Sends an untrusted NPC intent; the D2GS resolves player, price and stock. */

@@ -39,6 +39,8 @@ import com.badlogic.gdx.backends.headless.HeadlessApplicationConfiguration;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.ai.utils.Collision;
+import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.net.ServerSocket;
 import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.utils.GdxRuntimeException;
@@ -97,6 +99,9 @@ import com.riiablo.engine.server.VelocityAdder;
 import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
@@ -141,8 +146,12 @@ import com.riiablo.net.packet.d2gs.CursorToGround;
 import com.riiablo.net.packet.d2gs.CursorToStore;
 import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.Disconnect;
+import com.riiablo.net.packet.d2gs.ComponentP;
+import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.GroundToCursor;
 import com.riiablo.net.packet.d2gs.Ping;
+import com.riiablo.net.packet.d2gs.PositionP;
+import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.NpcServiceRequest;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.NpcServiceStock;
@@ -166,6 +175,8 @@ import com.riiablo.net.packet.d2gs.QuestOperation;
 import com.riiablo.net.packet.d2gs.QuestRequest;
 import com.riiablo.net.packet.d2gs.QuestResult;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
+import com.riiablo.net.AuthoritativeMovementValidator;
+import com.riiablo.net.MovementInputSequenceTracker;
 import com.riiablo.save.CharData;
 import com.riiablo.util.DebugUtils;
 
@@ -830,6 +841,8 @@ public class D2GS extends ApplicationAdapter {
   final BlockingQueue<Packet> outPackets = new ArrayBlockingQueue<>(8192);
   final IntIntMap player = new IntIntMap();
   final long[] nextMovementLogTime = new long[MAX_CLIENTS];
+  final MovementInputSequenceTracker[] movementInputs =
+      new MovementInputSequenceTracker[MAX_CLIENTS];
 
   static final BitVector ignoredPackets = new BitVector(D2GSData.names.length); {
     ignoredPackets.set(D2GSData.EntitySync);
@@ -863,6 +876,9 @@ public class D2GS extends ApplicationAdapter {
     this.home = home;
     this.seed = seed;
     this.diff = diff;
+    for (int i = 0; i < movementInputs.length; i++) {
+      movementInputs[i] = new MovementInputSequenceTracker();
+    }
   }
 
   @Override
@@ -1236,6 +1252,8 @@ public class D2GS extends ApplicationAdapter {
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
     int entityId = factory.createPlayer(charData, origin);
     player.put(packet.id, entityId);
+    movementInputs[packet.id].reset();
+    sync.clearMovementAcknowledgement(entityId);
     Gdx.app.log(TAG, "  entityId=" + entityId);
 
     NativeMercenaryRewardSystem mercenaryRewards =
@@ -1330,6 +1348,7 @@ public class D2GS extends ApplicationAdapter {
       numClients--;
       connected &= ~(1 << id);
     }
+    movementInputs[id].reset();
     broadcastPartySnapshots(PartyOperation.LEAVE, entityId, -1, -1);
   }
 
@@ -1346,11 +1365,74 @@ public class D2GS extends ApplicationAdapter {
   private void Synchronize(Packet packet) {
     int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
     assert entityId != Engine.INVALID_ENTITY;
+    EntitySync movement = (EntitySync) packet.data.data(new EntitySync());
+    if (movement.entityId() != entityId) {
+      Gdx.app.error(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
+          + " player=" + entityId + " claimed=" + movement.entityId()
+          + " reason=ownership");
+      return;
+    }
     if (isPlayerDead(entityId)) {
       Gdx.app.log(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
           + " player=" + entityId + " reason=player_dead");
       return;
     }
+
+    long inputSequence = movement.inputSequence();
+    long sequenceAdvance = movementInputs[packet.id].accept(inputSequence);
+    if (sequenceAdvance < 0L) {
+      Gdx.app.log(TAG, "[NET_MOVE] phase=stale_drop connection=" + packet.id
+          + " player=" + entityId + " sequence=" + inputSequence
+          + " processed=" + movementInputs[packet.id].lastProcessed());
+      return;
+    }
+
+    boolean rejected = false;
+    AuthoritativeMovementValidator.Result validation =
+        AuthoritativeMovementValidator.Result.ACCEPTED;
+    if (inputSequence != 0L) {
+      PositionP requestedPosition = findPosition(movement);
+      VelocityP requestedVelocity = findVelocity(movement);
+      Position authoritativePosition = world.getMapper(Position.class).get(entityId);
+      Velocity authoritativeVelocity = world.getMapper(Velocity.class).get(entityId);
+      Size size = world.getMapper(Size.class).get(entityId);
+      float maximumSpeed = authoritativeVelocity == null ? 0f : Math.max(
+          authoritativeVelocity.speed(false), authoritativeVelocity.speed(true));
+      int collisionSize = size == null ? Size.INSIGNIFICANT : size.size;
+      if (requestedPosition == null || requestedVelocity == null
+          || authoritativePosition == null || authoritativeVelocity == null) {
+        validation = AuthoritativeMovementValidator.Result.INVALID_NUMBER;
+      } else {
+        final Vector2 from = authoritativePosition.position;
+        final Ray<Vector2> movementRay = new Ray<>(new Vector2(), new Vector2());
+        final Collision<Vector2> movementCollision =
+            new Collision<>(new Vector2(), new Vector2());
+        validation = AuthoritativeMovementValidator.validate(
+            from.x, from.y, requestedPosition.x(), requestedPosition.y(),
+            requestedVelocity.x(), requestedVelocity.y(), maximumSpeed,
+            sequenceAdvance,
+            (fromX, fromY, toX, toY) -> {
+              if (map == null || map.getZone(fromX, fromY) == null
+                  || map.getZone(toX, toY) == null) return true;
+              movementRay.start.set(fromX, fromY);
+              movementRay.end.set(toX, toY);
+              return map.castRay(movementRay, DT1.Tile.FLAG_BLOCK_WALK,
+                  collisionSize, movementCollision);
+            });
+      }
+      rejected = validation != AuthoritativeMovementValidator.Result.ACCEPTED;
+      sync.acknowledgeMovement(entityId, inputSequence, rejected);
+    }
+
+    if (rejected) {
+      Velocity velocity = world.getMapper(Velocity.class).get(entityId);
+      if (velocity != null) velocity.velocity.setZero();
+      Gdx.app.log(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
+          + " player=" + entityId + " sequence=" + inputSequence
+          + " reason=" + validation.name().toLowerCase());
+      return;
+    }
+
     sync.sync(entityId, packet.data);
     long now = TimeUtils.millis();
     if (now >= nextMovementLogTime[packet.id]) {
@@ -1369,8 +1451,27 @@ public class D2GS extends ApplicationAdapter {
           position != null ? position.position.y : Float.NaN,
           velocity != null ? velocity.velocity.x : Float.NaN,
           velocity != null ? velocity.velocity.y : Float.NaN,
-          cof != null ? cof.mode & 0xFF : -1));
+          cof != null ? cof.mode & 0xFF : -1)
+          + " sequence=" + inputSequence);
     }
+  }
+
+  private static PositionP findPosition(EntitySync sync) {
+    for (int i = 0; i < sync.componentLength(); i++) {
+      if (sync.componentType(i) == ComponentP.PositionP) {
+        return (PositionP) sync.component(new PositionP(), i);
+      }
+    }
+    return null;
+  }
+
+  private static VelocityP findVelocity(EntitySync sync) {
+    for (int i = 0; i < sync.componentLength(); i++) {
+      if (sync.componentType(i) == ComponentP.VelocityP) {
+        return (VelocityP) sync.component(new VelocityP(), i);
+      }
+    }
+    return null;
   }
 
   /** Handles untrusted combat input; all damage and projectile creation stays on the server. */

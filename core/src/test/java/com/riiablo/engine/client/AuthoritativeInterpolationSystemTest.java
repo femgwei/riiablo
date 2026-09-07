@@ -41,4 +41,37 @@ class AuthoritativeInterpolationSystemTest {
       world.dispose();
     }
   }
+
+  @Test
+  void localCorrectionFadesOnlyDuringRendering() {
+    AuthoritativeInterpolationSystem interpolation =
+        new AuthoritativeInterpolationSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(interpolation)
+        .build());
+    try {
+      int entityId = world.create();
+      ComponentMapper<Position> positions = world.getMapper(Position.class);
+      positions.create(entityId).position.set(5f, 2f);
+      world.process();
+
+      interpolation.correctLocal(entityId, 1f, 0f, false);
+      interpolation.beginRender(0.04f);
+      assertEquals(6f, positions.get(entityId).position.x, 0.0001f);
+      interpolation.endRender();
+      assertEquals(5f, positions.get(entityId).position.x, 0f);
+
+      interpolation.beginRender(0.04f);
+      assertEquals(5.6667f, positions.get(entityId).position.x, 0.001f);
+      interpolation.endRender();
+      assertEquals(5f, positions.get(entityId).position.x, 0f);
+
+      interpolation.correctLocal(entityId, 1f, 0f, true);
+      interpolation.beginRender(0.04f);
+      assertEquals(5f, positions.get(entityId).position.x, 0f);
+      interpolation.endRender();
+    } finally {
+      world.dispose();
+    }
+  }
 }

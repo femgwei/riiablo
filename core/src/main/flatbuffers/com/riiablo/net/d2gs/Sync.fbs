@@ -34,6 +34,13 @@ table EntitySync {
   // older clients that simply ignore unknown fields.
   tick:ulong;
   serverTimeMillis:ulong;
+  // Monotonic client movement input and the authoritative server response.
+  // Appended fields preserve compatibility with pre-prediction peers.
+  inputSequence:ulong;
+  acknowledgedInputSequence:ulong;
+  // Non-zero only when this exact input was rejected and the client must
+  // discard prediction instead of visually smoothing through a collision.
+  rejectedInputSequence:ulong;
 }
 
 table ClassP {
