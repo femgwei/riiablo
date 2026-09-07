@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -22,13 +23,22 @@ class AuthoritativeSimulationTest {
     try {
       AuthoritativeSimulation simulation = new AuthoritativeSimulation(world);
       world.setDelta(99f);
+      long[] observedTime = new long[1];
 
-      simulation.tick(() -> phases.add("input"), () -> phases.add("output"));
+      simulation.tick(() -> {
+        assertSame(simulation, AuthoritativeSimulation.current());
+        phases.add("input");
+      }, () -> {
+        observedTime[0] = simulation.serverTimeMillis();
+        phases.add("output");
+      });
 
       assertEquals(Arrays.asList("input", "simulation", "output"), phases);
       assertEquals(AuthoritativeSimulation.STEP_SECONDS, system.delta, 0f);
       assertEquals(AuthoritativeSimulation.STEP_SECONDS, simulation.lastStepSeconds(), 0f);
       assertEquals(1, simulation.tickNumber());
+      assertTrue(observedTime[0] > 0L);
+      assertNull(AuthoritativeSimulation.current());
       assertSame(Thread.currentThread(), simulation.ownerThread());
     } finally {
       world.dispose();

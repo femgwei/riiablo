@@ -77,7 +77,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   }
 
   protected void process(int entityId) {
-    byte[] snapshot = serialize(entityId);
+    byte[] state = serialize(entityId, false);
     int recipients = recipientMask(entityId);
     if (recipients == 0) return;
     int previousRecipients = lastRecipients.get(entityId, Integer.MIN_VALUE);
@@ -86,7 +86,8 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       snapshots.remove(entityId);
       lastRecipients.put(entityId, recipients);
     }
-    if (!snapshots.update(entityId, snapshot)) return;
+    if (!snapshots.update(entityId, state)) return;
+    byte[] snapshot = serialize(entityId, true);
     Packet packet = Packet.obtain(recipients, ByteBuffer.wrap(snapshot));
     boolean success = outPackets.offer(packet);
     if (!success) {
@@ -127,10 +128,11 @@ public class NetworkSynchronizer extends BaseEntitySystem {
     long bytes = 0;
     for (int i = 0, size = entities.size(); i < size; i++) {
       int entityId = entityIds[i];
-      byte[] snapshot = serialize(entityId);
+      byte[] state = serialize(entityId, false);
+      byte[] snapshot = serialize(entityId, true);
       // Prime the global change cache. Existing clients already know these
       // unchanged entities, while this targeted packet initializes the joiner.
-      snapshots.update(entityId, snapshot);
+      snapshots.update(entityId, state);
       if (outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(snapshot)))) {
         queued++;
         bytes += snapshot.length;
@@ -144,8 +146,14 @@ public class NetworkSynchronizer extends BaseEntitySystem {
         + " failed=" + failed + " bytes=" + bytes);
   }
 
-  private byte[] serialize(int entityId) {
-    ByteBuffer buffer = sync(new FlatBufferBuilder(0), entityId).dataBuffer();
+  private byte[] serialize(int entityId, boolean includeClock) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(0);
+    int syncOffset = includeClock
+        ? serializer.serialize(builder, entityId)
+        : serializer.serialize(builder, entityId, 0L, 0L);
+    int root = D2GS.createD2GS(builder, D2GSData.EntitySync, syncOffset);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer buffer = builder.dataBuffer();
     byte[] bytes = new byte[buffer.remaining()];
     buffer.duplicate().get(bytes);
     return bytes;

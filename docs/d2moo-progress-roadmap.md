@@ -271,7 +271,15 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 新增 `AuthoritativeSimulationTest`，真实 `headlessSimulationTick` 协议测试在 1.10f 资源下通过（1.2 秒内 31 帧、步长 0.04s、写线程稳定）；1×1 真实隐藏营地测试继续通过。
   - 本阶段没有把本地单人 `GameScreen.render()` 改成独立模拟线程；迁移渲染线程逻辑需要单独处理 LibGDX/Artemis 上下文。
 
-下一项建议进入 **固定 Sim Tick 的快照/时间注入与客户端观测**：为网络快照记录 tick 序号和服务器时间，补多客户端顺序一致性测试；随后再评估本地 `GameScreen` 与服务端权威时钟的解耦，不要直接把 ECS 搬到渲染线程之外。
+- [x] ~~完成权威快照 tick/服务器时间与双客户端顺序观测~~
+  - `EntitySync` 追加兼容的 `tick` 和 `serverTimeMillis` 字段；服务端序列化在固定 Sim Tick 的线程局部时钟上下文中生成，所有同帧实体共享相同时间基准。
+  - 状态内容去重与时钟信封分离，tick 变化不会把未变化实体误判为每帧全量更新。
+  - 旧客户端发送的 `EntitySync` 仍使用默认 0 字段，服务端保持兼容；服务端快照不再依赖网络线程本地时间。
+  - 正式客户端维护单调权威时间线，接受同 tick 多实体批次和旧协议零值，拒绝会回滚状态的旧 tick/旧服务器时间。
+  - 新增 `headlessSnapshotOrder` 双客户端真实协议门槛，验证两个客户端 tick/服务器时间单调、存在共同 tick，并在移动后继续接收快照；1.10f 资源实测通过。
+  - 1×1 真实隐藏营地回归继续通过。
+
+下一项建议进入 **本地单人固定步进与渲染解耦第一阶段**：先把 `GameScreen` 的可变/截断 delta 改为 25Hz 累加器驱动，渲染仍留在主线程并限制每帧追赶次数；补后台切回、长帧和正常 60Hz 下的确定性测试，再决定是否需要真正的独立模拟线程。
 
 ## 记录规则
 

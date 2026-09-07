@@ -15,6 +15,7 @@ import com.riiablo.logger.Logger;
  */
 public final class AuthoritativeSimulation {
   private static final Logger log = LogManager.getLogger(AuthoritativeSimulation.class);
+  private static final ThreadLocal<AuthoritativeSimulation> CURRENT = new ThreadLocal<>();
 
   public static final int TICKS_PER_SECOND = (int) Animation.FRAMES_PER_SECOND;
   public static final float STEP_SECONDS = Animation.FRAME_DURATION;
@@ -23,6 +24,8 @@ public final class AuthoritativeSimulation {
   private volatile Thread ownerThread;
   private volatile long tick;
   private volatile float lastStepSeconds;
+  private final long epochMillis = System.currentTimeMillis();
+  private volatile long serverTimeMillis;
 
   public AuthoritativeSimulation(World world) {
     if (world == null) throw new NullPointerException("world");
@@ -32,12 +35,25 @@ public final class AuthoritativeSimulation {
   /** Runs one native authoritative frame in input/simulation/output order. */
   public void tick(Runnable applyIncoming, Runnable dispatchOutgoing) {
     assertOwnerThread();
-    if (applyIncoming != null) applyIncoming.run();
-    world.setDelta(STEP_SECONDS);
-    lastStepSeconds = world.getDelta();
-    world.process();
-    if (dispatchOutgoing != null) dispatchOutgoing.run();
     tick++;
+    serverTimeMillis = epochMillis + tick * Math.round(STEP_SECONDS * 1000f);
+    AuthoritativeSimulation previous = CURRENT.get();
+    CURRENT.set(this);
+    try {
+      if (applyIncoming != null) applyIncoming.run();
+      world.setDelta(STEP_SECONDS);
+      lastStepSeconds = world.getDelta();
+      world.process();
+      if (dispatchOutgoing != null) dispatchOutgoing.run();
+    } finally {
+      if (previous == null) CURRENT.remove();
+      else CURRENT.set(previous);
+    }
+  }
+
+  /** Simulation clock visible to serializers running inside the current tick. */
+  public static AuthoritativeSimulation current() {
+    return CURRENT.get();
   }
 
   private synchronized void assertOwnerThread() {
@@ -66,5 +82,9 @@ public final class AuthoritativeSimulation {
   /** Last step actually supplied to the ECS world, or zero before the first tick. */
   public float lastStepSeconds() {
     return lastStepSeconds;
+  }
+
+  public long serverTimeMillis() {
+    return serverTimeMillis;
   }
 }

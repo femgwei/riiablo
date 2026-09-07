@@ -29,6 +29,11 @@ table EntitySync {
   type:uint8;
   flags:EntityFlags;
   component:[ComponentP];
+  // Authoritative simulation clock for ordering snapshots across clients.
+  // These fields are appended to preserve FlatBuffers compatibility with
+  // older clients that simply ignore unknown fields.
+  tick:ulong;
+  serverTimeMillis:ulong;
 }
 
 table ClassP {

@@ -143,6 +143,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
           NETWORK_READ_BUFFER_SIZE, MAX_NETWORK_PACKET_SIZE,
           MAX_NETWORK_PACKET_SIZE + NETWORK_READ_BUFFER_SIZE + Integer.BYTES);
   private final EntitySync sync = new EntitySync();
+  private final AuthoritativeSnapshotTimeline snapshotTimeline =
+      new AuthoritativeSnapshotTimeline();
   private final IntSet deferredServerEntities = new IntSet();
   private final ClientPartyState partyState = new ClientPartyState();
 
@@ -609,6 +611,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private void Synchronize(EntitySync entityData) {
+    if (!snapshotTimeline.accept(entityData.tick(), entityData.serverTimeMillis())) {
+      Gdx.app.error(TAG, "[ENTITY_SYNC] phase=stale_drop serverEntity="
+          + entityData.entityId() + " tick=" + entityData.tick()
+          + " acceptedTick=" + snapshotTimeline.tick()
+          + " serverTime=" + entityData.serverTimeMillis()
+          + " acceptedServerTime=" + snapshotTimeline.serverTimeMillis());
+      return;
+    }
     int entityId = syncIds.get(entityData.entityId());
     if ((entityData.flags() & EntityFlags.deleted) == EntityFlags.deleted) {
       deferredServerEntities.remove(entityData.entityId());

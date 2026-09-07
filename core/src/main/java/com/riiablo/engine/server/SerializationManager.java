@@ -153,6 +153,16 @@ public class SerializationManager extends PassiveSystem {
 
   @SuppressWarnings("unchecked")
   public int serialize(FlatBufferBuilder builder, int entityId) {
+    AuthoritativeSimulation simulation = AuthoritativeSimulation.current();
+    return serialize(builder, entityId,
+        simulation == null ? 0L : simulation.tickNumber(),
+        simulation == null ? 0L : simulation.serverTimeMillis());
+  }
+
+  /** Serializes with an explicit clock, allowing change detection to use zero clock fields. */
+  @SuppressWarnings("unchecked")
+  public int serialize(FlatBufferBuilder builder, int entityId, long tick,
+      long serverTimeMillis) {
     dataType.clear();
     data.clear();
     components.clear();
@@ -163,7 +173,8 @@ public class SerializationManager extends PassiveSystem {
     if ((flags & EntityFlags.deleted) == EntityFlags.deleted) {
       int dataTypeOffset = EntitySync.createComponentTypeVector(builder, ArrayUtils.EMPTY_BYTE_ARRAY);
       int dataOffset = EntitySync.createComponentVector(builder, ArrayUtils.EMPTY_INT_ARRAY);
-      return EntitySync.createEntitySync(builder, entityId, type, flags, dataTypeOffset, dataOffset);
+      return createEntitySync(builder, entityId, type, flags, dataTypeOffset, dataOffset,
+          tick, serverTimeMillis);
     }
 
     componentManager.getComponentsFor(entityId, components);
@@ -188,7 +199,14 @@ public class SerializationManager extends PassiveSystem {
     for (int i = 0; i < dataSize; i++) builder.addOffset(data[i]);
     int dataOffset = builder.endVector();
 
-    return EntitySync.createEntitySync(builder, entityId, type, flags, dataTypeOffset, dataOffset);
+    return createEntitySync(builder, entityId, type, flags, dataTypeOffset, dataOffset,
+        tick, serverTimeMillis);
+  }
+
+  private static int createEntitySync(FlatBufferBuilder builder, int entityId, int type,
+      int flags, int dataTypeOffset, int dataOffset, long tick, long serverTimeMillis) {
+    return EntitySync.createEntitySync(builder, entityId, type, flags, dataTypeOffset,
+        dataOffset, tick, serverTimeMillis);
   }
 
   public void deserialize(int entityId, D2GS packet) {
