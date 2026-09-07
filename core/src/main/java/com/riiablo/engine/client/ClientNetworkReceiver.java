@@ -39,6 +39,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.io.ByteInput;
@@ -121,6 +122,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ItemManager items;
   protected Pinger pinger;
   protected EventSystem events;
+  protected AuthoritativeInterpolationSystem interpolation;
 
   @Wire(name="client.socket")
   protected Socket socket;
@@ -624,6 +626,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if ((entityData.flags() & EntityFlags.deleted) == EntityFlags.deleted) {
       deferredServerEntities.remove(entityData.entityId());
       if (entityId != Engine.INVALID_ENTITY) {
+        interpolation.remove(entityId);
         world.delete(entityId);
       }
 
@@ -641,6 +644,23 @@ public class ClientNetworkReceiver extends IntervalSystem {
         return;
       }
       syncIds.put(entityData.entityId(), entityId);
+    }
+
+    boolean localPlayer = Riiablo.game != null && entityId == Riiablo.game.player;
+    Class.Type entityType = Class.Type.valueOf(entityData.type());
+    boolean movingEntity = entityType == Class.Type.PLR || entityType == Class.Type.MON
+        || entityType == Class.Type.MIS;
+    if (!localPlayer && movingEntity && entityData.tick() != 0L) {
+      PositionP position = findTable(entityData, ComponentP.PositionP, new PositionP());
+      AngleP angle = findTable(entityData, ComponentP.AngleP, new AngleP());
+      StateP states = findTable(entityData, ComponentP.StateP, new StateP());
+      if (position != null || angle != null) {
+        interpolation.record(entityId, entityData.tick(), entityData.serverTimeMillis(),
+            position != null, position == null ? 0f : position.x(),
+            position == null ? 0f : position.y(),
+            angle != null, angle == null ? 0f : angle.x(),
+            angle == null ? 0f : angle.y(), containsState(states, StateId.SYNC_WARPED));
+      }
     }
 
     int tFlags = Dirty.NONE;
@@ -736,6 +756,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
     cofs.updateTransform(entityId, tFlags);
     cofs.updateAlpha(entityId, aFlags);
+  }
+
+  private static boolean containsState(StateP states, int stateId) {
+    if (states == null) return false;
+    for (int i = 0; i < states.stateIdLength(); i++) {
+      if (states.stateId(i) == stateId) return true;
+    }
+    return false;
   }
 
   private void applyStateSnapshot(int entityId, StateP data) {

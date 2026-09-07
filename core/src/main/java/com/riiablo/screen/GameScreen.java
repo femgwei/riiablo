@@ -47,6 +47,7 @@ import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.EngineConfig;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.client.AnimationStepper;
+import com.riiablo.engine.client.AuthoritativeInterpolationSystem;
 import com.riiablo.engine.client.Act1QuestDialogController;
 import com.riiablo.engine.client.Act1QuestIndicatorSystem;
 import com.riiablo.engine.client.ActTransitionSystem;
@@ -251,6 +252,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   private final FixedStepAccumulator simulationAccumulator =
       new FixedStepAccumulator(SimulationClock.STEP_SECONDS, MAX_SIMULATION_STEPS_PER_RENDER);
   private ClientRenderSystemRunner renderSystemRunner;
+  private AuthoritativeInterpolationSystem interpolationSystem;
   
   // Automap 持续缩放累加器（用于按住键持续放大/缩小）
   private float automapZoomAccumulator = 0f;
@@ -690,6 +692,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     if (socket != null) config.register("client.socket", socket);
     engine = Riiablo.engine = new World(config);
     renderSystemRunner = new ClientRenderSystemRunner(engine);
+    interpolationSystem = engine.getSystem(AuthoritativeInterpolationSystem.class);
     Gdx.app.log(TAG, String.format(
         "[SIM_CLOCK] rate=%dHz step=%.3fs maxCatchUp=%d renderSystems=%d",
         SimulationClock.TICKS_PER_SECOND, SimulationClock.STEP_SECONDS,
@@ -1084,7 +1087,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           simulationSteps, simulationAccumulator.getStepSeconds(),
           simulationAccumulator.getAccumulated()));
     }
-    renderSystemRunner.render(delta);
+    if (interpolationSystem != null) interpolationSystem.beginRender(delta);
+    try {
+      renderSystemRunner.render(delta);
+    } finally {
+      if (interpolationSystem != null) interpolationSystem.endRender();
+    }
 
     scaledStage.act(delta);
     scaledStage.draw();

@@ -6,6 +6,7 @@ import com.badlogic.gdx.net.Socket;
 
 import com.riiablo.engine.client.ClientNetworkReceiver;
 import com.riiablo.engine.client.ClientNetworkSynchronizer;
+import com.riiablo.engine.client.AuthoritativeInterpolationSystem;
 import com.riiablo.engine.client.NetworkProfiler;
 import com.riiablo.engine.client.Pinger;
 import com.riiablo.Riiablo;
@@ -31,6 +32,8 @@ public class NetworkedGameScreen extends GameScreen {
   @Override
   protected WorldConfigurationBuilder getWorldConfigurationBuilder() {
     WorldConfigurationBuilder builder = super.getWorldConfigurationBuilder();
+    builder.with(WorldConfigurationBuilder.Priority.HIGH,
+        new AuthoritativeInterpolationSystem());
     builder.with(WorldConfigurationBuilder.Priority.HIGH, new ClientNetworkReceiver());
     builder.with(new ClientNetworkSynchronizer());
     builder.with(new Pinger());
