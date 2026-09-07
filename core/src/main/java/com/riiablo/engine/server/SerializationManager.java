@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Object;
@@ -85,6 +86,7 @@ public class SerializationManager extends PassiveSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<DS1ObjectWrapper> mDS1ObjectWrapper;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper[] cm;
 
   protected ComponentManager componentManager;
@@ -182,7 +184,8 @@ public class SerializationManager extends PassiveSystem {
       int dataTypeOffset = EntitySync.createComponentTypeVector(builder, ArrayUtils.EMPTY_BYTE_ARRAY);
       int dataOffset = EntitySync.createComponentVector(builder, ArrayUtils.EMPTY_INT_ARRAY);
       return createEntitySync(builder, entityId, type, flags, dataTypeOffset, dataOffset,
-          tick, serverTimeMillis, acknowledgedInputSequence, rejectedInputSequence);
+          tick, serverTimeMillis, acknowledgedInputSequence, rejectedInputSequence,
+          levelId(entityId));
     }
 
     componentManager.getComponentsFor(entityId, components);
@@ -208,15 +211,23 @@ public class SerializationManager extends PassiveSystem {
     int dataOffset = builder.endVector();
 
     return createEntitySync(builder, entityId, type, flags, dataTypeOffset, dataOffset,
-        tick, serverTimeMillis, acknowledgedInputSequence, rejectedInputSequence);
+        tick, serverTimeMillis, acknowledgedInputSequence, rejectedInputSequence,
+        levelId(entityId));
+  }
+
+  private int levelId(int entityId) {
+    MapWrapper wrapper = mMapWrapper == null ? null
+        : (mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null);
+    return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+        ? -1 : wrapper.zone.level.Id;
   }
 
   private static int createEntitySync(FlatBufferBuilder builder, int entityId, int type,
       int flags, int dataTypeOffset, int dataOffset, long tick, long serverTimeMillis,
-      long acknowledgedInputSequence, long rejectedInputSequence) {
+      long acknowledgedInputSequence, long rejectedInputSequence, int levelId) {
     return EntitySync.createEntitySync(builder, entityId, type, flags, dataTypeOffset,
         dataOffset, tick, serverTimeMillis, 0L, acknowledgedInputSequence,
-        rejectedInputSequence);
+        rejectedInputSequence, levelId);
   }
 
   public void deserialize(int entityId, D2GS packet) {

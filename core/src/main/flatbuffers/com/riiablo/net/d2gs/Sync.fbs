@@ -68,6 +68,10 @@ table EntitySync {
   // Non-zero only when this exact input was rejected and the client must
   // discard prediction instead of visually smoothing through a collision.
   rejectedInputSequence:ulong;
+  // Authoritative level/zone context. A client must never apply an entity
+  // snapshot from a different level after a warp; -1 means unknown/legacy.
+  // Appended to preserve compatibility with older peers.
+  levelId:int32 = -1;
 }
 
 table ClassP {

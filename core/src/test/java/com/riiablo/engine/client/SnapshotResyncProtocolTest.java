@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
+import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.SnapshotBaseline;
 import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
 import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
@@ -52,5 +53,24 @@ class SnapshotResyncProtocolTest {
     assertEquals(5, marker.waypointMasksLength());
     assertEquals(4, marker.waypointMasks(2));
     assertEquals(17L, marker.inventoryRevision());
+  }
+
+  @Test
+  void entitySyncCarriesAuthoritativeLevelContext() {
+    FlatBufferBuilder builder = new FlatBufferBuilder(64);
+    int componentTypes = EntitySync.createComponentTypeVector(builder, new byte[0]);
+    int components = EntitySync.createComponentVector(builder, new int[0]);
+    int payload = EntitySync.createEntitySync(builder, 123, 1, 0,
+        componentTypes, components, 55L, 9000L, 0L, 12L, 0L, 8);
+    int root = D2GS.createD2GS(builder, D2GSData.EntitySync, payload);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer frame = builder.dataBuffer();
+    frame.position(frame.position() + Integer.BYTES);
+    EntitySync sync = (EntitySync) D2GS.getRootAsD2GS(frame)
+        .data(new EntitySync());
+    assertEquals(D2GSData.EntitySync, D2GS.getRootAsD2GS(frame).dataType());
+    assertEquals(123, sync.entityId());
+    assertEquals(55L, sync.tick());
+    assertEquals(8, sync.levelId());
   }
 }

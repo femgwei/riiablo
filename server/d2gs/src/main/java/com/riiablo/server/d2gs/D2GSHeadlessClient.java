@@ -84,6 +84,8 @@ public final class D2GSHeadlessClient {
   private long lastMovementAcknowledgement;
   private long lastRejectedMovementSequence;
   private long combatSequence;
+  private int currentLevelId = -1;
+  private int wrongLevelDrops;
   private float playerX = Float.NaN;
   private float playerY = Float.NaN;
 
@@ -427,11 +429,19 @@ public final class D2GSHeadlessClient {
             + " end=" + crossMapEnd + " town=(" + townX + ',' + townY + ") current=("
             + a.playerX + ',' + a.playerY + ")");
       }
+      float crossMapX = a.playerX, crossMapY = a.playerY;
+      long delayedTick = Math.max(a.lastSnapshotTick + 100L, 100L);
+      a.consume(staleLevelEntityPacket(0x7FFF0001, delayedTick, 1));
+      if (a.currentLevelId != 8 || a.wrongLevelDrops <= 0
+          || a.playerX != crossMapX || a.playerY != crossMapY) {
+        throw new IllegalStateException("old-level snapshot was not discarded: level="
+            + a.currentLevelId + " drops=" + a.wrongLevelDrops);
+      }
       log("snapshot_resync_pass", "request=77 warp=true death=true respawn=true crossMap=true corpse=true baseline=" + baselineId
           + " entities=" + entityFrames + " waypoints=" + waypointCount
           + " inventoryRevision=" + inventoryRevision
           + " duplicateBaseline=" + duplicateBaseline
-          + " peerUnaffected=true pausedMillis=2500");
+          + " peerUnaffected=true pausedMillis=2500 oldLevelDrops=" + a.wrongLevelDrops);
     }
   }
 
@@ -447,6 +457,24 @@ public final class D2GSHeadlessClient {
     byte[] bytes = new byte[frame.remaining()];
     frame.get(bytes);
     return bytes;
+  }
+
+  /** Builds an EntitySync frame tagged with an obsolete level for fault injection. */
+  private static com.riiablo.net.packet.d2gs.D2GS staleLevelEntityPacket(
+      int entityId, long tick, int levelId) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int position = PositionP.createPositionP(builder, 0f, 0f);
+    int types = EntitySync.createComponentTypeVector(builder,
+        new byte[] {ComponentP.PositionP});
+    int components = EntitySync.createComponentVector(builder, new int[] {position});
+    int sync = EntitySync.createEntitySync(builder, entityId, 1, 0, types, components,
+        tick, tick, 0L, 0L, 0L, levelId);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.EntitySync, sync);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer frame = builder.dataBuffer();
+    frame.position(frame.position() + Integer.BYTES);
+    return com.riiablo.net.packet.d2gs.D2GS.getRootAsD2GS(frame);
   }
 
   private static ByteBuffer playerLifecyclePacket(long requestId, byte operation) {
@@ -1601,6 +1629,12 @@ public final class D2GSHeadlessClient {
   private void consume(com.riiablo.net.packet.d2gs.D2GS packet) {
     if (packet.dataType() != D2GSData.EntitySync) return;
     EntitySync sync = (EntitySync) packet.data(new EntitySync());
+    int packetLevelId = sync.levelId();
+    if (sync.entityId() != playerId && packetLevelId >= 0 && currentLevelId >= 0
+        && packetLevelId != currentLevelId) {
+      wrongLevelDrops++;
+      return;
+    }
     long snapshotTick = sync.tick();
     long snapshotServerTime = sync.serverTimeMillis();
     if (snapshotTick > 0L) {
@@ -1614,6 +1648,7 @@ public final class D2GSHeadlessClient {
       snapshotTicks.add(snapshotTick);
     }
     if (sync.entityId() == playerId) {
+      if (packetLevelId >= 0) currentLevelId = packetLevelId;
       if (sync.acknowledgedInputSequence() > 0L) {
         lastMovementAcknowledgement = sync.acknowledgedInputSequence();
         lastRejectedMovementSequence = sync.rejectedInputSequence();
@@ -1787,7 +1822,7 @@ public final class D2GSHeadlessClient {
         new byte[] {ComponentP.PositionP});
     int components = EntitySync.createComponentVector(builder, new int[] {position});
     int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components,
-        0L, 0L, 0L, 0L, 0L);
+        0L, 0L, 0L, 0L, 0L, -1);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.EntitySync, sync);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
@@ -1811,7 +1846,7 @@ public final class D2GSHeadlessClient {
     int components = EntitySync.createComponentVector(
         builder, new int[] {position, velocity, angle});
     int sync = EntitySync.createEntitySync(builder, playerId, 2, 0, types, components,
-        0L, 0L, inputSequence, 0L, 0L);
+        0L, 0L, inputSequence, 0L, 0L, -1);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.EntitySync, sync);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);

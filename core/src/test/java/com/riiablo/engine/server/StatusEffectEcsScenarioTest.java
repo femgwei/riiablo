@@ -197,7 +197,7 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
         builder, new byte[] {ComponentP.StateP});
     int componentOffset = EntitySync.createComponentVector(builder, new int[] {stateOffset});
     int root = EntitySync.createEntitySync(builder, 42, 0, 0, typeOffset, componentOffset,
-        0L, 0L, 0L, 0L, 0L);
+        0L, 0L, 0L, 0L, 0L, -1);
     builder.finish(root);
 
     EntitySync packet = EntitySync.getRootAsEntitySync(builder.dataBuffer());

@@ -15,6 +15,8 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.utils.IntSet;
+import com.badlogic.gdx.utils.IntIntMap;
+import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.TimeUtils;
 
 import com.riiablo.Riiablo;
@@ -155,6 +157,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private final AuthoritativeSnapshotTimeline snapshotTimeline =
       new AuthoritativeSnapshotTimeline();
   private final IntSet deferredServerEntities = new IntSet();
+  /** Last authoritative level observed for each server entity. */
+  private final IntIntMap serverEntityLevels = new IntIntMap();
   private final ClientPartyState partyState = new ClientPartyState();
   private long latestServerTick;
   private long latestServerTickReceiptMillis;
@@ -164,6 +168,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private boolean snapshotResyncPending;
   private long lastResyncRequestMillis;
   private long lastResyncObservedTick;
+  /** Current level of the local player; -1 until the first authoritative snapshot. */
+  private int localLevelId = -1;
 
   public ClientNetworkReceiver() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -352,6 +358,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void Disconnect(D2GS packet) {
     snapshotResyncPending = false;
     snapshotResyncInProgress = false;
+    localLevelId = -1;
+    serverEntityLevels.clear();
     Disconnect disconnect = (Disconnect) packet.data(new Disconnect());
     int serverEntityId = disconnect.entityId();
     int entityId = syncIds.get(serverEntityId);
@@ -686,6 +694,23 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (snapshotResyncPending && !snapshotResyncInProgress) return;
     if (snapshotResyncInProgress && entityData.tick() != 0L
         && entityData.tick() < lastResyncObservedTick) return;
+
+    // Reject packets from a previous level before they can advance the
+    // snapshot timeline or delete an entity that happens to reuse an id in
+    // the current map. The local player's packet is always allowed through so
+    // it can establish the new level after a warp.
+    final int packetLevelId = entityData.levelId();
+    final int mappedEntityId = syncIds.get(entityData.entityId());
+    final boolean packetForLocalPlayer = Riiablo.game != null
+        && mappedEntityId != Engine.INVALID_ENTITY
+        && mappedEntityId == Riiablo.game.player;
+    if (!packetForLocalPlayer && packetLevelId >= 0 && localLevelId >= 0
+        && packetLevelId != localLevelId) {
+      Gdx.app.log(TAG, "[ENTITY_SYNC] phase=drop_wrong_level serverEntity="
+          + entityData.entityId() + " packetLevel=" + packetLevelId
+          + " localLevel=" + localLevelId + " tick=" + entityData.tick());
+      return;
+    }
     if (!snapshotTimeline.accept(entityData.tick(), entityData.serverTimeMillis())) {
       Gdx.app.error(TAG, "[ENTITY_SYNC] phase=stale_drop serverEntity="
           + entityData.entityId() + " tick=" + entityData.tick()
@@ -700,8 +725,20 @@ public class ClientNetworkReceiver extends IntervalSystem {
       latestServerTickReceiptMillis = TimeUtils.millis();
     }
     int entityId = syncIds.get(entityData.entityId());
+    if (packetLevelId >= 0) {
+      serverEntityLevels.put(entityData.entityId(), packetLevelId);
+      if (packetForLocalPlayer && packetLevelId != localLevelId) {
+        int previousLevelId = localLevelId;
+        localLevelId = packetLevelId;
+        pruneEntitiesForLevel(localLevelId);
+        Gdx.app.log(TAG, "[ENTITY_SYNC] phase=level_change localLevel="
+            + localLevelId + " previousLevel=" + previousLevelId
+            + " tick=" + entityData.tick());
+      }
+    }
     if ((entityData.flags() & EntityFlags.deleted) == EntityFlags.deleted) {
       deferredServerEntities.remove(entityData.entityId());
+      serverEntityLevels.remove(entityData.entityId(), -1);
       if (entityId != Engine.INVALID_ENTITY) {
         interpolation.remove(entityId);
         world.delete(entityId);
@@ -883,6 +920,28 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
     cofs.updateTransform(entityId, tFlags);
     cofs.updateAlpha(entityId, aFlags);
+  }
+
+  /** Removes stale remote entities retained from the level we just left. */
+  private void pruneEntitiesForLevel(int activeLevelId) {
+    IntArray staleServerIds = new IntArray();
+    for (IntIntMap.Entry entry : serverEntityLevels.entries()) {
+      if (entry.value == activeLevelId) continue;
+      int localEntityId = syncIds.get(entry.key);
+      if (localEntityId != Engine.INVALID_ENTITY
+          && (Riiablo.game == null || localEntityId != Riiablo.game.player)) {
+        staleServerIds.add(entry.key);
+        if (interpolation != null) interpolation.remove(localEntityId);
+        world.delete(localEntityId);
+      }
+    }
+    for (int i = 0; i < staleServerIds.size; i++) {
+      serverEntityLevels.remove(staleServerIds.get(i), -1);
+    }
+    if (staleServerIds.size > 0) {
+      Gdx.app.log(TAG, "[ENTITY_SYNC] phase=prune_old_level level="
+          + activeLevelId + " entities=" + staleServerIds.size);
+    }
   }
 
   private void SnapshotBaseline(D2GS packet) {

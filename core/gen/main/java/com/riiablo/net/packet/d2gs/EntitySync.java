@@ -33,6 +33,7 @@ public final class EntitySync extends Table {
   public long inputSequence() { int o = __offset(18); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
   public long acknowledgedInputSequence() { int o = __offset(20); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
   public long rejectedInputSequence() { int o = __offset(22); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public int levelId() { int o = __offset(24); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
 
   public static int createEntitySync(FlatBufferBuilder builder,
       int entityId,
@@ -44,13 +45,15 @@ public final class EntitySync extends Table {
       long serverTimeMillis,
       long inputSequence,
       long acknowledgedInputSequence,
-      long rejectedInputSequence) {
-    builder.startTable(10);
+      long rejectedInputSequence,
+      int levelId) {
+    builder.startTable(11);
     EntitySync.addRejectedInputSequence(builder, rejectedInputSequence);
     EntitySync.addAcknowledgedInputSequence(builder, acknowledgedInputSequence);
     EntitySync.addInputSequence(builder, inputSequence);
     EntitySync.addServerTimeMillis(builder, serverTimeMillis);
     EntitySync.addTick(builder, tick);
+    EntitySync.addLevelId(builder, levelId);
     EntitySync.addComponent(builder, componentOffset);
     EntitySync.addComponentType(builder, component_typeOffset);
     EntitySync.addEntityId(builder, entityId);
@@ -59,7 +62,7 @@ public final class EntitySync extends Table {
     return EntitySync.endEntitySync(builder);
   }
 
-  public static void startEntitySync(FlatBufferBuilder builder) { builder.startTable(10); }
+  public static void startEntitySync(FlatBufferBuilder builder) { builder.startTable(11); }
   public static void addEntityId(FlatBufferBuilder builder, int entityId) { builder.addInt(0, entityId, 0); }
   public static void addType(FlatBufferBuilder builder, int type) { builder.addByte(1, (byte)type, (byte)0); }
   public static void addFlags(FlatBufferBuilder builder, int flags) { builder.addByte(2, (byte)flags, (byte)0); }
@@ -74,6 +77,7 @@ public final class EntitySync extends Table {
   public static void addInputSequence(FlatBufferBuilder builder, long inputSequence) { builder.addLong(7, inputSequence, 0L); }
   public static void addAcknowledgedInputSequence(FlatBufferBuilder builder, long acknowledgedInputSequence) { builder.addLong(8, acknowledgedInputSequence, 0L); }
   public static void addRejectedInputSequence(FlatBufferBuilder builder, long rejectedInputSequence) { builder.addLong(9, rejectedInputSequence, 0L); }
+  public static void addLevelId(FlatBufferBuilder builder, int levelId) { builder.addInt(10, levelId, -1); }
   public static int endEntitySync(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

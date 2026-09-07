@@ -13,7 +13,7 @@ class EntitySyncClockTest {
     int components = EntitySync.createComponentVector(builder, new int[0]);
     builder.finish(EntitySync.createEntitySync(
         builder, 7, 2, 0, types, components, 123L, 4_920L,
-        81L, 79L, 79L));
+        81L, 79L, 79L, -1));
 
     EntitySync sync = EntitySync.getRootAsEntitySync(builder.dataBuffer());
     assertEquals(123L, sync.tick());
