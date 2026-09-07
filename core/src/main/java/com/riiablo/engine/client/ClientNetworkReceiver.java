@@ -168,6 +168,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private boolean snapshotResyncPending;
   private long lastResyncRequestMillis;
   private long lastResyncObservedTick;
+  private long baselineBeginTick;
+  private final SnapshotBaselineTransaction baselineTransaction =
+      new SnapshotBaselineTransaction();
   /** Current level of the local player; -1 until the first authoritative snapshot. */
   private int localLevelId = -1;
 
@@ -693,7 +696,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
     if (snapshotResyncPending && !snapshotResyncInProgress) return;
     if (snapshotResyncInProgress && entityData.tick() != 0L
-        && entityData.tick() < lastResyncObservedTick) return;
+        && entityData.tick() < baselineBeginTick) {
+      Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=entity_drop_before_begin serverEntity="
+          + entityData.entityId() + " tick=" + entityData.tick()
+          + " beginTick=" + baselineBeginTick);
+      return;
+    }
 
     // Reject packets from a previous level before they can advance the
     // snapshot timeline or delete an entity that happens to reuse an id in
@@ -720,6 +728,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       return;
     }
     if (entityData.tick() > lastResyncObservedTick) lastResyncObservedTick = entityData.tick();
+    if (snapshotResyncInProgress) baselineTransaction.acceptEntity(entityData.entityId());
     if (entityData.tick() > latestServerTick) {
       latestServerTick = entityData.tick();
       latestServerTickReceiptMillis = TimeUtils.millis();
@@ -947,19 +956,54 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private void SnapshotBaseline(D2GS packet) {
     SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
     if (marker.phase() == SnapshotBaselinePhase.BEGIN) {
+      if (!marker.success()) {
+        Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=begin success=false request="
+            + marker.requestId() + " baseline=" + marker.baselineId()
+            + " reason=" + marker.reason());
+        snapshotResyncPending = false;
+        snapshotResyncInProgress = false;
+        baselineTransaction.abort();
+        return;
+      }
+      boolean started = baselineTransaction.begin(marker.requestId(), marker.baselineId(),
+          marker.entityCount());
+      if (!started) {
+        Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=begin_ignored request="
+            + marker.requestId() + " baseline=" + marker.baselineId()
+            + " active=" + baselineTransaction.active());
+        return;
+      }
       snapshotResyncPending = false;
       snapshotResyncInProgress = true;
+      baselineBeginTick = marker.serverTick();
       lastResyncObservedTick = marker.serverTick();
       deferredServerEntities.clear();
       if (interpolation != null) interpolation.clear();
       Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=begin request=" + marker.requestId()
-          + " baseline=" + marker.baselineId() + " tick=" + marker.serverTick());
+          + " baseline=" + marker.baselineId() + " tick=" + marker.serverTick()
+          + " entities=" + marker.entityCount());
     } else {
-      if (!marker.success()) {
+      SnapshotBaselineTransaction.EndResult result = baselineTransaction.end(
+          marker.requestId(), marker.baselineId(), marker.entityCount(), marker.success());
+      if (result == SnapshotBaselineTransaction.EndResult.IGNORED) {
+        Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=end_ignored request="
+            + marker.requestId() + " baseline=" + marker.baselineId());
+        return;
+      }
+      if (result == SnapshotBaselineTransaction.EndResult.FAILED) {
         snapshotResyncPending = false;
         snapshotResyncInProgress = false;
         Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=end success=false request="
             + marker.requestId() + " reason=" + marker.reason());
+        return;
+      }
+      if (result == SnapshotBaselineTransaction.EndResult.INCOMPLETE) {
+        snapshotResyncInProgress = false;
+        snapshotResyncPending = true;
+        Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=end_incomplete request="
+            + marker.requestId() + " baseline=" + marker.baselineId()
+            + " expected=" + marker.entityCount());
+        requestSnapshotResync(lastResyncObservedTick, "baseline_incomplete");
         return;
       }
       snapshotTimeline.resetTo(marker.serverTick(), marker.serverTimeMillis());

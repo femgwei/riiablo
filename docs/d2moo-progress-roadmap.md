@@ -399,7 +399,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 离屏双客户端将开启对象切换为 `MODE_NU`，先向一个客户端重放基线，再验证另一个客户端也收到同一模式；之后恢复 `MODE_ON`，死亡怪物、掉落物和拾取/删除回归继续通过。
   - `headlessSnapshotResync` 输出 `recipient_baseline_pass`、`room_subscription_pass`、`room_persistence_pass` 和 `snapshot_resync_pass`，D2GS/Netty 编译及核心回归通过。
 
-下一项建议进入 **多人快照重同步第十五阶段（丢包/重排恢复与基线事务边界）**：注入实体增量包丢失、重复和乱序，验证客户端能通过幂等重同步恢复对象、怪物、掉落和玩家状态，且基线 BEGIN/实体帧/END 不会被旧包污染。
+- [x] ~~完成多人快照重同步第十五阶段（丢包/重排恢复与基线事务边界）~~
+  - 新增 `SnapshotBaselineTransaction`，严格绑定 requestId/baselineId，去重实体帧并校验 BEGIN 声明的实体数量；乱序 END、重复 BEGIN、旧 baseline 和缺帧不会提交半成品状态。
+  - `ClientNetworkReceiver` 仅在完整基线事务结束后重置时间线；不匹配的 END 被忽略，缺帧会终止当前事务并重新请求基线，旧 tick 的实体包在事务期间被丢弃。
+  - 新增基线事务单元测试，覆盖乱序 END、重复实体帧、重复 BEGIN、旧 baseline 和新事务替换；真实 1.10f `headlessSnapshotResync` 继续通过，包含 `recipient_baseline_pass`、`room_subscription_pass`、`room_persistence_pass` 与 `snapshot_resync_pass`。
+  - D2GS/Netty 编译及客户端快照时间线回归通过。
+
+下一项建议进入 **多人快照重同步第十六阶段（断线重连后的实体 ID、任务和背包一致性）**：验证重连客户端在 RoomEx、任务进度、背包 revision、地面掉落和佣兵/召唤物状态上与原连接及其他客户端保持同一权威基线。
 
 ## 记录规则
 
