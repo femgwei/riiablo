@@ -15,6 +15,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.utils.IntSet;
+import com.badlogic.gdx.utils.TimeUtils;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.SimulationClock;
@@ -151,9 +152,18 @@ public class ClientNetworkReceiver extends IntervalSystem {
       new AuthoritativeSnapshotTimeline();
   private final IntSet deferredServerEntities = new IntSet();
   private final ClientPartyState partyState = new ClientPartyState();
+  private long latestServerTick;
+  private long latestServerTickReceiptMillis;
 
   public ClientNetworkReceiver() {
     super(null, SimulationClock.STEP_SECONDS);
+  }
+
+  /** Latest accepted authoritative tick, or zero before the first snapshot. */
+  public long latestServerTick() {
+    if (latestServerTick == 0L) return 0L;
+    long elapsed = Math.max(0L, TimeUtils.millis() - latestServerTickReceiptMillis);
+    return latestServerTick + elapsed / SimulationClock.STEP_MILLIS;
   }
 
   @Override
@@ -622,6 +632,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
           + " serverTime=" + entityData.serverTimeMillis()
           + " acceptedServerTime=" + snapshotTimeline.serverTimeMillis());
       return;
+    }
+    if (entityData.tick() > latestServerTick) {
+      latestServerTick = entityData.tick();
+      latestServerTickReceiptMillis = TimeUtils.millis();
     }
     int entityId = syncIds.get(entityData.entityId());
     if ((entityData.flags() & EntityFlags.deleted) == EntityFlags.deleted) {

@@ -17,19 +17,31 @@ public final class RunToLocation extends Table {
 
   public short x() { int o = __offset(4); return o != 0 ? bb.getShort(o + bb_pos) : 0; }
   public short y() { int o = __offset(6); return o != 0 ? bb.getShort(o + bb_pos) : 0; }
+  public long sequence() { int o = __offset(8); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long observedServerTick() { int o = __offset(10); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long targetTick() { int o = __offset(12); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
 
   public static int createRunToLocation(FlatBufferBuilder builder,
       short x,
-      short y) {
-    builder.startTable(2);
+      short y,
+      long sequence,
+      long observedServerTick,
+      long targetTick) {
+    builder.startTable(5);
+    RunToLocation.addTargetTick(builder, targetTick);
+    RunToLocation.addObservedServerTick(builder, observedServerTick);
+    RunToLocation.addSequence(builder, sequence);
     RunToLocation.addY(builder, y);
     RunToLocation.addX(builder, x);
     return RunToLocation.endRunToLocation(builder);
   }
 
-  public static void startRunToLocation(FlatBufferBuilder builder) { builder.startTable(2); }
+  public static void startRunToLocation(FlatBufferBuilder builder) { builder.startTable(5); }
   public static void addX(FlatBufferBuilder builder, short x) { builder.addShort(0, x, 0); }
   public static void addY(FlatBufferBuilder builder, short y) { builder.addShort(1, y, 0); }
+  public static void addSequence(FlatBufferBuilder builder, long sequence) { builder.addLong(2, sequence, 0L); }
+  public static void addObservedServerTick(FlatBufferBuilder builder, long observedServerTick) { builder.addLong(3, observedServerTick, 0L); }
+  public static void addTargetTick(FlatBufferBuilder builder, long targetTick) { builder.addLong(4, targetTick, 0L); }
   public static int endRunToLocation(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

@@ -17,19 +17,31 @@ public final class RunToEntity extends Table {
 
   public int type() { int o = __offset(4); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
   public int entityId() { int o = __offset(6); return o != 0 ? bb.getInt(o + bb_pos) : 0; }
+  public long sequence() { int o = __offset(8); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long observedServerTick() { int o = __offset(10); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long targetTick() { int o = __offset(12); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
 
   public static int createRunToEntity(FlatBufferBuilder builder,
       int type,
-      int entityId) {
-    builder.startTable(2);
+      int entityId,
+      long sequence,
+      long observedServerTick,
+      long targetTick) {
+    builder.startTable(5);
+    RunToEntity.addTargetTick(builder, targetTick);
+    RunToEntity.addObservedServerTick(builder, observedServerTick);
+    RunToEntity.addSequence(builder, sequence);
     RunToEntity.addEntityId(builder, entityId);
     RunToEntity.addType(builder, type);
     return RunToEntity.endRunToEntity(builder);
   }
 
-  public static void startRunToEntity(FlatBufferBuilder builder) { builder.startTable(2); }
+  public static void startRunToEntity(FlatBufferBuilder builder) { builder.startTable(5); }
   public static void addType(FlatBufferBuilder builder, int type) { builder.addByte(0, (byte)type, (byte)0); }
   public static void addEntityId(FlatBufferBuilder builder, int entityId) { builder.addInt(1, entityId, 0); }
+  public static void addSequence(FlatBufferBuilder builder, long sequence) { builder.addLong(2, sequence, 0L); }
+  public static void addObservedServerTick(FlatBufferBuilder builder, long observedServerTick) { builder.addLong(3, observedServerTick, 0L); }
+  public static void addTargetTick(FlatBufferBuilder builder, long targetTick) { builder.addLong(4, targetTick, 0L); }
   public static int endRunToEntity(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

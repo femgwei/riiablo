@@ -4,6 +4,11 @@ table WalkToLocation {
   // request
   x:int16;
   y:int16;
+  // Monotonic input identity and the authoritative simulation frame on which
+  // this command should become visible. Appended for wire compatibility.
+  sequence:ulong;
+  observedServerTick:ulong;
+  targetTick:ulong;
 
   // response
 }
@@ -12,6 +17,9 @@ table WalkToEntity {
   // request
   type:uint8;
   entityId:int32;
+  sequence:ulong;
+  observedServerTick:ulong;
+  targetTick:ulong;
 
   // response
 }
@@ -20,6 +28,9 @@ table RunToLocation {
   // request
   x:int16;
   y:int16;
+  sequence:ulong;
+  observedServerTick:ulong;
+  targetTick:ulong;
 
   // response
 }
@@ -28,6 +39,9 @@ table RunToEntity {
   // request
   type:uint8;
   entityId:int32;
+  sequence:ulong;
+  observedServerTick:ulong;
+  targetTick:ulong;
 
   // response
 }

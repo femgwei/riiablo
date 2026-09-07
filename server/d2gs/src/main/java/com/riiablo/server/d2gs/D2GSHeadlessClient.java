@@ -23,6 +23,7 @@ import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.PositionP;
+import com.riiablo.net.packet.d2gs.RunToLocation;
 import com.riiablo.net.packet.d2gs.QuestOperation;
 import com.riiablo.net.packet.d2gs.QuestRequest;
 import com.riiablo.net.packet.d2gs.QuestResult;
@@ -87,6 +88,11 @@ public final class D2GSHeadlessClient {
     Config config = Config.parse(args);
     boolean startedServer = config.home != null;
     if (startedServer) {
+      // A few older combat fixtures deliberately place actors next to a
+      // deterministic target. Production D2GS leaves this bridge disabled.
+      if (!config.requireSnapshotOrder && !config.requireSimulationTick) {
+        System.setProperty("riiablo.d2gs.allowLegacyEntitySync", "true");
+      }
       log("server_start", "home=" + config.home + " seed=" + config.seed);
       D2GS.main(new String[] {
           "-home", config.home.getAbsolutePath(),
@@ -209,18 +215,26 @@ public final class D2GSHeadlessClient {
       if (!Float.isFinite(a.playerX) || !Float.isFinite(b.playerX)) {
         throw new IOException("snapshot baseline omitted one player position");
       }
-      send(outA, movementPacket(a.playerId, a.playerX, a.playerY, 1f, 0f, 1L));
+      long observedA = a.lastSnapshotTick;
+      long observedB = b.lastSnapshotTick;
+      send(outA, movementIntentPacket(a.playerX + 3f, a.playerY,
+          1L, observedA, observedA + 2L));
       // Starting at sequence 3 models two lost client samples before the
       // first packet reaches D2GS.
-      send(outB, movementPacket(b.playerId, b.playerX, b.playerY, 1f, 0f, 3L));
+      send(outB, movementIntentPacket(b.playerX + 3f, b.playerY,
+          3L, observedB, observedB + 2L));
       // A new but impossible displacement must be processed as a rejected
       // input so the real client can hard-correct and discard prediction.
-      send(outA, movementPacket(a.playerId, a.playerX + 100f, a.playerY,
-          1f, 0f, 2L));
+      send(outA, movementIntentPacket(a.playerX + 100f, a.playerY,
+          2L, observedA, observedA + 2L));
       // Duplicate input must be ignored before its deliberately invalid
       // position can overwrite the authoritative entity.
-      send(outA, movementPacket(a.playerId, a.playerX + 100f, a.playerY,
-          1f, 0f, 1L));
+      send(outA, movementIntentPacket(a.playerX + 100f, a.playerY,
+          1L, observedA, observedA + 2L));
+      // Production D2GS must reject the old absolute-coordinate upload even
+      // if it carries a newer sequence.
+      send(outB, movementPacket(b.playerId, b.playerX + 100f, b.playerY,
+          1f, 0f, 4L));
 
       long observationDeadline = System.currentTimeMillis() + 2_000L;
       while (System.currentTimeMillis() < observationDeadline) {
@@ -236,9 +250,9 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("snapshot ordering sample too small: clientA="
             + a.snapshotTicks + " clientB=" + b.snapshotTicks);
       }
-      if (a.lastMovementAcknowledgement != 2L || b.lastMovementAcknowledgement != 3L
+      if (a.lastMovementAcknowledgement != 2L || b.lastMovementAcknowledgement != 4L
           || a.lastRejectedMovementSequence != 2L
-          || b.lastRejectedMovementSequence != 0L) {
+          || b.lastRejectedMovementSequence != 4L) {
         throw new IllegalStateException("movement acknowledgement failed: clientA="
             + a.lastMovementAcknowledgement + "/" + a.lastRejectedMovementSequence
             + " clientB=" + b.lastMovementAcknowledgement + "/"
@@ -1597,6 +1611,18 @@ public final class D2GSHeadlessClient {
         0L, 0L, inputSequence, 0L, 0L);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.EntitySync, sync);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    return builder.dataBuffer();
+  }
+
+  private static ByteBuffer movementIntentPacket(
+      float x, float y, long sequence, long observedServerTick, long targetTick) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int intent = RunToLocation.createRunToLocation(builder,
+        (short) Math.round(x), (short) Math.round(y), sequence,
+        observedServerTick, targetTick);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.RunToLocation, intent);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     return builder.dataBuffer();
   }

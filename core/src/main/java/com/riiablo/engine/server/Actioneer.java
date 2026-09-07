@@ -149,7 +149,7 @@ public class Actioneer extends PassiveSystem {
       moveTo(entityId, null);
     } else {
       mTarget.create(entityId).target = targetId;
-      moveTo(entityId, mPosition.get(targetId).position);
+      pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);
     }
   }
 

@@ -12,8 +12,26 @@ import com.riiablo.engine.Direction;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.map.pfa.GraphPath;
+import com.riiablo.map.pfa.Point2;
 
 class PathfinderTest {
+  @Test
+  void pathfindRetainsFinalDestinationIndependentlyOfCurrentWaypoint() {
+    GraphPath path = new GraphPath();
+    path.add(new Point2(1, 2));
+    path.add(new Point2(3, 4));
+    path.add(new Point2(8, 9));
+    Pathfind pathfind = new Pathfind().set(path);
+
+    assertTrue(pathfind.target.epsilonEquals(3f, 4f, 0.0001f));
+    assertTrue(pathfind.destination.epsilonEquals(8f, 9f, 0.0001f));
+    pathfind.target.set(5f, 6f);
+    assertTrue(pathfind.destination.epsilonEquals(8f, 9f, 0.0001f));
+    pathfind.reset();
+    assertTrue(pathfind.destination.isZero());
+  }
+
   @Test
   void blockedRaycastFallbackStopsInsteadOfMovingDirectlyToTarget() {
     Velocity velocity = new Velocity();

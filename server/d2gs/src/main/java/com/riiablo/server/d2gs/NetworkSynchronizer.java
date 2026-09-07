@@ -194,6 +194,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       movement = new MovementAcknowledgement();
       movementAcknowledgements.put(entityId, movement);
     }
+    if (sequence < movement.acknowledged) return;
     movement.acknowledged = sequence;
     if (rejected) movement.rejected = sequence;
   }

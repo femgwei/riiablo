@@ -63,39 +63,30 @@ public class Pathfinder extends IteratingSystem {
     Vector2 target = pathfind.target;
     Iterator<Vector2> targets = pathfind.targets;
     
-    // Check if target is a player entity and handle dynamic repathing
-    // Use targetEntityId stored in Pathfind component (set when findPath is called with target entity)
+    // Entity-target commands must follow every moving unit, not only players.
+    // Networked players commonly chase monsters; treating a monster as a
+    // one-time location makes the server stop at its stale click position.
     boolean shouldRepath = false;
     int targetId = pathfind.targetEntityId;
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
       Vector2 targetPos = mPosition.get(targetId).position;
-      
-      // Check if target is a player
-      boolean isPlayerTarget = false;
-      if (mClass.has(targetId)) {
-        Class.Type targetType = mClass.get(targetId).type;
-        isPlayerTarget = (targetType == Class.Type.PLR);
-      }
-      
-      // If target is a player, check if player has moved or repath timer expired
-      if (isPlayerTarget) {
-        // Check if player has moved significantly (more than 0.5 tiles)
+      boolean dynamicTarget = mVelocity.has(targetId);
+      if (dynamicTarget) {
         float moveDistance = pathfind.lastTargetPosition.dst(targetPos);
         if (moveDistance > 0.5f) {
           shouldRepath = true;
           pathfind.lastTargetPosition.set(targetPos);
         }
-        
-        // Check repath timer
+
         pathfind.repathTimer -= world.delta;
         if (pathfind.repathTimer <= 0f) {
           shouldRepath = true;
           pathfind.repathTimer = Pathfind.REPATH_INTERVAL;
         }
       } else {
-        // Not a player target, reset tracking
-        pathfind.targetEntityId = Engine.INVALID_ENTITY;
-        pathfind.lastTargetPosition.setZero();
+        // Static objects still remain entity targets for range/interaction,
+        // but do not need periodic path recomputation.
+        pathfind.lastTargetPosition.set(targetPos);
         pathfind.repathTimer = 0f;
       }
       

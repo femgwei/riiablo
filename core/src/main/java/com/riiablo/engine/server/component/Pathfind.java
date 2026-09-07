@@ -15,6 +15,8 @@ public class Pathfind extends PooledComponent {
   public GraphPath path;
   public Iterator<Vector2> targets = Collections.emptyIterator();
   public final Vector2 target = new Vector2();
+  /** Final reachable destination used by network clients to send intent, not waypoints. */
+  public final Vector2 destination = new Vector2();
   
   // Track target entity for dynamic repathing (e.g., following player)
   public int targetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
@@ -30,6 +32,7 @@ public class Pathfind extends PooledComponent {
   public void reset() {
     path = null;
     target.setZero();
+    destination.setZero();
     targets = Collections.emptyIterator();
     targetEntityId = com.riiablo.engine.Engine.INVALID_ENTITY;
     lastTargetPosition.setZero();
@@ -43,6 +46,7 @@ public class Pathfind extends PooledComponent {
     targets = path.vectorIterator();
     Vector2 position = targets.next();
     target.set(targets.hasNext() ? targets.next() : position);
+    destination.set(path.getNodePosition(path.getCount() - 1));
     return this;
   }
 }

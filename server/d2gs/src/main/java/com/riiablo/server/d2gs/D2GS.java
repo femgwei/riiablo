@@ -100,6 +100,7 @@ import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
@@ -148,6 +149,10 @@ import com.riiablo.net.packet.d2gs.D2GSData;
 import com.riiablo.net.packet.d2gs.Disconnect;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
+import com.riiablo.net.packet.d2gs.RunToEntity;
+import com.riiablo.net.packet.d2gs.RunToLocation;
+import com.riiablo.net.packet.d2gs.WalkToEntity;
+import com.riiablo.net.packet.d2gs.WalkToLocation;
 import com.riiablo.net.packet.d2gs.GroundToCursor;
 import com.riiablo.net.packet.d2gs.Ping;
 import com.riiablo.net.packet.d2gs.PositionP;
@@ -177,6 +182,8 @@ import com.riiablo.net.packet.d2gs.QuestResult;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.net.AuthoritativeMovementValidator;
 import com.riiablo.net.MovementInputSequenceTracker;
+import com.riiablo.net.MovementIntent;
+import com.riiablo.net.MovementIntentScheduler;
 import com.riiablo.save.CharData;
 import com.riiablo.util.DebugUtils;
 
@@ -772,6 +779,9 @@ public class D2GS extends ApplicationAdapter {
 
   private static final int PORT = 6114;
   private static final int MAX_CLIENTS = Riiablo.MAX_PLAYERS;
+  /** Explicit test-only bridge for older smoke scenarios that place actors directly. */
+  private static final boolean ALLOW_LEGACY_ENTITY_SYNC =
+      Boolean.getBoolean("riiablo.d2gs.allowLegacyEntitySync");
 
   public static void main(String[] args) {
     Options options = new Options()
@@ -843,9 +853,17 @@ public class D2GS extends ApplicationAdapter {
   final long[] nextMovementLogTime = new long[MAX_CLIENTS];
   final MovementInputSequenceTracker[] movementInputs =
       new MovementInputSequenceTracker[MAX_CLIENTS];
+  final MovementIntentScheduler[] movementIntents =
+      new MovementIntentScheduler[MAX_CLIENTS];
+  final long[] lastAppliedMovementIntent = new long[MAX_CLIENTS];
+  final Collection<MovementIntent> readyMovementIntents = new ArrayList<>();
 
   static final BitVector ignoredPackets = new BitVector(D2GSData.names.length); {
     ignoredPackets.set(D2GSData.EntitySync);
+    ignoredPackets.set(D2GSData.WalkToLocation);
+    ignoredPackets.set(D2GSData.WalkToEntity);
+    ignoredPackets.set(D2GSData.RunToLocation);
+    ignoredPackets.set(D2GSData.RunToEntity);
   }
 
   FileHandle home;
@@ -878,6 +896,7 @@ public class D2GS extends ApplicationAdapter {
     this.diff = diff;
     for (int i = 0; i < movementInputs.length; i++) {
       movementInputs[i] = new MovementInputSequenceTracker();
+      movementIntents[i] = new MovementIntentScheduler();
     }
   }
 
@@ -1116,6 +1135,7 @@ public class D2GS extends ApplicationAdapter {
       if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) Gdx.app.log(TAG, "processing " + D2GSData.name(packet.data.dataType()) + " packet from " + packet.id);
       process(packet);
     }
+    applyReadyMovementIntents();
   }
 
   private void dispatchOutgoingPackets() {
@@ -1153,6 +1173,12 @@ public class D2GS extends ApplicationAdapter {
         break;
       case D2GSData.EntitySync:
         Synchronize(packet);
+        break;
+      case D2GSData.WalkToLocation:
+      case D2GSData.WalkToEntity:
+      case D2GSData.RunToLocation:
+      case D2GSData.RunToEntity:
+        MovementIntent(packet);
         break;
       case D2GSData.GroundToCursor:
         GroundToCursor(packet);
@@ -1253,6 +1279,8 @@ public class D2GS extends ApplicationAdapter {
     int entityId = factory.createPlayer(charData, origin);
     player.put(packet.id, entityId);
     movementInputs[packet.id].reset();
+    movementIntents[packet.id].reset();
+    lastAppliedMovementIntent[packet.id] = 0L;
     sync.clearMovementAcknowledgement(entityId);
     Gdx.app.log(TAG, "  entityId=" + entityId);
 
@@ -1349,7 +1377,148 @@ public class D2GS extends ApplicationAdapter {
       connected &= ~(1 << id);
     }
     movementInputs[id].reset();
+    movementIntents[id].reset();
+    lastAppliedMovementIntent[id] = 0L;
     broadcastPartySnapshots(PartyOperation.LEAVE, entityId, -1, -1);
+  }
+
+  /** Accepts an untrusted destination; identity always comes from the connection. */
+  private void MovementIntent(Packet packet) {
+    int entityId = player.get(packet.id, Engine.INVALID_ENTITY);
+    if (entityId == Engine.INVALID_ENTITY) {
+      Gdx.app.log(TAG, "[NET_MOVE] phase=intent_reject connection=" + packet.id
+          + " reason=not_authenticated");
+      return;
+    }
+
+    MovementIntent input;
+    switch (packet.data.dataType()) {
+      case D2GSData.WalkToLocation: {
+        WalkToLocation data = (WalkToLocation) packet.data.data(new WalkToLocation());
+        input = MovementIntent.location(data.sequence(), data.observedServerTick(),
+            data.targetTick(), false, data.x(), data.y());
+        break;
+      }
+      case D2GSData.RunToLocation: {
+        RunToLocation data = (RunToLocation) packet.data.data(new RunToLocation());
+        input = MovementIntent.location(data.sequence(), data.observedServerTick(),
+            data.targetTick(), true, data.x(), data.y());
+        break;
+      }
+      case D2GSData.WalkToEntity: {
+        WalkToEntity data = (WalkToEntity) packet.data.data(new WalkToEntity());
+        input = MovementIntent.entity(data.sequence(), data.observedServerTick(),
+            data.targetTick(), false, data.type(), data.entityId());
+        break;
+      }
+      case D2GSData.RunToEntity: {
+        RunToEntity data = (RunToEntity) packet.data.data(new RunToEntity());
+        input = MovementIntent.entity(data.sequence(), data.observedServerTick(),
+            data.targetTick(), true, data.type(), data.entityId());
+        break;
+      }
+      default:
+        throw new AssertionError(packet.data.dataType());
+    }
+
+    MovementIntentScheduler.Result result = movementIntents[packet.id].submit(
+        input, simulation.tickNumber());
+    if (result != MovementIntentScheduler.Result.ACCEPTED) {
+      Gdx.app.log(TAG, "[NET_MOVE] phase=intent_drop connection=" + packet.id
+          + " player=" + entityId + " sequence=" + input.sequence
+          + " result=" + result.name().toLowerCase());
+      return;
+    }
+  }
+
+  /** Applies due inputs before this tick's ECS processing and only then publishes ACKs. */
+  private void applyReadyMovementIntents() {
+    long currentTick = simulation.tickNumber();
+    for (int connectionId = 0; connectionId < MAX_CLIENTS; connectionId++) {
+      readyMovementIntents.clear();
+      movementIntents[connectionId].drainReady(currentTick, readyMovementIntents);
+      if (readyMovementIntents.isEmpty()) continue;
+      int entityId = player.get(connectionId, Engine.INVALID_ENTITY);
+      if (entityId == Engine.INVALID_ENTITY) continue;
+      for (MovementIntent input : readyMovementIntents) {
+        applyMovementIntent(connectionId, entityId, input, currentTick);
+      }
+    }
+    readyMovementIntents.clear();
+  }
+
+  private void applyMovementIntent(
+      int connectionId, int entityId, MovementIntent input, long currentTick) {
+    String rejection = validateMovementIntent(entityId, input);
+    long fingerprint = input.commandFingerprint();
+    boolean changed = fingerprint != lastAppliedMovementIntent[connectionId];
+    Actioneer actioneer = world.getSystem(Actioneer.class);
+    if (rejection == null && changed && !actioneer.canInterrupt(entityId)) {
+      rejection = "action_locked";
+    }
+
+    if (rejection == null && changed) {
+      ComponentMapper<Running> running = world.getMapper(Running.class);
+      if (input.running) running.create(entityId);
+      else running.remove(entityId);
+
+      if (input.targetKind == MovementIntent.TargetKind.ENTITY) {
+        actioneer.moveTo(entityId, input.targetEntityId);
+      } else {
+        Position position = world.getMapper(Position.class).get(entityId);
+        float dx = input.x - position.position.x;
+        float dy = input.y - position.position.y;
+        if (dx * dx + dy * dy <= 1f) {
+          actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
+        } else {
+          actioneer.moveTo(entityId, new Vector2(input.x, input.y));
+        }
+      }
+      lastAppliedMovementIntent[connectionId] = fingerprint;
+    }
+
+    boolean rejected = rejection != null;
+    sync.acknowledgeMovement(entityId, input.sequence, rejected);
+    long now = TimeUtils.millis();
+    if (rejected || changed || now >= nextMovementLogTime[connectionId]) {
+      nextMovementLogTime[connectionId] = now + 1000L;
+      Gdx.app.log(TAG, "[NET_MOVE] phase=intent_" + (rejected ? "reject" : "apply")
+          + " connection=" + connectionId + " player=" + entityId
+          + " sequence=" + input.sequence + " targetTick=" + input.targetTick
+          + " appliedTick=" + currentTick + " changed=" + changed
+          + (rejected ? " reason=" + rejection
+              : " mode=" + (input.running ? "run" : "walk")));
+    }
+  }
+
+  private String validateMovementIntent(int entityId, MovementIntent input) {
+    if (isPlayerDead(entityId)) return "player_dead";
+    Position source = world.getMapper(Position.class).get(entityId);
+    if (source == null) return "missing_source_position";
+    if (input.targetKind == MovementIntent.TargetKind.ENTITY) {
+      if (input.targetEntityId == entityId) return "self_target";
+      Position target = world.getMapper(Position.class).get(input.targetEntityId);
+      com.riiablo.engine.server.component.Class targetClass = world.getMapper(
+          com.riiablo.engine.server.component.Class.class).get(input.targetEntityId);
+      if (target == null || targetClass == null) return "unknown_target";
+      if (Math.abs(target.position.x - source.position.x) > 50f
+          || Math.abs(target.position.y - source.position.y) > 50f) {
+        return "target_out_of_range";
+      }
+      try {
+        if (com.riiablo.engine.server.component.Class.Type.valueOf(input.targetType)
+            != targetClass.type) return "target_type_mismatch";
+      } catch (Throwable ignored) {
+        return "invalid_target_type";
+      }
+      return null;
+    }
+
+    float dx = input.x - source.position.x;
+    float dy = input.y - source.position.y;
+    if (Math.abs(dx) > 50f || Math.abs(dy) > 50f) return "target_out_of_range";
+    if (map == null || map.getZone(input.x, input.y) == null) return "target_outside_map";
+    return null;
   }
 
   private void Ping(Packet packet) {
@@ -1370,6 +1539,15 @@ public class D2GS extends ApplicationAdapter {
       Gdx.app.error(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
           + " player=" + entityId + " claimed=" + movement.entityId()
           + " reason=ownership");
+      return;
+    }
+    if (!ALLOW_LEGACY_ENTITY_SYNC) {
+      if (movement.inputSequence() > 0L) {
+        sync.acknowledgeMovement(entityId, movement.inputSequence(), true);
+      }
+      Gdx.app.log(TAG, "[NET_MOVE] phase=reject connection=" + packet.id
+          + " player=" + entityId + " sequence=" + movement.inputSequence()
+          + " reason=legacy_absolute_protocol_disabled");
       return;
     }
     if (isPlayerDead(entityId)) {
