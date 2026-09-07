@@ -461,7 +461,7 @@ public class CreateCharacterScreen extends ScreenAdapter {
   /**
    * Initialize a new character with starting stats from CharStats.txt
    */
-  private void initializeNewCharacter(CharData charData, CharacterClass charClass) {
+  public static void initializeNewCharacter(CharData charData, CharacterClass charClass) {
     // Get starting stats from CharStats.txt
     com.riiablo.codec.excel.CharStats.Entry stats = charClass.entry();
 

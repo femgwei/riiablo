@@ -71,6 +71,8 @@ import com.riiablo.map.DT1Loader;
 import com.riiablo.mpq.MPQFileHandleResolver;
 import com.riiablo.save.CharData;
 import com.riiablo.screen.AudioUnpackerScreen;
+import com.riiablo.screen.CreateCharacterScreen;
+import com.riiablo.screen.OffscreenCampScreen;
 import com.riiablo.screen.SplashScreen;
 
 public class Client extends Game {
@@ -272,6 +274,8 @@ public class Client extends Game {
       console.out.println(RiiabloVersion.VERSION + " - " + RiiabloVersion.BUILD_DATE);
       console.out.println(home.path());
       console.out.println(saves.path());
+      console.out.println("[D2_RESOURCE_PROFILE] declared="
+          + System.getProperty("riiablo.d2-version", "unspecified"));
     }
 
     if (!home.exists() || !home.child("d2data.mpq").exists()) {
@@ -363,6 +367,15 @@ public class Client extends Game {
 
     if (Boolean.getBoolean("riiablo.offscreen-render")) {
       setScreen(new com.riiablo.screen.OffscreenRenderScreen(
+          System.getProperty("riiablo.offscreen-output", "build/visual-tests")));
+    } else if (Boolean.getBoolean("riiablo.offscreen-camp")) {
+      CharData smokeCharacter = charData.clear().set(
+          Riiablo.NORMAL, false, "CampSmoke", (byte) CharacterClass.AMAZON.id);
+      CreateCharacterScreen.initializeNewCharacter(smokeCharacter, CharacterClass.AMAZON);
+      // Keep the map deterministic so a later regression can be compared to
+      // this exact room layout rather than a wall-clock seed.
+      smokeCharacter.mapSeed = 0x110FCA4D;
+      setScreen(new OffscreenCampScreen(smokeCharacter,
           System.getProperty("riiablo.offscreen-output", "build/visual-tests")));
     } else if ((Gdx.app.getType() == Application.ApplicationType.Android && !home.child("data").exists()) || DEBUG_AUDIO_UNPACKER) {
       setScreen(new AudioUnpackerScreen());

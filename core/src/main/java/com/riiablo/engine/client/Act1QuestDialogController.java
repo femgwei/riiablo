@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.artemis.ComponentMapper;
+import com.artemis.annotations.Wire;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.Monster;
@@ -24,13 +25,13 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
 /** Presents the native Act 1 quest speech selected by the authoritative record. */
+@Wire(failOnNull = false)
 public class Act1QuestDialogController extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(Act1QuestDialogController.class);
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected DialogManager dialogManager;
   protected EventSystem events;
-  @com.artemis.annotations.Wire(failOnNull = false)
   protected ClientNetworkSynchronizer network;
 
   @Subscribe

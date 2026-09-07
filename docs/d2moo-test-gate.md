@@ -14,3 +14,22 @@
 - `FallenShamanAutoCombatIntegrationTest`、`DualClientFallenLootIntegrationTest`：怪物复活、掉落和双客户端集成测试。
 
 提交前至少运行对应模块的两层测试；任一层失败时，路线图中的模块保持未完成状态。
+
+## 真实画面启动门槛
+
+合成 UI 场景不能覆盖 `GameScreen`、DRLG、营地实体和第一帧 ECS。涉及客户端世界接线、
+任务、AI、地图或渲染的修改，还必须运行 1 像素隐藏窗口测试：
+
+```powershell
+.\gradlew.bat :desktop:offscreenCamp `
+  '-Pd2Home=<Diablo II 1.10f 目录>' `
+  '-PsavesDir=<可写的空目录>' `
+  '-PvisualOutput=<结果目录>' `
+  '-Pd2Version=1.10f'
+```
+
+该测试使用固定地图种子创建亚马逊，执行 Act 1 全地图生成、Rogue Encampment 对象/NPC/
+玩家创建及三个真实渲染帧。成功时输出 `rogue-encampment-manifest.txt` 和真实 1x1 帧缓冲
+截图；客户端线程异常、120 秒超时和初始化失败均必须让 Gradle 返回非零退出码。
+
+`offscreenRender` 仍用于 854x480 FBO 合成 UI 场景，两者不能互相替代。

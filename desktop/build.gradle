@@ -30,7 +30,22 @@ task offscreenRender(type: JavaExec) {
   // Supply -Pd2Home and -PsavesDir when invoking this task.
   args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
        '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
-       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests'
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests',
+       '--mode', 'visual',
+       '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  ignoreExitValue = false
+}
+
+task offscreenCamp(type: JavaExec) {
+  group = 'verification'
+  description = 'Load and render the real Act I Rogue Encampment through a 1x1 hidden client.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests',
+       '--mode', 'camp',
+       '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
   ignoreExitValue = false
 }
 

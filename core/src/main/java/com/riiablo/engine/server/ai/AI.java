@@ -165,6 +165,13 @@ public abstract class AI implements Interactable.Interactor {
    * that behavior for both specialized and fallback Java AIs.
    */
   public boolean updateWarCryControl(float delta) {
+    // Idle is a shared sentinel AI with no backing entity. Town NPCs and
+    // passive presets legitimately use it, so never query component mappers
+    // with Engine.INVALID_ENTITY (-1).
+    if (entityId == Engine.INVALID_ENTITY) {
+      nextWarCryThink = 0f;
+      return false;
+    }
     if (!mUnitStates.has(entityId) || mUnitStates.get(entityId).stateList == null) {
       nextWarCryThink = 0f;
       return false;
