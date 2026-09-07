@@ -48,19 +48,27 @@ public class RoomActivationSystem extends IteratingSystem {
     if (previous != null && previous.map == map && previous.zone == zone
         && previous.roomId == roomId) return;
 
-    if (previous != null) {
-      previous.zone.leaveClientRoom(previous.roomId);
-      log.debug("[ROOM_ACTIVATE] player={} fromLevel={} fromRoom={} action=leave",
-          entityId, levelId(previous.zone), previous.roomId);
-    }
     if (zone != null && roomId >= 0 && zone.hasNativeRoomTopology()) {
-      zone.enterClientRoom(roomId);
+      if (previous != null && previous.zone == zone) {
+        zone.changeClientRoom(previous.roomId, roomId);
+      } else {
+        // Match DRLGACTIVATE_ChangeClientRoom: promote the destination before
+        // releasing the source so shared rings never deactivate mid-change.
+        zone.enterClientRoom(roomId);
+        if (previous != null) previous.zone.leaveClientRoom(previous.roomId);
+      }
       clients.put(entityId, new ClientRoom(map, zone, roomId));
       spawnActiveRoomObjects(zone);
       spawnActiveRoomPopulations(zone);
-      log.debug("[ROOM_ACTIVATE] player={} toLevel={} toRoom={} action=enter",
-          entityId, levelId(zone), roomId);
+      log.debug("[ROOM_ACTIVATE] player={} fromLevel={} fromRoom={} toLevel={} toRoom={} action=change",
+          entityId, previous == null ? -1 : levelId(previous.zone),
+          previous == null ? -1 : previous.roomId, levelId(zone), roomId);
     } else {
+      if (previous != null) {
+        previous.zone.leaveClientRoom(previous.roomId);
+        log.debug("[ROOM_ACTIVATE] player={} fromLevel={} fromRoom={} action=leave",
+            entityId, levelId(previous.zone), previous.roomId);
+      }
       clients.remove(entityId);
     }
   }

@@ -386,7 +386,14 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 隐藏双客户端在地下通道一层自动选择两个不相邻且可行走的 RoomEx，验证同房玩家和动态实体互相可见、离开后玩家及对象/怪物定向删除、返回后完整恢复，随后继续完成地下通道一层到黑暗森林的真实 Warp。
   - 1.10f `headlessSnapshotResync` 完整通过：输出 `room_subscription_pass`，`delete=true`、`restore=true`；D2GS/Netty 编译、`MonsterRoomActivationTest` 与 `Act1MapBuilderD2MooLayersTest` 回归通过。
 
-下一项建议进入 **多人快照重同步第十三阶段（RoomEx 激活引用计数与实体状态持久性）**：验证两个客户端分离、重合和跨层时不会重复生成或提前卸载地下怪物/对象；怪物死亡、地面掉落及门/箱状态在取消订阅再返回后仍保持权威一致。
+- [x] ~~完成多人快照重同步第十三阶段（RoomEx 激活引用计数与实体状态持久性）~~
+  - 对齐 D2MOO `DRLGACTIVATE_ChangeClientRoom` 的顺序：同 Zone 切房先增加目标 RoomEx 引用、再释放来源引用；跨 Zone 同样先进入新 Zone，避免共享可见环短暂归零并触发错误失活。
+  - 多客户端分别维护 `CLIENT_IN_ROOM`/`CLIENT_IN_SIGHT` 引用；一个客户端离开不影响仍在原房间的客户端，两客户端都离开后引用归零且 RoomEx 正常转入非活动，返回后引用恢复为 2。
+  - 地面物品现在绑定 `MapWrapper` 和所属 Zone，参与 RoomEx 可见性筛选，不再落入跨 Level 兼容广播路径；死亡怪物、地面物品和已开启对象在无人订阅期间继续保留权威状态和实体 ID。
+  - 隐藏双客户端验证两端都收到死亡怪物、掉落物和对象的定向删除，重新进入后分别恢复死亡、地面掉落和 `MODE_ON` 状态；输出 `room_persistence_pass`，`duplicate=false`、`prematureUnload=false`、`refs=2`。
+  - `MonsterRoomActivationTest`、`Act1MapBuilderD2MooLayersTest`、`NativeObjectInteractTypePersistenceTest`、D2GS/Netty 编译及 1.10f `headlessSnapshotResync` 全部通过。
+
+下一项建议进入 **多人快照重同步第十四阶段（RoomEx 动态实体权威状态变更广播与重连基线一致性）**：验证对象模式、怪物死亡/复活、地面掉落拾取等在线增量变化，与掉线重连或新客户端加入时收到的完整基线状态完全一致。
 
 ## 记录规则
 

@@ -110,6 +110,42 @@ class MonsterRoomActivationTest {
   }
 
   @Test
+  void nativeClientRoomChangeKeepsIndependentReferencesAndSpawnClaims() {
+    Map.Zone zone = nativeThreeRoomZone();
+    Map.RoomEx source = zone.getRoomsEx().get(0);
+    Map.RoomEx destination = zone.getRoomsEx().get(2);
+    destination.addMonsterSpawn(7, 90, 10);
+    assertTrue(destination.claimMonsterPopulation());
+    destination.markPresetUnitsSpawned();
+
+    zone.enterClientRoom(source.id);
+    zone.enterClientRoom(source.id);
+    zone.changeClientRoom(source.id, destination.id);
+    assertEquals(1, source.getClientInRoomRefs(),
+        "one player must keep the source room anchored");
+    assertEquals(1, destination.getClientInRoomRefs());
+    assertEquals(Map.RoomEx.CLIENT_IN_ROOM, source.getActivationStatus());
+    assertEquals(Map.RoomEx.CLIENT_IN_ROOM, destination.getActivationStatus());
+
+    zone.changeClientRoom(source.id, destination.id);
+    assertEquals(0, source.getClientInRoomRefs());
+    assertEquals(2, destination.getClientInRoomRefs());
+    assertTrue(source.getActivationStatus() > Map.RoomEx.CLIENT_IN_SIGHT,
+        "a non-adjacent source room must leave the active AI ring");
+    assertTrue(destination.isMonsterPopulationSpawned());
+    assertTrue(destination.isPresetUnitsSpawned());
+    assertFalse(destination.claimMonsterPopulation(),
+        "RoomEx transitions must not reset one-shot population claims");
+
+    zone.changeClientRoom(destination.id, source.id);
+    zone.changeClientRoom(destination.id, source.id);
+    assertEquals(2, source.getClientInRoomRefs());
+    assertEquals(0, destination.getClientInRoomRefs());
+    assertTrue(destination.isMonsterPopulationSpawned());
+    assertTrue(destination.isPresetUnitsSpawned());
+  }
+
+  @Test
   void clientRoomReferencePropagatesAllFourD2MooStatuses() {
     Map.Zone zone = nativeFourRoomZone();
     zone.enterClientRoom(0);

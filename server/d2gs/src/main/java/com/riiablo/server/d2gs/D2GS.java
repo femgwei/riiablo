@@ -524,6 +524,161 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** RoomEx reference counters, one-shot spawn flags and live entity counts. */
+  static int[] headlessRoomLifecycleState(int levelId, int roomId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || Riiablo.files == null || Gdx.app == null) return new int[11];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[11]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        if (room == null) return;
+        int total = 0, monsters = 0, objects = 0, items = 0;
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Class> classes =
+            server.world.getMapper(com.riiablo.engine.server.component.Class.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.ComponentMapper<Position> positions = server.world.getMapper(Position.class);
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(Networked.class, com.riiablo.engine.server.component.Class.class,
+                Position.class, com.riiablo.engine.server.component.MapWrapper.class))
+            .getEntities();
+        int[] data = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int entityId = data[i];
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entityId);
+          com.riiablo.engine.server.component.Class type = classes.get(entityId);
+          Map.RoomEx entityRoom = zone.findRoomEx(positions.get(entityId).position.x,
+              positions.get(entityId).position.y);
+          if (wrapper == null || wrapper.zone != zone || type == null || entityRoom != room) continue;
+          total++;
+          if (type.type == com.riiablo.engine.server.component.Class.Type.MON) monsters++;
+          else if (type.type == com.riiablo.engine.server.component.Class.Type.OBJ) objects++;
+          else if (type.type == com.riiablo.engine.server.component.Class.Type.ITM) items++;
+        }
+        result.set(new int[] {
+            room.getActivationStatus(), room.getClientInRoomRefs(),
+            room.getClientInSightRefs(), room.getClientOutOfSightRefs(),
+            room.getUntileRefs(), room.isMonsterPopulationSpawned() ? 1 : 0,
+            room.isPresetUnitsSpawned() ? 1 : 0, total, monsters, objects, items
+        });
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[11];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[11];
+    }
+  }
+
+  /**
+   * Creates deterministic dead-monster/drop state and opens one native object
+   * in a RoomEx so unsubscribe/re-entry can verify authoritative persistence.
+   */
+  static int[] headlessCreateRoomLifecycleFixtures(
+      int playerId, int levelId, int roomId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || server.factory == null || Riiablo.files == null || Gdx.app == null) {
+      return new int[] {Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY};
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[] {
+            Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY});
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        Vector2 position = findHeadlessRoomPosition(server, zone, room);
+        if (room == null || position == null) return;
+
+        int monsterId = Engine.INVALID_ENTITY;
+        int zombieClass = Riiablo.files.monstats == null ? -1
+            : Riiablo.files.monstats.index("zombie1");
+        if (zombieClass >= 0) {
+          monsterId = server.factory.createMonster(zombieClass, position.x, position.y);
+          if (monsterId >= 0) {
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+                .get(monsterId).set(server.map, zone);
+            com.riiablo.engine.server.component.AttributesWrapper attributes = server.world
+                .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(monsterId);
+            com.riiablo.attributes.StatRef life = attributes == null || attributes.attrs == null
+                ? null : attributes.attrs.get(com.riiablo.attributes.Stat.hitpoints,
+                    com.riiablo.attributes.StatRef.obtain());
+            if (life != null) life.set(0f);
+            server.world.getSystem(EventSystem.class).dispatch(
+                com.riiablo.engine.server.event.DeathEvent.obtain(playerId, monsterId));
+          }
+        }
+
+        int itemId = Engine.INVALID_ENTITY;
+        com.riiablo.item.ItemGenerator generator =
+            server.world.getSystem(com.riiablo.item.ItemGenerator.class);
+        if (generator != null) {
+          com.riiablo.item.Item item = generator.generateLootItem("cap", 1,
+              com.riiablo.item.Quality.NORMAL, 0x524F4F4D, server.diff);
+          itemId = server.factory.createItem(item, position.x, position.y);
+          if (itemId >= 0) {
+            item.id = itemId;
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+                .get(itemId).set(server.map, zone);
+          }
+        }
+
+        int objectId = Engine.INVALID_ENTITY;
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeObjectState> states =
+            server.world.getMapper(com.riiablo.engine.server.component.NativeObjectState.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.ComponentMapper<Position> positions = server.world.getMapper(Position.class);
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(Networked.class,
+                com.riiablo.engine.server.component.NativeObjectState.class,
+                Position.class, com.riiablo.engine.server.component.MapWrapper.class))
+            .getEntities();
+        int[] data = objects.getData();
+        for (int i = 0; i < objects.size(); i++) {
+          int entityId = data[i];
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entityId);
+          if (wrapper == null || wrapper.zone != zone
+              || zone.findRoomEx(positions.get(entityId).position.x,
+                  positions.get(entityId).position.y) != room) continue;
+          com.riiablo.engine.server.component.NativeObjectState state = states.get(entityId);
+          state.persistOpened(true);
+          state.persistActivated(true);
+          state.persistMode(Engine.Object.MODE_ON);
+          com.riiablo.engine.server.component.CofReference cof = server.world
+              .getMapper(com.riiablo.engine.server.component.CofReference.class).get(entityId);
+          if (cof != null) cof.mode = Engine.Object.MODE_ON;
+          objectId = entityId;
+          break;
+        }
+        result.set(new int[] {monsterId, itemId, objectId});
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get()
+          : new int[] {Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY};
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[] {Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY};
+    }
+  }
+
   private static Vector2 findHeadlessRoomPosition(
       D2GS server, Map.Zone zone, Map.RoomEx room) {
     if (server == null || zone == null || room == null) return null;

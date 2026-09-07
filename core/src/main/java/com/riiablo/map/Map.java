@@ -1048,6 +1048,18 @@ public class Map implements Disposable {
       applyClientRoomRefs(roomId, 0, -1);
     }
 
+    /**
+     * Atomically moves one client anchor between RoomEx instances.
+     * D2MOO promotes the new room before releasing the previous room so their
+     * shared sight ring never observes a transient zero-reference state.
+     */
+    public void changeClientRoom(int previousRoomId, int nextRoomId) {
+      if (!hasNativeRoomTopology() || previousRoomId == nextRoomId) return;
+      roomActivationTracking = true;
+      if (nextRoomId >= 0) applyClientRoomRefs(nextRoomId, 0, 1);
+      if (previousRoomId >= 0) applyClientRoomRefs(previousRoomId, 0, -1);
+    }
+
     /** AI-relevant projection of D2MOO room status (CLIENT_IN_ROOM/SIGHT). */
     public boolean isRoomActiveForAI(float worldX, float worldY) {
       if (!hasNativeRoomTopology() || !roomActivationTracking) return true;

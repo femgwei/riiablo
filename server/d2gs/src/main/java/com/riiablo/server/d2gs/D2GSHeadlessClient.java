@@ -594,10 +594,155 @@ public final class D2GSHeadlessClient {
     if (firstOnPeer == null || firstOnPeer.deleted || dynamic == null || dynamic.deleted) {
       throw new IOException("returning to room did not restore full entity visibility");
     }
+
+    int[] fixtures = D2GS.headlessCreateRoomLifecycleFixtures(
+        first.playerId, 10, rooms[0]);
+    if (fixtures.length < 3 || fixtures[0] == Engine.INVALID_ENTITY
+        || fixtures[1] == Engine.INVALID_ENTITY || fixtures[2] == Engine.INVALID_ENTITY) {
+      throw new IOException("failed to create underground lifecycle fixtures: "
+          + java.util.Arrays.toString(fixtures));
+    }
+    deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+      if (packet != null) first.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      Snapshot deadMonster = first.monsters.get(fixtures[0]);
+      Visibility firstItem = first.visibility.get(fixtures[1]);
+      Visibility peerItem = peer.visibility.get(fixtures[1]);
+      Visibility firstObject = first.visibility.get(fixtures[2]);
+      Visibility peerObject = peer.visibility.get(fixtures[2]);
+      if (deadMonster != null && deadMonster.dead && !deadMonster.deleted
+          && firstItem != null && !firstItem.deleted && firstItem.type == 3
+          && peerItem != null && !peerItem.deleted && peerItem.type == 3
+          && firstObject != null && !firstObject.deleted
+          && firstObject.cofMode == Engine.Object.MODE_ON
+          && peerObject != null && !peerObject.deleted
+          && peerObject.cofMode == Engine.Object.MODE_ON) break;
+    }
+    Snapshot deadMonster = first.monsters.get(fixtures[0]);
+    Visibility firstItem = first.visibility.get(fixtures[1]);
+    Visibility peerItem = peer.visibility.get(fixtures[1]);
+    Visibility firstObject = first.visibility.get(fixtures[2]);
+    Visibility peerObject = peer.visibility.get(fixtures[2]);
+    if (deadMonster == null || !deadMonster.dead || deadMonster.deleted
+        || firstItem == null || firstItem.deleted || firstItem.type != 3
+        || peerItem == null || peerItem.deleted || peerItem.type != 3
+        || firstObject == null || firstObject.deleted
+        || firstObject.cofMode != Engine.Object.MODE_ON
+        || peerObject == null || peerObject.deleted
+        || peerObject.cofMode != Engine.Object.MODE_ON) {
+      throw new IOException("lifecycle fixtures were not synchronized to both clients");
+    }
+
+    Set<Integer> persistentEntities = entitySet(
+        D2GS.headlessRoomDynamicEntities(10, rooms[0]));
+    int[] activeState = D2GS.headlessRoomLifecycleState(10, rooms[0]);
+    if (activeState[0] != com.riiablo.map.Map.RoomEx.CLIENT_IN_ROOM
+        || activeState[1] != 2 || activeState[5] != 1 || activeState[6] != 1
+        || !persistentEntities.contains(fixtures[0])
+        || !persistentEntities.contains(fixtures[1])
+        || !persistentEntities.contains(fixtures[2])) {
+      throw new IOException("invalid active RoomEx state: "
+          + java.util.Arrays.toString(activeState));
+    }
+
+    if (!D2GS.headlessMovePlayerToRoom(peer.playerId, 10, rooms[1])
+        || !D2GS.headlessMovePlayerToRoom(first.playerId, 10, rooms[1])) {
+      throw new IOException("failed to fully unsubscribe source RoomEx");
+    }
+    int[] dormantState = new int[0];
+    deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+      if (packet != null) first.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      dormantState = D2GS.headlessRoomLifecycleState(10, rooms[0]);
+      Visibility firstDead = first.visibility.get(fixtures[0]);
+      Visibility firstDrop = first.visibility.get(fixtures[1]);
+      Visibility firstOpened = first.visibility.get(fixtures[2]);
+      Visibility peerDead = peer.visibility.get(fixtures[0]);
+      Visibility peerDrop = peer.visibility.get(fixtures[1]);
+      Visibility peerOpened = peer.visibility.get(fixtures[2]);
+      if (dormantState[1] == 0
+          && dormantState[0] > com.riiablo.map.Map.RoomEx.CLIENT_IN_SIGHT
+          && firstDead != null && firstDead.deleted
+          && firstDrop != null && firstDrop.deleted
+          && firstOpened != null && firstOpened.deleted
+          && peerDead != null && peerDead.deleted
+          && peerDrop != null && peerDrop.deleted
+          && peerOpened != null && peerOpened.deleted) break;
+    }
+    Set<Integer> dormantEntities = entitySet(
+        D2GS.headlessRoomDynamicEntities(10, rooms[0]));
+    Visibility dormantMonsterFirst = first.visibility.get(fixtures[0]);
+    Visibility dormantItemFirst = first.visibility.get(fixtures[1]);
+    Visibility dormantObjectFirst = first.visibility.get(fixtures[2]);
+    Visibility dormantMonsterPeer = peer.visibility.get(fixtures[0]);
+    Visibility dormantItemPeer = peer.visibility.get(fixtures[1]);
+    Visibility dormantObjectPeer = peer.visibility.get(fixtures[2]);
+    if (dormantState.length < 11 || dormantState[1] != 0
+        || dormantState[0] <= com.riiablo.map.Map.RoomEx.CLIENT_IN_SIGHT
+        || !dormantEntities.equals(persistentEntities)
+        || dormantMonsterFirst == null || !dormantMonsterFirst.deleted
+        || dormantItemFirst == null || !dormantItemFirst.deleted
+        || dormantObjectFirst == null || !dormantObjectFirst.deleted
+        || dormantMonsterPeer == null || !dormantMonsterPeer.deleted
+        || dormantItemPeer == null || !dormantItemPeer.deleted
+        || dormantObjectPeer == null || !dormantObjectPeer.deleted) {
+      throw new IOException("RoomEx deactivation changed authoritative entities: state="
+          + java.util.Arrays.toString(dormantState)
+          + " before=" + persistentEntities.size() + " after=" + dormantEntities.size());
+    }
+
+    if (!D2GS.headlessMovePlayerToRoom(first.playerId, 10, rooms[0])
+        || !D2GS.headlessMovePlayerToRoom(peer.playerId, 10, rooms[0])) {
+      throw new IOException("failed to reactivate source RoomEx");
+    }
+    deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+      if (packet != null) first.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      activeState = D2GS.headlessRoomLifecycleState(10, rooms[0]);
+      deadMonster = peer.monsters.get(fixtures[0]);
+      peerItem = peer.visibility.get(fixtures[1]);
+      peerObject = peer.visibility.get(fixtures[2]);
+      if (activeState[1] == 2 && deadMonster != null && deadMonster.dead
+          && !deadMonster.deleted && peerItem != null && !peerItem.deleted
+          && peerObject != null && !peerObject.deleted
+          && peerObject.cofMode == Engine.Object.MODE_ON) break;
+    }
+    Set<Integer> restoredEntities = entitySet(
+        D2GS.headlessRoomDynamicEntities(10, rooms[0]));
+    deadMonster = peer.monsters.get(fixtures[0]);
+    peerItem = peer.visibility.get(fixtures[1]);
+    peerObject = peer.visibility.get(fixtures[2]);
+    if (activeState[1] != 2 || !restoredEntities.equals(persistentEntities)
+        || deadMonster == null || !deadMonster.dead || deadMonster.deleted
+        || peerItem == null || peerItem.deleted || peerItem.type != 3
+        || peerObject == null || peerObject.deleted
+        || peerObject.cofMode != Engine.Object.MODE_ON) {
+      throw new IOException("RoomEx reactivation did not restore persistent state");
+    }
     log("room_subscription_pass", "level=10 sameRoom=" + rooms[0]
         + " remoteRoom=" + rooms[1] + " dynamic=" + deletedDynamic
         + " candidates=" + dynamicCandidates.size()
         + " delete=true restore=true");
+    log("room_persistence_pass", "level=10 room=" + rooms[0]
+        + " refs=" + activeState[1] + " entities=" + restoredEntities.size()
+        + " monster=" + fixtures[0] + " dead=true item=" + fixtures[1]
+        + " object=" + fixtures[2] + " mode=" + peerObject.cofMode
+        + " duplicate=false prematureUnload=false");
+  }
+
+  private static Set<Integer> entitySet(int[] entities) {
+    Set<Integer> result = new HashSet<>();
+    if (entities != null) for (int entityId : entities) result.add(entityId);
+    return result;
   }
 
   private void warpAndAssert(D2GSHeadlessClient observer, DataInputStream input,
@@ -1861,6 +2006,12 @@ public final class D2GSHeadlessClient {
     visible.type = sync.type();
     visible.levelId = packetLevelId;
     visible.deleted = (sync.flags() & EntityFlags.deleted) != 0;
+    int visibleCofIndex = findComponent(sync, ComponentP.CofReferenceP);
+    if (visibleCofIndex >= 0) {
+      CofReferenceP cof = (CofReferenceP) sync.component(
+          new CofReferenceP(), visibleCofIndex);
+      visible.cofMode = cof.mode();
+    }
     if (sync.type() == 3) {
       Snapshot snapshot = monsters.get(sync.entityId());
       if (snapshot == null) {
@@ -2199,6 +2350,7 @@ public final class D2GSHeadlessClient {
     final int entityId;
     int type = -1;
     int levelId = -1;
+    int cofMode = -1;
     boolean deleted;
 
     Visibility(int entityId) {

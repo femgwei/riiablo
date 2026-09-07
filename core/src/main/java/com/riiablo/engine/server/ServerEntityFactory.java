@@ -815,6 +815,10 @@ public class ServerEntityFactory extends EntityFactory {
     mItem.create(id).set(item);
 
     mPosition.create(id).position.set(x, y);
+    // Ground items are native room units too. Without MapWrapper they fall
+    // through NetworkSynchronizer's legacy broadcast path and leak to every
+    // client/level instead of following RoomEx visibility and persistence.
+    mMapWrapper.create(id).set(map, map == null ? null : map.getZone(x, y));
     mInteractable.create(id).set(1f, itemInteractor);
     mNetworked.create(id);
     return id;
