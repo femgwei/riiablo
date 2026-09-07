@@ -150,6 +150,11 @@ public class NetworkSynchronizer extends BaseEntitySystem {
         + " failed=" + failed + " bytes=" + bytes);
   }
 
+  /** Number of currently networked entities included in a baseline. */
+  public int subscriptionSize() {
+    return subscription.getEntities().size();
+  }
+
   private byte[] serialize(int entityId, boolean includeClock) {
     FlatBufferBuilder builder = new FlatBufferBuilder(0);
     MovementAcknowledgement movement = movementAcknowledgements.get(entityId);

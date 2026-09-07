@@ -320,7 +320,12 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 精确重传返回非终态重复确认，不会撤销原请求；客户端按单调 sequence 消费结果，最终拒绝会清理本地 Casting、Sequence 和 Target，避免攻击动画/目标锁死。服务端接受结果在动作排队的同一 tick 发送，拒绝不会执行任何资源或伤害副作用。
   - `NetworkedCombatTransportTest` 覆盖结果包字段；1.10f 双客户端 Fallen/Shaman 闭环验证 ACK、复活、NoDrop、跨端拾取和多次迟到拒绝均通过。
 
-下一项建议进入 **多人快照丢失后的 tick 重同步**：检测连续缺 tick 或 baseline 失效，按客户端请求重发完整实体/物品/状态快照，并在 Warp、死亡、地图切换、长时间后台恢复及重连场景验证不会回滚到旧状态。
+- [x] ~~完成多人快照丢失后的 tick 重同步第一阶段~~
+  - 新增兼容 `SnapshotResyncRequest` 与 `SnapshotBaseline(BEGIN/END)` 协议；客户端在权威 tick 出现明显缺口或连续 3 秒无快照时限频请求，服务端在固定 Sim Tick 单写线程发送完整实体基线并以 BEGIN/END 标记边界。
+  - 客户端基线期间暂停旧快照应用、清理延迟实体和插值历史，END 以服务端 tick/时间原子重置时间线；服务端按连接缓存 request/baseline ID，重复请求不会产生游戏状态副作用。
+  - 新增 `AuthoritativeSnapshotTimeline.resetTo`、协议往返测试；核心协议/时间线测试、D2GS 编译及 `headlessSnapshotOrder`（双客户端、1.10f 资源）通过。
+
+下一项建议进入 **多人快照重同步第二阶段**：将物品/任务/传送点等非实体状态纳入基线，并在 Warp、死亡、地图切换及后台恢复场景增加端到端门槛。
 
 ## 记录规则
 

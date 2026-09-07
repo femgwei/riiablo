@@ -45,6 +45,8 @@ union D2GSData {
   PlayerLifecycleResult,
   QuestRequest,
   QuestResult,
+  SnapshotResyncRequest,
+  SnapshotBaseline,
 }
 
 table D2GS {

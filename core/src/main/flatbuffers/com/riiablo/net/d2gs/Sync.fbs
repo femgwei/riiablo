@@ -1,5 +1,28 @@
 namespace com.riiablo.net.packet.d2gs;
 
+enum SnapshotBaselinePhase:ubyte { BEGIN, END }
+
+// Client asks the authoritative simulation to resend a complete visible
+// baseline after a transport gap, focus loss, warp or reconnect.
+table SnapshotResyncRequest {
+  requestId:ulong;
+  lastAcceptedTick:ulong;
+  reason:string;
+}
+
+// BEGIN/END markers delimit an atomic baseline on the client. EntitySync
+// packets between the markers carry the same authoritative tick boundary.
+table SnapshotBaseline {
+  requestId:ulong;
+  baselineId:ulong;
+  serverTick:ulong;
+  serverTimeMillis:ulong;
+  phase:SnapshotBaselinePhase;
+  success:bool = true;
+  reason:string;
+  entityCount:uint;
+}
+
 union ComponentP {
   ClassP,
   CofComponentsP,

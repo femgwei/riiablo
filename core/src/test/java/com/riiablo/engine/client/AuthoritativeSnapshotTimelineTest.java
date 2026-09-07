@@ -29,4 +29,14 @@ class AuthoritativeSnapshotTimelineTest {
     assertEquals(20L, timeline.tick());
     assertEquals(2_000L, timeline.serverTimeMillis());
   }
+
+  @Test
+  void resetAllowsNewBaselineAfterGap() {
+    AuthoritativeSnapshotTimeline timeline = new AuthoritativeSnapshotTimeline();
+    assertTrue(timeline.accept(100L, 10_000L));
+    timeline.resetTo(40L, 4_000L);
+    assertEquals(40L, timeline.tick());
+    assertEquals(4_000L, timeline.serverTimeMillis());
+    assertTrue(timeline.accept(41L, 4_040L));
+  }
 }

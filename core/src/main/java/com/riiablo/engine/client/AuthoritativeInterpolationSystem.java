@@ -174,6 +174,15 @@ public final class AuthoritativeInterpolationSystem extends BaseSystem {
     return entries.size;
   }
 
+  /** Drops interpolation history when a new authoritative baseline starts. */
+  public void clear() {
+    entries.clear();
+    localCorrections.clear();
+    applied.clear();
+    localApplied.clear();
+    expiredLocalCorrections.clear();
+  }
+
   private static final class Entry {
     final AuthoritativeTransformInterpolator buffer =
         new AuthoritativeTransformInterpolator();

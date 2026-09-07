@@ -183,6 +183,9 @@ import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.net.packet.d2gs.QuestOperation;
 import com.riiablo.net.packet.d2gs.QuestRequest;
 import com.riiablo.net.packet.d2gs.QuestResult;
+import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
+import com.riiablo.net.packet.d2gs.SnapshotBaseline;
+import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.net.AuthoritativeMovementValidator;
 import com.riiablo.net.MovementInputSequenceTracker;
@@ -865,6 +868,9 @@ public class D2GS extends ApplicationAdapter {
   final MovementIntentScheduler[] movementIntents =
       new MovementIntentScheduler[MAX_CLIENTS];
   final long[] lastAppliedMovementIntent = new long[MAX_CLIENTS];
+  final long[] lastSnapshotResyncRequest = new long[MAX_CLIENTS];
+  final long[] lastSnapshotBaselineId = new long[MAX_CLIENTS];
+  long nextSnapshotBaselineId = 1L;
   final Collection<MovementIntent> readyMovementIntents = new ArrayList<>();
   final CombatIntentScheduler[] combatIntents = new CombatIntentScheduler[MAX_CLIENTS];
   final Collection<CombatIntent> readyCombatIntents = new ArrayList<>();
@@ -1256,6 +1262,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.QuestRequest:
         QuestRequest(packet);
         break;
+      case D2GSData.SnapshotResyncRequest:
+        SnapshotResyncRequest(packet);
+        break;
       case D2GSData.Ping:
         Ping(packet);
         break;
@@ -1331,6 +1340,58 @@ public class D2GS extends ApplicationAdapter {
     sync.syncAllTo(id);
   }
 
+  private void SnapshotResyncRequest(Packet packet) {
+    SnapshotResyncRequest request = (SnapshotResyncRequest) packet.data.data(
+        new SnapshotResyncRequest());
+    int clientId = packet.id;
+    if (clientId < 0 || clientId >= MAX_CLIENTS
+        || (connected & (1 << clientId)) == 0) return;
+    long requestId = request.requestId();
+    if (requestId == 0L) requestId = 1L;
+    // Duplicate requests are harmless and deliberately replay the same
+    // baseline transaction instead of applying any game-side mutation.
+    boolean duplicate = lastSnapshotResyncRequest[clientId] == requestId;
+    if (duplicate) {
+      Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=duplicate client=" + clientId
+          + " request=" + requestId);
+    }
+    lastSnapshotResyncRequest[clientId] = requestId;
+    AuthoritativeSimulation current = simulation;
+    long tick = current == null ? 0L : current.tickNumber();
+    long serverTime = current == null ? 0L : current.serverTimeMillis();
+    long baselineId = duplicate && lastSnapshotBaselineId[clientId] != 0L
+        ? lastSnapshotBaselineId[clientId] : nextSnapshotBaselineId++;
+    lastSnapshotBaselineId[clientId] = baselineId;
+    int count = world == null ? 0 : world.getSystem(NetworkSynchronizer.class) == null
+        ? 0 : world.getSystem(NetworkSynchronizer.class).subscriptionSize();
+    enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
+        SnapshotBaselinePhase.BEGIN, true, "", count);
+    sync.syncAllTo(clientId);
+    current = simulation;
+    tick = current == null ? tick : current.tickNumber();
+    serverTime = current == null ? serverTime : current.serverTimeMillis();
+    enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
+        SnapshotBaselinePhase.END, true, "", count);
+    Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=complete client=" + clientId
+        + " request=" + requestId + " baseline=" + baselineId
+        + " tick=" + tick + " entities=" + count);
+  }
+
+  private void enqueueSnapshotBaseline(int clientId, long requestId, long baselineId,
+      long tick, long serverTime, byte phase, boolean success, String reason, int count) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int marker = SnapshotBaseline.createSnapshotBaseline(builder, requestId, baselineId,
+        tick, serverTime, phase, success, reasonOffset, count);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
+        D2GSData.SnapshotBaseline, marker);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    if (!outPackets.offer(Packet.obtain(1 << clientId, builder.dataBuffer()))) {
+      Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=marker_drop client=" + clientId
+          + " request=" + requestId + " phase=" + phase);
+    }
+  }
+
   private void BroadcastConnect(int id, Connection connection, CharData charData, int entityId) {
     FlatBufferBuilder builder = new FlatBufferBuilder();
     int charNameOffset = builder.createString(charData.name);
@@ -1387,6 +1448,8 @@ public class D2GS extends ApplicationAdapter {
 
       world.delete(entityId);
       player.remove(id, Engine.INVALID_ENTITY);
+      lastSnapshotResyncRequest[id] = 0L;
+      lastSnapshotBaselineId[id] = 0L;
     } else {
       Gdx.app.log(TAG, "client " + id + " disconnected before character handshake");
     }

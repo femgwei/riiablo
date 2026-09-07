@@ -24,4 +24,10 @@ public final class AuthoritativeSnapshotTimeline {
   public long serverTimeMillis() {
     return serverTimeMillis;
   }
+
+  /** Atomically establishes a new server baseline after a resync. */
+  public void resetTo(long nextTick, long nextServerTimeMillis) {
+    tick = Math.max(0L, nextTick);
+    serverTimeMillis = Math.max(0L, nextServerTimeMillis);
+  }
 }

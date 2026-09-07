@@ -42,6 +42,7 @@ import com.riiablo.net.packet.d2gs.PartyRequest;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
 import com.riiablo.net.packet.d2gs.QuestRequest;
+import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
 import com.riiablo.net.SizePrefixedPacketReader;
 import com.riiablo.save.CharData;
 import com.riiablo.util.ArrayUtils;
@@ -72,6 +73,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   private long nextPartyRequestId = 1;
   private long nextLifecycleRequestId = 1;
   private long nextQuestRequestId = 1;
+  private long nextSnapshotResyncRequestId = 1;
   private long nextMovementLogTime;
   private long nextMovementSequence = 1L;
   private final ClientPredictionBuffer prediction = new ClientPredictionBuffer();
@@ -263,6 +265,30 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       Gdx.app.error(TAG, t.getMessage(), t);
       prediction.reset(position.x, position.y);
       setEnabled(false);
+    }
+  }
+
+  /** Requests a complete authoritative baseline, rate-limited by the receiver. */
+  void requestSnapshotResync(long lastAcceptedTick, String reason) {
+    if (socket == null) return;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reasonOffset = builder.createString(reason == null ? "unknown" : reason);
+    long requestId = nextSnapshotResyncRequestId++;
+    SnapshotResyncRequest.startSnapshotResyncRequest(builder);
+    SnapshotResyncRequest.addRequestId(builder, requestId);
+    SnapshotResyncRequest.addLastAcceptedTick(builder, lastAcceptedTick);
+    SnapshotResyncRequest.addReason(builder, reasonOffset);
+    int request = SnapshotResyncRequest.endSnapshotResyncRequest(builder);
+    int root = D2GS.createD2GS(builder, D2GSData.SnapshotResyncRequest, request);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
+      ByteBuffer frame = builder.dataBuffer();
+      while (frame.hasRemaining()) channel.write(frame);
+      Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=request request=" + requestId
+          + " lastTick=" + lastAcceptedTick + " reason=" + reason);
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=send_failed reason=" + t.getMessage(), t);
     }
   }
 

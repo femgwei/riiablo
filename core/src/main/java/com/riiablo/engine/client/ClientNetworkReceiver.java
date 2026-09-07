@@ -90,6 +90,8 @@ import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.WarpP;
 import com.riiablo.net.packet.d2gs.StateP;
+import com.riiablo.net.packet.d2gs.SnapshotBaseline;
+import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.save.CharData;
 import com.riiablo.util.ArrayUtils;
@@ -158,6 +160,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private long latestServerTickReceiptMillis;
   private long lastCombatSequence;
   private boolean lastCombatAccepted;
+  private boolean snapshotResyncInProgress;
+  private boolean snapshotResyncPending;
+  private long lastResyncRequestMillis;
+  private long lastResyncObservedTick;
 
   public ClientNetworkReceiver() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -172,6 +178,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   @Override
   protected void processSystem() {
+    if (!snapshotResyncInProgress && latestServerTick > 0L
+        && TimeUtils.millis() - latestServerTickReceiptMillis > 3000L) {
+      requestSnapshotResync(snapshotTimeline.tick(), "snapshot_silence");
+    }
     InputStream in = socket.getInputStream();
     try {
       if (in.available() > 0) {
@@ -236,6 +246,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.EntitySync:
         Synchronize(packet);
+        break;
+      case D2GSData.SnapshotBaseline:
+        SnapshotBaseline(packet);
         break;
       case D2GSData.CastSkillResult:
         CastSkillResult(packet);
@@ -337,6 +350,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private void Disconnect(D2GS packet) {
+    snapshotResyncPending = false;
+    snapshotResyncInProgress = false;
     Disconnect disconnect = (Disconnect) packet.data(new Disconnect());
     int serverEntityId = disconnect.entityId();
     int entityId = syncIds.get(serverEntityId);
@@ -664,6 +679,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
   }
 
   private void Synchronize(EntitySync entityData) {
+    long previousTick = snapshotTimeline.tick();
+    if (!snapshotResyncInProgress && previousTick > 0L && entityData.tick() > previousTick + 20L) {
+      requestSnapshotResync(previousTick, "tick_gap");
+    }
+    if (snapshotResyncPending && !snapshotResyncInProgress) return;
+    if (snapshotResyncInProgress && entityData.tick() != 0L
+        && entityData.tick() < lastResyncObservedTick) return;
     if (!snapshotTimeline.accept(entityData.tick(), entityData.serverTimeMillis())) {
       Gdx.app.error(TAG, "[ENTITY_SYNC] phase=stale_drop serverEntity="
           + entityData.entityId() + " tick=" + entityData.tick()
@@ -672,6 +694,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           + " acceptedServerTime=" + snapshotTimeline.serverTimeMillis());
       return;
     }
+    if (entityData.tick() > lastResyncObservedTick) lastResyncObservedTick = entityData.tick();
     if (entityData.tick() > latestServerTick) {
       latestServerTick = entityData.tick();
       latestServerTickReceiptMillis = TimeUtils.millis();
@@ -851,6 +874,44 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
     cofs.updateTransform(entityId, tFlags);
     cofs.updateAlpha(entityId, aFlags);
+  }
+
+  private void SnapshotBaseline(D2GS packet) {
+    SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+    if (marker.phase() == SnapshotBaselinePhase.BEGIN) {
+      snapshotResyncPending = false;
+      snapshotResyncInProgress = true;
+      lastResyncObservedTick = marker.serverTick();
+      deferredServerEntities.clear();
+      if (interpolation != null) interpolation.clear();
+      Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=begin request=" + marker.requestId()
+          + " baseline=" + marker.baselineId() + " tick=" + marker.serverTick());
+    } else {
+      if (!marker.success()) {
+        snapshotResyncPending = false;
+        snapshotResyncInProgress = false;
+        Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=end success=false request="
+            + marker.requestId() + " reason=" + marker.reason());
+        return;
+      }
+      snapshotTimeline.resetTo(marker.serverTick(), marker.serverTimeMillis());
+      latestServerTick = marker.serverTick();
+      latestServerTickReceiptMillis = TimeUtils.millis();
+      lastResyncObservedTick = marker.serverTick();
+      snapshotResyncInProgress = false;
+      snapshotResyncPending = false;
+      Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=end request=" + marker.requestId()
+          + " baseline=" + marker.baselineId() + " tick=" + marker.serverTick()
+          + " entities=" + marker.entityCount());
+    }
+  }
+
+  private void requestSnapshotResync(long tick, String reason) {
+    long now = TimeUtils.millis();
+    if (now - lastResyncRequestMillis < 2000L) return;
+    lastResyncRequestMillis = now;
+    snapshotResyncPending = true;
+    if (networkSynchronizer != null) networkSynchronizer.requestSnapshotResync(tick, reason);
   }
 
   private static boolean containsState(StateP states, int stateId) {
