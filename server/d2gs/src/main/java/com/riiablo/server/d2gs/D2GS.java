@@ -679,6 +679,54 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /**
+   * Mutates an object's authoritative visual mode and immediately replays a
+   * baseline to one player. The next simulation frame must still deliver the
+   * same changed state to every other visible player; this is the regression
+   * for recipient-scoped snapshot caches.
+   */
+  static boolean headlessSetObjectModeAndSync(
+      int objectId, int baselinePlayerEntityId, byte mode) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean changed =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeObjectState> states =
+            server.world.getMapper(com.riiablo.engine.server.component.NativeObjectState.class);
+        com.riiablo.engine.server.component.NativeObjectState state =
+            states == null ? null : states.get(objectId);
+        if (state == null) return;
+        state.persistMode(mode);
+        com.riiablo.engine.server.component.CofReference cof = server.world
+            .getMapper(com.riiablo.engine.server.component.CofReference.class).get(objectId);
+        if (cof != null) cof.mode = mode;
+        int clientId = -1;
+        for (com.badlogic.gdx.utils.IntIntMap.Entry entry : server.player.entries()) {
+          if (entry.value == baselinePlayerEntityId) {
+            clientId = entry.key;
+            break;
+          }
+        }
+        if (clientId < 0) return;
+        NetworkSynchronizer synchronizer = server.world.getSystem(NetworkSynchronizer.class);
+        if (synchronizer == null) return;
+        synchronizer.syncAllTo(clientId);
+        changed.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && changed.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   private static Vector2 findHeadlessRoomPosition(
       D2GS server, Map.Zone zone, Map.RoomEx room) {
     if (server == null || zone == null || room == null) return null;

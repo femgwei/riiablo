@@ -592,7 +592,11 @@ public final class D2GSHeadlessClient {
     }
     Visibility dynamic = peer.visibility.get(deletedDynamic);
     if (firstOnPeer == null || firstOnPeer.deleted || dynamic == null || dynamic.deleted) {
-      throw new IOException("returning to room did not restore full entity visibility");
+      throw new IOException("returning to room did not restore full entity visibility: "
+          + "player=" + (firstOnPeer == null ? "null" : firstOnPeer.deleted)
+          + " dynamic=" + deletedDynamic + "/"
+          + (dynamic == null ? "null" : dynamic.deleted)
+          + " candidates=" + dynamicCandidates);
     }
 
     int[] fixtures = D2GS.headlessCreateRoomLifecycleFixtures(
@@ -646,6 +650,43 @@ public final class D2GSHeadlessClient {
         || !persistentEntities.contains(fixtures[2])) {
       throw new IOException("invalid active RoomEx state: "
           + java.util.Arrays.toString(activeState));
+    }
+
+    // A reconnect/baseline for one client must not advance the global cache
+    // past an update still pending for its peer. Mutate the authoritative
+    // object, immediately replay a baseline to the peer, then require both
+    // clients to observe the same changed mode.
+    if (!D2GS.headlessSetObjectModeAndSync(
+        fixtures[2], peer.playerId, Engine.Object.MODE_NU)) {
+      throw new IOException("failed to mutate object and replay peer baseline");
+    }
+    deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(firstInput);
+      if (packet != null) first.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      Visibility firstChanged = first.visibility.get(fixtures[2]);
+      Visibility peerChanged = peer.visibility.get(fixtures[2]);
+      if (firstChanged != null && !firstChanged.deleted
+          && firstChanged.cofMode == Engine.Object.MODE_NU
+          && peerChanged != null && !peerChanged.deleted
+          && peerChanged.cofMode == Engine.Object.MODE_NU) break;
+    }
+    Visibility firstChanged = first.visibility.get(fixtures[2]);
+    Visibility peerChanged = peer.visibility.get(fixtures[2]);
+    if (firstChanged == null || firstChanged.deleted
+        || firstChanged.cofMode != Engine.Object.MODE_NU
+        || peerChanged == null || peerChanged.deleted
+        || peerChanged.cofMode != Engine.Object.MODE_NU) {
+      throw new IOException("recipient-scoped object update diverged after peer baseline");
+    }
+    log("recipient_baseline_pass", "object=" + fixtures[2]
+        + " mode=" + Engine.Object.MODE_NU + " baselinePeer=" + peer.playerId
+        + " existingPeer=" + first.playerId + " clients=true,true");
+    if (!D2GS.headlessSetObjectModeAndSync(
+        fixtures[2], peer.playerId, Engine.Object.MODE_ON)) {
+      throw new IOException("failed to restore object mode after baseline regression");
     }
 
     if (!D2GS.headlessMovePlayerToRoom(peer.playerId, 10, rooms[1])

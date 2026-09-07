@@ -393,7 +393,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 隐藏双客户端验证两端都收到死亡怪物、掉落物和对象的定向删除，重新进入后分别恢复死亡、地面掉落和 `MODE_ON` 状态；输出 `room_persistence_pass`，`duplicate=false`、`prematureUnload=false`、`refs=2`。
   - `MonsterRoomActivationTest`、`Act1MapBuilderD2MooLayersTest`、`NativeObjectInteractTypePersistenceTest`、D2GS/Netty 编译及 1.10f `headlessSnapshotResync` 全部通过。
 
-下一项建议进入 **多人快照重同步第十四阶段（RoomEx 动态实体权威状态变更广播与重连基线一致性）**：验证对象模式、怪物死亡/复活、地面掉落拾取等在线增量变化，与掉线重连或新客户端加入时收到的完整基线状态完全一致。
+- [x] ~~完成多人快照重同步第十四阶段（RoomEx 动态实体权威状态变更广播与重连基线一致性）~~
+  - 将 D2GS `NetworkSynchronizer` 的实体快照缓存从全局单份改为按接收者独立维护；新客户端的 `syncAllTo` 不再覆盖其他客户端尚未发送的增量状态。
+  - RoomEx 接收者集合变化时清理离开者和当前可见者的实体缓存，并发送一次完整基线，避免共享 RoomEx 切换后残留旧状态。
+  - 离屏双客户端将开启对象切换为 `MODE_NU`，先向一个客户端重放基线，再验证另一个客户端也收到同一模式；之后恢复 `MODE_ON`，死亡怪物、掉落物和拾取/删除回归继续通过。
+  - `headlessSnapshotResync` 输出 `recipient_baseline_pass`、`room_subscription_pass`、`room_persistence_pass` 和 `snapshot_resync_pass`，D2GS/Netty 编译及核心回归通过。
+
+下一项建议进入 **多人快照重同步第十五阶段（丢包/重排恢复与基线事务边界）**：注入实体增量包丢失、重复和乱序，验证客户端能通过幂等重同步恢复对象、怪物、掉落和玩家状态，且基线 BEGIN/实体帧/END 不会被旧包污染。
 
 ## 记录规则
 

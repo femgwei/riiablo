@@ -46,7 +46,12 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   protected ComponentMapper<Flags> mFlags;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
-  private final EntitySnapshotCache snapshots = new EntitySnapshotCache();
+  /**
+   * Each connection needs its own last-sent state. A baseline sent to a newly
+   * connected client must never suppress an incremental update still pending
+   * for an existing client.
+   */
+  private final IntMap<EntitySnapshotCache> snapshotsByRecipient = new IntMap<>();
   private final IntIntMap lastRecipients = new IntIntMap();
   private final IntMap<MovementAcknowledgement> movementAcknowledgements = new IntMap<>();
 
@@ -58,7 +63,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   // FIXME: this assumes that removing Networked component implies deletion -- may not always be case
   @Override
   protected void removed(int entityId) {
-    snapshots.remove(entityId);
+    removeSnapshots(entityId);
     lastRecipients.remove(entityId, 0);
     movementAcknowledgements.remove(entityId);
     Class.Type type = mClass.get(entityId).type;
@@ -87,22 +92,41 @@ public class NetworkSynchronizer extends BaseEntitySystem {
     if (previousRecipients != Integer.MIN_VALUE && previousRecipients != recipients) {
       int departed = previousRecipients & ~recipients;
       if (departed != 0) sendVisibilityDeletion(entityId, departed);
+      // Re-entering a RoomEx must receive a complete state even when the
+      // entity itself did not change while the client was away.
+      // Re-prime every currently visible recipient after a topology change.
+      // This also repairs a client that retained a stale baseline while the
+      // other client moved through the shared RoomEx ring.
+      removeSnapshots(entityId, departed | recipients);
+      Gdx.app.log(TAG, "[NET_SYNC] phase=recipient_change entity=" + entityId
+          + " previous=0x" + Integer.toHexString(previousRecipients)
+          + " current=0x" + Integer.toHexString(recipients)
+          + " reenter=0x" + Integer.toHexString(recipients & ~previousRecipients));
     }
     if (previousRecipients != recipients) {
-      // A newly visible client needs the unchanged baseline too.
-      snapshots.remove(entityId);
       lastRecipients.put(entityId, recipients);
     }
     if (recipients == 0) return;
     byte[] state = serialize(entityId, false);
-    if (!snapshots.update(entityId, state)) return;
+    int changedRecipients = 0;
+    for (IntIntMap.Entry entry : players.entries()) {
+      int clientId = entry.key;
+      int recipient = 1 << clientId;
+      if ((recipients & recipient) == 0) continue;
+      if (snapshotsFor(clientId).update(entityId, state)) changedRecipients |= recipient;
+    }
+    if (changedRecipients == 0) return;
+    if (previousRecipients != recipients) {
+      Gdx.app.log(TAG, "[NET_SYNC] phase=recipient_baseline entity=" + entityId
+          + " recipients=0x" + Integer.toHexString(changedRecipients));
+    }
     byte[] snapshot = serialize(entityId, true);
-    Packet packet = Packet.obtain(recipients, ByteBuffer.wrap(snapshot));
+    Packet packet = Packet.obtain(changedRecipients, ByteBuffer.wrap(snapshot));
     boolean success = outPackets.offer(packet);
     if (!success) {
       // Do not suppress the next frame after a queue failure. Removing the
       // cached value makes the authoritative snapshot eligible for retry.
-      snapshots.remove(entityId);
+      removeSnapshots(entityId, changedRecipients);
       Gdx.app.error(TAG, "[NET_SYNC] phase=runtime_drop entity=" + entityId
           + " reason=out_queue_full");
     }
@@ -169,14 +193,15 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       if ((recipientMask(entityId) & recipient) == 0) continue;
       byte[] state = serialize(entityId, false);
       byte[] snapshot = serialize(entityId, true);
-      // Prime the global change cache. Existing clients already know these
-      // unchanged entities, while this targeted packet initializes the joiner.
-      snapshots.update(entityId, state);
+      // Prime only the joining client's cache. Existing clients may still have
+      // an unsent update for this entity and must not be affected by a joiner
+      // baseline.
+      snapshotsFor(clientId).update(entityId, state);
       if (outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(snapshot)))) {
         queued++;
         bytes += snapshot.length;
       } else {
-        snapshots.remove(entityId);
+        snapshotsFor(clientId).remove(entityId);
         failed++;
       }
     }
@@ -259,7 +284,32 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   public void clearMovementAcknowledgement(int entityId) {
     movementAcknowledgements.remove(entityId);
-    snapshots.remove(entityId);
+    removeSnapshots(entityId);
+  }
+
+  private EntitySnapshotCache snapshotsFor(int clientId) {
+    EntitySnapshotCache cache = snapshotsByRecipient.get(clientId);
+    if (cache == null) {
+      cache = new EntitySnapshotCache();
+      snapshotsByRecipient.put(clientId, cache);
+    }
+    return cache;
+  }
+
+  private void removeSnapshots(int entityId) {
+    for (IntMap.Entry<EntitySnapshotCache> entry : snapshotsByRecipient.entries()) {
+      entry.value.remove(entityId);
+    }
+  }
+
+  private void removeSnapshots(int entityId, int recipients) {
+    if (recipients == 0) return;
+    for (int clientId = 0; clientId < Integer.SIZE; clientId++) {
+      if ((recipients & (1 << clientId)) != 0) {
+        EntitySnapshotCache cache = snapshotsByRecipient.get(clientId);
+        if (cache != null) cache.remove(entityId);
+      }
+    }
   }
 
   private static final class MovementAcknowledgement {
