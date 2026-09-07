@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 class FixedStepAccumulatorTest {
-  private static final float STEP = 1f / 25f;
+  private static final float STEP = com.riiablo.engine.SimulationClock.STEP_SECONDS;
 
   @Test
   void emitsWholeFixedSteps() {

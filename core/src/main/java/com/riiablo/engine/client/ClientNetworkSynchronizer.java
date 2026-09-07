@@ -17,6 +17,7 @@ import com.badlogic.gdx.net.Socket;
 import com.badlogic.gdx.utils.TimeUtils;
 
 import com.riiablo.Riiablo;
+import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.component.CofComponents;
@@ -74,7 +75,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   @Wire(name="client.socket") Socket socket;
 
   public ClientNetworkSynchronizer() {
-    super(null, 1 / 60f);
+    super(null, SimulationClock.STEP_SECONDS);
   }
 
   @Override

@@ -17,6 +17,7 @@ import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.Riiablo;
+import com.riiablo.engine.SimulationClock;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Dirty;
@@ -149,7 +150,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private final ClientPartyState partyState = new ClientPartyState();
 
   public ClientNetworkReceiver() {
-    super(null, 1 / 60f);
+    super(null, SimulationClock.STEP_SECONDS);
   }
 
   @Override

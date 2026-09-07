@@ -5,8 +5,8 @@ import com.artemis.annotations.All;
 import com.artemis.systems.IntervalIteratingSystem;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
-import com.riiablo.codec.Animation;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Player;
@@ -28,7 +28,7 @@ public class AnimStepper extends IntervalIteratingSystem {
   protected EventSystem events;
 
   public AnimStepper() {
-    super(null, Animation.FRAME_DURATION);
+    super(null, SimulationClock.STEP_SECONDS);
   }
 
   @Override

@@ -286,7 +286,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 每帧最多追赶 4 个模拟 tick，后台/长帧不会形成无限 backlog；暂停时清空半 tick，恢复只从新的固定 tick 开始。
   - 新增 `FixedStepAccumulatorTest`，覆盖 40/80ms 步进、分数帧累计、2 秒长帧限幅、NaN/负数/Infinity、reset 和 60Hz 稳定性；核心测试、D2GS/Netty 编译及 1×1 真实隐藏营地回归通过。
 
-下一项建议进入 **本地/多人模拟时钟统一与帧率无关输入阶段**：核对所有仍依赖 `IntervalSystem` 可变 delta 的客户端移动、动画、网络收发和冷却系统，逐项改用统一权威 tick 或显式时间线，避免 25Hz 驱动下出现 60Hz 偏差；继续以固定种子离屏回归验证。
+- [x] ~~完成本地/多人模拟时钟统一与逐帧渲染隔离~~
+  - 新增共享 `SimulationClock`，本地、D2GS、客户端动画/Overlay、多人收发和 Box2D 统一使用 25Hz/40ms 原生时钟；移除 `GameScreen` 路径残留的 60Hz 网络与物理 interval，避免 Artemis accumulator 漂移及 Box2D 每秒仅推进约 0.417 秒。
+  - 新增 `ClientRenderSystemRunner`，将所有 `@GpuSystem` 从固定模拟循环隔离，并按每个可见帧顺序执行；模拟追赶不会重复渲染，60Hz 下没有模拟 tick 的帧也不会漏绘地图、标签或自动地图。
+  - `SimulationClockTest` 连续 250 tick 无余量漂移，渲染隔离、固定步进、GameScreen delta 和 Box2D 测试通过；1.10f 双客户端权威快照顺序及 1×1 真实营地回归通过。
+  - 附加 `headlessMultiplayer` 的怪物移动子场景在固定种子下未找到可用近战怪物而超时；双客户端连接/快照门槛已单独通过，此失败不属于客户端时钟回归，后续应让场景显式生成目标以消除数据随机性。
+
+下一项建议进入 **25Hz 权威状态的客户端表现插值第一阶段**：为位置和朝向保存前后两个权威快照，以服务器 tick 为时间轴只插值渲染坐标，不回写碰撞/战斗状态；补 60/120Hz 画面平滑、丢包、旧快照和 Warp 瞬移测试，进一步消除角色与怪物“滑动/跳步”观感。
 
 ## 记录规则
 

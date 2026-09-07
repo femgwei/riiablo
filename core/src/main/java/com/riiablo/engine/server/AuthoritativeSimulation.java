@@ -1,7 +1,7 @@
 package com.riiablo.engine.server;
 
 import com.artemis.World;
-import com.riiablo.codec.Animation;
+import com.riiablo.engine.SimulationClock;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -17,8 +17,8 @@ public final class AuthoritativeSimulation {
   private static final Logger log = LogManager.getLogger(AuthoritativeSimulation.class);
   private static final ThreadLocal<AuthoritativeSimulation> CURRENT = new ThreadLocal<>();
 
-  public static final int TICKS_PER_SECOND = (int) Animation.FRAMES_PER_SECOND;
-  public static final float STEP_SECONDS = Animation.FRAME_DURATION;
+  public static final int TICKS_PER_SECOND = SimulationClock.TICKS_PER_SECOND;
+  public static final float STEP_SECONDS = SimulationClock.STEP_SECONDS;
 
   private final World world;
   private volatile Thread ownerThread;
@@ -36,7 +36,7 @@ public final class AuthoritativeSimulation {
   public void tick(Runnable applyIncoming, Runnable dispatchOutgoing) {
     assertOwnerThread();
     tick++;
-    serverTimeMillis = epochMillis + tick * Math.round(STEP_SECONDS * 1000f);
+    serverTimeMillis = epochMillis + tick * SimulationClock.STEP_MILLIS;
     AuthoritativeSimulation previous = CURRENT.get();
     CURRENT.set(this);
     try {

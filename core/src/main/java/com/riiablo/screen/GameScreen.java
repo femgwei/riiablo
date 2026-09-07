@@ -37,13 +37,13 @@ import com.riiablo.Cvars;
 import com.riiablo.Keys;
 import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
-import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.cvar.Cvar;
 import com.riiablo.cvar.CvarStateAdapter;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.SimulationClock;
 import com.riiablo.engine.EngineConfig;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.client.AnimationStepper;
@@ -54,6 +54,7 @@ import com.riiablo.engine.client.AutoInteracter;
 import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.ClientEntityFactory;
 import com.riiablo.engine.client.ClientItemManager;
+import com.riiablo.engine.client.ClientRenderSystemRunner;
 import com.riiablo.engine.client.ClientNetworkSynchronizer;
 import com.riiablo.engine.client.CofAlphaHandler;
 import com.riiablo.engine.client.CofLayerCacher;
@@ -194,7 +195,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
    * Keep the same input delta bound while client and server systems still
    * share one Artemis world; the fixed-step accumulator below owns catch-up.
    */
-  static final float MAX_SIMULATION_DELTA = Animation.FRAME_DURATION * 2f;
+  static final float MAX_SIMULATION_DELTA = SimulationClock.STEP_SECONDS * 2f;
   static final int MAX_SIMULATION_STEPS_PER_RENDER = 4;
 
   private static final int[] ITEMS = {
@@ -248,7 +249,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   boolean isDebug;
   boolean discardNextSimulationDelta;
   private final FixedStepAccumulator simulationAccumulator =
-      new FixedStepAccumulator(Animation.FRAME_DURATION, MAX_SIMULATION_STEPS_PER_RENDER);
+      new FixedStepAccumulator(SimulationClock.STEP_SECONDS, MAX_SIMULATION_STEPS_PER_RENDER);
+  private ClientRenderSystemRunner renderSystemRunner;
   
   // Automap 持续缩放累加器（用于按住键持续放大/缩小）
   private float automapZoomAccumulator = 0f;
@@ -687,6 +689,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         ;
     if (socket != null) config.register("client.socket", socket);
     engine = Riiablo.engine = new World(config);
+    renderSystemRunner = new ClientRenderSystemRunner(engine);
+    Gdx.app.log(TAG, String.format(
+        "[SIM_CLOCK] rate=%dHz step=%.3fs maxCatchUp=%d renderSystems=%d",
+        SimulationClock.TICKS_PER_SECOND, SimulationClock.STEP_SECONDS,
+        MAX_SIMULATION_STEPS_PER_RENDER, renderSystemRunner.size()));
 
     // hacked until I can rewrite into proper system
     engine.inject(map);
@@ -824,7 +831,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     builder
         .with(new Box2DSynchronizerPre())
-        .with(new Box2DPhysics(1 / 60f))
+        .with(new Box2DPhysics(SimulationClock.STEP_SECONDS))
         .with(new Box2DSynchronizerPost())
 
         .with(new MissileCollisionSystem()) // 处理导弹的碰撞和伤害
@@ -1061,16 +1068,23 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
 
     Riiablo.assets.update();
-    int simulationSteps = simulationAccumulator.advance(delta, stepSeconds -> {
-      engine.setDelta(stepSeconds);
-      engine.process();
-    });
+    int simulationSteps;
+    renderSystemRunner.beginSimulation();
+    try {
+      simulationSteps = simulationAccumulator.advance(delta, stepSeconds -> {
+        engine.setDelta(stepSeconds);
+        engine.process();
+      });
+    } finally {
+      renderSystemRunner.endSimulation();
+    }
     if (simulationSteps > 1) {
       Gdx.app.debug(TAG, String.format(
           "Fixed simulation catch-up: steps=%d step=%.3fs remainder=%.4fs",
           simulationSteps, simulationAccumulator.getStepSeconds(),
           simulationAccumulator.getAccumulated()));
     }
+    renderSystemRunner.render(delta);
 
     scaledStage.act(delta);
     scaledStage.draw();
@@ -1426,12 +1440,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   static float sanitizeSimulationDelta(float delta) {
     if (!Float.isFinite(delta) || delta < 0f
         || delta > BACKGROUND_DELTA_THRESHOLD) {
-      return Animation.FRAME_DURATION;
+      return SimulationClock.STEP_SECONDS;
     }
     return Math.min(delta, MAX_SIMULATION_DELTA);
   }
 
   static float sanitizeResumedSimulationDelta(float delta) {
-    return Math.min(sanitizeSimulationDelta(delta), Animation.FRAME_DURATION);
+    return Math.min(sanitizeSimulationDelta(delta), SimulationClock.STEP_SECONDS);
   }
 }
