@@ -299,6 +299,21 @@ public final class D2GSHeadlessClient {
       if (!Float.isFinite(a.playerX) || !Float.isFinite(b.playerX)) {
         throw new IOException("resync fixture did not receive initial baselines");
       }
+      float preWarpX = a.playerX, preWarpY = a.playerY;
+      if (!D2GS.headlessWarpPlayer(a.playerId)) {
+        throw new IOException("native warp trigger unavailable for resync fixture");
+      }
+      boolean warped = false;
+      long warpDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < warpDeadline && !warped) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet != null) {
+          a.consume(packet);
+          warped = Float.isFinite(a.playerX) && Float.isFinite(a.playerY)
+              && Math.abs(a.playerX - preWarpX) + Math.abs(a.playerY - preWarpY) > 0.5f;
+        }
+      }
+      if (!warped) throw new IllegalStateException("native warp produced no authoritative position change");
       // Pause client A's receive loop while client B keeps consuming traffic.
       // The explicit request models a packet-loss detector firing after resume.
       long pausedUntil = System.currentTimeMillis() + 2_500L;
@@ -366,7 +381,7 @@ public final class D2GSHeadlessClient {
             + baselineId + " duplicate=" + duplicateBaseline + " begin=" + duplicateBegin
             + " end=" + duplicateEnd);
       }
-      log("snapshot_resync_pass", "request=77 baseline=" + baselineId
+      log("snapshot_resync_pass", "request=77 warp=true baseline=" + baselineId
           + " entities=" + entityFrames + " waypoints=" + waypointCount
           + " inventoryRevision=" + inventoryRevision
           + " duplicateBaseline=" + duplicateBaseline

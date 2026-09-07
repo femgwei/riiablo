@@ -342,7 +342,11 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 双客户端故障注入现在验证基线携带 5 幕传送点位图和非负物品 revision；同一 `requestId` 重传复用同一 `baselineId`，且请求端仍收到完整 BEGIN/实体/END 序列。
   - 1.10f 真实 D2GS 通过：99 个实体、5 幕 waypoint、inventoryRevision=0、重复请求 baselineId=1，另一客户端未收到定向标记。
 
-下一项建议进入 **多人快照重同步第四阶段（真实事件）**：将 Warp、死亡和地图切换动作接入故障注入场景，并逐项断言任务记录、位置、生命及传送点状态恢复。
+- [x] ~~完成多人快照重同步第四阶段（真实 Warp）~~
+  - 隐藏 D2GS 在固定模拟线程将请求端权威移动到 Blood Moor，并附加 `SYNC_WARPED`；客户端先确认位置发生变化，再暂停收包并完成定向基线恢复。
+  - 1.10f 双客户端真实资源门槛通过：Warp 后首次基线 119 个实体、5 幕 waypoint、物品 revision、重复请求幂等和对端隔离均成立。
+
+下一项建议进入 **多人快照重同步第五阶段（死亡与复活）**：触发权威玩家死亡，暂停客户端接收后重同步，验证死亡状态、生命值、尸体及复活后的城镇位置不回滚。
 
 ## 记录规则
 

@@ -233,6 +233,46 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only native warp trigger; production clients still use interaction flow. */
+  static boolean headlessWarpPlayer(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean warped =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Vector2 destination = findHeadlessLevelPosition(server, 2); // Blood Moor
+        com.riiablo.engine.server.component.Position position =
+            server.world.getMapper(com.riiablo.engine.server.component.Position.class).get(playerId);
+        if (destination == null || position == null) return;
+        position.position.set(destination);
+        com.riiablo.engine.server.component.Box2DBody body =
+            server.world.getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+        if (body != null && body.body != null) body.body.setTransform(destination, 0f);
+        com.riiablo.engine.server.component.MapWrapper mapWrapper =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        if (mapWrapper != null) mapWrapper.zone = server.map.getZone(destination.x, destination.y);
+        com.riiablo.engine.server.component.UnitStates states =
+            server.world.getMapper(com.riiablo.engine.server.component.UnitStates.class).get(playerId);
+        if (states != null) {
+          if (states.stateList == null) states.init(playerId);
+          states.stateList.addState(com.riiablo.engine.server.state.StateId.SYNC_WARPED,
+              2, 1, playerId);
+        }
+        warped.set(true);
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && warped.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   private static Vector2 findHeadlessLevelPosition(D2GS server, int levelId) {
     com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
     Map.Zone zone = level == null ? null : server.map.findZone(level);
