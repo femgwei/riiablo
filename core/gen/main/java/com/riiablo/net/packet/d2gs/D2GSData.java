@@ -25,21 +25,22 @@ public final class D2GSData {
   public static final byte CursorToBelt = 18;
   public static final byte SwapBeltItem = 19;
   public static final byte CastSkillRequest = 20;
-  public static final byte SpendSkillPointRequest = 21;
-  public static final byte SpendSkillPointResult = 22;
-  public static final byte NpcServiceRequest = 23;
-  public static final byte NpcServiceResult = 24;
-  public static final byte ItemMoveRequest = 25;
-  public static final byte ItemMoveResult = 26;
-  public static final byte SelectSkillRequest = 27;
-  public static final byte PartyRequest = 28;
-  public static final byte PartyResult = 29;
-  public static final byte PlayerLifecycleRequest = 30;
-  public static final byte PlayerLifecycleResult = 31;
-  public static final byte QuestRequest = 32;
-  public static final byte QuestResult = 33;
+  public static final byte CastSkillResult = 21;
+  public static final byte SpendSkillPointRequest = 22;
+  public static final byte SpendSkillPointResult = 23;
+  public static final byte NpcServiceRequest = 24;
+  public static final byte NpcServiceResult = 25;
+  public static final byte ItemMoveRequest = 26;
+  public static final byte ItemMoveResult = 27;
+  public static final byte SelectSkillRequest = 28;
+  public static final byte PartyRequest = 29;
+  public static final byte PartyResult = 30;
+  public static final byte PlayerLifecycleRequest = 31;
+  public static final byte PlayerLifecycleResult = 32;
+  public static final byte QuestRequest = 33;
+  public static final byte QuestResult = 34;
 
-  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", "SpendSkillPointRequest", "SpendSkillPointResult", "NpcServiceRequest", "NpcServiceResult", "ItemMoveRequest", "ItemMoveResult", "SelectSkillRequest", "PartyRequest", "PartyResult", "PlayerLifecycleRequest", "PlayerLifecycleResult", "QuestRequest", "QuestResult", };
+  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", "CastSkillResult", "SpendSkillPointRequest", "SpendSkillPointResult", "NpcServiceRequest", "NpcServiceResult", "ItemMoveRequest", "ItemMoveResult", "SelectSkillRequest", "PartyRequest", "PartyResult", "PlayerLifecycleRequest", "PlayerLifecycleResult", "QuestRequest", "QuestResult", };
 
   public static String name(int e) { return names[e]; }
 }

@@ -315,7 +315,12 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - `CastSkillRequest` 兼容追加 sequence、observedServerTick 和 targetTick；D2GS 按目标 tick 排队，支持精确重传幂等、同序号冲突拒绝及未来/迟到窗口，并从历史帧解析实体目标坐标。`PLAYER_FLYING` 地图射线同步接入 DT1 missile barrier 与动态门引用层，普通固体对象不再错误阻挡近战射线。
   - 原生距离、位置历史、攻击起手后目标移动、协议幂等、地图/动态门碰撞及 Amazon/Assassin/Barbarian/Druid 多段近战集中回归通过；1.10f 双客户端真实 Fallen 死亡、Shaman 复活、复活无奖励、原生 NoDrop 与跨客户端拾取闭环通过。真实 1×1 隐藏营地三个渲染帧通过，并修复本地模式可选网络时钟接线和 headless 观察点超出 Shaman AiDist 的测试缺陷。
 
-下一项建议进入 **多人战斗意图 ACK、拒绝结果与客户端动作校正**：为服务端已具备的 combat sequence/幂等缓存补正式结果包，返回 applied tick、接受/拒绝原因及权威目标；客户端据此清理待确认施法、撤销被拒绝的攻击动画/目标，并验证重传不会重复扣法力、弹药、耐久或造成二次伤害。
+- [x] ~~完成多人战斗意图 ACK、拒绝结果与客户端动作校正~~
+  - 新增兼容 `CastSkillResult`，返回 `sequence`、`appliedTick`、`authoritativeTick`、源/目标实体、接受/拒绝原因及终态标志；服务端对未来/迟到、目标快照、技能所有权、近战越距和玩家死亡等所有分支都返回明确结果。
+  - 精确重传返回非终态重复确认，不会撤销原请求；客户端按单调 sequence 消费结果，最终拒绝会清理本地 Casting、Sequence 和 Target，避免攻击动画/目标锁死。服务端接受结果在动作排队的同一 tick 发送，拒绝不会执行任何资源或伤害副作用。
+  - `NetworkedCombatTransportTest` 覆盖结果包字段；1.10f 双客户端 Fallen/Shaman 闭环验证 ACK、复活、NoDrop、跨端拾取和多次迟到拒绝均通过。
+
+下一项建议进入 **多人快照丢失后的 tick 重同步**：检测连续缺 tick 或 baseline 失效，按客户端请求重发完整实体/物品/状态快照，并在 Warp、死亡、地图切换、长时间后台恢复及重连场景验证不会回滚到旧状态。
 
 ## 记录规则
 

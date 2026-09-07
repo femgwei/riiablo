@@ -175,6 +175,20 @@ public class Actioneer extends PassiveSystem {
     return mSequence.has(entityId);
   }
 
+  /** Cancels a locally predicted network cast after an authoritative reject. */
+  public void cancelCasting(int entityId, String reason) {
+    if (entityId == Engine.INVALID_ENTITY) return;
+    boolean hadCasting = mCasting.has(entityId);
+    boolean hadSequence = mSequence.has(entityId);
+    if (hadCasting) mCasting.remove(entityId);
+    if (hadSequence) mSequence.remove(entityId);
+    if (mTarget.has(entityId)) mTarget.remove(entityId);
+    if (hadCasting || hadSequence) {
+      log.info("[SKILL_CAST] phase=authoritative_cancel entity={} reason={}",
+          entityId, reason == null ? "unknown" : reason);
+    }
+  }
+
   public void cast(int entityId, int skillId, int targetId, Vector2 targetVec) {
     castInternal(entityId, skillId, targetId, targetVec, (byte) Engine.INVALID_MODE,
         currentCombatTick());

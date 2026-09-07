@@ -17,6 +17,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
+import com.riiablo.net.packet.d2gs.CastSkillResult;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
@@ -82,6 +83,28 @@ class NetworkedCombatTransportTest extends RiiabloTest {
     assertEquals(100L, wire.observedServerTick());
     assertEquals(102L, wire.targetTick());
     System.out.println("[NET_CAST_CHAIN] skill=2 target=77 intentOnly=true status=PASS");
+  }
+
+  @Test
+  void castResultCarriesAppliedTickAndFinalReject() {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reason = builder.createString("melee_out_of_range");
+    int resultData = CastSkillResult.createCastSkillResult(
+        builder, 41L, 102L, false, reason, 77, 88, 0, 103L, true);
+    int root = D2GS.createD2GS(builder, D2GSData.CastSkillResult, resultData);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    D2GS packet = D2GS.getRootAsD2GS(
+        com.google.flatbuffers.ByteBufferUtil.removeSizePrefix(builder.dataBuffer()));
+    CastSkillResult result = (CastSkillResult) packet.data(new CastSkillResult());
+    assertEquals(D2GSData.CastSkillResult, packet.dataType());
+    assertEquals(41L, result.sequence());
+    assertEquals(102L, result.appliedTick());
+    assertTrue(!result.success());
+    assertEquals("melee_out_of_range", result.reason());
+    assertEquals(77, result.sourceEntityId());
+    assertEquals(88, result.targetEntityId());
+    assertEquals(103L, result.authoritativeTick());
+    assertTrue(result.finalResult());
   }
 
   @Test

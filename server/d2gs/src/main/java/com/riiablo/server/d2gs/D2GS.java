@@ -141,6 +141,7 @@ import com.riiablo.net.CombatIntentScheduler;
 import com.riiablo.net.packet.d2gs.BodyToCursor;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
+import com.riiablo.net.packet.d2gs.CastSkillResult;
 import com.riiablo.net.packet.d2gs.SpendSkillPointRequest;
 import com.riiablo.net.packet.d2gs.SelectSkillRequest;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
@@ -1680,10 +1681,20 @@ public class D2GS extends ApplicationAdapter {
         request.skillId(), request.targetId(), request.targetX(), request.targetY());
     CombatIntentScheduler.Result result = combatIntents[packet.id].submit(
         input, simulation.tickNumber());
+    if (result == CombatIntentScheduler.Result.DUPLICATE) {
+      // A retransmit is already represented by the original authoritative
+      // result. A non-final positive response lets the client retire the
+      // duplicate without cancelling a cast that is still in flight.
+      sendCombatResult(packet.id, input, true, "duplicate", simulation.tickNumber(),
+          entityId, input.targetEntityId, false);
+      return;
+    }
     if (result != CombatIntentScheduler.Result.ACCEPTED) {
       Gdx.app.log(TAG, "[NET_CAST] phase=intent_drop connection=" + packet.id
           + " player=" + entityId + " sequence=" + input.sequence
           + " result=" + result.name().toLowerCase());
+      sendCombatResult(packet.id, input, false, result.name().toLowerCase(),
+          simulation.tickNumber(), entityId, input.targetEntityId);
       return;
     }
     Gdx.app.log(TAG, "[NET_CAST] phase=intent_queue connection=" + packet.id
@@ -1699,7 +1710,13 @@ public class D2GS extends ApplicationAdapter {
       combatIntents[connectionId].drainReady(currentTick, readyCombatIntents);
       if (readyCombatIntents.isEmpty()) continue;
       int entityId = player.get(connectionId, Engine.INVALID_ENTITY);
-      if (entityId == Engine.INVALID_ENTITY) continue;
+      if (entityId == Engine.INVALID_ENTITY) {
+        for (CombatIntent input : readyCombatIntents) {
+          sendCombatResult(connectionId, input, false, "player_unavailable",
+              currentTick, entityId, input.targetEntityId);
+        }
+        continue;
+      }
       for (CombatIntent input : readyCombatIntents) {
         applyCombatIntent(connectionId, entityId, input, currentTick);
       }
@@ -1713,6 +1730,8 @@ public class D2GS extends ApplicationAdapter {
     if (isPlayerDead(entityId)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
           + " skill=" + request.skillId + " reason=player_dead");
+      sendCombatResult(connectionId, request, false, "player_dead", currentTick,
+          entityId, request.targetEntityId);
       return;
     }
     int targetId = request.targetEntityId;
@@ -1720,11 +1739,15 @@ public class D2GS extends ApplicationAdapter {
         && !world.getMapper(com.riiablo.engine.server.component.Class.class).has(targetId)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
           + " skill=" + request.skillId + " reason=unknown_target target=" + targetId);
+      sendCombatResult(connectionId, request, false, "unknown_target", currentTick,
+          entityId, targetId);
       return;
     }
     if (Riiablo.files.skills.get(request.skillId) == null) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
           + " skill=" + request.skillId + " reason=unknown_skill");
+      sendCombatResult(connectionId, request, false, "unknown_skill", currentTick,
+          entityId, targetId);
       return;
     }
     com.riiablo.engine.server.component.Player playerComponent =
@@ -1739,6 +1762,8 @@ public class D2GS extends ApplicationAdapter {
         || (!builtInSkill && playerComponent.data.getSkill(request.skillId) <= 0)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
           + " skill=" + request.skillId + " reason=skill_not_owned");
+      sendCombatResult(connectionId, request, false, "skill_not_owned", currentTick,
+          entityId, targetId);
       return;
     }
     float x = request.targetX;
@@ -1746,6 +1771,8 @@ public class D2GS extends ApplicationAdapter {
     if (!Float.isFinite(x) || !Float.isFinite(y)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
           + " skill=" + request.skillId + " reason=invalid_target_position");
+      sendCombatResult(connectionId, request, false, "invalid_target_position", currentTick,
+          entityId, targetId);
       return;
     }
     CombatPositionHistory.Snapshot attackerSnapshot =
@@ -1754,6 +1781,8 @@ public class D2GS extends ApplicationAdapter {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
           + " skill=" + request.skillId + " reason=attacker_snapshot_missing tick="
           + snapshotTick);
+      sendCombatResult(connectionId, request, false, "attacker_snapshot_missing", currentTick,
+          entityId, targetId);
       return;
     }
     if (targetId != Engine.INVALID_ENTITY) {
@@ -1763,6 +1792,8 @@ public class D2GS extends ApplicationAdapter {
         Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
             + " skill=" + request.skillId + " reason=target_snapshot_missing tick="
             + snapshotTick);
+        sendCombatResult(connectionId, request, false, "target_snapshot_missing", currentTick,
+            entityId, targetId);
         return;
       }
       // Never trust a client-supplied aim point for an entity target.
@@ -1774,6 +1805,8 @@ public class D2GS extends ApplicationAdapter {
     if (dx * dx + dy * dy > 2500f) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
           + " skill=" + request.skillId + " reason=target_position_out_of_bounds");
+      sendCombatResult(connectionId, request, false, "target_position_out_of_bounds", currentTick,
+          entityId, targetId);
       return;
     }
     if (request.skillId == com.riiablo.skill.SkillCodes.attack
@@ -1791,6 +1824,8 @@ public class D2GS extends ApplicationAdapter {
         Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
             + " skill=" + request.skillId + " reason=melee_out_of_range target=" + targetId
             + " tick=" + snapshotTick);
+        sendCombatResult(connectionId, request, false, "melee_out_of_range", currentTick,
+            entityId, targetId);
         return;
       }
     }
@@ -1801,6 +1836,7 @@ public class D2GS extends ApplicationAdapter {
         request.sequence, snapshotTick));
     Actioneer actioneer = world.getSystem(Actioneer.class);
     actioneer.castAtTick(entityId, request.skillId, targetId, new Vector2(x, y), snapshotTick);
+    sendCombatResult(connectionId, request, true, "accepted", snapshotTick, entityId, targetId);
     com.riiablo.engine.server.component.CofReference cof = world.getMapper(
         com.riiablo.engine.server.component.CofReference.class).get(entityId);
     com.riiablo.engine.server.component.AnimData anim = world.getMapper(
@@ -1817,6 +1853,36 @@ public class D2GS extends ApplicationAdapter {
         anim != null ? anim.speed : -1, anim != null ? anim.lastKeyframeIndex : -1,
         anim != null && anim.keyframes != null ? anim.keyframes.length : 0,
         summarizeKeyframes(anim)));
+  }
+
+  /** Sends a result for every combat intent, including validation drops. */
+  private void sendCombatResult(int clientId, CombatIntent input, boolean success,
+      String reason, long appliedTick, int sourceEntityId, int targetEntityId) {
+    sendCombatResult(clientId, input, success, reason, appliedTick,
+        sourceEntityId, targetEntityId, true);
+  }
+
+  private void sendCombatResult(int clientId, CombatIntent input, boolean success,
+      String reason, long appliedTick, int sourceEntityId, int targetEntityId,
+      boolean finalResult) {
+    if (clientId < 0 || clientId >= MAX_CLIENTS || input == null) return;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reasonOffset = builder.createString(reason == null ? "unknown" : reason);
+    int result = CastSkillResult.createCastSkillResult(builder,
+        input.sequence, appliedTick, success, reasonOffset,
+        sourceEntityId, targetEntityId, input.skillId,
+        simulation == null ? 0L : simulation.tickNumber(), finalResult);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.CastSkillResult, result);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    if (!outPackets.offer(Packet.obtain(1 << clientId, builder.dataBuffer()))) {
+      Gdx.app.error(TAG, "[NET_CAST] phase=result_drop connection=" + clientId
+          + " sequence=" + input.sequence);
+    } else {
+      Gdx.app.log(TAG, "[NET_CAST] phase=result connection=" + clientId
+          + " sequence=" + input.sequence + " success=" + success
+          + " reason=" + reason + " appliedTick=" + appliedTick);
+    }
   }
 
   /** Handles server-authoritative action selection and aura activation. */

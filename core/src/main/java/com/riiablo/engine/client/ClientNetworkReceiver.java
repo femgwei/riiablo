@@ -25,6 +25,7 @@ import com.riiablo.engine.Dirty;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.CofManager;
+import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AttributesWrapper;
@@ -76,6 +77,7 @@ import com.riiablo.net.packet.d2gs.PartyResult;
 import com.riiablo.net.packet.d2gs.PlayerP;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.net.packet.d2gs.QuestResult;
+import com.riiablo.net.packet.d2gs.CastSkillResult;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.StoreToCursor;
@@ -154,6 +156,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private final ClientPartyState partyState = new ClientPartyState();
   private long latestServerTick;
   private long latestServerTickReceiptMillis;
+  private long lastCombatSequence;
+  private boolean lastCombatAccepted;
 
   public ClientNetworkReceiver() {
     super(null, SimulationClock.STEP_SECONDS);
@@ -232,6 +236,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.EntitySync:
         Synchronize(packet);
+        break;
+      case D2GSData.CastSkillResult:
+        CastSkillResult(packet);
         break;
       case D2GSData.GroundToCursor:
         GroundToCursor(packet);
@@ -599,6 +606,38 @@ public class ClientNetworkReceiver extends IntervalSystem {
         + " success=" + result.success() + " reason=" + result.reason()
         + " skill=" + result.skillId() + " level=" + result.skillLevel()
         + " points=" + result.skillPoints());
+  }
+
+  private void CastSkillResult(D2GS packet) {
+    CastSkillResult result = (CastSkillResult) packet.data(new CastSkillResult());
+    if (result.sequence() <= lastCombatSequence && result.sequence() != 0L) {
+      Gdx.app.debug(TAG, "[NET_CAST] phase=result_stale sequence=" + result.sequence()
+          + " last=" + lastCombatSequence);
+      return;
+    }
+    if (result.sequence() != 0L) lastCombatSequence = result.sequence();
+    lastCombatAccepted = result.success();
+    if (!result.success() && result.finalResult()) {
+      int localSource = syncIds.get(result.sourceEntityId());
+      if (localSource != Engine.INVALID_ENTITY) {
+        Actioneer actioneer = world.getSystem(Actioneer.class);
+        if (actioneer != null) actioneer.cancelCasting(localSource, result.reason());
+      }
+    }
+    Gdx.app.log(TAG, "[NET_CAST] phase=result sequence=" + result.sequence()
+        + " success=" + result.success() + " reason=" + result.reason()
+        + " source=" + result.sourceEntityId() + " target=" + result.targetEntityId()
+        + " appliedTick=" + result.appliedTick()
+        + " authoritativeTick=" + result.authoritativeTick()
+        + " final=" + result.finalResult());
+  }
+
+  public long lastCombatSequence() {
+    return lastCombatSequence;
+  }
+
+  public boolean lastCombatAccepted() {
+    return lastCombatAccepted;
   }
 
   private void QuestResult(D2GS packet) {

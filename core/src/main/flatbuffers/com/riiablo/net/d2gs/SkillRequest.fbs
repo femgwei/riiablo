@@ -12,6 +12,21 @@ table CastSkillRequest {
   targetTick:ulong;
 }
 
+// Authoritative result for a combat intent.  This is deliberately separate
+// from EntitySync: clients must be able to retire a pending action even when
+// no entity component changed during the requested tick.
+table CastSkillResult {
+  sequence:ulong;
+  appliedTick:ulong;
+  success:bool;
+  reason:string;
+  sourceEntityId:int32;
+  targetEntityId:int32;
+  skillId:uint16;
+  authoritativeTick:ulong;
+  finalResult:bool;
+}
+
 // Changes the authoritative left/right action. Aura activation is derived
 // from the selected right action on the server, never from client state.
 table SelectSkillRequest {
