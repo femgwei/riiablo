@@ -543,6 +543,34 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /** Test-only player death/respawn state sampled on the simulation thread. */
+  static float[] headlessPlayerLifecycleState(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new float[5];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<float[]> state =
+        new java.util.concurrent.atomic.AtomicReference<>(new float[5]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        ServerPlayerDeathSystem deaths = server.world.getSystem(ServerPlayerDeathSystem.class);
+        Position position = server.world.getMapper(Position.class).get(playerId);
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(playerId);
+        float hp = wrapper == null || wrapper.attrs == null ? 0f
+            : wrapper.attrs.aggregate().getValue(com.riiablo.attributes.Stat.hitpoints, 0f);
+        int corpses = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Corpse.class,
+                com.riiablo.engine.server.component.PlayerCorpse.class)).getEntities().size();
+        state.set(new float[] {deaths != null && deaths.isPlayerDead(playerId) ? 1f : 0f,
+            deaths != null && deaths.canRespawn(playerId) ? 1f : 0f, hp,
+            position == null ? Float.NaN : position.position.x,
+            position == null ? Float.NaN : position.position.y, corpses});
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? state.get() : new float[5]; }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return new float[5]; }
+  }
+
   /** Test-only NPC-equivalent paid resurrection on the render thread. */
   static boolean headlessResurrectMercenary(int playerId) {
     D2GS server = activeHeadlessInstance;

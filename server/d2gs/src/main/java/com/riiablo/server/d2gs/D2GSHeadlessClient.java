@@ -32,6 +32,9 @@ import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.net.packet.d2gs.SnapshotBaseline;
 import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
 import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
+import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter96;
 import com.riiablo.skill.SkillCodes;
@@ -384,7 +387,23 @@ public final class D2GSHeadlessClient {
             + baselineId + " duplicate=" + duplicateBaseline + " begin=" + duplicateBegin
             + " end=" + duplicateEnd);
       }
-      log("snapshot_resync_pass", "request=77 warp=true death=true baseline=" + baselineId
+      float[] deadState = D2GS.headlessPlayerLifecycleState(a.playerId);
+      if (deadState.length < 6 || deadState[0] != 1f || deadState[1] != 1f
+          || deadState[2] > 0f || deadState[5] < 1f) {
+        throw new IllegalStateException("player did not reach respawnable death state");
+      }
+      send(outA, playerLifecyclePacket(88L, PlayerLifecycleOperation.RESPAWN));
+      PlayerLifecycleResult respawn = awaitPlayerLifecycleResult(inA, 88L,
+          System.currentTimeMillis() + config.testTimeoutMillis);
+      float[] liveState = D2GS.headlessPlayerLifecycleState(a.playerId);
+      if (!respawn.success() || liveState.length < 6 || liveState[0] != 0f
+          || liveState[2] <= 0f || liveState[5] < 1f
+          || Math.abs(liveState[3] - respawn.x()) > 0.01f
+          || Math.abs(liveState[4] - respawn.y()) > 0.01f) {
+        throw new IllegalStateException("authoritative respawn failed: success="
+            + respawn.success() + " reason=" + respawn.reason());
+      }
+      log("snapshot_resync_pass", "request=77 warp=true death=true respawn=true corpse=true baseline=" + baselineId
           + " entities=" + entityFrames + " waypoints=" + waypointCount
           + " inventoryRevision=" + inventoryRevision
           + " duplicateBaseline=" + duplicateBaseline
@@ -404,6 +423,26 @@ public final class D2GSHeadlessClient {
     byte[] bytes = new byte[frame.remaining()];
     frame.get(bytes);
     return bytes;
+  }
+
+  private static ByteBuffer playerLifecyclePacket(long requestId, byte operation) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(64);
+    int payload = PlayerLifecycleRequest.createPlayerLifecycleRequest(builder, requestId, operation);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
+        D2GSData.PlayerLifecycleRequest, payload);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    return builder.dataBuffer();
+  }
+
+  private static PlayerLifecycleResult awaitPlayerLifecycleResult(DataInputStream input,
+      long requestId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null || packet.dataType() != D2GSData.PlayerLifecycleResult) continue;
+      PlayerLifecycleResult result = (PlayerLifecycleResult) packet.data(new PlayerLifecycleResult());
+      if (result.requestId() == requestId) return result;
+    }
+    throw new IOException("timed out waiting for player lifecycle result " + requestId);
   }
 
   private void verifySimulationTick() throws Exception {
