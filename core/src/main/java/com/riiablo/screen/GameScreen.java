@@ -93,6 +93,7 @@ import com.riiablo.engine.client.debug.Box2DDebugger;
 import com.riiablo.engine.client.debug.PathDebugger;
 import com.riiablo.engine.client.debug.PathfindDebugger;
 import com.riiablo.engine.client.debug.RenderSystemDebugger;
+import com.riiablo.engine.client.FixedStepAccumulator;
 import com.riiablo.engine.server.AIStepper;
 import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.RoomEntityTrackingSystem;
@@ -190,10 +191,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   /**
    * D2 advances authoritative game state at 25 Hz and, in its bounded update
    * path, retains at most one additional 40 ms tick after a delayed frame.
-   * Keep the same upper bound while client and server systems still share one
-   * Artemis world; a multi-step loop here would also repeat input and renders.
+   * Keep the same input delta bound while client and server systems still
+   * share one Artemis world; the fixed-step accumulator below owns catch-up.
    */
   static final float MAX_SIMULATION_DELTA = Animation.FRAME_DURATION * 2f;
+  static final int MAX_SIMULATION_STEPS_PER_RENDER = 4;
 
   private static final int[] ITEMS = {
       205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223,
@@ -245,6 +247,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   boolean created;
   boolean isDebug;
   boolean discardNextSimulationDelta;
+  private final FixedStepAccumulator simulationAccumulator =
+      new FixedStepAccumulator(Animation.FRAME_DURATION, MAX_SIMULATION_STEPS_PER_RENDER);
   
   // Automap 持续缩放累加器（用于按住键持续放大/缩小）
   private float automapZoomAccumulator = 0f;
@@ -931,6 +935,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   @Override
   public void pause() {
     discardNextSimulationDelta = true;
+    // Do not retain a partial tick across an application pause/background
+    // transition. The next visible frame starts from a clean native tick.
+    simulationAccumulator.reset();
   }
 
   @Override
@@ -1054,8 +1061,16 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
 
     Riiablo.assets.update();
-    engine.setDelta(delta);
-    engine.process();
+    int simulationSteps = simulationAccumulator.advance(delta, stepSeconds -> {
+      engine.setDelta(stepSeconds);
+      engine.process();
+    });
+    if (simulationSteps > 1) {
+      Gdx.app.debug(TAG, String.format(
+          "Fixed simulation catch-up: steps=%d step=%.3fs remainder=%.4fs",
+          simulationSteps, simulationAccumulator.getStepSeconds(),
+          simulationAccumulator.getAccumulated()));
+    }
 
     scaledStage.act(delta);
     scaledStage.draw();

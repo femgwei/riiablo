@@ -279,7 +279,14 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 新增 `headlessSnapshotOrder` 双客户端真实协议门槛，验证两个客户端 tick/服务器时间单调、存在共同 tick，并在移动后继续接收快照；1.10f 资源实测通过。
   - 1×1 真实隐藏营地回归继续通过。
 
-下一项建议进入 **本地单人固定步进与渲染解耦第一阶段**：先把 `GameScreen` 的可变/截断 delta 改为 25Hz 累加器驱动，渲染仍留在主线程并限制每帧追赶次数；补后台切回、长帧和正常 60Hz 下的确定性测试，再决定是否需要真正的独立模拟线程。
+- 2026-09-07：完成本地单人固定步进与渲染解耦第一阶段；新增 `FixedStepAccumulator`，`GameScreen` ECS 改为 25Hz 固定 tick、每帧最多 4 步追赶并在暂停时清空 backlog。`FixedStepAccumulatorTest`、`GameScreenDeltaTest`、D2GS/Netty 编译和 1×1 真实隐藏营地（1.10f）均通过。
+
+- [x] ~~完成本地单人固定步进与渲染解耦第一阶段~~
+  - `GameScreen` 使用无 LibGDX 依赖的 `FixedStepAccumulator`，以 25Hz（40ms）固定 tick 驱动 ECS；渲染、UI 和输入仍在主线程按可见帧运行。
+  - 每帧最多追赶 4 个模拟 tick，后台/长帧不会形成无限 backlog；暂停时清空半 tick，恢复只从新的固定 tick 开始。
+  - 新增 `FixedStepAccumulatorTest`，覆盖 40/80ms 步进、分数帧累计、2 秒长帧限幅、NaN/负数/Infinity、reset 和 60Hz 稳定性；核心测试、D2GS/Netty 编译及 1×1 真实隐藏营地回归通过。
+
+下一项建议进入 **本地/多人模拟时钟统一与帧率无关输入阶段**：核对所有仍依赖 `IntervalSystem` 可变 delta 的客户端移动、动画、网络收发和冷却系统，逐项改用统一权威 tick 或显式时间线，避免 25Hz 驱动下出现 60Hz 偏差；继续以固定种子离屏回归验证。
 
 ## 记录规则
 
