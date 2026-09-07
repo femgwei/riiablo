@@ -273,6 +273,35 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only cross-map relocation used to validate stale snapshot isolation. */
+  static boolean headlessMovePlayerToLevel(int playerId, int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean moved = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        Vector2 destination = findHeadlessLevelPosition(server, levelId);
+        Position position = server.world.getMapper(Position.class).get(playerId);
+        if (destination == null || position == null) return;
+        position.position.set(destination);
+        com.riiablo.engine.server.component.MapWrapper wrapper =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        if (wrapper != null) wrapper.set(server.map, server.map.getZone(destination));
+        com.riiablo.engine.server.component.UnitStates states = server.world
+            .getMapper(com.riiablo.engine.server.component.UnitStates.class).get(playerId);
+        if (states != null) {
+          if (states.stateList == null) states.init(playerId);
+          states.stateList.addState(com.riiablo.engine.server.state.StateId.SYNC_WARPED,
+              2, 1, playerId);
+        }
+        moved.set(true);
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && moved.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
   private static Vector2 findHeadlessLevelPosition(D2GS server, int levelId) {
     com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
     Map.Zone zone = level == null ? null : server.map.findZone(level);

@@ -403,7 +403,31 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("authoritative respawn failed: success="
             + respawn.success() + " reason=" + respawn.reason());
       }
-      log("snapshot_resync_pass", "request=77 warp=true death=true respawn=true corpse=true baseline=" + baselineId
+      float townX = liveState[3], townY = liveState[4];
+      if (!D2GS.headlessMovePlayerToLevel(a.playerId, 8)) { // Den of Evil
+        throw new IOException("cross-map relocation trigger unavailable");
+      }
+      send(outA, ByteBuffer.wrap(snapshotResyncPacket(99L, a.lastSnapshotTick,
+          "cross_map")));
+      boolean crossMapBegin = false, crossMapEnd = false;
+      long crossMapDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      while (System.currentTimeMillis() < crossMapDeadline && !crossMapEnd) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet == null) continue;
+        if (packet.dataType() == D2GSData.SnapshotBaseline) {
+          SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+          crossMapBegin |= marker.phase() == SnapshotBaselinePhase.BEGIN;
+          crossMapEnd |= marker.phase() == SnapshotBaselinePhase.END && marker.success();
+        }
+        a.consume(packet);
+      }
+      if (!crossMapBegin || !crossMapEnd || Math.abs(a.playerX - townX)
+          + Math.abs(a.playerY - townY) < 0.5f) {
+        throw new IllegalStateException("cross-map baseline failed: begin=" + crossMapBegin
+            + " end=" + crossMapEnd + " town=(" + townX + ',' + townY + ") current=("
+            + a.playerX + ',' + a.playerY + ")");
+      }
+      log("snapshot_resync_pass", "request=77 warp=true death=true respawn=true crossMap=true corpse=true baseline=" + baselineId
           + " entities=" + entityFrames + " waypoints=" + waypointCount
           + " inventoryRevision=" + inventoryRevision
           + " duplicateBaseline=" + duplicateBaseline
