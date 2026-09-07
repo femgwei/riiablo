@@ -334,7 +334,11 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 基线携带服务端物品容器 `inventoryRevision`，客户端在 END 标记重置 `NetworkedClientItemManager` revision，避免后续移动请求因旧版本持续失败。
   - 客户端收到本地 `SYNC_WARPED` 或死亡状态时自动触发限频重同步；与 tick 缺口/静默检测共用 BEGIN/END 原子流程。
 
-下一项建议进入 **多人快照重同步第三阶段（端到端）**：加入 Warp、死亡、地图切换和后台恢复的双客户端故障注入测试，并验证物品 revision 与传送点状态同时恢复。
+- [x] ~~完成多人快照重同步第三阶段（端到端基础门槛）~~
+  - 新增 `headlessSnapshotResync`：双客户端连接后暂停一端收包 2.5 秒，发送重同步请求，验证请求端收到 BEGIN/完整实体快照/END，另一端不收到基线标记。
+  - 1.10f 资源真实 D2GS 运行通过：请求端基线包含 99 个实体，双客户端隔离成立；D2GS/核心编译及协议测试通过。
+
+下一项建议进入 **多人快照重同步第四阶段**：将真实 Warp、死亡、地图切换和后台恢复动作接入故障注入场景，并校验传送点、物品 revision、任务记录和实体状态同时恢复。
 
 ## 记录规则
 

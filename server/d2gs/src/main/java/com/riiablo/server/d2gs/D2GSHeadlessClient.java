@@ -29,6 +29,9 @@ import com.riiablo.net.packet.d2gs.QuestRequest;
 import com.riiablo.net.packet.d2gs.QuestResult;
 import com.riiablo.net.packet.d2gs.VelocityP;
 import com.riiablo.net.packet.d2gs.VitalsP;
+import com.riiablo.net.packet.d2gs.SnapshotBaseline;
+import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
+import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter96;
 import com.riiablo.skill.SkillCodes;
@@ -91,7 +94,8 @@ public final class D2GSHeadlessClient {
     if (startedServer) {
       // A few older combat fixtures deliberately place actors next to a
       // deterministic target. Production D2GS leaves this bridge disabled.
-      if (!config.requireSnapshotOrder && !config.requireSimulationTick) {
+      if (!config.requireSnapshotOrder && !config.requireSnapshotResync
+          && !config.requireSimulationTick) {
         System.setProperty("riiablo.d2gs.allowLegacyEntitySync", "true");
       }
       log("server_start", "home=" + config.home + " seed=" + config.seed);
@@ -130,6 +134,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireSnapshotOrder) {
       runSnapshotOrder(d2s, character);
+      return;
+    }
+    if (config.requireSnapshotResync) {
+      runSnapshotResync(d2s, character);
       return;
     }
     if (config.requireMercenaryRestore) {
@@ -265,6 +273,80 @@ public final class D2GSHeadlessClient {
           + " serverTimeB=" + b.lastSnapshotServerTime + " ackA="
           + a.lastMovementAcknowledgement + " ackB=" + b.lastMovementAcknowledgement);
     }
+  }
+
+  /** Two-client fault-injection gate: only the requesting client receives a baseline. */
+  private void runSnapshotResync(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave();
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      long baselineDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < baselineDeadline
+          && (!Float.isFinite(a.playerX) || !Float.isFinite(b.playerX))) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet != null) a.consume(packet);
+        packet = readPacket(inB);
+        if (packet != null) b.consume(packet);
+      }
+      if (!Float.isFinite(a.playerX) || !Float.isFinite(b.playerX)) {
+        throw new IOException("resync fixture did not receive initial baselines");
+      }
+      // Pause client A's receive loop while client B keeps consuming traffic.
+      // The explicit request models a packet-loss detector firing after resume.
+      long pausedUntil = System.currentTimeMillis() + 2_500L;
+      while (System.currentTimeMillis() < pausedUntil) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inB);
+        if (packet != null) b.consume(packet);
+      }
+      send(outA, ByteBuffer.wrap(snapshotResyncPacket(77L, a.lastSnapshotTick,
+          "headless_fault_injection")));
+      boolean begin = false, end = false, peerMarker = false;
+      int entityFrames = 0;
+      long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      while (System.currentTimeMillis() < deadline && !end) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet != null) {
+          if (packet.dataType() == D2GSData.SnapshotBaseline) {
+            SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+            if (marker.phase() == SnapshotBaselinePhase.BEGIN) begin = true;
+            if (marker.phase() == SnapshotBaselinePhase.END) end = marker.success();
+          } else if (begin && packet.dataType() == D2GSData.EntitySync) {
+            entityFrames++;
+          }
+          a.consume(packet);
+        }
+        packet = readPacket(inB);
+        if (packet != null && packet.dataType() == D2GSData.SnapshotBaseline) peerMarker = true;
+      }
+      if (!begin || !end || entityFrames == 0 || peerMarker) {
+        throw new IllegalStateException("snapshot resync failed: begin=" + begin
+            + " end=" + end + " entities=" + entityFrames + " peerMarker=" + peerMarker);
+      }
+      log("snapshot_resync_pass", "request=77 baseline=true entities=" + entityFrames
+          + " peerUnaffected=true pausedMillis=2500");
+    }
+  }
+
+  private static byte[] snapshotResyncPacket(long requestId, long lastTick, String reason) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reasonOffset = builder.createString(reason);
+    int payload = SnapshotResyncRequest.createSnapshotResyncRequest(builder, requestId,
+        lastTick, reasonOffset);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
+        D2GSData.SnapshotResyncRequest, payload);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer frame = builder.dataBuffer();
+    byte[] bytes = new byte[frame.remaining()];
+    frame.get(bytes);
+    return bytes;
   }
 
   private void verifySimulationTick() throws Exception {
@@ -1824,6 +1906,7 @@ public final class D2GSHeadlessClient {
     boolean requireMonsterMovement;
     boolean requireSimulationTick;
     boolean requireSnapshotOrder;
+    boolean requireSnapshotResync;
     boolean requireFallenScenario;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -1852,6 +1935,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
         else if ("--require-sim-tick".equals(arg)) config.requireSimulationTick = true;
         else if ("--require-snapshot-order".equals(arg)) config.requireSnapshotOrder = true;
+        else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -1909,7 +1993,8 @@ public final class D2GSHeadlessClient {
       System.out.println("Usage: D2GSHeadlessClient [--home <D2 dir>] [--save <file.d2s>]"
           + " [--generated-amazon] [--host 127.0.0.1] [--port 6114]"
           + " [--skill 0] [--require-missile] [--require-sim-tick]"
-          + " [--require-snapshot-order] [--require-fallen-scenario] [--attempts 20]");
+          + " [--require-snapshot-order] [--require-snapshot-resync]"
+          + " [--require-fallen-scenario] [--attempts 20]");
     }
   }
 }
