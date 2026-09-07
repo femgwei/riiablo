@@ -325,7 +325,12 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 客户端基线期间暂停旧快照应用、清理延迟实体和插值历史，END 以服务端 tick/时间原子重置时间线；服务端按连接缓存 request/baseline ID，重复请求不会产生游戏状态副作用。
   - 新增 `AuthoritativeSnapshotTimeline.resetTo`、协议往返测试；核心协议/时间线测试、D2GS 编译及 `headlessSnapshotOrder`（双客户端、1.10f 资源）通过。
 
-下一项建议进入 **多人快照重同步第二阶段**：将物品/任务/传送点等非实体状态纳入基线，并在 Warp、死亡、地图切换及后台恢复场景增加端到端门槛。
+- [x] ~~完成多人快照重同步第二阶段~~
+  - `SnapshotBaseline` 扩展当前难度各幕传送点激活位图；服务端从权威 `CharData` 生成，客户端在 END 标记原子应用，避免重连或丢包后传送点状态回退。
+  - 任务记录、金币、弹药、技能点等既有 `PlayerP` 权威字段继续随实体基线同步；本阶段补充传送点非实体状态并保持旧客户端兼容。
+  - 协议往返、时间线测试及 D2GS 编译通过。
+
+下一项建议进入 **多人快照重同步第三阶段**：为 Warp、死亡、地图切换和后台恢复增加真实双客户端故障注入/端到端门槛，并纳入物品容器 revision 快照校正。
 
 ## 记录规则
 

@@ -25,6 +25,13 @@ public final class SnapshotBaseline extends Table {
   public ByteBuffer reasonAsByteBuffer() { return __vector_as_bytebuffer(16, 1); }
   public ByteBuffer reasonInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 16, 1); }
   public long entityCount() { int o = __offset(18); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0L; }
+  public long waypointMasks(int j) { int o = __offset(20); return o != 0 ? (long)bb.getInt(__vector(o) + j * 4) & 0xFFFFFFFFL : 0; }
+  public int waypointMasksLength() { int o = __offset(20); return o != 0 ? __vector_len(o) : 0; }
+  public IntVector waypointMasksVector() { return waypointMasksVector(new IntVector()); }
+  public IntVector waypointMasksVector(IntVector obj) { int o = __offset(20); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer waypointMasksAsByteBuffer() { return __vector_as_bytebuffer(20, 4); }
+  public ByteBuffer waypointMasksInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 20, 4); }
+  public int difficulty() { int o = __offset(22); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
 
   public static int createSnapshotBaseline(FlatBufferBuilder builder,
       long requestId,
@@ -34,20 +41,24 @@ public final class SnapshotBaseline extends Table {
       int phase,
       boolean success,
       int reasonOffset,
-      long entityCount) {
-    builder.startTable(8);
+      long entityCount,
+      int waypointMasksOffset,
+      int difficulty) {
+    builder.startTable(10);
     SnapshotBaseline.addServerTimeMillis(builder, serverTimeMillis);
     SnapshotBaseline.addServerTick(builder, serverTick);
     SnapshotBaseline.addBaselineId(builder, baselineId);
     SnapshotBaseline.addRequestId(builder, requestId);
+    SnapshotBaseline.addWaypointMasks(builder, waypointMasksOffset);
     SnapshotBaseline.addEntityCount(builder, entityCount);
     SnapshotBaseline.addReason(builder, reasonOffset);
+    SnapshotBaseline.addDifficulty(builder, difficulty);
     SnapshotBaseline.addSuccess(builder, success);
     SnapshotBaseline.addPhase(builder, phase);
     return SnapshotBaseline.endSnapshotBaseline(builder);
   }
 
-  public static void startSnapshotBaseline(FlatBufferBuilder builder) { builder.startTable(8); }
+  public static void startSnapshotBaseline(FlatBufferBuilder builder) { builder.startTable(10); }
   public static void addRequestId(FlatBufferBuilder builder, long requestId) { builder.addLong(0, requestId, 0L); }
   public static void addBaselineId(FlatBufferBuilder builder, long baselineId) { builder.addLong(1, baselineId, 0L); }
   public static void addServerTick(FlatBufferBuilder builder, long serverTick) { builder.addLong(2, serverTick, 0L); }
@@ -56,6 +67,10 @@ public final class SnapshotBaseline extends Table {
   public static void addSuccess(FlatBufferBuilder builder, boolean success) { builder.addBoolean(5, success, true); }
   public static void addReason(FlatBufferBuilder builder, int reasonOffset) { builder.addOffset(6, reasonOffset, 0); }
   public static void addEntityCount(FlatBufferBuilder builder, long entityCount) { builder.addInt(7, (int)entityCount, (int)0L); }
+  public static void addWaypointMasks(FlatBufferBuilder builder, int waypointMasksOffset) { builder.addOffset(8, waypointMasksOffset, 0); }
+  public static int createWaypointMasksVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
+  public static void startWaypointMasksVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addDifficulty(FlatBufferBuilder builder, int difficulty) { builder.addByte(9, (byte)difficulty, (byte)0); }
   public static int endSnapshotBaseline(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

@@ -1362,27 +1362,35 @@ public class D2GS extends ApplicationAdapter {
     long baselineId = duplicate && lastSnapshotBaselineId[clientId] != 0L
         ? lastSnapshotBaselineId[clientId] : nextSnapshotBaselineId++;
     lastSnapshotBaselineId[clientId] = baselineId;
+    int playerEntityId = player.get(clientId, Engine.INVALID_ENTITY);
+    com.riiablo.engine.server.component.Player playerComponent = playerEntityId == Engine.INVALID_ENTITY
+        ? null : world.getMapper(Player.class).get(playerEntityId);
+    int[] waypointMasks = waypointMasks(playerComponent == null ? null : playerComponent.data);
+    int difficulty = playerComponent == null || playerComponent.data == null
+        ? diff : playerComponent.data.getDifficulty();
     int count = world == null ? 0 : world.getSystem(NetworkSynchronizer.class) == null
         ? 0 : world.getSystem(NetworkSynchronizer.class).subscriptionSize();
     enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
-        SnapshotBaselinePhase.BEGIN, true, "", count);
+        SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty);
     sync.syncAllTo(clientId);
     current = simulation;
     tick = current == null ? tick : current.tickNumber();
     serverTime = current == null ? serverTime : current.serverTimeMillis();
     enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
-        SnapshotBaselinePhase.END, true, "", count);
+        SnapshotBaselinePhase.END, true, "", count, waypointMasks, difficulty);
     Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=complete client=" + clientId
         + " request=" + requestId + " baseline=" + baselineId
         + " tick=" + tick + " entities=" + count);
   }
 
   private void enqueueSnapshotBaseline(int clientId, long requestId, long baselineId,
-      long tick, long serverTime, byte phase, boolean success, String reason, int count) {
+      long tick, long serverTime, byte phase, boolean success, String reason, int count,
+      int[] waypointMasks, int difficulty) {
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
     int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int waypointOffset = SnapshotBaseline.createWaypointMasksVector(builder, waypointMasks);
     int marker = SnapshotBaseline.createSnapshotBaseline(builder, requestId, baselineId,
-        tick, serverTime, phase, success, reasonOffset, count);
+        tick, serverTime, phase, success, reasonOffset, count, waypointOffset, difficulty);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
         D2GSData.SnapshotBaseline, marker);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
@@ -1390,6 +1398,13 @@ public class D2GS extends ApplicationAdapter {
       Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=marker_drop client=" + clientId
           + " request=" + requestId + " phase=" + phase);
     }
+  }
+
+  private static int[] waypointMasks(com.riiablo.save.CharData data) {
+    int[] masks = new int[Riiablo.NUM_ACTS];
+    if (data == null) return masks;
+    for (int act = 0; act < masks.length; act++) masks[act] = data.getWaypoints(act);
+    return masks;
   }
 
   private void BroadcastConnect(int id, Connection connection, CharData charData, int entityId) {

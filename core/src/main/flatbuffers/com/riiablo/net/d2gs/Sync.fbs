@@ -21,6 +21,9 @@ table SnapshotBaseline {
   success:bool = true;
   reason:string;
   entityCount:uint;
+  // Current-difficulty waypoint activation masks, one entry per act.
+  waypointMasks:[uint32];
+  difficulty:ubyte;
 }
 
 union ComponentP {

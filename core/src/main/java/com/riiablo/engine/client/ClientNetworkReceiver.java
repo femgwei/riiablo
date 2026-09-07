@@ -895,6 +895,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
         return;
       }
       snapshotTimeline.resetTo(marker.serverTick(), marker.serverTimeMillis());
+      applyWaypointBaseline(marker);
       latestServerTick = marker.serverTick();
       latestServerTickReceiptMillis = TimeUtils.millis();
       lastResyncObservedTick = marker.serverTick();
@@ -904,6 +905,18 @@ public class ClientNetworkReceiver extends IntervalSystem {
           + " baseline=" + marker.baselineId() + " tick=" + marker.serverTick()
           + " entities=" + marker.entityCount());
     }
+  }
+
+  private void applyWaypointBaseline(SnapshotBaseline marker) {
+    if (Riiablo.charData == null || marker.waypointMasksLength() == 0) return;
+    int difficulty = Math.max(0, Math.min(com.riiablo.Riiablo.NUM_DIFFS - 1,
+        marker.difficulty()));
+    int count = Math.min(marker.waypointMasksLength(), com.riiablo.Riiablo.NUM_ACTS);
+    for (int act = 0; act < count; act++) {
+      Riiablo.charData.setWaypointMask(difficulty, act, (int) marker.waypointMasks(act));
+    }
+    Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=waypoints difficulty=" + difficulty
+        + " acts=" + count);
   }
 
   private void requestSnapshotResync(long tick, String reason) {

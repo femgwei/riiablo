@@ -351,6 +351,20 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     return waypointData[diff][act];
   }
 
+  /** Current difficulty used by authoritative multiplayer snapshots. */
+  public int getDifficulty() {
+    return diff;
+  }
+
+  /** Applies a complete waypoint mask received from the authoritative server. */
+  public void setWaypointMask(int difficulty, int act, int mask) {
+    if (difficulty < 0 || difficulty >= Riiablo.NUM_DIFFS) {
+      throw new IllegalArgumentException("Invalid waypoint difficulty: " + difficulty);
+    }
+    validateWaypointAct(act);
+    waypointData[difficulty][act] = mask;
+  }
+
   public boolean isWaypointActivated(int act, int waypointNo) {
     int waypoint = getWaypointIndex(act, waypointNo);
     return (waypointData[diff][act] & (1 << waypoint)) != 0;
