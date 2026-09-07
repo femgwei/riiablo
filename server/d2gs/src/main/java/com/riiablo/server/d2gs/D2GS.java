@@ -1489,7 +1489,7 @@ public class D2GS extends ApplicationAdapter {
         ? diff : playerComponent.data.getDifficulty();
     long inventoryRevision = authoritativeItems.revision(playerEntityId);
     int count = world == null ? 0 : world.getSystem(NetworkSynchronizer.class) == null
-        ? 0 : world.getSystem(NetworkSynchronizer.class).subscriptionSize();
+        ? 0 : world.getSystem(NetworkSynchronizer.class).visibleCount(clientId);
     enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
         SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty, inventoryRevision);
     sync.syncAllTo(clientId);

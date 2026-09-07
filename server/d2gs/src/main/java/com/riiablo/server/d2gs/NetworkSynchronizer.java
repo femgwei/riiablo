@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.IntIntMap;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.AuthoritativeSimulation;
+import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.Networked;
@@ -107,13 +108,20 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   private int recipientMask(int entityId) {
     MapWrapper source = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
     if (source == null || source.zone == null || !source.zone.hasNativeRoomTopology()) {
-      return 0xFFFFFFFF;
+      if (source == null || source.zone == null) return 0xFFFFFFFF;
+      int mask = 0;
+      for (IntIntMap.Entry entry : players.entries()) {
+        MapWrapper target = mMapWrapper.has(entry.value) ? mMapWrapper.get(entry.value) : null;
+        if (sameLevel(source, target)) mask |= 1 << entry.key;
+      }
+      return mask;
     }
     int mask = 0;
     if (!mPosition.has(entityId)) return 0xFFFFFFFF;
     for (IntIntMap.Entry entry : players.entries()) {
       MapWrapper target = mMapWrapper.has(entry.value) ? mMapWrapper.get(entry.value) : null;
-      if (target == null || target.zone != source.zone || !mPosition.has(entry.value)) continue;
+      if (target == null || !sameLevel(source, target) || target.zone != source.zone
+          || !mPosition.has(entry.value)) continue;
       if (source.zone.areRoomsAdjacent(
           mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
           mPosition.get(entry.value).position.x, mPosition.get(entry.value).position.y)) {
@@ -127,11 +135,17 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   public void syncAllTo(int clientId) {
     IntBag entities = subscription.getEntities();
     int[] entityIds = entities.getData();
+    int playerEntityId = players.get(clientId, Engine.INVALID_ENTITY);
+    MapWrapper playerWrapper = playerEntityId == Engine.INVALID_ENTITY
+        || !mMapWrapper.has(playerEntityId) ? null : mMapWrapper.get(playerEntityId);
     int queued = 0;
     int failed = 0;
     long bytes = 0;
     for (int i = 0, size = entities.size(); i < size; i++) {
       int entityId = entityIds[i];
+      MapWrapper entityWrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+      if (playerWrapper != null && entityWrapper != null
+          && !sameLevel(playerWrapper, entityWrapper)) continue;
       byte[] state = serialize(entityId, false);
       byte[] snapshot = serialize(entityId, true);
       // Prime the global change cache. Existing clients already know these
@@ -146,13 +160,36 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       }
     }
     Gdx.app.log(TAG, "[NET_SYNC] phase=baseline client=" + clientId
-        + " entities=" + entities.size() + " queued=" + queued
+        + " entities=" + queued + " queued=" + queued
         + " failed=" + failed + " bytes=" + bytes);
   }
 
   /** Number of currently networked entities included in a baseline. */
   public int subscriptionSize() {
     return subscription.getEntities().size();
+  }
+
+  /** Number of entities in the requesting player's authoritative level. */
+  public int visibleCount(int clientId) {
+    int playerEntityId = players.get(clientId, Engine.INVALID_ENTITY);
+    if (playerEntityId == Engine.INVALID_ENTITY || !mMapWrapper.has(playerEntityId)) {
+      return subscription.getEntities().size();
+    }
+    MapWrapper playerWrapper = mMapWrapper.get(playerEntityId);
+    IntBag entities = subscription.getEntities();
+    int count = 0;
+    int[] entityIds = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      MapWrapper entityWrapper = mMapWrapper.has(entityIds[i]) ? mMapWrapper.get(entityIds[i]) : null;
+      if (entityWrapper == null || sameLevel(playerWrapper, entityWrapper)) count++;
+    }
+    return count;
+  }
+
+  private static boolean sameLevel(MapWrapper source, MapWrapper target) {
+    if (source == null || source.zone == null || source.zone.level == null
+        || target == null || target.zone == null || target.zone.level == null) return true;
+    return source.zone.level.Id == target.zone.level.Id;
   }
 
   private byte[] serialize(int entityId, boolean includeClock) {

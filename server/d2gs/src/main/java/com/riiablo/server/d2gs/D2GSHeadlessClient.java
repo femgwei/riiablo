@@ -336,6 +336,7 @@ public final class D2GSHeadlessClient {
       int waypointCount = -1;
       long inventoryRevision = -1L;
       int entityFrames = 0;
+      long declaredEntityCount = -1L;
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       while (System.currentTimeMillis() < deadline && !end) {
         com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
@@ -345,6 +346,7 @@ public final class D2GSHeadlessClient {
             if (marker.phase() == SnapshotBaselinePhase.BEGIN) {
               begin = true;
               baselineId = marker.baselineId();
+              declaredEntityCount = marker.entityCount();
               waypointCount = marker.waypointMasksLength();
               inventoryRevision = marker.inventoryRevision();
             }
@@ -361,10 +363,12 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("snapshot resync failed: begin=" + begin
             + " end=" + end + " entities=" + entityFrames + " peerMarker=" + peerMarker);
       }
-      if (baselineId <= 0L || waypointCount != Riiablo.NUM_ACTS || inventoryRevision < 0L) {
+      if (baselineId <= 0L || declaredEntityCount != entityFrames
+          || waypointCount != Riiablo.NUM_ACTS || inventoryRevision < 0L) {
         throw new IllegalStateException("snapshot state baseline missing: baselineId="
-            + baselineId + " waypoints=" + waypointCount + " inventoryRevision="
-            + inventoryRevision);
+            + baselineId + " declaredEntities=" + declaredEntityCount
+            + " receivedEntities=" + entityFrames + " waypoints=" + waypointCount
+            + " inventoryRevision=" + inventoryRevision);
       }
 
       // Replay the exact request ID. D2GS must remain idempotent and reuse the
