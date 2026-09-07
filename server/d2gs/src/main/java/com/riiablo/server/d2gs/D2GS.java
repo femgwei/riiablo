@@ -1368,16 +1368,17 @@ public class D2GS extends ApplicationAdapter {
     int[] waypointMasks = waypointMasks(playerComponent == null ? null : playerComponent.data);
     int difficulty = playerComponent == null || playerComponent.data == null
         ? diff : playerComponent.data.getDifficulty();
+    long inventoryRevision = authoritativeItems.revision(playerEntityId);
     int count = world == null ? 0 : world.getSystem(NetworkSynchronizer.class) == null
         ? 0 : world.getSystem(NetworkSynchronizer.class).subscriptionSize();
     enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
-        SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty);
+        SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty, inventoryRevision);
     sync.syncAllTo(clientId);
     current = simulation;
     tick = current == null ? tick : current.tickNumber();
     serverTime = current == null ? serverTime : current.serverTimeMillis();
     enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
-        SnapshotBaselinePhase.END, true, "", count, waypointMasks, difficulty);
+        SnapshotBaselinePhase.END, true, "", count, waypointMasks, difficulty, inventoryRevision);
     Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=complete client=" + clientId
         + " request=" + requestId + " baseline=" + baselineId
         + " tick=" + tick + " entities=" + count);
@@ -1385,12 +1386,13 @@ public class D2GS extends ApplicationAdapter {
 
   private void enqueueSnapshotBaseline(int clientId, long requestId, long baselineId,
       long tick, long serverTime, byte phase, boolean success, String reason, int count,
-      int[] waypointMasks, int difficulty) {
+      int[] waypointMasks, int difficulty, long inventoryRevision) {
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
     int reasonOffset = builder.createString(reason == null ? "" : reason);
     int waypointOffset = SnapshotBaseline.createWaypointMasksVector(builder, waypointMasks);
     int marker = SnapshotBaseline.createSnapshotBaseline(builder, requestId, baselineId,
-        tick, serverTime, phase, success, reasonOffset, count, waypointOffset, difficulty);
+        tick, serverTime, phase, success, reasonOffset, count, waypointOffset, difficulty,
+        inventoryRevision);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
         D2GSData.SnapshotBaseline, marker);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);

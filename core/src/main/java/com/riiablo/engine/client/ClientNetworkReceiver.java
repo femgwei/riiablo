@@ -724,6 +724,15 @@ public class ClientNetworkReceiver extends IntervalSystem {
     }
 
     boolean localPlayer = Riiablo.game != null && entityId == Riiablo.game.player;
+    if (localPlayer) {
+      StateP markerStates = findTable(entityData, ComponentP.StateP, new StateP());
+      VitalsP markerVitals = findTable(entityData, ComponentP.VitalsP, new VitalsP());
+      if (containsState(markerStates, StateId.SYNC_WARPED)) {
+        requestSnapshotResync(entityData.tick(), "warp");
+      } else if (markerVitals != null && markerVitals.dead()) {
+        requestSnapshotResync(entityData.tick(), "death");
+      }
+    }
     Class.Type entityType = Class.Type.valueOf(entityData.type());
     boolean movingEntity = entityType == Class.Type.PLR || entityType == Class.Type.MON
         || entityType == Class.Type.MIS;
@@ -896,6 +905,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
       snapshotTimeline.resetTo(marker.serverTick(), marker.serverTimeMillis());
       applyWaypointBaseline(marker);
+      if (world.getSystem(NetworkedClientItemManager.class) != null) {
+        world.getSystem(NetworkedClientItemManager.class)
+            .resetInventoryRevision(marker.inventoryRevision());
+      }
       latestServerTick = marker.serverTick();
       latestServerTickReceiptMillis = TimeUtils.millis();
       lastResyncObservedTick = marker.serverTick();

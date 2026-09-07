@@ -43,6 +43,11 @@ public class NetworkedClientItemManager extends ClientItemManager {
   private long inventoryRevision;
 
   public long inventoryRevision() { return inventoryRevision; }
+  /** Establishes the server revision after a complete snapshot baseline. */
+  public void resetInventoryRevision(long revision) {
+    inventoryRevision = Math.max(0L, revision);
+    Gdx.app.log(TAG, "[ITEM_MOVE_RESULT] phase=baseline revision=" + inventoryRevision);
+  }
   public void onAuthoritativeResult(ItemMoveResult result) {
     if (result == null) return;
     inventoryRevision = result.revision();

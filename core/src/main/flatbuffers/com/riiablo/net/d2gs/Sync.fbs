@@ -24,6 +24,7 @@ table SnapshotBaseline {
   // Current-difficulty waypoint activation masks, one entry per act.
   waypointMasks:[uint32];
   difficulty:ubyte;
+  inventoryRevision:ulong;
 }
 
 union ComponentP {

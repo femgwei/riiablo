@@ -330,7 +330,11 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 任务记录、金币、弹药、技能点等既有 `PlayerP` 权威字段继续随实体基线同步；本阶段补充传送点非实体状态并保持旧客户端兼容。
   - 协议往返、时间线测试及 D2GS 编译通过。
 
-下一项建议进入 **多人快照重同步第三阶段**：为 Warp、死亡、地图切换和后台恢复增加真实双客户端故障注入/端到端门槛，并纳入物品容器 revision 快照校正。
+- [x] ~~完成多人快照重同步第三阶段（基础）~~
+  - 基线携带服务端物品容器 `inventoryRevision`，客户端在 END 标记重置 `NetworkedClientItemManager` revision，避免后续移动请求因旧版本持续失败。
+  - 客户端收到本地 `SYNC_WARPED` 或死亡状态时自动触发限频重同步；与 tick 缺口/静默检测共用 BEGIN/END 原子流程。
+
+下一项建议进入 **多人快照重同步第三阶段（端到端）**：加入 Warp、死亡、地图切换和后台恢复的双客户端故障注入测试，并验证物品 revision 与传送点状态同时恢复。
 
 ## 记录规则
 
