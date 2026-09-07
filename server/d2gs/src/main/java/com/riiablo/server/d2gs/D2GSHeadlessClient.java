@@ -314,6 +314,9 @@ public final class D2GSHeadlessClient {
         }
       }
       if (!warped) throw new IllegalStateException("native warp produced no authoritative position change");
+      if (!D2GS.headlessKillPlayer(a.playerId)) {
+        throw new IOException("authoritative player death trigger unavailable");
+      }
       // Pause client A's receive loop while client B keeps consuming traffic.
       // The explicit request models a packet-loss detector firing after resume.
       long pausedUntil = System.currentTimeMillis() + 2_500L;
@@ -381,7 +384,7 @@ public final class D2GSHeadlessClient {
             + baselineId + " duplicate=" + duplicateBaseline + " begin=" + duplicateBegin
             + " end=" + duplicateEnd);
       }
-      log("snapshot_resync_pass", "request=77 warp=true baseline=" + baselineId
+      log("snapshot_resync_pass", "request=77 warp=true death=true baseline=" + baselineId
           + " entities=" + entityFrames + " waypoints=" + waypointCount
           + " inventoryRevision=" + inventoryRevision
           + " duplicateBaseline=" + duplicateBaseline

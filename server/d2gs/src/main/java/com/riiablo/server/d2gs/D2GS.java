@@ -521,6 +521,28 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only authoritative player death trigger for resync recovery. */
+  static boolean headlessKillPlayer(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean killed = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.AttributesWrapper wrapper =
+            server.world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(playerId);
+        if (wrapper != null && wrapper.attrs != null) {
+          wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints).set(0f);
+          server.world.getSystem(EventSystem.class).dispatch(
+              com.riiablo.engine.server.event.DeathEvent.obtain(Engine.INVALID_ENTITY, playerId));
+          killed.set(true);
+        }
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && killed.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
   /** Test-only NPC-equivalent paid resurrection on the render thread. */
   static boolean headlessResurrectMercenary(int playerId) {
     D2GS server = activeHeadlessInstance;
