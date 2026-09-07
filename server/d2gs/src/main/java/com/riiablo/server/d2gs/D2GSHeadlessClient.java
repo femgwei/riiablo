@@ -309,6 +309,9 @@ public final class D2GSHeadlessClient {
       send(outA, ByteBuffer.wrap(snapshotResyncPacket(77L, a.lastSnapshotTick,
           "headless_fault_injection")));
       boolean begin = false, end = false, peerMarker = false;
+      long baselineId = -1L;
+      int waypointCount = -1;
+      long inventoryRevision = -1L;
       int entityFrames = 0;
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
       while (System.currentTimeMillis() < deadline && !end) {
@@ -316,7 +319,12 @@ public final class D2GSHeadlessClient {
         if (packet != null) {
           if (packet.dataType() == D2GSData.SnapshotBaseline) {
             SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
-            if (marker.phase() == SnapshotBaselinePhase.BEGIN) begin = true;
+            if (marker.phase() == SnapshotBaselinePhase.BEGIN) {
+              begin = true;
+              baselineId = marker.baselineId();
+              waypointCount = marker.waypointMasksLength();
+              inventoryRevision = marker.inventoryRevision();
+            }
             if (marker.phase() == SnapshotBaselinePhase.END) end = marker.success();
           } else if (begin && packet.dataType() == D2GSData.EntitySync) {
             entityFrames++;
@@ -330,7 +338,38 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("snapshot resync failed: begin=" + begin
             + " end=" + end + " entities=" + entityFrames + " peerMarker=" + peerMarker);
       }
-      log("snapshot_resync_pass", "request=77 baseline=true entities=" + entityFrames
+      if (baselineId <= 0L || waypointCount != Riiablo.NUM_ACTS || inventoryRevision < 0L) {
+        throw new IllegalStateException("snapshot state baseline missing: baselineId="
+            + baselineId + " waypoints=" + waypointCount + " inventoryRevision="
+            + inventoryRevision);
+      }
+
+      // Replay the exact request ID. D2GS must remain idempotent and reuse the
+      // same baseline identity rather than creating a second logical result.
+      send(outA, ByteBuffer.wrap(snapshotResyncPacket(77L, a.lastSnapshotTick,
+          "headless_duplicate")));
+      long duplicateBaseline = -1L;
+      boolean duplicateBegin = false, duplicateEnd = false;
+      deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      while (System.currentTimeMillis() < deadline && !duplicateEnd) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet == null) continue;
+        if (packet.dataType() == D2GSData.SnapshotBaseline) {
+          SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+          duplicateBaseline = marker.baselineId();
+          duplicateBegin |= marker.phase() == SnapshotBaselinePhase.BEGIN;
+          duplicateEnd |= marker.phase() == SnapshotBaselinePhase.END && marker.success();
+        }
+      }
+      if (!duplicateBegin || !duplicateEnd || duplicateBaseline != baselineId) {
+        throw new IllegalStateException("snapshot duplicate is not idempotent: first="
+            + baselineId + " duplicate=" + duplicateBaseline + " begin=" + duplicateBegin
+            + " end=" + duplicateEnd);
+      }
+      log("snapshot_resync_pass", "request=77 baseline=" + baselineId
+          + " entities=" + entityFrames + " waypoints=" + waypointCount
+          + " inventoryRevision=" + inventoryRevision
+          + " duplicateBaseline=" + duplicateBaseline
           + " peerUnaffected=true pausedMillis=2500");
     }
   }

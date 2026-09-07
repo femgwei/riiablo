@@ -338,7 +338,11 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 新增 `headlessSnapshotResync`：双客户端连接后暂停一端收包 2.5 秒，发送重同步请求，验证请求端收到 BEGIN/完整实体快照/END，另一端不收到基线标记。
   - 1.10f 资源真实 D2GS 运行通过：请求端基线包含 99 个实体，双客户端隔离成立；D2GS/核心编译及协议测试通过。
 
-下一项建议进入 **多人快照重同步第四阶段**：将真实 Warp、死亡、地图切换和后台恢复动作接入故障注入场景，并校验传送点、物品 revision、任务记录和实体状态同时恢复。
+- [x] ~~完成多人快照重同步第四阶段（幂等与状态内容门槛）~~
+  - 双客户端故障注入现在验证基线携带 5 幕传送点位图和非负物品 revision；同一 `requestId` 重传复用同一 `baselineId`，且请求端仍收到完整 BEGIN/实体/END 序列。
+  - 1.10f 真实 D2GS 通过：99 个实体、5 幕 waypoint、inventoryRevision=0、重复请求 baselineId=1，另一客户端未收到定向标记。
+
+下一项建议进入 **多人快照重同步第四阶段（真实事件）**：将 Warp、死亡和地图切换动作接入故障注入场景，并逐项断言任务记录、位置、生命及传送点状态恢复。
 
 ## 记录规则
 
