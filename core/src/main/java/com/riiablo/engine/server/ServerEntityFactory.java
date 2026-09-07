@@ -41,6 +41,7 @@ import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeUnitFlags;
@@ -462,16 +463,25 @@ public class ServerEntityFactory extends EntityFactory {
       return Engine.INVALID_ENTITY;
     }
 
+    String nativePetType = PetType.canonical(petType);
     int maximum = Math.max(1, petMax);
     com.artemis.utils.IntBag pets = world.getAspectSubscriptionManager()
         .get(Aspect.all(SummonedPet.class)).getEntities();
     int matching = 0;
     com.badlogic.gdx.utils.IntArray matchingIds = new com.badlogic.gdx.utils.IntArray();
+    com.badlogic.gdx.utils.IntArray conflictingGroupIds =
+        new com.badlogic.gdx.utils.IntArray();
     for (int i = 0; i < pets.size(); i++) {
       SummonedPet pet = mSummonedPet.get(pets.get(i));
-      if (pet != null && pet.ownerId == ownerId && petType.equalsIgnoreCase(pet.petType)) {
+      if (pet == null || pet.ownerId != ownerId) continue;
+      if (PetType.sameNativeType(nativePetType, pet.petType)) {
         matching++;
         matchingIds.add(pets.get(i));
+      } else if (PetType.sameNativeList(nativePetType, pet.petType)) {
+        // D2MOO sub_6FC7D7A0 removes every pet in another PetType row from
+        // the same non-zero group. It does not retain old Spirit Wolves up to
+        // the new Dire Wolf limit.
+        conflictingGroupIds.add(pets.get(i));
       }
     }
 
@@ -493,19 +503,25 @@ public class ServerEntityFactory extends EntityFactory {
 
     int entityId = createMonster(summon.hcIdx, summonPosition.x, summonPosition.y);
     if (entityId == Engine.INVALID_ENTITY) return entityId;
-    mSummonedPet.create(entityId).set(ownerId, petType, skillId, skillLevel,
+    mSummonedPet.create(entityId).set(ownerId, nativePetType, skillId, skillLevel,
         passive, durationFrames);
     mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
+    for (int i = 0; i < conflictingGroupIds.size; i++) {
+      int oldId = conflictingGroupIds.get(i);
+      world.delete(oldId);
+      log.info("[SUMMON_PET] phase=replace_group owner={} petType={} oldEntity={} newEntity={}",
+          ownerId, nativePetType, oldId, entityId);
+    }
     int replacements = Math.max(0, matching + 1 - maximum);
     for (int i = 0; i < replacements && i < matchingIds.size; i++) {
       int oldId = matchingIds.get(i);
       world.delete(oldId);
       log.info("[SUMMON_PET] phase=replace owner={} petType={} oldEntity={} newEntity={}",
-          ownerId, petType, oldId, entityId);
+          ownerId, nativePetType, oldId, entityId);
     }
     log.info("[SUMMON_PET] phase=created owner={} entity={} summon={} petType={} "
             + "skill={} level={} max={} passive={} duration={} position=({}, {})",
-        ownerId, entityId, summon.Id, petType, skillId, skillLevel, maximum,
+        ownerId, entityId, summon.Id, nativePetType, skillId, skillLevel, maximum,
         passive, durationFrames, summonPosition.x, summonPosition.y);
     return entityId;
   }

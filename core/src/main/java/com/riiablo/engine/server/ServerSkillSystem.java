@@ -49,6 +49,7 @@ import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
+import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
@@ -281,10 +282,12 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 22 && event.srvdofunc != 49 && event.srvdofunc != 54
         && event.srvdofunc != 68 && event.srvdofunc != 71
+        && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
         && skill.srvdofunc != 22 && skill.srvdofunc != 49 && skill.srvdofunc != 54
-        && skill.srvdofunc != 68 && skill.srvdofunc != 71) {
+        && skill.srvdofunc != 68 && skill.srvdofunc != 71
+        && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119) {
       consumeRangedAmmoForSkill(event, skill);
       return;
     }
@@ -383,6 +386,16 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.srvdofunc == 16 || skill.srvdofunc == 16) {
       spawnAmazonSummon(event, skill, start, true);
+      return;
+    }
+    // D2MOO SKILLS_SrvDo114/115/119 are all native Druid summon paths.  They
+    // create monster units through the same owner/pet-list pipeline; only the
+    // spawn position and post-spawn aura differ.  Keep them out of the generic
+    // missile fallback so every client receives one authoritative entity.
+    if (event.srvdofunc == 114 || skill.srvdofunc == 114
+        || event.srvdofunc == 115 || skill.srvdofunc == 115
+        || event.srvdofunc == 119 || skill.srvdofunc == 119) {
+      spawnDruidSummon(event, skill, skillLevel, start);
       return;
     }
     if (event.srvdofunc == 24 || skill.srvdofunc == 24) {
@@ -1060,6 +1073,87 @@ public class ServerSkillSystem extends PassiveSystem {
         valkyrie ? "VALKYRIE" : "DECOY", event.entityId, petId, summon.Id,
         skill.pettype, event.skillId, skillLevel, petLevel, petMax, duration,
         target.x, target.y);
+  }
+
+  /** Native SKILLS_SrvDo114 Raven, SrvDo115 Vines and SrvDo119 DruidSummon. */
+  private void spawnDruidSummon(SkillDoEvent event, Skills.Entry skill,
+      int skillLevel, Vector2 caster) {
+    if (!mPlayer.has(event.entityId) || skill == null
+        || skill.summon == null || skill.summon.isEmpty()) {
+      log.warn("[DRUID_SUMMON] phase=reject owner={} skill={} reason=missing_owner_or_summon",
+          event.entityId, event.skillId);
+      return;
+    }
+    MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+    if (summon == null) {
+      log.warn("[DRUID_SUMMON] phase=reject owner={} skill={} row={} reason=missing_monstats",
+          event.entityId, event.skillId, skill.summon);
+      return;
+    }
+    String petType = PetType.canonical(skill.pettype);
+    if (petType.isEmpty()) {
+      petType = PetType.canonical(skill.summon);
+    }
+    int petMax = Math.max(1, SkillFormula.evaluate(skill.petmax, skill, skillLevel,
+        name -> getBaseSkillLevel(event.entityId, name)));
+    Vector2 target = (event.srvdofunc == 119 || skill.srvdofunc == 119)
+        ? resolveTargetPoint(event, caster, new Vector2()) : new Vector2(caster);
+    int petId = factory.createSummonedPet(event.entityId, summon, petType, event.skillId,
+        skillLevel, petMax, false, 0, target.x, target.y);
+    if (petId == Engine.INVALID_ENTITY) {
+      log.warn("[DRUID_SUMMON] phase=reject owner={} skill={} petType={} reason=create_failed",
+          event.entityId, event.skillId, petType);
+      return;
+    }
+
+    Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    Attributes petAttrs = mAttributesWrapper.has(petId)
+        ? mAttributesWrapper.get(petId).attrs : null;
+    int ownerLevel = Math.max(1, statInt(ownerAttrs, Stat.level));
+    int petLevel = summonBaseLevel(ownerLevel, skillLevel);
+    if (petAttrs != null) {
+      StatRef level = petAttrs.get(Stat.level, StatRef.obtain());
+      if (level != null) level.set(petLevel);
+      applyDruidSummonStats(petAttrs, skill, skillLevel,
+          name -> getBaseSkillLevel(event.entityId, name));
+    }
+    if (mUnitStates.has(petId)) {
+      UnitStates states = mUnitStates.get(petId);
+      if (states.stateList == null) states.init(petId);
+      int auraState = DruidSkills.getSummonAuraState(skill);
+      if (auraState != StateId.NONE) {
+        UnitState state = states.stateList.addState(auraState,
+            Math.max(0, SkillFormula.evaluate(skill.auralencalc, skill, skillLevel,
+                name -> getBaseSkillLevel(event.entityId, name))),
+            skillLevel, event.entityId);
+        if (state != null) {
+          state.skillId = event.skillId;
+          DruidSkills.applySummonAuraModifiers(state, skill, skillLevel,
+              name -> getBaseSkillLevel(event.entityId, name));
+          state.needsSync = true;
+        }
+      }
+    }
+    log.info("[DRUID_SUMMON] phase=spawn owner={} entity={} summon={} petType={} skill={} "
+            + "level={} petLevel={} max={} srvDo={} target=({}, {})",
+        event.entityId, petId, summon.Id, petType, skill.skill, skillLevel, petLevel,
+        petMax, skill.srvdofunc, target.x, target.y);
+  }
+
+  private static void applyDruidSummonStats(Attributes attrs, Skills.Entry skill, int level,
+      java.util.function.ToIntFunction<String> baseSkills) {
+    if (attrs == null || skill == null || skill.passivestat == null
+        || skill.passivecalc == null) return;
+    for (int i = 0; i < skill.passivestat.length && i < skill.passivecalc.length; i++) {
+      String name = skill.passivestat[i];
+      if (name == null || name.isEmpty()) continue;
+      short stat = Stat.index(name);
+      if (stat < 0) continue;
+      int value = SkillFormula.evaluate(skill.passivecalc[i], skill, level, baseSkills,
+          skillName -> Riiablo.files.skills.get(skillName));
+      if (value != 0) attrs.base().put(stat, value);
+    }
   }
 
   static int summonBaseLevel(int ownerLevel, int skillLevel) {

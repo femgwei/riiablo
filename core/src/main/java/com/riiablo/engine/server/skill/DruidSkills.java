@@ -908,4 +908,49 @@ public final class DruidSkills {
     // 每级 +15%
     return 15 * skillLevel;
   }
+
+  /** Maps the native summon skill's aurastate to the pet state used by ECS. */
+  public static int getSummonAuraState(Skills.Entry skill) {
+    if (skill == null) return StateId.NONE;
+    String raw = skill.aurastate;
+    if (raw == null || raw.trim().isEmpty()) raw = skill.pettype;
+    if (raw == null || raw.trim().isEmpty()) raw = skill.summon;
+    switch (raw.trim().toLowerCase(Locale.ROOT)) {
+      case "oak sage": case "oaksage": case "oaksagecontrol": return StateId.OAKSAGE;
+      case "wolverine": case "wolverinecontrol": return StateId.WOLVERINE;
+      case "barbs": case "barbscontrol": return StateId.BARBS;
+      case "vine beast": case "vine_beast": return StateId.VINE_BEAST;
+      case "totem":
+        if (skill.skill != null && skill.skill.toLowerCase(Locale.ROOT).contains("wolverine")) return StateId.WOLVERINE;
+        if (skill.skill != null && skill.skill.toLowerCase(Locale.ROOT).contains("barbs")) return StateId.BARBS;
+        return StateId.OAKSAGE;
+      default: return StateId.NONE;
+    }
+  }
+
+  /** Applies the data-driven aura stats carried by a Druid spirit/vine summon. */
+  public static void applySummonAuraModifiers(UnitState state, Skills.Entry skill,
+      int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (state == null || skill == null || skill.aurastat == null) return;
+    int count = Math.min(skill.aurastat.length,
+        skill.aurastatcalc != null ? skill.aurastatcalc.length : 0);
+    for (int i = 0; i < count; i++) {
+      String stat = skill.aurastat[i];
+      if (stat == null || stat.isEmpty()) continue;
+      int value = SkillFormula.evaluate(skill.aurastatcalc[i], skill, skillLevel,
+          baseSkillLevel, name -> com.riiablo.Riiablo.files.skills.get(name));
+      switch (stat.trim().toLowerCase(Locale.ROOT)) {
+        case "damagepercent": state.damageModifier += value; break;
+        case "item_tohit_percent": case "tohit": state.attackModifier += value; break;
+        case "item_maxhp_percent": case "hp%": state.maxLifeModifier += value; break;
+        case "item_armor_percent": state.defenseModifier += value; break;
+        case "fireresist": state.fireResistModifier += value; break;
+        case "coldresist": state.coldResistModifier += value; break;
+        case "lightresist": state.lightResistModifier += value; break;
+        case "poisonresist": state.poisonResistModifier += value; break;
+        case "thorns_percent": state.runtimeValue += value; break;
+        default: log.debug("[DRUID_SUMMON] ignored aura stat={} skill={}", stat, skill.skill);
+      }
+    }
+  }
 }

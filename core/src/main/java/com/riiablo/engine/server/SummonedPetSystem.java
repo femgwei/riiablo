@@ -4,7 +4,17 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.PlayerCorpse;
+import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Size;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.pet.PetType;
+import com.badlogic.gdx.math.Vector2;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -16,6 +26,13 @@ public class SummonedPetSystem extends IteratingSystem {
 
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<PlayerCorpse> mPlayerCorpse;
+  protected ComponentMapper<AttributesWrapper> mAttributes;
+  protected ComponentMapper<MapWrapper> mMap;
+  protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Size> mSize;
+  protected ComponentMapper<Corpse> mCorpse;
+  private final Vector2 warpPosition = new Vector2();
 
   @Override
   protected void process(int entityId) {
@@ -26,6 +43,72 @@ public class SummonedPetSystem extends IteratingSystem {
           entityId, pet.ownerId);
       world.delete(entityId);
       return;
+    }
+    // D2Game_KillPlayerPets removes every non-hireling summon when its owner
+    // dies.  Do this from authoritative HP rather than presentation state so
+    // local and multiplayer worlds follow the same rule.
+    // ServerPlayerDeathSystem places PlayerCorpse on the owner before the
+    // death event is broadcast. This is the authoritative death marker and
+    // avoids depending on an optional/late attributes snapshot.
+    if (mPlayerCorpse.has(pet.ownerId)) {
+      log.info("[SUMMON_PET] phase=remove entity={} owner={} reason=owner_corpse_marker",
+          entityId, pet.ownerId);
+      world.delete(entityId);
+      return;
+    }
+    if (mAttributes.has(pet.ownerId) && mAttributes.get(pet.ownerId).attrs != null) {
+      StatRef ownerHp = mAttributes.get(pet.ownerId).attrs.get(Stat.hitpoints, StatRef.obtain());
+      if (ownerHp != null && ownerHp.asFixed() <= 0f) {
+        log.info("[SUMMON_PET] phase=remove entity={} owner={} reason=owner_dead", entityId, pet.ownerId);
+        world.delete(entityId);
+        return;
+      }
+    }
+    // PetType.txt decides whether a pet follows its owner across a level
+    // transition. The owner may briefly lack a MapWrapper during login, so
+    // only enforce this when both sides are known.
+    if (mMap.has(entityId) && mMap.has(pet.ownerId)) {
+      MapWrapper petMap = mMap.get(entityId), ownerMap = mMap.get(pet.ownerId);
+      if (petMap != null && ownerMap != null && petMap.zone != null && ownerMap.zone != null
+          && petMap.zone != ownerMap.zone) {
+        if (PetType.warpsWithOwner(pet.petType)
+            && mPosition.has(entityId) && mPosition.has(pet.ownerId)) {
+          warpPosition.set(mPosition.get(pet.ownerId).position);
+          int footprint = mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : 1;
+          if (ownerMap.zone.findFreeCoordinates(
+              warpPosition, footprint, 8, true, warpPosition)) {
+            mPosition.get(entityId).position.set(warpPosition);
+            petMap.set(ownerMap.map, ownerMap.zone);
+            log.info("[SUMMON_PET] phase=warp entity={} owner={} petType={} position=({}, {})",
+                entityId, pet.ownerId, pet.petType, warpPosition.x, warpPosition.y);
+          } else {
+            log.warn("[SUMMON_PET] phase=remove entity={} owner={} petType={} "
+                    + "reason=owner_zone_no_free_position",
+                entityId, pet.ownerId, pet.petType);
+            world.delete(entityId);
+            return;
+          }
+        } else {
+          log.info("[SUMMON_PET] phase=remove entity={} owner={} petType={} "
+                  + "reason=owner_zone_changed_no_warp",
+              entityId, pet.ownerId, pet.petType);
+          world.delete(entityId);
+          return;
+        }
+      }
+    }
+    // D2MOO keeps the dead unit through its DT/DD sequence, then removes it
+    // from PLAYERPETS. Give clients one native second (25 frames) to observe
+    // the death state while preventing immortal summon corpses.
+    if (mCorpse.has(entityId)) {
+      pet.deathPending = true;
+      pet.deadFrames += Math.max(0f, world.delta) * NATIVE_FRAMES_PER_SECOND;
+      if (pet.deadFrames >= 25f) {
+        log.info("[SUMMON_PET] phase=remove entity={} owner={} petType={} reason=dead_complete",
+            entityId, pet.ownerId, pet.petType);
+        world.delete(entityId);
+        return;
+      }
     }
     if (pet.durationFrames <= 0) return;
     pet.elapsedFrames += Math.max(0f, world.delta) * NATIVE_FRAMES_PER_SECOND;

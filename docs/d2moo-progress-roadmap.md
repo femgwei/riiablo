@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-04
+更新时间：2026-09-07
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -58,7 +58,7 @@
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
-| 德鲁伊 Druid | 80% | 20% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 已完成；召唤物和持续区域技能待补 |
+| 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
@@ -259,9 +259,13 @@
 
 ## 当前下一项
 
-Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave 和 Fury 已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕和多目标连续攻击已接通。
+Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 
-下一项建议继续 **德鲁伊召唤物所有权与生命周期**：按 Raven/Vine/Spirit/Wolf/Bear 的 PetType、PetMax、召唤等级、主人归属、死亡/替换和多人同步逐项对齐。
+- [x] ~~完成德鲁伊召唤物所有权与生命周期~~
+  - 对照 D2MOO `SKILLS_SrvDo114_Raven`、`SKILLS_SrvDo115_Vines`、`SKILLS_SrvDo119_DruidSummon` 和 `PlayerPets.cpp`，接入召唤等级、PetMax、具体 PetType、非零 group 互斥替换、主人死亡/尸体标记清理、死亡动画宽限、地图切换 warp 标志和多人实体归属。
+  - `SummonedPetSystemTest`、`NativeDruidSummonDataTest`、`DruidSummonIntegrationTest` 以及全部 `*Druid*Test` 通过；1×1 真实隐藏营地测试 `:desktop:offscreenCamp` 使用 Diablo II 1.10f 资源通过。
+
+下一项建议进入 **固定 25Hz 权威 Sim Tick 基础设施**：先迁移 D2GS 服务端，保留网络线程只入队、模拟线程独占 ECS，再补快照和时间注入测试；不要与职业技能公式改动混提交。
 
 ## 记录规则
 

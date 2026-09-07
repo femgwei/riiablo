@@ -40,6 +40,9 @@ public class SummonedPet extends Component {
   public int infernoTargetId;
   /** Last corpse consumed by Death Sentry AI Fn104. */
   public int deathLastCorpseId;
+  /** Native death animation grace period before the pet is removed from the owner list. */
+  public boolean deathPending;
+  public float deadFrames;
 
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
@@ -67,6 +70,8 @@ public class SummonedPet extends Component {
     infernoPulseCooldownFrames = 0;
     infernoTargetId = -1;
     deathLastCorpseId = -1;
+    deathPending = false;
+    deadFrames = 0f;
     return this;
   }
 }

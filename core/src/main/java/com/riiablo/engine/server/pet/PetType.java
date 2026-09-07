@@ -138,6 +138,73 @@ public final class PetType {
     return type >= RAVEN && type <= SPIRIT_OF_BARBS;
   }
 
+  /** Native PetType.txt group. Spirit Wolf, Dire Wolf and Grizzly share group 1. */
+  public static int druidGroup(String petType) {
+    if (petType == null) return -1;
+    String value = petType.trim().toLowerCase(java.util.Locale.ROOT);
+    if ("spiritwolf".equals(value) || "fenris".equals(value)
+        || "direwolf".equals(value) || "grizzly".equals(value)) return 1;
+    return -1;
+  }
+
+  /** Canonicalizes the names used by 1.10f PetType.txt and converted Skills.txt. */
+  public static String canonical(String petType) {
+    if (petType == null) return "";
+    String value = petType.trim().toLowerCase(java.util.Locale.ROOT);
+    if ("spirit wolf".equals(value)) return "spiritwolf";
+    if ("dire wolf".equals(value) || "summon fenris".equals(value)) return "fenris";
+    if ("oak sage".equals(value)) return "totem";
+    if ("heart of wolverine".equals(value) || "spirit of barbs".equals(value)) return "totem";
+    if ("poison creeper".equals(value) || "carrion vine".equals(value)
+        || "solar creeper".equals(value) || "cycleoflife".equals(value)
+        || "vinecreature".equals(value)) return "vine";
+    return value;
+  }
+
+  /** True when two summon rows compete for one native PetType list. */
+  public static boolean sameNativeList(String left, String right) {
+    String a = canonical(left), b = canonical(right);
+    if (a.isEmpty() || b.isEmpty()) return false;
+    if (a.equals(b)) return true;
+    int ga = druidGroup(a), gb = druidGroup(b);
+    return ga >= 0 && ga == gb;
+  }
+
+  /** True only when two skills use the same native PetType.txt row. */
+  public static boolean sameNativeType(String left, String right) {
+    String a = canonical(left), b = canonical(right);
+    return !a.isEmpty() && a.equals(b);
+  }
+
+  /**
+   * PetType.txt {@code warp} flag for the currently supported summon rows.
+   * Druid wolves, spirits and vines follow their owner across levels, while
+   * Raven is deliberately omitted because its native row has no warp flag.
+   */
+  public static boolean warpsWithOwner(String petType) {
+    switch (canonical(petType)) {
+      case "single":
+      case "valkyrie":
+      case "golem":
+      case "skeleton":
+      case "skeletonmage":
+      case "revive":
+      case "hireable":
+      case "spiritwolf":
+      case "fenris":
+      case "totem":
+      case "vine":
+      case "grizzly":
+      case "shadowwarrior":
+      case "assassintrap":
+      case "pettrap":
+      case "hydra":
+        return true;
+      default:
+        return false;
+    }
+  }
+
   /**
    * 是否是陷阱
    */

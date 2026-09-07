@@ -18,7 +18,9 @@
 ## 真实画面启动门槛
 
 合成 UI 场景不能覆盖 `GameScreen`、DRLG、营地实体和第一帧 ECS。涉及客户端世界接线、
-任务、AI、地图或渲染的修改，还必须运行 1 像素隐藏窗口测试：
+任务、AI、地图或渲染的修改，还必须运行 1 像素隐藏窗口测试。此外，从 2026-09-07
+起，每完成一个较大的、完整功能模块移植，无论当前是否具备人工验证条件，都必须运行
+一次该真实营地测试：
 
 ```powershell
 .\gradlew.bat :desktop:offscreenCamp `
@@ -33,3 +35,6 @@
 截图；客户端线程异常、120 秒超时和初始化失败均必须让 Gradle 返回非零退出码。
 
 `offscreenRender` 仍用于 854x480 FBO 合成 UI 场景，两者不能互相替代。
+
+`libd2` / `dark-magic` 可借鉴的测试模式及 1.14d fixture 限制见
+[`external-test-reference-audit.md`](external-test-reference-audit.md)。
