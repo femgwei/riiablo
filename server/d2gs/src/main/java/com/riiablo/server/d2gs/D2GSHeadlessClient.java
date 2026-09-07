@@ -468,12 +468,51 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("old-level snapshot was not discarded: level="
             + a.currentLevelId + " drops=" + a.wrongLevelDrops);
       }
+      // Exercise the reverse entrance and the continuous underground chain.
+      warpAndAssert(a, inA, outA, 910L, 2); // Den of Evil -> Blood Moor
+      if (!D2GS.headlessMovePlayerToLevel(a.playerId, 4)) { // Stony Field staging
+        throw new IOException("Stony Field staging unavailable");
+      }
+      warpAndAssert(a, inA, outA, 911L, 10); // Underground Passage level 1
+      warpAndAssert(a, inA, outA, 912L, 14); // Underground Passage level 2
+      // Level 2 is a dead-end branch in the native Act 1 topology. Return to
+      // level 1 before using its second outdoor exit to Dark Wood.
+      warpAndAssert(a, inA, outA, 913L, 10); // Underground Passage level 1
+      warpAndAssert(a, inA, outA, 914L, 5); // Dark Wood
       log("snapshot_resync_pass", "request=77 warp=true death=true respawn=true crossMap=true corpse=true baseline=" + baselineId
           + " entities=" + entityFrames + " waypoints=" + waypointCount
           + " inventoryRevision=" + inventoryRevision
           + " duplicateBaseline=" + duplicateBaseline
           + " peerUnaffected=true pausedMillis=2500 oldLevelDrops=" + a.wrongLevelDrops);
     }
+  }
+
+  private void warpAndAssert(D2GSHeadlessClient observer, DataInputStream input,
+      OutputStream output, long requestId, int expectedLevel) throws Exception {
+    int warpId = D2GS.headlessPrepareWarpToLevel(observer.playerId, expectedLevel);
+    if (warpId == Engine.INVALID_ENTITY) {
+      throw new IOException("no native Warp to level " + expectedLevel);
+    }
+    send(output, questRequestPacket(requestId, QuestOperation.WARP_INTERACTION, warpId, -1));
+    QuestResult result = observer.awaitQuestResult(input, requestId,
+        System.currentTimeMillis() + config.testTimeoutMillis);
+    long snapshotDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (result.success() && observer.currentLevelId != expectedLevel
+        && System.currentTimeMillis() < snapshotDeadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) observer.consume(packet);
+    }
+    int[] state = D2GS.headlessWarpState(observer.playerId);
+    if (!result.success() || state.length < 4 || state[0] != expectedLevel
+        || state[1] < 0 || state[2] != 1 || state[3] != 0
+        || observer.currentLevelId != expectedLevel) {
+      throw new IOException("warp transition failed target=" + expectedLevel
+          + " success=" + result.success() + " reason=" + result.reason()
+          + " state=" + java.util.Arrays.toString(state)
+          + " clientLevel=" + observer.currentLevelId);
+    }
+    log("warp_pass", "request=" + requestId + " warp=" + warpId
+        + " level=" + expectedLevel + " room=" + state[1]);
   }
 
   private static byte[] snapshotResyncPacket(long requestId, long lastTick, String reason) {
