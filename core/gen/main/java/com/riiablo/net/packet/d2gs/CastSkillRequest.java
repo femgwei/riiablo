@@ -19,13 +19,22 @@ public final class CastSkillRequest extends Table {
   public int targetId() { int o = __offset(6); return o != 0 ? bb.getInt(o + bb_pos) : 0; }
   public float targetX() { int o = __offset(8); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
   public float targetY() { int o = __offset(10); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
+  public long sequence() { int o = __offset(12); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long observedServerTick() { int o = __offset(14); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long targetTick() { int o = __offset(16); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
 
   public static int createCastSkillRequest(FlatBufferBuilder builder,
       int skillId,
       int targetId,
       float targetX,
-      float targetY) {
-    builder.startTable(4);
+      float targetY,
+      long sequence,
+      long observedServerTick,
+      long targetTick) {
+    builder.startTable(7);
+    CastSkillRequest.addTargetTick(builder, targetTick);
+    CastSkillRequest.addObservedServerTick(builder, observedServerTick);
+    CastSkillRequest.addSequence(builder, sequence);
     CastSkillRequest.addTargetY(builder, targetY);
     CastSkillRequest.addTargetX(builder, targetX);
     CastSkillRequest.addTargetId(builder, targetId);
@@ -33,11 +42,14 @@ public final class CastSkillRequest extends Table {
     return CastSkillRequest.endCastSkillRequest(builder);
   }
 
-  public static void startCastSkillRequest(FlatBufferBuilder builder) { builder.startTable(4); }
+  public static void startCastSkillRequest(FlatBufferBuilder builder) { builder.startTable(7); }
   public static void addSkillId(FlatBufferBuilder builder, int skillId) { builder.addShort(0, (short)skillId, (short)0); }
   public static void addTargetId(FlatBufferBuilder builder, int targetId) { builder.addInt(1, targetId, 0); }
   public static void addTargetX(FlatBufferBuilder builder, float targetX) { builder.addFloat(2, targetX, 0.0f); }
   public static void addTargetY(FlatBufferBuilder builder, float targetY) { builder.addFloat(3, targetY, 0.0f); }
+  public static void addSequence(FlatBufferBuilder builder, long sequence) { builder.addLong(4, sequence, 0L); }
+  public static void addObservedServerTick(FlatBufferBuilder builder, long observedServerTick) { builder.addLong(5, observedServerTick, 0L); }
+  public static void addTargetTick(FlatBufferBuilder builder, long targetTick) { builder.addLong(6, targetTick, 0L); }
   public static int endCastSkillRequest(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

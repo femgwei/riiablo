@@ -77,6 +77,7 @@ public final class D2GSHeadlessClient {
   private long lastSnapshotServerTime = -1L;
   private long lastMovementAcknowledgement;
   private long lastRejectedMovementSequence;
+  private long combatSequence;
   private float playerX = Float.NaN;
   private float playerY = Float.NaN;
 
@@ -1627,10 +1628,12 @@ public final class D2GSHeadlessClient {
     return builder.dataBuffer();
   }
 
-  private static ByteBuffer castPacket(int skillId, int targetId, float x, float y) {
+  private ByteBuffer castPacket(int skillId, int targetId, float x, float y) {
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    long observedTick = Math.max(0L, lastSnapshotTick);
+    long targetTick = observedTick == 0L ? 0L : observedTick + 2L;
     int request = CastSkillRequest.createCastSkillRequest(
-        builder, skillId, targetId, x, y);
+        builder, skillId, targetId, x, y, ++combatSequence, observedTick, targetTick);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.CastSkillRequest, request);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);

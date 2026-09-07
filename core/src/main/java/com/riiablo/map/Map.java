@@ -701,6 +701,19 @@ public class Map implements Disposable {
     return zone.staticFlags(x - zone.x, y - zone.y);
   }
 
+  /**
+   * D2Common {@code COLLIDE_MASK_PLAYER_FLYING} projection.
+   *
+   * <p>DT1 bit 2 is the native missile barrier. Dynamic doors are tracked in
+   * a separate reference layer because ordinary colliding objects are folded
+   * into walk collision and must not block a melee ray.</p>
+   */
+  public int playerFlyingFlags(int x, int y) {
+    Zone zone = getZone(x, y);
+    if (zone == null) return DT1.Tile.FLAG_BLOCK_JUMP;
+    return zone.playerFlyingFlags(x - zone.x, y - zone.y);
+  }
+
   void or(Vector2 position, int width, int height, int flags) {
     if (width == 0 || height == 0) return;
     int x0 = round(position.x - width  / 2f);
@@ -841,6 +854,8 @@ public class Map implements Disposable {
     byte           flags[];
     /** Per-subtile references contributed by colliding object units. */
     short          objectBlockWalkRefs[];
+    /** Colliding object references which specifically belong to door units. */
+    short          objectDoorRefs[];
     final DT1.Tile tiles[][] = new DT1.Tile[Map.MAX_LAYERS][];
     Preset         presets[][];
 
@@ -942,6 +957,7 @@ public class Map implements Disposable {
       free(flags);
       flags = null;
       objectBlockWalkRefs = null;
+      objectDoorRefs = null;
 
       for (DT1.Tile[] layer : tiles) free(layer);
       Arrays.fill(tiles, null);
@@ -1100,6 +1116,18 @@ public class Map implements Disposable {
       return flags[index(width, x, y)] & 0xFF;
     }
 
+    public int playerFlyingFlags(int x, int y) {
+      if (x < 0 || y < 0 || x >= width || y >= height) {
+        return DT1.Tile.FLAG_BLOCK_JUMP;
+      }
+      int index = index(width, x, y);
+      int value = flags[index] & DT1.Tile.FLAG_BLOCK_JUMP;
+      if (objectDoorRefs != null && objectDoorRefs[index] > 0) {
+        value |= DT1.Tile.FLAG_BLOCK_JUMP;
+      }
+      return value;
+    }
+
     /**
      * Adds or removes one object's world-subtile collision footprint.
      *
@@ -1110,6 +1138,12 @@ public class Map implements Disposable {
      */
     public void adjustObjectCollision(
         int worldX, int worldY, int objectWidth, int objectHeight, int delta) {
+      adjustObjectCollision(worldX, worldY, objectWidth, objectHeight, delta, false);
+    }
+
+    public void adjustObjectCollision(
+        int worldX, int worldY, int objectWidth, int objectHeight, int delta,
+        boolean door) {
       if (delta == 0 || objectWidth <= 0 || objectHeight <= 0 || flags == null) return;
       int startX = Math.max(worldX, x);
       int startY = Math.max(worldY, y);
@@ -1118,6 +1152,9 @@ public class Map implements Disposable {
       if (startX >= endX || startY >= endY) return;
       if (delta > 0 && objectBlockWalkRefs == null) {
         objectBlockWalkRefs = new short[width * height];
+      }
+      if (door && delta > 0 && objectDoorRefs == null) {
+        objectDoorRefs = new short[width * height];
       }
       if (objectBlockWalkRefs == null) return;
 
@@ -1130,6 +1167,12 @@ public class Map implements Disposable {
           if (references < 0) references = 0;
           if (references > Short.MAX_VALUE) references = Short.MAX_VALUE;
           objectBlockWalkRefs[index] = (short) references;
+          if (door && objectDoorRefs != null) {
+            int doorReferences = objectDoorRefs[index] + delta;
+            if (doorReferences < 0) doorReferences = 0;
+            if (doorReferences > Short.MAX_VALUE) doorReferences = Short.MAX_VALUE;
+            objectDoorRefs[index] = (short) doorReferences;
+          }
         }
       }
     }

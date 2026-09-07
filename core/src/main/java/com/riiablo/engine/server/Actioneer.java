@@ -25,6 +25,8 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
+import com.riiablo.engine.server.combat.CombatPositionHistory;
+import com.riiablo.engine.server.combat.NativeMeleeDistance;
 import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
@@ -117,6 +119,8 @@ public class Actioneer extends PassiveSystem {
   protected Pathfinder pathfinder;
   @com.artemis.annotations.Wire(name = "map")
   protected Map map;
+  @com.artemis.annotations.Wire(name = "combatPositionHistory", failOnNull = false)
+  protected CombatPositionHistory combatPositionHistory;
 
   /** Entity IDs for whom the last attack target died; must release before next attack. */
   private final IntSet lastAttackTargetDied = new IntSet();
@@ -172,16 +176,24 @@ public class Actioneer extends PassiveSystem {
   }
 
   public void cast(int entityId, int skillId, int targetId, Vector2 targetVec) {
-    castInternal(entityId, skillId, targetId, targetVec, (byte) Engine.INVALID_MODE);
+    castInternal(entityId, skillId, targetId, targetVec, (byte) Engine.INVALID_MODE,
+        currentCombatTick());
+  }
+
+  /** Starts a cast against the exact authoritative position frame chosen by D2GS. */
+  public void castAtTick(
+      int entityId, int skillId, int targetId, Vector2 targetVec, long snapshotTick) {
+    castInternal(entityId, skillId, targetId, targetVec, (byte) Engine.INVALID_MODE,
+        snapshotTick);
   }
 
   /** Casts with an explicit native animation mode (used by hireling AI). */
   public void castWithMode(int entityId, int skillId, byte mode, int targetId, Vector2 targetVec) {
-    castInternal(entityId, skillId, targetId, targetVec, mode);
+    castInternal(entityId, skillId, targetId, targetVec, mode, currentCombatTick());
   }
 
   private void castInternal(int entityId, int skillId, int targetId, Vector2 targetVec,
-      byte requestedMode) {
+      byte requestedMode, long snapshotTick) {
     if (!canCast(entityId)) {
       log.info("[SKILL_CAST] rejected_busy entity={} skill={} casting={} sequence={}",
           entityId, skillId, mCasting.has(entityId), mSequence.has(entityId));
@@ -297,7 +309,7 @@ public class Actioneer extends PassiveSystem {
     Vector2 entityPos = mPosition.get(entityId).position;
     mAngle.get(entityId).target.set(targetVec).sub(entityPos).nor();
     mSequence.create(entityId).sequence(mode, mMovementModes.get(entityId).NU);
-    mCasting.create(entityId).set(skillId, targetId, targetVec);
+    mCasting.create(entityId).set(skillId, targetId, targetVec, snapshotTick);
     SkillCastEvent castEvent = SkillCastEvent.obtain(entityId, skillId, targetId, targetVec);
     events.dispatch(castEvent);
     if (!castEvent.accepted) {
@@ -353,18 +365,27 @@ public class Actioneer extends PassiveSystem {
     Class.Type type = mClass.get(entityId).type;
     switch (type) {
       case PLR:
-        // D2MOD: For players, get RangeAdder from equipped weapon
-        // TODO: Implement weapon inventory system to get actual RangeAdder
-        // For now, return 0 (no weapon equipped)
+        if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+          Item weapon = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.RARM);
+          if (weapon == null) {
+            weapon = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.LARM);
+          }
+          if (weapon != null && weapon.base instanceof Weapons.Entry) {
+            return Math.max(0, ((Weapons.Entry) weapon.base).RangeAdder);
+          }
+        }
         return 0;
       case MON:
         // D2MOD: For monsters, get MeleeRng from MonStats2
         if (mMonster.has(entityId)) {
           Monster monster = mMonster.get(entityId);
           if (monster.monstats2 != null) {
-            // D2MOD: If MeleeRng == 255, check weapon class (2HT = 2, else 0)
-            // For simplicity, we'll just return MeleeRng (assuming it's not 255)
-            return monster.monstats2.MeleeRng;
+            if (monster.monstats2.MeleeRng == 255) {
+              CofReference reference = mCofReference.get(entityId);
+              return reference != null && "2HT".equalsIgnoreCase(
+                  Engine.getWClass(reference.wclass)) ? 2 : 0;
+            }
+            return Math.max(0, monster.monstats2.MeleeRng);
           }
         }
         return 0;
@@ -391,13 +412,41 @@ public class Actioneer extends PassiveSystem {
       return false;
     }
     
-    Vector2 attackerPos = mPosition.get(attackerId).position;
-    Vector2 targetPos = mPosition.get(targetId).position;
-    float distance = attackerPos.dst(targetPos);
-    
-    // D2MOD: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
+    long tick = currentCombatTick();
+    Casting casting = mCasting.get(attackerId);
+    if (casting != null && casting.positionSnapshotTick > 0L) {
+      tick = casting.positionSnapshotTick;
+    }
+    return isInMeleeRangeAtTick(attackerId, targetId, rangeBonus, tick);
+  }
+
+  public boolean isInMeleeRangeAtTick(
+      int attackerId, int targetId, int rangeBonus, long tick) {
+    if (attackerId == Engine.INVALID_ENTITY || targetId == Engine.INVALID_ENTITY
+        || !mPosition.has(attackerId) || !mPosition.has(targetId)) return false;
     int meleeRange = getMeleeRange(attackerId);
-    return meleeRange + rangeBonus + 1 >= distance;
+    if (combatPositionHistory != null && tick > 0L) {
+      CombatPositionHistory.RangeResult result = combatPositionHistory.meleeRange(
+          attackerId, targetId, meleeRange, rangeBonus, tick);
+      if (result == CombatPositionHistory.RangeResult.MISSING_SNAPSHOT) {
+        log.warn("[MELEE_RANGE] phase=reject source={} target={} tick={} reason=missing_snapshot",
+            attackerId, targetId, tick);
+      }
+      return result == CombatPositionHistory.RangeResult.IN_RANGE;
+    }
+
+    Position attacker = mPosition.get(attackerId);
+    Position target = mPosition.get(targetId);
+    int attackerSize = mSize.has(attackerId) ? mSize.get(attackerId).size : Size.INSIGNIFICANT;
+    int targetSize = mSize.has(targetId) ? mSize.get(targetId).size : Size.INSIGNIFICANT;
+    return NativeMeleeDistance.isInRange(
+        Math.round(attacker.position.x), Math.round(attacker.position.y), attackerSize,
+        Math.round(target.position.x), Math.round(target.position.y), targetSize,
+        meleeRange, rangeBonus);
+  }
+
+  private long currentCombatTick() {
+    return combatPositionHistory == null ? 0L : combatPositionHistory.latestTick();
   }
 
   @Subscribe

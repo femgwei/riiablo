@@ -74,6 +74,7 @@ import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AuthoritativeSimulation;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.DeathRewardSystem;
+import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
 import com.riiablo.engine.server.ObjectInitializer;
@@ -135,6 +136,8 @@ import com.riiablo.map.Map;
 import com.riiablo.map.MapManager;
 import com.riiablo.mpq.MPQFileHandleResolver;
 import com.riiablo.net.packet.d2gs.BeltToCursor;
+import com.riiablo.net.CombatIntent;
+import com.riiablo.net.CombatIntentScheduler;
 import com.riiablo.net.packet.d2gs.BodyToCursor;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.CastSkillRequest;
@@ -352,14 +355,19 @@ public class D2GS extends ApplicationAdapter {
     Map.RoomEx room = zone == null ? null : zone.findRoomEx(originX, originY);
     if (room == null) return null;
     Vector2 best = null;
-    float bestDistance2 = 0f;
+    // Stay just outside immediate melee range while keeping the Shaman's
+    // player target inside its native AiDist. Choosing the farthest point in
+    // a large RoomEx can put every client outside AI activation even though
+    // the corpse and Shaman remain in the same room, making a valid
+    // resurrection scenario sleep forever.
+    float bestDistance2 = Float.MAX_VALUE;
     for (int y = room.y; y < room.y + room.height; y++) {
       for (int x = room.x; x < room.x + room.width; x++) {
         if ((server.map.flags(x, y) & DT1.Tile.FLAG_BLOCK_WALK) != 0) continue;
         float dx = x - originX;
         float dy = y - originY;
         float distance2 = dx * dx + dy * dy;
-        if (distance2 >= 8f * 8f && distance2 > bestDistance2) {
+        if (distance2 >= 8f * 8f && distance2 < bestDistance2) {
           bestDistance2 = distance2;
           if (best == null) best = new Vector2();
           best.set(x, y);
@@ -857,6 +865,8 @@ public class D2GS extends ApplicationAdapter {
       new MovementIntentScheduler[MAX_CLIENTS];
   final long[] lastAppliedMovementIntent = new long[MAX_CLIENTS];
   final Collection<MovementIntent> readyMovementIntents = new ArrayList<>();
+  final CombatIntentScheduler[] combatIntents = new CombatIntentScheduler[MAX_CLIENTS];
+  final Collection<CombatIntent> readyCombatIntents = new ArrayList<>();
 
   static final BitVector ignoredPackets = new BitVector(D2GSData.names.length); {
     ignoredPackets.set(D2GSData.EntitySync);
@@ -873,6 +883,7 @@ public class D2GS extends ApplicationAdapter {
   World world;
   AuthoritativeSimulation simulation;
   Map map;
+  CombatPositionHistory combatPositionHistory;
 
   EntityFactory factory;
   ItemManager itemManager;
@@ -897,6 +908,7 @@ public class D2GS extends ApplicationAdapter {
     for (int i = 0; i < movementInputs.length; i++) {
       movementInputs[i] = new MovementInputSequenceTracker();
       movementIntents[i] = new MovementIntentScheduler();
+      combatIntents[i] = new CombatIntentScheduler();
     }
   }
 
@@ -957,6 +969,7 @@ public class D2GS extends ApplicationAdapter {
     itemManager = new ServerItemManager();
     mapManager = new MapManager();
     sync = new NetworkSynchronizer();
+    combatPositionHistory = new CombatPositionHistory(map);
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem())
         .with(new Act1QuestSystem())
@@ -1026,6 +1039,7 @@ public class D2GS extends ApplicationAdapter {
         .register("player", player)
         .register("outPackets", outPackets)
         .register("partyManager", partyManager)
+        .register("combatPositionHistory", combatPositionHistory)
         ;
     Riiablo.engine = world = new World(config);
 
@@ -1136,6 +1150,10 @@ public class D2GS extends ApplicationAdapter {
       process(packet);
     }
     applyReadyMovementIntents();
+    // Freeze authoritative positions only after due movement commands have
+    // been accepted, and before any due combat command starts its animation.
+    combatPositionHistory.capture(world, simulation.tickNumber());
+    applyReadyCombatIntents();
   }
 
   private void dispatchOutgoingPackets() {
@@ -1378,6 +1396,7 @@ public class D2GS extends ApplicationAdapter {
     }
     movementInputs[id].reset();
     movementIntents[id].reset();
+    combatIntents[id].reset();
     lastAppliedMovementIntent[id] = 0L;
     broadcastPartySnapshots(PartyOperation.LEAVE, entityId, -1, -1);
   }
@@ -1656,21 +1675,56 @@ public class D2GS extends ApplicationAdapter {
   private void CastSkillRequest(Packet packet) {
     int entityId = getPlayerEntityId(packet);
     CastSkillRequest request = (CastSkillRequest) packet.data.data(new CastSkillRequest());
-    if (isPlayerDead(entityId)) {
-      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
-          + " skill=" + request.skillId() + " reason=player_dead");
+    CombatIntent input = new CombatIntent(
+        request.sequence(), request.observedServerTick(), request.targetTick(),
+        request.skillId(), request.targetId(), request.targetX(), request.targetY());
+    CombatIntentScheduler.Result result = combatIntents[packet.id].submit(
+        input, simulation.tickNumber());
+    if (result != CombatIntentScheduler.Result.ACCEPTED) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=intent_drop connection=" + packet.id
+          + " player=" + entityId + " sequence=" + input.sequence
+          + " result=" + result.name().toLowerCase());
       return;
     }
-    int targetId = request.targetId();
+    Gdx.app.log(TAG, "[NET_CAST] phase=intent_queue connection=" + packet.id
+        + " player=" + entityId + " sequence=" + input.sequence
+        + " observedTick=" + input.observedServerTick
+        + " targetTick=" + input.targetTick);
+  }
+
+  private void applyReadyCombatIntents() {
+    long currentTick = simulation.tickNumber();
+    for (int connectionId = 0; connectionId < MAX_CLIENTS; connectionId++) {
+      readyCombatIntents.clear();
+      combatIntents[connectionId].drainReady(currentTick, readyCombatIntents);
+      if (readyCombatIntents.isEmpty()) continue;
+      int entityId = player.get(connectionId, Engine.INVALID_ENTITY);
+      if (entityId == Engine.INVALID_ENTITY) continue;
+      for (CombatIntent input : readyCombatIntents) {
+        applyCombatIntent(connectionId, entityId, input, currentTick);
+      }
+    }
+    readyCombatIntents.clear();
+  }
+
+  private void applyCombatIntent(
+      int connectionId, int entityId, CombatIntent request, long currentTick) {
+    long snapshotTick = request.targetTick == 0L ? currentTick : request.targetTick;
+    if (isPlayerDead(entityId)) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+          + " skill=" + request.skillId + " reason=player_dead");
+      return;
+    }
+    int targetId = request.targetEntityId;
     if (targetId != Engine.INVALID_ENTITY
         && !world.getMapper(com.riiablo.engine.server.component.Class.class).has(targetId)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
-          + " skill=" + request.skillId() + " reason=unknown_target target=" + targetId);
+          + " skill=" + request.skillId + " reason=unknown_target target=" + targetId);
       return;
     }
-    if (Riiablo.files.skills.get(request.skillId()) == null) {
+    if (Riiablo.files.skills.get(request.skillId) == null) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
-          + " skill=" + request.skillId() + " reason=unknown_skill");
+          + " skill=" + request.skillId + " reason=unknown_skill");
       return;
     }
     com.riiablo.engine.server.component.Player playerComponent =
@@ -1680,40 +1734,49 @@ public class D2GS extends ApplicationAdapter {
     // legitimately report zero for getSkill(attack) until their local item
     // listeners have rebuilt the derived skill map.  Keep the server
     // authoritative, but accept this built-in action explicitly.
-    boolean builtInSkill = request.skillId() == com.riiablo.skill.SkillCodes.attack;
+    boolean builtInSkill = request.skillId == com.riiablo.skill.SkillCodes.attack;
     if (playerComponent == null || playerComponent.data == null
-        || (!builtInSkill && playerComponent.data.getSkill(request.skillId()) <= 0)) {
+        || (!builtInSkill && playerComponent.data.getSkill(request.skillId) <= 0)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
-          + " skill=" + request.skillId() + " reason=skill_not_owned");
+          + " skill=" + request.skillId + " reason=skill_not_owned");
       return;
     }
-    float x = request.targetX();
-    float y = request.targetY();
+    float x = request.targetX;
+    float y = request.targetY;
     if (!Float.isFinite(x) || !Float.isFinite(y)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
-          + " skill=" + request.skillId() + " reason=invalid_target_position");
+          + " skill=" + request.skillId + " reason=invalid_target_position");
+      return;
+    }
+    CombatPositionHistory.Snapshot attackerSnapshot =
+        combatPositionHistory.snapshot(entityId, snapshotTick);
+    if (attackerSnapshot == null) {
+      Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
+          + " skill=" + request.skillId + " reason=attacker_snapshot_missing tick="
+          + snapshotTick);
       return;
     }
     if (targetId != Engine.INVALID_ENTITY) {
-      com.riiablo.engine.server.component.Position targetPosition = world.getMapper(
-          com.riiablo.engine.server.component.Position.class).get(targetId);
-      if (targetPosition == null) {
+      CombatPositionHistory.Snapshot targetSnapshot =
+          combatPositionHistory.snapshot(targetId, snapshotTick);
+      if (targetSnapshot == null) {
         Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
-            + " skill=" + request.skillId() + " reason=target_has_no_position");
+            + " skill=" + request.skillId + " reason=target_snapshot_missing tick="
+            + snapshotTick);
         return;
       }
       // Never trust a client-supplied aim point for an entity target.
-      x = targetPosition.position.x;
-      y = targetPosition.position.y;
+      x = targetSnapshot.x;
+      y = targetSnapshot.y;
     }
-    Vector2 playerPosition = world.getMapper(
-        com.riiablo.engine.server.component.Position.class).get(entityId).position;
-    if (playerPosition.dst2(x, y) > 2500f) {
+    float dx = attackerSnapshot.x - x;
+    float dy = attackerSnapshot.y - y;
+    if (dx * dx + dy * dy > 2500f) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
-          + " skill=" + request.skillId() + " reason=target_position_out_of_bounds");
+          + " skill=" + request.skillId + " reason=target_position_out_of_bounds");
       return;
     }
-    if (request.skillId() == com.riiablo.skill.SkillCodes.attack
+    if (request.skillId == com.riiablo.skill.SkillCodes.attack
         && targetId != Engine.INVALID_ENTITY) {
       com.riiablo.item.Item weapon = playerComponent.data.getItems().getEquipped(
           com.riiablo.item.BodyLoc.RARM);
@@ -1724,17 +1787,20 @@ public class D2GS extends ApplicationAdapter {
           && (weapon.type.is(com.riiablo.item.Type.BOW)
               || weapon.type.is(com.riiablo.item.Type.XBOW));
       if (!rangedWeapon && !world.getSystem(Actioneer.class)
-          .isInMeleeRange(entityId, targetId, 3)) {
+          .isInMeleeRangeAtTick(entityId, targetId, 3, snapshotTick)) {
         Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
-            + " skill=" + request.skillId() + " reason=melee_out_of_range target=" + targetId);
+            + " skill=" + request.skillId + " reason=melee_out_of_range target=" + targetId
+            + " tick=" + snapshotTick);
         return;
       }
     }
     Gdx.app.log(TAG, String.format(
-        "[NET_CAST] phase=accept player=%d skill=%d target=%d targetPos=(%.2f,%.2f)",
-        entityId, request.skillId(), targetId, x, y));
+        "[NET_CAST] phase=accept connection=%d player=%d skill=%d target=%d "
+            + "targetPos=(%.2f,%.2f) sequence=%d snapshotTick=%d",
+        connectionId, entityId, request.skillId, targetId, x, y,
+        request.sequence, snapshotTick));
     Actioneer actioneer = world.getSystem(Actioneer.class);
-    actioneer.cast(entityId, request.skillId(), targetId, new Vector2(x, y));
+    actioneer.castAtTick(entityId, request.skillId, targetId, new Vector2(x, y), snapshotTick);
     com.riiablo.engine.server.component.CofReference cof = world.getMapper(
         com.riiablo.engine.server.component.CofReference.class).get(entityId);
     com.riiablo.engine.server.component.AnimData anim = world.getMapper(

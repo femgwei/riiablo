@@ -100,6 +100,8 @@ import com.riiablo.engine.server.AIStepper;
 import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.RoomEntityTrackingSystem;
 import com.riiablo.engine.server.Actioneer;
+import com.riiablo.engine.server.combat.CombatPositionCaptureSystem;
+import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.AngularVelocity;
 import com.riiablo.engine.server.AnimDataResolver;
 import com.riiablo.engine.server.AnimStepper;
@@ -674,6 +676,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     factory = new ClientEntityFactory();
     itemController = socket == null ? new ClientItemManager() : new NetworkedClientItemManager();
 
+    CombatPositionHistory combatPositionHistory = new CombatPositionHistory(map);
     WorldConfiguration config = getWorldConfiguration();
     config
         .register("iso", iso)
@@ -682,6 +685,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("factory", factory)
         .register("itemController", itemController)
         .register("partyManager", partyManager)
+        .register("combatPositionHistory", combatPositionHistory)
         .register("batch", Riiablo.batch)
         .register("shapes", Riiablo.shapes)
         .register("stage", stage)
@@ -742,6 +746,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   protected WorldConfigurationBuilder getWorldConfigurationBuilder() {
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
+        // Must precede input, AI and animation keyframes in every fixed tick.
+        .with(new CombatPositionCaptureSystem())
         .with(new NetworkIdManager())
         .with(new EventSystem())
         .with(new TagManager())

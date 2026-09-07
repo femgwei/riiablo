@@ -40,6 +40,7 @@ import com.riiablo.profiler.ProfilerSystem;
 import com.riiablo.save.ItemController;
 import com.riiablo.skill.SkillCodes;
 
+@Wire(failOnNull = false)
 public class CursorMovementSystem extends BaseSystem {
   private static final String TAG = "CursorMovementSystem";
 
@@ -57,6 +58,7 @@ public class CursorMovementSystem extends BaseSystem {
   protected ProfilerSystem profiler;
   protected Actioneer actioneer;
   protected DeathHandler deathHandler;
+  protected ClientNetworkReceiver networkReceiver;
 
   @Wire(name = "iso")
   protected IsometricCamera iso;
@@ -264,7 +266,10 @@ public class CursorMovementSystem extends BaseSystem {
     if (targetId != Engine.INVALID_ENTITY && mNetworked.has(targetId)) {
       targetServerId = mNetworked.get(targetId).serverId;
     }
-    NetworkedActionSender.cast(socket, skillId, targetServerId, targetVec);
+    long observedTick = networkReceiver == null ? 0L : networkReceiver.latestServerTick();
+    long targetTick = observedTick == 0L ? 0L : observedTick + 2L;
+    NetworkedActionSender.cast(socket, skillId, targetServerId, targetVec,
+        NetworkedActionSender.nextCombatSequence(), observedTick, targetTick);
   }
 
   /** Returns whether a new cast may be submitted this frame. */

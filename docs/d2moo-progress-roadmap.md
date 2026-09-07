@@ -309,7 +309,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - ACK 只在意图实际应用或拒绝后发布；重复目标不重复寻路。生产模式拒绝客户端 `EntitySync` 绝对 Position/Velocity/COF 上传，旧直传仅保留为显式开启的 headless 测试桥。
   - 双客户端真实协议门槛验证目标 tick、序号 1/3 跳跃、非法远距拒绝、冲突重传和旧绝对坐标拒绝；1.10f 资源下通过。1×1 真实隐藏营地三个生产渲染帧继续通过。
 
-下一项建议进入 **近战攻击 tick 位置快照与原生 hitbox**：由权威模拟在攻击起手/命中关键帧保存攻击者和目标的位置、footprint、攻击 tick，统一 `UNITS_IsInMeleeRange` 的子格距离规则；普通攻击、怪物攻击及多段近战都只能消费对应 tick 快照，不得读取客户端预测或渲染插值坐标，并补目标在起手和命中间移动、边缘距离及双客户端一致性回归。
+- [x] ~~完成近战攻击 tick 位置快照与原生 hitbox 第一阶段~~
+  - 一比一移植 D2Common `D2Common_10399` 的 64 项小距离查表、Size 1/2/3 footprint 修正和大距离近似；玩家武器使用 `Weapons.RangeAdder`，怪物兼容 `MonStats2.MeleeRng=255` 的 2HT 特例。
+  - 本地和 D2GS 每个 25Hz 权威 tick 在输入、AI 与动画关键帧前冻结实体整数子格坐标、Size、Zone 和 Room；普通攻击、Frenzy、Fury、Dragon Talon/Claw/Tail 等共享近战链只读取起手指定 tick，历史缺帧明确拒绝，不回退到客户端预测、渲染插值或当前实时位置。
+  - `CastSkillRequest` 兼容追加 sequence、observedServerTick 和 targetTick；D2GS 按目标 tick 排队，支持精确重传幂等、同序号冲突拒绝及未来/迟到窗口，并从历史帧解析实体目标坐标。`PLAYER_FLYING` 地图射线同步接入 DT1 missile barrier 与动态门引用层，普通固体对象不再错误阻挡近战射线。
+  - 原生距离、位置历史、攻击起手后目标移动、协议幂等、地图/动态门碰撞及 Amazon/Assassin/Barbarian/Druid 多段近战集中回归通过；1.10f 双客户端真实 Fallen 死亡、Shaman 复活、复活无奖励、原生 NoDrop 与跨客户端拾取闭环通过。真实 1×1 隐藏营地三个渲染帧通过，并修复本地模式可选网络时钟接线和 headless 观察点超出 Shaman AiDist 的测试缺陷。
+
+下一项建议进入 **多人战斗意图 ACK、拒绝结果与客户端动作校正**：为服务端已具备的 combat sequence/幂等缓存补正式结果包，返回 applied tick、接受/拒绝原因及权威目标；客户端据此清理待确认施法、撤销被拒绝的攻击动画/目标，并验证重传不会重复扣法力、弹药、耐久或造成二次伤害。
 
 ## 记录规则
 

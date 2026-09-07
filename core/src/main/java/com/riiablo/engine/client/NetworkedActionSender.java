@@ -18,17 +18,23 @@ import java.nio.channels.WritableByteChannel;
 public final class NetworkedActionSender {
   private static final String TAG = "NetworkedActionSender";
   private static final AtomicLong REQUEST_IDS = new AtomicLong(1);
+  private static final AtomicLong COMBAT_SEQUENCES = new AtomicLong(1);
 
   private NetworkedActionSender() {}
 
   public static boolean cast(Socket socket, int skillId, int targetServerId, Vector2 target) {
+    return cast(socket, skillId, targetServerId, target, 0L, 0L, 0L);
+  }
+
+  public static boolean cast(Socket socket, int skillId, int targetServerId, Vector2 target,
+      long sequence, long observedServerTick, long targetTick) {
     if (socket == null || target == null || !Float.isFinite(target.x) || !Float.isFinite(target.y)) {
       return false;
     }
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
     int request = CastSkillRequest.createCastSkillRequest(
         builder, Math.max(0, Math.min(0xFFFF, skillId)), targetServerId,
-        target.x, target.y);
+        target.x, target.y, sequence, observedServerTick, targetTick);
     int root = D2GS.createD2GS(builder, D2GSData.CastSkillRequest, request);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     try {
@@ -36,13 +42,20 @@ public final class NetworkedActionSender {
       WritableByteChannel channel = Channels.newChannel(output);
       channel.write(builder.dataBuffer());
       Gdx.app.log(TAG, String.format(
-          "[NET_CAST] phase=send skill=%d target=%d targetPos=(%.2f,%.2f)",
-          skillId, targetServerId, target.x, target.y));
+          "[NET_CAST] phase=send skill=%d target=%d targetPos=(%.2f,%.2f) sequence=%d "
+              + "observedTick=%d targetTick=%d",
+          skillId, targetServerId, target.x, target.y,
+          sequence, observedServerTick, targetTick));
       return true;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "[NET_CAST] phase=send_failed skill=" + skillId, t);
       return false;
     }
+  }
+
+  public static long nextCombatSequence() {
+    long sequence = COMBAT_SEQUENCES.getAndIncrement();
+    return sequence > 0L ? sequence : 1L;
   }
 
   /** Sends allocation intent only; the server owns validation and mutation. */

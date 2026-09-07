@@ -15,6 +15,8 @@ public class Casting extends PooledComponent {
   @EntityId
   public int targetId;
   public final Vector2 targetVec = new Vector2();
+  /** Authoritative 25 Hz position frame frozen for this cast/attack. */
+  public long positionSnapshotTick;
   /** Server-only state for native Dragon Talon SrvSt24/SrvDo042 chaining. */
   public int dragonTalonRemainingKicks;
   public int dragonTalonSuccessfulKicks;
@@ -60,9 +62,15 @@ public class Casting extends PooledComponent {
   public boolean fireClawsPrepared;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
+    return set(skillId, targetId, targetVec, 0L);
+  }
+
+  public Casting set(int skillId, int targetId, Vector2 targetVec,
+      long positionSnapshotTick) {
     this.skillId = skillId;
     this.targetId = targetId;
     this.targetVec.set(targetVec);
+    this.positionSnapshotTick = positionSnapshotTick;
     dragonTalonRemainingKicks = 0;
     dragonTalonSuccessfulKicks = 0;
     dragonTalonInitialized = false;
@@ -105,6 +113,7 @@ public class Casting extends PooledComponent {
     skillId = -1;
     targetId = Engine.INVALID_ENTITY;
     targetVec.setZero();
+    positionSnapshotTick = 0L;
     dragonTalonRemainingKicks = 0;
     dragonTalonSuccessfulKicks = 0;
     dragonTalonInitialized = false;

@@ -95,6 +95,30 @@ class ObjectCollisionUpdaterTest {
     }
   }
 
+  @Test
+  void playerFlyingMaskIncludesClosedDoorsButNotOrdinaryObjects() {
+    Fixture fixture = new Fixture();
+    try {
+      Objects.Entry door = object(1, 1, true, false, false);
+      door.IsDoor = true;
+      int doorEntity = fixture.create(door, 3, 3, Engine.Object.MODE_NU);
+      fixture.create(object(1, 1, true, false, false), 7, 7, Engine.Object.MODE_NU);
+      fixture.world.process();
+
+      assertEquals(DT1.Tile.FLAG_BLOCK_JUMP,
+          fixture.map.playerFlyingFlags(3, 3) & DT1.Tile.FLAG_BLOCK_JUMP);
+      assertEquals(0,
+          fixture.map.playerFlyingFlags(7, 7) & DT1.Tile.FLAG_BLOCK_JUMP);
+
+      fixture.mode(doorEntity, Engine.Object.MODE_ON);
+      fixture.world.process();
+      assertEquals(0,
+          fixture.map.playerFlyingFlags(3, 3) & DT1.Tile.FLAG_BLOCK_JUMP);
+    } finally {
+      fixture.dispose();
+    }
+  }
+
   private static Objects.Entry object(int width, int height,
       boolean nu, boolean op, boolean on) {
     Objects.Entry row = new Objects.Entry();

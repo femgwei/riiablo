@@ -67,16 +67,16 @@ public class ObjectCollisionUpdater extends IteratingSystem {
     int x = position == null ? 0 : MathUtils.round(position.position.x - width / 2f);
     int y = position == null ? 0 : MathUtils.round(position.position.y - height / 2f);
     Footprint previous = footprints.get(entityId);
-    if (previous != null && previous.matches(zone, x, y, width, height, enabled)) return;
+    boolean door = base != null && base.IsDoor;
+    if (previous != null && previous.matches(zone, x, y, width, height, enabled, door)) return;
     if (previous != null) previous.remove();
 
-    if (enabled && zone != null && width > 0 && height > 0) {
-      Footprint next = new Footprint(zone, x, y, width, height);
-      next.add();
-      footprints.put(entityId, next);
-    } else {
-      footprints.remove(entityId);
-    }
+    // Cache both colliding and non-colliding modes. Without the latter every
+    // static decoration was treated as a state transition on every 25 Hz
+    // tick, flooding long-running headless tests with millions of lines.
+    Footprint next = new Footprint(zone, x, y, width, height, door, enabled);
+    if (enabled && zone != null && width > 0 && height > 0) next.add();
+    footprints.put(entityId, next);
     if (Gdx.app != null && (previous == null || previous.enabled != enabled || previous.zone != zone
         || previous.x != x || previous.y != y || previous.width != width
         || previous.height != height)) {
@@ -105,28 +105,34 @@ public class ObjectCollisionUpdater extends IteratingSystem {
     final int y;
     final int width;
     final int height;
-    final boolean enabled = true;
+    final boolean door;
+    final boolean enabled;
 
-    Footprint(Map.Zone zone, int x, int y, int width, int height) {
+    Footprint(Map.Zone zone, int x, int y, int width, int height,
+        boolean door, boolean enabled) {
       this.zone = zone;
       this.x = x;
       this.y = y;
       this.width = width;
       this.height = height;
+      this.door = door;
+      this.enabled = enabled;
     }
 
     boolean matches(Map.Zone zone, int x, int y, int width, int height,
-        boolean enabled) {
-      return enabled && this.zone == zone && this.x == x && this.y == y
-          && this.width == width && this.height == height;
+        boolean enabled, boolean door) {
+      return this.enabled == enabled && this.zone == zone && this.x == x && this.y == y
+          && this.width == width && this.height == height && this.door == door;
     }
 
     void add() {
-      zone.adjustObjectCollision(x, y, width, height, 1);
+      zone.adjustObjectCollision(x, y, width, height, 1, door);
     }
 
     void remove() {
-      zone.adjustObjectCollision(x, y, width, height, -1);
+      if (enabled && zone != null && width > 0 && height > 0) {
+        zone.adjustObjectCollision(x, y, width, height, -1, door);
+      }
     }
   }
 }

@@ -7,6 +7,9 @@ table CastSkillRequest {
   targetId:int32;
   targetX:float32;
   targetY:float32;
+  sequence:ulong;
+  observedServerTick:ulong;
+  targetTick:ulong;
 }
 
 // Changes the authoritative left/right action. Aura activation is derived

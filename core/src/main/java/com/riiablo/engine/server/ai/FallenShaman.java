@@ -162,8 +162,17 @@ public class FallenShaman extends AI {
       bestDistance2 = distance2;
       best = candidateId;
     }
-    log.debug("[MONSTER_RAISE] phase=search source={} range={} subscribed={} eligible={} selected={}",
-        entityId, maxRange, entities.size(), eligible, best);
+    if (best != Engine.INVALID_ENTITY) {
+      // Keep successful corpse discovery visible in ordinary server logs. It
+      // is infrequent (the AI sleeps between decisions) and is essential for
+      // separating an AI-selection failure from a later animation/keyframe or
+      // replication failure in real multiplayer sessions.
+      log.info("[MONSTER_RAISE] phase=search source={} range={} subscribed={} eligible={} selected={}",
+          entityId, maxRange, entities.size(), eligible, best);
+    } else {
+      log.debug("[MONSTER_RAISE] phase=search source={} range={} subscribed={} eligible={} selected={}",
+          entityId, maxRange, entities.size(), eligible, best);
+    }
     return best;
   }
 
@@ -329,8 +338,10 @@ public class FallenShaman extends AI {
           monster.monstats.Skill4, monster.monstats.Skill5, monster.monstats.Skill6,
           monster.monstats.Skill7, monster.monstats.Skill8);
     }
-    log.debug("[MONSTER_RAISE] phase=decision source={} target={} skillSlot={} roll={}",
-        entityId, corpseId, resurrectSkill + 1, resurrectionRoll);
+    if (corpseId != Engine.INVALID_ENTITY) {
+      log.info("[MONSTER_RAISE] phase=decision source={} target={} skillSlot={} roll={}",
+          entityId, corpseId, resurrectSkill + 1, resurrectionRoll);
+    }
     if (corpseId != Engine.INVALID_ENTITY && resurrectSkill >= 0 && resurrectionRoll) {
       if (useMonsterSkill(
           resurrectSkill, corpseId, mPosition.get(corpseId).position, SHAMAN_SEQUENCE_MODE)) {

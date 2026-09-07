@@ -65,7 +65,8 @@ class NetworkedCombatTransportTest extends RiiabloTest {
   @Test
   void castRequestCarriesOnlyClientIntent() {
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
-    int request = CastSkillRequest.createCastSkillRequest(builder, 2, 77, 12.5f, -3.25f);
+    int request = CastSkillRequest.createCastSkillRequest(
+        builder, 2, 77, 12.5f, -3.25f, 41L, 100L, 102L);
     int root = D2GS.createD2GS(builder, D2GSData.CastSkillRequest, request);
     D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     ByteBuffer data = builder.dataBuffer();
@@ -77,6 +78,9 @@ class NetworkedCombatTransportTest extends RiiabloTest {
     assertEquals(77, wire.targetId());
     assertEquals(12.5f, wire.targetX(), 0.001f);
     assertEquals(-3.25f, wire.targetY(), 0.001f);
+    assertEquals(41L, wire.sequence());
+    assertEquals(100L, wire.observedServerTick());
+    assertEquals(102L, wire.targetTick());
     System.out.println("[NET_CAST_CHAIN] skill=2 target=77 intentOnly=true status=PASS");
   }
 
