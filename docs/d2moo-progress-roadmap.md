@@ -265,7 +265,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 对照 D2MOO `SKILLS_SrvDo114_Raven`、`SKILLS_SrvDo115_Vines`、`SKILLS_SrvDo119_DruidSummon` 和 `PlayerPets.cpp`，接入召唤等级、PetMax、具体 PetType、非零 group 互斥替换、主人死亡/尸体标记清理、死亡动画宽限、地图切换 warp 标志和多人实体归属。
   - `SummonedPetSystemTest`、`NativeDruidSummonDataTest`、`DruidSummonIntegrationTest` 以及全部 `*Druid*Test` 通过；1×1 真实隐藏营地测试 `:desktop:offscreenCamp` 使用 Diablo II 1.10f 资源通过。
 
-下一项建议进入 **固定 25Hz 权威 Sim Tick 基础设施**：先迁移 D2GS 服务端，保留网络线程只入队、模拟线程独占 ECS，再补快照和时间注入测试；不要与职业技能公式改动混提交。
+- [x] ~~完成固定 25Hz 权威 Sim Tick 第一阶段~~
+  - D2GS 三个服务入口统一使用 `AuthoritativeSimulation`，固定 `Animation.FRAME_DURATION=0.04s`，按“网络入站 → ECS 单帧 → 网络出站”顺序处理。
+  - 首次 tick 绑定唯一写线程；跨线程调用直接拒绝，tick 序号、实际步长和写线程可被集成测试读取。
+  - 新增 `AuthoritativeSimulationTest`，真实 `headlessSimulationTick` 协议测试在 1.10f 资源下通过（1.2 秒内 31 帧、步长 0.04s、写线程稳定）；1×1 真实隐藏营地测试继续通过。
+  - 本阶段没有把本地单人 `GameScreen.render()` 改成独立模拟线程；迁移渲染线程逻辑需要单独处理 LibGDX/Artemis 上下文。
+
+下一项建议进入 **固定 Sim Tick 的快照/时间注入与客户端观测**：为网络快照记录 tick 序号和服务器时间，补多客户端顺序一致性测试；随后再评估本地 `GameScreen` 与服务端权威时钟的解耦，不要直接把 ECS 搬到渲染线程之外。
 
 ## 记录规则
 

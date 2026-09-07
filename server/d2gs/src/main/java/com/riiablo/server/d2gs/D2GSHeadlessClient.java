@@ -135,6 +135,10 @@ public final class D2GSHeadlessClient {
            OutputStream output = new BufferedOutputStream(socket.getOutputStream())) {
         send(output, connectionPacket(character, d2s));
         awaitConnection(input, System.currentTimeMillis() + config.testTimeoutMillis);
+        if (config.requireSimulationTick) {
+          verifySimulationTick();
+          return;
+        }
         if (config.requirePeer) verifyPeerVisibility(character, d2s, input, output);
 
         Snapshot target = awaitTarget(input, System.currentTimeMillis() + config.testTimeoutMillis);
@@ -165,6 +169,36 @@ public final class D2GSHeadlessClient {
             result == null ? 0f : result.life, damaged, sawAttackMode, playerMissiles.size()));
       }
     }
+  }
+
+  private void verifySimulationTick() throws Exception {
+    if (config.home == null) {
+      throw new IllegalArgumentException(
+          "--require-sim-tick requires an embedded D2GS started with --home");
+    }
+    long[] before = D2GS.headlessSimulationState();
+    Thread.sleep(1_200L);
+    long[] after = D2GS.headlessSimulationState();
+    long advanced = after[0] - before[0];
+    float step = Float.intBitsToFloat((int) after[2]);
+    // The headless backend targets 25 Hz. Keep the wall-clock tolerance broad
+    // enough for loaded CI hosts while still rejecting an unbounded render loop
+    // or a stalled simulation.
+    if (before[0] <= 0L || advanced < 15L || advanced > 45L) {
+      throw new IllegalStateException("authoritative simulation cadence invalid: ticks="
+          + before[0] + "->" + after[0] + " advanced=" + advanced);
+    }
+    if (before[1] < 0L || before[1] != after[1]) {
+      throw new IllegalStateException("authoritative simulation writer changed: thread="
+          + before[1] + "->" + after[1]);
+    }
+    if (Float.floatToIntBits(step)
+        != Float.floatToIntBits(com.riiablo.engine.server.AuthoritativeSimulation.STEP_SECONDS)) {
+      throw new IllegalStateException("authoritative simulation step changed: " + step);
+    }
+    log("sim_tick_pass", "player=" + playerId + " ticks=" + before[0] + "->"
+        + after[0] + " advanced=" + advanced + " step=" + step
+        + " writerThreadId=" + after[1]);
   }
 
   /**
@@ -1648,6 +1682,7 @@ public final class D2GSHeadlessClient {
     boolean requireMissile;
     boolean requirePeer;
     boolean requireMonsterMovement;
+    boolean requireSimulationTick;
     boolean requireFallenScenario;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -1674,6 +1709,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-missile".equals(arg)) config.requireMissile = true;
         else if ("--require-peer".equals(arg)) config.requirePeer = true;
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
+        else if ("--require-sim-tick".equals(arg)) config.requireSimulationTick = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -1730,7 +1766,8 @@ public final class D2GSHeadlessClient {
     private static void usage() {
       System.out.println("Usage: D2GSHeadlessClient [--home <D2 dir>] [--save <file.d2s>]"
           + " [--generated-amazon] [--host 127.0.0.1] [--port 6114]"
-          + " [--skill 0] [--require-missile] [--require-fallen-scenario] [--attempts 20]");
+          + " [--skill 0] [--require-missile] [--require-sim-tick]"
+          + " [--require-fallen-scenario] [--attempts 20]");
     }
   }
 }

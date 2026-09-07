@@ -69,6 +69,7 @@ import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.AnimDataResolver;
+import com.riiablo.engine.server.AuthoritativeSimulation;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.DeathRewardSystem;
 import com.riiablo.engine.server.ItemInteractor;
@@ -171,6 +172,18 @@ import com.riiablo.util.DebugUtils;
 public class D2GS extends ApplicationAdapter {
   /** Embedded headless verification hook; normal dedicated-server clients never use it. */
   static volatile D2GS activeHeadlessInstance;
+
+  /** Stable, read-only diagnostics for the embedded fixed-tick integration gate. */
+  static long[] headlessSimulationState() {
+    D2GS server = activeHeadlessInstance;
+    AuthoritativeSimulation simulation = server == null ? null : server.simulation;
+    Thread owner = simulation == null ? null : simulation.ownerThread();
+    return new long[] {
+        simulation == null ? 0L : simulation.tickNumber(),
+        owner == null ? -1L : owner.getId(),
+        Float.floatToIntBits(simulation == null ? 0f : simulation.lastStepSeconds())
+    };
+  }
 
   static Vector2 headlessLevelPosition(int levelId) {
     D2GS server = activeHeadlessInstance;
@@ -800,7 +813,7 @@ public class D2GS extends ApplicationAdapter {
     }
 
     HeadlessApplicationConfiguration config = new HeadlessApplicationConfiguration();
-    config.updatesPerSecond = (int) Animation.FRAMES_PER_SECOND;
+    config.updatesPerSecond = AuthoritativeSimulation.TICKS_PER_SECOND;
     new HeadlessApplication(new D2GS(home, seed, diff), config);
   }
 
@@ -827,6 +840,7 @@ public class D2GS extends ApplicationAdapter {
   int diff;
 
   World world;
+  AuthoritativeSimulation simulation;
   Map map;
 
   EntityFactory factory;
@@ -990,6 +1004,7 @@ public class D2GS extends ApplicationAdapter {
 
     mNetworked = world.getMapper(Networked.class);
     world.delta = Animation.FRAME_DURATION;
+    simulation = new AuthoritativeSimulation(world);
 
     clientThreads = new ThreadGroup("D2GSClients");
 
@@ -1074,6 +1089,10 @@ public class D2GS extends ApplicationAdapter {
 
   @Override
   public void render() {
+    simulation.tick(this::applyIncomingPackets, this::dispatchOutgoingPackets);
+  }
+
+  private void applyIncomingPackets() {
     cache.clear();
     int cached = packets.drainTo(cache);
     if (DEBUG_RECEIVED_CACHE && cached > 0) Gdx.app.log(TAG, "processing " + cached + " packets");
@@ -1081,9 +1100,9 @@ public class D2GS extends ApplicationAdapter {
       if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) Gdx.app.log(TAG, "processing " + D2GSData.name(packet.data.dataType()) + " packet from " + packet.id);
       process(packet);
     }
+  }
 
-    world.process();
-
+  private void dispatchOutgoingPackets() {
     cache.clear();
     outPackets.drainTo(cache);
     for (Packet packet : cache) {

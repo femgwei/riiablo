@@ -42,6 +42,7 @@ import com.riiablo.engine.server.AIStepper;
 import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.RoomEntityTrackingSystem;
 import com.riiablo.engine.server.AnimDataResolver;
+import com.riiablo.engine.server.AuthoritativeSimulation;
 import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.ItemInteractor;
 import com.riiablo.engine.server.ItemManager;
@@ -123,7 +124,7 @@ public class Main extends ApplicationAdapter {
     }
 
     HeadlessApplicationConfiguration config = new HeadlessApplicationConfiguration();
-    config.updatesPerSecond = (int) Animation.FRAMES_PER_SECOND;
+    config.updatesPerSecond = AuthoritativeSimulation.TICKS_PER_SECOND;
     new HeadlessApplication(new Main(home, seed, diff), config);
   }
 
@@ -138,6 +139,7 @@ public class Main extends ApplicationAdapter {
   D2GSPacketProcessor packetProcessor;
 
   World world;
+  AuthoritativeSimulation simulation;
   Map map;
 
   EntityFactory factory;
@@ -250,6 +252,7 @@ public class Main extends ApplicationAdapter {
     mapManager.createEntities();
 
     world.delta = Animation.FRAME_DURATION;
+    simulation = new AuthoritativeSimulation(world);
 
     kill = new AtomicBoolean(false);
     cli = createCLI();
@@ -289,10 +292,15 @@ public class Main extends ApplicationAdapter {
 
   @Override
   public void render() {
-    final float delta = Gdx.graphics.getDeltaTime();
-    server.updateIncoming(delta);
-    world.process();
-    server.updateOutgoing(delta);
+    simulation.tick(this::applyIncomingPackets, this::dispatchOutgoingPackets);
+  }
+
+  private void applyIncomingPackets() {
+    server.updateIncoming(AuthoritativeSimulation.STEP_SECONDS);
+  }
+
+  private void dispatchOutgoingPackets() {
+    server.updateOutgoing(AuthoritativeSimulation.STEP_SECONDS);
   }
 
   private InetAddress getLocalHostAddress() {

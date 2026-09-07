@@ -34,6 +34,18 @@ tasks.register('headlessCombat', JavaExec) {
   }
 }
 
+tasks.register('headlessSimulationTick', JavaExec) {
+  group = 'verification'
+  description = 'Runs a real protocol client against the fixed 25 Hz single-writer D2GS loop.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-sim-tick', '--test-timeout', '20'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessMissileCombat', JavaExec) {
   group = 'verification'
   description = 'Runs a generated Amazon Throw through D2GS missile sync and collision.'
