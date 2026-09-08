@@ -57,6 +57,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.codec.excel.Speech;
 import com.riiablo.codec.excel.Shrines;
+import com.riiablo.codec.excel.States;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.codec.excel.TreasureClassEx;
 import com.riiablo.codec.excel.UniqueItems;
@@ -130,6 +131,8 @@ public class Files {
   public final SkillDesc        skilldesc;
   public final Sounds           Sounds;
   public final Shrines          Shrines;
+  /** Lossless 1.10f States.txt projection; runtime migration is intentionally incremental. */
+  public final States           States;
   public final SuperUniques     SuperUniques;
   public final TreasureClassEx  TreasureClassEx;
   public final UniqueItems      UniqueItems;
@@ -199,6 +202,8 @@ public class Files {
     skilldesc        = load(SkillDesc.class);
     Sounds           = load(Sounds.class);
     Shrines          = load(Shrines.class);
+    States           = com.riiablo.codec.excel.States.load(
+        Riiablo.mpqs.resolve(EXCEL_PATH + "States.txt"));
     SuperUniques     = load(SuperUniques.class, Excel.EXPANSION);
     TreasureClassEx  = load(TreasureClassEx.class, Excel.EXPANSION);
     UniqueItems      = load(UniqueItems.class, Excel.EXPANSION);

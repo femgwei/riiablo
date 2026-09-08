@@ -78,11 +78,16 @@
 否则只能标记为“部分完成”。`libd2` / `dark-magic` 的 1.14d 数据只能参考解析结构和
 测试方法，不能作为 1.10f 数值真值。
 
-- [ ] **P0-1 无损 TXT 数据层与 1.10f 五表对照（约 60%）**
-  - 已加载 `ItemStatCost/Skills/Missiles/MonStats`，但 `States.txt` 尚未建模；旧解析器会
-    跳过列数不一致的行和 `Expansion` 行，也没有逐表、逐行、逐列差异报告。
-  - 下一步：实现按列名访问、短行补空、保留原始行的无损读取器；接入 `States.txt`；
-    对固定导出的 1.10f `ItemStatCost/States/Skills/Missiles/MonStats` 建立 golden 对照。
+- [ ] **P0-1 无损 TXT 数据层与 1.10f 五表对照（约 70%）**
+  - 已完成独立于旧 `TxtParser` 的无损读取器：保留空字段、重复/空列、短行、超额列、
+    空行、`Expansion`、原始行和源行号；支持 D2 布尔值及完整 uint32 十六进制读取。
+  - 已按 D2MOO `DATATBLS_LoadStatesTxt` 接入 1.10f `States.txt` 的 40 个状态标志、死亡
+    保留字段、overlay/stat/function/link 字段；暂不改变运行时 State 行为。
+  - 已对本机原始 1.10f MPQ 的 `ItemStatCost/States/Skills/Missiles/MonStats` 固定行列数、
+    原始 SHA-256、header SHA-256 与逐字段语义 SHA-256；测试不提交原版 TXT 内容，其他
+    环境通过 `D2_110F_HOME` 可复验相同资源。
+  - 待补：把其余四张核心表从旧 Excel 投影逐步迁到无损 schema，并生成按表/行/列定位
+    的 schema 投影差异报告；完成后才可关闭 P0-1。
 - [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 55%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
@@ -250,6 +255,8 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
 
 ## 已完成记录
 
+- 2026-09-08：完成 P0-1 第一阶段；新增无损 TXT、稳定字段差异和不可逆摘要工具，按
+  D2MOO 1.10f 字段接入 `States.txt`，并以完整 1.10f MPQ 固定五张核心表 golden manifest。
 - 2026-09-02：为 `ItemData.updateStats` 和 `CharData.onUpdated` 增加不完整物品/角色记录保护；
   `NativeGemShrineServiceTest` 及地图、神殿、Fallen Shaman、双客户端掉落回归集合全部通过。
 - 2026-09-02：完成 P1 原生物品生成首项；新增纯数据和真实 Excel/MPQ 双层测试，物品、掉落、修理、交易与 Countess 回归共 35 个用例通过。
