@@ -2922,10 +2922,13 @@ public class Actioneer extends PassiveSystem {
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
       int physical = resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
           Stat.damageresist, -1);
-      int fire = resistedDamage(rawFire, targetAttrs, stateList(targetId),
-          Stat.fireresist, 0);
+      CombatSystem.CombatResult fireResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+          targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
+          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), 0);
+      int fire = fireResult.elementalDamage[CombatSystem.DAMAGE_FIRE];
+      applyElementalAbsorb(targetAttrs, fireResult, 1f);
       float damage = physical + fire;
-      if (damage <= 0f) continue;
+      if (damage <= 0f && fireResult.absorbedLife <= 0) continue;
       DamageEvent event = DamageEvent.obtain(sourceId, targetId, damage);
       events.dispatch(event);
       float applied = Math.max(0f, event.damage);
@@ -3137,10 +3140,13 @@ public class Actioneer extends PassiveSystem {
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
       int physical = resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
           Stat.damageresist, -1);
-      int cold = resistedDamage(rawCold, targetAttrs, stateList(targetId),
-          Stat.coldresist, 1);
+      CombatSystem.CombatResult coldResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+          targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
+          CombatSystem.DAMAGE_COLD, rawCold, 0, stateList(targetId), 0);
+      int cold = coldResult.elementalDamage[CombatSystem.DAMAGE_COLD];
+      applyElementalAbsorb(targetAttrs, coldResult, 1f);
       float damage = physical + cold;
-      if (damage <= 0f) continue;
+      if (damage <= 0f && coldResult.absorbedLife <= 0) continue;
       DamageEvent event = DamageEvent.obtain(sourceId, targetId, damage);
       events.dispatch(event);
       float applied = Math.max(0f, event.damage);
@@ -3352,14 +3358,17 @@ public class Actioneer extends PassiveSystem {
       if (targetId == sourceId || !isValidFistsTarget(sourceId, targetId)) continue;
       if (mPosition.get(targetId).position.dst2(origin) > radius * radius) continue;
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
-      int fire = resistedDamage(rawFire, targetAttrs, stateList(targetId),
-          Stat.fireresist, 0);
-      if (fire <= 0) continue;
+      CombatSystem.CombatResult fireResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+          targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
+          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), 0);
+      int fire = fireResult.elementalDamage[CombatSystem.DAMAGE_FIRE];
+      applyElementalAbsorb(targetAttrs, fireResult, 1f);
+      if (fire <= 0 && fireResult.absorbedLife <= 0) continue;
       DamageEvent event = DamageEvent.obtain(sourceId, targetId, fire);
       events.dispatch(event);
       float applied = Math.max(0f, event.damage);
       StatRef hp = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
-      if (hp == null || applied <= 0f) continue;
+      if (hp == null || (applied <= 0f && fireResult.absorbedLife <= 0)) continue;
       hp.sub(applied);
       if (hp.asFixed() <= 0f) {
         hp.set(0f);

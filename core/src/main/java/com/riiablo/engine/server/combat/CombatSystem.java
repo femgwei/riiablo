@@ -514,6 +514,62 @@ public class CombatSystem {
         difficulty);
   }
 
+  /** Resolves a fixed elemental packet for area effects that have no missile
+   *  entity. This keeps hand-written skill explosions on the same native
+   *  resistance/absorb/PvP chain as regular attacks.
+   */
+  public CombatResult calculateFixedElementalDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamage, int piercePercent,
+      StateList defenderStates, int difficulty) {
+    CombatResult result = new CombatResult();
+    result.reset();
+    if (defender == null || damageType <= DAMAGE_PHYSICAL
+        || damageType >= DAMAGE_TYPE_COUNT || rawDamage <= 0) return result;
+
+    DefenderData d = new DefenderData();
+    d.isPlayer = defenderPlayer;
+    d.isMonster = !defenderPlayer;
+    d.resistances[DAMAGE_FIRE] = statInt(defender, Stat.fireresist, 0);
+    d.resistances[DAMAGE_LIGHTNING] = statInt(defender, Stat.lightresist, 0);
+    d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
+    d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
+    d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
+    int penalty = defenderPlayer ? MonsterUtil.getResistancePenalty(difficulty) : 0;
+    for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) d.resistances[i] += penalty;
+    d.maxResistances[DAMAGE_FIRE] = 75 + statInt(defender, Stat.maxfireresist, 0);
+    d.maxResistances[DAMAGE_LIGHTNING] = 75 + statInt(defender, Stat.maxlightresist, 0);
+    d.maxResistances[DAMAGE_COLD] = 75 + statInt(defender, Stat.maxcoldresist, 0);
+    d.maxResistances[DAMAGE_POISON] = 75 + statInt(defender, Stat.maxpoisonresist, 0);
+    d.maxResistances[DAMAGE_MAGIC] = 75 + statInt(defender, Stat.maxmagicresist, 0);
+    d.absorbPercent[DAMAGE_FIRE] = statInt(defender, Stat.item_absorbfire_percent, 0);
+    d.absorbPercent[DAMAGE_LIGHTNING] = statInt(defender, Stat.item_absorblight_percent, 0);
+    d.absorbPercent[DAMAGE_COLD] = statInt(defender, Stat.item_absorbcold_percent, 0);
+    d.absorbPercent[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic_percent, 0);
+    d.absorbFlat[DAMAGE_FIRE] = statInt(defender, Stat.item_absorbfire, 0);
+    d.absorbFlat[DAMAGE_LIGHTNING] = statInt(defender, Stat.item_absorblight, 0);
+    d.absorbFlat[DAMAGE_COLD] = statInt(defender, Stat.item_absorbcold, 0);
+    d.absorbFlat[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic, 0);
+    if (defenderStates != null) {
+      d.resistances[DAMAGE_FIRE] += defenderStates.getTotalResistModifier(0);
+      d.resistances[DAMAGE_COLD] += defenderStates.getTotalResistModifier(1);
+      d.resistances[DAMAGE_LIGHTNING] += defenderStates.getTotalResistModifier(2);
+      d.resistances[DAMAGE_POISON] += defenderStates.getTotalResistModifier(3);
+      d.resistances[DAMAGE_MAGIC] += defenderStates.getTotalResistModifier(4);
+    }
+    d.immuneElemental[damageType] = d.resistances[damageType] >= 100;
+    int reduced = applyElementalResistance(rawDamage, d, damageType, piercePercent);
+    int absorbed = absorbElementalDamage(reduced, d, damageType);
+    int finalDamage = reduced - absorbed;
+    if (attackerPlayer && defenderPlayer) finalDamage = finalDamage * PVP_DAMAGE_PERCENT / 100;
+    result.hit = true;
+    result.hitChance = 100;
+    result.elementalDamage[damageType] = Math.max(0, finalDamage);
+    result.absorbedLife = absorbed;
+    result.totalDamage = result.elementalDamage[damageType];
+    return result;
+  }
+
   /**
    * Resolves a melee attack whose physical min/max were already fully scaled
    * by a native skill formula (for example Assassin kick damage).

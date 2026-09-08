@@ -290,6 +290,22 @@ public class CombatSystemTest extends RiiabloTest {
     assertEquals(1, result.absorbedLife);
   }
 
+  @Test
+  public void fixedElementalAreaDamageUsesSameAbsorbAndPvpChain() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.fireresist, 50);
+    defender.base().put(Stat.item_absorbfire_percent, 20);
+    defender.reset();
+
+    CombatSystem.CombatResult result = combat.calculateFixedElementalDamage(
+        defender, true, true, CombatSystem.DAMAGE_FIRE, 100, 0, null, 0);
+    // 100 -> 50 after resistance -> 40 after absorb; PvP scalar is applied
+    // after absorb, matching the regular attack resolver.
+    assertEquals(6, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(10, result.absorbedLife);
+    assertEquals(6, result.totalDamage);
+  }
+
   private static Attributes attrs(int hp, int level, int defense,
       int minDamage, int maxDamage, int attackRating) {
     Attributes attrs = Attributes.obtainStandard();
