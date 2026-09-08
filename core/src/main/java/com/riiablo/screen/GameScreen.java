@@ -763,6 +763,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new KeyboardMovementSystem()); // 键盘方向键移动支持
     }
     builder
+        // Explicit native 25 Hz order: state/stat decay, missile movement and
+        // collision, then unit/AI behavior and death processing.
+        .with(new StateUpdater())
+        .with(new MissileCollisionSystem())
         .with(new Actioneer()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.server.ServerMonsterCorpseSystem())
         .with(new com.riiablo.engine.server.UnitLifecycleSystem())
@@ -844,8 +848,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new Box2DPhysics(SimulationClock.STEP_SECONDS))
         .with(new Box2DSynchronizerPost())
 
-        .with(new MissileCollisionSystem()) // 处理导弹的碰撞和伤害
-        .with(new StateUpdater())
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
         .with(new ExperienceManager())
         .with(new PlayerCorpseRetrievalSystem())

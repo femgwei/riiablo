@@ -1643,6 +1643,10 @@ public class D2GS extends ApplicationAdapter {
         .with(new NativeTrapSystem())
         .with(new NativeTrapFireSystem())
 
+        // Native 25 Hz phase order: state/stat decay first, then projectile
+        // movement and collision, then unit/AI behavior and death handlers.
+        .with(new StateUpdater())
+        .with(new MissileCollisionSystem())
         .with(new Actioneer())
         .with(new com.riiablo.engine.server.MercenaryFollowSystem())
         .with(new com.riiablo.engine.server.SummonedPetSystem())
@@ -1661,8 +1665,6 @@ public class D2GS extends ApplicationAdapter {
         // consume the fresh attack sequence before the attack keyframe runs.
         .with(new AnimStepper())
         .with(new ObjectCollisionUpdater())
-        .with(new MissileCollisionSystem())
-        .with(new StateUpdater())
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
         .with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem())
         .with(new ExperienceManager())

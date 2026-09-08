@@ -149,10 +149,11 @@
     所有权清理和玩家实体保留。
   - 待补：将 `Spawn -> InsertWorld -> TickUpdate` 的阶段标记接入统一实体工厂，并补
     Room 卸载、网络断线和 Destroy 后订阅清理测试。
-- [ ] **P0-4 固定 25Hz Sim Tick 与阶段顺序（约 85%）**
-  - 服务端 40ms 单写者 tick、本地固定步进、渲染隔离、位置快照和多人时钟已通过；
-    仍需将 `state -> missile -> unit/AI -> death/destroy -> snapshot` 建成显式阶段门槛，
-    并补长时间漂移与高实体压力测试。
+- [ ] **P0-4 固定 25Hz Sim Tick 与阶段顺序（约 90%）**
+  - 服务端 40ms 单写者 tick、本地固定步进、渲染隔离、位置快照和多人时钟已通过。
+  - D2GS 与本地权威世界现按 `state -> missile -> unit/AI -> death/destroy -> snapshot`
+    注册核心系统；状态更新和导弹碰撞均在单位行为前执行，避免新状态/投射物被延迟一帧。
+  - 待补：长时间漂移、高实体压力和完整网络快照阶段的自动压力测试。
 - [ ] **P1-5 Missile 原生表驱动（约 75%）**
 - [ ] **P1-6 伤害、命中与死亡链（约 78%）**
 - [ ] **P1-7 地面物品、掉落与拾取（约 80%）**
@@ -403,6 +404,12 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 新增共享 `SimulationClock`，本地、D2GS、客户端动画/Overlay、多人收发和 Box2D 统一使用 25Hz/40ms 原生时钟；移除 `GameScreen` 路径残留的 60Hz 网络与物理 interval，避免 Artemis accumulator 漂移及 Box2D 每秒仅推进约 0.417 秒。
   - 新增 `ClientRenderSystemRunner`，将所有 `@GpuSystem` 从固定模拟循环隔离，并按每个可见帧顺序执行；模拟追赶不会重复渲染，60Hz 下没有模拟 tick 的帧也不会漏绘地图、标签或自动地图。
   - `SimulationClockTest` 连续 250 tick 无余量漂移，渲染隔离、固定步进、GameScreen delta 和 Box2D 测试通过；1.10f 双客户端权威快照顺序及 1×1 真实营地回归通过。
+
+- [x] ~~完成固定 Tick 核心阶段顺序首项~~
+  - D2GS 与 `GameScreen` 将 `StateUpdater`、`MissileCollisionSystem` 提前到 `Actioneer`/AI
+    前执行，形成状态衰减 → 导弹移动/碰撞 → 单位行为的稳定 25Hz 顺序；死亡/销毁仍由
+    `UnitLifecycleSystem` 和专用尸体系统处理，网络同步在 ECS 帧完成后执行。
+  - 状态、导弹、死亡生命周期和双客户端相关回归及 D2GS 编译全部通过。
   - 附加 `headlessMultiplayer` 的怪物移动子场景在固定种子下未找到可用近战怪物而超时；双客户端连接/快照门槛已单独通过，此失败不属于客户端时钟回归，后续应让场景显式生成目标以消除数据随机性。
 
 - [x] ~~完成 25Hz 权威状态的客户端表现插值第一阶段~~
