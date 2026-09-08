@@ -84,6 +84,23 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
     assertTrue(character.getItems().contains(cursor));
   }
 
+  @Test
+  void failedPickupNeverConsumesGroundEntity() {
+    CharData character = character();
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+    ItemMoveIntent missing = new ItemMoveIntent(2L, 0L,
+        ItemMoveOperation.GROUND_TO_CURSOR, 999, 9001,
+        -1, -1, -1, -1, false);
+
+    AuthoritativeItemMoveService.Outcome result = service.pickup(
+        7, character, missing, null);
+
+    assertFalse(result.success);
+    assertFalse(result.consumeGroundEntity);
+    assertEquals(ItemMoveFailure.GROUND_ITEM_NOT_FOUND, result.failure);
+    assertEquals(0L, result.revision);
+  }
+
   private static CharData character() {
     return CharData.obtain().set(Riiablo.NORMAL, false, "MoveHero", Riiablo.AMAZON);
   }

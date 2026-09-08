@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-08
+更新时间：2026-09-09
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -423,6 +423,22 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
     客户端，也不会污染幂等请求缓存。
   - 部分金币拾取仍保留地面实体并依赖 `EntitySync` 数量增量；全部拾取继续由删除
     快照清理双方客户端的地面实体。
+
+- [x] ~~完成多人拾取幂等、响应重排与幽灵地面物品修正第一阶段~~
+  - 服务端在死亡/背包状态校验前处理同连接、同 request ID 的精确重传，首次请求已
+    消耗物品或玩家随后死亡时仍重放首次结果；同 request ID 不同意图继续明确拒绝。
+  - 修正失败 `Outcome` 默认误标为“消耗地面实体”；所有失败拾取现在保留实体并返回
+    地面校正。完整成功拾取的 `ItemMoveResult` 直接携带被消费的 server entity ID 和
+    空 item data，客户端无需等待 `EntitySync.deleted` 即可移除幽灵物品。
+  - 客户端按 inventory revision 拒绝延迟到达的旧 `ItemMoveResult`，同 revision 的失败
+    快照仍可用于纠偏；若服务器确认地面物品存在但客户端缺失，则请求完整基线，避免
+    用缺少 Level/RoomEx 上下文的紧凑结果错误重建实体。
+  - 单元测试覆盖 revision 重排、同 revision 纠偏、失败不消费和请求缓存；1.10f 真实
+    双客户端 Fallen/Shaman 场景覆盖同包连续重传、另一客户端争抢拒绝、两端删除可见，
+    输出 `duplicate=true contentionRejected=true deleted=true`。
+
+下一小步：完成部分金币拾取后断线重连、重连基线地面数量/归属窗口校验，以及实体 ID
+复用不继承旧地面快照的专项门槛。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 

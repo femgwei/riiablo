@@ -3443,19 +3443,11 @@ public class D2GS extends ApplicationAdapter {
     ItemMoveIntent intent = new ItemMoveIntent(request.requestId(), request.revision(), operation,
         request.itemId(), request.groundEntityId(), request.storeLoc(), request.x(), request.y(),
         request.bodyLoc(), request.merc());
-    int authenticatedPlayerId = player.get(packet.id, Engine.INVALID_ENTITY);
-    if (isPlayerDead(authenticatedPlayerId)) {
-      sendItemMoveResult(packet.id, intent, false, ItemMoveFailure.PLAYER_DEAD,
-          authoritativeItems.revision(authenticatedPlayerId), false, false);
-      Gdx.app.log(TAG, "[ITEM_MOVE] phase=reject connection=" + packet.id
-          + " player=" + authenticatedPlayerId + " reason=player_dead");
-      return;
-    }
+    // Idempotency is evaluated before any current-state validation. An exact
+    // retransmission must replay the original response even when the first
+    // request changed inventory, consumed the ground entity, or the player
+    // died before the retry arrived.
     ItemMoveRequestCache.Entry cached = itemMoveRequestCache.lookup(packet.id, request.requestId());
-    Gdx.app.log(TAG, "[ITEM_PICKUP] phase=request client=" + packet.id
-        + " request=" + request.requestId() + " op=" + operation
-        + " item=" + request.itemId() + " ground=" + request.groundEntityId()
-        + " revision=" + request.revision());
     if (cached != null) {
       if (cached.matches(intent)) {
         outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response)));
@@ -3465,6 +3457,18 @@ public class D2GS extends ApplicationAdapter {
       }
       return;
     }
+    int authenticatedPlayerId = player.get(packet.id, Engine.INVALID_ENTITY);
+    if (isPlayerDead(authenticatedPlayerId)) {
+      sendItemMoveResult(packet.id, intent, false, ItemMoveFailure.PLAYER_DEAD,
+          authoritativeItems.revision(authenticatedPlayerId), false, false);
+      Gdx.app.log(TAG, "[ITEM_MOVE] phase=reject connection=" + packet.id
+          + " player=" + authenticatedPlayerId + " reason=player_dead");
+      return;
+    }
+    Gdx.app.log(TAG, "[ITEM_PICKUP] phase=request client=" + packet.id
+        + " request=" + request.requestId() + " op=" + operation
+        + " item=" + request.itemId() + " ground=" + request.groundEntityId()
+        + " revision=" + request.revision());
 
     int playerEntityId = player.get(packet.id, Engine.INVALID_ENTITY);
     Player playerComponent = playerEntityId == Engine.INVALID_ENTITY ? null
@@ -3640,7 +3644,12 @@ public class D2GS extends ApplicationAdapter {
       if (entryCount != entries.length) entries = java.util.Arrays.copyOf(entries, entryCount);
     }
     int snapshot = ItemMoveResult.createSnapshotVector(builder, entries);
-    int groundEntityId = -1;
+    // A pickup response always names the requested ground entity. Empty item
+    // data means that entity is authoritatively absent, allowing the client to
+    // remove it immediately even when the later EntitySync.deleted packet is
+    // delayed or lost. Existing operations keep the historical -1 default.
+    int groundEntityId = intent.operation == ItemMoveOperation.GROUND_TO_CURSOR
+        && (success || includeGroundCorrection) ? intent.groundEntityId : -1;
     int groundItemData = 0;
     float groundX = 0f;
     float groundY = 0f;
@@ -3649,7 +3658,6 @@ public class D2GS extends ApplicationAdapter {
       com.riiablo.engine.server.component.Position position =
           world.getMapper(com.riiablo.engine.server.component.Position.class).get(intent.groundEntityId);
       if (ground != null && ground.item != null && position != null) {
-        groundEntityId = intent.groundEntityId;
         groundItemData = serializeItemVector(builder, ground.item);
         groundX = position.position.x;
         groundY = position.position.y;

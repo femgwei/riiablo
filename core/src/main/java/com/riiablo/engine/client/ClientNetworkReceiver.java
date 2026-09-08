@@ -1254,8 +1254,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void ItemMoveResult(D2GS packet) {
     ItemMoveResult result = (ItemMoveResult) packet.data(new ItemMoveResult());
-    if (world.getSystem(NetworkedClientItemManager.class) != null) {
-      world.getSystem(NetworkedClientItemManager.class).onAuthoritativeResult(result);
+    NetworkedClientItemManager itemManager = world.getSystem(NetworkedClientItemManager.class);
+    if (itemManager != null && !itemManager.onAuthoritativeResult(result)) {
+      return;
     }
     if (Riiablo.charData != null) {
       com.badlogic.gdx.utils.Array<Item> snapshot = new com.badlogic.gdx.utils.Array<>(false,
@@ -1279,7 +1280,17 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
       Riiablo.charData.getItems().replaceFromAuthoritativeSnapshot(snapshot);
     }
-    if (result.groundEntityId() >= 0 && result.groundItemDataLength() > 0) {
+    if (result.groundEntityId() >= 0 && result.groundItemDataLength() == 0) {
+      int localEntityId = syncIds.get(result.groundEntityId());
+      serverEntityLevels.remove(result.groundEntityId(), -1);
+      deferredServerEntities.remove(result.groundEntityId());
+      if (localEntityId != Engine.INVALID_ENTITY) {
+        if (interpolation != null) interpolation.remove(localEntityId);
+        world.delete(localEntityId);
+      }
+      Gdx.app.log(TAG, "[ITEM_MOVE_GROUND] phase=authoritative_remove serverEntity="
+          + result.groundEntityId() + " request=" + result.requestId());
+    } else if (result.groundEntityId() >= 0 && result.groundItemDataLength() > 0) {
       int localEntityId = syncIds.get(result.groundEntityId());
       if (localEntityId != Engine.INVALID_ENTITY && mItem.has(localEntityId)) {
         try {
@@ -1293,6 +1304,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
           Gdx.app.error(TAG, "[ITEM_MOVE_GROUND] failed to apply ground correction "
               + result.groundEntityId(), t);
         }
+      } else {
+        // Recreating an item from this compact correction would omit its
+        // Level/RoomEx subscription context. Request a complete baseline so
+        // the normal EntitySync path restores it without producing a
+        // cross-level or ownerless ghost.
+        requestSnapshotResync(lastResyncObservedTick, "item_ground_missing");
       }
     }
     if (!result.success()) {

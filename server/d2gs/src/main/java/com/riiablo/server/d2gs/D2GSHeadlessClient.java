@@ -19,6 +19,7 @@ import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.ItemP;
+import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveRequest;
 import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
@@ -1029,15 +1030,48 @@ public final class D2GSHeadlessClient {
       // the peer path after that window rather than bypassing ownership rules.
       Thread.sleep(10_200L);
       send(outB, positionPacket(b.playerId, drop.x, drop.y));
+      // Send the exact same packet twice before consuming either response.
+      // The second request must replay the first transaction and may not add a
+      // duplicate item or advance the inventory revision again.
+      send(outB, itemMovePacket(1L, 0L, drop.entityId));
       send(outB, itemMovePacket(1L, 0L, drop.entityId));
       ItemMoveResult result = b.awaitItemMoveResult(inB, deadline());
       if (result == null || !result.success()) {
         throw new IllegalStateException("peer pickup failed: result="
             + (result == null ? "timeout" : result.failure()));
       }
+      long pickupRevision = result.revision();
+      int pickupSnapshotLength = result.snapshotLength();
+      ItemMoveResult duplicate = b.awaitItemMoveResult(inB, deadline());
+      if (duplicate == null || !duplicate.success()
+          || duplicate.revision() != pickupRevision
+          || duplicate.snapshotLength() != pickupSnapshotLength
+          || duplicate.groundEntityId() != drop.entityId
+          || duplicate.groundItemDataLength() != 0) {
+        throw new IllegalStateException("duplicate pickup was not idempotent: firstRevision="
+            + pickupRevision + " duplicateRevision="
+            + (duplicate == null ? -1L : duplicate.revision()));
+      }
+      a.awaitDeleted(inA, drop.entityId, deadline());
+      b.awaitDeleted(inB, drop.entityId, deadline());
+
+      // A different client racing after consumption receives an authoritative
+      // absence correction for the same server entity id. This prevents a
+      // delayed or lost deletion packet from leaving a clickable ghost.
+      send(outA, positionPacket(a.playerId, drop.x, drop.y));
+      send(outA, itemMovePacket(1L, 0L, drop.entityId));
+      ItemMoveResult consumed = a.awaitItemMoveResult(inA, deadline());
+      if (consumed == null || consumed.success()
+          || consumed.failure() != ItemMoveFailure.GROUND_ITEM_NOT_FOUND
+          || consumed.groundEntityId() != drop.entityId
+          || consumed.groundItemDataLength() != 0) {
+        throw new IllegalStateException("consumed ground correction invalid: result="
+            + (consumed == null ? "timeout" : consumed.failure()));
+      }
       log("dual_pickup_pass", "peer=" + b.playerId + " ground=" + drop.entityId
           + " revision=" + result.revision() + " inventorySnapshot="
-          + result.snapshotLength() + " nativeKills=" + lootKills);
+          + result.snapshotLength() + " nativeKills=" + lootKills
+          + " duplicate=true contentionRejected=true deleted=true");
     }
   }
 
@@ -1850,6 +1884,8 @@ public final class D2GSHeadlessClient {
   }
 
   private void awaitDeleted(DataInputStream input, int entityId, long deadline) throws Exception {
+    Snapshot existing = monsters.get(entityId);
+    if (existing != null && existing.deleted) return;
     while (System.currentTimeMillis() < deadline) {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
       if (packet == null) continue;

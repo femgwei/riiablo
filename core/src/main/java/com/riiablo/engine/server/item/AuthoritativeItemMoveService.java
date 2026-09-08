@@ -26,7 +26,10 @@ public final class AuthoritativeItemMoveService {
     /** Remaining quantity for a partially picked stack (zero for normal items). */
     public final int groundQuantityRemaining;
     public Outcome(boolean success, byte failure, long revision) {
-      this(success, failure, revision, true, 0);
+      // A failed transaction never consumes a ground entity. Successful
+      // ordinary pickups do; partial-stack outcomes use the explicit
+      // constructor below.
+      this(success, failure, revision, success, 0);
     }
     public Outcome(boolean success, byte failure, long revision,
                    boolean consumeGroundEntity, int groundQuantityRemaining) {

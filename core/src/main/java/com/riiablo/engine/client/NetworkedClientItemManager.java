@@ -48,12 +48,24 @@ public class NetworkedClientItemManager extends ClientItemManager {
     inventoryRevision = Math.max(0L, revision);
     Gdx.app.log(TAG, "[ITEM_MOVE_RESULT] phase=baseline revision=" + inventoryRevision);
   }
-  public void onAuthoritativeResult(ItemMoveResult result) {
-    if (result == null) return;
+  /**
+   * Advances the authoritative inventory timeline.
+   *
+   * @return {@code true} when the caller may apply the accompanying snapshot;
+   *     false for a delayed response older than the already-applied revision.
+   */
+  public boolean onAuthoritativeResult(ItemMoveResult result) {
+    if (result == null) return false;
+    if (result.revision() < inventoryRevision) {
+      Gdx.app.log(TAG, "[ITEM_MOVE_RESULT] phase=stale_drop request=" + result.requestId()
+          + " revision=" + result.revision() + " acceptedRevision=" + inventoryRevision);
+      return false;
+    }
     inventoryRevision = result.revision();
     Gdx.app.log(TAG, "[ITEM_MOVE_RESULT] request=" + result.requestId()
         + " success=" + result.success() + " failure=" + result.failure()
         + " revision=" + inventoryRevision + " snapshot=" + result.snapshotLength());
+    return true;
   }
 
   private void wrapAndSend(FlatBufferBuilder builder, byte data_type, int dataOffset) {
