@@ -1726,6 +1726,12 @@ public class D2GS extends ApplicationAdapter {
   final BlockingQueue<Packet> packets = new ArrayBlockingQueue<>(32);
   final Collection<Packet> cache = new ArrayList<>(1024);
   final BlockingQueue<Packet> outPackets = new ArrayBlockingQueue<>(8192);
+  /**
+   * Headless-only delayed deletion frames.  Entries are queued on the
+   * authoritative simulation thread and flushed after a fixed number of
+   * simulation ticks; production servers never populate this queue.
+   */
+  final Collection<DelayedDeletion> delayedDeletions = new ArrayList<>();
   final IntIntMap player = new IntIntMap();
   /** Character-name identity used only to rebind owner windows on reconnect. */
   final java.util.Map<String, Integer> disconnectedOwnerEntities = new HashMap<>();
@@ -1772,6 +1778,18 @@ public class D2GS extends ApplicationAdapter {
   final SkillPointRequestCache skillPointRequestCache = new SkillPointRequestCache();
   final PartyRequestCache partyRequestCache = new PartyRequestCache();
   final QuestRequestCache questRequestCache = new QuestRequestCache();
+
+  private static final class DelayedDeletion {
+    final Packet packet;
+    final int clientIndex;
+    final long dueTick;
+
+    DelayedDeletion(Packet packet, int clientIndex, long dueTick) {
+      this.packet = packet;
+      this.clientIndex = clientIndex;
+      this.dueTick = dueTick;
+    }
+  }
 
   protected ComponentMapper<Networked> mNetworked;
 
@@ -2035,6 +2053,7 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private void dispatchOutgoingPackets() {
+    flushDelayedDeletions();
     cache.clear();
     outPackets.drainTo(cache);
     for (Packet packet : cache) {
@@ -2046,6 +2065,27 @@ public class D2GS extends ApplicationAdapter {
           try {
             if (DEBUG_SENT_PACKETS && !ignoredPackets.get(packet.data.dataType())) Gdx.app.log(TAG, "  dispatching packet to " + i);
             client.send(packet);
+            // Headless-only fault injection: replay deletion frames to verify
+            // client-side idempotency.  Disabled by default and never used by
+            // production servers.
+            if (Boolean.getBoolean("riiablo.headless.duplicateDeletes")
+                && packet.data.dataType() == D2GSData.EntitySync) {
+              EntitySync sync = (EntitySync) packet.data.data(new EntitySync());
+              if ((sync.flags() & com.riiablo.net.packet.d2gs.EntityFlags.deleted)
+                  == com.riiablo.net.packet.d2gs.EntityFlags.deleted) {
+                int delayTicks = Integer.getInteger("riiablo.headless.deleteDelayTicks", 0);
+                if (delayTicks > 0) {
+                  long now = simulation == null ? 0L : simulation.tickNumber();
+                  delayedDeletions.add(new DelayedDeletion(packet, i, now + delayTicks));
+                  if (DEBUG_SENT_PACKETS) {
+                    Gdx.app.log(TAG, "[HEADLESS_FAULT] delayed deletion frame client=" + i
+                        + " dueTick=" + (now + delayTicks));
+                  }
+                } else {
+                  client.send(packet);
+                }
+              }
+            }
           } catch (Throwable t) {
             Gdx.app.error(TAG, t.getMessage(), t);
           }
@@ -2334,6 +2374,28 @@ public class D2GS extends ApplicationAdapter {
     if (!outPackets.offer(Packet.obtain(1 << clientId, builder.dataBuffer()))) {
       Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=marker_drop client=" + clientId
           + " request=" + requestId + " phase=" + phase);
+    }
+  }
+
+  /** Flushes test-only deletion frames once their simulation tick is reached. */
+  private void flushDelayedDeletions() {
+    if (!Boolean.getBoolean("riiablo.headless.duplicateDeletes")
+        || delayedDeletions.isEmpty()) return;
+    long now = simulation == null ? 0L : simulation.tickNumber();
+    java.util.Iterator<DelayedDeletion> iterator = delayedDeletions.iterator();
+    while (iterator.hasNext()) {
+      DelayedDeletion delayed = iterator.next();
+      if (delayed.dueTick > now) continue;
+      iterator.remove();
+      int flag = 1 << delayed.clientIndex;
+      Client client = clients[delayed.clientIndex];
+      if (client == null || client.kill || (connected & flag) == 0) continue;
+      try {
+        client.send(delayed.packet);
+      } catch (Throwable t) {
+        Gdx.app.error(TAG, "[HEADLESS_FAULT] delayed deletion send failed client="
+            + delayed.clientIndex, t);
+      }
     }
   }
 

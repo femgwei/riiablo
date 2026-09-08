@@ -205,7 +205,7 @@
   - 经验分配和掉落的 party-in-level 现在优先使用死亡瞬间快照；PlayersX 仍按全连接
     玩家数计算，避免因 party 范围缩小导致掉率偏差。
   - 待补：掉落归属超时快照广播，以及少数非 CombatSystem 的环境伤害特殊分支。
-- [ ] **P1-7 地面物品、掉落与拾取（约 90%）**
+- [x] **P1-7 地面物品、掉落与拾取（已完成）**
   - 地面掉落归属表现在会在 party 保护窗口结束后主动清理过期记录；公开掉落不再
     累积无效 owner 状态，重连 owner 重绑定只作用于仍在保护窗口内的实体。
   - `ItemMoveResult` 追加地面 owner/party 窗口字段；拾取失败（距离、归属、背包占用、
@@ -218,6 +218,10 @@
     覆盖删除后跨 RoomEx 重建，允许实体 ID 复用但确认新掉落不会继承旧 claim/元数据。
   - 客户端记录每个 server entity 的最后删除 tick，重复/旧删除包幂等忽略；断线和
     `SnapshotBaseline BEGIN` 会清理水位，避免旧 RoomEx 删除误删重建实体。
+  - headless D2GS 增加仅测试用的删除帧重复注入；`headlessItemFailureCorrections` 与
+    `headlessReconnectGroundLoot` 在重复删除包下均通过，验证断线重连基线和 claim 一致。
+  - 新增 `headlessDelayedDeleteFrames`，以跨 3 个 Sim Tick 的延迟删除帧验证旧删除不会
+    回退快照时钟或误删重建掉落；延迟注入和重复注入均通过。
 - [ ] **P1-8 D2S 1.10f round-trip（约 68%）**
 
 强制踩坑回归门槛：
@@ -475,8 +479,8 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-下一小步：补齐极端断线/重连期间的删除包乱序样本（网络层注入重复/延迟包），确认旧
-claim、客户端缓存和 RoomEx 基线在重复删除与延迟重建下仍保持一致，随后完成 P1‑7 收尾。
+下一小步：转入 P1‑8 D2S 1.10f round-trip，先核对现有写入器与 libd2 的 bitstream、
+状态/装备/任务字段，再补充读写往返和损坏存档拒绝测试。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 

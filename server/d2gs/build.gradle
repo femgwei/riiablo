@@ -193,6 +193,7 @@ tasks.register('headlessReconnectGroundLoot', JavaExec) {
   mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
   workingDir = rootProject.file('assets').path
   args '--generated-amazon', '--require-reconnect-ground-loot', '--test-timeout', '90'
+  jvmArgs '-Driiablo.headless.duplicateDeletes=true'
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
@@ -205,6 +206,20 @@ tasks.register('headlessItemFailureCorrections', JavaExec) {
   mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
   workingDir = rootProject.file('assets').path
   args '--generated-amazon', '--require-item-failure-corrections', '--test-timeout', '90'
+  jvmArgs '-Driiablo.headless.duplicateDeletes=true'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
+tasks.register('headlessDelayedDeleteFrames', JavaExec) {
+  group = 'verification'
+  description = 'Verifies idempotency when deletion frames arrive several simulation ticks late.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-reconnect-ground-loot', '--test-timeout', '90'
+  jvmArgs '-Driiablo.headless.duplicateDeletes=true', '-Driiablo.headless.deleteDelayTicks=3'
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()

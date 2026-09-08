@@ -2481,14 +2481,26 @@ public final class D2GSHeadlessClient {
     long snapshotTick = sync.tick();
     long snapshotServerTime = sync.serverTimeMillis();
     if (snapshotTick > 0L) {
-      if (lastSnapshotTick > snapshotTick || lastSnapshotServerTime > snapshotServerTime) {
+      boolean deletion = (sync.flags() & EntityFlags.deleted) != 0;
+      boolean stale = lastSnapshotTick > snapshotTick
+          || lastSnapshotServerTime > snapshotServerTime;
+      // A delayed deletion is intentionally older than the current stream.
+      // Production ClientNetworkReceiver applies these frames idempotently by
+      // entity deletion watermark, so the headless oracle must not reject the
+      // whole run merely because this fault-injected frame is out of order.
+      if (stale && !deletion) {
         throw new IllegalStateException("authoritative snapshot order regressed: tick="
             + lastSnapshotTick + "->" + snapshotTick + " serverTime="
             + lastSnapshotServerTime + "->" + snapshotServerTime);
       }
-      lastSnapshotTick = snapshotTick;
-      lastSnapshotServerTime = snapshotServerTime;
-      snapshotTicks.add(snapshotTick);
+      if (!stale) {
+        lastSnapshotTick = snapshotTick;
+        lastSnapshotServerTime = snapshotServerTime;
+        snapshotTicks.add(snapshotTick);
+      } else if (deletion) {
+        log("stale_delete_ignored", "entity=" + sync.entityId()
+            + " tick=" + snapshotTick + " latest=" + lastSnapshotTick);
+      }
     }
     if (sync.entityId() == playerId) {
       if (packetLevelId >= 0) currentLevelId = packetLevelId;
