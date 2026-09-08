@@ -4,6 +4,7 @@ import com.google.flatbuffers.Table;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
@@ -157,6 +158,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private final EntitySync sync = new EntitySync();
   private final AuthoritativeSnapshotTimeline snapshotTimeline =
       new AuthoritativeSnapshotTimeline();
+  /** Last authoritative deletion tick per server entity.  Deletion packets
+   * can be duplicated or arrive after a RoomEx re-entry; retaining this
+   * watermark prevents an old delete from removing a newly rebuilt entity
+   * that reused the same server id. */
+  private final HashMap<Integer, Long> lastDeletedServerTicks = new HashMap<>();
   private final IntSet deferredServerEntities = new IntSet();
   /** Last authoritative level observed for each server entity. */
   private final IntIntMap serverEntityLevels = new IntIntMap();
@@ -365,6 +371,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
     snapshotResyncInProgress = false;
     localLevelId = -1;
     serverEntityLevels.clear();
+    lastDeletedServerTicks.clear();
     Disconnect disconnect = (Disconnect) packet.data(new Disconnect());
     int serverEntityId = disconnect.entityId();
     int entityId = syncIds.get(serverEntityId);
@@ -752,6 +759,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
     }
     if ((entityData.flags() & EntityFlags.deleted) == EntityFlags.deleted) {
+      long deletionTick = entityData.tick();
+      Long previousDeletion = lastDeletedServerTicks.get(entityData.entityId());
+      if (previousDeletion != null
+          && (deletionTick == 0L || previousDeletion >= deletionTick)) {
+        Gdx.app.log(TAG, "[ENTITY_SYNC] phase=duplicate_delete_ignored serverEntity="
+            + entityData.entityId() + " tick=" + deletionTick
+            + " previousDeleteTick=" + previousDeletion);
+        return;
+      }
+      lastDeletedServerTicks.put(entityData.entityId(), deletionTick);
       deferredServerEntities.remove(entityData.entityId());
       serverEntityLevels.remove(entityData.entityId(), -1);
       if (entityId != Engine.INVALID_ENTITY) {
@@ -760,6 +777,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
       }
 
       return;
+    }
+
+    Long previousDeletion = lastDeletedServerTicks.get(entityData.entityId());
+    if (previousDeletion != null && (entityData.tick() == 0L
+        || entityData.tick() > previousDeletion)) {
+      // A newer baseline proves that this is a rebuilt incarnation of a
+      // recycled server id.  Future deletes are allowed at the new tick.
+      lastDeletedServerTicks.remove(entityData.entityId());
     }
 
     if (deferredServerEntities.contains(entityData.entityId())) return;
@@ -997,6 +1022,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       baselineBeginTick = marker.serverTick();
       baselineQuestRevision = marker.questRevision();
       lastResyncObservedTick = marker.serverTick();
+      lastDeletedServerTicks.clear();
       deferredServerEntities.clear();
       if (interpolation != null) interpolation.clear();
       Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=begin request=" + marker.requestId()

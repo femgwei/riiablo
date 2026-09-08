@@ -216,6 +216,8 @@
     `headlessReconnectVisibility`/`headlessReconnectGroundLoot` 门槛覆盖。
   - 新增 `GroundDropCleanupSystem`，在 Artemis 实体真正移除时调用 `discard()`；离屏回归
     覆盖删除后跨 RoomEx 重建，允许实体 ID 复用但确认新掉落不会继承旧 claim/元数据。
+  - 客户端记录每个 server entity 的最后删除 tick，重复/旧删除包幂等忽略；断线和
+    `SnapshotBaseline BEGIN` 会清理水位，避免旧 RoomEx 删除误删重建实体。
 - [ ] **P1-8 D2S 1.10f round-trip（约 68%）**
 
 强制踩坑回归门槛：
@@ -473,8 +475,8 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-下一小步：补齐极端断线/重连期间的删除包乱序样本，确认旧 claim、客户端缓存和 RoomEx
-基线在重复删除与延迟重建下仍保持一致，随后完成 P1‑7 收尾。
+下一小步：补齐极端断线/重连期间的删除包乱序样本（网络层注入重复/延迟包），确认旧
+claim、客户端缓存和 RoomEx 基线在重复删除与延迟重建下仍保持一致，随后完成 P1‑7 收尾。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 
