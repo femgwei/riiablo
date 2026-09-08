@@ -148,6 +148,9 @@ public class CombatSystem {
     public int[] elementalMinDamage = new int[DAMAGE_TYPE_COUNT];
     public int[] elementalMaxDamage = new int[DAMAGE_TYPE_COUNT];
 
+    /** Native percentage resistance pierce, indexed by damage type. */
+    public int[] elementalPierce = new int[DAMAGE_TYPE_COUNT];
+
     /** 对恶魔攻击等级加成 */
     public int demonToHit;
 
@@ -239,6 +242,9 @@ public class CombatSystem {
 
     /** 各元素抗性 */
     public int[] resistances = new int[DAMAGE_TYPE_COUNT];
+
+    /** Native maximum resistance caps (75 + max*resist stats). */
+    public int[] maxResistances = new int[DAMAGE_TYPE_COUNT];
 
     /** 物理伤害减免（Damage Reduced） */
     public int damageReduced;
@@ -701,6 +707,15 @@ public class CombatSystem {
     a.elementalMaxDamage[DAMAGE_POISON] = statInt(attacker, Stat.poisonmaxdam, 0);
     a.elementalMinDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmindam, 0);
     a.elementalMaxDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmaxdam, 0);
+    a.elementalPierce[DAMAGE_FIRE] = statInt(attacker, Stat.item_pierce_fire, 0)
+        + statInt(attacker, Stat.passive_fire_pierce, 0);
+    a.elementalPierce[DAMAGE_LIGHTNING] = statInt(attacker, Stat.item_pierce_ltng, 0)
+        + statInt(attacker, Stat.passive_ltng_pierce, 0);
+    a.elementalPierce[DAMAGE_COLD] = statInt(attacker, Stat.item_pierce_cold, 0)
+        + statInt(attacker, Stat.passive_cold_pierce, 0);
+    a.elementalPierce[DAMAGE_POISON] = statInt(attacker, Stat.item_pierce_pois, 0)
+        + statInt(attacker, Stat.passive_pois_pierce, 0);
+    a.elementalPierce[DAMAGE_MAGIC] = statInt(attacker, Stat.passive_mag_pierce, 0);
     a.deadlyStrike = statInt(attacker, Stat.item_deadlystrike, 0);
     a.criticalStrike = statInt(attacker, Stat.passive_critical_strike, 0);
     if (mastery != null) a.criticalStrike += mastery.criticalChance;
@@ -767,6 +782,11 @@ public class CombatSystem {
     d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
     d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
     d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
+    d.maxResistances[DAMAGE_FIRE] = 75 + statInt(defender, Stat.maxfireresist, 0);
+    d.maxResistances[DAMAGE_LIGHTNING] = 75 + statInt(defender, Stat.maxlightresist, 0);
+    d.maxResistances[DAMAGE_COLD] = 75 + statInt(defender, Stat.maxcoldresist, 0);
+    d.maxResistances[DAMAGE_POISON] = 75 + statInt(defender, Stat.maxpoisonresist, 0);
+    d.maxResistances[DAMAGE_MAGIC] = 75 + statInt(defender, Stat.maxmagicresist, 0);
     if (defenderStates != null) {
       d.resistances[DAMAGE_FIRE] += defenderStates.getTotalResistModifier(0);
       d.resistances[DAMAGE_COLD] += defenderStates.getTotalResistModifier(1);
@@ -882,7 +902,8 @@ public class CombatSystem {
       int elemDamage = calculateElementalDamage(attacker, i);
       if (i == attacker.physicalConversionType) elemDamage += convertedDamage;
       if (elemDamage > 0) {
-        result.elementalDamage[i] = applyElementalResistance(elemDamage, defender, i);
+        result.elementalDamage[i] = applyElementalResistance(
+            elemDamage, defender, i, attacker.elementalPierce[i]);
       }
     }
 
@@ -1121,16 +1142,22 @@ public class CombatSystem {
   /**
    * 应用元素抗性
    */
-  private int applyElementalResistance(int damage, DefenderData defender, int damageType) {
+  private int applyElementalResistance(int damage, DefenderData defender, int damageType,
+      int piercePercent) {
     if (defender.immuneElemental[damageType]) {
       return 0;
     }
 
-    int resistance = defender.resistances[damageType];
+    int resistance = defender.resistances[damageType]
+        - Math.max(0, Math.min(100, piercePercent));
 
     // 抗性可以为负（增加伤害）
     // 抗性上限为 75%（或更高，如果有装备加成）
-    resistance = Math.min(75, resistance);
+    int maxResist = defender.maxResistances != null
+        && damageType < defender.maxResistances.length
+        && defender.maxResistances[damageType] > 0
+        ? defender.maxResistances[damageType] : 75;
+    resistance = Math.min(maxResist, resistance);
 
     damage = damage * (100 - resistance) / 100;
 

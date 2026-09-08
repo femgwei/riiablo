@@ -152,6 +152,41 @@ public class CombatSystemTest extends RiiabloTest {
         + " status=PASS");
   }
 
+  @Test
+  public void nativeMaximumResistanceCapIsApplied() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.fireresist, 98);
+    defender.base().put(Stat.maxfireresist, 20);
+    defender.reset();
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 100;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 100;
+
+    CombatSystem.CombatResult result = combat.calculateAttack(attacker, defender,
+        true, false, false, 1, 1, 1000, true, fireMin, fireMax, 0, 0, null, null);
+    assertEquals(5, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+  }
+
+  @Test
+  public void nativeElementalPierceReducesTargetResistance() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    attacker.base().put(Stat.item_pierce_fire, 20);
+    attacker.reset();
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.fireresist, 75);
+    defender.reset();
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 100;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 100;
+
+    CombatSystem.CombatResult result = combat.calculateAttack(attacker, defender,
+        true, false, false, 1, 1, 1000, true, fireMin, fireMax, 0, 0, null, null);
+    assertEquals(45, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+  }
+
   private static Attributes attrs(int hp, int level, int defense,
       int minDamage, int maxDamage, int attackRating) {
     Attributes attrs = Attributes.obtainStandard();
