@@ -78,7 +78,7 @@
 否则只能标记为“部分完成”。`libd2` / `dark-magic` 的 1.14d 数据只能参考解析结构和
 测试方法，不能作为 1.10f 数值真值。
 
-- [ ] **P0-1 无损 TXT 数据层与 1.10f 五表对照（约 70%）**
+- [ ] **P0-1 无损 TXT 数据层与 1.10f 五表对照（约 76%）**
   - 已完成独立于旧 `TxtParser` 的无损读取器：保留空字段、重复/空列、短行、超额列、
     空行、`Expansion`、原始行和源行号；支持 D2 布尔值及完整 uint32 十六进制读取。
   - 已按 D2MOO `DATATBLS_LoadStatesTxt` 接入 1.10f `States.txt` 的 40 个状态标志、死亡
@@ -86,8 +86,11 @@
   - 已对本机原始 1.10f MPQ 的 `ItemStatCost/States/Skills/Missiles/MonStats` 固定行列数、
     原始 SHA-256、header SHA-256 与逐字段语义 SHA-256；测试不提交原版 TXT 内容，其他
     环境通过 `D2_110F_HOME` 可复验相同资源。
-  - 待补：把其余四张核心表从旧 Excel 投影逐步迁到无损 schema，并生成按表/行/列定位
-    的 schema 投影差异报告；完成后才可关闭 P0-1。
+  - 已完成 `ItemStatCost` 无损 schema；原生行序 ID 与 TXT `ID` 分开保存，Add/Multiply/
+    Divide、op/op base/op stat 及存档位字段保持原始值，不再被旧兼容修正污染；修正旧表
+    `damagerelated` 被错误声明为字符串的问题。
+  - 待补：把 `Skills/Missiles/MonStats` 从旧 Excel 投影逐步迁到无损 schema，并生成按
+    表/行/列定位的 schema 投影差异报告；完成后才可关闭 P0-1。
 - [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 55%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
@@ -257,6 +260,8 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
 
 - 2026-09-08：完成 P0-1 第一阶段；新增无损 TXT、稳定字段差异和不可逆摘要工具，按
   D2MOO 1.10f 字段接入 `States.txt`，并以完整 1.10f MPQ 固定五张核心表 golden manifest。
+- 2026-09-08：完成 P0-1 `ItemStatCost` 阶段；建立原生行 ID、运算/存档字段无损投影，
+  并用 359 行原始 1.10f 表验证；旧 `damagerelated` 字段改为 D2MOO 的 bit 语义。
 - 2026-09-02：为 `ItemData.updateStats` 和 `CharData.onUpdated` 增加不完整物品/角色记录保护；
   `NativeGemShrineServiceTest` 及地图、神殿、Fallen Shaman、双客户端掉落回归集合全部通过。
 - 2026-09-02：完成 P1 原生物品生成首项；新增纯数据和真实 Excel/MPQ 双层测试，物品、掉落、修理、交易与 Countess 回归共 35 个用例通过。
@@ -464,10 +469,10 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 同一角色重连取得新实体 ID 后，双方仍看到原实体 ID 的掉落与已开启对象；普通召唤物没有随角色错误恢复。客户端测试观察器同时消费正式 `Disconnect` 包，避免把玩家协议删除误判为缺少 `EntitySync.deleted`。
   - 测试输出 `reconnect_visibility_disconnect_pass`、`reconnect_visibility_pass`，构建成功。
 
-当前已进入 **P0-1 无损 TXT 数据层与 1.10f 五表对照**，第一阶段（无损读取、
-`States.txt`、五表 golden manifest）完成。下一小步按
-`ItemStatCost -> Skills -> Missiles -> MonStats` 顺序建立无损 schema 投影和逐字段差异报告；
-P0-1 完成前暂停扩展技能。
+当前已进入 **P0-1 无损 TXT 数据层与 1.10f 五表对照**；无损读取、`States.txt`、
+五表 golden manifest 和 `ItemStatCost` 已完成。下一小步按
+`Skills -> Missiles -> MonStats` 顺序建立无损 schema 投影和逐字段差异报告；P0-1 完成前
+暂停扩展技能。
 
 ## 记录规则
 

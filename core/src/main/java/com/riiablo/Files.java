@@ -32,6 +32,7 @@ import com.riiablo.codec.excel.MagicSuffix;
 import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Npc;
 import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.NativeItemStatCost;
 import com.riiablo.codec.excel.MonAI;
 import com.riiablo.codec.excel.MonLvl;
 import com.riiablo.codec.excel.MonMode;
@@ -84,6 +85,8 @@ public class Files {
   public final Gems             Gems;
   public final Inventory        inventory;
   public final ItemStatCost     ItemStatCost;
+  /** Lossless 1.10f projection; legacy ItemStatCost remains during migration. */
+  public final NativeItemStatCost NativeItemStatCost;
   public final ItemRatio        ItemRatio;
   public final ItemTypes        ItemTypes;
   public final Levels           Levels;
@@ -164,6 +167,8 @@ public class Files {
     Gems             = load(Gems.class, Excel.EXPANSION);
     inventory        = load(Inventory.class);
     ItemStatCost     = load(ItemStatCost.class);
+    NativeItemStatCost = com.riiablo.codec.excel.NativeItemStatCost.load(
+        Riiablo.mpqs.resolve(EXCEL_PATH + "ItemStatCost.txt"));
     ItemRatio        = load(ItemRatio.class);
     ItemTypes        = load(ItemTypes.class);
     Levels           = load(Levels.class, Excel.EXPANSION);

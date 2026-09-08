@@ -101,5 +101,15 @@ class Native110FTxtTablesIntegrationTest {
     assertEquals(-1, states.source().columnIndex("canstack"),
         "1.14d-only state columns must not enter the 1.10f schema");
     assertEquals(-1, states.source().columnIndex("sunder-res-reduce"));
+
+    NativeItemStatCost itemStats = NativeItemStatCost.parse(
+        resolver.resolve(EXCEL + "ItemStatCost.txt").readBytes());
+    assertEquals(359, itemStats.size());
+    boolean hasDamageRelated = false;
+    for (int id = 0; id < itemStats.size(); id++) {
+      assertEquals(id, itemStats.get(id).id);
+      hasDamageRelated |= itemStats.get(id).damageRelated;
+    }
+    assertTrue(hasDamageRelated, "1.10f ItemStatCost must retain damageRelated bit fields");
   }
 }

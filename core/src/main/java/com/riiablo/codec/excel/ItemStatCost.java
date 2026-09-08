@@ -84,7 +84,7 @@ public class ItemStatCost extends Excel<ItemStatCost.Entry> {
     @Column public boolean direct;
     @Column public String  maxstat;
     @Column public boolean itemspecific;
-    @Column public String  damagerelated;
+    @Column public boolean damagerelated;
     @Column public String  itemevent1;
     @Column public int     itemeventfunc1;
     @Column public String  itemevent2;
