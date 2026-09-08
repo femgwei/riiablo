@@ -1,5 +1,11 @@
 package com.riiablo.engine.server.state;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import com.riiablo.attributes.NativeStatResolver;
+import com.riiablo.attributes.Stat;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -42,6 +48,44 @@ public class UnitState {
   
   /** 技能ID（如果状态由技能产生） */
   public int skillId = -1;
+
+  /**
+   * One native stat-list entry owned by this state layer. D2MOO stores these
+   * entries on the allocated {@code D2StatListStrc}; the state/source/skill
+   * identity belongs to the list, not to the unit's already-folded totals.
+   */
+  public static final class StatContribution {
+    public final int statId;
+    public final int layer;
+    public NativeStatResolver.Operation operation;
+    public int encodedValue;
+
+    private StatContribution(int statId, int layer,
+        NativeStatResolver.Operation operation, int encodedValue) {
+      this.statId = statId;
+      this.layer = layer;
+      this.operation = operation;
+      this.encodedValue = encodedValue;
+    }
+
+    private StatContribution(StatContribution other) {
+      this(other.statId, other.layer, other.operation, other.encodedValue);
+    }
+  }
+
+  /** Exact stat deltas carried by this state; retained across refreshes and removable as one unit. */
+  private final ArrayList<StatContribution> statContributions = new ArrayList<>(8);
+  /* Last values emitted by the compatibility projection. Direct writes by
+   * legacy skills are detected against these baselines on the next read. */
+  private int projectedDamageModifier;
+  private int projectedDefenseModifier;
+  private int projectedAttackModifier;
+  private int projectedVelocityModifier;
+  private int projectedFireResistModifier;
+  private int projectedColdResistModifier;
+  private int projectedLightResistModifier;
+  private int projectedPoisonResistModifier;
+  private int projectedMagicResistModifier;
 
   //==========================================================================
   // 状态效果修正值
@@ -216,6 +260,7 @@ public class UnitState {
 
   /** Clears stat-list values while retaining state identity and lifetime. */
   public void clearModifiers() {
+    statContributions.clear();
     damageModifier = 0;
     defenseModifier = 0;
     attackModifier = 0;
@@ -241,6 +286,248 @@ public class UnitState {
     masteryAttackRatingModifier = 0;
     masteryDamageModifier = 0;
     masteryCriticalChance = 0;
+    projectedDamageModifier = 0;
+    projectedDefenseModifier = 0;
+    projectedAttackModifier = 0;
+    projectedVelocityModifier = 0;
+    projectedFireResistModifier = 0;
+    projectedColdResistModifier = 0;
+    projectedLightResistModifier = 0;
+    projectedPoisonResistModifier = 0;
+    projectedMagicResistModifier = 0;
+  }
+
+  /**
+   * Sets one native stat/layer entry. Re-setting the same key replaces the old
+   * value, matching {@code STATLIST_SetStat}; use {@link #addStatContribution}
+   * for {@code STATLIST_AddStat} behavior.
+   */
+  public void setStatContribution(int statId, int layer,
+      NativeStatResolver.Operation operation, int encodedValue) {
+    NativeStatResolver.Operation resolvedOperation = operation == null
+        ? NativeStatResolver.Operation.ADD : operation;
+    StatContribution contribution = findStatContribution(statId, layer);
+    if (encodedValue == 0) {
+      if (contribution != null) statContributions.remove(contribution);
+      projectLegacyModifier(statId);
+      return;
+    }
+    if (contribution == null) {
+      contribution = new StatContribution(statId, layer, resolvedOperation, encodedValue);
+      int index = 0;
+      while (index < statContributions.size()) {
+        StatContribution current = statContributions.get(index);
+        if (current.statId > statId || (current.statId == statId && current.layer > layer)) break;
+        index++;
+      }
+      statContributions.add(index, contribution);
+    } else {
+      contribution.operation = resolvedOperation;
+      contribution.encodedValue = encodedValue;
+    }
+    projectLegacyModifier(statId);
+  }
+
+  /** Adds to one native stat/layer entry and removes the zero entry, like D2MOO. */
+  public void addStatContribution(int statId, int layer,
+      NativeStatResolver.Operation operation, int encodedDelta) {
+    StatContribution contribution = findStatContribution(statId, layer);
+    if (contribution == null) {
+      if (encodedDelta == 0) return;
+      setStatContribution(statId, layer, operation, encodedDelta);
+      return;
+    }
+    contribution.encodedValue += encodedDelta;
+    if (contribution.encodedValue == 0) statContributions.remove(contribution);
+    projectLegacyModifier(statId);
+  }
+
+  public int getStatContributionValue(int statId) {
+    int value = 0;
+    for (StatContribution contribution : statContributions) {
+      if (contribution.statId == statId) value += contribution.encodedValue;
+    }
+    return value;
+  }
+
+  public boolean hasStatContribution(int statId) {
+    for (StatContribution contribution : statContributions) {
+      if (contribution.statId == statId) return true;
+    }
+    return false;
+  }
+
+  /** Read-only diagnostic projection in stable stat/layer insertion order. */
+  public List<StatContribution> getStatContributions() {
+    return Collections.unmodifiableList(statContributions);
+  }
+
+  public int resolvedDamageModifier() {
+    syncLegacyModifiers();
+    return hasStatContribution(Stat.damagepercent)
+        ? getStatContributionValue(Stat.damagepercent) : damageModifier;
+  }
+
+  public int resolvedDefenseModifier() {
+    syncLegacyModifiers();
+    return hasAnyStatContribution(Stat.item_armor_percent, Stat.skill_armor_percent, Stat.armorclass)
+        ? sumStatContributions(Stat.item_armor_percent, Stat.skill_armor_percent, Stat.armorclass)
+        : defenseModifier;
+  }
+
+  public int resolvedAttackModifier() {
+    syncLegacyModifiers();
+    return hasAnyStatContribution(Stat.item_tohit_percent, Stat.tohit, Stat.attackrate)
+        ? sumStatContributions(Stat.item_tohit_percent, Stat.tohit, Stat.attackrate)
+        : attackModifier;
+  }
+
+  public int resolvedVelocityModifier() {
+    syncLegacyModifiers();
+    return hasStatContribution(Stat.velocitypercent)
+        ? getStatContributionValue(Stat.velocitypercent) : velocityModifier;
+  }
+
+  public int resolvedResistModifier(int resistType) {
+    syncLegacyModifiers();
+    final int statId;
+    final int legacyValue;
+    switch (resistType) {
+      case 0: statId = Stat.fireresist; legacyValue = fireResistModifier; break;
+      case 1: statId = Stat.coldresist; legacyValue = coldResistModifier; break;
+      case 2: statId = Stat.lightresist; legacyValue = lightResistModifier; break;
+      case 3: statId = Stat.poisonresist; legacyValue = poisonResistModifier; break;
+      case 4: statId = Stat.magicresist; legacyValue = magicResistModifier; break;
+      default: return 0;
+    }
+    return hasStatContribution(statId) ? getStatContributionValue(statId) : legacyValue;
+  }
+
+  private StatContribution findStatContribution(int statId, int layer) {
+    for (StatContribution contribution : statContributions) {
+      if (contribution.statId == statId && contribution.layer == layer) return contribution;
+    }
+    return null;
+  }
+
+  private boolean hasAnyStatContribution(int... statIds) {
+    for (int statId : statIds) if (hasStatContribution(statId)) return true;
+    return false;
+  }
+
+  private int sumStatContributions(int... statIds) {
+    int value = 0;
+    for (int statId : statIds) value += getStatContributionValue(statId);
+    return value;
+  }
+
+  /** Keeps old serializers and un-migrated consumers working during the staged conversion. */
+  private void projectLegacyModifier(int statId) {
+    switch (statId) {
+      case Stat.damagepercent:
+        damageModifier = getStatContributionValue(Stat.damagepercent);
+        projectedDamageModifier = damageModifier;
+        break;
+      case Stat.item_armor_percent:
+      case Stat.skill_armor_percent:
+      case Stat.armorclass:
+        defenseModifier = sumStatContributions(
+            Stat.item_armor_percent, Stat.skill_armor_percent, Stat.armorclass);
+        projectedDefenseModifier = defenseModifier;
+        break;
+      case Stat.item_tohit_percent:
+      case Stat.tohit:
+      case Stat.attackrate:
+        attackModifier = sumStatContributions(
+            Stat.item_tohit_percent, Stat.tohit, Stat.attackrate);
+        projectedAttackModifier = attackModifier;
+        break;
+      case Stat.velocitypercent:
+        velocityModifier = getStatContributionValue(Stat.velocitypercent);
+        projectedVelocityModifier = velocityModifier;
+        break;
+      case Stat.fireresist:
+        fireResistModifier = getStatContributionValue(Stat.fireresist);
+        projectedFireResistModifier = fireResistModifier;
+        break;
+      case Stat.coldresist:
+        coldResistModifier = getStatContributionValue(Stat.coldresist);
+        projectedColdResistModifier = coldResistModifier;
+        break;
+      case Stat.lightresist:
+        lightResistModifier = getStatContributionValue(Stat.lightresist);
+        projectedLightResistModifier = lightResistModifier;
+        break;
+      case Stat.poisonresist:
+        poisonResistModifier = getStatContributionValue(Stat.poisonresist);
+        projectedPoisonResistModifier = poisonResistModifier;
+        break;
+      case Stat.magicresist:
+        magicResistModifier = getStatContributionValue(Stat.magicresist);
+        projectedMagicResistModifier = magicResistModifier;
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Imports direct writes made by pre-stat-list skills. Once a caller is
+   * migrated it writes the native entry and this method is a no-op. For a
+   * legacy caller, a changed scalar replaces only that category's canonical
+   * layer, preserving the D2MOO source-owned representation for all other
+   * categories.
+   */
+  private void syncLegacyModifiers() {
+    if (damageModifier != projectedDamageModifier) {
+      replaceLegacyCategory(Stat.damagepercent, damageModifier);
+      projectedDamageModifier = damageModifier;
+    }
+    if (defenseModifier != projectedDefenseModifier) {
+      replaceLegacyCategory(Stat.item_armor_percent, defenseModifier,
+          Stat.skill_armor_percent, Stat.armorclass);
+      projectedDefenseModifier = defenseModifier;
+    }
+    if (attackModifier != projectedAttackModifier) {
+      replaceLegacyCategory(Stat.item_tohit_percent, attackModifier,
+          Stat.tohit, Stat.attackrate);
+      projectedAttackModifier = attackModifier;
+    }
+    if (velocityModifier != projectedVelocityModifier) {
+      replaceLegacyCategory(Stat.velocitypercent, velocityModifier);
+      projectedVelocityModifier = velocityModifier;
+    }
+    if (fireResistModifier != projectedFireResistModifier) {
+      replaceLegacyCategory(Stat.fireresist, fireResistModifier);
+      projectedFireResistModifier = fireResistModifier;
+    }
+    if (coldResistModifier != projectedColdResistModifier) {
+      replaceLegacyCategory(Stat.coldresist, coldResistModifier);
+      projectedColdResistModifier = coldResistModifier;
+    }
+    if (lightResistModifier != projectedLightResistModifier) {
+      replaceLegacyCategory(Stat.lightresist, lightResistModifier);
+      projectedLightResistModifier = lightResistModifier;
+    }
+    if (poisonResistModifier != projectedPoisonResistModifier) {
+      replaceLegacyCategory(Stat.poisonresist, poisonResistModifier);
+      projectedPoisonResistModifier = poisonResistModifier;
+    }
+    if (magicResistModifier != projectedMagicResistModifier) {
+      replaceLegacyCategory(Stat.magicresist, magicResistModifier);
+      projectedMagicResistModifier = magicResistModifier;
+    }
+  }
+
+  private void replaceLegacyCategory(int canonicalStat, int value, int... aliases) {
+    for (int statId : aliases) removeStatContributions(statId);
+    setStatContribution(canonicalStat, 0, NativeStatResolver.Operation.ADD, value);
+  }
+
+  private void removeStatContributions(int statId) {
+    for (int i = statContributions.size() - 1; i >= 0; i--) {
+      if (statContributions.get(i).statId == statId) statContributions.remove(i);
+    }
   }
 
   /**
@@ -406,6 +693,19 @@ public class UnitState {
     this.masteryAttackRatingModifier = other.masteryAttackRatingModifier;
     this.masteryDamageModifier = other.masteryDamageModifier;
     this.masteryCriticalChance = other.masteryCriticalChance;
+    this.statContributions.clear();
+    for (StatContribution contribution : other.statContributions) {
+      this.statContributions.add(new StatContribution(contribution));
+    }
+    this.projectedDamageModifier = other.projectedDamageModifier;
+    this.projectedDefenseModifier = other.projectedDefenseModifier;
+    this.projectedAttackModifier = other.projectedAttackModifier;
+    this.projectedVelocityModifier = other.projectedVelocityModifier;
+    this.projectedFireResistModifier = other.projectedFireResistModifier;
+    this.projectedColdResistModifier = other.projectedColdResistModifier;
+    this.projectedLightResistModifier = other.projectedLightResistModifier;
+    this.projectedPoisonResistModifier = other.projectedPoisonResistModifier;
+    this.projectedMagicResistModifier = other.projectedMagicResistModifier;
     
     this.damagePerFrame = other.damagePerFrame;
     this.exactDamagePerFrame = other.exactDamagePerFrame;

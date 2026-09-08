@@ -95,13 +95,38 @@ public class StateList {
       return existing;
     }
 
-    // 创建新状态
+    return createState(stateId, duration, level, sourceEntityId, -1);
+  }
+
+  /**
+   * Adds or refreshes the stat-list layer identified by state, source and
+   * skill. Unlike the legacy {@link #addState} bridge, this permits two
+   * distinct owners to carry the same state without merging their deltas.
+   */
+  public UnitState addStateLayer(int stateId, int duration, int level,
+      int sourceEntityId, int skillId) {
+    if (!StateId.isValid(stateId)) {
+      log.warn("尝试添加无效的状态ID: {}", stateId);
+      return null;
+    }
+    UnitState existing = getStateLayer(stateId, sourceEntityId, skillId);
+    if (existing != null) {
+      existing.refresh(duration);
+      existing.enhance(level);
+      return existing;
+    }
+    return createState(stateId, duration, level, sourceEntityId, skillId);
+  }
+
+  private UnitState createState(int stateId, int duration, int level,
+      int sourceEntityId, int skillId) {
     UnitState state = statePool.obtain();
     state.stateId = stateId;
     state.duration = duration;
     state.initialDuration = duration;
     state.level = level;
     state.sourceEntityId = sourceEntityId;
+    state.skillId = skillId;
     
     states.add(state);
     flags.set(stateId);
@@ -148,7 +173,7 @@ public class StateList {
       UnitState state = states.get(i);
       if (state.stateId == stateId) {
         states.removeIndex(i);
-        flags.clear(stateId);
+        refreshFlag(stateId);
         statePool.free(state);
         log.debug("移除状态 {} 从实体 {}", StateId.getName(stateId), entityId);
         return true;
@@ -167,9 +192,10 @@ public class StateList {
     for (int i = states.size - 1; i >= 0; i--) {
       UnitState state = states.get(i);
       if (state.isCurse()) {
-        flags.clear(state.stateId);
+        int stateId = state.stateId;
         states.removeIndex(i);
         statePool.free(state);
+        refreshFlag(stateId);
         count++;
       }
     }
@@ -202,9 +228,10 @@ public class StateList {
     for (int i = states.size - 1; i >= 0; i--) {
       UnitState state = states.get(i);
       if (state.sourceEntityId == sourceEntityId) {
-        flags.clear(state.stateId);
+        int stateId = state.stateId;
         states.removeIndex(i);
         statePool.free(state);
+        refreshFlag(stateId);
         count++;
       }
     }
@@ -242,6 +269,30 @@ public class StateList {
       }
     }
     return null;
+  }
+
+  /** Returns one exact native stat-list layer rather than the first matching state. */
+  public UnitState getStateLayer(int stateId, int sourceEntityId, int skillId) {
+    if (!flags.check(stateId)) return null;
+    for (UnitState state : states) {
+      if (state.stateId == stateId && state.sourceEntityId == sourceEntityId
+          && state.skillId == skillId) return state;
+    }
+    return null;
+  }
+
+  /** Removes only one source/skill-owned layer and its exact contributions. */
+  public boolean removeStateLayer(int stateId, int sourceEntityId, int skillId) {
+    for (int i = states.size - 1; i >= 0; i--) {
+      UnitState state = states.get(i);
+      if (state.stateId != stateId || state.sourceEntityId != sourceEntityId
+          || state.skillId != skillId) continue;
+      states.removeIndex(i);
+      statePool.free(state);
+      refreshFlag(stateId);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -334,9 +385,10 @@ public class StateList {
       UnitState state = states.get(i);
       if (!state.update()) {
         // 状态已过期，移除
-        flags.clear(state.stateId);
+        int stateId = state.stateId;
         states.removeIndex(i);
         statePool.free(state);
+        refreshFlag(stateId);
       }
     }
   }
@@ -349,7 +401,7 @@ public class StateList {
   public int getTotalDamageModifier() {
     int total = 0;
     for (UnitState state : states) {
-      total += state.damageModifier;
+      total += state.resolvedDamageModifier();
     }
     return total;
   }
@@ -362,7 +414,7 @@ public class StateList {
   public int getTotalDefenseModifier() {
     int total = 0;
     for (UnitState state : states) {
-      total += state.defenseModifier;
+      total += state.resolvedDefenseModifier();
     }
     return total;
   }
@@ -382,7 +434,7 @@ public class StateList {
               && state.stateId <= StateId.PROGRESSIVE_LIGHTNING)) {
         continue;
       }
-      total += state.velocityModifier;
+      total += state.resolvedVelocityModifier();
     }
     return total;
   }
@@ -396,13 +448,7 @@ public class StateList {
   public int getTotalResistModifier(int resistType) {
     int total = 0;
     for (UnitState state : states) {
-      switch (resistType) {
-        case 0: total += state.fireResistModifier; break;
-        case 1: total += state.coldResistModifier; break;
-        case 2: total += state.lightResistModifier; break;
-        case 3: total += state.poisonResistModifier; break;
-        case 4: total += state.magicResistModifier; break;
-      }
+      total += state.resolvedResistModifier(resistType);
     }
     return total;
   }
@@ -427,7 +473,7 @@ public class StateList {
   public int getTotalAttackModifier() {
     int total = 0;
     for (UnitState state : states) {
-      total += state.attackModifier;
+      total += state.resolvedAttackModifier();
     }
     return total;
   }
@@ -552,6 +598,13 @@ public class StateList {
    */
   public int getEntityId() {
     return entityId;
+  }
+
+  private void refreshFlag(int stateId) {
+    for (UnitState state : states) {
+      if (state.stateId == stateId) return;
+    }
+    flags.clear(stateId);
   }
 
   @Override

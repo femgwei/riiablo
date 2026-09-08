@@ -7,6 +7,7 @@ import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
@@ -108,32 +109,28 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     state.needsSync = true;
     // Reapplication replaces the strongest value selected by AuraManager;
     // it must not accumulate each refresh/stronger-caster transition.
-    state.damageModifier = 0;
-    state.defenseModifier = 0;
-    state.attackModifier = 0;
-    state.velocityModifier = 0;
-    state.fireResistModifier = 0;
-    state.coldResistModifier = 0;
-    state.lightResistModifier = 0;
-    state.poisonResistModifier = 0;
-    state.magicResistModifier = 0;
+    state.clearModifiers();
     if (values != null) {
       for (int i = 0; i < values.length && i < statIds.length; i++) {
         if (values[i] == 0) continue;
-        // AuraManager's stat ids are D2 stat ids; map them to runtime state
-        // modifiers consumed by movement and combat adapters.
+        // Preserve the native stat id/layer on the state-owned list. UnitState
+        // projects migrated entries back to old scalar fields until all
+        // serializers and skill callers use the generic representation.
         switch (statIds[i]) {
-          case Stat.damagepercent: state.damageModifier += values[i]; break;
+          case Stat.damagepercent:
           case Stat.attackrate:
-          case Stat.item_tohit_percent: state.attackModifier += values[i]; break;
+          case Stat.item_tohit_percent:
           case Stat.item_armor_percent:
-          case Stat.armorclass: state.defenseModifier += values[i]; break;
-          case Stat.velocitypercent: state.velocityModifier += values[i]; break;
-          case Stat.fireresist: state.fireResistModifier += values[i]; break;
-          case Stat.coldresist: state.coldResistModifier += values[i]; break;
-          case Stat.lightresist: state.lightResistModifier += values[i]; break;
-          case Stat.poisonresist: state.poisonResistModifier += values[i]; break;
-          case Stat.magicresist: state.magicResistModifier += values[i]; break;
+          case Stat.armorclass:
+          case Stat.velocitypercent:
+          case Stat.fireresist:
+          case Stat.coldresist:
+          case Stat.lightresist:
+          case Stat.poisonresist:
+          case Stat.magicresist:
+            state.addStatContribution(statIds[i], 0,
+                NativeStatResolver.Operation.ADD, values[i]);
+            break;
           default: break;
         }
       }

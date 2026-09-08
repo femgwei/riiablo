@@ -101,7 +101,7 @@
     连续原生怪物 ID，避免控制行造成索引偏移。
   - 五表统一投影报告现可稳定列出原始行列数、D2MOO schema 字段数、额外诊断列及每个
     缺列、重复列、非法 integer/bit 的源行和列；五张真实 1.10f 表均无 schema issue。
-- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 62%）**
+- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 68%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
     必须由 1.10f 数据及 D2MOO 行为驱动。
@@ -110,7 +110,17 @@
     而是显式保留永久/装备基线，并以 24.8 编码值聚合、刷新、重算及到期恢复。
   - `libd2` 仅借鉴 buff 精确 delta 所有权和刷新/到期测试，`dark-magic` 仅借鉴稳定命名
     stat source 与乱序输入门槛；两者的 1.14d 数值和简化平面 stat 模型不作为行为真值。
-  - 待补：将其余 `UnitState` 专用 scalar 逐步迁入统一 stat source，按 `States.txt` 对齐
+  - 已建立 D2MOO `D2StatListStrc` 兼容状态层：同一 state 可按 source entity + skill
+    持有多个独立 stat-list，单独刷新、到期和移除时只撤销该层；修复多来源共用 state 时
+    删除一个层会错误清除全局 state flag 的问题。
+  - `UnitState` 开始保存原生 stat ID、layer、operation 和 encoded value；set/add/归零行为
+    分别对齐 `STATLIST_SetStat` / `STATLIST_AddStat`，条目按 stat/layer 稳定排序。首批已迁移
+    Aura 的 damage、attack、defense、velocity 与五类抗性，同时保留旧 scalar 投影供网络
+    序列化和未迁移技能兼容，聚合端不会重复计算。
+  - 战吼、变形、神殿等旧调用继续直接写 scalar 时，首次聚合读取会把变更反向导入该
+    state 自己的原生 stat/layer，而不是继续遗留在单位总值中；后续刷新替换同一条目，
+    state 到期或按来源移除即可完整撤销。专项回归覆盖旧写入、原生写入和混合兼容。
+  - 待补：将神殿、战吼、变形和其他 `UnitState` 专用 scalar 逐步迁入统一 stat source，按 `States.txt` 对齐
     同 state 覆盖、不同来源/层堆叠，以及玩家/怪物/Boss 死亡清理和保存规则。
 - [ ] **P0-3 Unit 生命周期（约 70%）**
   - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；仍需统一验证
