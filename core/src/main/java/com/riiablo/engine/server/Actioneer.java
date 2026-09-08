@@ -2256,9 +2256,10 @@ public class Actioneer extends PassiveSystem {
     if (duration <= 0) duration = 150;
     UnitStates states = mUnitStates.get(targetId);
     if (states.stateList == null) states.init(targetId);
-    UnitState state = states.stateList.addState(stateId, duration, level, entityId);
+    UnitState state = states.stateList.applyCurseState(
+        Riiablo.files != null ? Riiablo.files.States : null,
+        stateId, duration, level, entityId, casting.skillId, level);
     if (state != null) {
-      state.skillId = casting.skillId;
       state.needsSync = true;
     }
     log.info("[MONSTER_CURSE] phase=apply source={} target={} skill={} state={} level={} duration={}",

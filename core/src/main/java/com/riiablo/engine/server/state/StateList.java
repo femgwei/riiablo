@@ -4,6 +4,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
 import com.riiablo.codec.excel.States;
+import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -125,6 +126,112 @@ public class StateList {
     return createState(stateId, duration, level, sourceEntityId, skillId);
   }
 
+  /**
+   * Applies a native D2MOO-style curse stat-list.  Curse layers are owned by
+   * (source, skill, state), while States.txt group controls replacement of
+   * different curses in the same group.  Layers of the same curse from
+   * different sources remain independent so removing the stronger source can
+   * reveal the weaker one again.
+   *
+   * @param table authoritative 1.10f States.txt projection (may be null)
+   * @param stateId state to apply
+   * @param duration duration in simulation frames
+   * @param level skill level
+   * @param sourceEntityId caster/owner
+   * @param skillId originating skill
+   * @param strength effective curse strength; zero derives from statValue/level
+   * @param statId optional stat contribution, or {@code -1}
+   * @param statValue encoded contribution value
+   * @param operation stat operation (defaults to ADD)
+   * @return the active layer, or {@code null} when rejected by native rules
+   */
+  public UnitState applyCurseState(States table, int stateId, int duration, int level,
+      int sourceEntityId, int skillId, int strength, int statId, int statValue,
+      NativeStatResolver.Operation operation) {
+    States.Entry definition = table != null ? table.get(stateId) : null;
+    if (!(definition != null && definition.curse) && !StateId.isCurse(stateId)) {
+      log.warn("拒绝将非诅咒状态 {} 作为诅咒应用", StateId.getName(stateId));
+      return null;
+    }
+    if (duration <= 0) return null;
+    int resolvedStrength = strength != 0 ? Math.abs(strength)
+        : (statValue != 0 ? Math.abs(statValue) : Math.max(1, level));
+    int group = definition != null ? definition.group : 0;
+
+    UnitState exact = getStateLayer(stateId, sourceEntityId, skillId);
+    if (exact != null) {
+      // A weaker re-application does not disturb the stronger stat-list.
+      if (exact.curseStrength > resolvedStrength) return exact;
+      exact.curseStrength = resolvedStrength;
+      exact.curseGroup = group;
+      exact.level = Math.max(exact.level, level);
+      exact.sourceEntityId = sourceEntityId;
+      exact.skillId = skillId;
+      exact.duration = Math.max(exact.duration, duration);
+      exact.initialDuration = exact.duration;
+      if (statId >= 0) exact.setStatContribution(statId, 0, operation, statValue);
+      exact.expired = false;
+      exact.needsSync = true;
+      return exact;
+    }
+
+    // Different curse IDs in one native group are mutually exclusive.  Keep
+    // the strongest active layer; an incoming stronger layer replaces weaker
+    // layers and their stat contributions atomically.
+    if (group > 0) {
+      for (int i = states.size - 1; i >= 0; i--) {
+        UnitState current = states.get(i);
+        if (current.stateId == stateId || current.curseGroup != group) continue;
+        if (current.curseStrength >= resolvedStrength) return null;
+      }
+      for (int i = states.size - 1; i >= 0; i--) {
+        UnitState current = states.get(i);
+        if (current.stateId != stateId && current.curseGroup == group) {
+          int removedId = current.stateId;
+          states.removeIndex(i);
+          statePool.free(current);
+          refreshFlag(removedId);
+        }
+      }
+    }
+
+    UnitState applied = createState(stateId, duration, level, sourceEntityId, skillId);
+    applied.curseGroup = group;
+    applied.curseStrength = resolvedStrength;
+    if (statId >= 0 && statValue != 0) {
+      applied.setStatContribution(statId, 0, operation, statValue);
+    }
+    applied.needsSync = true;
+    log.debug("应用诅咒状态 {} entity={} source={} skill={} group={} strength={} duration={}",
+        StateId.getName(stateId), entityId, sourceEntityId, skillId, group,
+        resolvedStrength, duration);
+    return applied;
+  }
+
+  /** Convenience overload for curses without a stat contribution. */
+  public UnitState applyCurseState(States table, int stateId, int duration, int level,
+      int sourceEntityId, int skillId, int strength) {
+    return applyCurseState(table, stateId, duration, level, sourceEntityId, skillId,
+        strength, -1, 0, NativeStatResolver.Operation.ADD);
+  }
+
+  /** Removes only curable curses according to the native States.txt mask. */
+  public int removeCurableCurses(States table) {
+    int count = 0;
+    for (int i = states.size - 1; i >= 0; i--) {
+      UnitState state = states.get(i);
+      States.Entry definition = table != null ? table.get(state.stateId) : null;
+      boolean curse = definition != null ? definition.curse : state.isCurse();
+      if (!curse || (definition != null && !definition.curable)) continue;
+      int stateId = state.stateId;
+      states.removeIndex(i);
+      statePool.free(state);
+      refreshFlag(stateId);
+      count++;
+    }
+    return count;
+  }
+
   private UnitState createState(int stateId, int duration, int level,
       int sourceEntityId, int skillId) {
     UnitState state = statePool.obtain();
@@ -134,6 +241,7 @@ public class StateList {
     state.level = level;
     state.sourceEntityId = sourceEntityId;
     state.skillId = skillId;
+    if (StateId.isCurse(stateId)) state.curseStrength = Math.max(1, level);
     
     states.add(state);
     flags.set(stateId);

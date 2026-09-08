@@ -49,6 +49,10 @@ public class UnitState {
   /** 技能ID（如果状态由技能产生） */
   public int skillId = -1;
 
+  /** Native curse metadata used for group arbitration and strength ordering. */
+  public int curseGroup;
+  public int curseStrength;
+
   /** D2StatList BASIC/PERMANENT category; not removed by death cleanup. */
   public boolean basicStatList;
 
@@ -245,6 +249,8 @@ public class UnitState {
     initialDuration = 0;
     sourceEntityId = -1;
     skillId = -1;
+    curseGroup = 0;
+    curseStrength = 0;
     basicStatList = false;
 
     clearModifiers();
@@ -694,6 +700,8 @@ public class UnitState {
     this.initialDuration = other.initialDuration;
     this.sourceEntityId = other.sourceEntityId;
     this.skillId = other.skillId;
+    this.curseGroup = other.curseGroup;
+    this.curseStrength = other.curseStrength;
     this.basicStatList = other.basicStatList;
     
     this.damageModifier = other.damageModifier;

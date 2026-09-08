@@ -8,6 +8,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
@@ -627,11 +628,12 @@ public class ServerSkillSystem extends PassiveSystem {
       if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
       UnitStates states = mUnitStates.get(targetId);
       if (states.stateList == null) states.init(targetId);
-      UnitState state = states.stateList.addState(
-          StateId.DIMVISION, duration, skillLevel, event.entityId);
+      UnitState state = states.stateList.applyCurseState(
+          Riiablo.files != null ? Riiablo.files.States : null,
+          StateId.DIMVISION, duration, skillLevel, event.entityId, event.skillId,
+          Math.abs(defenseReduction), Stat.item_armor_percent, defenseReduction,
+          NativeStatResolver.Operation.ADD);
       if (state != null) {
-        state.skillId = event.skillId;
-        state.defenseModifier = defenseReduction;
         state.needsSync = true;
         affected++;
       }

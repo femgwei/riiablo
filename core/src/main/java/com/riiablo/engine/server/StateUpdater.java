@@ -632,6 +632,16 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       applyNativeFreezeState(entityId, states, duration, level, sourceId);
       return;
     }
+    // All remaining curse states use source/skill-owned native stat-list
+    // layers.  This prevents a second caster from overwriting the first and
+    // lets States.txt group/strength arbitration run in one place.
+    if (StateId.isCurse(stateId)) {
+      states.applyCurseState(
+          Riiablo.files != null ? Riiablo.files.States : null,
+          stateId, Math.max(1, duration), Math.max(1, level), sourceId, -1,
+          Math.max(1, level));
+      return;
+    }
     UnitState state = states.addState(stateId, duration, level, sourceId);
     if (state == null) return;
     if (damagePerFrame > state.damagePerFrame) state.damagePerFrame = (int) damagePerFrame;

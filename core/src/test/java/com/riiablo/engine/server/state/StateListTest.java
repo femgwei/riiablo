@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -126,6 +128,49 @@ public class StateListTest {
   }
 
   @Test
+  public void curseLayersAreOwnedBySourceAndRefreshExactKey() throws Exception {
+    StateList states = new StateList(42);
+    States table = curseTable();
+    UnitState weak = states.applyCurseState(table, StateId.AMPLIFYDAMAGE,
+        30, 1, 7, 100, 25, Stat.damagepercent, 25,
+        NativeStatResolver.Operation.ADD);
+    UnitState strong = states.applyCurseState(table, StateId.AMPLIFYDAMAGE,
+        40, 3, 8, 100, 60, Stat.damagepercent, 60,
+        NativeStatResolver.Operation.ADD);
+    assertNotNull(weak);
+    assertNotNull(strong);
+    assertEquals(2, states.size());
+    assertEquals(85, states.getTotalDamageModifier());
+
+    // Reapplying a weaker value from the same owner must not overwrite it.
+    states.applyCurseState(table, StateId.AMPLIFYDAMAGE,
+        90, 1, 7, 100, 10, Stat.damagepercent, 10,
+        NativeStatResolver.Operation.ADD);
+    assertEquals(25, weak.curseStrength);
+    assertEquals(30, weak.duration);
+
+    // Removing the strong source reveals the still-active weaker layer.
+    assertTrue(states.removeStateLayer(StateId.AMPLIFYDAMAGE, 8, 100));
+    assertEquals(25, states.getTotalDamageModifier());
+  }
+
+  @Test
+  public void curseGroupsReplaceOnlyDifferentStateIdsAndRejectWeaker() throws Exception {
+    StateList states = new StateList(42);
+    States table = curseTable();
+    UnitState amplify = states.applyCurseState(table, StateId.AMPLIFYDAMAGE,
+        50, 1, 1, 10, 30);
+    assertNotNull(amplify);
+    assertNotNull(states.applyCurseState(table, StateId.WEAKEN,
+        50, 1, 2, 11, 40));
+    // A weaker curse in the same group cannot displace Weaken.
+    assertNull(states.applyCurseState(table, StateId.AMPLIFYDAMAGE,
+        50, 1, 3, 12, 10));
+    assertTrue(states.hasState(StateId.WEAKEN));
+    assertFalse(states.hasState(StateId.AMPLIFYDAMAGE));
+  }
+
+  @Test
   public void coldReapplicationOnlyExtendsExpiryAndKeepsOriginalOwner() {
     StateList states = new StateList(42);
     UnitState cold = states.extendState(StateId.COLD, 50, 1, 7);
@@ -202,5 +247,19 @@ public class StateListTest {
         + "noclear\t\t\t\t1\n"
         + "ordinary\t\t\t\t\n";
     return States.parse(txt.getBytes(StandardCharsets.US_ASCII));
+  }
+
+  private static States curseTable() throws Exception {
+    StringBuilder txt = new StringBuilder("state\tgroup\tcurse\tcurable\n");
+    for (int i = 0; i <= StateId.WEAKEN; i++) {
+      if (i == StateId.AMPLIFYDAMAGE) {
+        txt.append("amplify\t1\t1\t1\n");
+      } else if (i == StateId.WEAKEN) {
+        txt.append("weaken\t1\t1\t1\n");
+      } else {
+        txt.append("state").append(i).append("\t0\t\t\n");
+      }
+    }
+    return States.parse(txt.toString().getBytes(StandardCharsets.US_ASCII));
   }
 }
