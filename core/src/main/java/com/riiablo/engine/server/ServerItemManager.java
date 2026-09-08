@@ -4,15 +4,22 @@ import com.badlogic.gdx.math.Vector2;
 import com.riiablo.save.CharData;
 import com.riiablo.item.VendorPricing;
 import com.riiablo.engine.server.item.GroundDropOwnership;
+import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.party.Party;
+import com.artemis.annotations.Wire;
 
 public class ServerItemManager extends ItemManager {
   private static final String TAG = "ServerItemManager";
 
+  @Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
+
   @Override
   public void groundToCursor(int entityId, int dst) {
     com.riiablo.item.Item ground = mItem.get(dst).item;
+    int partyId = partyManager == null ? Party.INVALID_ID : partyManager.getPartyId(entityId);
     if (ground != null && "gld".equalsIgnoreCase(ground.code)) {
-      if (!GroundDropOwnership.claim(dst, entityId)) return;
+      if (!GroundDropOwnership.claim(dst, entityId, partyId)) return;
       int amount = ground.attrs == null || ground.attrs.base().get(com.riiablo.attributes.Stat.quantity) == null
           ? 0 : ground.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt();
       VendorPricing.GoldGrant grant = VendorPricing.grantCarriedGold(mPlayer.get(entityId).data, amount);
@@ -31,7 +38,7 @@ public class ServerItemManager extends ItemManager {
           entityId, dst, amount, grant.credited, grant.remaining);
       return;
     }
-    if (!GroundDropOwnership.claim(dst, entityId)) return;
+    if (!GroundDropOwnership.claim(dst, entityId, partyId)) return;
     try {
       super.groundToCursor(entityId, dst);
       GroundDropOwnership.clear(dst);
