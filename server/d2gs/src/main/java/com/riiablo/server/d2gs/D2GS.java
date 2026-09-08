@@ -3394,8 +3394,11 @@ public class D2GS extends ApplicationAdapter {
     int playerId = player.get(packet.id, Engine.INVALID_ENTITY);
     String reason = null;
     if (playerId == Engine.INVALID_ENTITY) reason = "PLAYER_NOT_FOUND";
-    else if (isPlayerDead(playerId)) reason = "PLAYER_DEAD";
-    else if (request.operation() == QuestOperation.SNAPSHOT) {
+    else if (request.operation() != QuestOperation.SNAPSHOT && isPlayerDead(playerId)) {
+      // SNAPSHOT is a read-only recovery operation and remains available
+      // while the player's corpse/death state is authoritative.
+      reason = "PLAYER_DEAD";
+    } else if (request.operation() == QuestOperation.SNAPSHOT) {
       // A result snapshot is useful after reconnect or client-side correction.
     } else if (request.operation() == QuestOperation.NPC_MESSAGE) {
       reason = validateQuestNpc(playerId, request.targetEntityId(), request.messageIndex());
