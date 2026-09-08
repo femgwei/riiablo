@@ -184,15 +184,15 @@ public class D2SReader96 {
 
       if (!strict) recover(in, ITEMS_SIGNATURE, "items");
       MDC.put("d2s.section", "items");
-      d2s.items = readItemData(in, itemReader);
+      d2s.items = readItemData(in, itemReader, strict);
 
       if (!strict) recover(in, ITEMS_SIGNATURE, "corpse");
       MDC.put("d2s.section", "corpse");
-      d2s.corpse = readItemData(in, itemReader);
+      d2s.corpse = readItemData(in, itemReader, strict);
 
       if (!strict) recover(in, MERC_SIGNATURE, "merc");
       MDC.put("d2s.section", "merc");
-      d2s.merc = readMercData(d2s.merc, in, itemReader);
+      d2s.merc = readMercData(d2s.merc, in, itemReader, strict);
 
       if (!strict) recover(in, GOLEM_SIGNATURE, "golem");
       MDC.put("d2s.section", "golem");
@@ -322,6 +322,10 @@ public class D2SReader96 {
   }
 
   static D2S.ItemData readItemData(ByteInput in, ItemReader itemReader) {
+    return readItemData(in, itemReader, false);
+  }
+
+  static D2S.ItemData readItemData(ByteInput in, ItemReader itemReader, boolean strict) {
     log.trace("Validating items signature");
     in.readSignature(ITEMS_SIGNATURE);
     D2S.ItemData items = new D2S.ItemData();
@@ -332,7 +336,7 @@ public class D2SReader96 {
     for (int i = 0; i < size; i++) {
       try {
         MDC.put("item", i);
-        final Item item = itemReader.readItem(in);
+        final Item item = strict ? itemReader.readItemStrict(in) : itemReader.readItem(in);
         log.debug("item: {}", item);
         itemList.add(item);
       } catch (SignatureMismatch t) {
@@ -355,11 +359,16 @@ public class D2SReader96 {
   }
 
   static D2S.MercData readMercData(D2S.MercData merc, ByteInput in, ItemReader itemReader) {
+    return readMercData(merc, in, itemReader, false);
+  }
+
+  static D2S.MercData readMercData(
+      D2S.MercData merc, ByteInput in, ItemReader itemReader, boolean strict) {
     log.trace("Validating merc signature");
     in.readSignature(MERC_SIGNATURE);
     if (merc.seed == 0) return merc;
     // fixme: this is throwing end of stream exception -- something within ByteInput or BitInput isn't back tracking bytes read
-    merc.items = readItemData(in, itemReader);
+    merc.items = readItemData(in, itemReader, strict);
     return merc;
   }
 

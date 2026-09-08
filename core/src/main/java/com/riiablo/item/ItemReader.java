@@ -30,13 +30,24 @@ public class ItemReader {
 
   @SuppressWarnings("deprecation")
   public Item readItem(ByteInput in) {
+    return readItem(in, false);
+  }
+
+  /** Strict item reader used by complete D2S loads; nested records must be adjacent. */
+  @SuppressWarnings("deprecation")
+  public Item readItemStrict(ByteInput in) {
+    return readItem(in, true);
+  }
+
+  @SuppressWarnings("deprecation")
+  private Item readItem(ByteInput in, boolean strict) {
     final int startOffset = in.bytesRead(); /** @see Item#data */
     Item item = readSingleItem(in);
     if (item.socketsFilled > 0) log.trace("Reading {} sockets...", item.socketsFilled);
     for (int i = 0; i < item.socketsFilled; i++) {
       try {
         MDC.put("socket", i);
-        in.skipUntil(SIGNATURE);
+        if (!strict) in.skipUntil(SIGNATURE);
         item.sockets.add(readSingleItem(in));
       } finally {
         MDC.remove("socket");
