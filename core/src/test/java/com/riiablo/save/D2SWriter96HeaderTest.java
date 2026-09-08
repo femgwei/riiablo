@@ -112,6 +112,13 @@ class D2SWriter96HeaderTest {
   }
 
   @Test
+  void completeReaderRejectsTruncatedBodyAsInvalidFormat() {
+    byte[] data = new D2SWriter96().writeD2S(minimalExpansionSave("Truncated"));
+    byte[] truncated = Arrays.copyOf(data, data.length - 1);
+    assertThrows(InvalidFormat.class, () -> D2SReader.INSTANCE.readComplete(truncated));
+  }
+
+  @Test
   void rejectsNamesThatCannotRoundTripThroughTheClassicHeader() {
     assertTrue(D2S.isOriginalNameCompatible("Hero-01"));
     assertTrue(D2S.isOriginalNameCompatible("Test_Hero"));

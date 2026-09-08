@@ -228,8 +228,8 @@
     角色列表仍可使用只读头部的 `readD2S` 快路径。
   - `CharData.loadFromBuffer` 改用完整读取，`CharData.serialize` 改用当前对象重新生成
     原生 D2S，不再依赖按角色名索引的全局 `D2SWriterStub` 快照。
-  - `D2SWriter96HeaderTest` 增加完整读写、当前 `CharData` 序列化、篡改 checksum 和声明
-    size 的拒绝回归。
+  - `D2SWriter96HeaderTest` 增加完整读写、当前 `CharData` 序列化、篡改 checksum/声明
+    size 以及截断主体的拒绝回归。
   - 完整读取将截断 section 统一转换为 `InvalidFormat`，避免把损坏存档误报成无关的
     EOF/数组异常；下一步继续覆盖真实 1.10f 存档中的装备、佣兵和尸体字段。
   - `NewCharacterStartItemsTest` 已改用完整读取路径，逐职业验证起始装备、位置、耐久、
