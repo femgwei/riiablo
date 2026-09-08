@@ -156,6 +156,14 @@ table MonsterP {
 
 table ItemP {
   data:[ubyte];
+  // Authoritative multiplayer pickup window metadata. Appended fields keep
+  // old clients wire-compatible while allowing newer clients to avoid
+  // optimistic pickup attempts during the native owner/party window.
+  dropOwnerId:int32 = -1;
+  dropOwnerUntilMillis:ulong;
+  dropPartyId:int32 = -1;
+  dropPartyUntilMillis:ulong;
+  partyShareGold:bool;
 }
 
 // Objects created by D2Game at runtime have no backing DS1 row. Carry their

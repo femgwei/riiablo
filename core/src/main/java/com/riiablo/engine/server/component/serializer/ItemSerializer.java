@@ -32,7 +32,9 @@ public class ItemSerializer implements FlatBuffersSerializer<Item, ItemP> {
     itemWriter.writeItem(c.item, out);
     byte[] itemBytes = ByteBufUtil.getBytes(buffer);
     int dataOffset = ItemP.createDataVector(builder, itemBytes);
-    return ItemP.createItemP(builder, dataOffset);
+    return ItemP.createItemP(builder, dataOffset, c.dropOwnerId,
+        c.dropOwnerUntilMillis, c.dropPartyId, c.dropPartyUntilMillis,
+        c.partyShareGold);
   }
 
   @Override

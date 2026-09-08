@@ -242,7 +242,8 @@ public class DeathRewardSystem extends PassiveSystem {
           itemSeed, difficulty);
       int entityId = factory.createItem(item, x + MathUtils.random(-2f, 2f),
           y + MathUtils.random(-2f, 2f));
-      markDrop(entityId, ownerId);
+      markDrop(entityId, ownerId, dropPartyId(ownerId),
+          10_000L, 10_000L, "gld".equalsIgnoreCase(item.code));
       GroundDropOwnership.register(entityId, ownerId, dropPartyId(ownerId),
           10_000L, 10_000L, "gld".equalsIgnoreCase(item.code));
       // Item ids are serialized from the same object held by the component.
@@ -267,7 +268,8 @@ public class DeathRewardSystem extends PassiveSystem {
       gold.attrs.base().put(Stat.quantity, amount);
       int entityId = factory.createItem(gold, x + MathUtils.random(-1f, 1f),
           y + MathUtils.random(-1f, 1f));
-      markDrop(entityId, ownerId);
+      markDrop(entityId, ownerId, dropPartyId(ownerId),
+          10_000L, 10_000L, true);
       GroundDropOwnership.register(entityId, ownerId, dropPartyId(ownerId),
           10_000L, 10_000L, true);
       gold.id = entityId;
@@ -278,11 +280,13 @@ public class DeathRewardSystem extends PassiveSystem {
     }
   }
 
-  private void markDrop(int entityId, int ownerId) {
+  private void markDrop(int entityId, int ownerId, int partyId,
+                        long ownerDurationMillis, long partyDurationMillis,
+                        boolean partyShareGold) {
     if (entityId < 0 || mGroundItem == null || !mGroundItem.has(entityId)) return;
     com.riiablo.engine.server.component.Item item = mGroundItem.get(entityId);
-    item.dropOwnerId = ownerId;
-    item.dropOwnerUntilMillis = System.currentTimeMillis() + 10_000L;
+    GroundDropOwnership.applyMetadata(item, ownerId, partyId,
+        ownerDurationMillis, partyDurationMillis, partyShareGold);
   }
 
   private int dropPartyId(int ownerId) {

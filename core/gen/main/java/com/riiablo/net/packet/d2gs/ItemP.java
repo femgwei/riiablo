@@ -21,19 +21,39 @@ public final class ItemP extends Table {
   public ByteVector dataVector(ByteVector obj) { int o = __offset(4); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
   public ByteBuffer dataAsByteBuffer() { return __vector_as_bytebuffer(4, 1); }
   public ByteBuffer dataInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 4, 1); }
+  public int dropOwnerId() { int o = __offset(6); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
+  public long dropOwnerUntilMillis() { int o = __offset(8); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public int dropPartyId() { int o = __offset(10); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
+  public long dropPartyUntilMillis() { int o = __offset(12); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public boolean partyShareGold() { int o = __offset(14); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
   public static int createItemP(FlatBufferBuilder builder,
-      int dataOffset) {
-    builder.startTable(1);
+      int dataOffset,
+      int dropOwnerId,
+      long dropOwnerUntilMillis,
+      int dropPartyId,
+      long dropPartyUntilMillis,
+      boolean partyShareGold) {
+    builder.startTable(6);
+    ItemP.addDropPartyUntilMillis(builder, dropPartyUntilMillis);
+    ItemP.addDropOwnerUntilMillis(builder, dropOwnerUntilMillis);
+    ItemP.addDropPartyId(builder, dropPartyId);
+    ItemP.addDropOwnerId(builder, dropOwnerId);
     ItemP.addData(builder, dataOffset);
+    ItemP.addPartyShareGold(builder, partyShareGold);
     return ItemP.endItemP(builder);
   }
 
-  public static void startItemP(FlatBufferBuilder builder) { builder.startTable(1); }
+  public static void startItemP(FlatBufferBuilder builder) { builder.startTable(6); }
   public static void addData(FlatBufferBuilder builder, int dataOffset) { builder.addOffset(0, dataOffset, 0); }
   public static int createDataVector(FlatBufferBuilder builder, byte[] data) { return builder.createByteVector(data); }
   public static int createDataVector(FlatBufferBuilder builder, ByteBuffer data) { return builder.createByteVector(data); }
   public static void startDataVector(FlatBufferBuilder builder, int numElems) { builder.startVector(1, numElems, 1); }
+  public static void addDropOwnerId(FlatBufferBuilder builder, int dropOwnerId) { builder.addInt(1, dropOwnerId, -1); }
+  public static void addDropOwnerUntilMillis(FlatBufferBuilder builder, long dropOwnerUntilMillis) { builder.addLong(2, dropOwnerUntilMillis, 0L); }
+  public static void addDropPartyId(FlatBufferBuilder builder, int dropPartyId) { builder.addInt(3, dropPartyId, -1); }
+  public static void addDropPartyUntilMillis(FlatBufferBuilder builder, long dropPartyUntilMillis) { builder.addLong(4, dropPartyUntilMillis, 0L); }
+  public static void addPartyShareGold(FlatBufferBuilder builder, boolean partyShareGold) { builder.addBoolean(5, partyShareGold, false); }
   public static int endItemP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

@@ -52,8 +52,8 @@ public class ServerItemManager extends ItemManager {
     int droppedEntity = factory.createItem(item, position);
     if (droppedEntity >= 0 && mItem.has(droppedEntity)) {
       com.riiablo.engine.server.component.Item dropped = mItem.get(droppedEntity);
-      dropped.dropOwnerId = entityId;
-      dropped.dropOwnerUntilMillis = System.currentTimeMillis() + 10_000L;
+      GroundDropOwnership.applyMetadata(dropped, entityId, -1,
+          10_000L, 0L, false);
       GroundDropOwnership.register(droppedEntity, entityId, 10_000L);
     }
   }

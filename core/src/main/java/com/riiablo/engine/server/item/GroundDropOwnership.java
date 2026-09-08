@@ -11,6 +11,25 @@ public final class GroundDropOwnership {
   private static final java.util.HashSet<Integer> CLAIMED = new java.util.HashSet<>();
   private GroundDropOwnership() {}
 
+  /** Copies the authoritative pickup window to the ECS component that is
+   * serialized in ItemP. Keeping this in one helper prevents one drop path
+   * from accidentally omitting the party window or gold-sharing bit. */
+  public static void applyMetadata(com.riiablo.engine.server.component.Item component,
+                                   int ownerId, int partyId,
+                                   long ownerDurationMillis,
+                                   long partyDurationMillis,
+                                   boolean partyShareGold) {
+    if (component == null) return;
+    long now = System.currentTimeMillis();
+    component.dropOwnerId = ownerId;
+    component.dropOwnerUntilMillis = ownerId < 0 ? 0L
+        : now + Math.max(0L, ownerDurationMillis);
+    component.dropPartyId = partyId;
+    component.dropPartyUntilMillis = ownerId < 0 ? 0L
+        : component.dropOwnerUntilMillis + Math.max(0L, partyDurationMillis);
+    component.partyShareGold = partyShareGold;
+  }
+
   /** Resets stale state when Artemis recycles an entity id for a newly-created drop. */
   public static synchronized void created(int entityId) {
     DROPS.remove(entityId);

@@ -203,8 +203,8 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
           DEATH_GOLD_OWNER_MILLIS, 0L, false);
       if (mItem.has(entityId)) {
         com.riiablo.engine.server.component.Item drop = mItem.get(entityId);
-        drop.dropOwnerId = playerId;
-        drop.dropOwnerUntilMillis = System.currentTimeMillis() + DEATH_GOLD_OWNER_MILLIS;
+        GroundDropOwnership.applyMetadata(drop, playerId, -1,
+            DEATH_GOLD_OWNER_MILLIS, 0L, false);
       }
     } catch (Throwable t) {
       Gdx.app.error(TAG, "[PLAYER_DEATH_GOLD] phase=create_failed player=" + playerId, t);

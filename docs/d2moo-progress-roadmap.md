@@ -408,6 +408,15 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
 
 ## 当前下一项
 
+- [x] ~~完成多人地面掉落归属窗口广播~~
+  - `ItemP` 在保持旧字段兼容的前提下追加 owner/party 截止时间和金币队伍分配标记；
+    服务端所有掉落来源（怪物 TC、玩家丢弃、死亡金币）统一写入 ECS 元数据。
+  - `NetworkSynchronizer` 的现有 RoomEx/Level 可见性广播会把归属元数据随地面物品
+    基线和增量发送到每个可见客户端；客户端创建和更新实体时只读应用窗口，不绕过
+    服务端 claim 校验。金币部分拾取的数量变化仍通过同一实体快照同步，完全拾取继续
+    使用删除快照，避免第二客户端持有幽灵掉落。
+  - 新增 `GroundDropOwnershipMetadataTest`，并通过 `GoldPickupServiceTest`、D2GS 编译。
+
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 
 - [x] ~~完成德鲁伊召唤物所有权与生命周期~~

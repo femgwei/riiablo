@@ -14,11 +14,18 @@ public class Item extends Component {
   /** Temporary server-side pickup ownership for monster/player drops. */
   public int dropOwnerId = -1;
   public long dropOwnerUntilMillis;
+  /** Party window metadata mirrored to clients with ItemP. */
+  public int dropPartyId = -1;
+  public long dropPartyUntilMillis;
+  public boolean partyShareGold;
 
   public Item set(com.riiablo.item.Item item) {
     this.item = item;
     this.dropOwnerId = -1;
     this.dropOwnerUntilMillis = 0L;
+    this.dropPartyId = -1;
+    this.dropPartyUntilMillis = 0L;
+    this.partyShareGold = false;
     this.flippyDescriptor = new AssetDescriptor<>(Class.Type.ITM.PATH + '\\' + item.getFlippyFile() + ".dc6", DC6.class);
     return this;
   }

@@ -450,7 +450,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
         byte[] bytes = BufferUtils.readRemaining(item.dataAsByteBuffer());
         ByteInput byteInput = ByteInput.wrap(bytes);
         Item itemObj = itemReader.readItem(byteInput);
-        return factory.createItem(itemObj, position.x(), position.y());
+        int entityId = factory.createItem(itemObj, position.x(), position.y());
+        if (entityId != Engine.INVALID_ENTITY && mItem.has(entityId)) {
+          applyGroundItemMetadata(mItem.get(entityId), item);
+        }
+        return entityId;
       }
       case WRP: {
         WarpP warp = findTable(sync, ComponentP.WarpP, new WarpP());
@@ -853,8 +857,21 @@ public class ClientNetworkReceiver extends IntervalSystem {
         case ComponentP.DS1ObjectWrapperP:
         case ComponentP.WarpP:
         case ComponentP.MonsterP:
-        case ComponentP.ItemP:
+        case ComponentP.ItemP: {
+          if (entityType == Class.Type.ITM && mItem.has(entityId)) {
+            ItemP data = (ItemP) entityData.component(new ItemP(), i);
+            applyGroundItemMetadata(mItem.get(entityId), data);
+            byte[] encoded = BufferUtils.readRemaining(data.dataAsByteBuffer());
+            if (encoded.length > 0) {
+              try {
+                mItem.get(entityId).item = itemReader.readItem(ByteInput.wrap(encoded));
+              } catch (Throwable t) {
+                Gdx.app.error(TAG, "[ITEM_SYNC] failed to decode item " + entityData.entityId(), t);
+              }
+            }
+          }
           break;
+        }
         case ComponentP.StateP: {
           StateP data = (StateP) entityData.component(new StateP(), i);
           applyStateSnapshot(entityId, data);
@@ -1282,5 +1299,17 @@ public class ClientNetworkReceiver extends IntervalSystem {
       Gdx.app.log(TAG, "[ITEM_MOVE_REJECTED] request=" + result.requestId()
           + " failure=" + result.failure() + " revision=" + result.revision());
     }
+  }
+
+  /** Applies server-owned pickup-window metadata without granting client authority. */
+  private static void applyGroundItemMetadata(
+      com.riiablo.engine.server.component.Item local,
+      ItemP data) {
+    if (local == null || data == null) return;
+    local.dropOwnerId = data.dropOwnerId();
+    local.dropOwnerUntilMillis = data.dropOwnerUntilMillis();
+    local.dropPartyId = data.dropPartyId();
+    local.dropPartyUntilMillis = data.dropPartyUntilMillis();
+    local.partyShareGold = data.partyShareGold();
   }
 }

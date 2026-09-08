@@ -3514,6 +3514,10 @@ public class D2GS extends ApplicationAdapter {
         if (position == null) return false;
         int droppedEntity = factory.createItem(item, position.position.x, position.position.y);
         if (droppedEntity < 0) return false;
+        com.riiablo.engine.server.component.Item dropped = mItemSafe(droppedEntity);
+        com.riiablo.engine.server.item.GroundDropOwnership.applyMetadata(dropped,
+            playerEntityId, partyManager.getPartyId(playerEntityId),
+            10_000L, 10_000L, "gld".equalsIgnoreCase(item.code));
         com.riiablo.engine.server.item.GroundDropOwnership.register(droppedEntity,
             playerEntityId, partyManager.getPartyId(playerEntityId), 10_000L, 10_000L);
         return true;
