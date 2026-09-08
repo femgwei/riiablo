@@ -1447,7 +1447,7 @@ public class Actioneer extends PassiveSystem {
         if (log.debugEnabled()) {
           log.debug("{} calculated damage: {} on {}", entityId, damage, targetId);
         }
-        if (damage <= 0) {
+        if (damage <= 0 && combat.absorbedLife <= 0) {
           log.debug("{} melee hit on {} caused no damage", entityId, targetId);
           if (progressiveRelease != null && progressiveRelease.hasEffects()) {
             applyAssassinProgressiveStageEffects(
@@ -1467,6 +1467,7 @@ public class Actioneer extends PassiveSystem {
         DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
         events.dispatch(event);
         float appliedDamage = Math.max(0f, event.damage);
+        applyElementalAbsorb(attrs, combat, 1f);
         hitpoints.sub(appliedDamage);
         float hpAfter = hitpoints.asFixed();
         if (hpAfter < 0f) {
@@ -1749,6 +1750,7 @@ public class Actioneer extends PassiveSystem {
     DamageEvent event = DamageEvent.obtain(entityId, targetId, Math.max(0, combat.totalDamage));
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
+    applyElementalAbsorb(defender, combat, 1f);
     hitpoints.sub(applied);
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
     float lifeStolen = combat.totalDamage > 0
@@ -1963,6 +1965,7 @@ public class Actioneer extends PassiveSystem {
           entityId, current, Math.max(0, combat.totalDamage));
       events.dispatch(damageEvent);
       applied = Math.max(0f, damageEvent.damage);
+      applyElementalAbsorb(defender, combat, 1f);
       hp.sub(applied);
       if (hp.asFixed() < 0f) hp.set(0f);
       applyCombatStates(entityId, current, combat);
@@ -2034,6 +2037,7 @@ public class Actioneer extends PassiveSystem {
         Math.max(0, combat.totalDamage));
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
+    applyElementalAbsorb(defender, combat, 1f);
     hp.sub(applied);
     if (hp.asFixed() < 0f) hp.set(0f);
     int lifePct = DruidSkills.getHungerLifeLeech(
@@ -2070,6 +2074,7 @@ public class Actioneer extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent event = DamageEvent.obtain(sourceId, targetId, Math.max(0, combat.totalDamage));
     events.dispatch(event);
+    applyElementalAbsorb(defender, combat, 1f);
     hp.sub(Math.max(0f, event.damage));
     if (hp.asFixed() < 0f) hp.set(0f);
     applyCombatStates(sourceId, targetId, combat);
@@ -2499,6 +2504,7 @@ public class Actioneer extends PassiveSystem {
         Math.max(0f, combat.totalDamage));
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
+    applyElementalAbsorb(defender, combat, 1f);
     hp.sub(applied);
     if (hp.asFixed() < 0f) hp.set(0f);
     if (hp.asFixed() > 0f) queueHitReaction(targetId, false);
@@ -3461,6 +3467,23 @@ public class Actioneer extends PassiveSystem {
     return after - before;
   }
 
+  /** Applies elemental absorb reported by CombatSystem to the target's life.
+   *  CombatSystem has already removed the absorbed portion from damage; this
+   *  helper performs the corresponding native life restoration for melee and
+   *  skill paths that do not travel through MissileCollisionSystem.
+   */
+  private float applyElementalAbsorb(Attributes defender,
+      CombatSystem.CombatResult combat, float multiplier) {
+    if (defender == null || combat == null || combat.absorbedLife <= 0) return 0f;
+    float requested = combat.absorbedLife * Math.max(0.01f, multiplier);
+    float healed = restoreUpToMaximum(defender, Stat.hitpoints, Stat.maxhp, requested);
+    if (healed > 0f) {
+      log.debug("[COMBAT_ABSORB] absorbed={} requested={} healed={} multiplier={}",
+          combat.absorbedLife, requested, healed, multiplier);
+    }
+    return healed;
+  }
+
   private void resolveFireHit(int entityId, int targetId) {
     if (targetId == Engine.INVALID_ENTITY || !mMonster.has(entityId)
         || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)) {
@@ -3513,12 +3536,13 @@ public class Actioneer extends PassiveSystem {
             + "physical={} fire={} total={}",
         entityId, targetId, combat.hitChance, combat.physicalDamage,
         combat.elementalDamage[CombatSystem.DAMAGE_FIRE], damage);
-    if (damage <= 0) return;
+    if (damage <= 0 && combat.absorbedLife <= 0) return;
 
     StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
     DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
     events.dispatch(event);
+    applyElementalAbsorb(defender, combat, 1f);
     hitpoints.sub(Math.max(0f, event.damage));
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
     applyCombatStates(entityId, targetId, combat);
@@ -3634,6 +3658,7 @@ public class Actioneer extends PassiveSystem {
     DamageEvent event = DamageEvent.obtain(entityId, targetId, Math.max(0f, combat.totalDamage));
     events.dispatch(event);
     float damage = Math.max(0f, event.damage);
+    applyElementalAbsorb(defender, combat, 1f);
     hitpoints.sub(damage);
     if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
 
@@ -3886,6 +3911,7 @@ public class Actioneer extends PassiveSystem {
     float before = hp.asFixed();
     DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
     events.dispatch(event);
+    applyElementalAbsorb(defender, combat, (100f + bonusPercent) / 100f);
     hp.sub(Math.max(0f, event.damage));
     if (hp.asFixed() < 0f) hp.set(0f);
     log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result=hit baseDamage={} bonusPct={} damage={} hp={} -> {}",
