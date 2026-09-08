@@ -13,12 +13,29 @@ import java.util.Map;
 
 /** Lossless 1.10f {@code States.txt} projection matching D2MOO's state fields. */
 public final class States implements Iterable<States.Entry> {
+  public static final NativeTxtSchema SCHEMA = NativeTxtSchema.builder("States.txt")
+      .strings("state", "overlay1", "overlay2", "overlay3", "overlay4", "pgsvoverlay",
+          "castoverlay", "removerlay", "stat", "missile", "skill", "onsound", "offsound",
+          "itemtype", "itemtrans", "cltevent")
+      .integers("group", "setfunc", "remfunc", "colorpri", "colorshift", "light-r",
+          "light-g", "light-b", "gfxtype", "gfxclass", "clteventfunc", "cltactivefunc",
+          "srvactivefunc")
+      .booleans("nosend", "hide", "transform", "aura", "pgsv", "active", "remhit",
+          "damblue", "damred", "attblue", "attred", "curse", "curable", "plrstaydeath",
+          "monstaydeath", "bossstaydeath", "disguise", "bossinv", "meleeonly", "restrict",
+          "blue", "armblue", "rfblue", "rcblue", "rlblue", "rpblue", "stambarblue",
+          "armred", "rfred", "rcred", "rlred", "rpred", "exp", "shatter", "life",
+          "udead", "green", "nooverlays", "notondead", "noclear")
+      .build();
+
   private final LosslessTxtTable source;
   private final List<Entry> entries;
   private final Map<String, Entry> byName;
+  private final List<NativeTxtSchema.Issue> schemaIssues;
 
   private States(LosslessTxtTable source) {
     this.source = source;
+    schemaIssues = SCHEMA.validate(source);
     List<Entry> entries = new ArrayList<>();
     Map<String, Entry> byName = new LinkedHashMap<>();
     for (int row = 0; row < source.rowCount(); row++) {
@@ -50,6 +67,8 @@ public final class States implements Iterable<States.Entry> {
     return source;
   }
 
+  public List<NativeTxtSchema.Issue> schemaIssues() { return schemaIssues; }
+
   public int size() {
     return entries.size();
   }
@@ -72,8 +91,7 @@ public final class States implements Iterable<States.Entry> {
   }
 
   private static int integer(LosslessTxtTable table, int row, String column) {
-    Integer value = table.getInt(row, column);
-    return value == null ? 0 : value;
+    return table.getNativeInt(row, column);
   }
 
   public static final class Entry {
@@ -153,46 +171,46 @@ public final class States implements Iterable<States.Entry> {
       this.sourceLine = sourceLine;
       state = table.get(row, "state");
       group = integer(table, row, "group");
-      noSend = table.getBoolean(row, "nosend");
-      hide = table.getBoolean(row, "hide");
-      transform = table.getBoolean(row, "transform");
-      aura = table.getBoolean(row, "aura");
-      progressive = table.getBoolean(row, "pgsv");
-      active = table.getBoolean(row, "active");
-      removeOnHit = table.getBoolean(row, "remhit");
-      damageBlue = table.getBoolean(row, "damblue");
-      damageRed = table.getBoolean(row, "damred");
-      attackBlue = table.getBoolean(row, "attblue");
-      attackRed = table.getBoolean(row, "attred");
-      curse = table.getBoolean(row, "curse");
-      curable = table.getBoolean(row, "curable");
-      playerStayDeath = table.getBoolean(row, "plrstaydeath");
-      monsterStayDeath = table.getBoolean(row, "monstaydeath");
-      bossStayDeath = table.getBoolean(row, "bossstaydeath");
-      disguise = table.getBoolean(row, "disguise");
-      bossInvulnerable = table.getBoolean(row, "bossinv");
-      meleeOnly = table.getBoolean(row, "meleeonly");
-      restrict = table.getBoolean(row, "restrict");
-      blue = table.getBoolean(row, "blue");
-      armorBlue = table.getBoolean(row, "armblue");
-      fireResistBlue = table.getBoolean(row, "rfblue");
-      coldResistBlue = table.getBoolean(row, "rcblue");
-      lightningResistBlue = table.getBoolean(row, "rlblue");
-      poisonResistBlue = table.getBoolean(row, "rpblue");
-      staminaBarBlue = table.getBoolean(row, "stambarblue");
-      armorRed = table.getBoolean(row, "armred");
-      fireResistRed = table.getBoolean(row, "rfred");
-      coldResistRed = table.getBoolean(row, "rcred");
-      lightningResistRed = table.getBoolean(row, "rlred");
-      poisonResistRed = table.getBoolean(row, "rpred");
-      experience = table.getBoolean(row, "exp");
-      shatter = table.getBoolean(row, "shatter");
-      life = table.getBoolean(row, "life");
-      undead = table.getBoolean(row, "udead");
-      green = table.getBoolean(row, "green");
-      noOverlays = table.getBoolean(row, "nooverlays");
-      notOnDead = table.getBoolean(row, "notondead");
-      noClear = table.getBoolean(row, "noclear");
+      noSend = table.getNativeBit(row, "nosend");
+      hide = table.getNativeBit(row, "hide");
+      transform = table.getNativeBit(row, "transform");
+      aura = table.getNativeBit(row, "aura");
+      progressive = table.getNativeBit(row, "pgsv");
+      active = table.getNativeBit(row, "active");
+      removeOnHit = table.getNativeBit(row, "remhit");
+      damageBlue = table.getNativeBit(row, "damblue");
+      damageRed = table.getNativeBit(row, "damred");
+      attackBlue = table.getNativeBit(row, "attblue");
+      attackRed = table.getNativeBit(row, "attred");
+      curse = table.getNativeBit(row, "curse");
+      curable = table.getNativeBit(row, "curable");
+      playerStayDeath = table.getNativeBit(row, "plrstaydeath");
+      monsterStayDeath = table.getNativeBit(row, "monstaydeath");
+      bossStayDeath = table.getNativeBit(row, "bossstaydeath");
+      disguise = table.getNativeBit(row, "disguise");
+      bossInvulnerable = table.getNativeBit(row, "bossinv");
+      meleeOnly = table.getNativeBit(row, "meleeonly");
+      restrict = table.getNativeBit(row, "restrict");
+      blue = table.getNativeBit(row, "blue");
+      armorBlue = table.getNativeBit(row, "armblue");
+      fireResistBlue = table.getNativeBit(row, "rfblue");
+      coldResistBlue = table.getNativeBit(row, "rcblue");
+      lightningResistBlue = table.getNativeBit(row, "rlblue");
+      poisonResistBlue = table.getNativeBit(row, "rpblue");
+      staminaBarBlue = table.getNativeBit(row, "stambarblue");
+      armorRed = table.getNativeBit(row, "armred");
+      fireResistRed = table.getNativeBit(row, "rfred");
+      coldResistRed = table.getNativeBit(row, "rcred");
+      lightningResistRed = table.getNativeBit(row, "rlred");
+      poisonResistRed = table.getNativeBit(row, "rpred");
+      experience = table.getNativeBit(row, "exp");
+      shatter = table.getNativeBit(row, "shatter");
+      life = table.getNativeBit(row, "life");
+      undead = table.getNativeBit(row, "udead");
+      green = table.getNativeBit(row, "green");
+      noOverlays = table.getNativeBit(row, "nooverlays");
+      notOnDead = table.getNativeBit(row, "notondead");
+      noClear = table.getNativeBit(row, "noclear");
       overlays = new String[] {
           table.get(row, "overlay1"), table.get(row, "overlay2"),
           table.get(row, "overlay3"), table.get(row, "overlay4")};

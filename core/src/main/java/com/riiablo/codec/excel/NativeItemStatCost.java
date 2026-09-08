@@ -20,12 +20,27 @@ import java.util.Map;
  * are kept separate from the legacy Excel compatibility fixes.</p>
  */
 public final class NativeItemStatCost implements Iterable<NativeItemStatCost.Entry> {
+  public static final NativeTxtSchema SCHEMA = NativeTxtSchema.builder("ItemStatCost.txt")
+      .strings("stat", "maxstat", "itemevent1", "itemevent2", "descstrpos", "descstrneg",
+          "descstr2", "dgrpstrpos", "dgrpstrneg", "dgrpstr2", "op base", "op stat1",
+          "op stat2", "op stat3")
+      .integers("send bits", "send param bits", "divide", "multiply", "add", "valshift",
+          "minaccr", "save bits", "save add", "save param bits", "1.09-save bits",
+          "1.09-save add", "encode", "csvbits", "csvparam", "itemeventfunc1",
+          "itemeventfunc2", "descpriority", "descfunc", "descval", "dgrp", "dgrpfunc",
+          "dgrpval", "keepzero", "op", "op param", "stuff")
+      .booleans("send other", "signed", "updateanimrate", "fmin", "damagerelated",
+          "itemspecific", "direct", "fcallback", "saved", "csvsigned")
+      .build();
+
   private final LosslessTxtTable source;
   private final List<Entry> entries;
   private final Map<String, Entry> byName;
+  private final List<NativeTxtSchema.Issue> schemaIssues;
 
   private NativeItemStatCost(LosslessTxtTable source) {
     this.source = source;
+    schemaIssues = SCHEMA.validate(source);
     List<Entry> entries = new ArrayList<>();
     Map<String, Entry> byName = new LinkedHashMap<>();
     for (int row = 0; row < source.rowCount(); row++) {
@@ -57,6 +72,8 @@ public final class NativeItemStatCost implements Iterable<NativeItemStatCost.Ent
     return source;
   }
 
+  public List<NativeTxtSchema.Issue> schemaIssues() { return schemaIssues; }
+
   public int size() {
     return entries.size();
   }
@@ -79,8 +96,7 @@ public final class NativeItemStatCost implements Iterable<NativeItemStatCost.Ent
   }
 
   private static int integer(LosslessTxtTable table, int row, String column) {
-    Integer value = table.getInt(row, column);
-    return value == null ? 0 : value;
+    return table.getNativeInt(row, column);
   }
 
   public static final class Entry {

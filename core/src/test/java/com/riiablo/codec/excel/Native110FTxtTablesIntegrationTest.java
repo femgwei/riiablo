@@ -77,11 +77,13 @@ class Native110FTxtTablesIntegrationTest {
         + "headerSha256=993ac38a480003febf262ef291adbed452d02a766f826edd463d5be69083005b,"
         + "semanticSha256=52b168679f523804e689efab75cc68c5e7bd402a39fcfae7e5acb78c43f65a5d");
 
+    Map<String, LosslessTxtTable> nativeTables = new LinkedHashMap<>();
     for (Map.Entry<String, String[]> expected : requiredHeaders.entrySet()) {
       FileHandle handle = resolver.resolve(EXCEL + expected.getKey());
       assertNotNull(handle, "Missing native table " + expected.getKey());
       byte[] bytes = handle.readBytes();
       LosslessTxtTable table = LosslessTxtTable.parse(bytes);
+      nativeTables.put(expected.getKey(), table);
       for (String header : expected.getValue()) {
         assertTrue(table.columnIndex(header) >= 0,
             expected.getKey() + " is missing 1.10f column " + header);
@@ -89,6 +91,17 @@ class Native110FTxtTablesIntegrationTest {
       TxtTableManifest manifest = TxtTableManifest.create(bytes);
       assertEquals(nativeManifests.get(expected.getKey()), manifest.toString(),
           expected.getKey() + " does not match the fixed native 1.10f payload");
+    }
+
+    Map<String, NativeTxtSchema> schemas = new LinkedHashMap<>();
+    schemas.put("ItemStatCost.txt", NativeItemStatCost.SCHEMA);
+    schemas.put("States.txt", States.SCHEMA);
+    schemas.put("Skills.txt", NativeSkills.SCHEMA);
+    schemas.put("Missiles.txt", NativeMissiles.SCHEMA);
+    schemas.put("MonStats.txt", NativeMonStats.SCHEMA);
+    for (NativeTxtProjectionReport.TableReport report
+        : NativeTxtProjectionReport.createAll(schemas, nativeTables)) {
+      assertTrue(report.isClean(), report::toString);
     }
 
     FileHandle statesHandle = resolver.resolve(EXCEL + "States.txt");

@@ -78,7 +78,7 @@
 否则只能标记为“部分完成”。`libd2` / `dark-magic` 的 1.14d 数据只能参考解析结构和
 测试方法，不能作为 1.10f 数值真值。
 
-- [ ] **P0-1 无损 TXT 数据层与 1.10f 五表对照（约 92%）**
+- [x] **~~P0-1 无损 TXT 数据层与 1.10f 五表对照（100%）~~**
   - 已完成独立于旧 `TxtParser` 的无损读取器：保留空字段、重复/空列、短行、超额列、
     空行、`Expansion`、原始行和源行号；支持 D2 布尔值及完整 uint32 十六进制读取。
   - 已按 D2MOO `DATATBLS_LoadStatesTxt` 接入 1.10f `States.txt` 的 40 个状态标志、死亡
@@ -96,8 +96,11 @@
     核对无缺失，684 行、171 列原始 1.10f 数据全部通过。`TXTFIELD_BIT` 与 byte integer
     分开投影；`*N` 原始异常值保留但按原生缺省 0 读取，非零 bit（包括原表中的 `2`）按
     set 解释，不擅自改写原版数据。
-  - 待补：把 `MonStats` 从旧 Excel 投影迁到无损 schema，并生成五表按表/行/列定位的
-    schema 投影统一差异报告；完成后才可关闭 P0-1。
+  - 已完成 `MonStats` 无损 schema：D2MOO 加载的 253 个字段机械核对无缺失，另保留
+    `hcIdx` 原始诊断列；705 个原始数据行中排除 1 个 `Expansion` 控制行，得到 704 个
+    连续原生怪物 ID，避免控制行造成索引偏移。
+  - 五表统一投影报告现可稳定列出原始行列数、D2MOO schema 字段数、额外诊断列及每个
+    缺列、重复列、非法 integer/bit 的源行和列；五张真实 1.10f 表均无 schema issue。
 - [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 55%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
@@ -123,7 +126,7 @@
 4. 近战命中只能读取攻击起手 tick 的位置/Size/Zone/Room 快照。
 5. missile 测试必须验证命中、超时、离开世界和主人销毁后的实体回收，防止实体泄漏。
 
-当前执行优先级：`P0-1 TXT/States -> P0-2 Stat/State -> P0-3 Unit 生命周期 ->
+当前执行优先级：`P0-2 Stat/State -> P0-3 Unit 生命周期 ->
 P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 -> P3 技能扩展`。
 
 ### P0：先恢复可靠的回归基线
@@ -274,6 +277,9 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
 - 2026-09-08：完成 P0-1 `Missiles` 阶段；D2MOO 146 个加载字段机械核对无缺失，684 行
   真实 1.10f 表通过无损 schema，并区分原生 bit 与 byte integer，兼容 `*N` 和非二进制
   bit 原始异常值；数据、导弹房间跟踪、火焰命中和亚马逊箭表现回归通过。
+- 2026-09-08：完成 P0-1 `MonStats` 与五表总验收；253 个原生加载字段和 `hcIdx` 诊断列
+  接入，705 行原表正确投影为 704 个怪物记录；新增五表统一字段报告并将 States/Stat
+  bit 读取统一为 D2MOO 语义。五表真实 1.10f、状态生命周期和 Overlay 回归全部通过。
 - 2026-09-02：为 `ItemData.updateStats` 和 `CharData.onUpdated` 增加不完整物品/角色记录保护；
   `NativeGemShrineServiceTest` 及地图、神殿、Fallen Shaman、双客户端掉落回归集合全部通过。
 - 2026-09-02：完成 P1 原生物品生成首项；新增纯数据和真实 Excel/MPQ 双层测试，物品、掉落、修理、交易与 Countess 回归共 35 个用例通过。
@@ -481,9 +487,9 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 同一角色重连取得新实体 ID 后，双方仍看到原实体 ID 的掉落与已开启对象；普通召唤物没有随角色错误恢复。客户端测试观察器同时消费正式 `Disconnect` 包，避免把玩家协议删除误判为缺少 `EntitySync.deleted`。
   - 测试输出 `reconnect_visibility_disconnect_pass`、`reconnect_visibility_pass`，构建成功。
 
-当前已进入 **P0-1 无损 TXT 数据层与 1.10f 五表对照**；无损读取、`States.txt`、
-五表 golden manifest、`ItemStatCost` 和 `Skills` 已完成。下一小步按
-`Missiles -> MonStats` 顺序建立无损 schema 投影和逐字段差异报告；P0-1 完成前暂停扩展技能。
+**P0-1 无损 TXT 数据层与 1.10f 五表对照已完成。** 当前进入 **P0-2 原生
+Stat/State 聚合和生命周期**；下一小步先审计永久 stat、装备 stat 与临时 state stat 的
+现有写入路径，建立显式 `Base -> Add -> Percent` 聚合门槛，再对齐 state 覆盖/堆叠和死亡清理。
 
 ## 记录规则
 
