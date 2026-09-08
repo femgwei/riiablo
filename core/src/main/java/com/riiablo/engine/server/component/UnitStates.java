@@ -37,9 +37,14 @@ public class UnitStates extends Component {
   public int appliedMaxLifePercent;
   public int appliedMaxManaPercent;
   public int appliedMaxStaminaPercent;
-  public float resolvedMaxLife;
-  public float resolvedMaxMana;
-  public float resolvedMaxStamina;
+  /** Unmodified permanent/equipment aggregate captured before the state percentage phase. */
+  public int baseMaxLifeEncoded;
+  public int baseMaxManaEncoded;
+  public int baseMaxStaminaEncoded;
+  public int resolvedMaxLifeEncoded;
+  public int resolvedMaxManaEncoded;
+  public int resolvedMaxStaminaEncoded;
+  public long observedAggregateRevision;
 
   /**
    * 初始化状态组件
@@ -52,9 +57,13 @@ public class UnitStates extends Component {
     appliedMaxLifePercent = 0;
     appliedMaxManaPercent = 0;
     appliedMaxStaminaPercent = 0;
-    resolvedMaxLife = Float.NaN;
-    resolvedMaxMana = Float.NaN;
-    resolvedMaxStamina = Float.NaN;
+    baseMaxLifeEncoded = Integer.MIN_VALUE;
+    baseMaxManaEncoded = Integer.MIN_VALUE;
+    baseMaxStaminaEncoded = Integer.MIN_VALUE;
+    resolvedMaxLifeEncoded = Integer.MIN_VALUE;
+    resolvedMaxManaEncoded = Integer.MIN_VALUE;
+    resolvedMaxStaminaEncoded = Integer.MIN_VALUE;
+    observedAggregateRevision = Long.MIN_VALUE;
     if (stateList == null) {
       stateList = new StateList(entityId);
     } else {
@@ -71,8 +80,12 @@ public class UnitStates extends Component {
     appliedMaxLifePercent = 0;
     appliedMaxManaPercent = 0;
     appliedMaxStaminaPercent = 0;
-    resolvedMaxLife = Float.NaN;
-    resolvedMaxMana = Float.NaN;
-    resolvedMaxStamina = Float.NaN;
+    baseMaxLifeEncoded = Integer.MIN_VALUE;
+    baseMaxManaEncoded = Integer.MIN_VALUE;
+    baseMaxStaminaEncoded = Integer.MIN_VALUE;
+    resolvedMaxLifeEncoded = Integer.MIN_VALUE;
+    resolvedMaxManaEncoded = Integer.MIN_VALUE;
+    resolvedMaxStaminaEncoded = Integer.MIN_VALUE;
+    observedAggregateRevision = Long.MIN_VALUE;
   }
 }

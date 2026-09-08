@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.NativeTargeting;
 import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.state.StateId;
@@ -151,9 +152,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
   /**
    * Folds native percentage max-resource stats into the authoritative
-   * aggregate without compounding them every tick. Removing or refreshing a
-   * state first divides out the previously applied percentage, then applies
-   * the new total exactly once.
+   * aggregate without compounding them every tick. The unmodified permanent/
+   * equipment aggregate is retained explicitly, and all active state
+   * percentages are combined into one final encoded-value phase.
    */
   private void applyMaximumResourceModifiers(
       int entityId, UnitStates unitStates, StateList stateList) {
@@ -163,21 +164,29 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     int previousMaxLifePercent = unitStates.appliedMaxLifePercent;
     int previousMaxManaPercent = unitStates.appliedMaxManaPercent;
     int previousMaxStaminaPercent = unitStates.appliedMaxStaminaPercent;
+    boolean aggregateRebuilt = unitStates.observedAggregateRevision != attrs.aggregateRevision();
     int maxLifePercent = stateList.getTotalMaxLifeModifier();
-    unitStates.resolvedMaxLife = applyMaximumResourceModifier(attrs,
-        Stat.hitpoints, Stat.maxhp, unitStates.appliedMaxLifePercent,
-        maxLifePercent, unitStates.resolvedMaxLife);
+    int currentMaxLife = encoded(attrs, Stat.maxhp);
+    unitStates.baseMaxLifeEncoded = resolveUnmodifiedBase(currentMaxLife,
+        unitStates.resolvedMaxLifeEncoded, unitStates.baseMaxLifeEncoded, aggregateRebuilt);
+    unitStates.resolvedMaxLifeEncoded = applyMaximumResourceModifier(attrs,
+        Stat.hitpoints, Stat.maxhp, unitStates.baseMaxLifeEncoded, maxLifePercent);
     unitStates.appliedMaxLifePercent = maxLifePercent;
     int maxManaPercent = stateList.getTotalMaxManaModifier();
-    unitStates.resolvedMaxMana = applyMaximumResourceModifier(attrs,
-        Stat.mana, Stat.maxmana, unitStates.appliedMaxManaPercent,
-        maxManaPercent, unitStates.resolvedMaxMana);
+    int currentMaxMana = encoded(attrs, Stat.maxmana);
+    unitStates.baseMaxManaEncoded = resolveUnmodifiedBase(currentMaxMana,
+        unitStates.resolvedMaxManaEncoded, unitStates.baseMaxManaEncoded, aggregateRebuilt);
+    unitStates.resolvedMaxManaEncoded = applyMaximumResourceModifier(attrs,
+        Stat.mana, Stat.maxmana, unitStates.baseMaxManaEncoded, maxManaPercent);
     unitStates.appliedMaxManaPercent = maxManaPercent;
     int maxStaminaPercent = stateList.getTotalMaxStaminaModifier();
-    unitStates.resolvedMaxStamina = applyMaximumResourceModifier(attrs,
-        Stat.stamina, Stat.maxstamina, unitStates.appliedMaxStaminaPercent,
-        maxStaminaPercent, unitStates.resolvedMaxStamina);
+    int currentMaxStamina = encoded(attrs, Stat.maxstamina);
+    unitStates.baseMaxStaminaEncoded = resolveUnmodifiedBase(currentMaxStamina,
+        unitStates.resolvedMaxStaminaEncoded, unitStates.baseMaxStaminaEncoded, aggregateRebuilt);
+    unitStates.resolvedMaxStaminaEncoded = applyMaximumResourceModifier(attrs,
+        Stat.stamina, Stat.maxstamina, unitStates.baseMaxStaminaEncoded, maxStaminaPercent);
     unitStates.appliedMaxStaminaPercent = maxStaminaPercent;
+    unitStates.observedAggregateRevision = attrs.aggregateRevision();
     if (previousMaxLifePercent != maxLifePercent
         || previousMaxManaPercent != maxManaPercent
         || previousMaxStaminaPercent != maxStaminaPercent) {
@@ -234,28 +243,34 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
   }
 
-  static float applyMaximumResourceModifier(
+  static int resolveUnmodifiedBase(
+      int currentEncoded, int previousResolvedEncoded, int previousBaseEncoded,
+      boolean aggregateRebuilt) {
+    if (aggregateRebuilt || previousBaseEncoded == Integer.MIN_VALUE
+        || currentEncoded != previousResolvedEncoded) {
+      return currentEncoded;
+    }
+    return previousBaseEncoded;
+  }
+
+  static int applyMaximumResourceModifier(
       Attributes attrs, short currentStat, short maximumStat,
-      int previousPercent, int nextPercent, float previousResolved) {
+      int unmodifiedEncoded, int nextPercent) {
     StatRef maximum = attrs.get(maximumStat, StatRef.obtain());
-    if (maximum == null) return Float.NaN;
-    int oldScale = Math.max(1, 100 + previousPercent);
-    int newScale = Math.max(1, 100 + nextPercent);
-    float currentMaximum = maximum.asFixed();
-    // Item/stat reaggregation replaces the aggregate with a fresh unmodified
-    // maximum. Detect that external change instead of dividing the new base
-    // by the stale state percentage.
-    boolean stillOwnsPreviousValue = previousPercent != 0 && Float.isFinite(previousResolved)
-        && Math.abs(currentMaximum - previousResolved) <= 0.001f;
-    float unmodified = stillOwnsPreviousValue
-        ? currentMaximum * 100f / oldScale : currentMaximum;
-    float resolved = Math.max(0f, unmodified * newScale / 100f);
-    attrs.aggregate().put(maximumStat, resolved);
+    if (maximum == null || unmodifiedEncoded == Integer.MIN_VALUE) return Integer.MIN_VALUE;
+    int resolved = Math.max(0,
+        NativeStatResolver.applyPercentEncoded(unmodifiedEncoded, Math.max(-99, nextPercent)));
+    attrs.aggregate().putEncoded(maximumStat, resolved);
     StatRef current = attrs.get(currentStat, StatRef.obtain());
-    if (current != null && current.asFixed() > resolved) {
-      attrs.aggregate().put(currentStat, resolved);
+    if (current != null && current.encodedValues() > resolved) {
+      attrs.aggregate().putEncoded(currentStat, resolved);
     }
     return resolved;
+  }
+
+  private static int encoded(Attributes attrs, short stat) {
+    StatRef value = attrs.get(stat, StatRef.obtain());
+    return value == null ? Integer.MIN_VALUE : value.encodedValues();
   }
 
   /**

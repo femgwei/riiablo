@@ -168,6 +168,12 @@ class BarbarianWarCryTest extends RiiabloTest {
       assertEquals(135f, attrs.get(Stat.maxhp).asFixed(), 0.001f,
           "the state percentage must not compound on later ticks");
 
+      attrs.base().put(Stat.maxhp, 135f);
+      attrs.reset();
+      world.process();
+      assertEquals(182.25f, attrs.get(Stat.maxhp).asFixed(), 0.001f,
+          "an aggregate rebuild must be observable even when its base equals the old resolved value");
+
       attrs.aggregate().put(Stat.maxhp, 120f);
       world.process();
       assertEquals(162f, attrs.get(Stat.maxhp).asFixed(), 0.001f,

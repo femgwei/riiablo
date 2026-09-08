@@ -124,6 +124,8 @@ public final class Attributes implements Iterable<StatRef> {
   private StatListRef base;
   private StatListRef agg;
   private StatListRef rem;
+  /** Changes only when the permanent/equipment aggregate is rebuilt from base. */
+  private long aggregateRevision;
 
   Attributes() {}
 
@@ -186,7 +188,12 @@ public final class Attributes implements Iterable<StatRef> {
     if (base.isEmpty()) log.warn("#reset() called on attributes with an empty base");
     agg.setAll(base);
     rem.clear();
+    aggregateRevision++;
     return this;
+  }
+
+  public long aggregateRevision() {
+    return aggregateRevision;
   }
 
   public void clear()  {
@@ -194,6 +201,7 @@ public final class Attributes implements Iterable<StatRef> {
     base.clear();
     agg.clear();
     rem.clear();
+    aggregateRevision++;
   }
 
   @Override

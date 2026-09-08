@@ -101,10 +101,17 @@
     连续原生怪物 ID，避免控制行造成索引偏移。
   - 五表统一投影报告现可稳定列出原始行列数、D2MOO schema 字段数、额外诊断列及每个
     缺列、重复列、非法 integer/bit 的源行和列；五张真实 1.10f 表均无 schema issue。
-- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 55%）**
+- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 62%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
     必须由 1.10f 数据及 D2MOO 行为驱动。
+  - 已完成首项显式聚合门槛：新增带稳定来源身份的 encoded stat resolver，强制所有 Add
+    先汇总、Percent 最后只应用一次；最大生命/法力/体力不再通过浮点反除旧百分比恢复，
+    而是显式保留永久/装备基线，并以 24.8 编码值聚合、刷新、重算及到期恢复。
+  - `libd2` 仅借鉴 buff 精确 delta 所有权和刷新/到期测试，`dark-magic` 仅借鉴稳定命名
+    stat source 与乱序输入门槛；两者的 1.14d 数值和简化平面 stat 模型不作为行为真值。
+  - 待补：将其余 `UnitState` 专用 scalar 逐步迁入统一 stat source，按 `States.txt` 对齐
+    同 state 覆盖、不同来源/层堆叠，以及玩家/怪物/Boss 死亡清理和保存规则。
 - [ ] **P0-3 Unit 生命周期（约 70%）**
   - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；仍需统一验证
     `Spawn -> InsertWorld -> TickUpdate -> DeathEvent -> RemoveWorld -> Destroy`，以及死亡时
@@ -280,6 +287,9 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
 - 2026-09-08：完成 P0-1 `MonStats` 与五表总验收；253 个原生加载字段和 `hcIdx` 诊断列
   接入，705 行原表正确投影为 704 个怪物记录；新增五表统一字段报告并将 States/Stat
   bit 读取统一为 D2MOO 语义。五表真实 1.10f、状态生命周期和 Overlay 回归全部通过。
+- 2026-09-08：开始 P0-2 显式 Stat 聚合；借鉴 libd2 的 buff delta 生命周期和 dark-magic
+  的命名来源测试，新增 `Base -> Add -> Percent` encoded resolver，并将 Battle Orders 类
+  最大资源修正迁到显式未修正基线，消除浮点反算及逐 tick 复利风险。
 - 2026-09-02：为 `ItemData.updateStats` 和 `CharData.onUpdated` 增加不完整物品/角色记录保护；
   `NativeGemShrineServiceTest` 及地图、神殿、Fallen Shaman、双客户端掉落回归集合全部通过。
 - 2026-09-02：完成 P1 原生物品生成首项；新增纯数据和真实 Excel/MPQ 双层测试，物品、掉落、修理、交易与 Countess 回归共 35 个用例通过。
