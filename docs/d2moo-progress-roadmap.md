@@ -155,11 +155,14 @@
     所有权清理和玩家实体保留。
   - 待补：将 `Spawn -> InsertWorld -> TickUpdate` 的阶段标记接入统一实体工厂，并补
     Room 卸载、网络断线和 Destroy 后订阅清理测试。
-- [ ] **P0-4 固定 25Hz Sim Tick 与阶段顺序（约 90%）**
+- [ ] **P0-4 固定 25Hz Sim Tick 与阶段顺序（约 96%）**
   - 服务端 40ms 单写者 tick、本地固定步进、渲染隔离、位置快照和多人时钟已通过。
   - D2GS 与本地权威世界现按 `state -> missile -> unit/AI -> death/destroy -> snapshot`
     注册核心系统；状态更新和导弹碰撞均在单位行为前执行，避免新状态/投射物被延迟一帧。
-  - 待补：长时间漂移、高实体压力和完整网络快照阶段的自动压力测试。
+  - 新增固定时钟长跑回归：10,000 tick 的 serverTime 每帧严格增加 40ms，world delta
+    始终为 1/25 秒；2,000 个带生命周期实体连续运行 500 tick，tick 与订阅数量不漂移。
+  - 真实 1.10f `headlessSnapshotResync` 通过完整多人快照压力流程，包含跨地图、死亡/复活、
+    RoomEx 重订阅、乱序/重复基线和 2.5 秒暂停恢复（`oldLevelDrops=184`，无时间线回退）。
 - [ ] **P1-5 Missile 原生表驱动（约 88%）**
   - `ServerEntityFactory` 已读取 `Missiles.txt.Pierce` 和原生速度/Range；本轮将
     `Collision`、`CollideKill` 接入统一碰撞/销毁判定，非碰撞视觉导弹不再误伤，
