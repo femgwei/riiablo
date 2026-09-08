@@ -137,6 +137,58 @@ class NewCharacterStartItemsTest extends RiiabloTest {
     assertEquals(encoded.corpse.items.first().code, decoded.corpse.items.first().code);
   }
 
+  @Test
+  void socketedMercCorpseAndGolemItemsRoundTrip() {
+    CharData character = newCharacter(CharacterClass.AMAZON);
+    D2S encoded = D2SWriter96.createD2S(character);
+
+    // Turn the starting weapon into a one-socket item and attach a compact
+    // rune/potion-shaped child.  The child is deliberately stored as SOCKET;
+    // this exercises the nested JM records written after the parent item.
+    Item parent = encoded.items.items.first();
+    parent.flags |= Item.ITEMFLAG_SOCKETED;
+    parent.socketsFilled = 1;
+    parent.attrs.base().put(Stat.item_numsockets, 1);
+    Item socket = encoded.items.items.get(2);
+    socket.location = Location.SOCKET;
+    socket.bodyLoc = BodyLoc.NONE;
+    socket.storeLoc = StoreLoc.NONE;
+    parent.sockets = new Array<>();
+    parent.sockets.add(socket);
+
+    // Populate all optional item sections with real item records.  Reusing
+    // objects is intentional: the D2S format stores independent records and
+    // the reader must consume each section without relying on object identity.
+    encoded.merc.flags = 0x1234;
+    encoded.merc.seed = 0x5678;
+    encoded.merc.name = (short) 0x0102;
+    encoded.merc.type = (short) 0x0304;
+    encoded.merc.experience = 987654L;
+    encoded.merc.items = new D2S.ItemData();
+    encoded.merc.items.items = new Array<>();
+    encoded.merc.items.items.add(encoded.items.items.get(1));
+
+    encoded.corpse.items.add(encoded.items.items.get(3));
+    encoded.golem.exists = true;
+    encoded.golem.item = encoded.items.items.get(4);
+
+    byte[] bytes = new D2SWriter96().writeD2S(encoded);
+    D2S decoded = D2SReader.INSTANCE.readComplete(bytes, new StatListReader(), new ItemReader());
+
+    assertEquals(encoded.items.items.size, decoded.items.items.size);
+    Item decodedParent = decoded.items.items.first();
+    assertEquals(1, decodedParent.socketsFilled);
+    assertEquals(1, decodedParent.sockets.size);
+    assertEquals(socket.code, decodedParent.sockets.first().code);
+    assertEquals(Location.SOCKET, decodedParent.sockets.first().location);
+    assertEquals(1, decoded.merc.items.items.size);
+    assertEquals(encoded.merc.items.items.first().code, decoded.merc.items.items.first().code);
+    assertEquals(1, decoded.corpse.items.size);
+    assertEquals(encoded.corpse.items.first().code, decoded.corpse.items.first().code);
+    assertTrue(decoded.golem.exists);
+    assertEquals(encoded.golem.item.code, decoded.golem.item.code);
+  }
+
   private static CharData newCharacter(CharacterClass clazz) {
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "StartHero", (byte) clazz.id);
