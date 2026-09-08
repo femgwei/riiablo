@@ -1,6 +1,7 @@
 package com.riiablo.save;
 
 import com.badlogic.gdx.utils.Array;
+import com.riiablo.Riiablo;
 import com.riiablo.attributes.StatListReader;
 import com.riiablo.io.ByteInput;
 import com.riiablo.io.InvalidFormat;
@@ -94,6 +95,20 @@ class D2SWriter96HeaderTest {
     byte[] badSize = data.clone();
     badSize[0x08]++;
     assertThrows(InvalidFormat.class, () -> D2SReader.INSTANCE.readComplete(badSize));
+  }
+
+  @Test
+  void charDataSerializationUsesCurrentStateInsteadOfStaleNameCache() {
+    CharData character = CharData.obtain().set(
+        Riiablo.NORMAL, true, "Serialize", Riiablo.AMAZON);
+    character.level = 42;
+    byte[] first = character.serialize();
+    character.level = 77;
+    byte[] second = character.serialize();
+
+    assertFalse(Arrays.equals(first, second));
+    D2S decoded = D2SReader.INSTANCE.readComplete(second);
+    assertEquals(77, decoded.level());
   }
 
   @Test
