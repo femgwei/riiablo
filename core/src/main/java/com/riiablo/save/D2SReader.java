@@ -59,6 +59,50 @@ public enum D2SReader {
     }
   }
 
+  /**
+   * Reads and validates a complete 1.10f save.  The legacy {@link #readD2S}
+   * method intentionally stops after the fixed header because character-list
+   * screens only need preview data; callers that enter the game must use this
+   * method (or call {@link #readRemaining} themselves) so the body cannot be
+   * silently omitted.
+   *
+   * <p>The native loader rejects truncated files and checksum mismatches.  Do
+   * the same here before parsing variable-length item/stat sections, where a
+   * malformed count otherwise tends to surface as an unrelated EOF.</p>
+   */
+  public D2S readComplete(byte[] bytes, StatListReader statReader, ItemReader itemReader) {
+    if (bytes == null || bytes.length < D2SReader96.HEADER_SIZE) {
+      throw new InvalidFormat(ByteInput.wrap(bytes == null ? new byte[0] : bytes),
+          "D2S file is truncated before the fixed header");
+    }
+    ByteInput in = ByteInput.wrap(bytes);
+    D2S d2s = readD2S(in);
+    long declaredSize = Integer.toUnsignedLong(d2s.size);
+    if (declaredSize != bytes.length) {
+      throw new InvalidFormat(in, "D2S size mismatch: header=" + declaredSize
+          + " actual=" + bytes.length);
+    }
+    int calculated = calculateChecksum(ByteInput.wrap(bytes));
+    if (d2s.checksum != calculated) {
+      throw new InvalidFormat(in, String.format(
+          "D2S checksum mismatch: header=0x%08X calculated=0x%08X",
+          d2s.checksum, calculated));
+    }
+    if (statReader == null) statReader = new StatListReader();
+    if (itemReader == null) itemReader = new ItemReader();
+    readRemaining(d2s, in, statReader, itemReader);
+    if (in.bytesRemaining() != 0) {
+      throw new InvalidFormat(in, "D2S has " + in.bytesRemaining()
+          + " trailing bytes after the final section");
+    }
+    return d2s;
+  }
+
+  /** Convenience overload using the standard stat/item decoders. */
+  public D2S readComplete(byte[] bytes) {
+    return readComplete(bytes, null, null);
+  }
+
   static D2S readHeader(ByteInput in, D2S d2s) {
     d2s.version = in.readSafe32u();
     log.debug("version: {} ({})", d2s.version, D2S.getVersionString(d2s.version));

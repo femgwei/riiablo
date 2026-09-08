@@ -3,6 +3,7 @@ package com.riiablo.save;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.attributes.StatListReader;
 import com.riiablo.io.ByteInput;
+import com.riiablo.io.InvalidFormat;
 import com.riiablo.item.ItemReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -77,6 +78,22 @@ class D2SWriter96HeaderTest {
     assertEquals(0, decoded.corpse.items.size);
     assertFalse(decoded.golem.exists);
     assertEquals(0, in.bytesRemaining());
+  }
+
+  @Test
+  void completeReaderValidatesNativeSizeAndChecksum() {
+    byte[] data = new D2SWriter96().writeD2S(minimalExpansionSave("Complete"));
+    D2S decoded = D2SReader.INSTANCE.readComplete(data);
+    assertTrue(decoded.bodyRead());
+    assertEquals(data.length, decoded.size);
+
+    byte[] badChecksum = data.clone();
+    badChecksum[badChecksum.length - 1] ^= 0x01;
+    assertThrows(InvalidFormat.class, () -> D2SReader.INSTANCE.readComplete(badChecksum));
+
+    byte[] badSize = data.clone();
+    badSize[0x08]++;
+    assertThrows(InvalidFormat.class, () -> D2SReader.INSTANCE.readComplete(badSize));
   }
 
   @Test

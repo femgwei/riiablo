@@ -96,10 +96,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   @SuppressWarnings("deprecation") // d2s writer not implemented yet -- stub deprecated to avoid usage
   public static CharData loadFromBuffer(int diff, ByteBuffer buffer) {
     byte[] bytes = BufferUtils.readRemaining(buffer);
-    ByteInput in = ByteInput.wrap(bytes);
-    D2S d2s = D2SReader.INSTANCE.readD2S(in);
-    D2SReader.INSTANCE.readRemaining(d2s, in, STAT_READER, ITEM_READER);
-    D2SWriterStub.put(d2s, bytes);
+    D2S d2s = D2SReader.INSTANCE.readComplete(bytes, STAT_READER, ITEM_READER);
     return new CharData().set(diff, false).load(d2s);
   }
 
@@ -299,9 +296,12 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   }
 
   public byte[] serialize() {
-    /** TODO: replace this code when {@link D2SWriter} is implemented */
     Validate.isTrue(isManaged(), "Cannot serialize unmanaged data");
-    return D2SWriterStub.getBytes(name);
+    // Serialize the current authoritative CharData instead of returning the
+    // bytes cached by D2SWriterStub when the file was first read.  This keeps
+    // stat/skill/quest/item changes made during play in the next network or
+    // disk save and makes the result a native 1.10f round-trip.
+    return D2SWriter.INSTANCE.writeD2S(D2SWriter96.createD2S(this));
   }
 
   public int getHotkey(int button, int skill) {
