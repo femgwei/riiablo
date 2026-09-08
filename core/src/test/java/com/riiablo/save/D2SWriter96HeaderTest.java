@@ -119,6 +119,23 @@ class D2SWriter96HeaderTest {
   }
 
   @Test
+  void completeReaderRejectsMisplacedSectionInsteadOfRecoveringIntoPayload() {
+    byte[] data = new D2SWriter96().writeD2S(minimalExpansionSave("StrictSections"));
+    int statsOffset = HEADER_SIZE
+        + D2SReader96.QUESTS_SIZE
+        + D2SReader96.WAYPOINTS_SIZE
+        + D2SReader96.NPCS_SIZE;
+    int skillsOffset = statsOffset + 4; // empty gf stats section
+    assertEquals(0x69, data[skillsOffset] & 0xFF);
+
+    // Corrupt only the skills signature and repair the envelope checksum so
+    // the failure proves strict section placement, not checksum validation.
+    data[skillsOffset] = 0x00;
+    putIntLE(data, 0x0C, D2SWriter96.computeChecksum(data, 0x0C));
+    assertThrows(InvalidFormat.class, () -> D2SReader.INSTANCE.readComplete(data));
+  }
+
+  @Test
   void rejectsNamesThatCannotRoundTripThroughTheClassicHeader() {
     assertTrue(D2S.isOriginalNameCompatible("Hero-01"));
     assertTrue(D2S.isOriginalNameCompatible("Test_Hero"));
@@ -182,5 +199,9 @@ class D2SWriter96HeaderTest {
 
   private static int intLE(byte[] data, int offset) {
     return ByteBuffer.wrap(data, offset, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
+  }
+
+  private static void putIntLE(byte[] data, int offset, int value) {
+    ByteBuffer.wrap(data, offset, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(value);
   }
 }

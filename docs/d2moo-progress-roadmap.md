@@ -222,7 +222,7 @@
     `headlessReconnectGroundLoot` 在重复删除包下均通过，验证断线重连基线和 claim 一致。
   - 新增 `headlessDelayedDeleteFrames`，以跨 3 个 Sim Tick 的延迟删除帧验证旧删除不会
     回退快照时钟或误删重建掉落；延迟注入和重复注入均通过。
-- [ ] **P1-8 D2S 1.10f round-trip（约 85%）**
+- [ ] **P1-8 D2S 1.10f round-trip（约 88%）**
   - 新增 `D2SReader.readComplete`，在解析可变长度 section 前校验 1.10f 的声明大小和
     CRC，并要求 quests/waypoints/NPC/stats/skills/items/merc/golem 全部消费完毕；普通
     角色列表仍可使用只读头部的 `readD2S` 快路径。
@@ -248,6 +248,9 @@
     存档门槛：父物品 + SOCKET 子物品、佣兵装备、尸体装备和石魔装备同时存在时，所有
     `JM`/`jf`/`JM` 段均能完整消费并保持数量、位置和 code；覆盖嵌套物品导致的 section
     错位风险。
+  - `readComplete` 现在使用严格 body reader：技能、主物品、尸体、佣兵和石魔 section
+    必须在原生预期偏移出现签名，不再通过 `skipUntil` 从 payload 中“恢复”；保留旧
+    `readRemaining` 的宽松恢复行为供角色列表/诊断工具使用，并增加错位签名拒绝回归。
 
 强制踩坑回归门槛：
 

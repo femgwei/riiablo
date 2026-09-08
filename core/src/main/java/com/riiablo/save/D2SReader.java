@@ -83,7 +83,14 @@ public enum D2SReader {
       validateEnvelope(d2s, bytes, in);
       if (statReader == null) statReader = new StatListReader();
       if (itemReader == null) itemReader = new ItemReader();
-      readRemaining(d2s, in, statReader, itemReader);
+      // Complete game loads use the native strict path: section signatures
+      // must occur at the exact expected offset.  The legacy public
+      // readRemaining method retains its recovery behavior for preview/tools.
+      if (d2s.version == D2S.VERSION_110) {
+        D2SReader96.readRemainingStrict(d2s, in, statReader, itemReader);
+      } else {
+        readRemaining(d2s, in, statReader, itemReader);
+      }
       if (in.bytesRemaining() != 0) {
         throw new InvalidFormat(in, "D2S has " + in.bytesRemaining()
             + " trailing bytes after the final section");

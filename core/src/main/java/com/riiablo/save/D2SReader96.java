@@ -152,6 +152,17 @@ public class D2SReader96 {
   }
 
   static D2S readRemaining(D2S d2s, ByteInput in, StatListReader statReader, ItemReader itemReader) {
+    return readRemaining(d2s, in, statReader, itemReader, false);
+  }
+
+  /** Strict 1.10f body reader used for saves that will enter the game. */
+  static D2S readRemainingStrict(
+      D2S d2s, ByteInput in, StatListReader statReader, ItemReader itemReader) {
+    return readRemaining(d2s, in, statReader, itemReader, true);
+  }
+
+  private static D2S readRemaining(
+      D2S d2s, ByteInput in, StatListReader statReader, ItemReader itemReader, boolean strict) {
     try {
       MDC.put("d2s.name", d2s.name);
 
@@ -167,23 +178,23 @@ public class D2SReader96 {
       MDC.put("d2s.section", "stats");
       d2s.stats = readStatData(in, statReader);
 
-      recover(in, SKILLS_SIGNATURE, "skills");
+      if (!strict) recover(in, SKILLS_SIGNATURE, "skills");
       MDC.put("d2s.section", "skills");
       d2s.skills = readSkillData(in);
 
-      recover(in, ITEMS_SIGNATURE, "items");
+      if (!strict) recover(in, ITEMS_SIGNATURE, "items");
       MDC.put("d2s.section", "items");
       d2s.items = readItemData(in, itemReader);
 
-      recover(in, ITEMS_SIGNATURE, "corpse");
+      if (!strict) recover(in, ITEMS_SIGNATURE, "corpse");
       MDC.put("d2s.section", "corpse");
       d2s.corpse = readItemData(in, itemReader);
 
-      recover(in, MERC_SIGNATURE, "merc");
+      if (!strict) recover(in, MERC_SIGNATURE, "merc");
       MDC.put("d2s.section", "merc");
       d2s.merc = readMercData(d2s.merc, in, itemReader);
 
-      recover(in, GOLEM_SIGNATURE, "golem");
+      if (!strict) recover(in, GOLEM_SIGNATURE, "golem");
       MDC.put("d2s.section", "golem");
       d2s.golem = readGolemData(in, itemReader);
 
