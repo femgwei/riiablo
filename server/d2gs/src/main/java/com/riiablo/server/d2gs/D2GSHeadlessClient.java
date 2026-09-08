@@ -2006,6 +2006,12 @@ public final class D2GSHeadlessClient {
         throw new IOException("dual quest recovery revisions diverged: dead="
             + deadSnapshot.questRevision() + " peer=" + peerSnapshot.questRevision());
       }
+      long[] authoritative = D2GS.headlessQuestState(a.playerId);
+      if (authoritative.length == 0 || authoritative[0] != deadSnapshot.questRevision()) {
+        throw new IOException("quest snapshot differs from authoritative state: authority="
+            + (authoritative.length == 0 ? "unavailable" : authoritative[0])
+            + " client=" + deadSnapshot.questRevision());
+      }
       log("quest_recovery_pass", "clients=" + a.playerId + ',' + b.playerId
           + " deadSnapshot=true records=" + deadSnapshot.questRecordsLength()
           + " revision=" + deadSnapshot.questRevision());

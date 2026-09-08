@@ -1347,6 +1347,32 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return new float[5]; }
   }
 
+  /**
+   * Test-only authoritative quest state probe. The returned array contains
+   * the native snapshot revision at index 0 followed by unsigned quest
+   * records. It is marshalled onto the simulation thread so protocol tests
+   * can compare client snapshots without racing Artemis world access.
+   */
+  static long[] headlessQuestState(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new long[0];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<long[]> state =
+        new java.util.concurrent.atomic.AtomicReference<>(new long[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player component = server.world.getMapper(Player.class).get(playerId);
+        short[] records = QuestSnapshot.records(component == null ? null : component.data);
+        long[] encoded = new long[records.length + 1];
+        encoded[0] = QuestSnapshot.revision(records);
+        for (int i = 0; i < records.length; i++) encoded[i + 1] = records[i] & 0xFFFFL;
+        state.set(encoded);
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? state.get() : new long[0]; }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return new long[0]; }
+  }
+
   /** Test-only NPC-equivalent paid resurrection on the render thread. */
   static boolean headlessResurrectMercenary(int playerId) {
     D2GS server = activeHeadlessInstance;
