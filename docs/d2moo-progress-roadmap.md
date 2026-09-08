@@ -164,8 +164,9 @@
     `Explosion/AlwaysExplode/ExplosionMissile` 配置存在时生成通用爆炸子导弹。
   - `LastCollide` 已在 Range 末帧执行一次最终单位碰撞；`CollideType=7` 已支持
     导弹间碰撞，并按 `CanDestroy` 销毁可被导弹破坏的目标。
-  - 新增 `MissileNativePolicyTest`；待补动态场景物件的 `CanDestroy` 破坏回调、
-    更精确的 `LastCollide` 多目标边界语义和长时间高实体压力测试。
+  - 新增 `MissileNativePolicyTest` 的 512 枚短命导弹压力用例，确认 Range 回收不
+    残留；D2MOO 的 `CanDestroy` 仅针对 `UNIT_MISSILE`，不误用于普通场景物件。
+  - 待补更精确的 `LastCollide` 多目标边界语义和长时间跨房间高实体压力测试。
 - [ ] **P1-6 伤害、命中与死亡链（约 78%）**
 - [ ] **P1-7 地面物品、掉落与拾取（约 80%）**
 - [ ] **P1-8 D2S 1.10f round-trip（约 68%）**
