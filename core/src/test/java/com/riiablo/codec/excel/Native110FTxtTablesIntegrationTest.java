@@ -111,5 +111,11 @@ class Native110FTxtTablesIntegrationTest {
       hasDamageRelated |= itemStats.get(id).damageRelated;
     }
     assertTrue(hasDamageRelated, "1.10f ItemStatCost must retain damageRelated bit fields");
+
+    NativeSkills skills = NativeSkills.parse(resolver.resolve(EXCEL + "Skills.txt").readBytes());
+    assertEquals(357, skills.size());
+    assertTrue(skills.schemaIssues().isEmpty(), () -> "Skills.txt schema mismatch: "
+        + skills.schemaIssues().subList(0, Math.min(10, skills.schemaIssues().size())));
+    for (int id = 0; id < skills.size(); id++) assertEquals(id, skills.get(id).id);
   }
 }

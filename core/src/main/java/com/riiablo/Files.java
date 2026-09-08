@@ -33,6 +33,7 @@ import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Npc;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.NativeItemStatCost;
+import com.riiablo.codec.excel.NativeSkills;
 import com.riiablo.codec.excel.MonAI;
 import com.riiablo.codec.excel.MonLvl;
 import com.riiablo.codec.excel.MonMode;
@@ -87,6 +88,8 @@ public class Files {
   public final ItemStatCost     ItemStatCost;
   /** Lossless 1.10f projection; legacy ItemStatCost remains during migration. */
   public final NativeItemStatCost NativeItemStatCost;
+  /** Lossless D2MOO Skills.txt projection used while legacy callers migrate. */
+  public final NativeSkills      NativeSkills;
   public final ItemRatio        ItemRatio;
   public final ItemTypes        ItemTypes;
   public final Levels           Levels;
@@ -169,6 +172,8 @@ public class Files {
     ItemStatCost     = load(ItemStatCost.class);
     NativeItemStatCost = com.riiablo.codec.excel.NativeItemStatCost.load(
         Riiablo.mpqs.resolve(EXCEL_PATH + "ItemStatCost.txt"));
+    NativeSkills      = com.riiablo.codec.excel.NativeSkills.load(
+        Riiablo.mpqs.resolve(EXCEL_PATH + "Skills.txt"));
     ItemRatio        = load(ItemRatio.class);
     ItemTypes        = load(ItemTypes.class);
     Levels           = load(Levels.class, Excel.EXPANSION);
