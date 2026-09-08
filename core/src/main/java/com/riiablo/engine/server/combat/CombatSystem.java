@@ -10,6 +10,7 @@ import com.riiablo.logger.Logger;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.monster.MonsterUtil;
 
 /**
  * 战斗系统 - 基于 D2MOD SUnitDmg.cpp 移植
@@ -273,6 +274,10 @@ public class CombatSystem {
 
     /** 是否免疫各元素 */
     public boolean[] immuneElemental = new boolean[DAMAGE_TYPE_COUNT];
+
+    /** Native elemental absorption, applied after resistance. */
+    public int[] absorbPercent = new int[DAMAGE_TYPE_COUNT];
+    public int[] absorbFlat = new int[DAMAGE_TYPE_COUNT];
   }
 
   /**
@@ -309,6 +314,9 @@ public class CombatSystem {
     /** 法力偷取数量 */
     public int manaStolen;
 
+    /** Life restored by elemental absorption during this hit. */
+    public int absorbedLife;
+
     /** 实际命中率 */
     public int hitChance;
 
@@ -332,6 +340,7 @@ public class CombatSystem {
       totalDamage = 0;
       lifeStolen = 0;
       manaStolen = 0;
+      absorbedLife = 0;
       hitChance = 0;
       coldDuration = 0;
       poisonDuration = 0;
@@ -484,7 +493,25 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery);
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, 0);
+  }
+
+  /** Full context with native Nightmare/Hell resistance penalty selection. */
+  public CombatResult calculateAttackAtDifficulty(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      int difficulty) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
+        difficulty);
   }
 
   /**
@@ -539,7 +566,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, false, combinedMin, combinedMax,
         coldLength, poisonLength, attackerStates, defenderStates, defenderMoving, true,
-        0, DAMAGE_PHYSICAL, null);
+        0, DAMAGE_PHYSICAL, null, 0);
   }
 
   /** Native Barbarian weapon mastery context for one concrete weapon hand. */
@@ -576,7 +603,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         attackMinDamage, attackMaxDamage, attackRating, false,
         null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true,
-        physicalConversionPercent, physicalConversionType, mastery);
+        physicalConversionPercent, physicalConversionType, mastery, 0);
   }
 
   /**
@@ -633,7 +660,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, alwaysHit,
         elementalMin, elementalMax, coldLength, poisonLength,
-        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null);
+        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null, 0);
   }
 
   private CombatResult calculateAttackInternal(
@@ -646,7 +673,7 @@ public class CombatSystem {
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving, boolean precomputedPhysicalDamage,
       int physicalConversionPercent, int physicalConversionType,
-      StateList.WeaponMasteryBonus mastery) {
+      StateList.WeaponMasteryBonus mastery, int difficulty) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -789,11 +816,24 @@ public class CombatSystem {
     d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
     d.resistances[DAMAGE_POISON] = statInt(defender, Stat.poisonresist, 0);
     d.resistances[DAMAGE_MAGIC] = statInt(defender, Stat.magicresist, 0);
+    int difficultyPenalty = defenderPlayer
+        ? MonsterUtil.getResistancePenalty(difficulty) : 0;
+    for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
+      d.resistances[i] += difficultyPenalty;
+    }
     d.maxResistances[DAMAGE_FIRE] = 75 + statInt(defender, Stat.maxfireresist, 0);
     d.maxResistances[DAMAGE_LIGHTNING] = 75 + statInt(defender, Stat.maxlightresist, 0);
     d.maxResistances[DAMAGE_COLD] = 75 + statInt(defender, Stat.maxcoldresist, 0);
     d.maxResistances[DAMAGE_POISON] = 75 + statInt(defender, Stat.maxpoisonresist, 0);
     d.maxResistances[DAMAGE_MAGIC] = 75 + statInt(defender, Stat.maxmagicresist, 0);
+    d.absorbPercent[DAMAGE_FIRE] = statInt(defender, Stat.item_absorbfire_percent, 0);
+    d.absorbPercent[DAMAGE_LIGHTNING] = statInt(defender, Stat.item_absorblight_percent, 0);
+    d.absorbPercent[DAMAGE_COLD] = statInt(defender, Stat.item_absorbcold_percent, 0);
+    d.absorbPercent[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic_percent, 0);
+    d.absorbFlat[DAMAGE_FIRE] = statInt(defender, Stat.item_absorbfire, 0);
+    d.absorbFlat[DAMAGE_LIGHTNING] = statInt(defender, Stat.item_absorblight, 0);
+    d.absorbFlat[DAMAGE_COLD] = statInt(defender, Stat.item_absorbcold, 0);
+    d.absorbFlat[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic, 0);
     if (defenderStates != null) {
       d.resistances[DAMAGE_FIRE] += defenderStates.getTotalResistModifier(0);
       d.resistances[DAMAGE_COLD] += defenderStates.getTotalResistModifier(1);
@@ -911,6 +951,9 @@ public class CombatSystem {
       if (elemDamage > 0) {
         result.elementalDamage[i] = applyElementalResistance(
             elemDamage, defender, i, attacker.elementalPierce[i]);
+        int absorbed = absorbElementalDamage(result.elementalDamage[i], defender, i);
+        result.elementalDamage[i] -= absorbed;
+        result.absorbedLife += absorbed;
       }
     }
 
@@ -1186,6 +1229,18 @@ public class CombatSystem {
     }
 
     return Math.max(0, damage);
+  }
+
+  private int absorbElementalDamage(int damage, DefenderData defender, int damageType) {
+    if (damage <= 0 || defender.absorbPercent == null || damageType >= defender.absorbPercent.length) {
+      return 0;
+    }
+    int percent = Math.max(0, Math.min(100, defender.absorbPercent[damageType]));
+    int flat = defender.absorbFlat != null && damageType < defender.absorbFlat.length
+        ? Math.max(0, defender.absorbFlat[damageType]) : 0;
+    int absorbed = damage * percent / 100;
+    absorbed = Math.min(damage, absorbed + Math.min(flat, damage - absorbed));
+    return absorbed;
   }
 
   //==========================================================================

@@ -212,6 +212,84 @@ public class CombatSystemTest extends RiiabloTest {
     assertEquals(200, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
   }
 
+  @Test
+  public void playerDifficultyResistancePenaltyMatchesNativeValues() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 100;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 100;
+
+    CombatSystem.CombatResult normal = combat.calculateAttackAtDifficulty(
+        attacker, defender, false, true, false, 1, 1, 1000, true,
+        fireMin, fireMax, 0, 0, null, null, false, null, 0);
+    CombatSystem.CombatResult nightmare = combat.calculateAttackAtDifficulty(
+        attacker, defender, false, true, false, 1, 1, 1000, true,
+        fireMin, fireMax, 0, 0, null, null, false, null, 1);
+    CombatSystem.CombatResult hell = combat.calculateAttackAtDifficulty(
+        attacker, defender, false, true, false, 1, 1, 1000, true,
+        fireMin, fireMax, 0, 0, null, null, false, null, 2);
+
+    assertEquals(100, normal.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(140, nightmare.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(200, hell.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+  }
+
+  @Test
+  public void difficultyResistancePenaltyDoesNotApplyToMonsterTargets() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 100;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 100;
+
+    CombatSystem.CombatResult result = combat.calculateAttackAtDifficulty(
+        attacker, defender, false, false, false, 1, 1, 1000, true,
+        fireMin, fireMax, 0, 0, null, null, false, null, 2);
+    assertEquals(100, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+  }
+
+  @Test
+  public void elementalAbsorbAppliesPercentThenFlatAndRecordsLife() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(50, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.item_absorbfire_percent, 50);
+    defender.base().put(Stat.item_absorbfire, 10);
+    defender.reset();
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 100;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 100;
+
+    CombatSystem.CombatResult result = combat.calculateAttack(
+        attacker, defender, false, false, false, 1, 1, 1000, true,
+        fireMin, fireMax, 0, 0, null, null);
+    assertEquals(40, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(60, result.absorbedLife);
+    assertTrue(result.absorbedLife <= 100);
+  }
+
+  @Test
+  public void elementalAbsorbNeverProducesNegativeDamage() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(50, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.item_absorbfire_percent, 100);
+    defender.base().put(Stat.item_absorbfire, 1000);
+    defender.reset();
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 1;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 1;
+
+    CombatSystem.CombatResult result = combat.calculateAttack(
+        attacker, defender, false, false, false, 1, 1, 1000, true,
+        fireMin, fireMax, 0, 0, null, null);
+    assertEquals(0, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(1, result.absorbedLife);
+  }
+
   private static Attributes attrs(int hp, int level, int defense,
       int minDamage, int maxDamage, int attackRating) {
     Attributes attrs = Attributes.obtainStandard();

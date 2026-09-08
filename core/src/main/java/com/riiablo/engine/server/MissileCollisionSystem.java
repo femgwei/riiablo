@@ -766,7 +766,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       int arOverride = missile.damageSnapshot ? 0 : missile.attackRating;
       boolean alwaysHit = missile.damageSnapshot && missile.missile != null
           && !missile.missile.ToHit && !missile.usesAttackRating;
-      CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttack(
+      CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttackAtDifficulty(
           attackAttrs,
           targetAttrs,
           mPlayer.has(missile.ownerId),
@@ -778,7 +778,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           alwaysHit,
           null, null, 0, 0,
           stateList(missile.ownerId), stateList(targetId), isEntityMoving(targetId),
-          missileMastery(missile));
+          missileMastery(missile), combatDifficulty(missile.ownerId, targetId));
       boolean damageHit = combat.hit && !combat.blocked;
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
@@ -815,6 +815,22 @@ public class MissileCollisionSystem extends IteratingSystem {
           DamageEvent event = DamageEvent.obtain(missile.ownerId, targetId, damage, hitSound);
           events.dispatch(event);
           float appliedDamage = Math.max(0f, event.damage);
+          // Native elemental absorb restores the defender's life from the same
+          // post-multiplier packet that produced this hit.  Apply it before
+          // subtracting damage so a target at low life can survive an absorbed
+          // elemental missile, and clamp to maxhp just like D2Game.
+          if (combat.absorbedLife > 0) {
+            StatRef maxHitpoints = targetAttrs.get(Stat.maxhp, StatRef.obtain());
+            float maxLife = maxHitpoints != null ? Math.max(0f, maxHitpoints.asFixed()) : Float.MAX_VALUE;
+            float requestedHeal = combat.absorbedLife * Math.max(0.01f, missile.damageMultiplier);
+            float healed = Math.max(0f, Math.min(requestedHeal, maxLife - hitpoints.asFixed()));
+            if (healed > 0f) {
+              hitpoints.add(healed);
+              log.info("[MISSILE_ABSORB] missileId={} target={} absorbed={} healed={} hp={}/{}",
+                  missileId, targetId, combat.absorbedLife, healed,
+                  hitpoints.asFixed(), maxLife);
+            }
+          }
           boolean mercenaryDamage = appliedDamage > 0f && mMercenary.has(missile.ownerId);
           if (mercenaryDamage) {
             mercenaryDamageCount++;
@@ -861,6 +877,23 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /** Resolves the authoritative difficulty from the projectile's current map.
+   *  Owner and target wrappers can be absent during cross-zone handoff, so use
+   *  either side and fall back to Normal (the CombatSystem compatibility
+   *  overload has the same default).
+   */
+  private int combatDifficulty(int ownerId, int targetId) {
+    if (mMapWrapper.has(targetId)) {
+      MapWrapper wrapper = mMapWrapper.get(targetId);
+      if (wrapper != null && wrapper.map != null) return wrapper.map.getDifficulty();
+    }
+    if (mMapWrapper.has(ownerId)) {
+      MapWrapper wrapper = mMapWrapper.get(ownerId);
+      if (wrapper != null && wrapper.map != null) return wrapper.map.getDifficulty();
+    }
+    return 0;
   }
 
   static boolean hasNativeCollision(Missile missile) {
