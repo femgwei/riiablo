@@ -96,6 +96,7 @@ import com.riiablo.net.packet.d2gs.SnapshotBaseline;
 import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
 import com.riiablo.net.SizePrefixedPacketAccumulator;
 import com.riiablo.save.CharData;
+import com.riiablo.engine.server.quest.QuestSnapshot;
 import com.riiablo.util.ArrayUtils;
 import com.riiablo.util.BufferUtils;
 import com.riiablo.util.DebugUtils;
@@ -169,6 +170,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   private long lastResyncRequestMillis;
   private long lastResyncObservedTick;
   private long baselineBeginTick;
+  private long baselineQuestRevision = -1L;
   private final SnapshotBaselineTransaction baselineTransaction =
       new SnapshotBaselineTransaction();
   /** Current level of the local player; -1 until the first authoritative snapshot. */
@@ -976,6 +978,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
       snapshotResyncPending = false;
       snapshotResyncInProgress = true;
       baselineBeginTick = marker.serverTick();
+      baselineQuestRevision = marker.questRevision();
       lastResyncObservedTick = marker.serverTick();
       deferredServerEntities.clear();
       if (interpolation != null) interpolation.clear();
@@ -1011,6 +1014,15 @@ public class ClientNetworkReceiver extends IntervalSystem {
       if (world.getSystem(NetworkedClientItemManager.class) != null) {
         world.getSystem(NetworkedClientItemManager.class)
             .resetInventoryRevision(marker.inventoryRevision());
+      }
+      if (Riiablo.charData != null && marker.questRevision() != 0L) {
+        long appliedQuestRevision = QuestSnapshot.revision(QuestSnapshot.records(Riiablo.charData));
+        if (appliedQuestRevision != marker.questRevision()) {
+          Gdx.app.error(TAG, "[SNAPSHOT_RESYNC] phase=quest_revision_mismatch expected="
+              + marker.questRevision() + " applied=" + appliedQuestRevision
+              + " begin=" + baselineQuestRevision);
+          requestSnapshotResync(marker.serverTick(), "quest_revision_mismatch");
+        }
       }
       latestServerTick = marker.serverTick();
       latestServerTickReceiptMillis = TimeUtils.millis();

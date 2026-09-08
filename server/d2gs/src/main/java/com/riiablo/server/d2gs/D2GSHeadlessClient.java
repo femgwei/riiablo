@@ -23,6 +23,7 @@ import com.riiablo.net.packet.d2gs.ItemMoveResult;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.PositionP;
+import com.riiablo.net.packet.d2gs.PlayerP;
 import com.riiablo.net.packet.d2gs.RunToLocation;
 import com.riiablo.net.packet.d2gs.QuestOperation;
 import com.riiablo.net.packet.d2gs.QuestRequest;
@@ -89,6 +90,9 @@ public final class D2GSHeadlessClient {
   private int wrongLevelDrops;
   private float playerX = Float.NaN;
   private float playerY = Float.NaN;
+  private long playerQuestRevision = -1L;
+  private long baselineInventoryRevision = -1L;
+  private long baselineQuestRevision = -1L;
 
   private D2GSHeadlessClient(Config config) {
     this.config = config;
@@ -336,6 +340,7 @@ public final class D2GSHeadlessClient {
       long baselineId = -1L;
       int waypointCount = -1;
       long inventoryRevision = -1L;
+      long questRevision = -1L;
       int entityFrames = 0;
       long declaredEntityCount = -1L;
       long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
@@ -350,6 +355,7 @@ public final class D2GSHeadlessClient {
               declaredEntityCount = marker.entityCount();
               waypointCount = marker.waypointMasksLength();
               inventoryRevision = marker.inventoryRevision();
+              questRevision = marker.questRevision();
             }
             if (marker.phase() == SnapshotBaselinePhase.END) end = marker.success();
           } else if (begin && packet.dataType() == D2GSData.EntitySync) {
@@ -365,11 +371,13 @@ public final class D2GSHeadlessClient {
             + " end=" + end + " entities=" + entityFrames + " peerMarker=" + peerMarker);
       }
       if (baselineId <= 0L || declaredEntityCount != entityFrames
-          || waypointCount != Riiablo.NUM_ACTS || inventoryRevision < 0L) {
+          || waypointCount != Riiablo.NUM_ACTS || inventoryRevision < 0L
+          || questRevision < 0L) {
         throw new IllegalStateException("snapshot state baseline missing: baselineId="
             + baselineId + " declaredEntities=" + declaredEntityCount
             + " receivedEntities=" + entityFrames + " waypoints=" + waypointCount
-            + " inventoryRevision=" + inventoryRevision);
+            + " inventoryRevision=" + inventoryRevision
+            + " questRevision=" + questRevision);
       }
 
       // Replay the exact request ID. D2GS must remain idempotent and reuse the
@@ -483,7 +491,7 @@ public final class D2GSHeadlessClient {
       warpAndAssert(a, inA, outA, 914L, 5); // Dark Wood
       log("snapshot_resync_pass", "request=77 warp=true death=true respawn=true crossMap=true corpse=true baseline=" + baselineId
           + " entities=" + entityFrames + " waypoints=" + waypointCount
-          + " inventoryRevision=" + inventoryRevision
+          + " inventoryRevision=" + inventoryRevision + " questRevision=" + questRevision
           + " duplicateBaseline=" + duplicateBaseline
           + " peerUnaffected=true pausedMillis=2500 oldLevelDrops=" + a.wrongLevelDrops);
     }
@@ -1273,6 +1281,12 @@ public final class D2GSHeadlessClient {
         first.awaitConnection(firstInput, deadline());
         Snapshot firstMercenary = first.awaitMercenary(firstInput, deadline());
         firstMercenaryId = firstMercenary.entityId;
+        if (first.playerQuestRevision < 0L || first.baselineQuestRevision < 0L
+            || first.baselineInventoryRevision < 0L) {
+          throw new IllegalStateException("initial reconnect baseline omitted progression state: "
+              + "quest=" + first.playerQuestRevision + "/" + first.baselineQuestRevision
+              + " inventory=" + first.baselineInventoryRevision);
+        }
         peer.awaitEntity(peerInput, firstMercenaryId, deadline());
         first.awaitDead(firstInput, firstMercenaryId, deadline());
         peer.awaitDead(peerInput, firstMercenaryId, deadline());
@@ -1297,6 +1311,15 @@ public final class D2GSHeadlessClient {
         send(reconnectOutput, connectionPacket(character, d2s));
         reconnected.awaitConnection(reconnectInput, deadline());
         Snapshot restored = reconnected.awaitMercenary(reconnectInput, deadline());
+        if (reconnected.playerQuestRevision != first.playerQuestRevision
+            || reconnected.baselineQuestRevision != first.baselineQuestRevision
+            || reconnected.baselineInventoryRevision != first.baselineInventoryRevision) {
+          throw new IllegalStateException("reconnect progression baseline mismatch: first quest="
+              + first.playerQuestRevision + '/' + first.baselineQuestRevision
+              + " inventory=" + first.baselineInventoryRevision + " reconnect quest="
+              + reconnected.playerQuestRevision + '/' + reconnected.baselineQuestRevision
+              + " inventory=" + reconnected.baselineInventoryRevision);
+        }
         // Artemis may recycle the numeric id after the peer has observed the
         // authoritative deleted snapshot. ID reuse is safe and expected; the
         // deletion-before-reconnect assertion above detects stale entities.
@@ -1336,7 +1359,9 @@ public final class D2GSHeadlessClient {
             + " entity=" + restored.entityId + " owner=" + reconnected.playerId
             + " cost=" + before[2] + " gold=" + before[3] + "->" + after[3]
             + " idReused=" + (firstMercenaryId == restored.entityId)
-            + " staleRemoved=true clients=true,true");
+            + " staleRemoved=true questBaseline=" + reconnected.baselineQuestRevision
+            + " inventoryBaseline=" + reconnected.baselineInventoryRevision
+            + " clients=true,true");
       }
     }
   }
@@ -1996,6 +2021,14 @@ public final class D2GSHeadlessClient {
   }
 
   private void consume(com.riiablo.net.packet.d2gs.D2GS packet) {
+    if (packet.dataType() == D2GSData.SnapshotBaseline) {
+      SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+      if (marker.phase() == SnapshotBaselinePhase.BEGIN) {
+        baselineInventoryRevision = marker.inventoryRevision();
+        baselineQuestRevision = marker.questRevision();
+      }
+      return;
+    }
     if (packet.dataType() != D2GSData.EntitySync) return;
     EntitySync sync = (EntitySync) packet.data(new EntitySync());
     int packetLevelId = sync.levelId();
@@ -2037,6 +2070,11 @@ public final class D2GSHeadlessClient {
           }
           sawAttackMode = true;
         }
+      }
+      int playerIndex = findComponent(sync, ComponentP.PlayerP);
+      if (playerIndex >= 0) {
+        PlayerP player = (PlayerP) sync.component(new PlayerP(), playerIndex);
+        playerQuestRevision = player.questRevision();
       }
     }
     Visibility visible = visibility.get(sync.entityId());

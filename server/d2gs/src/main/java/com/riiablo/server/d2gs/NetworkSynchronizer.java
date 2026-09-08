@@ -287,6 +287,20 @@ public class NetworkSynchronizer extends BaseEntitySystem {
     removeSnapshots(entityId);
   }
 
+  /**
+   * Drops every recipient-scoped cache entry for a disconnected connection.
+   *
+   * <p>Connection slots are reusable. Keeping the old cache would allow a
+   * reconnecting character in the same slot to inherit the previous client's
+   * last-sent entity states, suppressing the first incremental update after
+   * the new baseline. D2GS calls this before releasing the socket.</p>
+   */
+  public void clearClient(int clientId) {
+    if (clientId < 0) return;
+    snapshotsByRecipient.remove(clientId);
+    Gdx.app.log(TAG, "[NET_SYNC] phase=client_cache_clear client=" + clientId);
+  }
+
   private EntitySnapshotCache snapshotsFor(int clientId) {
     EntitySnapshotCache cache = snapshotsByRecipient.get(clientId);
     if (cache == null) {

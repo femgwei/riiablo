@@ -1872,6 +1872,12 @@ public class D2GS extends ApplicationAdapter {
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
     int entityId = factory.createPlayer(charData, origin);
     player.put(packet.id, entityId);
+    long loadedQuestRevision = QuestSnapshot.revision(QuestSnapshot.records(charData));
+    Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=character_loaded client=" + packet.id
+        + " entity=" + entityId + " name=" + charData.name
+        + " questRevision=" + loadedQuestRevision
+        + " inventoryRevision=" + authoritativeItems.revision(entityId)
+        + " waypointActs=" + Riiablo.NUM_ACTS);
     movementInputs[packet.id].reset();
     movementIntents[packet.id].reset();
     lastAppliedMovementIntent[packet.id] = 0L;
@@ -1903,7 +1909,34 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private void Synchronize(int id, int entityId) {
+    // Treat the first login/reconnect baseline exactly like a later resync.
+    // Without BEGIN/END the client cannot atomically associate the initial
+    // entity set with its task and inventory revisions, and a reconnect can
+    // briefly display a mixed old/new progression state.
+    long baselineId = nextSnapshotBaselineId++;
+    long tick = simulation == null ? 0L : simulation.tickNumber();
+    long serverTime = simulation == null ? 0L : simulation.serverTimeMillis();
+    Player playerComponent = world.getMapper(Player.class).get(entityId);
+    int[] waypointMasks = waypointMasks(playerComponent == null ? null : playerComponent.data);
+    int difficulty = playerComponent == null || playerComponent.data == null
+        ? diff : playerComponent.data.getDifficulty();
+    long inventoryRevision = authoritativeItems.revision(entityId);
+    long questRevision = QuestSnapshot.revision(
+        QuestSnapshot.records(playerComponent == null ? null : playerComponent.data));
+    int count = sync.visibleCount(id);
+    enqueueSnapshotBaseline(id, baselineId, baselineId, tick, serverTime,
+        SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty,
+        inventoryRevision, questRevision);
     sync.syncAllTo(id);
+    tick = simulation == null ? tick : simulation.tickNumber();
+    serverTime = simulation == null ? serverTime : simulation.serverTimeMillis();
+    enqueueSnapshotBaseline(id, baselineId, baselineId, tick, serverTime,
+        SnapshotBaselinePhase.END, true, "", count, waypointMasks, difficulty,
+        inventoryRevision, questRevision);
+    Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=complete client=" + id
+        + " entity=" + entityId + " baseline=" + baselineId
+        + " questRevision=" + questRevision
+        + " inventoryRevision=" + inventoryRevision + " entities=" + count);
   }
 
   private void SnapshotResyncRequest(Packet packet) {
@@ -1935,16 +1968,20 @@ public class D2GS extends ApplicationAdapter {
     int difficulty = playerComponent == null || playerComponent.data == null
         ? diff : playerComponent.data.getDifficulty();
     long inventoryRevision = authoritativeItems.revision(playerEntityId);
+    long questRevision = QuestSnapshot.revision(
+        QuestSnapshot.records(playerComponent == null ? null : playerComponent.data));
     int count = world == null ? 0 : world.getSystem(NetworkSynchronizer.class) == null
         ? 0 : world.getSystem(NetworkSynchronizer.class).visibleCount(clientId);
     enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
-        SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty, inventoryRevision);
+        SnapshotBaselinePhase.BEGIN, true, "", count, waypointMasks, difficulty,
+        inventoryRevision, questRevision);
     sync.syncAllTo(clientId);
     current = simulation;
     tick = current == null ? tick : current.tickNumber();
     serverTime = current == null ? serverTime : current.serverTimeMillis();
     enqueueSnapshotBaseline(clientId, requestId, baselineId, tick, serverTime,
-        SnapshotBaselinePhase.END, true, "", count, waypointMasks, difficulty, inventoryRevision);
+        SnapshotBaselinePhase.END, true, "", count, waypointMasks, difficulty,
+        inventoryRevision, questRevision);
     Gdx.app.log(TAG, "[SNAPSHOT_RESYNC] phase=complete client=" + clientId
         + " request=" + requestId + " baseline=" + baselineId
         + " tick=" + tick + " entities=" + count);
@@ -1952,13 +1989,13 @@ public class D2GS extends ApplicationAdapter {
 
   private void enqueueSnapshotBaseline(int clientId, long requestId, long baselineId,
       long tick, long serverTime, byte phase, boolean success, String reason, int count,
-      int[] waypointMasks, int difficulty, long inventoryRevision) {
+      int[] waypointMasks, int difficulty, long inventoryRevision, long questRevision) {
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
     int reasonOffset = builder.createString(reason == null ? "" : reason);
     int waypointOffset = SnapshotBaseline.createWaypointMasksVector(builder, waypointMasks);
     int marker = SnapshotBaseline.createSnapshotBaseline(builder, requestId, baselineId,
         tick, serverTime, phase, success, reasonOffset, count, waypointOffset, difficulty,
-        inventoryRevision);
+        inventoryRevision, questRevision);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder,
         D2GSData.SnapshotBaseline, marker);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
@@ -2028,6 +2065,11 @@ public class D2GS extends ApplicationAdapter {
       NativeMercenaryRewardSystem mercenaryRewards =
           world.getSystem(NativeMercenaryRewardSystem.class);
       if (mercenaryRewards != null) mercenaryRewards.unloadPersistedMercenary(entityId);
+
+      // The numeric connection slot can be reused immediately. Clear its
+      // recipient-scoped snapshot cache before the next handshake so a new
+      // character cannot inherit the old client's last-sent states.
+      sync.clearClient(id);
 
       world.delete(entityId);
       player.remove(id, Engine.INVALID_ENTITY);

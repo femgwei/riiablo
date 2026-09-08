@@ -405,7 +405,14 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 新增基线事务单元测试，覆盖乱序 END、重复实体帧、重复 BEGIN、旧 baseline 和新事务替换；真实 1.10f `headlessSnapshotResync` 继续通过，包含 `recipient_baseline_pass`、`room_subscription_pass`、`room_persistence_pass` 与 `snapshot_resync_pass`。
   - D2GS/Netty 编译及客户端快照时间线回归通过。
 
-下一项建议进入 **多人快照重同步第十六阶段（断线重连后的实体 ID、任务和背包一致性）**：验证重连客户端在 RoomEx、任务进度、背包 revision、地面掉落和佣兵/召唤物状态上与原连接及其他客户端保持同一权威基线。
+[x] ~~完成多人快照重同步第十六阶段（断线重连后的实体 ID、任务和背包一致性）~~
+  - 首次连接和断线重连现在都使用 BEGIN/END 原子基线事务，客户端不会在实体帧、任务进度和背包 revision 之间看到混合状态；基线新增 `questRevision`，与 `inventoryRevision`、waypoint 和 difficulty 一起提交。
+  - D2GS 记录角色加载时的任务 revision、背包 revision 和 waypoint 基线；重连仍从同一 D2S 权威数据建立新的实体 ID，旧实体删除包先于新实体基线，佣兵按原生保存状态恢复，非雇佣召唤物继续按 D2MOO 规则随主人断线清理。
+  - 连接槽复用前清空 `NetworkSynchronizer` 的接收者快照缓存，防止新客户端继承旧客户端的 last-sent 状态而丢失首个增量。
+  - 1.10f 隐藏双客户端 `headlessMercenaryRestore` 通过：`mercenary_restore_reconnect_pass` 同时验证旧实体删除、佣兵恢复/复活、任务 revision、背包 revision 和两端可见性；输出 `staleRemoved=true`、`clients=true,true`。
+  - D2GS/Netty 编译、`SnapshotResyncProtocolTest`、`SnapshotBaselineTransactionTest`、`SummonedPetSystemTest` 和 `QuestSnapshotTest` 全部通过。
+
+下一项建议进入 **多人快照重同步第十七阶段（断线重连后的地面掉落、对象状态与召唤物可见性）**：在同一离屏双客户端场景中先制造掉落、开启对象和非雇佣召唤物，再断开主人，验证地面物品/对象持久化、召唤物删除、其他客户端基线和重新进入 RoomEx 后的状态不会互相污染。
 
 ## 记录规则
 

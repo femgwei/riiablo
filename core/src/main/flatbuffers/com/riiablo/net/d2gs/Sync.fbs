@@ -25,6 +25,10 @@ table SnapshotBaseline {
   waypointMasks:[uint32];
   difficulty:ubyte;
   inventoryRevision:ulong;
+  // Stable current-difficulty quest revision accompanying the entity baseline.
+  // This lets a reconnecting client distinguish a valid zero-progress quest
+  // state from a stale baseline even before the PlayerP frame is applied.
+  questRevision:ulong;
 }
 
 union ComponentP {

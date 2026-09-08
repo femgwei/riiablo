@@ -33,6 +33,7 @@ public final class SnapshotBaseline extends Table {
   public ByteBuffer waypointMasksInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 20, 4); }
   public int difficulty() { int o = __offset(22); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
   public long inventoryRevision() { int o = __offset(24); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public long questRevision() { int o = __offset(26); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
 
   public static int createSnapshotBaseline(FlatBufferBuilder builder,
       long requestId,
@@ -45,8 +46,10 @@ public final class SnapshotBaseline extends Table {
       long entityCount,
       int waypointMasksOffset,
       int difficulty,
-      long inventoryRevision) {
-    builder.startTable(11);
+      long inventoryRevision,
+      long questRevision) {
+    builder.startTable(12);
+    SnapshotBaseline.addQuestRevision(builder, questRevision);
     SnapshotBaseline.addInventoryRevision(builder, inventoryRevision);
     SnapshotBaseline.addServerTimeMillis(builder, serverTimeMillis);
     SnapshotBaseline.addServerTick(builder, serverTick);
@@ -61,7 +64,7 @@ public final class SnapshotBaseline extends Table {
     return SnapshotBaseline.endSnapshotBaseline(builder);
   }
 
-  public static void startSnapshotBaseline(FlatBufferBuilder builder) { builder.startTable(11); }
+  public static void startSnapshotBaseline(FlatBufferBuilder builder) { builder.startTable(12); }
   public static void addRequestId(FlatBufferBuilder builder, long requestId) { builder.addLong(0, requestId, 0L); }
   public static void addBaselineId(FlatBufferBuilder builder, long baselineId) { builder.addLong(1, baselineId, 0L); }
   public static void addServerTick(FlatBufferBuilder builder, long serverTick) { builder.addLong(2, serverTick, 0L); }
@@ -75,6 +78,7 @@ public final class SnapshotBaseline extends Table {
   public static void startWaypointMasksVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
   public static void addDifficulty(FlatBufferBuilder builder, int difficulty) { builder.addByte(9, (byte)difficulty, (byte)0); }
   public static void addInventoryRevision(FlatBufferBuilder builder, long inventoryRevision) { builder.addLong(10, inventoryRevision, 0L); }
+  public static void addQuestRevision(FlatBufferBuilder builder, long questRevision) { builder.addLong(11, questRevision, 0L); }
   public static int endSnapshotBaseline(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;
