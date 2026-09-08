@@ -222,7 +222,7 @@
     `headlessReconnectGroundLoot` 在重复删除包下均通过，验证断线重连基线和 claim 一致。
   - 新增 `headlessDelayedDeleteFrames`，以跨 3 个 Sim Tick 的延迟删除帧验证旧删除不会
     回退快照时钟或误删重建掉落；延迟注入和重复注入均通过。
-- [ ] **P1-8 D2S 1.10f round-trip（约 76%）**
+- [ ] **P1-8 D2S 1.10f round-trip（约 80%）**
   - 新增 `D2SReader.readComplete`，在解析可变长度 section 前校验 1.10f 的声明大小和
     CRC，并要求 quests/waypoints/NPC/stats/skills/items/merc/golem 全部消费完毕；普通
     角色列表仍可使用只读头部的 `readD2S` 快路径。
@@ -241,6 +241,9 @@
   - 新增可选 `D2SRealSaveIntegrationTest`（设置 `D2_REAL_SAVE` 后启用）；已使用
     Diablo II 1.10f `wp-a.d2s` 实测完整解析→重新写出→再次读取，装备/尸体数量及佣兵
     seed 均保持一致。
+  - 真实存档门槛进一步逐项比较角色头、快捷键、城镇、技能、任务、传送点、NPC、全部
+    基础 stat，以及每件物品的 flags/版本/位置/格子/ID/等级/品质，防止“能解析但语义
+    漂移”的伪 round-trip。
 
 强制踩坑回归门槛：
 
