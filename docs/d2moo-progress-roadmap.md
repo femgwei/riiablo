@@ -464,7 +464,10 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 同一角色重连取得新实体 ID 后，双方仍看到原实体 ID 的掉落与已开启对象；普通召唤物没有随角色错误恢复。客户端测试观察器同时消费正式 `Disconnect` 包，避免把玩家协议删除误判为缺少 `EntitySync.deleted`。
   - 测试输出 `reconnect_visibility_disconnect_pass`、`reconnect_visibility_pass`，构建成功。
 
-下一项切换到 **P0-1 无损 TXT 数据层与 1.10f 五表对照**；暂停继续扩展技能，先建立 `States.txt` 和字段 golden 门槛。
+当前已进入 **P0-1 无损 TXT 数据层与 1.10f 五表对照**，第一阶段（无损读取、
+`States.txt`、五表 golden manifest）完成。下一小步按
+`ItemStatCost -> Skills -> Missiles -> MonStats` 顺序建立无损 schema 投影和逐字段差异报告；
+P0-1 完成前暂停扩展技能。
 
 ## 记录规则
 
