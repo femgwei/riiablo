@@ -66,6 +66,43 @@ class GoldPickupServiceTest extends RiiabloTest {
   }
 
   @Test
+  void partialPickupReleasesClaimForLaterPlayerAndFullPickupClearsIt() {
+    CharData first = CharData.obtain()
+        .set(Riiablo.NORMAL, false, "PartialFirst", Riiablo.AMAZON);
+    first.level = 1;
+    first.getStats().base().put(Stat.gold, 9_995);
+    first.getStats().aggregate().put(Stat.gold, 9_995);
+    CharData second = CharData.obtain()
+        .set(Riiablo.NORMAL, false, "PartialSecond", Riiablo.AMAZON);
+    second.level = 1;
+    second.getStats().base().put(Stat.gold, 0);
+    second.getStats().aggregate().put(Stat.gold, 0);
+    Item gold = new Item();
+    gold.id = 430;
+    gold.code = "gld";
+    gold.attrs = Attributes.obtainStandard();
+    gold.attrs.base().put(Stat.quantity, 20);
+    GroundDropOwnership.register(907, 21, -1, 0L, 0L, true);
+
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+    AuthoritativeItemMoveService.Outcome firstPickup = service.pickup(21, first,
+        new ItemMoveIntent(20, 0, ItemMoveOperation.GROUND_TO_CURSOR,
+            430, 907, -1, -1, -1, -1, false), gold);
+    assertTrue(firstPickup.success);
+    assertFalse(firstPickup.consumeGroundEntity);
+    assertEquals(15, firstPickup.groundQuantityRemaining);
+    assertEquals(15, gold.attrs.base().get(Stat.quantity).asInt());
+
+    AuthoritativeItemMoveService.Outcome secondPickup = service.pickup(22, second,
+        new ItemMoveIntent(21, 0, ItemMoveOperation.GROUND_TO_CURSOR,
+            430, 907, -1, -1, -1, -1, false), gold);
+    assertTrue(secondPickup.success);
+    assertTrue(secondPickup.consumeGroundEntity);
+    assertEquals(15, second.getStats().get(Stat.gold).asInt());
+    assertFalse(GroundDropOwnership.canPickup(907, 23));
+  }
+
+  @Test
   void onlyOnePlayerCanConsumeTheSameGroundEntity() {
     CharData owner = CharData.obtain()
         .set(Riiablo.NORMAL, false, "Owner", Riiablo.AMAZON);
@@ -127,6 +164,17 @@ class GoldPickupServiceTest extends RiiabloTest {
   void expiredOwnershipAllowsAnotherPlayerToClaim() {
     GroundDropOwnership.register(903, 21, 0L);
     assertTrue(GroundDropOwnership.claim(903, 22));
+  }
+
+  @Test
+  void recycledEntityIdDoesNotInheritOldClaim() {
+    GroundDropOwnership.register(908, 31, 0L);
+    assertTrue(GroundDropOwnership.claim(908, 31));
+    GroundDropOwnership.clear(908);
+    assertFalse(GroundDropOwnership.claim(908, 32));
+    GroundDropOwnership.created(908);
+    GroundDropOwnership.register(908, 33, 0L);
+    assertTrue(GroundDropOwnership.claim(908, 34));
   }
 
   @Test

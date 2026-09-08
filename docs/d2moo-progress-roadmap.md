@@ -437,6 +437,18 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
     双客户端 Fallen/Shaman 场景覆盖同包连续重传、另一客户端争抢拒绝、两端删除可见，
     输出 `duplicate=true contentionRejected=true deleted=true`。
 
+- [x] ~~完成部分金币与地面 claim 生命周期第一阶段~~
+  - 部分金币拾取在达到携带上限时只修改权威地面数量并释放 in-flight claim，第二名
+    玩家可以继续拾取剩余数量；完整消费仍保留 claim 到实体删除边界，防止删除包延迟
+    时被重复领取。
+  - `GroundDropOwnership` 增加显式 `discard(entityId)` 生命周期钩子和 ID 复用测试；
+    新实体创建时清理旧 claim，避免 Artemis 实体 ID 复用继承上一件掉落的归属状态。
+    由于 Artemis `world.delete` 是延迟提交，拾取路径不会提前调用 discard，避免同一
+    tick 的竞争请求绕过 claim；实际删除观察点可安全调用该钩子。
+  - `GoldPickupServiceTest` 覆盖部分金币→剩余数量→第二玩家完整拾取→旧 claim 拒绝，
+    以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
+    继续通过。
+
 下一小步：完成部分金币拾取后断线重连、重连基线地面数量/归属窗口校验，以及实体 ID
 复用不继承旧地面快照的专项门槛。
 

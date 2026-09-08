@@ -103,6 +103,18 @@ public final class GroundDropOwnership {
   /** Clears ownership after a successful full pickup; the claim remains consumed. */
   public static synchronized void clear(int entityId) { DROPS.remove(entityId); }
 
+  /**
+   * Forgets all pickup state after the ECS ground entity is actually removed.
+   * {@link #clear(int)} intentionally keeps the claim until deletion is
+   * observed so a late duplicate request cannot consume the same entity. Once
+   * Artemis has accepted the delete, retaining that claim only leaks IDs and
+   * can contaminate a long-running server.
+   */
+  public static synchronized void discard(int entityId) {
+    DROPS.remove(entityId);
+    CLAIMED.remove(entityId);
+  }
+
   private static void purge() {
     Iterator<Map.Entry<Integer, Entry>> iterator;
     if (DROPS.size() > 4096) {
