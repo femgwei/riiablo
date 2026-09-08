@@ -198,6 +198,18 @@ tasks.register('headlessReconnectGroundLoot', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessItemFailureCorrections', JavaExec) {
+  group = 'verification'
+  description = 'Verifies complete ground-item corrections for distance, inventory and death failures.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-item-failure-corrections', '--test-timeout', '90'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 jar {
   archiveBaseName = project.name
 	// assets are present in both this project's resource set and the unpacked

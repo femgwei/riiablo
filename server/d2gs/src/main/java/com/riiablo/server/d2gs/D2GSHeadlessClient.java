@@ -167,6 +167,10 @@ public final class D2GSHeadlessClient {
       runReconnectGroundLoot(d2s, character);
       return;
     }
+    if (config.requireItemFailureCorrections) {
+      runItemFailureCorrections(d2s, character);
+      return;
+    }
     if (config.requireMercenaryTravel) {
       runMercenaryTravel(d2s, character);
       return;
@@ -1582,6 +1586,75 @@ public final class D2GSHeadlessClient {
     }
   }
 
+  /** Real 1.10f regression for complete ground-item corrections on failures. */
+  private void runItemFailureCorrections(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient client = new D2GSHeadlessClient(config);
+    int[] rooms = D2GS.headlessNonAdjacentRoomPair(10);
+    if (rooms.length < 2) throw new IOException("no non-adjacent RoomEx pair for correction test");
+    try (Socket socket = client.openSocket();
+         DataInputStream input = input(socket);
+         OutputStream output = output(socket)) {
+      send(output, connectionPacket(character, d2s));
+      client.awaitConnection(input, deadline());
+      if (!D2GS.headlessMovePlayerToRoom(client.playerId, 10, rooms[0])) {
+        throw new IOException("failed to stage correction client");
+      }
+      Thread.sleep(300L);
+
+      int farItem = D2GS.headlessCreateRoomItemFixture(client.playerId, 10, rooms[0], "cap");
+      Snapshot farDrop = awaitVisibleGroundEntity(client, input, farItem, deadline());
+      if (farDrop == null) throw new IOException("far-item baseline was not visible");
+      if (!D2GS.headlessMovePlayerToRoom(client.playerId, 10, rooms[1])) {
+        throw new IOException("failed to move correction client away from drop");
+      }
+      send(output, itemMovePacket(101L, 0L, farItem));
+      ItemMoveResult farResult = client.awaitItemMoveResult(input, deadline());
+      requireGroundFailure(farResult, ItemMoveFailure.GROUND_ITEM_TOO_FAR,
+          farItem, farDrop, "too_far");
+
+      if (!D2GS.headlessMovePlayerToRoom(client.playerId, 10, rooms[0])) {
+        throw new IOException("failed to return correction client");
+      }
+      int fullItem = D2GS.headlessCreateRoomItemFixture(client.playerId, 10, rooms[0], "cap");
+      Snapshot fullDrop = awaitVisibleGroundEntity(client, input, fullItem, deadline());
+      if (fullDrop == null) throw new IOException("full-inventory item baseline was not visible");
+      long fullRevision = D2GS.headlessFillPlayerInventory(client.playerId);
+      if (fullRevision < 0L) throw new IOException("failed to fill authoritative inventory");
+      send(output, positionPacket(client.playerId, fullDrop.x, fullDrop.y));
+      send(output, itemMovePacket(102L, fullRevision, fullItem));
+      ItemMoveResult fullResult = client.awaitItemMoveResult(input, deadline());
+      requireGroundFailure(fullResult, ItemMoveFailure.INVENTORY_OCCUPIED,
+          fullItem, fullDrop, "inventory_occupied");
+
+      int deadItem = D2GS.headlessCreateRoomItemFixture(client.playerId, 10, rooms[0], "cap");
+      Snapshot deadDrop = awaitVisibleGroundEntity(client, input, deadItem, deadline());
+      if (deadDrop == null || !D2GS.headlessKillPlayer(client.playerId)) {
+        throw new IOException("failed to stage dead-player correction");
+      }
+      long deadRevision = D2GS.headlessItemRevision(client.playerId);
+      send(output, itemMovePacket(103L, deadRevision, deadItem));
+      ItemMoveResult deadResult = client.awaitItemMoveResult(input, deadline());
+      requireGroundFailure(deadResult, ItemMoveFailure.PLAYER_DEAD,
+          deadItem, deadDrop, "player_dead");
+      log("item_failure_correction_pass", "tooFar=true inventoryOccupied=true playerDead=true"
+          + " completeGroundData=true ownerMetadata=true position=true");
+    }
+  }
+
+  private static void requireGroundFailure(ItemMoveResult result, byte expectedFailure,
+      int entityId, Snapshot expected, String label) {
+    if (result == null || result.success() || result.failure() != expectedFailure
+        || result.groundEntityId() != entityId || result.groundItemDataLength() == 0
+        || result.groundOwnerId() < 0
+        || Math.abs(result.groundX() - expected.x) > 0.01f
+        || Math.abs(result.groundY() - expected.y) > 0.01f) {
+      throw new IllegalStateException(label + " correction mismatch: result="
+          + (result == null ? "timeout" : result.failure())
+          + " entity=" + (result == null ? -1 : result.groundEntityId())
+          + " data=" + (result == null ? 0 : result.groundItemDataLength()));
+    }
+  }
+
   private void awaitReconnectFixture(D2GSHeadlessClient owner, D2GSHeadlessClient peer,
       DataInputStream ownerInput, DataInputStream peerInput, int[] fixtures, int summonId,
       long deadline) throws Exception {
@@ -2872,6 +2945,7 @@ public final class D2GSHeadlessClient {
     boolean requireMercenaryTravel;
     boolean requireReconnectVisibility;
     boolean requireReconnectGroundLoot;
+    boolean requireItemFailureCorrections;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -2903,6 +2977,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-mercenary-travel".equals(arg)) config.requireMercenaryTravel = true;
         else if ("--require-reconnect-visibility".equals(arg)) config.requireReconnectVisibility = true;
         else if ("--require-reconnect-ground-loot".equals(arg)) config.requireReconnectGroundLoot = true;
+        else if ("--require-item-failure-corrections".equals(arg)) config.requireItemFailureCorrections = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;

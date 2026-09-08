@@ -787,6 +787,94 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Creates a deterministic ordinary ground item in an exact RoomEx. */
+  static int headlessCreateRoomItemFixture(int playerId, int levelId, int roomId,
+      String code) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || server.factory == null || Riiablo.files == null || Gdx.app == null
+        || code == null || code.isEmpty()) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        Vector2 position = findHeadlessRoomPosition(server, zone, room);
+        com.riiablo.item.ItemGenerator generator = server.world.getSystem(
+            com.riiablo.item.ItemGenerator.class);
+        if (position == null || generator == null) return;
+        com.riiablo.item.Item item = generator.generateLootItem(code, 1,
+            com.riiablo.item.Quality.NORMAL, 0x49544658, server.diff);
+        if (item == null) return;
+        int entityId = server.factory.createItem(item, position.x, position.y);
+        if (entityId < 0) return;
+        item.id = entityId;
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .get(entityId).set(server.map, zone);
+        com.riiablo.engine.server.component.Item component = server.world
+            .getMapper(com.riiablo.engine.server.component.Item.class).get(entityId);
+        com.riiablo.engine.server.item.GroundDropOwnership.applyMetadata(component,
+            playerId, -1, 10_000L, 0L, false);
+        com.riiablo.engine.server.item.GroundDropOwnership.register(entityId,
+            playerId, -1, 10_000L, 0L, false);
+        result.set(entityId);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Fills the player's inventory and returns the resulting item revision. */
+  static long headlessFillPlayerInventory(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return -1L;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicLong revision = new java.util.concurrent.atomic.AtomicLong(-1L);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        com.riiablo.item.ItemGenerator generator = server.world.getSystem(
+            com.riiablo.item.ItemGenerator.class);
+        if (player == null || player.data == null || generator == null) return;
+        int serial = 0;
+        while (serial++ < 64) {
+          com.riiablo.item.Item item = generator.generateLootItem("cap", 1,
+              com.riiablo.item.Quality.NORMAL, 0x46494C4C + serial, server.diff);
+          if (item == null) break;
+          item.id = 0x70000000 + serial;
+          if (!player.data.getItems().addToInventory(item)) break;
+        }
+        revision.set(server.authoritativeItems.markExternalMutation(playerId));
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? revision.get() : -1L;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return -1L;
+    }
+  }
+
+  static long headlessItemRevision(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    return server == null || server.authoritativeItems == null
+        ? -1L : server.authoritativeItems.revision(playerId);
+  }
+
   /** Creates a non-hireling summon owned by the supplied player in one RoomEx. */
   static int headlessCreateRoomSummon(int playerId, int levelId, int roomId) {
     D2GS server = activeHeadlessInstance;

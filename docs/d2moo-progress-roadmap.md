@@ -205,12 +205,15 @@
   - 经验分配和掉落的 party-in-level 现在优先使用死亡瞬间快照；PlayersX 仍按全连接
     玩家数计算，避免因 party 范围缩小导致掉率偏差。
   - 待补：掉落归属超时快照广播，以及少数非 CombatSystem 的环境伤害特殊分支。
-- [ ] **P1-7 地面物品、掉落与拾取（约 86%）**
+- [ ] **P1-7 地面物品、掉落与拾取（约 90%）**
   - 地面掉落归属表现在会在 party 保护窗口结束后主动清理过期记录；公开掉落不再
     累积无效 owner 状态，重连 owner 重绑定只作用于仍在保护窗口内的实体。
   - `ItemMoveResult` 追加地面 owner/party 窗口字段；拾取失败（距离、归属、背包占用、
     玩家死亡或请求冲突）现在始终携带实体、序列化物品、位置和最新归属元数据，客户端
     会原子恢复地面状态，避免失败后出现幽灵物品或过期拾取限制。
+  - 新增 1.10f 离屏 `headlessItemFailureCorrections`，覆盖距离过远、背包占用和玩家死亡
+    三类拒绝；每类均验证完整物品数据、坐标和 owner 元数据，跨 RoomEx 重订阅继续由
+    `headlessReconnectVisibility`/`headlessReconnectGroundLoot` 门槛覆盖。
 - [ ] **P1-8 D2S 1.10f round-trip（约 68%）**
 
 强制踩坑回归门槛：
@@ -468,8 +471,8 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-下一小步：补充不同失败原因（背包满、距离过远、玩家死亡）的离屏校正样本，并完成
-地面实体删除/重建时的跨 RoomEx 快照一致性门槛。
+下一小步：补齐地面实体删除/重建时的跨 RoomEx 快照一致性门槛，并将掉落归属广播与
+实体回收（`discard`）接入统一删除观察点，完成 P1‑7 收尾。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 
