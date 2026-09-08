@@ -737,10 +737,37 @@ public class Act1QuestSystem extends PassiveSystem {
     if (playersByZone == null) return;
     IntBag entities = playersByZone.getEntities();
     int[] ids = entities.getData();
+    // D2MOO first credits everyone currently in Tristram, then propagates the
+    // rescue to party members elsewhere in Act I.  Keep the party set derived
+    // only from players actually present in Tristram; unrelated players in
+    // town or another area must not receive a reward-pending record.
+    IntSet eligibleParties = new IntSet();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int entityId = ids[i];
-      if (entityId == rescuerId
-          || !isPlayerInLevel(entityId, D2LevelIds.LEVEL_TRISTRAM)) continue;
+      if (!isPlayerInLevel(entityId, D2LevelIds.LEVEL_TRISTRAM)) continue;
+      Player member = mPlayer.get(entityId);
+      if (member == null || member.data == null) continue;
+      short previous = getCainRecord(member.data);
+      short next = Act1CainQuest.releaseCain(previous);
+      if (previous != next) {
+        setCainRecord(member.data, next);
+        persist(member.data);
+        log.info("[A1Q4] Cain release propagated: rescuer={}, player={}, scope=tristram, record=0x{}",
+            rescuerId, entityId, Integer.toHexString(Short.toUnsignedInt(next)));
+      }
+      if (partyManager != null) {
+        short partyId = partyManager.getPartyId(entityId);
+        if (partyId != Party.INVALID_ID) eligibleParties.add(partyId);
+      }
+    }
+
+    if (partyManager == null || eligibleParties.size == 0) return;
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int entityId = ids[i];
+      if (!isPlayerInAct1OutsideTown(entityId)
+          || isPlayerInLevel(entityId, D2LevelIds.LEVEL_TRISTRAM)) continue;
+      short partyId = partyManager.getPartyId(entityId);
+      if (partyId == Party.INVALID_ID || !eligibleParties.contains(partyId)) continue;
       Player member = mPlayer.get(entityId);
       if (member == null || member.data == null) continue;
       short previous = getCainRecord(member.data);
@@ -748,7 +775,7 @@ public class Act1QuestSystem extends PassiveSystem {
       if (previous == next) continue;
       setCainRecord(member.data, next);
       persist(member.data);
-      log.info("[A1Q4] Cain release propagated: rescuer={}, player={}, record=0x{}",
+      log.info("[A1Q4] Cain release propagated: rescuer={}, player={}, scope=party-act1, record=0x{}",
           rescuerId, entityId, Integer.toHexString(Short.toUnsignedInt(next)));
     }
   }

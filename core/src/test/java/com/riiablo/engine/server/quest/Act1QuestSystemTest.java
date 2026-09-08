@@ -450,6 +450,55 @@ class Act1QuestSystemTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void propagatesCainReleaseToAct1PartyMembersButNotUnrelatedPlayers() {
+    Harness harness = new Harness();
+    try {
+      CharData rescuerData = character("CainPartyRescuer", Riiablo.NORMAL);
+      CharData tristramData = character("CainTristramWitness", Riiablo.NORMAL);
+      CharData partyOutsideData = character("CainPartyOutside", Riiablo.NORMAL);
+      CharData unrelatedData = character("CainUnrelated", Riiablo.NORMAL);
+      short initial = Act1CainQuest.openTristramPortal((short) 0);
+      rescuerData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = initial;
+      tristramData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = initial;
+      partyOutsideData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = initial;
+      unrelatedData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD] = initial;
+
+      int rescuer = harness.createPlayer(rescuerData);
+      int witness = harness.createPlayer(tristramData);
+      int partyOutside = harness.createPlayer(partyOutsideData);
+      int unrelated = harness.createPlayer(unrelatedData);
+      harness.setPlayerLevel(rescuer, D2LevelIds.LEVEL_TRISTRAM);
+      harness.setPlayerLevel(witness, D2LevelIds.LEVEL_TRISTRAM);
+      harness.setPlayerLevel(partyOutside, D2LevelIds.LEVEL_BLOODMOOR);
+      harness.setPlayerLevel(unrelated, D2LevelIds.LEVEL_BLOODMOOR);
+      assertTrue(harness.parties.sendInvitation(rescuer, partyOutside));
+      assertTrue(harness.parties.acceptInvitation(partyOutside));
+      harness.process();
+
+      QuestObjectInteractionEvent gibbet = QuestObjectInteractionEvent.obtain(
+          rescuer, 71, NativeQuestObjectResolver.CAIN_GIBBET,
+          NativeQuestObjectResolver.Type.CAIN_GIBBET);
+      harness.events.dispatch(gibbet);
+
+      assertTrue(gibbet.accepted);
+      assertTrue(NativeQuestRecord.has(
+          rescuerData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD],
+          NativeQuestRecord.REWARD_PENDING));
+      assertTrue(NativeQuestRecord.has(
+          tristramData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD],
+          NativeQuestRecord.REWARD_PENDING));
+      assertTrue(NativeQuestRecord.has(
+          partyOutsideData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD],
+          NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(
+          unrelatedData.getQuests(Riiablo.ACT1)[Act1CainQuest.RECORD],
+          NativeQuestRecord.REWARD_PENDING));
+    } finally {
+      harness.dispose();
+    }
+  }
+
   private static CharData character(String name, int difficulty) {
     CharData data = CharData.obtain().set(difficulty, false, name, Riiablo.AMAZON);
     data.getStats().base().put(Stat.newskills, 0);
