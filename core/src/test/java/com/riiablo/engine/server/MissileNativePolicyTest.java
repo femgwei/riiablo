@@ -97,4 +97,31 @@ class MissileNativePolicyTest {
       world.dispose();
     }
   }
+
+  @Test
+  void zeroVelocityMissilesExpireByNativeLifetimeUnderLongRunPressure() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new MissileCollisionSystem()).build());
+    try {
+      final int count = 2_048;
+      for (int i = 0; i < count; i++) {
+        int id = world.create();
+        Missile missile = world.getMapper(Missile.class).create(id);
+        missile.missile = new Missiles.Entry();
+        missile.missile.Collision = false;
+        missile.nativeLifetimeFrames = 5;
+        missile.ownerId = -1;
+        world.getMapper(Position.class).create(id).position.set(i % 64, i / 64);
+        world.getMapper(Velocity.class).create(id).velocity.setZero();
+      }
+      world.setDelta(1f / 25f);
+      for (int frame = 0; frame < 6; frame++) world.process();
+      EntitySubscription subscription = world.getAspectSubscriptionManager().get(
+          Aspect.all(Missile.class, Position.class, Velocity.class));
+      assertEquals(0, subscription.getEntities().size(),
+          "stationary missiles must be reclaimed at native lifetime");
+    } finally {
+      world.dispose();
+    }
+  }
 }

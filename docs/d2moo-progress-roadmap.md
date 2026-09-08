@@ -163,7 +163,7 @@
     始终为 1/25 秒；2,000 个带生命周期实体连续运行 500 tick，tick 与订阅数量不漂移。
   - 真实 1.10f `headlessSnapshotResync` 通过完整多人快照压力流程，包含跨地图、死亡/复活、
     RoomEx 重订阅、乱序/重复基线和 2.5 秒暂停恢复（`oldLevelDrops=184`，无时间线回退）。
-- [ ] **P1-5 Missile 原生表驱动（约 88%）**
+- [ ] **P1-5 Missile 原生表驱动（约 92%）**
   - `ServerEntityFactory` 已读取 `Missiles.txt.Pierce` 和原生速度/Range；本轮将
     `Collision`、`CollideKill` 接入统一碰撞/销毁判定，非碰撞视觉导弹不再误伤，
     非 `CollideKill` 导弹可按原生规则继续飞行。
@@ -175,7 +175,10 @@
     导弹间碰撞，并按 `CanDestroy` 销毁可被导弹破坏的目标。
   - 新增 `MissileNativePolicyTest` 的 512 枚短命导弹压力用例，确认 Range 回收不
     残留；D2MOO 的 `CanDestroy` 仅针对 `UNIT_MISSILE`，不误用于普通场景物件。
-  - 待补更精确的 `LastCollide` 多目标边界语义和长时间跨房间高实体压力测试。
+  - 新增 2,048 枚零速度导弹的 5 帧原生寿命压力用例，确认 `nativeLifetimeFrames` 到期
+    后延迟删除不会残留实体；真实 `headlessSnapshotResync` 长跑覆盖跨 RoomEx 导弹/实体
+    快照及重订阅，未出现时间线倒退或导弹泄漏。
+  - 待补更精确的 `LastCollide` 多目标边界语义和真实地图跨房间飞行命中样本。
 - [ ] **P1-6 伤害、命中与死亡链（约 92%）**
   - `CombatSystem` 现按 `max*resist` 读取元素最大抗性上限，并接入火/电/冰/毒/魔法
     的原生元素穿透；免疫判定仍在抗性上限裁剪前执行。
