@@ -129,6 +129,7 @@ public class DeathRewardSystem extends PassiveSystem {
     int monsterLevel = Math.max(1, levelStat.asInt());
     com.badlogic.gdx.utils.IntArray eligibleSnapshot = killCredits == null ? null
         : killCredits.eligiblePlayers(ownerId, levelId(event.victim), players);
+    rewards.captureLootSnapshot(eligibleSnapshot);
     rewards.captureSnapshot(ownerId, difficulty, monsterLevel,
         victimAttrs != null && victimAttrs.get(Stat.experience) != null
             ? victimAttrs.get(Stat.experience).asInt() : 0, eligibleSnapshot);
@@ -145,8 +146,13 @@ public class DeathRewardSystem extends PassiveSystem {
     config.noRatio = monster.monstats != null && monster.monstats.noRatio;
     // D2Game starts with the current connected-player count. The value stored
     // on the monster is only an upper bound captured at spawn time.
+    int[] lootPlayers = rewards.snapshotLootPlayers();
+    // PlayersX uses the connected game count; keep that native scope rather
+    // than narrowing it to the killer's party. Only party-in-level is taken
+    // from the immutable death snapshot below.
     config.playerCount = players == null ? 1 : Math.max(1, players.getEntities().size());
-    config.partyMembersInLevel = partyMembersInLevel(ownerId);
+    config.partyMembersInLevel = lootPlayers.length > 0 ? lootPlayers.length
+        : partyMembersInLevel(ownerId);
     config.monsterPlayerCount = config.playerCount;
     if (mAttributesWrapper.has(event.victim) && mAttributesWrapper.get(event.victim).attrs != null) {
       com.riiablo.attributes.StatRef monsterPlayers =

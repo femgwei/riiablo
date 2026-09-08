@@ -26,6 +26,7 @@ public class MonsterRewardState extends Component {
   private int snapshotMonsterLevel;
   private int snapshotExperience;
   private int[] snapshotEligiblePlayers = new int[0];
+  private int[] snapshotLootPlayers = new int[0];
 
   public MonsterRewardState reset() {
     claims = 0;
@@ -34,6 +35,7 @@ public class MonsterRewardState extends Component {
     snapshotMonsterLevel = 0;
     snapshotExperience = 0;
     snapshotEligiblePlayers = new int[0];
+    snapshotLootPlayers = new int[0];
     return this;
   }
 
@@ -50,11 +52,19 @@ public class MonsterRewardState extends Component {
   }
 
   public boolean hasSnapshot() { return snapshotOwnerId >= 0; }
+  /** Captures same-level loot visibility independently from the 80-subtile XP list. */
+  public MonsterRewardState captureLootSnapshot(IntArray players) {
+    if (snapshotLootPlayers.length == 0 && players != null) {
+      snapshotLootPlayers = players.toArray();
+    }
+    return this;
+  }
   public int snapshotOwnerId() { return snapshotOwnerId; }
   public int snapshotDifficulty() { return snapshotDifficulty; }
   public int snapshotMonsterLevel() { return snapshotMonsterLevel; }
   public int snapshotExperience() { return snapshotExperience; }
   public int[] snapshotEligiblePlayers() { return snapshotEligiblePlayers.clone(); }
+  public int[] snapshotLootPlayers() { return snapshotLootPlayers.clone(); }
 
   public boolean claimExperience() {
     if ((claims & CLAIM_EXPERIENCE) != 0) return false;

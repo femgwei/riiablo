@@ -187,7 +187,8 @@ public class ExperienceManager extends PassiveSystem {
     awardHirelingExperience(ownerId, event.killer, defenderLevel, defenderExp);
 
     // 分配经验值（参考 D2MOD SUNITDMG_DistributeExperience）
-    distributeExperience(player.data, ownerId, event.victim, defenderLevel, defenderExp);
+    distributeExperience(player.data, ownerId, event.victim, defenderLevel, defenderExp,
+        eligibleSnapshot);
   }
 
   /**
@@ -201,7 +202,7 @@ public class ExperienceManager extends PassiveSystem {
    * @param defenderExp 被杀怪物基础经验值
    */
   private void distributeExperience(CharData killerData, int ownerEntityId,
-      int victimEntityId, int defenderLevel, int defenderExp) {
+      int victimEntityId, int defenderLevel, int defenderExp, IntArray snapshotEligible) {
     
     StatListRef killerStats = killerData.getStats().base();
     int killerLevel = getInt(killerStats, Stat.level, killerData.level);
@@ -236,9 +237,10 @@ public class ExperienceManager extends PassiveSystem {
     }
 
     int victimLevelId = levelId(victimEntityId);
-    IntArray eligible = killCredits == null ? new IntArray()
-        : killCredits.eligibleExperiencePlayers(
-            ownerEntityId, victimEntityId, victimLevelId, players);
+    IntArray eligible = snapshotEligible != null ? snapshotEligible
+        : (killCredits == null ? new IntArray()
+            : killCredits.eligibleExperiencePlayers(
+                ownerEntityId, victimEntityId, victimLevelId, players));
     int memberCount = eligible.size;
     int levelSum = 0;
     for (int i = 0; i < eligible.size; i++) {
