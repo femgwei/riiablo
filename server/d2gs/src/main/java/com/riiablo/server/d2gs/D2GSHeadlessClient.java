@@ -147,6 +147,10 @@ public final class D2GSHeadlessClient {
       runFallenDual(d2s, character);
       return;
     }
+    if (config.requireQuestRecovery) {
+      runQuestRecoveryDual(d2s, character);
+      return;
+    }
     if (config.requireSnapshotOrder) {
       runSnapshotOrder(d2s, character);
       return;
@@ -1953,6 +1957,61 @@ public final class D2GSHeadlessClient {
         + " replay=true conflictRejected=true");
   }
 
+  /**
+   * Verifies that both clients can read the same quest baseline and that a
+   * dead client may still request a read-only quest snapshot for recovery.
+   */
+  private void runQuestRecoveryDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave();
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = openSocket(); Socket socketB = openSocket()) {
+      DataInputStream inA = input(socketA);
+      DataInputStream inB = input(socketB);
+      OutputStream outA = output(socketA);
+      OutputStream outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      verifyDualQuestSnapshots(a, b, inA, inB, outA, outB);
+
+      if (!D2GS.headlessKillPlayer(a.playerId)) {
+        throw new IOException("failed to enter authoritative dead state");
+      }
+      long deathDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      while (System.currentTimeMillis() < deathDeadline) {
+        float[] state = D2GS.headlessPlayerLifecycleState(a.playerId);
+        if (state.length > 1 && state[0] == 1f && state[1] == 1f) break;
+        Thread.sleep(10L);
+      }
+      float[] deadState = D2GS.headlessPlayerLifecycleState(a.playerId);
+      if (deadState.length < 2 || deadState[0] != 1f || deadState[1] != 1f) {
+        throw new IOException("authoritative dead state was not reached");
+      }
+
+      send(outA, questRequestPacket(2L, QuestOperation.SNAPSHOT, -1, -1));
+      QuestResult deadSnapshot = a.awaitQuestResult(inA, 2L, deadline());
+      if (!deadSnapshot.success()
+          || deadSnapshot.questRecordsLength() != Riiablo.NUM_ACTS * 8) {
+        throw new IOException("dead-player quest snapshot rejected: success="
+            + deadSnapshot.success() + " reason=" + deadSnapshot.reason());
+      }
+
+      send(outB, questRequestPacket(2L, QuestOperation.SNAPSHOT, -1, -1));
+      QuestResult peerSnapshot = b.awaitQuestResult(inB, 2L, deadline());
+      if (!peerSnapshot.success()
+          || peerSnapshot.questRevision() != deadSnapshot.questRevision()) {
+        throw new IOException("dual quest recovery revisions diverged: dead="
+            + deadSnapshot.questRevision() + " peer=" + peerSnapshot.questRevision());
+      }
+      log("quest_recovery_pass", "clients=" + a.playerId + ',' + b.playerId
+          + " deadSnapshot=true records=" + deadSnapshot.questRecordsLength()
+          + " revision=" + deadSnapshot.questRevision());
+    }
+  }
+
   private QuestResult awaitQuestResult(DataInputStream input, long requestId,
                                        long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
@@ -2971,6 +3030,7 @@ public final class D2GSHeadlessClient {
     boolean requireSnapshotOrder;
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
+    boolean requireQuestRecovery;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
     boolean requireMercenaryProgression;
@@ -3003,6 +3063,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-snapshot-order".equals(arg)) config.requireSnapshotOrder = true;
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
+        else if ("--require-quest-recovery".equals(arg)) config.requireQuestRecovery = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
         else if ("--require-mercenary-progression".equals(arg)) config.requireMercenaryProgression = true;
@@ -3063,7 +3124,8 @@ public final class D2GSHeadlessClient {
           + " [--generated-amazon] [--host 127.0.0.1] [--port 6114]"
           + " [--skill 0] [--require-missile] [--require-sim-tick]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
-          + " [--require-fallen-scenario] [--require-reconnect-visibility]"
+          + " [--require-fallen-scenario] [--require-quest-recovery]"
+          + " [--require-reconnect-visibility]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }
   }
