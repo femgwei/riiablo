@@ -222,7 +222,7 @@
     `headlessReconnectGroundLoot` 在重复删除包下均通过，验证断线重连基线和 claim 一致。
   - 新增 `headlessDelayedDeleteFrames`，以跨 3 个 Sim Tick 的延迟删除帧验证旧删除不会
     回退快照时钟或误删重建掉落；延迟注入和重复注入均通过。
-- [ ] **P1-8 D2S 1.10f round-trip（约 98%）**
+- [ ] **P1-8 D2S 1.10f round-trip（约 99%）**
   - 新增 `D2SReader.readComplete`，在解析可变长度 section 前校验 1.10f 的声明大小和
     CRC，并要求 quests/waypoints/NPC/stats/skills/items/merc/golem 全部消费完毕；普通
     角色列表仍可使用只读头部的 `readD2S` 快路径。
@@ -261,6 +261,9 @@
   - 修复 `StatListWriter` 在 `RUNEWORD`/其他声明属性列表为空时遗漏终止符的问题；
     现在按 header flags 输出所有声明列表（空列表也写入 `0x1ff`），runeword、
     ethereal、inscribed 物品可稳定被 1.10f 读取。
+  - `D2SItemQualityRoundTripTest` 增加符文之语、ethereal 和 inscribed 组合回归；此前
+    暴露的属性列表位流错位已修复。保存模块剩余工作仅是使用原版客户端进程做最终
+    外部可识别性验证（当前自动化环境不启动有窗口的原版游戏）。
 
 强制踩坑回归门槛：
 
