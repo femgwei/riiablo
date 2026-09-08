@@ -252,8 +252,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       // Native LastCollide performs one final unit lookup at the range edge
       // before the missile is removed.  This matters for fast arrows whose
       // final segment ends inside a target's hitbox.
-      if (missile.missile != null && missile.missile.LastCollide
-          && !missile.lastCollideResolved && hasNativeCollision(missile)) {
+      if (shouldResolveLastCollide(missile, true)) {
         missile.lastCollideResolved = true;
         checkCollisions(entityId, missile, position, lastPos);
         if (!world.getEntityManager().isActive(entityId)) return;
@@ -912,6 +911,17 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   static boolean hasLastCollide(Missile missile) {
     return missile != null && missile.missile != null && missile.missile.LastCollide;
+  }
+
+  /**
+   * Native LastCollide is a single endpoint collision pass.  Keep the gate
+   * explicit so range-boundary handling cannot fire for a non-colliding visual
+   * missile or be evaluated twice when the final segment spans multiple
+   * targets.
+   */
+  static boolean shouldResolveLastCollide(Missile missile, boolean atRange) {
+    return atRange && missile != null && hasLastCollide(missile)
+        && !missile.lastCollideResolved && hasNativeCollision(missile);
   }
 
   static boolean rollPierce(Missile missile, int chance) {

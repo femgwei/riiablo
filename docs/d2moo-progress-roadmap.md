@@ -163,7 +163,7 @@
     始终为 1/25 秒；2,000 个带生命周期实体连续运行 500 tick，tick 与订阅数量不漂移。
   - 真实 1.10f `headlessSnapshotResync` 通过完整多人快照压力流程，包含跨地图、死亡/复活、
     RoomEx 重订阅、乱序/重复基线和 2.5 秒暂停恢复（`oldLevelDrops=184`，无时间线回退）。
-- [ ] **P1-5 Missile 原生表驱动（约 92%）**
+- [ ] **P1-5 Missile 原生表驱动（约 94%）**
   - `ServerEntityFactory` 已读取 `Missiles.txt.Pierce` 和原生速度/Range；本轮将
     `Collision`、`CollideKill` 接入统一碰撞/销毁判定，非碰撞视觉导弹不再误伤，
     非 `CollideKill` 导弹可按原生规则继续飞行。
@@ -178,6 +178,8 @@
   - 新增 2,048 枚零速度导弹的 5 帧原生寿命压力用例，确认 `nativeLifetimeFrames` 到期
     后延迟删除不会残留实体；真实 `headlessSnapshotResync` 长跑覆盖跨 RoomEx 导弹/实体
     快照及重订阅，未出现时间线倒退或导弹泄漏。
+  - 将 `LastCollide` 范围边界判定集中为单次门控函数，要求原生 Collision 标志且禁止
+    重复 endpoint pass；新增组合边界回归，避免多目标末帧重复命中。
   - 待补更精确的 `LastCollide` 多目标边界语义和真实地图跨房间飞行命中样本。
 - [ ] **P1-6 伤害、命中与死亡链（约 92%）**
   - `CombatSystem` 现按 `max*resist` 读取元素最大抗性上限，并接入火/电/冰/毒/魔法

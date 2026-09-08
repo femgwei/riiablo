@@ -73,6 +73,24 @@ class MissileNativePolicyTest {
   }
 
   @Test
+  void lastCollideEndpointGateIsSingleUseAndRequiresCollision() {
+    Missile missile = new Missile();
+    missile.missile = new Missiles.Entry();
+    missile.missile.LastCollide = true;
+    missile.missile.Collision = true;
+    assertFalse(MissileCollisionSystem.shouldResolveLastCollide(missile, false));
+    assertTrue(MissileCollisionSystem.shouldResolveLastCollide(missile, true));
+    missile.lastCollideResolved = true;
+    assertFalse(MissileCollisionSystem.shouldResolveLastCollide(missile, true));
+
+    Missile visual = new Missile();
+    visual.missile = new Missiles.Entry();
+    visual.missile.LastCollide = true;
+    visual.missile.Collision = false;
+    assertFalse(MissileCollisionSystem.shouldResolveLastCollide(visual, true));
+  }
+
+  @Test
   void shortLivedMissilesAreReclaimedUnderEntityPressure() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new EventSystem(), new MissileCollisionSystem()).build());
