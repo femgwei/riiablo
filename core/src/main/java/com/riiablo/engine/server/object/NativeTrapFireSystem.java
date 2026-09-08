@@ -120,7 +120,10 @@ public class NativeTrapFireSystem extends BaseSystem {
     hp.sub(applied);
     if (hp.asFixed() <= 0f) {
       hp.set(0f);
-      if (events != null) events.dispatch(DeathEvent.obtain(fireId, targetId));
+      if (events != null) {
+        int killerId = fire.ownerId >= 0 ? fire.ownerId : fireId;
+        events.dispatch(DeathEvent.obtain(killerId, targetId));
+      }
     }
     log.debug("[OBJECT_TRAP_FIRE] damage fire={} target={} raw={} applied={} absorbed={} hp={}",
         fireId, targetId, rawDamage, applied, combat.absorbedLife, hp.asFixed());

@@ -15,16 +15,24 @@ public class NativeTrapFire extends Component {
   public float remaining;
   public float untilDamageTick;
   public float radius;
+  /** Player/entity that triggered this object; used for kill credit. */
+  public int ownerId = -1;
   /** Objects.txt Damage percentage used by OBJEVAL_ApplyTrapObjectDamage. */
   public int damagePercent;
   private int seedLow;
   private int seedHigh;
 
   public NativeTrapFire reset(float duration, float radius, int damagePercent, int seed) {
+    return reset(duration, radius, damagePercent, seed, -1);
+  }
+
+  public NativeTrapFire reset(float duration, float radius, int damagePercent, int seed,
+      int ownerId) {
     remaining = Math.max(0f, duration);
     untilDamageTick = 0f;
     this.radius = Math.max(0f, radius);
     this.damagePercent = Math.max(0, damagePercent);
+    this.ownerId = ownerId;
     seedLow = seed == 0 ? 1 : seed;
     seedHigh = 666;
     return this;
@@ -45,6 +53,7 @@ public class NativeTrapFire extends Component {
     untilDamageTick = 0f;
     radius = 0f;
     damagePercent = 0;
+    ownerId = -1;
     seedLow = 0;
     seedHigh = 0;
   }

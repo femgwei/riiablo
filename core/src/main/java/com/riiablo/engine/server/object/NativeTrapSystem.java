@@ -136,7 +136,7 @@ public class NativeTrapSystem extends BaseSystem {
     int seed = 31 * sourceEntityId + fireId;
     seed = 31 * seed + Float.floatToIntBits(firePosition.position.x);
     seed = 31 * seed + Float.floatToIntBits(firePosition.position.y);
-    mFire.create(fireId).reset(duration, radius, damage, seed);
+    mFire.create(fireId).reset(duration, radius, damage, seed, sourceEntityId);
   }
 
   /** D2Game's level compatibility branches in {@code sub_6FC74DF0}. */

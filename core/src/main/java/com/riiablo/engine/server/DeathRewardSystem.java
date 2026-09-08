@@ -90,17 +90,20 @@ public class DeathRewardSystem extends PassiveSystem {
           event.victim, Integer.toHexString(unitFlags.flags()));
       return;
     }
+    int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
+    if (ownerId < 0 || !mPlayer.has(ownerId) || mPlayer.get(ownerId).data == null) {
+      log.debug("[DEATH_REWARD] skip unowned killer: killer={}, victim={}",
+          event.killer, event.victim);
+      return;
+    }
+    // Claim only after kill credit is validated. Environmental objects may
+    // emit a DeathEvent with no player owner; claiming first would permanently
+    // suppress the later authoritative player event for this monster.
     MonsterRewardState rewards = mMonsterRewardState.has(event.victim)
         ? mMonsterRewardState.get(event.victim)
         : mMonsterRewardState.create(event.victim).reset();
     if (!rewards.claimTreasureClass()) {
       log.warn("[DEATH_REWARD] duplicate death ignored: killer={}, victim={}",
-          event.killer, event.victim);
-      return;
-    }
-    int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
-    if (ownerId < 0 || !mPlayer.has(ownerId) || mPlayer.get(ownerId).data == null) {
-      log.debug("[DEATH_REWARD] skip unowned killer: killer={}, victim={}",
           event.killer, event.victim);
       return;
     }

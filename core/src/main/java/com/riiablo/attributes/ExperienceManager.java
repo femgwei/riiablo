@@ -143,6 +143,16 @@ public class ExperienceManager extends PassiveSystem {
           event.victim, Integer.toHexString(unitFlags.flags()));
       return;
     }
+    // D2Game resolves player, hireling and owned minion kills to the owning
+    // player before distributing either player or hireling experience.
+    int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
+    Player player = ownerId < 0 ? null : mPlayer.get(ownerId);
+    if (player == null || player.data == null) {
+      return; // unowned hostile or unsupported summon
+    }
+    // Validate kill credit before claiming the per-monster reward slot. An
+    // environmental object can emit a DeathEvent without an owning player;
+    // that event must not suppress the subsequent player-authoritative event.
     MonsterRewardState rewards = mMonsterRewardState.has(event.victim)
         ? mMonsterRewardState.get(event.victim)
         : mMonsterRewardState.create(event.victim).reset();
@@ -150,14 +160,6 @@ public class ExperienceManager extends PassiveSystem {
       log.warn("[XP_SYNC] duplicate death ignored: killer={}, victim={}",
           event.killer, event.victim);
       return;
-    }
-
-    // D2Game resolves player, hireling and owned minion kills to the owning
-    // player before distributing either player or hireling experience.
-    int ownerId = killCredits == null ? event.killer : killCredits.ownerOf(event.killer);
-    Player player = ownerId < 0 ? null : mPlayer.get(ownerId);
-    if (player == null || player.data == null) {
-      return; // unowned hostile or unsupported summon
     }
 
     // SUNITDMG_DistributeExperience reads the stats initialized on the unit,

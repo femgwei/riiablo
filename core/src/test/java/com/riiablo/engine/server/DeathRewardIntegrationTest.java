@@ -62,9 +62,14 @@ class DeathRewardIntegrationTest extends RiiabloTest {
       monsterAttrs.base().put(Stat.experience, 600);
       monsterAttrs.reset();
       world.getMapper(AttributesWrapper.class).create(monster).attrs = monsterAttrs;
+      int unownedKiller = world.create();
 
       System.out.println("[DEATH_REWARD_CHAIN] phase=death killer=" + player
           + " victim=" + monster + " expBefore=0");
+      // Environmental objects can report a lethal event without a player
+      // owner. That event must not claim the monster's reward slot; the later
+      // authoritative player event still owns XP and loot.
+      events.dispatch(DeathEvent.obtain(unownedKiller, monster));
       events.dispatch(DeathEvent.obtain(player, monster));
 
       long experienceAfter = data.getStats().aggregate().getValue(Stat.experience, 0L);
