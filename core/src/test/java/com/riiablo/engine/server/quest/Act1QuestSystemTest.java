@@ -252,6 +252,43 @@ class Act1QuestSystemTest extends RiiabloTest {
   }
 
   @Test
+  void propagatesBloodRavenCompletionToSamePartyOutsideBurialGrounds() {
+    Harness harness = new Harness();
+    try {
+      CharData hunterData = character("BloodRavenHunter", Riiablo.NORMAL);
+      CharData partyOutsideData = character("BloodRavenParty", Riiablo.NORMAL);
+      CharData unrelatedData = character("BloodRavenUnrelated", Riiablo.NORMAL);
+      int hunter = harness.createPlayer(hunterData);
+      int partyOutside = harness.createPlayer(partyOutsideData);
+      int unrelated = harness.createPlayer(unrelatedData);
+      harness.setPlayerLevel(hunter, D2LevelIds.LEVEL_BURIALGROUNDS);
+      harness.setPlayerLevel(partyOutside, D2LevelIds.LEVEL_BLOODMOOR);
+      harness.setPlayerLevel(unrelated, D2LevelIds.LEVEL_BLOODMOOR);
+      assertTrue(harness.parties.sendInvitation(hunter, partyOutside));
+      assertTrue(harness.parties.acceptInvitation(partyOutside));
+      int kashya = harness.createKashya();
+      int bloodRaven = harness.createBloodRaven();
+      harness.process();
+
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          hunter, kashya, Act1BloodRavenQuest.MESSAGE_INIT));
+      harness.events.dispatch(DeathEvent.obtain(hunter, bloodRaven));
+
+      short hunterRecord = hunterData.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
+      short partyRecord = partyOutsideData.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
+      short unrelatedRecord = unrelatedData.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(hunterRecord, NativeQuestRecord.REWARD_PENDING));
+      assertTrue(NativeQuestRecord.has(partyRecord, NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertFalse(NativeQuestRecord.has(partyRecord, NativeQuestRecord.REWARD_PENDING));
+      assertTrue(NativeQuestRecord.has(partyRecord, NativeQuestRecord.COMPLETED_NOW));
+      assertFalse(NativeQuestRecord.has(unrelatedRecord, NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(unrelatedRecord, NativeQuestRecord.COMPLETED_NOW));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
   void KashyaRewardEmitsFreeRogueRequestWithoutCommittingEarly() {
     Harness harness = new Harness();
     try {
