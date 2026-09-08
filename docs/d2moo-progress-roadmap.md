@@ -146,6 +146,9 @@
   - `EntityFactory` 创建实体时统一写入 `SPAWN`；`UnitLifecycleSystem` 改为权威
     `BaseSystem`，在固定 tick 依次推进 `SPAWN -> INSERTED -> ACTIVE`，避免实体在
     组件尚未完成装配时被行为系统提前消费。新增阶段推进回归测试。
+  - 生命周期系统改用实体订阅驱动，Destroy/延迟删除后订阅不残留；新增删除边界回归。
+    RoomEx 卸载、网络断线和重连的订阅删除已由 `headlessReconnectVisibility` 与
+    `RoomActivationSystem` 端到端覆盖，旧玩家/召唤物不会泄漏到新基线。
   - 死亡时清理 owner/damageOwner/attached 导弹、召唤物、Target 引用和来源 state 层；
     导弹等无尸体实体在死亡边界删除，玩家/怪物交由专用尸体系统保留。
   - `GameScreen` 与 D2GS 均注册该系统，新增 `UnitLifecycleSystemTest` 覆盖重复死亡事件、

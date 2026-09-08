@@ -44,6 +44,27 @@ class UnitLifecycleSystemTest {
   }
 
   @Test
+  void destroyedEntityLeavesLifecycleSubscription() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new UnitLifecycleSystem())
+        .build());
+    try {
+      int entity = world.create();
+      world.getMapper(UnitLifecycle.class).create(entity).reset();
+      world.process();
+      assertEquals(1, world.getAspectSubscriptionManager()
+          .get(com.artemis.Aspect.all(UnitLifecycle.class)).getEntities().size());
+      world.delete(entity);
+      world.process();
+      assertFalse(world.getEntityManager().isActive(entity));
+      assertEquals(0, world.getAspectSubscriptionManager()
+          .get(com.artemis.Aspect.all(UnitLifecycle.class)).getEntities().size());
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void ownerDeathCleansOwnedMissilesPetsTargetsAndSourceStatesExactlyOnce() {
     EventSystem events = new EventSystem();
     World world = new World(new WorldConfigurationBuilder()

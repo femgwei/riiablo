@@ -4,6 +4,8 @@ import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.BaseSystem;
+import com.artemis.BaseEntitySystem;
+import com.artemis.annotations.All;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.Missile;
@@ -25,7 +27,8 @@ import net.mostlyoriginal.api.event.common.Subscribe;
  * system only makes the boundary idempotent and removes references that would
  * otherwise keep missiles, summons, targets or source-owned states alive.
  */
-public class UnitLifecycleSystem extends BaseSystem {
+@All(UnitLifecycle.class)
+public class UnitLifecycleSystem extends BaseEntitySystem {
   private static final Logger log = LogManager.getLogger(UnitLifecycleSystem.class);
 
   protected ComponentMapper<UnitLifecycle> mLifecycle;
@@ -41,7 +44,6 @@ public class UnitLifecycleSystem extends BaseSystem {
   private EntitySubscription pets;
   private EntitySubscription targets;
   private EntitySubscription unitStates;
-  private EntitySubscription lifecycles;
   private long deathSequence;
 
   @Override
@@ -50,26 +52,37 @@ public class UnitLifecycleSystem extends BaseSystem {
     pets = world.getAspectSubscriptionManager().get(Aspect.all(SummonedPet.class));
     targets = world.getAspectSubscriptionManager().get(Aspect.all(Target.class));
     unitStates = world.getAspectSubscriptionManager().get(Aspect.all(UnitStates.class));
-    lifecycles = world.getAspectSubscriptionManager().get(Aspect.all(UnitLifecycle.class));
   }
 
-  @Override
-  protected void processSystem() {
+  protected void process(int entityId) {
     // EntityFactory marks newly allocated units as SPAWN.  Advancing one
     // phase per fixed tick makes InsertWorld observable and prevents systems
     // from treating a partially assembled entity as active in its creation
     // tick.  Death/removed phases are terminal and deliberately untouched.
-    if (lifecycles == null) return;
-    int[] ids = lifecycles.getEntities().getData();
-    int size = lifecycles.getEntities().size();
-    for (int i = 0; i < size; i++) {
-      UnitLifecycle lifecycle = mLifecycle.get(ids[i]);
-      if (lifecycle == null) continue;
-      if (lifecycle.phase == UnitLifecycle.Phase.SPAWN) {
-        lifecycle.transition(UnitLifecycle.Phase.INSERTED);
-      } else if (lifecycle.phase == UnitLifecycle.Phase.INSERTED) {
-        lifecycle.transition(UnitLifecycle.Phase.ACTIVE);
-      }
+    UnitLifecycle lifecycle = mLifecycle.get(entityId);
+    if (lifecycle == null) return;
+    if (lifecycle.phase == UnitLifecycle.Phase.SPAWN) {
+      lifecycle.transition(UnitLifecycle.Phase.INSERTED);
+    } else if (lifecycle.phase == UnitLifecycle.Phase.INSERTED) {
+      lifecycle.transition(UnitLifecycle.Phase.ACTIVE);
+    }
+  }
+
+  @Override
+  protected void processSystem() {
+    com.artemis.utils.IntBag entities = subscription.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) process(ids[i]);
+  }
+
+  @Override
+  protected void removed(int entityId) {
+    // BaseEntitySystem invokes this callback at the deletion boundary.  The
+    // component may already be detached, so this is best-effort; the
+    // important guarantee is that no deleted entity remains in the active
+    // lifecycle subscription.
+    if (mLifecycle.has(entityId)) {
+      mLifecycle.get(entityId).transition(UnitLifecycle.Phase.DESTROYED);
     }
   }
 
