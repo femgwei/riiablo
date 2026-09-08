@@ -83,6 +83,19 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     if (state != null && event.mode != Engine.Object.MODE_OP) {
       state.persistMode(event.mode);
     }
+    syncSnapshotState(event.entityId, state);
+  }
+
+  private void syncSnapshotState(int entityId, NativeObjectState state) {
+    Object object = mObject.get(entityId);
+    if (object == null) return;
+    object.mode = state == null ? (mCofReference.has(entityId)
+        ? mCofReference.get(entityId).mode : Engine.Object.MODE_NU) : state.currentMode;
+    byte flags = 0;
+    if (state != null && state.opened) flags |= 1;
+    if (state != null && state.activated) flags |= 2;
+    if (mInteractable.has(entityId)) flags |= 4;
+    object.stateFlags = flags;
   }
 
   @Override
@@ -121,6 +134,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     }
     event.dispatch(ObjectInteractionEvent.obtain(src, entityId, object.base.Id,
         object.base.OperateFn, kind, lifecycle, stateChanged));
+    syncSnapshotState(entityId, state);
     dispatchContainerTrap(src, entityId, object.base, lifecycle, stateChanged, state);
   }
 

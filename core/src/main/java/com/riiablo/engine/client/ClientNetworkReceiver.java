@@ -424,8 +424,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
             sync, ComponentP.ObjectP, new com.riiablo.net.packet.d2gs.ObjectP());
         PositionP position = findTable(sync, ComponentP.PositionP, new PositionP());
         if (object != null && position != null) {
-          return factory.createStaticObjectByClassId(
+          int created = factory.createStaticObjectByClassId(
               object.objectId(), position.x(), position.y());
+          applyObjectSnapshot(created, object);
+          return created;
         }
 
         return Engine.INVALID_ENTITY;
@@ -605,6 +607,15 @@ public class ClientNetworkReceiver extends IntervalSystem {
           "[XP_SYNC] entity=%d experience=%d oldExperience=%d level=%d oldLevel=%d skillPoints=%d oldSkillPoints=%d statPoints=%d oldStatPoints=%d learnedSkills=%d",
           entityId, experience, oldExperience, level, oldLevel, skillPoints, oldSkillPoints,
           statPoints, oldStatPoints, wireSkills));
+    }
+  }
+
+  private void applyObjectSnapshot(int entityId, com.riiablo.net.packet.d2gs.ObjectP snapshot) {
+    if (entityId == Engine.INVALID_ENTITY || snapshot == null) return;
+    if (mCofReference.has(entityId)
+        && snapshot.mode() >= Engine.Object.MODE_NU
+        && snapshot.mode() <= Engine.Object.MODE_S5) {
+      cofs.setMode(entityId, (byte) snapshot.mode());
     }
   }
 

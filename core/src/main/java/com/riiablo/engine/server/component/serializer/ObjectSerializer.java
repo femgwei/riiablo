@@ -18,7 +18,9 @@ public class ObjectSerializer implements FlatBuffersSerializer<Object, ObjectP> 
   @Override
   public int putData(FlatBufferBuilder builder, Object component) {
     return ObjectP.createObjectP(builder,
-        component == null || component.base == null ? 0 : component.base.Id);
+        component == null || component.base == null ? 0 : component.base.Id,
+        component == null ? 0 : component.mode,
+        component == null ? 0 : component.stateFlags);
   }
 
   @Override

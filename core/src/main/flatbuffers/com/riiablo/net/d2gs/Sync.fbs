@@ -170,6 +170,10 @@ table ItemP {
 // already-resolved Objects.txt class id so network clients can rebuild them.
 table ObjectP {
   objectId:uint16;
+  // Runtime state for D2Game-created objects.  Appended fields preserve wire
+  // compatibility with older clients that only consume objectId.
+  mode:ubyte;
+  stateFlags:ubyte; // bit 0 opened, bit 1 activated, bit 2 interactable
 }
 
 // Authoritative server status snapshot. The three vectors share the same

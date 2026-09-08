@@ -16,16 +16,24 @@ public final class ObjectP extends Table {
   public ObjectP __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
 
   public int objectId() { int o = __offset(4); return o != 0 ? bb.getShort(o + bb_pos) & 0xFFFF : 0; }
+  public int mode() { int o = __offset(6); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
+  public int stateFlags() { int o = __offset(8); return o != 0 ? bb.get(o + bb_pos) & 0xFF : 0; }
 
   public static int createObjectP(FlatBufferBuilder builder,
-      int objectId) {
-    builder.startTable(1);
+      int objectId,
+      int mode,
+      int stateFlags) {
+    builder.startTable(3);
     ObjectP.addObjectId(builder, objectId);
+    ObjectP.addStateFlags(builder, stateFlags);
+    ObjectP.addMode(builder, mode);
     return ObjectP.endObjectP(builder);
   }
 
-  public static void startObjectP(FlatBufferBuilder builder) { builder.startTable(1); }
+  public static void startObjectP(FlatBufferBuilder builder) { builder.startTable(3); }
   public static void addObjectId(FlatBufferBuilder builder, int objectId) { builder.addShort(0, (short)objectId, (short)0); }
+  public static void addMode(FlatBufferBuilder builder, int mode) { builder.addByte(1, (byte)mode, (byte)0); }
+  public static void addStateFlags(FlatBufferBuilder builder, int stateFlags) { builder.addByte(2, (byte)stateFlags, (byte)0); }
   public static int endObjectP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

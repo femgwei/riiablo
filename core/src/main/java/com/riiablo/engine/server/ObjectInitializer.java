@@ -46,7 +46,8 @@ public class ObjectInitializer extends BaseEntitySystem {
   protected void processSystem() {}
 
   public void initialize(int entityId) {
-    Objects.Entry base = mObject.get(entityId).base;
+    Object object = mObject.get(entityId);
+    Objects.Entry base = object.base;
     NativeObjectState nativeState = mNativeObjectState.get(entityId);
     if (nativeState != null && mCofReference.has(entityId)
         && nativeState.initialMode >= Engine.Object.MODE_NU
@@ -91,6 +92,18 @@ public class ObjectInitializer extends BaseEntitySystem {
         Gdx.app.error(TAG, "Invalid InitFn for " + mClassname.get(entityId).classname + ": " + base.InitFn);
     }
     restorePersistentInteractionState(entityId, base, nativeState);
+    syncSnapshotState(entityId, nativeState);
+  }
+
+  private void syncSnapshotState(int entityId, NativeObjectState state) {
+    Object object = mObject.get(entityId);
+    if (object == null) return;
+    object.mode = state == null ? Engine.Object.MODE_NU : state.currentMode;
+    byte flags = 0;
+    if (state != null && state.opened) flags |= 1;
+    if (state != null && state.activated) flags |= 2;
+    if (mInteractable.has(entityId)) flags |= 4;
+    object.stateFlags = flags;
   }
 
   private void initializeInteractType(int entityId, Objects.Entry base,
