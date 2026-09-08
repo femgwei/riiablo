@@ -64,21 +64,34 @@ public class StatListWriter {
   }
 
   public void write(StatList stats, BitOutput bits, int flags) {
-    final int numLists = stats.numLists();
+    // The item header flags declare which property lists follow.  A list may
+    // legitimately be empty (for example a runeword with no extra rune
+    // properties), but its 0x1ff terminator must still be emitted.  The old
+    // implementation iterated only numLists(), silently omitting declared
+    // trailing lists and shifting the next D2S section.
+    final int numLists = Math.max(stats.numLists(), highestList(flags) + 1);
     for (int i = 0; i < numLists; i++) {
-      if (((flags >> i) & 1) == 1) {
+      if (((flags >> i) & 1) == 1 && i < stats.numLists()) {
         try {
           MDC.put("propList", StatListFlags.itemToString(i)); // assert only items will be serialized
           write(stats.get(i), bits, false);
         } finally {
           MDC.remove("propList");
         }
+      } else if (((flags >> i) & 1) == 1) {
+        // Declared but not materialized list: native format still carries an
+        // empty stat stream so the reader remains aligned.
+        bits.write15u(Stat.NONE, Stat.BITS);
       }
     }
 
     if (flags == StatListFlags.FLAG_NONE) {
       bits.write15u(Stat.NONE, Stat.BITS);
     }
+  }
+
+  private static int highestList(int flags) {
+    return flags == 0 ? -1 : 31 - Integer.numberOfLeadingZeros(flags);
   }
 
 //  public Attributes read(Attributes attrs, BitInput bits, int flags) {

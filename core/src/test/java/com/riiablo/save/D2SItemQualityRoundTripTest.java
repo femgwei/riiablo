@@ -49,6 +49,30 @@ class D2SItemQualityRoundTripTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void runewordAndExtendedItemFlagsRoundTrip() {
+    String weaponCode = firstWeaponCode();
+    assumeTrue(weaponCode != null, "1.10f weapon table is unavailable");
+    Item item = new ItemGenerator().generateLootItem(weaponCode, 40, Quality.NORMAL,
+        0x7A6B5C4D, Riiablo.NORMAL);
+    item.flags |= Item.ITEMFLAG_RUNEWORD | Item.ITEMFLAG_ETHEREAL | Item.ITEMFLAG_INSCRIBED;
+    item.runewordData = 0x1234;
+    item.inscription = "RunewordHero";
+
+    CharData character = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, true, "RunewordHero", Riiablo.AMAZON);
+    D2S encoded = D2SWriter96.createD2S(character);
+    encoded.items.items = new Array<>();
+    encoded.items.items.add(item);
+    byte[] bytes = new D2SWriter96().writeD2S(encoded);
+    D2S decoded = D2SReader.INSTANCE.readComplete(bytes);
+    Item restored = decoded.items.items.first();
+
+    assertEquals(item.flags, restored.flags);
+    assertEquals(item.runewordData, restored.runewordData);
+    assertEquals(item.inscription, restored.inscription);
+  }
+
   private static void assertQualityRoundTrip(Item item) {
     assertNotNull(item);
     CharData character = CharData.obtain().clear()
@@ -90,6 +114,14 @@ class D2SItemQualityRoundTripTest extends RiiabloTest {
     if (Riiablo.files == null || Riiablo.files.UniqueItems == null) return null;
     for (UniqueItems.Entry entry : Riiablo.files.UniqueItems) {
       if (entry.enabled && isBaseCode(entry.code)) return entry;
+    }
+    return null;
+  }
+
+  private static String firstWeaponCode() {
+    if (Riiablo.files == null || Riiablo.files.weapons == null) return null;
+    for (com.riiablo.codec.excel.Weapons.Entry entry : Riiablo.files.weapons) {
+      if (isBaseCode(entry.code)) return entry.code;
     }
     return null;
   }

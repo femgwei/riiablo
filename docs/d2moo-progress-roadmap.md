@@ -222,7 +222,7 @@
     `headlessReconnectGroundLoot` 在重复删除包下均通过，验证断线重连基线和 claim 一致。
   - 新增 `headlessDelayedDeleteFrames`，以跨 3 个 Sim Tick 的延迟删除帧验证旧删除不会
     回退快照时钟或误删重建掉落；延迟注入和重复注入均通过。
-- [ ] **P1-8 D2S 1.10f round-trip（约 95%）**
+- [ ] **P1-8 D2S 1.10f round-trip（约 98%）**
   - 新增 `D2SReader.readComplete`，在解析可变长度 section 前校验 1.10f 的声明大小和
     CRC，并要求 quests/waypoints/NPC/stats/skills/items/merc/golem 全部消费完毕；普通
     角色列表仍可使用只读头部的 `readD2S` 快路径。
@@ -258,6 +258,9 @@
     D2S section 往返，避免品质元数据在写入后丢失。
   - 完整读取中的嵌套 SOCKET 物品改用相邻记录的严格解析，不再 `skipUntil` 越过损坏
     数据寻找下一个 `JM`；宽松 `ItemReader.readItem` 仍保留给旧工具和诊断路径。
+  - 修复 `StatListWriter` 在 `RUNEWORD`/其他声明属性列表为空时遗漏终止符的问题；
+    现在按 header flags 输出所有声明列表（空列表也写入 `0x1ff`），runeword、
+    ethereal、inscribed 物品可稳定被 1.10f 读取。
 
 强制踩坑回归门槛：
 
