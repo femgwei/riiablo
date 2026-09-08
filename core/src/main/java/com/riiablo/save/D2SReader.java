@@ -44,6 +44,7 @@ public enum D2SReader {
   public D2S readD2S(FileHandle handle) {
     byte[] bytes = handle.readBytes();
     D2S d2s = readD2S(ByteInput.wrap(bytes));
+    validateEnvelope(d2s, bytes, ByteInput.wrap(bytes));
     D2SWriterStub.put(d2s, bytes);
     return d2s;
   }
@@ -79,17 +80,7 @@ public enum D2SReader {
     ByteInput in = ByteInput.wrap(bytes);
     try {
       D2S d2s = readD2S(in);
-      long declaredSize = Integer.toUnsignedLong(d2s.size);
-      if (declaredSize != bytes.length) {
-        throw new InvalidFormat(in, "D2S size mismatch: header=" + declaredSize
-            + " actual=" + bytes.length);
-      }
-      int calculated = calculateChecksum(ByteInput.wrap(bytes));
-      if (d2s.checksum != calculated) {
-        throw new InvalidFormat(in, String.format(
-            "D2S checksum mismatch: header=0x%08X calculated=0x%08X",
-            d2s.checksum, calculated));
-      }
+      validateEnvelope(d2s, bytes, in);
       if (statReader == null) statReader = new StatListReader();
       if (itemReader == null) itemReader = new ItemReader();
       readRemaining(d2s, in, statReader, itemReader);
@@ -106,6 +97,20 @@ public enum D2SReader {
   /** Convenience overload using the standard stat/item decoders. */
   public D2S readComplete(byte[] bytes) {
     return readComplete(bytes, null, null);
+  }
+
+  private void validateEnvelope(D2S d2s, byte[] bytes, ByteInput in) {
+    long declaredSize = Integer.toUnsignedLong(d2s.size);
+    if (declaredSize != bytes.length) {
+      throw new InvalidFormat(in, "D2S size mismatch: header=" + declaredSize
+          + " actual=" + bytes.length);
+    }
+    int calculated = calculateChecksum(ByteInput.wrap(bytes));
+    if (d2s.checksum != calculated) {
+      throw new InvalidFormat(in, String.format(
+          "D2S checksum mismatch: header=0x%08X calculated=0x%08X",
+          d2s.checksum, calculated));
+    }
   }
 
   static D2S readHeader(ByteInput in, D2S d2s) {

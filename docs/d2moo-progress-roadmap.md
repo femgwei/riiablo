@@ -236,6 +236,8 @@
     起始技能词缀和库存占用均能 round-trip。
   - 同一测试补充佣兵头字段（flags/seed/name/type/xp）及尸体物品 section 往返，确保
     扩展版 `jf`/`JM` 段不会因空佣兵装备或尸体装备而错位。
+  - 文件型 `D2SReader.readD2S(FileHandle)` 与 `d2s-reader` 工具现在也先校验 size/CRC；
+    角色选择阶段即可拒绝损坏存档，而不是延迟到进入游戏时失败。
 
 强制踩坑回归门槛：
 

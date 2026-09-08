@@ -17,7 +17,6 @@ import com.riiablo.Files;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.StatListReader;
 import com.riiablo.codec.StringTBLs;
-import com.riiablo.io.ByteInput;
 import com.riiablo.item.ItemReader;
 import com.riiablo.logger.Level;
 import com.riiablo.logger.LogManager;
@@ -136,9 +135,7 @@ public class D2SReaderTool extends Tool {
     D2SReader serializer = D2SReader.INSTANCE;
     for (FileHandle d2sFile : d2sFiles) {
       log.info("Reading {}...", d2sFile);
-      ByteInput byteInput = ByteInput.wrap(d2sFile.readBytes());
-      D2S d2s = serializer.readD2S(byteInput);
-      serializer.readRemaining(d2s, byteInput, statReader, itemReader);
+      D2S d2s = serializer.readComplete(d2sFile.readBytes(), statReader, itemReader);
     }
 
     Gdx.app.exit();
