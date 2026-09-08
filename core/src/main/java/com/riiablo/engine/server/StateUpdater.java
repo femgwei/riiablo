@@ -440,9 +440,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || hp.asFixed() <= 0f) continue;
       float requested = Math.max(0f, combat.totalDamage);
-      if (requested > 0f) {
+      if (requested > 0f || combat.absorbedLife > 0) {
         DamageEvent damage = DamageEvent.obtain(entityId, targetId, requested);
         if (events != null) events.dispatch(damage);
+        applyElementalAbsorb(target, combat.absorbedLife);
         hp.sub(Math.max(0f, damage.damage));
         if (hp.asFixed() < 0f) hp.set(0f);
       }
@@ -484,6 +485,17 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (attrs == null) return false;
     StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
     return hp != null && hp.asFixed() > 0f;
+  }
+
+  private static float applyElementalAbsorb(Attributes target, int absorbedLife) {
+    if (target == null || absorbedLife <= 0) return 0f;
+    StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
+    StatRef max = target.get(Stat.maxhp, StatRef.obtain());
+    if (hp == null || max == null) return 0f;
+    float before = hp.asFixed();
+    float healed = Math.max(0f, Math.min((float) absorbedLife, max.asFixed() - before));
+    if (healed > 0f) hp.add(healed);
+    return healed;
   }
 
   private boolean isMoving(int entityId) {

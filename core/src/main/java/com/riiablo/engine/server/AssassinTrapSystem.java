@@ -387,9 +387,11 @@ public class AssassinTrapSystem extends IteratingSystem {
       CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateAttack(
           attack, targetAttrs, false, false, true, 0, 0, 0, true,
           elementalMin, elementalMax, 0, 0);
-      if (!result.hit || result.blocked || result.totalDamage <= 0) continue;
+      if (!result.hit || result.blocked
+          || (result.totalDamage <= 0 && result.absorbedLife <= 0)) continue;
       DamageEvent event = DamageEvent.obtain(sentryId, targetId, result.totalDamage);
       if (events != null) events.dispatch(event);
+      applyAbsorb(targetAttrs, result.absorbedLife);
       hp.sub(Math.max(0f, event.damage));
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
@@ -398,6 +400,18 @@ public class AssassinTrapSystem extends IteratingSystem {
       hit++;
     }
     return hit;
+  }
+
+  /** Restores elemental absorb life for corpse-explosion targets. */
+  private static float applyAbsorb(Attributes target, int absorbedLife) {
+    if (target == null || absorbedLife <= 0) return 0f;
+    StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
+    StatRef max = target.get(Stat.maxhp, StatRef.obtain());
+    if (hp == null || max == null) return 0f;
+    float before = hp.asFixed();
+    float healed = Math.max(0f, Math.min((float) absorbedLife, max.asFixed() - before));
+    if (healed > 0f) hp.add(healed);
+    return healed;
   }
 
   private void spawnCorpseExplosionVisual(int sentryId, Vector2 origin, Skills.Entry skill) {
