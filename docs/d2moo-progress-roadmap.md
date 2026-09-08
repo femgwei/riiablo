@@ -222,7 +222,7 @@
     `headlessReconnectGroundLoot` 在重复删除包下均通过，验证断线重连基线和 claim 一致。
   - 新增 `headlessDelayedDeleteFrames`，以跨 3 个 Sim Tick 的延迟删除帧验证旧删除不会
     回退快照时钟或误删重建掉落；延迟注入和重复注入均通过。
-- [ ] **P1-8 D2S 1.10f round-trip（约 90%）**
+- [ ] **P1-8 D2S 1.10f round-trip（约 93%）**
   - 新增 `D2SReader.readComplete`，在解析可变长度 section 前校验 1.10f 的声明大小和
     CRC，并要求 quests/waypoints/NPC/stats/skills/items/merc/golem 全部消费完毕；普通
     角色列表仍可使用只读头部的 `readD2S` 快路径。
@@ -253,6 +253,9 @@
     `readRemaining` 的宽松恢复行为供角色列表/诊断工具使用，并增加错位签名拒绝回归。
   - quests/waypoints/NPC 固定 section 的 size 字段改为显式校验（不依赖 JVM 断言）；
     篡改任一长度并重算 checksum 的存档会被完整读取拒绝，避免短切片导致后续段错位。
+  - 新增 `D2SItemQualityRoundTripTest`，以原生 `ItemGenerator` 生成 MAGIC/RARE，并在
+    可用表项存在时覆盖 SET/UNIQUE；校验 quality、qualityId、稀有前后缀数组和完整
+    D2S section 往返，避免品质元数据在写入后丢失。
 
 强制踩坑回归门槛：
 
