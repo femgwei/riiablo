@@ -246,7 +246,7 @@
     漂移”的伪 round-trip。
   - `NewCharacterStartItemsTest.socketedMercCorpseAndGolemItemsRoundTrip` 新增合成 1.10f
     存档门槛：父物品 + SOCKET 子物品、佣兵装备、尸体装备和石魔装备同时存在时，所有
-    `JM`/`jf`/`JM` 段均能完整消费并保持数量、位置和 code；覆盖嵌套物品导致的 section
+    `JM`/`jf`/`kf` 段均能完整消费并保持数量、位置和 code；覆盖嵌套物品导致的 section
     错位风险。
   - `readComplete` 现在使用严格 body reader：技能、主物品、尸体、佣兵和石魔 section
     必须在原生预期偏移出现签名，不再通过 `skipUntil` 从 payload 中“恢复”；保留旧
