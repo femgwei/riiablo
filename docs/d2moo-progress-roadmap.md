@@ -238,6 +238,9 @@
     扩展版 `jf`/`JM` 段不会因空佣兵装备或尸体装备而错位。
   - 文件型 `D2SReader.readD2S(FileHandle)` 与 `d2s-reader` 工具现在也先校验 size/CRC；
     角色选择阶段即可拒绝损坏存档，而不是延迟到进入游戏时失败。
+  - 新增可选 `D2SRealSaveIntegrationTest`（设置 `D2_REAL_SAVE` 后启用）；已使用
+    Diablo II 1.10f `wp-a.d2s` 实测完整解析→重新写出→再次读取，装备/尸体数量及佣兵
+    seed 均保持一致。
 
 强制踩坑回归门槛：
 
