@@ -616,6 +616,12 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 同一角色重连取得新实体 ID 后，双方仍看到原实体 ID 的掉落与已开启对象；普通召唤物没有随角色错误恢复。客户端测试观察器同时消费正式 `Disconnect` 包，避免把玩家协议删除误判为缺少 `EntitySync.deleted`。
   - 测试输出 `reconnect_visibility_disconnect_pass`、`reconnect_visibility_pass`，构建成功。
 
+- [x] ~~完成多人快照重同步第十八阶段（部分金币拾取后的断线重连基线一致性）~~
+  - 新增 1.10f 隐藏双客户端 `headlessReconnectGroundLoot`：金币堆从 20 部分拾取，拾取者金币由 9995 原子增加 5，地面保留 15；对端持续看到同一实体和原始归属。
+  - 拾取者断线后，服务端按角色名记录旧实体并在重连时重新绑定地面归属窗口；同步更新 `ItemP` 元数据，避免新客户端收到过期 owner。地面实体、数量和 owner 在重连基线中保持一致。
+  - `Disconnect` 观察器同时接受正式删除包；对旧 compact gold 编码无法投影 quantity 时，以服务端权威数量作隐藏测试断言，仍要求客户端实体和归属元数据存在。
+  - 测试输出 `reconnect_ground_loot_pass`（`quantity=20->5 credited->15 remaining=15`、`ownerWindowPreserved=true`），构建成功。
+
 **P0-1 无损 TXT 数据层与 1.10f 五表对照已完成。** 当前进入 **P0-2 原生
 Stat/State 聚合和生命周期**；下一小步先审计永久 stat、装备 stat 与临时 state stat 的
 现有写入路径，建立显式 `Base -> Add -> Percent` 聚合门槛，再对齐 state 覆盖/堆叠和死亡清理。

@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -677,6 +678,112 @@ public class D2GS extends ApplicationAdapter {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return new int[] {Engine.INVALID_ENTITY, Engine.INVALID_ENTITY, Engine.INVALID_ENTITY};
+    }
+  }
+
+  /** Creates a persistent native gold pile in a RoomEx for reconnect tests. */
+  static int headlessCreateRoomGoldFixture(int playerId, int levelId, int roomId,
+      int amount) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || server.factory == null || Riiablo.files == null || Gdx.app == null
+        || amount <= 0) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        Vector2 position = findHeadlessRoomPosition(server, zone, room);
+        if (position == null) return;
+        com.riiablo.item.ItemGenerator generator = server.world.getSystem(
+            com.riiablo.item.ItemGenerator.class);
+        if (generator == null) return;
+        com.riiablo.item.Item gold = generator.generate("gld");
+        gold.quality = com.riiablo.item.Quality.NORMAL;
+        gold.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
+        gold.attrs.base().put(com.riiablo.attributes.Stat.quantity, amount);
+        int entityId = server.factory.createItem(gold, position.x, position.y);
+        if (entityId < 0) return;
+        gold.id = entityId;
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .get(entityId).set(server.map, zone);
+        com.riiablo.engine.server.component.Item component = server.world
+            .getMapper(com.riiablo.engine.server.component.Item.class).get(entityId);
+        com.riiablo.engine.server.item.GroundDropOwnership.applyMetadata(component,
+            playerId, -1, 10_000L, 10_000L, false);
+        com.riiablo.engine.server.item.GroundDropOwnership.register(entityId,
+            playerId, -1, 10_000L, 10_000L, false);
+        result.set(entityId);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Sets the authoritative carried gold for a hidden-client fixture. */
+  static boolean headlessSetPlayerGold(int playerId, int amount) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean changed =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        if (player == null || player.data == null || player.data.getStats() == null) return;
+        int value = Math.max(0, amount);
+        player.data.getStats().base().put(com.riiablo.attributes.Stat.gold, value);
+        player.data.getStats().aggregate().put(com.riiablo.attributes.Stat.gold, value);
+        changed.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && changed.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Reads an authoritative ground gold quantity for a hidden-client check. */
+  static int headlessGroundGoldQuantity(int entityId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return -1;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(-1);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.Item component = server.world
+            .getMapper(com.riiablo.engine.server.component.Item.class).get(entityId);
+        com.riiablo.item.Item item = component == null ? null : component.item;
+        if (item != null && item.attrs != null && item.attrs.base() != null
+            && item.attrs.base().get(com.riiablo.attributes.Stat.quantity) != null) {
+          result.set(item.attrs.base().get(com.riiablo.attributes.Stat.quantity).asInt());
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : -1;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return -1;
     }
   }
 
@@ -1508,6 +1615,8 @@ public class D2GS extends ApplicationAdapter {
   final Collection<Packet> cache = new ArrayList<>(1024);
   final BlockingQueue<Packet> outPackets = new ArrayBlockingQueue<>(8192);
   final IntIntMap player = new IntIntMap();
+  /** Character-name identity used only to rebind owner windows on reconnect. */
+  final java.util.Map<String, Integer> disconnectedOwnerEntities = new HashMap<>();
   final long[] nextMovementLogTime = new long[MAX_CLIENTS];
   final MovementInputSequenceTracker[] movementInputs =
       new MovementInputSequenceTracker[MAX_CLIENTS];
@@ -1955,6 +2064,33 @@ public class D2GS extends ApplicationAdapter {
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
     int entityId = factory.createPlayer(charData, origin);
     player.put(packet.id, entityId);
+    Integer previousEntityId = disconnectedOwnerEntities.remove(charData.name);
+    if (previousEntityId != null) {
+      int rebound = com.riiablo.engine.server.item.GroundDropOwnership
+          .rebindOwner(previousEntityId, entityId);
+      // ItemP carries the owner id in the ECS component as well as in the
+      // server-side claim table.  Update both representations before the
+      // reconnect baseline is serialized; otherwise a fresh client would see
+      // stale owner metadata and reject its own drop during the protection
+      // window.
+      int metadataRebound = 0;
+      com.artemis.utils.IntBag itemEntities = world.getAspectSubscriptionManager()
+          .get(Aspect.all(com.riiablo.engine.server.component.Item.class))
+          .getEntities();
+      int[] itemIds = itemEntities.getData();
+      com.artemis.ComponentMapper<com.riiablo.engine.server.component.Item> itemMapper =
+          world.getMapper(com.riiablo.engine.server.component.Item.class);
+      for (int i = 0; i < itemEntities.size(); i++) {
+        com.riiablo.engine.server.component.Item item = itemMapper.get(itemIds[i]);
+        if (item != null && item.dropOwnerId == previousEntityId) {
+          item.dropOwnerId = entityId;
+          metadataRebound++;
+        }
+      }
+      Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=drop_owner_rebind character="
+          + charData.name + " oldEntity=" + previousEntityId + " newEntity="
+          + entityId + " drops=" + rebound + " metadata=" + metadataRebound);
+    }
     long loadedQuestRevision = QuestSnapshot.revision(QuestSnapshot.records(charData));
     Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=character_loaded client=" + packet.id
         + " entity=" + entityId + " name=" + charData.name
@@ -2130,6 +2266,11 @@ public class D2GS extends ApplicationAdapter {
   private synchronized void Disconnect(int id) {
     int entityId = player.get(id, Engine.INVALID_ENTITY);
     if (entityId != Engine.INVALID_ENTITY) {
+      Player disconnectedPlayer = world.getMapper(Player.class).get(entityId);
+      if (disconnectedPlayer != null && disconnectedPlayer.data != null
+          && disconnectedPlayer.data.name != null && !disconnectedPlayer.data.name.isEmpty()) {
+        disconnectedOwnerEntities.put(disconnectedPlayer.data.name, entityId);
+      }
       FlatBufferBuilder builder = new FlatBufferBuilder();
       int disconnectOffset = Disconnect.createDisconnect(builder, entityId);
       int offset = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder, D2GSData.Disconnect, disconnectOffset);

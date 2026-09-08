@@ -115,6 +115,21 @@ public final class GroundDropOwnership {
     CLAIMED.remove(entityId);
   }
 
+  /** Rebinds owner-protected drops when the same character reconnects with a
+   * fresh ECS entity id. Claims already consumed remain untouched. */
+  public static synchronized int rebindOwner(int oldOwnerId, int newOwnerId) {
+    if (oldOwnerId < 0 || newOwnerId < 0 || oldOwnerId == newOwnerId) return 0;
+    int rebound = 0;
+    for (Map.Entry<Integer, Entry> mapping : new LinkedHashMap<>(DROPS).entrySet()) {
+      Entry entry = mapping.getValue();
+      if (entry.ownerId != oldOwnerId) continue;
+      DROPS.put(mapping.getKey(), new Entry(newOwnerId, entry.partyId,
+          entry.ownerUntilMillis, entry.partyUntilMillis, entry.partyShareGold));
+      rebound++;
+    }
+    return rebound;
+  }
+
   private static void purge() {
     Iterator<Map.Entry<Integer, Entry>> iterator;
     if (DROPS.size() > 4096) {

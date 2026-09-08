@@ -186,6 +186,18 @@ tasks.register('headlessReconnectVisibility', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessReconnectGroundLoot', JavaExec) {
+  group = 'verification'
+  description = 'Runs partial gold pickup through disconnect/reconnect baseline consistency.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-reconnect-ground-loot', '--test-timeout', '90'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 jar {
   archiveBaseName = project.name
 	// assets are present in both this project's resource set and the unpacked
