@@ -23,6 +23,7 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.ShrineInteractionEvent;
 import com.riiablo.engine.server.event.WellInteractionEvent;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
@@ -245,9 +246,15 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
       if (attrs == null) continue;
       StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || hp.asFixed() <= 0f) continue;
-      float damage = Math.max(1f, hp.asFixed() * Math.max(0, percent) / 100f);
-      DamageEvent damageEvent = DamageEvent.obtain(attackerId, id, damage);
+      int rawDamage = Math.max(1, Math.round(hp.asFixed() * Math.max(0, percent) / 100f));
+      int difficulty = sourceMap.map != null ? sourceMap.map.getDifficulty() : 0;
+      CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+          attrs, mPlayer.has(id), false, CombatSystem.DAMAGE_LIGHTNING, rawDamage, 0,
+          null, difficulty);
+      if (combat.totalDamage <= 0 && combat.absorbedLife <= 0) continue;
+      DamageEvent damageEvent = DamageEvent.obtain(attackerId, id, combat.totalDamage);
       if (events != null) events.dispatch(damageEvent);
+      applyAbsorb(attrs, combat.absorbedLife);
       hp.sub(Math.max(0f, damageEvent.damage));
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
@@ -256,6 +263,16 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
       hit++;
     }
     return hit;
+  }
+
+  private static float applyAbsorb(Attributes attrs, int absorbedLife) {
+    if (attrs == null || absorbedLife <= 0) return 0f;
+    StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+    StatRef max = attrs.get(Stat.maxhp, StatRef.obtain());
+    if (hp == null || max == null) return 0f;
+    float healed = Math.max(0f, Math.min((float) absorbedLife, max.asFixed() - hp.asFixed()));
+    if (healed > 0f) hp.add(healed);
+    return healed;
   }
 
   private void upgradeNearestMonster(ShrineInteractionEvent event) {

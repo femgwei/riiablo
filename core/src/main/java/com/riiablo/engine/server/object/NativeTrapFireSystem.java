@@ -17,6 +17,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -107,16 +108,37 @@ public class NativeTrapFireSystem extends BaseSystem {
     int min = Math.max(hitpoints >> 5, 1);
     int max = Math.max(hitpoints >> 3, min + 1);
     int roll = min + fire.nextInt(max - min + 1);
-    float damage = Math.max(1f, roll * fire.damagePercent / 100f);
-    DamageEvent event = DamageEvent.obtain(fireId, targetId, damage);
+    int rawDamage = Math.max(1, Math.round(roll * fire.damagePercent / 100f));
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+        attrs, false, false, CombatSystem.DAMAGE_FIRE, rawDamage, 0, null,
+        sourceDifficulty(fireId, targetId));
+    if (!combat.hit || (combat.totalDamage <= 0 && combat.absorbedLife <= 0)) return;
+    DamageEvent event = DamageEvent.obtain(fireId, targetId, combat.totalDamage);
     if (events != null) events.dispatch(event);
+    applyAbsorb(attrs, combat.absorbedLife);
     float applied = Math.max(0f, event.damage);
     hp.sub(applied);
     if (hp.asFixed() <= 0f) {
       hp.set(0f);
       if (events != null) events.dispatch(DeathEvent.obtain(fireId, targetId));
     }
-    log.debug("[OBJECT_TRAP_FIRE] damage fire={} target={} damage={} hp={}",
-        fireId, targetId, applied, hp.asFixed());
+    log.debug("[OBJECT_TRAP_FIRE] damage fire={} target={} raw={} applied={} absorbed={} hp={}",
+        fireId, targetId, rawDamage, applied, combat.absorbedLife, hp.asFixed());
+  }
+
+  private int sourceDifficulty(int fireId, int targetId) {
+    MapWrapper wrapper = mMapWrapper.has(fireId) ? mMapWrapper.get(fireId)
+        : (mMapWrapper.has(targetId) ? mMapWrapper.get(targetId) : null);
+    return wrapper != null && wrapper.map != null ? wrapper.map.getDifficulty() : 0;
+  }
+
+  private static float applyAbsorb(Attributes attrs, int absorbedLife) {
+    if (attrs == null || absorbedLife <= 0) return 0f;
+    StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+    StatRef max = attrs.get(Stat.maxhp, StatRef.obtain());
+    if (hp == null || max == null) return 0f;
+    float healed = Math.max(0f, Math.min((float) absorbedLife, max.asFixed() - hp.asFixed()));
+    if (healed > 0f) hp.add(healed);
+    return healed;
   }
 }
