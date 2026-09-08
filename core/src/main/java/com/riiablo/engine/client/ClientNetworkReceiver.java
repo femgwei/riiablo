@@ -43,6 +43,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.component.Missile;
@@ -125,6 +126,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Selectable> mSelectable;
 
   protected CofManager cofs;
   protected NetworkIdManager syncIds;
@@ -617,6 +619,19 @@ public class ClientNetworkReceiver extends IntervalSystem {
         && snapshot.mode() <= Engine.Object.MODE_S5) {
       cofs.setMode(entityId, (byte) snapshot.mode());
     }
+    // stateFlags was appended after the original objectId-only payload. Keep
+    // old-server compatibility when both values are zero; new snapshots carry
+    // bit 2 while an object remains interactable. Toggling Selectable instead
+    // of removing Interactable preserves the factory-created range/interactor
+    // when a one-shot object is later recreated or reactivated.
+    if (mSelectable == null || !hasObjectStateSnapshot(snapshot)) return;
+    if ((snapshot.stateFlags() & 4) != 0) mSelectable.create(entityId);
+    else mSelectable.remove(entityId);
+  }
+
+  static boolean hasObjectStateSnapshot(com.riiablo.net.packet.d2gs.ObjectP snapshot) {
+    return snapshot != null && (snapshot.mode() != Engine.Object.MODE_NU
+        || snapshot.stateFlags() != 0);
   }
 
   private void NpcServiceResult(D2GS packet) {
@@ -889,7 +904,12 @@ public class ClientNetworkReceiver extends IntervalSystem {
           applyPlayerSnapshot(entityId, data);
           break;
         }
-        case ComponentP.ObjectP:
+        case ComponentP.ObjectP: {
+          com.riiablo.net.packet.d2gs.ObjectP data = (com.riiablo.net.packet.d2gs.ObjectP)
+              entityData.component(new com.riiablo.net.packet.d2gs.ObjectP(), i);
+          applyObjectSnapshot(entityId, data);
+          break;
+        }
         case ComponentP.DS1ObjectWrapperP:
         case ComponentP.WarpP:
         case ComponentP.MonsterP:
