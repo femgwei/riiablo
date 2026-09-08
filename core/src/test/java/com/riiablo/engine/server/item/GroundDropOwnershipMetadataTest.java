@@ -36,4 +36,12 @@ class GroundDropOwnershipMetadataTest {
     assertEquals(0L, component.dropPartyUntilMillis);
     assertFalse(component.partyShareGold);
   }
+
+  @Test
+  void expiredOwnershipRecordsArePurgedWhenWindowEnds() {
+    int before = GroundDropOwnership.trackedCount();
+    GroundDropOwnership.register(991, 41, 0L);
+    assertEquals(before, GroundDropOwnership.trackedCount());
+    assertTrue(GroundDropOwnership.canPickup(991, 77));
+  }
 }

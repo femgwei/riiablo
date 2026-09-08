@@ -130,7 +130,22 @@ public final class GroundDropOwnership {
     return rebound;
   }
 
+  /** Number of live ownership records, exposed package-locally for regression checks. */
+  static synchronized int trackedCount() {
+    purge();
+    return DROPS.size();
+  }
+
   private static void purge() {
+    long now = System.currentTimeMillis();
+    Iterator<Map.Entry<Integer, Entry>> expired = DROPS.entrySet().iterator();
+    while (expired.hasNext()) {
+      Entry entry = expired.next().getValue();
+      // Once the party window has elapsed the drop is public; retaining the
+      // record only leaks memory and makes reconnect rebinding consider stale
+      // ownership. CLAIMED is intentionally preserved until entity removal.
+      if (entry.partyUntilMillis > 0L && now >= entry.partyUntilMillis) expired.remove();
+    }
     Iterator<Map.Entry<Integer, Entry>> iterator;
     if (DROPS.size() > 4096) {
       iterator = DROPS.entrySet().iterator();
