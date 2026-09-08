@@ -323,7 +323,8 @@ class NativeBarbarianPassiveDataTest extends RiiabloTest {
     CombatSystem.CombatResult resisted = CombatSystem.INSTANCE.calculateAttack(
         attacker, defender, true, true, false, 1, 1, 1000, true,
         elementalMin, elementalMax, 0, 0, null, source.stateList);
-    assertEquals(78, resisted.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(13, resisted.elementalDamage[CombatSystem.DAMAGE_FIRE],
+        "native PvP scalar applies after resistance");
 
     StateSerializer serializer = new StateSerializer();
     FlatBufferBuilder builder = new FlatBufferBuilder(256);

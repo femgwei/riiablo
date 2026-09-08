@@ -187,6 +187,15 @@ public class CombatSystemTest extends RiiabloTest {
     assertEquals(45, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
   }
 
+  @Test
+  public void playerVsPlayerDamageUsesNativeSeventeenPercentScalar() {
+    Attributes attacker = attrs(100, 1, 0, 100, 100, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    CombatSystem.CombatResult result = combat.calculateAttack(attacker, defender,
+        true, true, false, 100, 100, 1000, true, null, null, 0, 0, null, null);
+    assertEquals(17, result.totalDamage);
+  }
+
   private static Attributes attrs(int hp, int level, int defense,
       int minDamage, int maxDamage, int attackRating) {
     Attributes attrs = Attributes.obtainStandard();

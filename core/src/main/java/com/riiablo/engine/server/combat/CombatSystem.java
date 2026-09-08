@@ -76,6 +76,9 @@ public class CombatSystem {
   /** Native chance-to-hit numerator factor (applies to every unit type). */
   public static final int PVP_HIT_FACTOR = 2;
 
+  /** Diablo II player-vs-player damage scalar (approximately one sixth). */
+  public static final int PVP_DAMAGE_PERCENT = 17;
+
   /** 等级差异每级影响（用于命中计算） */
   public static final int LEVEL_DIFF_MODIFIER = 2;
 
@@ -904,6 +907,16 @@ public class CombatSystem {
       if (elemDamage > 0) {
         result.elementalDamage[i] = applyElementalResistance(
             elemDamage, defender, i, attacker.elementalPierce[i]);
+      }
+    }
+
+    // D2MOO applies the global PvP scalar after elemental resistance and
+    // before life/mana leech are derived.  Keep poison's per-frame payload
+    // scaled as well; its duration is unchanged.
+    if (attacker.isPlayer && defender.isPlayer) {
+      result.physicalDamage = result.physicalDamage * PVP_DAMAGE_PERCENT / 100;
+      for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
+        result.elementalDamage[i] = result.elementalDamage[i] * PVP_DAMAGE_PERCENT / 100;
       }
     }
 
