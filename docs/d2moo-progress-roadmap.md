@@ -101,7 +101,7 @@
     连续原生怪物 ID，避免控制行造成索引偏移。
   - 五表统一投影报告现可稳定列出原始行列数、D2MOO schema 字段数、额外诊断列及每个
     缺列、重复列、非法 integer/bit 的源行和列；五张真实 1.10f 表均无 schema issue。
-- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 76%）**
+- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 84%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
     必须由 1.10f 数据及 D2MOO 行为驱动。
@@ -126,8 +126,17 @@
   - `noclear` 与死亡规则分离，提供普通清除时的保留路径；真实 1.10f MPQ 门槛确认四组
     mask 均非空。服务端执行权威清理，网络客户端不修改 snapshot-only 状态，本地模式
     使用同一规则。移除状态层同时移除其 stat contribution，无幽灵 buff。
+  - 已对齐 D2Game `SUNITDMG_ApplyPoisonDamage/ApplyBurnDamage`：新 DOT 每帧强度低于
+    现有效果时完全拒绝；相等或更强时替换来源、伤害和精确到期时间，因此 Venom 等
+    效果可以按原生规则缩短旧毒持续时间。毒/燃烧共用同一 StateList 策略。
+  - 已对齐 `SUNITDMG_ApplyColdState/ApplyFreezeState` 第一阶段：冰冷只延长到期时间，
+    保留原 owner/payload，不按等级重复叠加；首次应用写入 `velocitypercent / attackrate /
+    other_animrate`。修复原先把 `attackrate` 错当命中率以及额外硬编码减速导致的重复计算。
+  - 玩家、剧情 Boss、暗金/超级暗金和佣兵收到冻结时降级为冰冷；普通怪物才进入完全
+    冻结，不可打断状态会拒绝冻结，并读取 MonStats `coldeffect` 与难度 Cold/Freeze
+    divisor。专项 ECS 测试覆盖玩家、暗金和普通怪物的状态及移动表现。
   - 待补：将神殿、战吼、变形和其他 `UnitState` 专用 scalar 全部迁入统一 stat source，
-    再逐状态对齐刷新/更强值替换、诅咒互斥以及毒/燃烧/冰冷/冻结特殊覆盖规则。
+    再对齐诅咒互斥、同诅咒强值替换以及按施法者移除后的次强效果恢复。
 - [ ] **P0-3 Unit 生命周期（约 70%）**
   - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；仍需统一验证
     `Spawn -> InsertWorld -> TickUpdate -> DeathEvent -> RemoveWorld -> Destroy`，以及死亡时

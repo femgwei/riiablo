@@ -84,6 +84,7 @@ public class UnitState {
   private int projectedDefenseModifier;
   private int projectedAttackModifier;
   private int projectedVelocityModifier;
+  private int projectedAnimationRateModifier;
   private int projectedFireResistModifier;
   private int projectedColdResistModifier;
   private int projectedLightResistModifier;
@@ -294,6 +295,7 @@ public class UnitState {
     projectedDefenseModifier = 0;
     projectedAttackModifier = 0;
     projectedVelocityModifier = 0;
+    projectedAnimationRateModifier = 0;
     projectedFireResistModifier = 0;
     projectedColdResistModifier = 0;
     projectedLightResistModifier = 0;
@@ -381,8 +383,8 @@ public class UnitState {
 
   public int resolvedAttackModifier() {
     syncLegacyModifiers();
-    return hasAnyStatContribution(Stat.item_tohit_percent, Stat.tohit, Stat.attackrate)
-        ? sumStatContributions(Stat.item_tohit_percent, Stat.tohit, Stat.attackrate)
+    return hasAnyStatContribution(Stat.item_tohit_percent, Stat.tohit)
+        ? sumStatContributions(Stat.item_tohit_percent, Stat.tohit)
         : attackModifier;
   }
 
@@ -390,6 +392,17 @@ public class UnitState {
     syncLegacyModifiers();
     return hasStatContribution(Stat.velocitypercent)
         ? getStatContributionValue(Stat.velocitypercent) : velocityModifier;
+  }
+
+  public int resolvedAnimationRateModifier() {
+    syncLegacyModifiers();
+    if (hasStatContribution(Stat.attackrate)) {
+      return getStatContributionValue(Stat.attackrate);
+    }
+    if (hasStatContribution(Stat.other_animrate)) {
+      return getStatContributionValue(Stat.other_animrate);
+    }
+    return animationRateModifier;
   }
 
   public int resolvedResistModifier(int resistType) {
@@ -441,10 +454,16 @@ public class UnitState {
         break;
       case Stat.item_tohit_percent:
       case Stat.tohit:
-      case Stat.attackrate:
         attackModifier = sumStatContributions(
-            Stat.item_tohit_percent, Stat.tohit, Stat.attackrate);
+            Stat.item_tohit_percent, Stat.tohit);
         projectedAttackModifier = attackModifier;
+        break;
+      case Stat.attackrate:
+      case Stat.other_animrate:
+        animationRateModifier = hasStatContribution(Stat.attackrate)
+            ? getStatContributionValue(Stat.attackrate)
+            : getStatContributionValue(Stat.other_animrate);
+        projectedAnimationRateModifier = animationRateModifier;
         break;
       case Stat.velocitypercent:
         velocityModifier = getStatContributionValue(Stat.velocitypercent);
@@ -494,12 +513,16 @@ public class UnitState {
     }
     if (attackModifier != projectedAttackModifier) {
       replaceLegacyCategory(Stat.item_tohit_percent, attackModifier,
-          Stat.tohit, Stat.attackrate);
+          Stat.tohit);
       projectedAttackModifier = attackModifier;
     }
     if (velocityModifier != projectedVelocityModifier) {
       replaceLegacyCategory(Stat.velocitypercent, velocityModifier);
       projectedVelocityModifier = velocityModifier;
+    }
+    if (animationRateModifier != projectedAnimationRateModifier) {
+      replaceLegacyCategory(Stat.attackrate, animationRateModifier, Stat.other_animrate);
+      projectedAnimationRateModifier = animationRateModifier;
     }
     if (fireResistModifier != projectedFireResistModifier) {
       replaceLegacyCategory(Stat.fireresist, fireResistModifier);
@@ -706,6 +729,7 @@ public class UnitState {
     this.projectedDefenseModifier = other.projectedDefenseModifier;
     this.projectedAttackModifier = other.projectedAttackModifier;
     this.projectedVelocityModifier = other.projectedVelocityModifier;
+    this.projectedAnimationRateModifier = other.projectedAnimationRateModifier;
     this.projectedFireResistModifier = other.projectedFireResistModifier;
     this.projectedColdResistModifier = other.projectedColdResistModifier;
     this.projectedLightResistModifier = other.projectedLightResistModifier;

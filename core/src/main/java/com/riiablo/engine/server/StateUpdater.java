@@ -12,6 +12,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
 import com.riiablo.CharacterClass;
 import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.DifficultyLevels;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
@@ -35,6 +36,7 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.item.ItemDurabilityManager;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.skill.AssassinSkills;
@@ -309,12 +311,6 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (frenzy == null) frenzy = stateList.getState(StateId.MONFRENZY);
     if (frenzy != null) {
       frenzyPercent = Math.min(200, Math.max(0, frenzy.velocityModifier));
-    }
-    
-    // 寒冷减速
-    if (stateList.hasState(StateId.COLD)) {
-      UnitState coldState = stateList.getState(StateId.COLD);
-      slowPercent += 30 + coldState.level * 2; // 基础30% + 等级加成
     }
     
     // 减速状态
@@ -621,33 +617,102 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
     UnitStates unitStates = mUnitStates.get(entityId);
     if (unitStates.stateList == null) unitStates.init(entityId);
-    UnitState existing = unitStates.stateList.getState(stateId);
+    StateList states = unitStates.stateList;
     if ((stateId == StateId.POISON || stateId == StateId.BURNING)
-        && existing != null) {
-      // SUNITDMG_ApplyPoisonDamage/ApplyBurnDamage replace an existing DOT
-      // only when the new per-frame rate is at least as strong. The new
-      // expire frame is assigned directly, so Venom can intentionally
-      // shorten an older item poison to its ten-frame override length.
-      float existingRate = existing.exactDamagePerFrame > 0f
-          ? existing.exactDamagePerFrame : existing.damagePerFrame;
-      if (existingRate > damagePerFrame) return;
-      existing.duration = Math.max(1, duration);
-      existing.initialDuration = existing.duration;
-      existing.level = Math.max(1, level);
-      existing.sourceEntityId = sourceId;
-      existing.damagePerFrame = (int) damagePerFrame;
-      existing.exactDamagePerFrame = damagePerFrame;
-      existing.damageType = damageType;
-      existing.expired = false;
-      existing.needsSync = true;
+        && damagePerFrame > 0f) {
+      states.applyDamageOverTimeState(stateId, Math.max(1, duration), level,
+          sourceId, damagePerFrame, damageType);
       return;
     }
-    UnitState state = unitStates.stateList.addState(stateId, duration, level, sourceId);
+    if (stateId == StateId.COLD) {
+      applyNativeColdState(entityId, states, duration, level, sourceId);
+      return;
+    }
+    if (stateId == StateId.FREEZE) {
+      applyNativeFreezeState(entityId, states, duration, level, sourceId);
+      return;
+    }
+    UnitState state = states.addState(stateId, duration, level, sourceId);
     if (state == null) return;
     if (damagePerFrame > state.damagePerFrame) state.damagePerFrame = (int) damagePerFrame;
     state.exactDamagePerFrame = Math.max(state.exactDamagePerFrame, damagePerFrame);
     state.damageType = damageType;
     state.needsSync = true;
+  }
+
+  private UnitState applyNativeColdState(int entityId, StateList states,
+      int duration, int level, int sourceId) {
+    if (duration <= 0) return null;
+    int difficulty = difficulty();
+    int coldEffect = -50;
+    if (mMonster.has(entityId)) {
+      Monster monster = mMonster.get(entityId);
+      if (monster.monstats != null && monster.monstats.coldeffect != null
+          && difficulty < monster.monstats.coldeffect.length) {
+        coldEffect = monster.monstats.coldeffect[difficulty];
+      }
+      if (coldEffect == 0) return null;
+      if (coldEffect < 0) duration /= coldDivisor(difficulty);
+    }
+    duration = Math.max(1, duration);
+    boolean created = states.getState(StateId.COLD) == null;
+    UnitState cold = states.extendState(StateId.COLD, duration, level, sourceId);
+    if (cold != null && created) {
+      cold.setStatContribution(Stat.velocitypercent, 0,
+          NativeStatResolver.Operation.ADD, coldEffect);
+      cold.setStatContribution(Stat.attackrate, 0,
+          NativeStatResolver.Operation.ADD, coldEffect);
+      cold.setStatContribution(Stat.other_animrate, 0,
+          NativeStatResolver.Operation.ADD, coldEffect);
+      cold.needsSync = true;
+    }
+    return cold;
+  }
+
+  private UnitState applyNativeFreezeState(int entityId, StateList states,
+      int duration, int level, int sourceId) {
+    if (duration <= 0) return null;
+    if (mPlayer.has(entityId)) {
+      return applyNativeColdState(entityId, states, duration, level, sourceId);
+    }
+    if (mMonster.has(entityId)) {
+      if (states.hasState(StateId.UNINTERRUPTABLE)) return null;
+      Monster monster = mMonster.get(entityId);
+      if (mMercenary.has(entityId) || (monster.monstats != null && monster.monstats.boss)
+          || monster.rank == MonsterRank.UNIQUE
+          || monster.rank == MonsterRank.SUPER_UNIQUE) {
+        return applyNativeColdState(entityId, states, duration, level, sourceId);
+      }
+      int difficulty = difficulty();
+      int coldEffect = monster.monstats != null && monster.monstats.coldeffect != null
+          && difficulty < monster.monstats.coldeffect.length
+          ? monster.monstats.coldeffect[difficulty] : -50;
+      if (coldEffect >= 0) return null;
+      duration /= freezeDivisor(difficulty);
+    }
+    UnitState freeze = states.extendState(
+        StateId.FREEZE, Math.max(1, duration), level, sourceId);
+    if (freeze != null) freeze.needsSync = true;
+    return freeze;
+  }
+
+  private int difficulty() {
+    return map == null ? 0 : Math.max(0, Math.min(2, map.getDifficulty()));
+  }
+
+  private int coldDivisor(int difficulty) {
+    DifficultyLevels.Entry entry = difficultyEntry(difficulty);
+    return entry == null ? 1 : Math.max(1, entry.MonsterColdDivisor);
+  }
+
+  private int freezeDivisor(int difficulty) {
+    DifficultyLevels.Entry entry = difficultyEntry(difficulty);
+    return entry == null ? 1 : Math.max(1, entry.MonsterFreezeDivisor);
+  }
+
+  private DifficultyLevels.Entry difficultyEntry(int difficulty) {
+    return Riiablo.files == null || Riiablo.files.DifficultyLevels == null
+        ? null : Riiablo.files.DifficultyLevels.get(difficulty);
   }
 
   /**

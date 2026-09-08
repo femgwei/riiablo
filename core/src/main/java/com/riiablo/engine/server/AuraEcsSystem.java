@@ -119,6 +119,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
         switch (statIds[i]) {
           case Stat.damagepercent:
           case Stat.attackrate:
+          case Stat.other_animrate:
           case Stat.item_tohit_percent:
           case Stat.item_armor_percent:
           case Stat.armorclass:

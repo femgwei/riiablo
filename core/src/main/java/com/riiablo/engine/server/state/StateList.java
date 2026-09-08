@@ -144,6 +144,47 @@ public class StateList {
     return state;
   }
 
+  /** Extends an existing state expiry without changing its owner or payload. */
+  public UnitState extendState(int stateId, int duration, int level, int sourceEntityId) {
+    if (!StateId.isValid(stateId) || duration <= 0) return null;
+    UnitState existing = getState(stateId);
+    if (existing == null) return createState(stateId, duration, level, sourceEntityId, -1);
+    if (duration > existing.duration) {
+      existing.duration = duration;
+      existing.initialDuration = duration;
+      existing.needsSync = true;
+    }
+    return existing;
+  }
+
+  /**
+   * Native poison/burning replacement: an equal-or-stronger per-frame rate
+   * replaces owner, payload and expiry exactly; a weaker hit changes nothing.
+   */
+  public UnitState applyDamageOverTimeState(int stateId, int duration, int level,
+      int sourceEntityId, float damagePerFrame, int damageType) {
+    if ((stateId != StateId.POISON && stateId != StateId.BURNING)
+        || duration <= 0 || damagePerFrame <= 0f) return null;
+    UnitState state = getState(stateId);
+    if (state != null) {
+      float existingRate = state.exactDamagePerFrame > 0f
+          ? state.exactDamagePerFrame : state.damagePerFrame;
+      if (existingRate > damagePerFrame) return state;
+    } else {
+      state = createState(stateId, duration, level, sourceEntityId, -1);
+    }
+    state.duration = duration;
+    state.initialDuration = duration;
+    state.level = Math.max(1, level);
+    state.sourceEntityId = sourceEntityId;
+    state.damagePerFrame = (int) damagePerFrame;
+    state.exactDamagePerFrame = damagePerFrame;
+    state.damageType = damageType;
+    state.expired = false;
+    state.needsSync = true;
+    return state;
+  }
+
   /**
    * 添加状态（简化版本）
    * 
@@ -536,7 +577,7 @@ public class StateList {
 
   public int getTotalAnimationRateModifier() {
     int total = 0;
-    for (UnitState state : states) total += state.animationRateModifier;
+    for (UnitState state : states) total += state.resolvedAnimationRateModifier();
     return Math.max(-90, Math.min(200, total));
   }
 

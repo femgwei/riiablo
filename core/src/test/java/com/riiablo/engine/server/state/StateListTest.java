@@ -113,6 +113,36 @@ public class StateListTest {
   }
 
   @Test
+  public void attackRateIsAnimationSpeedAndNeverAttackRating() {
+    StateList states = new StateList(42);
+    UnitState cold = states.addState(StateId.COLD, 20, 1, 7);
+    cold.setStatContribution(
+        Stat.attackrate, 0, NativeStatResolver.Operation.ADD, -50);
+    cold.setStatContribution(
+        Stat.other_animrate, 0, NativeStatResolver.Operation.ADD, -50);
+
+    assertEquals(0, states.getTotalAttackModifier());
+    assertEquals(-50, states.getTotalAnimationRateModifier());
+  }
+
+  @Test
+  public void coldReapplicationOnlyExtendsExpiryAndKeepsOriginalOwner() {
+    StateList states = new StateList(42);
+    UnitState cold = states.extendState(StateId.COLD, 50, 1, 7);
+    cold.velocityModifier = -50;
+
+    assertSame(cold, states.extendState(StateId.COLD, 20, 5, 8));
+    assertEquals(50, cold.duration);
+    assertEquals(1, cold.level);
+    assertEquals(7, cold.sourceEntityId);
+
+    assertSame(cold, states.extendState(StateId.COLD, 80, 5, 8));
+    assertEquals(80, cold.duration);
+    assertEquals(1, cold.level);
+    assertEquals(7, cold.sourceEntityId);
+  }
+
+  @Test
   public void deathRetentionUsesNativeUnitSpecificMasksAndRemovesStatDeltas() throws Exception {
     States table = deathPolicyTable();
 

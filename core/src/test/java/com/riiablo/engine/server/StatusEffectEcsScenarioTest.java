@@ -16,6 +16,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Missiles;
+import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.Engine;
@@ -32,6 +33,7 @@ import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.item.Item;
@@ -169,6 +171,56 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
       assertEquals(20, burning.duration,
           "an equal-rate burn follows the same native replacement rule");
       assertEquals(2, burning.level);
+    } finally {
+      world.dispose();
+      StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
+  void freezeDowngradesForPlayersAndUniqueMonstersButLocksNormalMonsters() {
+    NoopFactory factory = new NoopFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new StateUpdater(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int source = createPlayer(world, 0, 0);
+      int player = createPlayer(world, 5, 5);
+      world.getMapper(UnitStates.class).create(player).init(player);
+      world.getMapper(Velocity.class).create(player).set(1f, 2f);
+      int unique = createMonster(world, 10, 10, 100, 0);
+      world.getMapper(Monster.class).get(unique).rank = MonsterRank.UNIQUE;
+      int normal = createMonster(world, 15, 15, 100, 0);
+      int immune = createMonster(world, 20, 20, 100, 0);
+      Monster immuneMonster = world.getMapper(Monster.class).get(immune);
+      immuneMonster.monstats = new MonStats.Entry();
+      immuneMonster.monstats.coldeffect = new int[] {0, 0, 0};
+      world.getMapper(Velocity.class).create(unique).set(1f, 2f);
+      world.getMapper(Velocity.class).create(normal).set(1f, 2f);
+
+      StatusEffectApplier.INSTANCE.applyFreeze(player, 40, source);
+      StatusEffectApplier.INSTANCE.applyFreeze(unique, 40, source);
+      StatusEffectApplier.INSTANCE.applyFreeze(normal, 40, source);
+      StatusEffectApplier.INSTANCE.applyFreeze(immune, 40, source);
+
+      UnitState playerCold = world.getMapper(UnitStates.class).get(player)
+          .stateList.getState(StateId.COLD);
+      assertTrue(playerCold != null);
+      assertFalse(world.getMapper(UnitStates.class).get(player).stateList.hasState(StateId.FREEZE));
+      assertEquals(-50, playerCold.velocityModifier);
+      assertEquals(-50, playerCold.animationRateModifier);
+      assertTrue(world.getMapper(UnitStates.class).get(unique).stateList.hasState(StateId.COLD));
+      assertFalse(world.getMapper(UnitStates.class).get(unique).stateList.hasState(StateId.FREEZE));
+      assertTrue(world.getMapper(UnitStates.class).get(normal).stateList.hasState(StateId.FREEZE));
+      assertFalse(world.getMapper(UnitStates.class).get(immune).stateList.hasState(StateId.FREEZE));
+      assertFalse(world.getMapper(UnitStates.class).get(immune).stateList.hasState(StateId.COLD));
+
+      world.process();
+      assertFalse(world.getMapper(Velocity.class).get(player).stateMovementLocked);
+      assertEquals(0.5f,
+          world.getMapper(Velocity.class).get(player).stateSpeedMultiplier, 0.001f);
+      assertFalse(world.getMapper(Velocity.class).get(unique).stateMovementLocked);
+      assertTrue(world.getMapper(Velocity.class).get(normal).stateMovementLocked);
     } finally {
       world.dispose();
       StatusEffectApplier.INSTANCE.setStateSink(null);
