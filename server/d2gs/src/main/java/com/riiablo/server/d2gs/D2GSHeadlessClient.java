@@ -1612,6 +1612,27 @@ public final class D2GSHeadlessClient {
       requireGroundFailure(farResult, ItemMoveFailure.GROUND_ITEM_TOO_FAR,
           farItem, farDrop, "too_far");
 
+      // Verify the delete observer releases the old claim before the client
+      // re-enters another RoomEx.  A newly created drop must receive a fresh
+      // entity id/metadata and never inherit the deleted item's ownership.
+      int deletedItem = D2GS.headlessCreateRoomItemFixture(client.playerId, 10, rooms[1], "cap");
+      Snapshot deletedDrop = awaitVisibleGroundEntity(client, input, deletedItem, deadline());
+      if (deletedDrop == null || !D2GS.headlessDeleteGroundEntity(deletedItem)) {
+        throw new IOException("failed to stage ground deletion fixture");
+      }
+      client.awaitDeleted(input, deletedItem, deadline());
+      if (!D2GS.headlessMovePlayerToRoom(client.playerId, 10, rooms[0])) {
+        throw new IOException("failed to move across RoomEx after deletion");
+      }
+      int rebuiltOwner = client.playerId + 1000;
+      int rebuiltItem = D2GS.headlessCreateRoomItemFixture(rebuiltOwner, 10, rooms[0], "cap");
+      Snapshot rebuiltDrop = awaitVisibleGroundEntity(client, input, rebuiltItem, deadline());
+      if (rebuiltDrop == null || rebuiltDrop.groundOwnerId != rebuiltOwner) {
+        throw new IllegalStateException("cross-room ground rebuild mismatch: deleted="
+            + deletedItem + " rebuilt=" + rebuiltItem + " owner="
+            + (rebuiltDrop == null ? -1 : rebuiltDrop.groundOwnerId));
+      }
+
       if (!D2GS.headlessMovePlayerToRoom(client.playerId, 10, rooms[0])) {
         throw new IOException("failed to return correction client");
       }

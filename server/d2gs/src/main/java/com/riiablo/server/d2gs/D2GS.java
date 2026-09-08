@@ -875,6 +875,30 @@ public class D2GS extends ApplicationAdapter {
         ? -1L : server.authoritativeItems.revision(playerId);
   }
 
+  /** Schedules deletion of a ground entity on the authoritative tick thread. */
+  static boolean headlessDeleteGroundEntity(int entityId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || entityId < 0) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean deleted = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        if (!server.world.getEntityManager().isActive(entityId)) return;
+        if (!server.world.getMapper(com.riiablo.engine.server.component.Item.class).has(entityId)) return;
+        server.world.delete(entityId);
+        deleted.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && deleted.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Creates a non-hireling summon owned by the supplied player in one RoomEx. */
   static int headlessCreateRoomSummon(int playerId, int levelId, int roomId) {
     D2GS server = activeHeadlessInstance;
@@ -1851,6 +1875,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new com.riiablo.engine.server.MercenarySkillSystem())
         .with(new ServerMonsterCorpseSystem())
         .with(new UnitLifecycleSystem())
+        .with(new com.riiablo.engine.server.item.GroundDropCleanupSystem())
         .with(new AuraEcsSystem())
         .with(new ServerPlayerDeathSystem())
         .with(new PlayerCorpseRetrievalSystem())
