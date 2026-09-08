@@ -73,6 +73,10 @@ public class CombatSystem {
   /** 最高命中率（95%） */
   public static final int MAX_TO_HIT_CHANCE = 95;
 
+  /** Native elemental resistance bounds before damage is resolved. */
+  public static final int MIN_RESISTANCE = -100;
+  public static final int ABSOLUTE_MAX_RESISTANCE = 95;
+
   /** Native chance-to-hit numerator factor (applies to every unit type). */
   public static final int PVP_HIT_FACTOR = 2;
 
@@ -1170,6 +1174,8 @@ public class CombatSystem {
         && damageType < defender.maxResistances.length
         && defender.maxResistances[damageType] > 0
         ? defender.maxResistances[damageType] : 75;
+    maxResist = Math.min(ABSOLUTE_MAX_RESISTANCE, maxResist);
+    resistance = Math.max(MIN_RESISTANCE, resistance);
     resistance = Math.min(maxResist, resistance);
 
     damage = damage * (100 - resistance) / 100;

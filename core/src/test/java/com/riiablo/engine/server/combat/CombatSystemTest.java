@@ -196,6 +196,22 @@ public class CombatSystemTest extends RiiabloTest {
     assertEquals(17, result.totalDamage);
   }
 
+  @Test
+  public void nativeResistanceIsClampedToNegativeHundred() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.fireresist, -150);
+    defender.reset();
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 100;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 100;
+
+    CombatSystem.CombatResult result = combat.calculateAttack(attacker, defender,
+        true, false, false, 1, 1, 1000, true, fireMin, fireMax, 0, 0, null, null);
+    assertEquals(200, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+  }
+
   private static Attributes attrs(int hp, int level, int defense,
       int minDamage, int maxDamage, int attackRating) {
     Attributes attrs = Attributes.obtainStandard();
