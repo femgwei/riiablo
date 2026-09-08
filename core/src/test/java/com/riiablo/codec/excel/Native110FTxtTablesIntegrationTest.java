@@ -117,5 +117,12 @@ class Native110FTxtTablesIntegrationTest {
     assertTrue(skills.schemaIssues().isEmpty(), () -> "Skills.txt schema mismatch: "
         + skills.schemaIssues().subList(0, Math.min(10, skills.schemaIssues().size())));
     for (int id = 0; id < skills.size(); id++) assertEquals(id, skills.get(id).id);
+
+    NativeMissiles missiles = NativeMissiles.parse(
+        resolver.resolve(EXCEL + "Missiles.txt").readBytes());
+    assertEquals(684, missiles.size());
+    assertTrue(missiles.schemaIssues().isEmpty(), () -> "Missiles.txt schema mismatch: "
+        + missiles.schemaIssues().subList(0, Math.min(10, missiles.schemaIssues().size())));
+    for (int id = 0; id < missiles.size(); id++) assertEquals(id, missiles.get(id).id);
   }
 }

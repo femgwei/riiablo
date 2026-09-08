@@ -39,7 +39,19 @@ class LosslessTxtTableTest {
     assertNull(table.getInt(0, "Bad"));
     assertTrue(table.getBoolean(0, "Enabled"));
     assertFalse(table.getBoolean(0, "LooseBool"));
+    assertTrue(table.getNativeBit(0, "LooseBool"));
     assertEquals("0xFFFFFFFF", table.get(0, "Mask"));
+  }
+
+  @Test
+  void nativeNumericAccessDefaultsDisabledStarValues() throws Exception {
+    LosslessTxtTable table = LosslessTxtTable.parse(
+        "Function\tFlag\n*16\t2\n".getBytes(StandardCharsets.ISO_8859_1));
+
+    assertNull(table.getInt(0, "Function"));
+    assertEquals(0, table.getNativeInt(0, "Function"));
+    assertTrue(table.getNativeBit(0, "Flag"));
+    assertEquals("*16", table.get(0, "Function"));
   }
 
   @Test

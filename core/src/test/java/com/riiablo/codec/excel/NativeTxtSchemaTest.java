@@ -10,7 +10,7 @@ class NativeTxtSchemaTest {
   @Test
   void reportsMissingDuplicateAndInvalidTypedFieldsWithStableCoordinates() throws Exception {
     LosslessTxtTable table = LosslessTxtTable.parse(
-        "Name\tEnabled\tEnabled\tCount\nfoo\t2\t1\tnan\n"
+        "Name\tEnabled\tEnabled\tCount\nfoo\tx\t1\tnan\n"
             .getBytes(StandardCharsets.ISO_8859_1));
     NativeTxtSchema schema = NativeTxtSchema.builder("Fixture.txt")
         .strings("Name", "Missing")
@@ -41,5 +41,18 @@ class NativeTxtSchemaTest {
     assertEquals(0, schema.validate(table).size());
     assertEquals(" ", table.get(0, "Enabled"));
     assertEquals("  ", table.get(0, "Count"));
+  }
+
+  @Test
+  void acceptsNativeDisabledNumbersAndNonBinaryBitCells() throws Exception {
+    LosslessTxtTable table = LosslessTxtTable.parse(
+        "Function\tFlag\n*16\t2\n".getBytes(StandardCharsets.ISO_8859_1));
+    NativeTxtSchema schema = NativeTxtSchema.builder("Fixture.txt")
+        .integers("Function")
+        .booleans("Flag")
+        .build();
+
+    assertEquals(0, schema.validate(table).size());
+    assertEquals("*16", table.get(0, "Function"));
   }
 }

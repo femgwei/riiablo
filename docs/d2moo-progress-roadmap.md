@@ -78,7 +78,7 @@
 否则只能标记为“部分完成”。`libd2` / `dark-magic` 的 1.14d 数据只能参考解析结构和
 测试方法，不能作为 1.10f 数值真值。
 
-- [ ] **P0-1 无损 TXT 数据层与 1.10f 五表对照（约 84%）**
+- [ ] **P0-1 无损 TXT 数据层与 1.10f 五表对照（约 92%）**
   - 已完成独立于旧 `TxtParser` 的无损读取器：保留空字段、重复/空列、短行、超额列、
     空行、`Expansion`、原始行和源行号；支持 D2 布尔值及完整 uint32 十六进制读取。
   - 已按 D2MOO `DATATBLS_LoadStatesTxt` 接入 1.10f `States.txt` 的 40 个状态标志、死亡
@@ -92,8 +92,12 @@
   - 已完成 `Skills` 无损 schema：D2MOO `pSkillTbl` 的 238 个字段机械核对无缺失，另外
     保留原始诊断列 `ID`；公式、链接名不提前编译，bit/integer 字段逐格验证，357 行原始
     1.10f 数据全部通过。空白数值格保留原文，但按原生缺省 0 语义验证。
-  - 待补：把 `Missiles/MonStats` 从旧 Excel 投影逐步迁到无损 schema，并生成按表/行/列
-    定位的 schema 投影差异报告；完成后才可关闭 P0-1。
+  - 已完成 `Missiles` 无损 schema：D2MOO `DATATBLS_LoadMissilesTxt` 的 146 个加载字段机械
+    核对无缺失，684 行、171 列原始 1.10f 数据全部通过。`TXTFIELD_BIT` 与 byte integer
+    分开投影；`*N` 原始异常值保留但按原生缺省 0 读取，非零 bit（包括原表中的 `2`）按
+    set 解释，不擅自改写原版数据。
+  - 待补：把 `MonStats` 从旧 Excel 投影迁到无损 schema，并生成五表按表/行/列定位的
+    schema 投影统一差异报告；完成后才可关闭 P0-1。
 - [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 55%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
@@ -267,6 +271,9 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
   并用 359 行原始 1.10f 表验证；旧 `damagerelated` 字段改为 D2MOO 的 bit 语义。
 - 2026-09-08：完成 P0-1 `Skills` 阶段；D2MOO 238 字段 schema、字段类型诊断和原始公式
   访问接入，357 行 1.10f MPQ 数据全量通过，旧解析器未参与新投影。
+- 2026-09-08：完成 P0-1 `Missiles` 阶段；D2MOO 146 个加载字段机械核对无缺失，684 行
+  真实 1.10f 表通过无损 schema，并区分原生 bit 与 byte integer，兼容 `*N` 和非二进制
+  bit 原始异常值；数据、导弹房间跟踪、火焰命中和亚马逊箭表现回归通过。
 - 2026-09-02：为 `ItemData.updateStats` 和 `CharData.onUpdated` 增加不完整物品/角色记录保护；
   `NativeGemShrineServiceTest` 及地图、神殿、Fallen Shaman、双客户端掉落回归集合全部通过。
 - 2026-09-02：完成 P1 原生物品生成首项；新增纯数据和真实 Excel/MPQ 双层测试，物品、掉落、修理、交易与 Countess 回归共 35 个用例通过。

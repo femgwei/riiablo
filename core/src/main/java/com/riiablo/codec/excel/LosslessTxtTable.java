@@ -168,9 +168,26 @@ public final class LosslessTxtTable {
     }
   }
 
+  /**
+   * Numeric conversion used by native TXT projection fields. A leading '*'
+   * marks a disabled value and compiles to the field default while the raw
+   * cell remains observable through {@link #get(int, String)}.
+   */
+  public int getNativeInt(int row, String column) {
+    String value = get(row, column).trim();
+    if (value.isEmpty() || value.startsWith("*")) return 0;
+    Integer parsed = getInt(row, column);
+    return parsed == null ? 0 : parsed;
+  }
+
   /** Blizzard TXT booleans are true only for the numeric value 1. */
   public boolean getBoolean(int row, String column) {
     return "1".equals(get(row, column).trim());
+  }
+
+  /** TXTFIELD_BIT uses the native integer conversion and treats nonzero as set. */
+  public boolean getNativeBit(int row, String column) {
+    return getNativeInt(row, column) != 0;
   }
 
   public int findFirst(String column, String value) {

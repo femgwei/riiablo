@@ -133,6 +133,7 @@ public final class NativeSkills implements Iterable<NativeSkills.Entry> {
 
     public String string(String field) { return source.get(row, field); }
     public Integer integer(String field) { return source.getInt(row, field); }
-    public boolean bool(String field) { return source.getBoolean(row, field); }
+    public int nativeInteger(String field) { return source.getNativeInt(row, field); }
+    public boolean bool(String field) { return source.getNativeBit(row, field); }
   }
 }

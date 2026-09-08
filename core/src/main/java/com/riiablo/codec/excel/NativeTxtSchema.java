@@ -39,15 +39,36 @@ public final class NativeTxtSchema {
         // Keep the raw whitespace in LosslessTxtTable, but match Blizzard's
         // numeric conversion: whitespace-only typed cells are default zero.
         if (value.trim().isEmpty()) continue;
-        if (column.type == Type.INTEGER && source.getInt(row, column.name) == null) {
+        if (column.type == Type.INTEGER && !isNativeInteger(value)) {
           issues.add(new Issue(table, Kind.INVALID_INTEGER, row, index, column.name, value));
         } else if (column.type == Type.BOOLEAN
-            && !("0".equals(value.trim()) || "1".equals(value.trim()))) {
+            && !isNativeInteger(value)) {
           issues.add(new Issue(table, Kind.INVALID_BOOLEAN, row, index, column.name, value));
         }
       }
     }
     return Collections.unmodifiableList(issues);
+  }
+
+  private static boolean isNativeInteger(String value) {
+    String normalized = value.trim();
+    // Blizzard tables use *N as a disabled/commented numeric value. The
+    // native compiler accepts it as the field default while retaining the
+    // original cell for diagnostics.
+    if (normalized.startsWith("*") && normalized.length() > 1) {
+      normalized = normalized.substring(1);
+    }
+    if (normalized.isEmpty()) return true;
+    try {
+      if (normalized.startsWith("0x") || normalized.startsWith("0X")) {
+        Long.parseLong(normalized.substring(2), 16);
+      } else {
+        Long.parseLong(normalized);
+      }
+      return true;
+    } catch (NumberFormatException ignored) {
+      return false;
+    }
   }
 
   public Map<String, Column> columns() {
