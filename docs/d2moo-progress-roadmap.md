@@ -232,6 +232,8 @@
     size 的拒绝回归。
   - 完整读取将截断 section 统一转换为 `InvalidFormat`，避免把损坏存档误报成无关的
     EOF/数组异常；下一步继续覆盖真实 1.10f 存档中的装备、佣兵和尸体字段。
+  - `NewCharacterStartItemsTest` 已改用完整读取路径，逐职业验证起始装备、位置、耐久、
+    起始技能词缀和库存占用均能 round-trip。
 
 强制踩坑回归门槛：
 

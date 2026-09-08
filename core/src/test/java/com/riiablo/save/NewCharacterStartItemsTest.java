@@ -8,7 +8,6 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.attributes.StatListReader;
 import com.riiablo.codec.excel.Skills;
-import com.riiablo.io.ByteInput;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemReader;
@@ -81,13 +80,9 @@ class NewCharacterStartItemsTest extends RiiabloTest {
       CharData character = newCharacter(clazz);
       D2S encoded = D2SWriter96.createD2S(character);
       byte[] bytes = new D2SWriter96().writeD2S(encoded);
-      ByteInput in = ByteInput.wrap(bytes);
-
-      D2S decoded = D2SReader.INSTANCE.readD2S(in);
-      D2SReader.INSTANCE.readRemaining(decoded, in, new StatListReader(), new ItemReader());
+      D2S decoded = D2SReader.INSTANCE.readComplete(bytes, new StatListReader(), new ItemReader());
 
       assertEquals(encoded.items.items.size, decoded.items.items.size, clazz.toString());
-      assertEquals(0, in.bytesRemaining(), clazz.toString());
       for (int i = 0; i < encoded.items.items.size; i++) {
         Item expected = encoded.items.items.get(i);
         Item actual = decoded.items.items.get(i);
