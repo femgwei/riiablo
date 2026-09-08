@@ -67,6 +67,7 @@ import com.riiablo.engine.server.ServerSkillSystem;
 import com.riiablo.engine.server.ServerPlayerDeathSystem;
 import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
 import com.riiablo.engine.server.ServerMonsterCorpseSystem;
+import com.riiablo.engine.server.UnitLifecycleSystem;
 import com.riiablo.engine.server.SequenceHandler;
 import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.attributes.ExperienceManager;
@@ -1648,6 +1649,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new com.riiablo.engine.server.AssassinTrapSystem())
         .with(new com.riiablo.engine.server.MercenarySkillSystem())
         .with(new ServerMonsterCorpseSystem())
+        .with(new UnitLifecycleSystem())
         .with(new AuraEcsSystem())
         .with(new ServerPlayerDeathSystem())
         .with(new PlayerCorpseRetrievalSystem())
