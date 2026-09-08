@@ -1522,10 +1522,28 @@ public final class D2GSHeadlessClient {
         ItemMoveResult pickup = owner.awaitItemMoveResult(ownerInput, deadline());
         if (pickup == null || !pickup.success() || pickup.groundEntityId() != goldEntity
             || pickup.groundItemDataLength() == 0
+            || pickup.groundOwnerId() != owner.playerId
             || D2GS.headlessGroundGoldQuantity(goldEntity) != 15) {
           throw new IllegalStateException("partial gold pickup mismatch: result="
               + (pickup == null ? "timeout" : pickup.failure())
               + " quantity=" + quantity(pickup));
+        }
+        // A competing client must receive a complete authoritative correction
+        // while the owner window is active, rather than a bare rejection that
+        // leaves its local ground entity/metadata stale.
+        send(peerOutput, positionPacket(peer.playerId, ownerDrop.x, ownerDrop.y));
+        send(peerOutput, itemMovePacket(77L, 0L, goldEntity));
+        ItemMoveResult rejected = peer.awaitItemMoveResult(peerInput, deadline());
+        if (rejected == null || rejected.success()
+            || rejected.failure() != ItemMoveFailure.GROUND_ITEM_NOT_OWNED
+            || rejected.groundEntityId() != goldEntity
+            || rejected.groundItemDataLength() == 0
+            || rejected.groundOwnerId() != owner.playerId
+            || Math.abs(rejected.groundX() - ownerDrop.x) > 0.01f
+            || Math.abs(rejected.groundY() - ownerDrop.y) > 0.01f) {
+          throw new IllegalStateException("contending pickup correction mismatch: result="
+              + (rejected == null ? "timeout" : rejected.failure())
+              + " owner=" + (rejected == null ? -1 : rejected.groundOwnerId()));
         }
         Snapshot peerPartial = awaitVisibleGroundEntity(peer, peerInput, goldEntity, deadline());
         if (peerPartial.groundOwnerId != owner.playerId) {

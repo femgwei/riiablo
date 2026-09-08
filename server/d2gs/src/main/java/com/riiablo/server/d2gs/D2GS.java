@@ -3594,14 +3594,16 @@ public class D2GS extends ApplicationAdapter {
         outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response)));
       } else {
         sendItemMoveResult(packet.id, intent, false, ItemMoveFailure.REQUEST_ID_REUSED,
-            authoritativeItems.revision(player.get(packet.id, Engine.INVALID_ENTITY)), false, false);
+            authoritativeItems.revision(player.get(packet.id, Engine.INVALID_ENTITY)), false,
+            operation == ItemMoveOperation.GROUND_TO_CURSOR);
       }
       return;
     }
     int authenticatedPlayerId = player.get(packet.id, Engine.INVALID_ENTITY);
     if (isPlayerDead(authenticatedPlayerId)) {
       sendItemMoveResult(packet.id, intent, false, ItemMoveFailure.PLAYER_DEAD,
-          authoritativeItems.revision(authenticatedPlayerId), false, false);
+          authoritativeItems.revision(authenticatedPlayerId), false,
+          operation == ItemMoveOperation.GROUND_TO_CURSOR);
       Gdx.app.log(TAG, "[ITEM_MOVE] phase=reject connection=" + packet.id
           + " player=" + authenticatedPlayerId + " reason=player_dead");
       return;
@@ -3794,6 +3796,11 @@ public class D2GS extends ApplicationAdapter {
     int groundItemData = 0;
     float groundX = 0f;
     float groundY = 0f;
+    int groundOwnerId = -1;
+    long groundOwnerUntilMillis = 0L;
+    int groundPartyId = -1;
+    long groundPartyUntilMillis = 0L;
+    boolean groundPartyShareGold = false;
     if (includeGroundCorrection && intent.groundEntityId >= 0) {
       com.riiablo.engine.server.component.Item ground = mItemSafe(intent.groundEntityId);
       com.riiablo.engine.server.component.Position position =
@@ -3802,10 +3809,17 @@ public class D2GS extends ApplicationAdapter {
         groundItemData = serializeItemVector(builder, ground.item);
         groundX = position.position.x;
         groundY = position.position.y;
+        groundOwnerId = ground.dropOwnerId;
+        groundOwnerUntilMillis = ground.dropOwnerUntilMillis;
+        groundPartyId = ground.dropPartyId;
+        groundPartyUntilMillis = ground.dropPartyUntilMillis;
+        groundPartyShareGold = ground.partyShareGold;
       }
     }
     int result = ItemMoveResult.createItemMoveResult(builder, intent.requestId, success, failure,
-        revision, intent.operation, snapshot, groundEntityId, groundItemData, groundX, groundY);
+        revision, intent.operation, snapshot, groundEntityId, groundItemData, groundX, groundY,
+        groundOwnerId, groundOwnerUntilMillis, groundPartyId, groundPartyUntilMillis,
+        groundPartyShareGold);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder, D2GSData.ItemMoveResult, result);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
     ByteBuffer response = builder.dataBuffer();

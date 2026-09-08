@@ -84,6 +84,13 @@ table ItemMoveResult {
   groundItemData:[ubyte];
   groundX:float;
   groundY:float;
+  // Ground item ownership metadata included with corrections.  These fields
+  // are appended for wire compatibility with older clients.
+  groundOwnerId:int32 = -1;
+  groundOwnerUntilMillis:ulong;
+  groundPartyId:int32 = -1;
+  groundPartyUntilMillis:ulong;
+  groundPartyShareGold:bool;
 }
 
 table GroundToCursor {

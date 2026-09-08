@@ -1297,6 +1297,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
           byte[] encoded = new byte[result.groundItemDataLength()];
           for (int i = 0; i < encoded.length; i++) encoded[i] = (byte) result.groundItemData(i);
           mItem.get(localEntityId).item = itemReader.readItem(ByteInput.wrap(encoded));
+          // Ground corrections carry the complete ownership window as well as
+          // the serialized item.  Keep the ECS metadata in lock-step so an
+          // expired/changed owner cannot leave a stale client-side pickup
+          // restriction after a rejected request.
+          com.riiablo.engine.server.component.Item local = mItem.get(localEntityId);
+          local.dropOwnerId = result.groundOwnerId();
+          local.dropOwnerUntilMillis = result.groundOwnerUntilMillis();
+          local.dropPartyId = result.groundPartyId();
+          local.dropPartyUntilMillis = result.groundPartyUntilMillis();
+          local.partyShareGold = result.groundPartyShareGold();
           if (mPosition.has(localEntityId)) {
             mPosition.get(localEntityId).position.set(result.groundX(), result.groundY());
           }

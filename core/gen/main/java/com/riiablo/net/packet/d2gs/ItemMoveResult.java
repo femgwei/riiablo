@@ -34,6 +34,11 @@ public final class ItemMoveResult extends Table {
   public ByteBuffer groundItemDataInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 18, 1); }
   public float groundX() { int o = __offset(20); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
   public float groundY() { int o = __offset(22); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
+  public int groundOwnerId() { int o = __offset(24); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
+  public long groundOwnerUntilMillis() { int o = __offset(26); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public int groundPartyId() { int o = __offset(28); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
+  public long groundPartyUntilMillis() { int o = __offset(30); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
+  public boolean groundPartyShareGold() { int o = __offset(32); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
   public static int createItemMoveResult(FlatBufferBuilder builder,
       long requestId,
@@ -45,8 +50,17 @@ public final class ItemMoveResult extends Table {
       int groundEntityId,
       int groundItemDataOffset,
       float groundX,
-      float groundY) {
-    builder.startTable(10);
+      float groundY,
+      int groundOwnerId,
+      long groundOwnerUntilMillis,
+      int groundPartyId,
+      long groundPartyUntilMillis,
+      boolean groundPartyShareGold) {
+    builder.startTable(15);
+    ItemMoveResult.addGroundPartyUntilMillis(builder, groundPartyUntilMillis);
+    ItemMoveResult.addGroundOwnerUntilMillis(builder, groundOwnerUntilMillis);
+    ItemMoveResult.addGroundPartyId(builder, groundPartyId);
+    ItemMoveResult.addGroundOwnerId(builder, groundOwnerId);
     ItemMoveResult.addGroundY(builder, groundY);
     ItemMoveResult.addGroundX(builder, groundX);
     ItemMoveResult.addGroundItemData(builder, groundItemDataOffset);
@@ -54,13 +68,14 @@ public final class ItemMoveResult extends Table {
     ItemMoveResult.addSnapshot(builder, snapshotOffset);
     ItemMoveResult.addRevision(builder, revision);
     ItemMoveResult.addRequestId(builder, requestId);
+    ItemMoveResult.addGroundPartyShareGold(builder, groundPartyShareGold);
     ItemMoveResult.addOperation(builder, operation);
     ItemMoveResult.addFailure(builder, failure);
     ItemMoveResult.addSuccess(builder, success);
     return ItemMoveResult.endItemMoveResult(builder);
   }
 
-  public static void startItemMoveResult(FlatBufferBuilder builder) { builder.startTable(10); }
+  public static void startItemMoveResult(FlatBufferBuilder builder) { builder.startTable(15); }
   public static void addRequestId(FlatBufferBuilder builder, long requestId) { builder.addInt(0, (int)requestId, (int)0L); }
   public static void addSuccess(FlatBufferBuilder builder, boolean success) { builder.addBoolean(1, success, false); }
   public static void addFailure(FlatBufferBuilder builder, byte failure) { builder.addByte(2, failure, 0); }
@@ -76,6 +91,11 @@ public final class ItemMoveResult extends Table {
   public static void startGroundItemDataVector(FlatBufferBuilder builder, int numElems) { builder.startVector(1, numElems, 1); }
   public static void addGroundX(FlatBufferBuilder builder, float groundX) { builder.addFloat(8, groundX, 0.0f); }
   public static void addGroundY(FlatBufferBuilder builder, float groundY) { builder.addFloat(9, groundY, 0.0f); }
+  public static void addGroundOwnerId(FlatBufferBuilder builder, int groundOwnerId) { builder.addInt(10, groundOwnerId, -1); }
+  public static void addGroundOwnerUntilMillis(FlatBufferBuilder builder, long groundOwnerUntilMillis) { builder.addLong(11, groundOwnerUntilMillis, 0L); }
+  public static void addGroundPartyId(FlatBufferBuilder builder, int groundPartyId) { builder.addInt(12, groundPartyId, -1); }
+  public static void addGroundPartyUntilMillis(FlatBufferBuilder builder, long groundPartyUntilMillis) { builder.addLong(13, groundPartyUntilMillis, 0L); }
+  public static void addGroundPartyShareGold(FlatBufferBuilder builder, boolean groundPartyShareGold) { builder.addBoolean(14, groundPartyShareGold, false); }
   public static int endItemMoveResult(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

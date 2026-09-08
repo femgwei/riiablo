@@ -38,7 +38,7 @@ class NetworkedClientItemManagerTest extends RiiabloTest {
     int root = ItemMoveResult.createItemMoveResult(builder, requestId, success,
         success ? ItemMoveFailure.NONE : ItemMoveFailure.STALE_INVENTORY,
         revision, ItemMoveOperation.GROUND_TO_CURSOR, snapshot,
-        -1, 0, 0f, 0f);
+        -1, 0, 0f, 0f, -1, 0L, -1, 0L, false);
     builder.finish(root);
     return ItemMoveResult.getRootAsItemMoveResult(builder.dataBuffer());
   }
