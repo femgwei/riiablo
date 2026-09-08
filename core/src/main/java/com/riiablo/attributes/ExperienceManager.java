@@ -178,6 +178,12 @@ public class ExperienceManager extends PassiveSystem {
     int defenderExp = getInt(defenderStats, Stat.experience, 0);
     if (defenderExp <= 0) return;
 
+    int victimLevelId = levelId(event.victim);
+    IntArray eligibleSnapshot = killCredits == null ? new IntArray()
+        : killCredits.eligibleExperiencePlayers(ownerId, event.victim, victimLevelId, players);
+    rewards.captureSnapshot(ownerId, player.data.diff, defenderLevel, defenderExp,
+        eligibleSnapshot);
+
     awardHirelingExperience(ownerId, event.killer, defenderLevel, defenderExp);
 
     // 分配经验值（参考 D2MOD SUNITDMG_DistributeExperience）

@@ -127,6 +127,11 @@ public class DeathRewardSystem extends PassiveSystem {
       return;
     }
     int monsterLevel = Math.max(1, levelStat.asInt());
+    com.badlogic.gdx.utils.IntArray eligibleSnapshot = killCredits == null ? null
+        : killCredits.eligiblePlayers(ownerId, levelId(event.victim), players);
+    rewards.captureSnapshot(ownerId, difficulty, monsterLevel,
+        victimAttrs != null && victimAttrs.get(Stat.experience) != null
+            ? victimAttrs.get(Stat.experience).asInt() : 0, eligibleSnapshot);
     LootManager.LootConfig config = new LootManager.LootConfig();
     config.monsterLevel = monsterLevel;
     config.rngSeed = Riiablo.gameSeed ^ (event.victim * 0x45D9F3B);

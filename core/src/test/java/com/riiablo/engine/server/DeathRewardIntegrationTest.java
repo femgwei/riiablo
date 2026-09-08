@@ -17,6 +17,7 @@ import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.MonsterRewardState;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -88,6 +89,11 @@ class DeathRewardIntegrationTest extends RiiabloTest {
       assertTrue(hpAfter >= 60f && hpAfter < 100f,
           "level-up life must use fixed-point units, not become 600+");
       assertTrue(itemsAfter >= 4, "boss reward must create its guaranteed item drops");
+      MonsterRewardState rewardState = world.getMapper(MonsterRewardState.class).get(monster);
+      assertTrue(rewardState.hasSnapshot(), "death must capture immutable reward context");
+      assertEquals(player, rewardState.snapshotOwnerId());
+      assertEquals(1, rewardState.snapshotMonsterLevel());
+      assertEquals(600, rewardState.snapshotExperience());
 
       // Both melee and missile systems may observe a lethal result. Neither
       // progression nor loot may be granted twice for one victim entity.
