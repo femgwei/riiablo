@@ -679,6 +679,85 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Creates a non-hireling summon owned by the supplied player in one RoomEx. */
+  static int headlessCreateRoomSummon(int playerId, int levelId, int roomId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || server.factory == null || Riiablo.files == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        Vector2 position = findHeadlessRoomPosition(server, zone, room);
+        com.riiablo.codec.excel.Skills.Entry skill =
+            Riiablo.files.skills.get(com.riiablo.engine.server.skill.SkillId.SUMMON_SPIRIT_WOLF);
+        com.riiablo.codec.excel.MonStats.Entry summon = skill == null
+            || skill.summon == null ? null : Riiablo.files.monstats.get(skill.summon);
+        if (position == null || summon == null) return;
+        int petId = server.factory.createSummonedPet(playerId, summon,
+            skill.pettype == null || skill.pettype.isEmpty() ? "spiritwolf" : skill.pettype,
+            com.riiablo.engine.server.skill.SkillId.SUMMON_SPIRIT_WOLF,
+            1, 1, false, 0, position.x, position.y);
+        if (petId != Engine.INVALID_ENTITY) result.set(petId);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Server-side persistence state after a summon owner disconnects/reconnects. */
+  static int[] headlessReconnectPersistenceState(
+      int oldOwnerId, int newOwnerId, int itemId, int objectId, int summonId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new int[7];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[7]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<Player> players = server.world.getMapper(Player.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.SummonedPet> pets =
+            server.world.getMapper(com.riiablo.engine.server.component.SummonedPet.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Item> items =
+            server.world.getMapper(com.riiablo.engine.server.component.Item.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeObjectState> objects =
+            server.world.getMapper(com.riiablo.engine.server.component.NativeObjectState.class);
+        com.riiablo.engine.server.component.NativeObjectState object = objects.get(objectId);
+        result.set(new int[] {
+            oldOwnerId >= 0 && players.has(oldOwnerId) ? 1 : 0,
+            newOwnerId >= 0 && players.has(newOwnerId) ? 1 : 0,
+            items.has(itemId) ? 1 : 0,
+            object != null ? 1 : 0,
+            object == null ? -1 : object.currentMode,
+            pets.has(summonId) ? 1 : 0,
+            server.world.getEntityManager().isActive(summonId) ? 1 : 0
+        });
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[7];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[7];
+    }
+  }
+
   /**
    * Mutates an object's authoritative visual mode and immediately replays a
    * baseline to one player. The next simulation frame must still deliver the

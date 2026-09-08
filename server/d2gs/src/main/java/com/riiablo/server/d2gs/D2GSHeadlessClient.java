@@ -14,6 +14,7 @@ import com.riiablo.net.packet.d2gs.CofReferenceP;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.D2GSData;
+import com.riiablo.net.packet.d2gs.Disconnect;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.packet.d2gs.MissileP;
@@ -152,6 +153,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireMercenaryRestore) {
       runMercenaryRestore(d2s, character);
+      return;
+    }
+    if (config.requireReconnectVisibility) {
+      runReconnectVisibility(d2s, character);
       return;
     }
     if (config.requireMercenaryTravel) {
@@ -1366,6 +1371,133 @@ public final class D2GSHeadlessClient {
     }
   }
 
+  /**
+   * Disconnect/reconnect regression for RoomEx-owned drops, objects and pets.
+   * Ground entities and opened objects remain authoritative while the owner's
+   * ordinary summon is deleted and never resurrected by the reconnect.
+   */
+  private void runReconnectVisibility(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave();
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket peerSocket = peer.openSocket();
+         DataInputStream peerInput = input(peerSocket);
+         OutputStream peerOutput = output(peerSocket)) {
+      send(peerOutput, connectionPacket(peerCharacter, peerD2s));
+      peer.awaitConnection(peerInput, deadline());
+      int room = D2GS.headlessNonAdjacentRoomPair(10)[0];
+      int[] persistedFixtures = null;
+      int persistedSummon = Engine.INVALID_ENTITY;
+      int oldOwnerId = Engine.INVALID_ENTITY;
+      try (Socket ownerSocket = owner.openSocket();
+           DataInputStream ownerInput = input(ownerSocket);
+           OutputStream ownerOutput = output(ownerSocket)) {
+        send(ownerOutput, connectionPacket(character, d2s));
+        owner.awaitConnection(ownerInput, deadline());
+        if (!D2GS.headlessMovePlayerToRoom(owner.playerId, 10, room)
+            || !D2GS.headlessMovePlayerToRoom(peer.playerId, 10, room)) {
+          throw new IOException("failed to stage reconnect visibility clients");
+        }
+        persistedFixtures = D2GS.headlessCreateRoomLifecycleFixtures(owner.playerId, 10, room);
+        persistedSummon = D2GS.headlessCreateRoomSummon(owner.playerId, 10, room);
+        if (persistedFixtures.length < 3 || persistedSummon == Engine.INVALID_ENTITY) {
+          throw new IOException("failed to create reconnect fixtures: fixtures="
+              + java.util.Arrays.toString(persistedFixtures) + " summon=" + persistedSummon);
+        }
+        awaitReconnectFixture(owner, peer, ownerInput, peerInput, persistedFixtures, persistedSummon,
+            deadline());
+        oldOwnerId = owner.playerId;
+        // Closing the owner socket invokes the authoritative Disconnect path.
+        // The peer remains in the same RoomEx and must keep seeing persistent
+        // entities while observing deletion of the owner and ordinary summon.
+        ownerSocket.close();
+        awaitDisconnectVisibility(peer, peerInput, oldOwnerId, persistedSummon, persistedFixtures,
+            deadline());
+        log("reconnect_visibility_disconnect_pass", "owner=" + oldOwnerId
+            + " summon=" + persistedSummon + " drop=" + persistedFixtures[1] + " object=" + persistedFixtures[2]
+            + " ownerDeleted=true summonDeleted=true persistent=true");
+      }
+
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(character, d2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessMovePlayerToRoom(reconnected.playerId, 10, room)) {
+          throw new IOException("failed to stage reconnected owner");
+        }
+        awaitReconnectedPersistentEntities(reconnected, reconnectInput, peer, peerInput,
+            persistedFixtures, persistedSummon, deadline());
+        log("reconnect_visibility_pass", "owner=" + reconnected.playerId
+            + " oldOwnerDeleted=true summonAbsent=true dropPersistent=true objectPersistent=true"
+            + " clients=true,true");
+      }
+    }
+  }
+
+  private void awaitReconnectFixture(D2GSHeadlessClient owner, D2GSHeadlessClient peer,
+      DataInputStream ownerInput, DataInputStream peerInput, int[] fixtures, int summonId,
+      long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+      if (packet != null) owner.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      if (visible(owner, fixtures[1]) && visible(peer, fixtures[1])
+          && visible(owner, fixtures[2]) && visible(peer, fixtures[2])
+          && visible(owner, summonId) && visible(peer, summonId)) return;
+    }
+    throw new IOException("reconnect fixtures were not visible to both clients");
+  }
+
+  private void awaitDisconnectVisibility(D2GSHeadlessClient peer, DataInputStream peerInput,
+      int oldOwnerId, int summonId, int[] fixtures, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      Visibility ownerState = peer.visibility.get(oldOwnerId);
+      Visibility summonState = peer.visibility.get(summonId);
+      if (ownerState != null && ownerState.deleted
+          && summonState != null && summonState.deleted
+          && visible(peer, fixtures[1]) && visible(peer, fixtures[2])) return;
+    }
+    throw new IOException("disconnect did not delete owner/summon while retaining drop/object");
+  }
+
+  private void awaitReconnectedPersistentEntities(D2GSHeadlessClient reconnected,
+      DataInputStream reconnectInput, D2GSHeadlessClient peer, DataInputStream peerInput,
+      int[] fixtures, int summonId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(reconnectInput);
+      if (packet != null) reconnected.consume(packet);
+      packet = readPacket(peerInput);
+      if (packet != null) peer.consume(packet);
+      if (visible(reconnected, fixtures[1]) && visible(reconnected, fixtures[2])
+          && visible(peer, fixtures[1]) && visible(peer, fixtures[2])) {
+        int[] state = D2GS.headlessReconnectPersistenceState(
+            Engine.INVALID_ENTITY, reconnected.playerId, fixtures[1], fixtures[2], summonId);
+        if (state.length >= 7 && state[1] == 1 && state[2] == 1 && state[3] == 1
+            && state[4] == Engine.Object.MODE_ON && state[5] == 0 && state[6] == 0) {
+          Visibility staleSummon = reconnected.visibility.get(summonId);
+          if (staleSummon == null || staleSummon.deleted) return;
+        }
+      }
+    }
+    throw new IOException("reconnect did not restore persistent drop/object or remove summon");
+  }
+
+  private static boolean visible(D2GSHeadlessClient client, int entityId) {
+    Visibility state = client.visibility.get(entityId);
+    if (state == null || state.deleted) return false;
+    if (state.type == 3) {
+      Snapshot item = client.monsters.get(entityId);
+      return item != null && !item.deleted;
+    }
+    return true;
+  }
+
   /** Two real sockets observe ordinary following plus three cross-zone relocations. */
   private void runMercenaryTravel(byte[] d2s, CharacterHeader character) throws Exception {
     D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
@@ -2021,6 +2153,18 @@ public final class D2GSHeadlessClient {
   }
 
   private void consume(com.riiablo.net.packet.d2gs.D2GS packet) {
+    if (packet.dataType() == D2GSData.Disconnect) {
+      Disconnect disconnect = (Disconnect) packet.data(new Disconnect());
+      Visibility visible = visibility.get(disconnect.entityId());
+      if (visible == null) {
+        visible = new Visibility(disconnect.entityId());
+        visibility.put(disconnect.entityId(), visible);
+      }
+      visible.deleted = true;
+      Snapshot snapshot = monsters.get(disconnect.entityId());
+      if (snapshot != null) snapshot.deleted = true;
+      return;
+    }
     if (packet.dataType() == D2GSData.SnapshotBaseline) {
       SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
       if (marker.phase() == SnapshotBaselinePhase.BEGIN) {
@@ -2501,6 +2645,7 @@ public final class D2GSHeadlessClient {
     boolean requireMercenaryProgression;
     boolean requireMercenaryRestore;
     boolean requireMercenaryTravel;
+    boolean requireReconnectVisibility;
     int attempts = 20;
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
@@ -2530,6 +2675,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-mercenary-progression".equals(arg)) config.requireMercenaryProgression = true;
         else if ("--require-mercenary-restore".equals(arg)) config.requireMercenaryRestore = true;
         else if ("--require-mercenary-travel".equals(arg)) config.requireMercenaryTravel = true;
+        else if ("--require-reconnect-visibility".equals(arg)) config.requireReconnectVisibility = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;
@@ -2582,7 +2728,7 @@ public final class D2GSHeadlessClient {
           + " [--generated-amazon] [--host 127.0.0.1] [--port 6114]"
           + " [--skill 0] [--require-missile] [--require-sim-tick]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
-          + " [--require-fallen-scenario] [--attempts 20]");
+          + " [--require-fallen-scenario] [--require-reconnect-visibility] [--attempts 20]");
     }
   }
 }

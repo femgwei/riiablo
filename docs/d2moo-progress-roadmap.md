@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-07
+更新时间：2026-09-08
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -70,6 +70,46 @@
 
 每完成一项，就在本文件将对应 `[ ]` 改为 `[x]` 并使用删除线标记，同时补充测试、
 提交和远程推送信息。未通过验收的模块不得标记完成。
+
+### 2026-09-08 P0/P1 原生底层重新基线
+
+此前百分比侧重“功能可运行”。从本节起，P0/P1 改用更严格的验收口径：1.10f
+原始表字段、D2MOO 可观察行为、固定 tick 时序、状态副作用和自动对照必须同时通过，
+否则只能标记为“部分完成”。`libd2` / `dark-magic` 的 1.14d 数据只能参考解析结构和
+测试方法，不能作为 1.10f 数值真值。
+
+- [ ] **P0-1 无损 TXT 数据层与 1.10f 五表对照（约 60%）**
+  - 已加载 `ItemStatCost/Skills/Missiles/MonStats`，但 `States.txt` 尚未建模；旧解析器会
+    跳过列数不一致的行和 `Expansion` 行，也没有逐表、逐行、逐列差异报告。
+  - 下一步：实现按列名访问、短行补空、保留原始行的无损读取器；接入 `States.txt`；
+    对固定导出的 1.10f `ItemStatCost/States/Skills/Missiles/MonStats` 建立 golden 对照。
+- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 55%）**
+  - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
+    state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
+    必须由 1.10f 数据及 D2MOO 行为驱动。
+- [ ] **P0-3 Unit 生命周期（约 70%）**
+  - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；仍需统一验证
+    `Spawn -> InsertWorld -> TickUpdate -> DeathEvent -> RemoveWorld -> Destroy`，以及死亡时
+    missile、state、AI、订阅和所有权引用的清理。
+- [ ] **P0-4 固定 25Hz Sim Tick 与阶段顺序（约 85%）**
+  - 服务端 40ms 单写者 tick、本地固定步进、渲染隔离、位置快照和多人时钟已通过；
+    仍需将 `state -> missile -> unit/AI -> death/destroy -> snapshot` 建成显式阶段门槛，
+    并补长时间漂移与高实体压力测试。
+- [ ] **P1-5 Missile 原生表驱动（约 75%）**
+- [ ] **P1-6 伤害、命中与死亡链（约 78%）**
+- [ ] **P1-7 地面物品、掉落与拾取（约 80%）**
+- [ ] **P1-8 D2S 1.10f round-trip（约 68%）**
+
+强制踩坑回归门槛：
+
+1. sim 数据不得由可变 `render()` delta 驱动；25Hz 逻辑阶段必须和逐帧渲染隔离。
+2. stat 聚合必须验证 `Base -> Add -> Percent`，禁止依赖调用顺序偶然正确。
+3. 死亡测试必须证明应清理 state 消失、应保留 state 保留，并且无幽灵 buff。
+4. 近战命中只能读取攻击起手 tick 的位置/Size/Zone/Room 快照。
+5. missile 测试必须验证命中、超时、离开世界和主人销毁后的实体回收，防止实体泄漏。
+
+当前执行优先级：`P0-1 TXT/States -> P0-2 Stat/State -> P0-3 Unit 生命周期 ->
+P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 -> P3 技能扩展`。
 
 ### P0：先恢复可靠的回归基线
 
@@ -405,14 +445,19 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 新增基线事务单元测试，覆盖乱序 END、重复实体帧、重复 BEGIN、旧 baseline 和新事务替换；真实 1.10f `headlessSnapshotResync` 继续通过，包含 `recipient_baseline_pass`、`room_subscription_pass`、`room_persistence_pass` 与 `snapshot_resync_pass`。
   - D2GS/Netty 编译及客户端快照时间线回归通过。
 
-[x] ~~完成多人快照重同步第十六阶段（断线重连后的实体 ID、任务和背包一致性）~~
+- [x] ~~完成多人快照重同步第十六阶段（断线重连后的实体 ID、任务和背包一致性）~~
   - 首次连接和断线重连现在都使用 BEGIN/END 原子基线事务，客户端不会在实体帧、任务进度和背包 revision 之间看到混合状态；基线新增 `questRevision`，与 `inventoryRevision`、waypoint 和 difficulty 一起提交。
   - D2GS 记录角色加载时的任务 revision、背包 revision 和 waypoint 基线；重连仍从同一 D2S 权威数据建立新的实体 ID，旧实体删除包先于新实体基线，佣兵按原生保存状态恢复，非雇佣召唤物继续按 D2MOO 规则随主人断线清理。
   - 连接槽复用前清空 `NetworkSynchronizer` 的接收者快照缓存，防止新客户端继承旧客户端的 last-sent 状态而丢失首个增量。
   - 1.10f 隐藏双客户端 `headlessMercenaryRestore` 通过：`mercenary_restore_reconnect_pass` 同时验证旧实体删除、佣兵恢复/复活、任务 revision、背包 revision 和两端可见性；输出 `staleRemoved=true`、`clients=true,true`。
   - D2GS/Netty 编译、`SnapshotResyncProtocolTest`、`SnapshotBaselineTransactionTest`、`SummonedPetSystemTest` 和 `QuestSnapshotTest` 全部通过。
 
-下一项建议进入 **多人快照重同步第十七阶段（断线重连后的地面掉落、对象状态与召唤物可见性）**：在同一离屏双客户端场景中先制造掉落、开启对象和非雇佣召唤物，再断开主人，验证地面物品/对象持久化、召唤物删除、其他客户端基线和重新进入 RoomEx 后的状态不会互相污染。
+- [x] ~~完成多人快照重同步第十七阶段（断线重连后的地面掉落、对象状态与召唤物可见性）~~
+  - 新增 1.10f 隐藏双客户端 `headlessReconnectVisibility`：在同一地下 RoomEx 创建地面掉落、已开启对象和普通召唤物，断开主人后验证旧玩家与召唤物均从对端消失，而掉落和对象继续保留。
+  - 同一角色重连取得新实体 ID 后，双方仍看到原实体 ID 的掉落与已开启对象；普通召唤物没有随角色错误恢复。客户端测试观察器同时消费正式 `Disconnect` 包，避免把玩家协议删除误判为缺少 `EntitySync.deleted`。
+  - 测试输出 `reconnect_visibility_disconnect_pass`、`reconnect_visibility_pass`，构建成功。
+
+下一项切换到 **P0-1 无损 TXT 数据层与 1.10f 五表对照**；暂停继续扩展技能，先建立 `States.txt` 和字段 golden 门槛。
 
 ## 记录规则
 
