@@ -41,7 +41,7 @@
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
 | P2 | 箱子、门、陷阱、神殿、水井等对象 | 5% | 90% | 10% | 0.5% | 服务端/线协议快照已接通，客户端 stateFlags 表现映射待补 |
-| P2 | 第一章任务、奖励和过渡 | 5% | 75% | 25% | 1.3% | 多人资格、对话分支和持久化待补 |
+| P2 | 第一章任务、奖励和过渡 | 5% | 82% | 18% | 0.9% | NPC 对话分支已服务端校验，多人资格/重连细节待补 |
 | P2 | NPC 买卖、修理、赌博、雇佣 | 4% | 70% | 30% | 1.2% | 原生库存刷新、雇佣/复活和重连待补 |
 | P2 | Party、敌对、玩家交易和多人同步 | 5% | 60% | 40% | 2.0% | 权威移动意图已接通；玩家交易、复杂可见性和重连待补 |
 | P2 | D2S 存档、角色创建和状态持久化 | 4% | 60% | 40% | 1.6% | 版本校验、完整 section 和 mask 待补 |
@@ -407,6 +407,10 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
   - 已补 `ObjectSnapshotWireTest` 覆盖新字段读写及旧快照默认值。客户端目前仅恢复
     `mode`；`stateFlags` 尚未映射到现有 `Interactable`/视觉组件，待补客户端表现验收。
 - [ ] 补齐第一章任务多人资格、对话变体、奖励幂等和重连恢复。
+  - 已新增 `Act1QuestMessageValidator`，D2GS 对 Akara/Charsi/Kashya/Cain/Warriv 的
+    网络对白请求按权威 D2S 任务记录、等级和任务物品校验，拒绝过期或伪造 message。
+  - `QuestRequestCache` 继续按连接和 requestId 幂等重放；当前仍需把所有 Act 1 任务的
+    多人资格、房间范围和重连后的对白/奖励恢复做成统一门槛。
 - [ ] 补齐 NPC 原生库存刷新、雇佣/复活和断线重连恢复。
 - [ ] 完成玩家交易、Party 可见性、敌对边界和异常顺序处理。
 - [ ] 完成 D2S 版本校验、完整 section/mask 和原版样本回归。
@@ -525,7 +529,8 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
     继续通过。
 
 下一小步：转入 P2 第一章任务多人资格、对话变体、奖励幂等和重连恢复；对象快照的
-客户端 `stateFlags` 表现映射作为对象模块收尾项并行补齐。
+客户端 `stateFlags` 表现映射作为对象模块收尾项并行补齐。任务侧优先补充多人奖励
+资格和重连快照测试。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 
@@ -554,6 +559,12 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   并随实体快照发送；客户端创建对象时恢复 `mode`。新增 `ObjectSnapshotWireTest` 验证
   新字段序列化及旧快照默认值，地图/对象回归集合通过。客户端 `stateFlags` 到交互/视觉
   组件的最终映射仍待完成。
+
+- 2026-09-09：完成第一章 NPC 任务对白服务端资格校验首阶段；新增
+  `Act1QuestMessageValidator`，按角色的权威 D2S 记录、等级与 Malus 任务物品验证
+  Akara/Charsi/Kashya/Cain/Warriv 分支，D2GS 拒绝过期或伪造 message index；新增
+  `Act1QuestMessageValidatorTest` 覆盖奖励、转交与 Cain 场景，全部任务回归及 D2GS
+  编译通过。多人房间资格、奖励传播与重连恢复仍待完成。
 
 - [x] ~~完成本地单人固定步进与渲染解耦第一阶段~~
   - `GameScreen` 使用无 LibGDX 依赖的 `FixedStepAccumulator`，以 25Hz（40ms）固定 tick 驱动 ECS；渲染、UI 和输入仍在主线程按可见帧运行。

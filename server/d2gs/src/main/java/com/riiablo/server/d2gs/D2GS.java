@@ -107,6 +107,7 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
+import com.riiablo.engine.server.quest.Act1QuestMessageValidator;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
@@ -3443,6 +3444,17 @@ public class D2GS extends ApplicationAdapter {
     if (source == null || target == null
         || !com.riiablo.engine.server.npc.NpcServiceProtocol.inRange(
             source.position, target.position)) return "NPC_OUT_OF_RANGE";
+    Player player = world.getMapper(Player.class).get(playerId);
+    if (player == null || player.data == null) return "QUEST_DATA_UNAVAILABLE";
+    int level = player.data.getStats() == null ? 0
+        : player.data.getStats().aggregate().getValue(com.riiablo.attributes.Stat.level, 0);
+    boolean hasMalus = player.data.getItems() != null
+        && player.data.getItems().containsItemCode(
+            com.riiablo.engine.server.quest.Act1MalusQuest.MALUS_CODE);
+    if (!Act1QuestMessageValidator.isAllowed(npc.monstats.hcIdx, player.data, level,
+        hasMalus, messageIndex)) {
+      return "QUEST_MESSAGE_NOT_AVAILABLE";
+    }
     return null;
   }
 
