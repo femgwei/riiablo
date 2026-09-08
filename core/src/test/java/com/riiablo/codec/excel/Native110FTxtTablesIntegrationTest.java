@@ -124,5 +124,14 @@ class Native110FTxtTablesIntegrationTest {
     assertTrue(missiles.schemaIssues().isEmpty(), () -> "Missiles.txt schema mismatch: "
         + missiles.schemaIssues().subList(0, Math.min(10, missiles.schemaIssues().size())));
     for (int id = 0; id < missiles.size(); id++) assertEquals(id, missiles.get(id).id);
+
+    NativeMonStats monsters = NativeMonStats.parse(
+        resolver.resolve(EXCEL + "MonStats.txt").readBytes());
+    assertEquals(705, monsters.source().rowCount());
+    assertEquals(704, monsters.size(),
+        "MonStats contains one Expansion control row which is not a native monster record");
+    assertTrue(monsters.schemaIssues().isEmpty(), () -> "MonStats.txt schema mismatch: "
+        + monsters.schemaIssues().subList(0, Math.min(10, monsters.schemaIssues().size())));
+    for (int id = 0; id < monsters.size(); id++) assertEquals(id, monsters.get(id).id);
   }
 }
