@@ -122,6 +122,8 @@ public class Missile extends PooledComponent {
   /** Native Pierce state. A missile may survive a hit and continue travelling. */
   public boolean pierceEnabled;
   public int pierceChance;
+  /** Prevents LastCollide from resolving the endpoint more than once. */
+  public boolean lastCollideResolved;
   public final IntSet hitTargets = new IntSet();
 
   /** Targets already resolved by another missile from the same cast. */
@@ -187,6 +189,7 @@ public class Missile extends PooledComponent {
     damageMultiplier = 1f;
     pierceEnabled = false;
     pierceChance = 0;
+    lastCollideResolved = false;
     hitTargets.clear();
     sharedHitTargets = null;
   }

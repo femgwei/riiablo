@@ -249,6 +249,15 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 检查范围限制
     if (missile.range > 0 && missile.distanceTraveled >= missile.range) {
+      // Native LastCollide performs one final unit lookup at the range edge
+      // before the missile is removed.  This matters for fast arrows whose
+      // final segment ends inside a target's hitbox.
+      if (missile.missile != null && missile.missile.LastCollide
+          && !missile.lastCollideResolved && hasNativeCollision(missile)) {
+        missile.lastCollideResolved = true;
+        checkCollisions(entityId, missile, position, lastPos);
+        if (!world.getEntityManager().isActive(entityId)) return;
+      }
       log.debug("Missile {} reached max range ({}), disposing. ownerId={}, pos=({}, {})", 
           entityId, missile.range, missile.ownerId, position.position.x, position.position.y);
       world.delete(entityId);
@@ -590,7 +599,33 @@ public class MissileCollisionSystem extends IteratingSystem {
         }
       }
     }
+    checkMissileDestruction(missileId, missile, lastPos, currentPos);
     if (areaEffect && !missile.persistent && collidesKill(missile)) world.delete(missileId);
+  }
+
+  /** D2MOO CollideType 7: missiles marked CanDestroy are valid targets. */
+  private void checkMissileDestruction(int missileId, Missile source,
+      Vector2 previousPos, Vector2 currentPos) {
+    if (source == null || source.missile == null || source.missile.CollideType != 7) return;
+    com.artemis.AspectSubscriptionManager subscriptions = world.getAspectSubscriptionManager();
+    com.artemis.EntitySubscription missiles = subscriptions.get(
+        Aspect.all(Missile.class, Position.class, Velocity.class));
+    IntBag entities = missiles.getEntities();
+    for (int i = 0; i < entities.size(); i++) {
+      int targetId = entities.get(i);
+      if (targetId == missileId || !mMissile.has(targetId) || !mPosition.has(targetId)) continue;
+      Missile target = mMissile.get(targetId);
+      if (!target.authoritative || target.missile == null || !target.missile.CanDestroy) continue;
+      float distance = distanceToSegment(mPosition.get(targetId).position, previousPos, currentPos);
+      if (distance > 2.0f) continue;
+      log.info("[MISSILE_DESTROY] source={} target={} sourceMissile={} targetMissile={} distance={}",
+          missileId, targetId, source.missile.Missile, target.missile.Missile, distance);
+      world.delete(targetId);
+      if (collidesKill(source)) {
+        world.delete(missileId);
+        return;
+      }
+    }
   }
   
   /**
@@ -840,6 +875,10 @@ public class MissileCollisionSystem extends IteratingSystem {
 
   static boolean collidesKill(Missile missile) {
     return missile == null || missile.missile == null || missile.missile.CollideKill;
+  }
+
+  static boolean hasLastCollide(Missile missile) {
+    return missile != null && missile.missile != null && missile.missile.LastCollide;
   }
 
   static boolean rollPierce(Missile missile, int chance) {

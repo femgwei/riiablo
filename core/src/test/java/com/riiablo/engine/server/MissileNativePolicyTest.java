@@ -54,4 +54,13 @@ class MissileNativePolicyTest {
     assertEquals(DT1.Tile.FLAG_BLOCK_JUMP | DT1.Tile.FLAG_BLOCK_WALK,
         MissileCollisionSystem.nativeMapCollisionMask(8));
   }
+
+  @Test
+  void lastCollideIsReadFromTheNativeRow() {
+    Missile missile = new Missile();
+    missile.missile = new Missiles.Entry();
+    assertFalse(MissileCollisionSystem.hasLastCollide(missile));
+    missile.missile.LastCollide = true;
+    assertTrue(MissileCollisionSystem.hasLastCollide(missile));
+  }
 }

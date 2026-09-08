@@ -154,7 +154,7 @@
   - D2GS 与本地权威世界现按 `state -> missile -> unit/AI -> death/destroy -> snapshot`
     注册核心系统；状态更新和导弹碰撞均在单位行为前执行，避免新状态/投射物被延迟一帧。
   - 待补：长时间漂移、高实体压力和完整网络快照阶段的自动压力测试。
-- [ ] **P1-5 Missile 原生表驱动（约 84%）**
+- [ ] **P1-5 Missile 原生表驱动（约 88%）**
   - `ServerEntityFactory` 已读取 `Missiles.txt.Pierce` 和原生速度/Range；本轮将
     `Collision`、`CollideKill` 接入统一碰撞/销毁判定，非碰撞视觉导弹不再误伤，
     非 `CollideKill` 导弹可按原生规则继续飞行。
@@ -162,8 +162,10 @@
     `UnitLifecycleSystem` 负责主人、附着控制体销毁时的导弹回收。
   - `CollideType` 已映射到原生 missile-barrier/wall 碰撞掩码；屏障命中会在
     `Explosion/AlwaysExplode/ExplosionMissile` 配置存在时生成通用爆炸子导弹。
-  - 新增 `MissileNativePolicyTest`；待补动态 `CanDestroy` 破坏物、`LastCollide` 的
-    多目标边界语义和长时间高实体压力测试。
+  - `LastCollide` 已在 Range 末帧执行一次最终单位碰撞；`CollideType=7` 已支持
+    导弹间碰撞，并按 `CanDestroy` 销毁可被导弹破坏的目标。
+  - 新增 `MissileNativePolicyTest`；待补动态场景物件的 `CanDestroy` 破坏回调、
+    更精确的 `LastCollide` 多目标边界语义和长时间高实体压力测试。
 - [ ] **P1-6 伤害、命中与死亡链（约 78%）**
 - [ ] **P1-7 地面物品、掉落与拾取（约 80%）**
 - [ ] **P1-8 D2S 1.10f round-trip（约 68%）**
