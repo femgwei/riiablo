@@ -214,7 +214,10 @@ public class D2SReader96 {
     log.trace("quests.version: {}", version);
     if (version != 6) throw new InvalidFormat(in, "quests.version(" + version + ") != " + 6);
     final short size = in.readSafe16u();
-    assert size == QUESTS_SIZE : "quests.size(" + size + ") != QUESTS_SIZE(" + QUESTS_SIZE + ")";
+    if (size != QUESTS_SIZE) {
+      throw new InvalidFormat(in,
+          "quests.size(" + size + ") != QUESTS_SIZE(" + QUESTS_SIZE + ")");
+    }
     in = in.readSlice(size - QUESTS_SIGNATURE.length - 4 - 2);
     final byte[][] flags = quests.flags = new byte[D2S.NUM_DIFFS][];
     for (int i = 0; i < D2S.NUM_DIFFS; i++) {
@@ -237,7 +240,10 @@ public class D2SReader96 {
     log.trace("waypoints.version: {}", version);
     if (version != 1) throw new InvalidFormat(in, "waypoints.version(" + version + ") != " + 1);
     final short size = in.readSafe16u();
-    assert size == WAYPOINTS_SIZE : "waypoints.size(" + size + ") != WAYPOINTS_SIZE(" + WAYPOINTS_SIZE + ")";
+    if (size != WAYPOINTS_SIZE) {
+      throw new InvalidFormat(in,
+          "waypoints.size(" + size + ") != WAYPOINTS_SIZE(" + WAYPOINTS_SIZE + ")");
+    }
     in = in.readSlice(size - WAYPOINTS_SIGNATURE.length - 4 - 2);
     final byte[][] flags = waypoints.flags = new byte[D2S.NUM_DIFFS][];
     for (int i = 0; i < D2S.NUM_DIFFS; i++) {
@@ -266,7 +272,10 @@ public class D2SReader96 {
     in.readSignature(NPCS_SIGNATURE);
     D2S.NPCData npcs = new D2S.NPCData();
     final short size = in.readSafe16u();
-    assert size == NPCS_SIZE : "npcs.size(" + size + ") != NPCS_SIZE(" + NPCS_SIZE + ")";
+    if (size != NPCS_SIZE) {
+      throw new InvalidFormat(in,
+          "npcs.size(" + size + ") != NPCS_SIZE(" + NPCS_SIZE + ")");
+    }
     in = in.readSlice(size - NPCS_SIGNATURE.length - 2);
     final byte[][][] flags = npcs.flags = new byte[D2S.NPCData.NUM_GREETINGS][D2S.NUM_DIFFS][];
     for (int i = 0; i < D2S.NPCData.NUM_GREETINGS; i++) {

@@ -136,6 +136,23 @@ class D2SWriter96HeaderTest {
   }
 
   @Test
+  void completeReaderRejectsInvalidFixedSectionLengths() {
+    byte[] source = new D2SWriter96().writeD2S(minimalExpansionSave("StrictLengths"));
+    int questsSize = HEADER_SIZE + 4 + 4;
+    int waypointsSize = HEADER_SIZE + D2SReader96.QUESTS_SIZE + 2 + 4;
+    int npcsSize = HEADER_SIZE + D2SReader96.QUESTS_SIZE + D2SReader96.WAYPOINTS_SIZE + 2;
+
+    for (int offset : new int[] {questsSize, waypointsSize, npcsSize}) {
+      byte[] corrupted = source.clone();
+      int declared = int16LE(corrupted, offset);
+      putShortLE(corrupted, offset, declared + 1);
+      putIntLE(corrupted, 0x0C, D2SWriter96.computeChecksum(corrupted, 0x0C));
+      assertThrows(InvalidFormat.class, () -> D2SReader.INSTANCE.readComplete(corrupted),
+          "section length at 0x" + Integer.toHexString(offset));
+    }
+  }
+
+  @Test
   void rejectsNamesThatCannotRoundTripThroughTheClassicHeader() {
     assertTrue(D2S.isOriginalNameCompatible("Hero-01"));
     assertTrue(D2S.isOriginalNameCompatible("Test_Hero"));
@@ -203,5 +220,13 @@ class D2SWriter96HeaderTest {
 
   private static void putIntLE(byte[] data, int offset, int value) {
     ByteBuffer.wrap(data, offset, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(value);
+  }
+
+  private static int int16LE(byte[] data, int offset) {
+    return ByteBuffer.wrap(data, offset, 2).order(ByteOrder.LITTLE_ENDIAN).getShort() & 0xFFFF;
+  }
+
+  private static void putShortLE(byte[] data, int offset, int value) {
+    ByteBuffer.wrap(data, offset, 2).order(ByteOrder.LITTLE_ENDIAN).putShort((short) value);
   }
 }
