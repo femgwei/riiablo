@@ -6,6 +6,7 @@ import com.badlogic.gdx.files.FileHandle;
 
 import com.riiablo.attributes.StatListReader;
 import com.riiablo.io.ByteInput;
+import com.riiablo.io.EndOfInput;
 import com.riiablo.io.InvalidFormat;
 import com.riiablo.io.UnsafeNarrowing;
 import com.riiablo.item.ItemReader;
@@ -76,26 +77,30 @@ public enum D2SReader {
           "D2S file is truncated before the fixed header");
     }
     ByteInput in = ByteInput.wrap(bytes);
-    D2S d2s = readD2S(in);
-    long declaredSize = Integer.toUnsignedLong(d2s.size);
-    if (declaredSize != bytes.length) {
-      throw new InvalidFormat(in, "D2S size mismatch: header=" + declaredSize
-          + " actual=" + bytes.length);
+    try {
+      D2S d2s = readD2S(in);
+      long declaredSize = Integer.toUnsignedLong(d2s.size);
+      if (declaredSize != bytes.length) {
+        throw new InvalidFormat(in, "D2S size mismatch: header=" + declaredSize
+            + " actual=" + bytes.length);
+      }
+      int calculated = calculateChecksum(ByteInput.wrap(bytes));
+      if (d2s.checksum != calculated) {
+        throw new InvalidFormat(in, String.format(
+            "D2S checksum mismatch: header=0x%08X calculated=0x%08X",
+            d2s.checksum, calculated));
+      }
+      if (statReader == null) statReader = new StatListReader();
+      if (itemReader == null) itemReader = new ItemReader();
+      readRemaining(d2s, in, statReader, itemReader);
+      if (in.bytesRemaining() != 0) {
+        throw new InvalidFormat(in, "D2S has " + in.bytesRemaining()
+            + " trailing bytes after the final section");
+      }
+      return d2s;
+    } catch (EndOfInput e) {
+      throw new InvalidFormat(in, "D2S ended inside a required section", e);
     }
-    int calculated = calculateChecksum(ByteInput.wrap(bytes));
-    if (d2s.checksum != calculated) {
-      throw new InvalidFormat(in, String.format(
-          "D2S checksum mismatch: header=0x%08X calculated=0x%08X",
-          d2s.checksum, calculated));
-    }
-    if (statReader == null) statReader = new StatListReader();
-    if (itemReader == null) itemReader = new ItemReader();
-    readRemaining(d2s, in, statReader, itemReader);
-    if (in.bytesRemaining() != 0) {
-      throw new InvalidFormat(in, "D2S has " + in.bytesRemaining()
-          + " trailing bytes after the final section");
-    }
-    return d2s;
   }
 
   /** Convenience overload using the standard stat/item decoders. */
