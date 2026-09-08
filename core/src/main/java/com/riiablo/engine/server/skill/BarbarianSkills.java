@@ -541,6 +541,7 @@ public final class BarbarianSkills {
     state.level = level;
     state.sourceEntityId = sourceEntityId;
     state.skillId = skill.Id;
+    state.basicStatList = true;
     state.clearModifiers();
     int count = Math.min(
         skill.aurastat != null ? skill.aurastat.length : 0,

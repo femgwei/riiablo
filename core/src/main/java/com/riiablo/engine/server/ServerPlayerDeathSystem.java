@@ -5,6 +5,7 @@ import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.Engine;
@@ -26,6 +27,7 @@ import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.item.GroundDropOwnership;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
@@ -104,6 +106,11 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
     mCorpse.create(corpseId).reset(PlayerCorpse.CORPSE_DURATION, false);
 
     setLife(playerId, 0f);
+    if (mUnitStates.has(playerId) && mUnitStates.get(playerId).stateList != null) {
+      mUnitStates.get(playerId).stateList.retainForDeath(
+          Riiablo.files != null ? Riiablo.files.States : null,
+          StateList.DeathUnitType.PLAYER);
+    }
     if (mVelocity.has(playerId)) mVelocity.remove(playerId);
     if (mTarget.has(playerId)) mTarget.remove(playerId);
     if (mPathfind.has(playerId)) mPathfind.remove(playerId);
@@ -149,10 +156,6 @@ public class ServerPlayerDeathSystem extends PassiveSystem {
     if (mTarget.has(playerId)) mTarget.remove(playerId);
     if (mSequence.has(playerId)) mSequence.remove(playerId);
     if (mRunning.has(playerId)) mRunning.remove(playerId);
-    if (mUnitStates.has(playerId) && mUnitStates.get(playerId).stateList != null) {
-      mUnitStates.get(playerId).stateList.clearAll();
-    }
-
     AttributesWrapper attributes = mAttributesWrapper.has(playerId)
         ? mAttributesWrapper.get(playerId) : null;
     if (attributes != null && attributes.attrs != null) {

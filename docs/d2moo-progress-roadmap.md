@@ -101,7 +101,7 @@
     连续原生怪物 ID，避免控制行造成索引偏移。
   - 五表统一投影报告现可稳定列出原始行列数、D2MOO schema 字段数、额外诊断列及每个
     缺列、重复列、非法 integer/bit 的源行和列；五张真实 1.10f 表均无 schema issue。
-- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 68%）**
+- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 76%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
     必须由 1.10f 数据及 D2MOO 行为驱动。
@@ -120,8 +120,14 @@
   - 战吼、变形、神殿等旧调用继续直接写 scalar 时，首次聚合读取会把变更反向导入该
     state 自己的原生 stat/layer，而不是继续遗留在单位总值中；后续刷新替换同一条目，
     state 到期或按来源移除即可完整撤销。专项回归覆盖旧写入、原生写入和混合兼容。
-  - 待补：将神殿、战吼、变形和其他 `UnitState` 专用 scalar 逐步迁入统一 stat source，按 `States.txt` 对齐
-    同 state 覆盖、不同来源/层堆叠，以及玩家/怪物/Boss 死亡清理和保存规则。
+  - 已对齐 D2Common `D2Common_10469` 死亡清理：玩家、普通怪物、Boss 分别读取
+    `plrstaydeath / monstaydeath / bossstaydeath`；D2StatList BASIC 永久被动无条件保留。
+    玩家复活不再错误 `clearAll()`，DOT 致死也不再在死亡订阅者处理后抹掉保留状态。
+  - `noclear` 与死亡规则分离，提供普通清除时的保留路径；真实 1.10f MPQ 门槛确认四组
+    mask 均非空。服务端执行权威清理，网络客户端不修改 snapshot-only 状态，本地模式
+    使用同一规则。移除状态层同时移除其 stat contribution，无幽灵 buff。
+  - 待补：将神殿、战吼、变形和其他 `UnitState` 专用 scalar 全部迁入统一 stat source，
+    再逐状态对齐刷新/更强值替换、诅咒互斥以及毒/燃烧/冰冷/冻结特殊覆盖规则。
 - [ ] **P0-3 Unit 生命周期（约 70%）**
   - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；仍需统一验证
     `Spawn -> InsertWorld -> TickUpdate -> DeathEvent -> RemoveWorld -> Destroy`，以及死亡时

@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import com.artemis.ComponentMapper;
+import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.Casting;
@@ -14,9 +15,11 @@ import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -47,10 +50,19 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Interactable> mInteractable;
+  protected ComponentMapper<UnitStates> mUnitStates;
 
   @Subscribe
   public void onDeath(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
+
+    Monster monster = mMonster.get(event.victim);
+    if (mUnitStates.has(event.victim) && mUnitStates.get(event.victim).stateList != null) {
+      boolean boss = monster != null && monster.monstats != null && monster.monstats.boss;
+      mUnitStates.get(event.victim).stateList.retainForDeath(
+          Riiablo.files != null ? Riiablo.files.States : null,
+          boss ? StateList.DeathUnitType.BOSS : StateList.DeathUnitType.MONSTER);
+    }
 
     // Local GameScreen still has DeathHandler, so this call is intentionally
     // idempotent: every native AI guards its DEAD state in kill().  D2GS uses

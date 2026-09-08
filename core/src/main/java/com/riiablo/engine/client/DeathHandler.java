@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.Gdx;
 
+import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.client.component.AnimationWrapper;
@@ -38,6 +39,7 @@ import com.riiablo.engine.server.component.CofTransforms;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -89,6 +91,21 @@ public class DeathHandler extends PassiveSystem {
   public void onDeathEvent(DeathEvent event) {
     log.traceEntry("onDeathEvent(killer: {}, victim: {})", event.killer, event.victim);
     final int victimId = event.victim;
+
+    if (mUnitStates.has(victimId) && !mUnitStates.get(victimId).snapshotOnly
+        && mUnitStates.get(victimId).stateList != null) {
+      StateList.DeathUnitType unitType = StateList.DeathUnitType.MONSTER;
+      if (mPlayer.has(victimId)) {
+        unitType = StateList.DeathUnitType.PLAYER;
+      } else if (mMonster.has(victimId)) {
+        Monster monster = mMonster.get(victimId);
+        if (monster.monstats != null && monster.monstats.boss) {
+          unitType = StateList.DeathUnitType.BOSS;
+        }
+      }
+      mUnitStates.get(victimId).stateList.retainForDeath(
+          Riiablo.files != null ? Riiablo.files.States : null, unitType);
+    }
     
     // Handle player death
     if (mPlayer.has(victimId)) {
@@ -483,10 +500,6 @@ public class DeathHandler extends PassiveSystem {
     if (mCasting.has(playerId)) mCasting.remove(playerId);
     if (mTarget.has(playerId)) mTarget.remove(playerId);
     if (mRunning.has(playerId)) mRunning.remove(playerId);
-    if (mUnitStates.has(playerId) && mUnitStates.get(playerId).stateList != null) {
-      mUnitStates.get(playerId).stateList.clearAll();
-    }
-    
     // Restore HP/MP to full
     if (mAttributesWrapper.has(playerId)) {
       com.riiablo.attributes.Attributes attrs = mAttributesWrapper.get(playerId).attrs;

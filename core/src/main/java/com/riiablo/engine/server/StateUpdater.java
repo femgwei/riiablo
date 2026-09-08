@@ -547,8 +547,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       log.debug("Entity {} died from state {} (damage={})", entityId,
           StateId.getName(stateId), appliedDamage);
       if (events != null) events.dispatch(DeathEvent.obtain(sourceEntityId, entityId));
-      // Prevent a dead entity from emitting the same death event every tick.
-      stateList.clearAll();
+      // Death subscribers apply the States.txt stay-death policy. Do not wipe
+      // the list here: hitpoints==0 already prevents duplicate DOT events and
+      // clearAll would incorrectly remove plr/mon/bossstaydeath entries.
     } else {
       log.trace("Entity {} takes {} damage from state {} (hp={})", entityId,
           appliedDamage, StateId.getName(stateId), hpAfter);

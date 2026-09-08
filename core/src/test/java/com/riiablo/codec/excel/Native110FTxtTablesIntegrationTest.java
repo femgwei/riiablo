@@ -114,6 +114,20 @@ class Native110FTxtTablesIntegrationTest {
     assertEquals(-1, states.source().columnIndex("canstack"),
         "1.14d-only state columns must not enter the 1.10f schema");
     assertEquals(-1, states.source().columnIndex("sunder-res-reduce"));
+    int playerStayDeath = 0;
+    int monsterStayDeath = 0;
+    int bossStayDeath = 0;
+    int noClear = 0;
+    for (States.Entry state : states) {
+      if (state.playerStayDeath) playerStayDeath++;
+      if (state.monsterStayDeath) monsterStayDeath++;
+      if (state.bossStayDeath) bossStayDeath++;
+      if (state.noClear) noClear++;
+    }
+    assertTrue(playerStayDeath > 0, "1.10f player stay-death mask must not be empty");
+    assertTrue(monsterStayDeath > 0, "1.10f monster stay-death mask must not be empty");
+    assertTrue(bossStayDeath > 0, "1.10f boss stay-death mask must not be empty");
+    assertTrue(noClear > 0, "1.10f no-clear mask must not be empty");
 
     NativeItemStatCost itemStats = NativeItemStatCost.parse(
         resolver.resolve(EXCEL + "ItemStatCost.txt").readBytes());

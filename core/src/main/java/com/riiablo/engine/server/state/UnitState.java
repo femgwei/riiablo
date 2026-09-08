@@ -49,6 +49,9 @@ public class UnitState {
   /** 技能ID（如果状态由技能产生） */
   public int skillId = -1;
 
+  /** D2StatList BASIC/PERMANENT category; not removed by death cleanup. */
+  public boolean basicStatList;
+
   /**
    * One native stat-list entry owned by this state layer. D2MOO stores these
    * entries on the allocated {@code D2StatListStrc}; the state/source/skill
@@ -241,6 +244,7 @@ public class UnitState {
     initialDuration = 0;
     sourceEntityId = -1;
     skillId = -1;
+    basicStatList = false;
 
     clearModifiers();
 
@@ -667,6 +671,7 @@ public class UnitState {
     this.initialDuration = other.initialDuration;
     this.sourceEntityId = other.sourceEntityId;
     this.skillId = other.skillId;
+    this.basicStatList = other.basicStatList;
     
     this.damageModifier = other.damageModifier;
     this.defenseModifier = other.defenseModifier;

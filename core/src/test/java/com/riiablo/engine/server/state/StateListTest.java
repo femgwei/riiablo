@@ -1,5 +1,7 @@
 package com.riiablo.engine.server.state;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
+import com.riiablo.codec.excel.States;
 
 public class StateListTest {
   @Test
@@ -107,5 +110,67 @@ public class StateListTest {
     state.damageModifier = 50;
     assertEquals(50, states.getTotalDamageModifier());
     assertEquals(50, state.getStatContributionValue(Stat.damagepercent));
+  }
+
+  @Test
+  public void deathRetentionUsesNativeUnitSpecificMasksAndRemovesStatDeltas() throws Exception {
+    States table = deathPolicyTable();
+
+    StateList player = policyStates();
+    assertEquals(4, player.retainForDeath(table, StateList.DeathUnitType.PLAYER));
+    assertEquals(1, player.size());
+    assertEquals(10, player.getTotalDamageModifier());
+
+    StateList monster = policyStates();
+    assertEquals(4, monster.retainForDeath(table, StateList.DeathUnitType.MONSTER));
+    assertEquals(2, monster.getState(StateId.POISON).stateId);
+    assertEquals(20, monster.getTotalDamageModifier());
+
+    StateList boss = policyStates();
+    assertEquals(4, boss.retainForDeath(table, StateList.DeathUnitType.BOSS));
+    assertEquals(3, boss.getState(StateId.RESISTFIRE).stateId);
+    assertEquals(30, boss.getTotalDamageModifier());
+  }
+
+  @Test
+  public void ordinaryClearRetainsOnlyNoClearMask() throws Exception {
+    StateList states = policyStates();
+
+    assertEquals(4, states.clearRemovable(deathPolicyTable()));
+    assertEquals(1, states.size());
+    assertEquals(StateId.RESISTCOLD, states.getState(StateId.RESISTCOLD).stateId);
+    assertEquals(40, states.getTotalDamageModifier());
+  }
+
+  @Test
+  public void deathRetentionAlwaysKeepsBasicPermanentLayer() throws Exception {
+    StateList states = new StateList(42);
+    UnitState passive = states.addStateLayer(StateId.IRONSKIN, 0, 4, 42, 205);
+    passive.basicStatList = true;
+    passive.damageModifier = 25;
+
+    assertEquals(0, states.retainForDeath(deathPolicyTable(), StateList.DeathUnitType.PLAYER));
+    assertEquals(25, states.getTotalDamageModifier());
+  }
+
+  private static StateList policyStates() {
+    StateList states = new StateList(42);
+    for (int stateId = 1; stateId <= 5; stateId++) {
+      UnitState state = states.addStateLayer(stateId, 100, 1, stateId, 10 + stateId);
+      state.setStatContribution(
+          Stat.damagepercent, 0, NativeStatResolver.Operation.ADD, stateId * 10);
+    }
+    return states;
+  }
+
+  private static States deathPolicyTable() throws Exception {
+    String txt = "state\tplrstaydeath\tmonstaydeath\tbossstaydeath\tnoclear\n"
+        + "none\t\t\t\t\n"
+        + "playerstay\t1\t\t\t\n"
+        + "monsterstay\t\t1\t\t\n"
+        + "bossstay\t\t\t1\t\n"
+        + "noclear\t\t\t\t1\n"
+        + "ordinary\t\t\t\t\n";
+    return States.parse(txt.getBytes(StandardCharsets.US_ASCII));
   }
 }

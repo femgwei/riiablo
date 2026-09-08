@@ -3,6 +3,7 @@ package com.riiablo.engine.server.state;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
+import com.riiablo.codec.excel.States;
 import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -41,6 +42,12 @@ public class StateList {
 
   /** 所属实体ID */
   private int entityId = -1;
+
+  public enum DeathUnitType {
+    PLAYER,
+    MONSTER,
+    BOSS
+  }
 
   //==========================================================================
   // 构造函数
@@ -215,6 +222,55 @@ public class StateList {
     states.clear();
     flags.clearAll();
     log.debug("清除实体 {} 的所有状态", entityId);
+  }
+
+  /**
+   * D2Common {@code D2Common_10469}: on death, free every runtime stat-list
+   * whose state is not marked to stay on this unit category. {@code noclear}
+   * is intentionally not consulted here; D2MOO death cleanup uses only the
+   * three stay-death masks.
+   *
+   * @return number of removed state-owned stat lists
+   */
+  public int retainForDeath(States table, DeathUnitType unitType) {
+    int removed = 0;
+    for (int i = states.size - 1; i >= 0; i--) {
+      UnitState state = states.get(i);
+      States.Entry entry = table != null ? table.get(state.stateId) : null;
+      if (state.basicStatList || (entry != null && staysOnDeath(entry, unitType))) continue;
+      int stateId = state.stateId;
+      states.removeIndex(i);
+      statePool.free(state);
+      refreshFlag(stateId);
+      removed++;
+    }
+    return removed;
+  }
+
+  /** Clears ordinary effects while preserving States.txt {@code noclear} entries. */
+  public int clearRemovable(States table) {
+    int removed = 0;
+    for (int i = states.size - 1; i >= 0; i--) {
+      UnitState state = states.get(i);
+      States.Entry entry = table != null ? table.get(state.stateId) : null;
+      if (state.basicStatList || (entry != null && entry.noClear)) continue;
+      int stateId = state.stateId;
+      states.removeIndex(i);
+      statePool.free(state);
+      refreshFlag(stateId);
+      removed++;
+    }
+    return removed;
+  }
+
+  private static boolean staysOnDeath(States.Entry entry, DeathUnitType unitType) {
+    if (entry == null || unitType == null) return false;
+    switch (unitType) {
+      case PLAYER: return entry.playerStayDeath;
+      case BOSS: return entry.bossStayDeath;
+      case MONSTER: return entry.monsterStayDeath;
+      default: return false;
+    }
   }
 
   /**
