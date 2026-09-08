@@ -3498,9 +3498,22 @@ public class D2GS extends ApplicationAdapter {
                 && com.riiablo.engine.server.item.GroundDropOwnership
                     .isPartyShareGold(groundEntity)
                 ? partyGoldRecipients(playerEntityId) : null;
+        java.util.HashMap<Integer, Long> recipientRevisions = null;
+        if (recipients != null && recipients.size > 1) {
+          recipientRevisions = new java.util.HashMap<>();
+          for (PartyGoldShareService.Recipient recipient : recipients) {
+            if (recipient != null) {
+              recipientRevisions.put(recipient.entityId,
+                  authoritativeItems.revision(recipient.entityId));
+            }
+          }
+        }
         if (recipients != null && recipients.size > 1) {
           outcome = authoritativeItems.pickupSharedGold(playerEntityId, playerPartyId,
               character, intent, groundItem, recipients);
+          if (outcome.success) {
+            broadcastPartyInventoryCorrections(recipients, playerEntityId, recipientRevisions);
+          }
         } else {
           outcome = authoritativeItems.pickup(playerEntityId, playerPartyId,
               character, intent, groundItem);
@@ -3569,6 +3582,38 @@ public class D2GS extends ApplicationAdapter {
         world.getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
     return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
         ? -1 : wrapper.zone.level.Id;
+  }
+
+  /** Sends a full inventory/revision correction to party members credited by a
+   * shared gold pickup. ItemMoveResult is intentionally directed to each
+   * recipient; broadcasting the picker snapshot would overwrite another
+   * client's inventory. */
+  private void broadcastPartyInventoryCorrections(
+      com.badlogic.gdx.utils.Array<PartyGoldShareService.Recipient> recipients,
+      int pickerEntityId, java.util.Map<Integer, Long> before) {
+    if (recipients == null || before == null) return;
+    for (PartyGoldShareService.Recipient recipient : recipients) {
+      if (recipient == null || recipient.entityId == pickerEntityId) continue;
+      long previous = before.containsKey(recipient.entityId)
+          ? before.get(recipient.entityId) : authoritativeItems.revision(recipient.entityId);
+      long current = authoritativeItems.revision(recipient.entityId);
+      if (current == previous) continue;
+      int connectionId = connectionIdForEntity(recipient.entityId);
+      if (connectionId < 0) continue;
+      ItemMoveIntent correction = new ItemMoveIntent(0L, current,
+          ItemMoveOperation.GROUND_TO_CURSOR, -1, -1, -1, -1, -1, -1, false);
+      sendItemMoveResult(connectionId, correction, true, ItemMoveFailure.NONE,
+          current, false, false);
+      Gdx.app.log(TAG, "[ITEM_PICKUP] phase=party_inventory_correction connection="
+          + connectionId + " player=" + recipient.entityId + " revision=" + current);
+    }
+  }
+
+  private int connectionIdForEntity(int entityId) {
+    for (IntIntMap.Entry entry : player.entries()) {
+      if (entry.value == entityId) return entry.key;
+    }
+    return -1;
   }
 
   private void sendItemMoveResult(int clientId, ItemMoveIntent intent, boolean success,

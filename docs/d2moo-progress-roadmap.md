@@ -417,6 +417,13 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
     使用删除快照，避免第二客户端持有幽灵掉落。
   - 新增 `GroundDropOwnershipMetadataTest`，并通过 `GoldPickupServiceTest`、D2GS 编译。
 
+- [x] ~~完成队伍金币拾取后的多人背包修正广播~~
+  - `PartyGoldShareService` 为队友增加背包 revision 后，D2GS 现在按实际被分配的
+    连接逐一发送完整 `ItemMoveResult` 快照；不会把拾取者的背包快照错误广播给其他
+    客户端，也不会污染幂等请求缓存。
+  - 部分金币拾取仍保留地面实体并依赖 `EntitySync` 数量增量；全部拾取继续由删除
+    快照清理双方客户端的地面实体。
+
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 
 - [x] ~~完成德鲁伊召唤物所有权与生命周期~~
