@@ -5,6 +5,8 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.systems.IteratingSystem;
 import com.artemis.utils.IntBag;
+import com.badlogic.gdx.ai.utils.Collision;
+import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
@@ -50,6 +52,7 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import com.riiablo.map.Map;
+import com.riiablo.map.DT1;
 
 /**
  * 导弹碰撞和伤害系统
@@ -92,6 +95,9 @@ public class MissileCollisionSystem extends IteratingSystem {
   
   private final Vector2 tmpVec = new Vector2();
   private final Vector2 lastPos = new Vector2();
+  private final Ray<Vector2> wallRay = new Ray<>(new Vector2(), new Vector2());
+  private final Collision<Vector2> wallCollision =
+      new Collision<>(new Vector2(), new Vector2());
   private volatile int mercenaryCollisionCount;
   private volatile int mercenaryDamageCount;
   private volatile int mercenaryLastDamageTarget = Engine.INVALID_ENTITY;
@@ -200,7 +206,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       moveDistance = lastPos.dst(position.position);
     } else {
       moveDistance = velocity.velocity.len() * world.delta;
-      position.position.add(velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
+      Vector2 next = tmpVec.set(position.position).add(
+          velocity.velocity.x * world.delta, velocity.velocity.y * world.delta);
+      if (checkNativeMapCollision(entityId, missile, position.position, next)) return;
+      position.position.set(next);
     }
 
     if (!updateNativeRoom(entityId, missile, position)) return;
@@ -246,6 +255,17 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
     
+    // Missiles.txt.Collision is authoritative. Non-colliding visual/control
+    // missiles still advance lifetime and room, but never enter combat. Some
+    // 1.10f rows leave Collision=0 while providing a server hit function; in
+    // that case the hit function is the native indication that collision is
+    // required.
+    if (!hasNativeCollision(missile)) {
+      if (missile.nativeLifetimeFrames > 0
+          && missile.nativeFrame >= missile.nativeLifetimeFrames) world.delete(entityId);
+      return;
+    }
+
     // 碰撞检测：检查是否与玩家或怪物碰撞
     checkCollisions(entityId, missile, position, lastPos);
     // D2MOO still advances Range for stationary basic missiles. Riiablo's
@@ -270,6 +290,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       world.delete(entityId);
       return;
     }
+
     position.position.set(mPosition.get(infectedId).position);
     controller.remainingFrames -= Math.max(1, elapsedFrames);
     if (controller.remainingFrames <= 0) {
@@ -449,6 +470,64 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     return true;
   }
+
+  /**
+   * D2MOO's {@code MISSMODE_HandleMissileCollision} tests the movement path
+   * against the collision mask selected by {@code CollideType}.  The old
+   * implementation only checked units, allowing arrows and fireballs to pass
+   * through missile barriers and walls.  Keep this check before unit broad
+   * phase so a barrier hit cannot also damage a unit behind it.
+   */
+  private boolean checkNativeMapCollision(int entityId, Missile missile,
+      Vector2 from, Vector2 to) {
+    if (missile == null || missile.missile == null || from == null || to == null
+        || from.epsilonEquals(to, 0.0001f)) return false;
+    MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    Map map = wrapper != null ? wrapper.map : null;
+    if (map == null || map.getZone(from) == null) return false;
+
+    int mask = nativeMapCollisionMask(missile.missile.CollideType);
+    if (mask == 0) return false;
+    wallRay.set(from, to);
+    if (!map.castRay(wallRay, mask, 0, wallCollision)) return false;
+
+    Vector2 impact = wallCollision.point;
+    if (impact != null && !impact.isZero(0.0001f)) {
+      // Raycast points are already in world subtiles.  Keep the missile on
+      // the impact edge for the explosion callback and diagnostics.
+      mPosition.get(entityId).position.set(impact);
+    }
+    log.debug("[MISSILE_MAP_HIT] missileId={} missile={} owner={} collideType={} "
+            + "mask=0x{} from=({}, {}) to=({}, {}) impact=({}, {}) canDestroy={} "
+            + "collideKill={}",
+        entityId, missile.missile.Missile, missile.ownerId,
+        missile.missile.CollideType, Integer.toHexString(mask), from.x, from.y,
+        to.x, to.y, impact != null ? impact.x : to.x, impact != null ? impact.y : to.y,
+        missile.missile.CanDestroy, missile.missile.CollideKill);
+    spawnNativeMapExplosion(missile, impact != null && !impact.isZero(0.0001f) ? impact : to);
+    // Native SrvDmgHitHandler is invoked with a null target for barrier/wall
+    // collisions.  It consumes the travelling missile even when CollideKill
+    // is clear; CollideKill controls unit-hit persistence, not map barriers.
+    world.delete(entityId);
+    return true;
+  }
+
+  /** Maps Missiles.txt CollideType to the low DT1 collision bits. */
+  static int nativeMapCollisionMask(int collideType) {
+    switch (collideType) {
+      case 1: // player + missile barrier
+      case 2: // monster + missile barrier
+      case 3: // player/monster + missile barrier
+      case 5: // monster + missile barrier
+      case 6: // missile barrier only
+        return DT1.Tile.FLAG_BLOCK_JUMP;
+      case 8: // player/monster + missile barrier + wall
+        return DT1.Tile.FLAG_BLOCK_JUMP | DT1.Tile.FLAG_BLOCK_WALK;
+      default:
+        // 0/4 are no-collision modes; 7 collides with other missiles only.
+        return 0;
+    }
+  }
   
   /**
    * 检查碰撞
@@ -511,7 +590,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         }
       }
     }
-    if (areaEffect && !missile.persistent) world.delete(missileId);
+    if (areaEffect && !missile.persistent && collidesKill(missile)) world.delete(missileId);
   }
   
   /**
@@ -737,16 +816,38 @@ public class MissileCollisionSystem extends IteratingSystem {
       // handled by the normal death path above.
       if (missile.attached) return true;
       if (damageHit && missile.pierceEnabled && missile.pierceChance > 0
-          && com.badlogic.gdx.math.MathUtils.random(99) < missile.pierceChance) {
+          && rollPierce(missile, missile.pierceChance)) {
         log.info("[MISSILE_PIERCE] phase=continue missileId={} target={} chance={} hitCount={}",
             missileId, targetId, missile.pierceChance, missile.hitTargets.size);
         return true;
       }
-      if (!missile.persistent) world.delete(missileId);
+      if (!missile.persistent && collidesKill(missile)) world.delete(missileId);
       return true;
     }
     
     return false;
+  }
+
+  static boolean hasNativeCollision(Missile missile) {
+    // Synthetic/test missiles without a table row retain the legacy collision
+    // behavior; real projectiles are strictly governed by Missiles.txt.
+    if (missile == null) return false;
+    if (missile.missile == null || missile.missile.Collision) return true;
+    Missiles.Entry row = missile.missile;
+    return row.pSrvHitFunc != 0 || row.pSrvDmgFunc != 0 || row.pSrvDoFunc != 0
+        || row.Explosion != 0 || row.AlwaysExplode;
+  }
+
+  static boolean collidesKill(Missile missile) {
+    return missile == null || missile.missile == null || missile.missile.CollideKill;
+  }
+
+  static boolean rollPierce(Missile missile, int chance) {
+    if (chance >= 100) return true;
+    NativeRng rng = new NativeRng(missile.rngState);
+    boolean result = rng.roll(chance, 100);
+    missile.rngState = rng.state();
+    return result;
   }
 
   private static StateList.WeaponMasteryBonus missileMastery(Missile missile) {
@@ -944,6 +1045,44 @@ public class MissileCollisionSystem extends IteratingSystem {
           source.ownerId, source.skillId, source.missile.Missile, childId, name,
           nativeAreaRadius(child), child.freezesTarget);
     }
+  }
+
+  /**
+   * Resolves a native map barrier hit through the row's explosion wiring.
+   * D2MOO uses the same SrvDmgHitHandler path for a null target, which may
+   * create ExplosionMissile or one of the HitSubMissile rows.  Keep this
+   * generic so elemental projectiles do not depend on an Amazon-only handler.
+   */
+  private void spawnNativeMapExplosion(Missile source, Vector2 origin) {
+    if (factory == null || source == null || source.missile == null || origin == null) return;
+    String name = source.missile.ExplosionMissile;
+    if ((name == null || name.isEmpty()) && source.missile.Explosion != 0
+        && source.missile.HitSubMissile != null
+        && source.missile.HitSubMissile.length > 0) {
+      name = source.missile.HitSubMissile[0];
+    }
+    if (name == null || name.isEmpty()) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    if (row == null) {
+      log.debug("[MISSILE_MAP_HIT] explosion_missing missile={} explosion={}",
+          source.missile.Missile, name);
+      return;
+    }
+    int childId = factory.createMissile(row, Vector2.X, origin, source.ownerId);
+    if (childId < 0 || !mMissile.has(childId)) return;
+    Missile child = mMissile.get(childId);
+    child.skillId = source.skillId;
+    child.damageLevel = Math.max(1, source.damageLevel);
+    child.damageMultiplier = source.damageMultiplier;
+    if (source.damageSnapshot) {
+      for (StatRef stat : source.damage.base()) {
+        child.damage.base().putEncoded(stat.id(), stat.encodedParams(), stat.encodedValues());
+      }
+      child.damage.reset();
+      child.damageSnapshot = true;
+    }
+    log.debug("[MISSILE_MAP_HIT] explosion_spawn source={} child={} missile={} pos=({}, {})",
+        source.missile.Missile, childId, name, origin.x, origin.y);
   }
 
   private static boolean isNativeAreaEffect(Missile missile) {

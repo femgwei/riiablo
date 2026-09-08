@@ -842,6 +842,7 @@ public class ServerEntityFactory extends EntityFactory {
     int id = super.createEntity(Class.Type.MIS, missile.Missile);
     com.riiablo.engine.server.component.Missile missileComponent = mMissile.create(id);
     missileComponent.set(missile, position, missile.Range).setOwner(ownerId);
+    missileComponent.rngState = NativeRng.forUnit(Riiablo.gameSeed, id).state();
     // Missiles.txt.Pierce is an intrinsic native flag (for example Guided
     // Arrow variants).  Skill-specific handlers may raise this chance from
     // the owner's Pierce stat, but the row flag must be honored for every

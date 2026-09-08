@@ -20,6 +20,8 @@ public class Missile extends PooledComponent {
   
   /** 导弹拥有者实体 ID（用于伤害计算和敌人判断） */
   public int ownerId = -1;
+  /** Per-projectile native RNG state (pierce/branch rolls never use global RNG). */
+  public int rngState;
 
   /** Current native RoomEx id, updated as the missile crosses room borders. */
   public int roomId = -1;
@@ -132,6 +134,7 @@ public class Missile extends PooledComponent {
     missileDescriptor = null;
     start.setZero();
     ownerId = -1;
+    rngState = 0;
     roomId = -1;
     authoritative = true;
     distanceTraveled = 0f;
