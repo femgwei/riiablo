@@ -234,6 +234,8 @@
     EOF/数组异常；下一步继续覆盖真实 1.10f 存档中的装备、佣兵和尸体字段。
   - `NewCharacterStartItemsTest` 已改用完整读取路径，逐职业验证起始装备、位置、耐久、
     起始技能词缀和库存占用均能 round-trip。
+  - 同一测试补充佣兵头字段（flags/seed/name/type/xp）及尸体物品 section 往返，确保
+    扩展版 `jf`/`JM` 段不会因空佣兵装备或尸体装备而错位。
 
 强制踩坑回归门槛：
 

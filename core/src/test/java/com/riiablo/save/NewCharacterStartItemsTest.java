@@ -111,6 +111,32 @@ class NewCharacterStartItemsTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void mercenaryHeaderAndCorpseSectionsRoundTrip() {
+    CharData character = newCharacter(CharacterClass.AMAZON);
+    D2S encoded = D2SWriter96.createD2S(character);
+    encoded.merc.flags = 0x1234;
+    encoded.merc.seed = 0x5678;
+    encoded.merc.name = (short) 0x0102;
+    encoded.merc.type = (short) 0x0304;
+    encoded.merc.experience = 987654L;
+    encoded.merc.items = new D2S.ItemData();
+    encoded.merc.items.items = new Array<>();
+    encoded.corpse.items.add(encoded.items.items.first());
+
+    byte[] bytes = new D2SWriter96().writeD2S(encoded);
+    D2S decoded = D2SReader.INSTANCE.readComplete(bytes, new StatListReader(), new ItemReader());
+
+    assertEquals(encoded.merc.flags, decoded.merc.flags);
+    assertEquals(encoded.merc.seed, decoded.merc.seed);
+    assertEquals(encoded.merc.name, decoded.merc.name);
+    assertEquals(encoded.merc.type, decoded.merc.type);
+    assertEquals(encoded.merc.experience, decoded.merc.experience);
+    assertEquals(0, decoded.merc.items.items.size);
+    assertEquals(1, decoded.corpse.items.size);
+    assertEquals(encoded.corpse.items.first().code, decoded.corpse.items.first().code);
+  }
+
   private static CharData newCharacter(CharacterClass clazz) {
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, "StartHero", (byte) clazz.id);
