@@ -23,6 +23,27 @@ import org.junit.jupiter.api.Test;
 /** Regression tests for the authoritative death boundary and reference cleanup. */
 class UnitLifecycleSystemTest {
   @Test
+  void spawnAdvancesThroughInsertedToActiveOnFixedTicks() {
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new UnitLifecycleSystem())
+        .build());
+    try {
+      int entity = world.create();
+      UnitLifecycle lifecycle = world.getMapper(UnitLifecycle.class).create(entity).reset();
+      assertEquals(UnitLifecycle.Phase.SPAWN, lifecycle.phase);
+      // Each fixed tick advances one lifecycle phase.
+      world.process();
+      assertEquals(UnitLifecycle.Phase.INSERTED,
+          world.getMapper(UnitLifecycle.class).get(entity).phase);
+      world.process();
+      assertEquals(UnitLifecycle.Phase.ACTIVE,
+          world.getMapper(UnitLifecycle.class).get(entity).phase);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void ownerDeathCleansOwnedMissilesPetsTargetsAndSourceStatesExactlyOnce() {
     EventSystem events = new EventSystem();
     World world = new World(new WorldConfigurationBuilder()

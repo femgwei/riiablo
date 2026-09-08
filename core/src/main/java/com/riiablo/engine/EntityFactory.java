@@ -13,6 +13,7 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.DS1ObjectWrapper;
 import com.riiablo.engine.server.component.Flags;
 import com.riiablo.engine.server.component.PathWrapper;
+import com.riiablo.engine.server.component.UnitLifecycle;
 import com.riiablo.item.Item;
 import com.riiablo.map.DS1;
 import com.riiablo.map.Map;
@@ -30,6 +31,8 @@ public abstract class EntityFactory extends PassiveSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<DS1ObjectWrapper> mDS1ObjectWrapper;
   protected ComponentMapper<PathWrapper> mPathWrapper;
+  /** Lifecycle marker shared by server and client-side entity factories. */
+  protected ComponentMapper<UnitLifecycle> mUnitLifecycle;
 
   @Wire(name = "map")
   protected Map map;
@@ -41,6 +44,10 @@ public abstract class EntityFactory extends PassiveSystem {
     mClass.create(id).type = type;
     mClassname.create(id).classname = classname;
     mFlags.create(id).flags = 0;
+    // Creation is an explicit native lifecycle boundary.  The authoritative
+    // lifecycle system advances this marker to INSERTED and ACTIVE on the
+    // next fixed simulation tick after all components have been attached.
+    if (mUnitLifecycle != null) mUnitLifecycle.create(id).reset();
     return id;
   }
 

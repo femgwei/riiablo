@@ -140,9 +140,12 @@
     同组不同诅咒按强度互斥，移除强来源后自动恢复仍有效的次强层；新增可驱散诅咒掩码路径。
   - 待补：将神殿、战吼、变形和其他 `UnitState` 专用 scalar 全部迁入统一 stat source，
     并继续对照每个具体诅咒技能的 stat/value 公式。
-- [ ] **P0-3 Unit 生命周期（约 78%）**
+- [ ] **P0-3 Unit 生命周期（约 84%）**
   - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；新增 `UnitLifecycle` 阶段标记和
     `UnitLifecycleSystem`，统一处理 `DeathEvent` 幂等边界。
+  - `EntityFactory` 创建实体时统一写入 `SPAWN`；`UnitLifecycleSystem` 改为权威
+    `BaseSystem`，在固定 tick 依次推进 `SPAWN -> INSERTED -> ACTIVE`，避免实体在
+    组件尚未完成装配时被行为系统提前消费。新增阶段推进回归测试。
   - 死亡时清理 owner/damageOwner/attached 导弹、召唤物、Target 引用和来源 state 层；
     导弹等无尸体实体在死亡边界删除，玩家/怪物交由专用尸体系统保留。
   - `GameScreen` 与 D2GS 均注册该系统，新增 `UnitLifecycleSystemTest` 覆盖重复死亡事件、
