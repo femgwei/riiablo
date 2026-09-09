@@ -109,7 +109,7 @@ public class Skeleton extends AI {
 
     // Find target
     float[] outDistance = { Float.MAX_VALUE };
-    targetId = findTargetWithContinuity(targetId, outDistance);
+    targetId = findSummonTarget(targetId, outDistance, 20f);
 
     if (targetId == Engine.INVALID_ENTITY) {
       if (followSummonOwner(6f)) {

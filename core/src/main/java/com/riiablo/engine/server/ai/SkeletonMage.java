@@ -100,7 +100,7 @@ public class SkeletonMage extends AI {
     time -= delta;
 
     float[] outDist = { Float.MAX_VALUE };
-    targetId = findTargetWithContinuity(targetId, outDist);
+    targetId = findSummonTarget(targetId, outDist, 20f);
     float targetDistance = outDist[0];
 
     if (time > 0) {

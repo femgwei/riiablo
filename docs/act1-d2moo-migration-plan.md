@@ -218,4 +218,7 @@ waypoints, caves, quest rewards and collision boundaries.
 - [x] ~~Necromancer summon allegiance filtering and target continuity (phase 1)~~
   - Player skeletons now target killable evil monsters instead of scanning players; friendly
     pets, owners, NPCs and corpses are excluded, and valid targets remain locked between thinks.
-- [ ] Next: owner-target inheritance/PvP summon relations and remaining cross-class skill validation.
+- [x] ~~Owner-target inheritance and PvP summon ownership relations (phase 1)~~
+  - Summons inherit the owner's active cast/chase target within the native pet range; PvP checks
+    resolve players, mercenaries and summons to their authoritative player owner.
+- [ ] Next: summon regroup/teleport edge cases and remaining cross-class skill validation.

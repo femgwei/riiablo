@@ -40,6 +40,7 @@ import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Size;
@@ -50,6 +51,8 @@ import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
@@ -106,6 +109,7 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<NativeAiTargetOverride> mNativeAiTargetOverride;
   protected ComponentMapper<Corpse> mCorpse;
+  protected ComponentMapper<Target> mTarget;
 
   protected CofManager cofs;
   protected Pathfinder pathfinder;
@@ -115,6 +119,9 @@ public abstract class AI implements Interactable.Interactor {
 
   @Wire(name = "factory")
   protected EntityFactory factory;
+
+  @Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
 
   private static final Vector2 tmpVec2 = new Vector2();
 
@@ -679,6 +686,46 @@ public abstract class AI implements Interactable.Interactor {
     return findNearestTargetWithAidist(outDistance);
   }
 
+  /**
+   * Player pets first preserve a valid target, then inherit the owner's
+   * current unit target, and finally fall back to their own nearest scan.
+   * This projects D2MOO's owner potential-target branch used by pet AI.
+   */
+  protected int findSummonTarget(
+      int previousTargetId, float[] outDistance, float ownerTargetDistance) {
+    if (previousTargetId != Engine.INVALID_ENTITY && isValidEnemyTarget(previousTargetId)) {
+      outDistance[0] = mPosition.get(entityId).position.dst(
+          mPosition.get(previousTargetId).position);
+      return previousTargetId;
+    }
+    int ownerTarget = summonOwnerTarget();
+    if (ownerTarget != Engine.INVALID_ENTITY && isValidEnemyTarget(ownerTarget)) {
+      float distance = mPosition.get(entityId).position.dst(mPosition.get(ownerTarget).position);
+      if (distance <= Math.max(1f, ownerTargetDistance)) {
+        outDistance[0] = distance;
+        return ownerTarget;
+      }
+    }
+    return findNearestTargetWithAidist(outDistance);
+  }
+
+  private int summonOwnerTarget() {
+    if (!mSummonedPet.has(entityId)) return Engine.INVALID_ENTITY;
+    SummonedPet pet = mSummonedPet.get(entityId);
+    if (pet == null || pet.ownerId == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;
+    int ownerId = pet.ownerId;
+    if (mCasting.has(ownerId)) {
+      int targetId = mCasting.get(ownerId).targetId;
+      if (targetId != Engine.INVALID_ENTITY) return targetId;
+    }
+    if (mTarget.has(ownerId)) {
+      int targetId = mTarget.get(ownerId).target;
+      if (targetId != Engine.INVALID_ENTITY) return targetId;
+    }
+    if (mPathfind.has(ownerId)) return mPathfind.get(ownerId).targetEntityId;
+    return Engine.INVALID_ENTITY;
+  }
+
   /** Native player-pet leash: non-passive summons regroup when no hostile is visible. */
   protected boolean followSummonOwner(float stopDistance) {
     if (!mSummonedPet.has(entityId) || !mPosition.has(entityId)) return false;
@@ -765,7 +812,11 @@ public abstract class AI implements Interactable.Interactor {
         && candidate.monstats != null && candidate.monstats.Align == 0
         && candidate.monstats.killable && !candidate.monstats.npc
         && !candidate.monstats.inTown;
-    if (sourcePet != null ? !targetHostileMonster : !targetFriendly) return false;
+    boolean targetHostilePlayerUnit = sourcePet != null && targetFriendly
+        && arePlayerOwnersHostile(sourcePet.ownerId, alignmentOwner(targetId));
+    if (sourcePet != null
+        ? !(targetHostileMonster || targetHostilePlayerUnit)
+        : !targetFriendly) return false;
     if (mMapWrapper.has(targetId) && mMapWrapper.get(targetId).zone != null
         && mMapWrapper.get(targetId).zone.isTown()) {
       return false;
@@ -816,6 +867,18 @@ public abstract class AI implements Interactable.Interactor {
       }
     }
     return true;
+  }
+
+  private boolean arePlayerOwnersHostile(int sourceOwner, int targetOwner) {
+    return sourceOwner != Engine.INVALID_ENTITY && targetOwner != Engine.INVALID_ENTITY
+        && PvpCombatRules.canTarget(
+            partyManager, sourceOwner, targetOwner, true, true);
+  }
+
+  protected int alignmentOwner(int targetId) {
+    if (mMercenary.has(targetId)) return mMercenary.get(targetId).ownerId;
+    if (mSummonedPet.has(targetId)) return mSummonedPet.get(targetId).ownerId;
+    return targetId;
   }
 
   protected boolean isValidOverrideMonsterTarget(int targetId) {

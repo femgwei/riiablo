@@ -1674,7 +1674,9 @@ public class MissileCollisionSystem extends IteratingSystem {
     boolean targetMonster = mMonster.has(entityId2);
     if (!sourcePlayer && !sourceMonster) return false;
     if (!targetPlayer && !targetMonster) return false;
-    boolean enemy = PvpCombatRules.canDamage(partyManager, entityId1, entityId2,
+    int relationSource = sourcePlayer ? alignmentOwner(entityId1) : entityId1;
+    int relationTarget = targetPlayer ? alignmentOwner(entityId2) : entityId2;
+    boolean enemy = PvpCombatRules.canDamage(partyManager, relationSource, relationTarget,
         sourcePlayer, targetPlayer);
     if (sourcePlayer && targetPlayer && !enemy) {
       log.info("[PVP] phase=missile_reject source={} target={} reason=not_hostile",

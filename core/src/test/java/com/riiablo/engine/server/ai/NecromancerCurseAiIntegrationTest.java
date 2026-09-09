@@ -29,14 +29,55 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.SummonedPet;
+import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.save.CharData;
 import org.junit.jupiter.api.Test;
 
 /** Authoritative AI target behavior for D2Game's Dim Vision/Attract/Confuse modes. */
 class NecromancerCurseAiIntegrationTest extends RiiabloTest {
+  @Test
+  void summonInheritsOwnerTargetAndUsesOwnerPvpRelation() {
+    Fixture fixture = new Fixture();
+    try {
+      int owner = fixture.player(0, 0);
+      int summon = fixture.monster(1, 0);
+      fixture.world.getMapper(SummonedPet.class).create(summon)
+          .set(owner, "skeleton", 70, 1, false, 0);
+      int closerMonster = fixture.monster(2, 0);
+      int enemyPlayer = fixture.player(8, 0);
+      fixture.world.getMapper(Casting.class).create(owner)
+          .set(0, enemyPlayer, fixture.world.getMapper(Position.class)
+              .get(enemyPlayer).position);
+      fixture.parties.declareHostility(owner, enemyPlayer);
+
+      ProbeAI ai = fixture.ai(summon);
+      assertEquals(enemyPlayer, ai.summonTarget(Engine.INVALID_ENTITY, 20f),
+          "a hostile owner target must take priority over a nearer ambient monster");
+
+      int enemyPet = fixture.monster(7, 0);
+      fixture.world.getMapper(SummonedPet.class).create(enemyPet)
+          .set(enemyPlayer, "skeleton", 70, 1, false, 0);
+      fixture.world.getMapper(Casting.class).get(owner).targetId = enemyPet;
+      assertEquals(enemyPet, ai.summonTarget(Engine.INVALID_ENTITY, 20f),
+          "the hostile relation must resolve through an enemy pet's player owner");
+
+      fixture.world.getMapper(Casting.class).remove(owner);
+      fixture.world.getMapper(Target.class).create(owner).target = enemyPlayer;
+      assertEquals(enemyPlayer, ai.summonTarget(Engine.INVALID_ENTITY, 20f),
+          "owner chase targets must remain inheritable before the attack keyframe");
+
+      fixture.parties.removeHostility(owner, enemyPlayer);
+      assertEquals(closerMonster, ai.summonTarget(Engine.INVALID_ENTITY, 20f),
+          "removing hostility must immediately stop the pet targeting that player");
+    } finally {
+      fixture.close();
+    }
+  }
+
   @Test
   void playerSummonTargetsHostileMonsterAndKeepsValidTarget() {
     Fixture fixture = new Fixture();
@@ -192,6 +233,7 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
   private static final class Fixture {
     final World previous = Riiablo.engine;
     final World world = new World(new WorldConfigurationBuilder().build());
+    final PartyManager parties = new PartyManager();
 
     Fixture() {
       Riiablo.engine = world;
@@ -199,7 +241,7 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
 
     ProbeAI ai(int entityId) {
       ProbeAI ai = new ProbeAI(entityId);
-      ai.wire(world);
+      ai.wire(world, parties);
       ai.initialize();
       return ai;
     }
@@ -256,7 +298,7 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
 
   private static final class ProbeAI extends AI {
     ProbeAI(int entityId) { super(entityId); }
-    void wire(World world) {
+    void wire(World world, PartyManager parties) {
       mMonster = world.getMapper(Monster.class);
       mPlayer = world.getMapper(Player.class);
       mPosition = world.getMapper(Position.class);
@@ -281,12 +323,17 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
       mUnitStates = world.getMapper(UnitStates.class);
       mNativeAiTargetOverride = world.getMapper(NativeAiTargetOverride.class);
       mCorpse = world.getMapper(Corpse.class);
+      mTarget = world.getMapper(Target.class);
+      partyManager = parties;
       pathfinder = new NoopPathfinder();
     }
     boolean tickSpecial() { return updateSpecialAiControl(1f / 25f); }
     int nearest() { return findNearestTargetWithAidist(new float[1]); }
     int continuing(int targetId) {
       return findTargetWithContinuity(targetId, new float[] {Float.MAX_VALUE});
+    }
+    int summonTarget(int targetId, float ownerRange) {
+      return findSummonTarget(targetId, new float[] {Float.MAX_VALUE}, ownerRange);
     }
     boolean validOverride(int targetId) { return isValidOverrideMonsterTarget(targetId); }
   }

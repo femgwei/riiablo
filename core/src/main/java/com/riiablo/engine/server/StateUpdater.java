@@ -635,8 +635,16 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private boolean isHostile(int sourceId, int targetId) {
     if (mMonster.has(targetId) && !mMercenary.has(targetId)
         && !mSummonedPet.has(targetId)) return isPlayerAligned(sourceId);
-    return PvpCombatRules.canDamage(partyManager, sourceId, targetId,
+    return PvpCombatRules.canDamage(partyManager,
+        isPlayerAligned(sourceId) ? playerAlignmentOwner(sourceId) : sourceId,
+        isPlayerAligned(targetId) ? playerAlignmentOwner(targetId) : targetId,
         isPlayerAligned(sourceId), isPlayerAligned(targetId));
+  }
+
+  private int playerAlignmentOwner(int entityId) {
+    if (mMercenary.has(entityId)) return mMercenary.get(entityId).ownerId;
+    if (mSummonedPet.has(entityId)) return mSummonedPet.get(entityId).ownerId;
+    return entityId;
   }
 
   private void drainBladeShieldDurability(int sourceId, int targetId) {
@@ -657,8 +665,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void applyDamageOverTime(int entityId, int sourceEntityId, float damage,
       StateList stateList, int stateId) {
     if (damage <= 0 || !mAttributesWrapper.has(entityId)) return;
-    if (mPlayer.has(sourceEntityId) && mPlayer.has(entityId)
-        && !PvpCombatRules.canDamage(partyManager, sourceEntityId, entityId, true, true)) {
+    if (isPlayerAligned(sourceEntityId) && isPlayerAligned(entityId)
+        && !PvpCombatRules.canDamage(partyManager,
+            playerAlignmentOwner(sourceEntityId), playerAlignmentOwner(entityId), true, true)) {
       // Hostility may be removed while poison/open-wounds is active.  Native
       // friendly checks must still prevent later DOT ticks from bypassing the
       // current authoritative relation.

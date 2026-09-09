@@ -147,18 +147,12 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     Player player = mPlayer.get(event.entityId);
-    if (event.targetId >= 0 && mPlayer.has(event.targetId)
-        && !PvpCombatRules.canTarget(partyManager, event.entityId, event.targetId,
-            true, true)) {
-      reject(event, 8, "target player is not hostile");
+    if (event.targetId >= 0 && (mPlayer.has(event.targetId)
+        || mMercenary.has(event.targetId) || mSummonedPet.has(event.targetId))
+        && !PvpCombatRules.canTarget(partyManager, event.entityId,
+            playerAlignmentOwner(event.targetId), true, true)) {
+      reject(event, 8, "target player or owned unit is not hostile");
       log.info("[PVP] phase=skill_reject source={} target={} skill={} reason=not_hostile",
-          event.entityId, event.targetId, event.skillId);
-      return;
-    }
-    if (event.targetId >= 0
-        && (mMercenary.has(event.targetId) || mSummonedPet.has(event.targetId))) {
-      reject(event, 8, "target is a friendly owned unit");
-      log.info("[SKILL_CAST] phase=reject source={} target={} skill={} reason=friendly_pet",
           event.entityId, event.targetId, event.skillId);
       return;
     }
@@ -1729,10 +1723,19 @@ public class ServerSkillSystem extends PassiveSystem {
     if (sourcePlayer) {
       if (mMonster.has(candidate) && !mMercenary.has(candidate)
           && !mSummonedPet.has(candidate)) return true;
-      return mPlayer.has(candidate) && PvpCombatRules.canTarget(
-          partyManager, sourceId, candidate, true, true);
+      boolean targetPlayerAligned = mPlayer.has(candidate) || mMercenary.has(candidate)
+          || mSummonedPet.has(candidate);
+      return targetPlayerAligned && PvpCombatRules.canTarget(
+          partyManager, playerAlignmentOwner(sourceId), playerAlignmentOwner(candidate),
+          true, true);
     }
     return mPlayer.has(candidate);
+  }
+
+  private int playerAlignmentOwner(int entityId) {
+    if (mMercenary.has(entityId)) return mMercenary.get(entityId).ownerId;
+    if (mSummonedPet.has(entityId)) return mSummonedPet.get(entityId).ownerId;
+    return entityId;
   }
 
   private Vector2 resolveTargetPoint(SkillDoEvent event, Vector2 fallback, Vector2 out) {

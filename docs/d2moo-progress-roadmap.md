@@ -1034,6 +1034,14 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     跨区或超出 `aiDist` 后才重新选择最近目标，减少多人环境中来回切换目标。
   - ECS 回归覆盖敌我筛选、有效目标保持和死亡目标替换。
 
+- [x] ~~完成召唤物主人目标继承与 PvP 所有者关系第一阶段~~
+  - 对齐 D2MOO pet AI 的 owner potential-target 分支：召唤物在没有有效锁定目标时，
+    优先继承主人当前施法、攻击或追击的单位目标，20 格外再回退自身最近目标搜索。
+  - 玩家、佣兵和召唤物的 PvP 判定统一解析到玩家所有者的 `PLAYERLIST` 敌对关系；敌对
+    玩家及其宠物可进入 AI、近战、技能、导弹和 DOT 权威链，队友/非敌对目标仍被拒绝。
+  - 回归覆盖主人攻击目标优先、敌方召唤物所有者解析、追击阶段继承和取消敌对后的
+    即时回退；未新增网络 schema 或客户端自行结算路径。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
 > “当前下一项”为准；Bone Armor、Poison Dagger、Corpse/Poison Explosion、Bone

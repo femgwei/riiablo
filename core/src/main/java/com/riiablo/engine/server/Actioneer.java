@@ -764,8 +764,8 @@ public class Actioneer extends PassiveSystem {
             || mSummonedPet.has(entityId);
         boolean targetPlayerAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
             || mSummonedPet.has(targetId);
-        if (!PvpCombatRules.canDamage(
-            partyManager, entityId, targetId, sourcePlayerAligned, targetPlayerAligned)) {
+        if (!canDamageRelation(
+            entityId, targetId, sourcePlayerAligned, targetPlayerAligned)) {
           log.info("[ASSASSIN_DRAGON_TAIL] phase=start_reject entity={} target={} reason=relation",
               entityId, targetId);
           mCasting.remove(entityId);
@@ -1148,8 +1148,8 @@ public class Actioneer extends PassiveSystem {
             || mSummonedPet.has(entityId);
         boolean targetPlayerUnit = mPlayer.has(targetId) || mMercenary.has(targetId)
             || mSummonedPet.has(targetId);
-        if (!PvpCombatRules.canDamage(
-            partyManager, entityId, targetId, attackerPlayerUnit, targetPlayerUnit)) {
+        if (!canDamageRelation(
+            entityId, targetId, attackerPlayerUnit, targetPlayerUnit)) {
           log.info("[COMBAT_RELATION] phase=reject source={} target={} "
                   + "sourcePlayerAligned={} targetPlayerAligned={}",
               entityId, targetId, attackerPlayerUnit, targetPlayerUnit);
@@ -1687,8 +1687,7 @@ public class Actioneer extends PassiveSystem {
         || mSummonedPet.has(entityId);
     boolean targetAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId);
-    if (!PvpCombatRules.canDamage(
-        partyManager, entityId, targetId, sourceAligned, targetAligned)) {
+    if (!canDamageRelation(entityId, targetId, sourceAligned, targetAligned)) {
       log.info("[NECRO_POISON_DAGGER] phase=start_reject source={} target={} reason=relation",
           entityId, targetId);
       return;
@@ -1826,7 +1825,7 @@ public class Actioneer extends PassiveSystem {
         || mSummonedPet.has(entityId);
     boolean targetAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId);
-    if (!PvpCombatRules.canDamage(partyManager, entityId, targetId, sourceAligned, targetAligned)) {
+    if (!canDamageRelation(entityId, targetId, sourceAligned, targetAligned)) {
       log.info("[DRUID_FERAL_MAUL] phase=start_reject source={} target={} reason=relation",
           entityId, targetId);
       return;
@@ -1947,8 +1946,7 @@ public class Actioneer extends PassiveSystem {
         || mSummonedPet.has(entityId);
     boolean targetAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId);
-    if (!PvpCombatRules.canDamage(partyManager, entityId, targetId,
-        sourceAligned, targetAligned)) return;
+    if (!canDamageRelation(entityId, targetId, sourceAligned, targetAligned)) return;
 
     int level = Math.max(1, skillLevel(entityId, skill.Id));
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
@@ -2311,8 +2309,7 @@ public class Actioneer extends PassiveSystem {
         || mSummonedPet.has(entityId);
     boolean targetPlayerAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId);
-    if (!PvpCombatRules.canDamage(
-        partyManager, entityId, targetId, sourcePlayerAligned, targetPlayerAligned)) {
+    if (!canDamageRelation(entityId, targetId, sourcePlayerAligned, targetPlayerAligned)) {
       return "relation";
     }
     Map.Zone sourceZone = map != null ? map.getZone(mPosition.get(entityId).position) : null;
@@ -2523,8 +2520,8 @@ public class Actioneer extends PassiveSystem {
       rejectBerserk(entityId, "invalid_target");
       return;
     }
-    if (!PvpCombatRules.canDamage(
-        partyManager, entityId, targetId,
+    if (!canDamageRelation(
+        entityId, targetId,
         mPlayer.has(entityId) || mMercenary.has(entityId) || mSummonedPet.has(entityId),
         mPlayer.has(targetId) || mMercenary.has(targetId) || mSummonedPet.has(targetId))) {
       rejectBerserk(entityId, "invalid_combat_relation");
@@ -2764,8 +2761,7 @@ public class Actioneer extends PassiveSystem {
         || mSummonedPet.has(sourceId);
     boolean targetPlayerAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId);
-    return PvpCombatRules.canDamage(
-        partyManager, sourceId, targetId, sourcePlayerAligned, targetPlayerAligned);
+    return canDamageRelation(sourceId, targetId, sourcePlayerAligned, targetPlayerAligned);
   }
 
   private Item dragonClawWeapon(int entityId, int strikeIndex) {
@@ -3548,8 +3544,22 @@ public class Actioneer extends PassiveSystem {
         || mSummonedPet.has(sourceId);
     boolean targetPlayerAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId);
+    return canDamageRelation(sourceId, targetId, sourcePlayerAligned, targetPlayerAligned);
+  }
+
+  /** Player-owned units use their owner's PLAYERLIST relation for PvP. */
+  private boolean canDamageRelation(
+      int sourceId, int targetId, boolean sourcePlayerAligned, boolean targetPlayerAligned) {
+    int relationSource = sourcePlayerAligned ? playerAlignmentOwner(sourceId) : sourceId;
+    int relationTarget = targetPlayerAligned ? playerAlignmentOwner(targetId) : targetId;
     return PvpCombatRules.canDamage(
-        partyManager, sourceId, targetId, sourcePlayerAligned, targetPlayerAligned);
+        partyManager, relationSource, relationTarget, sourcePlayerAligned, targetPlayerAligned);
+  }
+
+  private int playerAlignmentOwner(int entityId) {
+    if (mMercenary.has(entityId)) return mMercenary.get(entityId).ownerId;
+    if (mSummonedPet.has(entityId)) return mSummonedPet.get(entityId).ownerId;
+    return entityId;
   }
 
   private static int rollRange(int min, int max) {
