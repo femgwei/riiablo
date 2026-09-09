@@ -69,7 +69,8 @@ public final class GenericMonster extends AI {
     int targetId = findNearestLiveTarget(outDistance);
     if (targetId == Engine.INVALID_ENTITY) {
       state = "IDLE";
-      if (!followSummonOwner()) stopMovement();
+      if (followSummonOwner(6f)) state = "FOLLOW";
+      else stopMovement();
       return;
     }
 
@@ -111,17 +112,6 @@ public final class GenericMonster extends AI {
 
     state = "APPROACH";
     walkTo(target, targetId);
-  }
-
-  private boolean followSummonOwner() {
-    if (!mSummonedPet.has(entityId)) return false;
-    com.riiablo.engine.server.component.SummonedPet pet = mSummonedPet.get(entityId);
-    if (pet == null || pet.passive || !mPosition.has(pet.ownerId)) return false;
-    Vector2 owner = mPosition.get(pet.ownerId).position;
-    float distance = mPosition.get(entityId).position.dst(owner);
-    if (distance <= 6f) return false;
-    state = "FOLLOW";
-    return walkTo(owner, pet.ownerId);
   }
 
   private int findNearestLiveTarget(float[] outDistance) {

@@ -139,6 +139,11 @@ public class Skeleton extends AI {
     }
 
     if (targetId == Engine.INVALID_ENTITY) {
+      if (followSummonOwner(6f)) {
+        stateMachine.changeState(State.APPROACH);
+        time = Math.max(0.1f, SLEEP);
+        return;
+      }
       // No target, idle behavior
       switch (stateMachine.getCurrentState()) {
         case IDLE:

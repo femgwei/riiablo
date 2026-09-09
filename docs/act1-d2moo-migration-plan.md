@@ -209,3 +209,7 @@ waypoints, caves, quest rewards and collision boundaries.
   - Bone Spear now uses the native LastCollide/CollideKill continuation and a magic damage
     snapshot; Bone Spirit uses SrvDo010 homing with nearest-hostile fallback.
 - [ ] Next: Necromancer summon AI cadence and remaining cross-class skill validation.
+- [x] ~~Necromancer summon owner-follow and idle regroup (phase 1)~~
+  - Skeleton, SkeletonMage and GenericMonster now apply a native owner leash when no hostile
+    target is visible; passive decoys, bone walls and cross-zone pets are excluded.
+- [ ] Next: Necromancer summon combat cadence/target selection and remaining cross-class skill validation.

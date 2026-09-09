@@ -1014,6 +1014,12 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 两者均按 Skills.txt EMin/EMax、HitShift 和硬点协同生成魔法伤害快照，避免通用
     空 EType 路径造成零伤害；新增 `NativeNecromancerBoneProjectileDataTest`。
 
+- [x] ~~完成死灵法师召唤物跟随与脱战行为第一阶段~~
+  - 对照 D2MOO 召唤物 AI 的主人 leash 规则，骷髅、骷髅法师和通用召唤物在没有可见
+    敌人时回到主人身边；被动诱饵、骨墙/骨牢和跨区域召唤不会错误移动。
+  - 跨地图跟随仍由 `SummonedPetSystem` 的 PetType warp 规则负责，未改变召唤所有权、
+    掉落奖励或战斗伤害链；召唤生命周期回归和 1.10f 离屏营地测试通过。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
 > “当前下一项”为准；Bone Armor、Poison Dagger、Corpse/Poison Explosion、Bone

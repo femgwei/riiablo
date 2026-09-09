@@ -648,6 +648,24 @@ public abstract class AI implements Interactable.Interactor {
     return findNearestOrdinaryEnemy(outDistance, resolveAiDistance());
   }
 
+  /** Native player-pet leash: non-passive summons regroup when no hostile is visible. */
+  protected boolean followSummonOwner(float stopDistance) {
+    if (!mSummonedPet.has(entityId) || !mPosition.has(entityId)) return false;
+    SummonedPet pet = mSummonedPet.get(entityId);
+    if (pet == null || pet.passive || pet.boneWall || !mPosition.has(pet.ownerId)) return false;
+    if (mMapWrapper.has(entityId) && mMapWrapper.has(pet.ownerId)) {
+      MapWrapper source = mMapWrapper.get(entityId);
+      MapWrapper owner = mMapWrapper.get(pet.ownerId);
+      if (source != null && owner != null && source.zone != null && owner.zone != null
+          && source.zone != owner.zone) return false;
+    }
+    Vector2 ownerPosition = mPosition.get(pet.ownerId).position;
+    if (mPosition.get(entityId).position.dst(ownerPosition) <= Math.max(1f, stopDistance)) {
+      return false;
+    }
+    return walkTo(ownerPosition, pet.ownerId);
+  }
+
   private float resolveAiDistance() {
     float maxSearchDist = 35f;
     if (monster != null && monster.monstats != null && monster.monstats.aidist != null

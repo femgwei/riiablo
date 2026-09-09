@@ -125,6 +125,11 @@ public class SkeletonMage extends AI {
     time = SLEEP;
 
     if (targetId == Engine.INVALID_ENTITY) {
+      if (followSummonOwner(8f)) {
+        stateMachine.changeState(State.APPROACH);
+        time = Math.max(0.1f, SLEEP);
+        return;
+      }
       // No target, idle behavior
       switch (stateMachine.getCurrentState()) {
         case IDLE:
