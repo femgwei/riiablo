@@ -221,4 +221,9 @@ waypoints, caves, quest rewards and collision boundaries.
 - [x] ~~Owner-target inheritance and PvP summon ownership relations (phase 1)~~
   - Summons inherit the owner's active cast/chase target within the native pet range; PvP checks
     resolve players, mercenaries and summons to their authoritative player owner.
-- [ ] Next: summon regroup/teleport edge cases and remaining cross-class skill validation.
+- [x] ~~Summon regroup/teleport edge cases (phase 1)~~
+  - Native 50-subtile PetMove mode-3 relocation, missing owner-trail fallback across non-adjacent
+    RoomEx, deterministic walkable landing expansion and stale target/cast/path cleanup are covered.
+  - Passive walls/decoys and stationary traps do not use ordinary same-zone regroup; non-warp pets
+    are removed at a level boundary, matching their PetType policy.
+- [ ] Next: Revive/Golem specialized AI and remaining cross-class skill validation.

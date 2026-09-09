@@ -69,6 +69,15 @@ public class SkeletonMage extends AI {
   }
 
   @Override
+  public void onOwnerWarp() {
+    super.onOwnerWarp();
+    targetId = Engine.INVALID_ENTITY;
+    nextAction = 0f;
+    time = 0f;
+    if (stateMachine.getCurrentState() != State.DEAD) stateMachine.changeState(State.IDLE);
+  }
+
+  @Override
   public void initialize() {
     super.initialize();
     // Get missile from MissA1 or MissA2

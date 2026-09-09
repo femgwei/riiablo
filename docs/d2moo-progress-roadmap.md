@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-09
+更新时间：2026-09-10
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -29,7 +29,14 @@
 第一章已经接近收尾；全项目剩余量主要来自完整战斗分支、物品属性、多人边界、
 数据层统一，以及 Act 2–5 地图和任务。
 
-## 2026-09-09 当前进度快照
+## 2026-09-10 当前进度快照
+
+- 召唤物跨房间/跨区域重组已完成首轮：对齐 D2MOO NecroPet 的 28 格主人轨迹跟随与
+  50 格 PetMove mode 3 边界；跨 Zone、主人快速移动，以及非相邻 RoomEx 无有效路径时，
+  会在主人周围的可通行环带重放。旧 Target/Casting/Sequence/Pathfind、Running、速度和
+  骷髅 AI 缓存目标统一清理，Box2D、RoomEx 与 `SYNC_WARPED` 状态同步更新。
+- 新增 8/16/24 格确定性落点扩展；跨 Zone 完全无落点才按原规则移除，同 Zone 失败则
+  延迟重试。Bone Wall、诱饵及固定陷阱不会被普通远距重组。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -54,7 +61,8 @@
   Dagger 也已完成匕首门槛、`SrvSt16` 命中记录、8.8 定点毒伤、持续帧和 `SrvDo032`
   单次耐久/伤害消费。Corpse Explosion / Poison Explosion 也已完成共用尸体原子预留、
   原生尸体生命伤害、物理/火焰内外半径与八方向 8.8 定点持续毒云链。Bone Wall /
-  Bone Prison 也已完成可破坏单位、碰撞与生命周期。下一项为 Poison Nova 原生导弹链。
+  Bone Prison 也已完成可破坏单位、碰撞与生命周期；Poison Nova、Bone Spear/Spirit
+  以及召唤物重组/传送边界也已完成首轮。下一项为 Revive/Golem 专属 AI 与技能继承验收。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -97,7 +105,7 @@
 | P0 | 第一章地图、Warp、碰撞 | 10% | 85% | 15% | 1.5% | 可玩链基本稳定，需完成细节和回归 |
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
-| P0 | 怪物 AI 与特殊行为 | 8% | 60% | 40% | 3.2% | 诅咒特殊 AI 已接通；通用 fallback、召唤和其他特殊分支不全 |
+| P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
 | P1 | 战斗、伤害、状态、技能、导弹 | 12% | 78% | 22% | 2.6% | 骨墙/骨牢、尸爆/毒爆、Poison Nova、Bone Spear/Spirit 权威链已接通；剩余职业技能仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
@@ -121,7 +129,7 @@
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
-| 死灵法师 Necromancer | 94% | 6% | 诅咒、召唤、Bone Armor、Poison Dagger、尸爆/毒爆、骨墙/骨牢、Poison Nova、Bone Spear/Spirit 已接通；召唤 AI 收尾待补 |
+| 死灵法师 Necromancer | 95% | 5% | 诅咒、骨毒系与召唤权威链已接通，召唤跟随/PvP/跨区重组完成；Revive/Golem 专属 AI 仍待验收 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
@@ -646,7 +654,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
 Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor、Poison Dagger、Corpse
 Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单位、碰撞与
 生命周期已完成，Poison Nova 原生导弹、固定毒伤与多人表现也已完成，当前进入
-**死灵法师召唤 AI 深化与剩余跨职业技能验收**。
+召唤物跟随、概率节奏、敌我筛选、主人目标/PvP 关系及跨房间/跨区域重组现已完成首轮。
+当前进入 **Revive/Golem 专属 AI、技能继承与剩余跨职业技能验收**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -1041,6 +1050,22 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     玩家及其宠物可进入 AI、近战、技能、导弹和 DOT 权威链，队友/非敌对目标仍被拒绝。
   - 回归覆盖主人攻击目标优先、敌方召唤物所有者解析、追击阶段继承和取消敌对后的
     即时回退；未新增网络 schema 或客户端自行结算路径。
+
+- [x] ~~完成召唤物跨房间、跨区域重组与传送边界第一阶段~~
+  - 对照 D2MOO `AITHINK_Fn067_NecroPet`、`D2GAME_AI_PetMove_6FCE2BA0` 和
+    `D2GAME_AICORE_WalkToOwner_6FCD0B60`：超过 50 格使用 mode 3 重放；超过 28 格且
+    跨非相邻 RoomEx、路径不可用时，为缺失的主人坐标轨迹提供确定性重组兜底。
+  - 重组落点从主人碰撞范围外开始，依次扩展 8/16/24 格；成功后清除旧路径、目标、施法、
+    动画序列、奔跑与速度，并重置 Skeleton/SkeletonMage 的内部目标缓存，同时同步
+    Map/Zone/RoomEx、Box2D 和 `SYNC_WARPED`。固定陷阱、Hydra、诱饵和 Bone Wall 不做
+    同 Zone 普通重组；不带 PetType warp 标志的宠物跨区仍删除。
+  - `SummonedPetSystemTest` 与 `SummonOwnerWarpTest` 覆盖跨区清理、远距重组、扩大落点、
+    非 warp 删除、固定召唤排除和 AI 缓存 reset；死灵、PvP、导弹回归及 D2GS 编译通过，
+    真实 1.10f `offscreenCamp` 输出 `[OFFSCREEN_CAMP] result=PASS`。未修改网络 schema
+    或生成网络文件。
+
+下一项：核对 Revive 是否保留原怪物 AI/技能槽与原生限制，并补齐 Clay/Blood/Iron/Fire
+Golem 的专属目标、攻击节奏、元素/吸血副作用和跨区后的状态连续性。
 
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方

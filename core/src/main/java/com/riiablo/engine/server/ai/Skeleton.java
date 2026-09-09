@@ -68,6 +68,15 @@ public class Skeleton extends AI {
   }
 
   @Override
+  public void onOwnerWarp() {
+    super.onOwnerWarp();
+    targetId = Engine.INVALID_ENTITY;
+    nextAction = 0f;
+    time = 0f;
+    if (stateMachine.getCurrentState() != State.DEAD) stateMachine.changeState(State.IDLE);
+  }
+
+  @Override
   public void kill() {
     if (stateMachine.getCurrentState() == State.DEAD) return;
     pathfinder.findPath(entityId, null);

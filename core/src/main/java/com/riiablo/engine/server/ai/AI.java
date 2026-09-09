@@ -489,6 +489,17 @@ public abstract class AI implements Interactable.Interactor {
     movementActive = false;
   }
 
+  /**
+   * Called after a player pet is relocated beside its owner. Components which
+   * encode an active path/cast are cleared by {@code SummonedPetSystem}; this
+   * hook resets AI-local intent that cannot be represented by ECS components.
+   */
+  public void onOwnerWarp() {
+    movementActive = false;
+    lastMovementRunning = false;
+    lastMovementVelocityBonus = Integer.MIN_VALUE;
+  }
+
   protected int fire(Missiles.Entry missile) {
     Vector2 position = mPosition.get(entityId).position;
     Vector2 angle = mAngle.get(entityId).target;
