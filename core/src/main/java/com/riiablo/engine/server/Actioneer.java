@@ -1397,8 +1397,8 @@ public class Actioneer extends PassiveSystem {
                 unitStates.stateList, id -> Riiablo.files.skills.get(id),
                 id -> skillLevel(entityId, id));
             if (progressiveRelease.hasEffects()) {
-              applyAssassinProgressiveDamage(progressiveRelease, combat, attrs,
-                  stateList(targetId));
+              applyAssassinProgressiveDamage(entityId, targetId, progressiveRelease,
+                  combat, attrs, stateList(targetId));
               int consumed = AssassinSkills.consumeProgressiveCharges(unitStates.stateList);
               log.info("[ASSASSIN_FINISHER] phase=release source={} target={} srvDoFunc={} "
                       + "charges={} consumed={} tigerPct={} lifeLeechPct={} manaLeechPct={} "
@@ -2826,7 +2826,7 @@ public class Actioneer extends PassiveSystem {
   }
 
   /** D2MOO sub_6FCF5680/sub_6FCF5BC0 progressive damage preparation. */
-  private static void applyAssassinProgressiveDamage(
+  private void applyAssassinProgressiveDamage(int sourceId, int targetId,
       AssassinSkills.ProgressiveRelease release, CombatSystem.CombatResult combat,
       Attributes defender, com.riiablo.engine.server.state.StateList defenderStates) {
     if (release == null || combat == null) return;
@@ -2842,28 +2842,19 @@ public class Actioneer extends PassiveSystem {
       combat.physicalDamage -= converted;
     }
     int rawFire = converted + AssassinSkills.rollFireDamage(release);
-    if (rawFire > 0) {
-      int resistance = statInt(defender, Stat.fireresist);
-      if (defenderStates != null) resistance += defenderStates.getTotalResistModifier(0);
-      int fire = resistance >= 100 ? 0
-          : Math.max(0, rawFire * (100 - Math.min(75, resistance)) / 100);
-      combat.elementalDamage[CombatSystem.DAMAGE_FIRE] += fire;
-    }
+    addProgressiveElementalDamage(sourceId, targetId, combat, defender, defenderStates,
+        CombatSystem.DAMAGE_FIRE, rawFire);
 
     int rawLightning = AssassinSkills.rollLightningDamage(release);
-    if (rawLightning > 0) {
-      int lightning = resistedDamage(rawLightning, defender, defenderStates,
-          Stat.lightresist, 2);
-      combat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING] += lightning;
-    }
+    addProgressiveElementalDamage(sourceId, targetId, combat, defender, defenderStates,
+        CombatSystem.DAMAGE_LIGHTNING, rawLightning);
 
     int rawCold = AssassinSkills.rollColdDamage(release);
-    if (rawCold > 0) {
-      int cold = resistedDamage(rawCold, defender, defenderStates,
-          Stat.coldresist, 1);
-      combat.elementalDamage[CombatSystem.DAMAGE_COLD] += cold;
-      if (cold > 0) combat.coldDuration = Math.max(combat.coldDuration, release.coldLength);
-    }
+    int coldBefore = combat.elementalDamage[CombatSystem.DAMAGE_COLD];
+    addProgressiveElementalDamage(sourceId, targetId, combat, defender, defenderStates,
+        CombatSystem.DAMAGE_COLD, rawCold);
+    if (combat.elementalDamage[CombatSystem.DAMAGE_COLD] > coldBefore)
+      combat.coldDuration = Math.max(combat.coldDuration, release.coldLength);
 
     combat.totalDamage = combat.physicalDamage;
     for (int i = 1; i < CombatSystem.DAMAGE_TYPE_COUNT; i++) {
@@ -2871,6 +2862,17 @@ public class Actioneer extends PassiveSystem {
         combat.totalDamage += combat.elementalDamage[i];
       }
     }
+  }
+
+  private void addProgressiveElementalDamage(int sourceId, int targetId,
+      CombatSystem.CombatResult combat, Attributes defender, StateList defenderStates,
+      int damageType, int rawDamage) {
+    if (rawDamage <= 0) return;
+    CombatSystem.CombatResult elemental = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+        defender, isPlayerEntity(targetId), isPlayerEntity(sourceId), damageType,
+        rawDamage, 0, defenderStates, combatDifficulty());
+    combat.elementalDamage[damageType] += elemental.elementalDamage[damageType];
+    combat.absorbedLife += elemental.absorbedLife;
   }
 
   private void applyAssassinProgressiveStageEffects(int sourceId, int primaryTargetId,
@@ -2920,11 +2922,12 @@ public class Actioneer extends PassiveSystem {
       if (!isValidFistsTarget(sourceId, targetId)) continue;
       if (mPosition.get(targetId).position.dst2(origin) > range * range) continue;
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
-      int physical = resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
-          Stat.damageresist, -1);
+      int physical = scalePvpPhysical(
+          resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
+              Stat.damageresist, -1), sourceId, targetId);
       CombatSystem.CombatResult fireResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
-          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), 0);
+          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), combatDifficulty());
       int fire = fireResult.elementalDamage[CombatSystem.DAMAGE_FIRE];
       applyElementalAbsorb(targetAttrs, fireResult, 1f);
       float damage = physical + fire;
@@ -3138,11 +3141,12 @@ public class Actioneer extends PassiveSystem {
       if (targetId == sourceId || !isValidFistsTarget(sourceId, targetId)) continue;
       if (mPosition.get(targetId).position.dst2(origin) > range * range) continue;
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
-      int physical = resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
-          Stat.damageresist, -1);
+      int physical = scalePvpPhysical(
+          resistedDamage(rawPhysical, targetAttrs, stateList(targetId),
+              Stat.damageresist, -1), sourceId, targetId);
       CombatSystem.CombatResult coldResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
-          CombatSystem.DAMAGE_COLD, rawCold, 0, stateList(targetId), 0);
+          CombatSystem.DAMAGE_COLD, rawCold, 0, stateList(targetId), combatDifficulty());
       int cold = coldResult.elementalDamage[CombatSystem.DAMAGE_COLD];
       applyElementalAbsorb(targetAttrs, coldResult, 1f);
       float damage = physical + cold;
@@ -3360,7 +3364,7 @@ public class Actioneer extends PassiveSystem {
       Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
       CombatSystem.CombatResult fireResult = CombatSystem.INSTANCE.calculateFixedElementalDamage(
           targetAttrs, isPlayerEntity(targetId), isPlayerEntity(sourceId),
-          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), 0);
+          CombatSystem.DAMAGE_FIRE, rawFire, 0, stateList(targetId), combatDifficulty());
       int fire = fireResult.elementalDamage[CombatSystem.DAMAGE_FIRE];
       applyElementalAbsorb(targetAttrs, fireResult, 1f);
       if (fire <= 0 && fireResult.absorbedLife <= 0) continue;
@@ -3440,6 +3444,20 @@ public class Actioneer extends PassiveSystem {
     }
     if (resistance >= 100) return 0;
     return Math.max(0, rawDamage * (100 - Math.min(75, resistance)) / 100);
+  }
+
+  /** Applies D2's global 17% scalar to the physical portion of player-vs-player
+   * range releases. Elemental portions are already scaled by CombatSystem. */
+  private int scalePvpPhysical(int damage, int sourceId, int targetId) {
+    if (damage <= 0) return 0;
+    // Actioneer's player classification is authoritative for these skills;
+    // summons/mercenaries are intentionally excluded from the PvP scalar.
+    return isPlayerEntity(sourceId) && isPlayerEntity(targetId)
+        ? damage * CombatSystem.PVP_DAMAGE_PERCENT / 100 : damage;
+  }
+
+  private int combatDifficulty() {
+    return map == null ? 0 : map.getDifficulty();
   }
 
   /** Applies Cobra Strike steal after DamageEvent has finalized actual damage. */
