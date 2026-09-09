@@ -147,6 +147,10 @@ public final class D2GSHeadlessClient {
       runFallenDual(d2s, character);
       return;
     }
+    if (config.requireDenQuestScenario) {
+      runDenQuestDual(d2s, character);
+      return;
+    }
     if (config.requireQuestRecovery) {
       runQuestRecoveryDual(d2s, character);
       return;
@@ -1088,6 +1092,83 @@ public final class D2GSHeadlessClient {
           + result.snapshotLength() + " nativeKills=" + lootKills
           + " duplicate=true contentionRejected=true deleted=true");
     }
+  }
+
+  /** Two-client Den of Evil quest-credit and resurrection visibility gate. */
+  private void runDenQuestDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave();
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      if (!D2GS.headlessMovePlayerToLevel(a.playerId, 8)
+          || !D2GS.headlessMovePlayerToLevel(b.playerId, 8)) {
+        throw new IOException("Den of Evil staging unavailable");
+      }
+      long levelDeadline = deadline();
+      while (System.currentTimeMillis() < levelDeadline
+          && (a.currentLevelId != 8 || b.currentLevelId != 8)) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet != null) a.consume(packet);
+        packet = readPacket(inB);
+        if (packet != null) b.consume(packet);
+      }
+      if (a.currentLevelId != 8 || b.currentLevelId != 8) {
+        throw new IOException("clients did not observe Den of Evil level");
+      }
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
+        throw new IOException("headless party setup failed");
+      }
+      send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      QuestResult beforeA = a.awaitQuestResult(inA, 1L, deadline());
+      QuestResult beforeB = b.awaitQuestResult(inB, 1L, deadline());
+      if (!beforeA.success() || !beforeB.success()) {
+        throw new IOException("Den quest baseline rejected");
+      }
+      if (!D2GS.headlessCompleteDenObjective(a.playerId)) {
+        throw new IOException("authoritative Den objective trigger failed");
+      }
+      send(outA, questRequestPacket(2L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outB, questRequestPacket(2L, QuestOperation.SNAPSHOT, -1, -1));
+      QuestResult afterA = a.awaitQuestResult(inA, 2L, deadline());
+      QuestResult afterB = b.awaitQuestResult(inB, 2L, deadline());
+      int recordIndex = com.riiablo.engine.server.quest.Act1DenOfEvilQuest.RECORD;
+      if (!afterA.success() || !afterB.success()
+          || afterA.questRecordsLength() <= recordIndex
+          || afterB.questRecordsLength() <= recordIndex
+          || !hasQuestFlag(afterA.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlag(afterB.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlag(afterA.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
+          || !hasQuestFlag(afterB.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)) {
+        throw new IOException("Den objective did not propagate to both party clients");
+      }
+      long[] authorityA = D2GS.headlessQuestState(a.playerId);
+      long[] authorityB = D2GS.headlessQuestState(b.playerId);
+      if (authorityA.length == 0 || authorityB.length == 0
+          || authorityA[0] != afterA.questRevision()
+          || authorityB[0] != afterB.questRevision()
+          || authorityA[0] != authorityB[0]) {
+        throw new IOException("Den quest authority/client revisions diverged");
+      }
+      log("den_quest_dual_pass", "clients=" + a.playerId + ',' + b.playerId
+          + " level=8 party=true objective=true rewardPending=true revision="
+          + authorityA[0]);
+    }
+  }
+
+  private static boolean hasQuestFlag(int record, int flag) {
+    return (record & (1 << flag)) != 0;
   }
 
   /** Two-client integration path for an actual native Rogue hireling cast. */
@@ -3036,6 +3117,7 @@ public final class D2GSHeadlessClient {
     boolean requireSnapshotOrder;
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
+    boolean requireDenQuestScenario;
     boolean requireQuestRecovery;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -3069,6 +3151,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-snapshot-order".equals(arg)) config.requireSnapshotOrder = true;
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
+        else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-quest-recovery".equals(arg)) config.requireQuestRecovery = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -3130,7 +3213,7 @@ public final class D2GSHeadlessClient {
           + " [--generated-amazon] [--host 127.0.0.1] [--port 6114]"
           + " [--skill 0] [--require-missile] [--require-sim-tick]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
-          + " [--require-fallen-scenario] [--require-quest-recovery]"
+          + " [--require-fallen-scenario] [--require-den-quest] [--require-quest-recovery]"
           + " [--require-reconnect-visibility]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }

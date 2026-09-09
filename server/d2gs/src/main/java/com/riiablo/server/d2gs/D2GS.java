@@ -1373,6 +1373,76 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return new long[0]; }
   }
 
+  /** Test-only party setup used by the headless Act 1 quest fixtures. */
+  static boolean headlessJoinParty(int leaderId, int memberId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean joined = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        joined.set(server.partyManager.sendInvitation(leaderId, memberId)
+            && server.partyManager.acceptInvitation(memberId));
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && joined.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
+  /**
+   * Replaces active Den of Evil monsters with one deterministic fixture and
+   * dispatches its authoritative death. This keeps the protocol test focused
+   * on quest credit propagation instead of depending on a random room's
+   * monster count while still exercising the real Act1QuestSystem callback.
+   */
+  static boolean headlessCompleteDenObjective(int killerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean completed = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = entities.getData();
+        java.util.ArrayList<Integer> denMonsters = new java.util.ArrayList<>();
+        for (int i = 0; i < entities.size(); i++) {
+          int entityId = ids[i];
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
+          if (wrapper != null && wrapper.zone != null && wrapper.zone.level != null
+              && wrapper.zone.level.Id == 8 /* Den of Evil */) denMonsters.add(entityId);
+        }
+        for (Integer entityId : denMonsters) server.world.delete(entityId);
+
+        com.riiablo.engine.server.component.MapWrapper ownerWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(killerId);
+        Position ownerPosition = server.world.getMapper(Position.class).get(killerId);
+        if (ownerWrapper == null || ownerWrapper.zone == null) return;
+        int fixture = server.world.create();
+        server.world.getMapper(com.riiablo.engine.server.component.Monster.class).create(fixture);
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .create(fixture).set(server.map, ownerWrapper.zone);
+        if (ownerPosition != null) {
+          server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+        }
+        com.riiablo.attributes.Attributes attrs = com.riiablo.attributes.Attributes.obtainStandard();
+        attrs.base().put(com.riiablo.attributes.Stat.hitpoints, 1f);
+        attrs.reset();
+        server.world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class)
+            .create(fixture).attrs = attrs;
+        server.world.process();
+        attrs.get(com.riiablo.attributes.Stat.hitpoints).set(0f);
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
+        completed.set(true);
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && completed.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
   /** Test-only NPC-equivalent paid resurrection on the render thread. */
   static boolean headlessResurrectMercenary(int playerId) {
     D2GS server = activeHeadlessInstance;
