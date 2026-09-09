@@ -23,7 +23,6 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.ShrineInteractionEvent;
 import com.riiablo.engine.server.event.WellInteractionEvent;
-import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
@@ -246,15 +245,14 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
       if (attrs == null) continue;
       StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || hp.asFixed() <= 0f) continue;
-      int rawDamage = Math.max(1, Math.round(hp.asFixed() * Math.max(0, percent) / 100f));
-      int difficulty = sourceMap.map != null ? sourceMap.map.getDifficulty() : 0;
-      CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateFixedElementalDamage(
-          attrs, mPlayer.has(id), false, CombatSystem.DAMAGE_LIGHTNING, rawDamage, 0,
-          null, difficulty);
-      if (combat.totalDamage <= 0 && combat.absorbedLife <= 0) continue;
-      DamageEvent damageEvent = DamageEvent.obtain(attackerId, id, combat.totalDamage);
+      // D2GAME_SHRINES_Storm_6FC76BC0 subtracts Arg0 percent directly from
+      // STAT_HITPOINTS.  The radial missiles are presentation only: this
+      // packet must not pass through lightning resistance, absorb or PvP
+      // scaling merely because those visuals use a lightning cel.
+      int rawDamage = stormDamage(hp.asFixed(), percent);
+      if (rawDamage <= 0) continue;
+      DamageEvent damageEvent = DamageEvent.obtain(attackerId, id, rawDamage);
       if (events != null) events.dispatch(damageEvent);
-      applyAbsorb(attrs, combat.absorbedLife);
       hp.sub(Math.max(0f, damageEvent.damage));
       if (hp.asFixed() <= 0f) {
         hp.set(0f);
@@ -265,14 +263,11 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
     return hit;
   }
 
-  private static float applyAbsorb(Attributes attrs, int absorbedLife) {
-    if (attrs == null || absorbedLife <= 0) return 0f;
-    StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
-    StatRef max = attrs.get(Stat.maxhp, StatRef.obtain());
-    if (hp == null || max == null) return 0f;
-    float healed = Math.max(0f, Math.min((float) absorbedLife, max.asFixed() - hp.asFixed()));
-    if (healed > 0f) hp.add(healed);
-    return healed;
+  static int stormDamage(float hitpoints, int percent) {
+    // Native code converts 24.8 hitpoints to integer life before multiplying,
+    // so sub-point life and fractional portions deliberately contribute zero.
+    int integerLife = Math.max(0, (int) hitpoints);
+    return integerLife * Math.max(0, percent) / 100;
   }
 
   private void upgradeNearestMonster(ShrineInteractionEvent event) {

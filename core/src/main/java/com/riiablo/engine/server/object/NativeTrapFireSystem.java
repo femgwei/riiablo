@@ -15,6 +15,7 @@ import com.riiablo.engine.server.component.NativeTrapFire;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.combat.CombatSystem;
@@ -32,6 +33,7 @@ public class NativeTrapFireSystem extends BaseSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributes;
+  protected ComponentMapper<UnitStates> mUnitStates;
   protected EventSystem events;
 
   private EntitySubscription players;
@@ -110,7 +112,7 @@ public class NativeTrapFireSystem extends BaseSystem {
     int roll = min + fire.nextInt(max - min + 1);
     int rawDamage = Math.max(1, Math.round(roll * fire.damagePercent / 100f));
     CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateFixedElementalDamage(
-        attrs, false, false, CombatSystem.DAMAGE_FIRE, rawDamage, 0, null,
+        attrs, true, false, CombatSystem.DAMAGE_FIRE, rawDamage, 0, stateList(targetId),
         sourceDifficulty(fireId, targetId));
     if (!combat.hit || (combat.totalDamage <= 0 && combat.absorbedLife <= 0)) return;
     DamageEvent event = DamageEvent.obtain(fireId, targetId, combat.totalDamage);
@@ -133,6 +135,12 @@ public class NativeTrapFireSystem extends BaseSystem {
     MapWrapper wrapper = mMapWrapper.has(fireId) ? mMapWrapper.get(fireId)
         : (mMapWrapper.has(targetId) ? mMapWrapper.get(targetId) : null);
     return wrapper != null && wrapper.map != null ? wrapper.map.getDifficulty() : 0;
+  }
+
+  private com.riiablo.engine.server.state.StateList stateList(int entityId) {
+    if (!mUnitStates.has(entityId)) return null;
+    UnitStates states = mUnitStates.get(entityId);
+    return states != null ? states.stateList : null;
   }
 
   private static float applyAbsorb(Attributes attrs, int absorbedLife) {

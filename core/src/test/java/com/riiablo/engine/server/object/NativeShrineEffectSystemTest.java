@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,15 +15,53 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.event.ShrineInteractionEvent;
 import com.riiablo.engine.server.event.WellInteractionEvent;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.map.Map;
 
 import net.mostlyoriginal.api.event.common.EventSystem;
 
 class NativeShrineEffectSystemTest extends RiiabloTest {
+  @Test
+  void stormUsesNativeDirectLifePercentAndIgnoresLightningDefense() {
+    World world = effectWorld();
+    try {
+      Map.Zone zone = mock(Map.Zone.class);
+      Map map = new Map(0, 2);
+      int player = createUnit(world, 100, 100);
+      world.getMapper(Player.class).create(player);
+      world.getMapper(Position.class).create(player).position.set(10, 10);
+      world.getMapper(MapWrapper.class).create(player).set(map, zone);
+      Attributes attrs = world.getMapper(AttributesWrapper.class).get(player).attrs;
+      attrs.base().put(Stat.lightresist, 100);
+      attrs.base().put(Stat.item_absorblight_percent, 100);
+      attrs.base().put(Stat.item_absorblight, 100);
+      attrs.reset();
+
+      int shrine = world.create();
+      world.getMapper(Position.class).create(shrine).position.set(10, 10);
+      world.getMapper(MapWrapper.class).create(shrine).set(map, zone);
+      world.process();
+      world.getSystem(EventSystem.class).dispatch(ShrineInteractionEvent.obtain(
+          player, shrine, 0, 19, 50, 10, 0, 0, false));
+
+      assertEquals(50f, value(world, player, Stat.hitpoints), 0.001f,
+          "D2MOO storm subtracts life directly; the lightning missiles are visual only");
+      assertEquals(0, NativeShrineEffectSystem.stormDamage(0.75f, 50));
+      assertEquals(16, NativeShrineEffectSystem.stormDamage(33.75f, 50),
+          "native 24.8 life is truncated to whole points before percentage damage");
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void mapsNativeTimedShrinesToRuntimeModifiersAndExpiresThem() {
     StateList states = new StateList(1);

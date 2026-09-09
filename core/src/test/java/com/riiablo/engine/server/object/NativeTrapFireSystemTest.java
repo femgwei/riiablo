@@ -1,5 +1,6 @@
 package com.riiablo.engine.server.object;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -17,6 +18,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeTrapFire;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.map.Map;
 
@@ -25,6 +27,36 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 class NativeTrapFireSystemTest extends RiiabloTest {
+  @Test
+  void classifiesTrapVictimsAsPlayersForDifficultyAndStateResistance() {
+    DamageProbe probe = new DamageProbe();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new NativeTrapFireSystem())
+        .build());
+    try {
+      Map.Zone normalZone = mock(Map.Zone.class);
+      Map.Zone hellZone = mock(Map.Zone.class);
+      int normalFire = createFire(world, normalZone, new Map(0, 0), 0x1234);
+      int hellFire = createFire(world, hellZone, new Map(0, 2), 0x1234);
+      int normalPlayer = createPlayer(world, normalZone, new Map(0, 0));
+      int hellPlayer = createPlayer(world, hellZone, new Map(0, 2));
+
+      world.setDelta(0.1f);
+      world.process();
+
+      float normalLoss = 100f - hitpoints(world, normalPlayer);
+      float hellLoss = 100f - hitpoints(world, hellPlayer);
+      assertTrue(normalLoss > 0f);
+      assertEquals(normalLoss * 2f, hellLoss, 0.001f,
+          "Hell's -100 player resistance penalty must apply to native trap fire");
+      assertEquals(2, probe.damageEvents);
+      assertTrue(world.getEntityManager().isActive(normalFire));
+      assertTrue(world.getEntityManager().isActive(hellFire));
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void damagesNearbyPlayerAndDeletesFireAtEndOfLifetime() {
     DamageProbe probe = new DamageProbe();
@@ -61,6 +93,37 @@ class NativeTrapFireSystemTest extends RiiabloTest {
     } finally {
       world.dispose();
     }
+  }
+
+  private static int createFire(World world, Map.Zone zone, Map map, int seed) {
+    int id = world.create();
+    world.getMapper(Position.class).create(id).position.set(10, 10);
+    world.getMapper(MapWrapper.class).create(id).set(map, zone);
+    world.getMapper(NativeTrapFire.class).create(id).reset(0.5f, 3f, 100, seed);
+    return id;
+  }
+
+  private static int createPlayer(World world, Map.Zone zone, Map map) {
+    int id = world.create();
+    world.getMapper(Player.class).create(id);
+    world.getMapper(Position.class).create(id).position.set(11, 10);
+    world.getMapper(MapWrapper.class).create(id).set(map, zone);
+    Attributes attrs = Attributes.obtainLarge();
+    attrs.base().put(Stat.hitpoints, 100f);
+    attrs.base().put(Stat.maxhp, 100f);
+    attrs.base().put(Stat.level, 1);
+    attrs.base().put(Stat.dexterity, 0);
+    attrs.base().put(Stat.armorclass, 0);
+    attrs.reset();
+    world.getMapper(AttributesWrapper.class).create(id).attrs = attrs;
+    world.getMapper(UnitStates.class).create(id).init(id);
+    return id;
+  }
+
+  private static float hitpoints(World world, int entityId) {
+    Attributes attrs = world.getMapper(AttributesWrapper.class).get(entityId).attrs;
+    StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+    return hp != null ? hp.asFixed() : 0f;
   }
 
   private static final class DamageProbe extends PassiveSystem {
