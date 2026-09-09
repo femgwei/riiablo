@@ -82,11 +82,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       StateId.INCREASEDSTAMINA, StateId.IRONSKIN,
       StateId.INCREASEDSPEED, StateId.NATURALRESISTANCE
   };
-  private static final int[] PALADIN_RESIST_PASSIVE_SKILLS = {
-      SkillId.RESIST_FIRE, SkillId.RESIST_COLD, SkillId.RESIST_LIGHTNING
+  private static final int[] PALADIN_HARD_POINT_PASSIVE_SKILLS = {
+      SkillId.RESIST_FIRE, SkillId.RESIST_COLD, SkillId.RESIST_LIGHTNING,
+      SkillId.BLESSED_AIM
   };
-  private static final int[] PALADIN_RESIST_PASSIVE_STATES = {
-      StateId.PASSIVE_RESISTFIRE, StateId.PASSIVE_RESISTCOLD, StateId.PASSIVE_RESISTLTNG
+  private static final int[] PALADIN_HARD_POINT_PASSIVE_STATES = {
+      StateId.PASSIVE_RESISTFIRE, StateId.PASSIVE_RESISTCOLD,
+      StateId.PASSIVE_RESISTLTNG, StateId.PENETRATE
   };
 
   protected ComponentMapper<UnitStates> mUnitStates;
@@ -136,7 +138,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     applyBloodGolemDamageLink(event);
 
     absorbBoneArmor(event, victimStates);
-    applyIronGolemThorns(event);
+    applyThorns(event, victimStates);
 
     if (event.attacker < 0 || event.attacker == event.victim
         || event.physicalDamage <= 0f || !event.isLeechableAttack()
@@ -271,17 +273,23 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         ? Math.max(0, monster.monstats.Drain[difficulty]) : 0;
   }
 
-  /** Iron Golem's permanent thorns_percent aura uses the native reactive path. */
-  private void applyIronGolemThorns(DamageEvent event) {
-    if (!event.isMelee() || event.attacker < 0 || !mSummonedPet.has(event.victim)
-        || !mAttributesWrapper.has(event.attacker)) return;
-    SummonedPet pet = mSummonedPet.get(event.victim);
-    if (pet == null || pet.skillId != com.riiablo.engine.server.skill.SkillId.IRON_GOLEM
+  /** Native thorns_percent EventFunc: aura, item and Iron Golem lists share one path. */
+  private void applyThorns(DamageEvent event, StateList victimStates) {
+    if (!event.isMelee() || event.attacker < 0 || event.attacker == event.victim
+        || !mAttributesWrapper.has(event.attacker)
         || !mAttributesWrapper.has(event.victim)) return;
-    int percent = statInt(mAttributesWrapper.get(event.victim).attrs, Stat.thorns_percent);
+    Attributes victim = mAttributesWrapper.get(event.victim).attrs;
+    int percent = victim != null ? statInt(victim, Stat.thorns_percent) : 0;
+    if (victimStates != null) {
+      percent += victimStates.getTotalStatContribution(Stat.thorns_percent);
+    }
+    // D2Game reduces the percentage before multiplying when the melee
+    // attacker is a player or hireling. Keep the native rounding order.
+    if (mPlayer.has(event.attacker) || mMercenary.has(event.attacker)) {
+      percent = (percent + 4) / 8;
+    }
     int raw = (int) Math.floor(Math.min(Math.max(0f, event.physicalDamage),
-        Math.max(0f, event.damage)) * percent / 100f);
-    if (mPlayer.has(event.attacker) || mMercenary.has(event.attacker)) raw /= 8;
+        Math.max(0f, event.damage)) * Math.max(0, percent) / 100f);
     if (raw <= 0) return;
     Attributes attacker = mAttributesWrapper.get(event.attacker).attrs;
     StateList attackerStates = mUnitStates.has(event.attacker)
@@ -300,7 +308,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       life.set(0f);
       if (events != null) events.dispatch(DeathEvent.obtain(event.victim, event.attacker));
     }
-    log.info("[NECRO_IRON_GOLEM] phase=thorns pet={} attacker={} percent={} raw={} "
+    log.info("[THORNS] phase=reflect defender={} attacker={} percent={} raw={} "
             + "reflected={} hp={} -> {}",
         event.victim, event.attacker, percent, raw, reactive.damage, before, life.asFixed());
   }
@@ -478,7 +486,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     StateList stateList = unitStates.stateList;
 
     synchronizeBarbarianPassives(entityId, stateList);
-    synchronizePaladinResistancePassives(entityId, stateList);
+    synchronizePaladinHardPointPassives(entityId, stateList);
 
     processHolyFireAura(entityId, stateList);
     processBladeShield(entityId, stateList);
@@ -599,35 +607,36 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
   }
 
-  /** Keeps the native hard-point max-resist passive lists independent of the selected aura. */
-  private void synchronizePaladinResistancePassives(int entityId, StateList states) {
+  /** Keeps native aura hard-point passive lists independent of the selected aura. */
+  private void synchronizePaladinHardPointPassives(int entityId, StateList states) {
     if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null
         || mPlayer.get(entityId).data.classId != CharacterClass.PALADIN) return;
-    for (int i = 0; i < PALADIN_RESIST_PASSIVE_SKILLS.length; i++) {
-      int skillId = PALADIN_RESIST_PASSIVE_SKILLS[i];
-      int stateId = PALADIN_RESIST_PASSIVE_STATES[i];
+    for (int i = 0; i < PALADIN_HARD_POINT_PASSIVE_SKILLS.length; i++) {
+      int skillId = PALADIN_HARD_POINT_PASSIVE_SKILLS[i];
+      int stateId = PALADIN_HARD_POINT_PASSIVE_STATES[i];
       Skills.Entry skill = Riiablo.files.skills.get(skillId);
       int hardLevel = skill == null ? 0
           : Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skillId));
       UnitState current = states.getState(stateId);
-      if (hardLevel <= 0 || PaladinSkills.getResistancePassiveStateId(skill) == StateId.NONE) {
+      if (hardLevel <= 0 || PaladinSkills.getHardPointPassiveStateId(skill) == StateId.NONE) {
         if (current != null) {
           states.removeState(stateId);
-          log.info("[PALADIN_RESIST_PASSIVE] phase=remove entity={} skill={} state={}",
+          log.info("[PALADIN_HARD_POINT_PASSIVE] phase=remove entity={} skill={} state={}",
               entityId, skillId, StateId.getName(stateId));
         }
         continue;
       }
       if (current != null && current.level == hardLevel && !current.expired) continue;
-      UnitState applied = PaladinSkills.applyResistancePassiveState(
+      UnitState applied = PaladinSkills.applyHardPointPassiveState(
           states, skill, hardLevel, entityId);
       if (applied != null) {
-        log.info("[PALADIN_RESIST_PASSIVE] phase=refresh entity={} skill={} level={} "
-                + "state={} maxFire={} maxCold={} maxLightning={}",
+        log.info("[PALADIN_HARD_POINT_PASSIVE] phase=refresh entity={} skill={} level={} "
+                + "state={} maxFire={} maxCold={} maxLightning={} attackRating={}",
             entityId, skill.skill, hardLevel, StateId.getName(applied.stateId),
             applied.getStatContributionValue(Stat.maxfireresist),
             applied.getStatContributionValue(Stat.maxcoldresist),
-            applied.getStatContributionValue(Stat.maxlightresist));
+            applied.getStatContributionValue(Stat.maxlightresist),
+            applied.getStatContributionValue(Stat.item_tohit_percent));
       }
     }
   }

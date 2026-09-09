@@ -232,7 +232,11 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
         if (statId < 0 || values[i] == 0 || statId == Stat.hitpoints || statId == Stat.mana) {
           continue;
         }
-        state.addStatContribution(statId, 0, NativeStatResolver.Operation.ADD, values[i]);
+        // SrvDo065 writes AuraStat first and, for the owner, PassiveStat
+        // afterwards through STATLIST_SetStatIfListIsValid. Repeated entries
+        // therefore replace rather than accumulate (Fanaticism's full owner
+        // damage replaces the half-strength party value).
+        state.setStatContribution(statId, 0, NativeStatResolver.Operation.ADD, values[i]);
       }
     }
     if (stateUpdater != null) stateUpdater.refreshAuraVelocity(targetId);

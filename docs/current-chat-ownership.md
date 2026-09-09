@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（Fist of the Heavens / Holy Bolt 原生权威链）
-- 上一功能基线：`6aa992b2`（Blessed Hammer 原生权威螺旋、碰撞与伤害链）
+- 当前功能提交：本文件所在 `HEAD`（圣骑士五个原生支援光环）
+- 上一功能基线：`ef45c90e`（Holy Freeze / Holy Shock / Sanctuary 原生特殊周期光环）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 69%（详见路线图）
@@ -112,13 +112,16 @@
   可用尸体死亡链，以及 Sanctuary 的非 Boss 亡灵筛选、亡灵命中/伤害和绕过物抗均已
   完成。12 个测试套件 121 个用例、D2GS 编译和真实 1.10f 离屏营地通过；无生成网络
   文件差异。
+- Defiance、Blessed Aim、Vigor、Fanaticism 与 Thorns 已按原生 `SrvDo065` 接入；
+  Blessed Aim `penetrate` 只按硬点更新，Fanaticism 自身全伤覆盖队伍半伤，Thorns
+  聚合永久/状态来源并统一处理普通单位与钢铁石魔的近战反伤。54 个专项用例、D2GS
+  编译和真实 1.10f 离屏营地通过；未修改网络 schema 或生成文件。
 
 ## 下一步
 
 当前已完成 **P1 死灵法师召唤、诅咒和骨毒系首轮**，以及 **圣骑士代表性光环、四种
-抗性光环与硬点最大抗性、特殊周期光环、Blessed Hammer、Fist of the Heavens /
-Holy Bolt 原生权威链首轮**。下一步对齐 Defiance、Blessed Aim、Vigor、Fanaticism、
-Thorns 等剩余 `SrvDo065` 支援光环；再处理 Cleansing、Meditation、Redemption 的周期
+抗性光环与硬点最大抗性、特殊周期/支援光环、Blessed Hammer、Fist of the Heavens /
+Holy Bolt 原生权威链首轮**。下一步处理 Cleansing、Meditation、Redemption 的周期
 资源/尸体行为。战斗模块不再单独分派，相关修改与进度文档均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与

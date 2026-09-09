@@ -72,6 +72,12 @@
   `SHATTER`，碎尸死亡不会留下可选择/复活尸体。Holy Shock 使用原生闪电附伤和周期伤害；
   Sanctuary 只影响非 Boss 亡灵，其亡灵伤害/命中及绕过亡灵物抗已进入普通攻击和导弹
   权威链。
+- Defiance、Blessed Aim、Vigor、Fanaticism 与 Thorns 已完成原生 `SrvDo065` 支援光环：
+  五者的状态、目标过滤、50-frame 周期、范围与全部属性均读取 1.10f `Skills.txt`；
+  Fanaticism 对自身以后写全额伤害覆盖队友半值，不再错误相加。Blessed Aim 的永久
+  `penetrate` 独立 stat-list 只读取硬点，不受 `+skills` 影响。Thorns 已由钢铁石魔
+  专用分支扩展为统一近战受击回调，聚合物品与状态属性，并对玩家/佣兵攻击者执行
+  原生 `(percent + 4) / 8` 和后续 PvP 物理缩放；导弹与反应伤害不会递归触发。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -100,7 +106,8 @@
   以及召唤物重组/传送边界、Revive/Golem 专属 AI、技能继承和四类 Golem 战斗副作用
   也已完成首轮。圣骑士代表性光环、四种抗性光环与硬点最大抗性、Blessed Hammer、
   Fist of the Heavens / Holy Bolt，以及 Holy Freeze、Holy Shock、Sanctuary 原生权威链
-  也已完成首轮；下一项为剩余 `SrvDo065` 支援光环的数据驱动对齐。
+  也已完成首轮；五个 `SrvDo065` 支援光环现已数据驱动对齐，下一项为 Cleansing、
+  Meditation 与 Redemption 的周期资源/尸体行为。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -130,8 +137,9 @@
 7. **P1 圣骑士技能专项（进行中）**：光环权威状态与覆盖/叠加仲裁、Blessed Hammer，
    以及 Fist of the Heavens / Holy Bolt 的原生目标、延迟、分裂、伤害/治疗与协同链已
    完成首轮；Resist Fire/Cold/Lightning、Salvation、硬点最大抗性和 Holy Freeze /
-   Holy Shock / Sanctuary 特殊周期行为也已完成。下一项对齐 Defiance、Blessed Aim、
-   Vigor、Fanaticism 与 Thorns 等剩余 `SrvDo065` 支援光环。
+   Holy Shock / Sanctuary 特殊周期行为也已完成；Defiance、Blessed Aim、Vigor、
+   Fanaticism 与 Thorns 的 `SrvDo065` 原生属性、硬点被动和反伤链亦已完成。下一项处理
+   Cleansing、Meditation 与 Redemption 周期行为。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -147,7 +155,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 82% | 18% | 2.2% | 死灵骨毒/召唤链、圣骑士特殊周期光环、Blessed Hammer 与 FoH/Holy Bolt 已接通；剩余支援光环及职业技能仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 83% | 17% | 2.0% | 死灵骨毒/召唤链、圣骑士特殊周期/支援光环、Blessed Hammer 与 FoH/Holy Bolt 已接通；剩余周期资源光环及职业技能仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -171,7 +179,7 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 88% | 12% | 特殊周期光环、四种抗性光环、Blessed Hammer 与 FoH/Holy Bolt 已完成；剩余支援光环和近战技能尾项 |
+| 圣骑士 Paladin | 92% | 8% | 特殊周期/支援/抗性光环、Blessed Hammer 与 FoH/Holy Bolt 已完成；剩余周期资源光环和近战技能尾项 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
 职业技能专项整体按 **约 78% 完成、约 22% 剩余** 计入战斗模块；刺客专项已完成，
@@ -698,7 +706,8 @@ Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单�
 召唤物跟随、概率节奏、敌我筛选、主人目标/PvP 关系及跨房间/跨区域重组现已完成首轮。
 Revive/Golem 专属 AI、技能继承、四类 Golem 原生副作用、Blessed Hammer、Fist of
 the Heavens / Holy Bolt、四种抗性光环和三个特殊周期光环现已完成；当前进入
-**Defiance / Blessed Aim / Vigor / Fanaticism / Thorns 原生支援光环**。
+Defiance / Blessed Aim / Vigor / Fanaticism / Thorns 原生支援光环现已完成；当前进入
+**Cleansing / Meditation / Redemption 原生周期资源与尸体行为**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -1201,9 +1210,20 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     `:desktop:offscreenCamp` 均通过，输出 `[OFFSCREEN_CAMP] result=PASS`；未修改
     FlatBuffers schema，无生成网络文件差异。
 
-下一项：**剩余圣骑士 `SrvDo065` 支援光环原生化**。优先将 Defiance、Blessed Aim、
-Vigor、Fanaticism 与 Thorns 从硬编码默认值改为真实 1.10f 数据、状态和战斗副作用；
-随后单独处理 Cleansing、Meditation 与 Redemption 的周期资源/尸体行为。
+- [x] ~~完成 Defiance / Blessed Aim / Vigor / Fanaticism / Thorns 原生支援光环~~
+  - 五个 `SrvDo065` 光环均由 1.10f 状态、过滤、范围、周期和属性公式驱动；Vigor 三项
+    体力/移速属性和 Fanaticism 攻速、命中、队友半伤/自身全伤语义已接通。
+  - Blessed Aim `penetrate` 永久被动仅按硬点计算；Thorns 聚合永久/状态来源，仅响应
+    近战，并保留玩家/佣兵百分比折算、PvP 物理缩放和钢铁石魔兼容路径。
+  - 7 个专项/联合测试套件共 54 个用例、`:server:d2gs:compileJava` 与真实 1.10f
+    `:desktop:offscreenCamp` 均通过，输出 `[OFFSCREEN_CAMP] result=PASS`；未修改
+    FlatBuffers schema，无生成网络文件差异。额外全量 `:core:test` 执行 1396 个用例，
+    其中 97 个因仓库既有测试 fixture/资源缺失及既有 Shaman/Frenzy 场景失败而未通过，
+    本模块专项保持全绿。
+
+下一项：**Cleansing / Meditation / Redemption 原生周期资源与尸体行为**。优先核对
+`SrvDo065` 的 Prayer 被动资源消耗/恢复关联，以及 Redemption 的尸体筛选、概率、
+生命/法力恢复和原子尸体消费。
 当前 Chat 继续负责包括战斗在内的全部模块。
 
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，

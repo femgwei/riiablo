@@ -200,21 +200,22 @@ public final class PaladinSkills {
     return skillElementalDamage(skill, skillLevel, baseSkillLevel);
   }
 
-  /** Maps the three hard-point resistance passive states from States.txt. */
-  public static int getResistancePassiveStateId(Skills.Entry skill) {
+  /** Maps Paladin aura hard-point passive lists from the native States table. */
+  public static int getHardPointPassiveStateId(Skills.Entry skill) {
     if (skill == null || skill.passivestate == null) return StateId.NONE;
     switch (skill.passivestate.trim().toLowerCase(Locale.ROOT)) {
       case "passive_resistfire": return StateId.PASSIVE_RESISTFIRE;
       case "passive_resistcold": return StateId.PASSIVE_RESISTCOLD;
       case "passive_resistltng": return StateId.PASSIVE_RESISTLTNG;
+      case "penetrate": return StateId.PENETRATE;
       default: return StateId.NONE;
     }
   }
 
-  /** D2Common passive refresh: one max-resist point for every two hard points. */
-  public static UnitState applyResistancePassiveState(
+  /** Builds a permanent passive list strictly from owned hard skill points. */
+  public static UnitState applyHardPointPassiveState(
       StateList states, Skills.Entry skill, int hardLevel, int ownerId) {
-    int stateId = getResistancePassiveStateId(skill);
+    int stateId = getHardPointPassiveStateId(skill);
     if (states == null || hardLevel <= 0 || stateId == StateId.NONE) return null;
     UnitState state = states.addState(stateId, 0, hardLevel, ownerId);
     if (state == null) return null;
@@ -238,6 +239,19 @@ public final class PaladinSkills {
     }
     state.needsSync = true;
     return state;
+  }
+
+  /** Compatibility bridge for the three resistance aura passive callers. */
+  public static int getResistancePassiveStateId(Skills.Entry skill) {
+    int stateId = getHardPointPassiveStateId(skill);
+    return stateId == StateId.PENETRATE ? StateId.NONE : stateId;
+  }
+
+  /** Compatibility bridge for existing resistance aura tests and callers. */
+  public static UnitState applyResistancePassiveState(
+      StateList states, Skills.Entry skill, int hardLevel, int ownerId) {
+    if (getResistancePassiveStateId(skill) == StateId.NONE) return null;
+    return applyHardPointPassiveState(states, skill, hardLevel, ownerId);
   }
 
   /**

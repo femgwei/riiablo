@@ -224,7 +224,7 @@ class AuraEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
-  void fanaticismExpiresAfterRangePulseInsteadOfStackingAsFrenzy() {
+  void fanaticismExpiresAfterRangePulseAndUsesItsNativeAttackRateStat() {
     try (Harness test = new Harness()) {
       int caster = player(test.world, 0, 0);
       int ally = player(test.world, 3, 0);
@@ -234,8 +234,9 @@ class AuraEcsScenarioTest extends RiiabloTest {
       assertTrue(test.auras.manager().activateAura(caster, SkillId.FANATICISM, 1));
       test.tick();
       assertTrue(states(test.world, ally).hasState(StateId.FANATICISM));
-      assertEquals(15, states(test.world, ally).getTotalVelocityModifier());
-      assertEquals(1.15f, velocity.stateSpeedMultiplier, 0.001f);
+      assertEquals(14, states(test.world, ally).getTotalAnimationRateModifier());
+      assertEquals(0, states(test.world, ally).getTotalVelocityModifier());
+      assertEquals(1f, velocity.stateSpeedMultiplier, 0.001f);
 
       position(test.world, ally).set(500, 0);
       test.ticks(51);

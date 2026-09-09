@@ -459,8 +459,10 @@ public class AuraManager {
     if (Riiablo.files == null || Riiablo.files.skills == null || Riiablo.files.States == null) return;
     int[] ids = {SkillId.MIGHT, SkillId.PRAYER, SkillId.RESIST_FIRE,
         SkillId.RESIST_COLD, SkillId.RESIST_LIGHTNING, SkillId.HOLY_FIRE,
-        SkillId.CONCENTRATION, SkillId.HOLY_FREEZE, SkillId.HOLY_SHOCK,
-        SkillId.SANCTUARY, SkillId.CONVICTION, SkillId.SALVATION};
+        SkillId.THORNS, SkillId.DEFIANCE, SkillId.BLESSED_AIM,
+        SkillId.CONCENTRATION, SkillId.VIGOR, SkillId.HOLY_FREEZE,
+        SkillId.HOLY_SHOCK, SkillId.SANCTUARY, SkillId.FANATICISM,
+        SkillId.CONVICTION, SkillId.SALVATION};
     for (int id : ids) registerNativeAura(id);
   }
 
