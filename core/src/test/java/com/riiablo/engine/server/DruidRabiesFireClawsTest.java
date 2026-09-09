@@ -9,6 +9,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.SkillId;
@@ -61,5 +62,20 @@ class DruidRabiesFireClawsTest extends RiiabloTest {
     assertTrue(result.elementalDamage[CombatSystem.DAMAGE_FIRE] >= fire[0]);
     assertTrue(result.elementalDamage[CombatSystem.DAMAGE_FIRE] <= fire[1]);
     assertEquals(10 + result.elementalDamage[CombatSystem.DAMAGE_FIRE], result.totalDamage);
+  }
+
+  @Test
+  void rabiesChildControllerRetainsCastTimePoisonSnapshot() {
+    Missile parent = new Missile();
+    parent.rabiesRawDamageFixed = 777;
+    parent.rabiesPoisonPierce = 35;
+    parent.rabiesAttackerPlayer = true;
+    Missile child = new Missile();
+
+    MissileCollisionSystem.copyRabiesCastSnapshot(parent, child);
+
+    assertEquals(777, child.rabiesRawDamageFixed);
+    assertEquals(35, child.rabiesPoisonPierce);
+    assertTrue(child.rabiesAttackerPlayer);
   }
 }

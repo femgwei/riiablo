@@ -336,21 +336,32 @@ public class MissileCollisionSystem extends IteratingSystem {
       StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
       if (hp == null || hp.asFixed() <= 0f) continue;
       int duration = Math.max(10, controller.remainingFrames);
-      float damage = Math.max(1f / 256f, controller.damageMultiplier);
+      int difficulty = combatDifficulty(controller.rabiesSourceId, targetId);
+      CombatSystem.CombatResult poison =
+          CombatSystem.INSTANCE.calculateFixedPoisonDamageSnapshot(
+              attrs, mPlayer.has(targetId), controller.rabiesAttackerPlayer,
+              controller.rabiesRawDamageFixed, controller.rabiesPoisonPierce,
+              duration, targetStates.stateList, difficulty);
       UnitState infected = targetStates.stateList.addState(
           StateId.RABIES, duration, Math.max(1, controller.damageLevel),
           controller.rabiesSourceId);
       if (infected == null) continue;
       infected.skillId = controller.skillId;
       infected.needsSync = true;
-      StatusEffectApplier.INSTANCE.applyPoison(
-          targetId, damage, duration, controller.rabiesSourceId);
+      if (poison.poisonDamagePerFrame > 0f && poison.poisonDuration > 0) {
+        StatusEffectApplier.INSTANCE.applyPoison(
+            targetId, poison.poisonDamagePerFrame, poison.poisonDuration,
+            controller.rabiesSourceId);
+      }
       spawnRabiesContagionVisual(controller, position.position,
           targetId, mPosition.get(targetId).position);
       createRabiesControllerChild(controller, targetId, duration);
       log.info("[DRUID_RABIES] phase=spread source={} from={} target={} remaining={} "
-              + "damage={} radius={}", controller.rabiesSourceId, infectedId,
-          targetId, duration, damage, radius);
+              + "rawFixed={} damagePerFrame={} poisonDuration={} pierce={} "
+              + "targetPlayer={} difficulty={} radius={}", controller.rabiesSourceId,
+          infectedId, targetId, duration, controller.rabiesRawDamageFixed,
+          poison.poisonDamagePerFrame, poison.poisonDuration,
+          controller.rabiesPoisonPierce, mPlayer.has(targetId), difficulty, radius);
     }
   }
 
@@ -395,6 +406,14 @@ public class MissileCollisionSystem extends IteratingSystem {
     child.remainingFrames = duration;
     child.rabiesNextPulseFrame = child.nativeFrame + 1;
     child.damageMultiplier = parent.damageMultiplier;
+    copyRabiesCastSnapshot(parent, child);
+  }
+
+  static void copyRabiesCastSnapshot(Missile parent, Missile child) {
+    if (parent == null || child == null) return;
+    child.rabiesRawDamageFixed = parent.rabiesRawDamageFixed;
+    child.rabiesPoisonPierce = parent.rabiesPoisonPierce;
+    child.rabiesAttackerPlayer = parent.rabiesAttackerPlayer;
   }
 
   /** D2MOO MISSMODE_SrvDo31: a maker reaching its path end emits two waves. */

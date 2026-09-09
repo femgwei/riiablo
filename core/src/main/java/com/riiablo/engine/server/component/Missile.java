@@ -113,6 +113,12 @@ public class Missile extends PooledComponent {
   public boolean rabiesController;
   public int rabiesSourceId = -1;
   public int rabiesNextPulseFrame;
+  /** Cast-time 8.8 poison rate retained so each spread target resolves itself. */
+  public int rabiesRawDamageFixed;
+  /** Cast-time poison pierce retained independently of the original target. */
+  public int rabiesPoisonPierce;
+  /** Whether the original caster was a player, required for propagated PvP. */
+  public boolean rabiesAttackerPlayer;
   /** Presentation carrier; infection is committed by the authoritative controller. */
   public boolean rabiesContagionVisual;
 
@@ -185,6 +191,9 @@ public class Missile extends PooledComponent {
     rabiesController = false;
     rabiesSourceId = -1;
     rabiesNextPulseFrame = 0;
+    rabiesRawDamageFixed = 0;
+    rabiesPoisonPierce = 0;
+    rabiesAttackerPlayer = false;
     rabiesContagionVisual = false;
     damageMultiplier = 1f;
     pierceEnabled = false;

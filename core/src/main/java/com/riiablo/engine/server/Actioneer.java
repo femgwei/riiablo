@@ -1829,10 +1829,21 @@ public class Actioneer extends PassiveSystem {
             unitStates.stateList, stateList(targetId), isEntityMoving(targetId));
     if (rabies && combat.hit && !combat.blocked) {
       int rawFixed = MathUtils.random(elemental[0], elemental[1]);
-      int resistedFixed = resistedDamage(rawFixed, defender, stateList(targetId),
-          Stat.poisonresist, 3);
-      combat.poisonDamagePerFrame = resistedFixed / 256f
-          + combat.elementalDamage[CombatSystem.DAMAGE_POISON];
+      CombatSystem.CombatResult poison = CombatSystem.INSTANCE.calculateFixedPoisonDamage(
+          attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
+          rawFixed, duration, stateList(targetId), combatDifficulty());
+      // Weapon poison was already resolved by the melee record. It is also an
+      // 8.8 rate and must not be treated as whole damage per frame.
+      float weaponPoisonPerFrame =
+          CombatSystem.fixed8RateToPerFrame(
+              combat.elementalDamage[CombatSystem.DAMAGE_POISON]);
+      combat.elementalDamage[CombatSystem.DAMAGE_POISON] +=
+          poison.elementalDamage[CombatSystem.DAMAGE_POISON];
+      combat.poisonDamagePerFrame = weaponPoisonPerFrame + poison.poisonDamagePerFrame;
+      combat.poisonDuration = poison.poisonDuration;
+      combat.poisonRawDamageFixed = poison.poisonRawDamageFixed;
+      combat.poisonPiercePercent = poison.poisonPiercePercent;
+      combat.poisonBaseDuration = poison.poisonBaseDuration;
     }
     if (rabies) {
       casting.rabiesCombat = combat;
@@ -1869,7 +1880,7 @@ public class Actioneer extends PassiveSystem {
     if (targetStates.stateList == null) targetStates.init(targetId);
     if (!targetStates.stateList.hasState(StateId.RABIES)) {
       UnitState infected = targetStates.stateList.addState(
-          StateId.RABIES, Math.max(10, combat.poisonDuration),
+          StateId.RABIES, Math.max(10, combat.poisonBaseDuration),
           Math.max(1, skillLevel(entityId, casting.skillId)), entityId);
       if (infected != null) {
         infected.skillId = casting.skillId;
@@ -2104,9 +2115,12 @@ public class Actioneer extends PassiveSystem {
     controller.attachedEntityId = infectedId;
     controller.rabiesController = true;
     controller.rabiesSourceId = sourceId;
-    controller.remainingFrames = Math.max(10, combat.poisonDuration);
+    controller.remainingFrames = Math.max(10, combat.poisonBaseDuration);
     controller.rabiesNextPulseFrame = 0;
     controller.damageMultiplier = Math.max(0f, combat.poisonDamagePerFrame);
+    controller.rabiesRawDamageFixed = combat.poisonRawDamageFixed;
+    controller.rabiesPoisonPierce = combat.poisonPiercePercent;
+    controller.rabiesAttackerPlayer = isPlayerEntity(sourceId);
     log.info("[DRUID_RABIES] phase=controller_create source={} infected={} missileId={} "
             + "missile={} duration={}", sourceId, infectedId, missileId,
         row.Missile, controller.remainingFrames);

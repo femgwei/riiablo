@@ -347,6 +347,99 @@ public class CombatSystemTest extends RiiabloTest {
     assertEquals(6, result.totalDamage);
   }
 
+  @Test
+  public void fixedPoisonSeparatesRateAndLengthResistance() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.poisonresist, 50);
+    defender.base().put(Stat.item_poisonlengthresist, 25);
+    defender.reset();
+
+    CombatSystem.CombatResult result = combat.calculateFixedPoisonDamage(
+        attacker, defender, true, false, 256, 100, null, 0);
+
+    assertEquals(0.5f, result.poisonDamagePerFrame, 0.0001f);
+    assertEquals(75, result.poisonDuration);
+    assertEquals(100, result.poisonBaseDuration);
+    assertEquals(0, result.totalDamage);
+  }
+
+  @Test
+  public void fixedPoisonAppliesHellPenaltyToPlayerDamageAndLength() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+
+    CombatSystem.CombatResult result = combat.calculateFixedPoisonDamage(
+        attacker, defender, true, false, 256, 100, null, 2);
+
+    assertEquals(2f, result.poisonDamagePerFrame, 0.0001f);
+    assertEquals(200, result.poisonDuration);
+  }
+
+  @Test
+  public void fixedPoisonPvpScalesRateButNotDuration() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+
+    CombatSystem.CombatResult result = combat.calculateFixedPoisonDamage(
+        attacker, defender, true, true, 256, 100, null, 0);
+
+    assertEquals(43f / 256f, result.poisonDamagePerFrame, 0.0001f);
+    assertEquals(100, result.poisonDuration);
+  }
+
+  @Test
+  public void fixedPoisonSnapshotsMasteryAndPierceForSpreadTargets() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1);
+    attacker.base().put(Stat.passive_pois_mastery, 100);
+    attacker.base().put(Stat.item_pierce_pois, 10);
+    attacker.base().put(Stat.passive_pois_pierce, 15);
+    attacker.reset();
+    Attributes first = attrs(100, 1, 0, 1, 1, 1);
+    first.base().put(Stat.poisonresist, 50);
+    first.base().put(Stat.item_poisonlengthresist, 50);
+    first.reset();
+    Attributes spread = attrs(100, 1, 0, 1, 1, 1);
+    spread.base().put(Stat.poisonresist, 75);
+    spread.reset();
+
+    CombatSystem.CombatResult initial = combat.calculateFixedPoisonDamage(
+        attacker, first, false, true, 256, 100, null, 0);
+    CombatSystem.CombatResult propagated = combat.calculateFixedPoisonDamageSnapshot(
+        spread, false, true, initial.poisonRawDamageFixed,
+        initial.poisonPiercePercent, 80, null, 0);
+
+    assertEquals(512, initial.poisonRawDamageFixed);
+    assertEquals(25, initial.poisonPiercePercent);
+    assertEquals(1.5f, initial.poisonDamagePerFrame, 0.0001f);
+    assertEquals(75, initial.poisonDuration);
+    assertEquals(1f, propagated.poisonDamagePerFrame, 0.0001f);
+    // The same 25% pierce is replayed against the new target's zero poison
+    // length resistance, extending the remaining 80-frame infection to 100.
+    assertEquals(100, propagated.poisonDuration);
+  }
+
+  @Test
+  public void poisonShrineSuppressesDotWithoutDiscardingInfectionLifetime() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    StateList states = new StateList(99);
+    states.addState(StateId.SHRINE_RESIST_POISON, 100, 1, 99);
+
+    CombatSystem.CombatResult result = combat.calculateFixedPoisonDamageSnapshot(
+        defender, false, true, 256, 0, 100, states, 0);
+
+    assertEquals(1f, result.poisonDamagePerFrame, 0.0001f);
+    assertEquals(0, result.poisonDuration);
+    assertEquals(100, result.poisonBaseDuration);
+  }
+
+  @Test
+  public void convertsWeaponPoisonFromNativeEightEightRate() {
+    assertEquals(0.5f, CombatSystem.fixed8RateToPerFrame(128), 0.0001f);
+    assertEquals(1f, CombatSystem.fixed8RateToPerFrame(256), 0.0001f);
+    assertEquals(0f, CombatSystem.fixed8RateToPerFrame(-1), 0.0001f);
+  }
+
   private static Attributes attrs(int hp, int level, int defense,
       int minDamage, int maxDamage, int attackRating) {
     Attributes attrs = Attributes.obtainStandard();

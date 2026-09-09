@@ -325,6 +325,11 @@ public class CombatSystem {
     public int poisonDuration;
     /** Fractional poison rate used by native 8.8 fixed-point skill damage. */
     public float poisonDamagePerFrame;
+    /** Pre-resistance 8.8 poison rate and pierce snapshot used by Rabies spread. */
+    public int poisonRawDamageFixed;
+    public int poisonPiercePercent;
+    /** Unreduced skill duration retained for infection/controller lifetime. */
+    public int poisonBaseDuration;
 
     /** 重置结果 */
     public void reset() {
@@ -345,6 +350,9 @@ public class CombatSystem {
       coldDuration = 0;
       poisonDuration = 0;
       poisonDamagePerFrame = 0f;
+      poisonRawDamageFixed = 0;
+      poisonPiercePercent = 0;
+      poisonBaseDuration = 0;
     }
   }
 
@@ -568,6 +576,66 @@ public class CombatSystem {
     result.absorbedLife = absorbed;
     result.totalDamage = result.elementalDamage[damageType];
     return result;
+  }
+
+  /**
+   * Resolves an 8.8 fixed-point poison rate and its independent duration.
+   * D2Game sends poison damage and poison length through separate rows of the
+   * damage-stat table: both receive difficulty/pierce, but only damage receives
+   * poison resistance/max-resistance and the PvP damage scalar.
+   */
+  public CombatResult calculateFixedPoisonDamage(
+      Attributes attacker, Attributes defender, boolean defenderPlayer,
+      boolean attackerPlayer, int rawDamageFixed, int baseDuration,
+      StateList defenderStates, int difficulty) {
+    int mastery = statInt(attacker, Stat.passive_pois_mastery, 0);
+    long mastered = (long) Math.max(0, rawDamageFixed) * Math.max(0, 100 + mastery) / 100L;
+    int rawSnapshot = mastered >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) mastered;
+    int pierce = statInt(attacker, Stat.item_pierce_pois, 0)
+        + statInt(attacker, Stat.passive_pois_pierce, 0);
+    return calculateFixedPoisonDamageSnapshot(defender, defenderPlayer, attackerPlayer,
+        rawSnapshot, pierce, baseDuration, defenderStates, difficulty);
+  }
+
+  /** Replays a Rabies cast snapshot against a newly infected target. */
+  public CombatResult calculateFixedPoisonDamageSnapshot(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int rawDamageFixed, int piercePercent, int baseDuration,
+      StateList defenderStates, int difficulty) {
+    CombatResult result = calculateFixedElementalDamage(
+        defender, defenderPlayer, attackerPlayer, DAMAGE_POISON,
+        rawDamageFixed, piercePercent, defenderStates, difficulty);
+    result.poisonRawDamageFixed = Math.max(0, rawDamageFixed);
+    result.poisonPiercePercent = Math.max(0, piercePercent);
+    result.poisonBaseDuration = Math.max(0, baseDuration);
+    result.poisonDuration = resolvePoisonDuration(defender, defenderPlayer,
+        result.poisonBaseDuration, result.poisonPiercePercent, defenderStates, difficulty);
+    result.poisonDamagePerFrame = fixed8RateToPerFrame(
+        result.elementalDamage[DAMAGE_POISON]);
+    // Poison is a state payload, not immediate hit-point damage.
+    result.totalDamage = 0;
+    return result;
+  }
+
+  /** Converts D2's signed 8.8 poison-rate storage to life points per frame. */
+  public static float fixed8RateToPerFrame(int damageFixed) {
+    return Math.max(0, damageFixed) / 256f;
+  }
+
+  static int resolvePoisonDuration(Attributes defender, boolean defenderPlayer,
+      int baseDuration, int piercePercent, StateList defenderStates, int difficulty) {
+    if (defender == null || baseDuration <= 0) return 0;
+    if (defenderStates != null && defenderStates.hasState(StateId.SHRINE_RESIST_POISON)) {
+      return 0;
+    }
+    int resistance = statInt(defender, Stat.item_poisonlengthresist, 0)
+        - Math.max(0, Math.min(100, piercePercent));
+    if (defenderPlayer) resistance += MonsterUtil.getResistancePenalty(difficulty);
+    resistance = defenderPlayer
+        ? Math.max(-100, Math.min(75, resistance))
+        : Math.max(-100, Math.min(100, resistance));
+    long resolved = (long) baseDuration * (100 - resistance) / 100L;
+    return resolved >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, (int) resolved);
   }
 
   /**

@@ -239,6 +239,11 @@
     地图难度；范围物理部分补齐玩家对玩家 17% 系数，附加火/电/冰伤害统一经由
     `CombatSystem.calculateFixedElementalDamage`，并累计吸收生命。渐进终结技的附加
     元素伤害不再使用手写抗性公式。
+  - 德鲁伊 Rabies 毒伤已对齐 D2Game 的独立伤害/长度结算：技能与武器毒统一按
+    8.8 定点每帧速率处理，毒抗/最大毒抗、毒长抗性、Nightmare/Hell 玩家惩罚、
+    poison mastery/pierce 和 PvP 17% 顺序进入统一解析；PvP 只缩放毒伤，不缩短时长，
+    抗毒神殿仅清零 DOT 时长。感染控制体保存施法时原始毒伤与 pierce，每个传播目标
+    按自身抗性、状态、难度及玩家类型重新结算，同时继续使用未削减的剩余感染时长。
   - 待补：掉落归属超时快照广播，以及少数非 CombatSystem 的环境伤害特殊分支；真实
     多客户端长距离多段技能样本仍需外部资源环境验收。
 - [x] **P1-7 地面物品、掉落与拾取（已完成）**
@@ -603,6 +608,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   Akara/Charsi/Kashya/Cain/Warriv 分支，D2GS 拒绝过期或伪造 message index；新增
   `Act1QuestMessageValidatorTest` 覆盖奖励、转交与 Cain 场景，全部任务回归及 D2GS
   编译通过。多人房间资格、奖励传播与重连恢复仍待完成。
+
+- 2026-09-09：完成德鲁伊 Rabies 持续毒伤与传播结算对齐；新增原生 8.8 毒速率转换、
+  poison mastery/pierce 施法快照、毒伤/毒长独立抗性链，以及传播目标按自身抗性、
+  玩家类型和地图难度重新结算。控制体子代继承原始施法快照，毒免疫/抗毒神殿不会
+  产生 DOT，但感染标记仍按未削减剩余时长维持传播生命周期。`CombatSystemTest`、
+  `DruidRabiesFireClawsTest`、原生德鲁伊数据、状态 ECS 与 Missile policy 回归以及
+  D2GS 编译全部通过。
 
 - [x] ~~完成本地单人固定步进与渲染解耦第一阶段~~
   - `GameScreen` 使用无 LibGDX 依赖的 `FixedStepAccumulator`，以 25Hz（40ms）固定 tick 驱动 ECS；渲染、UI 和输入仍在主线程按可见帧运行。
