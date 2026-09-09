@@ -425,6 +425,64 @@ class Act1QuestSystemTest extends RiiabloTest {
   }
 
   @Test
+  void propagatesCountessRewardToAct1PartyMembersAndPreservesFinishedRecords() {
+    Harness harness = new Harness();
+    try {
+      CharData hunterData = character("CountessHunterParty", Riiablo.NORMAL);
+      CharData townData = character("CountessTownParty", Riiablo.NORMAL);
+      CharData fieldData = character("CountessFieldParty", Riiablo.NORMAL);
+      CharData act2Data = character("CountessAct2Party", Riiablo.NORMAL);
+      CharData unrelatedData = character("CountessUnrelated", Riiablo.NORMAL);
+      CharData finishedData = character("CountessAlreadyDone", Riiablo.NORMAL);
+      int hunter = harness.createPlayer(hunterData);
+      int townParty = harness.createPlayer(townData);
+      int fieldParty = harness.createPlayer(fieldData);
+      int act2Party = harness.createPlayer(act2Data);
+      int unrelated = harness.createPlayer(unrelatedData);
+      int alreadyFinished = harness.createPlayer(finishedData);
+      harness.setPlayerLevel(hunter, D2LevelIds.LEVEL_TOWERCELLARLVL5);
+      harness.setPlayerLevel(townParty, D2LevelIds.LEVEL_ROGUEENCAMPMENT);
+      harness.setPlayerLevel(fieldParty, D2LevelIds.LEVEL_BLOODMOOR);
+      harness.setPlayerLevel(act2Party, D2LevelIds.LEVEL_LUTGHOLEIN);
+      harness.setPlayerLevel(unrelated, D2LevelIds.LEVEL_BLOODMOOR);
+      harness.setPlayerLevel(alreadyFinished, D2LevelIds.LEVEL_BLOODMOOR);
+      assertTrue(harness.parties.sendInvitation(hunter, townParty));
+      assertTrue(harness.parties.acceptInvitation(townParty));
+      assertTrue(harness.parties.sendInvitation(hunter, fieldParty));
+      assertTrue(harness.parties.acceptInvitation(fieldParty));
+      assertTrue(harness.parties.sendInvitation(hunter, act2Party));
+      assertTrue(harness.parties.acceptInvitation(act2Party));
+      finishedData.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD] =
+          NativeQuestRecord.set((short) 0, NativeQuestRecord.REWARD_GRANTED);
+
+      int countess = harness.createCountess();
+      harness.process();
+      harness.events.dispatch(DeathEvent.obtain(hunter, countess));
+
+      assertTrue(NativeQuestRecord.has(countessRecord(hunterData), NativeQuestRecord.REWARD_GRANTED));
+      assertTrue(NativeQuestRecord.has(countessRecord(townData), NativeQuestRecord.REWARD_GRANTED),
+          "Rogue Encampment is still Act I in D2MOO");
+      assertTrue(NativeQuestRecord.has(countessRecord(fieldData), NativeQuestRecord.REWARD_GRANTED));
+      assertFalse(NativeQuestRecord.has(countessRecord(act2Data), NativeQuestRecord.REWARD_GRANTED));
+      assertTrue(NativeQuestRecord.has(countessRecord(act2Data), NativeQuestRecord.COMPLETED_NOW));
+      assertFalse(NativeQuestRecord.has(countessRecord(unrelatedData), NativeQuestRecord.REWARD_GRANTED));
+      assertTrue(NativeQuestRecord.has(countessRecord(unrelatedData), NativeQuestRecord.COMPLETED_NOW));
+      assertTrue(NativeQuestRecord.has(countessRecord(finishedData), NativeQuestRecord.REWARD_GRANTED));
+      assertFalse(NativeQuestRecord.has(countessRecord(townData), NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(countessRecord(fieldData), NativeQuestRecord.REWARD_PENDING));
+      assertEquals(1, harness.countessConsumer.requests);
+
+      // A second death notification for the same super-unique is ignored and
+      // cannot issue a second native treasure request or roll records back.
+      harness.events.dispatch(DeathEvent.obtain(hunter, countess));
+      assertEquals(1, harness.countessConsumer.requests);
+      assertTrue(NativeQuestRecord.has(countessRecord(townData), NativeQuestRecord.REWARD_GRANTED));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
   void createsPersistableCainMagicAndRareRings() {
     ItemGenerator generator = new ItemGenerator();
     Item normal = generator.generateQuestReward("rin", 7, Quality.MAGIC, 0x1001);
@@ -649,6 +707,10 @@ class Act1QuestSystemTest extends RiiabloTest {
 
   private static short record(CharData data) {
     return data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
+  }
+
+  private static short countessRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD];
   }
 
   private static final class Harness {

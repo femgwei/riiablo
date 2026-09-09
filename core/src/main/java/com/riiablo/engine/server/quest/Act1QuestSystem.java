@@ -662,7 +662,10 @@ public class Act1QuestSystem extends PassiveSystem {
         int playerId = ids[i];
         short partyId = partyManager.getPartyId(playerId);
         if (partyId != Party.INVALID_ID && eligibleParties.contains(partyId)
-            && isPlayerInAct1OutsideTown(playerId)) {
+            // D2MOO's ACT1Q5_UnitIterate_SetPrimaryGoalDoneForPartyMembers
+            // checks the member's act, not whether they are outside town.
+            // Rogue Encampment is therefore eligible for the direct reward.
+            && isPlayerInAct1(playerId)) {
           completeCountessFor(playerId, false, "eligible-party-member");
         }
       }

@@ -150,7 +150,7 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] PartyManager registration/state updates for eligible Act I party members outside Tristram.
     - [x] A1Q3 authoritative imbue item transformation (`NativeCharsiImbueSystem`).
     - [x] A1Q5 Countess quest record, room/party completion and native TC reward handoff.
-    - [ ] A1Q5 multiplayer isolation and reconnect snapshot acceptance tests.
+    - [x] A1Q5 multiplayer isolation, Act I town-party eligibility, idempotent reward and reconnect snapshot acceptance tests.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services (local single-player loop complete)
   - [x] Vendor stock receives persistent item ids and valid in-store flags.

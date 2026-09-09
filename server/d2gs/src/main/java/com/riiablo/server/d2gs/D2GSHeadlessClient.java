@@ -151,6 +151,10 @@ public final class D2GSHeadlessClient {
       runDenQuestDual(d2s, character);
       return;
     }
+    if (config.requireCountessQuestScenario) {
+      runCountessQuestDual(d2s, character);
+      return;
+    }
     if (config.requireQuestRecovery) {
       runQuestRecoveryDual(d2s, character);
       return;
@@ -1254,6 +1258,125 @@ public final class D2GSHeadlessClient {
           + " party=true objective=true"
           + " rewardPending=true isolated=true revision=" + authorityA[0]);
     }
+  }
+
+  /** Three-client A1Q5 Act-I party credit, isolation, idempotency and reconnect gate. */
+  private void runCountessQuestDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient c = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("CountessTown", 0x434E5454);
+    byte[] outsiderD2s = createGeneratedObserverSave("CountessOut", 0x434E544F);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    CharacterHeader outsiderCharacter = CharacterHeader.read(outsiderD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket();
+         Socket socketC = c.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB), inC = input(socketC);
+      OutputStream outA = output(socketA), outB = output(socketB), outC = output(socketC);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      send(outC, connectionPacket(outsiderCharacter, outsiderD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      c.awaitConnection(inC, deadline());
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
+        throw new IOException("Countess party setup failed");
+      }
+      // Only the killer enters Tower Cellar 5. The eligible party member and
+      // unrelated observer deliberately remain in Rogue Encampment.
+      if (!D2GS.headlessMovePlayerToLevel(a.playerId, 25)) {
+        throw new IOException("Tower Cellar Level 5 staging unavailable");
+      }
+      long levelDeadline = deadline();
+      while (System.currentTimeMillis() < levelDeadline
+          && (a.currentLevelId != 25 || b.currentLevelId != 1 || c.currentLevelId != 1)) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet != null) a.consume(packet);
+        packet = readPacket(inB);
+        if (packet != null) b.consume(packet);
+        packet = readPacket(inC);
+        if (packet != null) c.consume(packet);
+      }
+      if (a.currentLevelId != 25 || b.currentLevelId != 1 || c.currentLevelId != 1) {
+        throw new IOException("Countess clients did not observe staged levels: "
+            + a.currentLevelId + ',' + b.currentLevelId + ',' + c.currentLevelId);
+      }
+
+      if (!D2GS.headlessCompleteCountessObjective(a.playerId)) {
+        throw new IOException("authoritative Countess objective trigger failed");
+      }
+      send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outC, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      QuestResult afterA = a.awaitQuestResult(inA, 1L, deadline());
+      QuestResult afterB = b.awaitQuestResult(inB, 1L, deadline());
+      QuestResult afterC = c.awaitQuestResult(inC, 1L, deadline());
+      int recordIndex = com.riiablo.engine.server.quest.Act1CountessQuest.RECORD;
+      if (!isCountessReward(afterA, recordIndex, true)
+          || !isCountessReward(afterB, recordIndex, false)) {
+        throw new IOException("Countess reward did not propagate to the Act I town party");
+      }
+      if (!afterC.success() || afterC.questRecordsLength() <= recordIndex
+          || hasQuestFlag(afterC.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+          || !hasQuestFlag(afterC.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.COMPLETED_NOW)) {
+        throw new IOException("Countess reward leaked to unrelated town client");
+      }
+      long[] authorityA = D2GS.headlessQuestState(a.playerId);
+      long[] authorityB = D2GS.headlessQuestState(b.playerId);
+      long[] authorityC = D2GS.headlessQuestState(c.playerId);
+      if (authorityA.length == 0 || authorityB.length == 0 || authorityC.length == 0
+          || authorityA[0] != afterA.questRevision()
+          || authorityB[0] != afterB.questRevision()
+          || authorityC[0] != afterC.questRevision()) {
+        throw new IOException("Countess quest authority/client revisions diverged");
+      }
+
+      long completedRevision = authorityA[0];
+      int oldPlayerId = a.playerId;
+      socketA.close();
+      b.awaitDeleted(inB, oldPlayerId, deadline());
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        // The stale pre-quest D2S must not overwrite the authoritative
+        // in-game record retained for the disconnected character session.
+        send(reconnectOutput, connectionPacket(character, d2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        send(reconnectOutput, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+        QuestResult restored = reconnected.awaitQuestResult(reconnectInput, 1L, deadline());
+        long[] restoredAuthority = D2GS.headlessQuestState(reconnected.playerId);
+        if (!isCountessReward(restored, recordIndex, true)
+            || restored.questRevision() != completedRevision
+            || restoredAuthority.length == 0 || restoredAuthority[0] != completedRevision
+            || reconnected.playerQuestRevision != completedRevision
+            || reconnected.baselineQuestRevision != completedRevision) {
+          throw new IOException("Countess quest state was not restored on reconnect");
+        }
+      }
+      log("countess_quest_dual_pass", "killer=" + oldPlayerId
+          + " townParty=" + b.playerId + " outsider=" + c.playerId
+          + " rewardGranted=true pending=false duplicate=true reconnect=true revision="
+          + completedRevision);
+    }
+  }
+
+  private static boolean isCountessReward(QuestResult result, int recordIndex,
+      boolean requireCompletedNow) {
+    if (result == null || !result.success() || result.questRecordsLength() <= recordIndex) {
+      return false;
+    }
+    int record = result.questRecords(recordIndex);
+    return hasQuestFlag(record,
+            com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+        && hasQuestFlag(record,
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+        && !hasQuestFlag(record,
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
+        && (!requireCompletedNow || hasQuestFlag(record,
+            com.riiablo.engine.server.quest.NativeQuestRecord.COMPLETED_NOW));
   }
 
   private static boolean hasQuestFlag(int record, int flag) {
@@ -3211,6 +3334,7 @@ public final class D2GSHeadlessClient {
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
     boolean requireDenQuestScenario;
+    boolean requireCountessQuestScenario;
     boolean requireQuestRecovery;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -3245,6 +3369,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
+        else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
         else if ("--require-quest-recovery".equals(arg)) config.requireQuestRecovery = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -3307,6 +3432,7 @@ public final class D2GSHeadlessClient {
           + " [--skill 0] [--require-missile] [--require-sim-tick]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-den-quest] [--require-quest-recovery]"
+          + " [--require-countess-quest]"
           + " [--require-reconnect-visibility]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }

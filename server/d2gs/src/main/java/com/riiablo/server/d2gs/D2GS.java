@@ -1443,6 +1443,45 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /**
+   * Creates one deterministic Countess fixture in the killer's current level
+   * and dispatches the authoritative death twice. The duplicate notification
+   * deliberately exercises A1Q5 reward idempotency while the normal quest and
+   * treasure event chain remains in use.
+   */
+  static boolean headlessCompleteCountessObjective(int killerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean completed = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper ownerWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(killerId);
+        Position ownerPosition = server.world.getMapper(Position.class).get(killerId);
+        if (ownerWrapper == null || ownerWrapper.zone == null
+            || ownerWrapper.zone.level == null || ownerWrapper.zone.level.Id != 25
+            || ownerPosition == null) return;
+
+        int fixture = server.world.create();
+        server.world.getMapper(com.riiablo.engine.server.component.Monster.class).create(fixture);
+        server.world.getMapper(com.riiablo.engine.server.component.SuperUnique.class)
+            .create(fixture).id =
+                6; // D2MOO SUPERUNIQUE_THE_COUNTESS (1.10f)
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .create(fixture).set(server.map, ownerWrapper.zone);
+        server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+        server.world.process();
+        EventSystem events = server.world.getSystem(EventSystem.class);
+        events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
+        events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
+        completed.set(true);
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && completed.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
   /** Test-only NPC-equivalent paid resurrection on the render thread. */
   static boolean headlessResurrectMercenary(int playerId) {
     D2GS server = activeHeadlessInstance;
