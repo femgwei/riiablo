@@ -162,7 +162,7 @@
     事件不会把实体重新推进到 `ACTIVE`。
   - Room 卸载、网络断线和 Destroy 后订阅清理已有端到端回归；待补不同单位类型的
     `InsertWorld` 失败回滚，以及召唤物/佣兵跨区域卸载的专用验收。
-- [ ] **P0-4 固定 25Hz Sim Tick 与阶段顺序（约 96%）**
+- [ ] **P0-4 固定 25Hz Sim Tick 与阶段顺序（约 98%）**
   - 服务端 40ms 单写者 tick、本地固定步进、渲染隔离、位置快照和多人时钟已通过。
   - D2GS 与本地权威世界现按 `state -> missile -> unit/AI -> death/destroy -> snapshot`
     注册核心系统；状态更新和导弹碰撞均在单位行为前执行，避免新状态/投射物被延迟一帧。
@@ -170,6 +170,9 @@
     始终为 1/25 秒；2,000 个带生命周期实体连续运行 500 tick，tick 与订阅数量不漂移。
   - 真实 1.10f `headlessSnapshotResync` 通过完整多人快照压力流程，包含跨地图、死亡/复活、
     RoomEx 重订阅、乱序/重复基线和 2.5 秒暂停恢复（`oldLevelDrops=184`，无时间线回退）。
+  - 本轮复核 `AuthoritativeSimulationTest`、`GameScreenDeltaTest` 和
+    `FixedStepAccumulatorTest` 均通过；D2GS/Netty 的 render 入口只负责驱动固定步进，
+    不再把可变渲染 delta 传入权威世界。剩余 2% 仅为真实客户端长时间后台恢复的硬件验收。
 - [ ] **P1-5 Missile 原生表驱动（约 94%）**
   - `ServerEntityFactory` 已读取 `Missiles.txt.Pierce` 和原生速度/Range；本轮将
     `Collision`、`CollideKill` 接入统一碰撞/销毁判定，非碰撞视觉导弹不再误伤，
