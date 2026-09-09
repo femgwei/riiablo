@@ -108,14 +108,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   /**
-   * Native hit-event curse callbacks. DamageEvent is dispatched synchronously
-   * before the caller subtracts life, matching D2Game's unit-event phase.
+   * Native pre-life-loss state callbacks. DamageEvent is dispatched
+   * synchronously before the caller subtracts life, matching D2Game's unit
+   * event phase; defensive absorption runs before reactive curse effects.
    */
   @Subscribe
-  public void onReactiveCurseDamage(DamageEvent event) {
-    if (event == null || event.attacker < 0 || event.victim < 0
-        || event.attacker == event.victim || event.physicalDamage <= 0f
-        || !event.isLeechableAttack() || !mAttributesWrapper.has(event.attacker)
+  public void onDamageEvent(DamageEvent event) {
+    if (event == null || event.victim < 0 || event.physicalDamage <= 0f
         || !mAttributesWrapper.has(event.victim) || !mUnitStates.has(event.victim)) return;
     UnitStates victimUnitStates = mUnitStates.get(event.victim);
     // Network clients consume authoritative snapshots and must not apply the
@@ -123,6 +122,12 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (victimUnitStates != null && victimUnitStates.snapshotOnly) return;
     StateList victimStates = victimUnitStates != null ? victimUnitStates.stateList : null;
     if (victimStates == null) return;
+
+    absorbBoneArmor(event, victimStates);
+
+    if (event.attacker < 0 || event.attacker == event.victim
+        || event.physicalDamage <= 0f || !event.isLeechableAttack()
+        || !mAttributesWrapper.has(event.attacker)) return;
 
     Attributes victimAttributes = mAttributesWrapper.get(event.victim).attrs;
     StatRef victimLife = victimAttributes != null
@@ -139,6 +144,38 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (ironMaiden != null && event.isMelee()) {
       applyIronMaiden(event, ironMaiden, physical);
     }
+  }
+
+  /** Consumes Bone Armor after physical resistance but before life is removed. */
+  private void absorbBoneArmor(DamageEvent event, StateList victimStates) {
+    UnitState armor = victimStates.getState(StateId.BONEARMOR);
+    if (armor == null) return;
+    int remaining = armor.runtimeValue > 0
+        ? armor.runtimeValue : armor.getStatContributionValue(Stat.bonearmor);
+    if (remaining <= 0) {
+      victimStates.removeState(StateId.BONEARMOR);
+      return;
+    }
+    float absorbable = Math.min(Math.max(0f, event.physicalDamage),
+        Math.max(0f, event.damage));
+    float absorbed = Math.min(remaining, absorbable);
+    if (absorbed <= 0f) return;
+    int consumed = Math.min(remaining, Math.max(1, (int) Math.ceil(absorbed)));
+    int next = Math.max(0, remaining - consumed);
+    event.physicalDamage = Math.max(0f, event.physicalDamage - absorbed);
+    event.damage = Math.max(0f, event.damage - absorbed);
+    if (next == 0) {
+      victimStates.removeState(StateId.BONEARMOR);
+    } else {
+      armor.runtimeValue = next;
+      armor.setStatContribution(
+          Stat.bonearmor, 0, NativeStatResolver.Operation.ADD, next);
+      armor.needsSync = true;
+    }
+    log.info("[NECRO_BONE_ARMOR] phase=absorb victim={} attacker={} absorbed={} "
+            + "remaining={} physicalAfter={} totalAfter={}",
+        event.victim, event.attacker, absorbed, next,
+        event.physicalDamage, event.damage);
   }
 
   private void applyLifeTap(DamageEvent event, UnitState state, float physicalDamage) {

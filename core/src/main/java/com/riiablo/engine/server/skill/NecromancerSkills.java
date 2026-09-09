@@ -13,6 +13,9 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 
+import java.util.function.Function;
+import java.util.function.ToIntFunction;
+
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -458,6 +461,61 @@ public final class NecromancerSkills {
   public static float getReviveDuration(int skillLevel) {
     // 固定 180 秒
     return 180.0f;
+  }
+
+  /**
+   * Installs the native SrvDo018 stat-list used by Bone Armor.
+   *
+   * <p>The current and maximum shield values are sourced from the 1.10f
+   * {@code AuraStat/AuraStatCalc} columns. Recasting replaces the old list and
+   * restores the shield to its newly evaluated maximum, matching
+   * {@code sub_6FD11C90(..., 1)} before the defensive-buff list is allocated.</p>
+   */
+  public static UnitState applyBoneArmorState(StateList states, Skills.Entry skill,
+      int skillLevel, int sourceEntityId, ToIntFunction<String> baseSkillLevels,
+      Function<String, Skills.Entry> skillResolver) {
+    if (states == null || skill == null || skill.aurastate == null
+        || !"bonearmor".equalsIgnoreCase(skill.aurastate.trim())) return null;
+    int level = Math.max(1, skillLevel);
+    int duration = Math.max(0, SkillFormula.evaluate(
+        skill.auralencalc, skill, level, baseSkillLevels, skillResolver));
+    int absorb = evaluateAuraStat(skill, level, Stat.bonearmor,
+        baseSkillLevels, skillResolver);
+    int maximum = evaluateAuraStat(skill, level, Stat.bonearmormax,
+        baseSkillLevels, skillResolver);
+    if (absorb <= 0) absorb = Math.max(0, SkillFormula.evaluate(
+        skill.calc1, skill, level, baseSkillLevels, skillResolver));
+    if (absorb <= 0) absorb = calculateBoneArmorAbsorb(level);
+    if (maximum <= 0) maximum = absorb;
+    absorb = Math.min(absorb, maximum);
+    if (absorb <= 0) return null;
+
+    states.removeState(StateId.BONEARMOR);
+    UnitState state = states.addStateLayer(
+        StateId.BONEARMOR, duration, level, sourceEntityId, skill.Id);
+    if (state == null) return null;
+    state.setStatContribution(
+        Stat.bonearmor, 0, NativeStatResolver.Operation.ADD, absorb);
+    state.setStatContribution(
+        Stat.bonearmormax, 0, NativeStatResolver.Operation.ADD, maximum);
+    state.runtimeValue = absorb;
+    state.needsSync = true;
+    return state;
+  }
+
+  private static int evaluateAuraStat(Skills.Entry skill, int level, int statId,
+      ToIntFunction<String> baseSkillLevels,
+      Function<String, Skills.Entry> skillResolver) {
+    if (skill.aurastat == null || skill.aurastatcalc == null) return 0;
+    int count = Math.min(skill.aurastat.length, skill.aurastatcalc.length);
+    for (int i = 0; i < count; i++) {
+      String statName = skill.aurastat[i];
+      if (statName == null || statName.trim().isEmpty()
+          || Stat.index(statName.trim()) != statId) continue;
+      return SkillFormula.evaluate(
+          skill.aurastatcalc[i], skill, level, baseSkillLevels, skillResolver);
+    }
+    return 0;
   }
 
   /** Resolves the native Skills.txt aura target state used by SrvDo030. */

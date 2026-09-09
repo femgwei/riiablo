@@ -350,9 +350,15 @@ public class ServerSkillSystem extends PassiveSystem {
       spawnNova(event, skill, start);
       return;
     }
-    if ((event.srvdofunc == 18 || skill.srvdofunc == 18) && isVenom(skill)) {
-      applyVenom(event, skill, skillLevel);
-      return;
+    if (event.srvdofunc == 18 || skill.srvdofunc == 18) {
+      if (isVenom(skill)) {
+        applyVenom(event, skill, skillLevel);
+        return;
+      }
+      if (isBoneArmor(skill)) {
+        applyBoneArmor(event, skill, skillLevel);
+        return;
+      }
     }
     if (event.srvdofunc == 54 || skill.srvdofunc == 54) {
       armBladeShield(event, skill, skillLevel);
@@ -616,6 +622,26 @@ public class ServerSkillSystem extends PassiveSystem {
         venom.poisonMinDamage, venom.poisonMaxDamage, venom.poisonLengthOverride);
   }
 
+  /** Native SrvDo018 defensive-buff path for Necromancer Bone Armor. */
+  private void applyBoneArmor(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(event.entityId);
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    UnitState armor = NecromancerSkills.applyBoneArmorState(
+        states.stateList, skill, skillLevel, event.entityId,
+        name -> getBaseSkillLevel(event.entityId, name),
+        name -> Riiablo.files.skills.get(name));
+    if (armor == null) {
+      log.warn("[NECRO_BONE_ARMOR] phase=reject entity={} skill={} reason=native_state_data",
+          event.entityId, event.skillId);
+      return;
+    }
+    log.info("[NECRO_BONE_ARMOR] phase=apply entity={} skill={} level={} duration={} "
+            + "absorb={}/{}",
+        event.entityId, event.skillId, skillLevel, armor.duration,
+        armor.runtimeValue, armor.getStatContributionValue(Stat.bonearmormax));
+  }
+
   private void armBladeShield(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
     if (!mUnitStates.has(event.entityId)) return;
     UnitStates states = mUnitStates.get(event.entityId);
@@ -641,6 +667,12 @@ public class ServerSkillSystem extends PassiveSystem {
   private static boolean isVenom(Skills.Entry skill) {
     return skill != null && skill.aurastate != null
         && "venomclaws".equalsIgnoreCase(skill.aurastate.trim());
+  }
+
+  static boolean isBoneArmor(Skills.Entry skill) {
+    return skill != null && (skill.Id == SkillId.BONE_ARMOR
+        || skill.aurastate != null
+        && "bonearmor".equalsIgnoreCase(skill.aurastate.trim()));
   }
 
   /** Native SrvDo047: apply DIMVISION and defense reduction to hostile units in range. */

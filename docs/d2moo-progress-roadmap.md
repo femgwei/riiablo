@@ -48,8 +48,10 @@
   的抗性削减按原版降为 1/5。Raise Skeleton/Skeletal Mage 的尸体原子消费、
   PetType/PetMax、所有权生命周期和多人召唤创建已完成首轮；Revive/Golem 原生召唤链
   也已完成首轮；Iron Maiden/Life Tap 已接入统一受击事件回调；Dim Vision 的受限近战、
-  Attract 固定目标与 Confuse 确定性怪物目标重定向也已进入统一 AI 入口。下一项转入
-  死灵法师骨系/毒系主动技能权威链。
+  Attract 固定目标与 Confuse 确定性怪物目标重定向也已进入统一 AI 入口。Bone Armor
+  已完成骨毒系首项：`SrvDo018` 从 1.10f `AuraStatCalc` 生成当前/最大吸收量，物理伤害
+  在扣血前消费护盾，耗尽移除状态，重施恢复新上限，多人快照同步剩余容量。下一项为
+  Poison Dagger 的武器门槛、命中战斗记录、毒伤和耐久链。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -72,7 +74,8 @@
    尸体一次消费、PetType/PetMax、召唤所有权、死亡/断线/跨区生命周期和多人快照；
    Revive/Golem 已完成首轮；Iron Maiden/Life Tap 受击回调和复杂诅咒 AI 已完成首轮，
    骨系/毒系主动技能及全部专用攻击路径覆盖仍待完成。
-6. **P1 死灵法师骨系/毒系主动技能**：核对 Bone Armor、Poison Dagger、Corpse/Poison
+6. **P1 死灵法师骨系/毒系主动技能（进行中）**：Bone Armor 已完成原生公式、护盾消费、
+   耗尽/重施和多人容量快照；下一步核对 Poison Dagger。之后依次处理 Corpse/Poison
    Explosion、Bone Wall/Prison、Poison Nova、Bone Spear/Spirit 的原生函数、尸体消费、
    可破坏单位、导弹和多人表现。
 7. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
@@ -635,7 +638,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     继续通过。
 
 下一小步：死灵法师诅咒、尸体召唤、Revive/Golem、Iron Maiden/Life Tap 受击回调及
-Dim Vision/Attract/Confuse 特殊 AI 已完成首轮，转入 **死灵法师骨系/毒系主动技能权威链**。
+Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor 权威链已完成，当前进入
+**Poison Dagger 武器门槛、命中战斗记录、毒伤与耐久链**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -940,10 +944,20 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     新增 `NecromancerCurseAiIntegrationTest`，并扩展诅咒与导弹策略测试；第一章怪物、
     Fallen Shaman、战吼、生命周期联合回归通过。
 
+- [x] ~~完成 Bone Armor 原生权威吸收链~~
+  - 对照 D2MOO `SKILLS_SrvDo018_DefensiveBuff`，施法从 1.10f `aurastate`、
+    `auralencalc`、`aurastat/aurastatcalc` 建立来源拥有的状态 stat-list；Bone Wall 与
+    Bone Prison 硬点协同由数据公式解析，不再使用等级线性占位值。
+  - `DamageEvent` 在实际扣血前只消费结算后的物理分量；护盾保存 current/max，耗尽移除，
+    重施替换旧 stat-list 并恢复新容量。`snapshotOnly` 客户端不重复扣盾，剩余值通过既有
+    `StateP.runtimeValue` 广播，因此没有修改 FlatBuffers schema 或生成网络文件。
+  - 移除 Bone Armor 人工 1 秒冷却；`NecromancerBoneArmorIntegrationTest` 覆盖公式协同、
+    混合伤害、耗尽/重施、客户端快照和冷却门槛，相关状态/诅咒/战斗回归通过。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **P1 死灵法师骨系/毒系主动技能权威链**；召唤链、
-> 诅咒特殊 AI 与 Iron Maiden/Life Tap 受击回调首轮均已完成。
+> “当前下一项”为准，当前目标是 **Poison Dagger 武器门槛、命中、毒伤和耐久链**；
+> Bone Armor、召唤链、诅咒特殊 AI 与 Iron Maiden/Life Tap 受击回调首轮均已完成。
 
 ## 记录规则
 

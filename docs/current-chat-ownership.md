@@ -64,14 +64,16 @@
 - Dim Vision/Attract/Confuse 已接入统一怪物 AI：失明怪不再释放远程技能，Attract 固定
   周围怪物目标，Confuse 按单位种子选择另一只合法怪物；到期、死亡、状态移除和跨地图
   会恢复普通 AI，怪物导弹也能命中临时敌对目标。定向与第一章怪物联合回归已通过。
+- Bone Armor 已接入原生 `SrvDo018`：容量读取 1.10f `AuraStatCalc`，物理伤害在扣血前
+  消耗护盾，耗尽移除、重施恢复，并由现有状态快照同步剩余容量。
 
 ## 下一步
 
 当前已完成 **P1 死灵法师召唤与诅咒链首轮**：Raise Skeleton/Skeletal Mage、Revive、
 四类 Golem、Iron Maiden/Life Tap 及 Dim Vision/Attract/Confuse 特殊 AI 均已接入。
-下一步处理死灵法师骨系/毒系主动技能：优先核对 Bone Armor、Poison Dagger、尸爆/毒爆、
-Bone Wall/Prison、Poison Nova、Bone Spear/Spirit。战斗模块不再单独分派，相关修改均由
-本 Chat 负责。
+骨毒系已完成 Bone Armor。下一步处理 Poison Dagger 的匕首门槛、命中、毒伤和耐久，
+再依次处理尸爆/毒爆、Bone Wall/Prison、Poison Nova、Bone Spear/Spirit。战斗模块不再
+单独分派，相关修改均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。

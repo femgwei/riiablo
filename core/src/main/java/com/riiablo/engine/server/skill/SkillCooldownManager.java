@@ -242,10 +242,6 @@ public class SkillCooldownManager {
       case SkillId.TELEPORT:
         return 10; // 约0.4秒
       
-      // 骨甲有冷却
-      case SkillId.BONE_ARMOR:
-        return 25; // 1秒
-      
       // 陨石有较长冷却
       case SkillId.METEOR:
         return 30; // 1.2秒

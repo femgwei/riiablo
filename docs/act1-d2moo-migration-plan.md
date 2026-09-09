@@ -191,4 +191,6 @@ waypoints, caves, quest rewards and collision boundaries.
   player/hireling divisor, life restoration, resistance/PvP/death pipeline and recursion guard.
 - [x] Dim Vision/Attract/Confuse special AI: restricted blind behavior, fixed/random monster
   targets, deterministic selection, duration/death/zone reset and redirected missile hostility.
-- [ ] Next: authoritative Necromancer bone/poison active skills and destructible wall lifecycle.
+- [x] Bone Armor: native SrvDo018 aura formula, physical absorption, depletion/recast and
+  multiplayer remaining-capacity snapshot without generated-protocol changes.
+- [ ] Next: Poison Dagger weapon gate, combat record, poison duration and durability.
