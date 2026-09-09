@@ -66,13 +66,17 @@
   会恢复普通 AI，怪物导弹也能命中临时敌对目标。定向与第一章怪物联合回归已通过。
 - Bone Armor 已接入原生 `SrvDo018`：容量读取 1.10f `AuraStatCalc`，物理伤害在扣血前
   消耗护盾，耗尽移除、重施恢复，并由现有状态快照同步剩余容量。
+- Poison Dagger 已接入原生 `SrvSt16/SrvDo032`：施法前验证非投掷匕首，固定 tick 位置
+  快照生成一次性命中记录，按 1.10f 表计算 8.8 毒率、持续帧和双技能协同，命中时原子
+  结算伤害、毒状态和耐久；没有新增网络 schema。
 
 ## 下一步
 
 当前已完成 **P1 死灵法师召唤与诅咒链首轮**：Raise Skeleton/Skeletal Mage、Revive、
 四类 Golem、Iron Maiden/Life Tap 及 Dim Vision/Attract/Confuse 特殊 AI 均已接入。
-骨毒系已完成 Bone Armor。下一步处理 Poison Dagger 的匕首门槛、命中、毒伤和耐久，
-再依次处理尸爆/毒爆、Bone Wall/Prison、Poison Nova、Bone Spear/Spirit。战斗模块不再
+骨毒系已完成 Bone Armor 和 Poison Dagger。下一步处理 Corpse Explosion / Poison
+Explosion 的尸体原子消费、范围伤害和毒云，再依次处理 Bone Wall/Prison、Poison Nova、
+Bone Spear/Spirit。战斗模块不再
 单独分派，相关修改均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与

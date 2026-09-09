@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.item.Item;
 
 @PooledWeaver
 public class Casting extends PooledComponent {
@@ -60,6 +61,11 @@ public class Casting extends PooledComponent {
   public CombatSystem.CombatResult fireClawsCombat;
   @EntityId public int fireClawsTargetId;
   public boolean fireClawsPrepared;
+  /** Native Necromancer SrvSt16 combat record consumed once by SrvDo032. */
+  public CombatSystem.CombatResult poisonDaggerCombat;
+  @EntityId public int poisonDaggerTargetId;
+  public Item poisonDaggerWeapon;
+  public boolean poisonDaggerPrepared;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     return set(skillId, targetId, targetVec, 0L);
@@ -105,6 +111,10 @@ public class Casting extends PooledComponent {
     fireClawsCombat = null;
     fireClawsTargetId = Engine.INVALID_ENTITY;
     fireClawsPrepared = false;
+    poisonDaggerCombat = null;
+    poisonDaggerTargetId = Engine.INVALID_ENTITY;
+    poisonDaggerWeapon = null;
+    poisonDaggerPrepared = false;
     return this;
   }
 
@@ -148,5 +158,9 @@ public class Casting extends PooledComponent {
     fireClawsCombat = null;
     fireClawsTargetId = Engine.INVALID_ENTITY;
     fireClawsPrepared = false;
+    poisonDaggerCombat = null;
+    poisonDaggerTargetId = Engine.INVALID_ENTITY;
+    poisonDaggerWeapon = null;
+    poisonDaggerPrepared = false;
   }
 }

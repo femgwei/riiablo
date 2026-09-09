@@ -234,6 +234,24 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     ItemData items = player.data != null ? player.data.getItems() : null;
+    if (NecromancerSkills.isPoisonDagger(skill)) {
+      Item weapon = activeMeleeWeapon(items);
+      if (!NecromancerSkills.isPoisonDaggerWeapon(weapon)) {
+        reject(event, 9, "Poison Dagger requires an equipped melee dagger");
+        log.info("[NECRO_POISON_DAGGER] phase=cast_reject source={} skill={} "
+                + "weapon={} reason=requires_dagger",
+            event.entityId, event.skillId, weapon != null ? weapon.code : "none");
+        return;
+      }
+      if (event.targetId < 0 || !hasPositiveLife(event.targetId)
+          || isTownUnit(event.targetId)) {
+        reject(event, 8, "Poison Dagger requires a living non-town target");
+        log.info("[NECRO_POISON_DAGGER] phase=cast_reject source={} target={} "
+                + "reason=invalid_or_town_target",
+            event.entityId, event.targetId);
+        return;
+      }
+    }
     Item rangedWeapon = items != null ? items.getEquippedRangedWeapon() : null;
     if (isAmazonBowSkill(skill) && rangedWeapon == null) {
       reject(event, 9, "skill requires an equipped bow or crossbow");
@@ -269,6 +287,25 @@ public class ServerSkillSystem extends PassiveSystem {
       log.debug("Server skill accepted: entity={}, skill={}, level={}, manaCost={}, manaLeft={}",
           event.entityId, event.skillId, skillLevel, manaCost, mana.asFixed());
     }
+  }
+
+  private static Item activeMeleeWeapon(ItemData items) {
+    if (items == null) return null;
+    Item right = items.getEquipped(BodyLoc.RARM);
+    return right != null ? right : items.getEquipped(BodyLoc.LARM);
+  }
+
+  private boolean isTownUnit(int entityId) {
+    if (!mMapWrapper.has(entityId)) return false;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
+  }
+
+  private boolean hasPositiveLife(int entityId) {
+    if (!mAttributesWrapper.has(entityId)) return false;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    StatRef life = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    return life != null && life.asFixed() > 0f;
   }
 
   @Subscribe

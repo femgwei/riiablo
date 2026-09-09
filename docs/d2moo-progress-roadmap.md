@@ -50,8 +50,10 @@
   也已完成首轮；Iron Maiden/Life Tap 已接入统一受击事件回调；Dim Vision 的受限近战、
   Attract 固定目标与 Confuse 确定性怪物目标重定向也已进入统一 AI 入口。Bone Armor
   已完成骨毒系首项：`SrvDo018` 从 1.10f `AuraStatCalc` 生成当前/最大吸收量，物理伤害
-  在扣血前消费护盾，耗尽移除状态，重施恢复新上限，多人快照同步剩余容量。下一项为
-  Poison Dagger 的武器门槛、命中战斗记录、毒伤和耐久链。
+  在扣血前消费护盾，耗尽移除状态，重施恢复新上限，多人快照同步剩余容量。Poison
+  Dagger 也已完成匕首门槛、`SrvSt16` 命中记录、8.8 定点毒伤、持续帧和 `SrvDo032`
+  单次耐久/伤害消费。下一项为 Corpse Explosion / Poison Explosion 的尸体原子消费与
+  范围伤害/毒云链。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -75,8 +77,8 @@
    Revive/Golem 已完成首轮；Iron Maiden/Life Tap 受击回调和复杂诅咒 AI 已完成首轮，
    骨系/毒系主动技能及全部专用攻击路径覆盖仍待完成。
 6. **P1 死灵法师骨系/毒系主动技能（进行中）**：Bone Armor 已完成原生公式、护盾消费、
-   耗尽/重施和多人容量快照；下一步核对 Poison Dagger。之后依次处理 Corpse/Poison
-   Explosion、Bone Wall/Prison、Poison Nova、Bone Spear/Spirit 的原生函数、尸体消费、
+   耗尽/重施和多人容量快照；Poison Dagger 已完成原生预计算近战记录、毒伤和耐久链。
+   下一步处理 Corpse/Poison Explosion，之后依次处理 Bone Wall/Prison、Poison Nova、Bone Spear/Spirit 的原生函数、尸体消费、
    可破坏单位、导弹和多人表现。
 7. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
@@ -638,8 +640,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     继续通过。
 
 下一小步：死灵法师诅咒、尸体召唤、Revive/Golem、Iron Maiden/Life Tap 受击回调及
-Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor 权威链已完成，当前进入
-**Poison Dagger 武器门槛、命中战斗记录、毒伤与耐久链**。
+Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor 与 Poison Dagger 权威链已
+完成，当前进入 **Corpse Explosion / Poison Explosion 尸体原子消费与范围伤害/毒云链**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -954,10 +956,23 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 移除 Bone Armor 人工 1 秒冷却；`NecromancerBoneArmorIntegrationTest` 覆盖公式协同、
     混合伤害、耗尽/重施、客户端快照和冷却门槛，相关状态/诅咒/战斗回归通过。
 
+- [x] ~~完成 Poison Dagger 原生权威近战链~~
+  - 对照 D2MOO `SKILLS_SrvSt16_PoisonDagger` / `SKILLS_SrvDo032_PoisonDagger`：施法前
+    要求实际攻击手装备非投掷匕首，非法装备或无效/城镇目标在扣法力前拒绝。
+  - `SrvSt16` 从 1.10f `ToHit/LevToHit`、`SrcDam`、`EMin/EMax/EMinLev/EMaxLev`、
+    `EDmgSymPerCalc` 和 `ELen/ELevLen` 建立一次性战斗记录；Poison Explosion/Poison Nova
+    硬点协同、毒素精通/穿透/抗性/PvP 与 8.8 每帧毒率沿用统一战斗链。
+  - `SrvDo032` 仅消费一次预计算结果；未命中/格挡不施毒或损耗耐久，命中时统一派发
+    `DamageEvent`、毒状态、受击/死亡和双方耐久逻辑。未修改 FlatBuffers schema。
+  - 新增 `NativeNecromancerPoisonDaggerDataTest` 与
+    `NecromancerPoisonDaggerIntegrationTest`，覆盖数据字段、公式、装备门槛、法力原子性、
+    命中/未命中、毒状态、耐久与重复 keyframe 幂等。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **Poison Dagger 武器门槛、命中、毒伤和耐久链**；
-> Bone Armor、召唤链、诅咒特殊 AI 与 Iron Maiden/Life Tap 受击回调首轮均已完成。
+> “当前下一项”为准，当前目标是 **Corpse Explosion / Poison Explosion 尸体原子消费与
+> 范围伤害/毒云链**；Bone Armor、Poison Dagger、召唤链、诅咒特殊 AI 与 Iron
+> Maiden/Life Tap 受击回调首轮均已完成。
 
 ## 记录规则
 

@@ -33,6 +33,7 @@ import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
+import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
@@ -684,6 +685,10 @@ public class Actioneer extends PassiveSystem {
                 skill, level, mAttributesWrapper.get(entityId).attrs));
         break;
       }
+      case 16: { // SKILLS_SrvSt16_PoisonDagger
+        preparePoisonDagger(entityId, targetId);
+        break;
+      }
       case 24: { // SKILLS_SrvSt24_DragonTalon
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
@@ -987,6 +992,10 @@ public class Actioneer extends PassiveSystem {
         if (DruidSkills.isFury(skill)) resolveFury(entityId);
         else log.warn("Unsupported shared srvdofunc(13) for {} skill={}",
             entityId, skill != null ? skill.skill : "none");
+        break;
+      }
+      case 32: { // SKILLS_SrvDo032_PoisonDagger
+        resolvePoisonDagger(entityId, targetId);
         break;
       }
       case 1: // attack
@@ -1650,6 +1659,141 @@ public class Actioneer extends PassiveSystem {
         // TODO: default case will log an error when all valid cases are enumerated
         //log.error("Invalid srvdofunc({}) for {}", srvdofunc, entityId);
     }
+  }
+
+  /** Native SrvSt16: roll one dagger combat record before the attack keyframe. */
+  private void preparePoisonDagger(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    Item weapon = activeAttackWeapon(entityId);
+    if (casting == null || !NecromancerSkills.isPoisonDagger(skill)
+        || !NecromancerSkills.isPoisonDaggerWeapon(weapon)
+        || targetId == Engine.INVALID_ENTITY
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !isAlive(entityId) || !isAlive(targetId)
+        || !isInMeleeRange(entityId, targetId, isPlayerEntity(entityId) ? 3 : 0)) {
+      log.info("[NECRO_POISON_DAGGER] phase=start_reject source={} target={} "
+              + "weapon={} reason=invalid_context",
+          entityId, targetId, weapon != null ? weapon.code : "none");
+      return;
+    }
+    Map.Zone targetZone = map != null ? map.getZone(mPosition.get(targetId).position) : null;
+    if (targetZone != null && targetZone.isTown()) {
+      log.info("[NECRO_POISON_DAGGER] phase=start_reject source={} target={} reason=town",
+          entityId, targetId);
+      return;
+    }
+    boolean sourceAligned = mPlayer.has(entityId) || mMercenary.has(entityId)
+        || mSummonedPet.has(entityId);
+    boolean targetAligned = mPlayer.has(targetId) || mMercenary.has(targetId)
+        || mSummonedPet.has(targetId);
+    if (!PvpCombatRules.canDamage(
+        partyManager, entityId, targetId, sourceAligned, targetAligned)) {
+      log.info("[NECRO_POISON_DAGGER] phase=start_reject source={} target={} reason=relation",
+          entityId, targetId);
+      return;
+    }
+
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    StateList attackerStates = stateList(entityId);
+    int[] physical = NecromancerSkills.getPoisonDaggerPhysicalDamage(
+        skill, level, attacker, weapon, attackerStates);
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE
+        .calculatePrecomputedMeleeElementalAttack(
+            attacker, defender, isPlayerEntity(entityId), isPlayerEntity(targetId),
+            physical[0], physical[1], NecromancerSkills.getPoisonDaggerAttackRating(
+                skill, level, attacker, isPlayerEntity(entityId)),
+            new int[CombatSystem.DAMAGE_TYPE_COUNT],
+            new int[CombatSystem.DAMAGE_TYPE_COUNT], 0,
+            NecromancerSkills.getPoisonDaggerDurationFrames(
+                skill, level, name -> baseSkillLevel(entityId, name)),
+            attackerStates, stateList(targetId), isEntityMoving(targetId));
+    int[] poisonRange = NecromancerSkills.getPoisonDaggerDamage(
+        skill, level, name -> baseSkillLevel(entityId, name));
+    int poisonDuration = NecromancerSkills.getPoisonDaggerDurationFrames(
+        skill, level, name -> baseSkillLevel(entityId, name));
+    if (combat.hit && !combat.blocked) {
+      CombatSystem.CombatResult poison = CombatSystem.INSTANCE.calculateFixedPoisonDamage(
+          attacker, defender, isPlayerEntity(targetId), isPlayerEntity(entityId),
+          MathUtils.random(poisonRange[0], poisonRange[1]), poisonDuration,
+          stateList(targetId), combatDifficulty());
+      float itemPoisonPerFrame = CombatSystem.fixed8RateToPerFrame(
+          combat.elementalDamage[CombatSystem.DAMAGE_POISON]);
+      combat.elementalDamage[CombatSystem.DAMAGE_POISON] +=
+          poison.elementalDamage[CombatSystem.DAMAGE_POISON];
+      combat.poisonDamagePerFrame = itemPoisonPerFrame + poison.poisonDamagePerFrame;
+      combat.poisonDuration = poison.poisonDuration;
+      combat.poisonRawDamageFixed = poison.poisonRawDamageFixed;
+      combat.poisonPiercePercent = poison.poisonPiercePercent;
+      combat.poisonBaseDuration = poison.poisonBaseDuration;
+    }
+    casting.poisonDaggerCombat = combat;
+    casting.poisonDaggerTargetId = targetId;
+    casting.poisonDaggerWeapon = weapon;
+    // Native AllocCombat retains misses and blocks so SrvDo032 consumes the
+    // exact result once; only successful hits execute damage and durability.
+    casting.poisonDaggerPrepared = true;
+    log.info("[NECRO_POISON_DAGGER] phase=start source={} target={} level={} weapon={} "
+            + "physical={}..{} poisonFixed={}..{} duration={} chance={} hit={} blocked={}",
+        entityId, targetId, level, weapon.code, physical[0], physical[1],
+        poisonRange[0], poisonRange[1], poisonDuration, combat.hitChance,
+        combat.hit, combat.blocked);
+  }
+
+  /** Native SrvDo032/SUNITDMG_DrainItemDurability: consume and execute once. */
+  private void resolvePoisonDagger(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    if (casting == null || !casting.poisonDaggerPrepared
+        || casting.poisonDaggerTargetId != targetId
+        || casting.poisonDaggerCombat == null) {
+      log.info("[NECRO_POISON_DAGGER] phase=keyframe_reject source={} target={} "
+              + "reason=not_prepared",
+          entityId, targetId);
+      return;
+    }
+    CombatSystem.CombatResult combat = casting.poisonDaggerCombat;
+    Item weapon = casting.poisonDaggerWeapon;
+    casting.poisonDaggerCombat = null;
+    casting.poisonDaggerTargetId = Engine.INVALID_ENTITY;
+    casting.poisonDaggerWeapon = null;
+    casting.poisonDaggerPrepared = false;
+
+    if (!mAttributesWrapper.has(targetId) || !isAlive(targetId)
+        || !isInMeleeRange(entityId, targetId, isPlayerEntity(entityId) ? 3 : 0)) {
+      log.info("[NECRO_POISON_DAGGER] phase=keyframe_reject source={} target={} "
+              + "reason=target_or_range",
+          entityId, targetId);
+      return;
+    }
+    if (!combat.hit || combat.blocked) {
+      if (combat.blocked) queueHitReaction(targetId, true);
+      log.info("[NECRO_POISON_DAGGER] phase=keyframe source={} target={} result={} chance={}",
+          entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
+      return;
+    }
+
+    // SUNITDMG_DrainItemDurability updates both sides only for a successful hit.
+    drainFrenzyDurability(weapon, targetId);
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
+    float before = hitpoints.asFixed();
+    DamageEvent event = DamageEvent.obtainMelee(
+        entityId, targetId, Math.max(0, combat.totalDamage), combat.physicalDamage);
+    events.dispatch(event);
+    float applied = Math.max(0f, event.damage);
+    applyElementalAbsorb(defender, combat, 1f);
+    hitpoints.sub(applied);
+    if (hitpoints.asFixed() < 0f) hitpoints.set(0f);
+    applyCombatStates(entityId, targetId, combat);
+    if (hitpoints.asFixed() > 0f) queueHitReaction(targetId, false);
+    if (hitpoints.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+    log.info("[NECRO_POISON_DAGGER] phase=keyframe source={} target={} result=hit "
+            + "damage={} physical={} poisonPerFrame={} duration={} hp={} -> {}",
+        entityId, targetId, applied, combat.physicalDamage,
+        combat.poisonDamagePerFrame, combat.poisonDuration, before, hitpoints.asFixed());
   }
 
   /** Native SrvSt56: resolve hit once and retain the combat record for SrvDo120. */

@@ -9,9 +9,12 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.DifficultyLevels;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.codec.excel.States;
+import com.riiablo.codec.excel.Weapons;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.item.Item;
+import com.riiablo.item.Type;
 
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -195,28 +198,124 @@ public final class NecromancerSkills {
     return 20 + (skillLevel - 1) * 10;
   }
 
-  /**
-   * 毒匕首 - 毒素伤害攻击
-   * 
-   * @param skillLevel 技能等级
-   * @return 总毒素伤害
-   */
+  /** Legacy UI estimate backed by the loaded 1.10f Skills.txt row. */
   public static int calculatePoisonDaggerDamage(int skillLevel) {
-    // 基础 18-50，每级 +18-25
-    int minDamage = 18 + (skillLevel - 1) * 18;
-    int maxDamage = 50 + (skillLevel - 1) * 25;
-    return MathUtils.random(minDamage, maxDamage);
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.POISON_DAGGER) : null;
+    int[] rate = getPoisonDaggerDamage(skill, skillLevel, name -> 0);
+    int duration = getPoisonDaggerDurationFrames(skill, skillLevel, name -> 0);
+    return Math.round(MathUtils.random(rate[0], rate[1]) / 256f * duration);
   }
 
-  /**
-   * 获取毒匕首持续时间
-   * 
-   * @param skillLevel 技能等级
-   * @return 持续时间（秒）
-   */
+  /** Legacy UI duration in seconds, derived from D2's 25 Hz frame count. */
   public static float getPoisonDaggerDuration(int skillLevel) {
-    // 固定 2 秒
-    return 2.0f;
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.POISON_DAGGER) : null;
+    return getPoisonDaggerDurationFrames(skill, skillLevel, name -> 0) / 25f;
+  }
+
+  public static boolean isPoisonDagger(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 16 && skill.srvdofunc == 32;
+  }
+
+  /** D2Common's Poison Dagger item gate: a melee dagger, not a throwing knife. */
+  public static boolean isPoisonDaggerWeapon(Item weapon) {
+    return weapon != null && weapon.base instanceof Weapons.Entry && weapon.type != null
+        && weapon.type.is(Type.KNIF) && !weapon.type.is(Type.TKNI)
+        && !weapon.type.is(Type.THRO);
+  }
+
+  /** Native SKILLS_GetToHitFactor for the SrvSt16 combat roll. */
+  public static int getPoisonDaggerAttackRating(
+      Skills.Entry skill, int skillLevel, Attributes attacker, boolean player) {
+    int base = statInt(attacker, Stat.tohit);
+    int factor = skill == null ? 0
+        : skill.ToHit + (Math.max(1, skillLevel) - 1) * skill.LevToHit;
+    return player ? Math.max(1, base * Math.max(0, 100 + factor) / 100)
+        : Math.max(1, base + factor);
+  }
+
+  /** Full physical packet filled by SrvSt16 with Skills.txt SrcDam/calc1. */
+  public static int[] getPoisonDaggerPhysicalDamage(
+      Skills.Entry skill, int skillLevel, Attributes attacker, Item weapon,
+      StateList states) {
+    if (!isPoisonDagger(skill) || !isPoisonDaggerWeapon(weapon)) return new int[] {0, 0};
+    Weapons.Entry base = (Weapons.Entry) weapon.base;
+    int min = itemStatInt(weapon, Stat.mindamage, base.mindam);
+    int max = itemStatInt(weapon, Stat.maxdamage, Math.max(min, base.maxdam));
+    int percent = SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel))
+        + base.StrBonus * statInt(attacker, Stat.strength) / 100
+        + base.DexBonus * statInt(attacker, Stat.dexterity) / 100
+        + statInt(attacker, Stat.damagepercent)
+        + statInt(attacker, Stat.item_maxdamage_percent);
+    if (states != null) percent += states.getTotalDamageModifier();
+    int sourceDamage = skill.SrcDam == 0 ? 128 : skill.SrcDam;
+    return new int[] {
+        scaleSource(scalePercent(min, percent), sourceDamage),
+        scaleSource(scalePercent(Math.max(min, max), percent), sourceDamage)};
+  }
+
+  /** Native 8.8 poison rate from EMin/EMax and EDmgSymPerCalc. */
+  public static int[] getPoisonDaggerDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isPoisonDagger(skill)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    long min = Math.max(0L, (long) skill.EMin + damageBonusByLevel(level, skill.EMinLev));
+    long max = Math.max(min, (long) skill.EMax + damageBonusByLevel(level, skill.EMaxLev));
+    min <<= Math.min(Math.max(0, skill.HitShift), 30);
+    max <<= Math.min(Math.max(0, skill.HitShift), 30);
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        skill.EDmgSymPerCalc, skill, level, baseSkillLevel));
+    min += min * synergy / 100;
+    max += max * synergy / 100;
+    return new int[] {saturated(min), saturated(max)};
+  }
+
+  public static int getPoisonDaggerDurationFrames(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isPoisonDagger(skill)) return 0;
+    int level = Math.max(1, skillLevel);
+    return Math.max(10, skill.ELen + damageBonusByLevel(level, skill.ELevLen)
+        + SkillFormula.evaluate(skill.ELenSymPerCalc, skill, level, baseSkillLevel));
+  }
+
+  private static int itemStatInt(Item item, short stat, int fallback) {
+    if (item == null || item.attrs == null) return fallback;
+    StatRef ref = item.attrs.get(stat, StatRef.obtain());
+    if (ref == null) ref = item.attrs.base().get(stat, StatRef.obtain());
+    return ref == null ? fallback : ref.asInt();
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    if (attrs == null) return 0;
+    StatRef ref = attrs.get(stat, StatRef.obtain());
+    return ref == null ? 0 : ref.asInt();
+  }
+
+  private static int damageBonusByLevel(int level, int[] values) {
+    if (level <= 1 || values == null || values.length == 0) return 0;
+    int l1 = values.length > 0 ? values[0] : 0;
+    int l2 = values.length > 1 ? values[1] : 0;
+    int l3 = values.length > 2 ? values[2] : 0;
+    int l4 = values.length > 3 ? values[3] : l3;
+    int l5 = values.length > 4 ? values[4] : l4;
+    if (level > 28) return 7 * l1 + 8 * l2 + 6 * (l3 + l4) + (level - 28) * l5;
+    if (level > 22) return 7 * l1 + 8 * l2 + 6 * l3 + (level - 22) * l4;
+    if (level > 16) return 7 * l1 + 8 * l2 + (level - 16) * l3;
+    if (level > 8) return 7 * l1 + (level - 8) * l2;
+    return (level - 1) * l1;
+  }
+
+  private static int scalePercent(int value, int percent) {
+    return saturated((long) Math.max(0, value) * Math.max(0, 100 + percent) / 100L);
+  }
+
+  private static int scaleSource(int value, int sourceDamage) {
+    return saturated((long) Math.max(0, value) * Math.max(0, sourceDamage) / 128L);
+  }
+
+  private static int saturated(long value) {
+    return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, (int) value);
   }
 
   /**

@@ -193,4 +193,7 @@ waypoints, caves, quest rewards and collision boundaries.
   targets, deterministic selection, duration/death/zone reset and redirected missile hostility.
 - [x] Bone Armor: native SrvDo018 aura formula, physical absorption, depletion/recast and
   multiplayer remaining-capacity snapshot without generated-protocol changes.
-- [ ] Next: Poison Dagger weapon gate, combat record, poison duration and durability.
+- [x] Poison Dagger: native melee-dagger gate, SrvSt16 retained combat record, 8.8 fixed
+  poison rate/synergies/duration, SrvDo032 one-shot damage and durability consumption.
+- [ ] Next: Corpse Explosion / Poison Explosion atomic corpse consumption, area damage and
+  persistent poison-cloud chain.
