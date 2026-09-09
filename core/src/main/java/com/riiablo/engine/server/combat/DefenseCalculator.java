@@ -204,8 +204,10 @@ public class DefenseCalculator {
       return 0;
     }
 
-    // D2MOD 格挡公式
-    int effectiveBlock = baseBlockChance + (dexterity - BLOCK_BASE_DEX) / (Math.max(level, 1) * 2);
+    // D2Common UNITS_GetBlockRate expansion formula. baseBlockChance already
+    // contains the class block factor plus the equipped shield's ToBlock.
+    int effectiveBlock = baseBlockChance * Math.max(0, dexterity - BLOCK_BASE_DEX)
+        / (Math.max(level, 1) * 2);
     return Math.max(0, Math.min(MAX_BLOCK_CHANCE, effectiveBlock));
   }
 

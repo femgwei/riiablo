@@ -50,8 +50,49 @@ public class CombatSystemTest extends RiiabloTest {
     defender.dexterity = 35;
     defender.blockChance = 50;
     defender.canBlock = true;
+    defender.isPlayer = true;
 
-    assertEquals(54, combat.calculateBlockChance(defender));
+    assertEquals(50, combat.calculateBlockChance(defender));
+
+    defender.dexterity = 15;
+    assertEquals(0, combat.calculateBlockChance(defender));
+
+    defender.isPlayer = false;
+    assertEquals(50, combat.calculateBlockChance(defender));
+  }
+
+  @Test
+  public void shieldBlockAcceptsPhysicalMissilesButNotElementalOnlyMissiles() {
+    CombatSystem deterministicBlock = new CombatSystem() {
+      @Override
+      protected boolean rollShieldBlock(int blockChance) {
+        return blockChance > 0;
+      }
+    };
+    CombatSystem.AttackerData physicalArrow = new CombatSystem.AttackerData();
+    physicalArrow.alwaysHit = true;
+    physicalArrow.isMissile = true;
+    physicalArrow.level = 1;
+    physicalArrow.minDamage = 10;
+    physicalArrow.maxDamage = 10;
+
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.level = 1;
+    defender.canBlock = true;
+    defender.blockChance = 50;
+    assertTrue(deterministicBlock.calculateAttack(physicalArrow, defender).blocked);
+    assertTrue(CombatSystem.hasBlockablePhysicalDamage(physicalArrow));
+
+    CombatSystem.AttackerData elementalSpell = new CombatSystem.AttackerData();
+    elementalSpell.alwaysHit = true;
+    elementalSpell.isMissile = true;
+    elementalSpell.level = 1;
+    elementalSpell.elementalMinDamage[CombatSystem.DAMAGE_FIRE] = 10;
+    elementalSpell.elementalMaxDamage[CombatSystem.DAMAGE_FIRE] = 10;
+    CombatSystem.CombatResult result = deterministicBlock.calculateAttack(elementalSpell, defender);
+    assertTrue(result.hit);
+    assertTrue(!result.blocked);
+    assertTrue(!CombatSystem.hasBlockablePhysicalDamage(elementalSpell));
   }
 
   @Test

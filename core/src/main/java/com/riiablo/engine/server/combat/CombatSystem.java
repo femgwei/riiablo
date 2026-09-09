@@ -859,7 +859,10 @@ public class CombatSystem {
     d.currentLife = Math.max(0, statInt(defender, Stat.hitpoints, 0));
     d.maxLife = Math.max(d.currentLife, statInt(defender, Stat.maxhp, d.currentLife));
     d.blockChance = statInt(defender, Stat.toblock, 0);
-    d.canBlock = d.blockChance > 0 && !missile;
+    // D2MOO MissMode passes bBlock when the missile carries physical damage.
+    // Shield block is therefore not melee-only; eligibility is finalized from
+    // the attack packet in calculateAttack(AttackerData, DefenderData).
+    d.canBlock = d.blockChance > 0;
     d.attackType = missile ? DefenseCalculator.ATTACK_RANGED : DefenseCalculator.ATTACK_MELEE;
     d.isMoving = defenderMoving;
     d.passiveDodge = statInt(defender, Stat.passive_dodge, 0);
@@ -940,10 +943,21 @@ public class CombatSystem {
       return result;
     }
 
-    // D2MOO applies Amazon Dodge/Avoid/Evade after a successful to-hit roll
-    // and before damage/block resolution.  Shield block remains in the native
-    // block branch below; this call therefore only evaluates passive weapon
-    // block and the three Amazon defensive skills.
+    // D2MOO SUNITDMG_ApplyBlockOrDodge evaluates shield block first. Missile
+    // mode requests this branch only when the packet has physical damage;
+    // elemental-only spell missiles continue to Avoid/Weapon Block instead.
+    if (defender.canBlock && hasBlockablePhysicalDamage(attacker)) {
+      int blockChance = calculateBlockChance(defender);
+      result.blocked = rollShieldBlock(blockChance);
+
+      if (result.blocked) {
+        log.debug("[COMBAT_HIT] result=blocked blockChance={} chance={}%", blockChance, result.hitChance);
+        return result;
+      }
+    }
+
+    // If shield block fails, native code falls through to Weapon Block and
+    // Dodge/Avoid/Evade in that order.
     int passiveDefense = DefenseCalculator.INSTANCE.checkPassiveDefense(
         defender.attackType, defender.isMoving, defender.passiveDodge,
         defender.passiveAvoid, defender.passiveEvade, defender.passiveWeaponBlock);
@@ -955,17 +969,6 @@ public class CombatSystem {
       log.debug("[COMBAT_DEFENSE] passive={} attackType={} moving={}",
           passiveDefense, defender.attackType, defender.isMoving);
       return result;
-    }
-
-    // 2. 判定格挡
-    if (defender.canBlock && !attacker.isMissile) {
-      int blockChance = calculateBlockChance(defender);
-      result.blocked = MathUtils.random(99) < blockChance;
-
-      if (result.blocked) {
-        log.debug("[COMBAT_HIT] result=blocked blockChance={} chance={}%", blockChance, result.hitChance);
-        return result;
-      }
     }
 
     // 3. 计算基础物理伤害
@@ -1142,6 +1145,17 @@ public class CombatSystem {
     return MathUtils.random(99) < hitChance;
   }
 
+  static boolean hasBlockablePhysicalDamage(AttackerData attacker) {
+    if (attacker == null) return false;
+    if (!attacker.isMissile) return true;
+    return attacker.maxDamage > 0 && attacker.physicalConversionPercent < 100;
+  }
+
+  /** Test seam for the defender-owned native block roll. */
+  protected boolean rollShieldBlock(int blockChance) {
+    return blockChance > 0 && MathUtils.random(99) < blockChance;
+  }
+
   //==========================================================================
   // 格挡计算
   //==========================================================================
@@ -1162,9 +1176,14 @@ public class CombatSystem {
 
     int blockChance = defender.blockChance;
 
-    // 敏捷加成
-    int dexBonus = (defender.dexterity - 15) * BLOCK_DEXTERITY_FACTOR / defender.level;
-    blockChance += dexBonus;
+    // D2Common UNITS_GetBlockRate applies the expansion player formula to
+    // the combined class+shield block value. Monster ToBlock is already the
+    // final chance and must not be scaled by player dexterity.
+    if (defender.isPlayer) {
+      int dexterityFactor = Math.max(0, defender.dexterity - 15);
+      blockChance = blockChance * dexterityFactor
+          / (BLOCK_DEXTERITY_FACTOR * Math.max(1, defender.level));
+    }
 
     // 限制范围
     blockChance = Math.max(MIN_BLOCK_CHANCE, Math.min(MAX_BLOCK_CHANCE, blockChance));
