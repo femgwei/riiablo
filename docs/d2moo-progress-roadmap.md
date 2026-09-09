@@ -144,7 +144,7 @@
   - 待补：战吼、变形、刺客蓄力及其他 `UnitState` 专用 scalar 的逐项迁移，并继续对照
     每个具体诅咒技能的 stat/value 公式；刺客蓄力的 velocity 字段仍是层数语义，不能直接
     当作移动速度 stat。
-- [ ] **P0-3 Unit 生命周期（约 84%）**
+- [ ] **P0-3 Unit 生命周期（约 90%）**
   - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；新增 `UnitLifecycle` 阶段标记和
     `UnitLifecycleSystem`，统一处理 `DeathEvent` 幂等边界。
   - `EntityFactory` 创建实体时统一写入 `SPAWN`；`UnitLifecycleSystem` 改为权威
@@ -157,8 +157,11 @@
     导弹等无尸体实体在死亡边界删除，玩家/怪物交由专用尸体系统保留。
   - `GameScreen` 与 D2GS 均注册该系统，新增 `UnitLifecycleSystemTest` 覆盖重复死亡事件、
     所有权清理和玩家实体保留。
-  - 待补：将 `Spawn -> InsertWorld -> TickUpdate` 的阶段标记接入统一实体工厂，并补
-    Room 卸载、网络断线和 Destroy 后订阅清理测试。
+  - `EntityFactory.createEntity` 已统一挂载 `UnitLifecycle`，所有服务端玩家、怪物、对象、
+    Warp、物品和导弹创建路径都从 `SPAWN` 开始；新增单向阶段转移约束，迟到的死亡/销毁
+    事件不会把实体重新推进到 `ACTIVE`。
+  - Room 卸载、网络断线和 Destroy 后订阅清理已有端到端回归；待补不同单位类型的
+    `InsertWorld` 失败回滚，以及召唤物/佣兵跨区域卸载的专用验收。
 - [ ] **P0-4 固定 25Hz Sim Tick 与阶段顺序（约 96%）**
   - 服务端 40ms 单写者 tick、本地固定步进、渲染隔离、位置快照和多人时钟已通过。
   - D2GS 与本地权威世界现按 `state -> missile -> unit/AI -> death/destroy -> snapshot`

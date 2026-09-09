@@ -44,6 +44,23 @@ class UnitLifecycleSystemTest {
   }
 
   @Test
+  void lifecycleRejectsLateEventsThatWouldResurrectAnEntity() {
+    UnitLifecycle lifecycle = new UnitLifecycle().reset();
+    lifecycle.transition(UnitLifecycle.Phase.INSERTED)
+        .transition(UnitLifecycle.Phase.ACTIVE)
+        .transition(UnitLifecycle.Phase.DEATH)
+        .transition(UnitLifecycle.Phase.REMOVED)
+        .transition(UnitLifecycle.Phase.DESTROYED);
+
+    lifecycle.transition(UnitLifecycle.Phase.ACTIVE);
+    assertEquals(UnitLifecycle.Phase.DESTROYED, lifecycle.phase);
+    assertFalse(UnitLifecycle.canTransition(
+        UnitLifecycle.Phase.ACTIVE, UnitLifecycle.Phase.SPAWN));
+    assertTrue(UnitLifecycle.canTransition(
+        UnitLifecycle.Phase.SPAWN, UnitLifecycle.Phase.DEATH));
+  }
+
+  @Test
   void destroyedEntityLeavesLifecycleSubscription() {
     World world = new World(new WorldConfigurationBuilder()
         .with(new UnitLifecycleSystem())

@@ -26,8 +26,34 @@ public class UnitLifecycle extends Component {
   }
 
   public UnitLifecycle transition(Phase next) {
-    if (next != null) phase = next;
+    if (next != null && canTransition(phase, next)) phase = next;
     return this;
+  }
+
+  /**
+   * Returns whether a lifecycle transition is valid at a native boundary.
+   * Spawn/insert/active are strictly forward-only; death may be observed from
+   * any live phase, and removal/destruction are terminal. Invalid transitions
+   * are ignored by {@link #transition(Phase)} so a duplicate or late event
+   * cannot resurrect an entity or re-run its initialization path.
+   */
+  public static boolean canTransition(Phase current, Phase next) {
+    if (current == null || next == null || current == next) return true;
+    switch (current) {
+      case SPAWN:
+        return next == Phase.INSERTED || next == Phase.DEATH || next == Phase.REMOVED;
+      case INSERTED:
+        return next == Phase.ACTIVE || next == Phase.DEATH || next == Phase.REMOVED;
+      case ACTIVE:
+        return next == Phase.DEATH || next == Phase.REMOVED;
+      case DEATH:
+        return next == Phase.REMOVED || next == Phase.DESTROYED;
+      case REMOVED:
+        return next == Phase.DESTROYED;
+      case DESTROYED:
+      default:
+        return false;
+    }
   }
 
   public boolean isDead() {
