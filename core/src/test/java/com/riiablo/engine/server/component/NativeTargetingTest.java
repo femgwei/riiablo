@@ -23,6 +23,11 @@ class NativeTargetingTest {
 
     flags.set(NativeUnitFlags.IS_VALID_TARGET);
     assertTrue(NativeTargeting.isValidCombatTarget(flags));
+
+    // D2MOO requires TARGETABLE as well; clearing it makes the unit invalid
+    // even though the other two attack flags remain set.
+    flags.clear(NativeUnitFlags.TARGETABLE);
+    assertFalse(NativeTargeting.isValidCombatTarget(flags));
   }
 
   @Test
