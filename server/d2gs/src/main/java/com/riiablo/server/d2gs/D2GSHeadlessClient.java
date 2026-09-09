@@ -1125,6 +1125,31 @@ public final class D2GSHeadlessClient {
       if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
         throw new IOException("headless party setup failed");
       }
+      // Exercise the natural Den spawn before using the deterministic quest
+      // fixture below. Both clients must receive the same Fallen/Shaman pair,
+      // observe its death, and observe the native resurrection.
+      Vector2 denAnchor = D2GS.headlessFallenShamanPosition(8);
+      if (denAnchor == null) throw new IOException("Den Fallen/Shaman spawn unavailable");
+      send(outA, positionPacket(a.playerId, denAnchor.x, denAnchor.y));
+      send(outB, positionPacket(b.playerId, denAnchor.x, denAnchor.y));
+      Snapshot[] denPair = a.awaitFallenShamanPair(inA, deadline());
+      Snapshot denFallen = denPair[0];
+      Snapshot denShaman = denPair[1];
+      b.awaitEntity(inB, denFallen.entityId, deadline());
+      b.awaitEntity(inB, denShaman.entityId, deadline());
+      send(outA, positionPacket(a.playerId, denFallen.x - 1f, denFallen.y));
+      send(outB, positionPacket(b.playerId, denFallen.x - 1f, denFallen.y));
+      a.attackUntilDead(inA, outA, denFallen, deadline());
+      b.awaitDead(inB, denFallen.entityId, deadline());
+      Vector2 denObservation = D2GS.headlessRoomObservationPosition(
+          8, denFallen.x, denFallen.y);
+      if (denObservation == null) throw new IOException("Den observation point unavailable");
+      send(outA, positionPacket(a.playerId, denObservation.x, denObservation.y));
+      send(outB, positionPacket(b.playerId, denObservation.x, denObservation.y));
+      a.awaitRevived(inA, denFallen.entityId, deadline());
+      b.awaitRevived(inB, denFallen.entityId, deadline());
+      log("den_natural_revive_pass", "fallen=" + denFallen.entityId
+          + " shaman=" + denShaman.entityId + " clients=true,true");
       send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
       send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
       QuestResult beforeA = a.awaitQuestResult(inA, 1L, deadline());
