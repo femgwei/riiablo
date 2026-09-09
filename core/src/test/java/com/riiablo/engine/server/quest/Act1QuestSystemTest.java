@@ -160,6 +160,46 @@ class Act1QuestSystemTest extends RiiabloTest {
   }
 
   @Test
+  void excludesOfflineAndDeadPartyMembersFromDenCredit() {
+    Harness harness = new Harness();
+    try {
+      CharData ownerData = character("DenCreditOwner", Riiablo.NORMAL);
+      CharData eligibleData = character("DenCreditEligible", Riiablo.NORMAL);
+      CharData offlineData = character("DenCreditOffline", Riiablo.NORMAL);
+      CharData deadData = character("DenCreditDead", Riiablo.NORMAL);
+      int owner = harness.createPlayer(ownerData);
+      int eligible = harness.createPlayer(eligibleData);
+      int offline = harness.createPlayer(offlineData);
+      int dead = harness.createPlayer(deadData);
+      harness.setPlayerLevel(owner, D2LevelIds.LEVEL_DENOFEVIL);
+      harness.setPlayerLevel(eligible, D2LevelIds.LEVEL_DENOFEVIL);
+      harness.setPlayerLevel(offline, D2LevelIds.LEVEL_DENOFEVIL);
+      harness.setPlayerLevel(dead, D2LevelIds.LEVEL_DENOFEVIL);
+      assertTrue(harness.parties.sendInvitation(owner, eligible));
+      assertTrue(harness.parties.acceptInvitation(eligible));
+      assertTrue(harness.parties.sendInvitation(owner, offline));
+      assertTrue(harness.parties.acceptInvitation(offline));
+      assertTrue(harness.parties.sendInvitation(owner, dead));
+      assertTrue(harness.parties.acceptInvitation(dead));
+      harness.parties.setOnline(offline, false);
+      harness.parties.updateMember(dead, 1, 0, 100, 0, 100,
+          D2LevelIds.LEVEL_DENOFEVIL, 0, 0, false);
+      int monster = harness.createDenMonster(1f);
+      harness.process();
+
+      harness.setLife(monster, 0f);
+      harness.events.dispatch(DeathEvent.obtain(owner, monster));
+
+      assertTrue(NativeQuestRecord.has(record(ownerData), NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(record(eligibleData), NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertFalse(NativeQuestRecord.has(record(offlineData), NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertFalse(NativeQuestRecord.has(record(deadData), NativeQuestRecord.PRIMARY_GOAL_DONE));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
   void grantsAkaraSkillPointOnlyOnce() {
     Harness harness = new Harness();
     try {
