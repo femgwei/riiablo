@@ -52,4 +52,17 @@ class Act1MalusQuestTest {
     assertTrue(NativeQuestRecord.has(pending, NativeQuestRecord.REWARD_PENDING));
     assertFalse(Act1MalusQuest.isRewarded(pending));
   }
+
+  @Test
+  void partyMemberTransitionIsPendingAndIdempotent() {
+    short record = Act1MalusQuest.completePartyMember((short) 0);
+    assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE));
+    assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
+
+    assertEquals(record, Act1MalusQuest.completePartyMember(record));
+
+    short rewarded = Act1MalusQuest.claimReward(record);
+    assertTrue(NativeQuestRecord.has(rewarded, NativeQuestRecord.REWARD_GRANTED));
+    assertEquals(rewarded, Act1MalusQuest.completePartyMember(rewarded));
+  }
 }

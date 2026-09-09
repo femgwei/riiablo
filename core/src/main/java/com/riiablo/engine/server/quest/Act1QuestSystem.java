@@ -323,9 +323,45 @@ public class Act1QuestSystem extends PassiveSystem {
     persist(data);
     event.dispatch(NativeQuestRewardEvent.available(message.entityId,
         QuestId.A1Q3_MALUS, NativeQuestRewardEvent.CHARSI_IMBUE));
+    propagateMalusToParty(message.entityId);
     log.info("[A1Q3] Charsi accepted Malus: player={}, rewardPending={}",
         message.entityId,
         NativeQuestRecord.has(pending, NativeQuestRecord.REWARD_PENDING));
+  }
+
+  /**
+   * Mirrors D2MOO's A1Q3 party callback.  Turning in the Malus only consumes
+   * the item from the interacting player; eligible online party members get
+   * their own primary-goal and reward-pending flags so they can claim imbue
+   * independently.  No item or reward event is shared between players.
+   */
+  private void propagateMalusToParty(int turnInPlayerId) {
+    if (partyManager == null || playersByZone == null) return;
+    short partyId = partyManager.getPartyId(turnInPlayerId);
+    if (partyId == Party.INVALID_ID) return;
+
+    IntBag entities = playersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int entityId = ids[i];
+      if (partyManager.getPartyId(entityId) != partyId
+          || !isPlayerInAct1(entityId)) continue;
+      Player member = mPlayer.get(entityId);
+      if (member == null || member.data == null) continue;
+      if (level(entityId, member) < 8) {
+        log.debug("[A1Q3] Malus party member below level gate: turnIn={}, player={}, level={}",
+            turnInPlayerId, entityId, level(entityId, member));
+        continue;
+      }
+      short previous = getMalusRecord(member.data);
+      short next = Act1MalusQuest.completePartyMember(previous);
+      if (previous == next) continue;
+      setMalusRecord(member.data, next);
+      persist(member.data);
+      log.info("[A1Q3] Malus reward propagated: turnIn={}, player={}, party={}, record=0x{}",
+          turnInPlayerId, entityId, partyId,
+          Integer.toHexString(Short.toUnsignedInt(next)));
+    }
   }
 
   @Subscribe
@@ -731,6 +767,16 @@ public class Act1QuestSystem extends PassiveSystem {
     if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null) return false;
     int levelId = wrapper.zone.level.Id;
     return levelId > D2LevelIds.LEVEL_ROGUEENCAMPMENT && levelId < D2LevelIds.LEVEL_LUTGHOLEIN;
+  }
+
+  /** Returns true for every loaded Act I level, including the Rogue Encampment. */
+  private boolean isPlayerInAct1(int playerId) {
+    if (!mMapWrapper.has(playerId)) return false;
+    MapWrapper wrapper = mMapWrapper.get(playerId);
+    if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null) return false;
+    int levelId = wrapper.zone.level.Id;
+    return levelId >= D2LevelIds.LEVEL_ROGUEENCAMPMENT
+        && levelId < D2LevelIds.LEVEL_LUTGHOLEIN;
   }
 
   private void propagateCainRelease(int rescuerId) {

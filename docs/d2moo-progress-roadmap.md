@@ -450,6 +450,9 @@ P0-4 阶段顺序 -> P1 Missile/伤害 -> P1 物品/D2S -> P2 第一章边界 ->
 - [ ] 补齐第一章任务多人资格、对话变体、奖励幂等和重连恢复。
   - 已新增 `Act1QuestMessageValidator`，D2GS 对 Akara/Charsi/Kashya/Cain/Warriv 的
     网络对白请求按权威 D2S 任务记录、等级和任务物品校验，拒绝过期或伪造 message。
+  - 已定点补齐 A1Q3 Malus 交付后的原生 party propagation：交付者独立消费 `mdh`，
+    同队、在线且仍在 Act I、等级达到 8 的成员各自获得 `PRIMARY_GOAL_DONE +
+    REWARD_PENDING`；不共享物品、不重复发奖，已领奖和重复消息保持幂等。
   - `QuestRequestCache` 继续按连接和 requestId 幂等重放；当前仍需把所有 Act 1 任务的
     多人资格、房间范围和重连后的对白/奖励恢复做成统一门槛。
   - 任务 `SNAPSHOT` 作为只读恢复操作不再受玩家死亡状态拦截，死亡/断线重连期间仍可

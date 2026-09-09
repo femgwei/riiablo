@@ -495,6 +495,70 @@ class Act1QuestSystemTest extends RiiabloTest {
   }
 
   @Test
+  void propagatesMalusTurnInToEligibleAct1PartyMembersOnly() {
+    Harness harness = new Harness();
+    try {
+      CharData turnInData = character("MalusTurnIn", Riiablo.NORMAL);
+      CharData partyData = character("MalusParty", Riiablo.NORMAL);
+      CharData act2Data = character("MalusAct2", Riiablo.NORMAL);
+      CharData lowLevelData = character("MalusLow", Riiablo.NORMAL);
+      short started = Act1MalusQuest.markMalusPickedUp((short) 0);
+      turnInData.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD] = started;
+      partyData.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD] = started;
+      act2Data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD] = started;
+      lowLevelData.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD] = started;
+      turnInData.getStats().base().put(Stat.level, 8);
+      turnInData.getStats().reset();
+      partyData.getStats().base().put(Stat.level, 8);
+      partyData.getStats().reset();
+      act2Data.getStats().base().put(Stat.level, 8);
+      act2Data.getStats().reset();
+
+      // The compact test table does not include the quest-only mdh row; use a
+      // valid misc item shape and replace its code, which is all the quest
+      // bridge needs for ownership/removal validation.
+      Item malus = new ItemGenerator().generate("rin");
+      assertNotNull(malus);
+      malus.code = Act1MalusQuest.MALUS_CODE;
+      assertTrue(turnInData.getItems().addToInventory(malus));
+
+      int turnIn = harness.createPlayer(turnInData);
+      int party = harness.createPlayer(partyData);
+      int act2 = harness.createPlayer(act2Data);
+      int low = harness.createPlayer(lowLevelData);
+      int charsi = harness.createCharsi();
+      harness.setPlayerLevel(turnIn, D2LevelIds.LEVEL_ROGUEENCAMPMENT);
+      harness.setPlayerLevel(party, D2LevelIds.LEVEL_BLOODMOOR);
+      harness.setPlayerLevel(act2, D2LevelIds.LEVEL_LUTGHOLEIN);
+      harness.setPlayerLevel(low, D2LevelIds.LEVEL_BLOODMOOR);
+      lowLevelData.getStats().base().put(Stat.level, 7);
+      lowLevelData.getStats().reset();
+      assertTrue(harness.parties.sendInvitation(turnIn, party));
+      assertTrue(harness.parties.acceptInvitation(party));
+      assertTrue(harness.parties.sendInvitation(turnIn, act2));
+      assertTrue(harness.parties.acceptInvitation(act2));
+      assertTrue(harness.parties.sendInvitation(turnIn, low));
+      assertTrue(harness.parties.acceptInvitation(low));
+      harness.process();
+
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          turnIn, charsi, Act1MalusQuest.MESSAGE_MALUS));
+
+      short partyRecord = partyData.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD];
+      assertTrue(NativeQuestRecord.has(partyRecord, NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(partyRecord, NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(
+          act2Data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD],
+          NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(
+          lowLevelData.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD],
+          NativeQuestRecord.REWARD_PENDING));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
   void releasesCainForEveryEligiblePlayerInTristram() {
     Harness harness = new Harness();
     try {
@@ -608,6 +672,14 @@ class Act1QuestSystemTest extends RiiabloTest {
     int createAkara() {
       MonStats.Entry monstats = new MonStats.Entry();
       monstats.hcIdx = MonsterType.AKARA;
+      int entityId = world.create();
+      world.getMapper(Monster.class).create(entityId).monstats = monstats;
+      return entityId;
+    }
+
+    int createCharsi() {
+      MonStats.Entry monstats = new MonStats.Entry();
+      monstats.hcIdx = MonsterType.CHARSI;
       int entityId = world.create();
       world.getMapper(Monster.class).create(entityId).monstats = monstats;
       return entityId;

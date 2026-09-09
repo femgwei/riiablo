@@ -48,6 +48,17 @@ public final class Act1MalusQuest {
     return NativeQuestRecord.set(record, NativeQuestRecord.REWARD_PENDING);
   }
 
+  /**
+   * Applies the party-member transition used by the native A1Q3 script.
+   *
+   * <p>A party member does not receive the Malus item and must not be marked
+   * as having claimed the reward.  The native callback only makes the reward
+   * available (and is idempotent for members already pending or rewarded).
+   */
+  public static short completePartyMember(short record) {
+    return completeObjective(record);
+  }
+
   public static short claimReward(short record) {
     if (!NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
         || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) {
