@@ -167,6 +167,40 @@ public class ClientEntityFactory extends ServerEntityFactory {
     return base.Draw && base.OperateFn > 0 && base.OperateFn != 23;
   }
 
+  /**
+   * Projects the authoritative object lifecycle into the client input
+   * components. Removing Interactable is important: Selectable only controls
+   * hover presentation, while interaction systems query Interactable itself.
+   * Recreating it through the factory preserves the native range and object
+   * interactor after a shrine cooldown or room re-entry.
+   */
+  public void applyAuthoritativeObjectState(int entityId, int mode, int stateFlags) {
+    com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+    if (object == null) return;
+
+    object.mode = (byte) mode;
+    object.stateFlags = (byte) stateFlags;
+    boolean interactable = (stateFlags
+        & com.riiablo.engine.server.component.Object.STATE_INTERACTABLE) != 0;
+    if (!interactable) {
+      mInteractable.remove(entityId);
+      mSelectable.remove(entityId);
+      return;
+    }
+
+    float range = resolveObjectInteractionRange(object.base);
+    if (range <= 0f) {
+      // Do not manufacture a clickable area for an unknown or malformed
+      // Objects.txt row even if a peer sends an inconsistent flag.
+      mInteractable.remove(entityId);
+      mSelectable.remove(entityId);
+      return;
+    }
+
+    mInteractable.create(entityId).set(range, objectInteractor);
+    mSelectable.create(entityId);
+  }
+
   @Override
   public int createMonster(int monsterId, float x, float y) {
     int id = super.createMonster(monsterId, x, y);

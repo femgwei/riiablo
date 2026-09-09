@@ -111,6 +111,8 @@ waypoints, caves, quest rewards and collision boundaries.
 - [ ] Phase 2: native map objects
   - [x] D2Game OperateFn lifecycle table for Act 1 containers and doors.
   - [x] One-shot urn/barrel/corpse/rack/bookshelf state and one-way secret doors.
+  - [x] Authoritative object mode/state flags drive client Object, Interactable and Selectable;
+    exhausted objects remain disabled and cooldown shrines rebuild their native interaction.
   - [ ] Native container drops, trap callbacks and exploding-barrel damage events.
     - [x] TreasureClassEx table, native chest selector and weighted raw roll.
     - [x] Recursive TC expansion with native Picks/NoDrop and quality inheritance.

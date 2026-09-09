@@ -92,9 +92,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
     object.mode = state == null ? (mCofReference.has(entityId)
         ? mCofReference.get(entityId).mode : Engine.Object.MODE_NU) : state.currentMode;
     byte flags = 0;
-    if (state != null && state.opened) flags |= 1;
-    if (state != null && state.activated) flags |= 2;
-    if (mInteractable.has(entityId)) flags |= 4;
+    if (state != null && state.opened) flags |= Object.STATE_OPENED;
+    if (state != null && state.activated) flags |= Object.STATE_ACTIVATED;
+    if (mInteractable.has(entityId)) flags |= Object.STATE_INTERACTABLE;
     object.stateFlags = flags;
   }
 

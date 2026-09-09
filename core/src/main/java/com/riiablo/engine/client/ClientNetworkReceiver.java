@@ -124,6 +124,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Selectable> mSelectable;
@@ -614,19 +615,33 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   private void applyObjectSnapshot(int entityId, com.riiablo.net.packet.d2gs.ObjectP snapshot) {
     if (entityId == Engine.INVALID_ENTITY || snapshot == null) return;
-    if (mCofReference.has(entityId)
+    boolean hasState = hasObjectStateSnapshot(snapshot);
+    if (hasState && factory instanceof ClientEntityFactory) {
+      ((ClientEntityFactory) factory).applyAuthoritativeObjectState(
+          entityId, snapshot.mode(), snapshot.stateFlags());
+    } else if (hasState) {
+      // Test and compatibility factories may not own the client presentation
+      // components. Still retain the complete authoritative state locally.
+      com.riiablo.engine.server.component.Object object =
+          mObject == null ? null : mObject.get(entityId);
+      if (object != null) {
+        object.mode = (byte) snapshot.mode();
+        object.stateFlags = (byte) snapshot.stateFlags();
+      }
+      if (mSelectable != null) {
+        if ((snapshot.stateFlags()
+            & com.riiablo.engine.server.component.Object.STATE_INTERACTABLE) != 0) {
+          mSelectable.create(entityId);
+        } else {
+          mSelectable.remove(entityId);
+        }
+      }
+    }
+    if (hasState && mCofReference.has(entityId)
         && snapshot.mode() >= Engine.Object.MODE_NU
         && snapshot.mode() <= Engine.Object.MODE_S5) {
       cofs.setMode(entityId, (byte) snapshot.mode());
     }
-    // stateFlags was appended after the original objectId-only payload. Keep
-    // old-server compatibility when both values are zero; new snapshots carry
-    // bit 2 while an object remains interactable. Toggling Selectable instead
-    // of removing Interactable preserves the factory-created range/interactor
-    // when a one-shot object is later recreated or reactivated.
-    if (mSelectable == null || !hasObjectStateSnapshot(snapshot)) return;
-    if ((snapshot.stateFlags() & 4) != 0) mSelectable.create(entityId);
-    else mSelectable.remove(entityId);
   }
 
   static boolean hasObjectStateSnapshot(com.riiablo.net.packet.d2gs.ObjectP snapshot) {

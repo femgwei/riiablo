@@ -131,8 +131,9 @@ class NativeShrineSystemTest extends RiiabloTest {
       Objects.Entry shrine = shrineObject(0);
       shrine.OperateFn = 2;
       shrine.OperateRange = 4;
-      world.getMapper(com.riiablo.engine.server.component.Object.class)
-          .create(entityId).base = shrine;
+      com.riiablo.engine.server.component.Object object = world.getMapper(
+          com.riiablo.engine.server.component.Object.class).create(entityId);
+      object.base = shrine;
       NativeObjectState state = world.getMapper(NativeObjectState.class).create(entityId)
           .set(0, 136, 136, Engine.Object.MODE_ON, false, false,
               NativePresetObjectResolver.Kind.SHRINE);
@@ -146,6 +147,9 @@ class NativeShrineSystemTest extends RiiabloTest {
       assertFalse(world.getMapper(Interactable.class).has(entityId));
       assertTrue(state.activated);
       assertEquals(1f, state.shrineCooldownFrames, 0.001f);
+      assertEquals(Engine.Object.MODE_ON, object.mode);
+      assertEquals(com.riiablo.engine.server.component.Object.STATE_ACTIVATED,
+          object.stateFlags);
 
       world.process();
       assertFalse(state.activated);
@@ -154,6 +158,9 @@ class NativeShrineSystemTest extends RiiabloTest {
           world.getMapper(CofReference.class).get(entityId).mode);
       assertTrue(world.getMapper(Interactable.class).has(entityId));
       assertEquals(4f, world.getMapper(Interactable.class).get(entityId).range);
+      assertEquals(Engine.Object.MODE_NU, object.mode);
+      assertEquals(com.riiablo.engine.server.component.Object.STATE_INTERACTABLE,
+          object.stateFlags);
     } finally {
       world.dispose();
     }

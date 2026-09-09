@@ -158,6 +158,23 @@ public class NativeShrineSystem extends IteratingSystem {
     } else if (lifecycle == Lifecycle.WELL) {
       processWellRegeneration(entityId, state, object.base, elapsedFrames);
     }
+    syncSnapshotState(entityId, state, object);
+  }
+
+  private void syncSnapshotState(int entityId, NativeObjectState state,
+      com.riiablo.engine.server.component.Object object) {
+    object.mode = state.currentMode;
+    byte flags = 0;
+    if (state.opened) {
+      flags |= com.riiablo.engine.server.component.Object.STATE_OPENED;
+    }
+    if (state.activated) {
+      flags |= com.riiablo.engine.server.component.Object.STATE_ACTIVATED;
+    }
+    if (mInteractable.has(entityId)) {
+      flags |= com.riiablo.engine.server.component.Object.STATE_INTERACTABLE;
+    }
+    object.stateFlags = flags;
   }
 
   private void processShrineCooldown(int entityId, NativeObjectState state,
