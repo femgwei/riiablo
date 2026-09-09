@@ -156,6 +156,23 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void runtimeHolyFireStateAddsAuthoritativeMeleeElementalDamage() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    StateList states = new StateList(1);
+    states.addState(StateId.HOLYFIRE, 0);
+    states.getState(StateId.HOLYFIRE).setNativeModifier(Stat.firemindam, 6);
+    states.getState(StateId.HOLYFIRE).setNativeModifier(Stat.firemaxdam, 18);
+
+    CombatSystem.CombatResult result = combat.calculateAttack(attacker, defender,
+        true, false, false, 1, 1, 1000, true,
+        null, null, 0, 0, states, null);
+
+    assertTrue(result.elementalDamage[CombatSystem.DAMAGE_FIRE] >= 6);
+    assertTrue(result.elementalDamage[CombatSystem.DAMAGE_FIRE] <= 18);
+  }
+
+  @Test
   public void runtimeResistFireStateReducesElementalDamage() {
     Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
     Attributes defender = attrs(100, 1, 0, 1, 1, 1);

@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（四类 Golem 原生战斗副作用与跨区域状态连续性）
-- 上一功能基线：`871bd5f4`（Revive 与普通复活分流、NecroPet 原生特殊 AI）
+- 当前功能提交：本文件所在 `HEAD`（圣骑士光环权威状态、仲裁与多人同步）
+- 上一功能基线：`3af3aed4`（四类 Golem 原生战斗副作用与跨区域状态连续性）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 69%（详见路线图）
@@ -84,18 +84,20 @@
   目标 Drain 和原生递减曲线回血，并保留 1.10f `Param5=0` 的受击生命同步；Iron 聚合
   被消费物品并执行 Thorns；Fire 从 `SumSkill1/SumSk1Calc` 获得 25-frame Holy Fire。
   跨区域重组后永久光环和 Iron Golem 来源物品继续存在。
+- 圣骑士 Might、Prayer、Holy Fire、Concentration、Conviction 已统一接入真实 1.10f
+  `Skills.txt` 范围、属性、周期和持续时间；状态记录来源实体/技能/等级，并按目标、
+  state、skill 完成高等级覆盖、同等级刷新、低等级拒绝和弱光环恢复。
+- 光环目标按玩家 root owner 处理队伍、敌对、佣兵和召唤物关系，并排除跨 Zone、城镇
+  房间、`NoAura` 怪物；Holy Fire LOS、定点周期火伤、近战附火及 Prayer 治疗进入统一
+  战斗/状态链。108 个联合测试、D2GS 编译和真实 1.10f 离屏营地均通过；没有生成网络
+  文件差异。
 
 ## 下一步
 
-当前已完成 **P1 死灵法师召唤与诅咒链首轮**：Raise Skeleton/Skeletal Mage、Revive、
-四类 Golem、Iron Maiden/Life Tap 及 Dim Vision/Attract/Confuse 特殊 AI 均已接入。
-骨毒系已完成 Bone Armor、Poison Dagger、Corpse Explosion 和 Poison Explosion。
-Bone Wall/Prison 已完成可破坏单位、地图碰撞和生命周期；Poison Nova 已完成原生
-64 路导弹、固定毒率和多人快照；Bone Spear/Spirit 的魔法快照、穿透和追踪也已接通，
-召唤物跟随与脱战、原生概率流/骷髅法师节奏、敌我筛选、目标连续性、主人目标继承、
-PvP 所有者关系、跨房间/跨区域重组、Revive/NecroPet 特殊 AI 以及四类 Golem 原生
-战斗副作用均已完成；下一步进入圣骑士光环权威状态、覆盖/叠加仲裁和多人同步验收。
-战斗模块不再单独分派，相关修改均由本 Chat 负责。
+当前已完成 **P1 死灵法师召唤、诅咒和骨毒系首轮**，以及 **圣骑士代表性光环首轮**。
+下一步实现 Blessed Hammer 原生导弹、墙体/单位碰撞与 Concentration 对 Blessed Hammer
+的特殊增伤；随后处理 Fist of the Heavens 和剩余元素/抗性光环。战斗模块不再单独
+分派，相关修改与进度文档均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。

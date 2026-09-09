@@ -43,6 +43,12 @@
   `Param5=0` 仍执行的受击生命同步；Iron Golem 保留并聚合被消费金属物品属性，使用
   `THORNS` 权威反伤；Fire Golem 从 `SumSkill1/SumSk1Calc` 获得 Holy Fire，并按原生
   25-frame 周期执行范围火伤。跨 Zone 重组不会丢失永久光环或 Iron Golem 来源物品。
+- 圣骑士光环权威状态、覆盖/叠加仲裁与多人同步已完成首轮：Might、Prayer、Holy Fire、
+  Concentration、Conviction 统一由 1.10f `Skills.txt` 驱动范围、周期、持续时间和属性；
+  同一目标按 `state + skill` 进行高等级覆盖、同等级刷新和低等级拒绝，强光环消失后弱
+  光环可在后续周期恢复。队伍、敌对玩家、佣兵、召唤物、跨 Zone、城镇房间、`NoAura`
+  和 Holy Fire LOS 均纳入权威筛选；Prayer 定点治疗、Holy Fire 周期伤害和近战附火进入
+  统一战斗链，并由既有状态/伤害快照同步到多人客户端。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -69,7 +75,8 @@
   原生尸体生命伤害、物理/火焰内外半径与八方向 8.8 定点持续毒云链。Bone Wall /
   Bone Prison 也已完成可破坏单位、碰撞与生命周期；Poison Nova、Bone Spear/Spirit
   以及召唤物重组/传送边界、Revive/Golem 专属 AI、技能继承和四类 Golem 战斗副作用
-  也已完成首轮。下一项为圣骑士光环权威状态与叠加仲裁。
+  也已完成首轮。圣骑士五项代表性光环的权威状态与叠加仲裁也已完成首轮；下一项为
+  Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -96,8 +103,9 @@
    耗尽/重施和多人容量快照；Poison Dagger 已完成原生预计算近战记录、毒伤和耐久链；
    Corpse/Poison Explosion、Bone Wall/Prison、Poison Nova、Bone Spear/Spirit 的
    权威伤害、导弹、碰撞和多人表现均已接通。
-7. **P1 圣骑士技能专项（下一项）**：先完成光环权威状态与覆盖/叠加仲裁，再处理
-   Blessed Hammer、Fist of the Heavens 及元素抗性分支。
+7. **P1 圣骑士技能专项（进行中）**：光环权威状态与覆盖/叠加仲裁已完成首轮；下一项
+   处理 Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤，随后处理 Fist of
+   the Heavens 及剩余元素/抗性光环。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -137,7 +145,7 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
+| 圣骑士 Paladin | 65% | 35% | 代表性光环权威叠加已完成；剩余 Blessed Hammer/FoH、元素与抗性光环 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
 职业技能专项整体按 **约 74% 完成、约 26% 剩余** 计入战斗模块；刺客专项已完成，
@@ -663,7 +671,7 @@ Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单�
 生命周期已完成，Poison Nova 原生导弹、固定毒伤与多人表现也已完成，当前进入
 召唤物跟随、概率节奏、敌我筛选、主人目标/PvP 关系及跨房间/跨区域重组现已完成首轮。
 Revive/Golem 专属 AI、技能继承和四类 Golem 原生副作用现已完成；当前进入
-**圣骑士光环权威状态、覆盖/叠加仲裁与多人同步验收**。
+**Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -1102,8 +1110,21 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     `:desktop:offscreenCamp` 均通过，输出 `[OFFSCREEN_CAMP] result=PASS`。跨 Zone 重组
     保留 `UnitStates` 与 `sourceItem`；未修改 FlatBuffers schema 或生成网络文件。
 
-下一项：圣骑士光环权威状态与覆盖/叠加仲裁；优先对照 Might、Prayer、Holy Fire、
-Concentration、Conviction 的拥有者/队友/敌人筛选、同类高等级覆盖、周期 tick 与多人快照。
+- [x] ~~完成圣骑士光环权威状态、覆盖/叠加仲裁与多人同步首轮~~
+  - Might、Prayer、Holy Fire、Concentration、Conviction 的范围、属性、`perdelay=50`、
+    最低 5 tick 周期及 `perdelay+1` 状态持续时间均来自真实 1.10f `Skills.txt`。
+  - 状态记录来源实体、技能和等级；同目标按 `state + skill` 仲裁，高等级覆盖、同等级
+    刷新、低等级拒绝，强源消失后弱源可恢复。玩家 root owner 统一决定队伍、敌对、
+    佣兵和召唤物关系；跨 Zone、城镇房间、`NoAura` 与 Holy Fire LOS 均有回归覆盖。
+  - Prayer 使用 8.8 fixed `edns` 治疗；Holy Fire 周期火伤和近战附火进入统一抗性、吸收、
+    PvP、`DamageEvent` 与 `DeathEvent` 链。光环属性写入后立即刷新移动速度。
+  - 光环、状态、战斗、技能、Party/PvP、多人状态和客户端同步联合回归共 108 个测试通过；
+    `:server:d2gs:compileJava` 通过；真实 1.10f 1x1 `:desktop:offscreenCamp` 输出
+    `[OFFSCREEN_CAMP] result=PASS act=1 player=99 frames=3`。未修改 FlatBuffers schema，
+    无生成网络文件差异。
+
+下一项：**Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤**；随后完成 Fist of
+the Heavens 和剩余元素/抗性光环。当前 Chat 继续负责包括战斗在内的全部模块。
 
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方

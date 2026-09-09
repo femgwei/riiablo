@@ -731,6 +731,19 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
   }
 
+  /**
+   * Rebuilds movement modifiers immediately after an aura stat-list changes.
+   * Native {@code SKILLS_AuraCallback_BasicAura} invokes
+   * {@code UNITS_UpdateAnimRateAndVelocity} in the same game frame; the normal
+   * fixed-tick decay pass remains the owner of all other state updates.
+   */
+  public void refreshAuraVelocity(int entityId) {
+    if (!mVelocity.has(entityId) || !mUnitStates.has(entityId)) return;
+    UnitStates unitStates = mUnitStates.get(entityId);
+    if (unitStates == null || unitStates.stateList == null) return;
+    applyVelocityModifiers(entityId, unitStates.stateList);
+  }
+
   /** D2MOO EVENTTYPE_PERIODICSKILLS -> SrvDo054 -> SrvDo142. */
   private void processBladeShield(int entityId, StateList states) {
     UnitState state = states.getState(StateId.BLADESHIELD);

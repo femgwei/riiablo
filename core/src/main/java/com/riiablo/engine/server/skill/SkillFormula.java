@@ -129,6 +129,18 @@ public final class SkillFormula {
       if ("toht".equalsIgnoreCase(identifier)) {
         return skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
       }
+      // skillcalc.txt rows 38/52/53. The calc VM exposes elemental damage in
+      // native 8.8 fixed units; aura formulas such as Prayer's `edns` and
+      // Holy Fire's `enms*par5/256` depend on retaining that precision until
+      // the surrounding expression has been evaluated.
+      if ("edns".equalsIgnoreCase(identifier)
+          || "enms".equalsIgnoreCase(identifier)) {
+        return elementalDamageFixed(true);
+      }
+      if ("edxs".equalsIgnoreCase(identifier)
+          || "exms".equalsIgnoreCase(identifier)) {
+        return elementalDamageFixed(false);
+      }
       if (identifier.regionMatches(true, 0, "par", 0, 3)) {
         // The 1.10f Bone Wall row uses the otherwise unique `par34`
         // shorthand for the Param3/Param4 linear pair.  Blizzard's calc
@@ -164,6 +176,29 @@ public final class SkillFormula {
         }
       }
       return 0;
+    }
+
+    private int elementalDamageFixed(boolean minimum) {
+      if (skill == null) return 0;
+      int base = minimum ? skill.EMin : skill.EMax;
+      int[] perLevel = minimum ? skill.EMinLev : skill.EMaxLev;
+      long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
+      value <<= Math.min(Math.max(0, skill.HitShift), 30);
+      return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+    }
+
+    private static int damageBonusByLevel(int level, int[] values) {
+      if (level <= 1 || values == null || values.length == 0) return 0;
+      int l1 = values.length > 0 ? values[0] : 0;
+      int l2 = values.length > 1 ? values[1] : 0;
+      int l3 = values.length > 2 ? values[2] : 0;
+      int l4 = values.length > 3 ? values[3] : 0;
+      int l5 = values.length > 4 ? values[4] : 0;
+      if (level > 28) return 7 * l1 + 8 * l2 + 6 * (l3 + l4) + (level - 28) * l5;
+      if (level > 22) return 7 * l1 + 8 * l2 + 6 * l3 + (level - 22) * l4;
+      if (level > 16) return 7 * l1 + 8 * l2 + (level - 16) * l3;
+      if (level > 8) return 7 * l1 + (level - 8) * l2;
+      return (level - 1) * l1;
     }
 
     private int skillCall() {

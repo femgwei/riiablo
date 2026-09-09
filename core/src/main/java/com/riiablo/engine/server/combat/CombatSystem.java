@@ -892,6 +892,18 @@ public class CombatSystem {
     a.elementalMaxDamage[DAMAGE_POISON] = statInt(attacker, Stat.poisonmaxdam, 0);
     a.elementalMinDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmindam, 0);
     a.elementalMaxDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmaxdam, 0);
+    if (attackerStates != null) {
+      short[] stateMinStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
+          Stat.poisonmindam, Stat.magicmindam};
+      short[] stateMaxStats = {0, Stat.firemaxdam, Stat.lightmaxdam, Stat.coldmaxdam,
+          Stat.poisonmaxdam, Stat.magicmaxdam};
+      for (int type = DAMAGE_FIRE; type < DAMAGE_TYPE_COUNT; type++) {
+        a.elementalMinDamage[type] +=
+            attackerStates.getTotalStatContribution(stateMinStats[type]);
+        a.elementalMaxDamage[type] +=
+            attackerStates.getTotalStatContribution(stateMaxStats[type]);
+      }
+    }
     a.elementalPierce[DAMAGE_FIRE] = statInt(attacker, Stat.item_pierce_fire, 0)
         + statInt(attacker, Stat.passive_fire_pierce, 0);
     a.elementalPierce[DAMAGE_LIGHTNING] = statInt(attacker, Stat.item_pierce_ltng, 0)

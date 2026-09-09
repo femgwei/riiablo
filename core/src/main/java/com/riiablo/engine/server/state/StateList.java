@@ -645,6 +645,13 @@ public class StateList {
     return total;
   }
 
+  /** Aggregates one native stat across all active source-owned state layers. */
+  public int getTotalStatContribution(int statId) {
+    int total = 0;
+    for (UnitState state : states) total += state.getStatContributionValue(statId);
+    return total;
+  }
+
   /**
    * 计算所有状态的抗性修正总和
    * 
