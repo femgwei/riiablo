@@ -28,6 +28,7 @@ import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.state.StateId;
@@ -36,6 +37,42 @@ import org.junit.jupiter.api.Test;
 
 /** Authoritative AI target behavior for D2Game's Dim Vision/Attract/Confuse modes. */
 class NecromancerCurseAiIntegrationTest extends RiiabloTest {
+  @Test
+  void playerSummonTargetsHostileMonsterAndKeepsValidTarget() {
+    Fixture fixture = new Fixture();
+    try {
+      int owner = fixture.player(1, 0);
+      int summon = fixture.monster(0, 0);
+      fixture.world.getMapper(SummonedPet.class).create(summon)
+          .set(owner, "skeleton", 70, 1, false, 0);
+
+      int first = fixture.monster(6, 0);
+      int friendlyPet = fixture.monster(2, 0);
+      fixture.world.getMapper(SummonedPet.class).create(friendlyPet)
+          .set(owner, "skeleton", 70, 1, false, 0);
+      int corpse = fixture.monster(0.5f, 0);
+      fixture.world.getMapper(Corpse.class).create(corpse);
+      fixture.npc(0.25f, 0);
+
+      ProbeAI ai = fixture.ai(summon);
+      assertEquals(first, ai.nearest(),
+          "a player summon must ignore its owner, friendly pets, corpses and NPCs");
+
+      int closer = fixture.monster(3, 0);
+      fixture.world.process();
+      assertEquals(first, ai.continuing(first),
+          "D2MOO target-node selection must keep a valid current target");
+
+      fixture.world.getMapper(AttributesWrapper.class).get(first).attrs
+          .base().put(Stat.hitpoints, 0);
+      fixture.world.getMapper(AttributesWrapper.class).get(first).attrs.reset();
+      assertEquals(closer, ai.continuing(first),
+          "a dead current target must trigger a deterministic replacement scan");
+    } finally {
+      fixture.close();
+    }
+  }
+
   @Test
   void attractForcesMonsterTargetAndResetsWhenItDies() {
     Fixture fixture = new Fixture();
@@ -190,6 +227,19 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
       return id;
     }
 
+    int npc(float x, float y) {
+      MonStats.Entry row = new MonStats.Entry();
+      row.Id = "testnpc";
+      row.npc = true;
+      row.aidist = new int[] {35, 35, 35};
+      int id = world.create();
+      world.getMapper(Monster.class).create(id)
+          .set(row, new com.riiablo.codec.excel.MonStats2.Entry());
+      world.getMapper(Position.class).create(id).position.set(x, y);
+      world.getMapper(AttributesWrapper.class).create(id).attrs = attributes();
+      return id;
+    }
+
     void close() {
       world.dispose();
       Riiablo.engine = previous;
@@ -235,6 +285,9 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
     }
     boolean tickSpecial() { return updateSpecialAiControl(1f / 25f); }
     int nearest() { return findNearestTargetWithAidist(new float[1]); }
+    int continuing(int targetId) {
+      return findTargetWithContinuity(targetId, new float[] {Float.MAX_VALUE});
+    }
     boolean validOverride(int targetId) { return isValidOverrideMonsterTarget(targetId); }
   }
 

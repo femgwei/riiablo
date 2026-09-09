@@ -80,8 +80,8 @@
 骨毒系已完成 Bone Armor、Poison Dagger、Corpse Explosion 和 Poison Explosion。
 Bone Wall/Prison 已完成可破坏单位、地图碰撞和生命周期；Poison Nova 已完成原生
 64 路导弹、固定毒率和多人快照；Bone Spear/Spirit 的魔法快照、穿透和追踪也已接通，
-召唤物跟随与脱战第一阶段以及原生概率流/骷髅法师节奏对齐也已完成，下一步处理召唤
-AI 的目标评分与多人边界深化。
+召唤物跟随与脱战、原生概率流/骷髅法师节奏、敌我筛选和目标连续性第一阶段已完成；
+下一步处理主人目标继承、PvP 召唤关系与多人边界深化。
 战斗模块不再
 单独分派，相关修改均由本 Chat 负责。
 

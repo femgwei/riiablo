@@ -215,4 +215,7 @@ waypoints, caves, quest rewards and collision boundaries.
 - [x] ~~Necromancer summon AI chance stream and SkeletonMage cadence~~
   - AI percentage rolls now use a per-unit `NativeRng` stream; SkeletonMage no longer bypasses
     `aidel`/shoot chance with an immediate attack path.
-- [ ] Next: Necromancer summon target scoring/regroup edge cases and remaining cross-class skill validation.
+- [x] ~~Necromancer summon allegiance filtering and target continuity (phase 1)~~
+  - Player skeletons now target killable evil monsters instead of scanning players; friendly
+    pets, owners, NPCs and corpses are excluded, and valid targets remain locked between thinks.
+- [ ] Next: owner-target inheritance/PvP summon relations and remaining cross-class skill validation.

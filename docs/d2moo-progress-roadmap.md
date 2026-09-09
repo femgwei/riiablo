@@ -1027,6 +1027,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     `AITHINK_Fn064_SkeletonMage` 的固定 `aidel` 节奏与射击概率。
   - 新增 AI 概率边界回归测试；未改变召唤所有权、掉落或技能伤害链。
 
+- [x] ~~完成死灵召唤物敌我筛选与目标连续性第一阶段~~
+  - 修复 `Skeleton` 仍按玩家订阅扫描目标的问题；玩家骷髅现在与骷髅法师统一选择
+    邪恶、可击杀的普通怪物，不会攻击主人、友方召唤物、NPC 或尸体。
+  - 对齐 D2MOO `sub_6FCF2CC0` 的缓存目标优先分支：当前目标仍有效时保持锁定，死亡、
+    跨区或超出 `aiDist` 后才重新选择最近目标，减少多人环境中来回切换目标。
+  - ECS 回归覆盖敌我筛选、有效目标保持和死亡目标替换。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
 > “当前下一项”为准；Bone Armor、Poison Dagger、Corpse/Poison Explosion、Bone

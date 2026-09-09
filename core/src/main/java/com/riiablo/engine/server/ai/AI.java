@@ -665,6 +665,20 @@ public abstract class AI implements Interactable.Interactor {
     return findNearestOrdinaryEnemy(outDistance, resolveAiDistance());
   }
 
+  /**
+   * Mirrors the cached-target-first branch at the start of D2MOO's
+   * {@code sub_6FCF2CC0}. A living target remains selected while it is still
+   * valid and inside aiDist; only then does the AI perform a new nearest scan.
+   */
+  protected int findTargetWithContinuity(int previousTargetId, float[] outDistance) {
+    if (previousTargetId != Engine.INVALID_ENTITY && isValidEnemyTarget(previousTargetId)) {
+      outDistance[0] = mPosition.get(entityId).position.dst(
+          mPosition.get(previousTargetId).position);
+      return previousTargetId;
+    }
+    return findNearestTargetWithAidist(outDistance);
+  }
+
   /** Native player-pet leash: non-passive summons regroup when no hostile is visible. */
   protected boolean followSummonOwner(float stopDistance) {
     if (!mSummonedPet.has(entityId) || !mPosition.has(entityId)) return false;
@@ -745,7 +759,12 @@ public abstract class AI implements Interactable.Interactor {
     if (sourcePet != null && sourcePet.passive) return false;
     boolean targetFriendly = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId);
-    boolean targetHostileMonster = mMonster.has(targetId) && !targetFriendly;
+    Monster candidate = mMonster.has(targetId) ? mMonster.get(targetId) : null;
+    boolean targetHostileMonster = candidate != null && !targetFriendly
+        && !mCorpse.has(targetId)
+        && candidate.monstats != null && candidate.monstats.Align == 0
+        && candidate.monstats.killable && !candidate.monstats.npc
+        && !candidate.monstats.inTown;
     if (sourcePet != null ? !targetHostileMonster : !targetFriendly) return false;
     if (mMapWrapper.has(targetId) && mMapWrapper.get(targetId).zone != null
         && mMapWrapper.get(targetId).zone.isTown()) {

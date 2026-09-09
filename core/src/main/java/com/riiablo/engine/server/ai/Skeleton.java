@@ -1,9 +1,6 @@
 package com.riiablo.engine.server.ai;
 
-import com.artemis.Aspect;
 import com.artemis.ComponentMapper;
-import com.artemis.EntitySubscription;
-import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.ai.fsm.DefaultStateMachine;
 import com.badlogic.gdx.ai.fsm.StateMachine;
@@ -16,7 +13,6 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
@@ -59,25 +55,16 @@ public class Skeleton extends AI {
   protected ComponentMapper<com.riiablo.engine.server.component.Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
 
-  private EntitySubscription enemyEntities;
-
   final Vector2 tmpVec2 = new Vector2();
 
   final StateMachine<Integer, State> stateMachine;
   float nextAction;
   float time;
+  int targetId = Engine.INVALID_ENTITY;
 
   public Skeleton(int entityId) {
     super(entityId);
     stateMachine = new DefaultStateMachine<>(entityId, State.IDLE);
-  }
-
-  @Override
-  public void initialize() {
-    super.initialize();
-    enemyEntities = Riiablo.engine.getAspectSubscriptionManager().get(Aspect
-            .all(Class.class)
-            .one(Player.class));
   }
 
   @Override
@@ -121,22 +108,8 @@ public class Skeleton extends AI {
     time = SLEEP;
 
     // Find target
-    int targetId = Engine.INVALID_ENTITY;
-    float targetDistance = Float.MAX_VALUE;
-    Vector2 entityPos = mPosition.get(entityId).position;
-    
-    IntBag entities = enemyEntities.getEntities();
-    for (int i = 0, size = entities.size(); i < size; i++) {
-      int ent = entities.get(i);
-      if (isValidEnemyTarget(ent)) {
-        Vector2 targetPos = mPosition.get(ent).position;
-        float dst = entityPos.dst(targetPos);
-        if (dst < targetDistance) {
-          targetDistance = dst;
-          targetId = ent;
-        }
-      }
-    }
+    float[] outDistance = { Float.MAX_VALUE };
+    targetId = findTargetWithContinuity(targetId, outDistance);
 
     if (targetId == Engine.INVALID_ENTITY) {
       if (followSummonOwner(6f)) {

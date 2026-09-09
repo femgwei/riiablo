@@ -60,6 +60,7 @@ public class SkeletonMage extends AI {
   final StateMachine<Integer, State> stateMachine;
   float nextAction;
   float time;
+  int targetId = Engine.INVALID_ENTITY;
   Missiles.Entry missile;
 
   public SkeletonMage(int entityId) {
@@ -99,7 +100,7 @@ public class SkeletonMage extends AI {
     time -= delta;
 
     float[] outDist = { Float.MAX_VALUE };
-    int targetId = findNearestTargetWithAidist(outDist);
+    targetId = findTargetWithContinuity(targetId, outDist);
     float targetDistance = outDist[0];
 
     if (time > 0) {
