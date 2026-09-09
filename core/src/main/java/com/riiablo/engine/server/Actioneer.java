@@ -1363,7 +1363,7 @@ public class Actioneer extends PassiveSystem {
               activeCasting.dragonClawRemainingStrikes);
         } else {
           Item attackWeapon = activeAttackWeapon(entityId);
-          combat = CombatSystem.INSTANCE.calculateAttack(
+          combat = CombatSystem.INSTANCE.calculateAttackAgainstMonsterType(
               attackerAttrs,
               attrs,
               attackerPlayer,
@@ -1373,7 +1373,8 @@ public class Actioneer extends PassiveSystem {
               monsterAttackMaxDamage(entityId),
               monsterAttackRating(entityId),
               stateList(entityId), stateList(targetId), isEntityMoving(targetId),
-              weaponMastery(entityId, attackWeapon, false));
+              weaponMastery(entityId, attackWeapon, false),
+              isDemonTarget(targetId), isUndeadTarget(targetId));
         }
         if (!combat.hit) {
           log.info("[COMBAT_HIT] entity={} target={} result=miss chance={}% attackerLevel={} targetLevel={} ar={} defense={}",
@@ -1659,6 +1660,17 @@ public class Actioneer extends PassiveSystem {
         // TODO: default case will log an error when all valid cases are enumerated
         //log.error("Invalid srvdofunc({}) for {}", srvdofunc, entityId);
     }
+  }
+
+  private boolean isDemonTarget(int entityId) {
+    return mMonster.has(entityId) && mMonster.get(entityId).monstats != null
+        && mMonster.get(entityId).monstats.demon;
+  }
+
+  private boolean isUndeadTarget(int entityId) {
+    return mMonster.has(entityId) && mMonster.get(entityId).monstats != null
+        && (mMonster.get(entityId).monstats.lUndead
+            || mMonster.get(entityId).monstats.hUndead);
   }
 
   /** Native SrvSt16: roll one dagger combat record before the attack keyframe. */

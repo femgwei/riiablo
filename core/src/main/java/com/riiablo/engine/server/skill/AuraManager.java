@@ -37,13 +37,16 @@ public class AuraManager {
   // D2Common D2C_AuraFilters.
   public static final int FILTER_PLAYER = 0x0001;
   public static final int FILTER_MONSTER = 0x0002;
+  public static final int FILTER_UNDEAD = 0x0004;
   public static final int FILTER_CAN_BE_ATTACKED = 0x0080;
   public static final int FILTER_IGNORE_IN_TOWN = 0x0100;
   public static final int FILTER_USE_LINE_OF_SIGHT = 0x0200;
   public static final int FILTER_SELECTABLE = 0x0400;
   public static final int FILTER_IGNORE_TOWN_ROOMS = 0x2000;
+  public static final int FILTER_IGNORE_BOSS = 0x4000;
   public static final int FILTER_IGNORE_ALLY = 0x8000;
   public static final int FILTER_FIND_ALLY = 0x10000;
+  public static final int FILTER_IGNORE_PRIME_EVIL = 0x40000;
 
   public static class AuraDefinition {
     public int skillId;
@@ -119,7 +122,7 @@ public class AuraManager {
     boolean isAlly(int entityId1, int entityId2);
     int getBaseSkillLevel(int entityId, String skillName);
     boolean isValidTarget(
-        int casterId, int targetId, int auraFilter, boolean checkMonsterNoAura);
+        int casterId, int targetId, int skillId, int auraFilter, boolean checkMonsterNoAura);
     boolean isInTown(int entityId);
     boolean consumeMana(int casterId, float amount);
     void applyState(int targetId, int stateId, int duration, int sourceEntityId,
@@ -129,6 +132,8 @@ public class AuraManager {
         int sourceEntityId, int skillId);
     void applyPeriodicDamage(int casterId, int targetId, int skillId,
         int skillLevel, int minimum, int maximum, String elementType);
+    void updateHolyFreezeShatter(int casterId, int targetId, int skillId,
+        int skillLevel, int duration);
   }
 
   private final IntMap<AuraDefinition> auraDefinitions = new IntMap<>();
@@ -243,8 +248,8 @@ public class AuraManager {
       }
       boolean checkMonsterNoAura = definition.nativeSkill != null
           ? definition.nativeSkill.srvdofunc == 65 : definition.affectsParty;
-      if (!callback.isValidTarget(
-          aura.casterId, targetId, definition.auraFilter, checkMonsterNoAura)) continue;
+      if (!callback.isValidTarget(aura.casterId, targetId, definition.skillId,
+          definition.auraFilter, checkMonsterNoAura)) continue;
       boolean ally = callback.isAlly(aura.casterId, targetId);
       boolean rangeTarget = (definition.affectsParty && ally)
           || (definition.affectsEnemy && !ally);
@@ -256,6 +261,10 @@ public class AuraManager {
         if (damage[1] > 0) {
           callback.applyPeriodicDamage(aura.casterId, targetId, definition.skillId,
               aura.skillLevel, damage[0], damage[1], definition.nativeSkill.EType);
+        }
+        if (definition.skillId == SkillId.HOLY_FREEZE) {
+          callback.updateHolyFreezeShatter(aura.casterId, targetId, definition.skillId,
+              aura.skillLevel, Math.max(6, definition.perDelayFrames + 1));
         }
       }
     }
@@ -277,11 +286,25 @@ public class AuraManager {
         candidate.aura = aura;
         candidate.targetId = targetId;
         candidate.stateId = stateId;
-        candidate.statIds = self && hasStats(definition.passiveStatIds)
-            ? mergeStats(definition.statIds, definition.passiveStatIds) : definition.statIds;
-        candidate.statValues = self && hasStats(definition.passiveStatIds)
-            ? mergeValues(definition.statIds, aura.statValues,
-                definition.passiveStatIds, aura.passiveStatValues) : aura.statValues;
+        boolean separateDamageAuraLists = self && definition.nativeSkill != null
+            && (definition.nativeSkill.srvdofunc == 66
+                || definition.nativeSkill.srvdofunc == 81);
+        boolean sanctuarySelfStats = self && definition.skillId == SkillId.SANCTUARY;
+        candidate.statIds = sanctuarySelfStats
+            ? definition.statIds
+            : separateDamageAuraLists
+            ? definition.passiveStatIds
+            : self && hasStats(definition.passiveStatIds)
+                ? mergeStats(definition.statIds, definition.passiveStatIds)
+                : definition.statIds;
+        candidate.statValues = sanctuarySelfStats
+            ? aura.statValues
+            : separateDamageAuraLists
+            ? aura.passiveStatValues
+            : self && hasStats(definition.passiveStatIds)
+                ? mergeValues(definition.statIds, aura.statValues,
+                    definition.passiveStatIds, aura.passiveStatValues)
+                : aura.statValues;
         candidate.direct = containsDirectStat(candidate.statIds);
         long key = effectKey(targetId, stateId, definition.skillId);
         Array<Candidate> bucket = candidates.get(key);
@@ -436,13 +459,15 @@ public class AuraManager {
     if (Riiablo.files == null || Riiablo.files.skills == null || Riiablo.files.States == null) return;
     int[] ids = {SkillId.MIGHT, SkillId.PRAYER, SkillId.RESIST_FIRE,
         SkillId.RESIST_COLD, SkillId.RESIST_LIGHTNING, SkillId.HOLY_FIRE,
-        SkillId.CONCENTRATION, SkillId.CONVICTION, SkillId.SALVATION};
+        SkillId.CONCENTRATION, SkillId.HOLY_FREEZE, SkillId.HOLY_SHOCK,
+        SkillId.SANCTUARY, SkillId.CONVICTION, SkillId.SALVATION};
     for (int id : ids) registerNativeAura(id);
   }
 
   private void registerNativeAura(int skillId) {
     Skills.Entry skill = Riiablo.files.skills.get(skillId);
-    if (skill == null || (skill.srvdofunc != 65 && skill.srvdofunc != 66)) return;
+    if (skill == null || (skill.srvdofunc != 65 && skill.srvdofunc != 66
+        && skill.srvdofunc != 81)) return;
     AuraDefinition definition = new AuraDefinition();
     definition.skillId = skill.Id;
     definition.name = skill.skill;

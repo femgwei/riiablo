@@ -168,6 +168,13 @@ public class CombatSystem {
     /** 对亡灵攻击等级加成 */
     public int undeadToHit;
 
+    /** Native item_demondamage/undeaddamage target-class percentages. */
+    public int demonDamagePercent;
+    public int undeadDamagePercent;
+
+    /** Sanctuary ignores positive physical resistance on undead targets. */
+    public boolean bypassUndeadPhysicalResistance;
+
     /** 致命一击（Deadly Strike）几率 */
     public int deadlyStrike;
 
@@ -504,7 +511,22 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, 0, 0);
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, 0, 0,
+        false, false);
+  }
+
+  /** Regular attack with the native monster-type context needed by Sanctuary. */
+  public CombatResult calculateAttackAgainstMonsterType(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      boolean defenderDemon, boolean defenderUndead) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
+        null, null, 0, 0, attackerStates, defenderStates, defenderMoving, false,
+        0, DAMAGE_PHYSICAL, mastery, 0, 0, defenderDemon, defenderUndead);
   }
 
   /** Full context with native Nightmare/Hell resistance penalty selection. */
@@ -522,7 +544,7 @@ public class CombatSystem {
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
-        difficulty, 0);
+        difficulty, 0, false, false);
   }
 
   /**
@@ -544,7 +566,26 @@ public class CombatSystem {
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
-        difficulty, Math.max(0, magicTargetBonusPercent));
+        difficulty, Math.max(0, magicTargetBonusPercent), false, false);
+  }
+
+  /** Missile/ranged attack with target-class metadata for Sanctuary bonuses. */
+  public CombatResult calculateAttackAtDifficulty(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      int difficulty, int magicTargetBonusPercent,
+      boolean defenderDemon, boolean defenderUndead) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
+        difficulty, Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead);
   }
 
   /** Resolves a fixed elemental packet for area effects that have no missile
@@ -755,7 +796,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, false, combinedMin, combinedMax,
         coldLength, poisonLength, attackerStates, defenderStates, defenderMoving, true,
-        0, DAMAGE_PHYSICAL, null, 0, 0);
+        0, DAMAGE_PHYSICAL, null, 0, 0, false, false);
   }
 
   /** Native Barbarian weapon mastery context for one concrete weapon hand. */
@@ -792,7 +833,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         attackMinDamage, attackMaxDamage, attackRating, false,
         null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true,
-        physicalConversionPercent, physicalConversionType, mastery, 0, 0);
+        physicalConversionPercent, physicalConversionType, mastery, 0, 0, false, false);
   }
 
   /**
@@ -849,7 +890,8 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, alwaysHit,
         elementalMin, elementalMax, coldLength, poisonLength,
-        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null, 0, 0);
+        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null, 0, 0,
+        false, false);
   }
 
   private CombatResult calculateAttackInternal(
@@ -863,7 +905,7 @@ public class CombatSystem {
       boolean defenderMoving, boolean precomputedPhysicalDamage,
       int physicalConversionPercent, int physicalConversionType,
       StateList.WeaponMasteryBonus mastery, int difficulty,
-      int magicTargetBonusPercent) {
+      int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -889,6 +931,11 @@ public class CombatSystem {
       a.attackRating = Math.max(1, a.dexterity * 5 + Math.max(1, a.level) * 2);
     }
     a.attackRatingPercent = statInt(attacker, Stat.item_tohit_percent, 0);
+    a.demonToHit = statInt(attacker, Stat.item_demon_tohit, 0);
+    a.undeadToHit = statInt(attacker, Stat.item_undead_tohit, 0);
+    a.demonDamagePercent = statInt(attacker, Stat.item_demondamage_percent, 0);
+    a.undeadDamagePercent = statInt(attacker, Stat.item_undeaddamage_percent, 0);
+    a.bypassUndeadPhysicalResistance = statInt(attacker, Stat.skill_bypass_undead, 0) > 0;
     a.minDamage = hasAttackProfileOverride
         ? Math.max(0, attackMinDamageOverride) : statInt(attacker, Stat.mindamage, 1);
     a.maxDamage = hasAttackProfileOverride
@@ -908,6 +955,14 @@ public class CombatSystem {
     if (attackerStates != null) {
       a.enhancedDamagePercent += attackerStates.getTotalDamageModifier();
       a.attackRatingPercent += attackerStates.getTotalAttackModifier();
+      a.demonToHit += attackerStates.getTotalStatContribution(Stat.item_demon_tohit);
+      a.undeadToHit += attackerStates.getTotalStatContribution(Stat.item_undead_tohit);
+      a.demonDamagePercent +=
+          attackerStates.getTotalStatContribution(Stat.item_demondamage_percent);
+      a.undeadDamagePercent +=
+          attackerStates.getTotalStatContribution(Stat.item_undeaddamage_percent);
+      a.bypassUndeadPhysicalResistance |=
+          attackerStates.getTotalStatContribution(Stat.skill_bypass_undead) > 0;
     }
     if (mastery != null) {
       if (!precomputedPhysicalDamage) {
@@ -992,6 +1047,8 @@ public class CombatSystem {
     DefenderData d = new DefenderData();
     d.isPlayer = defenderPlayer;
     d.isMonster = !defenderPlayer;
+    d.isDemon = defenderDemon;
+    d.isUndead = defenderUndead;
     d.level = Math.max(1, statInt(defender, Stat.level, 1));
     d.dexterity = statInt(defender, Stat.dexterity, 0);
     d.defense = statInt(defender, Stat.armorclass, 0);
@@ -1133,7 +1190,7 @@ public class CombatSystem {
     }
 
     // 3. 计算基础物理伤害
-    int baseDamage = calculateBaseDamage(attacker);
+    int baseDamage = calculateBaseDamage(attacker, defender);
 
     // 4. 判定暴击/致命一击
     result.critical = rollCriticalStrike(attacker);
@@ -1160,7 +1217,8 @@ public class CombatSystem {
       convertedDamage = baseDamage * attacker.physicalConversionPercent / 100;
       baseDamage -= convertedDamage;
     }
-    result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender);
+    result.physicalDamage = applyPhysicalDamageReduction(baseDamage, defender,
+        defender.isUndead && attacker.bypassUndeadPhysicalResistance);
 
     // 7. 计算元素伤害
     result.coldDuration = Math.max(0, attacker.coldLength);
@@ -1362,7 +1420,7 @@ public class CombatSystem {
   /**
    * 计算基础物理伤害
    */
-  private int calculateBaseDamage(AttackerData attacker) {
+  private int calculateBaseDamage(AttackerData attacker, DefenderData defender) {
     // A native zero-profile melee/ranged attack still deals the one-point
     // minimum. Snapshot spell missiles mark alwaysHit and may legitimately
     // carry elemental-only damage, so they keep physical damage at zero.
@@ -1378,8 +1436,13 @@ public class CombatSystem {
     }
 
     // 增强伤害百分比
-    if (attacker.enhancedDamagePercent > 0) {
-      damage = damage * (100 + attacker.enhancedDamagePercent) / 100;
+    int targetDamagePercent = attacker.enhancedDamagePercent;
+    if (defender != null) {
+      if (defender.isDemon) targetDamagePercent += attacker.demonDamagePercent;
+      if (defender.isUndead) targetDamagePercent += attacker.undeadDamagePercent;
+    }
+    if (targetDamagePercent > 0) {
+      damage = damage * (100 + targetDamagePercent) / 100;
     }
 
     return Math.max(1, damage);
@@ -1422,13 +1485,18 @@ public class CombatSystem {
    * 应用物理伤害减免
    */
   private int applyPhysicalDamageReduction(int damage, DefenderData defender) {
+    return applyPhysicalDamageReduction(damage, defender, false);
+  }
+
+  private int applyPhysicalDamageReduction(
+      int damage, DefenderData defender, boolean bypassResistance) {
     if (damage <= 0) return 0;
-    if (defender.immunePhysical) {
+    if (!bypassResistance && defender.immunePhysical) {
       return 0;
     }
 
     // 百分比减免
-    if (defender.damageReducedPercent != 0) {
+    if (!bypassResistance && defender.damageReducedPercent != 0) {
       damage = damage * (100 - defender.damageReducedPercent) / 100;
     }
 

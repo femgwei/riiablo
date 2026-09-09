@@ -45,6 +45,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
 
   private final AuraManager auras = new AuraManager();
   private final IntMap<NativeRng> damageRng = new IntMap<>();
+  private final IntMap<NativeRng> holyFreezeRng = new IntMap<>();
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
@@ -152,7 +153,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
   }
 
   @Override public boolean isValidTarget(
-      int casterId, int targetId, int auraFilter, boolean checkMonsterNoAura) {
+      int casterId, int targetId, int skillId, int auraFilter, boolean checkMonsterNoAura) {
     if (!mPosition.has(targetId) || !mAttributes.has(targetId) || !isAlive(targetId)) return false;
     boolean player = mPlayer.has(targetId);
     boolean monster = mMonster.has(targetId);
@@ -168,6 +169,20 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
           && unit.monstats2 != null && !unit.monstats2.isAtt) return false;
       if ((auraFilter & AuraManager.FILTER_SELECTABLE) != 0
           && unit.monstats2 != null && unit.monstats2.noSel) return false;
+      if ((auraFilter & AuraManager.FILTER_UNDEAD) != 0
+          && (unit.monstats == null
+              || !(unit.monstats.lUndead || unit.monstats.hUndead))) return false;
+      if ((auraFilter & AuraManager.FILTER_IGNORE_BOSS) != 0
+          && unit.monstats != null && unit.monstats.boss) return false;
+      if ((auraFilter & AuraManager.FILTER_IGNORE_PRIME_EVIL) != 0
+          && unit.monstats != null && unit.monstats.primeevil) return false;
+      if (skillId == com.riiablo.engine.server.skill.SkillId.HOLY_FREEZE) {
+        int difficulty = map == null ? 0 : Math.max(0, Math.min(2, map.getDifficulty()));
+        int coldEffect = unit.monstats != null && unit.monstats.coldeffect != null
+            && difficulty < unit.monstats.coldeffect.length
+            ? unit.monstats.coldeffect[difficulty] : 0;
+        if (coldEffect >= 0) return false;
+      }
     }
     if ((auraFilter & (AuraManager.FILTER_IGNORE_IN_TOWN
         | AuraManager.FILTER_IGNORE_TOWN_ROOMS)) != 0 && isInTown(targetId)) return false;
@@ -280,6 +295,34 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     }
     log.info("[AURA_DAMAGE] caster={} target={} skill={} level={} raw={} applied={}",
         casterId, targetId, skillId, skillLevel, raw, event.damage);
+  }
+
+  @Override public void updateHolyFreezeShatter(int casterId, int targetId, int skillId,
+      int skillLevel, int duration) {
+    if (!mMonster.has(targetId) || !mUnitStates.has(targetId)) return;
+    UnitStates component = mUnitStates.get(targetId);
+    if (component.stateList == null) component.init(targetId);
+    NativeRng rng = holyFreezeRng.get(targetId);
+    if (rng == null) {
+      rng = NativeRng.forUnit(Riiablo.gameSeed ^ skillId, targetId);
+      holyFreezeRng.put(targetId, rng);
+    }
+    boolean shatter = rng.roll(20, 100);
+    if (shatter) {
+      UnitState state = component.stateList.addStateLayer(
+          com.riiablo.engine.server.state.StateId.SHATTER,
+          Math.max(1, duration), Math.max(1, skillLevel), casterId, skillId);
+      if (state != null) {
+        state.duration = Math.max(1, duration);
+        state.initialDuration = state.duration;
+        state.needsSync = true;
+      }
+    } else {
+      component.stateList.removeStateLayer(
+          com.riiablo.engine.server.state.StateId.SHATTER, casterId, skillId);
+    }
+    log.debug("[HOLY_FREEZE] phase=shatter_roll caster={} target={} roll={}",
+        casterId, targetId, shatter);
   }
 
   private boolean isAlive(int entityId) {

@@ -1021,7 +1021,10 @@ public class MissileCollisionSystem extends IteratingSystem {
           stateList(missile.ownerId), stateList(targetId), isEntityMoving(targetId),
           missileMastery(missile), combatDifficulty(missile.ownerId, targetId),
           blessedHammerTargetBonusPercent(
-              missile, mMonster.has(targetId) ? mMonster.get(targetId) : null));
+              missile, mMonster.has(targetId) ? mMonster.get(targetId) : null),
+          mMonster.has(targetId) && mMonster.get(targetId).monstats != null
+              && mMonster.get(targetId).monstats.demon,
+          mMonster.has(targetId) && isUndead(mMonster.get(targetId)));
       boolean damageHit = combat.hit && !combat.blocked;
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",

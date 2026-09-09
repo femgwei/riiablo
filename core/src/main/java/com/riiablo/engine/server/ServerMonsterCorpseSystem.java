@@ -58,10 +58,18 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
 
     Monster monster = mMonster.get(event.victim);
     if (mUnitStates.has(event.victim) && mUnitStates.get(event.victim).stateList != null) {
+      StateList states = mUnitStates.get(event.victim).stateList;
+      boolean shattered = states.hasState(
+          com.riiablo.engine.server.state.StateId.SHATTER);
       boolean boss = monster != null && monster.monstats != null && monster.monstats.boss;
-      mUnitStates.get(event.victim).stateList.retainForDeath(
+      states.retainForDeath(
           Riiablo.files != null ? Riiablo.files.States : null,
           boss ? StateList.DeathUnitType.BOSS : StateList.DeathUnitType.MONSTER);
+      // Keep the native death-mode decision even when a partial States.txt
+      // projection omits SHATTER's stay-death flag.
+      if (shattered && !states.hasState(com.riiablo.engine.server.state.StateId.SHATTER)) {
+        states.addState(com.riiablo.engine.server.state.StateId.SHATTER, 0, 1, event.killer);
+      }
     }
 
     // Local GameScreen still has DeathHandler, so this call is intentionally
@@ -93,10 +101,17 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
         || !mMonster.has(event.entityId)) return;
 
     final int entityId = event.entityId;
+    boolean shattered = mUnitStates.has(entityId)
+        && mUnitStates.get(entityId).stateList != null
+        && mUnitStates.get(entityId).stateList.hasState(
+            com.riiablo.engine.server.state.StateId.SHATTER);
     if (mNativeUnitFlags.has(entityId)) {
       mNativeUnitFlags.get(entityId).clear(NativeUnitFlags.MONSTER_TARGET);
     }
-    if (!mCorpse.has(entityId)) {
+    if (shattered) {
+      if (mCorpse.has(entityId)) mCorpse.remove(entityId);
+      log.info("[MONSTER_CORPSE] phase=shattered entity={} usable=false", entityId);
+    } else if (!mCorpse.has(entityId)) {
       mCorpse.create(entityId).reset(Corpse.DEFAULT_DURATION, true);
       Monster monster = mMonster.get(entityId);
       log.info("[MONSTER_CORPSE] phase=created entity={} monster={} usable={} duration={}",

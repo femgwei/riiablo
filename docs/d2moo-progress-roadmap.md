@@ -66,6 +66,12 @@
   最大抗性与仅按硬点计算的永久 `PassiveState` 分属独立 stat-list，不会重复叠加；普通
   攻击和固定元素伤害两条权威链均纳入状态最大抗性，并修正玩家高抗仍应按 75～95 上限
   截断、只有怪物保留 100+ 免疫的原版分流。
+- Holy Freeze、Holy Shock 与 Sanctuary 已完成原生特殊周期光环首轮：`SrvDo081/066`
+  分离施法者 `PassiveStat` 与目标 `AuraStat`；Holy Freeze 按难度读取怪物 `ColdEffect`，
+  对合法目标施加移动、攻击和动画三类减速，并使用目标独立确定性 RNG 逐次维护 20%
+  `SHATTER`，碎尸死亡不会留下可选择/复活尸体。Holy Shock 使用原生闪电附伤和周期伤害；
+  Sanctuary 只影响非 Boss 亡灵，其亡灵伤害/命中及绕过亡灵物抗已进入普通攻击和导弹
+  权威链。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -92,9 +98,9 @@
   原生尸体生命伤害、物理/火焰内外半径与八方向 8.8 定点持续毒云链。Bone Wall /
   Bone Prison 也已完成可破坏单位、碰撞与生命周期；Poison Nova、Bone Spear/Spirit
   以及召唤物重组/传送边界、Revive/Golem 专属 AI、技能继承和四类 Golem 战斗副作用
-  也已完成首轮。圣骑士代表性光环、四种抗性光环与硬点最大抗性、Blessed Hammer，
-  以及 Fist of the Heavens / Holy Bolt 原生权威链也已完成首轮；下一项为 Holy Freeze、
-  Holy Shock 与 Sanctuary 的原生特殊周期行为。
+  也已完成首轮。圣骑士代表性光环、四种抗性光环与硬点最大抗性、Blessed Hammer、
+  Fist of the Heavens / Holy Bolt，以及 Holy Freeze、Holy Shock、Sanctuary 原生权威链
+  也已完成首轮；下一项为剩余 `SrvDo065` 支援光环的数据驱动对齐。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -123,8 +129,9 @@
    权威伤害、导弹、碰撞和多人表现均已接通。
 7. **P1 圣骑士技能专项（进行中）**：光环权威状态与覆盖/叠加仲裁、Blessed Hammer，
    以及 Fist of the Heavens / Holy Bolt 的原生目标、延迟、分裂、伤害/治疗与协同链已
-   完成首轮；Resist Fire/Cold/Lightning、Salvation 及硬点最大抗性也已完成。下一项处理
-   Holy Freeze、Holy Shock 与 Sanctuary 的特殊周期行为。
+   完成首轮；Resist Fire/Cold/Lightning、Salvation、硬点最大抗性和 Holy Freeze /
+   Holy Shock / Sanctuary 特殊周期行为也已完成。下一项对齐 Defiance、Blessed Aim、
+   Vigor、Fanaticism 与 Thorns 等剩余 `SrvDo065` 支援光环。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -140,7 +147,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 81% | 19% | 2.3% | 死灵骨毒/召唤链、圣骑士抗性光环、Blessed Hammer 与 FoH/Holy Bolt 已接通；特殊周期光环及剩余职业技能仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 82% | 18% | 2.2% | 死灵骨毒/召唤链、圣骑士特殊周期光环、Blessed Hammer 与 FoH/Holy Bolt 已接通；剩余支援光环及职业技能仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -164,10 +171,10 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 82% | 18% | 代表性光环、四种抗性光环、硬点最大抗性、Blessed Hammer 与 FoH/Holy Bolt 已完成；剩余特殊周期光环及其他技能尾项 |
+| 圣骑士 Paladin | 88% | 12% | 特殊周期光环、四种抗性光环、Blessed Hammer 与 FoH/Holy Bolt 已完成；剩余支援光环和近战技能尾项 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
-职业技能专项整体按 **约 77% 完成、约 23% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 78% 完成、约 22% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
@@ -690,8 +697,8 @@ Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单�
 生命周期已完成，Poison Nova 原生导弹、固定毒伤与多人表现也已完成，当前进入
 召唤物跟随、概率节奏、敌我筛选、主人目标/PvP 关系及跨房间/跨区域重组现已完成首轮。
 Revive/Golem 专属 AI、技能继承、四类 Golem 原生副作用、Blessed Hammer、Fist of
-the Heavens / Holy Bolt，以及四种抗性光环和硬点最大抗性现已完成；当前进入
-**Holy Freeze / Holy Shock / Sanctuary 原生特殊周期光环**。
+the Heavens / Holy Bolt、四种抗性光环和三个特殊周期光环现已完成；当前进入
+**Defiance / Blessed Aim / Vigor / Fanaticism / Thorns 原生支援光环**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -1181,8 +1188,22 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     `:desktop:offscreenCamp` 均通过，输出 `[OFFSCREEN_CAMP] result=PASS`；未修改
     FlatBuffers schema，无生成网络文件差异。
 
-下一项：**Holy Freeze / Holy Shock / Sanctuary 原生特殊周期光环**。依次补齐目标过滤、
-周期伤害、近战附伤、Holy Freeze 三类减速与碎尸、Sanctuary 亡灵限定和绕过物抗。
+- [x] ~~完成 Holy Freeze / Holy Shock / Sanctuary 原生特殊周期光环首轮~~
+  - 对照 D2MOO `SKILLS_SrvDo081_HolyFreeze` 与
+    `SKILLS_SrvDo066_HolyFire_HolyShock_Sanctuary_Conviction`，由真实 1.10f
+    `AuraFilter/AuraStat/PassiveStat/EDmgSymPerCalc` 驱动范围、状态和伤害。
+  - Holy Freeze 仅接受对应难度 `ColdEffect < 0` 的怪物，目标获得三类速度减益；每次
+    脉冲使用目标独立确定性 RNG 切换 20% `SHATTER`，死亡时保留碎尸判定且不生成可用
+    尸体。施法者仅获得冰冷附伤，不会错误获得自身减速。
+  - Holy Shock 的闪电附伤/周期伤害和硬点协同已接通；Sanctuary 只脉冲非 Boss 亡灵，
+    自身 `AuraStat` 提供亡灵伤害、命中与绕过亡灵物抗，并传入普通攻击和导弹结算。
+  - 12 个专项/联合测试套件共 121 个用例、`:server:d2gs:compileJava` 与真实 1.10f
+    `:desktop:offscreenCamp` 均通过，输出 `[OFFSCREEN_CAMP] result=PASS`；未修改
+    FlatBuffers schema，无生成网络文件差异。
+
+下一项：**剩余圣骑士 `SrvDo065` 支援光环原生化**。优先将 Defiance、Blessed Aim、
+Vigor、Fanaticism 与 Thorns 从硬编码默认值改为真实 1.10f 数据、状态和战斗副作用；
+随后单独处理 Cleansing、Meditation 与 Redemption 的周期资源/尸体行为。
 当前 Chat 继续负责包括战斗在内的全部模块。
 
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，

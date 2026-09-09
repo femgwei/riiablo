@@ -24,9 +24,11 @@ import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
+import com.riiablo.engine.server.state.StateId;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
@@ -101,6 +103,29 @@ class ServerMonsterCorpseSystemTest {
       assertFalse(world.getMapper(Running.class).has(monsterId));
       assertFalse(world.getMapper(Target.class).has(monsterId));
       assertFalse(world.getMapper(Interactable.class).has(monsterId));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void holyFreezeShatterDeathDoesNotCreateUsableCorpse() {
+    EventSystem events = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(events, new ServerMonsterCorpseSystem())
+        .build());
+    try {
+      int monsterId = world.create();
+      world.getMapper(Monster.class).create(monsterId)
+          .set(new MonStats.Entry(), new MonStats2.Entry());
+      world.getMapper(UnitStates.class).create(monsterId).init(monsterId)
+          .stateList.addState(StateId.SHATTER, 51, 1, 7);
+
+      events.dispatch(DeathEvent.obtain(7, monsterId));
+      events.dispatch(ModeChangeEvent.obtain(monsterId, Engine.Monster.MODE_DD));
+
+      assertFalse(world.getMapper(Corpse.class).has(monsterId),
+          "a shattered frozen monster cannot be selected or resurrected as a corpse");
     } finally {
       world.dispose();
     }
