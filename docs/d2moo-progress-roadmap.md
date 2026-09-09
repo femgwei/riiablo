@@ -85,6 +85,10 @@
   范围内尸体，成功时原子占用一个尸体、恢复生命/法力并同步 `REDEEMED`、
   `CORPSE_NOSELECT`、`CORPSE_NODRAW`，重复脉冲不会再次消费。新增资源光环数据、状态
   缩短和尸体占用正式测试，专项回归与 D2GS 编译通过。
+- 圣骑士 Sacrifice 已接入原生 `SrvSt29/SrvDo064`：施法开始和攻击关键帧均使用固定
+  tick 位置快照校验近战目标；命中伤害读取 `calc1`，随后按 `calc2` 从未截断物理伤害
+  对施法者执行自伤，并沿用统一命中、PvP、死亡事件链。下一步继续 Smite/Zeal/Charge/
+  Vengeance/Holy Shield/Conversion 尾项。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -146,8 +150,9 @@
    完成首轮；Resist Fire/Cold/Lightning、Salvation、硬点最大抗性和 Holy Freeze /
    Holy Shock / Sanctuary 特殊周期行为也已完成；Defiance、Blessed Aim、Vigor、
    Fanaticism 与 Thorns 的 `SrvDo065` 原生属性、硬点被动和反伤链亦已完成；Cleansing、
-   Meditation 与 Redemption 周期资源/尸体行为已完成首轮。下一项处理圣骑士近战技能尾项，
-   并同步进行全职业技能表现/动画验收。
+   Meditation 与 Redemption 周期资源/尸体行为已完成首轮，Sacrifice 的
+   `SrvSt29/SrvDo064` 也已接通。下一项处理 Smite/Zeal/Charge/Vengeance/Holy Shield/
+   Conversion，并同步进行全职业技能表现/动画验收。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -187,7 +192,7 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 96% | 4% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer 与 FoH/Holy Bolt 已完成；剩余近战技能尾项和实机表现验收 |
+| 圣骑士 Paladin | 97% | 3% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer、FoH/Holy Bolt 与 Sacrifice 已完成；剩余近战技能尾项和实机表现验收 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
 职业技能专项整体按 **约 79% 完成、约 21% 剩余** 计入战斗模块；刺客专项已完成，

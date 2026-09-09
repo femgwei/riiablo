@@ -31,6 +31,7 @@ import com.riiablo.engine.server.item.ItemDurabilityManager;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.AssassinSkills;
+import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
@@ -829,6 +830,20 @@ public class Actioneer extends PassiveSystem {
             damage[0], damage[1], skill.SrcDam);
         break;
       }
+      case 29: { // SKILLS_SrvSt29_Sacrifice: validate the tick-snapshotted target
+        Casting casting = mCasting.get(entityId);
+        if (casting == null || targetId == Engine.INVALID_ENTITY
+            || !mPosition.has(entityId) || !mPosition.has(targetId)
+            || !isAlive(entityId) || !isAlive(targetId)
+            || !isInMeleeRangeAtTick(entityId, targetId, 0,
+                casting.positionSnapshotTick)) {
+          log.info("[PALADIN_SACRIFICE] phase=start_reject source={} target={} reason=target_or_range",
+              entityId, targetId);
+          if (mCasting.has(entityId)) mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+        }
+        break;
+      }
       case 33: // Find Potion / Grim Ward corpse eligibility is authoritative in ServerSkillSystem
       case 34: // Find Item corpse eligibility is authoritative in ServerSkillSystem
         log.debug("[BARBARIAN_CORPSE] phase=start entity={} target={} srvStFunc={}",
@@ -1547,6 +1562,10 @@ public class Actioneer extends PassiveSystem {
       }
       case 67: { // native Charge: authoritative melee hit with skill damage bonus
         resolveCharge(entityId, targetId);
+        break;
+      }
+      case 64: { // native Sacrifice: weapon hit followed by caster self-damage
+        resolveSacrifice(entityId, targetId);
         break;
       }
       case 24: // Vampire Firewall projectile; emitted through SkillDoEvent
@@ -4094,6 +4113,77 @@ public class Actioneer extends PassiveSystem {
     log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result=hit baseDamage={} bonusPct={} damage={} hp={} -> {}",
         entityId, targetId, combat.totalDamage, bonusPercent, event.damage, before, hp.asFixed());
     if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+  }
+
+  /** D2MOO SKILLS_SrvDo064_Sacrifice. The target and range are evaluated from
+   * the attack-start position snapshot, while the self-damage packet is
+   * derived from the uncapped physical hit before resist/PvP side effects. */
+  private void resolveSacrifice(int entityId, int targetId) {
+    if (!mPlayer.has(entityId) || targetId == Engine.INVALID_ENTITY
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !mPosition.has(entityId) || !mPosition.has(targetId)) {
+      log.info("[PALADIN_SACRIFICE] phase=hit_reject source={} target={} reason=missing_components",
+          entityId, targetId);
+      return;
+    }
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (skill == null || skill.srvdofunc != 64
+        || !isInMeleeRangeAtTick(entityId, targetId, 0,
+            casting != null ? casting.positionSnapshotTick : 0L)) {
+      log.info("[PALADIN_SACRIFICE] phase=hit_reject source={} target={} reason=skill_or_range",
+          entityId, targetId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    if (attacker == null || defender == null || !canDamageRelation(
+        entityId, targetId, true, isPlayerEntity(targetId))) return;
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, true, isPlayerEntity(targetId),
+        statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
+        statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
+        isEntityMoving(targetId));
+    if (!combat.hit || combat.blocked) {
+      log.info("[PALADIN_SACRIFICE] phase=hit_result source={} target={} result={} chance={}",
+          entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
+      return;
+    }
+    int bonus = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, level));
+    float multiplier = (100f + bonus) / 100f;
+    float targetBefore = defender.get(Stat.hitpoints, StatRef.obtain()).asFixed();
+    float totalDamage = combat.totalDamage * multiplier;
+    float physicalDamage = combat.physicalDamage * multiplier;
+    DamageEvent damageEvent = DamageEvent.obtainMelee(
+        entityId, targetId, totalDamage, physicalDamage);
+    events.dispatch(damageEvent);
+    StatRef targetHp = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (targetHp != null) {
+      targetHp.sub(Math.max(0f, damageEvent.damage));
+      if (targetHp.asFixed() < 0f) targetHp.set(0f);
+    }
+    int selfPercent = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, level));
+    float selfDamage = Math.min(Math.max(0f, combat.physicalDamage), Math.max(0f, targetBefore))
+        * selfPercent / 100f;
+    if (selfDamage > 0f) {
+      StatRef selfHp = attacker.get(Stat.hitpoints, StatRef.obtain());
+      if (selfHp != null) {
+        selfHp.sub(selfDamage);
+        if (selfHp.asFixed() < 0f) selfHp.set(0f);
+      }
+    }
+    log.info("[PALADIN_SACRIFICE] phase=hit_result source={} target={} level={} bonusPct={} "
+            + "damage={} selfPct={} selfDamage={} hp={} -> {}",
+        entityId, targetId, level, bonus, damageEvent.damage, selfPercent, selfDamage,
+        targetBefore, targetHp != null ? targetHp.asFixed() : -1f);
+    if (targetHp != null && targetHp.asFixed() <= 0f) {
+      events.dispatch(DeathEvent.obtain(entityId, targetId));
+    }
+    StatRef selfHp = attacker.get(Stat.hitpoints, StatRef.obtain());
+    if (selfHp != null && selfHp.asFixed() <= 0f) {
+      events.dispatch(DeathEvent.obtain(entityId, entityId));
+    }
   }
 
   private static final int[] MAGGOT_OFFSET_X = {
