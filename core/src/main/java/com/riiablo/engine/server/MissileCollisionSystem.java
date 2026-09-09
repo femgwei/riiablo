@@ -249,10 +249,18 @@ public class MissileCollisionSystem extends IteratingSystem {
     
     // 检查范围限制
     if (missile.range > 0 && missile.distanceTraveled >= missile.range) {
-      // Native LastCollide performs one final unit lookup at the range edge
-      // before the missile is removed.  This matters for fast arrows whose
-      // final segment ends inside a target's hitbox.
+    // Native LastCollide performs one final unit lookup at the range edge
+    // before the missile is removed.  This matters for fast arrows whose
+    // final segment ends inside a target's hitbox.
       if (shouldResolveLastCollide(missile, true)) {
+        if (!missile.attached && moveDistance > 0f && missile.distanceTraveled > missile.range) {
+          // A native range check resolves at the exact endpoint, not at the
+          // overshot position produced by a large single-frame velocity.
+          clampToRangeEndpoint(lastPos, position.position,
+              missile.distanceTraveled - moveDistance, moveDistance, missile.range, tmpVec);
+          position.position.set(tmpVec);
+          missile.distanceTraveled = missile.range;
+        }
         missile.lastCollideResolved = true;
         checkCollisions(entityId, missile, position, lastPos);
         if (!world.getEntityManager().isActive(entityId)) return;
@@ -922,6 +930,17 @@ public class MissileCollisionSystem extends IteratingSystem {
   static boolean shouldResolveLastCollide(Missile missile, boolean atRange) {
     return atRange && missile != null && hasLastCollide(missile)
         && !missile.lastCollideResolved && hasNativeCollision(missile);
+  }
+
+  /** Computes the point at which a missile reaches its native range endpoint. */
+  static Vector2 clampToRangeEndpoint(Vector2 start, Vector2 end,
+      float distanceBefore, float moveDistance, float range, Vector2 out) {
+    if (out == null) out = new Vector2();
+    if (start == null || end == null || moveDistance <= 0f || range <= distanceBefore) {
+      return out.set(end == null ? 0f : end.x, end == null ? 0f : end.y);
+    }
+    float fraction = Math.max(0f, Math.min(1f, (range - distanceBefore) / moveDistance));
+    return out.set(start).lerp(end, fraction);
   }
 
   static boolean rollPierce(Missile missile, int chance) {

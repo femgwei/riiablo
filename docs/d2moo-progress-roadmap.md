@@ -173,7 +173,7 @@
   - 本轮复核 `AuthoritativeSimulationTest`、`GameScreenDeltaTest` 和
     `FixedStepAccumulatorTest` 均通过；D2GS/Netty 的 render 入口只负责驱动固定步进，
     不再把可变渲染 delta 传入权威世界。剩余 2% 仅为真实客户端长时间后台恢复的硬件验收。
-- [ ] **P1-5 Missile 原生表驱动（约 94%）**
+- [ ] **P1-5 Missile 原生表驱动（约 95%）**
   - `ServerEntityFactory` 已读取 `Missiles.txt.Pierce` 和原生速度/Range；本轮将
     `Collision`、`CollideKill` 接入统一碰撞/销毁判定，非碰撞视觉导弹不再误伤，
     非 `CollideKill` 导弹可按原生规则继续飞行。
@@ -190,6 +190,8 @@
     快照及重订阅，未出现时间线倒退或导弹泄漏。
   - 将 `LastCollide` 范围边界判定集中为单次门控函数，要求原生 Collision 标志且禁止
     重复 endpoint pass；新增组合边界回归，避免多目标末帧重复命中。
+  - 修正高速导弹单帧越过 Range 时的 LastCollide 终点：最终碰撞段现在钳制到精确
+    原生射程位置，不会命中射程外目标；新增 overshoot、正常段和零长度边界测试。
   - 待补更精确的 `LastCollide` 多目标边界语义和真实地图跨房间飞行命中样本。
 - [ ] **P1-6 伤害、命中与死亡链（约 92%）**
   - `CombatSystem` 现按 `max*resist` 读取元素最大抗性上限，并接入火/电/冰/毒/魔法

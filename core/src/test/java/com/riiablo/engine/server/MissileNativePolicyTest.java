@@ -9,6 +9,7 @@ import com.artemis.EntitySubscription;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.artemis.utils.IntBag;
+import com.badlogic.gdx.math.Vector2;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
@@ -88,6 +89,25 @@ class MissileNativePolicyTest {
     visual.missile.LastCollide = true;
     visual.missile.Collision = false;
     assertFalse(MissileCollisionSystem.shouldResolveLastCollide(visual, true));
+  }
+
+  @Test
+  void lastCollideUsesExactRangeEndpointWhenAFrameOvershoots() {
+    Vector2 endpoint = MissileCollisionSystem.clampToRangeEndpoint(
+        new Vector2(0, 0), new Vector2(10, 0), 8f, 10f, 10f, new Vector2());
+    assertEquals(2f, endpoint.x, 0.001f);
+    assertEquals(0f, endpoint.y, 0.001f);
+
+    // A non-overshooting segment remains unchanged and a zero-length segment
+    // never produces NaN coordinates.
+    endpoint = MissileCollisionSystem.clampToRangeEndpoint(
+        new Vector2(1, 2), new Vector2(3, 4), 0f, 2f, 10f, endpoint);
+    assertEquals(3f, endpoint.x, 0.001f);
+    assertEquals(4f, endpoint.y, 0.001f);
+    endpoint = MissileCollisionSystem.clampToRangeEndpoint(
+        new Vector2(1, 2), new Vector2(1, 2), 0f, 0f, 1f, endpoint);
+    assertEquals(1f, endpoint.x, 0.001f);
+    assertEquals(2f, endpoint.y, 0.001f);
   }
 
   @Test
