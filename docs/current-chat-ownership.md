@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（死灵法师原生诅咒服务端权威链首轮）
-- 上一功能基线：`967b01a5`（对象 `stateFlags` 客户端表现与重连收尾）
+- 当前功能提交：本文件所在 `HEAD`（Iron Maiden/Life Tap 原生受击回调首轮）
+- 上一功能基线：`237deed6`（Revive/Golem 原生召唤链首轮）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 69%（详见路线图）
@@ -58,13 +58,17 @@
   `SrvDo030/059/061`、目标点范围、难度时长、状态 stat、免疫怪物 1/5 抗性削减和
   负物理抗性伤害；玩家与怪物不再走两套实现。
 - 定向核心测试、D2GS 编译以及真实 1.10f `offscreenCamp` 均通过。
+- Iron Maiden/Life Tap 已接入服务端权威 `DamageEvent`：近战/导弹携带结算后的物理
+  分量；反伤只响应近战且不会递归，Life Tap 按 `calc1` 恢复攻击者生命。定向测试和
+  D2GS 编译通过，真实 1.10f `offscreenCamp` 营地启动门槛通过。
 
 ## 下一步
 
 当前已完成 **P1 死灵法师召唤链首轮**：Raise Skeleton/Skeletal Mage、Revive 及四类
 Golem 均已接入尸体/物品原子消费、PetType/PetMax、召唤所有权、持续时间、死亡/断线/
-跨区清理与多人实体快照。下一步处理 Iron Maiden/Life Tap 事件回调，再处理诅咒复杂 AI
-分支。战斗模块不再单独分派，相关修改均由本 Chat 负责。
+跨区清理与多人实体快照；Iron Maiden/Life Tap 受击回调也已完成首轮。下一步处理
+Dim Vision/Attract/Confuse 完整 AI 特殊状态与目标重定向。战斗模块不再单独分派，
+相关修改均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。

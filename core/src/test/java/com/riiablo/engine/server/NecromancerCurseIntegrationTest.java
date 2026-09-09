@@ -23,8 +23,10 @@ import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -175,6 +177,65 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
           caster, skill.Id, target, new Vector2(10, 10), skill.srvdofunc, 0));
       assertEquals(SkillFormula.evaluate(skill.aurastatcalc[0], skill, 1),
           states(world, target).getTotalPhysicalResistModifier());
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void ironMaidenReflectsOnlyMeleePhysicalDamageAndLifeTapRestoresAttacker() {
+    NoopFactory factory = new NoopFactory();
+    EventSystem eventSystem = new EventSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(eventSystem, new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int attacker = player(world, "attacker", 0, 0);
+      int defender = monster(world, 1, 0, 0);
+      Attributes attackerAttrs = world.getMapper(AttributesWrapper.class).get(attacker).attrs;
+      attackerAttrs.base().put(Stat.hitpoints, 100);
+      attackerAttrs.base().put(Stat.maxhp, 100);
+      attackerAttrs.reset();
+      UnitStates defenderStates = world.getMapper(UnitStates.class).create(defender).init(defender);
+      com.riiablo.codec.excel.Skills.Entry lifeTap = Riiablo.files.skills.get(SkillId.LIFE_TAP);
+      NecromancerSkills.applyCurse(defenderStates.stateList, Riiablo.files.States,
+          lifeTap, 1, defender, Riiablo.files.DifficultyLevels.get(0),
+          world.getMapper(AttributesWrapper.class).get(defender).attrs, false);
+      world.getMapper(AttributesWrapper.class).get(attacker).attrs.base().put(Stat.hitpoints, 20);
+      world.getMapper(AttributesWrapper.class).get(attacker).attrs.reset();
+      defenderStates.snapshotOnly = true;
+      eventSystem.dispatch(DamageEvent.obtainMelee(attacker, defender, 20, 20));
+      assertEquals(20, world.getMapper(AttributesWrapper.class).get(attacker).attrs
+          .get(Stat.hitpoints).asInt(), "snapshot-only client must not repeat Life Tap healing");
+      defenderStates.snapshotOnly = false;
+      eventSystem.dispatch(DamageEvent.obtainMissile(attacker, defender, 20, 20, null));
+      assertEquals(30, world.getMapper(AttributesWrapper.class).get(attacker).attrs
+          .get(Stat.hitpoints).asInt(), "Life Tap must restore 50% of physical attack damage");
+
+      int reflectedTarget = monster(world, 2, 0, 0);
+      UnitStates ironStates = world.getMapper(UnitStates.class).create(reflectedTarget).init(reflectedTarget);
+      com.riiablo.codec.excel.Skills.Entry iron = Riiablo.files.skills.get(SkillId.IRON_MAIDEN);
+      NecromancerSkills.applyCurse(ironStates.stateList, Riiablo.files.States,
+          iron, 1, reflectedTarget, Riiablo.files.DifficultyLevels.get(0),
+          world.getMapper(AttributesWrapper.class).get(reflectedTarget).attrs, false);
+      int monsterAttacker = monster(world, 3, 0, 0);
+      world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs.base().put(Stat.hitpoints, 100);
+      world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs.base().put(Stat.maxhp, 100);
+      world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs.reset();
+      eventSystem.dispatch(DamageEvent.obtainMelee(monsterAttacker, reflectedTarget, 20, 20));
+      assertEquals(60, world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs
+          .get(Stat.hitpoints).asInt(), "Iron Maiden level 1 reflects calc1=200% physical damage");
+      eventSystem.dispatch(DamageEvent.obtainMissile(
+          monsterAttacker, reflectedTarget, 20, 20, null));
+      assertEquals(60, world.getMapper(AttributesWrapper.class).get(monsterAttacker).attrs
+          .get(Stat.hitpoints).asInt(), "Iron Maiden must not reflect missile damage");
+
+      attackerAttrs.base().put(Stat.hitpoints, 100);
+      attackerAttrs.reset();
+      eventSystem.dispatch(DamageEvent.obtainMelee(attacker, reflectedTarget, 20, 20));
+      assertEquals(95, attackerAttrs.get(Stat.hitpoints).asInt(),
+          "native player/hireling Iron Maiden reflection must use the one-eighth divisor");
     } finally {
       world.dispose();
     }

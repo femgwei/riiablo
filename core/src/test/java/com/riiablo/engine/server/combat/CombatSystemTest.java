@@ -440,6 +440,22 @@ public class CombatSystemTest extends RiiabloTest {
     assertEquals(0f, CombatSystem.fixed8RateToPerFrame(-1), 0.0001f);
   }
 
+  @Test
+  public void fixedPhysicalDamageAppliesResistanceFlatReductionAndPvp() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.damageresist, 25);
+    defender.base().put(Stat.normal_damage_reduction, 5);
+    defender.reset();
+
+    CombatSystem.CombatResult pve = combat.calculateFixedPhysicalDamage(
+        defender, true, false, 100, null);
+    CombatSystem.CombatResult pvp = combat.calculateFixedPhysicalDamage(
+        defender, true, true, 100, null);
+
+    assertEquals(70, pve.physicalDamage);
+    assertEquals(70 * CombatSystem.PVP_DAMAGE_PERCENT / 100, pvp.physicalDamage);
+  }
+
   private static Attributes attrs(int hp, int level, int defense,
       int minDamage, int maxDamage, int attackRating) {
     Attributes attrs = Attributes.obtainStandard();

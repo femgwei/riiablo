@@ -1464,7 +1464,8 @@ public class Actioneer extends PassiveSystem {
           break;
         }
         float hpBefore = hitpoints.asFixed();
-        DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
+        DamageEvent event = DamageEvent.obtainMelee(
+            entityId, targetId, damage, combat.physicalDamage);
         events.dispatch(event);
         float appliedDamage = Math.max(0f, event.damage);
         applyElementalAbsorb(attrs, combat, 1f);
@@ -1751,7 +1752,8 @@ public class Actioneer extends PassiveSystem {
     StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
     float before = hitpoints.asFixed();
-    DamageEvent event = DamageEvent.obtain(entityId, targetId, Math.max(0, combat.totalDamage));
+    DamageEvent event = DamageEvent.obtainMelee(
+        entityId, targetId, Math.max(0, combat.totalDamage), combat.physicalDamage);
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
@@ -1976,8 +1978,8 @@ public class Actioneer extends PassiveSystem {
     if (combat.blocked) {
       queueHitReaction(current, true);
     } else if (combat.hit && hp != null && before > 0f) {
-      DamageEvent damageEvent = DamageEvent.obtain(
-          entityId, current, Math.max(0, combat.totalDamage));
+      DamageEvent damageEvent = DamageEvent.obtainMelee(
+          entityId, current, Math.max(0, combat.totalDamage), combat.physicalDamage);
       events.dispatch(damageEvent);
       applied = Math.max(0f, damageEvent.damage);
       applyElementalAbsorb(defender, combat, 1f);
@@ -2048,8 +2050,8 @@ public class Actioneer extends PassiveSystem {
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || hp.asFixed() <= 0f) return;
     float before = hp.asFixed();
-    DamageEvent event = DamageEvent.obtain(entityId, targetId,
-        Math.max(0, combat.totalDamage));
+    DamageEvent event = DamageEvent.obtainMelee(entityId, targetId,
+        Math.max(0, combat.totalDamage), combat.physicalDamage);
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
@@ -2087,7 +2089,8 @@ public class Actioneer extends PassiveSystem {
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || hp.asFixed() <= 0f) return;
     float before = hp.asFixed();
-    DamageEvent event = DamageEvent.obtain(sourceId, targetId, Math.max(0, combat.totalDamage));
+    DamageEvent event = DamageEvent.obtainMelee(
+        sourceId, targetId, Math.max(0, combat.totalDamage), combat.physicalDamage);
     events.dispatch(event);
     applyElementalAbsorb(defender, combat, 1f);
     hp.sub(Math.max(0f, event.damage));
@@ -2477,8 +2480,8 @@ public class Actioneer extends PassiveSystem {
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || hp.asFixed() <= 0f) return;
     float before = hp.asFixed();
-    DamageEvent event = DamageEvent.obtain(entityId, targetId,
-        Math.max(0f, combat.totalDamage));
+    DamageEvent event = DamageEvent.obtainMelee(entityId, targetId,
+        Math.max(0f, combat.totalDamage), combat.physicalDamage);
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
@@ -3544,7 +3547,8 @@ public class Actioneer extends PassiveSystem {
 
     StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
-    DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
+    DamageEvent event = DamageEvent.obtainMelee(
+        entityId, targetId, damage, combat.physicalDamage);
     events.dispatch(event);
     applyElementalAbsorb(defender, combat, 1f);
     hitpoints.sub(Math.max(0f, event.damage));
@@ -3659,7 +3663,8 @@ public class Actioneer extends PassiveSystem {
     StatRef hitpoints = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hitpoints == null || hitpoints.asFixed() <= 0f) return;
     float before = hitpoints.asFixed();
-    DamageEvent event = DamageEvent.obtain(entityId, targetId, Math.max(0f, combat.totalDamage));
+    DamageEvent event = DamageEvent.obtainMelee(
+        entityId, targetId, Math.max(0f, combat.totalDamage), combat.physicalDamage);
     events.dispatch(event);
     float damage = Math.max(0f, event.damage);
     applyElementalAbsorb(defender, combat, 1f);
@@ -3913,7 +3918,9 @@ public class Actioneer extends PassiveSystem {
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     if (hp == null || hp.asFixed() <= 0f) return;
     float before = hp.asFixed();
-    DamageEvent event = DamageEvent.obtain(entityId, targetId, damage);
+    float damageScale = combat.totalDamage > 0f ? damage / combat.totalDamage : 0f;
+    DamageEvent event = DamageEvent.obtainMelee(
+        entityId, targetId, damage, combat.physicalDamage * damageScale);
     events.dispatch(event);
     applyElementalAbsorb(defender, combat, (100f + bonusPercent) / 100f);
     hp.sub(Math.max(0f, event.damage));

@@ -818,7 +818,9 @@ public class MissileCollisionSystem extends IteratingSystem {
               missile.missile != null ? missile.missile.Missile : "unknown",
               targetId,
               hitSound == null ? "" : hitSound);
-          DamageEvent event = DamageEvent.obtain(missile.ownerId, targetId, damage, hitSound);
+          DamageEvent event = DamageEvent.obtainMissile(
+              missile.ownerId, targetId, damage,
+              combat.physicalDamage * Math.max(0.01f, missile.damageMultiplier), hitSound);
           events.dispatch(event);
           float appliedDamage = Math.max(0f, event.damage);
           // Native elemental absorb restores the defender's life from the same

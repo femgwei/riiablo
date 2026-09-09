@@ -42,6 +42,7 @@ import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
+import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -49,6 +50,7 @@ import com.riiablo.map.Map;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
+import net.mostlyoriginal.api.event.common.Subscribe;
 
 /**
  * 状态更新系统 - 基于 D2MOD 状态处理逻辑移植
@@ -103,6 +105,93 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   protected void initialize() {
     super.initialize();
     StatusEffectApplier.INSTANCE.setStateSink(this);
+  }
+
+  /**
+   * Native hit-event curse callbacks. DamageEvent is dispatched synchronously
+   * before the caller subtracts life, matching D2Game's unit-event phase.
+   */
+  @Subscribe
+  public void onReactiveCurseDamage(DamageEvent event) {
+    if (event == null || event.attacker < 0 || event.victim < 0
+        || event.attacker == event.victim || event.physicalDamage <= 0f
+        || !event.isLeechableAttack() || !mAttributesWrapper.has(event.attacker)
+        || !mAttributesWrapper.has(event.victim) || !mUnitStates.has(event.victim)) return;
+    UnitStates victimUnitStates = mUnitStates.get(event.victim);
+    // Network clients consume authoritative snapshots and must not apply the
+    // same curse side effect a second time in their presentation world.
+    if (victimUnitStates != null && victimUnitStates.snapshotOnly) return;
+    StateList victimStates = victimUnitStates != null ? victimUnitStates.stateList : null;
+    if (victimStates == null) return;
+
+    Attributes victimAttributes = mAttributesWrapper.get(event.victim).attrs;
+    StatRef victimLife = victimAttributes != null
+        ? victimAttributes.get(Stat.hitpoints, StatRef.obtain()) : null;
+    float availableLife = victimLife != null ? Math.max(0f, victimLife.asFixed()) : 0f;
+    float physical = Math.min(Math.max(0f, event.physicalDamage), Math.max(0f, event.damage));
+    physical = Math.min(physical, availableLife);
+    if (physical <= 0f) return;
+
+    UnitState lifeTap = victimStates.getState(StateId.LIFETAP);
+    if (lifeTap != null) applyLifeTap(event, lifeTap, physical);
+
+    UnitState ironMaiden = victimStates.getState(StateId.IRONMAIDEN);
+    if (ironMaiden != null && event.isMelee()) {
+      applyIronMaiden(event, ironMaiden, physical);
+    }
+  }
+
+  private void applyLifeTap(DamageEvent event, UnitState state, float physicalDamage) {
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(state.skillId) : null;
+    int percent = NecromancerSkills.reactiveCursePercent(skill, state.level);
+    if (percent <= 0) return;
+    Attributes attacker = mAttributesWrapper.get(event.attacker).attrs;
+    StatRef life = attacker != null ? attacker.get(Stat.hitpoints, StatRef.obtain()) : null;
+    StatRef maximum = attacker != null ? attacker.get(Stat.maxhp, StatRef.obtain()) : null;
+    if (life == null || maximum == null || life.asFixed() <= 0f) return;
+    float before = life.asFixed();
+    float restored = Math.max(0f, Math.min(
+        physicalDamage * percent / 100f, maximum.asFixed() - before));
+    if (restored <= 0f) return;
+    life.add(restored);
+    log.info("[NECRO_LIFE_TAP] source={} victim={} skill={} level={} physical={} percent={} "
+            + "restored={} hp={} -> {}",
+        event.attacker, event.victim, state.skillId, state.level, physicalDamage,
+        percent, restored, before, life.asFixed());
+  }
+
+  private void applyIronMaiden(DamageEvent event, UnitState state, float physicalDamage) {
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(state.skillId) : null;
+    boolean playerOrHireling = mPlayer.has(event.attacker) || mMercenary.has(event.attacker);
+    int percent = NecromancerSkills.ironMaidenPercent(
+        skill, state.level, playerOrHireling);
+    int raw = (int) Math.floor(physicalDamage * percent / 100f);
+    if (raw <= 0) return;
+
+    Attributes attacker = mAttributesWrapper.get(event.attacker).attrs;
+    StateList attackerStates = mUnitStates.has(event.attacker)
+        ? mUnitStates.get(event.attacker).stateList : null;
+    CombatSystem.CombatResult reflected = CombatSystem.INSTANCE.calculateFixedPhysicalDamage(
+        attacker, mPlayer.has(event.attacker), mPlayer.has(event.victim), raw, attackerStates);
+    if (reflected.totalDamage <= 0) return;
+    DamageEvent reflectedEvent = DamageEvent.obtainReactive(
+        event.victim, event.attacker, reflected.totalDamage, reflected.physicalDamage);
+    if (events != null) events.dispatch(reflectedEvent);
+    float applied = Math.max(0f, reflectedEvent.damage);
+    StatRef life = attacker != null ? attacker.get(Stat.hitpoints, StatRef.obtain()) : null;
+    if (life == null || life.asFixed() <= 0f || applied <= 0f) return;
+    float before = life.asFixed();
+    life.sub(applied);
+    if (life.asFixed() <= 0f) {
+      life.set(0f);
+      if (events != null) events.dispatch(DeathEvent.obtain(event.victim, event.attacker));
+    }
+    log.info("[NECRO_IRON_MAIDEN] source={} defender={} skill={} level={} physical={} "
+            + "percent={} raw={} reflected={} hp={} -> {}",
+        event.attacker, event.victim, state.skillId, state.level, physicalDamage,
+        percent, raw, applied, before, life.asFixed());
   }
 
   //==========================================================================

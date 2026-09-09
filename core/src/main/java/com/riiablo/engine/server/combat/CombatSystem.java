@@ -578,6 +578,33 @@ public class CombatSystem {
     return result;
   }
 
+  /** Resolves reflected/direct physical damage without rolling a second hit. */
+  public CombatResult calculateFixedPhysicalDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int rawDamage, StateList defenderStates) {
+    CombatResult result = new CombatResult();
+    result.reset();
+    if (defender == null || rawDamage <= 0) return result;
+
+    DefenderData d = new DefenderData();
+    d.isPlayer = defenderPlayer;
+    d.isMonster = !defenderPlayer;
+    d.resistances[DAMAGE_PHYSICAL] = statInt(defender, Stat.damageresist, 0);
+    if (defenderStates != null) {
+      d.resistances[DAMAGE_PHYSICAL] += defenderStates.getTotalPhysicalResistModifier();
+    }
+    d.damageReducedPercent = Math.max(MIN_RESISTANCE, d.resistances[DAMAGE_PHYSICAL]);
+    d.damageReduced = Math.max(0, statInt(defender, Stat.normal_damage_reduction, 0));
+    d.immunePhysical = d.resistances[DAMAGE_PHYSICAL] >= 100;
+    int damage = applyPhysicalDamageReduction(rawDamage, d);
+    if (attackerPlayer && defenderPlayer) damage = damage * PVP_DAMAGE_PERCENT / 100;
+    result.hit = true;
+    result.hitChance = 100;
+    result.physicalDamage = Math.max(0, damage);
+    result.totalDamage = result.physicalDamage;
+    return result;
+  }
+
   /**
    * Resolves an 8.8 fixed-point poison rate and its independent duration.
    * D2Game sends poison damage and poison length through separate rows of the

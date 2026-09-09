@@ -47,7 +47,8 @@
   分走两套实现；Amplify Damage/Decrepify 的负物理抗性已进入统一伤害链，免疫怪物
   的抗性削减按原版降为 1/5。Raise Skeleton/Skeletal Mage 的尸体原子消费、
   PetType/PetMax、所有权生命周期和多人召唤创建已完成首轮；Revive/Golem 原生召唤链
-  也已完成首轮，下一项转入 Iron Maiden/Life Tap 受击事件回调。
+  也已完成首轮；Iron Maiden/Life Tap 已接入统一受击事件回调，下一项转入诅咒复杂
+  AI 重定向与剩余召唤收尾。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -68,7 +69,8 @@
    仍随怪物 AI 专项验收。
 5. **P1 死灵法师召唤与尸体链（首轮完成）**：Raise Skeleton/Skeletal Mage 已接入
    尸体一次消费、PetType/PetMax、召唤所有权、死亡/断线/跨区生命周期和多人快照；
-   Revive/Golem 已完成首轮；Iron Maiden/Life Tap 事件及复杂诅咒 AI 仍待完成。
+   Revive/Golem 已完成首轮；Iron Maiden/Life Tap 受击回调已完成首轮，复杂诅咒 AI
+   及全部专用攻击路径覆盖仍待完成。
 6. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -107,7 +109,7 @@
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
-| 死灵法师 Necromancer | 60% | 40% | 十项诅咒状态/stat 权威链已接通；尸体召唤、复活数量、Iron Maiden/Life Tap 事件及复杂 AI 待补 |
+| 死灵法师 Necromancer | 70% | 30% | 十项诅咒状态/stat、尸体/石魔/Revive 和 Iron Maiden/Life Tap 受击回调已接通；复杂 AI 与召唤收尾待补 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
@@ -628,8 +630,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-下一小步：死灵法师诅咒 stat 权威链已完成首轮，转入 **Raise Skeleton / Skeletal
-Mage 尸体原子消费与 PetMax 所有权**，随后补 Revive/Golem 和诅咒复杂 AI 行为。
+下一小步：死灵法师诅咒、尸体召唤、Revive/Golem 与 Iron Maiden/Life Tap 受击回调
+已完成首轮，转入 **Dim Vision / Attract / Confuse 完整 AI 特殊状态与目标重定向**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -887,8 +889,8 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - `NativeNecromancerCurseDataTest`、`NecromancerCurseIntegrationTest`、
     `StateListTest`、`UnitLifecycleSystemTest` 与 D2GS 编译通过；1.10f
     `:desktop:offscreenCamp` 输出 `[OFFSCREEN_CAMP] result=PASS`。
-  - 本项完成的是施法、状态与 stat 权威链；Iron Maiden/Life Tap 的受击事件回调以及
-    Dim Vision/Attract/Confuse 的完整 AI 特殊状态仍在死灵法师后续清单中，未误标为完成。
+  - 本项先完成施法、状态与 stat 权威链；后续批次已补 Iron Maiden/Life Tap 受击回调，
+    Dim Vision/Attract/Confuse 的完整 AI 特殊状态仍在死灵法师后续清单中。
 
 - [x] ~~完成死灵法师 Raise Skeleton/Skeletal Mage 召唤链首轮~~
   - 接通原生 `SrvSt15/SrvDo031`，Raise Skeleton 与 Raise Skeletal Mage 均从
@@ -912,10 +914,19 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 统一召唤被动 stat、`calc1` 最大生命、基础召唤等级与 Summon Resist 应用；
     `NativeNecromancerSummonDataTest`、`NecromancerGolemReviveIntegrationTest` 通过。
 
+- [x] ~~完成 Iron Maiden / Life Tap 原生受击事件回调首轮~~
+  - `DamageEvent` 增加近战/导弹/反应伤害类型及结算后物理分量；普通近战和导弹入口
+    写入真实物理分量，DOT、元素范围和反伤不会递归触发。
+  - Life Tap 从受诅咒目标的实际物理生命损失恢复攻击者生命；Iron Maiden 仅响应成功
+    近战物理命中，按 `calc1` 反伤，并依 D2MOO 对玩家/佣兵应用 `(percent+4)/8`。
+  - 反伤再走物理抗性、固定/百分比减伤、PvP 比例、DamageEvent 和 DeathEvent；
+    `NecromancerCurseIntegrationTest`、诅咒/战斗/导弹/生命周期定向测试及 D2GS 编译
+    通过；真实 1.10f `offscreenCamp` 输出 `[OFFSCREEN_CAMP] result=PASS`。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **P1 死灵法师 Iron Maiden/Life Tap 受击事件回调**；
-> Raise Skeleton/Skeletal Mage 与 Revive/Golem 首轮均已完成并有定向测试覆盖。
+> “当前下一项”为准，当前目标是 **P1 死灵法师 Dim Vision / Attract / Confuse 完整 AI
+> 特殊状态与目标重定向**；召唤链与 Iron Maiden/Life Tap 受击回调首轮均已完成。
 
 ## 记录规则
 

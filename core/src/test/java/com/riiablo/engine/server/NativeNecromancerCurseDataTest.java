@@ -64,4 +64,14 @@ class NativeNecromancerCurseDataTest extends RiiabloTest {
             / nightmare.AiCurseDivisor,
         NecromancerSkills.curseDuration(confuse, 1, nightmare));
   }
+
+  @Test
+  void reactiveCurseRowsRetainNativeEffectPercentages() {
+    Skills.Entry ironMaiden = Riiablo.files.skills.get(SkillId.IRON_MAIDEN);
+    Skills.Entry lifeTap = Riiablo.files.skills.get(SkillId.LIFE_TAP);
+    assertEquals(200, NecromancerSkills.reactiveCursePercent(ironMaiden, 1));
+    assertEquals(25, NecromancerSkills.ironMaidenPercent(ironMaiden, 1, true));
+    assertEquals(200, NecromancerSkills.ironMaidenPercent(ironMaiden, 1, false));
+    assertEquals(50, NecromancerSkills.reactiveCursePercent(lifeTap, 1));
+  }
 }

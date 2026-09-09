@@ -187,4 +187,6 @@ waypoints, caves, quest rewards and collision boundaries.
   PetType/PetMax ownership, disconnect/death/zone lifecycle and multiplayer snapshot recovery.
 - [x] Revive/Golem summon chain: native PetType/PetMax, metal-item consumption, in-place corpse
   revival, owner flags, duration and lifecycle.
-- [ ] Next: Iron Maiden/Life Tap event callbacks and full curse AI states.
+- [x] Iron Maiden/Life Tap hit-event callbacks: physical hit metadata, native melee reflection,
+  player/hireling divisor, life restoration, resistance/PvP/death pipeline and recursion guard.
+- [ ] Next: Dim Vision/Attract/Confuse full AI state and target redirection.

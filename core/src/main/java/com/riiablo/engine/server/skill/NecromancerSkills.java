@@ -523,6 +523,19 @@ public final class NecromancerSkills {
     return Math.max(1, duration);
   }
 
+  /** Native calc1 payload used by hit-event curses such as Iron Maiden and Life Tap. */
+  public static int reactiveCursePercent(Skills.Entry skill, int skillLevel) {
+    return Math.max(0, SkillFormula.evaluate(
+        skill == null ? null : skill.calc1, skill, Math.max(1, skillLevel)));
+  }
+
+  /** D2Game reduces reflected thorns damage to one eighth against players and hirelings. */
+  public static int ironMaidenPercent(
+      Skills.Entry skill, int skillLevel, boolean attackerPlayerOrHireling) {
+    int percent = reactiveCursePercent(skill, skillLevel);
+    return attackerPlayerOrHireling ? (percent + 4) / 8 : percent;
+  }
+
   /** Applies one native SrvDo030 curse layer from the row's aura stat columns. */
   public static UnitState applyCurse(StateList states, States stateTable, Skills.Entry skill,
       int skillLevel, int sourceEntityId, DifficultyLevels.Entry difficulty,
