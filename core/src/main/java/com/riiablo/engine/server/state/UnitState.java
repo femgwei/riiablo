@@ -459,6 +459,11 @@ public class UnitState {
     return hasStatContribution(statId) ? getStatContributionValue(statId) : legacyValue;
   }
 
+  /** Physical resistance contribution carried by Amplify Damage/Decrepify stat lists. */
+  public int resolvedPhysicalResistModifier() {
+    return getStatContributionValue(Stat.damageresist);
+  }
+
   private StatContribution findStatContribution(int statId, int layer) {
     for (StatContribution contribution : statContributions) {
       if (contribution.statId == statId && contribution.layer == layer) return contribution;

@@ -117,9 +117,9 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
     assertNotNull(row);
     Skills.Entry skill = skillFor(row, 30);
     assertNotNull(skill, "Doom Knight Mage must expose a curse skill");
-    Scenario scenario = new Scenario(row);
+    Scenario scenario = new Scenario(row, new ServerSkillSystem(true));
     try {
-      int target = scenario.target(11, 10);
+      int target = scenario.target(11, 10, scenario.attributes(100, 100), true);
       scenario.actioneer.cast(scenario.source, skill.Id, target, scenario.position(11, 10));
       scenario.keyframe(scenario.source);
       UnitStates states = scenario.world.getMapper(UnitStates.class).get(target);

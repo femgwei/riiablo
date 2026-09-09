@@ -42,6 +42,11 @@
   **95%**，剩余为复杂神殿效果和真实画面交互验收，百分比总口径暂不调整。
 - 战斗模块当前与地图、任务、物品等模块由本 Chat 统一负责，旧的独立战斗 Chat 不再
   作为进度来源。
+- 死灵法师十项诅咒已完成首轮原生权威接线：`SrvDo030/059/061` 统一读取
+  `auratargetstate/aurarangecalc/auralencalc/aurafilter/aurastat*`，玩家和怪物不再
+  分走两套实现；Amplify Damage/Decrepify 的负物理抗性已进入统一伤害链，免疫怪物
+  的抗性削减按原版降为 1/5。下一项转入 Raise Skeleton/Skeletal Mage 的尸体原子
+  消费、PetType/PetMax 和所有权生命周期。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -57,9 +62,12 @@
 3. **P2 对象表现收尾（已完成）**：`stateFlags` 已映射到客户端 `Object`、
    `Interactable` 和 `Selectable`；耗尽对象会停用交互，门继续可操作，神殿冷却后按
    原交互范围恢复。核心对象测试及 1.10f 双客户端重连门槛通过。
-4. **P1 战斗统一收尾**：在同一 Chat 内继续处理剩余职业技能、抗性/状态边界、怪物
-   AI 特殊分支和离屏双客户端验证；每个模块单独更新本节和提交记录。
-5. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
+4. **P1 死灵法师诅咒权威链（已完成首轮）**：十项诅咒的原生函数分派、目标中心范围、
+   难度时长、状态 stat-list、物理/元素抗性和目标排除门槛已接通；复杂 AI 重定向表现
+   仍随怪物 AI 专项验收。
+5. **P1 死灵法师召唤与尸体链（当前下一项）**：完成 Raise Skeleton/Skeletal Mage
+   尸体一次消费、PetType/PetMax、召唤所有权、死亡/断线/跨区生命周期和多人快照。
+6. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
 ## 模块完成度与剩余量
@@ -74,7 +82,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 57% | 43% | 3.4% | 通用 fallback、召唤和特殊 AI 分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 67% | 33% | 4.0% | 命中结果、抗性、持续伤害和技能分支仍简化 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 70% | 30% | 3.6% | 诅咒权威链已接通；召唤/复杂 AI 和剩余技能仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -97,7 +105,7 @@
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
-| 死灵法师 Necromancer | 50% | 50% | 尸体技能、召唤物所有权、诅咒和复活数量限制 |
+| 死灵法师 Necromancer | 60% | 40% | 十项诅咒状态/stat 权威链已接通；尸体召唤、复活数量、Iron Maiden/Life Tap 事件及复杂 AI 待补 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
@@ -139,7 +147,7 @@
     连续原生怪物 ID，避免控制行造成索引偏移。
   - 五表统一投影报告现可稳定列出原始行列数、D2MOO schema 字段数、额外诊断列及每个
     缺列、重复列、非法 integer/bit 的源行和列；五张真实 1.10f 表均无 schema issue。
-- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 93%）**
+- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 95%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
     必须由 1.10f 数据及 D2MOO 行为驱动。
@@ -179,9 +187,11 @@
   - 已迁移神殿增益、德鲁伊 Feral Rage/Maul、野蛮人 Frenzy 和 Berserk 的主要 scalar
     写入；这些路径现在通过 `setNativeModifier` 保持原生 stat/layer 与旧网络字段同步，
     状态到期后可由统一聚合自动撤销。
-  - 待补：战吼、变形、刺客蓄力及其他 `UnitState` 专用 scalar 的逐项迁移，并继续对照
-    每个具体诅咒技能的 stat/value 公式；刺客蓄力的 velocity 字段仍是层数语义，不能直接
-    当作移动速度 stat。
+  - 死灵法师十项诅咒已按 `Skills.txt` 的目标状态、范围、时长、filter 和六组 aura stat
+    建立来源拥有的 stat-list；Dim Vision/Terror/Attract/Confuse 使用难度 AI curse
+    divisor，免疫怪物的物理/元素抗性削减按 1/5，负 `damageresist` 可放大物理伤害。
+  - 待补：战吼、变形、刺客蓄力及其他 `UnitState` 专用 scalar 的逐项迁移；刺客蓄力的
+    velocity 字段仍是层数语义，不能直接当作移动速度 stat。
 - [ ] **P0-3 Unit 生命周期（约 90%）**
   - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；新增 `UnitLifecycle` 阶段标记和
     `UnitLifecycleSystem`，统一处理 `DeathEvent` 幂等边界。
@@ -231,7 +241,7 @@
   - 修正高速导弹单帧越过 Range 时的 LastCollide 终点：最终碰撞段现在钳制到精确
     原生射程位置，不会命中射程外目标；新增 overshoot、正常段和零长度边界测试。
   - 待补更精确的 `LastCollide` 多目标边界语义和真实地图跨房间飞行命中样本。
-- [ ] **P1-6 伤害、命中与死亡链（约 95%）**
+- [ ] **P1-6 伤害、命中与死亡链（约 96%）**
   - `CombatSystem` 现按 `max*resist` 读取元素最大抗性上限，并接入火/电/冰/毒/魔法
     的原生元素穿透；免疫判定仍在抗性上限裁剪前执行。
   - 已接入玩家对玩家 17% 原生伤害系数（抗性计算后、偷取计算前），并补充 PvP
@@ -282,6 +292,8 @@
     poison mastery/pierce 和 PvP 17% 顺序进入统一解析；PvP 只缩放毒伤，不缩短时长，
     抗毒神殿仅清零 DOT 时长。感染控制体保存施法时原始毒伤与 pierce，每个传播目标
     按自身抗性、状态、难度及玩家类型重新结算，同时继续使用未削减的剩余感染时长。
+  - 物理抗性现在合并活动 state-owned `damageresist`，并保留 `-100` 下限；Amplify
+    Damage/Decrepify 不再因旧的非负裁剪失效，物免怪按原版 1/5 削减后可正确破免。
   - 待补：掉落归属超时快照广播，以及少数非 CombatSystem 的环境伤害特殊分支；真实
     多客户端长距离多段技能样本仍需外部资源环境验收。
 - [x] **P1-7 地面物品、掉落与拾取（已完成）**
@@ -614,9 +626,9 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-下一小步：转入 **P1 战斗统一收尾**，先核对死灵法师召唤物/尸体消费/诅咒状态的
-服务端权威链和多人快照，再处理剩余职业、怪物 AI 特殊分支与物品严格验收。战斗模块
-由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
+下一小步：死灵法师诅咒 stat 权威链已完成首轮，转入 **Raise Skeleton / Skeletal
+Mage 尸体原子消费与 PetMax 所有权**，随后补 Revive/Golem 和诅咒复杂 AI 行为。
+战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
 
@@ -862,9 +874,24 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     D2GS 编译及 1.10f `headlessReconnectVisibility` 均通过，输出
     `reconnect_visibility_disconnect_pass` 与 `reconnect_visibility_pass`。
 
+- [x] ~~完成死灵法师原生诅咒服务端权威链首轮~~
+  - 对照 D2MOO `SKILLS_SrvDo030_Curse`、`SKILLS_SrvDo059_Attract` 和
+    `SKILLS_SrvDo061_Confuse`，十项诅咒统一由 `Skills.txt` 目标状态、范围、时长、
+    filter 和六组 aura stat 驱动；范围以技能目标点为中心，Attract 保持单目标。
+  - 玩家与怪物施法共用 `ServerSkillSystem`，移除 `Actioneer` 原按名称猜测、单目标且
+    无 stat 的旧怪物路径；尸体、NPC、己方召唤物及非敌对 PvP 玩家不会被误施加。
+  - 接通负物理抗性状态贡献及免疫怪物 1/5 抗性削减；状态 group/来源层、到期和死亡
+    清理由既有 `StateList`/`UnitLifecycleSystem` 统一处理。
+  - `NativeNecromancerCurseDataTest`、`NecromancerCurseIntegrationTest`、
+    `StateListTest`、`UnitLifecycleSystemTest` 与 D2GS 编译通过；1.10f
+    `:desktop:offscreenCamp` 输出 `[OFFSCREEN_CAMP] result=PASS`。
+  - 本项完成的是施法、状态与 stat 权威链；Iron Maiden/Life Tap 的受击事件回调以及
+    Dim Vision/Attract/Confuse 的完整 AI 特殊状态仍在死灵法师后续清单中，未误标为完成。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **P1 战斗统一收尾：死灵法师召唤/尸体/诅咒链**。
+> “当前下一项”为准，当前目标是 **P1 死灵法师 Raise Skeleton/Skeletal Mage
+> 尸体原子消费、PetType/PetMax 与所有权生命周期**。
 
 ## 记录规则
 

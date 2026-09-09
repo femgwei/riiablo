@@ -684,6 +684,13 @@ public class StateList {
     return total;
   }
 
+  /** Aggregates native {@code damageresist} entries from active state-owned stat lists. */
+  public int getTotalPhysicalResistModifier() {
+    int total = 0;
+    for (UnitState state : states) total += state.resolvedPhysicalResistModifier();
+    return total;
+  }
+
   public int getTotalAnimationRateModifier() {
     int total = 0;
     for (UnitState state : states) total += state.resolvedAnimationRateModifier();

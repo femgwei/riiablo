@@ -2,6 +2,17 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.NativeStatResolver;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
+import com.riiablo.codec.excel.DifficultyLevels;
+import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.States;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.UnitState;
+
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -447,5 +458,124 @@ public final class NecromancerSkills {
   public static float getReviveDuration(int skillLevel) {
     // 固定 180 秒
     return 180.0f;
+  }
+
+  /** Resolves the native Skills.txt aura target state used by SrvDo030. */
+  public static int resolveCurseStateId(String auraTargetState, String skillName) {
+    String value = auraTargetState == null ? "" : auraTargetState.trim();
+    if (value.isEmpty()) value = skillName == null ? "" : skillName.trim();
+    String name = value.toLowerCase(java.util.Locale.ROOT).replace("_", "");
+    if (name.equals("amplifydamage") || name.contains("amplify")) return StateId.AMPLIFYDAMAGE;
+    if (name.equals("dimvision") || name.contains("dimvision")) return StateId.DIMVISION;
+    if (name.equals("weaken")) return StateId.WEAKEN;
+    if (name.equals("ironmaiden")) return StateId.IRONMAIDEN;
+    if (name.equals("terror")) return StateId.TERROR;
+    if (name.equals("attract")) return StateId.ATTRACT;
+    if (name.equals("confuse")) return StateId.CONFUSE;
+    if (name.equals("lifetap")) return StateId.LIFETAP;
+    if (name.equals("decrepify")) return StateId.DECREPIFY;
+    if (name.equals("lowerresist")) return StateId.LOWERRESIST;
+    return StateId.NONE;
+  }
+
+  /** Resolves a native aura stat name to the stable ItemStatCost/Stat id. */
+  public static int resolveCurseStatId(String statName) {
+    if (statName == null) return -1;
+    String name = statName.trim().toLowerCase(java.util.Locale.ROOT).replace("_", "");
+    switch (name) {
+      case "damagepercent": return Stat.damagepercent;
+      case "itemarmorpercent": return Stat.item_armor_percent;
+      case "itemtohitpercent": return Stat.item_tohit_percent;
+      case "damageresist": return Stat.damageresist;
+      case "magicresist": return Stat.magicresist;
+      case "fireresist": return Stat.fireresist;
+      case "lightresist": return Stat.lightresist;
+      case "coldresist": return Stat.coldresist;
+      case "poisonresist": return Stat.poisonresist;
+      case "velocitypercent": return Stat.velocitypercent;
+      case "attackrate": return Stat.attackrate;
+      case "otheranimrate": return Stat.other_animrate;
+      case "lifedrainmindam": return Stat.lifedrainmindam;
+      case "lifedrainmaxdam": return Stat.lifedrainmaxdam;
+      case "stunlength": return Stat.stunlength;
+      default: return -1;
+    }
+  }
+
+  /** Native difficulty divisor used by Dim Vision/Terror/Attract/Confuse AI curses. */
+  public static int curseDifficultyDivisor(DifficultyLevels.Entry difficulty) {
+    return difficulty != null && difficulty.AiCurseDivisor > 0
+        ? difficulty.AiCurseDivisor : 1;
+  }
+
+  /** Evaluates native curse length and applies the difficulty reduction where required. */
+  public static int curseDuration(Skills.Entry skill, int skillLevel,
+      DifficultyLevels.Entry difficulty) {
+    int duration = SkillFormula.evaluate(skill == null ? null : skill.auralencalc,
+        skill, Math.max(1, skillLevel));
+    if (duration <= 0) duration = 1;
+    int stateId = resolveCurseStateId(skill == null ? null : skill.auratargetstate,
+        skill == null ? null : skill.skill);
+    if (stateId == StateId.DIMVISION || stateId == StateId.TERROR
+        || stateId == StateId.ATTRACT || stateId == StateId.CONFUSE) {
+      duration /= curseDifficultyDivisor(difficulty);
+    }
+    return Math.max(1, duration);
+  }
+
+  /** Applies one native SrvDo030 curse layer from the row's aura stat columns. */
+  public static UnitState applyCurse(StateList states, States stateTable, Skills.Entry skill,
+      int skillLevel, int sourceEntityId, DifficultyLevels.Entry difficulty,
+      Attributes targetAttributes, boolean targetPlayerOrHireling) {
+    if (states == null || skill == null) return null;
+    int stateId = resolveCurseStateId(skill.auratargetstate, skill.skill);
+    if (stateId == StateId.NONE) return null;
+    int duration = curseDuration(skill, skillLevel, difficulty);
+    int statId = -1;
+    int statValue = 0;
+    if (skill.aurastat != null && skill.aurastat.length > 0) {
+      statId = resolveCurseStatId(skill.aurastat[0]);
+      if (statId >= 0 && skill.aurastatcalc != null && skill.aurastatcalc.length > 0) {
+        statValue = normalizeCurseStatValue(statId,
+            SkillFormula.evaluate(skill.aurastatcalc[0], skill, skillLevel),
+            targetAttributes, targetPlayerOrHireling);
+      }
+    }
+    // D2MOO sub_6FD0B450 rejects a target when AuraStat1 exists but its
+    // evaluated value is zero. Curses without AuraStat1 remain state-only.
+    if (statId >= 0 && statValue == 0) return null;
+    int strength = Math.max(1, Math.abs(statValue));
+    UnitState state = states.applyCurseState(stateTable, stateId, duration,
+        Math.max(1, skillLevel), sourceEntityId, skill.Id, strength, statId, statValue,
+        NativeStatResolver.Operation.ADD);
+    if (state == null) return null;
+    int count = skill.aurastat == null ? 0 : skill.aurastat.length;
+    for (int i = 1; i < count; i++) {
+      int extraStat = resolveCurseStatId(skill.aurastat[i]);
+      if (extraStat < 0 || skill.aurastatcalc == null || i >= skill.aurastatcalc.length) continue;
+      int extraValue = normalizeCurseStatValue(extraStat,
+          SkillFormula.evaluate(skill.aurastatcalc[i], skill, skillLevel),
+          targetAttributes, targetPlayerOrHireling);
+      // setStatContribution removes a zero entry. This also prevents a
+      // refreshed lower-level layer retaining a stale non-zero old value.
+      state.setStatContribution(extraStat, 0, NativeStatResolver.Operation.ADD, extraValue);
+    }
+    state.needsSync = true;
+    return state;
+  }
+
+  /** Native curse rule: resistance reductions affect immune monsters at one fifth strength. */
+  public static int normalizeCurseStatValue(int statId, int value,
+      Attributes targetAttributes, boolean targetPlayerOrHireling) {
+    if (value > 0 || targetPlayerOrHireling || !isResistanceStat(statId)) return value;
+    StatRef resistance = targetAttributes != null
+        ? targetAttributes.get((short) statId, StatRef.obtain()) : null;
+    return resistance != null && resistance.asInt() >= 100 ? value / 5 : value;
+  }
+
+  private static boolean isResistanceStat(int statId) {
+    return statId == Stat.damageresist || statId == Stat.magicresist
+        || statId == Stat.fireresist || statId == Stat.lightresist
+        || statId == Stat.coldresist || statId == Stat.poisonresist;
   }
 }

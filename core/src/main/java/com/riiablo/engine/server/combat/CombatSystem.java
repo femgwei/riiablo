@@ -962,13 +962,17 @@ public class CombatSystem {
     d.absorbFlat[DAMAGE_COLD] = statInt(defender, Stat.item_absorbcold, 0);
     d.absorbFlat[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic, 0);
     if (defenderStates != null) {
+      d.resistances[DAMAGE_PHYSICAL] += defenderStates.getTotalPhysicalResistModifier();
       d.resistances[DAMAGE_FIRE] += defenderStates.getTotalResistModifier(0);
       d.resistances[DAMAGE_COLD] += defenderStates.getTotalResistModifier(1);
       d.resistances[DAMAGE_LIGHTNING] += defenderStates.getTotalResistModifier(2);
       d.resistances[DAMAGE_POISON] += defenderStates.getTotalResistModifier(3);
       d.resistances[DAMAGE_MAGIC] += defenderStates.getTotalResistModifier(4);
     }
-    d.damageReducedPercent = Math.max(0, d.resistances[DAMAGE_PHYSICAL]);
+    // Amplify Damage and Decrepify contribute negative damageresist. Native
+    // physical resistance keeps that sign so the same percentage formula
+    // increases damage below zero instead of silently clamping the curse out.
+    d.damageReducedPercent = Math.max(MIN_RESISTANCE, d.resistances[DAMAGE_PHYSICAL]);
     d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
     d.immunePhysical = d.resistances[DAMAGE_PHYSICAL] >= 100;
     for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
@@ -1332,7 +1336,7 @@ public class CombatSystem {
     }
 
     // 百分比减免
-    if (defender.damageReducedPercent > 0) {
+    if (defender.damageReducedPercent != 0) {
       damage = damage * (100 - defender.damageReducedPercent) / 100;
     }
 

@@ -1548,7 +1548,11 @@ public class Actioneer extends PassiveSystem {
         break;
       }
       case 30: { // native Necromancer curse dispatcher
-        resolveMonsterCurse(entityId, targetId);
+        // ServerSkillSystem owns the shared data-driven SrvDo030 area path
+        // for both players and monsters. Keeping a second name-based single
+        // target implementation here caused divergent state/stat payloads.
+        log.debug("[NECROMANCER_CURSE] phase=keyframe source={} delegated=ServerSkillSystem",
+            entityId);
         break;
       }
       case 150: { // native monster Smite: A2 physical hit with stun
@@ -2258,33 +2262,6 @@ public class Actioneer extends PassiveSystem {
     return true;
   }
 
-  /** Applies the target state selected by the Skills.txt curse row. */
-  private void resolveMonsterCurse(int entityId, int targetId) {
-    if (targetId == Engine.INVALID_ENTITY || !mUnitStates.has(targetId)
-        || !mCasting.has(entityId)) return;
-    Casting casting = mCasting.get(entityId);
-    Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
-    int stateId = curseStateId(skill != null ? skill.skill : null);
-    if (stateId == StateId.NONE) {
-      log.warn("[MONSTER_CURSE] phase=reject source={} target={} skill={} reason=unknown_state",
-          entityId, targetId, casting.skillId);
-      return;
-    }
-    int level = Math.max(1, skillLevel(entityId, casting.skillId));
-    int duration = SkillFormula.evaluate(skill != null ? skill.auralencalc : null, skill, level);
-    if (duration <= 0) duration = 150;
-    UnitStates states = mUnitStates.get(targetId);
-    if (states.stateList == null) states.init(targetId);
-    UnitState state = states.stateList.applyCurseState(
-        Riiablo.files != null ? Riiablo.files.States : null,
-        stateId, duration, level, entityId, casting.skillId, level);
-    if (state != null) {
-      state.needsSync = true;
-    }
-    log.info("[MONSTER_CURSE] phase=apply source={} target={} skill={} state={} level={} duration={}",
-        entityId, targetId, casting.skillId, StateId.getName(stateId), level, duration);
-  }
-
   private int skillLevel(int entityId, int skillId) {
     if (mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
       int bonus = mUnitStates.has(entityId)
@@ -2315,21 +2292,6 @@ public class Actioneer extends PassiveSystem {
       return Math.max(0, mPlayer.get(entityId).data.getSkill(skill.Id));
     }
     return Math.max(0, skillLevel(entityId, skill.Id));
-  }
-
-  private static int curseStateId(String skillName) {
-    if (skillName == null) return StateId.NONE;
-    String name = skillName.toLowerCase(java.util.Locale.ROOT);
-    if (name.contains("amplify")) return StateId.AMPLIFYDAMAGE;
-    if (name.contains("weaken")) return StateId.WEAKEN;
-    if (name.contains("defense curse")) return StateId.DEFENSE_CURSE;
-    if (name.contains("blood mana")) return StateId.BLOOD_MANA;
-    if (name.contains("decrepify")) return StateId.DECREPIFY;
-    if (name.contains("lower resist")) return StateId.LOWERRESIST;
-    if (name.contains("dim vision")) return StateId.DIMVISION;
-    if (name.contains("terror")) return StateId.TERROR;
-    if (name.contains("attract")) return StateId.ATTRACT;
-    return StateId.NONE;
   }
 
   private boolean isPlayerEntity(int entityId) {

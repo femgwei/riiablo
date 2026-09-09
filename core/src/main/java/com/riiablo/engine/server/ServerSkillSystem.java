@@ -50,6 +50,7 @@ import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
+import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
@@ -283,11 +284,13 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 22 && event.srvdofunc != 49 && event.srvdofunc != 54
         && event.srvdofunc != 68 && event.srvdofunc != 71
+        && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
         && skill.srvdofunc != 22 && skill.srvdofunc != 49 && skill.srvdofunc != 54
         && skill.srvdofunc != 68 && skill.srvdofunc != 71
+        && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119) {
       consumeRangedAmmoForSkill(event, skill);
       return;
@@ -296,6 +299,12 @@ public class ServerSkillSystem extends PassiveSystem {
 
     Vector2 start = mPosition.get(event.entityId).position;
     if (handleBarbarianCorpseSkill(event, skill, skillLevel)) return;
+    if ((event.srvdofunc == 30 || skill.srvdofunc == 30
+        || event.srvdofunc == 59 || skill.srvdofunc == 59
+        || event.srvdofunc == 61 || skill.srvdofunc == 61)) {
+      applyNecromancerCurse(event, skill, skillLevel, start);
+      return;
+    }
     if (event.srvdofunc == 71 || skill.srvdofunc == 71) {
       applyTaunt(event, skill, skillLevel, start);
       return;
@@ -646,6 +655,96 @@ public class ServerSkillSystem extends PassiveSystem {
   static boolean isCloakOfShadows(Skills.Entry skill) {
     return skill != null && skill.skill != null
         && "cloak of shadows".equalsIgnoreCase(skill.skill.trim());
+  }
+
+  /**
+   * Native Necromancer SrvDo030/SrvDo059/SrvDo061 authority path. SrvDo030
+   * and Confuse search around the selected point; Attract applies only to its
+   * selected evil monster and lets the AI state drive later target selection.
+   */
+  private void applyNecromancerCurse(SkillDoEvent event, Skills.Entry skill, int skillLevel,
+      Vector2 caster) {
+    int function = event.srvdofunc != 0 ? event.srvdofunc : skill.srvdofunc;
+    Vector2 center = resolveTargetPoint(event, caster, new Vector2());
+    int range = function == 59 ? 0
+        : SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
+    range = Math.max(0, Math.min(128, range));
+    float range2 = range * (float) range;
+    int difficulty = curseDifficulty(event.entityId);
+    com.riiablo.codec.excel.DifficultyLevels.Entry difficultyRow =
+        Riiablo.files != null && Riiablo.files.DifficultyLevels != null
+            ? Riiablo.files.DifficultyLevels.get(difficulty) : null;
+    int affected = 0;
+
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class)).getEntities();
+    for (int i = 0; i < entities.size(); i++) {
+      int targetId = entities.get(i);
+      if (function == 59 && targetId != event.targetId) continue;
+      if (function != 59 && center.dst2(mPosition.get(targetId).position) > range2) continue;
+      if (!isNecromancerCurseTarget(event.entityId, targetId, skill.aurafilter,
+          function == 59 || function == 61)) continue;
+
+      UnitStates targetStates = mUnitStates.has(targetId)
+          ? mUnitStates.get(targetId) : mUnitStates.create(targetId).init(targetId);
+      if (targetStates.stateList == null) targetStates.init(targetId);
+      Attributes targetAttributes = mAttributesWrapper.has(targetId)
+          ? mAttributesWrapper.get(targetId).attrs : null;
+      boolean playerOrHireling = mPlayer.has(targetId) || mMercenary.has(targetId);
+      UnitState state = NecromancerSkills.applyCurse(
+          targetStates.stateList, Riiablo.files != null ? Riiablo.files.States : null,
+          skill, skillLevel, event.entityId, difficultyRow,
+          targetAttributes, playerOrHireling);
+      if (state != null) affected++;
+    }
+    log.info("[NECROMANCER_CURSE] phase=apply source={} skill={} function={} state={} "
+            + "level={} difficulty={} center=({}, {}) range={} affected={} status={}",
+        event.entityId, event.skillId, function,
+        StateId.getName(NecromancerSkills.resolveCurseStateId(
+            skill.auratargetstate, skill.skill)),
+        skillLevel, difficulty, center.x, center.y, range, affected,
+        affected > 0 ? "PASS" : "NO_TARGET");
+  }
+
+  private boolean isNecromancerCurseTarget(
+      int sourceId, int targetId, int auraFilter, boolean monstersOnly) {
+    if (targetId == sourceId || mCorpse.has(targetId) || mSummonedPet.has(targetId)) return false;
+    boolean player = mPlayer.has(targetId);
+    boolean monster = mMonster.has(targetId) && !mMercenary.has(targetId);
+    if (!player && !monster) return false;
+    if (monstersOnly && !monster) return false;
+    int filter = auraFilter != 0 ? auraFilter : 0x583;
+    if ((player && (filter & 1) == 0) || (monster && (filter & 2) == 0)) return false;
+    if (monster) {
+      Monster target = mMonster.get(targetId);
+      if (target.monstats != null && target.monstats.npc) return false;
+      if (!mNativeUnitFlagsValid(targetId)) return false;
+    }
+    if (!isHostile(sourceId, targetId)) return false;
+    if (mAttributesWrapper.has(targetId)) {
+      StatRef hp = mAttributesWrapper.get(targetId).attrs.get(Stat.hitpoints, StatRef.obtain());
+      if (hp != null && hp.asFixed() <= 0f) return false;
+    }
+    if (mMapWrapper.has(sourceId) && mMapWrapper.has(targetId)) {
+      MapWrapper sourceMap = mMapWrapper.get(sourceId);
+      MapWrapper targetMap = mMapWrapper.get(targetId);
+      if (sourceMap.map != null && targetMap.map != null && sourceMap.map != targetMap.map) {
+        return false;
+      }
+      if ((filter & (0x100 | 0x2000)) != 0
+          && targetMap.zone != null && targetMap.zone.isTown()) return false;
+    }
+    return true;
+  }
+
+  private int curseDifficulty(int sourceId) {
+    if (mMapWrapper.has(sourceId) && mMapWrapper.get(sourceId).map != null) {
+      return Math.max(0, Math.min(2, mMapWrapper.get(sourceId).map.getDifficulty()));
+    }
+    if (mPlayer.has(sourceId) && mPlayer.get(sourceId).data != null) {
+      return Math.max(0, Math.min(2, mPlayer.get(sourceId).data.diff));
+    }
+    return 0;
   }
 
   private void spawnAssassinShadow(SkillDoEvent event, Skills.Entry skill, int skillLevel,
