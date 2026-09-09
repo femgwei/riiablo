@@ -152,6 +152,7 @@ public final class PetType {
     if (petType == null) return "";
     String value = petType.trim().toLowerCase(java.util.Locale.ROOT);
     if ("spirit wolf".equals(value)) return "spiritwolf";
+    if ("skeleton mage".equals(value) || "skeletal mage".equals(value)) return "skeletonmage";
     if ("dire wolf".equals(value) || "summon fenris".equals(value)) return "fenris";
     if ("oak sage".equals(value)) return "totem";
     if ("heart of wolverine".equals(value) || "spirit of barbs".equals(value)) return "totem";

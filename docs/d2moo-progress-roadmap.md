@@ -45,8 +45,8 @@
 - 死灵法师十项诅咒已完成首轮原生权威接线：`SrvDo030/059/061` 统一读取
   `auratargetstate/aurarangecalc/auralencalc/aurafilter/aurastat*`，玩家和怪物不再
   分走两套实现；Amplify Damage/Decrepify 的负物理抗性已进入统一伤害链，免疫怪物
-  的抗性削减按原版降为 1/5。下一项转入 Raise Skeleton/Skeletal Mage 的尸体原子
-  消费、PetType/PetMax 和所有权生命周期。
+  的抗性削减按原版降为 1/5。Raise Skeleton/Skeletal Mage 的尸体原子消费、
+  PetType/PetMax、所有权生命周期和多人召唤创建已完成首轮；下一项转入 Revive/Golem。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -65,8 +65,9 @@
 4. **P1 死灵法师诅咒权威链（已完成首轮）**：十项诅咒的原生函数分派、目标中心范围、
    难度时长、状态 stat-list、物理/元素抗性和目标排除门槛已接通；复杂 AI 重定向表现
    仍随怪物 AI 专项验收。
-5. **P1 死灵法师召唤与尸体链（当前下一项）**：完成 Raise Skeleton/Skeletal Mage
-   尸体一次消费、PetType/PetMax、召唤所有权、死亡/断线/跨区生命周期和多人快照。
+5. **P1 死灵法师召唤与尸体链（首轮完成）**：Raise Skeleton/Skeletal Mage 已接入
+   尸体一次消费、PetType/PetMax、召唤所有权、死亡/断线/跨区生命周期和多人快照；
+   Revive/Golem、Iron Maiden/Life Tap 事件及复杂诅咒 AI 仍待完成。
 6. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -888,10 +889,21 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 本项完成的是施法、状态与 stat 权威链；Iron Maiden/Life Tap 的受击事件回调以及
     Dim Vision/Attract/Confuse 的完整 AI 特殊状态仍在死灵法师后续清单中，未误标为完成。
 
+- [x] ~~完成死灵法师 Raise Skeleton/Skeletal Mage 召唤链首轮~~
+  - 接通原生 `SrvSt15/SrvDo031`，Raise Skeleton 与 Raise Skeletal Mage 均从
+    `Skills.txt` 的 `summon/pettype/petmax` 解析，不再走通用导弹回退。
+  - 尸体采用“可用性检查→`CORPSE_NOSELECT/NODRAW` 预留→创建召唤物→成功删除尸体；
+    失败回滚”的原子流程，禁止城镇尸体、重复关键帧和非怪物目标。
+  - 新召唤物写入 `PLAYER_SUMMON`、主人和 PetType，应用召唤技能 passive stat 与
+    `passive_summon_resist`；既有 `SummonedPetSystem` 继续负责死亡、断线、跨区 Warp
+    和多人快照生命周期。
+  - `NativeNecromancerSummonDataTest`、`NecromancerSummonIntegrationTest` 与之前的
+    诅咒/状态/生命周期定向测试通过。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **P1 死灵法师 Raise Skeleton/Skeletal Mage
-> 尸体原子消费、PetType/PetMax 与所有权生命周期**。
+> “当前下一项”为准，当前目标是 **P1 死灵法师 Revive/Golem 召唤链**；Raise Skeleton/
+> Skeletal Mage 首轮已完成并有定向 ECS/数据测试覆盖。
 
 ## 记录规则
 

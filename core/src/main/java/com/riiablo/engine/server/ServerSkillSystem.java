@@ -149,7 +149,7 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.targetId, event.skillId);
       return;
     }
-    boolean corpseSkill = skill.srvdofunc == 69 || skill.srvdofunc == 72
+    boolean corpseSkill = skill.srvdofunc == 31 || skill.srvdofunc == 69 || skill.srvdofunc == 72
         || skill.srvdofunc == 75;
     if (event.targetId >= 0 && mMonster.has(event.targetId) && !corpseSkill
         && mNativeUnitFlags.has(event.targetId)
@@ -207,9 +207,11 @@ public class ServerSkillSystem extends PassiveSystem {
     if (corpseSkill) {
       Corpse corpse = event.targetId >= 0 && mCorpse.has(event.targetId)
           ? mCorpse.get(event.targetId) : null;
-      boolean requiresMonster = skill.srvdofunc == 72 || skill.srvdofunc == 75;
+      boolean requiresMonster = skill.srvdofunc == 31 || skill.srvdofunc == 72
+          || skill.srvdofunc == 75;
       if (corpse == null || !corpse.usable || corpse.fading || hasCorpseNoSelect(event.targetId)
-          || requiresMonster && !mMonster.has(event.targetId)) {
+          || requiresMonster && !mMonster.has(event.targetId)
+          || skill.srvdofunc == 31 && isTownCorpse(event.targetId)) {
         reject(event, 3, "skill requires a selectable monster corpse");
         log.info("[BARBARIAN_CORPSE] phase=cast_reject source={} target={} skill={} reason=corpse_eligibility",
             event.entityId, event.targetId, skill.skill);
@@ -284,12 +286,14 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 22 && event.srvdofunc != 49 && event.srvdofunc != 54
         && event.srvdofunc != 68 && event.srvdofunc != 71
+        && event.srvdofunc != 31
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
         && skill.srvdofunc != 22 && skill.srvdofunc != 49 && skill.srvdofunc != 54
         && skill.srvdofunc != 68 && skill.srvdofunc != 71
+        && skill.srvdofunc != 31
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119) {
       consumeRangedAmmoForSkill(event, skill);
@@ -298,6 +302,10 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if (event.srvdofunc == 31 || skill.srvdofunc == 31) {
+      raiseNecromancerSkeleton(event, skill, skillLevel);
+      return;
+    }
     if (handleBarbarianCorpseSkill(event, skill, skillLevel)) return;
     if ((event.srvdofunc == 30 || skill.srvdofunc == 30
         || event.srvdofunc == 59 || skill.srvdofunc == 59
@@ -1785,6 +1793,119 @@ public class ServerSkillSystem extends PassiveSystem {
   private boolean hasCorpseNoSelect(int entityId) {
     return mUnitStates.has(entityId) && mUnitStates.get(entityId).stateList != null
         && mUnitStates.get(entityId).stateList.hasState(StateId.CORPSE_NOSELECT);
+  }
+
+  /** Native room gate used by Raise Skeleton/Mage (SrvSt15/SrvDo031). */
+  private boolean isTownCorpse(int entityId) {
+    if (!mMapWrapper.has(entityId)) return false;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
+  }
+
+  /**
+   * D2MOO SKILLS_SrvDo031_RaiseSkeleton_Mage.  The corpse is reserved before
+   * spawning so two keyframes (or two necromancers) cannot consume it twice;
+   * it is removed only after the pet was created successfully.  A failed
+   * spawn rolls the reservation back, matching the native consumeable check.
+   */
+  private void raiseNecromancerSkeleton(SkillDoEvent event, Skills.Entry skill, int level) {
+    final int source = event.entityId;
+    final int corpseId = event.targetId;
+    if (!mPlayer.has(source) || skill == null || corpseId < 0
+        || !mMonster.has(corpseId) || !mCorpse.has(corpseId)
+        || !mPosition.has(corpseId)) {
+      log.info("[NECRO_SUMMON] phase=reject source={} corpse={} reason=invalid_target", source, corpseId);
+      return;
+    }
+    Corpse corpse = mCorpse.get(corpseId);
+    if (corpse == null || !corpse.usable || corpse.fading || hasCorpseNoSelect(corpseId)
+        || isTownCorpse(corpseId)) {
+      log.info("[NECRO_SUMMON] phase=reject source={} corpse={} reason=corpse_unusable", source, corpseId);
+      return;
+    }
+    Monster dead = mMonster.get(corpseId);
+    if (dead == null || dead.monstats == null || dead.monstats2 == null) {
+      log.info("[NECRO_SUMMON] phase=reject source={} corpse={} reason=monster_data_missing", source, corpseId);
+      return;
+    }
+
+    // Reserve atomically before invoking the factory.  The state is also
+    // replicated, so a second client cannot race the same corpse.
+    markCorpseConsumed(corpseId, corpse, true);
+    String summonName = skill.summon;
+    MonStats.Entry summon = summonName == null || summonName.isEmpty()
+        ? null : Riiablo.files.monstats.get(summonName);
+    if (summon == null) {
+      corpse.usable = true;
+      if (mUnitStates.has(corpseId) && mUnitStates.get(corpseId).stateList != null) {
+        mUnitStates.get(corpseId).stateList.removeState(StateId.CORPSE_NOSELECT);
+        mUnitStates.get(corpseId).stateList.removeState(StateId.CORPSE_NODRAW);
+      }
+      log.warn("[NECRO_SUMMON] phase=rollback source={} corpse={} reason=missing_summon row={}",
+          source, corpseId, summonName);
+      return;
+    }
+    String petType = PetType.canonical(skill.pettype);
+    if (petType.isEmpty()) petType = inferSkeletonPetType(skill, summon);
+    int petMax = Math.max(1, SkillFormula.evaluate(skill.petmax, skill, level,
+        name -> getBaseSkillLevel(source, name)));
+    Vector2 position = mPosition.get(corpseId).position;
+    int petId = factory == null ? Engine.INVALID_ENTITY : factory.createSummonedPet(
+        source, summon, petType, event.skillId, level, petMax, false, 0,
+        position.x, position.y);
+    if (petId == Engine.INVALID_ENTITY) {
+      corpse.usable = true;
+      if (mUnitStates.has(corpseId) && mUnitStates.get(corpseId).stateList != null) {
+        mUnitStates.get(corpseId).stateList.removeState(StateId.CORPSE_NOSELECT);
+        mUnitStates.get(corpseId).stateList.removeState(StateId.CORPSE_NODRAW);
+      }
+      log.warn("[NECRO_SUMMON] phase=rollback source={} corpse={} reason=create_failed", source, corpseId);
+      return;
+    }
+    applySummonSkillStats(source, petId, skill, level);
+    applySummonResistance(source, petId);
+    // Native SrvDo031 removes the consumed corpse unit from the room.
+    mCorpse.remove(corpseId);
+    world.delete(corpseId);
+    log.info("[NECRO_SUMMON] phase=created source={} corpse={} pet={} summon={} petType={} level={} max={} position=({}, {})",
+        source, corpseId, petId, summon.Id, petType, level, petMax, position.x, position.y);
+  }
+
+  private static String inferSkeletonPetType(Skills.Entry skill, MonStats.Entry summon) {
+    String value = (skill.skill == null ? "" : skill.skill).toLowerCase(java.util.Locale.ROOT);
+    String row = (summon.Id == null ? "" : summon.Id).toLowerCase(java.util.Locale.ROOT);
+    return value.contains("mage") || row.contains("mage") ? "skeletonmage" : "skeleton";
+  }
+
+  /** Applies the native summon row's passive stat list to the new pet. */
+  private void applySummonSkillStats(int source, int petId, Skills.Entry skill, int level) {
+    if (!mAttributesWrapper.has(petId) || skill == null) return;
+    Attributes attrs = mAttributesWrapper.get(petId).attrs;
+    if (attrs == null || skill.passivestat == null || skill.passivecalc == null) return;
+    for (int i = 0; i < skill.passivestat.length && i < skill.passivecalc.length; i++) {
+      String name = skill.passivestat[i];
+      if (name == null || name.isEmpty()) continue;
+      short stat = Stat.index(name);
+      if (stat < 0) continue;
+      int value = SkillFormula.evaluate(skill.passivecalc[i], skill, level,
+          name2 -> getBaseSkillLevel(source, name2));
+      if (value != 0) attrs.base().add(stat, value);
+    }
+    attrs.reset();
+  }
+
+  /** D2GAME_SetSummonResistance_6FD0C2E0, with absorb guards. */
+  private void applySummonResistance(int source, int petId) {
+    if (!mAttributesWrapper.has(source) || !mAttributesWrapper.has(petId)) return;
+    Attributes owner = mAttributesWrapper.get(source).attrs;
+    Attributes pet = mAttributesWrapper.get(petId).attrs;
+    int resist = statInt(owner, Stat.passive_summon_resist);
+    if (resist == 0 || pet == null) return;
+    if (statInt(pet, Stat.item_absorbfire_percent) <= 0) pet.base().add(Stat.fireresist, resist);
+    if (statInt(pet, Stat.item_absorblight_percent) <= 0) pet.base().add(Stat.lightresist, resist);
+    if (statInt(pet, Stat.item_absorbcold_percent) <= 0) pet.base().add(Stat.coldresist, resist);
+    pet.base().add(Stat.poisonresist, resist);
+    pet.reset();
   }
 
   private void markCorpseConsumed(int entityId, Corpse corpse, boolean hide) {
