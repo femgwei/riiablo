@@ -103,14 +103,18 @@
   怪物类型门槛及四项硬点协同；单机/多人复用权威实体并显示 `handofgod` Overlay。
 - FoH/Holy Bolt 专项及联合回归共 22 个测试套件、121 个用例通过；D2GS 编译和真实
   1.10f 离屏营地均通过，没有修改网络 schema 或生成文件。
+- Resist Fire、Resist Cold、Resist Lightning 与 Salvation 已按原生 `SrvDo065` 接入范围、
+  周期、过滤和抗性公式；三种单抗的激活最大抗性与硬点永久被动使用独立 stat-list。
+  两条权威元素伤害路径已聚合状态最大抗性，并按 D2MOO 修正玩家高抗上限与怪物免疫
+  分流。44 个联合用例、D2GS 编译和真实 1.10f 离屏营地通过，无网络生成文件差异。
 
 ## 下一步
 
-当前已完成 **P1 死灵法师召唤、诅咒和骨毒系首轮**，以及 **圣骑士代表性光环、
-Blessed Hammer、Fist of the Heavens / Holy Bolt 原生权威链首轮**。下一步处理圣骑士
-剩余元素/抗性光环：Resist Fire、Resist Cold、Resist Lightning、Holy Freeze、Holy
-Shock、Sanctuary、Salvation。战斗模块不再单独分派，相关修改与进度文档均由本 Chat
-负责。
+当前已完成 **P1 死灵法师召唤、诅咒和骨毒系首轮**，以及 **圣骑士代表性光环、四种
+抗性光环与硬点最大抗性、Blessed Hammer、Fist of the Heavens / Holy Bolt 原生权威链
+首轮**。下一步处理 Holy Freeze、Holy Shock、Sanctuary 的目标过滤、特殊周期伤害、
+减速/碎尸、亡灵限定和绕过物抗。战斗模块不再单独分派，相关修改与进度文档均由本
+Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。

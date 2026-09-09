@@ -43,6 +43,8 @@ import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
+import com.riiablo.engine.server.skill.PaladinSkills;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.BodyLoc;
@@ -79,6 +81,12 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       StateId.POLEARMMASTERY, StateId.THROWINGMASTERY, StateId.SPEARMASTERY,
       StateId.INCREASEDSTAMINA, StateId.IRONSKIN,
       StateId.INCREASEDSPEED, StateId.NATURALRESISTANCE
+  };
+  private static final int[] PALADIN_RESIST_PASSIVE_SKILLS = {
+      SkillId.RESIST_FIRE, SkillId.RESIST_COLD, SkillId.RESIST_LIGHTNING
+  };
+  private static final int[] PALADIN_RESIST_PASSIVE_STATES = {
+      StateId.PASSIVE_RESISTFIRE, StateId.PASSIVE_RESISTCOLD, StateId.PASSIVE_RESISTLTNG
   };
 
   protected ComponentMapper<UnitStates> mUnitStates;
@@ -470,6 +478,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     StateList stateList = unitStates.stateList;
 
     synchronizeBarbarianPassives(entityId, stateList);
+    synchronizePaladinResistancePassives(entityId, stateList);
 
     processHolyFireAura(entityId, stateList);
     processBladeShield(entityId, stateList);
@@ -586,6 +595,39 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
             applied.masteryItemType, applied.masteryAttackRatingModifier,
             applied.masteryDamageModifier, applied.masteryCriticalChance,
             applied.throwingMastery);
+      }
+    }
+  }
+
+  /** Keeps the native hard-point max-resist passive lists independent of the selected aura. */
+  private void synchronizePaladinResistancePassives(int entityId, StateList states) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null
+        || mPlayer.get(entityId).data.classId != CharacterClass.PALADIN) return;
+    for (int i = 0; i < PALADIN_RESIST_PASSIVE_SKILLS.length; i++) {
+      int skillId = PALADIN_RESIST_PASSIVE_SKILLS[i];
+      int stateId = PALADIN_RESIST_PASSIVE_STATES[i];
+      Skills.Entry skill = Riiablo.files.skills.get(skillId);
+      int hardLevel = skill == null ? 0
+          : Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skillId));
+      UnitState current = states.getState(stateId);
+      if (hardLevel <= 0 || PaladinSkills.getResistancePassiveStateId(skill) == StateId.NONE) {
+        if (current != null) {
+          states.removeState(stateId);
+          log.info("[PALADIN_RESIST_PASSIVE] phase=remove entity={} skill={} state={}",
+              entityId, skillId, StateId.getName(stateId));
+        }
+        continue;
+      }
+      if (current != null && current.level == hardLevel && !current.expired) continue;
+      UnitState applied = PaladinSkills.applyResistancePassiveState(
+          states, skill, hardLevel, entityId);
+      if (applied != null) {
+        log.info("[PALADIN_RESIST_PASSIVE] phase=refresh entity={} skill={} level={} "
+                + "state={} maxFire={} maxCold={} maxLightning={}",
+            entityId, skill.skill, hardLevel, StateId.getName(applied.stateId),
+            applied.getStatContributionValue(Stat.maxfireresist),
+            applied.getStatContributionValue(Stat.maxcoldresist),
+            applied.getStatContributionValue(Stat.maxlightresist));
       }
     }
   }

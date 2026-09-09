@@ -117,6 +117,7 @@ public class AuraManager {
     float[] getEntityPosition(int entityId);
     Array<Integer> getEntitiesInRange(float x, float y, float range);
     boolean isAlly(int entityId1, int entityId2);
+    int getBaseSkillLevel(int entityId, String skillName);
     boolean isValidTarget(
         int casterId, int targetId, int auraFilter, boolean checkMonsterNoAura);
     boolean isInTown(int entityId);
@@ -250,7 +251,8 @@ public class AuraManager {
       if (rangeTarget) affected.add(targetId);
       if (rangeTarget && definition.auraType == AURA_TYPE_DAMAGE
           && definition.nativeSkill != null && !callback.isInTown(aura.casterId)) {
-        int[] damage = nativeElementalDamageRange(definition.nativeSkill, aura.skillLevel);
+        int[] damage = nativeElementalDamageRange(definition.nativeSkill, aura.skillLevel,
+            name -> callback.getBaseSkillLevel(aura.casterId, name));
         if (damage[1] > 0) {
           callback.applyPeriodicDamage(aura.casterId, targetId, definition.skillId,
               aura.skillLevel, damage[0], damage[1], definition.nativeSkill.EType);
@@ -407,16 +409,18 @@ public class AuraManager {
       return;
     }
     Skills.Entry skill = definition.nativeSkill;
+    java.util.function.ToIntFunction<String> baseSkills = callback == null
+        ? name -> 0 : name -> callback.getBaseSkillLevel(aura.casterId, name);
     for (int i = 0; i < MAX_AURA_STATS; i++) {
       aura.statValues[i] = definition.statIds[i] < 0 ? 0
-          : SkillFormula.evaluate(skill.aurastatcalc[i], skill, aura.skillLevel);
+          : SkillFormula.evaluate(skill.aurastatcalc[i], skill, aura.skillLevel, baseSkills);
       if (definition.passiveStatIds[i] >= 0) {
         // The formula result is already encoded for the destination stat.
         // Holy Fire, for example, explicitly divides its 8.8 `enms` token by
         // 256 inside `enms*par5/256`; dividing a second time erased its melee
         // fire bonus entirely.
         aura.passiveStatValues[i] =
-            SkillFormula.evaluate(skill.passivecalc[i], skill, aura.skillLevel);
+            SkillFormula.evaluate(skill.passivecalc[i], skill, aura.skillLevel, baseSkills);
       }
     }
   }
@@ -430,8 +434,9 @@ public class AuraManager {
 
   private void registerNativePaladinAuras() {
     if (Riiablo.files == null || Riiablo.files.skills == null || Riiablo.files.States == null) return;
-    int[] ids = {SkillId.MIGHT, SkillId.PRAYER, SkillId.HOLY_FIRE,
-        SkillId.CONCENTRATION, SkillId.CONVICTION};
+    int[] ids = {SkillId.MIGHT, SkillId.PRAYER, SkillId.RESIST_FIRE,
+        SkillId.RESIST_COLD, SkillId.RESIST_LIGHTNING, SkillId.HOLY_FIRE,
+        SkillId.CONCENTRATION, SkillId.CONVICTION, SkillId.SALVATION};
     for (int id : ids) registerNativeAura(id);
   }
 
@@ -460,7 +465,10 @@ public class AuraManager {
         : definition.affectsEnemy ? AURA_TYPE_DEBUFF : AURA_TYPE_BUFF;
     for (int i = 0; i < MAX_AURA_STATS; i++) {
       definition.statIds[i] = statId(skill.aurastat[i]);
-      if (i < skill.passivestat.length) {
+      // SrvDo065 folds PassiveStat into AuraState only when the row does not
+      // own a separate PassiveState. Resist Fire/Cold/Lightning use that
+      // separate permanent list for their hard-point max-resist bonus.
+      if (!hasText(skill.passivestate) && i < skill.passivestat.length) {
         definition.passiveStatIds[i] = statId(skill.passivestat[i]);
       }
     }
@@ -481,12 +489,13 @@ public class AuraManager {
 
   /** D2Common SKILLS_GetMin/MaxElemDamage converted from 8.8 to life units. */
   public static int[] nativeElementalDamageRange(Skills.Entry skill, int level) {
-    if (skill == null) return new int[] {0, 0};
-    int minFixed = SkillFormula.evaluate("edns", skill, level);
-    int maxFixed = SkillFormula.evaluate("edxs", skill, level);
-    int min = Math.max(0, minFixed / 256);
-    int max = Math.max(min, maxFixed / 256);
-    return new int[] {min, max};
+    return nativeElementalDamageRange(skill, level, name -> 0);
+  }
+
+  /** D2Game elemental aura packet including Skills.txt hard-point synergies. */
+  public static int[] nativeElementalDamageRange(Skills.Entry skill, int level,
+      java.util.function.ToIntFunction<String> baseSkillLevel) {
+    return PaladinSkills.getAuraElementalDamage(skill, level, baseSkillLevel);
   }
 
   private static boolean hasText(String value) {

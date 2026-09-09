@@ -4,8 +4,14 @@ import com.badlogic.gdx.math.MathUtils;
 
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.attributes.NativeStatResolver;
+import com.riiablo.attributes.Stat;
+import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import java.util.Locale;
 import java.util.function.ToIntFunction;
 
 /**
@@ -183,6 +189,55 @@ public final class PaladinSkills {
     min += min * synergy / 100L;
     max += max * synergy / 100L;
     return new int[] {saturated(min), saturated(max)};
+  }
+
+  /** Native elemental aura pulse/melee packet including hard-point synergies. */
+  public static int[] getAuraElementalDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (skill == null || skill.EType == null || skill.EType.trim().isEmpty()) {
+      return new int[] {0, 0};
+    }
+    return skillElementalDamage(skill, skillLevel, baseSkillLevel);
+  }
+
+  /** Maps the three hard-point resistance passive states from States.txt. */
+  public static int getResistancePassiveStateId(Skills.Entry skill) {
+    if (skill == null || skill.passivestate == null) return StateId.NONE;
+    switch (skill.passivestate.trim().toLowerCase(Locale.ROOT)) {
+      case "passive_resistfire": return StateId.PASSIVE_RESISTFIRE;
+      case "passive_resistcold": return StateId.PASSIVE_RESISTCOLD;
+      case "passive_resistltng": return StateId.PASSIVE_RESISTLTNG;
+      default: return StateId.NONE;
+    }
+  }
+
+  /** D2Common passive refresh: one max-resist point for every two hard points. */
+  public static UnitState applyResistancePassiveState(
+      StateList states, Skills.Entry skill, int hardLevel, int ownerId) {
+    int stateId = getResistancePassiveStateId(skill);
+    if (states == null || hardLevel <= 0 || stateId == StateId.NONE) return null;
+    UnitState state = states.addState(stateId, 0, hardLevel, ownerId);
+    if (state == null) return null;
+    state.duration = 0;
+    state.initialDuration = 0;
+    state.level = hardLevel;
+    state.sourceEntityId = ownerId;
+    state.skillId = skill.Id;
+    state.basicStatList = true;
+    state.clearModifiers();
+    int count = Math.min(skill.passivestat != null ? skill.passivestat.length : 0,
+        skill.passivecalc != null ? skill.passivecalc.length : 0);
+    ToIntFunction<String> hardPoints = name -> skill.skill != null
+        && skill.skill.equalsIgnoreCase(name) ? hardLevel : 0;
+    for (int i = 0; i < count; i++) {
+      int statId = skill.passivestat[i] == null ? -1 : Stat.index(skill.passivestat[i].trim());
+      if (statId < 0) continue;
+      int value = SkillFormula.evaluate(
+          skill.passivecalc[i], skill, hardLevel, hardPoints);
+      state.setStatContribution(statId, 0, NativeStatResolver.Operation.ADD, value);
+    }
+    state.needsSync = true;
+    return state;
   }
 
   /**

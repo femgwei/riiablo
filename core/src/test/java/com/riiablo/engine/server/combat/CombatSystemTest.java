@@ -228,6 +228,25 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void playerResistanceAtOneHundredUsesCapInsteadOfMonsterImmunity() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.fireresist, 100);
+    defender.base().put(Stat.maxfireresist, 4);
+    defender.reset();
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 100;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 100;
+
+    CombatSystem.CombatResult result = combat.calculateAttack(attacker, defender,
+        true, true, false, 1, 1, 1000, true, fireMin, fireMax, 0, 0, null, null);
+
+    // PvP scaling precedes the native player resistance cap: 17 * 21%.
+    assertEquals(3, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+  }
+
+  @Test
   public void nativeElementalPierceReducesTargetResistance() {
     Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
     attacker.base().put(Stat.item_pierce_fire, 20);

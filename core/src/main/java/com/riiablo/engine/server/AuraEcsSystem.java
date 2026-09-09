@@ -143,6 +143,14 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     return partyManager != null && partyManager.areInSameParty(firstOwner, secondOwner);
   }
 
+  @Override public int getBaseSkillLevel(int entityId, String skillName) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null
+        || skillName == null || Riiablo.files == null || Riiablo.files.skills == null) return 0;
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillName);
+    return skill == null ? 0 : Math.max(0,
+        mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id));
+  }
+
   @Override public boolean isValidTarget(
       int casterId, int targetId, int auraFilter, boolean checkMonsterNoAura) {
     if (!mPosition.has(targetId) || !mAttributes.has(targetId) || !isAlive(targetId)) return false;

@@ -589,8 +589,21 @@ public class CombatSystem {
       d.resistances[DAMAGE_LIGHTNING] += defenderStates.getTotalResistModifier(2);
       d.resistances[DAMAGE_POISON] += defenderStates.getTotalResistModifier(3);
       d.resistances[DAMAGE_MAGIC] += defenderStates.getTotalResistModifier(4);
+      d.maxResistances[DAMAGE_FIRE] +=
+          defenderStates.getTotalStatContribution(Stat.maxfireresist);
+      d.maxResistances[DAMAGE_COLD] +=
+          defenderStates.getTotalStatContribution(Stat.maxcoldresist);
+      d.maxResistances[DAMAGE_LIGHTNING] +=
+          defenderStates.getTotalStatContribution(Stat.maxlightresist);
+      d.maxResistances[DAMAGE_POISON] +=
+          defenderStates.getTotalStatContribution(Stat.maxpoisonresist);
+      d.maxResistances[DAMAGE_MAGIC] +=
+          defenderStates.getTotalStatContribution(Stat.maxmagicresist);
     }
-    d.immuneElemental[damageType] = d.resistances[damageType] >= 100;
+    // Native SUNITDMG only preserves >=100 elemental resistance as immunity
+    // for monsters. Player resistance is still clamped to the raised
+    // 75..95 maximum-resistance cap below.
+    d.immuneElemental[damageType] = d.isMonster && d.resistances[damageType] >= 100;
     int reduced = applyElementalResistance(rawDamage, d, damageType, piercePercent);
     int absorbed = absorbElementalDamage(reduced, d, damageType);
     int finalDamage = reduced - absorbed;
@@ -1034,6 +1047,16 @@ public class CombatSystem {
       d.resistances[DAMAGE_LIGHTNING] += defenderStates.getTotalResistModifier(2);
       d.resistances[DAMAGE_POISON] += defenderStates.getTotalResistModifier(3);
       d.resistances[DAMAGE_MAGIC] += defenderStates.getTotalResistModifier(4);
+      d.maxResistances[DAMAGE_FIRE] +=
+          defenderStates.getTotalStatContribution(Stat.maxfireresist);
+      d.maxResistances[DAMAGE_COLD] +=
+          defenderStates.getTotalStatContribution(Stat.maxcoldresist);
+      d.maxResistances[DAMAGE_LIGHTNING] +=
+          defenderStates.getTotalStatContribution(Stat.maxlightresist);
+      d.maxResistances[DAMAGE_POISON] +=
+          defenderStates.getTotalStatContribution(Stat.maxpoisonresist);
+      d.maxResistances[DAMAGE_MAGIC] +=
+          defenderStates.getTotalStatContribution(Stat.maxmagicresist);
     }
     // Amplify Damage and Decrepify contribute negative damageresist. Native
     // physical resistance keeps that sign so the same percentage formula
@@ -1042,7 +1065,7 @@ public class CombatSystem {
     d.magicDamageReduced = statInt(defender, Stat.magic_damage_reduction, 0);
     d.immunePhysical = d.resistances[DAMAGE_PHYSICAL] >= 100;
     for (int i = DAMAGE_FIRE; i < DAMAGE_TYPE_COUNT; i++) {
-      d.immuneElemental[i] = d.resistances[i] >= 100;
+      d.immuneElemental[i] = d.isMonster && d.resistances[i] >= 100;
     }
     return calculateAttack(a, d);
   }
