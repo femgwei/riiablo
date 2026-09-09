@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -23,6 +24,8 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.Map;
 import org.junit.jupiter.api.Test;
 
@@ -119,6 +122,10 @@ class SummonedPetSystemTest {
       velocity.setModeSpeedBonusPercent(80f);
       TestAI ai = new TestAI(pet);
       world.getMapper(AIWrapper.class).create(pet).ai = ai;
+      com.riiablo.item.Item sourceItem = new com.riiablo.item.Item();
+      world.getMapper(SummonedPet.class).get(pet).sourceItem = sourceItem;
+      world.getMapper(UnitStates.class).create(pet).init(pet).stateList
+          .addStateLayer(StateId.HOLYFIRE, 0, 5, pet, 102);
 
       world.process();
 
@@ -136,6 +143,11 @@ class SummonedPetSystemTest {
       assertEquals(Vector2.Zero, velocity.velocity);
       assertEquals(0f, velocity.modeSpeedBonusMultiplier);
       assertTrue(ai.ownerWarped);
+      assertSame(sourceItem, world.getMapper(SummonedPet.class).get(pet).sourceItem,
+          "Iron Golem source item must survive owner regroup/zone relocation");
+      assertNotNull(world.getMapper(UnitStates.class).get(pet).stateList
+          .getState(StateId.HOLYFIRE),
+          "permanent Golem aura must survive owner regroup/zone relocation");
     } finally {
       world.dispose();
     }

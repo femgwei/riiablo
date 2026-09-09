@@ -37,6 +37,12 @@
   骷髅 AI 缓存目标统一清理，Box2D、RoomEx 与 `SYNC_WARPED` 状态同步更新。
 - 新增 8/16/24 格确定性落点扩展；跨 Zone 完全无落点才按原规则移除，同 Zone 失败则
   延迟重试。Bone Wall、诱饵及固定陷阱不会被普通远距重组。
+- 四类 Golem 原生副作用已完成：Clay Golem 在被近战命中时向实际攻击者安装 750-frame
+  `SLOWED` stat-list，并按玩家/Champion/Unique 50%、普通怪物 90% 限幅；Blood Golem
+  对齐 `EventFunc23/26` 的目标 Drain、递减回血曲线、主人/宠物生命分配以及 1.10f
+  `Param5=0` 仍执行的受击生命同步；Iron Golem 保留并聚合被消费金属物品属性，使用
+  `THORNS` 权威反伤；Fire Golem 从 `SumSkill1/SumSk1Calc` 获得 Holy Fire，并按原生
+  25-frame 周期执行范围火伤。跨 Zone 重组不会丢失永久光环或 Iron Golem 来源物品。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -62,7 +68,8 @@
   单次耐久/伤害消费。Corpse Explosion / Poison Explosion 也已完成共用尸体原子预留、
   原生尸体生命伤害、物理/火焰内外半径与八方向 8.8 定点持续毒云链。Bone Wall /
   Bone Prison 也已完成可破坏单位、碰撞与生命周期；Poison Nova、Bone Spear/Spirit
-  以及召唤物重组/传送边界也已完成首轮。下一项为 Revive/Golem 专属 AI 与技能继承验收。
+  以及召唤物重组/传送边界、Revive/Golem 专属 AI、技能继承和四类 Golem 战斗副作用
+  也已完成首轮。下一项为圣骑士光环权威状态与叠加仲裁。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -81,23 +88,23 @@
 4. **P1 死灵法师诅咒权威链（已完成首轮）**：十项诅咒的原生函数分派、目标中心范围、
    难度时长、状态 stat-list、物理/元素抗性和目标排除门槛已接通；Dim Vision、Attract、
    Confuse 的特殊 AI、临时目标、到期/死亡/跨区 reset 和怪物导弹阵营例外已验收。
-5. **P1 死灵法师召唤与尸体链（首轮完成）**：Raise Skeleton/Skeletal Mage 已接入
+5. **P1 死灵法师召唤与尸体链（已完成首轮）**：Raise Skeleton/Skeletal Mage 已接入
    尸体一次消费、PetType/PetMax、召唤所有权、死亡/断线/跨区生命周期和多人快照；
-   Revive/Golem 已完成首轮；Iron Maiden/Life Tap 受击回调和复杂诅咒 AI 已完成首轮，
-   骨系/毒系主动技能及全部专用攻击路径覆盖仍待完成。
-6. **P1 死灵法师骨系/毒系主动技能（进行中）**：Bone Armor 已完成原生公式、护盾消费、
+   Revive/NecroPet 专属 AI、四类 Golem 副作用、Iron Maiden/Life Tap 受击回调和复杂
+   诅咒 AI 已完成首轮。
+6. **P1 死灵法师骨系/毒系主动技能（已完成首轮）**：Bone Armor 已完成原生公式、护盾消费、
    耗尽/重施和多人容量快照；Poison Dagger 已完成原生预计算近战记录、毒伤和耐久链；
-    Corpse/Poison Explosion 已完成原子尸体竞争、范围伤害、八方向持续毒云及多人表现；
-    Bone Wall/Prison 已完成原生段生成、可破坏单位、碰撞和生命周期。
-    下一步处理 Poison Nova，之后依次处理 Bone Spear/Spirit 的原生函数、
-   可破坏单位、导弹和多人表现。
-7. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
+   Corpse/Poison Explosion、Bone Wall/Prison、Poison Nova、Bone Spear/Spirit 的
+   权威伤害、导弹、碰撞和多人表现均已接通。
+7. **P1 圣骑士技能专项（下一项）**：先完成光环权威状态与覆盖/叠加仲裁，再处理
+   Blessed Hammer、Fist of the Heavens 及元素抗性分支。
+8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
 ## 模块完成度与剩余量
 
 “项目权重”表示该模块占整个 D2MOO 对齐目标的估计比重；“剩余贡献”表示该模块
-当前缺口折算到全项目的百分点，所有模块剩余贡献合计约 36%。
+当前缺口折算到全项目的百分点，所有模块剩余贡献合计约 31%。
 
 | 优先级 | 模块 | 项目权重 | 当前完成 | 模块剩余 | 剩余贡献 | 当前结论 |
 |---|---|---:|---:|---:|---:|---|
@@ -129,11 +136,11 @@
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
-| 死灵法师 Necromancer | 95% | 5% | 诅咒、骨毒系与召唤权威链已接通，召唤跟随/PvP/跨区重组完成；Revive/Golem 专属 AI 仍待验收 |
+| 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
-职业技能专项整体按 **约 73% 完成、约 27% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 74% 完成、约 26% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
@@ -655,7 +662,8 @@ Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor、Poison Dagge
 Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单位、碰撞与
 生命周期已完成，Poison Nova 原生导弹、固定毒伤与多人表现也已完成，当前进入
 召唤物跟随、概率节奏、敌我筛选、主人目标/PvP 关系及跨房间/跨区域重组现已完成首轮。
-当前进入 **Revive/Golem 专属 AI、技能继承与剩余跨职业技能验收**。
+Revive/Golem 专属 AI、技能继承和四类 Golem 原生副作用现已完成；当前进入
+**圣骑士光环权威状态、覆盖/叠加仲裁与多人同步验收**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -1079,8 +1087,23 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     `FallenShamanAutoCombatIntegrationTest` 通过；D2GS 编译及 1.10f `offscreenCamp`
     作为本模块提交门槛执行，未修改 FlatBuffers schema 或生成网络文件。
 
-下一项：补齐 Clay Golem 命中减速、Blood Golem 生命分配、Iron Golem 来源物品属性
-聚合，以及 Fire Golem 原生元素/光环副作用，并验证跨区后状态连续性。
+- [x] ~~下一项：补齐 Clay Golem 命中减速、Blood Golem 生命分配、Iron Golem 来源
+  物品属性聚合，以及 Fire Golem 原生元素/光环副作用，并验证跨区后状态连续性。~~
+
+- [x] ~~完成四类 Golem 原生战斗副作用与跨区域状态连续性~~
+  - `Skills.txt` 投影新增 `AuraEvent1..3/AuraEventFunc1..3`、`SumSkill1..5`、
+    `SumSk1Calc..5`、`SumUMod/SumOverlay`，不再用 Java 常量伪造原生召唤副作用。
+  - Clay Golem 对齐 `EventFunc27` 被近战命中减速攻击者；Blood Golem 对齐
+    `EventFunc23/26` 的 Drain、递减曲线、回血分配和 1.10f 零分担生命同步；Iron Golem
+    保留来源物品并聚合防御、武器伤害及魔法属性，通过统一 `DamageEvent` 反伤；Fire
+    Golem 按 `SumSkill1=holy fire` 和 `min(ln56,30)` 安装永久光环并精确每 25 frame 脉冲。
+  - 专项与召唤生命周期首轮 26 个测试通过；死灵、召唤、战斗、PvP 与 Fallen Shaman
+    联合回归共 104 个测试通过。`:server:d2gs:compileJava` 及使用本机 1.10f 资源的
+    `:desktop:offscreenCamp` 均通过，输出 `[OFFSCREEN_CAMP] result=PASS`。跨 Zone 重组
+    保留 `UnitStates` 与 `sourceItem`；未修改 FlatBuffers schema 或生成网络文件。
+
+下一项：圣骑士光环权威状态与覆盖/叠加仲裁；优先对照 Might、Prayer、Holy Fire、
+Concentration、Conviction 的拥有者/队友/敌人筛选、同类高等级覆盖、周期 tick 与多人快照。
 
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方

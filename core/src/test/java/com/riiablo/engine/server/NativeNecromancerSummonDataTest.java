@@ -68,6 +68,25 @@ class NativeNecromancerSummonDataTest extends RiiabloTest {
         "Short Sword must retain native Items.txt metal bit");
   }
 
+  @Test
+  void golemRowsExposeNativeSideEffectEventsAndAuraStats() {
+    Skills.Entry clay = Riiablo.files.skills.get(SkillId.CLAY_GOLEM);
+    assertEquals("damagedinmelee", clay.auraevent[0]);
+    assertEquals(27, clay.auraeventfunc[0]);
+    assertEquals("item_slow", clay.aurastat[0]);
+    Skills.Entry blood = Riiablo.files.skills.get(SkillId.BLOOD_GOLEM);
+    assertEquals("domeleedamage", blood.auraevent[0]);
+    assertEquals(23, blood.auraeventfunc[0]);
+    assertEquals("damagedinmelee", blood.auraevent[1]);
+    assertEquals(26, blood.auraeventfunc[1]);
+    Skills.Entry iron = Riiablo.files.skills.get(SkillId.IRON_GOLEM);
+    assertEquals("thorns", iron.aurastate);
+    assertEquals("thorns_percent", iron.aurastat[0]);
+    Skills.Entry fire = Riiablo.files.skills.get(SkillId.FIRE_GOLEM);
+    assertEquals("holy fire", fire.sumskill[0]);
+    assertEquals("fire", fire.EType);
+  }
+
   private static MonStats.Entry findMonster(String id) {
     MonStats.Entry exact = Riiablo.files.monstats.get(id);
     if (exact != null) return exact;

@@ -43,6 +43,7 @@ import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
+import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -123,7 +124,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     StateList victimStates = victimUnitStates != null ? victimUnitStates.stateList : null;
     if (victimStates == null) return;
 
+    applyNativeGolemHitEffects(event);
+    applyBloodGolemDamageLink(event);
+
     absorbBoneArmor(event, victimStates);
+    applyIronGolemThorns(event);
 
     if (event.attacker < 0 || event.attacker == event.victim
         || event.physicalDamage <= 0f || !event.isLeechableAttack()
@@ -137,6 +142,8 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     physical = Math.min(physical, availableLife);
     if (physical <= 0f) return;
 
+    applyBloodGolemLifeLink(event, physical);
+
     UnitState lifeTap = victimStates.getState(StateId.LIFETAP);
     if (lifeTap != null) applyLifeTap(event, lifeTap, physical);
 
@@ -144,6 +151,217 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (ironMaiden != null && event.isMelee()) {
       applyIronMaiden(event, ironMaiden, physical);
     }
+  }
+
+  /** D2Game EventFunc27: Clay Golem's item_slow is a 750-frame SLOWED layer. */
+  private void applyNativeGolemHitEffects(DamageEvent event) {
+    if (event.attacker < 0 || !event.isMelee() || !mSummonedPet.has(event.victim)
+        || !mMonster.has(event.victim) || !mUnitStates.has(event.attacker)
+        || (!mPlayer.has(event.attacker) && !mMonster.has(event.attacker))) return;
+    SummonedPet pet = mSummonedPet.get(event.victim);
+    if (pet == null || pet.skillId != com.riiablo.engine.server.skill.SkillId.CLAY_GOLEM) return;
+    Attributes golem = mAttributesWrapper.has(event.victim)
+        ? mAttributesWrapper.get(event.victim).attrs : null;
+    int slow = golem != null ? statInt(golem, Stat.item_slow) : 0;
+    if (slow <= 0) {
+      Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+          ? Riiablo.files.skills.get(pet.skillId) : null;
+      slow = skill != null ? SkillFormula.evaluate(skill.aurastatcalc[0], skill,
+          Math.max(1, pet.skillLevel)) : 0;
+    }
+    if (slow <= 0) return;
+    slow = Math.min(slow, mPlayer.has(event.attacker) ? 50 : 90);
+    Monster target = mMonster.get(event.attacker);
+    if (target != null && (target.rank == MonsterRank.CHAMPION
+        || target.rank == MonsterRank.UNIQUE)) slow = Math.min(slow, 50);
+    StateList states = mUnitStates.get(event.attacker).stateList;
+    if (states == null) return;
+    UnitState slowed = states.addStateLayer(StateId.SLOWED, 750, 1,
+        event.victim, com.riiablo.engine.server.skill.SkillId.CLAY_GOLEM);
+    if (slowed != null) {
+      slowed.setStatContribution(Stat.velocitypercent, 0,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD, -slow);
+      slowed.setStatContribution(Stat.attackrate, 0,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD, -slow);
+      slowed.setStatContribution(Stat.other_animrate, 0,
+          com.riiablo.attributes.NativeStatResolver.Operation.ADD, -slow);
+      slowed.needsSync = true;
+      log.info("[NECRO_CLAY_GOLEM] phase=slow source={} target={} slow={} duration={}",
+          event.victim, event.attacker, slow, 750);
+    }
+  }
+
+  private static int statInt(Attributes attrs, short stat) {
+    StatRef ref = attrs != null ? attrs.get(stat, StatRef.obtain()) : null;
+    return ref != null ? ref.asInt() : 0;
+  }
+
+  /**
+   * D2Game EventFunc26: before incoming melee/missile damage is consumed, a
+   * Blood Golem copies its owner's current life minus Param5's absorbed share.
+   * Param5 is zero in 1.10f, but the life-copy side effect still occurs.
+   */
+  private void applyBloodGolemDamageLink(DamageEvent event) {
+    if ((event.kind != DamageEvent.MELEE && event.kind != DamageEvent.MISSILE)
+        || event.damage <= 0f || !mSummonedPet.has(event.victim)
+        || !mAttributesWrapper.has(event.victim)) return;
+    SummonedPet pet = mSummonedPet.get(event.victim);
+    if (pet == null || pet.skillId != com.riiablo.engine.server.skill.SkillId.BLOOD_GOLEM
+        || !mAttributesWrapper.has(pet.ownerId)) return;
+    Attributes owner = mAttributesWrapper.get(pet.ownerId).attrs;
+    Attributes golem = mAttributesWrapper.get(event.victim).attrs;
+    StatRef ownerLife = owner != null ? owner.get(Stat.hitpoints, StatRef.obtain()) : null;
+    StatRef golemLife = golem != null ? golem.get(Stat.hitpoints, StatRef.obtain()) : null;
+    if (ownerLife == null || golemLife == null || ownerLife.asFixed() < 1f) return;
+
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(pet.skillId) : null;
+    int share = skill != null && skill.Param != null && skill.Param.length > 4
+        ? Math.max(0, skill.Param[4]) : 0;
+    float reduced = Math.max(0f, event.damage) * share / 100f;
+    float linkedLife = Math.max(1f, ownerLife.asFixed() - reduced);
+    golemLife.set(linkedLife);
+    event.damage = Math.max(0f, event.damage - reduced);
+    log.info("[NECRO_BLOOD_GOLEM] phase=damage_link pet={} owner={} kind={} share={} "
+            + "absorbed={} linkedHp={} remaining={}",
+        event.victim, pet.ownerId, event.kind, share, reduced, linkedLife, event.damage);
+  }
+
+  /** D2Game EventFunc23: distribute Blood Golem melee leech to owner and pet. */
+  private void applyBloodGolemLifeLink(DamageEvent event, float physicalDamage) {
+    if (!event.isMelee() || !mSummonedPet.has(event.attacker)) return;
+    SummonedPet pet = mSummonedPet.get(event.attacker);
+    if (pet == null || pet.skillId != com.riiablo.engine.server.skill.SkillId.BLOOD_GOLEM
+        || !mAttributesWrapper.has(event.attacker)) return;
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(pet.skillId) : null;
+    int percent = NecromancerSkills.nativeDiminishingPercent(skill, pet.skillLevel, 0, 1);
+    if (percent <= 0) return;
+    int drain = bloodGolemDrainPercent(event.victim);
+    if (drain <= 0) return;
+    float leechBase = physicalDamage * drain / 100f * percent / 100f;
+    if (leechBase <= 0f) return;
+
+    float ownerShare = skill != null && skill.Param != null && skill.Param.length > 2
+        ? leechBase * Math.max(0, skill.Param[2]) / 100f : 0f;
+    float healedOwner = heal(pet.ownerId, ownerShare);
+    float remaining = Math.max(0f, leechBase - healedOwner);
+    float healedPet = heal(event.attacker, remaining);
+    healedOwner += heal(pet.ownerId, Math.max(0f, remaining - healedPet));
+    log.info("[NECRO_BLOOD_GOLEM] phase=life_link pet={} owner={} target={} physical={} "
+            + "drain={} percent={} petHeal={} ownerHeal={}",
+        event.attacker, pet.ownerId, event.victim, physicalDamage, drain, percent,
+        healedPet, healedOwner);
+  }
+
+  private int bloodGolemDrainPercent(int victimId) {
+    if (mPlayer.has(victimId)) return 100;
+    Monster monster = mMonster.has(victimId) ? mMonster.get(victimId) : null;
+    if (monster == null || monster.monstats == null || monster.monstats.Drain == null) return 0;
+    int difficulty = difficulty();
+    return difficulty < monster.monstats.Drain.length
+        ? Math.max(0, monster.monstats.Drain[difficulty]) : 0;
+  }
+
+  /** Iron Golem's permanent thorns_percent aura uses the native reactive path. */
+  private void applyIronGolemThorns(DamageEvent event) {
+    if (!event.isMelee() || event.attacker < 0 || !mSummonedPet.has(event.victim)
+        || !mAttributesWrapper.has(event.attacker)) return;
+    SummonedPet pet = mSummonedPet.get(event.victim);
+    if (pet == null || pet.skillId != com.riiablo.engine.server.skill.SkillId.IRON_GOLEM
+        || !mAttributesWrapper.has(event.victim)) return;
+    int percent = statInt(mAttributesWrapper.get(event.victim).attrs, Stat.thorns_percent);
+    int raw = (int) Math.floor(Math.min(Math.max(0f, event.physicalDamage),
+        Math.max(0f, event.damage)) * percent / 100f);
+    if (mPlayer.has(event.attacker) || mMercenary.has(event.attacker)) raw /= 8;
+    if (raw <= 0) return;
+    Attributes attacker = mAttributesWrapper.get(event.attacker).attrs;
+    StateList attackerStates = mUnitStates.has(event.attacker)
+        ? mUnitStates.get(event.attacker).stateList : null;
+    CombatSystem.CombatResult reflected = CombatSystem.INSTANCE.calculateFixedPhysicalDamage(
+        attacker, isPlayerAligned(event.attacker), true, raw, attackerStates);
+    if (reflected.totalDamage <= 0) return;
+    DamageEvent reactive = DamageEvent.obtainReactive(
+        event.victim, event.attacker, reflected.totalDamage, reflected.physicalDamage);
+    if (events != null) events.dispatch(reactive);
+    StatRef life = attacker.get(Stat.hitpoints, StatRef.obtain());
+    if (life == null || life.asFixed() <= 0f) return;
+    float before = life.asFixed();
+    life.sub(Math.max(0f, reactive.damage));
+    if (life.asFixed() <= 0f) {
+      life.set(0f);
+      if (events != null) events.dispatch(DeathEvent.obtain(event.victim, event.attacker));
+    }
+    log.info("[NECRO_IRON_GOLEM] phase=thorns pet={} attacker={} percent={} raw={} "
+            + "reflected={} hp={} -> {}",
+        event.victim, event.attacker, percent, raw, reactive.damage, before, life.asFixed());
+  }
+
+  private float heal(int entityId, float requested) {
+    if (entityId < 0 || requested <= 0f || !mAttributesWrapper.has(entityId)) return 0f;
+    Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+    StatRef life = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+    StatRef maximum = attrs != null ? attrs.get(Stat.maxhp, StatRef.obtain()) : null;
+    if (life == null || maximum == null || life.asFixed() <= 0f) return 0f;
+    float healed = Math.min(requested, Math.max(0f, maximum.asFixed() - life.asFixed()));
+    if (healed > 0f) life.add(healed);
+    return healed;
+  }
+
+  /** Native SrvDo066 periodic damage granted to Fire Golem through SumSkill1. */
+  private void processHolyFireAura(int entityId, StateList states) {
+    UnitState aura = states.getState(StateId.HOLYFIRE);
+    if (aura == null || aura.skillId < 0 || !mSummonedPet.has(entityId)
+        || !mPosition.has(entityId) || !isAlive(entityId)) return;
+    if (aura.periodicCountdownFrames > 0) {
+      aura.periodicCountdownFrames--;
+      if (aura.periodicCountdownFrames > 0) return;
+    }
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(aura.skillId) : null;
+    if (skill == null) return;
+    aura.periodicCountdownFrames = Math.max(1, aura.periodicDelayFrames);
+    if (map != null) {
+      Map.Zone zone = map.getZone(mPosition.get(entityId).position.x,
+          mPosition.get(entityId).position.y);
+      if (zone != null && zone.isTown()) return;
+    }
+    int range = Math.max(0, SkillFormula.evaluate(skill.aurarangecalc, skill, aura.level));
+    int[] damageRange = NecromancerSkills.nativeElementalDamageRange(skill, aura.level);
+    if (range <= 0 || damageRange[1] <= 0) return;
+    NativeRng rng = new NativeRng(Riiablo.gameSeed ^ entityId * 0x45D9F3B
+        ^ ++aura.runtimeValue * 0x9E3779B9);
+    IntBag targets = world.getAspectSubscriptionManager()
+        .get(Aspect.all(AttributesWrapper.class, Position.class)).getEntities();
+    Vector2 origin = mPosition.get(entityId).position;
+    int hits = 0;
+    for (int i = 0; i < targets.size(); i++) {
+      int targetId = targets.get(i);
+      if (targetId == entityId || !isAlive(targetId) || !isHostile(entityId, targetId)
+          || origin.dst2(mPosition.get(targetId).position) > range * range) continue;
+      Attributes target = mAttributesWrapper.get(targetId).attrs;
+      int raw = damageRange[0] + rng.nextInt(Math.max(1, damageRange[1] - damageRange[0] + 1));
+      StateList targetStates = mUnitStates.has(targetId)
+          ? mUnitStates.get(targetId).stateList : null;
+      CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+          target, isPlayerAligned(targetId), true, CombatSystem.DAMAGE_FIRE,
+          raw, 0, targetStates, difficulty());
+      applyElementalAbsorb(target, combat.absorbedLife);
+      if (combat.totalDamage <= 0) continue;
+      DamageEvent event = DamageEvent.obtain(entityId, targetId, combat.totalDamage);
+      if (events != null) events.dispatch(event);
+      StatRef hp = target.get(Stat.hitpoints, StatRef.obtain());
+      if (hp == null) continue;
+      hp.sub(Math.max(0f, event.damage));
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        if (events != null) events.dispatch(DeathEvent.obtain(entityId, targetId));
+      }
+      hits++;
+    }
+    log.info("[NECRO_FIRE_GOLEM] phase=holy_fire pet={} skill={} level={} range={} "
+            + "damage={}..{} hits={}",
+        entityId, skill.skill, aura.level, range, damageRange[0], damageRange[1], hits);
   }
 
   /** Consumes Bone Armor after physical resistance but before life is removed. */
@@ -253,6 +471,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
     synchronizeBarbarianPassives(entityId, stateList);
 
+    processHolyFireAura(entityId, stateList);
     processBladeShield(entityId, stateList);
     processSpiderLayTrail(entityId, stateList);
     
@@ -442,7 +661,11 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // 减速状态
     if (stateList.hasState(StateId.SLOWED)) {
       UnitState slowState = stateList.getState(StateId.SLOWED);
-      slowPercent += 25 + slowState.level * 5;
+      // Native EventFunc27 carries velocitypercent in the state stat-list.
+      // Retain the old scalar fallback only for legacy SLOWED producers.
+      if (!slowState.hasStatContribution(Stat.velocitypercent)) {
+        slowPercent += 25 + slowState.level * 5;
+      }
     }
     
     // 衰老诅咒

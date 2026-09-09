@@ -1192,7 +1192,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private int getBaseSkillLevel(int entityId, String name) {
     if (name == null || name.isEmpty() || !mPlayer.has(entityId)
         || mPlayer.get(entityId).data == null) return 0;
-    Skills.Entry skill = Riiablo.files.skills.get(name);
+    Skills.Entry skill = resolveSkill(name);
     return skill != null ? mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id) : 0;
   }
 
@@ -2550,6 +2550,20 @@ public class ServerSkillSystem extends PassiveSystem {
     return null;
   }
 
+  /** Native txt compilation resolves symbolic skill references without preserving case. */
+  private static Skills.Entry resolveSkill(String skillName) {
+    if (skillName == null || skillName.trim().isEmpty()
+        || Riiablo.files == null || Riiablo.files.skills == null) return null;
+    String name = skillName.trim();
+    Skills.Entry skill = Riiablo.files.skills.get(name);
+    if (skill != null) return skill;
+    for (Skills.Entry candidate : Riiablo.files.skills) {
+      if (candidate != null && candidate.skill != null
+          && candidate.skill.equalsIgnoreCase(name)) return candidate;
+    }
+    return null;
+  }
+
   /** D2MOO SrvDo056 and SrvDo057. */
   private void spawnNecromancerGolem(SkillDoEvent event, Skills.Entry skill, int level,
       Vector2 caster, boolean iron) {
@@ -2586,13 +2600,70 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     applySummonSkillStats(event.entityId, petId, skill, level, true);
     applySummonResistance(event.entityId, petId);
+    applySummonGrantedSkills(event.entityId, petId, skill, level);
     if (iron && ground != null) {
       if (mSummonedPet.has(petId)) mSummonedPet.get(petId).sourceItem = ground.item;
+      applyIronGolemSourceItemStats(petId, ground.item);
       world.delete(event.targetId);
     }
     log.info("[NECRO_{}GOLEM] phase=created source={} pet={} summon={} petType={} level={} max={} item={} position=({}, {})",
         iron ? "IRON_" : "", event.entityId, petId, summon.Id, petType, level,
         petMax, iron ? event.targetId : Engine.INVALID_ENTITY, target.x, target.y);
+  }
+
+  /** D2GAME_SetSummonPassiveStats: install SumSkill/SumSkCalc entries. */
+  private void applySummonGrantedSkills(int source, int petId, Skills.Entry summonSkill,
+      int summonLevel) {
+    if (summonSkill == null || summonSkill.sumskill == null || summonSkill.sumskcalc == null
+        || !mUnitStates.has(petId)) return;
+    int count = Math.min(summonSkill.sumskill.length, summonSkill.sumskcalc.length);
+    for (int i = 0; i < count; i++) {
+      String name = summonSkill.sumskill[i];
+      if (name == null || name.isEmpty()) continue;
+      Skills.Entry granted = resolveSkill(name);
+      if (granted == null) continue;
+      int grantedLevel = SkillFormula.evaluate(summonSkill.sumskcalc[i], summonSkill,
+          summonLevel, skill -> getBaseSkillLevel(source, skill));
+      if (grantedLevel <= 0) continue;
+      int stateId = stateId(granted.aurastate);
+      if (stateId == StateId.NONE) continue;
+      UnitStates states = mUnitStates.get(petId);
+      if (states.stateList == null) states.init(petId);
+      UnitState aura = states.stateList.addStateLayer(
+          stateId, 0, grantedLevel, petId, granted.Id);
+      if (aura != null) {
+        aura.periodicDelayFrames = Math.max(1,
+            SkillFormula.evaluate(granted.perdelay, granted, grantedLevel));
+        aura.periodicCountdownFrames = 0;
+        aura.needsSync = true;
+      }
+      log.info("[SUMMON_SKILL] owner={} pet={} sourceSkill={} granted={} level={} state={} delay={}",
+          source, petId, summonSkill.skill, granted.skill, grantedLevel,
+          StateId.getName(stateId), aura != null ? aura.periodicDelayFrames : 0);
+    }
+  }
+
+  /** Native SrvDo057 equips the consumed metal item on the Iron Golem. */
+  private void applyIronGolemSourceItemStats(int petId, Item item) {
+    if (item == null || item.attrs == null || !mAttributesWrapper.has(petId)) return;
+    Attributes pet = mAttributesWrapper.get(petId).attrs;
+    if (pet == null || item.type == null) return;
+    com.riiablo.attributes.AttributesUpdater updater =
+        new com.riiablo.attributes.AttributesUpdater();
+    item.aggFlags |= com.riiablo.attributes.StatListFlags.FLAG_MAGIC
+        | com.riiablo.attributes.StatListFlags.FLAG_RUNE;
+    item.update(updater, pet, null, new com.badlogic.gdx.utils.IntIntMap());
+    updater.update(pet, null).add(item.attrs.remaining()).apply();
+    copyIronGolemBaseStat(pet, item, Stat.armorclass);
+    copyIronGolemBaseStat(pet, item, Stat.mindamage);
+    copyIronGolemBaseStat(pet, item, Stat.maxdamage);
+    log.info("[NECRO_IRON_GOLEM] phase=item_stats pet={} item={} code={} stats={}",
+        petId, item.id, item.code, item.attrs.remaining().size());
+  }
+
+  private static void copyIronGolemBaseStat(Attributes pet, Item item, short stat) {
+    StatRef value = item.attrs.get(stat, StatRef.obtain());
+    if (value != null) pet.aggregate().add(value);
   }
 
   /** D2MOO SrvDo058: revive the original monster entity and move it to the owner's pet list. */
@@ -2715,6 +2786,30 @@ public class ServerSkillSystem extends PassiveSystem {
         if (value != 0) attrs.base().add(stat, value);
       }
     }
+    // D2MOO posts the summon aura stat-list after passive stats.  Keeping the
+    // values on the pet's base aggregate makes the same snapshot visible to
+    // combat, missile and remote clients instead of using hard-coded golem
+    // bonuses in AI code.
+    if (skill.aurastat != null && skill.aurastatcalc != null) {
+      for (int i = 0; i < skill.aurastat.length && i < skill.aurastatcalc.length; i++) {
+        String name = skill.aurastat[i];
+        if (name == null || name.isEmpty()) continue;
+        short stat = Stat.index(name);
+        if (stat < 0) continue;
+        int value = SkillFormula.evaluate(skill.aurastatcalc[i], skill, level,
+            name2 -> getBaseSkillLevel(source, name2));
+        if (value != 0) attrs.base().add(stat, value);
+      }
+    }
+    if (skill.aurastate != null && !skill.aurastate.isEmpty() && mUnitStates.has(petId)) {
+      int stateId = stateId(skill.aurastate);
+      if (stateId != StateId.NONE) {
+        UnitStates unitStates = mUnitStates.get(petId);
+        if (unitStates.stateList == null) unitStates.init(petId);
+        UnitState aura = unitStates.stateList.addStateLayer(stateId, 0, level, source, skill.Id);
+        if (aura != null) aura.needsSync = true;
+      }
+    }
     float maxHp = Math.max(1f, statFixed(attrs, Stat.maxhp));
     int hpPercent = SkillFormula.evaluate(skill.calc1, skill, level,
         name -> getBaseSkillLevel(source, name));
@@ -2722,6 +2817,15 @@ public class ServerSkillSystem extends PassiveSystem {
     attrs.base().put(Stat.maxhp, adjustedHp);
     attrs.base().put(Stat.hitpoints, adjustedHp);
     attrs.reset();
+  }
+
+  private static int stateId(String name) {
+    if (name == null) return StateId.NONE;
+    switch (name.trim().toLowerCase(java.util.Locale.ROOT)) {
+      case "holyfire": return StateId.HOLYFIRE;
+      case "thorns": return StateId.THORNS;
+      default: return StateId.NONE;
+    }
   }
 
   /** D2GAME_SetSummonResistance_6FD0C2E0, with absorb guards. */

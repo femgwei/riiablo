@@ -232,4 +232,8 @@ waypoints, caves, quest rewards and collision boundaries.
     retains the original monster AI and resurrection presentation.
   - Native owner/target distance gates, town suppression, attack chance/cadence and owner-warp
     cache reset are covered without a network-schema change.
-- [ ] Next: Golem hit/passive side effects, then remaining cross-class skill validation.
+- [x] ~~Golem hit/passive side effects and relocation continuity~~
+  - Clay's damaged-in-melee slow, Blood's EventFunc23/26 life paths, Iron's consumed-item
+    aggregation/Thorns and Fire's granted Holy Fire aura now use the native 1.10f fields.
+  - Permanent aura state and the Iron Golem source item survive owner regroup and zone relocation.
+- [ ] Next: Paladin aura authority, same-aura precedence and multiplayer state snapshots.

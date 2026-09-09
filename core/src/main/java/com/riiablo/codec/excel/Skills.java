@@ -63,6 +63,11 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  auralencalc;
     @Column public String  aurarangecalc;
     @Column public int     aurafilter;
+    /** Native unit events installed with the summon/aura stat-list. */
+    @Column(startIndex = 1, endIndex = 4)
+    public String  auraevent[];
+    @Column(startIndex = 1, endIndex = 4)
+    public int     auraeventfunc[];
     @Column(startIndex = 1, endIndex = 7)
     public String  aurastat[];
     @Column(startIndex = 1, endIndex = 7)
@@ -146,6 +151,13 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  summon;
     @Column public String  pettype;
     @Column public String  petmax;
+    /** Skills granted to the summoned unit by D2GAME_SetSummonPassiveStats. */
+    @Column(startIndex = 1, endIndex = 6)
+    public String  sumskill[];
+    @Column(format = "SumSk%sCalc", startIndex = 1, endIndex = 6)
+    public String  sumskcalc[];
+    @Column public int     sumumod;
+    @Column public int     sumoverlay;
     /** Monster animation mode used when a summon is inserted into the world. */
     @Column public String  summode;
     /** Generic server missile spawned by D2GAME_SKILLS_Handler after SrvDoFunc. */

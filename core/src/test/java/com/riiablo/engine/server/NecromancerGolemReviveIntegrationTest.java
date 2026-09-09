@@ -53,6 +53,17 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
           owner, clay.Id, Engine.INVALID_ENTITY, new Vector2(12, 10), 56, 0));
       assertEquals(owner, world.getMapper(SummonedPet.class).get(factory.lastEntity).ownerId);
 
+      Skills.Entry fire = Riiablo.files.skills.get(SkillId.FIRE_GOLEM);
+      world.getMapper(Player.class).get(owner).data.setSkillLevel(SkillId.FIRE_GOLEM, 5);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          owner, fire.Id, Engine.INVALID_ENTITY, new Vector2(12, 11), 56, 0));
+      com.riiablo.engine.server.state.UnitState holyFire = world.getMapper(UnitStates.class)
+          .get(factory.lastEntity).stateList.getState(
+              com.riiablo.engine.server.state.StateId.HOLYFIRE);
+      assertNotNull(holyFire, "Fire Golem must receive native SumSkill1 holy fire");
+      assertEquals(SkillId.HOLY_FIRE, holyFire.skillId);
+      assertTrue(holyFire.level > 0);
+
       com.riiablo.item.Item sword = new ItemGenerator().generate("ssd");
       sword.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
       sword.location = Location.GROUND;
@@ -65,6 +76,14 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
       SummonedPet pet = world.getMapper(SummonedPet.class).get(factory.lastEntity);
       assertNotNull(pet.sourceItem);
       assertTrue(pet.sourceItem == sword, "Iron Golem must retain its source item payload");
+      int weaponMaxDamage = sword.attrs.get(Stat.maxdamage).asInt();
+      assertTrue(weaponMaxDamage > 0);
+      assertEquals(weaponMaxDamage,
+          world.getMapper(AttributesWrapper.class).get(factory.lastEntity).attrs
+              .get(Stat.maxdamage).asInt(),
+          "Iron Golem must aggregate the consumed weapon damage");
+      assertTrue(world.getMapper(UnitStates.class).get(factory.lastEntity).stateList
+          .hasState(com.riiablo.engine.server.state.StateId.THORNS));
       world.process();
       assertFalse(world.getEntityManager().isActive(itemId));
     } finally {

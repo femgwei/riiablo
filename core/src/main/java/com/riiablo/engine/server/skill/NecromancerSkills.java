@@ -654,6 +654,36 @@ public final class NecromancerSkills {
     return 30 + skillLevel * 5;
   }
 
+  /** D2Common 1.10f ord 11033/11034 used by Blood Golem's hit event. */
+  public static int nativeDiminishingPercent(
+      Skills.Entry skill, int skillLevel, int paramIndex, int maximumIndex) {
+    if (skill == null || skill.Param == null || skillLevel <= 0
+        || paramIndex < 0 || maximumIndex < 0
+        || paramIndex >= skill.Param.length || maximumIndex >= skill.Param.length) return 0;
+    int base = skill.Param[paramIndex];
+    int maximum = skill.Param[maximumIndex];
+    int value = base + (int) ((long) (maximum - base) * 110L * skillLevel
+        / (skillLevel + 6L) / 100L);
+    return Math.min(value, maximum);
+  }
+
+  /** Native skill elemental range after HitShift normalization. */
+  public static int[] nativeElementalDamageRange(Skills.Entry skill, int skillLevel) {
+    if (skill == null || skillLevel <= 0) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    long min = Math.max(0L, (long) skill.EMin + damageBonusByLevel(level, skill.EMinLev));
+    long max = Math.max(min, (long) skill.EMax + damageBonusByLevel(level, skill.EMaxLev));
+    int shift = skill.HitShift - 8;
+    if (shift > 0) {
+      min <<= Math.min(shift, 30);
+      max <<= Math.min(shift, 30);
+    } else if (shift < 0) {
+      min >>= Math.min(-shift, 30);
+      max >>= Math.min(-shift, 30);
+    }
+    return new int[] {saturated(min), saturated(max)};
+  }
+
   /**
    * 召唤抗性 - 增强召唤物抗性
    * 
