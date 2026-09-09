@@ -370,38 +370,38 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
     state.clearModifiers();
     switch (code) {
       case 6:
-        state.defenseModifier = Math.max(0, arg0);
+        state.setNativeModifier(Stat.skill_armor_percent, Math.max(0, arg0));
         break;
       case 7:
-        state.attackModifier = Math.max(0, arg0);
-        state.damageModifier = Math.max(0, arg1);
+        state.setNativeModifier(Stat.tohit, Math.max(0, arg0));
+        state.setNativeModifier(Stat.damagepercent, Math.max(0, arg1));
         break;
       case 8:
-        state.fireResistModifier = Math.max(0, arg0);
+        state.setNativeModifier(Stat.fireresist, Math.max(0, arg0));
         break;
       case 9:
-        state.coldResistModifier = Math.max(0, arg0);
+        state.setNativeModifier(Stat.coldresist, Math.max(0, arg0));
         break;
       case 10:
-        state.lightResistModifier = Math.max(0, arg0);
+        state.setNativeModifier(Stat.lightresist, Math.max(0, arg0));
         break;
       case 11:
-        state.poisonResistModifier = Math.max(0, arg0);
+        state.setNativeModifier(Stat.poisonresist, Math.max(0, arg0));
         break;
       case 12:
         // Native state 0x86 supplies +2 to all learned skills; Shrines.txt
         // arguments are deliberately ignored by D2GAME_SHRINES_SkillBoost.
-        state.skillModifier = SKILL_SHRINE_BONUS;
+        state.setNativeModifier(Stat.item_allskills, SKILL_SHRINE_BONUS);
         break;
       case 13:
-        state.manaRecoveryModifier = Math.max(0, arg0);
+        state.setNativeModifier(Stat.manarecoverybonus, Math.max(0, arg0));
         break;
       case 14:
-        state.maxStaminaModifier = Math.max(0, arg0);
-        state.staminaRecoveryModifier = 1000;
+        state.setNativeModifier(Stat.skill_staminapercent, Math.max(0, arg0));
+        state.setNativeModifier(Stat.staminarecoverybonus, 1000);
         break;
       case 15:
-        state.experienceModifier = Math.max(0, arg0);
+        state.setNativeModifier(Stat.item_addexperience, Math.max(0, arg0));
         break;
       default:
         return null;

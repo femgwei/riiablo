@@ -48,6 +48,39 @@ public class StateListTest {
   }
 
   @Test
+  public void setNativeModifierFeedsAggregatesAndExpiresWithState() {
+    StateList states = new StateList(42);
+    UnitState shrine = states.addState(StateId.SHRINE_COMBAT, 2, 1, 7);
+    shrine.setNativeModifier(Stat.damagepercent, 25);
+    shrine.setNativeModifier(Stat.tohit, 15);
+    shrine.setNativeModifier(Stat.lifedrainmaxdam, 7);
+
+    assertEquals(25, states.getTotalDamageModifier());
+    assertEquals(15, states.getTotalAttackModifier());
+    assertEquals(7, states.getTotalLifeLeechModifier());
+    assertEquals(3, shrine.getStatContributions().size());
+
+    states.update();
+    assertEquals(25, states.getTotalDamageModifier());
+    states.update();
+    assertEquals(0, states.getTotalDamageModifier());
+    assertEquals(0, states.getTotalAttackModifier());
+    assertEquals(0, states.getTotalLifeLeechModifier());
+  }
+
+  @Test
+  public void nativeAndLegacyScalarWritesDoNotDoubleCount() {
+    StateList states = new StateList(42);
+    UnitState state = states.addState(StateId.MIGHT, 20, 1, 7);
+    state.setNativeModifier(Stat.damagepercent, 20);
+    state.damageModifier = 40; // legacy writer updates the compatibility view
+
+    assertEquals(40, states.getTotalDamageModifier());
+    assertEquals(1, state.getStatContributions().size());
+    assertEquals(40, state.getStatContributionValue(Stat.damagepercent));
+  }
+
+  @Test
   public void sameStateFromDifferentOwnersRetainsAndRemovesExactLayer() {
     StateList states = new StateList(42);
     UnitState weak = states.addStateLayer(StateId.MIGHT, 25, 1, 7, 98);

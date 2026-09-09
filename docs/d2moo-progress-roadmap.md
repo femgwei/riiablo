@@ -101,7 +101,7 @@
     连续原生怪物 ID，避免控制行造成索引偏移。
   - 五表统一投影报告现可稳定列出原始行列数、D2MOO schema 字段数、额外诊断列及每个
     缺列、重复列、非法 integer/bit 的源行和列；五张真实 1.10f 表均无 schema issue。
-- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 88%）**
+- [ ] **P0-2 原生 Stat/State 聚合和生命周期（约 93%）**
   - 已有 `Attributes + UnitStates`、tick 衰减和部分技能状态；仍需明确永久 stat 与临时
     state stat 两层，并统一 `Base -> Add -> Percent`；堆叠、覆盖、死亡清除和保存规则
     必须由 1.10f 数据及 D2MOO 行为驱动。
@@ -138,8 +138,12 @@
   - 已对齐 D2Game 诅咒 stat-list 首项：状态层记录 source/skill/group/strength，
     同一来源同一技能重施按强度替换或刷新；不同来源同一诅咒独立保留；States.txt
     同组不同诅咒按强度互斥，移除强来源后自动恢复仍有效的次强层；新增可驱散诅咒掩码路径。
-  - 待补：将神殿、战吼、变形和其他 `UnitState` 专用 scalar 全部迁入统一 stat source，
-    并继续对照每个具体诅咒技能的 stat/value 公式。
+  - 已迁移神殿增益、德鲁伊 Feral Rage/Maul、野蛮人 Frenzy 和 Berserk 的主要 scalar
+    写入；这些路径现在通过 `setNativeModifier` 保持原生 stat/layer 与旧网络字段同步，
+    状态到期后可由统一聚合自动撤销。
+  - 待补：战吼、变形、刺客蓄力及其他 `UnitState` 专用 scalar 的逐项迁移，并继续对照
+    每个具体诅咒技能的 stat/value 公式；刺客蓄力的 velocity 字段仍是层数语义，不能直接
+    当作移动速度 stat。
 - [ ] **P0-3 Unit 生命周期（约 84%）**
   - 玩家、怪物、NPC、佣兵和召唤物已有 ECS 模型；新增 `UnitLifecycle` 阶段标记和
     `UnitLifecycleSystem`，统一处理 `DeathEvent` 幂等边界。

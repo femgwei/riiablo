@@ -215,8 +215,8 @@ public final class BarbarianSkills {
     if (state == null) return null;
     state.skillId = skill.Id;
     state.runtimeValue = stacks;
-    state.velocityModifier = getFrenzyMovementPercent(skill, stacks);
-    state.animationRateModifier = getFrenzyAnimationRatePercent(skill, stacks);
+    state.setNativeModifier(Stat.velocitypercent, getFrenzyMovementPercent(skill, stacks));
+    state.setNativeModifier(Stat.attackrate, getFrenzyAnimationRatePercent(skill, stacks));
     state.needsSync = true;
     return state;
   }

@@ -354,6 +354,39 @@ public class UnitState {
     projectLegacyModifier(statId);
   }
 
+  /** Writes a compatibility scalar and its native source-owned stat layer together. */
+  public void setNativeModifier(int statId, int value) {
+    setStatContribution(statId, 0, NativeStatResolver.Operation.ADD, value);
+    switch (statId) {
+      case Stat.damagepercent: damageModifier = value; break;
+      case Stat.skill_armor_percent:
+      case Stat.item_armor_percent:
+      case Stat.armorclass: defenseModifier = value; break;
+      case Stat.tohit:
+      case Stat.item_tohit_percent: attackModifier = value; break;
+      case Stat.velocitypercent: velocityModifier = value; break;
+      case Stat.attackrate:
+      case Stat.other_animrate: animationRateModifier = value; break;
+      case Stat.fireresist: fireResistModifier = value; break;
+      case Stat.coldresist: coldResistModifier = value; break;
+      case Stat.lightresist: lightResistModifier = value; break;
+      case Stat.poisonresist: poisonResistModifier = value; break;
+      case Stat.magicresist: magicResistModifier = value; break;
+      case Stat.item_allskills: skillModifier = value; break;
+      case Stat.item_addexperience: experienceModifier = value; break;
+      case Stat.item_maxhp_percent: maxLifeModifier = value; break;
+      case Stat.item_maxmana_percent: maxManaModifier = value; break;
+      case Stat.skill_staminapercent:
+      case Stat.skill_passive_staminapercent: maxStaminaModifier = value; break;
+      case Stat.lifedrainmindam:
+      case Stat.lifedrainmaxdam: lifeLeechModifier = value; break;
+      case Stat.stunlength: stunLength = value; break;
+      case Stat.manarecoverybonus: manaRecoveryModifier = value; break;
+      case Stat.staminarecoverybonus: staminaRecoveryModifier = value; break;
+      default: break;
+    }
+  }
+
   public int getStatContributionValue(int statId) {
     int value = 0;
     for (StatContribution contribution : statContributions) {

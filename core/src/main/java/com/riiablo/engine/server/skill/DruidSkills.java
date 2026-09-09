@@ -425,11 +425,17 @@ public final class DruidSkills {
       switch (stat.toLowerCase(Locale.ROOT)) {
         case "velocitypercent": state.velocityModifier += value; break;
         case "lifedrainmindam":
+          state.setNativeModifier(
+              Stat.lifedrainmindam, Math.max(state.lifeLeechModifier, value));
+          break;
         case "lifedrainmaxdam":
-          state.lifeLeechModifier = Math.max(state.lifeLeechModifier, value);
+          state.setNativeModifier(
+              Stat.lifedrainmaxdam, Math.max(state.lifeLeechModifier, value));
           break;
         case "damagepercent": state.damageModifier += value; break;
-        case "stunlength": state.stunLength = Math.max(state.stunLength, value); break;
+        case "stunlength":
+          state.setNativeModifier(Stat.stunlength, Math.max(state.stunLength, value));
+          break;
         default:
           log.warn("[DRUID_FERAL_MAUL] ignored AuraStat skill={} stat={}", skill.skill, stat);
           break;

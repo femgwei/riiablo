@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.Pool;
 
 import com.riiablo.codec.excel.States;
 import com.riiablo.attributes.NativeStatResolver;
+import com.riiablo.attributes.Stat;
 import com.riiablo.item.Item;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -691,43 +692,77 @@ public class StateList {
 
   public int getTotalLifeLeechModifier() {
     int total = 0;
-    for (UnitState state : states) total += state.lifeLeechModifier;
+    for (UnitState state : states) {
+      if (state.hasStatContribution(Stat.lifedrainmindam)
+          || state.hasStatContribution(Stat.lifedrainmaxdam)) {
+        // D2 stores min/max leech in separate stat rows; the compatibility
+        // scalar represents the effective (strongest) value for this state.
+        total += Math.max(
+            state.getStatContributionValue(Stat.lifedrainmindam),
+            state.getStatContributionValue(Stat.lifedrainmaxdam));
+      } else {
+        total += state.lifeLeechModifier;
+      }
+    }
     return Math.max(0, total);
   }
 
   public int getTotalStunLength() {
     int maximum = 0;
-    for (UnitState state : states) maximum = Math.max(maximum, state.stunLength);
+    for (UnitState state : states) {
+      int value = state.hasStatContribution(Stat.stunlength)
+          ? state.getStatContributionValue(Stat.stunlength) : state.stunLength;
+      maximum = Math.max(maximum, value);
+    }
     return maximum;
   }
 
   public int getTotalSkillModifier() {
     int total = 0;
-    for (UnitState state : states) total += state.skillModifier;
+    for (UnitState state : states) {
+      total += state.hasStatContribution(Stat.item_allskills)
+          ? state.getStatContributionValue(Stat.item_allskills) : state.skillModifier;
+    }
     return total;
   }
 
   public int getTotalExperienceModifier() {
     int total = 0;
-    for (UnitState state : states) total += state.experienceModifier;
+    for (UnitState state : states) {
+      total += state.hasStatContribution(Stat.item_addexperience)
+          ? state.getStatContributionValue(Stat.item_addexperience) : state.experienceModifier;
+    }
     return total;
   }
 
   public int getTotalMaxLifeModifier() {
     int total = 0;
-    for (UnitState state : states) total += state.maxLifeModifier;
+    for (UnitState state : states) {
+      total += state.hasStatContribution(Stat.item_maxhp_percent)
+          ? state.getStatContributionValue(Stat.item_maxhp_percent) : state.maxLifeModifier;
+    }
     return total;
   }
 
   public int getTotalMaxManaModifier() {
     int total = 0;
-    for (UnitState state : states) total += state.maxManaModifier;
+    for (UnitState state : states) {
+      total += state.hasStatContribution(Stat.item_maxmana_percent)
+          ? state.getStatContributionValue(Stat.item_maxmana_percent) : state.maxManaModifier;
+    }
     return total;
   }
 
   public int getTotalMaxStaminaModifier() {
     int total = 0;
-    for (UnitState state : states) total += state.maxStaminaModifier;
+    for (UnitState state : states) {
+      int value = state.hasStatContribution(Stat.skill_staminapercent)
+          ? state.getStatContributionValue(Stat.skill_staminapercent)
+          : state.hasStatContribution(Stat.skill_passive_staminapercent)
+              ? state.getStatContributionValue(Stat.skill_passive_staminapercent)
+              : state.maxStaminaModifier;
+      total += value;
+    }
     return total;
   }
 

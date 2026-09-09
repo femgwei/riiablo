@@ -2421,7 +2421,7 @@ public class Actioneer extends PassiveSystem {
       if (state != null) {
         state.skillId = casting.skillId;
         // D2MOO's berserk stat list contributes -100% defense while active.
-        state.defenseModifier = -100;
+        state.setNativeModifier(Stat.skill_armor_percent, -100);
         state.needsSync = true;
       }
     }
