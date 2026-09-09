@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.riiablo.Riiablo;
@@ -8,6 +9,8 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.pet.PetType;
+import com.riiablo.engine.server.ai.AI;
+import com.riiablo.engine.server.ai.NecroPet;
 import com.riiablo.engine.server.skill.SkillId;
 import org.junit.jupiter.api.Test;
 
@@ -44,8 +47,13 @@ class NativeNecromancerSummonDataTest extends RiiabloTest {
       if (ids[i] != SkillId.REVIVE) {
         assertTrue(skill.summon != null && !skill.summon.isEmpty(),
             skill.skill + " summon row missing");
-        assertNotNull(findMonster(skill.summon),
+        MonStats.Entry summon = findMonster(skill.summon);
+        assertNotNull(summon,
             skill.skill + " summon MonStats row missing: " + skill.summon);
+        assertEquals("NecroPet", summon.AI,
+            skill.skill + " must use native AITHINK_Fn067_NecroPet");
+        assertTrue(AI.findAI(-1, summon.AI) instanceof NecroPet,
+            skill.skill + " must not fall through GenericMonster");
       }
       assertTrue(skill.pettype != null && !skill.pettype.isEmpty(),
           skill.skill + " PetType missing");

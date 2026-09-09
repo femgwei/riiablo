@@ -34,6 +34,17 @@ class MonsterAiParamParityTest {
   }
 
   @Test
+  void necroPetRangesAndCadenceMatchD2Moo() {
+    assertEquals(28f, NecroPet.REGROUP_DISTANCE);
+    assertEquals(24f, NecroPet.ORDINARY_SCAN_DISTANCE);
+    assertEquals(6f, NecroPet.ORDINARY_KEEP_DISTANCE);
+    assertEquals(36f, NecroPet.OWNER_TARGET_DISTANCE);
+    assertEquals(15f, NecroPet.SKILL_SCAN_DISTANCE);
+    assertEquals(20f, NecroPet.SKILL_OWNER_TARGET_DISTANCE);
+    assertEquals(10f / 25f, NecroPet.THINK_DELAY);
+  }
+
+  @Test
   void bruteParamsMatchD2Moo() {
     assertEquals(2, Brute.PARAM_ATTACK_CHANCE);
     assertEquals(3, Brute.PARAM_ATTACK1_OR_2_CHANCE);

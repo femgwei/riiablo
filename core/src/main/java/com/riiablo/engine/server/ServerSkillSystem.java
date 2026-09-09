@@ -2607,7 +2607,7 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     // ServerEntityFactory reserves Corpse.usable before restoring any state,
     // making the in-place conversion idempotent within this fixed tick.
-    if (!factory.resurrectMonster(corpseId, event.entityId)) {
+    if (!factory.reviveMonster(corpseId, event.entityId)) {
       log.warn("[NECRO_REVIVE] phase=rollback source={} corpse={} reason=restore_failed",
           event.entityId, corpseId);
       return;

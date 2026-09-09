@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.ai.NecroPet;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Location;
@@ -33,6 +34,14 @@ import org.junit.jupiter.api.Test;
 
 /** Native SrvDo056/057/058 summon integration. */
 class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
+  @Test
+  void playerReviveUsesSpecialNecroPetAiWithoutChangingOrdinaryRaiseAi() {
+    com.riiablo.codec.excel.MonStats.Entry row = firstReviveableNonNecroPetMonster();
+    assertTrue(ServerEntityFactory.restoredMonsterAi(17, row, true) instanceof NecroPet);
+    assertFalse(ServerEntityFactory.restoredMonsterAi(17, row, false) instanceof NecroPet,
+        "Shaman/self resurrection must retain the monster's ordinary AI");
+  }
+
   @Test
   void golemAndIronGolemCreateOwnedPetsAndConsumeOnlyMetalItem() {
     RecordingFactory factory = new RecordingFactory();
@@ -83,12 +92,16 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
 
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           owner, revive.Id, corpse, new Vector2(12, 10), 58, 0));
+      assertTrue(factory.playerReviveRequested,
+          "SrvDo058 must use the dedicated player-Revive restoration path");
       assertFalse(world.getMapper(Corpse.class).has(corpse));
       assertEquals(owner, world.getMapper(SummonedPet.class).get(corpse).ownerId);
       assertTrue(world.getMapper(NativeUnitFlags.class).get(corpse)
           .has(NativeUnitFlags.PLAYER_SUMMON | NativeUnitFlags.IS_REVIVE));
       assertTrue(world.getMapper(UnitStates.class).get(corpse).stateList
           .hasState(com.riiablo.engine.server.state.StateId.REVIVE));
+      assertTrue(world.getMapper(Monster.class).get(corpse).monstats == row,
+          "Revive must preserve the corpse's original MonStats and skill slots");
     } finally {
       world.dispose();
     }
@@ -119,6 +132,14 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
     throw new AssertionError("1.10f contains no reviveable monster row");
   }
 
+  private static com.riiablo.codec.excel.MonStats.Entry firstReviveableNonNecroPetMonster() {
+    for (com.riiablo.codec.excel.MonStats.Entry row : Riiablo.files.monstats) {
+      com.riiablo.codec.excel.MonStats2.Entry row2 = Riiablo.files.monstats2.get(row.MonStatsEx);
+      if (row2 != null && row2.revive && !"NecroPet".equals(row.AI)) return row;
+    }
+    throw new AssertionError("1.10f contains no non-NecroPet reviveable monster row");
+  }
+
   private static Attributes attributes(int level, float hp, float maxHp) {
     Attributes attrs = Attributes.obtainStandard();
     attrs.base().put(Stat.level, level);
@@ -130,6 +151,7 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
 
   private static final class RecordingFactory extends EntityFactory {
     int lastEntity = Engine.INVALID_ENTITY;
+    boolean playerReviveRequested;
 
     @Override public int createSummonedPet(int ownerId,
         com.riiablo.codec.excel.MonStats.Entry summon, String petType, int skillId,
@@ -157,6 +179,11 @@ class NecromancerGolemReviveIntegrationTest extends RiiabloTest {
       attrs.base().put(Stat.hitpoints, attrs.get(Stat.maxhp).asFixed());
       attrs.reset();
       return true;
+    }
+
+    @Override public boolean reviveMonster(int monsterId, int ownerId) {
+      playerReviveRequested = true;
+      return resurrectMonster(monsterId, ownerId);
     }
 
     @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }

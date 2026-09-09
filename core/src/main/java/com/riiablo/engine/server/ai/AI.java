@@ -720,7 +720,7 @@ public abstract class AI implements Interactable.Interactor {
     return findNearestTargetWithAidist(outDistance);
   }
 
-  private int summonOwnerTarget() {
+  protected int summonOwnerTarget() {
     if (!mSummonedPet.has(entityId)) return Engine.INVALID_ENTITY;
     SummonedPet pet = mSummonedPet.get(entityId);
     if (pet == null || pet.ownerId == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;
@@ -770,7 +770,7 @@ public abstract class AI implements Interactable.Interactor {
     return maxSearchDist;
   }
 
-  private int findNearestOrdinaryEnemy(float[] outDistance, float maxSearchDist) {
+  protected int findNearestOrdinaryEnemy(float[] outDistance, float maxSearchDist) {
     Vector2 entityPos = mPosition.get(entityId).position;
     int targetId = Engine.INVALID_ENTITY;
     float best = Float.MAX_VALUE;

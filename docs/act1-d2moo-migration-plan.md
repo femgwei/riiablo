@@ -226,4 +226,10 @@ waypoints, caves, quest rewards and collision boundaries.
     RoomEx, deterministic walkable landing expansion and stale target/cast/path cleanup are covered.
   - Passive walls/decoys and stationary traps do not use ordinary same-zone regroup; non-warp pets
     are removed at a level boundary, matching their PetType policy.
-- [ ] Next: Revive/Golem specialized AI and remaining cross-class skill validation.
+- [x] ~~Revive/Golem specialized AI and ordinary-resurrection isolation~~
+  - Four native Golem rows now resolve `NecroPet`; player Revive preserves the corpse's
+    MonStats/skill slots but uses the revived special-AI path, while Shaman/self resurrection
+    retains the original monster AI and resurrection presentation.
+  - Native owner/target distance gates, town suppression, attack chance/cadence and owner-warp
+    cache reset are covered without a network-schema change.
+- [ ] Next: Golem hit/passive side effects, then remaining cross-class skill validation.

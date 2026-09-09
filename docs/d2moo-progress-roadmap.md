@@ -1064,8 +1064,23 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     真实 1.10f `offscreenCamp` 输出 `[OFFSCREEN_CAMP] result=PASS`。未修改网络 schema
     或生成网络文件。
 
-下一项：核对 Revive 是否保留原怪物 AI/技能槽与原生限制，并补齐 Clay/Blood/Iron/Fire
-Golem 的专属目标、攻击节奏、元素/吸血副作用和跨区后的状态连续性。
+- [x] ~~完成 Revive/NecroPet 原生特殊 AI 与普通复活路径隔离~~
+  - 新增 `NecroPet`，对齐 D2MOO `AITHINK_Fn067_NecroPet/sub_6FCE3740` 的 28 格主人
+    regroup、24/6 格普通目标、36 格主人目标、15/20 格技能分支、80% 攻击概率和
+    10-frame 思考节奏；城镇内只跟随，不攻击。
+  - 四类 Golem 的 `MonStats.AI=NecroPet` 现在命中专用实现，不再进入
+    `GenericMonster`；进行中的 Casting/Sequence 不会被下一次 AI think 覆盖，主人
+    Warp 后清理 AI 内部目标和计时。
+  - 玩家 `SrvDo058 Revive` 使用独立 `reviveMonster` 恢复入口，保留原尸体
+    `MonStats/Skill1..8`，但切换至 `AISPECIALSTATE_REVIVED` 对应的 `NecroPet`；不会再
+    误播原怪物 `ResurrectSkill`。Fallen Shaman/怪物自复活仍走原 AI、模式和技能链。
+  - `NativeNecromancerSummonDataTest`、`NecromancerGolemReviveIntegrationTest`、
+    `SummonOwnerWarpTest`、`MonsterAiParamParityTest` 和
+    `FallenShamanAutoCombatIntegrationTest` 通过；D2GS 编译及 1.10f `offscreenCamp`
+    作为本模块提交门槛执行，未修改 FlatBuffers schema 或生成网络文件。
+
+下一项：补齐 Clay Golem 命中减速、Blood Golem 生命分配、Iron Golem 来源物品属性
+聚合，以及 Fire Golem 原生元素/光环副作用，并验证跨区后状态连续性。
 
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方

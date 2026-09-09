@@ -13,6 +13,7 @@ import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.Riiablo;
 import com.riiablo.engine.server.ai.AI;
+import com.riiablo.engine.server.ai.NecroPet;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
@@ -611,6 +612,15 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override
   public boolean resurrectMonster(int monsterId, int sourceId) {
+    return restoreMonster(monsterId, sourceId, false);
+  }
+
+  @Override
+  public boolean reviveMonster(int monsterId, int ownerId) {
+    return restoreMonster(monsterId, ownerId, true);
+  }
+
+  private boolean restoreMonster(int monsterId, int sourceId, boolean playerRevive) {
     boolean hasMonster = mMonster.has(monsterId);
     boolean hasAttributes = mAttributesWrapper.has(monsterId);
     boolean hasPosition = mPosition.has(monsterId);
@@ -675,7 +685,10 @@ public class ServerEntityFactory extends EntityFactory {
     mMovementModes.create(monsterId).set(
         Engine.Monster.MODE_NU, Engine.Monster.MODE_WL, Engine.Monster.MODE_RN);
 
-    AI ai = mAIWrapper.create(monsterId).findAI(monsterId, monster.monstats.AI).ai;
+    mCasting.remove(monsterId);
+    mSequence.remove(monsterId);
+    AI ai = restoredMonsterAi(monsterId, monster.monstats, playerRevive);
+    mAIWrapper.create(monsterId).ai = ai;
     world.getInjector().inject(ai);
     ai.initialize();
     if (monster.monstats.interact && mSize.has(monsterId)) {
@@ -683,39 +696,55 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     int resurrectMode = Engine.Monster.MODE_NU;
-    String configuredMode = monster.monstats2.ResurrectMode;
-    if (configuredMode != null && !configuredMode.isEmpty()) {
-      int mode = Riiablo.files.MonMode.index(configuredMode);
-      if (mode >= 0 && mode < 16) resurrectMode = mode;
-    }
-    mSequence.create(monsterId).sequence((byte) resurrectMode, Engine.Monster.MODE_NU);
-
-    String configuredSkill = monster.monstats2.ResurrectSkill;
-    Skills.Entry resurrectSkill = configuredSkill == null || configuredSkill.isEmpty()
-        ? null : Riiablo.files.skills.get(configuredSkill);
-    if (resurrectSkill != null) {
-      Vector2 position = mPosition.get(monsterId).position;
-      mCasting.create(monsterId).set(
-          resurrectSkill.Id, monsterId, position);
-      if (events != null) {
-        events.dispatch(SkillStartEvent.obtain(
-            monsterId, resurrectSkill.Id, monsterId, position.cpy(),
-            resurrectSkill.srvstfunc, resurrectSkill.cltstfunc));
-      } else {
-        log.warn("[MONSTER_SELF_RESURRECT] phase=event_bus_missing entity={} skill={} srvStFunc={}",
-            monsterId, configuredSkill, resurrectSkill.srvstfunc);
+    String configuredSkill = "";
+    if (playerRevive) {
+      // Native SrvDo058 enters neutral immediately and switches to
+      // AISPECIALSTATE_REVIVED. It must not replay the monster's own
+      // ResurrectSkill (used by self-resurrecting monsters and Shamans).
+      if (mCofReference.has(monsterId)) {
+        mCofReference.get(monsterId).mode = Engine.Monster.MODE_NU;
       }
-    } else if (configuredSkill != null && !configuredSkill.isEmpty()) {
-      log.warn("[MONSTER_SELF_RESURRECT] phase=skill_lookup_failed entity={} skill={}",
-          monsterId, configuredSkill);
+    } else {
+      String configuredMode = monster.monstats2.ResurrectMode;
+      if (configuredMode != null && !configuredMode.isEmpty()) {
+        int mode = Riiablo.files.MonMode.index(configuredMode);
+        if (mode >= 0 && mode < 16) resurrectMode = mode;
+      }
+      mSequence.create(monsterId).sequence((byte) resurrectMode, Engine.Monster.MODE_NU);
+
+      configuredSkill = monster.monstats2.ResurrectSkill;
+      Skills.Entry resurrectSkill = configuredSkill == null || configuredSkill.isEmpty()
+          ? null : Riiablo.files.skills.get(configuredSkill);
+      if (resurrectSkill != null) {
+        Vector2 position = mPosition.get(monsterId).position;
+        mCasting.create(monsterId).set(
+            resurrectSkill.Id, monsterId, position);
+        if (events != null) {
+          events.dispatch(SkillStartEvent.obtain(
+              monsterId, resurrectSkill.Id, monsterId, position.cpy(),
+              resurrectSkill.srvstfunc, resurrectSkill.cltstfunc));
+        } else {
+          log.warn("[MONSTER_SELF_RESURRECT] phase=event_bus_missing entity={} skill={} srvStFunc={}",
+              monsterId, configuredSkill, resurrectSkill.srvstfunc);
+        }
+      } else if (configuredSkill != null && !configuredSkill.isEmpty()) {
+        log.warn("[MONSTER_SELF_RESURRECT] phase=skill_lookup_failed entity={} skill={}",
+            monsterId, configuredSkill);
+      }
     }
 
     log.info("[MONSTER_RAISE] phase=restored source={} target={} monster={} hp={} "
-            + "mode={} resurrectSkill={} position=({}, {})",
+            + "mode={} resurrectSkill={} playerRevive={} ai={} position=({}, {})",
         sourceId, monsterId, monster.monstats.Id, hitpoints.asFixed(), resurrectMode,
-        monster.monstats2.ResurrectSkill,
+        configuredSkill, playerRevive, ai.getClass().getSimpleName(),
         mPosition.get(monsterId).position.x, mPosition.get(monsterId).position.y);
     return true;
+  }
+
+  static AI restoredMonsterAi(int monsterId, MonStats.Entry monstats, boolean playerRevive) {
+    return playerRevive
+        ? new NecroPet(monsterId)
+        : AI.findAI(monsterId, monstats != null ? monstats.AI : null);
   }
 
   @Override

@@ -35,4 +35,18 @@ class SummonOwnerWarpTest {
     assertEquals(0f, ai.time);
     assertEquals("IDLE", ai.getState());
   }
+
+  @Test
+  void necroPetDropsCachedTargetAfterOwnerWarp() {
+    NecroPet ai = new NecroPet(9);
+    ai.targetId = 93;
+    ai.nextThink = 4f;
+    ai.state = "APPROACH";
+
+    ai.onOwnerWarp();
+
+    assertEquals(Engine.INVALID_ENTITY, ai.targetId);
+    assertEquals(0f, ai.nextThink);
+    assertEquals("IDLE", ai.getState());
+  }
 }

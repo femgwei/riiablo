@@ -142,6 +142,15 @@ public abstract class EntityFactory extends PassiveSystem {
     return false;
   }
 
+  /**
+   * Converts a corpse into a player-owned Revive pet. Authoritative factories
+   * override this so the ordinary monster/self-resurrection animation path is
+   * not reused for the native {@code AISPECIALSTATE_REVIVED} transition.
+   */
+  public boolean reviveMonster(int monsterId, int ownerId) {
+    return resurrectMonster(monsterId, ownerId);
+  }
+
   /** Executes native Skills.txt SrvSt61 for a monster's resurrection animation. */
   public boolean selfResurrectMonster(int monsterId) {
     return false;
