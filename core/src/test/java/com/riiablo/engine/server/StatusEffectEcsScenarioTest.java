@@ -130,6 +130,41 @@ class StatusEffectEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
+  void multipleDotStatesInOneTickProduceOneLethalDeath() {
+    Probe probe = new Probe();
+    NoopFactory factory = new NoopFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), probe, new StateUpdater(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int source = createPlayer(world, 0, 0);
+      int target = createMonster(world, 10, 10, 5, 0);
+      StateUpdater updater = world.getSystem(StateUpdater.class);
+      updater.applyState(target, StateId.POISON, 20, 1, source,
+          6, CombatSystem.DAMAGE_POISON);
+      updater.applyState(target, StateId.BURNING, 20, 1, source,
+          6, CombatSystem.DAMAGE_FIRE);
+
+      world.process();
+      assertEquals(0f, hitpoints(world, target), 0.001f,
+          "the first lethal DOT must clamp life to zero");
+      assertEquals(1, probe.damageEvents,
+          "a later DOT in the same tick must see the dead target and stop");
+      assertEquals(1, probe.deathEvents,
+          "multiple DOT states cannot emit duplicate DeathEvent rewards");
+
+      world.process();
+      assertEquals(1, probe.damageEvents,
+          "a dead target must not receive DOT damage on later ticks");
+      assertEquals(1, probe.deathEvents,
+          "DeathEvent remains idempotent after the lethal tick");
+    } finally {
+      world.dispose();
+      StatusEffectApplier.INSTANCE.setStateSink(null);
+    }
+  }
+
+  @Test
   void strongerDotReplacesWeakerButWeakerDotCannotReplaceStronger() {
     NoopFactory factory = new NoopFactory();
     StateUpdater updater = new StateUpdater();

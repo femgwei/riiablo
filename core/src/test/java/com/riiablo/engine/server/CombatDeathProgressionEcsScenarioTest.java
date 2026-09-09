@@ -112,6 +112,15 @@ class CombatDeathProgressionEcsScenarioTest extends RiiabloTest {
           .set(missileRow, new Vector2(), 100).setOwner(player);
       world.getMapper(Position.class).create(missile).position.set(20, 30);
       world.getMapper(Velocity.class).create(missile).velocity.setZero();
+      // Two authoritative missiles can overlap a low-life target in one sim
+      // tick (fan skills and network-queued casts make this a real boundary).
+      // The second collision must observe hp==0 and must not emit a duplicate
+      // death/reward event.
+      int trailingMissile = world.create();
+      world.getMapper(Missile.class).create(trailingMissile)
+          .set(missileRow, new Vector2(), 100).setOwner(player);
+      world.getMapper(Position.class).create(trailingMissile).position.set(20, 30);
+      world.getMapper(Velocity.class).create(trailingMissile).velocity.setZero();
       world.setDelta(1f / 60f);
 
       long expBefore = data.getStats().aggregate().getValue(Stat.experience, 0L);

@@ -679,20 +679,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         world.delete(missileId);
         return true;
       }
-      if (missile.attached) {
-        int nextFrame = missile.nextHitFrame.get(targetId, Integer.MIN_VALUE);
-        if (missile.nativeFrame < nextFrame) return false;
-        // With NextHit set, D2MOO installs JUSTHIT for NextDelay frames. If
-        // it is clear, the collision may be evaluated again on the next game
-        // frame (the blade still needs to be able to hit on its return pass).
-        int delay = missile.missile != null && missile.missile.NextHit
-            ? Math.max(1, missile.missile.NextDelay) : 1;
-        missile.nextHitFrame.put(targetId, missile.nativeFrame + delay);
-      } else if (!missile.hitTargets.add(targetId)) {
-        // A piercing projectile must never repeatedly damage the same unit on
-        // consecutive frames while its swept segment overlaps the target.
-        return false;
-      }
+      if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) return false;
       if (mMercenary.has(missile.ownerId)) mercenaryCollisionCount++;
 
       log.info("[MISSILE_HIT] phase=collision missileId={} missile={} owner={} target={} "
@@ -700,13 +687,6 @@ public class MissileCollisionSystem extends IteratingSystem {
           missileId, missile.missile != null ? missile.missile.Missile : "unknown",
           missile.ownerId, targetId, distance, collisionRadius,
           missilePos.x, missilePos.y, missile.distanceTraveled, missile.range);
-
-      // D2 radial/fan skills create many missiles for one activation. Resolve
-      // a target only once for that cast so overlapping launch paths cannot
-      // multiply the same hit dozens of times.
-      if (missile.sharedHitTargets != null && !missile.sharedHitTargets.add(targetId)) {
-        return false;
-      }
 
       if (missile.missile != null && missile.missile.pSrvHitFunc == 4) {
         spawnAmazonExplosion(missile, missilePos);
@@ -884,6 +864,44 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /**
+   * Applies the native per-projectile/per-cast hit gate.
+   *
+   * <p>D2MOO stores {@code JUSTHIT} on the target Unit, not on one missile, so
+   * every NextHit projectile observes the same target-wide delay. An attached
+   * missile without NextHit may be evaluated again on the next game frame.
+   * Non-attached missiles keep a lifetime hit set so a piercing path cannot
+   * damage the same unit repeatedly. The shared cast set is checked last.</p>
+   */
+  static boolean claimTargetHit(Missile missile, int targetId, StateList targetStates) {
+    if (missile == null || targetId < 0) return false;
+    boolean nextHit = missile.missile != null && missile.missile.NextHit;
+    if (nextHit && targetStates != null && targetStates.hasState(StateId.JUSTHIT)) return false;
+    if (missile.attached) {
+      if (!nextHit) {
+        int nextFrame = missile.nextHitFrame.get(targetId, Integer.MIN_VALUE);
+        if (missile.nativeFrame < nextFrame) return false;
+        missile.nextHitFrame.put(targetId, missile.nativeFrame + 1);
+      }
+    } else if (!missile.hitTargets.add(targetId)) {
+      // A piercing projectile must never repeatedly damage the same unit on
+      // consecutive frames while its swept segment overlaps the target.
+      return false;
+    }
+    if (missile.sharedHitTargets != null && !missile.sharedHitTargets.add(targetId)) return false;
+    if (nextHit && targetStates != null) {
+      targetStates.addState(StateId.JUSTHIT, Math.max(1, missile.missile.NextDelay),
+          1, missile.ownerId);
+    }
+    return true;
+  }
+
+  private StateList targetHitStates(Missile missile, int targetId) {
+    boolean nextHit = missile != null && missile.missile != null && missile.missile.NextHit;
+    if (nextHit && !mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    return stateList(targetId);
   }
 
   /** Resolves the authoritative difficulty from the projectile's current map.

@@ -333,8 +333,10 @@ class AssassinSkillSpecializationTest extends RiiabloTest {
       assertTrue(reachedTarget, "Blade Creeper must reach the selected endpoint");
       assertTrue(startedReturn, "Blade Creeper must switch back toward its cast origin");
       assertEquals(1, factory.missiles, "Blade Creeper creates one attached missile only");
-      assertTrue(bladeMissile.nextHitFrame.containsKey(target),
-          "the attached blade applies native per-target NextHit suppression");
+      assertTrue(world.getMapper(UnitStates.class).has(target),
+          "a NextHit collision creates the target's native JUSTHIT state list");
+      assertTrue(world.getMapper(UnitStates.class).get(target).stateList.hasState(StateId.JUSTHIT),
+          "the attached blade applies target-wide native JUSTHIT suppression");
       assertTrue(world.getEntityManager().isActive(factory.missileEntityId),
           "SrvHit37 unit collisions must not destroy Blade Creeper");
 

@@ -10,10 +10,12 @@ import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.map.DT1;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -108,6 +110,61 @@ class MissileNativePolicyTest {
         new Vector2(1, 2), new Vector2(1, 2), 0f, 0f, 1f, endpoint);
     assertEquals(1f, endpoint.x, 0.001f);
     assertEquals(2f, endpoint.y, 0.001f);
+  }
+
+  @Test
+  void nextHitAndNextDelayGateAttachedMissilesPerNativeFrame() {
+    Missile missile = new Missile();
+    missile.attached = true;
+    missile.missile = new Missiles.Entry();
+    missile.missile.NextHit = true;
+    missile.missile.NextDelay = 3;
+    StateList targetStates = new StateList(7);
+
+    missile.nativeFrame = 10;
+    assertTrue(MissileCollisionSystem.claimTargetHit(missile, 7, targetStates));
+    assertFalse(MissileCollisionSystem.claimTargetHit(missile, 7, targetStates),
+        "JUSTHIT must suppress contacts during NextDelay");
+    targetStates.update();
+    targetStates.update();
+    assertFalse(MissileCollisionSystem.claimTargetHit(missile, 7, targetStates));
+    targetStates.update();
+    assertTrue(MissileCollisionSystem.claimTargetHit(missile, 7, targetStates),
+        "the target becomes eligible again when the native delay expires");
+
+    Missile otherMissile = new Missile();
+    otherMissile.attached = true;
+    otherMissile.missile = missile.missile;
+    assertFalse(MissileCollisionSystem.claimTargetHit(otherMissile, 7, targetStates),
+        "JUSTHIT is target-wide and must suppress other NextHit missiles");
+
+    Missile noNextHit = new Missile();
+    noNextHit.attached = true;
+    noNextHit.missile = new Missiles.Entry();
+    noNextHit.missile.NextHit = false;
+    noNextHit.nativeFrame = 4;
+    assertTrue(MissileCollisionSystem.claimTargetHit(noNextHit, 7, targetStates));
+    assertFalse(MissileCollisionSystem.claimTargetHit(noNextHit, 7, targetStates),
+        "a single native frame cannot resolve the same attached contact twice");
+    noNextHit.nativeFrame = 5;
+    assertTrue(MissileCollisionSystem.claimTargetHit(noNextHit, 7, targetStates),
+        "without NextHit an attached missile may contact again next frame");
+  }
+
+  @Test
+  void projectileAndSharedCastHitSetsRemainIdempotent() {
+    Missile projectile = new Missile();
+    assertTrue(MissileCollisionSystem.claimTargetHit(projectile, 9, null));
+    assertFalse(MissileCollisionSystem.claimTargetHit(projectile, 9, null),
+        "a non-attached projectile may not damage one unit twice");
+
+    IntSet shared = new IntSet();
+    Missile first = new Missile().shareHitTargets(shared);
+    Missile second = new Missile().shareHitTargets(shared);
+    assertTrue(MissileCollisionSystem.claimTargetHit(first, 11, null));
+    assertFalse(MissileCollisionSystem.claimTargetHit(second, 11, null),
+        "overlapping missiles from one cast share one target claim");
+    assertTrue(MissileCollisionSystem.claimTargetHit(second, 12, null));
   }
 
   @Test
