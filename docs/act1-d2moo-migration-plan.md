@@ -212,4 +212,7 @@ waypoints, caves, quest rewards and collision boundaries.
 - [x] ~~Necromancer summon owner-follow and idle regroup (phase 1)~~
   - Skeleton, SkeletonMage and GenericMonster now apply a native owner leash when no hostile
     target is visible; passive decoys, bone walls and cross-zone pets are excluded.
-- [ ] Next: Necromancer summon combat cadence/target selection and remaining cross-class skill validation.
+- [x] ~~Necromancer summon AI chance stream and SkeletonMage cadence~~
+  - AI percentage rolls now use a per-unit `NativeRng` stream; SkeletonMage no longer bypasses
+    `aidel`/shoot chance with an immediate attack path.
+- [ ] Next: Necromancer summon target scoring/regroup edge cases and remaining cross-class skill validation.

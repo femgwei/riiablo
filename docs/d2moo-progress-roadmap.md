@@ -1020,6 +1020,13 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 跨地图跟随仍由 `SummonedPetSystem` 的 PetType warp 规则负责，未改变召唤所有权、
     掉落奖励或战斗伤害链；召唤生命周期回归和 1.10f 离屏营地测试通过。
 
+- [x] ~~完成召唤 AI 原生概率流与骷髅法师节奏对齐~~
+  - 骷髅与骷髅法师的 `AIRollChanceParam` 改用按游戏种子/实体 ID 隔离的
+    `NativeRng`，并对 0/100 边界做原生式钳制，避免渲染线程随机数影响权威 AI。
+  - 移除骷髅法师绕过 `time` 和 `shoot chance` 的即时攻击分支，恢复 D2MOO
+    `AITHINK_Fn064_SkeletonMage` 的固定 `aidel` 节奏与射击概率。
+  - 新增 AI 概率边界回归测试；未改变召唤所有权、掉落或技能伤害链。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
 > “当前下一项”为准；Bone Armor、Poison Dagger、Corpse/Poison Explosion、Bone

@@ -175,12 +175,12 @@ public class Skeleton extends AI {
     // D2MOD: If in combat, check attack chance
     if (bCombat) {
       // D2MOD: SKELETON_AI_PARAM_ATTACK_CHANCE_PCT
-      if (MathUtils.randomBoolean(params[PARAM_ATTACK_CHANCE] / 100f)) {
+      if (rollAiChance(params[PARAM_ATTACK_CHANCE])) {
         pathfinder.findPath(entityId, null);
         lookAt(targetId);
         stateMachine.changeState(State.ATTACK);
         // D2MOD: SKELETON_AI_PARAM_ATTACK_1_OR_2_CHANCE_PCT
-        byte attackMode = MathUtils.randomBoolean(params[PARAM_ATTACK1_OR_2_CHANCE] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
+        byte attackMode = rollAiChance(params[PARAM_ATTACK1_OR_2_CHANCE]) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
         mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
         Riiablo.audio.play(monsound + "_attack_1", true);
@@ -196,7 +196,7 @@ public class Skeleton extends AI {
     }
 
     // D2MOD: Not in combat, check approach chance
-    if (MathUtils.randomBoolean(params[PARAM_APPROACH_CHANCE] / 100f)) {
+    if (rollAiChance(params[PARAM_APPROACH_CHANCE])) {
       // D2MOD: AITACTICS_WalkToTargetUnitWithFlags(pGame, pUnit, pAiTickParam->pTarget, (4 | 2 | 1))
       // Flags 4|2|1 = 7 means walk with some special behavior, but we'll use normal pathfinding
       pathfinder.findPath(entityId, targetPos, false, targetId);

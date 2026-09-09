@@ -23,6 +23,17 @@ class MonsterAiParamParityTest {
   }
 
   @Test
+  void nativeAiChanceUsesClampedUnitStream() {
+    AI probe = new AI(0x42) {
+      @Override public String getState() { return "TEST"; }
+    };
+    assertFalse(probe.rollAiChance(0));
+    assertFalse(probe.rollAiChance(-10));
+    assertTrue(probe.rollAiChance(100));
+    assertTrue(probe.rollAiChance(250));
+  }
+
+  @Test
   void bruteParamsMatchD2Moo() {
     assertEquals(2, Brute.PARAM_ATTACK_CHANCE);
     assertEquals(3, Brute.PARAM_ATTACK1_OR_2_CHANCE);

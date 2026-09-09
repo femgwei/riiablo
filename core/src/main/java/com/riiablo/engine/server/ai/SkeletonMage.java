@@ -98,25 +98,9 @@ public class SkeletonMage extends AI {
     nextAction -= delta;
     time -= delta;
 
-    // 远程怪即时反应：玩家进入射程立即攻击，不等到 time 结束
     float[] outDist = { Float.MAX_VALUE };
     int targetId = findNearestTargetWithAidist(outDist);
     float targetDistance = outDist[0];
-    float fireDist = params.length > 5 ? params[5] : 15f;
-    if (targetId != Engine.INVALID_ENTITY
-        && stateMachine.getCurrentState() != State.ATTACK
-        && stateMachine.getCurrentState() != State.ESCAPE
-        && targetDistance <= fireDist) {
-      pathfinder.findPath(entityId, null);
-      lookAt(targetId);
-      stateMachine.changeState(State.ATTACK);
-      Vector2 targetPos = mPosition.get(targetId).position;
-      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
-      mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      Riiablo.audio.play(monsound + "_attack_1", true);
-      time = MathUtils.random(1f, 2f);
-      return;
-    }
 
     if (time > 0) {
       return;
@@ -162,7 +146,7 @@ public class SkeletonMage extends AI {
     float fireDistance = params.length > 5 ? params[5] : 15f;
 
     // D2MOD: If too far, approach
-    if (targetDistance > approachDistance && params.length > 2 && MathUtils.randomBoolean(params[2] / 100f)) {
+    if (targetDistance > approachDistance && params.length > 2 && rollAiChance(params[2])) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 10, 0)
       // D2MOD: AITACTICS_WalkToTargetUnitWithSteps(pGame, pUnit, pTarget, AI_GetParamValue(pGame, pAiTickParam, SKELETONMAGE_AI_PARAM_APPROACH_DISTANCE))
       walkTo(targetPos, 10, targetId);
@@ -172,7 +156,7 @@ public class SkeletonMage extends AI {
     }
 
     // D2MOD: If too close, walk away
-    if (targetDistance <= tooCloseDistance && params.length > 4 && MathUtils.randomBoolean(params[4] / 100f)) {
+    if (targetDistance <= tooCloseDistance && params.length > 4 && rollAiChance(params[4])) {
       // D2MOD: AITACTICS_SetVelocity(pUnit, 0, 25, 0)
       // D2MOD: D2GAME_AICORE_Escape_6FCD0560(pGame, pUnit, pTarget, 5u, 1)
       stateMachine.changeState(State.ESCAPE);
@@ -192,7 +176,7 @@ public class SkeletonMage extends AI {
     }
 
     // D2MOD: If in fire range, shoot
-    if (targetDistance < fireDistance && params.length > 0 && MathUtils.randomBoolean(params[0] / 100f)) {
+    if (targetDistance < fireDistance && params.length > 0 && rollAiChance(params[0])) {
       pathfinder.findPath(entityId, null);
       lookAt(targetId);
       stateMachine.changeState(State.ATTACK);
@@ -204,8 +188,8 @@ public class SkeletonMage extends AI {
     }
 
     // D2MOD: If within approach distance or no approach chance
-    if (targetDistance <= approachDistance || (params.length > 2 && !MathUtils.randomBoolean(params[2] / 100f))) {
-      if (params.length > 6 && !MathUtils.randomBoolean(params[6] / 100f)) {
+    if (targetDistance <= approachDistance || (params.length > 2 && !rollAiChance(params[2]))) {
+      if (params.length > 6 && !rollAiChance(params[6])) {
         // Idle
         stateMachine.changeState(State.IDLE);
         time = params.length > 7 ? params[7] * com.riiablo.codec.Animation.FRAME_DURATION : 15f * com.riiablo.codec.Animation.FRAME_DURATION;

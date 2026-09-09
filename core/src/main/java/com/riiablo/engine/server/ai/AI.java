@@ -132,6 +132,23 @@ public abstract class AI implements Interactable.Interactor {
   private float nextWarCryThink;
   private NativeRng specialAiRng;
 
+  /**
+   * Native-style percentage roll for AI decisions.
+   *
+   * <p>D2 consumes the unit/game RNG for AIRollChanceParam.  Using LibGDX's
+   * process-global RNG here made summon decisions depend on render-side random
+   * calls and could produce different target/attack cadence on two servers.
+   * Keep the stream per unit so every authoritative simulation is repeatable.
+   */
+  protected final boolean rollAiChance(int percent) {
+    if (percent <= 0) return false;
+    if (percent >= 100) return true;
+    if (specialAiRng == null) {
+      specialAiRng = NativeRng.forUnit(Riiablo.gameSeed, entityId);
+    }
+    return specialAiRng.nextInt(100) < percent;
+  }
+
   public AI(int entityId) {
     this.entityId = entityId;
   }
