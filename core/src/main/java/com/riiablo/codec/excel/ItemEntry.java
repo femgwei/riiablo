@@ -40,6 +40,8 @@ public class ItemEntry extends Excel.Entry {
   @Column public boolean useable;
   @Column public String  usesound;
   @Column public int     quest;
+  /** Native Items.txt material flags; bit 1 marks an Iron Golem-compatible metal item. */
+  @Column public int     bitfield1;
   @Column public boolean nodurability;
   @Column public int     level;
   @Column public int     levelreq;

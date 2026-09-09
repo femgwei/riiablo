@@ -185,5 +185,6 @@ waypoints, caves, quest rewards and collision boundaries.
   targets, and feed physical/elemental resistance into the shared combat pipeline.
 - [x] Raise Skeleton/Skeletal Mage corpse reservation and atomic consumption, native
   PetType/PetMax ownership, disconnect/death/zone lifecycle and multiplayer snapshot recovery.
-- [ ] Next: Revive/Golem summon chain; Iron Maiden/Life Tap event callbacks and full curse AI
-  states remain follow-up combat work.
+- [x] Revive/Golem summon chain: native PetType/PetMax, metal-item consumption, in-place corpse
+  revival, owner flags, duration and lifecycle.
+- [ ] Next: Iron Maiden/Life Tap event callbacks and full curse AI states.

@@ -18,6 +18,8 @@ public class Item extends Component {
   public int dropPartyId = -1;
   public long dropPartyUntilMillis;
   public boolean partyShareGold;
+  /** Fixed-tick reservation used by skills which atomically consume a ground item. */
+  public boolean skillReserved;
 
   public Item set(com.riiablo.item.Item item) {
     this.item = item;
@@ -26,6 +28,7 @@ public class Item extends Component {
     this.dropPartyId = -1;
     this.dropPartyUntilMillis = 0L;
     this.partyShareGold = false;
+    this.skillReserved = false;
     this.flippyDescriptor = new AssetDescriptor<>(Class.Type.ITM.PATH + '\\' + item.getFlippyFile() + ".dc6", DC6.class);
     return this;
   }

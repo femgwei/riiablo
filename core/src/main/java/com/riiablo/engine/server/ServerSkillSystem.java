@@ -108,6 +108,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
 
   /** Item generator is wired by both local and dedicated server worlds. */
   @com.artemis.annotations.SkipWire
@@ -149,7 +150,8 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.targetId, event.skillId);
       return;
     }
-    boolean corpseSkill = skill.srvdofunc == 31 || skill.srvdofunc == 69 || skill.srvdofunc == 72
+    boolean corpseSkill = skill.srvdofunc == 31 || skill.srvdofunc == 58
+        || skill.srvdofunc == 69 || skill.srvdofunc == 72
         || skill.srvdofunc == 75;
     if (event.targetId >= 0 && mMonster.has(event.targetId) && !corpseSkill
         && mNativeUnitFlags.has(event.targetId)
@@ -207,16 +209,25 @@ public class ServerSkillSystem extends PassiveSystem {
     if (corpseSkill) {
       Corpse corpse = event.targetId >= 0 && mCorpse.has(event.targetId)
           ? mCorpse.get(event.targetId) : null;
-      boolean requiresMonster = skill.srvdofunc == 31 || skill.srvdofunc == 72
+      boolean requiresMonster = skill.srvdofunc == 31 || skill.srvdofunc == 58
+          || skill.srvdofunc == 72
           || skill.srvdofunc == 75;
       if (corpse == null || !corpse.usable || corpse.fading || hasCorpseNoSelect(event.targetId)
           || requiresMonster && !mMonster.has(event.targetId)
-          || skill.srvdofunc == 31 && isTownCorpse(event.targetId)) {
+          || (skill.srvdofunc == 31 || skill.srvdofunc == 58) && isTownCorpse(event.targetId)
+          || skill.srvdofunc == 58 && !isReviveableMonster(event.targetId)) {
         reject(event, 3, "skill requires a selectable monster corpse");
         log.info("[BARBARIAN_CORPSE] phase=cast_reject source={} target={} skill={} reason=corpse_eligibility",
             event.entityId, event.targetId, skill.skill);
         return;
       }
+    }
+
+    if (skill.srvdofunc == 57 && !isValidIronGolemItem(event.targetId)) {
+      reject(event, 3, "Iron Golem requires an identified metal ground item");
+      log.info("[NECRO_IRON_GOLEM] phase=cast_reject source={} item={} reason=item_eligibility",
+          event.entityId, event.targetId);
+      return;
     }
 
     ItemData items = player.data != null ? player.data.getItems() : null;
@@ -286,14 +297,16 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 22 && event.srvdofunc != 49 && event.srvdofunc != 54
         && event.srvdofunc != 68 && event.srvdofunc != 71
-        && event.srvdofunc != 31
+        && event.srvdofunc != 31 && event.srvdofunc != 56
+        && event.srvdofunc != 57 && event.srvdofunc != 58
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
         && skill.srvdofunc != 22 && skill.srvdofunc != 49 && skill.srvdofunc != 54
         && skill.srvdofunc != 68 && skill.srvdofunc != 71
-        && skill.srvdofunc != 31
+        && skill.srvdofunc != 31 && skill.srvdofunc != 56
+        && skill.srvdofunc != 57 && skill.srvdofunc != 58
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119) {
       consumeRangedAmmoForSkill(event, skill);
@@ -304,6 +317,18 @@ public class ServerSkillSystem extends PassiveSystem {
     Vector2 start = mPosition.get(event.entityId).position;
     if (event.srvdofunc == 31 || skill.srvdofunc == 31) {
       raiseNecromancerSkeleton(event, skill, skillLevel);
+      return;
+    }
+    if (event.srvdofunc == 56 || skill.srvdofunc == 56) {
+      spawnNecromancerGolem(event, skill, skillLevel, start, false);
+      return;
+    }
+    if (event.srvdofunc == 57 || skill.srvdofunc == 57) {
+      spawnNecromancerGolem(event, skill, skillLevel, start, true);
+      return;
+    }
+    if (event.srvdofunc == 58 || skill.srvdofunc == 58) {
+      reviveNecromancerMonster(event, skill, skillLevel);
       return;
     }
     if (handleBarbarianCorpseSkill(event, skill, skillLevel)) return;
@@ -1833,8 +1858,7 @@ public class ServerSkillSystem extends PassiveSystem {
     // replicated, so a second client cannot race the same corpse.
     markCorpseConsumed(corpseId, corpse, true);
     String summonName = skill.summon;
-    MonStats.Entry summon = summonName == null || summonName.isEmpty()
-        ? null : Riiablo.files.monstats.get(summonName);
+    MonStats.Entry summon = resolveSummonMonster(summonName);
     if (summon == null) {
       corpse.usable = true;
       if (mUnitStates.has(corpseId) && mUnitStates.get(corpseId).stateList != null) {
@@ -1862,7 +1886,7 @@ public class ServerSkillSystem extends PassiveSystem {
       log.warn("[NECRO_SUMMON] phase=rollback source={} corpse={} reason=create_failed", source, corpseId);
       return;
     }
-    applySummonSkillStats(source, petId, skill, level);
+    applySummonSkillStats(source, petId, skill, level, true);
     applySummonResistance(source, petId);
     // Native SrvDo031 removes the consumed corpse unit from the room.
     mCorpse.remove(corpseId);
@@ -1877,20 +1901,191 @@ public class ServerSkillSystem extends PassiveSystem {
     return value.contains("mage") || row.contains("mage") ? "skeletonmage" : "skeleton";
   }
 
+  /** Skills.txt summon names are symbolic and are not consistently cased in 1.10f. */
+  private static MonStats.Entry resolveSummonMonster(String summonName) {
+    if (summonName == null || summonName.isEmpty()) return null;
+    MonStats.Entry summon = Riiablo.files.monstats.get(summonName);
+    if (summon == null) summon = Riiablo.files.monstats.get(
+        summonName.toLowerCase(java.util.Locale.ROOT));
+    if (summon != null) return summon;
+    for (MonStats.Entry candidate : Riiablo.files.monstats) {
+      if (candidate != null && candidate.Id != null
+          && candidate.Id.equalsIgnoreCase(summonName)) return candidate;
+    }
+    return null;
+  }
+
+  /** D2MOO SrvDo056 and SrvDo057. */
+  private void spawnNecromancerGolem(SkillDoEvent event, Skills.Entry skill, int level,
+      Vector2 caster, boolean iron) {
+    if (!mPlayer.has(event.entityId) || skill == null || factory == null) return;
+    com.riiablo.engine.server.component.Item ground = iron && mItem.has(event.targetId)
+        ? mItem.get(event.targetId) : null;
+    if (iron && !isValidIronGolemItem(event.targetId)) {
+      log.info("[NECRO_IRON_GOLEM] phase=reject source={} item={} reason=item_eligibility",
+          event.entityId, event.targetId);
+      return;
+    }
+    if (ground != null) ground.skillReserved = true;
+    MonStats.Entry summon = resolveSummonMonster(skill.summon);
+    if (summon == null) {
+      if (ground != null) ground.skillReserved = false;
+      log.warn("[NECRO_GOLEM] phase=rollback source={} skill={} reason=missing_summon row={}",
+          event.entityId, skill.skill, skill.summon);
+      return;
+    }
+    String petType = PetType.canonical(skill.pettype);
+    if (petType.isEmpty()) petType = "golem";
+    int petMax = Math.max(1, SkillFormula.evaluate(skill.petmax, skill, level,
+        name -> getBaseSkillLevel(event.entityId, name)));
+    Vector2 target = iron
+        ? new Vector2(mPosition.get(event.targetId).position)
+        : resolveTargetPoint(event, caster, new Vector2());
+    int petId = factory.createSummonedPet(event.entityId, summon, petType,
+        event.skillId, level, petMax, false, 0, target.x, target.y);
+    if (petId == Engine.INVALID_ENTITY) {
+      if (ground != null) ground.skillReserved = false;
+      log.warn("[NECRO_GOLEM] phase=rollback source={} skill={} reason=create_failed",
+          event.entityId, skill.skill);
+      return;
+    }
+    applySummonSkillStats(event.entityId, petId, skill, level, true);
+    applySummonResistance(event.entityId, petId);
+    if (iron && ground != null) {
+      if (mSummonedPet.has(petId)) mSummonedPet.get(petId).sourceItem = ground.item;
+      world.delete(event.targetId);
+    }
+    log.info("[NECRO_{}GOLEM] phase=created source={} pet={} summon={} petType={} level={} max={} item={} position=({}, {})",
+        iron ? "IRON_" : "", event.entityId, petId, summon.Id, petType, level,
+        petMax, iron ? event.targetId : Engine.INVALID_ENTITY, target.x, target.y);
+  }
+
+  /** D2MOO SrvDo058: revive the original monster entity and move it to the owner's pet list. */
+  private void reviveNecromancerMonster(SkillDoEvent event, Skills.Entry skill, int level) {
+    int corpseId = event.targetId;
+    if (!mPlayer.has(event.entityId) || !isReviveableMonster(corpseId)
+        || !mCorpse.has(corpseId) || hasCorpseNoSelect(corpseId) || isTownCorpse(corpseId)
+        || factory == null) {
+      log.info("[NECRO_REVIVE] phase=reject source={} corpse={} reason=corpse_eligibility",
+          event.entityId, corpseId);
+      return;
+    }
+    // ServerEntityFactory reserves Corpse.usable before restoring any state,
+    // making the in-place conversion idempotent within this fixed tick.
+    if (!factory.resurrectMonster(corpseId, event.entityId)) {
+      log.warn("[NECRO_REVIVE] phase=rollback source={} corpse={} reason=restore_failed",
+          event.entityId, corpseId);
+      return;
+    }
+    String petType = PetType.canonical(skill.pettype);
+    if (petType.isEmpty()) petType = "revive";
+    int petMax = Math.max(1, SkillFormula.evaluate(skill.petmax, skill, level,
+        name -> getBaseSkillLevel(event.entityId, name)));
+    int duration = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, level,
+        name -> getBaseSkillLevel(event.entityId, name)));
+    SummonedPet pet = mSummonedPet.has(corpseId)
+        ? mSummonedPet.get(corpseId) : mSummonedPet.create(corpseId);
+    pet.set(event.entityId, petType, event.skillId, level, false, duration);
+    if (mNativeUnitFlags.has(corpseId)) {
+      mNativeUnitFlags.get(corpseId).reset()
+          .set(NativeUnitFlags.PLAYER_SUMMON | NativeUnitFlags.IS_REVIVE);
+    }
+    if (mUnitStates.has(corpseId)) {
+      UnitStates states = mUnitStates.get(corpseId);
+      if (states.stateList == null) states.init(corpseId);
+      UnitState revive = states.stateList.addState(StateId.REVIVE, duration, level, event.entityId);
+      if (revive != null) {
+        revive.skillId = event.skillId;
+        revive.needsSync = true;
+      }
+    }
+    scaleReviveToOwnerLevel(event.entityId, corpseId);
+    applySummonSkillStats(event.entityId, corpseId, skill, level, false);
+    enforcePetMaximum(event.entityId, corpseId, petType, petMax);
+    log.info("[NECRO_REVIVE] phase=created source={} pet={} monster={} petType={} level={} max={} duration={}",
+        event.entityId, corpseId,
+        mMonster.get(corpseId).monstats != null ? mMonster.get(corpseId).monstats.Id : "unknown",
+        petType, level, petMax, duration);
+  }
+
+  private boolean isReviveableMonster(int entityId) {
+    if (entityId < 0 || !mMonster.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    return monster != null && monster.monstats2 != null && monster.monstats2.revive;
+  }
+
+  private boolean isValidIronGolemItem(int entityId) {
+    if (entityId < 0 || !mItem.has(entityId) || !mPosition.has(entityId)) return false;
+    com.riiablo.engine.server.component.Item ground = mItem.get(entityId);
+    Item item = ground != null ? ground.item : null;
+    return ground != null && !ground.skillReserved && item != null
+        && item.location == com.riiablo.item.Location.GROUND && item.isIdentified()
+        && item.base != null && (item.base.bitfield1 & 2) != 0;
+  }
+
+  private void scaleReviveToOwnerLevel(int ownerId, int petId) {
+    if (!mAttributesWrapper.has(ownerId) || !mAttributesWrapper.has(petId)) return;
+    Attributes owner = mAttributesWrapper.get(ownerId).attrs;
+    Attributes pet = mAttributesWrapper.get(petId).attrs;
+    int ownerLevel = Math.max(1, statInt(owner, Stat.level));
+    int petLevel = Math.max(1, statInt(pet, Stat.level));
+    if (ownerLevel >= petLevel) return;
+    float maxHp = Math.max(1f, statFixed(pet, Stat.maxhp));
+    float scaled = Math.max(1f, maxHp * ownerLevel / petLevel);
+    pet.base().put(Stat.level, ownerLevel);
+    pet.base().put(Stat.maxhp, scaled);
+    pet.base().put(Stat.hitpoints, scaled);
+    pet.reset();
+  }
+
+  private void enforcePetMaximum(int ownerId, int newestId, String petType, int maximum) {
+    IntBag pets = world.getAspectSubscriptionManager().get(Aspect.all(SummonedPet.class)).getEntities();
+    int excess = 0;
+    for (int i = 0; i < pets.size(); i++) {
+      int id = pets.get(i);
+      SummonedPet pet = mSummonedPet.get(id);
+      if (pet != null && pet.ownerId == ownerId && PetType.sameNativeType(petType, pet.petType)) excess++;
+    }
+    excess -= Math.max(1, maximum);
+    for (int i = 0; excess > 0 && i < pets.size(); i++) {
+      int id = pets.get(i);
+      SummonedPet pet = mSummonedPet.get(id);
+      if (id != newestId && pet != null && pet.ownerId == ownerId
+          && PetType.sameNativeType(petType, pet.petType)) {
+        world.delete(id);
+        excess--;
+      }
+    }
+  }
+
   /** Applies the native summon row's passive stat list to the new pet. */
-  private void applySummonSkillStats(int source, int petId, Skills.Entry skill, int level) {
+  private void applySummonSkillStats(int source, int petId, Skills.Entry skill, int level,
+      boolean setBaseLevel) {
     if (!mAttributesWrapper.has(petId) || skill == null) return;
     Attributes attrs = mAttributesWrapper.get(petId).attrs;
-    if (attrs == null || skill.passivestat == null || skill.passivecalc == null) return;
-    for (int i = 0; i < skill.passivestat.length && i < skill.passivecalc.length; i++) {
-      String name = skill.passivestat[i];
-      if (name == null || name.isEmpty()) continue;
-      short stat = Stat.index(name);
-      if (stat < 0) continue;
-      int value = SkillFormula.evaluate(skill.passivecalc[i], skill, level,
-          name2 -> getBaseSkillLevel(source, name2));
-      if (value != 0) attrs.base().add(stat, value);
+    if (attrs == null) return;
+    if (setBaseLevel) {
+      int ownerLevel = mAttributesWrapper.has(source)
+          ? Math.max(1, statInt(mAttributesWrapper.get(source).attrs, Stat.level)) : 1;
+      attrs.base().put(Stat.level, summonBaseLevel(ownerLevel, level));
     }
+    if (skill.passivestat != null && skill.passivecalc != null) {
+      for (int i = 0; i < skill.passivestat.length && i < skill.passivecalc.length; i++) {
+        String name = skill.passivestat[i];
+        if (name == null || name.isEmpty()) continue;
+        short stat = Stat.index(name);
+        if (stat < 0) continue;
+        int value = SkillFormula.evaluate(skill.passivecalc[i], skill, level,
+            name2 -> getBaseSkillLevel(source, name2));
+        if (value != 0) attrs.base().add(stat, value);
+      }
+    }
+    float maxHp = Math.max(1f, statFixed(attrs, Stat.maxhp));
+    int hpPercent = SkillFormula.evaluate(skill.calc1, skill, level,
+        name -> getBaseSkillLevel(source, name));
+    float adjustedHp = Math.max(1f, maxHp * (100f + hpPercent) / 100f);
+    attrs.base().put(Stat.maxhp, adjustedHp);
+    attrs.base().put(Stat.hitpoints, adjustedHp);
     attrs.reset();
   }
 

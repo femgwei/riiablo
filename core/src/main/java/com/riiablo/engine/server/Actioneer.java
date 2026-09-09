@@ -2134,7 +2134,8 @@ public class Actioneer extends PassiveSystem {
     // Native corpse skills deliberately target a completed death unit.  Keep
     // the animation/keyframe alive so ServerSkillSystem can consume the corpse
     // exactly once (SrvDo069/072/075), just like native Resurrect (097).
-    return skill != null && (skill.srvdofunc == 31 || skill.srvdofunc == 97 || skill.srvdofunc == 69
+    return skill != null && (skill.srvdofunc == 31 || skill.srvdofunc == 58
+        || skill.srvdofunc == 97 || skill.srvdofunc == 69
         || skill.srvdofunc == 72 || skill.srvdofunc == 75);
   }
 

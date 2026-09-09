@@ -30,4 +30,42 @@ class NativeNecromancerSummonDataTest extends RiiabloTest {
           skill.skill + " PetMax formula missing");
     }
   }
+
+  @Test
+  void reviveAndGolemRowsUseNativeFunctionsAndData() {
+    int[] ids = {SkillId.CLAY_GOLEM, SkillId.BLOOD_GOLEM,
+        SkillId.FIRE_GOLEM, SkillId.IRON_GOLEM, SkillId.REVIVE};
+    int[] functions = {56, 56, 56, 57, 58};
+    for (int i = 0; i < ids.length; i++) {
+      Skills.Entry skill = Riiablo.files.skills.get(ids[i]);
+      assertNotNull(skill, "missing Necromancer summon skill id=" + ids[i]);
+      assertTrue(skill.srvdofunc == functions[i],
+          skill.skill + " must use SrvDo" + functions[i]);
+      if (ids[i] != SkillId.REVIVE) {
+        assertTrue(skill.summon != null && !skill.summon.isEmpty(),
+            skill.skill + " summon row missing");
+        assertNotNull(findMonster(skill.summon),
+            skill.skill + " summon MonStats row missing: " + skill.summon);
+      }
+      assertTrue(skill.pettype != null && !skill.pettype.isEmpty(),
+          skill.skill + " PetType missing");
+      assertTrue(skill.petmax != null && !skill.petmax.isEmpty(),
+          skill.skill + " PetMax formula missing");
+    }
+  }
+
+  @Test
+  void itemsExposeNativeMetalBitForIronGolem() {
+    assertTrue((Riiablo.files.weapons.get("ssd").bitfield1 & 2) != 0,
+        "Short Sword must retain native Items.txt metal bit");
+  }
+
+  private static MonStats.Entry findMonster(String id) {
+    MonStats.Entry exact = Riiablo.files.monstats.get(id);
+    if (exact != null) return exact;
+    for (MonStats.Entry row : Riiablo.files.monstats) {
+      if (row.Id != null && row.Id.equalsIgnoreCase(id)) return row;
+    }
+    return null;
+  }
 }

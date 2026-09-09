@@ -43,6 +43,8 @@ public class SummonedPet extends Component {
   /** Native death animation grace period before the pet is removed from the owner list. */
   public boolean deathPending;
   public float deadFrames;
+  /** Item retained by Iron Golem after its ground entity is consumed. */
+  public com.riiablo.item.Item sourceItem;
 
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
@@ -72,6 +74,7 @@ public class SummonedPet extends Component {
     deathLastCorpseId = -1;
     deathPending = false;
     deadFrames = 0f;
+    sourceItem = null;
     return this;
   }
 }

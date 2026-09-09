@@ -46,7 +46,8 @@
   `auratargetstate/aurarangecalc/auralencalc/aurafilter/aurastat*`，玩家和怪物不再
   分走两套实现；Amplify Damage/Decrepify 的负物理抗性已进入统一伤害链，免疫怪物
   的抗性削减按原版降为 1/5。Raise Skeleton/Skeletal Mage 的尸体原子消费、
-  PetType/PetMax、所有权生命周期和多人召唤创建已完成首轮；下一项转入 Revive/Golem。
+  PetType/PetMax、所有权生命周期和多人召唤创建已完成首轮；Revive/Golem 原生召唤链
+  也已完成首轮，下一项转入 Iron Maiden/Life Tap 受击事件回调。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -67,7 +68,7 @@
    仍随怪物 AI 专项验收。
 5. **P1 死灵法师召唤与尸体链（首轮完成）**：Raise Skeleton/Skeletal Mage 已接入
    尸体一次消费、PetType/PetMax、召唤所有权、死亡/断线/跨区生命周期和多人快照；
-   Revive/Golem、Iron Maiden/Life Tap 事件及复杂诅咒 AI 仍待完成。
+   Revive/Golem 已完成首轮；Iron Maiden/Life Tap 事件及复杂诅咒 AI 仍待完成。
 6. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -900,10 +901,21 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - `NativeNecromancerSummonDataTest`、`NecromancerSummonIntegrationTest` 与之前的
     诅咒/状态/生命周期定向测试通过。
 
+- [x] ~~完成死灵法师 Revive/Golem 原生召唤链首轮~~
+  - 接通 `SrvDo056/057/058`：Clay/Blood/Fire Golem 复用唯一 `golem` PetType，
+    Iron Golem 原子预留并消费地面物品，Revive 原地恢复尸体实体并转入主人宠物表。
+  - 补齐 `Items.txt bitfield1`，铁魔严格要求已鉴定且 `bitfield1&2` 的金属物品；创建
+    失败释放预留，成功后保留原物品载荷到召唤实体，避免按物品名称猜测材质。
+  - Revive 检查 `MonStats2.revive`、尸体状态和非城镇边界，写入 `IS_REVIVE`、
+    `PLAYER_SUMMON`、Revive state、原生 `calc2` 持续帧与 `petmax`，并按主人等级下调
+    高等级尸体生命/等级。
+  - 统一召唤被动 stat、`calc1` 最大生命、基础召唤等级与 Summon Resist 应用；
+    `NativeNecromancerSummonDataTest`、`NecromancerGolemReviveIntegrationTest` 通过。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **P1 死灵法师 Revive/Golem 召唤链**；Raise Skeleton/
-> Skeletal Mage 首轮已完成并有定向 ECS/数据测试覆盖。
+> “当前下一项”为准，当前目标是 **P1 死灵法师 Iron Maiden/Life Tap 受击事件回调**；
+> Raise Skeleton/Skeletal Mage 与 Revive/Golem 首轮均已完成并有定向测试覆盖。
 
 ## 记录规则
 

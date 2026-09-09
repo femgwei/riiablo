@@ -61,10 +61,10 @@
 
 ## 下一步
 
-当前已完成 **P1 死灵法师 Raise Skeleton/Skeletal Mage 召唤链首轮**：尸体一次原子
-消费、PetType/PetMax、召唤所有权、死亡/断线/跨区清理与多人实体快照均已接通；下一步
-处理 Revive/Golem，再处理 Iron Maiden/Life Tap 事件回调和诅咒复杂 AI 分支。战斗模块
-不再单独分派，相关修改均由本 Chat 负责。
+当前已完成 **P1 死灵法师召唤链首轮**：Raise Skeleton/Skeletal Mage、Revive 及四类
+Golem 均已接入尸体/物品原子消费、PetType/PetMax、召唤所有权、持续时间、死亡/断线/
+跨区清理与多人实体快照。下一步处理 Iron Maiden/Life Tap 事件回调，再处理诅咒复杂 AI
+分支。战斗模块不再单独分派，相关修改均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。
