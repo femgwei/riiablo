@@ -156,6 +156,9 @@ public class CombatSystem {
     public int[] elementalMinDamage = new int[DAMAGE_TYPE_COUNT];
     public int[] elementalMaxDamage = new int[DAMAGE_TYPE_COUNT];
 
+    /** Target-class bonus applied to rolled magic damage before mitigation. */
+    public int magicTargetBonusPercent;
+
     /** Native percentage resistance pierce, indexed by damage type. */
     public int[] elementalPierce = new int[DAMAGE_TYPE_COUNT];
 
@@ -501,7 +504,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
-        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, 0);
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, 0, 0);
   }
 
   /** Full context with native Nightmare/Hell resistance penalty selection. */
@@ -519,7 +522,29 @@ public class CombatSystem {
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
-        difficulty);
+        difficulty, 0);
+  }
+
+  /**
+   * Native missile damage-function variant that adds a target-dependent
+   * percentage to the rolled magic packet before resistance and absorption.
+   * Blessed Hammer uses this for its independent undead/demon bonuses.
+   */
+  public CombatResult calculateAttackAtDifficulty(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      int difficulty, int magicTargetBonusPercent) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
+        difficulty, Math.max(0, magicTargetBonusPercent));
   }
 
   /** Resolves a fixed elemental packet for area effects that have no missile
@@ -717,7 +742,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, false, combinedMin, combinedMax,
         coldLength, poisonLength, attackerStates, defenderStates, defenderMoving, true,
-        0, DAMAGE_PHYSICAL, null, 0);
+        0, DAMAGE_PHYSICAL, null, 0, 0);
   }
 
   /** Native Barbarian weapon mastery context for one concrete weapon hand. */
@@ -754,7 +779,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         attackMinDamage, attackMaxDamage, attackRating, false,
         null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true,
-        physicalConversionPercent, physicalConversionType, mastery, 0);
+        physicalConversionPercent, physicalConversionType, mastery, 0, 0);
   }
 
   /**
@@ -811,7 +836,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, alwaysHit,
         elementalMin, elementalMax, coldLength, poisonLength,
-        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null, 0);
+        attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null, 0, 0);
   }
 
   private CombatResult calculateAttackInternal(
@@ -824,7 +849,8 @@ public class CombatSystem {
       StateList attackerStates, StateList defenderStates,
       boolean defenderMoving, boolean precomputedPhysicalDamage,
       int physicalConversionPercent, int physicalConversionType,
-      StateList.WeaponMasteryBonus mastery, int difficulty) {
+      StateList.WeaponMasteryBonus mastery, int difficulty,
+      int magicTargetBonusPercent) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -892,6 +918,7 @@ public class CombatSystem {
     a.elementalMaxDamage[DAMAGE_POISON] = statInt(attacker, Stat.poisonmaxdam, 0);
     a.elementalMinDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmindam, 0);
     a.elementalMaxDamage[DAMAGE_MAGIC] = statInt(attacker, Stat.magicmaxdam, 0);
+    a.magicTargetBonusPercent = Math.max(0, magicTargetBonusPercent);
     if (attackerStates != null) {
       short[] stateMinStats = {0, Stat.firemindam, Stat.lightmindam, Stat.coldmindam,
           Stat.poisonmindam, Stat.magicmindam};
@@ -1118,6 +1145,9 @@ public class CombatSystem {
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);
       if (i == attacker.physicalConversionType) elemDamage += convertedDamage;
+      if (i == DAMAGE_MAGIC && attacker.magicTargetBonusPercent > 0) {
+        elemDamage += elemDamage * attacker.magicTargetBonusPercent / 100;
+      }
       if (elemDamage > 0) {
         result.elementalDamage[i] = applyElementalResistance(
             elemDamage, defender, i, attacker.elementalPierce[i]);

@@ -7,6 +7,7 @@ import com.artemis.systems.IteratingSystem;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.ai.utils.Collision;
 import com.badlogic.gdx.ai.utils.Ray;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
@@ -69,6 +70,10 @@ import com.riiablo.map.DT1;
 @com.artemis.annotations.Wire(failOnNull = false)
 public class MissileCollisionSystem extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(MissileCollisionSystem.class);
+  /** D2DynamicPathStrc::MAXPATHLEN - 1, as used by PATHTYPE_BLESSEDHAMMER. */
+  public static final int BLESSED_HAMMER_PATH_POINTS = 77;
+  private static final float BLESSED_HAMMER_ANGLE_STEP = MathUtils.PI2 / 32f;
+  private static final float BLESSED_HAMMER_RADIUS_STEP = 9600f / 65536f;
   
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
@@ -97,6 +102,9 @@ public class MissileCollisionSystem extends IteratingSystem {
   
   private final Vector2 tmpVec = new Vector2();
   private final Vector2 lastPos = new Vector2();
+  private final Vector2 blessedHammerPoint = new Vector2();
+  private final Vector2 blessedHammerStep = new Vector2();
+  private final Vector2 blessedHammerNext = new Vector2();
   private final Ray<Vector2> wallRay = new Ray<>(new Vector2(), new Vector2());
   private final Collision<Vector2> wallCollision =
       new Collision<>(new Vector2(), new Vector2());
@@ -201,6 +209,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       velocity.velocity.set(missile.chaosIceX, missile.chaosIceY).nor().setLength(speed);
       if (mAngle.has(entityId)) mAngle.get(entityId).target.set(velocity.velocity);
     }
+
+    if (missile.blessedHammerPath && !missile.attached) {
+      processBlessedHammerPath(entityId, missile, position, velocity);
+      return;
+    }
     
     // 更新导弹位置（VelocityAdder 系统被注释掉了，所以在这里更新）
     float moveDistance;
@@ -293,6 +306,68 @@ public class MissileCollisionSystem extends IteratingSystem {
         && missile.nativeFrame >= missile.nativeLifetimeFrames) {
       world.delete(entityId);
     }
+  }
+
+  /**
+   * Advances D2Common's {@code PATHTYPE_BLESSEDHAMMER} along its expanding
+   * spiral. Every crossed path edge gets its own map ray and swept-unit pass;
+   * treating a whole tick as one chord lets the hammer cut corners through
+   * walls and skip targets on the arc.
+   */
+  private void processBlessedHammerPath(
+      int entityId, Missile missile, Position position, Velocity velocity) {
+    float remaining = Math.max(0f, velocity.velocity.len() * world.delta);
+    while (remaining > 0.0001f
+        && missile.blessedHammerPointIndex <= BLESSED_HAMMER_PATH_POINTS) {
+      blessedHammerPathPoint(missile.blessedHammerOrigin,
+          missile.blessedHammerPointIndex, blessedHammerPoint);
+      float distance = position.position.dst(blessedHammerPoint);
+      if (distance <= 0.0001f) {
+        missile.blessedHammerPointIndex++;
+        continue;
+      }
+
+      float stepLength = Math.min(remaining, distance);
+      blessedHammerStep.set(blessedHammerPoint).sub(position.position).setLength(stepLength);
+      blessedHammerNext.set(position.position).add(blessedHammerStep);
+      lastPos.set(position.position);
+      if (checkNativeMapCollision(entityId, missile, lastPos, blessedHammerNext)) return;
+
+      position.position.set(blessedHammerNext);
+      missile.distanceTraveled += stepLength;
+      remaining -= stepLength;
+      if (mAngle.has(entityId)) mAngle.get(entityId).target.set(blessedHammerStep).nor();
+      if (!updateNativeRoom(entityId, missile, position)) return;
+      if (hasNativeCollision(missile)) {
+        checkCollisions(entityId, missile, position, lastPos);
+        if (!world.getEntityManager().isActive(entityId)) return;
+      }
+      if (stepLength + 0.0001f >= distance) missile.blessedHammerPointIndex++;
+    }
+
+    boolean pathComplete = missile.blessedHammerPointIndex > BLESSED_HAMMER_PATH_POINTS;
+    boolean lifetimeComplete = missile.nativeLifetimeFrames > 0
+        && missile.nativeFrame >= missile.nativeLifetimeFrames;
+    if (pathComplete || lifetimeComplete) {
+      log.debug("[BLESSED_HAMMER] phase=remove missileId={} owner={} reason={} "
+              + "frame={} point={} traveled={}",
+          entityId, missile.ownerId, pathComplete ? "path_complete" : "lifetime",
+          missile.nativeFrame, missile.blessedHammerPointIndex,
+          missile.distanceTraveled);
+      world.delete(entityId);
+    }
+  }
+
+  /** Returns native spiral point {@code 1..77}; point zero is the origin. */
+  static Vector2 blessedHammerPathPoint(Vector2 origin, int pointIndex, Vector2 out) {
+    if (out == null) out = new Vector2();
+    if (origin == null || pointIndex <= 0) {
+      return out.set(origin == null ? Vector2.Zero : origin);
+    }
+    float angle = pointIndex * BLESSED_HAMMER_ANGLE_STEP;
+    float radius = pointIndex * BLESSED_HAMMER_RADIUS_STEP;
+    return out.set(origin.x + MathUtils.cos(angle) * radius,
+        origin.y + MathUtils.sin(angle) * radius);
   }
 
   /** D2MOO SrvDo30/SrvHit53: infected units periodically pass remaining poison. */
@@ -790,7 +865,9 @@ public class MissileCollisionSystem extends IteratingSystem {
           alwaysHit,
           null, null, 0, 0,
           stateList(missile.ownerId), stateList(targetId), isEntityMoving(targetId),
-          missileMastery(missile), combatDifficulty(missile.ownerId, targetId));
+          missileMastery(missile), combatDifficulty(missile.ownerId, targetId),
+          blessedHammerTargetBonusPercent(
+              missile, mMonster.has(targetId) ? mMonster.get(targetId) : null));
       boolean damageHit = combat.hit && !combat.blocked;
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
@@ -984,6 +1061,22 @@ public class MissileCollisionSystem extends IteratingSystem {
     Missiles.Entry row = missile.missile;
     return row.pSrvHitFunc != 0 || row.pSrvDmgFunc != 0 || row.pSrvDoFunc != 0
         || row.Explosion != 0 || row.AlwaysExplode;
+  }
+
+  /** Native {@code MISSMODE_SrvDmg05_BlessedHammer}. */
+  static int blessedHammerTargetBonusPercent(Missile missile, Monster target) {
+    if (missile == null || missile.missile == null
+        || missile.missile.pSrvDmgFunc != 5 || target == null
+        || target.monstats == null || missile.missile.dParam == null) return 0;
+    int bonus = 0;
+    if ((target.monstats.lUndead || target.monstats.hUndead)
+        && missile.missile.dParam.length > 0) {
+      bonus += Math.max(0, missile.missile.dParam[0]);
+    }
+    if (target.monstats.demon && missile.missile.dParam.length > 1) {
+      bonus += Math.max(0, missile.missile.dParam[1]);
+    }
+    return bonus;
   }
 
   static boolean collidesKill(Missile missile) {

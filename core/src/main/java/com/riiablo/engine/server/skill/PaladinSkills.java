@@ -2,8 +2,10 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import java.util.function.ToIntFunction;
 
 /**
  * 圣骑士技能实现 - 基于 D2MOD SkillPal.cpp 移植
@@ -171,6 +173,65 @@ public final class PaladinSkills {
   public static int getBlessedHammerBonusPercent(int skillLevel) {
     // 对不死 +50%
     return 50;
+  }
+
+  /** True only for the native 1.10f SrvDo073 Blessed Hammer row. */
+  public static boolean isBlessedHammer(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 73
+        && skill.skill != null && "Blessed Hammer".equalsIgnoreCase(skill.skill);
+  }
+
+  /**
+   * Native Skills.txt magic packet, including hard-point Vigor/Blessed Aim
+   * synergy. Concentration is deliberately applied afterwards because D2Game
+   * snapshots it onto the created missile rather than evaluating it here.
+   */
+  public static int[] getBlessedHammerMagicDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isBlessedHammer(skill)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    long min = Math.max(0L, (long) skill.EMin + damageBonusByLevel(level, skill.EMinLev));
+    long max = Math.max(min, (long) skill.EMax + damageBonusByLevel(level, skill.EMaxLev));
+    int shift = skill.HitShift - 8;
+    if (shift > 0) {
+      min <<= Math.min(30, shift);
+      max <<= Math.min(30, shift);
+    } else if (shift < 0) {
+      min >>= Math.min(30, -shift);
+      max >>= Math.min(30, -shift);
+    }
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        skill.EDmgSymPerCalc, skill, level,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel));
+    min += min * synergy / 100L;
+    max += max * synergy / 100L;
+    return new int[] {saturated(min), saturated(max)};
+  }
+
+  /** D2Common #11047: concentration damagepercent * Blessed Hammer Param1 / 8. */
+  public static int getBlessedHammerConcentrationPercent(
+      Skills.Entry skill, int concentrationDamagePercent) {
+    if (!isBlessedHammer(skill) || concentrationDamagePercent <= 0) return 0;
+    int scale = skill.Param != null && skill.Param.length > 0 ? skill.Param[0] : 0;
+    return Math.max(0, concentrationDamagePercent * scale / 8);
+  }
+
+  private static int damageBonusByLevel(int level, int[] values) {
+    if (level <= 1 || values == null || values.length == 0) return 0;
+    int l1 = values.length > 0 ? values[0] : 0;
+    int l2 = values.length > 1 ? values[1] : 0;
+    int l3 = values.length > 2 ? values[2] : 0;
+    int l4 = values.length > 3 ? values[3] : 0;
+    int l5 = values.length > 4 ? values[4] : 0;
+    if (level > 28) return 7 * l1 + 8 * l2 + 6 * (l3 + l4) + (level - 28) * l5;
+    if (level > 22) return 7 * l1 + 8 * l2 + 6 * l3 + (level - 22) * l4;
+    if (level > 16) return 7 * l1 + 8 * l2 + (level - 16) * l3;
+    if (level > 8) return 7 * l1 + (level - 8) * l2;
+    return (level - 1) * l1;
+  }
+
+  private static int saturated(long value) {
+    return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.max(0L, value);
   }
 
   /**

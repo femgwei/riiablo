@@ -56,6 +56,7 @@ import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
+import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.CorpseConsumption;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.party.PartyManager;
@@ -380,6 +381,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 57 && event.srvdofunc != 58
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
         && event.srvdofunc != 60 && event.srvdofunc != 62 && event.srvdofunc != 63
+        && event.srvdofunc != 73
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -389,6 +391,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 57 && skill.srvdofunc != 58
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
         && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
+        && skill.srvdofunc != 73
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119) {
       consumeRangedAmmoForSkill(event, skill);
       return;
@@ -396,6 +399,10 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if (event.srvdofunc == 73 || skill.srvdofunc == 73) {
+      spawnPaladinBlessedHammer(event, skill, skillLevel, start);
+      return;
+    }
     if (event.srvdofunc == 31 || skill.srvdofunc == 31) {
       raiseNecromancerSkeleton(event, skill, skillLevel);
       return;
@@ -2034,6 +2041,53 @@ public class ServerSkillSystem extends PassiveSystem {
           ownerMode, damageLevel, 0);
     }
     return missileId;
+  }
+
+  /** Native SKILLS_SrvDo073_BlessedHammer. */
+  private void spawnPaladinBlessedHammer(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 start) {
+    if (!PaladinSkills.isBlessedHammer(skill) || !hasText(skill.srvmissilea)) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    if (row == null) {
+      log.warn("[BLESSED_HAMMER] phase=reject entity={} missile={} reason=missing_row",
+          event.entityId, skill.srvmissilea);
+      return;
+    }
+
+    int missileId = createMissile(
+        row, Vector2.X, start, event.entityId, null, skillLevel);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+
+    Missile projectile = mMissile.get(missileId);
+    projectile.blessedHammerPath = true;
+    projectile.blessedHammerOrigin.set(start);
+    projectile.blessedHammerPointIndex = 1;
+    // Missiles.txt Range is a frame lifetime for this path, not a linear
+    // distance. The 77 native path points consume almost exactly 120 frames
+    // at the row's velocity.
+    projectile.range = 0f;
+    projectile.nativeLifetimeFrames = Math.max(1, row.Range);
+
+    int concentration = blessedHammerConcentrationPercent(event.entityId, skill);
+    Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    MissileDamageResolver.initializePaladinBlessedHammer(
+        projectile, skill, ownerAttrs, skillLevel,
+        name -> getBaseSkillLevel(event.entityId, name), concentration);
+    log.info("[BLESSED_HAMMER] phase=create entity={} missileId={} level={} "
+            + "pathPoints={} lifetime={} concentration={}",
+        event.entityId, missileId, skillLevel,
+        MissileCollisionSystem.BLESSED_HAMMER_PATH_POINTS,
+        projectile.nativeLifetimeFrames, concentration);
+  }
+
+  private int blessedHammerConcentrationPercent(int entityId, Skills.Entry skill) {
+    StateList states = mUnitStates.has(entityId)
+        ? mUnitStates.get(entityId).stateList : null;
+    UnitState concentration = states != null ? states.getState(StateId.CONCENTRATION) : null;
+    int damagePercent = concentration != null
+        ? concentration.getStatContributionValue(Stat.damagepercent) : 0;
+    return PaladinSkills.getBlessedHammerConcentrationPercent(skill, damagePercent);
   }
 
   /** Applies the Skills.txt damage profile after generic missile initialization. */

@@ -162,21 +162,26 @@ public class SkillCastHandler extends PassiveSystem {
 
     // Network clients receive the authoritative D2GS missile entity shortly
     // after this event. Creating another local visual here produces doubled
-    // arrows and travel sounds. Local games still need the legacy player
-    // projectile because their ServerSkillSystem runs in monsters-only mode.
+    // arrows and travel sounds. Local games normally retain the legacy player
+    // projectile, except for skills explicitly admitted by their monsters-only
+    // ServerSkillSystem (Blessed Hammer is now one such authoritative path).
     boolean serverMissile = hasServerMissile(skill);
     boolean networkClient = world.getSystem(ClientNetworkReceiver.class) != null;
-    boolean localMonsterServer = mMonster.has(event.entityId)
-        && world.getSystem(ServerSkillSystem.class) != null;
+    boolean localServer = world.getSystem(ServerSkillSystem.class) != null;
+    boolean localMonsterServer = mMonster.has(event.entityId) && localServer;
+    boolean localBlessedHammerServer = localServer
+        && (event.srvdofunc == 73 || skill.srvdofunc == 73);
     // Poison Explosion's server missiles are the eight damaging clouds, while
     // cltdofunc 33 owns a separate corpse-burst presentation. Keep that local
     // visual on every client even when the cloud entities are authoritative.
     boolean separateCorpseBurst = (event.srvdofunc == 63 || skill.srvdofunc == 63)
         && event.cltdofunc == 33;
-    if (serverMissile && !separateCorpseBurst && (networkClient || localMonsterServer)) {
+    if (serverMissile && !separateCorpseBurst
+        && (networkClient || localMonsterServer || localBlessedHammerServer)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} "
-              + "srvDoFunc={} networkClient={} localMonster={}",
-          event.entityId, skill.skill, skill.srvdofunc, networkClient, localMonsterServer);
+              + "srvDoFunc={} networkClient={} localMonster={} localBlessedHammer={}",
+          event.entityId, skill.skill, skill.srvdofunc, networkClient, localMonsterServer,
+          localBlessedHammerServer);
       return;
     }
 

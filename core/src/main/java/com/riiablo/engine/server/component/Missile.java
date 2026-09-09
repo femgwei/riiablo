@@ -104,6 +104,15 @@ public class Missile extends PooledComponent {
   public int chargedBoltSeedHigh;
   public float chargedBoltNextTurnDistance;
 
+  /**
+   * D2Common PATHTYPE_BLESSEDHAMMER. The native path contains 77 points on an
+   * expanding spiral rooted at the cast position; it is independent of the
+   * clicked target after creation.
+   */
+  public boolean blessedHammerPath;
+  public final Vector2 blessedHammerOrigin = new Vector2();
+  public int blessedHammerPointIndex;
+
   /** Remaining targets for native SrvHit12 chain-lightning continuation. */
   public int chainHitsRemaining;
 
@@ -195,6 +204,9 @@ public class Missile extends PooledComponent {
     chargedBoltSeedLow = 0;
     chargedBoltSeedHigh = 0;
     chargedBoltNextTurnDistance = 0f;
+    blessedHammerPath = false;
+    blessedHammerOrigin.setZero();
+    blessedHammerPointIndex = 0;
     chainHitsRemaining = 0;
     chaosIcePath = false;
     chaosIceSeed = 0;

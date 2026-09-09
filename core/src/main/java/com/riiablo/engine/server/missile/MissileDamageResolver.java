@@ -14,6 +14,7 @@ import com.riiablo.engine.server.MonsterStatsCalculator;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.skill.NecromancerSkills;
+import com.riiablo.engine.server.skill.PaladinSkills;
 import java.util.function.ToIntFunction;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -161,6 +162,31 @@ public final class MissileDamageResolver {
     log.info("[BONE_PROJECTILE_DAMAGE] missile={} skill={} level={} magic={}..{}",
         projectile.missile != null ? projectile.missile.Missile : "", skill.skill,
         level, damage[0], damage[1]);
+    return true;
+  }
+
+  /** Builds the SrvDo073 magic snapshot after its cast-time Concentration bonus. */
+  public static boolean initializePaladinBlessedHammer(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel, int concentrationPercent) {
+    if (projectile == null || !PaladinSkills.isBlessedHammer(skill)) return false;
+    int[] damage = PaladinSkills.getBlessedHammerMagicDamage(
+        skill, level, baseSkillLevel);
+    int bonus = Math.max(0, concentrationPercent);
+    damage[0] += damage[0] * bonus / 100;
+    damage[1] += damage[1] * bonus / 100;
+    int[] elementalMin = new int[DAMAGE_TYPES];
+    int[] elementalMax = new int[DAMAGE_TYPES];
+    elementalMin[MAGIC] = damage[0];
+    elementalMax[MAGIC] = damage[1];
+    writeSnapshot(projectile, ownerAttrs, false, Math.max(1, level),
+        0, 0, statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, 0, 0);
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = Math.max(1, level);
+    projectile.usesAttackRating = false;
+    log.info("[BLESSED_HAMMER_DAMAGE] missile={} level={} magic={}..{} concentration={}",
+        projectile.missile != null ? projectile.missile.Missile : "",
+        level, damage[0], damage[1], bonus);
     return true;
   }
 

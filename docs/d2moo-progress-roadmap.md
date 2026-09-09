@@ -49,6 +49,12 @@
   光环可在后续周期恢复。队伍、敌对玩家、佣兵、召唤物、跨 Zone、城镇房间、`NoAura`
   和 Holy Fire LOS 均纳入权威筛选；Prayer 定点治疗、Holy Fire 周期伤害和近战附火进入
   统一战斗链，并由既有状态/伤害快照同步到多人客户端。
+- Blessed Hammer 原生权威链已完成首轮：`SrvDo073` 创建一枚与点击方向无关的 77 点
+  外扩螺旋导弹，按 120 frame 生命周期运行；每个螺旋折线段独立执行地图屏障射线与
+  单位扫掠，同一目标仅命中一次而 `CollideKill=0` 允许继续命中其他目标。基础魔法伤害、
+  Vigor/Blessed Aim 硬点协同和施法瞬间 Concentration 特殊加成均固化到导弹快照；
+  `SrvDmg05` 的不死/恶魔各 50% 加成可叠加，并在魔法抗性、吸收和 PvP 缩放之前执行。
+  单机与多人客户端均复用服务端权威实体，不再额外创建第二枚客户端导弹。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -75,8 +81,9 @@
   原生尸体生命伤害、物理/火焰内外半径与八方向 8.8 定点持续毒云链。Bone Wall /
   Bone Prison 也已完成可破坏单位、碰撞与生命周期；Poison Nova、Bone Spear/Spirit
   以及召唤物重组/传送边界、Revive/Golem 专属 AI、技能继承和四类 Golem 战斗副作用
-  也已完成首轮。圣骑士五项代表性光环的权威状态与叠加仲裁也已完成首轮；下一项为
-  Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤。
+  也已完成首轮。圣骑士五项代表性光环的权威状态与叠加仲裁、Blessed Hammer 原生
+  螺旋/碰撞/伤害链也已完成首轮；下一项为 Fist of the Heavens 权威目标打击与 Holy
+  Bolt 分裂。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -103,9 +110,9 @@
    耗尽/重施和多人容量快照；Poison Dagger 已完成原生预计算近战记录、毒伤和耐久链；
    Corpse/Poison Explosion、Bone Wall/Prison、Poison Nova、Bone Spear/Spirit 的
    权威伤害、导弹、碰撞和多人表现均已接通。
-7. **P1 圣骑士技能专项（进行中）**：光环权威状态与覆盖/叠加仲裁已完成首轮；下一项
-   处理 Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤，随后处理 Fist of
-   the Heavens 及剩余元素/抗性光环。
+7. **P1 圣骑士技能专项（进行中）**：光环权威状态与覆盖/叠加仲裁及 Blessed Hammer
+   原生螺旋、碰撞、协同、Concentration 与怪物类型增伤已完成首轮；下一项处理 Fist of
+   the Heavens 权威目标打击与 Holy Bolt 分裂，随后处理剩余元素/抗性光环。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -121,7 +128,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 78% | 22% | 2.6% | 骨墙/骨牢、尸爆/毒爆、Poison Nova、Bone Spear/Spirit 权威链已接通；剩余职业技能仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 79% | 21% | 2.5% | 死灵骨毒/召唤链、圣骑士光环与 Blessed Hammer 已接通；剩余职业技能仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -145,10 +152,10 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 65% | 35% | 代表性光环权威叠加已完成；剩余 Blessed Hammer/FoH、元素与抗性光环 |
+| 圣骑士 Paladin | 70% | 30% | 代表性光环与 Blessed Hammer 权威链已完成；剩余 FoH、元素与抗性光环 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
-职业技能专项整体按 **约 74% 完成、约 26% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 75% 完成、约 25% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
@@ -670,8 +677,8 @@ Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor、Poison Dagge
 Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单位、碰撞与
 生命周期已完成，Poison Nova 原生导弹、固定毒伤与多人表现也已完成，当前进入
 召唤物跟随、概率节奏、敌我筛选、主人目标/PvP 关系及跨房间/跨区域重组现已完成首轮。
-Revive/Golem 专属 AI、技能继承和四类 Golem 原生副作用现已完成；当前进入
-**Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤**。
+Revive/Golem 专属 AI、技能继承、四类 Golem 原生副作用及 Blessed Hammer 原生权威链
+现已完成；当前进入 **Fist of the Heavens 权威目标打击与 Holy Bolt 分裂**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -1123,8 +1130,20 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     `[OFFSCREEN_CAMP] result=PASS act=1 player=99 frames=3`。未修改 FlatBuffers schema，
     无生成网络文件差异。
 
-下一项：**Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤**；随后完成 Fist of
-the Heavens 和剩余元素/抗性光环。当前 Chat 继续负责包括战斗在内的全部模块。
+- [x] ~~完成 Blessed Hammer 原生导弹、碰撞与 Concentration 特殊增伤首轮~~
+  - 对齐 D2Common `PATHTYPE_BLESSEDHAMMER` 的 77 点固定全局方向外扩螺旋与 120 frame
+    生命周期；每个折线段分别执行地图 `CollideType=3` 屏障射线和单位扫掠，导弹可连续
+    命中不同目标但对同一目标终身去重，墙体命中立即终止。
+  - 对齐 1.10f 基础魔法伤害、Vigor/Blessed Aim 硬点协同和施法时 Concentration
+    `damagepercent * Param1 / 8` 快照；`SrvDmg05` 的不死/恶魔各 50% 加成按原生顺序在
+    随机伤害之后、抗性/吸收/PvP 之前执行，两种类型可累加。
+  - 单机 monsters-only ServerSkillSystem 也创建权威导弹，客户端表现层检测该路径后复用
+    权威实体，避免本地或多人双导弹。23 个联合测试套件共 107 个用例通过，D2GS 编译
+    通过，真实 1.10f `offscreenCamp` 输出 `[OFFSCREEN_CAMP] result=PASS`；未修改
+    FlatBuffers schema，无生成网络文件差异。
+
+下一项：**Fist of the Heavens 权威目标打击与 Holy Bolt 分裂**；随后完成剩余元素/抗性
+光环。当前 Chat 继续负责包括战斗在内的全部模块。
 
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
