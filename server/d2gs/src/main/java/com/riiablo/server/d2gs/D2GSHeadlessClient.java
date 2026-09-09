@@ -1094,36 +1094,49 @@ public final class D2GSHeadlessClient {
     }
   }
 
-  /** Two-client Den of Evil quest-credit and resurrection visibility gate. */
+  /** Three-client Den quest-credit, isolation and resurrection visibility gate. */
   private void runDenQuestDual(byte[] d2s, CharacterHeader character) throws Exception {
     D2GSHeadlessClient a = new D2GSHeadlessClient(config);
     D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient c = new D2GSHeadlessClient(config);
     byte[] peerD2s = createGeneratedObserverSave();
+    byte[] outsiderD2s = createGeneratedObserverSave("HeadlessOut", 0x4F555453);
     CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
-    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
-      DataInputStream inA = input(socketA), inB = input(socketB);
-      OutputStream outA = output(socketA), outB = output(socketB);
+    CharacterHeader outsiderCharacter = CharacterHeader.read(outsiderD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket();
+         Socket socketC = c.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB), inC = input(socketC);
+      OutputStream outA = output(socketA), outB = output(socketB), outC = output(socketC);
       send(outA, connectionPacket(character, d2s));
       send(outB, connectionPacket(peerCharacter, peerD2s));
+      send(outC, connectionPacket(outsiderCharacter, outsiderD2s));
       a.awaitConnection(inA, deadline());
       b.awaitConnection(inB, deadline());
+      c.awaitConnection(inC, deadline());
+      // Form the eligible party before cross-level synchronization fills the
+      // socket buffers. The outsider remains unpartied in Rogue Encampment,
+      // which supplies the required different-level isolation case without
+      // generating an unrelated Blood Moor world baseline.
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
+        throw new IOException("headless party setup failed");
+      }
       if (!D2GS.headlessMovePlayerToLevel(a.playerId, 8)
           || !D2GS.headlessMovePlayerToLevel(b.playerId, 8)) {
         throw new IOException("Den of Evil staging unavailable");
       }
       long levelDeadline = deadline();
       while (System.currentTimeMillis() < levelDeadline
-          && (a.currentLevelId != 8 || b.currentLevelId != 8)) {
+          && (a.currentLevelId != 8 || b.currentLevelId != 8 || c.currentLevelId < 0)) {
         com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
         if (packet != null) a.consume(packet);
         packet = readPacket(inB);
         if (packet != null) b.consume(packet);
+        packet = readPacket(inC);
+        if (packet != null) c.consume(packet);
       }
-      if (a.currentLevelId != 8 || b.currentLevelId != 8) {
-        throw new IOException("clients did not observe Den of Evil level");
-      }
-      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
-        throw new IOException("headless party setup failed");
+      if (a.currentLevelId != 8 || b.currentLevelId != 8
+          || c.currentLevelId < 0 || c.currentLevelId == 8) {
+        throw new IOException("clients did not observe isolated quest levels");
       }
       // Exercise the natural Den spawn before using the deterministic quest
       // fixture below. Both clients must receive the same Fallen/Shaman pair,
@@ -1152,9 +1165,11 @@ public final class D2GSHeadlessClient {
           + " shaman=" + denShaman.entityId + " clients=true,true");
       send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
       send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outC, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
       QuestResult beforeA = a.awaitQuestResult(inA, 1L, deadline());
       QuestResult beforeB = b.awaitQuestResult(inB, 1L, deadline());
-      if (!beforeA.success() || !beforeB.success()) {
+      QuestResult beforeC = c.awaitQuestResult(inC, 1L, deadline());
+      if (!beforeA.success() || !beforeB.success() || !beforeC.success()) {
         throw new IOException("Den quest baseline rejected");
       }
       if (!D2GS.headlessCompleteDenObjective(a.playerId)) {
@@ -1162,8 +1177,10 @@ public final class D2GSHeadlessClient {
       }
       send(outA, questRequestPacket(2L, QuestOperation.SNAPSHOT, -1, -1));
       send(outB, questRequestPacket(2L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outC, questRequestPacket(2L, QuestOperation.SNAPSHOT, -1, -1));
       QuestResult afterA = a.awaitQuestResult(inA, 2L, deadline());
       QuestResult afterB = b.awaitQuestResult(inB, 2L, deadline());
+      QuestResult afterC = c.awaitQuestResult(inC, 2L, deadline());
       int recordIndex = com.riiablo.engine.server.quest.Act1DenOfEvilQuest.RECORD;
       if (!afterA.success() || !afterB.success()
           || afterA.questRecordsLength() <= recordIndex
@@ -1178,17 +1195,64 @@ public final class D2GSHeadlessClient {
               com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)) {
         throw new IOException("Den objective did not propagate to both party clients");
       }
+      if (!afterC.success() || afterC.questRecordsLength() <= recordIndex
+          || hasQuestFlag(afterC.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || hasQuestFlag(afterC.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)) {
+        throw new IOException("Den objective leaked to unrelated outside client");
+      }
       long[] authorityA = D2GS.headlessQuestState(a.playerId);
       long[] authorityB = D2GS.headlessQuestState(b.playerId);
-      if (authorityA.length == 0 || authorityB.length == 0
+      long[] authorityC = D2GS.headlessQuestState(c.playerId);
+      if (authorityA.length == 0 || authorityB.length == 0 || authorityC.length == 0
           || authorityA[0] != afterA.questRevision()
           || authorityB[0] != afterB.questRevision()
-          || authorityA[0] != authorityB[0]) {
+          || authorityC[0] != afterC.questRevision()
+          || authorityA[0] != authorityB[0]
+          || authorityC[0] == authorityA[0]) {
         throw new IOException("Den quest authority/client revisions diverged");
       }
-      log("den_quest_dual_pass", "clients=" + a.playerId + ',' + b.playerId
-          + " level=8 party=true objective=true rewardPending=true revision="
-          + authorityA[0]);
+      long completedRevision = authorityA[0];
+      int oldPlayerId = a.playerId;
+      socketA.close();
+      b.awaitDeleted(inB, oldPlayerId, deadline());
+
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        // Deliberately resend the original pre-quest D2S. The active game is
+        // authoritative and must restore the records retained at disconnect.
+        send(reconnectOutput, connectionPacket(character, d2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        send(reconnectOutput, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+        QuestResult restored = reconnected.awaitQuestResult(reconnectInput, 1L, deadline());
+        long[] restoredAuthority = D2GS.headlessQuestState(reconnected.playerId);
+        if (!restored.success() || restored.questRecordsLength() <= recordIndex
+            || restored.questRevision() != completedRevision
+            || !hasQuestFlag(restored.questRecords(recordIndex),
+                com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+            || !hasQuestFlag(restored.questRecords(recordIndex),
+                com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
+            || restoredAuthority.length == 0
+            || restoredAuthority[0] != completedRevision
+            || reconnected.playerQuestRevision != completedRevision
+            || reconnected.baselineQuestRevision != completedRevision) {
+          throw new IOException("Den quest state was not restored on reconnect: result="
+              + restored.questRevision() + " authority="
+              + (restoredAuthority.length == 0 ? "unavailable" : restoredAuthority[0])
+              + " playerBaseline=" + reconnected.playerQuestRevision
+              + " transactionBaseline=" + reconnected.baselineQuestRevision);
+        }
+        log("den_quest_reconnect_pass", "oldPlayer=" + oldPlayerId
+            + " player=" + reconnected.playerId + " staleD2s=true objective=true"
+            + " rewardPending=true revision=" + completedRevision);
+      }
+      log("den_quest_dual_pass", "eligible=" + a.playerId + ',' + b.playerId
+          + " outsider=" + c.playerId + " levels=8,8," + c.currentLevelId
+          + " party=true objective=true"
+          + " rewardPending=true isolated=true revision=" + authorityA[0]);
     }
   }
 
@@ -3029,8 +3093,12 @@ public final class D2GSHeadlessClient {
 
   /** Durable second client used only as a passive multiplayer observer/picker. */
   private static byte[] createGeneratedObserverSave() {
+    return createGeneratedObserverSave("HeadlessPeer", 0x50454552);
+  }
+
+  private static byte[] createGeneratedObserverSave(String name, int mapSeed) {
     CharData character = CharData.obtain().clear()
-        .set(Riiablo.NORMAL, false, "HeadlessPeer", Riiablo.BARBARIAN);
+        .set(Riiablo.NORMAL, false, name, Riiablo.BARBARIAN);
     com.riiablo.codec.excel.CharStats.Entry stats = CharacterClass.BARBARIAN.entry();
     StatListRef base = character.getStats().base();
     base.put(Stat.strength, stats.str);
@@ -3052,7 +3120,7 @@ public final class D2GSHeadlessClient {
     base.put(Stat.armorclass, 1_000_000);
     character.getStats().reset();
     character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
-    character.mapSeed = 0x50454552; // "PEER"
+    character.mapSeed = mapSeed;
     character.initializeStartItems(stats);
     return new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
   }

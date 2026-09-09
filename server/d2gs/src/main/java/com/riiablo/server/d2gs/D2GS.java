@@ -1832,6 +1832,14 @@ public class D2GS extends ApplicationAdapter {
   final IntIntMap player = new IntIntMap();
   /** Character-name identity used only to rebind owner windows on reconnect. */
   final java.util.Map<String, Integer> disconnectedOwnerEntities = new HashMap<>();
+  /**
+   * Authoritative current-difficulty quest records retained for a character
+   * that reconnects to this game. The client may reconnect with the same D2S
+   * bytes it used at login, so its stale copy must not roll back quest credit
+   * earned during the active server session.
+   */
+  final java.util.Map<String, short[]> disconnectedQuestRecords =
+      new java.util.concurrent.ConcurrentHashMap<>();
   final long[] nextMovementLogTime = new long[MAX_CLIENTS];
   final MovementInputSequenceTracker[] movementInputs =
       new MovementInputSequenceTracker[MAX_CLIENTS];
@@ -2302,6 +2310,21 @@ public class D2GS extends ApplicationAdapter {
 
     ByteBuffer d2sData = connection.d2sAsByteBuffer();
     CharData charData = CharData.loadFromBuffer(diff, d2sData);
+    short[] sessionQuestRecords = disconnectedQuestRecords.remove(charData.name);
+    if (sessionQuestRecords != null) {
+      int index = 0;
+      for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
+        short[] actRecords = charData.getQuests(act);
+        for (int quest = 0;
+             quest < QuestSnapshot.RECORDS_PER_ACT && index < sessionQuestRecords.length;
+             quest++) {
+          actRecords[quest] = sessionQuestRecords[index++];
+        }
+      }
+      Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=quest_restore character="
+          + charData.name + " records=" + index + " revision="
+          + QuestSnapshot.revision(QuestSnapshot.records(charData)));
+    }
     // Rebuild equipment-derived attributes and native skills after loading a
     // remote save.  Without this, a valid starting Amazon has a javelin in her
     // hand but the authoritative skill map never gains Throw, causing every
@@ -2542,6 +2565,11 @@ public class D2GS extends ApplicationAdapter {
       if (disconnectedPlayer != null && disconnectedPlayer.data != null
           && disconnectedPlayer.data.name != null && !disconnectedPlayer.data.name.isEmpty()) {
         disconnectedOwnerEntities.put(disconnectedPlayer.data.name, entityId);
+        short[] questRecords = QuestSnapshot.records(disconnectedPlayer.data);
+        disconnectedQuestRecords.put(disconnectedPlayer.data.name, questRecords);
+        Gdx.app.log(TAG, "[RECONNECT_BASELINE] phase=quest_retain character="
+            + disconnectedPlayer.data.name + " records=" + questRecords.length
+            + " revision=" + QuestSnapshot.revision(questRecords));
       }
       FlatBufferBuilder builder = new FlatBufferBuilder();
       int disconnectOffset = Disconnect.createDisconnect(builder, entityId);
@@ -3223,8 +3251,12 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private int clientForEntity(int entityId) {
-    for (IntIntMap.Entry entry : player.entries()) {
-      if (entry.value == entityId && (connected & (1 << entry.key)) != 0) return entry.key;
+    // Client disconnects are handled by their network threads, so iterating
+    // IntIntMap here can invalidate another party snapshot's pooled iterator.
+    // Connection ids are a fixed, dense range; scan those slots instead.
+    for (int clientId = 0; clientId < MAX_CLIENTS; clientId++) {
+      if ((connected & (1 << clientId)) != 0
+          && player.get(clientId, Engine.INVALID_ENTITY) == entityId) return clientId;
     }
     return -1;
   }
@@ -3268,11 +3300,15 @@ public class D2GS extends ApplicationAdapter {
     FlatBufferBuilder builder = new FlatBufferBuilder(4096);
     int reasonOffset = builder.createString(result.reason == null ? "" : result.reason);
     int viewerEntityId = player.get(clientId, Engine.INVALID_ENTITY);
-    int[] members = new int[player.size];
+    int[] members = new int[MAX_CLIENTS];
     int count = 0;
-    for (IntIntMap.Entry entry : player.entries()) {
-      int entityId = entry.value;
-      if (entityId == Engine.INVALID_ENTITY || (connected & (1 << entry.key)) == 0) continue;
+    // Do not use IntIntMap.entries() in this path. Disconnect may broadcast a
+    // party snapshot from a network thread while the simulation thread is
+    // building another snapshot, and LibGDX map iterators cannot be nested.
+    for (int rosterClientId = 0; rosterClientId < MAX_CLIENTS; rosterClientId++) {
+      if ((connected & (1 << rosterClientId)) == 0) continue;
+      int entityId = player.get(rosterClientId, Engine.INVALID_ENTITY);
+      if (entityId == Engine.INVALID_ENTITY) continue;
       com.riiablo.engine.server.component.Player playerComponent = world.getMapper(Player.class).get(entityId);
       com.riiablo.save.CharData data = playerComponent == null ? null : playerComponent.data;
       String name = data == null || data.name == null ? "" : data.name;
@@ -4043,8 +4079,8 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private int connectionIdForEntity(int entityId) {
-    for (IntIntMap.Entry entry : player.entries()) {
-      if (entry.value == entityId) return entry.key;
+    for (int clientId = 0; clientId < MAX_CLIENTS; clientId++) {
+      if (player.get(clientId, Engine.INVALID_ENTITY) == entityId) return clientId;
     }
     return -1;
   }

@@ -716,6 +716,19 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - `Disconnect` 观察器同时接受正式删除包；对旧 compact gold 编码无法投影 quantity 时，以服务端权威数量作隐藏测试断言，仍要求客户端实体和归属元数据存在。
   - 测试输出 `reconnect_ground_loot_pass`（`quantity=20->5 credited->15 remaining=15`、`ownerWindowPreserved=true`），构建成功。
 
+- [x] ~~完成第一章 Den of Evil 多人任务隔离与断线重连恢复~~
+  - `headlessDenQuestDual` 扩展为三个真实无窗口客户端：同队且位于 Den 的两端获得
+    `PRIMARY_GOAL_DONE + REWARD_PENDING`，未组队且位于 Rogue Encampment 的第三端
+    不获得任务进度；三个客户端快照 revision 均与各自服务端权威记录一致。
+  - D2GS 在同一游戏会话内按角色保留断线时的当前难度任务记录；即使客户端使用任务
+    完成前的旧 D2S 重连，也不会回滚已获得的目标与待领奖状态，连接原子基线、任务
+    请求快照和服务端状态使用同一 revision。
+  - Party roster 广播与实体到连接查找改为固定客户端槽扫描，消除网络断线线程与模拟
+    线程同时构建 roster 时触发的 LibGDX `IntIntMap #iterator() cannot be used nested`。
+  - 1.10f 真实资源下 `headlessDenQuestDual`、`headlessQuestRecovery` 和
+    `headlessReconnectVisibility` 全部通过；输出 `den_quest_reconnect_pass`、
+    `den_quest_dual_pass isolated=true`，原有实体重连生命周期未回归。
+
 **P0-1 无损 TXT 数据层与 1.10f 五表对照已完成。** 当前进入 **P0-2 原生
 Stat/State 聚合和生命周期**；下一小步先审计永久 stat、装备 stat 与临时 state stat 的
 现有写入路径，建立显式 `Base -> Add -> Percent` 聚合门槛，再对齐 state 覆盖/堆叠和死亡清理。
