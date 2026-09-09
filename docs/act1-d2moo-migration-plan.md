@@ -151,6 +151,7 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] A1Q3 authoritative imbue item transformation (`NativeCharsiImbueSystem`).
     - [x] A1Q5 Countess quest record, room/party completion and native TC reward handoff.
     - [x] A1Q5 multiplayer isolation, Act I town-party eligibility, idempotent reward and reconnect snapshot acceptance tests.
+    - [x] A1Q6 multiplayer Act I party eligibility, global completion flag, Warriv claim idempotency and reconnect snapshot acceptance tests.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services (local single-player loop complete)
   - [x] Vendor stock receives persistent item ids and valid in-store flags.
@@ -167,10 +168,10 @@ waypoints, caves, quest rewards and collision boundaries.
       - [x] Authoritative atomic REPAIR_ITEM/REPAIR_ALL with ownership and wallet validation.
       - [x] Player-private GAMBLE stock refresh and native-price purchase.
       - [ ] Reconnect/session recovery.
-- [ ] Phase 5: A1Q6 and Act completion
+- [x] Phase 5: A1Q6 and Act completion
   - [x] Andariel death record propagation and duplicate-death guard.
   - [x] Warriv reward claim and authoritative Act II transition event.
-  - [ ] Multiplayer isolation, repeated request and reconnect snapshot acceptance tests.
+  - [x] Multiplayer isolation, repeated request and reconnect snapshot acceptance tests.
 - [ ] Phase 6: remaining Act 1 quests
 - [ ] Phase 7: portals, drops and persistence
 - [ ] Phase 8: population, environment and regression

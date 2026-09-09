@@ -1482,6 +1482,89 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /** Creates a deterministic Act 1 Andariel and dispatches its death twice. */
+  static boolean headlessCompleteAndarielObjective(int killerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean completed = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper ownerWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(killerId);
+        Position ownerPosition = server.world.getMapper(Position.class).get(killerId);
+        if (ownerWrapper == null || ownerWrapper.zone == null
+            || ownerWrapper.zone.level == null || ownerWrapper.zone.level.Id != 37
+            || ownerPosition == null || Riiablo.files == null || Riiablo.files.monstats == null) {
+          return;
+        }
+        com.riiablo.codec.excel.MonStats.Entry stats =
+            Riiablo.files.monstats.get(com.riiablo.engine.server.monster.MonsterType.ANDARIEL);
+        if (stats == null) return;
+        int fixture = server.world.create();
+        server.world.getMapper(com.riiablo.engine.server.component.Monster.class)
+            .create(fixture).monstats = stats;
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .create(fixture).set(server.map, ownerWrapper.zone);
+        server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+        server.world.process();
+        EventSystem events = server.world.getSystem(EventSystem.class);
+        events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
+        events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
+        completed.set(true);
+      } finally { done.countDown(); }
+    });
+    try { return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && completed.get(); }
+    catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
+  }
+
+  /** Moves a headless player next to a real quest NPC and returns its entity id. */
+  static int headlessPrepareQuestNpc(int playerId, int monsterClass) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger npcId =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper playerWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        Position playerPosition = server.world.getMapper(Position.class).get(playerId);
+        if (playerWrapper == null || playerWrapper.zone == null || playerPosition == null) return;
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                Position.class, com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int entityId = ids[i];
+          com.riiablo.engine.server.component.Monster monster = server.world
+              .getMapper(com.riiablo.engine.server.component.Monster.class).get(entityId);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
+          if (monster == null || monster.monstats == null
+              || monster.monstats.hcIdx != monsterClass || wrapper == null
+              || wrapper.zone != playerWrapper.zone) continue;
+          Position target = server.world.getMapper(Position.class).get(entityId);
+          playerPosition.position.set(target.position.x + 1f, target.position.y);
+          com.riiablo.engine.server.component.Box2DBody body = server.world
+              .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+          if (body != null && body.body != null) {
+            body.body.setTransform(playerPosition.position, body.body.getAngle());
+          }
+          npcId.set(entityId);
+          return;
+        }
+      } finally { done.countDown(); }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? npcId.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /** Test-only NPC-equivalent paid resurrection on the render thread. */
   static boolean headlessResurrectMercenary(int playerId) {
     D2GS server = activeHeadlessInstance;

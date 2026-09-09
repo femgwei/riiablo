@@ -620,11 +620,17 @@ public class Act1QuestSystem extends PassiveSystem {
     }
     for (int i = 0, size = players.size(); i < size; i++) {
       int playerId = ids[i];
-      if (!isPlayerInAct1OutsideTown(playerId)) continue;
-      if (partyManager != null && eligibleParties.contains(partyManager.getPartyId(playerId))) {
+      // D2MOO's ACT1Q6_UnitIterate_SetPrimaryGoalDoneForPartyMembers walks
+      // every party member in Act I, including Rogue Encampment. Town is
+      // intentionally not excluded from the direct reward-pending grant.
+      if (partyManager != null && eligibleParties.contains(partyManager.getPartyId(playerId))
+          && isPlayerInAct1(playerId)) {
         updateAndarielRecord(mPlayer.get(playerId).data, Act1AndarielQuest::completePending,
             "eligible-party-member");
       } else {
+        // D2MOO's SetCompletionFlag is a global pass. Players in Act II (or
+        // another act) receive COMPLETED_NOW, but only Act I party members
+        // are eligible for the reward-pending transition above.
         updateAndarielRecord(mPlayer.get(playerId).data, Act1AndarielQuest::markCompletedNow,
             "andariel-died-this-game");
       }

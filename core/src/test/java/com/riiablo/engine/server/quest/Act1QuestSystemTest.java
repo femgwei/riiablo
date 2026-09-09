@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NativeCountessQuestEvent;
+import com.riiablo.engine.server.event.NativeActTransitionEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
@@ -483,6 +484,81 @@ class Act1QuestSystemTest extends RiiabloTest {
   }
 
   @Test
+  void propagatesAndarielRewardToAct1PartyAndMarksOtherActsComplete() {
+    Harness harness = new Harness();
+    try {
+      CharData hunterData = character("AndarielHunter", Riiablo.NORMAL);
+      CharData townData = character("AndarielTownParty", Riiablo.NORMAL);
+      CharData fieldData = character("AndarielFieldParty", Riiablo.NORMAL);
+      CharData act2Data = character("AndarielAct2Party", Riiablo.NORMAL);
+      CharData unrelatedData = character("AndarielUnrelated", Riiablo.NORMAL);
+      int hunter = harness.createPlayer(hunterData);
+      int townParty = harness.createPlayer(townData);
+      int fieldParty = harness.createPlayer(fieldData);
+      int act2Party = harness.createPlayer(act2Data);
+      int unrelated = harness.createPlayer(unrelatedData);
+      harness.setPlayerLevel(hunter, D2LevelIds.LEVEL_CATACOMBSLVL4);
+      harness.setPlayerLevel(townParty, D2LevelIds.LEVEL_ROGUEENCAMPMENT);
+      harness.setPlayerLevel(fieldParty, D2LevelIds.LEVEL_BLOODMOOR);
+      harness.setPlayerLevel(act2Party, D2LevelIds.LEVEL_LUTGHOLEIN);
+      harness.setPlayerLevel(unrelated, D2LevelIds.LEVEL_BLOODMOOR);
+      assertTrue(harness.parties.sendInvitation(hunter, townParty));
+      assertTrue(harness.parties.acceptInvitation(townParty));
+      assertTrue(harness.parties.sendInvitation(hunter, fieldParty));
+      assertTrue(harness.parties.acceptInvitation(fieldParty));
+      assertTrue(harness.parties.sendInvitation(hunter, act2Party));
+      assertTrue(harness.parties.acceptInvitation(act2Party));
+      int andariel = harness.createAndariel();
+      harness.process();
+      harness.events.dispatch(DeathEvent.obtain(hunter, andariel));
+
+      assertTrue(NativeQuestRecord.has(andarielRecord(hunterData), NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(andarielRecord(hunterData), NativeQuestRecord.REWARD_PENDING));
+      assertTrue(NativeQuestRecord.has(andarielRecord(townData), NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(andarielRecord(townData), NativeQuestRecord.REWARD_PENDING),
+          "Rogue Encampment is part of Act I for A1Q6 party propagation");
+      assertTrue(NativeQuestRecord.has(andarielRecord(fieldData), NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(andarielRecord(act2Data), NativeQuestRecord.REWARD_PENDING));
+      assertFalse(NativeQuestRecord.has(andarielRecord(act2Data), NativeQuestRecord.PRIMARY_GOAL_DONE));
+      assertTrue(NativeQuestRecord.has(andarielRecord(act2Data), NativeQuestRecord.COMPLETED_NOW));
+      assertTrue(NativeQuestRecord.has(andarielRecord(unrelatedData), NativeQuestRecord.COMPLETED_NOW));
+
+      harness.events.dispatch(DeathEvent.obtain(hunter, andariel));
+      assertTrue(NativeQuestRecord.has(andarielRecord(townData), NativeQuestRecord.REWARD_PENDING));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
+  void WarrivRewardIsAtomicAndIdempotent() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("AndarielWarriv", Riiablo.NORMAL);
+      int player = harness.createPlayer(data);
+      harness.setPlayerLevel(player, D2LevelIds.LEVEL_ROGUEENCAMPMENT);
+      int warriv = harness.createWarriv();
+      data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD] =
+          Act1AndarielQuest.completePending((short) 0);
+      harness.process();
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, warriv, Act1AndarielQuest.MESSAGE_WARRIV_REWARD));
+      short claimed = andarielRecord(data);
+      assertTrue(NativeQuestRecord.has(claimed, NativeQuestRecord.REWARD_GRANTED));
+      assertFalse(NativeQuestRecord.has(claimed, NativeQuestRecord.REWARD_PENDING));
+      assertEquals(1, harness.transitionConsumer.requests);
+      assertEquals(D2LevelIds.LEVEL_LUTGHOLEIN, harness.transitionConsumer.destination);
+
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, warriv, Act1AndarielQuest.MESSAGE_WARRIV_REWARD));
+      assertEquals(claimed, andarielRecord(data));
+      assertEquals(1, harness.transitionConsumer.requests);
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
   void createsPersistableCainMagicAndRareRings() {
     ItemGenerator generator = new ItemGenerator();
     Item normal = generator.generateQuestReward("rin", 7, Quality.MAGIC, 0x1001);
@@ -713,14 +789,19 @@ class Act1QuestSystemTest extends RiiabloTest {
     return data.getQuests(Riiablo.ACT1)[Act1CountessQuest.RECORD];
   }
 
+  private static short andarielRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT1)[Act1AndarielQuest.RECORD];
+  }
+
   private static final class Harness {
     final EventSystem events = new EventSystem();
     final Act1QuestSystem quests = new Act1QuestSystem();
     final CainQuestConsumer cainConsumer = new CainQuestConsumer();
     final CountessQuestConsumer countessConsumer = new CountessQuestConsumer();
+    final TransitionConsumer transitionConsumer = new TransitionConsumer();
     final PartyManager parties = new PartyManager();
     final World world = new World(new WorldConfigurationBuilder()
-        .with(events, quests, cainConsumer, countessConsumer)
+        .with(events, quests, cainConsumer, countessConsumer, transitionConsumer)
         .build()
         .register("partyManager", parties));
 
@@ -780,6 +861,27 @@ class Act1QuestSystemTest extends RiiabloTest {
       world.getMapper(SuperUnique.class).create(entityId).id =
           D2SuperUniques.SUPERUNIQUE_THE_COUNTESS;
       world.getMapper(MapWrapper.class).create(entityId).zone = zone;
+      return entityId;
+    }
+
+    int createAndariel() {
+      Levels.Entry level = new Levels.Entry();
+      level.Id = D2LevelIds.LEVEL_CATACOMBSLVL4;
+      Map.Zone zone = new Map.Zone();
+      zone.level = level;
+      MonStats.Entry monstats = new MonStats.Entry();
+      monstats.hcIdx = MonsterType.ANDARIEL;
+      int entityId = world.create();
+      world.getMapper(Monster.class).create(entityId).monstats = monstats;
+      world.getMapper(MapWrapper.class).create(entityId).zone = zone;
+      return entityId;
+    }
+
+    int createWarriv() {
+      MonStats.Entry monstats = new MonStats.Entry();
+      monstats.hcIdx = MonsterType.WARRIV;
+      int entityId = world.create();
+      world.getMapper(Monster.class).create(entityId).monstats = monstats;
       return entityId;
     }
 
@@ -850,6 +952,18 @@ class Act1QuestSystemTest extends RiiabloTest {
     public void onCountessQuest(NativeCountessQuestEvent event) {
       requests++;
       victim = event.countessId;
+    }
+  }
+
+  private static final class TransitionConsumer extends PassiveSystem {
+    int requests;
+    int destination = -1;
+
+    @Subscribe
+    public void onTransition(NativeActTransitionEvent event) {
+      requests++;
+      destination = event.destinationLevelId;
+      event.accept();
     }
   }
 }

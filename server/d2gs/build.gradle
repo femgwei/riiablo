@@ -147,6 +147,18 @@ tasks.register('headlessCountessQuestDual', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessAndarielQuestDual', JavaExec) {
+  group = 'verification'
+  description = 'Runs three windowless clients through Andariel party credit, Warriv idempotency and reconnect recovery.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-andariel-quest', '--test-timeout', '90'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessMercenarySkill', JavaExec) {
   group = 'verification'
   description = 'Runs a windowless native Rogue hireling skill-casting smoke test.'

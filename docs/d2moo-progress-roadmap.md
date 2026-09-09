@@ -31,8 +31,9 @@
 
 ## 2026-09-09 当前进度快照
 
-- 最近一次功能提交为 `6909a589`（A1Q3 Malus 多人任务传播）；本次完成 A1Q5 Countess
-  多人资格、幂等和重连收尾，修正了原版要求的“整个 Act I（含罗格营地）队伍奖励”差异。
+- 最近一次功能提交为 `24237b51`（A1Q5 Countess 多人任务与重连收尾）；本次完成 A1Q6
+  Andariel 多人资格、Warriv 领取幂等和两阶段重连收尾，修正了原版要求的“整个 Act I
+  （含罗格营地）队伍奖励”差异。
 - Git 历史显示 2026-09-08 至 2026-09-09 已完成 P0-1 五表、P0-2/P0-3/P0-4 的大部分
   骨架，以及 P1 Missile、伤害/死亡、多人掉落、D2S 严格往返等收尾批次；同时已经
   进入 P2 的对象快照、多人重连和第一章任务多人资格验证。因此“进入 P2”是真实执行
@@ -50,8 +51,9 @@
 
 1. **P2-A1Q5 Countess 收尾（已完成）**：修正队伍传播为按 Act I 判定（包含 Rogue
    Encampment），并通过同层/同队/无关/跨幕/重复死亡、权威 revision 与旧存档重连测试。
-2. **P2-A1Q6 Andariel 收尾（当前目标）**：保留现有击杀传播和 Warriv 过渡，补齐多人完成传播、
-   奖励领取、重复请求、跨幕排除、固定种子和重连恢复回归。
+2. **P2-A1Q6 Andariel 收尾（已完成）**：修正队伍传播为整个 Act I（含 Rogue Encampment），
+   全局完成标记覆盖跨幕玩家；Warriv 领取清除 `REWARD_PENDING`、设置 `REWARD_GRANTED`
+   并发出 Lut Gholein 过渡，重复请求保持幂等；核心和真实无窗口重连回归通过。
 3. **P2 对象表现收尾**：把 `stateFlags` 从服务端快照映射到客户端 `Interactable`，
    验证箱子、门、陷阱、神殿等对象的激活表现。
 4. **P1 战斗统一收尾**：在同一 Chat 内继续处理剩余职业技能、抗性/状态边界、怪物
@@ -76,7 +78,7 @@
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
 | P2 | 箱子、门、陷阱、神殿、水井等对象 | 5% | 90% | 10% | 0.5% | 服务端/线协议快照已接通，客户端 stateFlags 表现映射待补 |
-| P2 | 第一章任务、奖励和过渡 | 5% | 84% | 16% | 0.8% | A1Q5 多人资格/幂等/重连已通过；A1Q6、对象和少量脚本待补 |
+| P2 | 第一章任务、奖励和过渡 | 5% | 86% | 14% | 0.7% | A1Q5/A1Q6 多人资格、奖励幂等和重连已通过；对象和少量脚本待补 |
 | P2 | NPC 买卖、修理、赌博、雇佣 | 4% | 70% | 30% | 1.2% | 原生库存刷新、雇佣/复活和重连待补 |
 | P2 | Party、敌对、玩家交易和多人同步 | 5% | 60% | 40% | 2.0% | 权威移动意图已接通；玩家交易、复杂可见性和重连待补 |
 | P2 | D2S 存档、角色创建和状态持久化 | 4% | 60% | 40% | 1.6% | 版本校验、完整 section 和 mask 待补 |
@@ -611,8 +613,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-下一小步：转入 P2 A1Q6 Andariel 的多人资格、奖励幂等和重连恢复；随后处理对象快照的
-客户端 `stateFlags` 表现映射。战斗模块由本 Chat 统一维护，相关
+下一小步：转入 P2 对象快照的客户端 `stateFlags` 表现映射；随后处理剩余第一章脚本和
+战斗/物品严格验收。战斗模块由本 Chat 统一维护，相关
 技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -831,9 +833,25 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     与 `:server:d2gs:compileJava` 通过；`D2_HOME=G:/BaiduNetdiskDownload/Diablo II 1.10F`
     下 `:server:d2gs:headlessCountessQuestDual` 构建成功。
 
+- [x] ~~完成第一章 A1Q6 Andariel 多人资格、Warriv 奖励幂等与断线重连收尾~~
+  - 对照 D2MOO `ACT1Q6_UnitIterate_SetPrimaryGoalDoneForPartyMembers`，队伍奖励待领取
+    传播覆盖整个 Act I（包含 Rogue Encampment）；跨幕和无关玩家只获得全局
+    `COMPLETED_NOW`，不会获得 `REWARD_PENDING`。
+  - Warriv 消息原子地把 `PRIMARY_GOAL_DONE + REWARD_PENDING` 转为
+    `REWARD_GRANTED` 并发出 `LEVEL_LUTGHOLEIN` 过渡；重复 NPC 请求和重复 Andariel
+    死亡均不重复发放或改变记录。
+  - 核心 ECS 回归覆盖营地/野外队员、Act II 队员、无关玩家、重复死亡和 Warriv 双击；
+    新增三客户端 `headlessAndarielQuestDual`，验证待领取状态重连、Warriv 领取、重复
+    请求、领取后再次重连及权威 revision 一致。1.10f 真实资源测试输出
+    `andariel_quest_dual_pass`。
+  - 验证命令：`Act1QuestSystemTest`、`Act1AndarielQuestTest`、
+    `Act1QuestMessageValidatorTest`、`QuestSnapshotTest` 和 `:server:d2gs:compileJava`
+    全部通过；`D2_HOME=G:/BaiduNetdiskDownload/Diablo II 1.10F`
+    下 `:server:d2gs:headlessAndarielQuestDual` 通过。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **P2-A1Q6 Andariel 多人/重连收尾**。
+> “当前下一项”为准，当前目标是 **P2 对象 stateFlags 客户端表现收尾**。
 
 ## 记录规则
 

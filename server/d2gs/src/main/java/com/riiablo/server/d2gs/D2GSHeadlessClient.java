@@ -155,6 +155,10 @@ public final class D2GSHeadlessClient {
       runCountessQuestDual(d2s, character);
       return;
     }
+    if (config.requireAndarielQuestScenario) {
+      runAndarielQuestDual(d2s, character);
+      return;
+    }
     if (config.requireQuestRecovery) {
       runQuestRecoveryDual(d2s, character);
       return;
@@ -1377,6 +1381,176 @@ public final class D2GSHeadlessClient {
             com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
         && (!requireCompletedNow || hasQuestFlag(record,
             com.riiablo.engine.server.quest.NativeQuestRecord.COMPLETED_NOW));
+  }
+
+  /** Three-client A1Q6 party credit, Warriv claim and two-stage reconnect gate. */
+  private void runAndarielQuestDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient c = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("AndarielTown", 0x414E4454);
+    byte[] outsiderD2s = createGeneratedObserverSave("AndarielOut", 0x414E444F);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    CharacterHeader outsiderCharacter = CharacterHeader.read(outsiderD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket();
+         Socket socketC = c.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB), inC = input(socketC);
+      OutputStream outA = output(socketA), outB = output(socketB), outC = output(socketC);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      send(outC, connectionPacket(outsiderCharacter, outsiderD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      c.awaitConnection(inC, deadline());
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
+        throw new IOException("Andariel party setup failed");
+      }
+      if (!D2GS.headlessMovePlayerToLevel(a.playerId, 37)) {
+        throw new IOException("Catacombs Level 4 staging unavailable");
+      }
+      awaitQuestLevels(a, b, c, inA, inB, inC, 37, 1, 1, "Andariel");
+      if (!D2GS.headlessCompleteAndarielObjective(a.playerId)) {
+        throw new IOException("authoritative Andariel objective trigger failed");
+      }
+
+      send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outC, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      QuestResult afterA = a.awaitQuestResult(inA, 1L, deadline());
+      QuestResult afterB = b.awaitQuestResult(inB, 1L, deadline());
+      QuestResult afterC = c.awaitQuestResult(inC, 1L, deadline());
+      int recordIndex = com.riiablo.engine.server.quest.Act1AndarielQuest.RECORD;
+      if (!isAndarielPending(afterA, recordIndex)
+          || !isAndarielPending(afterB, recordIndex)) {
+        throw new IOException("Andariel reward-pending did not propagate to Act I town party");
+      }
+      if (!afterC.success() || afterC.questRecordsLength() <= recordIndex
+          || hasQuestFlag(afterC.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
+          || !hasQuestFlag(afterC.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.COMPLETED_NOW)) {
+        throw new IOException("Andariel reward leaked to unrelated town client");
+      }
+      long[] authorityA = D2GS.headlessQuestState(a.playerId);
+      long[] authorityB = D2GS.headlessQuestState(b.playerId);
+      long[] authorityC = D2GS.headlessQuestState(c.playerId);
+      if (authorityA.length == 0 || authorityB.length == 0 || authorityC.length == 0
+          || authorityA[0] != afterA.questRevision()
+          || authorityB[0] != afterB.questRevision()
+          || authorityC[0] != afterC.questRevision()) {
+        throw new IOException("Andariel quest authority/client revisions diverged");
+      }
+
+      long pendingRevision = authorityA[0];
+      int originalPlayerId = a.playerId;
+      socketA.close();
+      b.awaitDeleted(inB, originalPlayerId, deadline());
+      D2GSHeadlessClient claimant = new D2GSHeadlessClient(config);
+      long grantedRevision;
+      int claimantId;
+      try (Socket reconnectSocket = claimant.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(character, d2s));
+        claimant.awaitConnection(reconnectInput, deadline());
+        send(reconnectOutput, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+        QuestResult restoredPending = claimant.awaitQuestResult(
+            reconnectInput, 1L, deadline());
+        if (!isAndarielPending(restoredPending, recordIndex)
+            || restoredPending.questRevision() != pendingRevision
+            || claimant.playerQuestRevision != pendingRevision
+            || claimant.baselineQuestRevision != pendingRevision) {
+          throw new IOException("Andariel pending state was not restored on reconnect");
+        }
+        if (!D2GS.headlessMovePlayerToLevel(claimant.playerId, 1)) {
+          throw new IOException("Warriv town staging unavailable");
+        }
+        int warriv = D2GS.headlessPrepareQuestNpc(claimant.playerId,
+            com.riiablo.engine.server.monster.MonsterType.WARRIV);
+        if (warriv == Engine.INVALID_ENTITY) throw new IOException("Warriv fixture unavailable");
+        send(reconnectOutput, questRequestPacket(10L, QuestOperation.NPC_MESSAGE,
+            warriv, com.riiablo.engine.server.quest.Act1AndarielQuest.MESSAGE_WARRIV_REWARD));
+        QuestResult claimed = claimant.awaitQuestResult(reconnectInput, 10L, deadline());
+        if (!isAndarielGranted(claimed, recordIndex)) {
+          throw new IOException("Warriv did not atomically grant A1Q6 reward");
+        }
+        send(reconnectOutput, questRequestPacket(10L, QuestOperation.NPC_MESSAGE,
+            warriv, com.riiablo.engine.server.quest.Act1AndarielQuest.MESSAGE_WARRIV_REWARD));
+        QuestResult replay = claimant.awaitQuestResult(reconnectInput, 10L, deadline());
+        if (!isAndarielGranted(replay, recordIndex)
+            || replay.questRevision() != claimed.questRevision()) {
+          throw new IOException("Warriv idempotent request replay diverged");
+        }
+        long[] claimedAuthority = D2GS.headlessQuestState(claimant.playerId);
+        if (claimedAuthority.length == 0 || claimedAuthority[0] != claimed.questRevision()) {
+          throw new IOException("Warriv claimed revision diverged from authority");
+        }
+        grantedRevision = claimedAuthority[0];
+        claimantId = claimant.playerId;
+      }
+      b.awaitDeleted(inB, claimantId, deadline());
+
+      D2GSHeadlessClient finalReconnect = new D2GSHeadlessClient(config);
+      try (Socket finalSocket = finalReconnect.openSocket();
+           DataInputStream finalInput = input(finalSocket);
+           OutputStream finalOutput = output(finalSocket)) {
+        send(finalOutput, connectionPacket(character, d2s));
+        finalReconnect.awaitConnection(finalInput, deadline());
+        send(finalOutput, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+        QuestResult restoredGranted = finalReconnect.awaitQuestResult(finalInput, 1L, deadline());
+        if (!isAndarielGranted(restoredGranted, recordIndex)
+            || restoredGranted.questRevision() != grantedRevision
+            || finalReconnect.playerQuestRevision != grantedRevision
+            || finalReconnect.baselineQuestRevision != grantedRevision) {
+          throw new IOException("Andariel granted state was not restored on second reconnect");
+        }
+      }
+      log("andariel_quest_dual_pass", "killer=" + originalPlayerId
+          + " townParty=" + b.playerId + " outsider=" + c.playerId
+          + " pendingReconnect=true warrivGranted=true replay=true grantedReconnect=true"
+          + " pendingRevision=" + pendingRevision + " grantedRevision=" + grantedRevision);
+    }
+  }
+
+  private void awaitQuestLevels(D2GSHeadlessClient a, D2GSHeadlessClient b,
+      D2GSHeadlessClient c, DataInputStream inA, DataInputStream inB, DataInputStream inC,
+      int levelA, int levelB, int levelC, String scenario) throws Exception {
+    long levelDeadline = deadline();
+    while (System.currentTimeMillis() < levelDeadline
+        && (a.currentLevelId != levelA || b.currentLevelId != levelB
+            || c.currentLevelId != levelC)) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+      if (packet != null) a.consume(packet);
+      packet = readPacket(inB);
+      if (packet != null) b.consume(packet);
+      packet = readPacket(inC);
+      if (packet != null) c.consume(packet);
+    }
+    if (a.currentLevelId != levelA || b.currentLevelId != levelB
+        || c.currentLevelId != levelC) {
+      throw new IOException(scenario + " clients did not observe staged levels: "
+          + a.currentLevelId + ',' + b.currentLevelId + ',' + c.currentLevelId);
+    }
+  }
+
+  private static boolean isAndarielPending(QuestResult result, int recordIndex) {
+    return result != null && result.success() && result.questRecordsLength() > recordIndex
+        && hasQuestFlag(result.questRecords(recordIndex),
+            com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+        && hasQuestFlag(result.questRecords(recordIndex),
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
+        && !hasQuestFlag(result.questRecords(recordIndex),
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED);
+  }
+
+  private static boolean isAndarielGranted(QuestResult result, int recordIndex) {
+    return result != null && result.success() && result.questRecordsLength() > recordIndex
+        && hasQuestFlag(result.questRecords(recordIndex),
+            com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+        && !hasQuestFlag(result.questRecords(recordIndex),
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
+        && hasQuestFlag(result.questRecords(recordIndex),
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED);
   }
 
   private static boolean hasQuestFlag(int record, int flag) {
@@ -3335,6 +3509,7 @@ public final class D2GSHeadlessClient {
     boolean requireFallenScenario;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
+    boolean requireAndarielQuestScenario;
     boolean requireQuestRecovery;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -3370,6 +3545,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
+        else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
         else if ("--require-quest-recovery".equals(arg)) config.requireQuestRecovery = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -3433,6 +3609,7 @@ public final class D2GSHeadlessClient {
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-den-quest] [--require-quest-recovery]"
           + " [--require-countess-quest]"
+          + " [--require-andariel-quest]"
           + " [--require-reconnect-visibility]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }
