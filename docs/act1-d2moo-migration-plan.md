@@ -148,7 +148,9 @@ waypoints, caves, quest rewards and collision boundaries.
     - [x] Cain1 is transferred after the native delay to Cain5 at object 385 in Rogue Encampment.
     - [x] Cain release is propagated to every eligible player currently in Tristram.
     - [x] PartyManager registration/state updates for eligible Act I party members outside Tristram.
-    - [ ] A1Q3 imbue item transformation and A1Q5 quest script.
+    - [x] A1Q3 authoritative imbue item transformation (`NativeCharsiImbueSystem`).
+    - [x] A1Q5 Countess quest record, room/party completion and native TC reward handoff.
+    - [ ] A1Q5 multiplayer isolation and reconnect snapshot acceptance tests.
 - [ ] Phase 3: A1Q2 and mercenary entry
 - [ ] Phase 4: Act 1 NPC services (local single-player loop complete)
   - [x] Vendor stock receives persistent item ids and valid in-store flags.
@@ -166,6 +168,9 @@ waypoints, caves, quest rewards and collision boundaries.
       - [x] Player-private GAMBLE stock refresh and native-price purchase.
       - [ ] Reconnect/session recovery.
 - [ ] Phase 5: A1Q6 and Act completion
+  - [x] Andariel death record propagation and duplicate-death guard.
+  - [x] Warriv reward claim and authoritative Act II transition event.
+  - [ ] Multiplayer isolation, repeated request and reconnect snapshot acceptance tests.
 - [ ] Phase 6: remaining Act 1 quests
 - [ ] Phase 7: portals, drops and persistence
 - [ ] Phase 8: population, environment and regression

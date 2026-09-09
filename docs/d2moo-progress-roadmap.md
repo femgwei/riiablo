@@ -40,10 +40,11 @@
 
 ### 后续计划（按顺序）
 
-1. **P2-A1Q5 Countess**：核对多人击杀资格、同队奖励、等级/区域边界、奖励幂等和
-   断线重连快照；补齐 D2MOO 对照测试。
-2. **P2-A1Q6 Andariel**：核对多人完成传播、Warriv 过渡、奖励领取和重复请求恢复；
-   补齐固定种子和重连回归。
+1. **P2-A1Q5 Countess 收尾（当前目标）**：现有权威击杀、任务记录和 TC 奖励流程不
+   重写；补齐同层玩家、同队 Act I 成员、无关玩家、跨幕玩家、重复死亡和断线重连的
+   D2MOO 对照测试，发现行为差异后再做最小修正。
+2. **P2-A1Q6 Andariel 收尾**：保留现有击杀传播和 Warriv 过渡，补齐多人完成传播、
+   奖励领取、重复请求、跨幕排除、固定种子和重连恢复回归。
 3. **P2 对象表现收尾**：把 `stateFlags` 从服务端快照映射到客户端 `Interactable`，
    验证箱子、门、陷阱、神殿等对象的激活表现。
 4. **P1 战斗统一收尾**：在同一 Chat 内继续处理剩余职业技能、抗性/状态边界、怪物
@@ -807,9 +808,9 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     `headlessReconnectVisibility` 全部通过；输出 `den_quest_reconnect_pass`、
     `den_quest_dual_pass isolated=true`，原有实体重连生命周期未回归。
 
-**P0-1 无损 TXT 数据层与 1.10f 五表对照已完成。** 当前进入 **P0-2 原生
-Stat/State 聚合和生命周期**；下一小步先审计永久 stat、装备 stat 与临时 state stat 的
-现有写入路径，建立显式 `Base -> Add -> Percent` 聚合门槛，再对齐 state 覆盖/堆叠和死亡清理。
+> 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
+> 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
+> “当前下一项”为准，当前目标是 **P2-A1Q5 Countess 多人/重连收尾**。
 
 ## 记录规则
 
