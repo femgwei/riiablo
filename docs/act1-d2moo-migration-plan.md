@@ -195,5 +195,7 @@ waypoints, caves, quest rewards and collision boundaries.
   multiplayer remaining-capacity snapshot without generated-protocol changes.
 - [x] Poison Dagger: native melee-dagger gate, SrvSt16 retained combat record, 8.8 fixed
   poison rate/synergies/duration, SrvDo032 one-shot damage and durability consumption.
-- [ ] Next: Corpse Explosion / Poison Explosion atomic corpse consumption, area damage and
-  persistent poison-cloud chain.
+- [x] Corpse Explosion / Poison Explosion: shared atomic corpse reservation, native
+  corpse-life physical/fire range packet, eight drifting fixed-rate poison clouds and
+  synchronized client corpse-burst presentation.
+- [ ] Next: Bone Wall / Bone Prison destructible units, collision and authoritative lifecycle.

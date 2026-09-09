@@ -749,6 +749,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         if (!missile.attached) world.delete(missileId);
         return true;
       }
+      if (missile.fixedPoisonRate) {
+        resolveFixedPoisonCloud(missileId, missile, targetId, targetAttrs);
+        return true;
+      }
       log.info("[MISSILE_HIT] phase=stats missileId={} owner={} target={} "
               + "snapshot={} toHit={} throwMin={} throwMax={} weaponMin={} weaponMax={} "
               + "attackRating={} profileMin={} profileMax={} profileAr={} "
@@ -887,6 +891,34 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /** Resolves skill poison stored by D2 as an 8.8 per-frame rate. */
+  private void resolveFixedPoisonCloud(
+      int missileId, Missile missile, int targetId, Attributes targetAttrs) {
+    int min = Math.max(0, missile.poisonMinRateFixed);
+    int max = Math.max(min, missile.poisonMaxRateFixed);
+    NativeRng rng = new NativeRng(missile.rngState);
+    int raw = min;
+    if (max > min) raw += rng.nextInt(max - min);
+    missile.rngState = rng.state();
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    StateList targetStates = stateList(targetId);
+    CombatSystem.CombatResult poison =
+        CombatSystem.INSTANCE.calculateFixedPoisonDamageSnapshot(
+            targetAttrs, mPlayer.has(targetId), missile.poisonAttackerPlayer,
+            raw, missile.poisonPiercePercent,
+            Math.max(1, missile.poisonDurationFrames), targetStates,
+            combatDifficulty(missile.ownerId, targetId));
+    if (poison.poisonDamagePerFrame > 0f && poison.poisonDuration > 0) {
+      StatusEffectApplier.INSTANCE.applyPoison(
+          targetId, poison.poisonDamagePerFrame, poison.poisonDuration, missile.ownerId);
+    }
+    log.info("[POISON_CLOUD] phase=apply missileId={} owner={} target={} skill={} "
+            + "rawFixed={} damagePerFrame={} duration={} pierce={}",
+        missileId, missile.ownerId, targetId, missile.skillId, raw,
+        poison.poisonDamagePerFrame, poison.poisonDuration,
+        missile.poisonPiercePercent);
   }
 
   /**

@@ -30,7 +30,8 @@ import com.riiablo.engine.server.event.DamageEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
-import com.riiablo.engine.server.state.UnitState;
+import com.riiablo.engine.server.skill.CorpseConsumption;
+import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -303,13 +304,9 @@ public class AssassinTrapSystem extends IteratingSystem {
     Corpse corpse = mCorpse.get(entityId);
     Monster monster = mMonster.get(entityId);
     Attributes attrs = mAttributes.get(entityId).attrs;
-    StatRef hp = attrs != null ? attrs.get(Stat.hitpoints) : null;
-    boolean hidden = mUnitStates.has(entityId)
-        && mUnitStates.get(entityId).stateList != null
-        && mUnitStates.get(entityId).stateList.hasState(StateId.CORPSE_NODRAW);
-    return corpse != null && corpse.usable && !corpse.fading && !hidden
-        && monster != null && monster.monstats2 != null && monster.monstats2.corpseSel
-        && hp != null && hp.asFixed() <= 0f;
+    StateList states = mUnitStates.has(entityId)
+        ? mUnitStates.get(entityId).stateList : null;
+    return CorpseConsumption.selectable(corpse, monster, attrs, states);
   }
 
   /** Native SKILLS_SrvDo055_CorpseExplosion. */
@@ -317,16 +314,12 @@ public class AssassinTrapSystem extends IteratingSystem {
       Skills.Entry skill) {
     if (!selectableCorpse(corpseId) || !mPosition.has(corpseId)) return false;
     Corpse corpse = mCorpse.get(corpseId);
-    corpse.usable = false; // reserve before damage so another sentry cannot consume it
     UnitStates states = mUnitStates.has(corpseId)
         ? mUnitStates.get(corpseId) : mUnitStates.create(corpseId).init(corpseId);
     if (states.stateList == null) states.init(corpseId);
-    UnitState hidden = states.stateList.addState(StateId.CORPSE_NODRAW, 0,
-        Math.max(1, trap.skillLevel), sentryId);
-    if (hidden != null) {
-      hidden.skillId = skill.Id;
-      hidden.needsSync = true;
-    }
+    if (!CorpseConsumption.tryReserve(
+        corpse, mMonster.get(corpseId), mAttributes.get(corpseId).attrs,
+        states.stateList, true, trap.skillLevel, sentryId, skill.Id)) return false;
 
     Attributes corpseAttrs = mAttributes.get(corpseId).attrs;
     int corpseMaxHp = Math.max(1, statInt(corpseAttrs, Stat.maxhp, 1));

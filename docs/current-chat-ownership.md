@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（Iron Maiden/Life Tap 原生受击回调首轮）
-- 上一功能基线：`237deed6`（Revive/Golem 原生召唤链首轮）
+- 当前功能提交：本文件所在 `HEAD`（Corpse Explosion / Poison Explosion 原生权威链）
+- 上一功能基线：`a70e8e38`（Poison Dagger 原生权威近战链）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 69%（详见路线图）
@@ -69,14 +69,17 @@
 - Poison Dagger 已接入原生 `SrvSt16/SrvDo032`：施法前验证非投掷匕首，固定 tick 位置
   快照生成一次性命中记录，按 1.10f 表计算 8.8 毒率、持续帧和双技能协同，命中时原子
   结算伤害、毒状态和耐久；没有新增网络 schema。
+- Corpse Explosion / Poison Explosion 已接入原生 `SrvSt17/SrvDo055/SrvDo063`：共用
+  单消费者尸体预留，尸爆按基础尸体生命拆分物理/火焰内外半径，毒爆创建八枚服务端
+  权威漂移毒云并快照 8.8 毒率、协同、精通和穿透；客户端仅渲染同步云与尸体爆裂。
 
 ## 下一步
 
 当前已完成 **P1 死灵法师召唤与诅咒链首轮**：Raise Skeleton/Skeletal Mage、Revive、
 四类 Golem、Iron Maiden/Life Tap 及 Dim Vision/Attract/Confuse 特殊 AI 均已接入。
-骨毒系已完成 Bone Armor 和 Poison Dagger。下一步处理 Corpse Explosion / Poison
-Explosion 的尸体原子消费、范围伤害和毒云，再依次处理 Bone Wall/Prison、Poison Nova、
-Bone Spear/Spirit。战斗模块不再
+骨毒系已完成 Bone Armor、Poison Dagger、Corpse Explosion 和 Poison Explosion。
+下一步处理 Bone Wall/Prison 的可破坏单位、地图碰撞和生命周期，再依次处理 Poison
+Nova、Bone Spear/Spirit。战斗模块不再
 单独分派，相关修改均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与

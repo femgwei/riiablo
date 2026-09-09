@@ -318,16 +318,41 @@ public final class NecromancerSkills {
     return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, (int) value);
   }
 
-  /**
-   * 尸体爆炸 - 引爆尸体造成范围伤害
-   * 
-   * @param corpseMaxHp 尸体最大生命值
-   * @return 伤害（60-100% 尸体最大生命）
-   */
+  public static boolean isCorpseExplosion(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 17 && skill.srvdofunc == 55;
+  }
+
+  public static boolean isPoisonExplosion(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 17 && skill.srvdofunc == 63;
+  }
+
+  /** Native SrvDo055 minimum/maximum corpse-life percentage from calc1/calc2. */
+  public static int[] getCorpseExplosionDamagePercent(Skills.Entry skill, int skillLevel) {
+    if (!isCorpseExplosion(skill)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    int min = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, level));
+    int max = Math.max(min, SkillFormula.evaluate(skill.calc2, skill, level));
+    return new int[] {min, max};
+  }
+
+  /** Native calc3 elemental split, clamped by SrvDo055 to 0..100. */
+  public static int getCorpseExplosionElementalPercent(Skills.Entry skill, int skillLevel) {
+    if (!isCorpseExplosion(skill)) return 0;
+    return Math.max(0, Math.min(100,
+        SkillFormula.evaluate(skill.calc3, skill, Math.max(1, skillLevel))));
+  }
+
+  /** Returns D2's integer inner/outer radii after the ln34 half-square conversion. */
+  public static int[] getCorpseExplosionRadii(Skills.Entry skill, int skillLevel) {
+    if (!isCorpseExplosion(skill)) return new int[] {0, 0};
+    int range = Math.max(0,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, Math.max(1, skillLevel)));
+    return new int[] {range / 2, (range + 1) / 2};
+  }
+
+  /** Compatibility estimate retained for UI callers. */
   public static int calculateCorpseExplosionDamage(int corpseMaxHp) {
-    // 60-100% 尸体最大生命值
-    float percent = MathUtils.random(0.6f, 1.0f);
-    return (int)(corpseMaxHp * percent);
+    return Math.round(Math.max(0, corpseMaxHp) * MathUtils.random(0.7f, 1.2f));
   }
 
   /**
@@ -337,8 +362,31 @@ public final class NecromancerSkills {
    * @return 半径（子格）
    */
   public static int getCorpseExplosionRadius(int skillLevel) {
-    // 基础 2.6 码，每级 +0.3 码
-    return (int)(2.6f + (skillLevel - 1) * 0.3f);
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.CORPSE_EXPLOSION) : null;
+    return getCorpseExplosionRadii(skill, skillLevel)[1];
+  }
+
+  /** Native Poison Explosion 8.8 poison rate, including hard-point synergies. */
+  public static int[] getPoisonExplosionDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isPoisonExplosion(skill)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    long min = Math.max(0L, (long) skill.EMin + damageBonusByLevel(level, skill.EMinLev));
+    long max = Math.max(min, (long) skill.EMax + damageBonusByLevel(level, skill.EMaxLev));
+    min <<= Math.min(Math.max(0, skill.HitShift), 30);
+    max <<= Math.min(Math.max(0, skill.HitShift), 30);
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        skill.EDmgSymPerCalc, skill, level, baseSkillLevel));
+    min += min * synergy / 100;
+    max += max * synergy / 100;
+    return new int[] {saturated(min), saturated(max)};
+  }
+
+  public static int getPoisonExplosionDurationFrames(Skills.Entry skill, int skillLevel) {
+    if (!isPoisonExplosion(skill)) return 0;
+    return Math.max(1, skill.ELen + damageBonusByLevel(
+        Math.max(1, skillLevel), skill.ELevLen));
   }
 
   /**

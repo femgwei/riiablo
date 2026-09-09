@@ -168,7 +168,12 @@ public class SkillCastHandler extends PassiveSystem {
     boolean networkClient = world.getSystem(ClientNetworkReceiver.class) != null;
     boolean localMonsterServer = mMonster.has(event.entityId)
         && world.getSystem(ServerSkillSystem.class) != null;
-    if (serverMissile && (networkClient || localMonsterServer)) {
+    // Poison Explosion's server missiles are the eight damaging clouds, while
+    // cltdofunc 33 owns a separate corpse-burst presentation. Keep that local
+    // visual on every client even when the cloud entities are authoritative.
+    boolean separateCorpseBurst = (event.srvdofunc == 63 || skill.srvdofunc == 63)
+        && event.cltdofunc == 33;
+    if (serverMissile && !separateCorpseBurst && (networkClient || localMonsterServer)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} "
               + "srvDoFunc={} networkClient={} localMonster={}",
           event.entityId, skill.skill, skill.srvdofunc, networkClient, localMonsterServer);
@@ -329,12 +334,20 @@ public class SkillCastHandler extends PassiveSystem {
       case 31: // Raise Skeleton visual
         break;
 
-      case 32: // Poison Dagger hit
-        Riiablo.audio.play("weapon_1hs_small_1", true);
+      case 32: // Poison Dagger hit / Corpse Explosion burst
+        if (event.srvdofunc == 55 || skill.srvdofunc == 55) {
+          cltDoCorpseExplosionVisual(event, skill);
+        } else {
+          Riiablo.audio.play("weapon_1hs_small_1", true);
+        }
         break;
 
-      case 33: // Psychic Hammer visual
-        cltDoSingleMissile(event, skill, position);
+      case 33: // Psychic Hammer / Poison Explosion corpse burst
+        if (event.srvdofunc == 63 || skill.srvdofunc == 63) {
+          cltDoCorpseExplosionVisual(event, skill);
+        } else {
+          cltDoSingleMissile(event, skill, position);
+        }
         break;
 
       case 43: // Native Leap movement uses the server-synchronized unit position
@@ -343,7 +356,7 @@ public class SkillCastHandler extends PassiveSystem {
       case 45: // Whirlwind uses the synchronized SQ animation and position
         break;
 
-      case 55: // Corpse Explosion
+      case 55: // Legacy/custom Corpse Explosion callback
         cltDoCorpseExplosionVisual(event, skill);
         break;
 
@@ -605,7 +618,9 @@ public class SkillCastHandler extends PassiveSystem {
     if (missile == null) return;
 
     // Explosion at target corpse location
-    factory.createMissile(missile, Vector2.Zero, event.targetVec);
+    Vector2 target = event.targetId >= 0 && mPosition.has(event.targetId)
+        ? mPosition.get(event.targetId).position : event.targetVec;
+    if (target != null) factory.createMissile(missile, Vector2.Zero, target);
   }
 
   private void cltDoAuraPulse(SkillDoEvent event, Skills.Entry skill, Vector2 position) {

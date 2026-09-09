@@ -61,6 +61,14 @@ public class Missile extends PooledComponent {
   public int tickInterval = 1;
   public int tickFrames;
 
+  /** Native poison-skill missiles store an 8.8 per-frame rate, not life points. */
+  public boolean fixedPoisonRate;
+  public int poisonMinRateFixed;
+  public int poisonMaxRateFixed;
+  public int poisonDurationFrames;
+  public int poisonPiercePercent;
+  public boolean poisonAttackerPlayer;
+
   /** Optional native homing target (Guided Arrow/Bone Spirit). */
   public int targetId = -1;
   public boolean homing;
@@ -162,6 +170,12 @@ public class Missile extends PooledComponent {
     remainingFrames = 0;
     tickInterval = 1;
     tickFrames = 0;
+    fixedPoisonRate = false;
+    poisonMinRateFixed = 0;
+    poisonMaxRateFixed = 0;
+    poisonDurationFrames = 0;
+    poisonPiercePercent = 0;
+    poisonAttackerPlayer = false;
     targetId = -1;
     homing = false;
     attachedEntityId = -1;

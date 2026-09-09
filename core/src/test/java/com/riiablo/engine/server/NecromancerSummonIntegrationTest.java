@@ -48,7 +48,9 @@ class NecromancerSummonIntegrationTest extends RiiabloTest {
       int corpse = world.create();
       Skills.Entry skill = Riiablo.files.skills.get(SkillId.RAISE_SKELETON);
       Monster corpseMonster = world.getMapper(Monster.class).create(corpse);
-      corpseMonster.monstats = Riiablo.files.monstats.get(skill.summon);
+      // SrvDo031 consumes a selectable enemy corpse; the summoned skeleton
+      // row itself is not corpse-selectable in the native MonStats2 table.
+      corpseMonster.monstats = Riiablo.files.monstats.get("fallen1");
       corpseMonster.monstats2 = corpseMonster.monstats == null ? null
           : Riiablo.files.monstats2.get(corpseMonster.monstats.MonStatsEx);
       world.getMapper(Position.class).create(corpse).position.set(12, 10);

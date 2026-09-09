@@ -25,6 +25,7 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.state.StateId;
@@ -32,6 +33,8 @@ import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -52,10 +55,12 @@ import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
+import com.riiablo.engine.server.skill.CorpseConsumption;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.monster.MonsterRank;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -101,6 +106,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<Velocity> mVelocity;
   private volatile int mercenaryMissileCount;
   private volatile int mercenarySkillDoCount;
   private volatile int mercenaryConfiguredMissiles;
@@ -112,6 +118,7 @@ public class ServerSkillSystem extends PassiveSystem {
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<com.riiablo.engine.server.component.Item> mItem;
+  protected net.mostlyoriginal.api.event.common.EventSystem events;
 
   /** Item generator is wired by both local and dedicated server worlds. */
   @com.artemis.annotations.SkipWire
@@ -153,7 +160,8 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.targetId, event.skillId);
       return;
     }
-    boolean corpseSkill = skill.srvdofunc == 31 || skill.srvdofunc == 58
+    boolean corpseSkill = skill.srvdofunc == 31 || skill.srvdofunc == 55
+        || skill.srvdofunc == 58 || skill.srvdofunc == 63
         || skill.srvdofunc == 69 || skill.srvdofunc == 72
         || skill.srvdofunc == 75;
     if (event.targetId >= 0 && mMonster.has(event.targetId) && !corpseSkill
@@ -210,17 +218,18 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     if (corpseSkill) {
-      Corpse corpse = event.targetId >= 0 && mCorpse.has(event.targetId)
-          ? mCorpse.get(event.targetId) : null;
-      boolean requiresMonster = skill.srvdofunc == 31 || skill.srvdofunc == 58
+      boolean requiresMonster = skill.srvdofunc == 31 || skill.srvdofunc == 55
+          || skill.srvdofunc == 58 || skill.srvdofunc == 63
           || skill.srvdofunc == 72
           || skill.srvdofunc == 75;
-      if (corpse == null || !corpse.usable || corpse.fading || hasCorpseNoSelect(event.targetId)
+      if (!selectableCorpse(event.targetId)
           || requiresMonster && !mMonster.has(event.targetId)
-          || (skill.srvdofunc == 31 || skill.srvdofunc == 58) && isTownCorpse(event.targetId)
+          || (skill.srvdofunc == 31 || skill.srvdofunc == 55
+              || skill.srvdofunc == 58 || skill.srvdofunc == 63)
+              && isTownCorpse(event.targetId)
           || skill.srvdofunc == 58 && !isReviveableMonster(event.targetId)) {
         reject(event, 3, "skill requires a selectable monster corpse");
-        log.info("[BARBARIAN_CORPSE] phase=cast_reject source={} target={} skill={} reason=corpse_eligibility",
+        log.info("[CORPSE_SKILL] phase=cast_reject source={} target={} skill={} reason=corpse_eligibility",
             event.entityId, event.targetId, skill.skill);
         return;
       }
@@ -337,17 +346,19 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 22 && event.srvdofunc != 49 && event.srvdofunc != 54
         && event.srvdofunc != 68 && event.srvdofunc != 71
-        && event.srvdofunc != 31 && event.srvdofunc != 56
+        && event.srvdofunc != 31 && event.srvdofunc != 55 && event.srvdofunc != 56
         && event.srvdofunc != 57 && event.srvdofunc != 58
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
+        && event.srvdofunc != 63
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
         && skill.srvdofunc != 22 && skill.srvdofunc != 49 && skill.srvdofunc != 54
         && skill.srvdofunc != 68 && skill.srvdofunc != 71
-        && skill.srvdofunc != 31 && skill.srvdofunc != 56
+        && skill.srvdofunc != 31 && skill.srvdofunc != 55 && skill.srvdofunc != 56
         && skill.srvdofunc != 57 && skill.srvdofunc != 58
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
+        && skill.srvdofunc != 63
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119) {
       consumeRangedAmmoForSkill(event, skill);
       return;
@@ -369,6 +380,14 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.srvdofunc == 58 || skill.srvdofunc == 58) {
       reviveNecromancerMonster(event, skill, skillLevel);
+      return;
+    }
+    if (event.srvdofunc == 55 || skill.srvdofunc == 55) {
+      explodeNecromancerCorpse(event, skill, skillLevel);
+      return;
+    }
+    if (event.srvdofunc == 63 || skill.srvdofunc == 63) {
+      spawnNecromancerPoisonExplosion(event, skill, skillLevel);
       return;
     }
     if (handleBarbarianCorpseSkill(event, skill, skillLevel)) return;
@@ -1920,7 +1939,12 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, target, skill.skill);
       return true;
     }
-    markCorpseConsumed(target, corpse, function == 75);
+    if (!markCorpseConsumed(
+        target, function == 75, level, event.entityId, skill.Id)) {
+      log.info("[BARBARIAN_CORPSE] phase=reject source={} target={} skill={} reason=reserve_failed",
+          event.entityId, target, skill.skill);
+      return true;
+    }
     NativeRng rng = new NativeRng(Riiablo.gameSeed ^ event.entityId * 0x45D9F3B ^ target * 31);
     int chance = function == 69
         ? BarbarianSkills.getFindPotionChance(skill, level)
@@ -1945,11 +1969,226 @@ public class ServerSkillSystem extends PassiveSystem {
         && mUnitStates.get(entityId).stateList.hasState(StateId.CORPSE_NOSELECT);
   }
 
+  private boolean selectableCorpse(int entityId) {
+    if (entityId < 0 || !mCorpse.has(entityId) || !mMonster.has(entityId)
+        || !mAttributesWrapper.has(entityId)) return false;
+    StateList states = mUnitStates.has(entityId)
+        ? mUnitStates.get(entityId).stateList : null;
+    return CorpseConsumption.selectable(
+        mCorpse.get(entityId), mMonster.get(entityId),
+        mAttributesWrapper.get(entityId).attrs, states);
+  }
+
+  private boolean reserveCorpse(
+      int entityId, boolean hide, int level, int sourceEntityId, int skillId) {
+    if (entityId < 0 || !mCorpse.has(entityId) || !mMonster.has(entityId)
+        || !mAttributesWrapper.has(entityId)) return false;
+    UnitStates unitStates = mUnitStates.has(entityId)
+        ? mUnitStates.get(entityId) : mUnitStates.create(entityId).init(entityId);
+    if (unitStates.stateList == null) unitStates.init(entityId);
+    return CorpseConsumption.tryReserve(
+        mCorpse.get(entityId), mMonster.get(entityId),
+        mAttributesWrapper.get(entityId).attrs, unitStates.stateList,
+        hide, level, sourceEntityId, skillId);
+  }
+
   /** Native room gate used by Raise Skeleton/Mage (SrvSt15/SrvDo031). */
   private boolean isTownCorpse(int entityId) {
     if (!mMapWrapper.has(entityId)) return false;
     MapWrapper wrapper = mMapWrapper.get(entityId);
     return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
+  }
+
+  /** D2MOO SrvDo055: consume a corpse and apply its split physical/fire packet. */
+  private void explodeNecromancerCorpse(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    int source = event.entityId;
+    int corpseId = event.targetId;
+    if (!NecromancerSkills.isCorpseExplosion(skill) || isTownCorpse(corpseId)
+        || !mPosition.has(corpseId)
+        || !reserveCorpse(corpseId, true, skillLevel, source, skill.Id)) {
+      log.info("[NECRO_CORPSE_EXPLOSION] phase=reject source={} corpse={} reason=corpse_unusable",
+          source, corpseId);
+      return;
+    }
+
+    Attributes corpseAttrs = mAttributesWrapper.get(corpseId).attrs;
+    int corpseMaxHp = nativeCorpseExplosionLife(corpseId, corpseAttrs);
+    int[] percent = NecromancerSkills.getCorpseExplosionDamagePercent(skill, skillLevel);
+    NativeRng rng = NativeRng.forUnit(
+        Riiablo.gameSeed ^ source * 31 ^ skill.Id * 131, corpseId);
+    int rolledPercent = percent[0];
+    if (percent[1] > percent[0]) rolledPercent += rng.nextInt(percent[1] - percent[0]);
+    int total = Math.max(0, corpseMaxHp * rolledPercent / 100);
+    int corpseLevel = Math.max(1, statInt(corpseAttrs, Stat.level));
+    int sourceLevel = mAttributesWrapper.has(source)
+        ? Math.max(1, statInt(mAttributesWrapper.get(source).attrs, Stat.level)) : 1;
+    if (sourceLevel < corpseLevel) total = total * sourceLevel / corpseLevel;
+    int elementalPercent = NecromancerSkills.getCorpseExplosionElementalPercent(
+        skill, skillLevel);
+    int fire = total * elementalPercent / 100;
+    int physical = total - fire;
+    int[] radii = NecromancerSkills.getCorpseExplosionRadii(skill, skillLevel);
+    Vector2 origin = new Vector2(mPosition.get(corpseId).position);
+    int hit = damageCorpseExplosion(
+        source, origin, radii[0], radii[1], physical, fire);
+    log.info("[NECRO_CORPSE_EXPLOSION] phase=explode source={} corpse={} skill={} level={} "
+            + "corpseHp={} percent={}..{} roll={} total={} physical={} fire={} "
+            + "innerRadius={} outerRadius={} hit={}",
+        source, corpseId, skill.Id, skillLevel, corpseMaxHp,
+        percent[0], percent[1], rolledPercent, total, physical, fire,
+        radii[0], radii[1], hit);
+  }
+
+  private int nativeCorpseExplosionLife(int corpseId, Attributes fallback) {
+    if (mMapWrapper.has(corpseId) && mMapWrapper.get(corpseId).map != null
+        && mMonster.has(corpseId) && mMonster.get(corpseId).monstats != null) {
+      int level = Math.max(1, statInt(fallback, Stat.level));
+      int difficulty = combatDifficulty(corpseId, corpseId);
+      MonsterStatsCalculator.MonsterStatsInit calculated =
+          new MonsterStatsCalculator.MonsterStatsInit();
+      if (MonsterStatsCalculator.calculateMonsterStatsByLevel(
+          mMonster.get(corpseId).monstats.hcIdx, 1, difficulty, level,
+          (short) 1, calculated)
+          && calculated.minHP > 0 && calculated.maxHP >= calculated.minHP) {
+        return Math.max(1, (calculated.minHP + calculated.maxHP) / 2);
+      }
+    }
+    return Math.max(1, Math.round(statFixed(fallback, Stat.maxhp)));
+  }
+
+  private int damageCorpseExplosion(
+      int source, Vector2 origin, int physicalRadius, int outerRadius,
+      int physicalDamage, int fireDamage) {
+    IntBag candidates = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int hit = 0;
+    for (int i = 0; i < candidates.size(); i++) {
+      int target = candidates.get(i);
+      if (target == source || mCorpse.has(target)
+          || (!mPlayer.has(target) && !mMonster.has(target))
+          || !isHostile(source, target) || !sameZone(source, target)
+          || !mNativeUnitFlagsValid(target)) continue;
+      float distance2 = origin.dst2(mPosition.get(target).position);
+      if (distance2 > outerRadius * outerRadius) continue;
+      Attributes targetAttrs = mAttributesWrapper.get(target).attrs;
+      StatRef hp = targetAttrs != null
+          ? targetAttrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+      if (hp == null || hp.asFixed() <= 0f) continue;
+      StateList targetStates = mUnitStates.has(target)
+          ? mUnitStates.get(target).stateList : null;
+      int physical = distance2 <= physicalRadius * physicalRadius ? physicalDamage : 0;
+      boolean sourcePlayer = mPlayer.has(source);
+      boolean targetPlayer = mPlayer.has(target);
+      CombatSystem.CombatResult physicalResult =
+          CombatSystem.INSTANCE.calculateFixedPhysicalDamage(
+              targetAttrs, targetPlayer, sourcePlayer, physical, targetStates);
+      CombatSystem.CombatResult fireResult =
+          CombatSystem.INSTANCE.calculateFixedElementalDamage(
+              targetAttrs, targetPlayer, sourcePlayer, CombatSystem.DAMAGE_FIRE,
+              fireDamage, 0, targetStates, combatDifficulty(source, target));
+      int resolved = physicalResult.totalDamage + fireResult.totalDamage;
+      if (resolved <= 0 && fireResult.absorbedLife <= 0) continue;
+      if (fireResult.absorbedLife > 0) {
+        StatRef maxHp = targetAttrs.get(Stat.maxhp, StatRef.obtain());
+        if (maxHp != null) hp.add(Math.max(0f,
+            Math.min((float) fireResult.absorbedLife, maxHp.asFixed() - hp.asFixed())));
+      }
+      DamageEvent damage = DamageEvent.obtain(source, target, resolved);
+      damage.physicalDamage = physicalResult.physicalDamage;
+      if (events != null) events.dispatch(damage);
+      hp.sub(Math.max(0f, damage.damage));
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        if (events != null) events.dispatch(DeathEvent.obtain(source, target));
+      }
+      hit++;
+    }
+    return hit;
+  }
+
+  /** D2MOO SrvDo063: eight drifting, authoritative poison-cloud missiles. */
+  private void spawnNecromancerPoisonExplosion(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    int source = event.entityId;
+    int corpseId = event.targetId;
+    Missiles.Entry cloudRow = skill != null && skill.srvmissilea != null
+        ? Riiablo.files.Missiles.get(skill.srvmissilea) : null;
+    if (!NecromancerSkills.isPoisonExplosion(skill) || cloudRow == null || factory == null
+        || isTownCorpse(corpseId) || !mPosition.has(corpseId)
+        || !reserveCorpse(corpseId, false, skillLevel, source, skill.Id)) {
+      log.info("[NECRO_POISON_EXPLOSION] phase=reject source={} corpse={} reason={}",
+          source, corpseId, cloudRow == null ? "missile_missing" : "corpse_unusable");
+      return;
+    }
+
+    int[] poison = NecromancerSkills.getPoisonExplosionDamage(
+        skill, skillLevel, name -> getBaseSkillLevel(source, name));
+    Attributes sourceAttrs = mAttributesWrapper.has(source)
+        ? mAttributesWrapper.get(source).attrs : null;
+    int mastery = Math.max(0, statInt(sourceAttrs, Stat.passive_pois_mastery));
+    poison[0] = saturatedScale(poison[0], 100 + mastery, 100);
+    poison[1] = saturatedScale(poison[1], 100 + mastery, 100);
+    int duration = NecromancerSkills.getPoisonExplosionDurationFrames(skill, skillLevel);
+    int pierce = Math.max(0, statInt(sourceAttrs, Stat.item_pierce_pois)
+        + statInt(sourceAttrs, Stat.passive_pois_pierce));
+    Vector2 origin = new Vector2(mPosition.get(corpseId).position);
+    int[] x = {0, 2, 2, 2, 0, -2, -2, -2};
+    int[] y = {2, 2, 0, -2, -2, -2, 0, 2};
+    int velocity = cloudRow.Param != null && cloudRow.Param.length > 0
+        ? Math.max(0, cloudRow.Param[0]) : 0;
+    int created = 0;
+    for (int i = 0; i < x.length; i++) {
+      Vector2 direction = new Vector2(x[i], y[i]).nor();
+      int missileId = createMissile(
+          cloudRow, direction, origin, source, null, skillLevel);
+      if (missileId < 0 || !mMissile.has(missileId)) continue;
+      Missile cloud = mMissile.get(missileId);
+      cloud.skillId = skill.Id;
+      cloud.damageLevel = skillLevel;
+      cloud.fixedPoisonRate = true;
+      cloud.poisonMinRateFixed = poison[0];
+      cloud.poisonMaxRateFixed = poison[1];
+      cloud.poisonDurationFrames = duration;
+      cloud.poisonPiercePercent = pierce;
+      cloud.poisonAttackerPlayer = mPlayer.has(source);
+      cloud.persistent = true;
+      cloud.remainingFrames = Math.max(1, cloudRow.Range);
+      cloud.tickInterval = 1;
+      cloud.pierceEnabled = true;
+      if (mVelocity.has(missileId)) {
+        mVelocity.get(missileId).velocity.set(direction).setLength(velocity);
+      }
+      created++;
+    }
+    log.info("[NECRO_POISON_EXPLOSION] phase=cloud_create source={} corpse={} skill={} "
+            + "level={} missile={} created={} velocity={} duration={} rawFixed={}..{} "
+            + "mastery={} pierce={}",
+        source, corpseId, skill.Id, skillLevel, cloudRow.Missile, created,
+        velocity, duration, poison[0], poison[1], mastery, pierce);
+  }
+
+  private static int saturatedScale(int value, int numerator, int denominator) {
+    if (value <= 0 || numerator <= 0 || denominator <= 0) return 0;
+    long result = (long) value * numerator / denominator;
+    return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
+  }
+
+  private int combatDifficulty(int source, int target) {
+    if (mMapWrapper.has(target) && mMapWrapper.get(target).map != null) {
+      return mMapWrapper.get(target).map.getDifficulty();
+    }
+    if (mMapWrapper.has(source) && mMapWrapper.get(source).map != null) {
+      return mMapWrapper.get(source).map.getDifficulty();
+    }
+    return 0;
+  }
+
+  private boolean sameZone(int first, int second) {
+    if (!mMapWrapper.has(first) || !mMapWrapper.has(second)) return true;
+    MapWrapper a = mMapWrapper.get(first);
+    MapWrapper b = mMapWrapper.get(second);
+    return a == null || b == null || a.zone == null || b.zone == null || a.zone == b.zone;
   }
 
   /**
@@ -1981,7 +2220,11 @@ public class ServerSkillSystem extends PassiveSystem {
 
     // Reserve atomically before invoking the factory.  The state is also
     // replicated, so a second client cannot race the same corpse.
-    markCorpseConsumed(corpseId, corpse, true);
+    if (!markCorpseConsumed(corpseId, true, level, source, skill.Id)) {
+      log.info("[NECRO_SUMMON] phase=reject source={} corpse={} reason=reserve_failed",
+          source, corpseId);
+      return;
+    }
     String summonName = skill.summon;
     MonStats.Entry summon = resolveSummonMonster(summonName);
     if (summon == null) {
@@ -2228,14 +2471,15 @@ public class ServerSkillSystem extends PassiveSystem {
     pet.reset();
   }
 
-  private void markCorpseConsumed(int entityId, Corpse corpse, boolean hide) {
-    corpse.usable = false;
-    UnitStates states = mUnitStates.has(entityId)
-        ? mUnitStates.get(entityId) : mUnitStates.create(entityId);
-    if (states.stateList == null) states.init(entityId);
-    states.stateList.addState(StateId.CORPSE_NOSELECT, Integer.MAX_VALUE, 1, entityId);
-    if (hide) states.stateList.addState(StateId.CORPSE_NODRAW, Integer.MAX_VALUE, 1, entityId);
-    log.debug("[BARBARIAN_CORPSE] phase=consume entity={} hide={}", entityId, hide);
+  private boolean markCorpseConsumed(
+      int entityId, boolean hide, int level, int sourceEntityId, int skillId) {
+    boolean reserved = reserveCorpse(
+        entityId, hide, level, sourceEntityId, skillId);
+    if (reserved) {
+      log.debug("[CORPSE_SKILL] phase=consume entity={} source={} skill={} hide={}",
+          entityId, sourceEntityId, skillId, hide);
+    }
+    return reserved;
   }
 
   private void spawnFindPotion(int source, int corpseId, Skills.Entry skill, int level, NativeRng rng) {
