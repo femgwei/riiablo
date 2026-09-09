@@ -134,6 +134,12 @@ public class AuraManager {
         int skillLevel, int minimum, int maximum, String elementType);
     void updateHolyFreezeShatter(int casterId, int targetId, int skillId,
         int skillLevel, int duration);
+    /** Native Cleansing shortens currently active poison and curable curses. */
+    default void applyCleansingEffect(int targetId, int percent,
+        int sourceEntityId, int skillId) {}
+    /** Native Redemption scans and atomically consumes nearby corpses. */
+    default void applyRedemptionEffect(int casterId, int skillId,
+        int skillLevel, float range) {}
   }
 
   private final IntMap<AuraDefinition> auraDefinitions = new IntMap<>();
@@ -254,6 +260,12 @@ public class AuraManager {
       boolean rangeTarget = (definition.affectsParty && ally)
           || (definition.affectsEnemy && !ally);
       if (rangeTarget) affected.add(targetId);
+      if (rangeTarget && definition.skillId == SkillId.CLEANSING) {
+        int percent = definition.statIds.length > 0 && definition.statIds[0] >= 0
+            ? aura.statValues[0] : 0;
+        if (percent > 0) callback.applyCleansingEffect(targetId, percent,
+            aura.casterId, definition.skillId);
+      }
       if (rangeTarget && definition.auraType == AURA_TYPE_DAMAGE
           && definition.nativeSkill != null && !callback.isInTown(aura.casterId)) {
         int[] damage = nativeElementalDamageRange(definition.nativeSkill, aura.skillLevel,
@@ -269,6 +281,10 @@ public class AuraManager {
       }
     }
     aura.affectedEntities = affected;
+    if (definition.skillId == SkillId.REDEMPTION) {
+      callback.applyRedemptionEffect(aura.casterId, definition.skillId,
+          aura.skillLevel, aura.range);
+    }
     aura.lastUpdateTime = gameFrame / 25f;
   }
 
@@ -462,8 +478,32 @@ public class AuraManager {
         SkillId.THORNS, SkillId.DEFIANCE, SkillId.BLESSED_AIM,
         SkillId.CONCENTRATION, SkillId.VIGOR, SkillId.HOLY_FREEZE,
         SkillId.HOLY_SHOCK, SkillId.SANCTUARY, SkillId.FANATICISM,
-        SkillId.CONVICTION, SkillId.SALVATION};
+        SkillId.CONVICTION, SkillId.SALVATION, SkillId.CLEANSING,
+        SkillId.MEDITATION};
     for (int id : ids) registerNativeAura(id);
+    registerNativeRedemptionAura();
+  }
+
+  /** Redemption uses SrvDo082 and has no target state; its pulse scans corpses. */
+  private void registerNativeRedemptionAura() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.REDEMPTION);
+    if (skill == null || skill.srvdofunc != 82) return;
+    AuraDefinition definition = new AuraDefinition();
+    definition.skillId = skill.Id;
+    definition.name = skill.skill;
+    definition.nativeSkill = skill;
+    definition.selfStateId = stateId(skill.aurastate);
+    definition.stateId = definition.selfStateId;
+    definition.auraFilter = skill.aurafilter;
+    definition.perDelayFrames = Math.max(5, SkillFormula.evaluate(skill.perdelay, skill, 1));
+    definition.baseRange = Math.max(0,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, 1));
+    definition.affectsSelf = definition.selfStateId >= 0;
+    definition.affectsParty = false;
+    definition.affectsMercenary = false;
+    definition.affectsEnemy = false;
+    definition.auraType = AURA_TYPE_BUFF;
+    auraDefinitions.put(skill.Id, definition);
   }
 
   private void registerNativeAura(int skillId) {

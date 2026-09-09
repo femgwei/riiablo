@@ -13,6 +13,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.CharacterClass;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.DifficultyLevels;
+import com.riiablo.codec.excel.States;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
@@ -1033,6 +1034,39 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
     
     unitStates.stateList.addState(stateId, duration, level, sourceId);
+  }
+
+  /** Native Cleansing callback: shorten remaining poison/curable curse time. */
+  public void applyCleansingReduction(int entityId, int percent,
+      int sourceEntityId, int skillId) {
+    if (percent <= 0 || percent >= 100 || !mUnitStates.has(entityId)) return;
+    StateList states = mUnitStates.get(entityId).stateList;
+    if (states == null) return;
+    int changed = 0;
+    for (UnitState state : states.getStates()) {
+      if (state.duration <= 0 || state.stateId == StateId.CLEANSING
+          || state.stateId == StateId.MEDITATION || state.stateId == StateId.REDEMPTION) continue;
+      boolean poison = state.stateId == StateId.POISON;
+      States.Entry definition = Riiablo.files != null && Riiablo.files.States != null
+          ? Riiablo.files.States.get(state.stateId) : null;
+      boolean curse = definition != null ? definition.curse : StateId.isCurse(state.stateId);
+      // Native Cleansing only shortens curses carrying the States.txt
+      // curable bit.  Keep the legacy StateId fallback for headless tests
+      // which do not load the table.
+      if (definition != null && curse && !definition.curable) continue;
+      if (!poison && !curse) continue;
+      int remaining = Math.max(1, state.duration * percent / 100);
+      if (remaining < state.duration) {
+        state.duration = remaining;
+        state.initialDuration = Math.min(state.initialDuration, remaining);
+        state.needsSync = true;
+        changed++;
+      }
+    }
+    if (changed > 0) {
+      log.info("[CLEANSING] phase=shorten entity={} source={} skill={} percent={} states={}",
+          entityId, sourceEntityId, skillId, percent, changed);
+    }
   }
 
   @Override

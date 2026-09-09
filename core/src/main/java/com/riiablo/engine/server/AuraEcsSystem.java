@@ -12,12 +12,14 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Monster;
@@ -30,7 +32,11 @@ import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.skill.AuraManager;
+import com.riiablo.engine.server.skill.CorpseConsumption;
+import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.state.StateList;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -53,6 +59,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<AttributesWrapper> mAttributes;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
@@ -62,6 +69,7 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
   protected Map map;
   @Wire(failOnNull = false)
   protected StateUpdater stateUpdater;
+  private long redemptionRollCounter;
 
   @Override protected void initialize() {
     auras.setCallback(this);
@@ -327,6 +335,70 @@ public class AuraEcsSystem extends BaseSystem implements AuraManager.AuraCallbac
     }
     log.debug("[HOLY_FREEZE] phase=shatter_roll caster={} target={} roll={}",
         casterId, targetId, shatter);
+  }
+
+  @Override public void applyCleansingEffect(int targetId, int percent,
+      int sourceEntityId, int skillId) {
+    if (stateUpdater != null) {
+      stateUpdater.applyCleansingReduction(targetId, percent, sourceEntityId, skillId);
+    }
+  }
+
+  @Override public void applyRedemptionEffect(int casterId, int skillId,
+      int skillLevel, float range) {
+    if (mCorpse == null || mMonster == null || mPosition == null || mAttributes == null
+        || !mAttributes.has(casterId) || !mPosition.has(casterId)
+        || isInTown(casterId)) return;
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(skillId) : null;
+    if (skill == null) return;
+    int chance = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, skillLevel));
+    int hpGain = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, skillLevel));
+    int manaGain = Math.max(0, SkillFormula.evaluate(skill.calc3, skill, skillLevel));
+    IntBag candidates = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Corpse.class, Monster.class, Position.class, AttributesWrapper.class))
+        .getEntities();
+    Vector2 origin = mPosition.get(casterId).position;
+    for (int i = 0; i < candidates.size(); i++) {
+      int corpseId = candidates.get(i);
+      if (!mCorpse.has(corpseId) || !mMonster.has(corpseId)
+          || origin.dst2(mPosition.get(corpseId).position) > range * range
+          || !sameZone(casterId, corpseId)) continue;
+      Corpse corpse = mCorpse.get(corpseId);
+      Monster monster = mMonster.get(corpseId);
+      Attributes attrs = mAttributes.get(corpseId).attrs;
+      StateList corpseStates = mUnitStates.has(corpseId)
+          ? mUnitStates.get(corpseId).stateList : null;
+      if (!CorpseConsumption.selectable(corpse, monster, attrs, corpseStates)) continue;
+      // The native roll uses the owner's seed. A stable per-pulse hash keeps
+      // headless and network simulations deterministic without introducing a
+      // second random source in the presentation layer.
+      int roll = Math.floorMod((int) (Riiablo.gameSeed ^ ((long) casterId * 31)
+          ^ ((long) corpseId * 131) ^ redemptionRollCounter++), 100);
+      if (roll >= chance) continue;
+      if (corpseStates == null) {
+        if (!mUnitStates.has(corpseId)) mUnitStates.create(corpseId).init(corpseId);
+        corpseStates = mUnitStates.get(corpseId).stateList;
+      }
+      if (!CorpseConsumption.tryReserve(corpse, monster, attrs, corpseStates,
+          true, skillLevel, casterId, skillId)) continue;
+      heal(casterId, Stat.hitpoints, hpGain);
+      heal(casterId, Stat.mana, manaGain);
+      corpseStates.addState(StateId.REDEEMED, 0, skillLevel, casterId).needsSync = true;
+      log.info("[REDEMPTION] phase=consume caster={} corpse={} chance={} roll={} hp={} mana={}",
+          casterId, corpseId, chance, roll, hpGain, manaGain);
+      break;
+    }
+  }
+
+  private void heal(int entityId, short statId, int amount) {
+    if (amount <= 0 || !mAttributes.has(entityId)) return;
+    Attributes attrs = mAttributes.get(entityId).attrs;
+    StatRef current = attrs != null ? attrs.get(statId, StatRef.obtain()) : null;
+    StatRef maximum = attrs != null
+        ? attrs.get(statId == Stat.hitpoints ? Stat.maxhp : Stat.maxmana, StatRef.obtain()) : null;
+    if (current == null || maximum == null) return;
+    current.set(Math.min(maximum.asFixed(), current.asFixed() + amount));
   }
 
   private boolean isAlive(int entityId) {

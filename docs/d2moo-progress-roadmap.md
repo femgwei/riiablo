@@ -19,8 +19,8 @@
 
 ## 总体进度
 
-- **全项目 D2MOO 行为对齐：约 69%**
-- **全项目剩余工作：约 31%**
+- **全项目 D2MOO 行为对齐：约 70%**
+- **全项目剩余工作：约 30%**
 - **第一章最小可玩闭环：约 79%**
 - **第一章剩余工作：约 21%**
 - **D2MOO_JAVA DRLG 整体：约 70%**
@@ -78,6 +78,13 @@
   `penetrate` 独立 stat-list 只读取硬点，不受 `+skills` 影响。Thorns 已由钢铁石魔
   专用分支扩展为统一近战受击回调，聚合物品与状态属性，并对玩家/佣兵攻击者执行
   原生 `(percent + 4) / 8` 和后续 PvP 物理缩放；导弹与反应伤害不会递归触发。
+- Cleansing、Meditation、Redemption 已完成首轮原生资源光环链：Cleansing 按
+  `States.txt` 的 `curable` 标志缩短中毒和可净化诅咒的剩余 tick，不影响永久状态或光环
+  自身；Meditation 的法力恢复与 Prayer 硬点治疗读取 `Skills.txt` 的 `ln34` 和
+  `skill('Prayer'.edns)`；Redemption 对齐 `SrvDo082`，城镇禁用、按 `calc1` 概率筛选
+  范围内尸体，成功时原子占用一个尸体、恢复生命/法力并同步 `REDEEMED`、
+  `CORPSE_NOSELECT`、`CORPSE_NODRAW`，重复脉冲不会再次消费。新增资源光环数据、状态
+  缩短和尸体占用正式测试，专项回归与 D2GS 编译通过。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -86,7 +93,7 @@
   骨架，以及 P1 Missile、伤害/死亡、多人掉落、D2S 严格往返等收尾批次；同时已经
   进入 P2 的对象快照、多人重连和第一章任务多人资格验证。因此“进入 P2”是真实执行
   阶段，不代表 P0/P1 的所有尾项已经验收完毕。
-- 总体完成度仍为约 **69%**，第一章最小可玩闭环仍为约 **79%**；对象子模块提高到
+- 总体完成度调整为约 **70%**，第一章最小可玩闭环仍为约 **79%**；对象子模块提高到
   **95%**，剩余为复杂神殿效果和真实画面交互验收，百分比总口径暂不调整。
 - 战斗模块当前与地图、任务、物品等模块由本 Chat 统一负责，旧的独立战斗 Chat 不再
   作为进度来源。
@@ -106,8 +113,8 @@
   以及召唤物重组/传送边界、Revive/Golem 专属 AI、技能继承和四类 Golem 战斗副作用
   也已完成首轮。圣骑士代表性光环、四种抗性光环与硬点最大抗性、Blessed Hammer、
   Fist of the Heavens / Holy Bolt，以及 Holy Freeze、Holy Shock、Sanctuary 原生权威链
-  也已完成首轮；五个 `SrvDo065` 支援光环现已数据驱动对齐，下一项为 Cleansing、
-  Meditation 与 Redemption 的周期资源/尸体行为。
+  也已完成首轮；五个 `SrvDo065` 支援光环及 Cleansing、Meditation、Redemption 现已
+  数据驱动对齐，下一项为圣骑士近战技能尾项与全职业表现验收。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -138,8 +145,9 @@
    以及 Fist of the Heavens / Holy Bolt 的原生目标、延迟、分裂、伤害/治疗与协同链已
    完成首轮；Resist Fire/Cold/Lightning、Salvation、硬点最大抗性和 Holy Freeze /
    Holy Shock / Sanctuary 特殊周期行为也已完成；Defiance、Blessed Aim、Vigor、
-   Fanaticism 与 Thorns 的 `SrvDo065` 原生属性、硬点被动和反伤链亦已完成。下一项处理
-   Cleansing、Meditation 与 Redemption 周期行为。
+   Fanaticism 与 Thorns 的 `SrvDo065` 原生属性、硬点被动和反伤链亦已完成；Cleansing、
+   Meditation 与 Redemption 周期资源/尸体行为已完成首轮。下一项处理圣骑士近战技能尾项，
+   并同步进行全职业技能表现/动画验收。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -155,7 +163,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 83% | 17% | 2.0% | 死灵骨毒/召唤链、圣骑士特殊周期/支援光环、Blessed Hammer 与 FoH/Holy Bolt 已接通；剩余周期资源光环及职业技能仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 85% | 15% | 1.8% | 死灵骨毒/召唤链、圣骑士光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer 与 FoH/Holy Bolt 已接通；剩余职业技能和实机表现仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -179,10 +187,10 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 92% | 8% | 特殊周期/支援/抗性光环、Blessed Hammer 与 FoH/Holy Bolt 已完成；剩余周期资源光环和近战技能尾项 |
+| 圣骑士 Paladin | 96% | 4% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer 与 FoH/Holy Bolt 已完成；剩余近战技能尾项和实机表现验收 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
-职业技能专项整体按 **约 78% 完成、约 22% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 79% 完成、约 21% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
