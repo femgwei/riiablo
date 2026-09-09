@@ -55,8 +55,8 @@
   已通过；对象模块按 95% 记录，剩余复杂神殿效果及实机观感验收。
 - 当前 Chat 继续统一维护全部模块，包括战斗，不存在需要避让的独立战斗 Chat。
 - 圣骑士 Cleansing、Meditation、Redemption 已完成首轮原生资源/尸体行为；下一项为
-  圣骑士 Sacrifice 已接入 `SrvSt29/SrvDo064`；下一项为 Smite/Zeal/Charge/Vengeance/
-  Holy Shield/Conversion 近战尾项与全职业表现验收。
+  圣骑士 Sacrifice 已接入 `SrvSt29/SrvDo064`，Smite 已接入玩家 `SrvDo150`；下一项为
+  Zeal/Charge/Vengeance/Holy Shield/Conversion 近战尾项与全职业表现验收。
 - 十项死灵法师诅咒现统一读取 1.10f `Skills.txt/States.txt`，覆盖原生
   `SrvDo030/059/061`、目标点范围、难度时长、状态 stat、免疫怪物 1/5 抗性削减和
   负物理抗性伤害；玩家与怪物不再走两套实现。

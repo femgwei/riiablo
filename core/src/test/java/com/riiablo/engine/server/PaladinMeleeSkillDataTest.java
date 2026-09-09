@@ -25,4 +25,15 @@ class PaladinMeleeSkillDataTest extends RiiabloTest {
     assertTrue(bonus > 0, "Sacrifice must carry a native damage bonus formula");
     assertTrue(self > 0, "Sacrifice must carry a native self-damage formula");
   }
+
+  @Test
+  void smiteUsesNativeShieldAttackFunctionAndStunFormula() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.SMITE);
+    assertNotNull(skill);
+    assertEquals("Smite", skill.skill);
+    assertEquals(0, skill.srvstfunc);
+    assertEquals(150, skill.srvdofunc);
+    assertTrue(SkillFormula.evaluate(skill.calc2, skill, 1) > 0,
+        "Smite must carry a native stun duration formula");
+  }
 }

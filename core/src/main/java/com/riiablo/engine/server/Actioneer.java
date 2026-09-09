@@ -1586,7 +1586,8 @@ public class Actioneer extends PassiveSystem {
         break;
       }
       case 150: { // native monster Smite: A2 physical hit with stun
-        resolveSmite(entityId, targetId);
+        if (mPlayer.has(entityId)) resolvePlayerSmite(entityId, targetId);
+        else resolveSmite(entityId, targetId);
         break;
       }
       case 3: { // throw (srvdofunc for throw attacks)
@@ -4113,6 +4114,76 @@ public class Actioneer extends PassiveSystem {
     log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result=hit baseDamage={} bonusPct={} damage={} hp={} -> {}",
         entityId, targetId, combat.totalDamage, bonusPercent, event.damage, before, hp.asFixed());
     if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+  }
+
+  /** Native player branch of SKILLS_SrvDo150_Smite. */
+  private void resolvePlayerSmite(int entityId, int targetId) {
+    if (targetId == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)
+        || !mAttributesWrapper.has(targetId) || !mPosition.has(entityId)
+        || !mPosition.has(targetId)) return;
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (skill == null || skill.srvdofunc != 150
+        || !isInMeleeRangeAtTick(entityId, targetId, 0,
+            casting != null ? casting.positionSnapshotTick : 0L)) return;
+    Item shield = equippedShield(entityId);
+    if (shield == null || shield.base == null) {
+      log.info("[PALADIN_SMITE] phase=reject source={} target={} reason=no_shield", entityId, targetId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    if (attacker == null || defender == null || !canDamageRelation(
+        entityId, targetId, true, isPlayerEntity(targetId))) return;
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    int min = Math.max(0, shield.base.mindam);
+    int max = Math.max(min, shield.base.maxdam);
+    UnitState holyShield = stateList(entityId) != null
+        ? stateList(entityId).getState(StateId.HOLYSHIELD) : null;
+    if (holyShield != null && holyShield.skillId >= 0) {
+      Skills.Entry hs = Riiablo.files.skills.get(holyShield.skillId);
+      int hsLevel = Math.max(1, holyShield.level);
+      int hsBonus = hs != null ? Math.max(0, SkillFormula.evaluate(hs.calc1, hs, hsLevel)) : 0;
+      min += hsBonus;
+      max += hsBonus;
+    }
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, true, isPlayerEntity(targetId), min, max,
+        statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
+        isEntityMoving(targetId));
+    if (!combat.hit || combat.blocked) {
+      log.info("[PALADIN_SMITE] phase=result source={} target={} result={} chance={}",
+          entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
+      return;
+    }
+    float before = defender.get(Stat.hitpoints, StatRef.obtain()).asFixed();
+    DamageEvent damageEvent = DamageEvent.obtainMelee(entityId, targetId,
+        combat.totalDamage, combat.physicalDamage);
+    events.dispatch(damageEvent);
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    hp.sub(Math.max(0f, damageEvent.damage));
+    if (hp.asFixed() < 0f) hp.set(0f);
+    int stunFrames = Math.max(0, SkillFormula.evaluate(skill.calc2, skill, level));
+    if (stunFrames > 0) StatusEffectApplier.INSTANCE.applyStun(targetId, stunFrames);
+    if (mPosition.has(entityId) && mPosition.has(targetId)) {
+      StatusEffectApplier.INSTANCE.applyKnockback(targetId,
+          mPosition.get(entityId).position.x, mPosition.get(entityId).position.y,
+          mPosition.get(targetId).position.x, mPosition.get(targetId).position.y);
+    }
+    log.info("[PALADIN_SMITE] phase=result source={} target={} level={} shield={}..{} "
+            + "damage={} hp={} -> {} stunFrames={}", entityId, targetId, level,
+        min, max, damageEvent.damage, before, hp.asFixed(), stunFrames);
+    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, targetId));
+  }
+
+  private Item equippedShield(int entityId) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return null;
+    com.riiablo.save.ItemData items = mPlayer.get(entityId).data.getItems();
+    if (items == null) return null;
+    Item left = items.getEquipped(BodyLoc.LARM);
+    if (left != null && left.type != null && left.type.is(Type.SHLD)) return left;
+    Item right = items.getEquipped(BodyLoc.RARM);
+    return right != null && right.type != null && right.type.is(Type.SHLD) ? right : null;
   }
 
   /** D2MOO SKILLS_SrvDo064_Sacrifice. The target and range are evaluated from
