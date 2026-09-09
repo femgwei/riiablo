@@ -7,13 +7,15 @@ native D2 save flags, map topology, object state, quest rewards and level
 transitions. Native behavior is taken from `F:/3rd_src/D2MOO/source`; Java
 DRLG support in `D2MOO_JAVA` is reused where it is already verified.
 
-## Scope and ownership
+## Scope and ownership (current)
 
 - This plan owns quests, Act 1 NPC/objects, portals, room population and map
   persistence.
-- Combat formulas, skill damage, missiles and `LootManager` remain owned by
-  the combat task. Quest code may subscribe to `DeathEvent` but must not
-  change how combat produces it.
+- The current Chat is the single owner of the whole migration. Combat formulas,
+  skill damage, missiles, `LootManager`, experience, items, maps, quests,
+  multiplayer services and tests are all in scope. The former standalone
+  combat-task boundary is historical and must not be used to infer current
+  ownership or progress.
 - Shared files such as `GameScreen`, `ServerEntityFactory`, `Map` and server
   bootstrap code receive only minimal registration changes.
 - Every completed phase requires focused tests, `git diff --check`, a commit
@@ -58,7 +60,8 @@ persist opened/activated modes when rooms unload and reload.
 
 Implement Blood Raven quest eligibility, fixed boss completion, Kashya dialog,
 the free rogue reward and the interface to hiring/resurrection. Mercenary
-combat remains behind the combat-task boundary.
+combat is maintained in the same authoritative combat pipeline as the rest of
+this migration.
 
 ## Phase 4: Act 1 NPC services
 
@@ -82,8 +85,8 @@ Cain town state and multiplayer eligibility.
 
 Complete player town portals, quest portals, quest item lifecycle, native
 TreasureClass handoff, inactive-room units, unique/boss respawn rules and
-object/monster persistence. Changes to combat-owned loot files require prior
-coordination and a minimal event interface.
+object/monster persistence. Combat and loot changes are coordinated in this
+same Chat and must preserve the authoritative event interfaces.
 
 ## Phase 8: population, environment and full regression
 
