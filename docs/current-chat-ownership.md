@@ -6,7 +6,8 @@
 
 当前由本 Chat 维护 riiablo/D2MOO 对齐的全部模块。已关闭的独立战斗 Chat 不再作为
 代码、进度或责任来源；本地和远程访问都以仓库中的本文件和
-`docs/d2moo-progress-roadmap.md` 为准。
+`docs/d2moo-progress-roadmap.md` 为准。原始 P0–P3 优先级清单保存在
+[`d2moo-minimal-port-priority.md`](d2moo-minimal-port-priority.md)。
 
 包含的范围：
 
