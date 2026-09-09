@@ -13,6 +13,8 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.MonsterStatsCalculator;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.skill.NecromancerSkills;
+import java.util.function.ToIntFunction;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -133,6 +135,33 @@ public final class MissileDamageResolver {
   public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {
     return initializeSkill(projectile, skill, ownerAttrs, level, false, true);
+  }
+
+  /** Builds the native magic packet used by Bone Spear and Bone Spirit. */
+  public static boolean initializeNecromancerBoneMagic(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    if (projectile == null || skill == null
+        || (!NecromancerSkills.isBoneSpear(skill) && !NecromancerSkills.isBoneSpirit(skill))) {
+      return false;
+    }
+    int[] damage = NecromancerSkills.getBoneProjectileMagicDamage(
+        skill, level, baseSkillLevel);
+    if (damage[1] <= 0) return false;
+    int[] elementalMin = new int[DAMAGE_TYPES];
+    int[] elementalMax = new int[DAMAGE_TYPES];
+    elementalMin[MAGIC] = damage[0];
+    elementalMax[MAGIC] = damage[1];
+    writeSnapshot(projectile, ownerAttrs, false, Math.max(1, level),
+        0, 0, statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, 0, 0);
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = Math.max(1, level);
+    projectile.usesAttackRating = false;
+    projectile.freezesTarget = false;
+    log.info("[BONE_PROJECTILE_DAMAGE] missile={} skill={} level={} magic={}..{}",
+        projectile.missile != null ? projectile.missile.Missile : "", skill.skill,
+        level, damage[0], damage[1]);
+    return true;
   }
 
   private static boolean initializeSkill(Missile projectile, Skills.Entry skill,

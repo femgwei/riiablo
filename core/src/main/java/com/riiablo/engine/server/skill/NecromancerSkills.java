@@ -425,6 +425,40 @@ public final class NecromancerSkills {
         Math.max(1, skillLevel), skill.ELevLen));
   }
 
+  public static boolean isBoneSpear(Skills.Entry skill) {
+    return skill != null && skill.skill != null && "Bone Spear".equalsIgnoreCase(skill.skill);
+  }
+
+  public static boolean isBoneSpirit(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 10
+        && skill.skill != null && "Bone Spirit".equalsIgnoreCase(skill.skill);
+  }
+
+  /** Native magic packet for Bone Spear/Spirit (8.8 HitShift + hard-point synergy). */
+  public static int[] getBoneProjectileMagicDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isBoneSpear(skill) && !isBoneSpirit(skill)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    long min = Math.max(0L, (long) skill.EMin + damageBonusByLevel(level, skill.EMinLev));
+    long max = Math.max(min, (long) skill.EMax + damageBonusByLevel(level, skill.EMaxLev));
+    // Regular elemental packets use HitShift relative to D2's 8-bit damage
+    // scale (HitShift=8 is an unshifted integer packet).
+    int shift = skill.HitShift - 8;
+    if (shift > 0) {
+      min <<= Math.min(30, shift);
+      max <<= Math.min(30, shift);
+    } else if (shift < 0) {
+      min >>= Math.min(30, -shift);
+      max >>= Math.min(30, -shift);
+    }
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        skill.EDmgSymPerCalc, skill, level,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel));
+    min += min * synergy / 100;
+    max += max * synergy / 100;
+    return new int[] {saturated(min), saturated(max)};
+  }
+
   private static final int[] BONE_PRISON_X = {
       -1, 1, 3, 4, 4, 3, -1, 1, -3, -4, -4, -3
   };

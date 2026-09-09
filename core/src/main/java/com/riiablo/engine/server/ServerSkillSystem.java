@@ -1865,6 +1865,13 @@ public class ServerSkillSystem extends PassiveSystem {
       direction.set(1f, 0f);
     }
     if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+    if (targetId < 0 && NecromancerSkills.isBoneSpirit(skill)) {
+      targetId = nearestHostileMonster(event.entityId, start, 128f);
+      if (targetId >= 0 && mPosition.has(targetId)) {
+        direction.set(mPosition.get(targetId).position).sub(start);
+      }
+    }
+    if (direction.isZero(0.0001f)) direction.set(1f, 0f);
     int id = createMissile(missile, direction.nor(), start, event.entityId, null, skillLevel);
     if (id >= 0 && mMissile.has(id)) {
       initializeSkillDamage(id, skill, event.entityId, skillLevel);
@@ -1872,7 +1879,9 @@ public class ServerSkillSystem extends PassiveSystem {
       projectile.targetId = targetId;
       projectile.homing = targetId >= 0 && mPosition.has(targetId);
       int bonus = SkillFormula.evaluate(skill.calc1, skill, skillLevel);
-      if (bonus <= 0) bonus = AmazonSkills.calculateGuidedArrowDamageBonus(skillLevel);
+      if (bonus <= 0 && !NecromancerSkills.isBoneSpirit(skill)) {
+        bonus = AmazonSkills.calculateGuidedArrowDamageBonus(skillLevel);
+      }
       projectile.damageMultiplier = 1f + Math.max(0, bonus) / 100f;
       configurePierce(projectile, event.entityId, skillLevel, true);
       consumeRangedAmmoForSkill(event, skill);
@@ -1880,6 +1889,24 @@ public class ServerSkillSystem extends PassiveSystem {
               + "level={} damageBonus={} pierceChance={}", event.entityId, id, targetId,
           projectile.homing, skillLevel, bonus, projectile.pierceChance);
     }
+  }
+
+  private int nearestHostileMonster(int sourceId, Vector2 origin, float maxRange) {
+    if (origin == null) return Engine.INVALID_ENTITY;
+    int nearest = Engine.INVALID_ENTITY;
+    float nearestDistance = maxRange * maxRange;
+    IntBag candidates = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Monster.class, Position.class)).getEntities();
+    for (int i = 0; i < candidates.size(); i++) {
+      int candidate = candidates.get(i);
+      if (!isHostile(sourceId, candidate) || !mNativeUnitFlagsValid(candidate)) continue;
+      float distance = origin.dst2(mPosition.get(candidate).position);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = candidate;
+      }
+    }
+    return nearest;
   }
 
   /** Native SKILLS_SrvDo012_Strafe: one arrow per selected hostile target. */
@@ -2011,8 +2038,21 @@ public class ServerSkillSystem extends PassiveSystem {
       int ownerId, int skillLevel) {
     if (missileId < 0 || skill == null || !mMissile.has(missileId)
         || !mAttributesWrapper.has(ownerId)) return;
-    MissileDamageResolver.initializeSkill(mMissile.get(missileId), skill,
-        mAttributesWrapper.get(ownerId).attrs, skillLevel);
+    Missile projectile = mMissile.get(missileId);
+    boolean nativeBone = MissileDamageResolver.initializeNecromancerBoneMagic(
+        projectile, skill, mAttributesWrapper.get(ownerId).attrs, skillLevel,
+        name -> getBaseSkillLevel(ownerId, name));
+    if (!nativeBone) {
+      MissileDamageResolver.initializeSkill(projectile, skill,
+          mAttributesWrapper.get(ownerId).attrs, skillLevel);
+    }
+    if (NecromancerSkills.isBoneSpear(skill)) {
+      // Native bonespear has LastCollide and CollideKill=0: after a successful
+      // hit it continues through additional hostile units, while the missile's
+      // per-projectile hit set prevents re-hitting one unit.
+      projectile.pierceEnabled = true;
+      projectile.pierceChance = 100;
+    }
     captureThrowingMastery(mMissile.get(missileId), skill, ownerId);
   }
 

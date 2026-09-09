@@ -205,4 +205,7 @@ waypoints, caves, quest rewards and collision boundaries.
   - 1.10f `SrvDo022` now emits the native 64-way `poisonnova` fan with cast-time
     8.8 poison, synergy, mastery, pierce and duration snapshots; clients render the
     authoritative missiles only.
-- [ ] Next: Bone Spear / Bone Spirit native projectile and pierce/homing behavior.
+- [x] ~~Bone Spear / Bone Spirit native projectile and pierce/homing behavior~~
+  - Bone Spear now uses the native LastCollide/CollideKill continuation and a magic damage
+    snapshot; Bone Spirit uses SrvDo010 homing with nearest-hostile fallback.
+- [ ] Next: Necromancer summon AI cadence and remaining cross-class skill validation.
