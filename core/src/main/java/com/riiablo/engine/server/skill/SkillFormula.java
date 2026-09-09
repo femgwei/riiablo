@@ -130,6 +130,17 @@ public final class SkillFormula {
         return skill == null ? 0 : skill.ToHit + (level - 1) * skill.LevToHit;
       }
       if (identifier.regionMatches(true, 0, "par", 0, 3)) {
+        // The 1.10f Bone Wall row uses the otherwise unique `par34`
+        // shorthand for the Param3/Param4 linear pair.  Blizzard's calc
+        // compiler treats it like ln34; reading only the first digit happens
+        // to work at level one, but silently ignores the level step.
+        if (identifier.length() == 5) {
+          int first = identifier.charAt(3) - '0';
+          int second = identifier.charAt(4) - '0';
+          if (first >= 1 && first <= 9 && second >= 1 && second <= 9) {
+            return param(first) + (level - 1) * param(second);
+          }
+        }
         return param(parseDigits(identifier, 3));
       }
       if (identifier.length() == 4

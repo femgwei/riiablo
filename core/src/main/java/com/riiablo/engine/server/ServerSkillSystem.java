@@ -14,6 +14,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
@@ -100,6 +101,7 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
+  protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Mercenary> mMercenary;
@@ -242,6 +244,24 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
+    if (NecromancerSkills.isBoneWall(skill)) {
+      Vector2 target = castTargetPoint(event);
+      if (target == null || invalidBoneWallPoint(event.entityId, target)) {
+        reject(event, 3, "Bone Wall requires a valid non-town ground position");
+        log.info("[NECRO_BONE_WALL] phase=cast_reject source={} target={} reason=ground_or_town",
+            event.entityId, target);
+        return;
+      }
+    }
+    if (NecromancerSkills.isBonePrison(skill)
+        && (event.targetId < 0 || !mPosition.has(event.targetId)
+            || isTownUnit(event.targetId))) {
+      reject(event, 3, "Bone Prison requires a non-town unit target");
+      log.info("[NECRO_BONE_PRISON] phase=cast_reject source={} target={} reason=unit_or_town",
+          event.entityId, event.targetId);
+      return;
+    }
+
     ItemData items = player.data != null ? player.data.getItems() : null;
     if (NecromancerSkills.isPoisonDagger(skill)) {
       Item weapon = activeMeleeWeapon(items);
@@ -310,6 +330,22 @@ public class ServerSkillSystem extends PassiveSystem {
     return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
   }
 
+  private Vector2 castTargetPoint(SkillCastEvent event) {
+    if (event.targetId >= 0 && mPosition.has(event.targetId)) {
+      return new Vector2(mPosition.get(event.targetId).position);
+    }
+    return event.targetVec != null ? new Vector2(event.targetVec) : null;
+  }
+
+  private boolean invalidBoneWallPoint(int source, Vector2 target) {
+    if (target == null || !Float.isFinite(target.x) || !Float.isFinite(target.y)) return true;
+    if (!mMapWrapper.has(source)) return false;
+    MapWrapper wrapper = mMapWrapper.get(source);
+    if (wrapper == null || wrapper.map == null) return false;
+    com.riiablo.map.Map.Zone zone = wrapper.map.getZone(target);
+    return zone == null || zone.isTown();
+  }
+
   private boolean hasPositiveLife(int entityId) {
     if (!mAttributesWrapper.has(entityId)) return false;
     Attributes attrs = mAttributesWrapper.get(entityId).attrs;
@@ -349,7 +385,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 31 && event.srvdofunc != 55 && event.srvdofunc != 56
         && event.srvdofunc != 57 && event.srvdofunc != 58
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
-        && event.srvdofunc != 63
+        && event.srvdofunc != 60 && event.srvdofunc != 62 && event.srvdofunc != 63
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -358,7 +394,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 31 && skill.srvdofunc != 55 && skill.srvdofunc != 56
         && skill.srvdofunc != 57 && skill.srvdofunc != 58
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
-        && skill.srvdofunc != 63
+        && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119) {
       consumeRangedAmmoForSkill(event, skill);
       return;
@@ -388,6 +424,14 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     if (event.srvdofunc == 63 || skill.srvdofunc == 63) {
       spawnNecromancerPoisonExplosion(event, skill, skillLevel);
+      return;
+    }
+    if (event.srvdofunc == 60 || skill.srvdofunc == 60) {
+      spawnNecromancerBoneWall(event, skill, skillLevel, start);
+      return;
+    }
+    if (event.srvdofunc == 62 || skill.srvdofunc == 62) {
+      spawnNecromancerBonePrison(event, skill, skillLevel);
       return;
     }
     if (handleBarbarianCorpseSkill(event, skill, skillLevel)) return;
@@ -696,6 +740,127 @@ public class ServerSkillSystem extends PassiveSystem {
             + "absorb={}/{}",
         event.entityId, event.skillId, skillLevel, armor.duration,
         armor.runtimeValue, armor.getStatContributionValue(Stat.bonearmormax));
+  }
+
+  /** D2MOO SrvDo060: central segment plus two perpendicular maker paths. */
+  private void spawnNecromancerBoneWall(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 caster) {
+    if (factory == null || !NecromancerSkills.isBoneWall(skill)) return;
+    MonStats.Entry summon = resolveSummonMonster(skill.summon);
+    if (summon == null) {
+      log.warn("[NECRO_BONE_WALL] phase=reject source={} reason=missing_summon row={}",
+          event.entityId, skill.summon);
+      return;
+    }
+    Vector2 center = resolveTargetPoint(event, caster, new Vector2());
+    int duration = NecromancerSkills.getBoneWallDurationFrames(skill);
+    int controller = createBoneWallSegment(
+        event.entityId, summon, skill, skillLevel, duration, center, center,
+        Engine.INVALID_ENTITY);
+    if (controller == Engine.INVALID_ENTITY) {
+      log.info("[NECRO_BONE_WALL] phase=reject source={} position=({}, {}) reason=center_blocked",
+          event.entityId, center.x, center.y);
+      return;
+    }
+    SummonedPet root = mSummonedPet.has(controller) ? mSummonedPet.get(controller) : null;
+    if (root != null) root.controllerId = controller;
+
+    Vector2 direction = boneWallDirection(caster, center, new Vector2());
+    int perSide = NecromancerSkills.getBoneWallSegmentsPerSide(skill, skillLevel);
+    IntSet coordinates = new IntSet(perSide * 2 + 1);
+    coordinates.add(coordinateKey(MathUtils.round(center.x), MathUtils.round(center.y)));
+    int created = 1;
+    for (int side : new int[] {-1, 1}) {
+      for (int index = 1; index <= perSide; index++) {
+        // SrvDo13 emits a segment whenever the maker crosses a new subtile.
+        Vector2 position = new Vector2(center).mulAdd(direction, side * index);
+        int x = MathUtils.round(position.x);
+        int y = MathUtils.round(position.y);
+        if (!coordinates.add(coordinateKey(x, y))) continue;
+        if (createBoneWallSegment(event.entityId, summon, skill, skillLevel,
+            duration, new Vector2(x, y), center, controller) != Engine.INVALID_ENTITY) {
+          created++;
+        }
+      }
+    }
+    log.info("[NECRO_BONE_WALL] phase=created source={} skill={} level={} controller={} "
+            + "requested={} created={} duration={} center=({}, {}) direction=({}, {})",
+        event.entityId, skill.Id, skillLevel, controller, 1 + perSide * 2, created,
+        duration, center.x, center.y, direction.x, direction.y);
+  }
+
+  /** D2MOO SrvDo062: twelve fixed offsets around the selected unit. */
+  private void spawnNecromancerBonePrison(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (factory == null || !NecromancerSkills.isBonePrison(skill)
+        || event.targetId < 0 || !mPosition.has(event.targetId)
+        || isTownUnit(event.targetId)) {
+      log.info("[NECRO_BONE_PRISON] phase=reject source={} target={} reason=target_or_town",
+          event.entityId, event.targetId);
+      return;
+    }
+    MonStats.Entry summon = resolveSummonMonster(skill.summon);
+    if (summon == null) {
+      log.warn("[NECRO_BONE_PRISON] phase=reject source={} reason=missing_summon row={}",
+          event.entityId, skill.summon);
+      return;
+    }
+    Vector2 center = new Vector2(mPosition.get(event.targetId).position);
+    int duration = NecromancerSkills.getBoneWallDurationFrames(skill);
+    int controller = Engine.INVALID_ENTITY;
+    int created = 0;
+    int[] offset = new int[2];
+    for (int index = 0; index < NecromancerSkills.getBonePrisonSegmentCount(); index++) {
+      NecromancerSkills.getBonePrisonOffset(index, offset);
+      Vector2 position = new Vector2(center.x + offset[0], center.y + offset[1]);
+      int segment = createBoneWallSegment(event.entityId, summon, skill, skillLevel,
+          duration, position, center, controller);
+      if (segment == Engine.INVALID_ENTITY) continue;
+      if (controller == Engine.INVALID_ENTITY) {
+        controller = segment;
+        SummonedPet root = mSummonedPet.has(segment) ? mSummonedPet.get(segment) : null;
+        if (root != null) root.controllerId = segment;
+      }
+      created++;
+    }
+    log.info("[NECRO_BONE_PRISON] phase=created source={} target={} skill={} level={} "
+            + "controller={} requested={} created={} duration={} center=({}, {})",
+        event.entityId, event.targetId, skill.Id, skillLevel, controller,
+        NecromancerSkills.getBonePrisonSegmentCount(), created, duration,
+        center.x, center.y);
+  }
+
+  private int createBoneWallSegment(int owner, MonStats.Entry summon, Skills.Entry skill,
+      int skillLevel, int duration, Vector2 position, Vector2 facing, int controller) {
+    int entity = factory.createBoneWallSegment(
+        owner, summon, skill.Id, skillLevel, duration, position.x, position.y);
+    if (entity == Engine.INVALID_ENTITY) return entity;
+    if (mSummonedPet.has(entity)) {
+      SummonedPet pet = mSummonedPet.get(entity);
+      pet.boneWall = true;
+      pet.controllerId = controller == Engine.INVALID_ENTITY ? entity : controller;
+    }
+    applySummonSkillStats(owner, entity, skill, skillLevel, true);
+    if (mCofReference.has(entity) && skill.summode != null && !skill.summode.isEmpty()) {
+      int mode = Riiablo.files.MonMode.index(skill.summode);
+      if (mode >= 0) mCofReference.get(entity).mode = (byte) mode;
+    }
+    if (mAngle.has(entity)) {
+      Vector2 direction = mAngle.get(entity).target.set(facing).sub(position);
+      if (direction.isZero(0.0001f)) direction.set(1f, 0f);
+      direction.nor();
+    }
+    return entity;
+  }
+
+  static Vector2 boneWallDirection(Vector2 caster, Vector2 target, Vector2 out) {
+    out.set(target).sub(caster);
+    if (out.isZero(0.0001f)) out.set(1f, 0f);
+    return out.rotate90(1).nor();
+  }
+
+  private static int coordinateKey(int x, int y) {
+    return x * 73856093 ^ y * 19349663;
   }
 
   private void armBladeShield(SkillDoEvent event, Skills.Entry skill, int skillLevel) {

@@ -123,6 +123,20 @@ public abstract class EntityFactory extends PassiveSystem {
     return Engine.INVALID_ENTITY;
   }
 
+  /**
+   * Creates one exact-position Bone Wall/Bone Prison segment.
+   *
+   * <p>The authoritative server overrides this because ordinary summons may
+   * search several subtiles for a free coordinate and participate in a
+   * PetType maximum. Native bone-wall segments do neither. Detached test
+   * factories retain a useful fallback through the ordinary summon hook.</p>
+   */
+  public int createBoneWallSegment(int ownerId, MonStats.Entry summon,
+      int skillId, int skillLevel, int durationFrames, float x, float y) {
+    return createSummonedPet(ownerId, summon, "bonewall", skillId, skillLevel,
+        Integer.MAX_VALUE, true, durationFrames, x, y);
+  }
+
   /** Restores a dead monster entity in place; unsupported factories return false. */
   public boolean resurrectMonster(int monsterId, int sourceId) {
     return false;

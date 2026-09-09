@@ -198,4 +198,7 @@ waypoints, caves, quest rewards and collision boundaries.
 - [x] Corpse Explosion / Poison Explosion: shared atomic corpse reservation, native
   corpse-life physical/fire range packet, eight drifting fixed-rate poison clouds and
   synchronized client corpse-burst presentation.
-- [ ] Next: Bone Wall / Bone Prison destructible units, collision and authoritative lifecycle.
+- [x] Bone Wall / Bone Prison: native `SrvDo060/SrvDo062` segment geometry, `bonewall`
+  monster units, `calc1` life synergy, 600-frame lifetime, walk collision and controller
+  death cleanup. Added data, integration and collision regression tests.
+- [ ] Next: Poison Nova native missile fan, fixed poison snapshot and multiplayer presentation.

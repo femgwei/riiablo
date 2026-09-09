@@ -53,8 +53,8 @@
   在扣血前消费护盾，耗尽移除状态，重施恢复新上限，多人快照同步剩余容量。Poison
   Dagger 也已完成匕首门槛、`SrvSt16` 命中记录、8.8 定点毒伤、持续帧和 `SrvDo032`
   单次耐久/伤害消费。Corpse Explosion / Poison Explosion 也已完成共用尸体原子预留、
-  原生尸体生命伤害、物理/火焰内外半径与八方向 8.8 定点持续毒云链。下一项为
-  Bone Wall / Bone Prison 可破坏单位、碰撞与生命周期。
+  原生尸体生命伤害、物理/火焰内外半径与八方向 8.8 定点持续毒云链。Bone Wall /
+  Bone Prison 也已完成可破坏单位、碰撞与生命周期。下一项为 Poison Nova 原生导弹链。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -79,8 +79,9 @@
    骨系/毒系主动技能及全部专用攻击路径覆盖仍待完成。
 6. **P1 死灵法师骨系/毒系主动技能（进行中）**：Bone Armor 已完成原生公式、护盾消费、
    耗尽/重施和多人容量快照；Poison Dagger 已完成原生预计算近战记录、毒伤和耐久链；
-   Corpse/Poison Explosion 已完成原子尸体竞争、范围伤害、八方向持续毒云及多人表现。
-   下一步处理 Bone Wall/Prison，之后依次处理 Poison Nova、Bone Spear/Spirit 的原生函数、
+    Corpse/Poison Explosion 已完成原子尸体竞争、范围伤害、八方向持续毒云及多人表现；
+    Bone Wall/Prison 已完成原生段生成、可破坏单位、碰撞和生命周期。
+    下一步处理 Poison Nova，之后依次处理 Bone Spear/Spirit 的原生函数、
    可破坏单位、导弹和多人表现。
 7. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
@@ -97,7 +98,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 60% | 40% | 3.2% | 诅咒特殊 AI 已接通；通用 fallback、召唤和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 73% | 27% | 3.2% | 尸爆/毒爆权威链已接通；骨墙/骨牢与剩余职业技能仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 74% | 26% | 3.1% | 骨墙/骨牢、尸爆/毒爆权威链已接通；Nova、骨矛/骨灵与剩余职业技能仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -120,11 +121,11 @@
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
-| 死灵法师 Necromancer | 82% | 18% | 诅咒、召唤、Bone Armor、Poison Dagger、尸爆/毒爆已接通；骨墙/骨牢、Nova、骨矛/骨灵与召唤 AI 收尾待补 |
+| 死灵法师 Necromancer | 86% | 14% | 诅咒、召唤、Bone Armor、Poison Dagger、尸爆/毒爆、骨墙/骨牢已接通；Nova、骨矛/骨灵与召唤 AI 收尾待补 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
-职业技能专项整体按 **约 72% 完成、约 28% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 73% 完成、约 27% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
@@ -643,8 +644,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
 
 下一小步：死灵法师诅咒、尸体召唤、Revive/Golem、Iron Maiden/Life Tap 受击回调及
 Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor、Poison Dagger、Corpse
-Explosion 与 Poison Explosion 权威链已完成，当前进入 **Bone Wall / Bone Prison
-可破坏单位、碰撞与生命周期**。
+Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单位、碰撞与
+生命周期已完成，当前进入 **Poison Nova 原生导弹、固定毒伤与多人表现**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -984,10 +985,21 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
   - 新增数据、服务端集成和客户端表现测试；召唤、Death Sentry、野蛮人尸体技能等
     相邻回归通过，未修改 FlatBuffers schema 或生成网络文件。
 
+- [x] ~~完成 Bone Wall / Bone Prison 原生权威链~~
+  - 对照 D2MOO `SrvDo060/SrvDo062` 和 `MISSMODE_SrvDo13_BoneWallMaker`，Bone Wall
+    按施法方向生成中心段及两侧逐 sub-tile 段，Bone Prison 使用原版十二个固定偏移。
+  - `bonewall` 使用真实 `MonStats/MonStats2` 单位，读取 `calc1` 的 Bone Armor/Prison
+    或 Bone Wall 协同，保留 1.10f 的 `Param2=600` 帧寿命，并设置玩家召唤物的奖励抑制标志。
+  - 每段均可被攻击并触发普通死亡链；动态 walk footprint 写入 Zone 引用计数，死亡、
+    删除和中心控制段死亡会清理碰撞及其余段。客户端沿用网络怪物实体和原生 COF。
+  - `NativeNecromancerBoneWallDataTest`、`NecromancerBoneWallIntegrationTest`、
+    `BoneWallCollisionSystemTest` 及 `SummonedPetSystemTest` 通过；未修改 FlatBuffers
+    schema 或生成网络文件。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **Bone Wall / Bone Prison 可破坏单位、碰撞与
-> 生命周期**；Bone Armor、Poison Dagger、Corpse/Poison Explosion、召唤链、诅咒特殊 AI 与 Iron
+> “当前下一项”为准，当前目标是 **Poison Nova 原生导弹、固定毒伤与多人表现**；Bone
+> Armor、Poison Dagger、Corpse/Poison Explosion、Bone Wall/Prison、召唤链、诅咒特殊 AI 与 Iron
 > Maiden/Life Tap 受击回调首轮均已完成。
 
 ## 记录规则

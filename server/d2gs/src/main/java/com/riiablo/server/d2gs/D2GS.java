@@ -2132,6 +2132,7 @@ public class D2GS extends ApplicationAdapter {
         // consume the fresh attack sequence before the attack keyframe runs.
         .with(new AnimStepper())
         .with(new ObjectCollisionUpdater())
+        .with(new com.riiablo.engine.server.BoneWallCollisionSystem())
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
         .with(new com.riiablo.engine.server.item.NativeItemQuantityRegenSystem())
         .with(new ExperienceManager())

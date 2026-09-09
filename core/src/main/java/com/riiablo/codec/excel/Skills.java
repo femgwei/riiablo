@@ -146,6 +146,8 @@ public class Skills extends Excel<Skills.Entry> {
     @Column public String  summon;
     @Column public String  pettype;
     @Column public String  petmax;
+    /** Monster animation mode used when a summon is inserted into the world. */
+    @Column public String  summode;
     /** Generic server missile spawned by D2GAME_SKILLS_Handler after SrvDoFunc. */
     @Column public String  srvmissile;
     @Column public String  srvmissilea;

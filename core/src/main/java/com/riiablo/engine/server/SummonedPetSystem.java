@@ -64,6 +64,18 @@ public class SummonedPetSystem extends IteratingSystem {
         return;
       }
     }
+    // Native wall-maker segments are minions of the first wall unit. The
+    // MONUMOD_KILLMINIONSDEATH link removes the remaining line/ring when that
+    // controller dies; ownerId still points at the casting player for damage
+    // credit and multiplayer hostility.
+    if (pet.boneWall && pet.controllerId >= 0 && pet.controllerId != entityId
+        && !isLivingController(pet.controllerId)) {
+      log.info("[NECRO_BONE_WALL] phase=remove entity={} owner={} controller={} "
+              + "reason=controller_dead_or_missing",
+          entityId, pet.ownerId, pet.controllerId);
+      world.delete(entityId);
+      return;
+    }
     // PetType.txt decides whether a pet follows its owner across a level
     // transition. The owner may briefly lack a MapWrapper during login, so
     // only enforce this when both sides are known.
@@ -117,5 +129,12 @@ public class SummonedPetSystem extends IteratingSystem {
             + "duration={}",
         entityId, pet.ownerId, pet.petType, pet.durationFrames);
     world.delete(entityId);
+  }
+
+  private boolean isLivingController(int entityId) {
+    if (!world.getEntityManager().isActive(entityId) || mCorpse.has(entityId)) return false;
+    if (!mAttributes.has(entityId) || mAttributes.get(entityId).attrs == null) return true;
+    StatRef hp = mAttributes.get(entityId).attrs.get(Stat.hitpoints, StatRef.obtain());
+    return hp == null || hp.asFixed() > 0f;
   }
 }

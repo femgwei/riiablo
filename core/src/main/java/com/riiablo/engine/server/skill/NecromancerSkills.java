@@ -389,15 +389,60 @@ public final class NecromancerSkills {
         Math.max(1, skillLevel), skill.ELevLen));
   }
 
-  /**
-   * 骨墙 - 创建骨墙阻挡敌人
-   * 
-   * @param skillLevel 技能等级
-   * @return 骨墙生命值
-   */
+  private static final int[] BONE_PRISON_X = {
+      -1, 1, 3, 4, 4, 3, -1, 1, -3, -4, -4, -3
+  };
+  private static final int[] BONE_PRISON_Y = {
+      -4, -4, -3, -1, 1, 3, 4, 4, 3, -1, 1, -3
+  };
+
+  public static boolean isBoneWall(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 60;
+  }
+
+  public static boolean isBonePrison(Skills.Entry skill) {
+    return skill != null && skill.srvstfunc == 19 && skill.srvdofunc == 62;
+  }
+
+  /** Native calc1 maximum-life percentage applied by SetSummonPassiveStats. */
+  public static int getBoneWallLifePercent(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isBoneWall(skill) && !isBonePrison(skill)) return 0;
+    return SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel),
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel);
+  }
+
+  /** BoneWall AI Param2: native lifetime in 25 Hz game frames. */
+  public static int getBoneWallDurationFrames(Skills.Entry skill) {
+    return skill != null && skill.Param != null && skill.Param.length > 1
+        ? Math.max(1, skill.Param[1]) : 1;
+  }
+
+  /** Native SrvDo060 evaluates calc2, divides by two and launches two makers. */
+  public static int getBoneWallSegmentsPerSide(Skills.Entry skill, int skillLevel) {
+    if (!isBoneWall(skill)) return 0;
+    return Math.max(0, Math.min(32,
+        SkillFormula.evaluate(skill.calc2, skill, Math.max(1, skillLevel)) / 2));
+  }
+
+  public static int getBonePrisonSegmentCount() {
+    return BONE_PRISON_X.length;
+  }
+
+  /** Copies one of D2MOO SrvDo062's twelve fixed offsets. */
+  public static void getBonePrisonOffset(int index, int[] out) {
+    if (out == null || out.length < 2) return;
+    int normalized = Math.max(0, Math.min(BONE_PRISON_X.length - 1, index));
+    out[0] = BONE_PRISON_X[normalized];
+    out[1] = BONE_PRISON_Y[normalized];
+  }
+
+  /** Compatibility estimate retained for UI callers. */
   public static int calculateBoneWallHp(int skillLevel) {
-    // 基础 20，每级 +10
-    return 20 + (skillLevel - 1) * 10;
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.BONE_WALL) : null;
+    int percent = getBoneWallLifePercent(skill, skillLevel, name -> 0);
+    return Math.max(1, Math.round(19f * (100f + percent) / 100f));
   }
 
   /**
@@ -413,15 +458,12 @@ public final class NecromancerSkills {
     return MathUtils.random(minDamage, maxDamage);
   }
 
-  /**
-   * 骨牢 - 困住敌人的骨墙
-   * 
-   * @param skillLevel 技能等级
-   * @return 骨牢生命值
-   */
+  /** Compatibility estimate retained for UI callers. */
   public static int calculateBonePrisonHp(int skillLevel) {
-    // 基础 22，每级 +12
-    return 22 + (skillLevel - 1) * 12;
+    Skills.Entry skill = com.riiablo.Riiablo.files != null
+        ? com.riiablo.Riiablo.files.skills.get(SkillId.BONE_PRISON) : null;
+    int percent = getBoneWallLifePercent(skill, skillLevel, name -> 0);
+    return Math.max(1, Math.round(19f * (100f + percent) / 100f));
   }
 
   /**

@@ -45,6 +45,10 @@ public class SummonedPet extends Component {
   public float deadFrames;
   /** Item retained by Iron Golem after its ground entity is consumed. */
   public com.riiablo.item.Item sourceItem;
+  /** Native Bone Wall/Bone Prison unit; stationary, attackable and walk-blocking. */
+  public boolean boneWall;
+  /** First segment which owns the remaining wall/prison segments. */
+  public int controllerId;
 
   public SummonedPet set(int ownerId, String petType, int skillId, int skillLevel,
       boolean passive, int durationFrames) {
@@ -75,6 +79,8 @@ public class SummonedPet extends Component {
     deathPending = false;
     deadFrames = 0f;
     sourceItem = null;
+    boneWall = false;
+    controllerId = -1;
     return this;
   }
 }

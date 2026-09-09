@@ -526,6 +526,66 @@ public class ServerEntityFactory extends EntityFactory {
     return entityId;
   }
 
+  /** Native Bone Wall/Bone Prison segments use exact coordinates and no PetType limit. */
+  @Override
+  public int createBoneWallSegment(int ownerId, MonStats.Entry summon,
+      int skillId, int skillLevel, int durationFrames, float x, float y) {
+    if (ownerId < 0 || summon == null || !mPlayer.has(ownerId) || map == null) {
+      log.warn("[NECRO_BONE_WALL] phase=segment_reject owner={} summon={} "
+              + "position=({}, {}) reason=invalid_request",
+          ownerId, summon != null ? summon.Id : "null", x, y);
+      return Engine.INVALID_ENTITY;
+    }
+    MonStats2.Entry stats2 = Riiablo.files.monstats2.get(summon.MonStatsEx);
+    Map.Zone zone = map.getZone(x, y);
+    int footprint = stats2 != null ? Math.max(1, stats2.SizeX) : 1;
+    if (zone == null || zone.isTown() || !isStaticFootprintFree(zone, x, y, footprint)) {
+      log.debug("[NECRO_BONE_WALL] phase=segment_reject owner={} summon={} "
+              + "position=({}, {}) footprint={} reason=town_or_static_collision",
+          ownerId, summon.Id, x, y, footprint);
+      return Engine.INVALID_ENTITY;
+    }
+
+    int entityId = createMonster(summon.hcIdx, MathUtils.round(x), MathUtils.round(y));
+    if (entityId == Engine.INVALID_ENTITY) return entityId;
+    mSummonedPet.create(entityId).set(ownerId, "bonewall", skillId, skillLevel,
+        true, durationFrames).boneWall = true;
+    mNativeUnitFlags.get(entityId).reset().set(NativeUnitFlags.PLAYER_SUMMON);
+    if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
+    log.info("[NECRO_BONE_WALL] phase=segment_created owner={} entity={} skill={} "
+            + "level={} duration={} position=({}, {}) footprint={}",
+        ownerId, entityId, skillId, skillLevel, durationFrames,
+        MathUtils.round(x), MathUtils.round(y), footprint);
+    return entityId;
+  }
+
+  /** Unit overlap is legal for the native wall rings; only terrain is tested here. */
+  static boolean isStaticFootprintFree(Map.Zone zone, float x, float y, int unitSize) {
+    if (zone == null) return false;
+    int centerX = MathUtils.round(x);
+    int centerY = MathUtils.round(y);
+    int radius = Math.max(0, unitSize - 1);
+    Map.RoomEx centerRoom = zone.findRoomEx(centerX, centerY);
+    if (!zone.getRoomsEx().isEmpty() && centerRoom == null) return false;
+    for (int dy = -radius; dy <= radius; dy++) {
+      for (int dx = -radius; dx <= radius; dx++) {
+        int worldX = centerX + dx;
+        int worldY = centerY + dy;
+        if (worldX < zone.x() || worldY < zone.y()
+            || worldX >= zone.x() + zone.width()
+            || worldY >= zone.y() + zone.height()) return false;
+        if ((zone.staticFlags(worldX - zone.x(), worldY - zone.y())
+            & DT1.Tile.FLAG_BLOCK_WALK) != 0) return false;
+        if (!zone.getRoomsEx().isEmpty()) {
+          Map.RoomEx room = zone.findRoomEx(worldX, worldY);
+          if (room == null || centerRoom != null && room != centerRoom
+              && !centerRoom.isAdjacentTo(room.id)) return false;
+        }
+      }
+    }
+    return true;
+  }
+
   /** Applies only rank information encoded by the monster row itself. */
   static int normalizeNativeRank(int requestedRank, MonStats.Entry monstats) {
     if (requestedRank == com.riiablo.engine.server.monster.MonsterRank.NORMAL

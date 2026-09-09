@@ -831,6 +831,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new MissileLoader())
         .with(new AnimationStepper())
         .with(new ObjectCollisionUpdater())
+        // Bone Wall/Prison are monster units, not map objects. Their
+        // temporary walk footprint must exist in local and network clients.
+        .with(new com.riiablo.engine.server.BoneWallCollisionSystem())
 
         // In multiplayer, D2GS owns CofReference modes. The client still
         // computes local movement velocity, but must not overwrite server
