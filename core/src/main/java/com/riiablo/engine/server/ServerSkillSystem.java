@@ -434,6 +434,10 @@ public class ServerSkillSystem extends PassiveSystem {
       spawnNecromancerBonePrison(event, skill, skillLevel);
       return;
     }
+    if (NecromancerSkills.isPoisonNova(skill)) {
+      spawnNecromancerPoisonNova(event, skill, skillLevel, start);
+      return;
+    }
     if (handleBarbarianCorpseSkill(event, skill, skillLevel)) return;
     if ((event.srvdofunc == 30 || skill.srvdofunc == 30
         || event.srvdofunc == 59 || skill.srvdofunc == 59
@@ -1299,6 +1303,61 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     log.debug("Server nova projectiles: entity={}, skill={}, missile={}, created={}",
         event.entityId, event.skillId, missileName, created);
+  }
+
+  /**
+   * Native Poison Nova (SrvDo022): 64 fixed-offset poisonnova missiles.  The
+   * poison packet is captured once at cast time as an 8.8 rate and resolved by
+   * MissileCollisionSystem on the authoritative server; clients only render
+   * the replicated missiles and never apply damage locally.
+   */
+  private void spawnNecromancerPoisonNova(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 start) {
+    String missileName = firstNonEmpty(skill.srvmissilea,
+        firstNonEmpty(skill.srvmissile, skill.cltmissilea));
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[NECRO_POISON_NOVA] phase=reject source={} skill={} reason=missing_missile name={}",
+          event.entityId, event.skillId, missileName);
+      return;
+    }
+    int[] poison = NecromancerSkills.getPoisonNovaDamage(
+        skill, skillLevel, name -> getBaseSkillLevel(event.entityId, name));
+    Attributes sourceAttrs = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    int mastery = Math.max(0, statInt(sourceAttrs, Stat.passive_pois_mastery));
+    poison[0] = saturatedScale(poison[0], 100 + mastery, 100);
+    poison[1] = saturatedScale(poison[1], 100 + mastery, 100);
+    int duration = NecromancerSkills.getPoisonNovaDurationFrames(skill, skillLevel);
+    int pierce = Math.max(0, statInt(sourceAttrs, Stat.item_pierce_pois)
+        + statInt(sourceAttrs, Stat.passive_pois_pierce));
+    IntSet sharedHitTargets = new IntSet();
+    Vector2 direction = new Vector2();
+    int created = 0;
+    for (int i = 0; i < NOVA_MISSILE_COUNT; i++) {
+      radialDirection(i, NOVA_MISSILE_COUNT, direction);
+      int missileId = createMissile(missile, direction, start, event.entityId,
+          sharedHitTargets, skillLevel);
+      if (missileId < 0 || !mMissile.has(missileId)) continue;
+      Missile projectile = mMissile.get(missileId);
+      projectile.skillId = skill.Id;
+      projectile.damageLevel = skillLevel;
+      projectile.fixedPoisonRate = true;
+      projectile.poisonMinRateFixed = poison[0];
+      projectile.poisonMaxRateFixed = poison[1];
+      projectile.poisonDurationFrames = duration;
+      projectile.poisonPiercePercent = pierce;
+      projectile.poisonAttackerPlayer = mPlayer.has(event.entityId);
+      // Poison Nova is a single-hit radial wave.  A target is claimed by the
+      // first missile in this cast through sharedHitTargets; Pierce does not
+      // cause the same target to be damaged repeatedly by the wave.
+      projectile.pierceEnabled = false;
+      created++;
+    }
+    log.info("[NECRO_POISON_NOVA] phase=create source={} skill={} level={} missile={} "
+            + "created={} duration={} rawFixed={}..{} mastery={} pierce={} range={} velocity={}",
+        event.entityId, skill.Id, skillLevel, missile.Missile, created, duration,
+        poison[0], poison[1], mastery, pierce, missile.Range, missile.Vel);
   }
 
   /** D2MOO SKILLS_SrvDo024_FireWall: create only the maker at the target. */

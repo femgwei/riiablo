@@ -78,8 +78,8 @@
 当前已完成 **P1 死灵法师召唤与诅咒链首轮**：Raise Skeleton/Skeletal Mage、Revive、
 四类 Golem、Iron Maiden/Life Tap 及 Dim Vision/Attract/Confuse 特殊 AI 均已接入。
 骨毒系已完成 Bone Armor、Poison Dagger、Corpse Explosion 和 Poison Explosion。
-Bone Wall/Prison 已完成可破坏单位、地图碰撞和生命周期；下一步处理 Poison Nova，
-再依次处理 Bone Spear/Spirit。战斗模块不再
+Bone Wall/Prison 已完成可破坏单位、地图碰撞和生命周期；Poison Nova 已完成原生
+64 路导弹、固定毒率和多人快照；下一步处理 Bone Spear/Spirit。战斗模块不再
 单独分派，相关修改均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与

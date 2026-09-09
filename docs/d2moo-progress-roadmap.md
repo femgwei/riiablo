@@ -98,7 +98,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 60% | 40% | 3.2% | 诅咒特殊 AI 已接通；通用 fallback、召唤和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 74% | 26% | 3.1% | 骨墙/骨牢、尸爆/毒爆权威链已接通；Nova、骨矛/骨灵与剩余职业技能仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 76% | 24% | 2.9% | 骨墙/骨牢、尸爆/毒爆、Poison Nova 权威链已接通；骨矛/骨灵与剩余职业技能仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -121,7 +121,7 @@
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
-| 死灵法师 Necromancer | 86% | 14% | 诅咒、召唤、Bone Armor、Poison Dagger、尸爆/毒爆、骨墙/骨牢已接通；Nova、骨矛/骨灵与召唤 AI 收尾待补 |
+| 死灵法师 Necromancer | 90% | 10% | 诅咒、召唤、Bone Armor、Poison Dagger、尸爆/毒爆、骨墙/骨牢、Poison Nova 已接通；骨矛/骨灵与召唤 AI 收尾待补 |
 | 圣骑士 Paladin | 50% | 50% | 光环叠加、Blessed Hammer/FoH、元素伤害与抗性 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
@@ -645,7 +645,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
 下一小步：死灵法师诅咒、尸体召唤、Revive/Golem、Iron Maiden/Life Tap 受击回调及
 Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor、Poison Dagger、Corpse
 Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单位、碰撞与
-生命周期已完成，当前进入 **Poison Nova 原生导弹、固定毒伤与多人表现**。
+生命周期已完成，Poison Nova 原生导弹、固定毒伤与多人表现也已完成，当前进入
+**Bone Spear / Bone Spirit 原生导弹、穿透与追踪表现**。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。
@@ -992,15 +993,24 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     或 Bone Wall 协同，保留 1.10f 的 `Param2=600` 帧寿命，并设置玩家召唤物的奖励抑制标志。
   - 每段均可被攻击并触发普通死亡链；动态 walk footprint 写入 Zone 引用计数，死亡、
     删除和中心控制段死亡会清理碰撞及其余段。客户端沿用网络怪物实体和原生 COF。
-  - `NativeNecromancerBoneWallDataTest`、`NecromancerBoneWallIntegrationTest`、
+- `NativeNecromancerBoneWallDataTest`、`NecromancerBoneWallIntegrationTest`、
     `BoneWallCollisionSystemTest` 及 `SummonedPetSystemTest` 通过；未修改 FlatBuffers
     schema 或生成网络文件。
 
+- [x] ~~完成 Poison Nova 原生导弹、固定毒伤与多人表现~~
+  - 对照 D2MOO `SKILLS_SrvDo022_NovaAttack` 与 1.10f `Poison Nova`/`poisonnova`
+    行，创建 64 枚固定半径导弹；服务端在施法时快照 8.8 毒率、硬点协同、毒素精通、
+    穿透、持续帧数和施法者归属，客户端仅渲染权威导弹。
+  - `NativeNecromancerPoisonNovaDataTest` 覆盖 Skills/Missiles 字段、HitShift、
+    速度/范围、协同和持续时间；固定毒伤沿用统一抗性、PvP、状态和多人同步链，未修改
+    FlatBuffers/schema 或生成网络文件。
+
+下一项：Bone Spear / Bone Spirit 原生导弹、穿透与追踪表现。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
-> “当前下一项”为准，当前目标是 **Poison Nova 原生导弹、固定毒伤与多人表现**；Bone
-> Armor、Poison Dagger、Corpse/Poison Explosion、Bone Wall/Prison、召唤链、诅咒特殊 AI 与 Iron
-> Maiden/Life Tap 受击回调首轮均已完成。
+> “当前下一项”为准；Bone Armor、Poison Dagger、Corpse/Poison Explosion、Bone
+> Wall/Prison、Poison Nova、召唤链、诅咒特殊 AI 与 Iron Maiden/Life Tap 受击回调首轮均已完成。
 
 ## 记录规则
 

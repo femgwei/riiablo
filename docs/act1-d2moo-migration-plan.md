@@ -201,4 +201,8 @@ waypoints, caves, quest rewards and collision boundaries.
 - [x] Bone Wall / Bone Prison: native `SrvDo060/SrvDo062` segment geometry, `bonewall`
   monster units, `calc1` life synergy, 600-frame lifetime, walk collision and controller
   death cleanup. Added data, integration and collision regression tests.
-- [ ] Next: Poison Nova native missile fan, fixed poison snapshot and multiplayer presentation.
+- [x] ~~Poison Nova native missile fan, fixed poison snapshot and multiplayer presentation~~
+  - 1.10f `SrvDo022` now emits the native 64-way `poisonnova` fan with cast-time
+    8.8 poison, synergy, mastery, pierce and duration snapshots; clients render the
+    authoritative missiles only.
+- [ ] Next: Bone Spear / Bone Spirit native projectile and pierce/homing behavior.

@@ -389,6 +389,42 @@ public final class NecromancerSkills {
         Math.max(1, skillLevel), skill.ELevLen));
   }
 
+  /** Native Skills.txt SrvDo022 poison nova row (64 outward missiles). */
+  public static boolean isPoisonNova(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 22
+        && skill.skill != null && "Poison Nova".equalsIgnoreCase(skill.skill);
+  }
+
+  /**
+   * Resolves Poison Nova's 8.8 per-frame poison rate from the native EMin/EMax
+   * fields.  HitShift is the binary-point shift used by D2's elemental packet;
+   * unlike ordinary integer missile damage it must not be normalized to life
+   * points before the target resistance calculation.
+   */
+  public static int[] getPoisonNovaDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isPoisonNova(skill)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    long min = Math.max(0L, (long) skill.EMin + damageBonusByLevel(level, skill.EMinLev));
+    long max = Math.max(min, (long) skill.EMax + damageBonusByLevel(level, skill.EMaxLev));
+    int shift = Math.max(0, Math.min(30, skill.HitShift));
+    min <<= shift;
+    max <<= shift;
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        skill.EDmgSymPerCalc, skill, level,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel));
+    min += min * synergy / 100;
+    max += max * synergy / 100;
+    return new int[] {saturated(min), saturated(max)};
+  }
+
+  /** Poison Nova's native duration in game frames (25 frames/second). */
+  public static int getPoisonNovaDurationFrames(Skills.Entry skill, int skillLevel) {
+    if (!isPoisonNova(skill)) return 0;
+    return Math.max(1, skill.ELen + damageBonusByLevel(
+        Math.max(1, skillLevel), skill.ELevLen));
+  }
+
   private static final int[] BONE_PRISON_X = {
       -1, 1, 3, 4, 4, 3, -1, 1, -3, -4, -4, -3
   };
