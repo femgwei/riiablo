@@ -15,6 +15,7 @@ import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.ServerSkillSystem;
+import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.SkillCastEvent;
@@ -171,17 +172,35 @@ public class SkillCastHandler extends PassiveSystem {
     boolean localMonsterServer = mMonster.has(event.entityId) && localServer;
     boolean localBlessedHammerServer = localServer
         && (event.srvdofunc == 73 || skill.srvdofunc == 73);
+    boolean localFistOfHeavensServer = localServer
+        && (event.srvdofunc == 80 || skill.srvdofunc == 80);
+    boolean localHolyBoltServer = localServer && PaladinSkills.isHolyBolt(skill);
+    boolean fistOfHeavens = event.srvdofunc == 80 || skill.srvdofunc == 80;
+    if (fistOfHeavens && event.targetId >= 0 && mPosition.has(event.targetId)
+        && Riiablo.files.NativeSkills != null) {
+      com.riiablo.codec.excel.NativeSkills.Entry nativeSkill =
+          Riiablo.files.NativeSkills.get(skill.Id);
+      String serverOverlay = nativeSkill != null
+          ? nativeSkill.string("srvoverlay") : null;
+      if (hasText(serverOverlay) && Riiablo.colors != null && Riiablo.assets != null) {
+        overlays.set(event.targetId, serverOverlay);
+        log.info("[FIST_OF_HEAVENS] phase=target_overlay source={} target={} overlay={}",
+            event.entityId, event.targetId, serverOverlay);
+      }
+    }
     // Poison Explosion's server missiles are the eight damaging clouds, while
     // cltdofunc 33 owns a separate corpse-burst presentation. Keep that local
     // visual on every client even when the cloud entities are authoritative.
     boolean separateCorpseBurst = (event.srvdofunc == 63 || skill.srvdofunc == 63)
         && event.cltdofunc == 33;
     if (serverMissile && !separateCorpseBurst
-        && (networkClient || localMonsterServer || localBlessedHammerServer)) {
+        && (networkClient || localMonsterServer || localBlessedHammerServer
+            || localFistOfHeavensServer || localHolyBoltServer)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} "
-              + "srvDoFunc={} networkClient={} localMonster={} localBlessedHammer={}",
+              + "srvDoFunc={} networkClient={} localMonster={} localBlessedHammer={} "
+              + "localFistOfHeavens={} localHolyBolt={}",
           event.entityId, skill.skill, skill.srvdofunc, networkClient, localMonsterServer,
-          localBlessedHammerServer);
+          localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer);
       return;
     }
 

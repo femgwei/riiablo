@@ -44,6 +44,7 @@ import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
+import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.StateId;
@@ -125,6 +126,11 @@ public class MissileCollisionSystem extends IteratingSystem {
 
     if (missile.rabiesController) {
       processRabiesController(entityId, missile, position, elapsedFrames);
+      return;
+    }
+
+    if (missile.fistOfHeavensDelay) {
+      processFistOfHeavensDelay(entityId, missile, position);
       return;
     }
 
@@ -368,6 +374,143 @@ public class MissileCollisionSystem extends IteratingSystem {
     float radius = pointIndex * BLESSED_HAMMER_RADIUS_STEP;
     return out.set(origin.x + MathUtils.cos(angle) * radius,
         origin.y + MathUtils.sin(angle) * radius);
+  }
+
+  /** Native {@code MISSMODE_SrvHit22_FistOfTheHeavensDelay}. */
+  private void processFistOfHeavensDelay(
+      int entityId, Missile delay, Position delayPosition) {
+    int lifetime = Math.max(1, delay.nativeLifetimeFrames);
+    if (delay.nativeFrame < lifetime || delay.fistOfHeavensTriggered) return;
+    delay.fistOfHeavensTriggered = true;
+
+    int targetId = delay.targetId;
+    boolean ownerValid = delay.ownerId >= 0
+        && world.getEntityManager().isActive(delay.ownerId)
+        && mAttributesWrapper.has(delay.ownerId);
+    boolean targetValid = targetId >= 0
+        && world.getEntityManager().isActive(targetId)
+        && mPosition.has(targetId) && mAttributesWrapper.has(targetId)
+        && isAlive(targetId);
+    if (!ownerValid || !targetValid) {
+      log.info("[FIST_OF_HEAVENS] phase=delay_expire missileId={} owner={} target={} "
+              + "result=discard ownerValid={} targetValid={}",
+          entityId, delay.ownerId, targetId, ownerValid, targetValid);
+      world.delete(entityId);
+      return;
+    }
+
+    // SrvHit22 damages the saved Unit directly even if it moved after cast;
+    // pass its current point to the ordinary damage resolver while retaining
+    // the delay's original position as the Holy Bolt split origin.
+    Position targetPosition = mPosition.get(targetId);
+    Vector2 forcedPoint = new Vector2(targetPosition.position);
+    checkCollisionWithEntity(
+        entityId, delay, forcedPoint, forcedPoint, targetId, targetPosition);
+    spawnFistOfHeavensBolts(delay, delayPosition.position, targetId);
+    log.info("[FIST_OF_HEAVENS] phase=delay_expire missileId={} owner={} target={} "
+            + "frame={} origin=({}, {}) result=triggered",
+        entityId, delay.ownerId, targetId, delay.nativeFrame,
+        delayPosition.position.x, delayPosition.position.y);
+    world.delete(entityId);
+  }
+
+  private void spawnFistOfHeavensBolts(
+      Missile delay, Vector2 origin, int primaryTargetId) {
+    if (factory == null || delay == null || delay.missile == null
+        || delay.missile.HitSubMissile == null
+        || delay.missile.HitSubMissile.length == 0) return;
+    String name = delay.missile.HitSubMissile[0];
+    Missiles.Entry boltRow = name != null ? Riiablo.files.Missiles.get(name) : null;
+    Skills.Entry skill = delay.skillId >= 0 ? Riiablo.files.skills.get(delay.skillId) : null;
+    if (boltRow == null || !PaladinSkills.isFistOfTheHeavens(skill)) {
+      log.warn("[FIST_OF_HEAVENS] phase=split_reject owner={} missile={} skill={} reason=data",
+          delay.ownerId, name, delay.skillId);
+      return;
+    }
+    int level = Math.max(1, delay.damageLevel);
+    int range = PaladinSkills.getFistOfHeavensRange(delay.missile, skill, level);
+    int maximum = PaladinSkills.getFistOfHeavensBoltCount(delay.missile, skill, level);
+    int auraFilter = skill.aurafilter != 0 ? skill.aurafilter : 0xA587;
+    Array<Integer> targets = getEntitiesInRange(origin.x, origin.y, range);
+    targets.sort((left, right) -> {
+      float leftDistance = mPosition.has(left)
+          ? mPosition.get(left).position.dst2(origin) : Float.MAX_VALUE;
+      float rightDistance = mPosition.has(right)
+          ? mPosition.get(right).position.dst2(origin) : Float.MAX_VALUE;
+      int distanceOrder = Float.compare(leftDistance, rightDistance);
+      return distanceOrder != 0 ? distanceOrder : Integer.compare(left, right);
+    });
+    Attributes ownerAttrs = mAttributesWrapper.get(delay.ownerId).attrs;
+    int created = 0;
+    for (int i = 0; i < targets.size && created < maximum; i++) {
+      int targetId = targets.get(i);
+      if (!isFistOfHeavensAuraTarget(
+          delay.ownerId, targetId, origin, auraFilter)) continue;
+      Vector2 direction = new Vector2(mPosition.get(targetId).position).sub(origin);
+      if (direction.isZero(0.0001f)) direction.set(1f, 1f);
+      int boltId = factory.createMissile(
+          boltRow, direction.nor(), origin, delay.ownerId);
+      if (boltId < 0 || !mMissile.has(boltId)) continue;
+      Missile bolt = mMissile.get(boltId);
+      bolt.skillId = delay.skillId;
+      bolt.damageLevel = level;
+      bolt.targetId = targetId;
+      MissileDamageResolver.initializePaladinFistOfHeavensBolt(
+          bolt, skill, ownerAttrs, level,
+          skillName -> baseSkillLevel(delay.ownerId, skillName));
+      created++;
+    }
+    log.info("[FIST_OF_HEAVENS] phase=split owner={} primary={} skill={} level={} "
+            + "range={} filter=0x{} maximum={} created={} missile={}",
+        delay.ownerId, primaryTargetId, delay.skillId, level, range,
+        Integer.toHexString(auraFilter), maximum, created, name);
+  }
+
+  private boolean isFistOfHeavensAuraTarget(
+      int sourceId, int targetId, Vector2 origin, int filter) {
+    if (targetId == sourceId || !mPosition.has(targetId) || !isAlive(targetId)) return false;
+    boolean player = mPlayer.has(targetId);
+    boolean monster = mMonster.has(targetId);
+    if (!player && !monster) return false;
+    if ((player && (filter & 0x0001) == 0)
+        || (monster && (filter & 0x0002) == 0)) return false;
+    if (monster) {
+      Monster target = mMonster.get(targetId);
+      if (target.monstats == null || target.monstats.npc) return false;
+      if ((filter & 0x0004) != 0 && !isUndead(target)) return false;
+      if ((filter & 0x4000) != 0 && target.monstats.boss) return false;
+      if ((filter & 0x40000) != 0 && target.monstats.primeevil) return false;
+    }
+    if (mNativeUnitFlags.has(targetId)) {
+      NativeUnitFlags flags = mNativeUnitFlags.get(targetId);
+      if ((filter & 0x0080) != 0 && !NativeTargeting.canBeAttacked(flags)) return false;
+      if ((filter & 0x0400) != 0 && !NativeTargeting.isValidCombatTarget(flags)) return false;
+    }
+    if ((filter & (0x0100 | 0x2000)) != 0 && isTownUnit(targetId)) return false;
+    if ((filter & 0x10000) != 0 && !areAligned(sourceId, targetId)) return false;
+    if ((filter & 0x8000) != 0 && !isEnemy(sourceId, targetId)) return false;
+    if ((filter & 0x0200) != 0 && !hasAuraLineOfSight(sourceId, origin, targetId)) return false;
+    return true;
+  }
+
+  private boolean hasAuraLineOfSight(int sourceId, Vector2 origin, int targetId) {
+    Map map = null;
+    if (mMapWrapper.has(sourceId)) map = mMapWrapper.get(sourceId).map;
+    if (map == null && mMapWrapper.has(targetId)) map = mMapWrapper.get(targetId).map;
+    if (map == null || map.getZone(origin) == null) return true;
+    wallRay.set(origin, mPosition.get(targetId).position);
+    return !map.castRay(wallRay, DT1.Tile.FLAG_BLOCK_JUMP, 0, wallCollision);
+  }
+
+  private boolean isTownUnit(int entityId) {
+    if (!mMapWrapper.has(entityId)) return false;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
+  }
+
+  private static boolean isUndead(Monster monster) {
+    return monster != null && monster.monstats != null
+        && (monster.monstats.lUndead || monster.monstats.hUndead);
   }
 
   /** D2MOO SrvDo30/SrvHit53: infected units periodically pass remaining poison. */
@@ -755,6 +898,17 @@ public class MissileCollisionSystem extends IteratingSystem {
         // whole ring. They are state carriers, never ordinary damage packets.
         return false;
       }
+      if (hitFunction == 7) {
+        if (canHolyBoltHeal(missile, targetId)) {
+          if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) {
+            return false;
+          }
+          healHolyBoltTarget(missileId, missile, targetId);
+          if (!missile.persistent && collidesKill(missile)) world.delete(missileId);
+          return true;
+        }
+        if (!holyBoltCanDamage(missile, targetId)) return false;
+      }
       // 检查是否是敌人
       if (!isEnemy(missile.ownerId, targetId)) {
         return false;
@@ -968,6 +1122,65 @@ public class MissileCollisionSystem extends IteratingSystem {
     }
     
     return false;
+  }
+
+  /** Native SrvHit07 pet/ally branch. */
+  private boolean canHolyBoltHeal(Missile missile, int targetId) {
+    if (missile == null || missile.missile == null
+        || arrayValue(missile.missile.sHitPar, 0) == 0
+        || missile.ownerId < 0 || targetId == missile.ownerId
+        || !mAttributesWrapper.has(targetId) || !isAlive(targetId)
+        || !areAligned(missile.ownerId, targetId)) return false;
+    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    if (skill == null || Riiablo.files.NativeSkills == null) return false;
+    com.riiablo.codec.excel.NativeSkills.Entry nativeSkill =
+        Riiablo.files.NativeSkills.get(skill.Id);
+    if (nativeSkill == null) return false;
+    boolean pet = mMercenary.has(targetId) || mSummonedPet.has(targetId);
+    boolean ally = mPlayer.has(targetId) || pet;
+    return (pet && nativeSkill.bool("TargetPet"))
+        || (ally && nativeSkill.bool("TargetAlly"));
+  }
+
+  /** Native SrvHit07 target-type branch; false means the bolt keeps flying. */
+  private boolean holyBoltCanDamage(Missile missile, int targetId) {
+    int mode = arrayValue(missile != null && missile.missile != null
+        ? missile.missile.sHitPar : null, 1);
+    return holyBoltCanDamage(mode, mPlayer.has(targetId),
+        mMonster.has(targetId) ? mMonster.get(targetId) : null);
+  }
+
+  static boolean holyBoltCanDamage(int mode, boolean player, Monster monster) {
+    if (player) return mode == 0;
+    if (monster == null) return false;
+    if (mode == 0) return true;
+    if (monster.monstats == null) return false;
+    return mode == 2 ? monster.monstats.demon : isUndead(monster);
+  }
+
+  private void healHolyBoltTarget(int missileId, Missile missile, int targetId) {
+    Skills.Entry skill = missile.skillId >= 0 ? Riiablo.files.skills.get(missile.skillId) : null;
+    int level = Math.max(1, missile.damageLevel);
+    int[] healing = PaladinSkills.getHolyBoltHealing(
+        skill, level, name -> baseSkillLevel(missile.ownerId, name));
+    int amount = healing[0];
+    if (healing[1] > healing[0]) {
+      NativeRng rng = new NativeRng(missile.rngState);
+      amount += rng.nextInt(healing[1] - healing[0]);
+      missile.rngState = rng.state();
+    }
+    Attributes target = mAttributesWrapper.get(targetId).attrs;
+    StatRef life = target != null ? target.get(Stat.hitpoints, StatRef.obtain()) : null;
+    StatRef maximum = target != null ? target.get(Stat.maxhp, StatRef.obtain()) : null;
+    if (life == null || maximum == null) return;
+    float before = life.asFixed();
+    float after = Math.min(maximum.asFixed(), before + Math.max(0, amount));
+    life.set(after);
+    log.info("[HOLY_BOLT_HEAL] missileId={} missile={} owner={} target={} skill={} "
+            + "level={} rollRange={}..{} requested={} applied={} hp={}/{} overlay={}",
+        missileId, missile.missile.Missile, missile.ownerId, targetId,
+        skill != null ? skill.skill : "", level, healing[0], healing[1], amount,
+        after - before, after, maximum.asFixed(), missile.missile.ProgOverlay);
   }
 
   /** Resolves skill poison stored by D2 as an 8.8 per-frame rate. */

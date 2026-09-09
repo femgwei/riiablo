@@ -113,6 +113,14 @@ public class Missile extends PooledComponent {
   public final Vector2 blessedHammerOrigin = new Vector2();
   public int blessedHammerPointIndex;
 
+  /**
+   * Native SrvDo080/SrvHit22 controller. The stationary delay stores the
+   * original unit target and resolves exactly once when its frame lifetime
+   * expires; it is not a normal zero-velocity collision missile.
+   */
+  public boolean fistOfHeavensDelay;
+  public boolean fistOfHeavensTriggered;
+
   /** Remaining targets for native SrvHit12 chain-lightning continuation. */
   public int chainHitsRemaining;
 
@@ -207,6 +215,8 @@ public class Missile extends PooledComponent {
     blessedHammerPath = false;
     blessedHammerOrigin.setZero();
     blessedHammerPointIndex = 0;
+    fistOfHeavensDelay = false;
+    fistOfHeavensTriggered = false;
     chainHitsRemaining = 0;
     chaosIcePath = false;
     chaosIceSeed = 0;

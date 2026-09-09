@@ -257,6 +257,18 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
+    // Native SrvDo080 has no ground-target fallback: it obtains the caster's
+    // selected Unit and fails before creating the delay missile when absent.
+    if (PaladinSkills.isFistOfTheHeavens(skill)
+        && (event.targetId < 0 || !mPosition.has(event.targetId)
+            || !hasPositiveLife(event.targetId)
+            || !isHostile(event.entityId, event.targetId))) {
+      reject(event, 8, "Fist of the Heavens requires a living hostile unit target");
+      log.info("[FIST_OF_HEAVENS] phase=cast_reject source={} target={} reason=unit_target",
+          event.entityId, event.targetId);
+      return;
+    }
+
     ItemData items = player.data != null ? player.data.getItems() : null;
     if (NecromancerSkills.isPoisonDagger(skill)) {
       Item weapon = activeMeleeWeapon(items);
@@ -381,7 +393,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 57 && event.srvdofunc != 58
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
         && event.srvdofunc != 60 && event.srvdofunc != 62 && event.srvdofunc != 63
-        && event.srvdofunc != 73
+        && event.srvdofunc != 73 && event.srvdofunc != 80
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -391,14 +403,19 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 57 && skill.srvdofunc != 58
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
         && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
-        && skill.srvdofunc != 73
-        && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119) {
+        && skill.srvdofunc != 73 && skill.srvdofunc != 80
+        && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
+        && !PaladinSkills.isHolyBolt(skill)) {
       consumeRangedAmmoForSkill(event, skill);
       return;
     }
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if (event.srvdofunc == 80 || skill.srvdofunc == 80) {
+      spawnPaladinFistOfTheHeavens(event, skill, skillLevel);
+      return;
+    }
     if (event.srvdofunc == 73 || skill.srvdofunc == 73) {
       spawnPaladinBlessedHammer(event, skill, skillLevel, start);
       return;
@@ -2043,6 +2060,50 @@ public class ServerSkillSystem extends PassiveSystem {
     return missileId;
   }
 
+  /** Native {@code SKILLS_SrvDo080_FistOfTheHeavens}. */
+  private void spawnPaladinFistOfTheHeavens(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!PaladinSkills.isFistOfTheHeavens(skill) || !hasText(skill.srvmissilea)
+        || event.targetId < 0 || !world.getEntityManager().isActive(event.targetId)
+        || !mPosition.has(event.targetId) || !hasPositiveLife(event.targetId)
+        || !isHostile(event.entityId, event.targetId)) {
+      log.info("[FIST_OF_HEAVENS] phase=do_reject source={} target={} skill={} reason=unit_target",
+          event.entityId, event.targetId, skill != null ? skill.Id : -1);
+      return;
+    }
+    Missiles.Entry row = Riiablo.files.Missiles.get(skill.srvmissilea);
+    if (row == null) {
+      log.warn("[FIST_OF_HEAVENS] phase=do_reject source={} missile={} reason=missing_row",
+          event.entityId, skill.srvmissilea);
+      return;
+    }
+
+    Vector2 targetPosition = new Vector2(mPosition.get(event.targetId).position);
+    int missileId = createMissile(
+        row, Vector2.X, targetPosition, event.entityId, null, skillLevel);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+
+    Missile delay = mMissile.get(missileId);
+    delay.fistOfHeavensDelay = true;
+    delay.fistOfHeavensTriggered = false;
+    delay.targetId = event.targetId;
+    delay.range = 0f;
+    delay.nativeLifetimeFrames = Math.max(1, row.Range);
+    Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    MissileDamageResolver.initializePaladinFistOfTheHeavens(
+        delay, skill, ownerAttrs, skillLevel,
+        name -> getBaseSkillLevel(event.entityId, name));
+
+    com.riiablo.codec.excel.NativeSkills.Entry nativeSkill =
+        Riiablo.files.NativeSkills != null ? Riiablo.files.NativeSkills.get(skill.Id) : null;
+    String overlay = nativeSkill != null ? nativeSkill.string("srvoverlay") : "";
+    log.info("[FIST_OF_HEAVENS] phase=delay_create source={} target={} missileId={} "
+            + "level={} position=({}, {}) lifetime={} overlay={}",
+        event.entityId, event.targetId, missileId, skillLevel,
+        targetPosition.x, targetPosition.y, delay.nativeLifetimeFrames, overlay);
+  }
+
   /** Native SKILLS_SrvDo073_BlessedHammer. */
   private void spawnPaladinBlessedHammer(
       SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 start) {
@@ -2096,10 +2157,13 @@ public class ServerSkillSystem extends PassiveSystem {
     if (missileId < 0 || skill == null || !mMissile.has(missileId)
         || !mAttributesWrapper.has(ownerId)) return;
     Missile projectile = mMissile.get(missileId);
-    boolean nativeBone = MissileDamageResolver.initializeNecromancerBoneMagic(
+    boolean nativePaladin = MissileDamageResolver.initializePaladinHolyBolt(
         projectile, skill, mAttributesWrapper.get(ownerId).attrs, skillLevel,
         name -> getBaseSkillLevel(ownerId, name));
-    if (!nativeBone) {
+    boolean nativeBone = !nativePaladin && MissileDamageResolver.initializeNecromancerBoneMagic(
+        projectile, skill, mAttributesWrapper.get(ownerId).attrs, skillLevel,
+        name -> getBaseSkillLevel(ownerId, name));
+    if (!nativePaladin && !nativeBone) {
       MissileDamageResolver.initializeSkill(projectile, skill,
           mAttributesWrapper.get(ownerId).attrs, skillLevel);
     }

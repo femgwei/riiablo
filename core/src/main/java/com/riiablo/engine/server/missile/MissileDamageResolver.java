@@ -190,6 +190,73 @@ public final class MissileDamageResolver {
     return true;
   }
 
+  /** Builds the SrvDo080 center lightning snapshot stored on the delay missile. */
+  public static boolean initializePaladinFistOfTheHeavens(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    if (projectile == null || !PaladinSkills.isFistOfTheHeavens(skill)) return false;
+    int[] damage = PaladinSkills.getFistOfHeavensLightningDamage(
+        skill, level, baseSkillLevel);
+    boolean initialized = initializePaladinElemental(
+        projectile, skill, ownerAttrs, level, Stat.lightmindam, Stat.lightmaxdam, damage);
+    if (initialized) {
+      log.info("[FIST_OF_HEAVENS_DAMAGE] phase=center missile={} level={} lightning={}..{}",
+          projectile.missile != null ? projectile.missile.Missile : "",
+          level, damage[0], damage[1]);
+    }
+    return initialized;
+  }
+
+  /** Builds the ordinary Holy Bolt magic packet from Skills.txt. */
+  public static boolean initializePaladinHolyBolt(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    if (projectile == null || !PaladinSkills.isHolyBolt(skill)) return false;
+    int[] damage = PaladinSkills.getHolyBoltMagicDamage(skill, level, baseSkillLevel);
+    boolean initialized = initializePaladinElemental(
+        projectile, skill, ownerAttrs, level, Stat.magicmindam, Stat.magicmaxdam, damage);
+    if (initialized) {
+      log.info("[HOLY_BOLT_DAMAGE] missile={} level={} magic={}..{}",
+          projectile.missile != null ? projectile.missile.Missile : "",
+          level, damage[0], damage[1]);
+    }
+    return initialized;
+  }
+
+  /** Builds each SrvHit22 child from the FoH-bolt Missiles.txt row. */
+  public static boolean initializePaladinFistOfHeavensBolt(Missile projectile,
+      Skills.Entry fist, Attributes ownerAttrs, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    if (projectile == null || projectile.missile == null
+        || !PaladinSkills.isFistOfTheHeavens(fist)) return false;
+    int[] damage = PaladinSkills.getFistOfHeavensBoltMagicDamage(
+        projectile.missile, fist, level, baseSkillLevel);
+    boolean initialized = initializePaladinElemental(
+        projectile, fist, ownerAttrs, level, Stat.magicmindam, Stat.magicmaxdam, damage);
+    if (initialized) {
+      log.info("[FIST_OF_HEAVENS_DAMAGE] phase=holy_bolt missile={} level={} magic={}..{}",
+          projectile.missile.Missile, level, damage[0], damage[1]);
+    }
+    return initialized;
+  }
+
+  private static boolean initializePaladinElemental(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, int level,
+      short minStat, short maxStat, int[] damage) {
+    if (damage == null || damage.length < 2 || damage[1] <= 0) return false;
+    int[] elementalMin = new int[DAMAGE_TYPES];
+    int[] elementalMax = new int[DAMAGE_TYPES];
+    int type = minStat == Stat.lightmindam ? LIGHTNING : MAGIC;
+    elementalMin[type] = Math.max(0, damage[0]);
+    elementalMax[type] = Math.max(elementalMin[type], damage[1]);
+    writeSnapshot(projectile, ownerAttrs, false, Math.max(1, level),
+        0, 0, statInt(ownerAttrs, Stat.tohit), elementalMin, elementalMax, 0, 0);
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = Math.max(1, level);
+    projectile.usesAttackRating = false;
+    return projectile.damage.get(minStat) != null && projectile.damage.get(maxStat) != null;
+  }
+
   private static boolean initializeSkill(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, boolean includeSource, boolean includeElement) {
     if (projectile == null || skill == null) return false;

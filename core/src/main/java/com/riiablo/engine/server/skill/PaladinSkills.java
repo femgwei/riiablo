@@ -2,6 +2,7 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -91,6 +92,97 @@ public final class PaladinSkills {
   public static int calculateHolyBoltHeal(int skillLevel) {
     // 基础 12，每级 +4
     return 12 + (skillLevel - 1) * 4;
+  }
+
+  /** True for the native 1.10f Holy Bolt row handled by SrvHit07. */
+  public static boolean isHolyBolt(Skills.Entry skill) {
+    return skill != null && skill.skill != null
+        && "Holy Bolt".equalsIgnoreCase(skill.skill);
+  }
+
+  /** True only for the native 1.10f SrvDo080 Fist of the Heavens row. */
+  public static boolean isFistOfTheHeavens(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 80 && skill.skill != null
+        && "Fist of the Heavens".equalsIgnoreCase(skill.skill);
+  }
+
+  /** Native Holy Bolt magic packet, including hard-point skill synergies. */
+  public static int[] getHolyBoltMagicDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isHolyBolt(skill)) return new int[] {0, 0};
+    return skillElementalDamage(skill, skillLevel, baseSkillLevel);
+  }
+
+  /** Native FoH center lightning packet, including the Holy Shock synergy. */
+  public static int[] getFistOfHeavensLightningDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (!isFistOfTheHeavens(skill)) return new int[] {0, 0};
+    return skillElementalDamage(skill, skillLevel, baseSkillLevel);
+  }
+
+  /**
+   * Native FoH Holy Bolt packet comes from Missiles.txt rather than the FoH
+   * Skills.txt elemental columns. Its EDmgSymPerCalc still reads the caster's
+   * hard-point Holy Bolt level.
+   */
+  public static int[] getFistOfHeavensBoltMagicDamage(
+      Missiles.Entry missile, Skills.Entry fist, int skillLevel,
+      ToIntFunction<String> baseSkillLevel) {
+    if (missile == null || !isFistOfTheHeavens(fist)) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    long min = shiftedDamage(missile.EMin, missile.MinELev, level, missile.HitShift);
+    long max = Math.max(min,
+        shiftedDamage(missile.Emax, missile.MaxELev, level, missile.HitShift));
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        missile.EDmgSymPerCalc, fist, level,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel));
+    min += min * synergy / 100L;
+    max += max * synergy / 100L;
+    return new int[] {saturated(min), saturated(max)};
+  }
+
+  /** SrvHit07 healing range from the missile's stored casting skill. */
+  public static int[] getHolyBoltHealing(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    if (skill == null) return new int[] {0, 0};
+    int level = Math.max(1, skillLevel);
+    ToIntFunction<String> levels = baseSkillLevel == null ? name -> 0 : baseSkillLevel;
+    int min = Math.max(0, SkillFormula.evaluate(skill.calc1, skill, level, levels));
+    int max = Math.max(min, SkillFormula.evaluate(skill.calc2, skill, level, levels));
+    return new int[] {min, max};
+  }
+
+  /** SrvHit22 uses HitPar1 first, then Skills.txt AuraRangeCalc. */
+  public static int getFistOfHeavensRange(
+      Missiles.Entry delay, Skills.Entry skill, int skillLevel) {
+    int configured = arrayValue(delay != null ? delay.sHitPar : null, 0);
+    int calculated = configured > 0 ? configured
+        : SkillFormula.evaluate(skill != null ? skill.aurarangecalc : null,
+            skill, Math.max(1, skillLevel));
+    return Math.max(1, calculated);
+  }
+
+  /** SrvHit22 uses HitPar2 first, then FoH Calc4, with a native minimum of one. */
+  public static int getFistOfHeavensBoltCount(
+      Missiles.Entry delay, Skills.Entry skill, int skillLevel) {
+    int configured = arrayValue(delay != null ? delay.sHitPar : null, 1);
+    int calculated = configured > 0 ? configured
+        : SkillFormula.evaluate(skill != null ? skill.calc4 : null,
+            skill, Math.max(1, skillLevel));
+    return Math.max(1, calculated);
+  }
+
+  private static int[] skillElementalDamage(
+      Skills.Entry skill, int skillLevel, ToIntFunction<String> baseSkillLevel) {
+    int level = Math.max(1, skillLevel);
+    long min = shiftedDamage(skill.EMin, skill.EMinLev, level, skill.HitShift);
+    long max = Math.max(min, shiftedDamage(skill.EMax, skill.EMaxLev, level, skill.HitShift));
+    int synergy = Math.max(0, SkillFormula.evaluate(
+        skill.EDmgSymPerCalc, skill, level,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel));
+    min += min * synergy / 100L;
+    max += max * synergy / 100L;
+    return new int[] {saturated(min), saturated(max)};
   }
 
   /**
@@ -228,6 +320,18 @@ public final class PaladinSkills {
     if (level > 16) return 7 * l1 + 8 * l2 + (level - 16) * l3;
     if (level > 8) return 7 * l1 + (level - 8) * l2;
     return (level - 1) * l1;
+  }
+
+  private static int shiftedDamage(int base, int[] perLevel, int level, int hitShift) {
+    long value = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
+    int shift = hitShift - 8;
+    if (shift > 0) value <<= Math.min(30, shift);
+    else if (shift < 0) value >>= Math.min(30, -shift);
+    return saturated(value);
+  }
+
+  private static int arrayValue(int[] values, int index) {
+    return values != null && index >= 0 && index < values.length ? values[index] : 0;
   }
 
   private static int saturated(long value) {

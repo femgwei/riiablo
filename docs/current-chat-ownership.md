@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（Blessed Hammer 原生权威螺旋、碰撞与伤害链）
-- 上一功能基线：`1d6ea361`（圣骑士光环权威状态、仲裁与多人同步）
+- 当前功能提交：本文件所在 `HEAD`（Fist of the Heavens / Holy Bolt 原生权威链）
+- 上一功能基线：`6aa992b2`（Blessed Hammer 原生权威螺旋、碰撞与伤害链）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 69%（详见路线图）
@@ -97,13 +97,20 @@
   不死/恶魔各 50% 可叠加，并在魔法抗性、吸收和 PvP 缩放前结算。单机/多人表现复用
   同一权威实体。23 个联合测试套件共 107 个用例、D2GS 编译和真实 1.10f 离屏营地通过；
   没有修改网络 schema 或生成文件。
+- Fist of the Heavens 已接入 `SrvDo080/SrvHit22`：必须选择存活敌对 Unit；10-frame 延迟
+  后对保存的主目标结算闪电，再按 1.10f 范围、数量、过滤器和 LOS 向不死目标分裂 Holy
+  Bolt。普通 Holy Bolt 共用 `SrvHit07`，完成合法盟友/佣兵/召唤物治疗、MaxHP 限幅、
+  怪物类型门槛及四项硬点协同；单机/多人复用权威实体并显示 `handofgod` Overlay。
+- FoH/Holy Bolt 专项及联合回归共 22 个测试套件、121 个用例通过；D2GS 编译和真实
+  1.10f 离屏营地均通过，没有修改网络 schema 或生成文件。
 
 ## 下一步
 
-当前已完成 **P1 死灵法师召唤、诅咒和骨毒系首轮**，以及 **圣骑士代表性光环和
-Blessed Hammer 原生权威链首轮**。下一步实现 Fist of the Heavens 权威目标打击与
-Holy Bolt 分裂；随后处理剩余元素/抗性光环。战斗模块不再单独分派，相关修改与进度
-文档均由本 Chat 负责。
+当前已完成 **P1 死灵法师召唤、诅咒和骨毒系首轮**，以及 **圣骑士代表性光环、
+Blessed Hammer、Fist of the Heavens / Holy Bolt 原生权威链首轮**。下一步处理圣骑士
+剩余元素/抗性光环：Resist Fire、Resist Cold、Resist Lightning、Holy Freeze、Holy
+Shock、Sanctuary、Salvation。战斗模块不再单独分派，相关修改与进度文档均由本 Chat
+负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。
