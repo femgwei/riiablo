@@ -13,6 +13,8 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.state.StateList;
@@ -165,6 +167,27 @@ class MissileNativePolicyTest {
     assertFalse(MissileCollisionSystem.claimTargetHit(second, 11, null),
         "overlapping missiles from one cast share one target claim");
     assertTrue(MissileCollisionSystem.claimTargetHit(second, 12, null));
+  }
+
+  @Test
+  void redirectedMonsterMissileTreatsItsTemporaryTargetAsHostile() {
+    MissileCollisionSystem missiles = new MissileCollisionSystem();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), missiles).build());
+    try {
+      int source = world.create();
+      int target = world.create();
+      world.getMapper(Monster.class).create(source);
+      world.getMapper(Monster.class).create(target);
+      assertTrue(missiles.areAligned(source, target));
+
+      world.getMapper(NativeAiTargetOverride.class).create(source)
+          .setAttract(target, 99, 59, 10);
+      assertFalse(missiles.areAligned(source, target),
+          "the temporary AI target must pass monster missile collision filtering");
+    } finally {
+      world.dispose();
+    }
   }
 
   @Test

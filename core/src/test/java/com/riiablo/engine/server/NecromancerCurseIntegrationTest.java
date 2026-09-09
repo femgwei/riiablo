@@ -17,6 +17,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SummonedPet;
@@ -106,6 +107,7 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
     try {
       int owner = player(world, "necromancer", 0, 0);
       int target = monster(world, 10, 10, 0);
+      int nearby = monster(world, 1, 0, 0);
       CharData data = world.getMapper(Player.class).get(owner).data;
       data.diff = 1;
       com.riiablo.codec.excel.Skills.Entry attract =
@@ -118,9 +120,18 @@ class NecromancerCurseIntegrationTest extends RiiabloTest {
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           owner, attract.Id, target, new Vector2(10, 10), attract.srvdofunc, 0));
       assertTrue(states(world, target).hasState(StateId.ATTRACT));
+      NativeAiTargetOverride redirected = world.getMapper(NativeAiTargetOverride.class)
+          .get(nearby);
+      assertNotNull(redirected, "Attract must redirect nearby switch-AI monsters");
+      assertEquals(NativeAiTargetOverride.ATTRACT, redirected.mode);
+      assertEquals(target, redirected.targetId);
+      assertFalse(world.getMapper(NativeAiTargetOverride.class).has(target),
+          "the attracted monster must not be redirected to attack itself");
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           owner, confuse.Id, target, new Vector2(10, 10), confuse.srvdofunc, 0));
       assertTrue(states(world, target).hasState(StateId.CONFUSE));
+      assertEquals(NativeAiTargetOverride.CONFUSE,
+          world.getMapper(NativeAiTargetOverride.class).get(target).mode);
       assertEquals(SkillFormula.evaluate(confuse.auralencalc, confuse, 1)
               / Riiablo.files.DifficultyLevels.get(1).AiCurseDivisor,
           states(world, target).getState(StateId.CONFUSE).duration);

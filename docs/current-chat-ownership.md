@@ -61,14 +61,17 @@
 - Iron Maiden/Life Tap 已接入服务端权威 `DamageEvent`：近战/导弹携带结算后的物理
   分量；反伤只响应近战且不会递归，Life Tap 按 `calc1` 恢复攻击者生命。定向测试和
   D2GS 编译通过，真实 1.10f `offscreenCamp` 营地启动门槛通过。
+- Dim Vision/Attract/Confuse 已接入统一怪物 AI：失明怪不再释放远程技能，Attract 固定
+  周围怪物目标，Confuse 按单位种子选择另一只合法怪物；到期、死亡、状态移除和跨地图
+  会恢复普通 AI，怪物导弹也能命中临时敌对目标。定向与第一章怪物联合回归已通过。
 
 ## 下一步
 
-当前已完成 **P1 死灵法师召唤链首轮**：Raise Skeleton/Skeletal Mage、Revive 及四类
-Golem 均已接入尸体/物品原子消费、PetType/PetMax、召唤所有权、持续时间、死亡/断线/
-跨区清理与多人实体快照；Iron Maiden/Life Tap 受击回调也已完成首轮。下一步处理
-Dim Vision/Attract/Confuse 完整 AI 特殊状态与目标重定向。战斗模块不再单独分派，
-相关修改均由本 Chat 负责。
+当前已完成 **P1 死灵法师召唤与诅咒链首轮**：Raise Skeleton/Skeletal Mage、Revive、
+四类 Golem、Iron Maiden/Life Tap 及 Dim Vision/Attract/Confuse 特殊 AI 均已接入。
+下一步处理死灵法师骨系/毒系主动技能：优先核对 Bone Armor、Poison Dagger、尸爆/毒爆、
+Bone Wall/Prison、Poison Nova、Bone Spear/Spirit。战斗模块不再单独分派，相关修改均由
+本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。

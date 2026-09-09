@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.NativeTargeting;
+import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
@@ -55,6 +56,7 @@ import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.monster.MonsterRank;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -105,6 +107,7 @@ public class ServerSkillSystem extends PassiveSystem {
   private volatile int mercenaryLastSrvDoFunc;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<NativeAiTargetOverride> mNativeAiTargetOverride;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -699,8 +702,8 @@ public class ServerSkillSystem extends PassiveSystem {
       Vector2 caster) {
     int function = event.srvdofunc != 0 ? event.srvdofunc : skill.srvdofunc;
     Vector2 center = resolveTargetPoint(event, caster, new Vector2());
-    int range = function == 59 ? 0
-        : SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
+    int nativeAuraRange = SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel);
+    int range = function == 59 ? 0 : nativeAuraRange;
     range = Math.max(0, Math.min(128, range));
     float range2 = range * (float) range;
     int difficulty = curseDifficulty(event.entityId);
@@ -708,6 +711,8 @@ public class ServerSkillSystem extends PassiveSystem {
         Riiablo.files != null && Riiablo.files.DifficultyLevels != null
             ? Riiablo.files.DifficultyLevels.get(difficulty) : null;
     int affected = 0;
+    int curseStateId = NecromancerSkills.resolveCurseStateId(
+        skill.auratargetstate, skill.skill);
 
     IntBag entities = world.getAspectSubscriptionManager()
         .get(Aspect.all(Position.class)).getEntities();
@@ -717,6 +722,9 @@ public class ServerSkillSystem extends PassiveSystem {
       if (function != 59 && center.dst2(mPosition.get(targetId).position) > range2) continue;
       if (!isNecromancerCurseTarget(event.entityId, targetId, skill.aurafilter,
           function == 59 || function == 61)) continue;
+      if ((curseStateId == StateId.DIMVISION || function == 61)
+          && !canSwitchCurseAi(targetId)) continue;
+      if (function == 59 && isNativeUnique(targetId)) continue;
 
       UnitStates targetStates = mUnitStates.has(targetId)
           ? mUnitStates.get(targetId) : mUnitStates.create(targetId).init(targetId);
@@ -728,7 +736,18 @@ public class ServerSkillSystem extends PassiveSystem {
           targetStates.stateList, Riiablo.files != null ? Riiablo.files.States : null,
           skill, skillLevel, event.entityId, difficultyRow,
           targetAttributes, playerOrHireling);
-      if (state != null) affected++;
+      if (state != null) {
+        affected++;
+        if (function == 61) {
+          int seed = Riiablo.gameSeed ^ event.entityId * 0x45D9F3B
+              ^ targetId * 31 ^ event.skillId;
+          mNativeAiTargetOverride.create(targetId).setConfuse(
+              event.entityId, event.skillId, state.duration, seed);
+        } else if (function == 59) {
+          installAttractTargetOverrides(event, skill, targetId, state.duration,
+              Math.max(0, Math.min(128, nativeAuraRange)), caster);
+        }
+      }
     }
     log.info("[NECROMANCER_CURSE] phase=apply source={} skill={} function={} state={} "
             + "level={} difficulty={} center=({}, {}) range={} affected={} status={}",
@@ -737,6 +756,43 @@ public class ServerSkillSystem extends PassiveSystem {
             skill.auratargetstate, skill.skill)),
         skillLevel, difficulty, center.x, center.y, range, affected,
         affected > 0 ? "PASS" : "NO_TARGET");
+  }
+
+  /** Native SrvDo059: nearby switch-AI monsters receive a fixed monster target. */
+  private void installAttractTargetOverrides(SkillDoEvent event, Skills.Entry skill,
+      int attractedTargetId, int duration, int range, Vector2 caster) {
+    if (range <= 0 || !mPosition.has(attractedTargetId)) return;
+    int redirected = 0;
+    float range2 = range * (float) range;
+    IntBag entities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, Monster.class)).getEntities();
+    for (int i = 0; i < entities.size(); i++) {
+      int candidate = entities.get(i);
+      if (candidate == attractedTargetId || caster.dst2(mPosition.get(candidate).position) > range2
+          || !isNecromancerCurseTarget(event.entityId, candidate, skill.aurafilter, true)) {
+        continue;
+      }
+      Monster monster = mMonster.get(candidate);
+      if (!canSwitchCurseAi(candidate)) continue;
+      mNativeAiTargetOverride.create(candidate).setAttract(
+          attractedTargetId, event.entityId, event.skillId, duration);
+      redirected++;
+    }
+    log.info("[NECROMANCER_ATTRACT_AI] source={} skill={} target={} range={} duration={} "
+            + "redirected={} status={}",
+        event.entityId, event.skillId, attractedTargetId, range, duration, redirected,
+        redirected > 0 ? "PASS" : "NO_NEARBY_MONSTER");
+  }
+
+  private boolean canSwitchCurseAi(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    return monster.monstats != null && monster.monstats.switchai && !isNativeUnique(entityId);
+  }
+
+  private boolean isNativeUnique(int entityId) {
+    Monster monster = mMonster.get(entityId);
+    return monster.rank == MonsterRank.UNIQUE || monster.rank == MonsterRank.SUPER_UNIQUE;
   }
 
   private boolean isNecromancerCurseTarget(

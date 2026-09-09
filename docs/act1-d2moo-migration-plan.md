@@ -189,4 +189,6 @@ waypoints, caves, quest rewards and collision boundaries.
   revival, owner flags, duration and lifecycle.
 - [x] Iron Maiden/Life Tap hit-event callbacks: physical hit metadata, native melee reflection,
   player/hireling divisor, life restoration, resistance/PvP/death pipeline and recursion guard.
-- [ ] Next: Dim Vision/Attract/Confuse full AI state and target redirection.
+- [x] Dim Vision/Attract/Confuse special AI: restricted blind behavior, fixed/random monster
+  targets, deterministic selection, duration/death/zone reset and redirected missile hostility.
+- [ ] Next: authoritative Necromancer bone/poison active skills and destructible wall lifecycle.

@@ -34,6 +34,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.NativeTargeting;
+import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.PathWrapper;
 import com.riiablo.engine.server.component.Pathfind;
@@ -45,6 +46,8 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.attributes.Attributes;
@@ -101,6 +104,8 @@ public abstract class AI implements Interactable.Interactor {
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<NativeAiTargetOverride> mNativeAiTargetOverride;
+  protected ComponentMapper<Corpse> mCorpse;
 
   protected CofManager cofs;
   protected Pathfinder pathfinder;
@@ -125,6 +130,7 @@ public abstract class AI implements Interactable.Interactor {
   private boolean lastMovementRunning;
   private int lastMovementVelocityBonus = Integer.MIN_VALUE;
   private float nextWarCryThink;
+  private NativeRng specialAiRng;
 
   public AI(int entityId) {
     this.entityId = entityId;
@@ -164,7 +170,7 @@ public abstract class AI implements Interactable.Interactor {
    * of its ordinary AI function; keeping this in the base class preserves
    * that behavior for both specialized and fallback Java AIs.
    */
-  public boolean updateWarCryControl(float delta) {
+  public boolean updateSpecialAiControl(float delta) {
     // Idle is a shared sentinel AI with no backing entity. Town NPCs and
     // passive presets legitimately use it, so never query component mappers
     // with Engine.INVALID_ENTITY (-1).
@@ -172,17 +178,17 @@ public abstract class AI implements Interactable.Interactor {
       nextWarCryThink = 0f;
       return false;
     }
-    if (!mUnitStates.has(entityId) || mUnitStates.get(entityId).stateList == null) {
+    UnitStates unitStates = mUnitStates.has(entityId) ? mUnitStates.get(entityId) : null;
+    if (unitStates != null && unitStates.snapshotOnly) return false;
+    if (updateTargetOverride()) return false;
+    if (unitStates == null || unitStates.stateList == null) {
       nextWarCryThink = 0f;
       return false;
     }
     UnitState terror = mUnitStates.get(entityId).stateList.getState(StateId.TERROR);
     UnitState taunt = mUnitStates.get(entityId).stateList.getState(StateId.TAUNT);
     UnitState control = terror != null ? terror : taunt;
-    if (control == null) {
-      nextWarCryThink = 0f;
-      return false;
-    }
+    if (control == null) return updateDimVision(delta, unitStates);
 
     int sourceId = control.sourceEntityId;
     if (sourceId < 0 || !mPosition.has(sourceId) || !mPosition.has(entityId)) {
@@ -240,6 +246,118 @@ public abstract class AI implements Interactable.Interactor {
       walkTo(source, sourceId);
     }
     return true;
+  }
+
+  /** Compatibility entry point retained for older tests and integrations. */
+  public boolean updateWarCryControl(float delta) {
+    return updateSpecialAiControl(delta);
+  }
+
+  private boolean updateTargetOverride() {
+    if (!mNativeAiTargetOverride.has(entityId)) return false;
+    NativeAiTargetOverride override = mNativeAiTargetOverride.get(entityId);
+    if (override.remainingFrames <= 0) {
+      clearTargetOverride("expired");
+      return false;
+    }
+    override.remainingFrames--;
+    if (override.mode == NativeAiTargetOverride.CONFUSE) {
+      UnitState confuse = state(StateId.CONFUSE);
+      if (confuse == null) {
+        clearTargetOverride("state_removed");
+        return false;
+      }
+      override.remainingFrames = Math.min(override.remainingFrames, confuse.duration);
+      if (!isValidOverrideMonsterTarget(override.targetId)) {
+        override.targetId = selectConfuseTarget(override);
+        if (override.targetId == Engine.INVALID_ENTITY) return false;
+        log.info("[NECROMANCER_CONFUSE_AI] entity={} source={} skill={} target={} "
+                + "remainingFrames={} status=TARGET_SELECTED",
+            entityId, override.sourceEntityId, override.sourceSkillId,
+            override.targetId, override.remainingFrames);
+      }
+    } else if (override.mode == NativeAiTargetOverride.ATTRACT) {
+      if (!isValidOverrideMonsterTarget(override.targetId)) {
+        clearTargetOverride("target_invalid");
+      }
+    } else {
+      clearTargetOverride("unknown_mode");
+    }
+    return false;
+  }
+
+  private void clearTargetOverride(String reason) {
+    NativeAiTargetOverride override = mNativeAiTargetOverride.get(entityId);
+    log.info("[NECROMANCER_CURSE_AI_RESET] entity={} mode={} target={} reason={}",
+        entityId, override.mode, override.targetId, reason);
+    mNativeAiTargetOverride.remove(entityId);
+    if (mCasting.has(entityId)) mCasting.remove(entityId);
+    if (mSequence.has(entityId)) mSequence.remove(entityId);
+    stopMovement();
+  }
+
+  private boolean updateDimVision(float delta, UnitStates unitStates) {
+    UnitState dimVision = unitStates.stateList.getState(StateId.DIMVISION);
+    if (dimVision == null || monster == null || monster.monstats == null
+        || !monster.monstats.switchai) {
+      nextWarCryThink = 0f;
+      return false;
+    }
+    if (mCasting.has(entityId)) mCasting.remove(entityId);
+    if (mSequence.has(entityId)) mSequence.remove(entityId);
+    nextWarCryThink -= Math.max(0f, delta);
+    if (nextWarCryThink > 0f) return true;
+    nextWarCryThink = 10f / 25f;
+
+    float[] distance = { Float.MAX_VALUE };
+    int targetId = findNearestOrdinaryEnemy(distance, 35f);
+    if (targetId == Engine.INVALID_ENTITY) {
+      stopMovement();
+      return true;
+    }
+    float melee = 1f + (monster.monstats2 != null ? monster.monstats2.MeleeRng : 0);
+    if (distance[0] <= melee) {
+      stopMovement();
+      lookAt(targetId);
+      mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
+      mCasting.create(entityId).set(SkillCodes.attack, targetId,
+          mPosition.get(targetId).position);
+      return true;
+    }
+    if (specialAiRng == null) {
+      specialAiRng = NativeRng.forUnit(Riiablo.gameSeed, entityId);
+    }
+    if (specialAiRng.nextInt(100) < 20) {
+      walkTo(mPosition.get(targetId).position, targetId);
+    } else {
+      stopMovement();
+    }
+    return true;
+  }
+
+  private UnitState state(int stateId) {
+    if (!mUnitStates.has(entityId) || mUnitStates.get(entityId).stateList == null) return null;
+    return mUnitStates.get(entityId).stateList.getState(stateId);
+  }
+
+  private int selectConfuseTarget(NativeAiTargetOverride override) {
+    IntBag entities = getEnemyEntities().getEntities();
+    int[] candidates = new int[entities.size()];
+    int count = 0;
+    Vector2 position = mPosition.get(entityId).position;
+    for (int i = 0; i < entities.size(); i++) {
+      int candidate = entities.get(i);
+      if (isValidOverrideMonsterTarget(candidate)
+          && position.dst2(mPosition.get(candidate).position) <= 35f * 35f) {
+        candidates[count++] = candidate;
+      }
+    }
+    if (count == 0) return Engine.INVALID_ENTITY;
+    Arrays.sort(candidates, 0, count);
+    NativeRng rng = new NativeRng(override.rngState);
+    int selected = candidates[rng.nextInt(count)];
+    override.rngState = rng.state();
+    return selected;
   }
 
   private boolean isLiveTauntSource(int sourceId) {
@@ -518,11 +636,22 @@ public abstract class AI implements Interactable.Interactor {
    * 优化：使用 aidist 限制查找范围，平方距离避免开方。D2MOD 使用 nAiDist 限制查找。
    */
   protected int findNearestTargetWithAidist(float[] outDistance) {
-    Vector2 entityPos = mPosition.get(entityId).position;
-    int targetId = Engine.INVALID_ENTITY;
-    float best = Float.MAX_VALUE;
+    if (mNativeAiTargetOverride.has(entityId)) {
+      NativeAiTargetOverride override = mNativeAiTargetOverride.get(entityId);
+      if (override.remainingFrames >= 0 && isValidOverrideMonsterTarget(override.targetId)) {
+        float distance = mPosition.get(entityId).position.dst(
+            mPosition.get(override.targetId).position);
+        outDistance[0] = distance;
+        return override.targetId;
+      }
+    }
+    return findNearestOrdinaryEnemy(outDistance, resolveAiDistance());
+  }
+
+  private float resolveAiDistance() {
     float maxSearchDist = 35f;
-    if (monster.monstats.aidist != null && monster.monstats.aidist.length > 0) {
+    if (monster != null && monster.monstats != null && monster.monstats.aidist != null
+        && monster.monstats.aidist.length > 0) {
       int difficulty = 0;
       if (mMapWrapper.has(entityId) && mMapWrapper.get(entityId).map != null) {
         difficulty = mMapWrapper.get(entityId).map.getDifficulty();
@@ -531,11 +660,18 @@ public abstract class AI implements Interactable.Interactor {
       int aidist = monster.monstats.aidist[index];
       if (aidist > 0) maxSearchDist = aidist;
     }
+    return maxSearchDist;
+  }
+
+  private int findNearestOrdinaryEnemy(float[] outDistance, float maxSearchDist) {
+    Vector2 entityPos = mPosition.get(entityId).position;
+    int targetId = Engine.INVALID_ENTITY;
+    float best = Float.MAX_VALUE;
     float maxSearchDistSq = maxSearchDist * maxSearchDist;
     IntBag entities = getEnemyEntities().getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int ent = entities.get(i);
-      if (isValidEnemyTarget(ent)) {
+      if (isValidOrdinaryEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
         float dx = targetPos.x - entityPos.x;
         float dy = targetPos.y - entityPos.y;
@@ -560,6 +696,15 @@ public abstract class AI implements Interactable.Interactor {
    * monster AIs from accidentally reverting to global nearest-player scans.
    */
   protected boolean isValidEnemyTarget(int targetId) {
+    if (mNativeAiTargetOverride.has(entityId)) {
+      NativeAiTargetOverride override = mNativeAiTargetOverride.get(entityId);
+      return override.remainingFrames >= 0 && targetId == override.targetId
+          && isValidOverrideMonsterTarget(targetId);
+    }
+    return isValidOrdinaryEnemyTarget(targetId);
+  }
+
+  private boolean isValidOrdinaryEnemyTarget(int targetId) {
     if (!mPosition.has(targetId) || targetId == entityId) return false;
     SummonedPet sourcePet = mSummonedPet.has(entityId) ? mSummonedPet.get(entityId) : null;
     if (sourcePet != null && sourcePet.passive) return false;
@@ -615,6 +760,34 @@ public abstract class AI implements Interactable.Interactor {
           return false;
         }
       }
+    }
+    return true;
+  }
+
+  protected boolean isValidOverrideMonsterTarget(int targetId) {
+    if (targetId == Engine.INVALID_ENTITY || targetId == entityId
+        || !mPosition.has(targetId) || !mMonster.has(targetId)
+        || mMercenary.has(targetId) || mSummonedPet.has(targetId)
+        || mCorpse.has(targetId)) return false;
+    Monster targetMonster = mMonster.get(targetId);
+    if (targetMonster.monstats == null || targetMonster.monstats.npc) return false;
+    if (mAttributesWrapper.has(targetId)) {
+      Attributes attrs = mAttributesWrapper.get(targetId).attrs;
+      StatRef hp = attrs != null ? attrs.get(Stat.hitpoints, StatRef.obtain()) : null;
+      if (hp != null && hp.asFixed() <= 0f) return false;
+    }
+    if (mNativeUnitFlags.has(targetId)) {
+      NativeUnitFlags flags = mNativeUnitFlags.get(targetId);
+      if (!NativeTargeting.isTargetable(flags) || !NativeTargeting.canBeAttacked(flags)) {
+        return false;
+      }
+    }
+    if (mMapWrapper.has(entityId) && mMapWrapper.has(targetId)) {
+      MapWrapper source = mMapWrapper.get(entityId);
+      MapWrapper target = mMapWrapper.get(targetId);
+      if (source.map != null && target.map != null && source.map != target.map) return false;
+      if (source.zone != null && target.zone != null && source.zone != target.zone) return false;
+      if (target.zone != null && target.zone.isTown()) return false;
     }
     return true;
   }

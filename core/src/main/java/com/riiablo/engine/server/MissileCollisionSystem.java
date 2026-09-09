@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.NativeTargeting;
+import com.riiablo.engine.server.component.NativeAiTargetOverride;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Player;
@@ -82,6 +83,7 @@ public class MissileCollisionSystem extends IteratingSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<NativeAiTargetOverride> mNativeAiTargetOverride;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Sequence> mSequence;
@@ -1136,7 +1138,16 @@ public class MissileCollisionSystem extends IteratingSystem {
     return Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id));
   }
 
-  private boolean areAligned(int sourceId, int targetId) {
+  boolean areAligned(int sourceId, int targetId) {
+    if (mNativeAiTargetOverride.has(sourceId)) {
+      NativeAiTargetOverride override = mNativeAiTargetOverride.get(sourceId);
+      if (override.remainingFrames >= 0 && override.targetId == targetId) {
+        // Confuse and Attract alter the native AI target node without changing
+        // the persistent monster alignment. Its missile must therefore treat
+        // the selected monster as hostile for this temporary command.
+        return false;
+      }
+    }
     boolean sourceGood = mPlayer.has(sourceId) || mMercenary.has(sourceId)
         || mSummonedPet.has(sourceId);
     boolean targetGood = mPlayer.has(targetId) || mMercenary.has(targetId)
