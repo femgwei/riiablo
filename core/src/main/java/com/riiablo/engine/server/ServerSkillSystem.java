@@ -435,6 +435,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
         && skill.srvdofunc != 20 && skill.srvdofunc != 73 && skill.srvdofunc != 80
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
+        && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
         && !PaladinSkills.isHolyBolt(skill)) {
       consumeRangedAmmoForSkill(event, skill);
       return;
@@ -753,6 +754,22 @@ public class ServerSkillSystem extends PassiveSystem {
         continue;
       }
       created++;
+      if (isFrozenOrb(skill) && "frozenorb".equalsIgnoreCase(missile.Missile)
+          && mMissile.has(missileId)) {
+        Missile orb = mMissile.get(missileId);
+        orb.frozenOrbController = true;
+        orb.frozenOrbTargetPhase = 0;
+        orb.skillId = skill.Id;
+        orb.damageLevel = skillLevel;
+        log.info("[SORCERESS_FROZEN_ORB] phase=root source={} missileId={} level={} "
+                + "range={} interval={} phaseStep={} shard={} nova={}",
+            event.entityId, missileId, skillLevel, missile.Range,
+            firstParam(missile.Param, 0, 1), firstParam(missile.Param, 1, 19),
+            missile.SubMissile != null && missile.SubMissile.length > 0
+                ? missile.SubMissile[0] : "",
+            missile.HitSubMissile != null && missile.HitSubMissile.length > 0
+                ? missile.HitSubMissile[0] : "");
+      }
       initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
       if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
           || event.srvdofunc == 3 || event.srvdofunc == 5) {
@@ -1900,6 +1917,11 @@ public class ServerSkillSystem extends PassiveSystem {
         || "blizzardcenter".equalsIgnoreCase(skill.srvmissilea));
   }
 
+  private static boolean isFrozenOrb(Skills.Entry skill) {
+    return skill != null && ("Frozen Orb".equalsIgnoreCase(skill.skill)
+        || "frozenorb".equalsIgnoreCase(skill.srvmissile));
+  }
+
   /** D2MOO SrvDo026: create one root missile and defer each jump to SrvHit12. */
   private void spawnChainLightning(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
     String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
@@ -2524,6 +2546,11 @@ public class ServerSkillSystem extends PassiveSystem {
   static int firstParam(Skills.Entry skill, int index, int fallback) {
     if (skill == null || skill.Param == null || index < 1 || index > skill.Param.length) return fallback;
     return skill.Param[index - 1];
+  }
+
+  private static int firstParam(int[] params, int index, int fallback) {
+    return params != null && index >= 0 && index < params.length && params[index] != 0
+        ? params[index] : fallback;
   }
 
   static int getSrvDo008Total(Skills.Entry skill, int skillLevel) {

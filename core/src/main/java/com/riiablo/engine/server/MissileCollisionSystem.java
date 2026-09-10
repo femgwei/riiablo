@@ -75,6 +75,16 @@ public class MissileCollisionSystem extends IteratingSystem {
   public static final int BLESSED_HAMMER_PATH_POINTS = 77;
   private static final float BLESSED_HAMMER_ANGLE_STEP = MathUtils.PI2 / 32f;
   private static final float BLESSED_HAMMER_RADIUS_STEP = 9600f / 65536f;
+  private static final int[] FROZEN_ORB_X = {
+      30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2,
+      0, -2, -5, -8, -11, -14, -16, -19, -21, -23, -24, -26, -27, -28, -29, -29,
+      -30, -29, -29, -28, -27, -26, -24, -23, -21, -19, -16, -14, -11, -8, -5, -2,
+      0, 2, 5, 8, 11, 14, 16, 19, 21, 23, 24, 26, 27, 28, 29, 29};
+  private static final int[] FROZEN_ORB_Y = {
+      0, 2, 5, 8, 11, 14, 16, 19, 21, 23, 24, 26, 27, 28, 29, 29,
+      30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2,
+      0, -2, -5, -8, -11, -14, -16, -19, -21, -23, -24, -26, -27, -28, -29, -29,
+      -30, -29, -29, -28, -27, -26, -24, -23, -21, -19, -16, -14, -11, -8, -5, -2};
   
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
@@ -137,6 +147,14 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (missile.blizzardCenter) {
       processBlizzardCenter(entityId, missile, position, elapsedFrames);
       return;
+    }
+
+    if (missile.frozenOrbController) {
+      processFrozenOrbController(entityId, missile, position, elapsedFrames);
+      if (!world.getEntityManager().isActive(entityId)) return;
+    }
+    if (missile.frozenOrbNova) {
+      processFrozenOrbNova(missile, position, velocity);
     }
 
     // D2MOO SrvDo20 retargets Blade Creeper's missile path to its controller
@@ -459,6 +477,106 @@ public class MissileCollisionSystem extends IteratingSystem {
           entityId, center.ownerId);
       world.delete(entityId);
     }
+  }
+
+  /** Native MISSMODE_SrvDo15_FrozenOrb: emit one bolt on each table cadence. */
+  private void processFrozenOrbController(
+      int entityId, Missile orb, Position position, int elapsedFrames) {
+    if (factory == null || orb.missile == null) {
+      world.delete(entityId);
+      return;
+    }
+    String shardName = orb.missile.SubMissile != null
+        && orb.missile.SubMissile.length > 0 ? orb.missile.SubMissile[0] : null;
+    Missiles.Entry shard = shardName != null && !shardName.isEmpty()
+        ? Riiablo.files.Missiles.get(shardName) : null;
+    Skills.Entry skill = orb.skillId >= 0 ? Riiablo.files.skills.get(orb.skillId) : null;
+    if (shard == null || skill == null) {
+      log.warn("[SORCERESS_FROZEN_ORB] phase=controller_remove missileId={} owner={} reason=data",
+          entityId, orb.ownerId);
+      world.delete(entityId);
+      return;
+    }
+    int interval = Math.max(1, arrayValue(orb.missile.Param, 0));
+    if (orb.nativeFrame % interval == 0) {
+      int index = Math.floorMod(orb.frozenOrbTargetPhase, FROZEN_ORB_X.length);
+      Vector2 direction = tmpVec.set(FROZEN_ORB_X[index], FROZEN_ORB_Y[index]);
+      if (direction.isZero(0.0001f)) {
+        direction.set(mVelocity.get(entityId).velocity);
+        if (direction.isZero(0.0001f)) direction.set(Vector2.X);
+      }
+      direction.nor();
+      int childId = factory.createMissile(shard, direction, position.position, orb.ownerId);
+      if (childId >= 0 && mMissile.has(childId)) {
+        Missile child = mMissile.get(childId);
+        child.skillId = orb.skillId;
+        child.damageLevel = Math.max(1, orb.damageLevel);
+        Attributes ownerAttrs = mAttributesWrapper.has(orb.ownerId)
+            ? mAttributesWrapper.get(orb.ownerId).attrs : null;
+        MissileDamageResolver.initializeSkill(child, skill, ownerAttrs, child.damageLevel,
+            name -> baseSkillLevel(orb.ownerId, name), stateList(orb.ownerId));
+        log.debug("[SORCERESS_FROZEN_ORB] phase=bolt source={} root={} bolt={} index={} "
+                + "offset=({}, {}) damageSnapshot={}",
+            orb.ownerId, entityId, childId, index, FROZEN_ORB_X[index], FROZEN_ORB_Y[index],
+            child.damageSnapshot);
+      }
+      int step = arrayValue(orb.missile.Param, 1);
+      orb.frozenOrbTargetPhase = Math.floorMod(index + (step == 0 ? 1 : step),
+          FROZEN_ORB_X.length);
+    }
+  }
+
+  /** Native MISSMODE_SrvDo16_FrozenOrbNova late-path steering adjustment. */
+  private void processFrozenOrbNova(Missile nova, Position position, Velocity velocity) {
+    if (nova.missile == null || nova.nativeLifetimeFrames <= 0) return;
+    int remaining = nova.nativeLifetimeFrames - nova.nativeFrame;
+    int turnWindow = Math.max(0, arrayValue(nova.missile.Param, 0));
+    int turnInterval = Math.max(1, arrayValue(nova.missile.Param, 1));
+    if (remaining < turnWindow && remaining >= 0 && remaining % turnInterval == 0) {
+      int dx = nova.frozenOrbTargetX - nova.frozenOrbTargetY;
+      int dy = nova.frozenOrbTargetX + nova.frozenOrbTargetY;
+      tmpVec.set(nova.frozenOrbOrigin.x + dx * 0.5f,
+          nova.frozenOrbOrigin.y + dy * 0.5f).sub(position.position);
+      if (!tmpVec.isZero(0.0001f)) velocity.velocity.set(tmpVec).setLength(nova.missile.Vel);
+      log.debug("[SORCERESS_FROZEN_ORB] phase=nova_turn missile={} remaining={} target=({}, {})",
+          nova.missile.Missile, remaining, nova.frozenOrbTargetX, nova.frozenOrbTargetY);
+    }
+  }
+
+  /** Native MISSMODE_SrvHit29_FrozenOrb: fan out one bolt every HitPar[0] entries. */
+  private void spawnFrozenOrbNova(Missile source, Vector2 origin) {
+    if (factory == null || source == null || source.missile == null
+        || source.missile.HitSubMissile == null || source.missile.HitSubMissile.length == 0) return;
+    String name = source.missile.HitSubMissile[0];
+    Missiles.Entry row = name != null ? Riiablo.files.Missiles.get(name) : null;
+    Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    if (row == null || skill == null) return;
+    int step = Math.max(1, arrayValue(source.missile.sHitPar, 0));
+    int level = Math.max(1, source.damageLevel);
+    Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
+        ? mAttributesWrapper.get(source.ownerId).attrs : null;
+    int created = 0;
+    for (int i = 0; i < FROZEN_ORB_X.length; i += step) {
+      Vector2 direction = tmpVec.set(FROZEN_ORB_X[i], FROZEN_ORB_Y[i]);
+      if (direction.isZero(0.0001f)) direction.set(Vector2.X);
+      int childId = factory.createMissile(row, direction.nor(), origin, source.ownerId);
+      if (childId < 0 || !mMissile.has(childId)) continue;
+      Missile nova = mMissile.get(childId);
+      nova.skillId = source.skillId;
+      nova.damageLevel = level;
+      nova.frozenOrbNova = true;
+      nova.frozenOrbOrigin.set(origin);
+      nova.frozenOrbTargetX = FROZEN_ORB_X[i];
+      nova.frozenOrbTargetY = FROZEN_ORB_Y[i];
+      nova.range = 0f;
+      nova.nativeLifetimeFrames = Math.max(1, row.Range);
+      MissileDamageResolver.initializeSkill(nova, skill, ownerAttrs, level,
+          key -> baseSkillLevel(source.ownerId, key), stateList(source.ownerId));
+      created++;
+    }
+    log.info("[SORCERESS_FROZEN_ORB] phase=nova source={} origin=({}, {}) step={} created={} "
+            + "level={} lifetime={}", source.ownerId, origin.x, origin.y, step, created,
+        level, row.Range);
   }
 
   private void spawnBlizzardChild(
@@ -1018,6 +1136,18 @@ public class MissileCollisionSystem extends IteratingSystem {
         return true;
       }
       if (!claimTargetHit(missile, targetId, targetHitStates(missile, targetId))) return false;
+
+      // Native MISSMODE_SrvHit29 does not apply the root row as damage.  It
+      // fans out the authoritative frozen-orb nova shards; each shard then
+      // resolves the Frozen Orb cold packet independently.
+      if (missile.missile != null && missile.missile.pSrvHitFunc == 29) {
+        spawnFrozenOrbNova(missile, missilePos);
+        log.info("[SORCERESS_FROZEN_ORB] phase=root_hit missileId={} owner={} target={} "
+                + "position=({}, {})", missileId, missile.ownerId, targetId,
+            missilePos.x, missilePos.y);
+        if (!missile.attached) world.delete(missileId);
+        return true;
+      }
       if (mMercenary.has(missile.ownerId)) mercenaryCollisionCount++;
 
       log.info("[MISSILE_HIT] phase=collision missileId={} missile={} owner={} target={} "

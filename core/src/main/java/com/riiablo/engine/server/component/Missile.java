@@ -147,6 +147,16 @@ public class Missile extends PooledComponent {
   /** Native-style deterministic seed for Blizzard strike positions. */
   public int blizzardSeed;
 
+  /** Native MISSMODE_SrvDo15 controller for Frozen Orb. */
+  public boolean frozenOrbController;
+  /** Native target-X phase used to select the 64 Frozen Orb shard offsets. */
+  public int frozenOrbTargetPhase;
+  /** A SrvDo16 Frozen Orb nova shard with the late-path adjustment. */
+  public boolean frozenOrbNova;
+  public final Vector2 frozenOrbOrigin = new Vector2();
+  public int frozenOrbTargetX;
+  public int frozenOrbTargetY;
+
   /** D2MOO SrvDo35 periodically bends Royal Strike's chaos-ice path. */
   public boolean chaosIcePath;
   public int chaosIceSeed;
@@ -252,6 +262,12 @@ public class Missile extends PooledComponent {
     chainHitsRemaining = 0;
     blizzardCenter = false;
     blizzardSeed = 0;
+    frozenOrbController = false;
+    frozenOrbTargetPhase = 0;
+    frozenOrbNova = false;
+    frozenOrbOrigin.setZero();
+    frozenOrbTargetX = 0;
+    frozenOrbTargetY = 0;
     chaosIcePath = false;
     chaosIceSeed = 0;
     chaosIceX = 0;
