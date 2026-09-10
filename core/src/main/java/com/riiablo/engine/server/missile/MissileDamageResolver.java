@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.state.StateList;
 import java.util.function.ToIntFunction;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -131,7 +132,7 @@ public final class MissileDamageResolver {
     boolean impactCreatesExplosion = projectile != null && projectile.missile != null
         && projectile.missile.pSrvHitFunc == 4;
     return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
-        name -> 0);
+        name -> 0, 0);
   }
 
   /** Native skill snapshot with a resolver for EDmgSymPerCalc/ELenSymPerCalc. */
@@ -140,13 +141,48 @@ public final class MissileDamageResolver {
     boolean impactCreatesExplosion = projectile != null && projectile.missile != null
         && projectile.missile.pSrvHitFunc == 4;
     return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
-        baseSkillLevel == null ? name -> 0 : baseSkillLevel);
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel, 0);
+  }
+
+  /** Skill snapshot including permanent passive stat lists owned by the caster. */
+  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
+      StateList ownerStates) {
+    boolean impactCreatesExplosion = projectile != null && projectile.missile != null
+        && projectile.missile.pSrvHitFunc == 4;
+    int fireMastery = ownerStates != null
+        ? Math.max(0, ownerStates.getTotalStatContribution(Stat.passive_fire_mastery)) : 0;
+    int lightningMastery = ownerStates != null
+        ? Math.max(0, ownerStates.getTotalStatContribution(Stat.passive_ltng_mastery)) : 0;
+    int additionalMastery = skill != null && "fire".equalsIgnoreCase(skill.EType)
+        ? fireMastery : skill != null
+        && ("ltng".equalsIgnoreCase(skill.EType)
+            || "lightning".equalsIgnoreCase(skill.EType))
+        ? lightningMastery : 0;
+    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel, additionalMastery);
   }
 
   /** Builds the elemental-only snapshot inherited by an explosion sub-missile. */
   public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {
-    return initializeSkill(projectile, skill, ownerAttrs, level, false, true, name -> 0);
+    return initializeSkill(projectile, skill, ownerAttrs, level, false, true, name -> 0, 0);
+  }
+
+  /** Elemental-only explosion snapshot including the owner's passive stat lists. */
+  public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
+      StateList ownerStates) {
+    int additionalMastery = ownerStates != null && skill != null
+        && "fire".equalsIgnoreCase(skill.EType)
+        ? Math.max(0, ownerStates.getTotalStatContribution(Stat.passive_fire_mastery))
+        : ownerStates != null && skill != null
+            && ("ltng".equalsIgnoreCase(skill.EType)
+                || "lightning".equalsIgnoreCase(skill.EType))
+            ? Math.max(0, ownerStates.getTotalStatContribution(Stat.passive_ltng_mastery))
+            : 0;
+    return initializeSkill(projectile, skill, ownerAttrs, level, false, true,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel, additionalMastery);
   }
 
   /**
@@ -157,12 +193,24 @@ public final class MissileDamageResolver {
   public static boolean initializeSorceressFireArea(Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, boolean attackerPlayer, int level,
       ToIntFunction<String> baseSkillLevel) {
+    return initializeSorceressFireArea(projectile, skill, ownerAttrs, attackerPlayer,
+        level, baseSkillLevel, null);
+  }
+
+  /** Fire-area snapshot including Fire Mastery's source-owned passive state. */
+  public static boolean initializeSorceressFireArea(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, boolean attackerPlayer, int level,
+      ToIntFunction<String> baseSkillLevel, StateList ownerStates) {
     if (projectile == null || projectile.missile == null || skill == null
         || !"fire".equalsIgnoreCase(skill.EType)) return false;
     level = Math.max(1, level);
     int min = skillElementalDamageFixed(skill, level, true, baseSkillLevel);
     int max = skillElementalDamageFixed(skill, level, false, baseSkillLevel);
     int mastery = Math.max(0, statInt(ownerAttrs, Stat.passive_fire_mastery));
+    if (ownerStates != null) {
+      mastery += Math.max(0,
+          ownerStates.getTotalStatContribution(Stat.passive_fire_mastery));
+    }
     min = percentage(min, 100 + mastery);
     max = percentage(max, 100 + mastery);
     if (max <= 0) return false;
@@ -308,7 +356,7 @@ public final class MissileDamageResolver {
 
   private static boolean initializeSkill(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, boolean includeSource, boolean includeElement,
-      ToIntFunction<String> baseSkillLevel) {
+      ToIntFunction<String> baseSkillLevel, int additionalMastery) {
     if (projectile == null || skill == null) return false;
     level = Math.max(1, level);
     projectile.skillId = skill.Id;
@@ -333,13 +381,17 @@ public final class MissileDamageResolver {
         elementalMin[type] += elementalMin[type] * synergy / 100;
         elementalMax[type] += elementalMax[type] * synergy / 100;
       }
-      // Missiles.txt ApplyMastery is the native gate used by elemental skill
-      // packets. Fire/Lightning mastery increase damage; Cold Mastery is a
-      // resistance pierce state and is intentionally not folded into damage.
-      if (projectile.missile != null && projectile.missile.ApplyMastery) {
+      // D2Common MISSILE_CalculateDamageData has two branches: table-owned
+      // missile damage is gated by Missiles.ApplyMastery, while a missile
+      // backed by Skills.txt calls SKILLS_GetMin/MaxElemDamage(..., true) and
+      // therefore always includes the caster's elemental mastery. This
+      // resolver is the latter, skill-owned branch; Fire Bolt notably leaves
+      // ApplyMastery blank in Missiles.txt but still receives Fire Mastery.
+      if (projectile.missile != null) {
         short masteryStat = type == FIRE ? Stat.passive_fire_mastery
             : type == LIGHTNING ? Stat.passive_ltng_mastery : 0;
-        int mastery = masteryStat != 0 ? Math.max(0, statInt(ownerAttrs, masteryStat)) : 0;
+        int mastery = masteryStat != 0 ? Math.max(0,
+            statInt(ownerAttrs, masteryStat) + additionalMastery) : 0;
         elementalMin[type] += elementalMin[type] * mastery / 100;
         elementalMax[type] += elementalMax[type] * mastery / 100;
       }

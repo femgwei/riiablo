@@ -33,6 +33,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.StateList;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.MeleeAttackEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.combat.StatusEffectApplier;
 import com.riiablo.engine.server.combat.CombatSystem;
@@ -45,6 +46,7 @@ import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
+import com.riiablo.engine.server.skill.SorceressSkills;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
@@ -102,6 +104,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<NativeUnitFlags> mNativeUnitFlags;
+  protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
 
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
@@ -127,14 +130,16 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
    */
   @Subscribe
   public void onDamageEvent(DamageEvent event) {
-    if (event == null || event.victim < 0 || event.physicalDamage <= 0f
-        || !mAttributesWrapper.has(event.victim) || !mUnitStates.has(event.victim)) return;
+    if (event == null || event.victim < 0 || !mUnitStates.has(event.victim)) return;
     UnitStates victimUnitStates = mUnitStates.get(event.victim);
     // Network clients consume authoritative snapshots and must not apply the
     // same curse side effect a second time in their presentation world.
     if (victimUnitStates != null && victimUnitStates.snapshotOnly) return;
     StateList victimStates = victimUnitStates != null ? victimUnitStates.stateList : null;
     if (victimStates == null) return;
+
+    applySorceressArmorReaction(event, victimStates);
+    if (event.physicalDamage <= 0f || !mAttributesWrapper.has(event.victim)) return;
 
     applyNativeGolemHitEffects(event);
     applyBloodGolemDamageLink(event);
@@ -163,6 +168,156 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (ironMaiden != null && event.isMelee()) {
       applyIronMaiden(event, ironMaiden, physical);
     }
+  }
+
+  /** Native {@code UNITEVENT_ATTACKEDINMELEE}; unlike damage it includes misses and blocks. */
+  @Subscribe
+  public void onMeleeAttackEvent(MeleeAttackEvent event) {
+    if (event == null || event.victim < 0 || event.attacker < 0
+        || event.attacker == event.victim || !mUnitStates.has(event.victim)
+        || !world.getEntityManager().isActive(event.attacker)
+        || !isHostile(event.victim, event.attacker)) return;
+    UnitStates victim = mUnitStates.get(event.victim);
+    StateList states = victim != null ? victim.stateList : null;
+    UnitState shiver = states != null ? states.getState(StateId.SHIVERARMOR) : null;
+    if (shiver != null) applyShiverArmor(event.attacker, event.victim, shiver, states);
+  }
+
+  /** Dispatches the three native group-1 Sorceress armor unit events. */
+  private void applySorceressArmorReaction(DamageEvent event, StateList victimStates) {
+    if (event.attacker < 0 || event.attacker == event.victim
+        || !world.getEntityManager().isActive(event.attacker)
+        || !isHostile(event.victim, event.attacker)) return;
+    UnitState frozen = victimStates.getState(StateId.FROZENARMOR);
+    if (frozen != null && event.isMelee() && event.physicalDamage > 0f) {
+      applyFrozenArmor(event, frozen);
+      return;
+    }
+    UnitState chilling = victimStates.getState(StateId.CHILLINGARMOR);
+    if (chilling != null && event.kind == DamageEvent.MISSILE && event.returnFire) {
+      launchChillingArmorBolt(event, chilling, victimStates);
+    }
+  }
+
+  /** D2Game EventFunc02: freeze a melee attacker after physical damage. */
+  private void applyFrozenArmor(DamageEvent event, UnitState armor) {
+    Skills.Entry skill = Riiablo.files.skills.get(armor.skillId >= 0
+        ? armor.skillId : SkillId.FROZEN_ARMOR);
+    int duration = SorceressSkills.getFrozenArmorFreezeLength(
+        skill, armor.level, name -> baseSkillLevel(event.victim, name));
+    duration = resolveArmorColdDuration(event.victim, event.attacker, duration);
+    if (duration <= 0) return;
+    StatusEffectApplier.INSTANCE.applyFreeze(event.attacker, duration, event.victim);
+    log.info("[SORCERESS_FROZEN_ARMOR] phase=retaliate source={} attacker={} "
+            + "skill={} level={} duration={}",
+        event.victim, event.attacker, skill != null ? skill.Id : -1,
+        armor.level, duration);
+  }
+
+  /** D2Game EventFunc03: apply the armor skill's cold packet to a melee attacker. */
+  private void applyShiverArmor(
+      int attackerId, int victimId, UnitState armor, StateList ownerStates) {
+    if (!mAttributesWrapper.has(attackerId)) return;
+    Skills.Entry skill = Riiablo.files.skills.get(armor.skillId >= 0
+        ? armor.skillId : SkillId.SHIVER_ARMOR);
+    if (skill == null) return;
+    int[] range = SorceressSkills.getArmorColdDamage(
+        skill, armor.level, name -> baseSkillLevel(victimId, name));
+    NativeRng rng = new NativeRng(Riiablo.gameSeed
+        ^ victimId * 0x45D9F3B ^ attackerId * 31 ^ armor.duration);
+    int raw = range[0] + rng.nextInt(Math.max(1, range[1] - range[0] + 1));
+    Attributes attacker = mAttributesWrapper.get(attackerId).attrs;
+    StateList attackerStates = mUnitStates.has(attackerId)
+        ? mUnitStates.get(attackerId).stateList : null;
+    int pierce = armorColdPierce(victimId, ownerStates);
+    CombatSystem.CombatResult result = CombatSystem.INSTANCE.calculateFixedElementalDamage(
+        attacker, isPlayerAligned(attackerId), isPlayerAligned(victimId),
+        CombatSystem.DAMAGE_COLD, raw, pierce, attackerStates, difficulty());
+    applyElementalAbsorb(attacker, result.absorbedLife);
+    float applied = 0f;
+    StatRef life = attacker != null ? attacker.get(Stat.hitpoints, StatRef.obtain()) : null;
+    float before = life != null ? life.asFixed() : 0f;
+    if (life != null && before > 0f && result.totalDamage > 0) {
+      DamageEvent reactive = DamageEvent.obtainReactive(
+          victimId, attackerId, result.totalDamage, 0f);
+      if (events != null) events.dispatch(reactive);
+      applied = Math.max(0f, reactive.damage);
+      life.sub(applied);
+      if (life.asFixed() <= 0f) {
+        life.set(0f);
+        if (events != null) events.dispatch(DeathEvent.obtain(victimId, attackerId));
+      }
+    }
+    int coldLength = SorceressSkills.getArmorColdLength(
+        skill, armor.level, name -> baseSkillLevel(victimId, name));
+    int duration = resolveArmorColdDuration(victimId, attackerId, coldLength);
+    if (duration > 0 && isAlive(attackerId)) {
+      StatusEffectApplier.INSTANCE.applyFreeze(attackerId, duration, victimId);
+    }
+    log.info("[SORCERESS_SHIVER_ARMOR] phase=retaliate source={} attacker={} skill={} "
+            + "level={} raw={} applied={} hp={} -> {} freeze={}",
+        victimId, attackerId, skill.Id, armor.level, raw, applied,
+        before, life != null ? life.asFixed() : before, duration);
+  }
+
+  /** D2Game EventFunc01: fire Chilling Armor's authoritative return missile. */
+  private void launchChillingArmorBolt(
+      DamageEvent event, UnitState armor, StateList ownerStates) {
+    if (factory == null || !mPosition.has(event.victim) || !mPosition.has(event.attacker)) return;
+    Skills.Entry skill = Riiablo.files.skills.get(armor.skillId >= 0
+        ? armor.skillId : SkillId.CHILLING_ARMOR);
+    String missileName = skill != null ? skill.srvmissilea : null;
+    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (skill == null || row == null) {
+      log.warn("[SORCERESS_CHILLING_ARMOR] phase=retaliate_reject source={} attacker={} "
+              + "missile={} reason=missing_data",
+          event.victim, event.attacker, missileName);
+      return;
+    }
+    Vector2 origin = mPosition.get(event.victim).position;
+    Vector2 direction = new Vector2(mPosition.get(event.attacker).position).sub(origin);
+    if (direction.isZero(0.0001f)) direction.set(Vector2.X);
+    int missileId = factory.createMissile(row, direction.nor(), origin, event.victim);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+    com.riiablo.engine.server.component.Missile projectile = mMissile.get(missileId);
+    projectile.targetId = event.attacker;
+    MissileDamageResolver.initializeSkill(
+        projectile, skill,
+        mAttributesWrapper.has(event.victim)
+            ? mAttributesWrapper.get(event.victim).attrs : null,
+        Math.max(1, armor.level), name -> baseSkillLevel(event.victim, name), ownerStates);
+    log.info("[SORCERESS_CHILLING_ARMOR] phase=retaliate source={} attacker={} skill={} "
+            + "level={} missile={} missileId={}",
+        event.victim, event.attacker, skill.Id, armor.level, row.Missile, missileId);
+  }
+
+  private int resolveArmorColdDuration(int sourceId, int targetId, int duration) {
+    if (duration <= 0 || !mAttributesWrapper.has(targetId)) return 0;
+    StateList sourceStates = mUnitStates.has(sourceId)
+        ? mUnitStates.get(sourceId).stateList : null;
+    StateList targetStates = mUnitStates.has(targetId)
+        ? mUnitStates.get(targetId).stateList : null;
+    return CombatSystem.INSTANCE.resolveColdDuration(
+        mAttributesWrapper.get(targetId).attrs, isPlayerAligned(targetId), duration,
+        armorColdPierce(sourceId, sourceStates), targetStates, difficulty());
+  }
+
+  private int armorColdPierce(int entityId, StateList states) {
+    int pierce = mAttributesWrapper.has(entityId)
+        ? statInt(mAttributesWrapper.get(entityId).attrs, Stat.item_pierce_cold)
+            + statInt(mAttributesWrapper.get(entityId).attrs, Stat.passive_cold_pierce)
+        : 0;
+    if (states != null) {
+      pierce += states.getTotalStatContribution(Stat.passive_cold_pierce);
+    }
+    return Math.max(0, pierce);
+  }
+
+  private int baseSkillLevel(int entityId, String name) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return 0;
+    Skills.Entry skill = Riiablo.files.skills.get(name);
+    return skill != null
+        ? Math.max(0, mPlayer.get(entityId).data.getBaseSkillLevel(skill.Id)) : 0;
   }
 
   /** Death removes Conversion allegiance without applying the living-unit HP restore callback. */
@@ -505,6 +660,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
     synchronizeBarbarianPassives(entityId, stateList);
     synchronizePaladinHardPointPassives(entityId, stateList);
+    synchronizeSorceressPassives(entityId, stateList);
 
     processHolyFireAura(entityId, stateList);
     processBladeShield(entityId, stateList);
@@ -711,6 +867,32 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
             applied.getStatContributionValue(Stat.maxlightresist),
             applied.getStatContributionValue(Stat.item_tohit_percent));
       }
+    }
+  }
+
+  /** Keeps Fire Mastery's native permanent passive stat list current. */
+  private void synchronizeSorceressPassives(int entityId, StateList states) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null
+        || mPlayer.get(entityId).data.classId != CharacterClass.SORCERESS) return;
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.FIRE_MASTERY);
+    int ownedLevel = skill != null
+        ? Math.max(0, mPlayer.get(entityId).data.getSkill(SkillId.FIRE_MASTERY)) : 0;
+    int level = ownedLevel > 0 ? ownedLevel + states.getTotalSkillModifier() : 0;
+    UnitState current = states.getState(StateId.FIREMASTERY);
+    if (level <= 0 || skill == null || !skill.passive) {
+      if (current != null) {
+        states.removeState(StateId.FIREMASTERY);
+        log.info("[SORCERESS_FIRE_MASTERY] phase=remove entity={}", entityId);
+      }
+      return;
+    }
+    if (current != null && current.level == level && !current.expired) return;
+    UnitState applied = SorceressSkills.applyFireMasteryState(
+        states, skill, level, entityId);
+    if (applied != null) {
+      log.info("[SORCERESS_FIRE_MASTERY] phase=refresh entity={} level={} percent={}",
+          entityId, level,
+          applied.getStatContributionValue(Stat.passive_fire_mastery));
     }
   }
 
@@ -1136,7 +1318,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
           return synergy != null && mPlayer.has(entityId)
               && mPlayer.get(entityId).data != null
               ? mPlayer.get(entityId).data.getBaseSkillLevel(synergy.Id) : 0;
-        });
+        }, stateList);
     log.info("[SORCERESS_BLAZE] phase=trail source={} skill={} level={} missileId={} "
             + "position=({}, {}) lifetime={} rawFixed={}..{}",
         entityId, state.skillId, state.level, missileId, position.x, position.y,

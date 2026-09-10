@@ -20,6 +20,8 @@ public class DamageEvent implements Event {
   public byte kind;
   /** Optional sound key selected by the authoritative hit resolver. */
   public String hitSound;
+  /** Incoming Missiles.txt ReturnFire gate used by Chilling Armor. */
+  public boolean returnFire;
 
   public static DamageEvent obtain(int attacker, int victim, float damage) {
     return obtain(attacker, victim, damage, null);
@@ -33,6 +35,7 @@ public class DamageEvent implements Event {
     event.physicalDamage = 0f;
     event.kind = DIRECT;
     event.hitSound = hitSound;
+    event.returnFire = false;
     return event;
   }
 
@@ -50,6 +53,11 @@ public class DamageEvent implements Event {
     event.kind = MISSILE;
     event.physicalDamage = Math.max(0f, physicalDamage);
     return event;
+  }
+
+  public DamageEvent withReturnFire(boolean enabled) {
+    returnFire = enabled;
+    return this;
   }
 
   public static DamageEvent obtainReactive(

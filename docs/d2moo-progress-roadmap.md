@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-10
+更新时间：2026-09-11
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -29,7 +29,7 @@
 第一章已经接近收尾；全项目剩余量主要来自完整战斗分支、物品属性、多人边界、
 数据层统一，以及 Act 2–5 地图和任务。
 
-## 2026-09-10 当前进度快照
+## 2026-09-11 当前进度快照
 
 - 召唤物跨房间/跨区域重组已完成首轮：对齐 D2MOO NecroPet 的 28 格主人轨迹跟随与
   50 格 PetMove mode 3 边界；跨 Zone、主人快速移动，以及非相邻 RoomEx 无有效路径时，
@@ -37,6 +37,11 @@
   骷髅 AI 缓存目标统一清理，Box2D、RoomEx 与 `SYNC_WARPED` 状态同步更新。
 - 新增 8/16/24 格确定性落点扩展；跨 Zone 完全无落点才按原规则移除，同 Zone 失败则
   延迟重试。Bone Wall、诱饵及固定陷阱不会被普通远距重组。
+- 法师 Enchant、Fire Mastery 与三种冰甲已完成首轮原生链：Enchant 按 `SrvDo025`
+  选择友方目标并在非法/敌对目标时回退施法者，保存附火、命中率和持续时间；Fire
+  Mastery 以永久状态 stat-list 刷新，并进入普通技能导弹、Blaze 和 Fire Wall 的伤害
+  快照。Frozen Armor 使用 `DAMAGEDINMELEE`，Shiver Armor 使用包含 miss/block 的独立
+  `ATTACKEDINMELEE` 事件，Chilling Armor 只响应 `ReturnFire` 导弹并发射权威回击弹。
 - 四类 Golem 原生副作用已完成：Clay Golem 在被近战命中时向实际攻击者安装 750-frame
   `SLOWED` stat-list，并按玩家/Champion/Unique 50%、普通怪物 90% 限幅；Blood Golem
   对齐 `EventFunc23/26` 的目标 Drain、递减回血曲线、主人/宠物生命分配以及 1.10f
@@ -199,7 +204,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 88% | 12% | 1.4% | 死灵骨毒/召唤链、圣骑士技能与法师 Static Field/Frost Nova/Blaze/Fire Wall 已接通；剩余法师防御状态、Teleport、德鲁伊持续技能和实机表现待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 90% | 10% | 1.2% | 死灵骨毒/召唤链、圣骑士技能与法师 Enchant/Fire Mastery/三冰甲已接通；剩余 Teleport、德鲁伊持续技能和实机表现待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -224,9 +229,9 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 76% | 24% | Enchant/Fire Mastery、防御性状态链、Teleport 与复杂冰火技能表现 |
+| 法师 Sorceress | 84% | 16% | Teleport、复杂冰火雷技能及统一多人表现验收 |
 
-职业技能专项整体按 **约 81% 完成、约 19% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 96% 完成、约 4% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
@@ -768,10 +773,18 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   - 数据契约、ECS 持续区域与战斗定向共 36 个用例通过；130 项扩大回归只有既有
     Throwing Mastery 9/6 断言差异；D2GS 编译和真实 1.10f 离屏营地通过。
 
-- [ ] **下一项：法师 Enchant / Fire Mastery 与防御性状态链**
+- [x] ~~完成法师 Enchant / Fire Mastery 与防御性状态链~~
   - 优先核对 `SrvDo025` 友方目标回退、Enchant 状态/命中率/附火/持续时间与多人快照，
-    再核对 Fire Mastery 被动刷新以及 Frozen Armor、Shiver Armor、Chilling Armor 的
-    防御、冰冷反击导弹和状态生命周期；随后处理 Teleport。
+    Fire Mastery 被动刷新以及 Frozen Armor、Shiver Armor、Chilling Armor 的防御、
+    近战受击/攻击尝试事件、冰冷反击导弹和状态生命周期。
+  - Fire Mastery 按 D2Common 的 skill-owned missile 分支应用；`Missiles.ApplyMastery` 仅
+    约束 table-owned missile，避免 Fire Bolt 因该列为空而漏算精通。
+  - 三种冰甲的状态互斥、持久 Overlay 和 StateP 重建已接入；专项数据/集成、全部法师、
+    状态表现、战斗与近战距离回归通过，D2GS 编译和真实 1.10f `offscreenCamp` 通过。
+
+- [ ] **下一项：法师 Teleport 原生位移链**
+  - 对照 `SrvSt08/SrvDo019` 的目标坐标、城镇/Level Teleport 标志、地图碰撞与安全落点，
+    服务端完成权威位移、RoomEx/Zone/Box2D 更新以及 `SYNC_WARPED` 多人同步。
 
 - [x] ~~完成多人地面掉落归属窗口广播~~
   - `ItemP` 在保持旧字段兼容的前提下追加 owner/party 截止时间和金币队伍分配标记；
@@ -814,8 +827,9 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-当前小步：法师 Static Field、Frost Nova、Blaze 与 Fire Wall 已完成首轮，下一项是
-**Enchant / Fire Mastery 与法师防御性状态链**，随后处理 Teleport 与统一客户端表现验收。
+当前小步：法师 Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与
+三种冰甲已完成首轮，下一项是 **Teleport 原生权威位移链**，随后处理复杂技能与统一
+客户端表现验收。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。

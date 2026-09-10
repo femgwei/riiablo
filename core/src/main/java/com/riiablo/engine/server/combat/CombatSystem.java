@@ -675,6 +675,32 @@ public class CombatSystem {
     return result;
   }
 
+  /** Resolves a cold/freeze length through the native cold resistance row. */
+  public int resolveColdDuration(Attributes defender, boolean defenderPlayer,
+      int baseDuration, int piercePercent, StateList defenderStates, int difficulty) {
+    if (defender == null || baseDuration <= 0) return 0;
+    DefenderData d = new DefenderData();
+    d.isPlayer = defenderPlayer;
+    d.isMonster = !defenderPlayer;
+    d.resistances[DAMAGE_COLD] = statInt(defender, Stat.coldresist, 0);
+    if (defenderPlayer) {
+      d.resistances[DAMAGE_COLD] += MonsterUtil.getResistancePenalty(difficulty);
+    }
+    d.maxResistances[DAMAGE_COLD] = 75 + statInt(defender, Stat.maxcoldresist, 0);
+    d.cannotBeFrozen = statInt(defender, Stat.item_cannotbefrozen, 0) != 0;
+    d.halfFreezeDuration = statInt(defender, Stat.item_halffreezeduration, 0) != 0;
+    if (defenderStates != null) {
+      d.resistances[DAMAGE_COLD] += defenderStates.getTotalResistModifier(1);
+      d.maxResistances[DAMAGE_COLD] +=
+          defenderStates.getTotalStatContribution(Stat.maxcoldresist);
+    }
+    int duration = applyElementalResistance(
+        baseDuration, d, DAMAGE_COLD, Math.max(0, piercePercent));
+    if (d.cannotBeFrozen) return 0;
+    if (d.halfFreezeDuration) duration /= 2;
+    return Math.max(0, duration);
+  }
+
   /**
    * Resolves one native game-frame hit from Blaze/Fire Wall without dropping
    * the fractional 8.8 damage. {@code damageRate} scales flat magical damage

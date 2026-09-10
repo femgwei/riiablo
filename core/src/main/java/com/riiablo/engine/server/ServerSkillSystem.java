@@ -410,7 +410,8 @@ public class ServerSkillSystem extends PassiveSystem {
     // must still be created in the local authoritative world.
     if (monstersOnly && !mMonster.has(event.entityId)
         && event.srvdofunc != 15 && event.srvdofunc != 16
-        && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
+        && event.srvdofunc != 18 && event.srvdofunc != 25
+        && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 22 && event.srvdofunc != 23 && event.srvdofunc != 24
         && event.srvdofunc != 49 && event.srvdofunc != 54
         && event.srvdofunc != 68 && event.srvdofunc != 71
@@ -421,7 +422,8 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 20 && event.srvdofunc != 73 && event.srvdofunc != 80
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
-        && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
+        && skill.srvdofunc != 18 && skill.srvdofunc != 25
+        && skill.srvdofunc != 44 && skill.srvdofunc != 45
         && skill.srvdofunc != 22 && skill.srvdofunc != 23 && skill.srvdofunc != 24
         && skill.srvdofunc != 49 && skill.srvdofunc != 54
         && skill.srvdofunc != 68 && skill.srvdofunc != 71
@@ -503,6 +505,10 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     if (event.srvdofunc == 18 || skill.srvdofunc == 18) {
+      if (SorceressSkills.isDefensiveArmor(skill)) {
+        applySorceressDefensiveArmor(event, skill, skillLevel);
+        return;
+      }
       if (isVenom(skill)) {
         applyVenom(event, skill, skillLevel);
         return;
@@ -515,6 +521,12 @@ public class ServerSkillSystem extends PassiveSystem {
         applyHolyShield(event, skill, skillLevel);
         return;
       }
+    }
+    if (event.srvdofunc == 25 || skill.srvdofunc == 25) {
+      if (SorceressSkills.isEnchant(skill)) {
+        applyEnchant(event, skill, skillLevel);
+      }
+      return;
     }
     if (event.srvdofunc == 54 || skill.srvdofunc == 54) {
       armBladeShield(event, skill, skillLevel);
@@ -978,6 +990,80 @@ public class ServerSkillSystem extends PassiveSystem {
             + "block={} defense={}", event.entityId, event.skillId, shield.level,
         shield.duration, shield.getStatContributionValue(Stat.toblock),
         shield.getStatContributionValue(Stat.skill_armor_percent));
+  }
+
+  /** Native SrvDo018 self buff for Frozen/Shiver/Chilling Armor. */
+  private void applySorceressDefensiveArmor(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId)) {
+      mUnitStates.create(event.entityId).init(event.entityId);
+    }
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    UnitState armor = SorceressSkills.applyDefensiveArmorState(
+        states.stateList, skill, skillLevel, event.entityId,
+        name -> getBaseSkillLevel(event.entityId, name));
+    if (armor == null) {
+      log.warn("[SORCERESS_ARMOR] phase=do_reject source={} skill={} reason=native_state_data",
+          event.entityId, event.skillId);
+      return;
+    }
+    log.info("[SORCERESS_ARMOR] phase=do_apply source={} skill={} level={} state={} "
+            + "duration={} defense={}",
+        event.entityId, event.skillId, armor.level, StateId.getName(armor.stateId),
+        armor.duration, armor.getStatContributionValue(Stat.skill_armor_percent));
+  }
+
+  /** Native SrvDo025: enchant an aligned unit, otherwise fall back to self. */
+  private void applyEnchant(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    int targetId = event.targetId;
+    if (targetId < 0 || !world.getEntityManager().isActive(targetId)
+        || !hasPositiveLife(targetId) || !isPlayerAligned(targetId)
+        || isHostile(event.entityId, targetId)) {
+      targetId = event.entityId;
+    }
+    if (!mUnitStates.has(targetId)) mUnitStates.create(targetId).init(targetId);
+    UnitStates targetStates = mUnitStates.get(targetId);
+    if (targetStates.stateList == null) targetStates.init(targetId);
+    int mastery = sorceressFireMasteryPercent(event.entityId);
+    UnitState enchant = SorceressSkills.applyEnchantState(
+        targetStates.stateList, skill, skillLevel, event.entityId,
+        name -> getBaseSkillLevel(event.entityId, name), mastery);
+    if (enchant == null) {
+      log.warn("[SORCERESS_ENCHANT] phase=do_reject source={} target={} skill={} "
+              + "reason=native_state_data",
+          event.entityId, targetId, event.skillId);
+      return;
+    }
+    log.info("[SORCERESS_ENCHANT] phase=do_apply source={} target={} requestedTarget={} "
+            + "skill={} level={} duration={} fire={}..{} attackRating={} mastery={}",
+        event.entityId, targetId, event.targetId, skill.Id, enchant.level,
+        enchant.duration, enchant.getStatContributionValue(Stat.firemindam),
+        enchant.getStatContributionValue(Stat.firemaxdam),
+        enchant.getStatContributionValue(Stat.item_tohit_percent), mastery);
+  }
+
+  private int sorceressFireMasteryPercent(int entityId) {
+    int value = 0;
+    if (mAttributesWrapper.has(entityId)) {
+      Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+      StatRef mastery = attrs != null
+          ? attrs.get(Stat.passive_fire_mastery, StatRef.obtain()) : null;
+      value = mastery != null ? Math.max(0, mastery.asInt()) : 0;
+    }
+    StateList states = mUnitStates.has(entityId)
+        ? mUnitStates.get(entityId).stateList : null;
+    if (states != null) {
+      value += Math.max(0, states.getTotalStatContribution(Stat.passive_fire_mastery));
+    }
+    if (value == 0 && mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
+      int level = Math.max(0, mPlayer.get(entityId).data.getSkill(SkillId.FIRE_MASTERY));
+      if (level > 0) {
+        Skills.Entry mastery = Riiablo.files.skills.get(SkillId.FIRE_MASTERY);
+        value = SorceressSkills.getFireMasteryPercent(mastery, level);
+      }
+    }
+    return Math.max(0, value);
   }
 
   private boolean hasEquippedShield(int entityId) {
@@ -1732,7 +1818,7 @@ public class ServerSkillSystem extends PassiveSystem {
         ? mAttributesWrapper.get(ownerId).attrs : null;
     return MissileDamageResolver.initializeSorceressFireArea(
         projectile, skill, owner, mPlayer.has(ownerId), level,
-        name -> getBaseSkillLevel(ownerId, name));
+        name -> getBaseSkillLevel(ownerId, name), stateList(ownerId));
   }
 
   private boolean isTownPoint(int sourceId, Vector2 point) {
@@ -2536,7 +2622,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (!nativePaladin && !nativeBone) {
       MissileDamageResolver.initializeSkill(projectile, skill,
           mAttributesWrapper.get(ownerId).attrs, skillLevel,
-          name -> getBaseSkillLevel(ownerId, name));
+          name -> getBaseSkillLevel(ownerId, name), stateList(ownerId));
     }
     if (NecromancerSkills.isBoneSpear(skill)) {
       // Native bonespear has LastCollide and CollideKill=0: after a successful
@@ -2675,6 +2761,10 @@ public class ServerSkillSystem extends PassiveSystem {
       }
     }
     return 1;
+  }
+
+  private StateList stateList(int entityId) {
+    return mUnitStates.has(entityId) ? mUnitStates.get(entityId).stateList : null;
   }
 
   /** Kept as a narrow compatibility wrapper for existing diagnostics/tests. */

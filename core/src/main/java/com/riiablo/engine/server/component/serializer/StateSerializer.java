@@ -7,6 +7,8 @@ import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.skill.PaladinSkills;
+import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.SorceressSkills;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.net.packet.d2gs.ComponentP;
@@ -125,6 +127,56 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
               : PaladinSkills.getHolyShieldDefenseBonus(holyShield, level, name -> 0));
           state.runtimeValue = replicatedDefense > 0 ? replicatedDefense
               : PaladinSkills.getHolyShieldDefenseBonus(holyShield, level, name -> 0);
+          state.needsSync = false;
+        }
+        if ((state.stateId == StateId.FROZENARMOR
+            || state.stateId == StateId.SHIVERARMOR
+            || state.stateId == StateId.CHILLINGARMOR)
+            && Riiablo.files != null && Riiablo.files.skills != null) {
+          int skillId = state.stateId == StateId.FROZENARMOR ? SkillId.FROZEN_ARMOR
+              : state.stateId == StateId.SHIVERARMOR ? SkillId.SHIVER_ARMOR
+              : SkillId.CHILLING_ARMOR;
+          com.riiablo.codec.excel.Skills.Entry armor = Riiablo.files.skills.get(skillId);
+          int defense = state.runtimeValue > 0 ? state.runtimeValue
+              : SorceressSkills.getDefensiveArmorDefensePercent(
+                  armor, Math.max(1, state.level));
+          state.clearModifiers();
+          state.setStatContribution(Stat.skill_armor_percent, 0,
+              NativeStatResolver.Operation.ADD, defense);
+          state.runtimeValue = defense;
+          state.skillId = skillId;
+          state.needsSync = false;
+        }
+        if (state.stateId == StateId.FIREMASTERY && Riiablo.files != null
+            && Riiablo.files.skills != null) {
+          com.riiablo.codec.excel.Skills.Entry mastery =
+              Riiablo.files.skills.get(SkillId.FIRE_MASTERY);
+          state.clearModifiers();
+          state.setStatContribution(Stat.passive_fire_mastery, 0,
+              NativeStatResolver.Operation.ADD,
+              SorceressSkills.getFireMasteryPercent(mastery, Math.max(1, state.level)));
+          state.skillId = SkillId.FIRE_MASTERY;
+          state.needsSync = false;
+        }
+        if (state.stateId == StateId.ENCHANT && Riiablo.files != null
+            && Riiablo.files.skills != null) {
+          com.riiablo.codec.excel.Skills.Entry enchant =
+              Riiablo.files.skills.get(SkillId.ENCHANT);
+          int[] damage = SorceressSkills.getEnchantDamage(
+              enchant, Math.max(1, state.level), name -> 0, 0);
+          int replicatedMinimum = state.runtimeValue;
+          state.clearModifiers();
+          state.setStatContribution(Stat.firemindam, 0,
+              NativeStatResolver.Operation.ADD,
+              replicatedMinimum > 0 ? replicatedMinimum : damage[0]);
+          state.setStatContribution(Stat.firemaxdam, 0,
+              NativeStatResolver.Operation.ADD, damage[1]);
+          state.setStatContribution(Stat.item_tohit_percent, 0,
+              NativeStatResolver.Operation.ADD,
+              SorceressSkills.getEnchantAttackRatingPercent(
+                  enchant, Math.max(1, state.level)));
+          state.skillId = SkillId.ENCHANT;
+          state.runtimeValue = replicatedMinimum > 0 ? replicatedMinimum : damage[0];
           state.needsSync = false;
         }
       }

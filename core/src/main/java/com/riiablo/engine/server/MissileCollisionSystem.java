@@ -1071,7 +1071,8 @@ public class MissileCollisionSystem extends IteratingSystem {
               hitSound == null ? "" : hitSound);
           DamageEvent event = DamageEvent.obtainMissile(
               missile.ownerId, targetId, damage,
-              combat.physicalDamage * Math.max(0.01f, missile.damageMultiplier), hitSound);
+              combat.physicalDamage * Math.max(0.01f, missile.damageMultiplier), hitSound)
+              .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
           events.dispatch(event);
           float appliedDamage = Math.max(0f, event.damage);
           // Native elemental absorb restores the defender's life from the same
@@ -1251,7 +1252,8 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (damage <= 0f) return;
     DamageEvent event = DamageEvent.obtainMissile(
         missile.ownerId, targetId, damage, 0f,
-        missile.missile != null ? missile.missile.HitSound : null);
+        missile.missile != null ? missile.missile.HitSound : null)
+        .withReturnFire(missile.missile != null && missile.missile.ReturnFire);
     events.dispatch(event);
     float applied = Math.max(0f, event.damage);
     float before = life.asFixed();
@@ -1314,7 +1316,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         ? mAttributesWrapper.get(owner).attrs : null;
     MissileDamageResolver.initializeSorceressFireArea(
         child, skill, ownerAttrs, mPlayer.has(owner), level,
-        name -> baseSkillLevel(owner, name));
+        name -> baseSkillLevel(owner, name), stateList(owner));
     maker.fireWallSegmentsCreated++;
     log.info("[SORCERESS_FIRE_WALL] phase=segment maker={} segment={} owner={} "
             + "skill={} level={} index={} position=({}, {}) lifetime={}",
@@ -1651,7 +1653,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
             ? mAttributesWrapper.get(source.ownerId).attrs : null;
         int level = Math.max(1, source.damageLevel);
-        if (!MissileDamageResolver.initializeSkillArea(child, skill, ownerAttrs, level)) {
+        if (!MissileDamageResolver.initializeSkillArea(
+            child, skill, ownerAttrs, level,
+            synergyName -> baseSkillLevel(source.ownerId, synergyName),
+            stateList(source.ownerId))) {
           MissileDamageResolver.initialize(child, ownerAttrs, null, -1, level, 0);
         }
         child.skillId = source.skillId;

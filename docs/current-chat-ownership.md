@@ -1,6 +1,6 @@
 # 当前 Chat 维护状态
 
-更新时间：2026-09-10
+更新时间：2026-09-11
 
 ## 唯一负责人
 
@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（法师 Blaze / Fire Wall 原生持续区域链，待提交）
-- 上一功能基线：`53279e49`（法师 Frost Nova 原生范围冰冷链）
+- 当前功能提交：本文件所在 `HEAD`（法师 Enchant / Fire Mastery 与三种冰甲，待提交）
+- 上一功能基线：`c223027e`（法师 Blaze / Fire Wall 原生持续区域链）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 70%（详见路线图）
@@ -58,8 +58,11 @@
   与难度生命下限，统一处理电抗、电免、吸收、PvP、阵营、Zone 和 LOS；不生成伤害导弹。
   Frost Nova 也已接入 `SrvDo022` 固定 64 方向、原生速度/范围、共享命中、冰伤/时长和
   Cold Mastery/冰免/无法冰冻链。Blaze/Fire Wall 已补齐 `SrvDo023/024` 状态移动轨迹、
-  双 maker/中心段/子段及 8.8 定点周期火伤。下一项为 Enchant / Fire Mastery 与法师
-  防御性状态链，随后处理 Teleport。
+  双 maker/中心段/子段及 8.8 定点周期火伤。
+- Enchant 已接入 `SrvDo025` 友方目标/自身回退、附火、命中和持续时间；Fire Mastery 使用
+  永久状态 stat-list，并覆盖普通技能导弹及持续火场快照。Frozen/Shiver/Chilling Armor
+  互斥且分别响应受伤近战、包含 miss/block 的攻击近战和 `ReturnFire` 导弹事件；客户端
+  可从 StateP 恢复三种护甲状态和持久 Overlay。下一项为 Teleport。
 - 圣骑士 Cleansing、Meditation、Redemption、Sacrifice、Smite、Zeal 已完成首轮原生链；
   Charge 已接入 `SrvSt31/SrvDo067`（路径追击、Param1 速度、当前 tick 命中和 calc1 增伤）；
   Vengeance 已接入 `SrvSt35/SrvDo002` 的火/冰/电同时附伤、HitClass 轮换与权威结算；Holy
@@ -133,9 +136,9 @@
 ## 下一步
 
 当前已完成 **P1 死灵法师服务端技能首轮、圣骑士服务端技能首轮**，以及法师基础单体
-弹道、Static Field、Frost Nova、Blaze / Fire Wall 原生权威链首轮。下一步处理
-**Enchant / Fire Mastery 与 Frozen/Shiver/Chilling Armor 防御性状态链**，随后处理
-Teleport。战斗模块不再单独分派，相关修改与进度文档均由本 Chat 负责。
+弹道、Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与三种冰甲
+原生权威链首轮。下一步处理 **Teleport 原生权威位移链**，随后处理复杂技能和统一
+多人表现验收。战斗模块不再单独分派，相关修改与进度文档均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。

@@ -72,6 +72,7 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
+import com.riiablo.engine.server.event.MeleeAttackEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillDoEvent;
@@ -1535,6 +1536,11 @@ public class Actioneer extends PassiveSystem {
               weaponMastery(entityId, attackWeapon, false),
               isDemonTarget(targetId), isUndeadTarget(targetId));
         }
+        // D2Game UNITEVENT_ATTACKEDINMELEE is emitted for every valid melee
+        // attack roll, before miss/block stops the damage path. Shiver Armor
+        // consumes this event instead of the later DAMAGEDINMELEE packet.
+        events.dispatch(MeleeAttackEvent.obtain(
+            entityId, targetId, combat.hit, combat.blocked));
         if (!combat.hit) {
           log.info("[COMBAT_HIT] entity={} target={} result=miss chance={}% attackerLevel={} targetLevel={} ar={} defense={}",
               entityId, targetId, combat.hitChance,
@@ -1943,6 +1949,7 @@ public class Actioneer extends PassiveSystem {
           entityId, targetId);
       return;
     }
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       if (combat.blocked) queueHitReaction(targetId, true);
       log.info("[NECRO_POISON_DAGGER] phase=keyframe source={} target={} result={} chance={}",
@@ -2212,6 +2219,7 @@ public class Actioneer extends PassiveSystem {
     // Native SrvDo120 calls SUNITDMG_DrainItemDurability before Param1.
     Item weapon = activeAttackWeapon(entityId);
     if (weapon != null) drainFrenzyDurability(weapon, targetId);
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked || !mAttributesWrapper.has(targetId)) {
       log.info("[DRUID_FERAL_MAUL] phase=keyframe source={} target={} result={} blocked={}",
           entityId, targetId, combat.hit ? "blocked" : "miss", combat.blocked);
@@ -2432,6 +2440,7 @@ public class Actioneer extends PassiveSystem {
     casting.zealRemainingStrikes--;
     casting.zealStrikeProcessed = true;
     casting.zealCurrentTargetId = target;
+    events.dispatch(MeleeAttackEvent.obtain(entityId, target, combat.hit, combat.blocked));
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
     float before = hp != null ? hp.asFixed() : 0f;
     float applied = 0f;
@@ -2511,6 +2520,7 @@ public class Actioneer extends PassiveSystem {
     int strike = ++casting.furyStrikeIndex;
     casting.furyRemainingStrikes--;
     casting.furyStrikeProcessed = true;
+    events.dispatch(MeleeAttackEvent.obtain(entityId, current, combat.hit, combat.blocked));
     if (weapon != null) drainFrenzyDurability(weapon, current);
 
     StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
@@ -2582,6 +2592,7 @@ public class Actioneer extends PassiveSystem {
             isPlayerEntity(entityId), isPlayerEntity(targetId), damage[0], damage[1],
             DruidSkills.getShapeAttackRating(skill, level, attacker, isPlayerEntity(entityId)),
             states.stateList, stateList(targetId), isEntityMoving(targetId));
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       if (combat.blocked) queueHitReaction(targetId, true);
       log.info("[DRUID_HUNGER] phase=result source={} target={} result={} chance={}",
@@ -2619,6 +2630,9 @@ public class Actioneer extends PassiveSystem {
 
   private void resolveDruidElementalMeleeDamage(int sourceId, int targetId,
       CombatSystem.CombatResult combat, String tag) {
+    if (combat != null) {
+      events.dispatch(MeleeAttackEvent.obtain(sourceId, targetId, combat.hit, combat.blocked));
+    }
     if (combat == null || !combat.hit || combat.blocked
         || !mAttributesWrapper.has(targetId)) {
       if (combat != null && combat.blocked) queueHitReaction(targetId, true);
@@ -3004,6 +3018,7 @@ public class Actioneer extends PassiveSystem {
         damage[0], damage[1], attackRating,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId),
         weaponMastery(entityId, weapon, false));
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
       log.info("[WHIRLWIND] phase=strike entity={} target={} strike={} hand={} "
               + "result=miss chance={}",
@@ -4090,6 +4105,7 @@ public class Actioneer extends PassiveSystem {
         profile.elementalMin, profile.elementalMax,
         profile.coldLength, profile.poisonLength,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
       log.info("[MONSTER_SKILL] phase=fire_hit_result entity={} target={} result=miss chance={}",
           entityId, targetId, combat.hitChance);
@@ -4212,6 +4228,7 @@ public class Actioneer extends PassiveSystem {
         attacker, defender, false, isPlayerEntity(targetId), false,
         minDamage, maxDamage, attackRating,
         stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit) {
       log.info("[MONSTER_SMITE] phase=result source={} target={} result=miss chance={} distance={}",
           entityId, targetId, combat.hitChance, distance);
@@ -4529,6 +4546,8 @@ public class Actioneer extends PassiveSystem {
     CombatSystem.CombatResult combat = casting.vengeanceCombat;
     casting.vengeancePrepared = false;
     casting.vengeanceCombat = null;
+    events.dispatch(MeleeAttackEvent.obtain(
+        entityId, resolvedTarget, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       if (combat.blocked) queueHitReaction(resolvedTarget, true);
       log.info("[PALADIN_VENGEANCE] phase=hit_result source={} target={} result={} chance={}",
@@ -4600,6 +4619,8 @@ public class Actioneer extends PassiveSystem {
     casting.chargeTargetId = resolvedTarget;
     int bonus = Math.max(0, PaladinSkills.getChargeDamagePercent(skill, level));
     float multiplier = (100f + bonus) / 100f;
+    events.dispatch(MeleeAttackEvent.obtain(
+        entityId, resolvedTarget, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       if (combat.blocked) queueHitReaction(resolvedTarget, true);
       if (mVelocity.has(entityId)) mVelocity.get(entityId).clearModeSpeedBonus();
@@ -4642,6 +4663,7 @@ public class Actioneer extends PassiveSystem {
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
         statInt(attacker, Stat.tohit),
         stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       log.info("[MONSTER_CHARGE] phase=hit_result source={} target={} result={} chance={}",
           entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
@@ -4702,6 +4724,7 @@ public class Actioneer extends PassiveSystem {
         attacker, defender, true, isPlayerEntity(targetId), min, max,
         statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
         isEntityMoving(targetId));
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       log.info("[PALADIN_SMITE] phase=result source={} target={} result={} chance={}",
           entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
@@ -4767,6 +4790,7 @@ public class Actioneer extends PassiveSystem {
         statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage),
         statInt(attacker, Stat.tohit), stateList(entityId), stateList(targetId),
         isEntityMoving(targetId));
+    events.dispatch(MeleeAttackEvent.obtain(entityId, targetId, combat.hit, combat.blocked));
     if (!combat.hit || combat.blocked) {
       log.info("[PALADIN_SACRIFICE] phase=hit_result source={} target={} result={} chance={}",
           entityId, targetId, combat.blocked ? "blocked" : "miss", combat.hitChance);
