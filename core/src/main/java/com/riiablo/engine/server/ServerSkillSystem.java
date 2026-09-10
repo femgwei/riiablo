@@ -89,6 +89,19 @@ public class ServerSkillSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(ServerSkillSystem.class);
   private static final float MULTI_MISSILE_SPREAD_RADIANS = 0.12f;
   private static final int NOVA_MISSILE_COUNT = 64;
+  /** Exact target offsets used by D2Game {@code sub_6FD14170}. */
+  private static final int[] NATIVE_NOVA_X = {
+      30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2,
+      0, -2, -5, -8, -11, -14, -16, -19, -21, -23, -24, -26, -27, -28, -29, -29,
+      -30, -29, -29, -28, -27, -26, -24, -23, -21, -19, -16, -14, -11, -8, -5, -2,
+      0, 2, 5, 8, 11, 14, 16, 19, 21, 23, 24, 26, 27, 28, 29, 29
+  };
+  private static final int[] NATIVE_NOVA_Y = {
+      0, 2, 5, 8, 11, 14, 16, 19, 21, 23, 24, 26, 27, 28, 29, 29,
+      30, 29, 29, 28, 27, 26, 24, 23, 21, 19, 16, 14, 11, 8, 5, 2,
+      0, -2, -5, -8, -11, -14, -16, -19, -21, -23, -24, -26, -27, -28, -29, -29,
+      -30, -29, -29, -28, -27, -26, -24, -23, -21, -19, -16, -14, -11, -8, -5, -2
+  };
   private static final float CHAIN_LIGHTNING_JUMP_RANGE2 = 13f * 13f;
   private final boolean monstersOnly;
   private final Ray<Vector2> auraRay = new Ray<>(new Vector2(), new Vector2());
@@ -1480,8 +1493,11 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private void spawnNova(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
-    String missileName = firstNonEmpty(skill.srvmissile,
-        firstNonEmpty(skill.srvmissilea,
+    // SKILLS_GetProgressiveSkillMissileId falls back to SrvMissileA. The
+    // currently routed SrvDo022 class skills are non-progressive; progressive
+    // Assassin releases are consumed before reaching this generic callback.
+    String missileName = firstNonEmpty(skill.srvmissilea,
+        firstNonEmpty(skill.srvmissile,
             firstNonEmpty(skill.cltmissile, skill.cltmissilea)));
     if (missileName == null) {
       log.warn("Server nova has no missile configured: entity={}, skill={}",
@@ -1497,6 +1513,8 @@ public class ServerSkillSystem extends PassiveSystem {
 
     IntSet sharedHitTargets = new IntSet();
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
+    int velocity = nativeNovaVelocity(missile, skill, skillLevel);
+    int range = nativeMissileRange(missile, skillLevel);
     Vector2 direction = new Vector2();
     int created = 0;
     for (int i = 0; i < NOVA_MISSILE_COUNT; i++) {
@@ -1505,11 +1523,33 @@ public class ServerSkillSystem extends PassiveSystem {
           sharedHitTargets, skillLevel);
       if (missileId >= 0) {
         initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+        if (mMissile.has(missileId)) mMissile.get(missileId).range = range;
+        if (mVelocity.has(missileId)) {
+          mVelocity.get(missileId).velocity.set(direction).setLength(velocity);
+        }
         created++;
       }
     }
-    log.debug("Server nova projectiles: entity={}, skill={}, missile={}, created={}",
-        event.entityId, event.skillId, missileName, created);
+    log.info("[NOVA] phase=create source={} skill={} level={} missile={} created={} "
+            + "velocity={} range={} calc1={} sharedHitGate={}",
+        event.entityId, event.skillId, skillLevel, missileName, created,
+        velocity, range, skill.calc1, sharedHitTargets.size);
+  }
+
+  /** DATATBLS_GetMissileVelocityFromMissilesTxt + SrvDo022 Calc1. */
+  static int nativeNovaVelocity(Missiles.Entry missile, Skills.Entry skill, int skillLevel) {
+    if (missile == null) return 0;
+    int level = Math.max(1, skillLevel);
+    long velocity = (long) missile.Vel + (long) level * missile.VelLev / 8L;
+    velocity += SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, level);
+    return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, velocity));
+  }
+
+  /** MISSILES_CreateMissileFromParams native level-scaled lifetime/range. */
+  static int nativeMissileRange(Missiles.Entry missile, int skillLevel) {
+    if (missile == null) return 0;
+    long range = (long) missile.Range + (long) Math.max(1, skillLevel) * missile.LevRange;
+    return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, range));
   }
 
   /** Native {@code SKILLS_SrvDo017_ChargedBolt_BoltSentry} for the Sorceress. */
@@ -2476,6 +2516,10 @@ public class ServerSkillSystem extends PassiveSystem {
 
   static Vector2 radialDirection(int index, int count, Vector2 out) {
     if (count <= 0) return out.setZero();
+    if (count == NOVA_MISSILE_COUNT) {
+      int nativeIndex = Math.floorMod(index, NOVA_MISSILE_COUNT);
+      return out.set(NATIVE_NOVA_X[nativeIndex], NATIVE_NOVA_Y[nativeIndex]).nor();
+    }
     float radians = MathUtils.PI2 * index / count;
     return out.set(MathUtils.cos(radians), MathUtils.sin(radians)).nor();
   }

@@ -109,6 +109,11 @@
   `aurastat=toblock/aurastatcalc=dm56`，并把 `calc1` 的防御百分比写入状态 stat-list；
   重施不会叠加，状态快照在远端按技能等级重建 block/defense payload。Smite 继续只读取
   有效 Holy Shield 层。新增原生数据、刷新/到期和多人快照测试，专项回归与 D2GS 编译通过。
+- 法师 Frost Nova 已接入原生 `SrvDo022`：使用 D2Game `sub_6FD14170` 的 64 组整数方向
+  偏移，按 `Missiles.txt` 速度/等级速度和范围字段生成一圈共享命中门槛的权威导弹；冰伤、
+  `ELen/ELevLen` 寒冷时长和 Blizzard/Frozen Orb 硬点协同固化到施法快照。Cold Mastery/
+  装备穿透、怪物 100+ 冰免、冰抗时长缩放、Cannot Be Frozen 与 Half Freeze Duration
+  已进入统一结算，客户端继续复用服务端同步的导弹和状态表现。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -189,7 +194,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 86% | 14% | 1.7% | 死灵骨毒/召唤链、圣骑士技能与法师 Static Field 已接通；剩余法师/德鲁伊持续技能和实机表现仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 87% | 13% | 1.6% | 死灵骨毒/召唤链、圣骑士技能与法师 Static Field/Frost Nova 已接通；剩余法师/德鲁伊持续技能和实机表现仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -214,7 +219,7 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 68% | 32% | Frost Nova、Blaze/Fire Wall、Teleport 与持续区域表现 |
+| 法师 Sorceress | 72% | 28% | Blaze/Fire Wall、Teleport 与持续区域表现 |
 
 职业技能专项整体按 **约 80% 完成、约 20% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
@@ -727,8 +732,27 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   `SorceressStaticFieldIntegrationTest` 及相邻抗性/阵营/光环/诅咒回归通过，D2GS 编译和
   真实 1.10f `offscreenCamp` 通过。已知既有基线：Throwing Mastery 的旧测试期待 9%，
   当前 1.10f 表结果为 6%，与本项无关。下一项为 Frost Nova。
+- 2026-09-10：完成法师 Frost Nova `SrvDo022` 原生权威链。64 路导弹改用 D2Game 固定
+  整数偏移，速度、等级速度、范围、NextHit/NextDelay 和 LastCollide 由 1.10f 表驱动；
+  技能冰伤、寒冷持续时间、硬点协同和施法者冰冷穿透固化到权威导弹。统一战斗链新增
+  冰抗对寒冷持续时间的缩放、怪物冰免不可被 Cold Mastery 打破、Cannot Be Frozen 与
+  Half Freeze Duration 的原生次序。专项数据/ECS/碰撞测试通过；下一项为 Blaze/Fire Wall。
 
 ## 当前下一项
+
+- [x] ~~完成法师 Frost Nova `SrvDo022` 原生范围冰冷链~~
+  - 64 路权威导弹使用原生整数方向表和共享命中门槛，命中不同方向目标时每个目标只结算
+    一次；速度/范围、冰伤、协同和时长均来自 1.10f `Skills.txt/Missiles.txt`。
+  - Cold Mastery/装备穿透同时作用于冰伤和寒冷时长，但不能破除原生 100+ 怪物冰免；
+    Cannot Be Frozen 只清除状态、不取消冰伤，Half Freeze Duration 在抗性链之后减半。
+  - `NativeSorceressProjectileDataTest`、`SorceressFrostNovaIntegrationTest`、Nova 方向与
+    导弹/状态相邻回归、D2GS 编译和真实 `offscreenCamp` 已通过。另有早期
+    `NativeNecromancerPoisonNovaDataTest` 在当前 1.10f 资源下存在 `EMin 16/14` 版本真值
+    断言差异，生产代码和该测试均非本项修改，留作独立数据审计。
+
+- [ ] **下一项：法师 Blaze / Fire Wall 原生持续区域导弹链**
+  - 优先核对 `SrvDo023/SrvDo024`、移动轨迹、maker/子导弹、周期伤害、叠加命中门槛、
+    地图阻挡和多人导弹/状态表现；完成后再处理 Teleport。
 
 - [x] ~~完成多人地面掉落归属窗口广播~~
   - `ItemP` 在保持旧字段兼容的前提下追加 owner/party 截止时间和金币队伍分配标记；
@@ -771,15 +795,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-下一小步：死灵法师诅咒、尸体召唤、Revive/Golem、Iron Maiden/Life Tap 受击回调及
-Dim Vision/Attract/Confuse 特殊 AI 已完成首轮；Bone Armor、Poison Dagger、Corpse
-Explosion 与 Poison Explosion 权威链、Bone Wall / Bone Prison 可破坏单位、碰撞与
-生命周期已完成，Poison Nova 原生导弹、固定毒伤与多人表现也已完成，当前进入
-召唤物跟随、概率节奏、敌我筛选、主人目标/PvP 关系及跨房间/跨区域重组现已完成首轮。
-Revive/Golem 专属 AI、技能继承、四类 Golem 原生副作用、Blessed Hammer、Fist of
-the Heavens / Holy Bolt、四种抗性光环和三个特殊周期光环现已完成；当前进入
-Defiance / Blessed Aim / Vigor / Fanaticism / Thorns 原生支援光环现已完成；当前进入
-**Cleansing / Meditation / Redemption 原生周期资源与尸体行为**。
+当前小步：法师 Static Field 与 Frost Nova 已完成首轮，下一项是
+**Blaze / Fire Wall 原生持续区域导弹链**，随后处理 Teleport 与统一客户端表现验收。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。

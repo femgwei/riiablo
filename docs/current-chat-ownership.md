@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（法师 Static Field 原生范围伤害链，待提交）
-- 上一功能基线：`188303ab`（法师基础单体弹道原生链）
+- 当前功能提交：本文件所在 `HEAD`（法师 Frost Nova 原生范围冰冷链，待提交）
+- 上一功能基线：`52543486`（法师 Static Field 原生范围伤害链）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 70%（详见路线图）
@@ -56,7 +56,8 @@
 - 当前 Chat 继续统一维护全部模块，包括战斗，不存在需要避让的独立战斗 Chat。
 - 法师 Static Field 已接入 `SrvDo020`：服务端读取 1.10f 半径、当前生命百分比、AuraFilter
   与难度生命下限，统一处理电抗、电免、吸收、PvP、阵营、Zone 和 LOS；不生成伤害导弹。
-  下一项为 Frost Nova，然后处理 Blaze/Fire Wall 持续区域链。
+  Frost Nova 也已接入 `SrvDo022` 固定 64 方向、原生速度/范围、共享命中、冰伤/时长和
+  Cold Mastery/冰免/无法冰冻链。下一项为 Blaze/Fire Wall 持续区域链，随后处理 Teleport。
 - 圣骑士 Cleansing、Meditation、Redemption、Sacrifice、Smite、Zeal 已完成首轮原生链；
   Charge 已接入 `SrvSt31/SrvDo067`（路径追击、Param1 速度、当前 tick 命中和 calc1 增伤）；
   Vengeance 已接入 `SrvSt35/SrvDo002` 的火/冰/电同时附伤、HitClass 轮换与权威结算；Holy

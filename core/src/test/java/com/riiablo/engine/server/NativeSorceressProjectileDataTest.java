@@ -114,6 +114,37 @@ class NativeSorceressProjectileDataTest extends RiiabloTest {
     assertEquals(50, Riiablo.files.DifficultyLevels.get(2).StaticFieldMin);
   }
 
+  @Test
+  void frostNovaUsesNativeSrvDo22MissileAndColdPacket() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.FROST_NOVA);
+    assertNotNull(skill);
+    assertEquals("Frost Nova", skill.skill);
+    assertEquals(22, skill.srvdofunc);
+    assertEquals("frostnova", skill.srvmissilea);
+    assertEquals("cold", skill.EType);
+    assertEquals(7, skill.HitShift);
+    assertEquals(4, skill.EMin);
+    assertEquals(8, skill.EMax);
+    assertEquals(200, skill.ELen);
+    assertEquals(25, skill.ELevLen[0]);
+    assertEquals("(skill('Blizzard'.blvl)+skill('Frozen Orb'.blvl))*par8",
+        skill.EDmgSymPerCalc);
+
+    Missiles.Entry missile = Riiablo.files.Missiles.get(skill.srvmissilea);
+    assertNotNull(missile);
+    assertEquals(119, missile.Id);
+    assertEquals(1, missile.pSrvDoFunc);
+    assertEquals(24, missile.Vel);
+    assertEquals(14, missile.Range);
+    assertEquals(3, missile.CollideType);
+    assertTrue(missile.NextHit);
+    assertEquals(4, missile.NextDelay);
+    assertTrue(missile.LastCollide);
+    assertEquals("Frost Nova", missile.Skill);
+    assertEquals(24, ServerSkillSystem.nativeNovaVelocity(missile, skill, 1));
+    assertEquals(14, ServerSkillSystem.nativeMissileRange(missile, 1));
+  }
+
   private static void assertGenericBolt(
       int skillId, String name, String expectedMissile, String expectedElement) {
     Skills.Entry skill = Riiablo.files.skills.get(skillId);

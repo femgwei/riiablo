@@ -370,6 +370,19 @@ public final class MissileDamageResolver {
     if (ownerAttrs != null) {
       base.put(Stat.strength, statInt(ownerAttrs, Stat.strength));
       base.put(Stat.dexterity, statInt(ownerAttrs, Stat.dexterity));
+      // SUNITDMG applies these from the skill owner, independently of the
+      // damage packet stored on the missile. Preserve their cast-time value
+      // in the Java projectile snapshot so Cold Mastery and item pierce are
+      // not lost when CombatSystem receives the snapshot as its attacker.
+      copyStat(ownerAttrs, base, Stat.item_pierce_fire);
+      copyStat(ownerAttrs, base, Stat.passive_fire_pierce);
+      copyStat(ownerAttrs, base, Stat.item_pierce_ltng);
+      copyStat(ownerAttrs, base, Stat.passive_ltng_pierce);
+      copyStat(ownerAttrs, base, Stat.item_pierce_cold);
+      copyStat(ownerAttrs, base, Stat.passive_cold_pierce);
+      copyStat(ownerAttrs, base, Stat.item_pierce_pois);
+      copyStat(ownerAttrs, base, Stat.passive_pois_pierce);
+      copyStat(ownerAttrs, base, Stat.passive_mag_pierce);
     }
     base.put(Stat.mindamage, physicalMin);
     base.put(Stat.maxdamage, physicalMax);

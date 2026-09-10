@@ -285,6 +285,10 @@ public class CombatSystem {
     /** 是否免疫各元素 */
     public boolean[] immuneElemental = new boolean[DAMAGE_TYPE_COUNT];
 
+    /** Native cold-state duration gates evaluated after cold resistance. */
+    public boolean cannotBeFrozen;
+    public boolean halfFreezeDuration;
+
     /** Native elemental absorption, applied after resistance. */
     public int[] absorbPercent = new int[DAMAGE_TYPE_COUNT];
     public int[] absorbFlat = new int[DAMAGE_TYPE_COUNT];
@@ -1176,6 +1180,8 @@ public class CombatSystem {
     d.absorbFlat[DAMAGE_LIGHTNING] = statInt(defender, Stat.item_absorblight, 0);
     d.absorbFlat[DAMAGE_COLD] = statInt(defender, Stat.item_absorbcold, 0);
     d.absorbFlat[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic, 0);
+    d.cannotBeFrozen = statInt(defender, Stat.item_cannotbefrozen, 0) != 0;
+    d.halfFreezeDuration = statInt(defender, Stat.item_halffreezeduration, 0) != 0;
     if (defenderStates != null) {
       d.resistances[DAMAGE_PHYSICAL] += defenderStates.getTotalPhysicalResistModifier();
       d.resistances[DAMAGE_FIRE] += defenderStates.getTotalResistModifier(0);
@@ -1300,7 +1306,13 @@ public class CombatSystem {
         defender.isUndead && attacker.bypassUndeadPhysicalResistance);
 
     // 7. 计算元素伤害
-    result.coldDuration = Math.max(0, attacker.coldLength);
+    // D2Game runs ColdLen through the same cold-resistance/pierce row as
+    // cold damage, then applies Cannot Be Frozen / Half Freeze Duration.
+    result.coldDuration = applyElementalResistance(
+        Math.max(0, attacker.coldLength), defender, DAMAGE_COLD,
+        attacker.elementalPierce[DAMAGE_COLD]);
+    if (defender.cannotBeFrozen) result.coldDuration = 0;
+    else if (defender.halfFreezeDuration) result.coldDuration /= 2;
     result.poisonDuration = Math.max(0, attacker.poisonLength);
     for (int i = 1; i < DAMAGE_TYPE_COUNT; i++) {
       int elemDamage = calculateElementalDamage(attacker, i);
