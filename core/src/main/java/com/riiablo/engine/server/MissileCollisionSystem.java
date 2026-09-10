@@ -144,6 +144,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
 
+    if (missile.thunderStormStrike) {
+      processThunderStormStrike(entityId, missile, position);
+      return;
+    }
+
     if (missile.blizzardCenter) {
       processBlizzardCenter(entityId, missile, position, elapsedFrames);
       return;
@@ -446,6 +451,25 @@ public class MissileCollisionSystem extends IteratingSystem {
         entityId, delay.ownerId, targetId, delay.nativeFrame,
         delayPosition.position.x, delayPosition.position.y);
     world.delete(entityId);
+  }
+
+  /** Native Thunder Storm creates a strike at the saved target and calls the
+   * ordinary missile damage handler immediately (SrvDo029). */
+  private void processThunderStormStrike(int entityId, Missile strike, Position position) {
+    int targetId = strike.targetId;
+    if (targetId < 0 || !world.getEntityManager().isActive(targetId)
+        || !mPosition.has(targetId) || !mAttributesWrapper.has(targetId)
+        || !isAlive(targetId)) {
+      world.delete(entityId);
+      return;
+    }
+    Vector2 targetPoint = mPosition.get(targetId).position;
+    checkCollisionWithEntity(entityId, strike, targetPoint, targetPoint,
+        targetId, mPosition.get(targetId));
+    log.debug("[SORCERESS_THUNDER_STORM] phase=strike_resolve missileId={} owner={} target={} "
+            + "frame={} damageSnapshot={}",
+        entityId, strike.ownerId, targetId, strike.nativeFrame, strike.damageSnapshot);
+    if (world.getEntityManager().isActive(entityId)) world.delete(entityId);
   }
 
   /** Native MISSMODE_SrvDo10_BlizzardCenter. */

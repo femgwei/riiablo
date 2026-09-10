@@ -138,6 +138,10 @@
   `meteorcenter`，固定 60 帧后按 `aurarangecalc` 对范围内目标结算一次火焰冲击，
   再按原生 18 个偏移和 `HitPar2` 生成持久 `meteorfire` 火场；火场时长读取
   `Param3 + (等级-1)*Param4`，统一复用火焰精通、穿透、抗性、吸收、PvP 和死亡事件。
+- 法师 Thunder Storm 已接入原生 `SrvSt13/SrvDo029` 与 `MISSMODE_SrvDo03`：施法建立/刷新
+  `THUNDERSTORM` 状态，周期按 1.10f `perdelay`、`Param6` 搜索半径和合法目标规则选敌，
+  生成一次性 `thunderstorm1` 权威闪电导弹；伤害快照复用 Lightning Mastery、抗性、吸收、
+  PvP、状态和死亡链，客户端只消费服务端导弹。新增 `SorceressThunderStormIntegrationTest`。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -219,7 +223,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 94% | 6% | 0.7% | 死灵骨毒/召唤链、圣骑士技能与法师 Blizzard/Frozen Orb/Meteor 已接通；Thunder Storm 和统一实机表现仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 95% | 5% | 0.6% | 死灵骨毒/召唤链、圣骑士技能与法师 Blizzard/Frozen Orb/Meteor/Thunder Storm 已接通；统一实机表现仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -244,7 +248,7 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 96% | 4% | Thunder Storm 等复杂链及统一多人表现验收 |
+| 法师 Sorceress | 98% | 2% | 复杂技能尾项及统一多人表现验收 |
 
 职业技能专项整体按 **约 97% 完成、约 3% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
@@ -794,6 +798,11 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   使用 8.8 定点伤害并对齐火焰精通/穿透、火免、抗性/吸收/PvP、`DamageRate` 缩放 MDR
   和 `SrvDmg03` 受击反应。36 个定向用例通过；130 项扩大回归仅保留既有 Throwing
   Mastery 9/6 断言差异，D2GS 编译和真实 1.10f `offscreenCamp` 通过。未修改网络 schema。
+- 2026-09-11：完成法师 Thunder Storm `SrvSt13/SrvDo029` 首轮原生移植。`SrvDo029` 建立/刷新
+  自身 `THUNDERSTORM` 状态，周期阶段按 `perdelay` 和 `Param6` 选择同 Zone 的合法敌对
+  目标，创建 `thunderstorm1` 临时权威导弹并在同一服务端链结算；不攻击城镇、NPC、无效
+  Unit 或友军，目标死亡/离区后下一周期重新选敌。新增 `SorceressThunderStormIntegrationTest`，
+  覆盖原生函数编号、状态、周期导弹与伤害；定向测试通过。
 
 ## 当前下一项
 
@@ -872,9 +881,9 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-当前小步：法师 Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery、三种冰甲
-与 Teleport `SrvDo027` 原生权威位移链已完成，下一项处理复杂技能与统一
-客户端表现验收。
+当前小步：法师 Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery、三种冰甲、
+Teleport `SrvDo027` 与 Thunder Storm `SrvSt13/SrvDo029` 原生权威链已完成，下一项处理复杂
+技能与统一客户端表现验收。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。

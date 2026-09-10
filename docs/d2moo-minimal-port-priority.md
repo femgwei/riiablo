@@ -94,7 +94,8 @@ Andariel 和对象 `stateFlags` 表现。
 Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与三种冰甲已完成首轮核对，
 Teleport `SrvDo027` 原生权威位移链已完成（Level/Zone、飞行碰撞、footprint 安全落点、
 Box2D/RoomEx 与 `SYNC_WARPED`），Blizzard `SrvDo028/MISSMODE_SrvDo10` 也已完成首轮；
-下一项为 Frozen Orb，随后处理 Meteor、Thunder Storm 和复杂技能的多人表现链。
+Frozen Orb、Meteor、Thunder Storm 原生链均已接通，下一项转入复杂技能的多人表现链和
+统一实机表现验收。
 
 ## 工程约束
 

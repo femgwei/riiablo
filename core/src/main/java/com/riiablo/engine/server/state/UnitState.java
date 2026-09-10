@@ -194,6 +194,9 @@ public class UnitState {
   public int periodicDelayFrames;
   public int periodicCountdownFrames;
 
+  /** Native Thunder Storm skill Param1 equivalent (last struck unit). */
+  public int thunderStormTargetId;
+
   //==========================================================================
   // 状态标志
   //==========================================================================
@@ -272,6 +275,7 @@ public class UnitState {
     poisonLengthOverride = 0;
     periodicDelayFrames = 0;
     periodicCountdownFrames = -1;
+    thunderStormTargetId = -1;
 
     isNew = true;
     needsSync = false;
@@ -807,6 +811,7 @@ public class UnitState {
     this.poisonLengthOverride = other.poisonLengthOverride;
     this.periodicDelayFrames = other.periodicDelayFrames;
     this.periodicCountdownFrames = other.periodicCountdownFrames;
+    this.thunderStormTargetId = other.thunderStormTargetId;
     
     this.isNew = other.isNew;
     this.needsSync = other.needsSync;

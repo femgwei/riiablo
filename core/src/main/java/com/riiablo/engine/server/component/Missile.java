@@ -160,6 +160,9 @@ public class Missile extends PooledComponent {
   /** Native meteorcenter countdown/impact controller (SrvHit14). */
   public boolean meteorCenter;
 
+  /** Native Thunder Storm SrvDo029 strike resolved against one saved target. */
+  public boolean thunderStormStrike;
+
   /** D2MOO SrvDo35 periodically bends Royal Strike's chaos-ice path. */
   public boolean chaosIcePath;
   public int chaosIceSeed;
@@ -272,6 +275,7 @@ public class Missile extends PooledComponent {
     frozenOrbTargetX = 0;
     frozenOrbTargetY = 0;
     meteorCenter = false;
+    thunderStormStrike = false;
     chaosIcePath = false;
     chaosIceSeed = 0;
     chaosIceX = 0;

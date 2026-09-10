@@ -219,6 +219,7 @@ public class StateFlags {
                check(StateId.HOLYFIRE) ||
                check(StateId.THORNS) ||
                check(StateId.DEFIANCE) ||
+               check(StateId.THUNDERSTORM) ||
                check(StateId.BLESSEDAIM) ||
                check(StateId.CONCENTRATION) ||
                check(StateId.HOLYSHOCK) ||

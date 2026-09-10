@@ -12,6 +12,7 @@ import com.riiablo.attributes.NativeStatResolver;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.codec.excel.States;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Angle;
@@ -421,6 +422,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
         && event.srvdofunc != 60 && event.srvdofunc != 62 && event.srvdofunc != 63
         && event.srvdofunc != 20 && event.srvdofunc != 73 && event.srvdofunc != 80
+        && event.srvdofunc != 29
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
@@ -434,6 +436,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
         && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
         && skill.srvdofunc != 20 && skill.srvdofunc != 73 && skill.srvdofunc != 80
+        && skill.srvdofunc != 29
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
         && !PaladinSkills.isHolyBolt(skill)) {
@@ -443,6 +446,15 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    // D2MOO SKILLS_SrvDo029_ThunderStorm installs/refreshes the aura.  The
+    // periodic strike itself is emitted by StateUpdater so it runs in the
+    // authoritative fixed-tick phase instead of the render/cast callback.
+    if (event.srvdofunc == 29 || skill.srvdofunc == 29
+        || event.skillId == SkillId.THUNDER_STORM
+        || "Thunder Storm".equalsIgnoreCase(skill.skill)) {
+      applyThunderStormState(event, skill, skillLevel);
+      return;
+    }
     if (event.srvdofunc == 20 || skill.srvdofunc == 20) {
       applyStaticField(event, skill, skillLevel, start);
       return;
@@ -789,6 +801,50 @@ public class ServerSkillSystem extends PassiveSystem {
       ordinal++;
     }
     if (created > 0) consumeRangedAmmoForSkill(event, skill);
+  }
+
+  /** Native SKILLS_SrvDo029: create or refresh the self Thunder Storm aura. */
+  private void applyThunderStormState(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId) || skill == null) {
+      log.warn("[SORCERESS_THUNDER_STORM] phase=reject source={} reason=missing_state_or_skill",
+          event.entityId);
+      return;
+    }
+    UnitStates unitStates = mUnitStates.get(event.entityId);
+    if (unitStates.stateList == null) unitStates.init(event.entityId);
+    int stateId = StateId.THUNDERSTORM;
+    if (skill.aurastate != null && !skill.aurastate.isEmpty()
+        && !"thunderstorm".equalsIgnoreCase(skill.aurastate.trim())) {
+      States.Entry row = Riiablo.files != null && Riiablo.files.States != null
+          ? Riiablo.files.States.get(skill.aurastate.trim()) : null;
+      if (row != null) stateId = row.id;
+    }
+    int duration = Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill, skillLevel,
+        name -> getSkillLevel(event.entityId, skillIdByName(name))));
+    int delay = SkillFormula.evaluate(skill.perdelay, skill, skillLevel,
+        name -> getSkillLevel(event.entityId, skillIdByName(name)));
+    if (delay <= 0) delay = Math.max(1, skill.Param != null && skill.Param.length > 0
+        ? skill.Param[0] : 25);
+    UnitState state = unitStates.stateList.addState(
+        stateId, duration, Math.max(1, skillLevel), event.entityId);
+    if (state == null) return;
+    state.sourceEntityId = event.entityId;
+    state.skillId = skill.Id;
+    state.periodicDelayFrames = delay;
+    state.periodicCountdownFrames = delay;
+    state.thunderStormTargetId = -1;
+    state.needsSync = true;
+    log.info("[SORCERESS_THUNDER_STORM] phase=state source={} skill={} level={} state={} "
+            + "duration={} delay={} range={} missile={}",
+        event.entityId, skill.Id, skillLevel, StateId.getName(stateId), duration, delay,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, skillLevel), skill.srvmissilea);
+  }
+
+  private int skillIdByName(String name) {
+    if (name == null || Riiablo.files == null || Riiablo.files.skills == null) return -1;
+    Skills.Entry entry = Riiablo.files.skills.get(name);
+    return entry != null ? entry.Id : -1;
   }
 
   /** D2MOO SrvDo020: immediate authoritative current-life area damage. */

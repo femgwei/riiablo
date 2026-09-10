@@ -737,6 +737,9 @@ public class Actioneer extends PassiveSystem {
                 skill, level, mAttributesWrapper.get(entityId).attrs));
         break;
       }
+      case 13: // SKILLS_SrvSt13_ThunderStorm: Param1/Param2 are owned by the aura path
+        log.debug("[SORCERESS_THUNDER_STORM] phase=start entity={} target={}", entityId, targetId);
+        break;
       case 16: { // SKILLS_SrvSt16_PoisonDagger
         preparePoisonDagger(entityId, targetId);
         break;

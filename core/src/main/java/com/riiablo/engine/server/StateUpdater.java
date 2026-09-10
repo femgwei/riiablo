@@ -22,6 +22,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.NativeTargeting;
@@ -553,6 +554,119 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
         entityId, skill.skill, aura.level, range, damageRange[0], damageRange[1], hits);
   }
 
+  /**
+   * Native SKILLS_SrvDo029_ThunderStorm periodic strike.  D2MOO runs the
+   * selector from the periodic-skill phase, creates one temporary
+   * {@code thunderstorm} missile at the chosen unit and immediately invokes
+   * SrvDmgHitHandler.  We retain the missile as a one-tick authoritative
+   * carrier so the normal elemental resistance, mastery, absorb, PvP and
+   * death paths remain shared with every other lightning skill.
+   */
+  private void processThunderStorm(int entityId, StateList states) {
+    UnitState aura = states.getState(StateId.THUNDERSTORM);
+    if (aura == null || aura.skillId < 0 || factory == null
+        || !mPosition.has(entityId) || !isAlive(entityId)) return;
+    if (aura.periodicCountdownFrames > 0) {
+      aura.periodicCountdownFrames--;
+      if (aura.periodicCountdownFrames > 0) return;
+    }
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(aura.skillId) : null;
+    if (skill == null) {
+      aura.expired = true;
+      return;
+    }
+    int delay = Math.max(1, aura.periodicDelayFrames);
+    aura.periodicCountdownFrames = delay;
+    Map.Zone sourceZone = map != null ? map.getZone(mPosition.get(entityId).position) : null;
+    if (sourceZone != null && sourceZone.isTown()) return;
+    int range = Math.max(0, SkillFormula.evaluate(skill.aurarangecalc, skill, aura.level,
+        name -> baseSkillLevel(entityId, name)));
+    // 1.10f leaves AuraRangeCalc blank for Thunder Storm; the native target
+    // selector receives Param6 as its bounded search radius/type argument.
+    if (range <= 0 && skill.Param != null && skill.Param.length > 5) {
+      range = Math.max(1, skill.Param[5]);
+    }
+    if (range <= 0) return;
+    int targetId = selectThunderStormTarget(entityId, aura, range, skill.aurafilter, sourceZone);
+    if (targetId < 0 || !mPosition.has(targetId)) {
+      aura.thunderStormTargetId = -1;
+      return;
+    }
+    String missileName = skill.srvmissilea != null && !skill.srvmissilea.isEmpty()
+        ? skill.srvmissilea : "thunderstorm";
+    Missiles.Entry row = Riiablo.files.Missiles.get(missileName);
+    if (row == null) {
+      log.warn("[SORCERESS_THUNDER_STORM] phase=strike_reject source={} target={} "
+              + "reason=missing_missile missile={}", entityId, targetId, missileName);
+      return;
+    }
+    Vector2 target = mPosition.get(targetId).position;
+    int missileId = factory.createMissile(row, Vector2.X, target, entityId);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+    Missile strike = mMissile.get(missileId);
+    strike.thunderStormStrike = true;
+    strike.targetId = targetId;
+    strike.skillId = skill.Id;
+    strike.damageLevel = Math.max(1, aura.level);
+    strike.nativeLifetimeFrames = 1;
+    strike.range = 0f;
+    if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
+    Attributes owner = mAttributesWrapper.has(entityId)
+        ? mAttributesWrapper.get(entityId).attrs : null;
+    MissileDamageResolver.initializeSkill(strike, skill, owner, strike.damageLevel,
+        name -> baseSkillLevel(entityId, name), states);
+    aura.thunderStormTargetId = targetId;
+    aura.needsSync = true;
+    log.info("[SORCERESS_THUNDER_STORM] phase=strike source={} target={} missileId={} "
+            + "skill={} level={} range={} delay={} damageSnapshot={}",
+        entityId, targetId, missileId, skill.Id, strike.damageLevel, range, delay,
+        strike.damageSnapshot);
+  }
+
+  private int selectThunderStormTarget(int sourceId, UnitState aura, int range,
+      int filter, Map.Zone sourceZone) {
+    int previous = aura.thunderStormTargetId;
+    float range2 = range * (float) range;
+    IntBag candidates = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int best = -1;
+    float bestDistance = Float.MAX_VALUE;
+    int fallback = -1;
+    float fallbackDistance = Float.MAX_VALUE;
+    Vector2 origin = mPosition.get(sourceId).position;
+    for (int i = 0; i < candidates.size(); i++) {
+      int targetId = candidates.get(i);
+      boolean hostile = isHostile(sourceId, targetId)
+          || (mPlayer.has(sourceId) && mMonster.has(targetId));
+      if (targetId == sourceId || !isAlive(targetId) || !hostile
+          || !mPlayer.has(targetId) && !mMonster.has(targetId)) continue;
+      if (mNativeUnitFlags.has(targetId)
+          && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) continue;
+      if (mMonster.has(targetId)) {
+        Monster target = mMonster.get(targetId);
+        if (target.monstats != null && target.monstats.npc) continue;
+      }
+      if (map != null) {
+        Map.Zone zone = map.getZone(mPosition.get(targetId).position);
+        if (zone != null && zone.isTown()) continue;
+        if (sourceZone != null && zone != null && zone != sourceZone) continue;
+      }
+      float distance = origin.dst2(mPosition.get(targetId).position);
+      if (distance > range2) continue;
+      if (distance < fallbackDistance || (distance == fallbackDistance && targetId < fallback)) {
+        fallback = targetId;
+        fallbackDistance = distance;
+      }
+      if (targetId == previous) continue;
+      if (distance < bestDistance || (distance == bestDistance && targetId < best)) {
+        best = targetId;
+        bestDistance = distance;
+      }
+    }
+    return best >= 0 ? best : fallback;
+  }
+
   /** Consumes Bone Armor after physical resistance but before life is removed. */
   private void absorbBoneArmor(DamageEvent event, StateList victimStates) {
     UnitState armor = victimStates.getState(StateId.BONEARMOR);
@@ -663,6 +777,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     synchronizeSorceressPassives(entityId, stateList);
 
     processHolyFireAura(entityId, stateList);
+    processThunderStorm(entityId, stateList);
     processBladeShield(entityId, stateList);
     processBlazeTrail(entityId, stateList);
     processSpiderLayTrail(entityId, stateList);

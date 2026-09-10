@@ -33,7 +33,7 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（法师 Meteor 原生落点/爆炸导弹链，待提交）
+- 当前功能提交：本文件所在 `HEAD`（法师 Thunder Storm 原生周期闪电链，待提交）
 - 上一功能基线：`f41f6eff`（法师 Frozen Orb 原生分裂/轨迹导弹链）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
@@ -87,8 +87,8 @@
   1.10f `:desktop:offscreenCamp` 均通过；完整 `:core:test` 仍有 109 个仓库既有资源
   fixture/旧断言失败（缺少 `core/src/test/resources/test` 文件及已记录的旧职业断言），
   与本次 Frozen Orb 定向用例无关，未据此回退其他模块。
-- 当前下一项：法师 Thunder Storm 原生选敌/周期闪电链；本 Chat 继续统一负责全部地图、
-  战斗、技能、物品、任务和多人模块。
+- 当前下一项：复杂技能的统一多人表现验收（优先 Hydra/区域导弹的客户端状态与实机观感）；
+  本 Chat 继续统一负责全部地图、战斗、技能、物品、任务和多人模块。
 - Iron Maiden/Life Tap 已接入服务端权威 `DamageEvent`：近战/导弹携带结算后的物理
   分量；反伤只响应近战且不会递归，Life Tap 按 `calc1` 恢复攻击者生命。定向测试和
   D2GS 编译通过，真实 1.10f `offscreenCamp` 营地启动门槛通过。
