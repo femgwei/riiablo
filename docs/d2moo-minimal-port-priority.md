@@ -98,6 +98,8 @@ Frozen Orb、Meteor、Thunder Storm 原生链均已接通，下一项转入复�
 统一实机表现验收。
 - Hydra `SrvSt14/SrvDo144` 已接通首轮：服务端按原生三点偏移创建有所有权的 Hydra
   实体并同步持续时间；下一步继续区域导弹/持续区域技能的双客户端表现验收。
+- 德鲁伊 Firestorm `SrvDo117` 已接通首轮：依据 `Calc1` 创建多条服务端火焰流，施法
+  时固定火焰伤害快照并同步多人实体；下一项为 Fissure/Volcano 区域导弹链。
 
 ## 工程约束
 

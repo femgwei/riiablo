@@ -423,6 +423,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 60 && event.srvdofunc != 62 && event.srvdofunc != 63
         && event.srvdofunc != 20 && event.srvdofunc != 73 && event.srvdofunc != 80
         && event.srvdofunc != 29
+        && event.srvdofunc != 117
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && event.srvdofunc != 144
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
@@ -438,6 +439,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
         && skill.srvdofunc != 20 && skill.srvdofunc != 73 && skill.srvdofunc != 80
         && skill.srvdofunc != 29
+        && skill.srvdofunc != 117
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
         && skill.srvdofunc != 144
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
@@ -648,6 +650,11 @@ public class ServerSkillSystem extends PassiveSystem {
         || event.srvdofunc == 115 || skill.srvdofunc == 115
         || event.srvdofunc == 119 || skill.srvdofunc == 119) {
       spawnDruidSummon(event, skill, skillLevel, start);
+      return;
+    }
+    if (event.srvdofunc == 117 || skill.srvdofunc == 117
+        || event.skillId == SkillId.FIRESTORM) {
+      spawnDruidFirestorm(event, skill, skillLevel, start);
       return;
     }
     // D2MOO SrvSt14/SrvDo144 creates three stationary Hydra units at the
@@ -2317,6 +2324,52 @@ public class ServerSkillSystem extends PassiveSystem {
             + "created={} max={} duration={} target=({}, {})",
         event.entityId, event.skillId, summon.Id, petType, skillLevel, created,
         petMax, duration, target.x, target.y);
+  }
+
+  /** Native {@code SKILLS_SrvDo117_Firestorm} multi-stream release. */
+  private void spawnDruidFirestorm(SkillDoEvent event, Skills.Entry skill,
+      int skillLevel, Vector2 start) {
+    String missileName = firstNonEmpty(skill.srvmissilea,
+        firstNonEmpty(skill.srvmissile, skill.cltmissilea));
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[DRUID_FIRESTORM] phase=reject source={} skill={} reason=missing_missile name={}",
+          event.entityId, skill.Id, missileName);
+      return;
+    }
+    Vector2 target = resolveTargetPoint(event, start, new Vector2());
+    Vector2 base = target.sub(start);
+    if (base.isZero(0.0001f)) base.set(Vector2.X);
+    base.nor();
+
+    // SrvDo117 passes the negative Calc1 sub-missile count to the native
+    // ChargedBolt path.  Converted rows occasionally expose a positive
+    // count, so accept either representation and retain the native five-ray
+    // fallback when the formula is absent.
+    int count = Math.abs(SkillFormula.evaluate(skill.calc1, skill, skillLevel));
+    if (count <= 0) count = Math.abs(firstParam(skill, 0, 5));
+    count = Math.max(1, Math.min(16, count));
+    int created = 0;
+    IntSet sharedHitTargets = new IntSet();
+    for (int i = 0; i < count; i++) {
+      Vector2 direction = chargedBoltDirection(base, i, count, new Vector2());
+      int missileId = createMissile(missile, direction, start, event.entityId,
+          sharedHitTargets, skillLevel);
+      if (missileId < 0) continue;
+      // Firestorm is an elemental skill-owned stream.  Its native hit
+      // callback can be marked as an explosion in Missiles.txt, but the
+      // Skills.txt fire packet must still be snapshotted at cast time.
+      if (mAttributesWrapper.has(event.entityId)) {
+        MissileDamageResolver.initializeSorceressFireArea(mMissile.get(missileId), skill,
+            mAttributesWrapper.get(event.entityId).attrs, mPlayer.has(event.entityId),
+            skillLevel, name -> getBaseSkillLevel(event.entityId, name),
+            stateList(event.entityId));
+      }
+      created++;
+    }
+    log.info("[DRUID_FIRESTORM] phase=create source={} skill={} level={} missile={} "
+            + "requested={} created={} calc1={}",
+        event.entityId, skill.Id, skillLevel, missile.Missile, count, created, skill.calc1);
   }
 
   private static void applyDruidSummonStats(Attributes attrs, Skills.Entry skill, int level,

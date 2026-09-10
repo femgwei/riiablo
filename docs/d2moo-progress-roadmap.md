@@ -147,6 +147,10 @@
   创建三个有所有权的 Hydra 怪物实体，统一使用 PetType 上限、生命周期和多人实体同步；
   Hydra 自身继续通过原生怪物 AI 发射配置的火焰导弹。新增 Hydra 三实体/持续时间/偏移
   契约测试；真实离屏营地待补齐 1.10f MPQ 后复验。
+- 德鲁伊 Firestorm 已接入原生 `SrvDo117` 首轮：按真实 Skills/Missiles 行选择服务端
+  火焰导弹，依据 `Calc1` 释放多条扇形火焰流，并在施法时固定火焰伤害、精通、穿透和
+  DamageRate 快照，所有流由服务端实体同步给多人客户端。新增
+  `DruidFirestormIntegrationTest`；与 Shock Wave 回归、D2GS 编译通过。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -251,7 +255,7 @@
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
-| 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
+| 德鲁伊 Druid | 92% | 8% | Firestorm 已完成首轮；Fissure/Volcano/Armageddon/Hurricane、召唤 AI 深化和持续区域技能仍待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
 | 法师 Sorceress | 98% | 2% | Hydra 已接通服务端实体链，复杂区域技能及统一多人表现验收仍待补 |
