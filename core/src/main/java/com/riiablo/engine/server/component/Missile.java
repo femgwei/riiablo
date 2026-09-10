@@ -165,6 +165,11 @@ public class Missile extends PooledComponent {
   public int druidFissureNextFrame;
   public int druidFissureSeed;
 
+  /** Native SrvDo123 Volcano eruption controller. */
+  public boolean druidVolcanoController;
+  public int druidVolcanoNextFrame;
+  public int druidVolcanoSeed;
+
   /** Native Thunder Storm SrvDo029 strike resolved against one saved target. */
   public boolean thunderStormStrike;
 
@@ -283,6 +288,9 @@ public class Missile extends PooledComponent {
     druidFissureController = false;
     druidFissureNextFrame = 0;
     druidFissureSeed = 0;
+    druidVolcanoController = false;
+    druidVolcanoNextFrame = 0;
+    druidVolcanoSeed = 0;
     thunderStormStrike = false;
     chaosIcePath = false;
     chaosIceSeed = 0;

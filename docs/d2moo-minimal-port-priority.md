@@ -102,6 +102,8 @@ Frozen Orb、Meteor、Thunder Storm 原生链均已接通，下一项转入复�
   时固定火焰伤害快照并同步多人实体；下一项为 Fissure/Volcano 区域导弹链。
 - 德鲁伊 Fissure `SrvDo028` 已接通首轮：服务端创建控制导弹并按原生子导弹数据周期
   铺设火焰裂缝，生命周期和伤害快照纳入多人同步；下一项为 Volcano。
+- 德鲁伊 Volcano `SrvDo123` 已接通首轮：服务端创建固定生命周期的喷发控制导弹，
+  以确定性种子生成周期火焰子导弹并同步多人伤害快照；下一项为 Armageddon/Hurricane。
 
 ## 工程约束
 

@@ -424,6 +424,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 20 && event.srvdofunc != 73 && event.srvdofunc != 80
         && event.srvdofunc != 29
         && event.srvdofunc != 117
+        && event.srvdofunc != 123
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && event.srvdofunc != 144
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
@@ -440,6 +441,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 20 && skill.srvdofunc != 73 && skill.srvdofunc != 80
         && skill.srvdofunc != 29
         && skill.srvdofunc != 117
+        && skill.srvdofunc != 123
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
         && skill.srvdofunc != 144
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
@@ -682,6 +684,11 @@ public class ServerSkillSystem extends PassiveSystem {
       } else {
         spawnMeteor(event, skill, start);
       }
+      return;
+    }
+    if (event.srvdofunc == 123 || skill.srvdofunc == 123
+        || event.skillId == SkillId.VOLCANO) {
+      spawnDruidVolcanoController(event, skill, start);
       return;
     }
     if (event.skillId == SkillId.CHAIN_LIGHTNING
@@ -1789,6 +1796,46 @@ public class ServerSkillSystem extends PassiveSystem {
         mPlayer.has(event.entityId), level,
         name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
     log.info("[DRUID_FISSURE] phase=controller source={} skill={} level={} missile={} "
+            + "id={} lifetime={} target=({}, {})",
+        event.entityId, skill.Id, level, row.Missile, id,
+        controller.nativeLifetimeFrames, target.x, target.y);
+  }
+
+  /** Native {@code SKILLS_SrvDo123_Volcano}: one stationary eruption controller. */
+  private void spawnDruidVolcanoController(SkillDoEvent event, Skills.Entry skill,
+      Vector2 caster) {
+    String missileName = firstNonEmpty(skill.srvmissilea,
+        firstNonEmpty(skill.srvmissile, skill.cltmissilea));
+    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (row == null) {
+      log.warn("[DRUID_VOLCANO] phase=reject source={} reason=missing_controller name={}",
+          event.entityId, missileName);
+      return;
+    }
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    if (isTownPoint(event.entityId, target)) {
+      log.info("[DRUID_VOLCANO] phase=reject source={} reason=town target=({}, {})",
+          event.entityId, target.x, target.y);
+      return;
+    }
+    int level = Math.max(1, getSkillLevel(event.entityId, event.skillId));
+    int id = createMissile(row, Vector2.X, target, event.entityId, null, level);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile controller = mMissile.get(id);
+    controller.skillId = skill.Id;
+    controller.damageLevel = level;
+    controller.nativeLifetimeFrames = Math.max(1, nativeMissileRange(row, level));
+    controller.druidVolcanoController = true;
+    controller.druidVolcanoNextFrame = 1;
+    controller.druidVolcanoSeed = event.entityId * 1103515245 + skill.Id * 31 + level;
+    controller.range = 0f;
+    if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+    Attributes owner = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    MissileDamageResolver.initializeSorceressFireArea(controller, skill, owner,
+        mPlayer.has(event.entityId), level,
+        name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
+    log.info("[DRUID_VOLCANO] phase=controller source={} skill={} level={} missile={} "
             + "id={} lifetime={} target=({}, {})",
         event.entityId, skill.Id, level, row.Missile, id,
         controller.nativeLifetimeFrames, target.x, target.y);

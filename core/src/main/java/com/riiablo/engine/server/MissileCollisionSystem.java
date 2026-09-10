@@ -169,6 +169,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       processDruidFissureController(entityId, missile, position, elapsedFrames);
       return;
     }
+    if (missile.druidVolcanoController) {
+      processDruidVolcanoController(entityId, missile, position);
+      return;
+    }
 
     // D2MOO SrvDo20 retargets Blade Creeper's missile path to its controller
     // every frame. The stored damage owner remains the casting player.
@@ -415,6 +419,58 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (names == null) return null;
     for (String name : names) if (name != null && !name.isEmpty()) return name;
     return null;
+  }
+
+  /** Native Volcano missile mode: periodic deterministic upward eruptions. */
+  private void processDruidVolcanoController(int entityId, Missile controller,
+      Position position) {
+    if (controller.nativeFrame >= controller.nativeLifetimeFrames) {
+      world.delete(entityId);
+      return;
+    }
+    if (controller.nativeFrame < controller.druidVolcanoNextFrame) return;
+    controller.druidVolcanoNextFrame += 6;
+    String name = firstMissileName(controller.missile != null
+        ? controller.missile.SubMissile : null);
+    if ((name == null || name.isEmpty()) && controller.missile != null) {
+      name = firstMissileName(controller.missile.HitSubMissile);
+    }
+    if ((name == null || name.isEmpty()) && controller.missile != null) {
+      name = firstMissileName(controller.missile.CltSubMissile);
+    }
+    if (name == null || name.isEmpty() || factory == null) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    if (row == null) return;
+
+    NativeRng rng = new NativeRng(controller.druidVolcanoSeed);
+    controller.druidVolcanoSeed = rng.state();
+    float dx = ((rng.nextInt() & 7) - 3.5f) * 0.5f;
+    float dy = ((rng.nextInt() & 7) - 3.5f) * 0.5f;
+    Vector2 origin = tmpVec.set(position.position).add(dx, dy);
+    int childId = factory.createMissile(row, Vector2.Y, origin, controller.ownerId);
+    if (childId < 0 || !mMissile.has(childId)) return;
+    Missile eruption = mMissile.get(childId);
+    eruption.skillId = controller.skillId;
+    eruption.damageLevel = Math.max(1, controller.damageLevel);
+    eruption.persistent = true;
+    eruption.remainingFrames = Math.max(1, row.Range);
+    eruption.tickInterval = Math.max(1, row.DamageRate > 0 ? row.DamageRate : 5);
+    if (mVelocity.has(childId)) {
+      float speed = Math.max(0f, row.Vel);
+      mVelocity.get(childId).velocity.set(0f, 1f).setLength(speed);
+    }
+    Skills.Entry skill = controller.skillId >= 0 ? Riiablo.files.skills.get(controller.skillId) : null;
+    Attributes owner = mAttributesWrapper.has(controller.ownerId)
+        ? mAttributesWrapper.get(controller.ownerId).attrs : null;
+    if (skill != null) {
+      MissileDamageResolver.initializeSorceressFireArea(eruption, skill,
+          owner, mPlayer.has(controller.ownerId), eruption.damageLevel,
+          ignored -> 0, null);
+    }
+    log.debug("[DRUID_VOLCANO] phase=eruption controller={} child={} missile={} "
+            + "remaining={} tick={} position=({}, {})",
+        entityId, childId, name, eruption.remainingFrames, eruption.tickInterval,
+        origin.x, origin.y);
   }
 
   /**

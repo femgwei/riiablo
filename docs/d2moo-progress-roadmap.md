@@ -155,6 +155,9 @@
   创建 Fissure 控制导弹，按其 SubMissile/HitSubMissile 数据周期铺设火焰裂缝子导弹，
   统一保存火焰伤害快照、持续时间和 DamageRate，并通过权威导弹同步多人客户端。新增
   `DruidFissureIntegrationTest`；Fissure 的真实资源观感仍需离屏 MPQ 验收。
+- 德鲁伊 Volcano 已接入原生 `SrvDo123` 首轮：服务端在目标点创建固定生命周期的喷发
+  控制导弹，使用确定性种子周期生成火焰子导弹，保留 Skills/Missiles 火焰伤害、精通、
+  穿透、DamageRate 和多人实体生命周期；新增 `DruidVolcanoIntegrationTest`。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -259,7 +262,7 @@
 | 亚马逊 Amazon | 99% | 1% | 元素伤害、爆炸/冰冻、火场、毒标枪云雾与弹药闭环已完成；完整命中/受击动画仍待补齐 |
 | 刺客 Assassin | 100% | 0% | 服务端技能、状态、周期伤害、召唤/陷阱、聚气完成技和多人表现快照专项均已逐项接通；资源实机观感归入统一表现验收 |
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
-| 德鲁伊 Druid | 94% | 6% | Firestorm/Fissure 已完成首轮；Volcano/Armageddon/Hurricane、召唤 AI 深化和持续区域细节仍待补 |
+| 德鲁伊 Druid | 96% | 4% | Firestorm/Fissure/Volcano 已完成首轮；Armageddon/Hurricane、召唤 AI 深化和持续区域细节仍待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
 | 法师 Sorceress | 98% | 2% | Hydra 已接通服务端实体链，复杂区域技能及统一多人表现验收仍待补 |
