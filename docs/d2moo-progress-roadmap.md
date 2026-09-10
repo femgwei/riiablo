@@ -142,6 +142,11 @@
   `THUNDERSTORM` 状态，周期按 1.10f `perdelay`、`Param6` 搜索半径和合法目标规则选敌，
   生成一次性 `thunderstorm1` 权威闪电导弹；伤害快照复用 Lightning Mastery、抗性、吸收、
   PvP、状态和死亡链，客户端只消费服务端导弹。新增 `SorceressThunderStormIntegrationTest`。
+- 法师 Hydra 已接入原生 `SrvSt14/SrvDo144` 首轮：服务端验证目标区域非城镇后，按
+  `Param[0] + (等级-1)*Param[1]` 计算持续时间，在 `(-1,-1)/(0,0)/(1,-1)` 原生偏移
+  创建三个有所有权的 Hydra 怪物实体，统一使用 PetType 上限、生命周期和多人实体同步；
+  Hydra 自身继续通过原生怪物 AI 发射配置的火焰导弹。新增 Hydra 三实体/持续时间/偏移
+  契约测试；真实离屏营地待补齐 1.10f MPQ 后复验。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -208,7 +213,8 @@
    `SrvSt31/SrvDo067`、Vengeance `SrvSt35/SrvDo002` 及 Holy Shield
    `SrvSt36/SrvDo018` 也已接通。Conversion 与 Teleport 已完成，下一项同步进行全职业技能
   表现/动画验收。
-8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
+8. **复杂技能多人表现验收**：Hydra 服务端召唤链已完成首轮；下一步补区域导弹/持续区域
+   技能的双客户端实体、状态、Overlay 和离屏观感验收，再继续装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
 ## 模块完成度与剩余量
@@ -248,7 +254,7 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 98% | 2% | 复杂技能尾项及统一多人表现验收 |
+| 法师 Sorceress | 98% | 2% | Hydra 已接通服务端实体链，复杂区域技能及统一多人表现验收仍待补 |
 
 职业技能专项整体按 **约 97% 完成、约 3% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。

@@ -31,11 +31,43 @@ import com.riiablo.item.Item;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import java.util.ArrayList;
+import java.util.List;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
 
 /** Headless contract for the native Thunder Storm aura and periodic strike. */
 class SorceressThunderStormIntegrationTest extends RiiabloTest {
+  @Test
+  void hydraUsesNativeThreeOwnedSummons() {
+    Skills.Entry hydra = Riiablo.files.skills.get(SkillId.HYDRA);
+    assertNotNull(hydra);
+    assertEquals(14, hydra.srvstfunc);
+    assertEquals(144, hydra.srvdofunc);
+    assertTrue(hydra.summon != null && !hydra.summon.isEmpty());
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), new StateUpdater(),
+            new MissileCollisionSystem(), factory)
+        .build().register("factory", factory).register("map", new Map(0, 0)));
+    try {
+      int caster = player(world, 1);
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          caster, hydra.Id, Engine.INVALID_ENTITY, new Vector2(10f, 10f),
+          hydra.srvdofunc, hydra.cltdofunc));
+      assertEquals(3, factory.summons.size(),
+          "SrvDo144 creates the three native Hydra units");
+      assertEquals("hydra", factory.summons.get(0).petType.toLowerCase());
+      assertTrue(factory.summons.get(0).durationFrames > 0);
+      assertEquals(factory.summons.get(0).durationFrames,
+          factory.summons.get(1).durationFrames);
+      assertTrue(factory.summons.get(0).x != factory.summons.get(1).x
+          || factory.summons.get(0).y != factory.summons.get(1).y,
+          "Hydras use distinct native offsets");
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void nativeRowsUseThunderStormCallbacks() {
     Skills.Entry skill = Riiablo.files.skills.get(SkillId.THUNDER_STORM);
@@ -123,6 +155,20 @@ class SorceressThunderStormIntegrationTest extends RiiabloTest {
   private static final class RecordingFactory extends EntityFactory {
     final ArrayList<Missile> missiles = new ArrayList<>();
     final ArrayList<String> createdNames = new ArrayList<>();
+    final List<Summon> summons = new ArrayList<>();
+
+    static final class Summon {
+      final String petType;
+      final int durationFrames;
+      final float x;
+      final float y;
+      Summon(String petType, int durationFrames, float x, float y) {
+        this.petType = petType;
+        this.durationFrames = durationFrames;
+        this.x = x;
+        this.y = y;
+      }
+    }
 
     int count(String name) {
       int count = 0;
@@ -145,6 +191,12 @@ class SorceressThunderStormIntegrationTest extends RiiabloTest {
     }
     @Override public int createMissile(int id, Vector2 direction, Vector2 position) {
       return createMissile(id, direction, position, Engine.INVALID_ENTITY);
+    }
+    @Override public int createSummonedPet(int ownerId, MonStats.Entry summon,
+        String petType, int skillId, int skillLevel, int petMax, boolean passive,
+        int durationFrames, float x, float y) {
+      summons.add(new Summon(petType, durationFrames, x, y));
+      return 1000 + summons.size();
     }
     @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }
     @Override public int createMonster(int id, float x, float y) { return Engine.INVALID_ENTITY; }

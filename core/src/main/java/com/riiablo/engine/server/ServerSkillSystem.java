@@ -424,6 +424,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 20 && event.srvdofunc != 73 && event.srvdofunc != 80
         && event.srvdofunc != 29
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
+        && event.srvdofunc != 144
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
         && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -438,6 +439,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 20 && skill.srvdofunc != 73 && skill.srvdofunc != 80
         && skill.srvdofunc != 29
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
+        && skill.srvdofunc != 144
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
         && !PaladinSkills.isHolyBolt(skill)) {
       consumeRangedAmmoForSkill(event, skill);
@@ -646,6 +648,15 @@ public class ServerSkillSystem extends PassiveSystem {
         || event.srvdofunc == 115 || skill.srvdofunc == 115
         || event.srvdofunc == 119 || skill.srvdofunc == 119) {
       spawnDruidSummon(event, skill, skillLevel, start);
+      return;
+    }
+    // D2MOO SrvSt14/SrvDo144 creates three stationary Hydra units at the
+    // target point.  They are real owned monster units (not client-only
+    // missiles), so every client observes the same lifetime, ownership and
+    // later AI-fired Hydra bolts.
+    if (event.srvdofunc == 144 || skill.srvdofunc == 144
+        || event.skillId == SkillId.HYDRA) {
+      spawnSorceressHydra(event, skill, skillLevel, start);
       return;
     }
     if (event.srvdofunc == 24 || skill.srvdofunc == 24) {
@@ -2239,6 +2250,73 @@ public class ServerSkillSystem extends PassiveSystem {
             + "level={} petLevel={} max={} srvDo={} target=({}, {})",
         event.entityId, petId, summon.Id, petType, skill.skill, skillLevel, petLevel,
         petMax, skill.srvdofunc, target.x, target.y);
+  }
+
+  /**
+   * Native {@code SKILLS_SrvDo144_Hydra}.
+   *
+   * <p>The original routine validates the target room (Hydra cannot be cast
+   * in town), derives a single lifetime from {@code Param[0]/Param[1]}, then
+   * creates three owned Hydra monsters at the fixed offsets {@code (-1,-1)},
+   * {@code (0,0)} and {@code (1,-1)}.  The summon factory owns the PetType
+   * limit and authoritative network entity creation; the Hydra monster's
+   * native AI subsequently emits its configured fire bolts.</p>
+   */
+  private void spawnSorceressHydra(SkillDoEvent event, Skills.Entry skill,
+      int skillLevel, Vector2 caster) {
+    if (!mPlayer.has(event.entityId) || skill == null
+        || skill.summon == null || skill.summon.isEmpty()) {
+      log.warn("[HYDRA] phase=reject owner={} skill={} reason=missing_owner_or_summon",
+          event.entityId, event.skillId);
+      return;
+    }
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    if (map != null) {
+      Map.Zone zone = map.getZone(target.x, target.y);
+      if (zone != null && zone.isTown()) {
+        log.info("[HYDRA] phase=reject owner={} skill={} position=({}, {}) reason=town",
+            event.entityId, event.skillId, target.x, target.y);
+        return;
+      }
+    }
+    MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+    if (summon == null) {
+      log.warn("[HYDRA] phase=reject owner={} skill={} row={} reason=missing_monstats",
+          event.entityId, event.skillId, skill.summon);
+      return;
+    }
+
+    int duration = firstParam(skill, 0, 0) + Math.max(0, skillLevel - 1)
+        * firstParam(skill, 1, 0);
+    if (duration <= 0) {
+      duration = Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill, skillLevel));
+    }
+    int petMax = SkillFormula.evaluate(skill.petmax, skill, skillLevel,
+        name -> getBaseSkillLevel(event.entityId, name));
+    if (petMax <= 0) petMax = 6;
+    String petType = PetType.canonical(skill.pettype);
+    if (petType.isEmpty()) petType = "hydra";
+
+    // Exact D2MOO offsets are intentionally integer subtiles.  The server
+    // factory may nudge a point only when static collision makes it occupied.
+    final int[] offsetX = {-1, 0, 1};
+    final int[] offsetY = {-1, 0, -1};
+    int created = 0;
+    for (int i = 0; i < offsetX.length; i++) {
+      int petId = factory.createSummonedPet(event.entityId, summon, petType,
+          event.skillId, skillLevel, petMax, false, duration,
+          target.x + offsetX[i], target.y + offsetY[i]);
+      if (petId != Engine.INVALID_ENTITY) created++;
+    }
+    if (created == 0) {
+      log.warn("[HYDRA] phase=reject owner={} skill={} petType={} reason=create_failed",
+          event.entityId, event.skillId, petType);
+      return;
+    }
+    log.info("[HYDRA] phase=spawn owner={} skill={} summon={} petType={} level={} "
+            + "created={} max={} duration={} target=({}, {})",
+        event.entityId, event.skillId, summon.Id, petType, skillLevel, created,
+        petMax, duration, target.x, target.y);
   }
 
   private static void applyDruidSummonStats(Attributes attrs, Skills.Entry skill, int level,

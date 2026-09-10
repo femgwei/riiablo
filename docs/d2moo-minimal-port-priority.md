@@ -96,6 +96,8 @@ Teleport `SrvDo027` 原生权威位移链已完成（Level/Zone、飞行碰撞�
 Box2D/RoomEx 与 `SYNC_WARPED`），Blizzard `SrvDo028/MISSMODE_SrvDo10` 也已完成首轮；
 Frozen Orb、Meteor、Thunder Storm 原生链均已接通，下一项转入复杂技能的多人表现链和
 统一实机表现验收。
+- Hydra `SrvSt14/SrvDo144` 已接通首轮：服务端按原生三点偏移创建有所有权的 Hydra
+  实体并同步持续时间；下一步继续区域导弹/持续区域技能的双客户端表现验收。
 
 ## 工程约束
 
