@@ -543,6 +543,38 @@ public class Actioneer extends PassiveSystem {
     final Casting casting = mCasting.get(event.entityId);
     final int completedTargetId = casting.targetId;
     Skills.Entry completedSkill = Riiablo.files.skills.get(casting.skillId);
+
+    // Charge keeps its cast alive while the pathfinder closes the distance.
+    // Native SrvSt31 does not resolve impact until the unit is in melee range;
+    // retrying the animation here mirrors the server's end-of-animation loop.
+    if (casting.chargeInitialized && !casting.chargeHitProcessed) {
+      int chargeTarget = casting.chargeTargetId != Engine.INVALID_ENTITY
+          ? casting.chargeTargetId : casting.targetId;
+      if (chargeTarget == Engine.INVALID_ENTITY || !isAlive(chargeTarget)
+          || !mPosition.has(chargeTarget)) {
+        if (mVelocity.has(event.entityId)) mVelocity.get(event.entityId).clearModeSpeedBonus();
+        mCasting.remove(event.entityId);
+        if (mSequence.has(event.entityId)) mSequence.remove(event.entityId);
+        log.info("[PALADIN_CHARGE] phase=cancel source={} target={} reason=target_dead_or_missing",
+            event.entityId, chargeTarget);
+        return;
+      }
+      if (!isInMeleeRangeAtTick(event.entityId, chargeTarget, 3, currentCombatTick())) {
+        // Refresh the target path on every animation cycle. This mirrors the
+        // native dynamic-target branch and also recovers a path that was
+        // consumed when the unit reached an obstructed waypoint.
+        pathfinder.findPath(event.entityId, mPosition.get(chargeTarget).position, true, chargeTarget);
+        if (mSequence.has(event.entityId) && completedSkill != null && mClass.has(event.entityId)
+            && mMovementModes.has(event.entityId)) {
+          mSequence.get(event.entityId).sequence(
+              (byte) getMode(completedSkill, mClass.get(event.entityId).type),
+              mMovementModes.get(event.entityId).NU);
+        }
+        log.info("[PALADIN_CHARGE] phase=continue source={} target={} reason=approach",
+            event.entityId, chargeTarget);
+        return;
+      }
+    }
     
     // D2MOD: Check if target is dead after attack animation completes
     boolean targetDead = false;
@@ -627,6 +659,9 @@ public class Actioneer extends PassiveSystem {
     // before the death handler installs MODE_DT -> MODE_DD; otherwise the old
     // attack sequence receives the next AnimDataFinishedEvent and restores NU.
     if (event.victim != Engine.INVALID_ENTITY) {
+      if (mCasting.has(event.victim) && mVelocity.has(event.victim)) {
+        mVelocity.get(event.victim).clearModeSpeedBonus();
+      }
       if (mCasting.has(event.victim)) mCasting.remove(event.victim);
       if (mSequence.has(event.victim)) mSequence.remove(event.victim);
       if (mTarget.has(event.victim)) mTarget.remove(event.victim);
@@ -909,12 +944,51 @@ public class Actioneer extends PassiveSystem {
             entityId, emerged);
         break;
       }
-      case 31: // Charge: reserve the target path; damage is applied at keyframe
+      case 31: { // SKILLS_SrvSt31_Charge
+        Casting charge = mCasting.get(entityId);
+        Skills.Entry chargeSkill = charge != null ? Riiablo.files.skills.get(charge.skillId) : null;
+        if (mPlayer.has(entityId) && chargeSkill != null && chargeSkill.Id == SkillId.CHARGE) {
+          if (targetId == Engine.INVALID_ENTITY || !isAlive(targetId)
+              || !mPosition.has(targetId) || !canDamageRelation(entityId, targetId, true,
+                  isPlayerEntity(targetId))) {
+            log.info("[PALADIN_CHARGE] phase=start_reject source={} target={} reason=target_or_relation",
+                entityId, targetId);
+            mCasting.remove(entityId);
+            if (mSequence.has(entityId)) mSequence.remove(entityId);
+            break;
+          }
+          int level = Math.max(1, skillLevel(entityId, chargeSkill.Id));
+          charge.chargeInitialized = true;
+          charge.chargeHitProcessed = false;
+          charge.chargeTargetId = targetId;
+          charge.targetId = targetId;
+          charge.targetVec.set(mPosition.get(targetId).position);
+          charge.chargeVelocityBonusPercent = PaladinSkills.getChargeVelocityBonus(chargeSkill);
+          if (mVelocity.has(entityId)) {
+            mVelocity.get(entityId).setModeSpeedBonusPercent(charge.chargeVelocityBonusPercent);
+          }
+          boolean inRange = isInMeleeRangeAtTick(entityId, targetId, 3, currentCombatTick());
+          if (!inRange) {
+            boolean path = pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);
+            log.info("[PALADIN_CHARGE] phase=start source={} target={} level={} inRange={} path={} "
+                    + "velocityBonus={} damagePct={}", entityId, targetId, level, inRange, path,
+                charge.chargeVelocityBonusPercent,
+                PaladinSkills.getChargeDamagePercent(chargeSkill, level));
+          } else {
+            log.info("[PALADIN_CHARGE] phase=start source={} target={} level={} inRange=true "
+                    + "damagePct={}", entityId, targetId, level,
+                PaladinSkills.getChargeDamagePercent(chargeSkill, level));
+          }
+          break;
+        }
+        // Monster Charge uses the same native start function but has no player
+        // skill-move state; reserve a collision-safe path and resolve at impact.
         if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
           pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);
         }
         log.info("[MONSTER_CHARGE] phase=start entity={} target={}", entityId, targetId);
         break;
+      }
       case 37: { // Zeal/Fury/BloodLordFrenzy shared start function
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
@@ -1595,7 +1669,8 @@ public class Actioneer extends PassiveSystem {
         break;
       }
       case 67: { // native Charge: authoritative melee hit with skill damage bonus
-        resolveCharge(entityId, targetId);
+        if (mPlayer.has(entityId)) resolvePlayerCharge(entityId, targetId);
+        else resolveCharge(entityId, targetId);
         break;
       }
       case 64: { // native Sacrifice: weapon hit followed by caster self-damage
@@ -4169,6 +4244,71 @@ public class Actioneer extends PassiveSystem {
       }
     }
     return null;
+  }
+
+  /** Native player branch of SKILLS_SrvDo067_Charge. */
+  private void resolvePlayerCharge(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    int resolvedTarget = targetId != Engine.INVALID_ENTITY ? targetId
+        : casting != null ? casting.chargeTargetId : Engine.INVALID_ENTITY;
+    if (casting == null || skill == null || skill.Id != SkillId.CHARGE
+        || resolvedTarget == Engine.INVALID_ENTITY || !mAttributesWrapper.has(entityId)
+        || !mAttributesWrapper.has(resolvedTarget) || !mPosition.has(entityId)
+        || !mPosition.has(resolvedTarget) || !isAlive(entityId) || !isAlive(resolvedTarget)
+        || !canDamageRelation(entityId, resolvedTarget, true, isPlayerEntity(resolvedTarget))) {
+      log.info("[PALADIN_CHARGE] phase=hit_reject source={} target={} reason=invalid_context",
+          entityId, resolvedTarget);
+      return;
+    }
+    // Charge impact is evaluated on the tick where the unit reaches the target,
+    // not on the cast-start snapshot (the latter is intentionally out of range).
+    if (!isInMeleeRangeAtTick(entityId, resolvedTarget, 3, currentCombatTick())) {
+      log.info("[PALADIN_CHARGE] phase=hit_reject source={} target={} reason=not_in_range",
+          entityId, resolvedTarget);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(resolvedTarget).attrs;
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    Item weapon = activeAttackWeapon(entityId);
+    int minDamage = statInt(attacker, Stat.mindamage);
+    int maxDamage = Math.max(minDamage, statInt(attacker, Stat.maxdamage));
+    int attackRating = PaladinSkills.getChargeAttackRating(skill, level,
+        statInt(attacker, Stat.tohit));
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, true, isPlayerEntity(resolvedTarget), minDamage, maxDamage,
+        attackRating, stateList(entityId), stateList(resolvedTarget), isEntityMoving(resolvedTarget),
+        weaponMastery(entityId, weapon, false));
+    casting.chargeHitProcessed = true;
+    casting.chargeTargetId = resolvedTarget;
+    int bonus = Math.max(0, PaladinSkills.getChargeDamagePercent(skill, level));
+    float multiplier = (100f + bonus) / 100f;
+    if (!combat.hit || combat.blocked) {
+      if (combat.blocked) queueHitReaction(resolvedTarget, true);
+      if (mVelocity.has(entityId)) mVelocity.get(entityId).clearModeSpeedBonus();
+      log.info("[PALADIN_CHARGE] phase=hit_result source={} target={} result={} chance={} bonusPct={}",
+          entityId, resolvedTarget, combat.blocked ? "blocked" : "miss", combat.hitChance, bonus);
+      return;
+    }
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hp == null || hp.asFixed() <= 0f) return;
+    float before = hp.asFixed();
+    float totalDamage = combat.totalDamage * multiplier;
+    float physicalDamage = combat.physicalDamage * multiplier;
+    DamageEvent damageEvent = DamageEvent.obtainMelee(entityId, resolvedTarget,
+        totalDamage, physicalDamage);
+    events.dispatch(damageEvent);
+    float applied = Math.max(0f, damageEvent.damage);
+    hp.sub(applied);
+    if (hp.asFixed() < 0f) hp.set(0f);
+    applyCombatStates(entityId, resolvedTarget, combat);
+    if (mVelocity.has(entityId)) mVelocity.get(entityId).clearModeSpeedBonus();
+    log.info("[PALADIN_CHARGE] phase=hit_result source={} target={} result=hit chance={} "
+            + "damage={} hp={} -> {} bonusPct={} attackRating={}", entityId, resolvedTarget,
+        combat.hitChance, applied, before, hp.asFixed(), bonus, attackRating);
+    if (hp.asFixed() > 0f) queueHitReaction(resolvedTarget, false);
+    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, resolvedTarget));
   }
 
   /** D2MOO SKILLS_SrvDo067_Charge (monster branch). */

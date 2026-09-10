@@ -9,6 +9,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.PaladinSkills;
 import org.junit.jupiter.api.Test;
 
 /** Native data contract for the first Paladin melee tail skill. */
@@ -35,5 +36,23 @@ class PaladinMeleeSkillDataTest extends RiiabloTest {
     assertEquals(150, skill.srvdofunc);
     assertTrue(SkillFormula.evaluate(skill.calc2, skill, 1) > 0,
         "Smite must carry a native stun duration formula");
+  }
+
+  @Test
+  void chargeUsesNativeStartDoFunctionsAndScalesDamageAndAttackRating() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.CHARGE);
+    assertNotNull(skill);
+    assertEquals("Charge", skill.skill);
+    assertEquals(31, skill.srvstfunc);
+    assertEquals(67, skill.srvdofunc);
+    int level1Damage = PaladinSkills.getChargeDamagePercent(skill, 1);
+    int level5Damage = PaladinSkills.getChargeDamagePercent(skill, 5);
+    assertTrue(level1Damage > 0, "Charge must carry a native damage bonus formula");
+    assertTrue(level5Damage >= level1Damage, "Charge damage must not decrease with level");
+    int level1Ar = PaladinSkills.getChargeAttackRating(skill, 1, 100);
+    int level5Ar = PaladinSkills.getChargeAttackRating(skill, 5, 100);
+    assertTrue(level5Ar >= level1Ar, "Charge attack rating must not decrease with level");
+    assertTrue(PaladinSkills.getChargeVelocityBonus(skill) >= 0,
+        "Charge velocity bonus must be a non-negative native Param1 value");
   }
 }

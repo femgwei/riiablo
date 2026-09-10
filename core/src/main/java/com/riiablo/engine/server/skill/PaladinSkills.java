@@ -319,6 +319,27 @@ public final class PaladinSkills {
     return 100 + (skillLevel - 1) * 25;
   }
 
+  /** Native Charge SrvDo067 damage percentage (Skills.txt calc1). */
+  public static int getChargeDamagePercent(Skills.Entry skill, int skillLevel) {
+    if (skill == null || skill.Id != SkillId.CHARGE) return 0;
+    int value = SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel));
+    return value != 0 ? value : calculateChargeDamageBonus(skillLevel);
+  }
+
+  /** Native Charge attack-rating contribution from ToHit/LevToHit. */
+  public static int getChargeAttackRating(Skills.Entry skill, int skillLevel, int baseAttackRating) {
+    if (skill == null || skill.Id != SkillId.CHARGE) return baseAttackRating;
+    int level = Math.max(1, skillLevel);
+    return Math.max(0, baseAttackRating + skill.ToHit + (level - 1) * skill.LevToHit);
+  }
+
+  /** Native SrvSt31 movement bonus (Param1, percentage points). */
+  public static int getChargeVelocityBonus(Skills.Entry skill) {
+    if (skill == null || skill.Id != SkillId.CHARGE || skill.Param == null
+        || skill.Param.length == 0) return 0;
+    return Math.max(0, skill.Param[0]);
+  }
+
   /**
    * 复仇 - 元素伤害攻击
    * 

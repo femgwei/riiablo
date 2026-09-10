@@ -87,14 +87,18 @@
   缩短和尸体占用正式测试，专项回归与 D2GS 编译通过。
 - 圣骑士 Sacrifice 已接入原生 `SrvSt29/SrvDo064`：施法开始和攻击关键帧均使用固定
   tick 位置快照校验近战目标；命中伤害读取 `calc1`，随后按 `calc2` 从未截断物理伤害
-  对施法者执行自伤，并沿用统一命中、PvP、死亡事件链。下一步继续 Smite/Zeal/Charge/
-  Vengeance/Holy Shield/Conversion 尾项。
+  对施法者执行自伤，并沿用统一命中、PvP、死亡事件链。
 - 圣骑士 Smite 已接入玩家 `SrvDo150` 分支：强制装备盾牌、读取盾牌基础 `mindam/maxdam`，
   叠加 Holy Shield 技能伤害，按原生 `calc2` 施加眩晕，并沿用 tick 快照、统一命中、
   PvP 与死亡事件链；击退接口已调用，实际地图位移仍待碰撞系统验收。
 - 圣骑士 Zeal 已接入共享 `SrvSt37/SrvDo013` 多击链：按 `calc1` 初始化攻击次数（上限
   5），每个关键帧使用目标位置快照独立进行命中、伤害和目标重选，`calc2/calc3` 分别
   驱动伤害与命中等级加成；死亡、跨目标和剩余攻击次数会安全结束序列。
+- 圣骑士 Charge 已接入原生 `SrvSt31/SrvDo067`：起手校验敌对目标并按 `Param1` 安装
+  冲锋速度增益，服务端通过碰撞安全路径追击目标；动画结束前若尚未进入近战范围会
+  自动重试，进入范围后在当前权威 tick 结算一次 `calc1` 增伤与 `ToHit/LevToHit` 命中，
+  统一处理格挡、受击、死亡和多人快照。新增 Charge 数据契约测试，圣骑士回归与 D2GS
+  编译通过。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -198,7 +202,7 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 99% | 1% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer、FoH/Holy Bolt、Sacrifice、Smite 与 Zeal 已完成；剩余 Charge/Vengeance/Holy Shield/Conversion 和实机表现验收 |
+| 圣骑士 Paladin | 99% | 1% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer、FoH/Holy Bolt、Sacrifice、Smite、Zeal 与 Charge 已完成；剩余 Vengeance/Holy Shield/Conversion 和实机表现验收 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
 职业技能专项整体按 **约 79% 完成、约 21% 剩余** 计入战斗模块；刺客专项已完成，
@@ -674,6 +678,11 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
 - 2026-09-04：完成德鲁伊 Shock Wave `SrvDo008/SrvDmg07`；接入五路导弹、共享命中去重、Skills.txt 物理伤害、40+15/级帧眩晕、原生目标资格与权威状态同步日志。专项及通用回归共 17 个用例通过；德鲁伊专项更新为约 76%。
 - 2026-09-04：完成德鲁伊 Fury `SrvSt37/SrvDo013`；接入原生 2–5 击公式、狼形态门槛、`ln34` 增伤、每击独立命中/耐久和 GUID 邻近目标链，修正多击动画音效重复播放；德鲁伊专项回归与既有变形回归通过，D2GS 编译通过，专项更新为约 80%。
 - 2026-09-07：新增 1×1 隐藏窗口真实营地启动门槛；固定种子执行 Act 1 DRLG、营地实体、玩家创建和三个生产渲染帧，并让 LWJGL 线程异常正确传递为 Gradle 失败。测试先复现并修复单人任务控制器错误依赖多人同步器，以及共享 Idle AI 用 `entity=-1` 查询组件导致的启动崩溃；1.10f 主基线和 1.14 兼容资源均通过。
+- 2026-09-10：完成圣骑士 Charge `SrvSt31/SrvDo067` 首轮移植。起手按 `Param1` 安装
+  冲锋速度增益并通过碰撞安全路径追击；动画结束时未到近战范围会重试，命中帧使用当前
+  权威 tick 位置快照，按 `calc1`、`ToHit/LevToHit` 结算伤害和命中，统一处理格挡、
+  受击、死亡、速度清理与多人广播。新增 Charge 数据契约测试；圣骑士回归 4 组用例、
+  `:server:d2gs:compileJava` 均通过。下一项为 Vengeance。
 
 ## 当前下一项
 
