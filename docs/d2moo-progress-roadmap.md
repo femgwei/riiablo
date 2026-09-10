@@ -124,6 +124,11 @@
   两枚互为反向、垂直于施法方向的 `firewallmaker`，逐帧铺设子段并补齐中心段。区域火焰
   保留 8.8 每帧伤害、火焰精通/穿透、怪物火免、抗性/吸收/PvP、`DamageRate` 对魔法
   伤害降低的缩放和 `SrvDmg03` 受击反应概率；所有子导弹沿用服务端权威实体同步。
+- 法师 Blizzard 已接入原生多导弹链：`SrvDo028` 只创建一枚 `blizzardcenter` 控制导弹，
+  按 `MISSMODE_SrvDo10_BlizzardCenter` 的 `calc1/calc2` 在固定帧节拍生成 `blizzard1`；
+  子导弹使用中心导弹独立确定性种子，在 `CollideType=5` 地图阻挡点不生成，并复用
+  统一冰冷伤害、Cold Mastery、冰抗/冻结时长和 `NextHit` 处理。单机/多人仍只由服务端
+  创建权威导弹，客户端消费同步实体。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -205,7 +210,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 92% | 8% | 1.0% | 死灵骨毒/召唤链、圣骑士技能与法师 Enchant/Fire Mastery/三冰甲/Teleport 已接通；剩余复杂技能和实机表现待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 92% | 8% | 1.0% | 死灵骨毒/召唤链、圣骑士技能与法师 Enchant/Fire Mastery/三冰甲/Teleport/Blizzard 已接通；剩余复杂技能和实机表现待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -230,7 +235,7 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 88% | 12% | 复杂冰火雷技能及统一多人表现验收 |
+| 法师 Sorceress | 91% | 9% | Frozen Orb、Meteor、Thunder Storm 等复杂链及统一多人表现验收 |
 
 职业技能专项整体按 **约 97% 完成、约 3% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
@@ -713,6 +718,11 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
 - 2026-09-11：修正法师 Chain Lightning `SrvDo026/SrvHit12` 链路。施法阶段只创建一枚根
   导弹并保存原生跳数，命中后由 `MissileCollisionSystem` 选择未命中的邻近敌人并创建续链；
   同时排除导弹等非 Unit 实体被误选。专项回归、D2GS 编译和 1.10f `offscreenCamp` 通过。
+- 2026-09-11：完成法师 Blizzard `SrvDo028/MISSMODE_SrvDo10` 首轮移植。中心导弹按
+  `calc1/calc2` 和 `Range=100` 运行，每个节拍用独立确定性种子在 `CollideType=5` 地图
+  阻挡检查后生成 `blizzard1`；子导弹继承技能伤害、Cold Mastery、冰抗/冻结时长和
+  `NextHit` 结算。`SorceressBlizzardIntegrationTest`、法师专项回归、D2GS 编译及真实
+  1.10f `offscreenCamp` 通过，未修改网络 schema 或生成文件。下一项为 Frozen Orb。
 - 2026-09-10：完成圣骑士 Charge `SrvSt31/SrvDo067` 首轮移植。起手按 `Param1` 安装
   冲锋速度增益并通过碰撞安全路径追击；动画结束时未到近战范围会重试，命中帧使用当前
   权威 tick 位置快照，按 `calc1`、`ToHit/LevToHit` 结算伤害和命中，统一处理格挡、
@@ -1355,9 +1365,9 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
     其中 97 个因仓库既有测试 fixture/资源缺失及既有 Shaman/Frenzy 场景失败而未通过，
     本模块专项保持全绿。
 
-下一项：**Cleansing / Meditation / Redemption 原生周期资源与尸体行为**。优先核对
-`SrvDo065` 的 Prayer 被动资源消耗/恢复关联，以及 Redemption 的尸体筛选、概率、
-生命/法力恢复和原子尸体消费。
+下一项：**法师 Frozen Orb 原生分裂/轨迹导弹链**。优先核对中心导弹、分裂节拍、
+轨迹方向、共享命中门槛和冰冷伤害快照；随后继续 Meteor、Thunder Storm 与复杂技能
+的多人表现验收。
 当前 Chat 继续负责包括战斗在内的全部模块。
 
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，

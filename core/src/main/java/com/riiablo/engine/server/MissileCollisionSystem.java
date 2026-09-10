@@ -134,6 +134,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       return;
     }
 
+    if (missile.blizzardCenter) {
+      processBlizzardCenter(entityId, missile, position, elapsedFrames);
+      return;
+    }
+
     // D2MOO SrvDo20 retargets Blade Creeper's missile path to its controller
     // every frame. The stored damage owner remains the casting player.
     lastPos.set(position.position);
@@ -419,6 +424,82 @@ public class MissileCollisionSystem extends IteratingSystem {
         entityId, delay.ownerId, targetId, delay.nativeFrame,
         delayPosition.position.x, delayPosition.position.y);
     world.delete(entityId);
+  }
+
+  /** Native MISSMODE_SrvDo10_BlizzardCenter. */
+  private void processBlizzardCenter(
+      int entityId, Missile center, Position position, int elapsedFrames) {
+    if (factory == null || center.missile == null) {
+      world.delete(entityId);
+      return;
+    }
+    Skills.Entry skill = center.skillId >= 0 ? Riiablo.files.skills.get(center.skillId) : null;
+    String childName = center.missile.SubMissile != null
+        && center.missile.SubMissile.length > 0 ? center.missile.SubMissile[0] : null;
+    Missiles.Entry childRow = childName != null && !childName.isEmpty()
+        ? Riiablo.files.Missiles.get(childName) : null;
+    if (skill == null || childRow == null) {
+      log.warn("[SORCERESS_BLIZZARD] phase=center_remove missileId={} owner={} reason=data",
+          entityId, center.ownerId);
+      world.delete(entityId);
+      return;
+    }
+
+    int level = Math.max(1, center.damageLevel);
+    int interval = Math.max(1, SkillFormula.evaluate(skill.calc2, skill, level));
+    int radius = Math.max(1, SkillFormula.evaluate(skill.calc1, skill, level));
+    // Native SrvDo10 tests RemainingFrames % nFrames before creating the
+    // child. Preserve that phase instead of using a variable wall-clock timer.
+    if (center.remainingFrames > 0 && center.remainingFrames % interval == 0) {
+      spawnBlizzardChild(entityId, center, position, skill, childRow, radius);
+    }
+    center.remainingFrames -= Math.max(1, elapsedFrames);
+    if (center.remainingFrames <= 0) {
+      log.debug("[SORCERESS_BLIZZARD] phase=center_remove missileId={} owner={} reason=expired",
+          entityId, center.ownerId);
+      world.delete(entityId);
+    }
+  }
+
+  private void spawnBlizzardChild(
+      int centerId, Missile center, Position centerPosition,
+      Skills.Entry skill, Missiles.Entry childRow, int radius) {
+    int maxRange = Math.max(0, radius - 1);
+    NativeRng rng = new NativeRng(center.blizzardSeed);
+    int offsetX = maxRange == 0 ? 0 : rng.nextInt(2 * maxRange) - maxRange;
+    int offsetY = maxRange == 0 ? 0 : rng.nextInt(2 * maxRange) - maxRange;
+    center.blizzardSeed = rng.state();
+    // The center's position is authoritative; avoid using a shared temporary
+    // vector because child creation may synchronously publish the entity.
+    Vector2 origin = new Vector2(centerPosition.position);
+    origin.add(offsetX, offsetY);
+    MapWrapper wrapper = centerId >= 0 && mMapWrapper.has(centerId)
+        ? mMapWrapper.get(centerId) : null;
+    if (wrapper != null && wrapper.map != null
+        && (wrapper.map.getZone(origin) == null
+            || (wrapper.map.flags(origin) & nativeMapCollisionMask(5)) != 0)) {
+      log.debug("[SORCERESS_BLIZZARD] phase=strike_skip owner={} reason=collision point=({}, {})",
+          center.ownerId, origin.x, origin.y);
+      return;
+    }
+    int childId = factory.createMissile(childRow, Vector2.X, origin, center.ownerId);
+    if (childId < 0 || !mMissile.has(childId)) return;
+    Missile child = mMissile.get(childId);
+    child.skillId = center.skillId;
+    child.damageLevel = Math.max(1, center.damageLevel);
+    child.range = 0f;
+    child.nativeLifetimeFrames = Math.max(1, childRow.Range);
+    child.damageMultiplier = center.damageMultiplier;
+    Attributes ownerAttrs = mAttributesWrapper.has(center.ownerId)
+        ? mAttributesWrapper.get(center.ownerId).attrs : null;
+    MissileDamageResolver.initializeSkillArea(
+        child, skill, ownerAttrs, child.damageLevel,
+        name -> baseSkillLevel(center.ownerId, name), stateList(center.ownerId));
+    log.info("[SORCERESS_BLIZZARD] phase=strike owner={} centerSkill={} child={} "
+            + "missile={} point=({}, {}) radius={} interval={} lifetime={}",
+        center.ownerId, center.skillId, childId, childRow.Missile, origin.x, origin.y,
+        radius, Math.max(1, SkillFormula.evaluate(skill.calc2, skill, child.damageLevel)),
+        child.nativeLifetimeFrames);
   }
 
   private void spawnFistOfHeavensBolts(

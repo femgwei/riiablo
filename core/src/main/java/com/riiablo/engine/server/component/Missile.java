@@ -142,6 +142,11 @@ public class Missile extends PooledComponent {
   /** Remaining targets for native SrvHit12 chain-lightning continuation. */
   public int chainHitsRemaining;
 
+  /** Native SrvDo10 BlizzardCenter controller. */
+  public boolean blizzardCenter;
+  /** Native-style deterministic seed for Blizzard strike positions. */
+  public int blizzardSeed;
+
   /** D2MOO SrvDo35 periodically bends Royal Strike's chaos-ice path. */
   public boolean chaosIcePath;
   public int chaosIceSeed;
@@ -245,6 +250,8 @@ public class Missile extends PooledComponent {
     fistOfHeavensDelay = false;
     fistOfHeavensTriggered = false;
     chainHitsRemaining = 0;
+    blizzardCenter = false;
+    blizzardSeed = 0;
     chaosIcePath = false;
     chaosIceSeed = 0;
     chaosIceX = 0;

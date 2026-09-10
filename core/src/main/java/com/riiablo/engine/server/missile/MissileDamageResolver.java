@@ -150,15 +150,14 @@ public final class MissileDamageResolver {
       StateList ownerStates) {
     boolean impactCreatesExplosion = projectile != null && projectile.missile != null
         && projectile.missile.pSrvHitFunc == 4;
-    int fireMastery = ownerStates != null
-        ? Math.max(0, ownerStates.getTotalStatContribution(Stat.passive_fire_mastery)) : 0;
-    int lightningMastery = ownerStates != null
-        ? Math.max(0, ownerStates.getTotalStatContribution(Stat.passive_ltng_mastery)) : 0;
-    int additionalMastery = skill != null && "fire".equalsIgnoreCase(skill.EType)
-        ? fireMastery : skill != null
-        && ("ltng".equalsIgnoreCase(skill.EType)
-            || "lightning".equalsIgnoreCase(skill.EType))
-        ? lightningMastery : 0;
+    int additionalMastery = 0;
+    if (ownerStates != null && skill != null) {
+      short masteryStat = masteryStat(skill.EType);
+      if (masteryStat != 0) {
+        additionalMastery = Math.max(0,
+            ownerStates.getTotalStatContribution(masteryStat));
+      }
+    }
     return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
         baseSkillLevel == null ? name -> 0 : baseSkillLevel, additionalMastery);
   }
@@ -173,14 +172,14 @@ public final class MissileDamageResolver {
   public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel,
       StateList ownerStates) {
-    int additionalMastery = ownerStates != null && skill != null
-        && "fire".equalsIgnoreCase(skill.EType)
-        ? Math.max(0, ownerStates.getTotalStatContribution(Stat.passive_fire_mastery))
-        : ownerStates != null && skill != null
-            && ("ltng".equalsIgnoreCase(skill.EType)
-                || "lightning".equalsIgnoreCase(skill.EType))
-            ? Math.max(0, ownerStates.getTotalStatContribution(Stat.passive_ltng_mastery))
-            : 0;
+    int additionalMastery = 0;
+    if (ownerStates != null && skill != null) {
+      short masteryStat = masteryStat(skill.EType);
+      if (masteryStat != 0) {
+        additionalMastery = Math.max(0,
+            ownerStates.getTotalStatContribution(masteryStat));
+      }
+    }
     return initializeSkill(projectile, skill, ownerAttrs, level, false, true,
         baseSkillLevel == null ? name -> 0 : baseSkillLevel, additionalMastery);
   }
@@ -388,8 +387,7 @@ public final class MissileDamageResolver {
       // resolver is the latter, skill-owned branch; Fire Bolt notably leaves
       // ApplyMastery blank in Missiles.txt but still receives Fire Mastery.
       if (projectile.missile != null) {
-        short masteryStat = type == FIRE ? Stat.passive_fire_mastery
-            : type == LIGHTNING ? Stat.passive_ltng_mastery : 0;
+        short masteryStat = masteryStat(skill.EType);
         int mastery = masteryStat != 0 ? Math.max(0,
             statInt(ownerAttrs, masteryStat) + additionalMastery) : 0;
         elementalMin[type] += elementalMin[type] * mastery / 100;
@@ -426,6 +424,17 @@ public final class MissileDamageResolver {
     projectile.usesAttackRating = includeSource && skill.SrcDam > 0
         && !"Guided Arrow".equalsIgnoreCase(skill.skill);
     return true;
+  }
+
+  private static short masteryStat(String element) {
+    if (element == null) return 0;
+    if ("fire".equalsIgnoreCase(element)) return Stat.passive_fire_mastery;
+    if ("ltng".equalsIgnoreCase(element)
+        || "lightning".equalsIgnoreCase(element)) return Stat.passive_ltng_mastery;
+    if ("cold".equalsIgnoreCase(element)
+        || "freeze".equalsIgnoreCase(element)
+        || "frze".equalsIgnoreCase(element)) return Stat.passive_cold_mastery;
+    return 0;
   }
 
   /** Replaces the source A1 profile with the A2 profile selected by Actioneer. */

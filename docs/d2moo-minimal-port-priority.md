@@ -93,7 +93,8 @@ Andariel 和对象 `stateFlags` 表现。
 死灵法师与圣骑士的服务端技能首轮已基本闭环；法师基础单体弹道、Static Field、
 Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与三种冰甲已完成首轮核对，
 Teleport `SrvDo027` 原生权威位移链已完成（Level/Zone、飞行碰撞、footprint 安全落点、
-Box2D/RoomEx 与 `SYNC_WARPED`），随后处理复杂技能的多人表现链。
+Box2D/RoomEx 与 `SYNC_WARPED`），Blizzard `SrvDo028/MISSMODE_SrvDo10` 也已完成首轮；
+下一项为 Frozen Orb，随后处理 Meteor、Thunder Storm 和复杂技能的多人表现链。
 
 ## 工程约束
 

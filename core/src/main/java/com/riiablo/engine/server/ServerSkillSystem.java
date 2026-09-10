@@ -413,6 +413,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 18 && event.srvdofunc != 25
         && event.srvdofunc != 44 && event.srvdofunc != 45
         && event.srvdofunc != 22 && event.srvdofunc != 23 && event.srvdofunc != 24
+        && event.srvdofunc != 28
         && event.srvdofunc != 49 && event.srvdofunc != 54
         && event.srvdofunc != 68 && event.srvdofunc != 71
         && event.srvdofunc != 31 && event.srvdofunc != 55 && event.srvdofunc != 56
@@ -425,6 +426,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
         && skill.srvdofunc != 44 && skill.srvdofunc != 45
         && skill.srvdofunc != 22 && skill.srvdofunc != 23 && skill.srvdofunc != 24
+        && skill.srvdofunc != 28
         && skill.srvdofunc != 49 && skill.srvdofunc != 54
         && skill.srvdofunc != 68 && skill.srvdofunc != 71
         && skill.srvdofunc != 31 && skill.srvdofunc != 55 && skill.srvdofunc != 56
@@ -638,7 +640,11 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     if (event.srvdofunc == 28 || skill.srvdofunc == 28) {
-      spawnMeteor(event, skill, start);
+      if (isBlizzard(skill)) {
+        spawnBlizzard(event, skill, start);
+      } else {
+        spawnMeteor(event, skill, start);
+      }
       return;
     }
     if (event.skillId == SkillId.CHAIN_LIGHTNING
@@ -1848,6 +1854,50 @@ public class ServerSkillSystem extends PassiveSystem {
         getSkillLevel(event.entityId, event.skillId));
     log.info("[MONSTER_VAMPIRE] phase=meteor source={} target={} missile={} missileId={} position=({}, {})",
         event.entityId, event.targetId, missileName, missileId, target.x, target.y);
+  }
+
+  /** D2MOO SKILLS_SrvDo028 + MISSMODE_SrvDo10: create one Blizzard center. */
+  private void spawnBlizzard(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
+    String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+    Missiles.Entry center = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (center == null || center.pSrvDoFunc != 10) {
+      log.warn("[SORCERESS_BLIZZARD] phase=reject source={} skill={} missile={} reason=missing_center",
+          event.entityId, skill != null ? skill.Id : -1, missileName);
+      return;
+    }
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    int level = Math.max(1, getSkillLevel(event.entityId, event.skillId));
+    int missileId = createMissile(center, Vector2.X, target, event.entityId, null, level);
+    if (missileId < 0 || !mMissile.has(missileId)) {
+      log.warn("[SORCERESS_BLIZZARD] phase=reject source={} reason=create_failed", event.entityId);
+      return;
+    }
+    Missile projectile = mMissile.get(missileId);
+    projectile.blizzardCenter = true;
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = level;
+    projectile.persistent = false;
+    projectile.range = 0f;
+    projectile.remainingFrames = Math.max(1, nativeMissileRange(center, level));
+    // MISSMODE_CreateMissileWithCollisionCheck seeds from the center X and
+    // remaining frame count. Keep a per-center stream so unrelated missiles
+    // cannot perturb Blizzard's deterministic strike positions.
+    projectile.blizzardSeed = new NativeRng(
+        Math.round(target.x) + projectile.remainingFrames).state();
+    if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
+    log.info("[SORCERESS_BLIZZARD] phase=center source={} target={} skill={} level={} "
+            + "missile={} missileId={} lifetime={} radius={} interval={} child={}",
+        event.entityId, event.targetId, skill.Id, level, missileName, missileId,
+        projectile.remainingFrames,
+        SkillFormula.evaluate(skill.calc1, skill, level),
+        SkillFormula.evaluate(skill.calc2, skill, level),
+        center.SubMissile != null && center.SubMissile.length > 0
+            ? center.SubMissile[0] : "");
+  }
+
+  private static boolean isBlizzard(Skills.Entry skill) {
+    return skill != null && ("Blizzard".equalsIgnoreCase(skill.skill)
+        || "blizzardcenter".equalsIgnoreCase(skill.srvmissilea));
   }
 
   /** D2MOO SrvDo026: create one root missile and defer each jump to SrvHit12. */
