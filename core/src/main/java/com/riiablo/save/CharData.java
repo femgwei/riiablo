@@ -146,6 +146,11 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     return this;
   }
 
+  /** Whether this character uses the expansion rules encoded in the D2S flags. */
+  public boolean isExpansion() {
+    return (flags & D2S.FLAG_EXPANSION) != 0;
+  }
+
   CharData() {
     itemData.addUpdateListener(this);
   }

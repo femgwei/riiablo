@@ -11,6 +11,8 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.skill.SorceressSkills;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
@@ -90,6 +92,26 @@ class NativeSorceressProjectileDataTest extends RiiabloTest {
     // 10..20 * (1 + 2*5% synergy) * (1 + 20% mastery).
     assertEquals(13, fireMin.asInt());
     assertEquals(26, fireMax.asInt());
+  }
+
+  @Test
+  void staticFieldNativeRowsAreAvailable() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.STATIC_FIELD);
+    assertNotNull(skill);
+    assertEquals("Static Field", skill.skill);
+    assertEquals(20, skill.srvdofunc);
+    assertEquals("par4", skill.calc1);
+    assertEquals("par3", skill.calc2);
+    assertEquals("ln12", skill.aurarangecalc);
+    assertEquals(0x8783, skill.aurafilter);
+    assertEquals("ltng", skill.EType);
+    assertEquals(25, SkillFormula.evaluate(skill.calc1, skill, 1));
+    assertEquals(0, SkillFormula.evaluate(skill.calc2, skill, 1));
+    assertEquals(5, SorceressSkills.getStaticFieldRadius(skill, 1));
+    assertEquals(14, SorceressSkills.getStaticFieldRadius(skill, 10));
+    assertEquals(0, Riiablo.files.DifficultyLevels.get(0).StaticFieldMin);
+    assertEquals(33, Riiablo.files.DifficultyLevels.get(1).StaticFieldMin);
+    assertEquals(50, Riiablo.files.DifficultyLevels.get(2).StaticFieldMin);
   }
 
   private static void assertGenericBolt(

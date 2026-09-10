@@ -57,6 +57,7 @@ import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
+import com.riiablo.engine.server.skill.SorceressSkills;
 import com.riiablo.engine.server.skill.CorpseConsumption;
 import com.riiablo.engine.server.pet.PetType;
 import com.riiablo.engine.server.party.PartyManager;
@@ -64,9 +65,13 @@ import com.riiablo.engine.server.party.PvpCombatRules;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.monster.MonsterRank;
+import com.riiablo.map.DT1;
+import com.riiablo.map.Map;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
+import com.badlogic.gdx.ai.utils.Collision;
+import com.badlogic.gdx.ai.utils.Ray;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.IntSet;
@@ -86,6 +91,9 @@ public class ServerSkillSystem extends PassiveSystem {
   private static final int NOVA_MISSILE_COUNT = 64;
   private static final float CHAIN_LIGHTNING_JUMP_RANGE2 = 13f * 13f;
   private final boolean monstersOnly;
+  private final Ray<Vector2> auraRay = new Ray<>(new Vector2(), new Vector2());
+  private final Collision<Vector2> auraCollision =
+      new Collision<>(new Vector2(), new Vector2());
 
   public ServerSkillSystem() {
     this(false);
@@ -134,6 +142,9 @@ public class ServerSkillSystem extends PassiveSystem {
   /** Registered as "factory" by D2GS. */
   @Wire(name = "factory")
   protected EntityFactory factory;
+
+  @Wire(name = "map", failOnNull = false)
+  protected Map map;
 
   @Subscribe
   public void onSkillCast(SkillCastEvent event) {
@@ -393,7 +404,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 57 && event.srvdofunc != 58
         && event.srvdofunc != 30 && event.srvdofunc != 59 && event.srvdofunc != 61
         && event.srvdofunc != 60 && event.srvdofunc != 62 && event.srvdofunc != 63
-        && event.srvdofunc != 73 && event.srvdofunc != 80
+        && event.srvdofunc != 20 && event.srvdofunc != 73 && event.srvdofunc != 80
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -403,7 +414,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 57 && skill.srvdofunc != 58
         && skill.srvdofunc != 30 && skill.srvdofunc != 59 && skill.srvdofunc != 61
         && skill.srvdofunc != 60 && skill.srvdofunc != 62 && skill.srvdofunc != 63
-        && skill.srvdofunc != 73 && skill.srvdofunc != 80
+        && skill.srvdofunc != 20 && skill.srvdofunc != 73 && skill.srvdofunc != 80
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
         && !PaladinSkills.isHolyBolt(skill)) {
       consumeRangedAmmoForSkill(event, skill);
@@ -412,6 +423,10 @@ public class ServerSkillSystem extends PassiveSystem {
     int skillLevel = getSkillLevel(event.entityId, event.skillId);
 
     Vector2 start = mPosition.get(event.entityId).position;
+    if (event.srvdofunc == 20 || skill.srvdofunc == 20) {
+      applyStaticField(event, skill, skillLevel, start);
+      return;
+    }
     if (event.srvdofunc == 80 || skill.srvdofunc == 80) {
       spawnPaladinFistOfTheHeavens(event, skill, skillLevel);
       return;
@@ -719,6 +734,132 @@ public class ServerSkillSystem extends PassiveSystem {
       ordinal++;
     }
     if (created > 0) consumeRangedAmmoForSkill(event, skill);
+  }
+
+  /** D2MOO SrvDo020: immediate authoritative current-life area damage. */
+  private void applyStaticField(
+      SkillDoEvent event, Skills.Entry skill, int skillLevel, Vector2 origin) {
+    if (!SorceressSkills.isStaticField(skill)) {
+      log.warn("[STATIC_FIELD] phase=reject source={} skill={} reason=native_row_mismatch",
+          event.entityId, event.skillId);
+      return;
+    }
+    int range = SorceressSkills.getStaticFieldRadius(skill, skillLevel);
+    int damagePercent = SorceressSkills.getStaticFieldDamagePercent(skill, skillLevel);
+    int minimumDamageFixed =
+        SorceressSkills.getStaticFieldMinimumDamageFixed(skill, skillLevel);
+    int difficulty = combatDifficulty(event.entityId, event.entityId);
+    com.riiablo.codec.excel.DifficultyLevels.Entry difficultyRow =
+        Riiablo.files != null && Riiablo.files.DifficultyLevels != null
+            ? Riiablo.files.DifficultyLevels.get(difficulty) : null;
+    boolean expansion = !mPlayer.has(event.entityId)
+        || mPlayer.get(event.entityId).data == null
+        || mPlayer.get(event.entityId).data.isExpansion();
+    int floorPercent = SorceressSkills.getStaticFieldLifeFloorPercent(
+        difficultyRow, expansion);
+    int damageType = staticFieldDamageType(skill.EType);
+    int auraFilter = skill.aurafilter != 0 ? skill.aurafilter : 0x8783;
+    float range2 = (float) range * range;
+    IntBag candidates = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, AttributesWrapper.class)).getEntities();
+    int hit = 0;
+    int skippedAtFloor = 0;
+    for (int i = 0; i < candidates.size(); i++) {
+      int targetId = candidates.get(i);
+      if (!isStaticFieldTarget(event.entityId, targetId, auraFilter)
+          || origin.dst2(mPosition.get(targetId).position) > range2) continue;
+      Attributes target = mAttributesWrapper.get(targetId).attrs;
+      StatRef hp = target != null ? target.get(Stat.hitpoints, StatRef.obtain()) : null;
+      StatRef maxHp = target != null ? target.get(Stat.maxhp, StatRef.obtain()) : null;
+      if (hp == null || maxHp == null) continue;
+      int rawFixed = SorceressSkills.calculateStaticFieldRawDamageFixed(
+          toFixed8(hp.asFixed()), toFixed8(maxHp.asFixed()), damagePercent,
+          minimumDamageFixed, floorPercent);
+      if (rawFixed <= 0) {
+        skippedAtFloor++;
+        continue;
+      }
+      StateList targetStates = mUnitStates.has(targetId)
+          ? mUnitStates.get(targetId).stateList : null;
+      CombatSystem.StaticFieldDamageResult resolved =
+          CombatSystem.INSTANCE.calculateStaticFieldDamage(
+              target, mPlayer.has(targetId), mPlayer.has(event.entityId), damageType,
+              rawFixed, targetStates, difficulty);
+      if (resolved.absorbedLifeFixed > 0) {
+        float restored = resolved.absorbedLifeFixed / 256f;
+        hp.add(Math.max(0f, Math.min(restored, maxHp.asFixed() - hp.asFixed())));
+      }
+      if (resolved.damageFixed <= 0) continue;
+      DamageEvent damage = DamageEvent.obtain(
+          event.entityId, targetId, resolved.damageFixed / 256f);
+      if (events != null) events.dispatch(damage);
+      hp.sub(Math.max(0f, damage.damage));
+      if (hp.asFixed() <= 0f) {
+        hp.set(0f);
+        if (events != null) events.dispatch(DeathEvent.obtain(event.entityId, targetId));
+      }
+      hit++;
+    }
+    log.info("[STATIC_FIELD] phase=apply source={} skill={} level={} range={} filter=0x{} "
+            + "damagePercent={} minimumFixed={} floorPercent={} difficulty={} hit={} "
+            + "skippedAtFloor={}",
+        event.entityId, event.skillId, skillLevel, range,
+        Integer.toHexString(auraFilter), damagePercent, minimumDamageFixed,
+        floorPercent, difficulty, hit, skippedAtFloor);
+  }
+
+  private boolean isStaticFieldTarget(int sourceId, int targetId, int filter) {
+    if (sourceId == targetId || mCorpse.has(targetId) || !mPosition.has(targetId)
+        || !mAttributesWrapper.has(targetId) || !sameZone(sourceId, targetId)) return false;
+    boolean player = mPlayer.has(targetId);
+    boolean monster = mMonster.has(targetId);
+    if (!player && !monster) return false;
+    if ((player && (filter & 0x0001) == 0)
+        || (monster && (filter & 0x0002) == 0)) return false;
+    if (monster) {
+      Monster target = mMonster.get(targetId);
+      if (target.monstats != null && target.monstats.npc) return false;
+      if ((filter & 0x0080) != 0 && mNativeUnitFlags.has(targetId)
+          && !NativeTargeting.canBeAttacked(mNativeUnitFlags.get(targetId))) return false;
+      if ((filter & 0x0400) != 0) {
+        if (target.monstats2 != null && target.monstats2.noSel) return false;
+        if (mNativeUnitFlags.has(targetId)
+            && !NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(targetId))) return false;
+      }
+    }
+    if ((filter & (0x0100 | 0x2000)) != 0 && isTownUnit(targetId)) return false;
+    if ((filter & 0x8000) != 0 && !isHostile(sourceId, targetId)) return false;
+    return (filter & 0x0200) == 0 || hasStaticFieldLineOfSight(sourceId, targetId);
+  }
+
+  private boolean hasStaticFieldLineOfSight(int sourceId, int targetId) {
+    Map currentMap = null;
+    if (mMapWrapper.has(sourceId)) currentMap = mMapWrapper.get(sourceId).map;
+    if (currentMap == null && mMapWrapper.has(targetId)) {
+      currentMap = mMapWrapper.get(targetId).map;
+    }
+    if (currentMap == null
+        || currentMap.getZone(mPosition.get(sourceId).position) == null) return true;
+    auraRay.set(mPosition.get(sourceId).position, mPosition.get(targetId).position);
+    return !currentMap.castRay(auraRay, DT1.Tile.FLAG_BLOCK_JUMP, 0, auraCollision);
+  }
+
+  private static int staticFieldDamageType(String element) {
+    if ("fire".equalsIgnoreCase(element)) return CombatSystem.DAMAGE_FIRE;
+    if ("cold".equalsIgnoreCase(element)) return CombatSystem.DAMAGE_COLD;
+    if ("pois".equalsIgnoreCase(element) || "poison".equalsIgnoreCase(element)) {
+      return CombatSystem.DAMAGE_POISON;
+    }
+    if ("mag".equalsIgnoreCase(element) || "magic".equalsIgnoreCase(element)) {
+      return CombatSystem.DAMAGE_MAGIC;
+    }
+    return CombatSystem.DAMAGE_LIGHTNING;
+  }
+
+  private static int toFixed8(float value) {
+    if (!(value > 0f)) return 0;
+    double fixed = Math.floor(value * 256d);
+    return fixed >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) fixed;
   }
 
   /** D2MOO SrvDo023: SpiderLay installs a movement state; StateUpdater emits its trail. */
@@ -1856,23 +1997,26 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   private boolean isHostile(int sourceId, int candidate) {
-    boolean sourcePlayer = mPlayer.has(sourceId) || mMercenary.has(sourceId)
-        || mSummonedPet.has(sourceId);
-    if (sourcePlayer) {
-      if (mMonster.has(candidate) && !mMercenary.has(candidate)
-          && !mSummonedPet.has(candidate)) return true;
-      boolean targetPlayerAligned = mPlayer.has(candidate) || mMercenary.has(candidate)
-          || mSummonedPet.has(candidate);
-      return targetPlayerAligned && PvpCombatRules.canTarget(
-          partyManager, playerAlignmentOwner(sourceId), playerAlignmentOwner(candidate),
-          true, true);
-    }
-    return mPlayer.has(candidate);
+    boolean sourcePlayer = isPlayerAligned(sourceId);
+    boolean targetPlayer = isPlayerAligned(candidate);
+    if (sourcePlayer != targetPlayer) return true;
+    if (!sourcePlayer) return false;
+    return PvpCombatRules.canTarget(
+        partyManager, playerAlignmentOwner(sourceId), playerAlignmentOwner(candidate),
+        true, true);
+  }
+
+  private boolean isPlayerAligned(int entityId) {
+    return mPlayer.has(entityId) || mMercenary.has(entityId) || mSummonedPet.has(entityId)
+        || mMonster.has(entityId) && mMonster.get(entityId).converted;
   }
 
   private int playerAlignmentOwner(int entityId) {
     if (mMercenary.has(entityId)) return mMercenary.get(entityId).ownerId;
     if (mSummonedPet.has(entityId)) return mSummonedPet.get(entityId).ownerId;
+    if (mMonster.has(entityId) && mMonster.get(entityId).converted) {
+      return mMonster.get(entityId).conversionOwnerId;
+    }
     return entityId;
   }
 
@@ -2681,7 +2825,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (mMapWrapper.has(source) && mMapWrapper.get(source).map != null) {
       return mMapWrapper.get(source).map.getDifficulty();
     }
-    return 0;
+    return map != null ? map.getDifficulty() : 0;
   }
 
   private boolean sameZone(int first, int second) {

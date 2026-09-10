@@ -3,6 +3,8 @@ package com.riiablo.engine.server.skill;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
+import com.riiablo.codec.excel.DifficultyLevels;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -128,26 +130,64 @@ public final class SorceressSkills {
     return 3 + skillLevel / 3;
   }
 
-  /**
-   * 静态力场 - 降低范围内敌人当前生命值
-   * 
-   * @param skillLevel 技能等级
-   * @return 降低百分比
-   */
-  public static int calculateStaticFieldPercent(int skillLevel) {
-    // 固定降低 25% 当前生命
-    return 25;
+  /** D2MOO {@code SKILLS_SrvDo020_StaticField}. */
+  public static boolean isStaticField(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 20
+        && "Static Field".equalsIgnoreCase(skill.skill);
+  }
+
+  /** Native {@code AuraRangeCalc}; 1.10f uses {@code ln12}. */
+  public static int getStaticFieldRadius(Skills.Entry skill, int skillLevel) {
+    return Math.max(0, SkillFormula.evaluate(
+        skill != null ? skill.aurarangecalc : null, skill, Math.max(1, skillLevel)));
+  }
+
+  /** Native {@code calc1}; 1.10f uses {@code par4}=25 percent of current life. */
+  public static int getStaticFieldDamagePercent(Skills.Entry skill, int skillLevel) {
+    return Math.max(0, SkillFormula.evaluate(
+        skill != null ? skill.calc1 : null, skill, Math.max(1, skillLevel)));
+  }
+
+  /** Native {@code calc2}, retained in D2's signed 8.8 damage unit. */
+  public static int getStaticFieldMinimumDamageFixed(Skills.Entry skill, int skillLevel) {
+    return Math.max(0, SkillFormula.evaluate(
+        skill != null ? skill.calc2 : null, skill, Math.max(1, skillLevel)));
+  }
+
+  /** Expansion-only difficulty floor read from DifficultyLevels.txt. */
+  public static int getStaticFieldLifeFloorPercent(
+      DifficultyLevels.Entry difficulty, boolean expansion) {
+    return expansion && difficulty != null ? Math.max(0, difficulty.StaticFieldMin) : 0;
   }
 
   /**
-   * 获取静态力场半径
-   * 
-   * @param skillLevel 技能等级
-   * @return 半径（子格）
+   * Reproduces the integer-life arithmetic in
+   * {@code SKILLS_AuraCallback_StaticField} and returns signed 8.8 damage.
+   * The difficulty floor is an eligibility threshold, not a post-hit clamp:
+   * a hit starting just above the floor may cross below it, exactly as in
+   * D2Game 1.10f.
    */
-  public static int getStaticFieldRadius(int skillLevel) {
-    // 基础 3.3 码，每级 +0.6 码
-    return (int)(3.3f + (skillLevel - 1) * 0.6f);
+  public static int calculateStaticFieldRawDamageFixed(
+      int currentLifeFixed, int maximumLifeFixed, int damagePercent,
+      int minimumDamageFixed, int lifeFloorPercent) {
+    int currentLife = Math.max(0, currentLifeFixed) >> 8;
+    if (currentLife < 1) return 0;
+    int maximumLife = Math.max(0, maximumLifeFixed) >> 8;
+    if (lifeFloorPercent > 0
+        && currentLife <= percentage(maximumLife, lifeFloorPercent, 100)) return 0;
+    int shiftedDamage = percentage(currentLife, Math.max(0, damagePercent), 100);
+    shiftedDamage = Math.min(shiftedDamage, currentLife - 1);
+    long damageFixed = (long) Math.max(0, shiftedDamage) << 8;
+    damageFixed = Math.max(damageFixed, Math.max(0, minimumDamageFixed));
+    return damageFixed >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) damageFixed;
+  }
+
+  private static int percentage(int value, int multiplier, int divisor) {
+    if (divisor == 0) return 0;
+    long result = (long) value * multiplier / divisor;
+    if (result > Integer.MAX_VALUE) return Integer.MAX_VALUE;
+    if (result < Integer.MIN_VALUE) return Integer.MIN_VALUE;
+    return (int) result;
   }
 
   /**

@@ -189,7 +189,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 85% | 15% | 1.8% | 死灵骨毒/召唤链、圣骑士光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer 与 FoH/Holy Bolt 已接通；剩余职业技能和实机表现仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 86% | 14% | 1.7% | 死灵骨毒/召唤链、圣骑士技能与法师 Static Field 已接通；剩余法师/德鲁伊持续技能和实机表现仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -214,9 +214,9 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 62% | 38% | Static Field、Blaze/Fire Wall/Frost Nova、Teleport 与持续区域表现 |
+| 法师 Sorceress | 68% | 32% | Frost Nova、Blaze/Fire Wall、Teleport 与持续区域表现 |
 
-职业技能专项整体按 **约 79% 完成、约 21% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 80% 完成、约 20% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
@@ -718,6 +718,15 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   `Missiles.txt.ApplyMastery` 应用火焰/闪电精通；冰弹保留原生冰冷持续时间。新增
   `NativeSorceressProjectileDataTest`；下一项为法师范围/持续技能（Static Field、Blaze、
   Fire Wall、Frost Nova）及多人状态表现。
+- 2026-09-10：完成法师 Static Field `SrvDo020` 原生权威链。半径、当前生命百分比、
+  最低 8.8 伤害和 AuraFilter 均读取 1.10f `Skills.txt`；普通/噩梦/地狱读取
+  `DifficultyLevels.StaticFieldMin`，并保留原版“下限仅作为命中前资格门槛”的整数生命
+  行为。正电抗、电免、吸收和 PvP 进入统一结算，负电抗按 D2MOO 预补偿而不会放大伤害；
+  尸体、NPC、友军召唤物、转化怪、城镇、跨 Zone、超范围和 LOS 均由服务端过滤，效果
+  不创建伤害导弹。`NativeSorceressProjectileDataTest`、
+  `SorceressStaticFieldIntegrationTest` 及相邻抗性/阵营/光环/诅咒回归通过，D2GS 编译和
+  真实 1.10f `offscreenCamp` 通过。已知既有基线：Throwing Mastery 的旧测试期待 9%，
+  当前 1.10f 表结果为 6%，与本项无关。下一项为 Frost Nova。
 
 ## 当前下一项
 

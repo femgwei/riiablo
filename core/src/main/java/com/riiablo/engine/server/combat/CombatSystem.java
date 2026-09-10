@@ -390,6 +390,13 @@ public class CombatSystem {
         0, 0, 0);
   }
 
+  /** Signed 8.8 result used by Static Field's fractional native damage path. */
+  public static class StaticFieldDamageResult {
+    public int damageFixed;
+    public int absorbedLifeFixed;
+    public boolean immune;
+  }
+
   /**
    * Resolves an attack with an optional native monster attack profile.
    * MonStats stores separate A1/A2 damage and to-hit values while the ECS
@@ -655,6 +662,72 @@ public class CombatSystem {
     result.absorbedLife = absorbed;
     result.totalDamage = result.elementalDamage[damageType];
     return result;
+  }
+
+  /**
+   * Resolves the packet built by D2Game's Static Field callback without
+   * discarding its signed 8.8 precision. Native first compensates negative
+   * resistance and then runs the ordinary elemental mitigation path; this
+   * deliberately prevents negative resistance from increasing Static Field
+   * damage while positive resistance and immunity still reduce it.
+   */
+  public StaticFieldDamageResult calculateStaticFieldDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamageFixed, StateList defenderStates, int difficulty) {
+    StaticFieldDamageResult result = new StaticFieldDamageResult();
+    if (defender == null || damageType <= DAMAGE_PHYSICAL
+        || damageType >= DAMAGE_TYPE_COUNT || rawDamageFixed <= 0) return result;
+
+    short[] resistanceStats = {0, Stat.fireresist, Stat.lightresist,
+        Stat.coldresist, Stat.poisonresist, Stat.magicresist};
+    short[] maximumStats = {0, Stat.maxfireresist, Stat.maxlightresist,
+        Stat.maxcoldresist, Stat.maxpoisonresist, Stat.maxmagicresist};
+    short[] absorbPercentStats = {0, Stat.item_absorbfire_percent,
+        Stat.item_absorblight_percent, Stat.item_absorbcold_percent, 0,
+        Stat.item_absorbmagic_percent};
+    short[] absorbFlatStats = {0, Stat.item_absorbfire, Stat.item_absorblight,
+        Stat.item_absorbcold, 0, Stat.item_absorbmagic};
+    int[] stateResistanceTypes = {-1, 0, 2, 1, 3, 4};
+
+    int resistance = statInt(defender, resistanceStats[damageType], 0);
+    if (defenderStates != null) {
+      resistance += defenderStates.getTotalResistModifier(
+          stateResistanceTypes[damageType]);
+    }
+    if (defenderPlayer) resistance += MonsterUtil.getResistancePenalty(difficulty);
+    if (!defenderPlayer && resistance >= 100) {
+      result.immune = true;
+      return result;
+    }
+    int maximumResistance = 75 + statInt(defender, maximumStats[damageType], 0);
+    maximumResistance = Math.min(ABSOLUTE_MAX_RESISTANCE, maximumResistance);
+    resistance = Math.max(MIN_RESISTANCE, Math.min(maximumResistance, resistance));
+
+    long adjusted = rawDamageFixed;
+    if (resistance < 0) {
+      adjusted = 100L * adjusted / (100L - resistance);
+    }
+    long reduced = adjusted * (100L - resistance) / 100L;
+    int absorbPercent = absorbPercentStats[damageType] != 0
+        ? Math.max(0, Math.min(100,
+            statInt(defender, absorbPercentStats[damageType], 0))) : 0;
+    long absorbed = reduced * absorbPercent / 100L;
+    if (absorbFlatStats[damageType] != 0) {
+      long flatFixed = (long) Math.max(0,
+          statInt(defender, absorbFlatStats[damageType], 0)) << 8;
+      absorbed += Math.min(flatFixed, Math.max(0L, reduced - absorbed));
+    }
+    absorbed = Math.min(reduced, Math.max(0L, absorbed));
+    long damage = Math.max(0L, reduced - absorbed);
+    if (attackerPlayer && defenderPlayer) damage = damage * PVP_DAMAGE_PERCENT / 100L;
+
+    result.damageFixed = saturatingInt(damage);
+    result.absorbedLifeFixed = saturatingInt(absorbed);
+    return result;
+  }
+
+  private static int saturatingInt(long value) {
+    return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, (int) value);
   }
 
   /** Resolves reflected/direct physical damage without rolling a second hit. */
