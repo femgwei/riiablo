@@ -800,6 +800,8 @@ public class UnitState {
     this.isNew = other.isNew;
     this.needsSync = other.needsSync;
     this.expired = other.expired;
+    this.conversionOriginalLevel = other.conversionOriginalLevel;
+    this.conversionOriginalMaxHpEncoded = other.conversionOriginalMaxHpEncoded;
   }
 
   @Override
