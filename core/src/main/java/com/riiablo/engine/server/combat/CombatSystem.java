@@ -1063,6 +1063,12 @@ public class CombatSystem {
     d.currentLife = Math.max(0, statInt(defender, Stat.hitpoints, 0));
     d.maxLife = Math.max(d.currentLife, statInt(defender, Stat.maxhp, d.currentLife));
     d.blockChance = statInt(defender, Stat.toblock, 0);
+    // Holy Shield owns its native `toblock` value in a source stat-list;
+    // Attributes only contains the folded permanent/item stats. Include the
+    // active state layers before applying the normal dexterity/level formula.
+    if (defenderStates != null) {
+      d.blockChance += defenderStates.getTotalStatContribution(Stat.toblock);
+    }
     // D2MOO MissMode passes bBlock when the missile carries physical damage.
     // Shield block is therefore not melee-only; eligibility is finalized from
     // the attack packet in calculateAttack(AttackerData, DefenderData).

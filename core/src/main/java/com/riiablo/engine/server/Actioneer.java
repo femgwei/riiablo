@@ -894,6 +894,21 @@ public class Actioneer extends PassiveSystem {
         prepareVengeance(entityId, targetId);
         break;
       }
+      case 36: { // SKILLS_SrvSt36_HolyShield: shield is a hard native gate
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (!mPlayer.has(entityId) || !PaladinSkills.isHolyShield(skill)
+            || equippedShield(entityId) == null) {
+          log.info("[PALADIN_HOLY_SHIELD] phase=start_reject source={} reason=no_shield_or_skill",
+              entityId);
+          mCasting.remove(entityId);
+          if (mSequence.has(entityId)) mSequence.remove(entityId);
+          break;
+        }
+        log.info("[PALADIN_HOLY_SHIELD] phase=start source={} skill={} shield={} status=PASS",
+            entityId, skill.Id, equippedShield(entityId).code);
+        break;
+      }
       case 33: // Find Potion / Grim Ward corpse eligibility is authoritative in ServerSkillSystem
       case 34: // Find Item corpse eligibility is authoritative in ServerSkillSystem
         log.debug("[BARBARIAN_CORPSE] phase=start entity={} target={} srvStFunc={}",

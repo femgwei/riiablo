@@ -481,6 +481,10 @@ public class ServerSkillSystem extends PassiveSystem {
         applyBoneArmor(event, skill, skillLevel);
         return;
       }
+      if (PaladinSkills.isHolyShield(skill)) {
+        applyHolyShield(event, skill, skillLevel);
+        return;
+      }
     }
     if (event.srvdofunc == 54 || skill.srvdofunc == 54) {
       armBladeShield(event, skill, skillLevel);
@@ -762,6 +766,40 @@ public class ServerSkillSystem extends PassiveSystem {
             + "absorb={}/{}",
         event.entityId, event.skillId, skillLevel, armor.duration,
         armor.runtimeValue, armor.getStatContributionValue(Stat.bonearmormax));
+  }
+
+  /** Native SrvDo018 defensive-buff path for Paladin Holy Shield. */
+  private void applyHolyShield(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mPlayer.has(event.entityId) || !hasEquippedShield(event.entityId)) {
+      log.info("[PALADIN_HOLY_SHIELD] phase=do_reject entity={} skill={} reason=no_shield",
+          event.entityId, event.skillId);
+      return;
+    }
+    if (!mUnitStates.has(event.entityId)) mUnitStates.create(event.entityId).init(event.entityId);
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    UnitState shield = PaladinSkills.applyHolyShieldState(
+        states.stateList, skill, skillLevel, event.entityId,
+        name -> getBaseSkillLevel(event.entityId, name));
+    if (shield == null) {
+      log.warn("[PALADIN_HOLY_SHIELD] phase=do_reject entity={} skill={} reason=native_state_data",
+          event.entityId, event.skillId);
+      return;
+    }
+    log.info("[PALADIN_HOLY_SHIELD] phase=do_apply entity={} skill={} level={} duration={} "
+            + "block={} defense={}", event.entityId, event.skillId, shield.level,
+        shield.duration, shield.getStatContributionValue(Stat.toblock),
+        shield.getStatContributionValue(Stat.skill_armor_percent));
+  }
+
+  private boolean hasEquippedShield(int entityId) {
+    if (!mPlayer.has(entityId) || mPlayer.get(entityId).data == null) return false;
+    ItemData items = mPlayer.get(entityId).data.getItems();
+    if (items == null) return false;
+    Item left = items.getEquipped(BodyLoc.LARM);
+    Item right = items.getEquipped(BodyLoc.RARM);
+    return (left != null && left.type != null && left.type.is(com.riiablo.item.Type.SHLD))
+        || (right != null && right.type != null && right.type.is(com.riiablo.item.Type.SHLD));
   }
 
   /** D2MOO SrvDo060: central segment plus two perpendicular maker paths. */

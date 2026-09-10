@@ -2,7 +2,12 @@ package com.riiablo.engine.server.component.serializer;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 
+import com.riiablo.Riiablo;
+import com.riiablo.attributes.NativeStatResolver;
+import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.skill.PaladinSkills;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
@@ -102,6 +107,26 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
         state.maxManaModifier = i < data.maxManaModifierLength() ? data.maxManaModifier(i) : 0;
         state.maxStaminaModifier = i < data.maxStaminaModifierLength()
             ? data.maxStaminaModifier(i) : 0;
+        // StateP predates generic native stat-list serialization. Rebuild
+        // Holy Shield's data-driven block/defense payload from its replicated
+        // skill level so remote clients run the same combat formulas.
+        if (state.stateId == StateId.HOLYSHIELD && Riiablo.files != null
+            && Riiablo.files.skills != null) {
+          com.riiablo.codec.excel.Skills.Entry holyShield =
+              Riiablo.files.skills.get(com.riiablo.engine.server.skill.SkillId.HOLY_SHIELD);
+          int level = Math.max(1, state.level);
+          int replicatedDefense = state.runtimeValue;
+          state.clearModifiers();
+          state.setStatContribution(Stat.toblock, 0,
+              NativeStatResolver.Operation.ADD,
+              PaladinSkills.getHolyShieldBlockBonus(holyShield, level));
+          state.setNativeModifier(Stat.skill_armor_percent, replicatedDefense > 0
+              ? replicatedDefense
+              : PaladinSkills.getHolyShieldDefenseBonus(holyShield, level, name -> 0));
+          state.runtimeValue = replicatedDefense > 0 ? replicatedDefense
+              : PaladinSkills.getHolyShieldDefenseBonus(holyShield, level, name -> 0);
+          state.needsSync = false;
+        }
       }
     }
     return component;

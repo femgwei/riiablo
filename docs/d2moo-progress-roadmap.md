@@ -104,6 +104,11 @@
   表现；元素包以同一次武器物理基准 roll 计算，并纳入元素掌握、冰冷时长、抗性、吸收、
   PvP、受击和死亡链。新增数据契约及 `VengeanceIntegrationTest` ECS 测试，专项测试、
   D2GS 编译和真实 1.10f `offscreenCamp` 均通过。
+- 圣骑士 Holy Shield 已接入原生 `SrvSt36/SrvDo018`：`SrvSt36` 严格拒绝未装备盾牌的
+  施法，`SrvDo018` 按 1.10f `auralencalc=ln12` 建立单一可刷新状态层，读取
+  `aurastat=toblock/aurastatcalc=dm56`，并把 `calc1` 的防御百分比写入状态 stat-list；
+  重施不会叠加，状态快照在远端按技能等级重建 block/defense payload。Smite 继续只读取
+  有效 Holy Shield 层。新增原生数据、刷新/到期和多人快照测试，专项回归与 D2GS 编译通过。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -167,8 +172,8 @@
    Fanaticism 与 Thorns 的 `SrvDo065` 原生属性、硬点被动和反伤链亦已完成；Cleansing、
    Meditation 与 Redemption 周期资源/尸体行为已完成首轮，Sacrifice 的
    `SrvSt29/SrvDo064`、Smite `SrvDo150`、Zeal `SrvSt37/SrvDo013`、Charge
-   `SrvSt31/SrvDo067` 及 Vengeance `SrvSt35/SrvDo002` 也已接通。下一项处理 Holy Shield/
-   Conversion，并同步进行全职业技能表现/动画验收。
+   `SrvSt31/SrvDo067`、Vengeance `SrvSt35/SrvDo002` 及 Holy Shield
+   `SrvSt36/SrvDo018` 也已接通。下一项处理 Conversion，并同步进行全职业技能表现/动画验收。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -208,7 +213,7 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 99% | 1% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer、FoH/Holy Bolt、Sacrifice、Smite、Zeal、Charge 与 Vengeance 已完成；剩余 Holy Shield/Conversion 和实机表现验收 |
+| 圣骑士 Paladin | 99% | 1% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer、FoH/Holy Bolt、Sacrifice、Smite、Zeal、Charge、Vengeance 与 Holy Shield 已完成；剩余 Conversion 和实机表现验收 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
 职业技能专项整体按 **约 79% 完成、约 21% 剩余** 计入战斗模块；刺客专项已完成，
@@ -693,7 +698,12 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   和 `calc1/calc2/calc3` 同时预计算火/冰/电元素包，关键帧原子消费命中记录并只轮换
   HitClass；元素掌握、冰冷时长、抗性、吸收、PvP、受击与死亡进入统一权威链。数据契约、
   ECS 集成测试、D2GS 编译及真实 1.10f `offscreenCamp` 通过；下一项
-  为 Holy Shield。
+-  为 Holy Shield。
+- 2026-09-10：完成圣骑士 Holy Shield `SrvSt36/SrvDo018` 首轮移植。起手严格执行盾牌门槛，
+  关键帧按 `ln12` 建立可刷新状态，写入 `toblock/dm56` 与 `calc1` 防御贡献；重施替换旧层，
+  到期自动移除，远端状态快照按技能等级重建相同 payload。新增 `NativeHolyShieldDataTest`
+  覆盖 1.10f 数据、刷新和多人重建；Holy Shield、Bone Armor、Vengeance 定向回归及
+  `:server:d2gs:compileJava` 通过。下一项为 Conversion。
 
 ## 当前下一项
 

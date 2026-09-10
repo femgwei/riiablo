@@ -497,26 +497,81 @@ public final class PaladinSkills {
     return 4 * skillLevel;
   }
 
-  /**
-   * 神圣之盾 - 增加格挡
-   * 
-   * @param skillLevel 技能等级
-   * @return 防御加成百分比
-   */
+  /** Native Skills.txt SrvSt36/SrvDo018 Holy Shield gate and state payload. */
+  public static boolean isHolyShield(Skills.Entry skill) {
+    return skill != null && (skill.Id == SkillId.HOLY_SHIELD || skill.srvstfunc == 36);
+  }
+
+  /** Evaluates the native Holy Shield duration (ln12) in simulation frames. */
+  public static int getHolyShieldDuration(Skills.Entry skill, int skillLevel) {
+    if (!isHolyShield(skill)) return 0;
+    return Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill,
+        Math.max(1, skillLevel)));
+  }
+
+  /** Native aurastat1=toblock (dm56), retained as a state-owned stat-list entry. */
+  public static int getHolyShieldBlockBonus(Skills.Entry skill, int skillLevel) {
+    if (!isHolyShield(skill) || skill.aurastatcalc == null
+        || skill.aurastatcalc.length == 0) return 0;
+    return Math.max(0, SkillFormula.evaluate(skill.aurastatcalc[0], skill,
+        Math.max(1, skillLevel)));
+  }
+
+  /** Native Units_GetDefense contribution (Holy Shield calc1). */
+  public static int getHolyShieldDefenseBonus(Skills.Entry skill, int skillLevel,
+      ToIntFunction<String> baseSkillLevel) {
+    if (!isHolyShield(skill)) return 0;
+    return Math.max(0, SkillFormula.evaluate(skill.calc1, skill,
+        Math.max(1, skillLevel), baseSkillLevel));
+  }
+
+  /** Compatibility overload for callers without synergy context. */
   public static int calculateHolyShieldDefenseBonus(int skillLevel) {
-    // 每级 +15%
-    return 15 * skillLevel;
+    return 25 + Math.max(0, skillLevel - 1) * 15;
+  }
+
+  public static int calculateHolyShieldBlockBonus(int skillLevel) {
+    // Fallback for synthetic rows; real casts always use Skills.txt dm56.
+    return Math.max(0, 14 + Math.max(0, skillLevel - 1) * 3);
   }
 
   /**
-   * 神圣之盾格挡加成
-   * 
-   * @param skillLevel 技能等级
-   * @return 格挡加成百分比
+   * Installs the single source-owned Holy Shield stat list. Recasting replaces
+   * the old layer instead of stacking block/defense indefinitely.
    */
-  public static int calculateHolyShieldBlockBonus(int skillLevel) {
-    // 每级 +7%（封顶 75%）
-    return Math.min(40, 7 * skillLevel);
+  public static UnitState applyHolyShieldState(StateList states, Skills.Entry skill,
+      int skillLevel, int sourceEntityId,
+      ToIntFunction<String> baseSkillLevel) {
+    if (states == null || !isHolyShield(skill)) return null;
+    int level = Math.max(1, skillLevel);
+    int duration = getHolyShieldDuration(skill, level);
+    if (duration <= 0) return null;
+    states.removeState(StateId.HOLYSHIELD);
+    UnitState state = states.addState(StateId.HOLYSHIELD, duration, level, sourceEntityId);
+    if (state == null) return null;
+    state.skillId = skill.Id;
+    state.duration = duration;
+    state.initialDuration = duration;
+    state.level = level;
+    state.sourceEntityId = sourceEntityId;
+    state.clearModifiers();
+    int block = getHolyShieldBlockBonus(skill, level);
+    if (block > 0) {
+      state.setStatContribution(Stat.toblock, 0,
+          NativeStatResolver.Operation.ADD, block);
+    }
+    int defense = getHolyShieldDefenseBonus(skill, level,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel);
+    if (defense > 0) state.setNativeModifier(Stat.skill_armor_percent, defense);
+    // StateP has no generic stat-contribution vectors; retain the evaluated
+    // defense value in its replicated runtime scalar so clients with a
+    // different local hard-point view still reproduce the server result.
+    state.runtimeValue = defense;
+    state.needsSync = true;
+    log.info("[PALADIN_HOLY_SHIELD] phase=apply source={} skill={} level={} duration={} "
+            + "block={} defense={} status=PASS",
+        sourceEntityId, skill.Id, level, duration, block, defense);
+    return state;
   }
 
   /**
