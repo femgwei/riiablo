@@ -33,6 +33,12 @@ public class Monster extends Component {
   public float spawnX;
   public float spawnY;
 
+  /** Native Conversion alignment/ownership overlay.  The MonStats row remains
+   * immutable; this runtime projection is cleared by the Conversion state
+   * callback so AI and PvP targeting can observe the temporary allegiance. */
+  public boolean converted;
+  public int conversionOwnerId = -1;
+
   public Monster set(MonStats.Entry monstats, MonStats2.Entry monstats2) {
     this.monstats = monstats;
     this.monstats2 = monstats2;
@@ -46,6 +52,8 @@ public class Monster extends Component {
     spawnZone = null;
     spawnX = 0f;
     spawnY = 0f;
+    converted = false;
+    conversionOwnerId = -1;
     return this;
   }
 

@@ -129,6 +129,8 @@ public class Actioneer extends PassiveSystem {
   private final IntSet lastAttackTargetDied = new IntSet();
   /** Advancing per-unit stream used by native progressive field placement. */
   private final IntIntMap assassinProgressiveSeeds = new IntIntMap();
+  /** Advancing per-caster Conversion stream; repeated casts must consume new rolls. */
+  private final IntIntMap conversionSeeds = new IntIntMap();
 
   public boolean didLastAttackTargetDie(int entityId) {
     return lastAttackTargetDied.contains(entityId);
@@ -736,6 +738,9 @@ public class Actioneer extends PassiveSystem {
         preparePoisonDagger(entityId, targetId);
         break;
       }
+      case 32: // SKILLS_SrvSt32_Conversion_Bash_Stun_Concentrate_BearSmite
+        prepareConversion(entityId, targetId);
+        break;
       case 24: { // SKILLS_SrvSt24_DragonTalon
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
@@ -1138,6 +1143,10 @@ public class Actioneer extends PassiveSystem {
       }
       case 32: { // SKILLS_SrvDo032_PoisonDagger
         resolvePoisonDagger(entityId, targetId);
+        break;
+      }
+      case 79: { // SKILLS_SrvDo079_Conversion
+        resolveConversion(entityId, targetId);
         break;
       }
       case 1: // attack
@@ -1961,6 +1970,167 @@ public class Actioneer extends PassiveSystem {
             + "damage={} physical={} poisonPerFrame={} duration={} hp={} -> {}",
         entityId, targetId, applied, combat.physicalDamage,
         combat.poisonDamagePerFrame, combat.poisonDuration, before, hitpoints.asFixed());
+  }
+
+  /** Native SrvSt32 allocates one hit record before Conversion's keyframe. */
+  private void prepareConversion(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || skill == null || skill.srvdofunc != 79
+        || targetId == Engine.INVALID_ENTITY || !mMonster.has(targetId)
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !isAlive(entityId) || !isAlive(targetId)
+        || !isInMeleeRangeAtTick(entityId, targetId, 0, casting.positionSnapshotTick)) {
+      if (casting != null) {
+        casting.conversionPrepared = false;
+        casting.conversionHit = false;
+      }
+      log.info("[PALADIN_CONVERSION] phase=start_reject source={} target={} reason=target_or_range",
+          entityId, targetId);
+      if (mCasting.has(entityId)) mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+      return;
+    }
+    if (isTownTarget(targetId)) {
+      mCasting.remove(entityId);
+      if (mSequence.has(entityId)) mSequence.remove(entityId);
+      log.info("[PALADIN_CONVERSION] phase=start_reject source={} target={} reason=town",
+          entityId, targetId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    int toHit = statInt(attacker, Stat.tohit) + skill.ToHit
+        + Math.max(0, level - 1) * skill.LevToHit;
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, true, false,
+        statInt(attacker, Stat.mindamage), statInt(attacker, Stat.maxdamage), toHit,
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId));
+    casting.conversionPrepared = true;
+    casting.conversionTargetId = targetId;
+    casting.conversionHit = combat.hit && !combat.blocked;
+    log.info("[PALADIN_CONVERSION] phase=start source={} target={} level={} chanceToHit={} "
+            + "hit={} blocked={}",
+        entityId, targetId, level, combat.hitChance, combat.hit, combat.blocked);
+  }
+
+  private boolean isTownTarget(int entityId) {
+    if (map == null || !mPosition.has(entityId)) return false;
+    Map.Zone zone = map.getZone(mPosition.get(entityId).position);
+    return zone != null && zone.isTown();
+  }
+
+  /**
+   * Native {@code SKILLS_SrvDo079_Conversion}.  Conversion is deliberately
+   * resolved on the server at the animation keyframe: the roll, temporary
+   * allegiance, AI target policy and level/max-life save-list are all part of
+   * one atomic state transition.  A failed roll still drains weapon/armor
+   * durability in the same way as D2Game's SUNITDMG cleanup.
+   */
+  private void resolveConversion(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    int level = casting != null ? Math.max(1, skillLevel(entityId, casting.skillId)) : 1;
+    String reject = null;
+    if (casting == null || !casting.conversionPrepared
+        || casting.conversionTargetId != targetId
+        || skill == null || targetId == Engine.INVALID_ENTITY
+        || !mMonster.has(targetId) || mMercenary.has(targetId)
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !isAlive(entityId) || !isAlive(targetId)) {
+      reject = "missing_dead_or_missed_target";
+    }
+    Monster targetMonster = reject == null ? mMonster.get(targetId) : null;
+    if (casting != null) casting.conversionPrepared = false;
+    if (reject == null && (targetMonster.monstats == null || targetMonster.monstats.npc
+        || targetMonster.monstats.Align != 0 || targetMonster.monstats.killable == false
+        || targetMonster.monstats.inTown || targetMonster.converted
+        || !BarbarianSkills.canSwitchWarCryAi(targetMonster, stateList(targetId)))) {
+      reject = "target_not_evil_monster";
+    }
+    if (reject == null && !canDamageRelation(entityId, targetId, true, false)) {
+      reject = "relation";
+    }
+    int chance = reject == null ? conversionChance(skill, level, entityId) : 0;
+    int roll = -1;
+    boolean success = false;
+    if (reject == null) {
+      int seed = conversionSeeds.get(entityId,
+          NativeRng.forUnit(Riiablo.gameSeed ^ skill.Id, entityId).state());
+      NativeRng rng = new NativeRng(seed);
+      roll = rng.nextInt(100);
+      conversionSeeds.put(entityId, rng.state());
+      success = roll < chance;
+      if (!success) reject = "roll_failed";
+    }
+
+    // Native SrvDo079 performs this cleanup regardless of the conversion roll.
+    drainFrenzyDurability(activeAttackWeapon(entityId), targetId);
+    if (!success) {
+      log.info("[PALADIN_CONVERSION] phase=fail source={} target={} skill={} level={} "
+              + "chance={} roll={} reason={}",
+          entityId, targetId, skill != null ? skill.Id : -1, level, chance, roll, reject);
+      return;
+    }
+
+    UnitStates targetStates = mUnitStates.has(targetId) ? mUnitStates.get(targetId) : null;
+    if (targetStates == null) {
+      log.warn("[PALADIN_CONVERSION] phase=fail source={} target={} reason=state_component_missing",
+          entityId, targetId);
+      return;
+    }
+    if (targetStates.stateList == null) targetStates.init(targetId);
+    // Recasting the same state refreshes the native stat-list rather than
+    // stacking two ownership overlays.
+    targetStates.stateList.removeState(StateId.CONVERSION);
+    targetStates.stateList.removeState(StateId.CONVERSION_SAVE);
+    UnitState conversion = targetStates.stateList.addState(StateId.CONVERSION,
+        conversionDuration(skill, level), level, entityId);
+    UnitState save = targetStates.stateList.addPermanentState(StateId.CONVERSION_SAVE);
+    if (conversion == null || save == null) {
+      targetStates.stateList.removeState(StateId.CONVERSION);
+      targetStates.stateList.removeState(StateId.CONVERSION_SAVE);
+      log.warn("[PALADIN_CONVERSION] phase=fail source={} target={} reason=state_allocation",
+          entityId, targetId);
+      return;
+    }
+    Attributes sourceAttrs = mAttributesWrapper.get(entityId).attrs;
+    Attributes targetAttrs = mAttributesWrapper.get(targetId).attrs;
+    int sourceLevel = Math.max(1, statInt(sourceAttrs, Stat.level));
+    int targetLevel = Math.max(1, statInt(targetAttrs, Stat.level));
+    StatRef targetHp = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
+    StatRef targetMaxHp = targetAttrs.get(Stat.maxhp, StatRef.obtain());
+    save.conversionOriginalLevel = targetLevel;
+    save.conversionOriginalMaxHpEncoded = targetMaxHp == null
+        ? 0 : Math.max(1, Math.round(targetMaxHp.asFixed() * 256f));
+    if (targetLevel > sourceLevel && targetHp != null && targetMaxHp != null) {
+      float ratio = Math.min(1f, Math.max(0f, targetHp.asFixed() / Math.max(1f, targetMaxHp.asFixed())));
+      float scaledMax = Math.max(1f, targetMaxHp.asFixed() * sourceLevel / (float) targetLevel);
+      targetAttrs.get(Stat.level, StatRef.obtain()).set(sourceLevel);
+      targetMaxHp.set(scaledMax);
+      targetHp.set(Math.max(1f, Math.min(scaledMax, scaledMax * ratio)));
+    }
+    conversion.runtimeValue = entityId;
+    conversion.needsSync = true;
+    targetMonster.converted = true;
+    targetMonster.conversionOwnerId = entityId;
+    if (mTarget.has(targetId)) mTarget.remove(targetId);
+    if (mCasting.has(targetId)) mCasting.remove(targetId);
+    if (mSequence.has(targetId)) mSequence.remove(targetId);
+    log.info("[PALADIN_CONVERSION] phase=apply source={} target={} skill={} level={} "
+            + "chance={} roll={} duration={} targetLevel={} sourceLevel={} status=PASS",
+        entityId, targetId, skill.Id, level, chance, roll, conversion.duration,
+        targetLevel, sourceLevel);
+  }
+
+  private int conversionChance(Skills.Entry skill, int level, int entityId) {
+    return PaladinSkills.getConversionChance(
+        skill, level, name -> baseSkillLevel(entityId, name));
+  }
+
+  private int conversionDuration(Skills.Entry skill, int level) {
+    return PaladinSkills.getConversionDuration(skill, level);
   }
 
   /** Native SrvSt56: resolve hit once and retain the combat record for SrvDo120. */
@@ -3779,6 +3949,15 @@ public class Actioneer extends PassiveSystem {
   /** Player-owned units use their owner's PLAYERLIST relation for PvP. */
   private boolean canDamageRelation(
       int sourceId, int targetId, boolean sourcePlayerAligned, boolean targetPlayerAligned) {
+    // Conversion changes only the temporary allegiance; do not let a player
+    // damage a converted monster or let the converted unit strike its caster.
+    boolean sourceConverted = mMonster.has(sourceId) && mMonster.get(sourceId).converted;
+    boolean targetConverted = mMonster.has(targetId) && mMonster.get(targetId).converted;
+    if (targetConverted && sourcePlayerAligned) return false;
+    if (sourceConverted && targetPlayerAligned) return false;
+    if (sourceConverted && targetConverted) return false;
+    if (sourceConverted) return mMonster.has(targetId);
+    if (targetConverted) return mMonster.has(sourceId);
     int relationSource = sourcePlayerAligned ? playerAlignmentOwner(sourceId) : sourceId;
     int relationTarget = targetPlayerAligned ? playerAlignmentOwner(targetId) : targetId;
     return PvpCombatRules.canDamage(

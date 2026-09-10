@@ -202,6 +202,10 @@ public class UnitState {
   /** 是否已过期（待移除） */
   public boolean expired;
 
+  /** Conversion's native save-list payload (original level/max life). */
+  public int conversionOriginalLevel;
+  public int conversionOriginalMaxHpEncoded;
+
   //==========================================================================
   // 构造函数
   //==========================================================================
@@ -267,6 +271,8 @@ public class UnitState {
     isNew = true;
     needsSync = false;
     expired = false;
+    conversionOriginalLevel = 0;
+    conversionOriginalMaxHpEncoded = 0;
   }
 
   /** Clears stat-list values while retaining state identity and lifetime. */

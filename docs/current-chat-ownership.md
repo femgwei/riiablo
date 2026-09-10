@@ -58,7 +58,9 @@
   Charge 已接入 `SrvSt31/SrvDo067`（路径追击、Param1 速度、当前 tick 命中和 calc1 增伤）；
   Vengeance 已接入 `SrvSt35/SrvDo002` 的火/冰/电同时附伤、HitClass 轮换与权威结算；Holy
   Shield 已接入 `SrvSt36/SrvDo018` 的盾牌门槛、状态生命周期、block/defense stat-list 和
-  多人快照重建。下一项为 Conversion 与全职业表现验收。
+  多人快照重建；Conversion 已接入 `SrvSt32/SrvDo079` 的概率、阵营/AI、等级生命保存恢复、
+  死亡/离线/跨区清理及耐久收尾。圣骑士服务端技能首轮完成，下一项转入 Sorceress 单体
+  弹道/元素状态链专项核对，随后统一做全职业表现验收。
 - 十项死灵法师诅咒现统一读取 1.10f `Skills.txt/States.txt`，覆盖原生
   `SrvDo030/059/061`、目标点范围、难度时长、状态 stat、免疫怪物 1/5 抗性削减和
   负物理抗性伤害；玩家与怪物不再走两套实现。

@@ -815,19 +815,26 @@ public abstract class AI implements Interactable.Interactor {
     if (!mPosition.has(targetId) || targetId == entityId) return false;
     SummonedPet sourcePet = mSummonedPet.has(entityId) ? mSummonedPet.get(entityId) : null;
     if (sourcePet != null && sourcePet.passive) return false;
+    boolean sourceConverted = monster != null && monster.converted;
     boolean targetFriendly = mPlayer.has(targetId) || mMercenary.has(targetId)
         || mSummonedPet.has(targetId);
     Monster candidate = mMonster.has(targetId) ? mMonster.get(targetId) : null;
     boolean targetHostileMonster = candidate != null && !targetFriendly
         && !mCorpse.has(targetId)
         && candidate.monstats != null && candidate.monstats.Align == 0
+        && !candidate.converted
         && candidate.monstats.killable && !candidate.monstats.npc
         && !candidate.monstats.inTown;
+    // A converted monster is player-aligned and only seeks ordinary evil
+    // monsters.  It must never reacquire the caster or another converted unit.
+    if (sourceConverted && !targetHostileMonster) return false;
     boolean targetHostilePlayerUnit = sourcePet != null && targetFriendly
         && arePlayerOwnersHostile(sourcePet.ownerId, alignmentOwner(targetId));
-    if (sourcePet != null
-        ? !(targetHostileMonster || targetHostilePlayerUnit)
-        : !targetFriendly) return false;
+    if (!sourceConverted) {
+      if (sourcePet != null
+          ? !(targetHostileMonster || targetHostilePlayerUnit)
+          : !(targetFriendly || candidate != null && candidate.converted)) return false;
+    }
     if (mMapWrapper.has(targetId) && mMapWrapper.get(targetId).zone != null
         && mMapWrapper.get(targetId).zone.isTown()) {
       return false;

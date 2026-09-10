@@ -1480,6 +1480,17 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   boolean areAligned(int sourceId, int targetId) {
+    boolean sourceConverted = mMonster.has(sourceId) && mMonster.get(sourceId).converted;
+    boolean targetConverted = mMonster.has(targetId) && mMonster.get(targetId).converted;
+    if (sourceConverted || targetConverted) {
+      // Converted monsters are temporarily player-aligned: they can damage
+      // ordinary evil monsters, but neither players nor other converted units.
+      if (sourceConverted && targetConverted) return true;
+      if (sourceConverted) {
+        return mPlayer.has(targetId) || mMercenary.has(targetId) || mSummonedPet.has(targetId);
+      }
+      return mPlayer.has(sourceId) || mMercenary.has(sourceId) || mSummonedPet.has(sourceId);
+    }
     if (mNativeAiTargetOverride.has(sourceId)) {
       NativeAiTargetOverride override = mNativeAiTargetOverride.get(sourceId);
       if (override.remainingFrames >= 0 && override.targetId == targetId) {
@@ -1981,6 +1992,12 @@ public class MissileCollisionSystem extends IteratingSystem {
         || mSummonedPet.has(entityId2);
     boolean sourceMonster = mMonster.has(entityId1);
     boolean targetMonster = mMonster.has(entityId2);
+    if (sourceMonster && mMonster.get(entityId1).converted) {
+      return targetMonster && !mMonster.get(entityId2).converted;
+    }
+    if (targetMonster && mMonster.get(entityId2).converted) {
+      return !sourcePlayer && sourceMonster && !mMonster.get(entityId1).converted;
+    }
     if (!sourcePlayer && !sourceMonster) return false;
     if (!targetPlayer && !targetMonster) return false;
     int relationSource = sourcePlayer ? alignmentOwner(entityId1) : entityId1;

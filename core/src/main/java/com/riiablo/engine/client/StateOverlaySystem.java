@@ -57,6 +57,8 @@ public class StateOverlaySystem extends IteratingSystem {
         states.stateList.getState(StateId.BATTLECOMMAND));
     reconcile(entityId, StateId.SHOUT, states.stateList.getState(StateId.SHOUT));
     reconcile(entityId, StateId.BATTLECRY, states.stateList.getState(StateId.BATTLECRY));
+    reconcile(entityId, StateId.CONVERSION,
+        states.stateList.getState(StateId.CONVERSION));
     reconcileVenomTransform(entityId,
         states.stateList.getState(StateId.VENOMCLAWS));
   }
@@ -156,6 +158,9 @@ public class StateOverlaySystem extends IteratingSystem {
         break;
       case StateId.BATTLECRY:
         candidates = new String[] {"battlecry"};
+        break;
+      case StateId.CONVERSION:
+        candidates = new String[] {"conversion"};
         break;
       default:
         return null;

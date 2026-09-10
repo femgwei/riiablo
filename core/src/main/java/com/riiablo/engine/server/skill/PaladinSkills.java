@@ -497,6 +497,25 @@ public final class PaladinSkills {
     return 4 * skillLevel;
   }
 
+  /** Native calc1 projection for Conversion (clamped to the roll domain). */
+  public static int getConversionChance(Skills.Entry skill, int skillLevel,
+      ToIntFunction<String> baseSkillLevel) {
+    if (skill == null) return getConversionChance(skillLevel);
+    if (skill.calc1 == null || skill.calc1.trim().isEmpty()) {
+      return Math.max(0, Math.min(100, getConversionChance(skillLevel)));
+    }
+    int value = SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel),
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel);
+    return Math.max(0, Math.min(100, value));
+  }
+
+  /** Native auralencalc projection; duration is always at least one frame. */
+  public static int getConversionDuration(Skills.Entry skill, int skillLevel) {
+    if (skill == null) return 1;
+    return Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill,
+        Math.max(1, skillLevel)));
+  }
+
   /** Native Skills.txt SrvSt36/SrvDo018 Holy Shield gate and state payload. */
   public static boolean isHolyShield(Skills.Entry skill) {
     return skill != null && (skill.Id == SkillId.HOLY_SHIELD || skill.srvstfunc == 36);

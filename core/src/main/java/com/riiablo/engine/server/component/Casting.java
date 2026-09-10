@@ -82,6 +82,10 @@ public class Casting extends PooledComponent {
   @EntityId public int poisonDaggerTargetId;
   public Item poisonDaggerWeapon;
   public boolean poisonDaggerPrepared;
+  /** Native shared SrvSt32 combat record consumed by Conversion SrvDo079. */
+  public boolean conversionHit;
+  @EntityId public int conversionTargetId;
+  public boolean conversionPrepared;
 
   public Casting set(int skillId, int targetId, Vector2 targetVec) {
     return set(skillId, targetId, targetVec, 0L);
@@ -144,6 +148,9 @@ public class Casting extends PooledComponent {
     poisonDaggerTargetId = Engine.INVALID_ENTITY;
     poisonDaggerWeapon = null;
     poisonDaggerPrepared = false;
+    conversionHit = false;
+    conversionTargetId = Engine.INVALID_ENTITY;
+    conversionPrepared = false;
     return this;
   }
 
@@ -204,5 +211,8 @@ public class Casting extends PooledComponent {
     poisonDaggerTargetId = Engine.INVALID_ENTITY;
     poisonDaggerWeapon = null;
     poisonDaggerPrepared = false;
+    conversionHit = false;
+    conversionTargetId = Engine.INVALID_ENTITY;
+    conversionPrepared = false;
   }
 }

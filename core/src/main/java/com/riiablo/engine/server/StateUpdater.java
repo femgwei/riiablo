@@ -164,6 +164,22 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     }
   }
 
+  /** Death removes Conversion allegiance without applying the living-unit HP restore callback. */
+  @Subscribe
+  public void onDeath(DeathEvent event) {
+    if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
+    Monster monster = mMonster.get(event.victim);
+    if (!monster.converted) return;
+    monster.converted = false;
+    monster.conversionOwnerId = -1;
+    if (mUnitStates.has(event.victim) && mUnitStates.get(event.victim).stateList != null) {
+      StateList states = mUnitStates.get(event.victim).stateList;
+      states.removeState(StateId.CONVERSION);
+      states.removeState(StateId.CONVERSION_SAVE);
+    }
+    log.info("[PALADIN_CONVERSION] phase=clear entity={} reason=death", event.victim);
+  }
+
   /** D2Game EventFunc27: Clay Golem's item_slow is a 750-frame SLOWED layer. */
   private void applyNativeGolemHitEffects(DamageEvent event) {
     if (event.attacker < 0 || !event.isMelee() || !mSummonedPet.has(event.victim)
@@ -496,7 +512,13 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     // Resolve this tick before decrementing duration. A one-frame state must
     // still deal its final DOT tick, then expire.
     processDamageOverTime(entityId, stateList);
+    expireOrphanedConversion(entityId, stateList);
+    boolean conversionExpiring = stateList.getState(StateId.CONVERSION) != null
+        && stateList.getState(StateId.CONVERSION).duration == 1;
     stateList.update();
+    if (conversionExpiring && !stateList.hasState(StateId.CONVERSION)) {
+      restoreConversion(entityId, stateList);
+    }
     int removedDruidStates = DruidSkills.removeInvalidFeralMaulStates(stateList);
     if (removedDruidStates > 0) {
       log.info("[DRUID_FERAL_MAUL] phase=shape_dependency_cleanup entity={} removed={}",
@@ -565,6 +587,54 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
           attrs.aggregate().getValue(Stat.maxmana, 0f),
           attrs.aggregate().getValue(Stat.maxstamina, 0f));
     }
+  }
+
+  private void expireOrphanedConversion(int entityId, StateList states) {
+    UnitState conversion = states.getState(StateId.CONVERSION);
+    if (conversion == null) return;
+    int owner = conversion.sourceEntityId;
+    boolean invalid = owner < 0 || !mPlayer.has(owner) || !isAlive(owner);
+    if (!invalid && map != null && mPosition.has(owner) && mPosition.has(entityId)) {
+      Map.Zone ownerZone = map.getZone(mPosition.get(owner).position);
+      Map.Zone targetZone = map.getZone(mPosition.get(entityId).position);
+      invalid = ownerZone != targetZone;
+    }
+    if (invalid && conversion.duration != 1) {
+      conversion.duration = 1;
+      conversion.needsSync = true;
+      log.info("[PALADIN_CONVERSION] phase=expire entity={} owner={} reason=owner_or_zone",
+          entityId, owner);
+    }
+  }
+
+  /** Restores the native Conversion save-list payload when its aura expires. */
+  private void restoreConversion(int entityId, StateList states) {
+    if (!mMonster.has(entityId)) {
+      states.removeState(StateId.CONVERSION_SAVE);
+      return;
+    }
+    Monster monster = mMonster.get(entityId);
+    UnitState save = states.getState(StateId.CONVERSION_SAVE);
+    if (save != null && mAttributesWrapper.has(entityId)) {
+      Attributes attrs = mAttributesWrapper.get(entityId).attrs;
+      if (attrs != null) {
+        StatRef level = attrs.get(Stat.level, StatRef.obtain());
+        StatRef hp = attrs.get(Stat.hitpoints, StatRef.obtain());
+        StatRef maxHp = attrs.get(Stat.maxhp, StatRef.obtain());
+        if (level != null && hp != null && maxHp != null && save.conversionOriginalLevel > 0
+            && save.conversionOriginalMaxHpEncoded > 0) {
+          float ratio = Math.max(0f, Math.min(1f, hp.asFixed() / Math.max(1f, maxHp.asFixed())));
+          float originalMax = save.conversionOriginalMaxHpEncoded / 256f;
+          level.set(save.conversionOriginalLevel);
+          maxHp.set(originalMax);
+          hp.set(Math.max(1f, Math.min(originalMax, originalMax * ratio)));
+        }
+      }
+    }
+    monster.converted = false;
+    monster.conversionOwnerId = -1;
+    states.removeState(StateId.CONVERSION_SAVE);
+    log.info("[PALADIN_CONVERSION] phase=restore entity={} status=PASS", entityId);
   }
 
   /** Keeps D2Common passive stat lists aligned with the authoritative skill table. */
@@ -921,6 +991,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   }
 
   private boolean isHostile(int sourceId, int targetId) {
+    boolean sourceConverted = mMonster.has(sourceId) && mMonster.get(sourceId).converted;
+    boolean targetConverted = mMonster.has(targetId) && mMonster.get(targetId).converted;
+    if (sourceConverted) return mMonster.has(targetId) && !targetConverted;
+    if (targetConverted) return mMonster.has(sourceId);
     if (mMonster.has(targetId) && !mMercenary.has(targetId)
         && !mSummonedPet.has(targetId)) return isPlayerAligned(sourceId);
     return PvpCombatRules.canDamage(partyManager,

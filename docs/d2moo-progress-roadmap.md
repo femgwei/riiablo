@@ -213,7 +213,7 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 99% | 1% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer、FoH/Holy Bolt、Sacrifice、Smite、Zeal、Charge、Vengeance 与 Holy Shield 已完成；剩余 Conversion 和实机表现验收 |
+| 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
 职业技能专项整体按 **约 79% 完成、约 21% 剩余** 计入战斗模块；刺客专项已完成，
@@ -704,6 +704,13 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   到期自动移除，远端状态快照按技能等级重建相同 payload。新增 `NativeHolyShieldDataTest`
   覆盖 1.10f 数据、刷新和多人重建；Holy Shield、Bone Armor、Vengeance 定向回归及
   `:server:d2gs:compileJava` 通过。下一项为 Conversion。
+- 2026-09-10：完成圣骑士 Conversion `SrvSt32/SrvDo079` 首轮移植。起手建立原生命中记录，
+  关键帧按 `calc1` 百分比和 `auralencalc` 生命周期执行转化；只接受邪恶、可伤害、非佣兵
+  怪物。转换期间服务器统一切换怪物阵营与 AI 目标，玩家/队友/召唤物视其为友军，普通
+  怪物可与其互相攻击；到期按 `CONVERSION_SAVE` 恢复原等级、最大生命和当前生命比例。
+  死亡、施法者离线/死亡和跨区会清理或提前恢复，失败仍执行原生耐久收尾；状态快照沿用
+  现有 StateP，无网络 schema 改动。定向回归、D2GS 编译和真实 1.10f offscreenCamp 通过。
+  下一项为 Sorceress 单体弹道/元素状态链专项核对。
 
 ## 当前下一项
 
