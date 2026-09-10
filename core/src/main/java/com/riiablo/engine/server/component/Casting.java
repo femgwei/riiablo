@@ -59,6 +59,11 @@ public class Casting extends PooledComponent {
   public boolean chargeHitProcessed;
   @EntityId public int chargeTargetId;
   public int chargeVelocityBonusPercent;
+  /** Native Vengeance SrvSt35 precomputed melee/elemental record. */
+  public CombatSystem.CombatResult vengeanceCombat;
+  @EntityId public int vengeanceTargetId;
+  public int vengeanceElementType;
+  public boolean vengeancePrepared;
   /** Native Feral Rage/Maul SrvSt56 combat record consumed by SrvDo120. */
   public CombatSystem.CombatResult feralMaulCombat;
   @EntityId public int feralMaulTargetId;
@@ -121,6 +126,10 @@ public class Casting extends PooledComponent {
     chargeHitProcessed = false;
     chargeTargetId = Engine.INVALID_ENTITY;
     chargeVelocityBonusPercent = 0;
+    vengeanceCombat = null;
+    vengeanceTargetId = Engine.INVALID_ENTITY;
+    vengeanceElementType = 0;
+    vengeancePrepared = false;
     feralMaulCombat = null;
     feralMaulTargetId = Engine.INVALID_ENTITY;
     feralMaulStunFrames = 0;
@@ -177,6 +186,10 @@ public class Casting extends PooledComponent {
     chargeHitProcessed = false;
     chargeTargetId = Engine.INVALID_ENTITY;
     chargeVelocityBonusPercent = 0;
+    vengeanceCombat = null;
+    vengeanceTargetId = Engine.INVALID_ENTITY;
+    vengeanceElementType = 0;
+    vengeancePrepared = false;
     feralMaulCombat = null;
     feralMaulTargetId = Engine.INVALID_ENTITY;
     feralMaulStunFrames = 0;

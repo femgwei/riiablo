@@ -890,6 +890,10 @@ public class Actioneer extends PassiveSystem {
         }
         break;
       }
+      case 35: { // SKILLS_SrvSt35_Vengeance: precompute physical + one element
+        prepareVengeance(entityId, targetId);
+        break;
+      }
       case 33: // Find Potion / Grim Ward corpse eligibility is authoritative in ServerSkillSystem
       case 34: // Find Item corpse eligibility is authoritative in ServerSkillSystem
         log.debug("[BARBARIAN_CORPSE] phase=start entity={} target={} srvStFunc={}",
@@ -1134,6 +1138,14 @@ public class Actioneer extends PassiveSystem {
       case 2: // Berserk and other native SrvDo002 melee skills
       case 9: // player Frenzy
       case 109: { // monster Frenzy / BloodLordFrenzy
+        Casting vengeanceCasting = mCasting.get(entityId);
+        Skills.Entry vengeanceSkill = vengeanceCasting != null
+            ? Riiablo.files.skills.get(vengeanceCasting.skillId) : null;
+        if (srvdofunc == 2 && vengeanceSkill != null
+            && vengeanceSkill.Id == SkillId.VENGEANCE) {
+          resolveVengeance(entityId, targetId);
+          break;
+        }
         if (srvdofunc == 7) {
           log.info("[MONSTER_SKILL] phase=jab entity={} target={} using=melee_hit_pipeline",
               entityId, targetId);
@@ -4244,6 +4256,116 @@ public class Actioneer extends PassiveSystem {
       }
     }
     return null;
+  }
+
+  /** Native SrvSt35_Vengeance: reserve one rotating elemental hit record. */
+  private void prepareVengeance(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || skill == null || skill.Id != SkillId.VENGEANCE
+        || targetId == Engine.INVALID_ENTITY || !mPlayer.has(entityId)
+        || !mAttributesWrapper.has(entityId) || !mAttributesWrapper.has(targetId)
+        || !mPosition.has(entityId) || !mPosition.has(targetId)
+        || !isAlive(entityId) || !isAlive(targetId)
+        || !isInMeleeRangeAtTick(entityId, targetId, 3, casting.positionSnapshotTick)
+        || !canDamageRelation(entityId, targetId, true, isPlayerEntity(targetId))) {
+      log.info("[PALADIN_VENGEANCE] phase=start_reject source={} target={} reason=invalid_context",
+          entityId, targetId);
+      return;
+    }
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(targetId).attrs;
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    int physicalMin = Math.max(1, statInt(attacker, Stat.mindamage));
+    int physicalMax = Math.max(physicalMin, statInt(attacker, Stat.maxdamage));
+    int hitClassElement = Math.max(0, Math.min(2,
+        mPlayer.get(entityId).vengeanceHitClass));
+    // Native Vengeance rolls one weapon base value and derives all three
+    // elemental packets from it. Param1 only rotates the visual hit class.
+    int elementalBase = MathUtils.random(physicalMin, physicalMax);
+    int[] elementalMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] elementalMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] damageTypes = {CombatSystem.DAMAGE_FIRE, CombatSystem.DAMAGE_COLD,
+        CombatSystem.DAMAGE_LIGHTNING};
+    short[] masteryStats = {Stat.passive_fire_mastery, Stat.passive_cold_mastery,
+        Stat.passive_ltng_mastery};
+    int[] percentages = new int[3];
+    for (int element = 0; element < 3; element++) {
+      int percent = PaladinSkills.getVengeanceElementPercent(skill, level, element);
+      int mastery = statInt(attacker, masteryStats[element]);
+      if (percent > 0 && mastery != 0) percent += percent * mastery / 100;
+      percentages[element] = Math.max(0, percent);
+      int damage = Math.max(0, elementalBase * percentages[element] / 100);
+      elementalMin[damageTypes[element]] = damage;
+      elementalMax[damageTypes[element]] = damage;
+    }
+    int coldLength = PaladinSkills.getVengeanceColdLength(
+        skill, level, name -> baseSkillLevel(entityId, name));
+    int attackRating = PaladinSkills.getChargeAttackRating(skill, level,
+        statInt(attacker, Stat.tohit));
+    Item weapon = activeAttackWeapon(entityId);
+    casting.vengeanceCombat = CombatSystem.INSTANCE.calculateAttack(
+        attacker, defender, true, isPlayerEntity(targetId), false,
+        physicalMin, physicalMax, attackRating, false,
+        elementalMin, elementalMax, coldLength, 0,
+        stateList(entityId), stateList(targetId), isEntityMoving(targetId),
+        weaponMastery(entityId, weapon, false));
+    casting.vengeanceTargetId = targetId;
+    casting.vengeanceElementType = hitClassElement;
+    casting.vengeancePrepared = true;
+    log.info("[PALADIN_VENGEANCE] phase=start source={} target={} level={} hitClass={} "
+            + "physical={}..{} elementalBase={} firePct={} coldPct={} lightningPct={} "
+            + "coldLength={} attackRating={} hit={} chance={}",
+        entityId, targetId, level, hitClassElement, physicalMin, physicalMax, elementalBase,
+        percentages[0], percentages[1], percentages[2], coldLength, attackRating,
+        casting.vengeanceCombat.hit, casting.vengeanceCombat.hitChance);
+  }
+
+  /** Native SrvDo002 Vengeance consumer; the precomputed record is applied once. */
+  private void resolveVengeance(int entityId, int targetId) {
+    Casting casting = mCasting.get(entityId);
+    int resolvedTarget = casting != null && casting.vengeanceTargetId != Engine.INVALID_ENTITY
+        ? casting.vengeanceTargetId : targetId;
+    if (casting == null || !casting.vengeancePrepared || casting.vengeanceCombat == null
+        || resolvedTarget == Engine.INVALID_ENTITY || !mAttributesWrapper.has(resolvedTarget)) {
+      log.info("[PALADIN_VENGEANCE] phase=hit_reject source={} target={} reason=missing_record",
+          entityId, resolvedTarget);
+      return;
+    }
+    CombatSystem.CombatResult combat = casting.vengeanceCombat;
+    casting.vengeancePrepared = false;
+    casting.vengeanceCombat = null;
+    if (!combat.hit || combat.blocked) {
+      if (combat.blocked) queueHitReaction(resolvedTarget, true);
+      log.info("[PALADIN_VENGEANCE] phase=hit_result source={} target={} result={} chance={}",
+          entityId, resolvedTarget, combat.blocked ? "blocked" : "miss", combat.hitChance);
+      return;
+    }
+    Attributes defender = mAttributesWrapper.get(resolvedTarget).attrs;
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    if (hp == null || hp.asFixed() <= 0f) return;
+    float before = hp.asFixed();
+    DamageEvent damageEvent = DamageEvent.obtainMelee(entityId, resolvedTarget,
+        Math.max(0, combat.totalDamage), combat.physicalDamage);
+    events.dispatch(damageEvent);
+    float applied = Math.max(0f, damageEvent.damage);
+    hp.sub(applied);
+    if (hp.asFixed() < 0f) hp.set(0f);
+    Item weapon = activeAttackWeapon(entityId);
+    if (weapon != null) drainFrenzyDurability(weapon, resolvedTarget);
+    applyElementalAbsorb(defender, combat, 1f);
+    applyCombatStates(entityId, resolvedTarget, combat);
+    casting.vengeanceElementType = (casting.vengeanceElementType + 1) % 3;
+    mPlayer.get(entityId).vengeanceHitClass = casting.vengeanceElementType;
+    log.info("[PALADIN_VENGEANCE] phase=hit_result source={} target={} result=hit hitClass={} "
+            + "fire={} cold={} lightning={} damage={} hp={} -> {} nextHitClass={} chance={}",
+        entityId, resolvedTarget, (casting.vengeanceElementType + 2) % 3,
+        combat.elementalDamage[CombatSystem.DAMAGE_FIRE],
+        combat.elementalDamage[CombatSystem.DAMAGE_COLD],
+        combat.elementalDamage[CombatSystem.DAMAGE_LIGHTNING], applied, before, hp.asFixed(),
+        casting.vengeanceElementType, combat.hitChance);
+    if (hp.asFixed() > 0f) queueHitReaction(resolvedTarget, false);
+    if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, resolvedTarget));
   }
 
   /** Native player branch of SKILLS_SrvDo067_Charge. */

@@ -55,4 +55,25 @@ class PaladinMeleeSkillDataTest extends RiiabloTest {
     assertTrue(PaladinSkills.getChargeVelocityBonus(skill) >= 0,
         "Charge velocity bonus must be a non-negative native Param1 value");
   }
+
+  @Test
+  void vengeanceUsesNativeStartAndElementRotationFormulas() {
+    Skills.Entry skill = Riiablo.files.skills.get(SkillId.VENGEANCE);
+    assertNotNull(skill);
+    assertEquals("Vengeance", skill.skill);
+    assertEquals(35, skill.srvstfunc);
+    assertEquals(2, skill.srvdofunc);
+    int fire = PaladinSkills.getVengeanceElementPercent(skill, 1, 0);
+    int cold = PaladinSkills.getVengeanceElementPercent(skill, 1, 1);
+    int lightning = PaladinSkills.getVengeanceElementPercent(skill, 1, 2);
+    assertTrue(fire > 0 && cold > 0 && lightning > 0,
+        "Vengeance must provide all three native elemental percentages");
+    for (int element = 0; element < 3; element++) {
+      int[] packet = PaladinSkills.getVengeanceElementalDamage(skill, 1, element, 10, 20);
+      assertTrue(packet[0] > 0 && packet[1] >= packet[0],
+          "Vengeance must scale every elemental packet from physical weapon damage");
+    }
+    assertTrue(PaladinSkills.getVengeanceColdLength(skill, 1, name -> 0) > 0,
+        "Vengeance must preserve the native cold duration");
+  }
 }

@@ -33,7 +33,7 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（圣骑士 Charge 原生冲锋链）
+- 当前功能提交：本文件所在 `HEAD`（圣骑士 Vengeance 原生元素近战链）
 - 上一功能基线：`ef45c90e`（Holy Freeze / Holy Shock / Sanctuary 原生特殊周期光环）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
@@ -55,8 +55,9 @@
   已通过；对象模块按 95% 记录，剩余复杂神殿效果及实机观感验收。
 - 当前 Chat 继续统一维护全部模块，包括战斗，不存在需要避让的独立战斗 Chat。
 - 圣骑士 Cleansing、Meditation、Redemption、Sacrifice、Smite、Zeal 已完成首轮原生链；
-  Charge 已接入 `SrvSt31/SrvDo067`（路径追击、Param1 速度、当前 tick 命中和 calc1 增伤）。
-  下一项为 Vengeance，随后处理 Holy Shield/Conversion 与全职业表现验收。
+  Charge 已接入 `SrvSt31/SrvDo067`（路径追击、Param1 速度、当前 tick 命中和 calc1 增伤）；
+  Vengeance 已接入 `SrvSt35/SrvDo002` 的火/冰/电同时附伤、HitClass 轮换与权威结算。下一项为 Holy
+  Shield，随后处理 Conversion 与全职业表现验收。
 - 十项死灵法师诅咒现统一读取 1.10f `Skills.txt/States.txt`，覆盖原生
   `SrvDo030/059/061`、目标点范围、难度时长、状态 stat、免疫怪物 1/5 抗性削减和
   负物理抗性伤害；玩家与怪物不再走两套实现。

@@ -328,7 +328,9 @@ public final class PaladinSkills {
 
   /** Native Charge attack-rating contribution from ToHit/LevToHit. */
   public static int getChargeAttackRating(Skills.Entry skill, int skillLevel, int baseAttackRating) {
-    if (skill == null || skill.Id != SkillId.CHARGE) return baseAttackRating;
+    if (skill == null || (skill.Id != SkillId.CHARGE && skill.Id != SkillId.VENGEANCE)) {
+      return baseAttackRating;
+    }
     int level = Math.max(1, skillLevel);
     return Math.max(0, baseAttackRating + skill.ToHit + (level - 1) * skill.LevToHit);
   }
@@ -352,6 +354,41 @@ public final class PaladinSkills {
     int minDamage = 40 + (skillLevel - 1) * 20;
     int maxDamage = 60 + (skillLevel - 1) * 20;
     return MathUtils.random(minDamage, maxDamage);
+  }
+
+  /** Native Vengeance SrvSt35 elemental percentage (calc1/calc2/calc3). */
+  public static int getVengeanceElementPercent(Skills.Entry skill, int skillLevel,
+      int elementType) {
+    if (skill == null || skill.Id != SkillId.VENGEANCE) return 0;
+    String formula;
+    switch (Math.max(0, Math.min(2, elementType))) {
+      case 1: formula = skill.calc2; break; // cold
+      case 2: formula = skill.calc3; break; // lightning
+      default: formula = skill.calc1; break; // fire
+    }
+    int value = SkillFormula.evaluate(formula, skill, Math.max(1, skillLevel));
+    // 1.10f's Vengeance row is percentage based; retain a conservative
+    // compatibility fallback for reduced/custom tables.
+    return value > 0 ? value : 70 + 6 * (Math.max(1, skillLevel) - 1);
+  }
+
+  /** Converts the physical weapon range into one elemental Vengeance packet. */
+  public static int[] getVengeanceElementalDamage(Skills.Entry skill, int skillLevel,
+      int elementType, int physicalMin, int physicalMax) {
+    int percent = getVengeanceElementPercent(skill, skillLevel, elementType);
+    long min = Math.max(0L, (long) Math.max(0, physicalMin) * percent / 100L);
+    long max = Math.max(min, (long) Math.max(0, physicalMax) * percent / 100L);
+    return new int[] {saturated(min), saturated(max)};
+  }
+
+  /** Native SKILLS_GetElementalLength used by Vengeance's cold packet. */
+  public static int getVengeanceColdLength(Skills.Entry skill, int skillLevel,
+      ToIntFunction<String> baseSkillLevel) {
+    if (skill == null || skill.Id != SkillId.VENGEANCE) return 0;
+    int level = Math.max(1, skillLevel);
+    return Math.max(0, skill.ELen + damageBonusByLevel(level, skill.ELevLen)
+        + SkillFormula.evaluate(skill.ELenSymPerCalc, skill, level,
+            baseSkillLevel == null ? name -> 0 : baseSkillLevel));
   }
 
   /**
