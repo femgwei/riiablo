@@ -15,6 +15,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
+import com.riiablo.engine.server.skill.SkillFormula;
 import java.util.function.ToIntFunction;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -129,13 +130,23 @@ public final class MissileDamageResolver {
       Attributes ownerAttrs, int level) {
     boolean impactCreatesExplosion = projectile != null && projectile.missile != null
         && projectile.missile.pSrvHitFunc == 4;
-    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion);
+    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
+        name -> 0);
+  }
+
+  /** Native skill snapshot with a resolver for EDmgSymPerCalc/ELenSymPerCalc. */
+  public static boolean initializeSkill(Missile projectile, Skills.Entry skill,
+      Attributes ownerAttrs, int level, ToIntFunction<String> baseSkillLevel) {
+    boolean impactCreatesExplosion = projectile != null && projectile.missile != null
+        && projectile.missile.pSrvHitFunc == 4;
+    return initializeSkill(projectile, skill, ownerAttrs, level, true, !impactCreatesExplosion,
+        baseSkillLevel == null ? name -> 0 : baseSkillLevel);
   }
 
   /** Builds the elemental-only snapshot inherited by an explosion sub-missile. */
   public static boolean initializeSkillArea(Missile projectile, Skills.Entry skill,
       Attributes ownerAttrs, int level) {
-    return initializeSkill(projectile, skill, ownerAttrs, level, false, true);
+    return initializeSkill(projectile, skill, ownerAttrs, level, false, true, name -> 0);
   }
 
   /** Builds the native magic packet used by Bone Spear and Bone Spirit. */
@@ -258,7 +269,8 @@ public final class MissileDamageResolver {
   }
 
   private static boolean initializeSkill(Missile projectile, Skills.Entry skill,
-      Attributes ownerAttrs, int level, boolean includeSource, boolean includeElement) {
+      Attributes ownerAttrs, int level, boolean includeSource, boolean includeElement,
+      ToIntFunction<String> baseSkillLevel) {
     if (projectile == null || skill == null) return false;
     level = Math.max(1, level);
     projectile.skillId = skill.Id;
@@ -277,6 +289,22 @@ public final class MissileDamageResolver {
     if (includeElement && type > PHYSICAL) {
       elementalMin[type] = shiftedDamage(skill.EMin, skill.EMinLev, level, skill.HitShift);
       elementalMax[type] = shiftedDamage(skill.EMax, skill.EMaxLev, level, skill.HitShift);
+      int synergy = Math.max(0, SkillFormula.evaluate(skill.EDmgSymPerCalc, skill, level,
+          baseSkillLevel));
+      if (synergy > 0) {
+        elementalMin[type] += elementalMin[type] * synergy / 100;
+        elementalMax[type] += elementalMax[type] * synergy / 100;
+      }
+      // Missiles.txt ApplyMastery is the native gate used by elemental skill
+      // packets. Fire/Lightning mastery increase damage; Cold Mastery is a
+      // resistance pierce state and is intentionally not folded into damage.
+      if (projectile.missile != null && projectile.missile.ApplyMastery) {
+        short masteryStat = type == FIRE ? Stat.passive_fire_mastery
+            : type == LIGHTNING ? Stat.passive_ltng_mastery : 0;
+        int mastery = masteryStat != 0 ? Math.max(0, statInt(ownerAttrs, masteryStat)) : 0;
+        elementalMin[type] += elementalMin[type] * mastery / 100;
+        elementalMax[type] += elementalMax[type] * mastery / 100;
+      }
     }
     int coldLength = includeElement && type == COLD ? Math.max(0, skill.ELen
         + damageBonusByLevel(level, skill.ELevLen)) : 0;

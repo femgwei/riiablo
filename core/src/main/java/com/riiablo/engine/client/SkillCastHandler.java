@@ -175,6 +175,12 @@ public class SkillCastHandler extends PassiveSystem {
     boolean localFistOfHeavensServer = localServer
         && (event.srvdofunc == 80 || skill.srvdofunc == 80);
     boolean localHolyBoltServer = localServer && PaladinSkills.isHolyBolt(skill);
+    // Charged Bolt is emitted as authoritative one-per-calc1 missiles by the
+    // local ServerSkillSystem.  Do not also create the legacy client fan or
+    // local games will contain a doubled set of projectiles.
+    boolean localChargedBoltServer = localServer
+        && (event.skillId == com.riiablo.engine.server.skill.SkillId.CHARGED_BOLT
+            || "Charged Bolt".equalsIgnoreCase(skill.skill));
     boolean fistOfHeavens = event.srvdofunc == 80 || skill.srvdofunc == 80;
     if (fistOfHeavens && event.targetId >= 0 && mPosition.has(event.targetId)
         && Riiablo.files.NativeSkills != null) {
@@ -195,12 +201,13 @@ public class SkillCastHandler extends PassiveSystem {
         && event.cltdofunc == 33;
     if (serverMissile && !separateCorpseBurst
         && (networkClient || localMonsterServer || localBlessedHammerServer
-            || localFistOfHeavensServer || localHolyBoltServer)) {
+            || localFistOfHeavensServer || localHolyBoltServer || localChargedBoltServer)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} "
               + "srvDoFunc={} networkClient={} localMonster={} localBlessedHammer={} "
-              + "localFistOfHeavens={} localHolyBolt={}",
+          + "localFistOfHeavens={} localHolyBolt={} localChargedBolt={}",
           event.entityId, skill.skill, skill.srvdofunc, networkClient, localMonsterServer,
-          localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer);
+          localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer,
+          localChargedBoltServer);
       return;
     }
 

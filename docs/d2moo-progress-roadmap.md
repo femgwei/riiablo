@@ -214,7 +214,7 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
+| 法师 Sorceress | 62% | 38% | Static Field、Blaze/Fire Wall/Frost Nova、Teleport 与持续区域表现 |
 
 职业技能专项整体按 **约 79% 完成、约 21% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
@@ -711,6 +711,13 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   死亡、施法者离线/死亡和跨区会清理或提前恢复，失败仍执行原生耐久收尾；状态快照沿用
   现有 StateP，无网络 schema 改动。定向回归、D2GS 编译和真实 1.10f offscreenCamp 通过。
   下一项为 Sorceress 单体弹道/元素状态链专项核对。
+- 2026-09-10：完成法师基础单体弹道首轮对齐。Fire Bolt/Ice Bolt 继续走原生通用
+  `Skills.txt/SrvMissile` 链；Charged Bolt 接入 `SrvDo017`，按 `calc1` 创建多枚独立
+  权威导弹，复刻 `SKILLS_MissileInit_ChargedBolt` 的 77 帧上限、确定性种子和路径转向，
+  不再使用旧的单枚/随机客户端逻辑。技能快照现在读取 `EDmgSymPerCalc` 协同，并按
+  `Missiles.txt.ApplyMastery` 应用火焰/闪电精通；冰弹保留原生冰冷持续时间。新增
+  `NativeSorceressProjectileDataTest`；下一项为法师范围/持续技能（Static Field、Blaze、
+  Fire Wall、Frost Nova）及多人状态表现。
 
 ## 当前下一项
 

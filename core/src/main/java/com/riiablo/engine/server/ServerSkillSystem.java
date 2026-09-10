@@ -536,6 +536,16 @@ public class ServerSkillSystem extends PassiveSystem {
       spawnNova(event, skill, start);
       return;
     }
+    // D2MOO SKILLS_SrvDo017_ChargedBolt_BoltSentry is also used by the
+    // Sorceress Charged Bolt row.  The native callback evaluates calc1 and
+    // creates one independently collidable missile per count; falling through
+    // to the generic path would create only one bolt and lose the native
+    // Charged-Bolt path initialiser.
+    if (event.skillId == SkillId.CHARGED_BOLT
+        || "Charged Bolt".equalsIgnoreCase(skill.skill)) {
+      spawnSorceressChargedBolt(event, skill, start, skillLevel);
+      return;
+    }
     if (event.srvdofunc == 8 || skill.srvdofunc == 8) {
       spawnMultipleShotTeethShockWave(event, skill, start);
       return;
@@ -1361,6 +1371,53 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, event.skillId, missileName, created);
   }
 
+  /** Native {@code SKILLS_SrvDo017_ChargedBolt_BoltSentry} for the Sorceress. */
+  private void spawnSorceressChargedBolt(
+      SkillDoEvent event, Skills.Entry skill, Vector2 start, int skillLevel) {
+    String missileName = firstNonEmpty(skill.srvmissilea,
+        firstNonEmpty(skill.srvmissile, skill.cltmissilea));
+    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (row == null) {
+      log.warn("[SORCERESS_CHARGED_BOLT] phase=reject source={} skill={} "
+              + "reason=missing_missile name={}",
+          event.entityId, skill.Id, missileName);
+      return;
+    }
+
+    Vector2 targetPoint = resolveTargetPoint(event, start, new Vector2());
+    Vector2 base = targetPoint.sub(start);
+    if (base.isZero(0.0001f)) base.set(Vector2.X);
+    base.nor();
+
+    int count = chargedBoltCount(skill, skillLevel);
+    int mainDirection = AssassinTrapSystem.chargedBoltMainDirection(base);
+    int originX = MathUtils.floor(start.x);
+    int created = 0;
+    for (int i = 0; i < count; i++) {
+      Vector2 direction = chargedBoltDirection(base, i, count, new Vector2());
+      int missileId = createMissile(row, direction, start, event.entityId, null, skillLevel);
+      if (missileId < 0 || !mMissile.has(missileId)) continue;
+
+      Missile bolt = mMissile.get(missileId);
+      // SKILLS_MissileInit_ChargedBolt seeds the missile from ordinal + X,
+      // changes the path type, and caps the path's total frames at 77.
+      int seedLow = i + originX;
+      long rolled = AssassinTrapSystem.chargedBoltRoll(seedLow, 666);
+      bolt.chargedBoltPath = true;
+      bolt.chargedBoltMainDirection = mainDirection;
+      bolt.chargedBoltSeedLow = (int) rolled;
+      bolt.chargedBoltSeedHigh = (int) (rolled >>> 32);
+      bolt.chargedBoltNextTurnDistance = 2f;
+      bolt.range = Math.min(77f, Math.max(1f, bolt.range));
+      initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+      created++;
+    }
+    log.info("[SORCERESS_CHARGED_BOLT] phase=create source={} skill={} level={} "
+            + "missile={} requested={} created={} calc1={} origin=({}, {})",
+        event.entityId, skill.Id, skillLevel, row.Missile, count, created,
+        skill.calc1, start.x, start.y);
+  }
+
   /**
    * Native Poison Nova (SrvDo022): 64 fixed-offset poisonnova missiles.  The
    * poison packet is captured once at cast time as an 8.8 rate and resolved by
@@ -1751,6 +1808,25 @@ public class ServerSkillSystem extends PassiveSystem {
   static int chargedStrikeBoltCount(Skills.Entry skill, int skillLevel) {
     int count = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, skillLevel);
     return Math.max(1, Math.min(64, count));
+  }
+
+  /** Native Charged Bolt count (Skills.txt calc1, clamped like D2's loop). */
+  static int chargedBoltCount(Skills.Entry skill, int skillLevel) {
+    int count = SkillFormula.evaluate(skill != null ? skill.calc1 : null, skill, skillLevel);
+    // A few custom 1.10f exports omit calc1 but retain Param1.  The native
+    // table's effective level-one value is three, so preserve that fallback
+    // without reintroducing the old random/hard-coded damage helper.
+    if (count <= 0) count = firstParam(skill, 1, 3);
+    return Math.max(1, Math.min(64, count));
+  }
+
+  static Vector2 chargedBoltDirection(Vector2 base, int index, int count, Vector2 out) {
+    if (count <= 1) return out.set(base).nor();
+    // The native callback does not fan bolts by a fixed angle; each missile's
+    // path initialiser chooses one of the three neighbouring octants from its
+    // per-missile seed.  Start each bolt in the target octant and let the
+    // deterministic path turn logic provide the native spread.
+    return out.set(base).nor();
   }
 
   static Vector2 chargedStrikeDirection(Vector2 base, int index, int count, Vector2 out) {
@@ -2203,7 +2279,8 @@ public class ServerSkillSystem extends PassiveSystem {
         name -> getBaseSkillLevel(ownerId, name));
     if (!nativePaladin && !nativeBone) {
       MissileDamageResolver.initializeSkill(projectile, skill,
-          mAttributesWrapper.get(ownerId).attrs, skillLevel);
+          mAttributesWrapper.get(ownerId).attrs, skillLevel,
+          name -> getBaseSkillLevel(ownerId, name));
     }
     if (NecromancerSkills.isBoneSpear(skill)) {
       // Native bonespear has LastCollide and CollideKill=0: after a successful
