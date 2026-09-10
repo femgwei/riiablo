@@ -492,12 +492,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
             new Vector2(position.x(), position.y()), localOwnerId);
         if (entityId != Engine.INVALID_ENTITY && mMissile.has(entityId)) {
           Missile local = mMissile.get(entityId);
-          local.authoritative = false;
-          local.range = missile.range();
+          applyMissileSnapshot(local, missile);
         }
         Gdx.app.log(TAG, String.format(
-            "[MISSILE_SYNC] phase=create serverEntity=%d missileId=%d owner=%d position=(%.2f,%.2f)",
-            sync.entityId(), missile.missileId(), missile.ownerId(), position.x(), position.y()));
+            "[MISSILE_SYNC] phase=create serverEntity=%d missileId=%d owner=%d skill=%d "
+                + "level=%d position=(%.2f,%.2f)",
+            sync.entityId(), missile.missileId(), missile.ownerId(), missile.skillId(),
+            missile.damageLevel(), position.x(), position.y()));
         return entityId;
       }
       default:
@@ -1152,6 +1153,15 @@ public class ClientNetworkReceiver extends IntervalSystem {
     return false;
   }
 
+  /** Applies presentation metadata without enabling client simulation. */
+  static void applyMissileSnapshot(Missile local, MissileP data) {
+    if (local == null || data == null) return;
+    local.authoritative = false;
+    local.range = data.range();
+    local.skillId = data.skillId();
+    local.damageLevel = data.damageLevel();
+  }
+
   private void applyStateSnapshot(int entityId, StateP data) {
     if (!mUnitStates.has(entityId)) {
       Gdx.app.debug(TAG, "Ignoring state snapshot for entity without UnitStates: " + entityId);
@@ -1173,7 +1183,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
       for (int i = 0; i < count; i++) {
         if (i > 0) snapshot.append(',');
         snapshot.append(stateIds[i]).append(':').append(durations[i])
-            .append('@').append(levels[i]);
+            .append('@').append(levels[i])
+            .append("#skill=").append(i < data.skillIdLength() ? data.skillId(i) : -1)
+            .append("/source=")
+            .append(i < data.sourceEntityIdLength() ? data.sourceEntityId(i) : -1)
+            .append("/period=")
+            .append(i < data.periodicCountdownFramesLength()
+                ? data.periodicCountdownFrames(i) : -1)
+            .append('/')
+            .append(i < data.periodicDelayFramesLength()
+                ? data.periodicDelayFrames(i) : 0);
       }
       Gdx.app.log(TAG, String.format(
           "[STATE_SYNC] entity=%d count=%d states=%s source=server",
@@ -1193,6 +1212,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
         state.maxManaModifier = i < data.maxManaModifierLength() ? data.maxManaModifier(i) : 0;
         state.maxStaminaModifier = i < data.maxStaminaModifierLength()
             ? data.maxStaminaModifier(i) : 0;
+        state.sourceEntityId = i < data.sourceEntityIdLength()
+            ? data.sourceEntityId(i) : -1;
+        state.skillId = i < data.skillIdLength() ? data.skillId(i) : -1;
+        state.periodicDelayFrames = i < data.periodicDelayFramesLength()
+            ? data.periodicDelayFrames(i) : 0;
+        state.periodicCountdownFrames = i < data.periodicCountdownFramesLength()
+            ? data.periodicCountdownFrames(i) : -1;
       }
     }
     unitStates.snapshotOnly = true;

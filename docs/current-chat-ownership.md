@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（法师 Thunder Storm 原生周期闪电链，待提交）
-- 上一功能基线：`f41f6eff`（法师 Frozen Orb 原生分裂/轨迹导弹链）
+- 当前功能提交：本文件所在 `HEAD`（复杂区域技能多人权威快照语义，待提交）
+- 上一功能基线：`89c2e54a`（德鲁伊 Armageddon/Hurricane 原生状态链）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 70%（详见路线图）
@@ -100,6 +100,23 @@
   子导弹及服务端伤害快照均已接通，新增 Volcano 无渲染测试。
 - 德鲁伊 Armageddon/Hurricane `SrvDo124` 已完成首轮：状态持续时间、周期延迟、合法
   目标筛选、区域导弹和多人状态快照已接通，新增无渲染状态测试。
+
+### 2026-09-11 复杂区域技能多人快照语义
+
+- `MissileP` 追加 `skillId/damageLevel`，`StateP` 追加来源实体、来源技能和周期时钟；
+  均为尾部字段，保留旧客户端读取既有字段的兼容性。
+- 客户端导弹副本统一设为 `authoritative=false`，只呈现服务端位置和生命周期；反序列化
+  的 `UnitStates` 统一设为 `snapshotOnly=true`，不会再次递减状态或生成区域导弹。
+- Firestorm、Fissure、Volcano、Armageddon、Hurricane 明确复用服务端导弹；Hurricane
+  虽只在 `cltMissileA` 声明表现资源，但 `SrvDo124` 已由服务端周期发射，因此也禁止本地
+  重建。Hydra 保持原生三只 Monster 实体同步，不错误套入 MissileP。
+- 1.10f 的 hurricane/armageddon States 行 Overlay 均为空，表现来自
+  `hurricaneswoosh/armageddoncontrol` 导弹，未添加虚假 Overlay 映射。
+- 7 个区域技能专项类共 17 个用例、6 个状态序列化相邻类共 33 个用例，以及
+  `:server:d2gs:compileJava` 通过；`offscreenCamp` 因
+  `build/riiablo-offscreen-d2` 缺少 MPQ 而未启动，属于本机测试资源门槛。
+- 下一项：增加真实 D2GS 无窗口双客户端区域技能门槛，分别核对 Hydra 的 MonsterP
+  三实体，以及 Hurricane/Volcano 等导弹和状态在两端的实体 ID、技能 ID 与删除时序。
 - Iron Maiden/Life Tap 已接入服务端权威 `DamageEvent`：近战/导弹携带结算后的物理
   分量；反伤只响应近战且不会递归，Life Tap 按 `calc1` 恢复攻击者生命。定向测试和
   D2GS 编译通过，真实 1.10f `offscreenCamp` 营地启动门槛通过。

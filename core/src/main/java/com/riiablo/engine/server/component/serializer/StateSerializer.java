@@ -27,7 +27,8 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
   @Override
   public int putData(FlatBufferBuilder builder, UnitStates component) {
     if (component.stateList == null || component.stateList.isEmpty()) {
-      return StateP.createStateP(builder, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+      return StateP.createStateP(builder, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0);
     }
 
     int count = component.stateList.size();
@@ -41,6 +42,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
     short[] maxLifeModifiers = new short[count];
     short[] maxManaModifiers = new short[count];
     short[] maxStaminaModifiers = new short[count];
+    int[] sourceEntityIds = new int[count];
+    int[] skillIds = new int[count];
+    int[] periodicDelayFrames = new int[count];
+    int[] periodicCountdownFrames = new int[count];
     for (int i = 0; i < count; i++) {
       UnitState state = component.stateList.getStates().get(i);
       stateIds[i] = (short) Math.max(0, Math.min(0xFFFF, state.stateId));
@@ -56,6 +61,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
       maxLifeModifiers[i] = clampShort(state.maxLifeModifier);
       maxManaModifiers[i] = clampShort(state.maxManaModifier);
       maxStaminaModifiers[i] = clampShort(state.maxStaminaModifier);
+      sourceEntityIds[i] = state.sourceEntityId;
+      skillIds[i] = state.skillId;
+      periodicDelayFrames[i] = state.periodicDelayFrames;
+      periodicCountdownFrames[i] = state.periodicCountdownFrames;
     }
 
     int stateIdOffset = StateP.createStateIdVector(builder, stateIds);
@@ -70,10 +79,17 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
     int maxManaModifierOffset = StateP.createMaxManaModifierVector(builder, maxManaModifiers);
     int maxStaminaModifierOffset =
         StateP.createMaxStaminaModifierVector(builder, maxStaminaModifiers);
+    int sourceEntityIdOffset = StateP.createSourceEntityIdVector(builder, sourceEntityIds);
+    int skillIdOffset = StateP.createSkillIdVector(builder, skillIds);
+    int periodicDelayFramesOffset =
+        StateP.createPeriodicDelayFramesVector(builder, periodicDelayFrames);
+    int periodicCountdownFramesOffset =
+        StateP.createPeriodicCountdownFramesVector(builder, periodicCountdownFrames);
     return StateP.createStateP(builder, stateIdOffset, durationOffset, levelOffset,
         velocityModifierOffset, runtimeValueOffset, animationRateModifierOffset,
         skillModifierOffset, maxLifeModifierOffset, maxManaModifierOffset,
-        maxStaminaModifierOffset);
+        maxStaminaModifierOffset, sourceEntityIdOffset, skillIdOffset,
+        periodicDelayFramesOffset, periodicCountdownFramesOffset);
   }
 
   @Override
@@ -109,6 +125,13 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
         state.maxManaModifier = i < data.maxManaModifierLength() ? data.maxManaModifier(i) : 0;
         state.maxStaminaModifier = i < data.maxStaminaModifierLength()
             ? data.maxStaminaModifier(i) : 0;
+        state.sourceEntityId = i < data.sourceEntityIdLength()
+            ? data.sourceEntityId(i) : -1;
+        state.skillId = i < data.skillIdLength() ? data.skillId(i) : -1;
+        state.periodicDelayFrames = i < data.periodicDelayFramesLength()
+            ? data.periodicDelayFrames(i) : 0;
+        state.periodicCountdownFrames = i < data.periodicCountdownFramesLength()
+            ? data.periodicCountdownFrames(i) : -1;
         // StateP predates generic native stat-list serialization. Rebuild
         // Holy Shield's data-driven block/defense payload from its replicated
         // skill level so remote clients run the same combat formulas.
@@ -181,6 +204,10 @@ public class StateSerializer implements FlatBuffersSerializer<UnitStates, StateP
         }
       }
     }
+    // StateP is an authoritative projection. A deserialized replica may
+    // render the restored state but must never decrement clocks or emit DOT,
+    // aura or periodic missiles locally.
+    component.snapshotOnly = true;
     return component;
   }
 

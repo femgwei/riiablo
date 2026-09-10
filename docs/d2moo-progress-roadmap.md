@@ -1433,3 +1433,23 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
 - 修改共享文件时必须在提交说明和最终报告中列出。
 - 每次完成后记录：测试命令、通过/失败数量、commit hash、远程分支状态。
 - 测试失败时保持模块为 `[ ]`，只记录失败原因和下一步修复项。
+
+### 2026-09-11 复杂区域技能多人权威快照语义（已完成）
+
+- [x] ~~统一 Firestorm/Fissure/Volcano/Armageddon/Hurricane 的多人导弹身份与状态来源~~
+  - `MissileP` 追加技能 ID/等级，`StateP` 追加来源实体、来源技能、周期延迟和剩余计时；
+    新字段只追加在表尾，旧协议字段布局不变。
+  - 客户端导弹始终为只读副本，状态反序列化后自动进入 `snapshotOnly`；网络客户端不会
+    再用 `SkillCastHandler` 创建第二套区域导弹。Hurricane 的权威资源虽来自
+    `cltMissileA=hurricaneswoosh`，也已纳入该判定。
+  - Hydra 原生为 `SrvDo144` 创建的三个 Monster Unit，继续走 MonsterP/Unit 生命周期，
+    不伪装成导弹。1.10f hurricane/armageddon 状态没有 Overlay，视觉由权威导弹提供。
+  - 新增 `AuthoritativeAreaSkillSnapshotTest`，扩充 `DruidStormAuraIntegrationTest`；
+    7 个相关测试类共 17 个用例、6 个状态序列化相邻类共 33 个用例通过，
+    `:server:d2gs:compileJava` 通过。
+  - `:desktop:offscreenCamp` 已执行，但 `build/riiablo-offscreen-d2` 缺少 MPQ，报
+    `home does not refer to a valid D2 installation`，未进入营地且未据此回退代码。
+
+当前下一项：**真实 D2GS 无窗口双客户端复杂区域技能同步门槛**。先为测试客户端记录
+MonsterP/MissileP/StateP 的技能语义和删除时序，再验证一端施放 Hydra、Hurricane、
+Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括战斗在内的全部模块。

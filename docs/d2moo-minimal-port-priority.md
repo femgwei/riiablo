@@ -106,6 +106,10 @@ Frozen Orb、Meteor、Thunder Storm 原生链均已接通，下一项转入复�
   以确定性种子生成周期火焰子导弹并同步多人伤害快照；下一项为 Armageddon/Hurricane。
 - 德鲁伊 Armageddon/Hurricane `SrvDo124` 已接通首轮：状态、AuraLenCalc/PerDelay、周期
   目标筛选和权威区域导弹均已同步；下一项转入全职业复杂区域技能表现验收。
+- 复杂区域技能多人快照语义已完成：`MissileP` 现在携带技能 ID/等级，`StateP` 携带
+  来源实体、来源技能和周期时钟；客户端导弹/状态分别强制为 `authoritative=false` 和
+  `snapshotOnly=true`。Hurricane 的 `cltMissileA` 已归入服务端权威复用名单，避免网络
+  客户端再生成第二套效果；Hydra 明确走 MonsterP。下一项为真实 D2GS 双客户端门槛。
 
 ## 工程约束
 

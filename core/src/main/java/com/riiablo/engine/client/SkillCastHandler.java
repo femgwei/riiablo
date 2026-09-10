@@ -166,7 +166,6 @@ public class SkillCastHandler extends PassiveSystem {
     // arrows and travel sounds. Local games normally retain the legacy player
     // projectile, except for skills explicitly admitted by their monsters-only
     // ServerSkillSystem (Blessed Hammer is now one such authoritative path).
-    boolean serverMissile = hasServerMissile(skill);
     boolean networkClient = world.getSystem(ClientNetworkReceiver.class) != null;
     boolean localServer = world.getSystem(ServerSkillSystem.class) != null;
     boolean localMonsterServer = mMonster.has(event.entityId) && localServer;
@@ -199,9 +198,9 @@ public class SkillCastHandler extends PassiveSystem {
     // visual on every client even when the cloud entities are authoritative.
     boolean separateCorpseBurst = (event.srvdofunc == 63 || skill.srvdofunc == 63)
         && event.cltdofunc == 33;
-    if (serverMissile && !separateCorpseBurst
-        && (networkClient || localMonsterServer || localBlessedHammerServer
-            || localFistOfHeavensServer || localHolyBoltServer || localChargedBoltServer)) {
+    if (shouldReuseServerMissile(skill, networkClient, localMonsterServer,
+        localBlessedHammerServer, localFistOfHeavensServer, localHolyBoltServer,
+        localChargedBoltServer, separateCorpseBurst)) {
       log.info("[SKILL_PRESENTATION] phase=reuse_server_missile entity={} skill={} "
               + "srvDoFunc={} networkClient={} localMonster={} localBlessedHammer={} "
           + "localFistOfHeavens={} localHolyBolt={} localChargedBolt={}",
@@ -720,10 +719,23 @@ public class SkillCastHandler extends PassiveSystem {
     return out.nor();
   }
 
-  private static boolean hasServerMissile(Skills.Entry skill) {
+  static boolean shouldReuseServerMissile(Skills.Entry skill, boolean networkClient,
+      boolean localMonsterServer, boolean localBlessedHammerServer,
+      boolean localFistOfHeavensServer, boolean localHolyBoltServer,
+      boolean localChargedBoltServer, boolean separateCorpseBurst) {
+    return hasServerMissile(skill) && !separateCorpseBurst
+        && (networkClient || localMonsterServer || localBlessedHammerServer
+            || localFistOfHeavensServer || localHolyBoltServer || localChargedBoltServer);
+  }
+
+  static boolean hasServerMissile(Skills.Entry skill) {
     return skill != null && (hasText(skill.srvmissile)
         || hasText(skill.srvmissilea) || hasText(skill.srvmissileb)
-        || hasText(skill.srvmissilec) || hasText(skill.srvmissiled));
+        || hasText(skill.srvmissilec) || hasText(skill.srvmissiled)
+        // Native SrvDo124 stores the presentation missile in cltMissileA,
+        // but StateUpdater emits it as an authoritative periodic entity.
+        || skill.Id == com.riiablo.engine.server.skill.SkillId.HURRICANE
+        || skill.Id == com.riiablo.engine.server.skill.SkillId.ARMAGEDDON);
   }
 
   private static boolean hasText(String value) {

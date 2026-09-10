@@ -190,6 +190,14 @@ table StateP {
   maxLifeModifier:[int16];
   maxManaModifier:[int16];
   maxStaminaModifier:[int16];
+  // Source identity is required to restore skill-owned presentation after a
+  // late join/reconnect without asking the client to infer it from stateId.
+  sourceEntityId:[int32];
+  skillId:[int32];
+  // Periodic state clocks are presentation metadata only on clients. The
+  // authoritative server remains the sole emitter of their missiles.
+  periodicDelayFrames:[int32];
+  periodicCountdownFrames:[int32];
 }
 
 // Compact authoritative combat state. Attribute modifiers remain server-side;
@@ -215,4 +223,8 @@ table MissileP {
   missileId:uint16;
   ownerId:int32;
   range:float32;
+  // Preserve the casting skill identity on every client; clients render this
+  // entity but must never run its damage/controller logic.
+  skillId:int32 = -1;
+  damageLevel:uint8;
 }

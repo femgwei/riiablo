@@ -75,6 +75,30 @@ public final class StateP extends Table {
   public ShortVector maxStaminaModifierVector(ShortVector obj) { int o = __offset(22); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
   public ByteBuffer maxStaminaModifierAsByteBuffer() { return __vector_as_bytebuffer(22, 2); }
   public ByteBuffer maxStaminaModifierInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 22, 2); }
+  public int sourceEntityId(int j) { int o = __offset(24); return o != 0 ? bb.getInt(__vector(o) + j * 4) : 0; }
+  public int sourceEntityIdLength() { int o = __offset(24); return o != 0 ? __vector_len(o) : 0; }
+  public IntVector sourceEntityIdVector() { return sourceEntityIdVector(new IntVector()); }
+  public IntVector sourceEntityIdVector(IntVector obj) { int o = __offset(24); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer sourceEntityIdAsByteBuffer() { return __vector_as_bytebuffer(24, 4); }
+  public ByteBuffer sourceEntityIdInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 24, 4); }
+  public int skillId(int j) { int o = __offset(26); return o != 0 ? bb.getInt(__vector(o) + j * 4) : 0; }
+  public int skillIdLength() { int o = __offset(26); return o != 0 ? __vector_len(o) : 0; }
+  public IntVector skillIdVector() { return skillIdVector(new IntVector()); }
+  public IntVector skillIdVector(IntVector obj) { int o = __offset(26); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer skillIdAsByteBuffer() { return __vector_as_bytebuffer(26, 4); }
+  public ByteBuffer skillIdInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 26, 4); }
+  public int periodicDelayFrames(int j) { int o = __offset(28); return o != 0 ? bb.getInt(__vector(o) + j * 4) : 0; }
+  public int periodicDelayFramesLength() { int o = __offset(28); return o != 0 ? __vector_len(o) : 0; }
+  public IntVector periodicDelayFramesVector() { return periodicDelayFramesVector(new IntVector()); }
+  public IntVector periodicDelayFramesVector(IntVector obj) { int o = __offset(28); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer periodicDelayFramesAsByteBuffer() { return __vector_as_bytebuffer(28, 4); }
+  public ByteBuffer periodicDelayFramesInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 28, 4); }
+  public int periodicCountdownFrames(int j) { int o = __offset(30); return o != 0 ? bb.getInt(__vector(o) + j * 4) : 0; }
+  public int periodicCountdownFramesLength() { int o = __offset(30); return o != 0 ? __vector_len(o) : 0; }
+  public IntVector periodicCountdownFramesVector() { return periodicCountdownFramesVector(new IntVector()); }
+  public IntVector periodicCountdownFramesVector(IntVector obj) { int o = __offset(30); return o != 0 ? obj.__assign(__vector(o), bb) : null; }
+  public ByteBuffer periodicCountdownFramesAsByteBuffer() { return __vector_as_bytebuffer(30, 4); }
+  public ByteBuffer periodicCountdownFramesInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 30, 4); }
 
   public static int createStateP(FlatBufferBuilder builder,
       int stateIdOffset,
@@ -86,8 +110,16 @@ public final class StateP extends Table {
       int skillModifierOffset,
       int maxLifeModifierOffset,
       int maxManaModifierOffset,
-      int maxStaminaModifierOffset) {
-    builder.startTable(10);
+      int maxStaminaModifierOffset,
+      int sourceEntityIdOffset,
+      int skillIdOffset,
+      int periodicDelayFramesOffset,
+      int periodicCountdownFramesOffset) {
+    builder.startTable(14);
+    StateP.addPeriodicCountdownFrames(builder, periodicCountdownFramesOffset);
+    StateP.addPeriodicDelayFrames(builder, periodicDelayFramesOffset);
+    StateP.addSkillId(builder, skillIdOffset);
+    StateP.addSourceEntityId(builder, sourceEntityIdOffset);
     StateP.addMaxStaminaModifier(builder, maxStaminaModifierOffset);
     StateP.addMaxManaModifier(builder, maxManaModifierOffset);
     StateP.addMaxLifeModifier(builder, maxLifeModifierOffset);
@@ -101,7 +133,7 @@ public final class StateP extends Table {
     return StateP.endStateP(builder);
   }
 
-  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(10); }
+  public static void startStateP(FlatBufferBuilder builder) { builder.startTable(14); }
   public static void addStateId(FlatBufferBuilder builder, int stateIdOffset) { builder.addOffset(0, stateIdOffset, 0); }
   public static int createStateIdVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startStateIdVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
@@ -133,6 +165,18 @@ public final class StateP extends Table {
   public static void addMaxStaminaModifier(FlatBufferBuilder builder, int maxStaminaModifierOffset) { builder.addOffset(9, maxStaminaModifierOffset, 0); }
   public static int createMaxStaminaModifierVector(FlatBufferBuilder builder, short[] data) { builder.startVector(2, data.length, 2); for (int i = data.length - 1; i >= 0; i--) builder.addShort(data[i]); return builder.endVector(); }
   public static void startMaxStaminaModifierVector(FlatBufferBuilder builder, int numElems) { builder.startVector(2, numElems, 2); }
+  public static void addSourceEntityId(FlatBufferBuilder builder, int sourceEntityIdOffset) { builder.addOffset(10, sourceEntityIdOffset, 0); }
+  public static int createSourceEntityIdVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
+  public static void startSourceEntityIdVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addSkillId(FlatBufferBuilder builder, int skillIdOffset) { builder.addOffset(11, skillIdOffset, 0); }
+  public static int createSkillIdVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
+  public static void startSkillIdVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addPeriodicDelayFrames(FlatBufferBuilder builder, int periodicDelayFramesOffset) { builder.addOffset(12, periodicDelayFramesOffset, 0); }
+  public static int createPeriodicDelayFramesVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
+  public static void startPeriodicDelayFramesVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void addPeriodicCountdownFrames(FlatBufferBuilder builder, int periodicCountdownFramesOffset) { builder.addOffset(13, periodicCountdownFramesOffset, 0); }
+  public static int createPeriodicCountdownFramesVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addInt(data[i]); return builder.endVector(); }
+  public static void startPeriodicCountdownFramesVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
   public static int endStateP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

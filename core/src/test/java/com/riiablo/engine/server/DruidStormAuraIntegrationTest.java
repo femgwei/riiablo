@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.flatbuffers.FlatBufferBuilder;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.Vector2;
@@ -18,10 +19,14 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.serializer.StateSerializer;
 import com.riiablo.engine.server.event.SkillDoEvent;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.state.StateId;
+import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.item.Item;
+import com.riiablo.net.packet.d2gs.ComponentP;
+import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.save.CharData;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -63,6 +68,63 @@ class DruidStormAuraIntegrationTest extends RiiabloTest {
           druid, SkillId.HURRICANE, Engine.INVALID_ENTITY, new Vector2(6, 0),
           skill.srvdofunc, skill.cltdofunc));
       assertNotNull(states.stateList.getState(StateId.HURRICANE));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void stormStateSnapshotPreservesSkillOwnershipAndPeriodicClock() {
+    UnitStates authority = new UnitStates().init(41);
+    UnitState storm = authority.stateList.addState(StateId.HURRICANE, 275, 9, 41);
+    storm.skillId = SkillId.HURRICANE;
+    storm.sourceEntityId = 41;
+    storm.periodicDelayFrames = 17;
+    storm.periodicCountdownFrames = 6;
+
+    StateSerializer serializer = new StateSerializer();
+    FlatBufferBuilder builder = new FlatBufferBuilder(256);
+    int stateOffset = serializer.putData(builder, authority);
+    int typeOffset = EntitySync.createComponentTypeVector(
+        builder, new byte[] {ComponentP.StateP});
+    int componentOffset = EntitySync.createComponentVector(builder, new int[] {stateOffset});
+    int root = EntitySync.createEntitySync(builder, 41, 0, 0, typeOffset, componentOffset,
+        0L, 0L, 0L, 0L, 0L, -1);
+    builder.finish(root);
+
+    UnitStates replica = new UnitStates().init(41);
+    serializer.getData(EntitySync.getRootAsEntitySync(builder.dataBuffer()), 0, replica);
+    UnitState restored = replica.stateList.getState(StateId.HURRICANE);
+    assertNotNull(restored);
+    assertTrue(replica.snapshotOnly);
+    assertEquals(275, restored.duration);
+    assertEquals(9, restored.level);
+    assertEquals(41, restored.sourceEntityId);
+    assertEquals(SkillId.HURRICANE, restored.skillId);
+    assertEquals(17, restored.periodicDelayFrames);
+    assertEquals(6, restored.periodicCountdownFrames);
+  }
+
+  @Test
+  void snapshotOnlyStormClockDoesNotAdvanceOrEmitLocally() {
+    RecordingFactory factory = new RecordingFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new StateUpdater(), factory)
+        .build().register("factory", factory)
+        .register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      int druid = world.create();
+      UnitStates states = world.getMapper(UnitStates.class).create(druid).init(druid);
+      UnitState storm = states.stateList.addState(StateId.ARMAGEDDON, 100, 4, druid);
+      storm.skillId = SkillId.ARMAGEDDON;
+      storm.periodicDelayFrames = 8;
+      storm.periodicCountdownFrames = 3;
+      states.snapshotOnly = true;
+
+      world.setDelta(0.04f);
+      world.process();
+      assertEquals(100, storm.duration);
+      assertEquals(3, storm.periodicCountdownFrames);
     } finally {
       world.dispose();
     }
