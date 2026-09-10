@@ -134,6 +134,10 @@
   `HitPar1=4` 生成 16 枚 `frozenorbnova`，Nova 按 `SrvDo16` 在尾段重定向。每枚
   服务端导弹独立快照 Frozen Orb 冷伤、硬点 Ice Bolt 协同、Cold Mastery、冰抗/冻结
   时长和生命周期，多人客户端只消费权威实体，没有把 Orb 简化为一次性范围伤害。
+- 法师 Meteor 已接入原生 `SrvDo028` / `SrvHit14`：施法只创建目标点
+  `meteorcenter`，固定 60 帧后按 `aurarangecalc` 对范围内目标结算一次火焰冲击，
+  再按原生 18 个偏移和 `HitPar2` 生成持久 `meteorfire` 火场；火场时长读取
+  `Param3 + (等级-1)*Param4`，统一复用火焰精通、穿透、抗性、吸收、PvP 和死亡事件。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -215,7 +219,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 93% | 7% | 0.8% | 死灵骨毒/召唤链、圣骑士技能与法师 Blizzard/Frozen Orb 已接通；Meteor、Thunder Storm 和统一实机表现仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 94% | 6% | 0.7% | 死灵骨毒/召唤链、圣骑士技能与法师 Blizzard/Frozen Orb/Meteor 已接通；Thunder Storm 和统一实机表现仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -240,7 +244,7 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 94% | 6% | Meteor、Thunder Storm 等复杂链及统一多人表现验收 |
+| 法师 Sorceress | 96% | 4% | Thunder Storm 等复杂链及统一多人表现验收 |
 
 职业技能专项整体按 **约 97% 完成、约 3% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
@@ -736,6 +740,12 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   固定节拍、16 枚 Nova、快照和生命周期；定向法师回归通过，下一项为 Meteor。
   `:server:d2gs:compileJava` 与 1.10f `:desktop:offscreenCamp` 也通过；完整 `:core:test`
   的 109 个失败仍为仓库既有测试资源/旧断言缺失，不影响本模块定向验收。
+- 2026-09-11：完成法师 Meteor 原生落点/爆炸链。`SrvDo028` 仅创建目标点
+  `meteorcenter`，服务端固定等待 60 帧后按 `SrvHit14` 的 `aurarangecalc` 结算一次火焰
+  冲击，并用 18 个原生偏移生成 `meteorfire` 持续区域；区域持续时间按 `Param3/Param4`
+  读取，火焰精通/穿透/抗性/吸收/PvP/死亡事件沿用权威固定元素链。新增
+  `SorceressMeteorIntegrationTest` 覆盖表项、延迟、即时冲击、18 个火场和生命周期；
+  定向法师回归通过，下一项为 Thunder Storm。
 - 2026-09-10：完成圣骑士 Charge `SrvSt31/SrvDo067` 首轮移植。起手按 `Param1` 安装
   冲锋速度增益并通过碰撞安全路径追击；动画结束时未到近战范围会重试，命中帧使用当前
   权威 tick 位置快照，按 `calc1`、`ToHit/LevToHit` 结算伤害和命中，统一处理格挡、

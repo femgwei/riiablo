@@ -33,8 +33,8 @@
 ## 当前基线
 
 - 分支：`master`
-- 当前功能提交：本文件所在 `HEAD`（法师 Frozen Orb 原生分裂/轨迹导弹链，待提交）
-- 上一功能基线：`5cc867b2`（法师 Blizzard 原生区域导弹链）
+- 当前功能提交：本文件所在 `HEAD`（法师 Meteor 原生落点/爆炸导弹链，待提交）
+- 上一功能基线：`f41f6eff`（法师 Frozen Orb 原生分裂/轨迹导弹链）
 - 远程：完成本次提交后推送 `origin/master`，最终结果以交付报告中的 hash 为准
 - 工作区：本次提交完成后应为干净
 - 总体对齐进度：约 70%（详见路线图）
@@ -80,11 +80,14 @@
 - 法师 Frozen Orb 已按 D2MOO `SrvDo15/SrvHit29/SrvDo16` 接入主体、bolt 与 Nova 三段
   权威导弹链，覆盖 64 点方向环、16 枚命中分裂、Ice Bolt 协同、Cold Mastery、冻结时长、
   冰抗和尾段轨迹调整；新增 `SorceressFrozenOrbIntegrationTest`。
-- 本次验证：全部法师专项测试、Frozen Orb 集成测试、`:server:d2gs:compileJava` 和
+- 法师 Meteor 已按 D2MOO `SrvDo028/SrvHit14` 接入 `meteorcenter` 60 帧延迟、一次性
+  范围火焰冲击和 18 个 `meteorfire` 持续火场；火场时长来自 1.10f `Param3/Param4`，
+  新增 `SorceressMeteorIntegrationTest`，没有新增网络 schema。
+- 本次验证：Meteor/Frozen Orb 及全部法师专项测试、`:server:d2gs:compileJava` 和
   1.10f `:desktop:offscreenCamp` 均通过；完整 `:core:test` 仍有 109 个仓库既有资源
   fixture/旧断言失败（缺少 `core/src/test/resources/test` 文件及已记录的旧职业断言），
   与本次 Frozen Orb 定向用例无关，未据此回退其他模块。
-- 当前下一项：法师 Meteor 原生落点/爆炸导弹链；本 Chat 继续统一负责全部地图、
+- 当前下一项：法师 Thunder Storm 原生选敌/周期闪电链；本 Chat 继续统一负责全部地图、
   战斗、技能、物品、任务和多人模块。
 - Iron Maiden/Life Tap 已接入服务端权威 `DamageEvent`：近战/导弹携带结算后的物理
   分量；反伤只响应近战且不会递归，Life Tap 按 `calc1` 恢复攻击者生命。定向测试和

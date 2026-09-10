@@ -1858,19 +1858,45 @@ public class ServerSkillSystem extends PassiveSystem {
   private void spawnMeteor(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
     String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
     Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
-    if (missile == null) {
-      log.warn("[MONSTER_VAMPIRE] phase=meteor_rejected source={} reason=missing_missile missile={}",
+    if (missile == null || missile.pSrvHitFunc != 14) {
+      log.warn("[SORCERESS_METEOR] phase=reject source={} reason=missing_center missile={}",
           event.entityId, missileName);
       return;
     }
     Vector2 target = resolveTargetPoint(event, caster, new Vector2());
-    Vector2 direction = new Vector2(target).sub(caster);
-    if (direction.isZero(0.0001f)) direction.set(1f, 0f);
-    direction.nor();
-    int missileId = createMissile(missile, direction, target, event.entityId, null,
-        getSkillLevel(event.entityId, event.skillId));
-    log.info("[MONSTER_VAMPIRE] phase=meteor source={} target={} missile={} missileId={} position=({}, {})",
-        event.entityId, event.targetId, missileName, missileId, target.x, target.y);
+    if (isTownPoint(event.entityId, target)) {
+      log.info("[SORCERESS_METEOR] phase=reject source={} reason=town target=({}, {})",
+          event.entityId, target.x, target.y);
+      return;
+    }
+    int level = Math.max(1, getSkillLevel(event.entityId, event.skillId));
+    int missileId = createMissile(missile, Vector2.X, target, event.entityId, null, level);
+    if (missileId < 0 || !mMissile.has(missileId)) return;
+    Missile center = mMissile.get(missileId);
+    center.meteorCenter = true;
+    center.skillId = skill.Id;
+    center.damageLevel = level;
+    center.range = 0f;
+    center.nativeLifetimeFrames = Math.max(1, missile.Range);
+    if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
+    Attributes ownerAttrs = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    // SrvHit14 uses the skill's elemental packet for the immediate impact;
+    // the meteorfire children use the same snapshot for their periodic field.
+    MissileDamageResolver.initializeSorceressFireArea(center, skill, ownerAttrs,
+        mPlayer.has(event.entityId), level,
+        name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
+    log.info("[SORCERESS_METEOR] phase=center source={} target={} skill={} level={} "
+            + "missile={} missileId={} delay={} radius={} fireLifetime={}",
+        event.entityId, event.targetId, skill.Id, level, missileName, missileId,
+        center.nativeLifetimeFrames,
+        SkillFormula.evaluate(skill.aurarangecalc, skill, level),
+        meteorFireLifetime(skill, level));
+  }
+
+  static int meteorFireLifetime(Skills.Entry skill, int level) {
+    if (skill == null || skill.Param == null || skill.Param.length < 4) return 1;
+    return Math.max(1, skill.Param[2] + Math.max(0, level - 1) * skill.Param[3]);
   }
 
   /** D2MOO SKILLS_SrvDo028 + MISSMODE_SrvDo10: create one Blizzard center. */

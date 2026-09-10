@@ -156,6 +156,10 @@ public class MissileCollisionSystem extends IteratingSystem {
     if (missile.frozenOrbNova) {
       processFrozenOrbNova(missile, position, velocity);
     }
+    if (missile.meteorCenter) {
+      processMeteorCenter(entityId, missile, position);
+      return;
+    }
 
     // D2MOO SrvDo20 retargets Blade Creeper's missile path to its controller
     // every frame. The stored damage owner remains the casting player.
@@ -578,6 +582,68 @@ public class MissileCollisionSystem extends IteratingSystem {
             + "level={} lifetime={}", source.ownerId, origin.x, origin.y, step, created,
         level, row.Range);
   }
+
+  /** Native MISSMODE_SrvHit14: delayed impact plus meteorfire fields. */
+  private void processMeteorCenter(int entityId, Missile center, Position position) {
+    Skills.Entry skill = center.skillId >= 0 ? Riiablo.files.skills.get(center.skillId) : null;
+    if (skill == null || center.missile == null
+        || center.nativeFrame < Math.max(1, center.nativeLifetimeFrames)) return;
+    int level = Math.max(1, center.damageLevel);
+    int radius = Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill, level));
+    Array<Integer> candidates = getEntitiesInRange(position.position.x, position.position.y, radius);
+    int impacted = 0;
+    for (int i = 0; i < candidates.size; i++) {
+      int targetId = candidates.get(i);
+      if (!mPosition.has(targetId) || !mAttributesWrapper.has(targetId)
+          || (!mPlayer.has(targetId) && !mMonster.has(targetId))
+          || !isEnemy(center.ownerId, targetId) || !isAlive(targetId)) continue;
+      if (position.position.dst2(mPosition.get(targetId).position) > radius * radius) continue;
+      resolveFixedElementalRate(entityId, center, targetId,
+          mAttributesWrapper.get(targetId).attrs);
+      impacted++;
+    }
+    int fields = spawnMeteorFireFields(center, position.position, skill, level);
+    log.info("[SORCERESS_METEOR] phase=impact source={} center={} radius={} impacted={} "
+            + "fields={} level={}", center.ownerId, entityId, radius, impacted, fields, level);
+    world.delete(entityId);
+  }
+
+  private int spawnMeteorFireFields(
+      Missile center, Vector2 origin, Skills.Entry skill, int level) {
+    if (factory == null || center.missile.HitSubMissile == null
+        || center.missile.HitSubMissile.length == 0) return 0;
+    String name = center.missile.HitSubMissile[0];
+    Missiles.Entry row = name != null ? Riiablo.files.Missiles.get(name) : null;
+    if (row == null) return 0;
+    int step = Math.max(1, arrayValue(center.missile.sHitPar, 1));
+    int lifetime = ServerSkillSystem.meteorFireLifetime(skill, level);
+    Attributes ownerAttrs = mAttributesWrapper.has(center.ownerId)
+        ? mAttributesWrapper.get(center.ownerId).attrs : null;
+    int created = 0;
+    for (int i = 0; i < METEOR_X.length; i += step) {
+      int childId = factory.createMissile(row, Vector2.X,
+          new Vector2(origin).add(METEOR_X[i], METEOR_Y[i]), center.ownerId);
+      if (childId < 0 || !mMissile.has(childId)) continue;
+      Missile fire = mMissile.get(childId);
+      fire.skillId = center.skillId;
+      fire.damageLevel = level;
+      fire.persistent = true;
+      fire.remainingFrames = lifetime;
+      fire.tickInterval = 1;
+      fire.range = 0f;
+      if (mVelocity.has(childId)) mVelocity.get(childId).velocity.setZero();
+      MissileDamageResolver.initializeSorceressFireArea(fire, skill, ownerAttrs,
+          mPlayer.has(center.ownerId), level,
+          key -> baseSkillLevel(center.ownerId, key), stateList(center.ownerId));
+      created++;
+    }
+    return created;
+  }
+
+  private static final int[] METEOR_X = {
+      2, -2, 0, 0, -3, 0, 3, -1, 1, -1, 2, -4, -3, -1, 0, 1, 3, 4};
+  private static final int[] METEOR_Y = {
+      -2, -2, 2, 5, 3, 3, 3, 2, 1, -1, -1, -2, -2, -3, -4, -3, -3, -2};
 
   private void spawnBlizzardChild(
       int centerId, Missile center, Position centerPosition,
