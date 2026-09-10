@@ -248,6 +248,13 @@ public class MissileCollisionSystem extends IteratingSystem {
     // 更新已移动距离（与 d2mod 一致，使用 distanceTraveled）
     missile.distanceTraveled += moveDistance;
 
+    // D2MOO SrvDo06: each moving maker lays one Fire Wall child. The maker
+    // itself is only a control path and never enters unit collision.
+    if (missile.fireWallMaker) {
+      processFireWallMaker(entityId, missile, position, velocity);
+      if (!world.getEntityManager().isActive(entityId)) return;
+    }
+
     // Wake maker movement is ordinary path travel; SrvDo31 is evaluated
     // after the step so it can detect arrival at the configured endpoint.
     if (missile.wakeMaker) {
@@ -982,6 +989,10 @@ public class MissileCollisionSystem extends IteratingSystem {
         resolveFixedPoisonCloud(missileId, missile, targetId, targetAttrs);
         return true;
       }
+      if (missile.fixedElementalRate) {
+        resolveFixedElementalRate(missileId, missile, targetId, targetAttrs);
+        return true;
+      }
       log.info("[MISSILE_HIT] phase=stats missileId={} owner={} target={} "
               + "snapshot={} toHit={} throwMin={} throwMax={} weaponMin={} weaponMax={} "
               + "attackRating={} profileMin={} profileMax={} profileAr={} "
@@ -1212,6 +1223,109 @@ public class MissileCollisionSystem extends IteratingSystem {
         missileId, missile.ownerId, targetId, missile.skillId, raw,
         poison.poisonDamagePerFrame, poison.poisonDuration,
         missile.poisonPiercePercent);
+  }
+
+  /** Resolves one 8.8 game-frame hit from Blaze or Fire Wall. */
+  private void resolveFixedElementalRate(
+      int missileId, Missile missile, int targetId, Attributes targetAttrs) {
+    int min = Math.max(0, missile.elementalMinRateFixed);
+    int max = Math.max(min, missile.elementalMaxRateFixed);
+    NativeRng rng = new NativeRng(missile.rngState);
+    int raw = min;
+    if (max > min) raw += rng.nextInt(max - min);
+    missile.rngState = rng.state();
+    CombatSystem.FixedElementalDamageResult combat =
+        CombatSystem.INSTANCE.calculateFixedElementalRateDamage(
+            targetAttrs, mPlayer.has(targetId), missile.elementalAttackerPlayer,
+            missile.fixedElementalType, raw, missile.elementalPiercePercent,
+            missile.elementalDamageRate, stateList(targetId),
+            combatDifficulty(missile.ownerId, targetId));
+    StatRef life = targetAttrs.get(Stat.hitpoints, StatRef.obtain());
+    if (life == null || life.asFixed() <= 0f) return;
+    StatRef maximum = targetAttrs.get(Stat.maxhp, StatRef.obtain());
+    float absorbed = combat.absorbedLifeFixed / 256f;
+    if (absorbed > 0f && maximum != null) {
+      life.add(Math.min(absorbed, Math.max(0f, maximum.asFixed() - life.asFixed())));
+    }
+    float damage = combat.damageFixed / 256f;
+    if (damage <= 0f) return;
+    DamageEvent event = DamageEvent.obtainMissile(
+        missile.ownerId, targetId, damage, 0f,
+        missile.missile != null ? missile.missile.HitSound : null);
+    events.dispatch(event);
+    float applied = Math.max(0f, event.damage);
+    float before = life.asFixed();
+    life.sub(applied);
+    if (life.asFixed() <= 0f) {
+      life.set(0f);
+      events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));
+    } else if (missile.missile != null && missile.missile.pSrvDmgFunc == 3) {
+      // SrvDmg03 requests hit recovery with dParam1 / 128 probability.
+      int chance = missile.missile.dParam != null && missile.missile.dParam.length > 0
+          ? Math.max(0, missile.missile.dParam[0]) : 0;
+      NativeRng recoveryRng = new NativeRng(missile.rngState);
+      boolean recovery = (recoveryRng.nextInt() & 127) < chance;
+      missile.rngState = recoveryRng.state();
+      if (recovery) queueHitReaction(targetId, false);
+    }
+    log.info("[FIRE_AREA_HIT] missileId={} missile={} owner={} target={} skill={} "
+            + "rawFixed={} damage={} absorbed={} hp={} -> {} damageRate={}",
+        missileId, missile.missile != null ? missile.missile.Missile : "",
+        missile.ownerId, targetId, missile.skillId, raw, applied, absorbed,
+        before, life.asFixed(), missile.elementalDamageRate);
+  }
+
+  /** Native MISSMODE_SrvDo06 FireWallMaker child emission. */
+  private void processFireWallMaker(int entityId, Missile maker, Position position,
+      Velocity velocity) {
+    if (factory == null || maker.missile == null || maker.missile.SubMissile == null
+        || maker.missile.SubMissile.length == 0) {
+      world.delete(entityId);
+      return;
+    }
+    String childName = maker.missile.SubMissile[0];
+    Missiles.Entry childRow = childName != null && !childName.isEmpty()
+        ? Riiablo.files.Missiles.get(childName) : null;
+    Skills.Entry skill = maker.skillId >= 0 ? Riiablo.files.skills.get(maker.skillId) : null;
+    if (childRow == null || skill == null) {
+      log.warn("[SORCERESS_FIRE_WALL] phase=maker_reject maker={} owner={} "
+              + "child={} skill={}", entityId, maker.ownerId, childName, maker.skillId);
+      world.delete(entityId);
+      return;
+    }
+
+    Vector2 origin = new Vector2(position.position);
+    if (maker.range > 0f && maker.distanceTraveled > maker.range
+        && !velocity.velocity.isZero(0.0001f)) {
+      origin.mulAdd(new Vector2(velocity.velocity).nor(),
+          -(maker.distanceTraveled - maker.range));
+    }
+    int owner = maker.damageOwnerId >= 0 ? maker.damageOwnerId : maker.ownerId;
+    int childId = factory.createMissile(childRow, Vector2.X, origin, owner);
+    if (childId < 0 || !mMissile.has(childId)) return;
+    Missile child = mMissile.get(childId);
+    int level = Math.max(1, maker.damageLevel);
+    child.persistent = true;
+    child.remainingFrames = nativeMissileRange(childRow, level);
+    child.tickInterval = 1;
+    child.range = 0f;
+    if (mVelocity.has(childId)) mVelocity.get(childId).velocity.setZero();
+    Attributes ownerAttrs = mAttributesWrapper.has(owner)
+        ? mAttributesWrapper.get(owner).attrs : null;
+    MissileDamageResolver.initializeSorceressFireArea(
+        child, skill, ownerAttrs, mPlayer.has(owner), level,
+        name -> baseSkillLevel(owner, name));
+    maker.fireWallSegmentsCreated++;
+    log.info("[SORCERESS_FIRE_WALL] phase=segment maker={} segment={} owner={} "
+            + "skill={} level={} index={} position=({}, {}) lifetime={}",
+        entityId, childId, owner, maker.skillId, level,
+        maker.fireWallSegmentsCreated, origin.x, origin.y, child.remainingFrames);
+  }
+
+  private static int nativeMissileRange(Missiles.Entry row, int level) {
+    if (row == null) return 0;
+    long range = (long) row.Range + (long) Math.max(1, level) * row.LevRange;
+    return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, range));
   }
 
   /**

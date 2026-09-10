@@ -47,6 +47,7 @@ import com.riiablo.engine.server.skill.NecromancerSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -507,6 +508,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
     processHolyFireAura(entityId, stateList);
     processBladeShield(entityId, stateList);
+    processBlazeTrail(entityId, stateList);
     processSpiderLayTrail(entityId, stateList);
     
     // Resolve this tick before decrementing duration. A one-frame state must
@@ -1081,6 +1083,71 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     int missileId = factory.createMissile(missile, direction, position, entityId);
     log.info("[SPIDER_LAY] phase=missile entity={} skill={} missileId={} position=({}, {})",
         entityId, state.skillId, missileId, position.x, position.y);
+  }
+
+  /** Emits one native Blaze ground missile whenever the owner actually moves. */
+  private void processBlazeTrail(int entityId, StateList stateList) {
+    UnitState state = stateList.getState(StateId.BLAZE);
+    if (state == null || factory == null || !mVelocity.has(entityId)
+        || !mPosition.has(entityId)) return;
+    Velocity velocity = mVelocity.get(entityId);
+    if (velocity.velocity.isZero(0.0001f)) return;
+    Vector2 position = mPosition.get(entityId).position;
+    if (state.trailPositionSet
+        && Math.abs(position.x - state.trailX) < 0.0001f
+        && Math.abs(position.y - state.trailY) < 0.0001f) return;
+    state.trailX = position.x;
+    state.trailY = position.y;
+    state.trailPositionSet = true;
+
+    Map currentMap = map;
+    if (currentMap != null) {
+      Map.Zone zone = currentMap.getZone(position);
+      if (zone != null && zone.isTown()) return;
+    }
+    Skills.Entry skill = Riiablo.files.skills.get(state.skillId);
+    String missileName = skill != null && skill.srvmissilea != null
+        && !skill.srvmissilea.isEmpty() ? skill.srvmissilea : "blaze";
+    Missiles.Entry row = Riiablo.files.Missiles.get(missileName);
+    if (skill == null || row == null) {
+      log.warn("[SORCERESS_BLAZE] phase=trail_reject source={} skill={} missile={}",
+          entityId, state.skillId, missileName);
+      state.expired = true;
+      return;
+    }
+
+    int missileId = factory.createMissile(row, Vector2.X, position, entityId);
+    if (missileId < 0 || !world.getEntityManager().isActive(missileId)) return;
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.Missile> missiles =
+        world.getMapper(com.riiablo.engine.server.component.Missile.class);
+    if (!missiles.has(missileId)) return;
+    com.riiablo.engine.server.component.Missile projectile = missiles.get(missileId);
+    projectile.persistent = true;
+    projectile.remainingFrames = nativeMissileRange(row, state.level);
+    projectile.tickInterval = 1;
+    projectile.range = 0f;
+    if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
+    Attributes owner = mAttributesWrapper.has(entityId)
+        ? mAttributesWrapper.get(entityId).attrs : null;
+    MissileDamageResolver.initializeSorceressFireArea(
+        projectile, skill, owner, mPlayer.has(entityId), state.level,
+        name -> {
+          Skills.Entry synergy = Riiablo.files.skills.get(name);
+          return synergy != null && mPlayer.has(entityId)
+              && mPlayer.get(entityId).data != null
+              ? mPlayer.get(entityId).data.getBaseSkillLevel(synergy.Id) : 0;
+        });
+    log.info("[SORCERESS_BLAZE] phase=trail source={} skill={} level={} missileId={} "
+            + "position=({}, {}) lifetime={} rawFixed={}..{}",
+        entityId, state.skillId, state.level, missileId, position.x, position.y,
+        projectile.remainingFrames, projectile.elementalMinRateFixed,
+        projectile.elementalMaxRateFixed);
+  }
+
+  private static int nativeMissileRange(Missiles.Entry row, int level) {
+    if (row == null) return 0;
+    long frames = (long) row.Range + (long) Math.max(1, level) * row.LevRange;
+    return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, frames));
   }
 
   //==========================================================================

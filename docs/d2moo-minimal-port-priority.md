@@ -91,8 +91,9 @@ Andariel 和对象 `stateFlags` 表现。
 每个技能必须有固定等级、固定属性、原版 1.10f 伤害、状态持续 tick 和日志对照测试，
 不能只依赖动画肉眼判断。刺客/野蛮人专项已基本完成，亚马逊约 99%，德鲁伊约 90%，
 死灵法师与圣骑士的服务端技能首轮已基本闭环；法师基础单体弹道、Static Field
-`SrvDo020` 与 Frost Nova `SrvDo022` 已完成首轮核对，下一项优先处理 Blaze/Fire Wall，
-随后处理 Teleport 和持续区域状态的多人表现链。
+`SrvDo020`、Frost Nova `SrvDo022` 与 Blaze/Fire Wall `SrvDo023/024` 已完成首轮核对，
+下一项优先处理 Enchant / Fire Mastery 与三种冰甲防御状态链，随后处理 Teleport 和
+复杂技能的多人表现链。
 
 ## 工程约束
 

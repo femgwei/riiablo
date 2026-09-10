@@ -7,6 +7,7 @@ import com.riiablo.codec.excel.DifficultyLevels;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import java.util.function.ToIntFunction;
 
 /**
  * 法师技能实现 - 基于 D2MOD SkillSor.cpp 移植
@@ -134,6 +135,26 @@ public final class SorceressSkills {
   public static boolean isStaticField(Skills.Entry skill) {
     return skill != null && skill.srvdofunc == 20
         && "Static Field".equalsIgnoreCase(skill.skill);
+  }
+
+  /** Native {@code SKILLS_SrvDo023_Blaze_EnergyShield_SpiderLay} Blaze row. */
+  public static boolean isBlaze(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 23
+        && "Blaze".equalsIgnoreCase(skill.skill);
+  }
+
+  /** Blaze's native self-state duration from {@code AuraLenCalc}. */
+  public static int getBlazeDuration(Skills.Entry skill, int skillLevel,
+      ToIntFunction<String> baseSkillLevel) {
+    if (!isBlaze(skill)) return 0;
+    return Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill,
+        Math.max(1, skillLevel), baseSkillLevel == null ? name -> 0 : baseSkillLevel));
+  }
+
+  /** Native {@code SKILLS_SrvDo024_FireWall} row discriminator. */
+  public static boolean isFireWall(Skills.Entry skill) {
+    return skill != null && skill.srvdofunc == 24
+        && "Fire Wall".equalsIgnoreCase(skill.skill);
   }
 
   /** Native {@code AuraRangeCalc}; 1.10f uses {@code ln12}. */

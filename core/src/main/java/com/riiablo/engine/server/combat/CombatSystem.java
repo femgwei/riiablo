@@ -401,6 +401,13 @@ public class CombatSystem {
     public boolean immune;
   }
 
+  /** Signed 8.8 result for persistent elemental ground missiles. */
+  public static class FixedElementalDamageResult {
+    public int damageFixed;
+    public int absorbedLifeFixed;
+    public boolean immune;
+  }
+
   /**
    * Resolves an attack with an optional native monster attack profile.
    * MonStats stores separate A1/A2 damage and to-hit values while the ECS
@@ -665,6 +672,77 @@ public class CombatSystem {
     result.elementalDamage[damageType] = Math.max(0, finalDamage);
     result.absorbedLife = absorbed;
     result.totalDamage = result.elementalDamage[damageType];
+    return result;
+  }
+
+  /**
+   * Resolves one native game-frame hit from Blaze/Fire Wall without dropping
+   * the fractional 8.8 damage. {@code damageRate} scales flat magical damage
+   * reduction by {@code rate / 1024}, matching D2Game's
+   * {@code STAT_DAMAGE_FRAMERATE} handling for rapid area missiles.
+   */
+  public FixedElementalDamageResult calculateFixedElementalRateDamage(
+      Attributes defender, boolean defenderPlayer, boolean attackerPlayer,
+      int damageType, int rawDamageFixed, int piercePercent, int damageRate,
+      StateList defenderStates, int difficulty) {
+    FixedElementalDamageResult result = new FixedElementalDamageResult();
+    if (defender == null || damageType <= DAMAGE_PHYSICAL
+        || damageType >= DAMAGE_TYPE_COUNT || rawDamageFixed <= 0) return result;
+
+    short[] resistanceStats = {0, Stat.fireresist, Stat.lightresist,
+        Stat.coldresist, Stat.poisonresist, Stat.magicresist};
+    short[] maximumStats = {0, Stat.maxfireresist, Stat.maxlightresist,
+        Stat.maxcoldresist, Stat.maxpoisonresist, Stat.maxmagicresist};
+    short[] absorbPercentStats = {0, Stat.item_absorbfire_percent,
+        Stat.item_absorblight_percent, Stat.item_absorbcold_percent, 0,
+        Stat.item_absorbmagic_percent};
+    short[] absorbFlatStats = {0, Stat.item_absorbfire, Stat.item_absorblight,
+        Stat.item_absorbcold, 0, Stat.item_absorbmagic};
+    int[] stateResistanceTypes = {-1, 0, 2, 1, 3, 4};
+
+    int resistance = statInt(defender, resistanceStats[damageType], 0);
+    if (defenderStates != null) {
+      resistance += defenderStates.getTotalResistModifier(
+          stateResistanceTypes[damageType]);
+    }
+    if (defenderPlayer) resistance += MonsterUtil.getResistancePenalty(difficulty);
+    if (!defenderPlayer && resistance >= 100) {
+      result.immune = true;
+      return result;
+    }
+    resistance -= Math.max(0, piercePercent);
+    int maximumResistance = Math.min(ABSOLUTE_MAX_RESISTANCE,
+        75 + statInt(defender, maximumStats[damageType], 0));
+    resistance = Math.max(MIN_RESISTANCE, Math.min(maximumResistance, resistance));
+
+    // Native SUNITDMG_CalculateTotalDamage scales PvP before flat reduction,
+    // resistance and absorb. This ordering matters for sub-point fire ticks.
+    long reduced = rawDamageFixed;
+    if (attackerPlayer && defenderPlayer) {
+      reduced = reduced * PVP_DAMAGE_PERCENT / 100L;
+    }
+    long flatReduction = (long) Math.max(0,
+        statInt(defender, Stat.magic_damage_reduction, 0)) << 8;
+    if (flatReduction > 0 && damageRate > 0) {
+      flatReduction = flatReduction * damageRate / 1024L;
+    }
+    reduced = Math.max(0L, reduced - flatReduction);
+    reduced = reduced * (100L - resistance) / 100L;
+
+    int absorbPercent = absorbPercentStats[damageType] != 0
+        ? Math.max(0, Math.min(40,
+            statInt(defender, absorbPercentStats[damageType], 0))) : 0;
+    long absorbed = reduced * absorbPercent / 100L;
+    if (absorbFlatStats[damageType] != 0) {
+      long flatFixed = (long) Math.max(0,
+          statInt(defender, absorbFlatStats[damageType], 0)) << 8;
+      absorbed += Math.min(flatFixed, Math.max(0L, reduced - absorbed));
+    }
+    absorbed = Math.min(reduced, Math.max(0L, absorbed));
+    long damage = Math.max(0L, reduced - absorbed);
+
+    result.damageFixed = saturatingInt(damage);
+    result.absorbedLifeFixed = saturatingInt(absorbed);
     return result;
   }
 

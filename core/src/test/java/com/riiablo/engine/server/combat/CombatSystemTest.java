@@ -492,6 +492,58 @@ public class CombatSystemTest extends RiiabloTest {
     assertEquals(70 * CombatSystem.PVP_DAMAGE_PERCENT / 100, pvp.physicalDamage);
   }
 
+  @Test
+  public void fixedFireRatePreservesFractionAndScalesMdrByDamageRate() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.fireresist, 50);
+    defender.base().put(Stat.magic_damage_reduction, 10);
+    defender.reset();
+
+    CombatSystem.FixedElementalDamageResult pve =
+        combat.calculateFixedElementalRateDamage(
+            defender, false, true, CombatSystem.DAMAGE_FIRE,
+            256, 20, 41, null, 0);
+    CombatSystem.FixedElementalDamageResult pvp =
+        combat.calculateFixedElementalRateDamage(
+            defender, true, true, CombatSystem.DAMAGE_FIRE,
+            256, 20, 41, null, 0);
+
+    // PvE: (1.0 fire - MDR 10 * 41/1024) * 70% = 107/256.
+    // PvP: 1.0 * 17% is below the scaled MDR and is therefore fully reduced.
+    assertEquals(107, pve.damageFixed);
+    assertEquals(0, pvp.damageFixed);
+  }
+
+  @Test
+  public void fixedFireRateDoesNotBreakMonsterImmunityWithPierce() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.fireresist, 100);
+    defender.reset();
+
+    CombatSystem.FixedElementalDamageResult result =
+        combat.calculateFixedElementalRateDamage(
+            defender, false, true, CombatSystem.DAMAGE_FIRE,
+            256, 50, 41, null, 0);
+
+    assertTrue(result.immune);
+    assertEquals(0, result.damageFixed);
+  }
+
+  @Test
+  public void fixedFireRateCapsPercentAbsorbAtNativeFortyPercent() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.item_absorbfire_percent, 90);
+    defender.reset();
+
+    CombatSystem.FixedElementalDamageResult result =
+        combat.calculateFixedElementalRateDamage(
+            defender, false, true, CombatSystem.DAMAGE_FIRE,
+            256, 0, 41, null, 0);
+
+    assertEquals(154, result.damageFixed);
+    assertEquals(102, result.absorbedLifeFixed);
+  }
+
   private static Attributes attrs(int hp, int level, int defense,
       int minDamage, int maxDamage, int attackRating) {
     Attributes attrs = Attributes.obtainStandard();

@@ -411,7 +411,8 @@ public class ServerSkillSystem extends PassiveSystem {
     if (monstersOnly && !mMonster.has(event.entityId)
         && event.srvdofunc != 15 && event.srvdofunc != 16
         && event.srvdofunc != 18 && event.srvdofunc != 44 && event.srvdofunc != 45
-        && event.srvdofunc != 22 && event.srvdofunc != 49 && event.srvdofunc != 54
+        && event.srvdofunc != 22 && event.srvdofunc != 23 && event.srvdofunc != 24
+        && event.srvdofunc != 49 && event.srvdofunc != 54
         && event.srvdofunc != 68 && event.srvdofunc != 71
         && event.srvdofunc != 31 && event.srvdofunc != 55 && event.srvdofunc != 56
         && event.srvdofunc != 57 && event.srvdofunc != 58
@@ -421,7 +422,8 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 44 && skill.srvdofunc != 45
-        && skill.srvdofunc != 22 && skill.srvdofunc != 49 && skill.srvdofunc != 54
+        && skill.srvdofunc != 22 && skill.srvdofunc != 23 && skill.srvdofunc != 24
+        && skill.srvdofunc != 49 && skill.srvdofunc != 54
         && skill.srvdofunc != 68 && skill.srvdofunc != 71
         && skill.srvdofunc != 31 && skill.srvdofunc != 55 && skill.srvdofunc != 56
         && skill.srvdofunc != 57 && skill.srvdofunc != 58
@@ -532,10 +534,15 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, event.skillId, event.srvdofunc);
       return;
     }
-    if ((event.srvdofunc == 23 || skill.srvdofunc == 23)
-        && "SpiderLay".equalsIgnoreCase(skill.skill)) {
-      applySpiderLayState(event, skill, skillLevel);
-      return;
+    if (event.srvdofunc == 23 || skill.srvdofunc == 23) {
+      if (SorceressSkills.isBlaze(skill)) {
+        applyBlazeState(event, skill, skillLevel);
+        return;
+      }
+      if ("SpiderLay".equalsIgnoreCase(skill.skill)) {
+        applySpiderLayState(event, skill, skillLevel);
+        return;
+      }
     }
     // D2MOO SKILLS_SrvDo047_CloakOfShadows applies Dim Vision through an
     // aura callback.  It does not create a projectile; the state snapshot is
@@ -893,6 +900,23 @@ public class ServerSkillSystem extends PassiveSystem {
     }
     log.info("[SPIDER_LAY] phase=state entity={} skill={} level={} duration={}",
         event.entityId, event.skillId, skillLevel, duration);
+  }
+
+  /** D2MOO SrvDo023: Blaze stores skill/level on its timed self state. */
+  private void applyBlazeState(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId)) {
+      mUnitStates.create(event.entityId).init(event.entityId);
+    }
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    int duration = SorceressSkills.getBlazeDuration(skill, skillLevel,
+        name -> getBaseSkillLevel(event.entityId, name));
+    UnitState state = states.stateList.addStateLayer(
+        StateId.BLAZE, duration, skillLevel, event.entityId, skill.Id);
+    if (state == null) return;
+    state.needsSync = true;
+    log.info("[SORCERESS_BLAZE] phase=state source={} skill={} level={} duration={}",
+        event.entityId, skill.Id, skillLevel, duration);
   }
 
   private void applyVenom(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
@@ -1654,23 +1678,71 @@ public class ServerSkillSystem extends PassiveSystem {
         poison[0], poison[1], mastery, pierce, missile.Range, missile.Vel);
   }
 
-  /** D2MOO SKILLS_SrvDo024_FireWall: create only the maker at the target. */
+  /** D2MOO SrvDo024: two perpendicular makers plus the centre fire segment. */
   private void spawnFireWall(SkillDoEvent event, Skills.Entry skill, Vector2 caster) {
-    String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
-    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
-    if (missile == null) {
-      log.warn("[MONSTER_VAMPIRE] phase=firewall_rejected source={} reason=missing_missile missile={}",
-          event.entityId, missileName);
+    String makerName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
+    String fireName = firstNonEmpty(skill.srvmissileb, skill.cltmissileb);
+    Missiles.Entry makerRow = makerName != null ? Riiablo.files.Missiles.get(makerName) : null;
+    Missiles.Entry fireRow = fireName != null ? Riiablo.files.Missiles.get(fireName) : null;
+    if (makerRow == null || fireRow == null) {
+      log.warn("[SORCERESS_FIRE_WALL] phase=reject source={} reason=missing_missile "
+              + "maker={} fire={}", event.entityId, makerName, fireName);
       return;
     }
     Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    if (isTownPoint(event.entityId, target)) {
+      log.info("[SORCERESS_FIRE_WALL] phase=reject source={} reason=town target=({}, {})",
+          event.entityId, target.x, target.y);
+      return;
+    }
     Vector2 direction = firewallDirection(caster, target, new Vector2());
-    int missileId = createMissile(missile, direction, target, event.entityId, null,
-        getSkillLevel(event.entityId, event.skillId));
-    log.info("[MONSTER_VAMPIRE] phase=firewall source={} target={} missile={} missileId={} "
-            + "position=({}, {}) direction=({}, {})",
-        event.entityId, event.targetId, missileName, missileId,
+    int level = getSkillLevel(event.entityId, event.skillId);
+    int created = 0;
+    for (int side : new int[] {-1, 1}) {
+      Vector2 makerDirection = new Vector2(direction).scl(side);
+      int makerId = createMissile(
+          makerRow, makerDirection, target, event.entityId, null, level);
+      if (makerId < 0 || !mMissile.has(makerId)) continue;
+      Missile maker = mMissile.get(makerId);
+      maker.fireWallMaker = true;
+      maker.skillId = skill.Id;
+      maker.damageLevel = level;
+      maker.range = nativeMissileRange(makerRow, level);
+      created++;
+    }
+    int centreId = createMissile(fireRow, Vector2.X, target,
+        event.entityId, null, level);
+    if (configureFireAreaMissile(centreId, skill, event.entityId, level)) created++;
+    log.info("[SORCERESS_FIRE_WALL] phase=create source={} target={} skill={} level={} "
+            + "maker={} fire={} created={} position=({}, {}) axis=({}, {})",
+        event.entityId, event.targetId, skill.Id, level, makerName, fireName, created,
         target.x, target.y, direction.x, direction.y);
+  }
+
+  private boolean configureFireAreaMissile(
+      int missileId, Skills.Entry skill, int ownerId, int level) {
+    if (missileId < 0 || !mMissile.has(missileId)) return false;
+    Missile projectile = mMissile.get(missileId);
+    projectile.persistent = true;
+    projectile.remainingFrames = nativeMissileRange(projectile.missile, level);
+    projectile.tickInterval = 1;
+    projectile.range = 0f;
+    if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
+    Attributes owner = mAttributesWrapper.has(ownerId)
+        ? mAttributesWrapper.get(ownerId).attrs : null;
+    return MissileDamageResolver.initializeSorceressFireArea(
+        projectile, skill, owner, mPlayer.has(ownerId), level,
+        name -> getBaseSkillLevel(ownerId, name));
+  }
+
+  private boolean isTownPoint(int sourceId, Vector2 point) {
+    Map currentMap = map;
+    if (currentMap == null && mMapWrapper.has(sourceId)) {
+      currentMap = mMapWrapper.get(sourceId).map;
+    }
+    if (currentMap == null) return false;
+    Map.Zone zone = currentMap.getZone(point);
+    return zone != null && zone.isTown();
   }
 
   /** D2MOO SKILLS_SrvDo028_Meteor: create the centre missile at the target. */

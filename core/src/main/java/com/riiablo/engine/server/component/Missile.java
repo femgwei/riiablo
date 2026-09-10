@@ -61,6 +61,24 @@ public class Missile extends PooledComponent {
   public int tickInterval = 1;
   public int tickFrames;
 
+  /**
+   * Native 8.8 elemental rate used by persistent ground effects such as
+   * Blaze and Fire Wall. Keeping the fraction is required because their
+   * Skills.txt HitShift is below eight and one game-frame hit can be less
+   * than one life point.
+   */
+  public boolean fixedElementalRate;
+  public int fixedElementalType;
+  public int elementalMinRateFixed;
+  public int elementalMaxRateFixed;
+  public int elementalPiercePercent;
+  public int elementalDamageRate;
+  public boolean elementalAttackerPlayer;
+
+  /** Native SrvDo06 control missile; it emits SubMissile1 while moving. */
+  public boolean fireWallMaker;
+  public int fireWallSegmentsCreated;
+
   /** Native poison-skill missiles store an 8.8 per-frame rate, not life points. */
   public boolean fixedPoisonRate;
   public int poisonMinRateFixed;
@@ -187,6 +205,15 @@ public class Missile extends PooledComponent {
     remainingFrames = 0;
     tickInterval = 1;
     tickFrames = 0;
+    fixedElementalRate = false;
+    fixedElementalType = 0;
+    elementalMinRateFixed = 0;
+    elementalMaxRateFixed = 0;
+    elementalPiercePercent = 0;
+    elementalDamageRate = 0;
+    elementalAttackerPlayer = false;
+    fireWallMaker = false;
+    fireWallSegmentsCreated = 0;
     fixedPoisonRate = false;
     poisonMinRateFixed = 0;
     poisonMaxRateFixed = 0;

@@ -114,6 +114,11 @@
   `ELen/ELevLen` 寒冷时长和 Blizzard/Frozen Orb 硬点协同固化到施法快照。Cold Mastery/
   装备穿透、怪物 100+ 冰免、冰抗时长缩放、Cannot Be Frozen 与 Half Freeze Duration
   已进入统一结算，客户端继续复用服务端同步的导弹和状态表现。
+- 法师 Blaze / Fire Wall 已接入原生持续区域链：Blaze 通过 `STATE_BLAZE` 保存技能和
+  等级，仅在施法者实际移动且不处于城镇时沿轨迹生成地面火焰；Fire Wall 在目标点生成
+  两枚互为反向、垂直于施法方向的 `firewallmaker`，逐帧铺设子段并补齐中心段。区域火焰
+  保留 8.8 每帧伤害、火焰精通/穿透、怪物火免、抗性/吸收/PvP、`DamageRate` 对魔法
+  伤害降低的缩放和 `SrvDmg03` 受击反应概率；所有子导弹沿用服务端权威实体同步。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -194,7 +199,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 87% | 13% | 1.6% | 死灵骨毒/召唤链、圣骑士技能与法师 Static Field/Frost Nova 已接通；剩余法师/德鲁伊持续技能和实机表现仍待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 88% | 12% | 1.4% | 死灵骨毒/召唤链、圣骑士技能与法师 Static Field/Frost Nova/Blaze/Fire Wall 已接通；剩余法师防御状态、Teleport、德鲁伊持续技能和实机表现待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -219,9 +224,9 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 72% | 28% | Blaze/Fire Wall、Teleport 与持续区域表现 |
+| 法师 Sorceress | 76% | 24% | Enchant/Fire Mastery、防御性状态链、Teleport 与复杂冰火技能表现 |
 
-职业技能专项整体按 **约 80% 完成、约 20% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 81% 完成、约 19% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
@@ -737,6 +742,11 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   技能冰伤、寒冷持续时间、硬点协同和施法者冰冷穿透固化到权威导弹。统一战斗链新增
   冰抗对寒冷持续时间的缩放、怪物冰免不可被 Cold Mastery 打破、Cannot Be Frozen 与
   Half Freeze Duration 的原生次序。专项数据/ECS/碰撞测试通过；下一项为 Blaze/Fire Wall。
+- 2026-09-10：完成法师 Blaze / Fire Wall `SrvDo023/024` 原生持续区域链。Blaze 状态
+  按真实移动位置生成 `blaze`，Fire Wall 创建双向 maker、中心段及逐帧子段；地面火焰
+  使用 8.8 定点伤害并对齐火焰精通/穿透、火免、抗性/吸收/PvP、`DamageRate` 缩放 MDR
+  和 `SrvDmg03` 受击反应。36 个定向用例通过；130 项扩大回归仅保留既有 Throwing
+  Mastery 9/6 断言差异，D2GS 编译和真实 1.10f `offscreenCamp` 通过。未修改网络 schema。
 
 ## 当前下一项
 
@@ -750,9 +760,18 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     `NativeNecromancerPoisonNovaDataTest` 在当前 1.10f 资源下存在 `EMin 16/14` 版本真值
     断言差异，生产代码和该测试均非本项修改，留作独立数据审计。
 
-- [ ] **下一项：法师 Blaze / Fire Wall 原生持续区域导弹链**
-  - 优先核对 `SrvDo023/SrvDo024`、移动轨迹、maker/子导弹、周期伤害、叠加命中门槛、
-    地图阻挡和多人导弹/状态表现；完成后再处理 Teleport。
+- [x] ~~完成法师 Blaze / Fire Wall 原生持续区域导弹链~~
+  - `SrvDo023` 建立 Blaze 自身状态，并只在实际移动、非城镇位置铺设 `blaze`；
+    `SrvDo024` 创建两枚相反方向 maker、中心 `firewall` 以及 maker 移动子段。
+  - 每个火焰段保留原生 8.8 每帧伤害，统一处理火焰精通/穿透、怪物火免、抗性、吸收、
+    PvP、`DamageRate` 缩放 MDR 和 `dParam1 / 128` 受击反应概率。
+  - 数据契约、ECS 持续区域与战斗定向共 36 个用例通过；130 项扩大回归只有既有
+    Throwing Mastery 9/6 断言差异；D2GS 编译和真实 1.10f 离屏营地通过。
+
+- [ ] **下一项：法师 Enchant / Fire Mastery 与防御性状态链**
+  - 优先核对 `SrvDo025` 友方目标回退、Enchant 状态/命中率/附火/持续时间与多人快照，
+    再核对 Fire Mastery 被动刷新以及 Frozen Armor、Shiver Armor、Chilling Armor 的
+    防御、冰冷反击导弹和状态生命周期；随后处理 Teleport。
 
 - [x] ~~完成多人地面掉落归属窗口广播~~
   - `ItemP` 在保持旧字段兼容的前提下追加 owner/party 截止时间和金币队伍分配标记；
@@ -795,8 +814,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-当前小步：法师 Static Field 与 Frost Nova 已完成首轮，下一项是
-**Blaze / Fire Wall 原生持续区域导弹链**，随后处理 Teleport 与统一客户端表现验收。
+当前小步：法师 Static Field、Frost Nova、Blaze 与 Fire Wall 已完成首轮，下一项是
+**Enchant / Fire Mastery 与法师防御性状态链**，随后处理 Teleport 与统一客户端表现验收。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
 Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 以及召唤物所有权与生命周期已完成，德鲁伊形态限制、聚能状态、感染传播、五路范围伤害、多人权威眩晕、多目标连续攻击和 PetType/PetMax 生命周期已接通。

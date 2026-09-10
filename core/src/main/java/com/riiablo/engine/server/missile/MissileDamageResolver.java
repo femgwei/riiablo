@@ -149,6 +149,44 @@ public final class MissileDamageResolver {
     return initializeSkill(projectile, skill, ownerAttrs, level, false, true, name -> 0);
   }
 
+  /**
+   * Captures the native 8.8 per-frame fire packet used by Blaze/Fire Wall.
+   * D2Common's skill-owned missile path always applies elemental mastery;
+   * {@code Missiles.ApplyMastery} only gates table-owned missile damage.
+   */
+  public static boolean initializeSorceressFireArea(Missile projectile,
+      Skills.Entry skill, Attributes ownerAttrs, boolean attackerPlayer, int level,
+      ToIntFunction<String> baseSkillLevel) {
+    if (projectile == null || projectile.missile == null || skill == null
+        || !"fire".equalsIgnoreCase(skill.EType)) return false;
+    level = Math.max(1, level);
+    int min = skillElementalDamageFixed(skill, level, true, baseSkillLevel);
+    int max = skillElementalDamageFixed(skill, level, false, baseSkillLevel);
+    int mastery = Math.max(0, statInt(ownerAttrs, Stat.passive_fire_mastery));
+    min = percentage(min, 100 + mastery);
+    max = percentage(max, 100 + mastery);
+    if (max <= 0) return false;
+
+    projectile.skillId = skill.Id;
+    projectile.damageLevel = level;
+    projectile.damageSnapshot = true;
+    projectile.fixedElementalRate = true;
+    projectile.fixedElementalType = com.riiablo.engine.server.combat.CombatSystem.DAMAGE_FIRE;
+    projectile.elementalMinRateFixed = Math.max(0, min);
+    projectile.elementalMaxRateFixed = Math.max(projectile.elementalMinRateFixed, max);
+    projectile.elementalPiercePercent =
+        statInt(ownerAttrs, Stat.item_pierce_fire)
+            + statInt(ownerAttrs, Stat.passive_fire_pierce);
+    projectile.elementalDamageRate = Math.max(0, projectile.missile.DamageRate);
+    projectile.elementalAttackerPlayer = attackerPlayer;
+    log.info("[FIRE_AREA_DAMAGE] missile={} skill={} level={} rawFixed={}..{} "
+            + "mastery={} pierce={} damageRate={}",
+        projectile.missile.Missile, skill.skill, level,
+        projectile.elementalMinRateFixed, projectile.elementalMaxRateFixed,
+        mastery, projectile.elementalPiercePercent, projectile.elementalDamageRate);
+    return true;
+  }
+
   /** Builds the native magic packet used by Bone Spear and Bone Spirit. */
   public static boolean initializeNecromancerBoneMagic(Missile projectile,
       Skills.Entry skill, Attributes ownerAttrs, int level,
@@ -485,6 +523,27 @@ public final class MissileDamageResolver {
     if (shift > 0) value <<= Math.min(shift, 30);
     else if (shift < 0) value >>= Math.min(-shift, 30);
     return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+  }
+
+  private static int skillElementalDamageFixed(Skills.Entry skill, int level,
+      boolean minimum, ToIntFunction<String> baseSkillLevel) {
+    int base = minimum ? skill.EMin : skill.EMax;
+    int[] perLevel = minimum ? skill.EMinLev : skill.EMaxLev;
+    long damage = Math.max(0L, (long) base + damageBonusByLevel(level, perLevel));
+    damage <<= Math.max(0, Math.min(30, skill.HitShift));
+    boolean applySynergy = !minimum || damage > 256L || arrayValue(perLevel, 0) != 0;
+    if (applySynergy) {
+      int synergy = Math.max(0, SkillFormula.evaluate(
+          skill.EDmgSymPerCalc, skill, level,
+          baseSkillLevel == null ? name -> 0 : baseSkillLevel));
+      damage += damage * synergy / 100L;
+    }
+    return damage >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) damage;
+  }
+
+  private static int percentage(int value, int percent) {
+    long result = (long) Math.max(0, value) * Math.max(0, percent) / 100L;
+    return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
   }
 
   private static int elementalLength(Missiles.Entry row, int level) {

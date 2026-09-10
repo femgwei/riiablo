@@ -114,6 +114,11 @@ public class UnitState {
   /** Generic state runtime scalar, e.g. native STAT_SKILL_FRENZY stacks. */
   public int runtimeValue;
 
+  /** Last authoritative ground-trail origin (Blaze/SpiderLay movement gate). */
+  public float trailX;
+  public float trailY;
+  public boolean trailPositionSet;
+
   /** Native attackrate/other_animrate percentage used by animation stepping. */
   public int animationRateModifier;
 
@@ -283,6 +288,9 @@ public class UnitState {
     attackModifier = 0;
     velocityModifier = 0;
     runtimeValue = 0;
+    trailX = 0f;
+    trailY = 0f;
+    trailPositionSet = false;
     animationRateModifier = 0;
     lifeLeechModifier = 0;
     stunLength = 0;
@@ -753,6 +761,9 @@ public class UnitState {
     this.attackModifier = other.attackModifier;
     this.velocityModifier = other.velocityModifier;
     this.runtimeValue = other.runtimeValue;
+    this.trailX = other.trailX;
+    this.trailY = other.trailY;
+    this.trailPositionSet = other.trailPositionSet;
     this.animationRateModifier = other.animationRateModifier;
     this.lifeLeechModifier = other.lifeLeechModifier;
     this.stunLength = other.stunLength;
