@@ -92,6 +92,9 @@
 - 圣骑士 Smite 已接入玩家 `SrvDo150` 分支：强制装备盾牌、读取盾牌基础 `mindam/maxdam`，
   叠加 Holy Shield 技能伤害，按原生 `calc2` 施加眩晕，并沿用 tick 快照、统一命中、
   PvP 与死亡事件链；击退接口已调用，实际地图位移仍待碰撞系统验收。
+- 圣骑士 Zeal 已接入共享 `SrvSt37/SrvDo013` 多击链：按 `calc1` 初始化攻击次数（上限
+  5），每个关键帧使用目标位置快照独立进行命中、伤害和目标重选，`calc2/calc3` 分别
+  驱动伤害与命中等级加成；死亡、跨目标和剩余攻击次数会安全结束序列。
 
 - A1Q5 Countess 与 A1Q6 Andariel/Warriv 多人任务、幂等和重连收尾已经提交；本次进一步
   完成对象 `stateFlags` 客户端表现与神殿冷却恢复同步，当前功能基线以本文件所在
@@ -154,7 +157,7 @@
    Holy Shock / Sanctuary 特殊周期行为也已完成；Defiance、Blessed Aim、Vigor、
    Fanaticism 与 Thorns 的 `SrvDo065` 原生属性、硬点被动和反伤链亦已完成；Cleansing、
    Meditation 与 Redemption 周期资源/尸体行为已完成首轮，Sacrifice 的
-   `SrvSt29/SrvDo064` 及 Smite `SrvDo150` 也已接通。下一项处理 Zeal/Charge/Vengeance/Holy Shield/
+   `SrvSt29/SrvDo064`、Smite `SrvDo150` 及 Zeal `SrvSt37/SrvDo013` 也已接通。下一项处理 Charge/Vengeance/Holy Shield/
    Conversion，并同步进行全职业技能表现/动画验收。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
@@ -195,7 +198,7 @@
 | 野蛮人 Barbarian | 100% | 0% | 主动技能、战吼、尸体工具链、六类武器精通及 GH/BL/状态 Overlay 同步已接入；资源实机观感归入统一表现验收 |
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
-| 圣骑士 Paladin | 98% | 2% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer、FoH/Holy Bolt、Sacrifice 与 Smite 已完成；剩余 Zeal/Charge/Vengeance/Holy Shield/Conversion 和实机表现验收 |
+| 圣骑士 Paladin | 99% | 1% | 特殊周期/支援/抗性光环（含 Cleansing/Meditation/Redemption）、Blessed Hammer、FoH/Holy Bolt、Sacrifice、Smite 与 Zeal 已完成；剩余 Charge/Vengeance/Holy Shield/Conversion 和实机表现验收 |
 | 法师 Sorceress | 55% | 45% | Teleport、冰冻/燃烧持续时间、掌握技能和导弹分裂 |
 
 职业技能专项整体按 **约 79% 完成、约 21% 剩余** 计入战斗模块；刺客专项已完成，

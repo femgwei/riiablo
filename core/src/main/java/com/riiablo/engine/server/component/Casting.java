@@ -48,6 +48,12 @@ public class Casting extends PooledComponent {
   public int furyRemainingStrikes;
   public int furyStrikeIndex;
   @EntityId public int furyCurrentTargetId;
+  /** Native Paladin Zeal SrvSt37/SrvDo013 sequence state. */
+  public boolean zealInitialized;
+  public boolean zealStrikeProcessed;
+  public int zealRemainingStrikes;
+  public int zealStrikeIndex;
+  @EntityId public int zealCurrentTargetId;
   /** Native Feral Rage/Maul SrvSt56 combat record consumed by SrvDo120. */
   public CombatSystem.CombatResult feralMaulCombat;
   @EntityId public int feralMaulTargetId;
@@ -101,6 +107,11 @@ public class Casting extends PooledComponent {
     furyRemainingStrikes = 0;
     furyStrikeIndex = 0;
     furyCurrentTargetId = Engine.INVALID_ENTITY;
+    zealInitialized = false;
+    zealStrikeProcessed = false;
+    zealRemainingStrikes = 0;
+    zealStrikeIndex = 0;
+    zealCurrentTargetId = Engine.INVALID_ENTITY;
     feralMaulCombat = null;
     feralMaulTargetId = Engine.INVALID_ENTITY;
     feralMaulStunFrames = 0;
@@ -148,6 +159,11 @@ public class Casting extends PooledComponent {
     furyRemainingStrikes = 0;
     furyStrikeIndex = 0;
     furyCurrentTargetId = Engine.INVALID_ENTITY;
+    zealInitialized = false;
+    zealStrikeProcessed = false;
+    zealRemainingStrikes = 0;
+    zealStrikeIndex = 0;
+    zealCurrentTargetId = Engine.INVALID_ENTITY;
     feralMaulCombat = null;
     feralMaulTargetId = Engine.INVALID_ENTITY;
     feralMaulStunFrames = 0;

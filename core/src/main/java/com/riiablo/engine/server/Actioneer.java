@@ -32,6 +32,7 @@ import com.riiablo.engine.server.missile.MissileDamageResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.AssassinSkills;
 import com.riiablo.engine.server.skill.PaladinSkills;
+import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
@@ -516,7 +517,9 @@ public class Actioneer extends PassiveSystem {
         && casting.frenzyInitialized && (casting.frenzyStrikeIndex & 1) != 0;
     boolean furyRetarget = DruidSkills.isFury(skill)
         && casting.furyInitialized && casting.furyRemainingStrikes > 0;
-    if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget) {
+    boolean zealRetarget = skill != null && skill.Id == SkillId.ZEAL
+        && casting.zealInitialized && casting.zealRemainingStrikes > 0;
+    if (!targetDead || allowsDeadTarget(skill) || frenzyRetarget || furyRetarget || zealRetarget) {
       srvdofunc(event.entityId, skill.srvdofunc, casting.targetId, casting.targetVec);
       if (mPlayer.has(event.entityId)) {
         com.badlogic.gdx.Gdx.app.log("Actioneer", String.format(
@@ -590,6 +593,14 @@ public class Actioneer extends PassiveSystem {
       log.info("[DRUID_FURY] phase=continue source={} nextTarget={} remaining={} nextStrike={}",
           event.entityId, casting.furyCurrentTargetId,
           casting.furyRemainingStrikes, casting.furyStrikeIndex + 1);
+      return;
+    }
+    if (casting.zealInitialized
+        && casting.zealRemainingStrikes > 0
+        && casting.zealStrikeProcessed) {
+      log.info("[PALADIN_ZEAL] phase=continue source={} nextTarget={} remaining={} nextStrike={}",
+          event.entityId, casting.zealCurrentTargetId,
+          casting.zealRemainingStrikes, casting.zealStrikeIndex + 1);
       return;
     }
     if (mWhirlwindRuntime.has(event.entityId)) {
@@ -907,6 +918,28 @@ public class Actioneer extends PassiveSystem {
       case 37: { // Zeal/Fury/BloodLordFrenzy shared start function
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (skill != null && skill.Id == SkillId.ZEAL) {
+          int level = Math.max(1, skillLevel(entityId, casting.skillId));
+          int strikes = PaladinSkills.getZealAttackCount(skill, level);
+          if (targetId == Engine.INVALID_ENTITY || strikes <= 0 || !isAlive(targetId)
+              || !isValidFrenzyTarget(entityId, targetId)) {
+            log.info("[PALADIN_ZEAL] phase=start_reject source={} target={} reason=target_or_formula",
+                entityId, targetId);
+            mCasting.remove(entityId);
+            if (mSequence.has(entityId)) mSequence.remove(entityId);
+            break;
+          }
+          casting.zealInitialized = true;
+          casting.zealStrikeProcessed = false;
+          casting.zealRemainingStrikes = strikes;
+          casting.zealStrikeIndex = 0;
+          casting.zealCurrentTargetId = targetId;
+          log.info("[PALADIN_ZEAL] phase=start source={} skill={} level={} target={} strikes={} "+
+                  "damagePct={} attackRatingPct={}", entityId, casting.skillId, level, targetId,
+              strikes, PaladinSkills.getZealDamagePercent(skill, level),
+              PaladinSkills.getZealAttackRatingPercent(skill, level));
+          break;
+        }
         if (DruidSkills.isFury(skill)) {
           UnitStates unitStates = mUnitStates.get(entityId);
           StateList states = unitStates != null ? unitStates.stateList : null;
@@ -1004,7 +1037,8 @@ public class Actioneer extends PassiveSystem {
       case 13: { // SKILLS_SrvDo013_Fend_Zeal_Fury
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
-        if (DruidSkills.isFury(skill)) resolveFury(entityId);
+        if (skill != null && skill.Id == SkillId.ZEAL) resolveZeal(entityId);
+        else if (DruidSkills.isFury(skill)) resolveFury(entityId);
         else log.warn("Unsupported shared srvdofunc(13) for {} skill={}",
             entityId, skill != null ? skill.skill : "none");
         break;
@@ -2091,6 +2125,67 @@ public class Actioneer extends PassiveSystem {
    * select the next GUID in melee+4 range. The animation sequence repeats
    * while Param1 remains positive and a valid hostile target exists.
    */
+  private void resolveZeal(int entityId) {
+    Casting casting = mCasting.get(entityId);
+    Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+    if (casting == null || !casting.zealInitialized || skill == null
+        || skill.Id != SkillId.ZEAL || casting.zealRemainingStrikes <= 0
+        || !mAttributesWrapper.has(entityId) || !isAlive(entityId)) return;
+    int target = casting.zealCurrentTargetId;
+    if (target == Engine.INVALID_ENTITY || !isAlive(target)
+        || !isValidFrenzyTarget(entityId, target)
+        || !isInMeleeRange(entityId, target, 0)) {
+      target = findNextFrenzyTarget(entityId, target);
+    }
+    if (target == Engine.INVALID_ENTITY || !mAttributesWrapper.has(target)) {
+      casting.zealRemainingStrikes = 0;
+      casting.zealStrikeProcessed = true;
+      return;
+    }
+    int level = Math.max(1, skillLevel(entityId, skill.Id));
+    Attributes attacker = mAttributesWrapper.get(entityId).attrs;
+    Attributes defender = mAttributesWrapper.get(target).attrs;
+    if (attacker == null || defender == null) return;
+    Item weapon = activeAttackWeapon(entityId);
+    int min = statInt(attacker, Stat.mindamage);
+    int max = Math.max(min, statInt(attacker, Stat.maxdamage));
+    int attackRating = statInt(attacker, Stat.tohit);
+    int arBonus = PaladinSkills.getZealAttackRatingPercent(skill, level);
+    attackRating += attackRating * arBonus / 100;
+    CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculatePrecomputedMeleeAttack(
+        attacker, defender, true, isPlayerEntity(target), min, max, attackRating,
+        stateList(entityId), stateList(target), isEntityMoving(target),
+        weaponMastery(entityId, weapon, false));
+    casting.zealStrikeIndex++;
+    casting.zealRemainingStrikes--;
+    casting.zealStrikeProcessed = true;
+    casting.zealCurrentTargetId = target;
+    StatRef hp = defender.get(Stat.hitpoints, StatRef.obtain());
+    float before = hp != null ? hp.asFixed() : 0f;
+    float applied = 0f;
+    if (combat.hit && !combat.blocked && hp != null && before > 0f) {
+      int damagePct = PaladinSkills.getZealDamagePercent(skill, level);
+      float multiplier = (100f + damagePct) / 100f;
+      DamageEvent event = DamageEvent.obtainMelee(entityId, target,
+          combat.totalDamage * multiplier, combat.physicalDamage * multiplier);
+      events.dispatch(event);
+      applied = Math.max(0f, event.damage);
+      hp.sub(applied);
+      if (hp.asFixed() < 0f) hp.set(0f);
+      applyCombatStates(entityId, target, combat);
+      if (hp.asFixed() <= 0f) events.dispatch(DeathEvent.obtain(entityId, target));
+    }
+    if (casting.zealRemainingStrikes > 0) {
+      int next = findNextFrenzyTarget(entityId, target);
+      if (next != Engine.INVALID_ENTITY) casting.zealCurrentTargetId = next;
+      else casting.zealRemainingStrikes = 0;
+    }
+    log.info("[PALADIN_ZEAL] phase=strike source={} index={} target={} result={} damage={} hp={} -> {} remaining={}",
+        entityId, casting.zealStrikeIndex, target,
+        combat.blocked ? "blocked" : combat.hit ? "hit" : "miss", applied,
+        before, hp != null ? hp.asFixed() : before, casting.zealRemainingStrikes);
+  }
+
   private void resolveFury(int entityId) {
     Casting casting = mCasting.get(entityId);
     Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;

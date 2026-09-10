@@ -265,6 +265,27 @@ public final class PaladinSkills {
     return 5;
   }
 
+  /** Native Zeal strike count from calc1, clamped to the 1.10f five-hit cap. */
+  public static int getZealAttackCount(Skills.Entry skill, int skillLevel) {
+    if (skill == null || skill.Id != SkillId.ZEAL) return 0;
+    int value = SkillFormula.evaluate(skill.calc1, skill, Math.max(1, skillLevel));
+    return Math.max(1, Math.min(5, value > 0 ? value : getZealAttackCount(skillLevel)));
+  }
+
+  /** Native Zeal physical damage bonus (calc2). */
+  public static int getZealDamagePercent(Skills.Entry skill, int skillLevel) {
+    if (skill == null || skill.Id != SkillId.ZEAL) return 0;
+    int value = SkillFormula.evaluate(skill.calc2, skill, Math.max(1, skillLevel));
+    return value != 0 ? value : calculateZealDamageBonus(skillLevel);
+  }
+
+  /** Native Zeal attack-rating bonus (calc3). */
+  public static int getZealAttackRatingPercent(Skills.Entry skill, int skillLevel) {
+    if (skill == null || skill.Id != SkillId.ZEAL) return 0;
+    int value = SkillFormula.evaluate(skill.calc3, skill, Math.max(1, skillLevel));
+    return value != 0 ? value : calculateZealAttackRatingBonus(skillLevel);
+  }
+
   /**
    * 热忱伤害加成
    * 
