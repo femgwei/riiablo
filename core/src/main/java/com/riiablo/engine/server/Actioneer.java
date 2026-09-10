@@ -69,6 +69,7 @@ import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 import com.riiablo.engine.server.event.AnimDataKeyframeEvent;
 import com.riiablo.engine.server.event.DamageEvent;
@@ -108,6 +109,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Pathfind> mPathfind;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
@@ -2795,28 +2797,78 @@ public class Actioneer extends PassiveSystem {
           entityId, targetVec);
       return false;
     }
+    Vector2 from = new Vector2(mPosition.get(entityId).position);
+    Vector2 landing = targetVec;
     int flags = map != null ? map.flags(targetVec) : 0xFF;
-    if ((flags & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+
+    // 原生 SrvDo027 首先检查当前关卡的 Levels.Teleport 标志。
+    // 对没有构造 Zone 的隔离 ECS 调用保留兼容回退；真实地图请求不能绕过
+    // 关卡和 RoomEx 拓扑校验。
+    Map.Zone sourceZone = map != null ? map.getZone(from) : null;
+    if (sourceZone != null) {
+      if (sourceZone.level == null || sourceZone.level.Teleport == 0) {
+        log.info("[TELEPORT] phase=reject entity={} level={} teleport={} reason=level_disabled",
+            entityId, sourceZone.level != null ? sourceZone.level.Id : -1,
+            sourceZone.level != null ? sourceZone.level.Teleport : -1);
+        return false;
+      }
+      Map.Zone targetZone = map.getZone(targetVec);
+      if (targetZone == null || targetZone != sourceZone) {
+        log.info("[TELEPORT] phase=reject entity={} level={} reason=outside_source_zone",
+            entityId, sourceZone.level.Id);
+        return false;
+      }
+
+      // Levels.Teleport == 2 时使用 COLLIDE_MASK_PLAYER_FLYING 特殊限制
+      // （导弹屏障和关闭的门）；普通落点仍继续走下面的安全坐标搜索。
+      int flyingFlags = map.playerFlyingFlags(Map.round(targetVec.x), Map.round(targetVec.y));
+      if (sourceZone.level.Teleport == 2
+          && (flyingFlags & DT1.Tile.FLAG_BLOCK_JUMP) != 0) {
+        log.info("[TELEPORT] phase=reject entity={} level={} target=({}, {}) flags={} reason=flying_collision",
+            entityId, sourceZone.level.Id, targetVec.x, targetVec.y, flyingFlags);
+        return false;
+      }
+
+      int unitSize = mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : Size.MEDIUM;
+      Vector2 safeLanding = new Vector2();
+      int collisionMask = DT1.Tile.FLAG_BLOCK_WALK | DT1.Tile.FLAG_BLOCK_PLAYER_WALK;
+      if (!targetZone.findFreeCoordinates(targetVec, unitSize, 50, collisionMask,
+          false, safeLanding)) {
+        log.info("[TELEPORT] phase=reject entity={} level={} target=({}, {}) size={} flags={} reason=no_free_coordinate",
+            entityId, sourceZone.level.Id, targetVec.x, targetVec.y, unitSize, flags);
+        return false;
+      }
+      landing = safeLanding;
+      flags = map.flags(landing);
+    } else if ((flags & DT1.Tile.FLAG_BLOCK_WALK) != 0) {
+      // 无 Zone 的无渲染/单元测试夹具使用兼容路径；生产地图始终走上面的原生路径。
       log.info("[TELEPORT] phase=reject entity={} target=({}, {}) flags={} reason=blocked",
           entityId, targetVec.x, targetVec.y, flags);
       return false;
     }
-    Vector2 from = new Vector2(mPosition.get(entityId).position);
-    mPosition.get(entityId).position.set(targetVec);
+
+    mPosition.get(entityId).position.set(landing);
     if (mPathfind.has(entityId)) mPathfind.remove(entityId);
     if (mTarget.has(entityId)) mTarget.remove(entityId);
     if (mVelocity.has(entityId)) mVelocity.get(entityId).velocity.setZero();
     Box2DBody box2dWrapper = mBox2DBody.get(entityId);
     if (box2dWrapper != null && box2dWrapper.body != null) {
-      box2dWrapper.body.setTransform(targetVec, 0);
+      box2dWrapper.body.setTransform(landing, box2dWrapper.body.getAngle());
+    }
+    if (mMapWrapper != null && sourceZone != null) {
+      MapWrapper wrapper = mMapWrapper.has(entityId)
+          ? mMapWrapper.get(entityId) : mMapWrapper.create(entityId);
+      wrapper.set(map, sourceZone);
+      Map.RoomEx room = sourceZone.findRoomEx(landing.x, landing.y);
+      wrapper.roomId = room == null ? -1 : room.id;
     }
     if (mUnitStates.has(entityId)) {
       UnitStates states = mUnitStates.get(entityId);
       if (states.stateList == null) states.init(entityId);
       states.stateList.addState(StateId.SYNC_WARPED, 2, 1, entityId);
     }
-    log.info("[TELEPORT] phase=warp entity={} from=({}, {}) to=({}, {}) flags={} status=PASS",
-        entityId, from.x, from.y, targetVec.x, targetVec.y, flags);
+    log.info("[TELEPORT] phase=warp entity={} from=({}, {}) requested=({}, {}) landing=({}, {}) flags={} status=PASS",
+        entityId, from.x, from.y, targetVec.x, targetVec.y, landing.x, landing.y, flags);
     return true;
   }
 

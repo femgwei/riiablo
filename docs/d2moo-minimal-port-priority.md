@@ -92,7 +92,8 @@ Andariel 和对象 `stateFlags` 表现。
 不能只依赖动画肉眼判断。刺客/野蛮人专项已基本完成，亚马逊约 99%，德鲁伊约 90%，
 死灵法师与圣骑士的服务端技能首轮已基本闭环；法师基础单体弹道、Static Field、
 Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与三种冰甲已完成首轮核对，
-下一项优先处理 Teleport 原生权威位移链，随后处理复杂技能的多人表现链。
+Teleport `SrvDo027` 原生权威位移链已完成（Level/Zone、飞行碰撞、footprint 安全落点、
+Box2D/RoomEx 与 `SYNC_WARPED`），随后处理复杂技能的多人表现链。
 
 ## 工程约束
 

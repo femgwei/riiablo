@@ -62,7 +62,8 @@
 - Enchant 已接入 `SrvDo025` 友方目标/自身回退、附火、命中和持续时间；Fire Mastery 使用
   永久状态 stat-list，并覆盖普通技能导弹及持续火场快照。Frozen/Shiver/Chilling Armor
   互斥且分别响应受伤近战、包含 miss/block 的攻击近战和 `ReturnFire` 导弹事件；客户端
-  可从 StateP 恢复三种护甲状态和持久 Overlay。下一项为 Teleport。
+  可从 StateP 恢复三种护甲状态和持久 Overlay。Teleport `SrvDo027` 已完成原生安全落点与
+  多人同步，下一项转入复杂技能的多人表现验收。
 - 圣骑士 Cleansing、Meditation、Redemption、Sacrifice、Smite、Zeal 已完成首轮原生链；
   Charge 已接入 `SrvSt31/SrvDo067`（路径追击、Param1 速度、当前 tick 命中和 calc1 增伤）；
   Vengeance 已接入 `SrvSt35/SrvDo002` 的火/冰/电同时附伤、HitClass 轮换与权威结算；Holy
@@ -137,7 +138,7 @@
 
 当前已完成 **P1 死灵法师服务端技能首轮、圣骑士服务端技能首轮**，以及法师基础单体
 弹道、Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与三种冰甲
-原生权威链首轮。下一步处理 **Teleport 原生权威位移链**，随后处理复杂技能和统一
+原生权威链首轮。Teleport `SrvDo027` 原生权威位移链已完成，下一步处理复杂技能和统一
 多人表现验收。战斗模块不再单独分派，相关修改与进度文档均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与

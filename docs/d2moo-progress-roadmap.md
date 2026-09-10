@@ -153,7 +153,7 @@
   也已完成首轮。圣骑士代表性光环、四种抗性光环与硬点最大抗性、Blessed Hammer、
   Fist of the Heavens / Holy Bolt，以及 Holy Freeze、Holy Shock、Sanctuary 原生权威链
   也已完成首轮；五个 `SrvDo065` 支援光环及 Cleansing、Meditation、Redemption 现已
-  数据驱动对齐，下一项为圣骑士近战技能尾项与全职业表现验收。
+  数据驱动对齐，Teleport 已补齐，下一项为复杂技能与全职业表现验收。
 
 > 口径说明：详细阶段中 P1-7 的“地面物品、掉落与拾取”已完成，但顶部模块表的
 > “装备、背包、物品移动和派生属性”仍为约 60%；前者是最小物品闭环，后者包含完整
@@ -188,7 +188,8 @@
    Meditation 与 Redemption 周期资源/尸体行为已完成首轮，Sacrifice 的
    `SrvSt29/SrvDo064`、Smite `SrvDo150`、Zeal `SrvSt37/SrvDo013`、Charge
    `SrvSt31/SrvDo067`、Vengeance `SrvSt35/SrvDo002` 及 Holy Shield
-   `SrvSt36/SrvDo018` 也已接通。下一项处理 Conversion，并同步进行全职业技能表现/动画验收。
+   `SrvSt36/SrvDo018` 也已接通。Conversion 与 Teleport 已完成，下一项同步进行全职业技能
+  表现/动画验收。
 8. **P1 物品与存档**：继续补装备派生属性、插槽/尸体边界以及 D2S 完整 section/mask
    回归，再进入 Act 2–5 扩展。
 
@@ -204,7 +205,7 @@
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
 | P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
 | P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
-| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 90% | 10% | 1.2% | 死灵骨毒/召唤链、圣骑士技能与法师 Enchant/Fire Mastery/三冰甲已接通；剩余 Teleport、德鲁伊持续技能和实机表现待补 |
+| P1 | 战斗、伤害、状态、技能、导弹 | 12% | 92% | 8% | 1.0% | 死灵骨毒/召唤链、圣骑士技能与法师 Enchant/Fire Mastery/三冰甲/Teleport 已接通；剩余复杂技能和实机表现待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
 | P1 | TreasureClassEx、品质和地面掉落 | 7% | 70% | 30% | 2.1% | 唯一/套装属性和完整构造仍有 fallback |
@@ -229,9 +230,9 @@
 | 德鲁伊 Druid | 90% | 10% | 狼/熊、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、Fury 及召唤物所有权/生命周期已完成；召唤 AI 深化和持续区域技能待补 |
 | 死灵法师 Necromancer | 99% | 1% | 诅咒、骨毒系、召唤、Revive/Golem 专属 AI 与四类 Golem 副作用已接通；剩余资源实机观感统一验收 |
 | 圣骑士 Paladin | 100% | 0% | 服务端技能首轮已完成：Conversion 现已补齐 SrvSt32/SrvDo079、阵营/AI、等级生命保存恢复、耐久收尾与多人状态表现；资源实机观感归入统一验收 |
-| 法师 Sorceress | 84% | 16% | Teleport、复杂冰火雷技能及统一多人表现验收 |
+| 法师 Sorceress | 88% | 12% | 复杂冰火雷技能及统一多人表现验收 |
 
-职业技能专项整体按 **约 96% 完成、约 4% 剩余** 计入战斗模块；刺客专项已完成，
+职业技能专项整体按 **约 97% 完成、约 3% 剩余** 计入战斗模块；刺客专项已完成，
 其余职业仍按各自行所列缺口继续推进。
 
 ## 实施顺序
@@ -704,6 +705,11 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
 - 2026-09-04：完成德鲁伊 Shock Wave `SrvDo008/SrvDmg07`；接入五路导弹、共享命中去重、Skills.txt 物理伤害、40+15/级帧眩晕、原生目标资格与权威状态同步日志。专项及通用回归共 17 个用例通过；德鲁伊专项更新为约 76%。
 - 2026-09-04：完成德鲁伊 Fury `SrvSt37/SrvDo013`；接入原生 2–5 击公式、狼形态门槛、`ln34` 增伤、每击独立命中/耐久和 GUID 邻近目标链，修正多击动画音效重复播放；德鲁伊专项回归与既有变形回归通过，D2GS 编译通过，专项更新为约 80%。
 - 2026-09-07：新增 1×1 隐藏窗口真实营地启动门槛；固定种子执行 Act 1 DRLG、营地实体、玩家创建和三个生产渲染帧，并让 LWJGL 线程异常正确传递为 Gradle 失败。测试先复现并修复单人任务控制器错误依赖多人同步器，以及共享 Idle AI 用 `entity=-1` 查询组件导致的启动崩溃；1.10f 主基线和 1.14 兼容资源均通过。
+- 2026-09-11：完成法师 Teleport `SrvDo027` 原生权威位移链。按 `Levels.Teleport` 校验
+  当前 Level，同 Zone 内按 `COLLIDE_MASK_PLAYER_FLYING` 检查飞行阻挡，并调用
+  `Zone.findFreeCoordinates` 以单位 footprint 搜索安全落点；成功后更新 Position、Box2D、
+  MapWrapper/RoomEx，清理移动意图并写入 `SYNC_WARPED`。Teleport/落点专项、D2GS 编译和
+  1.10f `offscreenCamp` 通过；完整专项类仍有既有 Chain Lightning 4 段/3 段断言差异。
 - 2026-09-10：完成圣骑士 Charge `SrvSt31/SrvDo067` 首轮移植。起手按 `Param1` 安装
   冲锋速度增益并通过碰撞安全路径追击；动画结束时未到近战范围会重试，命中帧使用当前
   权威 tick 位置快照，按 `calc1`、`ToHit/LevToHit` 结算伤害和命中，统一处理格挡、
@@ -782,9 +788,12 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   - 三种冰甲的状态互斥、持久 Overlay 和 StateP 重建已接入；专项数据/集成、全部法师、
     状态表现、战斗与近战距离回归通过，D2GS 编译和真实 1.10f `offscreenCamp` 通过。
 
-- [ ] **下一项：法师 Teleport 原生位移链**
-  - 对照 `SrvSt08/SrvDo019` 的目标坐标、城镇/Level Teleport 标志、地图碰撞与安全落点，
-    服务端完成权威位移、RoomEx/Zone/Box2D 更新以及 `SYNC_WARPED` 多人同步。
+- [x] ~~完成法师 Teleport 原生位移链~~
+  - 对照 D2MOO `SKILLS_SrvDo027_Teleport` 与 `SUnit.cpp::sub_6FCBDFE0`，服务端校验当前
+    Level 的 `Teleport` 标志、同一 Zone、飞行碰撞，并按单位 footprint 搜索安全落点；成功后
+    清理移动/目标/速度，更新 Position、Box2D、MapWrapper/RoomEx，写入 `SYNC_WARPED`。
+  - Teleport/落点专项测试、D2GS 编译和真实 1.10f `offscreenCamp` 通过；完整专项类仍有
+    既有 Chain Lightning 4 段/3 段断言差异，与本次 Teleport 改动无关。
 
 - [x] ~~完成多人地面掉落归属窗口广播~~
   - `ItemP` 在保持旧字段兼容的前提下追加 owner/party 截止时间和金币队伍分配标记；
@@ -827,8 +836,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
     以及实体 ID 回收；重连可见性门槛 `headlessReconnectVisibility` 在 1.10f 资源下
     继续通过。
 
-当前小步：法师 Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与
-三种冰甲已完成首轮，下一项是 **Teleport 原生权威位移链**，随后处理复杂技能与统一
+当前小步：法师 Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery、三种冰甲
+与 Teleport `SrvDo027` 原生权威位移链已完成，下一项处理复杂技能与统一
 客户端表现验收。
 战斗模块由本 Chat 统一维护，相关技能或 AI 工作不会再被视为“另一个 Chat 的进度”。
 
