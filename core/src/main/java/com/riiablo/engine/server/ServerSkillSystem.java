@@ -1850,12 +1850,7 @@ public class ServerSkillSystem extends PassiveSystem {
         event.entityId, event.targetId, missileName, missileId, target.x, target.y);
   }
 
-  /**
-   * Native chain lightning walks the nearby hostile-unit list, never revisits
-   * a target, and emits one authoritative segment per jump.  Each segment is
-   * represented by the normal missile/collision path, preserving resistance,
-   * hit and death event handling instead of applying damage directly here.
-   */
+  /** D2MOO SrvDo026: create one root missile and defer each jump to SrvHit12. */
   private void spawnChainLightning(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
     String missileName = firstNonEmpty(skill.srvmissilea, skill.cltmissilea);
     Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
@@ -1864,33 +1859,30 @@ public class ServerSkillSystem extends PassiveSystem {
           event.entityId, missileName);
       return;
     }
-    int maxHits = Math.min(12, Math.max(1,
-        5 + getSkillLevel(event.entityId, event.skillId) / 5));
-    IntSet visited = new IntSet();
-    Vector2 from = new Vector2(start);
-    int created = 0;
-    for (int jump = 0; jump < maxHits; jump++) {
-      int next = jump == 0 && event.targetId >= 0 && mPosition.has(event.targetId)
-          && isHostile(event.entityId, event.targetId)
-          ? event.targetId : findNearestHostile(
-              event.entityId, from, visited, CHAIN_LIGHTNING_JUMP_RANGE2);
-      if (next < 0 || !mPosition.has(next)) break;
-      Vector2 destination = mPosition.get(next).position;
-      Vector2 direction = new Vector2(destination).sub(from);
-      if (direction.isZero(0.0001f)) {
-        visited.add(next);
-        continue;
-      }
-      direction.nor();
-      // Each segment owns its collision set. Sharing the target-selection set
-      // would pre-mark every intended victim and make collision skip them.
-      if (createMissile(missile, direction, from, event.entityId, null,
-          getSkillLevel(event.entityId, event.skillId)) >= 0) created++;
-      visited.add(next);
-      from.set(destination);
+    int level = getSkillLevel(event.entityId, event.skillId);
+    int maxHits = Math.min(12, Math.max(1, 5 + level / 5));
+    int initialTarget = event.targetId >= 0 && mPosition.has(event.targetId)
+        && isHostile(event.entityId, event.targetId)
+        ? event.targetId
+        : findNearestHostile(event.entityId, start, new IntSet(), CHAIN_LIGHTNING_JUMP_RANGE2);
+    Vector2 direction = new Vector2(1, 0);
+    if (initialTarget >= 0 && mPosition.has(initialTarget)) {
+      direction.set(mPosition.get(initialTarget).position).sub(start);
+      if (direction.isZero(0.0001f)) direction.set(1, 0);
     }
-    log.info("[CHAIN_LIGHTNING] phase=spawn source={} initialTarget={} hits={} missile={} status={}",
-        event.entityId, event.targetId, created, missileName, created > 0 ? "PASS" : "EMPTY");
+    int missileId = createMissile(missile, direction.nor(), start, event.entityId,
+        new IntSet(), level);
+    if (missileId >= 0 && mMissile.has(missileId)) {
+      Missile projectile = mMissile.get(missileId);
+      projectile.chainHitsRemaining = maxHits;
+      log.info("[CHAIN_LIGHTNING] phase=spawn source={} initialTarget={} missile={} "
+              + "missileId={} jumps={} status=PASS",
+          event.entityId, initialTarget, missileName, missileId, maxHits);
+    } else {
+      log.info("[CHAIN_LIGHTNING] phase=spawn source={} initialTarget={} missile={} "
+              + "jumps={} status=EMPTY",
+          event.entityId, initialTarget, missileName, maxHits);
+    }
   }
 
   /** Native Amazon SrvDo011: release Calc1 charged bolts from the hit target. */
@@ -2134,7 +2126,9 @@ public class ServerSkillSystem extends PassiveSystem {
     for (int i = 0; i < entities.size(); i++) {
       int candidate = entities.get(i);
       if (candidate == sourceId || visited.contains(candidate) || !isHostile(sourceId, candidate)
-          || !mPosition.has(candidate)) continue;
+          || !mPosition.has(candidate)
+          || (!mPlayer.has(candidate) && !mMonster.has(candidate)
+              && !mMercenary.has(candidate) && !mSummonedPet.has(candidate))) continue;
       float distance = origin.dst2(mPosition.get(candidate).position);
       if (distance <= range2 && distance < nearestDistance) {
         nearestDistance = distance;

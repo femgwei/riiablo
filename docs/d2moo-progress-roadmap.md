@@ -709,7 +709,10 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   当前 Level，同 Zone 内按 `COLLIDE_MASK_PLAYER_FLYING` 检查飞行阻挡，并调用
   `Zone.findFreeCoordinates` 以单位 footprint 搜索安全落点；成功后更新 Position、Box2D、
   MapWrapper/RoomEx，清理移动意图并写入 `SYNC_WARPED`。Teleport/落点专项、D2GS 编译和
-  1.10f `offscreenCamp` 通过；完整专项类仍有既有 Chain Lightning 4 段/3 段断言差异。
+  1.10f `offscreenCamp` 通过；完整专项类随后通过 Chain Lightning 根导弹回归。
+- 2026-09-11：修正法师 Chain Lightning `SrvDo026/SrvHit12` 链路。施法阶段只创建一枚根
+  导弹并保存原生跳数，命中后由 `MissileCollisionSystem` 选择未命中的邻近敌人并创建续链；
+  同时排除导弹等非 Unit 实体被误选。专项回归、D2GS 编译和 1.10f `offscreenCamp` 通过。
 - 2026-09-10：完成圣骑士 Charge `SrvSt31/SrvDo067` 首轮移植。起手按 `Param1` 安装
   冲锋速度增益并通过碰撞安全路径追击；动画结束时未到近战范围会重试，命中帧使用当前
   权威 tick 位置快照，按 `calc1`、`ToHit/LevToHit` 结算伤害和命中，统一处理格挡、
@@ -792,8 +795,8 @@ P2 对象 stateFlags 表现 -> P1 战斗/物品剩余项`，详见本文件的�
   - 对照 D2MOO `SKILLS_SrvDo027_Teleport` 与 `SUnit.cpp::sub_6FCBDFE0`，服务端校验当前
     Level 的 `Teleport` 标志、同一 Zone、飞行碰撞，并按单位 footprint 搜索安全落点；成功后
     清理移动/目标/速度，更新 Position、Box2D、MapWrapper/RoomEx，写入 `SYNC_WARPED`。
-  - Teleport/落点专项测试、D2GS 编译和真实 1.10f `offscreenCamp` 通过；完整专项类仍有
-    既有 Chain Lightning 4 段/3 段断言差异，与本次 Teleport 改动无关。
+  - Teleport/落点专项测试、D2GS 编译和真实 1.10f `offscreenCamp` 通过；Chain Lightning
+    的后续根导弹修正已在相邻专项回归中通过。
 
 - [x] ~~完成多人地面掉落归属窗口广播~~
   - `ItemP` 在保持旧字段兼容的前提下追加 owner/party 截止时间和金币队伍分配标记；

@@ -138,7 +138,8 @@
 
 当前已完成 **P1 死灵法师服务端技能首轮、圣骑士服务端技能首轮**，以及法师基础单体
 弹道、Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与三种冰甲
-原生权威链首轮。Teleport `SrvDo027` 原生权威位移链已完成，下一步处理复杂技能和统一
+原生权威链首轮。Teleport `SrvDo027` 与 Chain Lightning `SrvDo026/SrvHit12` 原生链已完成，
+下一步处理复杂技能和统一
 多人表现验收。战斗模块不再单独分派，相关修改与进度文档均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与

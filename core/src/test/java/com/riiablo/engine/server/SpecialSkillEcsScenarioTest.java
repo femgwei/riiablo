@@ -55,9 +55,11 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           caster, skillId, first, new Vector2(5, 0), 0, 0));
 
-      assertEquals(3, factory.created, "chain lightning must emit three segments for three targets");
+      assertEquals(1, factory.created,
+          "native chain lightning creates one root missile; SrvHit12 creates continuations");
+      assertEquals(5, world.getMapper(Missile.class).get(factory.lastMissileId).chainHitsRemaining);
       System.out.println("[CHAIN_LIGHTNING_ECS] caster=" + caster + " initialTarget=" + first
-          + " segments=" + factory.created + " status=PASS");
+          + " rootMissiles=" + factory.created + " jumps=5 status=PASS");
     } finally {
       world.dispose();
     }
@@ -208,6 +210,7 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
 
   private static final class RecordingFactory extends EntityFactory {
     int created;
+    int lastMissileId = Engine.INVALID_ENTITY;
 
     @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }
     @Override public int createDynamicObject(int act, int id, float x, float y) { return Engine.INVALID_ENTITY; }
@@ -232,6 +235,7 @@ class SpecialSkillEcsScenarioTest extends RiiabloTest {
       world.getMapper(Missile.class).create(id).set(row, position, row.Range).setOwner(-1);
       world.getMapper(Position.class).create(id).position.set(position);
       created++;
+      lastMissileId = id;
       return id;
     }
   }
