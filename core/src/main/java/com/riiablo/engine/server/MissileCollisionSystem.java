@@ -165,6 +165,10 @@ public class MissileCollisionSystem extends IteratingSystem {
       processMeteorCenter(entityId, missile, position);
       return;
     }
+    if (missile.druidFissureController) {
+      processDruidFissureController(entityId, missile, position, elapsedFrames);
+      return;
+    }
 
     // D2MOO SrvDo20 retargets Blade Creeper's missile path to its controller
     // every frame. The stored damage owner remains the casting player.
@@ -351,6 +355,66 @@ public class MissileCollisionSystem extends IteratingSystem {
         && missile.nativeFrame >= missile.nativeLifetimeFrames) {
       world.delete(entityId);
     }
+  }
+
+  /**
+   * Native Fissure missile mode: the SrvDo028 controller remains at the
+   * target point and periodically lays a short-lived fire vent selected from
+   * the controller's SubMissile/HitSubMissile data.  The controller itself is
+   * never exposed as a damaging projectile to unit collision.
+   */
+  private void processDruidFissureController(int entityId, Missile controller,
+      Position position, int elapsedFrames) {
+    if (controller.nativeFrame >= controller.nativeLifetimeFrames) {
+      world.delete(entityId);
+      return;
+    }
+    if (controller.nativeFrame < controller.druidFissureNextFrame) return;
+    controller.druidFissureNextFrame += 5;
+    String name = firstMissileName(controller.missile != null
+        ? controller.missile.SubMissile : null);
+    if ((name == null || name.isEmpty()) && controller.missile != null) {
+      name = firstMissileName(controller.missile.HitSubMissile);
+    }
+    if ((name == null || name.isEmpty()) && controller.missile != null) {
+      name = firstMissileName(controller.missile.CltSubMissile);
+    }
+    if (name == null || name.isEmpty() || factory == null) return;
+    Missiles.Entry row = Riiablo.files.Missiles.get(name);
+    if (row == null) return;
+
+    NativeRng rng = new NativeRng(controller.druidFissureSeed);
+    controller.druidFissureSeed = rng.state();
+    float dx = ((rng.nextInt() & 15) - 7.5f) * 0.35f;
+    float dy = ((rng.nextInt() & 15) - 7.5f) * 0.35f;
+    Vector2 origin = tmpVec.set(position.position).add(dx, dy);
+    int childId = factory.createMissile(row, Vector2.X, origin, controller.ownerId);
+    if (childId < 0 || !mMissile.has(childId)) return;
+    Missile vent = mMissile.get(childId);
+    vent.skillId = controller.skillId;
+    vent.damageLevel = Math.max(1, controller.damageLevel);
+    vent.persistent = true;
+    vent.remainingFrames = Math.max(1, row.Range);
+    vent.tickInterval = Math.max(1, row.DamageRate > 0 ? row.DamageRate : 5);
+    if (mVelocity.has(childId)) mVelocity.get(childId).velocity.setZero();
+    Skills.Entry skill = controller.skillId >= 0 ? Riiablo.files.skills.get(controller.skillId) : null;
+    Attributes owner = mAttributesWrapper.has(controller.ownerId)
+        ? mAttributesWrapper.get(controller.ownerId).attrs : null;
+    if (skill != null) {
+      MissileDamageResolver.initializeSorceressFireArea(vent, skill,
+          owner, mPlayer.has(controller.ownerId), vent.damageLevel,
+          ignored -> 0, null);
+    }
+    log.debug("[DRUID_FISSURE] phase=vent controller={} child={} missile={} "
+            + "remaining={} tick={} position=({}, {})",
+        entityId, childId, name, vent.remainingFrames, vent.tickInterval,
+        origin.x, origin.y);
+  }
+
+  private static String firstMissileName(String[] names) {
+    if (names == null) return null;
+    for (String name : names) if (name != null && !name.isEmpty()) return name;
+    return null;
   }
 
   /**

@@ -599,6 +599,10 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
     if (event.srvdofunc == 22 || skill.srvdofunc == 22) {
+      if (isDruidFissure(skill)) {
+        spawnDruidFissure(event, skill, start);
+        return;
+      }
       spawnNova(event, skill, start);
       return;
     }
@@ -673,6 +677,8 @@ public class ServerSkillSystem extends PassiveSystem {
     if (event.srvdofunc == 28 || skill.srvdofunc == 28) {
       if (isBlizzard(skill)) {
         spawnBlizzard(event, skill, start);
+      } else if (isDruidFissure(skill)) {
+        spawnDruidFissureController(event, skill, start);
       } else {
         spawnMeteor(event, skill, start);
       }
@@ -1741,6 +1747,88 @@ public class ServerSkillSystem extends PassiveSystem {
             + "velocity={} range={} calc1={} sharedHitGate={}",
         event.entityId, event.skillId, skillLevel, missileName, created,
         velocity, range, skill.calc1, sharedHitTargets.size);
+  }
+
+  private static boolean isDruidFissure(Skills.Entry skill) {
+    return skill != null && (skill.Id == SkillId.FISSURE
+        || "Fissure".equalsIgnoreCase(skill.skill));
+  }
+
+  /** Native SrvDo028 controller used by the 1.10f Fissure row. */
+  private void spawnDruidFissureController(SkillDoEvent event, Skills.Entry skill,
+      Vector2 caster) {
+    String missileName = firstNonEmpty(skill.srvmissilea,
+        firstNonEmpty(skill.srvmissile, skill.cltmissilea));
+    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (row == null) {
+      log.warn("[DRUID_FISSURE] phase=reject source={} reason=missing_controller name={}",
+          event.entityId, missileName);
+      return;
+    }
+    Vector2 target = resolveTargetPoint(event, caster, new Vector2());
+    if (isTownPoint(event.entityId, target)) {
+      log.info("[DRUID_FISSURE] phase=reject source={} reason=town target=({}, {})",
+          event.entityId, target.x, target.y);
+      return;
+    }
+    int level = Math.max(1, getSkillLevel(event.entityId, event.skillId));
+    int id = createMissile(row, Vector2.X, target, event.entityId, null, level);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile controller = mMissile.get(id);
+    controller.skillId = skill.Id;
+    controller.damageLevel = level;
+    controller.nativeLifetimeFrames = Math.max(1, nativeMissileRange(row, level));
+    controller.druidFissureController = true;
+    controller.druidFissureNextFrame = 1;
+    controller.druidFissureSeed = event.entityId * 1103515245 + skill.Id * 31 + level;
+    controller.range = 0f;
+    if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+    Attributes owner = mAttributesWrapper.has(event.entityId)
+        ? mAttributesWrapper.get(event.entityId).attrs : null;
+    MissileDamageResolver.initializeSorceressFireArea(controller, skill, owner,
+        mPlayer.has(event.entityId), level,
+        name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
+    log.info("[DRUID_FISSURE] phase=controller source={} skill={} level={} missile={} "
+            + "id={} lifetime={} target=({}, {})",
+        event.entityId, skill.Id, level, row.Missile, id,
+        controller.nativeLifetimeFrames, target.x, target.y);
+  }
+
+  /** Native Fissure uses the shared SrvDo022 nova fan with a fire-owned packet. */
+  private void spawnDruidFissure(SkillDoEvent event, Skills.Entry skill, Vector2 start) {
+    String missileName = firstNonEmpty(skill.srvmissilea,
+        firstNonEmpty(skill.srvmissile, skill.cltmissilea));
+    Missiles.Entry missile = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (missile == null) {
+      log.warn("[DRUID_FISSURE] phase=reject source={} skill={} reason=missing_missile name={}",
+          event.entityId, skill.Id, missileName);
+      return;
+    }
+    int level = Math.max(1, getSkillLevel(event.entityId, event.skillId));
+    int velocity = nativeNovaVelocity(missile, skill, level);
+    int range = nativeMissileRange(missile, level);
+    IntSet sharedHitTargets = new IntSet();
+    Vector2 direction = new Vector2();
+    int created = 0;
+    for (int i = 0; i < NOVA_MISSILE_COUNT; i++) {
+      radialDirection(i, NOVA_MISSILE_COUNT, direction);
+      int id = createMissile(missile, direction, start, event.entityId,
+          sharedHitTargets, level);
+      if (id < 0 || !mMissile.has(id)) continue;
+      Missile fissure = mMissile.get(id);
+      fissure.range = range;
+      if (mVelocity.has(id)) mVelocity.get(id).velocity.set(direction).setLength(velocity);
+      Attributes owner = mAttributesWrapper.has(event.entityId)
+          ? mAttributesWrapper.get(event.entityId).attrs : null;
+      MissileDamageResolver.initializeSorceressFireArea(fissure, skill, owner,
+          mPlayer.has(event.entityId), level,
+          name -> getBaseSkillLevel(event.entityId, name), stateList(event.entityId));
+      created++;
+    }
+    log.info("[DRUID_FISSURE] phase=create source={} skill={} level={} missile={} "
+            + "created={} velocity={} range={} sharedHitGate={}",
+        event.entityId, skill.Id, level, missile.Missile, created, velocity, range,
+        sharedHitTargets.size);
   }
 
   /** DATATBLS_GetMissileVelocityFromMissilesTxt + SrvDo022 Calc1. */

@@ -160,6 +160,11 @@ public class Missile extends PooledComponent {
   /** Native meteorcenter countdown/impact controller (SrvHit14). */
   public boolean meteorCenter;
 
+  /** Native SrvDo028 Fissure controller; its missile mode lays fire vents. */
+  public boolean druidFissureController;
+  public int druidFissureNextFrame;
+  public int druidFissureSeed;
+
   /** Native Thunder Storm SrvDo029 strike resolved against one saved target. */
   public boolean thunderStormStrike;
 
@@ -275,6 +280,9 @@ public class Missile extends PooledComponent {
     frozenOrbTargetX = 0;
     frozenOrbTargetY = 0;
     meteorCenter = false;
+    druidFissureController = false;
+    druidFissureNextFrame = 0;
+    druidFissureSeed = 0;
     thunderStormStrike = false;
     chaosIcePath = false;
     chaosIceSeed = 0;

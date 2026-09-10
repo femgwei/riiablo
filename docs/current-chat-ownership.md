@@ -94,6 +94,8 @@
   数据/召唤契约测试。离屏营地本轮因环境未提供 MPQ 未启动，需补资源后复验。
 - 德鲁伊 Firestorm `SrvDo117` 已完成首轮：按 `Calc1` 生成多条服务端火焰流，保存
   火焰伤害/精通/穿透/DamageRate 快照并同步到多人客户端；新增 Firestorm 无渲染测试。
+- 德鲁伊 Fissure `SrvDo028` 已完成首轮：创建原生控制导弹并从其 SubMissile 数据周期
+  生成火焰裂缝子导弹；服务端固定火焰伤害快照并同步生命周期，新增 Fissure 无渲染测试。
 - Iron Maiden/Life Tap 已接入服务端权威 `DamageEvent`：近战/导弹携带结算后的物理
   分量；反伤只响应近战且不会递归，Life Tap 按 `calc1` 恢复攻击者生命。定向测试和
   D2GS 编译通过，真实 1.10f `offscreenCamp` 营地启动门槛通过。
@@ -158,7 +160,7 @@
 当前已完成 **P1 死灵法师服务端技能首轮、圣骑士服务端技能首轮**，以及法师基础单体
 弹道、Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与三种冰甲
 原生权威链首轮。Teleport `SrvDo027` 与 Chain Lightning `SrvDo026/SrvHit12` 原生链已完成，
-下一步处理德鲁伊 Fissure/Volcano 区域导弹链，并继续补齐 Hydra/Firestorm 实机观感验证。
+下一步处理德鲁伊 Volcano 区域喷发链，并继续补齐 Hydra/Firestorm/Fissure 实机观感验证。
 战斗模块不再单独分派，相关修改与进度文档均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
