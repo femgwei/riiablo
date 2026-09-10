@@ -98,6 +98,8 @@
   生成火焰裂缝子导弹；服务端固定火焰伤害快照并同步生命周期，新增 Fissure 无渲染测试。
 - 德鲁伊 Volcano `SrvDo123` 已完成首轮：目标点控制导弹、确定性喷发种子、周期火焰
   子导弹及服务端伤害快照均已接通，新增 Volcano 无渲染测试。
+- 德鲁伊 Armageddon/Hurricane `SrvDo124` 已完成首轮：状态持续时间、周期延迟、合法
+  目标筛选、区域导弹和多人状态快照已接通，新增无渲染状态测试。
 - Iron Maiden/Life Tap 已接入服务端权威 `DamageEvent`：近战/导弹携带结算后的物理
   分量；反伤只响应近战且不会递归，Life Tap 按 `calc1` 恢复攻击者生命。定向测试和
   D2GS 编译通过，真实 1.10f `offscreenCamp` 营地启动门槛通过。
@@ -162,8 +164,8 @@
 当前已完成 **P1 死灵法师服务端技能首轮、圣骑士服务端技能首轮**，以及法师基础单体
 弹道、Static Field、Frost Nova、Blaze/Fire Wall、Enchant/Fire Mastery 与三种冰甲
 原生权威链首轮。Teleport `SrvDo027` 与 Chain Lightning `SrvDo026/SrvHit12` 原生链已完成，
-下一步处理德鲁伊 Armageddon/Hurricane 光环区域链，并继续补齐 Hydra/Firestorm/Fissure/
-Volcano 实机观感验证。
+下一步进入全职业复杂区域技能统一表现验收，并继续补齐 Hydra/Firestorm/Fissure/Volcano/
+Armageddon/Hurricane 的实机观感验证。
 战斗模块不再单独分派，相关修改与进度文档均由本 Chat 负责。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与

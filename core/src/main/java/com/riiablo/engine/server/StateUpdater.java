@@ -778,6 +778,7 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
 
     processHolyFireAura(entityId, stateList);
     processThunderStorm(entityId, stateList);
+    processDruidStorm(entityId, stateList);
     processBladeShield(entityId, stateList);
     processBlazeTrail(entityId, stateList);
     processSpiderLayTrail(entityId, stateList);
@@ -860,6 +861,73 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
           attrs.aggregate().getValue(Stat.maxmana, 0f),
           attrs.aggregate().getValue(Stat.maxstamina, 0f));
     }
+  }
+
+  /** Native SrvDo124 periodic Armageddon/Hurricane missile emission. */
+  private void processDruidStorm(int entityId, StateList states) {
+    UnitState aura = states.getState(StateId.HURRICANE);
+    if (aura == null) aura = states.getState(StateId.ARMAGEDDON);
+    if (aura == null || aura.skillId < 0 || factory == null
+        || !mPosition.has(entityId) || !isAlive(entityId)) return;
+    if (aura.periodicCountdownFrames > 0) {
+      aura.periodicCountdownFrames--;
+      if (aura.periodicCountdownFrames > 0) return;
+    }
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(aura.skillId) : null;
+    if (skill == null) return;
+    aura.periodicCountdownFrames = Math.max(1, aura.periodicDelayFrames);
+    Map.Zone zone = map != null ? map.getZone(mPosition.get(entityId).position) : null;
+    if (zone != null && zone.isTown()) return;
+    String missileName = firstStormMissile(skill);
+    Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
+    if (row == null) return;
+    int range = Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill, aura.level));
+    int targetId = findStormTarget(entityId, range);
+    Vector2 origin = mPosition.get(entityId).position;
+    if (targetId >= 0 && mPosition.has(targetId)) origin = mPosition.get(targetId).position;
+    int id = factory.createMissile(row, Vector2.X, origin, entityId);
+    if (id < 0 || !mMissile.has(id)) return;
+    Missile strike = mMissile.get(id);
+    strike.skillId = skill.Id;
+    strike.damageLevel = Math.max(1, aura.level);
+    strike.nativeLifetimeFrames = 1;
+    strike.range = 0f;
+    if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
+    Attributes owner = mAttributesWrapper.has(entityId)
+        ? mAttributesWrapper.get(entityId).attrs : null;
+    MissileDamageResolver.initializeSkill(strike, skill, owner, strike.damageLevel,
+        name -> baseSkillLevel(entityId, name), states);
+    aura.needsSync = true;
+    log.info("[DRUID_STORM] phase=strike source={} skill={} target={} missileId={} "
+            + "state={} level={} range={} delay={} snapshot={}",
+        entityId, skill.Id, targetId, id, StateId.getName(aura.stateId), aura.level,
+        range, aura.periodicDelayFrames, strike.damageSnapshot);
+  }
+
+  private static String firstStormMissile(Skills.Entry skill) {
+    if (skill == null) return null;
+    if (skill.srvmissilea != null && !skill.srvmissilea.isEmpty()) return skill.srvmissilea;
+    if (skill.srvmissile != null && !skill.srvmissile.isEmpty()) return skill.srvmissile;
+    return skill.cltmissilea;
+  }
+
+  private int findStormTarget(int sourceId, int range) {
+    float range2 = range * (float) range;
+    Vector2 source = mPosition.get(sourceId).position;
+    int best = -1;
+    float bestDistance = Float.MAX_VALUE;
+    IntBag candidates = world.getAspectSubscriptionManager()
+        .get(Aspect.all(AttributesWrapper.class, Position.class)).getEntities();
+    for (int i = 0; i < candidates.size(); i++) {
+      int id = candidates.get(i);
+      if (id == sourceId || !isAlive(id) || !isHostile(sourceId, id)) continue;
+      float distance = source.dst2(mPosition.get(id).position);
+      if (distance > range2 || distance >= bestDistance) continue;
+      best = id;
+      bestDistance = distance;
+    }
+    return best;
   }
 
   private void expireOrphanedConversion(int entityId, StateList states) {

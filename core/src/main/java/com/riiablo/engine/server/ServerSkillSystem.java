@@ -425,6 +425,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 29
         && event.srvdofunc != 117
         && event.srvdofunc != 123
+        && event.srvdofunc != 124
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && event.srvdofunc != 144
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
@@ -442,6 +443,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 29
         && skill.srvdofunc != 117
         && skill.srvdofunc != 123
+        && skill.srvdofunc != 124
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
         && skill.srvdofunc != 144
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
@@ -689,6 +691,11 @@ public class ServerSkillSystem extends PassiveSystem {
     if (event.srvdofunc == 123 || skill.srvdofunc == 123
         || event.skillId == SkillId.VOLCANO) {
       spawnDruidVolcanoController(event, skill, start);
+      return;
+    }
+    if (event.srvdofunc == 124 || skill.srvdofunc == 124
+        || event.skillId == SkillId.ARMAGEDDON || event.skillId == SkillId.HURRICANE) {
+      applyDruidStormState(event, skill, skillLevel);
       return;
     }
     if (event.skillId == SkillId.CHAIN_LIGHTNING
@@ -1839,6 +1846,39 @@ public class ServerSkillSystem extends PassiveSystem {
             + "id={} lifetime={} target=({}, {})",
         event.entityId, skill.Id, level, row.Missile, id,
         controller.nativeLifetimeFrames, target.x, target.y);
+  }
+
+  /** Native SrvDo124 state installation for Armageddon and Hurricane. */
+  private void applyDruidStormState(SkillDoEvent event, Skills.Entry skill, int skillLevel) {
+    if (!mUnitStates.has(event.entityId) || skill == null) return;
+    if (isTownPoint(event.entityId, mPosition.get(event.entityId).position)) {
+      log.info("[DRUID_STORM] phase=reject source={} skill={} reason=town",
+          event.entityId, event.skillId);
+      return;
+    }
+    UnitStates states = mUnitStates.get(event.entityId);
+    if (states.stateList == null) states.init(event.entityId);
+    int stateId = event.skillId == SkillId.HURRICANE ? StateId.HURRICANE : StateId.ARMAGEDDON;
+    if (skill.aurastate != null && !skill.aurastate.isEmpty()) {
+      States.Entry row = Riiablo.files.States.get(skill.aurastate.trim());
+      if (row != null) stateId = row.id;
+    }
+    int duration = Math.max(1, SkillFormula.evaluate(skill.auralencalc, skill, skillLevel,
+        name -> getSkillLevel(event.entityId, skillIdByName(name))));
+    int delay = SkillFormula.evaluate(skill.perdelay, skill, skillLevel,
+        name -> getSkillLevel(event.entityId, skillIdByName(name)));
+    if (delay <= 0) delay = Math.max(1, firstParam(skill, 3, 25));
+    UnitState state = states.stateList.addState(stateId, duration,
+        Math.max(1, skillLevel), event.entityId);
+    if (state == null) return;
+    state.skillId = skill.Id;
+    state.sourceEntityId = event.entityId;
+    state.periodicDelayFrames = delay;
+    state.periodicCountdownFrames = delay;
+    state.needsSync = true;
+    log.info("[DRUID_STORM] phase=state source={} skill={} level={} state={} duration={} delay={} missile={}",
+        event.entityId, skill.Id, skillLevel, StateId.getName(stateId), duration, delay,
+        skill.srvmissilea);
   }
 
   /** Native Fissure uses the shared SrvDo022 nova fan with a fire-owned packet. */
