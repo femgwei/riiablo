@@ -65,6 +65,11 @@ public final class OffscreenCampScreen extends GameScreen {
   private int continuityBoundaryBfsUncheckable;
   private int continuityBoundaryObjectNearby;
   private int continuityBoundaryDoorNearby;
+  private int continuityBoundaryBlockedDoor;
+  private int continuityBoundaryBlockedObject;
+  private int continuityBoundaryBlockedBare;
+  private int continuityBoundaryWarpBlocked;
+  private int continuityBoundaryWarpBare;
   private final StringBuilder continuityBoundaryDetails = new StringBuilder();
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
@@ -360,7 +365,8 @@ public final class OffscreenCampScreen extends GameScreen {
     com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
     output.mkdirs();
     boolean passed = continuityInvalidAdjacency == 0 && continuityNoWalkableZones == 0
-        && continuityWarpRoomMissing == 0 && continuityWarpOutsideMain == 0;
+        && continuityWarpRoomMissing == 0 && continuityWarpOutsideMain == 0
+        && continuityBoundaryWarpBare == 0;
     String report = "mode=act1-map-continuity\n"
         + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
         + "zones=" + continuityZones + "\n"
@@ -383,6 +389,11 @@ public final class OffscreenCampScreen extends GameScreen {
         + "boundaryBfsUncheckable=" + continuityBoundaryBfsUncheckable + "\n"
         + "boundaryObjectNearby=" + continuityBoundaryObjectNearby + "\n"
         + "boundaryDoorNearby=" + continuityBoundaryDoorNearby + "\n"
+        + "boundaryBlockedDoor=" + continuityBoundaryBlockedDoor + "\n"
+        + "boundaryBlockedObject=" + continuityBoundaryBlockedObject + "\n"
+        + "boundaryBlockedBare=" + continuityBoundaryBlockedBare + "\n"
+        + "boundaryWarpBlocked=" + continuityBoundaryWarpBlocked + "\n"
+        + "boundaryWarpBare=" + continuityBoundaryWarpBare + "\n"
         + "result=" + (passed ? "PASS" : "FAIL") + "\n"
         + continuityBoundaryDetails;
     output.child("act1-map-continuity-manifest.txt").writeString(report, false, "UTF-8");
@@ -395,13 +406,15 @@ public final class OffscreenCampScreen extends GameScreen {
       throw new IllegalStateException("Act1 map continuity validation failed: invalidAdjacency="
           + continuityInvalidAdjacency + " noWalkableZones=" + continuityNoWalkableZones
           + " warpRoomMissing=" + continuityWarpRoomMissing
-          + " warpOutsideMain=" + continuityWarpOutsideMain);
+          + " warpOutsideMain=" + continuityWarpOutsideMain
+          + " boundaryWarpBare=" + continuityBoundaryWarpBare);
     }
   }
 
   /** Checks that every native RoomEx adjacency has at least one walkable edge. */
   private void validateRoomBoundaryTransitions(Map.Zone zone) {
     int roomCount = zone.getRoomsEx().size;
+    com.artemis.ComponentMapper<Position> positionMapper = engine.getMapper(Position.class);
     for (int roomId = 0; roomId < roomCount; roomId++) {
       Map.RoomEx room = zone.getRoomsEx().get(roomId);
       for (int adjacentId : room.getAdjacentRoomIds()) {
@@ -419,6 +432,17 @@ public final class OffscreenCampScreen extends GameScreen {
           int objectKind = classifyBoundaryObjects(zone, room, adjacent);
           if (objectKind > 0) continuityBoundaryObjectNearby++;
           if (objectKind > 1) continuityBoundaryDoorNearby++;
+          boolean warpBoundary = containsWarp(zone, room, positionMapper)
+              || containsWarp(zone, adjacent, positionMapper);
+          if (bfs == 0) {
+            if (objectKind > 1) continuityBoundaryBlockedDoor++;
+            else if (objectKind > 0) continuityBoundaryBlockedObject++;
+            else continuityBoundaryBlockedBare++;
+            if (warpBoundary) {
+              continuityBoundaryWarpBlocked++;
+              if (objectKind == 0) continuityBoundaryWarpBare++;
+            }
+          }
           if (continuityBoundaryDetails.length() < 12000) {
             continuityBoundaryDetails.append("level=").append(zone.levelId())
                 .append(" rooms=").append(room.id).append(',').append(adjacent.id)
@@ -427,6 +451,7 @@ public final class OffscreenCampScreen extends GameScreen {
                 .append(" b=").append(adjacent.x).append(':').append(adjacent.y).append('x')
                 .append(adjacent.width).append('x').append(adjacent.height)
                 .append(" bfs=").append(bfs).append(" objectKind=").append(objectKind)
+                .append(" warpBoundary=").append(warpBoundary)
                 .append('\n');
           }
         }
@@ -435,7 +460,17 @@ public final class OffscreenCampScreen extends GameScreen {
     }
   }
 
-  /** Local collision BFS around a candidate interface. */
+  private static boolean containsWarp(Map.Zone zone, Map.RoomEx room,
+      com.artemis.ComponentMapper<Position> positionMapper) {
+    for (int entity : zone.getWarpEntities().toArray()) {
+      if (!positionMapper.has(entity)) continue;
+      Position position = positionMapper.get(entity);
+      if (room.contains(position.position.x, position.position.y)) return true;
+    }
+    return false;
+  }
+
+  /** Classifies native objects near a candidate interface. */
   private static int classifyBoundaryObjects(Map.Zone zone, Map.RoomEx a, Map.RoomEx b) {
     int minX = Math.min(a.x, b.x) - zone.x() - 16;
     int minY = Math.min(a.y, b.y) - zone.y() - 16;
