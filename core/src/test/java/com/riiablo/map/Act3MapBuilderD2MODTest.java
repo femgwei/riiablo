@@ -41,6 +41,26 @@ class Act3MapBuilderD2MODTest {
   }
 
   @Test
+  void includesAllRemainingAct3UndergroundLevelsInNativeOrder() {
+    assertArrayEquals(new int[] {
+        D2LevelIds.LEVEL_SWAMPYPITLVL1,
+        D2LevelIds.LEVEL_SWAMPYPITLVL2,
+        D2LevelIds.LEVEL_FLAYERDUNGEONLVL1,
+        D2LevelIds.LEVEL_FLAYERDUNGEONLVL2,
+        D2LevelIds.LEVEL_SWAMPYPITLVL3,
+        D2LevelIds.LEVEL_FLAYERDUNGEONLVL3,
+        D2LevelIds.LEVEL_SEWERSA3LEV1,
+        D2LevelIds.LEVEL_SEWERSA3LEV2,
+        D2LevelIds.LEVEL_RUINEDTEMPLE,
+        D2LevelIds.LEVEL_DISUSEDFANE,
+        D2LevelIds.LEVEL_FORGOTTENRELIQUARY,
+        D2LevelIds.LEVEL_FORGOTTENTEMPLE,
+        D2LevelIds.LEVEL_RUINEDFANE,
+        D2LevelIds.LEVEL_DISUSEDRELIQUARY
+    }, Act3MapBuilderD2MOD.ACT3_UNDERGROUND_SECONDARY);
+  }
+
+  @Test
   void uses110fSpiderLvlPrestDefValues() {
     assertEquals(659, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_SW);
     assertEquals(660, com.d2moo.common.drlg.D2LvlPrestIds.LVLPREST_ACT3_SPIDER_SE);

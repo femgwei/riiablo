@@ -2491,3 +2491,26 @@ A3Q2 Blade of the Old Religion、A3Q3 Khalim's Will 的触发/奖励闭环，再
 当前下一项：继续第三章地下区域原生链，优先处理 `Swampy Pit`、`Flayer Dungeon`、
 `Ruined Temple`、`Disused Fane` 的正确 Level/LvlPrest 映射、RoomEx/碰撞导出和入口双向 Warp；
 完成这一组后再接入 A3Q1 Golden Bird 的地图触发与奖励状态。
+
+### 2026-09-12 Act III 剩余地下区域原生地图与双向入口（本轮完成）
+
+- [x] 将 Swampy Pit 1–3（86、87、90）、Flayer Dungeon 1–3（88、89、91）、Sewers A3
+  1–2（92、93）以及 Ruined/Disused/Forgotten Temple/Fane/Reliquary（94–99）纳入 Act III
+  Zone 与 D2MOO 原生 RoomEx/TileGrid 导出；1.10f `LvlPrest.txt` 的 Sewer/Temple Def 映射
+  已校准为 705–753 与 647/704 基础预设。
+- [x] 重放 D2Common 的运行时 `DRLG_SetWarpId` first-empty-slot 规则：地下层到户外层、
+  地下层级之间、Sewers 双层以及六个 Kurast 侧区域均建立按原生 `Vis/Warp` 槽的双向目标覆盖，
+  不修改共享 `Levels.txt` 数组。
+- [x] 导出并保留原生 `UNIT_TILE`/墙体 Warp marker；缺少墙体 marker 的地板出口使用同一
+  `Vis/Warp` 槽生成逻辑 marker，并在 RoomEx/碰撞生成后校正到可行走坐标，避免入口落在
+  洞穴空洞或墙体后面。
+- [x] 增加 Act III 地下 Level/LvlPrest、Warp marker 和运行时槽位诊断日志与回归断言；
+  未修改战斗、技能、掉落或网络协议。
+- 验证：`:core:test --tests com.riiablo.map.Act3MapBuilderD2MODTest --tests
+  com.riiablo.map.Act3MapBuilderD2MODWarpTest`、`:D2MOO_JAVA:compileJava`、
+  `:core:compileJava`、`:server:d2gs:compileJava` 通过；使用 1.10f MPQ 离屏目标
+  `offscreenLevel=86/88/92/94/95/96/97/98/99` 全部输出 `OFFSCREEN_CAMP result=PASS`，
+  Automap/RoomEx/native object 均为非零。
+
+当前下一项：接入第三章 A3Q1 Golden Bird、A3Q2 Blade of the Old Religion、A3Q3 Khalim's
+Will 的原生地图触发、任务标记和奖励闭环；完成第三章任务后再开始第四章主链 Zone/入口导出。

@@ -357,13 +357,22 @@ public class DataTbls {
         for (D2LvlPrestTxt record : lvlPrestTxtCache) {
             if (record == null || record.getSzFile() == null) continue;
             for (String file : record.getSzFile()) {
-                if (file != null && file.toLowerCase(java.util.Locale.ROOT).contains("spider")) {
-                    D2Log.debug("DATATBLS_LVLPREST_SPIDER def=%d level=%d files=%d file=%s",
+                if (file != null && isAct3UndergroundPresetFile(file)) {
+                    D2Log.debug("DATATBLS_LVLPREST_ACT3_UNDERGROUND def=%d level=%d files=%d file=%s",
                             record.getDwDef(), record.getDwLevelId(), record.getDwFiles(), file);
                     break;
                 }
             }
         }
+    }
+
+    private static boolean isAct3UndergroundPresetFile(String file) {
+        String normalized = file.toLowerCase(java.util.Locale.ROOT).replace('\\', '/');
+        if (!normalized.contains("act3/")) return false;
+        return normalized.contains("spider") || normalized.contains("flayer")
+                || normalized.contains("dungeon") || normalized.contains("swamp")
+                || normalized.contains("temple") || normalized.contains("fane")
+                || normalized.contains("reliquary") || normalized.contains("ruin");
     }
     
     /**

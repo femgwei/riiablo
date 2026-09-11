@@ -940,6 +940,39 @@ public class Map implements Disposable {
       nativeTileGrid = grid;
       nativeDt1Mask = dt1Mask;
     }
+
+    /**
+     * Adds a logical warp marker emitted by D2MOO's UNIT_TILE preset path.
+     * Native floor/room exits do not always have an orientation-10/11 wall
+     * tile, but MapManager still needs a stable DS1.Cell for the authoritative
+     * Warp entity. Coordinates are level-local subtiles, matching the native
+     * preset-unit export contract.
+     */
+    public void addNativeWarpMarker(int mainIndex, int subtileX, int subtileY) {
+      if (level == null || mainIndex < 0 || mainIndex >= 8) return;
+      int tx = Math.max(0, Math.min(tilesX - 1, subtileX / DT1.Tile.SUBTILE_SIZE));
+      int ty = Math.max(0, Math.min(tilesY - 1, subtileY / DT1.Tile.SUBTILE_SIZE));
+      if (specials == EMPTY_INT_CELL_MAP) specials = new IntMap<>();
+      int originalTx = tx;
+      int originalTy = ty;
+      int attempts = 0;
+      while (specials.containsKey(tileHashCode(Map.WALL_OFFSET, tx, ty)) && attempts++ < 16) {
+        tx = Math.max(0, Math.min(tilesX - 1, originalTx + (attempts & 3)));
+        ty = Math.max(0, Math.min(tilesY - 1, originalTy + (attempts >> 2)));
+      }
+      DS1.Cell cell = new DS1.Cell();
+      cell.id = DT1.Tile.Index.create(Orientation.SPECIAL_10, mainIndex, 0);
+      cell.mainIndex = (short) mainIndex;
+      cell.subIndex = 0;
+      cell.orientation = (short) Orientation.SPECIAL_10;
+      cell.value = (mainIndex & 0x3F) << 20;
+      putCell(Map.WALL_OFFSET, tx, ty, cell);
+      if (Gdx.app != null) {
+        Gdx.app.log(TAG, String.format(
+            "Native UNIT_TILE warp marker: level=%d mainIndex=%d subtile=(%d,%d) tile=(%d,%d)",
+            level.Id, mainIndex, subtileX, subtileY, tx, ty));
+      }
+    }
     public int levelAct() { return level == null ? -1 : level.Act + 1; }
     public String levelTypeName() { return type == null ? null : type.Name; }
     /** D2MOO AutoMap.txt LevelName (for example, "1 Wilderness"). */

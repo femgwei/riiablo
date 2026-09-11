@@ -564,8 +564,11 @@ public class D2LvlPrestIds {
     public static final int LVLPREST_ACT2_BASEMENT_NE = 576;
     
     // Act 3 迷宫预设
-    public static final int LVLPREST_ACT3_TEMPLE_6 = 789; // 与 METROTEMPLE 相同
-    public static final int LVLPREST_ACT3_DUNGEON_TREASURE_2 = 790; // 与 METRO_08X08 相同
+    // 1.10f Def values are 142 lower than the D2MOO enum ordinals for the
+    // Act III metro/dungeon block.  These two records are used as the base
+    // presets by DrlgMaze for Kurast and Flayer/Swampy dungeon rooms.
+    public static final int LVLPREST_ACT3_TEMPLE_6 = 647; // MetroTemple2.ds1
+    public static final int LVLPREST_ACT3_DUNGEON_TREASURE_2 = 704; // Dungeon treasure
     // These are the 1.10f LvlPrest.txt Def values, not the ordinal values
     // from the D2MOO enum.  The table has gaps, so using the enum ordinals
     // silently selected Act IV Mesa Border DS1s (800..805) for Spider Cave.

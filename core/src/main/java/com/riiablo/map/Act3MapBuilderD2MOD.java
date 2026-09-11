@@ -3,11 +3,13 @@ package com.riiablo.map;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
+import com.riiablo.codec.excel.LvlWarp;
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.map.Map.Preset;
@@ -49,6 +51,24 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   static final int[] ACT3_UNDERGROUND_PRIMARY = {
       D2LevelIds.LEVEL_SPIDERCAVE,
       D2LevelIds.LEVEL_SPIDERCAVERN
+  };
+
+  /** Remaining Act III side dungeons and temple/sewer levels. */
+  static final int[] ACT3_UNDERGROUND_SECONDARY = {
+      D2LevelIds.LEVEL_SWAMPYPITLVL1,
+      D2LevelIds.LEVEL_SWAMPYPITLVL2,
+      D2LevelIds.LEVEL_FLAYERDUNGEONLVL1,
+      D2LevelIds.LEVEL_FLAYERDUNGEONLVL2,
+      D2LevelIds.LEVEL_SWAMPYPITLVL3,
+      D2LevelIds.LEVEL_FLAYERDUNGEONLVL3,
+      D2LevelIds.LEVEL_SEWERSA3LEV1,
+      D2LevelIds.LEVEL_SEWERSA3LEV2,
+      D2LevelIds.LEVEL_RUINEDTEMPLE,
+      D2LevelIds.LEVEL_DISUSEDFANE,
+      D2LevelIds.LEVEL_FORGOTTENRELIQUARY,
+      D2LevelIds.LEVEL_FORGOTTENTEMPLE,
+      D2LevelIds.LEVEL_RUINEDFANE,
+      D2LevelIds.LEVEL_DISUSEDRELIQUARY
   };
 
   /** Native outdoor build order used by DRLG_LINKS for Act III. */
@@ -229,6 +249,22 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
             level.LevelName, levelId, posX, undergroundY + townZone.y));
       }
     }
+    for (int levelId : ACT3_UNDERGROUND_SECONDARY) {
+      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      if (level == null || findZone(map, levelId) != null) continue;
+      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+      int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
+      undergroundY -= sizeY * 5;
+      Zone zone = base.createZoneWithGenerator(map, level, diff, posX,
+          undergroundY + townZone.y);
+      zone.generator = base.createMonsterGenerator(socket);
+      if (DEBUG_BUILD) {
+        Gdx.app.debug(TAG, String.format(
+            "Placed Act3 underground fallback %s (id=%d) at (%d, %d)",
+            level.LevelName, levelId, posX, undergroundY + townZone.y));
+      }
+    }
 
     // 4. 创建 TRAVINCAL（特殊区域）
     Levels.Entry travincalLevel = Riiablo.files.Levels.get(LEVEL_TRAVINCAL);
@@ -328,8 +364,53 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         D2LevelIds.LEVEL_DURANCEOFHATELEVEL3);
     map.addWarpDestinationOverride(D2LevelIds.LEVEL_DURANCEOFHATELEVEL3, 3,
         D2LevelIds.LEVEL_DURANCEOFHATELEVEL2);
+    configureAct3UndergroundWarps(map);
     Gdx.app.log(TAG, String.format("Act3 native warp table configured: links=%d/%d",
         configured, ACT3_OUTDOOR_LINKS.length));
+  }
+
+  /**
+   * Replays D2Common's dynamic DRLG_SetWarpId calls for detached Act III
+   * dungeons.  Levels.txt contains the native source Vis/Warp rows, but the
+   * outdoor destination often receives its return slot only while the maze
+   * is linked.  Keep those additions as per-map overrides and materialize a
+   * logical marker for every endpoint so floor exits are interactable too.
+   */
+  private void configureAct3UndergroundWarps(Map map) {
+    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    IntMap<RuntimeWarpState> states = new IntMap<>();
+    for (int levelId : ACT3_UNDERGROUND_SECONDARY) {
+      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      if (level != null) states.put(levelId, new RuntimeWarpState(level.Vis, level.Warp));
+    }
+    for (int levelId : ACT3_UNDERGROUND_SECONDARY) {
+      Levels.Entry source = Riiablo.files.Levels.get(levelId);
+      RuntimeWarpState sourceState = states.get(levelId);
+      if (source == null || sourceState == null || source.Vis == null || source.Warp == null) continue;
+      int count = Math.min(8, Math.min(source.Vis.length, source.Warp.length));
+      for (int slot = 0; slot < count; slot++) {
+        int destinationId = source.Vis[slot];
+        if (destinationId <= 0 || source.Warp[slot] < 0) continue;
+        Levels.Entry destination = Riiablo.files.Levels.get(destinationId);
+        if (destination == null) continue;
+        RuntimeWarpState destinationState = states.get(destinationId);
+        if (destinationState == null) {
+          destinationState = new RuntimeWarpState(destination.Vis, destination.Warp);
+          states.put(destinationId, destinationState);
+        }
+        int reverseSlot = destinationState.ensureDestination(levelId);
+        if (reverseSlot < 0) {
+          Gdx.app.error(TAG, String.format(
+              "Act3 underground warp slot exhausted: %d[%d] -> %d",
+              levelId, slot, destinationId));
+          continue;
+        }
+        map.addWarpDestinationOverride(levelId, slot, destinationId);
+        map.addWarpDestinationOverride(destinationId, reverseSlot, levelId);
+        ensureProgressionWarpMarker(map, levelId, slot);
+        ensureProgressionWarpMarker(map, destinationId, reverseSlot);
+      }
+    }
   }
 
   /** Pairs emitted special-wall cells after all Act III zones are generated. */
@@ -344,11 +425,25 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         D2LevelIds.LEVEL_SPIDERCAVE);
     map.addWarpDestinationOverride(LEVEL_SPIDERFOREST, 0,
         D2LevelIds.LEVEL_SPIDERCAVERN);
+    relocateAct3WarpMarkers(map);
     int linked = 0;
     int missingZone = 0;
     int missingReverse = 0;
     for (Zone source : new Array.ArrayIterator<>(map.zones)) {
       if (source == null || source.level == null || source.specials == null) continue;
+      if (isAct3SecondaryUnderground(source.level.Id)) {
+        StringBuilder warpCells = new StringBuilder();
+        for (IntMap.Entry<DS1.Cell> special : source.specials.entries()) {
+          DS1.Cell cell = special.value;
+          if (cell != null && Map.ID.WARPS.contains(cell.id)) {
+            if (warpCells.length() > 0) warpCells.append(',');
+            warpCells.append(cell.mainIndex).append('/').append(cell.subIndex);
+          }
+        }
+        Gdx.app.log(TAG, String.format("Act3 native warp cells: level=%d count=%d cells=%s",
+            source.level.Id, warpCells.length() == 0 ? 0 : warpCells.toString().split(",").length,
+            warpCells));
+      }
       for (IntMap.Entry<DS1.Cell> entry : source.specials.entries()) {
         DS1.Cell sourceCell = entry.value;
         if (sourceCell == null || !Map.ID.WARPS.contains(sourceCell.id)) continue;
@@ -368,7 +463,9 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         }
         DS1.Cell destinationCell = findReverseWarp(map, destination, source.level.Id);
         if (destinationCell == null) {
-          if (source.level.Id == D2LevelIds.LEVEL_SPIDERCAVE
+          if (isAct3SecondaryUnderground(source.level.Id)
+              || isAct3SecondaryUnderground(destination.level.Id)
+              || source.level.Id == D2LevelIds.LEVEL_SPIDERCAVE
               || source.level.Id == D2LevelIds.LEVEL_SPIDERCAVERN
               || destination.level.Id == D2LevelIds.LEVEL_SPIDERFOREST) {
             Gdx.app.log(TAG, String.format(
@@ -388,6 +485,30 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         linked, missingZone, missingReverse));
   }
 
+  private static boolean isAct3SecondaryUnderground(int levelId) {
+    for (int candidate : ACT3_UNDERGROUND_SECONDARY) {
+      if (candidate == levelId) return true;
+    }
+    return false;
+  }
+
+  private static void relocateAct3WarpMarkers(Map map) {
+    for (Zone zone : new Array.ArrayIterator<>(map.zones)) {
+      if (zone == null || zone.level == null || zone.specials == null) continue;
+      if (zone.level.Id < LEVEL_KURASTDOCKTOWN || zone.level.Id > 102) continue;
+      IntMap<Integer> keys = new IntMap<>();
+      for (IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+        if (entry.value != null && Map.ID.WARPS.contains(entry.value.id)) {
+          keys.put(entry.key, entry.key);
+        }
+      }
+      for (IntMap.Entry<Integer> entry : keys.entries()) {
+        DS1.Cell cell = zone.specials.get(entry.value);
+        if (cell != null) relocateWarpMarkerIfBlocked(zone, entry.value, cell);
+      }
+    }
+  }
+
   private static Zone findZone(Map map, int levelId) {
     if (map == null) return null;
     for (Zone zone : map.zones) {
@@ -402,7 +523,10 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     for (IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
       DS1.Cell existing = entry.value;
       if (existing != null && Map.ID.WARPS.contains(existing.id)
-          && existing.mainIndex == mainIndex) return;
+          && existing.mainIndex == mainIndex) {
+        relocateWarpMarkerIfBlocked(zone, entry.key, existing);
+        return;
+      }
     }
     if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
     // Keep synthetic slots at distinct tile hashes.  IntMap is keyed by
@@ -411,6 +535,27 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     int tx = Math.max(0, Math.min(zone.tilesX - 1,
         zone.tilesX / 2 + (mainIndex - 1) * 2));
     int ty = Math.max(0, Math.min(zone.tilesY - 1, zone.tilesY / 2));
+    com.riiablo.drlg.TileGrid nativeGrid = zone.nativeTileGrid();
+    if (nativeGrid != null) {
+      int bestDistance = Integer.MAX_VALUE;
+      int bestX = tx;
+      int bestY = ty;
+      for (int candidateY = 0; candidateY < nativeGrid.height; candidateY++) {
+        for (int candidateX = 0; candidateX < nativeGrid.width; candidateX++) {
+          if (nativeGrid.floorIds[candidateY][candidateX] < 0) continue;
+          int distance = Math.abs(candidateX - tx) + Math.abs(candidateY - ty);
+          if (distance < bestDistance
+              && !zone.specials.containsKey(
+                  Zone.tileHashCode(Map.WALL_OFFSET, candidateX, candidateY))) {
+            bestDistance = distance;
+            bestX = candidateX;
+            bestY = candidateY;
+          }
+        }
+      }
+      tx = bestX;
+      ty = bestY;
+    }
     DS1.Cell cell = new DS1.Cell();
     cell.id = DT1.Tile.Index.create(Orientation.SPECIAL_10, mainIndex, 0);
     cell.mainIndex = (short) mainIndex;
@@ -421,6 +566,61 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     Gdx.app.log(TAG, String.format(
         "Act3 synthetic progression warp: level=%d mainIndex=%d tile=(%d,%d)",
         levelId, mainIndex, tx, ty));
+  }
+
+  private static void relocateWarpMarkerIfBlocked(Zone zone, int oldKey, DS1.Cell cell) {
+    if (zone == null || zone.specials == null || zone.level == null) return;
+    int oldTx = Zone.tileHashX(oldKey);
+    int oldTy = Zone.tileHashY(oldKey);
+    int offsetX = warpOffsetX(zone, cell.mainIndex);
+    int offsetY = warpOffsetY(zone, cell.mainIndex);
+    Vector2 landing = new Vector2();
+    int worldX = zone.x() + oldTx * DT1.Tile.SUBTILE_SIZE + offsetX;
+    int worldY = zone.y() + oldTy * DT1.Tile.SUBTILE_SIZE + offsetY;
+    if (zone.findFreeCoordinates(new Vector2(worldX, worldY), 1, 8, true, landing)) return;
+    int bestTx = oldTx;
+    int bestTy = oldTy;
+    int bestDistance = Integer.MAX_VALUE;
+    for (int ty = 0; ty < zone.tilesY; ty++) {
+      for (int tx = 0; tx < zone.tilesX; tx++) {
+        if (zone.nativeTileGrid() != null
+            && (tx >= zone.nativeTileGrid().width || ty >= zone.nativeTileGrid().height
+                || zone.nativeTileGrid().floorIds[ty][tx] < 0)) continue;
+        int key = Zone.tileHashCode(Map.WALL_OFFSET, tx, ty);
+        if (key != oldKey && zone.specials.containsKey(key)) continue;
+        int candidateX = zone.x() + tx * DT1.Tile.SUBTILE_SIZE + offsetX;
+        int candidateY = zone.y() + ty * DT1.Tile.SUBTILE_SIZE + offsetY;
+        if (!zone.findFreeCoordinates(new Vector2(candidateX, candidateY), 1, 8, true, landing)) continue;
+        int distance = Math.abs(tx - oldTx) + Math.abs(ty - oldTy);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestTx = tx;
+          bestTy = ty;
+        }
+      }
+    }
+    if (bestDistance == Integer.MAX_VALUE || (bestTx == oldTx && bestTy == oldTy)) return;
+    zone.specials.remove(oldKey);
+    zone.putCell(Map.WALL_OFFSET, bestTx, bestTy, cell);
+    Gdx.app.log(TAG, String.format(
+        "Act3 warp marker relocated to walkable tile: level=%d mainIndex=%d from=(%d,%d) to=(%d,%d)",
+        zone.level.Id, (int) cell.mainIndex, oldTx, oldTy, bestTx, bestTy));
+  }
+
+  private static int warpOffsetX(Zone zone, int mainIndex) {
+    if (zone == null || zone.level == null || zone.level.Warp == null
+        || mainIndex < 0 || mainIndex >= zone.level.Warp.length
+        || zone.level.Warp[mainIndex] < 0 || Riiablo.files == null || Riiablo.files.LvlWarp == null) return 0;
+    LvlWarp.Entry entry = Riiablo.files.LvlWarp.get(zone.level.Warp[mainIndex]);
+    return entry == null ? 0 : entry.OffsetX;
+  }
+
+  private static int warpOffsetY(Zone zone, int mainIndex) {
+    if (zone == null || zone.level == null || zone.level.Warp == null
+        || mainIndex < 0 || mainIndex >= zone.level.Warp.length
+        || zone.level.Warp[mainIndex] < 0 || Riiablo.files == null || Riiablo.files.LvlWarp == null) return 0;
+    LvlWarp.Entry entry = Riiablo.files.LvlWarp.get(zone.level.Warp[mainIndex]);
+    return entry == null ? 0 : entry.OffsetY;
   }
 
   private static Zone findZoneByLevelId(Map map, int levelId) {

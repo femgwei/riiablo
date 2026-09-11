@@ -45,6 +45,20 @@ public final class Act3D2MOOLayoutBridge {
       D2LevelIds.LEVEL_TRAVINCAL,
       D2LevelIds.LEVEL_SPIDERCAVE,
       D2LevelIds.LEVEL_SPIDERCAVERN,
+      D2LevelIds.LEVEL_SWAMPYPITLVL1,
+      D2LevelIds.LEVEL_SWAMPYPITLVL2,
+      D2LevelIds.LEVEL_FLAYERDUNGEONLVL1,
+      D2LevelIds.LEVEL_FLAYERDUNGEONLVL2,
+      D2LevelIds.LEVEL_SWAMPYPITLVL3,
+      D2LevelIds.LEVEL_FLAYERDUNGEONLVL3,
+      D2LevelIds.LEVEL_SEWERSA3LEV1,
+      D2LevelIds.LEVEL_SEWERSA3LEV2,
+      D2LevelIds.LEVEL_RUINEDTEMPLE,
+      D2LevelIds.LEVEL_DISUSEDFANE,
+      D2LevelIds.LEVEL_FORGOTTENRELIQUARY,
+      D2LevelIds.LEVEL_FORGOTTENTEMPLE,
+      D2LevelIds.LEVEL_RUINEDFANE,
+      D2LevelIds.LEVEL_DISUSEDRELIQUARY,
       D2LevelIds.LEVEL_DURANCEOFHATELEVEL1,
       D2LevelIds.LEVEL_DURANCEOFHATELEVEL2,
       D2LevelIds.LEVEL_DURANCEOFHATELEVEL3
@@ -98,6 +112,14 @@ public final class Act3D2MOOLayoutBridge {
         // vertical stacking that could overlap jungle and Kurast regions.
         int nativeX = level.getLevelCoords().getNPosX();
         int nativeY = level.getLevelCoords().getNPosY();
+        if (Gdx.app != null && (levelId >= D2LevelIds.LEVEL_SWAMPYPITLVL1
+            && levelId <= D2LevelIds.LEVEL_DISUSEDRELIQUARY)) {
+          com.d2moo.common.drlg.D2DrlgWarp warp =
+              DrlgDrlg.getDrlgWarpFromLevelId(drlg, levelId);
+          Gdx.app.log(TAG, "Act3 native level warp table: level=" + levelId
+              + " vis=" + java.util.Arrays.toString(warp == null ? null : warp.getNVis())
+              + " warp=" + java.util.Arrays.toString(warp == null ? null : warp.getNWarp()));
+        }
         zone.setPosition(worldTownX + (nativeX - nativeTownX)
                 * com.riiablo.map.DT1.Tile.SUBTILE_SIZE,
             worldTownY + (nativeY - nativeTownY)
@@ -106,10 +128,26 @@ public final class Act3D2MOOLayoutBridge {
         applier.putGrid(levelId, grid);
         int floors = DrlgExport.exportLevelTiles(drlg, levelId, applier);
         int[] rawObjects = {0, 0};
+        int[] nativeWarpUnits = {0, 0};
         com.badlogic.gdx.utils.Array<Map.NativeObject> exportedObjects =
             new com.badlogic.gdx.utils.Array<>();
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+              if (unitType == D2UnitTypes.UNIT_TILE) {
+                // Floor/room exits are emitted as UNIT_TILE and carry the
+                // destination LevelId instead of a DS1 wall style.
+                if (zone.level != null && zone.level.Vis != null && zone.level.Warp != null) {
+                  for (int slot = 0; slot < 8; slot++) {
+                    if (zone.level.Vis[slot] == index && zone.level.Warp[slot] >= 0) {
+                      zone.addNativeWarpMarker(slot, x, y);
+                      nativeWarpUnits[0]++;
+                      break;
+                    }
+                  }
+                }
+                nativeWarpUnits[1]++;
+                return;
+              }
               if (unitType != D2UnitTypes.UNIT_OBJECT) return;
               rawObjects[0]++;
               if (x < 0 || y < 0
@@ -139,8 +177,9 @@ public final class Act3D2MOOLayoutBridge {
               "Act3 native level=%d rooms=%d tiles=%dx%d floors=%d walls=%d shadows=%d dt1Mask=0x%X",
               levelId, level.getRooms(), width, height, floors,
               applier.getExportedWallCount(), applier.getExportedShadowCount(), dt1Mask)
-              + String.format(" objects=%d/%d invalidObjectPos=%d",
-                  presetUnits, rawObjects[0], rawObjects[1]));
+              + String.format(" objects=%d/%d invalidObjectPos=%d unitTileWarp=%d/%d",
+                  presetUnits, rawObjects[0], rawObjects[1],
+                  nativeWarpUnits[0], nativeWarpUnits[1]));
         }
         applier.resetLastExportedFloorCount();
       }
