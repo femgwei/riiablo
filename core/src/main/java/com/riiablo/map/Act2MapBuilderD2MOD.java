@@ -345,7 +345,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       zone.generator = base.createMonsterGenerator(socket);
     }
     
-    // 处理 CANYONOFTHEMAGI（独立区域）
+    // 处理 CANYONOFTHEMAGI。它不是一个脱离主链的固定坐标区域：
+    // D2Common 的 gAct2CanyonDrlgLink 把 Canyon 接在 Valley of Snakes
+    // 的运行时坐标之后。旧实现直接使用 Levels.OffsetX/OffsetY，虽然
+    // Warp 表项存在，但入口会把玩家送到另一块不相连的地图。
     Levels.Entry canyonLevel = Riiablo.files.Levels.get(LEVEL_CANYONOFTHEMAGI);
     if (canyonLevel != null) {
       LvlPrest.Entry canyonPreset = null;
@@ -365,8 +368,29 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
           base.factory = factory;
           base.socket = socket;
-          base.createZoneWithPreset(map, canyonLevel, canyonPreset, select, 
-              canyonLevel.OffsetX, canyonLevel.OffsetY, false);
+
+          // linkData[5] is Valley of Snakes, the final outdoor link in
+          // gAct2OutdoorDrlgLink.  Use its post-layout coordinate and append
+          // Canyon along the native east-facing link.  Keep the fallback for
+          // malformed/partial tables so headless tests still get a usable
+          // Canyon zone instead of crashing generation.
+          int valleyX = linkData.coords[5].x + offsetX;
+          int valleyY = linkData.coords[5].y + offsetY;
+          int[] canyonPlacement = resolveCanyonPlacement(
+              valleyX, valleyY, linkData.coords[5].width,
+              canyonLevel.OffsetX, canyonLevel.OffsetY);
+          int canyonX = canyonPlacement[0];
+          int canyonY = canyonPlacement[1];
+          if (canyonPlacement[2] != 0) {
+            Gdx.app.error(TAG, "Act2 Valley coordinate unavailable; using Canyon offset fallback");
+          }
+          Zone canyonZone = base.createZoneWithPreset(map, canyonLevel, canyonPreset,
+              select, canyonX, canyonY, false);
+          if (canyonZone != null) canyonZone.generator = base.createMonsterGenerator(socket);
+
+          Gdx.app.log(TAG, String.format(
+              "Act2 native canyon placement: valley=(%d,%d) canyon=(%d,%d) fallback=%s",
+              valleyX, valleyY, canyonX, canyonY, canyonPlacement[2] != 0));
         }
       }
     }
@@ -397,6 +421,13 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         }
       }
     }
+  }
+
+  /** Resolves the native Valley-of-Snakes -> Canyon placement contract. */
+  static int[] resolveCanyonPlacement(int valleyX, int valleyY, int valleyWidth,
+      int fallbackX, int fallbackY) {
+    if (valleyWidth <= 0) return new int[] {fallbackX, fallbackY, 1};
+    return new int[] {valleyX + valleyWidth, valleyY, 0};
   }
 
   /**

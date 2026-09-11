@@ -2172,3 +2172,19 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 
 当前下一项：使用 1.10f 资源在隐藏客户端验证显式 `Throw` 技能点击怪物，确认日志包含
 `[THROW_ATTACK]` 与 `[MISSILE_CREATE]`，并确认普通标枪投掷不重新获得全路径贯穿效果。
+
+### 2026-09-12 启动 Act II–V 地图/任务扩展：修复 Act II Canyon 拓扑（已完成代码修复）
+
+- [x] 按优先级先处理地图主链，而不是同时铺开五章任务脚本：Act II 的
+  Lut Gholein → Rocky Waste → Dry Hills → Far Oasis → Lost City → Valley of Snakes
+  → Canyon of the Magi 是后续地下区域和任务入口的基础。
+- [x] 修复 Canyon 直接使用 `Levels.OffsetX/OffsetY` 的错误，改为沿 Valley of Snakes
+  的 D2Common 运行时布局坐标放置；仅当 Valley 尺寸缺失时才使用安全 fallback。
+- [x] Canyon 继续参与运行时 Warp 表配置、反向特殊墙配对和怪物生成器安装，避免入口存在
+  但传送后落在断开的地图块。
+- [x] 增加 Canyon 坐标解析的正向/fallback 回归测试。
+- 验证：`Act2MapBuilderD2MooWarpTest`、`:core:compileJava` 通过。
+
+下一项：补齐 Act II 主链上的地下区域（Halls of the Dead、Maggot Lair、Claw Viper、
+Arcane Sanctuary、Tal Rasha Tombs）与主链 Warp 的自动拓扑校验；之后再接入对应任务触发器、
+任务物品和奖励，完成 Act II 后按相同顺序推进 Act III、IV、V。

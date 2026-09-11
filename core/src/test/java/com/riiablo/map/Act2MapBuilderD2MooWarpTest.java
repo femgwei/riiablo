@@ -37,4 +37,24 @@ class Act2MapBuilderD2MooWarpTest {
     assertEquals(-1,
         Act2MapBuilderD2MOD.findRuntimeWarpSlot(vis, warp, 40));
   }
+
+  @Test
+  void placesCanyonAfterValleyInsteadOfUsingDisconnectedLevelOffset() {
+    int[] placement = Act2MapBuilderD2MOD.resolveCanyonPlacement(
+        1200, -80, 640, 12, 34);
+
+    assertEquals(1840, placement[0]);
+    assertEquals(-80, placement[1]);
+    assertEquals(0, placement[2]);
+  }
+
+  @Test
+  void fallsBackWhenValleySizeIsUnavailable() {
+    int[] placement = Act2MapBuilderD2MOD.resolveCanyonPlacement(
+        1200, -80, 0, 12, 34);
+
+    assertEquals(12, placement[0]);
+    assertEquals(34, placement[1]);
+    assertEquals(1, placement[2]);
+  }
 }
