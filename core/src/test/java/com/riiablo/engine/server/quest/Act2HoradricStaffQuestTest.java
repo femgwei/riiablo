@@ -21,6 +21,8 @@ import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Location;
+import com.riiablo.item.StoreLoc;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import java.util.ArrayList;
@@ -104,6 +106,54 @@ class Act2HoradricStaffQuestTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void horadricStaffTransmuteIsCubeOnlyAtomicAndIdempotent() {
+    CharData data = character("Transmute");
+    addCube(data, Act2HoradricStaffQuest.STAFF_OF_KINGS);
+    addCube(data, Act2HoradricStaffQuest.VIPER_AMULET);
+    addCube(data, Act2HoradricStaffQuest.HORADRIC_CUBE);
+
+    ItemGenerator generator = new ItemGenerator() {
+      @Override public Item generate(String code) {
+        Item item = new Item();
+        item.code = code;
+        return item;
+      }
+    };
+    Act2HoradricStaffTransmute.Result result =
+        Act2HoradricStaffTransmute.transmute(data, generator);
+    assertTrue(result.success());
+    assertFalse(data.getItems().containsItemCode(Act2HoradricStaffQuest.STAFF_OF_KINGS));
+    assertFalse(data.getItems().containsItemCode(Act2HoradricStaffQuest.VIPER_AMULET));
+    assertTrue(data.getItems().containsItemCode(Act2HoradricStaffQuest.HORADRIC_CUBE));
+    assertTrue(data.getItems().containsItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF));
+    assertTrue(NativeQuestRecord.has(record(data), NativeQuestRecord.CUSTOM7));
+
+    Act2HoradricStaffTransmute.Result replay =
+        Act2HoradricStaffTransmute.transmute(data, generator);
+    assertEquals(Act2HoradricStaffTransmute.Status.ALREADY_ASSEMBLED, replay.status);
+  }
+
+  @Test
+  void horadricStaffTransmuteRejectsInventoryMaterialsWithoutMutation() {
+    CharData data = character("InventoryOnly");
+    add(data, Act2HoradricStaffQuest.STAFF_OF_KINGS);
+    add(data, Act2HoradricStaffQuest.VIPER_AMULET);
+    add(data, Act2HoradricStaffQuest.HORADRIC_CUBE);
+    ItemGenerator generator = new ItemGenerator() {
+      @Override public Item generate(String code) {
+        Item item = new Item();
+        item.code = code;
+        return item;
+      }
+    };
+    Act2HoradricStaffTransmute.Result result =
+        Act2HoradricStaffTransmute.transmute(data, generator);
+    assertEquals(Act2HoradricStaffTransmute.Status.MISSING_STAFF_OF_KINGS, result.status);
+    assertTrue(data.getItems().containsItemCode(Act2HoradricStaffQuest.STAFF_OF_KINGS));
+    assertTrue(data.getItems().containsItemCode(Act2HoradricStaffQuest.VIPER_AMULET));
+  }
+
   private static CharData character(String name) {
     return CharData.obtain().set(Riiablo.NORMAL, false, name, Riiablo.AMAZON);
   }
@@ -112,6 +162,14 @@ class Act2HoradricStaffQuestTest extends RiiabloTest {
     Item item = new Item();
     item.code = code;
     data.getItems().getItems().add(item);
+  }
+
+  private static void addCube(CharData data, String code) {
+    Item item = new Item();
+    item.code = code;
+    item.location = Location.STORED;
+    item.storeLoc = StoreLoc.CUBE;
+    assertTrue(data.getItems().addToCube(item));
   }
 
   private static short record(CharData data) {

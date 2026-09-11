@@ -490,6 +490,85 @@ public class ItemData {
   }
 
   /**
+   * Returns whether an item can be placed in the native 3x4 Horadric Cube
+   * store.  This is deliberately a read-only preflight so quest transmutations
+   * can validate capacity before consuming their inputs.
+   */
+  public boolean canAddToCube(Item item) {
+    return findFreeCubeSlot(item) != null;
+  }
+
+  /**
+   * Adds an item to the first free native cube slot.  The item is not mutated
+   * when no slot is available.  A missing base entry is treated as a 1x1 item
+   * for legacy/headless fixtures; normal generated items always carry a base
+   * entry and use its authoritative dimensions.
+   */
+  public boolean addToCube(Item item) {
+    if (item == null || contains(item)) return false;
+    int[] slot = findFreeCubeSlot(item);
+    if (slot == null) return false;
+    int index = add(item);
+    store(StoreLoc.CUBE, index, slot[0], slot[1]);
+    return true;
+  }
+
+  private int[] findFreeCubeSlot(Item item) {
+    if (item == null || contains(item)) return null;
+    int width = item.base == null ? 1 : item.base.invwidth;
+    int height = item.base == null ? 1 : item.base.invheight;
+    if (width <= 0 || height <= 0 || width > 3 || height > 4) return null;
+
+    boolean[][] occupied = new boolean[4][3];
+    IntArray cubeItems = getStore(StoreLoc.CUBE);
+    for (int n = 0; n < cubeItems.size; n++) {
+      Item stored = getItem(cubeItems.get(n));
+      if (stored == null) continue;
+      int x = stored.gridX;
+      int y = stored.gridY;
+      int storedWidth = stored.base == null ? 1 : stored.base.invwidth;
+      int storedHeight = stored.base == null ? 1 : stored.base.invheight;
+      if (x < 0 || y < 0 || storedWidth <= 0 || storedHeight <= 0
+          || x + storedWidth > 3 || y + storedHeight > 4) return null;
+      for (int dy = 0; dy < storedHeight; dy++) {
+        for (int dx = 0; dx < storedWidth; dx++) occupied[y + dy][x + dx] = true;
+      }
+    }
+    for (int y = 0; y <= 4 - height; y++) {
+      for (int x = 0; x <= 3 - width; x++) {
+        boolean free = true;
+        for (int dy = 0; dy < height && free; dy++) {
+          for (int dx = 0; dx < width; dx++) {
+            if (occupied[y + dy][x + dx]) {
+              free = false;
+              break;
+            }
+          }
+        }
+        if (free) return new int[] {x, y};
+      }
+    }
+    return null;
+  }
+
+  /** Removes an exact owned item from any non-ground store atomically. */
+  public boolean removeOwnedItem(Item item) {
+    if (item == null) return false;
+    int index = indexOf(item);
+    if (index == INVALID_ITEM || item.location == Location.GROUND) return false;
+    if (item.location == Location.STORED) notifyStoreRemoved(item);
+    if (cursor == index) cursor = INVALID_ITEM;
+    else if (cursor > index) cursor--;
+    setLocation(item, null);
+    remove(index);
+    if (Riiablo.files != null) {
+      updateStats();
+      notifyUpdated();
+    }
+    return true;
+  }
+
+  /**
    * Atomically applies D2Common's {@code INVENTORY_GetFreeBeltSlot} ordering.
    * A potion matching one of the four quick-slot (bottom-row) potion families
    * fills the first hole above that slot. If the matching column is full, an

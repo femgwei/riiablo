@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-11
+更新时间：2026-09-12
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -30,6 +30,20 @@
 数据层统一，以及 Act 2–5 地图和任务。
 
 ## 2026-09-11 当前进度快照
+
+## 2026-09-12 Act II–V 地图与任务推进
+
+### A2Q2 赫拉迪克法杖：方块合成（本轮完成）
+
+- 新增 `Act2HoradricStaffTransmute` 服务端权威接口，对照 D2MOO `A2Q2.cpp` 的
+  `msf + vip + box -> hst` 行为执行严格方块内校验；背包或地面材料不会被接受。
+- 合成先生成输出并预检 3x4 方块容量，再原子消费 Staff of Kings 与 Viper Amulet，
+  保留 Horadric Cube，生成一个 Horadric Staff；失败、材料不足、输出空间不足、重复
+  请求均不改变库存。成功后设置 A2Q2 `CUSTOM7`，不提前设置 A2Q2 完成奖励。
+- `ItemData` 增加方块容量只读预检、原子放入方块和精确拥有物移除接口，供后续联网
+  `TRANSMUTE` 请求复用；本轮暂未新增 FlatBuffer opcode，现有 Quest/NPC 网络协议不变。
+- 新增成功、重复请求、库存材料拒绝与失败不变更测试。下一项为 A2Q3 蝮蛇神殿祭坛
+  的 `vip` 掉落和幂等对象状态，随后完成 A2Q6 古墓插杖/红门联动。
 
 ### AutoMap 数据查询层（本轮）
 
