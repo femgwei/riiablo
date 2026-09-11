@@ -59,6 +59,9 @@ public final class OffscreenCampScreen extends GameScreen {
   private int continuityBoundaryWalkable;
   private int continuityBoundaryBlocked;
   private int continuityBoundaryUncheckable;
+  private int continuityBoundaryBfsResolved;
+  private int continuityBoundaryBfsBlocked;
+  private int continuityBoundaryBfsUncheckable;
   private final StringBuilder continuityBoundaryDetails = new StringBuilder();
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
@@ -372,6 +375,9 @@ public final class OffscreenCampScreen extends GameScreen {
         + "boundaryWalkable=" + continuityBoundaryWalkable + "\n"
         + "boundaryBlocked=" + continuityBoundaryBlocked + "\n"
         + "boundaryUncheckable=" + continuityBoundaryUncheckable + "\n"
+        + "boundaryBfsResolved=" + continuityBoundaryBfsResolved + "\n"
+        + "boundaryBfsBlocked=" + continuityBoundaryBfsBlocked + "\n"
+        + "boundaryBfsUncheckable=" + continuityBoundaryBfsUncheckable + "\n"
         + "result=" + (passed ? "PASS" : "FAIL") + "\n"
         + continuityBoundaryDetails;
     output.child("act1-map-continuity-manifest.txt").writeString(report, false, "UTF-8");
@@ -401,18 +407,70 @@ public final class OffscreenCampScreen extends GameScreen {
         if (result > 0) continuityBoundaryWalkable++;
         else if (result == 0) {
           continuityBoundaryBlocked++;
+          int bfs = findRoomLocalPath(zone, room, adjacent);
+          if (bfs > 0) continuityBoundaryBfsResolved++;
+          else if (bfs == 0) continuityBoundaryBfsBlocked++;
+          else continuityBoundaryBfsUncheckable++;
           if (continuityBoundaryDetails.length() < 12000) {
             continuityBoundaryDetails.append("level=").append(zone.levelId())
                 .append(" rooms=").append(room.id).append(',').append(adjacent.id)
                 .append(" a=").append(room.x).append(':').append(room.y).append('x')
                 .append(room.width).append('x').append(room.height)
                 .append(" b=").append(adjacent.x).append(':').append(adjacent.y).append('x')
-                .append(adjacent.width).append('x').append(adjacent.height).append('\n');
+                .append(adjacent.width).append('x').append(adjacent.height)
+                .append(" bfs=").append(bfs).append('\n');
           }
         }
         else continuityBoundaryUncheckable++;
       }
     }
+  }
+
+  /** Local collision BFS around a candidate interface. */
+  private static int findRoomLocalPath(Map.Zone zone, Map.RoomEx a, Map.RoomEx b) {
+    int minX = Math.max(zone.x(), Math.min(a.x, b.x) - 8);
+    int minY = Math.max(zone.y(), Math.min(a.y, b.y) - 8);
+    int maxX = Math.min(zone.x() + zone.width() - 1,
+        Math.max(a.x + a.width, b.x + b.width) + 8);
+    int maxY = Math.min(zone.y() + zone.height() - 1,
+        Math.max(a.y + a.height, b.y + b.height) + 8);
+    int width = maxX - minX + 1;
+    int height = maxY - minY + 1;
+    if (width <= 0 || height <= 0 || width > 128 || height > 128) return -1;
+    boolean[] visited = new boolean[width * height];
+    com.badlogic.gdx.utils.IntArray queue = new com.badlogic.gdx.utils.IntArray();
+    for (int y = minY; y <= maxY; y++) {
+      for (int x = minX; x <= maxX; x++) {
+        if (a.contains(x, y) && isWalkable(zone, x, y)) {
+          int index = (y - minY) * width + x - minX;
+          if (!visited[index]) {
+            visited[index] = true;
+            queue.add(index);
+          }
+        }
+      }
+    }
+    if (queue.size == 0) return -1;
+    while (queue.size > 0) {
+      int index = queue.pop();
+      int x = minX + index % width;
+      int y = minY + index / width;
+      if (b.contains(x, y)) return 1;
+      if (x > minX) enqueueWalkable(zone, x - 1, y, minX, minY, width, height, visited, queue);
+      if (x < maxX) enqueueWalkable(zone, x + 1, y, minX, minY, width, height, visited, queue);
+      if (y > minY) enqueueWalkable(zone, x, y - 1, minX, minY, width, height, visited, queue);
+      if (y < maxY) enqueueWalkable(zone, x, y + 1, minX, minY, width, height, visited, queue);
+    }
+    return 0;
+  }
+
+  private static void enqueueWalkable(Map.Zone zone, int x, int y, int minX, int minY,
+      int width, int height, boolean[] visited, com.badlogic.gdx.utils.IntArray queue) {
+    if (!isWalkable(zone, x, y)) return;
+    int index = (y - minY) * width + x - minX;
+    if (index < 0 || index >= visited.length || visited[index]) return;
+    visited[index] = true;
+    queue.add(index);
   }
 
   /** Returns 1 for a walkable transition, 0 for a blocked known interface, -1 if uncheckable. */
