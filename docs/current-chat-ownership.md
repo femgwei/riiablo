@@ -40,6 +40,14 @@
 - 总体对齐进度：约 70%（详见路线图）
 - 第一章最小可玩闭环：约 79%
 
+## 最近更新（2026-09-11）
+
+- Automap 原生 DC6 实体 SpriteBatch 阶段已加入 ShapeRenderer 投影矩阵保存/恢复、异常
+  finally 清理和 batch 嵌套保护；`AutomapRenderStateTest` 定向测试通过。
+- 当前 Chat 继续统一负责地图、战斗、技能、物品、任务、NPC、网络和存档；真实 1.10f
+  画面验收仍因环境条件暂缓。
+- 下一步：隔离 `RenderSystem` 旧墙体固定帧回退，并验证实体探索过滤与原生/回退绘制不重复。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName

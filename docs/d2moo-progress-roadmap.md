@@ -1671,6 +1671,23 @@ Storm，并收敛 headless 测试日志输出以便持续集成。
 并建立“普通 Shaman 尸体双客户端不得被普通 Shaman 复活、Unique Shaman 可以复活”的
 真实 D2GS 负向/正向门槛；随后优先实现第一章六类专用 AI fallback 中的 Boss AI。
 
+### 2026-09-11 Automap SpriteBatch/ShapeRenderer 状态保护（已完成）
+
+- [x] ~~加固原生 Automap DC6 实体绘制的渲染状态切换~~
+  - `AutomapRenderer.renderNativeEntitySprites()` 现在保存并恢复 ShapeRenderer 的投影矩阵，
+    以 `try/finally` 保证 SpriteBatch 在异常路径结束、ShapeRenderer 必定重新进入；避免
+    原生 DC6 绘制异常后破坏后续地图/UI 绘制。
+  - 增加 SpriteBatch 嵌套绘制保护：检测到已有 batch pass 时跳过 Automap 实体精灵阶段，
+    不结束其他系统持有的 batch。
+  - 新增 `AutomapRenderState` 纯 Java 阶段状态机及测试，覆盖正常切换、重复进入、非法离开
+    与异常恢复路径。
+- 验证：`:core:test --tests com.riiablo.engine.client.automap.AutomapRenderStateTest
+  --tests com.riiablo.engine.client.automap.AutomapEntityCellsTest :core:compileJava`
+  全部通过；真实 1.10f 画面测试仍按当前条件跳过。
+
+当前下一项：移除/隔离 `RenderSystem` 中 Automap 旧墙体固定帧兼容回退，并补充对象/怪物
+探索过滤回归，确保原生 DC6 与几何回退不会重复绘制。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。

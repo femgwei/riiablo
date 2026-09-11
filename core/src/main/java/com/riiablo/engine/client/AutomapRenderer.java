@@ -9,6 +9,7 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import com.riiablo.Riiablo;
@@ -18,6 +19,7 @@ import com.riiablo.engine.client.automap.AutomapCamera;
 import com.riiablo.engine.client.automap.AutomapEntityCells;
 import com.riiablo.engine.client.automap.AutomapIconType;
 import com.riiablo.engine.client.automap.AutomapManager;
+import com.riiablo.engine.client.automap.AutomapRenderState;
 import com.riiablo.engine.client.automap.AutomapTileRenderer;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
@@ -300,13 +302,40 @@ public class AutomapRenderer extends BaseSystem {
 
   private void renderNativeEntitySprites() {
     if (Riiablo.batch == null || shapes == null) return;
+    // Do not nest a SpriteBatch pass.  Another system owning the batch must
+    // finish its pass before Automap is rendered.
+    if (Riiablo.batch.isDrawing()) {
+      if (Gdx.app != null) {
+        Gdx.app.debug(TAG, "Skipping native entity sprites: SpriteBatch is already drawing");
+      }
+      return;
+    }
+
+    // Keep the exact ShapeRenderer projection/type state across the sprite
+    // pass.  This method is called from processSystem while shapes is active;
+    // any failure in the native DC6 renderer must still restore that state so
+    // subsequent map/UI systems can render normally.
+    Matrix4 previousProjection = new Matrix4(shapes.getProjectionMatrix());
+    AutomapRenderState.Phase phase = AutomapRenderState.Phase.SHAPES;
+    boolean batchBegun = false;
     shapes.end();
-    Riiablo.batch.setProjectionMatrix(automapCamera != null && automapCamera.isInitialized()
-        ? automapCamera.combined : iso.combined);
-    Riiablo.batch.begin();
-    automapManager.renderNativeEntitySprites(Riiablo.batch, automapManager.opacity);
-    Riiablo.batch.end();
-    shapes.begin(ShapeRenderer.ShapeType.Filled);
+    try {
+      phase = AutomapRenderState.enterSprites(phase);
+      Riiablo.batch.setProjectionMatrix(automapCamera != null && automapCamera.isInitialized()
+          ? automapCamera.combined : iso.combined);
+      Riiablo.batch.begin();
+      batchBegun = true;
+      automapManager.renderNativeEntitySprites(Riiablo.batch, automapManager.opacity);
+    } finally {
+      if (batchBegun && Riiablo.batch.isDrawing()) {
+        Riiablo.batch.end();
+      }
+      if (phase == AutomapRenderState.Phase.SPRITES) {
+        AutomapRenderState.leaveSprites(phase);
+      }
+      shapes.setProjectionMatrix(previousProjection);
+      shapes.begin(ShapeRenderer.ShapeType.Filled);
+    }
   }
   
   /**
