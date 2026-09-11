@@ -9,7 +9,11 @@ public final class AutomapEntityCells {
 
   /** Returns Objects.txt AutoMap, or -1 when the row has no native icon. */
   public static int objectCell(Objects.Entry object) {
-    return object == null || object.AutoMap < 0 ? -1 : object.AutoMap;
+    if (object == null) return -1;
+    if (object.AutoMap >= 0) return object.AutoMap;
+    // D2MOO object rows sometimes omit AutoMap while the object class has a
+    // well-known native cell (waypoint, shrine, well, stash).
+    return AutomapIconType.getIconForObject(object.Id, object.ShrineFunction);
   }
 
   /** Returns MonStats2.txt automapCel, or -1 for monsters hidden on automap. */

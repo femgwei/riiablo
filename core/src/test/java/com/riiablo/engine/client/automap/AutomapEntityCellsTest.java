@@ -13,6 +13,11 @@ class AutomapEntityCellsTest {
     assertEquals(307, AutomapEntityCells.objectCell(object));
     object.AutoMap = -1;
     assertEquals(-1, AutomapEntityCells.objectCell(object));
+    object.Id = 119;
+    assertEquals(AutomapIconType.WAYPOINT, AutomapEntityCells.objectCell(object));
+    object.Id = 999;
+    object.ShrineFunction = 1;
+    assertEquals(AutomapIconType.SHRINE, AutomapEntityCells.objectCell(object));
   }
 
   @Test void monsterAutomapCellUsesNativeFrame() {

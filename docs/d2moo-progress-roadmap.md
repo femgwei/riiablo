@@ -111,6 +111,13 @@
   无合法帧时保留原几何标记。未改变服务端战斗、同步和网络协议。
 - 已通过实体 Automap 单元测试和 `:core:compileJava`；真实 DC6 画面验证因资源/运行条件限制暂跳过。
 
+### 原生对象图标回退（本轮完成）
+
+- `AutomapEntityCells.objectCell` 在 `Objects.AutoMap` 缺省时，按原生对象 ID 识别
+  Waypoint/Shrine/Well/Stash 并返回 D2MOO 固定 DC6 帧；未知对象仍返回 -1，继续走几何回退。
+- 新增对象图标回退测试；下一步统一 Automap 实体坐标投影和缩放，随后清理 RenderSystem
+  中未使用的固定 Automap 帧常量。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster
