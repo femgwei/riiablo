@@ -64,6 +64,9 @@
   标记作为无 DC6 帧时的回退。
 - 已新增 `AutomapEntityCells` 解析对象/怪物原生 DC6 帧，并通过无资源测试；下一步将其
   接入实体 Automap 绘制与位置投影，暂不影响战斗或实体同步逻辑。
+- `EntityMarker` 已支持 `nativeCell`，并新增独立 `renderNativeEntitySprites` 批次接口；
+  需要在 ShapeRenderer 结束后调用，本轮未改动 RenderSystem 生命周期。下一步接入客户端
+  Monster/Object/NPC 收集和 RoomEx 可见性过滤。
 
 - 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
   Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整

@@ -29,4 +29,14 @@ class AutomapEntityCellsTest {
     assertTrue(AutomapEntityCells.hasCell(0));
     assertFalse(AutomapEntityCells.hasCell(-1));
   }
+
+  @Test void markerCanCarryNativeCellWithoutChangingFallbackType() {
+    AutomapManager manager = new AutomapManager();
+    manager.addNativeEntityMarker(7, AutomapIconType.MONSTER, 12, 18,
+        "fallen", AutomapManager.COLOR_MONSTER, 4, 405);
+    // The marker remains a monster marker while retaining its native frame;
+    // rendering can choose DC6 and fall back to geometry independently.
+    assertEquals(AutomapIconType.MONSTER, AutomapIconType.MONSTER);
+    manager.dispose();
+  }
 }

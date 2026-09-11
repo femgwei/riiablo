@@ -94,6 +94,14 @@
 - 增加无资源测试覆盖对象、怪物、空记录和负值回退；尚未把接口接入
   `RenderSystem.drawAutomapEntities` 的实际 DC6 绘制，下一步处理实体位置投影和多人可见性。
 
+### 实体 DC6 绘制阶段抽象（本轮完成）
+
+- `AutomapManager.EntityMarker` 现在可携带 `nativeCell`，新增独立
+  `renderNativeEntitySprites(PaletteIndexedBatch, alpha)` 阶段；调用方应在 ShapeRenderer
+  结束后执行，避免批次嵌套和 OpenGL 状态污染。
+- 无合法帧时仍由现有几何标记绘制；本轮未强行改写 `RenderSystem` 的 ShapeRenderer 生命周期，
+  下一步接入客户端实体收集（Monster/Object/NPC）及 RoomEx 可见性过滤。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster

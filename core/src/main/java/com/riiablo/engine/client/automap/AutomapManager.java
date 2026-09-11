@@ -150,6 +150,8 @@ public class AutomapManager implements Disposable {
     public String name;
     public Color color;
     public float size;
+    /** Native MaxiMap.dc6 frame; -1 means use geometric fallback. */
+    public int nativeCell = -1;
     
     public EntityMarker() {}
     
@@ -162,6 +164,7 @@ public class AutomapManager implements Disposable {
       this.name = name;
       this.color = color;
       this.size = size;
+      this.nativeCell = -1;
       return this;
     }
   }
@@ -373,6 +376,13 @@ public class AutomapManager implements Disposable {
     EntityMarker marker = new EntityMarker();
     marker.set(entityId, type, worldX, worldY, name, color, size);
     entityMarkers.add(marker);
+  }
+
+  /** Adds an entity marker with a native MaxiMap.dc6 frame. */
+  public void addNativeEntityMarker(int entityId, int type, float worldX, float worldY,
+                                    String name, Color color, float size, int nativeCell) {
+    addEntityMarker(entityId, type, worldX, worldY, name, color, size);
+    entityMarkers.peek().nativeCell = nativeCell;
   }
   
   /**
@@ -611,6 +621,29 @@ public class AutomapManager implements Disposable {
     
     // 恢复颜色
     batch.setColor(1f, 1f, 1f, 1f);
+  }
+
+  /**
+   * Draws native entity cells in a separate SpriteBatch phase. The caller must
+   * invoke this after ending ShapeRenderer and before beginning it again.
+   */
+  public int renderNativeEntitySprites(PaletteIndexedBatch batch, float alpha) {
+    if (batch == null || tileRenderer == null || !tileRenderer.hasSprite()) return 0;
+    int drawn = 0;
+    batch.setColor(1f, 1f, 1f, alpha);
+    for (int i = 0, size = entityMarkers.size; i < size; i++) {
+      EntityMarker marker = entityMarkers.get(i);
+      if (!AutomapEntityCells.hasCell(marker.nativeCell)) continue;
+      try {
+        tileRenderer.renderTile(batch, marker.nativeCell,
+            marker.worldX, marker.worldY);
+        drawn++;
+      } catch (RuntimeException ignored) {
+        // Invalid/missing DC6 frame falls back to the geometric marker.
+      }
+    }
+    batch.setColor(1f, 1f, 1f, 1f);
+    return drawn;
   }
 
   private void renderNativeCells(PaletteIndexedBatch batch, Array<AutomapCell> cells,
