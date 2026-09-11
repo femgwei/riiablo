@@ -10,6 +10,7 @@ import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
+import com.d2moo.common.drlg.D2LevelIds;
 
 /**
  * Act3 地图生成器 - 完全复刻 D2MOD 实现
@@ -26,15 +27,32 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
   private static final boolean DEBUG_BUILD = DEBUG && true;
 
   // Act3 区域定义
-  private static final int LEVEL_KURASTDOCKTOWN = 75;
-  private static final int LEVEL_SPIDERFOREST = 76;
-  private static final int LEVEL_GREATMARSH = 77;
-  private static final int LEVEL_FLAYERJUNGLE = 78;
-  private static final int LEVEL_LOWERKURAST = 79;
-  private static final int LEVEL_KURASTBAZAAR = 80;
-  private static final int LEVEL_UPPERKURAST = 81;
-  private static final int LEVEL_KURASTCAUSEWAY = 82;
-  private static final int LEVEL_TRAVINCAL = 83;
+  // Keep these ids sourced from the same table used by the native D2MOO
+  // bridge.  Arcane Sanctuary is 75; Act III starts at 76 in 1.10f.
+  // The previous literals were all one lower and caused level 75 (Arcane
+  // Sanctuary) to be generated as Kurast Docks.
+  static final int LEVEL_KURASTDOCKTOWN = D2LevelIds.LEVEL_KURASTDOCKTOWN;
+  static final int LEVEL_SPIDERFOREST = D2LevelIds.LEVEL_SPIDERFOREST;
+  static final int LEVEL_GREATMARSH = D2LevelIds.LEVEL_GREATMARSH;
+  static final int LEVEL_FLAYERJUNGLE = D2LevelIds.LEVEL_FLAYERJUNGLE;
+  static final int LEVEL_LOWERKURAST = D2LevelIds.LEVEL_LOWERKURAST;
+  static final int LEVEL_KURASTBAZAAR = D2LevelIds.LEVEL_KURASTBAZAAR;
+  static final int LEVEL_UPPERKURAST = D2LevelIds.LEVEL_UPPERKURAST;
+  static final int LEVEL_KURASTCAUSEWAY = D2LevelIds.LEVEL_KURASTCAUSEWAY;
+  static final int LEVEL_TRAVINCAL = D2LevelIds.LEVEL_TRAVINCAL;
+
+  /** Native outdoor build order used by DRLG_LINKS for Act III. */
+  static final int[] ACT3_OUTDOOR_CHAIN = {
+      LEVEL_KURASTDOCKTOWN,
+      LEVEL_SPIDERFOREST,
+      LEVEL_GREATMARSH,
+      LEVEL_FLAYERJUNGLE,
+      LEVEL_LOWERKURAST,
+      LEVEL_KURASTBAZAAR,
+      LEVEL_UPPERKURAST,
+      LEVEL_KURASTCAUSEWAY,
+      LEVEL_TRAVINCAL
+  };
 
   @Wire(name = "factory")
   protected EntityFactory factory;
