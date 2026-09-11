@@ -75,6 +75,13 @@
 - Automap 全套无资源测试及核心编译通过；真实资源画面验收仍待 MPQ 环境。
 - 下一步：补充 cell 去重、边界裁剪和激活快照断言，为第一章真实 Automap 验收做准备。
 
+## 最近更新（2026-09-11，六续）
+
+- AutomapLayer 的 terrain/object/extra cell 现在按 `cellNo + 坐标` 去重；对象和特殊图标
+  也遵循 RoomEx 探索掩码，未探索区域不会直接绘制。
+- Automap 全套无资源测试、RoomEx 集成测试和核心编译通过。
+- 下一步：增加 RoomEx 激活快照一致性断言，并准备第一章真实 MPQ 画面验收入口。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName

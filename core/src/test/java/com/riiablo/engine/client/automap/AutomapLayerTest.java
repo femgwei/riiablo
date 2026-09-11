@@ -20,4 +20,18 @@ class AutomapLayerTest {
     assertTrue(layer.isExplored(-4, -6));
     assertEquals(1, layer.getExploredCount());
   }
+
+  @Test void duplicateNativeCellsAreCollapsedPerLayer() {
+    AutomapLayer layer = new AutomapLayer(2);
+    layer.addFloor(11, -5, 7);
+    layer.addFloor(11, -5, 7);
+    layer.addWall(12, -5, 7);
+    layer.addWall(12, -5, 7);
+    layer.addObject(13, -5, 7);
+    layer.addExtra(14, -5, 7);
+    assertEquals(1, layer.floors.size);
+    assertEquals(1, layer.walls.size);
+    assertEquals(1, layer.objects.size);
+    assertEquals(1, layer.extras.size);
+  }
 }

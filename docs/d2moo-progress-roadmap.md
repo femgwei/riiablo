@@ -1746,6 +1746,21 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
 当前下一项：进入第一章 Automap 真实资源验收准备，先补充无资源的 cell 去重、边界裁剪和
 房间激活快照断言，再安排可用 MPQ 环境下的隐藏营地/鲜血荒地画面门槛。
 
+### 2026-09-11 Automap cell 去重与探索裁剪（已完成）
+
+- [x] ~~收敛原生 cell 重复并阻止未探索对象泄漏~~
+  - `AutomapLayer` 的 floor/wall/object/extra 添加统一去重，同一 `cellNo + world坐标`
+    只保留一个 cell，避免重复 DT1 层或重复重建造成叠绘。
+  - `AutomapManager.renderWithSprites` 对 objects/extras 也应用探索掩码；未探索房间的
+    物体和特殊图标不再绕过 RoomEx 过滤直接绘制。
+  - 既有 RoomEx 激活集成回归与新增 cell 去重测试均覆盖负坐标。
+- 验证：`:core:test --tests 'com.riiablo.engine.client.automap.*' --tests
+  com.riiablo.map.AutomapRoomProjectionIntegrationTest :core:compileJava` 全部通过；
+  真实 1.10f 画面测试仍按当前条件跳过。
+
+当前下一项：在无资源测试中增加激活快照一致性断言（房间状态变化不应修改已生成 cell），
+并准备第一章真实 MPQ 隐藏营地/鲜血荒地 Automap 画面验收入口。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。

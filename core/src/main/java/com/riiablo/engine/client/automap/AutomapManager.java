@@ -630,7 +630,7 @@ public class AutomapManager implements Disposable {
     // 渲染物体图标
     for (int i = 0, size = layer.objects.size; i < size; i++) {
       AutomapCell cell = layer.objects.get(i);
-      if (cell.cellNo >= 0) {
+      if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
         tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel);
       }
     }
@@ -638,7 +638,7 @@ public class AutomapManager implements Disposable {
     // 渲染额外图标（传送点、神殿等）
     for (int i = 0, size = layer.extras.size; i < size; i++) {
       AutomapCell cell = layer.extras.get(i);
-      if (cell.cellNo >= 0) {
+      if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
         tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel);
       }
     }

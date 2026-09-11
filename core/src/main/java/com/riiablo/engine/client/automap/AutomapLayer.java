@@ -45,28 +45,36 @@ public class AutomapLayer {
    * 添加地板单元格
    */
   public void addFloor(int cellNo, int x, int y) {
-    floors.add(new AutomapCell(cellNo, x, y));
+    addUnique(floors, cellNo, x, y);
   }
   
   /**
    * 添加墙壁单元格
    */
   public void addWall(int cellNo, int x, int y) {
-    walls.add(new AutomapCell(cellNo, x, y));
+    addUnique(walls, cellNo, x, y);
   }
   
   /**
    * 添加物体单元格
    */
   public void addObject(int cellNo, int x, int y) {
-    objects.add(new AutomapCell(cellNo, x, y));
+    addUnique(objects, cellNo, x, y);
   }
   
   /**
    * 添加额外单元格
    */
   public void addExtra(int cellNo, int x, int y) {
-    extras.add(new AutomapCell(cellNo, x, y));
+    addUnique(extras, cellNo, x, y);
+  }
+
+  private static void addUnique(Array<AutomapCell> cells, int cellNo, int x, int y) {
+    for (int i = 0, n = cells.size; i < n; i++) {
+      AutomapCell existing = cells.get(i);
+      if (existing.cellNo == cellNo && existing.xPixel == x && existing.yPixel == y) return;
+    }
+    cells.add(new AutomapCell(cellNo, x, y));
   }
   
   /**
