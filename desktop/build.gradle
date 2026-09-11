@@ -47,6 +47,22 @@ task offscreenCamp(type: JavaExec) {
        '--mode', 'camp',
        '--level', project.findProperty('offscreenLevel') ?: '-1',
        '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  if (project.findProperty('warpGraph')?.toString()?.toBoolean()) args '--warp-graph'
+  ignoreExitValue = false
+}
+
+task offscreenWarpGraph(type: JavaExec) {
+  group = 'verification'
+  description = 'Validate every generated Act 1 Warp edge in a hidden 1x1 client.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/act1-warp-graph',
+       '--mode', 'camp',
+       '--level', '-1',
+       '--warp-graph',
+       '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
   ignoreExitValue = false
 }
 

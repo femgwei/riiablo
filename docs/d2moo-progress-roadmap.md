@@ -1846,6 +1846,23 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
 当前下一项：扩展到 Act 1 全部洞穴/地道/塔楼入口的自动化 Warp 图遍历，统计每个入口的
 双向边、RoomEx 落点和可通行坐标，随后再补充地图连续性指标。
 
+### 2026-09-11 Act 1 全量 Warp 图自动验收（已通过）
+
+- [x] ~~自动遍历第一章全部洞穴、地道、塔楼、监牢和墓穴 Warp~~
+  - 新增 `:desktop:offscreenWarpGraph`，使用生产地图和 1×1 隐藏客户端一次性遍历全部
+    已生成 Act 1 Zone，而不再依赖逐个指定 `-PoffscreenLevel`。
+  - `Map.Zone` 维护去重的专用 Warp 实体索引，验收不再扫描怪物、NPC 和地面物品实体；
+    `findWarp` 同步改用该索引。该索引也避免已回收 Artemis 实体槽被误判为 Warp。
+  - 完整 1.10f 固定种子结果：39 个 Zone、53 个 Warp、53 个反向边、53 个可通行入口，
+    `unresolved=0`、`missingReverse=0`。塔楼楼梯的阻挡图较大，入口搜索覆盖 32 个 subtile。
+  - 报告输出到 `desktop/build/visual-tests/act1-warp-graph/act1-warp-graph-manifest.txt`，
+    逐边记录 `source->destination`、Warp index、RoomEx、反向关系和可通行状态。
+- 验证：`:desktop:offscreenWarpGraph` 使用 `G:\BaiduNetdiskDownload\Diablo II 1.10F`
+  通过；Automap/RoomEx 测试和桌面编译通过。
+
+当前下一项：为 Act 1 真实地图建立连续性指标，逐 Zone 检查 RoomEx 邻接图连通分量、
+可行走 subtile 覆盖率和 Warp 所在房间到主连通分量的可达性，优先捕获黑块与错误墙体。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。

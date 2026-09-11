@@ -320,6 +320,13 @@ Armageddon/Hurricane 的实机观感验证。
   可通行坐标校验；未修改战斗目录或网络生成文件。
 - 下一项为自动遍历 Act 1 全部洞穴/地道/塔楼 Warp 图，并把结果写入进度文档。
 
+### 2026-09-11 Act 1 全量 Warp 图
+
+- 当前 Chat 已加入 `:desktop:offscreenWarpGraph`，真实 1.10f 固定种子共验收 39 个 Zone、
+  53 个 Warp；全部具有反向边、RoomEx 记录和入口附近可通行坐标。
+- 下一项转入 Act 1 RoomEx/碰撞连续性指标，继续由当前 Chat 负责地图与全部战斗模块；
+  不再存在独立战斗 Chat 的避让范围。
+
 ### 2026-09-11 当前工作进度
 
 - 已实现真实 D2GS 无窗口双客户端复杂区域技能门槛：`D2GSHeadlessClient` 的

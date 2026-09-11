@@ -25,6 +25,7 @@ import com.riiablo.engine.client.automap.AutomapManager;
 public final class OffscreenCampScreen extends GameScreen {
   private final String outputDirectory;
   private final int targetLevelId;
+  private final boolean validateWarpGraph;
   private int renderedFrames;
   private boolean completed;
   private boolean targetApplied;
@@ -37,15 +38,28 @@ public final class OffscreenCampScreen extends GameScreen {
   private int targetWarpWalkable;
   private String targetWarpRooms = "";
   private String targetWarpTargets = "";
+  private int graphZoneCount;
+  private int graphWarpCount;
+  private int graphReverseWarpCount;
+  private int graphWalkableCount;
+  private int graphUnresolvedCount;
+  private int graphMissingReverseCount;
+  private String graphEdges = "";
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
-    this(charData, outputDirectory, -1);
+    this(charData, outputDirectory, -1, false);
   }
 
   public OffscreenCampScreen(CharData charData, String outputDirectory, int targetLevelId) {
+    this(charData, outputDirectory, targetLevelId, false);
+  }
+
+  public OffscreenCampScreen(CharData charData, String outputDirectory, int targetLevelId,
+      boolean validateWarpGraph) {
     super(charData);
     this.outputDirectory = outputDirectory;
     this.targetLevelId = targetLevelId;
+    this.validateWarpGraph = validateWarpGraph;
   }
 
   @Override
@@ -58,6 +72,7 @@ public final class OffscreenCampScreen extends GameScreen {
       return;
     }
     if (renderedFrames < (targetApplied ? 6 : 3)) return;
+    if (validateWarpGraph) validateAct1WarpGraph();
     validateTargetAutomap();
     completed = true;
 
@@ -82,6 +97,12 @@ public final class OffscreenCampScreen extends GameScreen {
         + "targetWarpWalkable=" + targetWarpWalkable + "\n"
         + "targetWarpRooms=" + targetWarpRooms + "\n"
         + "targetWarpTargets=" + targetWarpTargets + "\n"
+        + "warpGraphZones=" + graphZoneCount + "\n"
+        + "warpGraphWarps=" + graphWarpCount + "\n"
+        + "warpGraphReverseWarps=" + graphReverseWarpCount + "\n"
+        + "warpGraphWalkable=" + graphWalkableCount + "\n"
+        + "warpGraphUnresolved=" + graphUnresolvedCount + "\n"
+        + "warpGraphMissingReverse=" + graphMissingReverseCount + "\n"
         + "player=" + player + "\n"
         + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
         + "result=PASS\n";
@@ -89,6 +110,140 @@ public final class OffscreenCampScreen extends GameScreen {
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_CAMP] result=PASS act="
         + (map.getAct() + 1) + " player=" + player + " frames=" + renderedFrames);
     Gdx.app.exit();
+  }
+
+  /**
+   * Walk every generated Act 1 zone and validate the native Warp graph.  This
+   * is deliberately an offline assertion: production Warp resolution remains
+   * unchanged, while a single run catches bad Levels.txt Vis/Warp imports in
+   * all caves, passages, towers and quest sub-levels.
+   */
+  private void validateAct1WarpGraph() {
+    StringBuilder edges = new StringBuilder();
+    com.artemis.ComponentMapper<Warp> warpMapper = engine.getMapper(Warp.class);
+    com.artemis.ComponentMapper<Position> positionMapper = engine.getMapper(Position.class);
+    if (map.getZones().size > 200) {
+      throw new IllegalStateException("Act1 Warp graph has excessive zones: "
+          + map.getZones().size);
+    }
+    int warpEntitySlots = 0;
+    for (Map.Zone zone : map.getZones()) {
+      if (zone.levelAct() == 1) warpEntitySlots += zone.getWarpEntities().size;
+    }
+    if (warpEntitySlots > 5000) {
+      throw new IllegalStateException("Act1 Warp graph has excessive Warp slots: "
+          + warpEntitySlots);
+    }
+    com.badlogic.gdx.utils.IntMap<Map.Zone> zonesByLevel = new com.badlogic.gdx.utils.IntMap<>();
+    com.badlogic.gdx.utils.IntMap<com.badlogic.gdx.utils.IntSet> destinationsByLevel =
+        new com.badlogic.gdx.utils.IntMap<>();
+    for (Map.Zone zone : map.getZones()) {
+      if (zone.levelAct() != 1) continue;
+      zonesByLevel.put(zone.levelId(), zone);
+      com.badlogic.gdx.utils.IntSet destinations = new com.badlogic.gdx.utils.IntSet();
+      for (int entity : zone.getWarpEntities().toArray()) {
+        if (!warpMapper.has(entity)) continue;
+        Warp warp = warpMapper.get(entity);
+        if (warp.dstLevel != null) destinations.add(warp.dstLevel.Id);
+      }
+      destinationsByLevel.put(zone.levelId(), destinations);
+    }
+    for (Map.Zone sourceZone : map.getZones()) {
+      if (sourceZone.levelAct() != 1) continue;
+      graphZoneCount++;
+      if (sourceZone.getWarpEntities().size > 1000) {
+        throw new IllegalStateException("Act1 Zone has excessive Warp entities: level="
+            + sourceZone.levelId() + " count=" + sourceZone.getWarpEntities().size);
+      }
+      com.badlogic.gdx.utils.IntSet seenEntities = new com.badlogic.gdx.utils.IntSet();
+      int[] sourceWarpEntities = sourceZone.getWarpEntities().toArray();
+      for (int entity : sourceWarpEntities) {
+        if (!seenEntities.add(entity)) continue;
+        if (!warpMapper.has(entity)) continue;
+        Warp warp = warpMapper.get(entity);
+        graphWarpCount++;
+        int sourceId = sourceZone.levelId();
+        int destinationId = warp.dstLevel == null ? -1 : warp.dstLevel.Id;
+        if (warp.dstLevel == null || !zonesByLevel.containsKey(destinationId)) {
+          graphUnresolvedCount++;
+          throw new IllegalStateException("Act1 Warp graph unresolved: source=" + sourceId
+              + " destination=" + destinationId + " index=" + warp.index);
+        }
+        Position position = positionMapper.get(entity);
+        if (position == null || !sourceZone.contains(Math.round(position.position.x),
+            Math.round(position.position.y))) {
+          throw new IllegalStateException("Act1 Warp graph position outside zone: source="
+              + sourceId + " index=" + warp.index);
+        }
+        // Tall stair and tower transition tiles can place the Warp anchor
+        // farther inside their blocked DT1 footprint than cave doorways.
+        boolean walkable = hasWalkableCoordinate(sourceZone, position.position, 32);
+        if (!walkable) {
+          throw new IllegalStateException("Act1 Warp graph has no walkable landing: source="
+              + sourceId + " index=" + warp.index);
+        }
+        graphWalkableCount++;
+        com.badlogic.gdx.utils.IntSet reverseDestinations =
+            destinationsByLevel.get(destinationId);
+        boolean reverse = reverseDestinations != null && reverseDestinations.contains(sourceId);
+        if (reverse) graphReverseWarpCount++;
+        else graphMissingReverseCount++;
+        // Keep the manifest bounded even if a malformed export duplicates an
+        // entity. Counts still cover the complete graph; only the first 1000
+        // edges are emitted as diagnostics.
+        if (graphWarpCount <= 1000) {
+          if (edges.length() > 0) edges.append('\n');
+          Map.RoomEx room = sourceZone.findRoomEx(position.position.x, position.position.y);
+          edges.append(sourceId).append("->").append(destinationId)
+              .append(" index=").append(warp.index)
+              .append(" room=").append(room == null ? -1 : room.id)
+              .append(" reverse=").append(reverse)
+              .append(" walkable=").append(walkable);
+        }
+      }
+    }
+    graphEdges = edges.toString();
+    com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
+    output.mkdirs();
+    boolean passed = graphUnresolvedCount == 0 && graphMissingReverseCount == 0
+        && graphWalkableCount == graphWarpCount;
+    String report = "mode=act1-warp-graph\n"
+        + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
+        + "zones=" + graphZoneCount + "\n"
+        + "warps=" + graphWarpCount + "\n"
+        + "reverseWarps=" + graphReverseWarpCount + "\n"
+        + "walkable=" + graphWalkableCount + "\n"
+        + "unresolved=" + graphUnresolvedCount + "\n"
+        + "missingReverse=" + graphMissingReverseCount + "\n"
+        + "result=" + (passed ? "PASS" : "FAIL") + "\n\n" + graphEdges + "\n";
+    output.child("act1-warp-graph-manifest.txt").writeString(report, false, "UTF-8");
+    Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_WARP_GRAPH] zones=" + graphZoneCount
+        + " warps=" + graphWarpCount + " reverse=" + graphReverseWarpCount
+        + " walkable=" + graphWalkableCount + " missingReverse=" + graphMissingReverseCount);
+    if (!passed) {
+      throw new IllegalStateException("Act1 Warp graph validation failed: warps=" + graphWarpCount
+          + " reverse=" + graphReverseWarpCount + " walkable=" + graphWalkableCount
+          + " unresolved=" + graphUnresolvedCount
+          + " missingReverse=" + graphMissingReverseCount);
+    }
+  }
+
+  /** Fast size-one collision probe used by the full graph audit. */
+  private static boolean hasWalkableCoordinate(Map.Zone zone, Vector2 origin, int distance) {
+    int originX = Math.round(origin.x);
+    int originY = Math.round(origin.y);
+    for (int radius = 0; radius <= distance; radius++) {
+      for (int y = originY - radius; y <= originY + radius; y++) {
+        for (int x = originX - radius; x <= originX + radius; x++) {
+          if (radius > 0 && Math.abs(x - originX) != radius
+              && Math.abs(y - originY) != radius) continue;
+          if (!zone.contains(x, y)) continue;
+          if ((zone.flags(x - zone.x(), y - zone.y())
+              & com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK) == 0) return true;
+        }
+      }
+    }
+    return false;
   }
 
   private void applyTargetLevel() {
@@ -133,10 +288,10 @@ public final class OffscreenCampScreen extends GameScreen {
     boolean hasExpectedCaveReturn = false;
     com.artemis.ComponentMapper<Warp> warpMapper = engine.getMapper(Warp.class);
     com.artemis.ComponentMapper<Position> positionMapper = engine.getMapper(Position.class);
-    for (int i = 0; i < targetZone.getEntities().size; i++) {
-      int warpEntity = targetZone.getEntities().get(i);
+    for (int i = 0; i < targetZone.getWarpEntities().size; i++) {
+      int warpEntity = targetZone.getWarpEntities().get(i);
+      if (!warpMapper.has(warpEntity)) continue;
       Warp warp = warpMapper.get(warpEntity);
-      if (warp == null) continue;
       if (warp.dstLevel == null || map.findZone(warp.dstLevel) == null) {
         throw new IllegalStateException("Warp target is unresolved: source=" + targetLevelId);
       }
@@ -168,8 +323,10 @@ public final class OffscreenCampScreen extends GameScreen {
       // the destination zone has an edge back to this source level.
       Map.Zone destinationZone = map.findZone(warp.dstLevel);
       boolean reverseFound = false;
-      for (int j = 0; j < destinationZone.getEntities().size; j++) {
-        Warp reverse = warpMapper.get(destinationZone.getEntities().get(j));
+      for (int j = 0; j < destinationZone.getWarpEntities().size; j++) {
+        int reverseEntity = destinationZone.getWarpEntities().get(j);
+        if (!warpMapper.has(reverseEntity)) continue;
+        Warp reverse = warpMapper.get(reverseEntity);
         if (reverse != null && reverse.dstLevel != null
             && reverse.dstLevel.Id == targetLevelId) {
           reverseFound = true;

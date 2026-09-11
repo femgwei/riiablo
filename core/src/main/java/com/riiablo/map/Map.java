@@ -758,6 +758,15 @@ public class Map implements Disposable {
     return null;
   }
 
+  /**
+   * Returns the generated zones for diagnostics and offline validation.
+   * The returned collection is the map's live, read-only-by-convention list;
+   * callers must not add or remove zones while generation is in progress.
+   */
+  public Array<Zone> getZones() {
+    return zones;
+  }
+
   Zone addZone(Levels.Entry level, LvlPrest.Entry preset, int ds1) {
     assert preset.LevelId != 0 : "presets should have an assigned level id";
     Zone zone = addZone(level,
@@ -861,6 +870,8 @@ public class Map implements Disposable {
 
     static final IntArray EMPTY_ENTITY_ARRAY = new IntArray(0);
     IntArray entities = EMPTY_ENTITY_ARRAY;
+    /** Dedicated Warp entity index; avoids scanning every unit in a Zone. */
+    IntArray warpEntities = EMPTY_ENTITY_ARRAY;
 
     static final IntIntMap EMPTY_INT_INT_MAP = new IntIntMap(0);
     IntIntMap warps = EMPTY_INT_INT_MAP;
@@ -985,6 +996,7 @@ public class Map implements Disposable {
       town = false;
       townExitDirection = -1;
       entities = EMPTY_ENTITY_ARRAY;
+      warpEntities = EMPTY_ENTITY_ARRAY;
       warps = EMPTY_INT_INT_MAP;
       generator = EMPTY_GENERATOR;
       specials = EMPTY_INT_CELL_MAP;
@@ -1032,6 +1044,11 @@ public class Map implements Disposable {
     /** Entity IDs created for this zone, including native warps. */
     public IntArray getEntities() {
       return entities;
+    }
+
+    /** Entity IDs created as native Warp objects for this zone. */
+    public IntArray getWarpEntities() {
+      return warpEntities;
     }
 
     public Array<RoomEx> getRoomsEx() { return roomsEx; }
@@ -1331,12 +1348,20 @@ public class Map implements Disposable {
       final int y = this.y + (warpY * DT1.Tile.SUBTILE_SIZE);
       if (entities == EMPTY_ENTITY_ARRAY) entities = new IntArray();
       int entity = map.factory.createWarp(index, x, y);
-      entities.add(entity);
+      if (entity != Engine.INVALID_ENTITY) {
+        entities.add(entity);
+        if (warpEntities == EMPTY_ENTITY_ARRAY) warpEntities = new IntArray();
+        if (!warpEntities.contains(entity)) warpEntities.add(entity);
+      }
     }
 
     public void addWarp(int entityId) {
       assert map.mWarp.has(entityId);
       addEntity(entityId);
+      if (entityId != Engine.INVALID_ENTITY) {
+        if (warpEntities == EMPTY_ENTITY_ARRAY) warpEntities = new IntArray();
+        if (!warpEntities.contains(entityId)) warpEntities.add(entityId);
+      }
     }
 
     void setWarp(int src, int dst) {
@@ -1349,8 +1374,9 @@ public class Map implements Disposable {
     }
 
     public int findWarp(int id) {
-      for (int i = 0, size = entities.size; i < size; i++) {
-        int entityId = entities.get(i);
+      for (int i = 0, size = warpEntities.size; i < size; i++) {
+        int entityId = warpEntities.get(i);
+        if (!map.mWarp.has(entityId)) continue;
         Warp warp = map.mWarp.get(entityId);
         if (warp != null && warp.index == id) {
           return entityId;

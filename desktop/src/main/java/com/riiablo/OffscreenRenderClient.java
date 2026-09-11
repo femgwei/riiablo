@@ -20,6 +20,7 @@ public final class OffscreenRenderClient {
         .addOption(Option.builder("o").longOpt("output").hasArg().build())
         .addOption(Option.builder("m").longOpt("mode").hasArg().build())
         .addOption(Option.builder("l").longOpt("level").hasArg().build())
+        .addOption(Option.builder().longOpt("warp-graph").hasArg(false).build())
         .addOption(Option.builder().longOpt("d2-version").hasArg().build());
     CommandLine command = new DefaultParser().parse(options, args);
     String output = command.getOptionValue("output", "build/visual-tests");
@@ -34,6 +35,8 @@ public final class OffscreenRenderClient {
     System.setProperty("riiablo.offscreen-output", output);
     System.setProperty("riiablo.offscreen-level",
         command.getOptionValue("level", "-1"));
+    System.setProperty("riiablo.offscreen-warp-graph",
+        Boolean.toString(command.hasOption("warp-graph")));
     System.setProperty("riiablo.d2-version",
         command.getOptionValue("d2-version", "unspecified"));
 
