@@ -2318,3 +2318,19 @@ Tainted Sun、Arcane Sanctuary、Duriel）：以地图入口 LevelId/预设单�
 
 当前下一项：实现 A2Q5 Summoner 的原生身份（SuperUnique 18/MonStats 250）和 Arcane Sanctuary
 死亡结算、队伍奖励待领取状态，再补 Drognan/Jerhyn/Atma 等 NPC 对话分支。
+
+### 2026-09-12 Act II A2Q5 召唤者身份与死亡结算（已完成代码修复）
+
+- [x] 新增 `Act2SummonerQuest`，记录 A2Q5 的 `PRIMARY_GOAL_DONE`、`REWARD_PENDING`、
+  `REWARD_GRANTED` 与 `COMPLETED_NOW` 原生转换，并覆盖重复领奖。
+- [x] 召唤者只在 Arcane Sanctuary（Level 75）结算，优先校验 D2MOO `SuperUnique=18`，
+  兼容缺失 SuperUnique 组件时的 `MonStats=250` 身份；其他区域的同名/普通怪不会触发任务。
+- [x] 召唤者死亡事件幂等；当前 Arcane Sanctuary 玩家获得独立待领奖记录，同 Act II 但不在
+  Sanctuary 的在线玩家只获得本局 `COMPLETED_NOW`，不错误领取奖励。
+- [x] 增加无渲染 A2Q5 状态回归测试；NPC 对话、奖励确认和四个方向的 Arcane Sanctuary 预设
+  入口仍作为下一小步处理。
+- 验证：`Act2SummonerQuestTest`、A2Q4/A2Q6/对象解析回归、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：接通 A2Q5 原生 NPC 对话消息（419–429）和奖励确认，再为 Arcane Sanctuary 的
+Summoner 四方向预设建立确定性入口/出口映射；之后转入 Act III 地图主链和 A3Q1–A3Q3。

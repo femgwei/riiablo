@@ -54,6 +54,7 @@ public class Act2QuestSystem extends PassiveSystem {
 
   private EntitySubscription playersByZone;
   private final IntSet completedRadaments = new IntSet();
+  private final IntSet completedSummoners = new IntSet();
 
   @Override
   protected void initialize() {
@@ -166,7 +167,12 @@ public class Act2QuestSystem extends PassiveSystem {
 
   @Subscribe
   public void onMonsterKilled(DeathEvent event) {
-    if (event == null || !isRadament(event.victim)) return;
+    if (event == null) return;
+    if (isSummoner(event.victim)) {
+      onSummonerKilled(event.victim);
+      return;
+    }
+    if (!isRadament(event.victim)) return;
     if (!completedRadaments.add(event.victim)) {
       log.warn("[A2Q1] Duplicate Radament death ignored: victim={}", event.victim);
       return;
@@ -212,6 +218,40 @@ public class Act2QuestSystem extends PassiveSystem {
         event.victim, players.size(), books, created, partyManager != null);
   }
 
+  private void onSummonerKilled(int victimId) {
+    if (!completedSummoners.add(victimId)) {
+      log.warn("[A2Q5] Duplicate Summoner death ignored: victim={}", victimId);
+      return;
+    }
+
+    IntBag players = playersByZone == null ? null : playersByZone.getEntities();
+    if (players == null) return;
+    int[] ids = players.getData();
+    int credited = 0;
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = ids[i];
+      Player player = mPlayer.get(playerId);
+      if (player == null || player.data == null) continue;
+      if (isPlayerInLevel(playerId, D2LevelIds.LEVEL_ARCANESANCTUARY)) {
+        short previous = getSummonerRecord(player.data);
+        short next = Act2SummonerQuest.completeObjective(previous);
+        if (next != previous) {
+          setSummonerRecord(player.data, next);
+          persist(player.data);
+          credited++;
+        }
+      } else if (isPlayerInAct2(playerId)) {
+        short previous = getSummonerRecord(player.data);
+        short next = Act2SummonerQuest.markCompletedNow(previous);
+        if (next != previous) {
+          setSummonerRecord(player.data, next);
+          persist(player.data);
+        }
+      }
+    }
+    log.info("[A2Q5] Summoner killed: victim={} creditedArcanePlayers={}", victimId, credited);
+  }
+
   private boolean isRadament(int entityId) {
     if (entityId < 0 || !mMonster.has(entityId)
         || !isEntityInLevel(entityId, D2LevelIds.LEVEL_SEWERSLVL3ACT2)) return false;
@@ -222,6 +262,16 @@ public class Act2QuestSystem extends PassiveSystem {
     // SuperUniques row. Keep the native class-id fallback constrained to L49.
     return monster != null && monster.monstats != null
         && monster.monstats.hcIdx == MonsterType.RADAMENT;
+  }
+
+  private boolean isSummoner(int entityId) {
+    if (entityId < 0 || !mMonster.has(entityId)
+        || !isEntityInLevel(entityId, D2LevelIds.LEVEL_ARCANESANCTUARY)) return false;
+    if (mSuperUnique.has(entityId)
+        && mSuperUnique.get(entityId).id == D2SuperUniques.SUPERUNIQUE_THE_SUMMONER) return true;
+    Monster monster = mMonster.get(entityId);
+    return monster != null && monster.monstats != null
+        && monster.monstats.hcIdx == MonsterType.SUMMONER;
   }
 
   private int countRequiredSkillBooks(IntBag players) {
@@ -311,6 +361,10 @@ public class Act2QuestSystem extends PassiveSystem {
     return data.getQuests(Riiablo.ACT2)[Act2HoradricStaffQuest.RECORD];
   }
 
+  private static short getSummonerRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT2)[Act2SummonerQuest.RECORD];
+  }
+
   private static short getHorazonRecord(CharData data) {
     return data.getQuests(Riiablo.ACT2)[Act2HorazonTomeQuest.RECORD];
   }
@@ -321,6 +375,10 @@ public class Act2QuestSystem extends PassiveSystem {
 
   private static void setStaffRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT2)[Act2HoradricStaffQuest.RECORD] = record;
+  }
+
+  private static void setSummonerRecord(CharData data, short record) {
+    data.getQuests(Riiablo.ACT2)[Act2SummonerQuest.RECORD] = record;
   }
 
   private static void setHorazonRecord(CharData data, short record) {
