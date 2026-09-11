@@ -199,6 +199,7 @@ public class CursorMovementSystem extends BaseSystem {
         if (interactable != null && dst <= interactable.range) {
           traceInteraction(src, targetId, interactable, dst, "trigger", true);
           actioneer.moveTo(src, Engine.INVALID_ENTITY);
+          actioneer.faceTarget(src, targetId);
           interactable.interactor.interact(src, targetId);
         } else if (interactable != null) {
           traceInteraction(src, targetId, interactable, dst, "approach", false);

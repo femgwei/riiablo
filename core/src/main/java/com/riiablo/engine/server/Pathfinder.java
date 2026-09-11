@@ -17,6 +17,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Target;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.Engine;
@@ -42,6 +43,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<Target> mTarget;
+  protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<MapWrapper> mMapWrapper;
@@ -128,8 +130,21 @@ public class Pathfinder extends IteratingSystem {
         }
       }
       
-      // If in melee or ranged attack range, stop movement to allow immediate attack
-      if (distance <= meleeRangeThreshold || (rangedRangeThreshold > 0f && distance <= rangedRangeThreshold)) {
+      // Interaction targets use their own native range. Do not apply the
+      // player's melee stop threshold to an NPC: that can stop the player
+      // several tiles away, leaving CursorMovementSystem waiting forever for
+      // the interaction range and facing check.
+      boolean interactionTarget = targetId != Engine.INVALID_ENTITY
+          && mInteractable.has(targetId);
+      float interactionRange = interactionTarget
+          ? Math.max(0.5f, mInteractable.get(targetId).range) : 0f;
+      if ((interactionTarget && distance <= interactionRange)
+          || (!interactionTarget && (distance <= meleeRangeThreshold
+              || (rangedRangeThreshold > 0f && distance <= rangedRangeThreshold)))) {
+        if (interactionTarget && mAngle.has(entityId)) {
+          Vector2 facing = new Vector2(targetPos).sub(position0);
+          if (!facing.isZero(0.0001f)) mAngle.get(entityId).target.set(facing).nor();
+        }
         findPath(entityId, null);
         return;
       }

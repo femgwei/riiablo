@@ -1976,3 +1976,19 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 
 当前下一项：使用真实 D2GS 日志复核 `[THROW_PIERCE] chance=0` 和每次投掷只产生一枚
 权威 missile；随后处理金币点击直拾取和 NPC 接近路径问题。
+
+### 2026-09-11 NPC 点击自动接近与朝向修复（已完成代码修复）
+
+- [x] ~~NPC/可交互对象点击自动接近~~：`Actioneer.moveTo` 不再把交互对象中心当作
+  必须到达的可行走点，而是按 `Interactable.range` 在玩家一侧计算接近点，并通过
+  `Zone.findFreeCoordinates` 修正为可通行坐标。
+- [x] ~~交互范围判定对齐~~：`Pathfinder` 对带 `Interactable` 的目标使用自身交互范围，
+  不再提前套用玩家近战停止距离，避免距离尚未满足时停止移动。
+- [x] ~~自动调整朝向~~：到达交互范围时，服务端/本地 `Angle.target` 都会指向 NPC，
+  触发对话前再执行一次朝向校正；多人客户端通过 Angle 快照同步。
+- 增加 `[INTERACTION_APPROACH]` 诊断日志，记录源实体、目标、距离、交互范围和最终接近点。
+- 验证：`:core:compileJava`、`:server:d2gs:compileJava`、CursorMovementSystem 和
+  Pathfinder 相关测试通过。
+
+当前下一项：真实 D2GS/离屏场景验证 Akara、Charsi、Kashya 等 NPC 的远距离点击，确认
+  玩家能自动走入交互范围、自动转向并只弹出一次对话菜单；之后继续处理金币地面点击直拾取。

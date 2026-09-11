@@ -110,6 +110,7 @@ public class Actioneer extends PassiveSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<com.riiablo.engine.server.component.Interactable> mInteractable;
 
   @com.artemis.annotations.Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
@@ -161,8 +162,42 @@ public class Actioneer extends PassiveSystem {
       moveTo(entityId, null);
     } else {
       mTarget.create(entityId).target = targetId;
-      pathfinder.findPath(entityId, mPosition.get(targetId).position, true, targetId);
+      Vector2 destination = mPosition.get(targetId).position;
+      // NPCs, waypoints and objects are interaction targets, not walkable
+      // coordinates. Their centre can be occupied by the unit/object itself,
+      // so pathing to the centre either fails or stops short without ever
+      // entering the interaction range. Pick a free point on the source side
+      // of the target and retain the target entity for range checking.
+      if (mInteractable.has(targetId) && mPosition.has(entityId)) {
+        float range = Math.max(0.5f, mInteractable.get(targetId).range);
+        Vector2 source = mPosition.get(entityId).position;
+        float distance = source.dst(destination);
+        if (distance > range) {
+          Vector2 approach = new Vector2(source).sub(destination).nor()
+              .scl(Math.max(0.5f, range - 0.25f)).add(destination);
+          if (map != null) {
+            Map.Zone zone = map.getZone(approach);
+            Vector2 free = new Vector2();
+            int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.MEDIUM;
+            if (zone != null && zone.findFreeCoordinates(approach, size, 6, true, free)) {
+              approach.set(free);
+            }
+          }
+          log.info("[INTERACTION_APPROACH] source={} target={} distance={} range={} destination=({}, {})",
+              entityId, targetId, distance, range, approach.x, approach.y);
+          destination = approach;
+        }
+      }
+      pathfinder.findPath(entityId, destination, true, targetId);
     }
+  }
+
+  /** Turns a unit toward an interaction target without changing movement. */
+  public void faceTarget(int entityId, int targetId) {
+    if (!mPosition.has(entityId) || !mPosition.has(targetId) || !mAngle.has(entityId)) return;
+    Vector2 direction = new Vector2(mPosition.get(targetId).position)
+        .sub(mPosition.get(entityId).position);
+    if (!direction.isZero(0.0001f)) mAngle.get(entityId).target.set(direction).nor();
   }
 
   private boolean canCast(int entityId) {
