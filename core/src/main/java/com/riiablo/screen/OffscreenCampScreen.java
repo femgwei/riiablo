@@ -12,6 +12,9 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.map.Map;
+import com.riiablo.engine.client.AutomapRenderer;
+import com.riiablo.engine.client.automap.AutomapLayer;
+import com.riiablo.engine.client.automap.AutomapManager;
 
 /**
  * Production {@link GameScreen} smoke test driven by a 1x1 hidden LWJGL
@@ -24,6 +27,10 @@ public final class OffscreenCampScreen extends GameScreen {
   private int renderedFrames;
   private boolean completed;
   private boolean targetApplied;
+  private Map.Zone targetZone;
+  private int targetNativeCells;
+  private int targetRoomCount;
+  private int targetNativeObjects;
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
     this(charData, outputDirectory, -1);
@@ -45,6 +52,7 @@ public final class OffscreenCampScreen extends GameScreen {
       return;
     }
     if (renderedFrames < (targetApplied ? 6 : 3)) return;
+    validateTargetAutomap();
     completed = true;
 
     com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
@@ -60,6 +68,9 @@ public final class OffscreenCampScreen extends GameScreen {
         + "renderedFrames=" + renderedFrames + "\n"
         + "act=" + (map.getAct() + 1) + "\n"
         + "targetLevel=" + targetLevelId + "\n"
+        + "targetNativeCells=" + targetNativeCells + "\n"
+        + "targetRooms=" + targetRoomCount + "\n"
+        + "targetNativeObjects=" + targetNativeObjects + "\n"
         + "player=" + player + "\n"
         + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
         + "result=PASS\n";
@@ -82,6 +93,7 @@ public final class OffscreenCampScreen extends GameScreen {
       throw new IllegalStateException("Target level zone was not generated: " + target.LevelName
           + "(" + targetLevelId + ")");
     }
+    this.targetZone = targetZone;
     Vector2 destination = new Vector2(targetZone.x() + targetZone.width() / 2f,
         targetZone.y() + targetZone.height() / 2f);
     Position position = engine.getMapper(Position.class).get(player);
@@ -95,5 +107,39 @@ public final class OffscreenCampScreen extends GameScreen {
     targetApplied = true;
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_LEVEL] target=" + target.LevelName
         + "(" + targetLevelId + ") position=" + destination);
+  }
+
+  private void validateTargetAutomap() {
+    if (!targetApplied) return;
+    if (targetZone == null || targetZone.width() <= 0 || targetZone.height() <= 0) {
+      throw new IllegalStateException("Target Zone has invalid bounds: level=" + targetLevelId);
+    }
+    targetRoomCount = targetZone.getRoomsEx().size;
+    targetNativeObjects = targetZone.getNativeObjects().size;
+
+    AutomapRenderer automap = engine.getSystem(AutomapRenderer.class);
+    if (automap == null || automap.getAutomapManager() == null) {
+      throw new IllegalStateException("AutomapRenderer unavailable for target level=" + targetLevelId);
+    }
+    Position position = engine.getMapper(Position.class).get(player);
+    automap.updatePlayerPosition(targetLevelId, Math.round(position.position.x),
+        Math.round(position.position.y));
+    AutomapManager manager = automap.getAutomapManager();
+    AutomapLayer layer = manager.getLayer(targetLevelId);
+    if (layer == null) {
+      throw new IllegalStateException("Automap layer missing for target level=" + targetLevelId);
+    }
+    targetNativeCells = layer.floors.size + layer.walls.size + layer.objects.size + layer.extras.size;
+    if (targetNativeCells == 0) {
+      throw new IllegalStateException("Automap has no native cells for target level=" + targetLevelId);
+    }
+    // Underground sub-levels must expose at least one exported entrance/object
+    // record; otherwise a successful Zone switch would hide a broken cave link.
+    if ((targetLevelId == 8 || targetLevelId == 10) && targetNativeObjects == 0) {
+      throw new IllegalStateException("Cave target has no native entrance objects: level=" + targetLevelId);
+    }
+    Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_AUTOMAP] level=" + targetLevelId
+        + " cells=" + targetNativeCells + " rooms=" + targetRoomCount
+        + " nativeObjects=" + targetNativeObjects);
   }
 }

@@ -104,6 +104,13 @@
   隐藏切换测试均通过，目标 Zone 生成、玩家绑定和 6 帧渲染正常。
 - 下一步：在离屏目标场景中增加 Automap cell 数量、RoomEx 拓扑及入口对象存在性断言。
 
+## 最近更新（2026-09-11，十续）
+
+- 离屏入口现已断言目标 Zone 的 Automap cell、RoomEx 和原生入口对象；真实 1.10f 下
+  Blood Moor、Den of Evil、Underground Passage 三项均通过，分别生成 1082/544/1251
+  个 Automap cells。
+- 下一步：继续校验洞穴/地下通道入口对象的具体 Warp 目标 Level ID 与 D2MOO 拓扑一致。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName

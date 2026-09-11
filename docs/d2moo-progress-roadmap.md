@@ -1799,6 +1799,22 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
 当前下一项：为离屏目标场景增加 Automap cell 数量、RoomEx 拓扑和入口对象存在性断言，
 避免“Zone 切换成功但地图块/洞穴入口未加载”的回归。
 
+### 2026-09-11 Act 1 Automap 目标场景完整性验收（已通过）
+
+- [x] ~~离屏断言目标 Zone 的 Automap cell、RoomEx 和入口对象~~
+  - `OffscreenCampScreen` 切换目标 Level 后，校验 Zone 边界、AutomapRenderer 图层、
+    原生 cell 数量和 RoomEx 数量；洞穴/地下通道额外要求存在原生入口对象记录。
+  - 真实 1.10f MPQ 验证结果：Level 2 Blood Moor 为 1082 cells/79 rooms/8 objects；
+    Level 8 Den of Evil 为 544 cells/3 rooms/19 objects；Level 10 Underground Passage
+    为 1251 cells/7 rooms/34 objects；三项均 `result=PASS`。
+  - 输出目录分别为 `desktop/build/visual-tests/blood-moor-automap`、
+    `evil-cave-automap`、`underground-passage-automap`。
+- 验证：三项 `:desktop:offscreenCamp -PoffscreenLevel=2/8/10` 全部通过，未出现区域
+  切换崩溃或 Automap 图层缺失。
+
+当前下一项：扩展离屏断言到入口对象的具体 Warp 目标 Level，验证地下通道/洞穴入口不仅
+  存在，而且目标关卡 ID 与 D2MOO `pWarp` 拓扑一致。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。
