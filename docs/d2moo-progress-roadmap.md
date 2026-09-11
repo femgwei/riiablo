@@ -1488,6 +1488,19 @@ Storm，并收敛 headless 测试日志输出以便持续集成。
 
 当前下一项：统一收敛 headless 区域技能日志，并将这组重连门槛纳入持续集成回归。
 
+### 2026-09-11 headless 区域技能回归接线（已通过）
+
+- [x] ~~日志收敛与完整 Gradle 回归任务~~
+  - `--require-area-skill` 默认启用 quiet 模式，隐藏 DRLG、网络同步和逐包调试输出，
+    保留阶段结果、警告和错误；传入 `--verbose` 可恢复详细日志。
+  - 新增 `:server:d2gs:headlessAreaSkillRegression`，依次运行 Hydra、Volcano、
+    Armageddon、Hurricane、Thunder Storm、Meteor、Blizzard、Frozen Orb 八项真实双端
+    双阶段（快照 + 重连）门槛。
+  - 使用真实 1.10f MPQ、`-PareaTimeout=8` 回归全绿；主动断开观察端造成的 ACK 写入
+    `SocketException` 在 quiet headless 模式下按预期断线处理。
+
+当前下一项：把该 Gradle 回归任务接入 CI，并保留 `D2_HOME` 外部资源注入方式。
+
 ### 2026-09-11 真实 1.10f 双客户端复杂区域技能门槛（已通过）
 
 - [x] ~~Volcano(244)、Hydra(62)、Armageddon(249)、Hurricane(250) 真实无窗口双客户端验收~~

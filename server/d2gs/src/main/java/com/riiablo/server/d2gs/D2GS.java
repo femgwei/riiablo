@@ -2072,7 +2072,8 @@ public class D2GS extends ApplicationAdapter {
   @Override
   public void create() {
     activeHeadlessInstance = this;
-    Gdx.app.setLogLevel(Application.LOG_DEBUG);
+    Gdx.app.setLogLevel(Boolean.getBoolean("riiablo.d2gs.quiet")
+        ? Application.LOG_ERROR : Application.LOG_DEBUG);
 
     final Calendar calendar = Calendar.getInstance();
     DateFormat format = DateFormat.getDateTimeInstance();
@@ -4412,6 +4413,13 @@ public class D2GS extends ApplicationAdapter {
         Thread.currentThread().interrupt();
         kill = true;
       } catch (IOException t) {
+        // The reconnect gate intentionally closes an observer socket while a
+        // queued ping ACK may still be in flight. In quiet headless mode this
+        // is an expected disconnect, not a failed verification.
+        if (Boolean.getBoolean("riiablo.d2gs.quiet")) {
+          kill = true;
+          return;
+        }
         throw new GdxRuntimeException("Unable to send ping ACK", t);
       }
     }

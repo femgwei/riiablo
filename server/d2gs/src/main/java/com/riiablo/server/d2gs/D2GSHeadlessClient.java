@@ -115,6 +115,11 @@ public final class D2GSHeadlessClient {
     Config config = Config.parse(args);
     boolean startedServer = config.home != null;
     if (startedServer) {
+      if (!config.verbose) {
+        // Keep the default headless run readable: stage results and warnings
+        // remain visible, while DRLG and recipient-cache traces stay opt-in.
+        System.setProperty("riiablo.d2gs.quiet", "true");
+      }
       // A few older combat fixtures deliberately place actors next to a
       // deterministic target. Production D2GS leaves this bridge disabled.
       if (!config.requireSnapshotOrder && !config.requireSnapshotResync
@@ -4080,6 +4085,7 @@ public final class D2GSHeadlessClient {
     int connectTimeoutMillis = 2000;
     int serverTimeoutMillis = 180000;
     int testTimeoutMillis = 60000;
+    boolean verbose;
 
     static Config parse(String[] args) throws IOException {
       Config config = new Config();
@@ -4114,6 +4120,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-reconnect-visibility".equals(arg)) config.requireReconnectVisibility = true;
         else if ("--require-reconnect-ground-loot".equals(arg)) config.requireReconnectGroundLoot = true;
         else if ("--require-item-failure-corrections".equals(arg)) config.requireItemFailureCorrections = true;
+        else if ("--verbose".equals(arg)) config.verbose = true;
         else if ("--attempts".equals(arg)) config.attempts = integer(args, ++i, arg);
         else if ("--server-timeout".equals(arg)) {
           config.serverTimeoutMillis = integer(args, ++i, arg) * 1000;
@@ -4183,6 +4190,7 @@ public final class D2GSHeadlessClient {
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
           + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
+          + " [--verbose]"
           + " [--require-reconnect-visibility]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }

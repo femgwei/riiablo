@@ -33,6 +33,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   private static final boolean DEBUG      = true;
   private static final boolean DEBUG_SYNC = DEBUG && !true;
+  private static final boolean QUIET = Boolean.getBoolean("riiablo.d2gs.quiet");
 
   protected SerializationManager serializer;
 
@@ -98,7 +99,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       // This also repairs a client that retained a stale baseline while the
       // other client moved through the shared RoomEx ring.
       removeSnapshots(entityId, departed | recipients);
-      Gdx.app.log(TAG, "[NET_SYNC] phase=recipient_change entity=" + entityId
+      if (!QUIET) Gdx.app.log(TAG, "[NET_SYNC] phase=recipient_change entity=" + entityId
           + " previous=0x" + Integer.toHexString(previousRecipients)
           + " current=0x" + Integer.toHexString(recipients)
           + " reenter=0x" + Integer.toHexString(recipients & ~previousRecipients));
@@ -117,7 +118,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
     }
     if (changedRecipients == 0) return;
     if (previousRecipients != recipients) {
-      Gdx.app.log(TAG, "[NET_SYNC] phase=recipient_baseline entity=" + entityId
+      if (!QUIET) Gdx.app.log(TAG, "[NET_SYNC] phase=recipient_baseline entity=" + entityId
           + " recipients=0x" + Integer.toHexString(changedRecipients));
     }
     byte[] snapshot = serialize(entityId, true);
@@ -148,7 +149,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
           + " recipients=0x" + Integer.toHexString(recipients));
       return;
     }
-    Gdx.app.log(TAG, "[NET_SYNC] phase=visibility_delete entity=" + entityId
+    if (!QUIET) Gdx.app.log(TAG, "[NET_SYNC] phase=visibility_delete entity=" + entityId
         + " recipients=0x" + Integer.toHexString(recipients)
         + " tick=" + tick);
   }
@@ -205,7 +206,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
         failed++;
       }
     }
-    Gdx.app.log(TAG, "[NET_SYNC] phase=baseline client=" + clientId
+    if (!QUIET) Gdx.app.log(TAG, "[NET_SYNC] phase=baseline client=" + clientId
         + " entities=" + queued + " queued=" + queued
         + " failed=" + failed + " bytes=" + bytes);
   }
@@ -298,7 +299,7 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   public void clearClient(int clientId) {
     if (clientId < 0) return;
     snapshotsByRecipient.remove(clientId);
-    Gdx.app.log(TAG, "[NET_SYNC] phase=client_cache_clear client=" + clientId);
+    if (!QUIET) Gdx.app.log(TAG, "[NET_SYNC] phase=client_cache_clear client=" + clientId);
   }
 
   private EntitySnapshotCache snapshotsFor(int clientId) {

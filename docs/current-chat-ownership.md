@@ -238,3 +238,11 @@ Armageddon/Hurricane 的实机观感验证。
   未知或已删除实体。
 - 下一项是收敛 headless 日志并将全部区域技能双端/重连门槛接入 CI；战斗、地图和网络
   仍由当前 Chat 统一维护。
+
+### 2026-09-11 headless 回归任务
+
+- 默认 headless 区域技能测试进入 quiet 模式，仅输出阶段结果、警告和错误；`--verbose`
+  保留原始 DRLG/网络同步调试日志。
+- 新增 `:server:d2gs:headlessAreaSkillRegression`，覆盖 Hydra、Volcano、Armageddon、
+  Hurricane、Thunder Storm、Meteor、Blizzard、Frozen Orb 的双客户端快照与断线重连。
+- 真实 1.10f MPQ 回归全绿；下一项是接入 CI，资源继续由 `D2_HOME` 注入，不提交 MPQ。

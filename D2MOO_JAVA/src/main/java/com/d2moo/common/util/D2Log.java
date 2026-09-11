@@ -5,6 +5,15 @@ package com.d2moo.common.util;
  * 封装统一的日志函数，调试日志采用英文
  */
 public class D2Log {
+    /**
+     * Headless protocol fixtures can suppress the very verbose DRLG trace while
+     * retaining warnings and errors. Normal D2GS runs keep the historical
+     * debug output unless the quiet system property is explicitly enabled.
+     */
+    private static boolean debugEnabled() {
+        return !Boolean.getBoolean("riiablo.d2gs.quiet")
+                || Boolean.getBoolean("riiablo.d2moo.verbose");
+    }
     
     /**
      * 记录调试日志
@@ -13,6 +22,7 @@ public class D2Log {
      * @param args 参数
      */
     public static void debug(LogLevel level, String message, Object... args) {
+        if (!debugEnabled()) return;
         String formattedMessage = String.format(message, args);
         System.out.println(String.format("[D2Log][%s] %s", level.name(), formattedMessage));
     }
@@ -52,6 +62,7 @@ public class D2Log {
      * @param args 参数
      */
     public static void trace(String message, Object... args) {
+        if (!debugEnabled()) return;
         String formattedMessage = String.format(message, args);
         System.out.println(String.format("[D2Log][TRACE] %s", formattedMessage));
     }

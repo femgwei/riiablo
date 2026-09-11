@@ -111,6 +111,31 @@ tasks.register('headlessAreaSkill', JavaExec) {
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()
+  if (project.hasProperty('areaVerbose')) args '--verbose'
+}
+
+tasks.register('headlessAreaSkillRegression') {
+  group = 'verification'
+  description = 'Runs the complete real-MPQ area-skill dual-client and reconnect gate.'
+  dependsOn ':server:d2gs:compileJava'
+
+  doLast {
+    def skills = [62, 244, 249, 250, 57, 56, 59, 64]
+    def timeout = project.hasProperty('areaTimeout')
+        ? project.property('areaTimeout').toString() : '60'
+    def home = providers.environmentVariable('D2_HOME')
+    skills.each { skill ->
+      project.javaexec {
+        classpath = sourceSets.main.runtimeClasspath
+        mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+        workingDir = rootProject.file('assets').path
+        args '--require-area-skill', '--area-skill', skill.toString(),
+             '--test-timeout', timeout
+        if (home.isPresent()) args '--home', home.get()
+        if (project.hasProperty('areaVerbose')) args '--verbose'
+      }
+    }
+  }
 }
 
 tasks.register('headlessFallenDual', JavaExec) {

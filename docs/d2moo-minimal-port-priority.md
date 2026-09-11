@@ -150,3 +150,7 @@ Hydra、Volcano、Armageddon、Hurricane、Thunder Storm 的同类重连门槛�
 双客户端验证：Hydra 使用 `MonsterP` 所有权集合，其余技能使用 `MissileP`，并校验
 Armageddon/Hurricane/Thunder Storm 的 `StateP` 来源与状态 ID。下一项转入 headless 日志
 收敛和持续集成回归。
+
+headless 日志收敛与完整回归已完成：默认隐藏 DRLG/网络逐条调试输出，`--verbose` 可恢复；
+新增 `:server:d2gs:headlessAreaSkillRegression` 覆盖八项复杂区域技能的双端快照与重连
+门槛，真实 1.10f MPQ 回归通过。下一项是接入 CI，并继续通过 `D2_HOME` 注入外部资源。
