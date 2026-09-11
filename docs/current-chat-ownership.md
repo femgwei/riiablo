@@ -82,6 +82,14 @@
 - Automap 全套无资源测试、RoomEx 集成测试和核心编译通过。
 - 下一步：增加 RoomEx 激活快照一致性断言，并准备第一章真实 MPQ 画面验收入口。
 
+## 最近更新（2026-09-11，七续）
+
+- 新增 RoomEx 激活快照一致性断言：跨房间移动只更新探索/可见状态，不修改已生成的
+  floor/wall/object cell 数量和坐标。
+- Automap 全套无资源测试与核心编译通过；真实验收入口为
+  `:desktop:offscreenCamp -Pd2Home=<1.10f目录>`，当前环境仍未执行真实画面测试。
+- 下一步：在 MPQ 就绪后运行隐藏营地并扩展鲜血荒地/洞穴入口离屏场景。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName
