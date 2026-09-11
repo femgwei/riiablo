@@ -83,6 +83,7 @@ import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.net.packet.d2gs.QuestResult;
 import com.riiablo.net.packet.d2gs.CastSkillResult;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
+import com.riiablo.net.packet.d2gs.SpendStatPointResult;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.StoreToCursor;
 import com.riiablo.net.packet.d2gs.SwapBeltItem;
@@ -317,6 +318,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.SpendSkillPointResult:
         SpendSkillPointResult(packet);
+        break;
+      case D2GSData.SpendStatPointResult:
+        SpendStatPointResult(packet);
         break;
       case D2GSData.PlayerLifecycleResult:
         PlayerLifecycleResult(packet);
@@ -687,6 +691,35 @@ public class ClientNetworkReceiver extends IntervalSystem {
         + " success=" + result.success() + " reason=" + result.reason()
         + " skill=" + result.skillId() + " level=" + result.skillLevel()
         + " points=" + result.skillPoints());
+  }
+
+  private void SpendStatPointResult(D2GS packet) {
+    SpendStatPointResult result = (SpendStatPointResult) packet.data(
+        new SpendStatPointResult());
+    if (Riiablo.charData != null && result.success()) {
+      short stat;
+      switch (result.statType()) {
+        case com.riiablo.engine.server.player.PlayerStatsManager.STAT_TYPE_STRENGTH:
+          stat = Stat.strength; break;
+        case com.riiablo.engine.server.player.PlayerStatsManager.STAT_TYPE_ENERGY:
+          stat = Stat.energy; break;
+        case com.riiablo.engine.server.player.PlayerStatsManager.STAT_TYPE_DEXTERITY:
+          stat = Stat.dexterity; break;
+        case com.riiablo.engine.server.player.PlayerStatsManager.STAT_TYPE_VITALITY:
+          stat = Stat.vitality; break;
+        default: stat = -1;
+      }
+      if (stat >= 0) {
+        Riiablo.charData.getStats().base().put(stat, result.statValue());
+        Riiablo.charData.getStats().aggregate().put(stat, result.statValue());
+      }
+      Riiablo.charData.getStats().base().put(Stat.statpts, result.statPoints());
+      Riiablo.charData.getStats().aggregate().put(Stat.statpts, result.statPoints());
+    }
+    Gdx.app.log(TAG, "[STAT_POINT_NET] phase=result request=" + result.requestId()
+        + " success=" + result.success() + " reason=" + result.reason()
+        + " stat=" + result.statType() + " value=" + result.statValue()
+        + " points=" + result.statPoints());
   }
 
   private void CastSkillResult(D2GS packet) {

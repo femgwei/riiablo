@@ -52,6 +52,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
   final SkillButton[] buttons;
   private final Label skillsRemaining;
+  private int availableSkillPoints = -1;
 
   static final com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle SMALL_LABEL_STYLE
       = new com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle(Riiablo.fonts.fontformal10, null);
@@ -188,9 +189,23 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     if (client == null || client.getStats() == null) return;
     StatRef points = client.getStats().aggregate().get(com.riiablo.attributes.Stat.newskills);
     int value = points == null ? 0 : Math.max(0, points.asInt());
+    if (value == availableSkillPoints) return;
+    availableSkillPoints = value;
     skillsRemaining.setText(Integer.toString(value));
+    for (SkillButton button : buttons) {
+      if (button != null) button.updateEnabledState();
+    }
     log.debug(
         "[SKILL_POINTS_UI] character={} available={}", client.name, value);
+  }
+
+  @Override
+  public void act(float delta) {
+    // PlayerP progression snapshots update CharData directly and may not
+    // change a skill level. Poll the authoritative stat so a level-up makes
+    // the allocation controls appear immediately when the panel is open.
+    updateSkillPoints(Riiablo.charData);
+    super.act(delta);
   }
 
   private static Color getColor(String str) {
@@ -302,7 +317,14 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
       label.setStyle(sLvl > 9 ? SMALL_LABEL_STYLE : LARGE_LABEL_STYLE);
       label.setText(sLvl > 0 ? Integer.toString(sLvl) : "");
       label.setPosition(52, -5, Align.center);
-      setDisabled(sLvl <= 0);
+      // Unlearned skills must remain clickable while points are available;
+      // the authoritative server validates level, class and prerequisites.
+      // The old sLvl <= 0 condition made every skill impossible to learn.
+      updateEnabledState();
+    }
+
+    void updateEnabledState() {
+      setDisabled(availableSkillPoints <= 0);
     }
 
     @Override

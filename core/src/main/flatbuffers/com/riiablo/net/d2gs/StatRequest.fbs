@@ -1,0 +1,20 @@
+namespace com.riiablo.net.packet.d2gs;
+
+// Client intent to spend one of the character's four unspent attribute points.
+// The server resolves the authenticated character and validates the request.
+table SpendStatPointRequest {
+  requestId:uint32;
+  statType:uint8;
+}
+
+// Authoritative result. The next PlayerP snapshot carries the complete stat
+// point balance; the selected value is included so the UI can update without
+// waiting for a periodic snapshot.
+table SpendStatPointResult {
+  requestId:uint32;
+  success:bool;
+  reason:string;
+  statType:uint8;
+  statValue:uint16;
+  statPoints:uint16;
+}

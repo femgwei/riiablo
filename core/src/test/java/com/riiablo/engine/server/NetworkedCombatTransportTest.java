@@ -25,6 +25,8 @@ import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.MissileP;
 import com.riiablo.net.packet.d2gs.SpendSkillPointRequest;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
+import com.riiablo.net.packet.d2gs.SpendStatPointRequest;
+import com.riiablo.net.packet.d2gs.SpendStatPointResult;
 import java.nio.ByteBuffer;
 import org.junit.jupiter.api.Test;
 
@@ -61,6 +63,39 @@ class NetworkedCombatTransportTest extends RiiabloTest {
     assertEquals(2, result.skillLevel());
     assertEquals(3, result.skillPoints());
     System.out.println("[SKILL_POINT_NET] request=99 skill=6 result=OK level=2 points=3 status=PASS");
+  }
+
+  @Test
+  void statPointPacketsCarryIntentAndAuthoritativeResult() {
+    FlatBufferBuilder requestBuilder = new FlatBufferBuilder(128);
+    int requestData = SpendStatPointRequest.createSpendStatPointRequest(
+        requestBuilder, 101, 3);
+    int requestRoot = D2GS.createD2GS(
+        requestBuilder, D2GSData.SpendStatPointRequest, requestData);
+    D2GS.finishSizePrefixedD2GSBuffer(requestBuilder, requestRoot);
+    D2GS requestPacket = D2GS.getRootAsD2GS(com.google.flatbuffers.ByteBufferUtil
+        .removeSizePrefix(requestBuilder.dataBuffer()));
+    SpendStatPointRequest request = (SpendStatPointRequest) requestPacket.data(
+        new SpendStatPointRequest());
+    assertEquals(101, request.requestId());
+    assertEquals(3, request.statType());
+
+    FlatBufferBuilder resultBuilder = new FlatBufferBuilder(128);
+    int reason = resultBuilder.createString("OK");
+    int resultData = SpendStatPointResult.createSpendStatPointResult(
+        resultBuilder, 101, true, reason, 3, 17, 4);
+    int resultRoot = D2GS.createD2GS(
+        resultBuilder, D2GSData.SpendStatPointResult, resultData);
+    D2GS.finishSizePrefixedD2GSBuffer(resultBuilder, resultRoot);
+    D2GS resultPacket = D2GS.getRootAsD2GS(com.google.flatbuffers.ByteBufferUtil
+        .removeSizePrefix(resultBuilder.dataBuffer()));
+    SpendStatPointResult result = (SpendStatPointResult) resultPacket.data(
+        new SpendStatPointResult());
+    assertTrue(result.success());
+    assertEquals(3, result.statType());
+    assertEquals(17, result.statValue());
+    assertEquals(4, result.statPoints());
+    System.out.println("[STAT_POINT_NET] request=101 stat=3 value=17 points=4 status=PASS");
   }
 
   @Test

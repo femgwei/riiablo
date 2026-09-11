@@ -954,6 +954,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     return PlayerStatsManager.INSTANCE.spendSkillPoint(charData, skillId);
   }
 
+  /** Allocates one attribute point locally or through the authoritative D2GS. */
+  public boolean spendStatPoint(int statType) {
+    if (socket != null) return NetworkedActionSender.spendStatPoint(socket, statType);
+    return PlayerStatsManager.INSTANCE.spendStatPoint(charData, statType)
+        == PlayerStatsManager.RESULT_SUCCESS;
+  }
+
   @Override
   public void pause() {
     discardNextSimulationDelta = true;

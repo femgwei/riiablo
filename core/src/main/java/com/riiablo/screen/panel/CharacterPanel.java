@@ -276,7 +276,12 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     button.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        PlayerStatsManager.INSTANCE.spendStatPoint(Riiablo.charData, statType);
+        if (Riiablo.game == null) return;
+        boolean accepted = Riiablo.game.spendStatPoint(statType);
+        com.riiablo.logger.LogManager.getLogger("CharacterPanel").info(
+            "[STAT_POINT_UI] phase=request stat={} accepted={}", statType, accepted);
+        // Single-player mutations are immediate. Multiplayer waits for the
+        // authoritative result/snapshot before changing the visible balance.
         updateStatPointControls();
       }
     });

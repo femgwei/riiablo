@@ -3,6 +3,7 @@ include "PlayerController.fbs";
 include "Sync.fbs";
 include "ItemManagement.fbs";
 include "SkillRequest.fbs";
+include "StatRequest.fbs";
 include "NpcService.fbs";
 include "PartyService.fbs";
 include "PlayerLifecycle.fbs";
@@ -34,6 +35,8 @@ union D2GSData {
   CastSkillResult,
   SpendSkillPointRequest,
   SpendSkillPointResult,
+  SpendStatPointRequest,
+  SpendStatPointResult,
   NpcServiceRequest,
   NpcServiceResult,
   ItemMoveRequest,

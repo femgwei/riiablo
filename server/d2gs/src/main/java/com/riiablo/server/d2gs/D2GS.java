@@ -97,6 +97,7 @@ import com.riiablo.engine.server.item.ItemMoveIntent;
 import com.riiablo.engine.server.item.ItemMoveRequestCache;
 import com.riiablo.engine.server.player.PlayerStatsManager;
 import com.riiablo.engine.server.player.SkillPointRequestCache;
+import com.riiablo.engine.server.player.StatPointRequestCache;
 import com.riiablo.engine.server.ServerNetworkIdManager;
 import com.riiablo.engine.server.VelocityAdder;
 import com.riiablo.engine.server.WarpInteractor;
@@ -148,6 +149,8 @@ import com.riiablo.net.packet.d2gs.CastSkillResult;
 import com.riiablo.net.packet.d2gs.SpendSkillPointRequest;
 import com.riiablo.net.packet.d2gs.SelectSkillRequest;
 import com.riiablo.net.packet.d2gs.SpendSkillPointResult;
+import com.riiablo.net.packet.d2gs.SpendStatPointRequest;
+import com.riiablo.net.packet.d2gs.SpendStatPointResult;
 import com.riiablo.net.packet.d2gs.CursorToBelt;
 import com.riiablo.net.packet.d2gs.CursorToBody;
 import com.riiablo.net.packet.d2gs.CursorToGround;
@@ -2041,6 +2044,7 @@ public class D2GS extends ApplicationAdapter {
   final AuthoritativeItemMoveService authoritativeItems = new AuthoritativeItemMoveService();
   final ItemMoveRequestCache itemMoveRequestCache = new ItemMoveRequestCache();
   final SkillPointRequestCache skillPointRequestCache = new SkillPointRequestCache();
+  final StatPointRequestCache statPointRequestCache = new StatPointRequestCache();
   final PartyRequestCache partyRequestCache = new PartyRequestCache();
   final QuestRequestCache questRequestCache = new QuestRequestCache();
 
@@ -2422,6 +2426,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.SpendSkillPointRequest:
         SpendSkillPointRequest(packet);
         break;
+      case D2GSData.SpendStatPointRequest:
+        SpendStatPointRequest(packet);
+        break;
       case D2GSData.NpcServiceRequest:
         NpcServiceRequest(packet);
         break;
@@ -2743,6 +2750,7 @@ public class D2GS extends ApplicationAdapter {
       npcVendors.clearPlayer(entityId);
       itemMoveRequestCache.clearConnection(id);
       skillPointRequestCache.clearConnection(id);
+      statPointRequestCache.clearConnection(id);
       partyRequestCache.clear(id);
       questRequestCache.clear(id);
       authoritativeItems.reset(entityId);
@@ -3351,6 +3359,68 @@ public class D2GS extends ApplicationAdapter {
     byte[] bytes = new byte[response.remaining()];
     response.duplicate().get(bytes);
     if (cache) skillPointRequestCache.put(clientId, requestId, skillId, bytes);
+    outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
+  }
+
+  /** Handles an idempotent, server-authoritative attribute allocation request. */
+  private void SpendStatPointRequest(Packet packet) {
+    SpendStatPointRequest request = (SpendStatPointRequest) packet.data.data(
+        new SpendStatPointRequest());
+    StatPointRequestCache.Entry cached = statPointRequestCache.lookup(
+        packet.id, request.requestId());
+    if (cached != null) {
+      if (cached.statType == request.statType()) {
+        outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response())));
+        Gdx.app.log("D2GS", "[STAT_POINT_NET] phase=replay connection=" + packet.id
+            + " request=" + request.requestId() + " stat=" + request.statType());
+      } else {
+        sendStatPointResult(packet.id, request.requestId(), false, "REQUEST_ID_REUSED",
+            request.statType(), 0, 0, false);
+      }
+      return;
+    }
+
+    int entityId = getPlayerEntityId(packet);
+    Player playerComponent = entityId == Engine.INVALID_ENTITY ? null
+        : world.getMapper(Player.class).get(entityId);
+    CharData data = playerComponent != null ? playerComponent.data : null;
+    int result = PlayerStatsManager.INSTANCE.spendStatPoint(data, request.statType());
+    boolean success = result == PlayerStatsManager.RESULT_SUCCESS;
+    String reason;
+    switch (result) {
+      case PlayerStatsManager.RESULT_SUCCESS: reason = "OK"; break;
+      case PlayerStatsManager.RESULT_NO_POINTS: reason = "NO_STAT_POINTS"; break;
+      case PlayerStatsManager.RESULT_MAX_REACHED: reason = "STAT_MAX_LEVEL"; break;
+      default: reason = "INVALID_STAT"; break;
+    }
+    int statValue = data == null ? 0
+        : PlayerStatsManager.INSTANCE.getStatValue(data, request.statType());
+    int statPoints = data == null ? 0
+        : PlayerStatsManager.INSTANCE.getAvailableStatPoints(data);
+    sendStatPointResult(packet.id, request.requestId(), success, reason,
+        request.statType(), statValue, statPoints, true);
+    if (success && entityId != Engine.INVALID_ENTITY) sync.process(entityId);
+    Gdx.app.log("D2GS", "[STAT_POINT_NET] phase=" + (success ? "accept" : "reject")
+        + " connection=" + packet.id + " player=" + entityId
+        + " request=" + request.requestId() + " stat=" + request.statType()
+        + " value=" + statValue + " points=" + statPoints + " reason=" + reason);
+  }
+
+  private void sendStatPointResult(int clientId, long requestId, boolean success,
+      String reason, int statType, int statValue, int statPoints, boolean cache) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int result = SpendStatPointResult.createSpendStatPointResult(builder,
+        requestId, success, reasonOffset, statType,
+        Math.max(0, Math.min(0xFFFF, statValue)),
+        Math.max(0, Math.min(0xFFFF, statPoints)));
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.SpendStatPointResult, result);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer response = builder.dataBuffer();
+    byte[] bytes = new byte[response.remaining()];
+    response.duplicate().get(bytes);
+    if (cache) statPointRequestCache.put(clientId, requestId, statType, bytes);
     outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
   }
 
