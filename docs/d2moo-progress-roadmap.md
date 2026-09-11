@@ -1877,8 +1877,21 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
   `desktop/build/visual-tests/act1-map-continuity/act1-map-continuity-manifest.txt`，
   `result=PASS`；编译与 Automap/RoomEx 测试通过。
 
-当前下一项：把连续性扫描扩展为地图块拼接断言，比较相邻 RoomEx 边界的地面/碰撞过渡，
-重点覆盖城镇出口、石块荒野—黑色森林和地下通道入口，定位“地面不连续/墙体挡路”问题。
+### 2026-09-11 RoomEx 边界过渡指标（已完成初版）
+
+- [x] ~~统计相邻 RoomEx 的地面/碰撞过渡~~
+  - 连续性扫描现在按每对原生相邻 RoomEx 的矩形接口采样，记录存在可行走过渡、
+    已知接口但采样不到可行走点、以及几何上无法直接判断的边界。
+  - 1.10f 结果：`boundaryPairs=3090`、`boundaryWalkable=1525`、
+    `boundaryBlocked=128`、`boundaryUncheckable=1437`。RoomEx 矩形包含墙裙、门框和
+    楼梯边界，`boundaryBlocked` 目前只作为诊断指标，不直接判定地图错误；主连通分量、
+    Warp 和全 Zone 可行走断言仍为 PASS。
+  - 报告同时保留前 12KB 的 Level/RoomEx 矩形详情，供后续针对石块荒野、黑色森林和
+    地下通道逐类收紧接口探测。
+- 验证：真实 1.10f 隐藏离屏连续性任务通过，Automap/RoomEx 测试和桌面编译通过。
+
+当前下一项：针对 `boundaryBlocked` 的 128 个候选接口，结合原生 RoomEx 邻接方向和
+碰撞层做局部 BFS/门口搜索，区分真实封死墙体与墙裙/楼梯的合法不可直穿边界。
 
 ## 记录规则
 

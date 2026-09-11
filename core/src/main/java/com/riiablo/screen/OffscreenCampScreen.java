@@ -55,6 +55,11 @@ public final class OffscreenCampScreen extends GameScreen {
   private int continuityWarpOutsideMain;
   private long continuitySampledCells;
   private long continuityWalkableCells;
+  private int continuityBoundaryPairs;
+  private int continuityBoundaryWalkable;
+  private int continuityBoundaryBlocked;
+  private int continuityBoundaryUncheckable;
+  private final StringBuilder continuityBoundaryDetails = new StringBuilder();
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
     this(charData, outputDirectory, -1, false);
@@ -291,7 +296,7 @@ public final class OffscreenCampScreen extends GameScreen {
         java.util.Arrays.fill(components, -1);
         int largestComponent = -1;
         int largestSize = 0;
-        for (int start = 0; start < width; start++) {
+      for (int start = 0; start < width; start++) {
           if (components[start] >= 0) continue;
           int componentId = continuityComponents++;
           com.badlogic.gdx.utils.IntArray queue = new com.badlogic.gdx.utils.IntArray();
@@ -331,6 +336,8 @@ public final class OffscreenCampScreen extends GameScreen {
         }
       }
 
+      validateRoomBoundaryTransitions(zone);
+
       boolean hasWalkable = false;
       for (int y = 0; y < zone.height(); y += 4) {
         for (int x = 0; x < zone.width(); x += 4) {
@@ -361,7 +368,12 @@ public final class OffscreenCampScreen extends GameScreen {
         + "walkableCells=" + continuityWalkableCells + "\n"
         + "walkableRatio=" + (continuitySampledCells == 0 ? 0
             : (double) continuityWalkableCells / continuitySampledCells) + "\n"
-        + "result=" + (passed ? "PASS" : "FAIL") + "\n";
+        + "boundaryPairs=" + continuityBoundaryPairs + "\n"
+        + "boundaryWalkable=" + continuityBoundaryWalkable + "\n"
+        + "boundaryBlocked=" + continuityBoundaryBlocked + "\n"
+        + "boundaryUncheckable=" + continuityBoundaryUncheckable + "\n"
+        + "result=" + (passed ? "PASS" : "FAIL") + "\n"
+        + continuityBoundaryDetails;
     output.child("act1-map-continuity-manifest.txt").writeString(report, false, "UTF-8");
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_CONTINUITY] zones=" + continuityZones
         + " components=" + continuityComponents + " invalidAdjacency="
@@ -374,6 +386,92 @@ public final class OffscreenCampScreen extends GameScreen {
           + " warpRoomMissing=" + continuityWarpRoomMissing
           + " warpOutsideMain=" + continuityWarpOutsideMain);
     }
+  }
+
+  /** Checks that every native RoomEx adjacency has at least one walkable edge. */
+  private void validateRoomBoundaryTransitions(Map.Zone zone) {
+    int roomCount = zone.getRoomsEx().size;
+    for (int roomId = 0; roomId < roomCount; roomId++) {
+      Map.RoomEx room = zone.getRoomsEx().get(roomId);
+      for (int adjacentId : room.getAdjacentRoomIds()) {
+        if (adjacentId <= roomId || adjacentId < 0 || adjacentId >= roomCount) continue;
+        Map.RoomEx adjacent = zone.getRoomsEx().get(adjacentId);
+        continuityBoundaryPairs++;
+        int result = findRoomBoundaryTransition(zone, room, adjacent);
+        if (result > 0) continuityBoundaryWalkable++;
+        else if (result == 0) {
+          continuityBoundaryBlocked++;
+          if (continuityBoundaryDetails.length() < 12000) {
+            continuityBoundaryDetails.append("level=").append(zone.levelId())
+                .append(" rooms=").append(room.id).append(',').append(adjacent.id)
+                .append(" a=").append(room.x).append(':').append(room.y).append('x')
+                .append(room.width).append('x').append(room.height)
+                .append(" b=").append(adjacent.x).append(':').append(adjacent.y).append('x')
+                .append(adjacent.width).append('x').append(adjacent.height).append('\n');
+          }
+        }
+        else continuityBoundaryUncheckable++;
+      }
+    }
+  }
+
+  /** Returns 1 for a walkable transition, 0 for a blocked known interface, -1 if uncheckable. */
+  private static int findRoomBoundaryTransition(Map.Zone zone, Map.RoomEx a, Map.RoomEx b) {
+    int aRight = a.x + a.width;
+    int bRight = b.x + b.width;
+    int aBottom = a.y + a.height;
+    int bBottom = b.y + b.height;
+    if (aRight <= b.x || bRight <= a.x) {
+      boolean aBefore = aRight <= b.x;
+      int left = aBefore ? aRight - 1 : bRight - 1;
+      int right = aBefore ? b.x : a.x;
+      int overlapStart = Math.max(a.y, b.y);
+      int overlapEnd = Math.min(aBottom, bBottom);
+      if (overlapStart >= overlapEnd || right - left > 32) return -1;
+      for (int y = overlapStart; y < overlapEnd; y += 2) {
+        for (int offset = 0; offset <= 4; offset++) {
+          int firstX = aBefore ? left - offset : left + offset;
+          int secondX = aBefore ? right + offset : right - offset;
+          if (a.contains(firstX, y) && b.contains(secondX, y)
+              && isWalkable(zone, firstX, y) && isWalkable(zone, secondX, y)) return 1;
+        }
+      }
+      return 0;
+    }
+    if (aBottom <= b.y || bBottom <= a.y) {
+      boolean aBefore = aBottom <= b.y;
+      int top = aBefore ? aBottom - 1 : bBottom - 1;
+      int bottom = aBefore ? b.y : a.y;
+      int overlapStart = Math.max(a.x, b.x);
+      int overlapEnd = Math.min(aRight, bRight);
+      if (overlapStart >= overlapEnd || bottom - top > 32) return -1;
+      for (int x = overlapStart; x < overlapEnd; x += 2) {
+        for (int offset = 0; offset <= 4; offset++) {
+          int firstY = aBefore ? top - offset : top + offset;
+          int secondY = aBefore ? bottom + offset : bottom - offset;
+          if (a.contains(x, firstY) && b.contains(x, secondY)
+              && isWalkable(zone, x, firstY) && isWalkable(zone, x, secondY)) return 1;
+        }
+      }
+      return 0;
+    }
+    // Overlapping rectangles are valid for native rooms whose bounds include
+    // a doorway; any walkable overlap is a valid transition.
+    int startX = Math.max(a.x, b.x), endX = Math.min(aRight, bRight);
+    int startY = Math.max(a.y, b.y), endY = Math.min(aBottom, bBottom);
+    if (startX >= endX || startY >= endY) return -1;
+    for (int y = startY; y < endY; y += 2) {
+      for (int x = startX; x < endX; x += 2) {
+        if (isWalkable(zone, x, y)) return 1;
+      }
+    }
+    return 0;
+  }
+
+  private static boolean isWalkable(Map.Zone zone, int worldX, int worldY) {
+    return zone.contains(worldX, worldY)
+        && (zone.staticFlags(worldX - zone.x(), worldY - zone.y())
+            & com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK) == 0;
   }
 
   private void applyTargetLevel() {
