@@ -212,15 +212,23 @@ public class AutomapTileRenderer implements Disposable {
     return null;
   }
 
+  /** 使用方向常量的字符串 LevelName 便捷重载。 */
+  public int[] getFrameIndices(String levelName, int tileOrientation, int tileStyle, int tileSequence) {
+    return getFrameIndices(levelName, tileOrientationName(tileOrientation), tileStyle, tileSequence);
+  }
+
   /** 返回 D2MOO 风格的单一 Automap cell（同一 seed 结果稳定）。 */
   public int getAutomapCellId(String levelName, String tileName, int tileStyle, int tileSequence,
       long automapSeed) {
     int[] frames = getFrameIndices(levelName, tileName, tileStyle, tileSequence);
-    if (frames == null || frames.length == 0) return -1;
-    long mixed = automapSeed ^ (automapSeed >>> 33);
-    mixed *= 0xff51afd7ed558ccdL;
-    mixed ^= (mixed >>> 33);
-    return frames[(int) ((mixed & Long.MAX_VALUE) % frames.length)];
+    return selectCellId(frames, automapSeed);
+  }
+
+  /** 使用方向常量的单 Cel 查询重载。 */
+  public int getAutomapCellId(String levelName, int tileOrientation, int tileStyle, int tileSequence,
+      long automapSeed) {
+    return getAutomapCellId(levelName, tileOrientationName(tileOrientation), tileStyle,
+        tileSequence, automapSeed);
   }
 
   /** 纯查询匹配函数，供无资源单元测试复用。 */
