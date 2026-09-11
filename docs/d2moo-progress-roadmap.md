@@ -2406,3 +2406,26 @@ Act III 地图主链和 A3Q1–A3Q3。
 
 当前下一项：在有资源的隐藏/离屏环境验证 Arcane 的 floor/wall/collision 导出质量，并补齐四方向
 Summoner DS1 的实际预设和入口/返回 Warp；资源不可用时再继续完善 Act III 地图主链和 A3Q1–A3Q3。
+
+### 2026-09-12 Act III 原生关卡 ID 对齐（已完成代码修复）
+
+- [x] 将 `Act3MapBuilderD2MOD` 的关卡常量改为统一引用 `D2LevelIds`：Arcane Sanctuary 保持
+  `75`，Kurast Docks 从错误的 `75` 修正为 `76`，Travincal 为 `84`；修复了第三章生成器把
+  Arcane Sanctuary 当作城镇的致命一位偏移。
+- [x] 增加 Act III 原生户外构建顺序回归：Kurast Docks → Spider Forest → Great Marsh →
+  Flayer Jungle → Lower Kurast → Kurast Bazaar → Upper Kurast → Kurast Causeway → Travincal。
+- 验证：`Act3MapBuilderD2MODTest`、`:core:compileJava`、`:server:d2gs:compileJava` 通过。
+
+### 2026-09-12 Act III 原生户外 Warp 链（已完成代码修复）
+
+- [x] 对齐 D2MOO `DRLG_LINKS(Act III)` 的运行时 first-empty-slot 规则，为相邻户外关卡建立双向
+  `Warp` 目标覆盖，不直接改写 `Levels.txt` 原数组。
+- [x] 在所有 Zone 生成后配对入口/出口特殊墙；缺少资源、目标 Zone 或反向 Warp 时安全记录日志，
+  不会把普通 `Vis` 标记误生成可交互传送门。
+- [x] `Map` 仅增加 Act III 地图后处理分支，未改动战斗/技能注册；新增 Warp 槽位和主链连续性测试。
+- 验证：`Act3MapBuilderD2MODTest`、`Act3MapBuilderD2MODWarpTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过；尚未执行真实 MPQ 窗口验证。
+
+当前下一项：补齐 Act III 丛林/库拉斯特的 D2MOO 原生 `DrlgOutJung` 预设布局（头/尾、边界门、
+  不重叠放置）和实际入口 DS1；随后接入 A3Q1 Golden Bird、A3Q2 Blade of the Old Religion、
+  A3Q3 Khalim's Will 的地图触发与任务状态闭环。
