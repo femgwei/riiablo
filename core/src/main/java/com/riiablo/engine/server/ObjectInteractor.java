@@ -143,7 +143,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         || type == NativeQuestObjectResolver.Type.CAIRN_STONE
         || type == NativeQuestObjectResolver.Type.CAIN_GIBBET
         || type == NativeQuestObjectResolver.Type.INIFUSS_TREE
-        || type == NativeQuestObjectResolver.Type.HORADRIC_MALUS;
+        || type == NativeQuestObjectResolver.Type.HORADRIC_MALUS
+        || type == NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR;
   }
 
   private boolean interactQuestPortal(int playerId, int visualEntityId) {
@@ -234,6 +235,20 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           + " player=" + src + " object=" + base.Id + " trapType=" + resolvedTrapType
           + " first=" + first);
       return first ? InteractionResult.HANDLED_CHANGED : InteractionResult.HANDLED_UNCHANGED;
+    }
+
+    if (lifecycle == Lifecycle.TAINTED_SUN_ALTAR) {
+      if (state != null && state.activated) return InteractionResult.HANDLED_UNCHANGED;
+      if (state != null) {
+        state.persistActivated(true);
+        state.persistOpened(true);
+        state.persistMode(Engine.Object.MODE_ON);
+      }
+      mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+      mInteractable.remove(entityId);
+      Gdx.app.log(TAG, "Native A2Q3 altar activated: entity=" + entityId
+          + " player=" + src + " object=" + base.Id);
+      return InteractionResult.HANDLED_CHANGED;
     }
 
     if (lifecycle == Lifecycle.SHRINE) {

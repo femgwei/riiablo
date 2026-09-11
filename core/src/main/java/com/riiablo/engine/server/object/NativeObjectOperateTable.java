@@ -13,6 +13,7 @@ public final class NativeObjectOperateTable {
     WELL,
     TRAP,
     QUEST_OBJECT,
+    TAINTED_SUN_ALTAR,
     TOGGLE_DOOR,
     ONE_WAY_DOOR
   }
@@ -21,6 +22,12 @@ public final class NativeObjectOperateTable {
 
   public static Lifecycle resolve(Objects.Entry object,
       NativePresetObjectResolver.Kind kind) {
+    // A2Q3 owns OperateFn 24.  It is a quest object in the network protocol,
+    // but has its own altar animation/drop lifecycle rather than A1's generic
+    // QuestObjectInteractionEvent path.
+    if (object != null && object.OperateFn == 24) {
+      return Lifecycle.TAINTED_SUN_ALTAR;
+    }
     if (NativeQuestObjectResolver.resolve(object)
         != NativeQuestObjectResolver.Type.NONE) {
       return Lifecycle.QUEST_OBJECT;
@@ -46,6 +53,7 @@ public final class NativeObjectOperateTable {
     }
 
     if (operateFn == 7) return Lifecycle.TRAP;
+    if (operateFn == 24) return Lifecycle.TAINTED_SUN_ALTAR;
 
     switch (operateFn) {
       // Casket, urn/jar, chest, barrel, Tower Tome, exploding barrel,

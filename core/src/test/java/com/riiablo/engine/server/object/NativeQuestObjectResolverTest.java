@@ -21,6 +21,7 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.CAIN_GIBBET, resolve(26, 7));
     assertEquals(NativeQuestObjectResolver.Type.INIFUSS_TREE, resolve(30, 9));
     assertEquals(NativeQuestObjectResolver.Type.HORADRIC_MALUS, resolve(108, 15));
+    assertEquals(NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR, resolve(149, 24));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }

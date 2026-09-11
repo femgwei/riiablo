@@ -42,8 +42,20 @@
   请求均不改变库存。成功后设置 A2Q2 `CUSTOM7`，不提前设置 A2Q2 完成奖励。
 - `ItemData` 增加方块容量只读预检、原子放入方块和精确拥有物移除接口，供后续联网
   `TRANSMUTE` 请求复用；本轮暂未新增 FlatBuffer opcode，现有 Quest/NPC 网络协议不变。
-- 新增成功、重复请求、库存材料拒绝与失败不变更测试。下一项为 A2Q3 蝮蛇神殿祭坛
-  的 `vip` 掉落和幂等对象状态，随后完成 A2Q6 古墓插杖/红门联动。
+- 新增成功、重复请求、库存材料拒绝与失败不变更测试。
+
+### A2Q3 腐化太阳：蝮蛇神殿祭坛（本轮完成）
+
+- 对照 D2MOO `OBJECTS_OperateFunction24_TaintedSunAltar`，将 OperateFn 24 / Objects
+  class 149 接入独立 `TAINTED_SUN_ALTAR` 生命周期：首次操作原子切换对象状态并移除
+  交互，不会重复触发掉落。
+- 新增 `Act2TaintedSunQuestSystem`，只在 Valley of Snakes、Claw Viper Temple 1/2
+  的原生地图范围接受祭坛事件；按 D2MOO `DetermineViperAmuletDropCount` 为当前 Act II
+  游戏中尚未拥有 `vip`/`tsh` 且尚未领取 A2Q2 奖励的玩家各生成一枚已鉴定 Unique Viper
+  Amulet，并设置 A2Q3 `PRIMARY_GOAL_DONE + REWARD_PENDING + COMPLETED_NOW`。
+- 本地 GameScreen 与 D2GS 均已注册该系统，网络对象校验也识别 A2Q3 祭坛。新增
+  OperateFn、对象 class、地图范围测试；下一项为 A2Q6 Tal Rasha 墓穴插杖、删除任务
+  物品并开启 Duriel 房间/红门，之后再回补 A2Q3 NPC 奖励对话。
 
 ### AutoMap 数据查询层（本轮）
 

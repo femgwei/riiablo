@@ -5,6 +5,7 @@ import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycl
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.NONE;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.ONE_WAY_DOOR;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.SHRINE;
+import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TAINTED_SUN_ALTAR;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TOGGLE_DOOR;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.TRAP;
 import static com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle.WELL;
@@ -24,6 +25,7 @@ class NativeObjectOperateTableTest {
     assertEquals(INSTANT_CONTAINER, resolve(20));
     assertEquals(INSTANT_CONTAINER, resolve(26));
     assertEquals(TRAP, resolve(7));
+    assertEquals(TAINTED_SUN_ALTAR, resolve(24));
   }
 
   @Test
