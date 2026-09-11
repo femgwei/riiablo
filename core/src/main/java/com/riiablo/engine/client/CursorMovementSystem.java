@@ -21,6 +21,7 @@ import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
+import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Interactable;
@@ -79,8 +80,15 @@ public class CursorMovementSystem extends BaseSystem {
   protected ItemController itemController;
 
   EntitySubscription hoveredSubscriber;
+  EntitySubscription selectableSubscriber;
   EntitySubscription waypointInputSubscriber;
   boolean requireRelease;
+  /** One-shot left-click captured on the render frame and consumed by the next sim tick. */
+  private boolean pendingLeftPress;
+  private float pendingLeftX;
+  private float pendingLeftY;
+  private long pendingLeftCapturedAt;
+  private boolean sampledLeftDown;
   int lastInteractionTraceTarget = Engine.INVALID_ENTITY;
   long lastInteractionTraceMillis;
   int lastAttackRangeTarget = Engine.INVALID_ENTITY;
@@ -97,6 +105,8 @@ public class CursorMovementSystem extends BaseSystem {
   @Override
   protected void initialize() {
     hoveredSubscriber = world.getAspectSubscriptionManager().get(Aspect.all(Hovered.class));
+    selectableSubscriber = world.getAspectSubscriptionManager().get(
+        Aspect.all(Selectable.class, Position.class, BBoxWrapper.class));
     waypointInputSubscriber = world.getAspectSubscriptionManager().get(
         Aspect.all(Interactable.class, Position.class, BBoxWrapper.class, Object.class));
   }
@@ -115,6 +125,12 @@ public class CursorMovementSystem extends BaseSystem {
       // ESC key handling for respawn should be done elsewhere (e.g., GameScreen)
       return;
     }
+
+    // A short click can begin and end between two 25 Hz simulation ticks. The
+    // render frame captures its coordinates; consume it once here so a ground
+    // move is never lost just because the button was released before the next
+    // fixed step.
+    if (consumePendingLeftPress(playerId)) return;
     
     stage.screenToStageCoordinates(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY()));
     Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
@@ -153,6 +169,53 @@ public class CursorMovementSystem extends BaseSystem {
     } else {
       updateLeft();
     }
+  }
+
+  /** Samples the input edge once per render frame, before the fixed-step loop. */
+  public void capturePointerInput() {
+    if (Gdx.input == null) return;
+    boolean down = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+    if (down && !sampledLeftDown) {
+      pendingLeftPress = true;
+      pendingLeftX = Gdx.input.getX();
+      pendingLeftY = Gdx.input.getY();
+      pendingLeftCapturedAt = TimeUtils.millis();
+    }
+    sampledLeftDown = down;
+  }
+
+  private boolean consumePendingLeftPress(int src) {
+    if (!pendingLeftPress) return false;
+    pendingLeftPress = false;
+
+    // UI clicks must remain owned by Stage. Use the captured coordinates rather
+    // than the current cursor, which may already have moved by this tick.
+    stage.screenToStageCoordinates(tmpVec2.set(pendingLeftX, pendingLeftY));
+    Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
+    scaledStage.screenToStageCoordinates(tmpVec2.set(pendingLeftX, pendingLeftY));
+    Actor hit2 = scaledStage.hit(tmpVec2.x, tmpVec2.y, true);
+    if (hit1 != null || hit2 != null) {
+      traceBlockedClick(hit1 != null ? "queued-stage:" + hit1.getClass().getSimpleName()
+          : "queued-scaledStage:" + hit2.getClass().getSimpleName());
+      return true;
+    }
+
+    long age = Math.max(0L, TimeUtils.millis() - pendingLeftCapturedAt);
+    if (age > 40L) {
+      Gdx.app.log(TAG, "[INPUT_QUEUE] phase=consume player=" + src
+          + " ageMs=" + age + " x=" + pendingLeftX + " y=" + pendingLeftY);
+    }
+
+    // If HoveredManager already observed the clicked entity, preserve the
+    // normal interaction/attack path. Otherwise this is a ground click and we
+    // can immediately enqueue its world destination from the captured point.
+    if (getHoveredAt(src, pendingLeftX, pendingLeftY) != Engine.INVALID_ENTITY) {
+      touchDown(src, pendingLeftX, pendingLeftY);
+      return true;
+    }
+    iso.agg(tmpVec2.set(pendingLeftX, pendingLeftY)).unproject().toWorld();
+    if (actioneer.canInterrupt(src)) actioneer.moveTo(src, tmpVec2);
+    return true;
   }
 
   private void updateLeft() {
@@ -281,17 +344,26 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private int getHovered(int src) {
-    IntBag hoveredEntities = hoveredSubscriber.getEntities();
+    return getHoveredAt(src, Gdx.input.getX(), Gdx.input.getY());
+  }
+
+  /** Hit-tests the supplied screen coordinates against the current selectable snapshot. */
+  private int getHoveredAt(int src, float screenX, float screenY) {
     Position srcPosition = mPosition.get(src);
     int selected = Engine.INVALID_ENTITY;
     boolean selectedInteractable = false;
     float selectedDst2 = Float.POSITIVE_INFINITY;
-    for (int i = 0, size = hoveredEntities.size(); i < size; i++) {
-      int candidate = hoveredEntities.get(i);
+    IntBag selectableEntities = selectableSubscriber.getEntities();
+    for (int i = 0, size = selectableEntities.size(); i < size; i++) {
+      int candidate = selectableEntities.get(i);
       Position candidatePosition = mPosition.get(candidate);
-      if (candidatePosition == null) continue;
+      BBoxWrapper boxWrapper = mBBoxWrapper.get(candidate);
+      if (candidatePosition == null || boxWrapper == null || boxWrapper.box == null) continue;
 
       boolean candidateInteractable = mInteractable.has(candidate);
+      iso.toScreen(entityScreen.set(candidatePosition.position));
+      if (!containsScreenPoint(boxWrapper.box, entityScreen,
+          cursorScreen.set(screenX, screenY))) continue;
       float candidateDst2 = srcPosition == null
           ? Float.POSITIVE_INFINITY
           : srcPosition.position.dst2(candidatePosition.position);
@@ -308,7 +380,7 @@ public class CursorMovementSystem extends BaseSystem {
     // selectable or is entered by the cursor on the click frame would
     // otherwise be absent until the following frame. Perform a synchronous
     // hit test for waypoints so the click cannot be lost to system ordering.
-    cursorScreen.set(Gdx.input.getX(), Gdx.input.getY());
+    cursorScreen.set(screenX, screenY);
     iso.unproject(cursorScreen);
     IntBag waypoints = waypointInputSubscriber.getEntities();
     for (int i = 0, size = waypoints.size(); i < size; i++) {
@@ -361,10 +433,14 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private boolean touchDown(int src) {
+    return touchDown(src, Gdx.input.getX(), Gdx.input.getY());
+  }
+
+  private boolean touchDown(int src, float screenX, float screenY) {
     if (actioneer.hasCasting(src) || actioneer.hasSequence(src)) return false;
     if (actioneer.didLastAttackTargetDie(src)) return false;
     
-    int target = getHovered(src);
+    int target = getHoveredAt(src, screenX, screenY);
     if (target == Engine.INVALID_ENTITY) {
       traceNoInteractionTarget(src);
       return false;

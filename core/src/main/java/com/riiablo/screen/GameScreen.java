@@ -253,6 +253,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   boolean discardNextSimulationDelta;
   private final FixedStepAccumulator simulationAccumulator =
       new FixedStepAccumulator(SimulationClock.STEP_SECONDS, MAX_SIMULATION_STEPS_PER_RENDER);
+  private long lastSlowSimulationLogNanos;
   private ClientRenderSystemRunner renderSystemRunner;
   private AuthoritativeInterpolationSystem interpolationSystem;
   
@@ -1090,12 +1091,24 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
 
     Riiablo.assets.update();
+    CursorMovementSystem cursorMovement = engine.getSystem(CursorMovementSystem.class);
+    if (cursorMovement != null) cursorMovement.capturePointerInput();
     int simulationSteps;
     renderSystemRunner.beginSimulation();
     try {
       simulationSteps = simulationAccumulator.advance(delta, stepSeconds -> {
         engine.setDelta(stepSeconds);
+        long simulationStartNanos = System.nanoTime();
         engine.process();
+        long simulationElapsedNanos = System.nanoTime() - simulationStartNanos;
+        if (simulationElapsedNanos > 30_000_000L
+            && simulationStartNanos - lastSlowSimulationLogNanos > 1_000_000_000L) {
+          lastSlowSimulationLogNanos = simulationStartNanos;
+          Gdx.app.log(TAG, String.format(
+              "[SIM_SLOW] elapsedMs=%.2f budgetMs=%.2f step=%.3fs",
+              simulationElapsedNanos / 1_000_000f, SimulationClock.STEP_SECONDS * 1000f,
+              stepSeconds));
+        }
       });
     } finally {
       renderSystemRunner.endSimulation();
