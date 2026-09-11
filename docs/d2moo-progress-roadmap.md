@@ -2047,3 +2047,17 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 
 当前下一项：用新构建运行真实联机点击移动，比较 `intent_queue.receiveTick`、`targetTick`
 与 `intent_apply.appliedTick`，定位网络接收或模拟 Tick 调度延迟。
+
+### 2026-09-12 修复真实客户端 Automap 探索刷新（已完成代码修复）
+
+- [x] `AutomapRenderer` 在正常 `GameScreen` 的 Automap 渲染阶段读取玩家权威位置，
+  按当前 Zone/Level 调用 `AutomapManager.updatePlayerPosition`，推进 RoomEx 探索和原生
+  Automap cell 构建。
+- [x] 与离屏营地入口保持相同的探索更新语义；只读客户端位置，不修改模拟实体或地图碰撞。
+- 根因：此前只有 `OffscreenCampScreen` 显式更新 Automap，真实客户端没有任何调用，导致
+  小地图停留在初始状态、移动后不显示新区域。
+- 验证：`AutomapLayerTest`、`AutomapRoomProjectionIntegrationTest`、`:core:compileJava`
+  通过。
+
+当前下一项：在真实/隐藏客户端打开 Automap 后移动跨越 RoomEx 边界，确认新 cell 出现且旧
+  探索不会被清空；随后继续核对联机移动日志中的 `intent_queue` 与 `intent_apply` Tick 差。

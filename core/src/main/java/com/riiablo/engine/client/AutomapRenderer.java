@@ -30,6 +30,7 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.profiler.GpuSystem;
+import com.riiablo.engine.Engine;
 
 /**
  * 小地图渲染系统
@@ -242,6 +243,13 @@ public class AutomapRenderer extends BaseSystem {
     if (!automapManager.isVisible()) {
       return;
     }
+
+    // The normal GameScreen does not own an Automap update callback. Keep the
+    // exploration state driven by the same authoritative player position used
+    // by entity collection, otherwise the overlay remains frozen at its
+    // initial room (the offscreen harness updates this explicitly). This is a
+    // read-only client-side update; it never changes simulation coordinates.
+    updateExplorationFromPlayer();
     
     // Gdx.app.log(TAG, "processSystem: automap is visible, calling drawAutomap()...");
     
@@ -255,6 +263,18 @@ public class AutomapRenderer extends BaseSystem {
     
     // 渲染增强的实体标记
     renderEnhancedMarkers();
+  }
+
+  private void updateExplorationFromPlayer() {
+    if (mPosition == null || map == null || Riiablo.game == null) return;
+    int playerId = Riiablo.game.player;
+    if (playerId == Engine.INVALID_ENTITY || !mPosition.has(playerId)) return;
+    Position position = mPosition.get(playerId);
+    if (position == null || position.position == null) return;
+    Map.Zone zone = map.getZone(position.position.x, position.position.y);
+    if (zone == null) return;
+    automapManager.updatePlayerPosition(zone.levelId(),
+        Math.round(position.position.x), Math.round(position.position.y), map);
   }
   
   /**
