@@ -54,6 +54,9 @@
   自动回退旧半径逻辑。新增 `AutomapLayerTest`，待下一步接入真实 DS1 单元绘制。
 - 本轮新增 `AutomapManager.rebuildNativeCells`，把 Zone 的 DT1 单元转换为 AutoMap 查询
   后的 DC6 cells；尚未自动接入首次地图生成，需先完成 LevelId→Automap LevelName 映射。
+- 已接入首次玩家位置更新和 `renderWithSprites`：按 Zone 的 `LvlTypes.Name` 构建并绘制已探索
+  floor/wall/object DC6 cells，未探索单元过滤；几何线条仅作为兼容回退。待真实 1.10f
+  资源校验 LevelName 映射。
 
 - 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
   Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整

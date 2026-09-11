@@ -113,6 +113,7 @@ public class AutomapManager implements Disposable {
   
   /** 各关卡的小地图图层 */
   private final IntMap<AutomapLayer> layers = new IntMap<>();
+  private final IntMap<Boolean> nativeCellsBuilt = new IntMap<>();
   
   /** 当前激活的图层ID */
   private int activeLayerId = -1;
@@ -309,6 +310,13 @@ public class AutomapManager implements Disposable {
     }
     Map.Zone zone = map.getZone(playerX, playerY);
     layer.updateRoomExploration(zone, playerX, playerY);
+    if (zone != null && !nativeCellsBuilt.containsKey(levelId)) {
+      String nativeName = zone.automapLevelName();
+      if (nativeName != null) {
+        rebuildNativeCells(zone, nativeName, levelId);
+        nativeCellsBuilt.put(levelId, Boolean.TRUE);
+      }
+    }
   }
 
   /**
@@ -579,6 +587,11 @@ public class AutomapManager implements Disposable {
     
     // 设置透明度
     batch.setColor(1f, 1f, 1f, alpha);
+
+    // Native terrain cells are rendered before object/icon cells and are
+    // filtered by the RoomEx-driven exploration mask.
+    renderNativeCells(batch, layer.floors, layer, alpha);
+    renderNativeCells(batch, layer.walls, layer, alpha);
     
     // 渲染物体图标
     for (int i = 0, size = layer.objects.size; i < size; i++) {
@@ -598,6 +611,16 @@ public class AutomapManager implements Disposable {
     
     // 恢复颜色
     batch.setColor(1f, 1f, 1f, 1f);
+  }
+
+  private void renderNativeCells(PaletteIndexedBatch batch, Array<AutomapCell> cells,
+      AutomapLayer layer, float alpha) {
+    for (int i = 0, size = cells.size; i < size; i++) {
+      AutomapCell cell = cells.get(i);
+      if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
+        tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel);
+      }
+    }
   }
   
   /**
@@ -676,6 +699,7 @@ public class AutomapManager implements Disposable {
   @Override
   public void dispose() {
     layers.clear();
+    nativeCellsBuilt.clear();
     entityMarkers.clear();
     automapData = null;
     iconSprite = null;
@@ -693,6 +717,7 @@ public class AutomapManager implements Disposable {
     if (layer != null) {
       layer.clear();
     }
+    nativeCellsBuilt.remove(levelId);
   }
   
   /**
@@ -703,6 +728,7 @@ public class AutomapManager implements Disposable {
       layer.clear();
     }
     layers.clear();
+    nativeCellsBuilt.clear();
     activeLayerId = -1;
   }
 }

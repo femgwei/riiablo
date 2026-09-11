@@ -62,6 +62,15 @@
   1.10f `Levels.txt` 校验。下一步建立 LevelId→Automap LevelName 映射并接入首次 Zone
   生成和离屏 DC6 连续性回归。
 
+### DC6 单元渲染接线（本轮完成）
+
+- `AutomapManager` 现在会在首次玩家位置更新时按 Zone 的 `LvlTypes.Name` 自动构建原生
+  floor/wall/object cells，并在 `renderWithSprites` 中先绘制已探索的 floor/wall，再绘制
+  objects/extras；未探索单元不会泄漏到小地图。
+- 完善 DT1 全方向到 D2MOO tile name 的映射（包括门、阴影、树、屋顶和 lower wall）。
+- 仍需用真实 1.10f 资源验证 `LvlTypes.Name` 与 D2MOO 35 类 LevelName 的映射；当前
+  `RenderSystem.drawAutomap` 的几何线条仍保留为兼容回退。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster

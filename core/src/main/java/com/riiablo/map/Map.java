@@ -889,6 +889,8 @@ public class Map implements Disposable {
     public int height() { return height; }
     /** Public level identifier for client-side projections such as Automap. */
     public int levelId() { return level == null ? -1 : level.Id; }
+    /** D2MOO AutoMap.txt LevelName (for example, "1 Wilderness"). */
+    public String automapLevelName() { return type == null ? null : type.Name; }
 
     static final Pool<Zone> pool = Pools.get(Zone.class, 16);
 
