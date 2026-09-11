@@ -42,6 +42,10 @@
 
 ## 本次更新
 
+- AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName
+  严格匹配、Style/Sequence 通配、完整缓存键和 seed 稳定单帧选择；新增无资源单元测试。
+  当前仍保留现有 AutomapLayer 探索半径逻辑，下一步接入 DRLG 房间揭示和离屏连续性回归。
+
 - 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
   Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整
   接线，不能宣称怪物 AI 已全部与 D2MOO 对齐。

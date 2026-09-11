@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.ObjectMap;
 
 import com.riiablo.Riiablo;
 import com.riiablo.codec.DC6;
@@ -106,8 +107,11 @@ public class AutomapTileRenderer implements Disposable {
   /** AutoMap.txt 数据 */
   private AutoMap automapData;
   
-  /** 瓷砖类型到帧索引的缓存 (key = levelId << 16 | tileType) */
-  private final IntMap<int[]> frameCaches = new IntMap<>();
+  /** D2MOO AutoMap 查询结果缓存。键必须包含完整的 level/tile/style/sequence。 */
+  private final ObjectMap<String, int[]> frameCaches = new ObjectMap<>();
+
+  /** 可选的旧 levelId 到 D2MOO LevelName 映射。 */
+  private final IntMap<String> levelNames = new IntMap<>();
   
   /** 是否已初始化 */
   private boolean initialized = false;
@@ -152,6 +156,13 @@ public class AutomapTileRenderer implements Disposable {
     this.automapData = data;
     frameCaches.clear(); // 清除缓存以重新构建
   }
+
+  /** 注册旧 API 使用的 levelId 到 AutoMap.txt LevelName 映射。 */
+  public void setLevelName(int levelId, String levelName) {
+    if (levelName == null || levelName.trim().isEmpty()) levelNames.remove(levelId);
+    else levelNames.put(levelId, levelName);
+    frameCaches.clear();
+  }
   
   /**
    * 设置当前章节（用于切换地图资源）
@@ -175,47 +186,99 @@ public class AutomapTileRenderer implements Disposable {
    * @return 帧索引数组（可能有多个变体），null 表示无对应图标
    */
   public int[] getFrameIndices(int levelId, int tileOrientation, int tileStyle, int tileSequence) {
-    if (automapData == null) return null;
-    
-    // 构建缓存键
-    int cacheKey = (levelId << 16) | (tileOrientation << 8) | tileStyle;
-    
-    int[] cached = frameCaches.get(cacheKey);
+    String levelName = levelNames.get(levelId);
+    if (levelName == null) return null;
+    return getFrameIndices(levelName, tileOrientationName(tileOrientation), tileStyle, tileSequence);
+  }
+
+  /**
+   * D2MOO DATATBLS_GetAutomapCellId 使用的字符串查询规则。
+   * LevelName、TileName 必须匹配；Style=-1 或 StartSequence=-1 为通配。
+   */
+  public int[] getFrameIndices(String levelName, String tileName, int tileStyle, int tileSequence) {
+    if (automapData == null || levelName == null || tileName == null) return null;
+    String key = cacheKey(levelName, tileName, tileStyle, tileSequence);
+    int[] cached = frameCaches.get(key);
     if (cached != null) return cached;
-    
-    // 查找匹配的 AutoMap 记录
+
     for (AutoMap.Entry entry : automapData) {
-      if (entry.Style == tileStyle) {
-        // 检查序列范围
-        if (entry.StartSequence >= 0 && entry.EndSequence >= 0) {
-          if (tileSequence < entry.StartSequence || tileSequence > entry.EndSequence) {
-            continue;
-          }
-        }
-        
-        // 收集有效的帧索引（排除 -1）
-        int[] frames = entry.Cel;
-        if (frames != null) {
-          int count = 0;
-          for (int frame : frames) {
-            if (frame >= 0) count++;
-          }
-          
-          if (count > 0) {
-            int[] result = new int[count];
-            int idx = 0;
-            for (int frame : frames) {
-              if (frame >= 0) result[idx++] = frame;
-            }
-            
-            frameCaches.put(cacheKey, result);
-            return result;
-          }
-        }
+      if (!matches(entry, levelName, tileName, tileStyle, tileSequence)) continue;
+      int[] frames = validCels(entry.Cel);
+      if (frames != null) {
+        frameCaches.put(key, frames);
+        return frames;
       }
     }
-    
     return null;
+  }
+
+  /** 返回 D2MOO 风格的单一 Automap cell（同一 seed 结果稳定）。 */
+  public int getAutomapCellId(String levelName, String tileName, int tileStyle, int tileSequence,
+      long automapSeed) {
+    int[] frames = getFrameIndices(levelName, tileName, tileStyle, tileSequence);
+    if (frames == null || frames.length == 0) return -1;
+    long mixed = automapSeed ^ (automapSeed >>> 33);
+    mixed *= 0xff51afd7ed558ccdL;
+    mixed ^= (mixed >>> 33);
+    return frames[(int) ((mixed & Long.MAX_VALUE) % frames.length)];
+  }
+
+  /** 纯查询匹配函数，供无资源单元测试复用。 */
+  public static boolean matches(AutoMap.Entry entry, String levelName, String tileName,
+      int tileStyle, int tileSequence) {
+    if (entry == null || !same(entry.LevelName, levelName) || !same(entry.TileName, tileName)) {
+      return false;
+    }
+    if (entry.Style != -1 && entry.Style != tileStyle) return false;
+    // 原版以 StartSequence=-1 表示忽略序列；EndSequence=-1 则表示无上界。
+    if (entry.StartSequence != -1 && tileSequence < entry.StartSequence) return false;
+    if (entry.EndSequence != -1 && tileSequence > entry.EndSequence) return false;
+    return true;
+  }
+
+  private static boolean same(String a, String b) {
+    return a != null && b != null && a.trim().equalsIgnoreCase(b.trim());
+  }
+
+  private static int[] validCels(int[] cels) {
+    if (cels == null) return null;
+    int count = 0;
+    for (int cel : cels) if (cel >= 0) count++;
+    if (count == 0) return null;
+    int[] result = new int[count];
+    int i = 0;
+    for (int cel : cels) if (cel >= 0) result[i++] = cel;
+    return result;
+  }
+
+  /** 从有效 Cel 列表按 seed 稳定选择一个帧；无有效帧时返回 -1。 */
+  public static int selectCellId(int[] cels, long automapSeed) {
+    int[] frames = validCels(cels);
+    if (frames == null) return -1;
+    long mixed = automapSeed ^ (automapSeed >>> 33);
+    mixed *= 0xff51afd7ed558ccdL;
+    mixed ^= (mixed >>> 33);
+    return frames[(int) ((mixed & Long.MAX_VALUE) % frames.length)];
+  }
+
+  private static String cacheKey(String levelName, String tileName, int style, int sequence) {
+    return levelName.trim().toLowerCase() + '|' + tileName.trim().toLowerCase()
+        + '|' + style + '|' + sequence;
+  }
+
+  private static String tileOrientationName(int orientation) {
+    switch (orientation) {
+      case TILE_FLOOR: return "fl";
+      case TILE_WALL_LEFT: return "wl";
+      case TILE_WALL_RIGHT: return "wr";
+      case TILE_WALL_TOP_LEFT: return "wtll";
+      case TILE_WALL_TOP_RIGHT: return "wtlr";
+      case TILE_WALL_BOTTOM_LEFT: return "wle";
+      case TILE_WALL_BOTTOM_RIGHT: return "wre";
+      case TILE_PILLAR: return "co";
+      case TILE_DOOR: return "sh";
+      default: return Integer.toString(orientation);
+    }
   }
   
   /**
@@ -326,6 +389,7 @@ public class AutomapTileRenderer implements Disposable {
     maxiMapSmall = null;
     currentSprite = null;
     frameCaches.clear();
+    levelNames.clear();
     initialized = false;
   }
 }

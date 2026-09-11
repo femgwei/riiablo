@@ -31,6 +31,18 @@
 
 ## 2026-09-11 当前进度快照
 
+### AutoMap 数据查询层（本轮）
+
+- 已按 D2MOO `DATATBLS_GetAutomapCellId` 规则重写 `AutomapTileRenderer` 查询：
+  `LevelName`、`TileName` 必须匹配，`Style=-1` 和 `Start/EndSequence=-1` 支持通配，
+  序列边界按原版方式处理。
+- 新增完整字符串查询、旧 `levelId` 映射注册和基于 seed 的稳定单 Cel 选择；缓存键包含
+  level/tile/style/sequence，避免不同地图块互相污染。方向常量增加 D2MOO tile name 映射。
+- 新增无资源单元测试覆盖名称、样式/序列通配、边界、无效 Cel 和 seed 稳定性；尚未替换
+  `AutomapLayer` 的房间探索算法，也未完成真实 1.10f DC6 画面验收。
+- 本轮下一项：把 DRLG 房间/墙体探索事件接入 AutomapLayer，并用 1.10f AutoMap.txt
+  与 MaxiMap.dc6 做离屏连续性回归。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster
