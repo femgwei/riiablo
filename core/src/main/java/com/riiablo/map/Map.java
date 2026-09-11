@@ -848,6 +848,8 @@ public class Map implements Disposable {
     int width, height;
     /** D2MOO D2DrlgLevel seed ({@code levelId + drlg.startSeed}). */
     private int levelSeed;
+    /** Optional native Arcane Sanctuary graph; populated only for level 75. */
+    private Act2ArcaneSanctuaryTopology arcaneSanctuaryTopology;
     int gridSizeX, gridSizeY;
     int gridsX, gridsY;
     int tx, ty;
@@ -904,6 +906,9 @@ public class Map implements Disposable {
     public int levelId() { return level == null ? -1 : level.Id; }
     /** Stable native DRLG seed shared by server and client projections. */
     public int levelSeed() { return levelSeed; }
+    public Act2ArcaneSanctuaryTopology arcaneSanctuaryTopology() {
+      return arcaneSanctuaryTopology;
+    }
     public int levelAct() { return level == null ? -1 : level.Act + 1; }
     public String levelTypeName() { return type == null ? null : type.Name; }
     /** D2MOO AutoMap.txt LevelName (for example, "1 Wilderness"). */
@@ -932,6 +937,8 @@ public class Map implements Disposable {
       this.level     = level;
       this.diff      = diff;
       this.levelSeed = level == null ? 0 : NativeLevelSeed.forLevel(map.seed, level.Id);
+      this.arcaneSanctuaryTopology = level != null && level.Id == 75
+          ? Act2ArcaneSanctuaryTopology.generate(this.levelSeed) : null;
       this.type      = Riiablo.files.LvlTypes.get(level.LevelType);
       this.gridSizeX = gridSizeX;
       this.gridSizeY = gridSizeY;
@@ -975,6 +982,7 @@ public class Map implements Disposable {
       x = y = 0;
       width = height = 0;
       levelSeed = 0;
+      arcaneSanctuaryTopology = null;
       gridSizeX = gridSizeY = 0;
       gridsX = gridsY = 0;
       tx = ty = 0;

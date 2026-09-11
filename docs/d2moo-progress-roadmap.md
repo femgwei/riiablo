@@ -2365,3 +2365,18 @@ Act III 地图主链和 A3Q1–A3Q3。
 当前下一项：使用该独立 level seed 真正接入 Arcane Sanctuary 四方向 branch 与 Summoner DS1
 预设（保留迷宫房间拓扑，不把单个 DS1 当作整张地图），并增加入口/出口/唯一 Summoner 的无渲染
 拓扑测试；完成后继续 Act III 地图主链和 A3Q1–A3Q3。
+
+### 2026-09-12 Act II Arcane Sanctuary 拓扑模型（已完成代码修复）
+
+- [x] 新增 `Act2ArcaneSanctuaryTopology`，复刻 D2MOO `placeArcaneSanctuary` 的中心房间与
+  四条 15 房间分支，共 61 个房间和 60 条连接。
+- [x] 保留原生分支索引 8、12 的父房间不推进规则，因此 8/9、12/13 是正确的分叉，而不是
+  被错误拉成一条直线；每个房间记录分支方向和对应的 `LvlPrest.Def`。
+- [x] Arcane Sanctuary Zone 保存该拓扑元数据并输出房间数、连接数、Summoner 分支和 level seed，
+  但尚未把单个 Summoner DS1 伪装成整张地图，渲染/碰撞仍使用现有 Zone 生成路径。
+- 验证：`Act2ArcaneSanctuaryTopologyTest`、Level seed/Layout 回归、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：把 D2MOO `DrlgMaze` 的真实 RoomEx/DS1 预设导出接入 Arcane Sanctuary，使用上述
+拓扑定位 branch、Summoner、入口和返回出口；禁止用单一预设覆盖整个迷宫。完成后进入 Act III
+地图主链和 A3Q1–A3Q3 任务。
