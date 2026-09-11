@@ -481,10 +481,27 @@ public final class Act1D2MOOLayoutBridge {
                     target.setSzFile(i, path);
                 }
             }
+            // A few 1.10f table decoders expose the unused File columns of
+            // Act III's Spider level type as the literal string "0".  Native
+            // D2Common still resolves type 23 to the Spider/Lair DT1; feeding
+            // Tiles\0 into D2CMP leaves maze rooms with only hidden style-30
+            // filler floors and no wall/collision tiles.  Keep this narrow
+            // compatibility mapping here rather than changing shared Excel
+            // parsing or the renderer's asset lookup.
+            if (source.Id == 23 && isMissingTilePath(target.getSzFile(0))) {
+                target.setSzFile(0, "DATA\\GLOBAL\\Tiles\\Act3\\Spider\\Lair.dt1");
+                D2Log.debug("ACT3_D2MOO_LVLTYPES override type=23 file=Act3/Spider/Lair.dt1");
+            }
             cache.add(target);
         }
         D2Log.debug("ACT1_D2MOO_LVLTYPES records=%d", cache.size());
         return cache.toArray(new D2LevelTypesTxt[0]);
+    }
+
+    private static boolean isMissingTilePath(String path) {
+        if (path == null || path.trim().isEmpty()) return true;
+        String normalized = path.trim();
+        return normalized.matches("[0-9]+");
     }
 
     /** Convert the riiablo Levels.txt value to the D2MOO 1-based contract. */

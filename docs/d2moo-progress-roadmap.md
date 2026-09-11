@@ -2466,3 +2466,28 @@ A3Q3 Khalim's Will 的地图触发与任务状态闭环。
 当前下一项：继续第三章地图专用地下区域（Spider Cave/Spider Cavern、Swampy Pit、Flayer
 Dungeon、Ruined/Disused Temple）原生 Zone、入口 Warp 与碰撞导出；随后接入 A3Q1 Golden Bird、
 A3Q2 Blade of the Old Religion、A3Q3 Khalim's Will 的触发/奖励闭环，再开始 Act IV 主链。
+
+### 2026-09-12 Act III Spider Cave/Cavern 原生预设与双向 Warp（本轮完成）
+
+- [x] 修正 1.10f `LvlPrest.txt` 的 Spider 预设 Def 映射：`659..664` 才是
+  `LairSW/LairSE/LairNW/LairNE/LairNWMage/LairNECon`；此前错误使用 D2MOO 枚举序号
+  `800..805`，实际加载成 Act IV Mesa Border，导致地下区域只有隐藏 `fl/30/0` 地面、无墙体
+  和无有效碰撞。
+- [x] `DrlgMaze.materializeBasicPresetMaps` 对 Spider 两层加入房间/预设/DS1 诊断日志，确保
+  `RoomEx → LvlPrest → DS1 → TileGrid` 链条可审计；原生导出现在包含真实 Spider floor/wall
+  和预设对象。
+- [x] 新增 Spider Cave(84)、Spider Cavern(85) Zone，并纳入 Act III D2MOO 原生桥；两层均为
+  4 个 RoomEx，1.10f 离屏导出分别得到约 1027 floor、497/481 wall tiles，Automap 产生非零
+  DC6 cells，碰撞不再是空洞 fallback。
+- [x] 对齐 Spider Cave/Cavern → Spider Forest 的原生 VIS_1 出口，并在 Spider Forest 的
+  有效 LvlWarp 槽补齐两个不同位置的返回入口（Cave 使用 slot 1，Cavern 使用 slot 0）；
+  避免两个 synthetic marker 占同一 IntMap key 而互相覆盖。
+- [x] 修正 Act III 反向 Warp 配对对动态覆盖槽的判断；Spider 两层入口与森林返回门均可由
+  MapManager 创建交互实体。
+- 验证：`Act3MapBuilderD2MODTest`、`Act3MapBuilderD2MODWarpTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava`；使用 1.10f MPQ 离屏目标 `offscreenLevel=84` 和 `85` 均通过，
+  `OFFSCREEN_AUTOMAP` 分别为 393/380 cells，`OFFSCREEN_CAMP result=PASS`。
+
+当前下一项：继续第三章地下区域原生链，优先处理 `Swampy Pit`、`Flayer Dungeon`、
+`Ruined Temple`、`Disused Fane` 的正确 Level/LvlPrest 映射、RoomEx/碰撞导出和入口双向 Warp；
+完成这一组后再接入 A3Q1 Golden Bird 的地图触发与奖励状态。

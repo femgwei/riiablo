@@ -350,6 +350,20 @@ public class DataTbls {
         
         setLvlPrestTxtCache(records.toArray(new D2LvlPrestTxt[0]));
         D2Log.debug("DATATBLS_LoadLvlPrestTxt: Loaded " + lvlPrestTxtCache.length + " records, a2: " + a2);
+        // Keep the native Act III maze IDs auditable when a user's MPQ has a
+        // different table revision.  The enum values are only useful if they
+        // resolve to the expected DS1 family; logging the actual Def/file pair
+        // makes an ordinal drift immediately visible without shipping assets.
+        for (D2LvlPrestTxt record : lvlPrestTxtCache) {
+            if (record == null || record.getSzFile() == null) continue;
+            for (String file : record.getSzFile()) {
+                if (file != null && file.toLowerCase(java.util.Locale.ROOT).contains("spider")) {
+                    D2Log.debug("DATATBLS_LVLPREST_SPIDER def=%d level=%d files=%d file=%s",
+                            record.getDwDef(), record.getDwLevelId(), record.getDwFiles(), file);
+                    break;
+                }
+            }
+        }
     }
     
     /**

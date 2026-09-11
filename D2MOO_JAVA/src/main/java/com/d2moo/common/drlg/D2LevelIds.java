@@ -133,14 +133,19 @@ public class D2LevelIds {
     public static final int LEVEL_FLAYERDUNGEONLVL1 = 88;
     public static final int LEVEL_FLAYERDUNGEONLVL2 = 89;
     public static final int LEVEL_FLAYERDUNGEONLVL3 = 91;
-    public static final int LEVEL_SWAMPTEMPLELVL1 = 92;
-    public static final int LEVEL_SWAMPTEMPLELVL2 = 93;
-    public static final int LEVEL_SWAMPTEMPLELVL3 = 94;
+    // The native 1.10f names for 92/93 are the two Kurast Sewers levels;
+    // 94 is the Ruined Temple.  Keep the old aliases below for source
+    // compatibility, but expose the actual ordinal names as the primary API.
+    public static final int LEVEL_SEWERSA3LEV1 = 92;
+    public static final int LEVEL_SEWERSA3LEV2 = 93;
+    public static final int LEVEL_RUINEDTEMPLE = 94;
+    public static final int LEVEL_SWAMPTEMPLELVL1 = LEVEL_SEWERSA3LEV1;
+    public static final int LEVEL_SWAMPTEMPLELVL2 = LEVEL_SEWERSA3LEV2;
+    public static final int LEVEL_SWAMPTEMPLELVL3 = LEVEL_RUINEDTEMPLE;
     public static final int LEVEL_RUINEDFANE = 98;
     public static final int LEVEL_DISUSEDFANE = 95;
     public static final int LEVEL_FORGOTTENRELIQUARY = 96;
     public static final int LEVEL_FORGOTTENTEMPLE = 97;
-    public static final int LEVEL_RUINEDTEMPLE = 94;
     public static final int LEVEL_DISUSEDRELIQUARY = 99;
     public static final int LEVEL_DURANCEOFHATELEVEL1 = 100;
     public static final int LEVEL_DURANCEOFHATELEVEL2 = 101;

@@ -566,12 +566,15 @@ public class D2LvlPrestIds {
     // Act 3 迷宫预设
     public static final int LVLPREST_ACT3_TEMPLE_6 = 789; // 与 METROTEMPLE 相同
     public static final int LVLPREST_ACT3_DUNGEON_TREASURE_2 = 790; // 与 METRO_08X08 相同
-    public static final int LVLPREST_ACT3_SPIDER_SW = 800;
-    public static final int LVLPREST_ACT3_SPIDER_SE = 801;
-    public static final int LVLPREST_ACT3_SPIDER_NW = 802;
-    public static final int LVLPREST_ACT3_SPIDER_NE = 803;
-    public static final int LVLPREST_ACT3_SPIDER_CHEST_NE = 804;
-    public static final int LVLPREST_ACT3_SPIDER_CHEST_NW = 805;
+    // These are the 1.10f LvlPrest.txt Def values, not the ordinal values
+    // from the D2MOO enum.  The table has gaps, so using the enum ordinals
+    // silently selected Act IV Mesa Border DS1s (800..805) for Spider Cave.
+    public static final int LVLPREST_ACT3_SPIDER_SW = 659;
+    public static final int LVLPREST_ACT3_SPIDER_SE = 660;
+    public static final int LVLPREST_ACT3_SPIDER_NW = 661;
+    public static final int LVLPREST_ACT3_SPIDER_NE = 662;
+    public static final int LVLPREST_ACT3_SPIDER_CHEST_NW = 663;
+    public static final int LVLPREST_ACT3_SPIDER_CHEST_NE = 664;
     
     // Act 4 迷宫预设
     public static final int LVLPREST_ACT4_LAVA_X = 941; // 与 MESA_BORDER_1 相同

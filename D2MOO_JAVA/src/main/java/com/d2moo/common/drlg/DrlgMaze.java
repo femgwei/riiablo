@@ -465,17 +465,45 @@ public class DrlgMaze {
     }
 
     private static void materializeBasicPresetMaps(D2DrlgLevel level) {
+        boolean traceSpider = level != null && (level.getLevelId() == D2LevelIds.LEVEL_SPIDERCAVE
+                || level.getLevelId() == D2LevelIds.LEVEL_SPIDERCAVERN);
+        int roomIndex = 0;
         for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
                 room = room.getDrlgRoomNext()) {
-            if (!(room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) continue;
+            if (!(room.getMazeOrOutdoor() instanceof D2DrlgPresetRoomStrc)) {
+                if (traceSpider) {
+                    D2Log.warning("DRLGMAZE_SPIDER_ROOM level=%d index=%d type=%d maze=%s",
+                            level.getLevelId(), roomIndex, room.getType(),
+                            room.getMazeOrOutdoor() == null ? "null"
+                                    : room.getMazeOrOutdoor().getClass().getSimpleName());
+                }
+                roomIndex++;
+                continue;
+            }
             D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) room.getMazeOrOutdoor();
-            if (preset.getPMap() != null || preset.getNLevelPrest() <= 0) continue;
+            if (traceSpider) {
+                D2Log.debug("DRLGMAZE_SPIDER_ROOM level=%d index=%d type=%d coord=(%d,%d %dx%d) preset=%d file=%d flags=0x%X map=%s",
+                        level.getLevelId(), roomIndex, room.getType(), room.getNTileXPos(),
+                        room.getNTileYPos(), room.getNTileWidth(), room.getNTileHeight(),
+                        preset.getNLevelPrest(), preset.getNPickedFile(), preset.getDwFlags(),
+                        preset.getPMap() == null ? "null" : "present");
+            }
+            if (preset.getPMap() != null || preset.getNLevelPrest() <= 0) {
+                roomIndex++;
+                continue;
+            }
 
             D2DrlgMapStrc map = DrlgPreset.allocDrlgMap(
                 level, preset.getNLevelPrest(), room.getDrlgCoord(), level.getSeed());
             if (map == null || map.getPLvlPrestTxtRecord() == null) {
                 D2Log.warning("DRLGMAZE_RollBasicPresets: missing LvlPrest=%d level=%d",
                     preset.getNLevelPrest(), level.getLevelId());
+                if (traceSpider) {
+                    D2Log.warning("DRLGMAZE_SPIDER_PRESET_MISSING level=%d index=%d preset=%d record=%s",
+                            level.getLevelId(), roomIndex, preset.getNLevelPrest(),
+                            map == null || map.getPLvlPrestTxtRecord() == null ? "null" : "present");
+                }
+                roomIndex++;
                 continue;
             }
             if (preset.getNPickedFile() >= 0) {
@@ -484,6 +512,14 @@ public class DrlgMaze {
             preset.setPMap(map);
             preset.setNPickedFile(map.getNPickedFile());
             room.setDt1Mask(map.getPLvlPrestTxtRecord().getDwDt1Mask());
+            if (traceSpider) {
+                D2Log.debug("DRLGMAZE_SPIDER_PRESET_READY level=%d index=%d preset=%d picked=%d files=%d size=%dx%d file1=%s dt1=0x%X",
+                        level.getLevelId(), roomIndex, map.getNLevelPrest(), map.getNPickedFile(),
+                        map.getPLvlPrestTxtRecord().getDwFiles(), map.getPDrlgCoord().getNWidth(),
+                        map.getPDrlgCoord().getNHeight(), map.getPLvlPrestTxtRecord().getSzFile(0),
+                        map.getPLvlPrestTxtRecord().getDwDt1Mask());
+            }
+            roomIndex++;
         }
     }
     
