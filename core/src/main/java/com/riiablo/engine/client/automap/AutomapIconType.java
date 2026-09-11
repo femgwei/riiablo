@@ -96,6 +96,8 @@ public final class AutomapIconType {
   
   /** 传送门标记 */
   public static final int PORTAL = -7;
+  /** Generic object marker; native cell is used when Objects.txt provides one. */
+  public static final int OBJECT = -8;
 
   // ==================== 出入口图标 ====================
   

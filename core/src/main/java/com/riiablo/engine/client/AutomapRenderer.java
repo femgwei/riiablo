@@ -1,7 +1,11 @@
 package com.riiablo.engine.client;
 
 import com.artemis.BaseSystem;
+import com.artemis.Aspect;
+import com.artemis.ComponentMapper;
+import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
+import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
@@ -11,10 +15,17 @@ import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.DC6;
 import com.riiablo.engine.client.automap.AutomapCamera;
+import com.riiablo.engine.client.automap.AutomapEntityCells;
+import com.riiablo.engine.client.automap.AutomapIconType;
 import com.riiablo.engine.client.automap.AutomapManager;
 import com.riiablo.engine.client.automap.AutomapTileRenderer;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
+import com.riiablo.engine.server.component.Class;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Object;
+import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.profiler.GpuSystem;
 
 /**
@@ -50,6 +61,13 @@ public class AutomapRenderer extends BaseSystem {
   
   @Wire(name = "map")
   protected Map map;
+
+  @Wire(failOnNull = false) protected ComponentMapper<Position> mPosition;
+  @Wire(failOnNull = false) protected ComponentMapper<Class> mClass;
+  @Wire(failOnNull = false) protected ComponentMapper<Monster> mMonster;
+  @Wire(failOnNull = false) protected ComponentMapper<Object> mObject;
+  @Wire(failOnNull = false) protected ComponentMapper<Interactable> mInteractable;
+  private EntitySubscription automapEntities;
   
   /** 小地图管理器 */
   private AutomapManager automapManager;
@@ -65,6 +83,8 @@ public class AutomapRenderer extends BaseSystem {
     
     // 创建 automap 专用摄像头
     automapCamera = new AutomapCamera();
+    automapEntities = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Position.class, Class.class));
 
     // 尝试加载 AutoMap.txt 数据和小地图图标精灵
     // 说明: 这里直接使用 Riiablo.files / Riiablo.assets，避免在系统间重复传递依赖
@@ -227,6 +247,8 @@ public class AutomapRenderer extends BaseSystem {
     
     // 使用原有的地形渲染
     renderer.drawAutomap(shapes);
+
+    renderNativeEntitySprites();
     
     // 渲染增强的实体标记
     renderEnhancedMarkers();
@@ -238,8 +260,53 @@ public class AutomapRenderer extends BaseSystem {
    * 将来可以扩展为独立的实体收集逻辑
    */
   private void collectEntityMarkers() {
-    // 当前使用 RenderSystem 的实体渲染
-    // 不需要额外收集，由 renderer.drawAutomap() 处理
+    if (automapEntities == null || mPosition == null || mClass == null) return;
+    IntBag entities = automapEntities.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0, n = entities.size(); i < n; i++) {
+      int id = ids[i];
+      Position position = mPosition.get(id);
+      Class clazz = mClass.get(id);
+      if (position == null || clazz == null || !isVisibleInRoom(position.position.x, position.position.y)) continue;
+      String name = null;
+      if (mMonster != null && mMonster.has(id) && mMonster.get(id).monstats != null) {
+        Monster monster = mMonster.get(id);
+        name = monster.monstats.NameStr;
+        boolean npc = monster.monstats.npc || (mInteractable != null && mInteractable.has(id));
+        int cell = monster.monstats2 == null ? -1 : AutomapEntityCells.monsterCell(monster.monstats2);
+        int type = npc ? AutomapIconType.NPC : AutomapIconType.MONSTER;
+        automapManager.addNativeEntityMarker(id, type, position.position.x, position.position.y,
+            name, npc ? AutomapManager.COLOR_NPC : AutomapManager.COLOR_MONSTER,
+            npc ? 5 : 4, cell);
+      } else if (mObject != null && mObject.has(id) && mObject.get(id).base != null) {
+        Object object = mObject.get(id);
+        int cell = AutomapEntityCells.objectCell(object.base);
+        automapManager.addNativeEntityMarker(id, AutomapIconType.OBJECT,
+            position.position.x, position.position.y, object.base.Name,
+            AutomapManager.COLOR_DOOR, 4, cell);
+      } else if (clazz.type == Class.Type.PLR) {
+        automapManager.addPlayerMarker(id, position.position.x, position.position.y, null);
+      }
+    }
+  }
+
+  private boolean isVisibleInRoom(float x, float y) {
+    if (map == null) return true;
+    Map.Zone zone = map.getZone(x, y);
+    if (zone == null || !zone.hasNativeRoomTopology() || !zone.isRoomActivationTracking()) return true;
+    Map.RoomEx room = zone.findRoomEx(x, y);
+    return room != null && room.getActivationStatus() <= Map.RoomEx.CLIENT_IN_SIGHT;
+  }
+
+  private void renderNativeEntitySprites() {
+    if (Riiablo.batch == null || shapes == null) return;
+    shapes.end();
+    Riiablo.batch.setProjectionMatrix(automapCamera != null && automapCamera.isInitialized()
+        ? automapCamera.combined : iso.combined);
+    Riiablo.batch.begin();
+    automapManager.renderNativeEntitySprites(Riiablo.batch, automapManager.opacity);
+    Riiablo.batch.end();
+    shapes.begin(ShapeRenderer.ShapeType.Filled);
   }
   
   /**

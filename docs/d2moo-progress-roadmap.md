@@ -102,6 +102,15 @@
 - 无合法帧时仍由现有几何标记绘制；本轮未强行改写 `RenderSystem` 的 ShapeRenderer 生命周期，
   下一步接入客户端实体收集（Monster/Object/NPC）及 RoomEx 可见性过滤。
 
+### 客户端实体收集与 DC6 绘制接入（本轮完成）
+
+- `AutomapRenderer` 现在从 ECS 收集 Position/Class/Monster/Object/Interactable，Monster 使用
+  `MonStats2.automapCel`，Object 使用 `Objects.AutoMap`，并按 RoomEx `CLIENT_IN_SIGHT`
+  过滤实体。
+- 实体标记在 ShapeRenderer 绘制结束后进入独立 PaletteIndexedBatch 阶段绘制原生 DC6；
+  无合法帧时保留原几何标记。未改变服务端战斗、同步和网络协议。
+- 已通过实体 Automap 单元测试和 `:core:compileJava`；真实 DC6 画面验证因资源/运行条件限制暂跳过。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster

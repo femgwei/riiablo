@@ -67,6 +67,9 @@
 - `EntityMarker` 已支持 `nativeCell`，并新增独立 `renderNativeEntitySprites` 批次接口；
   需要在 ShapeRenderer 结束后调用，本轮未改动 RenderSystem 生命周期。下一步接入客户端
   Monster/Object/NPC 收集和 RoomEx 可见性过滤。
+- 已完成客户端 ECS 实体收集、RoomEx 可见性过滤及独立 DC6 批次绘制接线；Monster/Object
+  分别读取 `MonStats2.automapCel`/`Objects.AutoMap`，无帧时回退几何标记。未修改战斗与
+  网络协议，真实画面验证按当前条件跳过。
 
 - 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
   Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整
