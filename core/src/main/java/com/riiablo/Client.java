@@ -375,8 +375,10 @@ public class Client extends Game {
       // Keep the map deterministic so a later regression can be compared to
       // this exact room layout rather than a wall-clock seed.
       smokeCharacter.mapSeed = 0x110FCA4D;
+      int offscreenLevel = Integer.getInteger("riiablo.offscreen-level", -1);
       setScreen(new OffscreenCampScreen(smokeCharacter,
-          System.getProperty("riiablo.offscreen-output", "build/visual-tests")));
+          System.getProperty("riiablo.offscreen-output", "build/visual-tests"),
+          offscreenLevel));
     } else if ((Gdx.app.getType() == Application.ApplicationType.Android && !home.child("data").exists()) || DEBUG_AUDIO_UNPACKER) {
       setScreen(new AudioUnpackerScreen());
     } else {

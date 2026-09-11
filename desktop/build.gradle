@@ -45,6 +45,7 @@ task offscreenCamp(type: JavaExec) {
        '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
        '--output', project.findProperty('visualOutput') ?: 'build/visual-tests',
        '--mode', 'camp',
+       '--level', project.findProperty('offscreenLevel') ?: '-1',
        '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
   ignoreExitValue = false
 }

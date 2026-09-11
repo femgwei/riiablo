@@ -97,6 +97,13 @@
 - 下一步：扩展离屏入口支持鲜血荒地及洞穴/地下通道目标 Level，验证区域切换和 Automap
   连续性。
 
+## 最近更新（2026-09-11，九续）
+
+- `OffscreenRenderClient`/`OffscreenCampScreen` 新增目标 Level 参数，真实 1.10f MPQ 下
+  Level 2（Blood Moor）、Level 8（Den of Evil）、Level 10（Underground Passage）三项
+  隐藏切换测试均通过，目标 Zone 生成、玩家绑定和 6 帧渲染正常。
+- 下一步：在离屏目标场景中增加 Automap cell 数量、RoomEx 拓扑及入口对象存在性断言。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName

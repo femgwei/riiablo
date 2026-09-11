@@ -1784,6 +1784,21 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
 当前下一项：扩展隐藏客户端入口支持指定 Act 1 目标 Level（鲜血荒地、洞穴/地下通道），
 在相同真实 MPQ 下验证区域切换、RoomEx 拓扑和 Automap cell 连续性。
 
+### 2026-09-11 Act 1 目标 Level 离屏切换验收（已通过）
+
+- [x] ~~鲜血荒地、邪恶洞穴、地下通道真实资源离屏切换~~
+  - `OffscreenRenderClient` 新增 `--level` 参数（Gradle 属性 `-PoffscreenLevel`），
+    `OffscreenCampScreen` 在营地初始化完成后切换到指定 Act 1 Zone，并输出目标 Level。
+  - 使用完整 1.10f MPQ 分别验证 Level 2（Blood Moor）、Level 8（Den of Evil）和
+    Level 10（Underground Passage）；三项均完成 6 帧渲染并生成 `result=PASS` manifest。
+  - 验收过程中未出现区域切换崩溃，目标 Zone 均成功生成并绑定玩家 `MapWrapper`。
+- 验证命令（分别使用 `-PoffscreenLevel=2/8/10`）：
+  `./gradlew :desktop:offscreenCamp -Pd2Home='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'
+  -PvisualOutput='build/visual-tests/<scene>' -Pd2Version='1.10f'`，全部通过。
+
+当前下一项：为离屏目标场景增加 Automap cell 数量、RoomEx 拓扑和入口对象存在性断言，
+避免“Zone 切换成功但地图块/洞穴入口未加载”的回归。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。
