@@ -364,6 +364,14 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         D2LevelIds.LEVEL_DURANCEOFHATELEVEL3);
     map.addWarpDestinationOverride(D2LevelIds.LEVEL_DURANCEOFHATELEVEL3, 3,
         D2LevelIds.LEVEL_DURANCEOFHATELEVEL2);
+    // Durance levels use native edge links rather than a visible DS1 wall in
+    // every seed.  Materialize the logical slots so both entry and return
+    // endpoints are available to MapManager/WarpInteractor.
+    ensureProgressionWarpMarker(map, D2LevelIds.LEVEL_DURANCEOFHATELEVEL1, 0);
+    ensureProgressionWarpMarker(map, D2LevelIds.LEVEL_DURANCEOFHATELEVEL1, 1);
+    ensureProgressionWarpMarker(map, D2LevelIds.LEVEL_DURANCEOFHATELEVEL2, 0);
+    ensureProgressionWarpMarker(map, D2LevelIds.LEVEL_DURANCEOFHATELEVEL2, 1);
+    ensureProgressionWarpMarker(map, D2LevelIds.LEVEL_DURANCEOFHATELEVEL3, 3);
     configureAct3UndergroundWarps(map);
     Gdx.app.log(TAG, String.format("Act3 native warp table configured: links=%d/%d",
         configured, ACT3_OUTDOOR_LINKS.length));
@@ -463,11 +471,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         }
         DS1.Cell destinationCell = findReverseWarp(map, destination, source.level.Id);
         if (destinationCell == null) {
-          if (isAct3SecondaryUnderground(source.level.Id)
-              || isAct3SecondaryUnderground(destination.level.Id)
-              || source.level.Id == D2LevelIds.LEVEL_SPIDERCAVE
-              || source.level.Id == D2LevelIds.LEVEL_SPIDERCAVERN
-              || destination.level.Id == D2LevelIds.LEVEL_SPIDERFOREST) {
+          if ((source.level.Id >= LEVEL_KURASTDOCKTOWN && source.level.Id <= 102)
+              || (destination.level.Id >= LEVEL_KURASTDOCKTOWN && destination.level.Id <= 102)) {
             Gdx.app.log(TAG, String.format(
                 "Act3 native warp missing reverse: source=%d mainIndex=%d target=%d destination=%d",
                 source.level.Id, (int) sourceCell.mainIndex, destinationLevelId,

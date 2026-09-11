@@ -2506,6 +2506,8 @@ A3Q2 Blade of the Old Religion、A3Q3 Khalim's Will 的触发/奖励闭环，再
   洞穴空洞或墙体后面。
 - [x] 增加 Act III 地下 Level/LvlPrest、Warp marker 和运行时槽位诊断日志与回归断言；
   未修改战斗、技能、掉落或网络协议。
+- [x] 补齐 Durance of Hate 1–3（100–102）在部分种子中缺失的逻辑入口 marker；第三章
+  原生 Warp 诊断从 `missingReverse=2` 收敛到 `missingReverse=0`。
 - 验证：`:core:test --tests com.riiablo.map.Act3MapBuilderD2MODTest --tests
   com.riiablo.map.Act3MapBuilderD2MODWarpTest`、`:D2MOO_JAVA:compileJava`、
   `:core:compileJava`、`:server:d2gs:compileJava` 通过；使用 1.10f MPQ 离屏目标
