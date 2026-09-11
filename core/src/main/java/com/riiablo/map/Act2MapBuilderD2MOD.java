@@ -498,10 +498,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         if (zone == null) continue;
         if (target.Id == LEVEL_ARCANESANCTUARY) {
           Act2ArcaneSanctuaryLayout.Direction direction =
-              Act2ArcaneSanctuaryLayout.fromLevelSeed(seed);
+              Act2ArcaneSanctuaryLayout.fromLevelSeed(zone.levelSeed());
           Gdx.app.log(TAG, String.format(
-              "Act2 Arcane Sanctuary branch: seed=%d direction=%s rotation=%d branchDef=%d summonerDef=%d",
-              seed, direction, direction.nativeRotation(), direction.branchPresetDef(),
+              "Act2 Arcane Sanctuary branch: gameSeed=%d levelSeed=%d direction=%s rotation=%d branchDef=%d summonerDef=%d",
+              seed, zone.levelSeed(), direction, direction.nativeRotation(), direction.branchPresetDef(),
               direction.summonerPresetDef()));
         }
         zone.generator = new BaseMapBuilderD2MOD() {{
@@ -541,7 +541,8 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         Gdx.app.error(TAG, "Act2 linked preset has no DS1 files: " + level.LevelName);
         return null;
       }
-      int select = fileIds[Math.floorMod(seed ^ level.Id, count)];
+      int levelSeed = NativeLevelSeed.forLevel(seed, level.Id);
+      int select = fileIds[Math.floorMod(levelSeed, count)];
       if (!validPresetFile(preset, select)) {
         Gdx.app.error(TAG, String.format("Act2 linked preset file invalid: level=%d file=%d",
             level.Id, select));

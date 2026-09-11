@@ -2349,3 +2349,19 @@ Act III 地图主链和 A3Q1–A3Q3。
 
 当前下一项：将独立 Level seed 接入 Act II 迷宫 Zone，并真正替换 Arcane Sanctuary 的分支/召唤者
 预设；完成后进入 Act III 地图主链和 A3Q1–A3Q3 任务闭环。
+
+### 2026-09-12 Act II 独立 Level seed（已完成代码修复）
+
+- [x] 新增 `NativeLevelSeed`，按 D2MOO `DRLG_AllocDrlg` 先推进一次游戏低位 seed 得到
+  `startSeed`，再使用 `levelId + startSeed` 生成每个关卡的稳定种子；没有把 Act/难度错误混入
+  1.10f 的关卡 seed 公式。
+- [x] `Map.Zone` 保存并公开 `levelSeed()`，因此服务端、客户端和后续地图预设选择可使用同一
+  关卡级输入；Act II Arcane Sanctuary 诊断日志改为同时输出 game seed 和 level seed。
+- [x] Act II 预设关卡的文件选择改用 native level seed，避免用 `gameSeed ^ levelId` 的自定义
+  选择逻辑造成客户端/服务端与 D2MOO 分叉。
+- 验证：`NativeLevelSeedTest`、`Act2ArcaneSanctuaryLayoutTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过；没有修改战斗目录。
+
+当前下一项：使用该独立 level seed 真正接入 Arcane Sanctuary 四方向 branch 与 Summoner DS1
+预设（保留迷宫房间拓扑，不把单个 DS1 当作整张地图），并增加入口/出口/唯一 Summoner 的无渲染
+拓扑测试；完成后继续 Act III 地图主链和 A3Q1–A3Q3。

@@ -846,6 +846,8 @@ public class Map implements Disposable {
 
     int x, y;
     int width, height;
+    /** D2MOO D2DrlgLevel seed ({@code levelId + drlg.startSeed}). */
+    private int levelSeed;
     int gridSizeX, gridSizeY;
     int gridsX, gridsY;
     int tx, ty;
@@ -900,6 +902,8 @@ public class Map implements Disposable {
     public int height() { return height; }
     /** Public level identifier for client-side projections such as Automap. */
     public int levelId() { return level == null ? -1 : level.Id; }
+    /** Stable native DRLG seed shared by server and client projections. */
+    public int levelSeed() { return levelSeed; }
     public int levelAct() { return level == null ? -1 : level.Act + 1; }
     public String levelTypeName() { return type == null ? null : type.Name; }
     /** D2MOO AutoMap.txt LevelName (for example, "1 Wilderness"). */
@@ -927,6 +931,7 @@ public class Map implements Disposable {
       this.map       = map;
       this.level     = level;
       this.diff      = diff;
+      this.levelSeed = level == null ? 0 : NativeLevelSeed.forLevel(map.seed, level.Id);
       this.type      = Riiablo.files.LvlTypes.get(level.LevelType);
       this.gridSizeX = gridSizeX;
       this.gridSizeY = gridSizeY;
@@ -969,6 +974,7 @@ public class Map implements Disposable {
     public void dispose() {
       x = y = 0;
       width = height = 0;
+      levelSeed = 0;
       gridSizeX = gridSizeY = 0;
       gridsX = gridsY = 0;
       tx = ty = 0;
