@@ -26,6 +26,8 @@ import com.riiablo.net.packet.d2gs.SwapStoreItem;
 import com.riiablo.net.packet.d2gs.ItemMoveRequest;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.ItemMoveResult;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 import java.io.OutputStream;
 import java.nio.channels.Channels;
@@ -33,6 +35,7 @@ import java.nio.channels.WritableByteChannel;
 
 public class NetworkedClientItemManager extends ClientItemManager {
   private static final String TAG = "NetworkedClientItemManager";
+  private static final Logger log = LogManager.getLogger(NetworkedClientItemManager.class);
 
   protected ComponentMapper<Networked> mNetworked;
 
@@ -102,8 +105,16 @@ public class NetworkedClientItemManager extends ClientItemManager {
 
   @Override
   public void groundToCursor(int entityId) {
-    int serverId = mNetworked.get(entityId).serverId;
+    Networked networked = mNetworked.get(entityId);
     com.riiablo.engine.server.component.Item item = mItem.get(entityId);
+    if (networked == null || item == null || item.item == null) {
+      log.warn("[GROUND_PICKUP] phase=reject mode=network entity={} reason={}", entityId,
+          networked == null ? "network_id_missing" : "item_missing");
+      return;
+    }
+    int serverId = networked.serverId;
+    log.info("[GROUND_PICKUP] phase=request mode=network entity={} serverEntity={} item={} code={}",
+        entityId, serverId, item.item.id, item.item.code);
     send(ItemMoveOperation.GROUND_TO_CURSOR, item == null || item.item == null ? -1 : item.item.id,
         serverId, -1, -1, -1, -1, false);
   }

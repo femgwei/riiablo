@@ -55,6 +55,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   final AssetDescriptor<DC6> goldcoinbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\goldcoinbtn.dc6", DC6.class);
   Button btnDropGold;
+  Label invgold;
 
   final AssetDescriptor<DC6> inv_armorDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\inv_armor.DC6", DC6.class);
   final AssetDescriptor<DC6> inv_beltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\inv_belt.DC6", DC6.class);
@@ -282,7 +283,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     addActor(grid);
 
     StatRef gold = Riiablo.charData.getStats().get(Stat.gold);
-    Label invgold = new Label(Integer.toString(gold != null ? gold.asInt() : 0), Riiablo.fonts.font16);
+    invgold = new Label(Integer.toString(gold != null ? gold.asInt() : 0), Riiablo.fonts.font16);
     invgold.setSize(88, 16);
     invgold.setPosition(109, 24);
     addActor(invgold);
@@ -316,6 +317,11 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public void draw(Batch batch, float a) {
+    StatRef gold = Riiablo.charData.getStats().get(Stat.gold);
+    int carriedGold = gold == null ? 0 : gold.asInt();
+    if (!Integer.toString(carriedGold).contentEquals(invgold.getText())) {
+      invgold.setText(Integer.toString(carriedGold));
+    }
     // BodyPart caches are UI state only. Equipment may also change through
     // death/corpse handling, so refresh from the authoritative slot map and
     // never leave a clickable image for an already detached item.
