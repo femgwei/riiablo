@@ -1701,6 +1701,22 @@ Storm，并收敛 headless 测试日志输出以便持续集成。
 当前下一项：为 Automap 对象/怪物的 RoomEx 探索过滤补充纯 Java 回归，确认未探索实体不
 泄漏、原生 DC6 与几何标记不重复；随后再评估移除兼容代码的时机。
 
+### 2026-09-11 Automap 实体探索过滤与标记去重（已完成）
+
+- [x] ~~补充对象/怪物 RoomEx 可见性和实体标记去重回归~~
+  - 新增 `AutomapVisibility`，集中实现 D2MOO `CLIENT_IN_ROOM/CLIENT_IN_SIGHT` 可见
+    规则；无原生拓扑或尚未开始激活跟踪时保留兼容放行，找不到 RoomEx 时不泄漏实体。
+  - `AutomapRenderer` 的对象、怪物、NPC 收集统一经过该谓词，避免未探索房间实体提前
+    出现在小地图上。
+  - `AutomapManager` 对同一实体 ID 的刷新改为更新已有标记，原生 DC6 标记不会和几何
+    回退标记在管理器内重复累积；增加只读计数/访问接口供无资源回归使用。
+  - 新增 `AutomapVisibilityTest`，覆盖激活状态边界、空房间过滤和 native marker 去重。
+- 验证：`:core:test --tests 'com.riiablo.engine.client.automap.*' :core:compileJava`
+  全部通过（含既有 Automap 测试）；真实 1.10f 画面测试仍按当前条件跳过。
+
+当前下一项：检查 Automap 地形与实体的坐标投影是否仍存在重复变换，补充负坐标、跨 Zone
+边界和 RoomEx 邻接房间的投影回归；随后进入第一章 Automap 真实资源验收准备。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。

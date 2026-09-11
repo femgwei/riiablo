@@ -54,6 +54,14 @@
   隔离，运行时不会与 AutoMap.txt/DC6 原生 cell 重复绘制；Automap 定向测试与核心编译通过。
 - 下一步：补充对象/怪物 RoomEx 探索过滤回归，验证原生图标和几何回退不会重复出现。
 
+## 最近更新（2026-09-11，再续）
+
+- 新增 `AutomapVisibility` 并接入实体收集：RoomEx 未探索区域的对象、怪物和 NPC 不再
+  泄漏到 Automap；无原生拓扑时保持旧兼容行为。
+- `AutomapManager` 同一实体 ID 刷新采用更新而非追加，避免原生 DC6 与几何标记重复累积；
+  Automap 全套无资源测试和核心编译通过。
+- 下一步：验证地形/实体坐标投影、负坐标、跨 Zone 边界和 RoomEx 邻接投影。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName

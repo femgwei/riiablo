@@ -367,12 +367,36 @@ public class AutomapManager implements Disposable {
   public void clearEntityMarkers() {
     entityMarkers.clear();
   }
+
+  /** Number of markers currently collected for the active Automap frame. */
+  public int getEntityMarkerCount() {
+    return entityMarkers.size;
+  }
+
+  /** Returns a marker for diagnostics/tests; callers must not mutate it. */
+  public EntityMarker getEntityMarker(int index) {
+    return entityMarkers.get(index);
+  }
   
   /**
    * 添加实体标记
    */
   public void addEntityMarker(int entityId, int type, float worldX, float worldY,
                               String name, Color color, float size) {
+    // A network/entity refresh may first add a geometric marker and then add
+    // its native DC6 marker. Update the existing entry instead of drawing two
+    // markers for the same entity.
+    if (entityId >= 0) {
+      for (int i = 0, n = entityMarkers.size; i < n; i++) {
+        EntityMarker existing = entityMarkers.get(i);
+        if (existing.entityId == entityId) {
+          int nativeCell = existing.nativeCell;
+          existing.set(entityId, type, worldX, worldY, name, color, size);
+          existing.nativeCell = nativeCell;
+          return;
+        }
+      }
+    }
     EntityMarker marker = new EntityMarker();
     marker.set(entityId, type, worldX, worldY, name, color, size);
     entityMarkers.add(marker);

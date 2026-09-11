@@ -21,6 +21,7 @@ import com.riiablo.engine.client.automap.AutomapIconType;
 import com.riiablo.engine.client.automap.AutomapManager;
 import com.riiablo.engine.client.automap.AutomapRenderState;
 import com.riiablo.engine.client.automap.AutomapTileRenderer;
+import com.riiablo.engine.client.automap.AutomapVisibility;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.engine.server.component.Class;
@@ -269,7 +270,9 @@ public class AutomapRenderer extends BaseSystem {
       int id = ids[i];
       Position position = mPosition.get(id);
       Class clazz = mClass.get(id);
-      if (position == null || clazz == null || !isVisibleInRoom(position.position.x, position.position.y)) continue;
+      if (position == null || clazz == null) continue;
+      Map.Zone entityZone = map == null ? null : map.getZone(position.position.x, position.position.y);
+      if (!AutomapVisibility.isEntityVisible(entityZone, position.position.x, position.position.y)) continue;
       String name = null;
       if (mMonster != null && mMonster.has(id) && mMonster.get(id).monstats != null) {
         Monster monster = mMonster.get(id);
@@ -290,14 +293,6 @@ public class AutomapRenderer extends BaseSystem {
         automapManager.addPlayerMarker(id, position.position.x, position.position.y, null);
       }
     }
-  }
-
-  private boolean isVisibleInRoom(float x, float y) {
-    if (map == null) return true;
-    Map.Zone zone = map.getZone(x, y);
-    if (zone == null || !zone.hasNativeRoomTopology() || !zone.isRoomActivationTracking()) return true;
-    Map.RoomEx room = zone.findRoomEx(x, y);
-    return room != null && room.getActivationStatus() <= Map.RoomEx.CLIENT_IN_SIGHT;
   }
 
   private void renderNativeEntitySprites() {
