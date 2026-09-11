@@ -1731,6 +1731,21 @@ Storm，并收敛 headless 测试日志输出以便持续集成。
 当前下一项：补充 RoomEx 邻接房间的探索/投影集成回归，验证跨 Zone 切换时当前房间、
 CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
 
+### 2026-09-11 RoomEx 邻接探索与跨房间投影回归（已完成）
+
+- [x] ~~验证当前房间、邻接房间和远端房间的 Automap 探索范围~~
+  - 新增 `AutomapRoomProjectionIntegrationTest`：构造三段原生 RoomEx 链，验证当前房间
+    与 `CLIENT_IN_SIGHT` 邻接房间同时揭示，两跳之外房间和实体保持隐藏。
+  - 覆盖 `changeClientRoom` 后的可见环更新以及房间边界坐标（40/80）归属，确认没有
+    坐标漂移或跨房间提前显示。
+  - `AutomapVisibility` 仅接受 0/1 两个原生激活状态，非法负值也不会被误判为可见。
+- 验证：`:core:test --tests 'com.riiablo.engine.client.automap.*' --tests
+  com.riiablo.map.AutomapRoomProjectionIntegrationTest :core:compileJava` 全部通过；
+  真实 1.10f 画面测试仍按当前条件跳过。
+
+当前下一项：进入第一章 Automap 真实资源验收准备，先补充无资源的 cell 去重、边界裁剪和
+房间激活快照断言，再安排可用 MPQ 环境下的隐藏营地/鲜血荒地画面门槛。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。

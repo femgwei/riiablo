@@ -68,6 +68,13 @@
   新增负坐标和跨边界投影测试，Automap 全套测试及核心编译通过。
 - 下一步：补充 RoomEx 邻接房间探索/投影集成回归，检查跨 Zone 切换和实体图标可见范围。
 
+## 最近更新（2026-09-11，五续）
+
+- 新增 RoomEx 邻接探索集成回归：当前房间和 `CLIENT_IN_SIGHT` 邻接房间可见，两跳之外
+  房间隐藏；`changeClientRoom` 后可见环和边界坐标保持稳定。
+- Automap 全套无资源测试及核心编译通过；真实资源画面验收仍待 MPQ 环境。
+- 下一步：补充 cell 去重、边界裁剪和激活快照断言，为第一章真实 Automap 验收做准备。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName

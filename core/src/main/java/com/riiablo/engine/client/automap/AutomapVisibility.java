@@ -16,7 +16,8 @@ public final class AutomapVisibility {
 
   /** D2MOO activation statuses 0/1 are visible; 2/3/COUNT remain hidden. */
   public static boolean isActivationVisible(int activationStatus) {
-    return activationStatus <= Map.RoomEx.CLIENT_IN_SIGHT;
+    return activationStatus >= Map.RoomEx.CLIENT_IN_ROOM
+        && activationStatus <= Map.RoomEx.CLIENT_IN_SIGHT;
   }
 
   /**

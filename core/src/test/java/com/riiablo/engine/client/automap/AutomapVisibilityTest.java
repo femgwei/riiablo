@@ -13,6 +13,7 @@ class AutomapVisibilityTest {
     assertFalse(AutomapVisibility.isActivationVisible(2));
     assertFalse(AutomapVisibility.isActivationVisible(3));
     assertFalse(AutomapVisibility.isActivationVisible(4));
+    assertFalse(AutomapVisibility.isActivationVisible(-1));
   }
 
   @Test
