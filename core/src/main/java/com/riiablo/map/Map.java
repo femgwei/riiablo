@@ -1753,7 +1753,8 @@ public class Map implements Disposable {
       this(presetIndex, mode, x, y, true, false);
     }
 
-    NativeObject(int presetIndex, int mode, int x, int y,
+    /** Public for resource bridges in map.d2moo; state remains immutable. */
+    public NativeObject(int presetIndex, int mode, int x, int y,
         boolean ds1Raw, boolean spawned) {
       this.presetIndex = presetIndex;
       this.mode = mode;

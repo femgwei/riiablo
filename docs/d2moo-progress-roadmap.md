@@ -2438,6 +2438,8 @@ A3Q3 Khalim's Will 的地图触发与任务状态闭环。
   地形和碰撞数据，不改变怪物、战斗或任务注册。
 - [x] 以 Kurast Docks 为锚点把 D2MOO 原生 tile-space Level 坐标投影到 Riiablo subtile Zone
   坐标，避免旧的纵向堆叠造成第三章丛林/库拉斯特区域重叠和入口错位。
+- [x] 同步导出原生 RoomEx 邻接关系、LvlPrest 元数据和 DS1 Object preset units（包括入口、
+  传送点、神殿等），保留 `ds1Raw`/`bSpawned` 标记供 `MapManager` 按 D2Game 规则去重。
 - [x] 记录每个关卡的原生房间数、瓦片计数和失败安全日志，便于隐藏/离屏资源验证。
 - 验证：`Act3MapBuilderD2MODTest`、`Act3MapBuilderD2MODWarpTest`、`:core:compileJava`、
   `:server:d2gs:compileJava` 通过；本机当前未执行真实 MPQ 窗口验证。

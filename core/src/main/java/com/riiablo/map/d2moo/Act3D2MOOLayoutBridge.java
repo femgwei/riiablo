@@ -5,7 +5,10 @@ import com.d2moo.common.datatbls.DataTbls;
 import com.d2moo.common.drlg.D2C_Acts;
 import com.d2moo.common.drlg.D2DrlgAct;
 import com.d2moo.common.drlg.D2DrlgLevel;
+import com.d2moo.common.drlg.D2DrlgPresetRoomStrc;
+import com.d2moo.common.drlg.D2DrlgRoom;
 import com.d2moo.common.drlg.D2DrlgStrc;
+import com.d2moo.common.drlg.D2UnitTypes;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
@@ -14,6 +17,8 @@ import com.d2moo.common.util.D2MemoryPool;
 import com.riiablo.map.Map;
 import com.riiablo.map.Map.Zone;
 import com.riiablo.drlg.TileGrid;
+
+import java.util.IdentityHashMap;
 
 /**
  * Resource-gated Act III bridge to the native D2MOO DRLG.
@@ -83,16 +88,42 @@ public final class Act3D2MOOLayoutBridge {
         TileGrid grid = new TileGrid(width, height);
         applier.putGrid(levelId, grid);
         int floors = DrlgExport.exportLevelTiles(drlg, levelId, applier);
+        int[] rawObjects = {0, 0};
+        com.badlogic.gdx.utils.Array<Map.NativeObject> exportedObjects =
+            new com.badlogic.gdx.utils.Array<>();
+        int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
+            (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+              if (unitType != D2UnitTypes.UNIT_OBJECT) return;
+              rawObjects[0]++;
+              if (x < 0 || y < 0
+                  || x >= width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
+                  || y >= height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
+                rawObjects[1]++;
+                return;
+              }
+              exportedObjects.add(new Map.NativeObject(
+                  index, mode, x, y, ds1Raw, spawned));
+            });
         int dt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
         if (floors > 0) {
+          projectRooms(level, zone);
+          zone.getNativeObjects().addAll(exportedObjects);
           zone.setNativeTileGrid(grid, dt1Mask);
           exportedLevels++;
+        } else {
+          // Do not leave a partial native topology behind when a resource
+          // archive is incomplete: MapManager would otherwise wait for room
+          // activation and skip the compatibility object path.
+          zone.getRoomsEx().clear();
+          zone.getNativeObjects().clear();
         }
         if (Gdx.app != null) {
           Gdx.app.log(TAG, String.format(
               "Act3 native level=%d rooms=%d tiles=%dx%d floors=%d walls=%d shadows=%d dt1Mask=0x%X",
               levelId, level.getRooms(), width, height, floors,
-              applier.getExportedWallCount(), applier.getExportedShadowCount(), dt1Mask));
+              applier.getExportedWallCount(), applier.getExportedShadowCount(), dt1Mask)
+              + String.format(" objects=%d/%d invalidObjectPos=%d",
+                  presetUnits, rawObjects[0], rawObjects[1]));
         }
         applier.resetLastExportedFloorCount();
       }
@@ -115,6 +146,42 @@ public final class Act3D2MOOLayoutBridge {
       if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
     }
     return null;
+  }
+
+  private static void projectRooms(D2DrlgLevel level, Zone zone) {
+    int levelX = level.getLevelCoords().getNPosX();
+    int levelY = level.getLevelCoords().getNPosY();
+    zone.getRoomsEx().clear();
+    IdentityHashMap<D2DrlgRoom, Integer> ids = new IdentityHashMap<>();
+    java.util.ArrayList<D2DrlgRoom> nativeRooms = new java.util.ArrayList<>();
+    for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+        room = room.getDrlgRoomNext()) {
+      ids.put(room, nativeRooms.size());
+      nativeRooms.add(room);
+      int localX = room.getNTileXPos() - levelX;
+      int localY = room.getNTileYPos() - levelY;
+      Map.RoomEx projected = zone.addRoomEx(
+          zone.x() + localX * com.riiablo.map.DT1.Tile.SUBTILE_SIZE,
+          zone.y() + localY * com.riiablo.map.DT1.Tile.SUBTILE_SIZE,
+          room.getNTileWidth() * com.riiablo.map.DT1.Tile.SUBTILE_SIZE,
+          room.getNTileHeight() * com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
+      Object maze = room.getMazeOrOutdoor();
+      if (maze instanceof D2DrlgPresetRoomStrc) {
+        D2DrlgPresetRoomStrc preset = (D2DrlgPresetRoomStrc) maze;
+        projected.setPreset(preset.getNLevelPrest(), preset.getNPickedFile());
+      }
+    }
+    for (int i = 0; i < nativeRooms.size(); i++) {
+      D2DrlgRoom room = nativeRooms.get(i);
+      D2DrlgRoom[] near = room.getPpRoomsNear();
+      int count = near == null ? 0 : Math.min(room.getNRoomsNear(), near.length);
+      com.badlogic.gdx.utils.IntArray adjacent = new com.badlogic.gdx.utils.IntArray(count);
+      for (int j = 0; j < count; j++) {
+        Integer id = near[j] == null ? null : ids.get(near[j]);
+        if (id != null && id != i) adjacent.add(id);
+      }
+      zone.getRoomsEx().get(i).setAdjacentRoomIds(adjacent.toArray());
+    }
   }
 
   private static final class RiiabloAccess {
