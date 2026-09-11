@@ -53,6 +53,8 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   private static final boolean DEBUG         = true;
   private static final boolean DEBUG_PACKET  = DEBUG && !true;
   private static final boolean DEBUG_CONNECT = DEBUG && !true;
+  /** Movement is applied on the next authoritative tick; combat keeps its own +2 lead. */
+  static final int MOVEMENT_TARGET_LEAD_TICKS = 1;
 
   protected ComponentMapper<Networked> mNetworked;
   protected ComponentMapper<CofComponents> mCofComponents;
@@ -170,7 +172,8 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
     Vector2 position = mPosition.get(entityId).position;
     final long inputSequence = nextMovementSequence;
     final long observedServerTick = receiver.latestServerTick();
-    final long targetTick = observedServerTick == 0L ? 0L : observedServerTick + 2L;
+    final long targetTick = observedServerTick == 0L ? 0L
+        : observedServerTick + MOVEMENT_TARGET_LEAD_TICKS;
     final boolean running = mRunning.has(entityId);
 
     int targetEntityId = Engine.INVALID_ENTITY;

@@ -2024,3 +2024,16 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 当前下一项：在真实窗口/隐藏客户端日志中确认 `[INPUT_QUEUE]` 的等待是否降至一个 Tick
 以内，并根据 `[SIM_SLOW]` 的实际耗时定位路径搜索、地图碰撞或渲染资源加载造成的卡顿；
 若无慢 Tick，再继续核对网络移动命令的往返延迟。
+
+### 2026-09-12 联机移动目标 Tick 延迟收敛（已完成代码修复）
+
+- [x] ~~缩短移动意图排队~~：`ClientNetworkSynchronizer` 的移动包从服务端观察 Tick 的
+  `+2` 改为 `+1`，正常点击移动最多等待一个权威 Tick；启动阶段仍使用兼容的 `targetTick=0`。
+- [x] ~~保持战斗时序隔离~~：仅修改 `Run/WalkToLocation` 与 `Run/WalkToEntity` 的移动
+  命令；技能/攻击 `NetworkedActionSender` 仍保持原有 `observedTick+2`，不改变命中快照。
+- 验证：移动/输入相关 core 测试、`CursorMovementSystemTest`、`FixedStepAccumulatorTest`、
+  `:core:compileJava` 和 `:server:d2gs:compileJava` 通过。
+
+当前下一项：使用新版本真实联机日志确认 `[NET_MOVE] phase=client_intent` 到
+`phase=intent_apply` 的 Tick 差为 0/1；若仍有明显延迟，再处理 TCP 写入/服务端接收线程
+到权威 Tick 的排队，而不再扩大客户端预测提前量。
