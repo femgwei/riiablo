@@ -33,6 +33,9 @@ public final class OffscreenCampScreen extends GameScreen {
   private int targetRoomCount;
   private int targetNativeObjects;
   private int targetWarpCount;
+  private int targetReverseWarpCount;
+  private int targetWarpWalkable;
+  private String targetWarpRooms = "";
   private String targetWarpTargets = "";
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
@@ -75,6 +78,9 @@ public final class OffscreenCampScreen extends GameScreen {
         + "targetRooms=" + targetRoomCount + "\n"
         + "targetNativeObjects=" + targetNativeObjects + "\n"
         + "targetWarpCount=" + targetWarpCount + "\n"
+        + "targetReverseWarpCount=" + targetReverseWarpCount + "\n"
+        + "targetWarpWalkable=" + targetWarpWalkable + "\n"
+        + "targetWarpRooms=" + targetWarpRooms + "\n"
         + "targetWarpTargets=" + targetWarpTargets + "\n"
         + "player=" + player + "\n"
         + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
@@ -123,22 +129,74 @@ public final class OffscreenCampScreen extends GameScreen {
     targetNativeObjects = targetZone.getNativeObjects().size;
 
     StringBuilder warpTargets = new StringBuilder();
+    StringBuilder warpRooms = new StringBuilder();
     boolean hasExpectedCaveReturn = false;
     com.artemis.ComponentMapper<Warp> warpMapper = engine.getMapper(Warp.class);
+    com.artemis.ComponentMapper<Position> positionMapper = engine.getMapper(Position.class);
     for (int i = 0; i < targetZone.getEntities().size; i++) {
-      Warp warp = warpMapper.get(targetZone.getEntities().get(i));
+      int warpEntity = targetZone.getEntities().get(i);
+      Warp warp = warpMapper.get(warpEntity);
       if (warp == null) continue;
       if (warp.dstLevel == null || map.findZone(warp.dstLevel) == null) {
         throw new IllegalStateException("Warp target is unresolved: source=" + targetLevelId);
       }
       if (targetWarpCount++ > 0) warpTargets.append(',');
       warpTargets.append(warp.dstLevel.Id);
+
+      // Native warp objects may be placed on a blocked doorway.  Validate the
+      // source coordinate and use the same expanding free-coordinate search
+      // as D2Common to prove that a player can actually stand by the entry.
+      Position warpPosition = positionMapper.get(warpEntity);
+      if (warpPosition == null || !targetZone.contains(Math.round(warpPosition.position.x),
+          Math.round(warpPosition.position.y))) {
+        throw new IllegalStateException("Warp position is outside source zone: level="
+            + targetLevelId + " index=" + warp.index);
+      }
+      Map.RoomEx warpRoom = targetZone.findRoomEx(warpPosition.position.x,
+          warpPosition.position.y);
+      if (warpRooms.length() > 0) warpRooms.append(',');
+      warpRooms.append(warp.index).append(':').append(warpRoom == null ? -1 : warpRoom.id);
+      Vector2 landing = new Vector2();
+      if (targetZone.findFreeCoordinates(warpPosition.position, 1, 8, true, landing)) {
+        targetWarpWalkable++;
+      } else {
+        throw new IllegalStateException("No walkable coordinates near warp: level="
+            + targetLevelId + " index=" + warp.index + " position=" + warpPosition.position);
+      }
+
+      // A bad Vis/Warp import often creates a one-way dead end.  Verify that
+      // the destination zone has an edge back to this source level.
+      Map.Zone destinationZone = map.findZone(warp.dstLevel);
+      boolean reverseFound = false;
+      for (int j = 0; j < destinationZone.getEntities().size; j++) {
+        Warp reverse = warpMapper.get(destinationZone.getEntities().get(j));
+        if (reverse != null && reverse.dstLevel != null
+            && reverse.dstLevel.Id == targetLevelId) {
+          reverseFound = true;
+          break;
+        }
+      }
+      if (reverseFound) {
+        targetReverseWarpCount++;
+      } else if (targetLevelId == 8 || targetLevelId == 10) {
+        throw new IllegalStateException("Warp has no reverse edge: source=" + targetLevelId
+            + " destination=" + warp.dstLevel.Id + " index=" + warp.index);
+      }
       if (targetLevelId == 8 && warp.dstLevel.Id == 2) hasExpectedCaveReturn = true;
       if (targetLevelId == 10 && (warp.dstLevel.Id == 5 || warp.dstLevel.Id == 6)) {
         hasExpectedCaveReturn = true;
       }
     }
     targetWarpTargets = warpTargets.toString();
+    targetWarpRooms = warpRooms.toString();
+    if (targetReverseWarpCount != targetWarpCount) {
+      throw new IllegalStateException("Warp reverse edge count mismatch: level=" + targetLevelId
+          + " forward=" + targetWarpCount + " reverse=" + targetReverseWarpCount);
+    }
+    if (targetWarpWalkable != targetWarpCount) {
+      throw new IllegalStateException("Warp walkability mismatch: level=" + targetLevelId
+          + " total=" + targetWarpCount + " walkable=" + targetWarpWalkable);
+    }
     if ((targetLevelId == 8 || targetLevelId == 10) && !hasExpectedCaveReturn) {
       throw new IllegalStateException("Cave warp target does not match Act 1 topology: level="
           + targetLevelId + " targets=" + targetWarpTargets);

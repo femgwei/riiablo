@@ -1830,6 +1830,22 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
 当前下一项：把 Warp 目标断言扩展到入口/出口双向配对，确认每个 Act 1 洞穴入口都能在目标
   Zone 找到反向 Warp，并校验坐标落在对应 RoomEx/可通行区域内。
 
+### 2026-09-11 Act 1 Warp 双向配对与可通行区域验收（已通过）
+
+- [x] ~~验证入口/出口 Warp 双向关系与落点可通行性~~
+  - `OffscreenCampScreen` 对每个目标 Zone 的 Warp 检查源坐标在 Zone 边界内，
+    通过 `Zone.findFreeCoordinates` 在入口附近搜索可站立坐标，并记录所在 RoomEx。
+  - 对 `dstLevel` 对应 Zone 遍历反向 Warp，确认目标关卡存在回到当前源关卡的边；
+    Level 8/10 的所有入口均要求反向边，避免 Vis/Warp 方向导入错误形成单向死路。
+  - manifest 新增 `targetReverseWarpCount`、`targetWarpWalkable`、`targetWarpRooms`。
+  - 真实 1.10f 结果：Level 8 为 `1/1/1`，入口 `5386:RoomEx1`，目标 Level 2；
+    Level 10 为 `3/3/3`，入口分别位于 RoomEx 0/3/1，目标 Level 5、4、14；全部 PASS。
+- 验证：`:desktop:compileJava`、Automap/RoomEx 集成测试，以及 Level 8/10 真实 1×1
+  隐藏离屏测试全部通过；未修改生产 Warp 解析逻辑或战斗模块。
+
+当前下一项：扩展到 Act 1 全部洞穴/地道/塔楼入口的自动化 Warp 图遍历，统计每个入口的
+双向边、RoomEx 落点和可通行坐标，随后再补充地图连续性指标。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。
