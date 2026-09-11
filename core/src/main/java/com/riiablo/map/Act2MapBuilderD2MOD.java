@@ -496,6 +496,14 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         int[] placement = findDungeonPlacement(map, source, target, edge.mainIndex);
         Zone zone = createLinkedDungeonZone(map, target, diff, seed, placement[0], placement[1]);
         if (zone == null) continue;
+        if (target.Id == LEVEL_ARCANESANCTUARY) {
+          Act2ArcaneSanctuaryLayout.Direction direction =
+              Act2ArcaneSanctuaryLayout.fromLevelSeed(seed);
+          Gdx.app.log(TAG, String.format(
+              "Act2 Arcane Sanctuary branch: seed=%d direction=%s rotation=%d branchDef=%d summonerDef=%d",
+              seed, direction, direction.nativeRotation(), direction.branchPresetDef(),
+              direction.summonerPresetDef()));
+        }
         zone.generator = new BaseMapBuilderD2MOD() {{
           factory = Act2MapBuilderD2MOD.this.factory;
           socket = Act2MapBuilderD2MOD.this.socket;

@@ -2337,3 +2337,15 @@ Tainted Sun、Arcane Sanctuary、Duriel）：以地图入口 LevelId/预设单�
 
 当前下一项：为 Arcane Sanctuary 的 Summoner 四方向预设建立确定性入口/出口映射；之后转入
 Act III 地图主链和 A3Q1–A3Q3。
+
+### 2026-09-12 Act II Arcane Sanctuary 四方向预设映射（已完成代码修复）
+
+- [x] 新增 `Act2ArcaneSanctuaryLayout`，对齐 D2MOO `DRLGMAZE_GenerateLevel` 的四方向分支：
+  North/East/South/West、原生旋转值以及对应的 branch/Summoner `LvlPrest.Def`。
+- [x] 使用 Level seed 的原生 `SEED_RollRandomNumber(...) & 3` 规则进行确定性选择；Act II 地图
+  生成入口输出方向、旋转和预设 Def，便于无窗口日志核对。
+- [x] 增加四方向覆盖和确定性回归测试；当前核心 Map 尚未暴露独立 Level seed，生成器暂用游戏
+  seed 作为兼容诊断输入，不把普通整图生成错误替换成单个 DS1 预设。
+
+当前下一项：将独立 Level seed 接入 Act II 迷宫 Zone，并真正替换 Arcane Sanctuary 的分支/召唤者
+预设；完成后进入 Act III 地图主链和 A3Q1–A3Q3 任务闭环。
