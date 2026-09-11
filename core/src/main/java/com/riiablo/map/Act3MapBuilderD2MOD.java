@@ -12,6 +12,7 @@ import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
+import com.riiablo.map.d2moo.Act3D2MOOLayoutBridge;
 import com.d2moo.common.drlg.D2LevelIds;
 
 /**
@@ -191,6 +192,11 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         }
       }
     }
+
+    // When 1.10f MPQs are available, replace the compatibility outdoor
+    // terrain with D2MOO's actual RoomEx/DT1 export.  The bridge is gated and
+    // failure-safe, so headless/resource-light environments keep this builder.
+    Act3D2MOOLayoutBridge.populateZones(seed, diff, map);
 
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTPLACE_InitAct3OutdoorLevel

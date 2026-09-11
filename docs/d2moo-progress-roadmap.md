@@ -2427,5 +2427,18 @@ Summoner DS1 的实际预设和入口/返回 Warp；资源不可用时再继续�
   `:server:d2gs:compileJava` 通过；尚未执行真实 MPQ 窗口验证。
 
 当前下一项：补齐 Act III 丛林/库拉斯特的 D2MOO 原生 `DrlgOutJung` 预设布局（头/尾、边界门、
-  不重叠放置）和实际入口 DS1；随后接入 A3Q1 Golden Bird、A3Q2 Blade of the Old Religion、
-  A3Q3 Khalim's Will 的地图触发与任务状态闭环。
+不重叠放置）和实际入口 DS1；随后接入 A3Q1 Golden Bird、A3Q2 Blade of the Old Religion、
+A3Q3 Khalim's Will 的地图触发与任务状态闭环。
+
+### 2026-09-12 Act III D2MOO RoomEx/TileGrid 桥接（已完成代码修复）
+
+- [x] 新增 `Act3D2MOOLayoutBridge`：在 MPQ 可用时按 Act III 原生 `DrlgDrlg.allocDrlg`、
+  `initLevel` 和 `DrlgExport.exportLevelTiles` 导出 76–84 各关卡的 floor/wall/shadow 与 DT1 mask。
+- [x] 导出结果写入现有 Zone 的 `nativeTileGrid`，保留兼容生成器作为无资源/导出失败回退；桥接只替换
+  地形和碰撞数据，不改变怪物、战斗或任务注册。
+- [x] 记录每个关卡的原生房间数、瓦片计数和失败安全日志，便于隐藏/离屏资源验证。
+- 验证：`Act3MapBuilderD2MODTest`、`Act3MapBuilderD2MODWarpTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过；本机当前未执行真实 MPQ 窗口验证。
+
+当前下一项：在资源可用环境验证 Act III 导出的丛林头/尾、库拉斯特边界门和实际 DS1 入口；若资源
+仍不可用，则先补无资源的 `DrlgOutJung` 预设选择/不重叠布局测试，再实现 A3Q1–A3Q3 任务触发链。
