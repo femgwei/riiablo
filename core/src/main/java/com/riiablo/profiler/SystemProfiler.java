@@ -114,6 +114,11 @@ public class SystemProfiler implements ArtemisProfiler {
     return getAverage() / 1000000f;
   }
 
+  /** Duration of the most recently measured system invocation in milliseconds. */
+  public float getLastSampleMillis() {
+    return sample / 1000000f;
+  }
+
   /**
    * Create a sample with specified time
    *

@@ -1,6 +1,7 @@
 package com.riiablo.screen;
 
 import com.artemis.Aspect;
+import com.artemis.BaseSystem;
 import com.artemis.World;
 import com.artemis.WorldConfiguration;
 import com.artemis.WorldConfigurationBuilder;
@@ -156,6 +157,9 @@ import com.riiablo.map.Map;
 import com.riiablo.map.MapManager;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.profiler.ProfilerPlugin;
+import com.riiablo.profiler.ProfilerManager;
+import com.riiablo.profiler.SystemProfiler;
+import com.riiablo.profiler.GpuSystem;
 import com.riiablo.save.CharData;
 import com.riiablo.screen.panel.CharacterPanel;
 import com.riiablo.screen.panel.ControlPanel;
@@ -1105,9 +1109,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             && simulationStartNanos - lastSlowSimulationLogNanos > 1_000_000_000L) {
           lastSlowSimulationLogNanos = simulationStartNanos;
           Gdx.app.log(TAG, String.format(
-              "[SIM_SLOW] elapsedMs=%.2f budgetMs=%.2f step=%.3fs",
+              "[SIM_SLOW] elapsedMs=%.2f budgetMs=%.2f step=%.3fs systems=%s",
               simulationElapsedNanos / 1_000_000f, SimulationClock.STEP_SECONDS * 1000f,
-              stepSeconds));
+              stepSeconds, slowSimulationSystems()));
         }
       });
     } finally {
@@ -1379,6 +1383,42 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     if (actor == null) return;
     actor.setVisible(true);
     left = actor;
+  }
+
+  /** Returns the three slowest CPU Artemis systems from the just-finished Tick. */
+  private String slowSimulationSystems() {
+    if (engine == null) return "[]";
+    ProfilerManager manager = engine.getSystem(ProfilerManager.class);
+    if (manager == null) return "[]";
+    BaseSystem[] slowest = new BaseSystem[3];
+    float[] times = new float[3];
+    for (int i = 0; i < engine.getSystems().size(); i++) {
+      BaseSystem system = engine.getSystems().get(i);
+      if (system == null || system.getClass().isAnnotationPresent(GpuSystem.class)) continue;
+      SystemProfiler profiler = manager.getFor(system);
+      if (profiler == null) continue;
+      float millis = profiler.getLastSampleMillis();
+      for (int slot = 0; slot < times.length; slot++) {
+        if (millis <= times[slot]) continue;
+        for (int move = times.length - 1; move > slot; move--) {
+          times[move] = times[move - 1];
+          slowest[move] = slowest[move - 1];
+        }
+        times[slot] = millis;
+        slowest[slot] = system;
+        break;
+      }
+    }
+    StringBuilder result = new StringBuilder("[");
+    boolean first = true;
+    for (int i = 0; i < slowest.length; i++) {
+      if (slowest[i] == null || times[i] <= 0f) continue;
+      if (!first) result.append(", ");
+      first = false;
+      result.append(slowest[i].getClass().getSimpleName()).append('=').append(
+          String.format(java.util.Locale.ROOT, "%.2fms", times[i]));
+    }
+    return result.append(']').toString();
   }
 
   /** True when an inventory/character/quest/vendor panel is actually visible. */
