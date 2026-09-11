@@ -275,17 +275,32 @@ public class AutomapTileRenderer implements Disposable {
   }
 
   private static String tileOrientationName(int orientation) {
+    String name = tileNameForOrientation(orientation);
+    return name != null ? name : Integer.toString(orientation);
+  }
+
+  /** Maps the full DT1 orientation vocabulary to D2MOO AutoMap tile names. */
+  public static String tileNameForOrientation(int orientation) {
     switch (orientation) {
-      case TILE_FLOOR: return "fl";
-      case TILE_WALL_LEFT: return "wl";
-      case TILE_WALL_RIGHT: return "wr";
-      case TILE_WALL_TOP_LEFT: return "wtll";
-      case TILE_WALL_TOP_RIGHT: return "wtlr";
-      case TILE_WALL_BOTTOM_LEFT: return "wle";
-      case TILE_WALL_BOTTOM_RIGHT: return "wre";
-      case TILE_PILLAR: return "co";
-      case TILE_DOOR: return "sh";
-      default: return Integer.toString(orientation);
+      case com.riiablo.map.Orientation.FLOOR: return "fl";
+      case com.riiablo.map.Orientation.LEFT_WALL: return "wl";
+      case com.riiablo.map.Orientation.RIGHT_WALL: return "wr";
+      case com.riiablo.map.Orientation.RIGHT_NORTH_CORNER_WALL: return "wtlr";
+      case com.riiablo.map.Orientation.LEFT_NORTH_CORNER_WALL: return "wtll";
+      case com.riiablo.map.Orientation.LEFT_END_WALL: return "wle";
+      case com.riiablo.map.Orientation.RIGHT_END_WALL: return "wre";
+      case com.riiablo.map.Orientation.SOUTH_CORNER_WALL: return "wbr";
+      case com.riiablo.map.Orientation.LEFT_WALL_DOOR: return "wld";
+      case com.riiablo.map.Orientation.RIGHT_WALL_DOOR: return "wrd";
+      case com.riiablo.map.Orientation.PILLAR: return "co";
+      case com.riiablo.map.Orientation.SHADOW: return "sh";
+      case com.riiablo.map.Orientation.TREE: return "tr";
+      case com.riiablo.map.Orientation.ROOF: return "rf";
+      case com.riiablo.map.Orientation.LOWER_LEFT_WALL: return "ld";
+      case com.riiablo.map.Orientation.LOWER_RIGHT_WALL: return "rd";
+      case com.riiablo.map.Orientation.LOWER_NORTH_CORNER_WALL: return "fd";
+      case com.riiablo.map.Orientation.LOWER_SOUTH_CORNER_WALL: return "fi";
+      default: return null;
     }
   }
   
