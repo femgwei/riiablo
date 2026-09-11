@@ -162,8 +162,8 @@ public class RenderSystem extends BaseEntitySystem {
   // 小地图精灵资源路径
   private static final String AUTOMAP_SPRITE_PATH = "data\\global\\ui\\AUTOMAP\\MaxiMap.dc6";
   
-  // 小地图精灵帧索引（基于 MaxiMap.dc6 布局）
-  // 这些值对应原版 D2 的小地图精灵帧
+  // 旧墙体精灵回退帧（仅 drawAutomapWallsWithSprites 兼容路径使用）。
+  // 主路径使用 AutoMap.txt + AutomapTileRenderer 查询，不应新增固定实体帧。
   private static final int AUTOMAP_FRAME_WALL_LEFT = 1;           // 左墙
   private static final int AUTOMAP_FRAME_WALL_RIGHT = 2;          // 右墙
   private static final int AUTOMAP_FRAME_WALL_CORNER_NW = 3;      // 西北角墙
@@ -172,8 +172,6 @@ public class RenderSystem extends BaseEntitySystem {
   private static final int AUTOMAP_FRAME_WALL_CORNER_SE = 6;      // 东南角墙
   private static final int AUTOMAP_FRAME_DOOR_LEFT = 7;           // 左门
   private static final int AUTOMAP_FRAME_DOOR_RIGHT = 8;          // 右门
-  private static final int AUTOMAP_FRAME_WAYPOINT = 69;           // 传送点
-  private static final int AUTOMAP_FRAME_PLAYER = 81;             // 玩家标记
 
   private static final Color RENDER_DEBUG_GRID_COLOR_1 = new Color(0x3f3f3f3f);
   private static final Color RENDER_DEBUG_GRID_COLOR_2 = new Color(0x7f7f7f3f);

@@ -125,6 +125,13 @@
   标记保持一致，避免墙体/对象图标整体偏移半个子瓦片。
 - 增加正负坐标投影测试；实际缩放比例仍需真实资源截图确认，暂不改动主渲染相机缩放。
 
+### 固定 Automap 帧清理（本轮完成）
+
+- 删除 `RenderSystem` 中未使用的 Waypoint/Player 固定帧常量。
+- 旧墙体固定帧仅保留在兼容回退路径，并明确主路径必须使用 AutoMap.txt 查询，避免新增
+  自定义实体帧映射。
+- `:core:compileJava` 通过；下一步补充 SpriteBatch/ShapeRenderer 无窗口状态切换测试。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster
