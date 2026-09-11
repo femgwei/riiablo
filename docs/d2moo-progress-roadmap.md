@@ -1813,7 +1813,22 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
   切换崩溃或 Automap 图层缺失。
 
 当前下一项：扩展离屏断言到入口对象的具体 Warp 目标 Level，验证地下通道/洞穴入口不仅
-  存在，而且目标关卡 ID 与 D2MOO `pWarp` 拓扑一致。
+存在，而且目标关卡 ID 与 D2MOO `pWarp` 拓扑一致。
+
+### 2026-09-11 Act 1 洞穴 Warp 目标验收（已通过）
+
+- [x] ~~验证洞穴/地下通道入口 Warp 的目标 Level~~
+  - `OffscreenCampScreen` 遍历目标 Zone 的 Warp 实体，检查 `dstLevel` 非空且目标 Zone
+    可解析，并把目标 Level ID 写入 manifest。
+  - Level 8（Den of Evil）检测到 1 个 Warp，目标为 Level 2（Blood Moor）。
+  - Level 10（Underground Passage）检测到 3 个 Warp，目标为 Level 5、4、14；均可在
+    当前 Act 地图中解析。
+  - 未发现“入口对象存在但目标关卡为空/错误”的情况。
+- 验证：真实 1.10f 下 `-PoffscreenLevel=8`、`-PoffscreenLevel=10` 均通过，manifest
+  均为 `result=PASS`。
+
+当前下一项：把 Warp 目标断言扩展到入口/出口双向配对，确认每个 Act 1 洞穴入口都能在目标
+  Zone 找到反向 Warp，并校验坐标落在对应 RoomEx/可通行区域内。
 
 ## 记录规则
 

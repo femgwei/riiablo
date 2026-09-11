@@ -104,6 +104,12 @@
   隐藏切换测试均通过，目标 Zone 生成、玩家绑定和 6 帧渲染正常。
 - 下一步：在离屏目标场景中增加 Automap cell 数量、RoomEx 拓扑及入口对象存在性断言。
 
+## 最近更新（2026-09-11，十一续）
+
+- 已增加 Warp 目标校验并通过真实 1.10f：Den of Evil → Blood Moor（2）；Underground
+  Passage 的目标为 5、4、14，所有目标 Zone 均可解析。
+- 下一步：继续校验入口/出口 Warp 双向配对、反向坐标和 RoomEx 可通行区域。
+
 ## 最近更新（2026-09-11，十续）
 
 - 离屏入口现已断言目标 Zone 的 Automap cell、RoomEx 和原生入口对象；真实 1.10f 下

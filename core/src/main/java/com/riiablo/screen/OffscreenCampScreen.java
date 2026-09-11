@@ -10,6 +10,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.map.Map;
 import com.riiablo.engine.client.AutomapRenderer;
@@ -31,6 +32,8 @@ public final class OffscreenCampScreen extends GameScreen {
   private int targetNativeCells;
   private int targetRoomCount;
   private int targetNativeObjects;
+  private int targetWarpCount;
+  private String targetWarpTargets = "";
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
     this(charData, outputDirectory, -1);
@@ -71,6 +74,8 @@ public final class OffscreenCampScreen extends GameScreen {
         + "targetNativeCells=" + targetNativeCells + "\n"
         + "targetRooms=" + targetRoomCount + "\n"
         + "targetNativeObjects=" + targetNativeObjects + "\n"
+        + "targetWarpCount=" + targetWarpCount + "\n"
+        + "targetWarpTargets=" + targetWarpTargets + "\n"
         + "player=" + player + "\n"
         + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
         + "result=PASS\n";
@@ -116,6 +121,28 @@ public final class OffscreenCampScreen extends GameScreen {
     }
     targetRoomCount = targetZone.getRoomsEx().size;
     targetNativeObjects = targetZone.getNativeObjects().size;
+
+    StringBuilder warpTargets = new StringBuilder();
+    boolean hasExpectedCaveReturn = false;
+    com.artemis.ComponentMapper<Warp> warpMapper = engine.getMapper(Warp.class);
+    for (int i = 0; i < targetZone.getEntities().size; i++) {
+      Warp warp = warpMapper.get(targetZone.getEntities().get(i));
+      if (warp == null) continue;
+      if (warp.dstLevel == null || map.findZone(warp.dstLevel) == null) {
+        throw new IllegalStateException("Warp target is unresolved: source=" + targetLevelId);
+      }
+      if (targetWarpCount++ > 0) warpTargets.append(',');
+      warpTargets.append(warp.dstLevel.Id);
+      if (targetLevelId == 8 && warp.dstLevel.Id == 2) hasExpectedCaveReturn = true;
+      if (targetLevelId == 10 && (warp.dstLevel.Id == 5 || warp.dstLevel.Id == 6)) {
+        hasExpectedCaveReturn = true;
+      }
+    }
+    targetWarpTargets = warpTargets.toString();
+    if ((targetLevelId == 8 || targetLevelId == 10) && !hasExpectedCaveReturn) {
+      throw new IllegalStateException("Cave warp target does not match Act 1 topology: level="
+          + targetLevelId + " targets=" + targetWarpTargets);
+    }
 
     AutomapRenderer automap = engine.getSystem(AutomapRenderer.class);
     if (automap == null || automap.getAutomapManager() == null) {

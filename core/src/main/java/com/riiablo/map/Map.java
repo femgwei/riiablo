@@ -1029,6 +1029,11 @@ public class Map implements Disposable {
       return nativeObjects;
     }
 
+    /** Entity IDs created for this zone, including native warps. */
+    public IntArray getEntities() {
+      return entities;
+    }
+
     public Array<RoomEx> getRoomsEx() { return roomsEx; }
 
     /** True only when every room carries an exported D2MOO pRoomsNear list. */
