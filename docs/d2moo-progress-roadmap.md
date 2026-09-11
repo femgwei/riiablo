@@ -2202,3 +2202,27 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 当前下一项：在不依赖真实窗口的条件下补 Act II 任务最小闭环（Radament、Horadric Staff、
 Tainted Sun、Arcane Sanctuary、Duriel）：以地图入口 LevelId/预设单位为触发源，接入任务标记、
 任务物品和奖励；真实 DS1/MPQ 可用后再做一次第二章地下区域离屏渲染与碰撞回归。
+
+### 2026-09-12 Act II A2Q1 拉达曼特最小闭环（已完成代码修复）
+
+- [x] ~~A2Q1 原生任务记录~~：使用 Act II 本地记录 1，接入 `STARTED`、`LEFT_TOWN`、
+  `ENTERED_AREA`、`PRIMARY_GOAL_DONE`、`REWARD_PENDING`、`CUSTOM1`、`COMPLETED_NOW`
+  和 `REWARD_GRANTED`；Atma 消息采用 D2MOO 的 304/310/317/334 分支。
+- [x] ~~Radament 原生身份与区域约束~~：优先使用 `SuperUnique=10`，仅在 Sewers Level 3
+  （Level 49）结算；为尚未保留 SuperUnique 组件的旧生成路径增加 `MonStats=229 + Level 49`
+  的受限兼容判断，并对同一死亡事件幂等。
+- [x] ~~多人任务传播~~：Sewers Level 3 玩家获得目标与待领奖标记，其队伍成员在 Act II
+  内同步获得独立奖励资格；其他在线玩家只设置本局 `COMPLETED_NOW`，不错误领取奖励。
+- [x] ~~原生技能书掉落~~：按拥有 `CUSTOM1` 且身上没有任务书的玩家数生成 `ass`
+  （Book of Skill）地面物品；Atma 对话只确认任务，不直接伪造技能点。
+- [x] ~~客户端/服务端对话接线~~：增加 Atma 对话展示和网络请求白名单；本地世界与 D2GS
+  均注册 A2Q1 权威系统，任务快照仍按每个玩家的 D2S 记录同步。
+- 验证：`Act2RadamentQuestTest`（状态、区域、Atma、多人队伍、技能书、重复死亡、错误层级）、
+  `:core:compileJava`、`:server:d2gs:compileJava` 全部通过。
+- 共享文件：仅最小修改 `GameScreen.java` 和 `server/d2gs/D2GS.java` 的系统注册/消息校验，
+  未删除或重排战斗系统。
+
+当前下一项：A2Q2 赫拉迪克法杖任务链。优先核对 D2MOO 的 Cube/Staff/Shaft/Amulet
+任务物品、死亡神殿与蛇坛对象、方块合成结果、Tal Rasha 古墓插杖机关及 Duriel 房间入口，
+先建立数据驱动状态机和对象/物品事件，再接地图预设实体与多人任务传播。当前 Chat 继续负责
+地图、任务、战斗及其他全部模块，不存在需要避让的独立战斗 Chat。

@@ -74,6 +74,8 @@ public final class MonsterType {
   public static final int DIABLO = 243;
   /** 巴尔 (Act 5 Boss) */
   public static final int BAALCRAB = 544;
+  /** 拉达曼特 (Act 2，下水道第三层) */
+  public static final int RADAMENT = 229;
 
   //==========================================================================
   // 超级 Boss
@@ -140,6 +142,8 @@ public final class MonsterType {
   public static final int GHEED = 147;
   /** 沃瑞夫 (Act 1) */
   public static final int WARRIV = 155;
+  /** 艾特玛 (Act 2) */
+  public static final int ATMA = 176;
 
   //==========================================================================
   // 召唤物

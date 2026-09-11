@@ -109,6 +109,8 @@ import com.riiablo.engine.server.AnimStepper;
 import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
+import com.riiablo.engine.server.quest.Act2QuestSystem;
+import com.riiablo.engine.client.Act2QuestDialogController;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
@@ -785,6 +787,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new DeathHandler()) // TODO: move to more appropriate spot in list
         .with(new CorpseManager()) // Manages corpse lifetime and removal
         ;
+    // Presentation-only adapter is also required by network clients; quest
+    // mutation remains authoritative in the local/server Act2QuestSystem.
+    builder.with(new Act2QuestDialogController());
     if (socket == null) {
       // Local games own the authoritative combat world.  Dedicated servers
       // already register this system; network clients must not create a
@@ -792,6 +797,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new Act1QuestDialogController(), new Act1QuestIndicatorSystem(),
           new ActTransitionSystem());
       builder.with(new Act1QuestSystem());
+      builder.with(new Act2QuestSystem());
       builder.with(new NativeMercenaryRewardSystem());
       builder.with(new com.riiablo.engine.server.MercenaryFollowSystem());
       builder.with(new com.riiablo.engine.server.SummonedPetSystem());
