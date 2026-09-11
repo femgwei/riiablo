@@ -46,6 +46,18 @@ tasks.register('headlessSimulationTick', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessMovementIntent', JavaExec) {
+  group = 'verification'
+  description = 'Runs a real protocol movement intent and verifies target-tick ACK latency.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-movement-intent', '--test-timeout', '20'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessSnapshotOrder', JavaExec) {
   group = 'verification'
   description = 'Runs two real protocol clients and verifies monotonic shared snapshot clocks.'

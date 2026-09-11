@@ -2086,5 +2086,19 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
   通过。
 
 当前下一项：用真实联机或隐藏双客户端采集新的 `[NET_MOVE]` 样本；若 `applyDelay` 大于
-  1 Tick，再检查 D2GS 模拟线程唤醒/批处理；若接收 Tick 已落后，则转查客户端发送和 TCP
-  往返，不再调整移动预测提前量。
+1 Tick，再检查 D2GS 模拟线程唤醒/批处理；若接收 Tick 已落后，则转查客户端发送和 TCP
+往返，不再调整移动预测提前量。
+
+### 2026-09-12 联机移动目标 Tick 无窗口验收（已通过）
+
+- [x] 新增 `:server:d2gs:headlessMovementIntent`：启动真实 D2GS 和协议客户端，等待玩家
+  权威基线后发送 `observedTick+1` 的移动意图，并验证 ACK 未被拒绝且在目标 Tick 后最多
+  一个 Tick 内返回。
+- [x] headless 客户端记录 ACK 所属快照 Tick，可自动输出 observed/target/ack Tick、
+  `tickLag` 和墙钟耗时。
+- 真实 1.10f 结果：`observedTick=7`、`targetTick=8`、`acknowledgedTick=9`、
+  `tickLag=1`、`wallMillis=42`，符合固定 25Hz 预算。
+- 验证：`:server:d2gs:headlessMovementIntent` 通过，同时完成 core 与 D2GS 编译。
+
+当前下一项：移动协议和权威队列自动门槛已正常，若真实窗口仍感觉点击迟滞，下一步转向客户端
+渲染输入到本地预测开始的延迟，并用 `[INPUT_QUEUE]` 与渲染/模拟阶段耗时做自动化复核。

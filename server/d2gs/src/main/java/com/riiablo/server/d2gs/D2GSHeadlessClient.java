@@ -98,6 +98,7 @@ public final class D2GSHeadlessClient {
   private long lastSnapshotServerTime = -1L;
   private long lastMovementAcknowledgement;
   private long lastRejectedMovementSequence;
+  private long lastMovementAcknowledgementTick = -1L;
   private long combatSequence;
   private int currentLevelId = -1;
   private int wrongLevelDrops;
@@ -123,7 +124,7 @@ public final class D2GSHeadlessClient {
       // A few older combat fixtures deliberately place actors next to a
       // deterministic target. Production D2GS leaves this bridge disabled.
       if (!config.requireSnapshotOrder && !config.requireSnapshotResync
-          && !config.requireSimulationTick) {
+          && !config.requireSimulationTick && !config.requireMovementIntent) {
         System.setProperty("riiablo.d2gs.allowLegacyEntitySync", "true");
       }
       log("server_start", "home=" + config.home + " seed=" + config.seed);
@@ -225,6 +226,10 @@ public final class D2GSHeadlessClient {
         awaitConnection(input, System.currentTimeMillis() + config.testTimeoutMillis);
         if (config.requireSimulationTick) {
           verifySimulationTick();
+          return;
+        }
+        if (config.requireMovementIntent) {
+          verifyMovementIntentScheduling(input, output);
           return;
         }
         if (config.requirePeer) verifyPeerVisibility(character, d2s, input, output);
@@ -1345,6 +1350,52 @@ public final class D2GSHeadlessClient {
     log("sim_tick_pass", "player=" + playerId + " ticks=" + before[0] + "->"
         + after[0] + " advanced=" + advanced + " step=" + step
         + " writerThreadId=" + after[1]);
+  }
+
+  /** Real-protocol gate for client targetTick -> authoritative apply/ACK timing. */
+  private void verifyMovementIntentScheduling(
+      DataInputStream input, OutputStream output) throws Exception {
+    long testDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+    while (System.currentTimeMillis() < testDeadline
+        && (!Float.isFinite(playerX) || !Float.isFinite(playerY) || lastSnapshotTick <= 0L)) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+    }
+    if (!Float.isFinite(playerX) || !Float.isFinite(playerY) || lastSnapshotTick <= 0L) {
+      throw new IOException("movement intent fixture did not receive a player baseline");
+    }
+
+    long sequence = 1L;
+    long observedTick = lastSnapshotTick;
+    long targetTick = observedTick + 1L;
+    long sentAtMillis = System.currentTimeMillis();
+    send(output, movementIntentPacket(
+        playerX + 3f, playerY, sequence, observedTick, targetTick));
+
+    while (System.currentTimeMillis() < testDeadline
+        && lastMovementAcknowledgement < sequence) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+    }
+    if (lastMovementAcknowledgement != sequence) {
+      throw new IllegalStateException("movement intent was not acknowledged: expected="
+          + sequence + " actual=" + lastMovementAcknowledgement);
+    }
+    if (lastRejectedMovementSequence == sequence) {
+      throw new IllegalStateException("valid movement intent was rejected at tick "
+          + lastMovementAcknowledgementTick);
+    }
+    long tickLag = lastMovementAcknowledgementTick - targetTick;
+    if (lastMovementAcknowledgementTick < targetTick || tickLag > 1L) {
+      throw new IllegalStateException("movement intent apply tick outside 0/1 tick budget: "
+          + "observed=" + observedTick + " target=" + targetTick + " ack="
+          + lastMovementAcknowledgementTick + " lag=" + tickLag);
+    }
+    log("movement_intent_pass", "player=" + playerId + " sequence=" + sequence
+        + " observedTick=" + observedTick + " targetTick=" + targetTick
+        + " acknowledgedTick=" + lastMovementAcknowledgementTick
+        + " tickLag=" + tickLag + " wallMillis="
+        + (System.currentTimeMillis() - sentAtMillis));
   }
 
   /**
@@ -3449,6 +3500,7 @@ public final class D2GSHeadlessClient {
       if (sync.acknowledgedInputSequence() > 0L) {
         lastMovementAcknowledgement = sync.acknowledgedInputSequence();
         lastRejectedMovementSequence = sync.rejectedInputSequence();
+        lastMovementAcknowledgementTick = snapshotTick;
       }
       int positionIndex = findComponent(sync, ComponentP.PositionP);
       if (positionIndex >= 0) {
@@ -4064,6 +4116,7 @@ public final class D2GSHeadlessClient {
     boolean requirePeer;
     boolean requireMonsterMovement;
     boolean requireSimulationTick;
+    boolean requireMovementIntent;
     boolean requireSnapshotOrder;
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
@@ -4103,6 +4156,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-peer".equals(arg)) config.requirePeer = true;
         else if ("--require-monster-movement".equals(arg)) config.requireMonsterMovement = true;
         else if ("--require-sim-tick".equals(arg)) config.requireSimulationTick = true;
+        else if ("--require-movement-intent".equals(arg)) config.requireMovementIntent = true;
         else if ("--require-snapshot-order".equals(arg)) config.requireSnapshotOrder = true;
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
@@ -4185,6 +4239,7 @@ public final class D2GSHeadlessClient {
       System.out.println("Usage: D2GSHeadlessClient [--home <D2 dir>] [--save <file.d2s>]"
           + " [--generated-amazon] [--host 127.0.0.1] [--port 6114]"
           + " [--skill 0] [--require-missile] [--require-sim-tick]"
+          + " [--require-movement-intent]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-den-quest] [--require-quest-recovery]"
           + " [--require-countess-quest]"
