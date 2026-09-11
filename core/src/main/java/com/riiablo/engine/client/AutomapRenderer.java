@@ -240,17 +240,14 @@ public class AutomapRenderer extends BaseSystem {
 
   @Override
   protected void processSystem() {
+    // Exploration is simulation state, not a draw-only effect. Continue
+    // updating it while the overlay is hidden so opening Automap later shows
+    // the rooms the player already traversed.
+    updateExplorationFromPlayer();
     if (!automapManager.isVisible()) {
       return;
     }
 
-    // The normal GameScreen does not own an Automap update callback. Keep the
-    // exploration state driven by the same authoritative player position used
-    // by entity collection, otherwise the overlay remains frozen at its
-    // initial room (the offscreen harness updates this explicitly). This is a
-    // read-only client-side update; it never changes simulation coordinates.
-    updateExplorationFromPlayer();
-    
     // Gdx.app.log(TAG, "processSystem: automap is visible, calling drawAutomap()...");
     
     // 收集实体标记

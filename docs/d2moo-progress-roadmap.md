@@ -2060,4 +2060,17 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
   通过。
 
 当前下一项：在真实/隐藏客户端打开 Automap 后移动跨越 RoomEx 边界，确认新 cell 出现且旧
-  探索不会被清空；随后继续核对联机移动日志中的 `intent_queue` 与 `intent_apply` Tick 差。
+探索不会被清空；随后继续核对联机移动日志中的 `intent_queue` 与 `intent_apply` Tick 差。
+
+### 2026-09-12 Automap 隐藏期间持续记录探索（已完成代码修复）
+
+- [x] 将玩家位置到 RoomEx 探索状态的更新移到 Automap 可见性判断之前；小地图关闭时仍
+  持续记录已走过的房间，重新打开时不会回到旧的初始探索范围。
+- [x] 地形 cell 的实际绘制仍仅在 Automap 可见时执行，不增加隐藏状态下的 GPU 绘制开销，
+  也不修改权威模拟坐标。
+- 验证：`AutomapLayerTest`、`AutomapRoomProjectionIntegrationTest`、`:core:compileJava`
+  通过。
+
+当前下一项：在具备资源的隐藏客户端验证“关闭 Automap 移动后再打开”的探索保留，并继续
+  使用 `[NET_MOVE] phase=intent_queue/intent_apply` 样本判断联机移动延迟是否来自网络接收
+  还是服务端 Tick 调度。
