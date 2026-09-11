@@ -211,8 +211,13 @@ public class CursorMovementSystem extends BaseSystem {
     // normal interaction/attack path. Otherwise this is a ground click and we
     // can immediately enqueue its world destination from the captured point.
     if (getHoveredAt(src, pendingLeftX, pendingLeftY) != Engine.INVALID_ENTITY) {
-      touchDown(src, pendingLeftX, pendingLeftY);
-      return true;
+      // A click arriving while the previous attack/throw sequence is still
+      // active is not actionable yet. Do not swallow it: fall through to the
+      // legacy edge/release path so a short throw click can be retried once
+      // the sequence becomes interruptible.
+      if (touchDown(src, pendingLeftX, pendingLeftY)) return true;
+      pendingLeftClicks.restore(click);
+      return false;
     }
     iso.agg(tmpVec2.set(pendingLeftX, pendingLeftY)).unproject().toWorld();
     if (actioneer.canInterrupt(src)) actioneer.moveTo(src, tmpVec2);
@@ -300,9 +305,12 @@ public class CursorMovementSystem extends BaseSystem {
                 // Get throwing range from weapon's RangeAdder or default
                 if (weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry) {
                   com.riiablo.codec.excel.Weapons.Entry weaponEntry = (com.riiablo.codec.excel.Weapons.Entry) weapon.base;
-                  throwRange = weaponEntry.RangeAdder + 3f; // RangeAdder + player range bonus
+                  // Pathfinder stops a player at RangeAdder + 3 + 1 native
+                  // distance. Include that final native cell so a queued
+                  // throw is not left permanently just outside its range.
+                  throwRange = weaponEntry.RangeAdder + 4f;
                 } else {
-                  throwRange = 10f; // Default throwing range
+                  throwRange = 11f; // Default throwing range plus native cell
                 }
                 
                 // Check if target is within throwing range
@@ -492,9 +500,11 @@ public class CursorMovementSystem extends BaseSystem {
         if (quantity != null && quantity.asInt() > 0) {
           if (weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry) {
             com.riiablo.codec.excel.Weapons.Entry weaponEntry = (com.riiablo.codec.excel.Weapons.Entry) weapon.base;
-            throwRange = weaponEntry.RangeAdder + 3f;
+            // Keep the client release check consistent with Pathfinder's
+            // native melee stop threshold (RangeAdder + 3 + 1).
+            throwRange = weaponEntry.RangeAdder + 4f;
           } else {
-            throwRange = 10f;
+            throwRange = 11f;
           }
 
           if (dst <= throwRange) {

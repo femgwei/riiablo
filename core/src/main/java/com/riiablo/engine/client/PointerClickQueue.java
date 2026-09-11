@@ -39,6 +39,11 @@ final class PointerClickQueue {
     return click;
   }
 
+  /** Returns a temporarily unconsumed click to the queue unchanged. */
+  void restore(Click click) {
+    if (click != null && pending == null) pending = click;
+  }
+
   boolean hasPending() {
     return pending != null;
   }

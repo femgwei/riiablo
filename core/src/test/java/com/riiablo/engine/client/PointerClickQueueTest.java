@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.Test;
 
@@ -22,5 +23,20 @@ class PointerClickQueueTest {
     assertEquals(42L, click.observedTick);
     assertFalse(queue.hasPending());
     assertNull(queue.poll());
+  }
+
+  @Test
+  void restoresUnconsumedClickWithoutChangingCoordinates() {
+    PointerClickQueue queue = new PointerClickQueue();
+    queue.capture(12f, 34f, 56L, 78L);
+    PointerClickQueue.Click click = queue.poll();
+    queue.restore(click);
+
+    PointerClickQueue.Click restored = queue.poll();
+    assertNotNull(restored);
+    assertEquals(12f, restored.screenX);
+    assertEquals(34f, restored.screenY);
+    assertEquals(56L, restored.capturedAtMillis);
+    assertEquals(78L, restored.observedTick);
   }
 }
