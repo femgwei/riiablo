@@ -13,6 +13,13 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * Act2 地图生成器 - 完全复刻 D2MOD 实现
  * 
@@ -35,6 +42,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   private static final int LEVEL_LOSTCITY = 44;
   private static final int LEVEL_VALLEYOFSNAKES = 45;
   private static final int LEVEL_CANYONOFTHEMAGI = 46;
+  private static final int LEVEL_ARCANESANCTUARY = 75;
+  private static final int ACT2_LEVEL_FIRST = LEVEL_LUTGHOLEIN;
+  private static final int ACT2_LEVEL_LAST = LEVEL_ARCANESANCTUARY;
+  private static final int DUNGEON_PLACEMENT_GAP = 10 * DT1.Tile.SUBTILE_SIZE;
 
   /**
    * D2Common's Act II outdoor link order.  The native generator does not
@@ -395,6 +406,13 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       }
     }
 
+    // Levels.txt contains the Act II underground graph, but the outdoor
+    // builder above only creates the seven outdoor links.  D2Common allocates
+    // linked dungeon levels lazily from the real Vis/Warp slots.  Do the same
+    // here before Warp entities are emitted; otherwise an entrance can be
+    // rendered while its destination Zone is missing (black/void map).
+    createAct2LinkedDungeonZones(map, diff, seed);
+
     // Configure the runtime slots before MapManager creates Warp entities.
     // Native D2Common performs this after layout placement via
     // DRLG_SetWarpId; doing it here preserves the same mainIndex semantics.
@@ -403,7 +421,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTDESR_InitAct2OutdoorLevel
     for (Zone zone : map.zones) {
-      if (!zone.town) {
+      if (!zone.town && isAct2OutdoorLevel(zone.level.Id)) {
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 1);
         
@@ -421,6 +439,246 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         }
       }
     }
+  }
+
+  /**
+   * Creates all Act II levels reachable through a real Levels.txt Vis/Warp
+   * edge.  This intentionally does not hard-code Halls/Maggot/Viper/Tomb
+   * ids: 1.10f table data is the source of truth and the same routine also
+   * handles Palace Cellars, Sewers and Arcane Sanctuary.
+   */
+  private void createAct2LinkedDungeonZones(Map map, int diff, int seed) {
+    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+
+    List<Act2WarpEdge> edges = discoverAct2WarpEdges(Riiablo.files.Levels);
+    if (edges.isEmpty()) {
+      Gdx.app.log(TAG, "Act2 linked dungeon discovery: no Vis/Warp edges in Levels.txt");
+      return;
+    }
+
+    Set<Integer> generated = new LinkedHashSet<>();
+    List<Integer> queue = new ArrayList<>();
+    for (Zone zone : map.zones) {
+      if (zone != null && zone.level != null && isAct2Level(zone.level.Id)) {
+        generated.add(zone.level.Id);
+        queue.add(zone.level.Id);
+      }
+    }
+
+    HashMap<Integer, Levels.Entry> levelsById = new HashMap<>();
+    for (Levels.Entry level : Riiablo.files.Levels) {
+      if (level != null) levelsById.put(level.Id, level);
+    }
+
+    int created = 0;
+    for (int cursor = 0; cursor < queue.size(); cursor++) {
+      int sourceLevelId = queue.get(cursor);
+      Zone source = findZoneByLevelId(map, sourceLevelId);
+      if (source == null || source.level == null) continue;
+
+      for (Act2WarpEdge edge : edges) {
+        if (edge.sourceLevelId != sourceLevelId || generated.contains(edge.destinationLevelId)) {
+          continue;
+        }
+        Levels.Entry target = levelsById.get(edge.destinationLevelId);
+        if (target == null) {
+          Gdx.app.error(TAG, String.format(
+              "Act2 dungeon target missing from Levels.txt: %d -> %d",
+              sourceLevelId, edge.destinationLevelId));
+          continue;
+        }
+
+        int[] placement = findDungeonPlacement(map, source, target, edge.mainIndex);
+        Zone zone = createLinkedDungeonZone(map, target, diff, seed, placement[0], placement[1]);
+        if (zone == null) continue;
+        zone.generator = new BaseMapBuilderD2MOD() {{
+          factory = Act2MapBuilderD2MOD.this.factory;
+          socket = Act2MapBuilderD2MOD.this.socket;
+        }}.createMonsterGenerator(socket);
+        generated.add(target.Id);
+        queue.add(target.Id);
+        created++;
+        Gdx.app.log(TAG, String.format(
+            "Act2 linked dungeon created: %s(%d) <- %s(%d) visSlot=%d pos=(%d,%d)",
+            target.LevelName, target.Id, source.level.LevelName, source.level.Id,
+            edge.mainIndex, placement[0], placement[1]));
+      }
+    }
+
+    TopologyReport report = validateAct2Topology(Riiablo.files.Levels, generated);
+    Gdx.app.log(TAG, String.format(
+        "Act2 linked dungeon summary: edges=%d created=%d generated=%d missingTargets=%d missingReverse=%d",
+        report.edgeCount, created, generated.size(), report.missingTargets, report.missingReverse));
+  }
+
+  private Zone createLinkedDungeonZone(Map map, Levels.Entry level, int diff, int seed,
+      int x, int y) {
+    LvlPrest.Entry preset = findPreset(level.Id);
+    BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {{
+      factory = Act2MapBuilderD2MOD.this.factory;
+      socket = Act2MapBuilderD2MOD.this.socket;
+    }};
+
+    final boolean presetLevel = level.DrlgType == 2 && preset != null;
+    Zone zone;
+    if (presetLevel) {
+      int[] fileIds = new int[6];
+      int count = Preset.getPresets(preset, fileIds);
+      if (count <= 0) {
+        Gdx.app.error(TAG, "Act2 linked preset has no DS1 files: " + level.LevelName);
+        return null;
+      }
+      int select = fileIds[Math.floorMod(seed ^ level.Id, count)];
+      if (!validPresetFile(preset, select)) {
+        Gdx.app.error(TAG, String.format("Act2 linked preset file invalid: level=%d file=%d",
+            level.Id, select));
+        return null;
+      }
+      zone = base.createZoneWithPreset(map, level, preset, select, x, y, false);
+    } else {
+      int tilesX = Math.max(1, NativeDataTables.levelSizeX(level, diff, 1));
+      int tilesY = Math.max(1, NativeDataTables.levelSizeY(level, diff, 1));
+      int gridSizeX = nativeGridSize(tilesX);
+      int gridSizeY = nativeGridSize(tilesY);
+      // Keep the native dimensions exact.  The ordinary outdoor helper uses
+      // a fixed 8x8 grid and truncates a maze whose size is not divisible by
+      // eight, which leaves an unrendered/collision-free strip at the edge.
+      zone = map.addZone(level, gridSizeX, gridSizeY,
+          Math.max(1, tilesX / gridSizeX), Math.max(1, tilesY / gridSizeY));
+      zone.setPosition(x, y);
+      zone.town = false;
+    }
+    return zone;
+  }
+
+  private static int nativeGridSize(int tiles) {
+    for (int size = Math.min(8, tiles); size >= 1; size--) {
+      if (tiles % size == 0) return size;
+    }
+    return 1;
+  }
+
+  private static LvlPrest.Entry findPreset(int levelId) {
+    for (LvlPrest.Entry preset : Riiablo.files.LvlPrest) {
+      if (preset != null && preset.LevelId == levelId) return preset;
+    }
+    return null;
+  }
+
+  private static boolean validPresetFile(LvlPrest.Entry preset, int fileId) {
+    return fileId >= 0 && fileId < preset.File.length
+        && preset.File[fileId] != null && !preset.File[fileId].isEmpty()
+        && preset.File[fileId].charAt(0) != '0';
+  }
+
+  private static int[] findDungeonPlacement(Map map, Zone source, Levels.Entry target,
+      int mainIndex) {
+    int targetWidth = Math.max(1, NativeDataTables.levelSizeX(target, source.diff, 1))
+        * DT1.Tile.SUBTILE_SIZE;
+    int targetHeight = Math.max(1, NativeDataTables.levelSizeY(target, source.diff, 1))
+        * DT1.Tile.SUBTILE_SIZE;
+
+    // The LvlWarp record owns the actual orientation; mainIndex is stable for
+    // a seed but is not itself a cardinal direction.  Use it only to rotate
+    // the deterministic candidate order, then test all four sides for overlap.
+    int preferred = Math.floorMod(mainIndex, 4);
+    for (int step = 0; step < 4; step++) {
+      int direction = (preferred + step) & 3;
+      int x, y;
+      switch (direction) {
+        case 0: x = source.x(); y = source.y() - targetHeight - DUNGEON_PLACEMENT_GAP; break;
+        case 1: x = source.x() + source.width() + DUNGEON_PLACEMENT_GAP; y = source.y(); break;
+        case 2: x = source.x(); y = source.y() + source.height() + DUNGEON_PLACEMENT_GAP; break;
+        default: x = source.x() - targetWidth - DUNGEON_PLACEMENT_GAP; y = source.y(); break;
+      }
+      if (!overlapsAnyZone(map, x, y, targetWidth, targetHeight)) return new int[] {x, y};
+    }
+
+    // A dense table can exhaust all four adjacent positions.  Preserve the
+    // graph by moving east in deterministic gap-sized bands until free.
+    int x = source.x() + source.width() + DUNGEON_PLACEMENT_GAP;
+    int y = source.y();
+    int band = 2;
+    while (overlapsAnyZone(map, x, y, targetWidth, targetHeight) && band < 1024) {
+      x += DUNGEON_PLACEMENT_GAP * band++;
+    }
+    return new int[] {x, y};
+  }
+
+  private static boolean overlapsAnyZone(Map map, int x, int y, int width, int height) {
+    for (Zone zone : map.zones) {
+      if (zone == null) continue;
+      if (x < zone.x() + zone.width() && x + width > zone.x()
+          && y < zone.y() + zone.height() && y + height > zone.y()) return true;
+    }
+    return false;
+  }
+
+  static boolean isAct2Level(int levelId) {
+    return levelId >= ACT2_LEVEL_FIRST && levelId <= ACT2_LEVEL_LAST;
+  }
+
+  private static boolean isAct2OutdoorLevel(int levelId) {
+    return levelId >= LEVEL_LUTGHOLEIN && levelId <= LEVEL_CANYONOFTHEMAGI;
+  }
+
+  /** Returns only real teleport/entrance edges, not Vis-only sight links. */
+  static List<Act2WarpEdge> discoverAct2WarpEdges(Iterable<Levels.Entry> levels) {
+    HashMap<Integer, Levels.Entry> byId = new HashMap<>();
+    for (Levels.Entry level : levels) if (level != null) byId.put(level.Id, level);
+    List<Act2WarpEdge> result = new ArrayList<>();
+    Set<String> seen = new HashSet<>();
+    for (Levels.Entry source : byId.values()) {
+      if (!isAct2Level(source.Id) || source.Vis == null || source.Warp == null) continue;
+      int count = Math.min(8, Math.min(source.Vis.length, source.Warp.length));
+      for (int i = 0; i < count; i++) {
+        int targetId = source.Vis[i];
+        if (source.Warp[i] < 0 || !isAct2Level(targetId)) continue;
+        String key = source.Id + ":" + i + ":" + targetId;
+        if (seen.add(key)) result.add(new Act2WarpEdge(source.Id, targetId, i));
+      }
+    }
+    return result;
+  }
+
+  static TopologyReport validateAct2Topology(Iterable<Levels.Entry> levels,
+      Set<Integer> generatedLevelIds) {
+    HashMap<Integer, Levels.Entry> byId = new HashMap<>();
+    for (Levels.Entry level : levels) if (level != null) byId.put(level.Id, level);
+    TopologyReport report = new TopologyReport();
+    Set<String> edgeKeys = new HashSet<>();
+    for (Act2WarpEdge edge : discoverAct2WarpEdges(levels)) {
+      edgeKeys.add(edge.sourceLevelId + ":" + edge.destinationLevelId);
+    }
+    for (Act2WarpEdge edge : discoverAct2WarpEdges(levels)) {
+      report.edgeCount++;
+      if (!byId.containsKey(edge.destinationLevelId)) report.missingTargets++;
+      if (!generatedLevelIds.contains(edge.sourceLevelId)
+          || !generatedLevelIds.contains(edge.destinationLevelId)) report.missingGenerated++;
+      if (!edgeKeys.contains(edge.destinationLevelId + ":" + edge.sourceLevelId)) {
+        report.missingReverse++;
+      }
+    }
+    return report;
+  }
+
+  static final class Act2WarpEdge {
+    final int sourceLevelId;
+    final int destinationLevelId;
+    final int mainIndex;
+
+    Act2WarpEdge(int sourceLevelId, int destinationLevelId, int mainIndex) {
+      this.sourceLevelId = sourceLevelId;
+      this.destinationLevelId = destinationLevelId;
+      this.mainIndex = mainIndex;
+    }
+  }
+
+  static final class TopologyReport {
+    int edgeCount;
+    int missingTargets;
+    int missingGenerated;
+    int missingReverse;
   }
 
   /** Resolves the native Valley-of-Snakes -> Canyon placement contract. */
@@ -497,6 +755,13 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       for (IntMap.Entry<DS1.Cell> entry : source.specials.entries()) {
         DS1.Cell sourceCell = entry.value;
         if (sourceCell == null || !Map.ID.WARPS.contains(sourceCell.id)) continue;
+        // A Vis entry can describe a neighbouring level that is only in the
+        // sight graph.  D2Common creates a warp only when the corresponding
+        // LvlWarp slot is valid; do not turn a visibility marker into a
+        // playable entrance.
+        if (source.level.Warp == null || sourceCell.mainIndex < 0
+            || sourceCell.mainIndex >= source.level.Warp.length
+            || source.level.Warp[sourceCell.mainIndex] < 0) continue;
         int destinationLevelId = map.getWarpDestinationOverride(
             source.level.Id, sourceCell.mainIndex);
         if (destinationLevelId <= 0 && source.level.Vis != null
@@ -552,6 +817,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     for (IntMap.Entry<DS1.Cell> entry : destination.specials.entries()) {
       DS1.Cell cell = entry.value;
       if (cell == null || !Map.ID.WARPS.contains(cell.id)) continue;
+      if (destination.level.Warp == null || cell.mainIndex < 0
+          || cell.mainIndex >= destination.level.Warp.length
+          || destination.level.Warp[cell.mainIndex] < 0) continue;
       int target = map.getWarpDestinationOverride(destination.level.Id, cell.mainIndex);
       if (target <= 0 && destination.level.Vis != null
           && cell.mainIndex >= 0 && cell.mainIndex < destination.level.Vis.length) {

@@ -2185,6 +2185,20 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 - [x] 增加 Canyon 坐标解析的正向/fallback 回归测试。
 - 验证：`Act2MapBuilderD2MooWarpTest`、`:core:compileJava` 通过。
 
-下一项：补齐 Act II 主链上的地下区域（Halls of the Dead、Maggot Lair、Claw Viper、
-Arcane Sanctuary、Tal Rasha Tombs）与主链 Warp 的自动拓扑校验；之后再接入对应任务触发器、
-任务物品和奖励，完成 Act II 后按相同顺序推进 Act III、IV、V。
+### 2026-09-12 Act II 地下 Zone 数据驱动补齐（已完成代码修复）
+
+- [x] 不再硬编码 Halls/Maggot/Claw Viper/Palace/Sewers/Tal Rasha 的单独入口；从
+  `Levels.txt` 的真实 `Vis + Warp` 槽递归发现 Act II 传送边，按可达关系创建地下 Zone。
+- [x] 预设关卡优先使用对应 `LvlPrest` DS1；迷宫/随机关卡使用精确尺寸的网格生成器，避免
+  8-tile 整除截断导致地下边界出现黑块或可穿行空带。
+- [x] 地下 Zone 使用确定性的非重叠坐标，保留源/目标区域的 Warp 图关系；地下区域不再套用
+  Act II 野外边界、路径点和神殿装饰。
+- [x] Warp 特殊墙配对现在同时校验 `Warp[mainIndex] >= 0`，Vis-only 邻接不会被误当作可进入
+  传送门；加入 Act II 拓扑报告和递归入口日志。
+- [x] 增加 `Act2MapBuilderD2MooWarpTest`：覆盖真实 Warp 边发现、Vis-only 过滤、双向拓扑和
+  未生成目标检测。
+- 验证：`Act2MapBuilderD2MooWarpTest`、`:core:compileJava` 通过。
+
+当前下一项：在不依赖真实窗口的条件下补 Act II 任务最小闭环（Radament、Horadric Staff、
+Tainted Sun、Arcane Sanctuary、Duriel）：以地图入口 LevelId/预设单位为触发源，接入任务标记、
+任务物品和奖励；真实 DS1/MPQ 可用后再做一次第二章地下区域离屏渲染与碰撞回归。
