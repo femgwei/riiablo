@@ -161,6 +161,13 @@ public class RenderSystem extends BaseEntitySystem {
   
   // 小地图精灵资源路径
   private static final String AUTOMAP_SPRITE_PATH = "data\\global\\ui\\AUTOMAP\\MaxiMap.dc6";
+
+  /**
+   * Legacy wall-sprite rendering is retained only for source compatibility
+   * with old tooling. Runtime rendering uses AutoMap.txt/DC6 cells from
+   * AutomapManager; enabling this fallback would duplicate or misalign walls.
+   */
+  private static final boolean LEGACY_AUTOMAP_SPRITE_FALLBACK = false;
   
   // 旧墙体精灵回退帧（仅 drawAutomapWallsWithSprites 兼容路径使用）。
   // 主路径使用 AutoMap.txt + AutomapTileRenderer 查询，不应新增固定实体帧。
@@ -1796,6 +1803,7 @@ public class RenderSystem extends BaseEntitySystem {
    * 使用精灵渲染小地图墙壁
    */
   private void drawAutomapWallSprite(int orientation, float px, float py) {
+    if (!LEGACY_AUTOMAP_SPRITE_FALLBACK) return;
     if (automapSprite == null) return;
     
     int frameIndex = getAutomapFrameForOrientation(orientation);
@@ -2150,8 +2158,11 @@ public class RenderSystem extends BaseEntitySystem {
       // Gdx.app.log(TAG, "=== Automap first render - Debug info ===");
     }
     
-    // 尝试加载小地图精灵（保留用于将来可能的精灵渲染）
-    tryLoadAutomapSprite();
+    // Legacy fixed-frame wall sprites are disabled; native cells are rendered
+    // by AutomapRenderer/AutomapManager from AutoMap.txt and MaxiMap.dc6.
+    if (LEGACY_AUTOMAP_SPRITE_FALLBACK) {
+      tryLoadAutomapSprite();
+    }
     
     // 仅在首次打开小地图时记录一次
     if (!automapLoggedOnce) {
@@ -2604,6 +2615,7 @@ public class RenderSystem extends BaseEntitySystem {
    * 使用精灵批处理渲染所有墙壁（备用方法，目前不使用）
    */
   private void drawAutomapWallsWithSprites() {
+    if (!LEGACY_AUTOMAP_SPRITE_FALLBACK) return;
     int startX2 = startX;
     int startY2 = startY;
     float startPx2 = startPx;

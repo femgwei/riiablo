@@ -48,6 +48,12 @@
   画面验收仍因环境条件暂缓。
 - 下一步：隔离 `RenderSystem` 旧墙体固定帧回退，并验证实体探索过滤与原生/回退绘制不重复。
 
+## 最近更新（2026-09-11，续）
+
+- `RenderSystem` 的旧墙体固定帧精灵路径已通过 `LEGACY_AUTOMAP_SPRITE_FALLBACK=false`
+  隔离，运行时不会与 AutoMap.txt/DC6 原生 cell 重复绘制；Automap 定向测试与核心编译通过。
+- 下一步：补充对象/怪物 RoomEx 探索过滤回归，验证原生图标和几何回退不会重复出现。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName

@@ -1688,6 +1688,19 @@ Storm，并收敛 headless 测试日志输出以便持续集成。
 当前下一项：移除/隔离 `RenderSystem` 中 Automap 旧墙体固定帧兼容回退，并补充对象/怪物
 探索过滤回归，确保原生 DC6 与几何回退不会重复绘制。
 
+### 2026-09-11 Automap 旧墙体精灵回退隔离（已完成）
+
+- [x] ~~隔离 `RenderSystem` 固定墙体帧兼容路径~~
+  - 增加 `LEGACY_AUTOMAP_SPRITE_FALLBACK=false`，运行时不再加载或执行旧的
+    `MaxiMap.dc6` 固定墙体帧路径；墙体统一由 `AutomapManager` 的 AutoMap.txt 查询和
+    原生 DC6 cell 绘制，避免与新路径重复叠加、方向错位。
+  - 保留旧方法仅作源码兼容，显式开关开启时才可用于历史工具调试。
+- 验证：`:core:test --tests com.riiablo.engine.client.automap.* :core:compileJava`
+  全部通过；真实 1.10f 画面测试仍按当前条件跳过。
+
+当前下一项：为 Automap 对象/怪物的 RoomEx 探索过滤补充纯 Java 回归，确认未探索实体不
+泄漏、原生 DC6 与几何标记不重复；随后再评估移除兼容代码的时机。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。
