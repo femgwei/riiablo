@@ -887,6 +887,8 @@ public class Map implements Disposable {
     public int y() { return y; }
     public int width() { return width; }
     public int height() { return height; }
+    /** Public level identifier for client-side projections such as Automap. */
+    public int levelId() { return level == null ? -1 : level.Id; }
 
     static final Pool<Zone> pool = Pools.get(Zone.class, 16);
 

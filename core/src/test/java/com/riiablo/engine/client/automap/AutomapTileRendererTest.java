@@ -48,4 +48,11 @@ class AutomapTileRendererTest {
     int selected = AutomapTileRenderer.selectCellId(cels, 1234L);
     assertTrue(selected == 4 || selected == 9);
   }
+
+  @Test void orientationNamesMatchD2MooVocabulary() {
+    assertEquals("fl", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.FLOOR));
+    assertEquals("wtlr", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.RIGHT_NORTH_CORNER_WALL));
+    assertEquals("wld", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.LEFT_WALL_DOOR));
+    assertEquals("rf", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.ROOF));
+  }
 }

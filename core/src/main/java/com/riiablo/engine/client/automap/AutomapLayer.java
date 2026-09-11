@@ -151,15 +151,20 @@ public class AutomapLayer {
   public void clearExploration() {
     exploredTiles.clear();
   }
+
+  /** Clears generated DC6 cells while preserving exploration progress. */
+  public void clearCells() {
+    floors.clear();
+    walls.clear();
+    objects.clear();
+    extras.clear();
+  }
   
   /**
    * 清除所有单元格数据
    */
   public void clear() {
-    floors.clear();
-    walls.clear();
-    objects.clear();
-    extras.clear();
+    clearCells();
     exploredTiles.clear();
     saved = false;
   }

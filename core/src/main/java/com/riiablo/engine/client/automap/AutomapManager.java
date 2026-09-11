@@ -14,6 +14,8 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.AutoMap;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.map.Map;
+import com.riiablo.map.DT1;
+import com.riiablo.map.Orientation;
 import com.riiablo.util.DebugUtils;
 
 /**
@@ -307,6 +309,43 @@ public class AutomapManager implements Disposable {
     }
     Map.Zone zone = map.getZone(playerX, playerY);
     layer.updateRoomExploration(zone, playerX, playerY);
+  }
+
+  /**
+   * Builds native DC6-backed cells from a generated Zone.  Coordinates stored
+   * in AutomapCell are world subtiles; the renderer's automap camera projects
+   * them just like entity markers.  Call once after a zone is generated (or
+   * again after changing level/seed).
+   */
+  public int rebuildNativeCells(Map.Zone zone, String automapLevelName, long automapSeed) {
+    if (zone == null || automapLevelName == null || tileRenderer == null) return 0;
+    AutomapLayer layer = getOrCreateLayer(zone.levelId());
+    layer.clearCells();
+    int added = 0;
+    int minTx = zone.x() / DT1.Tile.SUBTILE_SIZE;
+    int minTy = zone.y() / DT1.Tile.SUBTILE_SIZE;
+    int maxTx = (zone.x() + zone.width()) / DT1.Tile.SUBTILE_SIZE;
+    int maxTy = (zone.y() + zone.height()) / DT1.Tile.SUBTILE_SIZE;
+    for (int ty = minTy; ty < maxTy; ty++) {
+      for (int tx = minTx; tx < maxTx; tx++) {
+        int worldX = tx * DT1.Tile.SUBTILE_SIZE;
+        int worldY = ty * DT1.Tile.SUBTILE_SIZE;
+        for (int l = 0; l < Map.MAX_LAYERS; l++) {
+          DT1.Tile tile = zone.get(l, tx, ty);
+          if (tile == null) continue;
+          String tileName = AutomapTileRenderer.tileNameForOrientation(tile.orientation);
+          if (tileName == null) continue;
+          int cell = tileRenderer.getAutomapCellId(automapLevelName, tileName,
+              tile.mainIndex, tile.subIndex, automapSeed ^ (worldX * 31L + worldY));
+          if (cell < 0) continue;
+          if (Orientation.isFloor(tile.orientation)) layer.addFloor(cell, worldX, worldY);
+          else if (Orientation.isWall(tile.orientation)) layer.addWall(cell, worldX, worldY);
+          else layer.addObject(cell, worldX, worldY);
+          added++;
+        }
+      }
+    }
+    return added;
   }
   
   // ==================== 实体标记 ====================

@@ -52,6 +52,16 @@
 - 新增矩形边界与负坐标测试。尚未完成墙体/地板单元的 DC6 连续性离屏验收；下一步为
   将 RoomEx 的 DS1 floor/wall 单元按 AutoMap cell 查询绘制到已探索区域。
 
+### 原生 DC6 单元构建（本轮完成）
+
+- `AutomapManager.rebuildNativeCells` 遍历 Zone 的 DT1 floor/wall/object 层，按 D2MOO
+  tile name、style、sequence 和确定性 seed 查询 `MaxiMap.dc6` cell，并写入
+  `AutomapLayer` 的 floors/walls/objects 列表；旧几何绘制仍可作为无资源回退。
+- `AutomapLayer.clearCells` 与 `Map.Zone.levelId()` 用于安全重建和跨关卡缓存隔离。
+- 当前接口尚未自动挂到地图生成回调：各地图的 D2MOO Automap LevelType 映射仍需根据
+  1.10f `Levels.txt` 校验。下一步建立 LevelId→Automap LevelName 映射并接入首次 Zone
+  生成和离屏 DC6 连续性回归。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster
