@@ -1449,6 +1449,19 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
 当前下一项：继续扩展复杂技能真实双客户端门槛（Blizzard/Frozen Orb/Meteor 的子导弹
   删除与重连），并将测试入口的超时/日志输出收敛为可持续 CI 运行模式。
 
+### 2026-09-11 Blizzard / Frozen Orb / Meteor 子导弹门槛（已通过）
+
+- [x] ~~控制导弹、子导弹和双端删除集合一致性~~
+  - `headlessAreaSkill` 新增 Blizzard(59)、Frozen Orb(64)；Meteor(56) 同时要求根导弹
+    和至少一个子导弹的原生 missile ID 在两端都出现。
+  - 双端门槛现在比较实体 ID 的并集与交集，任何只在一端生成或删除的 `MissileP` 都会
+    失败；共享条目继续比较技能 ID、伤害等级和删除标记。
+  - 真实 1.10f MPQ 下 Meteor、Blizzard、Frozen Orb 三项通过，既有 Thunder Storm、
+    Druid Storm 和 Hydra/Volcano 门槛保持通过。
+
+当前下一项：把复杂技能门槛扩展到断线重连后的子导弹快照恢复，并减少测试日志噪声，随后
+进入其余多段导弹技能的多人表现验收。
+
 ### 2026-09-11 真实 1.10f 双客户端复杂区域技能门槛（已通过）
 
 - [x] ~~Volcano(244)、Hydra(62)、Armageddon(249)、Hurricane(250) 真实无窗口双客户端验收~~

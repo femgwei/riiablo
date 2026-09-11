@@ -137,3 +137,7 @@ Hydra(62)、Armageddon(249)、Hurricane(250) 全部通过。两端共享服务�
 Meteor(56) 与 Thunder Storm(57) 的真实 1.10f 双客户端验收随后完成；Thunder Storm
 导弹只结算一次并保留到下一固定帧，确保两端收到同一权威 `MissileP`。下一项转入
 Blizzard/Frozen Orb/Meteor 子导弹删除与重连门槛。
+
+Blizzard(59)、Frozen Orb(64)、Meteor(56) 的根/子导弹双客户端门槛已通过；测试现在
+比较两端 `MissileP` 实体 ID 并集，单端生成或删除会直接失败。下一项为断线重连后的
+复杂子导弹快照恢复。

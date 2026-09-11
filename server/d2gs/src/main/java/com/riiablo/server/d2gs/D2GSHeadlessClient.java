@@ -644,6 +644,9 @@ public final class D2GSHeadlessClient {
     Set<Integer> shared = new HashSet<>(a.areaMissiles.keySet());
     shared.retainAll(b.areaMissiles.keySet());
     if (!areaMissileDeletionConsistent(a, b, skillId)) return false;
+    if (requiresAreaChild(skillId) && !sharedAreaChildObserved(a, b, shared, skillId)) {
+      return false;
+    }
     for (Integer entityId : shared) {
       AreaMissile first = a.areaMissiles.get(entityId);
       AreaMissile second = b.areaMissiles.get(entityId);
@@ -661,10 +664,42 @@ public final class D2GSHeadlessClient {
     return false;
   }
 
+  /**
+   * Blizzard, Frozen Orb and Meteor are controller skills: observing only the
+   * root missile is insufficient. Their native SrvDo/SrvHit path must publish
+   * at least one child missile to both clients before the gate passes.
+   */
+  private static boolean requiresAreaChild(int skillId) {
+    return skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
+        || skillId == SkillId.METEOR;
+  }
+
+  private static boolean sharedAreaChildObserved(D2GSHeadlessClient a,
+      D2GSHeadlessClient b, Set<Integer> shared, int skillId) {
+    Set<Integer> aTypes = new HashSet<>();
+    Set<Integer> bTypes = new HashSet<>();
+    for (Integer entityId : shared) {
+      AreaMissile first = a.areaMissiles.get(entityId);
+      AreaMissile second = b.areaMissiles.get(entityId);
+      if (first == null || second == null || !first.everActive || !second.everActive
+          || first.skillId != skillId || second.skillId != skillId) continue;
+      aTypes.add(first.missileId);
+      bTypes.add(second.missileId);
+    }
+    // Root and child rows use distinct native missile IDs in 1.10f. Keep the
+    // comparison symmetric so one client cannot pass with a stale child.
+    return aTypes.size() >= 2 && aTypes.equals(bTypes);
+  }
+
   private static boolean areaMissileDeletionConsistent(D2GSHeadlessClient a,
       D2GSHeadlessClient b, int skillId) {
     Set<Integer> shared = new HashSet<>(a.areaMissiles.keySet());
     shared.retainAll(b.areaMissiles.keySet());
+    Set<Integer> all = new HashSet<>(a.areaMissiles.keySet());
+    all.addAll(b.areaMissiles.keySet());
+    // A deletion or child spawn observed by only one TCP peer is already a
+    // protocol divergence, even if all currently shared entries match.
+    if (shared.size() != all.size()) return false;
     for (Integer entityId : shared) {
       AreaMissile first = a.areaMissiles.get(entityId);
       AreaMissile second = b.areaMissiles.get(entityId);
@@ -3699,7 +3734,8 @@ public final class D2GSHeadlessClient {
   private static byte[] createGeneratedAreaSave(int skillId) {
     boolean hydra = skillId == SkillId.HYDRA;
     boolean sorceress = hydra || skillId == SkillId.METEOR
-        || skillId == SkillId.THUNDER_STORM;
+        || skillId == SkillId.THUNDER_STORM || skillId == SkillId.BLIZZARD
+        || skillId == SkillId.FROZEN_ORB;
     int characterClass = sorceress ? Riiablo.SORCERESS : Riiablo.DRUID;
     CharacterClass classData = sorceress ? CharacterClass.SORCERESS : CharacterClass.DRUID;
     String name = hydra ? "HeadlessHydra" : sorceress ? "HeadlessSorc" : "HeadlessArea";
@@ -3930,7 +3966,7 @@ public final class D2GSHeadlessClient {
       if (config.requireAreaSkillScenario && !isAreaSkill(config.areaSkillId)) {
         throw new IllegalArgumentException("--area-skill must be one of Hydra(62), Firestorm(225), "
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
-            + "Meteor(56), ThunderStorm(57)");
+            + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
       }
       if (!config.generatedAmazon && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
@@ -3945,7 +3981,8 @@ public final class D2GSHeadlessClient {
       return skillId == SkillId.HYDRA || skillId == SkillId.FIRESTORM
           || skillId == SkillId.FISSURE || skillId == SkillId.VOLCANO
           || skillId == SkillId.ARMAGEDDON || skillId == SkillId.HURRICANE
-          || skillId == SkillId.METEOR || skillId == SkillId.THUNDER_STORM;
+          || skillId == SkillId.METEOR || skillId == SkillId.THUNDER_STORM
+          || skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB;
     }
 
     private static File firstSave(File directory) {
@@ -3970,7 +4007,7 @@ public final class D2GSHeadlessClient {
           + " [--require-fallen-scenario] [--require-den-quest] [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
-          + " [--require-area-skill] [--area-skill 244|56|57]"
+          + " [--require-area-skill] [--area-skill 244|56|57|59|64]"
           + " [--require-reconnect-visibility]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }
