@@ -71,6 +71,15 @@
 - 仍需用真实 1.10f 资源验证 `LvlTypes.Name` 与 D2MOO 35 类 LevelName 的映射；当前
   `RenderSystem.drawAutomap` 的几何线条仍保留为兼容回退。
 
+### Automap LevelName 映射（本轮完成）
+
+- 新增 `AutomapLevelNames`，把 0-based Act 与 `LvlTypes.Name` 规范化为 D2MOO 的 35 类
+  `AutoMap.txt LevelName`，覆盖第一幕 Town/Wilderness/Cave/Crypt/Monestary/Courtyard/
+  Barracks/Jail/Cathedral/Catacombs/Tristram，并兼容 Act 2–5 类型。
+- `Map.Zone.automapLevelName()` 已使用该映射，避免把关卡显示名误当 AutoMap 类型名。
+- 新增规范化、未知类型及 `Ice Caves` 优先级测试；下一步使用真实 1.10f 资源运行隐藏营地
+  与鲜血荒地截图回归，确认 DC6 cell 数量和坐标投影。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster

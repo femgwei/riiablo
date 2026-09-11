@@ -57,6 +57,8 @@
 - 已接入首次玩家位置更新和 `renderWithSprites`：按 Zone 的 `LvlTypes.Name` 构建并绘制已探索
   floor/wall/object DC6 cells，未探索单元过滤；几何线条仅作为兼容回退。待真实 1.10f
   资源校验 LevelName 映射。
+- 新增 `AutomapLevelNames` 并接入 Zone，将 Act/LvlTypes 规范化为 D2MOO 35 类 LevelName；
+  第一幕全部类型和 Act 2–5 兼容分支已有无资源测试。下一步执行真实 1.10f 离屏截图回归。
 
 - 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
   Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整
