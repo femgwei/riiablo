@@ -111,6 +111,7 @@ import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act1QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act2QuestSystem;
 import com.riiablo.engine.server.quest.Act2QuestMessageValidator;
+import com.riiablo.engine.server.quest.Act2HoradricStaffDropSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
@@ -2152,6 +2153,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new ObjectInitializer())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new NativeObjectDropSystem())
+        .with(new Act2HoradricStaffDropSystem())
         .with(new NativeShrineEffectSystem(authoritativeItems))
         .with(new NativeShrineSystem())
         .with(new NativeTrapSystem())

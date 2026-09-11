@@ -80,8 +80,13 @@ public class Act2QuestSystem extends PassiveSystem {
     Player player = mPlayer.get(event.entityId);
     Monster npc = mMonster.get(event.npcId);
     if (player == null || player.data == null || npc == null || npc.monstats == null
-        || npc.monstats.hcIdx != MonsterType.ATMA) return;
+        || (npc.monstats.hcIdx != MonsterType.ATMA
+            && npc.monstats.hcIdx != MonsterType.DECKARDCAIN_ACT2)) return;
 
+    if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN_ACT2) {
+      onCainStaffMessage(event, player);
+      return;
+    }
     if (event.messageIndex == Act2RadamentQuest.MESSAGE_INIT) {
       updateRecord(player.data, Act2RadamentQuest::start, "atma-init-message");
     } else if (event.messageIndex == Act2RadamentQuest.MESSAGE_REWARD) {
@@ -93,6 +98,40 @@ public class Act2QuestSystem extends PassiveSystem {
       log.info("[A2Q1] Atma reward acknowledged: player={} record=0x{}",
           event.entityId, Integer.toHexString(Short.toUnsignedInt(next)));
     }
+  }
+
+  private void onCainStaffMessage(NpcQuestMessageEvent message, Player player) {
+    CharData data = player.data;
+    short previous = getStaffRecord(data);
+    short next;
+    switch (message.messageIndex) {
+      case Act2HoradricStaffQuest.MESSAGE_SCROLL:
+        if (!data.getItems().removeItemCode(Act2HoradricStaffQuest.HORADRIC_SCROLL)) return;
+        next = Act2HoradricStaffQuest.acknowledgeScroll(previous);
+        break;
+      case Act2HoradricStaffQuest.MESSAGE_AMULET:
+        next = Act2HoradricStaffQuest.acknowledgeAmulet(previous);
+        break;
+      case Act2HoradricStaffQuest.MESSAGE_STAFF:
+        next = Act2HoradricStaffQuest.acknowledgeStaff(previous);
+        break;
+      case Act2HoradricStaffQuest.MESSAGE_CUBE:
+        next = Act2HoradricStaffQuest.acknowledgeCube(previous);
+        break;
+      case Act2HoradricStaffQuest.MESSAGE_ASSEMBLED:
+        if (!data.getItems().containsItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF)) return;
+        next = Act2HoradricStaffQuest.acknowledgeAssembly(previous);
+        break;
+      default:
+        return;
+    }
+    if (next == previous) return;
+    setStaffRecord(data, next);
+    persist(data);
+    log.info("[A2Q2] Cain message applied: player={} message={} previous=0x{} next=0x{}",
+        message.entityId, message.messageIndex,
+        Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   @Subscribe
@@ -238,8 +277,16 @@ public class Act2QuestSystem extends PassiveSystem {
     return data.getQuests(Riiablo.ACT2)[Act2RadamentQuest.RECORD];
   }
 
+  private static short getStaffRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT2)[Act2HoradricStaffQuest.RECORD];
+  }
+
   private static void setRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT2)[Act2RadamentQuest.RECORD] = record;
+  }
+
+  private static void setStaffRecord(CharData data, short record) {
+    data.getQuests(Riiablo.ACT2)[Act2HoradricStaffQuest.RECORD] = record;
   }
 
   private void updateRecord(CharData data, RecordUpdate update, String reason) {

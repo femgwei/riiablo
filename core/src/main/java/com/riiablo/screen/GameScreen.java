@@ -110,6 +110,7 @@ import com.riiablo.engine.server.StateUpdater;
 import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act2QuestSystem;
+import com.riiablo.engine.server.quest.Act2HoradricStaffDropSystem;
 import com.riiablo.engine.client.Act2QuestDialogController;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
@@ -813,6 +814,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // rolled or materialized. Network clients receive D2GS-created items.
       builder.with(new DeathRewardSystem());
       builder.with(new NativeObjectDropSystem());
+      builder.with(new Act2HoradricStaffDropSystem());
       builder.with(new NativeShrineEffectSystem());
       builder.with(new NativeShrineSystem());
       builder.with(new NativeTrapSystem());

@@ -2226,3 +2226,24 @@ Tainted Sun、Arcane Sanctuary、Duriel）：以地图入口 LevelId/预设单�
 任务物品、死亡神殿与蛇坛对象、方块合成结果、Tal Rasha 古墓插杖机关及 Duriel 房间入口，
 先建立数据驱动状态机和对象/物品事件，再接地图预设实体与多人任务传播。当前 Chat 继续负责
 地图、任务、战斗及其他全部模块，不存在需要避让的独立战斗 Chat。
+
+### 2026-09-12 Act II A2Q2 赫拉迪克法杖前置与任务宝箱（进行中）
+
+- [x] ~~原生 A2Q2 记录模型~~：使用 Act II 本地记录 2，按 D2MOO 对齐 Cain 335/336/337/338/339
+  的 `LEFT_TOWN`、`ENTERED_AREA`、`CUSTOM1/2/6/7` 转换；不把组装法杖错误标记为
+  `REWARD_GRANTED`，该完成状态留给 A2Q6 开墓流程。
+- [x] ~~任务物品代码模型~~：固定 `tr1`（Horadric Scroll）、`box`（Horadric Cube）、
+  `msf`（Staff of Kings）、`vip`（Viper Amulet）、`hst`（Horadric Staff），并提供原生
+  四件材料齐备判定和 Cain 对话分支选择。
+- [x] ~~任务宝箱多人掉落~~：OperateFn 39/40/41 在 Act II 区域首次打开时，按当前玩家各自
+  存档物品状态生成 Cube/Scroll/Staff；已拥有或已完成玩家不重复掉落，重复开箱事件幂等。
+- [x] ~~Cain 网络校验与权威处理~~：新增 Act II Cain2（MonStats 244）消息白名单；335
+  消耗 Scroll，其余消息只更新对应玩家的独立任务记录。
+- 验证：`Act2HoradricStaffQuestTest`（记录顺序、多人宝箱、幂等开箱、Cain 消耗）、
+  `:core:compileJava`、`:server:d2gs:compileJava` 通过。
+- 当前仍未完成：方块 UI/网络 `TRANSMUTE` 接口、`msf+vip+box -> hst` 的权威原子物品转换、
+  蝮蛇神殿祭坛掉落 `vip`、Tal Rasha 墓穴插杖/红门，以及与 A2Q6 的最终开墓联动；本轮只完成
+  A2Q2 前置状态和任务宝箱，避免伪造原版完成奖励。
+
+当前下一项：接通服务端权威方块合成的 A2Q2 专用配方（消费 `msf/vip`、保留 `box`、生成
+`hst`，失败原子回滚），随后补蝮蛇祭坛与 Tal Rasha 插杖对象事件，再进入 A2Q3 被污染的太阳。
