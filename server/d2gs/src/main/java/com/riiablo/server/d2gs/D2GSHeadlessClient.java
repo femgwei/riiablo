@@ -611,7 +611,7 @@ public final class D2GSHeadlessClient {
       }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
           + " animationFallback=" + animationFallback);
-      if (requiresAreaChild(skillId)) {
+      if (requiresAreaReconnect(skillId)) {
         verifyAreaSkillReconnect(a, b, inA, socketB, peerD2s, peerCharacter, skillId);
       }
     }
@@ -625,11 +625,17 @@ public final class D2GSHeadlessClient {
   private void verifyAreaSkillReconnect(D2GSHeadlessClient owner,
       D2GSHeadlessClient oldObserver, DataInputStream ownerInput, Socket oldSocket,
       byte[] observerD2s, CharacterHeader observerCharacter, int skillId) throws Exception {
+    if (skillId == SkillId.HYDRA) {
+      verifyHydraReconnect(owner, oldObserver, ownerInput, oldSocket,
+          observerD2s, observerCharacter);
+      return;
+    }
     Set<Integer> activeBefore = activeAreaMissiles(owner, skillId);
     if (activeBefore.isEmpty()) {
       throw new IllegalStateException("area-skill reconnect has no active missiles: skill="
           + skillId + " missiles=" + areaMissileSummary(owner.areaMissiles));
     }
+    Set<Integer> statesBefore = areaStateIds(owner, skillId);
     int oldObserverId = oldObserver.playerId;
     oldSocket.close();
     long disconnectDeadline = System.currentTimeMillis() + 5_000L;
@@ -669,18 +675,82 @@ public final class D2GSHeadlessClient {
         // packet and the replacement baseline. That is valid native timing;
         // a reconnect may only contain missiles that were active before the
         // disconnect, and must not resurrect a deleted/unknown entity.
-        if (!reconnectActive.isEmpty() && activeBefore.containsAll(reconnectActive)
-            && ownerActive.containsAll(reconnectActive)) {
+        Set<Integer> ownerStates = areaStateIds(owner, skillId);
+        Set<Integer> reconnectStates = areaStateIds(reconnected, skillId);
+        boolean missileSnapshotValid = activeBefore.containsAll(reconnectActive)
+            && ownerActive.containsAll(reconnectActive);
+        boolean stateSnapshotValid = statesBefore.containsAll(reconnectStates)
+            && ownerStates.containsAll(reconnectStates);
+        if ((!reconnectActive.isEmpty() || !reconnectStates.isEmpty())
+            && missileSnapshotValid && stateSnapshotValid) {
           log("area_skill_reconnect_pass", "skill=" + skillId
               + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
               + " active=" + reconnectActive + " expiredDuringReconnect="
-              + (activeBefore.size() - reconnectActive.size()) + " stale=false");
+              + (activeBefore.size() - reconnectActive.size()) + " states="
+              + reconnectStates + " stale=false");
           return;
         }
       }
       throw new IllegalStateException("area-skill reconnect snapshot mismatch: skill=" + skillId
           + " before=" + activeBefore + " owner=" + activeAreaMissiles(owner, skillId)
           + " reconnected=" + activeAreaMissiles(reconnected, skillId));
+    }
+  }
+
+  private void verifyHydraReconnect(D2GSHeadlessClient owner,
+      D2GSHeadlessClient oldObserver, DataInputStream ownerInput, Socket oldSocket,
+      byte[] observerD2s, CharacterHeader observerCharacter) throws Exception {
+    Set<Integer> hydraBefore = activeHydraIds(owner);
+    if (hydraBefore.size() < 3) {
+      throw new IllegalStateException("hydra reconnect has insufficient active monsters: "
+          + hydraBefore);
+    }
+    int oldObserverId = oldObserver.playerId;
+    oldSocket.close();
+    long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+    while (System.currentTimeMillis() < disconnectDeadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+      if (packet != null) owner.consume(packet);
+      Visibility state = owner.visibility.get(oldObserverId);
+      if (state != null && state.deleted) break;
+    }
+    D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+    try (Socket reconnectSocket = reconnected.openSocket();
+         DataInputStream reconnectInput = input(reconnectSocket);
+         OutputStream reconnectOutput = output(reconnectSocket)) {
+      send(reconnectOutput, connectionPacket(observerCharacter, observerD2s));
+      reconnected.awaitConnection(reconnectInput, deadline());
+      if (!D2GS.headlessWarpPlayer(reconnected.playerId)) {
+        throw new IOException("hydra reconnect could not enter Blood Moor");
+      }
+      long warpDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < warpDeadline && reconnected.currentLevelId != 2) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(reconnectInput);
+        if (packet != null) reconnected.consume(packet);
+      }
+      if (reconnected.currentLevelId != 2) {
+        throw new IOException("hydra reconnect did not receive Blood Moor baseline");
+      }
+      long reconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < reconnectDeadline) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+        if (packet != null) owner.consume(packet);
+        packet = readPacket(reconnectInput);
+        if (packet != null) reconnected.consume(packet);
+        Set<Integer> ownerActive = activeHydraIds(owner);
+        Set<Integer> reconnectActive = activeHydraIds(reconnected);
+        if (!reconnectActive.isEmpty() && hydraBefore.containsAll(reconnectActive)
+            && hydraBefore.containsAll(ownerActive)
+            && ownerActive.containsAll(reconnectActive)) {
+          log("area_skill_reconnect_pass", "skill=" + SkillId.HYDRA
+              + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
+              + " active=" + reconnectActive + " stale=false");
+          return;
+        }
+      }
+      throw new IllegalStateException("hydra reconnect snapshot mismatch: before=" + hydraBefore
+          + " owner=" + activeHydraIds(owner)
+          + " reconnected=" + activeHydraIds(reconnected));
     }
   }
 
@@ -693,6 +763,24 @@ public final class D2GSHeadlessClient {
       }
     }
     return active;
+  }
+
+  private static Set<Integer> activeHydraIds(D2GSHeadlessClient client) {
+    Set<Integer> active = new HashSet<>(client.areaHydraMonsters);
+    active.removeAll(client.areaHydraDeletes);
+    return active;
+  }
+
+  private static Set<Integer> areaStateIds(D2GSHeadlessClient client, int skillId) {
+    Set<Integer> expected = new HashSet<>();
+    if (skillId == SkillId.THUNDER_STORM) expected.add(
+        com.riiablo.engine.server.state.StateId.THUNDERSTORM);
+    else if (skillId == SkillId.HURRICANE) expected.add(
+        com.riiablo.engine.server.state.StateId.HURRICANE);
+    else if (skillId == SkillId.ARMAGEDDON) expected.add(
+        com.riiablo.engine.server.state.StateId.ARMAGEDDON);
+    expected.retainAll(client.areaStates.keySet());
+    return expected;
   }
 
   private static void awaitAreaBaselines(D2GSHeadlessClient a, D2GSHeadlessClient b,
@@ -753,6 +841,12 @@ public final class D2GSHeadlessClient {
   private static boolean requiresAreaChild(int skillId) {
     return skillId == SkillId.BLIZZARD || skillId == SkillId.FROZEN_ORB
         || skillId == SkillId.METEOR;
+  }
+
+  private static boolean requiresAreaReconnect(int skillId) {
+    return requiresAreaChild(skillId) || skillId == SkillId.HYDRA
+        || skillId == SkillId.VOLCANO || skillId == SkillId.ARMAGEDDON
+        || skillId == SkillId.HURRICANE || skillId == SkillId.THUNDER_STORM;
   }
 
   private static boolean sharedAreaChildObserved(D2GSHeadlessClient a,

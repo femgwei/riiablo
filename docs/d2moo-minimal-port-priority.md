@@ -145,3 +145,8 @@ Blizzard(59)、Frozen Orb(64)、Meteor(56) 的根/子导弹双客户端门槛已
 Meteor、Blizzard、Frozen Orb 的断线重连门槛已通过：重连基线不会恢复未知或已删除的
 导弹，重连窗口内按原生寿命过期的短导弹允许从新基线消失。下一项扩展到 Hydra、Volcano、
 Armageddon、Hurricane、Thunder Storm。
+
+Hydra、Volcano、Armageddon、Hurricane、Thunder Storm 的同类重连门槛也已通过真实 1.10f
+双客户端验证：Hydra 使用 `MonsterP` 所有权集合，其余技能使用 `MissileP`，并校验
+Armageddon/Hurricane/Thunder Storm 的 `StateP` 来源与状态 ID。下一项转入 headless 日志
+收敛和持续集成回归。

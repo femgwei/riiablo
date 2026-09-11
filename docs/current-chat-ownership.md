@@ -228,3 +228,13 @@ Armageddon/Hurricane 的实机观感验证。
   角色重连后，服务端基线只恢复断开前已存在且仍存活的导弹，不恢复未知/已删除实体。
 - 重连期间自然过期的短生命周期子导弹按原生寿命处理，不误报为同步错误。
 - 下一项是 Hydra、Volcano、Armageddon、Hurricane、Thunder Storm 的同类重连门槛。
+
+### 2026-09-11 Hydra/风暴技能重连验收结果
+
+- Hydra(62)、Volcano(244)、Armageddon(249)、Hurricane(250)、Thunder Storm(57) 已使用
+  真实 1.10f MPQ 完成无窗口双客户端断线重连验证。
+- Hydra 校验 `MonsterP` 所有权和实体集合；其余技能校验 `MissileP`，并对三种带状态的
+  技能校验 `StateP` 来源。短生命周期导弹在重连期间自然过期不算同步错误，但不得恢复
+  未知或已删除实体。
+- 下一项是收敛 headless 日志并将全部区域技能双端/重连门槛接入 CI；战斗、地图和网络
+  仍由当前 Chat 统一维护。

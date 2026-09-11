@@ -1474,6 +1474,20 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
 当前下一项：将同样的重连门槛扩展到 Hydra、Volcano、Armageddon、Hurricane、Thunder
 Storm，并收敛 headless 测试日志输出以便持续集成。
 
+### 2026-09-11 Hydra/风暴技能断线重连门槛（已通过）
+
+- [x] ~~Hydra、Volcano、Armageddon、Hurricane、Thunder Storm 重连快照~~
+  - Hydra(62) 按三个 `MonsterP` 的所有权、实体 ID 和删除集合校验；重连客户端不恢复
+    未知或已删除的召唤物。
+  - Volcano(244) 按活跃 `MissileP` 集合校验；Armageddon(249)、Hurricane(250) 和
+    Thunder Storm(57) 允许短生命周期导弹在重连窗口内按原生寿命过期，同时校验对应
+    `StateP`（`ARMAGEDDON`、`HURRICANE`、`THUNDERSTORM`）来源不漂移。
+  - 五项均使用真实 `G:\\BaiduNetdiskDownload\\Diablo II 1.10f` MPQ、两个 TCP 客户端和
+    无窗口 D2GS 通过；日志中的 `area_skill_dual_pass` 与 `area_skill_reconnect_pass`
+    均出现，未发现陈旧实体。
+
+当前下一项：统一收敛 headless 区域技能日志，并将这组重连门槛纳入持续集成回归。
+
 ### 2026-09-11 真实 1.10f 双客户端复杂区域技能门槛（已通过）
 
 - [x] ~~Volcano(244)、Hydra(62)、Armageddon(249)、Hurricane(250) 真实无窗口双客户端验收~~
