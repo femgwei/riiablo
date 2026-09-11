@@ -445,6 +445,26 @@ public class Map implements Disposable {
         }
       }
     }
+
+    // Act III uses the same runtime first-empty-slot warp insertion as the
+    // native DRLG_LINKS path.  Keep this post-generation so both endpoint
+    // special cells already exist before they are paired.
+    if (act == 2) {
+      boolean useD2MOD = true;
+      if (Riiablo.cvars != null) {
+        com.riiablo.cvar.Cvar<Boolean> cvar =
+            Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
+      }
+      if (useD2MOD) {
+        try {
+          Act3MapBuilderD2MOD.INSTANCE.configureAct3OutdoorWarps(this);
+          Act3MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(this);
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "Error during Act3 native warp post-generation processing", t);
+        }
+      }
+    }
   }
 
   public int seed() {
@@ -1188,6 +1208,20 @@ public class Map implements Disposable {
       return flags[index(width, x, y)] & 0xFF;
     }
 
+    /** Number of currently active native object footprints at a world cell. */
+    public int objectCollisionReferences(int worldX, int worldY) {
+      if (objectBlockWalkRefs == null || worldX < x || worldY < y
+          || worldX >= x + width || worldY >= y + height) return 0;
+      return objectBlockWalkRefs[index(width, worldX - x, worldY - y)];
+    }
+
+    /** Number of currently active door footprints at a world cell. */
+    public int doorCollisionReferences(int worldX, int worldY) {
+      if (objectDoorRefs == null || worldX < x || worldY < y
+          || worldX >= x + width || worldY >= y + height) return 0;
+      return objectDoorRefs[index(width, worldX - x, worldY - y)];
+    }
+
     public int playerFlyingFlags(int x, int y) {
       if (x < 0 || y < 0 || x >= width || y >= height) {
         return DT1.Tile.FLAG_BLOCK_JUMP;
@@ -1800,7 +1834,7 @@ public class Map implements Disposable {
   }
 
   /** Immutable world-space projection of a native D2DrlgRoom/RoomEx. */
-  public static final class RoomEx {
+    public static final class RoomEx {
     public static final int CLIENT_IN_ROOM = 0;
     public static final int CLIENT_IN_SIGHT = 1;
     public static final int CLIENT_OUT_OF_SIGHT = 2;

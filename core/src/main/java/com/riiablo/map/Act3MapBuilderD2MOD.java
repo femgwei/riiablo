@@ -3,6 +3,8 @@ package com.riiablo.map;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
@@ -52,6 +54,18 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       LEVEL_UPPERKURAST,
       LEVEL_KURASTCAUSEWAY,
       LEVEL_TRAVINCAL
+  };
+
+  /** Adjacent outdoor links installed by D2Common's DRLG_SetWarpId path. */
+  static final int[][] ACT3_OUTDOOR_LINKS = {
+      {LEVEL_KURASTDOCKTOWN, LEVEL_SPIDERFOREST},
+      {LEVEL_SPIDERFOREST, LEVEL_GREATMARSH},
+      {LEVEL_GREATMARSH, LEVEL_FLAYERJUNGLE},
+      {LEVEL_FLAYERJUNGLE, LEVEL_LOWERKURAST},
+      {LEVEL_LOWERKURAST, LEVEL_KURASTBAZAAR},
+      {LEVEL_KURASTBAZAAR, LEVEL_UPPERKURAST},
+      {LEVEL_UPPERKURAST, LEVEL_KURASTCAUSEWAY},
+      {LEVEL_KURASTCAUSEWAY, LEVEL_TRAVINCAL}
   };
 
   @Wire(name = "factory")
@@ -192,6 +206,135 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
           OutdoorFeatures.placeShrines(zone, seed, 3);
         }
       }
+    }
+  }
+
+  /**
+   * Mirrors the runtime half of D2Common's Act III outdoor linking.  The
+   * native generator appends the adjacent level to the first empty LvlWarp
+   * slot instead of replacing Levels.txt, so preserve that slot behaviour.
+   */
+  void configureAct3OutdoorWarps(Map map) {
+    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    IntMap<RuntimeWarpState> states = new IntMap<>();
+    for (int[] link : ACT3_OUTDOOR_LINKS) {
+      for (int levelId : link) {
+        if (states.containsKey(levelId)) continue;
+        Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        if (level != null) states.put(levelId, new RuntimeWarpState(level.Vis, level.Warp));
+      }
+    }
+
+    int configured = 0;
+    for (int[] link : ACT3_OUTDOOR_LINKS) {
+      RuntimeWarpState source = states.get(link[0]);
+      RuntimeWarpState destination = states.get(link[1]);
+      if (source == null || destination == null) continue;
+      int sourceSlot = source.ensureDestination(link[1]);
+      int destinationSlot = destination.ensureDestination(link[0]);
+      if (sourceSlot < 0 || destinationSlot < 0) {
+        Gdx.app.error(TAG, String.format(
+            "Act3 warp slot exhausted: %d->%d sourceSlot=%d destinationSlot=%d",
+            link[0], link[1], sourceSlot, destinationSlot));
+        continue;
+      }
+      map.addWarpDestinationOverride(link[0], sourceSlot, link[1]);
+      map.addWarpDestinationOverride(link[1], destinationSlot, link[0]);
+      configured++;
+    }
+    Gdx.app.log(TAG, String.format("Act3 native warp table configured: links=%d/%d",
+        configured, ACT3_OUTDOOR_LINKS.length));
+  }
+
+  /** Pairs emitted special-wall cells after all Act III zones are generated. */
+  void linkNativeWarpSpecials(Map map) {
+    if (map == null) return;
+    int linked = 0;
+    int missingZone = 0;
+    int missingReverse = 0;
+    for (Zone source : new Array.ArrayIterator<>(map.zones)) {
+      if (source == null || source.level == null || source.specials == null) continue;
+      for (IntMap.Entry<DS1.Cell> entry : source.specials.entries()) {
+        DS1.Cell sourceCell = entry.value;
+        if (sourceCell == null || !Map.ID.WARPS.contains(sourceCell.id)) continue;
+        if (source.level.Warp == null || sourceCell.mainIndex < 0
+            || sourceCell.mainIndex >= source.level.Warp.length
+            || source.level.Warp[sourceCell.mainIndex] < 0) continue;
+        int destinationLevelId = map.getWarpDestinationOverride(
+            source.level.Id, sourceCell.mainIndex);
+        if (destinationLevelId <= 0 && source.level.Vis != null
+            && sourceCell.mainIndex < source.level.Vis.length) {
+          destinationLevelId = source.level.Vis[sourceCell.mainIndex];
+        }
+        Zone destination = findZoneByLevelId(map, destinationLevelId);
+        if (destination == null) {
+          missingZone++;
+          continue;
+        }
+        DS1.Cell destinationCell = findReverseWarp(map, destination, source.level.Id);
+        if (destinationCell == null) {
+          missingReverse++;
+          continue;
+        }
+        source.setWarp(sourceCell.id, destinationCell.id);
+        linked++;
+      }
+    }
+    Gdx.app.log(TAG, String.format(
+        "Act3 native warp special summary: linked=%d missingZone=%d missingReverse=%d",
+        linked, missingZone, missingReverse));
+  }
+
+  private static Zone findZoneByLevelId(Map map, int levelId) {
+    for (Zone zone : map.zones) {
+      if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
+    }
+    return null;
+  }
+
+  private static DS1.Cell findReverseWarp(Map map, Zone destination, int sourceLevelId) {
+    if (destination.specials == null) return null;
+    for (IntMap.Entry<DS1.Cell> entry : destination.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell == null || !Map.ID.WARPS.contains(cell.id)) continue;
+      if (destination.level.Warp == null || cell.mainIndex < 0
+          || cell.mainIndex >= destination.level.Warp.length
+          || destination.level.Warp[cell.mainIndex] < 0) continue;
+      int target = map.getWarpDestinationOverride(destination.level.Id, cell.mainIndex);
+      if (target <= 0 && destination.level.Vis != null
+          && cell.mainIndex < destination.level.Vis.length) {
+        target = destination.level.Vis[cell.mainIndex];
+      }
+      if (target == sourceLevelId) return cell;
+    }
+    return null;
+  }
+
+  static int findRuntimeWarpSlot(int[] vis, int[] warp, int destinationLevelId) {
+    if (vis == null || warp == null) return -1;
+    int count = Math.min(8, Math.min(vis.length, warp.length));
+    for (int i = 0; i < count; i++) if (vis[i] == destinationLevelId) return i;
+    for (int i = 0; i < count; i++) {
+      if (vis[i] == 0 && warp[i] == -1) return i;
+    }
+    return -1;
+  }
+
+  private static final class RuntimeWarpState {
+    final int[] vis = new int[8];
+    final int[] warp = new int[8];
+
+    RuntimeWarpState(int[] sourceVis, int[] sourceWarp) {
+      for (int i = 0; i < vis.length; i++) {
+        vis[i] = sourceVis != null && i < sourceVis.length ? sourceVis[i] : 0;
+        warp[i] = sourceWarp != null && i < sourceWarp.length ? sourceWarp[i] : -1;
+      }
+    }
+
+    int ensureDestination(int destinationLevelId) {
+      int slot = findRuntimeWarpSlot(vis, warp, destinationLevelId);
+      if (slot >= 0) vis[slot] = destinationLevelId;
+      return slot;
     }
   }
 }
