@@ -197,12 +197,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   static final float BACKGROUND_DELTA_THRESHOLD = 0.25f;
 
   /**
-   * D2 advances authoritative game state at 25 Hz and, in its bounded update
-   * path, retains at most one additional 40 ms tick after a delayed frame.
-   * Keep the same input delta bound while client and server systems still
-   * share one Artemis world; the fixed-step accumulator below owns catch-up.
+   * A visible frame may be delayed by the desktop compositor or a focus
+   * transition.  Do not turn that delay into a burst of two or more gameplay
+   * ticks: interval systems (animation, AI and cooldowns) would all advance
+   * together and the next frame looks like a speed-up.  The accumulator still
+   * handles ordinary 60 Hz fractional frames; a delayed frame contributes at
+   * most one native 40 ms tick and deliberately drops the excess wall time.
    */
-  static final float MAX_SIMULATION_DELTA = SimulationClock.STEP_SECONDS * 2f;
+  static final float MAX_SIMULATION_DELTA = SimulationClock.STEP_SECONDS;
   static final int MAX_SIMULATION_STEPS_PER_RENDER = 4;
 
   private static final int[] ITEMS = {

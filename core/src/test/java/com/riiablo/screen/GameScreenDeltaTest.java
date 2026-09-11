@@ -15,9 +15,11 @@ class GameScreenDeltaTest {
   }
 
   @Test
-  void boundsCatchUpToOneAdditionalNativeTick() {
+  void boundsDelayedFrameToOneNativeTick() {
     assertEquals(GameScreen.MAX_SIMULATION_DELTA,
         GameScreen.sanitizeSimulationDelta(GameScreen.MAX_SIMULATION_DELTA + 0.001f));
+    assertEquals(GameScreen.MAX_SIMULATION_DELTA,
+        GameScreen.sanitizeSimulationDelta(GameScreen.MAX_SIMULATION_DELTA * 2f));
     assertEquals(GameScreen.MAX_SIMULATION_DELTA,
         GameScreen.sanitizeSimulationDelta(GameScreen.BACKGROUND_DELTA_THRESHOLD));
   }

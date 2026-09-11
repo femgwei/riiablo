@@ -2135,3 +2135,16 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 
 当前下一项：在真实/隐藏客户端触发一次 `[SIM_SLOW]`，根据前三项热点分别检查路径搜索、
   地图碰撞和实体遍历；若没有慢 Tick，则转向检查窗口恢复后的渲染帧追赶。
+
+### 2026-09-12 修复窗口恢复后的客户端动作加速（已完成代码修复）
+
+- [x] 将 `GameScreen` 的单帧模拟输入上限从两个原生 Tick 收紧为一个 `SimulationClock.STEP_SECONDS`
+  （40ms）。窗口切回、桌面合成器延迟或短暂卡顿不会在同一可见帧内连续推进两个动画、AI、
+  冷却或移动 Tick。
+- [x] 保留 `FixedStepAccumulator` 的普通 60Hz 分数帧累积能力；只有延迟帧超出的墙钟时间被丢弃，
+  不改变服务端权威 25Hz 模拟，也不影响正常帧率下的固定步长。
+- [x] 更新 `GameScreenDeltaTest`，覆盖 40ms 以上延迟帧仍只产生一个原生 Tick 的边界。
+- 验证：`:core:test --tests com.riiablo.screen.GameScreenDeltaTest`、`:core:compileJava` 通过。
+
+当前下一项：在有资源的隐藏/真实客户端复现一次后台切换，确认动作不再成倍播放；若仍有加速，
+继续追踪非 ECS 的 UI、音频或动画回调是否直接使用原始渲染 delta。
