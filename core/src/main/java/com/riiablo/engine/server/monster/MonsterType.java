@@ -140,6 +140,8 @@ public final class MonsterType {
   public static final int DECKARDCAIN_TOWN = 265;
   /** 第二幕鲁高因的迪卡·凯恩（D2MOO MONSTER_CAIN2） */
   public static final int DECKARDCAIN_ACT2 = 244;
+  /** 第三幕迪卡·凯恩（D2MOO MONSTER_CAIN3） */
+  public static final int CAIN3 = 245;
   /** 格瑞兹 (Act 1) */
   public static final int GHEED = 147;
   /** 沃瑞夫 (Act 1) */
@@ -162,6 +164,18 @@ public final class MonsterType {
   public static final int LYSANDER = 202;
   /** 梅希夫 (Act 2). */
   public static final int MESHIF1 = 210;
+  /** 艾什拉 (Act 3). */
+  public static final int ASHEARA = 252;
+  /** 赫拉铁力 (Act 3). */
+  public static final int HRATLI = 253;
+  /** 艾柯 (Act 3). */
+  public static final int ALKOR = 254;
+  /** 奥玛斯 (Act 3). */
+  public static final int ORMUS = 255;
+  /** 梅希夫 (Act 3). */
+  public static final int MESHIF2 = 264;
+  /** 娜塔亚 (Act 3). */
+  public static final int NATALYA = 297;
 
   //==========================================================================
   // 召唤物

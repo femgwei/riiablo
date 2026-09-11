@@ -110,6 +110,7 @@ import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act1QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act2QuestSystem;
+import com.riiablo.engine.server.quest.Act3QuestSystem;
 import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
 import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
 import com.riiablo.engine.server.quest.Act2QuestMessageValidator;
@@ -2143,6 +2144,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new EventSystem())
         .with(new Act1QuestSystem())
         .with(new Act2QuestSystem())
+        .with(new Act3QuestSystem())
         .with(new Act2TaintedSunQuestSystem())
         .with(new Act2DurielQuestSystem())
         .with(new NativeMercenaryRewardSystem())

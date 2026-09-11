@@ -561,10 +561,14 @@ public class NpcDialogManager {
     registerNpc(210, "Meshif", 2, NPC_TYPE_TRAVEL, false, false, false, false, true);
 
     // 第三幕 NPC
-    registerNpc(252, "Ormus", 3, NPC_TYPE_VENDOR, true, false, false, false, false);
+    // D2MOO MonsterIds: Asheara=252, Hratli=253, Alkor=254, Ormus=255.
+    registerNpc(255, "Ormus", 3, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(253, "Hratli", 3, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
     registerNpc(254, "Alkor", 3, NPC_TYPE_GAMBLER, false, true, false, false, false);
-    registerNpc(199, "Asheara", 3, NPC_TYPE_HIRELING, false, false, false, true, false);
+    registerNpc(252, "Asheara", 3, NPC_TYPE_HIRELING, false, false, false, true, false);
+    registerNpc(245, "Deckard Cain", 3, NPC_TYPE_NORMAL, false, false, false, false, false);
+    registerNpc(264, "Meshif", 3, NPC_TYPE_TRAVEL, false, false, false, false, true);
+    registerNpc(297, "Natalya", 3, NPC_TYPE_NORMAL, false, false, false, false, false);
 
     // 第四幕 NPC
     registerNpc(405, "Halbu", 4, NPC_TYPE_BLACKSMITH, true, false, true, false, false);

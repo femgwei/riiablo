@@ -2516,3 +2516,23 @@ A3Q2 Blade of the Old Religion、A3Q3 Khalim's Will 的触发/奖励闭环，再
 
 当前下一项：接入第三章 A3Q1 Golden Bird、A3Q2 Blade of the Old Religion、A3Q3 Khalim's
 Will 的原生地图触发、任务标记和奖励闭环；完成第三章任务后再开始第四章主链 Zone/入口导出。
+
+### 2026-09-12 Act III A3Q1 Golden Bird 原生任务链（本轮完成）
+
+- [x] 新增 `Act3GoldenBirdQuest` 和 `Act3QuestSystem`，按 D2MOO A3Q4 脚本对齐
+  `DeathEvent → Jade Figurine → Cain → Meshif → Alkor → Potion of Life` 的状态顺序、
+  奖励幂等和 D2S 任务记录持久化。
+- [x] 使用 1.10f 资源表的真实任务物品代码：`j34`（Jade Figurine）、`g34`（Golden Bird）、
+  `xyz`（Potion of Life）；满背包时 Meshif 交换保持原子性，Alkor 奖励优先尝试背包，失败时
+  安全掉落到玩家位置。
+- [x] 首个符合条件的 Act III 非 NPC/非 Boss 怪物死亡只生成一次 Jade Figurine；重复
+  `DeathEvent` 不会重复掉落。拾取后组队成员获得任务状态提示，物品和奖励仍按玩家独立领取。
+- [x] 补齐 D2MOO Act III NPC class id（Cain3=245、Asheara=252、Hratli=253、Alkor=254、
+  Ormus=255、Meshif2=264、Natalya=297），并修正 `NpcDialogManager` 原有 Ormus/Asheara 映射。
+- [x] 将任务系统注册到本地 `GameScreen` 和 `server/d2gs` 权威世界；未改动战斗公式、技能、
+  核心掉落概率或网络协议。
+- [x] 验证：`Act3GoldenBirdQuestTest`、`:core:compileJava`、`:server:d2gs:compileJava`
+  通过。
+
+当前下一项：实现第三章 A3Q2 Blade of the Old Religion（Gidbinn）任务对象、首次拾取、
+  Asheara 佣兵奖励和队伍状态传播；随后处理 A3Q3 Khalim's Will，再开始 Act IV 主链。
