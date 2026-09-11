@@ -1717,6 +1717,20 @@ Storm，并收敛 headless 测试日志输出以便持续集成。
 当前下一项：检查 Automap 地形与实体的坐标投影是否仍存在重复变换，补充负坐标、跨 Zone
 边界和 RoomEx 邻接房间的投影回归；随后进入第一章 Automap 真实资源验收准备。
 
+### 2026-09-11 Automap 负坐标与 Zone 边界投影（已完成）
+
+- [x] ~~统一 DT1 tile 边界的负坐标投影~~
+  - `AutomapProjection` 新增 floor-based tile index 和 exclusive end 计算，修复 Java
+    整数除法向零截断导致负坐标 Zone 漏绘首个 tile 的问题。
+  - `AutomapManager.rebuildNativeCells` 改用统一投影工具，地形 cell 与实体 world-subtile
+    坐标继续使用同一坐标空间。
+  - `AutomapProjectionTest` 增加负坐标、整 tile 边界和跨边界覆盖测试。
+- 验证：`:core:test --tests 'com.riiablo.engine.client.automap.*' :core:compileJava`
+  全部通过；真实 1.10f 画面测试仍按当前条件跳过。
+
+当前下一项：补充 RoomEx 邻接房间的探索/投影集成回归，验证跨 Zone 切换时当前房间、
+CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。

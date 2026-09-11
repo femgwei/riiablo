@@ -19,4 +19,18 @@ class AutomapProjectionTest {
     assertEquals(12.5f, out.x, 0.001f);
     assertEquals(-3.25f, out.y, 0.001f);
   }
+
+  @Test void negativeWorldCoordinatesUseFloorTileDivision() {
+    assertEquals(-1, AutomapProjection.tileIndex(-1));
+    assertEquals(-1, AutomapProjection.tileIndex(-5));
+    assertEquals(-2, AutomapProjection.tileIndex(-6));
+  }
+
+  @Test void zoneBoundsUseExclusiveCeilingAcrossTileEdges() {
+    assertEquals(1, AutomapProjection.tileEndExclusive(1));
+    assertEquals(1, AutomapProjection.tileEndExclusive(5));
+    assertEquals(2, AutomapProjection.tileEndExclusive(6));
+    assertEquals(0, AutomapProjection.tileEndExclusive(0));
+    assertEquals(0, AutomapProjection.tileEndExclusive(-1));
+  }
 }

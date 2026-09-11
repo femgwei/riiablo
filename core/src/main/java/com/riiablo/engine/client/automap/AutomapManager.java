@@ -333,10 +333,10 @@ public class AutomapManager implements Disposable {
     AutomapLayer layer = getOrCreateLayer(zone.levelId());
     layer.clearCells();
     int added = 0;
-    int minTx = zone.x() / DT1.Tile.SUBTILE_SIZE;
-    int minTy = zone.y() / DT1.Tile.SUBTILE_SIZE;
-    int maxTx = (zone.x() + zone.width()) / DT1.Tile.SUBTILE_SIZE;
-    int maxTy = (zone.y() + zone.height()) / DT1.Tile.SUBTILE_SIZE;
+    int minTx = AutomapProjection.tileIndex(zone.x());
+    int minTy = AutomapProjection.tileIndex(zone.y());
+    int maxTx = AutomapProjection.tileEndExclusive(zone.x() + zone.width());
+    int maxTy = AutomapProjection.tileEndExclusive(zone.y() + zone.height());
     for (int ty = minTy; ty < maxTy; ty++) {
       for (int tx = minTx; tx < maxTx; tx++) {
         int worldX = tx * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;

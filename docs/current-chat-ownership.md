@@ -62,6 +62,12 @@
   Automap 全套无资源测试和核心编译通过。
 - 下一步：验证地形/实体坐标投影、负坐标、跨 Zone 边界和 RoomEx 邻接投影。
 
+## 最近更新（2026-09-11，四续）
+
+- Automap DT1 tile 边界统一采用 floor division，修复负坐标 Zone 漏掉首个 tile 的问题；
+  新增负坐标和跨边界投影测试，Automap 全套测试及核心编译通过。
+- 下一步：补充 RoomEx 邻接房间探索/投影集成回归，检查跨 Zone 切换和实体图标可见范围。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName
