@@ -333,6 +333,12 @@ public class AutomapManager implements Disposable {
     AutomapLayer layer = getOrCreateLayer(zone.levelId());
     layer.clearCells();
     int added = 0;
+    int tileCount = 0;
+    int lookupMisses = 0;
+    String firstTile = null;
+    String firstTileName = null;
+    int firstTileStyle = 0;
+    int firstTileSequence = 0;
     int minTx = AutomapProjection.tileIndex(zone.x());
     int minTy = AutomapProjection.tileIndex(zone.y());
     int maxTx = AutomapProjection.tileEndExclusive(zone.x() + zone.width());
@@ -344,16 +350,38 @@ public class AutomapManager implements Disposable {
         for (int l = 0; l < Map.MAX_LAYERS; l++) {
           DT1.Tile tile = zone.get(l, tx, ty);
           if (tile == null) continue;
+          tileCount++;
           String tileName = AutomapTileRenderer.tileNameForOrientation(tile.orientation);
           if (tileName == null) continue;
+          if (firstTile == null) {
+            firstTile = tileName + "/" + tile.mainIndex + "/" + tile.subIndex
+                + " orientation=" + tile.orientation;
+            firstTileName = tileName;
+            firstTileStyle = tile.mainIndex;
+            firstTileSequence = tile.subIndex;
+          }
           int cell = tileRenderer.getAutomapCellId(automapLevelName, tileName,
               tile.mainIndex, tile.subIndex, automapSeed ^ (worldX * 31L + worldY));
-          if (cell < 0) continue;
+          if (cell < 0) {
+            lookupMisses++;
+            continue;
+          }
           if (Orientation.isFloor(tile.orientation)) layer.addFloor(cell, worldX, worldY);
           else if (Orientation.isWall(tile.orientation)) layer.addWall(cell, worldX, worldY);
           else layer.addObject(cell, worldX, worldY);
           added++;
         }
+      }
+    }
+    if (Gdx.app != null) {
+      Gdx.app.log(TAG, String.format(
+          "[AUTOMAP_NATIVE] level=%d name=%s tiles=%d cells=%d lookupMisses=%d first=%s",
+          zone.levelId(), automapLevelName, tileCount, added, lookupMisses,
+          firstTile == null ? "none" : firstTile));
+      if (added == 0 && firstTile != null) {
+        Gdx.app.log(TAG, "[AUTOMAP_LOOKUP] "
+            + tileRenderer.diagnostic(automapLevelName, firstTileName,
+                firstTileStyle, firstTileSequence));
       }
     }
     return added;

@@ -32,6 +32,21 @@ public final class Act3D2MOOLayoutBridge {
   private static final String TAG = "Act3D2MOOLayoutBridge";
   private static final int FIRST_LEVEL = D2LevelIds.LEVEL_KURASTDOCKTOWN;
   private static final int LAST_LEVEL = D2LevelIds.LEVEL_TRAVINCAL;
+  /** Act III progression levels exported by the bridge, including Durance. */
+  private static final int[] NATIVE_LEVELS = {
+      D2LevelIds.LEVEL_KURASTDOCKTOWN,
+      D2LevelIds.LEVEL_SPIDERFOREST,
+      D2LevelIds.LEVEL_GREATMARSH,
+      D2LevelIds.LEVEL_FLAYERJUNGLE,
+      D2LevelIds.LEVEL_LOWERKURAST,
+      D2LevelIds.LEVEL_KURASTBAZAAR,
+      D2LevelIds.LEVEL_UPPERKURAST,
+      D2LevelIds.LEVEL_KURASTCAUSEWAY,
+      D2LevelIds.LEVEL_TRAVINCAL,
+      D2LevelIds.LEVEL_DURANCEOFHATELEVEL1,
+      D2LevelIds.LEVEL_DURANCEOFHATELEVEL2,
+      D2LevelIds.LEVEL_DURANCEOFHATELEVEL3
+  };
 
   private Act3D2MOOLayoutBridge() {}
 
@@ -65,7 +80,7 @@ public final class Act3D2MOOLayoutBridge {
       int worldTownX = townZone == null ? 0 : townZone.x();
       int worldTownY = townZone == null ? 0 : townZone.y();
       int exportedLevels = 0;
-      for (int levelId = FIRST_LEVEL; levelId <= LAST_LEVEL; levelId++) {
+      for (int levelId : NATIVE_LEVELS) {
         Zone zone = findZone(map, levelId);
         D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
         if (zone == null || level == null) continue;
@@ -129,11 +144,17 @@ public final class Act3D2MOOLayoutBridge {
       }
       if (Gdx.app != null) Gdx.app.log(TAG,
           String.format("Act3 native terrain summary: levels=%d/%d", exportedLevels,
-              LAST_LEVEL - FIRST_LEVEL + 1));
+              NATIVE_LEVELS.length));
       return exportedLevels > 0;
     } catch (Throwable t) {
       if (Gdx.app != null) Gdx.app.error(TAG,
-          "Native Act III generation unavailable; keeping compatibility terrain", t);
+          "Native Act III generation stopped after a per-level export failure; keeping completed levels",
+          t);
+      // A later preset (currently Travincal on some 1.10f seeds) may fail
+      // after earlier levels have been exported successfully. Preserve those
+      // completed native grids; the failing level remains on the compatibility
+      // builder and is explicitly reported in the log instead of invalidating
+      // the whole act.
       return false;
     } finally {
       if (drlg != null) DrlgDrlg.freeDrlg(drlg);

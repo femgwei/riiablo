@@ -2446,3 +2446,23 @@ A3Q3 Khalim's Will 的地图触发与任务状态闭环。
 
 当前下一项：在资源可用环境验证 Act III 导出的丛林头/尾、库拉斯特边界门和实际 DS1 入口；若资源
 仍不可用，则先补无资源的 `DrlgOutJung` 预设选择/不重叠布局测试，再实现 A3Q1–A3Q3 任务触发链。
+
+### 2026-09-12 Act III 原生主链与 Durance（本轮完成代码修复）
+
+- [x] 补齐 `Kurast Causeway(82)`、`Travincal(83)` 以及 `Durance of Hate 1–3(100–102)`
+  的 Zone 占位，使原生桥可以接收全部第三章推进关卡，而不再在 Upper Kurast 后停止。
+- [x] `Act3D2MOOLayoutBridge` 改为显式导出 12 个第三章主链关卡；当前 1.10f MPQ 离屏摘要为
+  `levels=12/12`，每层均有 RoomEx、floor/wall/shadow 或可用的原生碰撞数据。
+- [x] 修正普通墙体缺失瓦片错误回退为 orientation-10/11 出口瓦片的问题；该错误曾在 Travincal
+  产生大量假传送点。Act III Warp 实体按逻辑 LvlWarp 槽去重，避免同一门的多个墙体组件重复生成。
+- [x] 对齐 Durance 1–3 的 1.10f 进度 Warp：Travincal→Durance 1→Durance 2→Durance 3，
+  并补齐每层返回边；Travincal 的 outdoor edge-link 使用单个显式逻辑入口，不修改全局 Levels 表。
+- [x] 离屏验证通过：Kurast Docks、Spider Forest、Great Marsh、Flayer Jungle、Lower Kurast、
+  Kurast Bazaar、Upper Kurast、Kurast Causeway、Travincal、Durance 1–3；目标层 Automap
+  均生成非零 DC6 cells，Travincal/Durance 入口反向 Warp 校验通过。
+- [x] `DrlgRoomTile` 的普通墙体 fallback、Act III Warp 槽去重及第三章进度 Warp 增加回归日志，
+  不修改战斗公式、技能、掉落或网络协议。
+
+当前下一项：继续第三章地图专用地下区域（Spider Cave/Spider Cavern、Swampy Pit、Flayer
+Dungeon、Ruined/Disused Temple）原生 Zone、入口 Warp 与碰撞导出；随后接入 A3Q1 Golden Bird、
+A3Q2 Blade of the Old Religion、A3Q3 Khalim's Will 的触发/奖励闭环，再开始 Act IV 主链。

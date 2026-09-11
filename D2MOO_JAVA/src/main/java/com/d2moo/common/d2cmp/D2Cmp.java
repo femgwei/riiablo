@@ -204,9 +204,9 @@ public class D2Cmp {
                         D2TileLibraryHashNodeStrc currentNode = node;
                         while (currentNode != null && nFoundTiles < nTileListSize) {
                             // 检查瓦片类型、风格、序列是否匹配
-                            if (currentNode.getNType() == nType 
-                                    && currentNode.getNStyle() == nStyle 
-                                    && currentNode.getNSequence() == nSequence) {
+                            if (currentNode.getNType() == nType
+                                    && (nStyle < 0 || currentNode.getNStyle() == nStyle)
+                                    && (nSequence < 0 || currentNode.getNSequence() == nSequence)) {
                                 
                                 // 从引用链表中获取所有匹配的瓦片数据
                                 D2TileLibraryHashRefStrc pRef = currentNode.getPRef();

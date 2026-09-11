@@ -1320,14 +1320,18 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     if (origin == null) origin = map.find(Map.ID.TP_LOCATION);
     Map.Zone zone = origin != null ? map.getZone(origin) : null;
     if (origin == null || zone == null) {
-      // 无传送点或 D2MOO 回退布局时：使用城镇 zone 中心作为出生点
-      com.riiablo.codec.excel.Levels.Entry townLevel = Riiablo.files.Levels.get(1);
-      if (townLevel != null) {
-        Map.Zone townZone = map.findZone(townLevel);
-        if (townZone != null) {
-          origin = new Vector2(townZone.x() + townZone.width() / 2f, townZone.y() + townZone.height() / 2f);
-          zone = townZone;
-        }
+      // 无传送点或 D2MOO 回退布局时：使用当前 Act 的城镇 zone 中心。
+      // 旧代码硬编码 Levels id=1，只对 Act I 有效；Act III–V 会因此
+      // 找不到出生区，留下 INVALID_ENTITY 并在首个模拟 tick 崩溃。
+      for (Map.Zone candidate : map.getZones()) {
+        if (candidate == null || !candidate.isTown()
+            || candidate.levelAct() != map.getAct() + 1) continue;
+        origin = new Vector2(candidate.x() + candidate.width() / 2f,
+            candidate.y() + candidate.height() / 2f);
+        zone = candidate;
+        Gdx.app.log(TAG, "Using current-act town center fallback: level="
+            + candidate.levelId() + " position=" + origin);
+        break;
       }
     }
     if (origin == null || zone == null) {

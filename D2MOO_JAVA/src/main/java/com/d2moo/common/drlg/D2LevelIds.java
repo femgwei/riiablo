@@ -110,40 +110,42 @@ public class D2LevelIds {
     public static final int LEVEL_TALRASHASTOMB6 = 72;
     public static final int LEVEL_TALRASHASTOMB7 = 73;
     public static final int LEVEL_DURIELSLAIR = 74;
-    public static final int LEVEL_ARCANESANCTUARY = 75;
+    public static final int LEVEL_ARCANESANCTUARY = 74;
     
     // Act 3 关卡
-    public static final int LEVEL_KURASTDOCKTOWN = 76;
-    public static final int LEVEL_SPIDERFOREST = 77;
-    public static final int LEVEL_GREATMARSH = 78;
-    public static final int LEVEL_FLAYERJUNGLE = 79;
-    public static final int LEVEL_LOWERKURAST = 80;
-    public static final int LEVEL_KURASTBAZAAR = 81;
-    public static final int LEVEL_UPPERKURAST = 82;
-    public static final int LEVEL_KURASTCAUSEWAY = 83;
-    public static final int LEVEL_TRAVINCAL = 84;
-    public static final int LEVEL_ARCHNIDLAIR = 85;
-    public static final int LEVEL_SPIDERCAVERN = 86;
-    public static final int LEVEL_SPIDERCAVE = 85; // 别名，与 ARCHNIDLAIR 相同
-    public static final int LEVEL_SWAMPYPITLVL1 = 87;
-    public static final int LEVEL_SWAMPYPITLVL2 = 88;
-    public static final int LEVEL_SWAMPYPITLVL3 = 89;
-    public static final int LEVEL_FLAYERDUNGEONLVL1 = 90;
-    public static final int LEVEL_FLAYERDUNGEONLVL2 = 91;
-    public static final int LEVEL_FLAYERDUNGEONLVL3 = 92;
-    public static final int LEVEL_SWAMPTEMPLELVL1 = 93;
-    public static final int LEVEL_SWAMPTEMPLELVL2 = 94;
-    public static final int LEVEL_SWAMPTEMPLELVL3 = 95;
-    public static final int LEVEL_RUINEDFANE = 96;
-    public static final int LEVEL_DISUSEDFANE = 97;
-    public static final int LEVEL_FORGOTTENRELIQUARY = 98;
-    public static final int LEVEL_FORGOTTENTEMPLE = 99;
-    public static final int LEVEL_RUINEDTEMPLE = 100;
-    public static final int LEVEL_DISUSEDRELIQUARY = 101;
-    public static final int LEVEL_DURANCEOFHATELEVEL1 = 102;
-    public static final int LEVEL_DURANCEOFHATELEVEL2 = 103;
-    public static final int LEVEL_DURANCEOFHATELEVEL3 = 104;
-    public static final int LEVEL_THEPANDEMONIUMFORTRESS = 105;
+    public static final int LEVEL_KURASTDOCKTOWN = 75;
+    public static final int LEVEL_SPIDERFOREST = 76;
+    public static final int LEVEL_GREATMARSH = 77;
+    public static final int LEVEL_FLAYERJUNGLE = 78;
+    public static final int LEVEL_LOWERKURAST = 79;
+    public static final int LEVEL_KURASTBAZAAR = 80;
+    public static final int LEVEL_UPPERKURAST = 81;
+    public static final int LEVEL_KURASTCAUSEWAY = 82;
+    public static final int LEVEL_TRAVINCAL = 83;
+    // Native Act III cave/temple ids.  Keep the historical Java names as
+    // aliases, but use the actual 1.10f ordinal values.
+    public static final int LEVEL_ARCHNIDLAIR = 84; // native SPIDERCAVE
+    public static final int LEVEL_SPIDERCAVERN = 85;
+    public static final int LEVEL_SPIDERCAVE = 84;
+    public static final int LEVEL_SWAMPYPITLVL1 = 86;
+    public static final int LEVEL_SWAMPYPITLVL2 = 87;
+    public static final int LEVEL_SWAMPYPITLVL3 = 90;
+    public static final int LEVEL_FLAYERDUNGEONLVL1 = 88;
+    public static final int LEVEL_FLAYERDUNGEONLVL2 = 89;
+    public static final int LEVEL_FLAYERDUNGEONLVL3 = 91;
+    public static final int LEVEL_SWAMPTEMPLELVL1 = 92;
+    public static final int LEVEL_SWAMPTEMPLELVL2 = 93;
+    public static final int LEVEL_SWAMPTEMPLELVL3 = 94;
+    public static final int LEVEL_RUINEDFANE = 98;
+    public static final int LEVEL_DISUSEDFANE = 95;
+    public static final int LEVEL_FORGOTTENRELIQUARY = 96;
+    public static final int LEVEL_FORGOTTENTEMPLE = 97;
+    public static final int LEVEL_RUINEDTEMPLE = 94;
+    public static final int LEVEL_DISUSEDRELIQUARY = 99;
+    public static final int LEVEL_DURANCEOFHATELEVEL1 = 100;
+    public static final int LEVEL_DURANCEOFHATELEVEL2 = 101;
+    public static final int LEVEL_DURANCEOFHATELEVEL3 = 102;
+    public static final int LEVEL_THEPANDEMONIUMFORTRESS = 103;
     
     // Act 4 关卡
     public static final int LEVEL_OUTERSTEPPES = 106;

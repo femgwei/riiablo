@@ -8,7 +8,9 @@ import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.server.component.Box2DBody;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
@@ -28,6 +30,7 @@ public final class OffscreenCampScreen extends GameScreen {
   private final int targetLevelId;
   private final boolean validateWarpGraph;
   private final boolean validateContinuity;
+  private final boolean validateWarpCollision;
   private int renderedFrames;
   private boolean completed;
   private boolean targetApplied;
@@ -71,6 +74,17 @@ public final class OffscreenCampScreen extends GameScreen {
   private int continuityBoundaryWarpBlocked;
   private int continuityBoundaryWarpBare;
   private final StringBuilder continuityBoundaryDetails = new StringBuilder();
+  private DynamicCollisionProbe dynamicCollisionProbe;
+  private int dynamicObjectCandidates;
+  private int dynamicWarpRoomCandidates;
+  private int dynamicDoors;
+  private int dynamicCollisionChecks;
+  private int dynamicCollisionCleared;
+  private int dynamicCollisionRestored;
+  private int dynamicCollisionLeaks;
+  private int dynamicCollisionFailures;
+  private boolean dynamicCollisionSkipped;
+  private final StringBuilder dynamicCollisionDetails = new StringBuilder();
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
     this(charData, outputDirectory, -1, false);
@@ -82,16 +96,39 @@ public final class OffscreenCampScreen extends GameScreen {
 
   public OffscreenCampScreen(CharData charData, String outputDirectory, int targetLevelId,
       boolean validateWarpGraph) {
-    this(charData, outputDirectory, targetLevelId, validateWarpGraph, false);
+    this(charData, outputDirectory, targetLevelId, validateWarpGraph, false, false);
   }
 
   public OffscreenCampScreen(CharData charData, String outputDirectory, int targetLevelId,
       boolean validateWarpGraph, boolean validateContinuity) {
+    this(charData, outputDirectory, targetLevelId, validateWarpGraph, validateContinuity, false);
+  }
+
+  public OffscreenCampScreen(CharData charData, String outputDirectory, int targetLevelId,
+      boolean validateWarpGraph, boolean validateContinuity, boolean validateWarpCollision) {
     super(charData);
     this.outputDirectory = outputDirectory;
     this.targetLevelId = targetLevelId;
     this.validateWarpGraph = validateWarpGraph;
     this.validateContinuity = validateContinuity;
+    this.validateWarpCollision = validateWarpCollision;
+  }
+
+  /** Select a requested non-Act-I level before the normal screen setup. */
+  @Override
+  public void show() {
+    if (map.getAct() == -1 && targetLevelId >= 0) {
+      Levels.Entry target = Riiablo.files.Levels.get(targetLevelId);
+      if (target == null) {
+        throw new IllegalStateException("Unknown offscreen level id=" + targetLevelId);
+      }
+      // setAct delegates loading/generation to GameLoadingScreen, just like
+      // the normal waypoint path; it must happen before GameScreen.show()
+      // applies its default Act-I start.
+      setAct(target.Act);
+      return;
+    }
+    super.show();
   }
 
   @Override
@@ -103,9 +140,42 @@ public final class OffscreenCampScreen extends GameScreen {
       applyTargetLevel();
       return;
     }
-    if (renderedFrames < (targetApplied ? 6 : 3)) return;
+    // Wait for the initial object pass to settle before sampling references;
+    // newly activated rooms may attach their Box2D/object footprints for a few
+    // fixed ticks after the loading screen is dismissed.
+    if (validateWarpCollision && renderedFrames >= 8) {
+      if (dynamicCollisionProbe == null) {
+        dynamicCollisionProbe = beginDynamicCollisionProbe();
+        return;
+      }
+      if (dynamicCollisionProbe.phase == 1) {
+        checkSolidCollisionPhase(dynamicCollisionProbe);
+        dynamicCollisionProbe.phase = 2;
+        setOpenProbeModes(dynamicCollisionProbe);
+        return;
+      }
+      if (dynamicCollisionProbe.phase == 2) {
+        checkOpenCollisionPhase(dynamicCollisionProbe);
+        dynamicCollisionProbe.phase = 3;
+        restoreProbeModes(dynamicCollisionProbe);
+        return;
+      }
+      if (dynamicCollisionProbe.phase == 3) {
+        checkRestoredCollisionPhase(dynamicCollisionProbe);
+        dynamicCollisionProbe.phase = 4;
+      }
+    }
+    int minimumFrames = validateWarpCollision ? 12 : (targetApplied ? 6 : 3);
+    if (renderedFrames < minimumFrames) return;
     if (validateWarpGraph) validateAct1WarpGraph();
     if (validateContinuity) validateAct1Continuity();
+    if (validateWarpCollision && dynamicCollisionFailures > 0) {
+      throw new IllegalStateException("Act1 dynamic Warp collision validation failed: candidates="
+          + dynamicObjectCandidates + " checks=" + dynamicCollisionChecks
+          + " cleared=" + dynamicCollisionCleared + " restored=" + dynamicCollisionRestored
+          + " leaks=" + dynamicCollisionLeaks + " failures=" + dynamicCollisionFailures
+          + " details=" + dynamicCollisionDetails);
+    }
     validateTargetAutomap();
     completed = true;
 
@@ -145,6 +215,16 @@ public final class OffscreenCampScreen extends GameScreen {
         + "continuityWarpOutsideMain=" + continuityWarpOutsideMain + "\n"
         + "continuitySampledCells=" + continuitySampledCells + "\n"
         + "continuityWalkableCells=" + continuityWalkableCells + "\n"
+        + "dynamicObjectCandidates=" + dynamicObjectCandidates + "\n"
+        + "dynamicWarpRoomCandidates=" + dynamicWarpRoomCandidates + "\n"
+        + "dynamicDoors=" + dynamicDoors + "\n"
+        + "dynamicCollisionChecks=" + dynamicCollisionChecks + "\n"
+        + "dynamicCollisionCleared=" + dynamicCollisionCleared + "\n"
+        + "dynamicCollisionRestored=" + dynamicCollisionRestored + "\n"
+        + "dynamicCollisionLeaks=" + dynamicCollisionLeaks + "\n"
+        + "dynamicCollisionFailures=" + dynamicCollisionFailures + "\n"
+        + "dynamicCollisionSkipped=" + dynamicCollisionSkipped + "\n"
+        + dynamicCollisionDetails
         + "player=" + player + "\n"
         + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
         + "result=PASS\n";
@@ -152,6 +232,223 @@ public final class OffscreenCampScreen extends GameScreen {
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_CAMP] result=PASS act="
         + (map.getAct() + 1) + " player=" + player + " frames=" + renderedFrames);
     Gdx.app.exit();
+  }
+
+  /** Builds a bounded probe over loaded native objects whose modes differ in collision. */
+  private DynamicCollisionProbe beginDynamicCollisionProbe() {
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.Object> objects =
+        engine.getMapper(com.riiablo.engine.server.component.Object.class);
+    com.artemis.ComponentMapper<CofReference> cofs = engine.getMapper(CofReference.class);
+    com.artemis.ComponentMapper<Position> positions = engine.getMapper(Position.class);
+    com.artemis.ComponentMapper<MapWrapper> wrappers = engine.getMapper(MapWrapper.class);
+    com.artemis.ComponentMapper<NativeObjectState> states = engine.getMapper(NativeObjectState.class);
+    DynamicCollisionProbe probe = new DynamicCollisionProbe();
+    int scanned = 0;
+    int objectSeen = 0;
+    for (Map.Zone zone : map.getZones()) {
+      for (int entity : zone.getEntities().toArray()) {
+        scanned++;
+        if (objects.has(entity)) objectSeen++;
+        if (probe.candidates.size >= 1 || !objects.has(entity) || !cofs.has(entity)
+            || !positions.has(entity)) continue;
+        com.riiablo.engine.server.component.Object object = objects.get(entity);
+        if (object.base == null || object.base.HasCollision == null
+            || object.base.SizeX <= 0 || object.base.SizeY <= 0) continue;
+        int solid = -1, open = -1;
+        for (int mode = 0; mode < object.base.HasCollision.length; mode++) {
+          if (object.base.HasCollision[mode]) solid = mode;
+          else if (open < 0) open = mode;
+        }
+        if (open < 0 && solid != com.riiablo.engine.Engine.Object.MODE_OP) {
+          open = com.riiablo.engine.Engine.Object.MODE_OP;
+        }
+        if (solid < 0 || open < 0) continue;
+        Map.Zone objectZone = wrappers.has(entity) && wrappers.get(entity).zone != null
+            ? wrappers.get(entity).zone : zone;
+        Position position = positions.get(entity);
+        int x = Math.round(position.position.x - object.base.SizeX / 2f);
+        int y = Math.round(position.position.y - object.base.SizeY / 2f);
+        if (objectZone == null) continue;
+        boolean warpRoom = false;
+        Map.RoomEx room = objectZone.findRoomEx(position.position.x, position.position.y);
+        if (room != null) warpRoom = containsWarp(objectZone, room, positions);
+        Candidate candidate = new Candidate(entity, objectZone, object.base.SizeX,
+            object.base.SizeY, cofs.get(entity).mode, solid, open,
+            object.base.IsDoor, warpRoom);
+        candidate.state = states.has(entity) ? states.get(entity) : null;
+        candidate.object = object;
+        candidate.baselineReferences = candidate.collisionReferences();
+        probe.candidates.add(candidate);
+        dynamicObjectCandidates++;
+        if (warpRoom) dynamicWarpRoomCandidates++;
+        if (candidate.door) dynamicDoors++;
+      }
+    }
+    // Native object lists are persistent, while their ECS entity index can be
+    // outside a Zone's bookkeeping array during room activation. Fall back to
+    // the live world index so the probe still covers the actual updater.
+    if (probe.candidates.isEmpty()) {
+      for (int entity = 0; entity < 4096 && probe.candidates.isEmpty(); entity++) {
+        if (!engine.getEntityManager().isActive(entity) || !objects.has(entity)
+            || !cofs.has(entity) || !positions.has(entity)) continue;
+        Map.Zone zone = wrappers.has(entity) ? wrappers.get(entity).zone : null;
+        if (zone == null) zone = map.getZone(positions.get(entity).position);
+        if (zone == null) {
+          for (Map.Zone candidateZone : map.getZones()) {
+            if (candidateZone.levelId() == 1) {
+              zone = candidateZone;
+              break;
+            }
+          }
+        }
+        com.riiablo.engine.server.component.Object object = objects.get(entity);
+        if (zone == null || object.base == null
+            || object.base.HasCollision == null || object.base.SizeX <= 0
+            || object.base.SizeY <= 0) continue;
+        int solid = -1, open = -1;
+        for (int mode = 0; mode < object.base.HasCollision.length; mode++) {
+          if (object.base.HasCollision[mode]) solid = mode;
+          else if (open < 0) open = mode;
+        }
+        if (open < 0 && solid != com.riiablo.engine.Engine.Object.MODE_OP) {
+          open = com.riiablo.engine.Engine.Object.MODE_OP;
+        }
+        if (solid < 0 || open < 0) continue;
+        Position position = positions.get(entity);
+        boolean warpRoom = false;
+        Map.RoomEx room = zone.findRoomEx(position.position.x, position.position.y);
+        if (room != null) warpRoom = containsWarp(zone, room, positions);
+        Candidate candidate = new Candidate(entity, zone, object.base.SizeX,
+            object.base.SizeY, cofs.get(entity).mode, solid, open,
+            object.base.IsDoor, warpRoom);
+        candidate.state = states.has(entity) ? states.get(entity) : null;
+        candidate.object = object;
+        candidate.baselineReferences = candidate.collisionReferences();
+        probe.candidates.add(candidate);
+        dynamicObjectCandidates++;
+        if (warpRoom) dynamicWarpRoomCandidates++;
+        if (candidate.door) dynamicDoors++;
+      }
+    }
+    if (probe.candidates.isEmpty()) {
+      System.err.println("[OFFSCREEN_WARP_COLLISION] no candidate objects; zones=" + map.getZones().size
+          + " scanned=" + scanned + " objectSeen=" + objectSeen);
+      Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_WARP_COLLISION] scanned=" + scanned
+          + " zones=" + map.getZones().size);
+      dynamicCollisionSkipped = true;
+      dynamicCollisionDetails.append("noLoadedDynamicObjects\n");
+      probe.phase = 4;
+      return probe;
+    }
+    for (Candidate candidate : probe.candidates) setProbeMode(candidate, candidate.solidMode);
+    probe.phase = 1;
+    return probe;
+  }
+
+  private void checkSolidCollisionPhase(DynamicCollisionProbe probe) {
+    for (Candidate candidate : probe.candidates) {
+      int refs = candidate.collisionReferences();
+      dynamicCollisionChecks++;
+      if (refs > 0) candidate.solidReferences = refs;
+      else recordDynamicFailure(candidate, "solid-not-added");
+    }
+  }
+
+  private void checkOpenCollisionPhase(DynamicCollisionProbe probe) {
+    for (Candidate candidate : probe.candidates) {
+      int refs = candidate.collisionReferences();
+      dynamicCollisionChecks++;
+      if (refs == candidate.baselineReferences) dynamicCollisionCleared++;
+      else {
+        dynamicCollisionLeaks++;
+        recordDynamicFailure(candidate, "open-still-blocked refs=" + refs);
+      }
+    }
+  }
+
+  private void checkRestoredCollisionPhase(DynamicCollisionProbe probe) {
+    for (Candidate candidate : probe.candidates) {
+      int refs = candidate.collisionReferences();
+      dynamicCollisionChecks++;
+      boolean expected = candidate.originalMode >= 0
+          && candidate.originalMode < candidate.object.base.HasCollision.length
+          && candidate.object.base.HasCollision[candidate.originalMode];
+      if ((expected && refs > 0) || (!expected && refs == candidate.baselineReferences)) dynamicCollisionRestored++;
+      else recordDynamicFailure(candidate, "restore-mismatch refs=" + refs
+          + " expectedSolid=" + expected);
+    }
+  }
+
+  private void setProbeModes(DynamicCollisionProbe probe, int mode) {
+    for (Candidate candidate : probe.candidates) setProbeMode(candidate, mode);
+  }
+
+  private void setOpenProbeModes(DynamicCollisionProbe probe) {
+    for (Candidate candidate : probe.candidates) setProbeMode(candidate, candidate.openMode);
+  }
+
+  private void restoreProbeModes(DynamicCollisionProbe probe) {
+    for (Candidate candidate : probe.candidates) setProbeMode(candidate, candidate.originalMode);
+  }
+
+  private void setProbeMode(Candidate candidate, int mode) {
+    CofReference cof = engine.getMapper(CofReference.class).get(candidate.entity);
+    if (cof != null) cof.mode = (byte) mode;
+    candidate.object.mode = (byte) mode;
+    if (candidate.state != null) candidate.state.currentMode = (byte) mode;
+  }
+
+  private void recordDynamicFailure(Candidate candidate, String reason) {
+    dynamicCollisionFailures++;
+    if (dynamicCollisionDetails.length() < 8000) {
+      dynamicCollisionDetails.append("entity=").append(candidate.entity)
+          .append(" level=").append(candidate.zone.levelId())
+          .append(" door=").append(candidate.door)
+          .append(" baselineRefs=").append(candidate.baselineReferences)
+          .append(" reason=").append(reason).append('\n');
+    }
+  }
+
+  private final class DynamicCollisionProbe {
+    final com.badlogic.gdx.utils.Array<Candidate> candidates = new com.badlogic.gdx.utils.Array<>();
+    int phase;
+  }
+
+  private final class Candidate {
+    final int entity, width, height, originalMode, solidMode, openMode;
+    final Map.Zone zone;
+    final boolean door, warpRoom;
+    com.riiablo.engine.server.component.Object object;
+    NativeObjectState state;
+    int baselineReferences;
+    int solidReferences;
+
+    Candidate(int entity, Map.Zone zone, int width, int height, int originalMode,
+        int solidMode, int openMode, boolean door, boolean warpRoom) {
+      this.entity = entity;
+      this.zone = zone;
+      this.width = width;
+      this.height = height;
+      this.originalMode = originalMode;
+      this.solidMode = solidMode;
+      this.openMode = openMode;
+      this.door = door;
+      this.warpRoom = warpRoom;
+    }
+
+    int collisionReferences() {
+      Position position = engine.getMapper(Position.class).get(entity);
+      if (position == null) return 0;
+      int x = Math.round(position.position.x - width / 2f);
+      int y = Math.round(position.position.y - height / 2f);
+      int max = 0;
+      for (int dy = 0; dy < height; dy++) {
+        for (int dx = 0; dx < width; dx++) {
+          max = Math.max(max, zone.objectCollisionReferences(x + dx, y + dy));
+        }
+      }
+      return max;
+    }
   }
 
   /**
@@ -601,8 +898,9 @@ public final class OffscreenCampScreen extends GameScreen {
     Levels.Entry target = Riiablo.files.Levels.get(targetLevelId);
     if (target == null) throw new IllegalStateException("Unknown offscreen level id=" + targetLevelId);
     if (target.Act != map.getAct()) {
-      throw new IllegalStateException("Offscreen level must be Act 1: id=" + targetLevelId
-          + " act=" + (target.Act + 1));
+      throw new IllegalStateException("Offscreen level act does not match generated map: id="
+          + targetLevelId + " targetAct=" + (target.Act + 1)
+          + " generatedAct=" + (map.getAct() + 1));
     }
     Map.Zone targetZone = map.findZone(target);
     if (targetZone == null) {

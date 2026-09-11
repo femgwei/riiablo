@@ -44,9 +44,18 @@ public class MapManager extends PassiveSystem {
 
   private void createWarps(Map.Zone zone) {
     IntMap<DS1.Cell> specials = zone.specials;
+    IntSet act3WarpSlots = zone.level != null && zone.level.Id >= 75 && zone.level.Id <= 102
+        ? new IntSet() : null;
     for (IntMap.Entry<DS1.Cell> entry : specials.entries()) {
       DS1.Cell cell = entry.value;
       if (Map.ID.WARPS.contains(cell.id)) {
+        if (act3WarpSlots != null) {
+          int mainIndex = DT1.Tile.Index.mainIndex(cell.id);
+          // RoomEx exports may contain several wall components for one
+          // logical LvlWarp slot.  D2Game creates one interactive warp per
+          // slot; deduplicate the visual components before creating entities.
+          if (!act3WarpSlots.add(mainIndex)) continue;
+        }
         int hash = entry.key;
         int x = zone.x + (Map.Zone.tileHashX(hash) * DT1.Tile.SUBTILE_SIZE);
         int y = zone.y + (Map.Zone.tileHashY(hash) * DT1.Tile.SUBTILE_SIZE);
@@ -113,6 +122,10 @@ public class MapManager extends PassiveSystem {
 
   private void createNativeObjects(
       Map.Zone zone, Map.RoomEx onlyRoom, boolean outsideRoomsOnly) {
+    // Objects.txt is split by act. Native DS1 exports carry the zero-based
+    // Levels.txt act, while the table loader uses the original one-based
+    // section (Act I = 1).
+    final int objectAct = zone.level != null ? zone.level.Act + 1 : 1;
     int created = 0;
     int failed = 0;
     int skipped = 0;
@@ -140,10 +153,10 @@ public class MapManager extends PassiveSystem {
       // it as one-based. Act I therefore uses table section 1 here. Units
       // generated after DS1 loading carry a direct Objects.txt class id.
       int objectId = object.ds1Raw
-          ? resolveDs1ObjectId(1, object.presetIndex)
+          ? resolveDs1ObjectId(objectAct, object.presetIndex)
           : object.presetIndex;
       NativePresetObjectResolver.Resolution resolution =
-          NativePresetObjectResolver.resolve(1, zone.level.Id, objectId,
+          NativePresetObjectResolver.resolve(objectAct, zone.level.Id, objectId,
               map.seed, object.x, object.y);
       if (!resolution.shouldCreate()) {
         skipped++;
@@ -162,7 +175,7 @@ public class MapManager extends PassiveSystem {
             resolvedObjectId, resolution.kind, object.ds1Raw, object.x, object.y));
       }
       int id = object.ds1Raw && resolvedObjectId == objectId
-          ? factory.createObject(1, DS1.Object.STATIC_TYPE, object.presetIndex,
+          ? factory.createObject(objectAct, DS1.Object.STATIC_TYPE, object.presetIndex,
               worldX, worldY)
           : factory.createStaticObjectByClassId(
               resolvedObjectId, worldX, worldY);

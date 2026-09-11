@@ -22,6 +22,7 @@ public final class OffscreenRenderClient {
         .addOption(Option.builder("l").longOpt("level").hasArg().build())
         .addOption(Option.builder().longOpt("warp-graph").hasArg(false).build())
         .addOption(Option.builder().longOpt("continuity").hasArg(false).build())
+        .addOption(Option.builder().longOpt("warp-collision").hasArg(false).build())
         .addOption(Option.builder().longOpt("d2-version").hasArg().build());
     CommandLine command = new DefaultParser().parse(options, args);
     String output = command.getOptionValue("output", "build/visual-tests");
@@ -40,6 +41,8 @@ public final class OffscreenRenderClient {
         Boolean.toString(command.hasOption("warp-graph")));
     System.setProperty("riiablo.offscreen-continuity",
         Boolean.toString(command.hasOption("continuity")));
+    System.setProperty("riiablo.offscreen-warp-collision",
+        Boolean.toString(command.hasOption("warp-collision")));
     System.setProperty("riiablo.d2-version",
         command.getOptionValue("d2-version", "unspecified"));
 

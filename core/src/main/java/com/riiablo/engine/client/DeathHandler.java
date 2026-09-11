@@ -445,6 +445,13 @@ public class DeathHandler extends PassiveSystem {
    * (even if still in MODE_DT death animation, before MODE_DD)
    */
   public boolean isPlayerDead(int playerId) {
+    // Headless/offscreen screens can run a fixed tick before the renderer has
+    // published its source entity.  Artemis component mappers do not accept
+    // Entity.INVALID_ENTITY (-1), so treat that transient state as "not dead"
+    // until a real player entity is available.
+    if (playerId < 0) {
+      return false;
+    }
     if (!mPlayer.has(playerId)) {
       return false;
     }

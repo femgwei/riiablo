@@ -81,6 +81,21 @@ task offscreenMapContinuity(type: JavaExec) {
   ignoreExitValue = false
 }
 
+task offscreenWarpCollision(type: JavaExec) {
+  group = 'verification'
+  description = 'Validate dynamic native object and door collision transitions around Act 1 entrances.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/act1-warp-collision',
+       '--mode', 'camp',
+       '--level', '-1',
+       '--warp-collision',
+       '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  ignoreExitValue = false
+}
+
 run {
   workingDir = rootProject.file('assets').path
   setIgnoreExitValue(true)

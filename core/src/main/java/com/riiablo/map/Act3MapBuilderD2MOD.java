@@ -170,6 +170,36 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       }
     }
 
+    // 3b. The native chain continues through Kurast Causeway before entering
+    // Travincal.  The old compatibility builder stopped at Upper Kurast, so
+    // the D2MOO bridge had no Zone to receive the native RoomEx/TileGrid for
+    // levels 82 and 83.  Always allocate lightweight fallback zones here;
+    // Act3D2MOOLayoutBridge will replace their terrain with the native export
+    // when the 1.10f resources are available.
+    int[] tailLevels = {
+        LEVEL_KURASTCAUSEWAY,
+        LEVEL_TRAVINCAL,
+        D2LevelIds.LEVEL_DURANCEOFHATELEVEL1,
+        D2LevelIds.LEVEL_DURANCEOFHATELEVEL2,
+        D2LevelIds.LEVEL_DURANCEOFHATELEVEL3
+    };
+    for (int levelId : tailLevels) {
+      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      if (level == null || findZone(map, levelId) != null) continue;
+      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
+      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+      int posX = (townZone.width / 2 + townZone.x) - (sizeX * 5 / 2);
+      posY -= sizeY * 5;
+      Zone zone = base.createZoneWithGenerator(map, level, diff, posX,
+          posY + townZone.y);
+      zone.generator = base.createMonsterGenerator(socket);
+      if (DEBUG_BUILD) {
+        Gdx.app.debug(TAG, String.format(
+            "Placed native tail fallback %s (id=%d) at (%d, %d)",
+            level.LevelName, levelId, posX, posY + townZone.y));
+      }
+    }
+
     // 4. 创建 TRAVINCAL（特殊区域）
     Levels.Entry travincalLevel = Riiablo.files.Levels.get(LEVEL_TRAVINCAL);
     if (travincalLevel != null) {
@@ -197,6 +227,11 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     // terrain with D2MOO's actual RoomEx/DT1 export.  The bridge is gated and
     // failure-safe, so headless/resource-light environments keep this builder.
     Act3D2MOOLayoutBridge.populateZones(seed, diff, map);
+    // Travincal's native outdoor link is represented by an edge link rather
+    // than a preset wall cell.  Seed one logical VIS_0_00 marker so the
+    // existing MapManager/WarpInteractor path exposes the Durance entrance;
+    // the destination is resolved by the native Act III warp table below.
+    ensureProgressionWarpMarker(map, LEVEL_TRAVINCAL, 0);
 
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTPLACE_InitAct3OutdoorLevel
@@ -248,6 +283,21 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       map.addWarpDestinationOverride(link[1], destinationSlot, link[0]);
       configured++;
     }
+    // Levels.txt Vis entries for the Durance are duplicated in a few 1.10f
+    // table exports (both slots may point to the next level).  D2Common uses
+    // the actual progression edges: Travincal -> Durance 1 -> Durance 2 ->
+    // Durance 3, with one return edge at each boundary.  Keep these overrides
+    // local to Act III instead of mutating the shared Levels table.
+    map.addWarpDestinationOverride(D2LevelIds.LEVEL_DURANCEOFHATELEVEL1, 0,
+        LEVEL_TRAVINCAL);
+    map.addWarpDestinationOverride(D2LevelIds.LEVEL_DURANCEOFHATELEVEL1, 1,
+        D2LevelIds.LEVEL_DURANCEOFHATELEVEL2);
+    map.addWarpDestinationOverride(D2LevelIds.LEVEL_DURANCEOFHATELEVEL2, 0,
+        D2LevelIds.LEVEL_DURANCEOFHATELEVEL1);
+    map.addWarpDestinationOverride(D2LevelIds.LEVEL_DURANCEOFHATELEVEL2, 1,
+        D2LevelIds.LEVEL_DURANCEOFHATELEVEL3);
+    map.addWarpDestinationOverride(D2LevelIds.LEVEL_DURANCEOFHATELEVEL3, 3,
+        D2LevelIds.LEVEL_DURANCEOFHATELEVEL2);
     Gdx.app.log(TAG, String.format("Act3 native warp table configured: links=%d/%d",
         configured, ACT3_OUTDOOR_LINKS.length));
   }
@@ -289,6 +339,37 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     Gdx.app.log(TAG, String.format(
         "Act3 native warp special summary: linked=%d missingZone=%d missingReverse=%d",
         linked, missingZone, missingReverse));
+  }
+
+  private static Zone findZone(Map map, int levelId) {
+    if (map == null) return null;
+    for (Zone zone : map.zones) {
+      if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
+    }
+    return null;
+  }
+
+  private static void ensureProgressionWarpMarker(Map map, int levelId, int mainIndex) {
+    Zone zone = findZone(map, levelId);
+    if (zone == null || zone.level == null) return;
+    for (IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+      DS1.Cell existing = entry.value;
+      if (existing != null && Map.ID.WARPS.contains(existing.id)
+          && existing.mainIndex == mainIndex) return;
+    }
+    if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
+    int tx = Math.max(0, Math.min(zone.tilesX - 1, zone.tilesX / 2));
+    int ty = Math.max(0, Math.min(zone.tilesY - 1, zone.tilesY / 2));
+    DS1.Cell cell = new DS1.Cell();
+    cell.id = DT1.Tile.Index.create(Orientation.SPECIAL_10, mainIndex, 0);
+    cell.mainIndex = (short) mainIndex;
+    cell.subIndex = 0;
+    cell.orientation = (short) Orientation.SPECIAL_10;
+    cell.value = ((mainIndex & 0x3F) << 20);
+    zone.putCell(Map.WALL_OFFSET, tx, ty, cell);
+    Gdx.app.log(TAG, String.format(
+        "Act3 synthetic progression warp: level=%d mainIndex=%d tile=(%d,%d)",
+        levelId, mainIndex, tx, ty));
   }
 
   private static Zone findZoneByLevelId(Map map, int levelId) {

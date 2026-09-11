@@ -1,75 +1,56 @@
 package com.d2moo.common.util;
 
-/**
- * 日志工具类
- * 封装统一的日志函数，调试日志采用英文
- */
+import java.util.IllegalFormatException;
+
+/** 日志工具类。 */
 public class D2Log {
-    /**
-     * Headless protocol fixtures can suppress the very verbose DRLG trace while
-     * retaining warnings and errors. Normal D2GS runs keep the historical
-     * debug output unless the quiet system property is explicitly enabled.
-     */
     private static boolean debugEnabled() {
         return !Boolean.getBoolean("riiablo.d2gs.quiet")
                 || Boolean.getBoolean("riiablo.d2moo.verbose");
     }
-    
-    /**
-     * 记录调试日志
-     * @param level 日志级别
-     * @param message 日志消息（英文）
-     * @param args 参数
-     */
+
+    /** C++ diagnostics often contain a literal '%' and no formatter args. */
+    private static String format(String message, Object... args) {
+        if (message == null) return "null";
+        if (args == null || args.length == 0) return message;
+        try {
+            return String.format(message, args);
+        } catch (IllegalFormatException e) {
+            StringBuilder fallback = new StringBuilder(message).append(" [args=");
+            for (int i = 0; i < args.length; i++) {
+                if (i > 0) fallback.append(',');
+                fallback.append(String.valueOf(args[i]));
+            }
+            return fallback.append(']').toString();
+        }
+    }
+
     public static void debug(LogLevel level, String message, Object... args) {
         if (!debugEnabled()) return;
-        String formattedMessage = String.format(message, args);
+        String formattedMessage = format(message, args);
         System.out.println(String.format("[D2Log][%s] %s", level.name(), formattedMessage));
     }
-    
-    /**
-     * 记录调试日志（使用默认 DEBUG 级别）
-     * @param message 日志消息（英文）
-     * @param args 参数
-     */
+
     public static void debug(String message, Object... args) {
         debug(LogLevel.DEBUG, message, args);
     }
-    
-    /**
-     * 记录警告日志
-     * @param message 警告消息（英文）
-     * @param args 参数
-     */
+
     public static void warning(String message, Object... args) {
-        String formattedMessage = String.format(message, args);
+        String formattedMessage = format(message, args);
         System.err.println(String.format("[D2Log][WARNING] %s", formattedMessage));
     }
-    
-    /**
-     * 记录错误日志
-     * @param message 错误消息（英文）
-     * @param args 参数
-     */
+
     public static void error(String message, Object... args) {
-        String formattedMessage = String.format(message, args);
+        String formattedMessage = format(message, args);
         System.err.println(String.format("[D2Log][ERROR] %s", formattedMessage));
     }
-    
-    /**
-     * 记录跟踪日志（用于调试）
-     * @param message 跟踪消息（英文）
-     * @param args 参数
-     */
+
     public static void trace(String message, Object... args) {
         if (!debugEnabled()) return;
-        String formattedMessage = String.format(message, args);
+        String formattedMessage = format(message, args);
         System.out.println(String.format("[D2Log][TRACE] %s", formattedMessage));
     }
-    
-    /**
-     * 日志级别枚举
-     */
+
     public enum LogLevel {
         DEBUG,
         INFO,

@@ -1074,8 +1074,12 @@ public class Map implements Disposable {
     public void setPosition(int x, int y) {
       this.x = x;
       this.y = y;
-      tx = x / DT1.Tile.SUBTILE_SIZE;
-      ty = y / DT1.Tile.SUBTILE_SIZE;
+      // Keep tile origins in the same coordinate space as AutomapProjection
+      // and D2's signed room coordinates. Java's '/' truncates negative
+      // values toward zero, so a zone at -1 would incorrectly retain tx=0
+      // and every automap lookup for its first tile indexed -1.
+      tx = Math.floorDiv(x, DT1.Tile.SUBTILE_SIZE);
+      ty = Math.floorDiv(y, DT1.Tile.SUBTILE_SIZE);
     }
 
     public boolean isTown() {

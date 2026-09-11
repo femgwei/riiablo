@@ -513,11 +513,33 @@ public class DrlgRoomTile {
             
             return ppTileLibraryEntries[nId];
         } else {
-            // 如果找不到，使用默认的 WALL_LEFT_EXIT 类型
-            if (D2Cmp.getTiles(drlgRoom.getTiles(), TILETYPE_WALL_LEFT_EXIT, 0, 0, ppTileLibraryEntries, ppTileLibraryEntries.length) == 0) {
-                D2Log.warning("DRLGROOMTILE_GetTileCache: nSize is 0");
+            // A missing style/sequence must not turn a floor into the native
+            // wall-exit marker (orientation 10).  That old fallback made all
+            // Act III Jungle ground non-renderable and left Automap empty.
+            // Native data normally resolves exactly; the wildcard lookup is a
+            // compatibility fallback for incomplete LvlSub/DT1 combinations.
+            nEntries = D2Cmp.getTiles(drlgRoom.getTiles(), nType, -1, -1,
+                    ppTileLibraryEntries, ppTileLibraryEntries.length);
+            if (nEntries > 0) {
+                return ppTileLibraryEntries[0];
             }
-            return ppTileLibraryEntries[0];
+
+            // Keep the historical exit fallback only when the native request
+            // itself is an exit tile.  Falling back for every wall request
+            // injects orientation-10 warp markers into ordinary Travincal /
+            // Durance walls; MapManager then creates dozens of bogus warps
+            // all pointing at the same level.  A missing ordinary wall is
+            // safer as an empty tile than as a fake level transition.
+            if (nType == TILETYPE_WALL_LEFT_EXIT || nType == TILETYPE_WALL_RIGHT_EXIT) {
+                if (D2Cmp.getTiles(drlgRoom.getTiles(), TILETYPE_WALL_LEFT_EXIT,
+                        0, 0, ppTileLibraryEntries, ppTileLibraryEntries.length) == 0) {
+                    D2Log.warning("DRLGROOMTILE_GetTileCache: nSize is 0");
+                }
+                return ppTileLibraryEntries[0];
+            }
+            D2Log.warning("DRLGROOMTILE_GetTileCache: no tile for type=" + nType
+                    + " style=" + nStyle + " sequence=" + nSequence);
+            return null;
         }
     }
     

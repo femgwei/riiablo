@@ -221,7 +221,58 @@ public class AutomapTileRenderer implements Disposable {
   public int getAutomapCellId(String levelName, String tileName, int tileStyle, int tileSequence,
       long automapSeed) {
     int[] frames = getFrameIndices(levelName, tileName, tileStyle, tileSequence);
+    if (frames == null) {
+      // Some 1.10f Jungle/Kurast terrain rows are generated with the base
+      // style (0) while AutoMap.txt only lists the visual style variants.
+      // Keep level/tile semantics, but tolerate that data-table gap by using
+      // the first native cell for the same tile family.
+      frames = getFrameIndicesAnyStyle(levelName, tileName);
+    }
     return selectCellId(frames, automapSeed);
+  }
+
+  private int[] getFrameIndicesAnyStyle(String levelName, String tileName) {
+    if (automapData == null || levelName == null || tileName == null) return null;
+    for (AutoMap.Entry entry : automapData) {
+      if (!same(entry.LevelName, levelName) || !same(entry.TileName, tileName)) continue;
+      int[] frames = validCels(entry.Cel);
+      if (frames != null) return frames;
+    }
+    return null;
+  }
+
+  /** Compact diagnostics for headless map validation when a native lookup misses. */
+  public String diagnostic(String levelName, String tileName, int tileStyle, int tileSequence) {
+    int levelMatches = 0;
+    int tileMatches = 0;
+    int styleMatches = 0;
+    String example = null;
+    StringBuilder styles = new StringBuilder();
+    if (automapData != null) {
+      for (AutoMap.Entry entry : automapData) {
+        if (!same(entry.LevelName, levelName)) continue;
+        levelMatches++;
+        if (!same(entry.TileName, tileName)) continue;
+        tileMatches++;
+        if (styles.length() < 160) {
+          if (styles.length() > 0) styles.append(',');
+          styles.append(entry.Style).append(':').append(entry.StartSequence)
+              .append("..").append(entry.EndSequence);
+        }
+        if (entry.Style != -1 && entry.Style != tileStyle) continue;
+        if (entry.StartSequence != -1
+            && (tileSequence < entry.StartSequence
+                || (entry.EndSequence != -1 && tileSequence > entry.EndSequence))) continue;
+        styleMatches++;
+        if (example == null) {
+          example = entry.LevelName + "/" + entry.TileName + "/"
+              + entry.Style + "/" + entry.StartSequence + ".." + entry.EndSequence;
+        }
+      }
+    }
+    return "levelMatches=" + levelMatches + " tileMatches=" + tileMatches
+        + " styleMatches=" + styleMatches + " example="
+        + (example == null ? "none" : example) + " entries=" + styles;
   }
 
   /** 使用方向常量的单 Cel 查询重载。 */

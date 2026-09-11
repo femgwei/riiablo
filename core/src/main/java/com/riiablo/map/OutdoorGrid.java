@@ -208,9 +208,11 @@ public class OutdoorGrid {
       case 1: // LVLTYPE_ACT1_WILDERNESS
         return 0x44103;
       case 3: // LVLTYPE_ACT3_JUNGLE
+      case 21: // 1.10f LvlTypes.txt: Act III Jungle
         return 0x04;
       case 2: // LVLTYPE_ACT2_DESERT
       case 4: // LVLTYPE_ACT3_KURAST
+      case 22: // 1.10f LvlTypes.txt: Act III Kurast
       case 5: // LVLTYPE_ACT4_MESA
       case 6: // LVLTYPE_ACT4_LAVA
         return 0x01;

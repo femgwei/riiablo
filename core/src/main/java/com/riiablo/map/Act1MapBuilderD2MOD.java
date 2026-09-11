@@ -3237,6 +3237,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           "Applied native TileGrid: level=%d grid=%dx%d floor=%d wall=%d shadow=%d",
           zone.levelId(), grid.width, grid.height,
           counts.floors, counts.walls, counts.shadows));
+      if (counts.failedResolve > 0) {
+        Gdx.app.error(TAG, "Native TileGrid unresolved level=" + zone.levelId()
+            + " floor=" + formatTileIds(counts.failedFloorIds)
+            + " wall=" + formatTileIds(counts.failedWallIds)
+            + " shadow=" + formatTileIds(counts.failedShadowIds));
+      }
     }
   }
 

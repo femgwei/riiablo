@@ -497,12 +497,28 @@ public class DrlgDrlgRoom {
             }
             
             if (nX < 6 && nY < 6) {
-                ppNearRooms[nRoomsNear] = currentRoomEx;
-                nRoomsNear++;
+                // The native structure deliberately reserves 30 entries.
+                // Malformed/partially ported preset coordinates can make the
+                // Java geometry predicate select more rooms than the native
+                // invariant. Do not turn that data error into an array write
+                // past the fixed buffer; keep the closest rooms after the
+                // same positional sort and expose the condition in the log.
+                if (nRoomsNear < ppNearRooms.length) {
+                    ppNearRooms[nRoomsNear] = currentRoomEx;
+                    nRoomsNear++;
+                } else if (nRoomsNear == ppNearRooms.length) {
+                    D2Log.warning("sub_6FD77BB0: native near-room limit exceeded; truncating at %d",
+                        ppNearRooms.length);
+                    nRoomsNear++;
+                }
             }
-            
-            currentRoomEx = currentRoomEx.getDrlgRoomNext();
+
+        currentRoomEx = currentRoomEx.getDrlgRoomNext();
         }
+
+        // Keep the native fixed-buffer capacity even when the diagnostic
+        // counter above observed additional candidates.
+        if (nRoomsNear > ppNearRooms.length) nRoomsNear = ppNearRooms.length;
         
         // 排序房间列表
         sortRoomListByPosition(ppNearRooms, nRoomsNear);
