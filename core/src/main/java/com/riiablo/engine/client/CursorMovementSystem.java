@@ -360,6 +360,13 @@ public class CursorMovementSystem extends BaseSystem {
     int selected = Engine.INVALID_ENTITY;
     boolean selectedInteractable = false;
     float selectedDst2 = Float.POSITIVE_INFINITY;
+    // HoveredManager first converts the native input point through the camera
+    // before comparing it with iso.toScreen(entityPosition).  The queued click
+    // path must use the exact same coordinate space; comparing raw window
+    // coordinates makes every monster/NPC miss whenever the viewport or camera
+    // has a non-zero projection offset.
+    cursorScreen.set(screenX, screenY);
+    iso.unproject(cursorScreen);
     IntBag selectableEntities = selectableSubscriber.getEntities();
     for (int i = 0, size = selectableEntities.size(); i < size; i++) {
       int candidate = selectableEntities.get(i);
@@ -370,7 +377,7 @@ public class CursorMovementSystem extends BaseSystem {
       boolean candidateInteractable = mInteractable.has(candidate);
       iso.toScreen(entityScreen.set(candidatePosition.position));
       if (!containsScreenPoint(boxWrapper.box, entityScreen,
-          cursorScreen.set(screenX, screenY))) continue;
+          cursorScreen)) continue;
       float candidateDst2 = srcPosition == null
           ? Float.POSITIVE_INFINITY
           : srcPosition.position.dst2(candidatePosition.position);

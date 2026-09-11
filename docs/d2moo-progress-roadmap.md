@@ -2148,3 +2148,15 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 
 当前下一项：在有资源的隐藏/真实客户端复现一次后台切换，确认动作不再成倍播放；若仍有加速，
 继续追踪非 ECS 的 UI、音频或动画回调是否直接使用原始渲染 delta。
+
+### 2026-09-12 修复点击怪物/NPC无法命中的回归（已完成代码修复）
+
+- [x] 修复点击队列引入的同步命中检测坐标空间错误：`CursorMovementSystem` 现在与
+  `HoveredManager` 一样，先执行 `IsometricCamera.unproject`，再使用实体包围盒进行命中判断。
+- [x] 恢复点击怪物后的近战/投射物攻击路径，以及点击 NPC 后的自动接近、朝向和交互路径；
+  不改变地面点击队列和 UI 点击拦截逻辑。
+- 验证：`CursorMovementSystemTest`、`:core:compileJava` 通过。
+
+当前下一项：在隐藏客户端分别验证“点击怪物攻击”和“点击 NPC 自动接近并对话”，并检查
+`[ATTACK_RANGE]` 与 `Interaction target` 日志；若仍有个别实体命不中，再检查其 BBox/Selectable
+组件是否在加载完成前缺失。
