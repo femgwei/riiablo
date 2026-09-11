@@ -2008,6 +2008,8 @@ public class D2GS extends ApplicationAdapter {
       new MovementInputSequenceTracker[MAX_CLIENTS];
   final MovementIntentScheduler[] movementIntents =
       new MovementIntentScheduler[MAX_CLIENTS];
+  /** Rate limit for diagnostic queue samples; movement semantics remain unchanged. */
+  final long[] nextMovementQueueLogTime = new long[MAX_CLIENTS];
   final long[] lastAppliedMovementIntent = new long[MAX_CLIENTS];
   final long[] lastSnapshotResyncRequest = new long[MAX_CLIENTS];
   final long[] lastSnapshotBaselineId = new long[MAX_CLIENTS];
@@ -2541,6 +2543,7 @@ public class D2GS extends ApplicationAdapter {
         + " waypointActs=" + Riiablo.NUM_ACTS);
     movementInputs[packet.id].reset();
     movementIntents[packet.id].reset();
+    nextMovementQueueLogTime[packet.id] = 0L;
     lastAppliedMovementIntent[packet.id] = 0L;
     sync.clearMovementAcknowledgement(entityId);
     Gdx.app.log(TAG, "  entityId=" + entityId);
@@ -2779,6 +2782,7 @@ public class D2GS extends ApplicationAdapter {
     }
     movementInputs[id].reset();
     movementIntents[id].reset();
+    nextMovementQueueLogTime[id] = 0L;
     combatIntents[id].reset();
     lastAppliedMovementIntent[id] = 0L;
     broadcastPartySnapshots(PartyOperation.LEAVE, entityId, -1, -1);
@@ -2830,6 +2834,17 @@ public class D2GS extends ApplicationAdapter {
           + " player=" + entityId + " sequence=" + input.sequence
           + " result=" + result.name().toLowerCase());
       return;
+    }
+    long now = TimeUtils.millis();
+    if (now >= nextMovementQueueLogTime[packet.id]) {
+      nextMovementQueueLogTime[packet.id] = now + 1000L;
+      long currentTick = simulation.tickNumber();
+      long lead = input.targetTick == 0L ? 0L : input.targetTick - currentTick;
+      Gdx.app.log(TAG, "[NET_MOVE] phase=intent_queue connection=" + packet.id
+          + " player=" + entityId + " sequence=" + input.sequence
+          + " observedTick=" + input.observedServerTick
+          + " targetTick=" + input.targetTick + " receiveTick=" + currentTick
+          + " targetLead=" + lead);
     }
   }
 

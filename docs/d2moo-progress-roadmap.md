@@ -2037,3 +2037,13 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 当前下一项：使用新版本真实联机日志确认 `[NET_MOVE] phase=client_intent` 到
 `phase=intent_apply` 的 Tick 差为 0/1；若仍有明显延迟，再处理 TCP 写入/服务端接收线程
 到权威 Tick 的排队，而不再扩大客户端预测提前量。
+
+### 2026-09-12 联机移动队列延迟观测（已完成代码修复）
+
+- [x] D2GS 对接受的移动意图限频输出 `[NET_MOVE] phase=intent_queue`，包含
+  `observedTick`、`targetTick`、`receiveTick` 和 `targetLead`，用于区分网络接收与模拟应用延迟。
+- [x] 每个连接每秒最多输出一条队列样本；断线和连接槽复用时清理限频状态，不改变移动行为。
+- 验证：`:core:compileJava`、`:server:d2gs:compileJava`、`headlessSimulationTick` 通过。
+
+当前下一项：用新构建运行真实联机点击移动，比较 `intent_queue.receiveTick`、`targetTick`
+与 `intent_apply.appliedTick`，定位网络接收或模拟 Tick 调度延迟。
