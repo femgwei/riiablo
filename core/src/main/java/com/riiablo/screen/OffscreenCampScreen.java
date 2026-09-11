@@ -13,6 +13,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.map.Map;
+import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.automap.AutomapLayer;
 import com.riiablo.engine.client.automap.AutomapManager;
@@ -62,6 +63,8 @@ public final class OffscreenCampScreen extends GameScreen {
   private int continuityBoundaryBfsResolved;
   private int continuityBoundaryBfsBlocked;
   private int continuityBoundaryBfsUncheckable;
+  private int continuityBoundaryObjectNearby;
+  private int continuityBoundaryDoorNearby;
   private final StringBuilder continuityBoundaryDetails = new StringBuilder();
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
@@ -378,6 +381,8 @@ public final class OffscreenCampScreen extends GameScreen {
         + "boundaryBfsResolved=" + continuityBoundaryBfsResolved + "\n"
         + "boundaryBfsBlocked=" + continuityBoundaryBfsBlocked + "\n"
         + "boundaryBfsUncheckable=" + continuityBoundaryBfsUncheckable + "\n"
+        + "boundaryObjectNearby=" + continuityBoundaryObjectNearby + "\n"
+        + "boundaryDoorNearby=" + continuityBoundaryDoorNearby + "\n"
         + "result=" + (passed ? "PASS" : "FAIL") + "\n"
         + continuityBoundaryDetails;
     output.child("act1-map-continuity-manifest.txt").writeString(report, false, "UTF-8");
@@ -411,6 +416,9 @@ public final class OffscreenCampScreen extends GameScreen {
           if (bfs > 0) continuityBoundaryBfsResolved++;
           else if (bfs == 0) continuityBoundaryBfsBlocked++;
           else continuityBoundaryBfsUncheckable++;
+          int objectKind = classifyBoundaryObjects(zone, room, adjacent);
+          if (objectKind > 0) continuityBoundaryObjectNearby++;
+          if (objectKind > 1) continuityBoundaryDoorNearby++;
           if (continuityBoundaryDetails.length() < 12000) {
             continuityBoundaryDetails.append("level=").append(zone.levelId())
                 .append(" rooms=").append(room.id).append(',').append(adjacent.id)
@@ -418,7 +426,8 @@ public final class OffscreenCampScreen extends GameScreen {
                 .append(room.width).append('x').append(room.height)
                 .append(" b=").append(adjacent.x).append(':').append(adjacent.y).append('x')
                 .append(adjacent.width).append('x').append(adjacent.height)
-                .append(" bfs=").append(bfs).append('\n');
+                .append(" bfs=").append(bfs).append(" objectKind=").append(objectKind)
+                .append('\n');
           }
         }
         else continuityBoundaryUncheckable++;
@@ -427,6 +436,26 @@ public final class OffscreenCampScreen extends GameScreen {
   }
 
   /** Local collision BFS around a candidate interface. */
+  private static int classifyBoundaryObjects(Map.Zone zone, Map.RoomEx a, Map.RoomEx b) {
+    int minX = Math.min(a.x, b.x) - zone.x() - 16;
+    int minY = Math.min(a.y, b.y) - zone.y() - 16;
+    int maxX = Math.max(a.x + a.width, b.x + b.width) - zone.x() + 16;
+    int maxY = Math.max(a.y + a.height, b.y + b.height) - zone.y() + 16;
+    int kind = 0;
+    for (Map.NativeObject object : zone.getNativeObjects()) {
+      if (object.x < minX || object.x > maxX || object.y < minY || object.y > maxY) continue;
+      int classId = object.ds1Raw
+          ? Riiablo.files.obj.getObjectId(1, object.presetIndex) : object.presetIndex;
+      NativePresetObjectResolver.Resolution resolution = NativePresetObjectResolver.resolve(
+          1, zone.levelId(), classId, zone.map.seed(), object.x, object.y);
+      if (!resolution.shouldCreate()) continue;
+      com.riiablo.codec.excel.Objects.Entry base = Riiablo.files.objects.get(resolution.classId);
+      if (base != null && base.IsDoor) return 2;
+      kind = 1;
+    }
+    return kind;
+  }
+
   private static int findRoomLocalPath(Map.Zone zone, Map.RoomEx a, Map.RoomEx b) {
     int minX = Math.max(zone.x(), Math.min(a.x, b.x) - 8);
     int minY = Math.max(zone.y(), Math.min(a.y, b.y) - 8);
