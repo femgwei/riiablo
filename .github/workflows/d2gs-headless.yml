@@ -51,9 +51,9 @@ jobs:
       - name: Run authoritative area-skill unit tests
         run: >-
           ./gradlew :core:test
-          --tests com.riiablo.engine.client.AuthoritativeAreaSkillSnapshotTest
-          --tests com.riiablo.engine.server.DruidStormAuraIntegrationTest
-          --tests com.riiablo.engine.server.SorceressThunderStormIntegrationTest
+          --tests com.riiablo.engine.client.FixedStepAccumulatorTest
+          --tests com.riiablo.engine.client.AuthoritativeSnapshotTimelineTest
+          --tests com.riiablo.engine.client.SnapshotResyncProtocolTest
 
   real-mpq-area-regression:
     name: Real 1.10f dual-client area regression
@@ -83,6 +83,15 @@ jobs:
         run: |
           .\gradlew.bat :server:d2gs:headlessAreaSkillRegression -PareaTimeout=8 *> area-regression.log
           if ($LASTEXITCODE -ne 0) { Get-Content area-regression.log; exit $LASTEXITCODE }
+      - name: Run resource-backed area presentation tests
+        shell: pwsh
+        env:
+          D2_HOME: ${{ vars.D2_HOME }}
+        run: >
+          .\gradlew.bat :core:test
+          --tests com.riiablo.engine.client.AuthoritativeAreaSkillSnapshotTest
+          --tests com.riiablo.engine.server.DruidStormAuraIntegrationTest
+          --tests com.riiablo.engine.server.SorceressThunderStormIntegrationTest
       - name: Upload real regression log
         if: always()
         uses: actions/upload-artifact@v4
