@@ -2827,6 +2827,10 @@ public class D2GS extends ApplicationAdapter {
         throw new AssertionError(packet.data.dataType());
     }
 
+    // Keep the receive tick on the immutable command so the apply log can
+    // measure queue delay even when several packets arrive between ticks.
+    input = input.withReceivedTick(simulation.tickNumber());
+
     MovementIntentScheduler.Result result = movementIntents[packet.id].submit(
         input, simulation.tickNumber());
     if (result != MovementIntentScheduler.Result.ACCEPTED) {
@@ -2843,7 +2847,7 @@ public class D2GS extends ApplicationAdapter {
       Gdx.app.log(TAG, "[NET_MOVE] phase=intent_queue connection=" + packet.id
           + " player=" + entityId + " sequence=" + input.sequence
           + " observedTick=" + input.observedServerTick
-          + " targetTick=" + input.targetTick + " receiveTick=" + currentTick
+          + " targetTick=" + input.targetTick + " receiveTick=" + input.receivedTick
           + " targetLead=" + lead);
     }
   }
@@ -2902,7 +2906,12 @@ public class D2GS extends ApplicationAdapter {
       Gdx.app.log(TAG, "[NET_MOVE] phase=intent_" + (rejected ? "reject" : "apply")
           + " connection=" + connectionId + " player=" + entityId
           + " sequence=" + input.sequence + " targetTick=" + input.targetTick
-          + " appliedTick=" + currentTick + " changed=" + changed
+          + " receiveTick=" + input.receivedTick + " appliedTick=" + currentTick
+          + " applyDelay=" + (input.receivedTick > 0L
+              ? Math.max(0L, currentTick - input.receivedTick) : -1L)
+          + " targetLag=" + (input.targetTick > 0L
+              ? currentTick - input.targetTick : 0L)
+          + " changed=" + changed
           + (rejected ? " reason=" + rejection
               : " mode=" + (input.running ? "run" : "walk")));
     }

@@ -70,4 +70,16 @@ class MovementIntentSchedulerTest {
     assertEquals(0, scheduler.pendingCount());
     assertEquals(MovementIntentScheduler.Result.ACCEPTED, scheduler.submit(input, 2));
   }
+
+  @Test
+  void receiveTickAnnotationDoesNotChangeReplayIdentity() {
+    MovementIntentScheduler scheduler = new MovementIntentScheduler();
+    MovementIntent input = MovementIntent.location(1, 10, 11, false, 1, 1);
+    MovementIntent received = input.withReceivedTick(10);
+    assertEquals(10L, received.receivedTick);
+    assertEquals(MovementIntentScheduler.Result.ACCEPTED,
+        scheduler.submit(received, 10));
+    assertEquals(MovementIntentScheduler.Result.DUPLICATE,
+        scheduler.submit(received.withReceivedTick(11), 10));
+  }
 }

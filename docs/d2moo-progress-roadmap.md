@@ -2072,5 +2072,19 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
   通过。
 
 当前下一项：在具备资源的隐藏客户端验证“关闭 Automap 移动后再打开”的探索保留，并继续
-  使用 `[NET_MOVE] phase=intent_queue/intent_apply` 样本判断联机移动延迟是否来自网络接收
-  还是服务端 Tick 调度。
+使用 `[NET_MOVE] phase=intent_queue/intent_apply` 样本判断联机移动延迟是否来自网络接收
+还是服务端 Tick 调度。
+
+### 2026-09-12 联机移动接收/应用 Tick 精确关联（已完成代码修复）
+
+- [x] `MovementIntent` 增加仅用于诊断的 `receivedTick`，D2GS 接收命令时写入权威 Tick，
+  不参与命令指纹和重复包判定。
+- [x] `[NET_MOVE] phase=intent_apply` 增加 `receiveTick`、`applyDelay`、`targetLag`，
+  可直接区分网络接收晚、队列等待和目标 Tick 已过期三种情况。
+- [x] 增加重复包回归：改变诊断接收 Tick 不会改变 replay identity。
+- 验证：`MovementIntentSchedulerTest`、`:core:compileJava`、`:server:d2gs:compileJava`
+  通过。
+
+当前下一项：用真实联机或隐藏双客户端采集新的 `[NET_MOVE]` 样本；若 `applyDelay` 大于
+  1 Tick，再检查 D2GS 模拟线程唤醒/批处理；若接收 Tick 已落后，则转查客户端发送和 TCP
+  往返，不再调整移动预测提前量。
