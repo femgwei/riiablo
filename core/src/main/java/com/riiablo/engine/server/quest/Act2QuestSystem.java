@@ -82,11 +82,17 @@ public class Act2QuestSystem extends PassiveSystem {
     if (event == null || !mPlayer.has(event.entityId) || !mMonster.has(event.npcId)) return;
     Player player = mPlayer.get(event.entityId);
     Monster npc = mMonster.get(event.npcId);
-    if (player == null || player.data == null || npc == null || npc.monstats == null
-        || (npc.monstats.hcIdx != MonsterType.ATMA
-            && npc.monstats.hcIdx != MonsterType.DECKARDCAIN_ACT2)) return;
+    if (player == null || player.data == null || npc == null || npc.monstats == null) return;
 
-    if (npc.monstats.hcIdx == MonsterType.DECKARDCAIN_ACT2) {
+    int npcType = npc.monstats.hcIdx;
+    if (Act2SummonerQuest.isRewardNpc(npcType)
+        && Act2SummonerQuest.isRewardMessage(event.messageIndex)) {
+      onSummonerRewardMessage(event, player);
+      return;
+    }
+    if (npcType != MonsterType.ATMA && npcType != MonsterType.DECKARDCAIN_ACT2) return;
+
+    if (npcType == MonsterType.DECKARDCAIN_ACT2) {
       onCainStaffMessage(event, player);
       return;
     }
@@ -101,6 +107,19 @@ public class Act2QuestSystem extends PassiveSystem {
       log.info("[A2Q1] Atma reward acknowledged: player={} record=0x{}",
           event.entityId, Integer.toHexString(Short.toUnsignedInt(next)));
     }
+  }
+
+  private void onSummonerRewardMessage(NpcQuestMessageEvent event, Player player) {
+    short[] act2 = player.data.getQuests(Riiablo.ACT2);
+    if (act2 == null || act2.length <= Act2SummonerQuest.RECORD) return;
+    short previous = act2[Act2SummonerQuest.RECORD];
+    short next = Act2SummonerQuest.claimReward(previous);
+    if (next == previous) return;
+    act2[Act2SummonerQuest.RECORD] = next;
+    persist(player.data);
+    log.info("[A2Q5] Summoner reward acknowledged: player={} npc={} message={} record=0x{}",
+        event.entityId, event.npcId, event.messageIndex,
+        Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   /**

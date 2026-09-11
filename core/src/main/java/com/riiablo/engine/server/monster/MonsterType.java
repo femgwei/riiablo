@@ -144,8 +144,24 @@ public final class MonsterType {
   public static final int GHEED = 147;
   /** 沃瑞夫 (Act 1) */
   public static final int WARRIV = 155;
+  /** 沃瑞夫 (Act 2 quest proxy, D2MOO MONSTER_WARRIV2). */
+  public static final int WARRIV2 = 175;
   /** 艾特玛 (Act 2) */
   public static final int ATMA = 176;
+  /** 卓格南 (Act 2). */
+  public static final int DROGNAN = 177;
+  /** 法拉 (Act 2). */
+  public static final int FARA = 178;
+  /** 艾尔兹克 (Act 2). */
+  public static final int ELZIX = 199;
+  /** 格格什 (Act 2). */
+  public static final int GEGLASH = 200;
+  /** 杰海因 (Act 2). */
+  public static final int JERHYN = 201;
+  /** 盖因 (Act 2). */
+  public static final int LYSANDER = 202;
+  /** 梅希夫 (Act 2). */
+  public static final int MESHIF1 = 210;
 
   //==========================================================================
   // 召唤物

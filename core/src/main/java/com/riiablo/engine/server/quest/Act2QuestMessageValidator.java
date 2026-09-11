@@ -12,6 +12,15 @@ public final class Act2QuestMessageValidator {
     if (data == null || messageIndex < 0) return false;
     short[] act2 = data.getQuests(Riiablo.ACT2);
     if (act2 == null || act2.length <= Act2RadamentQuest.RECORD) return false;
+    // A2Q5's reward chain is shared by several Act II NPCs, including Atma
+    // and Cain2, so it must be checked before their quest-specific branches.
+    if (act2.length > Act2SummonerQuest.RECORD
+        && Act2SummonerQuest.isRewardNpc(npcType)
+        && Act2SummonerQuest.isRewardMessage(messageIndex)) {
+      return Act2SummonerQuest.isRewardMessage(messageIndex)
+          && NativeQuestRecord.has(act2[Act2SummonerQuest.RECORD],
+              NativeQuestRecord.REWARD_PENDING);
+    }
     if (npcType == MonsterType.ATMA) {
       return messageIndex == Act2RadamentQuest.selectAtmaMessage(
           act2[Act2RadamentQuest.RECORD]);

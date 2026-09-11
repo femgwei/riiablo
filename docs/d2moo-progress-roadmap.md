@@ -2327,10 +2327,13 @@ Tainted Sun、Arcane Sanctuary、Duriel）：以地图入口 LevelId/预设单�
   兼容缺失 SuperUnique 组件时的 `MonStats=250` 身份；其他区域的同名/普通怪不会触发任务。
 - [x] 召唤者死亡事件幂等；当前 Arcane Sanctuary 玩家获得独立待领奖记录，同 Act II 但不在
   Sanctuary 的在线玩家只获得本局 `COMPLETED_NOW`，不错误领取奖励。
-- [x] 增加无渲染 A2Q5 状态回归测试；NPC 对话、奖励确认和四个方向的 Arcane Sanctuary 预设
-  入口仍作为下一小步处理。
+- [x] 接入 A2Q5 原生 NPC 白名单（Warriv2、Atma、Drognan、Fara、Elzix、Geglash、Jerhyn、
+  Lysander、Meshif1、Cain2）及消息 419–429；只有 `REWARD_PENDING` 时允许领奖，且不影响
+  Atma/Cain 原有 A2Q1/A2Q2 消息分支。
+- [x] 增加无渲染 A2Q5 状态和网络消息校验回归测试；四个方向的 Arcane Sanctuary 预设入口
+  仍作为下一小步处理。
 - 验证：`Act2SummonerQuestTest`、A2Q4/A2Q6/对象解析回归、`:core:compileJava`、
   `:server:d2gs:compileJava` 通过。
 
-当前下一项：接通 A2Q5 原生 NPC 对话消息（419–429）和奖励确认，再为 Arcane Sanctuary 的
-Summoner 四方向预设建立确定性入口/出口映射；之后转入 Act III 地图主链和 A3Q1–A3Q3。
+当前下一项：为 Arcane Sanctuary 的 Summoner 四方向预设建立确定性入口/出口映射；之后转入
+Act III 地图主链和 A3Q1–A3Q3。
