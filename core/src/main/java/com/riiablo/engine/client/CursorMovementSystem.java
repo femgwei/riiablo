@@ -88,6 +88,7 @@ public class CursorMovementSystem extends BaseSystem {
   private float pendingLeftX;
   private float pendingLeftY;
   private long pendingLeftCapturedAt;
+  private long pendingLeftObservedTick;
   private boolean sampledLeftDown;
   int lastInteractionTraceTarget = Engine.INVALID_ENTITY;
   long lastInteractionTraceMillis;
@@ -180,6 +181,8 @@ public class CursorMovementSystem extends BaseSystem {
       pendingLeftX = Gdx.input.getX();
       pendingLeftY = Gdx.input.getY();
       pendingLeftCapturedAt = TimeUtils.millis();
+      pendingLeftObservedTick = networkReceiver == null
+          ? 0L : networkReceiver.latestServerTick();
     }
     sampledLeftDown = down;
   }
@@ -201,9 +204,13 @@ public class CursorMovementSystem extends BaseSystem {
     }
 
     long age = Math.max(0L, TimeUtils.millis() - pendingLeftCapturedAt);
-    if (age > 40L) {
+    long consumedTick = networkReceiver == null ? 0L : networkReceiver.latestServerTick();
+    long tickDelay = inputTickDelay(pendingLeftObservedTick, consumedTick);
+    if (age > 40L || tickDelay > 1L) {
       Gdx.app.log(TAG, "[INPUT_QUEUE] phase=consume player=" + src
-          + " ageMs=" + age + " x=" + pendingLeftX + " y=" + pendingLeftY);
+          + " ageMs=" + age + " observedTick=" + pendingLeftObservedTick
+          + " consumedTick=" + consumedTick + " tickDelay=" + tickDelay
+          + " x=" + pendingLeftX + " y=" + pendingLeftY);
     }
 
     // If HoveredManager already observed the clicked entity, preserve the
@@ -216,6 +223,12 @@ public class CursorMovementSystem extends BaseSystem {
     iso.agg(tmpVec2.set(pendingLeftX, pendingLeftY)).unproject().toWorld();
     if (actioneer.canInterrupt(src)) actioneer.moveTo(src, tmpVec2);
     return true;
+  }
+
+  /** Returns the authoritative snapshot-Tick delay for a captured click. */
+  static long inputTickDelay(long capturedTick, long consumedTick) {
+    if (capturedTick <= 0L || consumedTick <= 0L) return -1L;
+    return Math.max(0L, consumedTick - capturedTick);
   }
 
   private void updateLeft() {

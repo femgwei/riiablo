@@ -2102,3 +2102,14 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 
 当前下一项：移动协议和权威队列自动门槛已正常，若真实窗口仍感觉点击迟滞，下一步转向客户端
 渲染输入到本地预测开始的延迟，并用 `[INPUT_QUEUE]` 与渲染/模拟阶段耗时做自动化复核。
+
+### 2026-09-12 客户端点击捕获/消费 Tick 诊断（已完成代码修复）
+
+- [x] `CursorMovementSystem` 在渲染帧捕获点击时记录 `observedTick`，在固定 Tick 消费时
+  记录 `consumedTick`，并输出 `tickDelay`；启动阶段 Tick 为 0 时保持兼容。
+- [x] `[INPUT_QUEUE]` 仅在墙钟等待超过 40ms 或 Tick 延迟超过 1 时输出，避免正常点击刷屏。
+- [x] 增加 `inputTickDelay` 纯逻辑回归，覆盖启动值、倒退值和 0/1 Tick 正常窗口。
+- 验证：`CursorMovementSystemTest`、`:core:compileJava` 通过。
+
+当前下一项：在真实窗口或隐藏客户端产生一次地面点击，确认 `[INPUT_QUEUE]` 的
+`tickDelay<=1`；若仍有超过 1 Tick 的样本，再继续检查渲染帧捕获位置和模拟累积器追帧。

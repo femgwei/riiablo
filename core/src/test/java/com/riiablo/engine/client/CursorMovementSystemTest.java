@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -47,5 +48,13 @@ class CursorMovementSystemTest {
         box, waypointScreen, new Vector2(429, 300)));
     assertFalse(CursorMovementSystem.containsScreenPoint(
         box, waypointScreen, new Vector2(500, 331)));
+  }
+
+  @Test
+  void inputTickDelayHandlesStartupAndNeverReportsNegativeLag() {
+    assertEquals(-1L, CursorMovementSystem.inputTickDelay(0L, 4L));
+    assertEquals(-1L, CursorMovementSystem.inputTickDelay(4L, 0L));
+    assertEquals(0L, CursorMovementSystem.inputTickDelay(8L, 7L));
+    assertEquals(1L, CursorMovementSystem.inputTickDelay(8L, 9L));
   }
 }
