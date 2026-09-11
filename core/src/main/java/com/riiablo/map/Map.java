@@ -35,6 +35,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.pfa.AStarPathFinder;
 import com.riiablo.map.pfa.Point2;
+import com.riiablo.drlg.TileGrid;
 
 public class Map implements Disposable {
   private static final String TAG = "Map";
@@ -850,6 +851,9 @@ public class Map implements Disposable {
     private int levelSeed;
     /** Optional native Arcane Sanctuary graph; populated only for level 75. */
     private Act2ArcaneSanctuaryTopology arcaneSanctuaryTopology;
+    /** Native exported tile layers kept until Zone.generate applies them. */
+    private TileGrid nativeTileGrid;
+    private int nativeDt1Mask;
     int gridSizeX, gridSizeY;
     int gridsX, gridsY;
     int tx, ty;
@@ -909,6 +913,13 @@ public class Map implements Disposable {
     public Act2ArcaneSanctuaryTopology arcaneSanctuaryTopology() {
       return arcaneSanctuaryTopology;
     }
+    public TileGrid nativeTileGrid() { return nativeTileGrid; }
+    public int nativeDt1Mask() { return nativeDt1Mask; }
+
+    public void setNativeTileGrid(TileGrid grid, int dt1Mask) {
+      nativeTileGrid = grid;
+      nativeDt1Mask = dt1Mask;
+    }
     public int levelAct() { return level == null ? -1 : level.Act + 1; }
     public String levelTypeName() { return type == null ? null : type.Name; }
     /** D2MOO AutoMap.txt LevelName (for example, "1 Wilderness"). */
@@ -939,6 +950,8 @@ public class Map implements Disposable {
       this.levelSeed = level == null ? 0 : NativeLevelSeed.forLevel(map.seed, level.Id);
       this.arcaneSanctuaryTopology = level != null && level.Id == 75
           ? Act2ArcaneSanctuaryTopology.generate(this.levelSeed) : null;
+      this.nativeTileGrid = null;
+      this.nativeDt1Mask = 0;
       this.type      = Riiablo.files.LvlTypes.get(level.LevelType);
       this.gridSizeX = gridSizeX;
       this.gridSizeY = gridSizeY;
@@ -983,6 +996,8 @@ public class Map implements Disposable {
       width = height = 0;
       levelSeed = 0;
       arcaneSanctuaryTopology = null;
+      nativeTileGrid = null;
+      nativeDt1Mask = 0;
       gridSizeX = gridSizeY = 0;
       gridsX = gridsY = 0;
       tx = ty = 0;
@@ -1449,6 +1464,7 @@ public class Map implements Disposable {
           int baseDt1Mask = OutdoorGrid.getDt1MaskForLevel(level);
           int exportedDt1Mask = Act1MapBuilderD2MOD.INSTANCE.hasD2MooExport(level.Id)
               ? Act1MapBuilderD2MOD.INSTANCE.getD2MooDt1Mask(level.Id) : 0;
+          exportedDt1Mask |= nativeDt1Mask;
           int dt1Mask = dependencyDt1Mask(hasAnyPreset, baseDt1Mask, exportedDt1Mask);
           int filesAdded = 0;
           if (DEBUG_BUILD) {
@@ -1620,6 +1636,14 @@ public class Map implements Disposable {
           } catch (Throwable t) {
             Gdx.app.error(TAG, "Error during Blood Moor TileGrid debug compare", t);
           }
+        }
+      }
+
+      if (nativeTileGrid != null) {
+        try {
+          Act1MapBuilderD2MOD.applyExportedTileGrid(this, nativeTileGrid);
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "Failed to apply native exported TileGrid for " + level.LevelName, t);
         }
       }
     }

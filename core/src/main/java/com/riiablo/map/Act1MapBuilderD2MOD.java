@@ -3221,6 +3221,25 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     return counts;
   }
 
+  /** Applies a native export to any Zone, including Act II–V consumers. */
+  public static void applyExportedTileGrid(Zone zone, TileGrid grid) {
+    if (zone == null || grid == null || zone.dt1s == null || zone.tiles == null) return;
+    int width = Math.min(grid.width, zone.tilesX);
+    int height = Math.min(grid.height, zone.tilesY);
+    LayerApplyCounts counts = applyTileGridLayers(
+        grid, zone.dt1s, zone.tiles, zone.tilesX, width, height, null);
+    if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new IntMap<>();
+    registerSpecialWalls(grid, zone.specials, width, height);
+    rebuildTileCollisionFlags(grid, zone.tiles, zone.dt1s, zone.flags,
+        zone.tilesX, zone.tilesY, width, height);
+    if (Gdx.app != null) {
+      Gdx.app.log(TAG, String.format(
+          "Applied native TileGrid: level=%d grid=%dx%d floor=%d wall=%d shadow=%d",
+          zone.levelId(), grid.width, grid.height,
+          counts.floors, counts.walls, counts.shadows));
+    }
+  }
+
   static SpecialApplyCounts registerSpecialWalls(TileGrid grid, IntMap<DS1.Cell> specials,
       int width, int height) {
     SpecialApplyCounts counts = new SpecialApplyCounts();

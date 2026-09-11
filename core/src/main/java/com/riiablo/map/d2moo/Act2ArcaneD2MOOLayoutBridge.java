@@ -15,6 +15,7 @@ import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2MemoryPool;
 import com.riiablo.map.Map;
 import com.riiablo.map.Map.Zone;
+import com.riiablo.drlg.TileGrid;
 
 import java.util.IdentityHashMap;
 
@@ -58,11 +59,23 @@ public final class Act2ArcaneD2MOOLayoutBridge {
       if (level.getFirstRoomEx() == null || level.getLevelCoords() == null) return false;
 
       projectRooms(level, zone);
+      D2MooTileApplier applier = new D2MooTileApplier();
+      TileGrid grid = new TileGrid(level.getLevelCoords().getNWidth(),
+          level.getLevelCoords().getNHeight());
+      applier.putGrid(LEVEL_ARCANE, grid);
+      int exportedFloors = com.d2moo.common.drlg.DrlgExport.exportLevelTiles(
+          drlg, LEVEL_ARCANE, applier);
+      int dt1Mask = com.d2moo.common.drlg.DrlgExport.collectLevelDt1Mask(
+          drlg, LEVEL_ARCANE);
+      if (exportedFloors > 0) zone.setNativeTileGrid(grid, dt1Mask);
       if (Gdx.app != null) {
-        Gdx.app.log(TAG, String.format("Projected native Arcane RoomEx: seed=%d levelSeed=%d rooms=%d topology=%s",
-            gameSeed, zone.levelSeed(), zone.getRoomsEx().size, zone.hasNativeRoomTopology()));
+        Gdx.app.log(TAG, String.format(
+            "Projected native Arcane RoomEx/tiles: seed=%d levelSeed=%d rooms=%d topology=%s floors=%d walls=%d shadows=%d dt1Mask=0x%X",
+            gameSeed, zone.levelSeed(), zone.getRoomsEx().size, zone.hasNativeRoomTopology(),
+            applier.getLastExportedFloorCount(), applier.getExportedWallCount(),
+            applier.getExportedShadowCount(), dt1Mask));
       }
-      return !zone.getRoomsEx().isEmpty();
+      return !zone.getRoomsEx().isEmpty() && exportedFloors > 0;
     } catch (Throwable t) {
       if (Gdx.app != null) Gdx.app.error(TAG,
           "Native Arcane generation unavailable; keeping compatibility Zone", t);

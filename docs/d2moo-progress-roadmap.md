@@ -2392,3 +2392,17 @@ Act III 地图主链和 A3Q1–A3Q3。
 
 当前下一项：使用 `DrlgExport.exportLevelTiles` 导出 Arcane Sanctuary 的 floor/wall/shadow，接入
 现有 Zone 图层和碰撞，随后验证四方向 Summoner DS1、入口 Warp 与返回 Canyon of the Magi 的连续性。
+
+### 2026-09-12 Act II Arcane Sanctuary 原生 TileGrid 渲染桥接（已完成代码修复）
+
+- [x] Arcane Sanctuary 原生桥现在使用 `DrlgExport.exportLevelTiles` 导出 floor、wall、shadow，
+  同时收集该关卡实际使用的 DT1 mask。
+- [x] `Zone` 缓存 native `TileGrid`，在基础 Zone 生成之后统一应用原生图层、特殊 Warp 墙和
+  碰撞标志；导出区域外的空洞会按 native footprint 保持不可行走。
+- [x] 原生 DT1 mask 参与 Zone 依赖加载，避免 Arcane 房间使用额外 DT1 时出现黑块或空地；导出
+  失败时继续使用兼容生成路径。
+- 验证：Arcane Sanctuary 拓扑/Level seed/Layout 测试、`:core:test` 指定回归、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过；未进行真实 MPQ 窗口验证。
+
+当前下一项：在有资源的隐藏/离屏环境验证 Arcane 的 floor/wall/collision 导出质量，并补齐四方向
+Summoner DS1 的实际预设和入口/返回 Warp；资源不可用时再继续完善 Act III 地图主链和 A3Q1–A3Q3。
