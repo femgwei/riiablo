@@ -51,6 +51,7 @@ import com.riiablo.engine.server.skill.SorceressSkills;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
+import com.riiablo.engine.server.missile.MissileId;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
@@ -507,6 +508,9 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
       aura.periodicCountdownFrames--;
       if (aura.periodicCountdownFrames > 0) return;
     }
+    log.info("[DRUID_STORM] phase=tick source={} skill={} state={} delay={} position=({}, {})",
+        entityId, aura.skillId, StateId.getName(aura.stateId), aura.periodicDelayFrames,
+        mPosition.get(entityId).position.x, mPosition.get(entityId).position.y);
     Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
         ? Riiablo.files.skills.get(aura.skillId) : null;
     if (skill == null) return;
@@ -565,7 +569,14 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void processThunderStorm(int entityId, StateList states) {
     UnitState aura = states.getState(StateId.THUNDERSTORM);
     if (aura == null || aura.skillId < 0 || factory == null
-        || !mPosition.has(entityId) || !isAlive(entityId)) return;
+        || !mPosition.has(entityId) || !isAlive(entityId)) {
+      if (aura != null && aura.skillId >= 0) {
+        log.debug("[DRUID_STORM] phase=skip source={} skill={} reason=missing_runtime_binding "
+            + "factory={} position={} alive={}", entityId, aura.skillId, factory != null,
+            mPosition.has(entityId), isAlive(entityId));
+      }
+      return;
+    }
     if (aura.periodicCountdownFrames > 0) {
       aura.periodicCountdownFrames--;
       if (aura.periodicCountdownFrames > 0) return;
@@ -867,31 +878,68 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
   private void processDruidStorm(int entityId, StateList states) {
     UnitState aura = states.getState(StateId.HURRICANE);
     if (aura == null) aura = states.getState(StateId.ARMAGEDDON);
-    if (aura == null || aura.skillId < 0 || factory == null
-        || !mPosition.has(entityId) || !isAlive(entityId)) return;
+    if (aura == null) return;
+    if (aura.skillId < 0 || factory == null || !mPosition.has(entityId) || !isAlive(entityId)) {
+      log.info("[DRUID_STORM] phase=skip source={} skill={} state={} reason=missing_runtime_binding "
+              + "factory={} position={} alive={} countdown={} delay={}",
+          entityId, aura.skillId, StateId.getName(aura.stateId), factory != null,
+          mPosition.has(entityId), isAlive(entityId), aura.periodicCountdownFrames,
+          aura.periodicDelayFrames);
+      return;
+    }
     if (aura.periodicCountdownFrames > 0) {
       aura.periodicCountdownFrames--;
       if (aura.periodicCountdownFrames > 0) return;
     }
     Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
         ? Riiablo.files.skills.get(aura.skillId) : null;
-    if (skill == null) return;
+    if (skill == null) {
+      log.info("[DRUID_STORM] phase=skip source={} skill={} reason=missing_skill_entry",
+          entityId, aura.skillId);
+      return;
+    }
     aura.periodicCountdownFrames = Math.max(1, aura.periodicDelayFrames);
     Map.Zone zone = map != null ? map.getZone(mPosition.get(entityId).position) : null;
-    if (zone != null && zone.isTown()) return;
+    if (zone != null && zone.isTown()) {
+      log.debug("[DRUID_STORM] phase=skip source={} skill={} reason=town", entityId, skill.Id);
+      return;
+    }
     String missileName = firstStormMissile(skill);
     Missiles.Entry row = missileName != null ? Riiablo.files.Missiles.get(missileName) : null;
-    if (row == null) return;
+    // A few 1.10f TXT exports leave SrvMissile/CltMissile blank for the
+    // SrvDo124 storm rows. D2MOO resolves the native MissileIds directly in
+    // that case; retain the same data-driven fallback instead of silently
+    // dropping the periodic strike.
+    if (row == null) {
+      int missileId = skill.Id == SkillId.ARMAGEDDON
+          ? MissileId.ARMAGEDDON : skill.Id == SkillId.HURRICANE
+          ? MissileId.HURRICANE : -1;
+      if (missileId >= 0) row = missileByNativeId(missileId);
+      if (row != null) missileName = row.Missile;
+    }
+    if (row == null) {
+      log.warn("[DRUID_STORM] phase=skip source={} skill={} reason=missing_missile name={} ",
+          entityId, skill.Id, missileName);
+      return;
+    }
     int range = Math.max(1, SkillFormula.evaluate(skill.aurarangecalc, skill, aura.level));
     int targetId = findStormTarget(entityId, range);
     Vector2 origin = mPosition.get(entityId).position;
     if (targetId >= 0 && mPosition.has(targetId)) origin = mPosition.get(targetId).position;
     int id = factory.createMissile(row, Vector2.X, origin, entityId);
-    if (id < 0 || !mMissile.has(id)) return;
+    if (id < 0 || !mMissile.has(id)) {
+      log.info("[DRUID_STORM] phase=skip source={} skill={} reason=create_missile_failed "
+              + "row={} id={} hasMissile={}",
+          entityId, skill.Id, row.Missile, id, id >= 0 && mMissile.has(id));
+      return;
+    }
     Missile strike = mMissile.get(id);
     strike.skillId = skill.Id;
     strike.damageLevel = Math.max(1, aura.level);
-    strike.nativeLifetimeFrames = 1;
+    // Keep the carrier alive through the creation tick and one snapshot
+    // boundary. With a one-frame lifetime MissileCollisionSystem removes a
+    // newly-created storm visual before NetworkSynchronizer can publish it.
+    strike.nativeLifetimeFrames = 2;
     strike.range = 0f;
     if (mVelocity.has(id)) mVelocity.get(id).velocity.setZero();
     Attributes owner = mAttributesWrapper.has(entityId)
@@ -910,6 +958,14 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     if (skill.srvmissilea != null && !skill.srvmissilea.isEmpty()) return skill.srvmissilea;
     if (skill.srvmissile != null && !skill.srvmissile.isEmpty()) return skill.srvmissile;
     return skill.cltmissilea;
+  }
+
+  private static Missiles.Entry missileByNativeId(int id) {
+    if (Riiablo.files == null || Riiablo.files.Missiles == null) return null;
+    for (Missiles.Entry candidate : Riiablo.files.Missiles) {
+      if (candidate != null && candidate.Id == id) return candidate;
+    }
+    return null;
   }
 
   private int findStormTarget(int sourceId, int range) {

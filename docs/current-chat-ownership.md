@@ -187,3 +187,22 @@ Armageddon/Hurricane 的实机观感验证。
 
 当前阶段说明：项目已进入 **P2 执行阶段**，但 P0/P1 仍保留少量严格验收尾项；P2 与
 这些尾项并行推进，不表示底层阶段被跳过或记录丢失。
+
+### 2026-09-11 当前工作进度
+
+- 已实现真实 D2GS 无窗口双客户端复杂区域技能门槛：`D2GSHeadlessClient` 的
+  `--require-area-skill --area-skill <id>` 会生成 caster/observer 存档、发送真实施法包，
+  并比对两端 `MissileP`、`StateP`、Hydra `MonsterP` 的权威实体身份和删除时序。
+- 当前完成代码级实现、D2GS 编译和专项测试；本机缺少完整 1.10f MPQ，尚未进行真实资源运行。
+  资源就绪后优先执行 Volcano、Armageddon、Hurricane、Hydra 四项。
+
+### 2026-09-11 真实 1.10f 双客户端区域技能验收结果
+
+- `D2GSHeadlessClient --require-area-skill --area-skill <id>` 已在真实 1.10f MPQ 下通过
+  Volcano(244)、Hydra(62)、Armageddon(249)、Hurricane(250) 四项门槛。
+- 两个 TCP 客户端只看到同一组服务端实体：Hydra 使用三个 `MonsterP`，其余区域效果使用
+  `MissileP`/`StateP`；技能 ID、伤害等级、来源和删除时序均一致。
+- Armageddon/Hurricane 的周期导弹由服务端保留两个模拟帧，修复一帧导弹在快照前被清理的
+  问题；客户端仍保持 `snapshotOnly`，不会本地再生成第二套效果。
+- 下一项是 Meteor/Thunder Storm 的真实双客户端表现验收；当前 Chat 继续负责地图、战斗、
+  技能、物品、任务、NPC、网络和存档全部修改。

@@ -1422,6 +1422,38 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
 的多人表现验收。
 当前 Chat 继续负责包括战斗在内的全部模块。
 
+### 2026-09-11 真实 D2GS 双客户端复杂区域技能门槛（代码完成，待真实 MPQ 运行）
+
+- [x] ~~增加 `D2GSHeadlessClient --require-area-skill` 双客户端协议门槛~~
+  - 支持 Hydra(62)、Firestorm(225)、Fissure(234)、Volcano(244)、Armageddon(249)、
+    Hurricane(250)；客户端 A 通过真实 `CastSkillRequest` 施放，客户端 B 只观察服务端快照。
+  - 两端比对服务端实体 ID、`MissileP.skillId/damageLevel`、Hydra 三个 `MonsterP` 实体，
+    以及 Hurricane/Armageddon 的 `StateP` 来源与周期字段；历史活动记录和删除一致性也纳入门槛。
+  - 新增确定性 30 级 Druid/Sorceress 技能存档生成器，避免手工存档和渲染依赖。
+- 验证：`:server:d2gs:compileJava` 与区域技能/状态序列化专项通过；本机 `build/riiablo-offscreen-d2`
+  缺少 `d2data.mpq`，因此真实双客户端尚未宣称通过。
+
+当前下一项：在具备完整 1.10f 资源的环境依次运行 `--area-skill 244/249/250/62`，记录两端
+实体与删除日志；门槛全绿后进入 Meteor/Thunder Storm 的多人表现验收。
+
+### 2026-09-11 真实 1.10f 双客户端复杂区域技能门槛（已通过）
+
+- [x] ~~Volcano(244)、Hydra(62)、Armageddon(249)、Hurricane(250) 真实无窗口双客户端验收~~
+  - 使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10f` 的真实 `d2data.mpq`，客户端 A
+    发送真实 `CastSkillRequest`，客户端 B 只消费服务端快照。
+  - Volcano 的共享 `MissileP`、Hydra 的三个共享 `MonsterP`、Armageddon/Hurricane 的
+    状态来源与周期导弹均在两端使用相同 server entity ID、技能等级和伤害快照；删除记录
+    也保持一致。
+  - 修复 Armageddon/Hurricane 周期导弹一帧即删除、无法跨过网络快照边界的问题：权威
+    carrier 保留 2 个模拟帧，仍由服务端负责碰撞/伤害，客户端不重复生成。
+  - 无窗口 COF 缺少可靠技能关键帧时，测试入口保留一次服务端 `SkillDoEvent` 回退；这
+    只用于测试施法触发，不改变生产客户端的权威判定。
+- 验证命令：`:server:d2gs:compileJava`、`headlessAreaSkill -PareaSkill=244/249/250/62`
+  均通过；区域专项测试和状态序列化回归继续通过。
+
+当前下一项：Meteor/Thunder Storm 的真实双客户端复杂表现验收，然后补齐剩余复杂技能的
+    视觉资源/动画门槛。Armageddon/Hurricane 不再处于“仅 StateP 通过”的未完成状态。
+
 > 历史指针：P0-1 完成后曾进入 P0-2 Stat/State。该阶段及后续 P1 工作已经继续推进，
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
 > “当前下一项”为准；Bone Armor、Poison Dagger、Corpse/Poison Explosion、Bone

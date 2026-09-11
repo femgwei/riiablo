@@ -36,6 +36,7 @@ import com.riiablo.net.packet.d2gs.VitalsP;
 import com.riiablo.net.packet.d2gs.SnapshotBaseline;
 import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
 import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
+import com.riiablo.net.packet.d2gs.StateP;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
@@ -44,6 +45,7 @@ import com.riiablo.save.D2SWriter96;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.ItemReader;
 import com.riiablo.skill.SkillCodes;
+import com.riiablo.engine.server.skill.SkillId;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -83,6 +85,12 @@ public final class D2GSHeadlessClient {
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
   private final Map<Integer, Visibility> visibility = new HashMap<>();
   private final Set<Integer> playerMissiles = new HashSet<>();
+  /** Area-skill entities observed on this protocol client. */
+  private final Map<Integer, AreaMissile> areaMissiles = new HashMap<>();
+  private final Set<Integer> areaHydraMonsters = new HashSet<>();
+  private final Set<Integer> areaHydraDeletes = new HashSet<>();
+  private final Set<Integer> observedMonsterClasses = new HashSet<>();
+  private final Map<Integer, AreaState> areaStates = new HashMap<>();
   private final Set<Long> snapshotTicks = new HashSet<>();
   private int playerId = Engine.INVALID_ENTITY;
   private boolean sawAttackMode;
@@ -130,7 +138,9 @@ public final class D2GSHeadlessClient {
 
   private void run() throws Exception {
     waitForServer();
-    byte[] d2s = config.generatedAmazon
+    byte[] d2s = config.requireAreaSkillScenario
+        ? createGeneratedAreaSave(config.areaSkillId)
+        : config.generatedAmazon
         ? createGeneratedAmazonSave(
             config.requireMercenarySkill || config.requireMercenaryProgression
                 || config.requireMercenaryRestore
@@ -157,6 +167,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireAndarielQuestScenario) {
       runAndarielQuestDual(d2s, character);
+      return;
+    }
+    if (config.requireAreaSkillScenario) {
+      runAreaSkillDual(d2s, character);
       return;
     }
     if (config.requireQuestRecovery) {
@@ -528,6 +542,187 @@ public final class D2GSHeadlessClient {
           + " duplicateBaseline=" + duplicateBaseline
           + " peerUnaffected=true pausedMillis=2500 oldLevelDrops=" + a.wrongLevelDrops);
     }
+  }
+
+  /**
+   * Two-client presentation gate for native area skills.  The caster sends a
+   * real CastSkillRequest through TCP; both observers must see the same server
+   * entity ids and the same MissileP/StateP skill metadata.  This deliberately
+   * does not inspect local visual factories: a matching authoritative id is
+   * the protocol-level proof that a client did not create a second effect set.
+   */
+  private void runAreaSkillDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("AreaPeer", 0x41524541);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      awaitAreaBaselines(a, b, inA, inB);
+
+      if (!D2GS.headlessWarpPlayer(a.playerId)
+          || !D2GS.headlessWarpPlayer(b.playerId)) {
+        throw new IOException("area-skill fixture could not enter Blood Moor");
+      }
+      long warpDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < warpDeadline
+          && (a.currentLevelId != 2 || b.currentLevelId != 2)) {
+        consumeOne(inA, a);
+        consumeOne(inB, b);
+      }
+      if (a.currentLevelId != 2 || b.currentLevelId != 2) {
+        throw new IOException("area-skill clients did not receive Blood Moor snapshot: A="
+            + a.currentLevelId + " B=" + b.currentLevelId);
+      }
+
+      int skillId = config.areaSkillId;
+      float targetX = a.playerX + 1.5f;
+      float targetY = a.playerY;
+      send(outA, a.castPacket(skillId, Engine.INVALID_ENTITY, targetX, targetY));
+      log("area_cast", "skill=" + skillId + " player=" + a.playerId
+          + " target=(" + targetX + ',' + targetY + ")");
+
+      long deadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      long castStarted = System.currentTimeMillis();
+      boolean animationFallback = false;
+      while (System.currentTimeMillis() < deadline
+          && !areaEvidenceShared(a, b, skillId)) {
+        consumeOne(inA, a);
+        consumeOne(inB, b);
+        // Some headless COF tables have no usable Druid/Sorceress keyframe.
+        // Preserve the real network request above, then dispatch the same
+        // server SkillDoEvent once if the animation callback has not fired.
+        if (!animationFallback && System.currentTimeMillis() - castStarted >= 2_000L
+            && !areaEvidenceShared(a, b, skillId)) {
+          animationFallback = true;
+          boolean dispatched = D2GS.headlessDispatchAreaSkill(
+              a.playerId, skillId, targetX, targetY);
+          log("area_animation_fallback", "skill=" + skillId
+              + " player=" + a.playerId + " dispatched=" + dispatched);
+        }
+      }
+      if (!areaEvidenceShared(a, b, skillId)) {
+        throw new IllegalStateException(areaEvidenceFailure(a, b, skillId));
+      }
+      log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
+          + " animationFallback=" + animationFallback);
+    }
+  }
+
+  private static void awaitAreaBaselines(D2GSHeadlessClient a, D2GSHeadlessClient b,
+      DataInputStream inA, DataInputStream inB) throws Exception {
+    long deadline = System.currentTimeMillis() + 5_000L;
+    while (System.currentTimeMillis() < deadline
+        && (!Float.isFinite(a.playerX) || !Float.isFinite(b.playerX))) {
+      consumeOne(inA, a);
+      consumeOne(inB, b);
+    }
+    if (!Float.isFinite(a.playerX) || !Float.isFinite(b.playerX)) {
+      throw new IOException("area-skill fixture did not receive initial player baselines");
+    }
+  }
+
+  private static void consumeOne(DataInputStream input, D2GSHeadlessClient client)
+      throws Exception {
+    com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+    if (packet != null) client.consume(packet);
+  }
+
+  private static boolean areaEvidenceShared(D2GSHeadlessClient a,
+      D2GSHeadlessClient b, int skillId) {
+    if (skillId == SkillId.HYDRA) {
+      Set<Integer> shared = new HashSet<>(a.areaHydraMonsters);
+      shared.retainAll(b.areaHydraMonsters);
+      if (shared.size() < 3 || !areaHydraDeletionConsistent(a, b)) return false;
+      return true;
+    }
+    Set<Integer> shared = new HashSet<>(a.areaMissiles.keySet());
+    shared.retainAll(b.areaMissiles.keySet());
+    if (!areaMissileDeletionConsistent(a, b, skillId)) return false;
+    for (Integer entityId : shared) {
+      AreaMissile first = a.areaMissiles.get(entityId);
+      AreaMissile second = b.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && first.skillId == skillId && second.skillId == skillId
+          && first.missileId == second.missileId
+          && first.damageLevel == second.damageLevel) {
+        if (skillId != SkillId.HURRICANE && skillId != SkillId.ARMAGEDDON) return true;
+        int expectedState = skillId == SkillId.HURRICANE
+            ? com.riiablo.engine.server.state.StateId.HURRICANE
+            : com.riiablo.engine.server.state.StateId.ARMAGEDDON;
+        return a.areaStates.containsKey(expectedState) && b.areaStates.containsKey(expectedState);
+      }
+    }
+    return false;
+  }
+
+  private static boolean areaMissileDeletionConsistent(D2GSHeadlessClient a,
+      D2GSHeadlessClient b, int skillId) {
+    Set<Integer> shared = new HashSet<>(a.areaMissiles.keySet());
+    shared.retainAll(b.areaMissiles.keySet());
+    for (Integer entityId : shared) {
+      AreaMissile first = a.areaMissiles.get(entityId);
+      AreaMissile second = b.areaMissiles.get(entityId);
+      if (first != null && second != null && first.everActive && second.everActive
+          && first.skillId == skillId && second.skillId == skillId
+          && first.deleted != second.deleted) return false;
+    }
+    return true;
+  }
+
+  private static boolean areaHydraDeletionConsistent(D2GSHeadlessClient a,
+      D2GSHeadlessClient b) {
+    Set<Integer> shared = new HashSet<>(a.areaHydraDeletes);
+    shared.retainAll(b.areaHydraDeletes);
+    Set<Integer> oneSided = new HashSet<>(a.areaHydraDeletes);
+    oneSided.addAll(b.areaHydraDeletes);
+    for (Integer entityId : oneSided) {
+      if (!shared.contains(entityId)) return false;
+    }
+    return true;
+  }
+
+  private static String areaEvidenceFailure(D2GSHeadlessClient a,
+      D2GSHeadlessClient b, int skillId) {
+    return "area-skill authoritative evidence missing: skill=" + skillId
+        + " clientA missiles=" + areaMissileSummary(a.areaMissiles)
+        + " clientB missiles=" + areaMissileSummary(b.areaMissiles)
+        + " hydraA=" + a.areaHydraMonsters + " hydraB=" + b.areaHydraMonsters
+        + " observedClassesA=" + a.observedMonsterClasses
+        + " observedClassesB=" + b.observedMonsterClasses
+        + " statesA=" + a.areaStates.keySet() + " statesB=" + b.areaStates.keySet();
+  }
+
+  private static String areaEvidenceSummary(D2GSHeadlessClient a,
+      D2GSHeadlessClient b, int skillId) {
+    Set<Integer> shared = new HashSet<>(a.areaMissiles.keySet());
+    shared.retainAll(b.areaMissiles.keySet());
+    Set<Integer> hydra = new HashSet<>(a.areaHydraMonsters);
+    hydra.retainAll(b.areaHydraMonsters);
+    return "skill=" + skillId + " sharedMissiles=" + shared
+        + " sharedHydra=" + hydra + " statesA=" + a.areaStates.keySet()
+        + " statesB=" + b.areaStates.keySet() + " deletesA=" + a.areaHydraDeletes
+        + " deletesB=" + b.areaHydraDeletes;
+  }
+
+  private static String areaMissileSummary(Map<Integer, AreaMissile> missiles) {
+    StringBuilder result = new StringBuilder("{");
+    boolean first = true;
+    for (AreaMissile missile : missiles.values()) {
+      if (!first) result.append(", ");
+      first = false;
+      result.append(missile.entityId).append("=skill:").append(missile.skillId)
+          .append("/missile:").append(missile.missileId)
+          .append("/level:").append(missile.damageLevel)
+          .append("/deleted:").append(missile.deleted)
+          .append("/active:").append(missile.everActive);
+    }
+    return result.append('}').toString();
   }
 
   private void verifyUndergroundVisibilityLifecycle(D2GSHeadlessClient first,
@@ -3076,6 +3271,10 @@ public final class D2GSHeadlessClient {
           new CofReferenceP(), visibleCofIndex);
       visible.cofMode = cof.mode();
     }
+    // StateP is carried by player, monster and summon frames. Consume it
+    // before type-specific returns so aura snapshots are observed on both
+    // clients as well as on the caster's player frame.
+    recordAreaStates(sync);
     if (sync.type() == 3) {
       Snapshot snapshot = monsters.get(sync.entityId());
       if (snapshot == null) {
@@ -3121,9 +3320,20 @@ public final class D2GSHeadlessClient {
       int missileIndex = findComponent(sync, ComponentP.MissileP);
       if (missileIndex >= 0) {
         MissileP missile = (MissileP) sync.component(new MissileP(), missileIndex);
+        AreaMissile area = areaMissiles.get(sync.entityId());
+        if (area == null) {
+          area = new AreaMissile(sync.entityId());
+          areaMissiles.put(sync.entityId(), area);
+        }
+        area.missileId = missile.missileId();
+        area.skillId = missile.skillId();
+        area.damageLevel = missile.damageLevel();
+        area.deleted = (sync.flags() & EntityFlags.deleted) != 0;
+        if (!area.deleted) area.everActive = true;
         if (missile.ownerId() == playerId && playerMissiles.add(sync.entityId())) {
           log("missile", "entity=" + sync.entityId() + " owner=" + missile.ownerId()
-              + " missile=" + missile.missileId());
+              + " missile=" + missile.missileId() + " skill=" + missile.skillId()
+              + " damageLevel=" + missile.damageLevel());
         }
       }
       return;
@@ -3139,6 +3349,15 @@ public final class D2GSHeadlessClient {
       // A visibility/room unload is not a combat death. Keep the last vitals
       // so tests cannot mistake recipient-scoped deletion for a kill.
       snapshot.deleted = true;
+      int deletedMonsterId = snapshot.monsterClass;
+      int deletedMonsterIndex = findComponent(sync, ComponentP.MonsterP);
+      if (deletedMonsterIndex >= 0) {
+        MonsterP deletedMonster = (MonsterP) sync.component(new MonsterP(), deletedMonsterIndex);
+        deletedMonsterId = deletedMonster.monsterId();
+      }
+      if (isHydraMonsterId(deletedMonsterId)) {
+        areaHydraDeletes.add(sync.entityId());
+      }
       return;
     }
     snapshot.deleted = false;
@@ -3146,6 +3365,10 @@ public final class D2GSHeadlessClient {
     if (index >= 0) {
       MonsterP monster = (MonsterP) sync.component(new MonsterP(), index);
       snapshot.monsterClass = monster.monsterId();
+      observedMonsterClasses.add(snapshot.monsterClass);
+      if (isHydraMonsterId(snapshot.monsterClass)) {
+        areaHydraMonsters.add(sync.entityId());
+      }
     }
     index = findComponent(sync, ComponentP.PositionP);
     if (index >= 0) {
@@ -3171,6 +3394,56 @@ public final class D2GSHeadlessClient {
           && cof.mode() != Engine.Monster.MODE_WL
           && cof.mode() != Engine.Monster.MODE_RN;
     }
+  }
+
+  /** Records the authoritative StateP projection without mutating local state. */
+  private void recordAreaStates(EntitySync sync) {
+    int stateIndex = findComponent(sync, ComponentP.StateP);
+    if (stateIndex < 0) return;
+    StateP states = (StateP) sync.component(new StateP(), stateIndex);
+    int count = states.stateIdLength();
+    for (int i = 0; i < count; i++) {
+      int stateId = states.stateId(i);
+      AreaState area = areaStates.get(stateId);
+      if (area == null) {
+        area = new AreaState(stateId);
+        areaStates.put(stateId, area);
+      }
+      area.skillId = i < states.skillIdLength() ? states.skillId(i) : -1;
+      area.sourceEntityId = i < states.sourceEntityIdLength() ? states.sourceEntityId(i) : -1;
+      area.duration = i < states.durationLength() ? states.duration(i) : 0;
+      area.level = i < states.levelLength() ? states.level(i) : 0;
+      area.periodicDelayFrames = i < states.periodicDelayFramesLength()
+          ? states.periodicDelayFrames(i) : 0;
+      area.periodicCountdownFrames = i < states.periodicCountdownFramesLength()
+          ? states.periodicCountdownFrames(i) : 0;
+      area.everObserved = true;
+      log("area_state", "entity=" + sync.entityId() + " state=" + stateId
+          + " skill=" + area.skillId + " source=" + area.sourceEntityId
+          + " duration=" + area.duration + " level=" + area.level
+          + " periodic=" + area.periodicDelayFrames + "/"
+          + area.periodicCountdownFrames);
+    }
+  }
+
+  private static boolean isHydraMonsterId(int monsterId) {
+    try {
+      if (Riiablo.files != null && Riiablo.files.monstats != null) {
+        // 1.10f uses hydra/hydra1 aliases depending on the TXT export. Use
+        // every matching row rather than assuming one key.
+        for (com.riiablo.codec.excel.MonStats.Entry candidate : Riiablo.files.monstats) {
+          if (candidate != null && candidate.Id != null
+              && candidate.Id.toLowerCase(java.util.Locale.ROOT).startsWith("hydra")
+              && candidate.hcIdx == monsterId) {
+            return true;
+          }
+        }
+      }
+    } catch (Throwable ignored) {
+      // External D2GS clients may not have local TXT tables; keep the oracle
+      // conservative rather than guessing a MonsterIds ordinal.
+    }
+    return false;
   }
 
   private static int findComponent(EntitySync sync, byte type) {
@@ -3422,6 +3695,47 @@ public final class D2GSHeadlessClient {
     return new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
   }
 
+  /** Creates a deterministic level-30 caster fixture for native area skills. */
+  private static byte[] createGeneratedAreaSave(int skillId) {
+    boolean hydra = skillId == SkillId.HYDRA;
+    int characterClass = hydra ? Riiablo.SORCERESS : Riiablo.DRUID;
+    CharacterClass classData = hydra ? CharacterClass.SORCERESS : CharacterClass.DRUID;
+    String name = hydra ? "HeadlessHydra" : "HeadlessArea";
+    CharData character = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, name, (byte) characterClass);
+    com.riiablo.codec.excel.CharStats.Entry stats = classData.entry();
+    StatListRef base = character.getStats().base();
+    base.put(Stat.strength, stats.str);
+    base.put(Stat.energy, stats._int);
+    base.put(Stat.dexterity, stats.dex);
+    base.put(Stat.vitality, stats.vit);
+    base.put(Stat.statpts, 0);
+    base.put(Stat.newskills, 200);
+    base.put(Stat.hitpoints, 1_000_000);
+    base.put(Stat.maxhp, 1_000_000);
+    base.put(Stat.mana, 10_000);
+    base.put(Stat.maxmana, 10_000);
+    base.put(Stat.stamina, 10_000);
+    base.put(Stat.maxstamina, 10_000);
+    base.put(Stat.level, 30);
+    base.put(Stat.experience, 0);
+    base.put(Stat.gold, 0);
+    base.put(Stat.goldbank, 0);
+    base.put(Stat.armorclass, 1_000_000);
+    character.getStats().reset();
+    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
+    character.mapSeed = 0x41524541; // "AREA", stable map fixture.
+    character.initializeStartItems(stats);
+    if (!character.setSkillLevel(skillId, 20)) {
+      throw new IllegalStateException("could not seed area skill " + skillId);
+    }
+    byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
+    log("character_generated", "name=" + name + " class="
+        + (hydra ? "sorceress" : "druid") + " skill=" + skillId
+        + " level=20 bytes=" + data.length);
+    return data;
+  }
+
   private static void send(OutputStream output, ByteBuffer buffer) throws IOException {
     byte[] bytes = new byte[buffer.remaining()];
     buffer.get(bytes);
@@ -3442,6 +3756,34 @@ public final class D2GSHeadlessClient {
 
     Visibility(int entityId) {
       this.entityId = entityId;
+    }
+  }
+
+  private static final class AreaMissile {
+    final int entityId;
+    int missileId = -1;
+    int skillId = -1;
+    int damageLevel;
+    boolean deleted;
+    boolean everActive;
+
+    AreaMissile(int entityId) {
+      this.entityId = entityId;
+    }
+  }
+
+  private static final class AreaState {
+    final int stateId;
+    int skillId = -1;
+    int sourceEntityId = -1;
+    int duration;
+    int level;
+    int periodicDelayFrames;
+    int periodicCountdownFrames;
+    boolean everObserved;
+
+    AreaState(int stateId) {
+      this.stateId = stateId;
     }
   }
 
@@ -3510,6 +3852,8 @@ public final class D2GSHeadlessClient {
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
     boolean requireAndarielQuestScenario;
+    boolean requireAreaSkillScenario;
+    int areaSkillId = SkillId.VOLCANO;
     boolean requireQuestRecovery;
     boolean requireMercenarySkill;
     boolean requireMercenaryLifecycle;
@@ -3546,6 +3890,8 @@ public final class D2GSHeadlessClient {
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
         else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
+        else if ("--require-area-skill".equals(arg)) config.requireAreaSkillScenario = true;
+        else if ("--area-skill".equals(arg)) config.areaSkillId = integer(args, ++i, arg);
         else if ("--require-quest-recovery".equals(arg)) config.requireQuestRecovery = true;
         else if ("--require-mercenary-skill".equals(arg)) config.requireMercenarySkill = true;
         else if ("--require-mercenary-lifecycle".equals(arg)) config.requireMercenaryLifecycle = true;
@@ -3579,6 +3925,10 @@ public final class D2GSHeadlessClient {
         throw new IllegalArgumentException("embedded D2GS currently listens on port "
             + DEFAULT_PORT + "; omit --home when testing an external server port");
       }
+      if (config.requireAreaSkillScenario && !isAreaSkill(config.areaSkillId)) {
+        throw new IllegalArgumentException("--area-skill must be one of Hydra(62), Firestorm(225), "
+            + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250)");
+      }
       if (!config.generatedAmazon && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
@@ -3586,6 +3936,12 @@ public final class D2GSHeadlessClient {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
       return config;
+    }
+
+    private static boolean isAreaSkill(int skillId) {
+      return skillId == SkillId.HYDRA || skillId == SkillId.FIRESTORM
+          || skillId == SkillId.FISSURE || skillId == SkillId.VOLCANO
+          || skillId == SkillId.ARMAGEDDON || skillId == SkillId.HURRICANE;
     }
 
     private static File firstSave(File directory) {
@@ -3610,6 +3966,7 @@ public final class D2GSHeadlessClient {
           + " [--require-fallen-scenario] [--require-den-quest] [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
+          + " [--require-area-skill] [--area-skill 244]"
           + " [--require-reconnect-visibility]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }

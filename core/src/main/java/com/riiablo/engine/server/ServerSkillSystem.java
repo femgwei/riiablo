@@ -2446,12 +2446,16 @@ public class ServerSkillSystem extends PassiveSystem {
    */
   private void spawnSorceressHydra(SkillDoEvent event, Skills.Entry skill,
       int skillLevel, Vector2 caster) {
-    if (!mPlayer.has(event.entityId) || skill == null
-        || skill.summon == null || skill.summon.isEmpty()) {
+    if (!mPlayer.has(event.entityId) || skill == null) {
       log.warn("[HYDRA] phase=reject owner={} skill={} reason=missing_owner_or_summon",
           event.entityId, event.skillId);
       return;
     }
+    // Some 1.10f table exports omit the Summon column even though SrvDo144
+    // hardcodes the hydra monstats row. Preserve the native fallback instead
+    // of treating a blank TXT field as a failed cast.
+    String summonName = skill.summon == null || skill.summon.isEmpty()
+        ? "hydra" : skill.summon;
     Vector2 target = resolveTargetPoint(event, caster, new Vector2());
     if (map != null) {
       Map.Zone zone = map.getZone(target.x, target.y);
@@ -2461,10 +2465,10 @@ public class ServerSkillSystem extends PassiveSystem {
         return;
       }
     }
-    MonStats.Entry summon = Riiablo.files.monstats.get(skill.summon);
+    MonStats.Entry summon = Riiablo.files.monstats.get(summonName);
     if (summon == null) {
       log.warn("[HYDRA] phase=reject owner={} skill={} row={} reason=missing_monstats",
-          event.entityId, event.skillId, skill.summon);
+          event.entityId, event.skillId, summonName);
       return;
     }
 

@@ -119,3 +119,17 @@ Frozen Orb、Meteor、Thunder Storm 原生链均已接通，下一项转入复�
 - 只移植行为算法，不分发暴雪 MPQ 资源。
 - 任何完成项都必须在路线图中记录测试、commit、远程状态和下一步；未通过验收不得
   标记完成。
+
+### 双客户端复杂区域技能验收补充（2026-09-11）
+
+`server/d2gs/D2GSHeadlessClient` 已提供无窗口双客户端门槛入口。该入口只把服务端网络快照
+作为真值，不创建本地技能表现实体；通过共享 server entity ID、技能/等级字段和删除水印
+确认多人表现不会重复生成或只在一端消失。当前尚未标记为“真实运行完成”，因为本机缺少可用
+的 1.10f MPQ。
+
+### 真实 1.10f 双客户端验收结果（2026-09-11）
+
+已使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10f` 运行 `headlessAreaSkill`，Volcano(244)、
+Hydra(62)、Armageddon(249)、Hurricane(250) 全部通过。两端共享服务端实体 ID、技能/等级、
+状态来源和删除时序；Armageddon/Hurricane 的权威周期导弹保留两个模拟帧，确保跨过网络
+快照边界。下一项转入 Meteor/Thunder Storm 的真实双客户端表现验收。

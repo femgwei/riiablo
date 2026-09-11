@@ -98,6 +98,21 @@ tasks.register('headlessMultiplayer', JavaExec) {
   }
 }
 
+tasks.register('headlessAreaSkill', JavaExec) {
+  group = 'verification'
+  description = 'Runs two windowless clients through an authoritative area-skill snapshot gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--require-area-skill', '--area-skill',
+       (project.hasProperty('areaSkill') ? project.property('areaSkill').toString() : '244'),
+       '--test-timeout',
+       (project.hasProperty('areaTimeout') ? project.property('areaTimeout').toString() : '60')
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessFallenDual', JavaExec) {
   group = 'verification'
   description = 'Runs two real D2GS sockets through Fallen death, Shaman resurrection and peer loot pickup.'

@@ -213,6 +213,44 @@ public class D2GS extends ApplicationAdapter {
     };
   }
 
+  /**
+   * Test-only fallback for skills whose COF keyframe is not available in the
+   * headless animation tables. The network client still submits a real
+   * CastSkillRequest first; this hook dispatches the same authoritative
+   * SkillDoEvent on the D2GS application thread so snapshot verification does
+   * not depend on a renderer-owned animation callback.
+   */
+  static boolean headlessDispatchAreaSkill(int playerId, int skillId, float x, float y) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null
+        || Riiablo.files == null || Riiablo.files.skills.get(skillId) == null) return false;
+    java.util.concurrent.CountDownLatch completed = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean dispatched =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillId);
+        com.riiablo.engine.server.component.Player player = server.world.getMapper(
+            com.riiablo.engine.server.component.Player.class).get(playerId);
+        if (skill == null || player == null || player.data == null
+            || player.data.getSkill(skillId) <= 0) return;
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.SkillDoEvent.obtain(
+                playerId, skillId, Engine.INVALID_ENTITY, new Vector2(x, y),
+                skill.srvdofunc, skill.cltdofunc));
+        dispatched.set(true);
+      } finally {
+        completed.countDown();
+      }
+    });
+    try {
+      return completed.await(5, java.util.concurrent.TimeUnit.SECONDS) && dispatched.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   static Vector2 headlessLevelPosition(int levelId) {
     D2GS server = activeHeadlessInstance;
     if (server == null || server.map == null || Riiablo.files == null || Gdx.app == null) {
