@@ -889,8 +889,13 @@ public class Map implements Disposable {
     public int height() { return height; }
     /** Public level identifier for client-side projections such as Automap. */
     public int levelId() { return level == null ? -1 : level.Id; }
+    public int levelAct() { return level == null ? -1 : level.Act + 1; }
+    public String levelTypeName() { return type == null ? null : type.Name; }
     /** D2MOO AutoMap.txt LevelName (for example, "1 Wilderness"). */
-    public String automapLevelName() { return type == null ? null : type.Name; }
+    public String automapLevelName() {
+      return com.riiablo.engine.client.automap.AutomapLevelNames.resolve(levelAct(),
+          type == null ? null : type.Name, level != null && level.IsInside);
+    }
 
     static final Pool<Zone> pool = Pools.get(Zone.class, 16);
 
