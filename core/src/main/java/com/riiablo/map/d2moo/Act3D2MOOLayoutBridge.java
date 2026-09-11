@@ -51,6 +51,14 @@ public final class Act3D2MOOLayoutBridge {
       if (drlg == null) return false;
 
       D2MooTileApplier applier = new D2MooTileApplier();
+      D2DrlgLevel townLevel = DrlgDrlg.getLevel(drlg, FIRST_LEVEL);
+      Zone townZone = findZone(map, FIRST_LEVEL);
+      int nativeTownX = townLevel != null && townLevel.getLevelCoords() != null
+          ? townLevel.getLevelCoords().getNPosX() : 0;
+      int nativeTownY = townLevel != null && townLevel.getLevelCoords() != null
+          ? townLevel.getLevelCoords().getNPosY() : 0;
+      int worldTownX = townZone == null ? 0 : townZone.x();
+      int worldTownY = townZone == null ? 0 : townZone.y();
       int exportedLevels = 0;
       for (int levelId = FIRST_LEVEL; levelId <= LAST_LEVEL; levelId++) {
         Zone zone = findZone(map, levelId);
@@ -61,6 +69,17 @@ public final class Act3D2MOOLayoutBridge {
         int width = level.getLevelCoords().getNWidth();
         int height = level.getLevelCoords().getNHeight();
         if (width <= 0 || height <= 0) continue;
+
+        // D2MOO coordinates are tile-space.  Riiablo Zone positions are
+        // subtiles, so keep the town anchor and project every other level
+        // relative to the native town origin.  This removes the old custom
+        // vertical stacking that could overlap jungle and Kurast regions.
+        int nativeX = level.getLevelCoords().getNPosX();
+        int nativeY = level.getLevelCoords().getNPosY();
+        zone.setPosition(worldTownX + (nativeX - nativeTownX)
+                * com.riiablo.map.DT1.Tile.SUBTILE_SIZE,
+            worldTownY + (nativeY - nativeTownY)
+                * com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
         TileGrid grid = new TileGrid(width, height);
         applier.putGrid(levelId, grid);
         int floors = DrlgExport.exportLevelTiles(drlg, levelId, applier);
