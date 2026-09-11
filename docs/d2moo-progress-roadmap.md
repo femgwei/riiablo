@@ -2113,3 +2113,14 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
 
 当前下一项：在真实窗口或隐藏客户端产生一次地面点击，确认 `[INPUT_QUEUE]` 的
 `tickDelay<=1`；若仍有超过 1 Tick 的样本，再继续检查渲染帧捕获位置和模拟累积器追帧。
+
+### 2026-09-12 客户端点击边沿队列抽取与回归（已完成代码修复）
+
+- [x] 将渲染帧到固定 Tick 的单次点击缓存抽为 `PointerClickQueue`，点击坐标、捕获时间
+  和观察 Tick 在入队后保持不可变，不会被之后的鼠标移动覆盖。
+- [x] 未消费的第二个边沿不会覆盖第一个命令；每个点击只会被固定 Tick 消费一次。
+- [x] 新增无 LibGDX 依赖的 `PointerClickQueueTest`，覆盖坐标/Tick 保留、单次消费和空队列。
+- 验证：`PointerClickQueueTest`、`CursorMovementSystemTest`、`:core:compileJava` 通过。
+
+当前下一项：在隐藏客户端接入真实鼠标/输入事件后采集 `[INPUT_QUEUE]`，确认队列重构没有
+引入额外 Tick；随后继续处理仍然出现的 `[SIM_SLOW]` 路径搜索或地图碰撞慢 Tick。

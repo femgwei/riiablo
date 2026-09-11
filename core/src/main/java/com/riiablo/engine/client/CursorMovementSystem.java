@@ -84,11 +84,7 @@ public class CursorMovementSystem extends BaseSystem {
   EntitySubscription waypointInputSubscriber;
   boolean requireRelease;
   /** One-shot left-click captured on the render frame and consumed by the next sim tick. */
-  private boolean pendingLeftPress;
-  private float pendingLeftX;
-  private float pendingLeftY;
-  private long pendingLeftCapturedAt;
-  private long pendingLeftObservedTick;
+  private final PointerClickQueue pendingLeftClicks = new PointerClickQueue();
   private boolean sampledLeftDown;
   int lastInteractionTraceTarget = Engine.INVALID_ENTITY;
   long lastInteractionTraceMillis;
@@ -177,19 +173,17 @@ public class CursorMovementSystem extends BaseSystem {
     if (Gdx.input == null) return;
     boolean down = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
     if (down && !sampledLeftDown) {
-      pendingLeftPress = true;
-      pendingLeftX = Gdx.input.getX();
-      pendingLeftY = Gdx.input.getY();
-      pendingLeftCapturedAt = TimeUtils.millis();
-      pendingLeftObservedTick = networkReceiver == null
-          ? 0L : networkReceiver.latestServerTick();
+      pendingLeftClicks.capture(Gdx.input.getX(), Gdx.input.getY(), TimeUtils.millis(),
+          networkReceiver == null ? 0L : networkReceiver.latestServerTick());
     }
     sampledLeftDown = down;
   }
 
   private boolean consumePendingLeftPress(int src) {
-    if (!pendingLeftPress) return false;
-    pendingLeftPress = false;
+    PointerClickQueue.Click click = pendingLeftClicks.poll();
+    if (click == null) return false;
+    float pendingLeftX = click.screenX;
+    float pendingLeftY = click.screenY;
 
     // UI clicks must remain owned by Stage. Use the captured coordinates rather
     // than the current cursor, which may already have moved by this tick.
@@ -203,12 +197,12 @@ public class CursorMovementSystem extends BaseSystem {
       return true;
     }
 
-    long age = Math.max(0L, TimeUtils.millis() - pendingLeftCapturedAt);
+    long age = Math.max(0L, TimeUtils.millis() - click.capturedAtMillis);
     long consumedTick = networkReceiver == null ? 0L : networkReceiver.latestServerTick();
-    long tickDelay = inputTickDelay(pendingLeftObservedTick, consumedTick);
+    long tickDelay = inputTickDelay(click.observedTick, consumedTick);
     if (age > 40L || tickDelay > 1L) {
       Gdx.app.log(TAG, "[INPUT_QUEUE] phase=consume player=" + src
-          + " ageMs=" + age + " observedTick=" + pendingLeftObservedTick
+          + " ageMs=" + age + " observedTick=" + click.observedTick
           + " consumedTick=" + consumedTick + " tickDelay=" + tickDelay
           + " x=" + pendingLeftX + " y=" + pendingLeftY);
     }
