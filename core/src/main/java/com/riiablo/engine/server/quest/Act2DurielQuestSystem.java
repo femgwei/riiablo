@@ -58,17 +58,11 @@ public class Act2DurielQuestSystem extends BaseSystem {
     }
 
     ItemData items = player.data.getItems();
-    if (items == null || !items.removeItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF)) {
+    if (items == null || !items.containsItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF)) {
       log.warn("[A2Q6] Staff orifice activation had no authoritative hst: player={}",
           event.playerId);
       return;
     }
-    // D2MOO also removes old quest aliases when a player inserts the staff.
-    items.removeItemCode(REMOVED_TAINTED_SUN_STAFF);
-    items.removeItemCode(Act2HoradricStaffQuest.VIPER_AMULET);
-    items.removeItemCode(REMOVED_FALSE_STAFF);
-
-    markRecords(player.data);
     float portalX = source.position.x - 13f;
     float portalY = source.position.y + 3f;
     if (wrapper.map != null && wrapper.map.flags((int) portalX, (int) portalY) != 0) {
@@ -85,6 +79,22 @@ public class Act2DurielQuestSystem extends BaseSystem {
           event.entityId, event.playerId);
       return;
     }
+
+    // Portal creation is the last fallible world operation.  Only after it
+    // succeeds do we consume the quest materials and persist the records;
+    // a missing destination/map can therefore never eat the player's staff.
+    if (!items.removeItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF)) {
+      if (visual != Engine.INVALID_ENTITY && world != null) world.delete(visual);
+      if (world != null) world.delete(warp);
+      log.error("[A2Q6] staff disappeared during orifice transaction: player={}",
+          event.playerId);
+      return;
+    }
+    // D2MOO also removes old quest aliases when a player inserts the staff.
+    items.removeItemCode(REMOVED_TAINTED_SUN_STAFF);
+    items.removeItemCode(Act2HoradricStaffQuest.VIPER_AMULET);
+    items.removeItemCode(REMOVED_FALSE_STAFF);
+    markRecords(player.data);
     wrapper.zone.addWarp(warp);
     log.info("[A2Q6] Tal Rasha staff inserted: player={} orifice={} visual={} warp={} destination={}",
         event.playerId, event.entityId, visual, warp, D2LevelIds.LEVEL_DURIELSLAIR);
