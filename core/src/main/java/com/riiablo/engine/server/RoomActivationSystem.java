@@ -104,11 +104,43 @@ public class RoomActivationSystem extends IteratingSystem {
         mMapWrapper.create(monsterId).set(zone.map, zone);
         if (mMonster.has(monsterId)) {
           mMonster.get(monsterId).setSpawnAnchor(zone, spawn.x, spawn.y);
+          // D2Game records the pack leader before creating its PartyMin/
+          // PartyMax companions. Preserve that relationship so AI callbacks
+          // can restrict resurrection to the leader's own minions.
+          if (spawn.packId >= 0) {
+            mMonster.get(monsterId).setNativePack(spawn.packId, !spawn.minion);
+          }
         }
         spawned++;
       }
+      // Resolve owners after the whole room batch is present. This also
+      // handles a minion whose leader was activated in an adjacent RoomEx.
+      if (spawned > 0) resolvePackOwners(zone);
       log.info("[ROOM_MONSTER_POPULATION] level={} room={} queued={} spawned={} action=first_activate",
           levelId(zone), room.id, room.getPendingMonsterSpawns().size, spawned);
+    }
+  }
+
+  private void resolvePackOwners(Map.Zone zone) {
+    if (zone == null || mMonster == null) return;
+    IntMap<Integer> leaders = new IntMap<>();
+    com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager()
+        .get(com.artemis.Aspect.all(Monster.class, MapWrapper.class)).getEntities();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = entities.get(i);
+      Monster value = mMonster.get(id);
+      MapWrapper mapping = mMapWrapper.get(id);
+      if (mapping == null || mapping.zone != zone || value.nativePackId < 0) continue;
+      if (value.nativePackLeader) leaders.put(value.nativePackId, id);
+    }
+    for (int i = 0; i < entities.size(); i++) {
+      int id = entities.get(i);
+      Monster value = mMonster.get(id);
+      MapWrapper mapping = mMapWrapper.get(id);
+      if (mapping == null || mapping.zone != zone || value.nativePackId < 0
+          || value.nativePackLeader) continue;
+      Integer owner = leaders.get(value.nativePackId);
+      if (owner != null) value.setMinionOwner(owner);
     }
   }
 

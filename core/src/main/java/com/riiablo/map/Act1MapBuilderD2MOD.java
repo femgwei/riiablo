@@ -211,6 +211,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   /** Random monsters wait until the final native collision layer is available. */
   private final IntMap<Array<PendingMonsterSpawn>> pendingMonsterSpawns = new IntMap<>();
+  /** Stable key used to reconnect deferred party minions to their leader. */
+  private int nextMonsterPackId = 1;
   /** Native Act I quest bosses spawned once per generated level. */
   private final IntSet questBossSpawned = new IntSet();
 
@@ -229,6 +231,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     levelsWithNativeDirtPaths.clear();
     d2MooDt1Masks.clear();
     pendingMonsterSpawns.clear();
+    nextMonsterPackId = 1;
     questBossSpawned.clear();
     lvlSubDs1PlacedCounts.clear();
     MathUtils.random.setSeed(seed);
@@ -699,6 +702,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                       ? monster.MaxGrp
                       : MathUtils.random(NativeDataTables.minGroup(monster),
                           NativeDataTables.maxGroup(monster));
+                  int packId = nextMonsterPackId++;
                   for (int j = 0; j < count; j++) {
                     // currentTx/currentTy identify the top-left subtile of a 5x5
                     // floor tile. Jittering around that corner used to push half
@@ -707,7 +711,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                     float px = monsterSpawnCoordinate(zone.x, currentTx, MathUtils.random(-1f, 1f));
                     float py = monsterSpawnCoordinate(zone.y, currentTy, MathUtils.random(-1f, 1f));
                     if (renderD2MooExport) {
-                      queueMonsterSpawn(zone.level.Id, monster, px, py);
+                      queueMonsterSpawn(zone.level.Id, monster, px, py, packId, false);
                     } else {
                       zone.map.factory.createMonster(monster, px, py);
                     }
@@ -736,7 +740,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                     float my = monsterSpawnCoordinate(zone.y, currentTy,
                         MathUtils.random(-1f, 1f)) + MathUtils.random(-2f, 2f);
                     if (renderD2MooExport) {
-                      queueMonsterSpawn(zone.level.Id, minion, mx, my);
+                      queueMonsterSpawn(zone.level.Id, minion, mx, my, packId, true);
                     } else {
                       zone.map.factory.createMonster(minion, mx, my);
                     }
@@ -1634,6 +1638,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   }
 
   private void queueMonsterSpawn(int levelId, MonStats.Entry monster, float x, float y) {
+    queueMonsterSpawn(levelId, monster, x, y, -1, false);
+  }
+
+  private void queueMonsterSpawn(int levelId, MonStats.Entry monster, float x, float y,
+      int packId, boolean minion) {
     if (monster == null) return;
     MonStats2.Entry monstats2 = Riiablo.files.monstats2.get(monster.MonStatsEx);
     int size = monstats2 == null ? 1 : Math.max(1, monstats2.SizeX);
@@ -1641,7 +1650,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (pending == null) {
       pendingMonsterSpawns.put(levelId, pending = new Array<>());
     }
-    pending.add(new PendingMonsterSpawn(monster.hcIdx, size, x, y));
+    pending.add(new PendingMonsterSpawn(monster.hcIdx, size, x, y, packId, minion));
   }
 
   private void spawnPendingMonsters(Zone zone) {
@@ -1680,7 +1689,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       }
       Map.RoomEx room = zone.findRoomEx(spawnX, spawnY);
       if (zone.hasNativeRoomTopology() && room != null) {
-        room.addMonsterSpawn(candidate.monsterId, spawnX, spawnY);
+        room.addMonsterSpawn(candidate.monsterId, spawnX, spawnY,
+            candidate.packId, candidate.minion);
         deferred++;
       } else if (zone.map.factory != null) {
         zone.map.factory.createMonster(candidate.monsterId, spawnX, spawnY);
@@ -1898,12 +1908,17 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     final int size;
     final float x;
     final float y;
+    final int packId;
+    final boolean minion;
 
-    PendingMonsterSpawn(int monsterId, int size, float x, float y) {
+    PendingMonsterSpawn(int monsterId, int size, float x, float y,
+        int packId, boolean minion) {
       this.monsterId = monsterId;
       this.size = size;
       this.x = x;
       this.y = y;
+      this.packId = packId;
+      this.minion = minion;
     }
   }
 

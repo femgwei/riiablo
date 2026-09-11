@@ -152,6 +152,40 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void ordinaryShamanOnlyResurrectsItsOwnPackMinion() {
+    MonStats.Entry shamanRow = Riiablo.files.monstats.get("fallenshaman1");
+    MonStats.Entry fallenRow = Riiablo.files.monstats.get("fallen1");
+    MonStats2.Entry shamanStats2 = Riiablo.files.monstats2.get(shamanRow.MonStatsEx);
+    MonStats2.Entry fallenStats2 = Riiablo.files.monstats2.get(fallenRow.MonStatsEx);
+
+    Monster shaman = new Monster().set(shamanRow, shamanStats2)
+        .setRank(com.riiablo.engine.server.monster.MonsterRank.NORMAL, 0L, -1, -1);
+    Monster own = new Monster().set(fallenRow, fallenStats2).setMinionOwner(41);
+    Monster foreign = new Monster().set(fallenRow, fallenStats2).setMinionOwner(99);
+    Corpse corpse = new Corpse().reset(Corpse.DEFAULT_DURATION, true);
+
+    assertTrue(FallenShaman.isResurrectableFallen(shaman, own, corpse, 0f));
+    assertTrue(FallenShaman.isOwnedMinion(shaman, 41, own));
+    assertTrue(!FallenShaman.isOwnedMinion(shaman, 41, foreign));
+  }
+
+  @Test
+  void uniqueShamanMayResurrectOrdinaryShamanButNotEliteCorpse() {
+    MonStats.Entry shamanRow = Riiablo.files.monstats.get("fallenshaman1");
+    MonStats2.Entry shamanStats2 = Riiablo.files.monstats2.get(shamanRow.MonStatsEx);
+    Monster unique = new Monster().set(shamanRow, shamanStats2)
+        .setRank(com.riiablo.engine.server.monster.MonsterRank.UNIQUE, 0L, -1, -1);
+    Monster normal = new Monster().set(shamanRow, shamanStats2)
+        .setRank(com.riiablo.engine.server.monster.MonsterRank.NORMAL, 0L, -1, -1);
+    Monster champion = new Monster().set(shamanRow, shamanStats2)
+        .setRank(com.riiablo.engine.server.monster.MonsterRank.CHAMPION, 0L, -1, -1);
+    Corpse corpse = new Corpse().reset(Corpse.DEFAULT_DURATION, true);
+
+    assertTrue(FallenShaman.isResurrectableFallen(unique, normal, corpse, 0f));
+    assertTrue(!FallenShaman.isResurrectableFallen(unique, champion, corpse, 0f));
+  }
+
   private static int createPlayer(World world) {
     int id = world.create();
     world.getMapper(Player.class).create(id).data = CharData.obtain().clear()

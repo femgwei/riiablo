@@ -150,15 +150,13 @@ public final class AuthoritativeItemMoveService {
       revisions.put(playerEntityId, next);
       return new Outcome(true, ItemMoveFailure.NONE, next, grant.remaining == 0, grant.remaining);
     }
-    // Ground clicks in the native game attempt an automatic inventory
-    // placement.  The old path only marked the item CURSOR, leaving it
-    // visually attached to the mouse and making a normal pickup appear to
-    // fail in multiplayer.  Pack it into the first authoritative free
-    // inventory rectangle; the explicit cursor operations remain available
-    // for items moved from panels.
+    // Native ground pickup gives belt-compatible potions the first free belt
+    // cell, then falls back to the inventory. Other item types go directly to
+    // the inventory. Both placements remain one authoritative transaction.
     boolean stored;
     try {
-      stored = character.getItems().addToInventory(groundItem);
+      stored = character.getItems().addPotionToBelt(groundItem)
+          || character.getItems().addToInventory(groundItem);
     } catch (Throwable t) {
       GroundDropOwnership.release(intent.groundEntityId);
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);

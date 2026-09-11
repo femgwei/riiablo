@@ -105,6 +105,7 @@ class MonsterAiParamParityTest {
 
   @Test
   void fallenShamanOnlySelectsUsableNormalFallenCorpses() {
+    Monster source = fallenMonster("fallenshaman1", MonsterRank.NORMAL);
     MonStats.Entry stats = new MonStats.Entry();
     stats.Id = "fallen2";
     stats.BaseId = "fallen1";
@@ -115,34 +116,57 @@ class MonsterAiParamParityTest {
     Monster monster = new Monster().set(stats, stats2);
     Corpse corpse = new Corpse();
 
-    assertTrue(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    assertTrue(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
 
     corpse.fading = true;
-    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
     corpse.fading = false;
     monster.rank = MonsterRank.CHAMPION;
-    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
     monster.rank = MonsterRank.NORMAL;
     stats.BaseId = "skeleton1";
-    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
     stats.BaseId = "fallenshaman1";
-    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 1f));
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 1f));
+
+    source.rank = MonsterRank.CHAMPION;
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
+    source.rank = MonsterRank.UNIQUE;
+    assertTrue(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
+    source.rank = MonsterRank.SUPER_UNIQUE;
+    assertTrue(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
+    source.rank = MonsterRank.NORMAL;
 
     // Native D2MOO does not gate this callback on MonStats2.revive.  Some
     // shipped Fallen rows leave that column unset while remaining valid
     // resurrection targets.
     stats.BaseId = "fallen1";
     stats2.revive = false;
-    assertTrue(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    assertTrue(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
 
     stats.Align = 1; // neutral, not UNIT_ALIGNMENT_EVIL
-    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
     stats.Align = 0;
 
     // Runtime champion/unique quality is checked in addition to MonStats
     // flags, matching MONSTERUNIQUE_CheckMonTypeFlag in D2MOO.
     monster.rank = MonsterRank.CHAMPION;
-    assertFalse(FallenShaman.isResurrectableFallen(monster, corpse, 0f));
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
+    monster.rank = MonsterRank.UNIQUE;
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
+    monster.rank = MonsterRank.SUPER_UNIQUE;
+    assertFalse(FallenShaman.isResurrectableFallen(source, monster, corpse, 0f));
+  }
+
+  private static Monster fallenMonster(String baseId, int rank) {
+    MonStats.Entry stats = new MonStats.Entry();
+    stats.Id = baseId;
+    stats.BaseId = baseId;
+    stats.Align = 0;
+    Monster monster = new Monster().set(stats, new MonStats2.Entry());
+    monster.rank = rank;
+    return monster;
   }
 
   @Test

@@ -42,6 +42,19 @@
 
 ## 本次更新
 
+- 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
+  Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整
+  接线，不能宣称怪物 AI 已全部与 D2MOO 对齐。
+- 已修复普通/Champion Fallen Shaman 错误复活 Fallen Shaman；只有 Unique/Super Unique
+  Shaman 可以选择普通 Shaman 尸体。普通/Champion Shaman 的 pack owner 约束已在本轮接通，
+  下一步转入第一章特殊怪物 Generic fallback（优先 BloodRaven）。
+- 已补齐第一轮 Fallen/Shaman minion owner 关系：D2MOO 延迟 RoomEx 生成记录 pack key，
+  激活时把 Party minion 绑定到同包 leader；普通/Champion Shaman 现在拒绝带有其他
+  owner 的 Fallen 尸体。旧无 owner 地图数据保留兼容 fallback，待完整旧地图重导出后
+  再收紧为强制 owner。
+- 已修复地面药水自动拾取：服务端按 D2MOO 家族/列顺序优先填充同类药水的上层腰带格，
+  再找第一层空位，满腰带回退背包；多人 revision、地面归属和失败回滚不变。定向测试、
+  D2GS 编译和真实 1.10f `headlessFallenDual` 均通过。
 - 对照 D2MOO 修正 A1Q5 队伍资格：整个 Act I 均合格，Rogue Encampment 不再被错误
   排除；Act II 队员与无关玩家只获得本局完成标记。
 - 补齐同层、营地/野外队员、跨幕、无关玩家、已领奖记录和重复死亡的核心测试。

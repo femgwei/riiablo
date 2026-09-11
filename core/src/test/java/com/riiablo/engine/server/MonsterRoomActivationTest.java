@@ -146,6 +146,17 @@ class MonsterRoomActivationTest {
   }
 
   @Test
+  void deferredMonsterSpawnRetainsNativePackOwnerMetadata() {
+    Map.Zone zone = nativeThreeRoomZone();
+    Map.RoomEx room = zone.getRoomsEx().get(0);
+    room.addMonsterSpawn(7, 10, 10, 41, true);
+
+    Map.MonsterSpawn spawn = room.getPendingMonsterSpawns().get(0);
+    assertEquals(41, spawn.packId);
+    assertTrue(spawn.minion);
+  }
+
+  @Test
   void clientRoomReferencePropagatesAllFourD2MooStatuses() {
     Map.Zone zone = nativeFourRoomZone();
     zone.enterClientRoom(0);

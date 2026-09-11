@@ -21,6 +21,12 @@ public class Monster extends Component {
   public long affixes;
   public int uniqueId;
 
+  /** Native MonsterSpawn minion owner for ordinary monster party members. */
+  public int minionOwnerId = -1;
+  /** Deferred RoomEx pack identity and leader marker used during activation. */
+  public int nativePackId = -1;
+  public boolean nativePackLeader;
+
   /** Level-scaled native A2 profile captured when this monster is spawned. */
   public int attack2MinDamage;
   public int attack2MaxDamage;
@@ -46,6 +52,9 @@ public class Monster extends Component {
     championType = -1;
     affixes = 0L;
     uniqueId = -1;
+    minionOwnerId = -1;
+    nativePackId = -1;
+    nativePackLeader = false;
     attack2MinDamage = 0;
     attack2MaxDamage = 0;
     attack2ToHit = 0;
@@ -62,6 +71,18 @@ public class Monster extends Component {
     this.affixes = affixes;
     this.championType = championType;
     this.uniqueId = uniqueId;
+    return this;
+  }
+
+  /** Assigns the native pack leader for a regular monster minion. */
+  public Monster setMinionOwner(int ownerId) {
+    minionOwnerId = ownerId;
+    return this;
+  }
+
+  public Monster setNativePack(int packId, boolean leader) {
+    nativePackId = packId;
+    nativePackLeader = leader;
     return this;
   }
 

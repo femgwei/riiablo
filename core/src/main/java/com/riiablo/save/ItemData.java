@@ -489,6 +489,65 @@ public class ItemData {
     return true;
   }
 
+  /**
+   * Atomically applies D2Common's {@code INVENTORY_GetFreeBeltSlot} ordering.
+   * A potion matching one of the four quick-slot (bottom-row) potion families
+   * fills the first hole above that slot. If the matching column is full, an
+   * empty bottom-row slot starts a new column. The item is left untouched when
+   * it is not a belt-compatible potion or no native slot is available.
+   */
+  public boolean addPotionToBelt(Item item) {
+    if (item == null || contains(item) || item.typeEntry == null
+        || !item.typeEntry.Beltable || item.type == null
+        || !item.type.is(Type.POTI)) return false;
+
+    Item[][] occupied = new Item[4][4];
+    for (int i = 0; i < itemData.size; i++) {
+      Item beltItem = itemData.get(i);
+      if (beltItem == null || beltItem.location != Location.BELT) continue;
+      int x = beltItem.gridX;
+      int y = beltItem.gridY;
+      if (x < 0 || x >= 4 || y < 0 || y >= 4) return false;
+      occupied[y][x] = beltItem;
+    }
+
+    // Native belt slots are encoded x + 4*y. It first searches quick slots
+    // 0..3 for a comparable potion, then walks that column by increments of 4.
+    for (int x = 0; x < 4; x++) {
+      if (!sameNativePotionType(item, occupied[0][x])) continue;
+      for (int y = 0; y < 4; y++) {
+        if (occupied[y][x] == null) return addToBeltSlot(item, x, y);
+      }
+    }
+
+    // If every matching column is full (or none exists), native AutoBelt
+    // starts a new family only in the first empty quick slot.
+    for (int x = 0; x < 4; x++) {
+      if (occupied[0][x] == null) return addToBeltSlot(item, x, 0);
+    }
+    return false;
+  }
+
+  private boolean addToBeltSlot(Item item, int x, int y) {
+    add(item);
+    item.storeLoc = StoreLoc.NONE;
+    item.bodyLoc = BodyLoc.NONE;
+    item.gridX = (byte) x;
+    item.gridY = (byte) y;
+    setLocation(item, Location.BELT);
+    return true;
+  }
+
+  /** D2Common ITEMS_ComparePotionTypes: exact item, health, mana or rejuv family. */
+  static boolean sameNativePotionType(Item first, Item second) {
+    if (first == null || second == null) return false;
+    if (first.code != null && first.code.equalsIgnoreCase(second.code)) return true;
+    if (first.type == null || second.type == null) return false;
+    return first.type.is(Type.HPOT) && second.type.is(Type.HPOT)
+        || first.type.is(Type.MPOT) && second.type.is(Type.MPOT)
+        || first.type.is(Type.RPOT) && second.type.is(Type.RPOT);
+  }
+
   /** Packs an already-owned corpse item into the first free inventory rectangle. */
   public boolean moveOwnedToInventory(Item item) {
     int itemIndex = indexOf(item);

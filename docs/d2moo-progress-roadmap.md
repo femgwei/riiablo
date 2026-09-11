@@ -31,6 +31,22 @@
 
 ## 2026-09-11 当前进度快照
 
+- 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
+  `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
+  和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster
+  条目、63 个敌对单位、72 个直接攻击 profile 和 11 个远程 profile。仍未完全对齐的关键项
+  是区域 RNG/完整群组生成、Champion/Unique pack 接线，以及 Arach、Andariel、BloodRaven、
+  GargoyleTrap、Griswold、Smith 六类专用 AI（目前使用 `GenericMonster`，其中 GargoyleTrap
+  仍是静态 fallback）。因此维持“怪物生成约 70%、怪物 AI 约 62%”的保守估计。
+- 修正 Fallen Shaman 原生复活目标分流：普通/Champion Shaman 不再选择 Fallen Shaman
+  尸体；只有 Unique/Super Unique Shaman 可选择普通 `fallenshaman1`，所有施法者仍可选择
+  合法普通 Fallen；Champion/Unique/Super Unique 尸体继续拒绝。D2MOO 中普通/Champion
+  Shaman 还要求目标为自己的 minion；本轮已在 Monster/RoomEx 生成链保存 pack owner，
+  并在普通/Champion Shaman 筛选时拒绝其他 pack 的尸体。
+- 修正服务端权威地面药水拾取：`Beltable + poti` 物品按照 D2Common 家族归类，先填充
+  同类药水所在列的下一个层级；该列已满时再找第一层最左空位；腰带满后原子回退 10x4
+  背包。相关矩阵/拾取测试、D2GS 编译及真实 1.10f 双客户端 Fallen 击杀/复活/掉落/
+  争抢拾取均通过。
 - 召唤物跨房间/跨区域重组已完成首轮：对齐 D2MOO NecroPet 的 28 格主人轨迹跟随与
   50 格 PetMove mode 3 边界；跨 Zone、主人快速移动，以及非相邻 RoomEx 无有效路径时，
   会在主人周围的可通行环带重放。旧 Target/Casting/Sequence/Pathfind、Running、速度和
@@ -241,8 +257,8 @@
 | P0 | 数据表、固定点、RNG、Unit 所属关系 | 10% | 62% | 38% | 3.8% | 部分运行路径仍有默认值和 fallback |
 | P0 | 第一章地图、Warp、碰撞 | 10% | 85% | 15% | 1.5% | 可玩链基本稳定，需完成细节和回归 |
 | P0 | Act 2–5/完整 DRLG | 5% | 25% | 75% | 3.8% | 尚未按第一章标准逐幕审计 |
-| P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | 还需完整区域池、群组和难度分支 |
-| P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | 诅咒特殊 AI、召唤跟随/PvP/跨区重组已接通；通用 fallback 和其他特殊分支不全 |
+| P0 | 怪物生成、等级和区域人口 | 7% | 70% | 30% | 2.1% | A1 难度池/密度/普通群组/Party 已接通；Champion/Unique pack、区域 RNG 和完整分支未对齐 |
+| P0 | 怪物 AI 与特殊行为 | 8% | 62% | 38% | 3.0% | Fallen Shaman 目标品质已修；A1 仍有 6 类 Generic fallback，普通 Shaman minion-owner 关系未接通 |
 | P1 | 战斗、伤害、状态、技能、导弹 | 12% | 95% | 5% | 0.6% | 死灵骨毒/召唤链、圣骑士技能与法师 Blizzard/Frozen Orb/Meteor/Thunder Storm 已接通；统一实机表现仍待补 |
 | P1 | 经验、升级、属性点、技能点、佣兵经验 | 7% | 75% | 25% | 1.8% | 所有权链、存档恢复和少量事件待补 |
 | P1 | 装备、背包、物品移动和派生属性 | 10% | 60% | 40% | 4.0% | 原生属性聚合、腰带/尸体/插槽仍不完整 |
@@ -1535,6 +1551,24 @@ Storm，并收敛 headless 测试日志输出以便持续集成。
 > 不再是当前执行位置。唯一有效的下一步以本文件顶部“当前进度快照”和上方
 > “当前下一项”为准；Bone Armor、Poison Dagger、Corpse/Poison Explosion、Bone
 > Wall/Prison、Poison Nova、召唤链、诅咒特殊 AI 与 Iron Maiden/Life Tap 受击回调首轮均已完成。
+
+### 2026-09-11 Fallen Shaman 复活目标与药水自动入腰带（已完成）
+
+- [x] ~~按施法者品质分流 Fallen Shaman 复活目标~~
+  - 普通/Champion 施法者拒绝 `fallenshaman1`；Unique/Super Unique 才可复活普通
+    Shaman，且所有 Champion/Unique/Super Unique 目标尸体继续拒绝。
+  - 普通 Fallen 的可用尸体、邪恶阵营、死亡生命和 fading 过滤保持不变。
+- [x] ~~地面药水服务端权威自动入腰带~~
+  - `INVENTORY_GetFreeBeltSlot` 的家族匹配和列优先顺序已复刻：同类药水先向上填充，
+    无同类列时才使用第一层空位；满腰带回退背包。
+  - 拾取仍保持归属 claim、revision、幂等响应和失败不删除地面实体的既有事务语义。
+- 验证：Fallen/物品定向测试通过；第一章怪物、生成、攻击、技能与物品联合回归通过；
+  `:server:d2gs:compileJava` 通过；真实 1.10f `:server:d2gs:headlessFallenDual` 通过，
+  输出 `dual_revive_pass`、`dual_native_no_reward_pass` 和 `dual_pickup_pass`。
+
+当前下一项：补齐普通/Champion Fallen Shaman 到自身 Fallen minion 的原生 owner 关系，
+并建立“普通 Shaman 尸体双客户端不得被普通 Shaman 复活、Unique Shaman 可以复活”的
+真实 D2GS 负向/正向门槛；随后优先实现第一章六类专用 AI fallback 中的 Boss AI。
 
 ## 记录规则
 

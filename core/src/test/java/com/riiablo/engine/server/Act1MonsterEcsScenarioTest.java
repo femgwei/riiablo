@@ -275,7 +275,7 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
   }
 
   @Test
-  void vampireFirewallKeyframeCreatesOneFirewallMaker() {
+  void vampireFirewallKeyframeCreatesNativeMakersAndCentreSegment() {
     MonStats.Entry row = Riiablo.files.monstats.get("vampire1");
     assertNotNull(row);
     Skills.Entry skill = Riiablo.files.skills.get("VampireFirewall");
@@ -285,11 +285,13 @@ class Act1MonsterEcsScenarioTest extends RiiabloTest {
       int target = scenario.target(16, 10);
       scenario.actioneer.cast(scenario.source, skill.Id, target, scenario.position(16, 10));
       scenario.keyframe(scenario.source);
-      assertEquals(1, scenario.factory.missilesCreated);
-      assertEquals(skill.srvmissilea, scenario.factory.lastMissile);
+      // D2MOO SrvDo024 creates two opposing SrvMissileA makers followed by
+      // one stationary SrvMissileB centre segment.
+      assertEquals(3, scenario.factory.missilesCreated);
+      assertEquals(skill.srvmissileb, scenario.factory.lastMissile);
       assertEquals(1, scenario.probe.skillDo);
       System.out.println("[ACT1_ECS_CHAIN] skill=VampireFirewall missile="
-          + scenario.factory.lastMissile + " created=1 status=PASS");
+          + scenario.factory.lastMissile + " created=3 status=PASS");
     } finally {
       scenario.close();
     }

@@ -145,7 +145,14 @@ public class FallenShaman extends AI {
       Monster candidate = mMonster.get(candidateId);
       Corpse corpse = mCorpse.get(candidateId);
       float distance2 = source.dst2(mPosition.get(candidateId).position);
-      boolean resurrectable = isResurrectableFallen(candidate, corpse, hpValue);
+      boolean resurrectable = isResurrectableFallen(monster, candidate, corpse, hpValue);
+      if (resurrectable && requiresOwnedMinion(monster)
+          && !isOwnedMinion(monster, entityId, candidate)) {
+        resurrectable = false;
+        log.debug("[MONSTER_RAISE] phase=candidate_rejected source={} candidate={} "
+                + "reason=minion_owner_mismatch owner={} expected={}",
+            entityId, candidateId, candidate.minionOwnerId, entityId);
+      }
       if (!resurrectable) {
         log.debug("[MONSTER_RAISE] phase=candidate_rejected source={} candidate={} monster={} "
                 + "hp={} usable={} fading={} distance={} align={} revive={}",
@@ -194,8 +201,16 @@ public class FallenShaman extends AI {
     return -1;
   }
 
-  public static boolean isResurrectableFallen(Monster monster, Corpse corpse, float hitpoints) {
-    if (monster == null || monster.monstats == null || monster.monstats2 == null
+  /**
+   * Applies the native Fallen Shaman target split. Ordinary and champion
+   * shamans use their minion-owner search in D2Game and therefore may not
+   * select another shaman corpse. Unique/super-unique shamans use
+   * {@code AITHINK_TargetCallback_FallenShaman}, which additionally accepts
+   * an ordinary {@code fallenshaman1} corpse.
+   */
+  public static boolean isResurrectableFallen(
+      Monster source, Monster candidate, Corpse corpse, float hitpoints) {
+    if (candidate == null || candidate.monstats == null || candidate.monstats2 == null
         || corpse == null || !corpse.usable || corpse.fading || hitpoints > 0f) {
       return false;
     }
@@ -207,21 +222,51 @@ public class FallenShaman extends AI {
     // GOOD = 2.  The previous port treated neutral (1) as evil, which
     // rejected every real Fallen row (the log showed align=0) before the
     // resurrection roll could ever run.
-    if (monster.monstats.Align != 0) {
+    if (candidate.monstats.Align != 0) {
       return false;
     }
 
     // AITHINK_TargetCallback_FallenShaman rejects unique/champion targets at
     // runtime.  MonStats flags alone do not capture generated quality, so use
     // the spawn-time rank when available as the ECS equivalent.
-    if (monster.rank == MonsterRank.CHAMPION || monster.rank == MonsterRank.UNIQUE) {
+    if (candidate.rank == MonsterRank.CHAMPION
+        || candidate.rank == MonsterRank.UNIQUE
+        || candidate.rank == MonsterRank.SUPER_UNIQUE) {
       return false;
     }
 
-    String baseId = monster.monstats.BaseId;
-    if (baseId == null || baseId.isEmpty()) baseId = monster.monstats.Id;
-    return "fallen1".equalsIgnoreCase(baseId)
-        || "fallenshaman1".equalsIgnoreCase(baseId);
+    String baseId = candidate.monstats.BaseId;
+    if (baseId == null || baseId.isEmpty()) baseId = candidate.monstats.Id;
+    if ("fallen1".equalsIgnoreCase(baseId)) return true;
+    return "fallenshaman1".equalsIgnoreCase(baseId)
+        && source != null
+        && MonsterRank.isUnique(source.rank);
+  }
+
+  /**
+   * Compatibility helper for callers that do not have a resurrection source.
+   * Such a call is intentionally treated as an ordinary shaman and can only
+   * select a normal Fallen corpse.
+   */
+  public static boolean isResurrectableFallen(
+      Monster candidate, Corpse corpse, float hitpoints) {
+    return isResurrectableFallen(null, candidate, corpse, hitpoints);
+  }
+
+  /**
+   * Native ordinary/champion Shamans use the minion-owner search path.  Older
+   * map exports do not carry an owner pointer, so an unset value remains a
+   * compatibility fallback; once the RoomEx population has explicit owner
+   * metadata, a corpse from another pack is rejected deterministically.
+   */
+  public static boolean requiresOwnedMinion(Monster source) {
+    return source != null
+        && (source.rank == MonsterRank.NORMAL || source.rank == MonsterRank.CHAMPION);
+  }
+
+  public static boolean isOwnedMinion(Monster source, int sourceId, Monster candidate) {
+    if (!requiresOwnedMinion(source) || candidate == null) return true;
+    return candidate.minionOwnerId < 0 || candidate.minionOwnerId == sourceId;
   }
 
   static boolean withinShootDistance(float distance, int shootDistance) {

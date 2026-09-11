@@ -1787,8 +1787,15 @@ public class Map implements Disposable {
     }
 
     public void addMonsterSpawn(int monsterId, float worldX, float worldY) {
+      addMonsterSpawn(monsterId, worldX, worldY, -1, false);
+    }
+
+    /** Adds a deferred spawn while preserving the native pack owner relation. */
+    public void addMonsterSpawn(int monsterId, float worldX, float worldY,
+        int packId, boolean minion) {
       if (!monsterPopulationSpawned) {
-        pendingMonsterSpawns.add(new MonsterSpawn(monsterId, worldX, worldY));
+        pendingMonsterSpawns.add(new MonsterSpawn(monsterId, worldX, worldY,
+            packId, minion));
       }
     }
 
@@ -1855,11 +1862,21 @@ public class Map implements Disposable {
     public final int monsterId;
     public final float x;
     public final float y;
+    /** Room-local pack key; -1 means no explicit native owner relation. */
+    public final int packId;
+    /** True when this entry is a party minion of the pack leader. */
+    public final boolean minion;
 
     MonsterSpawn(int monsterId, float x, float y) {
+      this(monsterId, x, y, -1, false);
+    }
+
+    MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion) {
       this.monsterId = monsterId;
       this.x = x;
       this.y = y;
+      this.packId = packId;
+      this.minion = minion;
     }
   }
 
