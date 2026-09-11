@@ -13,6 +13,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.quest.Act2TombSelection;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
+import com.riiablo.map.d2moo.Act2ArcaneD2MOOLayoutBridge;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -512,6 +513,9 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           factory = Act2MapBuilderD2MOD.this.factory;
           socket = Act2MapBuilderD2MOD.this.socket;
         }}.createMonsterGenerator(socket);
+        if (target.Id == LEVEL_ARCANESANCTUARY) {
+          Act2ArcaneD2MOOLayoutBridge.populateZone(seed, diff, zone);
+        }
         generated.add(target.Id);
         queue.add(target.Id);
         created++;

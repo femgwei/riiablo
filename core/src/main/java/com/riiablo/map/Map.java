@@ -1787,6 +1787,8 @@ public class Map implements Disposable {
     public final int y;
     public final int width;
     public final int height;
+    private int presetDef = -1;
+    private int pickedFile = -1;
     private int[] adjacentRoomIds;
     private int clientInRoomRefs;
     private int clientInSightRefs;
@@ -1838,6 +1840,17 @@ public class Map implements Disposable {
 
     public int getUntileRefs() {
       return untileRefs;
+    }
+
+    /** Native LvlPrest.Def selected for this room, or -1 for a generated room. */
+    public int presetDef() { return presetDef; }
+
+    /** Native LvlPrest file index selected for this room, or -1 if unknown. */
+    public int pickedFile() { return pickedFile; }
+
+    public void setPreset(int presetDef, int pickedFile) {
+      this.presetDef = presetDef;
+      this.pickedFile = pickedFile;
     }
 
     public void addMonsterSpawn(int monsterId, float worldX, float worldY) {

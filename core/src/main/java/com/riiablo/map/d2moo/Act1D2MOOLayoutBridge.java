@@ -394,7 +394,7 @@ public final class Act1D2MOOLayoutBridge {
     /**
      * 从 Riiablo.files.Levels 构建 D2MOO 所需的 LevelDef 缓存。
      */
-    private static D2LevelDefBin[] buildLevelDefCache(int diff, int burialGroundsId) {
+    static D2LevelDefBin[] buildLevelDefCache(int diff, int burialGroundsId) {
         List<D2LevelDefBin> records = new ArrayList<>();
         Set<Integer> seenIds = new HashSet<>();
         for (Levels.Entry entry : Riiablo.files.Levels) {
@@ -462,7 +462,7 @@ public final class Act1D2MOOLayoutBridge {
         return records.toArray(new D2LevelDefBin[0]);
     }
 
-    private static D2LevelTypesTxt[] buildLevelTypesCache() {
+    static D2LevelTypesTxt[] buildLevelTypesCache() {
         java.util.ArrayList<D2LevelTypesTxt> cache = new java.util.ArrayList<>();
         for (LvlTypes.Entry source : Riiablo.files.LvlTypes) {
             if (source == null) continue;
@@ -488,7 +488,7 @@ public final class Act1D2MOOLayoutBridge {
     }
 
     /** Convert the riiablo Levels.txt value to the D2MOO 1-based contract. */
-    private static int toD2MooDrlgType(int value) {
+    static int toD2MooDrlgType(int value) {
         switch (value) {
             case 1: return D2DrlgTypes.DRLGTYPE_MAZE;
             case 2: return D2DrlgTypes.DRLGTYPE_PRESET;

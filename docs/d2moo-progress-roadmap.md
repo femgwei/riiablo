@@ -2380,3 +2380,15 @@ Act III 地图主链和 A3Q1–A3Q3。
 当前下一项：把 D2MOO `DrlgMaze` 的真实 RoomEx/DS1 预设导出接入 Arcane Sanctuary，使用上述
 拓扑定位 branch、Summoner、入口和返回出口；禁止用单一预设覆盖整个迷宫。完成后进入 Act III
 地图主链和 A3Q1–A3Q3 任务。
+### 2026-09-12 Act II Arcane Sanctuary 原生 RoomEx 桥接（已完成代码修复）
+
+- [x] 新增 `Act2ArcaneD2MOOLayoutBridge`：在 MPQ 可用时以 Act II/Level 75 调用 D2MOO
+  `DrlgDrlg.initLevel`，不再只依赖自定义的矩形区域。
+- [x] 将原生 RoomEx 的位置、尺寸、`pRoomsNear` 邻接关系投影到 Arcane Sanctuary Zone，记录每个
+  房间的 `LvlPrest.Def` 和 picked file，供入口、Summoner 房间和后续 DS1 渲染使用。
+- [x] 桥接失败或无 MPQ 时自动回退现有 Zone 生成逻辑，并释放 D2MOO DRLG 和表缓存；无头环境不会
+  因资源缺失崩溃。
+- 验证：`:core:compileJava`、`:server:d2gs:compileJava` 通过；战斗目录未修改。
+
+当前下一项：使用 `DrlgExport.exportLevelTiles` 导出 Arcane Sanctuary 的 floor/wall/shadow，接入
+现有 Zone 图层和碰撞，随后验证四方向 Summoner DS1、入口 Warp 与返回 Canyon of the Magi 的连续性。
