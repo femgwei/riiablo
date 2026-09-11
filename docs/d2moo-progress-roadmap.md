@@ -1959,5 +1959,20 @@ Volcano 时两端只看到同一组权威实体；当前 Chat 继续负责包括
   回归测试通过。
 
 当前下一项：在隐藏/离屏客户端中验证升级后打开 Character/Spells 面板的可见状态，确认
-  多人 `PlayerP` 快照、属性/技能结果包和面板按钮状态在真实 D2GS 上一致；随后继续处理
-  金币地面拾取、普通标枪误穿透和 NPC 接近交互。
+多人 `PlayerP` 快照、属性/技能结果包和面板按钮状态在真实 D2GS 上一致；随后继续处理
+金币地面拾取、普通标枪误穿透和 NPC 接近交互。
+
+### 2026-09-11 普通标枪误穿透修复（已完成代码修复）
+
+- [x] ~~禁止普通 Throw 继承 `javelin` 的 `Missiles.txt.Pierce=1`~~：普通投掷现在只在
+  角色实际拥有 Amazon `Pierce` 技能时按技能概率继续穿透；无 Pierce 时首个命中即结束。
+- [x] ~~移除重复客户端投射物~~：本地权威 ServerSkillSystem 和多人 D2GS 都会生成投掷
+  投射物，`SkillCastHandler` 不再额外创建 legacy client javelin，避免第二枚投射物绕过
+  权威配置继续 100% 穿透。
+- 增加回归断言：普通标枪命中第一个怪物后 `pierceEnabled=false`、`pierceChance=0`，
+  同一直线第二个怪物生命不应变化；Guided Arrow/Strafe 的原有 Pierce 行为保持不变。
+- 验证：`:core:test --tests com.riiablo.engine.server.CombatPipelineIntegrationTest`、
+  Amazon 专项测试通过；`:core:compileJava`、`:server:d2gs:compileJava` 通过。
+
+当前下一项：使用真实 D2GS 日志复核 `[THROW_PIERCE] chance=0` 和每次投掷只产生一枚
+权威 missile；随后处理金币点击直拾取和 NPC 接近路径问题。

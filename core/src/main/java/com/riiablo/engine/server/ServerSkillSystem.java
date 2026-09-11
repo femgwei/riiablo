@@ -821,6 +821,18 @@ public class ServerSkillSystem extends PassiveSystem {
                 ? missile.HitSubMissile[0] : "");
       }
       initializeSkillDamage(missileId, skill, event.entityId, skillLevel);
+      // Missiles.txt.Pierce is not a blanket property of the generic Throw
+      // skill.  The native javelin row is shared by normal throwing and
+      // Amazon skills, so ordinary player throws must override the factory's
+      // row default and only use the character's actual Pierce skill.
+      if (mPlayer.has(event.entityId)
+          && (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw)
+          && mMissile.has(missileId)) {
+        configurePierce(mMissile.get(missileId), event.entityId, skillLevel, false);
+        log.info("[THROW_PIERCE] phase=configure entity={} missileId={} chance={} enabled={}",
+            event.entityId, missileId, mMissile.get(missileId).pierceChance,
+            mMissile.get(missileId).pierceEnabled);
+      }
       if (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw
           || event.srvdofunc == 3 || event.srvdofunc == 5) {
         log.info("[MISSILE_CREATE] phase=throw entity={} missileId={} owner={} missile={} "
@@ -2918,7 +2930,10 @@ public class ServerSkillSystem extends PassiveSystem {
   private void configurePierce(Missile projectile, int ownerId, int skillLevel,
       boolean guided) {
     if (projectile == null || projectile.missile == null) return;
-    int chance = projectile.missile.Pierce ? 100 : 0;
+    // The row flag is intrinsic for explicitly native piercing skills (for
+    // example Guided Arrow), but the generic Throw path uses the same
+    // javelin missile row and must not inherit a 100% chance.
+    int chance = guided && projectile.missile.Pierce ? 100 : 0;
     if (mAttributesWrapper.has(ownerId)) {
       chance = Math.max(chance, statInt(mAttributesWrapper.get(ownerId).attrs, Stat.skill_pierce));
     }

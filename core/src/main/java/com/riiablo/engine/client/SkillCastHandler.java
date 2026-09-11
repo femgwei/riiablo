@@ -180,6 +180,17 @@ public class SkillCastHandler extends PassiveSystem {
     boolean localChargedBoltServer = localServer
         && (event.skillId == com.riiablo.engine.server.skill.SkillId.CHARGED_BOLT
             || "Charged Bolt".equalsIgnoreCase(skill.skill));
+    boolean authoritativeThrow = event.skillId == SkillCodes.throw_
+        || event.skillId == SkillCodes.left_hand_throw;
+    // Throwing weapons are created by ServerSkillSystem (including the local
+    // single-player server). Creating the legacy client javelin as well makes
+    // it collide independently, and the shared javelin Missiles.txt row has
+    // Pierce=1, which used to produce an apparent 100% piercing throw.
+    if (authoritativeThrow && (networkClient || localServer)) {
+      log.info("[SKILL_PRESENTATION] phase=reuse_server_throw entity={} skill={} networkClient={} localServer={}",
+          event.entityId, event.skillId, networkClient, localServer);
+      return;
+    }
     boolean fistOfHeavens = event.srvdofunc == 80 || skill.srvdofunc == 80;
     if (fistOfHeavens && event.targetId >= 0 && mPosition.has(event.targetId)
         && Riiablo.files.NativeSkills != null) {

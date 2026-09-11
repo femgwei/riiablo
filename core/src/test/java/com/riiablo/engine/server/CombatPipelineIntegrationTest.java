@@ -106,14 +106,24 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
       playerAttrs.reset();
       int player = harness.createPlayer(data, 10, 10, playerAttrs);
       int monster = harness.createMonster(15, 10, combatAttributes(20, 1, 1, 1));
+      int monsterBehind = harness.createMonster(18, 10, combatAttributes(20, 1, 1, 1));
       float hpBefore = hitpoints(harness.attributes(monster));
+      float hpBehindBefore = hitpoints(harness.attributes(monsterBehind));
 
       System.out.println("[PLAYER_THROW_CHAIN] phase=script_throw attacker=" + player
           + " target=" + monster + " weapon=" + javelin.code
           + " quantityBefore=" + quantityBefore);
       harness.actioneer.cast(player, SkillCodes.throw_, monster, new Vector2(15, 10));
       harness.installAttackAnimation(player);
-      harness.processFrames(16);
+      for (int i = 0; i < 16 && harness.factory.creations == 0; i++) {
+        harness.processFrames(1);
+      }
+      Missile thrown = harness.world.getMapper(Missile.class).get(harness.factory.lastMissileId);
+      assertNotNull(thrown);
+      assertTrue(!thrown.pierceEnabled,
+          "ordinary Throw must stop at the first target without Amazon Pierce");
+      assertEquals(0, thrown.pierceChance);
+      harness.processFrames(15);
 
       int quantityAfter = quantity.asInt();
       float hpAfter = hitpoints(harness.attributes(monster));
@@ -123,6 +133,8 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
       assertEquals(quantityBefore - 1, quantityAfter);
       assertEquals(1, harness.probe.damageEvents);
       assertTrue(hpAfter < hpBefore);
+      assertEquals(hpBehindBefore, hitpoints(harness.attributes(monsterBehind)), 0.001f,
+          "a normal javelin must not damage a second monster on the same path");
       System.out.println("[PLAYER_THROW_CHAIN] phase=summary keyframes="
           + harness.probe.keyframes + " skillDo=" + harness.probe.skillDoEvents
           + " missiles=" + harness.factory.creations + " damage="
