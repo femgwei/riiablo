@@ -296,6 +296,18 @@ public class AutomapManager implements Disposable {
       layer.updateExploration(playerX, playerY);
     }
   }
+
+  /** Updates exploration from native RoomEx activation state when available. */
+  public void updatePlayerPosition(int levelId, int playerX, int playerY, Map map) {
+    if (activeLayerId != levelId) setActiveLayer(levelId);
+    AutomapLayer layer = getActiveLayer();
+    if (layer == null || map == null) {
+      if (layer != null) layer.updateExploration(playerX, playerY);
+      return;
+    }
+    Map.Zone zone = map.getZone(playerX, playerY);
+    layer.updateRoomExploration(zone, playerX, playerY);
+  }
   
   // ==================== 实体标记 ====================
   

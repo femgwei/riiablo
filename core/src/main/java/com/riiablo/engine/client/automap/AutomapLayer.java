@@ -2,6 +2,7 @@ package com.riiablo.engine.client.automap;
 
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
+import com.riiablo.map.Map;
 
 /**
  * 小地图图层数据
@@ -80,9 +81,48 @@ public class AutomapLayer {
       for (int dx = -EXPLORE_RADIUS; dx <= EXPLORE_RADIUS; dx++) {
         // 使用圆形范围检测
         if (dx * dx + dy * dy <= EXPLORE_RADIUS * EXPLORE_RADIUS) {
-          int key = ((playerX + dx) << 16) | (playerY + dy) & 0xFFFF;
-          exploredTiles.put(key, Boolean.TRUE);
+          exploredTiles.put(tileKey(playerX + dx, playerY + dy), Boolean.TRUE);
         }
+      }
+    }
+  }
+
+  /**
+   * Reveals a native D2MOO RoomEx rectangle.  Room activation is authoritative
+   * for automap visibility: the current room and its CLIENT_IN_SIGHT ring are
+   * revealed, while OUT_OF_SIGHT/UNTILE rooms remain hidden.
+   */
+  public void updateRoomExploration(Map.Zone zone, int playerX, int playerY) {
+    if (zone == null || !zone.hasNativeRoomTopology()) {
+      updateExploration(playerX, playerY);
+      return;
+    }
+    boolean revealed = false;
+    for (int i = 0, n = zone.getRoomsEx().size; i < n; i++) {
+      Map.RoomEx room = zone.getRoomsEx().get(i);
+      if (room.getActivationStatus() <= Map.RoomEx.CLIENT_IN_SIGHT) {
+        revealRoom(room);
+        revealed = true;
+      }
+    }
+    // Before RoomActivationSystem has observed the first player tick, retain
+    // the original small reveal so the automap is not blank for one frame.
+    if (!revealed) updateExploration(playerX, playerY);
+  }
+
+  /** Reveals one RoomEx footprint in world-subtile coordinates. */
+  public void revealRoom(Map.RoomEx room) {
+    if (room == null) return;
+    revealRect(room.x, room.y, room.width, room.height);
+  }
+
+  /** Reveals a rectangular world-subtile footprint; dimensions are clamped positive. */
+  public void revealRect(int x, int y, int width, int height) {
+    int maxX = x + Math.max(1, width);
+    int maxY = y + Math.max(1, height);
+    for (int py = y; py < maxY; py++) {
+      for (int px = x; px < maxX; px++) {
+        exploredTiles.put(tileKey(px, py), Boolean.TRUE);
       }
     }
   }
@@ -95,8 +135,7 @@ public class AutomapLayer {
    * @return 是否已探索
    */
   public boolean isExplored(int x, int y) {
-    int key = (x << 16) | y & 0xFFFF;
-    return exploredTiles.containsKey(key);
+    return exploredTiles.containsKey(tileKey(x, y));
   }
   
   /**
@@ -123,5 +162,9 @@ public class AutomapLayer {
     extras.clear();
     exploredTiles.clear();
     saved = false;
+  }
+
+  private static int tileKey(int x, int y) {
+    return (x << 16) | (y & 0xFFFF);
   }
 }

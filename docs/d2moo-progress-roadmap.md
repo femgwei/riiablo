@@ -43,6 +43,15 @@
 - 本轮下一项：把 DRLG 房间/墙体探索事件接入 AutomapLayer，并用 1.10f AutoMap.txt
   与 MaxiMap.dc6 做离屏连续性回归。
 
+### RoomEx 探索揭示（本轮完成）
+
+- `AutomapLayer` 新增 RoomEx 矩形揭示，按 `CLIENT_IN_ROOM/CLIENT_IN_SIGHT` 激活状态显示
+  当前房间及邻接视野房间；未完成首次房间激活时保留一帧半径回退，避免小地图空白。
+- `AutomapManager`/`AutomapRenderer` 已将玩家位置更新接到 `Map.Zone` 原生拓扑，缺少
+  D2MOO 房间数据的旧地图自动回退原有半径探索。
+- 新增矩形边界与负坐标测试。尚未完成墙体/地板单元的 DC6 连续性离屏验收；下一步为
+  将 RoomEx 的 DS1 floor/wall 单元按 AutoMap cell 查询绘制到已探索区域。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster

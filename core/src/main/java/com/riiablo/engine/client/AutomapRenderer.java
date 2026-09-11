@@ -258,7 +258,9 @@ public class AutomapRenderer extends BaseSystem {
    * @param playerY 玩家Y坐标（子瓷砖）
    */
   public void updatePlayerPosition(int levelId, int playerX, int playerY) {
-    automapManager.updatePlayerPosition(levelId, playerX, playerY);
+    // Prefer native RoomEx activation visibility; manager falls back to the
+    // legacy radius when a map or exported topology is unavailable.
+    automapManager.updatePlayerPosition(levelId, playerX, playerY, map);
   }
   
   /**

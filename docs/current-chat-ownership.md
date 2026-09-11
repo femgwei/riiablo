@@ -49,6 +49,9 @@
   com.riiablo.engine.client.automap.AutomapTileRendererTest` 与 `:core:compileJava`
   均通过。`origin/master` 推送仍被 GitHub OAuth 缺少 `workflow` scope 拒绝，工作区仅保留
   未跟踪运行日志，未纳入提交。
+- 本轮继续完成 RoomEx 探索揭示：`AutomapRenderer` 玩家位置更新优先使用 Zone 原生房间
+  激活状态，`AutomapLayer` 按当前/邻接 CLIENT_IN_SIGHT 房间矩形标记探索；无原生拓扑时
+  自动回退旧半径逻辑。新增 `AutomapLayerTest`，待下一步接入真实 DS1 单元绘制。
 
 - 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
   Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整
