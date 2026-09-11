@@ -87,6 +87,13 @@
 - 下一项改为补齐 `Objects.AutoMap` / `MonStats2.automapCel` 的原生对象与怪物图标数据接口，
   让有原生帧的实体优先使用 MaxiMap DC6，缺失时才回退几何标记。
 
+### 实体原生 Automap 图标数据接口（本轮完成）
+
+- 新增 `AutomapEntityCells`：对象读取 `Objects.txt.AutoMap`，怪物读取
+  `MonStats2.txt.automapCel`，严格保留 0 帧并将负值视为无图标。
+- 增加无资源测试覆盖对象、怪物、空记录和负值回退；尚未把接口接入
+  `RenderSystem.drawAutomapEntities` 的实际 DC6 绘制，下一步处理实体位置投影和多人可见性。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster

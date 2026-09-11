@@ -62,6 +62,8 @@
 - 按当前资源限制跳过真实截图，LevelName 解析改为纯 Java 自动接入首次玩家位置更新。
   下一项转为 `Objects.AutoMap` / `MonStats2.automapCel` 原生对象与怪物图标接口，保留几何
   标记作为无 DC6 帧时的回退。
+- 已新增 `AutomapEntityCells` 解析对象/怪物原生 DC6 帧，并通过无资源测试；下一步将其
+  接入实体 Automap 绘制与位置投影，暂不影响战斗或实体同步逻辑。
 
 - 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
   Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整
