@@ -90,6 +90,13 @@
   `:desktop:offscreenCamp -Pd2Home=<1.10f目录>`，当前环境仍未执行真实画面测试。
 - 下一步：在 MPQ 就绪后运行隐藏营地并扩展鲜血荒地/洞穴入口离屏场景。
 
+## 最近更新（2026-09-11，八续）
+
+- 已使用完整 1.10f MPQ 通过真实 1×1 隐藏营地烟测：Act 1 营地加载、3 帧渲染和退出均
+  正常，输出 `desktop/build/visual-tests/camp-latest/rogue-encampment-manifest.txt`。
+- 下一步：扩展离屏入口支持鲜血荒地及洞穴/地下通道目标 Level，验证区域切换和 Automap
+  连续性。
+
 ## 本次更新
 
 - AutoMap 查询层已按 D2MOO `DATATBLS_GetAutomapCellId` 对齐：新增 LevelName/TileName

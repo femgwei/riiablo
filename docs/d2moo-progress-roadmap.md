@@ -1771,6 +1771,19 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
 当前下一项：在具备 1.10f MPQ 的环境运行 `:desktop:offscreenCamp`，并扩展鲜血荒地/洞穴
 入口离屏场景参数。
 
+### 2026-09-11 真实 1.10f 隐藏营地验收（已通过）
+
+- [x] ~~Rogue Encampment 真实资源加载与 Automap 渲染烟测~~
+  - 使用 `G:\\BaiduNetdiskDownload\\Diablo II 1.10F` 的完整 MPQ，通过 1×1 隐藏 LWJGL
+    窗口启动生产 `Client`，成功加载基础 MPQ、生成 Act 1 营地并完成 3 个渲染帧。
+  - 输出 `desktop/build/visual-tests/camp-latest/rogue-encampment-manifest.txt`，
+    `act=1`、`result=PASS`，并生成帧缓冲 PNG。
+- 验证命令：`./gradlew :desktop:offscreenCamp -Pd2Home='G:\\BaiduNetdiskDownload\\Diablo II 1.10F'`
+  `-PvisualOutput='build/visual-tests/camp-latest' -Pd2Version='1.10f'` 通过。
+
+当前下一项：扩展隐藏客户端入口支持指定 Act 1 目标 Level（鲜血荒地、洞穴/地下通道），
+在相同真实 MPQ 下验证区域切换、RoomEx 拓扑和 Automap cell 连续性。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。
