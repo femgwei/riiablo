@@ -339,8 +339,8 @@ public class AutomapManager implements Disposable {
     int maxTy = (zone.y() + zone.height()) / DT1.Tile.SUBTILE_SIZE;
     for (int ty = minTy; ty < maxTy; ty++) {
       for (int tx = minTx; tx < maxTx; tx++) {
-        int worldX = tx * DT1.Tile.SUBTILE_SIZE;
-        int worldY = ty * DT1.Tile.SUBTILE_SIZE;
+        int worldX = tx * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;
+        int worldY = ty * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;
         for (int l = 0; l < Map.MAX_LAYERS; l++) {
           DT1.Tile tile = zone.get(l, tx, ty);
           if (tile == null) continue;

@@ -118,6 +118,13 @@
 - 新增对象图标回退测试；下一步统一 Automap 实体坐标投影和缩放，随后清理 RenderSystem
   中未使用的固定 Automap 帧常量。
 
+### Automap 坐标约定统一（本轮完成）
+
+- 新增 `AutomapProjection` 作为世界坐标与 AutomapCamera 坐标的统一入口。
+- 地形 DC6 cell 从 DT1 瓷砖左上角调整为 5×5 子瓦片 footprint 中心坐标，和实体位置
+  标记保持一致，避免墙体/对象图标整体偏移半个子瓦片。
+- 增加正负坐标投影测试；实际缩放比例仍需真实资源截图确认，暂不改动主渲染相机缩放。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster

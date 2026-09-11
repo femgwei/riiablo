@@ -72,6 +72,8 @@
   网络协议，真实画面验证按当前条件跳过。
 - 对象图标解析已补充 D2MOO Waypoint/Shrine/Well/Stash 固定帧回退，并通过测试；下一步
   统一 Automap 实体坐标投影/缩放。
+- 新增 `AutomapProjection`，地形 cell 使用 DT1 footprint 中心坐标，完成正负坐标测试；
+  真实缩放比例仍待资源运行条件恢复后确认。
 
 - 本轮重新核对第一章怪物生成和 AI：运行时已接通难度怪物池、密度、Rarity、普通群组、
   Party minion 与 RoomEx 延迟激活，但 Champion/Unique pack 和六类第一章专用 AI 仍未完整
