@@ -26,6 +26,7 @@ public final class OffscreenCampScreen extends GameScreen {
   private final String outputDirectory;
   private final int targetLevelId;
   private final boolean validateWarpGraph;
+  private final boolean validateContinuity;
   private int renderedFrames;
   private boolean completed;
   private boolean targetApplied;
@@ -45,21 +46,36 @@ public final class OffscreenCampScreen extends GameScreen {
   private int graphUnresolvedCount;
   private int graphMissingReverseCount;
   private String graphEdges = "";
+  private int continuityZones;
+  private int continuityRoomZones;
+  private int continuityComponents;
+  private int continuityInvalidAdjacency;
+  private int continuityNoWalkableZones;
+  private int continuityWarpRoomMissing;
+  private int continuityWarpOutsideMain;
+  private long continuitySampledCells;
+  private long continuityWalkableCells;
 
   public OffscreenCampScreen(CharData charData, String outputDirectory) {
     this(charData, outputDirectory, -1, false);
   }
 
   public OffscreenCampScreen(CharData charData, String outputDirectory, int targetLevelId) {
-    this(charData, outputDirectory, targetLevelId, false);
+    this(charData, outputDirectory, targetLevelId, false, false);
   }
 
   public OffscreenCampScreen(CharData charData, String outputDirectory, int targetLevelId,
       boolean validateWarpGraph) {
+    this(charData, outputDirectory, targetLevelId, validateWarpGraph, false);
+  }
+
+  public OffscreenCampScreen(CharData charData, String outputDirectory, int targetLevelId,
+      boolean validateWarpGraph, boolean validateContinuity) {
     super(charData);
     this.outputDirectory = outputDirectory;
     this.targetLevelId = targetLevelId;
     this.validateWarpGraph = validateWarpGraph;
+    this.validateContinuity = validateContinuity;
   }
 
   @Override
@@ -73,6 +89,7 @@ public final class OffscreenCampScreen extends GameScreen {
     }
     if (renderedFrames < (targetApplied ? 6 : 3)) return;
     if (validateWarpGraph) validateAct1WarpGraph();
+    if (validateContinuity) validateAct1Continuity();
     validateTargetAutomap();
     completed = true;
 
@@ -103,6 +120,15 @@ public final class OffscreenCampScreen extends GameScreen {
         + "warpGraphWalkable=" + graphWalkableCount + "\n"
         + "warpGraphUnresolved=" + graphUnresolvedCount + "\n"
         + "warpGraphMissingReverse=" + graphMissingReverseCount + "\n"
+        + "continuityZones=" + continuityZones + "\n"
+        + "continuityRoomZones=" + continuityRoomZones + "\n"
+        + "continuityComponents=" + continuityComponents + "\n"
+        + "continuityInvalidAdjacency=" + continuityInvalidAdjacency + "\n"
+        + "continuityNoWalkableZones=" + continuityNoWalkableZones + "\n"
+        + "continuityWarpRoomMissing=" + continuityWarpRoomMissing + "\n"
+        + "continuityWarpOutsideMain=" + continuityWarpOutsideMain + "\n"
+        + "continuitySampledCells=" + continuitySampledCells + "\n"
+        + "continuityWalkableCells=" + continuityWalkableCells + "\n"
         + "player=" + player + "\n"
         + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
         + "result=PASS\n";
@@ -244,6 +270,110 @@ public final class OffscreenCampScreen extends GameScreen {
       }
     }
     return false;
+  }
+
+  /**
+   * Computes lightweight continuity indicators from the generated Act 1 map.
+   * RoomEx adjacency is authoritative; collision coverage is sampled every
+   * four subtiles so the audit stays bounded while still detecting all-black
+   * regions and disconnected entrance rooms.
+   */
+  private void validateAct1Continuity() {
+    com.artemis.ComponentMapper<Warp> warpMapper = engine.getMapper(Warp.class);
+    com.artemis.ComponentMapper<Position> positionMapper = engine.getMapper(Position.class);
+    for (Map.Zone zone : map.getZones()) {
+      if (zone.levelAct() != 1) continue;
+      continuityZones++;
+      int width = zone.getRoomsEx().size;
+      if (width > 0) {
+        continuityRoomZones++;
+        int[] components = new int[width];
+        java.util.Arrays.fill(components, -1);
+        int largestComponent = -1;
+        int largestSize = 0;
+        for (int start = 0; start < width; start++) {
+          if (components[start] >= 0) continue;
+          int componentId = continuityComponents++;
+          com.badlogic.gdx.utils.IntArray queue = new com.badlogic.gdx.utils.IntArray();
+          queue.add(start);
+          components[start] = componentId;
+          int componentSize = 0;
+          while (queue.size > 0) {
+            int roomId = queue.pop();
+            componentSize++;
+            Map.RoomEx room = zone.getRoomsEx().get(roomId);
+            for (int adjacentId : room.getAdjacentRoomIds()) {
+              if (adjacentId < 0 || adjacentId >= width) {
+                continuityInvalidAdjacency++;
+                continue;
+              }
+              if (components[adjacentId] < 0) {
+                components[adjacentId] = componentId;
+                queue.add(adjacentId);
+              }
+            }
+          }
+          if (componentSize > largestSize) {
+            largestSize = componentSize;
+            largestComponent = componentId;
+          }
+        }
+
+        for (int entity : zone.getWarpEntities().toArray()) {
+          if (!warpMapper.has(entity) || !positionMapper.has(entity)) continue;
+          Position position = positionMapper.get(entity);
+          Map.RoomEx room = zone.findRoomEx(position.position.x, position.position.y);
+          if (room == null) {
+            continuityWarpRoomMissing++;
+          } else if (components[room.id] != largestComponent) {
+            continuityWarpOutsideMain++;
+          }
+        }
+      }
+
+      boolean hasWalkable = false;
+      for (int y = 0; y < zone.height(); y += 4) {
+        for (int x = 0; x < zone.width(); x += 4) {
+          continuitySampledCells++;
+          if ((zone.staticFlags(x, y) & com.riiablo.map.DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+            continuityWalkableCells++;
+            hasWalkable = true;
+          }
+        }
+      }
+      if (!hasWalkable) continuityNoWalkableZones++;
+    }
+
+    com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
+    output.mkdirs();
+    boolean passed = continuityInvalidAdjacency == 0 && continuityNoWalkableZones == 0
+        && continuityWarpRoomMissing == 0 && continuityWarpOutsideMain == 0;
+    String report = "mode=act1-map-continuity\n"
+        + "d2Version=" + System.getProperty("riiablo.d2-version", "unspecified") + "\n"
+        + "zones=" + continuityZones + "\n"
+        + "roomZones=" + continuityRoomZones + "\n"
+        + "components=" + continuityComponents + "\n"
+        + "invalidAdjacency=" + continuityInvalidAdjacency + "\n"
+        + "noWalkableZones=" + continuityNoWalkableZones + "\n"
+        + "warpRoomMissing=" + continuityWarpRoomMissing + "\n"
+        + "warpOutsideMain=" + continuityWarpOutsideMain + "\n"
+        + "sampledCells=" + continuitySampledCells + "\n"
+        + "walkableCells=" + continuityWalkableCells + "\n"
+        + "walkableRatio=" + (continuitySampledCells == 0 ? 0
+            : (double) continuityWalkableCells / continuitySampledCells) + "\n"
+        + "result=" + (passed ? "PASS" : "FAIL") + "\n";
+    output.child("act1-map-continuity-manifest.txt").writeString(report, false, "UTF-8");
+    Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_CONTINUITY] zones=" + continuityZones
+        + " components=" + continuityComponents + " invalidAdjacency="
+        + continuityInvalidAdjacency + " warpOutsideMain=" + continuityWarpOutsideMain
+        + " walkableRatio=" + (continuitySampledCells == 0 ? 0
+            : (double) continuityWalkableCells / continuitySampledCells));
+    if (!passed) {
+      throw new IllegalStateException("Act1 map continuity validation failed: invalidAdjacency="
+          + continuityInvalidAdjacency + " noWalkableZones=" + continuityNoWalkableZones
+          + " warpRoomMissing=" + continuityWarpRoomMissing
+          + " warpOutsideMain=" + continuityWarpOutsideMain);
+    }
   }
 
   private void applyTargetLevel() {

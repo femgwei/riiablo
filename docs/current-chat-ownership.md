@@ -327,6 +327,12 @@ Armageddon/Hurricane 的实机观感验证。
 - 下一项转入 Act 1 RoomEx/碰撞连续性指标，继续由当前 Chat 负责地图与全部战斗模块；
   不再存在独立战斗 Chat 的避让范围。
 
+### 2026-09-11 Act 1 地图连续性扫描
+
+- 新增 `:desktop:offscreenMapContinuity`，真实 1.10f 扫描 39 个 Zone、1,160,896 个
+  采样 subtile；RoomEx 非法邻接、Warp 孤立房间和无可行走 Zone 均为 0，结果 PASS。
+- 下一步是地图块边界过渡与碰撞连续性断言，继续由当前 Chat 统一维护全部模块。
+
 ### 2026-09-11 当前工作进度
 
 - 已实现真实 D2GS 无窗口双客户端复杂区域技能门槛：`D2GSHeadlessClient` 的

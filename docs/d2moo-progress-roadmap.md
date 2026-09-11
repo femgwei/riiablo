@@ -1863,6 +1863,23 @@ CLIENT_IN_SIGHT 邻接房间和实体图标不会错位或提前显示。
 当前下一项：为 Act 1 真实地图建立连续性指标，逐 Zone 检查 RoomEx 邻接图连通分量、
 可行走 subtile 覆盖率和 Warp 所在房间到主连通分量的可达性，优先捕获黑块与错误墙体。
 
+### 2026-09-11 Act 1 地图连续性指标（已通过）
+
+- [x] ~~建立第一章 RoomEx/碰撞连续性离屏扫描~~
+  - 新增 `:desktop:offscreenMapContinuity`，按真实生成 Zone 遍历 RoomEx 邻接图，统计
+    连通分量、非法邻接引用、Warp 所在房间是否落在主连通分量，并按 4-subtile 采样静态
+    `BLOCK_WALK` 覆盖率。
+  - 1.10f 固定种子结果：39 个 Zone、38 个 RoomEx Zone、38 个连通分量；非法邻接、
+    无可行走 Zone、Warp 缺失 Room、Warp 脱离主分量均为 0。
+  - 共采样 1,160,896 个 subtile，静态可行走采样 76,760 个，比例约 6.612%。该比例作为
+    回归基线，不直接把室内墙体/悬崖判定为错误。
+- 验证：真实 1.10f 隐藏 1×1 客户端输出
+  `desktop/build/visual-tests/act1-map-continuity/act1-map-continuity-manifest.txt`，
+  `result=PASS`；编译与 Automap/RoomEx 测试通过。
+
+当前下一项：把连续性扫描扩展为地图块拼接断言，比较相邻 RoomEx 边界的地面/碰撞过渡，
+重点覆盖城镇出口、石块荒野—黑色森林和地下通道入口，定位“地面不连续/墙体挡路”问题。
+
 ## 记录规则
 
 - 每个模块独立提交，不把地图、战斗、物品和网络无关改动混在一起。
