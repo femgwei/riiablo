@@ -10,6 +10,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.quest.Act2TombSelection;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
@@ -137,6 +138,10 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   public void generate(Map map, int seed, int diff) {
     // 重要：设置随机种子，确保多人游戏中所有客户端生成相同的地图
     MathUtils.random.setSeed(seed);
+    Act2TombSelection tombSelection = Act2TombSelection.forGameSeed(seed);
+    Gdx.app.log(TAG, String.format(
+        "Act2 native tomb selection: seed=%d staff=%d boss=%d",
+        seed, tombSelection.staffTombLevel(), tombSelection.bossTombLevel()));
 
     // D2MOD: gAct2OutdoorDrlgLink 数组
     // { 函数指针, 区域ID, levelLink, levelLinkEx }

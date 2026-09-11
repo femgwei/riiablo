@@ -1,5 +1,8 @@
 package com.riiablo.map;
 
+import com.d2moo.common.drlg.D2LevelIds;
+import com.riiablo.engine.server.quest.Act2TombSelection;
+
 /**
  * Resolves the object class carried by a D2MOO preset unit.
  *
@@ -71,9 +74,17 @@ public final class NativePresetObjectResolver {
           return new Resolution(resolvePresetChest(act, levelId, seed, localX, localY),
               Kind.PRESET_CHEST);
         case 582:
-          // The quest chooses one of 307..313 in Act II.  Without quest state,
-          // D2Game uses 307 as its deterministic fallback; keep the category
-          // so a later quest bridge can replace only the class id.
+          // D2Game::ACT2Q6_GetObjectIdForArcaneThing allocates the six symbol
+          // ids after excluding the staff tomb.  Preserve the fallback for
+          // non-Act-II levels and for incomplete/headless table data.
+          if (levelId >= D2LevelIds.LEVEL_TALRASHASTOMB1
+              && levelId <= D2LevelIds.LEVEL_TALRASHASTOMB7) {
+            int classIdForTomb = Act2TombSelection.forGameSeed(seed)
+                .arcaneSymbolObjectFor(levelId);
+            if (classIdForTomb >= 0) {
+              return new Resolution(classIdForTomb, Kind.ARCANE_SYMBOL);
+            }
+          }
           return new Resolution(ARCANE_THING_FALLBACK, Kind.ARCANE_SYMBOL);
         default:
           break;

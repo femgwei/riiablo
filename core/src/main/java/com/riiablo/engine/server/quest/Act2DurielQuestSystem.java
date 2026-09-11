@@ -49,9 +49,12 @@ public class Act2DurielQuestSystem extends BaseSystem {
     Player player = mPlayer.get(event.playerId);
     MapWrapper wrapper = mMapWrapper.get(event.entityId);
     Position source = mPosition.get(event.entityId);
-    if (player == null || player.data == null || wrapper == null || wrapper.zone == null
+    if (player == null || player.data == null || wrapper == null || wrapper.map == null
+        || wrapper.zone == null
         || wrapper.zone.level == null || source == null
-        || !isAct2(wrapper.zone.level.Id)) {
+        || !isAct2(wrapper.zone.level.Id)
+        || !Act2TombSelection.forGameSeed(wrapper.map.seed())
+            .isStaffTomb(wrapper.zone.level.Id)) {
       log.warn("[A2Q6] Staff orifice activation rejected by level/world validation: entity={} player={}",
           event.entityId, event.playerId);
       return;

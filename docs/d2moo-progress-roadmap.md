@@ -2286,3 +2286,20 @@ Tainted Sun、Arcane Sanctuary、Duriel）：以地图入口 LevelId/预设单�
 
 当前下一项：接通服务端权威方块合成的 A2Q2 专用配方（消费 `msf/vip`、保留 `box`、生成
 `hst`，失败原子回滚），随后补蝮蛇祭坛与 Tal Rasha 插杖对象事件，再进入 A2Q3 被污染的太阳。
+
+### 2026-09-12 Act II A2Q6 原生墓穴选择与 Arcane Symbol 映射（已完成代码修复）
+
+- [x] 新增 `Act2TombSelection`，按 D2MOO `DRLG_AllocDrlg` 的真实种子顺序（起始种子推进一次，
+  再抽取两个不同的 0–6 偏移）确定法杖墓和督瑞尔 Boss 墓，保证同一游戏种子在服务端、地图构建
+  和客户端对象解析中得到相同结果。
+- [x] A2Q6 法杖孔现在只接受当前游戏实际的法杖墓，其他六个墓穴不会误触发红门；缺失地图上下文
+  的交互仍被拒绝。
+- [x] 对齐 `ACT2Q6_GetObjectIdForArcaneThing`：7 个墓穴的 582 特殊对象会排除法杖墓，按原生
+  `[313,312,308,310,311,309,307]` 顺序分配；非 Act II 或不完整数据继续使用 307 安全回退。
+- [x] Act II D2MOD 地图生成输出 staff/boss tomb 选择日志；新增纯逻辑回归覆盖固定种子、有效范围、
+  不重复选择和 Arcane Symbol 顺序，无需 MPQ 或窗口运行。
+- 验证：`Act2TombSelectionTest`、`Act2DurielQuestSystemTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：补齐 A2Q6 的墓穴预设语义（法杖墓/普通墓/督瑞尔墓的 DS1 入口、Arcane Symbol、
+墓穴出口和 Duriel 房间），再开始 A2Q4 Horazon 之书与 A2Q5 召唤者任务。
