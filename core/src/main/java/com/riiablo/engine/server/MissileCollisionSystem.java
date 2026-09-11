@@ -576,20 +576,28 @@ public class MissileCollisionSystem extends IteratingSystem {
   /** Native Thunder Storm creates a strike at the saved target and calls the
    * ordinary missile damage handler immediately (SrvDo029). */
   private void processThunderStormStrike(int entityId, Missile strike, Position position) {
-    int targetId = strike.targetId;
-    if (targetId < 0 || !world.getEntityManager().isActive(targetId)
-        || !mPosition.has(targetId) || !mAttributesWrapper.has(targetId)
-        || !isAlive(targetId)) {
-      world.delete(entityId);
-      return;
+    if (!strike.thunderStormResolved) {
+      int targetId = strike.targetId;
+      if (targetId < 0 || !world.getEntityManager().isActive(targetId)
+          || !mPosition.has(targetId) || !mAttributesWrapper.has(targetId)
+          || !isAlive(targetId)) {
+        world.delete(entityId);
+        return;
+      }
+      Vector2 targetPoint = mPosition.get(targetId).position;
+      checkCollisionWithEntity(entityId, strike, targetPoint, targetPoint,
+          targetId, mPosition.get(targetId));
+      strike.thunderStormResolved = true;
+      log.debug("[SORCERESS_THUNDER_STORM] phase=strike_resolve missileId={} owner={} target={} "
+              + "frame={} damageSnapshot={}",
+          entityId, strike.ownerId, targetId, strike.nativeFrame, strike.damageSnapshot);
     }
-    Vector2 targetPoint = mPosition.get(targetId).position;
-    checkCollisionWithEntity(entityId, strike, targetPoint, targetPoint,
-        targetId, mPosition.get(targetId));
-    log.debug("[SORCERESS_THUNDER_STORM] phase=strike_resolve missileId={} owner={} target={} "
-            + "frame={} damageSnapshot={}",
-        entityId, strike.ownerId, targetId, strike.nativeFrame, strike.damageSnapshot);
-    if (world.getEntityManager().isActive(entityId)) world.delete(entityId);
+    // Keep the resolved carrier alive until the next fixed frame so both
+    // clients receive the same authoritative MissileP before deletion.
+    if (strike.nativeLifetimeFrames <= 0
+        || strike.nativeFrame >= strike.nativeLifetimeFrames) {
+      if (world.getEntityManager().isActive(entityId)) world.delete(entityId);
+    }
   }
 
   /** Native MISSMODE_SrvDo10_BlizzardCenter. */

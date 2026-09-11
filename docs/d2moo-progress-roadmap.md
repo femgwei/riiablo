@@ -1436,6 +1436,19 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
 当前下一项：在具备完整 1.10f 资源的环境依次运行 `--area-skill 244/249/250/62`，记录两端
 实体与删除日志；门槛全绿后进入 Meteor/Thunder Storm 的多人表现验收。
 
+### 2026-09-11 Meteor / Thunder Storm 双客户端验收（已通过）
+
+- [x] ~~Meteor(56) 与 Thunder Storm(57) 真实无窗口双客户端表现门槛~~
+  - 测试入口自动生成 Sorceress 角色存档，并比较两端 `MissileP` 的 server entity ID、
+    技能 ID、伤害等级和删除时序；Thunder Storm 额外验证 `StateP` 的状态来源和周期计时。
+  - 修复 Thunder Storm 命中后同一固定帧立即删除的问题：导弹只结算一次，保留到下一
+    模拟帧，确保两个客户端都能收到同一权威闪电导弹。
+- 验证：`headlessAreaSkill -PareaSkill=56/57 -PareaTimeout=8`、法师 Thunder Storm、
+  区域快照和 Druid 风暴专项测试均通过。
+
+当前下一项：继续扩展复杂技能真实双客户端门槛（Blizzard/Frozen Orb/Meteor 的子导弹
+  删除与重连），并将测试入口的超时/日志输出收敛为可持续 CI 运行模式。
+
 ### 2026-09-11 真实 1.10f 双客户端复杂区域技能门槛（已通过）
 
 - [x] ~~Volcano(244)、Hydra(62)、Armageddon(249)、Hurricane(250) 真实无窗口双客户端验收~~

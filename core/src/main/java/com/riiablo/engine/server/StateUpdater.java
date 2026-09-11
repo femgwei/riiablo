@@ -620,7 +620,10 @@ public class StateUpdater extends IteratingSystem implements StatusEffectApplier
     strike.targetId = targetId;
     strike.skillId = skill.Id;
     strike.damageLevel = Math.max(1, aura.level);
-    strike.nativeLifetimeFrames = 1;
+    // Publish the one-shot strike for at least one network snapshot. A
+    // one-frame lifetime is consumed by MissileCollisionSystem in the same
+    // fixed tick in which the periodic aura creates it.
+    strike.nativeLifetimeFrames = 2;
     strike.range = 0f;
     if (mVelocity.has(missileId)) mVelocity.get(missileId).velocity.setZero();
     Attributes owner = mAttributesWrapper.has(entityId)

@@ -3698,9 +3698,11 @@ public final class D2GSHeadlessClient {
   /** Creates a deterministic level-30 caster fixture for native area skills. */
   private static byte[] createGeneratedAreaSave(int skillId) {
     boolean hydra = skillId == SkillId.HYDRA;
-    int characterClass = hydra ? Riiablo.SORCERESS : Riiablo.DRUID;
-    CharacterClass classData = hydra ? CharacterClass.SORCERESS : CharacterClass.DRUID;
-    String name = hydra ? "HeadlessHydra" : "HeadlessArea";
+    boolean sorceress = hydra || skillId == SkillId.METEOR
+        || skillId == SkillId.THUNDER_STORM;
+    int characterClass = sorceress ? Riiablo.SORCERESS : Riiablo.DRUID;
+    CharacterClass classData = sorceress ? CharacterClass.SORCERESS : CharacterClass.DRUID;
+    String name = hydra ? "HeadlessHydra" : sorceress ? "HeadlessSorc" : "HeadlessArea";
     CharData character = CharData.obtain().clear()
         .set(Riiablo.NORMAL, false, name, (byte) characterClass);
     com.riiablo.codec.excel.CharStats.Entry stats = classData.entry();
@@ -3731,7 +3733,7 @@ public final class D2GSHeadlessClient {
     }
     byte[] data = new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
     log("character_generated", "name=" + name + " class="
-        + (hydra ? "sorceress" : "druid") + " skill=" + skillId
+        + (sorceress ? "sorceress" : "druid") + " skill=" + skillId
         + " level=20 bytes=" + data.length);
     return data;
   }
@@ -3927,7 +3929,8 @@ public final class D2GSHeadlessClient {
       }
       if (config.requireAreaSkillScenario && !isAreaSkill(config.areaSkillId)) {
         throw new IllegalArgumentException("--area-skill must be one of Hydra(62), Firestorm(225), "
-            + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250)");
+            + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
+            + "Meteor(56), ThunderStorm(57)");
       }
       if (!config.generatedAmazon && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
@@ -3941,7 +3944,8 @@ public final class D2GSHeadlessClient {
     private static boolean isAreaSkill(int skillId) {
       return skillId == SkillId.HYDRA || skillId == SkillId.FIRESTORM
           || skillId == SkillId.FISSURE || skillId == SkillId.VOLCANO
-          || skillId == SkillId.ARMAGEDDON || skillId == SkillId.HURRICANE;
+          || skillId == SkillId.ARMAGEDDON || skillId == SkillId.HURRICANE
+          || skillId == SkillId.METEOR || skillId == SkillId.THUNDER_STORM;
     }
 
     private static File firstSave(File directory) {
@@ -3966,7 +3970,7 @@ public final class D2GSHeadlessClient {
           + " [--require-fallen-scenario] [--require-den-quest] [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
-          + " [--require-area-skill] [--area-skill 244]"
+          + " [--require-area-skill] [--area-skill 244|56|57]"
           + " [--require-reconnect-visibility]"
           + " [--require-reconnect-ground-loot] [--attempts 20]");
     }

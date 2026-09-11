@@ -133,3 +133,7 @@ Frozen Orb、Meteor、Thunder Storm 原生链均已接通，下一项转入复�
 Hydra(62)、Armageddon(249)、Hurricane(250) 全部通过。两端共享服务端实体 ID、技能/等级、
 状态来源和删除时序；Armageddon/Hurricane 的权威周期导弹保留两个模拟帧，确保跨过网络
 快照边界。下一项转入 Meteor/Thunder Storm 的真实双客户端表现验收。
+
+Meteor(56) 与 Thunder Storm(57) 的真实 1.10f 双客户端验收随后完成；Thunder Storm
+导弹只结算一次并保留到下一固定帧，确保两端收到同一权威 `MissileP`。下一项转入
+Blizzard/Frozen Orb/Meteor 子导弹删除与重连门槛。

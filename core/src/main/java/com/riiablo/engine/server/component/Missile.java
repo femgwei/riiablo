@@ -172,6 +172,8 @@ public class Missile extends PooledComponent {
 
   /** Native Thunder Storm SrvDo029 strike resolved against one saved target. */
   public boolean thunderStormStrike;
+  /** Prevents a published Thunder Storm carrier from applying damage twice. */
+  public boolean thunderStormResolved;
 
   /** D2MOO SrvDo35 periodically bends Royal Strike's chaos-ice path. */
   public boolean chaosIcePath;
@@ -292,6 +294,7 @@ public class Missile extends PooledComponent {
     druidVolcanoNextFrame = 0;
     druidVolcanoSeed = 0;
     thunderStormStrike = false;
+    thunderStormResolved = false;
     chaosIcePath = false;
     chaosIceSeed = 0;
     chaosIceX = 0;

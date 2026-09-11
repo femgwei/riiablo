@@ -206,3 +206,11 @@ Armageddon/Hurricane 的实机观感验证。
   问题；客户端仍保持 `snapshotOnly`，不会本地再生成第二套效果。
 - 下一项是 Meteor/Thunder Storm 的真实双客户端表现验收；当前 Chat 继续负责地图、战斗、
   技能、物品、任务、NPC、网络和存档全部修改。
+
+### 2026-09-11 Meteor / Thunder Storm 验收结果
+
+- Meteor(56) 与 Thunder Storm(57) 已使用真实 1.10f MPQ 通过双 TCP 客户端门槛；两端
+  共享服务端导弹 ID、技能/伤害等级和删除时序，Thunder Storm 的 `StateP` 周期字段也一致。
+- Thunder Storm 的一次性导弹改为只结算一次、跨过一个网络快照后再删除，避免命中逻辑
+  与展示实体在同一固定帧被清理。
+- 下一项：Blizzard/Frozen Orb/Meteor 子导弹的删除与重连门槛，以及测试入口 CI 化。
