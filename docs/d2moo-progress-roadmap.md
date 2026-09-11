@@ -80,6 +80,13 @@
 - 新增规范化、未知类型及 `Ice Caves` 优先级测试；下一步使用真实 1.10f 资源运行隐藏营地
   与鲜血荒地截图回归，确认 DC6 cell 数量和坐标投影。
 
+### 资源验证受限时的继续工作
+
+- 已将 LevelName 解析改为独立纯 Java 映射，`Map.Zone.automapLevelName()` 自动提供
+  D2MOO 规范名称，首次玩家位置更新即可触发 DC6 cell 构建；真实截图验证暂按用户要求跳过。
+- 下一项改为补齐 `Objects.AutoMap` / `MonStats2.automapCel` 的原生对象与怪物图标数据接口，
+  让有原生帧的实体优先使用 MaxiMap DC6，缺失时才回退几何标记。
+
 - 第一章怪物生成/AI 本轮重新按代码与真实 1.10f 数据核对，不能标记为“全部完成”。
   `Act1MapBuilderD2MOD` 已读取难度怪物池、`NumMon`、`Rarity`、`MonDen`、`MinGrp/MaxGrp`
   和 `PartyMin/PartyMax`，并在 RoomEx 首次激活时创建权威实体；第一章审计识别 77 个 roster
