@@ -141,3 +141,7 @@ Blizzard/Frozen Orb/Meteor 子导弹删除与重连门槛。
 Blizzard(59)、Frozen Orb(64)、Meteor(56) 的根/子导弹双客户端门槛已通过；测试现在
 比较两端 `MissileP` 实体 ID 并集，单端生成或删除会直接失败。下一项为断线重连后的
 复杂子导弹快照恢复。
+
+Meteor、Blizzard、Frozen Orb 的断线重连门槛已通过：重连基线不会恢复未知或已删除的
+导弹，重连窗口内按原生寿命过期的短导弹允许从新基线消失。下一项扩展到 Hydra、Volcano、
+Armageddon、Hurricane、Thunder Storm。

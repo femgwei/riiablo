@@ -1462,6 +1462,18 @@ Werewolf/Werebear、Feral Rage/Maul、Rabies/Fire Claws、Hunger、Shock Wave、
 当前下一项：把复杂技能门槛扩展到断线重连后的子导弹快照恢复，并减少测试日志噪声，随后
 进入其余多段导弹技能的多人表现验收。
 
+### 2026-09-11 复杂区域技能断线重连门槛（已通过）
+
+- [x] ~~根/子导弹断线重连快照恢复~~
+  - 施法端保持连接，观察端在根/子导弹已同步后断开；新观察端重新进入 Blood Moor，
+    接收服务端基线并比较活跃导弹集合。
+  - 重连基线只能包含断开前已存在的权威实体，不允许恢复未知或已删除导弹；重连窗口内
+    按原生寿命自然过期的短导弹不视为错误。
+  - Meteor(56)、Blizzard(59)、Frozen Orb(64) 的双客户端断线重连门槛全部通过。
+
+当前下一项：将同样的重连门槛扩展到 Hydra、Volcano、Armageddon、Hurricane、Thunder
+Storm，并收敛 headless 测试日志输出以便持续集成。
+
 ### 2026-09-11 真实 1.10f 双客户端复杂区域技能门槛（已通过）
 
 - [x] ~~Volcano(244)、Hydra(62)、Armageddon(249)、Hurricane(250) 真实无窗口双客户端验收~~

@@ -611,7 +611,88 @@ public final class D2GSHeadlessClient {
       }
       log("area_skill_dual_pass", areaEvidenceSummary(a, b, skillId)
           + " animationFallback=" + animationFallback);
+      if (requiresAreaChild(skillId)) {
+        verifyAreaSkillReconnect(a, b, inA, socketB, peerD2s, peerCharacter, skillId);
+      }
     }
+  }
+
+  /**
+   * Reconnect gate for controller/child area skills. The observer disconnects
+   * after the child chain is visible; the replacement observer must receive
+   * the same still-active authoritative missiles and no deleted/stale entity.
+   */
+  private void verifyAreaSkillReconnect(D2GSHeadlessClient owner,
+      D2GSHeadlessClient oldObserver, DataInputStream ownerInput, Socket oldSocket,
+      byte[] observerD2s, CharacterHeader observerCharacter, int skillId) throws Exception {
+    Set<Integer> activeBefore = activeAreaMissiles(owner, skillId);
+    if (activeBefore.isEmpty()) {
+      throw new IllegalStateException("area-skill reconnect has no active missiles: skill="
+          + skillId + " missiles=" + areaMissileSummary(owner.areaMissiles));
+    }
+    int oldObserverId = oldObserver.playerId;
+    oldSocket.close();
+    long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+    while (System.currentTimeMillis() < disconnectDeadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+      if (packet != null) owner.consume(packet);
+      Visibility state = owner.visibility.get(oldObserverId);
+      if (state != null && state.deleted) break;
+    }
+
+    D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+    try (Socket reconnectSocket = reconnected.openSocket();
+         DataInputStream reconnectInput = input(reconnectSocket);
+         OutputStream reconnectOutput = output(reconnectSocket)) {
+      send(reconnectOutput, connectionPacket(observerCharacter, observerD2s));
+      reconnected.awaitConnection(reconnectInput, deadline());
+      if (!D2GS.headlessWarpPlayer(reconnected.playerId)) {
+        throw new IOException("area-skill reconnect could not enter Blood Moor");
+      }
+      long warpDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < warpDeadline && reconnected.currentLevelId != 2) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(reconnectInput);
+        if (packet != null) reconnected.consume(packet);
+      }
+      if (reconnected.currentLevelId != 2) {
+        throw new IOException("area-skill reconnect did not receive Blood Moor baseline");
+      }
+      long reconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < reconnectDeadline) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(ownerInput);
+        if (packet != null) owner.consume(packet);
+        packet = readPacket(reconnectInput);
+        if (packet != null) reconnected.consume(packet);
+        Set<Integer> ownerActive = activeAreaMissiles(owner, skillId);
+        Set<Integer> reconnectActive = activeAreaMissiles(reconnected, skillId);
+        // A short-lived child may expire between the old observer's last
+        // packet and the replacement baseline. That is valid native timing;
+        // a reconnect may only contain missiles that were active before the
+        // disconnect, and must not resurrect a deleted/unknown entity.
+        if (!reconnectActive.isEmpty() && activeBefore.containsAll(reconnectActive)
+            && ownerActive.containsAll(reconnectActive)) {
+          log("area_skill_reconnect_pass", "skill=" + skillId
+              + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
+              + " active=" + reconnectActive + " expiredDuringReconnect="
+              + (activeBefore.size() - reconnectActive.size()) + " stale=false");
+          return;
+        }
+      }
+      throw new IllegalStateException("area-skill reconnect snapshot mismatch: skill=" + skillId
+          + " before=" + activeBefore + " owner=" + activeAreaMissiles(owner, skillId)
+          + " reconnected=" + activeAreaMissiles(reconnected, skillId));
+    }
+  }
+
+  private static Set<Integer> activeAreaMissiles(D2GSHeadlessClient client, int skillId) {
+    Set<Integer> active = new HashSet<>();
+    for (Map.Entry<Integer, AreaMissile> entry : client.areaMissiles.entrySet()) {
+      AreaMissile missile = entry.getValue();
+      if (missile.skillId == skillId && missile.everActive && !missile.deleted) {
+        active.add(entry.getKey());
+      }
+    }
+    return active;
   }
 
   private static void awaitAreaBaselines(D2GSHeadlessClient a, D2GSHeadlessClient b,
