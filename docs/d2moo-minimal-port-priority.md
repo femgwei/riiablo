@@ -154,3 +154,6 @@ Armageddon/Hurricane/Thunder Storm 的 `StateP` 来源与状态 ID。下一项�
 headless 日志收敛与完整回归已完成：默认隐藏 DRLG/网络逐条调试输出，`--verbose` 可恢复；
 新增 `:server:d2gs:headlessAreaSkillRegression` 覆盖八项复杂区域技能的双端快照与重连
 门槛，真实 1.10f MPQ 回归通过。下一项是接入 CI，并继续通过 `D2_HOME` 注入外部资源。
+
+已新增 `.github/workflows/d2gs-headless.yml`：公共 runner 执行编译和无资源专项测试；真实
+MPQ 任务仅在手动触发且配置 `self-hosted, windows, d2-1.10f` runner 与 `D2_HOME` 后运行。

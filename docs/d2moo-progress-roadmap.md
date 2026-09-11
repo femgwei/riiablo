@@ -1501,6 +1501,18 @@ Storm，并收敛 headless 测试日志输出以便持续集成。
 
 当前下一项：把该 Gradle 回归任务接入 CI，并保留 `D2_HOME` 外部资源注入方式。
 
+### 2026-09-11 CI 回归工作流（已完成）
+
+- [x] ~~公共 CI 编译/单元测试与真实 MPQ 手动门槛~~
+  - 新增 `.github/workflows/d2gs-headless.yml`：公共 Ubuntu runner 执行 D2GS 编译和
+    三个无资源专项测试，不需要也不会下载或提交 MPQ。
+  - `workflow_dispatch` 提供可选的真实门槛；仅在标记为 `self-hosted, windows, d2-1.10f`
+    的 runner 上运行，并通过仓库变量 `D2_HOME` 注入用户自备的 1.10f 安装目录。
+  - 工作流先检查 `D2_HOME/d2data.mpq`，再运行八项 headless 双客户端快照/重连回归。
+
+当前下一项：在具备自托管 runner 的环境执行一次手动 CI 真实资源门槛，并继续完善失败
+日志归档和测试报告上传。
+
 ### 2026-09-11 真实 1.10f 双客户端复杂区域技能门槛（已通过）
 
 - [x] ~~Volcano(244)、Hydra(62)、Armageddon(249)、Hurricane(250) 真实无窗口双客户端验收~~

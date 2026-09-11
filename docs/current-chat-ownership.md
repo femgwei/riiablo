@@ -246,3 +246,11 @@ Armageddon/Hurricane 的实机观感验证。
 - 新增 `:server:d2gs:headlessAreaSkillRegression`，覆盖 Hydra、Volcano、Armageddon、
   Hurricane、Thunder Storm、Meteor、Blizzard、Frozen Orb 的双客户端快照与断线重连。
 - 真实 1.10f MPQ 回归全绿；下一项是接入 CI，资源继续由 `D2_HOME` 注入，不提交 MPQ。
+
+### 2026-09-11 CI 工作流
+
+- 新增 `.github/workflows/d2gs-headless.yml`。公共 runner 只执行 D2GS 编译和无资源专项
+  测试；真实 MPQ 验收必须通过手动 workflow dispatch、Windows self-hosted runner 和
+  `D2_HOME` 仓库变量启用。
+- 工作流不会下载、缓存或提交暴雪 MPQ；真实任务先检查 `d2data.mpq`，再调用
+  `headlessAreaSkillRegression`。

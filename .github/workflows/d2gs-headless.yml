@@ -1,0 +1,92 @@
+name: D2GS headless verification
+
+on:
+  push:
+    paths:
+      - 'core/**'
+      - 'D2MOO_JAVA/**'
+      - 'server/d2gs/**'
+      - 'gradle/**'
+      - 'gradlew*'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - '.github/workflows/d2gs-headless.yml'
+  pull_request:
+    paths:
+      - 'core/**'
+      - 'D2MOO_JAVA/**'
+      - 'server/d2gs/**'
+      - 'gradle/**'
+      - 'gradlew*'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - '.github/workflows/d2gs-headless.yml'
+  workflow_dispatch:
+    inputs:
+      run_real_mpq:
+        description: 'Run the real 1.10f MPQ gate on a configured self-hosted runner'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  compile-and-unit:
+    name: Compile and headless unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+      - name: Compile D2GS
+        run: ./gradlew :server:d2gs:compileJava
+      - name: Run authoritative area-skill unit tests
+        run: >-
+          ./gradlew :core:test
+          --tests com.riiablo.engine.client.AuthoritativeAreaSkillSnapshotTest
+          --tests com.riiablo.engine.server.DruidStormAuraIntegrationTest
+          --tests com.riiablo.engine.server.SorceressThunderStormIntegrationTest
+
+  real-mpq-area-regression:
+    name: Real 1.10f dual-client area regression
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_real_mpq == true }}
+    runs-on: [self-hosted, windows, d2-1.10f]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: gradle
+      - name: Check externally provisioned MPQ path
+        shell: pwsh
+        env:
+          D2_HOME: ${{ vars.D2_HOME }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:D2_HOME)) { throw 'Repository variable D2_HOME is required' }
+          if (-not (Test-Path (Join-Path $env:D2_HOME 'd2data.mpq'))) { throw "D2_HOME does not contain d2data.mpq: $env:D2_HOME" }
+      - name: Run real dual-client regression
+        shell: pwsh
+        env:
+          D2_HOME: ${{ vars.D2_HOME }}
+        run: |
+          .\gradlew.bat :server:d2gs:headlessAreaSkillRegression -PareaTimeout=8 *> area-regression.log
+          if ($LASTEXITCODE -ne 0) { Get-Content area-regression.log; exit $LASTEXITCODE }
+      - name: Upload real regression log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2gs-area-regression-log
+          path: area-regression.log
+          if-no-files-found: ignore
