@@ -14,6 +14,7 @@ public final class NativeObjectOperateTable {
     TRAP,
     QUEST_OBJECT,
     TAINTED_SUN_ALTAR,
+    STAFF_ORIFICE,
     TOGGLE_DOOR,
     ONE_WAY_DOOR
   }
@@ -27,6 +28,9 @@ public final class NativeObjectOperateTable {
     // QuestObjectInteractionEvent path.
     if (object != null && object.OperateFn == 24) {
       return Lifecycle.TAINTED_SUN_ALTAR;
+    }
+    if (object != null && object.OperateFn == 25) {
+      return Lifecycle.STAFF_ORIFICE;
     }
     if (NativeQuestObjectResolver.resolve(object)
         != NativeQuestObjectResolver.Type.NONE) {
@@ -54,6 +58,7 @@ public final class NativeObjectOperateTable {
 
     if (operateFn == 7) return Lifecycle.TRAP;
     if (operateFn == 24) return Lifecycle.TAINTED_SUN_ALTAR;
+    if (operateFn == 25) return Lifecycle.STAFF_ORIFICE;
 
     switch (operateFn) {
       // Casket, urn/jar, chest, barrel, Tower Tome, exploding barrel,

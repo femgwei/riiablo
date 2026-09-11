@@ -13,6 +13,7 @@ public final class NativeQuestObjectResolver {
     INIFUSS_TREE(false, true, Engine.Object.MODE_ON),
     HORADRIC_MALUS(false, true, Engine.Object.MODE_ON),
     TAINTED_SUN_ALTAR(false, true, Engine.Object.MODE_ON),
+    HORADRIC_ORIFICE(false, true, Engine.Object.MODE_ON),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -37,6 +38,7 @@ public final class NativeQuestObjectResolver {
   public static final int INIFUSS_TREE = 30;
   public static final int HORADRIC_MALUS = 108;
   public static final int TAINTED_SUN_ALTAR = 149;
+  public static final int HORADRIC_ORIFICE = 152;
 
   private NativeQuestObjectResolver() {}
 
@@ -52,6 +54,7 @@ public final class NativeQuestObjectResolver {
       case INIFUSS_TREE: return Type.INIFUSS_TREE;
       case HORADRIC_MALUS: return Type.HORADRIC_MALUS;
       case TAINTED_SUN_ALTAR: return Type.TAINTED_SUN_ALTAR;
+      case HORADRIC_ORIFICE: return Type.HORADRIC_ORIFICE;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.

@@ -54,8 +54,21 @@
   游戏中尚未拥有 `vip`/`tsh` 且尚未领取 A2Q2 奖励的玩家各生成一枚已鉴定 Unique Viper
   Amulet，并设置 A2Q3 `PRIMARY_GOAL_DONE + REWARD_PENDING + COMPLETED_NOW`。
 - 本地 GameScreen 与 D2GS 均已注册该系统，网络对象校验也识别 A2Q3 祭坛。新增
-  OperateFn、对象 class、地图范围测试；下一项为 A2Q6 Tal Rasha 墓穴插杖、删除任务
-  物品并开启 Duriel 房间/红门，之后再回补 A2Q3 NPC 奖励对话。
+  OperateFn、对象 class、地图范围测试。
+
+### A2Q6 七墓与督瑞尔：插杖和红门（本轮完成首阶段）
+
+- 对照 D2MOO `OBJECTS_OperateFunction25_StaffOrifice` 与
+  `ACT2Q6_DeleteAllHoradricItemsAndOpenTomb`，新增 `STAFF_ORIFICE` 生命周期和
+  Objects class 152 校验；没有服务端持有 `hst` 的玩家不能激活，激活后原子删除
+  `hst/vip/tsh/fsm` 别名、设置 A2Q2 `REWARD_GRANTED + PRIMARY_GOAL_DONE`，并将
+  A2Q6 标记为已开始/离开城镇。
+- 在法杖孔附近创建原生红门视觉对象（class 60）和可同步的 quest warp，目标为
+  D2MOO `LEVEL_DURIELSLAIR=74`；重复对象交互由对象状态幂等抑制。网络 Quest 请求、
+  本地 GameScreen 与 D2GS 均已接线。
+- 本轮完成的是权威插杖/红门最小闭环；D2MOO 的随机真墓穴对象初始化、Duriel 击杀后
+  Tyrael 对话/回城门、七墓符号选择仍待下一阶段补齐。下一项优先补 A2Q6 的墓穴
+  Level/Arcane Symbol 选择和 Duriel 死亡奖励，再回补 A2Q3 NPC 奖励对话。
 
 ### AutoMap 数据查询层（本轮）
 

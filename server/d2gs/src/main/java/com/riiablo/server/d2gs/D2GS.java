@@ -111,6 +111,7 @@ import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act1QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act2QuestSystem;
 import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
+import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
 import com.riiablo.engine.server.quest.Act2QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act2HoradricStaffDropSystem;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
@@ -2143,6 +2144,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new Act1QuestSystem())
         .with(new Act2QuestSystem())
         .with(new Act2TaintedSunQuestSystem())
+        .with(new Act2DurielQuestSystem())
         .with(new NativeMercenaryRewardSystem())
         .with(new NativeCountessRewardSystem())
         .with(new NativeCharsiImbueSystem())
@@ -3908,7 +3910,8 @@ public class D2GS extends ApplicationAdapter {
         || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.CAIN_GIBBET
         || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.INIFUSS_TREE
         || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_MALUS
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR;
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_ORIFICE;
   }
 
   private void sendQuestResult(int clientId, long requestId, boolean success, String reason,

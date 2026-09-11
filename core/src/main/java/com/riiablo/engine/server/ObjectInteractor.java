@@ -144,7 +144,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         || type == NativeQuestObjectResolver.Type.CAIN_GIBBET
         || type == NativeQuestObjectResolver.Type.INIFUSS_TREE
         || type == NativeQuestObjectResolver.Type.HORADRIC_MALUS
-        || type == NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR;
+        || type == NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR
+        || type == NativeQuestObjectResolver.Type.HORADRIC_ORIFICE;
   }
 
   private boolean interactQuestPortal(int playerId, int visualEntityId) {
@@ -247,6 +248,28 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
       mInteractable.remove(entityId);
       Gdx.app.log(TAG, "Native A2Q3 altar activated: entity=" + entityId
+          + " player=" + src + " object=" + base.Id);
+      return InteractionResult.HANDLED_CHANGED;
+    }
+
+    if (lifecycle == Lifecycle.STAFF_ORIFICE) {
+      Player player = mPlayer.get(src);
+      if (player == null || player.data == null || player.data.getItems() == null
+          || !player.data.getItems().containsItemCode(
+              com.riiablo.engine.server.quest.Act2HoradricStaffQuest.HORADRIC_STAFF)) {
+        Gdx.app.log(TAG, "Native A2Q6 orifice rejected: player=" + src
+            + " missing Horadric Staff");
+        return InteractionResult.HANDLED_UNCHANGED;
+      }
+      if (state != null && state.activated) return InteractionResult.HANDLED_UNCHANGED;
+      if (state != null) {
+        state.persistActivated(true);
+        state.persistOpened(true);
+        state.persistMode(Engine.Object.MODE_ON);
+      }
+      mSequence.create(entityId).sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+      mInteractable.remove(entityId);
+      Gdx.app.log(TAG, "Native A2Q6 Horadric orifice activated: entity=" + entityId
           + " player=" + src + " object=" + base.Id);
       return InteractionResult.HANDLED_CHANGED;
     }
