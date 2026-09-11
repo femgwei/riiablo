@@ -23,6 +23,7 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.HORADRIC_MALUS, resolve(108, 15));
     assertEquals(NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR, resolve(149, 24));
     assertEquals(NativeQuestObjectResolver.Type.HORADRIC_ORIFICE, resolve(152, 21));
+    assertEquals(NativeQuestObjectResolver.Type.ARCANE_SANCTUARY_TOME, resolve(357, 42));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }
@@ -53,6 +54,14 @@ class NativeQuestObjectResolverTest {
     cairn.accept(Engine.Object.MODE_OP);
     assertTrue(cairn.accepted);
     assertEquals(Engine.Object.MODE_OP, cairn.targetMode);
+  }
+
+  @Test
+  void sanctuaryTomeUsesQuestOwnedOperateLifecycle() {
+    Objects.Entry tome = object(357, 42);
+    assertEquals(NativeObjectOperateTable.Lifecycle.QUEST_OBJECT,
+        NativeObjectOperateTable.resolve(tome,
+            NativePresetObjectResolver.Kind.ORDINARY));
   }
 
   private static NativeQuestObjectResolver.Type resolve(int id, int initFn) {

@@ -2303,3 +2303,18 @@ Tainted Sun、Arcane Sanctuary、Duriel）：以地图入口 LevelId/预设单�
 
 当前下一项：补齐 A2Q6 的墓穴预设语义（法杖墓/普通墓/督瑞尔墓的 DS1 入口、Arcane Symbol、
 墓穴出口和 Duriel 房间），再开始 A2Q4 Horazon 之书与 A2Q5 召唤者任务。
+
+### 2026-09-12 Act II A2Q4 Horazon 之书/Arcane Sanctuary（已完成代码修复）
+
+- [x] 对齐 `OBJECTS_OperateFunction42_SanctuaryTome` 的对象身份：Objects class 357、OperateFn 42
+  进入独立的 `ARCANE_SANCTUARY_TOME` 任务对象类型，不再按普通箱子处理或产生普通掉落。
+- [x] 只有 Arcane Sanctuary（Level 75）中的 Horazon 之书能完成 A2Q4；完成时设置原生
+  `PRIMARY_GOAL_DONE`、`REWARD_PENDING`、`REWARD_GRANTED`、`CUSTOM3/4`，并保留幂等行为。
+- [x] 同一 Arcane Sanctuary 内的队伍成员获得独立完成记录，其他玩家不会被错误写入任务进度；
+  对象动画/持久化状态仍由通用 ObjectInteractor 负责。
+- [x] 接入本地/网络任务对象白名单，并增加 `Act2HorazonTomeQuestTest` 与对象解析回归。
+- 验证：A2Q4 状态、对象类型/OperateFn、Act II 墓穴选择相关测试、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：实现 A2Q5 Summoner 的原生身份（SuperUnique 18/MonStats 250）和 Arcane Sanctuary
+死亡结算、队伍奖励待领取状态，再补 Drognan/Jerhyn/Atma 等 NPC 对话分支。

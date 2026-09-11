@@ -3,7 +3,7 @@ package com.riiablo.engine.server.object;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.Engine;
 
-/** Identifies Act I quest objects whose lifecycle is owned by quest scripts. */
+/** Identifies quest objects whose lifecycle is owned by native quest scripts. */
 public final class NativeQuestObjectResolver {
   public enum Type {
     NONE(false, false, Engine.Object.MODE_NU),
@@ -14,6 +14,7 @@ public final class NativeQuestObjectResolver {
     HORADRIC_MALUS(false, true, Engine.Object.MODE_ON),
     TAINTED_SUN_ALTAR(false, true, Engine.Object.MODE_ON),
     HORADRIC_ORIFICE(false, true, Engine.Object.MODE_ON),
+    ARCANE_SANCTUARY_TOME(false, true, Engine.Object.MODE_ON),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -39,6 +40,8 @@ public final class NativeQuestObjectResolver {
   public static final int HORADRIC_MALUS = 108;
   public static final int TAINTED_SUN_ALTAR = 149;
   public static final int HORADRIC_ORIFICE = 152;
+  /** Objects.txt OBJECT_YET_ANOTHER_TOME / A2Q4 OperateFn 42. */
+  public static final int ARCANE_SANCTUARY_TOME = 357;
 
   private NativeQuestObjectResolver() {}
 
@@ -55,6 +58,7 @@ public final class NativeQuestObjectResolver {
       case HORADRIC_MALUS: return Type.HORADRIC_MALUS;
       case TAINTED_SUN_ALTAR: return Type.TAINTED_SUN_ALTAR;
       case HORADRIC_ORIFICE: return Type.HORADRIC_ORIFICE;
+      case ARCANE_SANCTUARY_TOME: return Type.ARCANE_SANCTUARY_TOME;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.

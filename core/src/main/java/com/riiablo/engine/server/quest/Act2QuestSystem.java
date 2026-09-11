@@ -18,10 +18,12 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
+import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -98,6 +100,34 @@ public class Act2QuestSystem extends PassiveSystem {
       log.info("[A2Q1] Atma reward acknowledged: player={} record=0x{}",
           event.entityId, Integer.toHexString(Short.toUnsignedInt(next)));
     }
+  }
+
+  /**
+   * A2Q4's native OperateFn 42 handler.  The generic object interactor owns
+   * the animation/state transition; this callback owns only the authoritative
+   * quest record and nearby party credit.
+   */
+  @Subscribe
+  public void onQuestObjectInteraction(QuestObjectInteractionEvent event) {
+    if (event == null
+        || event.type != NativeQuestObjectResolver.Type.ARCANE_SANCTUARY_TOME
+        || !mPlayer.has(event.playerId)) return;
+    Player player = mPlayer.get(event.playerId);
+    if (player == null || player.data == null || !isPlayerInLevel(
+        event.playerId, D2LevelIds.LEVEL_ARCANESANCTUARY)) return;
+
+    short previous = getHorazonRecord(player.data);
+    short next = Act2HorazonTomeQuest.completeObjective(previous);
+    // Native A2Q4 still opens the tome and displays its scroll message after
+    // the quest has already been completed.  Accepting an idempotent request
+    // keeps object state and quest state independent.
+    event.accept();
+    if (next == previous) return;
+    setHorazonRecord(player.data, next);
+    persist(player.data);
+    propagateHorazonTome(event.playerId);
+    log.info("[A2Q4] Horazon tome activated: player={} record=0x{}",
+        event.playerId, Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   private void onCainStaffMessage(NpcQuestMessageEvent message, Player player) {
@@ -281,12 +311,42 @@ public class Act2QuestSystem extends PassiveSystem {
     return data.getQuests(Riiablo.ACT2)[Act2HoradricStaffQuest.RECORD];
   }
 
+  private static short getHorazonRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT2)[Act2HorazonTomeQuest.RECORD];
+  }
+
   private static void setRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT2)[Act2RadamentQuest.RECORD] = record;
   }
 
   private static void setStaffRecord(CharData data, short record) {
     data.getQuests(Riiablo.ACT2)[Act2HoradricStaffQuest.RECORD] = record;
+  }
+
+  private static void setHorazonRecord(CharData data, short record) {
+    data.getQuests(Riiablo.ACT2)[Act2HorazonTomeQuest.RECORD] = record;
+  }
+
+  private void propagateHorazonTome(int sourcePlayerId) {
+    if (playersByZone == null || partyManager == null) return;
+    short partyId = partyManager.getPartyId(sourcePlayerId);
+    if (partyId == Party.INVALID_ID) return;
+    IntBag entities = playersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int playerId = ids[i];
+      if (playerId == sourcePlayerId || partyManager.getPartyId(playerId) != partyId
+          || !isPlayerInLevel(playerId, D2LevelIds.LEVEL_ARCANESANCTUARY)) continue;
+      Player member = mPlayer.get(playerId);
+      if (member == null || member.data == null) continue;
+      short previous = getHorazonRecord(member.data);
+      short next = Act2HorazonTomeQuest.completeObjective(previous);
+      if (next == previous) continue;
+      setHorazonRecord(member.data, next);
+      persist(member.data);
+      log.info("[A2Q4] Horazon tome party credit: source={} member={} record=0x{}",
+          sourcePlayerId, playerId, Integer.toHexString(Short.toUnsignedInt(next)));
+    }
   }
 
   private void updateRecord(CharData data, RecordUpdate update, String reason) {
