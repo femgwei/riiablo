@@ -2038,6 +2038,7 @@ public final class D2GSHeadlessClient {
       int a4Warp = D2GS.headlessPrepareQuestWarp(b.playerId, a4Source, a4Destination);
       if (a4Warp == Engine.INVALID_ENTITY) throw new IOException("A4 portal fixture unavailable");
       awaitLevel(b, inB, a4Source, deadline());
+      a.awaitVisibleEntity(inA, a4Warp, deadline());
       send(outB, questRequestPacket(200L, QuestOperation.WARP_INTERACTION, a4Warp, -1));
       QuestResult a4Rejected = b.awaitQuestResult(inB, 200L, deadline());
       if (a4Rejected.success() || !"A4Q2_NOT_COMPLETE".equals(a4Rejected.reason())) {
@@ -2076,6 +2077,11 @@ public final class D2GSHeadlessClient {
       int a5Warp = D2GS.headlessPrepareQuestWarp(b.playerId, a5Source, a5Destination);
       if (a5Warp == Engine.INVALID_ENTITY) throw new IOException("A5 Nihlathak portal unavailable");
       awaitLevel(b, inB, a5Source, deadline());
+      if (!D2GS.headlessMovePlayerToLevel(a.playerId, a5Source)) {
+        throw new IOException("A5 Harrogath observer staging unavailable");
+      }
+      awaitLevel(a, inA, a5Source, deadline());
+      a.awaitVisibleEntity(inA, a5Warp, deadline());
       send(outB, questRequestPacket(300L, QuestOperation.WARP_INTERACTION, a5Warp, -1));
       QuestResult a5Rejected = b.awaitQuestResult(inB, 300L, deadline());
       if (a5Rejected.success() || !"A5Q4_NOT_STARTED".equals(a5Rejected.reason())) {
@@ -2112,6 +2118,10 @@ public final class D2GSHeadlessClient {
            OutputStream reconnectOutput = output(reconnectSocket)) {
         send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
         reconnected.awaitConnection(reconnectInput, deadline());
+        if (reconnected.currentLevelId != a5Destination) {
+          throw new IOException("A5Q4 reconnect did not restore target level: "
+              + reconnected.currentLevelId + " expected=" + a5Destination);
+        }
         send(reconnectOutput, questRequestPacket(400L, QuestOperation.SNAPSHOT, -1, -1));
         QuestResult restored = reconnected.awaitQuestResult(reconnectInput, 400L, deadline());
         if (!restored.success() || restored.questRecordsLength() <= nihlathakRecord

@@ -3396,3 +3396,16 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：在该入口补充跨客户端可见性和目标区域重连后的 Warp 实体快照校验，并将
   A3/A4/A5 任务门槛结果写入统一离屏回归日志；随后继续校验其他 Act 任务对象与区域入口。
+
+### 2026-09-12 跨客户端 Warp 可见性与目标区域重连校验（本轮完成）
+
+- [x] A4Q2 与 A5Q4 场景由第二客户端创建 Warp 后，第一客户端在同一源区域等待并
+  观察相同实体，确认任务 Warp 沿正常 Room/NetworkSynchronizer 路径同步，而非仅在
+  创建者本地可见。
+- [x] A5Q4 成功传送后，第二客户端断线并用原始 D2S 重连；离屏入口现在同时检查
+  重连快照已恢复到 Nihlathak Temple 目标区域，再检查 Nihlathak `STARTED` 记录。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava`、QuestWarpPolicy 单测和
+  `git diff --check`；真实 socket/MPQ 运行仍待资源完整的验证环境。
+
+当前下一项：将同一快照/可见性校验推广到 A3/A4/A5 任务对象（Hell Gate、Tyrael、Drehya）
+的实体重建，确保任务记录恢复时对应的入口视觉对象和 Warp 一起恢复。
