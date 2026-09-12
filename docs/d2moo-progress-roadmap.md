@@ -2790,8 +2790,8 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 ### 2026-09-12 Act V A5Q6 Throne 五波仆从状态机（本轮完成基础闭环）
 
-- [x] 新增 `Act5BaalWaveState`，固定五波、每波五名成员；只有当前波所有成员都产生
-  `DeathEvent` 后才推进下一波，重复死亡不会重复扣减或重复生成。
+- [x] 新增 `Act5BaalWaveState` 基础五波顺序；本节最初使用每波五名及 DeathEvent
+  计数，已由后续“原生波次精确对齐”替换为 SuperUniques.txt 数量、清场扫描和计时状态。
 - [x] 使用 1.10f `MonsterIds.h` 中的原生波次基础类：`BaalHighPriest`、
   `PutridDefiler1`、`PainWorm1`、`VenomLord`、`BaalMinion1`；服务端在 Throne
   进入时启动第一波，第五波清空后才生成 Baal。
@@ -2843,3 +2843,25 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：核对 A5Q6 五波首领的精确变体、延迟与清场条件，并补齐原生经验/金币
 奖励；完成后继续第二至第四章的地图入口、任务对象和奖励差异核对。
+
+### 2026-09-12 Act V A5Q6 Throne 原生波次精确对齐（本轮完成）
+
+- [x] 按 D2MOO `AITHINK_Fn134_BaalThrone` 改为固定 25 Hz 计时状态：每次王座清场后
+  等待 250 tick（10 秒）再生成，生成后锁定 100 tick（4 秒）；不再由当前波
+  `DeathEvent` 立即推进，因此其他残存敌人也会阻止下一波。
+- [x] 清场条件扫描 Throne 原点 64 格内所有存活敌对怪物，排除 NPC、佣兵、玩家
+  召唤物和尸体；这与 D2MOO 的房间怪物回调一致，解决只杀波次集合便提前推进的问题。
+- [x] 五波改用 SuperUnique hcIdx `61..65`，即 Colenzo、Achmel、Bartuc、Ventar、
+  Lister 的原生 `MonClass`；随从类型取 `MonStats.minion1`，数量按 1.10f
+  `SuperUniques.txt` 精确为 `5/3/5/8/5`，并写入 SuperUnique 身份、品质、固定 Mod
+  和专属 TC 所需的实体元数据。
+- [x] 补齐 `D2MOO_JAVA.D2SuperUniques` 缺少的 Subject 3..5 常量；修复旧名称包含
+  判断把第三波 `baalhighpriest` 当作最终 Baal、提前完成任务的严重误判。
+- [x] `Act5BaalWaveStateTest` 覆盖 250/100 tick、64 格清场门控、五个原生索引、
+  随从数量和 BaalHighPriest 回归；通过 `:D2MOO_JAVA:compileJava`、`:core:test`、
+  `:core:compileJava`、`:server:d2gs:compileJava`。
+- [ ] Baal 的生成法术/尸体爆炸视觉以及 SuperUnique Mod 23 的独立 Poison Field
+  行为尚未完全实现；当前将其映射为已有毒素强化运行时标志。
+
+当前下一项：补齐 A5Q5 远古人原生经验奖励与 A5Q6 结束奖励/比赛难度限制；然后转入
+第二至第四章地图入口、任务对象与奖励的专项差异核对。

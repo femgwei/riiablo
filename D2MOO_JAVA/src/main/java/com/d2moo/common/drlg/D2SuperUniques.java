@@ -68,4 +68,7 @@ public class D2SuperUniques {
     public static final int SUPERUNIQUE_NIHLATHAK_BOSS = 60;
     public static final int SUPERUNIQUE_BAAL_SUBJECT_1 = 61;
     public static final int SUPERUNIQUE_BAAL_SUBJECT_2 = 62;
+    public static final int SUPERUNIQUE_BAAL_SUBJECT_3 = 63;
+    public static final int SUPERUNIQUE_BAAL_SUBJECT_4 = 64;
+    public static final int SUPERUNIQUE_BAAL_SUBJECT_5 = 65;
 }

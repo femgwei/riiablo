@@ -1,51 +1,71 @@
 package com.riiablo.engine.server.quest;
 
-/** Small deterministic state machine for the five native Throne waves. */
+/** Deterministic timing state for D2MOO's BaalThrone AI. */
 public final class Act5BaalWaveState {
+  public static final int NONE = -1;
+  public static final int SPAWN_BAAL = Act5BaalQuest.WAVE_COUNT;
+
+  private enum Phase { IDLE, WAIT_CLEAR, PRE_WAVE_DELAY, POST_SPAWN_LOCK, DONE }
+
+  private Phase phase = Phase.IDLE;
+  /** Number of waves already spawned (0..5). */
   private int wave;
-  private int alive;
+  private int delayTicks;
 
   public int wave() {
     return wave;
   }
 
-  public int alive() {
-    return alive;
+  public int delayTicks() {
+    return delayTicks;
   }
 
   public boolean started() {
-    return wave > 0;
+    return phase != Phase.IDLE;
   }
 
   public boolean finished() {
-    return wave == Act5BaalQuest.WAVE_COUNT && alive == 0;
+    return phase == Phase.DONE;
   }
 
   public boolean canStart() {
-    return wave == 0;
+    return phase == Phase.IDLE;
   }
 
-  public boolean canAdvance() {
-    return wave > 0 && alive == 0 && wave < Act5BaalQuest.WAVE_COUNT;
-  }
-
-  public int startWave() {
-    if (!canStart()) return wave;
-    wave = 1;
-    alive = Act5BaalQuest.MONSTERS_PER_WAVE;
-    return wave;
-  }
-
-  public int advanceWave() {
-    if (!canAdvance()) return wave;
-    wave++;
-    alive = Act5BaalQuest.MONSTERS_PER_WAVE;
-    return wave;
-  }
-
-  public boolean defeatOne() {
-    if (alive <= 0) return false;
-    alive--;
+  public boolean start() {
+    if (!canStart()) return false;
+    phase = Phase.WAIT_CLEAR;
     return true;
+  }
+
+  /** Advances one authoritative 25 Hz frame. Returns wave index 0..4,
+   * {@link #SPAWN_BAAL}, or {@link #NONE}. */
+  public int tick(boolean throneClear) {
+    if (phase == Phase.IDLE || phase == Phase.DONE) return NONE;
+    if (phase == Phase.POST_SPAWN_LOCK) {
+      if (--delayTicks > 0) return NONE;
+      delayTicks = 0;
+      phase = Phase.WAIT_CLEAR;
+    }
+    if (phase == Phase.WAIT_CLEAR) {
+      if (!throneClear) return NONE;
+      phase = Phase.PRE_WAVE_DELAY;
+      delayTicks = Act5BaalQuest.PRE_WAVE_DELAY_TICKS;
+      return NONE;
+    }
+    if (phase == Phase.PRE_WAVE_DELAY) {
+      if (delayTicks > 0 && --delayTicks > 0) return NONE;
+      delayTicks = 0;
+      if (!throneClear) return NONE;
+      if (wave >= Act5BaalQuest.WAVE_COUNT) {
+        phase = Phase.DONE;
+        return SPAWN_BAAL;
+      }
+      int result = wave++;
+      phase = Phase.POST_SPAWN_LOCK;
+      delayTicks = Act5BaalQuest.POST_SPAWN_LOCK_TICKS;
+      return result;
+    }
+    return NONE;
   }
 }

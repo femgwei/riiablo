@@ -1,6 +1,7 @@
 package com.riiablo.engine.server.quest;
 
 import com.artemis.Aspect;
+import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
@@ -23,6 +24,8 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SuperUnique;
@@ -32,7 +35,7 @@ import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
-import com.riiablo.engine.server.monster.MonsterType;
+import com.riiablo.engine.server.monster.MonsterRank;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -44,11 +47,10 @@ import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import net.mostlyoriginal.api.event.common.Subscribe;
-import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /** Server-authoritative A5Q1 Shenk lifecycle and Larzuk completion state. */
 @Wire(failOnNull = false)
-public class Act5QuestSystem extends PassiveSystem {
+public class Act5QuestSystem extends BaseSystem {
   private static final Logger log = LogManager.getLogger(Act5QuestSystem.class);
 
   protected ComponentMapper<Player> mPlayer;
@@ -59,6 +61,8 @@ public class Act5QuestSystem extends PassiveSystem {
   protected ComponentMapper<SuperUnique> mSuperUnique;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
+  protected ComponentMapper<SummonedPet> mSummonedPet;
+  protected ComponentMapper<Mercenary> mMercenary;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
   @Wire(name = "partyManager", failOnNull = false)
@@ -93,6 +97,17 @@ public class Act5QuestSystem extends PassiveSystem {
         Aspect.all(Player.class, MapWrapper.class));
     monstersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Monster.class, MapWrapper.class));
+  }
+
+  @Override
+  protected void processSystem() {
+    if (!baalWaveState.started() || baalWaveState.finished()) return;
+    int action = baalWaveState.tick(isBaalThroneClear());
+    if (action >= 0 && action < Act5BaalQuest.WAVE_COUNT) {
+      spawnBaalWave(action);
+    } else if (action == Act5BaalWaveState.SPAWN_BAAL) {
+      spawnBaalAfterWaves();
+    }
   }
 
   @Subscribe
@@ -262,9 +277,8 @@ public class Act5QuestSystem extends PassiveSystem {
       return;
     }
     if (baalWaveEntities.remove(event.victim)) {
-      if (baalWaveState.defeatOne() && baalWaveState.alive() == 0) {
-        advanceBaalWave(event.victim);
-      }
+      log.info("[A5Q6] Baal wave member defeated: entity={} remaining={}",
+          event.victim, baalWaveEntities.size);
       return;
     }
     if (isNihlathak(event.victim)
@@ -592,39 +606,151 @@ public class Act5QuestSystem extends PassiveSystem {
 
   private void startBaalWavesIfNeeded(int playerId) {
     if (!baalWaveState.canStart() || factory == null || mPosition == null) return;
-    Position origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
+    Position origin = findBaalThronePosition();
+    if (origin == null) origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
     if (origin == null) return;
     baalWaveOriginX = origin.position.x;
     baalWaveOriginY = origin.position.y;
-    baalWaveState.startWave();
-    spawnCurrentBaalWave();
-    log.info("[A5Q6] Baal wave started: wave={}/{} player={}", baalWaveState.wave(),
-        Act5BaalQuest.WAVE_COUNT, playerId);
+    baalWaveState.start();
+    log.info("[A5Q6] Baal throne sequence armed: player={} clearRadius={} preDelay={}",
+        playerId, Act5BaalQuest.THRONE_CLEAR_RADIUS, Act5BaalQuest.PRE_WAVE_DELAY_TICKS);
   }
 
-  private void spawnCurrentBaalWave() {
-    if (factory == null || baalWaveState.wave() <= 0
-        || baalWaveState.wave() > Act5BaalQuest.WAVE_COUNT) return;
-    int monsterClass = Act5BaalQuest.WAVE_MONSTER_CLASSES[baalWaveState.wave() - 1];
-    for (int i = 0; i < Act5BaalQuest.MONSTERS_PER_WAVE; i++) {
-      float x = baalWaveOriginX + (i - 2) * 1.5f;
-      float y = baalWaveOriginY + (i % 2 == 0 ? 1f : -1f);
-      int entity = factory.createMonster(monsterClass, x, y);
-      if (entity >= 0) baalWaveEntities.add(entity);
-    }
-    log.info("[A5Q6] Baal wave spawned: wave={}/{} class={} entities={}",
-        baalWaveState.wave(), Act5BaalQuest.WAVE_COUNT, monsterClass, baalWaveEntities.size);
-  }
-
-  private void advanceBaalWave(int sourceEntity) {
-    if (baalWaveState.wave() < Act5BaalQuest.WAVE_COUNT) {
-      baalWaveState.advanceWave();
-      spawnCurrentBaalWave();
-      log.info("[A5Q6] Baal wave advanced: wave={}/{} source={}", baalWaveState.wave(),
-          Act5BaalQuest.WAVE_COUNT, sourceEntity);
+  private void spawnBaalWave(int waveIndex) {
+    if (factory == null || waveIndex < 0 || waveIndex >= Act5BaalQuest.WAVE_COUNT) return;
+    baalWaveEntities.clear();
+    SuperUniques.Entry unique = resolveBaalWaveSuperUnique(waveIndex);
+    MonStats.Entry leaderStats = resolveBaalWaveStats(waveIndex, unique);
+    if (leaderStats == null) {
+      log.error("[A5Q6] Baal wave leader unresolved: wave={} superUnique={}",
+          waveIndex + 1, Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex]);
       return;
     }
-    spawnBaalAfterWaves();
+    float leaderX = baalWaveOriginX;
+    float leaderY = baalWaveOriginY + 13f;
+    int uniqueId = unique == null
+        ? Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex] : unique.hcIdx;
+    long affixes = unique == null ? 0L : Act5BaalQuest.nativeSuperUniqueAffixes(unique.Mod);
+    int leader = factory.createMonster(leaderStats.hcIdx, leaderX, leaderY,
+        MonsterRank.SUPER_UNIQUE, affixes, -1, uniqueId);
+    if (leader < 0) return;
+    baalWaveEntities.add(leader);
+    if (mSuperUnique != null) {
+      mSuperUnique.create(leader).set(uniqueId,
+          unique == null ? "Baal Subject " + (waveIndex + 1) : unique.Superunique);
+    }
+
+    MonStats.Entry minionStats = resolveBaalWaveMinion(leaderStats);
+    int min = unique == null ? Act5BaalQuest.WAVE_MINIONS[waveIndex] : unique.MinGrp;
+    int max = unique == null ? Act5BaalQuest.WAVE_MINIONS[waveIndex] : unique.MaxGrp;
+    int minions = Act5BaalQuest.minionCount(min, max, map == null ? 0 : map.seed(), waveIndex);
+    for (int i = 0; i < minions; i++) {
+      double angle = Math.PI * 2.0 * i / Math.max(1, minions);
+      float x = leaderX + (float) Math.cos(angle) * 3f;
+      float y = leaderY + (float) Math.sin(angle) * 3f;
+      int entity = factory.createMonster(minionStats.hcIdx, x, y,
+          MonsterRank.MINION, 0L, -1, leader);
+      if (entity >= 0) baalWaveEntities.add(entity);
+    }
+    log.info("[A5Q6] Baal wave spawned: wave={}/{} leader={} class={} minionClass={} "
+            + "minions={} affixes=0x{} entities={} postLock={}",
+        waveIndex + 1, Act5BaalQuest.WAVE_COUNT,
+        unique == null ? uniqueId : unique.Superunique, leaderStats.Id, minionStats.Id,
+        minions, Long.toHexString(affixes), baalWaveEntities.size,
+        Act5BaalQuest.POST_SPAWN_LOCK_TICKS);
+  }
+
+  /** Native BaalThrone callback blocks while any live hostile monster is
+   * within 64 tiles, rather than looking only at entities from the wave. */
+  private boolean isBaalThroneClear() {
+    if (monstersByZone == null || mPosition == null) return false;
+    float radius2 = Act5BaalQuest.THRONE_CLEAR_RADIUS * Act5BaalQuest.THRONE_CLEAR_RADIUS;
+    IntBag entities = monstersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      if (levelId(id) != Act5BaalQuest.THRONE_OF_DESTRUCTION
+          || !mPosition.has(id) || !isLiveHostileMonster(id)
+          || isBaal(id) || isBaalThrone(id)) continue;
+      Position position = mPosition.get(id);
+      float dx = position.position.x - baalWaveOriginX;
+      float dy = position.position.y - baalWaveOriginY;
+      if (dx * dx + dy * dy < radius2) return false;
+    }
+    return true;
+  }
+
+  private Position findBaalThronePosition() {
+    if (monstersByZone == null || mPosition == null) return null;
+    IntBag entities = monstersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      if (levelId(id) == Act5BaalQuest.THRONE_OF_DESTRUCTION
+          && isBaalThrone(id) && mPosition.has(id)) return mPosition.get(id);
+    }
+    return null;
+  }
+
+  private boolean isBaalThrone(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    return monster != null && monster.monstats != null
+        && Act5BaalQuest.isBaalThroneMonster(monster.monstats.hcIdx, monster.monstats.Id);
+  }
+
+  private boolean isLiveHostileMonster(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    if (monster == null || monster.monstats == null || monster.monstats.npc) return false;
+    if ((mSummonedPet != null && mSummonedPet.has(entityId))
+        || (mMercenary != null && mMercenary.has(entityId))) return false;
+    if (mCofReference != null && mCofReference.has(entityId)) {
+      byte mode = mCofReference.get(entityId).mode;
+      if (mode == Engine.Monster.MODE_DT || mode == Engine.Monster.MODE_DD) return false;
+    }
+    if (mAttributesWrapper != null && mAttributesWrapper.has(entityId)) {
+      AttributesWrapper attributes = mAttributesWrapper.get(entityId);
+      if (attributes != null && attributes.attrs != null
+          && attributes.attrs.aggregate().getValue(Stat.hitpoints, 0f) <= 0f) return false;
+    }
+    return true;
+  }
+
+  private static SuperUniques.Entry resolveBaalWaveSuperUnique(int waveIndex) {
+    if (waveIndex < 0 || waveIndex >= Act5BaalQuest.WAVE_COUNT
+        || Riiablo.files == null || Riiablo.files.SuperUniques == null) return null;
+    int id = Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex];
+    for (SuperUniques.Entry entry : Riiablo.files.SuperUniques) {
+      if (entry != null && entry.hcIdx == id) return entry;
+    }
+    return null;
+  }
+
+  private static MonStats.Entry resolveBaalWaveStats(
+      int waveIndex, SuperUniques.Entry unique) {
+    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+    if (unique != null && unique.MonClass != null && !unique.MonClass.isEmpty()) {
+      MonStats.Entry stats = Riiablo.files.monstats.get(unique.MonClass);
+      if (stats != null) return stats;
+    }
+    if (waveIndex < 0 || waveIndex >= Act5BaalQuest.WAVE_MONSTER_IDS.length) return null;
+    MonStats.Entry stats = Riiablo.files.monstats.get(Act5BaalQuest.WAVE_MONSTER_IDS[waveIndex]);
+    if (stats != null) return stats;
+    for (MonStats.Entry entry : Riiablo.files.monstats) {
+      if (entry != null && entry.Id != null
+          && entry.Id.equalsIgnoreCase(Act5BaalQuest.WAVE_MONSTER_IDS[waveIndex])) return entry;
+    }
+    return null;
+  }
+
+  private static MonStats.Entry resolveBaalWaveMinion(MonStats.Entry leader) {
+    if (leader == null || Riiablo.files == null || Riiablo.files.monstats == null) return leader;
+    if (leader.minion1 != null && !leader.minion1.isEmpty()) {
+      MonStats.Entry minion = Riiablo.files.monstats.get(leader.minion1);
+      if (minion != null) return minion;
+    }
+    return leader;
   }
 
   private void spawnBaalAfterWaves() {
@@ -753,8 +879,7 @@ public class Act5QuestSystem extends PassiveSystem {
 
   private boolean isBaal(MonStats.Entry stats) {
     if (stats == null) return false;
-    return stats.hcIdx == MonsterType.BAALCRAB
-        || containsName(stats.Id, "baal") || containsName(stats.NameStr, "baal");
+    return Act5BaalQuest.isBaalMonster(stats.hcIdx, stats.Id);
   }
 
   private static MonStats.Entry resolveBaalStats() {
@@ -764,8 +889,7 @@ public class Act5QuestSystem extends PassiveSystem {
     stats = Riiablo.files.monstats.get("Baal");
     if (stats != null) return stats;
     for (MonStats.Entry entry : Riiablo.files.monstats) {
-      if (entry != null && (entry.hcIdx == MonsterType.BAALCRAB
-          || containsName(entry.Id, "baal"))) return entry;
+      if (entry != null && Act5BaalQuest.isBaalMonster(entry.hcIdx, entry.Id)) return entry;
     }
     return null;
   }
