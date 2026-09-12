@@ -2880,3 +2880,22 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：补齐 A5Q6 巴尔结束奖励、难度/资料片通关限制；完成后转入第二至第四章
 地图入口、任务对象与奖励差异专项核对。
+
+### 2026-09-12 Act V A5Q6 原生通关资格与角色 progression（本轮完成）
+
+- [x] 修复旧实现把第五章任意区域所有玩家直接标记为击败 Baal 的范围错误：现在仅
+  Worldstone Chamber 内资料片角色直接完成；其队伍中仍位于第五章的资料片角色获得
+  原生 party primary-goal 同步，第四章及其他章节玩家不再越区领奖。
+- [x] 实现 D2MOO `CLIENTS_UpdateCharacterProgression` 的 D2S flags 8..15 编码；资料片
+  普通/噩梦/地狱完成 A5Q6 后 progression 单调推进到 `5/10/15`，供下一难度解锁与
+  Slayer/Champion/Patriarch 等称号读取，并随任务记录一起持久化。
+- [x] 核对 D2MOO 后确认 A5Q6 正常完成没有固定任务经验或金币奖励；原代码中的金币
+  路径仅用于击杀者在结算后仍无领奖资格的特殊兜底，不应作为正常 Baal 奖励复制。
+- [x] 删除旧 `QuestManager` 中自定义的 Baal `150,000 XP` 奖励，并按原生记录位区分
+  获奖玩家（`REWARD_GRANTED + PRIMARY_GOAL_DONE`）与未获奖旁观者的
+  `COMPLETED_NOW`，避免保存一个原版不会生成的完成位。
+- [x] 新增 progression 编码、难度解锁、资料片限制、Chamber 直接资格、第五章队伍
+  资格及不回退测试。
+
+当前下一项：转入第二至第四章地图入口、任务对象与奖励差异专项核对；优先从第二章
+主线入口与 A2Q6 Duriel/Tyrael/Meshif 结束链开始。

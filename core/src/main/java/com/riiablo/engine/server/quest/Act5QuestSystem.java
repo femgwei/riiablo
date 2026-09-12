@@ -935,22 +935,56 @@ public class Act5QuestSystem extends BaseSystem {
     for (int i = 0; i < players.size(); i++) {
       int id = ids[i];
       Player player = mPlayer.get(id);
-      if (player == null || player.data == null || !isAct5Level(levelId(id))) continue;
-      updateBaalRecord(player.data, Act5BaalQuest::complete, "baal-defeated");
-      if (partyManager != null) {
+      if (player == null || player.data == null
+          || !Act5BaalQuest.canReceiveDirectReward(
+              player.data.isExpansion(), levelId(id))) continue;
+      completeBaalAndProgression(id, player, "baal-defeated");
+      if (partyManager != null && NativeQuestRecord.has(
+          baalRecord(player.data), NativeQuestRecord.PRIMARY_GOAL_DONE)) {
         short party = partyManager.getPartyId(id);
         if (party != Party.INVALID_ID) parties.add(party);
       }
     }
-    if (partyManager == null) return;
+    if (partyManager != null) {
+      for (int i = 0; i < players.size(); i++) {
+        int id = ids[i];
+        Player player = mPlayer.get(id);
+        if (player == null || player.data == null
+            || !Act5BaalQuest.canReceivePartyReward(
+                player.data.isExpansion(), levelId(id))) continue;
+        if (parties.contains(partyManager.getPartyId(id))) {
+          completeBaalAndProgression(id, player, "baal-party-sync");
+        }
+      }
+    }
+    // Native SetCompletionFlag runs for every player after direct and party
+    // rewards, but never replaces REWARD_GRANTED on qualifying players.
     for (int i = 0; i < players.size(); i++) {
       int id = ids[i];
       Player player = mPlayer.get(id);
-      if (player == null || player.data == null || !isAct5Level(levelId(id))) continue;
-      if (parties.contains(partyManager.getPartyId(id))) {
-        updateBaalRecord(player.data, Act5BaalQuest::complete, "baal-party-sync");
-      }
+      if (player == null || player.data == null) continue;
+      updateBaalRecord(player.data, Act5BaalQuest::completeObserver,
+          "baal-completed-observer");
     }
+  }
+
+  private boolean completeBaalAndProgression(int playerId, Player player, String reason) {
+    if (player == null || player.data == null) return false;
+    short previous = baalRecord(player.data);
+    if (Act5BaalQuest.isFinished(previous)) return false;
+    short completed = Act5BaalQuest.complete(previous);
+    if (completed == previous) return false;
+    int previousProgression = NativeCharacterProgression.value(player.data.flags);
+    player.data.flags = NativeCharacterProgression.update(
+        player.data.flags, 5, difficulty(playerId), player.data.isExpansion());
+    player.data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD] = completed;
+    if (player.data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(player.data);
+    log.info("[A5Q6] Baal reward granted: player={} difficulty={} progression={}->{} "
+            + "reason={} record=0x{}",
+        playerId, difficulty(playerId), previousProgression,
+        NativeCharacterProgression.value(player.data.flags), reason,
+        Integer.toHexString(Short.toUnsignedInt(completed)));
+    return true;
   }
 
   private MonStats.Entry resolveAncientStats(int superUniqueId, int ordinal) {

@@ -83,14 +83,36 @@ public final class Act5BaalQuest {
 
   /** D2MOO grants A5Q6 immediately when Baal dies; there is no pending NPC turn-in. */
   public static short complete(short record) {
-    if (isFinished(record)) return record;
-    record = NativeQuestRecord.clear(record, NativeQuestRecord.REWARD_PENDING);
+    if (!canGrantReward(record)) return record;
     record = NativeQuestRecord.set(record, NativeQuestRecord.PRIMARY_GOAL_DONE);
-    record = NativeQuestRecord.set(record, NativeQuestRecord.REWARD_GRANTED);
-    return NativeQuestRecord.set(record, NativeQuestRecord.COMPLETED_NOW);
+    return NativeQuestRecord.set(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
+  public static boolean canGrantReward(short record) {
+    return !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+  }
+
+  /** Players who did not qualify for primary-goal credit still receive the
+   * native game-wide quest-log completion marker. */
+  public static short completeObserver(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        ? record : NativeQuestRecord.set(record, NativeQuestRecord.COMPLETED_NOW);
   }
 
   public static boolean isFinished(short record) {
     return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
+  /** Native SetRewardGranted only accepts players physically in the Chamber. */
+  public static boolean canReceiveDirectReward(boolean expansion, int levelId) {
+    return expansion && levelId == WORLDSTONE_CHAMBER;
+  }
+
+  /** Chamber recipients propagate primary-goal credit only to party members
+   * that are still in Act V. */
+  public static boolean canReceivePartyReward(boolean expansion, int levelId) {
+    return expansion && levelId >= D2LevelIds.LEVEL_HARROGATH
+        && levelId <= D2LevelIds.LEVEL_WORLDSTONECHAMBER;
   }
 }

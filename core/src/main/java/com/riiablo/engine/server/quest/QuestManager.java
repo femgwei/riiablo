@@ -630,7 +630,8 @@ public class QuestManager {
     registerQuestReward(QuestId.A5Q5_ANCIENTS, 0, 0, 0, 0, 0, 0);
 
     // 巴尔
-    registerQuestReward(QuestId.A5Q6_BAAL, 150000, 0, 0, 0, 0, 0);
+    // Native A5Q6 advances character progression; it has no fixed XP reward.
+    registerQuestReward(QuestId.A5Q6_BAAL, 0, 0, 0, 0, 0, 0);
   }
 
   private void registerQuestReward(int questId, int exp, int gold, int skillPoints,
