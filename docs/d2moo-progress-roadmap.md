@@ -3216,3 +3216,18 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 当前下一项：为已生成波次增加按 `SuperUnique.hcIdx` 的重连/RoomEx 恢复索引；恢复时只
 补回确实缺失的当前波次实体，不重生已经清场的前序波次，并继续保持多人客户端看到相同
 的 preset 类别和所有权。
+
+### 2026-09-12 A5Q6 波次 hcIdx 重建索引（本轮完成）
+
+- [x] `Act5QuestSystem` 每个固定 Tick 扫描 Throne 的 `SuperUnique` 组件，以原生
+  `SuperUnique.hcIdx` 重建 leader 索引；不依赖不稳定的 Artemis entity id。
+- [x] 当前波次恢复时，按 leader entity id 重新收集 `Monster.uniqueId` 指向的随从，
+  只重建 `baalWaveEntities`，不会把前序已清场波次加入当前集合。
+- [x] `spawnBaalWave` 在生成前检查同 hcIdx 的存活 leader；Room/ECS 重建或重复动作
+  不会再次创建同一波首领/随从。`Act5BaalWaveState.activeWaveIndex()` 明确区分当前
+  波次与 DONE 后的 Baal 阶段。
+- [x] 通过 A5Q6 波次、快照、布局及任务状态测试，`:core:compileJava`、
+  `:server:d2gs:compileJava`、`git diff --check` 均通过。
+
+当前下一项：补充波次 leader/minion 的持久化成员标记和无 leader 场景诊断，覆盖“leader
+已死亡但随从仍存活”和 Room 重建中实体短暂缺失两种边界，避免误判为可重生波次。

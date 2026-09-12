@@ -22,6 +22,7 @@ class Act5BaalWaveStateTest {
       }
       assertEquals(wave, state.tick(true));
       assertEquals(wave + 1, state.wave());
+      assertEquals(wave, state.activeWaveIndex());
 
       // The 100-frame post-spawn lock expires, but a surviving hostile keeps
       // the state waiting without starting the next 250-frame delay.
@@ -38,6 +39,7 @@ class Act5BaalWaveStateTest {
     }
     assertEquals(Act5BaalWaveState.SPAWN_BAAL, state.tick(true));
     assertTrue(state.finished());
+    assertEquals(-1, state.activeWaveIndex());
     assertEquals(Act5BaalWaveState.NONE, state.tick(true));
   }
 

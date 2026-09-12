@@ -98,6 +98,9 @@ public class Act5QuestSystem extends BaseSystem {
   private final IntSet spawnedBaalLevels = new IntSet();
   private final IntSet killedBaalEntities = new IntSet();
   private final IntSet baalWaveEntities = new IntSet();
+  /** Rebuilt every simulation tick from SuperUnique.hcIdx, never persisted as
+   * an entity id.  Entity ids are not stable across Room/ECS reconstruction. */
+  private final IntIntMap baalWaveLeaders = new IntIntMap();
   @Wire(name = "act5QuestGameState", failOnNull = false)
   protected Act5QuestGameState act5QuestGameState;
   private final Act5QuestGameState fallbackGameState = new Act5QuestGameState();
@@ -118,6 +121,7 @@ public class Act5QuestSystem extends BaseSystem {
   @Override
   protected void processSystem() {
     Act5BaalWaveState baalWaveState = gameState().baalWaves;
+    rebuildBaalWaveEntityIndex();
     if (baalWaveState.started() && !baalWaveState.finished()) {
       int action = baalWaveState.tick(isBaalThroneClear());
       if (action >= 0 && action < Act5BaalQuest.WAVE_COUNT) {
@@ -1024,7 +1028,6 @@ public class Act5QuestSystem extends BaseSystem {
 
   private void spawnBaalWave(int waveIndex) {
     if (factory == null || waveIndex < 0 || waveIndex >= Act5BaalQuest.WAVE_COUNT) return;
-    baalWaveEntities.clear();
     SuperUniques.Entry unique = resolveBaalWaveSuperUnique(waveIndex);
     MonStats.Entry leaderStats = resolveBaalWaveStats(waveIndex, unique);
     if (leaderStats == null) {
@@ -1038,6 +1041,14 @@ public class Act5QuestSystem extends BaseSystem {
     float leaderY = summonPoint.y;
     int uniqueId = unique == null
         ? Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex] : unique.hcIdx;
+    int existingLeader = baalWaveLeaders.get(uniqueId, Engine.INVALID_ENTITY);
+    if (existingLeader != Engine.INVALID_ENTITY && isLiveHostileMonster(existingLeader)) {
+      reindexCurrentBaalWave(existingLeader, waveIndex);
+      log.info("[A5Q6] Baal wave spawn suppressed: wave={} superUnique={} leader={} reason=already_present",
+          waveIndex + 1, uniqueId, existingLeader);
+      return;
+    }
+    baalWaveEntities.clear();
     long affixes = unique == null ? 0L : Act5BaalQuest.nativeSuperUniqueAffixes(unique.Mod);
     Map.Zone throneZone = findZone(Act5BaalQuest.THRONE_OF_DESTRUCTION);
     com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
@@ -1094,6 +1105,60 @@ public class Act5QuestSystem extends BaseSystem {
     if (mAngle == null || !mAngle.has(entityId)) return;
     mAngle.get(entityId).set(new com.badlogic.gdx.math.Vector2(
         Act5BaalSpawnLayout.FACING_X, Act5BaalSpawnLayout.FACING_Y));
+  }
+
+  /**
+   * Rebuilds the transient wave index from authoritative components.  Native
+   * SuperUnique ids survive a Room/ECS rebuild while Artemis entity ids do not.
+   * Only the currently active wave is copied into {@code baalWaveEntities};
+   * completed earlier waves therefore cannot be resurrected by reconnect.
+   */
+  private void rebuildBaalWaveEntityIndex() {
+    baalWaveLeaders.clear();
+    if (monstersByZone == null || mMonster == null || mSuperUnique == null) return;
+    IntBag entities = monstersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      if (levelId(id) != Act5BaalQuest.THRONE_OF_DESTRUCTION
+          || !mSuperUnique.has(id) || !isLiveHostileMonster(id)) continue;
+      SuperUnique unique = mSuperUnique.get(id);
+      if (unique != null && isBaalWaveSuperUnique(unique.id)) {
+        baalWaveLeaders.put(unique.id, id);
+      }
+    }
+
+    Act5BaalWaveState waves = gameState().baalWaves;
+    int activeWave = waves.activeWaveIndex();
+    if (activeWave < 0 || activeWave >= Act5BaalQuest.WAVE_COUNT) return;
+    int superUniqueId = Act5BaalQuest.WAVE_SUPER_UNIQUES[activeWave];
+    int leader = baalWaveLeaders.get(superUniqueId, Engine.INVALID_ENTITY);
+    if (leader == Engine.INVALID_ENTITY) return;
+    reindexCurrentBaalWave(leader, activeWave);
+  }
+
+  private void reindexCurrentBaalWave(int leader, int waveIndex) {
+    baalWaveEntities.clear();
+    IntBag entities = monstersByZone == null ? null : monstersByZone.getEntities();
+    if (entities == null) return;
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      if (id != leader && (!mMonster.has(id) || mMonster.get(id) == null
+          || mMonster.get(id).uniqueId != leader)) continue;
+      if (levelId(id) == Act5BaalQuest.THRONE_OF_DESTRUCTION
+          && isLiveHostileMonster(id)) baalWaveEntities.add(id);
+    }
+    log.debug("[A5Q6] Baal wave index rebuilt: wave={} superUnique={} leader={} members={}",
+        waveIndex + 1, Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex], leader,
+        baalWaveEntities.size);
+  }
+
+  private static boolean isBaalWaveSuperUnique(int id) {
+    for (int waveId : Act5BaalQuest.WAVE_SUPER_UNIQUES) {
+      if (waveId == id) return true;
+    }
+    return false;
   }
 
   /** Native BaalThrone callback blocks while any live hostile monster is

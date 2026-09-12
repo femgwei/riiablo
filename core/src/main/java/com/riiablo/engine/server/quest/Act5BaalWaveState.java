@@ -29,6 +29,17 @@ public final class Act5BaalWaveState {
     return wave;
   }
 
+  /**
+   * Returns the wave whose preset members may still be present in the Throne.
+   * The counter is incremented at the same tick that a wave is requested, so
+   * the active preset is always {@code wave - 1}.  Once the state reaches DONE
+   * there is no wave to rebuild; Baal is spawned instead.
+   */
+  public int activeWaveIndex() {
+    return phase == Phase.IDLE || phase == Phase.DONE || wave <= 0
+        ? -1 : wave - 1;
+  }
+
   public int delayTicks() {
     return delayTicks;
   }
