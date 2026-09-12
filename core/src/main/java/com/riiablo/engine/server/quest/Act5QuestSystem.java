@@ -139,6 +139,7 @@ public class Act5QuestSystem extends BaseSystem {
         || !mPlayer.has(event.entityId)) return;
     Player player = mPlayer.get(event.entityId);
     if (player == null || player.data == null) return;
+    syncBaalChangedLevel(event, player);
     if (event.zone.level.Id == D2LevelIds.LEVEL_BLOODYFOOTHILLS) {
       updateRecord(player.data, Act5ShenkQuest::start, "entered-bloody-foothills");
       spawnShenkIfNeeded(event.entityId, event.zone.level.Id);
@@ -169,6 +170,73 @@ public class Act5QuestSystem extends BaseSystem {
       if (event.zone.level.Id == Act5BaalQuest.THRONE_OF_DESTRUCTION) {
         startBaalWavesIfNeeded(event.entityId);
       }
+    }
+  }
+
+  /**
+   * Mirrors the state-only part of D2MOO's A5Q6 ChangedLevel/JoinedGame
+   * callbacks.  The ECS event does not carry the old level, so the transition
+   * is derived from the authoritative destination and current quest record;
+   * the resulting PlayerP/QuestResult snapshot is the Java protocol equivalent
+   * of the native quest packet 0x50/0x5D updates.
+   */
+  private void syncBaalChangedLevel(ZoneChangeEvent event, Player player) {
+    int newLevel = event.zone.level.Id;
+    if (!isAct5Level(newLevel) || player == null || player.data == null) return;
+    short previous = baalRecord(player.data);
+
+    // Native PlayerStartedGame/PlayerJoinedGame set CUSTOM6 for a completed
+    // character.  Do this before the portal-specific branch so a reconnect
+    // into Harrogath receives the same completion marker.
+    if (NativeQuestRecord.has(previous, NativeQuestRecord.REWARD_GRANTED)
+        || NativeQuestRecord.has(previous, NativeQuestRecord.COMPLETED_BEFORE)) {
+      short next = NativeQuestRecord.set(previous, NativeQuestRecord.CUSTOM6);
+      updateBaalRecord(player.data, ignored -> next, "changed-level-completed");
+      return;
+    }
+
+    // A late/reconnected party member must receive Chamber credit even though
+    // the original Baal DeathEvent and its entity id are gone.
+    if (newLevel == Act5BaalQuest.WORLDSTONE_CHAMBER
+        && gameState().isBaalDefeated()
+        && Act5BaalQuest.canReceiveDirectReward(
+            player.data.isExpansion(), newLevel)) {
+      if (completeBaalAndProgression(event.entityId, player, "changed-level-baal-kill")) {
+        log.info("[A5Q6] ChangedLevel direct reward: player={} level={}",
+            event.entityId, newLevel);
+      }
+      return;
+    }
+
+    // Party members entering the Chamber after a teammate's kill inherit the
+    // native PRIMARYGOALDONE propagation; direct Chamber completion then adds
+    // the reward/progression exactly once.
+    if (newLevel == Act5BaalQuest.WORLDSTONE_CHAMBER && partyManager != null) {
+      short party = partyManager.getPartyId(event.entityId);
+      if (party != Party.INVALID_ID && playersByZone != null) {
+        IntBag players = playersByZone.getEntities();
+        int[] ids = players.getData();
+        for (int i = 0; i < players.size(); i++) {
+          int id = ids[i];
+          Player member = mPlayer.get(id);
+          if (member == null || member.data == null
+              || partyManager.getPartyId(id) != party) continue;
+          short memberRecord = baalRecord(member.data);
+          if (!NativeQuestRecord.has(memberRecord, NativeQuestRecord.PRIMARY_GOAL_DONE)) continue;
+          if (Act5BaalQuest.canReceiveDirectReward(
+              player.data.isExpansion(), newLevel)) {
+            completeBaalAndProgression(event.entityId, player, "changed-level-party-sync");
+          }
+          break;
+        }
+      }
+    }
+
+    if (newLevel >= Act5BaalQuest.THRONE_OF_DESTRUCTION) {
+      updateBaalRecord(player.data, Act5BaalQuest::start, "changed-level-throne");
+    } else if (newLevel == Act5BaalQuest.HARROGATH
+        && NativeQuestRecord.has(previous, NativeQuestRecord.STARTED)) {
+      updateBaalRecord(player.data, Act5BaalQuest::leaveTown, "changed-level-harrogath");
     }
   }
 
@@ -302,6 +370,7 @@ public class Act5QuestSystem extends BaseSystem {
     }
     if (isBaal(event.victim) && isBaalArea(levelId(event.victim))
         && killedBaalEntities.add(event.victim)) {
+      gameState().markBaalDefeated();
       completeBaalForPlayers();
       // D2MOO spawns Tyrael3 from the post-death missile callback.  The
       // DeathEvent is the authoritative equivalent in this server; the Last

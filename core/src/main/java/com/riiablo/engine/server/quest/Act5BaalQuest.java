@@ -84,6 +84,11 @@ public final class Act5BaalQuest {
     return NativeQuestRecord.set(start(record), NativeQuestRecord.ENTERED_AREA);
   }
 
+  /** Mirrors A5Q6's state-3 transition when a started player leaves Harrogath. */
+  public static short leaveTown(short record) {
+    return NativeQuestRecord.set(start(record), NativeQuestRecord.LEFT_TOWN);
+  }
+
   /** D2MOO grants A5Q6 immediately when Baal dies; there is no pending NPC turn-in. */
   public static short complete(short record) {
     if (!canGrantReward(record)) return record;

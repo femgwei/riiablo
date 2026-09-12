@@ -17,6 +17,7 @@ public final class Act5QuestGameState {
   private float tyraelOriginX;
   private float tyraelOriginY;
   private boolean tyraelSpawned;
+  private boolean baalDefeated;
 
   public static final class Snapshot {
     public final Act5BaalWaveState.Snapshot waves;
@@ -27,11 +28,12 @@ public final class Act5QuestGameState {
     public final float tyraelOriginX;
     public final float tyraelOriginY;
     public final boolean tyraelSpawned;
+    public final boolean baalDefeated;
 
     public Snapshot(Act5BaalWaveState.Snapshot waves,
         Act5BaalPortalState.Snapshot portals, float baalOriginX,
         float baalOriginY, boolean hasBaalOrigin, float tyraelOriginX,
-        float tyraelOriginY, boolean tyraelSpawned) {
+        float tyraelOriginY, boolean tyraelSpawned, boolean baalDefeated) {
       this.waves = waves;
       this.portals = portals;
       this.baalOriginX = baalOriginX;
@@ -40,6 +42,7 @@ public final class Act5QuestGameState {
       this.tyraelOriginX = tyraelOriginX;
       this.tyraelOriginY = tyraelOriginY;
       this.tyraelSpawned = tyraelSpawned;
+      this.baalDefeated = baalDefeated;
     }
   }
 
@@ -88,10 +91,22 @@ public final class Act5QuestGameState {
     return tyraelOriginY;
   }
 
+  /** Records the game-wide A5Q6 kill so a late/reconnected party member can
+   * receive the same Chamber credit without relying on the dead entity id. */
+  public boolean markBaalDefeated() {
+    if (baalDefeated) return false;
+    baalDefeated = true;
+    return true;
+  }
+
+  public boolean isBaalDefeated() {
+    return baalDefeated;
+  }
+
   public Snapshot snapshot() {
     return new Snapshot(baalWaves.snapshot(), baalPortals.snapshot(),
         baalOriginX, baalOriginY, hasBaalOrigin,
-        tyraelOriginX, tyraelOriginY, tyraelSpawned);
+        tyraelOriginX, tyraelOriginY, tyraelSpawned, baalDefeated);
   }
 
   public void restore(Snapshot snapshot) {
@@ -107,5 +122,6 @@ public final class Act5QuestGameState {
     tyraelOriginX = snapshot.tyraelOriginX;
     tyraelOriginY = snapshot.tyraelOriginY;
     tyraelSpawned = snapshot.tyraelSpawned;
+    baalDefeated = snapshot.baalDefeated;
   }
 }

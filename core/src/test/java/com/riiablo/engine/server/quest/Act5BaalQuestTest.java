@@ -71,4 +71,13 @@ class Act5BaalQuestTest {
     assertFalse(Act5BaalQuest.canTriggerLastPortal(granted,
         Act5BaalQuest.THRONE_OF_DESTRUCTION, Act5BaalQuest.MESSAGE_TYRAEL));
   }
+
+  @Test
+  void changedLevelTransitionsPreserveNativeStartedAndLeftTownBits() {
+    short started = Act5BaalQuest.start((short) 0);
+    assertTrue(NativeQuestRecord.has(started, NativeQuestRecord.STARTED));
+    short leftTown = Act5BaalQuest.leaveTown(started);
+    assertTrue(NativeQuestRecord.has(leftTown, NativeQuestRecord.STARTED));
+    assertTrue(NativeQuestRecord.has(leftTown, NativeQuestRecord.LEFT_TOWN));
+  }
 }

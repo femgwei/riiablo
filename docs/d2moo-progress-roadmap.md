@@ -3165,3 +3165,20 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 当前下一项：继续对照 D2MOO `ACT5Q6_Callback03_ChangedLevel`/`Callback09` 和
 `OBJECTS_OperateFunction72_LastPortal`，补齐跨 Harrogath/Chamber 的多人任务记录与
 `CUSTOM6` 传送完成同步，然后再核对五波仆从的原生 preset 出生坐标。
+
+### 2026-09-12 A5Q6 ChangedLevel/多人任务状态同步（本轮完成）
+
+- [x] 对照 D2MOO `ACT5Q6_Callback03_ChangedLevel` 及 `Callback13/14` 的状态部分，
+  在 `ZoneChangeEvent` 中同步 A5Q6 的 `STARTED`、`LEFT_TOWN`、`CUSTOM6`；完成角色
+  重连或重新进入 Act V 后不再丢失完成标记。
+- [x] 将巴尔击杀记录提升为游戏级 `baalDefeated` 快照。迟到或重连的扩展版角色进入
+  Worldstone Chamber 时，服务端可在没有旧 Baal 实体的情况下补发一次主目标/奖励/进度，
+  并保持幂等。
+- [x] 队伍成员进入 Chamber 时检查同队已完成玩家，按原生 `SetPrimaryGoalDoneForPartyMembers`
+  语义补齐主目标；`QuestResult`（Warp 请求）和 `PlayerP`/重连基线继续作为当前 Java
+  协议中的客户端完成通知，不新增 FlatBuffer/生成网络文件。
+- [x] 新增 `leaveTown` 与游戏级 Baal defeated 快照回归覆盖；A5Q6 定向测试、核心/D2GS
+  编译和 `git diff --check` 通过。
+
+当前下一项：核对五波仆从在 1.10f `SuperUniques.txt`/D2MOO preset 中的精确出生坐标、
+出生方向和环形偏移，替换当前仅按中心/环形搜索的近似实现；随后补充无资源坐标回归。
