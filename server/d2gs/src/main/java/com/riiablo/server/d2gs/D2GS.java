@@ -1649,6 +1649,83 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only fixture: marks all matching native quest objects as activated. */
+  static int headlessActivateQuestObjects(int levelId, int classId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) return 0;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger changed = new java.util.concurrent.atomic.AtomicInteger();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Object object = server.world
+              .getMapper(com.riiablo.engine.server.component.Object.class).get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+          if (object == null || object.base == null || wrapper == null || wrapper.zone != zone
+              || object.base.Id != classId) continue;
+          com.riiablo.engine.server.component.NativeObjectState state = server.world
+              .getMapper(com.riiablo.engine.server.component.NativeObjectState.class).get(entity);
+          if (state != null) {
+            state.persistActivated(true);
+            state.persistOpened(true);
+            state.persistMode(com.riiablo.engine.Engine.Object.MODE_ON);
+          }
+          object.mode = com.riiablo.engine.Engine.Object.MODE_ON;
+          object.stateFlags |= com.riiablo.engine.server.component.Object.STATE_OPENED
+              | com.riiablo.engine.server.component.Object.STATE_ACTIVATED;
+          com.riiablo.engine.server.component.CofReference cof = server.world
+              .getMapper(com.riiablo.engine.server.component.CofReference.class).get(entity);
+          if (cof != null) cof.mode = com.riiablo.engine.Engine.Object.MODE_ON;
+          changed.incrementAndGet();
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? changed.get() : 0;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return 0;
+    }
+  }
+
+  /** Test-only replay of the normal zone-change/rebuild path for quest objects. */
+  static boolean headlessRebuildQuestObjects(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean rebuilt = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        if (wrapper == null || wrapper.zone == null) return;
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.ZoneChangeEvent.obtain(playerId, wrapper.zone));
+        server.world.process();
+        rebuilt.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && rebuilt.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   private static Vector2 findHeadlessRoomPosition(
       D2GS server, Map.Zone zone, Map.RoomEx room) {
     if (server == null || zone == null || room == null) return null;

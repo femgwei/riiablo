@@ -3453,3 +3453,20 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 当前下一项：把该快照接口接入离屏双客户端场景，分别预置 A5Q2/A5Q3/A5Q5 完成记录，
   删除并重建对象后比较两客户端的对象数量、开启状态和同步可见性；随后再覆盖 A1-A3
   特殊箱/祭坛/任务物体。
+
+### 2026-09-12 A5Q2/A5Q3/A5Q5 双客户端对象重建场景（本轮完成）
+
+- [x] 新增 `--require-quest-object-dual`：两个 TCP 客户端分别进入 Frigid Highlands、
+  Frozen River、Arreat Summit，使用权威任务系统预置/恢复 A5Q2 牢笼、A5Q3 Frozen Anya、
+  A5Q5 Ancient 门状态。
+- [x] 新增测试桥接 `headlessActivateQuestObjects` 与 `headlessRebuildQuestObjects`，
+  只通过 `NativeObjectState`、`ZoneChangeEvent` 和固定 Tick 重放生产重建路径；不会绕过
+  任务系统直接改客户端快照。
+- [x] 双客户端各自请求 Quest Snapshot，验证 A5Q2/A5Q3/A5Q5 记录同步；权威对象快照
+  验证牢笼至少 5 个且全部开启、Frozen Anya 已解冻、Ancient 门存在且有开启门。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava`、QuestWarpPolicy 单测和
+  `git diff --check`；完整 MPQ 资源运行仍需在外部环境执行。
+
+当前下一项：在完整资源环境执行 `--require-quest-warp-dual` 与
+  `--require-quest-object-dual`，补采两客户端对象实体的 `CofReferenceP`/删除重建日志；
+  然后继续 A1-A3 特殊箱、祭坛、任务门和预设对象的同类重建覆盖。

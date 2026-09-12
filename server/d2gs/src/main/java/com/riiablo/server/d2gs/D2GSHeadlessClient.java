@@ -148,6 +148,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedBaalSave("BaalAma", 0x42414141)
         : config.requireQuestWarpDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireQuestObjectDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
         : config.generatedAmazon
@@ -173,6 +175,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireQuestWarpDual) {
       runQuestWarpDual(d2s, character);
+      return;
+    }
+    if (config.requireQuestObjectDual) {
+      runQuestObjectDual(d2s, character);
       return;
     }
     if (config.requireDenQuestScenario) {
@@ -1975,6 +1981,133 @@ public final class D2GSHeadlessClient {
     }
   }
 
+  /** Two-client A5 quest-object Room/ECS rebuild and visibility gate. */
+  private void runQuestObjectDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("QuestObjectPeer", 0x514F424A);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      int frig = com.riiablo.engine.server.quest.Act5RescueQuest.FRIGID_HIGHLANDS;
+      int cages = com.riiablo.engine.server.quest.Act5RescueQuest.CAGED_SOLDIER_OBJECT;
+      if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5,
+          com.riiablo.engine.server.quest.Act5RescueQuest.RECORD, (short) 0)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
+              com.riiablo.engine.server.quest.Act5RescueQuest.RECORD, (short) 0)
+          || !D2GS.headlessEnterLevel(a.playerId, frig)
+          || !D2GS.headlessEnterLevel(b.playerId, frig)) {
+        throw new IOException("A5Q2 Frigid Highlands staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, frig, "A5Q2 objects");
+      int activatedCages = D2GS.headlessActivateQuestObjects(frig, cages);
+      if (activatedCages < com.riiablo.engine.server.quest.Act5RescueQuest.REQUIRED_CAGES
+          || !D2GS.headlessRebuildQuestObjects(a.playerId)) {
+        throw new IOException("A5Q2 cage activation/rebuild unavailable: " + activatedCages);
+      }
+      int[] cageSnapshot = D2GS.headlessQuestObjectSnapshot(frig);
+      if (cageSnapshot.length < 2 || cageSnapshot[0] < 5 || cageSnapshot[1] < 5) {
+        throw new IOException("A5Q2 cage snapshot incomplete: "
+            + java.util.Arrays.toString(cageSnapshot));
+      }
+      QuestResult cageA = requestSnapshot(a, inA, outA, 10L);
+      QuestResult cageB = requestSnapshot(b, inB, outB, 10L);
+      int rescueRecord = com.riiablo.engine.server.quest.Act5RescueQuest.RECORD;
+      if (!hasQuestFlagAt(cageA, Riiablo.ACT5, rescueRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlagAt(cageB, Riiablo.ACT5, rescueRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+        throw new IOException("A5Q2 cage completion did not reach both clients");
+      }
+      log("a5q2_object_rebuild_pass", "cages=" + java.util.Arrays.toString(cageSnapshot)
+          + " clients=true,true");
+
+      int frozenRiver = com.riiablo.engine.server.quest.Act5PrisonQuest.FROZEN_RIVER;
+      int anya = com.riiablo.engine.server.quest.Act5PrisonQuest.FROZEN_ANYA_OBJECT;
+      short prisonComplete = com.riiablo.engine.server.quest.Act5PrisonQuest.complete((short) 0);
+      if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5,
+          com.riiablo.engine.server.quest.Act5PrisonQuest.RECORD, prisonComplete)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
+              com.riiablo.engine.server.quest.Act5PrisonQuest.RECORD, prisonComplete)
+          || !D2GS.headlessEnterLevel(a.playerId, frozenRiver)
+          || !D2GS.headlessEnterLevel(b.playerId, frozenRiver)) {
+        throw new IOException("A5Q3 Frozen River staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, frozenRiver, "A5Q3 objects");
+      if (!D2GS.headlessRebuildQuestObjects(a.playerId)) {
+        throw new IOException("A5Q3 Anya rebuild unavailable");
+      }
+      int[] anyaSnapshot = D2GS.headlessQuestObjectSnapshot(frozenRiver);
+      if (anyaSnapshot.length < 4 || anyaSnapshot[2] < 1 || anyaSnapshot[3] < 1) {
+        throw new IOException("A5Q3 Anya snapshot incomplete: "
+            + java.util.Arrays.toString(anyaSnapshot));
+      }
+      QuestResult anyaA = requestSnapshot(a, inA, outA, 20L);
+      QuestResult anyaB = requestSnapshot(b, inB, outB, 20L);
+      int prisonRecord = com.riiablo.engine.server.quest.Act5PrisonQuest.RECORD;
+      if (!hasQuestFlagAt(anyaA, Riiablo.ACT5, prisonRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlagAt(anyaB, Riiablo.ACT5, prisonRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+        throw new IOException("A5Q3 Anya record did not reach both clients");
+      }
+      log("a5q3_object_rebuild_pass", "anya=" + java.util.Arrays.toString(anyaSnapshot)
+          + " clients=true,true");
+
+      int summit = com.riiablo.engine.server.quest.Act5AncientsQuest.ARREAT_SUMMIT;
+      short ancientsComplete = com.riiablo.engine.server.quest.Act5AncientsQuest.complete((short) 0);
+      if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5,
+          com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, ancientsComplete)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
+              com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, ancientsComplete)
+          || !D2GS.headlessEnterLevel(a.playerId, summit)
+          || !D2GS.headlessEnterLevel(b.playerId, summit)) {
+        throw new IOException("A5Q5 Arreat Summit staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 objects");
+      if (!D2GS.headlessRebuildQuestObjects(a.playerId)) {
+        throw new IOException("A5Q5 Ancient door rebuild unavailable");
+      }
+      int[] ancientSnapshot = D2GS.headlessQuestObjectSnapshot(summit);
+      if (ancientSnapshot.length < 10
+          || (ancientSnapshot[6] + ancientSnapshot[8]) < 1
+          || (ancientSnapshot[7] + ancientSnapshot[9]) < 1) {
+        throw new IOException("A5Q5 door snapshot incomplete: "
+            + java.util.Arrays.toString(ancientSnapshot));
+      }
+      QuestResult ancientA = requestSnapshot(a, inA, outA, 30L);
+      QuestResult ancientB = requestSnapshot(b, inB, outB, 30L);
+      int ancientsRecord = com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD;
+      if (!hasQuestFlagAt(ancientA, Riiablo.ACT5, ancientsRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+          || !hasQuestFlagAt(ancientB, Riiablo.ACT5, ancientsRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
+        throw new IOException("A5Q5 Ancient reward record did not reach both clients");
+      }
+      log("a5q5_object_rebuild_pass", "ancients="
+          + java.util.Arrays.toString(ancientSnapshot) + " clients=true,true");
+      log("quest_object_dual_pass", "a5q2=true a5q3=true a5q5=true rebuild=true");
+    }
+  }
+
+  private QuestResult requestSnapshot(D2GSHeadlessClient client, DataInputStream input,
+      OutputStream output, long requestId) throws Exception {
+    send(output, questRequestPacket(requestId, QuestOperation.SNAPSHOT, -1, -1));
+    return client.awaitQuestResult(input, requestId, deadline());
+  }
+
+  private static boolean hasQuestFlagAt(QuestResult result, int act, int recordIndex, int flag) {
+    int offset = act * com.riiablo.engine.server.quest.QuestSnapshot.RECORDS_PER_ACT;
+    return result != null && result.success() && result.questRecordsLength() > offset + recordIndex
+        && hasQuestFlag(result.questRecords(offset + recordIndex), flag);
+  }
+
   /**
    * Two-client cross-Act quest-Warp gate. Each case first exercises the native
    * rejection, then the successful interaction, exact request replay and a
@@ -2561,6 +2694,22 @@ public final class D2GSHeadlessClient {
           + " townParty=" + b.playerId + " outsider=" + c.playerId
           + " pendingReconnect=true warrivGranted=true replay=true grantedReconnect=true"
           + " pendingRevision=" + pendingRevision + " grantedRevision=" + grantedRevision);
+    }
+  }
+
+  private void awaitTwoQuestLevels(D2GSHeadlessClient a, D2GSHeadlessClient b,
+      DataInputStream inA, DataInputStream inB, int level, String scenario) throws Exception {
+    long levelDeadline = deadline();
+    while (System.currentTimeMillis() < levelDeadline
+        && (a.currentLevelId != level || b.currentLevelId != level)) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+      if (packet != null) a.consume(packet);
+      packet = readPacket(inB);
+      if (packet != null) b.consume(packet);
+    }
+    if (a.currentLevelId != level || b.currentLevelId != level) {
+      throw new IOException(scenario + " clients did not observe staged level: "
+          + a.currentLevelId + ',' + b.currentLevelId);
     }
   }
 
@@ -4784,6 +4933,7 @@ public final class D2GSHeadlessClient {
     boolean requireFallenScenario;
     boolean requireBaalWaveDual;
     boolean requireQuestWarpDual;
+    boolean requireQuestObjectDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
     boolean requireAndarielQuestScenario;
@@ -4826,6 +4976,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
+        else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
         else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
@@ -4871,10 +5022,12 @@ public final class D2GSHeadlessClient {
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
+          && !config.requireQuestObjectDual
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
+          && !config.requireQuestObjectDual
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -4910,7 +5063,7 @@ public final class D2GSHeadlessClient {
           + " [--require-movement-intent]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
-          + " [--require-quest-warp-dual] [--require-den-quest]"
+          + " [--require-quest-warp-dual] [--require-quest-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
