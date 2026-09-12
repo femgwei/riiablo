@@ -3845,3 +3845,18 @@ Symbol 的真实选择、地下区域入口和地图拓扑校验。
 `:server:d2gs:compileJava`、`:server:d2gs:headlessA2TombDual`、`git diff --check` 均通过。
 下一项：继续补七墓真实 DS1 入口/出口特殊墙体的 slot 对齐和地图碰撞连续性，优先核对
 `Levels.txt` 的 Vis/Warp 反向边与缺失资源时的诊断日志。
+
+### 2026-09-13 A2 七墓 Vis/Warp slot 诊断与反向边校验（本轮完成）
+
+- [x] 新增 `validateAct2TombTopology`，逐墓检查 `Levels.txt` 的有效 Warp slot、反向
+  Vis/Warp 边、缺失的 Levels/Zone 记录，并将静态指向 Duriel's Lair 计为错误（Lair 仅由
+  Orifice 任务 Warp 打开）。
+- [x] Act II 建图阶段输出七墓拓扑摘要，资源缺失时区分 `missingGenerated` 与
+  `missingReverse`，避免把 DS1 不完整误判为代码生成成功。
+- [x] 增加正向/反向 slot 单测；`Act2MapBuilderD2MooWarpTest` 全部通过，覆盖 Canyon↔Tomb
+  反向槽位、七墓缺失记录与非法 Duriel 静态边。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Act2MapBuilderD2MOD.java`、
+`core/src/test/java/com/riiablo/map/Act2MapBuilderD2MooWarpTest.java`。
+下一项：根据拓扑诊断结果补入口特殊墙体的落点碰撞校正，验证 Warp 邻接格可通行且不会把
+玩家送入墙体或 Zone 外。

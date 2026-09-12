@@ -604,6 +604,11 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     Gdx.app.log(TAG, String.format(
         "Act2 linked dungeon summary: edges=%d created=%d generated=%d missingTargets=%d missingReverse=%d",
         report.edgeCount, created, generated.size(), report.missingTargets, report.missingReverse));
+    TombTopologyReport tombReport = validateAct2TombTopology(Riiablo.files.Levels, generated);
+    Gdx.app.log(TAG, String.format(
+        "Act2 tomb topology: levels=%d/%d edges=%d reverseMissing=%d generatedMissing=%d staticDurielEdges=%d",
+        tombReport.presentLevels, tombReport.expectedLevels, tombReport.tombEdges,
+        tombReport.missingReverse, tombReport.missingGenerated, tombReport.staticDurielEdges));
   }
 
   private Zone createLinkedDungeonZone(Map map, Levels.Entry level, int diff, int seed,
@@ -791,6 +796,68 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     int missingTargets;
     int missingGenerated;
     int missingReverse;
+  }
+
+  /** Diagnostics for the seven Tomb levels and their native Vis/Warp slots. */
+  static TombTopologyReport validateAct2TombTopology(Iterable<Levels.Entry> levels,
+      Set<Integer> generatedLevelIds) {
+    HashMap<Integer, Levels.Entry> byId = new HashMap<>();
+    if (levels != null) for (Levels.Entry level : levels) {
+      if (level != null) byId.put(level.Id, level);
+    }
+    TombTopologyReport report = new TombTopologyReport();
+    report.expectedLevels = Act2TombSelection.LAST_TOMB_LEVEL
+        - Act2TombSelection.FIRST_TOMB_LEVEL + 1;
+    for (int id = Act2TombSelection.FIRST_TOMB_LEVEL;
+        id <= Act2TombSelection.LAST_TOMB_LEVEL; id++) {
+      Levels.Entry level = byId.get(id);
+      if (level == null) {
+        // A missing Levels.txt row is itself a generation gap; count it so
+        // diagnostics distinguish an absent resource from an unmaterialized
+        // but valid tomb zone.
+        report.missingGenerated++;
+        continue;
+      }
+      report.presentLevels++;
+      if (generatedLevelIds == null || !generatedLevelIds.contains(id)) report.missingGenerated++;
+      if (level.Vis == null || level.Warp == null) continue;
+      int count = Math.min(8, Math.min(level.Vis.length, level.Warp.length));
+      for (int slot = 0; slot < count; slot++) {
+        int destination = level.Vis[slot];
+        if (level.Warp[slot] < 0 || destination <= 0) continue;
+        if (destination == LEVEL_DURIELSLAIR) {
+          // Duriel's Lair is a runtime quest destination, never a static
+          // tomb edge in Levels.txt.
+          report.staticDurielEdges++;
+          continue;
+        }
+        if (destination != LEVEL_CANYONOFTHEMAGI
+            && (destination < Act2TombSelection.FIRST_TOMB_LEVEL
+                || destination > Act2TombSelection.LAST_TOMB_LEVEL)) continue;
+        report.tombEdges++;
+        Levels.Entry reverse = byId.get(destination);
+        if (!hasWarpDestination(reverse, id)) report.missingReverse++;
+      }
+    }
+    return report;
+  }
+
+  private static boolean hasWarpDestination(Levels.Entry level, int destination) {
+    if (level == null || level.Vis == null || level.Warp == null) return false;
+    int count = Math.min(8, Math.min(level.Vis.length, level.Warp.length));
+    for (int slot = 0; slot < count; slot++) {
+      if (level.Vis[slot] == destination && level.Warp[slot] >= 0) return true;
+    }
+    return false;
+  }
+
+  static final class TombTopologyReport {
+    int expectedLevels;
+    int presentLevels;
+    int tombEdges;
+    int missingReverse;
+    int missingGenerated;
+    int staticDurielEdges;
   }
 
   /** Resolves the native Valley-of-Snakes -> Canyon placement contract. */

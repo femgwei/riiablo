@@ -95,6 +95,40 @@ class Act2MapBuilderD2MooWarpTest {
     assertEquals(0, report.missingReverse);
   }
 
+  @Test
+  void tombTopologyRequiresAllLevelsAndRejectsStaticDurielEdge() {
+    java.util.ArrayList<Levels.Entry> levels = new java.util.ArrayList<>();
+    for (int id = com.riiablo.engine.server.quest.Act2TombSelection.FIRST_TOMB_LEVEL;
+        id <= com.riiablo.engine.server.quest.Act2TombSelection.LAST_TOMB_LEVEL; id++) {
+      levels.add(level(id, new int[] {46}, new int[] {0}));
+    }
+    // A static 74 edge is invalid; Duriel's Lair is opened only by Orifice.
+    Levels.Entry invalid = levels.get(0);
+    invalid.Vis = new int[] {74};
+    invalid.Warp = new int[] {0};
+    Act2MapBuilderD2MOD.TombTopologyReport report =
+        Act2MapBuilderD2MOD.validateAct2TombTopology(levels,
+            new HashSet<>(java.util.Arrays.asList(67, 68, 69, 70, 71, 72, 73)));
+    assertEquals(7, report.presentLevels);
+    assertEquals(7, report.expectedLevels);
+    assertEquals(6, report.tombEdges);
+    assertEquals(1, report.staticDurielEdges);
+    assertEquals(0, report.missingGenerated);
+  }
+
+  @Test
+  void tombTopologyReportsMissingReverseSlotAndGeneration() {
+    Levels.Entry tomb = level(67, new int[] {46}, new int[] {0});
+    Levels.Entry canyon = level(46, new int[] {67}, new int[] {0});
+    Act2MapBuilderD2MOD.TombTopologyReport report =
+        Act2MapBuilderD2MOD.validateAct2TombTopology(
+            Arrays.asList(tomb, canyon), new HashSet<>(Arrays.asList(67)));
+    assertEquals(1, report.presentLevels);
+    assertEquals(6, report.missingGenerated);
+    assertEquals(1, report.tombEdges);
+    assertEquals(0, report.missingReverse);
+  }
+
   private static Levels.Entry level(int id, int[] vis, int[] warp) {
     Levels.Entry level = new Levels.Entry();
     level.Id = id;
