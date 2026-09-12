@@ -71,6 +71,10 @@ public class Act5QuestSystem extends PassiveSystem {
   private final IntSet killedAncientEntities = new IntSet();
   private final IntSet spawnedBaalLevels = new IntSet();
   private final IntSet killedBaalEntities = new IntSet();
+  private final IntSet baalWaveEntities = new IntSet();
+  private final Act5BaalWaveState baalWaveState = new Act5BaalWaveState();
+  private float baalWaveOriginX;
+  private float baalWaveOriginY;
   private final IntSet rescuedCages = new IntSet();
 
   @Override
@@ -111,7 +115,7 @@ public class Act5QuestSystem extends PassiveSystem {
       if (!hasAncientsPrerequisite(player.data)) return;
       updateBaalRecord(player.data, Act5BaalQuest::enterArea, "entered-worldstone-area");
       if (event.zone.level.Id == Act5BaalQuest.THRONE_OF_DESTRUCTION) {
-        spawnBaalIfNeeded(event.entityId, event.zone.level.Id);
+        startBaalWavesIfNeeded(event.entityId);
       }
     }
   }
@@ -194,6 +198,12 @@ public class Act5QuestSystem extends PassiveSystem {
         && killedBaalEntities.add(event.victim)) {
       completeBaalForPlayers();
       log.info("[A5Q6] Baal defeated: victim={} killer={}", event.victim, event.killer);
+      return;
+    }
+    if (baalWaveEntities.remove(event.victim)) {
+      if (baalWaveState.defeatOne() && baalWaveState.alive() == 0) {
+        advanceBaalWave(event.victim);
+      }
       return;
     }
     if (isNihlathak(event.victim)
@@ -455,7 +465,45 @@ public class Act5QuestSystem extends PassiveSystem {
     }
   }
 
-  private void spawnBaalIfNeeded(int playerId, int levelId) {
+  private void startBaalWavesIfNeeded(int playerId) {
+    if (!baalWaveState.canStart() || factory == null || mPosition == null) return;
+    Position origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
+    if (origin == null) return;
+    baalWaveOriginX = origin.position.x;
+    baalWaveOriginY = origin.position.y;
+    baalWaveState.startWave();
+    spawnCurrentBaalWave();
+    log.info("[A5Q6] Baal wave started: wave={}/{} player={}", baalWaveState.wave(),
+        Act5BaalQuest.WAVE_COUNT, playerId);
+  }
+
+  private void spawnCurrentBaalWave() {
+    if (factory == null || baalWaveState.wave() <= 0
+        || baalWaveState.wave() > Act5BaalQuest.WAVE_COUNT) return;
+    int monsterClass = Act5BaalQuest.WAVE_MONSTER_CLASSES[baalWaveState.wave() - 1];
+    for (int i = 0; i < Act5BaalQuest.MONSTERS_PER_WAVE; i++) {
+      float x = baalWaveOriginX + (i - 2) * 1.5f;
+      float y = baalWaveOriginY + (i % 2 == 0 ? 1f : -1f);
+      int entity = factory.createMonster(monsterClass, x, y);
+      if (entity >= 0) baalWaveEntities.add(entity);
+    }
+    log.info("[A5Q6] Baal wave spawned: wave={}/{} class={} entities={}",
+        baalWaveState.wave(), Act5BaalQuest.WAVE_COUNT, monsterClass, baalWaveEntities.size);
+  }
+
+  private void advanceBaalWave(int sourceEntity) {
+    if (baalWaveState.wave() < Act5BaalQuest.WAVE_COUNT) {
+      baalWaveState.advanceWave();
+      spawnCurrentBaalWave();
+      log.info("[A5Q6] Baal wave advanced: wave={}/{} source={}", baalWaveState.wave(),
+          Act5BaalQuest.WAVE_COUNT, sourceEntity);
+      return;
+    }
+    spawnBaalAfterWaves();
+  }
+
+  private void spawnBaalAfterWaves() {
+    int levelId = Act5BaalQuest.THRONE_OF_DESTRUCTION;
     if (spawnedBaalLevels.contains(levelId) || factory == null || monstersByZone == null) return;
     IntBag entities = monstersByZone.getEntities();
     int[] ids = entities.getData();
@@ -467,12 +515,11 @@ public class Act5QuestSystem extends PassiveSystem {
       }
     }
     MonStats.Entry stats = resolveBaalStats();
-    Position origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
-    if (stats == null || origin == null) return;
-    int entity = factory.createMonster(stats, origin.position.x + 3f, origin.position.y);
+    if (stats == null) return;
+    int entity = factory.createMonster(stats, baalWaveOriginX + 3f, baalWaveOriginY);
     if (entity >= 0) {
       spawnedBaalLevels.add(levelId);
-      log.info("[A5Q6] Baal spawned: player={} entity={} level={}", playerId, entity, levelId);
+      log.info("[A5Q6] Baal spawned after waves: entity={} level={}", entity, levelId);
     }
   }
 

@@ -2780,9 +2780,25 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 - [x] 将现有 `THEWORLDSTONEKEEPLEV1/2`、`WORLDSTONECHAMBER` 别名追加到
   `Act5MapBuilderD2MOD` 主链，配置三段双向 Warp；Worldstone 区域不再套用室外边界/神殿
   特殊生成，保留独立怪物生成器。新增地图链连续性回归测试。
-- [ ] 五波 Baal 仆从、Baal's Portal/Last Portal、Tyrael 结束传送和 D2MOO 的经验/金币
-  奖励尚未完全接入。由于现有 `D2LevelIds` 对 128–136 区间存在历史别名，本轮沿用
-  工程已有别名，没有直接重排全局 LevelId，避免破坏已完成 Act V 地图链。
+- [x] 五波 Baal 仆从的基础服务端状态机已接入；Baal's Portal/Last Portal、Tyrael
+  结束传送和 D2MOO 的经验/金币奖励尚未完全接入。由于现有 `D2LevelIds` 对 128–136
+  区间存在历史别名，本轮沿用工程已有别名，没有直接重排全局 LevelId，避免破坏已完成
+  Act V 地图链。
 
 当前下一项：接入 D2MOO A5Q6 五波 Baal 仆从和波次状态机，再实现 Baal/Last Portal
 对象；完成后回补 A5Q5 远古人复位动画与原生经验奖励。
+
+### 2026-09-12 Act V A5Q6 Throne 五波仆从状态机（本轮完成基础闭环）
+
+- [x] 新增 `Act5BaalWaveState`，固定五波、每波五名成员；只有当前波所有成员都产生
+  `DeathEvent` 后才推进下一波，重复死亡不会重复扣减或重复生成。
+- [x] 使用 1.10f `MonsterIds.h` 中的原生波次基础类：`BaalHighPriest`、
+  `PutridDefiler1`、`PainWorm1`、`VenomLord`、`BaalMinion1`；服务端在 Throne
+  进入时启动第一波，第五波清空后才生成 Baal。
+- [x] 波次生成位置固定在首次进入玩家的 Throne 原点附近，实体集合由服务端持有，
+  不依赖渲染线程；新增 `Act5BaalWaveStateTest`，验证五波顺序和幂等行为。
+- [ ] 当前仍未接入 D2MOO 的每波首领精确变体、延迟计时、区域清场条件、Baal Portal/
+  Last Portal、Tyrael 结束传送和原生经验/金币奖励；这些属于后续对象与奖励专项。
+
+当前下一项：补齐 A5Q6 Baal Portal/Last Portal 与 Worldstone Chamber 开关状态，再
+回补五波首领精确变体和 A5Q5 远古人复位动画。

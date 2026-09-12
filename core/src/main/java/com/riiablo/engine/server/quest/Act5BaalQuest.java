@@ -12,6 +12,10 @@ public final class Act5BaalQuest {
   public static final int WORLDSTONE_CHAMBER = D2LevelIds.LEVEL_WORLDSTONECHAMBER;
   public static final int MESSAGE_TYRAEL = 20175;
   public static final int BAAL_CLASS = 544;
+  /** Native wave leader/base classes from MonsterIds.h (1.10f). */
+  public static final int[] WAVE_MONSTER_CLASSES = {557, 546, 551, 558, 571};
+  public static final int WAVE_COUNT = 5;
+  public static final int MONSTERS_PER_WAVE = 5;
 
   public static short start(short record) {
     return isFinished(record) ? record : NativeQuestRecord.set(record, NativeQuestRecord.STARTED);
