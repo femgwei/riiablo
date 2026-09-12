@@ -1,5 +1,7 @@
 package com.riiablo.engine.server.quest;
 
+import com.d2moo.common.drlg.D2LevelIds;
+
 /** Native D2MOO A4Q2 Diablo record transitions. */
 public final class Act4DiabloQuest {
   private Act4DiabloQuest() {}
@@ -9,6 +11,8 @@ public final class Act4DiabloQuest {
   public static final int FIRST_SEAL = 392;
   public static final int LAST_SEAL = 396;
   public static final int CHAOS_SANCTUARY = 110;
+  public static final int PANDEMONIUM_FORTRESS = D2LevelIds.LEVEL_THEPANDEMONIUMFORTRESS;
+  public static final int HARROGATH = D2LevelIds.LEVEL_HARROGATH;
   public static final int MESSAGE_TYRAEL_ACT5 = 20000;
 
   public static boolean isSealObject(int objectClassId) {

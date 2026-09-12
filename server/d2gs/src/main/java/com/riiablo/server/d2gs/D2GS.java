@@ -724,6 +724,84 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only quest fixture: sets one native quest record on the authoritative player. */
+  static boolean headlessSetQuestRecord(int playerId, int act, int record, short value) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null
+        || act < 0 || act >= Riiablo.NUM_ACTS || record < 0) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        if (player == null || player.data == null) return;
+        short[] records = player.data.getQuests(act);
+        if (records == null || record >= records.length) return;
+        records[record] = value;
+        updated.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /**
+   * Test-only fixture for a real quest Warp. The player is placed in the
+   * requested source level, then the production EntityFactory creates and
+   * registers a networked quest Warp in that zone.
+   */
+  static int headlessPrepareQuestWarp(int playerId, int sourceLevelId, int destinationLevelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Vector2 destination = findHeadlessLevelPosition(server, sourceLevelId);
+        Position playerPosition = server.world.getMapper(Position.class).get(playerId);
+        com.riiablo.engine.server.component.MapWrapper playerWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(sourceLevelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (destination == null || playerPosition == null || playerWrapper == null || zone == null) {
+          return;
+        }
+        playerPosition.position.set(destination);
+        playerWrapper.set(server.map, zone);
+        com.riiablo.engine.server.component.Box2DBody body = server.world
+            .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+        if (body != null && body.body != null) body.body.setTransform(destination, body.body.getAngle());
+        Map.RoomEx room = zone.findRoomEx(destination.x, destination.y);
+        playerWrapper.roomId = room == null ? -1 : room.id;
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.ZoneChangeEvent.obtain(playerId, zone));
+        int warp = server.factory.createQuestWarp(destinationLevelId, destination.x, destination.y);
+        if (warp == Engine.INVALID_ENTITY) return;
+        zone.addWarp(warp);
+        result.set(warp);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /** Returns level, RoomEx, zone consistency and walk-collision state after a Warp. */
   static int[] headlessWarpState(int playerId) {
     D2GS server = activeHeadlessInstance;

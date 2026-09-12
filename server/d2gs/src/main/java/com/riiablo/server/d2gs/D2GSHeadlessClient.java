@@ -146,6 +146,8 @@ public final class D2GSHeadlessClient {
     waitForServer();
     byte[] d2s = config.requireBaalWaveDual
         ? createGeneratedBaalSave("BaalAma", 0x42414141)
+        : config.requireQuestWarpDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
         : config.generatedAmazon
@@ -167,6 +169,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireBaalWaveDual) {
       runBaalWaveDual(d2s, character);
+      return;
+    }
+    if (config.requireQuestWarpDual) {
+      runQuestWarpDual(d2s, character);
       return;
     }
     if (config.requireDenQuestScenario) {
@@ -1966,6 +1972,157 @@ public final class D2GSHeadlessClient {
           + java.util.Arrays.toString(normal) + " nightmare="
           + java.util.Arrays.toString(nightmare) + " hell="
           + java.util.Arrays.toString(hell));
+    }
+  }
+
+  /**
+   * Two-client cross-Act quest-Warp gate. Each case first exercises the native
+   * rejection, then the successful interaction, exact request replay and a
+   * fresh request against the stale source Warp. The final case reconnects the
+   * second client before reusing the A5Q4 portal.
+   */
+  private void runQuestWarpDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("QuestWarpPeer", 0x51575250);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      int a3Source = com.riiablo.engine.server.quest.Act3MephistoQuest.MEPHISTO_LEVEL;
+      int a3Destination = com.riiablo.engine.server.quest.Act3MephistoQuest.DESTINATION_ACT4;
+      if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT3,
+          com.riiablo.engine.server.quest.Act3MephistoQuest.RECORD, (short) 0)) {
+        throw new IOException("A3Q6 fixture record unavailable");
+      }
+      int a3Warp = D2GS.headlessPrepareQuestWarp(a.playerId, a3Source, a3Destination);
+      if (a3Warp == Engine.INVALID_ENTITY) throw new IOException("A3 Hell Gate fixture unavailable");
+      awaitLevel(a, inA, a3Source, deadline());
+      send(outA, questRequestPacket(100L, QuestOperation.WARP_INTERACTION, a3Warp, -1));
+      QuestResult a3Rejected = a.awaitQuestResult(inA, 100L, deadline());
+      if (a3Rejected.success() || !"A3Q6_NOT_COMPLETE".equals(a3Rejected.reason())) {
+        throw new IOException("A3 Hell Gate accepted an incomplete quest: " + a3Rejected.reason());
+      }
+      short a3Complete = com.riiablo.engine.server.quest.Act3MephistoQuest.complete((short) 0);
+      if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT3,
+          com.riiablo.engine.server.quest.Act3MephistoQuest.RECORD, a3Complete)) {
+        throw new IOException("A3Q6 completion fixture unavailable");
+      }
+      send(outA, questRequestPacket(101L, QuestOperation.WARP_INTERACTION, a3Warp, -1));
+      QuestResult a3Accepted = a.awaitQuestResult(inA, 101L, deadline());
+      awaitLevel(a, inA, a3Destination, deadline());
+      if (!a3Accepted.success()) throw new IOException("A3 Hell Gate rejected completion: "
+          + a3Accepted.reason());
+      send(outA, questRequestPacket(101L, QuestOperation.WARP_INTERACTION, a3Warp, -1));
+      if (!a.awaitQuestResult(inA, 101L, deadline()).success()) {
+        throw new IOException("A3 Hell Gate exact replay was not idempotent");
+      }
+      send(outA, questRequestPacket(102L, QuestOperation.WARP_INTERACTION, a3Warp, -1));
+      QuestResult a3Stale = a.awaitQuestResult(inA, 102L, deadline());
+      if (a3Stale.success()) throw new IOException("A3 stale source Warp was accepted");
+      log("a3_quest_warp_pass", "warp=" + a3Warp + " reject=" + a3Rejected.reason()
+          + " replay=true staleRejected=" + a3Stale.reason());
+
+      int a4Source = com.riiablo.engine.server.quest.Act4DiabloQuest.PANDEMONIUM_FORTRESS;
+      int a4Destination = com.riiablo.engine.server.quest.Act4DiabloQuest.HARROGATH;
+      short a4Empty = 0;
+      if (!D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT4,
+          com.riiablo.engine.server.quest.Act4DiabloQuest.RECORD, a4Empty)) {
+        throw new IOException("A4Q2 fixture record unavailable");
+      }
+      int a4Warp = D2GS.headlessPrepareQuestWarp(b.playerId, a4Source, a4Destination);
+      if (a4Warp == Engine.INVALID_ENTITY) throw new IOException("A4 portal fixture unavailable");
+      awaitLevel(b, inB, a4Source, deadline());
+      send(outB, questRequestPacket(200L, QuestOperation.WARP_INTERACTION, a4Warp, -1));
+      QuestResult a4Rejected = b.awaitQuestResult(inB, 200L, deadline());
+      if (a4Rejected.success() || !"A4Q2_NOT_COMPLETE".equals(a4Rejected.reason())) {
+        throw new IOException("A4 Diablo portal accepted an incomplete quest: "
+            + a4Rejected.reason());
+      }
+      short a4Complete = com.riiablo.engine.server.quest.Act4DiabloQuest.claimCompletion(
+          com.riiablo.engine.server.quest.Act4DiabloQuest.complete((short) 0));
+      if (!D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT4,
+          com.riiablo.engine.server.quest.Act4DiabloQuest.RECORD, a4Complete)) {
+        throw new IOException("A4Q2 completion fixture unavailable");
+      }
+      send(outB, questRequestPacket(201L, QuestOperation.WARP_INTERACTION, a4Warp, -1));
+      QuestResult a4Accepted = b.awaitQuestResult(inB, 201L, deadline());
+      awaitLevel(b, inB, a4Destination, deadline());
+      if (!a4Accepted.success()) throw new IOException("A4 Diablo portal rejected completion: "
+          + a4Accepted.reason());
+      send(outB, questRequestPacket(201L, QuestOperation.WARP_INTERACTION, a4Warp, -1));
+      if (!b.awaitQuestResult(inB, 201L, deadline()).success()) {
+        throw new IOException("A4 Diablo portal exact replay was not idempotent");
+      }
+      send(outB, questRequestPacket(202L, QuestOperation.WARP_INTERACTION, a4Warp, -1));
+      QuestResult a4Stale = b.awaitQuestResult(inB, 202L, deadline());
+      if (a4Stale.success()) throw new IOException("A4 stale source Warp was accepted");
+      log("a4_quest_warp_pass", "warp=" + a4Warp + " reject=" + a4Rejected.reason()
+          + " replay=true staleRejected=" + a4Stale.reason());
+
+      int a5Source = com.riiablo.engine.server.quest.Act5BaalQuest.HARROGATH;
+      int a5Destination = com.riiablo.engine.server.quest.Act5NihlathakQuest.NIHLATHAK_TEMPLE;
+      int prisonRecord = com.riiablo.engine.server.quest.Act5PrisonQuest.RECORD;
+      int nihlathakRecord = com.riiablo.engine.server.quest.Act5NihlathakQuest.RECORD;
+      if (!D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5, prisonRecord, (short) 0)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5, nihlathakRecord, (short) 0)) {
+        throw new IOException("A5Q4 fixture records unavailable");
+      }
+      int a5Warp = D2GS.headlessPrepareQuestWarp(b.playerId, a5Source, a5Destination);
+      if (a5Warp == Engine.INVALID_ENTITY) throw new IOException("A5 Nihlathak portal unavailable");
+      awaitLevel(b, inB, a5Source, deadline());
+      send(outB, questRequestPacket(300L, QuestOperation.WARP_INTERACTION, a5Warp, -1));
+      QuestResult a5Rejected = b.awaitQuestResult(inB, 300L, deadline());
+      if (a5Rejected.success() || !"A5Q4_NOT_STARTED".equals(a5Rejected.reason())) {
+        throw new IOException("A5 Nihlathak portal accepted an incomplete quest: "
+            + a5Rejected.reason());
+      }
+      short prisonComplete = com.riiablo.engine.server.quest.Act5PrisonQuest.complete((short) 0);
+      short nihlathakStarted = com.riiablo.engine.server.quest.Act5NihlathakQuest.start((short) 0);
+      if (!D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5, prisonRecord, prisonComplete)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
+              nihlathakRecord, nihlathakStarted)) {
+        throw new IOException("A5Q4 completion fixture unavailable");
+      }
+      send(outB, questRequestPacket(301L, QuestOperation.WARP_INTERACTION, a5Warp, -1));
+      QuestResult a5Accepted = b.awaitQuestResult(inB, 301L, deadline());
+      awaitLevel(b, inB, a5Destination, deadline());
+      if (!a5Accepted.success()) throw new IOException("A5 Nihlathak portal rejected completion: "
+          + a5Accepted.reason());
+      send(outB, questRequestPacket(301L, QuestOperation.WARP_INTERACTION, a5Warp, -1));
+      if (!b.awaitQuestResult(inB, 301L, deadline()).success()) {
+        throw new IOException("A5 Nihlathak portal exact replay was not idempotent");
+      }
+      send(outB, questRequestPacket(302L, QuestOperation.WARP_INTERACTION, a5Warp, -1));
+      QuestResult a5Stale = b.awaitQuestResult(inB, 302L, deadline());
+      if (a5Stale.success()) throw new IOException("A5 stale source Warp was accepted");
+      log("a5_quest_warp_pass", "warp=" + a5Warp + " reject=" + a5Rejected.reason()
+          + " replay=true staleRejected=" + a5Stale.reason());
+
+      socketB.close();
+      a.awaitDeleted(inA, b.playerId, deadline());
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        send(reconnectOutput, questRequestPacket(400L, QuestOperation.SNAPSHOT, -1, -1));
+        QuestResult restored = reconnected.awaitQuestResult(reconnectInput, 400L, deadline());
+        if (!restored.success() || restored.questRecordsLength() <= nihlathakRecord
+            || !hasQuestFlag(restored.questRecords(nihlathakRecord),
+                com.riiablo.engine.server.quest.NativeQuestRecord.STARTED)) {
+          throw new IOException("A5Q4 started record was not restored after reconnect");
+        }
+        log("quest_warp_reconnect_pass", "player=" + reconnected.playerId
+            + " nihlathakStarted=true");
+      }
+      log("quest_warp_dual_pass", "a3=true a4=true a5=true replay=true staleRejected=true");
     }
   }
 
@@ -4598,6 +4755,7 @@ public final class D2GSHeadlessClient {
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
     boolean requireBaalWaveDual;
+    boolean requireQuestWarpDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
     boolean requireAndarielQuestScenario;
@@ -4639,6 +4797,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
+        else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
         else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
@@ -4683,11 +4842,11 @@ public final class D2GSHeadlessClient {
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
       }
-      if (!config.generatedAmazon && !config.requireBaalWaveDual
+      if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
-      if (!config.generatedAmazon && !config.requireBaalWaveDual
+      if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -4722,7 +4881,8 @@ public final class D2GSHeadlessClient {
           + " [--skill 0] [--require-missile] [--require-sim-tick]"
           + " [--require-movement-intent]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
-          + " [--require-fallen-scenario] [--require-baal-wave-dual] [--require-den-quest]"
+          + " [--require-fallen-scenario] [--require-baal-wave-dual]"
+          + " [--require-quest-warp-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"

@@ -3379,3 +3379,20 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 当前下一项：在现有双 socket 离屏入口中加入 A3/A4/A5 任务 Warp 的跨 Act 回归，分别验证
   正常使用、错误任务记录拒绝、精确 request id 重放、过期源区域拒绝，以及断线重连后的
   Warp 状态重建。
+
+### 2026-09-12 A3/A4/A5 任务 Warp 双客户端离屏回归入口（本轮完成）
+
+- [x] `D2GSHeadlessClient` 新增 `--require-quest-warp-dual`，通过两个真实 TCP 客户端
+  依次覆盖 A3Q6 Hell Gate、A4Q2 Diablo 结束门、A5Q4 Nihlathak 门；每个场景先使用错误
+  任务记录验证权威拒绝，再使用原生记录位放行。
+- [x] 每个 Warp 都由生产 `EntityFactory.createQuestWarp` 创建并注册到真实 `Map.Zone`，
+  不绕过 `WarpInteractor`/D2GS 校验；成功请求的同一 request id 必须缓存重放成功，新的
+  request id 点击已离开的源 Warp 必须拒绝。
+- [x] A5Q4 成功后断开第二客户端，以原始 D2S 重连并请求 Quest Snapshot，验证
+  `Nihlathak STARTED` 记录没有被旧存档覆盖；新增 `headlessSetQuestRecord` 和
+  `headlessPrepareQuestWarp` 仅为离屏 fixture 使用，不修改网络协议。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava` 和 `git diff --check`；本机
+  缺少可运行的完整 1.10f MPQ，真实 socket 场景需在具备资源的环境执行。
+
+当前下一项：在该入口补充跨客户端可见性和目标区域重连后的 Warp 实体快照校验，并将
+  A3/A4/A5 任务门槛结果写入统一离屏回归日志；随后继续校验其他 Act 任务对象与区域入口。
