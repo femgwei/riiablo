@@ -16,6 +16,8 @@ public final class NativeQuestObjectResolver {
     HORADRIC_ORIFICE(false, true, Engine.Object.MODE_ON),
     ARCANE_SANCTUARY_TOME(false, true, Engine.Object.MODE_ON),
     GIDBINN_DECOY(false, true, Engine.Object.MODE_OP),
+    KHALIM_CHEST(false, true, Engine.Object.MODE_ON),
+    COMPELLING_ORB(false, false, Engine.Object.MODE_OP),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -45,6 +47,12 @@ public final class NativeQuestObjectResolver {
   public static final int ARCANE_SANCTUARY_TOME = 357;
   /** Objects.txt Gidbinn decoy / OperateFn 31. */
   public static final int GIDBINN_DECOY = 252;
+  /** Native Khalim chest variants / OperateFn 57..59. */
+  public static final int KHALIM_CHEST1 = 405;
+  public static final int KHALIM_CHEST2 = 406;
+  public static final int KHALIM_CHEST3 = 407;
+  /** Travincal compelling orb (OperateFn 53). */
+  public static final int COMPELLING_ORB = 404;
 
   private NativeQuestObjectResolver() {}
 
@@ -63,6 +71,9 @@ public final class NativeQuestObjectResolver {
       case HORADRIC_ORIFICE: return Type.HORADRIC_ORIFICE;
       case ARCANE_SANCTUARY_TOME: return Type.ARCANE_SANCTUARY_TOME;
       case GIDBINN_DECOY: return Type.GIDBINN_DECOY;
+      case KHALIM_CHEST1: case KHALIM_CHEST2: case KHALIM_CHEST3:
+        return Type.KHALIM_CHEST;
+      case COMPELLING_ORB: return Type.COMPELLING_ORB;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.

@@ -6,6 +6,7 @@ import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.utils.IntSet;
+import com.badlogic.gdx.utils.IntIntMap;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.Riiablo;
 import com.riiablo.engine.EntityFactory;
@@ -63,8 +64,11 @@ public class Act3QuestSystem extends PassiveSystem {
   private final IntSet jadeDropVictims = new IntSet();
   private final IntSet gidbinnBosses = new IntSet();
   private final IntSet gidbinnDropVictims = new IntSet();
+  private final IntSet khalimChestDrops = new IntSet();
+  private final IntIntMap compellingOrbHits = new IntIntMap();
   private boolean jadeDropIssued;
   private boolean gidbinnDropIssued;
+  private boolean khalimFlailDropIssued;
 
   @Override
   protected void initialize() {
@@ -90,10 +94,20 @@ public class Act3QuestSystem extends PassiveSystem {
 
   @Subscribe
   public void onQuestObjectInteraction(QuestObjectInteractionEvent interaction) {
-    if (interaction == null || interaction.type != com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.GIDBINN_DECOY
+    if (interaction == null || (interaction.type != com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.GIDBINN_DECOY
+        && interaction.type != com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.KHALIM_CHEST
+        && interaction.type != com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.COMPELLING_ORB)
         || !mPlayer.has(interaction.playerId) || !mPosition.has(interaction.entityId)) return;
     Player player = mPlayer.get(interaction.playerId);
     if (player == null || player.data == null) return;
+    if (interaction.type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.KHALIM_CHEST) {
+      onKhalimChestInteraction(interaction, player);
+      return;
+    }
+    if (interaction.type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.COMPELLING_ORB) {
+      onCompellingOrbInteraction(interaction, player);
+      return;
+    }
     short record = gidbinnRecord(player.data);
     if (!Act3GidbinnQuest.canProgress(record)
         || NativeQuestRecord.has(record, NativeQuestRecord.CUSTOM2)
@@ -107,6 +121,44 @@ public class Act3QuestSystem extends PassiveSystem {
     gidbinnBosses.add(boss);
     log.info("[A3Q2] Gidbinn guardian spawned: object={} player={} boss={}",
         interaction.entityId, interaction.playerId, boss);
+  }
+
+  private void onKhalimChestInteraction(QuestObjectInteractionEvent interaction, Player player) {
+    short record = khalimRecord(player.data);
+    String code = khalimChestCode(interaction.objectClassId);
+    if (code == null || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        || khalimChestDrops.contains(interaction.entityId)
+        || player.data.getItems().containsItemCode(code) || factory == null) return;
+    Item item = createQuestItem(code);
+    Position position = mPosition.get(interaction.entityId);
+    if (item == null || position == null) return;
+    int entityId = factory.createItem(item, position.position.x, position.position.y);
+    if (entityId < 0) return;
+    item.id = entityId;
+    khalimChestDrops.add(interaction.entityId);
+    interaction.accept();
+    log.info("[A3Q3] Khalim relic dropped: chest={} code={} entity={} player={}",
+        interaction.objectClassId, code, entityId, interaction.playerId);
+  }
+
+  private void onCompellingOrbInteraction(QuestObjectInteractionEvent interaction, Player player) {
+    short record = khalimRecord(player.data);
+    if (!player.data.getItems().containsItemCode(Act3KhalimQuest.KHALIM_WILL)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return;
+    int hits = compellingOrbHits.get(interaction.entityId, 0) + 1;
+    compellingOrbHits.put(interaction.entityId, hits);
+    if (hits < 2) {
+      log.info("[A3Q3] Compelling Orb hit {}/2: player={} object={}", hits,
+          interaction.playerId, interaction.entityId);
+      return;
+    }
+    if (!player.data.getItems().removeItemCode(Act3KhalimQuest.KHALIM_WILL)) return;
+    short next = NativeQuestRecord.set(record, NativeQuestRecord.PRIMARY_GOAL_DONE);
+    next = NativeQuestRecord.set(next, NativeQuestRecord.REWARD_GRANTED);
+    updateKhalimRecord(player.data, next, "compelling-orb-smashed");
+    interaction.accept();
+    log.info("[A3Q3] Compelling Orb smashed: player={} object={}", interaction.playerId,
+        interaction.entityId);
   }
 
   @Subscribe
@@ -158,6 +210,25 @@ public class Act3QuestSystem extends PassiveSystem {
   }
 
   @Subscribe
+  public void onKhalimCouncilKilled(DeathEvent event) {
+    if (event == null || event.victim < 0 || khalimFlailDropIssued
+        || !mMonster.has(event.victim) || !mPosition.has(event.victim)
+        || !hasKhalimEligiblePlayer() || !isAct3Level(levelId(event.victim))) return;
+    Monster monster = mMonster.get(event.victim);
+    if (monster == null || monster.monstats == null
+        || monster.monstats.hcIdx != MonsterType.COUNCILMEMBER || factory == null) return;
+    Item item = createQuestItem(Act3KhalimQuest.KHALIM_FLAIL);
+    Position origin = mPosition.get(event.victim);
+    if (item == null || origin == null) return;
+    int entityId = factory.createItem(item, origin.position.x, origin.position.y);
+    if (entityId < 0) return;
+    item.id = entityId;
+    khalimFlailDropIssued = true;
+    markKhalimDropForAct3Players();
+    log.info("[A3Q3] Khalim Flail dropped: victim={} entity={}", event.victim, entityId);
+  }
+
+  @Subscribe
   public void onQuestItemPickedUp(QuestItemPickedUpEvent event) {
     if (event == null || !mPlayer.has(event.playerId)) return;
     Player player = mPlayer.get(event.playerId);
@@ -170,6 +241,10 @@ public class Act3QuestSystem extends PassiveSystem {
       short previous = gidbinnRecord(player.data);
       updateGidbinnRecord(player.data, Act3GidbinnQuest.markGidbinnPicked(previous),
           "gidbinn-picked-up");
+    } else if (Act3KhalimQuest.isPart(event.itemCode)) {
+      short previous = khalimRecord(player.data);
+      short next = Act3KhalimQuest.markPicked(previous, event.itemCode);
+      if (next != previous) updateKhalimRecord(player.data, next, "khalim-part-picked");
     }
   }
 
@@ -348,6 +423,43 @@ public class Act3QuestSystem extends PassiveSystem {
     }
   }
 
+  private void markKhalimDropForAct3Players() {
+    if (playersByZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      Player player = mPlayer.get(ids[i]);
+      if (player == null || player.data == null || !isAct3Level(levelId(ids[i]))) continue;
+      short previous = khalimRecord(player.data);
+      short next = Act3KhalimQuest.start(previous);
+      if (next != previous) updateKhalimRecord(player.data, next, "khalim-council-killed");
+    }
+  }
+
+  private boolean hasKhalimEligiblePlayer() {
+    if (playersByZone == null) return false;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      Player player = mPlayer.get(ids[i]);
+      if (player == null || player.data == null || !isAct3Level(levelId(ids[i]))) continue;
+      short record = khalimRecord(player.data);
+      if (!NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+          && !player.data.getItems().containsItemCode(Act3KhalimQuest.KHALIM_FLAIL)
+          && !player.data.getItems().containsItemCode(Act3KhalimQuest.KHALIM_WILL)) return true;
+    }
+    return false;
+  }
+
+  private static String khalimChestCode(int objectClassId) {
+    switch (objectClassId) {
+      case Act3KhalimQuest.KHALIM_CHEST1: return Act3KhalimQuest.KHALIM_HEART;
+      case Act3KhalimQuest.KHALIM_CHEST2: return Act3KhalimQuest.KHALIM_EYE;
+      case Act3KhalimQuest.KHALIM_CHEST3: return Act3KhalimQuest.KHALIM_BRAIN;
+      default: return null;
+    }
+  }
+
   private void propagateGidbinnTurnIn(int sourcePlayerId) {
     if (playersByZone == null || partyManager == null) return;
     short partyId = partyManager.getPartyId(sourcePlayerId);
@@ -471,6 +583,10 @@ public class Act3QuestSystem extends PassiveSystem {
     return data.getQuests(Riiablo.ACT3)[Act3GidbinnQuest.RECORD];
   }
 
+  private short khalimRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT3)[Act3KhalimQuest.RECORD];
+  }
+
   private void updateRecord(CharData data, short next, String reason) {
     short previous = record(data);
     if (previous == next) return;
@@ -487,6 +603,16 @@ public class Act3QuestSystem extends PassiveSystem {
     data.getQuests(Riiablo.ACT3)[Act3GidbinnQuest.RECORD] = next;
     persist(data);
     log.info("[A3Q2] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private void updateKhalimRecord(CharData data, short next, String reason) {
+    short previous = khalimRecord(data);
+    if (previous == next) return;
+    data.getQuests(Riiablo.ACT3)[Act3KhalimQuest.RECORD] = next;
+    persist(data);
+    log.info("[A3Q3] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
   }

@@ -25,6 +25,10 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.HORADRIC_ORIFICE, resolve(152, 21));
     assertEquals(NativeQuestObjectResolver.Type.ARCANE_SANCTUARY_TOME, resolve(357, 42));
     assertEquals(NativeQuestObjectResolver.Type.GIDBINN_DECOY, resolve(252, 31));
+    assertEquals(NativeQuestObjectResolver.Type.KHALIM_CHEST, resolve(405, 57));
+    assertEquals(NativeQuestObjectResolver.Type.KHALIM_CHEST, resolve(406, 58));
+    assertEquals(NativeQuestObjectResolver.Type.KHALIM_CHEST, resolve(407, 59));
+    assertEquals(NativeQuestObjectResolver.Type.COMPELLING_ORB, resolve(404, 53));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }

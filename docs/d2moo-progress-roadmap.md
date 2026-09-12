@@ -2553,3 +2553,21 @@ Asheara 佣兵奖励和队伍状态传播；随后处理 A3Q3 Khalim's Will，�
 
 当前下一项：接入第三章 A3Q3 Khalim's Will（四件遗物、赫拉迪克合成、崔凡克黑色球体）
 的最小任务记录与对象触发链，再开始第四章地图主链和任务。
+
+### 2026-09-12 Act III A3Q3 Khalim's Will（本轮完成基础闭环）
+
+- [x] 对齐 D2MOO `ACT3Q2` 的四件遗物代码：`qey`（Eye）、`qhr`（Heart）、`qbr`（Brain）、
+  `qf1`（Khalim's Flail）和合成产物 `qf2`（Super Khalim's Flail / Khalim's Will）。
+- [x] 新增服务端原子方块合成 `Act3KhalimWillTransmute`：严格要求四件输入和方块位于
+  Cube，预检后一次性移除并生成产物，失败不消耗材料；任务记录写入 D2S。
+- [x] 注册 Khalim 三座宝箱（Objects 405/406/407）和 Travincal 黑色球体（Object 404）
+  的原生任务对象类型；三座宝箱分别生成 Heart/Eye/Brain，球体要求两次有效命中并消费
+  `qf2` 后完成任务，重复交互不会重复奖励。
+- [x] 议会成员首次有效击杀生成一次 `qf1`，四件遗物拾取后分别更新任务记录；增加对象解析
+  回归断言。未修改战斗、技能、掉落概率或网络协议。
+- 验证：`Act3KhalimQuestTest`、`Act3GidbinnQuestTest`、`NativeQuestObjectResolverTest`、
+  `:core:compileJava`、`:server:d2gs:compileJava` 通过。
+
+当前下一项：核对 A3Q3 与现有方块网络入口的接线（将 `Act3KhalimWillTransmute` 接入实际
+  `CUBE_TRANSMUTE` 请求），并完成 Travincal 黑色球体的多人状态传播；随后开始第四章
+  地图主链与 A4Q1 Izual 任务。
