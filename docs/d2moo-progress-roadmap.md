@@ -3653,3 +3653,22 @@ Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖�
 
 下一项：继续核对墓穴 `LvlPrest/DT1` 资源装载和 Orifice class 152 的生产 Quest 请求，
 确认回退 Zone 能进入后，再接入 Arcane Tome 与 Tainted Sun 的双客户端交互断言。
+
+### 2026-09-13 A2 Staff Tomb 双客户端关卡快照修复（本轮完成）
+
+- [x] 修正 `headlessEnterLevel` 的连接目标：`NetworkSynchronizer.syncAllTo` 使用的是
+  连接槽位（client id），不是 ECS 玩家实体 id；现在通过实体反查连接槽位，并复用
+  登录/重连相同的 `SnapshotBaseline BEGIN → EntitySync → END` 事务。
+- [x] 增加离屏专用 `syncEntityTo` 自身快照接口，跨关卡 staging 时绕过临时的
+  Room 可见性过滤，确保请求玩家一定收到带目标 LevelId 的权威快照；不改变生产房间
+  可见性规则。
+- [x] 修正 `RoomEntityTrackingSystem`：实体仍在当前 Zone 边界内但暂时没有 RoomEx 时，
+  保留事件提供的权威 Zone，避免 A2 墓穴与 A1 地下区域坐标重叠造成错误回退。
+- [x] 新增 `:server:d2gs:headlessA2TombDual` 快速回归入口；在
+  `D2_HOME=G:\\BaiduNetdiskDownload\\Diablo II 1.10F` 下通过，日志确认
+  `a2-horadric-orifice level=73`、`clients=true,true`，并成功物化/重建 Orifice
+  class 152。
+
+验证：`:core:compileJava`、`:server:d2gs:compileJava`、
+`:server:d2gs:headlessA2TombDual` 均成功；完整 `headlessEarlyObjectDual` 仍包含
+  A1-A3 全链路长回归，后续可在资源完整环境中重新执行。

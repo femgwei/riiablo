@@ -27,7 +27,18 @@ public class RoomEntityTrackingSystem extends IteratingSystem {
     int oldRoomId = wrapper.roomId;
     Map.Zone zone = oldZone;
     Map.RoomEx room = zone != null ? zone.findRoomEx(position.x, position.y) : null;
-    if (room == null) {
+    // Keep the authoritative zone while the entity is still inside its
+    // bounds but not yet inside a native RoomEx (common for generated tombs,
+    // caves and sparse preset areas).  Falling back to Map#getZone solely on
+    // a missing RoomEx is ambiguous because Acts intentionally reuse world
+    // coordinate ranges; it can silently relabel an A2 player as an older A1
+    // level before the baseline is serialized.  Only resolve another zone
+    // after the player actually leaves the current zone bounds.
+    boolean insideOldZone = oldZone != null
+        && position.x >= oldZone.x() && position.y >= oldZone.y()
+        && position.x < oldZone.x() + oldZone.width()
+        && position.y < oldZone.y() + oldZone.height();
+    if (room == null && !insideOldZone) {
       zone = wrapper.map.getZone(position);
       room = zone != null ? zone.findRoomEx(position.x, position.y) : null;
     }

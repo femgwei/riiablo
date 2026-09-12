@@ -2097,9 +2097,11 @@ public class Map implements Disposable {
     }
 
     static int getPresets(LvlPrest.Entry preset, int[] fileIds) {
+      if (preset == null || preset.File == null || fileIds == null) return 0;
       int numFiles = 0;
-      for (int i = 0; i < preset.File.length; i++) {
-        if (preset.File[i].charAt(0) != '0') {
+      for (int i = 0; i < preset.File.length && numFiles < fileIds.length; i++) {
+        String file = preset.File[i];
+        if (file != null && !file.isEmpty() && file.charAt(0) != '0') {
           fileIds[numFiles++] = i;
         }
       }

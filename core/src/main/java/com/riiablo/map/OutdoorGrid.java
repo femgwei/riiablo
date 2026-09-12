@@ -1,7 +1,9 @@
 package com.riiablo.map;
 
 import com.badlogic.gdx.utils.IntArray;
+import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
+import com.riiablo.codec.excel.LvlTypes;
 
 /**
  * 室外区域网格系统
@@ -242,8 +244,24 @@ public class OutdoorGrid {
       return 0x44103;
     }
     
-    // 其他 Act 根据 LevelType 判断
-    return getDt1MaskForLevelType(level.LevelType);
+    // 其他 Act 根据 LevelType 判断。迷宫/室内类型（例如 Act II
+    // Sewer/Harem/Basement/Tomb/Lair/Arcane）不属于 OutdoorGrid 的
+    // 旧枚举，不能返回 0；D2Common 实际使用对应 LvlTypes 的 File[]
+    // 作为 DT1 库。按当前 1.10f 表动态推导非空槽位，避免把墓穴生成成
+    // 没有地板的空 Zone，同时也兼容不同资源导出的文件槽位。
+    int mask = getDt1MaskForLevelType(level.LevelType);
+    if (mask != 0 || Riiablo.files == null || Riiablo.files.LvlTypes == null) {
+      return mask;
+    }
+    LvlTypes.Entry type = Riiablo.files.LvlTypes.get(level.LevelType);
+    if (type == null || type.File == null) return 0;
+    for (int i = 0; i < type.File.length && i < Integer.SIZE; i++) {
+      String file = type.File[i];
+      if (file != null && !file.isEmpty() && file.charAt(0) != '0') {
+        mask |= 1 << i;
+      }
+    }
+    return mask;
   }
 
   public static final int GRID_SIZE_TILES = GRID_SIZE;

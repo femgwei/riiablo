@@ -211,6 +211,32 @@ public class NetworkSynchronizer extends BaseEntitySystem {
         + " failed=" + failed + " bytes=" + bytes);
   }
 
+  /**
+   * Test/offscreen helper that sends one entity regardless of room visibility.
+   * During a deterministic level transition the requesting player's wrapper
+   * is updated before the peer has moved, so recipientMask intentionally
+   * filters cross-level entities.  The player must still receive its own
+   * authoritative level-bearing snapshot; production room visibility remains
+   * unchanged because callers use this only for explicit baselines.
+   */
+  public void syncEntityTo(int clientId, int entityId) {
+    if (clientId < 0 || clientId >= 32 || entityId < 0) return;
+    byte[] state = serialize(entityId, false);
+    byte[] snapshot = serialize(entityId, true);
+    snapshotsFor(clientId).update(entityId, state);
+    if (!outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(snapshot)))
+        && !QUIET) {
+      Gdx.app.log(TAG, "[NET_SYNC] phase=self_baseline_failed client=" + clientId
+          + " entity=" + entityId);
+    } else if (!QUIET) {
+      MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+      int level = wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+          ? -1 : wrapper.zone.level.Id;
+      Gdx.app.log(TAG, "[NET_SYNC] phase=self_baseline client=" + clientId
+          + " entity=" + entityId + " level=" + level);
+    }
+  }
+
   /** Number of currently networked entities included in a baseline. */
   public int subscriptionSize() {
     return subscription.getEntities().size();

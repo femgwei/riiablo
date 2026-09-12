@@ -165,6 +165,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA3ObjectInteractionDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA2TombDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireEarlyObjectDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
@@ -200,6 +202,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA3ObjectInteractionDual) {
       runA3ObjectInteractionDual(d2s, character);
+      return;
+    }
+    if (config.requireA2TombDual) {
+      runA2TombDual(d2s, character);
       return;
     }
     if (config.requireEarlyObjectDual) {
@@ -2492,6 +2498,29 @@ public final class D2GSHeadlessClient {
         + " before=" + java.util.Arrays.toString(before)
         + " after=" + java.util.Arrays.toString(after)
         + " revision=" + snapshotA.questRevision());
+  }
+
+  /** Focused two-client regression for the selected A2 Staff Tomb level. */
+  private void runA2TombDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A2TombPeer", 0x41325450);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      int tomb = com.riiablo.engine.server.quest.Act2TombSelection
+          .forGameSeed(config.seed).staffTombLevel();
+      runEarlyObjectStage(a, b, inA, inB, outA, outB, tomb,
+          "a2-horadric-orifice", 5, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.HORADRIC_ORIFICE},
+          1L);
+      log("a2_tomb_dual_pass", "level=" + tomb + " clients=true,true");
+    }
   }
 
   private QuestResult requestSnapshot(D2GSHeadlessClient client, DataInputStream input,
@@ -5333,6 +5362,7 @@ public final class D2GSHeadlessClient {
     boolean requireQuestWarpDual;
     boolean requireQuestObjectDual;
     boolean requireA3ObjectInteractionDual;
+    boolean requireA2TombDual;
     boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
@@ -5378,6 +5408,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
         else if ("--require-a3-object-interaction-dual".equals(arg)) config.requireA3ObjectInteractionDual = true;
+        else if ("--require-a2-tomb-dual".equals(arg)) config.requireA2TombDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
@@ -5425,12 +5456,14 @@ public final class D2GSHeadlessClient {
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
+          && !config.requireA2TombDual
           && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
+          && !config.requireA2TombDual
           && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
@@ -5469,6 +5502,7 @@ public final class D2GSHeadlessClient {
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
           + " [--require-quest-warp-dual] [--require-quest-object-dual]"
           + " [--require-a3-object-interaction-dual]"
+          + " [--require-a2-tomb-dual]"
           + " [--require-early-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"
           + " [--require-countess-quest]"

@@ -235,6 +235,18 @@ tasks.register('headlessEarlyObjectDual', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessA2TombDual', JavaExec) {
+  group = 'verification'
+  description = 'Runs a focused two-client selected A2 Staff Tomb level snapshot test.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-a2-tomb-dual', '--test-timeout', '90'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessMercenarySkill', JavaExec) {
   group = 'verification'
   description = 'Runs a windowless native Rogue hireling skill-casting smoke test.'

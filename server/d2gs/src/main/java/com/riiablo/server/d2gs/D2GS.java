@@ -377,11 +377,19 @@ public class D2GS extends ApplicationAdapter {
       try {
         ensureHeadlessAct(server, levelId);
         Vector2 destination = findHeadlessLevelPosition(server, levelId);
+        com.riiablo.codec.excel.Levels.Entry level =
+            Riiablo.files == null || Riiablo.files.Levels == null
+                ? null : Riiablo.files.Levels.get(levelId);
         Position position = server.world.getMapper(Position.class).get(playerId);
         com.riiablo.engine.server.component.MapWrapper wrapper = server.world
             .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
         if (destination == null || position == null || wrapper == null) return;
-        Map.Zone zone = server.map.getZone(destination);
+        // Use the level-indexed Zone as authority.  Several generated Acts
+        // intentionally share coordinate ranges; resolving the destination
+        // back through Map#getZone can therefore select an older overlapping
+        // zone (for example Act I level 25 instead of the selected A2 tomb).
+        // The warp/zone event already carries the authoritative target Zone.
+        Map.Zone zone = server.map.findZone(level);
         if (zone == null || zone.level == null || zone.level.Id != levelId) return;
         position.position.set(destination);
         wrapper.set(server.map, zone);
@@ -406,6 +414,35 @@ public class D2GS extends ApplicationAdapter {
         // sparse native outdoor zone exposes its quest objects immediately;
         // normal clients still use RoomActivationSystem's deferred path.
         if (server.mapManager != null) server.mapManager.createNativeObjects(zone);
+        // RoomEntityTrackingSystem may fall back to Map#getZone(position)
+        // when a generated dungeon has no native RoomEx at the spawn point.
+        // Several Acts intentionally reuse coordinate ranges, so that lookup
+        // can select an older level (the A1 Tower Cellar in this fixture).
+        // Re-assert the event's level-authoritative wrapper immediately before
+        // serializing the baseline; normal movement will still update it once
+        // the player enters a real RoomEx.
+        wrapper.set(server.map, zone);
+        // A headless fixture has no render loop to trigger a fresh baseline.
+        // syncAllTo addresses a connection slot (0..MAX_CLIENTS-1), not the
+        // ECS player entity id.  Passing the latter can silently address the
+        // wrong bit because Java shifts mask the distance modulo 32, leaving
+        // the peer on its previous level snapshot.  Resolve the authoritative
+        // socket slot before priming the baseline.
+        int clientId = server.connectionIdForEntity(playerId);
+        if (server.sync != null && clientId >= 0) {
+          // Reuse the same BEGIN/sync/END transaction as login and explicit
+          // snapshot-resync requests.  This keeps the offscreen client from
+          // applying a level-bearing EntitySync outside its baseline window.
+          server.Synchronize(clientId, playerId);
+          server.sync.syncEntityTo(clientId, playerId);
+          Gdx.app.log(TAG, "[HEADLESS_LEVEL] player=" + playerId
+              + " client=" + clientId + " requestedLevel=" + levelId
+              + " targetZoneLevel=" + zone.level.Id + " destination=" + destination);
+        } else {
+          Gdx.app.log(TAG, "[HEADLESS_LEVEL] baseline skipped player=" + playerId
+              + " client=" + clientId + " requestedLevel=" + levelId
+              + " targetZoneLevel=" + zone.level.Id);
+        }
         entered.set(true);
       } finally {
         done.countDown();
