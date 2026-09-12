@@ -21,6 +21,7 @@ public final class NativeQuestObjectResolver {
     DIABLO_SEAL(false, true, Engine.Object.MODE_ON),
     HELLFORGE(false, false, Engine.Object.MODE_ON),
     CAGED_SOLDIER(false, true, Engine.Object.MODE_ON),
+    FROZEN_ANYA(false, true, Engine.Object.MODE_ON),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -62,6 +63,8 @@ public final class NativeQuestObjectResolver {
   public static final int HELLFORGE = 376;
   /** Act V A5Q2 caged barbarian group. */
   public static final int CAGED_SOLDIER = 473;
+  /** Act V A5Q3 frozen Anya object. */
+  public static final int FROZEN_ANYA = 558;
 
   private NativeQuestObjectResolver() {}
 
@@ -87,6 +90,7 @@ public final class NativeQuestObjectResolver {
         return Type.DIABLO_SEAL;
       case HELLFORGE: return Type.HELLFORGE;
       case CAGED_SOLDIER: return Type.CAGED_SOLDIER;
+      case FROZEN_ANYA: return Type.FROZEN_ANYA;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.

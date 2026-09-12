@@ -2709,4 +2709,19 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
   `:server:d2gs:compileJava` 通过。
 
 当前下一项：接入 A5Q3 Prison of Ice（Frozen River/Frozen Tundra 的 Anya 冰封对象、
-  冰冻 Anya 解冻和 Malah 奖励），随后再处理 A5Q4 Nihlathak。
+冰冻 Anya 解冻和 Malah 奖励），随后再处理 A5Q4 Nihlathak。
+
+### 2026-09-12 Act V A5Q3 Prison of Ice / Frozen Anya（本轮完成基础闭环）
+
+- [x] 对齐 D2MOO `ACT5Q3` 的 Frozen Anya Object `558` 与 Frozen River 入口；新增
+  `FROZEN_ANYA` 原生对象类型，只有已获得解冻药水状态（原生 fourcc `eci`）的玩家
+  才能一次性解冻 Anya。
+- [x] 接入 Malah `20116` 开始/发放解冻状态、`20122` 奖励领取，记录 A5Q3 的
+  `PRIMARY_GOAL_DONE + REWARD_PENDING → REWARD_GRANTED + CUSTOM4`，D2S 持久化和
+  重复消息保持幂等。
+- [x] 增加 A5Q3 状态及 Frozen Anya resolver 回归测试；未改动战斗、技能或掉落公式。
+- 验证：`Act5PrisonQuestTest`、`NativeQuestObjectResolverTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：接入 A5Q4 Nihlathak（Nihlathak Temple 及 Halls of Vaught 入口、Nihlathak
+  击杀和 Anya 奖励状态），随后处理 A5Q5 Ancients。

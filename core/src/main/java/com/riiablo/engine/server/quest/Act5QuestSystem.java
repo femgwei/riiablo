@@ -79,9 +79,13 @@ public class Act5QuestSystem extends PassiveSystem {
 
   @Subscribe
   public void onQuestObjectInteraction(QuestObjectInteractionEvent interaction) {
-    if (interaction == null
-        || interaction.type != NativeQuestObjectResolver.Type.CAGED_SOLDIER
-        || !mPlayer.has(interaction.playerId) || !mMapWrapper.has(interaction.entityId)) return;
+    if (interaction == null || !mPlayer.has(interaction.playerId)
+        || !mMapWrapper.has(interaction.entityId)) return;
+    if (interaction.type == NativeQuestObjectResolver.Type.FROZEN_ANYA) {
+      onFrozenAnyaInteraction(interaction);
+      return;
+    }
+    if (interaction.type != NativeQuestObjectResolver.Type.CAGED_SOLDIER) return;
     if (levelId(interaction.entityId) != Act5RescueQuest.FRIGID_HIGHLANDS) return;
     Player player = mPlayer.get(interaction.playerId);
     if (player == null || player.data == null || rescuedCages.contains(interaction.entityId)) return;
@@ -101,6 +105,19 @@ public class Act5QuestSystem extends PassiveSystem {
         interaction.playerId, interaction.entityId, rescuedCages.size,
         Act5RescueQuest.REQUIRED_CAGES,
         rescuedCages.size * Act5RescueQuest.SOLDIERS_PER_CAGE);
+  }
+
+  private void onFrozenAnyaInteraction(QuestObjectInteractionEvent interaction) {
+    if (levelId(interaction.entityId) != Act5PrisonQuest.FROZEN_RIVER) return;
+    Player player = mPlayer.get(interaction.playerId);
+    if (player == null || player.data == null) return;
+    short record = prisonRecord(player.data);
+    if (!Act5PrisonQuest.hasPotion(record) || Act5PrisonQuest.isFinished(record)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) return;
+    interaction.accept();
+    updatePrisonRecord(player.data, Act5PrisonQuest::complete, "anya-defrosted");
+    log.info("[A5Q3] Frozen Anya defrosted: player={} object={}",
+        interaction.playerId, interaction.entityId);
   }
 
   @Subscribe
@@ -146,6 +163,10 @@ public class Act5QuestSystem extends PassiveSystem {
       onQualKehkMessage(event, player);
       return;
     }
+    if (isMalah(npc.monstats)) {
+      onMalahMessage(event, player);
+      return;
+    }
     if (!isLarzuk(npc.monstats) || event.messageIndex != Act5ShenkQuest.MESSAGE_LARZUK_REWARD) return;
     short previous = record(player.data);
     short next = Act5ShenkQuest.claimReward(previous);
@@ -153,6 +174,16 @@ public class Act5QuestSystem extends PassiveSystem {
     updateRecord(player.data, ignored -> next, "larzuk-shenk-reward");
     log.info("[A5Q1] Larzuk reward claimed: player={} (socket service entitlement)",
         event.entityId);
+  }
+
+  private void onMalahMessage(NpcQuestMessageEvent event, Player player) {
+    short previous = prisonRecord(player.data);
+    if (event.messageIndex == Act5PrisonQuest.MESSAGE_MALAH_INIT) {
+      updatePrisonRecord(player.data, Act5PrisonQuest::markPotion, "malah-defrost-potion");
+    } else if (event.messageIndex == Act5PrisonQuest.MESSAGE_MALAH_REWARD
+        && Act5PrisonQuest.canClaimReward(previous)) {
+      updatePrisonRecord(player.data, Act5PrisonQuest::claimReward, "malah-anya-reward");
+    }
   }
 
   private void onQualKehkMessage(NpcQuestMessageEvent event, Player player) {
@@ -257,12 +288,22 @@ public class Act5QuestSystem extends PassiveSystem {
     return stats.NameStr != null && stats.NameStr.toLowerCase().contains("qual");
   }
 
+  private boolean isMalah(MonStats.Entry stats) {
+    if (stats == null) return false;
+    if ("Malah".equalsIgnoreCase(stats.Id) || "Malah".equalsIgnoreCase(stats.NameStr)) return true;
+    return stats.NameStr != null && stats.NameStr.toLowerCase().contains("malah");
+  }
+
   private short record(CharData data) {
     return data.getQuests(Riiablo.ACT5)[Act5ShenkQuest.RECORD];
   }
 
   private short rescueRecord(CharData data) {
     return data.getQuests(Riiablo.ACT5)[Act5RescueQuest.RECORD];
+  }
+
+  private short prisonRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT5)[Act5PrisonQuest.RECORD];
   }
 
   private void complete(CharData data) {
@@ -289,6 +330,18 @@ public class Act5QuestSystem extends PassiveSystem {
     data.getQuests(Riiablo.ACT5)[Act5RescueQuest.RECORD] = next;
     if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
     log.info("[A5Q2] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private void updatePrisonRecord(CharData data,
+      java.util.function.UnaryOperator<Short> transition, String reason) {
+    short previous = prisonRecord(data);
+    short next = transition.apply(previous);
+    if (previous == next) return;
+    data.getQuests(Riiablo.ACT5)[Act5PrisonQuest.RECORD] = next;
+    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    log.info("[A5Q3] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
   }

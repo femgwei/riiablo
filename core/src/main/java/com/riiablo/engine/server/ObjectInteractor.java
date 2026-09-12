@@ -152,7 +152,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         || type == NativeQuestObjectResolver.Type.COMPELLING_ORB
         || type == NativeQuestObjectResolver.Type.DIABLO_SEAL
         || type == NativeQuestObjectResolver.Type.HELLFORGE
-        || type == NativeQuestObjectResolver.Type.CAGED_SOLDIER;
+        || type == NativeQuestObjectResolver.Type.CAGED_SOLDIER
+        || type == NativeQuestObjectResolver.Type.FROZEN_ANYA;
   }
 
   private boolean interactQuestPortal(int playerId, int visualEntityId) {
