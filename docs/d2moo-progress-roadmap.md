@@ -3814,3 +3814,19 @@ Symbol 的真实选择、地下区域入口和地图拓扑校验。
 共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`、
 `server/d2gs/build.gradle`。下一项：继续 A2 七墓 Arcane Symbol 的真实 582 预设生成、
 地下入口/出口与 `Levels.txt` Vis/Warp 拓扑校验。
+
+### 2026-09-13 A2 七墓 Arcane Symbol 582 预设回退（本轮完成）
+
+- [x] `Act2MapBuilderD2MOD` 在七墓 Zone 已生成但 DS1 导出缺少原生 582 单位时，按当前
+  游戏 seed 排除 Staff Tomb，并为其余六个墓穴补入一个 level-local 的 582 预设；位置
+  通过 `Zone.findFreeCoordinates` 选择，避免把符号放到墙体或 Zone 外。
+- [x] 预设保留 `ds1Raw=false` provenance，交给 `MapManager`/`NativePresetObjectResolver`
+  解析为 D2MOO 的 307..313 Objects.txt class；Staff Tomb 继续不生成符号，重复建图不会
+  重复添加已有 Arcane Symbol。
+- [x] 通过 `Act2TombSelectionTest`、`:core:compileJava`，以及 1.10f 资源
+  `:server:d2gs:headlessA2TombDual`（日志 `a2_tomb_dual_pass level=73 clients=true,true`）。
+  当前资源仍可能缺少部分 DS1/DT1 原生墙体，完整画面连续性需在完整导出环境复测。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Act2MapBuilderD2MOD.java`。
+下一项：补 A2 七墓地下入口/出口的真实 DS1 预设与 `Levels.txt` Vis/Warp 双向拓扑回归，
+重点核对 Staff Tomb→Duriel Lair 仅由 Horadric Orifice 任务 Warp 创建。

@@ -3,6 +3,7 @@ package com.riiablo.map;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
@@ -563,6 +564,30 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
             "Act2 tomb fallback created: %s(%d) pos=(%d,%d)",
             tomb.LevelName, tomb.Id, placement[0], placement[1]));
       }
+      // A reduced DS1/DT1 export can omit the native 582 preset unit even
+      // though D2Common still assigns an Arcane Symbol to each non-staff
+      // tomb. Materialize a synthetic 582 preset at a collision-free point
+      // so MapManager resolves the correct 307..313 Objects.txt class. The
+      // staff tomb intentionally remains symbol-free.
+      for (int tombId = Act2TombSelection.FIRST_TOMB_LEVEL;
+          tombId <= Act2TombSelection.LAST_TOMB_LEVEL; tombId++) {
+        if (tombId == selectedTombs.staffTombLevel()) continue;
+        Zone tomb = findZoneByLevelId(map, tombId);
+        if (tomb == null || hasArcaneSymbolPreset(tomb, seed)) continue;
+        Vector2 center = new Vector2(tomb.x() + tomb.width() / 2f,
+            tomb.y() + tomb.height() / 2f);
+        Vector2 free = new Vector2(center);
+        if (!tomb.findFreeCoordinates(center, 1, 32, true, free)) free.set(center);
+        int localX = Math.max(0, Math.min(tomb.width() - 1,
+            Math.round(free.x - tomb.x())));
+        int localY = Math.max(0, Math.min(tomb.height() - 1,
+            Math.round(free.y - tomb.y())));
+        tomb.getNativeObjects().add(new Map.NativeObject(582, 0, localX, localY,
+            false, false));
+        Gdx.app.log(TAG, String.format(
+            "Act2 synthetic Arcane Symbol preset: tomb=%d class=%d local=(%d,%d)",
+            tombId, selectedTombs.arcaneSymbolObjectFor(tombId), localX, localY));
+      }
     }
 
     TopologyReport report = validateAct2Topology(Riiablo.files.Levels, generated);
@@ -610,6 +635,22 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       zone.town = false;
     }
     return zone;
+  }
+
+  private static boolean hasArcaneSymbolPreset(Zone zone, int seed) {
+    if (zone == null || zone.level == null) return false;
+    int act = zone.level.Act + 1;
+    for (Map.NativeObject object : zone.getNativeObjects()) {
+      int objectId = object.presetIndex;
+      if (object.ds1Raw && Riiablo.files != null && Riiablo.files.obj != null
+          && objectId >= 0 && objectId < Riiablo.files.obj.getSize(act)) {
+        objectId = Riiablo.files.obj.getObjectId(act, objectId);
+      }
+      NativePresetObjectResolver.Resolution resolution = NativePresetObjectResolver.resolve(
+          act, zone.level.Id, objectId, seed, object.x, object.y);
+      if (resolution.kind == NativePresetObjectResolver.Kind.ARCANE_SYMBOL) return true;
+    }
+    return false;
   }
 
   private static int nativeGridSize(int tiles) {
