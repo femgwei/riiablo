@@ -2979,3 +2979,17 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：继续补第四章 Chaos 封印/Diablo 对象的实体重建与重复生成防护，随后进入
 第五章 Harrogath 任务对象和 Act V 地图入口的重连恢复核对。
+
+### 2026-09-12 Act IV Chaos 封印重连与重复激活防护（本轮完成）
+
+- [x] 新增 A4Q2 封印对象范围判定（Objects `392..396`），并在逻辑帧/进入 Chaos
+  Sanctuary 时从 `NativeObjectState.activated` 或对象持久化状态重建已激活封印集合。
+- [x] 地图或 ECS 实体重建后，`5/5` 状态不会回退为 `0/5`；已激活封印不会因为瞬时
+  实体 ID 集合丢失而再次触发首领生成。首次加载的新 Chaos 区域仍沿用原有交互和
+  三名封印首领生成流程。
+- [x] 为 A4Q2 增加对象范围和进入/恢复回归断言；通过 `Act4DiabloQuestTest`、
+  `Act4IzualQuestTest`、`NativeQuestObjectResolverTest`、`:core:compileJava` 和
+  `:server:d2gs:compileJava`。
+
+当前下一项：核对第五章 Harrogath 任务对象、主链入口和任务传送门的重连恢复，优先
+处理 A5Q1–A5Q3 的对象状态与地图入口一致性。

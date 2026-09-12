@@ -18,6 +18,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -31,6 +32,7 @@ import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import com.riiablo.item.Item;
@@ -45,6 +47,8 @@ public class Act4QuestSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(Act4QuestSystem.class);
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
@@ -57,6 +61,7 @@ public class Act4QuestSystem extends PassiveSystem {
 
   private EntitySubscription playersByZone;
   private EntitySubscription monstersByZone;
+  private EntitySubscription objectsByZone;
   private final IntSet spawnedIzualLevels = new IntSet();
   private final IntSet rewardedIzuals = new IntSet();
   private final IntSet activatedDiabloSeals = new IntSet();
@@ -67,6 +72,7 @@ public class Act4QuestSystem extends PassiveSystem {
   private boolean allSealsActivated;
   private final IntSet openedHellforges = new IntSet();
   private final IntIntMap hellforgeHits = new IntIntMap();
+  private Map.Zone trackedChaosZone;
   private boolean soulstoneDropped;
   private boolean hammerDropped;
 
@@ -76,6 +82,25 @@ public class Act4QuestSystem extends PassiveSystem {
         Aspect.all(Player.class, MapWrapper.class));
     monstersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Monster.class, MapWrapper.class));
+    objectsByZone = world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Object.class, MapWrapper.class));
+  }
+
+  @Override
+  protected void processSystem() {
+    // Seal activation is stored on the native object/map record, while the
+    // entity id set is transient. Rebuild it after a reconnect or RoomEx
+    // recreation so an already-open seal cannot spawn another boss.
+    if (playersByZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      if (levelId(ids[i]) == Act4DiabloQuest.CHAOS_SANCTUARY) {
+        MapWrapper wrapper = mMapWrapper.get(ids[i]);
+        if (wrapper != null) rebuildChaosSealState(wrapper.zone);
+        break;
+      }
+    }
   }
 
   @Subscribe
@@ -94,6 +119,7 @@ public class Act4QuestSystem extends PassiveSystem {
     if (event.zone.level.Id == Act4DiabloQuest.CHAOS_SANCTUARY) {
       updateDiabloRecord(player.data, Act4DiabloQuest::enterArea,
           "entered-chaos-sanctuary");
+      rebuildChaosSealState(event.zone);
     } else if (isAct4Level(event.zone.level.Id)) {
       updateDiabloRecord(player.data, Act4DiabloQuest::start,
           "entered-act4-combat-area");
@@ -113,6 +139,7 @@ public class Act4QuestSystem extends PassiveSystem {
       return;
     }
     if (levelId(interaction.entityId) != Act4DiabloQuest.CHAOS_SANCTUARY) return;
+    rebuildChaosSealState(mMapWrapper.get(interaction.entityId).zone);
     if (!activatedDiabloSeals.add(interaction.entityId)) return;
     interaction.accept();
     updateDiabloRecord(player.data);
@@ -211,6 +238,32 @@ public class Act4QuestSystem extends PassiveSystem {
 
   private void spawnDiabloIfReady(int sourceEntityId) {
     if (allSealsActivated && killedSealBosses.size >= 3) spawnDiablo(sourceEntityId);
+  }
+
+  private void rebuildChaosSealState(Map.Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != Act4DiabloQuest.CHAOS_SANCTUARY
+        || objectsByZone == null) return;
+    if (trackedChaosZone != zone) {
+      trackedChaosZone = zone;
+      activatedDiabloSeals.clear();
+      allSealsActivated = false;
+    }
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      MapWrapper wrapper = mMapWrapper.get(id);
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      if (wrapper == null || wrapper.zone != zone || object == null || object.base == null
+          || !Act4DiabloQuest.isSealObject(object.base.Id)) continue;
+      NativeObjectState state = mNativeObjectState.has(id) ? mNativeObjectState.get(id) : null;
+      boolean activated = state != null ? state.activated
+          : (object.stateFlags & com.riiablo.engine.server.component.Object.STATE_ACTIVATED) != 0;
+      if (activated) activatedDiabloSeals.add(id);
+    }
+    allSealsActivated = activatedDiabloSeals.size >= 5;
   }
 
   private void spawnDiablo(int sourceEntityId) {

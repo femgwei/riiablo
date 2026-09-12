@@ -11,6 +11,10 @@ public final class Act4DiabloQuest {
   public static final int CHAOS_SANCTUARY = 110;
   public static final int MESSAGE_TYRAEL_ACT5 = 20000;
 
+  public static boolean isSealObject(int objectClassId) {
+    return objectClassId >= FIRST_SEAL && objectClassId <= LAST_SEAL;
+  }
+
   public static short start(short record) {
     return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
         ? record : NativeQuestRecord.set(record, NativeQuestRecord.STARTED);
