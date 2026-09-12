@@ -109,6 +109,20 @@ public class ItemWriterTest {
   }
 
   @Test
+  public void MissingWeaponDurabilityStatsStillSerialize() {
+    // Quest weapons such as Khalim's Will can be created without the normal
+    // durability StatRefs.  The writer must still emit the native zero-value
+    // slots so the following item/stat lists remain bit-aligned.
+    Item item = new ItemGenerator().generate("qf2");
+    assertNotNull(item);
+    assertNotNull(item.attrs);
+    item.attrs.base().clear();
+    ByteOutput out = ByteOutput.wrap(Unpooled.buffer());
+    assertDoesNotThrow(() -> new ItemWriter().writeItem(item, out));
+    assertTrue(out.bytesWritten() > 0);
+  }
+
+  @Test
   public void Rugged_Small_Charm_of_Vita() {
     testItem(Gdx.files.internal("test/Rugged Small Charm of Vita.d2i").readBytes());
   }

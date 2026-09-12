@@ -3576,3 +3576,15 @@ A1/A2 特殊宝箱、祭坛、任务门的生产交互和掉落幂等覆盖。
 本轮测试仍会输出大量底层资源缺失/内存池 warning（主要是 DS1 墙体 Warp tile 和
 headless 资源回退），但不再阻断 A3 任务对象闭环。下一项：补齐 `ItemWriter` 缺失耐久
 字段的 round-trip 单测，并继续 A1/A2 特殊箱、祭坛、任务门的生产交互和掉落幂等覆盖。
+
+### 2026-09-12 ItemWriter 缺失耐久回归用例（本轮完成）
+
+- [x] 在 `ItemWriterTest` 增加 Khalim's Will（`qf2`）缺失耐久 StatRefs 的序列化用例，
+  清空基础 stat 后验证 `writeItem` 不抛异常且仍产生非空 D2 item 位流。
+- [x] `:server:d2gs:headlessA3ObjectInteractionDual` 已通过，确认该修复覆盖真实
+  任务掉落网络路径。当前机器的 `ItemWriterTest` 初始化仍依赖旧的 Steam 安装路径
+  `C:\\Program Files (x86)\\Steam\\steamapps\\common\\Diablo II`，路径不存在时
+  测试会在 MPQ 初始化阶段失败；这属于测试环境资源配置问题，不是本轮代码失败。
+
+下一项：继续 A1/A2 特殊箱、祭坛、任务门的生产交互与掉落幂等覆盖，并将 A3 丛林
+`ACT3_BRIDGE` 诊断日志从 warning 分级为 debug，保留真正资源解析异常的 warning。
