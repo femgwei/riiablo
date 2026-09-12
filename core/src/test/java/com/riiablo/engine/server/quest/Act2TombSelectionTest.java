@@ -37,4 +37,39 @@ class Act2TombSelectionTest {
     assertEquals(309, NativePresetObjectResolver.resolve(2,
         D2LevelIds.LEVEL_TALRASHASTOMB7, 582, 1, 0, 0).classId);
   }
+
+  @Test
+  void preset582NeverCreatesSymbolInStaffTomb() {
+    for (int seed = -32; seed <= 32; seed++) {
+      Act2TombSelection selection = Act2TombSelection.forGameSeed(seed);
+      NativePresetObjectResolver.Resolution resolution = NativePresetObjectResolver.resolve(
+          2, selection.staffTombLevel(), 582, seed, 10, 20);
+      assertEquals(NativePresetObjectResolver.Kind.SKIP, resolution.kind,
+          "staff tomb must not receive an Arcane Symbol for seed " + seed);
+      assertEquals(-1, resolution.classId);
+      assertTrue(!resolution.shouldCreate());
+    }
+  }
+
+  @Test
+  void preset582UsesSixNativeSymbolsAndFallbackOutsideTombs() {
+    for (int seed = -16; seed <= 16; seed++) {
+      Act2TombSelection selection = Act2TombSelection.forGameSeed(seed);
+      int symbols = 0;
+      for (int level = Act2TombSelection.FIRST_TOMB_LEVEL;
+          level <= Act2TombSelection.LAST_TOMB_LEVEL; level++) {
+        NativePresetObjectResolver.Resolution resolution =
+            NativePresetObjectResolver.resolve(2, level, 582, seed, 0, 0);
+        if (level == selection.staffTombLevel()) {
+          assertEquals(NativePresetObjectResolver.Kind.SKIP, resolution.kind);
+        } else {
+          assertEquals(NativePresetObjectResolver.Kind.ARCANE_SYMBOL, resolution.kind);
+          assertTrue(resolution.classId >= 307 && resolution.classId <= 313);
+          symbols++;
+        }
+      }
+      assertEquals(6, symbols);
+      assertEquals(307, NativePresetObjectResolver.resolve(2, 46, 582, seed, 0, 0).classId);
+    }
+  }
 }

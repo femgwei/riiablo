@@ -87,7 +87,7 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_BARRACKS = 28;
   private static final int LEVEL_TRISTRAM = 38;
   private static final int LEVEL_TOWERCELLARLVL5 = 25;
-  private static final int LEVEL_ARCANESANCTUARY = 74;
+  private static final int LEVEL_ARCANESANCTUARY = 75;
   private static final int LEVEL_DURIELSLAIR = 74;
   private static final int LEVEL_DURANCEOFHATELEVEL3 = 102;
   private static final int LEVEL_SPIDERCAVERN = 85;

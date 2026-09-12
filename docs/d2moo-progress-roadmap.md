@@ -3500,6 +3500,19 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
   1.10f MPQ，未宣称真实 socket/地图对象运行通过。完整资源环境应运行：
   `D2GSHeadlessClient --require-early-object-dual`。
 
+### 2026-09-12 A2Q6 七墓 582 Arcane Symbol 与关卡链校核（本轮完成）
+
+- [x] 校核当前项目的关卡约定：A2 地图构建器、Arcane 拓扑和离屏场景使用项目表中的
+  Arcane Sanctuary=75，Duriel's Lair=74；没有擅自重排共享 `D2LevelIds`，避免破坏
+  已有 Act II/Act III Levels.txt 链和存档兼容性。
+- [x] 修正 `NativePresetObjectResolver` 的 582 分支：法杖墓明确不生成 Arcane
+  Symbol，返回 `SKIP`；其余六墓按 D2MOO `ACT2Q6_GetObjectIdForArcaneThing` 顺序
+  生成 307/308/309/310/311/312/313 中的六个原生对象，非墓穴区域仍使用安全回退。
+- [x] 新增跨多 seed 的七墓回归，验证 staff/boss 墓不重复、法杖墓无 582 对象、六个
+  普通墓各有一个符号，并验证非墓穴 582 的回退行为。
+- [x] 通过 `Act2TombSelectionTest`、`:server:d2gs:compileJava` 和
+  `git diff --check`；真实 DS1 预设入口/出口连续性仍需完整 MPQ 环境执行离屏回归。
+
 当前下一项：在完整资源环境运行 `--require-early-object-dual`，记录每个区域的对象
   数量与重建前后 `Object.mode/NativeObjectState`；若 A1-A3 及 A2Q6/A3Q6 全部通过，
   下一项转为 A2Q6 七墓 Arcane Symbol 的实际 582 预设生成/出口拼接回归，以及

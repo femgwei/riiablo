@@ -33,9 +33,8 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
 
   // Act3 区域定义
   // Keep these ids sourced from the same table used by the native D2MOO
-  // bridge.  Arcane Sanctuary is 75; Act III starts at 76 in 1.10f.
-  // The previous literals were all one lower and caused level 75 (Arcane
-  // Sanctuary) to be generated as Kurast Docks.
+  // bridge.  Arcane Sanctuary is 75; Act III starts at 76 in the current
+  // project data tables. Keep these ids sourced from D2MOO's Java bridge.
   static final int LEVEL_KURASTDOCKTOWN = D2LevelIds.LEVEL_KURASTDOCKTOWN;
   static final int LEVEL_SPIDERFOREST = D2LevelIds.LEVEL_SPIDERFOREST;
   static final int LEVEL_GREATMARSH = D2LevelIds.LEVEL_GREATMARSH;

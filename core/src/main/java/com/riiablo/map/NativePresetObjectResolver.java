@@ -84,6 +84,10 @@ public final class NativePresetObjectResolver {
             if (classIdForTomb >= 0) {
               return new Resolution(classIdForTomb, Kind.ARCANE_SYMBOL);
             }
+            // The staff tomb deliberately has no Arcane Symbol.  Do not use
+            // the generic fallback here: creating object 307 would duplicate
+            // the native tomb layout and expose an invalid interaction.
+            return new Resolution(-1, Kind.SKIP);
           }
           return new Resolution(ARCANE_THING_FALLBACK, Kind.ARCANE_SYMBOL);
         default:
