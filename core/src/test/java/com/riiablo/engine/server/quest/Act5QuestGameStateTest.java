@@ -14,6 +14,8 @@ class Act5QuestGameStateTest {
     assertTrue(original.baalWaves.start());
     original.baalWaves.tick(true);
     assertTrue(original.baalPortals.openWorldstoneChamber());
+    assertTrue(original.markTyraelSpawned(118.5f, 451.25f));
+    assertFalse(original.markTyraelSpawned(999f, 999f));
 
     Act5QuestGameState restored = new Act5QuestGameState();
     restored.restore(original.snapshot());
@@ -26,5 +28,8 @@ class Act5QuestGameStateTest {
     assertTrue(restored.baalPortals.isWorldstoneChamberOpen());
     assertFalse(restored.baalPortals.isLastPortalCreated());
     assertFalse(restored.baalPortals.openWorldstoneChamber());
+    assertTrue(restored.isTyraelSpawned());
+    assertEquals(118.5f, restored.tyraelOriginX());
+    assertEquals(451.25f, restored.tyraelOriginY());
   }
 }

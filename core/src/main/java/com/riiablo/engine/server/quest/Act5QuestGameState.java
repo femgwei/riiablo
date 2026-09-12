@@ -14,6 +14,9 @@ public final class Act5QuestGameState {
   private float baalOriginX;
   private float baalOriginY;
   private boolean hasBaalOrigin;
+  private float tyraelOriginX;
+  private float tyraelOriginY;
+  private boolean tyraelSpawned;
 
   public static final class Snapshot {
     public final Act5BaalWaveState.Snapshot waves;
@@ -21,15 +24,22 @@ public final class Act5QuestGameState {
     public final float baalOriginX;
     public final float baalOriginY;
     public final boolean hasBaalOrigin;
+    public final float tyraelOriginX;
+    public final float tyraelOriginY;
+    public final boolean tyraelSpawned;
 
     public Snapshot(Act5BaalWaveState.Snapshot waves,
         Act5BaalPortalState.Snapshot portals, float baalOriginX,
-        float baalOriginY, boolean hasBaalOrigin) {
+        float baalOriginY, boolean hasBaalOrigin, float tyraelOriginX,
+        float tyraelOriginY, boolean tyraelSpawned) {
       this.waves = waves;
       this.portals = portals;
       this.baalOriginX = baalOriginX;
       this.baalOriginY = baalOriginY;
       this.hasBaalOrigin = hasBaalOrigin;
+      this.tyraelOriginX = tyraelOriginX;
+      this.tyraelOriginY = tyraelOriginY;
+      this.tyraelSpawned = tyraelSpawned;
     }
   }
 
@@ -54,9 +64,34 @@ public final class Act5QuestGameState {
     return baalOriginY;
   }
 
+  /** Records the authoritative Tyrael3 spawn point once per game. */
+  public boolean markTyraelSpawned(float x, float y) {
+    if (!Float.isFinite(x) || !Float.isFinite(y)) {
+      throw new IllegalArgumentException("Tyrael spawn must be finite");
+    }
+    if (tyraelSpawned) return false;
+    tyraelOriginX = x;
+    tyraelOriginY = y;
+    tyraelSpawned = true;
+    return true;
+  }
+
+  public boolean isTyraelSpawned() {
+    return tyraelSpawned;
+  }
+
+  public float tyraelOriginX() {
+    return tyraelOriginX;
+  }
+
+  public float tyraelOriginY() {
+    return tyraelOriginY;
+  }
+
   public Snapshot snapshot() {
     return new Snapshot(baalWaves.snapshot(), baalPortals.snapshot(),
-        baalOriginX, baalOriginY, hasBaalOrigin);
+        baalOriginX, baalOriginY, hasBaalOrigin,
+        tyraelOriginX, tyraelOriginY, tyraelSpawned);
   }
 
   public void restore(Snapshot snapshot) {
@@ -69,5 +104,8 @@ public final class Act5QuestGameState {
       baalOriginX = 0f;
       baalOriginY = 0f;
     }
+    tyraelOriginX = snapshot.tyraelOriginX;
+    tyraelOriginY = snapshot.tyraelOriginY;
+    tyraelSpawned = snapshot.tyraelSpawned;
   }
 }

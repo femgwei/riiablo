@@ -12,6 +12,8 @@ public final class Act5BaalQuest {
   public static final int THRONE_OF_DESTRUCTION = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2;
   public static final int WORLDSTONE_CHAMBER = D2LevelIds.LEVEL_WORLDSTONECHAMBER;
   public static final int MESSAGE_TYRAEL = 20175;
+  /** D2MOO MONSTER_TYRAEL3 (the enum includes the explicit zero row). */
+  public static final int TYRAEL3_CLASS = 522;
   public static final int BAAL_THRONE_CLASS = 543;
   public static final int BAAL_CLASS = 544;
   /** Native SuperUniques.txt hardcoded ids used by BaalThrone AI. */
@@ -119,6 +121,23 @@ public final class Act5BaalQuest {
 
   /** Native object 72 gate for the Worldstone Chamber -> Harrogath portal. */
   public static boolean canUseLastPortal(short record, int sourceLevelId) {
-    return sourceLevelId == WORLDSTONE_CHAMBER && isFinished(record);
+    // OBJECTS_OperateFunction72 checks PRIMARYGOALDONE, not REWARD_GRANTED;
+    // party members can receive the former before their individual reward bit
+    // is persisted.
+    return sourceLevelId == WORLDSTONE_CHAMBER
+        && NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE);
+  }
+
+  public static boolean isTyrael3(int hcIdx, String id) {
+    return hcIdx == TYRAEL3_CLASS || "tyrael3".equalsIgnoreCase(id)
+        || "tyrael".equalsIgnoreCase(id);
+  }
+
+  /** The final portal is a Tyrael dialogue/deactivate transition, not a
+   * direct consequence of Baal's DeathEvent. */
+  public static boolean canTriggerLastPortal(short record, int sourceLevelId,
+      int messageIndex) {
+    return sourceLevelId == WORLDSTONE_CHAMBER && isFinished(record)
+        && messageIndex == MESSAGE_TYRAEL;
   }
 }

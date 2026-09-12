@@ -115,6 +115,7 @@ import com.riiablo.engine.server.quest.Act3MephistoQuestSystem;
 import com.riiablo.engine.server.quest.Act4QuestSystem;
 import com.riiablo.engine.server.quest.Act5QuestSystem;
 import com.riiablo.engine.server.quest.Act5BaalQuest;
+import com.riiablo.engine.server.quest.Act5QuestMessageValidator;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
 import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
@@ -3877,7 +3878,9 @@ public class D2GS extends ApplicationAdapter {
     if (!Act1QuestMessageValidator.isAllowed(npc.monstats.hcIdx, player.data, level,
         hasMalus, messageIndex)
         && !Act2QuestMessageValidator.isAllowed(
-            npc.monstats.hcIdx, player.data, messageIndex)) {
+            npc.monstats.hcIdx, player.data, messageIndex)
+        && !Act5QuestMessageValidator.isAllowed(
+            npc.monstats.hcIdx, player.data, levelIdOf(npcId), messageIndex)) {
       return "QUEST_MESSAGE_NOT_AVAILABLE";
     }
     return null;

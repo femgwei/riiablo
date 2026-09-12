@@ -46,11 +46,29 @@ class Act5BaalQuestTest {
   }
 
   @Test
-  void lastPortalRequiresChamberAndGrantedReward() {
+  void lastPortalRequiresChamberAndPrimaryGoal() {
     short granted = NativeQuestRecord.set((short) 0, NativeQuestRecord.REWARD_GRANTED);
+    granted = NativeQuestRecord.set(granted, NativeQuestRecord.PRIMARY_GOAL_DONE);
     assertTrue(Act5BaalQuest.canUseLastPortal(granted, Act5BaalQuest.WORLDSTONE_CHAMBER));
     assertFalse(Act5BaalQuest.canUseLastPortal((short) 0,
         Act5BaalQuest.WORLDSTONE_CHAMBER));
     assertFalse(Act5BaalQuest.canUseLastPortal(granted, Act5BaalQuest.THRONE_OF_DESTRUCTION));
+    assertTrue(Act5BaalQuest.canUseLastPortal(
+        NativeQuestRecord.set((short) 0, NativeQuestRecord.PRIMARY_GOAL_DONE),
+        Act5BaalQuest.WORLDSTONE_CHAMBER));
+  }
+
+  @Test
+  void tyraelTerminalMessageIsTheOnlyLastPortalTrigger() {
+    short granted = NativeQuestRecord.set((short) 0, NativeQuestRecord.REWARD_GRANTED);
+    assertTrue(Act5BaalQuest.isTyrael3(Act5BaalQuest.TYRAEL3_CLASS, "Tyrael3"));
+    assertTrue(Act5BaalQuest.canTriggerLastPortal(granted,
+        Act5BaalQuest.WORLDSTONE_CHAMBER, Act5BaalQuest.MESSAGE_TYRAEL));
+    assertFalse(Act5BaalQuest.canTriggerLastPortal(granted,
+        Act5BaalQuest.WORLDSTONE_CHAMBER, 20178));
+    assertFalse(Act5BaalQuest.canTriggerLastPortal((short) 0,
+        Act5BaalQuest.WORLDSTONE_CHAMBER, Act5BaalQuest.MESSAGE_TYRAEL));
+    assertFalse(Act5BaalQuest.canTriggerLastPortal(granted,
+        Act5BaalQuest.THRONE_OF_DESTRUCTION, Act5BaalQuest.MESSAGE_TYRAEL));
   }
 }

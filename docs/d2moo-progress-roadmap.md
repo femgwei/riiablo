@@ -3143,3 +3143,25 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 `OBJECTS_InitFunction77_LastPortal` 和 `OBJECTS_OperateFunction72_LastPortal`，补齐 Baal
 结束后的 Tyrael 动画、Worldstone Chamber/Harrogath 状态传播与多人结束门奖励同步；随后
 继续核对五波精确原生 preset 出生坐标。
+
+### 2026-09-12 A5Q6 Tyrael3 终结对话与回城门时序（本轮完成）
+
+- [x] 从 D2MOO `MonsterIds.h` 核对 `MONSTER_TYRAEL3` 的真实 hcIdx 为 **522**，补充
+  `MonsterType.TYRAEL3`、第五幕动态 NPC 注册和 `monstats` 按 `Tyrael3`/hcIdx 的解析，避免
+  把城镇/第四幕 Tyrael 的 257/367 错当为 Worldstone Chamber NPC。
+- [x] 修正 A5Q6 时序：Baal `DeathEvent` 只完成 Chamber/队伍奖励并生成 Tyrael3；不再在
+  巴尔死亡回调中直接创建 Harrogath 门。Tyrael3 使用 D2MOO 的 `(BaalX-5,BaalY-5)`
+  起点和 free-position 搜索，并通过游戏级快照在 RoomEx/ECS 重建后恢复且不重复生成。
+- [x] 接入原生 `20175` Tyrael 终结消息（对应 `Callback11_ScrollMessage`/`NpcDeactivate`）：
+  仅 Worldstone Chamber 且玩家已持有 `PRIMARY_GOAL_DONE/REWARD_GRANTED` 时创建
+  `LAST_PORTAL`，设置 `CUSTOM3`，重复消息、重复奖励和重复 Warp 均幂等；回城门恢复只在
+  已消费 Tyrael 终结流程后执行，避免重连或普通巴尔死亡提前开门。
+- [x] 网络 NPC 消息校验增加 A5Q6 Tyrael3 专用白名单；D2GS 仍保留原有距离、同区域和
+  QuestWarp 权威校验。新增 Tyrael class、状态快照、终结消息和门户时序回归覆盖。
+- [x] 验证：`Act5BaalQuestTest`、`Act5QuestGameStateTest`、`Act5BaalPortalStateTest`、
+  `:core:compileJava`、`:server:d2gs:compileJava`、`git diff --check` 通过；真实 1.10f
+  画面测试因当前环境条件仍跳过。
+
+当前下一项：继续对照 D2MOO `ACT5Q6_Callback03_ChangedLevel`/`Callback09` 和
+`OBJECTS_OperateFunction72_LastPortal`，补齐跨 Harrogath/Chamber 的多人任务记录与
+`CUSTOM6` 传送完成同步，然后再核对五波仆从的原生 preset 出生坐标。

@@ -580,6 +580,10 @@ public class NpcDialogManager {
     registerNpc(513, "Malah", 5, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(514, "Anya", 5, NPC_TYPE_VENDOR, true, true, false, false, false);
     registerNpc(511, "Qual-Kehk", 5, NPC_TYPE_HIRELING, false, false, false, true, false);
+    // D2MOO MONSTER_TYRAEL3 (hcIdx 522), spawned in the Worldstone Chamber
+    // after Baal.  It is dialogue-only; the A5Q6 quest system owns the final
+    // portal transition and reward gating.
+    registerNpc(522, "Tyrael", 5, NPC_TYPE_NORMAL, false, false, false, false, false);
 
     log.debug("Registered {} default NPCs", npcDefinitions.size);
   }

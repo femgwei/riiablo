@@ -13,6 +13,7 @@ import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Warp;
@@ -20,6 +21,9 @@ import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.Map;
 import com.riiablo.engine.server.quest.QuestWarp;
+import com.riiablo.engine.server.quest.Act5BaalQuest;
+import com.riiablo.Riiablo;
+import com.riiablo.save.D2SWriter;
 import com.riiablo.net.packet.d2gs.QuestOperation;
 import net.mostlyoriginal.api.event.common.EventSystem;
 
@@ -33,6 +37,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<Player> mPlayer;
 
   protected Pathfinder pathfinder;
   protected Actioneer actioneer;
@@ -71,6 +76,21 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
       return false;
     }
     if (QuestWarp.isQuestWarp(warp.index)) {
+      // Keep local/offline interaction on the same native object-72 gate as
+      // D2GS.  Without this check a non-network client could bypass the
+      // Worldstone Chamber -> Harrogath quest requirement.
+      if (warp.dstLevel.Id == Act5BaalQuest.HARROGATH
+          && source.level != null
+          && source.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER) {
+        Player player = mPlayer == null ? null : mPlayer.get(src);
+        short record = player == null || player.data == null
+            ? 0 : player.data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD];
+        if (!Act5BaalQuest.canUseLastPortal(record, source.level.Id)) {
+          Gdx.app.log(TAG, "A5Q6 last portal rejected: player=" + src
+              + " source=" + source.level.Id);
+          return false;
+        }
+      }
       int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
       Vector2 arrival = findQuestArrival(dst, unitSize);
       if (arrival == null) {
@@ -80,6 +100,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
         return false;
       }
       commitTransition(src, dst, arrival);
+      markA5Q6LastPortalUsed(src, source, warp);
       Gdx.app.log(TAG, "Quest warp interaction: player=" + src
           + " source=" + source.level.LevelName + "(" + source.level.Id + ")"
           + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
@@ -123,6 +144,25 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     tmpVec2.set(arrivalX, arrivalY).add(dstWarpEntry.ExitWalkX, dstWarpEntry.ExitWalkY);
     actioneer.moveTo(src, tmpVec2);
     return true;
+  }
+
+  /** Mirrors OBJECTS_OperateFunction72_LastPortal's CUSTOM6 transition. */
+  private void markA5Q6LastPortalUsed(int playerId, Map.Zone source, Warp warp) {
+    if (warp == null || source == null || source.level == null
+        || warp.dstLevel == null || warp.dstLevel.Id != Act5BaalQuest.HARROGATH
+        || source.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER || mPlayer == null) return;
+    Player player = mPlayer.get(playerId);
+    if (player == null || player.data == null) return;
+    short[] records = player.data.getQuests(Riiablo.ACT5);
+    if (records == null || records.length <= Act5BaalQuest.RECORD) return;
+    short previous = records[Act5BaalQuest.RECORD];
+    short next = com.riiablo.engine.server.quest.NativeQuestRecord.set(
+        previous, com.riiablo.engine.server.quest.NativeQuestRecord.CUSTOM6);
+    if (next == previous) return;
+    records[Act5BaalQuest.RECORD] = next;
+    if (player.data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(player.data);
+    Gdx.app.log(TAG, "A5Q6 last portal completed: player=" + playerId
+        + " record=0x" + Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   /**

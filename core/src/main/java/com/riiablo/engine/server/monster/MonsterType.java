@@ -118,6 +118,8 @@ public final class MonsterType {
   public static final int HEPHASTO = 409;
   /** 泰瑞尔（第四幕任务 NPC，D2MOO MONSTER_TYRAEL2） */
   public static final int TYRAEL2 = 367;
+  /** 泰瑞尔（第五幕巴尔击杀后，D2MOO MONSTER_TYRAEL3） */
+  public static final int TYRAEL3 = 522;
 
   //==========================================================================
   // 雇佣兵

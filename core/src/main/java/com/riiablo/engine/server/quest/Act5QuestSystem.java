@@ -129,6 +129,7 @@ public class Act5QuestSystem extends BaseSystem {
     // simulation phase as well as the zone-change callback.
     rebuildAct5QuestObjectState();
     rebuildNihlathakPortalState();
+    rebuildBaalTyraelState();
     rebuildBaalEndPortalState();
   }
 
@@ -301,8 +302,11 @@ public class Act5QuestSystem extends BaseSystem {
     }
     if (isBaal(event.victim) && isBaalArea(levelId(event.victim))
         && killedBaalEntities.add(event.victim)) {
-      createLastPortal(event.victim);
       completeBaalForPlayers();
+      // D2MOO spawns Tyrael3 from the post-death missile callback.  The
+      // DeathEvent is the authoritative equivalent in this server; the Last
+      // Portal itself is intentionally deferred until Tyrael's final message.
+      spawnA5Q6Tyrael(event.victim);
       log.info("[A5Q6] Baal defeated: victim={} killer={}", event.victim, event.killer);
       return;
     }
@@ -364,6 +368,10 @@ public class Act5QuestSystem extends BaseSystem {
     }
     if (isDrehya(npc.monstats)) {
       onDrehyaMessage(event, player);
+      return;
+    }
+    if (Act5BaalQuest.isTyrael3(npc.monstats.hcIdx, npc.monstats.Id)) {
+      onBaalTyraelMessage(event, player, npc);
       return;
     }
     if (!isLarzuk(npc.monstats) || event.messageIndex != Act5ShenkQuest.MESSAGE_LARZUK_REWARD) return;
@@ -1179,27 +1187,135 @@ public class Act5QuestSystem extends BaseSystem {
         portalX, portalY);
   }
 
-  /** Creates the Worldstone Chamber -> Harrogath end portal once. */
-  private void createLastPortal(int baalEntity) {
-    if (factory == null || world == null) return;
-    MapWrapper wrapper = mMapWrapper.has(baalEntity) ? mMapWrapper.get(baalEntity) : null;
-    Position sourcePosition = mPosition.has(baalEntity) ? mPosition.get(baalEntity) : null;
-    if (wrapper == null || wrapper.zone == null
-        || wrapper.zone.level == null
+  /**
+   * Spawns the native MONSTER_TYRAEL3 after Baal dies.  D2MOO derives the
+   * coordinates from the Baal-death missile (x-5,y-5) and searches a free
+   * position; using the DeathEvent position preserves that behavior without
+   * coupling quest state to a rendered missile entity.
+   */
+  private void spawnA5Q6Tyrael(int baalEntity) {
+    if (factory == null || world == null || mMapWrapper == null || !mMapWrapper.has(baalEntity)) {
+      return;
+    }
+    MapWrapper wrapper = mMapWrapper.get(baalEntity);
+    if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null
         || wrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER) {
-      log.warn("[A5Q6] Last portal deferred: Baal is not in Worldstone Chamber entity={}",
+      log.warn("[A5Q6] Tyrael3 spawn deferred: Baal is not in Worldstone Chamber entity={}",
           baalEntity);
       return;
     }
-    float portalX = sourcePosition == null ? wrapper.zone.x() + 5f
-        : sourcePosition.position.x + 5f;
-    float portalY = sourcePosition == null ? wrapper.zone.y() : sourcePosition.position.y;
-    ensureLastPortal(wrapper.zone, portalX, portalY);
+    int existing = findTyraelInChamber();
+    if (existing != Engine.INVALID_ENTITY) {
+      Position position = mPosition.has(existing) ? mPosition.get(existing) : null;
+      if (position != null) gameState().markTyraelSpawned(
+          position.position.x, position.position.y);
+      return;
+    }
+    Position baalPosition = mPosition.has(baalEntity) ? mPosition.get(baalEntity) : null;
+    float x = baalPosition == null ? wrapper.zone.x() : baalPosition.position.x;
+    float y = baalPosition == null ? wrapper.zone.y() : baalPosition.position.y;
+    spawnA5Q6TyraelAt(wrapper.zone, x - 5f, y - 5f);
+  }
+
+  private void spawnA5Q6TyraelAt(Map.Zone chamber, float x, float y) {
+    if (chamber == null || factory == null) return;
+    MonStats.Entry stats = resolveTyraelStats();
+    if (stats == null) {
+      log.warn("[A5Q6] Tyrael3 spawn deferred: MonStats row not found (hcIdx={})",
+          Act5BaalQuest.TYRAEL3_CLASS);
+      return;
+    }
+    com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
+    if (!chamber.findFreeCoordinates(free.set(x, y), 2, 32, true, free)) {
+      log.warn("[A5Q6] Tyrael3 spawn deferred: no free Chamber position near=({}, {})", x, y);
+      return;
+    }
+    x = free.x;
+    y = free.y;
+    int entity = factory.createMonster(stats, x, y);
+    if (entity == Engine.INVALID_ENTITY) {
+      log.warn("[A5Q6] Tyrael3 spawn failed: position=({}, {})", x, y);
+      return;
+    }
+    gameState().markTyraelSpawned(x, y);
+    log.info("[A5Q6] Tyrael3 spawned: entity={} position=({}, {})", entity, x, y);
+  }
+
+  private int findTyraelInChamber() {
+    if (monstersByZone == null || mMonster == null || mMapWrapper == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    IntBag monsters = monstersByZone.getEntities();
+    int[] ids = monsters.getData();
+    for (int i = 0; i < monsters.size(); i++) {
+      int id = ids[i];
+      if (!mMonster.has(id) || !mMapWrapper.has(id)) continue;
+      Monster monster = mMonster.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (monster != null && monster.monstats != null && wrapper != null
+          && wrapper.zone != null && wrapper.zone.level != null
+          && wrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER
+          && Act5BaalQuest.isTyrael3(monster.monstats.hcIdx, monster.monstats.Id)) {
+        return id;
+      }
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  private static MonStats.Entry resolveTyraelStats() {
+    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+    MonStats.Entry stats = Riiablo.files.monstats.get("Tyrael3");
+    if (stats != null) return stats;
+    stats = Riiablo.files.monstats.get("Tyrael");
+    if (stats != null && Act5BaalQuest.isTyrael3(stats.hcIdx, stats.Id)) return stats;
+    for (MonStats.Entry entry : Riiablo.files.monstats) {
+      if (entry != null && Act5BaalQuest.isTyrael3(entry.hcIdx, entry.Id)) return entry;
+    }
+    return null;
+  }
+
+  /** Handles the terminal 20175 message (the Java equivalent of
+   * D2MOO's NPCDEACTIVATE callback). */
+  private void onBaalTyraelMessage(NpcQuestMessageEvent event, Player player, Monster npc) {
+    if (event.messageIndex != Act5BaalQuest.MESSAGE_TYRAEL || player == null
+        || player.data == null || levelId(event.entityId) != Act5BaalQuest.WORLDSTONE_CHAMBER
+        || levelId(event.npcId) != Act5BaalQuest.WORLDSTONE_CHAMBER) return;
+    short previous = baalRecord(player.data);
+    if (!Act5BaalQuest.canTriggerLastPortal(previous,
+        levelId(event.npcId), event.messageIndex)) {
+      log.debug("[A5Q6] Tyrael3 message rejected: player={} npc={} record=0x{} level={}",
+          event.entityId, event.npcId, Integer.toHexString(Short.toUnsignedInt(previous)),
+          levelId(event.npcId));
+      return;
+    }
+    MapWrapper wrapper = mMapWrapper.has(event.npcId) ? mMapWrapper.get(event.npcId) : null;
+    Position position = mPosition.has(event.npcId) ? mPosition.get(event.npcId) : null;
+    if (wrapper == null || wrapper.zone == null || position == null) return;
+    if (!ensureLastPortal(wrapper.zone, position.position.x + 5f, position.position.y)) return;
+    // ScrollMessage 20175 sets CUSTOM3 in the native implementation.  This
+    // prevents the same player from reopening the terminal dialogue while
+    // leaving the portal globally available to the party.
+    short next = NativeQuestRecord.set(previous, NativeQuestRecord.CUSTOM3);
+    updateBaalRecord(player.data, ignored -> next, "tyrael3-terminal-message");
+    log.info("[A5Q6] Tyrael3 terminal message accepted: player={} npc={} portal=ready",
+        event.entityId, event.npcId);
+  }
+
+  /** Restores Tyrael3 after a room/ECS rebuild while preserving the game-level
+   * spawn position. */
+  private void rebuildBaalTyraelState() {
+    if (factory == null || world == null || !gameState().isTyraelSpawned()) return;
+    int existing = findTyraelInChamber();
+    if (existing != Engine.INVALID_ENTITY) return;
+    Map.Zone chamber = findZone(Act5BaalQuest.WORLDSTONE_CHAMBER);
+    if (chamber == null) return;
+    spawnA5Q6TyraelAt(chamber, gameState().tyraelOriginX(), gameState().tyraelOriginY());
   }
 
   /** Rebuilds the end portal after Chamber entities are recreated. */
   private void rebuildBaalEndPortalState() {
-    if (playersByZone == null || factory == null || world == null) return;
+    if (playersByZone == null || factory == null || world == null
+        || !gameState().baalPortals.isLastPortalCreated()) return;
     IntBag players = playersByZone.getEntities();
     int[] ids = players.getData();
     for (int i = 0; i < players.size(); i++) {
@@ -1210,9 +1326,15 @@ public class Act5QuestSystem extends BaseSystem {
       if (player == null || player.data == null || wrapper == null || wrapper.zone == null
           || wrapper.zone.level == null
           || wrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER
-          || !Act5BaalQuest.isFinished(baalRecord(player.data))) continue;
-      float x = wrapper.zone.x() + wrapper.zone.width() * 0.5f;
-      float y = wrapper.zone.y() + wrapper.zone.height() * 0.5f;
+          || !Act5BaalQuest.canUseLastPortal(
+              baalRecord(player.data), Act5BaalQuest.WORLDSTONE_CHAMBER)) continue;
+      int tyrael = findTyraelInChamber();
+      Position tyraelPosition = tyrael == Engine.INVALID_ENTITY || !mPosition.has(tyrael)
+          ? null : mPosition.get(tyrael);
+      float x = tyraelPosition == null ? gameState().tyraelOriginX() + 5f
+          : tyraelPosition.position.x + 5f;
+      float y = tyraelPosition == null ? gameState().tyraelOriginY()
+          : tyraelPosition.position.y;
       ensureLastPortal(wrapper.zone, x, y);
       return;
     }
