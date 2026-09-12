@@ -34,6 +34,9 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.HELLFORGE, resolve(376, 49));
     assertEquals(NativeQuestObjectResolver.Type.CAGED_SOLDIER, resolve(473, 71));
     assertEquals(NativeQuestObjectResolver.Type.FROZEN_ANYA, resolve(558, 71));
+    for (int id = 474; id <= 476; id++) {
+      assertEquals(NativeQuestObjectResolver.Type.ANCIENT_STATUE, resolve(id, 71));
+    }
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }

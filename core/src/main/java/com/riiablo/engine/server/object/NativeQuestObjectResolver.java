@@ -22,6 +22,7 @@ public final class NativeQuestObjectResolver {
     HELLFORGE(false, false, Engine.Object.MODE_ON),
     CAGED_SOLDIER(false, true, Engine.Object.MODE_ON),
     FROZEN_ANYA(false, true, Engine.Object.MODE_ON),
+    ANCIENT_STATUE(false, true, Engine.Object.MODE_ON),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -65,6 +66,9 @@ public final class NativeQuestObjectResolver {
   public static final int CAGED_SOLDIER = 473;
   /** Act V A5Q3 frozen Anya object. */
   public static final int FROZEN_ANYA = 558;
+  /** Act V A5Q5 Ancients statues (Objects 474..476). */
+  public static final int FIRST_ANCIENT_STATUE = 474;
+  public static final int LAST_ANCIENT_STATUE = 476;
 
   private NativeQuestObjectResolver() {}
 
@@ -91,6 +95,8 @@ public final class NativeQuestObjectResolver {
       case HELLFORGE: return Type.HELLFORGE;
       case CAGED_SOLDIER: return Type.CAGED_SOLDIER;
       case FROZEN_ANYA: return Type.FROZEN_ANYA;
+      case FIRST_ANCIENT_STATUE: case 475: case LAST_ANCIENT_STATUE:
+        return Type.ANCIENT_STATUE;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.

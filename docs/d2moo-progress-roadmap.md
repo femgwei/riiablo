@@ -2744,3 +2744,23 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：接入 A5Q5 Ancients（Ancient's Way/Arreat Summit 三古代人、等级/组队
   门槛和奖励状态），再处理 A5Q6 Baal 主链。
+
+### 2026-09-12 Act V A5Q5 Ancients / Rite of Passage（本轮完成基础闭环）
+
+- [x] 新增 `Act5AncientsQuest`，使用 A5Q5 record `5`，并按 D2MOO 的难度门槛实现
+  普通 20、噩梦 40、地狱 60 级限制；进入 Rocky Summit（125）或工程中的 Arreat
+  Summit（122）别名时写入 `STARTED + ENTERED_AREA`。
+- [x] 对齐原生远古人雕像 Objects `474/475/476`，加入网络任务对象解析；三座雕像
+  首次激活后，按 SuperUnique `43/44/45` 解析三名远古人并在对应雕像位置生成，避免
+  使用普通怪物替代任务首领。
+- [x] 三名远古人全部死亡后，为满足等级门槛的 Summit 玩家和同队 Act V 玩家同步
+  `PRIMARY_GOAL_DONE + REWARD_GRANTED + COMPLETED_NOW`；奖励状态即时完成，重复击杀
+  不会重复推进。
+- [x] 新增 A5Q5 状态测试和远古人对象 resolver 测试；通过定向测试、`:core:compileJava`、
+  `:server:d2gs:compileJava`。
+- [ ] D2MOO 的远古人战斗场景重置、雕像动画/复活、Summit Door/Ancients Altar 动画和
+  原生任务经验数值尚未完全接入；这些属于后续对象动画与经验奖励专项，不影响本轮
+  任务记录闭环。
+
+当前下一项：接入 A5Q6 Baal 主链（Worldstone Keep/Throne of Destruction、五波仆从、
+  Baal 击杀、Worldstone Chamber 入口和 Act V 结束状态）。
