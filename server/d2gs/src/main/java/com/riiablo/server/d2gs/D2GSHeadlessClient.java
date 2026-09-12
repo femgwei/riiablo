@@ -176,6 +176,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA2TombDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA2DungeonWarpDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireEarlyObjectDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
@@ -227,6 +229,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA2TombDual) {
       runA2TombDual(d2s, character);
+      return;
+    }
+    if (config.requireA2DungeonWarpDual) {
+      runA2DungeonWarpDual(d2s, character);
       return;
     }
     if (config.requireEarlyObjectDual) {
@@ -2648,6 +2654,95 @@ public final class D2GSHeadlessClient {
           + boundary[2] + "," + boundary[3] + ") rejectedSequence=" + boundarySequence);
       log("a2_tomb_dual_pass", "staff=" + tomb + " boss=" + selection.bossTombLevel()
           + " tombs=7 symbols=" + symbols + " clients=true,true");
+    }
+  }
+
+  /**
+   * Two-client regression for the static Act II underground graph.  The
+   * pairs mirror the 1.10f Levels.txt links: Dry Hills→Halls of the Dead,
+   * Far Oasis→Maggot Lair, Valley of Snakes→Claw Viper Temple and Palace
+   * Cellar 3→Arcane Sanctuary.  Each pair is exercised in both directions,
+   * then a one-cell boundary escape is rejected authoritatively.
+   */
+  private void runA2DungeonWarpDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A2DungeonPeer", 0x41324450);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    // Keep this table in native ordinal order; these are not D2LevelIds.java
+    // aliases (that file historically carried an Arcane=74 typo).  Arcane
+    // Sanctuary is opened by the quest portal rather than a static Levels.txt
+    // edge and remains covered by the A2 object/quest fixture.
+    int[][] pairs = {{42, 56}, {43, 62}, {45, 58}};
+    int roundTrips = 0;
+    int boundaryRejects = 0;
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      for (int i = 0; i < pairs.length; i++) {
+        int source = pairs[i][0], destination = pairs[i][1];
+        if (!D2GS.headlessEnterLevel(a.playerId, source)
+            || !D2GS.headlessEnterLevel(b.playerId, source)) {
+          throw new IOException("A2 dungeon source staging unavailable: " + source);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB, source, "a2-dungeon-source-" + source);
+        int warp = D2GS.headlessStaticWarpEntity(source, destination);
+        if (warp == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, warp)) {
+          throw new IOException("A2 dungeon Warp entity unavailable: " + source + "->" + destination);
+        }
+        long requestId = 10_000L + i * 10L;
+        send(outA, questRequestPacket(requestId, QuestOperation.WARP_INTERACTION, warp, -1));
+        QuestResult result = a.awaitQuestResult(inA, requestId, deadline());
+        if (result == null || !result.success()) {
+          throw new IOException("A2 dungeon Warp rejected: " + source + "->" + destination);
+        }
+        awaitLevel(a, inA, destination, deadline());
+        int[] state = D2GS.headlessWarpState(a.playerId);
+        if (state.length < 4 || state[0] != destination || state[2] != 1 || state[3] != 0) {
+          throw new IOException("A2 dungeon Warp landed outside walkable Zone: "
+              + source + "->" + destination + " state=" + java.util.Arrays.toString(state));
+        }
+
+        float[] boundary = D2GS.headlessPrepareBoundaryProbe(a.playerId, destination);
+        if (boundary == null) {
+          throw new IOException("A2 dungeon boundary probe unavailable: " + destination);
+        }
+        long sequence = 11_000L + i;
+        send(outA, movementIntentPacket(boundary[2], boundary[3], sequence, 0L, 0L));
+        long boundaryDeadline = System.currentTimeMillis() + 4_000L;
+        while (System.currentTimeMillis() < boundaryDeadline
+            && a.lastMovementAcknowledgement < sequence) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+          if (packet != null) a.consume(packet);
+        }
+        if (a.lastMovementAcknowledgement != sequence
+            || a.lastRejectedMovementSequence != sequence) {
+          throw new IOException("A2 dungeon boundary move was not rejected: "
+              + destination + " ack=" + a.lastMovementAcknowledgement
+              + " rejected=" + a.lastRejectedMovementSequence);
+        }
+        boundaryRejects++;
+
+        int reverse = D2GS.headlessStaticWarpEntity(destination, source);
+        if (reverse == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, reverse)) {
+          throw new IOException("A2 dungeon reverse Warp unavailable: " + destination + "->" + source);
+        }
+        long reverseRequest = requestId + 1L;
+        send(outA, questRequestPacket(reverseRequest, QuestOperation.WARP_INTERACTION, reverse, -1));
+        QuestResult reverseResult = a.awaitQuestResult(inA, reverseRequest, deadline());
+        if (reverseResult == null || !reverseResult.success()) {
+          throw new IOException("A2 dungeon reverse Warp rejected: " + destination + "->" + source);
+        }
+        awaitLevel(a, inA, source, deadline());
+        roundTrips++;
+      }
+      log("a2_dungeon_warp_dual_pass", "pairs=" + pairs.length
+          + " roundTrips=" + roundTrips + " boundaryRejects=" + boundaryRejects
+          + " clients=true,true");
     }
   }
 
@@ -5982,6 +6077,7 @@ public final class D2GSHeadlessClient {
     boolean requireA2Q6Reconnect;
     boolean requireA1ObjectInteractionDual;
     boolean requireA2TombDual;
+    boolean requireA2DungeonWarpDual;
     boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
@@ -6031,6 +6127,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-a2q6-reconnect".equals(arg)) config.requireA2Q6Reconnect = true;
         else if ("--require-a1-object-interaction-dual".equals(arg)) config.requireA1ObjectInteractionDual = true;
         else if ("--require-a2-tomb-dual".equals(arg)) config.requireA2TombDual = true;
+        else if ("--require-a2-dungeon-warp-dual".equals(arg)) config.requireA2DungeonWarpDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
@@ -6081,6 +6178,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA2ObjectInteractionDual
           && !config.requireA2Q6Reconnect
           && !config.requireA2TombDual
+          && !config.requireA2DungeonWarpDual
           && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
@@ -6090,6 +6188,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA2ObjectInteractionDual
           && !config.requireA2Q6Reconnect
           && !config.requireA2TombDual
+          && !config.requireA2DungeonWarpDual
           && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");

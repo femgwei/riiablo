@@ -624,6 +624,13 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
             tombId, selectedTombs.arcaneSymbolObjectFor(tombId), localX, localY));
       }
       configureAct2TombWarps(map);
+      // Static dungeon links (Sewers, Palace Cellars, Maggot Lair,
+      // Claw Viper Temple, Halls of the Dead and Arcane Sanctuary) use the
+      // same first-empty runtime slot contract as outdoor links.  Reduced
+      // DS1 exports frequently omit one endpoint's SPECIAL_10 cell; install
+      // a deterministic marker so MapManager can still create the real Warp
+      // entity instead of leaving a rendered-but-unreachable entrance.
+      configureAct2DungeonWarps(map);
     }
 
     TopologyReport report = validateAct2Topology(Riiablo.files.Levels, generated);
@@ -869,6 +876,106 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
           canyonSlot, tombId, tombSlot));
     }
     Gdx.app.log(TAG, String.format("Act2 tomb runtime warps configured: %d/7", configured));
+  }
+
+  /**
+   * Materializes non-quest Act II underground Vis/Warp edges.
+   *
+   * <p>Unlike the seven Tombs, these links are present in Levels.txt when
+   * using the full 1.10f tables.  The reduced exports used by headless and
+   * client builds may still contain the level graph while omitting a DS1 warp
+   * unit.  D2Common's {@code DRLG_SetWarpId} allocates a first-empty slot at
+   * runtime; reproducing that allocation and adding a synthetic marker keeps
+   * the destination override and the rendered interaction in sync.</p>
+   */
+  void configureAct2DungeonWarps(Map map) {
+    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    IntMap<IntSet> reservedByLevel = new IntMap<>();
+    int configured = 0;
+    int skippedQuest = 0;
+    for (Act2WarpEdge edge : discoverAct2WarpEdges(Riiablo.files.Levels)) {
+      // Outdoor links are injected by configureAct2OutdoorWarps, and Tombs
+      // have their own seven-link allocator.  Duriel's Lair is opened only
+      // by the Horadric Orifice quest Warp, never by a static Vis/Warp edge.
+      if (!isStaticDungeonWarpEdge(edge)) {
+        skippedQuest++;
+        continue;
+      }
+
+      Zone source = findZoneByLevelId(map, edge.sourceLevelId);
+      Zone destination = findZoneByLevelId(map, edge.destinationLevelId);
+      Levels.Entry sourceLevel = Riiablo.files.Levels.get(edge.sourceLevelId);
+      Levels.Entry destinationLevel = Riiablo.files.Levels.get(edge.destinationLevelId);
+      if (source == null || destination == null || sourceLevel == null || destinationLevel == null) {
+        continue;
+      }
+
+      IntSet sourceReserved = reservedByLevel.get(edge.sourceLevelId);
+      if (sourceReserved == null) {
+        sourceReserved = occupiedWarpSlots(source);
+        reservedByLevel.put(edge.sourceLevelId, sourceReserved);
+      }
+      IntSet destinationReserved = reservedByLevel.get(edge.destinationLevelId);
+      if (destinationReserved == null) {
+        destinationReserved = occupiedWarpSlots(destination);
+        reservedByLevel.put(edge.destinationLevelId, destinationReserved);
+      }
+
+      int sourceSlot = findRuntimeWarpSlot(sourceLevel.Vis, sourceLevel.Warp,
+          edge.destinationLevelId);
+      if (sourceSlot < 0) {
+        sourceSlot = findOrAllocateWarpSlot(sourceLevel.Vis, sourceLevel.Warp,
+            edge.destinationLevelId, sourceReserved);
+      }
+      int destinationSlot = findRuntimeWarpSlot(destinationLevel.Vis, destinationLevel.Warp,
+          edge.sourceLevelId);
+      if (destinationSlot < 0) {
+        destinationSlot = findOrAllocateWarpSlot(destinationLevel.Vis, destinationLevel.Warp,
+            edge.sourceLevelId, destinationReserved);
+      }
+      if (sourceSlot < 0 || destinationSlot < 0) {
+        Gdx.app.error(TAG, String.format(
+            "Act2 dungeon warp slot unavailable: %d->%d sourceSlot=%d destinationSlot=%d",
+            edge.sourceLevelId, edge.destinationLevelId, sourceSlot, destinationSlot));
+        continue;
+      }
+
+      map.addWarpDestinationOverride(edge.sourceLevelId, sourceSlot, edge.destinationLevelId);
+      map.addWarpDestinationOverride(edge.destinationLevelId, destinationSlot, edge.sourceLevelId);
+      sourceReserved.add(sourceSlot);
+      destinationReserved.add(destinationSlot);
+      ensureLinkedWarpMarker(source, sourceSlot);
+      ensureLinkedWarpMarker(destination, destinationSlot);
+      configured++;
+      if (DEBUG_BUILD) {
+        Gdx.app.debug(TAG, String.format(
+            "Act2 dungeon warp runtime link: %d[%d] <-> %d[%d]",
+            edge.sourceLevelId, sourceSlot, edge.destinationLevelId, destinationSlot));
+      }
+    }
+    Gdx.app.log(TAG, String.format(
+        "Act2 dungeon runtime warps configured: %d skippedQuest=%d", configured, skippedQuest));
+  }
+
+  private static boolean isTombLevel(int levelId) {
+    return levelId >= Act2TombSelection.FIRST_TOMB_LEVEL
+        && levelId <= Act2TombSelection.LAST_TOMB_LEVEL;
+  }
+
+  /** True for a non-outdoor, non-quest dungeon edge that may be materialized. */
+  static boolean isStaticDungeonWarpEdge(Act2WarpEdge edge) {
+    if (edge == null) return false;
+    if (isAct2OutdoorLevel(edge.sourceLevelId)
+        && isAct2OutdoorLevel(edge.destinationLevelId)) return false;
+    if (isTombLevel(edge.sourceLevelId) || isTombLevel(edge.destinationLevelId)) return false;
+    // Duriel's Lair is intentionally quest-only (Horadric Orifice).
+    return edge.sourceLevelId != LEVEL_DURIELSLAIR
+        && edge.destinationLevelId != LEVEL_DURIELSLAIR;
+  }
+
+  /** Same marker fallback as Tombs, named separately to document its scope. */
+  private static void ensureLinkedWarpMarker(Zone zone, int mainIndex) {
+    ensureTombWarpMarker(zone, mainIndex);
   }
 
   private static int findOrAllocateWarpSlot(int[] vis, int[] warp, int destination) {

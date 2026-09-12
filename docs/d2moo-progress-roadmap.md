@@ -3903,3 +3903,45 @@ Symbol 的真实选择、地下区域入口和地图拓扑校验。
 
 下一项：继续 A2 地下区域（Maggot Lair、Claw Viper Temple、Arcane Sanctuary）真实
 入口/出口的 Warp 交互与边界回归，随后再进入 Act III 的地下地图连接。
+
+### 2026-09-13 A2 地下区域通用 Warp 物化（本轮完成）
+
+- [x] `Act2MapBuilderD2MOD.configureAct2DungeonWarps` 按 `Levels.txt` 的真实
+  `Vis/Warp` 边遍历 Sewers、Palace Cellars、Maggot Lair、Claw Viper Temple、
+  Halls of the Dead、Ancient Tunnels 和 Arcane Sanctuary 等地下区域，采用
+  D2Common `DRLG_SetWarpId` first-empty-slot 规则写入双向 destination override。
+- [x] 精简 DS1 导出缺少 `SPECIAL_10` 入口单位时，自动补建 level-local Warp marker，
+  仍由 `linkNativeWarpSpecials` 进行反向配对；已有原生槽位优先复用，避免重复入口。
+- [x] 明确排除七墓（由 Tomb 专用分配器负责）、户外链和 Duriel's Lair 静态边，保证
+  Staff Tomb→Duriel 仍只能由 Horadric Orifice 任务 Warp 打开。
+- [x] 增加 `isStaticDungeonWarpEdge` 单测，覆盖地下边、户外边、七墓边和 Duriel
+  任务边分类；`Act2MapBuilderD2MooWarpTest` 全部通过。
+
+验证：`:core:test --tests com.riiablo.map.Act2MapBuilderD2MooWarpTest`、
+`:core:compileJava`、`git diff --check` 通过。完整 1.10f 资源下的双客户端地下入口/出口
+实跑由下一项回归覆盖（Arcane Sanctuary 仍使用其任务 Portal，而非静态 Levels.txt 边）。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Act2MapBuilderD2MOD.java`、
+`core/src/test/java/com/riiablo/map/Act2MapBuilderD2MooWarpTest.java`。
+
+下一项：新增 `headlessA2DungeonWarpDual`，按 Levels.txt 自动发现并双向验证 Maggot
+Lair、Claw Viper Temple、Arcane Sanctuary 入口、可行走落点及地下边界拒绝。
+
+### 2026-09-13 A2 地下 Warp 双客户端回归（本轮完成）
+
+- [x] 新增 `headlessA2DungeonWarpDual` 离屏双客户端夹具，按 1.10f 原生序号验证
+  Dry Hills→Halls of the Dead（42→56）、Far Oasis→Maggot Lair（43→62）、
+  Valley of Snakes→Claw Viper Temple（45→58）三条静态地下链路的正向/反向
+  `WARP_INTERACTION`，每次均校验目标 Zone、可行走落点和边界越界拒绝。
+- [x] Arcane Sanctuary 明确为 Palace Cellar 任务 Portal（非静态 `Levels.txt` Warp），
+  继续由 `headlessA2ObjectInteractionDual` 的 Arcane Tome/任务链覆盖，避免伪造错误
+  的 54→75 静态入口。
+- [x] 1.10f 离屏结果：`a2_dungeon_warp_dual_pass pairs=3 roundTrips=3
+  boundaryRejects=3 clients=true,true`。
+
+验证：`:server:d2gs:headlessA2DungeonWarpDual`（`D2_HOME` 指向
+`G:\\BaiduNetdiskDownload\\Diablo II 1.10F`）、`:server:d2gs:compileJava`、
+`core` A2 Warp 单测、`git diff --check` 均通过。
+
+下一项：进入 Act III 地下地图连接，优先 Spider Cave/Spider Cavern、Flayer Dungeon、
+Sewers 的真实 Vis/Warp 物化与双向边界回归。

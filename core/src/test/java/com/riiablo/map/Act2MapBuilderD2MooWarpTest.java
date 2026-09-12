@@ -82,6 +82,18 @@ class Act2MapBuilderD2MooWarpTest {
   }
 
   @Test
+  void classifiesDungeonEdgesWithoutTurningOutdoorOrQuestLinksIntoStaticWarps() {
+    assertTrue(Act2MapBuilderD2MOD.isStaticDungeonWarpEdge(
+        new Act2MapBuilderD2MOD.Act2WarpEdge(42, 63, 0)));
+    assertTrue(Act2MapBuilderD2MOD.isStaticDungeonWarpEdge(
+        new Act2MapBuilderD2MOD.Act2WarpEdge(54, 75, 0)));
+    assertTrue(!Act2MapBuilderD2MOD.isStaticDungeonWarpEdge(
+        new Act2MapBuilderD2MOD.Act2WarpEdge(42, 43, 0)));
+    assertTrue(!Act2MapBuilderD2MOD.isStaticDungeonWarpEdge(
+        new Act2MapBuilderD2MOD.Act2WarpEdge(73, 74, 0)));
+  }
+
+  @Test
   void topologyReportFlagsMissingGeneratedDungeonAndReverseRoute() {
     Levels.Entry rocky = level(41, new int[] {63}, new int[] {0});
     Levels.Entry maggot = level(63, new int[] {41}, new int[] {0});
