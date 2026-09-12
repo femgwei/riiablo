@@ -73,7 +73,8 @@ public class MercenaryManager {
   public static final int NPC_GREIZ = 198;
 
   /** 阿舍拉（第三幕雇佣兵 NPC） */
-  public static final int NPC_ASHEARA = 199;
+  /** D2MOO MONSTER_ASHEARA (Act III), not Act II's Elzix id. */
+  public static final int NPC_ASHEARA = 252;
 
   /** 夸坎克（第五幕雇佣兵 NPC） */
   public static final int NPC_QUAL_KEHK = 511;
@@ -457,6 +458,32 @@ public class MercenaryManager {
     rogue.hired = true;
     callback.onMercenaryHired(playerId, merc);
     log.info("Granted free Rogue: player={} entity={} level={} name={}",
+        playerId, entityId, merc.level, merc.nameId);
+    return true;
+  }
+
+  /** Grants the native Act III Gidbinn Iron Wolf without charging gold. */
+  public boolean grantFreeIronWolf(int playerId, int playerLevel) {
+    if (playerMercs.containsKey(playerId) || callback == null) return false;
+    Array<AvailableMercenary> available = getAvailableMercenaries(NPC_ASHEARA,
+        Math.max(1, playerLevel));
+    AvailableMercenary wolf = firstAvailable(available, MERC_TYPE_IRON_WOLF);
+    if (wolf == null) {
+      NpcMercenaryList list = npcLists.get(NPC_ASHEARA);
+      if (list != null) {
+        refreshMercenaryList(list, Math.max(1, playerLevel));
+        wolf = firstAvailable(list.available, MERC_TYPE_IRON_WOLF);
+      }
+    }
+    if (wolf == null) return false;
+    int entityId = callback.createMercenaryEntity(playerId, wolf.definition,
+        wolf.level, wolf.seed, wolf.nameId);
+    if (entityId == Engine.INVALID_ENTITY) return false;
+    ActiveMercenary merc = createActiveMercenary(playerId, wolf, entityId);
+    playerMercs.put(playerId, merc);
+    wolf.hired = true;
+    callback.onMercenaryHired(playerId, merc);
+    log.info("Granted free Iron Wolf: player={} entity={} level={} name={}",
         playerId, entityId, merc.level, merc.nameId);
     return true;
   }

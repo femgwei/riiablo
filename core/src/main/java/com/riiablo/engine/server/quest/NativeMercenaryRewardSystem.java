@@ -71,22 +71,27 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   @Subscribe
   public void onNativeQuestReward(NativeQuestRewardEvent reward) {
     if (reward == null || reward.phase != NativeQuestRewardEvent.AVAILABLE
-        || reward.questId != QuestId.A1Q2_BLOOD_RAVEN
-        || reward.rewardKind != NativeQuestRewardEvent.BLOOD_RAVEN_FREE_ROGUE) {
+        || (reward.questId != QuestId.A1Q2_BLOOD_RAVEN
+            && reward.questId != QuestId.A3Q2_BLADE_OF_OLD_RELIGION)
+        || (reward.rewardKind != NativeQuestRewardEvent.BLOOD_RAVEN_FREE_ROGUE
+            && reward.rewardKind != NativeQuestRewardEvent.GIDBINN_FREE_IRON_WOLF)) {
       return;
     }
 
     int playerLevel = getPlayerLevel(reward.playerId);
-    if (!mercenaries.grantFreeRogue(reward.playerId, playerLevel)) {
-      log.warn("[A1Q2] Free Rogue grant failed; quest remains pending: player={}",
-          reward.playerId);
+    boolean granted = reward.rewardKind == NativeQuestRewardEvent.GIDBINN_FREE_IRON_WOLF
+        ? mercenaries.grantFreeIronWolf(reward.playerId, playerLevel)
+        : mercenaries.grantFreeRogue(reward.playerId, playerLevel);
+    if (!granted) {
+      log.warn("[QUEST_MERC] free mercenary grant failed; quest remains pending: player={} kind={}",
+          reward.playerId, reward.rewardKind);
       return;
     }
 
     event.dispatch(NativeQuestRewardEvent.granted(reward.playerId,
         reward.questId, reward.rewardKind));
-    log.info("[A1Q2] Free Rogue entity committed: player={} level={}",
-        reward.playerId, playerLevel);
+    log.info("[QUEST_MERC] free mercenary entity committed: player={} level={} kind={}",
+        reward.playerId, playerLevel, reward.rewardKind);
   }
 
   MercenaryManager mercenaries() {

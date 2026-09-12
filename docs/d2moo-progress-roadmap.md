@@ -2535,4 +2535,21 @@ Will 的原生地图触发、任务标记和奖励闭环；完成第三章任务
   通过。
 
 当前下一项：实现第三章 A3Q2 Blade of the Old Religion（Gidbinn）任务对象、首次拾取、
-  Asheara 佣兵奖励和队伍状态传播；随后处理 A3Q3 Khalim's Will，再开始 Act IV 主链。
+Asheara 佣兵奖励和队伍状态传播；随后处理 A3Q3 Khalim's Will，再开始 Act IV 主链。
+
+### 2026-09-12 Act III A3Q2 Blade of the Old Religion / Gidbinn（本轮完成）
+
+- [x] 按 D2MOO `ACT3Q3` 对齐项目对外编号 `A3Q2_BLADE_OF_OLD_RELIGION`：Gidbinn
+  Decoy（Objects.txt 252）激活、Fetish11 守卫生成、死亡后只掉落一次 `g33` Gidbinn。
+- [x] Gidbinn 拾取、Ormus 对话交付（587）、稀有戒指奖励（593，资源代码 `rin`）和
+  Asheara 免费 Iron Wolf（589）接入现有任务记录；只有 Ormus 奖励和 Asheara 佣兵奖励
+  都完成后才设置 `REWARD_GRANTED`，各阶段均幂等。
+- [x] 新增 Gidbinn quest object resolver/network 路径；多人队伍在 Ormus 交付后同步
+  任务状态，物品和佣兵实体仍按玩家独立创建，失败时不提前提交奖励状态。
+- [x] 扩展 `MercenaryManager`/`NativeMercenaryRewardSystem` 的免费 Iron Wolf 事务，
+  修正 Act III Asheara class id（252），不改变付费佣兵和战斗逻辑。
+- [x] 验证：`Act3GidbinnQuestTest`、`Act3GoldenBirdQuestTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：接入第三章 A3Q3 Khalim's Will（四件遗物、赫拉迪克合成、崔凡克黑色球体）
+的最小任务记录与对象触发链，再开始第四章地图主链和任务。

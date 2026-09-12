@@ -176,6 +176,8 @@ public final class MonsterType {
   public static final int MESHIF2 = 264;
   /** 娜塔亚 (Act 3). */
   public static final int NATALYA = 297;
+  /** Gidbinn's unique Fetish guardian (D2MOO MONSTER_FETISH11). */
+  public static final int FETISH11 = 407;
 
   //==========================================================================
   // 召唤物

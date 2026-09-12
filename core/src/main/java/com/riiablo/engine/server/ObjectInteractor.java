@@ -146,7 +146,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         || type == NativeQuestObjectResolver.Type.HORADRIC_MALUS
         || type == NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR
         || type == NativeQuestObjectResolver.Type.HORADRIC_ORIFICE
-        || type == NativeQuestObjectResolver.Type.ARCANE_SANCTUARY_TOME;
+        || type == NativeQuestObjectResolver.Type.ARCANE_SANCTUARY_TOME
+        || type == NativeQuestObjectResolver.Type.GIDBINN_DECOY;
   }
 
   private boolean interactQuestPortal(int playerId, int visualEntityId) {

@@ -15,6 +15,7 @@ public final class NativeQuestObjectResolver {
     TAINTED_SUN_ALTAR(false, true, Engine.Object.MODE_ON),
     HORADRIC_ORIFICE(false, true, Engine.Object.MODE_ON),
     ARCANE_SANCTUARY_TOME(false, true, Engine.Object.MODE_ON),
+    GIDBINN_DECOY(false, true, Engine.Object.MODE_OP),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -42,6 +43,8 @@ public final class NativeQuestObjectResolver {
   public static final int HORADRIC_ORIFICE = 152;
   /** Objects.txt OBJECT_YET_ANOTHER_TOME / A2Q4 OperateFn 42. */
   public static final int ARCANE_SANCTUARY_TOME = 357;
+  /** Objects.txt Gidbinn decoy / OperateFn 31. */
+  public static final int GIDBINN_DECOY = 252;
 
   private NativeQuestObjectResolver() {}
 
@@ -59,6 +62,7 @@ public final class NativeQuestObjectResolver {
       case TAINTED_SUN_ALTAR: return Type.TAINTED_SUN_ALTAR;
       case HORADRIC_ORIFICE: return Type.HORADRIC_ORIFICE;
       case ARCANE_SANCTUARY_TOME: return Type.ARCANE_SANCTUARY_TOME;
+      case GIDBINN_DECOY: return Type.GIDBINN_DECOY;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.

@@ -24,6 +24,7 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR, resolve(149, 24));
     assertEquals(NativeQuestObjectResolver.Type.HORADRIC_ORIFICE, resolve(152, 21));
     assertEquals(NativeQuestObjectResolver.Type.ARCANE_SANCTUARY_TOME, resolve(357, 42));
+    assertEquals(NativeQuestObjectResolver.Type.GIDBINN_DECOY, resolve(252, 31));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }

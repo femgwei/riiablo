@@ -14,7 +14,9 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
@@ -29,6 +31,7 @@ import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import net.mostlyoriginal.api.event.common.Subscribe;
+import net.mostlyoriginal.api.event.common.EventSystem;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
 /**
@@ -54,10 +57,14 @@ public class Act3QuestSystem extends PassiveSystem {
   protected EntityFactory factory;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
+  protected EventSystem event;
 
   private EntitySubscription playersByZone;
   private final IntSet jadeDropVictims = new IntSet();
+  private final IntSet gidbinnBosses = new IntSet();
+  private final IntSet gidbinnDropVictims = new IntSet();
   private boolean jadeDropIssued;
+  private boolean gidbinnDropIssued;
 
   @Override
   protected void initialize() {
@@ -74,6 +81,32 @@ public class Act3QuestSystem extends PassiveSystem {
     short previous = record(player.data);
     short next = Act3GoldenBirdQuest.enterArea(previous);
     if (next != previous) updateRecord(player.data, next, "entered-act3");
+    short gidbinnPrevious = gidbinnRecord(player.data);
+    short gidbinnNext = event.zone.level.Id == D2LevelIds.LEVEL_FLAYERJUNGLE
+        ? Act3GidbinnQuest.enterArea(gidbinnPrevious) : gidbinnPrevious;
+    if (gidbinnNext != gidbinnPrevious) updateGidbinnRecord(player.data, gidbinnNext,
+        "entered-flayer-jungle");
+  }
+
+  @Subscribe
+  public void onQuestObjectInteraction(QuestObjectInteractionEvent interaction) {
+    if (interaction == null || interaction.type != com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.GIDBINN_DECOY
+        || !mPlayer.has(interaction.playerId) || !mPosition.has(interaction.entityId)) return;
+    Player player = mPlayer.get(interaction.playerId);
+    if (player == null || player.data == null) return;
+    short record = gidbinnRecord(player.data);
+    if (!Act3GidbinnQuest.canProgress(record)
+        || NativeQuestRecord.has(record, NativeQuestRecord.CUSTOM2)
+        || gidbinnDropIssued) return;
+    if (factory == null) return;
+    Position position = mPosition.get(interaction.entityId);
+    int boss = factory.createMonster(MonsterType.FETISH11,
+        position.position.x, position.position.y);
+    if (boss < 0) return;
+    interaction.accept();
+    gidbinnBosses.add(boss);
+    log.info("[A3Q2] Gidbinn guardian spawned: object={} player={} boss={}",
+        interaction.entityId, interaction.playerId, boss);
   }
 
   @Subscribe
@@ -108,14 +141,36 @@ public class Act3QuestSystem extends PassiveSystem {
   }
 
   @Subscribe
+  public void onGidbinnGuardianKilled(DeathEvent event) {
+    if (event == null || event.victim < 0 || gidbinnDropIssued
+        || !gidbinnBosses.contains(event.victim) || !mPosition.has(event.victim)) return;
+    if (!gidbinnDropVictims.add(event.victim)) return;
+    Item item = createQuestItem(Act3GidbinnQuest.GIDBINN);
+    if (item == null || factory == null) return;
+    Position origin = mPosition.get(event.victim);
+    int entityId = factory.createItem(item, origin.position.x, origin.position.y);
+    if (entityId < 0) return;
+    item.id = entityId;
+    gidbinnDropIssued = true;
+    markGidbinnDropForAct3Players();
+    log.info("[A3Q2] Gidbinn dropped: victim={} killer={} entity={}",
+        event.victim, event.killer, entityId);
+  }
+
+  @Subscribe
   public void onQuestItemPickedUp(QuestItemPickedUpEvent event) {
-    if (event == null || !Act3GoldenBirdQuest.JADE_FIGURINE.equalsIgnoreCase(event.itemCode)
-        || !mPlayer.has(event.playerId)) return;
+    if (event == null || !mPlayer.has(event.playerId)) return;
     Player player = mPlayer.get(event.playerId);
     if (player == null || player.data == null) return;
-    updateRecord(player.data, Act3GoldenBirdQuest.markJadePicked(record(player.data)),
-        "jade-figurine-picked-up");
-    propagateJadeStatus(event.playerId);
+    if (Act3GoldenBirdQuest.JADE_FIGURINE.equalsIgnoreCase(event.itemCode)) {
+      updateRecord(player.data, Act3GoldenBirdQuest.markJadePicked(record(player.data)),
+          "jade-figurine-picked-up");
+      propagateJadeStatus(event.playerId);
+    } else if (Act3GidbinnQuest.GIDBINN.equalsIgnoreCase(event.itemCode)) {
+      short previous = gidbinnRecord(player.data);
+      updateGidbinnRecord(player.data, Act3GidbinnQuest.markGidbinnPicked(previous),
+          "gidbinn-picked-up");
+    }
   }
 
   @Subscribe
@@ -131,6 +186,60 @@ public class Act3QuestSystem extends PassiveSystem {
       onMeshifMessage(event, player);
     } else if (Act3GoldenBirdQuest.isAlkor(npcType)) {
       onAlkorMessage(event, player);
+    } else if (npcType == MonsterType.HRATLI || npcType == MonsterType.ORMUS
+        || npcType == MonsterType.ASHEARA) {
+      onGidbinnNpcMessage(event, player, npcType);
+    }
+  }
+
+  private void onGidbinnNpcMessage(NpcQuestMessageEvent event, Player player, int npcType) {
+    CharData data = player.data;
+    short previous = gidbinnRecord(data);
+    if (npcType == MonsterType.HRATLI
+        && event.messageIndex == Act3GidbinnQuest.MESSAGE_HRATLI_INIT) {
+      updateGidbinnRecord(data, Act3GidbinnQuest.start(previous), "hratli-gidbinn-init");
+      return;
+    }
+    if (npcType == MonsterType.ORMUS
+        && event.messageIndex == Act3GidbinnQuest.MESSAGE_ORMUS_TURN_IN) {
+      if (!data.getItems().containsItemCode(Act3GidbinnQuest.GIDBINN)
+          || NativeQuestRecord.has(previous, NativeQuestRecord.CUSTOM2)) return;
+      if (!data.getItems().removeItemCode(Act3GidbinnQuest.GIDBINN)) return;
+      short next = Act3GidbinnQuest.markBroughtToOrmus(previous);
+      updateGidbinnRecord(data, next, "ormus-gidbinn-turn-in");
+      propagateGidbinnTurnIn(event.entityId);
+      return;
+    }
+    if (npcType == MonsterType.ORMUS
+        && event.messageIndex == Act3GidbinnQuest.MESSAGE_ORMUS_REWARD) {
+      if (!NativeQuestRecord.has(previous, NativeQuestRecord.CUSTOM2)
+          || NativeQuestRecord.has(previous, NativeQuestRecord.CUSTOM4)) return;
+      short next = Act3GidbinnQuest.markOrmusReward(previous);
+      updateGidbinnRecord(data, next, "ormus-ring-reward");
+      createGidbinnReward(event.entityId, player);
+      completeGidbinnIfReady(data);
+      return;
+    }
+    if (npcType == MonsterType.ASHEARA
+        && event.messageIndex == Act3GidbinnQuest.MESSAGE_ASHEARA_REWARD
+        && NativeQuestRecord.has(previous, NativeQuestRecord.CUSTOM2)
+        && !NativeQuestRecord.has(previous, NativeQuestRecord.CUSTOM3)) {
+      if (this.event != null) this.event.dispatch(NativeQuestRewardEvent.available(event.entityId,
+          QuestId.A3Q2_BLADE_OF_OLD_RELIGION, NativeQuestRewardEvent.GIDBINN_FREE_IRON_WOLF));
+    }
+  }
+
+  @Subscribe
+  public void onNativeQuestReward(NativeQuestRewardEvent reward) {
+    if (reward == null || reward.phase != NativeQuestRewardEvent.GRANTED
+        || reward.questId != QuestId.A3Q2_BLADE_OF_OLD_RELIGION || !mPlayer.has(reward.playerId)) return;
+    Player player = mPlayer.get(reward.playerId);
+    if (player == null || player.data == null) return;
+    short previous = gidbinnRecord(player.data);
+    short next = Act3GidbinnQuest.markAshearaReward(previous);
+    if (next != previous) {
+      updateGidbinnRecord(player.data, next, "asheara-free-iron-wolf");
+      completeGidbinnIfReady(player.data);
     }
   }
 
@@ -226,6 +335,67 @@ public class Act3QuestSystem extends PassiveSystem {
     }
   }
 
+  private void markGidbinnDropForAct3Players() {
+    if (playersByZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      Player player = mPlayer.get(ids[i]);
+      if (player == null || player.data == null || !isAct3Level(levelId(ids[i]))) continue;
+      short previous = gidbinnRecord(player.data);
+      short next = Act3GidbinnQuest.enterArea(Act3GidbinnQuest.start(previous));
+      if (next != previous) updateGidbinnRecord(player.data, next, "gidbinn-guardian-died");
+    }
+  }
+
+  private void propagateGidbinnTurnIn(int sourcePlayerId) {
+    if (playersByZone == null || partyManager == null) return;
+    short partyId = partyManager.getPartyId(sourcePlayerId);
+    if (partyId == Party.INVALID_ID) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = ids[i];
+      if (playerId == sourcePlayerId || partyManager.getPartyId(playerId) != partyId
+          || !isAct3Level(levelId(playerId))) continue;
+      Player member = mPlayer.get(playerId);
+      if (member == null || member.data == null) continue;
+      short previous = gidbinnRecord(member.data);
+      short next = Act3GidbinnQuest.markBroughtToOrmus(previous);
+      if (next != previous) updateGidbinnRecord(member.data, next, "party-ormus-turn-in");
+    }
+  }
+
+  private void createGidbinnReward(int playerId, Player player) {
+    Item reward = createQuestItem(Act3GidbinnQuest.ORMUS_REWARD);
+    if (reward != null) {
+      reward.quality = Quality.RARE;
+      reward.ilvl = (byte) (player.data.diff == Riiablo.NORMAL ? 21
+          : player.data.diff == Riiablo.NIGHTMARE ? 35 : 75);
+      if (player.data.getItems().addToInventory(reward)) {
+        log.info("[A3Q2] Ormus rare ring placed in inventory: player={}", playerId);
+        return;
+      }
+      if (factory != null && mPosition.has(playerId)) {
+        Position pos = mPosition.get(playerId);
+        int entityId = factory.createItem(reward, pos.position.x, pos.position.y);
+        if (entityId >= 0) {
+          reward.id = entityId;
+          log.info("[A3Q2] Ormus rare ring dropped at player: player={} entity={}",
+              playerId, entityId);
+          return;
+        }
+      }
+    }
+    log.warn("[A3Q2] Ormus rare ring reward could not be placed: player={}", playerId);
+  }
+
+  private void completeGidbinnIfReady(CharData data) {
+    short previous = gidbinnRecord(data);
+    short next = Act3GidbinnQuest.completeIfBothRewards(previous);
+    if (next != previous) updateGidbinnRecord(data, next, "gidbinn-both-rewards");
+  }
+
   private boolean hasEligiblePlayer() {
     if (playersByZone == null) return false;
     IntBag players = playersByZone.getEntities();
@@ -274,7 +444,7 @@ public class Act3QuestSystem extends PassiveSystem {
       case MonsterType.ASHEARA: case MonsterType.HRATLI: case MonsterType.ALKOR:
       case MonsterType.ORMUS: case MonsterType.MESHIF2: case MonsterType.NATALYA:
       case MonsterType.ANDARIEL: case MonsterType.DURIEL: case MonsterType.MEPHISTO:
-      case MonsterType.DIABLO: case MonsterType.BAALCRAB:
+      case MonsterType.DIABLO: case MonsterType.BAALCRAB: case MonsterType.FETISH11:
         return false;
       default:
         return true;
@@ -297,12 +467,26 @@ public class Act3QuestSystem extends PassiveSystem {
     return data.getQuests(Riiablo.ACT3)[Act3GoldenBirdQuest.RECORD];
   }
 
+  private short gidbinnRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT3)[Act3GidbinnQuest.RECORD];
+  }
+
   private void updateRecord(CharData data, short next, String reason) {
     short previous = record(data);
     if (previous == next) return;
     data.getQuests(Riiablo.ACT3)[Act3GoldenBirdQuest.RECORD] = next;
     persist(data);
     log.info("[A3Q1] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private void updateGidbinnRecord(CharData data, short next, String reason) {
+    short previous = gidbinnRecord(data);
+    if (previous == next) return;
+    data.getQuests(Riiablo.ACT3)[Act3GidbinnQuest.RECORD] = next;
+    persist(data);
+    log.info("[A3Q2] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
