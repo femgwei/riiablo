@@ -3080,3 +3080,18 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：继续处理 A5Q6 的 Worldstone Keep→Throne→Chamber 入口与 Baal 结束传送的
 重连/碰撞一致性，并核对五波仆从的原生出生位置和结束门状态。
+
+### 2026-09-12 A5Q6 Baal 传送门重连与落点幂等（本轮完成）
+
+- [x] Throne→Worldstone Chamber 门创建前先检查 Zone 的 QuestWarp；重连后即使
+  `Act5BaalPortalState`（瞬态 ECS 状态）丢失，也不会重复创建 Warp。缺少 Baal 原生
+  位置时回退到 Throne 中心，并通过 `findFreeCoordinates` 选择可通行落点。
+- [x] Baal 死亡后的 Worldstone Chamber→Harrogath 结束门改为 Zone Warp 幂等检查，
+  不再依赖本次进程的 `lastPortalCreated` 标志；已完成 A5Q6 的玩家在 Chamber 重建
+  后会自动恢复结束门，且落点再次经过碰撞搜索。
+- [x] 保留 D2MOO 五波顺序、清场半径和 25Hz 延迟逻辑；本轮只修传送门恢复与碰撞，
+  未改变 Baal/仆从伤害或掉落规则。
+- 验证：`Act5BaalQuestTest`、`:core:test`、`:server:d2gs:compileJava` 通过。
+
+当前下一项：继续核对 A5Q6 五波仆从的原生 preset 出生坐标、波次重连状态持久化，以及
+Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。

@@ -129,6 +129,7 @@ public class Act5QuestSystem extends BaseSystem {
     // simulation phase as well as the zone-change callback.
     rebuildAct5QuestObjectState();
     rebuildNihlathakPortalState();
+    rebuildBaalEndPortalState();
   }
 
   @Subscribe
@@ -1125,14 +1126,29 @@ public class Act5QuestSystem extends BaseSystem {
 
   /** Creates the A5Q6 Throne -> Worldstone Chamber portal once. */
   private void openWorldstoneChamberPortal() {
-    if (baalPortalState.isWorldstoneChamberOpen() || factory == null || world == null) return;
+    if (factory == null || world == null) return;
     Map.Zone source = findZone(Act5BaalQuest.THRONE_OF_DESTRUCTION);
     if (source == null) {
       log.warn("[A5Q6] Worldstone Chamber portal deferred: throne zone not found");
       return;
     }
-    float portalX = baalWaveOriginX;
-    float portalY = baalWaveOriginY;
+    int questWarp = QuestWarp.encode(Act5BaalQuest.WORLDSTONE_CHAMBER);
+    if (source.findWarp(questWarp) != Engine.INVALID_ENTITY) {
+      baalPortalState.openWorldstoneChamber();
+      return;
+    }
+    Position throne = findBaalThronePosition();
+    float portalX = throne == null ? baalWaveOriginX : throne.position.x;
+    float portalY = throne == null ? baalWaveOriginY : throne.position.y;
+    if (throne == null && portalX == 0f && portalY == 0f) {
+      portalX = source.x() + source.width() * 0.5f;
+      portalY = source.y() + source.height() * 0.5f;
+    }
+    com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
+    if (source.findFreeCoordinates(free.set(portalX, portalY), 1, 32, true, free)) {
+      portalX = free.x;
+      portalY = free.y;
+    }
     int visual = factory.createStaticObjectByClassId(
         NativeQuestObjectResolver.BAAL_PORTAL, portalX, portalY);
     int warp = factory.createQuestWarp(Act5BaalQuest.WORLDSTONE_CHAMBER, portalX, portalY);
@@ -1151,7 +1167,7 @@ public class Act5QuestSystem extends BaseSystem {
 
   /** Creates the Worldstone Chamber -> Harrogath end portal once. */
   private void createLastPortal(int baalEntity) {
-    if (baalPortalState.isLastPortalCreated() || factory == null || world == null) return;
+    if (factory == null || world == null) return;
     MapWrapper wrapper = mMapWrapper.has(baalEntity) ? mMapWrapper.get(baalEntity) : null;
     Position sourcePosition = mPosition.has(baalEntity) ? mPosition.get(baalEntity) : null;
     if (wrapper == null || wrapper.zone == null
@@ -1164,6 +1180,42 @@ public class Act5QuestSystem extends BaseSystem {
     float portalX = sourcePosition == null ? wrapper.zone.x() + 5f
         : sourcePosition.position.x + 5f;
     float portalY = sourcePosition == null ? wrapper.zone.y() : sourcePosition.position.y;
+    ensureLastPortal(wrapper.zone, portalX, portalY);
+  }
+
+  /** Rebuilds the end portal after Chamber entities are recreated. */
+  private void rebuildBaalEndPortalState() {
+    if (playersByZone == null || factory == null || world == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      if (!mPlayer.has(id) || !mMapWrapper.has(id)) continue;
+      Player player = mPlayer.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (player == null || player.data == null || wrapper == null || wrapper.zone == null
+          || wrapper.zone.level == null
+          || wrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER
+          || !Act5BaalQuest.isFinished(baalRecord(player.data))) continue;
+      float x = wrapper.zone.x() + wrapper.zone.width() * 0.5f;
+      float y = wrapper.zone.y() + wrapper.zone.height() * 0.5f;
+      ensureLastPortal(wrapper.zone, x, y);
+      return;
+    }
+  }
+
+  private boolean ensureLastPortal(Map.Zone zone, float portalX, float portalY) {
+    if (zone == null || factory == null || world == null) return false;
+    int questWarp = QuestWarp.encode(D2LevelIds.LEVEL_HARROGATH);
+    if (zone.findWarp(questWarp) != Engine.INVALID_ENTITY) {
+      baalPortalState.createLastPortal();
+      return true;
+    }
+    com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
+    if (zone.findFreeCoordinates(free.set(portalX, portalY), 1, 48, true, free)) {
+      portalX = free.x;
+      portalY = free.y;
+    }
     int visual = factory.createStaticObjectByClassId(
         NativeQuestObjectResolver.LAST_PORTAL, portalX, portalY);
     int warp = factory.createQuestWarp(D2LevelIds.LEVEL_HARROGATH, portalX, portalY);
@@ -1171,12 +1223,13 @@ public class Act5QuestSystem extends BaseSystem {
       if (visual != Engine.INVALID_ENTITY) world.delete(visual);
       log.error("[A5Q6] Last portal creation failed: visual={} position=({}, {})",
           visual, portalX, portalY);
-      return;
+      return false;
     }
     baalPortalState.createLastPortal();
-    wrapper.zone.addWarp(warp);
+    zone.addWarp(warp);
     log.info("[A5Q6] Last portal created: visual={} warp={} destination={} position=({}, {})",
         visual, warp, D2LevelIds.LEVEL_HARROGATH, portalX, portalY);
+    return true;
   }
 
   private Map.Zone findZone(int levelId) {
