@@ -526,6 +526,38 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       }
     }
 
+    // Native DRLG always allocates the seed-selected Staff/Boss tomb records,
+    // even when a malformed/partial Levels.txt export omits a Vis/Warp edge.
+    // Without this pass the Staff Tomb may have no Zone at all, making entry
+    // impossible and preventing its Horadric Orifice from being materialized
+    // by the quest system. Add only these two missing records and keep the
+    // normal discovered topology untouched; other tombs remain lazy.
+    Zone anchor = findZoneByLevelId(map, LEVEL_CANYONOFTHEMAGI);
+    if (anchor == null && !map.zones.isEmpty()) anchor = map.zones.peek();
+    if (anchor != null) {
+      Act2TombSelection selectedTombs = Act2TombSelection.forGameSeed(seed);
+      int[] requiredTombs = {selectedTombs.staffTombLevel(), selectedTombs.bossTombLevel()};
+      for (int tombId : requiredTombs) {
+        if (generated.contains(tombId)) continue;
+        Levels.Entry tomb = levelsById.get(tombId);
+        if (tomb == null) continue;
+        int[] placement = findDungeonPlacement(map, anchor, tomb, tombId);
+        Zone zone = createLinkedDungeonZone(map, tomb, diff, seed,
+            placement[0], placement[1]);
+        if (zone == null) continue;
+        zone.generator = new BaseMapBuilderD2MOD() {{
+          factory = Act2MapBuilderD2MOD.this.factory;
+          socket = Act2MapBuilderD2MOD.this.socket;
+        }}.createMonsterGenerator(socket);
+        generated.add(tombId);
+        queue.add(tombId);
+        created++;
+        Gdx.app.log(TAG, String.format(
+            "Act2 tomb fallback created: %s(%d) pos=(%d,%d)",
+            tomb.LevelName, tomb.Id, placement[0], placement[1]));
+      }
+    }
+
     TopologyReport report = validateAct2Topology(Riiablo.files.Levels, generated);
     Gdx.app.log(TAG, String.format(
         "Act2 linked dungeon summary: edges=%d created=%d generated=%d missingTargets=%d missingReverse=%d",

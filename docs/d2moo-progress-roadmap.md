@@ -3640,3 +3640,16 @@ Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖�
 保存在 `Map.seed()`，会导致选择错误的 Staff Tomb。现已改为优先使用 `map.seed()`；
 若资源可装载，Orifice 回退将与实际地图选中的墓穴保持一致。当前运行仍在墓穴 DT1/DS1
 为空处失败，需补齐该资源导出后复测。
+
+### 2026-09-13 A2 Staff/Boss Tomb 缺失链回退（本轮完成）
+
+- [x] `Act2MapBuilderD2MOD` 在 Vis/Warp BFS 后检查当前 seed 选定的 Staff Tomb 与
+  Boss Tomb；若 Levels.txt 未提供可达边，则仅补建这两个缺失 Zone，避免一次性生成
+  七座大墓造成 headless 启动时间和内存膨胀。
+- [x] 回退墓穴沿用现有 `createLinkedDungeonZone`、Room/Zone 坐标和怪物生成器，
+  不覆盖已发现的原生链接。
+- [x] 编译与 `git diff --check` 通过；完整离屏回归在当前资源环境仍需较长时间，
+  尚未宣称 Staff Tomb 运行通过。
+
+下一项：继续核对墓穴 `LvlPrest/DT1` 资源装载和 Orifice class 152 的生产 Quest 请求，
+确认回退 Zone 能进入后，再接入 Arcane Tome 与 Tainted Sun 的双客户端交互断言。
