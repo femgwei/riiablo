@@ -113,7 +113,8 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
             entityId, -1) != 0) {
       return;
     }
-    if ((object.base.Id == 60
+    if ((object.base.Id == NativeQuestObjectResolver.TOWN_PORTAL
+        || object.base.Id == 60
         || networkQuest == NativeQuestObjectResolver.Type.BAAL_PORTAL
         || networkQuest == NativeQuestObjectResolver.Type.LAST_PORTAL)
         && interactQuestPortal(src, entityId)) return;

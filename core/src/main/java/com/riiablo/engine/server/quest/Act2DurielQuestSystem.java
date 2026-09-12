@@ -1,17 +1,31 @@
 package com.riiablo.engine.server.quest;
 
+import com.artemis.Aspect;
 import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
+import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
+import com.artemis.utils.IntBag;
+import com.badlogic.gdx.utils.IntSet;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.Riiablo;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.CofManager;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.event.DeathEvent;
+import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
+import com.riiablo.engine.server.monster.MonsterType;
+import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
+import com.riiablo.engine.server.party.Party;
+import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.save.ItemData;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -25,16 +39,35 @@ import net.mostlyoriginal.api.event.common.Subscribe;
 public class Act2DurielQuestSystem extends BaseSystem {
   private static final Logger log = LogManager.getLogger(Act2DurielQuestSystem.class);
   private static final int ORIFICE_OBJECT_ID = 152;
-  /** Act II record slot for The Seven Tombs / Duriel. */
-  public static final int RECORD = 6;
+  public static final int RECORD = Act2DurielQuest.RECORD;
   private static final String REMOVED_TAINTED_SUN_STAFF = "tsh";
   private static final String REMOVED_FALSE_STAFF = "fsm";
 
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
+  protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
+  @Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
+  protected CofManager cofs;
+
+  private EntitySubscription playersByZone;
+  private EntitySubscription objectsByZone;
+  private final IntSet killedDuriels = new IntSet();
+  private boolean lutGholeinPortalOpened;
+
+  @Override
+  protected void initialize() {
+    playersByZone = world.getAspectSubscriptionManager().get(
+        Aspect.all(Player.class, MapWrapper.class));
+    objectsByZone = world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Object.class, MapWrapper.class));
+  }
 
   @Override
   protected void processSystem() {
@@ -103,6 +136,218 @@ public class Act2DurielQuestSystem extends BaseSystem {
         event.playerId, event.entityId, visual, warp, D2LevelIds.LEVEL_DURIELSLAIR);
   }
 
+  @Subscribe
+  public void onMonsterKilled(DeathEvent event) {
+    if (event == null || event.victim < 0 || !isDuriel(event.victim)
+        || !killedDuriels.add(event.victim)) return;
+    markDurielKilledForPlayers();
+    openTyraelsDoor();
+    log.info("[A2Q6] Duriel defeated: victim={} killer={}", event.victim, event.killer);
+  }
+
+  @Subscribe
+  public void onNpcQuestMessage(NpcQuestMessageEvent event) {
+    if (event == null || !mPlayer.has(event.entityId) || !mMonster.has(event.npcId)) return;
+    Player player = mPlayer.get(event.entityId);
+    Monster npc = mMonster.get(event.npcId);
+    if (player == null || player.data == null || npc == null || npc.monstats == null) return;
+    int npcType = npc.monstats.hcIdx;
+    if (npcType == MonsterType.TYRAEL1
+        && event.messageIndex == Act2DurielQuest.MESSAGE_TYRAEL_PORTAL) {
+      if (!isInLevel(event.entityId, D2LevelIds.LEVEL_DURIELSLAIR)
+          || !openLutGholeinPortal(event.npcId, event.entityId)) return;
+      grantTyraelCredit();
+    } else if (npcType == MonsterType.JERHYN
+        && event.messageIndex == Act2DurielQuest.MESSAGE_JERHYN_END) {
+      updateRecord(player.data, Act2DurielQuest::acknowledgeJerhyn, "jerhyn-end");
+    } else if (npcType == MonsterType.MESHIF1
+        && event.messageIndex == Act2DurielQuest.MESSAGE_MESHIF_TRAVEL) {
+      short previous = record(player.data);
+      short next = Act2DurielQuest.travelWithMeshif(previous);
+      if (next == previous) return;
+      removeObsoleteHoradricItems(player.data.getItems());
+      setRecord(player.data, next, "meshif-travel");
+    }
+  }
+
+  private boolean isDuriel(int entityId) {
+    if (!mMonster.has(entityId) || !isInLevel(entityId, D2LevelIds.LEVEL_DURIELSLAIR)) {
+      return false;
+    }
+    Monster monster = mMonster.get(entityId);
+    return monster != null && monster.monstats != null
+        && monster.monstats.hcIdx == MonsterType.DURIEL;
+  }
+
+  private void markDurielKilledForPlayers() {
+    if (playersByZone == null) return;
+    IntSet parties = new IntSet();
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = ids[i];
+      if (!isInLevel(playerId, D2LevelIds.LEVEL_DURIELSLAIR)) continue;
+      Player player = mPlayer.get(playerId);
+      if (player == null || player.data == null) continue;
+      updateRecord(player.data, Act2DurielQuest::markDurielKilled, "duriel-killed");
+      if (partyManager != null) {
+        short party = partyManager.getPartyId(playerId);
+        if (party != Party.INVALID_ID) parties.add(party);
+      }
+    }
+    if (partyManager == null) return;
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = ids[i];
+      Player player = mPlayer.get(playerId);
+      if (player == null || player.data == null || !isInAct2(playerId)
+          || !parties.contains(partyManager.getPartyId(playerId))) continue;
+      updateRecord(player.data, Act2DurielQuest::markDurielKilled, "duriel-party-sync");
+    }
+  }
+
+  private void grantTyraelCredit() {
+    if (playersByZone == null) return;
+    IntSet parties = new IntSet();
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = ids[i];
+      if (!isInLevel(playerId, D2LevelIds.LEVEL_DURIELSLAIR)) continue;
+      Player player = mPlayer.get(playerId);
+      if (player == null || player.data == null) continue;
+      grantPrimaryGoal(playerId, player, "tyrael-portal");
+      if (partyManager != null && NativeQuestRecord.has(
+          record(player.data), NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+        short party = partyManager.getPartyId(playerId);
+        if (party != Party.INVALID_ID) parties.add(party);
+      }
+    }
+    if (partyManager != null) {
+      for (int i = 0; i < players.size(); i++) {
+        int playerId = ids[i];
+        Player player = mPlayer.get(playerId);
+        if (player == null || player.data == null || !isInAct2(playerId)
+            || !parties.contains(partyManager.getPartyId(playerId))) continue;
+        grantPrimaryGoal(playerId, player, "tyrael-party-sync");
+      }
+    }
+    for (int i = 0; i < players.size(); i++) {
+      Player player = mPlayer.get(ids[i]);
+      if (player != null && player.data != null) {
+        updateRecord(player.data, Act2DurielQuest::markCompletedNow,
+            "duriel-completed-observer");
+      }
+    }
+  }
+
+  private void grantPrimaryGoal(int playerId, Player player, String reason) {
+    short previous = record(player.data);
+    short next = Act2DurielQuest.acceptTyraelPortal(previous);
+    if (next == previous) return;
+    player.data.flags = NativeCharacterProgression.update(
+        player.data.flags, 2, difficulty(playerId), player.data.isExpansion());
+    setRecord(player.data, next, reason);
+  }
+
+  private boolean openLutGholeinPortal(int npcId, int playerId) {
+    if (lutGholeinPortalOpened) return true;
+    if (factory == null) return false;
+    int sourceId = mPosition.has(npcId) ? npcId : playerId;
+    if (!mPosition.has(sourceId) || !mMapWrapper.has(sourceId)) return false;
+    Position position = mPosition.get(sourceId);
+    MapWrapper wrapper = mMapWrapper.get(sourceId);
+    if (wrapper == null || wrapper.zone == null) return false;
+    float x = position.position.x + 2f;
+    float y = position.position.y;
+    int visual = factory.createStaticObjectByClassId(
+        NativeQuestObjectResolver.TOWN_PORTAL, x, y);
+    int warp = factory.createQuestWarp(D2LevelIds.LEVEL_LUTGHOLEIN, x, y);
+    if (warp == Engine.INVALID_ENTITY) {
+      if (visual != Engine.INVALID_ENTITY) world.delete(visual);
+      return false;
+    }
+    wrapper.zone.addWarp(warp);
+    lutGholeinPortalOpened = true;
+    log.info("[A2Q6] Tyrael portal opened: visual={} warp={} destination={}",
+        visual, warp, D2LevelIds.LEVEL_LUTGHOLEIN);
+    return true;
+  }
+
+  private void openTyraelsDoor() {
+    if (objectsByZone == null) return;
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      if (object == null || object.base == null
+          || object.base.Id != Act2DurielQuest.TYRAELS_DOOR
+          || !isInLevel(id, D2LevelIds.LEVEL_DURIELSLAIR)) continue;
+      NativeObjectState state = mNativeObjectState.has(id) ? mNativeObjectState.get(id) : null;
+      if (state != null) {
+        state.persistOpened(true);
+        state.persistActivated(true);
+        state.persistMode((byte) Engine.Object.MODE_ON);
+      }
+      if (cofs != null && mCofReference.has(id)) {
+        cofs.setMode(id, (byte) Engine.Object.MODE_ON);
+      } else {
+        object.mode = (byte) Engine.Object.MODE_ON;
+        object.stateFlags |= com.riiablo.engine.server.component.Object.STATE_OPENED;
+      }
+      log.info("[A2Q6] Tyrael door opened: entity={}", id);
+    }
+  }
+
+  private boolean isInAct2(int entityId) {
+    return Act2DurielQuest.isAct2(levelId(entityId));
+  }
+
+  private boolean isInLevel(int entityId, int expected) {
+    return levelId(entityId) == expected;
+  }
+
+  private int levelId(int entityId) {
+    if (!mMapWrapper.has(entityId)) return -1;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+        ? -1 : wrapper.zone.level.Id;
+  }
+
+  private int difficulty(int entityId) {
+    if (!mMapWrapper.has(entityId)) return 0;
+    MapWrapper wrapper = mMapWrapper.get(entityId);
+    return wrapper == null || wrapper.map == null ? 0 : wrapper.map.getDifficulty();
+  }
+
+  private static short record(CharData data) {
+    return data.getQuests(Riiablo.ACT2)[RECORD];
+  }
+
+  private void updateRecord(CharData data,
+      java.util.function.UnaryOperator<Short> transition, String reason) {
+    short previous = record(data);
+    short next = transition.apply(previous);
+    if (next != previous) setRecord(data, next, reason);
+  }
+
+  private void setRecord(CharData data, short next, String reason) {
+    short previous = record(data);
+    if (next == previous) return;
+    data.getQuests(Riiablo.ACT2)[RECORD] = next;
+    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    log.info("[A2Q6] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private static void removeObsoleteHoradricItems(ItemData items) {
+    if (items == null) return;
+    items.removeItemCode(REMOVED_TAINTED_SUN_STAFF);
+    items.removeItemCode(Act2HoradricStaffQuest.VIPER_AMULET);
+    items.removeItemCode(REMOVED_FALSE_STAFF);
+  }
+
   private static void markRecords(CharData data) {
     short[] act2 = data.getQuests(Riiablo.ACT2);
     short staff = act2[Act2HoradricStaffQuest.RECORD];
@@ -112,13 +357,14 @@ public class Act2DurielQuestSystem extends BaseSystem {
 
     short duriel = act2[RECORD];
     duriel = NativeQuestRecord.set(duriel, NativeQuestRecord.STARTED);
-    duriel = NativeQuestRecord.set(duriel, NativeQuestRecord.LEFT_TOWN);
+    // Native insertion advances the quest state, but LEFT_TOWN belongs to
+    // Tyrael's post-Duriel message and must not be set here.
+    duriel = Act2DurielQuest.repairLegacyOrificeFlags(duriel);
     act2[RECORD] = duriel;
     if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
   }
 
   static boolean isAct2(int levelId) {
-    return levelId >= D2LevelIds.LEVEL_LUTGHOLEIN
-        && levelId < D2LevelIds.LEVEL_KURASTDOCKTOWN;
+    return Act2DurielQuest.isAct2(levelId);
   }
 }

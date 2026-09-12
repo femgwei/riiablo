@@ -53,6 +53,8 @@ public final class NativeQuestObjectResolver {
   public static final int HORADRIC_MALUS = 108;
   public static final int TAINTED_SUN_ALTAR = 149;
   public static final int HORADRIC_ORIFICE = 152;
+  /** Generic portal visual used by Tyrael after Duriel. */
+  public static final int TOWN_PORTAL = 59;
   /** Objects.txt OBJECT_YET_ANOTHER_TOME / A2Q4 OperateFn 42. */
   public static final int ARCANE_SANCTUARY_TOME = 357;
   /** Objects.txt Gidbinn decoy / OperateFn 31. */

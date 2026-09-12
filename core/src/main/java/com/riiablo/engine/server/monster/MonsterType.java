@@ -172,6 +172,8 @@ public final class MonsterType {
   public static final int LYSANDER = 202;
   /** 梅希夫 (Act 2). */
   public static final int MESHIF1 = 210;
+  /** 泰瑞尔 (Duriel lair, D2MOO MONSTER_TYRAEL1). */
+  public static final int TYRAEL1 = 251;
   /** 艾什拉 (Act 3). */
   public static final int ASHEARA = 252;
   /** 赫拉铁力 (Act 3). */

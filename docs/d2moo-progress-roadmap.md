@@ -2899,3 +2899,23 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：转入第二至第四章地图入口、任务对象与奖励差异专项核对；优先从第二章
 主线入口与 A2Q6 Duriel/Tyrael/Meshif 结束链开始。
+
+### 2026-09-12 Act II A2Q6 Duriel/Tyrael/Jerhyn/Meshif 结束链（本轮完成）
+
+- [x] 保留已有 Horadric Orifice 插杖事务，并补上 Duriel hcIdx 211 的权威死亡识别；
+  死亡后按 D2MOO 给 Duriel Lair 内玩家及其仍在第二章的队友写入 `CUSTOM1`。
+- [x] Duriel 死亡会打开原生对象 153 Tyrael's Door；Tyrael 消息 302 创建对象 59
+  城镇传送门及返回 Lut Gholein 的 Warp，并只在传送门创建成功后进入任务结算。
+- [x] Tyrael 对话为 Lair 玩家及其第二章队友写入 `PRIMARY_GOAL_DONE + LEFT_TOWN`，
+  progression 按 `act=2` 单调更新；其他在线玩家仅写 `COMPLETED_NOW`。
+- [x] Jerhyn 442 完成 `LEFT_TOWN -> ENTERED_AREA`，Meshif 450 完成
+  `ENTERED_AREA -> REWARD_GRANTED` 并清理旧 Horadric 任务物品，形成可持久化的
+  第二章到第三章任务闭环。
+- [x] 删除旧 `QuestManager` 自定义的 Duriel `50,000 XP`；原生 A2Q6 没有该固定奖励。
+- [x] 城镇传送门对象 59 接入通用 Warp 点击查找，避免只创建图片却无法返回城镇。
+- [x] 修复旧 Java 插杖逻辑过早写入 `LEFT_TOWN`、从而让 Duriel/Tyrael 结算被拒绝的
+  阻断问题；插杖现在只置 `STARTED`，并兼容清理“无 PRIMARY_GOAL_DONE 却有
+  LEFT_TOWN”的旧存档非法组合。
+
+当前下一项：专项核对第二章 A2Q6 的 Tyrael 门/传送门对象重连恢复与 Duriel Lair
+地图预设是否稳定生成；随后检查第三章 A3Q6 Mephisto progression 与红门链。

@@ -579,7 +579,8 @@ public class QuestManager {
     registerQuestReward(QuestId.A2Q5_SUMMONER, 0, 0, 0, 0, 0, 0);
 
     // 督瑞尔
-    registerQuestReward(QuestId.A2Q6_DURIEL, 50000, 0, 0, 0, 0, 0);
+    // Native A2Q6 advances progression at Tyrael and completes at Meshif.
+    registerQuestReward(QuestId.A2Q6_DURIEL, 0, 0, 0, 0, 0, 0);
   }
 
   private void registerAct3Quests() {
