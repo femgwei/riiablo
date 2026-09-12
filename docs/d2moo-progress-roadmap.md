@@ -3296,3 +3296,19 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：在该双 socket 场景上继续覆盖第二至第五波的延迟/清场推进、波次顺序和
   Baal 生成门控，并把每个难度的五波数量快照写入离屏回归日志。
+
+### 2026-09-12 A5Q6 五波顺序与 Baal 生成门控验证（本轮完成）
+
+- [x] 双 socket 场景现在循环覆盖五个 Subject：每波都通过服务端测试桥接发布真实
+  `DeathEvent`，由 `Act5QuestSystem.onMonsterKilled` 清除波次成员，再等待 100 Tick
+  生成锁定和 250 Tick 下一波前置延迟；未清场时不会提前进入下一波。
+- [x] 每波分别校验两端新的 MonsterP/PositionP 集合、monster class、坐标和 leader/minion
+  数量；数量按 Normal/Nightmare/Hell 的 `MinGrp/MaxGrp + difficulty` 规则计算，覆盖
+  Subject 1 到 Subject 5 的 `5/3/5/8/5` 原生随从基数。
+- [x] 第五波清空后额外读取游戏级 `Act5BaalWaveState`，要求状态进入 DONE，再确认
+  Throne 中没有残留波次标记；不会因删除实体但状态机未完成而误判 Baal 已开放。
+- [x] 新增 `headlessBaalWaveState`/`headlessClearBaalWave` 仅供离屏回归使用，不改变
+  生产协议，不生成新的网络文件；通过核心 A5Q6 测试、D2GS 编译和 `git diff --check`。
+
+当前下一项：在五波回归中加入实际 Baal/Worldstone Chamber 生成实体的双客户端观察，
+并核对 Baal 死亡后的 Tyrael3、终结消息和 Last Portal 在两端的顺序一致性。

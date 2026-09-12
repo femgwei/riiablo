@@ -455,6 +455,82 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only authoritative clear of one wave through the normal DeathEvent path. */
+  static int headlessClearBaalWave(int waveIndex, int killerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return 0;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger cleared = new java.util.concurrent.atomic.AtomicInteger();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+            server.world.getMapper(com.riiablo.engine.server.component.Monster.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] data = entities.getData();
+        com.badlogic.gdx.utils.IntArray victims = new com.badlogic.gdx.utils.IntArray();
+        for (int i = 0; i < entities.size(); i++) {
+          int entity = data[i];
+          com.riiablo.engine.server.component.Monster monster = monsters.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (monster == null || wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+              || wrapper.zone.level.Id != Act5BaalQuest.THRONE_OF_DESTRUCTION
+              || monster.baalWaveIndex != waveIndex) continue;
+          victims.add(entity);
+        }
+        EventSystem events = server.world.getSystem(EventSystem.class);
+        for (int i = 0; i < victims.size; i++) {
+          events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(
+              killerId, victims.get(i)));
+          cleared.incrementAndGet();
+        }
+        // DeathEvent updates the quest state; remove the test victims so the
+        // next native clear-radius check sees the same empty throne as D2Game.
+        for (int i = 0; i < victims.size; i++) {
+          int entity = victims.get(i);
+          if (server.world.getEntityManager().isActive(entity)) server.world.delete(entity);
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? cleared.get() : 0;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return 0;
+    }
+  }
+
+  /** Returns {@code [phaseOrdinal, spawnedWaveCount, delayTicks]} for A5Q6. */
+  static int[] headlessBaalWaveState() {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new int[3];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[3]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Act5QuestSystem quest = server.world.getSystem(Act5QuestSystem.class);
+        if (quest == null) return;
+        com.riiablo.engine.server.quest.Act5BaalWaveState.Snapshot waves =
+            quest.snapshotGameState().waves;
+        result.set(new int[] {waves.phase, waves.wave, waves.delayTicks});
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[3];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[3];
+    }
+  }
+
   /** Places the test player on a real Warp whose authoritative destination matches. */
   static int headlessPrepareWarpToLevel(int playerId, int destinationLevelId) {
     D2GS server = activeHeadlessInstance;

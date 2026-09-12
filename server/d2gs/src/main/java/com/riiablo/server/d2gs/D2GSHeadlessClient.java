@@ -1642,6 +1642,77 @@ public final class D2GSHeadlessClient {
           + expectedMembers + " minions=" + expectedMinions + " entities=" + waveA
           + " classesA=" + classes(a, waveA) + " classesB=" + classes(b, waveB)
           + " positionsEqual=true");
+
+      Set<Integer> previousA = new HashSet<>(livingMonsterIds(a));
+      Set<Integer> previousB = new HashSet<>(livingMonsterIds(b));
+      for (int wave = 1; wave < com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_COUNT; wave++) {
+        int cleared = D2GS.headlessClearBaalWave(wave - 1, a.playerId);
+        int expectedCleared = com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[wave - 1]
+            + 1 + difficulty;
+        if (cleared != expectedCleared) {
+          throw new IOException("Baal wave clear count mismatch: wave=" + (wave - 1)
+              + " expected=" + expectedCleared + " actual=" + cleared);
+        }
+        int expectedMinionsNext = com.riiablo.engine.server.quest.Act5BaalQuest
+            .nativeGroupRange(
+                com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[wave],
+                com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[wave], difficulty)[0];
+        int expectedNext = expectedMinionsNext + 1;
+        Set<Integer> nextA = awaitBaalWaveMembers(a, inA, previousA, expectedNext, deadline());
+        Set<Integer> nextB = awaitBaalWaveMembers(b, inB, previousB, expectedNext, deadline());
+        if (!nextA.equals(nextB)) {
+          throw new IOException("Baal wave entity visibility diverged: wave=" + (wave + 1)
+              + " A=" + nextA + " B=" + nextB);
+        }
+        for (Integer entityId : nextA) {
+          Snapshot first = a.monsters.get(entityId);
+          Snapshot second = b.monsters.get(entityId);
+          if (first == null || second == null || first.monsterClass != second.monsterClass
+              || Math.abs(first.x - second.x) > 0.01f
+              || Math.abs(first.y - second.y) > 0.01f) {
+            throw new IOException("Baal wave MonsterP/PositionP diverged: wave=" + (wave + 1)
+                + " entity=" + entityId);
+          }
+        }
+        int[] nextAuthority = D2GS.headlessBaalWaveSnapshot();
+        if (nextAuthority[0] != wave || nextAuthority[1] != expectedNext
+            || nextAuthority[2] != 1 || nextAuthority[3] != expectedMinionsNext) {
+          throw new IOException("native Baal wave count mismatch: wave=" + (wave + 1)
+              + " expected=" + expectedNext + " authority="
+              + java.util.Arrays.toString(nextAuthority));
+        }
+        log("baal_wave_dual_pass", "difficulty=" + difficulty + " wave=" + (wave + 1)
+            + " members=" + expectedNext + " minions=" + expectedMinionsNext
+            + " entities=" + nextA + " classesA=" + classes(a, nextA)
+            + " classesB=" + classes(b, nextB) + " positionsEqual=true");
+        previousA = new HashSet<>(livingMonsterIds(a));
+        previousB = new HashSet<>(livingMonsterIds(b));
+      }
+
+      int finalCleared = D2GS.headlessClearBaalWave(
+          com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_COUNT - 1, a.playerId);
+      int expectedFinal = com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[
+          com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_COUNT - 1] + 1 + difficulty;
+      if (finalCleared != expectedFinal) {
+        throw new IOException("final Baal wave clear count mismatch: expected="
+            + expectedFinal + " actual=" + finalCleared);
+      }
+      long gateDeadline = deadline();
+      int[] finalAuthority;
+      int[] finalState;
+      do {
+        consumeOne(inA, a);
+        consumeOne(inB, b);
+        finalAuthority = D2GS.headlessBaalWaveSnapshot();
+        finalState = D2GS.headlessBaalWaveState();
+      } while (System.currentTimeMillis() < gateDeadline && finalState[0] != 4);
+      if (finalState[0] != 4 || finalAuthority[0] >= 0 || finalAuthority[1] != 0) {
+        throw new IOException("Baal spawned before/without final wave gate: authority="
+            + java.util.Arrays.toString(finalAuthority) + " state="
+            + java.util.Arrays.toString(finalState));
+      }
+      log("baal_wave_gate_pass", "difficulty=" + difficulty + " waves=5 finalCleared="
+          + finalCleared + " baalSpawnGate=true");
     }
   }
 
