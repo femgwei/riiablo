@@ -107,7 +107,15 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       return;
     }
     NativeQuestObjectResolver.Type networkQuest = NativeQuestObjectResolver.resolve(object.base);
-    if (clientNetwork != null && isNetworkQuestObject(networkQuest)
+    NativeObjectState state = mNativeObjectState.get(entityId);
+    NativePresetObjectResolver.Kind kind = state == null
+        ? NativePresetObjectResolver.Kind.ORDINARY : state.kind;
+    // Native special/preset chests are not represented by an Objects.txt
+    // quest id, but D2Game still owns their RNG, lifecycle and drops.  Route
+    // them through the same authoritative request as quest objects so all
+    // clients observe one open and one shared drop set.
+    if (clientNetwork != null && (isNetworkQuestObject(networkQuest)
+        || NativePresetObjectResolver.isNetworkObject(kind))
         && clientNetwork.requestQuest(
             com.riiablo.net.packet.d2gs.QuestOperation.OBJECT_INTERACTION,
             entityId, -1) != 0) {
@@ -126,9 +134,6 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
           + " mode=" + (cof == null ? "none" : cof.mode)
           + " position=" + (position == null ? "none" : position.position));
     }
-    NativeObjectState state = mNativeObjectState.get(entityId);
-    NativePresetObjectResolver.Kind kind = state == null
-        ? NativePresetObjectResolver.Kind.ORDINARY : state.kind;
     Lifecycle lifecycle = NativeObjectOperateTable.resolve(object.base, kind);
     InteractionResult result = handleNativeLifecycle(
         src, entityId, object.base, lifecycle);

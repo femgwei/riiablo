@@ -3694,3 +3694,27 @@ Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖�
 
 下一项：按优先级覆盖 A1 特殊宝箱与任务门的生产交互、掉落归属、重复请求幂等和
 双客户端对象模式可见性，再处理 A2 Horadric Orifice 插杖后的 Duriel 入口切换。
+
+### 2026-09-13 A1 特殊/预设宝箱权威交互入口（本轮完成）
+
+- [x] 对齐 D2MOO `OBJECTS_SpawnSpecialChest`/`OBJECTS_SpawnPresetChest` 的对象来源：
+  特殊宝箱和预设宝箱虽然不是 `Objects.txt` 任务对象，但其开启动画、对象区域 RNG、
+  NoDrop 和地面掉落均由 D2GS 权威执行；新增统一的 `isNetworkObject(Kind)` 策略。
+- [x] 客户端 `ObjectInteractor` 对 `SPECIAL_CHEST`、`PRESET_CHEST` 改走
+  `QuestOperation.OBJECT_INTERACTION`，避免多人时本地开箱造成状态/掉落分叉。
+- [x] D2GS `validateQuestObject` 增加两类原生宝箱的所有权、关卡、距离和
+  `Interactable` 校验；普通容器和 Arcane Symbol 仍保持原有本地/装饰路径。
+- [x] 增加 resolver 回归断言，确认 580/581 被标记为网络权威对象、582 Arcane Symbol
+  不可交互；通过 core 与 d2gs 编译及相关单测。
+
+共享文件最小修改：
+`core/src/main/java/com/riiablo/engine/server/ObjectInteractor.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`。
+
+验证：`:core:test --tests com.riiablo.map.Act1MapBuilderD2MooLayersTest
+--tests com.riiablo.engine.server.object.NativeQuestObjectResolverTest`、
+`:core:compileJava`、`:server:d2gs:compileJava`、`git diff --check` 均通过。
+
+下一项：增加 A1 特殊/预设宝箱双客户端离屏生产交互夹具，并覆盖 Cain Gibbet、
+Horadric Malus 等任务门的真实请求、掉落归属和重复请求回放；完成后进入 A2
+Horadric Orifice 插入法杖后的 Duriel 入口/区域切换。

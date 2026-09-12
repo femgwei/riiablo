@@ -40,6 +40,16 @@ public final class NativePresetObjectResolver {
     }
   }
 
+  /**
+   * Returns whether the preset provenance requires the authoritative object
+   * interaction path in a multiplayer game.  Native D2Game special and
+   * preset chests consume the object-region RNG and create shared ground
+   * items, so allowing them to be opened locally would desynchronise peers.
+   */
+  public static boolean isNetworkObject(Kind kind) {
+    return kind == Kind.SPECIAL_CHEST || kind == Kind.PRESET_CHEST;
+  }
+
   private static final int INVALID_OBJECT = 573;
   private static final int FIRST_SPECIAL = 574;
   private static final int LAST_SPECIAL = 582;

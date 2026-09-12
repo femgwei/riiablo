@@ -125,11 +125,18 @@ class Act1MapBuilderD2MooLayersTest {
     assertEquals(NativePresetObjectResolver.Kind.PRESET_CHEST, presetChest.kind);
     assertTrue(presetChest.shouldCreate());
     assertTrue(presetChest.classId != 581);
+    assertTrue(NativePresetObjectResolver.isNetworkObject(presetChest.kind));
+
+    NativePresetObjectResolver.Resolution specialChest =
+        NativePresetObjectResolver.resolve(1, 1, 580, 7, 0, 0);
+    assertEquals(NativePresetObjectResolver.Kind.SPECIAL_CHEST, specialChest.kind);
+    assertTrue(NativePresetObjectResolver.isNetworkObject(specialChest.kind));
 
     NativePresetObjectResolver.Resolution arcane =
         NativePresetObjectResolver.resolve(2, 40, 582, 7, 0, 0);
     assertEquals(NativePresetObjectResolver.Kind.ARCANE_SYMBOL, arcane.kind);
     assertEquals(307, arcane.classId);
+    assertFalse(NativePresetObjectResolver.isNetworkObject(arcane.kind));
   }
 
   @Test

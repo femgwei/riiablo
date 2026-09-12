@@ -5155,9 +5155,15 @@ public class D2GS extends ApplicationAdapter {
   private String validateQuestObject(int playerId, int objectId) {
     com.riiablo.engine.server.component.Object object =
         world.getMapper(com.riiablo.engine.server.component.Object.class).get(objectId);
+    com.riiablo.engine.server.component.NativeObjectState nativeState =
+        world.getMapper(com.riiablo.engine.server.component.NativeObjectState.class).get(objectId);
+    com.riiablo.engine.server.object.NativeQuestObjectResolver.Type questType = object == null
+        || object.base == null ? com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.NONE
+        : com.riiablo.engine.server.object.NativeQuestObjectResolver.resolve(object.base);
+    boolean networkPreset = nativeState != null
+        && com.riiablo.map.NativePresetObjectResolver.isNetworkObject(nativeState.kind);
     if (object == null || object.base == null
-        || !isNetworkQuestObject(
-            com.riiablo.engine.server.object.NativeQuestObjectResolver.resolve(object.base))) {
+        || (!isNetworkQuestObject(questType) && !networkPreset)) {
       return "QUEST_OBJECT_NOT_FOUND";
     }
     if (levelIdOf(playerId) < 0 || levelIdOf(playerId) != levelIdOf(objectId)) {
