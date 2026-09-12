@@ -3409,3 +3409,18 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：将同一快照/可见性校验推广到 A3/A4/A5 任务对象（Hell Gate、Tyrael、Drehya）
 的实体重建，确保任务记录恢复时对应的入口视觉对象和 Warp 一起恢复。
+
+### 2026-09-12 A3/A4/A5 任务对象与 Warp 重建对齐（本轮完成）
+
+- [x] 核对 A3Q6：`Act3MephistoQuestSystem` 已按 A3Q6 完成记录在 Durance 换区及固定
+  Tick 中恢复 Hell Gate 对象状态并幂等补建 Pandemonium Fortress Warp。
+- [x] 核对 A5Q4：`Act5QuestSystem.rebuildNihlathakPortalState` 已按 Prison 前置和
+  Nihlathak `STARTED` 记录重建 Drehya 传送门视觉/Warp，并以目标 Warp 作为幂等键。
+- [x] 修复 A4Q2 缺口：`Act4QuestSystem` 现在按 Diablo `REWARD_GRANTED` 在换区和固定 Tick
+  中恢复 Tyrael 的 Harrogath 传送门；已有 Warp 时只补缺失视觉对象，没有重复创建 Warp，
+  Warp 缺失时同时创建视觉与 Warp，创建失败会回收孤立视觉实体。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava`；未新增网络字段或生成文件，
+  未改动战斗公式。真实 MPQ 环境仍需运行离屏入口确认三套资源对象均存在。
+
+当前下一项：为三套重建路径增加统一的离屏实体快照桥接（视觉对象、Warp 目标、源区域），
+  并在 A3/A4/A5 双客户端场景中分别模拟删除/重建后验证实体 ID 可变化但目标和可见性不变。

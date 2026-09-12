@@ -98,7 +98,13 @@ public class Act4QuestSystem extends PassiveSystem {
       if (levelId(ids[i]) == Act4DiabloQuest.CHAOS_SANCTUARY) {
         MapWrapper wrapper = mMapWrapper.get(ids[i]);
         if (wrapper != null) rebuildChaosSealState(wrapper.zone);
-        break;
+      }
+      if (levelId(ids[i]) == Act4DiabloQuest.PANDEMONIUM_FORTRESS) {
+        Player player = mPlayer.get(ids[i]);
+        MapWrapper wrapper = mMapWrapper.get(ids[i]);
+        if (player != null && player.data != null && wrapper != null) {
+          reconcileAct5PortalState(ids[i], wrapper.zone, player.data);
+        }
       }
     }
   }
@@ -120,6 +126,8 @@ public class Act4QuestSystem extends PassiveSystem {
       updateDiabloRecord(player.data, Act4DiabloQuest::enterArea,
           "entered-chaos-sanctuary");
       rebuildChaosSealState(event.zone);
+    } else if (event.zone.level.Id == Act4DiabloQuest.PANDEMONIUM_FORTRESS) {
+      reconcileAct5PortalState(event.entityId, event.zone, player.data);
     } else if (isAct4Level(event.zone.level.Id)) {
       updateDiabloRecord(player.data, Act4DiabloQuest::start,
           "entered-act4-combat-area");
@@ -467,6 +475,77 @@ public class Act4QuestSystem extends PassiveSystem {
     dataSetDiabloRecord(player.data, next);
     log.info("[A4Q2] Act V portal opened: player={} visual={} warp={} destination={}",
         event.entityId, visual, warp, D2LevelIds.LEVEL_HARROGATH);
+  }
+
+  /** Recreates Tyrael's Act V portal after a reconnect or Room/ECS rebuild. */
+  private void reconcileAct5PortalState(int playerId, Map.Zone zone, CharData data) {
+    if (zone == null || data == null
+        || !NativeQuestRecord.has(diabloRecord(data), NativeQuestRecord.REWARD_GRANTED)) return;
+    ensureAct5Portal(zone, playerId);
+  }
+
+  private boolean ensureAct5Portal(Map.Zone zone, int fallbackEntityId) {
+    if (zone == null || factory == null) return false;
+    final int destination = Act4DiabloQuest.HARROGATH;
+    final int questWarp = QuestWarp.encode(destination);
+    int warp = zone.findWarp(questWarp);
+    if (warp != Engine.INVALID_ENTITY) {
+      if (hasAct5PortalVisual(zone)) return true;
+      if (!mPosition.has(warp)) return false;
+      Position position = mPosition.get(warp);
+      int visual = factory.createStaticObjectByClassId(566,
+          position.position.x, position.position.y);
+      log.info("[A4Q2] Restored Act V portal visual: visual={} warp={} destination={}",
+          visual, warp, destination);
+      return visual != Engine.INVALID_ENTITY;
+    }
+
+    int tyrael = findTyraelInFortress(zone);
+    if (tyrael == Engine.INVALID_ENTITY) tyrael = fallbackEntityId;
+    if (!mPosition.has(tyrael)) return false;
+    Position source = mPosition.get(tyrael);
+    float portalX = source.position.x + 5f;
+    float portalY = source.position.y;
+    int visual = factory.createStaticObjectByClassId(566, portalX, portalY);
+    warp = factory.createQuestWarp(destination, portalX, portalY);
+    if (warp == Engine.INVALID_ENTITY) {
+      if (visual != Engine.INVALID_ENTITY && world != null) world.delete(visual);
+      return false;
+    }
+    zone.addWarp(warp);
+    log.info("[A4Q2] Restored Act V portal: visual={} warp={} destination={}",
+        visual, warp, destination);
+    return true;
+  }
+
+  private int findTyraelInFortress(Map.Zone zone) {
+    if (monstersByZone == null) return Engine.INVALID_ENTITY;
+    IntBag monsters = monstersByZone.getEntities();
+    int[] ids = monsters.getData();
+    for (int i = 0; i < monsters.size(); i++) {
+      int id = ids[i];
+      if (!mMonster.has(id) || !mMapWrapper.has(id)) continue;
+      MapWrapper wrapper = mMapWrapper.get(id);
+      Monster monster = mMonster.get(id);
+      if (wrapper != null && wrapper.zone == zone && monster != null && monster.monstats != null
+          && monster.monstats.hcIdx == MonsterType.TYRAEL2) return id;
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  private boolean hasAct5PortalVisual(Map.Zone zone) {
+    if (objectsByZone == null) return false;
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (wrapper != null && wrapper.zone == zone && object != null && object.base != null
+          && object.base.Id == 566) return true;
+    }
+    return false;
   }
 
   private void setObjective(CharData data) {
