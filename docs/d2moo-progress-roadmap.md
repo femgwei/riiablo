@@ -3492,11 +3492,15 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 - [x] 每个阶段都先比较对象数量，再通过 `headlessActivateQuestObjects`（Countess
   宝箱除外）和两个客户端的 `ZoneChangeEvent` 重建路径，最后比较两个 Quest Snapshot
   的成功状态、记录长度和 revision，避免只验证单端内存状态。
+- [x] 同一入口继续覆盖 A2Q6/A3Q6：通过真实 `DeathEvent` fixture 验证 Duriel 的
+  `CUSTOM1`、Tyrael 门、Tyrael 对话后的 Lut Gholein 门/Warp；再验证 Mephisto 的
+  双端奖励、Mephisto Bridge、Hell Gate 和 Act IV Warp。两个客户端均等待对象实体
+  可见，避免只统计服务端对象数量。
 - [x] 通过 `:server:d2gs:compileJava` 与 `git diff --check`；由于当前环境没有完整
   1.10f MPQ，未宣称真实 socket/地图对象运行通过。完整资源环境应运行：
   `D2GSHeadlessClient --require-early-object-dual`。
 
 当前下一项：在完整资源环境运行 `--require-early-object-dual`，记录每个区域的对象
-  数量与重建前后 `Object.mode/NativeObjectState`；若 A1-A3 全部通过，继续补齐
-  A2Q6 七墓 Arcane Symbol 选择、Duriel 击杀奖励和 A3 Mephisto Bridge/Hell Gate
-  的对象实体可见性回归。
+  数量与重建前后 `Object.mode/NativeObjectState`；若 A1-A3 及 A2Q6/A3Q6 全部通过，
+  下一项转为 A2Q6 七墓 Arcane Symbol 的实际 582 预设生成/出口拼接回归，以及
+  A3 其他任务对象的掉落与交互可见性。

@@ -576,6 +576,106 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Dispatches the native A2Q6 Duriel death callback for a deterministic fixture. */
+  static int headlessCompleteDurielObjective(int killerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Player> players =
+            server.world.getMapper(com.riiablo.engine.server.component.Player.class);
+        com.riiablo.engine.server.component.Player killer = players.get(killerId);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.riiablo.engine.server.component.MapWrapper ownerWrapper = wrappers.get(killerId);
+        if (killer == null || ownerWrapper == null || ownerWrapper.zone == null
+            || ownerWrapper.zone.level == null
+            // D2MOO 1.10f DURIELSLAIR level ordinal.
+            || ownerWrapper.zone.level.Id != 74
+            || Riiablo.files == null || Riiablo.files.monstats == null) return;
+        com.riiablo.codec.excel.MonStats.Entry stats =
+            Riiablo.files.monstats.get(com.riiablo.engine.server.monster.MonsterType.DURIEL);
+        if (stats == null) return;
+        Position ownerPosition = server.world.getMapper(Position.class).get(killerId);
+        int fixture = server.world.create();
+        server.world.getMapper(com.riiablo.engine.server.component.Monster.class)
+            .create(fixture).monstats = stats;
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .create(fixture).set(server.map, ownerWrapper.zone);
+        if (ownerPosition != null) {
+          server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+        }
+        server.world.process();
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
+        if (server.world.getEntityManager().isActive(fixture)) server.world.delete(fixture);
+        result.set(fixture);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Dispatches the native A3Q6 Mephisto death callback for a deterministic fixture. */
+  static int headlessCompleteMephistoObjective(int killerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Player> players =
+            server.world.getMapper(com.riiablo.engine.server.component.Player.class);
+        com.riiablo.engine.server.component.Player killer = players.get(killerId);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.riiablo.engine.server.component.MapWrapper ownerWrapper = wrappers.get(killerId);
+        if (killer == null || ownerWrapper == null || ownerWrapper.zone == null
+            || ownerWrapper.zone.level == null
+            || ownerWrapper.zone.level.Id
+                != com.riiablo.engine.server.quest.Act3MephistoQuest.MEPHISTO_LEVEL
+            || Riiablo.files == null || Riiablo.files.monstats == null) return;
+        com.riiablo.codec.excel.MonStats.Entry stats =
+            Riiablo.files.monstats.get(com.riiablo.engine.server.monster.MonsterType.MEPHISTO);
+        if (stats == null) return;
+        Position ownerPosition = server.world.getMapper(Position.class).get(killerId);
+        int fixture = server.world.create();
+        server.world.getMapper(com.riiablo.engine.server.component.Monster.class)
+            .create(fixture).monstats = stats;
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .create(fixture).set(server.map, ownerWrapper.zone);
+        if (ownerPosition != null) {
+          server.world.getMapper(Position.class).create(fixture).position.set(ownerPosition.position);
+        }
+        server.world.process();
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.DeathEvent.obtain(killerId, fixture));
+        if (server.world.getEntityManager().isActive(fixture)) server.world.delete(fixture);
+        result.set(fixture);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /** Returns the authoritative Last Portal Warp entity in the Chamber. */
   static int headlessLastPortalEntity() {
     D2GS server = activeHeadlessInstance;
@@ -1722,6 +1822,121 @@ public class D2GS extends ApplicationAdapter {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return new int[15];
+    }
+  }
+
+  /**
+   * Read-only snapshot for the A2Q6/A3Q6 endgame objects. Result order is
+   * {@code [tyraelDoors, townPortals, mephistoBridges, hellGates,
+   * openObjects, warps]}.
+   */
+  static int[] headlessEndgameQuestObjectSnapshot(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return new int[6];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[6]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        int[] counts = new int[6];
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Object> objectMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Object.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrapperMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeObjectState> stateMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.NativeObjectState.class);
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Object object = objectMapper.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrapperMapper.get(entity);
+          if (object == null || object.base == null || wrapper == null || wrapper.zone != zone) continue;
+          int classId = object.base.Id;
+          if (classId != com.riiablo.engine.server.quest.Act2DurielQuest.TYRAELS_DOOR
+              && classId != com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+              && classId != com.riiablo.engine.server.quest.Act3MephistoQuest.MEPHISTO_BRIDGE
+              && classId != com.riiablo.engine.server.quest.Act3MephistoQuest.HELL_GATE_PORTAL) continue;
+          boolean open = object.mode == com.riiablo.engine.Engine.Object.MODE_ON;
+          com.riiablo.engine.server.component.NativeObjectState state = stateMapper.get(entity);
+          if (state != null && (state.opened || state.activated
+              || state.currentMode == com.riiablo.engine.Engine.Object.MODE_ON)) open = true;
+          if (classId == com.riiablo.engine.server.quest.Act2DurielQuest.TYRAELS_DOOR) counts[0]++;
+          else if (classId == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL) counts[1]++;
+          else if (classId == com.riiablo.engine.server.quest.Act3MephistoQuest.MEPHISTO_BRIDGE) counts[2]++;
+          else counts[3]++;
+          if (open) counts[4]++;
+        }
+        com.artemis.utils.IntBag warps = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Warp.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] warpIds = warps.getData();
+        for (int i = 0; i < warps.size(); i++) {
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(warpIds[i]);
+          if (wrapper != null && wrapper.zone == zone) counts[5]++;
+        }
+        result.set(counts);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[6];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[6];
+    }
+  }
+
+  /** Returns one native quest-object entity in a zone for visibility probes. */
+  static int headlessQuestObjectEntity(int levelId, int classId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Object object = server.world
+              .getMapper(com.riiablo.engine.server.component.Object.class).get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+          if (object != null && object.base != null && object.base.Id == classId
+              && wrapper != null && wrapper.zone == zone) {
+            result.set(entity);
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
     }
   }
 

@@ -88,6 +88,8 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_TRISTRAM = 38;
   private static final int LEVEL_TOWERCELLARLVL5 = 25;
   private static final int LEVEL_ARCANESANCTUARY = 74;
+  private static final int LEVEL_DURIELSLAIR = 74;
+  private static final int LEVEL_DURANCEOFHATELEVEL3 = 102;
   private static final int LEVEL_SPIDERCAVERN = 85;
   private static final int LEVEL_FLAYERJUNGLE = 78;
   private static final int LEVEL_TRAVINCAL = 83;
@@ -2187,8 +2189,104 @@ public final class D2GSHeadlessClient {
           "a3-compelling-orb", 9, 1,
           new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.COMPELLING_ORB},
           10L);
+      runEndgameQuestDual(a, b, inA, inB, outA, outB);
       log("early_object_dual_pass", "a1=true a2=true a3=true rebuild=true clients=true,true");
     }
+  }
+
+  /** A2Q6/A3Q6 death, reward and native exit visibility regression. */
+  private void runEndgameQuestDual(D2GSHeadlessClient a, D2GSHeadlessClient b,
+      DataInputStream inA, DataInputStream inB, OutputStream outA, OutputStream outB)
+      throws Exception {
+    if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_DURIELSLAIR)
+        || !D2GS.headlessEnterLevel(b.playerId, LEVEL_DURIELSLAIR)) {
+      throw new IOException("Duriel Lair staging unavailable");
+    }
+    awaitTwoQuestLevels(a, b, inA, inB, LEVEL_DURIELSLAIR, "a2q6-duriel");
+    if (D2GS.headlessCompleteDurielObjective(a.playerId) == Engine.INVALID_ENTITY
+        || !D2GS.headlessRebuildQuestObjects(a.playerId)
+        || !D2GS.headlessRebuildQuestObjects(b.playerId)) {
+      throw new IOException("Duriel death/rebuild path unavailable");
+    }
+    int[] durielObjects = D2GS.headlessEndgameQuestObjectSnapshot(LEVEL_DURIELSLAIR);
+    if (durielObjects.length < 6 || durielObjects[0] < 1 || durielObjects[4] < 1) {
+      throw new IOException("Duriel Tyrael door was not restored: "
+          + java.util.Arrays.toString(durielObjects));
+    }
+    QuestResult durielA = requestSnapshot(a, inA, outA, 11L);
+    QuestResult durielB = requestSnapshot(b, inB, outB, 11L);
+    int durielRecord = com.riiablo.engine.server.quest.Act2DurielQuest.RECORD;
+    if (!hasQuestFlagAt(durielA, Riiablo.ACT2, durielRecord,
+            com.riiablo.engine.server.quest.NativeQuestRecord.CUSTOM1)
+        || !hasQuestFlagAt(durielB, Riiablo.ACT2, durielRecord,
+            com.riiablo.engine.server.quest.NativeQuestRecord.CUSTOM1)) {
+      throw new IOException("Duriel kill did not propagate CUSTOM1 to both clients");
+    }
+    int tyrael = D2GS.headlessQuestObjectEntity(LEVEL_DURIELSLAIR,
+        com.riiablo.engine.server.quest.Act2DurielQuest.TYRAELS_DOOR);
+    if (tyrael == Engine.INVALID_ENTITY) throw new IOException("Tyrael door entity unavailable");
+    a.awaitVisibleEntity(inA, tyrael, deadline());
+    b.awaitVisibleEntity(inB, tyrael, deadline());
+
+    int tyraelNpc = D2GS.headlessPrepareQuestNpc(a.playerId,
+        com.riiablo.engine.server.monster.MonsterType.TYRAEL1);
+    if (tyraelNpc == Engine.INVALID_ENTITY) throw new IOException("Tyrael NPC unavailable");
+    send(outA, questRequestPacket(12L, QuestOperation.NPC_MESSAGE, tyraelNpc,
+        com.riiablo.engine.server.quest.Act2DurielQuest.MESSAGE_TYRAEL_PORTAL));
+    QuestResult tyraelResult = a.awaitQuestResult(inA, 12L, deadline());
+    if (!hasQuestFlagAt(tyraelResult, Riiablo.ACT2, durielRecord,
+            com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+      throw new IOException("Tyrael portal message did not grant A2Q6 primary goal");
+    }
+    D2GS.headlessRebuildQuestObjects(a.playerId);
+    int[] townPortal = D2GS.headlessEndgameQuestObjectSnapshot(LEVEL_DURIELSLAIR);
+    if (townPortal.length < 6 || townPortal[1] < 1 || townPortal[5] < 1) {
+      throw new IOException("Tyrael town portal was not created: "
+          + java.util.Arrays.toString(townPortal));
+    }
+
+    if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_DURANCEOFHATELEVEL3)
+        || !D2GS.headlessEnterLevel(b.playerId, LEVEL_DURANCEOFHATELEVEL3)) {
+      throw new IOException("Mephisto Durance staging unavailable");
+    }
+    awaitTwoQuestLevels(a, b, inA, inB, LEVEL_DURANCEOFHATELEVEL3, "a3q6-mephisto");
+    if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT3,
+            com.riiablo.engine.server.quest.Act3MephistoQuest.RECORD, (short) 0)
+        || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT3,
+            com.riiablo.engine.server.quest.Act3MephistoQuest.RECORD, (short) 0)
+        || D2GS.headlessCompleteMephistoObjective(a.playerId) == Engine.INVALID_ENTITY
+        || !D2GS.headlessRebuildQuestObjects(a.playerId)
+        || !D2GS.headlessRebuildQuestObjects(b.playerId)) {
+      throw new IOException("Mephisto death/rebuild path unavailable");
+    }
+    int[] mephistoObjects = D2GS.headlessEndgameQuestObjectSnapshot(LEVEL_DURANCEOFHATELEVEL3);
+    if (mephistoObjects.length < 6 || mephistoObjects[2] < 1 || mephistoObjects[3] < 1
+        || mephistoObjects[4] < 2 || mephistoObjects[5] < 1) {
+      throw new IOException("Mephisto bridge/gate/warp was not restored: "
+          + java.util.Arrays.toString(mephistoObjects));
+    }
+    QuestResult mephistoA = requestSnapshot(a, inA, outA, 13L);
+    QuestResult mephistoB = requestSnapshot(b, inB, outB, 13L);
+    int mephistoRecord = com.riiablo.engine.server.quest.Act3MephistoQuest.RECORD;
+    if (!hasQuestFlagAt(mephistoA, Riiablo.ACT3, mephistoRecord,
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+        || !hasQuestFlagAt(mephistoB, Riiablo.ACT3, mephistoRecord,
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
+      throw new IOException("Mephisto reward did not propagate to both clients");
+    }
+    int bridge = D2GS.headlessQuestObjectEntity(LEVEL_DURANCEOFHATELEVEL3,
+        com.riiablo.engine.server.quest.Act3MephistoQuest.MEPHISTO_BRIDGE);
+    int gate = D2GS.headlessQuestObjectEntity(LEVEL_DURANCEOFHATELEVEL3,
+        com.riiablo.engine.server.quest.Act3MephistoQuest.HELL_GATE_PORTAL);
+    if (bridge == Engine.INVALID_ENTITY || gate == Engine.INVALID_ENTITY) {
+      throw new IOException("Mephisto exit objects unavailable");
+    }
+    a.awaitVisibleEntity(inA, bridge, deadline());
+    b.awaitVisibleEntity(inB, bridge, deadline());
+    a.awaitVisibleEntity(inA, gate, deadline());
+    b.awaitVisibleEntity(inB, gate, deadline());
+    log("endgame_quest_dual_pass", "a2q6=true tyrael=true townPortal=true"
+        + " a3q6=true bridge=true gate=true clients=true,true");
   }
 
   private void runEarlyObjectStage(D2GSHeadlessClient a, D2GSHeadlessClient b,
