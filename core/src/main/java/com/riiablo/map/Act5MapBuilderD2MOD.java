@@ -8,6 +8,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
+import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
@@ -25,12 +26,46 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
   private static final boolean DEBUG = true;
   private static final boolean DEBUG_BUILD = DEBUG && true;
 
-  // D2MOD: gAct5OutdoorDrlgLink 数组
-  private static final int LEVEL_HARROGATH = 109;
-  private static final int LEVEL_BLOODYFOOTHILLS = 110;
-  private static final int LEVEL_ID_ACT5_BARRICADE_1 = 111;
-  private static final int LEVEL_ARREATPLATEAU = 112;
-  private static final int LEVEL_TUNDRAWASTELANDS = 113;
+  // D2MOD/1.10f Act V level ids. The previous literals (109..113) overlapped
+  // Act IV and loaded the wrong Levels/LvlPrest records.
+  static final int LEVEL_HARROGATH = D2LevelIds.LEVEL_HARROGATH;
+  static final int LEVEL_BLOODYFOOTHILLS = D2LevelIds.LEVEL_BLOODYFOOTHILLS;
+  /** Native barricade level used by D2MOO for Frigid Highlands. */
+  static final int LEVEL_ID_ACT5_BARRICADE_1 = D2LevelIds.LEVEL_FRIGIDHIGHLANDS;
+  static final int LEVEL_FRIGIDHIGHLANDS = D2LevelIds.LEVEL_FRIGIDHIGHLANDS;
+  static final int LEVEL_ARREATPLATEAU = D2LevelIds.LEVEL_ARREATPLATEAU;
+  static final int LEVEL_CRYSTALLINEPASSAGE = D2LevelIds.LEVEL_CRYSTALLINEPASSAGE;
+  static final int LEVEL_FROZENTUNDRA = D2LevelIds.LEVEL_FROZENTUNDRA;
+  static final int LEVEL_GLACIALTRAIL = D2LevelIds.LEVEL_GLACIALTRAIL;
+  static final int LEVEL_FROZENRIVER = D2LevelIds.LEVEL_FROZENRIVER;
+  static final int LEVEL_ANCIENTSWAY = D2LevelIds.LEVEL_ANCIENTSWAY;
+  static final int LEVEL_ARREATSUMMIT = D2LevelIds.LEVEL_ARREATSUMMIT;
+
+  /** Main Act V progression. Side caves are linked by their native LvlWarp rows. */
+  static final int[] ACT5_MAIN_CHAIN = {
+      LEVEL_HARROGATH,
+      LEVEL_BLOODYFOOTHILLS,
+      LEVEL_FRIGIDHIGHLANDS,
+      LEVEL_ARREATPLATEAU,
+      LEVEL_CRYSTALLINEPASSAGE,
+      LEVEL_FROZENRIVER,
+      LEVEL_GLACIALTRAIL,
+      LEVEL_FROZENTUNDRA,
+      LEVEL_ANCIENTSWAY,
+      LEVEL_ARREATSUMMIT
+  };
+
+  static final int[][] ACT5_MAIN_LINKS = {
+      {LEVEL_HARROGATH, LEVEL_BLOODYFOOTHILLS},
+      {LEVEL_BLOODYFOOTHILLS, LEVEL_FRIGIDHIGHLANDS},
+      {LEVEL_FRIGIDHIGHLANDS, LEVEL_ARREATPLATEAU},
+      {LEVEL_ARREATPLATEAU, LEVEL_CRYSTALLINEPASSAGE},
+      {LEVEL_CRYSTALLINEPASSAGE, LEVEL_FROZENRIVER},
+      {LEVEL_FROZENRIVER, LEVEL_GLACIALTRAIL},
+      {LEVEL_GLACIALTRAIL, LEVEL_FROZENTUNDRA},
+      {LEVEL_FROZENTUNDRA, LEVEL_ANCIENTSWAY},
+      {LEVEL_ANCIENTSWAY, LEVEL_ARREATSUMMIT}
+  };
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -44,13 +79,11 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     MathUtils.random.setSeed(seed);
 
     // D2MOD: gAct5OutdoorDrlgLink 数组
-    BaseMapBuilderD2MOD.LevelLink[] act5Links = new BaseMapBuilderD2MOD.LevelLink[] {
-      new BaseMapBuilderD2MOD.LevelLink(LEVEL_HARROGATH, -1, -1),              // 0: 城镇
-      new BaseMapBuilderD2MOD.LevelLink(LEVEL_BLOODYFOOTHILLS, 0, -1),        // 1
-      new BaseMapBuilderD2MOD.LevelLink(LEVEL_ID_ACT5_BARRICADE_1, 1, -1),   // 2
-      new BaseMapBuilderD2MOD.LevelLink(LEVEL_ARREATPLATEAU, 2, -1),         // 3
-      null // 结束标记
-    };
+    BaseMapBuilderD2MOD.LevelLink[] act5Links = new BaseMapBuilderD2MOD.LevelLink[ACT5_MAIN_CHAIN.length];
+    for (int i = 0; i < ACT5_MAIN_CHAIN.length; i++) {
+      act5Links[i] = new BaseMapBuilderD2MOD.LevelLink(
+          ACT5_MAIN_CHAIN[i], i == 0 ? -1 : i - 1, -1);
+    }
 
     BaseMapBuilderD2MOD.LevelLinkData linkData = new BaseMapBuilderD2MOD.LevelLinkData();
 
@@ -80,46 +113,18 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       
       BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
       
-      if (act5Links[counter].level == LEVEL_HARROGATH || 
-          act5Links[counter].level == LEVEL_BLOODYFOOTHILLS) {
-        // sub_6FD81330 - 城镇和 BLOODYFOOTHILLS
+      if (counter == 0) {
+        // sub_6FD81330 - Harrogath is the anchor level.
         success = base.placeFirstLevel(linkData, counter, level);
-      } else if (act5Links[counter].level == LEVEL_ID_ACT5_BARRICADE_1) {
-        // DRLGOUTROOM_LinkLevelsByLevelCoords - 使用坐标连接
-        if (counter > 0 && act5Links[counter].levelLink >= 0) {
-          int levelLink = act5Links[counter].levelLink;
-          linkData.coords[counter].x = linkData.coords[levelLink].x + linkData.coords[levelLink].width;
-          linkData.coords[counter].y = linkData.coords[levelLink].y;
-          success = true;
-        } else {
-          linkData.coords[counter].x = level.OffsetX;
-          linkData.coords[counter].y = level.OffsetY;
-          success = true;
-        }
-      } else if (act5Links[counter].level == LEVEL_ARREATPLATEAU) {
-        // DRLGOUTROOM_LinkLevelsByOffsetCoords - 使用偏移连接
-        if (counter > 0 && act5Links[counter].levelLink >= 0) {
-          int levelLink = act5Links[counter].levelLink;
-          linkData.coords[counter].x = linkData.coords[levelLink].x + linkData.coords[levelLink].width;
-          linkData.coords[counter].y = linkData.coords[levelLink].y;
-          success = true;
-        } else {
-          linkData.coords[counter].x = level.OffsetX;
-          linkData.coords[counter].y = level.OffsetY;
-          success = true;
-        }
       } else {
-        // 默认逻辑
-        if (act5Links[counter].levelLink >= 0) {
-          int levelLink = act5Links[counter].levelLink;
-          linkData.coords[counter].x = linkData.coords[levelLink].x + linkData.coords[levelLink].width;
-          linkData.coords[counter].y = linkData.coords[levelLink].y;
-          success = true;
-        } else {
-          linkData.coords[counter].x = level.OffsetX;
-          linkData.coords[counter].y = level.OffsetY;
-          success = true;
-        }
+        // Place every outdoor level at the previous level's edge. This keeps
+        // the generated chain connected even when a custom MPQ has placeholder
+        // OffsetX/OffsetY values.
+        int levelLink = act5Links[counter].levelLink;
+        linkData.coords[counter].x = linkData.coords[levelLink].x
+            + linkData.coords[levelLink].width;
+        linkData.coords[counter].y = linkData.coords[levelLink].y;
+        success = true;
       }
 
       // 检查重叠
@@ -187,33 +192,6 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       }
     }
 
-    // 处理 TUNDRAWASTELANDS（独立区域，参考 DRLGOUTROOM_LinkLevelsByLevelDef）
-    Levels.Entry tundraLevel = Riiablo.files.Levels.get(LEVEL_TUNDRAWASTELANDS);
-    if (tundraLevel != null) {
-      LvlPrest.Entry tundraPreset = null;
-      for (LvlPrest.Entry p : Riiablo.files.LvlPrest) {
-        if (p.LevelId == LEVEL_TUNDRAWASTELANDS) {
-          tundraPreset = p;
-          break;
-        }
-      }
-      
-      if (tundraPreset != null) {
-        int fileId[] = new int[6];
-        int numFiles = Preset.getPresets(tundraPreset, fileId);
-        if (numFiles > 0) {
-          int selectIndex = MathUtils.random(numFiles - 1);
-          int select = fileId[selectIndex];
-          base.createZoneWithPreset(map, tundraLevel, tundraPreset, select, 
-              tundraLevel.OffsetX, tundraLevel.OffsetY, false);
-        }
-      } else {
-        Zone zone = base.createZoneWithGenerator(map, tundraLevel, diff, 
-            tundraLevel.OffsetX, tundraLevel.OffsetY);
-        zone.generator = base.createMonsterGenerator(socket);
-      }
-    }
-
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTSIEGE_InitAct5OutdoorLevel
     for (Zone zone : map.zones) {
@@ -224,7 +202,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
         // Act5 的特殊处理
         // 攻城区域可以放置神殿
         if (zone.level.Id == LEVEL_BLOODYFOOTHILLS || zone.level.Id == LEVEL_ID_ACT5_BARRICADE_1 ||
-            zone.level.Id == LEVEL_ARREATPLATEAU || zone.level.Id == LEVEL_TUNDRAWASTELANDS) {
+            zone.level.Id == LEVEL_ARREATPLATEAU || zone.level.Id == LEVEL_FROZENTUNDRA) {
           OutdoorFeatures.placeShrines(zone, seed, 3);
         }
       }

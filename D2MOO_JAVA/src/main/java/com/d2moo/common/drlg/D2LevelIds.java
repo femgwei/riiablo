@@ -163,7 +163,9 @@ public class D2LevelIds {
     // Act 5 关卡
     public static final int LEVEL_HARROGATH = 111;
     public static final int LEVEL_BLOODYFOOTHILLS = 112;
-    public static final int LEVEL_ID_ACT5_BARRICADE_1 = 112;  // 别名，对应 Act5 路障关卡
+    // D2MOO's barricade level is the next record after Bloody Foothills;
+    // the old alias incorrectly pointed back to Bloody Foothills itself.
+    public static final int LEVEL_ID_ACT5_BARRICADE_1 = 113;
     public static final int LEVEL_FRIGIDHIGHLANDS = 113;
     public static final int LEVEL_ARREATPLATEAU = 114;
     public static final int LEVEL_CRYSTALLINEPASSAGE = 115;

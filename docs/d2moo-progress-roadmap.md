@@ -2647,3 +2647,20 @@ Sanctuary/封印/击杀任务链。
 Frigid Highlands、Arreat Plateau、Crystalline Passage、Frozen River、Glacial Trail、
 Frozen Tundra、Ancients' Way、Arreat Summit），先完成 Zone/Level/LvlPrest/入口 Warp
 导出与碰撞，再按 A5Q1→A5Q6 接入任务。
+
+### 2026-09-12 Act V 主地图链 Level/LvlPrest 修正（本轮完成第一阶段）
+
+- [x] 修正 `Act5MapBuilderD2MOD` 原先误用 `109..113` 的编号；改用工程当前
+  `D2LevelIds` 的 Harrogath、Bloody Foothills、Frigid Highlands、Arreat Plateau
+  及后续 Act V 区域常量，避免把 Act IV 地图表加载成 Act V。
+- [x] 补齐 Harrogath → Bloody Foothills → Frigid Highlands → Arreat Plateau →
+  Crystalline Passage → Frozen River → Glacial Trail → Frozen Tundra → Ancients' Way
+  → Arreat Summit 的 Zone 主链；所有非城镇区域都挂接原有怪物生成器和边界/神殿处理。
+- [x] 修正 `LEVEL_ID_ACT5_BARRICADE_1` 错误别名，使其不再与 Bloody Foothills 共用同一
+  LevelId；增加主链顺序、双向链路及别名不重叠回归测试。
+- 验证：`Act5MapBuilderD2MODTest`、`:D2MOO_JAVA:compileJava`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：补齐 Act V 主链的原生 `Vis/Warp` 双向槽位和入口碰撞校正，再接入
+A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五章其他任务，避免
+任务对象落在未配对的地图入口上。
