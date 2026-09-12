@@ -13,6 +13,8 @@ import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2SuperUniques;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.ExperienceManager;
+import com.riiablo.attributes.ExperienceTable;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.MonStats;
@@ -71,6 +73,7 @@ public class Act5QuestSystem extends BaseSystem {
   protected Map map;
   @Wire(failOnNull = false)
   protected ItemGenerator itemGenerator;
+  private ExperienceManager experienceManager;
 
   private EntitySubscription playersByZone;
   private EntitySubscription monstersByZone;
@@ -97,6 +100,7 @@ public class Act5QuestSystem extends BaseSystem {
         Aspect.all(Player.class, MapWrapper.class));
     monstersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Monster.class, MapWrapper.class));
+    experienceManager = world.getSystem(ExperienceManager.class);
   }
 
   @Override
@@ -586,7 +590,7 @@ public class Act5QuestSystem extends BaseSystem {
       Player player = mPlayer.get(id);
       if (player == null || player.data == null || !isAncientSummit(levelId(id))) continue;
       if (playerLevel(id, player) < Act5AncientsQuest.requiredLevel(difficulty(id))) continue;
-      updateAncientsRecord(player.data, Act5AncientsQuest::complete, "ancients-defeated");
+      completeAncientsAndReward(id, player, "ancients-defeated");
       if (partyManager != null) {
         short party = partyManager.getPartyId(id);
         if (party != Party.INVALID_ID) parties.add(party);
@@ -599,9 +603,38 @@ public class Act5QuestSystem extends BaseSystem {
       if (player == null || player.data == null || !isAct5Level(levelId(id))) continue;
       if (parties.contains(partyManager.getPartyId(id))
           && playerLevel(id, player) >= Act5AncientsQuest.requiredLevel(difficulty(id))) {
-        updateAncientsRecord(player.data, Act5AncientsQuest::complete, "ancients-party-sync");
+        completeAncientsAndReward(id, player, "ancients-party-sync");
       }
     }
+  }
+
+  private boolean completeAncientsAndReward(int playerId, Player player, String reason) {
+    if (player == null || player.data == null) return false;
+    short previous = ancientsRecord(player.data);
+    if (Act5AncientsQuest.isFinished(previous)) return false;
+
+    int oldLevel = playerLevel(playerId, player);
+    int difficulty = difficulty(playerId);
+    int classId = player.data.charClass & 0xFF;
+    long reward = Act5AncientsQuest.rewardExperience(
+        difficulty, oldLevel, classId, ExperienceTable.getInstance());
+    if (reward > 0L) {
+      if (experienceManager == null) {
+        log.error("[A5Q5] Reward deferred: ExperienceManager unavailable player={} xp={}",
+            playerId, reward);
+        return false;
+      }
+      experienceManager.addExperienceForPlayer(player.data, oldLevel, reward);
+    }
+
+    short completed = Act5AncientsQuest.complete(previous);
+    player.data.getQuests(Riiablo.ACT5)[Act5AncientsQuest.RECORD] = completed;
+    if (player.data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(player.data);
+    log.info("[A5Q5] Ancients reward granted: player={} difficulty={} oldLevel={} "
+            + "newLevel={} experience={} reason={} record=0x{}",
+        playerId, difficulty, oldLevel, player.data.level & 0xFF, reward, reason,
+        Integer.toHexString(Short.toUnsignedInt(completed)));
+    return true;
   }
 
   private void startBaalWavesIfNeeded(int playerId) {

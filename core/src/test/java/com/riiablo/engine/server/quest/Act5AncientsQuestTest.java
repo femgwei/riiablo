@@ -24,6 +24,27 @@ class Act5AncientsQuestTest {
   }
 
   @Test
+  void nativeDifficultyRewardsAndOneLevelCapMatchD2Moo() {
+    assertEquals(1_400_000L, Act5AncientsQuest.baseRewardExperience(0));
+    assertEquals(20_000_000L, Act5AncientsQuest.baseRewardExperience(1));
+    assertEquals(40_000_000L, Act5AncientsQuest.baseRewardExperience(2));
+    assertEquals(1_400_000L, Act5AncientsQuest.baseRewardExperience(99));
+
+    assertEquals(1_400_000L,
+        Act5AncientsQuest.cappedRewardExperience(1_400_000L, 10_000_000L, 12_000_000L));
+    assertEquals(500_000L,
+        Act5AncientsQuest.cappedRewardExperience(1_400_000L, 10_000_000L, 10_500_000L));
+    assertEquals(0L,
+        Act5AncientsQuest.cappedRewardExperience(1_400_000L, 10_000_000L, 9_000_000L));
+  }
+
+  @Test
+  void maxLevelReceivesNoAncientsExperience() {
+    assertEquals(0L, Act5AncientsQuest.rewardExperience(
+        2, 99, 0, com.riiablo.attributes.ExperienceTable.getInstance()));
+  }
+
+  @Test
   void thirdAncientGrantsQuestImmediatelyAndIsIdempotent() {
     short record = Act5AncientsQuest.enterArea((short) 0);
     assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.ENTERED_AREA));
