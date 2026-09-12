@@ -12,6 +12,16 @@ public final class Act5BaalPortalState {
   private boolean worldstoneChamberOpen;
   private boolean lastPortalCreated;
 
+  public static final class Snapshot {
+    public final boolean worldstoneChamberOpen;
+    public final boolean lastPortalCreated;
+
+    public Snapshot(boolean worldstoneChamberOpen, boolean lastPortalCreated) {
+      this.worldstoneChamberOpen = worldstoneChamberOpen;
+      this.lastPortalCreated = lastPortalCreated;
+    }
+  }
+
   /** Opens the Throne portal once; returns true only on the transition. */
   public boolean openWorldstoneChamber() {
     if (worldstoneChamberOpen) return false;
@@ -32,5 +42,15 @@ public final class Act5BaalPortalState {
 
   public boolean isLastPortalCreated() {
     return lastPortalCreated;
+  }
+
+  public Snapshot snapshot() {
+    return new Snapshot(worldstoneChamberOpen, lastPortalCreated);
+  }
+
+  public void restore(Snapshot snapshot) {
+    if (snapshot == null) return;
+    worldstoneChamberOpen = snapshot.worldstoneChamberOpen;
+    lastPortalCreated = snapshot.lastPortalCreated;
   }
 }

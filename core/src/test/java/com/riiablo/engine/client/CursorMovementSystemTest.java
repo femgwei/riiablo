@@ -57,4 +57,12 @@ class CursorMovementSystemTest {
     assertEquals(0L, CursorMovementSystem.inputTickDelay(8L, 7L));
     assertEquals(1L, CursorMovementSystem.inputTickDelay(8L, 9L));
   }
+
+  @Test
+  void explicitThrowIsNotLimitedByMeleeRangeAdder() {
+    assertTrue(CursorMovementSystem.canStartExplicitThrow(true, true, 60));
+    assertFalse(CursorMovementSystem.canStartExplicitThrow(false, true, 60));
+    assertFalse(CursorMovementSystem.canStartExplicitThrow(true, false, 60));
+    assertFalse(CursorMovementSystem.canStartExplicitThrow(true, true, 0));
+  }
 }

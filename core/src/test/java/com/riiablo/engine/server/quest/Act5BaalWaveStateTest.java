@@ -72,4 +72,32 @@ class Act5BaalWaveStateTest {
     assertEquals(com.riiablo.engine.server.monster.MonsterAffix.SPECTRAL_HIT,
         Act5BaalQuest.nativeSuperUniqueAffixes(new int[] {27, 0, 0}));
   }
+
+  @Test
+  void reconnectSnapshotResumesDelayWithoutReplayingWave() {
+    Act5BaalWaveState original = new Act5BaalWaveState();
+    assertTrue(original.start());
+    assertEquals(Act5BaalWaveState.NONE, original.tick(true));
+    for (int i = 0; i < 37; i++) {
+      assertEquals(Act5BaalWaveState.NONE, original.tick(true));
+    }
+
+    Act5BaalWaveState restored = new Act5BaalWaveState();
+    restored.restore(original.snapshot());
+    assertEquals(original.wave(), restored.wave());
+    assertEquals(original.delayTicks(), restored.delayTicks());
+    while (restored.delayTicks() > 1) {
+      assertEquals(Act5BaalWaveState.NONE, restored.tick(true));
+    }
+    assertEquals(0, restored.tick(true));
+    assertEquals(1, restored.wave());
+
+    Act5BaalWaveState afterSpawn = new Act5BaalWaveState();
+    afterSpawn.restore(restored.snapshot());
+    for (int tick = 0; tick < Act5BaalQuest.POST_SPAWN_LOCK_TICKS; tick++) {
+      assertEquals(Act5BaalWaveState.NONE, afterSpawn.tick(true));
+    }
+    assertEquals(1, afterSpawn.wave(), "restoring post-spawn state must not replay wave zero");
+    assertEquals(Act5BaalQuest.PRE_WAVE_DELAY_TICKS, afterSpawn.delayTicks());
+  }
 }

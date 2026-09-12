@@ -2045,6 +2045,8 @@ public class D2GS extends ApplicationAdapter {
   AuthoritativeSimulation simulation;
   Map map;
   CombatPositionHistory combatPositionHistory;
+  final com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
+      new com.riiablo.engine.server.quest.Act5QuestGameState();
 
   EntityFactory factory;
   ItemManager itemManager;
@@ -2228,6 +2230,7 @@ public class D2GS extends ApplicationAdapter {
         .register("outPackets", outPackets)
         .register("partyManager", partyManager)
         .register("combatPositionHistory", combatPositionHistory)
+        .register("act5QuestGameState", act5QuestGameState)
         ;
     Riiablo.engine = world = new World(config);
 
@@ -3182,7 +3185,11 @@ public class D2GS extends ApplicationAdapter {
     // legitimately report zero for getSkill(attack) until their local item
     // listeners have rebuilt the derived skill map.  Keep the server
     // authoritative, but accept this built-in action explicitly.
-    boolean builtInSkill = request.skillId == com.riiablo.skill.SkillCodes.attack;
+    // Attack and the two native Throw actions are not learned character
+    // skills. Throw is equipment-derived on the client, and a freshly loaded
+    // remote D2S can briefly lack that derived map entry. Actioneer still
+    // authoritatively requires a throwable weapon with positive quantity.
+    boolean builtInSkill = isIntrinsicCombatAction(request.skillId);
     if (playerComponent == null || playerComponent.data == null
         || (!builtInSkill && playerComponent.data.getSkill(request.skillId) <= 0)) {
       Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
@@ -3311,6 +3318,12 @@ public class D2GS extends ApplicationAdapter {
   }
 
   /** Handles server-authoritative action selection and aura activation. */
+  private static boolean isIntrinsicCombatAction(int skillId) {
+    return skillId == com.riiablo.skill.SkillCodes.attack
+        || skillId == com.riiablo.skill.SkillCodes.throw_
+        || skillId == com.riiablo.skill.SkillCodes.left_hand_throw;
+  }
+
   private void SelectSkillRequest(Packet packet) {
     int entityId = getPlayerEntityId(packet);
     SelectSkillRequest request = (SelectSkillRequest) packet.data.data(new SelectSkillRequest());
@@ -3320,7 +3333,7 @@ public class D2GS extends ApplicationAdapter {
         : world.getMapper(Player.class).get(entityId);
     CharData data = playerComponent != null ? playerComponent.data : null;
     com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillId);
-    boolean builtIn = skillId == com.riiablo.skill.SkillCodes.attack;
+    boolean builtIn = isIntrinsicCombatAction(skillId);
     String reason = null;
     if (data == null) reason = "PLAYER_NOT_FOUND";
     else if (button != com.badlogic.gdx.Input.Buttons.LEFT

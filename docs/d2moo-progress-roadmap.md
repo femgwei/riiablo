@@ -3116,3 +3116,30 @@ QuestWarp 授权校验，无战斗注册或公式变更）。
 
 当前下一项：继续核对 A5Q6 五波仆从的原生 preset 出生坐标、波次重连状态持久化，以及
 Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
+
+### 2026-09-12 亚马逊原生 Throw 点击与联机授权修复（本轮完成）
+
+- [x] 修正客户端把 `Weapons.RangeAdder`（近战武器触及距离）误当成标枪最大投掷距离的
+  问题；显式 Throw 只校验投掷武器和数量，点击远处怪物会立即提交投射请求，地图边界、
+  墙体碰撞和 missile 生命周期继续由服务端权威处理。
+- [x] 把右键按下边沿纳入固定 Tick 输入队列；默认位于右技能槽的 Throw 即使快速点击发生
+  在两个 40ms Tick 之间，也会在下一 Tick 使用捕获时的目标与坐标提交一次，不再静默丢失。
+- [x] D2GS 将 `Attack/Throw/Left Hand Throw` 识别为原生动作，不再要求远程 D2S 的已学习
+  技能表包含 Throw；`Actioneer` 仍会校验投掷武器和正数量，客户端不能借此无武器投掷。
+- [x] 增加投掷资格回归；通过 `CursorMovementSystemTest` 和 `:server:d2gs:compileJava`。
+
+### 2026-09-12 A5Q6 五波游戏级快照与重连恢复（本轮完成）
+
+- [x] 新增 `Act5QuestGameState`，将五波阶段、已生成波次、剩余延迟、Baal 原点和两个任务门
+  状态从 `Act5QuestSystem` 的瞬态字段提升为 D2GS 当前游戏所有的状态；该状态不写进角色
+  D2S，避免把一局游戏的波次错误带入下一局。
+- [x] `Act5BaalWaveState` 增加带边界校验的 snapshot/restore；恢复 PRE/POST 延迟时保持原
+  Tick 位置，恢复已生成波次时不会再次返回同一个 spawn action。
+- [x] 本地权威世界和 D2GS 都显式注册游戏级状态；后续即使任务系统/RoomEx 重建，也能使用
+  同一快照继续，玩家普通断线重连不再依赖怪物实体 ID 推断波次。
+- [x] 增加中途延迟恢复、禁止重复波次、原点及 Portal 状态恢复测试。
+
+当前下一项：对照 D2MOO `ACT5Q6_Callback03_ChangedLevel`、`ACT5Q6_Callback09`、
+`OBJECTS_InitFunction77_LastPortal` 和 `OBJECTS_OperateFunction72_LastPortal`，补齐 Baal
+结束后的 Tyrael 动画、Worldstone Chamber/Harrogath 状态传播与多人结束门奖励同步；随后
+继续核对五波精确原生 preset 出生坐标。

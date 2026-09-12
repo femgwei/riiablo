@@ -96,10 +96,9 @@ public class Act5QuestSystem extends BaseSystem {
   private final IntSet spawnedBaalLevels = new IntSet();
   private final IntSet killedBaalEntities = new IntSet();
   private final IntSet baalWaveEntities = new IntSet();
-  private final Act5BaalWaveState baalWaveState = new Act5BaalWaveState();
-  private final Act5BaalPortalState baalPortalState = new Act5BaalPortalState();
-  private float baalWaveOriginX;
-  private float baalWaveOriginY;
+  @Wire(name = "act5QuestGameState", failOnNull = false)
+  protected Act5QuestGameState act5QuestGameState;
+  private final Act5QuestGameState fallbackGameState = new Act5QuestGameState();
   private final IntSet rescuedCages = new IntSet();
   private Map.Zone trackedRescueZone;
 
@@ -116,6 +115,7 @@ public class Act5QuestSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
+    Act5BaalWaveState baalWaveState = gameState().baalWaves;
     if (baalWaveState.started() && !baalWaveState.finished()) {
       int action = baalWaveState.tick(isBaalThroneClear());
       if (action >= 0 && action < Act5BaalQuest.WAVE_COUNT) {
@@ -932,12 +932,12 @@ public class Act5QuestSystem extends BaseSystem {
   }
 
   private void startBaalWavesIfNeeded(int playerId) {
+    Act5BaalWaveState baalWaveState = gameState().baalWaves;
     if (!baalWaveState.canStart() || factory == null || mPosition == null) return;
     Position origin = findBaalThronePosition();
     if (origin == null) origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
     if (origin == null) return;
-    baalWaveOriginX = origin.position.x;
-    baalWaveOriginY = origin.position.y;
+    gameState().setBaalOrigin(origin.position.x, origin.position.y);
     baalWaveState.start();
     log.info("[A5Q6] Baal throne sequence armed: player={} clearRadius={} preDelay={}",
         playerId, Act5BaalQuest.THRONE_CLEAR_RADIUS, Act5BaalQuest.PRE_WAVE_DELAY_TICKS);
@@ -953,8 +953,8 @@ public class Act5QuestSystem extends BaseSystem {
           waveIndex + 1, Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex]);
       return;
     }
-    float leaderX = baalWaveOriginX;
-    float leaderY = baalWaveOriginY + 13f;
+    float leaderX = baalWaveOriginX();
+    float leaderY = baalWaveOriginY() + 13f;
     int uniqueId = unique == null
         ? Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex] : unique.hcIdx;
     long affixes = unique == null ? 0L : Act5BaalQuest.nativeSuperUniqueAffixes(unique.Mod);
@@ -1012,8 +1012,8 @@ public class Act5QuestSystem extends BaseSystem {
           || !mPosition.has(id) || !isLiveHostileMonster(id)
           || isBaal(id) || isBaalThrone(id)) continue;
       Position position = mPosition.get(id);
-      float dx = position.position.x - baalWaveOriginX;
-      float dy = position.position.y - baalWaveOriginY;
+      float dx = position.position.x - baalWaveOriginX();
+      float dy = position.position.y - baalWaveOriginY();
       if (dx * dx + dy * dy < radius2) return false;
     }
     return true;
@@ -1112,8 +1112,8 @@ public class Act5QuestSystem extends BaseSystem {
     // than once by reconnect/replay paths.
     openWorldstoneChamberPortal();
     Map.Zone chamber = findZone(Act5BaalQuest.WORLDSTONE_CHAMBER);
-    float spawnX = baalWaveOriginX + 3f;
-    float spawnY = baalWaveOriginY;
+    float spawnX = baalWaveOriginX() + 3f;
+    float spawnY = baalWaveOriginY();
     if (chamber != null) {
       spawnX = chamber.x() + chamber.width() * 0.5f;
       spawnY = chamber.y() + chamber.height() * 0.5f;
@@ -1148,12 +1148,12 @@ public class Act5QuestSystem extends BaseSystem {
     int existingWarp = source.findWarp(questWarp);
     if (existingWarp != Engine.INVALID_ENTITY) {
       ensurePortalVisual(source, NativeQuestObjectResolver.BAAL_PORTAL, existingWarp);
-      baalPortalState.openWorldstoneChamber();
+      gameState().baalPortals.openWorldstoneChamber();
       return;
     }
     Position throne = findBaalThronePosition();
-    float portalX = throne == null ? baalWaveOriginX : throne.position.x;
-    float portalY = throne == null ? baalWaveOriginY : throne.position.y;
+    float portalX = throne == null ? baalWaveOriginX() : throne.position.x;
+    float portalY = throne == null ? baalWaveOriginY() : throne.position.y;
     if (throne == null && portalX == 0f && portalY == 0f) {
       portalX = source.x() + source.width() * 0.5f;
       portalY = source.y() + source.height() * 0.5f;
@@ -1172,7 +1172,7 @@ public class Act5QuestSystem extends BaseSystem {
           visual, portalX, portalY);
       return;
     }
-    baalPortalState.openWorldstoneChamber();
+    gameState().baalPortals.openWorldstoneChamber();
     source.addWarp(warp);
     log.info("[A5Q6] Worldstone Chamber portal opened: visual={} warp={} destination={} "
         + "position=({}, {})", visual, warp, Act5BaalQuest.WORLDSTONE_CHAMBER,
@@ -1224,7 +1224,7 @@ public class Act5QuestSystem extends BaseSystem {
     int existingWarp = zone.findWarp(questWarp);
     if (existingWarp != Engine.INVALID_ENTITY) {
       ensurePortalVisual(zone, NativeQuestObjectResolver.LAST_PORTAL, existingWarp);
-      baalPortalState.createLastPortal();
+      gameState().baalPortals.createLastPortal();
       return true;
     }
     com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
@@ -1241,7 +1241,7 @@ public class Act5QuestSystem extends BaseSystem {
           visual, portalX, portalY);
       return false;
     }
-    baalPortalState.createLastPortal();
+    gameState().baalPortals.createLastPortal();
     zone.addWarp(warp);
     log.info("[A5Q6] Last portal created: visual={} warp={} destination={} position=({}, {})",
         visual, warp, D2LevelIds.LEVEL_HARROGATH, portalX, portalY);
@@ -1675,6 +1675,28 @@ public class Act5QuestSystem extends BaseSystem {
     MapWrapper wrapper = mMapWrapper.get(entityId);
     return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
         ? -1 : wrapper.zone.level.Id;
+  }
+
+  private Act5QuestGameState gameState() {
+    return act5QuestGameState != null ? act5QuestGameState : fallbackGameState;
+  }
+
+  private float baalWaveOriginX() {
+    return gameState().hasBaalOrigin() ? gameState().baalOriginX() : 0f;
+  }
+
+  private float baalWaveOriginY() {
+    return gameState().hasBaalOrigin() ? gameState().baalOriginY() : 0f;
+  }
+
+  /** Exposes a primitive-only room snapshot for D2GS reconnect/migration. */
+  public Act5QuestGameState.Snapshot snapshotGameState() {
+    return gameState().snapshot();
+  }
+
+  /** Restores the room snapshot before the next authoritative quest tick. */
+  public void restoreGameState(Act5QuestGameState.Snapshot snapshot) {
+    gameState().restore(snapshot);
   }
 
   private static boolean isAct5Level(int levelId) {

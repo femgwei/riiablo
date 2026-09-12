@@ -12,6 +12,19 @@ public final class Act5BaalWaveState {
   private int wave;
   private int delayTicks;
 
+  /** Primitive-only game snapshot suitable for reconnect/room migration. */
+  public static final class Snapshot {
+    public final int phase;
+    public final int wave;
+    public final int delayTicks;
+
+    public Snapshot(int phase, int wave, int delayTicks) {
+      this.phase = phase;
+      this.wave = wave;
+      this.delayTicks = delayTicks;
+    }
+  }
+
   public int wave() {
     return wave;
   }
@@ -36,6 +49,34 @@ public final class Act5BaalWaveState {
     if (!canStart()) return false;
     phase = Phase.WAIT_CLEAR;
     return true;
+  }
+
+  public Snapshot snapshot() {
+    return new Snapshot(phase.ordinal(), wave, delayTicks);
+  }
+
+  /** Restores one game-session snapshot without replaying an already spawned wave. */
+  public void restore(Snapshot snapshot) {
+    if (snapshot == null) return;
+    if (snapshot.phase < 0 || snapshot.phase >= Phase.values().length) {
+      throw new IllegalArgumentException("invalid Baal wave phase: " + snapshot.phase);
+    }
+    if (snapshot.wave < 0 || snapshot.wave > Act5BaalQuest.WAVE_COUNT) {
+      throw new IllegalArgumentException("invalid Baal wave index: " + snapshot.wave);
+    }
+    if (snapshot.delayTicks < 0
+        || snapshot.delayTicks > Math.max(Act5BaalQuest.PRE_WAVE_DELAY_TICKS,
+            Act5BaalQuest.POST_SPAWN_LOCK_TICKS)) {
+      throw new IllegalArgumentException("invalid Baal wave delay: " + snapshot.delayTicks);
+    }
+    Phase restoredPhase = Phase.values()[snapshot.phase];
+    if ((restoredPhase == Phase.IDLE || restoredPhase == Phase.DONE)
+        && snapshot.delayTicks != 0) {
+      throw new IllegalArgumentException("idle/done Baal wave state cannot have a delay");
+    }
+    phase = restoredPhase;
+    wave = snapshot.wave;
+    delayTicks = snapshot.delayTicks;
   }
 
   /** Advances one authoritative 25 Hz frame. Returns wave index 0..4,

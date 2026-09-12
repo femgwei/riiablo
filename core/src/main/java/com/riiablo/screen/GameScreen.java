@@ -692,6 +692,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     itemController = socket == null ? new ClientItemManager() : new NetworkedClientItemManager();
 
     CombatPositionHistory combatPositionHistory = new CombatPositionHistory(map);
+    com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
+        new com.riiablo.engine.server.quest.Act5QuestGameState();
     WorldConfiguration config = getWorldConfiguration();
     config
         .register("iso", iso)
@@ -701,6 +703,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("itemController", itemController)
         .register("partyManager", partyManager)
         .register("combatPositionHistory", combatPositionHistory)
+        .register("act5QuestGameState", act5QuestGameState)
         .register("batch", Riiablo.batch)
         .register("shapes", Riiablo.shapes)
         .register("stage", stage)

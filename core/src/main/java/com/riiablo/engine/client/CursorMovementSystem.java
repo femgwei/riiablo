@@ -85,7 +85,10 @@ public class CursorMovementSystem extends BaseSystem {
   boolean requireRelease;
   /** One-shot left-click captured on the render frame and consumed by the next sim tick. */
   private final PointerClickQueue pendingLeftClicks = new PointerClickQueue();
+  /** Right-side skills use the same edge queue so a short Throw click cannot miss a 25 Hz tick. */
+  private final PointerClickQueue pendingRightClicks = new PointerClickQueue();
   private boolean sampledLeftDown;
+  private boolean sampledRightDown;
   int lastInteractionTraceTarget = Engine.INVALID_ENTITY;
   long lastInteractionTraceMillis;
   int lastAttackRangeTarget = Engine.INVALID_ENTITY;
@@ -128,6 +131,7 @@ public class CursorMovementSystem extends BaseSystem {
     // move is never lost just because the button was released before the next
     // fixed step.
     if (consumePendingLeftPress(playerId)) return;
+    if (consumePendingRightPress(playerId)) return;
     
     stage.screenToStageCoordinates(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY()));
     Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
@@ -171,12 +175,18 @@ public class CursorMovementSystem extends BaseSystem {
   /** Samples the input edge once per render frame, before the fixed-step loop. */
   public void capturePointerInput() {
     if (Gdx.input == null) return;
-    boolean down = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
-    if (down && !sampledLeftDown) {
+    boolean leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+    if (leftDown && !sampledLeftDown) {
       pendingLeftClicks.capture(Gdx.input.getX(), Gdx.input.getY(), TimeUtils.millis(),
           networkReceiver == null ? 0L : networkReceiver.latestServerTick());
     }
-    sampledLeftDown = down;
+    sampledLeftDown = leftDown;
+    boolean rightDown = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+    if (rightDown && !sampledRightDown) {
+      pendingRightClicks.capture(Gdx.input.getX(), Gdx.input.getY(), TimeUtils.millis(),
+          networkReceiver == null ? 0L : networkReceiver.latestServerTick());
+    }
+    sampledRightDown = rightDown;
   }
 
   private boolean consumePendingLeftPress(int src) {
@@ -221,6 +231,36 @@ public class CursorMovementSystem extends BaseSystem {
     }
     iso.agg(tmpVec2.set(pendingLeftX, pendingLeftY)).unproject().toWorld();
     if (actioneer.canInterrupt(src)) actioneer.moveTo(src, tmpVec2);
+    return true;
+  }
+
+  private boolean consumePendingRightPress(int src) {
+    PointerClickQueue.Click click = pendingRightClicks.poll();
+    if (click == null) return false;
+
+    stage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
+    Actor hit1 = stage.hit(tmpVec2.x, tmpVec2.y, true);
+    scaledStage.screenToStageCoordinates(tmpVec2.set(click.screenX, click.screenY));
+    Actor hit2 = scaledStage.hit(tmpVec2.x, tmpVec2.y, true);
+    if (hit1 != null || hit2 != null) return true;
+
+    if (!canStartCast(src)) {
+      pendingRightClicks.restore(click);
+      return false;
+    }
+
+    int targetId = getHoveredAt(src, click.screenX, click.screenY);
+    if (targetId != Engine.INVALID_ENTITY
+        && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(src))) {
+      actioneer.moveTo(src, Engine.INVALID_ENTITY);
+      return true;
+    }
+    int skillId = Riiablo.charData.getAction(Input.Buttons.RIGHT);
+    iso.agg(tmpVec2.set(click.screenX, click.screenY)).unproject().toWorld();
+    if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
+      tmpVec2.set(mPosition.get(targetId).position);
+    }
+    requestCast(src, skillId, targetId, tmpVec2);
     return true;
   }
 
@@ -292,32 +332,15 @@ public class CursorMovementSystem extends BaseSystem {
           final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
 
           // Check if the selected skill is an explicit throw and the equipped
-          // weapon is throwable and in throwing range. A throwable weapon does
-          // not turn the normal Attack skill into a ranged attack.
+          // weapon is throwable and has quantity. A throwable weapon does not
+          // turn the normal Attack skill into a ranged attack.
           boolean canThrow = false;
-          float throwRange = 0f;
           Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
           
-          if (explicitThrowSkill && weapon != null && weapon.base != null) {
-              // Check quantity
-              com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
-              if (quantity != null && quantity.asInt() > 0) {
-                // Get throwing range from weapon's RangeAdder or default
-                if (weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry) {
-                  com.riiablo.codec.excel.Weapons.Entry weaponEntry = (com.riiablo.codec.excel.Weapons.Entry) weapon.base;
-                  // Pathfinder stops a player at RangeAdder + 3 + 1 native
-                  // distance. Include that final native cell so a queued
-                  // throw is not left permanently just outside its range.
-                  throwRange = weaponEntry.RangeAdder + 4f;
-                } else {
-                  throwRange = 11f; // Default throwing range plus native cell
-                }
-                
-                // Check if target is within throwing range
-                if (dst <= throwRange) {
-                  canThrow = true;
-                }
-              }
+          if (weapon != null && weapon.attrs != null) {
+            com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
+            canThrow = canStartExplicitThrow(explicitThrowSkill, true,
+                quantity != null ? quantity.asInt() : 0);
           }
 
           traceAttackRange(src, targetId, selectedSkillId, dst, inMeleeRange,
@@ -489,28 +512,15 @@ public class CursorMovementSystem extends BaseSystem {
       final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
 
       // Check if the selected skill is an explicit throw and the equipped
-      // weapon is throwable and in throwing range. Normal Attack remains
-      // point-blank melee even when a throwable weapon is equipped.
+      // weapon is throwable and has quantity. Normal Attack remains point-
+      // blank melee even when a throwable weapon is equipped.
       boolean canThrow = false;
-      float throwRange = 0f;
       Item weapon = Riiablo.charData.getItems().getEquippedThrowableWeapon();
 
-      if (explicitThrowSkill && weapon != null && weapon.base != null) {
+      if (weapon != null && weapon.attrs != null) {
         com.riiablo.attributes.StatRef quantity = weapon.attrs.base().get(Stat.quantity);
-        if (quantity != null && quantity.asInt() > 0) {
-          if (weapon.base instanceof com.riiablo.codec.excel.Weapons.Entry) {
-            com.riiablo.codec.excel.Weapons.Entry weaponEntry = (com.riiablo.codec.excel.Weapons.Entry) weapon.base;
-            // Keep the client release check consistent with Pathfinder's
-            // native melee stop threshold (RangeAdder + 3 + 1).
-            throwRange = weaponEntry.RangeAdder + 4f;
-          } else {
-            throwRange = 11f;
-          }
-
-          if (dst <= throwRange) {
-            canThrow = true;
-          }
-        }
+        canThrow = canStartExplicitThrow(explicitThrowSkill, true,
+            quantity != null ? quantity.asInt() : 0);
       }
       
       traceAttackRange(src, target, selectedSkillId, dst, inMeleeRange,
@@ -596,6 +606,17 @@ public class CursorMovementSystem extends BaseSystem {
     Skills.Entry skill = Riiablo.files.skills.get(skillId);
     return skill != null && (skill.srvdofunc == 3 || skill.srvdofunc == 5
         || skill.cltdofunc == 3 || skill.cltdofunc == 5);
+  }
+
+  /**
+   * Explicit Throw is a ranged action. {@code Weapons.RangeAdder} describes
+   * melee reach and must not be used as a maximum projectile targeting range.
+   * World bounds, line collision and the missile lifetime remain authoritative
+   * in D2GS/ServerSkillSystem.
+   */
+  static boolean canStartExplicitThrow(
+      boolean explicitThrowSkill, boolean hasThrowableWeapon, int quantity) {
+    return explicitThrowSkill && hasThrowableWeapon && quantity > 0;
   }
 
   private boolean isMeleeNormalAttack(int skillId) {
