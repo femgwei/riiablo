@@ -23,4 +23,13 @@ class Act2QuestMessageValidatorTest {
     assertFalse(Act2QuestMessageValidator.isAllowed(MonsterType.ATMA, data, 418));
     assertFalse(Act2QuestMessageValidator.isAllowed(MonsterType.ATMA, data, 430));
   }
+
+  @Test
+  void acceptsDurielTyraelPortalMessageOutsideByteRange() {
+    CharData data = CharData.obtain().set(Riiablo.NORMAL, false, "A2Q6Validation", Riiablo.AMAZON);
+    assertTrue(Act2QuestMessageValidator.isAllowed(
+        MonsterType.TYRAEL1, data, Act2DurielQuest.MESSAGE_TYRAEL_PORTAL));
+    assertFalse(Act2QuestMessageValidator.isAllowed(
+        MonsterType.TYRAEL1, data, Act2DurielQuest.MESSAGE_TYRAEL_PORTAL - 1));
+  }
 }

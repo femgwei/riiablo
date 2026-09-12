@@ -87,6 +87,7 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_BARRACKS = 28;
   private static final int LEVEL_TRISTRAM = 38;
   private static final int LEVEL_TOWERCELLARLVL5 = 25;
+  private static final int LEVEL_LUTGHOLEIN = 40;
   private static final int LEVEL_CLAWVIPERTEMPLELVL2 = 61;
   private static final int LEVEL_ARCANESANCTUARY = 75;
   private static final int LEVEL_DURIELSLAIR = 74;
@@ -2830,6 +2831,68 @@ public final class D2GSHeadlessClient {
           + " clients=true,true");
       log("a2_object_interaction_dual_pass",
           "taintedSun=true arcaneTome=true orifice=true durielEntry=true clients=true,true");
+
+      // Continue the same native A2Q6 chain: Duriel death opens Tyrael's
+      // door, Tyrael's terminal message creates the Lut Gholein return
+      // portal, and each party member may use that portal independently.
+      if (D2GS.headlessCompleteDurielObjective(a.playerId) == Engine.INVALID_ENTITY
+          || !D2GS.headlessRebuildQuestObjects(a.playerId)
+          || !D2GS.headlessRebuildQuestObjects(b.playerId)) {
+        throw new IOException("A2Q6 Duriel death/rebuild unavailable");
+      }
+      int[] durielState = D2GS.headlessEndgameQuestObjectSnapshot(LEVEL_DURIELSLAIR);
+      if (durielState.length < 6 || durielState[0] < 1 || durielState[4] < 1) {
+        throw new IOException("A2Q6 Tyrael door was not opened: "
+            + java.util.Arrays.toString(durielState));
+      }
+      int tyraelNpc = D2GS.headlessPrepareQuestNpc(a.playerId,
+          com.riiablo.engine.server.monster.MonsterType.TYRAEL1);
+      if (tyraelNpc == Engine.INVALID_ENTITY) {
+        throw new IOException("A2Q6 Tyrael NPC unavailable");
+      }
+      send(outA, questRequestPacket(323L, QuestOperation.NPC_MESSAGE, tyraelNpc,
+          com.riiablo.engine.server.quest.Act2DurielQuest.MESSAGE_TYRAEL_PORTAL));
+      QuestResult tyraelResult = a.awaitQuestResult(inA, 323L, deadline());
+      int durielRecord = com.riiablo.engine.server.quest.Act2DurielQuest.RECORD;
+      if (!hasQuestFlagAt(tyraelResult, Riiablo.ACT2, durielRecord,
+          com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+        throw new IOException("A2Q6 Tyrael portal message rejected: "
+            + (tyraelResult == null ? "NO_RESULT" : tyraelResult.reason()));
+      }
+      int[] portalState = D2GS.headlessEndgameQuestObjectSnapshot(LEVEL_DURIELSLAIR);
+      int townPortal = D2GS.headlessQuestWarpEntity(LEVEL_DURIELSLAIR,
+          LEVEL_LUTGHOLEIN);
+      if (portalState.length < 6 || portalState[1] < 1 || portalState[5] < 1
+          || townPortal == Engine.INVALID_ENTITY) {
+        throw new IOException("A2Q6 Lut Gholein portal was not created: "
+            + java.util.Arrays.toString(portalState));
+      }
+      if (!D2GS.headlessMovePlayerToObject(b.playerId, townPortal)) {
+        throw new IOException("A2Q6 peer town portal arrival staging unavailable");
+      }
+      a.awaitVisibleEntity(inA, townPortal, deadline());
+      b.awaitVisibleEntity(inB, townPortal, deadline());
+      // Replaying the terminal message must not create a second portal.
+      send(outA, questRequestPacket(323L, QuestOperation.NPC_MESSAGE, tyraelNpc,
+          com.riiablo.engine.server.quest.Act2DurielQuest.MESSAGE_TYRAEL_PORTAL));
+      QuestResult tyraelReplay = a.awaitQuestResult(inA, 323L, deadline());
+      int replayPortal = D2GS.headlessQuestWarpEntity(LEVEL_DURIELSLAIR,
+          LEVEL_LUTGHOLEIN);
+      if (tyraelReplay == null || !tyraelReplay.success() || replayPortal != townPortal) {
+        throw new IOException("A2Q6 Tyrael portal replay was not idempotent");
+      }
+      if (!D2GS.headlessMovePlayerToObject(a.playerId, townPortal)) {
+        throw new IOException("A2Q6 town portal arrival staging unavailable");
+      }
+      send(outA, questRequestPacket(324L, QuestOperation.WARP_INTERACTION, townPortal, -1));
+      QuestResult townWarpA = a.awaitQuestResult(inA, 324L, deadline());
+      if (townWarpA == null || !townWarpA.success()) {
+        throw new IOException("A2Q6 town portal Warp rejected: " +
+            (townWarpA == null ? "NO_RESULT" : townWarpA.reason()));
+      }
+      awaitLevel(a, inA, LEVEL_LUTGHOLEIN, deadline());
+      log("a2q6_tyrael_portal_dual_pass", "door=true tyrael=true townPortal=true"
+          + " replay=true warp=true clients=true,true");
     }
   }
 

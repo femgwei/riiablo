@@ -397,6 +397,8 @@ public class Act2DurielQuestSystem extends BaseSystem {
 
   private void openTyraelsDoor() {
     if (objectsByZone == null) return;
+    boolean doorFound = false;
+    Map.Zone durielZone = null;
     IntBag objects = objectsByZone.getEntities();
     int[] ids = objects.getData();
     for (int i = 0; i < objects.size(); i++) {
@@ -405,6 +407,8 @@ public class Act2DurielQuestSystem extends BaseSystem {
       if (object == null || object.base == null
           || object.base.Id != Act2DurielQuest.TYRAELS_DOOR
           || !isInLevel(id, D2LevelIds.LEVEL_DURIELSLAIR)) continue;
+      doorFound = true;
+      if (durielZone == null && mMapWrapper.has(id)) durielZone = mMapWrapper.get(id).zone;
       NativeObjectState state = mNativeObjectState.has(id) ? mNativeObjectState.get(id) : null;
       boolean alreadyOpen = state != null ? state.opened && state.activated
           && state.currentMode == Engine.Object.MODE_ON
@@ -418,11 +422,88 @@ public class Act2DurielQuestSystem extends BaseSystem {
       }
       if (cofs != null && mCofReference.has(id)) {
         cofs.setMode(id, (byte) Engine.Object.MODE_ON);
-      } else {
-        object.mode = (byte) Engine.Object.MODE_ON;
-        object.stateFlags |= com.riiablo.engine.server.component.Object.STATE_OPENED;
       }
+      // Keep the authoritative object fields in sync with the COF animation
+      // request.  Network serialization and reconnect snapshots read these
+      // fields, so relying on CofReference alone would show a closed door.
+      object.mode = (byte) Engine.Object.MODE_ON;
+      object.stateFlags |= com.riiablo.engine.server.component.Object.STATE_OPENED;
       log.info("[A2Q6] Tyrael door opened: entity={}", id);
+    }
+    // Some reduced DS1 exports omit the fixed Tyrael door preset entirely.
+    // Native D2Game still creates the door unit when Duriel dies, so provide
+    // the same authoritative fallback at a free player-adjacent position.
+    if (durielZone == null && playersByZone != null) {
+      IntBag playersInLair = playersByZone.getEntities();
+      int[] idsInLair = playersInLair.getData();
+      for (int i = 0; i < playersInLair.size(); i++) {
+        int playerId = idsInLair[i];
+        if (isInLevel(playerId, D2LevelIds.LEVEL_DURIELSLAIR)
+            && mMapWrapper.has(playerId)) {
+          durielZone = mMapWrapper.get(playerId).zone;
+          break;
+        }
+      }
+    }
+    if (factory == null || playersByZone == null || durielZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] playerIds = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = playerIds[i];
+      if (!isInLevel(playerId, D2LevelIds.LEVEL_DURIELSLAIR)
+          || !mPosition.has(playerId)) continue;
+      Position position = mPosition.get(playerId);
+      if (!doorFound) {
+        int door = factory.createStaticObjectByClassId(
+            Act2DurielQuest.TYRAELS_DOOR, position.position.x + 3f,
+            position.position.y);
+        if (door == Engine.INVALID_ENTITY) return;
+        NativeObjectState state = mNativeObjectState.has(door)
+            ? mNativeObjectState.get(door) : null;
+        if (state != null) {
+          state.persistOpened(true);
+          state.persistActivated(true);
+          state.persistMode((byte) Engine.Object.MODE_ON);
+        }
+        if (cofs != null && mCofReference.has(door)) {
+          cofs.setMode(door, (byte) Engine.Object.MODE_ON);
+        }
+        if (mObject.has(door)) {
+          com.riiablo.engine.server.component.Object created = mObject.get(door);
+          created.mode = (byte) Engine.Object.MODE_ON;
+          created.stateFlags |= com.riiablo.engine.server.component.Object.STATE_OPENED;
+        }
+        doorFound = true;
+        log.info("[A2Q6] Tyrael door fallback created/opened: entity={} player={}",
+            door, playerId);
+      }
+      if (findTyraelInZone(durielZone) == Engine.INVALID_ENTITY) {
+        ensureTyraelNpc(durielZone, position.position.x + 5f, position.position.y);
+      }
+      return;
+    }
+  }
+
+  private void ensureTyraelNpc(Map.Zone zone, float x, float y) {
+    if (zone == null || factory == null || Riiablo.files == null
+        || Riiablo.files.monstats == null) return;
+    com.riiablo.codec.excel.MonStats.Entry stats = Riiablo.files.monstats.get("Tyrael1");
+    if (stats == null) stats = Riiablo.files.monstats.get("Tyrael");
+    if (stats == null) {
+      for (com.riiablo.codec.excel.MonStats.Entry candidate : Riiablo.files.monstats) {
+        if (candidate != null && candidate.hcIdx == MonsterType.TYRAEL1) {
+          stats = candidate;
+          break;
+        }
+      }
+    }
+    if (stats == null) return;
+    com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
+    if (!zone.findFreeCoordinates(free.set(x, y), 2, 32, true, free)) return;
+    int entity = factory.createMonster(stats, free.x, free.y);
+    if (entity != Engine.INVALID_ENTITY) {
+      log.info("[A2Q6] Tyrael NPC fallback spawned: entity={} zone={} position=({}, {})",
+          entity, zone.level == null ? -1 : zone.level.Id, free.x, free.y);
     }
   }
 

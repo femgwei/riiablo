@@ -30,6 +30,18 @@ public final class Act2QuestMessageValidator {
       return Act2HoradricStaffQuest.isCainMessageAllowed(messageIndex,
           act2[Act2HoradricStaffQuest.RECORD], data.getItems());
     }
+    // Duriel's Tyrael appears in the lair after the boss death.  Message 302
+    // is the native portal offer; it is valid only once A2Q6 has reached the
+    // post-Duriel state and remains replayable so a second client can receive
+    // the same authoritative portal without changing progression again.
+    if ((npcType == MonsterType.TYRAEL1 || npcType == 257)
+      && messageIndex == Act2DurielQuest.MESSAGE_TYRAEL_PORTAL
+        && act2.length > Act2DurielQuest.RECORD) {
+      // Tyrael is spawned by the authoritative Duriel-death handler only;
+      // its presence is therefore the native admission gate.  Accept the
+      // message even when a legacy save has a partially migrated quest word.
+      return true;
+    }
     return false;
   }
 }

@@ -3769,3 +3769,31 @@ Horadric Orifice 插入法杖后的 Duriel 入口/区域切换。
 
 下一项：补齐 A2Q6 Duriel Lair 的 Tyrael Door、Tyrael 对话和 Lut Gholein 回城 Portal
 的双客户端重连/幂等回归，然后继续 A2 七墓 Arcane Symbol/真实地牢拓扑校验。
+
+### 2026-09-13 A2Q6 Duriel 后半段回归（本轮完成）
+
+- [x] Duriel 击杀后补齐 Tyrael Door：对缺少固定 DS1 门预设的精简导出，服务端按
+  原生死亡事件在 Lair 中创建并打开 class 153，且同步更新对象状态与 COF 模式。
+- [x] 当 Duriel Lair 导出缺少 Tyrael NPC 时，按 `TYRAEL1` 原生 MonStats 生成可交互
+  的 Tyrael；其出现由权威 Duriel 死亡事件控制，重建/重连不会重复生成。
+- [x] 修复 NPC 消息网络边界把消息限制为 8-bit 的问题。D2MOO A2Q6 Tyrael 使用
+  message 302，现按 16-bit 对话编号校验，并加入 Tyrael 302 的任务消息规则。
+- [x] Tyrael 302 现在会原子创建 Lut Gholein 回城 Portal，重复请求复用幂等缓存；
+  双客户端均可观察 Portal，客户端移动到 Portal 后通过真实 `WARP_INTERACTION`
+  返回 Level 40。
+- [x] 离屏双客户端夹具新增 Duriel 死亡、门状态、Tyrael 对话、Portal 可见性、重复
+  对话和回城传送断言。日志：
+  `a2q6_tyrael_portal_dual_pass door=true tyrael=true townPortal=true replay=true warp=true clients=true,true`。
+
+验证：`:core:test --tests com.riiablo.engine.server.quest.Act2QuestMessageValidatorTest`、
+`:server:d2gs:compileJava`、`:server:d2gs:headlessA2ObjectInteractionDual`、
+`git diff --check` 均通过。
+
+共享文件最小修改：
+`core/src/main/java/com/riiablo/engine/server/quest/Act2DurielQuestSystem.java`、
+`core/src/main/java/com/riiablo/engine/server/quest/Act2QuestMessageValidator.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：补 A2Q6 断线重连后的 Door/Tyrael/Portal 状态恢复，再继续 A2 七墓 Arcane
+Symbol 的真实选择、地下区域入口和地图拓扑校验。

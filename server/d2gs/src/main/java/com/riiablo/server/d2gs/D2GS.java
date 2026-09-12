@@ -5230,10 +5230,17 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private String validateQuestNpc(int playerId, int npcId, int messageIndex) {
-    if (messageIndex < 0 || messageIndex > 255) return "INVALID_MESSAGE";
+    // Native D2 dialogue ids are 16-bit values (A2Q6 Tyrael uses 302), not
+    // an unsigned byte.  Reject only values outside the wire/int domain.
+    if (messageIndex < 0 || messageIndex > 0xFFFF) return "INVALID_MESSAGE";
     com.riiablo.engine.server.component.Monster npc =
         world.getMapper(com.riiablo.engine.server.component.Monster.class).get(npcId);
-    if (npc == null || npc.monstats == null || !npc.monstats.npc || !npc.monstats.interact) {
+    boolean nativeTyrael = npc != null && npc.monstats != null
+        && (npc.monstats.hcIdx == com.riiablo.engine.server.monster.MonsterType.TYRAEL1
+            || (npc.monstats.Id != null
+                && npc.monstats.Id.toLowerCase(java.util.Locale.ROOT).startsWith("tyrael")));
+    if (npc == null || npc.monstats == null
+        || ((!npc.monstats.npc || !npc.monstats.interact) && !nativeTyrael)) {
       return "NPC_NOT_FOUND";
     }
     if (levelIdOf(playerId) < 0 || levelIdOf(playerId) != levelIdOf(npcId)) {
