@@ -3540,6 +3540,20 @@ Gidbinn decoy；日志显示 `DRLGOUTJUNG_BuildJungle: pJungleDefs is null` 及 
 因此本轮不能把 A3 真实对象链标记为运行通过，缺口是 A3 D2MOO 导出/DS1 资源装载，不是网络
 交互入口本身。已保留失败门槛，便于补齐资源后直接复跑。
 
+### 2026-09-12 A3 D2MOO 丛林定义回写修复（本轮完成）
+
+- [x] 修复 `D2MOO_JAVA/DrlgOutPlace.generateJungles()` 中被注释掉的原生回写：将每个
+  `D2JungleStrc` 的 `pJungleDefs` 和 `nJungleDefsCount` 写回对应 `D2DrlgLevel`，与
+  D2Common 的 `DRLG_GenerateJungles`/`DRLGOUTJUNG_BuildJungle` 调用链一致。
+- [x] 修复后真实 MPQ 离屏运行不再出现 `pJungleDefs is null`，说明丛林定义生命周期已
+  接通；但下一层仍把部分 DT1/DS1 预设解析为 ID 0（`DATA\\GLOBAL\\Tiles\\0`、DS1
+  file 0），Gidbinn 对象尚未能生成。
+- [x] 通过 `:D2MOO_JAVA:compileJava`、`:server:d2gs:compileJava` 和 `git diff --check`。
+
+当前下一项：继续对齐 A3 `LvlPrest/LevelTypes/DT1` 数据加载，消除预设/Tile ID=0；优先
+核对 `Act3D2MOOLayoutBridge` 的 `DataTbls` 加载顺序和 `D2FileReader` MPQ 路径，再重跑
+`headlessA3ObjectInteractionDual`。
+
 当前下一项：在完整 1.10f MPQ 环境执行 `--require-a3-object-interaction-dual`，确认真实
 DS1 预设中 Gidbinn/三座 Khalim 宝箱/Compelling Orb 的实体房间与双端可见性；通过后继续
 A1/A2 特殊宝箱、祭坛、任务门的生产交互和掉落幂等覆盖。

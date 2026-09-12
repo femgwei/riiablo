@@ -3052,15 +3052,16 @@ public class DrlgOutPlace {
         java.util.Arrays.sort(tJungles, (lhs, rhs) -> 
             Integer.compare(rhs.getPDrlgCoord().getNPosY(), lhs.getPDrlgCoord().getNPosY()));
         
-        // 设置关卡信息
+        // 设置关卡信息。D2Common keeps the generated jungle definition grid
+        // on each corresponding level; leaving these assignments commented
+        // makes DRLGOUTJUNG_BuildJungle observe a null pJungleDefs and abort
+        // before emitting the head/tail DS1 preset units.
         D2DrlgLevel pJungleLevel = null;
         for (int i = 0; i < D2JungleStrc.JUNGLE_MAX_ATTACH; ++i) {
             pJungleLevel = DrlgDrlg.getLevel(pDrlg, i + D2LevelIds.LEVEL_SPIDERFOREST);
             if (pJungleLevel != null) {
-                // 设置丛林定义数组
-                // 注意：需要根据实际的 D2DrlgLevel 结构来设置这些字段
-                // pJungleLevel.setPJungleDefs(tJungles[i].getPJungleDefs());
-                // pJungleLevel.setNJungleDefsCount(tJungles[i].getNJungleDefs());
+                pJungleLevel.setPJungleDefs(tJungles[i].getPJungleDefs());
+                pJungleLevel.setNJungleDefsCount(tJungles[i].getNJungleDefs());
                 pJungleLevel.getLevelCoords().setNPosX(tJungles[i].getPDrlgCoord().getNPosX());
                 pJungleLevel.getLevelCoords().setNPosY(tJungles[i].getPDrlgCoord().getNPosY());
                 pJungleLevel.getLevelCoords().setNWidth(tJungles[i].getPDrlgCoord().getNWidth());
