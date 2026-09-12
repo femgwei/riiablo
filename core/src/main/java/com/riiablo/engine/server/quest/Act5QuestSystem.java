@@ -1055,9 +1055,12 @@ public class Act5QuestSystem extends BaseSystem {
     baalWaveEntities.clear();
     long affixes = unique == null ? 0L : Act5BaalQuest.nativeSuperUniqueAffixes(unique.Mod);
     Map.Zone throneZone = findZone(Act5BaalQuest.THRONE_OF_DESTRUCTION);
+    Map.RoomEx spawnRoom = throneZone == null ? null
+        : throneZone.findRoomEx(leaderX, leaderY);
+    int spawnRoomId = spawnRoom == null ? -1 : spawnRoom.id;
     com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
     if (throneZone != null
-        && throneZone.findFreeCoordinates(free.set(leaderX, leaderY), 2, 50, true, free)) {
+        && throneZone.findFreeCoordinates(free.set(leaderX, leaderY), 2, 50, false, free)) {
       leaderX = free.x;
       leaderY = free.y;
     }
@@ -1065,7 +1068,7 @@ public class Act5QuestSystem extends BaseSystem {
         MonsterRank.SUPER_UNIQUE, affixes, -1, uniqueId);
     if (leader < 0) return;
     if (mMonster.has(leader)) {
-      mMonster.get(leader).setBaalWaveMember(waveIndex, uniqueId, true);
+      mMonster.get(leader).setBaalWaveMember(waveIndex, uniqueId, spawnRoomId, true);
     }
     gameState().baalWaves.markWaveSpawned();
     applyBaalSpawnFacing(leader);
@@ -1078,6 +1081,10 @@ public class Act5QuestSystem extends BaseSystem {
     MonStats.Entry minionStats = resolveBaalWaveMinion(leaderStats);
     int min = unique == null ? Act5BaalQuest.WAVE_MINIONS[waveIndex] : unique.MinGrp;
     int max = unique == null ? Act5BaalQuest.WAVE_MINIONS[waveIndex] : unique.MaxGrp;
+    int[] nativeGroups = Act5BaalQuest.nativeGroupRange(min, max,
+        map == null ? 0 : map.getDifficulty());
+    min = nativeGroups[0];
+    max = nativeGroups[1];
     int minions = Act5BaalQuest.minionCount(min, max, map == null ? 0 : map.seed(), waveIndex);
     for (int i = 0; i < minions; i++) {
       // The native preset uses the room collision placer rather than a
@@ -1086,7 +1093,7 @@ public class Act5QuestSystem extends BaseSystem {
       float x = leaderX + Act5BaalSpawnLayout.candidateX(i);
       float y = leaderY + Act5BaalSpawnLayout.candidateY(i);
       if (throneZone != null
-          && throneZone.findFreeCoordinates(free.set(x, y), 1, 12, true, free)) {
+          && throneZone.findFreeCoordinates(free.set(x, y), 1, 12, false, free)) {
         x = free.x;
         y = free.y;
       }
@@ -1094,7 +1101,7 @@ public class Act5QuestSystem extends BaseSystem {
           MonsterRank.MINION, 0L, -1, leader);
       if (entity >= 0) {
         if (mMonster.has(entity)) {
-          mMonster.get(entity).setBaalWaveMember(waveIndex, uniqueId, false);
+          mMonster.get(entity).setBaalWaveMember(waveIndex, uniqueId, spawnRoomId, false);
         }
         applyBaalSpawnFacing(entity);
         baalWaveEntities.add(entity);
@@ -1201,6 +1208,9 @@ public class Act5QuestSystem extends BaseSystem {
       Monster monster = mMonster.get(id);
       if (monster != null && monster.baalWaveIndex == waveIndex
           && monster.baalWaveSuperUniqueId == superUniqueId
+          && (monster.baalWaveRoomId < 0 || !mMapWrapper.has(id)
+              || mMapWrapper.get(id).roomId < 0
+              || monster.baalWaveRoomId == mMapWrapper.get(id).roomId)
           && levelId(id) == Act5BaalQuest.THRONE_OF_DESTRUCTION
           && isLiveHostileMonster(id)) count++;
     }

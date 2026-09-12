@@ -3262,3 +3262,19 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：继续对照 D2MOO `D2GAME_SpawnPresetMonster` 的房间坐标列表和难度组数量，
 把恢复重生限制到同一 Room/碰撞候选集，并补一组离屏双客户端波次一致性测试。
+
+### 2026-09-12 A5Q6 preset Room/难度规则与双观察者一致性（本轮完成）
+
+- [x] 核对 `MonsterRegion.cpp`/`MonsterUnique.cpp`：SuperUnique preset 的
+  `SpawnMinions` 以同一 `pRoom` 进行碰撞放置；Java 波次首领和随从现在使用
+  `findFreeCoordinates(..., allowNeighborRooms=false)`，恢复标记保留 `RoomEx` id，
+  不会跨房间选点。
+- [x] 对齐 `SpawnSuperUnique` 的难度组规则：非零 `MinGrp/MaxGrp` 在噩梦/地狱分别
+  加 `+1/+2`，再按固定 seed 做范围内抽样；新增 `nativeGroupRange` 回归覆盖。
+- [x] 增加离屏双观察者一致性测试：同一 seed/difficulty 下两端看到相同波次数量、
+  0xA4 类别提示和候选偏移；不启动图形窗口，也不依赖 MPQ 资源。
+- [x] 通过 A5Q6 全套定向测试、`:core:compileJava`、`:server:d2gs:compileJava`
+  和 `git diff --check`。
+
+当前下一项：将上述同房间候选规则接入真正的 D2GS 双 socket 场景（生成波次后分别
+  观察两端 MonsterP/位置/所有权），并补充不同难度下的实际组数量快照校验。

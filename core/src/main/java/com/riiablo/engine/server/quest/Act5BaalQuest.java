@@ -53,6 +53,18 @@ public final class Act5BaalQuest {
     return min + (mixed & 0x7FFFFFFF) % (max - min + 1);
   }
 
+  /** D2GAME_SpawnSuperUnique adds difficulty (0/1/2) to non-zero groups. */
+  static int[] nativeGroupRange(int min, int max, int difficulty) {
+    min = Math.max(0, min);
+    max = Math.max(min, max);
+    difficulty = Math.max(0, Math.min(2, difficulty));
+    if (min > 0 && max > 0) {
+      min += difficulty;
+      max += difficulty;
+    }
+    return new int[] {min, max};
+  }
+
   static String[] nativeWaveClientClassHints(int waveIndex) {
     if (waveIndex < 0 || waveIndex >= WAVE_CLIENT_CLASS_HINTS.length) return new String[0];
     return WAVE_CLIENT_CLASS_HINTS[waveIndex].clone();

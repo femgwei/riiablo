@@ -11,21 +11,23 @@ class Act5BaalWaveMemberTest {
   @Test
   void markerKeepsWaveIdentityWhenLeaderDies() {
     Monster member = new Monster().set(null, null);
-    member.setBaalWaveMember(1, Act5BaalQuest.WAVE_SUPER_UNIQUES[1], false);
+    member.setBaalWaveMember(1, Act5BaalQuest.WAVE_SUPER_UNIQUES[1], 7, false);
 
     assertEquals(1, member.baalWaveIndex);
     assertEquals(Act5BaalQuest.WAVE_SUPER_UNIQUES[1], member.baalWaveSuperUniqueId);
+    assertEquals(7, member.baalWaveRoomId);
     assertFalse(member.baalWaveLeader);
   }
 
   @Test
   void pooledMonsterResetClearsWaveMarker() {
     Monster member = new Monster().set(null, null)
-        .setBaalWaveMember(0, Act5BaalQuest.WAVE_SUPER_UNIQUES[0], true);
+        .setBaalWaveMember(0, Act5BaalQuest.WAVE_SUPER_UNIQUES[0], 3, true);
     member.set(null, null);
 
     assertEquals(-1, member.baalWaveIndex);
     assertEquals(-1, member.baalWaveSuperUniqueId);
+    assertEquals(-1, member.baalWaveRoomId);
     assertFalse(member.baalWaveLeader);
   }
 }

@@ -60,6 +60,9 @@ class Act5BaalWaveStateTest {
       assertTrue(count >= 3 && count <= 6);
       assertEquals(count, Act5BaalQuest.minionCount(3, 6, 0xBaa1, wave));
     }
+    assertArrayEquals(new int[] {5, 5}, Act5BaalQuest.nativeGroupRange(5, 5, 0));
+    assertArrayEquals(new int[] {6, 6}, Act5BaalQuest.nativeGroupRange(5, 5, 1));
+    assertArrayEquals(new int[] {7, 7}, Act5BaalQuest.nativeGroupRange(5, 5, 2));
   }
 
   @Test

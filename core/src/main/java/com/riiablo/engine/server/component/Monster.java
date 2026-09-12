@@ -29,6 +29,7 @@ public class Monster extends Component {
    */
   public int baalWaveIndex = -1;
   public int baalWaveSuperUniqueId = -1;
+  public int baalWaveRoomId = -1;
   public boolean baalWaveLeader;
 
   /** Native MonsterSpawn minion owner for ordinary monster party members. */
@@ -64,6 +65,7 @@ public class Monster extends Component {
     uniqueId = -1;
     baalWaveIndex = -1;
     baalWaveSuperUniqueId = -1;
+    baalWaveRoomId = -1;
     baalWaveLeader = false;
     minionOwnerId = -1;
     nativePackId = -1;
@@ -87,9 +89,11 @@ public class Monster extends Component {
     return this;
   }
 
-  public Monster setBaalWaveMember(int waveIndex, int superUniqueId, boolean leader) {
+  public Monster setBaalWaveMember(int waveIndex, int superUniqueId, int roomId,
+      boolean leader) {
     baalWaveIndex = waveIndex;
     baalWaveSuperUniqueId = superUniqueId;
+    baalWaveRoomId = roomId;
     baalWaveLeader = leader;
     return this;
   }
