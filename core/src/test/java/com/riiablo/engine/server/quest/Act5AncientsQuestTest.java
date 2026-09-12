@@ -54,4 +54,14 @@ class Act5AncientsQuestTest {
     assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
     assertEquals(record, Act5AncientsQuest.complete(record));
   }
+
+  @Test
+  void nativeDoorPermissionsMatchPendingAndGrantedStates() {
+    short pending = NativeQuestRecord.set((short) 0, NativeQuestRecord.REWARD_PENDING);
+    short granted = NativeQuestRecord.set((short) 0, NativeQuestRecord.REWARD_GRANTED);
+    assertTrue(Act5AncientsQuest.canOpenAncientsDoor(pending));
+    assertTrue(Act5AncientsQuest.canOpenAncientsDoor(granted));
+    assertFalse(Act5AncientsQuest.canOpenSummitDoor(pending));
+    assertTrue(Act5AncientsQuest.canOpenSummitDoor(granted));
+  }
 }

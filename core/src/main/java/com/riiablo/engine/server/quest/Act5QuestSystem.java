@@ -22,6 +22,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.CofReference;
@@ -70,6 +71,8 @@ public class Act5QuestSystem extends BaseSystem {
   protected ComponentMapper<Mercenary> mMercenary;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
+  @Wire(failOnNull = false)
+  protected ObjectInteractor objectInteractor;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
   @Wire(name = "map", failOnNull = false)
@@ -87,6 +90,7 @@ public class Act5QuestSystem extends BaseSystem {
   private final IntSet killedNihlathakEntities = new IntSet();
   private final IntSet activatedAncientStatues = new IntSet();
   private final IntIntMap ancientStatueEntities = new IntIntMap();
+  private Map.Zone trackedAncientZone;
   private final IntSet spawnedAncientEntities = new IntSet();
   private final IntSet killedAncientEntities = new IntSet();
   private final IntSet spawnedBaalLevels = new IntSet();
@@ -155,6 +159,7 @@ public class Act5QuestSystem extends BaseSystem {
       if (!hasNihlathakPrerequisite(player.data)) return;
       updateAncientsRecord(player.data, Act5AncientsQuest::enterArea,
           "entered-arreat-summit");
+      rebuildAncientsState(event.zone, event.entityId);
     }
     if (isBaalArea(event.zone.level.Id)) {
       if (!hasAncientsPrerequisite(player.data)) return;
@@ -257,8 +262,12 @@ public class Act5QuestSystem extends BaseSystem {
   private void onAncientsDoorInteraction(QuestObjectInteractionEvent interaction) {
     if (!isAncientSummit(levelId(interaction.entityId)) || !mPlayer.has(interaction.playerId)) return;
     Player player = mPlayer.get(interaction.playerId);
-    if (player == null || player.data == null
-        || !Act5AncientsQuest.isFinished(ancientsRecord(player.data))) return;
+    if (player == null || player.data == null) return;
+    short record = ancientsRecord(player.data);
+    boolean allowed = interaction.type == NativeQuestObjectResolver.Type.SUMMIT_DOOR
+        ? Act5AncientsQuest.canOpenSummitDoor(record)
+        : Act5AncientsQuest.canOpenAncientsDoor(record);
+    if (!allowed) return;
     interaction.accept(Engine.Object.MODE_ON);
     log.info("[A5Q5] Summit door opened: player={} object={} type={}",
         interaction.playerId, interaction.entityId, interaction.type);
@@ -549,7 +558,71 @@ public class Act5QuestSystem extends BaseSystem {
         rebuildRescueCageState(wrapper.zone);
       } else if (level == Act5PrisonQuest.FROZEN_RIVER) {
         restoreFrozenAnyaState(wrapper.zone);
+      } else if (isAncientSummit(level)) {
+        rebuildAncientsState(wrapper.zone, playerId);
       }
+    }
+  }
+
+  /** Reconciles A5Q5 statues and doors from persistent native object snapshots. */
+  private void rebuildAncientsState(Map.Zone zone, int playerId) {
+    if (zone == null || zone.level == null || !isAncientSummit(zone.level.Id)
+        || objectsByZone == null) return;
+    if (trackedAncientZone != zone) {
+      trackedAncientZone = zone;
+      activatedAncientStatues.clear();
+      ancientStatueEntities.clear();
+    }
+
+    IntBag objects = objectsByZone.getEntities();
+    int[] objectIds = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = objectIds[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (wrapper == null || wrapper.zone != zone || object == null || object.base == null) continue;
+
+      int classId = object.base.Id;
+      NativeObjectState state = mNativeObjectState != null && mNativeObjectState.has(id)
+          ? mNativeObjectState.get(id) : null;
+      if (classId >= Act5AncientsQuest.FIRST_ANCIENT_STATUE
+          && classId <= Act5AncientsQuest.LAST_ANCIENT_STATUE) {
+        ancientStatueEntities.put(classId, id);
+        boolean activated = state != null ? state.activated
+            : (object.stateFlags & com.riiablo.engine.server.component.Object.STATE_ACTIVATED) != 0;
+        if (activated) activatedAncientStatues.add(id);
+      } else if (classId == NativeQuestObjectResolver.ANCIENT_DOOR
+          || classId == NativeQuestObjectResolver.SUMMIT_DOOR) {
+        Player player = mPlayer.has(playerId) ? mPlayer.get(playerId) : null;
+        if (player != null && player.data != null) {
+          short record = ancientsRecord(player.data);
+          boolean open = classId == NativeQuestObjectResolver.SUMMIT_DOOR
+              ? Act5AncientsQuest.canOpenSummitDoor(record)
+              : Act5AncientsQuest.canOpenAncientsDoor(record);
+          if (open) restoreAncientDoor(id, state, object);
+        }
+      }
+    }
+
+    Player player = mPlayer.has(playerId) ? mPlayer.get(playerId) : null;
+    if (activatedAncientStatues.size >= 3 && spawnedAncientEntities.size == 0
+        && player != null && player.data != null
+        && !Act5AncientsQuest.isFinished(ancientsRecord(player.data))) {
+      spawnAncients(playerId);
+    }
+  }
+
+  private void restoreAncientDoor(int entityId, NativeObjectState state,
+      com.riiablo.engine.server.component.Object object) {
+    if (state != null) {
+      state.persistOpened(true);
+      state.persistMode((byte) Engine.Object.MODE_ON);
+    }
+    object.mode = (byte) Engine.Object.MODE_ON;
+    object.stateFlags |= com.riiablo.engine.server.component.Object.STATE_OPENED;
+    if (mCofReference != null && mCofReference.has(entityId)) {
+      mCofReference.get(entityId).mode = Engine.Object.MODE_ON;
     }
   }
 
@@ -773,13 +846,29 @@ public class Act5QuestSystem extends BaseSystem {
   }
 
   private void resetAncientStatue(int entityId) {
+    byte initialMode = (byte) Engine.Object.MODE_NU;
     if (mNativeObjectState != null && mNativeObjectState.has(entityId)) {
       NativeObjectState state = mNativeObjectState.get(entityId);
+      initialMode = state.initialMode;
       state.persistActivated(false);
       state.persistOpened(false);
       state.persistMode(state.initialMode);
       if (mCofReference != null && mCofReference.has(entityId)) {
         mCofReference.get(entityId).mode = state.initialMode;
+      }
+    }
+    if (mObject != null && mObject.has(entityId)) {
+      com.riiablo.engine.server.component.Object object = mObject.get(entityId);
+      if (object != null) {
+        object.mode = initialMode;
+        object.stateFlags &= ~(com.riiablo.engine.server.component.Object.STATE_OPENED
+            | com.riiablo.engine.server.component.Object.STATE_ACTIVATED);
+        if (mInteractable != null && !mInteractable.has(entityId)
+            && objectInteractor != null && object.base != null) {
+          float range = object.base.OperateRange > 0 ? object.base.OperateRange : 3f;
+          mInteractable.create(entityId).set(range, objectInteractor);
+          object.stateFlags |= com.riiablo.engine.server.component.Object.STATE_INTERACTABLE;
+        }
       }
     }
   }

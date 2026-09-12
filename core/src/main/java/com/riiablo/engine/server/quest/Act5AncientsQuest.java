@@ -76,6 +76,17 @@ public final class Act5AncientsQuest {
     return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
   }
 
+  /** Object 547 accepts the pending and granted reward states in D2MOO. */
+  public static boolean canOpenAncientsDoor(short record) {
+    return isFinished(record)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+  }
+
+  /** The Summit/Worldstone door is traversable only after the Ancients die. */
+  public static boolean canOpenSummitDoor(short record) {
+    return isFinished(record);
+  }
+
   /** D2MOO ACT5Q5_OnPlayerDied reset predicate, excluding portal tracking
    * which is not yet represented by the Java quest state. */
   public static boolean shouldResetEncounter(

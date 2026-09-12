@@ -3064,3 +3064,19 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：对照 D2MOO `A5Q5.cpp` 补齐三古代人对象动画/失败复位与 Summit Door 状态，
   并验证完成 A5Q5 后通往 Worldstone Keep 的入口仅在正确任务状态开放。
+
+### 2026-09-12 A5Q5 三古代人对象恢复与门状态对齐（本轮完成）
+
+- [x] RoomEx/服务器重连后按 `NativeObjectState` 重建 474–476 三座雕像的激活集合；
+  三座均已激活且战斗实体尚未恢复时，重新生成三名古代人，避免任务记录仍在但遭遇
+  被跳过或重复生成。
+- [x] 对照 `A5Q5.cpp` 区分对象 547（Ancients Door）与 564（Summit Door）：
+  前者允许 `REWARD_PENDING/REWARD_GRANTED`，后者只允许古代人完成后的
+  `REWARD_GRANTED`；重连时同步 Object/Cof/NativeObjectState 的打开模式。
+- [x] 玩家在山顶全部死亡触发失败复位时，同时恢复雕像的动画模式、持久化状态、碰撞
+  和可交互组件，下一次尝试可以重新逐个激活，不再出现“画面复位但对象不可点”。
+- [x] 新增 A5Q5 门权限回归测试；通过 `Act5AncientsQuestTest`、A5Q4/A5 地图测试、
+  `:core:test` 与 `:server:d2gs:compileJava`。
+
+当前下一项：继续处理 A5Q6 的 Worldstone Keep→Throne→Chamber 入口与 Baal 结束传送的
+重连/碰撞一致性，并核对五波仆从的原生出生位置和结束门状态。
