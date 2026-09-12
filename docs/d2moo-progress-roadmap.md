@@ -2725,3 +2725,22 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：接入 A5Q4 Nihlathak（Nihlathak Temple 及 Halls of Vaught 入口、Nihlathak
   击杀和 Anya 奖励状态），随后处理 A5Q5 Ancients。
+
+### 2026-09-12 Act V A5Q4 Nihlathak / Betrayal of Harrogath（本轮完成基础闭环）
+
+- [x] 对齐 D2MOO `ACT5Q4` 的前置条件：只有 A5Q3 已领取或处于奖励待领取状态时，
+  进入 Nihlathak Temple（123）/ Halls of Vaught（127）才会推进 A5Q4；进入区域写入
+  `STARTED + ENTERED_AREA`，避免跳过冰封安雅任务直接击杀首领。
+- [x] 使用原生 SuperUnique 索引 `60`（`SUPERUNIQUE_NIHLATHAK_BOSS`）识别 Nihlathak；
+  缺失预设时按 `SuperUniques.txt` 的 `MonClass`/`monstats.txt` 名称解析并补生成一次，
+  不把普通同名外观怪物当作任务首领。
+- [x] Nihlathak 在 Halls of Vaught 被击杀后，为当前区域玩家和同队 Act V 玩家同步
+  `PRIMARY_GOAL_DONE + REWARD_PENDING`；Drehya 的 `20137` 开始消息和 `20148` 奖励消息
+  接入，奖励领取转为 `REWARD_GRANTED + CUSTOM1`，重复死亡/对话保持幂等。
+- [x] 新增 `Act5NihlathakQuestTest`，覆盖进入区域、击杀待领奖励、Drehya 领取和重复
+  操作；通过定向测试、`:core:compileJava`、`:server:d2gs:compileJava`。
+- [ ] D2MOO 的 Drehya→Nihlathak Temple 动态传送门和城镇状态循环仍待后续 Warp/对象
+  专项补齐；本轮不伪造传送门，不改变现有地图 Warp 拓扑。
+
+当前下一项：接入 A5Q5 Ancients（Ancient's Way/Arreat Summit 三古代人、等级/组队
+  门槛和奖励状态），再处理 A5Q6 Baal 主链。

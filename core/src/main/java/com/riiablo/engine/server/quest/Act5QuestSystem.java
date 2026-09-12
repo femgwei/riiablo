@@ -53,14 +53,19 @@ public class Act5QuestSystem extends PassiveSystem {
   protected ItemGenerator itemGenerator;
 
   private EntitySubscription playersByZone;
+  private EntitySubscription monstersByZone;
   private final IntSet spawnedShenkLevels = new IntSet();
   private final IntSet killedShenkEntities = new IntSet();
+  private final IntSet spawnedNihlathakLevels = new IntSet();
+  private final IntSet killedNihlathakEntities = new IntSet();
   private final IntSet rescuedCages = new IntSet();
 
   @Override
   protected void initialize() {
     playersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Player.class, MapWrapper.class));
+    monstersByZone = world.getAspectSubscriptionManager().get(
+        Aspect.all(Monster.class, MapWrapper.class));
   }
 
   @Subscribe
@@ -74,6 +79,15 @@ public class Act5QuestSystem extends PassiveSystem {
       spawnShenkIfNeeded(event.entityId, event.zone.level.Id);
     } else if (event.zone.level.Id == Act5RescueQuest.FRIGID_HIGHLANDS) {
       updateRescueRecord(player.data, Act5RescueQuest::start, "entered-frigid-highlands");
+    }
+    if (event.zone.level.Id == Act5NihlathakQuest.NIHLATHAK_TEMPLE
+        || event.zone.level.Id == Act5NihlathakQuest.HALLS_OF_VAUGHT) {
+      if (!hasPrisonPrerequisite(player.data)) return;
+      updateNihlathakRecord(player.data, Act5NihlathakQuest::enterArea,
+          "entered-nihlathak-area");
+      if (event.zone.level.Id == Act5NihlathakQuest.HALLS_OF_VAUGHT) {
+        spawnNihlathakIfNeeded(event.entityId, event.zone.level.Id);
+      }
     }
   }
 
@@ -123,7 +137,15 @@ public class Act5QuestSystem extends PassiveSystem {
   @Subscribe
   public void onMonsterKilled(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)
-        || !mMapWrapper.has(event.victim) || !isShenk(event.victim)
+        || !mMapWrapper.has(event.victim)) return;
+    if (isNihlathak(event.victim)
+        && levelId(event.victim) == Act5NihlathakQuest.HALLS_OF_VAUGHT
+        && killedNihlathakEntities.add(event.victim)) {
+      completeNihlathakForPlayers();
+      log.info("[A5Q4] Nihlathak defeated: victim={} killer={}", event.victim, event.killer);
+      return;
+    }
+    if (!isShenk(event.victim)
         || levelId(event.victim) != D2LevelIds.LEVEL_BLOODYFOOTHILLS
         || !killedShenkEntities.add(event.victim)) return;
     if (playersByZone == null) return;
@@ -167,6 +189,10 @@ public class Act5QuestSystem extends PassiveSystem {
       onMalahMessage(event, player);
       return;
     }
+    if (isDrehya(npc.monstats)) {
+      onDrehyaMessage(event, player);
+      return;
+    }
     if (!isLarzuk(npc.monstats) || event.messageIndex != Act5ShenkQuest.MESSAGE_LARZUK_REWARD) return;
     short previous = record(player.data);
     short next = Act5ShenkQuest.claimReward(previous);
@@ -184,6 +210,21 @@ public class Act5QuestSystem extends PassiveSystem {
         && Act5PrisonQuest.canClaimReward(previous)) {
       updatePrisonRecord(player.data, Act5PrisonQuest::claimReward, "malah-anya-reward");
     }
+  }
+
+  private void onDrehyaMessage(NpcQuestMessageEvent event, Player player) {
+    if (event.messageIndex == Act5NihlathakQuest.MESSAGE_DREHYA_START) {
+      if (hasPrisonPrerequisite(player.data)) {
+        updateNihlathakRecord(player.data, Act5NihlathakQuest::start, "drehya-nihlathak-start");
+      }
+      return;
+    }
+    if (event.messageIndex != Act5NihlathakQuest.MESSAGE_DREHYA_REWARD) return;
+    short previous = nihlathakRecord(player.data);
+    if (!Act5NihlathakQuest.canClaimReward(previous)) return;
+    updateNihlathakRecord(player.data, Act5NihlathakQuest::claimReward,
+        "drehya-nihlathak-reward");
+    log.info("[A5Q4] Drehya reward claimed: player={}", event.entityId);
   }
 
   private void onQualKehkMessage(NpcQuestMessageEvent event, Player player) {
@@ -247,6 +288,108 @@ public class Act5QuestSystem extends PassiveSystem {
     log.info("[A5Q1] Shenk spawned: player={} entity={} level={}", playerId, entity, levelId);
   }
 
+  private void spawnNihlathakIfNeeded(int playerId, int levelId) {
+    if (spawnedNihlathakLevels.contains(levelId) || factory == null || monstersByZone == null) return;
+    IntBag entities = monstersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      if (isNihlathak(id) && levelId(id) == levelId) {
+        spawnedNihlathakLevels.add(levelId);
+        return;
+      }
+    }
+    MonStats.Entry stats = resolveNihlathakStats();
+    Position origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
+    if (stats == null || origin == null) return;
+    int entity = factory.createMonster(stats, origin.position.x + 3f, origin.position.y);
+    if (entity < 0) return;
+    if (mSuperUnique != null) {
+      SuperUniques.Entry unique = resolveNihlathakSuperUnique();
+      mSuperUnique.create(entity).set(
+          unique == null ? Act5NihlathakQuest.SUPERUNIQUE_NIHLATHAK_BOSS : unique.hcIdx,
+          unique == null ? "Nihlathak" : unique.Superunique);
+    }
+    spawnedNihlathakLevels.add(levelId);
+    log.info("[A5Q4] Nihlathak spawned: player={} entity={} level={}", playerId, entity, levelId);
+  }
+
+  private boolean isNihlathak(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    if (mSuperUnique != null && mSuperUnique.has(entityId)) {
+      SuperUnique unique = mSuperUnique.get(entityId);
+      if (unique != null && unique.id == Act5NihlathakQuest.SUPERUNIQUE_NIHLATHAK_BOSS) return true;
+    }
+    Monster monster = mMonster.get(entityId);
+    return isNihlathak(monster == null ? null : monster.monstats);
+  }
+
+  private boolean isNihlathak(MonStats.Entry stats) {
+    if (stats == null) return false;
+    return containsName(stats.Id, "nihlathak") || containsName(stats.NameStr, "nihlathak");
+  }
+
+  private static boolean containsName(String value, String needle) {
+    return value != null && value.toLowerCase().contains(needle);
+  }
+
+  private static MonStats.Entry resolveNihlathakStats() {
+    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+    SuperUniques.Entry unique = resolveNihlathakSuperUnique();
+    if (unique != null && unique.MonClass != null) {
+      MonStats.Entry stats = Riiablo.files.monstats.get(unique.MonClass);
+      if (stats != null) return stats;
+    }
+    MonStats.Entry stats = Riiablo.files.monstats.get("Nihlathak");
+    if (stats != null) return stats;
+    for (MonStats.Entry entry : Riiablo.files.monstats) {
+      if (entry != null && (containsName(entry.Id, "nihlathak")
+          || containsName(entry.NameStr, "nihlathak"))) return entry;
+    }
+    return null;
+  }
+
+  private static SuperUniques.Entry resolveNihlathakSuperUnique() {
+    if (Riiablo.files == null || Riiablo.files.SuperUniques == null) return null;
+    SuperUniques.Entry indexed = Riiablo.files.SuperUniques.get("Nihlathak");
+    if (indexed != null) return indexed;
+    for (SuperUniques.Entry entry : Riiablo.files.SuperUniques) {
+      if (entry != null && (entry.hcIdx == Act5NihlathakQuest.SUPERUNIQUE_NIHLATHAK_BOSS
+          || containsName(entry.Superunique, "nihlathak"))) return entry;
+    }
+    return null;
+  }
+
+  private void completeNihlathakForPlayers() {
+    if (playersByZone == null) return;
+    IntSet parties = new IntSet();
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      Player player = mPlayer.get(id);
+      if (player == null || player.data == null || !isAct5Level(levelId(id))) continue;
+      if (levelId(id) == Act5NihlathakQuest.HALLS_OF_VAUGHT) {
+        updateNihlathakRecord(player.data, Act5NihlathakQuest::complete,
+            "nihlathak-defeated");
+        if (partyManager != null) {
+          short party = partyManager.getPartyId(id);
+          if (party != Party.INVALID_ID) parties.add(party);
+        }
+      }
+    }
+    if (partyManager == null) return;
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      Player player = mPlayer.get(id);
+      if (player == null || player.data == null || !isAct5Level(levelId(id))) continue;
+      if (parties.contains(partyManager.getPartyId(id))) {
+        updateNihlathakRecord(player.data, Act5NihlathakQuest::complete,
+            "nihlathak-party-sync");
+      }
+    }
+  }
+
   private boolean isShenk(int entityId) {
     if (mSuperUnique != null && mSuperUnique.has(entityId)) {
       SuperUnique unique = mSuperUnique.get(entityId);
@@ -294,6 +437,12 @@ public class Act5QuestSystem extends PassiveSystem {
     return stats.NameStr != null && stats.NameStr.toLowerCase().contains("malah");
   }
 
+  private boolean isDrehya(MonStats.Entry stats) {
+    if (stats == null) return false;
+    return "Drehya".equalsIgnoreCase(stats.Id) || "Drehya".equalsIgnoreCase(stats.NameStr)
+        || containsName(stats.NameStr, "drehya");
+  }
+
   private short record(CharData data) {
     return data.getQuests(Riiablo.ACT5)[Act5ShenkQuest.RECORD];
   }
@@ -304,6 +453,16 @@ public class Act5QuestSystem extends PassiveSystem {
 
   private short prisonRecord(CharData data) {
     return data.getQuests(Riiablo.ACT5)[Act5PrisonQuest.RECORD];
+  }
+
+  private short nihlathakRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT5)[Act5NihlathakQuest.RECORD];
+  }
+
+  private boolean hasPrisonPrerequisite(CharData data) {
+    short record = prisonRecord(data);
+    return Act5PrisonQuest.isFinished(record)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
   }
 
   private void complete(CharData data) {
@@ -342,6 +501,18 @@ public class Act5QuestSystem extends PassiveSystem {
     data.getQuests(Riiablo.ACT5)[Act5PrisonQuest.RECORD] = next;
     if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
     log.info("[A5Q3] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private void updateNihlathakRecord(CharData data,
+      java.util.function.UnaryOperator<Short> transition, String reason) {
+    short previous = nihlathakRecord(data);
+    short next = transition.apply(previous);
+    if (previous == next) return;
+    data.getQuests(Riiablo.ACT5)[Act5NihlathakQuest.RECORD] = next;
+    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    log.info("[A5Q4] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
