@@ -2587,6 +2587,49 @@ public final class D2GSHeadlessClient {
       log("a1_malus_object_interaction_pass", "object=" + malus
           + " drop=" + malusItem + " clients=true,true");
 
+      // Cain's Gibbet is a one-shot task door.  Seed both players as having
+      // opened the Tristram portal, then exercise the real network request;
+      // the server must spawn exactly one Cain and propagate the reward flags.
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)
+          || !D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT1,
+              com.riiablo.engine.server.quest.Act1CainQuest.RECORD,
+              com.riiablo.engine.server.quest.Act1CainQuest.openTristramPortal((short) 0))
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT1,
+              com.riiablo.engine.server.quest.Act1CainQuest.RECORD,
+              com.riiablo.engine.server.quest.Act1CainQuest.openTristramPortal((short) 0))
+          || !D2GS.headlessEnterLevel(a.playerId, LEVEL_TRISTRAM)
+          || !D2GS.headlessEnterLevel(b.playerId, LEVEL_TRISTRAM)) {
+        throw new IOException("A1 Tristram staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, LEVEL_TRISTRAM, "a1-cain-gibbet-interaction");
+      int gibbet = D2GS.headlessQuestObjectEntity(LEVEL_TRISTRAM,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.CAIN_GIBBET);
+      if (gibbet == Engine.INVALID_ENTITY) {
+        log("a1_cain_gibbet_skipped", "reason=no-gibbet-in-export");
+      } else if (!D2GS.headlessMovePlayerToObject(a.playerId, gibbet)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, gibbet)) {
+        throw new IOException("Cain Gibbet movement unavailable");
+      } else {
+        send(outA, questRequestPacket(421L, QuestOperation.OBJECT_INTERACTION, gibbet, -1));
+        QuestResult gibbetResult = a.awaitQuestResult(inA, 421L, deadline());
+        if (gibbetResult == null || !gibbetResult.success()) {
+          throw new IOException("Cain Gibbet interaction rejected");
+        }
+        int cain = D2GS.headlessFindMonsterInLevel(LEVEL_TRISTRAM,
+            com.riiablo.engine.server.monster.MonsterType.DECKARDCAIN);
+        if (cain == Engine.INVALID_ENTITY) throw new IOException("Cain was not spawned");
+        a.awaitVisibleEntity(inA, cain, deadline());
+        b.awaitVisibleEntity(inB, cain, deadline());
+        send(outA, questRequestPacket(421L, QuestOperation.OBJECT_INTERACTION, gibbet, -1));
+        if (a.awaitQuestResult(inA, 421L, deadline()) == null
+            || D2GS.headlessFindMonsterInLevel(LEVEL_TRISTRAM,
+                com.riiablo.engine.server.monster.MonsterType.DECKARDCAIN) != cain) {
+          throw new IOException("Cain Gibbet duplicate request was not idempotent");
+        }
+        log("a1_cain_gibbet_interaction_pass", "object=" + gibbet
+            + " cain=" + cain + " clients=true,true");
+      }
+
       int chestLevel = LEVEL_STONYFIELD;
       if (!D2GS.headlessEnterLevel(a.playerId, chestLevel)
           || !D2GS.headlessEnterLevel(b.playerId, chestLevel)) {

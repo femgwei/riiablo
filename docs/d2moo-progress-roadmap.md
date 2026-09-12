@@ -3733,3 +3733,7 @@ Horadric Orifice 插入法杖后的 Duriel 入口/区域切换。
 验证结果：`:server:d2gs:headlessA1ObjectInteractionDual` 通过，日志包含
 `a1_malus_object_interaction_pass ... clients=true,true`；编译与 `git diff --check`
 通过。资源限制：当前导出没有可定位的 580/581 保留宝箱实体，需完整 DS1 导出后复测。
+
+补充验证：同一双客户端夹具已完成 Cain Gibbet 的真实 `OBJECT_INTERACTION` 请求，
+成功生成单个 Tristram Cain、双方均收到实体，并验证重复请求不会重复生成
+（日志：`a1_cain_gibbet_interaction_pass object=379 cain=356 clients=true,true`）。
