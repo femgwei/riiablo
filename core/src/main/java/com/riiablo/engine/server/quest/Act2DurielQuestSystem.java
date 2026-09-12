@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
+import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
@@ -58,6 +59,7 @@ public class Act2DurielQuestSystem extends BaseSystem {
 
   private EntitySubscription playersByZone;
   private EntitySubscription objectsByZone;
+  private EntitySubscription monstersByZone;
   private final IntSet killedDuriels = new IntSet();
   private boolean lutGholeinPortalOpened;
 
@@ -67,11 +69,26 @@ public class Act2DurielQuestSystem extends BaseSystem {
         Aspect.all(Player.class, MapWrapper.class));
     objectsByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(com.riiablo.engine.server.component.Object.class, MapWrapper.class));
+    monstersByZone = world.getAspectSubscriptionManager().get(
+        Aspect.all(Monster.class, MapWrapper.class, Position.class));
   }
 
   @Override
   protected void processSystem() {
-    // Opening is driven by the authoritative object interaction event.
+    // Quest records are persisted, whereas the door/portal entities are not.
+    // Reconcile them every simulation step so reconnects and rebuilt zones do
+    // not depend on the original Duriel death/dialogue event being replayed.
+    reconcileDurielLairState();
+  }
+
+  @Subscribe
+  public void onZoneChanged(ZoneChangeEvent event) {
+    if (event == null || event.zone == null || event.zone.level == null
+        || !mPlayer.has(event.entityId)
+        || event.zone.level.Id != D2LevelIds.LEVEL_DURIELSLAIR) return;
+    Player player = mPlayer.get(event.entityId);
+    if (player == null || player.data == null) return;
+    reconcileDurielLairState(event.entityId, event.zone, player.data);
   }
 
   @Subscribe
@@ -250,27 +267,107 @@ public class Act2DurielQuestSystem extends BaseSystem {
   }
 
   private boolean openLutGholeinPortal(int npcId, int playerId) {
-    if (lutGholeinPortalOpened) return true;
-    if (factory == null) return false;
     int sourceId = mPosition.has(npcId) ? npcId : playerId;
     if (!mPosition.has(sourceId) || !mMapWrapper.has(sourceId)) return false;
-    Position position = mPosition.get(sourceId);
     MapWrapper wrapper = mMapWrapper.get(sourceId);
     if (wrapper == null || wrapper.zone == null) return false;
-    float x = position.position.x + 2f;
-    float y = position.position.y;
+    return ensureLutGholeinPortal(wrapper.zone, sourceId);
+  }
+
+  private void reconcileDurielLairState() {
+    if (playersByZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = ids[i];
+      if (!mPlayer.has(playerId) || !mMapWrapper.has(playerId)) continue;
+      MapWrapper wrapper = mMapWrapper.get(playerId);
+      if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+          || wrapper.zone.level.Id != D2LevelIds.LEVEL_DURIELSLAIR) continue;
+      Player player = mPlayer.get(playerId);
+      if (player != null && player.data != null) {
+        reconcileDurielLairState(playerId, wrapper.zone, player.data);
+      }
+    }
+  }
+
+  private void reconcileDurielLairState(int playerId, Map.Zone zone, CharData data) {
+    short quest = record(data);
+    if (Act2DurielQuest.shouldRestoreTyraelDoor(quest)) openTyraelsDoor();
+    if (Act2DurielQuest.shouldRestoreTownPortal(quest)) {
+      ensureLutGholeinPortal(zone, playerId);
+    }
+  }
+
+  /** Rebuilds the visual/Warp pair exactly once for a rebuilt Duriel Lair. */
+  private boolean ensureLutGholeinPortal(Map.Zone zone, int fallbackEntityId) {
+    if (zone == null || factory == null) return false;
+    final int destination = D2LevelIds.LEVEL_LUTGHOLEIN;
+    final int questWarp = QuestWarp.encode(destination);
+    int warp = zone.findWarp(questWarp);
+    if (warp != Engine.INVALID_ENTITY) {
+      lutGholeinPortalOpened = true;
+      if (hasPortalVisual(zone)) return true;
+      if (!mPosition.has(warp)) return false;
+      Position warpPosition = mPosition.get(warp);
+      int visual = factory.createStaticObjectByClassId(
+          NativeQuestObjectResolver.TOWN_PORTAL,
+          warpPosition.position.x, warpPosition.position.y);
+      log.info("[A2Q6] Restored Tyrael portal visual: visual={} warp={} destination={}",
+          visual, warp, destination);
+      return visual != Engine.INVALID_ENTITY;
+    }
+
+    int sourceId = findTyraelInZone(zone);
+    if (sourceId == Engine.INVALID_ENTITY) sourceId = fallbackEntityId;
+    if (!mPosition.has(sourceId)) return false;
+    Position source = mPosition.get(sourceId);
+    float x = source.position.x + 2f;
+    float y = source.position.y;
     int visual = factory.createStaticObjectByClassId(
         NativeQuestObjectResolver.TOWN_PORTAL, x, y);
-    int warp = factory.createQuestWarp(D2LevelIds.LEVEL_LUTGHOLEIN, x, y);
+    warp = factory.createQuestWarp(destination, x, y);
     if (warp == Engine.INVALID_ENTITY) {
-      if (visual != Engine.INVALID_ENTITY) world.delete(visual);
+      if (visual != Engine.INVALID_ENTITY && world != null) world.delete(visual);
       return false;
     }
-    wrapper.zone.addWarp(warp);
+    zone.addWarp(warp);
     lutGholeinPortalOpened = true;
-    log.info("[A2Q6] Tyrael portal opened: visual={} warp={} destination={}",
-        visual, warp, D2LevelIds.LEVEL_LUTGHOLEIN);
+    log.info("[A2Q6] Restored Tyrael portal: visual={} warp={} destination={}",
+        visual, warp, destination);
     return true;
+  }
+
+  private int findTyraelInZone(Map.Zone zone) {
+    if (monstersByZone == null) return Engine.INVALID_ENTITY;
+    IntBag monsters = monstersByZone.getEntities();
+    int[] ids = monsters.getData();
+    for (int i = 0; i < monsters.size(); i++) {
+      int id = ids[i];
+      if (!mMonster.has(id) || !mMapWrapper.has(id)) continue;
+      MapWrapper wrapper = mMapWrapper.get(id);
+      Monster monster = mMonster.get(id);
+      if (wrapper != null && wrapper.zone == zone && monster != null
+          && monster.monstats != null && monster.monstats.hcIdx == MonsterType.TYRAEL1) {
+        return id;
+      }
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  private boolean hasPortalVisual(Map.Zone zone) {
+    if (objectsByZone == null) return false;
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (wrapper != null && wrapper.zone == zone && object != null && object.base != null
+          && object.base.Id == NativeQuestObjectResolver.TOWN_PORTAL) return true;
+    }
+    return false;
   }
 
   private void openTyraelsDoor() {
@@ -284,6 +381,11 @@ public class Act2DurielQuestSystem extends BaseSystem {
           || object.base.Id != Act2DurielQuest.TYRAELS_DOOR
           || !isInLevel(id, D2LevelIds.LEVEL_DURIELSLAIR)) continue;
       NativeObjectState state = mNativeObjectState.has(id) ? mNativeObjectState.get(id) : null;
+      boolean alreadyOpen = state != null ? state.opened && state.activated
+          && state.currentMode == Engine.Object.MODE_ON
+          : object.mode == Engine.Object.MODE_ON
+              && (object.stateFlags & com.riiablo.engine.server.component.Object.STATE_OPENED) != 0;
+      if (alreadyOpen) continue;
       if (state != null) {
         state.persistOpened(true);
         state.persistActivated(true);

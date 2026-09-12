@@ -52,6 +52,31 @@ public final class Act2DurielQuest {
     return NativeQuestRecord.set(record, NativeQuestRecord.REWARD_GRANTED);
   }
 
+  /**
+   * Returns whether the Duriel-room Tyrael door must be restored when a
+   * saved character or a rebuilt map enters the lair.  D2Game keeps the door
+   * open after Duriel has been killed; the transient ECS object is not part of
+   * the D2S file, so the quest record is the authoritative reconstruction
+   * signal.
+   */
+  public static boolean shouldRestoreTyraelDoor(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.CUSTOM1)
+        || NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE)
+        || NativeQuestRecord.has(record, NativeQuestRecord.LEFT_TOWN)
+        || NativeQuestRecord.has(record, NativeQuestRecord.ENTERED_AREA)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
+  /**
+   * Tyrael's return-to-town portal exists until the A2Q6 Meshif turn-in.  It
+   * is a runtime Warp/visual pair, therefore it has to be rebuilt after a
+   * reconnect or map regeneration while the temporary quest flags remain.
+   */
+  public static boolean shouldRestoreTownPortal(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.LEFT_TOWN)
+        || NativeQuestRecord.has(record, NativeQuestRecord.ENTERED_AREA);
+  }
+
   public static boolean isAct2(int levelId) {
     return levelId >= D2LevelIds.LEVEL_LUTGHOLEIN
         && levelId < D2LevelIds.LEVEL_KURASTDOCKTOWN;

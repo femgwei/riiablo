@@ -47,4 +47,25 @@ class Act2DurielQuestTest {
     short nativePair = Act2DurielQuest.acceptTyraelPortal((short) 0);
     assertEquals(nativePair, Act2DurielQuest.repairLegacyOrificeFlags(nativePair));
   }
+
+  @Test
+  void reconnectRestoresDoorAfterDurielButNotTownPortalBeforeTyrael() {
+    short killed = Act2DurielQuest.markDurielKilled((short) 0);
+    assertTrue(Act2DurielQuest.shouldRestoreTyraelDoor(killed));
+    assertFalse(Act2DurielQuest.shouldRestoreTownPortal(killed));
+  }
+
+  @Test
+  void reconnectRestoresTownPortalUntilMeshifTurnIn() {
+    short tyrael = Act2DurielQuest.acceptTyraelPortal(
+        Act2DurielQuest.markDurielKilled((short) 0));
+    assertTrue(Act2DurielQuest.shouldRestoreTyraelDoor(tyrael));
+    assertTrue(Act2DurielQuest.shouldRestoreTownPortal(tyrael));
+
+    short jerhyn = Act2DurielQuest.acknowledgeJerhyn(tyrael);
+    assertTrue(Act2DurielQuest.shouldRestoreTownPortal(jerhyn));
+    short meshif = Act2DurielQuest.travelWithMeshif(jerhyn);
+    assertTrue(Act2DurielQuest.shouldRestoreTyraelDoor(meshif));
+    assertFalse(Act2DurielQuest.shouldRestoreTownPortal(meshif));
+  }
 }

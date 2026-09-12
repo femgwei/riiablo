@@ -2919,3 +2919,24 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：专项核对第二章 A2Q6 的 Tyrael 门/传送门对象重连恢复与 Duriel Lair
 地图预设是否稳定生成；随后检查第三章 A3Q6 Mephisto progression 与红门链。
+
+### 2026-09-12 Act II A2Q6 重连与地图重建恢复（本轮完成）
+
+- [x] 将 Duriel 击杀后的 Tyrael 门恢复条件从运行时 `killedDuriels` 扩展到持久化
+  A2Q6 记录：`CUSTOM1` 及后续主线状态都能在 Duriel Lair 重建后重新打开对象 153，
+  不依赖服务器重启前的实体 ID 或死亡事件。
+- [x] 将 Tyrael 返回 Lut Gholein 的对象 59 与 QuestWarp 作为一对可重建实体处理：
+  重连/地图重建后先按目标 Level 检查现有 Warp，缺视觉对象时只补 class 59；两次
+  恢复不会重复创建 Warp。`LEFT_TOWN` 或 `ENTERED_AREA` 阶段恢复，Meshif 完成后不再
+  创建旧任务传送门。
+- [x] 优先使用 Duriel Lair 中的 Tyrael 坐标生成回城门，NPC 尚未进入 ECS 时回退到
+  重连玩家位置；恢复逻辑同时挂在 `ZoneChangeEvent` 和固定逻辑帧，覆盖地图实体晚于
+  玩家进入事件生成的情况。
+- [x] 新增 A2Q6 Door/Portal 恢复状态测试；重新核对 `Act2MapBuilderD2MOD` 的
+  Levels.txt Vis/Warp 链，Duriel Lair 仍由真实地下城边生成流程创建，不新增硬编码
+  假地图或断开的入口。
+- [x] 通过 `Act2DurielQuest*`、`Act2MapBuilderD2MooWarpTest`、`:core:compileJava`
+  和 `:server:d2gs:compileJava`。
+
+当前下一项：专项核对第三章 A3Q6 Mephisto 的死亡资格、红门（对象 566/QuestWarp）
+与 Act IV progression；随后补 Travincal→Durance→Mephisto 的地图入口和重连恢复。
