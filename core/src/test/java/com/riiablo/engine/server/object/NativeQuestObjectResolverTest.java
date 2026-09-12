@@ -37,6 +37,8 @@ class NativeQuestObjectResolverTest {
     for (int id = 474; id <= 476; id++) {
       assertEquals(NativeQuestObjectResolver.Type.ANCIENT_STATUE, resolve(id, 71));
     }
+    assertEquals(NativeQuestObjectResolver.Type.BAAL_PORTAL, resolve(563, 71));
+    assertEquals(NativeQuestObjectResolver.Type.LAST_PORTAL, resolve(565, 71));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }

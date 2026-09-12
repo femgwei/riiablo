@@ -14,8 +14,10 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
@@ -56,6 +58,8 @@ public class Act5QuestSystem extends PassiveSystem {
   protected EntityFactory factory;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
+  @Wire(name = "map", failOnNull = false)
+  protected Map map;
   @Wire(failOnNull = false)
   protected ItemGenerator itemGenerator;
 
@@ -73,6 +77,7 @@ public class Act5QuestSystem extends PassiveSystem {
   private final IntSet killedBaalEntities = new IntSet();
   private final IntSet baalWaveEntities = new IntSet();
   private final Act5BaalWaveState baalWaveState = new Act5BaalWaveState();
+  private final Act5BaalPortalState baalPortalState = new Act5BaalPortalState();
   private float baalWaveOriginX;
   private float baalWaveOriginY;
   private final IntSet rescuedCages = new IntSet();
@@ -196,6 +201,7 @@ public class Act5QuestSystem extends PassiveSystem {
     }
     if (isBaal(event.victim) && isBaalArea(levelId(event.victim))
         && killedBaalEntities.add(event.victim)) {
+      createLastPortal(event.victim);
       completeBaalForPlayers();
       log.info("[A5Q6] Baal defeated: victim={} killer={}", event.victim, event.killer);
       return;
@@ -503,7 +509,7 @@ public class Act5QuestSystem extends PassiveSystem {
   }
 
   private void spawnBaalAfterWaves() {
-    int levelId = Act5BaalQuest.THRONE_OF_DESTRUCTION;
+    int levelId = Act5BaalQuest.WORLDSTONE_CHAMBER;
     if (spawnedBaalLevels.contains(levelId) || factory == null || monstersByZone == null) return;
     IntBag entities = monstersByZone.getEntities();
     int[] ids = entities.getData();
@@ -516,11 +522,108 @@ public class Act5QuestSystem extends PassiveSystem {
     }
     MonStats.Entry stats = resolveBaalStats();
     if (stats == null) return;
-    int entity = factory.createMonster(stats, baalWaveOriginX + 3f, baalWaveOriginY);
+    // D2MOO opens the Worldstone Chamber portal after the fifth wave is
+    // cleared, before Baal becomes attackable. Keep the object and warp
+    // creation idempotent because the final DeathEvent may be delivered more
+    // than once by reconnect/replay paths.
+    openWorldstoneChamberPortal();
+    Map.Zone chamber = findZone(Act5BaalQuest.WORLDSTONE_CHAMBER);
+    float spawnX = baalWaveOriginX + 3f;
+    float spawnY = baalWaveOriginY;
+    if (chamber != null) {
+      spawnX = chamber.x() + chamber.width() * 0.5f;
+      spawnY = chamber.y() + chamber.height() * 0.5f;
+      com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
+      if (chamber.findFreeCoordinates(free.set(spawnX, spawnY), 2, 50, true, free)) {
+        spawnX = free.x;
+        spawnY = free.y;
+      }
+    } else {
+      // A headless/minimal map may not have constructed the destination zone
+      // yet. Keep the old throne fallback so the boss is not silently lost;
+      // normal games always use the Worldstone Chamber zone above.
+      log.warn("[A5Q6] Worldstone Chamber zone unavailable; spawning Baal at Throne");
+    }
+    int entity = factory.createMonster(stats, spawnX, spawnY);
     if (entity >= 0) {
       spawnedBaalLevels.add(levelId);
-      log.info("[A5Q6] Baal spawned after waves: entity={} level={}", entity, levelId);
+      log.info("[A5Q6] Baal spawned after waves: entity={} level={} position=({}, {})",
+          entity, levelId, spawnX, spawnY);
     }
+  }
+
+  /** Creates the A5Q6 Throne -> Worldstone Chamber portal once. */
+  private void openWorldstoneChamberPortal() {
+    if (baalPortalState.isWorldstoneChamberOpen() || factory == null || world == null) return;
+    Map.Zone source = findZone(Act5BaalQuest.THRONE_OF_DESTRUCTION);
+    if (source == null) {
+      log.warn("[A5Q6] Worldstone Chamber portal deferred: throne zone not found");
+      return;
+    }
+    float portalX = baalWaveOriginX;
+    float portalY = baalWaveOriginY;
+    int visual = factory.createStaticObjectByClassId(
+        NativeQuestObjectResolver.BAAL_PORTAL, portalX, portalY);
+    int warp = factory.createQuestWarp(Act5BaalQuest.WORLDSTONE_CHAMBER, portalX, portalY);
+    if (warp == Engine.INVALID_ENTITY) {
+      if (visual != Engine.INVALID_ENTITY) world.delete(visual);
+      log.error("[A5Q6] Worldstone Chamber portal creation failed: visual={} position=({}, {})",
+          visual, portalX, portalY);
+      return;
+    }
+    baalPortalState.openWorldstoneChamber();
+    source.addWarp(warp);
+    log.info("[A5Q6] Worldstone Chamber portal opened: visual={} warp={} destination={} "
+        + "position=({}, {})", visual, warp, Act5BaalQuest.WORLDSTONE_CHAMBER,
+        portalX, portalY);
+  }
+
+  /** Creates the Worldstone Chamber -> Harrogath end portal once. */
+  private void createLastPortal(int baalEntity) {
+    if (baalPortalState.isLastPortalCreated() || factory == null || world == null) return;
+    MapWrapper wrapper = mMapWrapper.has(baalEntity) ? mMapWrapper.get(baalEntity) : null;
+    Position sourcePosition = mPosition.has(baalEntity) ? mPosition.get(baalEntity) : null;
+    if (wrapper == null || wrapper.zone == null
+        || wrapper.zone.level == null
+        || wrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER) {
+      log.warn("[A5Q6] Last portal deferred: Baal is not in Worldstone Chamber entity={}",
+          baalEntity);
+      return;
+    }
+    float portalX = sourcePosition == null ? wrapper.zone.x() + 5f
+        : sourcePosition.position.x + 5f;
+    float portalY = sourcePosition == null ? wrapper.zone.y() : sourcePosition.position.y;
+    int visual = factory.createStaticObjectByClassId(
+        NativeQuestObjectResolver.LAST_PORTAL, portalX, portalY);
+    int warp = factory.createQuestWarp(D2LevelIds.LEVEL_HARROGATH, portalX, portalY);
+    if (warp == Engine.INVALID_ENTITY) {
+      if (visual != Engine.INVALID_ENTITY) world.delete(visual);
+      log.error("[A5Q6] Last portal creation failed: visual={} position=({}, {})",
+          visual, portalX, portalY);
+      return;
+    }
+    baalPortalState.createLastPortal();
+    wrapper.zone.addWarp(warp);
+    log.info("[A5Q6] Last portal created: visual={} warp={} destination={} position=({}, {})",
+        visual, warp, D2LevelIds.LEVEL_HARROGATH, portalX, portalY);
+  }
+
+  private Map.Zone findZone(int levelId) {
+    if (map != null) {
+      Levels.Entry level = Riiablo.files == null || Riiablo.files.Levels == null
+          ? null : Riiablo.files.Levels.get(levelId);
+      Map.Zone zone = level == null ? null : map.findZone(level);
+      if (zone != null) return zone;
+    }
+    if (mMapWrapper == null || playersByZone == null) return null;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      MapWrapper wrapper = mMapWrapper.get(ids[i]);
+      if (wrapper != null && wrapper.zone != null && wrapper.zone.level != null
+          && wrapper.zone.level.Id == levelId) return wrapper.zone;
+    }
+    return null;
   }
 
   private boolean isBaal(int entityId) {

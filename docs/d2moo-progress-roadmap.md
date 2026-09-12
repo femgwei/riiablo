@@ -2802,3 +2802,23 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：补齐 A5Q6 Baal Portal/Last Portal 与 Worldstone Chamber 开关状态，再
 回补五波首领精确变体和 A5Q5 远古人复位动画。
+
+### 2026-09-12 Act V A5Q6 Baal Portal / Last Portal（本轮完成基础闭环）
+
+- [x] 五波仆从清空后按 D2MOO 时序打开 Throne 的 Baal Portal（Objects `563`），
+  生成服务端权威 QuestWarp，目标为 Worldstone Chamber；传送门和 Warp 使用同一
+  个位置，并加入源 Zone，避免只显示图片但不能传送。
+- [x] Baal 现在优先生成在 Worldstone Chamber（没有目标 Zone 的离屏/最小地图才回退
+  到 Throne），击杀后在 Chamber 创建 Objects `565` Last Portal，基础目标为
+  Harrogath；创建过程对重复 DeathEvent 幂等，失败会清理视觉对象并记录日志。
+- [x] `NativeQuestObjectResolver`、`ObjectInteractor` 和状态生命周期表接入两种
+  Portal 对象，客户端点击视觉对象会解析到附近 QuestWarp；新增
+  `Act5BaalPortalStateTest` 覆盖开关和结束传送的一次性状态转换。
+- [x] 验证：`Act5BaalPortalStateTest`、`Act5BaalWaveStateTest`、
+  `NativeQuestObjectResolverTest`、`:core:compileJava`、`:server:d2gs:compileJava`。
+- [ ] 尚未完全复刻 D2MOO 的 Tyrael 结束流程、Baal Chamber 进入动画、Portal 对象
+  动画模式和原生经验/金币奖励；这些留在后续奖励/对象动画专项，不伪造任务记录。
+
+当前下一项：回补 A5Q5 远古人战斗失败后的雕像复位与 Summit Door/Ancients Altar
+动画；随后核对 A5Q6 五波精确首领变体、原生延迟和经验/金币奖励，再按优先级推进
+第二至第四章地图与任务缺口。

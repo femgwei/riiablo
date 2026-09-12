@@ -3917,7 +3917,9 @@ public class D2GS extends ApplicationAdapter {
         || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.INIFUSS_TREE
         || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_MALUS
         || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_ORIFICE;
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_ORIFICE
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.BAAL_PORTAL
+        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.LAST_PORTAL;
   }
 
   private void sendQuestResult(int clientId, long requestId, boolean success, String reason,

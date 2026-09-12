@@ -113,7 +113,10 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
             entityId, -1) != 0) {
       return;
     }
-    if (object.base.Id == 60 && interactQuestPortal(src, entityId)) return;
+    if ((object.base.Id == 60
+        || networkQuest == NativeQuestObjectResolver.Type.BAAL_PORTAL
+        || networkQuest == NativeQuestObjectResolver.Type.LAST_PORTAL)
+        && interactQuestPortal(src, entityId)) return;
     if (object.base.OperateFn == 23) {
       CofReference cof = mCofReference.get(entityId);
       Position position = mPosition.get(entityId);
@@ -154,7 +157,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         || type == NativeQuestObjectResolver.Type.HELLFORGE
         || type == NativeQuestObjectResolver.Type.CAGED_SOLDIER
         || type == NativeQuestObjectResolver.Type.FROZEN_ANYA
-        || type == NativeQuestObjectResolver.Type.ANCIENT_STATUE;
+        || type == NativeQuestObjectResolver.Type.ANCIENT_STATUE
+        || type == NativeQuestObjectResolver.Type.BAAL_PORTAL
+        || type == NativeQuestObjectResolver.Type.LAST_PORTAL;
   }
 
   private boolean interactQuestPortal(int playerId, int visualEntityId) {
