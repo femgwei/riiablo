@@ -3246,3 +3246,19 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：把“Room 重建短暂缺失”从日志诊断提升为带 Tick 窗口的恢复策略，仅在确认
 当前波次未清场且持续缺失超过窗口后按 preset 重新生成，并继续禁止前序波次回生。
+
+### 2026-09-12 A5Q6 波次缺失 Tick 窗口恢复（本轮完成）
+
+- [x] `Act5BaalWaveState` 快照增加 `waveSpawnRequested/waveSpawned/waveCleared`，
+  记录当前波次是否真正生成、是否已由死亡事件清场；状态随游戏级快照恢复，不写入角色
+  D2S。
+- [x] Room/ECS 重建时如果当前波次没有成员，先累计 25 个固定 Tick；窗口内不重复生成，
+  窗口后仅对仍未标记清场的当前 preset 调用一次 `spawnBaalWave`。前序波次已完成后，
+  `waveCleared` 阻止其回生。
+- [x] 首领死亡但随从仍存活时保持“有成员、无首领”诊断并明确 `do_not_respawn`；最后
+  一个标记成员死亡时写入清场状态。新增状态测试覆盖请求、生成、清场和恢复门槛。
+- [x] 通过 A5Q6 波次/成员/快照测试、`:core:compileJava`、`:server:d2gs:compileJava`
+  和 `git diff --check`。
+
+当前下一项：继续对照 D2MOO `D2GAME_SpawnPresetMonster` 的房间坐标列表和难度组数量，
+把恢复重生限制到同一 Room/碰撞候选集，并补一组离屏双客户端波次一致性测试。

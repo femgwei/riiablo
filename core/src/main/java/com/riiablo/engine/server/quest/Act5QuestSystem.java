@@ -101,6 +101,8 @@ public class Act5QuestSystem extends BaseSystem {
   /** Rebuilt every simulation tick from SuperUnique.hcIdx, never persisted as
    * an entity id.  Entity ids are not stable across Room/ECS reconstruction. */
   private final IntIntMap baalWaveLeaders = new IntIntMap();
+  private static final int BAAL_WAVE_RECOVERY_WINDOW_TICKS = 25;
+  private int baalWaveMissingTicks;
   @Wire(name = "act5QuestGameState", failOnNull = false)
   protected Act5QuestGameState act5QuestGameState;
   private final Act5QuestGameState fallbackGameState = new Act5QuestGameState();
@@ -388,6 +390,7 @@ public class Act5QuestSystem extends BaseSystem {
     if (baalWaveEntities.remove(event.victim)) {
       log.info("[A5Q6] Baal wave member defeated: entity={} remaining={}",
           event.victim, baalWaveEntities.size);
+      if (baalWaveEntities.isEmpty()) gameState().baalWaves.markWaveCleared();
       return;
     }
     if (isNihlathak(event.victim)
@@ -1043,6 +1046,7 @@ public class Act5QuestSystem extends BaseSystem {
         ? Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex] : unique.hcIdx;
     int existingLeader = baalWaveLeaders.get(uniqueId, Engine.INVALID_ENTITY);
     if (existingLeader != Engine.INVALID_ENTITY && isLiveHostileMonster(existingLeader)) {
+      gameState().baalWaves.markWaveSpawned();
       reindexCurrentBaalWave(existingLeader, waveIndex);
       log.info("[A5Q6] Baal wave spawn suppressed: wave={} superUnique={} leader={} reason=already_present",
           waveIndex + 1, uniqueId, existingLeader);
@@ -1063,6 +1067,7 @@ public class Act5QuestSystem extends BaseSystem {
     if (mMonster.has(leader)) {
       mMonster.get(leader).setBaalWaveMember(waveIndex, uniqueId, true);
     }
+    gameState().baalWaves.markWaveSpawned();
     applyBaalSpawnFacing(leader);
     baalWaveEntities.add(leader);
     if (mSuperUnique != null) {
@@ -1142,16 +1147,27 @@ public class Act5QuestSystem extends BaseSystem {
     int markedMembers = countMarkedBaalWaveMembers(activeWave, superUniqueId);
     if (leader == Engine.INVALID_ENTITY) {
       if (markedMembers > 0) {
+        baalWaveMissingTicks = 0;
         log.warn("[A5Q6] Baal wave leader missing while members remain: wave={} "
                 + "superUnique={} members={} action=do_not_respawn",
             activeWave + 1, superUniqueId, markedMembers);
       } else {
-        log.debug("[A5Q6] Baal wave has no indexed members: wave={} superUnique={} "
-                + "reason=cleared_or_room_rebuild",
-            activeWave + 1, superUniqueId);
+        if (waves.needsWaveRecovery()
+            && ++baalWaveMissingTicks >= BAAL_WAVE_RECOVERY_WINDOW_TICKS) {
+          log.warn("[A5Q6] Baal wave members missing beyond recovery window: wave={} "
+                  + "superUnique={} ticks={} action=rebuild_preset",
+              activeWave + 1, superUniqueId, baalWaveMissingTicks);
+          spawnBaalWave(activeWave);
+          baalWaveMissingTicks = 0;
+        } else {
+          log.debug("[A5Q6] Baal wave has no indexed members: wave={} superUnique={} "
+                  + "reason=cleared_or_room_rebuild missingTicks={}",
+              activeWave + 1, superUniqueId, baalWaveMissingTicks);
+        }
       }
       return;
     }
+    baalWaveMissingTicks = 0;
     reindexCurrentBaalWave(leader, activeWave);
   }
 

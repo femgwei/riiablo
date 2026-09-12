@@ -11,17 +11,31 @@ public final class Act5BaalWaveState {
   /** Number of waves already spawned (0..5). */
   private int wave;
   private int delayTicks;
+  private boolean waveSpawnRequested;
+  private boolean waveSpawned;
+  private boolean waveCleared;
 
   /** Primitive-only game snapshot suitable for reconnect/room migration. */
   public static final class Snapshot {
     public final int phase;
     public final int wave;
     public final int delayTicks;
+    public final boolean waveSpawnRequested;
+    public final boolean waveSpawned;
+    public final boolean waveCleared;
 
     public Snapshot(int phase, int wave, int delayTicks) {
+      this(phase, wave, delayTicks, false, false, false);
+    }
+
+    public Snapshot(int phase, int wave, int delayTicks,
+        boolean waveSpawnRequested, boolean waveSpawned, boolean waveCleared) {
       this.phase = phase;
       this.wave = wave;
       this.delayTicks = delayTicks;
+      this.waveSpawnRequested = waveSpawnRequested;
+      this.waveSpawned = waveSpawned;
+      this.waveCleared = waveCleared;
     }
   }
 
@@ -44,6 +58,18 @@ public final class Act5BaalWaveState {
     return delayTicks;
   }
 
+  public boolean waveSpawnRequested() {
+    return waveSpawnRequested;
+  }
+
+  public boolean waveSpawned() {
+    return waveSpawned;
+  }
+
+  public boolean waveCleared() {
+    return waveCleared;
+  }
+
   public boolean started() {
     return phase != Phase.IDLE;
   }
@@ -59,11 +85,28 @@ public final class Act5BaalWaveState {
   public boolean start() {
     if (!canStart()) return false;
     phase = Phase.WAIT_CLEAR;
+    waveSpawnRequested = false;
+    waveSpawned = false;
+    waveCleared = false;
     return true;
   }
 
+  public void markWaveSpawned() {
+    if (activeWaveIndex() >= 0) waveSpawned = true;
+  }
+
+  public void markWaveCleared() {
+    if (activeWaveIndex() >= 0) waveCleared = true;
+  }
+
+  /** True only for a requested wave that has not been explicitly cleared. */
+  public boolean needsWaveRecovery() {
+    return activeWaveIndex() >= 0 && waveSpawnRequested && !waveCleared;
+  }
+
   public Snapshot snapshot() {
-    return new Snapshot(phase.ordinal(), wave, delayTicks);
+    return new Snapshot(phase.ordinal(), wave, delayTicks,
+        waveSpawnRequested, waveSpawned, waveCleared);
   }
 
   /** Restores one game-session snapshot without replaying an already spawned wave. */
@@ -88,6 +131,9 @@ public final class Act5BaalWaveState {
     phase = restoredPhase;
     wave = snapshot.wave;
     delayTicks = snapshot.delayTicks;
+    waveSpawnRequested = snapshot.waveSpawnRequested;
+    waveSpawned = snapshot.waveSpawned;
+    waveCleared = snapshot.waveCleared;
   }
 
   /** Advances one authoritative 25 Hz frame. Returns wave index 0..4,
@@ -114,6 +160,9 @@ public final class Act5BaalWaveState {
         return SPAWN_BAAL;
       }
       int result = wave++;
+      waveSpawnRequested = true;
+      waveSpawned = false;
+      waveCleared = false;
       phase = Phase.POST_SPAWN_LOCK;
       delayTicks = Act5BaalQuest.POST_SPAWN_LOCK_TICKS;
       return result;
