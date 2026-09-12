@@ -3830,3 +3830,18 @@ Symbol 的真实选择、地下区域入口和地图拓扑校验。
 共享文件最小修改：`core/src/main/java/com/riiablo/map/Act2MapBuilderD2MOD.java`。
 下一项：补 A2 七墓地下入口/出口的真实 DS1 预设与 `Levels.txt` Vis/Warp 双向拓扑回归，
 重点核对 Staff Tomb→Duriel Lair 仅由 Horadric Orifice 任务 Warp 创建。
+
+### 2026-09-13 A2 七墓全量物化与入口回归（本轮完成）
+
+- [x] Act II DRLG 现在预先物化全部七个 Tal Rasha Tomb Zone，而不再只创建 seed 选定的
+  Staff/Boss 两个墓；这样 Canyon of the Magi 的其余五个入口不会落入空 Zone。
+- [x] `headlessA2TombDual` 扩展为逐一进入 Level 66–72，双客户端验证每个墓可加载；
+  六个普通墓各有一个按 D2MOO 顺序解析的 Arcane Symbol，Staff Tomb 无符号，Boss Tomb
+  保留为普通可见墓穴，统计结果 `staff=73 boss=72 tombs=7 symbols=6`。
+- [x] Staff Tomb→Duriel's Lair 仍不添加静态 `Vis/Warp`，入口只由 A2Q6 Horadric
+  Orifice 任务 Warp 提供；此前的 `a2_orifice_duriel_entry_pass` 继续覆盖该约束。
+
+验证：`:core:compileJava`、`:core:test --tests com.riiablo.engine.server.quest.Act2TombSelectionTest`、
+`:server:d2gs:compileJava`、`:server:d2gs:headlessA2TombDual`、`git diff --check` 均通过。
+下一项：继续补七墓真实 DS1 入口/出口特殊墙体的 slot 对齐和地图碰撞连续性，优先核对
+`Levels.txt` 的 Vis/Warp 反向边与缺失资源时的诊断日志。

@@ -543,8 +543,18 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       // DRLG still allocates the level record up front, so materialize it
       // alongside the seed-selected staff/boss tombs.  Otherwise the first
       // valid Orifice interaction is rejected as WARP_DESTINATION_MISSING.
-      int[] requiredDungeons = {selectedTombs.staffTombLevel(),
-          selectedTombs.bossTombLevel(), LEVEL_DURIELSLAIR};
+      // D2Common allocates all seven Tal Rasha tomb levels up front.  Only
+      // the seed-selected staff tomb is special for A2Q6, while the other
+      // six remain ordinary playable dungeons (one is the boss tomb).  The
+      // previous bridge materialized only staff/boss, which made five valid
+      // Canyon entrances resolve to an empty/missing Zone.
+      int[] requiredDungeons = new int[Act2TombSelection.LAST_TOMB_LEVEL
+          - Act2TombSelection.FIRST_TOMB_LEVEL + 2];
+      for (int i = 0; i <= Act2TombSelection.LAST_TOMB_LEVEL
+          - Act2TombSelection.FIRST_TOMB_LEVEL; i++) {
+        requiredDungeons[i] = Act2TombSelection.FIRST_TOMB_LEVEL + i;
+      }
+      requiredDungeons[requiredDungeons.length - 1] = LEVEL_DURIELSLAIR;
       for (int tombId : requiredDungeons) {
         if (generated.contains(tombId)) continue;
         Levels.Entry tomb = levelsById.get(tombId);

@@ -2539,7 +2539,36 @@ public final class D2GSHeadlessClient {
           "a2-horadric-orifice", 5, 1,
           new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.HORADRIC_ORIFICE},
           1L);
-      log("a2_tomb_dual_pass", "level=" + tomb + " clients=true,true");
+      // All seven tomb levels are materialized by native DRLG. Verify each
+      // can be entered by both clients and that the six non-staff tombs have
+      // exactly one Arcane Symbol while the staff tomb has none.
+      com.riiablo.engine.server.quest.Act2TombSelection selection =
+          com.riiablo.engine.server.quest.Act2TombSelection.forGameSeed(config.seed);
+      int symbols = 0;
+      for (int level = com.riiablo.engine.server.quest.Act2TombSelection.FIRST_TOMB_LEVEL;
+          level <= com.riiablo.engine.server.quest.Act2TombSelection.LAST_TOMB_LEVEL; level++) {
+        if (!D2GS.headlessEnterLevel(a.playerId, level)
+            || !D2GS.headlessEnterLevel(b.playerId, level)) {
+          throw new IOException("A2 tomb level staging unavailable: " + level);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB, level, "a2-tomb-" + level);
+        int symbolClass = selection.arcaneSymbolObjectFor(level);
+        int symbol = symbolClass < 0 ? Engine.INVALID_ENTITY
+            : D2GS.headlessQuestObjectEntity(level, symbolClass);
+        if (level == selection.staffTombLevel()) {
+          if (symbol != Engine.INVALID_ENTITY) {
+            throw new IOException("staff tomb unexpectedly contains Arcane Symbol: " + level);
+          }
+        } else {
+          if (symbol == Engine.INVALID_ENTITY) {
+            throw new IOException("ordinary tomb Arcane Symbol missing: " + level
+                + " class=" + symbolClass);
+          }
+          symbols++;
+        }
+      }
+      log("a2_tomb_dual_pass", "staff=" + tomb + " boss=" + selection.bossTombLevel()
+          + " tombs=7 symbols=" + symbols + " clients=true,true");
     }
   }
 
