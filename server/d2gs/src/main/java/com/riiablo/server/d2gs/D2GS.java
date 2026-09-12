@@ -111,6 +111,7 @@ import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act1QuestMessageValidator;
 import com.riiablo.engine.server.quest.Act2QuestSystem;
 import com.riiablo.engine.server.quest.Act3QuestSystem;
+import com.riiablo.engine.server.quest.Act3MephistoQuestSystem;
 import com.riiablo.engine.server.quest.Act4QuestSystem;
 import com.riiablo.engine.server.quest.Act5QuestSystem;
 import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
@@ -2147,6 +2148,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new Act1QuestSystem())
         .with(new Act2QuestSystem())
         .with(new Act3QuestSystem())
+        .with(new Act3MephistoQuestSystem())
         .with(new Act4QuestSystem())
         .with(new Act5QuestSystem())
         .with(new Act2TaintedSunQuestSystem())

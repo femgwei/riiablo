@@ -28,6 +28,8 @@ public final class NativeQuestObjectResolver {
     SUMMIT_DOOR(false, false, Engine.Object.MODE_ON),
     BAAL_PORTAL(false, true, Engine.Object.MODE_ON),
     LAST_PORTAL(false, true, Engine.Object.MODE_ON),
+    MEPHISTO_BRIDGE(false, false, Engine.Object.MODE_ON),
+    HELL_GATE_PORTAL(false, false, Engine.Object.MODE_ON),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -84,6 +86,9 @@ public final class NativeQuestObjectResolver {
   public static final int BAAL_PORTAL = 563;
   /** A5Q6 Worldstone Chamber exit portal. */
   public static final int LAST_PORTAL = 565;
+  /** Act III A3Q6 Durance bridge and Hell Gate portal. */
+  public static final int MEPHISTO_BRIDGE = 341;
+  public static final int HELL_GATE_PORTAL = 342;
 
   private NativeQuestObjectResolver() {}
 
@@ -126,6 +131,8 @@ public final class NativeQuestObjectResolver {
       case SUMMIT_DOOR: return Type.SUMMIT_DOOR;
       case BAAL_PORTAL: return Type.BAAL_PORTAL;
       case LAST_PORTAL: return Type.LAST_PORTAL;
+      case MEPHISTO_BRIDGE: return Type.MEPHISTO_BRIDGE;
+      case HELL_GATE_PORTAL: return Type.HELL_GATE_PORTAL;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.

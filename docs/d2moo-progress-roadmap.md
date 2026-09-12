@@ -2938,5 +2938,27 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 - [x] 通过 `Act2DurielQuest*`、`Act2MapBuilderD2MooWarpTest`、`:core:compileJava`
   和 `:server:d2gs:compileJava`。
 
-当前下一项：专项核对第三章 A3Q6 Mephisto 的死亡资格、红门（对象 566/QuestWarp）
+当前下一项：专项核对第三章 A3Q6 Mephisto 的死亡资格、Hell Gate（对象 342/QuestWarp）
 与 Act IV progression；随后补 Travincal→Durance→Mephisto 的地图入口和重连恢复。
+
+### 2026-09-12 Act III A3Q6 Mephisto 与 Hell Gate（本轮完成）
+
+- [x] 新增 `Act3MephistoQuestSystem`，按 D2MOO `A3Q6_Callback08_MonsterKilled` 只接受
+  Durance of Hate Level 3（102）的 Mephisto；当前层玩家直接获得
+  `PRIMARY_GOAL_DONE + REWARD_GRANTED + CUSTOM7`，同队且仍在第三章的玩家同步，
+  其他在线玩家只得到 `COMPLETED_NOW`，重复死亡事件幂等。
+- [x] 直接完成玩家使用 `NativeCharacterProgression.update(..., act=3, ...)` 推进
+  D2S flags 8–15；没有另写固定经验奖励，Mephisto 的灵魂石掉落继续由既有 A4Q3
+  资源链负责，避免同一死亡事件重复掉落。
+- [x] 对齐原生 Objects `341`（Mephisto Bridge）与 `342`（Hell Gate Portal），加入
+  网络任务对象解析和开启状态恢复。击杀后将两个对象切换为 `MODE_ON`，并以 Hell Gate
+  坐标创建到 Pandemonium Fortress（103）的 QuestWarp；重连/地图重建按 A3Q6 记录
+  自动恢复，不重复创建 Warp。
+- [x] 客户端 GameScreen 与 D2GS 均注册 A3Q6 系统；新增 A3Q6 状态测试和 341/342
+  resolver 回归断言。Travincal→Durance 1→2→3 的地图 Warp 链沿用现有
+  `Act3MapBuilderD2MOD` 原生 Vis/Warp 入口，没有新增断开的假入口。
+- [x] 通过 `Act3MephistoQuestTest`、`NativeQuestObjectResolverTest`、Act III 地图
+  Warp 测试、`:core:compileJava`、`:server:d2gs:compileJava`。
+
+当前下一项：继续核对第三章 A3Q6 的 Hell Gate/Bridge 对象预设坐标与碰撞恢复，随后
+处理第四章 Diablo progression、Chaos Sanctuary 封印/红门重连和 Act IV→V 过渡。

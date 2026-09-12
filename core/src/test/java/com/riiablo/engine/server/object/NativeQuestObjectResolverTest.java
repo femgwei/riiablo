@@ -42,6 +42,8 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.SUMMIT_DOOR, resolve(564, 76));
     assertEquals(NativeQuestObjectResolver.Type.BAAL_PORTAL, resolve(563, 71));
     assertEquals(NativeQuestObjectResolver.Type.LAST_PORTAL, resolve(565, 71));
+    assertEquals(NativeQuestObjectResolver.Type.MEPHISTO_BRIDGE, resolve(341, 45));
+    assertEquals(NativeQuestObjectResolver.Type.HELL_GATE_PORTAL, resolve(342, 44));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }
