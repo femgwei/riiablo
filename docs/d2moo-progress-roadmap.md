@@ -2993,3 +2993,24 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：核对第五章 Harrogath 任务对象、主链入口和任务传送门的重连恢复，优先
 处理 A5Q1–A5Q3 的对象状态与地图入口一致性。
+
+### 2026-09-12 Act V A5Q1–A5Q3 对象状态与重连恢复（本轮完成）
+
+- [x] 对照 D2MOO `A5Q1.cpp` 的任务记录门槛，Shenk 生成现在受持久化
+  `PRIMARY_GOAL_DONE/REWARD_PENDING/REWARD_GRANTED` 保护；重连或 Bloody Foothills
+  RoomEx 重建不会重新生成已经击杀、待 Larzuk 领奖或已领奖的 Siege Boss。
+- [x] A5Q2 Frigid Highlands 囚笼对象 `473` 增加原生状态重建：从
+  `NativeObjectState.activated`/对象快照重新收集已开启囚笼，实体 ID 变化不再把进度
+  回退到 0/5；五笼已开启时，重连玩家按 D2MOO 的游戏级状态继承
+  `PRIMARY_GOAL_DONE + REWARD_PENDING`，不会重复发放 Qual-Kehk 奖励。
+- [x] A5Q3 Frozen River Anya 对象 `558` 增加任务记录驱动的解冻恢复：已有主目标完成、
+  待领奖励或已领奖记录时，RoomEx 重建会恢复 `MODE_ON`、打开/激活标志和不可交互状态，
+  不会重新创建冰封对象或重复消耗解冻流程。
+- [x] 固定逻辑帧补充对象晚于 `ZoneChangeEvent` 创建时的二次对账；新增 Shenk 生成门槛、
+  囚笼完成继承和 Anya 状态恢复测试。未修改战斗公式、技能、掉落或共享地图生成接口。
+- 验证：`Act5ShenkQuestTest`、`Act5RescueQuestTest`、`Act5PrisonQuestTest`、
+  `NativeQuestObjectResolverTest`、`:core:compileJava`、`:server:d2gs:compileJava` 通过。
+
+当前下一项：补齐 A5Q4 Drehya→Nihlathak Temple 的原生动态传送门和城镇状态循环，
+并在 Nihlathak Temple/Halls of Vaught 地图重建时恢复入口对象与目标 Warp；随后继续
+核对 A5Q5/A5Q6 的对象动画和结束传送。

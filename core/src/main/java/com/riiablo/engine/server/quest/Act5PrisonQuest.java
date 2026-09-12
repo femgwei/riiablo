@@ -26,6 +26,15 @@ public final class Act5PrisonQuest {
     return NativeQuestRecord.has(record, NativeQuestRecord.CUSTOM3);
   }
 
+  /** Frozen Anya is left in the defrosted mode after the goal is recorded.
+   * The predicate is intentionally record based so a RoomEx rebuild does not
+   * recreate the ice object for a reconnecting player. */
+  public static boolean shouldRestoreDefrostedObject(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
   public static short complete(short record) {
     if (isFinished(record)) return record;
     record = NativeQuestRecord.set(record, NativeQuestRecord.PRIMARY_GOAL_DONE);

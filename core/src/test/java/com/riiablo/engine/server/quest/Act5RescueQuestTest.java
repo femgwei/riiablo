@@ -14,4 +14,15 @@ class Act5RescueQuestTest {
     assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
     assertFalse(Act5RescueQuest.canClaimReward(record));
   }
+
+  @Test
+  void completedCagesRestorePendingStateForReconnect() {
+    assertFalse(Act5RescueQuest.shouldRestoreCompletion((short) 0,
+        Act5RescueQuest.REQUIRED_CAGES - 1));
+    assertTrue(Act5RescueQuest.shouldRestoreCompletion((short) 0,
+        Act5RescueQuest.REQUIRED_CAGES));
+    short pending = Act5RescueQuest.complete(Act5RescueQuest.start((short) 0));
+    assertFalse(Act5RescueQuest.shouldRestoreCompletion(pending,
+        Act5RescueQuest.REQUIRED_CAGES));
+  }
 }

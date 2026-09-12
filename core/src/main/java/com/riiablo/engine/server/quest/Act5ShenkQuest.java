@@ -29,6 +29,18 @@ public final class Act5ShenkQuest {
         && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
   }
 
+  /**
+   * D2MOO's Shenk init path does not create the quest super-unique after the
+   * primary goal has already been recorded.  This also covers a reconnect
+   * while Larzuk's reward is still pending: the quest state, rather than the
+   * transient monster entity id, is authoritative.
+   */
+  public static boolean shouldSpawnBoss(short record) {
+    return !NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
   public static short claimReward(short record) {
     if (!canClaimReward(record)) return record;
     record = NativeQuestRecord.clear(record, NativeQuestRecord.REWARD_PENDING);

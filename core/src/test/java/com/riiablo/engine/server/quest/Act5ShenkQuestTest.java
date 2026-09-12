@@ -16,4 +16,12 @@ class Act5ShenkQuestTest {
     assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
     assertFalse(Act5ShenkQuest.canClaimReward(record));
   }
+
+  @Test
+  void completedOrPendingRecordDoesNotRespawnShenkAfterReconnect() {
+    assertTrue(Act5ShenkQuest.shouldSpawnBoss(Act5ShenkQuest.start((short) 0)));
+    short pending = Act5ShenkQuest.complete(Act5ShenkQuest.start((short) 0));
+    assertFalse(Act5ShenkQuest.shouldSpawnBoss(pending));
+    assertFalse(Act5ShenkQuest.shouldSpawnBoss(Act5ShenkQuest.claimReward(pending)));
+  }
 }

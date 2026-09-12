@@ -26,6 +26,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Player;
@@ -63,6 +64,8 @@ public class Act5QuestSystem extends BaseSystem {
   protected ComponentMapper<SuperUnique> mSuperUnique;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
+  protected ComponentMapper<com.riiablo.engine.server.component.Object> mObject;
+  protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<SummonedPet> mSummonedPet;
   protected ComponentMapper<Mercenary> mMercenary;
   @Wire(name = "factory", failOnNull = false)
@@ -77,6 +80,7 @@ public class Act5QuestSystem extends BaseSystem {
 
   private EntitySubscription playersByZone;
   private EntitySubscription monstersByZone;
+  private EntitySubscription objectsByZone;
   private final IntSet spawnedShenkLevels = new IntSet();
   private final IntSet killedShenkEntities = new IntSet();
   private final IntSet spawnedNihlathakLevels = new IntSet();
@@ -93,6 +97,7 @@ public class Act5QuestSystem extends BaseSystem {
   private float baalWaveOriginX;
   private float baalWaveOriginY;
   private final IntSet rescuedCages = new IntSet();
+  private Map.Zone trackedRescueZone;
 
   @Override
   protected void initialize() {
@@ -100,18 +105,25 @@ public class Act5QuestSystem extends BaseSystem {
         Aspect.all(Player.class, MapWrapper.class));
     monstersByZone = world.getAspectSubscriptionManager().get(
         Aspect.all(Monster.class, MapWrapper.class));
+    objectsByZone = world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Object.class, MapWrapper.class));
     experienceManager = world.getSystem(ExperienceManager.class);
   }
 
   @Override
   protected void processSystem() {
-    if (!baalWaveState.started() || baalWaveState.finished()) return;
-    int action = baalWaveState.tick(isBaalThroneClear());
-    if (action >= 0 && action < Act5BaalQuest.WAVE_COUNT) {
-      spawnBaalWave(action);
-    } else if (action == Act5BaalWaveState.SPAWN_BAAL) {
-      spawnBaalAfterWaves();
+    if (baalWaveState.started() && !baalWaveState.finished()) {
+      int action = baalWaveState.tick(isBaalThroneClear());
+      if (action >= 0 && action < Act5BaalQuest.WAVE_COUNT) {
+        spawnBaalWave(action);
+      } else if (action == Act5BaalWaveState.SPAWN_BAAL) {
+        spawnBaalAfterWaves();
+      }
     }
+    // Native quest objects can be created after ZoneChangeEvent (RoomEx
+    // activation), so keep the record/object reconciliation in the fixed
+    // simulation phase as well as the zone-change callback.
+    rebuildAct5QuestObjectState();
   }
 
   @Subscribe
@@ -125,6 +137,9 @@ public class Act5QuestSystem extends BaseSystem {
       spawnShenkIfNeeded(event.entityId, event.zone.level.Id);
     } else if (event.zone.level.Id == Act5RescueQuest.FRIGID_HIGHLANDS) {
       updateRescueRecord(player.data, Act5RescueQuest::start, "entered-frigid-highlands");
+      rebuildRescueCageState(event.zone);
+    } else if (event.zone.level.Id == Act5PrisonQuest.FROZEN_RIVER) {
+      restoreFrozenAnyaState(event.zone);
     }
     if (event.zone.level.Id == Act5NihlathakQuest.NIHLATHAK_TEMPLE
         || event.zone.level.Id == Act5NihlathakQuest.HALLS_OF_VAUGHT) {
@@ -414,6 +429,14 @@ public class Act5QuestSystem extends BaseSystem {
 
   private void spawnShenkIfNeeded(int playerId, int levelId) {
     if (spawnedShenkLevels.contains(levelId) || factory == null || mPosition == null) return;
+    if (!mPlayer.has(playerId)) return;
+    Player player = mPlayer.get(playerId);
+    if (player == null || player.data == null
+        || !Act5ShenkQuest.shouldSpawnBoss(record(player.data))) {
+      log.debug("[A5Q1] Shenk spawn suppressed by persistent quest record: player={} level={}",
+          playerId, levelId);
+      return;
+    }
     if (playersByZone == null) return;
     IntBag entities = world.getAspectSubscriptionManager().get(
         Aspect.all(Monster.class, MapWrapper.class)).getEntities();
@@ -438,6 +461,118 @@ public class Act5QuestSystem extends BaseSystem {
     }
     spawnedShenkLevels.add(levelId);
     log.info("[A5Q1] Shenk spawned: player={} entity={} level={}", playerId, entity, levelId);
+  }
+
+  /** Reconciles transient ECS object ids with the persistent native object
+   * snapshots.  RoomEx can be rebuilt after a reconnect, so entity ids alone
+   * must never be used as the source of truth for A5Q2/A5Q3. */
+  private void rebuildAct5QuestObjectState() {
+    if (playersByZone == null || objectsByZone == null || mMapWrapper == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = ids[i];
+      if (!mPlayer.has(playerId)) continue;
+      MapWrapper wrapper = mMapWrapper.get(playerId);
+      if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null) continue;
+      int level = wrapper.zone.level.Id;
+      if (level == Act5RescueQuest.FRIGID_HIGHLANDS) {
+        rebuildRescueCageState(wrapper.zone);
+      } else if (level == Act5PrisonQuest.FROZEN_RIVER) {
+        restoreFrozenAnyaState(wrapper.zone);
+      }
+    }
+  }
+
+  private void rebuildRescueCageState(Map.Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != Act5RescueQuest.FRIGID_HIGHLANDS
+        || objectsByZone == null) return;
+    if (trackedRescueZone != zone) {
+      trackedRescueZone = zone;
+      rescuedCages.clear();
+    }
+    IntBag objects = objectsByZone.getEntities();
+    int[] objectIds = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = objectIds[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (wrapper == null || wrapper.zone != zone || object == null || object.base == null
+          || object.base.Id != Act5RescueQuest.CAGED_SOLDIER_OBJECT) continue;
+      NativeObjectState state = mNativeObjectState.has(id) ? mNativeObjectState.get(id) : null;
+      boolean activated = state != null ? state.activated
+          : (object.stateFlags & com.riiablo.engine.server.component.Object.STATE_ACTIVATED) != 0;
+      if (activated) rescuedCages.add(id);
+    }
+    if (rescuedCages.size < Act5RescueQuest.REQUIRED_CAGES) return;
+
+    // A5Q2's cage activation is game-wide.  A player reconnecting after the
+    // fifth cage was opened must see the same pending reward even though the
+    // old cage entity ids are gone.
+    IntBag players = playersByZone == null ? null : playersByZone.getEntities();
+    if (players == null) return;
+    int[] playerIds = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = playerIds[i];
+      if (!mPlayer.has(playerId)) continue;
+      MapWrapper wrapper = mMapWrapper.get(playerId);
+      Player player = mPlayer.get(playerId);
+      if (wrapper == null || wrapper.zone != zone || player == null || player.data == null) continue;
+      short record = rescueRecord(player.data);
+      if (Act5RescueQuest.shouldRestoreCompletion(record, rescuedCages.size)) {
+        updateRescueRecord(player.data,
+            value -> Act5RescueQuest.complete(Act5RescueQuest.start(value)),
+            "cages-restored-" + rescuedCages.size);
+      }
+    }
+  }
+
+  private void restoreFrozenAnyaState(Map.Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != Act5PrisonQuest.FROZEN_RIVER || objectsByZone == null) return;
+    boolean defrosted = false;
+    IntBag players = playersByZone == null ? null : playersByZone.getEntities();
+    if (players != null) {
+      int[] ids = players.getData();
+      for (int i = 0; i < players.size(); i++) {
+        int playerId = ids[i];
+        if (!mPlayer.has(playerId) || !mMapWrapper.has(playerId)) continue;
+        MapWrapper wrapper = mMapWrapper.get(playerId);
+        Player player = mPlayer.get(playerId);
+        if (wrapper != null && wrapper.zone == zone && player != null && player.data != null
+            && Act5PrisonQuest.shouldRestoreDefrostedObject(prisonRecord(player.data))) {
+          defrosted = true;
+          break;
+        }
+      }
+    }
+    if (!defrosted) return;
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (wrapper == null || wrapper.zone != zone || object == null || object.base == null
+          || object.base.Id != Act5PrisonQuest.FROZEN_ANYA_OBJECT) continue;
+      NativeObjectState state = mNativeObjectState.has(id) ? mNativeObjectState.get(id) : null;
+      boolean already = state != null && state.activated
+          && state.currentMode == Engine.Object.MODE_ON;
+      if (!already && state != null) {
+        state.persistActivated(true);
+        state.persistOpened(true);
+        state.persistMode((byte) Engine.Object.MODE_ON);
+      }
+      if (mCofReference.has(id)) mCofReference.get(id).mode = Engine.Object.MODE_ON;
+      object.mode = (byte) Engine.Object.MODE_ON;
+      object.stateFlags |= com.riiablo.engine.server.component.Object.STATE_OPENED
+          | com.riiablo.engine.server.component.Object.STATE_ACTIVATED;
+      if (mInteractable.has(id)) mInteractable.remove(id);
+      if (!already) log.info("[A5Q3] Restored Frozen Anya defrosted state: entity={}", id);
+    }
   }
 
   private void spawnNihlathakIfNeeded(int playerId, int levelId) {

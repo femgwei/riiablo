@@ -16,4 +16,14 @@ class Act5PrisonQuestTest {
     assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
     assertFalse(Act5PrisonQuest.canClaimReward(record));
   }
+
+  @Test
+  void defrostedObjectRestoresFromPersistentRecord() {
+    assertFalse(Act5PrisonQuest.shouldRestoreDefrostedObject((short) 0));
+    short pending = Act5PrisonQuest.complete(
+        Act5PrisonQuest.markPotion(Act5PrisonQuest.start((short) 0)));
+    assertTrue(Act5PrisonQuest.shouldRestoreDefrostedObject(pending));
+    assertTrue(Act5PrisonQuest.shouldRestoreDefrostedObject(
+        Act5PrisonQuest.claimReward(pending)));
+  }
 }

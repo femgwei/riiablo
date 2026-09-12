@@ -31,6 +31,14 @@ public final class Act5RescueQuest {
         && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
   }
 
+  /** Returns whether a reconnecting player should inherit the game-wide
+   * completed-cage state after RoomEx objects have been rebuilt. */
+  public static boolean shouldRestoreCompletion(short record, int activatedCages) {
+    return activatedCages >= REQUIRED_CAGES
+        && !isFinished(record)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+  }
+
   public static short claimReward(short record) {
     if (!canClaimReward(record)) return record;
     record = NativeQuestRecord.clear(record, NativeQuestRecord.REWARD_PENDING);
