@@ -26,6 +26,16 @@ public final class Act5BaalQuest {
   /** Fallback MonStats classes when SuperUniques.txt is unavailable. */
   public static final String[] WAVE_MONSTER_IDS = {
       "fallenshaman5", "unraveler5", "baalhighpriest", "venomlord", "baalminion1"};
+  /**
+   * Native AITHINK_BaalThrone 0xA4 class-preload hints sent before waves 1/2.
+   * These are client preload hints, not extra monsters: the actual entities
+   * still come from SuperUnique preset spawning and MonStats.minion1.
+   */
+  private static final String[][] WAVE_CLIENT_CLASS_HINTS = {
+      {"fallenshaman5", "fallen5"},
+      {"unraveler5", "skmage_cold3"},
+      {}, {}, {}
+  };
   /** 1.10f SuperUniques.txt MinGrp/MaxGrp (both columns are equal). */
   public static final int[] WAVE_MINIONS = {5, 3, 5, 8, 5};
   public static final int WAVE_COUNT = 5;
@@ -41,6 +51,11 @@ public final class Act5BaalQuest {
     int mixed = gameSeed ^ (waveIndex + 1) * 0x9E3779B9;
     mixed ^= mixed >>> 16;
     return min + (mixed & 0x7FFFFFFF) % (max - min + 1);
+  }
+
+  static String[] nativeWaveClientClassHints(int waveIndex) {
+    if (waveIndex < 0 || waveIndex >= WAVE_CLIENT_CLASS_HINTS.length) return new String[0];
+    return WAVE_CLIENT_CLASS_HINTS[waveIndex].clone();
   }
 
   static boolean isBaalMonster(int hcIdx, String id) {

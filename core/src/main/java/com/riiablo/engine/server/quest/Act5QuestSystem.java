@@ -1078,11 +1078,13 @@ public class Act5QuestSystem extends BaseSystem {
         baalWaveEntities.add(entity);
       }
     }
+    String[] classHints = Act5BaalQuest.nativeWaveClientClassHints(waveIndex);
     log.info("[A5Q6] Baal wave spawned: wave={}/{} leader={} class={} minionClass={} "
-            + "minions={} affixes=0x{} entities={} postLock={}",
+            + "minions={} affixes=0x{} entities={} classHints={} postLock={}",
         waveIndex + 1, Act5BaalQuest.WAVE_COUNT,
         unique == null ? uniqueId : unique.Superunique, leaderStats.Id, minionStats.Id,
         minions, Long.toHexString(affixes), baalWaveEntities.size,
+        java.util.Arrays.toString(classHints),
         Act5BaalQuest.POST_SPAWN_LOCK_TICKS);
   }
 

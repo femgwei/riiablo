@@ -3201,3 +3201,18 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 当前下一项：继续补齐 D2MOO `SpawnPresetMonster` 的特殊波次随从语义（Subject 1 的
 `fallen5`、Subject 2 的 `skmage_cold3` 客户端 A4 提示/实体归属），并为波次实体补上
 重连后的按 preset 标识恢复，避免只恢复阶段而丢失原生波次成员关系。
+
+### 2026-09-12 A5Q6 Subject 1/2 原生 A4 类别提示核对（本轮完成）
+
+- [x] 核对 `AiThink.cpp`：Subject 1 的 `fallenshaman5 + fallen5`、Subject 2 的
+  `unraveler5 + skmage_cold3` 是波次施法前发送的 0xA4 客户端类别预加载提示，
+  不是第二次实体生成；避免把提示误移植成重复怪物。
+- [x] 在 `Act5BaalQuest` 固化两组类别映射，并在波次日志打印 `classHints`；实体仍严格
+  由 `SuperUniques.MonClass`、`MonStats.minion1` 和 preset 的 `MinGrp/MaxGrp` 生成，
+  所有权继续绑定到波次首领，不会出现重复 Fallen 或错误的 Shaman 随从。
+- [x] `Act5BaalQuestTest` 覆盖两组原生提示及非法波次；定向 A5Q6 测试、核心/D2GS
+  编译和 `git diff --check` 通过。
+
+当前下一项：为已生成波次增加按 `SuperUnique.hcIdx` 的重连/RoomEx 恢复索引；恢复时只
+补回确实缺失的当前波次实体，不重生已经清场的前序波次，并继续保持多人客户端看到相同
+的 preset 类别和所有权。

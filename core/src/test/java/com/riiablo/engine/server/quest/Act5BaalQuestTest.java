@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
 import org.junit.jupiter.api.Test;
 
 class Act5BaalQuestTest {
@@ -79,5 +81,15 @@ class Act5BaalQuestTest {
     short leftTown = Act5BaalQuest.leaveTown(started);
     assertTrue(NativeQuestRecord.has(leftTown, NativeQuestRecord.STARTED));
     assertTrue(NativeQuestRecord.has(leftTown, NativeQuestRecord.LEFT_TOWN));
+  }
+
+  @Test
+  void baalWaveClassHintsMatchNativeA4PreloadMessages() {
+    assertArrayEquals(new String[] {"fallenshaman5", "fallen5"},
+        Act5BaalQuest.nativeWaveClientClassHints(0));
+    assertArrayEquals(new String[] {"unraveler5", "skmage_cold3"},
+        Act5BaalQuest.nativeWaveClientClassHints(1));
+    assertEquals(0, Act5BaalQuest.nativeWaveClientClassHints(2).length);
+    assertEquals(0, Act5BaalQuest.nativeWaveClientClassHints(-1).length);
   }
 }
