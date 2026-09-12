@@ -3588,3 +3588,14 @@ headless 资源回退），但不再阻断 A3 任务对象闭环。下一项：�
 
 下一项：继续 A1/A2 特殊箱、祭坛、任务门的生产交互与掉落幂等覆盖，并将 A3 丛林
 `ACT3_BRIDGE` 诊断日志从 warning 分级为 debug，保留真正资源解析异常的 warning。
+
+### 2026-09-12 A2 Tainted Sun 祭坛掉落归属修复（本轮完成）
+
+- [x] `Act2TaintedSunQuestSystem` 为祭坛生成的 Viper Amulet 显式继承祭坛的
+  `MapWrapper.zone`，避免 Valley of Snakes/Claw Viper Temple 重叠矩形导致掉落物被
+  绑定到错误区域；仅增加地图归属信息，不改变任务奖励条件。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava` 和 `git diff --check`。
+
+下一项：在完整资源环境把 Tainted Sun 祭坛、Arcane Sanctuary Tome、Horadric
+Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖励掉落、Zone 归属和幂等；
+随后覆盖 A1 特殊箱/任务门的同类路径。

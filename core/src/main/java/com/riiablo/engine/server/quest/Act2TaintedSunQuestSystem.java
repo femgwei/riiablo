@@ -43,6 +43,8 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
   protected ComponentMapper<Position> mPosition;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
+  @Wire(name = "map", failOnNull = false)
+  protected Map map;
   @Wire(failOnNull = false)
   protected ItemGenerator itemGenerator;
 
@@ -87,6 +89,13 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
             altarPosition.position.x + DROP_X[created % DROP_X.length],
             altarPosition.position.y + DROP_Y[created % DROP_Y.length]);
         if (entityId < 0) continue;
+        // Valley of Snakes and Claw Viper Temple use overlapping synthetic
+        // level rectangles in the Java map bridge. Preserve the altar's
+        // authoritative zone on each amulet instead of re-inferring it from
+        // the drop coordinates.
+        if (map != null && altarWrapper != null && altarWrapper.zone != null) {
+          mMapWrapper.create(entityId).set(map, altarWrapper.zone);
+        }
         item.id = entityId;
         markRewardPending(player.data);
         created++;
