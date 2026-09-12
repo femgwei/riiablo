@@ -110,6 +110,8 @@ public final class MonsterType {
   public static final int COUNCILMEMBER = 345;
   /** 伊兹尔 */
   public static final int IZUAL = 256;
+  /** 泰瑞尔（第四幕任务 NPC，D2MOO MONSTER_TYRAEL2） */
+  public static final int TYRAEL2 = 367;
 
   //==========================================================================
   // 雇佣兵

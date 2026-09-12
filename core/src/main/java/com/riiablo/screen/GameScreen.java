@@ -803,6 +803,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new Act1QuestSystem());
       builder.with(new Act2QuestSystem());
       builder.with(new Act3QuestSystem());
+      builder.with(new com.riiablo.engine.server.quest.Act4QuestSystem());
       builder.with(new Act2TaintedSunQuestSystem());
       builder.with(new Act2DurielQuestSystem());
       builder.with(new NativeMercenaryRewardSystem());

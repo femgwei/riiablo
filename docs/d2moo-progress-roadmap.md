@@ -2584,3 +2584,19 @@ Asheara 佣兵奖励和队伍状态传播；随后处理 A3Q3 Khalim's Will，�
 
 当前下一项：接入 A3Q3 实际 `CUBE_TRANSMUTE` 请求和多人球体状态传播，然后实现第四章
 A4Q1 Izual 的 Plains of Despair 生成、击杀奖励（2 技能点）及队伍记录同步。
+
+### 2026-09-12 Act IV A4Q1 Izual / The Fallen Angel（本轮完成）
+
+- [x] 新增 `Act4IzualQuest` 与权威 `Act4QuestSystem`，按 D2MOO `ACT4Q1` 实现
+  `Plains of Despair → Izual → Tyrael` 的任务记录状态：击杀后设置
+  `PRIMARY_GOAL_DONE + REWARD_PENDING`，Tyrael 676 对话领取奖励后设置
+  `REWARD_GRANTED`，重复领取不会重复发放。
+- [x] 进入 Plains of Despair 时检查原生 Izual 是否已经由预设生成；若没有则由服务端
+  在当前区域可行走位置补生成一次，避免重复 Izual。
+- [x] Izual 击杀支持当前区域和同队 Act IV 成员状态传播；Tyrael 670/676 对话接入，
+  奖励为 2 点 `newskills`，并持久化到 D2S。
+- [x] 注册到本地 GameScreen 和 `server/d2gs` 权威世界，新增 A4Q1 记录幂等测试。
+- 验证：`Act4IzualQuestTest`、`:core:compileJava`、`:server:d2gs:compileJava` 通过。
+
+当前下一项：将 A3Q3 Khalim 合成接入实际方块请求，再处理 A4Q2 Diablo 的 Chaos
+Sanctuary/封印/击杀任务链。
