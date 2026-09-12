@@ -2616,3 +2616,16 @@ Sanctuary/封印/击杀任务链。
 
 当前下一项：接入 Diablo 完成后的 Tyrael/Act V 传送主链，再处理 A4Q3 Hellforge；同时
 继续寻找现有网络协议中的方块请求入口，接通 A3Q3 的多人合成操作。
+
+### 2026-09-12 Act IV Diablo → Act V 传送主链（本轮完成）
+
+- [x] 接入 D2MOO A4Q2 Tyrael `20000` 对话分支；仅当 A4Q2 已设置主目标完成时，
+  才创建 Act V Harrogath（111）任务传送门。
+- [x] 传送门使用原生对象 566 + `createQuestWarp`，加入当前区域 Warp 列表；创建失败
+  时不写入 `REWARD_GRANTED`，避免错误解锁下一幕。
+- [x] 传送门成功创建后才持久化 A4Q2 奖励完成状态，重复对话幂等。
+- 验证：`Act4DiabloQuestTest`、`Act4IzualQuestTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：处理第四章 A4Q3 Hellforge（灵魂石、地狱熔炉、锤子交互、符文奖励），
+然后开始第五章 Harrogath 地图和任务主链。

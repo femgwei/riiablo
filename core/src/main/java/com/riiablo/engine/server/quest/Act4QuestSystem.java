@@ -13,6 +13,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
@@ -257,7 +258,36 @@ public class Act4QuestSystem extends PassiveSystem {
       addSkillPoints(event.entityId, player.data, 2);
       updateRecord(player.data, ignored -> next, "tyrael-izual-reward");
       log.info("[A4Q1] Tyrael granted 2 skill points: player={}", event.entityId);
+    } else if (event.messageIndex == Act4DiabloQuest.MESSAGE_TYRAEL_ACT5
+        && NativeQuestRecord.has(diabloRecord(player.data), NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+      openAct5Portal(event, player);
     }
+  }
+
+  private void openAct5Portal(NpcQuestMessageEvent event, Player player) {
+    MapWrapper wrapper = mMapWrapper.get(event.npcId);
+    Position source = mPosition.get(event.npcId);
+    if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null || source == null
+        || factory == null || wrapper.zone.level.Id != D2LevelIds.LEVEL_THEPANDEMONIUMFORTRESS) {
+      log.warn("[A4Q2] Act V portal rejected: player={} npc={}", event.entityId, event.npcId);
+      return;
+    }
+    short record = diabloRecord(player.data);
+    if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return;
+    float portalX = source.position.x + 5f;
+    float portalY = source.position.y;
+    int visual = factory.createStaticObjectByClassId(566, portalX, portalY);
+    int warp = factory.createQuestWarp(D2LevelIds.LEVEL_HARROGATH, portalX, portalY);
+    if (warp == Engine.INVALID_ENTITY) {
+      if (visual != Engine.INVALID_ENTITY && world != null) world.delete(visual);
+      log.error("[A4Q2] Act V portal creation failed: player={} npc={}", event.entityId, event.npcId);
+      return;
+    }
+    wrapper.zone.addWarp(warp);
+    short next = Act4DiabloQuest.claimCompletion(record);
+    dataSetDiabloRecord(player.data, next);
+    log.info("[A4Q2] Act V portal opened: player={} visual={} warp={} destination={}",
+        event.entityId, visual, warp, D2LevelIds.LEVEL_HARROGATH);
   }
 
   private void setObjective(CharData data) {
@@ -305,6 +335,11 @@ public class Act4QuestSystem extends PassiveSystem {
     log.info("[A4Q2] Quest record changed: character={} reason=diablo-defeated previous=0x{} next=0x{}",
         data.name, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private void dataSetDiabloRecord(CharData data, short next) {
+    data.getQuests(Riiablo.ACT4)[Act4DiabloQuest.RECORD] = next;
+    persist(data);
   }
 
   private static void persist(CharData data) {

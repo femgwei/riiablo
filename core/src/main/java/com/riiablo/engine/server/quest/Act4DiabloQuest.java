@@ -9,6 +9,7 @@ public final class Act4DiabloQuest {
   public static final int FIRST_SEAL = 392;
   public static final int LAST_SEAL = 396;
   public static final int CHAOS_SANCTUARY = 110;
+  public static final int MESSAGE_TYRAEL_ACT5 = 20000;
 
   public static short start(short record) {
     return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
