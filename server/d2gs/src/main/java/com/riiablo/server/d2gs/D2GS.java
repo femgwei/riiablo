@@ -375,6 +375,7 @@ public class D2GS extends ApplicationAdapter {
         new java.util.concurrent.atomic.AtomicBoolean(false);
     Gdx.app.postRunnable(() -> {
       try {
+        ensureHeadlessAct(server, levelId);
         Vector2 destination = findHeadlessLevelPosition(server, levelId);
         Position position = server.world.getMapper(Position.class).get(playerId);
         com.riiablo.engine.server.component.MapWrapper wrapper = server.world
@@ -396,6 +397,10 @@ public class D2GS extends ApplicationAdapter {
         }
         server.world.getSystem(EventSystem.class).dispatch(
             com.riiablo.engine.server.event.ZoneChangeEvent.obtain(playerId, zone));
+        // Room activation and native preset entities are ECS systems.  Process
+        // once here so an offscreen fixture can immediately query the same
+        // object set a real client receives after the zone-change tick.
+        server.world.process();
         entered.set(true);
       } finally {
         done.countDown();
@@ -407,6 +412,38 @@ public class D2GS extends ApplicationAdapter {
       Thread.currentThread().interrupt();
       return false;
     }
+  }
+
+  /**
+   * Lazily loads the act containing a requested level for headless scenarios.
+   * Production D2GS starts in Act I and changes acts through its normal map
+   * transition; this bridge mirrors that Map.setAct/load/generate/entity pass
+   * only when a deterministic offscreen fixture asks for another act.
+   */
+  private static void ensureHeadlessAct(D2GS server, int levelId) {
+    if (server == null || server.map == null || server.map.getAct() == headlessAct(levelId)) return;
+    int act = headlessAct(levelId);
+    com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    com.artemis.ComponentMapper<Player> players = server.world.getMapper(Player.class);
+    for (int i = 0; i < entities.size(); i++) {
+      if (!players.has(ids[i])) server.world.delete(ids[i]);
+    }
+    server.world.process();
+    server.map.setAct(act);
+    server.map.load();
+    server.map.finishLoading();
+    server.map.generate();
+    if (server.mapManager != null) server.mapManager.createEntities();
+  }
+
+  private static int headlessAct(int levelId) {
+    if (levelId <= 39) return 0;
+    if (levelId <= 74) return 1;
+    if (levelId <= 102) return 2;
+    if (levelId <= 108) return 3;
+    return 4;
   }
 
   /**
@@ -1937,6 +1974,204 @@ public class D2GS extends ApplicationAdapter {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /**
+   * Moves a headless player next to an authoritative quest object.  The
+   * subsequent OBJECT_INTERACTION request still travels through the normal
+   * network validation and ObjectInteractor path; this helper only removes
+   * path-finding from the deterministic regression fixture.
+   */
+  static boolean headlessMovePlayerToObject(int playerId, int objectId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean moved =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Position source = server.world.getMapper(Position.class).get(playerId);
+        Position target = server.world.getMapper(Position.class).get(objectId);
+        com.riiablo.engine.server.component.MapWrapper targetWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(objectId);
+        com.riiablo.engine.server.component.MapWrapper sourceWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        if (source == null || target == null || targetWrapper == null
+            || targetWrapper.zone == null || sourceWrapper == null) return;
+        source.position.set(target.position);
+        sourceWrapper.set(server.map, targetWrapper.zone);
+        com.riiablo.engine.server.component.Box2DBody body = server.world
+            .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+        if (body != null && body.body != null) body.body.setTransform(target.position, body.body.getAngle());
+        moved.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && moved.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Returns a ground item entity with the requested code in one generated level. */
+  static int headlessGroundItemEntity(int levelId, String code) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || code == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag items = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Item.class,
+                Position.class, com.riiablo.engine.server.component.MapWrapper.class))
+            .getEntities();
+        int[] ids = items.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Item> itemMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Item.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < items.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Item component = itemMapper.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (component != null && component.item != null
+              && code.equalsIgnoreCase(component.item.code)
+              && wrapper != null && wrapper.zone == zone) {
+            result.set(entity);
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Returns one spawned monster of a concrete hcIdx in a generated level. */
+  static int headlessFindMonsterInLevel(int levelId, int monsterClass) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag monsters = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = monsters.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> mapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Monster.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < monsters.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Monster monster = mapper.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (monster != null && monster.monstats != null
+              && monster.monstats.hcIdx == monsterClass && wrapper != null
+              && wrapper.zone == zone) {
+            result.set(entity);
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Adds one deterministic quest item to a player's authoritative inventory. */
+  static boolean headlessAddQuestItem(int playerId, String code) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || code == null || code.isEmpty()
+        || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean added =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        com.riiablo.item.ItemGenerator generator = server.world.getSystem(
+            com.riiablo.item.ItemGenerator.class);
+        if (player == null || player.data == null || player.data.getItems() == null
+            || generator == null || player.data.getItems().containsItemCode(code)) return;
+        com.riiablo.item.Item item = generator.generate(code);
+        if (item == null) return;
+        item.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
+        added.set(player.data.getItems().addToInventory(item));
+        if (added.get() && server.authoritativeItems != null) {
+          server.authoritativeItems.markExternalMutation(playerId);
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && added.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Dispatches a normal monster death for a real spawned quest guardian. */
+  static boolean headlessKillMonster(int killerId, int monsterId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean killed =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+            server.world.getMapper(com.riiablo.engine.server.component.Monster.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.AttributesWrapper> attrs =
+            server.world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class);
+        if (!monsters.has(monsterId) || !attrs.has(monsterId)) return;
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = attrs.get(monsterId);
+        if (wrapper.attrs == null) return;
+        wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints).set(0f);
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.DeathEvent.obtain(killerId, monsterId));
+        killed.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && killed.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
     }
   }
 

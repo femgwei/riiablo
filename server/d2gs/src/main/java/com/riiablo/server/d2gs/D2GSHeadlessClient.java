@@ -163,6 +163,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireQuestObjectDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA3ObjectInteractionDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireEarlyObjectDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
@@ -194,6 +196,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireQuestObjectDual) {
       runQuestObjectDual(d2s, character);
+      return;
+    }
+    if (config.requireA3ObjectInteractionDual) {
+      runA3ObjectInteractionDual(d2s, character);
       return;
     }
     if (config.requireEarlyObjectDual) {
@@ -2122,6 +2128,155 @@ public final class D2GSHeadlessClient {
    * inspected, selected objects are activated, and a zone-change rebuild is
    * replayed before both quest snapshots are compared.
    */
+  /**
+   * A3 quest-object regression through the production OBJECT_INTERACTION
+   * protocol. It covers Gidbinn, all three Khalim chests, and the two-hit Orb.
+   */
+  private void runA3ObjectInteractionDual(byte[] d2s, CharacterHeader character)
+      throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A3ObjectPeer", 0x41334F42);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_FLAYERJUNGLE)
+          || !D2GS.headlessEnterLevel(b.playerId, LEVEL_FLAYERJUNGLE)) {
+        throw new IOException("A3 Gidbinn staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, LEVEL_FLAYERJUNGLE, "a3-gidbinn-interaction");
+      int gidbinnObject = D2GS.headlessQuestObjectEntity(LEVEL_FLAYERJUNGLE,
+          com.riiablo.engine.server.quest.Act3GidbinnQuest.GIDBINN_DECOY_OBJECT);
+      if (gidbinnObject == Engine.INVALID_ENTITY
+          || !D2GS.headlessMovePlayerToObject(a.playerId, gidbinnObject)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, gidbinnObject)) {
+        throw new IOException("Gidbinn decoy unavailable");
+      }
+      send(outA, questRequestPacket(201L, QuestOperation.OBJECT_INTERACTION,
+          gidbinnObject, -1));
+      QuestResult gidbinnResult = a.awaitQuestResult(inA, 201L, deadline());
+      if (gidbinnResult == null || !gidbinnResult.success()) {
+        throw new IOException("Gidbinn interaction rejected");
+      }
+      int guardian = D2GS.headlessFindMonsterInLevel(LEVEL_FLAYERJUNGLE,
+          com.riiablo.engine.server.monster.MonsterType.FETISH11);
+      if (guardian == Engine.INVALID_ENTITY) throw new IOException("Gidbinn guardian not spawned");
+      a.awaitVisibleEntity(inA, guardian, deadline());
+      b.awaitVisibleEntity(inB, guardian, deadline());
+      if (!D2GS.headlessKillMonster(a.playerId, guardian)) {
+        throw new IOException("Gidbinn guardian death callback unavailable");
+      }
+      int gidbinnItem = awaitGroundItem(LEVEL_FLAYERJUNGLE,
+          com.riiablo.engine.server.quest.Act3GidbinnQuest.GIDBINN);
+      if (gidbinnItem == Engine.INVALID_ENTITY) throw new IOException("Gidbinn drop missing");
+      a.awaitVisibleEntity(inA, gidbinnItem, deadline());
+      b.awaitVisibleEntity(inB, gidbinnItem, deadline());
+      // Exact request replay exercises QuestRequestCache without touching the
+      // now one-shot/inactive native object a second time.
+      send(outA, questRequestPacket(201L, QuestOperation.OBJECT_INTERACTION,
+          gidbinnObject, -1));
+      if (!a.awaitQuestResult(inA, 201L, deadline()).success()) {
+        throw new IOException("Gidbinn duplicate interaction rejected");
+      }
+      log("a3_gidbinn_interaction_pass", "object=" + gidbinnObject
+          + " guardian=" + guardian + " drop=" + gidbinnItem + " clients=true,true");
+
+      runKhalimChestInteraction(a, b, inA, inB, outA, outB, LEVEL_SPIDERCAVERN,
+          com.riiablo.engine.server.quest.Act3KhalimQuest.KHALIM_CHEST2,
+          com.riiablo.engine.server.quest.Act3KhalimQuest.KHALIM_EYE, 211L);
+      runKhalimChestInteraction(a, b, inA, inB, outA, outB, 91,
+          com.riiablo.engine.server.quest.Act3KhalimQuest.KHALIM_CHEST1,
+          com.riiablo.engine.server.quest.Act3KhalimQuest.KHALIM_HEART, 212L);
+      runKhalimChestInteraction(a, b, inA, inB, outA, outB, 93,
+          com.riiablo.engine.server.quest.Act3KhalimQuest.KHALIM_CHEST3,
+          com.riiablo.engine.server.quest.Act3KhalimQuest.KHALIM_BRAIN, 213L);
+
+      if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_TRAVINCAL)
+          || !D2GS.headlessEnterLevel(b.playerId, LEVEL_TRAVINCAL)
+          || !D2GS.headlessAddQuestItem(a.playerId,
+              com.riiablo.engine.server.quest.Act3KhalimQuest.KHALIM_WILL)) {
+        throw new IOException("Compelling Orb staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, LEVEL_TRAVINCAL, "a3-compelling-orb-interaction");
+      int orb = D2GS.headlessQuestObjectEntity(LEVEL_TRAVINCAL,
+          com.riiablo.engine.server.quest.Act3KhalimQuest.COMPELLING_ORB);
+      if (orb == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, orb)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, orb)) {
+        throw new IOException("Compelling Orb unavailable");
+      }
+      send(outA, questRequestPacket(221L, QuestOperation.OBJECT_INTERACTION, orb, -1));
+      if (!a.awaitQuestResult(inA, 221L, deadline()).success()) {
+        throw new IOException("Orb first hit rejected");
+      }
+      send(outA, questRequestPacket(222L, QuestOperation.OBJECT_INTERACTION, orb, -1));
+      if (!a.awaitQuestResult(inA, 222L, deadline()).success()) {
+        throw new IOException("Orb second hit rejected");
+      }
+      QuestResult orbA = requestSnapshot(a, inA, outA, 223L);
+      QuestResult orbB = requestSnapshot(b, inB, outB, 223L);
+      int khalimRecord = com.riiablo.engine.server.quest.Act3KhalimQuest.RECORD;
+      if (!hasQuestFlagAt(orbA, Riiablo.ACT3, khalimRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlagAt(orbB, Riiablo.ACT3, khalimRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+        throw new IOException("Compelling Orb completion did not propagate");
+      }
+      send(outA, questRequestPacket(224L, QuestOperation.OBJECT_INTERACTION, orb, -1));
+      if (!a.awaitQuestResult(inA, 224L, deadline()).success()) {
+        throw new IOException("Orb duplicate rejected");
+      }
+      log("a3_object_interaction_dual_pass", "gidbinn=true khalimChests=3 orb=true clients=true,true");
+    }
+  }
+
+  private void runKhalimChestInteraction(D2GSHeadlessClient a, D2GSHeadlessClient b,
+      DataInputStream inA, DataInputStream inB, OutputStream outA, OutputStream outB,
+      int level, int classId, String itemCode, long requestId) throws Exception {
+    if (!D2GS.headlessEnterLevel(a.playerId, level)
+        || !D2GS.headlessEnterLevel(b.playerId, level)) {
+      throw new IOException("Khalim chest staging unavailable: level=" + level);
+    }
+    awaitTwoQuestLevels(a, b, inA, inB, level, "khalim-chest-" + classId);
+    int chest = D2GS.headlessQuestObjectEntity(level, classId);
+    if (chest == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, chest)
+        || !D2GS.headlessMovePlayerToObject(b.playerId, chest)) {
+      throw new IOException("Khalim chest unavailable: class=" + classId);
+    }
+    send(outA, questRequestPacket(requestId, QuestOperation.OBJECT_INTERACTION, chest, -1));
+    if (!a.awaitQuestResult(inA, requestId, deadline()).success()) {
+      throw new IOException("Khalim chest interaction rejected: class=" + classId);
+    }
+    int item = awaitGroundItem(level, itemCode);
+    if (item == Engine.INVALID_ENTITY) {
+      throw new IOException("Khalim relic missing: class=" + classId + " code=" + itemCode);
+    }
+    a.awaitVisibleEntity(inA, item, deadline());
+    b.awaitVisibleEntity(inB, item, deadline());
+    send(outA, questRequestPacket(requestId, QuestOperation.OBJECT_INTERACTION,
+        chest, -1));
+    if (!a.awaitQuestResult(inA, requestId, deadline()).success()) {
+      throw new IOException("Khalim chest duplicate rejected: class=" + classId);
+    }
+    log("khalim_chest_interaction_pass", "level=" + level + " class=" + classId
+        + " code=" + itemCode + " chest=" + chest + " item=" + item);
+  }
+
+  private int awaitGroundItem(int level, String code) throws Exception {
+    long end = deadline();
+    do {
+      int entity = D2GS.headlessGroundItemEntity(level, code);
+      if (entity != Engine.INVALID_ENTITY) return entity;
+      Thread.sleep(20L);
+    } while (System.currentTimeMillis() < end);
+    return Engine.INVALID_ENTITY;
+  }
+
   private void runEarlyObjectDual(byte[] d2s, CharacterHeader character) throws Exception {
     D2GSHeadlessClient a = new D2GSHeadlessClient(config);
     D2GSHeadlessClient b = new D2GSHeadlessClient(config);
@@ -5170,6 +5325,7 @@ public final class D2GSHeadlessClient {
     boolean requireBaalWaveDual;
     boolean requireQuestWarpDual;
     boolean requireQuestObjectDual;
+    boolean requireA3ObjectInteractionDual;
     boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
@@ -5214,6 +5370,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
+        else if ("--require-a3-object-interaction-dual".equals(arg)) config.requireA3ObjectInteractionDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
@@ -5260,12 +5417,14 @@ public final class D2GSHeadlessClient {
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
-          && !config.requireQuestObjectDual && !config.requireEarlyObjectDual
+          && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
+          && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
-          && !config.requireQuestObjectDual && !config.requireEarlyObjectDual
+          && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
+          && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -5302,6 +5461,7 @@ public final class D2GSHeadlessClient {
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
           + " [--require-quest-warp-dual] [--require-quest-object-dual]"
+          + " [--require-a3-object-interaction-dual]"
           + " [--require-early-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"
           + " [--require-countess-quest]"

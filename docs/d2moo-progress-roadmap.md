@@ -3517,3 +3517,29 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
   数量与重建前后 `Object.mode/NativeObjectState`；若 A1-A3 及 A2Q6/A3Q6 全部通过，
   下一项转为 A2Q6 七墓 Arcane Symbol 的实际 582 预设生成/出口拼接回归，以及
   A3 其他任务对象的掉落与交互可见性。
+
+### 2026-09-12 A3 任务对象生产交互双客户端回归（本轮完成）
+
+- [x] 新增 `--require-a3-object-interaction-dual`，通过真实 Quest 网络请求走完
+  `validateQuestObject → ObjectInteractor → QuestObjectInteractionEvent → Act3QuestSystem`，
+  不再用 `headlessActivateQuestObjects` 直接改对象状态。
+- [x] 增加 Gidbinn decoy → guardian 生成 → `DeathEvent` → `g33` 地面掉落链，两个客户端
+  均等待守卫和掉落实体可见，并验证重复交互不会产生第二份掉落。
+- [x] 覆盖三种 Khalim 宝箱（`qey`/`qhr`/`qbr`）的原生 class 映射、地面掉落和双端可见性，
+  每个宝箱重复请求均保持幂等。
+- [x] 覆盖 Compelling Orb 两次命中、`qf2` 消耗、A3Q3 `PRIMARY_GOAL_DONE` 双端快照同步，
+  并验证第三次请求不会重复完成任务。
+- [x] 新增仅供离屏夹具使用的对象移动、怪物/物品查询、任务物品注入和真实怪物死亡桥接；
+  未新增 FlatBuffer 字段或生成网络文件。
+- [x] 通过 `:core:test` 定向任务/地图回归、`:server:d2gs:compileJava` 和 `git diff --check`；
+  当前资源虽含 1.10F MPQ，但缺少可供 A3 D2MOO 导出链读取的完整 DS1/JungleDefs，尚未宣称
+  A3 真实对象运行通过。
+
+补充验证：本机虽有 1.10F MPQ，但 `headlessA3ObjectInteractionDual` 在跨 Act 加载后仍找不到
+Gidbinn decoy；日志显示 `DRLGOUTJUNG_BuildJungle: pJungleDefs is null` 及 DS1 预设读取失败。
+因此本轮不能把 A3 真实对象链标记为运行通过，缺口是 A3 D2MOO 导出/DS1 资源装载，不是网络
+交互入口本身。已保留失败门槛，便于补齐资源后直接复跑。
+
+当前下一项：在完整 1.10f MPQ 环境执行 `--require-a3-object-interaction-dual`，确认真实
+DS1 预设中 Gidbinn/三座 Khalim 宝箱/Compelling Orb 的实体房间与双端可见性；通过后继续
+A1/A2 特殊宝箱、祭坛、任务门的生产交互和掉落幂等覆盖。
