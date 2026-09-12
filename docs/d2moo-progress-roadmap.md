@@ -2764,3 +2764,24 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：接入 A5Q6 Baal 主链（Worldstone Keep/Throne of Destruction、五波仆从、
   Baal 击杀、Worldstone Chamber 入口和 Act V 结束状态）。
+
+### 2026-09-12 Act V A5Q6 Baal / Eve of Destruction（本轮完成基础任务闭环）
+
+- [x] 新增 `Act5BaalQuest`，使用 A5Q6 record `6`，沿用当前工程已有的
+  `THEWORLDSTONEKEEPLEV1/2` 与 `WORLDSTONECHAMBER` LevelId 别名，进入 Worldstone
+  区域写入 `STARTED + ENTERED_AREA`。
+- [x] 接入 Baal 识别（原生 `monstats` hcIdx `544` 或名称解析）；Throne 区域缺少
+  原生预设时补生成一次，避免测试地图完全没有任务首领。
+- [x] Baal 击杀后按 D2MOO 直接完成任务，不经过 NPC 二次领取；为当前 Act V 玩家和
+  同队玩家同步 `PRIMARY_GOAL_DONE + REWARD_GRANTED + COMPLETED_NOW`，重复死亡事件
+  保持幂等。
+- [x] 新增 A5Q6 状态测试；通过 `Act5BaalQuestTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava`。
+- [ ] 当前工程的 Worldstone Keep/Throne/Worldstone Chamber 主地图仍缺少独立的原生
+  Level/LvlPrest 导出；五波 Baal 仆从、Baal's Portal/Last Portal、Tyrael 结束传送
+  和 D2MOO 的经验/金币奖励也尚未完全接入。由于现有 `D2LevelIds` 对 128–136 区间
+  存在历史别名，本轮没有直接重排全局 LevelId，避免破坏已完成 Act V 地图链。
+
+当前下一项：优先补齐 A5Q6 Worldstone Keep → Throne → Worldstone Chamber 的原生
+Level/LvlPrest/Warp 拓扑，再接入五波仆从和 Baal/结束传送对象；完成后回补 A5Q5
+远古人复位动画与原生经验奖励。

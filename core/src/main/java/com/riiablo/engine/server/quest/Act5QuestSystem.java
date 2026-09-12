@@ -27,6 +27,7 @@ import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -68,6 +69,8 @@ public class Act5QuestSystem extends PassiveSystem {
   private final IntIntMap ancientStatueEntities = new IntIntMap();
   private final IntSet spawnedAncientEntities = new IntSet();
   private final IntSet killedAncientEntities = new IntSet();
+  private final IntSet spawnedBaalLevels = new IntSet();
+  private final IntSet killedBaalEntities = new IntSet();
   private final IntSet rescuedCages = new IntSet();
 
   @Override
@@ -103,6 +106,13 @@ public class Act5QuestSystem extends PassiveSystem {
       if (!hasNihlathakPrerequisite(player.data)) return;
       updateAncientsRecord(player.data, Act5AncientsQuest::enterArea,
           "entered-arreat-summit");
+    }
+    if (isBaalArea(event.zone.level.Id)) {
+      if (!hasAncientsPrerequisite(player.data)) return;
+      updateBaalRecord(player.data, Act5BaalQuest::enterArea, "entered-worldstone-area");
+      if (event.zone.level.Id == Act5BaalQuest.THRONE_OF_DESTRUCTION) {
+        spawnBaalIfNeeded(event.entityId, event.zone.level.Id);
+      }
     }
   }
 
@@ -178,6 +188,12 @@ public class Act5QuestSystem extends PassiveSystem {
     if (isAncient(event.victim) && isAncientSummit(levelId(event.victim))
         && killedAncientEntities.add(event.victim)) {
       onAncientKilled(event.victim);
+      return;
+    }
+    if (isBaal(event.victim) && isBaalArea(levelId(event.victim))
+        && killedBaalEntities.add(event.victim)) {
+      completeBaalForPlayers();
+      log.info("[A5Q6] Baal defeated: victim={} killer={}", event.victim, event.killer);
       return;
     }
     if (isNihlathak(event.victim)
@@ -439,6 +455,78 @@ public class Act5QuestSystem extends PassiveSystem {
     }
   }
 
+  private void spawnBaalIfNeeded(int playerId, int levelId) {
+    if (spawnedBaalLevels.contains(levelId) || factory == null || monstersByZone == null) return;
+    IntBag entities = monstersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      if (isBaal(id) && levelId(id) == levelId) {
+        spawnedBaalLevels.add(levelId);
+        return;
+      }
+    }
+    MonStats.Entry stats = resolveBaalStats();
+    Position origin = mPosition.has(playerId) ? mPosition.get(playerId) : null;
+    if (stats == null || origin == null) return;
+    int entity = factory.createMonster(stats, origin.position.x + 3f, origin.position.y);
+    if (entity >= 0) {
+      spawnedBaalLevels.add(levelId);
+      log.info("[A5Q6] Baal spawned: player={} entity={} level={}", playerId, entity, levelId);
+    }
+  }
+
+  private boolean isBaal(int entityId) {
+    if (!mMonster.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    return isBaal(monster == null ? null : monster.monstats);
+  }
+
+  private boolean isBaal(MonStats.Entry stats) {
+    if (stats == null) return false;
+    return stats.hcIdx == MonsterType.BAALCRAB
+        || containsName(stats.Id, "baal") || containsName(stats.NameStr, "baal");
+  }
+
+  private static MonStats.Entry resolveBaalStats() {
+    if (Riiablo.files == null || Riiablo.files.monstats == null) return null;
+    MonStats.Entry stats = Riiablo.files.monstats.get("BaalCrab");
+    if (stats != null) return stats;
+    stats = Riiablo.files.monstats.get("Baal");
+    if (stats != null) return stats;
+    for (MonStats.Entry entry : Riiablo.files.monstats) {
+      if (entry != null && (entry.hcIdx == MonsterType.BAALCRAB
+          || containsName(entry.Id, "baal"))) return entry;
+    }
+    return null;
+  }
+
+  private void completeBaalForPlayers() {
+    if (playersByZone == null) return;
+    IntSet parties = new IntSet();
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      Player player = mPlayer.get(id);
+      if (player == null || player.data == null || !isAct5Level(levelId(id))) continue;
+      updateBaalRecord(player.data, Act5BaalQuest::complete, "baal-defeated");
+      if (partyManager != null) {
+        short party = partyManager.getPartyId(id);
+        if (party != Party.INVALID_ID) parties.add(party);
+      }
+    }
+    if (partyManager == null) return;
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      Player player = mPlayer.get(id);
+      if (player == null || player.data == null || !isAct5Level(levelId(id))) continue;
+      if (parties.contains(partyManager.getPartyId(id))) {
+        updateBaalRecord(player.data, Act5BaalQuest::complete, "baal-party-sync");
+      }
+    }
+  }
+
   private MonStats.Entry resolveAncientStats(int superUniqueId, int ordinal) {
     SuperUniques.Entry unique = resolveAncientSuperUnique(superUniqueId);
     if (unique != null && unique.MonClass != null && Riiablo.files != null
@@ -600,6 +688,12 @@ public class Act5QuestSystem extends PassiveSystem {
         || levelId == Act5AncientsQuest.ARREAT_SUMMIT;
   }
 
+  private boolean isBaalArea(int levelId) {
+    return levelId == Act5BaalQuest.WORLDSTONE_KEEP_1
+        || levelId == Act5BaalQuest.THRONE_OF_DESTRUCTION
+        || levelId == Act5BaalQuest.WORLDSTONE_CHAMBER;
+  }
+
   private short record(CharData data) {
     return data.getQuests(Riiablo.ACT5)[Act5ShenkQuest.RECORD];
   }
@@ -620,6 +714,10 @@ public class Act5QuestSystem extends PassiveSystem {
     return data.getQuests(Riiablo.ACT5)[Act5AncientsQuest.RECORD];
   }
 
+  private short baalRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD];
+  }
+
   private boolean hasPrisonPrerequisite(CharData data) {
     short record = prisonRecord(data);
     return Act5PrisonQuest.isFinished(record)
@@ -629,6 +727,12 @@ public class Act5QuestSystem extends PassiveSystem {
   private boolean hasNihlathakPrerequisite(CharData data) {
     short record = nihlathakRecord(data);
     return Act5NihlathakQuest.isFinished(record)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+  }
+
+  private boolean hasAncientsPrerequisite(CharData data) {
+    short record = ancientsRecord(data);
+    return Act5AncientsQuest.isFinished(record)
         || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
   }
 
@@ -706,6 +810,18 @@ public class Act5QuestSystem extends PassiveSystem {
     data.getQuests(Riiablo.ACT5)[Act5AncientsQuest.RECORD] = next;
     if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
     log.info("[A5Q5] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private void updateBaalRecord(CharData data,
+      java.util.function.UnaryOperator<Short> transition, String reason) {
+    short previous = baalRecord(data);
+    short next = transition.apply(previous);
+    if (previous == next) return;
+    data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD] = next;
+    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    log.info("[A5Q6] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
