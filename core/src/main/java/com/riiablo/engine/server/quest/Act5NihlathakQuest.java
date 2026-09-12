@@ -38,6 +38,15 @@ public final class Act5NihlathakQuest {
         && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
   }
 
+  /** D2MOO opens the permanent Drehya portal after the quest has started and
+   * keeps it available across a reconnect until the reward is resolved. */
+  public static boolean shouldOpenPortal(short record, boolean prisonPrerequisite) {
+    return prisonPrerequisite
+        && NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
   public static short claimReward(short record) {
     if (!canClaimReward(record)) return record;
     record = NativeQuestRecord.clear(record, NativeQuestRecord.REWARD_PENDING);

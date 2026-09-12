@@ -3014,3 +3014,20 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 当前下一项：补齐 A5Q4 Drehya→Nihlathak Temple 的原生动态传送门和城镇状态循环，
 并在 Nihlathak Temple/Halls of Vaught 地图重建时恢复入口对象与目标 Warp；随后继续
 核对 A5Q5/A5Q6 的对象动画和结束传送。
+
+### 2026-09-12 Act V A5Q4 Drehya → Nihlathak Temple 动态传送门（本轮完成）
+
+- [x] 对照 D2MOO `A5Q4_Callback11_ScrollMessage` 与 `Callback02_NpcDeactivate`，
+  Drehya 消息 `20137` 在 A5Q3 前置满足时写入 A5Q4 `STARTED`，并从 Drehya 位置
+  `(x+10,y+5)` 创建 Object `59` 视觉和目标为 Nihlathak Temple 的 QuestWarp。
+- [x] 以 `QuestWarp.encode(NIHLATHAK_TEMPLE)` 作为幂等键；同一城镇已有目标 Warp
+  时不重复创建视觉/Warp，避免重复对话或多人同时交互生成多个入口。
+- [x] 固定逻辑帧按持久化 A5Q4 记录重建入口：任务已开始且未处于
+  `REWARD_PENDING/REWARD_GRANTED` 时，即使服务器重连或 Harrogath/NPC 实体晚于玩家
+  生成，也会重新确保传送门存在。进入 Nihlathak Temple 后继续沿用现有区域入口和
+  Halls of Vaught 目标 Warp，不改变地图拓扑。
+- [x] 新增 A5Q4 传送门恢复判定测试；通过 `Act5NihlathakQuestTest`、
+  `NativeQuestObjectResolverTest`、`:core:compileJava`、`:server:d2gs:compileJava`。
+
+当前下一项：继续核对 A5Q4 Nihlathak Temple/Halls of Vaught 的原生入口碰撞和重连后
+  目标区域一致性，再处理 A5Q5 远古人对象动画/复位与 A5Q6 结束传送的剩余差异。

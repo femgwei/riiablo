@@ -31,4 +31,16 @@ class Act5NihlathakQuestTest {
     assertTrue(Act5NihlathakQuest.claimReward(record) == record);
     assertTrue(Act5NihlathakQuest.start(record) == record);
   }
+
+  @Test
+  void startedQuestRestoresDrehyaPortalUntilReward() {
+    assertFalse(Act5NihlathakQuest.shouldOpenPortal((short) 0, true));
+    short started = Act5NihlathakQuest.start((short) 0);
+    assertTrue(Act5NihlathakQuest.shouldOpenPortal(started, true));
+    assertFalse(Act5NihlathakQuest.shouldOpenPortal(started, false));
+    short pending = Act5NihlathakQuest.complete(started);
+    assertFalse(Act5NihlathakQuest.shouldOpenPortal(pending, true));
+    assertFalse(Act5NihlathakQuest.shouldOpenPortal(
+        Act5NihlathakQuest.claimReward(pending), true));
+  }
 }

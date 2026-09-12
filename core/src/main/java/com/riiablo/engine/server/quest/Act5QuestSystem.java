@@ -124,6 +124,7 @@ public class Act5QuestSystem extends BaseSystem {
     // activation), so keep the record/object reconciliation in the fixed
     // simulation phase as well as the zone-change callback.
     rebuildAct5QuestObjectState();
+    rebuildNihlathakPortalState();
   }
 
   @Subscribe
@@ -378,6 +379,7 @@ public class Act5QuestSystem extends BaseSystem {
     if (event.messageIndex == Act5NihlathakQuest.MESSAGE_DREHYA_START) {
       if (hasPrisonPrerequisite(player.data)) {
         updateNihlathakRecord(player.data, Act5NihlathakQuest::start, "drehya-nihlathak-start");
+        ensureNihlathakPortal(event.npcId);
       }
       return;
     }
@@ -387,6 +389,73 @@ public class Act5QuestSystem extends BaseSystem {
     updateNihlathakRecord(player.data, Act5NihlathakQuest::claimReward,
         "drehya-nihlathak-reward");
     log.info("[A5Q4] Drehya reward claimed: player={}", event.entityId);
+  }
+
+  /** Recreates the A5Q4 town portal after a reconnect or map/object rebuild.
+   * D2MOO stores the quest record, while the visual/Warp entities themselves
+   * are transient; the destination Warp is therefore the idempotency key. */
+  private void rebuildNihlathakPortalState() {
+    if (playersByZone == null || monstersByZone == null) return;
+    IntBag players = playersByZone.getEntities();
+    int[] playerIds = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = playerIds[i];
+      if (!mPlayer.has(playerId)) continue;
+      Player player = mPlayer.get(playerId);
+      if (player == null || player.data == null
+          || !Act5NihlathakQuest.shouldOpenPortal(
+              nihlathakRecord(player.data), hasPrisonPrerequisite(player.data))) continue;
+      int drehya = findDrehyaInHarrogath();
+      if (drehya != Engine.INVALID_ENTITY) {
+        ensureNihlathakPortal(drehya);
+        return;
+      }
+    }
+  }
+
+  private int findDrehyaInHarrogath() {
+    if (monstersByZone == null) return Engine.INVALID_ENTITY;
+    IntBag monsters = monstersByZone.getEntities();
+    int[] ids = monsters.getData();
+    for (int i = 0; i < monsters.size(); i++) {
+      int id = ids[i];
+      if (levelId(id) == D2LevelIds.LEVEL_HARROGATH && isDrehya(
+          mMonster.get(id) == null ? null : mMonster.get(id).monstats)) return id;
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  private boolean ensureNihlathakPortal(int drehyaId) {
+    if (factory == null || drehyaId < 0 || !mPosition.has(drehyaId)) return false;
+    Map.Zone town = null;
+    if (mMapWrapper.has(drehyaId)) {
+      MapWrapper wrapper = mMapWrapper.get(drehyaId);
+      if (wrapper != null && wrapper.zone != null && wrapper.zone.level != null
+          && wrapper.zone.level.Id == D2LevelIds.LEVEL_HARROGATH) town = wrapper.zone;
+    }
+    if (town == null) town = findZone(D2LevelIds.LEVEL_HARROGATH);
+    if (town == null) return false;
+    int questWarpIndex = QuestWarp.encode(Act5NihlathakQuest.NIHLATHAK_TEMPLE);
+    if (town.findWarp(questWarpIndex) != Engine.INVALID_ENTITY) return true;
+
+    Position source = mPosition.get(drehyaId);
+    float portalX = source.position.x + 10f;
+    float portalY = source.position.y + 5f;
+    int visual = factory.createStaticObjectByClassId(
+        NativeQuestObjectResolver.TOWN_PORTAL, portalX, portalY);
+    int warp = factory.createQuestWarp(Act5NihlathakQuest.NIHLATHAK_TEMPLE,
+        portalX, portalY);
+    if (warp == Engine.INVALID_ENTITY) {
+      if (visual != Engine.INVALID_ENTITY && world != null) world.delete(visual);
+      log.error("[A5Q4] Nihlathak portal creation failed: drehya={} destination={}",
+          drehyaId, Act5NihlathakQuest.NIHLATHAK_TEMPLE);
+      return false;
+    }
+    town.addWarp(warp);
+    log.info("[A5Q4] Nihlathak portal opened: drehya={} visual={} warp={} destination={} "
+        + "position=({}, {})", drehyaId, visual, warp,
+        Act5NihlathakQuest.NIHLATHAK_TEMPLE, portalX, portalY);
+    return true;
   }
 
   private void onQualKehkMessage(NpcQuestMessageEvent event, Player player) {
