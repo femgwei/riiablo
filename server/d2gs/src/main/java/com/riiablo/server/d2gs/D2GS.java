@@ -802,6 +802,108 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /**
+   * Test-only Room/ECS rebuild fixture for a native quest portal. The source
+   * Warp is removed; A3's preset gate is reset, while dynamic A4/A5 portal
+   * visuals are removed. One authoritative world process must restore the
+   * visual/Warp pair from quest records.
+   *
+   * @return {@code [warpEntity, visualCount, openGateCount]}, or an empty array
+   * when the requested source zone is unavailable.
+   */
+  static int[] headlessRebuildQuestPortal(int sourceLevelId, int destinationLevelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return new int[0];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(sourceLevelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        int questWarpIndex = com.riiablo.engine.server.quest.QuestWarp.encode(destinationLevelId);
+        com.artemis.utils.IntBag warps = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Warp.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] warpIds = warps.getData();
+        for (int i = 0; i < warps.size(); i++) {
+          int entity = warpIds[i];
+          com.riiablo.engine.server.component.Warp warp = server.world
+              .getMapper(com.riiablo.engine.server.component.Warp.class).get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+          if (warp != null && wrapper != null && wrapper.zone == zone
+              && warp.index == questWarpIndex
+              && server.world.getEntityManager().isActive(entity)) server.world.delete(entity);
+        }
+
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] objectIds = objects.getData();
+        boolean resetA3Gate = sourceLevelId
+            == com.riiablo.engine.server.quest.Act3MephistoQuest.MEPHISTO_LEVEL;
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = objectIds[i];
+          com.riiablo.engine.server.component.Object object = server.world
+              .getMapper(com.riiablo.engine.server.component.Object.class).get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+          if (object == null || wrapper == null || wrapper.zone != zone || object.base == null) continue;
+          if (resetA3Gate && object.base.Id
+              == com.riiablo.engine.server.quest.Act3MephistoQuest.HELL_GATE_PORTAL) {
+            com.riiablo.engine.server.component.NativeObjectState state = server.world
+                .getMapper(com.riiablo.engine.server.component.NativeObjectState.class).get(entity);
+            if (state != null) {
+              state.persistOpened(false);
+              state.persistActivated(false);
+              state.persistMode(com.riiablo.engine.Engine.Object.MODE_NU);
+            }
+            object.mode = com.riiablo.engine.Engine.Object.MODE_NU;
+            object.stateFlags &= ~com.riiablo.engine.server.component.Object.STATE_OPENED;
+          } else if (object.base.Id == 566
+              || object.base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL) {
+            if (server.world.getEntityManager().isActive(entity)) server.world.delete(entity);
+          }
+        }
+        server.world.process();
+
+        int warpEntity = zone.findWarp(questWarpIndex);
+        int visuals = 0;
+        int openGates = 0;
+        com.artemis.utils.IntBag rebuiltObjects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] rebuiltIds = rebuiltObjects.getData();
+        for (int i = 0; i < rebuiltObjects.size(); i++) {
+          int entity = rebuiltIds[i];
+          com.riiablo.engine.server.component.Object object = server.world
+              .getMapper(com.riiablo.engine.server.component.Object.class).get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+          if (object == null || wrapper == null || wrapper.zone != zone || object.base == null) continue;
+          if (object.base.Id == 566
+              || object.base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL) visuals++;
+          if (object.base.Id == com.riiablo.engine.server.quest.Act3MephistoQuest.HELL_GATE_PORTAL
+              && object.mode == com.riiablo.engine.Engine.Object.MODE_ON) openGates++;
+        }
+        result.set(new int[] {warpEntity, visuals, openGates});
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[0];
+    }
+  }
+
   /** Returns level, RoomEx, zone consistency and walk-collision state after a Warp. */
   static int[] headlessWarpState(int playerId) {
     D2GS server = activeHeadlessInstance;

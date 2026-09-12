@@ -2013,6 +2013,12 @@ public final class D2GSHeadlessClient {
           com.riiablo.engine.server.quest.Act3MephistoQuest.RECORD, a3Complete)) {
         throw new IOException("A3Q6 completion fixture unavailable");
       }
+      int[] a3Rebuilt = D2GS.headlessRebuildQuestPortal(a3Source, a3Destination);
+      if (a3Rebuilt.length < 3 || a3Rebuilt[0] == Engine.INVALID_ENTITY || a3Rebuilt[2] < 1) {
+        throw new IOException("A3 Hell Gate did not rebuild visual/Warp: "
+            + java.util.Arrays.toString(a3Rebuilt));
+      }
+      a3Warp = a3Rebuilt[0];
       send(outA, questRequestPacket(101L, QuestOperation.WARP_INTERACTION, a3Warp, -1));
       QuestResult a3Accepted = a.awaitQuestResult(inA, 101L, deadline());
       awaitLevel(a, inA, a3Destination, deadline());
@@ -2051,6 +2057,12 @@ public final class D2GSHeadlessClient {
           com.riiablo.engine.server.quest.Act4DiabloQuest.RECORD, a4Complete)) {
         throw new IOException("A4Q2 completion fixture unavailable");
       }
+      int[] a4Rebuilt = D2GS.headlessRebuildQuestPortal(a4Source, a4Destination);
+      if (a4Rebuilt.length < 3 || a4Rebuilt[0] == Engine.INVALID_ENTITY || a4Rebuilt[1] < 1) {
+        throw new IOException("A4 Diablo portal did not rebuild visual/Warp: "
+            + java.util.Arrays.toString(a4Rebuilt));
+      }
+      a4Warp = a4Rebuilt[0];
       send(outB, questRequestPacket(201L, QuestOperation.WARP_INTERACTION, a4Warp, -1));
       QuestResult a4Accepted = b.awaitQuestResult(inB, 201L, deadline());
       awaitLevel(b, inB, a4Destination, deadline());
@@ -2095,6 +2107,12 @@ public final class D2GSHeadlessClient {
               nihlathakRecord, nihlathakStarted)) {
         throw new IOException("A5Q4 completion fixture unavailable");
       }
+      int[] a5Rebuilt = D2GS.headlessRebuildQuestPortal(a5Source, a5Destination);
+      if (a5Rebuilt.length < 3 || a5Rebuilt[0] == Engine.INVALID_ENTITY || a5Rebuilt[1] < 1) {
+        throw new IOException("A5 Nihlathak portal did not rebuild visual/Warp: "
+            + java.util.Arrays.toString(a5Rebuilt));
+      }
+      a5Warp = a5Rebuilt[0];
       send(outB, questRequestPacket(301L, QuestOperation.WARP_INTERACTION, a5Warp, -1));
       QuestResult a5Accepted = b.awaitQuestResult(inB, 301L, deadline());
       awaitLevel(b, inB, a5Destination, deadline());
