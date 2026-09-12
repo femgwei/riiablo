@@ -8,6 +8,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
+import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
 
@@ -25,11 +26,12 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
   private static final boolean DEBUG_BUILD = DEBUG && false;
 
   // D2MOD: gAct4OutdoorDrlgLink 数组
-  private static final int LEVEL_THEPANDEMONIUMFORTRESS = 103;
-  private static final int LEVEL_OUTERSTEPPES = 104;
-  private static final int LEVEL_PLAINSOFDESPAIR = 105;
-  private static final int LEVEL_CITYOFTHEDAMNED = 106;
-  private static final int LEVEL_CHAOSSANCTUM = 107;
+  static final int LEVEL_THEPANDEMONIUMFORTRESS = D2LevelIds.LEVEL_THEPANDEMONIUMFORTRESS;
+  static final int LEVEL_OUTERSTEPPES = D2LevelIds.LEVEL_OUTERSTEPPES;
+  static final int LEVEL_PLAINSOFDESPAIR = D2LevelIds.LEVEL_PLAINSOFDESPAIR;
+  static final int LEVEL_CITYOFTHEDAMNED = D2LevelIds.LEVEL_CITYOFTHEDAMNED;
+  static final int LEVEL_RIVEROFFLAME = D2LevelIds.LEVEL_RIVEROFFLAME;
+  static final int LEVEL_CHAOSSANCTUM = D2LevelIds.LEVEL_CHAOSSANCTUM;
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -70,6 +72,7 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
       new BaseMapBuilderD2MOD.LevelLink(LEVEL_OUTERSTEPPES, 0, -1),            // 1
       new BaseMapBuilderD2MOD.LevelLink(LEVEL_PLAINSOFDESPAIR, 1, -1),        // 2
       new BaseMapBuilderD2MOD.LevelLink(LEVEL_CITYOFTHEDAMNED, 2, -1),        // 3
+      new BaseMapBuilderD2MOD.LevelLink(LEVEL_RIVEROFFLAME, 3, -1),             // 4
       null // 结束标记
     };
 

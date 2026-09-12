@@ -2569,5 +2569,18 @@ Asheara 佣兵奖励和队伍状态传播；随后处理 A3Q3 Khalim's Will，�
   `:core:compileJava`、`:server:d2gs:compileJava` 通过。
 
 当前下一项：核对 A3Q3 与现有方块网络入口的接线（将 `Act3KhalimWillTransmute` 接入实际
-  `CUBE_TRANSMUTE` 请求），并完成 Travincal 黑色球体的多人状态传播；随后开始第四章
-  地图主链与 A4Q1 Izual 任务。
+`CUBE_TRANSMUTE` 请求），并完成 Travincal 黑色球体的多人状态传播；随后开始第四章
+地图主链与 A4Q1 Izual 任务。
+
+### 2026-09-12 Act IV 地图主链 LevelId 校准（本轮完成）
+
+- [x] 将 `Act4MapBuilderD2MOD` 的硬编码 LevelId 改为 D2MOO `D2LevelIds`：Pandemonium
+  Fortress 103、Outer Steppes 106、Plains of Despair 107、City of the Damned 108、
+  River of Flame 109、Chaos Sanctuary 110。
+- [x] 把 River of Flame 补入 Act IV 室外主链；此前 104–107 偏移会导致加载到错误区域，
+  并使 Izual/Chaos 入口与实际 1.10f 地图不一致。
+- 验证：`Act4MapBuilderD2MODTest`、`:core:compileJava`、`:server:d2gs:compileJava`
+  通过；未修改战斗、技能或物品掉落逻辑。
+
+当前下一项：接入 A3Q3 实际 `CUBE_TRANSMUTE` 请求和多人球体状态传播，然后实现第四章
+A4Q1 Izual 的 Plains of Despair 生成、击杀奖励（2 技能点）及队伍记录同步。
