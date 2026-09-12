@@ -23,4 +23,14 @@ class Act4DiabloQuestTest {
     assertTrue(Act4DiabloQuest.LAST_SEAL == 396);
     assertTrue(Act4DiabloQuest.CHAOS_SANCTUARY == 110);
   }
+
+  @Test
+  void enteringChaosSetsStartedAndEnteredAreaWithoutCompletingQuest() {
+    short record = Act4DiabloQuest.enterArea((short) 0);
+    assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.STARTED));
+    assertTrue(NativeQuestRecord.has(record, NativeQuestRecord.ENTERED_AREA));
+    assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED));
+    assertTrue(Act4DiabloQuest.shouldRestoreCompletedState(
+        Act4DiabloQuest.complete(record)));
+  }
 }

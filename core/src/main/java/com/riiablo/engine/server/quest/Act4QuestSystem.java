@@ -83,11 +83,20 @@ public class Act4QuestSystem extends PassiveSystem {
     if (event == null || event.zone == null || event.zone.level == null
         || !mPlayer.has(event.entityId)) return;
     Player player = mPlayer.get(event.entityId);
-    if (player == null || player.data == null || event.zone.level.Id != D2LevelIds.LEVEL_PLAINSOFDESPAIR) return;
-    updateRecord(player.data, Act4IzualQuest::start, "entered-plains-of-despair");
-    spawnIzualIfNeeded(event.entityId, event.zone.level.Id);
+    if (player == null || player.data == null) return;
+    if (event.zone.level.Id == D2LevelIds.LEVEL_PLAINSOFDESPAIR) {
+      updateRecord(player.data, Act4IzualQuest::start, "entered-plains-of-despair");
+      spawnIzualIfNeeded(event.entityId, event.zone.level.Id);
+    }
+    // The previous implementation nested this branch under the Plains of
+    // Despair guard, so the Diablo quest never recorded entering Chaos
+    // Sanctuary.  Native A4Q2 advances its level-change state independently.
     if (event.zone.level.Id == Act4DiabloQuest.CHAOS_SANCTUARY) {
-      updateDiabloRecord(player.data);
+      updateDiabloRecord(player.data, Act4DiabloQuest::enterArea,
+          "entered-chaos-sanctuary");
+    } else if (isAct4Level(event.zone.level.Id)) {
+      updateDiabloRecord(player.data, Act4DiabloQuest::start,
+          "entered-act4-combat-area");
     }
   }
 
@@ -447,13 +456,18 @@ public class Act4QuestSystem extends PassiveSystem {
   }
 
   private void updateDiabloRecord(CharData data) {
+    updateDiabloRecord(data, Act4DiabloQuest::start, "entered-chaos-sanctuary");
+  }
+
+  private void updateDiabloRecord(CharData data,
+      java.util.function.UnaryOperator<Short> transition, String reason) {
     short previous = diabloRecord(data);
-    short next = Act4DiabloQuest.start(previous);
+    short next = transition.apply(previous);
     if (next == previous) return;
     data.getQuests(Riiablo.ACT4)[Act4DiabloQuest.RECORD] = next;
     persist(data);
-    log.info("[A4Q2] Quest record changed: character={} reason=entered-chaos-sanctuary previous=0x{} next=0x{}",
-        data.name, Integer.toHexString(Short.toUnsignedInt(previous)),
+    log.info("[A4Q2] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
 

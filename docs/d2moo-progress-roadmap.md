@@ -2962,3 +2962,20 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：继续核对第三章 A3Q6 的 Hell Gate/Bridge 对象预设坐标与碰撞恢复，随后
 处理第四章 Diablo progression、Chaos Sanctuary 封印/红门重连和 Act IV→V 过渡。
+
+### 2026-09-12 Act IV Diablo 进入状态与重连基线修复（本轮完成）
+
+- [x] 修复 `Act4QuestSystem.onZoneChanged` 的条件嵌套错误：此前 Chaos Sanctuary
+  分支位于 Plains of Despair 的提前返回之后，A4Q2 永远不会写入 `ENTERED_AREA`。
+  现在进入第四章战斗区域会写入 `STARTED`，进入 Chaos Sanctuary 会原子写入
+  `STARTED + ENTERED_AREA`。
+- [x] 新增 `Act4DiabloQuest.enterArea` 与完成状态恢复判定，保存的 pending/完成记录
+  可作为重连后的 Chaos 任务状态基线，不依赖本次连接是否曾触发过地图事件。
+- [x] 保留原有 Chaos 封印、Diablo 击杀和 Tyrael→Act V 传送逻辑，不改变现有
+  `REWARD_PENDING`→Tyrael 领取流程；本轮只修正原生 level-change 状态，避免误把
+  Diablo 击杀奖励改成错误的即时领取。
+- [x] 新增 A4Q2 进入/恢复测试；通过 `Act4DiabloQuestTest`、`Act4IzualQuestTest`、
+  `NativeQuestObjectResolverTest`、`:core:compileJava` 和 `:server:d2gs:compileJava`。
+
+当前下一项：继续补第四章 Chaos 封印/Diablo 对象的实体重建与重复生成防护，随后进入
+第五章 Harrogath 任务对象和 Act V 地图入口的重连恢复核对。

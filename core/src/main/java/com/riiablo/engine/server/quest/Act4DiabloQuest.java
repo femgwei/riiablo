@@ -16,6 +16,20 @@ public final class Act4DiabloQuest {
         ? record : NativeQuestRecord.set(record, NativeQuestRecord.STARTED);
   }
 
+  /** Native level-change callback marks Chaos Sanctuary as entered while the
+   * seal/Diablo state is still pending. */
+  public static short enterArea(short record) {
+    return NativeQuestRecord.set(start(record), NativeQuestRecord.ENTERED_AREA);
+  }
+
+  /** A saved pending/completed record is enough to rebuild the Chaos quest
+   * presentation after the transient ECS state has been recreated. */
+  public static boolean shouldRestoreCompletedState(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
   public static short complete(short record) {
     if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return record;
     record = NativeQuestRecord.set(record, NativeQuestRecord.PRIMARY_GOAL_DONE);
