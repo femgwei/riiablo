@@ -41,6 +41,10 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
   static final int LEVEL_FROZENRIVER = D2LevelIds.LEVEL_FROZENRIVER;
   static final int LEVEL_ANCIENTSWAY = D2LevelIds.LEVEL_ANCIENTSWAY;
   static final int LEVEL_ARREATSUMMIT = D2LevelIds.LEVEL_ARREATSUMMIT;
+  /** Current D2MOO_JAVA aliases for the Worldstone Keep/Throne tail. */
+  static final int LEVEL_WORLDSTONEKEEPLEV1 = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV1;
+  static final int LEVEL_THRONEOFDESTRUCTION = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2;
+  static final int LEVEL_WORLDSTONECHAMBER = D2LevelIds.LEVEL_WORLDSTONECHAMBER;
 
   /** Main Act V progression. Side caves are linked by their native LvlWarp rows. */
   static final int[] ACT5_MAIN_CHAIN = {
@@ -53,7 +57,10 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       LEVEL_GLACIALTRAIL,
       LEVEL_FROZENTUNDRA,
       LEVEL_ANCIENTSWAY,
-      LEVEL_ARREATSUMMIT
+      LEVEL_ARREATSUMMIT,
+      LEVEL_WORLDSTONEKEEPLEV1,
+      LEVEL_THRONEOFDESTRUCTION,
+      LEVEL_WORLDSTONECHAMBER
   };
 
   static final int[][] ACT5_MAIN_LINKS = {
@@ -65,7 +72,10 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       {LEVEL_FROZENRIVER, LEVEL_GLACIALTRAIL},
       {LEVEL_GLACIALTRAIL, LEVEL_FROZENTUNDRA},
       {LEVEL_FROZENTUNDRA, LEVEL_ANCIENTSWAY},
-      {LEVEL_ANCIENTSWAY, LEVEL_ARREATSUMMIT}
+      {LEVEL_ANCIENTSWAY, LEVEL_ARREATSUMMIT},
+      {LEVEL_ARREATSUMMIT, LEVEL_WORLDSTONEKEEPLEV1},
+      {LEVEL_WORLDSTONEKEEPLEV1, LEVEL_THRONEOFDESTRUCTION},
+      {LEVEL_THRONEOFDESTRUCTION, LEVEL_WORLDSTONECHAMBER}
   };
 
   @Wire(name = "factory")
@@ -196,7 +206,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTSIEGE_InitAct5OutdoorLevel
     for (Zone zone : map.zones) {
-      if (!zone.town) {
+      if (!zone.town && isOutdoorFeatureLevel(zone.level.Id)) {
         // 放置边界
         OutdoorFeatures.placeBorders(zone, seed, 4);
         
@@ -208,6 +218,13 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
         }
       }
     }
+  }
+
+  private static boolean isOutdoorFeatureLevel(int levelId) {
+    return levelId == LEVEL_BLOODYFOOTHILLS
+        || levelId == LEVEL_ID_ACT5_BARRICADE_1
+        || levelId == LEVEL_ARREATPLATEAU
+        || levelId == LEVEL_FROZENTUNDRA;
   }
 
   /**

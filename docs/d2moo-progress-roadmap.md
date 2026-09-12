@@ -2777,11 +2777,12 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
   保持幂等。
 - [x] 新增 A5Q6 状态测试；通过 `Act5BaalQuestTest`、`:core:compileJava`、
   `:server:d2gs:compileJava`。
-- [ ] 当前工程的 Worldstone Keep/Throne/Worldstone Chamber 主地图仍缺少独立的原生
-  Level/LvlPrest 导出；五波 Baal 仆从、Baal's Portal/Last Portal、Tyrael 结束传送
-  和 D2MOO 的经验/金币奖励也尚未完全接入。由于现有 `D2LevelIds` 对 128–136 区间
-  存在历史别名，本轮没有直接重排全局 LevelId，避免破坏已完成 Act V 地图链。
+- [x] 将现有 `THEWORLDSTONEKEEPLEV1/2`、`WORLDSTONECHAMBER` 别名追加到
+  `Act5MapBuilderD2MOD` 主链，配置三段双向 Warp；Worldstone 区域不再套用室外边界/神殿
+  特殊生成，保留独立怪物生成器。新增地图链连续性回归测试。
+- [ ] 五波 Baal 仆从、Baal's Portal/Last Portal、Tyrael 结束传送和 D2MOO 的经验/金币
+  奖励尚未完全接入。由于现有 `D2LevelIds` 对 128–136 区间存在历史别名，本轮沿用
+  工程已有别名，没有直接重排全局 LevelId，避免破坏已完成 Act V 地图链。
 
-当前下一项：优先补齐 A5Q6 Worldstone Keep → Throne → Worldstone Chamber 的原生
-Level/LvlPrest/Warp 拓扑，再接入五波仆从和 Baal/结束传送对象；完成后回补 A5Q5
-远古人复位动画与原生经验奖励。
+当前下一项：接入 D2MOO A5Q6 五波 Baal 仆从和波次状态机，再实现 Baal/Last Portal
+对象；完成后回补 A5Q5 远古人复位动画与原生经验奖励。
