@@ -3945,3 +3945,20 @@ Lair、Claw Viper Temple、Arcane Sanctuary 入口、可行走落点及地下边
 
 下一项：进入 Act III 地下地图连接，优先 Spider Cave/Spider Cavern、Flayer Dungeon、
 Sewers 的真实 Vis/Warp 物化与双向边界回归。
+
+### 2026-09-13 Act III 地下 Warp 拓扑物化（本轮完成）
+
+- [x] `Act3MapBuilderD2MOD` 新增通用 `Levels.txt` 地下边遍历，补齐户外→洞穴入口及
+  地下层间反向槽位；不再只依赖 Spider Forest 的手工 marker。
+- [x] 精简 DS1 缺失 `SPECIAL_10` 时自动生成入口 marker，仍通过现有
+  `linkNativeWarpSpecials` 和碰撞安全落点流程创建实体。
+- [x] 明确跳过 Act III 线性户外链和 Durance（由专用原生进度链处理），避免重复覆盖
+  运行时槽位。
+- [x] 增加 `Act3MapBuilderD2MODWarpTest`，覆盖 Spider Cave、Flayer Dungeon、户外链
+  和 Durance 分类；`core` 单测与 `d2gs` 编译通过。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Act3MapBuilderD2MOD.java`、
+`core/src/test/java/com/riiablo/map/Act3MapBuilderD2MODWarpTest.java`。
+
+下一项：新增 Act III 双客户端离屏 Warp 回归，验证 Spider Cave/Cavern、Flayer
+Dungeon、Swampy Pit、Kurast Sewers 入口/出口与边界拒绝，再继续 Act IV 地图连接。

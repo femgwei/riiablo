@@ -372,6 +372,7 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
     ensureProgressionWarpMarker(map, D2LevelIds.LEVEL_DURANCEOFHATELEVEL2, 1);
     ensureProgressionWarpMarker(map, D2LevelIds.LEVEL_DURANCEOFHATELEVEL3, 3);
     configureAct3UndergroundWarps(map);
+    configureAct3DungeonGraphWarps(map);
     Gdx.app.log(TAG, String.format("Act3 native warp table configured: links=%d/%d",
         configured, ACT3_OUTDOOR_LINKS.length));
   }
@@ -418,6 +419,68 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         ensureProgressionWarpMarker(map, destinationId, reverseSlot);
       }
     }
+  }
+
+  /**
+   * Completes all static Act III dungeon edges, including the outdoor→cave
+   * entrances that are not represented by a secondary dungeon row.  Some
+   * reduced DS1 exports contain the Levels.txt graph but omit one SPECIAL_10
+   * cell; materializing the marker here keeps the authoritative Warp entity
+   * available without changing the native level table.
+   */
+  private void configureAct3DungeonGraphWarps(Map map) {
+    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    IntMap<RuntimeWarpState> states = new IntMap<>();
+    for (Levels.Entry level : Riiablo.files.Levels) {
+      if (level != null && level.Id >= LEVEL_SPIDERFOREST && level.Id <= 102) {
+        states.put(level.Id, new RuntimeWarpState(level.Vis, level.Warp));
+      }
+    }
+    int configured = 0;
+    for (Levels.Entry source : Riiablo.files.Levels) {
+      if (source == null || source.Id < LEVEL_SPIDERFOREST || source.Id > 102
+          || source.Vis == null || source.Warp == null) continue;
+      int count = Math.min(8, Math.min(source.Vis.length, source.Warp.length));
+      for (int slot = 0; slot < count; slot++) {
+        int destinationId = source.Vis[slot];
+        if (source.Warp[slot] < 0 || destinationId < LEVEL_SPIDERFOREST
+            || destinationId > 102 || !isStaticAct3DungeonEdge(source.Id, destinationId)) {
+          continue;
+        }
+        Levels.Entry destination = Riiablo.files.Levels.get(destinationId);
+        if (destination == null || findZone(map, source.Id) == null
+            || findZone(map, destinationId) == null) continue;
+        RuntimeWarpState destinationState = states.get(destinationId);
+        if (destinationState == null) continue;
+        int reverseSlot = findRuntimeWarpSlot(destination.Vis, destination.Warp, source.Id);
+        if (reverseSlot < 0) reverseSlot = destinationState.ensureDestination(source.Id);
+        if (reverseSlot < 0) continue;
+        map.addWarpDestinationOverride(source.Id, slot, destinationId);
+        map.addWarpDestinationOverride(destinationId, reverseSlot, source.Id);
+        ensureProgressionWarpMarker(map, source.Id, slot);
+        ensureProgressionWarpMarker(map, destinationId, reverseSlot);
+        configured++;
+      }
+    }
+    Gdx.app.log(TAG, "Act3 dungeon graph warps configured=" + configured);
+  }
+
+  static boolean isStaticAct3DungeonEdge(int sourceLevelId, int destinationLevelId) {
+    if (sourceLevelId < LEVEL_SPIDERFOREST || destinationLevelId < LEVEL_SPIDERFOREST
+        || sourceLevelId > 102 || destinationLevelId > 102) return false;
+    // Linear outdoor progression and Durance are handled by their dedicated
+    // native-link paths; do not allocate duplicate slots here.
+    boolean sourceOutdoor = isAct3Outdoor(sourceLevelId);
+    boolean destinationOutdoor = isAct3Outdoor(destinationLevelId);
+    if (sourceOutdoor && destinationOutdoor) return false;
+    if (sourceLevelId >= D2LevelIds.LEVEL_DURANCEOFHATELEVEL1
+        || destinationLevelId >= D2LevelIds.LEVEL_DURANCEOFHATELEVEL1) return false;
+    return true;
+  }
+
+  private static boolean isAct3Outdoor(int levelId) {
+    for (int candidate : ACT3_OUTDOOR_CHAIN) if (candidate == levelId) return true;
+    return false;
   }
 
   /** Pairs emitted special-wall cells after all Act III zones are generated. */

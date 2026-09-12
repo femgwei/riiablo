@@ -27,4 +27,12 @@ class Act3MapBuilderD2MODWarpTest {
           < Act3MapBuilderD2MOD.ACT3_OUTDOOR_LINKS[i][1]);
     }
   }
+
+  @Test
+  void classifiesStaticDungeonEdgesSeparatelyFromOutdoorAndDuranceLinks() {
+    assertTrue(Act3MapBuilderD2MOD.isStaticAct3DungeonEdge(76, 84));
+    assertTrue(Act3MapBuilderD2MOD.isStaticAct3DungeonEdge(78, 88));
+    assertTrue(!Act3MapBuilderD2MOD.isStaticAct3DungeonEdge(76, 77));
+    assertTrue(!Act3MapBuilderD2MOD.isStaticAct3DungeonEdge(100, 101));
+  }
 }
