@@ -3,6 +3,7 @@ package com.riiablo.map;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
@@ -387,11 +388,79 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
         if (cell != null && Map.ID.WARPS.contains(cell.id) && cell.mainIndex == mainIndex) return;
       }
     }
+    Vector2 marker = new Vector2();
+    if (resolveWarpMarkerPosition(zone, mainIndex, marker)) {
+      zone.addNativeWarpMarker(mainIndex, (int) marker.x, (int) marker.y);
+      return;
+    }
+
+    // A malformed/native-less export can have no walkable subtile at all. Keep
+    // the logical Warp visible in that case, but make the fallback explicit so
+    // a bad collision export is diagnosable instead of silently producing a
+    // marker in an arbitrary wall tile.
     int tx = Math.max(0, zone.tilesX / 2 + (mainIndex & 1) * 2 - 1);
     int ty = Math.max(0, zone.tilesY / 2 + (mainIndex / 2) * 2 - 1);
+    if (Gdx.app != null) {
+      Gdx.app.error(TAG, String.format(
+          "No walkable synthetic Warp marker: level=%d mainIndex=%d fallbackTile=(%d,%d)",
+          levelId, mainIndex, tx, ty));
+    }
     zone.addNativeWarpMarker(mainIndex,
         tx * DT1.Tile.SUBTILE_SIZE,
         ty * DT1.Tile.SUBTILE_SIZE);
+  }
+
+  /**
+   * Resolves a synthetic UNIT_TILE warp to a walkable, in-bounds tile.
+   *
+   * <p>{@link Zone#findFreeCoordinates} uses world-subtile coordinates while
+   * {@link Zone#addNativeWarpMarker} accepts level-local coordinates.  Keep
+   * that conversion here so synthetic A5Q4 portals cannot accidentally land
+   * in the rectangular level void or on a blocked wall footprint.</p>
+   *
+   * @return true when {@code result} contains a level-local subtile position
+   *         whose containing tile is walkable
+   */
+  static boolean resolveWarpMarkerPosition(Zone zone, int mainIndex, Vector2 result) {
+    if (zone == null || result == null || zone.flags == null
+        || zone.tilesX <= 0 || zone.tilesY <= 0
+        || mainIndex < 0 || mainIndex >= 8) return false;
+
+    final int centerX = Math.max(0, zone.tilesX / 2 + (mainIndex & 1) * 2 - 1);
+    final int centerY = Math.max(0, zone.tilesY / 2 + (mainIndex / 2) * 2 - 1);
+    final Vector2 candidate = new Vector2();
+    final Vector2 free = new Vector2();
+
+    // Try the native-looking location first, then a deterministic set of
+    // points around the room.  This preserves stable seeds while avoiding a
+    // blocked centre in Temple/Halls maps with irregular RoomEx topology.
+    final int[][] offsets = {
+        {0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+        {2, 0}, {-2, 0}, {0, 2}, {0, -2},
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+    };
+    for (int[] offset : offsets) {
+      int tx = MathUtils.clamp(centerX + offset[0], 0, zone.tilesX - 1);
+      int ty = MathUtils.clamp(centerY + offset[1], 0, zone.tilesY - 1);
+      candidate.set(zone.x + tx * DT1.Tile.SUBTILE_SIZE,
+          zone.y + ty * DT1.Tile.SUBTILE_SIZE);
+      if (!zone.findFreeCoordinates(candidate, 1, 48, true, free)) continue;
+
+      // addNativeWarpMarker floors to a tile. Validate that exact tile after
+      // converting back to the level-local coordinate space; otherwise a free
+      // subtile near a tile edge could still place the marker on a wall.
+      int localX = MathUtils.clamp(
+          MathUtils.floor(free.x - zone.x) / DT1.Tile.SUBTILE_SIZE,
+          0, zone.tilesX - 1) * DT1.Tile.SUBTILE_SIZE;
+      int localY = MathUtils.clamp(
+          MathUtils.floor(free.y - zone.y) / DT1.Tile.SUBTILE_SIZE,
+          0, zone.tilesY - 1) * DT1.Tile.SUBTILE_SIZE;
+      Vector2 aligned = candidate.set(zone.x + localX, zone.y + localY);
+      if (!zone.findFreeCoordinates(aligned, 1, 0, true, free)) continue;
+      result.set(localX, localY);
+      return true;
+    }
+    return false;
   }
 
   private static final class RuntimeWarpState {

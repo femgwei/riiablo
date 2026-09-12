@@ -3048,3 +3048,19 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：补齐 A5Q4 分支入口落点的可通行性/碰撞验证（尤其 Temple 与 Halls of Pain
   的合成 marker），随后进入 A5Q5 三古代人对象动画、失败复位和 Summit 门状态对齐。
+
+### 2026-09-12 A5Q4 合成 Warp 可通行落点校正（本轮完成）
+
+- [x] 合成 `UNIT_TILE` Warp 不再直接固定在 Temple/Halls 地图中心；现在以
+  `Zone.findFreeCoordinates` 按 D2Common 的扩圈搜索检查地形、RoomEx 邻接和边界，
+  再将世界 subtiles 转回 Zone-local tile 坐标后创建 marker。
+- [x] 对 marker 所在的最终 tile 做二次精确碰撞校验，避免“相邻 subtile 可走但
+  marker 被 floor 到墙体”的落点；所有候选失败时保留显式 error 日志和确定性 fallback，
+  便于定位损坏的 native collision 导出。
+- [x] 新增 `Act5WarpMarkerPositionTest`，覆盖中心阻挡时避让、完全阻挡地图的安全失败；
+  原有 A5Q4 分支链、NativeFreeCoordinates 和地图任务测试继续通过。
+- 验证：`Act5MapBuilderD2MODTest`、`Act5WarpMarkerPositionTest`、
+  `NativeFreeCoordinatesTest`、`:core:compileJava`、`:core:test` 通过。
+
+当前下一项：对照 D2MOO `A5Q5.cpp` 补齐三古代人对象动画/失败复位与 Summit Door 状态，
+  并验证完成 A5Q5 后通往 Worldstone Keep 的入口仅在正确任务状态开放。
