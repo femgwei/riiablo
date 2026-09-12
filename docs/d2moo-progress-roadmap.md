@@ -3329,3 +3329,19 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：把上述 A5Q6 场景扩展到断线重连——Baal 死亡后、Tyrael 终结消息前后分别
   重连一名客户端，验证 Chamber 奖励、Tyrael3 和 Last Portal 的游戏级快照恢复及幂等性。
+
+### 2026-09-12 A5Q6 Tyrael/Last Portal 断线重连验证（本轮完成）
+
+- [x] Baal 死亡、Tyrael3 已生成但尚未发送 `20175` 时断开第一客户端并重连；重连后
+  重新进入 Chamber，`QuestResult` 恢复 A5Q6 奖励，且 Tyrael3 的实体 ID/位置保持一致，
+  Last Portal 仍未提前出现。
+- [x] 重连客户端与在线客户端分别发送 Tyrael `20175`，验证终结消息仍可通过网络边界，
+  Last Portal 只创建一次，两个观察者收到同一个 Chamber→Harrogath Warp。
+- [x] Last Portal 已创建后断开第二客户端并重连；恢复快照同时包含
+  `PRIMARY_GOAL_DONE`、`REWARD_GRANTED`、`CUSTOM3`，并重新收到 Tyrael3 与 Last Portal
+  的可见同步。
+- [x] 复用现有游戏级 A5Q6 状态和 QuestRequest 幂等缓存，没有增加 FlatBuffer/生成网络
+  文件；通过核心/D2GS 编译和 `git diff --check`。真实 MPQ/TCP 运行仍需完整资源环境。
+
+当前下一项：核对 A5Q6 结束后回到 Harrogath 的 Last Portal 使用、重复点击和跨房间重建，
+然后把同一套断线恢复门槛推广到其他 Act IV/V 任务 Warp。

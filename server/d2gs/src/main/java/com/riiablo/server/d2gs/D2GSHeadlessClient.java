@@ -1760,47 +1760,97 @@ public final class D2GSHeadlessClient {
       log("tyrael3_spawn_dual_pass", "entity=" + tyraelA.entityId
           + " class=" + tyraelA.monsterClass + " clients=true,true");
 
-      int recordIndex = com.riiablo.engine.server.quest.Act5BaalQuest.RECORD;
-      send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
-      send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
-      QuestResult rewardA = a.awaitQuestResult(inA, 1L, deadline());
-      QuestResult rewardB = b.awaitQuestResult(inB, 1L, deadline());
-      if (!rewardA.success() || !rewardB.success()
-          || rewardA.questRecordsLength() <= recordIndex
-          || rewardB.questRecordsLength() <= recordIndex
-          || !hasQuestFlag(rewardA.questRecords(recordIndex),
-              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
-          || !hasQuestFlag(rewardA.questRecords(recordIndex),
-              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
-          || !hasQuestFlag(rewardB.questRecords(recordIndex),
-              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
-          || !hasQuestFlag(rewardB.questRecords(recordIndex),
-              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
-        throw new IOException("Baal reward was not synchronized to both Chamber clients");
-      }
-      if (D2GS.headlessLastPortalEntity() != Engine.INVALID_ENTITY) {
-        throw new IOException("Last Portal appeared before Tyrael's terminal message");
-      }
-      log("last_portal_order_pass", "beforeMessage=false");
+      // Reconnect one client after Baal death but before Tyrael's terminal
+      // message.  The stale pre-kill D2S must not overwrite the authoritative
+      // Chamber reward or Tyrael snapshot retained by the game session.
+      socketA.close();
+      b.awaitDeleted(inB, a.playerId, deadline());
+      D2GSHeadlessClient reconnectedA = new D2GSHeadlessClient(config);
+      try (Socket socketReconnectA = reconnectedA.openSocket()) {
+        DataInputStream inReconnectA = input(socketReconnectA);
+        OutputStream outReconnectA = output(socketReconnectA);
+        send(outReconnectA, connectionPacket(character, d2s));
+        reconnectedA.awaitConnection(inReconnectA, deadline());
+        if (!D2GS.headlessEnterLevel(reconnectedA.playerId, chamber)) {
+          throw new IOException("Baal pre-message reconnect could not enter Chamber");
+        }
+        awaitLevel(reconnectedA, inReconnectA, chamber, deadline());
+        Snapshot tyraelReconnect = reconnectedA.awaitTyrael(inReconnectA, deadline());
+        if (tyraelReconnect.entityId != tyraelA.entityId
+            || tyraelReconnect.monsterClass != tyraelA.monsterClass
+            || Math.abs(tyraelReconnect.x - tyraelA.x) > 0.01f
+            || Math.abs(tyraelReconnect.y - tyraelA.y) > 0.01f) {
+          throw new IOException("pre-message reconnect lost Tyrael3 snapshot");
+        }
 
-      send(outA, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
-          tyraelA.entityId, com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
-      send(outB, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
-          tyraelB.entityId, com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
-      QuestResult messageA = a.awaitQuestResult(inA, 2L, deadline());
-      QuestResult messageB = b.awaitQuestResult(inB, 2L, deadline());
-      if (!messageA.success() || !messageB.success()) {
-        throw new IOException("Tyrael terminal message rejected: A=" + messageA.reason()
-            + " B=" + messageB.reason());
+        int recordIndex = com.riiablo.engine.server.quest.Act5BaalQuest.RECORD;
+        send(outReconnectA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+        send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+        QuestResult rewardReconnect = reconnectedA.awaitQuestResult(
+            inReconnectA, 1L, deadline());
+        QuestResult rewardB = b.awaitQuestResult(inB, 1L, deadline());
+        if (!hasBaalReward(rewardReconnect, recordIndex)
+            || !hasBaalReward(rewardB, recordIndex)) {
+          throw new IOException("pre-message reconnect lost Baal Chamber reward");
+        }
+        if (D2GS.headlessLastPortalEntity() != Engine.INVALID_ENTITY) {
+          throw new IOException("Last Portal appeared before Tyrael's terminal message");
+        }
+        log("baal_pre_message_reconnect_pass", "player=" + reconnectedA.playerId
+            + " tyrael=" + tyraelReconnect.entityId + " reward=true portal=false");
+
+        send(outReconnectA, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
+            tyraelReconnect.entityId,
+            com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
+        send(outB, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
+            tyraelB.entityId, com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
+        QuestResult messageReconnect = reconnectedA.awaitQuestResult(
+            inReconnectA, 2L, deadline());
+        QuestResult messageB = b.awaitQuestResult(inB, 2L, deadline());
+        if (!messageReconnect.success() || !messageB.success()) {
+          throw new IOException("Tyrael terminal message rejected after reconnect: A="
+              + messageReconnect.reason() + " B=" + messageB.reason());
+        }
+        int lastPortal = awaitLastPortal(deadline());
+        if (lastPortal == Engine.INVALID_ENTITY) {
+          throw new IOException("Last Portal was not created after Tyrael 20175 message");
+        }
+        reconnectedA.awaitVisibleEntity(inReconnectA, lastPortal, deadline());
+        b.awaitVisibleEntity(inB, lastPortal, deadline());
+        log("baal_terminal_dual_pass", "tyrael=" + tyraelReconnect.entityId
+            + " message=20175 lastPortal=" + lastPortal + " clients=true,true");
+
+        // Reconnect the second client after the end portal exists.  This
+        // checks the game-level CUSTOM3/portal snapshot, not just the first
+        // client's live entity stream.
+        socketB.close();
+        D2GSHeadlessClient reconnectedB = new D2GSHeadlessClient(config);
+        try (Socket socketReconnectB = reconnectedB.openSocket()) {
+          DataInputStream inReconnectB = input(socketReconnectB);
+          OutputStream outReconnectB = output(socketReconnectB);
+          send(outReconnectB, connectionPacket(peerCharacter, peerD2s));
+          reconnectedB.awaitConnection(inReconnectB, deadline());
+          if (!D2GS.headlessEnterLevel(reconnectedB.playerId, chamber)) {
+            throw new IOException("post-message reconnect could not enter Chamber");
+          }
+          awaitLevel(reconnectedB, inReconnectB, chamber, deadline());
+          send(outReconnectB, questRequestPacket(3L, QuestOperation.SNAPSHOT, -1, -1));
+          QuestResult restored = reconnectedB.awaitQuestResult(inReconnectB, 3L, deadline());
+          if (!hasBaalReward(restored, recordIndex)
+              || !hasQuestFlag(restored.questRecords(recordIndex),
+                  com.riiablo.engine.server.quest.NativeQuestRecord.CUSTOM3)) {
+            throw new IOException("post-message reconnect lost Baal CUSTOM3/portal state");
+          }
+          Snapshot tyraelRestored = reconnectedB.awaitTyrael(inReconnectB, deadline());
+          if (tyraelRestored.entityId != tyraelReconnect.entityId) {
+            throw new IOException("post-message reconnect changed Tyrael entity identity");
+          }
+          reconnectedB.awaitVisibleEntity(inReconnectB, lastPortal, deadline());
+          log("baal_post_message_reconnect_pass", "player=" + reconnectedB.playerId
+              + " tyrael=" + tyraelRestored.entityId + " lastPortal=" + lastPortal
+              + " reward=true custom3=true");
+        }
       }
-      int lastPortal = awaitLastPortal(deadline());
-      if (lastPortal == Engine.INVALID_ENTITY) {
-        throw new IOException("Last Portal was not created after Tyrael 20175 message");
-      }
-      a.awaitVisibleEntity(inA, lastPortal, deadline());
-      b.awaitVisibleEntity(inB, lastPortal, deadline());
-      log("baal_terminal_dual_pass", "tyrael=" + tyraelA.entityId + " message=20175"
-          + " lastPortal=" + lastPortal + " clients=true,true");
     }
   }
 
@@ -1834,6 +1884,28 @@ public final class D2GSHeadlessClient {
       if (snapshot != null) result.add(snapshot.monsterClass);
     }
     return result;
+  }
+
+  private static void awaitLevel(D2GSHeadlessClient client, DataInputStream input,
+      int levelId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline && client.currentLevelId != levelId) {
+      consumeOne(input, client);
+    }
+    if (client.currentLevelId != levelId) {
+      throw new IOException("client did not observe level " + levelId
+          + ": actual=" + client.currentLevelId);
+    }
+  }
+
+  private static boolean hasBaalReward(QuestResult result, int recordIndex) {
+    if (result == null || !result.success() || result.questRecordsLength() <= recordIndex) {
+      return false;
+    }
+    int record = result.questRecords(recordIndex);
+    return hasQuestFlag(record,
+            com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+        && hasQuestFlag(record,
+            com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED);
   }
 
   private static void verifyNativeBaalDifficultyTable() {
