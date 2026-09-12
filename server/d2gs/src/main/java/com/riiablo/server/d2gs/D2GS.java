@@ -115,6 +115,7 @@ import com.riiablo.engine.server.quest.Act3MephistoQuestSystem;
 import com.riiablo.engine.server.quest.Act4QuestSystem;
 import com.riiablo.engine.server.quest.Act5QuestSystem;
 import com.riiablo.engine.server.quest.Act5BaalQuest;
+import com.riiablo.engine.server.quest.QuestWarpPolicy;
 import com.riiablo.engine.server.quest.Act5QuestMessageValidator;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
@@ -4229,22 +4230,15 @@ public class D2GS extends ApplicationAdapter {
     if (warp == null || interactable == null || warp.dstLevel == null) {
       return "WARP_NOT_FOUND";
     }
-    // D2MOO's object 72 handler gates the Chamber -> Harrogath portal on
-    // A5Q6 PRIMARY_GOAL_DONE.  QuestWarp is otherwise generic, so enforce
-    // this one native gate at the network boundary as well as in the local
-    // object path; otherwise a stale client could bypass the quest record.
-    if (QuestWarp.isQuestWarp(warp.index)
-        && warp.dstLevel.Id == Act5BaalQuest.HARROGATH) {
+    // Quest-Warp admission is shared with the offline object path.  Keeping
+    // this at the network boundary prevents stale clients from bypassing
+    // native quest gates while avoiding a second, A5Q6-only check here.
+    if (QuestWarp.isQuestWarp(warp.index)) {
       Player player = world.getMapper(Player.class).get(playerId);
-      short record = player == null || player.data == null
-          ? 0 : player.data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD];
-      if (!Act5BaalQuest.canUseLastPortal(record, levelIdOf(warpId))) {
-        // Other quest portals may also target Harrogath (for example Act IV's
-        // Tyrael portal), so only the Chamber source receives this gate.
-        if (levelIdOf(warpId) == Act5BaalQuest.WORLDSTONE_CHAMBER) {
-          return "A5Q6_NOT_COMPLETE";
-        }
-      }
+      String rejection = QuestWarpPolicy.rejectionReason(
+          player == null ? null : player.data,
+          levelIdOf(warpId), warp.dstLevel.Id);
+      if (rejection != null) return rejection;
     }
     if (levelIdOf(playerId) < 0 || levelIdOf(playerId) != levelIdOf(warpId)) {
       return "WARP_WRONG_LEVEL";

@@ -22,6 +22,7 @@ import com.riiablo.engine.server.state.StateId;
 import com.riiablo.map.Map;
 import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.engine.server.quest.Act5BaalQuest;
+import com.riiablo.engine.server.quest.QuestWarpPolicy;
 import com.riiablo.Riiablo;
 import com.riiablo.save.D2SWriter;
 import com.riiablo.net.packet.d2gs.QuestOperation;
@@ -76,20 +77,16 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
       return false;
     }
     if (QuestWarp.isQuestWarp(warp.index)) {
-      // Keep local/offline interaction on the same native object-72 gate as
-      // D2GS.  Without this check a non-network client could bypass the
-      // Worldstone Chamber -> Harrogath quest requirement.
-      if (warp.dstLevel.Id == Act5BaalQuest.HARROGATH
-          && source.level != null
-          && source.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER) {
-        Player player = mPlayer == null ? null : mPlayer.get(src);
-        short record = player == null || player.data == null
-            ? 0 : player.data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD];
-        if (!Act5BaalQuest.canUseLastPortal(record, source.level.Id)) {
-          Gdx.app.log(TAG, "A5Q6 last portal rejected: player=" + src
-              + " source=" + source.level.Id);
-          return false;
-        }
+      Player player = mPlayer == null ? null : mPlayer.get(src);
+      String rejection = QuestWarpPolicy.rejectionReason(
+          player == null ? null : player.data,
+          source.level == null ? -1 : source.level.Id,
+          warp.dstLevel.Id);
+      if (rejection != null) {
+        Gdx.app.log(TAG, "Quest warp rejected: player=" + src + " source="
+            + (source.level == null ? -1 : source.level.Id) + " destination="
+            + warp.dstLevel.Id + " reason=" + rejection);
+        return false;
       }
       int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
       Vector2 arrival = findQuestArrival(dst, unitSize);

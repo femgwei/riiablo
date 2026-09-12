@@ -3360,3 +3360,22 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：把 Last Portal 的同样“状态快照 + 源区域 + 精确重放”门槛推广到 Act IV
   Hell Gate/Diablo 结束 Warp 以及 Act V 其他任务传送门，并补跨 Act 的统一回归入口。
+
+### 2026-09-12 A3/A4/A5 任务传送门统一权限策略（本轮完成）
+
+- [x] 新增 `QuestWarpPolicy`，按原生 source level → destination level 配对集中处理
+  A3Q6 Durance of Hate Level 3 → Pandemonium Fortress、A4Q2 Pandemonium Fortress →
+  Harrogath、A5Q4 Harrogath → Nihlathak Temple，以及 A5Q6 Worldstone Chamber →
+  Harrogath；未知 Quest Warp 和普通 Warp 不会被策略误拦截。
+- [x] 离线 `WarpInteractor` 与网络 `D2GS.validateWarpInteraction` 共用同一门槛，保留
+  `A5Q6_NOT_COMPLETE` 等既有错误码；移除网络入口重复的 A5Q6 专用判断，避免两个逻辑源
+  漂移。
+- [x] 增加 `QuestWarpPolicyTest`，覆盖四个任务门槛、前置 Prison 记录、完成奖励位、
+  未知 Warp 和空角色数据行为。
+- [x] 通过 `:core:test --tests com.riiablo.engine.server.quest.QuestWarpPolicyTest`、
+  `:core:compileJava`、`:server:d2gs:compileJava` 和 `git diff --check`；未新增网络字段，
+  未修改战斗公式。
+
+当前下一项：在现有双 socket 离屏入口中加入 A3/A4/A5 任务 Warp 的跨 Act 回归，分别验证
+  正常使用、错误任务记录拒绝、精确 request id 重放、过期源区域拒绝，以及断线重连后的
+  Warp 状态重建。
