@@ -5,7 +5,9 @@ public final class Act1MalusQuest {
   /** Act-local D2S record index; Q1 and Q2 occupy indices 1 and 2. */
   public static final int RECORD = 3;
   /** D2 item code dropped by the Horadric Malus object. */
-  public static final String MALUS_CODE = "mdh";
+  // D2MOO's little-endian fourcc is written as ' mdh'; the table-facing
+  // string used by Misc.txt/ItemGenerator is the byte-reversed code "hdm".
+  public static final String MALUS_CODE = "hdm";
 
   public static final int MESSAGE_INIT = 146;
   public static final int MESSAGE_MALUS = 163;

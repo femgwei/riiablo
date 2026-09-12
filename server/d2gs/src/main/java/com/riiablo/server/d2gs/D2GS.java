@@ -2019,6 +2019,49 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Returns one generated native preset object by its provenance kind. */
+  static int headlessNativeObjectEntity(int levelId,
+      com.riiablo.map.NativePresetObjectResolver.Kind kind) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || kind == null
+        || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeObjectState> states =
+            server.world.getMapper(com.riiablo.engine.server.component.NativeObjectState.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.NativeObjectState state = states.get(entity);
+          if (state != null && state.kind == kind && wrappers.get(entity).zone == zone) {
+            result.set(entity);
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /**
    * Moves a headless player next to an authoritative quest object.  The
    * subsequent OBJECT_INTERACTION request still travels through the normal

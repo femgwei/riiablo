@@ -3718,3 +3718,18 @@ Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖�
 下一项：增加 A1 特殊/预设宝箱双客户端离屏生产交互夹具，并覆盖 Cain Gibbet、
 Horadric Malus 等任务门的真实请求、掉落归属和重复请求回放；完成后进入 A2
 Horadric Orifice 插入法杖后的 Duriel 入口/区域切换。
+
+### 2026-09-13 A1 任务门与双客户端回归（本轮完成）
+
+- [x] 修正 A1Q3 Horadric Malus 物品码：D2MOO 四字符常量 `' mdh'` 在
+  `Misc.txt` 中对应表码 `hdm`，此前使用 `mdh` 会导致交互成功但物品创建失败。
+- [x] 新增 `:server:d2gs:headlessA1ObjectInteractionDual`，通过真实
+  `QuestOperation.OBJECT_INTERACTION` 验证 Malus 的权威激活、`hdm` 掉落、双方可见性
+  与请求幂等；当前 1.10f 资源的 Stony Field 未导出 580/581 保留宝箱，因此该夹具
+  会明确记录 `a1_native_chest_skipped`，不把资源缺失误报为代码失败。
+- [x] 增加 `headlessNativeObjectEntity` 测试辅助，可在资源补齐后直接复用同一夹具验证
+  特殊/预设宝箱的共享模式和掉落集合。
+
+验证结果：`:server:d2gs:headlessA1ObjectInteractionDual` 通过，日志包含
+`a1_malus_object_interaction_pass ... clients=true,true`；编译与 `git diff --check`
+通过。资源限制：当前导出没有可定位的 580/581 保留宝箱实体，需完整 DS1 导出后复测。

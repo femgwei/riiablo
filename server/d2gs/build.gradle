@@ -259,6 +259,18 @@ tasks.register('headlessA2ObjectInteractionDual', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessA1ObjectInteractionDual', JavaExec) {
+  group = 'verification'
+  description = 'Runs two windowless clients through native Act I quest and chest interactions.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-a1-object-interaction-dual', '--test-timeout', '120'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessMercenarySkill', JavaExec) {
   group = 'verification'
   description = 'Runs a windowless native Rogue hireling skill-casting smoke test.'

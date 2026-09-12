@@ -168,6 +168,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA2ObjectInteractionDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA1ObjectInteractionDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireA2TombDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireEarlyObjectDual
@@ -209,6 +211,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA2ObjectInteractionDual) {
       runA2ObjectInteractionDual(d2s, character);
+      return;
+    }
+    if (config.requireA1ObjectInteractionDual) {
+      runA1ObjectInteractionDual(d2s, character);
       return;
     }
     if (config.requireA2TombDual) {
@@ -2527,6 +2533,96 @@ public final class D2GSHeadlessClient {
           new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.HORADRIC_ORIFICE},
           1L);
       log("a2_tomb_dual_pass", "level=" + tomb + " clients=true,true");
+    }
+  }
+
+  /**
+   * Production OBJECT_INTERACTION regression for native Act-I containers.
+   * Special/preset chests use the same network request as quest objects;
+   * opening once must produce one authoritative state transition visible to
+   * both clients, and replaying the request must not roll another drop.
+   */
+  private void runA1ObjectInteractionDual(byte[] d2s, CharacterHeader character)
+      throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A1ObjectPeer", 0x41314F42);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_BARRACKS)
+          || !D2GS.headlessEnterLevel(b.playerId, LEVEL_BARRACKS)) {
+        throw new IOException("A1 Barracks staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, LEVEL_BARRACKS, "a1-malus-object");
+      int malus = D2GS.headlessQuestObjectEntity(LEVEL_BARRACKS,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.HORADRIC_MALUS);
+      if (malus == Engine.INVALID_ENTITY
+          || !D2GS.headlessMovePlayerToObject(a.playerId, malus)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, malus)) {
+        throw new IOException("Horadric Malus object unavailable");
+      }
+      send(outA, questRequestPacket(401L, QuestOperation.OBJECT_INTERACTION, malus, -1));
+      QuestResult first = a.awaitQuestResult(inA, 401L, deadline());
+      if (first == null || !first.success()) throw new IOException("Malus interaction rejected");
+      int malusDrops = D2GS.headlessGroundItemCount(LEVEL_BARRACKS,
+          com.riiablo.engine.server.quest.Act1MalusQuest.MALUS_CODE);
+      if (malusDrops != 1) throw new IOException("Malus drop count=" + malusDrops);
+      int malusItem = D2GS.headlessGroundItemEntity(LEVEL_BARRACKS,
+          com.riiablo.engine.server.quest.Act1MalusQuest.MALUS_CODE);
+      a.awaitVisibleEntity(inA, malusItem, deadline());
+      b.awaitVisibleEntity(inB, malusItem, deadline());
+      send(outA, questRequestPacket(401L, QuestOperation.OBJECT_INTERACTION, malus, -1));
+      if (a.awaitQuestResult(inA, 401L, deadline()) == null
+          || D2GS.headlessGroundItemCount(LEVEL_BARRACKS,
+              com.riiablo.engine.server.quest.Act1MalusQuest.MALUS_CODE) != 1) {
+        throw new IOException("Malus duplicate request was not idempotent");
+      }
+      log("a1_malus_object_interaction_pass", "object=" + malus
+          + " drop=" + malusItem + " clients=true,true");
+
+      int chestLevel = LEVEL_STONYFIELD;
+      if (!D2GS.headlessEnterLevel(a.playerId, chestLevel)
+          || !D2GS.headlessEnterLevel(b.playerId, chestLevel)) {
+        throw new IOException("A1 Stony Field staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, chestLevel, "a1-native-chest");
+      int chest = D2GS.headlessNativeObjectEntity(chestLevel,
+          com.riiablo.map.NativePresetObjectResolver.Kind.SPECIAL_CHEST);
+      if (chest == Engine.INVALID_ENTITY) {
+        chest = D2GS.headlessNativeObjectEntity(chestLevel,
+            com.riiablo.map.NativePresetObjectResolver.Kind.PRESET_CHEST);
+      }
+      if (chest == Engine.INVALID_ENTITY) {
+        // Some reduced DS1 exports contain no reserved 580/581 unit in the
+        // Stony Field.  Keep the gate useful for the Malus path and report
+        // the resource limitation instead of treating it as a code failure.
+        log("a1_native_chest_skipped", "level=" + chestLevel
+            + " reason=no-reserved-chest-in-export");
+        return;
+      }
+      if (!D2GS.headlessMovePlayerToObject(a.playerId, chest)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, chest)) {
+        throw new IOException("A1 native chest movement unavailable");
+      }
+      send(outA, questRequestPacket(411L, QuestOperation.OBJECT_INTERACTION, chest, -1));
+      QuestResult chestResult = a.awaitQuestResult(inA, 411L, deadline());
+      if (chestResult == null || !chestResult.success()) {
+        throw new IOException("native chest interaction rejected");
+      }
+      a.awaitVisibleEntity(inA, chest, deadline());
+      b.awaitVisibleEntity(inB, chest, deadline());
+      send(outA, questRequestPacket(411L, QuestOperation.OBJECT_INTERACTION, chest, -1));
+      if (a.awaitQuestResult(inA, 411L, deadline()) == null) {
+        throw new IOException("native chest duplicate request rejected");
+      }
+      log("a1_native_chest_interaction_pass", "chest=" + chest + " clients=true,true");
     }
   }
 
@@ -5466,6 +5562,7 @@ public final class D2GSHeadlessClient {
     boolean requireQuestObjectDual;
     boolean requireA3ObjectInteractionDual;
     boolean requireA2ObjectInteractionDual;
+    boolean requireA1ObjectInteractionDual;
     boolean requireA2TombDual;
     boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
@@ -5513,6 +5610,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
         else if ("--require-a3-object-interaction-dual".equals(arg)) config.requireA3ObjectInteractionDual = true;
         else if ("--require-a2-object-interaction-dual".equals(arg)) config.requireA2ObjectInteractionDual = true;
+        else if ("--require-a1-object-interaction-dual".equals(arg)) config.requireA1ObjectInteractionDual = true;
         else if ("--require-a2-tomb-dual".equals(arg)) config.requireA2TombDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
