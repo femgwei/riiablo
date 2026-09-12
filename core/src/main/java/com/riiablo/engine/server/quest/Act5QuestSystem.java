@@ -1182,12 +1182,21 @@ public class Act5QuestSystem extends BaseSystem {
     baalWaveEntities.clear();
     IntBag entities = monstersByZone == null ? null : monstersByZone.getEntities();
     if (entities == null) return;
+    int leaderRoomId = -1;
+    if (mMapWrapper != null && mMapWrapper.has(leader)
+        && mMapWrapper.get(leader) != null) {
+      leaderRoomId = mMapWrapper.get(leader).roomId;
+    }
     int[] ids = entities.getData();
     for (int i = 0; i < entities.size(); i++) {
       int id = ids[i];
       Monster monster = mMonster.has(id) ? mMonster.get(id) : null;
       boolean markedMember = monster != null && monster.baalWaveIndex == waveIndex
-          && monster.baalWaveSuperUniqueId == Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex];
+          && monster.baalWaveSuperUniqueId == Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex]
+          && (leaderRoomId < 0 || monster.baalWaveRoomId < 0
+              || !mMapWrapper.has(id) || mMapWrapper.get(id) == null
+              || mMapWrapper.get(id).roomId < 0
+              || mMapWrapper.get(id).roomId == leaderRoomId);
       if (id != leader && !markedMember && (monster == null || monster.uniqueId != leader)) continue;
       if (levelId(id) == Act5BaalQuest.THRONE_OF_DESTRUCTION
           && isLiveHostileMonster(id)) baalWaveEntities.add(id);
