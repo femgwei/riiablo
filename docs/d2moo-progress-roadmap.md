@@ -3797,3 +3797,20 @@ Horadric Orifice 插入法杖后的 Duriel 入口/区域切换。
 
 下一项：补 A2Q6 断线重连后的 Door/Tyrael/Portal 状态恢复，再继续 A2 七墓 Arcane
 Symbol 的真实选择、地下区域入口和地图拓扑校验。
+
+### 2026-09-13 A2Q6 Door/Tyrael/Portal 断线重连门槛（本轮完成）
+
+- [x] 新增 `headlessA2Q6Reconnect` 双客户端离屏夹具：在 Duriel 击杀并发送 Tyrael
+  302 后断开一名玩家，使用同一份旧 D2S 重连并重新进入 Duriel's Lair。
+- [x] 重连基线校验 A2Q6 任务记录及 `questRevision`（包括客户端基线 revision）保持一致，
+  不会因旧存档回滚 Tyrael 主目标状态。
+- [x] 地图重建后 Door、Tyrael NPC、Lut Gholein Portal/Warp 各只存在一份；对象数量、
+  开启状态、Warp 目标和实体 ID 均保持一致，重复 Tyrael 302 请求复用原 Portal，未产生
+  第二个 Warp。
+- [x] 验证：`:server:d2gs:headlessA2Q6Reconnect`（D2_HOME 指向 1.10f）通过，日志：
+  `a2q6_reconnect_pass oldPlayer=97 player=97 door=1618 tyrael=1619 portal=1620 revision=1358000456174251831 duplicate=false`；
+  `:server:d2gs:compileJava` 与 `git diff --check` 通过。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`、
+`server/d2gs/build.gradle`。下一项：继续 A2 七墓 Arcane Symbol 的真实 582 预设生成、
+地下入口/出口与 `Levels.txt` Vis/Warp 拓扑校验。

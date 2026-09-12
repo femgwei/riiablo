@@ -169,6 +169,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA2ObjectInteractionDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA2Q6Reconnect
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireA1ObjectInteractionDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA2TombDual
@@ -212,6 +214,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA2ObjectInteractionDual) {
       runA2ObjectInteractionDual(d2s, character);
+      return;
+    }
+    if (config.requireA2Q6Reconnect) {
+      runA2Q6ReconnectDual(d2s, character);
       return;
     }
     if (config.requireA1ObjectInteractionDual) {
@@ -4498,6 +4504,123 @@ public final class D2GSHeadlessClient {
     }
   }
 
+  /**
+   * A2Q6-specific reconnect gate.  Quest records are persisted while the
+   * Door/Tyrael/return-portal entities are transient ECS objects, so reconnect
+   * must rebuild the same object set without duplicating Warps or losing the
+   * Tyrael dialogue state.
+   */
+  private void runA2Q6ReconnectDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A2Q6Peer", 0x41325136);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_DURIELSLAIR)
+          || !D2GS.headlessEnterLevel(b.playerId, LEVEL_DURIELSLAIR)) {
+        throw new IOException("A2Q6 reconnect staging could not enter Duriel's Lair");
+      }
+      awaitLevel(a, inA, LEVEL_DURIELSLAIR, deadline());
+      awaitLevel(b, inB, LEVEL_DURIELSLAIR, deadline());
+      if (D2GS.headlessCompleteDurielObjective(a.playerId) == Engine.INVALID_ENTITY
+          || !D2GS.headlessRebuildQuestObjects(a.playerId)
+          || !D2GS.headlessRebuildQuestObjects(b.playerId)) {
+        throw new IOException("A2Q6 reconnect Duriel objective setup failed");
+      }
+      int[] beforeDoor = D2GS.headlessEndgameQuestObjectSnapshot(LEVEL_DURIELSLAIR);
+      if (beforeDoor.length < 6 || beforeDoor[0] != 1 || beforeDoor[4] < 1) {
+        throw new IOException("A2Q6 reconnect door state invalid before Tyrael: "
+            + java.util.Arrays.toString(beforeDoor));
+      }
+      int doorId = D2GS.headlessQuestObjectEntity(LEVEL_DURIELSLAIR,
+          com.riiablo.engine.server.quest.Act2DurielQuest.TYRAELS_DOOR);
+      int tyraelId = D2GS.headlessPrepareQuestNpc(a.playerId,
+          com.riiablo.engine.server.monster.MonsterType.TYRAEL1);
+      if (doorId == Engine.INVALID_ENTITY || tyraelId == Engine.INVALID_ENTITY) {
+        throw new IOException("A2Q6 reconnect Tyrael fixtures unavailable");
+      }
+      send(outA, questRequestPacket(610L, QuestOperation.NPC_MESSAGE, tyraelId,
+          com.riiablo.engine.server.quest.Act2DurielQuest.MESSAGE_TYRAEL_PORTAL));
+      QuestResult tyrael = a.awaitQuestResult(inA, 610L, deadline());
+      int record = com.riiablo.engine.server.quest.Act2DurielQuest.RECORD;
+      if (!hasQuestFlagAt(tyrael, Riiablo.ACT2, record,
+          com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+        throw new IOException("A2Q6 Tyrael message did not persist primary goal");
+      }
+      int portalId = D2GS.headlessQuestWarpEntity(LEVEL_DURIELSLAIR, LEVEL_LUTGHOLEIN);
+      int[] beforeReconnect = D2GS.headlessEndgameQuestObjectSnapshot(LEVEL_DURIELSLAIR);
+      if (portalId == Engine.INVALID_ENTITY || beforeReconnect.length < 6
+          || beforeReconnect[0] != 1 || beforeReconnect[1] != 1
+          || beforeReconnect[5] < 1) {
+        throw new IOException("A2Q6 reconnect portal state invalid before disconnect: "
+            + java.util.Arrays.toString(beforeReconnect));
+      }
+      long revision = tyrael.questRevision();
+      int oldPlayerId = a.playerId;
+      socketA.close();
+      b.awaitDeleted(inB, oldPlayerId, deadline());
+
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(character, d2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        send(reconnectOutput, questRequestPacket(611L, QuestOperation.SNAPSHOT, -1, -1));
+        QuestResult restored = reconnected.awaitQuestResult(reconnectInput, 611L, deadline());
+        if (!hasQuestFlagAt(restored, Riiablo.ACT2, record,
+                com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+            || restored.questRevision() != revision
+            || reconnected.playerQuestRevision != revision
+            || reconnected.baselineQuestRevision != revision) {
+          throw new IOException("A2Q6 quest state was not restored after reconnect");
+        }
+        if (!D2GS.headlessEnterLevel(reconnected.playerId, LEVEL_DURIELSLAIR)) {
+          throw new IOException("A2Q6 reconnect could not re-enter Duriel's Lair");
+        }
+        awaitLevel(reconnected, reconnectInput, LEVEL_DURIELSLAIR, deadline());
+        if (!D2GS.headlessRebuildQuestObjects(reconnected.playerId)) {
+          throw new IOException("A2Q6 reconnect object rebuild failed");
+        }
+        int[] afterReconnect = D2GS.headlessEndgameQuestObjectSnapshot(LEVEL_DURIELSLAIR);
+        int restoredDoor = D2GS.headlessQuestObjectEntity(LEVEL_DURIELSLAIR,
+            com.riiablo.engine.server.quest.Act2DurielQuest.TYRAELS_DOOR);
+        int restoredPortal = D2GS.headlessQuestWarpEntity(LEVEL_DURIELSLAIR,
+            LEVEL_LUTGHOLEIN);
+        int restoredTyrael = D2GS.headlessPrepareQuestNpc(reconnected.playerId,
+            com.riiablo.engine.server.monster.MonsterType.TYRAEL1);
+        if (afterReconnect.length < 6 || afterReconnect[0] != 1 || afterReconnect[1] != 1
+            || afterReconnect[5] < 1 || afterReconnect[4] < 1
+            || restoredDoor != doorId || restoredPortal != portalId
+            || restoredTyrael == Engine.INVALID_ENTITY) {
+          throw new IOException("A2Q6 reconnect duplicated/lost objects: before="
+              + java.util.Arrays.toString(beforeReconnect) + " after="
+              + java.util.Arrays.toString(afterReconnect) + " door=" + restoredDoor
+              + " portal=" + restoredPortal + " tyrael=" + restoredTyrael);
+        }
+        send(reconnectOutput, questRequestPacket(612L, QuestOperation.NPC_MESSAGE,
+            restoredTyrael, com.riiablo.engine.server.quest.Act2DurielQuest.MESSAGE_TYRAEL_PORTAL));
+        QuestResult replay = reconnected.awaitQuestResult(reconnectInput, 612L, deadline());
+        int replayPortal = D2GS.headlessQuestWarpEntity(LEVEL_DURIELSLAIR, LEVEL_LUTGHOLEIN);
+        if (replay == null || !replay.success() || replayPortal != portalId
+            || replay.questRevision() != revision) {
+          throw new IOException("A2Q6 reconnect Tyrael replay was not idempotent");
+        }
+        log("a2q6_reconnect_pass", "oldPlayer=" + oldPlayerId
+            + " player=" + reconnected.playerId + " door=" + restoredDoor
+            + " tyrael=" + restoredTyrael + " portal=" + restoredPortal
+            + " revision=" + revision + " duplicate=false");
+      }
+    }
+  }
+
   private QuestResult awaitQuestResult(DataInputStream input, long requestId,
                                        long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
@@ -5748,6 +5871,7 @@ public final class D2GSHeadlessClient {
     boolean requireQuestObjectDual;
     boolean requireA3ObjectInteractionDual;
     boolean requireA2ObjectInteractionDual;
+    boolean requireA2Q6Reconnect;
     boolean requireA1ObjectInteractionDual;
     boolean requireA2TombDual;
     boolean requireEarlyObjectDual;
@@ -5796,6 +5920,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
         else if ("--require-a3-object-interaction-dual".equals(arg)) config.requireA3ObjectInteractionDual = true;
         else if ("--require-a2-object-interaction-dual".equals(arg)) config.requireA2ObjectInteractionDual = true;
+        else if ("--require-a2q6-reconnect".equals(arg)) config.requireA2Q6Reconnect = true;
         else if ("--require-a1-object-interaction-dual".equals(arg)) config.requireA1ObjectInteractionDual = true;
         else if ("--require-a2-tomb-dual".equals(arg)) config.requireA2TombDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
@@ -5846,6 +5971,7 @@ public final class D2GSHeadlessClient {
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
           && !config.requireA2ObjectInteractionDual
+          && !config.requireA2Q6Reconnect
           && !config.requireA2TombDual
           && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
@@ -5854,6 +5980,7 @@ public final class D2GSHeadlessClient {
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
           && !config.requireA2ObjectInteractionDual
+          && !config.requireA2Q6Reconnect
           && !config.requireA2TombDual
           && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
@@ -5894,6 +6021,7 @@ public final class D2GSHeadlessClient {
           + " [--require-quest-warp-dual] [--require-quest-object-dual]"
           + " [--require-a3-object-interaction-dual]"
           + " [--require-a2-object-interaction-dual]"
+          + " [--require-a2q6-reconnect]"
           + " [--require-a2-tomb-dual]"
           + " [--require-early-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"

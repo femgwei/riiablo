@@ -259,6 +259,18 @@ tasks.register('headlessA2ObjectInteractionDual', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessA2Q6Reconnect', JavaExec) {
+  group = 'verification'
+  description = 'Runs the two-client A2Q6 Duriel/Tyrael reconnect and idempotency gate.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-a2q6-reconnect', '--test-timeout', '120'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessA1ObjectInteractionDual', JavaExec) {
   group = 'verification'
   description = 'Runs two windowless clients through native Act I quest and chest interactions.'
