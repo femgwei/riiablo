@@ -1060,6 +1060,9 @@ public class Act5QuestSystem extends BaseSystem {
     int leader = factory.createMonster(leaderStats.hcIdx, leaderX, leaderY,
         MonsterRank.SUPER_UNIQUE, affixes, -1, uniqueId);
     if (leader < 0) return;
+    if (mMonster.has(leader)) {
+      mMonster.get(leader).setBaalWaveMember(waveIndex, uniqueId, true);
+    }
     applyBaalSpawnFacing(leader);
     baalWaveEntities.add(leader);
     if (mSuperUnique != null) {
@@ -1085,6 +1088,9 @@ public class Act5QuestSystem extends BaseSystem {
       int entity = factory.createMonster(minionStats.hcIdx, x, y,
           MonsterRank.MINION, 0L, -1, leader);
       if (entity >= 0) {
+        if (mMonster.has(entity)) {
+          mMonster.get(entity).setBaalWaveMember(waveIndex, uniqueId, false);
+        }
         applyBaalSpawnFacing(entity);
         baalWaveEntities.add(entity);
       }
@@ -1133,7 +1139,19 @@ public class Act5QuestSystem extends BaseSystem {
     if (activeWave < 0 || activeWave >= Act5BaalQuest.WAVE_COUNT) return;
     int superUniqueId = Act5BaalQuest.WAVE_SUPER_UNIQUES[activeWave];
     int leader = baalWaveLeaders.get(superUniqueId, Engine.INVALID_ENTITY);
-    if (leader == Engine.INVALID_ENTITY) return;
+    int markedMembers = countMarkedBaalWaveMembers(activeWave, superUniqueId);
+    if (leader == Engine.INVALID_ENTITY) {
+      if (markedMembers > 0) {
+        log.warn("[A5Q6] Baal wave leader missing while members remain: wave={} "
+                + "superUnique={} members={} action=do_not_respawn",
+            activeWave + 1, superUniqueId, markedMembers);
+      } else {
+        log.debug("[A5Q6] Baal wave has no indexed members: wave={} superUnique={} "
+                + "reason=cleared_or_room_rebuild",
+            activeWave + 1, superUniqueId);
+      }
+      return;
+    }
     reindexCurrentBaalWave(leader, activeWave);
   }
 
@@ -1144,14 +1162,33 @@ public class Act5QuestSystem extends BaseSystem {
     int[] ids = entities.getData();
     for (int i = 0; i < entities.size(); i++) {
       int id = ids[i];
-      if (id != leader && (!mMonster.has(id) || mMonster.get(id) == null
-          || mMonster.get(id).uniqueId != leader)) continue;
+      Monster monster = mMonster.has(id) ? mMonster.get(id) : null;
+      boolean markedMember = monster != null && monster.baalWaveIndex == waveIndex
+          && monster.baalWaveSuperUniqueId == Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex];
+      if (id != leader && !markedMember && (monster == null || monster.uniqueId != leader)) continue;
       if (levelId(id) == Act5BaalQuest.THRONE_OF_DESTRUCTION
           && isLiveHostileMonster(id)) baalWaveEntities.add(id);
     }
     log.debug("[A5Q6] Baal wave index rebuilt: wave={} superUnique={} leader={} members={}",
         waveIndex + 1, Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex], leader,
         baalWaveEntities.size);
+  }
+
+  private int countMarkedBaalWaveMembers(int waveIndex, int superUniqueId) {
+    if (monstersByZone == null || mMonster == null) return 0;
+    int count = 0;
+    IntBag entities = monstersByZone.getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      if (!mMonster.has(id)) continue;
+      Monster monster = mMonster.get(id);
+      if (monster != null && monster.baalWaveIndex == waveIndex
+          && monster.baalWaveSuperUniqueId == superUniqueId
+          && levelId(id) == Act5BaalQuest.THRONE_OF_DESTRUCTION
+          && isLiveHostileMonster(id)) count++;
+    }
+    return count;
   }
 
   private static boolean isBaalWaveSuperUnique(int id) {

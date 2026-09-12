@@ -21,6 +21,16 @@ public class Monster extends Component {
   public long affixes;
   public int uniqueId;
 
+  /**
+   * Game-scoped A5Q6 Baal preset membership.  Entity ids are not stable when
+   * a Room/ECS is rebuilt, so the quest system uses these native preset
+   * identities for diagnostics and re-indexing.  The fields remain transient
+   * and are never written to a character D2S save.
+   */
+  public int baalWaveIndex = -1;
+  public int baalWaveSuperUniqueId = -1;
+  public boolean baalWaveLeader;
+
   /** Native MonsterSpawn minion owner for ordinary monster party members. */
   public int minionOwnerId = -1;
   /** Deferred RoomEx pack identity and leader marker used during activation. */
@@ -52,6 +62,9 @@ public class Monster extends Component {
     championType = -1;
     affixes = 0L;
     uniqueId = -1;
+    baalWaveIndex = -1;
+    baalWaveSuperUniqueId = -1;
+    baalWaveLeader = false;
     minionOwnerId = -1;
     nativePackId = -1;
     nativePackLeader = false;
@@ -71,6 +84,13 @@ public class Monster extends Component {
     this.affixes = affixes;
     this.championType = championType;
     this.uniqueId = uniqueId;
+    return this;
+  }
+
+  public Monster setBaalWaveMember(int waveIndex, int superUniqueId, boolean leader) {
+    baalWaveIndex = waveIndex;
+    baalWaveSuperUniqueId = superUniqueId;
+    baalWaveLeader = leader;
     return this;
   }
 

@@ -3231,3 +3231,18 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：补充波次 leader/minion 的持久化成员标记和无 leader 场景诊断，覆盖“leader
 已死亡但随从仍存活”和 Room 重建中实体短暂缺失两种边界，避免误判为可重生波次。
+
+### 2026-09-12 A5Q6 波次成员标记与缺失首领诊断（本轮完成）
+
+- [x] `Monster` 增加游戏级、非 D2S 的 `baalWaveIndex`、`baalWaveSuperUniqueId`
+  和 `baalWaveLeader` 标记；首领和随从生成时写入，组件复用时清零，避免把旧实体
+  的波次身份带入下一局。
+- [x] 重建索引优先按成员标记收集当前波次，即使 leader 已死亡、但随从仍存活，也能
+  保持同一 preset 归属；同时保留 `Monster.uniqueId` 作为原生 owner 兼容路径。
+- [x] 增加无 leader 诊断：有标记随从时明确记录 `do_not_respawn`，无成员时记录
+  `cleared_or_room_rebuild`，不会根据短暂缺失自动刷出整波，避免误复活已清场波次。
+- [x] 新增 `Act5BaalWaveMemberTest`，覆盖标记生命周期和组件复用清理；A5Q6 定向
+  测试、核心/D2GS 编译和 `git diff --check` 通过。
+
+当前下一项：把“Room 重建短暂缺失”从日志诊断提升为带 Tick 窗口的恢复策略，仅在确认
+当前波次未清场且持续缺失超过窗口后按 preset 重新生成，并继续禁止前序波次回生。
