@@ -2695,3 +2695,18 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：接入 A5Q2 Rescue Anya/Qual-Kehk，优先完成 Frigid Highlands 囚笼对象、
 五名野蛮人救援和 Qual-Kehk 佣兵奖励状态，再处理 A5Q3 Prison of Ice。
+
+### 2026-09-12 Act V A5Q2 Rescue the Barbarians / Qual-Kehk（本轮完成基础闭环）
+
+- [x] 对齐 D2MOO `ACT5Q2` 的 `CAGEDWUSSIE1` Object `473`，新增
+  `CAGED_SOLDIER` 原生任务对象类型；每个笼子只接受一次交互，按原版每笼 3 名、共 5
+  个笼子累计 15 名救援，达到阈值后写入 `PRIMARY_GOAL_DONE + REWARD_PENDING`。
+- [x] 接入 Qual-Kehk 消息 `20096/20110`：任务初始化和奖励领取状态持久化；奖励
+  基础实现生成 `r07/r08/r09` 三枚符文，重复领取幂等。
+- [x] 注册对象网络交互路径与 `Act5QuestSystem` 事件处理；增加 A5Q2 状态和 Object
+  resolver 回归测试，未改动战斗公式、技能或掉落系统。
+- 验证：`Act5RescueQuestTest`、`NativeQuestObjectResolverTest`、`:core:compileJava`、
+  `:server:d2gs:compileJava` 通过。
+
+当前下一项：接入 A5Q3 Prison of Ice（Frozen River/Frozen Tundra 的 Anya 冰封对象、
+  冰冻 Anya 解冻和 Malah 奖励），随后再处理 A5Q4 Nihlathak。

@@ -32,6 +32,7 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.DIABLO_SEAL, resolve(392, 34));
     assertEquals(NativeQuestObjectResolver.Type.DIABLO_SEAL, resolve(396, 38));
     assertEquals(NativeQuestObjectResolver.Type.HELLFORGE, resolve(376, 49));
+    assertEquals(NativeQuestObjectResolver.Type.CAGED_SOLDIER, resolve(473, 71));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }

@@ -19,7 +19,12 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
+import com.riiablo.engine.server.object.NativeQuestObjectResolver;
+import com.riiablo.item.Item;
+import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Quality;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.logger.LogManager;
@@ -44,10 +49,13 @@ public class Act5QuestSystem extends PassiveSystem {
   protected EntityFactory factory;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
+  @Wire(failOnNull = false)
+  protected ItemGenerator itemGenerator;
 
   private EntitySubscription playersByZone;
   private final IntSet spawnedShenkLevels = new IntSet();
   private final IntSet killedShenkEntities = new IntSet();
+  private final IntSet rescuedCages = new IntSet();
 
   @Override
   protected void initialize() {
@@ -60,10 +68,39 @@ public class Act5QuestSystem extends PassiveSystem {
     if (event == null || event.zone == null || event.zone.level == null
         || !mPlayer.has(event.entityId)) return;
     Player player = mPlayer.get(event.entityId);
-    if (player == null || player.data == null
-        || event.zone.level.Id != D2LevelIds.LEVEL_BLOODYFOOTHILLS) return;
-    updateRecord(player.data, Act5ShenkQuest::start, "entered-bloody-foothills");
-    spawnShenkIfNeeded(event.entityId, event.zone.level.Id);
+    if (player == null || player.data == null) return;
+    if (event.zone.level.Id == D2LevelIds.LEVEL_BLOODYFOOTHILLS) {
+      updateRecord(player.data, Act5ShenkQuest::start, "entered-bloody-foothills");
+      spawnShenkIfNeeded(event.entityId, event.zone.level.Id);
+    } else if (event.zone.level.Id == Act5RescueQuest.FRIGID_HIGHLANDS) {
+      updateRescueRecord(player.data, Act5RescueQuest::start, "entered-frigid-highlands");
+    }
+  }
+
+  @Subscribe
+  public void onQuestObjectInteraction(QuestObjectInteractionEvent interaction) {
+    if (interaction == null
+        || interaction.type != NativeQuestObjectResolver.Type.CAGED_SOLDIER
+        || !mPlayer.has(interaction.playerId) || !mMapWrapper.has(interaction.entityId)) return;
+    if (levelId(interaction.entityId) != Act5RescueQuest.FRIGID_HIGHLANDS) return;
+    Player player = mPlayer.get(interaction.playerId);
+    if (player == null || player.data == null || rescuedCages.contains(interaction.entityId)) return;
+    short record = rescueRecord(player.data);
+    if (Act5RescueQuest.isFinished(record)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) return;
+    rescuedCages.add(interaction.entityId);
+    interaction.accept();
+    short next = Act5RescueQuest.start(record);
+    if (rescuedCages.size >= Act5RescueQuest.REQUIRED_CAGES) {
+      next = Act5RescueQuest.complete(next);
+    }
+    final short transition = next;
+    updateRescueRecord(player.data, ignored -> transition,
+        "cage-opened-" + rescuedCages.size);
+    log.info("[A5Q2] Cage opened: player={} object={} cages={}/{} soldiers={}",
+        interaction.playerId, interaction.entityId, rescuedCages.size,
+        Act5RescueQuest.REQUIRED_CAGES,
+        rescuedCages.size * Act5RescueQuest.SOLDIERS_PER_CAGE);
   }
 
   @Subscribe
@@ -104,14 +141,51 @@ public class Act5QuestSystem extends PassiveSystem {
     if (event == null || !mPlayer.has(event.entityId) || !mMonster.has(event.npcId)) return;
     Player player = mPlayer.get(event.entityId);
     Monster npc = mMonster.get(event.npcId);
-    if (player == null || player.data == null || npc == null || npc.monstats == null
-        || !isLarzuk(npc.monstats) || event.messageIndex != Act5ShenkQuest.MESSAGE_LARZUK_REWARD) return;
+    if (player == null || player.data == null || npc == null || npc.monstats == null) return;
+    if (isQualKehk(npc.monstats)) {
+      onQualKehkMessage(event, player);
+      return;
+    }
+    if (!isLarzuk(npc.monstats) || event.messageIndex != Act5ShenkQuest.MESSAGE_LARZUK_REWARD) return;
     short previous = record(player.data);
     short next = Act5ShenkQuest.claimReward(previous);
     if (next == previous) return;
     updateRecord(player.data, ignored -> next, "larzuk-shenk-reward");
     log.info("[A5Q1] Larzuk reward claimed: player={} (socket service entitlement)",
         event.entityId);
+  }
+
+  private void onQualKehkMessage(NpcQuestMessageEvent event, Player player) {
+    short previous = rescueRecord(player.data);
+    if (event.messageIndex == Act5RescueQuest.MESSAGE_QUAL_KEHK_INIT) {
+      updateRescueRecord(player.data, Act5RescueQuest::start, "qual-kehk-init");
+      return;
+    }
+    if (event.messageIndex != Act5RescueQuest.MESSAGE_QUAL_KEHK_REWARD
+        || !Act5RescueQuest.canClaimReward(previous)) return;
+    short next = Act5RescueQuest.claimReward(previous);
+    updateRescueRecord(player.data, ignored -> next, "qual-kehk-reward");
+    dropRescueRunes(event.npcId);
+    log.info("[A5Q2] Qual-Kehk reward claimed: player={} runes=r07,r08,r09", event.entityId);
+  }
+
+  private void dropRescueRunes(int npcId) {
+    if (itemGenerator == null || factory == null || !mPosition.has(npcId)) return;
+    Position position = mPosition.get(npcId);
+    String[] runes = {"r07", "r08", "r09"};
+    for (int i = 0; i < runes.length; i++) {
+      try {
+        Item rune = itemGenerator.generate(runes[i]);
+        if (rune == null) continue;
+        rune.version = Item.VERSION_110;
+        rune.quality = Quality.NORMAL;
+        rune.flags |= Item.ITEMFLAG_IDENTIFIED;
+        int entity = factory.createItem(rune, position.position.x + i - 1f, position.position.y);
+        if (entity >= 0) rune.id = entity;
+      } catch (Throwable t) {
+        log.warn("[A5Q2] Qual-Kehk rune generation failed: code={}", runes[i], t);
+      }
+    }
   }
 
   private void spawnShenkIfNeeded(int playerId, int levelId) {
@@ -176,8 +250,19 @@ public class Act5QuestSystem extends PassiveSystem {
     return stats.NameStr != null && stats.NameStr.toLowerCase().contains("larzuk");
   }
 
+  private boolean isQualKehk(MonStats.Entry stats) {
+    if (stats == null) return false;
+    if ("Qual-Kehk".equalsIgnoreCase(stats.Id)
+        || "Qual-Kehk".equalsIgnoreCase(stats.NameStr)) return true;
+    return stats.NameStr != null && stats.NameStr.toLowerCase().contains("qual");
+  }
+
   private short record(CharData data) {
     return data.getQuests(Riiablo.ACT5)[Act5ShenkQuest.RECORD];
+  }
+
+  private short rescueRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT5)[Act5RescueQuest.RECORD];
   }
 
   private void complete(CharData data) {
@@ -192,6 +277,18 @@ public class Act5QuestSystem extends PassiveSystem {
     data.getQuests(Riiablo.ACT5)[Act5ShenkQuest.RECORD] = next;
     if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
     log.info("[A5Q1] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private void updateRescueRecord(CharData data,
+      java.util.function.UnaryOperator<Short> transition, String reason) {
+    short previous = rescueRecord(data);
+    short next = transition.apply(previous);
+    if (previous == next) return;
+    data.getQuests(Riiablo.ACT5)[Act5RescueQuest.RECORD] = next;
+    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+    log.info("[A5Q2] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
         data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
         Integer.toHexString(Short.toUnsignedInt(next)));
   }
