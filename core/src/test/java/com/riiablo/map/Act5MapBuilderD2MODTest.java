@@ -52,4 +52,21 @@ class Act5MapBuilderD2MODTest {
     assertEquals(D2LevelIds.LEVEL_WORLDSTONECHAMBER,
         Act5MapBuilderD2MOD.ACT5_MAIN_LINKS[summit + 2][1]);
   }
+
+  @Test
+  void nihlathakBranchUsesIndependentNativeTempleChain() {
+    assertEquals(4, Act5MapBuilderD2MOD.ACT5_NIHLATHAK_CHAIN.length);
+    assertEquals(D2LevelIds.LEVEL_NIHLATHAKSTEMPLE,
+        Act5MapBuilderD2MOD.ACT5_NIHLATHAK_CHAIN[0]);
+    assertEquals(D2LevelIds.LEVEL_HALLSOFVAUGHT,
+        Act5MapBuilderD2MOD.ACT5_NIHLATHAK_CHAIN[3]);
+    assertEquals(Act5MapBuilderD2MOD.ACT5_NIHLATHAK_CHAIN.length - 1,
+        Act5MapBuilderD2MOD.ACT5_NIHLATHAK_LINKS.length);
+    for (int i = 0; i < Act5MapBuilderD2MOD.ACT5_NIHLATHAK_LINKS.length; i++) {
+      assertEquals(Act5MapBuilderD2MOD.ACT5_NIHLATHAK_CHAIN[i],
+          Act5MapBuilderD2MOD.ACT5_NIHLATHAK_LINKS[i][0]);
+      assertEquals(Act5MapBuilderD2MOD.ACT5_NIHLATHAK_CHAIN[i + 1],
+          Act5MapBuilderD2MOD.ACT5_NIHLATHAK_LINKS[i][1]);
+    }
+  }
 }

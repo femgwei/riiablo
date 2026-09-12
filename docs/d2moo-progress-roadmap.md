@@ -3031,3 +3031,20 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 
 当前下一项：继续核对 A5Q4 Nihlathak Temple/Halls of Vaught 的原生入口碰撞和重连后
   目标区域一致性，再处理 A5Q5 远古人对象动画/复位与 A5Q6 结束传送的剩余差异。
+
+### 2026-09-12 Act V A5Q4 Temple 地图分支与双向 Warp（本轮完成）
+
+- [x] 修正 Act V 地图生成遗漏：独立生成 D2MOO A5Q4 的
+  `Nihlathak Temple (123) → Halls of Anguish (124) → Halls of Pain (126) →
+  Halls of Vaught (127)` Zone 分支；该分支不再错误地接入 Arreat Summit 主链。
+- [x] 按 D2Common first-empty warp slot 规则写入 A5Q4 分支双向 `Vis/Warp` 覆盖和
+  合成入口 marker，保证 `WarpInteractor` 能在没有 DS1 特殊墙体的种子中仍创建有效
+  Warp 实体；城镇 Drehya QuestWarp 仍作为唯一入口，不改变主链拓扑。
+- [x] 生成分支 Zone 时挂接与其他 Act V 区域相同的权威怪物生成器，坐标放置在主链
+  外侧避免边界重叠；补充 A5Q4 分支顺序、链路数量和首尾关卡回归测试。
+- [x] 共享文件 `Map.java` 仅增加 A5Q4 Warp 后处理调用，未改动战斗、技能、实体注册
+  或碰撞公式；通过 `Act5MapBuilderD2MODTest`、`Act5NihlathakQuestTest`、
+  `NativeQuestObjectResolverTest`、`:core:compileJava`、`:server:d2gs:compileJava`。
+
+当前下一项：补齐 A5Q4 分支入口落点的可通行性/碰撞验证（尤其 Temple 与 Halls of Pain
+  的合成 marker），随后进入 A5Q5 三古代人对象动画、失败复位和 Summit 门状态对齐。

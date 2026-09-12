@@ -479,6 +479,7 @@ public class Map implements Disposable {
       if (useD2MOD) {
         try {
           Act5MapBuilderD2MOD.INSTANCE.configureAct5OutdoorWarps(this);
+          Act5MapBuilderD2MOD.INSTANCE.configureAct5QuestWarps(this);
         } catch (Throwable t) {
           Gdx.app.error(TAG, "Error during D2MOD Act V warp post-generation processing", t);
         }

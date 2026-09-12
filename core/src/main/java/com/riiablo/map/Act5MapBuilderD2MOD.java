@@ -46,6 +46,20 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
   static final int LEVEL_THRONEOFDESTRUCTION = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2;
   static final int LEVEL_WORLDSTONECHAMBER = D2LevelIds.LEVEL_WORLDSTONECHAMBER;
 
+  /** Native A5Q4 temple branch entered through Drehya's town portal. */
+  static final int[] ACT5_NIHLATHAK_CHAIN = {
+      D2LevelIds.LEVEL_NIHLATHAKSTEMPLE,
+      D2LevelIds.LEVEL_HALLSOFANGUISH,
+      D2LevelIds.LEVEL_HALLSOFPAIN,
+      D2LevelIds.LEVEL_HALLSOFVAUGHT
+  };
+
+  static final int[][] ACT5_NIHLATHAK_LINKS = {
+      {D2LevelIds.LEVEL_NIHLATHAKSTEMPLE, D2LevelIds.LEVEL_HALLSOFANGUISH},
+      {D2LevelIds.LEVEL_HALLSOFANGUISH, D2LevelIds.LEVEL_HALLSOFPAIN},
+      {D2LevelIds.LEVEL_HALLSOFPAIN, D2LevelIds.LEVEL_HALLSOFVAUGHT}
+  };
+
   /** Main Act V progression. Side caves are linked by their native LvlWarp rows. */
   static final int[] ACT5_MAIN_CHAIN = {
       LEVEL_HARROGATH,
@@ -164,6 +178,10 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     BaseMapBuilderD2MOD base = new BaseMapBuilderD2MOD() {};
     base.factory = factory;
     base.socket = socket;
+
+    // A5Q4 is a separate temple branch. It is not part of the outdoor
+    // Harrogath-to-Summit chain and must not inherit a fake Summit edge.
+    createNihlathakQuestZones(map, diff, base);
     
     for (int i = 0; i < act5Links.length && act5Links[i] != null; i++) {
       Levels.Entry level = Riiablo.files.Levels.get(act5Links[i].level);
@@ -220,6 +238,27 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     }
   }
 
+  private void createNihlathakQuestZones(Map map, int diff, BaseMapBuilderD2MOD base) {
+    if (map == null || base == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    int cursor = 0;
+    for (Zone existing : map.zones) {
+      if (existing != null) cursor = Math.max(cursor, existing.x() + existing.width());
+    }
+    cursor += 32;
+    for (int levelId : ACT5_NIHLATHAK_CHAIN) {
+      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      if (level == null) {
+        Gdx.app.error(TAG, "A5Q4 level missing: " + levelId);
+        continue;
+      }
+      Zone zone = base.createZoneWithGenerator(map, level, diff, cursor, 0);
+      zone.generator = base.createMonsterGenerator(socket);
+      cursor += zone.width() + 32;
+      Gdx.app.debug(TAG, "A5Q4 quest zone placed: level=" + levelId
+          + " x=" + zone.x() + " width=" + zone.width());
+    }
+  }
+
   private static boolean isOutdoorFeatureLevel(int levelId) {
     return levelId == LEVEL_BLOODYFOOTHILLS
         || levelId == LEVEL_ID_ACT5_BARRICADE_1
@@ -234,9 +273,19 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
    * to this Map avoids mutating shared table data.
    */
   void configureAct5OutdoorWarps(Map map) {
+    configureAct5WarpLinks(map, ACT5_MAIN_LINKS, "outdoor");
+  }
+
+  /** Configures the independent A5Q4 temple branch without connecting it to
+   * the outdoor progression chain. */
+  void configureAct5QuestWarps(Map map) {
+    configureAct5WarpLinks(map, ACT5_NIHLATHAK_LINKS, "A5Q4 temple");
+  }
+
+  private void configureAct5WarpLinks(Map map, int[][] links, String label) {
     if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
     IntMap<RuntimeWarpState> states = new IntMap<>();
-    for (int[] link : ACT5_MAIN_LINKS) {
+    for (int[] link : links) {
       for (int levelId : link) {
         if (states.containsKey(levelId)) continue;
         Levels.Entry level = Riiablo.files.Levels.get(levelId);
@@ -248,7 +297,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       }
     }
     int configured = 0;
-    for (int[] link : ACT5_MAIN_LINKS) {
+    for (int[] link : links) {
       RuntimeWarpState source = states.get(link[0]);
       RuntimeWarpState destination = states.get(link[1]);
       if (source == null || destination == null) continue;
@@ -256,7 +305,8 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       int destinationSlot = destination.ensureDestination(link[0]);
       if (sourceSlot < 0 || destinationSlot < 0) {
         Gdx.app.error(TAG, String.format(
-            "Act5 warp slot exhausted: %d->%d sourceSlot=%d destinationSlot=%d",
+            "Act5 %s warp slot exhausted: %d->%d sourceSlot=%d destinationSlot=%d",
+            label,
             link[0], link[1], sourceSlot, destinationSlot));
         continue;
       }
@@ -267,8 +317,8 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       configured++;
     }
     linkNativeWarpSpecials(map);
-    Gdx.app.log(TAG, String.format("Act5 native warp table configured: links=%d/%d",
-        configured, ACT5_MAIN_LINKS.length));
+    Gdx.app.log(TAG, String.format("Act5 %s native warp table configured: links=%d/%d",
+        label, configured, links.length));
   }
 
   /** Pair exported/synthetic warp cells with the reverse cell expected by WarpInteractor. */
