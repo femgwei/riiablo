@@ -3345,3 +3345,18 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：核对 A5Q6 结束后回到 Harrogath 的 Last Portal 使用、重复点击和跨房间重建，
 然后把同一套断线恢复门槛推广到其他 Act IV/V 任务 Warp。
+
+### 2026-09-12 A5Q6 Last Portal 使用/重建/重复点击验证（本轮完成）
+
+- [x] 双客户端在 Chamber 中触发 Last Portal 的瞬态实体删除，再由
+  `Act5QuestSystem.rebuildBaalEndPortalState` 按游戏级 `lastPortalCreated` 状态重建；
+  两端都观察到重建后的 Warp，避免 Room/ECS 重建后传送门丢失。
+- [x] 通过真实 `QuestOperation.WARP_INTERACTION` 使用 Last Portal 返回 Harrogath，校验
+  目标 Level、Zone 一致性和碰撞状态；精确重复请求按缓存重放成功。
+- [x] 使用新的 request id 重复点击旧的 Chamber Warp，在玩家已离开源区域后被权威边界
+  拒绝，避免过期客户端再次执行传送。
+- [x] 通过 A5Q6 核心测试、D2GS 编译和 `git diff --check`；未新增 FlatBuffer/生成网络
+  文件，未改变战斗或伤害逻辑。
+
+当前下一项：把 Last Portal 的同样“状态快照 + 源区域 + 精确重放”门槛推广到 Act IV
+  Hell Gate/Diablo 结束 Warp 以及 Act V 其他任务传送门，并补跨 Act 的统一回归入口。

@@ -1849,6 +1849,54 @@ public final class D2GSHeadlessClient {
           log("baal_post_message_reconnect_pass", "player=" + reconnectedB.playerId
               + " tyrael=" + tyraelRestored.entityId + " lastPortal=" + lastPortal
               + " reward=true custom3=true");
+
+          int rebuiltPortal = D2GS.headlessRebuildLastPortal();
+          if (rebuiltPortal == Engine.INVALID_ENTITY) {
+            throw new IOException("Last Portal did not rebuild after Chamber room reset");
+          }
+          reconnectedA.awaitVisibleEntity(inReconnectA, rebuiltPortal, deadline());
+          reconnectedB.awaitVisibleEntity(inReconnectB, rebuiltPortal, deadline());
+          log("baal_last_portal_rebuild_pass", "old=" + lastPortal + " rebuilt="
+              + rebuiltPortal + " clients=true,true");
+          lastPortal = rebuiltPortal;
+
+          int townWarp = D2GS.headlessPrepareWarpToLevel(
+              reconnectedB.playerId, com.riiablo.engine.server.quest.Act5BaalQuest.HARROGATH);
+          if (townWarp == Engine.INVALID_ENTITY) {
+            throw new IOException("Last Portal Warp was not selectable from Chamber");
+          }
+          send(outReconnectB, questRequestPacket(4L, QuestOperation.WARP_INTERACTION,
+              townWarp, -1));
+          QuestResult townWarpResult = reconnectedB.awaitQuestResult(
+              inReconnectB, 4L, deadline());
+          awaitLevel(reconnectedB, inReconnectB,
+              com.riiablo.engine.server.quest.Act5BaalQuest.HARROGATH, deadline());
+          int[] warpState = D2GS.headlessWarpState(reconnectedB.playerId);
+          if (!townWarpResult.success() || warpState.length < 4
+              || warpState[0] != com.riiablo.engine.server.quest.Act5BaalQuest.HARROGATH
+              || warpState[2] != 1) {
+            throw new IOException("Last Portal return to Harrogath was not atomic: result="
+                + townWarpResult.success() + " state=" + java.util.Arrays.toString(warpState));
+          }
+          // Exact request replay must remain a cached success even though the
+          // player is now in Harrogath and the source Warp is out of scope.
+          send(outReconnectB, questRequestPacket(4L, QuestOperation.WARP_INTERACTION,
+              townWarp, -1));
+          QuestResult replayedTownWarp = reconnectedB.awaitQuestResult(
+              inReconnectB, 4L, deadline());
+          if (!replayedTownWarp.success()) {
+            throw new IOException("Last Portal repeated request was not idempotent: "
+                + replayedTownWarp.reason());
+          }
+          send(outReconnectB, questRequestPacket(5L, QuestOperation.WARP_INTERACTION,
+              townWarp, -1));
+          QuestResult staleTownWarp = reconnectedB.awaitQuestResult(
+              inReconnectB, 5L, deadline());
+          if (staleTownWarp.success()) {
+            throw new IOException("stale Last Portal click was accepted after level change");
+          }
+          log("baal_last_portal_use_pass", "warp=" + townWarp + " destination=Harrogath"
+              + " replay=true staleRejected=" + staleTownWarp.reason());
         }
       }
     }

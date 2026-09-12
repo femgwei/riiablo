@@ -584,25 +584,79 @@ public class D2GS extends ApplicationAdapter {
         new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
     Gdx.app.postRunnable(() -> {
       try {
+        result.set(findLastPortalWarpEntity(server));
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  private static int findLastPortalWarpEntity(D2GS server) {
+    if (server == null || server.world == null) return Engine.INVALID_ENTITY;
+    com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Warp.class,
+            com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+    int[] data = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int entity = data[i];
+      com.riiablo.engine.server.component.Warp warp = server.world
+          .getMapper(com.riiablo.engine.server.component.Warp.class).get(entity);
+      com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+          .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+      if (warp != null && warp.dstLevel != null && wrapper != null && wrapper.zone != null
+          && wrapper.zone.level != null
+          && wrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER
+          && warp.dstLevel.Id == Act5BaalQuest.HARROGATH
+          && warp.index == QuestWarp.encode(Act5BaalQuest.HARROGATH)) return entity;
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  /**
+   * Deletes the Chamber's transient Last Portal visual/Warp and lets the
+   * normal Act5QuestSystem fixed-tick rebuild it from game-level state.
+   * Returns the recreated Warp id, or INVALID_ENTITY when the rebuild failed.
+   */
+  static int headlessRebuildLastPortal() {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        int warpId = findLastPortalWarpEntity(server);
         com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
-            Aspect.all(com.riiablo.engine.server.component.Warp.class,
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
                 com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
         int[] data = entities.getData();
         for (int i = 0; i < entities.size(); i++) {
           int entity = data[i];
-          com.riiablo.engine.server.component.Warp warp = server.world
-              .getMapper(com.riiablo.engine.server.component.Warp.class).get(entity);
+          com.riiablo.engine.server.component.Object object = server.world
+              .getMapper(com.riiablo.engine.server.component.Object.class).get(entity);
           com.riiablo.engine.server.component.MapWrapper wrapper = server.world
               .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
-          if (warp != null && warp.dstLevel != null && wrapper != null && wrapper.zone != null
-              && wrapper.zone.level != null
+          if (object != null && object.base != null && object.base.Id
+              == com.riiablo.engine.server.object.NativeQuestObjectResolver.LAST_PORTAL
+              && wrapper != null && wrapper.zone != null && wrapper.zone.level != null
               && wrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER
-              && warp.dstLevel.Id == Act5BaalQuest.HARROGATH
-              && warp.index == QuestWarp.encode(Act5BaalQuest.HARROGATH)) {
-            result.set(entity);
-            return;
+              && server.world.getEntityManager().isActive(entity)) {
+            server.world.delete(entity);
           }
         }
+        if (warpId != Engine.INVALID_ENTITY
+            && server.world.getEntityManager().isActive(warpId)) server.world.delete(warpId);
+        // Flush the deletion and run the normal quest rebuild path. The state
+        // remains lastPortalCreated=true, so this must create exactly one pair.
+        server.world.process();
+        result.set(findLastPortalWarpEntity(server));
       } finally {
         done.countDown();
       }
