@@ -3860,3 +3860,19 @@ Symbol 的真实选择、地下区域入口和地图拓扑校验。
 `core/src/test/java/com/riiablo/map/Act2MapBuilderD2MooWarpTest.java`。
 下一项：根据拓扑诊断结果补入口特殊墙体的落点碰撞校正，验证 Warp 邻接格可通行且不会把
 玩家送入墙体或 Zone 外。
+
+### 2026-09-13 A2 七墓入口特殊墙体与运行时 Warp 补齐（本轮完成）
+
+- [x] `Act2MapBuilderD2MOD.configureAct2TombWarps` 对七个 Canyon↔Tomb 关系执行原生
+  `DRLG_SetWarpId` 风格的 first-empty-slot 分配；已有 `Vis/Warp` 槽优先复用，缺失槽位
+  写入 Map 的运行时 destination override。
+- [x] 当 DS1 导出缺少入口特殊墙体时，为两端补建 `SPECIAL_10` Warp marker；
+  `linkNativeWarpSpecials` 随后按反向 slot 配对，`MapManager` 可生成正常 Warp 实体，
+  `WarpInteractor` 仍通过 `Zone.findFreeCoordinates` 做 50-subtile 碰撞安全落点搜索。
+- [x] 新增拓扑单测覆盖 Canyon↔Tomb 双向槽位、缺失 Zone 诊断和静态 Duriel 边拒绝；
+  1.10f `headlessA2TombDual` 逐墓进入回归继续通过（七墓、六符号、双客户端）。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Act2MapBuilderD2MOD.java`、
+`core/src/test/java/com/riiablo/map/Act2MapBuilderD2MooWarpTest.java`。
+下一项：增加真实 Warp 交互离屏测试，验证每个 Tomb 入口的实体可点击、落点不在阻挡格，
+并核对地下地图边界外移动拒绝。

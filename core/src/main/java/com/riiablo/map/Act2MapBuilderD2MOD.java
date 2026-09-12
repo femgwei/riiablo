@@ -598,6 +598,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
             "Act2 synthetic Arcane Symbol preset: tomb=%d class=%d local=(%d,%d)",
             tombId, selectedTombs.arcaneSymbolObjectFor(tombId), localX, localY));
       }
+      configureAct2TombWarps(map);
     }
 
     TopologyReport report = validateAct2Topology(Riiablo.files.Levels, generated);
@@ -756,6 +757,67 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
       }
     }
     return result;
+  }
+
+  /**
+   * Installs the seven Canyon↔Tomb runtime links used by D2Common's canyon
+   * generator.  Some reduced Levels.txt exports omit those Vis/Warp slots;
+   * allocate the first native-empty slot and emit a synthetic SPECIAL_10
+   * marker so MapManager can still build a collision-validated Warp entity.
+   */
+  void configureAct2TombWarps(Map map) {
+    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    Zone canyon = findZoneByLevelId(map, LEVEL_CANYONOFTHEMAGI);
+    Levels.Entry canyonLevel = Riiablo.files.Levels.get(LEVEL_CANYONOFTHEMAGI);
+    if (canyon == null || canyonLevel == null) return;
+    int configured = 0;
+    for (int tombId = Act2TombSelection.FIRST_TOMB_LEVEL;
+        tombId <= Act2TombSelection.LAST_TOMB_LEVEL; tombId++) {
+      Zone tomb = findZoneByLevelId(map, tombId);
+      Levels.Entry tombLevel = Riiablo.files.Levels.get(tombId);
+      if (tomb == null || tombLevel == null) continue;
+      int canyonSlot = findOrAllocateWarpSlot(canyonLevel.Vis, canyonLevel.Warp, tombId);
+      int tombSlot = findOrAllocateWarpSlot(tombLevel.Vis, tombLevel.Warp,
+          LEVEL_CANYONOFTHEMAGI);
+      if (canyonSlot < 0 || tombSlot < 0) {
+        Gdx.app.error(TAG, String.format(
+            "Act2 tomb warp slot unavailable: canyon=%d slot=%d tomb=%d slot=%d",
+            LEVEL_CANYONOFTHEMAGI, canyonSlot, tombId, tombSlot));
+        continue;
+      }
+      map.addWarpDestinationOverride(LEVEL_CANYONOFTHEMAGI, canyonSlot, tombId);
+      map.addWarpDestinationOverride(tombId, tombSlot, LEVEL_CANYONOFTHEMAGI);
+      ensureTombWarpMarker(canyon, canyonSlot);
+      ensureTombWarpMarker(tomb, tombSlot);
+      configured++;
+    }
+    Gdx.app.log(TAG, String.format("Act2 tomb runtime warps configured: %d/7", configured));
+  }
+
+  private static int findOrAllocateWarpSlot(int[] vis, int[] warp, int destination) {
+    int existing = findRuntimeWarpSlot(vis, warp, destination);
+    if (existing >= 0) return existing;
+    if (vis == null || warp == null) return 0;
+    int count = Math.min(8, Math.min(vis.length, warp.length));
+    for (int i = 0; i < count; i++) {
+      if (vis[i] == 0 && warp[i] < 0) return i;
+    }
+    return -1;
+  }
+
+  private static void ensureTombWarpMarker(Zone zone, int mainIndex) {
+    if (zone == null || mainIndex < 0 || mainIndex >= 8) return;
+    if (zone.specials != null) {
+      for (IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+        DS1.Cell cell = entry.value;
+        if (cell != null && cell.mainIndex == mainIndex
+            && Map.ID.WARPS.contains(cell.id)) return;
+      }
+    }
+    int tileX = Math.max(1, Math.min(zone.tilesX - 2, 2 + (mainIndex % 4) * 3));
+    int tileY = Math.max(1, Math.min(zone.tilesY - 2, 2 + (mainIndex / 4) * 3));
+    zone.addNativeWarpMarker(mainIndex, tileX * DT1.Tile.SUBTILE_SIZE + 2,
+        tileY * DT1.Tile.SUBTILE_SIZE + 2);
   }
 
   static TopologyReport validateAct2Topology(Iterable<Levels.Entry> levels,
