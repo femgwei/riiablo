@@ -29,6 +29,8 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.KHALIM_CHEST, resolve(406, 58));
     assertEquals(NativeQuestObjectResolver.Type.KHALIM_CHEST, resolve(407, 59));
     assertEquals(NativeQuestObjectResolver.Type.COMPELLING_ORB, resolve(404, 53));
+    assertEquals(NativeQuestObjectResolver.Type.DIABLO_SEAL, resolve(392, 34));
+    assertEquals(NativeQuestObjectResolver.Type.DIABLO_SEAL, resolve(396, 38));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }

@@ -20,8 +20,10 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
+import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.riiablo.engine.server.object.NativeQuestObjectResolver;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.logger.LogManager;
@@ -49,6 +51,9 @@ public class Act4QuestSystem extends PassiveSystem {
   private EntitySubscription monstersByZone;
   private final IntSet spawnedIzualLevels = new IntSet();
   private final IntSet rewardedIzuals = new IntSet();
+  private final IntSet activatedDiabloSeals = new IntSet();
+  private final IntSet completedDiablos = new IntSet();
+  private boolean diabloSpawned;
 
   @Override
   protected void initialize() {
@@ -66,6 +71,47 @@ public class Act4QuestSystem extends PassiveSystem {
     if (player == null || player.data == null || event.zone.level.Id != D2LevelIds.LEVEL_PLAINSOFDESPAIR) return;
     updateRecord(player.data, Act4IzualQuest::start, "entered-plains-of-despair");
     spawnIzualIfNeeded(event.entityId, event.zone.level.Id);
+    if (event.zone.level.Id == Act4DiabloQuest.CHAOS_SANCTUARY) {
+      updateDiabloRecord(player.data);
+    }
+  }
+
+  @Subscribe
+  public void onQuestObjectInteraction(QuestObjectInteractionEvent interaction) {
+    if (interaction == null || interaction.type != NativeQuestObjectResolver.Type.DIABLO_SEAL
+        || !mPlayer.has(interaction.playerId) || !mPosition.has(interaction.entityId)) return;
+    Player player = mPlayer.get(interaction.playerId);
+    if (player == null || player.data == null || levelId(interaction.entityId) != Act4DiabloQuest.CHAOS_SANCTUARY
+        || NativeQuestRecord.has(diabloRecord(player.data), NativeQuestRecord.REWARD_GRANTED)) return;
+    if (!activatedDiabloSeals.add(interaction.entityId)) return;
+    interaction.accept();
+    updateDiabloRecord(player.data);
+    log.info("[A4Q2] Chaos seal activated: object={} player={} count={}/5",
+        interaction.entityId, interaction.playerId, activatedDiabloSeals.size);
+    if (activatedDiabloSeals.size >= 5) spawnDiablo(interaction.entityId);
+  }
+
+  private void spawnDiablo(int sourceEntityId) {
+    if (diabloSpawned || factory == null) return;
+    if (monstersByZone != null) {
+      IntBag entities = monstersByZone.getEntities();
+      int[] ids = entities.getData();
+      for (int i = 0; i < entities.size(); i++) {
+        Monster monster = mMonster.get(ids[i]);
+        if (monster != null && monster.monstats != null && monster.monstats.hcIdx == MonsterType.DIABLO
+            && levelId(ids[i]) == Act4DiabloQuest.CHAOS_SANCTUARY) {
+          diabloSpawned = true;
+          return;
+        }
+      }
+    }
+    Position position = mPosition.get(sourceEntityId);
+    if (position == null) return;
+    int entity = factory.createMonster(MonsterType.DIABLO, position.position.x, position.position.y);
+    if (entity >= 0) {
+      diabloSpawned = true;
+      log.info("[A4Q2] Diablo spawned: entity={} seal={}", entity, sourceEntityId);
+    }
   }
 
   private void spawnIzualIfNeeded(int playerId, int levelId) {
@@ -97,6 +143,13 @@ public class Act4QuestSystem extends PassiveSystem {
   public void onMonsterKilled(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
     Monster monster = mMonster.get(event.victim);
+    if (monster != null && monster.monstats != null && monster.monstats.hcIdx == MonsterType.DIABLO
+        && levelId(event.victim) == Act4DiabloQuest.CHAOS_SANCTUARY
+        && completedDiablos.add(event.victim)) {
+      completeDiabloForPlayers();
+      log.info("[A4Q2] Diablo defeated: victim={} killer={}", event.victim, event.killer);
+      return;
+    }
     if (monster == null || monster.monstats == null
         || monster.monstats.hcIdx != MonsterType.IZUAL
         || levelId(event.victim) != D2LevelIds.LEVEL_PLAINSOFDESPAIR
@@ -125,6 +178,28 @@ public class Act4QuestSystem extends PassiveSystem {
       }
     }
     log.info("[A4Q1] Izual defeated: victim={} killer={}", event.victim, event.killer);
+  }
+
+  private void completeDiabloForPlayers() {
+    if (playersByZone == null) return;
+    IntSet parties = new IntSet();
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      Player player = mPlayer.get(id);
+      if (player == null || player.data == null || levelId(id) != Act4DiabloQuest.CHAOS_SANCTUARY) continue;
+      completeDiabloRecord(player.data);
+      short party = partyManager == null ? Party.INVALID_ID : partyManager.getPartyId(id);
+      if (party != Party.INVALID_ID) parties.add(party);
+    }
+    if (partyManager == null) return;
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      Player player = mPlayer.get(id);
+      if (player == null || player.data == null || !isAct4Level(levelId(id))) continue;
+      if (parties.contains(partyManager.getPartyId(id))) completeDiabloRecord(player.data);
+    }
   }
 
   @Subscribe
@@ -165,6 +240,36 @@ public class Act4QuestSystem extends PassiveSystem {
 
   private short record(CharData data) {
     return data.getQuests(Riiablo.ACT4)[Act4IzualQuest.RECORD];
+  }
+
+  private short diabloRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT4)[Act4DiabloQuest.RECORD];
+  }
+
+  private void updateDiabloRecord(CharData data) {
+    short previous = diabloRecord(data);
+    short next = Act4DiabloQuest.start(previous);
+    if (next == previous) return;
+    data.getQuests(Riiablo.ACT4)[Act4DiabloQuest.RECORD] = next;
+    persist(data);
+    log.info("[A4Q2] Quest record changed: character={} reason=entered-chaos-sanctuary previous=0x{} next=0x{}",
+        data.name, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private void completeDiabloRecord(CharData data) {
+    short previous = diabloRecord(data);
+    short next = Act4DiabloQuest.complete(previous);
+    if (next == previous) return;
+    data.getQuests(Riiablo.ACT4)[Act4DiabloQuest.RECORD] = next;
+    persist(data);
+    log.info("[A4Q2] Quest record changed: character={} reason=diablo-defeated previous=0x{} next=0x{}",
+        data.name, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
+  }
+
+  private static void persist(CharData data) {
+    if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
   }
 
   private void updateRecord(CharData data, java.util.function.UnaryOperator<Short> transition,

@@ -2600,3 +2600,17 @@ A4Q1 Izual 的 Plains of Despair 生成、击杀奖励（2 技能点）及队伍
 
 当前下一项：将 A3Q3 Khalim 合成接入实际方块请求，再处理 A4Q2 Diablo 的 Chaos
 Sanctuary/封印/击杀任务链。
+
+### 2026-09-12 Act IV A4Q2 Diablo / Chaos Sanctuary（本轮完成基础闭环）
+
+- [x] 注册 Chaos Sanctuary 五个原生封印对象（Objects 392–396），服务端只接受首次
+  激活；进入 5/5 后生成一个 Diablo，若原生预设已经生成则复用，不重复创建。
+- [x] 接入 Diablo 击杀事件，设置 A4Q2 的 `PRIMARY_GOAL_DONE + REWARD_PENDING`，
+  并同步当前 Chaos Sanctuary 和同队 Act IV 玩家；重复死亡事件不会重复完成任务。
+- [x] 修正 A4Q2 与 A4Q1 使用不同 D2S record 槽位，避免第四章两个任务互相覆盖；新增
+  封印对象解析和 A4Q2 状态幂等测试。
+- 验证：`Act4DiabloQuestTest`、`Act4IzualQuestTest`、`NativeQuestObjectResolverTest`、
+  `:core:compileJava`、`:server:d2gs:compileJava` 通过。
+
+当前下一项：接入 Diablo 完成后的 Tyrael/Act V 传送主链，再处理 A4Q3 Hellforge；同时
+继续寻找现有网络协议中的方块请求入口，接通 A3Q3 的多人合成操作。

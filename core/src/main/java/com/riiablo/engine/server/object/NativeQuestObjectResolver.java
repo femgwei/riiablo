@@ -18,6 +18,7 @@ public final class NativeQuestObjectResolver {
     GIDBINN_DECOY(false, true, Engine.Object.MODE_OP),
     KHALIM_CHEST(false, true, Engine.Object.MODE_ON),
     COMPELLING_ORB(false, false, Engine.Object.MODE_OP),
+    DIABLO_SEAL(false, true, Engine.Object.MODE_ON),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -53,6 +54,9 @@ public final class NativeQuestObjectResolver {
   public static final int KHALIM_CHEST3 = 407;
   /** Travincal compelling orb (OperateFn 53). */
   public static final int COMPELLING_ORB = 404;
+  /** Chaos Sanctuary seals / OperateFn 34..38. */
+  public static final int FIRST_DIABLO_SEAL = 392;
+  public static final int LAST_DIABLO_SEAL = 396;
 
   private NativeQuestObjectResolver() {}
 
@@ -74,6 +78,8 @@ public final class NativeQuestObjectResolver {
       case KHALIM_CHEST1: case KHALIM_CHEST2: case KHALIM_CHEST3:
         return Type.KHALIM_CHEST;
       case COMPELLING_ORB: return Type.COMPELLING_ORB;
+      case FIRST_DIABLO_SEAL: case 393: case 394: case 395: case LAST_DIABLO_SEAL:
+        return Type.DIABLO_SEAL;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.
