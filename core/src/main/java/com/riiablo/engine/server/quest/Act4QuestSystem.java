@@ -5,6 +5,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
+import com.badlogic.gdx.utils.IntIntMap;
 import com.badlogic.gdx.utils.IntSet;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.Riiablo;
@@ -22,6 +23,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.event.QuestObjectInteractionEvent;
+import com.riiablo.engine.server.event.QuestItemPickedUpEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
@@ -31,6 +33,9 @@ import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
+import com.riiablo.item.Item;
+import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Quality;
 import net.mostlyoriginal.api.event.common.Subscribe;
 import net.mostlyoriginal.api.system.core.PassiveSystem;
 
@@ -45,6 +50,8 @@ public class Act4QuestSystem extends PassiveSystem {
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
+  @Wire(failOnNull = false)
+  protected ItemGenerator itemGenerator;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
 
@@ -58,6 +65,10 @@ public class Act4QuestSystem extends PassiveSystem {
   private final IntSet completedDiablos = new IntSet();
   private boolean diabloSpawned;
   private boolean allSealsActivated;
+  private final IntSet openedHellforges = new IntSet();
+  private final IntIntMap hellforgeHits = new IntIntMap();
+  private boolean soulstoneDropped;
+  private boolean hammerDropped;
 
   @Override
   protected void initialize() {
@@ -82,11 +93,17 @@ public class Act4QuestSystem extends PassiveSystem {
 
   @Subscribe
   public void onQuestObjectInteraction(QuestObjectInteractionEvent interaction) {
-    if (interaction == null || interaction.type != NativeQuestObjectResolver.Type.DIABLO_SEAL
+    if (interaction == null || (interaction.type != NativeQuestObjectResolver.Type.DIABLO_SEAL
+        && interaction.type != NativeQuestObjectResolver.Type.HELLFORGE)
         || !mPlayer.has(interaction.playerId) || !mPosition.has(interaction.entityId)) return;
     Player player = mPlayer.get(interaction.playerId);
-    if (player == null || player.data == null || levelId(interaction.entityId) != Act4DiabloQuest.CHAOS_SANCTUARY
+    if (player == null || player.data == null
         || NativeQuestRecord.has(diabloRecord(player.data), NativeQuestRecord.REWARD_GRANTED)) return;
+    if (interaction.type == NativeQuestObjectResolver.Type.HELLFORGE) {
+      onHellforgeInteraction(interaction, player);
+      return;
+    }
+    if (levelId(interaction.entityId) != Act4DiabloQuest.CHAOS_SANCTUARY) return;
     if (!activatedDiabloSeals.add(interaction.entityId)) return;
     interaction.accept();
     updateDiabloRecord(player.data);
@@ -96,6 +113,70 @@ public class Act4QuestSystem extends PassiveSystem {
     if (activatedDiabloSeals.size >= 5) {
       allSealsActivated = true;
       spawnDiabloIfReady(interaction.entityId);
+    }
+  }
+
+  private void onHellforgeInteraction(QuestObjectInteractionEvent interaction, Player player) {
+    if (levelId(interaction.entityId) < D2LevelIds.LEVEL_OUTERSTEPPES
+        || levelId(interaction.entityId) > D2LevelIds.LEVEL_CHAOSSANCTUM) return;
+    short record = hellforgeRecord(player.data);
+    if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) return;
+    if (!openedHellforges.contains(interaction.entityId)) {
+      if (!player.data.getItems().removeItemCode(Act4HellforgeQuest.SOULSTONE)) return;
+      openedHellforges.add(interaction.entityId);
+      interaction.accept();
+      updateHellforgeRecord(player.data, Act4HellforgeQuest.start(record), "hellforge-opened");
+      log.info("[A4Q3] Hellforge opened: player={} object={}", interaction.playerId,
+          interaction.entityId);
+      return;
+    }
+    if (!player.data.getItems().containsItemCode(Act4HellforgeQuest.HAMMER)) return;
+    int hits = hellforgeHits.get(interaction.entityId, 0) + 1;
+    hellforgeHits.put(interaction.entityId, hits);
+    if (hits < 3) {
+      interaction.accept();
+      log.info("[A4Q3] Hellforge hammer hit {}/3: player={} object={}", hits,
+          interaction.playerId, interaction.entityId);
+      return;
+    }
+    if (!player.data.getItems().removeItemCode(Act4HellforgeQuest.HAMMER)) return;
+    interaction.accept(Engine.Object.MODE_S1);
+    short next = Act4HellforgeQuest.complete(record);
+    updateHellforgeRecord(player.data, next, "soulstone-smashed");
+    dropHellforgeRunes(interaction.entityId);
+    log.info("[A4Q3] Hellforge completed: player={} object={}", interaction.playerId,
+        interaction.entityId);
+  }
+
+  private void dropHellforgeRunes(int forgeEntityId) {
+    if (itemGenerator == null || factory == null || !mPosition.has(forgeEntityId)) return;
+    Position position = mPosition.get(forgeEntityId);
+    String[] runes = {"r07", "r08", "r09"};
+    for (int i = 0; i < runes.length; i++) {
+      try {
+        Item rune = itemGenerator.generate(runes[i]);
+        if (rune == null) continue;
+        rune.version = Item.VERSION_110;
+        rune.quality = Quality.NORMAL;
+        rune.flags |= Item.ITEMFLAG_IDENTIFIED;
+        int entity = factory.createItem(rune, position.position.x + i - 1f, position.position.y);
+        if (entity >= 0) rune.id = entity;
+      } catch (Throwable t) {
+        log.warn("[A4Q3] Hellforge rune generation failed: code={}", runes[i], t);
+      }
+    }
+  }
+
+  @Subscribe
+  public void onQuestItemPickedUp(QuestItemPickedUpEvent event) {
+    if (event == null || !Act4HellforgeQuest.SOULSTONE.equalsIgnoreCase(event.itemCode)
+        || !mPlayer.has(event.playerId)) return;
+    Player player = mPlayer.get(event.playerId);
+    if (player != null && player.data != null) {
+      short previous = hellforgeRecord(player.data);
+      short next = Act4HellforgeQuest.start(previous);
+      if (next != previous) updateHellforgeRecord(player.data, next, "soulstone-picked-up");
     }
   }
 
@@ -175,6 +256,17 @@ public class Act4QuestSystem extends PassiveSystem {
   public void onMonsterKilled(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
     Monster monster = mMonster.get(event.victim);
+    if (monster != null && monster.monstats != null && monster.monstats.hcIdx == MonsterType.MEPHISTO
+        && levelId(event.victim) == D2LevelIds.LEVEL_DURANCEOFHATELEVEL3
+        && !soulstoneDropped) {
+      dropMephistoSoulstone(event.victim);
+      return;
+    }
+    if (monster != null && monster.monstats != null && monster.monstats.hcIdx == MonsterType.HEPHASTO
+        && levelId(event.victim) == D2LevelIds.LEVEL_RIVEROFFLAME && !hammerDropped) {
+      dropQuestItem(event.victim, Act4HellforgeQuest.HAMMER, "Hephasto Hellforge Hammer");
+      return;
+    }
     if (sealBossEntities.contains(event.victim)) {
       if (killedSealBosses.add(event.victim)) {
         log.info("[A4Q2] Seal boss defeated: entity={} count={}/3", event.victim,
@@ -218,6 +310,31 @@ public class Act4QuestSystem extends PassiveSystem {
       }
     }
     log.info("[A4Q1] Izual defeated: victim={} killer={}", event.victim, event.killer);
+  }
+
+  private void dropMephistoSoulstone(int victim) {
+    dropQuestItem(victim, Act4HellforgeQuest.SOULSTONE, "Mephisto Soulstone");
+  }
+
+  private void dropQuestItem(int victim, String code, String description) {
+    if (factory == null || itemGenerator == null || !mPosition.has(victim)) return;
+    try {
+      Item soulstone = itemGenerator.generate(code);
+      Position position = mPosition.get(victim);
+      if (soulstone == null || position == null) return;
+      soulstone.version = Item.VERSION_110;
+      soulstone.quality = Quality.NORMAL;
+      soulstone.flags |= Item.ITEMFLAG_IDENTIFIED;
+      int entity = factory.createItem(soulstone, position.position.x, position.position.y);
+      if (entity >= 0) {
+        soulstone.id = entity;
+        if (Act4HellforgeQuest.SOULSTONE.equalsIgnoreCase(code)) soulstoneDropped = true;
+        if (Act4HellforgeQuest.HAMMER.equalsIgnoreCase(code)) hammerDropped = true;
+        log.info("[A4Q3] {} dropped: victim={} entity={}", description, victim, entity);
+      }
+    } catch (Throwable t) {
+      log.warn("[A4Q3] Mephisto Soulstone generation failed", t);
+    }
   }
 
   private void completeDiabloForPlayers() {
@@ -313,6 +430,20 @@ public class Act4QuestSystem extends PassiveSystem {
 
   private short diabloRecord(CharData data) {
     return data.getQuests(Riiablo.ACT4)[Act4DiabloQuest.RECORD];
+  }
+
+  private short hellforgeRecord(CharData data) {
+    return data.getQuests(Riiablo.ACT4)[Act4HellforgeQuest.RECORD];
+  }
+
+  private void updateHellforgeRecord(CharData data, short next, String reason) {
+    short previous = hellforgeRecord(data);
+    if (previous == next) return;
+    data.getQuests(Riiablo.ACT4)[Act4HellforgeQuest.RECORD] = next;
+    persist(data);
+    log.info("[A4Q3] Quest record changed: character={} reason={} previous=0x{} next=0x{}",
+        data.name, reason, Integer.toHexString(Short.toUnsignedInt(previous)),
+        Integer.toHexString(Short.toUnsignedInt(next)));
   }
 
   private void updateDiabloRecord(CharData data) {

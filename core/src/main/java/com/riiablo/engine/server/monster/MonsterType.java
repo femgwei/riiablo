@@ -114,6 +114,8 @@ public final class MonsterType {
   public static final int INFECTOR_OF_SOULS = 362;
   public static final int LORD_DE_SEIS = 312;
   public static final int GRAND_VIZIER_OF_CHAOS = 306;
+  /** 海法斯特·盔甲匠（地狱熔炉守卫）。 */
+  public static final int HEPHASTO = 409;
   /** 泰瑞尔（第四幕任务 NPC，D2MOO MONSTER_TYRAEL2） */
   public static final int TYRAEL2 = 367;
 

@@ -31,6 +31,7 @@ class NativeQuestObjectResolverTest {
     assertEquals(NativeQuestObjectResolver.Type.COMPELLING_ORB, resolve(404, 53));
     assertEquals(NativeQuestObjectResolver.Type.DIABLO_SEAL, resolve(392, 34));
     assertEquals(NativeQuestObjectResolver.Type.DIABLO_SEAL, resolve(396, 38));
+    assertEquals(NativeQuestObjectResolver.Type.HELLFORGE, resolve(376, 49));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
     assertEquals(NativeQuestObjectResolver.Type.NONE, resolve(5, 3));
   }

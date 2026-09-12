@@ -19,6 +19,7 @@ public final class NativeQuestObjectResolver {
     KHALIM_CHEST(false, true, Engine.Object.MODE_ON),
     COMPELLING_ORB(false, false, Engine.Object.MODE_OP),
     DIABLO_SEAL(false, true, Engine.Object.MODE_ON),
+    HELLFORGE(false, false, Engine.Object.MODE_ON),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
 
     /** Safe without consulting a quest record (only the Countess tome). */
@@ -57,6 +58,7 @@ public final class NativeQuestObjectResolver {
   /** Chaos Sanctuary seals / OperateFn 34..38. */
   public static final int FIRST_DIABLO_SEAL = 392;
   public static final int LAST_DIABLO_SEAL = 396;
+  public static final int HELLFORGE = 376;
 
   private NativeQuestObjectResolver() {}
 
@@ -80,6 +82,7 @@ public final class NativeQuestObjectResolver {
       case COMPELLING_ORB: return Type.COMPELLING_ORB;
       case FIRST_DIABLO_SEAL: case 393: case 394: case 395: case LAST_DIABLO_SEAL:
         return Type.DIABLO_SEAL;
+      case HELLFORGE: return Type.HELLFORGE;
       default:
         // Countess room emitters share InitFn 47 and are registered with the
         // quest even though they are not ordinary loot containers.

@@ -2629,3 +2629,21 @@ Sanctuary/封印/击杀任务链。
 
 当前下一项：处理第四章 A4Q3 Hellforge（灵魂石、地狱熔炉、锤子交互、符文奖励），
 然后开始第五章 Harrogath 地图和任务主链。
+
+### 2026-09-12 Act IV A4Q3 Hellforge / The Hellforge（本轮完成基础闭环）
+
+- [x] 对齐 D2MOO `ACT4Q3` 的核心资源与对象：Hellforge Object `376`、Mephisto
+  Soulstone `mss`、Hellforge Hammer `hfh`、Hephasto monster class `409`；注册
+  `NativeQuestObjectResolver.Type.HELLFORGE`，并保留可重复交互以支持三次锤击。
+- [x] 接入 Mephisto 与 Hephasto 死亡掉落，生成失败时不提前标记掉落；Soulstone
+  可开启熔炉，随后持有 Hammer 的玩家完成三次命中，第三次原子消费 Hammer、关闭
+  熔炉并写入 A4Q3 `PRIMARY_GOAL_DONE + REWARD_PENDING`。
+- [x] 完成 Hellforge 奖励基础实现：在熔炉位置生成 `r07`、`r08`、`r09` 三枚符文，
+  任务记录按 D2S 记录槽持久化，重复交互和重复死亡事件保持幂等。
+- [x] 增加 A4Q3 状态/对象解析回归测试；通过 `Act4HellforgeQuestTest`、
+  `NativeQuestObjectResolverTest`、`:core:compileJava`、`:server:d2gs:compileJava`。
+
+当前下一项：开始第五章 Harrogath 地图主链（Harrogath 111、Bloody Foothills、
+Frigid Highlands、Arreat Plateau、Crystalline Passage、Frozen River、Glacial Trail、
+Frozen Tundra、Ancients' Way、Arreat Summit），先完成 Zone/Level/LvlPrest/入口 Warp
+导出与碰撞，再按 A5Q1→A5Q6 接入任务。
