@@ -3624,3 +3624,14 @@ Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖�
 
 下一项：在资源完整环境运行 A2 祭坛、Orifice、Arcane Tome 的真实 Quest 请求双客户端
 交互，随后覆盖 A1 特殊箱和任务门的掉落/幂等路径。
+
+### 2026-09-12 A2 Arcane Tome 对象物化回退（本轮完成）
+
+- [x] `Act2QuestSystem` 在项目约定的 Arcane Sanctuary level 75 检查 class 357；当
+  D2MOO DS1 预设未导出该对象时，按 RoomEx 中心物化并绑定 `Zone`、`NativeObjectState`
+  和 `OperateFn=42`，交互仍由 `Act2QuestSystem` 的 Horazon Tome 处理器接管。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava` 和 `git diff --check`。
+
+下一项：在资源完整环境复测 A2 三个对象的真实 Quest 请求双客户端路径；当前本机
+`headlessEarlyObjectDual` 仍在 Staff Tomb 关卡 DT1/DS1 为空处阻断，确认资源完整后
+再判定 Orifice/Tome 的运行时通过状态。

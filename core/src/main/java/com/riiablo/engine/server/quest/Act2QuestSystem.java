@@ -98,6 +98,13 @@ public class Act2QuestSystem extends PassiveSystem {
       ensureAct2QuestObject(event.zone,
           NativeQuestObjectResolver.HORADRIC_ORIFICE, "Horadric Orifice", 42);
     }
+    // Riiablo's level table keeps Arcane Sanctuary at 75 (Act III starts at
+    // 76). Preserve that project-facing convention rather than using the
+    // legacy D2MOO alias which shares the Duriel id.
+    if (levelId == 75) {
+      ensureAct2QuestObject(event.zone,
+          NativeQuestObjectResolver.ARCANE_SANCTUARY_TOME, "Arcane Sanctuary Tome", 42);
+    }
   }
 
   private void ensureAct2QuestObject(Map.Zone zone, int classId, String label, int interactType) {
