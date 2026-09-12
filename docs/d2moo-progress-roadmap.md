@@ -3100,5 +3100,19 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 共享文件：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`（仅 A5Q6
 QuestWarp 授权校验，无战斗注册或公式变更）。
 
+### 2026-09-12 A5Q6 波次出生碰撞与入口视觉成对恢复（本轮完成）
+
+- [x] 五波仆从的首领出生点现在以 Throne 原生坐标为首选，并用 `findFreeCoordinates`
+  按中型单位 footprint 搜索；每个随从的环形出生点也会避开墙体和 RoomEx 空洞，避免
+  波次怪物生成在地图边界外或不可行走区域。
+- [x] Throne→Chamber 与 Chamber→Harrogath 的 QuestWarp 已存在但视觉对象丢失时，
+  根据 Warp 实体坐标补建 Objects `563/565`，避免“传送功能还在但地面没有门”的重连
+  半成品状态。
+- 验证：`Act5BaalQuestTest`、`Act5AncientsQuestTest`、`Act5MapBuilderD2MODTest`、
+  `:core:test`、`:server:d2gs:compileJava` 通过。
+
+当前下一项：继续补齐 A5Q6 波次过程的持久化/重连恢复（当前波次状态仍是进程内状态），
+  并核对结束后 Tyrael/回城奖励动画与 D2MOO `ACT5Q6_Callback03/09` 的状态同步。
+
 当前下一项：继续核对 A5Q6 五波仆从的原生 preset 出生坐标、波次重连状态持久化，以及
 Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。

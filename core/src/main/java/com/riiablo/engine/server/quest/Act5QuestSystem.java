@@ -958,6 +958,13 @@ public class Act5QuestSystem extends BaseSystem {
     int uniqueId = unique == null
         ? Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex] : unique.hcIdx;
     long affixes = unique == null ? 0L : Act5BaalQuest.nativeSuperUniqueAffixes(unique.Mod);
+    Map.Zone throneZone = findZone(Act5BaalQuest.THRONE_OF_DESTRUCTION);
+    com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
+    if (throneZone != null
+        && throneZone.findFreeCoordinates(free.set(leaderX, leaderY), 2, 50, true, free)) {
+      leaderX = free.x;
+      leaderY = free.y;
+    }
     int leader = factory.createMonster(leaderStats.hcIdx, leaderX, leaderY,
         MonsterRank.SUPER_UNIQUE, affixes, -1, uniqueId);
     if (leader < 0) return;
@@ -975,6 +982,11 @@ public class Act5QuestSystem extends BaseSystem {
       double angle = Math.PI * 2.0 * i / Math.max(1, minions);
       float x = leaderX + (float) Math.cos(angle) * 3f;
       float y = leaderY + (float) Math.sin(angle) * 3f;
+      if (throneZone != null
+          && throneZone.findFreeCoordinates(free.set(x, y), 1, 12, true, free)) {
+        x = free.x;
+        y = free.y;
+      }
       int entity = factory.createMonster(minionStats.hcIdx, x, y,
           MonsterRank.MINION, 0L, -1, leader);
       if (entity >= 0) baalWaveEntities.add(entity);
@@ -1133,7 +1145,9 @@ public class Act5QuestSystem extends BaseSystem {
       return;
     }
     int questWarp = QuestWarp.encode(Act5BaalQuest.WORLDSTONE_CHAMBER);
-    if (source.findWarp(questWarp) != Engine.INVALID_ENTITY) {
+    int existingWarp = source.findWarp(questWarp);
+    if (existingWarp != Engine.INVALID_ENTITY) {
+      ensurePortalVisual(source, NativeQuestObjectResolver.BAAL_PORTAL, existingWarp);
       baalPortalState.openWorldstoneChamber();
       return;
     }
@@ -1207,7 +1221,9 @@ public class Act5QuestSystem extends BaseSystem {
   private boolean ensureLastPortal(Map.Zone zone, float portalX, float portalY) {
     if (zone == null || factory == null || world == null) return false;
     int questWarp = QuestWarp.encode(D2LevelIds.LEVEL_HARROGATH);
-    if (zone.findWarp(questWarp) != Engine.INVALID_ENTITY) {
+    int existingWarp = zone.findWarp(questWarp);
+    if (existingWarp != Engine.INVALID_ENTITY) {
+      ensurePortalVisual(zone, NativeQuestObjectResolver.LAST_PORTAL, existingWarp);
       baalPortalState.createLastPortal();
       return true;
     }
@@ -1230,6 +1246,28 @@ public class Act5QuestSystem extends BaseSystem {
     log.info("[A5Q6] Last portal created: visual={} warp={} destination={} position=({}, {})",
         visual, warp, D2LevelIds.LEVEL_HARROGATH, portalX, portalY);
     return true;
+  }
+
+  /** Restores a portal's visual object when the authoritative Warp survived a
+   * RoomEx/ECS rebuild but the transient static object did not. */
+  private void ensurePortalVisual(Map.Zone zone, int objectClassId, int warpEntity) {
+    if (zone == null || factory == null || objectsByZone == null
+        || mPosition == null || !mPosition.has(warpEntity)) return;
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (wrapper != null && wrapper.zone == zone && object != null && object.base != null
+          && object.base.Id == objectClassId) return;
+    }
+    Position position = mPosition.get(warpEntity);
+    int visual = factory.createStaticObjectByClassId(
+        objectClassId, position.position.x, position.position.y);
+    log.info("[A5Q6] Restored portal visual: visual={} warp={} object={} position=({}, {})",
+        visual, warpEntity, objectClassId, position.position.x, position.position.y);
   }
 
   private Map.Zone findZone(int levelId) {
