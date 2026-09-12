@@ -96,6 +96,8 @@ public class Item {
 
   static final int SET_ID_SIZE      = 12;
   static final int UNIQUE_ID_SIZE   = 12;
+  /** Reserved serialized id used by quest uniques without UniqueItems.txt rows. */
+  public static final int NO_UNIQUE_ID = (1 << UNIQUE_ID_SIZE) - 1;
 
   static final Array<Item> EMPTY_SOCKETS_ARRAY = new Array<Item>(0) {
     @Override
@@ -303,11 +305,15 @@ public class Item {
       switch (quality) {
         case SET:
           SetItems.Entry setItem = (SetItems.Entry) qualityData;
-          if (!setItem.invfile.isEmpty()) return setItem.invfile;
+          if (setItem != null && setItem.invfile != null && !setItem.invfile.isEmpty()) {
+            return setItem.invfile;
+          }
           break;
         case UNIQUE:
           UniqueItems.Entry uniqueItem = (UniqueItems.Entry) qualityData;
-          if (!uniqueItem.invfile.isEmpty()) return uniqueItem.invfile;
+          if (uniqueItem != null && uniqueItem.invfile != null && !uniqueItem.invfile.isEmpty()) {
+            return uniqueItem.invfile;
+          }
           break;
         default:
           // do nothing
@@ -347,10 +353,10 @@ public class Item {
       }
 
       case SET:
-        return ((SetItems.Entry) qualityData).invtransform;
+        return qualityData == null ? null : ((SetItems.Entry) qualityData).invtransform;
 
       case UNIQUE:
-        return ((UniqueItems.Entry) qualityData).invtransform;
+        return qualityData == null ? null : ((UniqueItems.Entry) qualityData).invtransform;
 
       default:
         return null;
@@ -387,10 +393,10 @@ public class Item {
       }
 
       case SET:
-        return ((SetItems.Entry) qualityData).chrtransform;
+        return qualityData == null ? null : ((SetItems.Entry) qualityData).chrtransform;
 
       case UNIQUE:
-        return ((UniqueItems.Entry) qualityData).chrtransform;
+        return qualityData == null ? null : ((UniqueItems.Entry) qualityData).chrtransform;
 
       default:
         return null;
@@ -402,11 +408,14 @@ public class Item {
       switch (quality) {
         case SET:
           SetItems.Entry setItem = (SetItems.Entry) qualityData;
-          if (!setItem.flippyfile.isEmpty()) return setItem.flippyfile;
+          if (setItem != null && setItem.flippyfile != null && !setItem.flippyfile.isEmpty()) {
+            return setItem.flippyfile;
+          }
           break;
         case UNIQUE:
           UniqueItems.Entry uniqueItem = (UniqueItems.Entry) qualityData;
-          if (!uniqueItem.flippyfile.isEmpty()) return uniqueItem.flippyfile;
+          if (uniqueItem != null && uniqueItem.flippyfile != null
+              && !uniqueItem.flippyfile.isEmpty()) return uniqueItem.flippyfile;
           break;
         default:
           // do nothing
@@ -421,11 +430,11 @@ public class Item {
       switch (quality) {
         case SET:
           SetItems.Entry setItem = (SetItems.Entry) qualityData;
-          if (setItem.dropsfxframe > 0) return setItem.dropsfxframe;
+          if (setItem != null && setItem.dropsfxframe > 0) return setItem.dropsfxframe;
           break;
         case UNIQUE:
           UniqueItems.Entry uniqueItem = (UniqueItems.Entry) qualityData;
-          if (uniqueItem.dropsfxframe > 0) return uniqueItem.dropsfxframe;
+          if (uniqueItem != null && uniqueItem.dropsfxframe > 0) return uniqueItem.dropsfxframe;
           break;
         default:
           // do nothing
@@ -440,11 +449,14 @@ public class Item {
       switch (quality) {
         case SET:
           SetItems.Entry setItem = (SetItems.Entry) qualityData;
-          if (!setItem.dropsound.isEmpty()) return setItem.dropsound;
+          if (setItem != null && setItem.dropsound != null && !setItem.dropsound.isEmpty()) {
+            return setItem.dropsound;
+          }
           break;
         case UNIQUE:
           UniqueItems.Entry uniqueItem = (UniqueItems.Entry) qualityData;
-          if (!uniqueItem.dropsound.isEmpty()) return uniqueItem.dropsound;
+          if (uniqueItem != null && uniqueItem.dropsound != null
+              && !uniqueItem.dropsound.isEmpty()) return uniqueItem.dropsound;
           break;
         default:
           // do nothing
@@ -459,11 +471,14 @@ public class Item {
       switch (quality) {
         case SET:
           SetItems.Entry setItem = (SetItems.Entry) qualityData;
-          if (!setItem.usesound.isEmpty()) return setItem.usesound;
+          if (setItem != null && setItem.usesound != null && !setItem.usesound.isEmpty()) {
+            return setItem.usesound;
+          }
           break;
         case UNIQUE:
           UniqueItems.Entry uniqueItem = (UniqueItems.Entry) qualityData;
-          if (!uniqueItem.usesound.isEmpty()) return uniqueItem.usesound;
+          if (uniqueItem != null && uniqueItem.usesound != null
+              && !uniqueItem.usesound.isEmpty()) return uniqueItem.usesound;
           break;
         default:
           // do nothing
@@ -579,7 +594,7 @@ public class Item {
         break;
 
       case UNIQUE:
-        if (qualityId != (1 << UNIQUE_ID_SIZE) - 1) {
+        if (qualityId != NO_UNIQUE_ID) {
           name.append(Riiablo.string.lookup(Riiablo.files.UniqueItems.get(qualityId).index));
         } else {
           name.append(Riiablo.string.lookup(base.namestr));

@@ -2105,6 +2105,46 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Counts matching ground items in one authoritative level. */
+  static int headlessGroundItemCount(int levelId, String code) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || code == null || Gdx.app == null) return 0;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result = new java.util.concurrent.atomic.AtomicInteger();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag items = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Item.class,
+                Position.class, com.riiablo.engine.server.component.MapWrapper.class))
+            .getEntities();
+        int[] ids = items.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Item> itemMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Item.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < items.size(); i++) {
+          com.riiablo.engine.server.component.Item component = itemMapper.get(ids[i]);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(ids[i]);
+          if (component != null && component.item != null
+              && code.equalsIgnoreCase(component.item.code)
+              && wrapper != null && wrapper.zone == zone) result.incrementAndGet();
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : 0;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return 0;
+    }
+  }
+
   /** Returns one spawned monster of a concrete hcIdx in a generated level. */
   static int headlessFindMonsterInLevel(int levelId, int monsterClass) {
     D2GS server = activeHeadlessInstance;

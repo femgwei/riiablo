@@ -3672,3 +3672,25 @@ Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖�
 验证：`:core:compileJava`、`:server:d2gs:compileJava`、
 `:server:d2gs:headlessA2TombDual` 均成功；完整 `headlessEarlyObjectDual` 仍包含
   A1-A3 全链路长回归，后续可在资源完整环境中重新执行。
+
+### 2026-09-13 A2 Tainted Sun / Arcane Tome 生产交互闭环（本轮完成）
+
+- [x] 修复 Arcane Sanctuary 关卡编号分裂：地图与 1.10f `Levels.txt` 使用 level 75，
+  但历史 `D2LevelIds` 将其和 Duriel's Lair 都别名为 74；A2 Zone、Summoner、Tome
+  与 Party 信用现在统一使用项目权威 level 75，不全局重排旧常量。
+- [x] 对齐 D2MOO A2Q3：Viper Amulet 掉落数量按全局仍缺任务物品的玩家统计；任务
+  `PRIMARY_GOAL_DONE/REWARD_PENDING` 先授予祭坛所在层玩家，再传播给其位于 Act II
+  的 Party 成员，其余未完成玩家只记录 `COMPLETED_NOW`。
+- [x] 支持不在 `UniqueItems.txt` 中的原生 quest unique：Viper Amulet 保留
+  `ITEMQUAL_UNIQUE`，使用保留 quality id，并在物品视觉资源选择时安全回退到基础
+  `Misc.txt` 记录，修复掉落创建时的 `qualityData == null` 崩溃。
+- [x] 新增 `:server:d2gs:headlessA2ObjectInteractionDual`，通过真实
+  `QuestOperation.OBJECT_INTERACTION` 验证两客户端祭坛/Tome 交互、Party 任务记录、
+  两枚 Viper Amulet 掉落、双方可见性和重复请求幂等。
+
+验证结果：相关 A2 单测、core/D2GS 编译和完整资源离屏双客户端测试均通过；日志包含
+`a2_tainted_sun_interaction_pass ... amulets=2 clients=true,true` 与
+`a2_object_interaction_dual_pass taintedSun=true arcaneTome=true clients=true,true`。
+
+下一项：按优先级覆盖 A1 特殊宝箱与任务门的生产交互、掉落归属、重复请求幂等和
+双客户端对象模式可见性，再处理 A2 Horadric Orifice 插杖后的 Duriel 入口切换。

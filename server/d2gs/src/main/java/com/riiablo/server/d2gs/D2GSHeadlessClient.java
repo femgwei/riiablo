@@ -87,6 +87,7 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_BARRACKS = 28;
   private static final int LEVEL_TRISTRAM = 38;
   private static final int LEVEL_TOWERCELLARLVL5 = 25;
+  private static final int LEVEL_CLAWVIPERTEMPLELVL2 = 61;
   private static final int LEVEL_ARCANESANCTUARY = 75;
   private static final int LEVEL_DURIELSLAIR = 74;
   private static final int LEVEL_DURANCEOFHATELEVEL3 = 102;
@@ -165,6 +166,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA3ObjectInteractionDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA2ObjectInteractionDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireA2TombDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireEarlyObjectDual
@@ -202,6 +205,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA3ObjectInteractionDual) {
       runA3ObjectInteractionDual(d2s, character);
+      return;
+    }
+    if (config.requireA2ObjectInteractionDual) {
+      runA2ObjectInteractionDual(d2s, character);
       return;
     }
     if (config.requireA2TombDual) {
@@ -2520,6 +2527,102 @@ public final class D2GSHeadlessClient {
           new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.HORADRIC_ORIFICE},
           1L);
       log("a2_tomb_dual_pass", "level=" + tomb + " clients=true,true");
+    }
+  }
+
+  /** Production QuestRequest regression for A2Q3 altar and A2Q4 tome. */
+  private void runA2ObjectInteractionDual(byte[] d2s, CharacterHeader character)
+      throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A2ObjectPeer", 0x41324F42);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
+        throw new IOException("A2 object party setup failed");
+      }
+
+      if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_CLAWVIPERTEMPLELVL2)
+          || !D2GS.headlessEnterLevel(b.playerId, LEVEL_CLAWVIPERTEMPLELVL2)) {
+        throw new IOException("Tainted Sun altar staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, LEVEL_CLAWVIPERTEMPLELVL2,
+          "a2-tainted-sun-interaction");
+      int altar = D2GS.headlessQuestObjectEntity(LEVEL_CLAWVIPERTEMPLELVL2,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.TAINTED_SUN_ALTAR);
+      if (altar == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, altar)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, altar)) {
+        throw new IOException("Tainted Sun altar unavailable");
+      }
+      send(outA, questRequestPacket(301L, QuestOperation.OBJECT_INTERACTION, altar, -1));
+      QuestResult altarResult = a.awaitQuestResult(inA, 301L, deadline());
+      if (altarResult == null || !altarResult.success()) {
+        throw new IOException("Tainted Sun altar interaction rejected");
+      }
+      String amuletCode = com.riiablo.engine.server.quest.Act2HoradricStaffQuest.VIPER_AMULET;
+      int amulet = awaitGroundItem(LEVEL_CLAWVIPERTEMPLELVL2, amuletCode);
+      int amuletsBeforeReplay = D2GS.headlessGroundItemCount(
+          LEVEL_CLAWVIPERTEMPLELVL2, amuletCode);
+      if (amulet == Engine.INVALID_ENTITY || amuletsBeforeReplay < 2) {
+        throw new IOException("Tainted Sun Viper Amulet drops missing: " + amuletsBeforeReplay);
+      }
+      a.awaitVisibleEntity(inA, amulet, deadline());
+      b.awaitVisibleEntity(inB, amulet, deadline());
+      send(outA, questRequestPacket(301L, QuestOperation.OBJECT_INTERACTION, altar, -1));
+      if (!a.awaitQuestResult(inA, 301L, deadline()).success()
+          || D2GS.headlessGroundItemCount(LEVEL_CLAWVIPERTEMPLELVL2, amuletCode)
+              != amuletsBeforeReplay) {
+        throw new IOException("Tainted Sun duplicate request was not idempotent");
+      }
+      QuestResult altarA = requestSnapshot(a, inA, outA, 302L);
+      QuestResult altarB = requestSnapshot(b, inB, outB, 302L);
+      int taintedRecord = com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem.RECORD;
+      if (!hasQuestFlagAt(altarA, Riiablo.ACT2, taintedRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
+          || !hasQuestFlagAt(altarB, Riiablo.ACT2, taintedRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)) {
+        throw new IOException("Tainted Sun party reward state did not propagate");
+      }
+      log("a2_tainted_sun_interaction_pass", "altar=" + altar
+          + " amulets=" + amuletsBeforeReplay + " clients=true,true");
+
+      if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_ARCANESANCTUARY)
+          || !D2GS.headlessEnterLevel(b.playerId, LEVEL_ARCANESANCTUARY)) {
+        throw new IOException("Arcane Sanctuary Tome staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, LEVEL_ARCANESANCTUARY,
+          "a2-arcane-tome-interaction");
+      int tome = D2GS.headlessQuestObjectEntity(LEVEL_ARCANESANCTUARY,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.ARCANE_SANCTUARY_TOME);
+      if (tome == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, tome)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, tome)) {
+        throw new IOException("Arcane Sanctuary Tome unavailable");
+      }
+      send(outA, questRequestPacket(311L, QuestOperation.OBJECT_INTERACTION, tome, -1));
+      QuestResult tomeResult = a.awaitQuestResult(inA, 311L, deadline());
+      if (tomeResult == null || !tomeResult.success()) {
+        throw new IOException("Arcane Sanctuary Tome interaction rejected");
+      }
+      send(outA, questRequestPacket(311L, QuestOperation.OBJECT_INTERACTION, tome, -1));
+      if (!a.awaitQuestResult(inA, 311L, deadline()).success()) {
+        throw new IOException("Arcane Sanctuary Tome duplicate request rejected");
+      }
+      QuestResult tomeA = requestSnapshot(a, inA, outA, 312L);
+      QuestResult tomeB = requestSnapshot(b, inB, outB, 312L);
+      int tomeRecord = com.riiablo.engine.server.quest.Act2HorazonTomeQuest.RECORD;
+      if (!hasQuestFlagAt(tomeA, Riiablo.ACT2, tomeRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+          || !hasQuestFlagAt(tomeB, Riiablo.ACT2, tomeRecord,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
+        throw new IOException("Arcane Sanctuary Tome party completion did not propagate");
+      }
+      log("a2_object_interaction_dual_pass", "taintedSun=true arcaneTome=true clients=true,true");
     }
   }
 
@@ -5362,6 +5465,7 @@ public final class D2GSHeadlessClient {
     boolean requireQuestWarpDual;
     boolean requireQuestObjectDual;
     boolean requireA3ObjectInteractionDual;
+    boolean requireA2ObjectInteractionDual;
     boolean requireA2TombDual;
     boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
@@ -5408,6 +5512,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
         else if ("--require-a3-object-interaction-dual".equals(arg)) config.requireA3ObjectInteractionDual = true;
+        else if ("--require-a2-object-interaction-dual".equals(arg)) config.requireA2ObjectInteractionDual = true;
         else if ("--require-a2-tomb-dual".equals(arg)) config.requireA2TombDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
@@ -5456,6 +5561,7 @@ public final class D2GSHeadlessClient {
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
+          && !config.requireA2ObjectInteractionDual
           && !config.requireA2TombDual
           && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
@@ -5463,6 +5569,7 @@ public final class D2GSHeadlessClient {
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
+          && !config.requireA2ObjectInteractionDual
           && !config.requireA2TombDual
           && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
@@ -5502,6 +5609,7 @@ public final class D2GSHeadlessClient {
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
           + " [--require-quest-warp-dual] [--require-quest-object-dual]"
           + " [--require-a3-object-interaction-dual]"
+          + " [--require-a2-object-interaction-dual]"
           + " [--require-a2-tomb-dual]"
           + " [--require-early-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"

@@ -42,6 +42,12 @@ import net.mostlyoriginal.api.system.core.PassiveSystem;
 @Wire(failOnNull = false)
 public class Act2QuestSystem extends PassiveSystem {
   private static final Logger log = LogManager.getLogger(Act2QuestSystem.class);
+  /**
+   * Project-facing 1.10f level id. The imported D2LevelIds table historically
+   * aliases Arcane Sanctuary to Duriel's Lair (74), while Levels.txt and the
+   * Java map builders correctly use 75.
+   */
+  static final int ARCANE_SANCTUARY_LEVEL = 75;
 
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
@@ -102,7 +108,7 @@ public class Act2QuestSystem extends PassiveSystem {
     // Riiablo's level table keeps Arcane Sanctuary at 75 (Act III starts at
     // 76). Preserve that project-facing convention rather than using the
     // legacy D2MOO alias which shares the Duriel id.
-    if (levelId == 75) {
+    if (levelId == ARCANE_SANCTUARY_LEVEL) {
       ensureAct2QuestObject(event.zone,
           NativeQuestObjectResolver.ARCANE_SANCTUARY_TOME, "Arcane Sanctuary Tome", 42);
     }
@@ -200,7 +206,7 @@ public class Act2QuestSystem extends PassiveSystem {
         || !mPlayer.has(event.playerId)) return;
     Player player = mPlayer.get(event.playerId);
     if (player == null || player.data == null || !isPlayerInLevel(
-        event.playerId, D2LevelIds.LEVEL_ARCANESANCTUARY)) return;
+        event.playerId, ARCANE_SANCTUARY_LEVEL)) return;
 
     short previous = getHorazonRecord(player.data);
     short next = Act2HorazonTomeQuest.completeObjective(previous);
@@ -317,7 +323,7 @@ public class Act2QuestSystem extends PassiveSystem {
       int playerId = ids[i];
       Player player = mPlayer.get(playerId);
       if (player == null || player.data == null) continue;
-      if (isPlayerInLevel(playerId, D2LevelIds.LEVEL_ARCANESANCTUARY)) {
+      if (isPlayerInLevel(playerId, ARCANE_SANCTUARY_LEVEL)) {
         short previous = getSummonerRecord(player.data);
         short next = Act2SummonerQuest.completeObjective(previous);
         if (next != previous) {
@@ -351,7 +357,7 @@ public class Act2QuestSystem extends PassiveSystem {
 
   private boolean isSummoner(int entityId) {
     if (entityId < 0 || !mMonster.has(entityId)
-        || !isEntityInLevel(entityId, D2LevelIds.LEVEL_ARCANESANCTUARY)) return false;
+        || !isEntityInLevel(entityId, ARCANE_SANCTUARY_LEVEL)) return false;
     if (mSuperUnique.has(entityId)
         && mSuperUnique.get(entityId).id == D2SuperUniques.SUPERUNIQUE_THE_SUMMONER) return true;
     Monster monster = mMonster.get(entityId);
@@ -435,7 +441,7 @@ public class Act2QuestSystem extends PassiveSystem {
 
   static boolean isAct2Level(int levelId) {
     return levelId >= D2LevelIds.LEVEL_LUTGHOLEIN
-        && levelId <= D2LevelIds.LEVEL_ARCANESANCTUARY;
+        && levelId <= ARCANE_SANCTUARY_LEVEL;
   }
 
   private static short getRecord(CharData data) {
@@ -479,7 +485,7 @@ public class Act2QuestSystem extends PassiveSystem {
     for (int i = 0; i < entities.size(); i++) {
       int playerId = ids[i];
       if (playerId == sourcePlayerId || partyManager.getPartyId(playerId) != partyId
-          || !isPlayerInLevel(playerId, D2LevelIds.LEVEL_ARCANESANCTUARY)) continue;
+          || !isPlayerInLevel(playerId, ARCANE_SANCTUARY_LEVEL)) continue;
       Player member = mPlayer.get(playerId);
       if (member == null || member.data == null) continue;
       short previous = getHorazonRecord(member.data);

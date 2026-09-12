@@ -6,6 +6,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
+import com.badlogic.gdx.utils.IntSet;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
@@ -15,6 +16,8 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
+import com.riiablo.engine.server.party.Party;
+import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Quality;
@@ -47,6 +50,8 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
   protected Map map;
   @Wire(failOnNull = false)
   protected ItemGenerator itemGenerator;
+  @Wire(name = "partyManager", failOnNull = false)
+  protected PartyManager partyManager;
 
   private EntitySubscription players;
 
@@ -79,11 +84,11 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
     if (players != null) {
       IntBag entities = players.getEntities();
       int[] ids = entities.getData();
+      IntSet eligibleParties = new IntSet();
       for (int i = 0; i < entities.size(); i++) {
         int playerId = ids[i];
         if (!isEligible(playerId)) continue;
-        Player player = mPlayer.get(playerId);
-        Item item = createAmulet(altarPosition, created);
+        Item item = createAmulet();
         if (item == null) continue;
         int entityId = factory == null ? -1 : factory.createItem(item,
             altarPosition.position.x + DROP_X[created % DROP_X.length],
@@ -97,8 +102,38 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
           mMapWrapper.create(entityId).set(map, altarWrapper.zone);
         }
         item.id = entityId;
-        markRewardPending(player.data);
         created++;
+      }
+
+      // D2Game first credits every player in the altar level, then propagates
+      // PRIMARYGOALDONE/REWARDPENDING to those players' party members anywhere
+      // in Act II.  Viper Amulet drop counting is deliberately game-wide and
+      // remains separate from quest-record eligibility.
+      for (int i = 0; i < entities.size(); i++) {
+        int playerId = ids[i];
+        Player player = mPlayer.get(playerId);
+        if (player == null || player.data == null
+            || levelId(mMapWrapper.get(playerId)) != altarLevel) continue;
+        markRewardPending(player.data);
+        if (partyManager != null) {
+          short partyId = partyManager.getPartyId(playerId);
+          if (partyId != Party.INVALID_ID) eligibleParties.add(partyId);
+        }
+      }
+      if (partyManager != null && eligibleParties.size > 0) {
+        for (int i = 0; i < entities.size(); i++) {
+          int playerId = ids[i];
+          short partyId = partyManager.getPartyId(playerId);
+          Player player = mPlayer.get(playerId);
+          if (partyId == Party.INVALID_ID || !eligibleParties.contains(partyId)
+              || player == null || player.data == null
+              || !isAct2Level(levelId(mMapWrapper.get(playerId)))) continue;
+          markRewardPending(player.data);
+        }
+      }
+      for (int i = 0; i < entities.size(); i++) {
+        Player player = mPlayer.get(ids[i]);
+        if (player != null && player.data != null) markCompletedNow(player.data);
       }
     }
     log.info("[A2Q3] Tainted Sun altar activated: entity={} level={} player={} amulets={}",
@@ -116,13 +151,17 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
             && !player.data.getItems().containsItemCode(TAINTED_SUN_STAFF));
   }
 
-  private Item createAmulet(Position origin, int index) {
+  private Item createAmulet() {
     if (factory == null || itemGenerator == null || Riiablo.files == null) return null;
     try {
       Item item = itemGenerator.generate(VIPER_AMULET);
       if (item == null) return null;
       item.version = Item.VERSION_110;
       item.quality = Quality.UNIQUE;
+      // Quest uniques such as 'vip' are not rows in UniqueItems.txt. Native
+      // D2 still emits ITEMQUAL_UNIQUE; use the reserved id so naming and
+      // serialization fall back to the base quest-item record.
+      item.qualityId = Item.NO_UNIQUE_ID;
       item.flags |= Item.ITEMFLAG_IDENTIFIED;
       return item;
     } catch (Throwable t) {
@@ -134,10 +173,24 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
   private static void markRewardPending(CharData data) {
     short[] act2 = data.getQuests(Riiablo.ACT2);
     short record = act2[RECORD];
+    if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        || NativeQuestRecord.has(record, NativeQuestRecord.COMPLETED_BEFORE)) return;
+    short previous = record;
     record = NativeQuestRecord.set(record, NativeQuestRecord.PRIMARY_GOAL_DONE);
     record = NativeQuestRecord.set(record, NativeQuestRecord.REWARD_PENDING);
-    record = NativeQuestRecord.set(record, NativeQuestRecord.COMPLETED_NOW);
+    record = NativeQuestRecord.clear(record, NativeQuestRecord.COMPLETED_NOW);
     act2[RECORD] = record;
+    if (record != previous && data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
+  }
+
+  private static void markCompletedNow(CharData data) {
+    short[] act2 = data.getQuests(Riiablo.ACT2);
+    short record = act2[RECORD];
+    if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) return;
+    short next = NativeQuestRecord.set(record, NativeQuestRecord.COMPLETED_NOW);
+    if (next == record) return;
+    act2[RECORD] = next;
     if (data.managed && Riiablo.saves != null) D2SWriter.INSTANCE.save(data);
   }
 
@@ -151,5 +204,10 @@ public class Act2TaintedSunQuestSystem extends BaseSystem {
     return levelId == D2LevelIds.LEVEL_VALLEYOFSNAKES
         || levelId == D2LevelIds.LEVEL_CLAWVIPERTEMPLELEV1
         || levelId == D2LevelIds.LEVEL_CLAWVIPERTEMPLELEV2;
+  }
+
+  private static boolean isAct2Level(int levelId) {
+    return levelId >= D2LevelIds.LEVEL_LUTGHOLEIN
+        && levelId <= Act2QuestSystem.ARCANE_SANCTUARY_LEVEL;
   }
 }

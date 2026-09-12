@@ -26,4 +26,10 @@ class Act2HorazonTomeQuestTest {
     assertTrue(Act2HorazonTomeQuest.completeObjective(pending) == pending);
     assertTrue(Act2HorazonTomeQuest.completeObjective(granted) == granted);
   }
+
+  @Test
+  void projectArcaneSanctuaryOrdinalRemainsInAct2() {
+    assertTrue(Act2QuestSystem.isAct2Level(Act2QuestSystem.ARCANE_SANCTUARY_LEVEL));
+    assertFalse(Act2QuestSystem.isAct2Level(Act2QuestSystem.ARCANE_SANCTUARY_LEVEL + 1));
+  }
 }
