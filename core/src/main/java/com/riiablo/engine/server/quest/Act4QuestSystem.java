@@ -52,8 +52,11 @@ public class Act4QuestSystem extends PassiveSystem {
   private final IntSet spawnedIzualLevels = new IntSet();
   private final IntSet rewardedIzuals = new IntSet();
   private final IntSet activatedDiabloSeals = new IntSet();
+  private final IntSet sealBossEntities = new IntSet();
+  private final IntSet killedSealBosses = new IntSet();
   private final IntSet completedDiablos = new IntSet();
   private boolean diabloSpawned;
+  private boolean allSealsActivated;
 
   @Override
   protected void initialize() {
@@ -88,7 +91,35 @@ public class Act4QuestSystem extends PassiveSystem {
     updateDiabloRecord(player.data);
     log.info("[A4Q2] Chaos seal activated: object={} player={} count={}/5",
         interaction.entityId, interaction.playerId, activatedDiabloSeals.size);
-    if (activatedDiabloSeals.size >= 5) spawnDiablo(interaction.entityId);
+    spawnSealBoss(interaction.objectClassId, interaction.entityId);
+    if (activatedDiabloSeals.size >= 5) {
+      allSealsActivated = true;
+      spawnDiabloIfReady(interaction.entityId);
+    }
+  }
+
+  private void spawnSealBoss(int objectClassId, int sealEntityId) {
+    if (factory == null || objectClassId < Act4DiabloQuest.FIRST_SEAL
+        || objectClassId > Act4DiabloQuest.FIRST_SEAL + 2) return;
+    int monsterType;
+    switch (objectClassId) {
+      case 392: monsterType = MonsterType.INFECTOR_OF_SOULS; break;
+      case 393: monsterType = MonsterType.LORD_DE_SEIS; break;
+      case 394: monsterType = MonsterType.GRAND_VIZIER_OF_CHAOS; break;
+      default: return;
+    }
+    Position position = mPosition.get(sealEntityId);
+    if (position == null) return;
+    int entity = factory.createMonster(monsterType, position.position.x, position.position.y);
+    if (entity >= 0) {
+      sealBossEntities.add(entity);
+      log.info("[A4Q2] Seal boss spawned: seal={} monsterType={} entity={}",
+          objectClassId, monsterType, entity);
+    }
+  }
+
+  private void spawnDiabloIfReady(int sourceEntityId) {
+    if (allSealsActivated && killedSealBosses.size >= 3) spawnDiablo(sourceEntityId);
   }
 
   private void spawnDiablo(int sourceEntityId) {
@@ -143,6 +174,14 @@ public class Act4QuestSystem extends PassiveSystem {
   public void onMonsterKilled(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
     Monster monster = mMonster.get(event.victim);
+    if (sealBossEntities.contains(event.victim)) {
+      if (killedSealBosses.add(event.victim)) {
+        log.info("[A4Q2] Seal boss defeated: entity={} count={}/3", event.victim,
+            killedSealBosses.size);
+        spawnDiabloIfReady(event.victim);
+      }
+      return;
+    }
     if (monster != null && monster.monstats != null && monster.monstats.hcIdx == MonsterType.DIABLO
         && levelId(event.victim) == Act4DiabloQuest.CHAOS_SANCTUARY
         && completedDiablos.add(event.victim)) {

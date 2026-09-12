@@ -2607,6 +2607,8 @@ Sanctuary/封印/击杀任务链。
   激活；进入 5/5 后生成一个 Diablo，若原生预设已经生成则复用，不重复创建。
 - [x] 接入 Diablo 击杀事件，设置 A4Q2 的 `PRIMARY_GOAL_DONE + REWARD_PENDING`，
   并同步当前 Chaos Sanctuary 和同队 Act IV 玩家；重复死亡事件不会重复完成任务。
+- [x] 按 D2MOO `ACT4Q2_SpawnSealBoss` 补齐前三个封印首领：Infector of Souls、Lord De Seis、
+  Grand Vizier of Chaos；只有三个封印首领都死亡且五个封印全部激活后才生成 Diablo。
 - [x] 修正 A4Q2 与 A4Q1 使用不同 D2S record 槽位，避免第四章两个任务互相覆盖；新增
   封印对象解析和 A4Q2 状态幂等测试。
 - 验证：`Act4DiabloQuestTest`、`Act4IzualQuestTest`、`NativeQuestObjectResolverTest`、

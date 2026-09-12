@@ -16,4 +16,11 @@ class Act4DiabloQuestTest {
     assertFalse(NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING));
     assertTrue(record == Act4DiabloQuest.claimCompletion(record));
   }
+
+  @Test
+  void usesNativeChaosSealRange() {
+    assertTrue(Act4DiabloQuest.FIRST_SEAL == 392);
+    assertTrue(Act4DiabloQuest.LAST_SEAL == 396);
+    assertTrue(Act4DiabloQuest.CHAOS_SANCTUARY == 110);
+  }
 }

@@ -110,6 +110,10 @@ public final class MonsterType {
   public static final int COUNCILMEMBER = 345;
   /** 伊兹尔 */
   public static final int IZUAL = 256;
+  /** 混沌避难所三个封印首领。 */
+  public static final int INFECTOR_OF_SOULS = 362;
+  public static final int LORD_DE_SEIS = 312;
+  public static final int GRAND_VIZIER_OF_CHAOS = 306;
   /** 泰瑞尔（第四幕任务 NPC，D2MOO MONSTER_TYRAEL2） */
   public static final int TYRAEL2 = 367;
 
