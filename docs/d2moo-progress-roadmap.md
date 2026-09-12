@@ -3093,5 +3093,12 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
   未改变 Baal/仆从伤害或掉落规则。
 - 验证：`Act5BaalQuestTest`、`:core:test`、`:server:d2gs:compileJava` 通过。
 
+- [x] D2GS 的网络 Warp 校验增加 A5Q6 object 72 等价门槛：只有从 Worldstone Chamber
+  且记录含 `PRIMARY_GOAL_DONE/REWARD_GRANTED` 才能使用回城 QuestWarp；Act IV 其他
+  指向 Harrogath 的任务门不受影响。该共享文件仅增加最小地图任务校验。
+
+共享文件：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`（仅 A5Q6
+QuestWarp 授权校验，无战斗注册或公式变更）。
+
 当前下一项：继续核对 A5Q6 五波仆从的原生 preset 出生坐标、波次重连状态持久化，以及
 Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。

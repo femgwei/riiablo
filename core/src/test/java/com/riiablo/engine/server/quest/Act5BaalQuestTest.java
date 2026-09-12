@@ -44,4 +44,13 @@ class Act5BaalQuestTest {
     short rewarded = Act5BaalQuest.complete((short) 0);
     assertEquals(rewarded, Act5BaalQuest.completeObserver(rewarded));
   }
+
+  @Test
+  void lastPortalRequiresChamberAndGrantedReward() {
+    short granted = NativeQuestRecord.set((short) 0, NativeQuestRecord.REWARD_GRANTED);
+    assertTrue(Act5BaalQuest.canUseLastPortal(granted, Act5BaalQuest.WORLDSTONE_CHAMBER));
+    assertFalse(Act5BaalQuest.canUseLastPortal((short) 0,
+        Act5BaalQuest.WORLDSTONE_CHAMBER));
+    assertFalse(Act5BaalQuest.canUseLastPortal(granted, Act5BaalQuest.THRONE_OF_DESTRUCTION));
+  }
 }

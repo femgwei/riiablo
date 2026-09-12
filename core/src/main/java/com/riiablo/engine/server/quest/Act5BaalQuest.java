@@ -7,6 +7,7 @@ public final class Act5BaalQuest {
   private Act5BaalQuest() {}
 
   public static final int RECORD = 6;
+  public static final int HARROGATH = D2LevelIds.LEVEL_HARROGATH;
   public static final int WORLDSTONE_KEEP_1 = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV1;
   public static final int THRONE_OF_DESTRUCTION = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2;
   public static final int WORLDSTONE_CHAMBER = D2LevelIds.LEVEL_WORLDSTONECHAMBER;
@@ -114,5 +115,10 @@ public final class Act5BaalQuest {
   public static boolean canReceivePartyReward(boolean expansion, int levelId) {
     return expansion && levelId >= D2LevelIds.LEVEL_HARROGATH
         && levelId <= D2LevelIds.LEVEL_WORLDSTONECHAMBER;
+  }
+
+  /** Native object 72 gate for the Worldstone Chamber -> Harrogath portal. */
+  public static boolean canUseLastPortal(short record, int sourceLevelId) {
+    return sourceLevelId == WORLDSTONE_CHAMBER && isFinished(record);
   }
 }
