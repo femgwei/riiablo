@@ -3481,6 +3481,22 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
   重建后的任务对象状态；不绕过生产交互逻辑，不新增网络字段。
 - [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava`；完整资源运行待外部 MPQ 环境。
 
-当前下一项：新增 `--require-early-object-dual`，用两个客户端依次进入 A1/A2/A3 任务区域，
-  对比该快照和 Quest Snapshot，覆盖 Cain 任务对象、Countess 宝箱、Horadric/Arcane
-  对象与 Khalim/Compelling Orb 的状态重建和可见性。
+### 2026-09-12 A1-A3 任务对象双客户端回归（本轮完成）
+
+- [x] 新增 `--require-early-object-dual` 离屏入口，两个客户端依次进入 A1/A2/A3
+  任务区域，并在每个区域请求 Quest Snapshot；测试使用 `headlessEarlyQuestObjectSnapshot`
+  读取权威对象分类和开启态，不添加新的网络字段。
+- [x] A1 覆盖 Cairn Stones、Inifuss Tree、Cain Gibbet、Horadric Malus 和 Countess
+  宝箱；A2 按当前游戏 seed 选择原生 staff tomb，再覆盖 Horadric Orifice，并覆盖
+  Arcane Sanctuary Tome；A3 覆盖 Khalim chest、Gidbinn decoy 和 Compelling Orb。
+- [x] 每个阶段都先比较对象数量，再通过 `headlessActivateQuestObjects`（Countess
+  宝箱除外）和两个客户端的 `ZoneChangeEvent` 重建路径，最后比较两个 Quest Snapshot
+  的成功状态、记录长度和 revision，避免只验证单端内存状态。
+- [x] 通过 `:server:d2gs:compileJava` 与 `git diff --check`；由于当前环境没有完整
+  1.10f MPQ，未宣称真实 socket/地图对象运行通过。完整资源环境应运行：
+  `D2GSHeadlessClient --require-early-object-dual`。
+
+当前下一项：在完整资源环境运行 `--require-early-object-dual`，记录每个区域的对象
+  数量与重建前后 `Object.mode/NativeObjectState`；若 A1-A3 全部通过，继续补齐
+  A2Q6 七墓 Arcane Symbol 选择、Duriel 击杀奖励和 A3 Mephisto Bridge/Hell Gate
+  的对象实体可见性回归。

@@ -80,6 +80,17 @@ public final class D2GSHeadlessClient {
   private static final String TAG = "[HEADLESS_COMBAT]";
   private static final int DEFAULT_PORT = 6114;
   private static final int MAX_PACKET_SIZE = 1 << 20;
+  // Native 1.10f level ordinals used by the early-object fixture.  Keep the
+  // headless server module independent from the optional D2MOO source set.
+  private static final int LEVEL_STONYFIELD = 4;
+  private static final int LEVEL_DARKWOOD = 5;
+  private static final int LEVEL_BARRACKS = 28;
+  private static final int LEVEL_TRISTRAM = 38;
+  private static final int LEVEL_TOWERCELLARLVL5 = 25;
+  private static final int LEVEL_ARCANESANCTUARY = 74;
+  private static final int LEVEL_SPIDERCAVERN = 85;
+  private static final int LEVEL_FLAYERJUNGLE = 78;
+  private static final int LEVEL_TRAVINCAL = 83;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -150,6 +161,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireQuestObjectDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireEarlyObjectDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
         : config.generatedAmazon
@@ -179,6 +192,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireQuestObjectDual) {
       runQuestObjectDual(d2s, character);
+      return;
+    }
+    if (config.requireEarlyObjectDual) {
+      runEarlyObjectDual(d2s, character);
       return;
     }
     if (config.requireDenQuestScenario) {
@@ -2094,6 +2111,127 @@ public final class D2GSHeadlessClient {
           + java.util.Arrays.toString(ancientSnapshot) + " clients=true,true");
       log("quest_object_dual_pass", "a5q2=true a5q3=true a5q5=true rebuild=true");
     }
+  }
+
+  /**
+   * Two-client A1/A2/A3 quest-object snapshot and rebuild gate.  This keeps
+   * the early-act object registry on the same authoritative path as the A5
+   * object test: both clients enter each zone, the native object classes are
+   * inspected, selected objects are activated, and a zone-change rebuild is
+   * replayed before both quest snapshots are compared.
+   */
+  private void runEarlyObjectDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("EarlyObjectPeer", 0x45415259);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      // A1: Cain's five Cairn Stones in the Stony Field.
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_STONYFIELD,
+          "a1-cain-stones", 0, 5,
+          new int[] {17, 18, 19, 20, 21}, 1L);
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_DARKWOOD, "a1-inifuss-tree", 1, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.INIFUSS_TREE}, 2L);
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_TRISTRAM, "a1-cain-gibbet", 2, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.CAIN_GIBBET}, 3L);
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_BARRACKS, "a1-horadric-malus", 3, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.HORADRIC_MALUS}, 4L);
+
+      // A1: Countess' native chest emitter in Tower Cellar Level 5.  It is
+      // intentionally read-only here; the chest is opened by the Countess
+      // quest handler and has no stable Objects.txt class id.
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_TOWERCELLARLVL5,
+          "a1-countess-chest", 13, 1, new int[0], 5L);
+
+      // A2: the Horadric Orifice and Arcane Sanctuary tome use different
+      // native levels and are deliberately checked independently.
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          com.riiablo.engine.server.quest.Act2TombSelection.forGameSeed(config.seed)
+              .staffTombLevel(),
+          "a2-horadric-orifice", 5, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.HORADRIC_ORIFICE},
+          6L);
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_ARCANESANCTUARY,
+          "a2-arcane-tome", 6, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.ARCANE_SANCTUARY_TOME},
+          7L);
+
+      // A3: each Khalim component and the Compelling Orb are owned by a
+      // different native area.  Checking all three areas catches accidental
+      // object-table aliases while the Orb stage verifies the final switch.
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_SPIDERCAVERN,
+          "a3-khalim-eye", 8, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.KHALIM_CHEST2},
+          8L);
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_FLAYERJUNGLE,
+          "a3-gidbinn-heart", 7, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.GIDBINN_DECOY},
+          9L);
+      runEarlyObjectStage(a, b, inA, inB, outA, outB,
+          LEVEL_TRAVINCAL,
+          "a3-compelling-orb", 9, 1,
+          new int[] {com.riiablo.engine.server.object.NativeQuestObjectResolver.COMPELLING_ORB},
+          10L);
+      log("early_object_dual_pass", "a1=true a2=true a3=true rebuild=true clients=true,true");
+    }
+  }
+
+  private void runEarlyObjectStage(D2GSHeadlessClient a, D2GSHeadlessClient b,
+      DataInputStream inA, DataInputStream inB, OutputStream outA, OutputStream outB,
+      int level, String name, int countIndex, int minimum, int[] activateClasses,
+      long requestId) throws Exception {
+    if (!D2GS.headlessEnterLevel(a.playerId, level)
+        || !D2GS.headlessEnterLevel(b.playerId, level)) {
+      throw new IOException(name + " staging unavailable");
+    }
+    awaitTwoQuestLevels(a, b, inA, inB, level, name);
+    int[] before = D2GS.headlessEarlyQuestObjectSnapshot(level);
+    if (before.length <= countIndex || before[countIndex] < minimum) {
+      throw new IOException(name + " object snapshot incomplete: "
+          + java.util.Arrays.toString(before));
+    }
+    for (int classId : activateClasses) {
+      if (D2GS.headlessActivateQuestObjects(level, classId) < 1) {
+        throw new IOException(name + " activation unavailable: class=" + classId
+            + " snapshot=" + java.util.Arrays.toString(before));
+      }
+    }
+    if (!D2GS.headlessRebuildQuestObjects(a.playerId)
+        || !D2GS.headlessRebuildQuestObjects(b.playerId)) {
+      throw new IOException(name + " rebuild unavailable");
+    }
+    int[] after = D2GS.headlessEarlyQuestObjectSnapshot(level);
+    if (after.length < 15 || after[countIndex] < minimum
+        || after[14] < activateClasses.length) {
+      throw new IOException(name + " rebuilt snapshot incomplete: "
+          + java.util.Arrays.toString(after));
+    }
+    QuestResult snapshotA = requestSnapshot(a, inA, outA, requestId);
+    QuestResult snapshotB = requestSnapshot(b, inB, outB, requestId);
+    if (snapshotA == null || snapshotB == null || !snapshotA.success() || !snapshotB.success()
+        || snapshotA.questRevision() != snapshotB.questRevision()
+        || snapshotA.questRecordsLength() != snapshotB.questRecordsLength()) {
+      throw new IOException(name + " quest snapshot diverged");
+    }
+    log("early_object_stage_pass", "stage=" + name + " level=" + level
+        + " before=" + java.util.Arrays.toString(before)
+        + " after=" + java.util.Arrays.toString(after)
+        + " revision=" + snapshotA.questRevision());
   }
 
   private QuestResult requestSnapshot(D2GSHeadlessClient client, DataInputStream input,
@@ -4934,6 +5072,7 @@ public final class D2GSHeadlessClient {
     boolean requireBaalWaveDual;
     boolean requireQuestWarpDual;
     boolean requireQuestObjectDual;
+    boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
     boolean requireAndarielQuestScenario;
@@ -4977,6 +5116,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
+        else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
         else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
@@ -5022,12 +5162,12 @@ public final class D2GSHeadlessClient {
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
-          && !config.requireQuestObjectDual
+          && !config.requireQuestObjectDual && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
-          && !config.requireQuestObjectDual
+          && !config.requireQuestObjectDual && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -5063,7 +5203,8 @@ public final class D2GSHeadlessClient {
           + " [--require-movement-intent]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
-          + " [--require-quest-warp-dual] [--require-quest-object-dual] [--require-den-quest]"
+          + " [--require-quest-warp-dual] [--require-quest-object-dual]"
+          + " [--require-early-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
