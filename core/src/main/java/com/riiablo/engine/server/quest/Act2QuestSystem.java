@@ -94,7 +94,8 @@ public class Act2QuestSystem extends PassiveSystem {
     // The Horadric Orifice exists only in the seed-selected staff tomb.  A
     // few DS1 exports omit the preset, so use the same room-backed fallback
     // while preserving the native level selection rule.
-    if (levelId == Act2TombSelection.forGameSeed(Riiablo.gameSeed).staffTombLevel()) {
+    int gameSeed = map == null ? Riiablo.gameSeed : map.seed();
+    if (levelId == Act2TombSelection.forGameSeed(gameSeed).staffTombLevel()) {
       ensureAct2QuestObject(event.zone,
           NativeQuestObjectResolver.HORADRIC_ORIFICE, "Horadric Orifice", 42);
     }

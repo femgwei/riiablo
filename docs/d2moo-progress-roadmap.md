@@ -3635,3 +3635,8 @@ Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖�
 下一项：在资源完整环境复测 A2 三个对象的真实 Quest 请求双客户端路径；当前本机
 `headlessEarlyObjectDual` 仍在 Staff Tomb 关卡 DT1/DS1 为空处阻断，确认资源完整后
 再判定 Orifice/Tome 的运行时通过状态。
+
+补充诊断：Staff Tomb 回退原先读取 `Riiablo.gameSeed`，而 headless D2GS 的权威种子只
+保存在 `Map.seed()`，会导致选择错误的 Staff Tomb。现已改为优先使用 `map.seed()`；
+若资源可装载，Orifice 回退将与实际地图选中的墓穴保持一致。当前运行仍在墓穴 DT1/DS1
+为空处失败，需补齐该资源导出后复测。
