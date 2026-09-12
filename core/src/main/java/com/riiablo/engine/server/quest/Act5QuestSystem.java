@@ -25,6 +25,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Interactable;
@@ -62,6 +63,7 @@ public class Act5QuestSystem extends BaseSystem {
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<SuperUnique> mSuperUnique;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<NativeObjectState> mNativeObjectState;
@@ -1030,8 +1032,10 @@ public class Act5QuestSystem extends BaseSystem {
           waveIndex + 1, Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex]);
       return;
     }
-    float leaderX = baalWaveOriginX();
-    float leaderY = baalWaveOriginY() + 13f;
+    com.badlogic.gdx.math.Vector2 summonPoint = Act5BaalSpawnLayout.summonPoint(
+        baalWaveOriginX(), baalWaveOriginY(), new com.badlogic.gdx.math.Vector2());
+    float leaderX = summonPoint.x;
+    float leaderY = summonPoint.y;
     int uniqueId = unique == null
         ? Act5BaalQuest.WAVE_SUPER_UNIQUES[waveIndex] : unique.hcIdx;
     long affixes = unique == null ? 0L : Act5BaalQuest.nativeSuperUniqueAffixes(unique.Mod);
@@ -1045,6 +1049,7 @@ public class Act5QuestSystem extends BaseSystem {
     int leader = factory.createMonster(leaderStats.hcIdx, leaderX, leaderY,
         MonsterRank.SUPER_UNIQUE, affixes, -1, uniqueId);
     if (leader < 0) return;
+    applyBaalSpawnFacing(leader);
     baalWaveEntities.add(leader);
     if (mSuperUnique != null) {
       mSuperUnique.create(leader).set(uniqueId,
@@ -1056,9 +1061,11 @@ public class Act5QuestSystem extends BaseSystem {
     int max = unique == null ? Act5BaalQuest.WAVE_MINIONS[waveIndex] : unique.MaxGrp;
     int minions = Act5BaalQuest.minionCount(min, max, map == null ? 0 : map.seed(), waveIndex);
     for (int i = 0; i < minions; i++) {
-      double angle = Math.PI * 2.0 * i / Math.max(1, minions);
-      float x = leaderX + (float) Math.cos(angle) * 3f;
-      float y = leaderY + (float) Math.sin(angle) * 3f;
+      // The native preset uses the room collision placer rather than a
+      // geometric ring.  Keep the native candidate order and let the map
+      // choose the first walkable point for each candidate.
+      float x = leaderX + Act5BaalSpawnLayout.candidateX(i);
+      float y = leaderY + Act5BaalSpawnLayout.candidateY(i);
       if (throneZone != null
           && throneZone.findFreeCoordinates(free.set(x, y), 1, 12, true, free)) {
         x = free.x;
@@ -1066,7 +1073,10 @@ public class Act5QuestSystem extends BaseSystem {
       }
       int entity = factory.createMonster(minionStats.hcIdx, x, y,
           MonsterRank.MINION, 0L, -1, leader);
-      if (entity >= 0) baalWaveEntities.add(entity);
+      if (entity >= 0) {
+        applyBaalSpawnFacing(entity);
+        baalWaveEntities.add(entity);
+      }
     }
     log.info("[A5Q6] Baal wave spawned: wave={}/{} leader={} class={} minionClass={} "
             + "minions={} affixes=0x{} entities={} postLock={}",
@@ -1074,6 +1084,14 @@ public class Act5QuestSystem extends BaseSystem {
         unique == null ? uniqueId : unique.Superunique, leaderStats.Id, minionStats.Id,
         minions, Long.toHexString(affixes), baalWaveEntities.size,
         Act5BaalQuest.POST_SPAWN_LOCK_TICKS);
+  }
+
+  /** Applies the neutral facing used by D2GAME_SpawnNormalMonster to both the
+   * SuperUnique leader and its preset minions. */
+  private void applyBaalSpawnFacing(int entityId) {
+    if (mAngle == null || !mAngle.has(entityId)) return;
+    mAngle.get(entityId).set(new com.badlogic.gdx.math.Vector2(
+        Act5BaalSpawnLayout.FACING_X, Act5BaalSpawnLayout.FACING_Y));
   }
 
   /** Native BaalThrone callback blocks while any live hostile monster is

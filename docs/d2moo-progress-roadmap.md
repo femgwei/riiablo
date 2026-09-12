@@ -3182,3 +3182,22 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：核对五波仆从在 1.10f `SuperUniques.txt`/D2MOO preset 中的精确出生坐标、
 出生方向和环形偏移，替换当前仅按中心/环形搜索的近似实现；随后补充无资源坐标回归。
+
+### 2026-09-12 A5Q6 五波原生召唤点与出生布局对齐（本轮完成）
+
+- [x] 对照 D2MOO `AITHINK_Fn134_BaalThrone` 与
+  `MISSMODE_SrvHit54_BaalSpawnMonsters`，将波次基准明确为 Baal/Throne 单位坐标
+  `(+0,+13)` 的 `Baal Monster Spawn` 目标点；不再把波次中心误认为固定地图坐标。
+- [x] 新增 `Act5BaalSpawnLayout`：保留原生召唤点偏移、16 个稳定的 preset 候选偏移
+  顺序和中立出生朝向。候选仍逐个交给 `Zone.findFreeCoordinates`，因此墙体、RoomEx
+  空洞和地图边界继续由权威碰撞层决定，不会因布局修复重新生成黑块或越界怪物。
+- [x] `Act5QuestSystem.spawnBaalWave` 改用原生候选顺序，首领与随从统一设置中立朝向，
+  保留 `SuperUniques.txt` 的 `MinGrp/MaxGrp`、hcIdx 和词缀映射；没有新增网络协议或
+  生成文件，也没有修改战斗伤害公式。
+- [x] 新增 `Act5BaalSpawnLayoutTest`，覆盖 `(+0,+13)` 召唤点、候选不重叠/可循环和
+  朝向常量；通过 A5Q6 定向测试、`:core:compileJava`、`:server:d2gs:compileJava`、
+  `git diff --check`。真实 1.10f 画面验证仍因当前环境条件跳过。
+
+当前下一项：继续补齐 D2MOO `SpawnPresetMonster` 的特殊波次随从语义（Subject 1 的
+`fallen5`、Subject 2 的 `skmage_cold3` 客户端 A4 提示/实体归属），并为波次实体补上
+重连后的按 preset 标识恢复，避免只恢复阶段而丢失原生波次成员关系。
