@@ -88,12 +88,19 @@ public class Act2QuestSystem extends PassiveSystem {
     if (levelId == D2LevelIds.LEVEL_VALLEYOFSNAKES
         || levelId == D2LevelIds.LEVEL_CLAWVIPERTEMPLELEV1
         || levelId == D2LevelIds.LEVEL_CLAWVIPERTEMPLELEV2) {
-      ensureTaintedSunAltar(event.zone);
+      ensureAct2QuestObject(event.zone,
+          NativeQuestObjectResolver.TAINTED_SUN_ALTAR, "Tainted Sun altar", 24);
+    }
+    // The Horadric Orifice exists only in the seed-selected staff tomb.  A
+    // few DS1 exports omit the preset, so use the same room-backed fallback
+    // while preserving the native level selection rule.
+    if (levelId == Act2TombSelection.forGameSeed(Riiablo.gameSeed).staffTombLevel()) {
+      ensureAct2QuestObject(event.zone,
+          NativeQuestObjectResolver.HORADRIC_ORIFICE, "Horadric Orifice", 42);
     }
   }
 
-  private void ensureTaintedSunAltar(Map.Zone zone) {
-    final int classId = NativeQuestObjectResolver.TAINTED_SUN_ALTAR;
+  private void ensureAct2QuestObject(Map.Zone zone, int classId, String label, int interactType) {
     if (zone == null || factory == null || map == null || mObject == null
         || mMapWrapper == null || mNativeObjectState == null || hasQuestObject(zone, classId)) {
       return;
@@ -107,9 +114,10 @@ public class Act2QuestSystem extends PassiveSystem {
     NativeObjectState state = mNativeObjectState.create(entity);
     state.set(classId, classId, classId, com.riiablo.engine.Engine.Object.MODE_NU,
         false, false, NativePresetObjectResolver.Kind.ORDINARY);
+    state.interactType = interactType;
     state.source = new Map.NativeObject(classId, com.riiablo.engine.Engine.Object.MODE_NU,
         (int) (x - zone.x()), (int) (y - zone.y()), false, false);
-    log.info("[A2Q3] materialized missing Tainted Sun altar: level={} entity={}",
+    log.info("[A2] materialized missing {}: level={} entity={}", label,
         zone.level == null ? -1 : zone.level.Id, entity);
   }
 

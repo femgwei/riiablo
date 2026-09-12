@@ -3611,3 +3611,16 @@ Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖�
 
 下一项：新增 A2 祭坛/Arcane Tome/Orifice 的真实 Quest 请求双客户端离屏夹具，确认
 回退对象的激活、奖励掉落和幂等行为；再处理 A1 特殊箱与任务门。
+
+### 2026-09-12 A2 任务对象回退与离屏入口（本轮完成）
+
+- [x] `Act2QuestSystem` 为缺失的 Tainted Sun 祭坛（class 149）以及当前种子选定
+  staff tomb 中缺失的 Horadric Orifice（class 152）增加 RoomEx 中心物化回退，记录
+  正确 `interactType`、Zone 和 `NativeObjectState`。
+- [x] 新增 `:server:d2gs:headlessEarlyObjectDual` Gradle 入口，统一执行 A1-A3
+  任务对象离屏快照/重建回归。
+- [x] A1 五类对象阶段通过；A2 Orifice 阶段在当前机器因对应墓穴 DT1/DS1 导出为空，
+  无法完成关卡 staging，待补齐资源后复测，不将其误记为功能通过。
+
+下一项：在资源完整环境运行 A2 祭坛、Orifice、Arcane Tome 的真实 Quest 请求双客户端
+交互，随后覆盖 A1 特殊箱和任务门的掉落/幂等路径。
