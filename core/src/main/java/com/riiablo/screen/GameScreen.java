@@ -111,6 +111,7 @@ import com.riiablo.engine.server.PlayerCorpseRetrievalSystem;
 import com.riiablo.engine.server.quest.Act1QuestSystem;
 import com.riiablo.engine.server.quest.Act2QuestSystem;
 import com.riiablo.engine.server.quest.Act3QuestSystem;
+import com.riiablo.engine.server.quest.Act5QuestSystem;
 import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
 import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
 import com.riiablo.engine.server.quest.Act2HoradricStaffDropSystem;
@@ -804,6 +805,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new Act2QuestSystem());
       builder.with(new Act3QuestSystem());
       builder.with(new com.riiablo.engine.server.quest.Act4QuestSystem());
+      builder.with(new Act5QuestSystem());
       builder.with(new Act2TaintedSunQuestSystem());
       builder.with(new Act2DurielQuestSystem());
       builder.with(new NativeMercenaryRewardSystem());

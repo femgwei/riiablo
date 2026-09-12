@@ -2678,4 +2678,20 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
   通过。
 
 当前下一项：接入 A5Q1 Shenk the Overseer 的原生任务链（Bloody Foothills 进入、围攻
-  首领生成、击杀状态传播和 Larzuk 奖励）；完成后继续 A5Q2 Rescue Anya/Qual-Kehk。
+首领生成、击杀状态传播和 Larzuk 奖励）；完成后继续 A5Q2 Rescue Anya/Qual-Kehk。
+
+### 2026-09-12 Act V A5Q1 Shenk / Siege on Harrogath（本轮完成基础闭环）
+
+- [x] 新增 `Act5ShenkQuest` 与 `Act5QuestSystem`，按 D2MOO `ACT5Q1` 对齐
+  `Bloody Foothills → Siege Boss(42) → Larzuk 20090` 状态顺序；进入区域时只在
+  没有原生 SuperUnique 的情况下补生成 `DeathMauler1`，不会把普通 DeathMauler
+  误判为 Shenk。
+- [x] Shenk 击杀后为当前 Bloody Foothills 玩家及同队 Act V 玩家写入
+  `PRIMARY_GOAL_DONE + REWARD_PENDING`，Larzuk 对话一次性转为 `REWARD_GRANTED + CUSTOM1`，
+  任务记录持久化并保持重复死亡/重复对话幂等。
+- [x] 注册到本地 `GameScreen` 和专用 `server/d2gs` 权威世界；共享文件仅增加
+  Act5 quest system 注册，不改变战斗系统注册顺序。
+- 验证：`Act5ShenkQuestTest`、`:core:compileJava`、`:server:d2gs:compileJava` 通过。
+
+当前下一项：接入 A5Q2 Rescue Anya/Qual-Kehk，优先完成 Frigid Highlands 囚笼对象、
+五名野蛮人救援和 Qual-Kehk 佣兵奖励状态，再处理 A5Q3 Prison of Ice。
