@@ -3278,3 +3278,21 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：将上述同房间候选规则接入真正的 D2GS 双 socket 场景（生成波次后分别
   观察两端 MonsterP/位置/所有权），并补充不同难度下的实际组数量快照校验。
+
+### 2026-09-12 A5Q6 真双 socket 首波观察与难度组校验（本轮完成）
+
+- [x] `D2GSHeadlessClient` 新增 `--require-baal-wave-dual` 场景：两个独立 TCP
+  客户端进入 Throne of Destruction，服务端仅通过测试桥接发布真实 `ZoneChangeEvent`，
+  波次仍由 `Act5QuestSystem` 固定 Tick/原生状态机生成。
+- [x] 两端分别收集 `MonsterP`、`PositionP` 和删除状态，按进入前基线提取第一波实体，
+  校验实体 id 集合、monster class 和位置完全一致；不新增 FlatBuffer 字段或生成网络文件。
+- [x] 增加权威 `headlessBaalWaveSnapshot`，核对 leader/minion 标记与两端可见数量；
+  首波 Normal/Nightmare/Hell 的 `MinGrp/MaxGrp` 实际规则校验为 `5/6/7` 个随从加
+  1 个首领。可分别使用 `--difficulty 0/1/2` 运行真实 socket 场景。
+- [x] 测试角色使用扩展版并预置 A5Q5 完成记录，满足 D2MOO A5Q6 进入王座的前置门槛；
+  `Act5BaalQuest.nativeGroupRange` 改为公开只读算法入口。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava` 和 `git diff --check`；
+  当前环境未提供完整 1.10f MPQ，真实 socket 运行仅保留为可执行离屏入口，未伪造成功结果。
+
+当前下一项：在该双 socket 场景上继续覆盖第二至第五波的延迟/清场推进、波次顺序和
+  Baal 生成门控，并把每个难度的五波数量快照写入离屏回归日志。

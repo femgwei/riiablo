@@ -358,6 +358,103 @@ public class D2GS extends ApplicationAdapter {
     catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
   }
 
+  /**
+   * Test-only level entry that follows the authoritative warp outcome and
+   * publishes the same ZoneChangeEvent used by WarpInteractor.  Plain
+   * relocation is useful for snapshot tests, but quest systems intentionally
+   * start their native sequences from this event.
+   */
+  static boolean headlessEnterLevel(int playerId, int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return false;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean entered =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        Vector2 destination = findHeadlessLevelPosition(server, levelId);
+        Position position = server.world.getMapper(Position.class).get(playerId);
+        com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        if (destination == null || position == null || wrapper == null) return;
+        Map.Zone zone = server.map.getZone(destination);
+        if (zone == null || zone.level == null || zone.level.Id != levelId) return;
+        position.position.set(destination);
+        wrapper.set(server.map, zone);
+        com.riiablo.engine.server.component.Box2DBody body = server.world
+            .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+        if (body != null && body.body != null) body.body.setTransform(destination, body.body.getAngle());
+        com.riiablo.engine.server.component.UnitStates states = server.world
+            .getMapper(com.riiablo.engine.server.component.UnitStates.class).get(playerId);
+        if (states != null) {
+          if (states.stateList == null) states.init(playerId);
+          states.stateList.addState(com.riiablo.engine.server.state.StateId.SYNC_WARPED,
+              2, 1, playerId);
+        }
+        server.world.getSystem(EventSystem.class).dispatch(
+            com.riiablo.engine.server.event.ZoneChangeEvent.obtain(playerId, zone));
+        entered.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && entered.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /**
+   * Returns the authoritative marker counts for the currently spawned Baal
+   * wave: {@code [waveIndex, totalMembers, leaders, minions]}.  This is a
+   * diagnostics-only bridge; clients still prove their own MonsterP view.
+   */
+  static int[] headlessBaalWaveSnapshot() {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new int[4];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[4]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+            server.world.getMapper(com.riiablo.engine.server.component.Monster.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] data = entities.getData();
+        int wave = -1, total = 0, leaders = 0;
+        for (int i = 0; i < entities.size(); i++) {
+          int entity = data[i];
+          com.riiablo.engine.server.component.Monster monster = monsters.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (monster == null || wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+              || wrapper.zone.level.Id != Act5BaalQuest.THRONE_OF_DESTRUCTION
+              || monster.baalWaveIndex < 0) continue;
+          if (wave < 0) wave = monster.baalWaveIndex;
+          if (monster.baalWaveIndex != wave) continue;
+          total++;
+          if (monster.baalWaveLeader) leaders++;
+        }
+        result.set(new int[] {wave, total, leaders, total - leaders});
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[4];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[4];
+    }
+  }
+
   /** Places the test player on a real Warp whose authoritative destination matches. */
   static int headlessPrepareWarpToLevel(int playerId, int destinationLevelId) {
     D2GS server = activeHeadlessInstance;

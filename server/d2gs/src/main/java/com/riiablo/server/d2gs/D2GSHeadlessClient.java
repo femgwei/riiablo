@@ -144,7 +144,9 @@ public final class D2GSHeadlessClient {
 
   private void run() throws Exception {
     waitForServer();
-    byte[] d2s = config.requireAreaSkillScenario
+    byte[] d2s = config.requireBaalWaveDual
+        ? createGeneratedBaalSave("BaalAma", 0x42414141)
+        : config.requireAreaSkillScenario
         ? createGeneratedAreaSave(config.areaSkillId)
         : config.generatedAmazon
         ? createGeneratedAmazonSave(
@@ -161,6 +163,10 @@ public final class D2GSHeadlessClient {
 
     if (config.requireFallenScenario) {
       runFallenDual(d2s, character);
+      return;
+    }
+    if (config.requireBaalWaveDual) {
+      runBaalWaveDual(d2s, character);
       return;
     }
     if (config.requireDenQuestScenario) {
@@ -1560,6 +1566,127 @@ public final class D2GSHeadlessClient {
           + " revision=" + result.revision() + " inventorySnapshot="
           + result.snapshotLength() + " nativeKills=" + lootKills
           + " duplicate=true contentionRejected=true deleted=true");
+    }
+  }
+
+  /**
+   * Two real TCP observers for the first native A5Q6 Baal wave.  The server
+   * bridge only performs a level entry and dispatches the normal ZoneChange
+   * event; wave creation remains in Act5QuestSystem's fixed-tick path.
+   */
+  private void runBaalWaveDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedBaalSave("BaalPeer", 0x4241414C);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      int throne = com.riiablo.engine.server.quest.Act5BaalQuest.THRONE_OF_DESTRUCTION;
+      if (!D2GS.headlessEnterLevel(a.playerId, throne)
+          || !D2GS.headlessEnterLevel(b.playerId, throne)) {
+        throw new IOException("Baal wave staging could not enter Throne of Destruction");
+      }
+      long levelDeadline = deadline();
+      while (System.currentTimeMillis() < levelDeadline
+          && (a.currentLevelId != throne || b.currentLevelId != throne)) {
+        consumeOne(inA, a);
+        consumeOne(inB, b);
+      }
+      if (a.currentLevelId != throne || b.currentLevelId != throne) {
+        throw new IOException("dual clients did not observe Throne level: "
+            + a.currentLevelId + ',' + b.currentLevelId);
+      }
+
+      // Drain the baseline before the 250-tick native pre-wave delay.  The
+      // delta in entity ids is the protocol-visible wave, independent of
+      // MonsterP's intentionally compact schema.
+      a.consumeFor(inA, 350L);
+      b.consumeFor(inB, 350L);
+      Set<Integer> baselineA = livingMonsterIds(a);
+      Set<Integer> baselineB = livingMonsterIds(b);
+      int difficulty = Math.max(0, Math.min(2, config.difficulty));
+      int[] expectedRange = com.riiablo.engine.server.quest.Act5BaalQuest.nativeGroupRange(
+          com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[0],
+          com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[0], difficulty);
+      int expectedMinions = expectedRange[0];
+      int expectedMembers = expectedMinions + 1;
+      verifyNativeBaalDifficultyTable();
+
+      Set<Integer> waveA = awaitBaalWaveMembers(a, inA, baselineA, expectedMembers, deadline());
+      Set<Integer> waveB = awaitBaalWaveMembers(b, inB, baselineB, expectedMembers, deadline());
+      if (!waveA.equals(waveB)) {
+        throw new IOException("Baal wave entity visibility diverged: A=" + waveA + " B=" + waveB);
+      }
+      for (Integer entityId : waveA) {
+        Snapshot first = a.monsters.get(entityId);
+        Snapshot second = b.monsters.get(entityId);
+        if (first == null || second == null || first.monsterClass != second.monsterClass
+            || Math.abs(first.x - second.x) > 0.01f
+            || Math.abs(first.y - second.y) > 0.01f) {
+          throw new IOException("Baal wave MonsterP/PositionP diverged for entity " + entityId);
+        }
+      }
+      int[] authority = D2GS.headlessBaalWaveSnapshot();
+      if (authority.length < 4 || authority[0] != 0 || authority[1] != expectedMembers
+          || authority[2] != 1 || authority[3] != expectedMinions) {
+        throw new IOException("native Baal wave count mismatch: expected=" + expectedMembers
+            + " authority=" + java.util.Arrays.toString(authority));
+      }
+      log("baal_wave_dual_pass", "difficulty=" + difficulty + " wave=1 members="
+          + expectedMembers + " minions=" + expectedMinions + " entities=" + waveA
+          + " classesA=" + classes(a, waveA) + " classesB=" + classes(b, waveB)
+          + " positionsEqual=true");
+    }
+  }
+
+  private static Set<Integer> livingMonsterIds(D2GSHeadlessClient client) {
+    Set<Integer> ids = new HashSet<>();
+    for (Snapshot snapshot : client.monsters.values()) {
+      if (!snapshot.deleted && snapshot.hasPosition && snapshot.hasVitals
+          && snapshot.life > 0f && !snapshot.groundItem) ids.add(snapshot.entityId);
+    }
+    return ids;
+  }
+
+  private Set<Integer> awaitBaalWaveMembers(D2GSHeadlessClient client,
+      DataInputStream input, Set<Integer> baseline, int expected, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      Set<Integer> current = livingMonsterIds(client);
+      current.removeAll(baseline);
+      if (current.size() >= expected) return current;
+      consumeOne(input, client);
+    }
+    Set<Integer> current = livingMonsterIds(client);
+    current.removeAll(baseline);
+    throw new IOException("timed out waiting for Baal wave: expected=" + expected
+        + " observed=" + current.size() + " ids=" + current);
+  }
+
+  private static Set<Integer> classes(D2GSHeadlessClient client, Set<Integer> ids) {
+    Set<Integer> result = new HashSet<>();
+    for (Integer id : ids) {
+      Snapshot snapshot = client.monsters.get(id);
+      if (snapshot != null) result.add(snapshot.monsterClass);
+    }
+    return result;
+  }
+
+  private static void verifyNativeBaalDifficultyTable() {
+    int[] normal = com.riiablo.engine.server.quest.Act5BaalQuest.nativeGroupRange(5, 5, 0);
+    int[] nightmare = com.riiablo.engine.server.quest.Act5BaalQuest.nativeGroupRange(5, 5, 1);
+    int[] hell = com.riiablo.engine.server.quest.Act5BaalQuest.nativeGroupRange(5, 5, 2);
+    if (normal[0] != 5 || nightmare[0] != 6 || hell[0] != 7
+        || normal[1] != 5 || nightmare[1] != 6 || hell[1] != 7) {
+      throw new IllegalStateException("native Baal difficulty group table changed: normal="
+          + java.util.Arrays.toString(normal) + " nightmare="
+          + java.util.Arrays.toString(nightmare) + " hell="
+          + java.util.Arrays.toString(hell));
     }
   }
 
@@ -3962,6 +4089,38 @@ public final class D2GSHeadlessClient {
     return new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
   }
 
+  /** Expansion fixture with A5Q5 complete, matching the native A5Q6 gate. */
+  private static byte[] createGeneratedBaalSave(String name, int mapSeed) {
+    CharData character = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, name, Riiablo.BARBARIAN);
+    com.riiablo.codec.excel.CharStats.Entry stats = CharacterClass.BARBARIAN.entry();
+    StatListRef base = character.getStats().base();
+    base.put(Stat.strength, stats.str);
+    base.put(Stat.energy, stats._int);
+    base.put(Stat.dexterity, stats.dex);
+    base.put(Stat.vitality, stats.vit);
+    base.put(Stat.statpts, 0);
+    base.put(Stat.newskills, 0);
+    base.put(Stat.hitpoints, 1_000_000);
+    base.put(Stat.maxhp, 1_000_000);
+    base.put(Stat.mana, 1_000);
+    base.put(Stat.maxmana, 1_000);
+    base.put(Stat.stamina, 1_000);
+    base.put(Stat.maxstamina, 1_000);
+    base.put(Stat.level, 80);
+    base.put(Stat.experience, 0);
+    base.put(Stat.gold, 0);
+    base.put(Stat.goldbank, 0);
+    base.put(Stat.armorclass, 1_000_000);
+    character.getStats().reset();
+    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT5, 0);
+    character.mapSeed = mapSeed;
+    character.initializeStartItems(stats);
+    character.getQuests(Riiablo.ACT5)[com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD] =
+        com.riiablo.engine.server.quest.Act5AncientsQuest.complete((short) 0);
+    return new D2SWriter96().writeD2S(D2SWriter96.createD2S(character));
+  }
+
   /** Creates a deterministic level-30 caster fixture for native area skills. */
   private static byte[] createGeneratedAreaSave(int skillId) {
     boolean hydra = skillId == SkillId.HYDRA;
@@ -4120,6 +4279,7 @@ public final class D2GSHeadlessClient {
     boolean requireSnapshotOrder;
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
+    boolean requireBaalWaveDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
     boolean requireAndarielQuestScenario;
@@ -4160,6 +4320,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-snapshot-order".equals(arg)) config.requireSnapshotOrder = true;
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
+        else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
         else if ("--require-andariel-quest".equals(arg)) config.requireAndarielQuestScenario = true;
@@ -4204,10 +4365,12 @@ public final class D2GSHeadlessClient {
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
       }
-      if (!config.generatedAmazon && config.save == null && config.home != null) {
+      if (!config.generatedAmazon && !config.requireBaalWaveDual
+          && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
-      if (!config.generatedAmazon && (config.save == null || !config.save.isFile())) {
+      if (!config.generatedAmazon && !config.requireBaalWaveDual
+          && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
       return config;
@@ -4241,7 +4404,8 @@ public final class D2GSHeadlessClient {
           + " [--skill 0] [--require-missile] [--require-sim-tick]"
           + " [--require-movement-intent]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
-          + " [--require-fallen-scenario] [--require-den-quest] [--require-quest-recovery]"
+          + " [--require-fallen-scenario] [--require-baal-wave-dual] [--require-den-quest]"
+          + " [--require-quest-recovery]"
           + " [--require-countess-quest]"
           + " [--require-andariel-quest]"
           + " [--require-area-skill] [--area-skill 244|56|57|59|64]"

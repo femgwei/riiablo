@@ -54,7 +54,8 @@ public final class Act5BaalQuest {
   }
 
   /** D2GAME_SpawnSuperUnique adds difficulty (0/1/2) to non-zero groups. */
-  static int[] nativeGroupRange(int min, int max, int difficulty) {
+  /** Returns the native SuperUnique group range after D2Game difficulty scaling. */
+  public static int[] nativeGroupRange(int min, int max, int difficulty) {
     min = Math.max(0, min);
     max = Math.max(min, max);
     difficulty = Math.max(0, Math.min(2, difficulty));
