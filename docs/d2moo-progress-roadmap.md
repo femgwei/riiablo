@@ -3557,3 +3557,22 @@ Gidbinn decoy；日志显示 `DRLGOUTJUNG_BuildJungle: pJungleDefs is null` 及 
 当前下一项：在完整 1.10f MPQ 环境执行 `--require-a3-object-interaction-dual`，确认真实
 DS1 预设中 Gidbinn/三座 Khalim 宝箱/Compelling Orb 的实体房间与双端可见性；通过后继续
 A1/A2 特殊宝箱、祭坛、任务门的生产交互和掉落幂等覆盖。
+
+### 2026-09-12 A3 任务对象离屏闭环复测与多人 Orb 共享（本轮完成）
+
+- [x] 重新运行 `D2_HOME=G:\\BaiduNetdiskDownload\\Diablo II 1.10F`
+  `:server:d2gs:headlessA3ObjectInteractionDual`；Gidbinn、三座 Khalim 宝箱和
+  Travincal Compelling Orb 均通过真实双客户端 Quest 请求，日志包含
+  `a3_object_interaction_dual_pass`，Gradle `BUILD SUCCESSFUL`。
+- [x] 修复 qbr 任务掉落在 A3 重叠 Zone 中的归属问题：掉落物沿用宝箱的
+  `MapWrapper.zone`，避免坐标推断将物品绑定到错误区域。
+- [x] 对齐 D2Game 的多人任务信用：Compelling Orb 消耗执行者的 `qf2` 后，向同一
+  Act III 区域内的同 Party 成员传播 `PRIMARY_GOAL_DONE/REWARD_GRANTED`，保留成员
+  已有的组件标记，不复制物品。
+- [x] A3 离屏夹具在进入区域前显式组 Party，确保双端快照验证覆盖真实多人路径。
+- [x] `ItemWriter` 对缺失 `maxdurability/durability` 的特殊任务武器写入零值槽位，
+  避免任务掉落网络序列化 NPE 并保持 D2S 位流对齐。
+
+本轮测试仍会输出大量底层资源缺失/内存池 warning（主要是 DS1 墙体 Warp tile 和
+headless 资源回退），但不再阻断 A3 任务对象闭环。下一项：补齐 `ItemWriter` 缺失耐久
+字段的 round-trip 单测，并继续 A1/A2 特殊箱、祭坛、任务门的生产交互和掉落幂等覆盖。

@@ -2145,6 +2145,12 @@ public final class D2GSHeadlessClient {
       send(outB, connectionPacket(peerCharacter, peerD2s));
       a.awaitConnection(inA, deadline());
       b.awaitConnection(inB, deadline());
+      // Quest objective propagation follows the native party-credit path.
+      // Form the party before either client enters Act III so the Orb stage
+      // can verify shared completion on both snapshots.
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
+        throw new IOException("A3 object party setup failed");
+      }
 
       if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_FLAYERJUNGLE)
           || !D2GS.headlessEnterLevel(b.playerId, LEVEL_FLAYERJUNGLE)) {
@@ -2156,7 +2162,8 @@ public final class D2GSHeadlessClient {
       if (gidbinnObject == Engine.INVALID_ENTITY
           || !D2GS.headlessMovePlayerToObject(a.playerId, gidbinnObject)
           || !D2GS.headlessMovePlayerToObject(b.playerId, gidbinnObject)) {
-        throw new IOException("Gidbinn decoy unavailable");
+        throw new IOException("Gidbinn decoy unavailable snapshot="
+            + java.util.Arrays.toString(D2GS.headlessEarlyQuestObjectSnapshot(LEVEL_FLAYERJUNGLE)));
       }
       send(outA, questRequestPacket(201L, QuestOperation.OBJECT_INTERACTION,
           gidbinnObject, -1));

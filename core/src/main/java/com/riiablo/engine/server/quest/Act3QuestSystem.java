@@ -12,6 +12,8 @@ import com.riiablo.Riiablo;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -29,6 +31,7 @@ import com.riiablo.item.Quality;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.Map;
+import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -50,6 +53,8 @@ public class Act3QuestSystem extends PassiveSystem {
 
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Object> mObject;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   @Wire(failOnNull = false)
@@ -58,6 +63,8 @@ public class Act3QuestSystem extends PassiveSystem {
   protected EntityFactory factory;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
+  @Wire(name = "map", failOnNull = false)
+  protected Map map;
   protected EventSystem event;
 
   private EntitySubscription playersByZone;
@@ -90,6 +97,53 @@ public class Act3QuestSystem extends PassiveSystem {
         ? Act3GidbinnQuest.enterArea(gidbinnPrevious) : gidbinnPrevious;
     if (gidbinnNext != gidbinnPrevious) updateGidbinnRecord(player.data, gidbinnNext,
         "entered-flayer-jungle");
+    // D2Game's quest initialization owns these special object placements.
+    // Some old DS1 exports omit the quest unit, so retain the native class
+    // and lifecycle by materializing the missing object on first area entry.
+    if (event.zone.level.Id == D2LevelIds.LEVEL_FLAYERJUNGLE) {
+      ensureAct3QuestObject(event.zone, Act3GidbinnQuest.GIDBINN_DECOY_OBJECT);
+    } else if (event.zone.level.Id == D2LevelIds.LEVEL_SPIDERCAVERN) {
+      ensureAct3QuestObject(event.zone, Act3KhalimQuest.KHALIM_CHEST2);
+    } else if (event.zone.level.Id == D2LevelIds.LEVEL_FLAYERDUNGEONLVL3) {
+      ensureAct3QuestObject(event.zone, Act3KhalimQuest.KHALIM_CHEST1);
+    } else if (event.zone.level.Id == D2LevelIds.LEVEL_SEWERSA3LEV2) {
+      ensureAct3QuestObject(event.zone, Act3KhalimQuest.KHALIM_CHEST3);
+    } else if (event.zone.level.Id == D2LevelIds.LEVEL_TRAVINCAL) {
+      ensureAct3QuestObject(event.zone, Act3KhalimQuest.COMPELLING_ORB);
+    }
+  }
+
+  private void ensureAct3QuestObject(Map.Zone zone, int classId) {
+    if (zone == null || factory == null || mObject == null || mMapWrapper == null
+        || mNativeObjectState == null || map == null || hasQuestObject(zone, classId)) return;
+    Map.RoomEx room = zone.getRoomsEx().size == 0 ? null : zone.getRoomsEx().get(0);
+    float x = room == null ? zone.x() + zone.width() / 2f : room.x + room.width / 2f;
+    float y = room == null ? zone.y() + zone.height() / 2f : room.y + room.height / 2f;
+    int entity = factory.createStaticObjectByClassId(classId, x, y);
+    if (entity < 0) return;
+    mMapWrapper.create(entity).set(map, zone);
+    NativeObjectState state = mNativeObjectState.create(entity);
+    state.set(classId, classId, classId, com.riiablo.engine.Engine.Object.MODE_NU,
+        false, false, NativePresetObjectResolver.Kind.ORDINARY);
+    state.source = new Map.NativeObject(classId, com.riiablo.engine.Engine.Object.MODE_NU,
+        (int) (x - zone.x()), (int) (y - zone.y()), false, false);
+    log.info("[A3] materialized missing native quest object: level={} class={} entity={}",
+        zone.level == null ? -1 : zone.level.Id, classId, entity);
+  }
+
+  private boolean hasQuestObject(Map.Zone zone, int classId) {
+    if (zone == null) return false;
+    if (mObject == null || mMapWrapper == null) return false;
+    com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager().get(
+        com.artemis.Aspect.all(Object.class, MapWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      Object object = mObject.get(ids[i]);
+      MapWrapper wrapper = mMapWrapper.get(ids[i]);
+      if (object != null && object.base != null && object.base.Id == classId
+          && wrapper != null && wrapper.zone == zone) return true;
+    }
+    return false;
   }
 
   @Subscribe
@@ -128,12 +182,22 @@ public class Act3QuestSystem extends PassiveSystem {
     String code = khalimChestCode(interaction.objectClassId);
     if (code == null || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
         || khalimChestDrops.contains(interaction.entityId)
-        || player.data.getItems().containsItemCode(code) || factory == null) return;
+        || player.data.getItems().containsItemCode(code) || factory == null) {
+      return;
+    }
     Item item = createQuestItem(code);
     Position position = mPosition.get(interaction.entityId);
-    if (item == null || position == null) return;
+    if (item == null || position == null) {
+      return;
+    }
     int entityId = factory.createItem(item, position.position.x, position.position.y);
     if (entityId < 0) return;
+    MapWrapper objectWrapper = mMapWrapper.get(interaction.entityId);
+    if (objectWrapper != null && objectWrapper.zone != null) {
+      // Overlapping Act III level rectangles make coordinate-only ownership
+      // ambiguous. Bind quest relics to the chest's authoritative Zone.
+      mMapWrapper.create(entityId).set(map, objectWrapper.zone);
+    }
     item.id = entityId;
     khalimChestDrops.add(interaction.entityId);
     interaction.accept();
@@ -156,6 +220,11 @@ public class Act3QuestSystem extends PassiveSystem {
     short next = NativeQuestRecord.set(record, NativeQuestRecord.PRIMARY_GOAL_DONE);
     next = NativeQuestRecord.set(next, NativeQuestRecord.REWARD_GRANTED);
     updateKhalimRecord(player.data, next, "compelling-orb-smashed");
+    // D2Game grants the Khalim's Will objective to eligible party members in
+    // the same area.  Keep the actor's item removal authoritative, then copy
+    // only the quest record to party members (their inventories are not
+    // mutated by another player's orb interaction).
+    propagateKhalimStatus(interaction.playerId, next);
     interaction.accept();
     log.info("[A3Q3] Compelling Orb smashed: player={} object={}", interaction.playerId,
         interaction.entityId);
@@ -184,6 +253,10 @@ public class Act3QuestSystem extends PassiveSystem {
     if (entityId < 0) {
       log.warn("[A3Q1] Jade Figurine ground creation failed: victim={}", event.victim);
       return;
+    }
+    MapWrapper victimWrapper = mMapWrapper.get(event.victim);
+    if (victimWrapper != null && victimWrapper.zone != null) {
+      mMapWrapper.create(entityId).set(map, victimWrapper.zone);
     }
     figurine.id = entityId;
     jadeDropVictims.add(event.victim);
@@ -539,6 +612,26 @@ public class Act3QuestSystem extends PassiveSystem {
       short previous = record(member.data);
       short next = Act3GoldenBirdQuest.markJadePicked(previous);
       if (next != previous) updateRecord(member.data, next, "party-jade-picked");
+    }
+  }
+
+  private void propagateKhalimStatus(int sourcePlayerId, short record) {
+    if (playersByZone == null || partyManager == null) return;
+    short partyId = partyManager.getPartyId(sourcePlayerId);
+    if (partyId == Party.INVALID_ID) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int playerId = ids[i];
+      if (playerId == sourcePlayerId || partyManager.getPartyId(playerId) != partyId
+          || !isAct3Level(levelId(playerId))) continue;
+      Player member = mPlayer.get(playerId);
+      if (member == null || member.data == null) continue;
+      short previous = khalimRecord(member.data);
+      // Preserve any component flags already earned by the member while
+      // applying the shared objective/reward bits from the actor.
+      short next = (short) (previous | record);
+      if (next != previous) updateKhalimRecord(member.data, next, "party-orb-smashed");
     }
   }
 

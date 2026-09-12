@@ -13,6 +13,7 @@ import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
 import com.d2moo.common.util.D2FileReader;
+import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2MemoryPool;
 import com.riiablo.map.Map;
 import com.riiablo.map.Map.Zone;
@@ -85,6 +86,7 @@ public final class Act3D2MOOLayoutBridge {
       drlg = DrlgDrlg.allocDrlg(act, D2C_Acts.ACT_III, archive, gameSeed,
           FIRST_LEVEL, 0, null, (byte) diff, null, null);
       if (drlg == null) return false;
+      D2Log.warning("ACT3_BRIDGE alloc levels town=%s", DrlgDrlg.getLevel(drlg, FIRST_LEVEL) != null);
 
       D2MooTileApplier applier = new D2MooTileApplier();
       D2DrlgLevel townLevel = DrlgDrlg.getLevel(drlg, FIRST_LEVEL);
@@ -99,6 +101,13 @@ public final class Act3D2MOOLayoutBridge {
       for (int levelId : NATIVE_LEVELS) {
         Zone zone = findZone(map, levelId);
         D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+        D2Log.warning("ACT3_BRIDGE level=%d zone=%s native=%s rooms=%s coords=%s",
+            levelId, zone != null, level != null,
+            level != null ? level.getFirstRoomEx() != null : false,
+            level != null && level.getLevelCoords() != null
+                ? String.format("(%d,%d %dx%d)", level.getLevelCoords().getNPosX(),
+                    level.getLevelCoords().getNPosY(), level.getLevelCoords().getNWidth(),
+                    level.getLevelCoords().getNHeight()) : "none");
         if (zone == null || level == null) continue;
         if (level.getFirstRoomEx() == null) DrlgDrlg.initLevel(level);
         if (level.getLevelCoords() == null || level.getFirstRoomEx() == null) continue;
@@ -181,6 +190,8 @@ public final class Act3D2MOOLayoutBridge {
                   presetUnits, rawObjects[0], rawObjects[1],
                   nativeWarpUnits[0], nativeWarpUnits[1]));
         }
+        D2Log.warning("ACT3_BRIDGE exported level=%d floors=%d rooms=%d objects=%d nativeObjects=%d",
+            levelId, floors, level.getRooms(), rawObjects[0], zone.getNativeObjects().size);
         applier.resetLastExportedFloorCount();
       }
       if (Gdx.app != null) Gdx.app.log(TAG,

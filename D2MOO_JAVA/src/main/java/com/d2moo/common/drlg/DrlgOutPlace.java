@@ -2305,18 +2305,58 @@ public class DrlgOutPlace {
     private static final int DIRECTION_NORTHEAST = 3;
     private static final int DIRECTION_COUNT = 4;
     
-    // 丛林预设数组（对应 C++ 中的 gJunglePresets）
-    // 注意：这些预设ID需要根据实际的 D2LvlPrestIds 值进行调整
+    // 预设连接表，逐项对应 D2MOO DrlgOutPlace.cpp 的原生表。
     private static final int[] gJunglePresets = {
-        D2LvlPrestIds.LVLPREST_NONE, 0, 0, 0,  // 占位符，需要实际的预设ID
-        // 这里需要添加完整的64个预设ID值
-        // 由于预设ID值未知，暂时使用占位符
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_W_E,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_W_S, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_W_N,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_E_W, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_E_S, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_E_N,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_EW_S, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_EW_N,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_S_W, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_S_E,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_S_N,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_SW_E,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_SW_N,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_SE_W, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_SE_N,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_SEW_N,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_N_W, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_N_E,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_N_S, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NW_E,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NW_S, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NE_W, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NE_S, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NEW_S, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NS_W, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NS_E,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NSW_E,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_JUNGLE_NSE_W, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE
     };
-    
-    // 蜘蛛森林预设数组（对应 C++ 中的 gSpiderForestPresets）
+
     private static final int[] gSpiderForestPresets = {
-        D2LvlPrestIds.LVLPREST_NONE, 0, 0, 0,  // 占位符，需要实际的预设ID
-        // 这里需要添加完整的17个预设ID值
+        D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_W,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_E,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_EW,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_S,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_SW,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_SE,
+        D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_N,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_NW,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_NE,
+        D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_ACT3_CLEARING_WEBBY_NS,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE,
+        D2LvlPrestIds.LVLPREST_NONE, D2LvlPrestIds.LVLPREST_NONE
     };
     
     /**
@@ -2855,9 +2895,8 @@ public class DrlgOutPlace {
         
         if (nPDef != 0) {
             if (nLevelPresetId < nbDirections) {
-                // 小于16的预设ID，加上城镇基础ID
-                // 注意：LVLPREST_ACT3_TOWN 需要在实际使用时定义
-                nPDef += 700; // 占位符，需要实际的 LVLPREST_ACT3_TOWN 值
+                // 小于 16 的预设 ID 以 Act III Town 为基准。
+                nPDef += D2LvlPrestIds.LVLPREST_ACT3_TOWN;
             } else {
                 // 大于等于16的预设ID，从 gJunglePresets 数组中查找
                 int nPresetDefinitionOffset = 4 * (nPDef - 1); // 注意：nPDef > 0

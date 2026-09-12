@@ -340,7 +340,11 @@ public class DataTbls {
 
             String[] files = new String[6];
             for (int fileIndex = 0; fileIndex < files.length; fileIndex++) {
-                files[fileIndex] = parseColumnString(row, columns, "File" + (fileIndex + 1), null);
+                String file = parseColumnString(row, columns, "File" + (fileIndex + 1), null);
+                // LvlPrest uses the literal numeric 0 for an unused DS1 slot;
+                // it is a sentinel, never a filesystem/MPQ filename.
+                files[fileIndex] = file != null && file.trim().matches("[0-9]+")
+                    ? null : file;
             }
             record.setSzFile(files);
             record.setDwBeta(parseColumnInt(row, columns, "Beta", 0));

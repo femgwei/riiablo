@@ -475,6 +475,11 @@ public final class Act1D2MOOLayoutBridge {
                 for (int i = 0; i < source.File.length && i < 32; i++) {
                     String path = source.File[i];
                     if (path == null || path.isEmpty()) continue;
+                    // LvlTypes.txt uses numeric zero placeholders for unused
+                    // DT1 slots.  They are not filenames; prefixing them with
+                    // Tiles\\ produces the invalid DATA\\GLOBAL\\Tiles\\0
+                    // requests seen in the native room loader.
+                    if (path.trim().matches("[0-9]+")) continue;
                     if (!path.regionMatches(true, 0, "DATA\\", 0, 5)) {
                         path = "DATA\\GLOBAL\\Tiles\\" + path;
                     }

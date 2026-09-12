@@ -176,10 +176,37 @@ public class ItemWriter {
   private boolean writeDurability(Item item, BitOutput bits) {
     boolean hasDurability = item.type.is(Type.ARMO) || item.type.is(Type.WEAP);
     if (hasDurability) {
-      int maxdurability = statListWriter.write(item.attrs.base(), Stat.maxdurability, bits, false).asInt();
-      if (maxdurability > 0) statListWriter.write(item.attrs.base(), Stat.durability, bits, false);
+      // Quest/ethereal weapons may legitimately omit maxdurability from their
+      // generated stat list.  The native stream still contains the stat slot;
+      // emit a zero value instead of dereferencing a missing StatRef.
+      StatRef maxStat = item.attrs.base().get(Stat.maxdurability);
+      int maxdurability;
+      if (maxStat != null) {
+        maxdurability = statListWriter.write(item.attrs.base(), maxStat, bits, false).asInt();
+      } else {
+        com.riiablo.codec.excel.ItemStatCost.Entry entry = Stat.entry(Stat.maxdurability);
+        bits.write15u(Stat.maxdurability, 9); // Stat.BITS (D2 stat id width)
+        bits.write63u(0, entry.Save_Param_Bits);
+        bits.write63u(entry.Save_Add, entry.Save_Bits);
+        maxdurability = 0;
+      }
+      if (maxdurability > 0) {
+        StatRef durability = item.attrs.base().get(Stat.durability);
+        if (durability != null) {
+          statListWriter.write(item.attrs.base(), durability, bits, false);
+        } else {
+          writeZeroStat(Stat.durability, bits);
+        }
+      }
     }
     return hasDurability;
+  }
+
+  private static void writeZeroStat(short stat, BitOutput bits) {
+    com.riiablo.codec.excel.ItemStatCost.Entry entry = Stat.entry(stat);
+    bits.write15u(stat, 9);
+    bits.write63u(0, entry.Save_Param_Bits);
+    bits.write63u(entry.Save_Add, entry.Save_Bits);
   }
 
   private boolean writeSockets(Item item, BitOutput bits) {

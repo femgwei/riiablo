@@ -401,6 +401,11 @@ public class D2GS extends ApplicationAdapter {
         // once here so an offscreen fixture can immediately query the same
         // object set a real client receives after the zone-change tick.
         server.world.process();
+        // A headless fixture has no render/network room-ring callbacks.  Run
+        // the authoritative preset pass once after the activation tick so a
+        // sparse native outdoor zone exposes its quest objects immediately;
+        // normal clients still use RoomActivationSystem's deferred path.
+        if (server.mapManager != null) server.mapManager.createNativeObjects(zone);
         entered.set(true);
       } finally {
         done.countDown();
@@ -2278,6 +2283,18 @@ public class D2GS extends ApplicationAdapter {
     com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
     Map.Zone zone = level == null ? null : server.map.findZone(level);
     if (zone == null) return null;
+    // Native outdoor exports are sparse: the center of the rectangular Zone
+    // is not necessarily inside a RoomEx.  Enter through a real room so the
+    // same RoomActivationSystem path that a client uses can spawn deferred
+    // preset units (Gidbinn, jungle chests, etc.).
+    if (zone.hasNativeRoomTopology()) {
+      final int roomCount = zone.getRoomsEx().size;
+      for (int roomIndex = 0; roomIndex < roomCount; roomIndex++) {
+        Vector2 roomPosition = findHeadlessRoomPosition(server, zone,
+            zone.getRoomsEx().get(roomIndex));
+        if (roomPosition != null) return roomPosition;
+      }
+    }
     int centerX = zone.x() + zone.width() / 2;
     int centerY = zone.y() + zone.height() / 2;
     for (int radius = 0; radius <= 64; radius++) {
