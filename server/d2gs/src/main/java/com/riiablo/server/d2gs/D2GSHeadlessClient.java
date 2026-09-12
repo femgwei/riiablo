@@ -95,6 +95,7 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_SPIDERCAVERN = 85;
   private static final int LEVEL_FLAYERJUNGLE = 78;
   private static final int LEVEL_TRAVINCAL = 83;
+  private static final int LEVEL_CANYONOFTHEMAGI = 46;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -2547,6 +2548,47 @@ public final class D2GSHeadlessClient {
       int symbols = 0;
       for (int level = com.riiablo.engine.server.quest.Act2TombSelection.FIRST_TOMB_LEVEL;
           level <= com.riiablo.engine.server.quest.Act2TombSelection.LAST_TOMB_LEVEL; level++) {
+        if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_CANYONOFTHEMAGI)
+            || !D2GS.headlessEnterLevel(b.playerId, LEVEL_CANYONOFTHEMAGI)) {
+          throw new IOException("Canyon staging unavailable before tomb warp: " + level);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB,
+            LEVEL_CANYONOFTHEMAGI,
+            "a2-canyon-warp-" + level);
+        int canyonWarp = D2GS.headlessStaticWarpEntity(
+            LEVEL_CANYONOFTHEMAGI, level);
+        if (canyonWarp == Engine.INVALID_ENTITY
+            || !D2GS.headlessMovePlayerToObject(a.playerId, canyonWarp)) {
+          throw new IOException("Canyon tomb Warp entity unavailable: " + level);
+        }
+        send(outA, questRequestPacket(700L + level, QuestOperation.WARP_INTERACTION,
+            canyonWarp, -1));
+        QuestResult toTomb = a.awaitQuestResult(inA, 700L + level, deadline());
+        if (toTomb == null || !toTomb.success()) {
+          throw new IOException("Canyon→Tomb Warp rejected: " + level + " reason="
+              + (toTomb == null ? "NO_RESULT" : toTomb.reason()));
+        }
+        awaitLevel(a, inA, level, deadline());
+        int[] warpState = D2GS.headlessWarpState(a.playerId);
+        if (warpState.length < 4 || warpState[0] != level || warpState[2] != 1
+            || warpState[3] != 0) {
+          throw new IOException("Tomb Warp landed outside walkable Zone: level=" + level
+              + " state=" + java.util.Arrays.toString(warpState));
+        }
+        int reverseWarp = D2GS.headlessStaticWarpEntity(level, LEVEL_CANYONOFTHEMAGI);
+        if (reverseWarp == Engine.INVALID_ENTITY
+            || !D2GS.headlessMovePlayerToObject(a.playerId, reverseWarp)) {
+          throw new IOException("Tomb reverse Warp entity unavailable: " + level);
+        }
+        send(outA, questRequestPacket(800L + level, QuestOperation.WARP_INTERACTION,
+            reverseWarp, -1));
+        QuestResult toCanyon = a.awaitQuestResult(inA, 800L + level, deadline());
+        if (toCanyon == null || !toCanyon.success()) {
+          throw new IOException("Tomb→Canyon Warp rejected: " + level);
+        }
+        awaitLevel(a, inA, LEVEL_CANYONOFTHEMAGI,
+            deadline());
+
         if (!D2GS.headlessEnterLevel(a.playerId, level)
             || !D2GS.headlessEnterLevel(b.playerId, level)) {
           throw new IOException("A2 tomb level staging unavailable: " + level);
@@ -2567,6 +2609,43 @@ public final class D2GSHeadlessClient {
           symbols++;
         }
       }
+      int boundaryLevel = com.riiablo.engine.server.quest.Act2TombSelection.LAST_TOMB_LEVEL;
+      if (!D2GS.headlessEnterLevel(a.playerId, boundaryLevel)) {
+        throw new IOException("A2 tomb boundary level staging unavailable");
+      }
+      awaitLevel(a, inA, boundaryLevel, deadline());
+      float[] boundary = D2GS.headlessPrepareBoundaryProbe(a.playerId, boundaryLevel);
+      if (boundary == null) {
+        throw new IOException("A2 tomb boundary probe has no walkable edge cell");
+      }
+      long boundarySequence = 9001L;
+      // Use tick zero's startup compatibility value: this probe runs after
+      // the seven warp round-trips, so a previously captured tick would be
+      // considered too late by MovementIntentScheduler.
+      long observedTick = 0L;
+      send(outA, movementIntentPacket(boundary[2], boundary[3], boundarySequence,
+          observedTick, observedTick));
+      long boundaryDeadline = System.currentTimeMillis() + 4_000L;
+      while (System.currentTimeMillis() < boundaryDeadline
+          && a.lastMovementAcknowledgement < boundarySequence) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet != null) a.consume(packet);
+      }
+      if (a.lastMovementAcknowledgement != boundarySequence
+          || a.lastRejectedMovementSequence != boundarySequence) {
+        throw new IOException("A2 tomb boundary move was not rejected: ack="
+            + a.lastMovementAcknowledgement + " rejected=" + a.lastRejectedMovementSequence);
+      }
+      int[] boundaryState = D2GS.headlessWarpState(a.playerId);
+      if (boundaryState.length < 4 || boundaryState[0]
+          != boundaryLevel
+          || boundaryState[3] != 0) {
+        throw new IOException("A2 tomb boundary probe changed authoritative state: "
+            + java.util.Arrays.toString(boundaryState));
+      }
+      log("a2_tomb_boundary_pass", "level=" + boundaryState[0]
+          + " source=(" + boundary[0] + "," + boundary[1] + ") outside=("
+          + boundary[2] + "," + boundary[3] + ") rejectedSequence=" + boundarySequence);
       log("a2_tomb_dual_pass", "staff=" + tomb + " boss=" + selection.bossTombLevel()
           + " tombs=7 symbols=" + symbols + " clients=true,true");
     }

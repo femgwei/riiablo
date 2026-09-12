@@ -1140,6 +1140,80 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Places a headless player on a walkable edge cell and returns
+   * {sourceX, sourceY, outsideX, outsideY} for a boundary rejection probe. */
+  static float[] headlessPrepareBoundaryProbe(int playerId, int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return null;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<float[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Position position = server.world.getMapper(Position.class).get(playerId);
+        if (zone == null || position == null) return;
+        // Search up to 49 subtiles inward so the outside target remains
+        // within the server's 50-subtile movement-intent range.
+        for (int inset = 0; inset < 49; inset++) {
+          int leftX = zone.x() + inset;
+          int rightX = zone.x() + zone.width() - 1 - inset;
+          int topY = zone.y() + inset;
+          int bottomY = zone.y() + zone.height() - 1 - inset;
+          for (int y = zone.y() + 1; y < zone.y() + zone.height() - 1; y++) {
+            if (server.map.getZone(leftX, y) == zone
+                && (server.map.flags(leftX, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              position.position.set(leftX, y);
+              setHeadlessZone(server, playerId, zone);
+              result.set(new float[] {leftX, y, zone.x() - 1, y});
+              return;
+            }
+            if (server.map.getZone(rightX, y) == zone
+                && (server.map.flags(rightX, y) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              position.position.set(rightX, y);
+              setHeadlessZone(server, playerId, zone);
+              result.set(new float[] {rightX, y, zone.x() + zone.width(), y});
+              return;
+            }
+          }
+          for (int x = zone.x() + 1; x < zone.x() + zone.width() - 1; x++) {
+            if (server.map.getZone(x, topY) == zone
+                && (server.map.flags(x, topY) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              position.position.set(x, topY);
+              setHeadlessZone(server, playerId, zone);
+              result.set(new float[] {x, topY, x, zone.y() - 1});
+              return;
+            }
+            if (server.map.getZone(x, bottomY) == zone
+                && (server.map.flags(x, bottomY) & DT1.Tile.FLAG_BLOCK_WALK) == 0) {
+              position.position.set(x, bottomY);
+              setHeadlessZone(server, playerId, zone);
+              result.set(new float[] {x, bottomY, x, zone.y() + zone.height()});
+              return;
+            }
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : null;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return null;
+    }
+  }
+
+  private static void setHeadlessZone(D2GS server, int playerId, Map.Zone zone) {
+    com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+        .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+    if (wrapper != null) wrapper.set(server.map, zone);
+  }
+
   /** Finds two walkable native rooms that are outside each other's network sight. */
   static int[] headlessNonAdjacentRoomPair(int levelId) {
     D2GS server = activeHeadlessInstance;
@@ -2114,6 +2188,52 @@ public class D2GS extends ApplicationAdapter {
           com.riiablo.engine.server.component.Warp warp = mapper.get(entity);
           com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
           if (warp != null && warp.index == index && wrapper != null && wrapper.zone == zone) {
+            result.set(entity);
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Returns a native (non-quest) Warp entity for a source/destination pair. */
+  static int headlessStaticWarpEntity(int sourceLevelId, int destinationLevelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(sourceLevelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag warps = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Warp.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = warps.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Warp> warpMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Warp.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrapperMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < warps.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Warp warp = warpMapper.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrapperMapper.get(entity);
+          if (warp != null && wrapper != null && wrapper.zone == zone
+              && warp.dstLevel != null && warp.dstLevel.Id == destinationLevelId
+              && !com.riiablo.engine.server.quest.QuestWarp.isQuestWarp(warp.index)) {
             result.set(entity);
             return;
           }

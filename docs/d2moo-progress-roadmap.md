@@ -3876,3 +3876,30 @@ Symbol 的真实选择、地下区域入口和地图拓扑校验。
 `core/src/test/java/com/riiablo/map/Act2MapBuilderD2MooWarpTest.java`。
 下一项：增加真实 Warp 交互离屏测试，验证每个 Tomb 入口的实体可点击、落点不在阻挡格，
 并核对地下地图边界外移动拒绝。
+
+### 2026-09-13 A2 七墓真实 Warp 交互与地下边界回归（本轮完成）
+
+- [x] `headlessA2TombDual` 现在逐一从 Canyon（Level 46）查找七个真实的非任务
+  Warp 实体，发送生产协议 `WARP_INTERACTION`，并验证七个入口全部双向可用。
+- [x] 修复 D2Common first-empty-slot 移植中的槽位复用问题：Canyon 的 Valley→Canyon
+  槽位在墓穴分配时保留，七个墓穴使用互不覆盖的运行时槽；这解决了 Level 73 入口
+  被 Level 45 运行时链接覆盖、导致入口实体消失的问题。
+- [x] 对精简 1.10f 导出中缺失 `LvlWarp`/`Warp` 表项的合成 marker，服务端使用中性
+  `LvlWarp` 边界记录创建 Warp，并允许显式 destination override 参与反向配对。
+- [x] 每个 Warp 到达后校验玩家仍位于目标 Zone、坐标对应 Zone 一致且
+  `FLAG_BLOCK_WALK == 0`；新增地下边界探针，将玩家放在 Level 73 可行走边缘并发送
+  一格越界的移动意图，确认权威服务端回 ACK 且拒绝该序列，位置未越界。
+- [x] 离屏双客户端日志：`a2_tomb_boundary_pass level=73 ... rejectedSequence=9001`、
+  `a2_tomb_dual_pass staff=73 boss=72 tombs=7 symbols=6 clients=true,true`。
+
+验证：`:core:test --tests com.riiablo.map.Act2MapBuilderD2MooWarpTest`、
+`:server:d2gs:compileJava`、`:server:d2gs:headlessA2TombDual`（D2_HOME 指向
+`G:\\BaiduNetdiskDownload\\Diablo II 1.10F`）以及 `git diff --check` 均通过。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Act2MapBuilderD2MOD.java`、
+`core/src/main/java/com/riiablo/engine/server/ServerEntityFactory.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：继续 A2 地下区域（Maggot Lair、Claw Viper Temple、Arcane Sanctuary）真实
+入口/出口的 Warp 交互与边界回归，随后再进入 Act III 的地下地图连接。

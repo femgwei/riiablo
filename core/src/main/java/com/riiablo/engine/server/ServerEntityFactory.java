@@ -839,7 +839,7 @@ public class ServerEntityFactory extends EntityFactory {
       int destination = com.riiablo.engine.server.quest.QuestWarp.destinationLevelId(index);
       Map.Zone zone = map.getZone(x, y);
       Levels.Entry destinationLevel = Riiablo.files.Levels.get(destination);
-      LvlWarp.Entry portalBounds = Riiablo.files.LvlWarp.get(0);
+      LvlWarp.Entry portalBounds = neutralWarpBounds();
       if (zone == null || destinationLevel == null || portalBounds == null) {
         log.error("[QUEST_WARP] creation failed: sourceZone={} destination={} bounds={}",
             zone, destination, portalBounds);
@@ -860,9 +860,13 @@ public class ServerEntityFactory extends EntityFactory {
     final int orientation = DT1.Tile.Index.orientation(index);
 
     Map.Zone zone = map.getZone(x, y);
+    if (zone == null || zone.level == null) return Engine.INVALID_ENTITY;
     int dstFromOverride = map.getWarpDestinationOverride(zone.level.Id, mainIndex);
     int dst = dstFromOverride;
     if (dst <= 0) {
+      if (zone.level.Vis == null || mainIndex < 0 || mainIndex >= zone.level.Vis.length) {
+        return Engine.INVALID_ENTITY;
+      }
       dst = zone.level.Vis[mainIndex];
     }
     // 调试：Rogue Encampment 所有 warp 打日志
@@ -875,12 +879,20 @@ public class ServerEntityFactory extends EntityFactory {
       dst = 2;
     }
     assert dst > 0 : "Warp to unknown level!";
-    int wrp = zone.level.Warp[mainIndex];
-    assert wrp >= 0 : "Invalid warp";
+    int wrp = zone.level.Warp != null && mainIndex >= 0
+        && mainIndex < zone.level.Warp.length ? zone.level.Warp[mainIndex] : -1;
+    // D2Common can append a runtime link even when a reduced Levels.txt
+    // export has no native LvlWarp index for that slot.  The Java map builder
+    // emits a synthetic marker and destination override in that case; use
+    // the neutral portal bounds entry while retaining the authoritative
+    // destination level.
+    if (wrp < 0 && dstFromOverride > 0) wrp = 0;
+    if (wrp < 0) return Engine.INVALID_ENTITY;
 
     Levels.Entry dstLevel = Riiablo.files.Levels.get(dst);
 
     LvlWarp.Entry warp = Riiablo.files.LvlWarp.get(wrp);
+    if (warp == null && dstFromOverride > 0) warp = neutralWarpBounds();
     if (warp == null) {
       // LvlWarp entry not found, skip creating warp
       return Engine.INVALID_ENTITY;
@@ -911,6 +923,18 @@ public class ServerEntityFactory extends EntityFactory {
     mInteractable.create(id).set(1f, itemInteractor);
     mNetworked.create(id);
     return id;
+  }
+
+  /** Returns a usable LvlWarp bounds record even when a reduced table omits
+   * the conventional id 0 row used by quest portals and synthetic markers. */
+  private static LvlWarp.Entry neutralWarpBounds() {
+    if (Riiablo.files == null || Riiablo.files.LvlWarp == null) return null;
+    LvlWarp.Entry entry = Riiablo.files.LvlWarp.get(0);
+    if (entry != null) return entry;
+    for (LvlWarp.Entry candidate : Riiablo.files.LvlWarp) {
+      if (candidate != null) return candidate;
+    }
+    return null;
   }
 
   @Override

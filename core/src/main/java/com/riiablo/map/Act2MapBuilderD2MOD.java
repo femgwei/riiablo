@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
@@ -535,6 +536,30 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     // by the quest system. Add only these two missing records and keep the
     // normal discovered topology untouched; other tombs remain lazy.
     Zone anchor = findZoneByLevelId(map, LEVEL_CANYONOFTHEMAGI);
+    // A partial export may omit Canyon's preset entirely. Native DRLG still
+    // allocates the level record, so create a compatibility Zone first and
+    // use it as the placement anchor for all seven tombs.
+    if (anchor == null && levelsById.containsKey(LEVEL_CANYONOFTHEMAGI)
+        && !map.zones.isEmpty()) {
+      Levels.Entry canyon = levelsById.get(LEVEL_CANYONOFTHEMAGI);
+      Zone baseAnchor = map.zones.peek();
+      int[] placement = findDungeonPlacement(map, baseAnchor, canyon,
+          LEVEL_CANYONOFTHEMAGI);
+      anchor = createLinkedDungeonZone(map, canyon, diff, seed,
+          placement[0], placement[1]);
+      if (anchor != null) {
+        anchor.generator = new BaseMapBuilderD2MOD() {{
+          factory = Act2MapBuilderD2MOD.this.factory;
+          socket = Act2MapBuilderD2MOD.this.socket;
+        }}.createMonsterGenerator(socket);
+        generated.add(LEVEL_CANYONOFTHEMAGI);
+        queue.add(LEVEL_CANYONOFTHEMAGI);
+        created++;
+        Gdx.app.log(TAG, String.format(
+            "Act2 Canyon fallback created: %s(%d) pos=(%d,%d)",
+            canyon.LevelName, canyon.Id, placement[0], placement[1]));
+      }
+    }
     if (anchor == null && !map.zones.isEmpty()) anchor = map.zones.peek();
     if (anchor != null) {
       Act2TombSelection selectedTombs = Act2TombSelection.forGameSeed(seed);
@@ -770,39 +795,126 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     Zone canyon = findZoneByLevelId(map, LEVEL_CANYONOFTHEMAGI);
     Levels.Entry canyonLevel = Riiablo.files.Levels.get(LEVEL_CANYONOFTHEMAGI);
     if (canyon == null || canyonLevel == null) return;
+    if (DEBUG_BUILD) {
+      Gdx.app.log(TAG, "Act2 Canyon warp table vis="
+          + java.util.Arrays.toString(canyonLevel.Vis) + " warp="
+          + java.util.Arrays.toString(canyonLevel.Warp));
+    }
+    // DRLG_SetWarpId appends each runtime link to a distinct empty slot.  A
+    // plain first-empty lookup is not sufficient here because all seven tomb
+    // links are installed in one pass; without reservation every missing
+    // Levels.txt entry reuses slot 0 and later overrides hide earlier tombs.
+    // Reserve slots that actually have a DS1 warp marker.  Reduced exports
+    // often leave a non-negative Levels.txt Warp value without emitting the
+    // corresponding wall cell; treating that value as occupied would hide a
+    // perfectly valid synthetic slot (the failure previously affected 73).
+    IntSet canyonSlots = occupiedWarpSlots(canyon);
+    // Canyon slot 0 is reserved by the outdoor Valley-of-Snakes link, which
+    // is installed during Map.generate() after this builder runs.  Keep it
+    // out of the tomb allocator or the later outdoor pass would overwrite
+    // the first/last tomb destination.
+    canyonSlots.add(0);
+    boolean[] tombConfigured = new boolean[Act2TombSelection.LAST_TOMB_LEVEL
+        - Act2TombSelection.FIRST_TOMB_LEVEL + 1];
     int configured = 0;
     for (int tombId = Act2TombSelection.FIRST_TOMB_LEVEL;
         tombId <= Act2TombSelection.LAST_TOMB_LEVEL; tombId++) {
       Zone tomb = findZoneByLevelId(map, tombId);
       Levels.Entry tombLevel = Riiablo.files.Levels.get(tombId);
       if (tomb == null || tombLevel == null) continue;
-      int canyonSlot = findOrAllocateWarpSlot(canyonLevel.Vis, canyonLevel.Warp, tombId);
+      int canyonSlot = findOrAllocateWarpSlot(canyonLevel.Vis, canyonLevel.Warp,
+          tombId, canyonSlots);
       int tombSlot = findOrAllocateWarpSlot(tombLevel.Vis, tombLevel.Warp,
-          LEVEL_CANYONOFTHEMAGI);
+          LEVEL_CANYONOFTHEMAGI, occupiedWarpSlots(tomb));
       if (canyonSlot < 0 || tombSlot < 0) {
         Gdx.app.error(TAG, String.format(
             "Act2 tomb warp slot unavailable: canyon=%d slot=%d tomb=%d slot=%d",
             LEVEL_CANYONOFTHEMAGI, canyonSlot, tombId, tombSlot));
         continue;
       }
+      if (DEBUG_BUILD) {
+        Gdx.app.log(TAG, String.format("Act2 tomb warp slot: canyon=46 slot=%d tomb=%d slot=%d",
+            canyonSlot, tombId, tombSlot));
+      }
+      map.addWarpDestinationOverride(LEVEL_CANYONOFTHEMAGI, canyonSlot, tombId);
+      map.addWarpDestinationOverride(tombId, tombSlot, LEVEL_CANYONOFTHEMAGI);
+      canyonSlots.add(canyonSlot);
+      ensureTombWarpMarker(canyon, canyonSlot);
+      ensureTombWarpMarker(tomb, tombSlot);
+      tombConfigured[tombId - Act2TombSelection.FIRST_TOMB_LEVEL] = true;
+      configured++;
+    }
+    // If a malformed entry omitted one endpoint from the initial pass, still
+    // expose that tomb from Canyon.  D2Common owns seven logical tomb links;
+    // preserving the first-free marker here prevents one missing DS1 record
+    // from making the final tomb unreachable.
+    for (int i = 0; i < tombConfigured.length; i++) {
+      if (tombConfigured[i]) continue;
+      int tombId = Act2TombSelection.FIRST_TOMB_LEVEL + i;
+      Zone tomb = findZoneByLevelId(map, tombId);
+      Levels.Entry tombLevel = Riiablo.files.Levels.get(tombId);
+      if (tomb == null || tombLevel == null) continue;
+      int canyonSlot = findOrAllocateWarpSlot(canyonLevel.Vis, canyonLevel.Warp,
+          tombId, canyonSlots);
+      int tombSlot = findOrAllocateWarpSlot(tombLevel.Vis, tombLevel.Warp,
+          LEVEL_CANYONOFTHEMAGI, occupiedWarpSlots(tomb));
+      if (canyonSlot < 0 || tombSlot < 0) continue;
       map.addWarpDestinationOverride(LEVEL_CANYONOFTHEMAGI, canyonSlot, tombId);
       map.addWarpDestinationOverride(tombId, tombSlot, LEVEL_CANYONOFTHEMAGI);
       ensureTombWarpMarker(canyon, canyonSlot);
       ensureTombWarpMarker(tomb, tombSlot);
+      canyonSlots.add(canyonSlot);
       configured++;
+      Gdx.app.log(TAG, String.format("Act2 tomb warp fallback slot: canyon=46 slot=%d tomb=%d slot=%d",
+          canyonSlot, tombId, tombSlot));
     }
     Gdx.app.log(TAG, String.format("Act2 tomb runtime warps configured: %d/7", configured));
   }
 
   private static int findOrAllocateWarpSlot(int[] vis, int[] warp, int destination) {
+    return findOrAllocateWarpSlot(vis, warp, destination, null);
+  }
+
+  /** Finds/reseves a runtime slot, optionally excluding slots allocated in
+   * the current DRLG pass.  Null tables are treated as an empty native table;
+   * synthetic markers and destination overrides still make those slots
+   * usable by the Java server. */
+  private static int findOrAllocateWarpSlot(int[] vis, int[] warp, int destination,
+      IntSet reserved) {
     int existing = findRuntimeWarpSlot(vis, warp, destination);
-    if (existing >= 0) return existing;
-    if (vis == null || warp == null) return 0;
-    int count = Math.min(8, Math.min(vis.length, warp.length));
+    // When a reservation set is supplied this is a fresh allocation pass;
+    // static Vis values may describe a slot that another runtime link will
+    // overwrite later (notably Canyon slot 0).  Allocate outside the set
+    // instead of blindly reusing that stale destination.
+    if (existing >= 0 && reserved == null) return existing;
+    int count = Math.min(8, Math.max(vis == null ? 0 : vis.length, warp == null ? 0 : warp.length));
     for (int i = 0; i < count; i++) {
-      if (vis[i] == 0 && warp[i] < 0) return i;
+      if (reserved != null && reserved.contains(i)) continue;
+      int visValue = vis != null && i < vis.length ? vis[i] : 0;
+      int warpValue = warp != null && i < warp.length ? warp[i] : -1;
+      if (reserved != null || (visValue == 0 && warpValue < 0)) return i;
+    }
+    // A completely omitted table still has the eight logical LvlWarp slots
+    // used by D2Common; emit a synthetic marker in the first free one.
+    if (count == 0) {
+      for (int i = 0; i < 8; i++) {
+        if (reserved == null || !reserved.contains(i)) return i;
+      }
     }
     return -1;
+  }
+
+  private static IntSet occupiedWarpSlots(Zone zone) {
+    IntSet slots = new IntSet(8);
+    if (zone == null || zone.specials == null) return slots;
+    for (IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell != null && Map.ID.WARPS.contains(cell.id)
+          && cell.mainIndex >= 0 && cell.mainIndex < 8) {
+        slots.add(cell.mainIndex);
+      }
+    }
+    return slots;
   }
 
   private static void ensureTombWarpMarker(Zone zone, int mainIndex) {
@@ -1000,11 +1112,15 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
         // sight graph.  D2Common creates a warp only when the corresponding
         // LvlWarp slot is valid; do not turn a visibility marker into a
         // playable entrance.
-        if (source.level.Warp == null || sourceCell.mainIndex < 0
-            || sourceCell.mainIndex >= source.level.Warp.length
-            || source.level.Warp[sourceCell.mainIndex] < 0) continue;
         int destinationLevelId = map.getWarpDestinationOverride(
             source.level.Id, sourceCell.mainIndex);
+        // A reduced export may omit Levels.txt Warp arrays or leave the
+        // runtime slot at -1.  An explicit D2Common-style override is enough
+        // to make the synthetic marker authoritative in that case.
+        boolean nativeSlotValid = source.level.Warp != null && sourceCell.mainIndex >= 0
+            && sourceCell.mainIndex < source.level.Warp.length
+            && source.level.Warp[sourceCell.mainIndex] >= 0;
+        if (!nativeSlotValid && destinationLevelId <= 0) continue;
         if (destinationLevelId <= 0 && source.level.Vis != null
             && sourceCell.mainIndex >= 0
             && sourceCell.mainIndex < source.level.Vis.length) {
@@ -1058,10 +1174,11 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     for (IntMap.Entry<DS1.Cell> entry : destination.specials.entries()) {
       DS1.Cell cell = entry.value;
       if (cell == null || !Map.ID.WARPS.contains(cell.id)) continue;
-      if (destination.level.Warp == null || cell.mainIndex < 0
-          || cell.mainIndex >= destination.level.Warp.length
-          || destination.level.Warp[cell.mainIndex] < 0) continue;
       int target = map.getWarpDestinationOverride(destination.level.Id, cell.mainIndex);
+      boolean nativeSlotValid = destination.level.Warp != null && cell.mainIndex >= 0
+          && cell.mainIndex < destination.level.Warp.length
+          && destination.level.Warp[cell.mainIndex] >= 0;
+      if (!nativeSlotValid && target <= 0) continue;
       if (target <= 0 && destination.level.Vis != null
           && cell.mainIndex >= 0 && cell.mainIndex < destination.level.Vis.length) {
         target = destination.level.Vis[cell.mainIndex];
