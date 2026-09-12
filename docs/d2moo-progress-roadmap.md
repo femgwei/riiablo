@@ -3470,3 +3470,17 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 当前下一项：在完整资源环境执行 `--require-quest-warp-dual` 与
   `--require-quest-object-dual`，补采两客户端对象实体的 `CofReferenceP`/删除重建日志；
   然后继续 A1-A3 特殊箱、祭坛、任务门和预设对象的同类重建覆盖。
+
+### 2026-09-12 A1-A3 任务对象分类快照桥接（本轮完成）
+
+- [x] 新增 `headlessEarlyQuestObjectSnapshot(levelId)`，按 `NativeQuestObjectResolver`
+  分类统计 Cain 石阵/树/牢笼、Horadric Malus、Countess 宝箱、Horadric Orifice、Arcane
+  Tome、Gidbinn、Khalim 宝箱、Compelling Orb、Tainted Sun 祭坛、Mephisto Bridge 和
+  Hell Gate，并统计开启态对象数量。
+- [x] 快照读取实体 `Object.mode` 与 `NativeObjectState`，可用于检测 A1-A3 Room/ECS
+  重建后的任务对象状态；不绕过生产交互逻辑，不新增网络字段。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava`；完整资源运行待外部 MPQ 环境。
+
+当前下一项：新增 `--require-early-object-dual`，用两个客户端依次进入 A1/A2/A3 任务区域，
+  对比该快照和 Quest Snapshot，覆盖 Cain 任务对象、Countess 宝箱、Horadric/Arcane
+  对象与 Khalim/Compelling Orb 的状态重建和可见性。

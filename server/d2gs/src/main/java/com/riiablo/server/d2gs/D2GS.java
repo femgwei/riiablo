@@ -1649,6 +1649,82 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /**
+   * Read-only snapshot for early-act quest objects. Result order is
+   * {@code [cairnStones, inifussTrees, cainGibbets, malusStands, towerTomes,
+   * horadricOrifices, arcaneTomes, gidbinnDecoys, khalimChests,
+   * compellingOrbs, taintedSunAltars, mephistoBridges, hellGates,
+   * countessChests, openObjects]}.
+   */
+  static int[] headlessEarlyQuestObjectSnapshot(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return new int[15];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[15]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        int[] counts = new int[15];
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Object> objectMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Object.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrapperMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeObjectState> stateMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.NativeObjectState.class);
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Object object = objectMapper.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrapperMapper.get(entity);
+          if (object == null || object.base == null || wrapper == null || wrapper.zone != zone) continue;
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.Type type =
+              com.riiablo.engine.server.object.NativeQuestObjectResolver.resolve(object.base);
+          switch (type) {
+            case CAIRN_STONE: counts[0]++; break;
+            case INIFUSS_TREE: counts[1]++; break;
+            case CAIN_GIBBET: counts[2]++; break;
+            case HORADRIC_MALUS: counts[3]++; break;
+            case TOWER_TOME: counts[4]++; break;
+            case HORADRIC_ORIFICE: counts[5]++; break;
+            case ARCANE_SANCTUARY_TOME: counts[6]++; break;
+            case GIDBINN_DECOY: counts[7]++; break;
+            case KHALIM_CHEST: counts[8]++; break;
+            case COMPELLING_ORB: counts[9]++; break;
+            case TAINTED_SUN_ALTAR: counts[10]++; break;
+            case MEPHISTO_BRIDGE: counts[11]++; break;
+            case HELL_GATE_PORTAL: counts[12]++; break;
+            case COUNTESS_CHEST: counts[13]++; break;
+            default: continue;
+          }
+          com.riiablo.engine.server.component.NativeObjectState state = stateMapper.get(entity);
+          if (object.mode == com.riiablo.engine.Engine.Object.MODE_ON
+              || (state != null && (state.opened || state.activated
+                  || state.currentMode == com.riiablo.engine.Engine.Object.MODE_ON))) {
+            counts[14]++;
+          }
+        }
+        result.set(counts);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[15];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[15];
+    }
+  }
+
   /** Test-only fixture: marks all matching native quest objects as activated. */
   static int headlessActivateQuestObjects(int levelId, int classId) {
     D2GS server = activeHeadlessInstance;
