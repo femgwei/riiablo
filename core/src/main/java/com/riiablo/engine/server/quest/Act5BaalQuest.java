@@ -71,12 +71,12 @@ public final class Act5BaalQuest {
     return WAVE_CLIENT_CLASS_HINTS[waveIndex].clone();
   }
 
-  static boolean isBaalMonster(int hcIdx, String id) {
+  public static boolean isBaalMonster(int hcIdx, String id) {
     return hcIdx == BAAL_CLASS || "baalcrab".equalsIgnoreCase(id)
         || "baal".equalsIgnoreCase(id);
   }
 
-  static boolean isBaalThroneMonster(int hcIdx, String id) {
+  public static boolean isBaalThroneMonster(int hcIdx, String id) {
     return hcIdx == BAAL_THRONE_CLASS || "baalthrone".equalsIgnoreCase(id);
   }
 

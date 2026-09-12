@@ -1713,6 +1713,94 @@ public final class D2GSHeadlessClient {
       }
       log("baal_wave_gate_pass", "difficulty=" + difficulty + " waves=5 finalCleared="
           + finalCleared + " baalSpawnGate=true");
+
+      int chamber = com.riiablo.engine.server.quest.Act5BaalQuest.WORLDSTONE_CHAMBER;
+      if (!D2GS.headlessEnterLevel(a.playerId, chamber)
+          || !D2GS.headlessEnterLevel(b.playerId, chamber)) {
+        throw new IOException("Baal dual scenario could not enter Worldstone Chamber");
+      }
+      long chamberDeadline = deadline();
+      while (System.currentTimeMillis() < chamberDeadline
+          && (a.currentLevelId != chamber || b.currentLevelId != chamber)) {
+        consumeOne(inA, a);
+        consumeOne(inB, b);
+      }
+      if (a.currentLevelId != chamber || b.currentLevelId != chamber) {
+        throw new IOException("clients did not observe Worldstone Chamber: "
+            + a.currentLevelId + ',' + b.currentLevelId);
+      }
+      Snapshot baalA = a.awaitNamedMonster(inA, "baalcrab", false, deadline());
+      Snapshot baalB = b.awaitEntity(inB, baalA.entityId, deadline());
+      if (baalB.monsterClass != baalA.monsterClass
+          || Math.abs(baalB.x - baalA.x) > 0.01f
+          || Math.abs(baalB.y - baalA.y) > 0.01f) {
+        throw new IOException("Baal MonsterP/PositionP diverged between clients");
+      }
+      if (D2GS.headlessLastPortalEntity() == Engine.INVALID_ENTITY) {
+        throw new IOException("Worldstone Chamber portal was not opened after wave gate");
+      }
+      log("baal_spawn_dual_pass", "baal=" + baalA.entityId + " class="
+          + baalA.monsterClass + " position=(" + baalA.x + ',' + baalA.y + ") clients=true,true");
+
+      int deadBaal = D2GS.headlessKillBaal(a.playerId);
+      if (deadBaal != baalA.entityId) {
+        throw new IOException("authoritative Baal kill did not target observed entity: observed="
+            + baalA.entityId + " actual=" + deadBaal);
+      }
+      a.awaitDeleted(inA, deadBaal, deadline());
+      b.awaitDeleted(inB, deadBaal, deadline());
+      Snapshot tyraelA = awaitTyrael(inA, deadline());
+      Snapshot tyraelB = awaitTyrael(inB, deadline());
+      if (tyraelA.entityId != tyraelB.entityId
+          || tyraelA.monsterClass != tyraelB.monsterClass
+          || Math.abs(tyraelA.x - tyraelB.x) > 0.01f
+          || Math.abs(tyraelA.y - tyraelB.y) > 0.01f) {
+        throw new IOException("Tyrael3 MonsterP/PositionP diverged between clients");
+      }
+      log("tyrael3_spawn_dual_pass", "entity=" + tyraelA.entityId
+          + " class=" + tyraelA.monsterClass + " clients=true,true");
+
+      int recordIndex = com.riiablo.engine.server.quest.Act5BaalQuest.RECORD;
+      send(outA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
+      QuestResult rewardA = a.awaitQuestResult(inA, 1L, deadline());
+      QuestResult rewardB = b.awaitQuestResult(inB, 1L, deadline());
+      if (!rewardA.success() || !rewardB.success()
+          || rewardA.questRecordsLength() <= recordIndex
+          || rewardB.questRecordsLength() <= recordIndex
+          || !hasQuestFlag(rewardA.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlag(rewardA.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+          || !hasQuestFlag(rewardB.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlag(rewardB.questRecords(recordIndex),
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
+        throw new IOException("Baal reward was not synchronized to both Chamber clients");
+      }
+      if (D2GS.headlessLastPortalEntity() != Engine.INVALID_ENTITY) {
+        throw new IOException("Last Portal appeared before Tyrael's terminal message");
+      }
+      log("last_portal_order_pass", "beforeMessage=false");
+
+      send(outA, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
+          tyraelA.entityId, com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
+      send(outB, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
+          tyraelB.entityId, com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
+      QuestResult messageA = a.awaitQuestResult(inA, 2L, deadline());
+      QuestResult messageB = b.awaitQuestResult(inB, 2L, deadline());
+      if (!messageA.success() || !messageB.success()) {
+        throw new IOException("Tyrael terminal message rejected: A=" + messageA.reason()
+            + " B=" + messageB.reason());
+      }
+      int lastPortal = awaitLastPortal(deadline());
+      if (lastPortal == Engine.INVALID_ENTITY) {
+        throw new IOException("Last Portal was not created after Tyrael 20175 message");
+      }
+      a.awaitVisibleEntity(inA, lastPortal, deadline());
+      b.awaitVisibleEntity(inB, lastPortal, deadline());
+      log("baal_terminal_dual_pass", "tyrael=" + tyraelA.entityId + " message=20175"
+          + " lastPortal=" + lastPortal + " clients=true,true");
     }
   }
 
@@ -3173,6 +3261,45 @@ public final class D2GSHeadlessClient {
       }
     }
     throw new IOException("timed out waiting for monster " + name);
+  }
+
+  private Snapshot awaitTyrael(DataInputStream input, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      for (Snapshot snapshot : monsters.values()) {
+        if (snapshot.deleted || !snapshot.hasPosition || !snapshot.hasVitals
+            || snapshot.life <= 0f || snapshot.monsterClass < 0
+            || Riiablo.files == null || Riiablo.files.monstats == null) continue;
+        com.riiablo.codec.excel.MonStats.Entry row =
+            Riiablo.files.monstats.get(snapshot.monsterClass);
+        if (row != null && ("tyrael3".equalsIgnoreCase(row.Id)
+            || "tyrael".equalsIgnoreCase(row.Id))) return snapshot;
+      }
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+    }
+    throw new IOException("timed out waiting for Tyrael3");
+  }
+
+  private int awaitLastPortal(long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      int entity = D2GS.headlessLastPortalEntity();
+      if (entity != Engine.INVALID_ENTITY) return entity;
+      Thread.sleep(10L);
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
+  private void awaitVisibleEntity(DataInputStream input, int entityId, long deadline)
+      throws Exception {
+    Visibility existing = visibility.get(entityId);
+    if (existing != null && !existing.deleted) return;
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet != null) consume(packet);
+      Visibility visible = visibility.get(entityId);
+      if (visible != null && !visible.deleted) return;
+    }
+    throw new IOException("client did not observe entity " + entityId);
   }
 
   /** Selects a real native spawn pair rather than unrelated monsters sharing a class id. */

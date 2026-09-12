@@ -531,6 +531,91 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Dispatches the real A5Q6 Baal DeathEvent and removes the dead boss fixture. */
+  static int headlessKillBaal(int killerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+            server.world.getMapper(com.riiablo.engine.server.component.Monster.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] data = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int entity = data[i];
+          com.riiablo.engine.server.component.Monster monster = monsters.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (monster == null || monster.monstats == null || wrapper == null
+              || wrapper.zone == null || wrapper.zone.level == null
+              || wrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER
+              || !Act5BaalQuest.isBaalMonster(monster.monstats.hcIdx, monster.monstats.Id)) continue;
+          server.world.getSystem(EventSystem.class).dispatch(
+              com.riiablo.engine.server.event.DeathEvent.obtain(killerId, entity));
+          if (server.world.getEntityManager().isActive(entity)) server.world.delete(entity);
+          result.set(entity);
+          return;
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Returns the authoritative Last Portal Warp entity in the Chamber. */
+  static int headlessLastPortalEntity() {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Warp.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] data = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int entity = data[i];
+          com.riiablo.engine.server.component.Warp warp = server.world
+              .getMapper(com.riiablo.engine.server.component.Warp.class).get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+          if (warp != null && warp.dstLevel != null && wrapper != null && wrapper.zone != null
+              && wrapper.zone.level != null
+              && wrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER
+              && warp.dstLevel.Id == Act5BaalQuest.HARROGATH
+              && warp.index == QuestWarp.encode(Act5BaalQuest.HARROGATH)) {
+            result.set(entity);
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /** Places the test player on a real Warp whose authoritative destination matches. */
   static int headlessPrepareWarpToLevel(int playerId, int destinationLevelId) {
     D2GS server = activeHeadlessInstance;

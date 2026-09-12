@@ -3312,3 +3312,20 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 
 当前下一项：在五波回归中加入实际 Baal/Worldstone Chamber 生成实体的双客户端观察，
 并核对 Baal 死亡后的 Tyrael3、终结消息和 Last Portal 在两端的顺序一致性。
+
+### 2026-09-12 A5Q6 Baal/Chamber/Tyrael 双客户端顺序验证（本轮完成）
+
+- [x] 五波完成后，双 socket 客户端进入 Worldstone Chamber，分别观察同一个 Baal
+  实体的 `MonsterP`、位置和实体删除；同时确认 Throne→Chamber 的 Baal Portal 已开启。
+- [x] Baal 通过服务端真实 `DeathEvent` 路径死亡后，两端都观察到同一个 Tyrael3 的
+  `MonsterP`/位置；A5Q6 游戏级 `PRIMARY_GOAL_DONE/REWARD_GRANTED` 同步到两名 Chamber
+  玩家。
+- [x] 在发送 Tyrael `20175` 终结消息前确认 Last Portal 不存在；两个客户端分别通过
+  `QuestOperation.NPC_MESSAGE` 发送消息后，服务端幂等创建同一个 Chamber→Harrogath
+  Warp，两端都收到该实体的可见同步。
+- [x] 新增离屏桥接 `headlessKillBaal`、`headlessLastPortalEntity`，仅测试使用，未新增
+  FlatBuffer/网络生成文件；通过核心/D2GS 编译和 `git diff --check`。真实 1.10f MPQ
+  画面运行仍需在有完整资源的环境执行。
+
+当前下一项：把上述 A5Q6 场景扩展到断线重连——Baal 死亡后、Tyrael 终结消息前后分别
+  重连一名客户端，验证 Chamber 奖励、Tyrael3 和 Last Portal 的游戏级快照恢复及幂等性。
