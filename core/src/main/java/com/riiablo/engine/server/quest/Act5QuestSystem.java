@@ -6,6 +6,7 @@ import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.utils.IntIntMap;
+import com.badlogic.gdx.utils.IntArray;
 import com.badlogic.gdx.utils.IntSet;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2SuperUniques;
@@ -20,6 +21,8 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SuperUnique;
@@ -54,6 +57,8 @@ public class Act5QuestSystem extends PassiveSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<SuperUnique> mSuperUnique;
+  protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
   @Wire(name = "partyManager", failOnNull = false)
@@ -137,6 +142,15 @@ public class Act5QuestSystem extends PassiveSystem {
       onAncientStatueInteraction(interaction);
       return;
     }
+    if (interaction.type == NativeQuestObjectResolver.Type.ANCIENTS_ALTAR) {
+      onAncientsAltarInteraction(interaction);
+      return;
+    }
+    if (interaction.type == NativeQuestObjectResolver.Type.ANCIENT_DOOR
+        || interaction.type == NativeQuestObjectResolver.Type.SUMMIT_DOOR) {
+      onAncientsDoorInteraction(interaction);
+      return;
+    }
     if (interaction.type != NativeQuestObjectResolver.Type.CAGED_SOLDIER) return;
     if (levelId(interaction.entityId) != Act5RescueQuest.FRIGID_HIGHLANDS) return;
     Player player = mPlayer.get(interaction.playerId);
@@ -188,6 +202,47 @@ public class Act5QuestSystem extends PassiveSystem {
     if (activatedAncientStatues.size >= 3) spawnAncients(interaction.playerId);
     log.info("[A5Q5] Ancient statue activated: player={} object={} count={}/3",
         interaction.playerId, interaction.entityId, activatedAncientStatues.size);
+  }
+
+  /** Mirrors D2MOO's OperateFunction65: the altar opens its animation state
+   * but does not grant the quest or bypass the three Ancient encounter. */
+  private void onAncientsAltarInteraction(QuestObjectInteractionEvent interaction) {
+    if (!isAncientSummit(levelId(interaction.entityId)) || !mPlayer.has(interaction.playerId)) return;
+    Player player = mPlayer.get(interaction.playerId);
+    if (player == null || player.data == null || Act5AncientsQuest.isFinished(
+        ancientsRecord(player.data))) return;
+    interaction.accept(Engine.Object.MODE_ON);
+    updateAncientsRecord(player.data, Act5AncientsQuest::start, "ancients-altar-opened");
+    log.info("[A5Q5] Ancients altar opened: player={} object={}",
+        interaction.playerId, interaction.entityId);
+  }
+
+  /** Door handlers only change the visible mode once the native quest permits
+   * it. The actual zone transition remains owned by the map Warp entity. */
+  private void onAncientsDoorInteraction(QuestObjectInteractionEvent interaction) {
+    if (!isAncientSummit(levelId(interaction.entityId)) || !mPlayer.has(interaction.playerId)) return;
+    Player player = mPlayer.get(interaction.playerId);
+    if (player == null || player.data == null
+        || !Act5AncientsQuest.isFinished(ancientsRecord(player.data))) return;
+    interaction.accept(Engine.Object.MODE_ON);
+    log.info("[A5Q5] Summit door opened: player={} object={} type={}",
+        interaction.playerId, interaction.entityId, interaction.type);
+  }
+
+  /** D2MOO resets the Ancient encounter when the last living Summit player
+   * dies. This is separate from monster DeathEvent handling because the player
+   * is not a Monster component. */
+  @Subscribe
+  public void onPlayerDeath(DeathEvent event) {
+    if (event == null || !mPlayer.has(event.victim) || mMapWrapper == null
+        || !mMapWrapper.has(event.victim)) return;
+    MapWrapper wrapper = mMapWrapper.get(event.victim);
+    if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+        || !isAncientSummit(wrapper.zone.level.Id) || !ancientEncounterActive()) return;
+    if (!Act5AncientsQuest.shouldResetEncounter(
+        ancientEncounterActive(), killedAncientEntities.size >= 3,
+        countLivingSummitPlayers())) return;
+    resetAncientEncounter();
   }
 
   @Subscribe
@@ -441,6 +496,70 @@ public class Act5QuestSystem extends PassiveSystem {
         killedAncientEntities.size);
     if (killedAncientEntities.size < 3) return;
     completeAncientsForPlayers();
+  }
+
+  private boolean ancientEncounterActive() {
+    return activatedAncientStatues.size > 0 || spawnedAncientEntities.size > 0
+        || killedAncientEntities.size > 0;
+  }
+
+  private int countLivingSummitPlayers() {
+    if (playersByZone == null) return 0;
+    int living = 0;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      if (!mPlayer.has(id) || !mMapWrapper.has(id)) continue;
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+          || !isAncientSummit(wrapper.zone.level.Id)) continue;
+      if (isPlayerAlive(id)) living++;
+    }
+    return living;
+  }
+
+  private boolean isPlayerAlive(int playerId) {
+    if (mCofReference != null && mCofReference.has(playerId)) {
+      byte mode = mCofReference.get(playerId).mode;
+      if (mode == Engine.Player.MODE_DT || mode == Engine.Player.MODE_DD) return false;
+    }
+    if (mAttributesWrapper == null || !mAttributesWrapper.has(playerId)) return true;
+    AttributesWrapper wrapper = mAttributesWrapper.get(playerId);
+    return wrapper == null || wrapper.attrs == null
+        || wrapper.attrs.aggregate().getValue(Stat.hitpoints, 0f) > 0f;
+  }
+
+  private void resetAncientEncounter() {
+    IntArray entities = new IntArray(spawnedAncientEntities.size);
+    for (IntSet.IntSetIterator it = spawnedAncientEntities.iterator(); it.hasNext; ) {
+      entities.add(it.next());
+    }
+    for (int i = 0; i < entities.size; i++) {
+      int entity = entities.get(i);
+      if (world != null && world.getEntityManager().isActive(entity)) world.delete(entity);
+    }
+    spawnedAncientEntities.clear();
+    killedAncientEntities.clear();
+    activatedAncientStatues.clear();
+
+    // Reset only the three native statues; the Map.NativeObject source is also
+    // updated so a reconnect/recreation does not resurrect the activated mode.
+    for (IntIntMap.Entry entry : ancientStatueEntities) resetAncientStatue(entry.value);
+    log.info("[A5Q5] Ancient encounter reset: statues={} spawned={}",
+        ancientStatueEntities.size, entities.size);
+  }
+
+  private void resetAncientStatue(int entityId) {
+    if (mNativeObjectState != null && mNativeObjectState.has(entityId)) {
+      NativeObjectState state = mNativeObjectState.get(entityId);
+      state.persistActivated(false);
+      state.persistOpened(false);
+      state.persistMode(state.initialMode);
+      if (mCofReference != null && mCofReference.has(entityId)) {
+        mCofReference.get(entityId).mode = state.initialMode;
+      }
+    }
   }
 
   private void completeAncientsForPlayers() {

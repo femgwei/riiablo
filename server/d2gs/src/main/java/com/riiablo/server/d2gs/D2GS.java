@@ -3911,15 +3911,7 @@ public class D2GS extends ApplicationAdapter {
 
   private static boolean isNetworkQuestObject(
       com.riiablo.engine.server.object.NativeQuestObjectResolver.Type type) {
-    return type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.TOWER_TOME
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.CAIRN_STONE
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.CAIN_GIBBET
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.INIFUSS_TREE
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_MALUS
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.HORADRIC_ORIFICE
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.BAAL_PORTAL
-        || type == com.riiablo.engine.server.object.NativeQuestObjectResolver.Type.LAST_PORTAL;
+    return com.riiablo.engine.server.object.NativeQuestObjectResolver.isNetworkObject(type);
   }
 
   private void sendQuestResult(int clientId, long requestId, boolean success, String reason,

@@ -8,6 +8,14 @@ import org.junit.jupiter.api.Test;
 
 class Act5AncientsQuestTest {
   @Test
+  void encounterResetsOnlyWhenLastLivingSummitPlayerDiesBeforeCompletion() {
+    assertTrue(Act5AncientsQuest.shouldResetEncounter(true, false, 0));
+    assertFalse(Act5AncientsQuest.shouldResetEncounter(false, false, 0));
+    assertFalse(Act5AncientsQuest.shouldResetEncounter(true, false, 1));
+    assertFalse(Act5AncientsQuest.shouldResetEncounter(true, true, 0));
+  }
+
+  @Test
   void difficultyLevelGateMatchesD2Moo() {
     assertEquals(20, Act5AncientsQuest.requiredLevel(0));
     assertEquals(40, Act5AncientsQuest.requiredLevel(1));

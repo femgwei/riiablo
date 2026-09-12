@@ -23,6 +23,9 @@ public final class NativeQuestObjectResolver {
     CAGED_SOLDIER(false, true, Engine.Object.MODE_ON),
     FROZEN_ANYA(false, true, Engine.Object.MODE_ON),
     ANCIENT_STATUE(false, true, Engine.Object.MODE_ON),
+    ANCIENTS_ALTAR(false, false, Engine.Object.MODE_ON),
+    ANCIENT_DOOR(false, false, Engine.Object.MODE_ON),
+    SUMMIT_DOOR(false, false, Engine.Object.MODE_ON),
     BAAL_PORTAL(false, true, Engine.Object.MODE_ON),
     LAST_PORTAL(false, true, Engine.Object.MODE_ON),
     COUNTESS_CHEST(false, false, Engine.Object.MODE_NU);
@@ -71,12 +74,25 @@ public final class NativeQuestObjectResolver {
   /** Act V A5Q5 Ancients statues (Objects 474..476). */
   public static final int FIRST_ANCIENT_STATUE = 474;
   public static final int LAST_ANCIENT_STATUE = 476;
+  /** A5Q5 Ancients altar and the two native door variants. */
+  public static final int ANCIENTS_ALTAR = 546;
+  public static final int ANCIENT_DOOR = 547;
+  public static final int SUMMIT_DOOR = 564;
   /** A5Q6 Throne portal which opens the Worldstone Chamber. */
   public static final int BAAL_PORTAL = 563;
   /** A5Q6 Worldstone Chamber exit portal. */
   public static final int LAST_PORTAL = 565;
 
   private NativeQuestObjectResolver() {}
+
+  /**
+   * Returns whether interaction with this quest-owned object must be validated
+   * by the authoritative server. Keeping this policy next to classification
+   * prevents client and D2GS allow-lists from drifting apart.
+   */
+  public static boolean isNetworkObject(Type type) {
+    return type != null && type != Type.NONE && type != Type.COUNTESS_CHEST;
+  }
 
   public static Type resolve(Objects.Entry object) {
     if (object == null) return Type.NONE;
@@ -103,6 +119,9 @@ public final class NativeQuestObjectResolver {
       case FROZEN_ANYA: return Type.FROZEN_ANYA;
       case FIRST_ANCIENT_STATUE: case 475: case LAST_ANCIENT_STATUE:
         return Type.ANCIENT_STATUE;
+      case ANCIENTS_ALTAR: return Type.ANCIENTS_ALTAR;
+      case ANCIENT_DOOR: return Type.ANCIENT_DOOR;
+      case SUMMIT_DOOR: return Type.SUMMIT_DOOR;
       case BAAL_PORTAL: return Type.BAAL_PORTAL;
       case LAST_PORTAL: return Type.LAST_PORTAL;
       default:

@@ -2822,3 +2822,24 @@ A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五�
 当前下一项：回补 A5Q5 远古人战斗失败后的雕像复位与 Summit Door/Ancients Altar
 动画；随后核对 A5Q6 五波精确首领变体、原生延迟和经验/金币奖励，再按优先级推进
 第二至第四章地图与任务缺口。
+
+### 2026-09-12 Act V A5Q5 Ancient encounter reset / door / altar（本轮完成基础状态）
+
+- [x] 对齐 D2MOO 的 `ACT5Q5_OnPlayerDied` 基础规则：当远古人挑战已激活且
+  Summit 上最后一名存活玩家死亡时，删除本轮生成的远古人、清空死亡/激活集合，并
+  将三座雕像恢复到初始动画模式；同步回写 `Map.NativeObject`，重建 ECS 对象后不会
+  残留已激活状态。
+- [x] 接入原生 Objects `546`（Ancients Altar）、`547`（Ancients Door）、`564`
+  （Summit Door）解析和多人对象校验。祭坛只推进 A5Q5 开始状态并播放打开模式，
+  不绕过三名远古人；门对象只有任务完成后才接受打开动画，区域切换仍由现有 Warp
+  权威处理。
+- [x] 新增 resolver 回归断言；通过 `NativeQuestObjectResolverTest`、
+  `Act5AncientsQuestTest`、`:core:compileJava`、`:server:d2gs:compileJava`。
+- [x] 消除客户端与 D2GS 两份任务对象白名单的漂移，统一由
+  `NativeQuestObjectResolver.isNetworkObject` 判定；这同时修复此前已实现的远古人
+  雕像及 Act II/III/IV 任务对象可能被多人服务端误拒绝的问题。
+- [ ] 尚未完全复刻原生祭坛传送门的动态创建/关闭、门的逐帧动画回调和远古人原生
+  经验奖励；这些属于后续对象动画与奖励专项。
+
+当前下一项：核对 A5Q6 五波首领的精确变体、延迟与清场条件，并补齐原生经验/金币
+奖励；完成后继续第二至第四章的地图入口、任务对象和奖励差异核对。

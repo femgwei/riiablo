@@ -44,4 +44,11 @@ public final class Act5AncientsQuest {
   public static boolean isFinished(short record) {
     return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
   }
+
+  /** D2MOO ACT5Q5_OnPlayerDied reset predicate, excluding portal tracking
+   * which is not yet represented by the Java quest state. */
+  public static boolean shouldResetEncounter(
+      boolean encounterActive, boolean ancientsDefeated, int livingPlayersOnSummit) {
+    return encounterActive && !ancientsDefeated && livingPlayersOnSummit <= 0;
+  }
 }

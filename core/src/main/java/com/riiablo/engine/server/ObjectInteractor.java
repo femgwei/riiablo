@@ -142,24 +142,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   }
 
   private static boolean isNetworkQuestObject(NativeQuestObjectResolver.Type type) {
-    return type == NativeQuestObjectResolver.Type.TOWER_TOME
-        || type == NativeQuestObjectResolver.Type.CAIRN_STONE
-        || type == NativeQuestObjectResolver.Type.CAIN_GIBBET
-        || type == NativeQuestObjectResolver.Type.INIFUSS_TREE
-        || type == NativeQuestObjectResolver.Type.HORADRIC_MALUS
-        || type == NativeQuestObjectResolver.Type.TAINTED_SUN_ALTAR
-        || type == NativeQuestObjectResolver.Type.HORADRIC_ORIFICE
-        || type == NativeQuestObjectResolver.Type.ARCANE_SANCTUARY_TOME
-        || type == NativeQuestObjectResolver.Type.GIDBINN_DECOY
-        || type == NativeQuestObjectResolver.Type.KHALIM_CHEST
-        || type == NativeQuestObjectResolver.Type.COMPELLING_ORB
-        || type == NativeQuestObjectResolver.Type.DIABLO_SEAL
-        || type == NativeQuestObjectResolver.Type.HELLFORGE
-        || type == NativeQuestObjectResolver.Type.CAGED_SOLDIER
-        || type == NativeQuestObjectResolver.Type.FROZEN_ANYA
-        || type == NativeQuestObjectResolver.Type.ANCIENT_STATUE
-        || type == NativeQuestObjectResolver.Type.BAAL_PORTAL
-        || type == NativeQuestObjectResolver.Type.LAST_PORTAL;
+    return NativeQuestObjectResolver.isNetworkObject(type);
   }
 
   private boolean interactQuestPortal(int playerId, int visualEntityId) {

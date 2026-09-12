@@ -37,6 +37,9 @@ class NativeQuestObjectResolverTest {
     for (int id = 474; id <= 476; id++) {
       assertEquals(NativeQuestObjectResolver.Type.ANCIENT_STATUE, resolve(id, 71));
     }
+    assertEquals(NativeQuestObjectResolver.Type.ANCIENTS_ALTAR, resolve(546, 72));
+    assertEquals(NativeQuestObjectResolver.Type.ANCIENT_DOOR, resolve(547, 73));
+    assertEquals(NativeQuestObjectResolver.Type.SUMMIT_DOOR, resolve(564, 76));
     assertEquals(NativeQuestObjectResolver.Type.BAAL_PORTAL, resolve(563, 71));
     assertEquals(NativeQuestObjectResolver.Type.LAST_PORTAL, resolve(565, 71));
     assertEquals(NativeQuestObjectResolver.Type.COUNTESS_CHEST, resolve(500, 47));
@@ -69,6 +72,15 @@ class NativeQuestObjectResolverTest {
     cairn.accept(Engine.Object.MODE_OP);
     assertTrue(cairn.accepted);
     assertEquals(Engine.Object.MODE_OP, cairn.targetMode);
+  }
+
+  @Test
+  void clientAndServerShareOneNetworkQuestObjectPolicy() {
+    for (NativeQuestObjectResolver.Type type : NativeQuestObjectResolver.Type.values()) {
+      assertEquals(type != NativeQuestObjectResolver.Type.NONE
+              && type != NativeQuestObjectResolver.Type.COUNTESS_CHEST,
+          NativeQuestObjectResolver.isNetworkObject(type));
+    }
   }
 
   @Test
