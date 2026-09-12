@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -24,6 +25,7 @@ import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.object.NativeQuestObjectResolver;
+import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyManager;
@@ -51,6 +53,9 @@ public class Act2DurielQuestSystem extends BaseSystem {
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Interactable> mInteractable;
+  @Wire(failOnNull = false)
+  protected ObjectInteractor objectInteractor;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
   @Wire(name = "partyManager", failOnNull = false)
@@ -105,6 +110,7 @@ public class Act2DurielQuestSystem extends BaseSystem {
         || !isAct2(wrapper.zone.level.Id)
         || !Act2TombSelection.forGameSeed(wrapper.map.seed())
             .isStaffTomb(wrapper.zone.level.Id)) {
+      rollbackOrifice(event.entityId);
       log.warn("[A2Q6] Staff orifice activation rejected by level/world validation: entity={} player={}",
           event.entityId, event.playerId);
       return;
@@ -112,6 +118,7 @@ public class Act2DurielQuestSystem extends BaseSystem {
 
     ItemData items = player.data.getItems();
     if (items == null || !items.containsItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF)) {
+      rollbackOrifice(event.entityId);
       log.warn("[A2Q6] Staff orifice activation had no authoritative hst: player={}",
           event.playerId);
       return;
@@ -128,6 +135,7 @@ public class Act2DurielQuestSystem extends BaseSystem {
         : factory.createQuestWarp(D2LevelIds.LEVEL_DURIELSLAIR, portalX, portalY);
     if (warp == Engine.INVALID_ENTITY) {
       if (visual != Engine.INVALID_ENTITY && world != null) world.delete(visual);
+      rollbackOrifice(event.entityId);
       log.error("[A2Q6] failed to create Duriel quest portal: orifice={} player={}",
           event.entityId, event.playerId);
       return;
@@ -139,6 +147,7 @@ public class Act2DurielQuestSystem extends BaseSystem {
     if (!items.removeItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF)) {
       if (visual != Engine.INVALID_ENTITY && world != null) world.delete(visual);
       if (world != null) world.delete(warp);
+      rollbackOrifice(event.entityId);
       log.error("[A2Q6] staff disappeared during orifice transaction: player={}",
           event.playerId);
       return;
@@ -151,6 +160,22 @@ public class Act2DurielQuestSystem extends BaseSystem {
     wrapper.zone.addWarp(warp);
     log.info("[A2Q6] Tal Rasha staff inserted: player={} orifice={} visual={} warp={} destination={}",
         event.playerId, event.entityId, visual, warp, D2LevelIds.LEVEL_DURIELSLAIR);
+  }
+
+  /** Restores a failed insertion to the pre-operation neutral/selectable state. */
+  private void rollbackOrifice(int entityId) {
+    NativeObjectState state = mNativeObjectState.get(entityId);
+    if (state != null) {
+      state.persistActivated(false);
+      state.persistOpened(false);
+      state.persistMode(Engine.Object.MODE_NU);
+    }
+    if (mCofReference.has(entityId)) {
+      mCofReference.get(entityId).mode = Engine.Object.MODE_NU;
+    }
+    if (mInteractable != null && !mInteractable.has(entityId)) {
+      mInteractable.create(entityId).set(3f, objectInteractor);
+    }
   }
 
   @Subscribe

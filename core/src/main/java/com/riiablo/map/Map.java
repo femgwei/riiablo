@@ -795,7 +795,16 @@ public class Map implements Disposable {
   }
 
   public Zone findZone(Levels.Entry level) {
-    for (Zone zone : zones) if (zone.level == level) return zone;
+    if (level == null) return null;
+    // Levels rows may be materialized more than once when an Act is lazily
+    // rebuilt (headless tests and reconnects do this frequently).  Native
+    // DRLG identifies a level by its numeric id, not Java object identity;
+    // accepting the stable id prevents quest Warps from reporting a missing
+    // destination after such a rebuild.
+    for (Zone zone : zones) {
+      if (zone.level == level
+          || (zone.level != null && zone.level.Id == level.Id)) return zone;
+    }
     return null;
   }
 

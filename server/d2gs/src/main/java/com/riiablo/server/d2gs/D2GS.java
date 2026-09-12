@@ -430,6 +430,14 @@ public class D2GS extends ApplicationAdapter {
         // socket slot before priming the baseline.
         int clientId = server.connectionIdForEntity(playerId);
         if (server.sync != null && clientId >= 0) {
+          // A headless level switch can leave a large tail of snapshots from
+          // the previous generated map in the shared outbound queue.  Those
+          // stale frames are not useful to the test client and may delay its
+          // own level-bearing baseline long enough for the fixture to time
+          // out (the authoritative wrapper is already on the target zone).
+          // Drop only packets addressed to this client; production room
+          // visibility and other clients remain untouched.
+          server.dropHeadlessQueuedPackets(clientId);
           // Reuse the same BEGIN/sync/END transaction as login and explicit
           // snapshot-resync requests.  This keeps the offscreen client from
           // applying a level-bearing EntitySync outside its baseline window.
@@ -453,6 +461,22 @@ public class D2GS extends ApplicationAdapter {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return false;
+    }
+  }
+
+  /** Removes stale outbound frames for one offscreen test client. */
+  private void dropHeadlessQueuedPackets(int clientId) {
+    if (clientId < 0 || clientId >= MAX_CLIENTS) return;
+    int mask = 1 << clientId;
+    int removed = 0;
+    for (Packet packet : outPackets) {
+      if (packet != null && (packet.id & mask) != 0 && outPackets.remove(packet)) {
+        removed++;
+      }
+    }
+    if (removed > 0 && Gdx.app != null) {
+      Gdx.app.log(TAG, "[HEADLESS_LEVEL] dropped stale outbound packets client="
+          + clientId + " count=" + removed);
     }
   }
 
@@ -2045,6 +2069,51 @@ public class D2GS extends ApplicationAdapter {
           int entity = ids[i];
           com.riiablo.engine.server.component.NativeObjectState state = states.get(entity);
           if (state != null && state.kind == kind && wrappers.get(entity).zone == zone) {
+            result.set(entity);
+            return;
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Returns a quest Warp entity in a source level for a destination level. */
+  static int headlessQuestWarpEntity(int sourceLevelId, int destinationLevelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(sourceLevelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        int index = com.riiablo.engine.server.quest.QuestWarp.encode(destinationLevelId);
+        com.artemis.utils.IntBag warps = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Warp.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = warps.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Warp> mapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Warp.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < warps.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Warp warp = mapper.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (warp != null && warp.index == index && wrapper != null && wrapper.zone == zone) {
             result.set(entity);
             return;
           }

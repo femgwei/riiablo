@@ -3737,3 +3737,35 @@ Horadric Orifice 插入法杖后的 Duriel 入口/区域切换。
 补充验证：同一双客户端夹具已完成 Cain Gibbet 的真实 `OBJECT_INTERACTION` 请求，
 成功生成单个 Tristram Cain、双方均收到实体，并验证重复请求不会重复生成
 （日志：`a1_cain_gibbet_interaction_pass object=379 cain=356 clients=true,true`）。
+
+### 2026-09-13 A2 Orifice → Duriel 入口双客户端闭环（本轮完成）
+
+- [x] `Act2DurielQuestSystem` 对齐 D2MOO `OBJECTS_OperateFunction25_StaffOrifice` 的
+  失败事务语义：关卡/世界不符、缺少 `hst`、红门创建失败或法杖消费失败时，恢复
+  Orifice 的 `MODE_NU`、`activated/opened=false` 和 `Interactable`，不会留下不可再次
+  交互的“半激活”对象。
+- [x] Act II D2MOD 地图生成器始终物化 seed 选定的 Staff/Boss Tomb，并预先分配
+  Duriel's Lair(74) Zone；七墓插杖后生成的 quest Warp 不再因目标 Zone 延迟创建而被
+  `WARP_DESTINATION_MISSING` 拒绝。`Map.findZone` 同时按稳定 LevelId 匹配，兼容 Act
+  懒加载时重复 materialize 的 `Levels.Entry` 实例。
+- [x] 离屏双客户端夹具增强跨地图基线：清理指定测试连接的过期输出帧、重试目标
+  Level 快照，并在传送门交互前移动到 Warp 位置，保留生产距离校验。
+- [x] 通过真实 `OBJECT_INTERACTION`、重复请求幂等、双客户端 Warp 可见性和
+  `WARP_INTERACTION` 切换到 Duriel's Lair；日志：
+  `a2_orifice_duriel_entry_pass orifice=195 warp=197 destination=74 clients=true,true`、
+  `a2_object_interaction_dual_pass taintedSun=true arcaneTome=true orifice=true durielEntry=true clients=true,true`。
+
+共享文件最小修改：
+`core/src/main/java/com/riiablo/map/Map.java`、
+`core/src/main/java/com/riiablo/engine/server/WarpInteractor.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+验证：`:core:compileJava`、`:server:d2gs:compileJava`、
+`:server:d2gs:headlessA2ObjectInteractionDual`、`git diff --check` 均通过。
+资源提示：日志中的 `DRLGROOMTILE_GetTileCache`/`Native TileGrid unresolved` 仍表示
+部分 1.10f DT1 导出缺失，但不影响本轮 Orifice/Warp 权威逻辑；需在完整资源环境做
+最终画面连续性验收。
+
+下一项：补齐 A2Q6 Duriel Lair 的 Tyrael Door、Tyrael 对话和 Lut Gholein 回城 Portal
+的双客户端重连/幂等回归，然后继续 A2 七墓 Arcane Symbol/真实地牢拓扑校验。

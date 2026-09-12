@@ -44,6 +44,7 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
   private static final int LEVEL_LOSTCITY = 44;
   private static final int LEVEL_VALLEYOFSNAKES = 45;
   private static final int LEVEL_CANYONOFTHEMAGI = 46;
+  private static final int LEVEL_DURIELSLAIR = 74;
   private static final int LEVEL_ARCANESANCTUARY = 75;
   private static final int ACT2_LEVEL_FIRST = LEVEL_LUTGHOLEIN;
   private static final int ACT2_LEVEL_LAST = LEVEL_ARCANESANCTUARY;
@@ -536,8 +537,14 @@ public enum Act2MapBuilderD2MOD implements MapBuilder {
     if (anchor == null && !map.zones.isEmpty()) anchor = map.zones.peek();
     if (anchor != null) {
       Act2TombSelection selectedTombs = Act2TombSelection.forGameSeed(seed);
-      int[] requiredTombs = {selectedTombs.staffTombLevel(), selectedTombs.bossTombLevel()};
-      for (int tombId : requiredTombs) {
+      // Duriel's Lair has no ordinary Vis/Warp edge in Levels.txt; the
+      // Horadric Orifice creates a quest portal to it at runtime.  Native
+      // DRLG still allocates the level record up front, so materialize it
+      // alongside the seed-selected staff/boss tombs.  Otherwise the first
+      // valid Orifice interaction is rejected as WARP_DESTINATION_MISSING.
+      int[] requiredDungeons = {selectedTombs.staffTombLevel(),
+          selectedTombs.bossTombLevel(), LEVEL_DURIELSLAIR};
+      for (int tombId : requiredDungeons) {
         if (generated.contains(tombId)) continue;
         Levels.Entry tomb = levelsById.get(tombId);
         if (tomb == null) continue;

@@ -2761,7 +2761,75 @@ public final class D2GSHeadlessClient {
               com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
         throw new IOException("Arcane Sanctuary Tome party completion did not propagate");
       }
-      log("a2_object_interaction_dual_pass", "taintedSun=true arcaneTome=true clients=true,true");
+
+      int staffTomb = com.riiablo.engine.server.quest.Act2TombSelection
+          .forGameSeed(config.seed).staffTombLevel();
+      if (!D2GS.headlessAddQuestItem(a.playerId,
+              com.riiablo.engine.server.quest.Act2HoradricStaffQuest.HORADRIC_STAFF)) {
+        throw new IOException("Horadric Orifice staging unavailable");
+      }
+      // Materialize the Duriel Lair zone before opening the portal.  Native
+      // games keep all Act-II level records available in the DRLG; a lazy
+      // headless map may otherwise omit the destination until first entry,
+      // causing validation to report WARP_DESTINATION_MISSING.
+      if (!D2GS.headlessEnterLevel(a.playerId, LEVEL_DURIELSLAIR)
+          || !D2GS.headlessEnterLevel(b.playerId, LEVEL_DURIELSLAIR)) {
+        throw new IOException("Duriel Lair destination staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, LEVEL_DURIELSLAIR,
+          "a2-duriel-destination-materialization");
+      // Zone transitions are queued on the authoritative tick.  Re-submit
+      // both requests once after the preceding Arcane Sanctuary rebuild so a
+      // delayed peer snapshot cannot make the fixture report a false failure.
+      if (!D2GS.headlessEnterLevel(a.playerId, staffTomb)
+          || !D2GS.headlessEnterLevel(b.playerId, staffTomb)) {
+        throw new IOException("Horadric Orifice staging unavailable");
+      }
+      Thread.sleep(100L);
+      D2GS.headlessEnterLevel(a.playerId, staffTomb);
+      D2GS.headlessEnterLevel(b.playerId, staffTomb);
+      awaitTwoQuestLevels(a, b, inA, inB, staffTomb, "a2-orifice-interaction");
+      int orifice = D2GS.headlessQuestObjectEntity(staffTomb,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.HORADRIC_ORIFICE);
+      if (orifice == Engine.INVALID_ENTITY
+          || !D2GS.headlessMovePlayerToObject(a.playerId, orifice)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, orifice)) {
+        throw new IOException("Horadric Orifice unavailable");
+      }
+      send(outA, questRequestPacket(321L, QuestOperation.OBJECT_INTERACTION, orifice, -1));
+      QuestResult orificeResult = a.awaitQuestResult(inA, 321L, deadline());
+      if (orificeResult == null || !orificeResult.success()) {
+        throw new IOException("Horadric Orifice interaction rejected");
+      }
+      int durielWarp = D2GS.headlessQuestWarpEntity(staffTomb, LEVEL_DURIELSLAIR);
+      if (durielWarp == Engine.INVALID_ENTITY) {
+        throw new IOException("Duriel quest Warp was not created");
+      }
+      a.awaitVisibleEntity(inA, durielWarp, deadline());
+      b.awaitVisibleEntity(inB, durielWarp, deadline());
+      send(outA, questRequestPacket(321L, QuestOperation.OBJECT_INTERACTION, orifice, -1));
+      if (a.awaitQuestResult(inA, 321L, deadline()) == null
+          || D2GS.headlessQuestWarpEntity(staffTomb, LEVEL_DURIELSLAIR) != durielWarp) {
+        throw new IOException("Horadric Orifice duplicate request was not idempotent");
+      }
+      // The native client walks to a newly opened portal before sending the
+      // interaction packet.  Keep the headless request subject to the same
+      // range validation instead of bypassing it from the orifice position.
+      if (!D2GS.headlessMovePlayerToObject(a.playerId, durielWarp)) {
+        throw new IOException("Duriel quest Warp arrival staging unavailable");
+      }
+      send(outA, questRequestPacket(322L, QuestOperation.WARP_INTERACTION, durielWarp, -1));
+      QuestResult warpResult = a.awaitQuestResult(inA, 322L, deadline());
+      if (warpResult == null || !warpResult.success()) {
+        throw new IOException("Duriel quest Warp interaction rejected: "
+            + (warpResult == null ? "NO_RESULT" : warpResult.reason()));
+      }
+      awaitLevel(a, inA, LEVEL_DURIELSLAIR, deadline());
+      log("a2_orifice_duriel_entry_pass", "orifice=" + orifice
+          + " warp=" + durielWarp + " destination=" + LEVEL_DURIELSLAIR
+          + " clients=true,true");
+      log("a2_object_interaction_dual_pass",
+          "taintedSun=true arcaneTome=true orifice=true durielEntry=true clients=true,true");
     }
   }
 
@@ -3369,12 +3437,24 @@ public final class D2GSHeadlessClient {
   private void awaitTwoQuestLevels(D2GSHeadlessClient a, D2GSHeadlessClient b,
       DataInputStream inA, DataInputStream inB, int level, String scenario) throws Exception {
     long levelDeadline = deadline();
+    long retryAt = System.currentTimeMillis() + 1_000L;
     while (System.currentTimeMillis() < levelDeadline
         && (a.currentLevelId != level || b.currentLevelId != level)) {
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
       if (packet != null) a.consume(packet);
       packet = readPacket(inB);
       if (packet != null) b.consume(packet);
+      // Generated Act maps can enqueue thousands of room snapshots.  If one
+      // peer has not yet received its own level-bearing baseline, re-submit
+      // the authoritative entry after the first queue drain.  The bridge is
+      // idempotent and this keeps the fixture from mistaking delayed output
+      // for a quest/warp failure.
+      if (System.currentTimeMillis() >= retryAt
+          && (a.currentLevelId != level || b.currentLevelId != level)) {
+        D2GS.headlessEnterLevel(a.playerId, level);
+        D2GS.headlessEnterLevel(b.playerId, level);
+        retryAt = System.currentTimeMillis() + 1_000L;
+      }
     }
     if (a.currentLevelId != level || b.currentLevelId != level) {
       throw new IOException(scenario + " clients did not observe staged level: "

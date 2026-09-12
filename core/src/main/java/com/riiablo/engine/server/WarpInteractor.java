@@ -194,8 +194,24 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
   private Vector2 findQuestArrival(Map.Zone destination, int unitSize) {
     int centerX = destination.x() + destination.width() / 2;
     int centerY = destination.y() + destination.height() / 2;
+    // Native quest rooms are often irregular and their geometric center can
+    // land on a wall/void.  D2Common expands the search over the destination
+    // room graph rather than failing the portal outright; mirror that by
+    // trying a wider radius first and then each exported RoomEx center.
     return destination.findFreeCoordinates(
-        tmpVec2.set(centerX, centerY), unitSize, 50, true, tmpVec2)
-        ? tmpVec2 : null;
+        tmpVec2.set(centerX, centerY), unitSize, 200, true, tmpVec2)
+        ? tmpVec2 : findQuestRoomArrival(destination, unitSize);
+  }
+
+  private Vector2 findQuestRoomArrival(Map.Zone destination, int unitSize) {
+    com.badlogic.gdx.utils.Array<Map.RoomEx> rooms = destination.getRoomsEx();
+    for (int i = 0; i < rooms.size; i++) {
+      Map.RoomEx room = rooms.get(i);
+      int x = room.x + room.width / 2;
+      int y = room.y + room.height / 2;
+      if (destination.findFreeCoordinates(tmpVec2.set(x, y), unitSize, 32,
+          true, tmpVec2)) return tmpVec2;
+    }
+    return null;
   }
 }
