@@ -13,6 +13,8 @@ import com.riiablo.Riiablo;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SuperUnique;
@@ -30,6 +32,7 @@ import com.riiablo.item.Quality;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.Map;
+import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -42,6 +45,8 @@ public class Act2QuestSystem extends PassiveSystem {
 
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Object> mObject;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<SuperUnique> mSuperUnique;
@@ -51,6 +56,8 @@ public class Act2QuestSystem extends PassiveSystem {
   protected EntityFactory factory;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
+  @Wire(name = "map", failOnNull = false)
+  protected Map map;
 
   private EntitySubscription playersByZone;
   private final IntSet completedRadaments = new IntSet();
@@ -75,6 +82,49 @@ public class Act2QuestSystem extends PassiveSystem {
     if (isSewers(levelId)) {
       updateRecord(player.data, Act2RadamentQuest::enterSewers, "entered-sewers");
     }
+    // Some native DS1 exports omit the Tainted Sun altar object. Materialize
+    // it in the first real RoomEx so the production interaction path remains
+    // available; normal exports are left untouched by hasQuestObject().
+    if (levelId == D2LevelIds.LEVEL_VALLEYOFSNAKES
+        || levelId == D2LevelIds.LEVEL_CLAWVIPERTEMPLELEV1
+        || levelId == D2LevelIds.LEVEL_CLAWVIPERTEMPLELEV2) {
+      ensureTaintedSunAltar(event.zone);
+    }
+  }
+
+  private void ensureTaintedSunAltar(Map.Zone zone) {
+    final int classId = NativeQuestObjectResolver.TAINTED_SUN_ALTAR;
+    if (zone == null || factory == null || map == null || mObject == null
+        || mMapWrapper == null || mNativeObjectState == null || hasQuestObject(zone, classId)) {
+      return;
+    }
+    Map.RoomEx room = zone.getRoomsEx().size == 0 ? null : zone.getRoomsEx().get(0);
+    float x = room == null ? zone.x() + zone.width() / 2f : room.x + room.width / 2f;
+    float y = room == null ? zone.y() + zone.height() / 2f : room.y + room.height / 2f;
+    int entity = factory.createStaticObjectByClassId(classId, x, y);
+    if (entity < 0) return;
+    mMapWrapper.create(entity).set(map, zone);
+    NativeObjectState state = mNativeObjectState.create(entity);
+    state.set(classId, classId, classId, com.riiablo.engine.Engine.Object.MODE_NU,
+        false, false, NativePresetObjectResolver.Kind.ORDINARY);
+    state.source = new Map.NativeObject(classId, com.riiablo.engine.Engine.Object.MODE_NU,
+        (int) (x - zone.x()), (int) (y - zone.y()), false, false);
+    log.info("[A2Q3] materialized missing Tainted Sun altar: level={} entity={}",
+        zone.level == null ? -1 : zone.level.Id, entity);
+  }
+
+  private boolean hasQuestObject(Map.Zone zone, int classId) {
+    if (zone == null || mObject == null || mMapWrapper == null) return false;
+    IntBag entities = world.getAspectSubscriptionManager().get(
+        Aspect.all(Object.class, MapWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      Object object = mObject.get(ids[i]);
+      MapWrapper wrapper = mMapWrapper.get(ids[i]);
+      if (object != null && object.base != null && object.base.Id == classId
+          && wrapper != null && wrapper.zone == zone) return true;
+    }
+    return false;
   }
 
   @Subscribe

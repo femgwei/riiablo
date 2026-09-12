@@ -3599,3 +3599,15 @@ headless 资源回退），但不再阻断 A3 任务对象闭环。下一项：�
 下一项：在完整资源环境把 Tainted Sun 祭坛、Arcane Sanctuary Tome、Horadric
 Orifice 接入生产 Quest 请求双客户端回归，验证对象激活、奖励掉落、Zone 归属和幂等；
 随后覆盖 A1 特殊箱/任务门的同类路径。
+
+### 2026-09-12 A2 Tainted Sun 祭坛对象物化回退（本轮完成）
+
+- [x] `Act2QuestSystem` 在进入 Valley of Snakes、Claw Viper Temple Level 1/2 时检查
+  原生祭坛对象；当 DS1 导出缺失 class 149 时，按首个 RoomEx 中心创建权威对象，绑定
+  `MapWrapper.zone` 和 `NativeObjectState`（OperateFn 24），随后仍走标准
+  `ObjectInteractor → Act2TaintedSunQuestSystem` 交互链。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava` 和 `git diff --check`；
+  未改动战斗目录或网络协议。
+
+下一项：新增 A2 祭坛/Arcane Tome/Orifice 的真实 Quest 请求双客户端离屏夹具，确认
+回退对象的激活、奖励掉落和幂等行为；再处理 A1 特殊箱与任务门。
