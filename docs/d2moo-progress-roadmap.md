@@ -3439,3 +3439,17 @@ Worldstone Chamber 入口视觉对象与 Warp 的成对恢复。
 当前下一项：在具备完整 1.10f MPQ 的环境执行 `--require-quest-warp-dual`，记录 A3/A4/A5
   三套实体快照；若资源运行通过，再继续第二至第五章其他任务对象（门、箱、牢笼和特殊
   预设）的重连/房间重建一致性。
+
+### 2026-09-12 A4/A5 任务对象统一离屏快照桥接（本轮完成）
+
+- [x] 新增 `D2GS.headlessQuestObjectSnapshot(levelId)` 只读诊断接口，统一统计指定区域的
+  A5Q2 牢笼及开启数、A5Q3 Frozen Anya 及解冻状态、A5Q5 三座雕像/Ancient 门/Summit
+  门及开启数，以及 A4 五枚封印及开启数。
+- [x] 开启判定同时读取实体 `Object.mode` 与持久化 `NativeObjectState`，可识别 Room/ECS
+  重建后实体 ID 改变但原生状态保留的情况；不改动网络协议、不创建生成文件。
+- [x] 通过 `:core:compileJava`、`:server:d2gs:compileJava`；当前环境没有完整 MPQ，尚未
+  伪造资源运行结果。
+
+当前下一项：把该快照接口接入离屏双客户端场景，分别预置 A5Q2/A5Q3/A5Q5 完成记录，
+  删除并重建对象后比较两客户端的对象数量、开启状态和同步可见性；随后再覆盖 A1-A3
+  特殊箱/祭坛/任务物体。

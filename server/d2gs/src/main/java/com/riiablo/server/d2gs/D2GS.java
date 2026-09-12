@@ -1573,6 +1573,82 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /**
+   * Returns native quest-object state for one generated level. The result is
+   * {@code [cages, openCages, anya, defrostedAnya, statues, activatedStatues,
+   * ancientDoors, openAncientDoors, summitDoors, openSummitDoors, seals,
+   * openSeals]}. This is read-only diagnostics for reconnect/RoomEx tests.
+   */
+  static int[] headlessQuestObjectSnapshot(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return new int[12];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[12]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        int[] counts = new int[12];
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Object> objectMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Object.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrapperMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.NativeObjectState> stateMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.NativeObjectState.class);
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Object object = objectMapper.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrapperMapper.get(entity);
+          if (object == null || object.base == null || wrapper == null || wrapper.zone != zone) continue;
+          com.riiablo.engine.server.component.NativeObjectState state = stateMapper.get(entity);
+          boolean open = object.mode == com.riiablo.engine.Engine.Object.MODE_ON
+              || (state != null && (state.opened || state.activated
+                  || state.currentMode == com.riiablo.engine.Engine.Object.MODE_ON));
+          int classId = object.base.Id;
+          if (classId == com.riiablo.engine.server.quest.Act5RescueQuest.CAGED_SOLDIER_OBJECT) {
+            counts[0]++;
+            if (open) counts[1]++;
+          } else if (classId == com.riiablo.engine.server.quest.Act5PrisonQuest.FROZEN_ANYA_OBJECT) {
+            counts[2]++;
+            if (open) counts[3]++;
+          } else if (classId >= com.riiablo.engine.server.quest.Act5AncientsQuest.FIRST_ANCIENT_STATUE
+              && classId <= com.riiablo.engine.server.quest.Act5AncientsQuest.LAST_ANCIENT_STATUE) {
+            counts[4]++;
+            if (open) counts[5]++;
+          } else if (classId == com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR) {
+            counts[6]++;
+            if (open) counts[7]++;
+          } else if (classId == com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR) {
+            counts[8]++;
+            if (open) counts[9]++;
+          } else if (classId >= com.riiablo.engine.server.object.NativeQuestObjectResolver.FIRST_DIABLO_SEAL
+              && classId <= com.riiablo.engine.server.object.NativeQuestObjectResolver.LAST_DIABLO_SEAL) {
+            counts[10]++;
+            if (open) counts[11]++;
+          }
+        }
+        result.set(counts);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[12];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[12];
+    }
+  }
+
   private static Vector2 findHeadlessRoomPosition(
       D2GS server, Map.Zone zone, Map.RoomEx room) {
     if (server == null || zone == null || room == null) return null;
