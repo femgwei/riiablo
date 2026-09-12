@@ -2664,3 +2664,18 @@ Frozen Tundra、Ancients' Way、Arreat Summit），先完成 Zone/Level/LvlPrest
 当前下一项：补齐 Act V 主链的原生 `Vis/Warp` 双向槽位和入口碰撞校正，再接入
 A5Q1 Shenk（Bloody Foothills）任务生成/击杀/奖励；不先实现第五章其他任务，避免
 任务对象落在未配对的地图入口上。
+
+### 2026-09-12 Act V 主链原生 Warp 槽位与入口标记（本轮完成）
+
+- [x] 新增 `configureAct5OutdoorWarps`，按 D2Common `DRLG_SetWarpId` 的 first-empty
+  slot 规则为主链双向写入每张 Map 的 `Vis/Warp` override，不修改共享 Levels 表。
+- [x] 在缺少 DS1 墙体出口的种子中补发 `UNIT_TILE` 风格的合成 Warp marker，并在
+  `linkNativeWarpSpecials` 阶段配对正反向特殊单元，确保 MapManager 能创建实际 Warp
+  实体；所有入口仍落在 Zone 的有效 tile 坐标内。
+- [x] 在 `Map.generate(act=4)` 接入 Act V 后处理；共享文件 `Map.java` 仅增加地图
+  Warp 后处理分支，没有改动战斗或实体注册。
+- 验证：`Act5MapBuilderD2MODTest`、`:core:compileJava`、`:server:d2gs:compileJava`
+  通过。
+
+当前下一项：接入 A5Q1 Shenk the Overseer 的原生任务链（Bloody Foothills 进入、围攻
+  首领生成、击杀状态传播和 Larzuk 奖励）；完成后继续 A5Q2 Rescue Anya/Qual-Kehk。

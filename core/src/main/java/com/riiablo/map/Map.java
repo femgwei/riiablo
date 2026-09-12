@@ -465,6 +465,25 @@ public class Map implements Disposable {
         }
       }
     }
+
+    // Act V outdoor links are inserted by D2Common at runtime. Configure and
+    // pair their exported/synthetic markers before MapManager creates Warp
+    // entities, matching the Act II/III post-generation path.
+    if (act == 4) {
+      boolean useD2MOD = true;
+      if (Riiablo.cvars != null) {
+        com.riiablo.cvar.Cvar<Boolean> cvar =
+            Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
+      }
+      if (useD2MOD) {
+        try {
+          Act5MapBuilderD2MOD.INSTANCE.configureAct5OutdoorWarps(this);
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "Error during D2MOD Act V warp post-generation processing", t);
+        }
+      }
+    }
   }
 
   public int seed() {
