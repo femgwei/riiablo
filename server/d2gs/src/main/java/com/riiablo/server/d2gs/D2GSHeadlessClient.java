@@ -2364,12 +2364,14 @@ public final class D2GSHeadlessClient {
     }
   }
 
-  /** Focused two-client A5Q5 encounter gate, independent of sparse A5Q2/A5Q3 DS1 fixtures. */
+  /** Focused two-client A5Q5 reconnect gate, independent of sparse A5Q2/A5Q3 fixtures. */
   private void runA5AncientDual(byte[] d2s, CharacterHeader character) throws Exception {
     D2GSHeadlessClient a = new D2GSHeadlessClient(config);
     D2GSHeadlessClient b = new D2GSHeadlessClient(config);
     byte[] peerD2s = createGeneratedObserverSave("AncientPeer", 0x41355135, 80);
     CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    final int summit = com.riiablo.engine.server.quest.Act5AncientsQuest.ARREAT_SUMMIT;
+    final int record = com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD;
     try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
       DataInputStream inA = input(socketA), inB = input(socketB);
       OutputStream outA = output(socketA), outB = output(socketB);
@@ -2380,15 +2382,12 @@ public final class D2GSHeadlessClient {
 
       short nihlathakComplete = com.riiablo.engine.server.quest.Act5NihlathakQuest.claimReward(
           com.riiablo.engine.server.quest.Act5NihlathakQuest.complete((short) 0));
-      int summit = com.riiablo.engine.server.quest.Act5AncientsQuest.ARREAT_SUMMIT;
       if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5,
               com.riiablo.engine.server.quest.Act5NihlathakQuest.RECORD, nihlathakComplete)
           || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
               com.riiablo.engine.server.quest.Act5NihlathakQuest.RECORD, nihlathakComplete)
-          || !D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5,
-              com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, (short) 0)
-          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
-              com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, (short) 0)
+          || !D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5, record, (short) 0)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5, record, (short) 0)
           || !D2GS.headlessEnterLevel(a.playerId, summit)
           || !D2GS.headlessEnterLevel(b.playerId, summit)) {
         throw new IOException("A5Q5 focused Summit staging unavailable");
@@ -2396,62 +2395,89 @@ public final class D2GSHeadlessClient {
       awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 focused entry");
       activateAndRequireAncients(a.playerId, b.playerId, summit);
 
-      if (!D2GS.headlessKillPlayer(a.playerId)
-          || !D2GS.headlessKillPlayer(b.playerId)) {
-        throw new IOException("A5Q5 focused player death staging failed");
+      int[] inProgress = D2GS.headlessAncientEntities(summit);
+      if (inProgress.length != 3 || inProgress[0] == Engine.INVALID_ENTITY
+          || !D2GS.headlessKillMonster(a.playerId, inProgress[0])) {
+        throw new IOException("A5Q5 focused mid-combat setup failed");
       }
-      int[] resetAncients = D2GS.headlessAncientEntities(summit);
-      int[] resetObjects = D2GS.headlessQuestObjectSnapshot(summit);
-      if (resetAncients.length != 3
-          || resetAncients[0] != Engine.INVALID_ENTITY
-          || resetAncients[1] != Engine.INVALID_ENTITY
-          || resetAncients[2] != Engine.INVALID_ENTITY
-          || resetObjects.length < 6 || resetObjects[5] != 0) {
-        throw new IOException("A5Q5 focused death reset failed: ancients="
-            + java.util.Arrays.toString(resetAncients) + " objects="
-            + java.util.Arrays.toString(resetObjects));
-      }
+      // DeathEvent is dispatched on the simulation thread; count living
+      // guardians rather than relying on deferred ECS deletion of corpses.
+      awaitAncientAliveCount(summit, 2, deadline());
+      socketB.close();
+      awaitEntityInactive(b.playerId, deadline());
 
-      awaitRespawnable(a.playerId);
-      awaitRespawnable(b.playerId);
-      send(outA, playerLifecyclePacket(551L, PlayerLifecycleOperation.RESPAWN));
-      PlayerLifecycleResult respawnA = awaitPlayerLifecycleResult(inA, 551L, deadline());
-      send(outB, playerLifecyclePacket(552L, PlayerLifecycleOperation.RESPAWN));
-      PlayerLifecycleResult respawnB = awaitPlayerLifecycleResult(inB, 552L, deadline());
-      if (!respawnA.success() || !respawnB.success()
-          || !D2GS.headlessEnterLevel(a.playerId, summit)
-          || !D2GS.headlessEnterLevel(b.playerId, summit)) {
-        throw new IOException("A5Q5 focused respawn/re-entry failed");
-      }
-      awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 focused reset re-entry");
-      int[] ancientEntities = activateAndRequireAncients(a.playerId, b.playerId, summit);
-      for (int ancient : ancientEntities) {
-        if (ancient == Engine.INVALID_ENTITY
-            || !D2GS.headlessKillMonster(a.playerId, ancient)) {
-          throw new IOException("A5Q5 focused Ancient kill failed: "
-              + java.util.Arrays.toString(ancientEntities));
+      D2GSHeadlessClient midReconnect = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = midReconnect.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+        midReconnect.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessEnterLevel(midReconnect.playerId, summit)) {
+          throw new IOException("A5Q5 focused mid-combat reconnect staging failed");
+        }
+        awaitLevel(midReconnect, reconnectInput, summit, deadline());
+        int[] reconnectAncients = D2GS.headlessAncientEntities(summit);
+        int aliveAfterReconnect = D2GS.headlessAncientAliveCount(summit);
+        if (aliveAfterReconnect != 2) {
+          throw new IOException("A5Q5 focused reconnect changed encounter: "
+              + java.util.Arrays.toString(reconnectAncients));
+        }
+        QuestResult inProgressSnapshot = requestSnapshot(midReconnect, reconnectInput,
+            reconnectOutput, 559L);
+        if (hasQuestFlagAt(inProgressSnapshot, Riiablo.ACT5, record,
+                com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
+          throw new IOException("A5Q5 focused mid-combat reconnect was prematurely complete");
+        }
+
+        for (int ancient : reconnectAncients) {
+          if (ancient != Engine.INVALID_ENTITY && ancient != inProgress[0]
+              && !D2GS.headlessKillMonster(a.playerId, ancient)) {
+            throw new IOException("A5Q5 focused post-reconnect Ancient kill failed");
+          }
+        }
+        if (!D2GS.headlessRebuildQuestObjects(a.playerId)
+            || !D2GS.headlessRebuildQuestObjects(midReconnect.playerId)) {
+          throw new IOException("A5Q5 focused post-reconnect door rebuild unavailable");
+        }
+        int[] objects = D2GS.headlessQuestObjectSnapshot(summit);
+        QuestResult rewardA = requestSnapshot(a, inA, outA, 560L);
+        QuestResult rewardB = requestSnapshot(midReconnect, reconnectInput,
+            reconnectOutput, 561L);
+        if (objects.length < 10 || (objects[7] + objects[9]) < 2
+            || !hasQuestFlagAt(rewardA, Riiablo.ACT5, record,
+                com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+            || !hasQuestFlagAt(rewardB, Riiablo.ACT5, record,
+                com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
+          throw new IOException("A5Q5 focused post-reconnect reward failed: "
+              + java.util.Arrays.toString(objects));
+        }
+        log("a5q5_ancient_mid_reconnect_pass", "aliveBefore=3 aliveAfter=2 reward=true");
+
+        // Reconnect again after completion and require the persistent reward
+        // flags and opened doors to be restored to the new ECS entity.
+        reconnectSocket.close();
+        awaitEntityInactive(midReconnect.playerId, deadline());
+        D2GSHeadlessClient postReconnect = new D2GSHeadlessClient(config);
+        try (Socket postSocket = postReconnect.openSocket();
+             DataInputStream postInput = input(postSocket);
+             OutputStream postOutput = output(postSocket)) {
+          send(postOutput, connectionPacket(peerCharacter, peerD2s));
+          postReconnect.awaitConnection(postInput, deadline());
+          if (!D2GS.headlessEnterLevel(postReconnect.playerId, summit)) {
+            throw new IOException("A5Q5 focused post-completion reconnect staging failed");
+          }
+          awaitLevel(postReconnect, postInput, summit, deadline());
+          QuestResult restored = requestSnapshot(postReconnect, postInput, postOutput, 562L);
+          int[] restoredObjects = D2GS.headlessQuestObjectSnapshot(summit);
+          if (!hasQuestFlagAt(restored, Riiablo.ACT5, record,
+                  com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+              || restoredObjects.length < 10 || (restoredObjects[7] + restoredObjects[9]) < 2) {
+            throw new IOException("A5Q5 focused post-completion restore failed: "
+                + java.util.Arrays.toString(restoredObjects));
+          }
+          log("a5q5_ancient_post_reconnect_pass", "reward=true doors=true");
         }
       }
-
-      if (!D2GS.headlessRebuildQuestObjects(a.playerId)
-          || !D2GS.headlessRebuildQuestObjects(b.playerId)) {
-        throw new IOException("A5Q5 focused door rebuild unavailable");
-      }
-      int[] objects = D2GS.headlessQuestObjectSnapshot(summit);
-      QuestResult snapshotA = requestSnapshot(a, inA, outA, 553L);
-      QuestResult snapshotB = requestSnapshot(b, inB, outB, 554L);
-      int record = com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD;
-      if (objects.length < 10 || (objects[6] + objects[8]) < 1
-          || (objects[7] + objects[9]) < 1
-          || !hasQuestFlagAt(snapshotA, Riiablo.ACT5, record,
-              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
-          || !hasQuestFlagAt(snapshotB, Riiablo.ACT5, record,
-              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
-        throw new IOException("A5Q5 focused reward/door snapshot failed: "
-            + java.util.Arrays.toString(objects));
-      }
-      log("a5q5_ancient_dual_pass", "reset=true respawn=true reward=true objects="
-          + java.util.Arrays.toString(objects));
     }
   }
 
@@ -5951,6 +5977,39 @@ public final class D2GSHeadlessClient {
       if (removed != null && removed.deleted) return;
     }
     throw new IOException("peer did not observe entity removal " + entityId);
+  }
+
+  /** Waits for the simulation thread to retire a defeated Ancient slot. */
+  private void awaitAncientRemoved(int levelId, int entityId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      int[] current = D2GS.headlessAncientEntities(levelId);
+      boolean present = false;
+      for (int id : current) {
+        if (id == entityId) {
+          present = true;
+          break;
+        }
+      }
+      if (!present) return;
+      Thread.sleep(20L);
+    }
+    throw new IOException("authoritative Ancient removal timed out " + entityId);
+  }
+
+  private void awaitAncientAliveCount(int levelId, int expected, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      if (D2GS.headlessAncientAliveCount(levelId) == expected) return;
+      Thread.sleep(20L);
+    }
+    throw new IOException("living Ancient count did not reach " + expected);
+  }
+
+  private void awaitEntityInactive(int entityId, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      if (!D2GS.headlessEntityActive(entityId)) return;
+      Thread.sleep(20L);
+    }
+    throw new IOException("authoritative entity removal timed out " + entityId);
   }
 
   private Snapshot awaitGroundItem(DataInputStream input, long deadline) throws Exception {

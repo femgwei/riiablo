@@ -4339,3 +4339,21 @@ Baal/Tyrael/奖励/重连链。
 
 下一项：修正 headless Tyrael3 EntitySync 观察器，完成 A5Q6 奖励/重连全链路，
 随后进入 A5Q5 Ancient Summit 门、动态对象与碰撞核对。
+
+### 2026-09-13 A5Q5 Ancient Summit 中途/完成后断线重连（本轮完成）
+
+- [x] `headlessA5AncientDual` 扩展为双客户端断线重连场景：三座雕像激活并生成
+  三名远古后击杀一名，断开第二客户端，再重连并确认剩余两名远古和未完成任务
+  状态保持；随后共同击杀剩余远古并校验双方奖励标志与 Summit 两扇门开启。
+- [x] 完成后再次断线重连，确认任务 `REWARD_GRANTED`、门状态和 Chamber/Summit
+  对象快照恢复。测试按权威生命值统计，避免 Artemis 延迟删除尸体导致误判。
+- [x] 新增 `D2GS.headlessEntityActive`、`headlessAncientAliveCount` 测试辅助，
+  断线后的实体删除和中途存活数量不再依赖网络观察器的删除包时序。
+- [x] 隐藏窗口实跑通过：`a5q5_ancient_mid_reconnect_pass aliveBefore=3
+  aliveAfter=2 reward=true`、`a5q5_ancient_post_reconnect_pass reward=true doors=true`。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：继续核对 A5Q5 Summit 动态门/雕像的实际碰撞与进入边界，再完成 A5Q6
+Tyrael3 奖励/重连观察器修正；随后回到 A2--A5 剩余地图入口和任务分支验收。

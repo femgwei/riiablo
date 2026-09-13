@@ -2884,6 +2884,73 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Returns whether an entity is still active in the authoritative ECS. */
+  static boolean headlessEntityActive(int entityId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean active =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        active.set(server.world.getEntityManager().isActive(entityId));
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && active.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /** Counts living Ancient guardians, ignoring deferred-deletion corpses. */
+  static int headlessAncientAliveCount(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return 0;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger alive = new java.util.concurrent.atomic.AtomicInteger();
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.SuperUnique.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.SuperUnique> uniques =
+            server.world.getMapper(com.riiablo.engine.server.component.SuperUnique.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.AttributesWrapper> attrs =
+            server.world.getMapper(com.riiablo.engine.server.component.AttributesWrapper.class);
+        int[] ids = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.SuperUnique unique = uniques.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (unique == null || wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+              || wrapper.zone.level.Id != levelId) continue;
+          int ordinal = unique.id - com.riiablo.engine.server.quest.Act5AncientsQuest.SUPERUNIQUE_ANCIENT_1;
+          if (ordinal < 0 || ordinal >= 3) continue;
+          com.riiablo.engine.server.component.AttributesWrapper value = attrs.get(entity);
+          if (value != null && value.attrs != null
+              && value.attrs.get(com.riiablo.attributes.Stat.hitpoints).asFixed() > 0f) {
+            alive.incrementAndGet();
+          }
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? alive.get() : 0;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return 0;
+    }
+  }
+
   /** Adds one deterministic quest item to a player's authoritative inventory. */
   static boolean headlessAddQuestItem(int playerId, String code) {
     D2GS server = activeHeadlessInstance;
