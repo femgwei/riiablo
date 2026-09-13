@@ -4607,3 +4607,16 @@ A4Q2 Diablo 完成后的多人领取/重连快照，再进入 A3/A5 仍缺少原
   菜单不再误走 Act1 任务控制器。
 - [ ] A4Q1 仍需补充离屏双客户端完整回归（Izual 击杀→双方 pending→各自 Tyrael
   领取→重连），下一轮继续完成。
+
+### 2026-09-14 A4Q1 Izual/Tyrael 双客户端回归（本轮完成）
+
+- [x] 新增 `headlessA4IzualDual` 离屏测试：两名玩家组队进入 Plains of Despair，
+  击杀原生 Izual 后均获得 `REWARD_PENDING`。
+- [x] 双方进入 Pandemonium Fortress，与同一个 Tyrael2 实体分别发送 `676`，各自
+  获得 `REWARD_GRANTED`；奖励请求受网络边界状态校验保护。
+- [x] 回归日志：
+  `a4q1_izual_dual_pass izual=330 tyrael=309 pending=true,true claim=granted,granted clients=true,true`。
+- [x] `:server:d2gs:headlessA4IzualDual` 编译并运行通过。
+
+下一项：继续 A4Q2 Diablo 完成后的多人奖励/Act V 传送状态重连快照，再处理 A3/A5
+尚未覆盖的原生 NPC 任务对话分支。

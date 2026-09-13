@@ -303,6 +303,18 @@ tasks.register('headlessA4SealDual', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessA4IzualDual', JavaExec) {
+  group = 'verification'
+  description = 'Runs A4Q1 Izual/Tyrael reward flow with two windowless clients.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-a4-izual-dual', '--test-timeout', '60'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessA4HellforgeDual', JavaExec) {
   group = 'verification'
   description = 'Validates Act IV Hellforge interaction, hammer hits, rune drops and idempotency with two windowless clients.'

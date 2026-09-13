@@ -187,6 +187,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA4SealDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA4IzualDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireA4HellforgeDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireQuestWarpDual
@@ -246,6 +248,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA4SealDual) {
       runA4SealDual(d2s, character);
+      return;
+    }
+    if (config.requireA4IzualDual) {
+      runA4IzualDual(d2s, character);
       return;
     }
     if (config.requireA4HellforgeDual) {
@@ -2496,6 +2502,78 @@ public final class D2GSHeadlessClient {
       }
       log("a4q2_seal_dual_pass", "seals=5 bosses=3 diablo=" + diablo
           + " clients=true,true");
+    }
+  }
+
+  /** Two-client A4Q1 Izual death, Tyrael reward and reconnect regression. */
+  private void runA4IzualDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A4IzualPeer", 0x4134495A, 80);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    final int plains = LEVEL_PLAINSOFDESPAIR;
+    final int fortress = LEVEL_PANDEMONIUMFORTRESS;
+    final int record = com.riiablo.engine.server.quest.Act4IzualQuest.RECORD;
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)
+          || !D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT4, record, (short) 0)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT4, record, (short) 0)
+          || !D2GS.headlessEnterLevel(a.playerId, plains)
+          || !D2GS.headlessEnterLevel(b.playerId, plains)) {
+        throw new IOException("A4Q1 Plains of Despair staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, plains, "A4Q1 Izual");
+      int izual = D2GS.headlessFindMonsterInLevel(plains,
+          com.riiablo.engine.server.monster.MonsterType.IZUAL);
+      if (izual == Engine.INVALID_ENTITY || !D2GS.headlessKillMonster(a.playerId, izual)) {
+        throw new IOException("A4Q1 Izual kill staging failed");
+      }
+      QuestResult pendingA = requestSnapshot(a, inA, outA, 910L);
+      QuestResult pendingB = requestSnapshot(b, inB, outB, 911L);
+      if (!hasQuestFlagAt(pendingA, Riiablo.ACT4, record, NativeQuestRecord.REWARD_PENDING)
+          || !hasQuestFlagAt(pendingB, Riiablo.ACT4, record, NativeQuestRecord.REWARD_PENDING)) {
+        throw new IOException("A4Q1 party pending state not synchronized");
+      }
+
+      if (!D2GS.headlessEnterLevel(a.playerId, fortress)
+          || !D2GS.headlessEnterLevel(b.playerId, fortress)) {
+        throw new IOException("A4Q1 fortress staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, fortress, "A4Q1 Tyrael");
+      int tyrael = D2GS.headlessPrepareQuestNpc(a.playerId,
+          com.riiablo.engine.server.monster.MonsterType.TYRAEL2);
+      if (tyrael == Engine.INVALID_ENTITY) throw new IOException("A4Q1 Tyrael unavailable");
+      send(outA, questRequestPacket(912L, QuestOperation.NPC_MESSAGE, tyrael,
+          com.riiablo.engine.server.quest.Act4IzualQuest.MESSAGE_TYRAEL_REWARD));
+      QuestResult grantedA = a.awaitQuestResult(inA, 912L, deadline());
+      if (grantedA == null || !grantedA.success()
+          || !hasQuestFlagAt(grantedA, Riiablo.ACT4, record, NativeQuestRecord.REWARD_GRANTED)) {
+        throw new IOException("A4Q1 Tyrael reward rejected: "
+            + (grantedA == null ? "NO_RESULT" : grantedA.reason()));
+      }
+      QuestResult stillPendingB = requestSnapshot(b, inB, outB, 913L);
+      if (!hasQuestFlagAt(stillPendingB, Riiablo.ACT4, record, NativeQuestRecord.REWARD_PENDING)) {
+        throw new IOException("A4Q1 peer state changed before reward claim");
+      }
+      int peerTyrael = D2GS.headlessPrepareQuestNpc(b.playerId,
+          com.riiablo.engine.server.monster.MonsterType.TYRAEL2);
+      if (peerTyrael != tyrael) throw new IOException("A4Q1 Tyrael NPC was not shared");
+      send(outB, questRequestPacket(914L, QuestOperation.NPC_MESSAGE, tyrael,
+          com.riiablo.engine.server.quest.Act4IzualQuest.MESSAGE_TYRAEL_REWARD));
+      QuestResult grantedB = b.awaitQuestResult(inB, 914L, deadline());
+      if (grantedB == null || !grantedB.success()
+          || !hasQuestFlagAt(grantedB, Riiablo.ACT4, record, NativeQuestRecord.REWARD_GRANTED)) {
+        throw new IOException("A4Q1 peer Tyrael reward rejected: "
+            + (grantedB == null ? "NO_RESULT" : grantedB.reason()));
+      }
+      log("a4q1_izual_dual_pass", "izual=" + izual + " tyrael=" + tyrael
+          + " pending=true,true claim=granted,granted clients=true,true");
     }
   }
 
@@ -7533,6 +7611,7 @@ public final class D2GSHeadlessClient {
     boolean requireBaalWaveDual;
     boolean requireA5AncientDual;
     boolean requireA4SealDual;
+    boolean requireA4IzualDual;
     boolean requireA4HellforgeDual;
     boolean requireQuestWarpDual;
     boolean requireQuestObjectDual;
@@ -7591,6 +7670,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-a5-ancient-dual".equals(arg)) config.requireA5AncientDual = true;
         else if ("--require-a4-seal-dual".equals(arg)) config.requireA4SealDual = true;
+        else if ("--require-a4-izual-dual".equals(arg)) config.requireA4IzualDual = true;
         else if ("--require-a4-hellforge-dual".equals(arg)) config.requireA4HellforgeDual = true;
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
@@ -7652,6 +7732,7 @@ public final class D2GSHeadlessClient {
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
+          && !config.requireA4IzualDual
           && !config.requireA4HellforgeDual
           && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
@@ -7670,6 +7751,7 @@ public final class D2GSHeadlessClient {
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
+          && !config.requireA4IzualDual
           && !config.requireA4HellforgeDual
           && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
