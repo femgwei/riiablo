@@ -49,6 +49,7 @@ import com.riiablo.engine.server.party.PartyManager;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import com.riiablo.map.Map;
+import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter;
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -187,6 +188,7 @@ public class Act5QuestSystem extends BaseSystem {
       if (!hasNihlathakPrerequisite(player.data)) return;
       updateAncientsRecord(player.data, Act5AncientsQuest::enterArea,
           "entered-arreat-summit");
+      ensureAncientQuestObjects(event.zone);
       rebuildAncientsState(event.zone, event.entityId);
     }
     if (isBaalArea(event.zone.level.Id)) {
@@ -685,9 +687,68 @@ public class Act5QuestSystem extends BaseSystem {
       } else if (level == Act5PrisonQuest.FROZEN_RIVER) {
         restoreFrozenAnyaState(wrapper.zone);
       } else if (isAncientSummit(level)) {
+        ensureAncientQuestObjects(wrapper.zone);
         rebuildAncientsState(wrapper.zone, playerId);
       }
     }
+  }
+
+  /**
+   * Restores the native A5Q5 object set when a reduced DS1 export omits its
+   * preset units. Existing DS1 objects always win; only missing class ids are
+   * materialized, and their map-owned snapshots survive RoomEx recreation.
+   */
+  private void ensureAncientQuestObjects(Map.Zone zone) {
+    if (zone == null || zone.level == null || !isAncientSummit(zone.level.Id)
+        || factory == null || mObject == null || mMapWrapper == null
+        || mNativeObjectState == null || map == null) return;
+    Map.RoomEx room = zone.getRoomsEx().size == 0 ? null : zone.getRoomsEx().get(0);
+    float centerX = room == null ? zone.x() + zone.width() / 2f : room.x + room.width / 2f;
+    float centerY = room == null ? zone.y() + zone.height() / 2f : room.y + room.height / 2f;
+    int[] classes = {
+        Act5AncientsQuest.FIRST_ANCIENT_STATUE,
+        Act5AncientsQuest.FIRST_ANCIENT_STATUE + 1,
+        Act5AncientsQuest.LAST_ANCIENT_STATUE,
+        NativeQuestObjectResolver.ANCIENTS_ALTAR,
+        NativeQuestObjectResolver.ANCIENT_DOOR,
+        NativeQuestObjectResolver.SUMMIT_DOOR};
+    float[] offsetX = {-3f, 0f, 3f, 0f, -5f, 5f};
+    float[] offsetY = {0f, 0f, 0f, 3f, 6f, 6f};
+    for (int i = 0; i < classes.length; i++) {
+      int classId = classes[i];
+      if (hasAncientQuestObject(zone, classId)) continue;
+      float x = centerX + offsetX[i];
+      float y = centerY + offsetY[i];
+      int entity = factory.createStaticObjectByClassId(classId, x, y);
+      if (entity < 0) {
+        log.error("[A5Q5] Missing quest object could not be materialized: level={} class={}",
+            zone.level.Id, classId);
+        continue;
+      }
+      mMapWrapper.create(entity).set(map, zone);
+      NativeObjectState state = mNativeObjectState.create(entity);
+      state.set(classId, classId, classId, Engine.Object.MODE_NU,
+          false, false, NativePresetObjectResolver.Kind.ORDINARY);
+      state.source = new Map.NativeObject(classId, Engine.Object.MODE_NU,
+          (int) (x - zone.x()), (int) (y - zone.y()), false, false);
+      log.info("[A5Q5] Materialized missing native quest object: level={} class={} entity={}",
+          zone.level.Id, classId, entity);
+    }
+  }
+
+  private boolean hasAncientQuestObject(Map.Zone zone, int classId) {
+    if (zone == null || objectsByZone == null) return false;
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (object != null && object.base != null && object.base.Id == classId
+          && wrapper != null && wrapper.zone == zone) return true;
+    }
+    return false;
   }
 
   /** Reconciles A5Q5 statues and doors from persistent native object snapshots. */

@@ -28,12 +28,12 @@
 - 离屏双客户端测试修正 A5 扁平 QuestResult 索引（Act V 记录索引 46），覆盖五波、
   Baal/Tyrael 同步、奖励重连、终结门户和门户重建。
 
-当前下一项：A5Q5 Ancient Summit 的死亡重置和多人重连闭环。已完成三名
-`MonStats` 全量预检、三座雕像激活、三名 SuperUnique 生成/击杀的离屏测试接线；
-缺行时不再生成不完整遭遇。本轮已将玩家死亡→遭遇清理→复活重进→重新激活的
-双客户端断言接入 `headlessQuestObjectDual`，但完整场景当前仍被既有 A5Q2
-Frigid Highlands 精简 DS1 缺少牢笼对象（激活数为 0）阻断，尚未将该项标记为通过。
-下一步先修复/隔离该测试夹具，再验证玩家死亡重置、奖励经验及重连后的门状态，
+当前下一项：A5Q5 Ancient Summit 的断线重连闭环。本轮已新增独立
+`headlessA5AncientDual`，不再被 A5Q2 精简 DS1 夹具阻断；对于缺失 A5Q5 预设的
+Summit，服务端会保留已有 DS1 对象并只幂等补齐三座雕像、祭坛、Ancients Door 和
+Summit Door。双客户端已实际通过三名 SuperUnique 生成、两名玩家全灭后的遭遇清理、
+雕像复位、复活重进、重新激活、三名全部击杀、双方奖励和两扇门开启验证。
+下一步补齐战斗中与完成后的断线重连，确认实体、QuestResult、经验幂等和门碰撞恢复，
 随后继续 A2–A5 地图/任务剩余分支。
 
 ## 2026-09-13 Act V 主链 Warp（本轮完成）

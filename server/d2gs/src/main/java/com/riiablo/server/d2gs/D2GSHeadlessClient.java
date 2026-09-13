@@ -182,6 +182,8 @@ public final class D2GSHeadlessClient {
     if (config.home != null) waitForGameFiles();
     byte[] d2s = config.requireBaalWaveDual
         ? createGeneratedBaalSave("BaalAma", 0x42414141)
+        : config.requireA5AncientDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireQuestWarpDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA5QuestWarpDual
@@ -231,6 +233,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireBaalWaveDual) {
       runBaalWaveDual(d2s, character);
+      return;
+    }
+    if (config.requireA5AncientDual) {
+      runA5AncientDual(d2s, character);
       return;
     }
     if (config.requireQuestWarpDual) {
@@ -2356,6 +2362,128 @@ public final class D2GSHeadlessClient {
           + java.util.Arrays.toString(ancientSnapshot) + " clients=true,true");
       log("quest_object_dual_pass", "a5q2=true a5q3=true a5q5=true rebuild=true");
     }
+  }
+
+  /** Focused two-client A5Q5 encounter gate, independent of sparse A5Q2/A5Q3 DS1 fixtures. */
+  private void runA5AncientDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("AncientPeer", 0x41355135, 80);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      short nihlathakComplete = com.riiablo.engine.server.quest.Act5NihlathakQuest.claimReward(
+          com.riiablo.engine.server.quest.Act5NihlathakQuest.complete((short) 0));
+      int summit = com.riiablo.engine.server.quest.Act5AncientsQuest.ARREAT_SUMMIT;
+      if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5,
+              com.riiablo.engine.server.quest.Act5NihlathakQuest.RECORD, nihlathakComplete)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
+              com.riiablo.engine.server.quest.Act5NihlathakQuest.RECORD, nihlathakComplete)
+          || !D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5,
+              com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, (short) 0)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
+              com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, (short) 0)
+          || !D2GS.headlessEnterLevel(a.playerId, summit)
+          || !D2GS.headlessEnterLevel(b.playerId, summit)) {
+        throw new IOException("A5Q5 focused Summit staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 focused entry");
+      activateAndRequireAncients(a.playerId, b.playerId, summit);
+
+      if (!D2GS.headlessKillPlayer(a.playerId)
+          || !D2GS.headlessKillPlayer(b.playerId)) {
+        throw new IOException("A5Q5 focused player death staging failed");
+      }
+      int[] resetAncients = D2GS.headlessAncientEntities(summit);
+      int[] resetObjects = D2GS.headlessQuestObjectSnapshot(summit);
+      if (resetAncients.length != 3
+          || resetAncients[0] != Engine.INVALID_ENTITY
+          || resetAncients[1] != Engine.INVALID_ENTITY
+          || resetAncients[2] != Engine.INVALID_ENTITY
+          || resetObjects.length < 6 || resetObjects[5] != 0) {
+        throw new IOException("A5Q5 focused death reset failed: ancients="
+            + java.util.Arrays.toString(resetAncients) + " objects="
+            + java.util.Arrays.toString(resetObjects));
+      }
+
+      awaitRespawnable(a.playerId);
+      awaitRespawnable(b.playerId);
+      send(outA, playerLifecyclePacket(551L, PlayerLifecycleOperation.RESPAWN));
+      PlayerLifecycleResult respawnA = awaitPlayerLifecycleResult(inA, 551L, deadline());
+      send(outB, playerLifecyclePacket(552L, PlayerLifecycleOperation.RESPAWN));
+      PlayerLifecycleResult respawnB = awaitPlayerLifecycleResult(inB, 552L, deadline());
+      if (!respawnA.success() || !respawnB.success()
+          || !D2GS.headlessEnterLevel(a.playerId, summit)
+          || !D2GS.headlessEnterLevel(b.playerId, summit)) {
+        throw new IOException("A5Q5 focused respawn/re-entry failed");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 focused reset re-entry");
+      int[] ancientEntities = activateAndRequireAncients(a.playerId, b.playerId, summit);
+      for (int ancient : ancientEntities) {
+        if (ancient == Engine.INVALID_ENTITY
+            || !D2GS.headlessKillMonster(a.playerId, ancient)) {
+          throw new IOException("A5Q5 focused Ancient kill failed: "
+              + java.util.Arrays.toString(ancientEntities));
+        }
+      }
+
+      if (!D2GS.headlessRebuildQuestObjects(a.playerId)
+          || !D2GS.headlessRebuildQuestObjects(b.playerId)) {
+        throw new IOException("A5Q5 focused door rebuild unavailable");
+      }
+      int[] objects = D2GS.headlessQuestObjectSnapshot(summit);
+      QuestResult snapshotA = requestSnapshot(a, inA, outA, 553L);
+      QuestResult snapshotB = requestSnapshot(b, inB, outB, 554L);
+      int record = com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD;
+      if (objects.length < 10 || (objects[6] + objects[8]) < 1
+          || (objects[7] + objects[9]) < 1
+          || !hasQuestFlagAt(snapshotA, Riiablo.ACT5, record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+          || !hasQuestFlagAt(snapshotB, Riiablo.ACT5, record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
+        throw new IOException("A5Q5 focused reward/door snapshot failed: "
+            + java.util.Arrays.toString(objects));
+      }
+      log("a5q5_ancient_dual_pass", "reset=true respawn=true reward=true objects="
+          + java.util.Arrays.toString(objects));
+    }
+  }
+
+  private int[] activateAndRequireAncients(int playerA, int playerB, int summit)
+      throws IOException {
+    int activated = 0;
+    for (int statueClass = com.riiablo.engine.server.quest.Act5AncientsQuest.FIRST_ANCIENT_STATUE;
+         statueClass <= com.riiablo.engine.server.quest.Act5AncientsQuest.LAST_ANCIENT_STATUE;
+         statueClass++) {
+      activated += D2GS.headlessActivateQuestObjects(summit, statueClass);
+    }
+    if (activated < 3 || !D2GS.headlessRebuildQuestObjects(playerA)
+        || !D2GS.headlessRebuildQuestObjects(playerB)) {
+      throw new IOException("A5Q5 focused statue activation failed: " + activated);
+    }
+    int[] ancients = D2GS.headlessAncientEntities(summit);
+    if (ancients.length != 3 || ancients[0] == Engine.INVALID_ENTITY
+        || ancients[1] == Engine.INVALID_ENTITY || ancients[2] == Engine.INVALID_ENTITY) {
+      throw new IOException("A5Q5 focused encounter incomplete: "
+          + java.util.Arrays.toString(ancients));
+    }
+    return ancients;
+  }
+
+  private void awaitRespawnable(int playerId) throws Exception {
+    long timeout = deadline();
+    while (System.currentTimeMillis() < timeout) {
+      float[] state = D2GS.headlessPlayerLifecycleState(playerId);
+      if (state.length >= 2 && state[0] == 1f && state[1] == 1f) return;
+      Thread.sleep(10L);
+    }
+    throw new IOException("player did not become respawnable: " + playerId);
   }
 
   /**
@@ -6706,6 +6834,10 @@ public final class D2GSHeadlessClient {
   }
 
   private static byte[] createGeneratedObserverSave(String name, int mapSeed) {
+    return createGeneratedObserverSave(name, mapSeed, 1);
+  }
+
+  private static byte[] createGeneratedObserverSave(String name, int mapSeed, int level) {
     CharData character = CharData.obtain().clear()
         // Baal/Tyrael are Expansion-only in native D2; use an expansion save
         // so the direct Chamber reward gate matches the real A5Q6 path.
@@ -6724,7 +6856,7 @@ public final class D2GSHeadlessClient {
     base.put(Stat.maxmana, 1_000);
     base.put(Stat.stamina, 1_000);
     base.put(Stat.maxstamina, 1_000);
-    base.put(Stat.level, 1);
+    base.put(Stat.level, Math.max(1, level));
     base.put(Stat.experience, 0);
     base.put(Stat.gold, 0);
     base.put(Stat.goldbank, 0);
@@ -6932,6 +7064,7 @@ public final class D2GSHeadlessClient {
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
     boolean requireBaalWaveDual;
+    boolean requireA5AncientDual;
     boolean requireQuestWarpDual;
     boolean requireQuestObjectDual;
     boolean requireA3ObjectInteractionDual;
@@ -6987,6 +7120,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
+        else if ("--require-a5-ancient-dual".equals(arg)) config.requireA5AncientDual = true;
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
         else if ("--require-a3-object-interaction-dual".equals(arg)) config.requireA3ObjectInteractionDual = true;
@@ -7045,7 +7179,8 @@ public final class D2GSHeadlessClient {
             + "Fissure(234), Volcano(244), Armageddon(249), Hurricane(250), "
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
       }
-      if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
+      if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
+          && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
           && !config.requireA2ObjectInteractionDual
           && !config.requireA2Q6Reconnect
@@ -7060,7 +7195,8 @@ public final class D2GSHeadlessClient {
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
-      if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireQuestWarpDual
+      if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
+          && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
           && !config.requireA2ObjectInteractionDual
           && !config.requireA2Q6Reconnect
@@ -7107,6 +7243,7 @@ public final class D2GSHeadlessClient {
           + " [--require-movement-intent]"
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
+          + " [--require-a5-ancient-dual]"
           + " [--require-quest-warp-dual] [--require-quest-object-dual]"
           + " [--require-a3-object-interaction-dual]"
           + " [--require-a2-object-interaction-dual]"
