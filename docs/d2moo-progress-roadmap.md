@@ -4267,3 +4267,16 @@ Worldstone Chamber 中 Baal、Tyrael、奖励和重连均通过；随后继续 A
 
 下一项：重新运行完整 A5Q6 双客户端测试；若 Chamber 仍失败，依据新增的
 `Baal spawn attempt/result` 日志继续核对实体快照与奖励流程。
+
+### 2026-09-13 修复离屏测试核心网络类增量构建（本轮完成）
+
+- [x] 诊断发现完整 A5Q6 回归被 `PartyMemberSnapshot` 缺失阻断：FlatBuffers 源码
+  已生成，但 D2GS JavaExec 复用了旧的 `core` JAR。
+- [x] 为 `server/d2gs` 的所有 `JavaExec` 任务增加 `dependsOn ':core:jar'`，确保
+  每次离屏测试都先打包最新生成网络类，避免增量构建造成运行时
+  `NoClassDefFoundError`。
+- [x] 强制重建 `core-0.0.5-SNAPSHOT.jar` 并确认其中包含
+  `com/riiablo/net/packet/d2gs/PartyMemberSnapshot.class`。
+
+下一项：在该构建依赖修复后重新跑 `headlessBaalWaveDual`，继续验证 Chamber
+Baal/Tyrael/奖励/重连链。
