@@ -2444,9 +2444,16 @@ public final class D2GSHeadlessClient {
           com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
       int[] closedApproach = D2GS.headlessQuestObjectApproachSnapshot(summit,
           com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
+      int[] closedSummitApproach = D2GS.headlessQuestObjectApproachSnapshot(summit,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
       if (closedApproach[0] != Engine.INVALID_ENTITY && approachCount(closedApproach) == 0) {
         throw new IOException("A5Q5 closed Ancients Door has no free approach cell: "
             + java.util.Arrays.toString(closedApproach));
+      }
+      if (closedSummitApproach[0] != Engine.INVALID_ENTITY
+          && approachCount(closedSummitApproach) == 0) {
+        throw new IOException("A5Q5 closed Summit Door has no free approach cell: "
+            + java.util.Arrays.toString(closedSummitApproach));
       }
       log("a5q5_statue_approach_pass", "statues=3 freeSamples=" + statueApproachSamples
           + " clients=true,true");
@@ -2510,6 +2517,8 @@ public final class D2GSHeadlessClient {
             com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
         int[] openApproach = D2GS.headlessQuestObjectApproachSnapshot(summit,
             com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
+        int[] openSummitApproach = D2GS.headlessQuestObjectApproachSnapshot(summit,
+            com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
         QuestResult rewardA = requestSnapshot(a, inA, outA, 560L);
         QuestResult rewardB = requestSnapshot(midReconnect, reconnectInput,
             reconnectOutput, 561L);
@@ -2519,6 +2528,8 @@ public final class D2GSHeadlessClient {
             || openSummitDoor[0] != Engine.INVALID_ENTITY && openSummitDoor[3] > 0
                 && openSummitDoor[4] > 0 && openSummitDoor[5] != 0
             || openApproach[0] != Engine.INVALID_ENTITY && approachCount(openApproach) == 0
+            || openSummitApproach[0] != Engine.INVALID_ENTITY
+                && approachCount(openSummitApproach) == 0
             || !hasQuestFlagAt(rewardA, Riiablo.ACT5, record,
                 com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
             || !hasQuestFlagAt(rewardB, Riiablo.ACT5, record,
@@ -2567,6 +2578,13 @@ public final class D2GSHeadlessClient {
           if (restoredApproach[0] != Engine.INVALID_ENTITY && approachCount(restoredApproach) == 0) {
             throw new IOException("A5Q5 restored door has no free approach cell: "
                 + java.util.Arrays.toString(restoredApproach));
+          }
+          int[] restoredSummitApproach = D2GS.headlessQuestObjectApproachSnapshot(summit,
+              com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
+          if (restoredSummitApproach[0] != Engine.INVALID_ENTITY
+              && approachCount(restoredSummitApproach) == 0) {
+            throw new IOException("A5Q5 restored Summit Door has no free approach cell: "
+                + java.util.Arrays.toString(restoredSummitApproach));
           }
           log("a5q5_ancient_post_reconnect_pass", "reward=true doors=true");
         }

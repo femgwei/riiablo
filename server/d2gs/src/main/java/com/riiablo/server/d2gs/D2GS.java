@@ -2433,14 +2433,15 @@ public class D2GS extends ApplicationAdapter {
               || position == null || wrapper == null || wrapper.zone != zone) continue;
           int width = Math.max(0, object.base.SizeX);
           int height = Math.max(0, object.base.SizeY);
-          if (width == 0 || height == 0) {
-            result.set(new int[] {entity, 0, 0, 0, 0});
-            return;
-          }
           int x = Math.round(position.position.x);
           int y = Math.round(position.position.y);
-          int dx = Math.max(2, width / 2 + 2);
-          int dy = Math.max(2, height / 2 + 2);
+          // Summit Door (class 564) is a visual marker with SizeX/SizeY=0
+          // in the 1.10f Objects table. Still sample a one-tile perimeter
+          // around its authoritative position; this verifies the static DT1
+          // entrance is not completely sealed even when no dynamic footprint
+          // can be attached to the object itself.
+          int dx = width == 0 ? 2 : Math.max(2, width / 2 + 2);
+          int dy = height == 0 ? 2 : Math.max(2, height / 2 + 2);
           com.badlogic.gdx.math.Vector2 candidate = new com.badlogic.gdx.math.Vector2();
           com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
           int[] samples = new int[5];

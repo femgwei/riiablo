@@ -4436,3 +4436,20 @@ Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰�
 
 下一项：核对 A5Q5 Summit Door 两侧入口（当前 Objects.txt 为 0×0）与 Warp/静态
 碰撞连接；随后继续 A2--A5 尚未覆盖的任务对象和地图碰撞分支。
+
+### 2026-09-13 A5Q5 Summit Door 两侧入口采样（本轮完成）
+
+- [x] 对 `Objects.txt` 中 `SUMMIT_DOOR (class 564)` 的 0×0 尺寸做兼容处理：
+  以对象权威坐标向四侧偏移 2 个子格，调用 `findFreeCoordinates` 检查静态 DT1
+  碰撞，避免把“无动态 footprint”误报成入口封死。
+- [x] A5Q5 关闭、开启以及完成后重连均执行 Ancients Door 和 Summit Door 两侧
+  接近格采样；Ancients Door 动态引用在开启后清零，Summit Door 维持 0×0
+  视觉对象语义，双方客户端对象快照一致。
+- [x] `:server:d2gs:compileJava` 与 `headlessA5AncientDual` 通过（含
+  `a5q5_statue_approach_pass`、中途/终态重连回归）。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：继续 A2--A5 尚未覆盖的任务对象与地图碰撞分支，优先补齐仍缺少双方
+客户端可见性/接近格验证的地下入口、房屋和 Warp 连接。
