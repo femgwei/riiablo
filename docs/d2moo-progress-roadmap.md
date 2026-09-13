@@ -4280,3 +4280,14 @@ Worldstone Chamber 中 Baal、Tyrael、奖励和重连均通过；随后继续 A
 
 下一项：在该构建依赖修复后重新跑 `headlessBaalWaveDual`，继续验证 Chamber
 Baal/Tyrael/奖励/重连链。
+
+### 2026-09-13 离屏 Chamber 终态触发条件放宽（本轮完成）
+
+- [x] 离屏进入 Chamber 后不再依赖 quest state 的瞬时 `finished()` 读取结果，
+  直接调用幂等 `spawnBaalAfterWaves()`；这样即使状态快照与 ZoneChange 不在同一
+  tick，也能完成 Baal 实体补生成。
+- [x] 生成方法仍以 Chamber 中的权威实体扫描为准，已有 Baal 时不会重复创建。
+- [x] `:server:d2gs:compileJava` 与相关 A5Baal 单元测试通过。
+
+下一项：重新运行单实例 `headlessBaalWaveDual`，确认终态 Baal/Tyrael/奖励/重连
+全部通过后进入 A5Q5 门与对象碰撞核对。
