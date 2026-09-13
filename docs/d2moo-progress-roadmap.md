@@ -4236,3 +4236,23 @@ Warp 和碰撞状态恢复回归。
 
 下一项：修正 `awaitBaalWaveMembers` 的跨波次网络观察窗口（保留实体 ID 重用和
 基线去重），完成五波双客户端同步回归，再继续 A5Q5/A5Q6 真实任务状态核对。
+
+### 2026-09-13 A5Q6 跨波次快照去重与 Baal 重生保护（本轮完成）
+
+- [x] 双客户端观察器改用实体生命周期代数（删除后重新出现即新 incarnation），
+  不再只比较 Artemis entity id；同时要求服务端权威 `waveIndex` 与观察窗口一致，
+  防止旧波次快照或重用 ID 冒充新波次。
+- [x] 快照解析记录 `everActive/incarnation`，并在实体删除后允许同一 ID 的下一次
+  有效 MonsterP 重新计数；A/B 两个客户端仍必须看到相同实体集合、Monster class
+  与坐标。
+- [x] Baal 生成标记改为以 Worldstone Chamber 中的权威实体为准。房间/ECS 重建后
+  若只剩陈旧 `spawnedBaalLevels` 标记而实体已不存在，会清理标记并重新生成，
+  避免进入 Chamber 后 Baal 永久缺失。
+- [x] `ObjectCollisionUpdaterTest` 通过；离屏双客户端回归已通过五波实体同步与
+  波次门槛（日志 `baal_wave_dual_pass` wave=1..5、`baal_wave_gate_pass`）。
+  完整回归第二次运行曾受残留 D2GS 进程占用 6114 影响，已清理进程；Baal/奖励
+  末段需再次在空闲端口复跑确认。
+
+下一项：在无残留 D2GS 进程的环境重新跑完整 `headlessBaalWaveDual`，确认
+Worldstone Chamber 中 Baal、Tyrael、奖励和重连均通过；随后继续 A5Q5/A5Q6 任务
+状态、动态门/对象碰撞及 A2--A5 地图连接核对。

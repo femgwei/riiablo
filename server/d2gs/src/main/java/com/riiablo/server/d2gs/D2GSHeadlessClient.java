@@ -1742,8 +1742,8 @@ public final class D2GSHeadlessClient {
       // MonsterP's intentionally compact schema.
       a.consumeFor(inA, 350L);
       b.consumeFor(inB, 350L);
-      Set<Integer> baselineA = livingMonsterIds(a);
-      Set<Integer> baselineB = livingMonsterIds(b);
+      Map<Integer, Integer> baselineA = monsterIncarnations(a);
+      Map<Integer, Integer> baselineB = monsterIncarnations(b);
       int difficulty = Math.max(0, Math.min(2, config.difficulty));
       int[] expectedRange = com.riiablo.engine.server.quest.Act5BaalQuest.nativeGroupRange(
           com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[0],
@@ -1752,8 +1752,10 @@ public final class D2GSHeadlessClient {
       int expectedMembers = expectedMinions + 1;
       verifyNativeBaalDifficultyTable();
 
-      Set<Integer> waveA = awaitBaalWaveMembers(a, inA, baselineA, expectedMembers, deadline());
-      Set<Integer> waveB = awaitBaalWaveMembers(b, inB, baselineB, expectedMembers, deadline());
+      Set<Integer> waveA = awaitBaalWaveMembers(a, inA, baselineA, 0,
+          expectedMembers, deadline());
+      Set<Integer> waveB = awaitBaalWaveMembers(b, inB, baselineB, 0,
+          expectedMembers, deadline());
       if (!waveA.equals(waveB)) {
         throw new IOException("Baal wave entity visibility diverged: A=" + waveA + " B=" + waveB);
       }
@@ -1777,8 +1779,8 @@ public final class D2GSHeadlessClient {
           + " classesA=" + classes(a, waveA) + " classesB=" + classes(b, waveB)
           + " positionsEqual=true");
 
-      Set<Integer> previousA = new HashSet<>(livingMonsterIds(a));
-      Set<Integer> previousB = new HashSet<>(livingMonsterIds(b));
+      Map<Integer, Integer> previousA = monsterIncarnations(a);
+      Map<Integer, Integer> previousB = monsterIncarnations(b);
       for (int wave = 1; wave < com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_COUNT; wave++) {
         int cleared = D2GS.headlessClearBaalWave(wave - 1, a.playerId);
         int expectedCleared = com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[wave - 1]
@@ -1792,8 +1794,10 @@ public final class D2GSHeadlessClient {
                 com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[wave],
                 com.riiablo.engine.server.quest.Act5BaalQuest.WAVE_MINIONS[wave], difficulty)[0];
         int expectedNext = expectedMinionsNext + 1;
-        Set<Integer> nextA = awaitBaalWaveMembers(a, inA, previousA, expectedNext, deadline());
-        Set<Integer> nextB = awaitBaalWaveMembers(b, inB, previousB, expectedNext, deadline());
+        Set<Integer> nextA = awaitBaalWaveMembers(a, inA, previousA, wave,
+            expectedNext, deadline());
+        Set<Integer> nextB = awaitBaalWaveMembers(b, inB, previousB, wave,
+            expectedNext, deadline());
         if (!nextA.equals(nextB)) {
           throw new IOException("Baal wave entity visibility diverged: wave=" + (wave + 1)
               + " A=" + nextA + " B=" + nextB);
@@ -1819,8 +1823,8 @@ public final class D2GSHeadlessClient {
             + " members=" + expectedNext + " minions=" + expectedMinionsNext
             + " entities=" + nextA + " classesA=" + classes(a, nextA)
             + " classesB=" + classes(b, nextB) + " positionsEqual=true");
-        previousA = new HashSet<>(livingMonsterIds(a));
-        previousB = new HashSet<>(livingMonsterIds(b));
+        previousA = monsterIncarnations(a);
+        previousB = monsterIncarnations(b);
       }
 
       int finalCleared = D2GS.headlessClearBaalWave(
@@ -2045,19 +2049,53 @@ public final class D2GSHeadlessClient {
     return ids;
   }
 
+  /**
+   * Returns the lifecycle generation observed for every currently living
+   * monster. Artemis entity ids are recycled after a deletion, so an id-only
+   * baseline cannot distinguish a new Baal wave from the previous one. The
+   * generation increments on each authoritative delete→spawn transition.
+   */
+  private static Map<Integer, Integer> monsterIncarnations(D2GSHeadlessClient client) {
+    Map<Integer, Integer> generations = new HashMap<>();
+    for (Snapshot snapshot : client.monsters.values()) {
+      if (!snapshot.deleted && snapshot.hasPosition && snapshot.hasVitals
+          && snapshot.life > 0f && !snapshot.groundItem && snapshot.everActive) {
+        generations.put(snapshot.entityId, snapshot.incarnation);
+      }
+    }
+    return generations;
+  }
+
   private Set<Integer> awaitBaalWaveMembers(D2GSHeadlessClient client,
-      DataInputStream input, Set<Integer> baseline, int expected, long deadline) throws Exception {
+      DataInputStream input, Map<Integer, Integer> baseline, int expectedWave,
+      int expected, long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
-      Set<Integer> current = livingMonsterIds(client);
-      current.removeAll(baseline);
+      int[] authority = D2GS.headlessBaalWaveSnapshot();
+      Set<Integer> current = new HashSet<>();
+      if (authority.length >= 1 && authority[0] == expectedWave) {
+        for (Snapshot snapshot : client.monsters.values()) {
+          if (snapshot.deleted || !snapshot.hasPosition || !snapshot.hasVitals
+              || snapshot.life <= 0f || snapshot.groundItem || !snapshot.everActive) continue;
+          Integer previous = baseline.get(snapshot.entityId);
+          if (previous == null || snapshot.incarnation > previous) current.add(snapshot.entityId);
+        }
+      }
       if (current.size() >= expected) return current;
       consumeOne(input, client);
     }
-    Set<Integer> current = livingMonsterIds(client);
-    current.removeAll(baseline);
+    int[] authority = D2GS.headlessBaalWaveSnapshot();
+    Set<Integer> current = new HashSet<>();
+    for (Snapshot snapshot : client.monsters.values()) {
+      if (!snapshot.deleted && snapshot.hasPosition && snapshot.hasVitals
+          && snapshot.life > 0f && !snapshot.groundItem && snapshot.everActive) {
+        Integer previous = baseline.get(snapshot.entityId);
+        if (previous == null || snapshot.incarnation > previous) current.add(snapshot.entityId);
+      }
+    }
     throw new IOException("timed out waiting for Baal wave: expected=" + expected
         + " observed=" + current.size() + " ids=" + current
-        + " authority=" + java.util.Arrays.toString(D2GS.headlessBaalWaveSnapshot()));
+        + " expectedWave=" + expectedWave + " authority="
+        + java.util.Arrays.toString(authority));
   }
 
   private static Set<Integer> classes(D2GSHeadlessClient client, Set<Integer> ids) {
@@ -5472,15 +5510,37 @@ public final class D2GSHeadlessClient {
   private Snapshot awaitNamedMonster(DataInputStream input, String name, boolean allowDead,
                                      long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
+      // A chamber baseline may have delivered Baal before the level-bearing
+      // frame was consumed by the caller. Inspect the accumulated snapshot
+      // first so a quiet socket cannot hide an already observed entity.
+      for (Snapshot snapshot : monsters.values()) {
+        if (snapshot.deleted || !snapshot.hasPosition || !snapshot.hasVitals) continue;
+        if (!allowDead && snapshot.life <= 0f) continue;
+        if ("baalcrab".equalsIgnoreCase(name)
+            && com.riiablo.engine.server.quest.Act5BaalQuest.isBaalMonster(
+                snapshot.monsterClass, null)) return snapshot;
+        if (snapshot.monsterClass < 0 || Riiablo.files == null || Riiablo.files.monstats == null) continue;
+        com.riiablo.codec.excel.MonStats.Entry row = Riiablo.files.monstats.get(snapshot.monsterClass);
+        if (row != null && (name.equalsIgnoreCase(row.Id)
+            || ("baalcrab".equalsIgnoreCase(name)
+                && com.riiablo.engine.server.quest.Act5BaalQuest.isBaalMonster(
+                    snapshot.monsterClass, row.Id)))) return snapshot;
+      }
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
       if (packet == null) continue;
       consume(packet);
       for (Snapshot snapshot : monsters.values()) {
         if (snapshot.deleted || !snapshot.hasPosition || !snapshot.hasVitals) continue;
         if (!allowDead && snapshot.life <= 0f) continue;
+        if ("baalcrab".equalsIgnoreCase(name)
+            && com.riiablo.engine.server.quest.Act5BaalQuest.isBaalMonster(
+                snapshot.monsterClass, null)) return snapshot;
         if (snapshot.monsterClass < 0 || Riiablo.files == null || Riiablo.files.monstats == null) continue;
         com.riiablo.codec.excel.MonStats.Entry row = Riiablo.files.monstats.get(snapshot.monsterClass);
-        if (row != null && name.equalsIgnoreCase(row.Id)) return snapshot;
+        if (row != null && (name.equalsIgnoreCase(row.Id)
+            || ("baalcrab".equalsIgnoreCase(name)
+                && com.riiablo.engine.server.quest.Act5BaalQuest.isBaalMonster(
+                    snapshot.monsterClass, row.Id)))) return snapshot;
       }
     }
     throw new IOException("timed out waiting for monster " + name);
@@ -6107,6 +6167,8 @@ public final class D2GSHeadlessClient {
         snapshot.groundItem = false;
         return;
       }
+      if (snapshot.deleted || !snapshot.everActive) snapshot.incarnation++;
+      snapshot.everActive = true;
       snapshot.deleted = false;
       snapshot.groundItem = findComponent(sync, ComponentP.ItemP) >= 0;
       int itemIndex = findComponent(sync, ComponentP.ItemP);
@@ -6181,6 +6243,8 @@ public final class D2GSHeadlessClient {
       }
       return;
     }
+    if (snapshot.deleted || !snapshot.everActive) snapshot.incarnation++;
+    snapshot.everActive = true;
     snapshot.deleted = false;
     int index = findComponent(sync, ComponentP.MonsterP);
     if (index >= 0) {
@@ -6660,6 +6724,9 @@ public final class D2GSHeadlessClient {
     int groundPartyId = -1;
     boolean hasPosition;
     boolean hasVitals;
+    /** Number of authoritative spawn incarnations observed for this id. */
+    int incarnation;
+    boolean everActive;
     boolean sawActionMode;
     int lastMode = -1;
 

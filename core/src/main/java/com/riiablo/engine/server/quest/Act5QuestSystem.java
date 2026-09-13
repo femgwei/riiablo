@@ -144,6 +144,11 @@ public class Act5QuestSystem extends BaseSystem {
         spawnBaalAfterWaves();
       }
     }
+    // Reconcile the terminal state every tick as well. A room transition can
+    // rebuild the Chamber after the DONE transition and drop the one-shot
+    // spawn callback; the authoritative entity scan in spawnBaalAfterWaves()
+    // makes this retry idempotent and restores Baal on the next tick.
+    if (baalWaveState.finished()) spawnBaalAfterWaves();
     // Native quest objects can be created after ZoneChangeEvent (RoomEx
     // activation), so keep the record/object reconciliation in the fixed
     // simulation phase as well as the zone-change callback.
@@ -1362,18 +1367,34 @@ public class Act5QuestSystem extends BaseSystem {
 
   private void spawnBaalAfterWaves() {
     int levelId = Act5BaalQuest.WORLDSTONE_CHAMBER;
-    if (spawnedBaalLevels.contains(levelId) || factory == null || monstersByZone == null) return;
+    if (factory == null || monstersByZone == null) return;
     IntBag entities = monstersByZone.getEntities();
     int[] ids = entities.getData();
+    boolean existing = false;
     for (int i = 0; i < entities.size(); i++) {
       int id = ids[i];
       if (isBaal(id) && levelId(id) == levelId) {
-        spawnedBaalLevels.add(levelId);
-        return;
+        existing = true;
+        break;
       }
     }
+    if (existing) {
+      spawnedBaalLevels.add(levelId);
+      return;
+    }
+    // The transient marker can survive a room/ECS rebuild while the actual
+    // entity was removed (for example when a headless client enters the
+    // Chamber immediately after the final wave).  Reconcile the marker from
+    // authoritative entities instead of suppressing the respawn forever.
+    if (spawnedBaalLevels.contains(levelId)) {
+      spawnedBaalLevels.remove(levelId);
+      log.warn("[A5Q6] Baal spawn marker stale; clearing for authoritative respawn");
+    }
     MonStats.Entry stats = resolveBaalStats();
-    if (stats == null) return;
+    if (stats == null) {
+      log.error("[A5Q6] Baal stats unresolved; cannot spawn terminal boss");
+      return;
+    }
     // D2MOO opens the Worldstone Chamber portal after the fifth wave is
     // cleared, before Baal becomes attackable. Keep the object and warp
     // creation idempotent because the final DeathEvent may be delivered more
@@ -1401,6 +1422,9 @@ public class Act5QuestSystem extends BaseSystem {
       spawnedBaalLevels.add(levelId);
       log.info("[A5Q6] Baal spawned after waves: entity={} level={} position=({}, {})",
           entity, levelId, spawnX, spawnY);
+    } else {
+      log.error("[A5Q6] Baal entity creation failed: stats={} position=({}, {})",
+          stats.Id, spawnX, spawnY);
     }
   }
 
