@@ -466,6 +466,24 @@ public class Map implements Disposable {
       }
     }
 
+    // Act IV native progression links are injected after level generation,
+    // matching D2Common's runtime DRLG_SetWarpId behaviour.
+    if (act == 3) {
+      boolean useD2MOD = true;
+      if (Riiablo.cvars != null) {
+        com.riiablo.cvar.Cvar<Boolean> cvar = Riiablo.cvars.get("Client.Map.UseD2MODImplementation");
+        if (cvar != null) useD2MOD = Boolean.TRUE.equals(cvar.get());
+      }
+      if (useD2MOD) {
+        try {
+          Act4MapBuilderD2MOD.INSTANCE.configureAct4Warps(this);
+          Act4MapBuilderD2MOD.INSTANCE.linkNativeWarpSpecials(this);
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "Error during Act4 native warp post-generation processing", t);
+        }
+      }
+    }
+
     // Act V outdoor links are inserted by D2Common at runtime. Configure and
     // pair their exported/synthetic markers before MapManager creates Warp
     // entities, matching the Act II/III post-generation path.

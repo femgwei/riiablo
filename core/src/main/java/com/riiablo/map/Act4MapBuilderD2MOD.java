@@ -32,6 +32,10 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
   static final int LEVEL_CITYOFTHEDAMNED = D2LevelIds.LEVEL_CITYOFTHEDAMNED;
   static final int LEVEL_RIVEROFFLAME = D2LevelIds.LEVEL_RIVEROFFLAME;
   static final int LEVEL_CHAOSSANCTUM = D2LevelIds.LEVEL_CHAOSSANCTUM;
+  static final int[] ACT4_CHAIN = {
+      LEVEL_THEPANDEMONIUMFORTRESS, LEVEL_OUTERSTEPPES, LEVEL_PLAINSOFDESPAIR,
+      LEVEL_CITYOFTHEDAMNED, LEVEL_RIVEROFFLAME, LEVEL_CHAOSSANCTUM
+  };
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -245,6 +249,110 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
         }
       }
     }
+  }
+
+  /** Installs native first-empty-slot links for the Act IV progression. */
+  void configureAct4Warps(Map map) {
+    if (map == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    int configured = 0;
+    for (int i = 0; i + 1 < ACT4_CHAIN.length; i++) {
+      int sourceId = ACT4_CHAIN[i], destinationId = ACT4_CHAIN[i + 1];
+      Levels.Entry sourceLevel = Riiablo.files.Levels.get(sourceId);
+      Levels.Entry destinationLevel = Riiablo.files.Levels.get(destinationId);
+      Zone source = findZone(map, sourceId), destination = findZone(map, destinationId);
+      if (sourceLevel == null || destinationLevel == null || source == null || destination == null) continue;
+      int sourceSlot = findRuntimeWarpSlot(sourceLevel.Vis, sourceLevel.Warp, destinationId);
+      if (sourceSlot < 0) sourceSlot = firstFreeWarpSlot(source);
+      int destinationSlot = findRuntimeWarpSlot(destinationLevel.Vis, destinationLevel.Warp, sourceId);
+      if (destinationSlot < 0) destinationSlot = firstFreeWarpSlot(destination);
+      if (sourceSlot < 0 || destinationSlot < 0) {
+        Gdx.app.error(TAG, "Act4 warp slot unavailable: " + sourceId + "->" + destinationId);
+        continue;
+      }
+      map.addWarpDestinationOverride(sourceId, sourceSlot, destinationId);
+      map.addWarpDestinationOverride(destinationId, destinationSlot, sourceId);
+      ensureWarpMarker(source, sourceSlot);
+      ensureWarpMarker(destination, destinationSlot);
+      configured++;
+    }
+    Gdx.app.log(TAG, "Act4 native warp table configured: links=" + configured + "/" + (ACT4_CHAIN.length - 1));
+  }
+
+  /** Pairs special cells after Zone.generate and before MapManager creates entities. */
+  void linkNativeWarpSpecials(Map map) {
+    if (map == null) return;
+    int linked = 0;
+    for (Zone source : new com.badlogic.gdx.utils.Array.ArrayIterator<>(map.zones)) {
+      if (source == null || source.level == null || source.specials == null) continue;
+      for (com.badlogic.gdx.utils.IntMap.Entry<DS1.Cell> entry : source.specials.entries()) {
+        DS1.Cell cell = entry.value;
+        if (cell == null || !Map.ID.WARPS.contains(cell.id)) continue;
+        int destinationId = map.getWarpDestinationOverride(source.level.Id, cell.mainIndex);
+        if (destinationId <= 0 && source.level.Vis != null && cell.mainIndex < source.level.Vis.length) {
+          destinationId = source.level.Vis[cell.mainIndex];
+        }
+        Zone destination = findZone(map, destinationId);
+        if (destination == null) continue;
+        DS1.Cell reverse = findReverseWarp(map, destination, source.level.Id);
+        if (reverse != null) {
+          source.setWarp(cell.id, reverse.id);
+          linked++;
+        }
+      }
+    }
+    Gdx.app.log(TAG, "Act4 native warp special summary: linked=" + linked);
+  }
+
+  static int findRuntimeWarpSlot(int[] vis, int[] warp, int destinationId) {
+    int count = Math.min(8, Math.min(vis == null ? 0 : vis.length, warp == null ? 0 : warp.length));
+    for (int i = 0; i < count; i++) if (vis[i] == destinationId && warp[i] >= 0) return i;
+    for (int i = 0; i < count; i++) if (vis[i] == 0 && warp[i] < 0) return i;
+    return -1;
+  }
+
+  private static Zone findZone(Map map, int levelId) {
+    for (Zone zone : map.zones) if (zone != null && zone.level != null && zone.level.Id == levelId) return zone;
+    return null;
+  }
+
+  private static int firstFreeWarpSlot(Zone zone) {
+    boolean[] used = new boolean[8];
+    if (zone.specials != null) for (com.badlogic.gdx.utils.IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell != null && Map.ID.WARPS.contains(cell.id) && cell.mainIndex >= 0 && cell.mainIndex < 8) used[cell.mainIndex] = true;
+    }
+    for (int i = 0; i < used.length; i++) if (!used[i]) return i;
+    return -1;
+  }
+
+  private static void ensureWarpMarker(Zone zone, int mainIndex) {
+    if (zone == null || zone.level == null) return;
+    if (zone.specials != null) for (com.badlogic.gdx.utils.IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell != null && Map.ID.WARPS.contains(cell.id) && cell.mainIndex == mainIndex) return;
+    }
+    if (zone.specials == Zone.EMPTY_INT_CELL_MAP) zone.specials = new com.badlogic.gdx.utils.IntMap<>();
+    int tx = Math.max(1, Math.min(zone.tilesX - 2, zone.tilesX / 2 + mainIndex % 3));
+    int ty = Math.max(1, Math.min(zone.tilesY - 2, zone.tilesY / 2));
+    DS1.Cell cell = new DS1.Cell();
+    cell.id = DT1.Tile.Index.create(Orientation.SPECIAL_10, mainIndex, 0);
+    cell.mainIndex = (short) mainIndex;
+    cell.subIndex = 0;
+    cell.orientation = (short) Orientation.SPECIAL_10;
+    cell.value = (mainIndex & 0x3F) << 20;
+    zone.putCell(Map.WALL_OFFSET, tx, ty, cell);
+  }
+
+  private static DS1.Cell findReverseWarp(Map map, Zone destination, int sourceLevelId) {
+    if (destination.specials == null) return null;
+    for (com.badlogic.gdx.utils.IntMap.Entry<DS1.Cell> entry : destination.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell == null || !Map.ID.WARPS.contains(cell.id)) continue;
+      int target = map.getWarpDestinationOverride(destination.level.Id, cell.mainIndex);
+      if (target <= 0 && destination.level.Vis != null && cell.mainIndex < destination.level.Vis.length) target = destination.level.Vis[cell.mainIndex];
+      if (target == sourceLevelId) return cell;
+    }
+    return null;
   }
 
 }

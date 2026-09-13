@@ -3985,3 +3985,21 @@ Act III Warp 单测、`git diff --check` 均通过。
 
 下一项：开始 Act IV 地图连接，优先 Outer Steppes/Plains of Despair、River of Flame
 与 Chaos Sanctuary 的真实 Warp 拓扑和边界回归。
+
+### 2026-09-13 Act IV Warp 拓扑与入口物化（本轮完成）
+
+- [x] 新增 Act IV 原生主链运行时 Warp 配置：Pandemonium Fortress → Outer
+  Steppes → Plains of Despair → City of the Damned → River of Flame → Chaos
+  Sanctuary。
+- [x] 按 first-empty-slot 规则写入双向 destination override；精简 DS1 缺少特殊墙体
+  时自动生成 `SPECIAL_10` marker，随后由 `MapManager` 创建可交互实体。
+- [x] 在 `Map.generate()` 的 Act IV 阶段接入配置和反向特殊墙体配对，避免只绘制地图却
+  无法进入下一层。
+- [x] 新增 Act IV Warp 槽位和主链单测；`core` Act IV 测试及 `d2gs` 编译通过。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Act4MapBuilderD2MOD.java`、
+`core/src/main/java/com/riiablo/map/Map.java`、
+`core/src/test/java/com/riiablo/map/Act4MapBuilderD2MODTest.java`。
+
+下一项：新增 Act IV 双客户端离屏 Warp 回归，验证主链五段入口/出口、Chaos Sanctuary
+落点和边界碰撞，再继续 Act V 地图连接。
