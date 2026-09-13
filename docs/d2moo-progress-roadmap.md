@@ -3962,3 +3962,26 @@ Sewers 的真实 Vis/Warp 物化与双向边界回归。
 
 下一项：新增 Act III 双客户端离屏 Warp 回归，验证 Spider Cave/Cavern、Flayer
 Dungeon、Swampy Pit、Kurast Sewers 入口/出口与边界拒绝，再继续 Act IV 地图连接。
+
+### 2026-09-13 Act III 地下 Warp 双客户端回归（本轮完成）
+
+- [x] 新增 `headlessA3DungeonWarpDual`，覆盖 Spider Forest→Spider Cave/Cavern、
+  Great Marsh→Swampy Pit、Flayer Jungle→Flayer Dungeon、Kurast Bazaar→Kurast
+  Sewers 五条 1.10f 侧区域入口。
+- [x] 每条链路均通过生产 `WARP_INTERACTION` 完成正向/反向往返，并验证目标 Zone、
+  可行走落点和一格越界移动被权威服务端拒绝。
+- [x] 运行时发现 Great Marsh 等户外入口在部分表中没有有效 `LvlWarp` 行；新增的
+  fallback marker/override 已使缺失资源仍能生成可交互 Warp。
+- [x] 1.10f 离屏结果：`a3_dungeon_warp_dual_pass pairs=5 roundTrips=5
+  boundaryRejects=5 clients=true,true`。
+
+验证：`:server:d2gs:headlessA3DungeonWarpDual`、`:server:d2gs:compileJava`、
+Act III Warp 单测、`git diff --check` 均通过。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Act3MapBuilderD2MOD.java`、
+`core/src/test/java/com/riiablo/map/Act3MapBuilderD2MODWarpTest.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`、
+`server/d2gs/build.gradle`。
+
+下一项：开始 Act IV 地图连接，优先 Outer Steppes/Plains of Despair、River of Flame
+与 Chaos Sanctuary 的真实 Warp 拓扑和边界回归。

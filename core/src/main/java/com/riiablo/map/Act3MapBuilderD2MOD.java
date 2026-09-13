@@ -462,7 +462,51 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
         configured++;
       }
     }
+    // A few 1.10f exports leave the outdoor side-area Vis/Warp row empty;
+    // D2Common injects these links while building the jungle.  Keep explicit
+    // fallbacks for those native entrances, using the first available slot
+    // and the same collision-safe marker path as the table-driven edges.
+    ensureAct3SideDungeonFallback(map, LEVEL_GREATMARSH,
+        D2LevelIds.LEVEL_SWAMPYPITLVL1);
+    ensureAct3SideDungeonFallback(map, LEVEL_FLAYERJUNGLE,
+        D2LevelIds.LEVEL_FLAYERDUNGEONLVL1);
+    ensureAct3SideDungeonFallback(map, D2LevelIds.LEVEL_KURASTBAZAAR,
+        D2LevelIds.LEVEL_SEWERSA3LEV1);
     Gdx.app.log(TAG, "Act3 dungeon graph warps configured=" + configured);
+  }
+
+  private static void ensureAct3SideDungeonFallback(Map map, int sourceLevelId,
+      int destinationLevelId) {
+    Zone source = findZone(map, sourceLevelId);
+    Zone destination = findZone(map, destinationLevelId);
+    Levels.Entry sourceLevel = Riiablo.files.Levels.get(sourceLevelId);
+    Levels.Entry destinationLevel = Riiablo.files.Levels.get(destinationLevelId);
+    if (source == null || destination == null || sourceLevel == null || destinationLevel == null) return;
+    int sourceSlot = findRuntimeWarpSlot(sourceLevel.Vis, sourceLevel.Warp, destinationLevelId);
+    if (sourceSlot < 0) sourceSlot = firstFreeWarpSlot(source);
+    int reverseSlot = findRuntimeWarpSlot(destinationLevel.Vis, destinationLevel.Warp, sourceLevelId);
+    if (reverseSlot < 0) reverseSlot = firstFreeWarpSlot(destination);
+    if (sourceSlot < 0 || reverseSlot < 0) {
+      Gdx.app.error(TAG, "Act3 side dungeon fallback slot unavailable: "
+          + sourceLevelId + "->" + destinationLevelId);
+      return;
+    }
+    map.addWarpDestinationOverride(sourceLevelId, sourceSlot, destinationLevelId);
+    map.addWarpDestinationOverride(destinationLevelId, reverseSlot, sourceLevelId);
+    ensureProgressionWarpMarker(map, sourceLevelId, sourceSlot);
+    ensureProgressionWarpMarker(map, destinationLevelId, reverseSlot);
+  }
+
+  private static int firstFreeWarpSlot(Zone zone) {
+    if (zone == null || zone.specials == null) return 0;
+    boolean[] used = new boolean[8];
+    for (IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell != null && Map.ID.WARPS.contains(cell.id)
+          && cell.mainIndex >= 0 && cell.mainIndex < used.length) used[cell.mainIndex] = true;
+    }
+    for (int i = 0; i < used.length; i++) if (!used[i]) return i;
+    return -1;
   }
 
   static boolean isStaticAct3DungeonEdge(int sourceLevelId, int destinationLevelId) {
@@ -517,11 +561,15 @@ public enum Act3MapBuilderD2MOD implements MapBuilder {
       for (IntMap.Entry<DS1.Cell> entry : source.specials.entries()) {
         DS1.Cell sourceCell = entry.value;
         if (sourceCell == null || !Map.ID.WARPS.contains(sourceCell.id)) continue;
-        if (source.level.Warp == null || sourceCell.mainIndex < 0
-            || sourceCell.mainIndex >= source.level.Warp.length
-            || source.level.Warp[sourceCell.mainIndex] < 0) continue;
         int destinationLevelId = map.getWarpDestinationOverride(
             source.level.Id, sourceCell.mainIndex);
+        boolean nativeSlotValid = source.level.Warp != null && sourceCell.mainIndex >= 0
+            && sourceCell.mainIndex < source.level.Warp.length
+            && source.level.Warp[sourceCell.mainIndex] >= 0;
+        // A reduced export can omit the native LvlWarp row entirely.  An
+        // explicit runtime override plus a synthetic marker is authoritative
+        // and must still be paired into a Warp entity.
+        if (!nativeSlotValid && destinationLevelId <= 0) continue;
         if (destinationLevelId <= 0 && source.level.Vis != null
             && sourceCell.mainIndex < source.level.Vis.length) {
           destinationLevelId = source.level.Vis[sourceCell.mainIndex];
