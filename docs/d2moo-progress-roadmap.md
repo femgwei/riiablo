@@ -4175,3 +4175,24 @@ Warp 和碰撞状态恢复回归。
 下一项：在不改变回退语义的前提下，继续补齐 Worldstone Keep 1/2/3 的原生 RoomEx/DT1
 导出接入（若资源存在则优先加载），并对 Throne/Chamber 的实际 DS1 房间边界和
 动态对象碰撞做更细粒度回归；随后进入 A5Q5/A5Q6 任务与实体网络同步核对。
+
+### 2026-09-13 Act V Worldstone 原生 RoomEx/TileGrid 桥接（本轮完成）
+
+- [x] 新增 `Act5D2MOOLayoutBridge`，沿用 Act II/III 的资源门控 D2MOO DRLG 调用链，
+  对 Worldstone Keep 1/2/3、Throne of Destruction、Worldstone Chamber 导出原生
+  RoomEx、邻接关系、TileGrid、DT1 mask 和预设对象，并按原生城镇坐标锚点投影到
+  现有 Act V Zone；导出失败时保留兼容生成器，不破坏精简资源环境。
+- [x] `Act5MapBuilderD2MOD` 在兼容 Zone 建立后调用该桥接，`Zone.generate()` 随后应用
+  原生 TileGrid 并重建碰撞；地图 Warp/实体创建仍走原有权威路径。
+- [x] 使用完整 1.10f MPQ 实跑：Throne（131）导出 35 个 RoomEx、DT1 mask `0x2C`，
+  Chamber（132）导出 49 个 RoomEx、DT1 mask `0x3C`，均通过双客户端进入、碰撞覆盖
+  与断线重连基线校验。Keep 1/2/3 在当前 D2MOO 导出中仍无可用 RoomEx/地板，保持
+  metadata-only 回退（测试日志会显示 `rooms=0/native=0`），没有将回退误报为原生完成。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/d2moo/Act5D2MOOLayoutBridge.java`、
+`core/src/main/java/com/riiablo/map/Act5MapBuilderD2MOD.java`、
+`docs/d2moo-progress-roadmap.md`。
+
+下一项：继续定位 Keep 1/2/3 缺失的原生导出原因（LvlPrest/LvlMaze/DS1 archive 或
+  D2MOO 关卡初始化分支），同时为 Throne/Chamber 增加动态门、实体碰撞和房间切换
+  回归；完成后进入 A5Q5 Ancient's Summit 门与 A5Q6 Baal 波次的任务/网络核对。

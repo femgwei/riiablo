@@ -13,6 +13,7 @@ import com.riiablo.engine.EntityFactory;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.riiablo.map.Map.Preset;
 import com.riiablo.map.Map.Zone;
+import com.riiablo.map.d2moo.Act5D2MOOLayoutBridge;
 
 /**
  * Act5 地图生成器 - 完全复刻 D2MOD 实现
@@ -235,6 +236,12 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     // causing its zones to overlap the town and making coordinate-based Warp
     // resolution select Nihlathak Temple for Harrogath markers.
     createNihlathakQuestZones(map, diff, base);
+
+    // When the complete 1.10f MPQ set is available, replace the synthetic
+    // Worldstone tail with D2MOO's native RoomEx/TileGrid export.  The bridge
+    // is resource-gated and failure-safe; reduced/headless fixtures retain
+    // the compatibility zones and their explicit floor fallback.
+    Act5D2MOOLayoutBridge.populateZones(seed, diff, map);
 
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTSIEGE_InitAct5OutdoorLevel
