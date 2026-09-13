@@ -2500,8 +2500,51 @@ public final class D2GSHeadlessClient {
       if (diablo == Engine.INVALID_ENTITY) {
         throw new IOException("A4Q2 Diablo did not spawn after seal bosses");
       }
+      if (!D2GS.headlessKillMonster(a.playerId, diablo)) {
+        throw new IOException("A4Q2 Diablo kill staging failed");
+      }
+      QuestResult pendingA = requestSnapshot(a, inA, outA, 760L);
+      QuestResult pendingB = requestSnapshot(b, inB, outB, 761L);
+      if (!hasQuestFlagAt(pendingA, Riiablo.ACT4, com.riiablo.engine.server.quest.Act4DiabloQuest.RECORD,
+              NativeQuestRecord.REWARD_PENDING)
+          || !hasQuestFlagAt(pendingB, Riiablo.ACT4, com.riiablo.engine.server.quest.Act4DiabloQuest.RECORD,
+              NativeQuestRecord.REWARD_PENDING)) {
+        throw new IOException("A4Q2 Diablo completion did not reach both clients");
+      }
+      final int fortress = com.riiablo.engine.server.quest.Act4DiabloQuest.PANDEMONIUM_FORTRESS;
+      if (!D2GS.headlessEnterLevel(a.playerId, fortress)
+          || !D2GS.headlessEnterLevel(b.playerId, fortress)) {
+        throw new IOException("A4Q2 fortress staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, fortress, "A4Q2 Tyrael portal");
+      int tyrael = D2GS.headlessPrepareQuestNpc(a.playerId,
+          com.riiablo.engine.server.monster.MonsterType.TYRAEL2);
+      if (tyrael == Engine.INVALID_ENTITY) throw new IOException("A4Q2 Tyrael unavailable");
+      send(outA, questRequestPacket(762L, QuestOperation.NPC_MESSAGE, tyrael,
+          com.riiablo.engine.server.quest.Act4DiabloQuest.MESSAGE_TYRAEL_ACT5));
+      QuestResult portalA = a.awaitQuestResult(inA, 762L, deadline());
+      if (portalA == null || !portalA.success()) {
+        throw new IOException("A4Q2 Tyrael portal rejected: "
+            + (portalA == null ? "NO_RESULT" : portalA.reason()));
+      }
+      int portal = D2GS.headlessQuestWarpEntity(fortress,
+          com.riiablo.engine.server.quest.Act4DiabloQuest.HARROGATH);
+      if (portal == Engine.INVALID_ENTITY) throw new IOException("A4Q2 Act V portal missing");
+      a.awaitVisibleEntity(inA, portal, deadline());
+      b.awaitVisibleEntity(inB, portal, deadline());
+      int peerTyrael = D2GS.headlessPrepareQuestNpc(b.playerId,
+          com.riiablo.engine.server.monster.MonsterType.TYRAEL2);
+      if (peerTyrael != tyrael) throw new IOException("A4Q2 Tyrael NPC was not shared");
+      send(outB, questRequestPacket(763L, QuestOperation.NPC_MESSAGE, tyrael,
+          com.riiablo.engine.server.quest.Act4DiabloQuest.MESSAGE_TYRAEL_ACT5));
+      QuestResult portalB = b.awaitQuestResult(inB, 763L, deadline());
+      if (portalB == null || !portalB.success()
+          || D2GS.headlessQuestWarpEntity(fortress,
+              com.riiablo.engine.server.quest.Act4DiabloQuest.HARROGATH) != portal) {
+        throw new IOException("A4Q2 second Tyrael claim duplicated or failed");
+      }
       log("a4q2_seal_dual_pass", "seals=5 bosses=3 diablo=" + diablo
-          + " clients=true,true");
+          + " portal=" + portal + " claims=2 clients=true,true");
     }
   }
 

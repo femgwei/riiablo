@@ -4629,3 +4629,16 @@ A4Q2 Diablo 完成后的多人领取/重连快照，再进入 A3/A5 仍缺少原
   A4Q2 的 Tyrael Act V 传送对话，避免两个任务链互相遮蔽。
 - [ ] A4Q2 仍需补充完整的 Diablo 击杀→双方记录同步→Tyrael 传送门唯一性→重连
   快照离屏回归，下一轮继续完成。
+
+### 2026-09-14 A4Q2 Diablo/Tyrael 传送门双客户端回归（本轮完成）
+
+- [x] 扩展 `headlessA4SealDual`：五枚封印、三组 Boss 后继续击杀 Diablo，验证
+  两名队伍成员都收到 A4Q2 `REWARD_PENDING`。
+- [x] 双客户端进入 Pandemonium Fortress，与共享 Tyrael2 分别提交原生消息 `20000`；
+  Act V 传送门仅创建一次，两个客户端均可见，第二次请求复用已有 Warp。
+- [x] 回归日志：
+  `a4q2_seal_dual_pass seals=5 bosses=3 diablo=340 portal=343 claims=2 clients=true,true`。
+- [x] `:server:d2gs:headlessA4SealDual` 编译并运行通过。
+
+下一项：补充 A4Q2 传送门创建后的断线重连快照（包括已有 Warp/视觉对象和玩家
+目标 Level），随后继续 A3/A5 尚未覆盖的原生 NPC 任务奖励分支。

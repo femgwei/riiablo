@@ -591,6 +591,17 @@ public class Act4QuestSystem extends PassiveSystem {
     }
     short record = diabloRecord(player.data);
     if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return;
+    // A4Q2's Act V portal is a game-wide object.  A second party member may
+    // claim the same Tyrael message after the first member already opened it;
+    // reuse the existing Warp instead of spawning duplicate visuals/Warps.
+    int existingWarp = wrapper.zone.findWarp(QuestWarp.encode(Act4DiabloQuest.HARROGATH));
+    if (existingWarp != Engine.INVALID_ENTITY) {
+      short next = Act4DiabloQuest.claimCompletion(record);
+      dataSetDiabloRecord(player.data, next);
+      log.info("[A4Q2] Act V portal reused: player={} warp={} destination={}",
+          event.entityId, existingWarp, Act4DiabloQuest.HARROGATH);
+      return;
+    }
     float portalX = source.position.x + 5f;
     float portalY = source.position.y;
     int visual = factory.createStaticObjectByClassId(566, portalX, portalY);
