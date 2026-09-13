@@ -4256,3 +4256,14 @@ Warp 和碰撞状态恢复回归。
 下一项：在无残留 D2GS 进程的环境重新跑完整 `headlessBaalWaveDual`，确认
 Worldstone Chamber 中 Baal、Tyrael、奖励和重连均通过；随后继续 A5Q5/A5Q6 任务
 状态、动态门/对象碰撞及 A2--A5 地图连接核对。
+
+### 2026-09-13 离屏 Chamber 终态生成接线（本轮完成）
+
+- [x] `headlessEnterLevel(Worldstone Chamber)` 在完成 Zone/对象重建后显式调用
+  `Act5QuestSystem.ensureTerminalBaalForHeadless()`，触发与正常固定 tick 相同的
+  幂等终态生成检查，避免离屏环境缺少渲染/房间回调而漏掉 Baal。
+- [x] 已通过 `:server:d2gs:compileJava`；完整五波同步仍通过，Chamber 末段回归
+  需要在空闲端口重新执行确认 Baal/Tyrael/奖励链。
+
+下一项：重新运行完整 A5Q6 双客户端测试；若 Chamber 仍失败，依据新增的
+`Baal spawn attempt/result` 日志继续核对实体快照与奖励流程。
