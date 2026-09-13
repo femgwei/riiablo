@@ -154,6 +154,24 @@ public class NetworkSynchronizer extends BaseEntitySystem {
         + " tick=" + tick);
   }
 
+  /**
+   * Headless/test hook for an authoritative entity removal.  Production room
+   * tracking normally emits the deletion when an entity leaves the ECS, but a
+   * deterministic fixture may delete the entity in the same runnable as the
+   * DeathEvent.  In that case the subscription no longer has enough context
+   * to compute the former recipient mask, so callers provide it explicitly.
+   */
+  public void sendDeletedTo(int entityId, int recipients) {
+    if (entityId < 0 || recipients == 0) return;
+    // Queue one packet per client.  Besides making the delivery explicit for
+    // headless fixtures, this avoids sharing a mutable ByteBuffer between
+    // sockets when a client is slow and the packet is retried.
+    for (int bit = 0; bit < 32; bit++) {
+      int mask = 1 << bit;
+      if ((recipients & mask) != 0) sendVisibilityDeletion(entityId, mask);
+    }
+  }
+
   /** D2MOO sends unit updates only to clients in the current/adjacent RoomEx. */
   private int recipientMask(int entityId) {
     MapWrapper source = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;

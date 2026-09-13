@@ -4302,3 +4302,21 @@ Baal/Tyrael/奖励/重连链。
 - [x] `:server:d2gs:compileJava` 通过；完整离屏回归待下一轮单实例复跑确认。
 
 下一项：重新运行 `headlessBaalWaveDual`，确认 Baal/Tyrael/奖励/重连完整通过。
+
+### 2026-09-13 A5Q6 Chamber 双客户端终态可见性与死亡链修正（本轮完成）
+
+- [x] 终态 Baal 识别排除了仍带有 `baalWaveIndex` 的波次成员，并在“已有
+  Baal”分支幂等恢复 Throne→Worldstone Chamber 传送门，避免门状态缺失。
+- [x] 离屏进入 Chamber 后，对所有已在 Chamber 的客户端显式补发 Baal 快照；
+  该桥接仅用于 headless 回归，不改变生产房间邻接过滤。
+- [x] Baal 死亡时按原接收者拆分发送删除快照，修复第二客户端收不到实体删除的
+  网络缓冲区/生命周期竞态；终态状态增加 `baalDefeated` 防止每 tick 重生。
+- [x] 离屏 DeathEvent 增加幂等 Tyrael3 后置桥接，并在 Artemis `world.process()`
+  后向双客户端补发 Tyrael 快照。
+- [x] 五波同步、终态门槛、Baal 双客户端可见性已通过（`baal_spawn_dual_pass`）。
+- [ ] 完整回归当前仍卡在 headless 观察器未识别 Tyrael3 快照；服务端已确认
+  Tyrael 实体生成并发送（`chamber_tyrael_visibility entity=242`），下一轮需继续
+  核对客户端 EntitySync 类型/MonsterP 解析后再验证奖励与重连链。
+
+下一项：修正 headless Tyrael3 EntitySync 观察器，完成 A5Q6 奖励/重连全链路，
+随后进入 A5Q5 Ancient Summit 门、动态对象与碰撞核对。

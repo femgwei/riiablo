@@ -5548,10 +5548,23 @@ public final class D2GSHeadlessClient {
 
   private Snapshot awaitTyrael(DataInputStream input, long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
+      int authoritativeId = D2GS.headlessTyraelEntity();
+      Snapshot authoritative = authoritativeId == Engine.INVALID_ENTITY
+          ? null : monsters.get(authoritativeId);
+      if (authoritative != null && !authoritative.deleted && authoritative.hasPosition) {
+        return authoritative;
+      }
       for (Snapshot snapshot : monsters.values()) {
-        if (snapshot.deleted || !snapshot.hasPosition || !snapshot.hasVitals
-            || snapshot.life <= 0f || snapshot.monsterClass < 0
+        // Tyrael3 is an NPC monster fixture and does not carry a VitalityP
+        // component in the native spawn path; requiring hasVitals would hide
+        // an otherwise valid synchronized dialogue entity.
+        if (snapshot.deleted || !snapshot.hasPosition || snapshot.monsterClass < 0
             || Riiablo.files == null || Riiablo.files.monstats == null) continue;
+        // MonsterP carries the native hcIdx.  Resolve Tyrael by its stable
+        // class id first; table lookup by ordinal is not guaranteed when the
+        // 1.10f rows are loaded through the projected TXT schema.
+        if (com.riiablo.engine.server.quest.Act5BaalQuest.isTyrael3(
+            snapshot.monsterClass, null)) return snapshot;
         com.riiablo.codec.excel.MonStats.Entry row =
             Riiablo.files.monstats.get(snapshot.monsterClass);
         if (row != null && ("tyrael3".equalsIgnoreCase(row.Id)

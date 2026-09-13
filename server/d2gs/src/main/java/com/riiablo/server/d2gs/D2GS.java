@@ -463,6 +463,14 @@ public class D2GS extends ApplicationAdapter {
           Gdx.app.log(TAG, "[HEADLESS_LEVEL] player=" + playerId
               + " client=" + clientId + " requestedLevel=" + levelId
               + " targetZoneLevel=" + zone.level.Id + " destination=" + destination);
+          // Quest bosses may be placed in a non-adjacent Chamber room.  The
+          // normal room-ring filter will publish them once a player walks
+          // into that room, but the offscreen regression harness has no room
+          // traversal.  Prime the terminal Baal snapshot for every connected
+          // Chamber client after the authoritative baseline transaction.
+          if (levelId == Act5BaalQuest.WORLDSTONE_CHAMBER) {
+            server.syncHeadlessChamberBaal();
+          }
         } else {
           Gdx.app.log(TAG, "[HEADLESS_LEVEL] baseline skipped player=" + playerId
               + " client=" + clientId + " requestedLevel=" + levelId
@@ -478,6 +486,41 @@ public class D2GS extends ApplicationAdapter {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return false;
+    }
+  }
+
+  /** Headless-only visibility bridge for the A5Q6 terminal boss. */
+  private void syncHeadlessChamberBaal() {
+    if (sync == null || world == null) return;
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+        world.getMapper(com.riiablo.engine.server.component.Monster.class);
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+        world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+    com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Monster.class,
+            com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int entityId = ids[i];
+      com.riiablo.engine.server.component.Monster monster = monsters.get(entityId);
+      com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entityId);
+      if (monster == null || monster.monstats == null || monster.baalWaveIndex >= 0
+          || wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+          || wrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER
+          || !Act5BaalQuest.isBaalMonster(monster.monstats.hcIdx, monster.monstats.Id)) {
+        continue;
+      }
+      for (int clientId = 0; clientId < MAX_CLIENTS; clientId++) {
+        int playerId = player.get(clientId, Engine.INVALID_ENTITY);
+        if (playerId == Engine.INVALID_ENTITY) continue;
+        com.riiablo.engine.server.component.MapWrapper playerWrapper = wrappers.get(playerId);
+        if (playerWrapper == null || playerWrapper.zone == null
+            || playerWrapper.zone.level == null
+            || playerWrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER) continue;
+        sync.syncEntityTo(clientId, entityId);
+      }
+      Gdx.app.log(TAG, "[HEADLESS_LEVEL] chamber_baal_visibility entity=" + entityId);
+      return;
     }
   }
 
@@ -696,8 +739,30 @@ public class D2GS extends ApplicationAdapter {
               || wrapper.zone == null || wrapper.zone.level == null
               || wrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER
               || !Act5BaalQuest.isBaalMonster(monster.monstats.hcIdx, monster.monstats.Id)) continue;
+          int formerRecipients = 0;
+          for (int clientId = 0; clientId < MAX_CLIENTS; clientId++) {
+            int playerId = server.player.get(clientId, Engine.INVALID_ENTITY);
+            if (playerId == Engine.INVALID_ENTITY) continue;
+            com.riiablo.engine.server.component.MapWrapper playerWrapper = wrappers.get(playerId);
+            if (playerWrapper != null && playerWrapper.zone != null
+                && playerWrapper.zone.level != null
+                && playerWrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER) {
+              formerRecipients |= 1 << clientId;
+            }
+          }
+          com.riiablo.engine.server.quest.Act5QuestSystem quests =
+              server.world.getSystem(com.riiablo.engine.server.quest.Act5QuestSystem.class);
+          // Capture the Baal wrapper/position before dispatching DeathEvent;
+          // some lifecycle subscribers remove components immediately.  The
+          // bridge is idempotent and lets the normal callback run afterward.
+          if (quests != null) quests.ensureTyraelAfterHeadlessBaalDeath(entity);
+          // Factory-created Tyrael enters the Monster/MapWrapper
+          // subscriptions on the next Artemis process pass.
+          server.world.process();
+          server.syncHeadlessChamberTyrael();
           server.world.getSystem(EventSystem.class).dispatch(
               com.riiablo.engine.server.event.DeathEvent.obtain(killerId, entity));
+          if (server.sync != null) server.sync.sendDeletedTo(entity, formerRecipients);
           if (server.world.getEntityManager().isActive(entity)) server.world.delete(entity);
           result.set(entity);
           return;
@@ -712,6 +777,39 @@ public class D2GS extends ApplicationAdapter {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Headless-only visibility bridge for Tyrael3 created by Baal's death. */
+  private void syncHeadlessChamberTyrael() {
+    if (sync == null || world == null) return;
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+        world.getMapper(com.riiablo.engine.server.component.Monster.class);
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+        world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+    com.artemis.utils.IntBag entities = world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Monster.class,
+            com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int entityId = ids[i];
+      com.riiablo.engine.server.component.Monster monster = monsters.get(entityId);
+      com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entityId);
+      if (monster == null || monster.monstats == null || wrapper == null || wrapper.zone == null
+          || wrapper.zone.level == null
+          || wrapper.zone.level.Id != Act5BaalQuest.WORLDSTONE_CHAMBER
+          || !Act5BaalQuest.isTyrael3(monster.monstats.hcIdx, monster.monstats.Id)) continue;
+      for (int clientId = 0; clientId < MAX_CLIENTS; clientId++) {
+        int playerId = player.get(clientId, Engine.INVALID_ENTITY);
+        if (playerId == Engine.INVALID_ENTITY) continue;
+        com.riiablo.engine.server.component.MapWrapper playerWrapper = wrappers.get(playerId);
+        if (playerWrapper != null && playerWrapper.zone != null
+            && playerWrapper.zone.level != null
+            && playerWrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER) {
+          sync.syncEntityTo(clientId, entityId);
+        }
+      }
+      Gdx.app.log(TAG, "[HEADLESS_LEVEL] chamber_tyrael_visibility entity=" + entityId);
     }
   }
 
@@ -890,25 +988,62 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Returns the current authoritative Tyrael3 entity in the Chamber. */
+  static int headlessTyraelEntity() {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+        server.world.getMapper(com.riiablo.engine.server.component.Monster.class);
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+    com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Monster.class,
+            com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      com.riiablo.engine.server.component.Monster monster = monsters.get(id);
+      com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(id);
+      if (monster != null && monster.monstats != null && wrapper != null
+          && wrapper.zone != null && wrapper.zone.level != null
+          && wrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER
+          && Act5BaalQuest.isTyrael3(monster.monstats.hcIdx, monster.monstats.Id)) return id;
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
   private static int findLastPortalWarpEntity(D2GS server) {
     if (server == null || server.world == null) return Engine.INVALID_ENTITY;
     com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
         Aspect.all(com.riiablo.engine.server.component.Warp.class,
             com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
     int[] data = entities.getData();
+    int thronePortal = Engine.INVALID_ENTITY;
     for (int i = 0; i < entities.size(); i++) {
       int entity = data[i];
       com.riiablo.engine.server.component.Warp warp = server.world
           .getMapper(com.riiablo.engine.server.component.Warp.class).get(entity);
       com.riiablo.engine.server.component.MapWrapper wrapper = server.world
           .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
-      if (warp != null && warp.dstLevel != null && wrapper != null && wrapper.zone != null
-          && wrapper.zone.level != null
-          && wrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER
-          && warp.dstLevel.Id == Act5BaalQuest.HARROGATH
-          && warp.index == QuestWarp.encode(Act5BaalQuest.HARROGATH)) return entity;
+      if (warp == null || warp.dstLevel == null || wrapper == null || wrapper.zone == null
+          || wrapper.zone.level == null) continue;
+      int sourceLevel = wrapper.zone.level.Id;
+      int destinationLevel = warp.dstLevel.Id;
+      // During A5Q6 there are two authoritative quest portals: the Throne
+      // portal into the Worldstone Chamber (opened after wave five) and the
+      // Chamber portal back to Harrogath (opened after Baal dies).  The
+      // headless helper is used at both points, so accept either native warp
+      // while retaining the exact encoded destination check.
+      boolean throneToChamber = sourceLevel == Act5BaalQuest.THRONE_OF_DESTRUCTION
+          && destinationLevel == Act5BaalQuest.WORLDSTONE_CHAMBER
+          && warp.index == QuestWarp.encode(Act5BaalQuest.WORLDSTONE_CHAMBER);
+      boolean chamberToTown = sourceLevel == Act5BaalQuest.WORLDSTONE_CHAMBER
+          && destinationLevel == Act5BaalQuest.HARROGATH
+          && warp.index == QuestWarp.encode(Act5BaalQuest.HARROGATH);
+      if (chamberToTown) return entity;
+      if (throneToChamber && thronePortal == Engine.INVALID_ENTITY) thronePortal = entity;
     }
-    return Engine.INVALID_ENTITY;
+    return thronePortal;
   }
 
   /**

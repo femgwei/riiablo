@@ -1367,6 +1367,11 @@ public class Act5QuestSystem extends BaseSystem {
 
   private void spawnBaalAfterWaves() {
     int levelId = Act5BaalQuest.WORLDSTONE_CHAMBER;
+    // Once the authoritative DeathEvent marks Baal defeated, the terminal
+    // boss must stay gone for the remainder of the game.  Without this guard
+    // the per-tick reconciliation correctly noticed the missing entity but
+    // incorrectly respawned Baal while Tyrael/reward flow was in progress.
+    if (gameState().isBaalDefeated()) return;
     if (factory == null || monstersByZone == null) return;
     IntBag entities = monstersByZone.getEntities();
     int[] ids = entities.getData();
@@ -1374,9 +1379,27 @@ public class Act5QuestSystem extends BaseSystem {
     Map.Zone chamber = findZone(Act5BaalQuest.WORLDSTONE_CHAMBER);
     for (int i = 0; i < entities.size(); i++) {
       int id = ids[i];
-      if (isBaal(id) && levelId(id) == levelId) {
+      Monster candidate = mMonster.has(id) ? mMonster.get(id) : null;
+      // Wave leaders/minions can temporarily retain their old map wrapper while
+      // a room is rebuilt.  They must never satisfy the terminal-boss lookup:
+      // only a Baal entity outside the wave state is eligible here.
+      boolean terminalCandidate = isBaal(id)
+          && (candidate == null || candidate.baalWaveIndex < 0);
+      if (terminalCandidate && levelId(id) == levelId) {
         existing = true;
+        String statsId = candidate == null || candidate.monstats == null
+            ? "null" : candidate.monstats.Id;
+        int statsHcIdx = candidate == null || candidate.monstats == null
+            ? -1 : candidate.monstats.hcIdx;
+        float posX = mPosition != null && mPosition.has(id) && mPosition.get(id) != null
+            ? mPosition.get(id).position.x : Float.NaN;
+        float posY = mPosition != null && mPosition.has(id) && mPosition.get(id) != null
+            ? mPosition.get(id).position.y : Float.NaN;
         System.err.println("[A5Q6] existing terminal Baal entity=" + id
+            + " stats=" + statsId + " hcIdx=" + statsHcIdx
+            + " waveIndex=" + (candidate == null ? -1 : candidate.baalWaveIndex)
+            + " boundLevel=" + levelId(id)
+            + " position=(" + posX + "," + posY + ")"
             + " hasPosition=" + (mPosition != null && mPosition.has(id)));
         // A previous terminal spawn may have used the throne fallback before
         // the Chamber Zone was active.  Keep the entity but relocate it into
@@ -1399,6 +1422,11 @@ public class Act5QuestSystem extends BaseSystem {
       }
     }
     if (existing) {
+      // A previous reconcile may have observed the boss after a room rebuild
+      // but before the Throne -> Chamber warp was registered.  Keep the
+      // portal side effect idempotent instead of returning with a boss that
+      // cannot be reached through the native quest transition.
+      openWorldstoneChamberPortal();
       spawnedBaalLevels.add(levelId);
       return;
     }
@@ -1476,6 +1504,21 @@ public class Act5QuestSystem extends BaseSystem {
     System.err.println("[A5Q6] headless terminal reconcile factory=" + (factory != null)
         + " monstersByZone=" + (monstersByZone != null));
     spawnBaalAfterWaves();
+  }
+
+  /**
+   * Completes the post-death side effects for an offscreen deterministic kill.
+   * The normal event bus invokes {@link #onMonsterKilled(DeathEvent)}, but a
+   * headless fixture can remove the ECS entity in the same runnable and race
+   * the subscription update.  Keep this bridge idempotent so it is safe when
+   * the event callback already ran.
+   */
+  public void ensureTyraelAfterHeadlessBaalDeath(int baalEntity) {
+    if (!gameState().isBaalDefeated()) {
+      gameState().markBaalDefeated();
+      completeBaalForPlayers();
+    }
+    spawnA5Q6Tyrael(baalEntity);
   }
 
   /** Creates the A5Q6 Throne -> Worldstone Chamber portal once. */
