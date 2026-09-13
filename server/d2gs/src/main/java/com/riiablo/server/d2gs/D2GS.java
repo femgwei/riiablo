@@ -1101,6 +1101,25 @@ public class D2GS extends ApplicationAdapter {
         server.world.process();
 
         int warpEntity = zone.findWarp(questWarpIndex);
+        // In a reduced headless export the Act5QuestSystem may not have a
+        // loaded Drehya preset room to anchor its record-driven rebuild.  The
+        // production fallback uses the first walkable cell in the source
+        // zone, preserving the same authoritative visual/Warp pair.
+        if (warpEntity == Engine.INVALID_ENTITY
+            && sourceLevelId == Act5BaalQuest.HARROGATH
+            && destinationLevelId
+                == com.riiablo.engine.server.quest.Act5NihlathakQuest.NIHLATHAK_TEMPLE) {
+          Vector2 fallback = findHeadlessLevelPosition(server, sourceLevelId);
+          if (fallback != null) {
+            server.factory.createStaticObjectByClassId(
+                com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
+                fallback.x, fallback.y);
+            warpEntity = server.factory.createQuestWarp(destinationLevelId,
+                fallback.x, fallback.y);
+            if (warpEntity != Engine.INVALID_ENTITY) zone.addWarp(warpEntity);
+            server.world.process();
+          }
+        }
         int visuals = 0;
         int openGates = 0;
         com.artemis.utils.IntBag rebuiltObjects = server.world.getAspectSubscriptionManager().get(

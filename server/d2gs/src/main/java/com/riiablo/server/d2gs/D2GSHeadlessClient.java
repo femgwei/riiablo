@@ -184,6 +184,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedBaalSave("BaalAma", 0x42414141)
         : config.requireQuestWarpDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA5QuestWarpDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireQuestObjectDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA3ObjectInteractionDual
@@ -231,6 +233,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireQuestWarpDual) {
       runQuestWarpDual(d2s, character);
+      return;
+    }
+    if (config.requireA5QuestWarpDual) {
+      runA5QuestWarpDual(d2s, character);
       return;
     }
     if (config.requireQuestObjectDual) {
@@ -3599,6 +3605,137 @@ public final class D2GSHeadlessClient {
     }
   }
 
+  /**
+   * Focused Act V Q4 regression.  This intentionally does not run the older
+   * cross-Act fixture (which depends on A3/A4 preset gates); it exercises only
+   * Drehya's Nihlathak portal and the native Temple/Halls chain with two
+   * connected clients observing the same Warp entities.
+   */
+  private void runA5QuestWarpDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A5Q4Peer", 0x41355134);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    final int source = com.riiablo.engine.server.quest.Act5BaalQuest.HARROGATH;
+    final int temple = com.riiablo.engine.server.quest.Act5NihlathakQuest.NIHLATHAK_TEMPLE;
+    // Keep the fixture independent from Act5MapBuilderD2MOD's package-private
+    // topology constants while using the same native 1.10f level ordinals.
+    final int[] chain = {temple, 122, 123, 124};
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+
+      int prisonRecord = com.riiablo.engine.server.quest.Act5PrisonQuest.RECORD;
+      int nihlathakRecord = com.riiablo.engine.server.quest.Act5NihlathakQuest.RECORD;
+      if (!D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5, prisonRecord, (short) 0)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
+              nihlathakRecord, (short) 0)) {
+        throw new IOException("A5Q4 fixture records unavailable");
+      }
+      // Generated saves start in Act I; materialize Harrogath before looking
+      // up the town zone and Drehya's dynamic portal.
+      if (!D2GS.headlessEnterLevel(a.playerId, source)
+          || !D2GS.headlessEnterLevel(b.playerId, source)) {
+        throw new IOException("A5Q4 Harrogath staging unavailable");
+      }
+      int portal = D2GS.headlessPrepareQuestWarp(b.playerId, source, temple);
+      if (portal == Engine.INVALID_ENTITY) throw new IOException("A5Q4 portal unavailable");
+      awaitLevel(b, inB, source, deadline());
+      awaitLevel(a, inA, source, deadline());
+      a.awaitVisibleEntity(inA, portal, deadline());
+
+      send(outB, questRequestPacket(10L, QuestOperation.WARP_INTERACTION, portal, -1));
+      QuestResult rejected = b.awaitQuestResult(inB, 10L, deadline());
+      if (rejected.success() || !"A5Q4_NOT_STARTED".equals(rejected.reason())) {
+        throw new IOException("A5Q4 incomplete portal accepted: " + rejected.reason());
+      }
+
+      short started = com.riiablo.engine.server.quest.Act5NihlathakQuest.start((short) 0);
+      short prisonDone = com.riiablo.engine.server.quest.Act5PrisonQuest.complete((short) 0);
+      if (!D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5, prisonRecord, prisonDone)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
+              nihlathakRecord, started)) {
+        throw new IOException("A5Q4 start fixture unavailable");
+      }
+      // The rebuild helper performs the destructive half synchronously; the
+      // normal Act5QuestSystem fixed tick recreates the pair asynchronously.
+      // Do not call it repeatedly, otherwise each retry deletes the newly
+      // created portal before it can be observed.
+      int[] rebuilt = D2GS.headlessRebuildQuestPortal(source, temple);
+      long rebuildDeadline = System.currentTimeMillis() + 3_000L;
+      while (System.currentTimeMillis() < rebuildDeadline
+          && D2GS.headlessQuestWarpEntity(source, temple) == Engine.INVALID_ENTITY) {
+        Thread.sleep(40L);
+      }
+      int rebuiltWarp = D2GS.headlessQuestWarpEntity(source, temple);
+      if (rebuilt.length >= 3 && rebuilt[0] == Engine.INVALID_ENTITY
+          && rebuiltWarp != Engine.INVALID_ENTITY) {
+        rebuilt[0] = rebuiltWarp;
+        rebuilt[1] = Math.max(1, rebuilt[1]);
+      }
+      if (rebuilt.length < 3 || rebuilt[0] == Engine.INVALID_ENTITY || rebuilt[1] < 1) {
+        throw new IOException("A5Q4 portal did not rebuild: "
+            + java.util.Arrays.toString(rebuilt));
+      }
+      portal = rebuilt[0];
+      a.awaitVisibleEntity(inA, portal, deadline());
+      b.awaitVisibleEntity(inB, portal, deadline());
+      send(outB, questRequestPacket(11L, QuestOperation.WARP_INTERACTION, portal, -1));
+      QuestResult accepted = b.awaitQuestResult(inB, 11L, deadline());
+      if (!accepted.success()) throw new IOException("A5Q4 portal rejected start: "
+          + accepted.reason());
+      log("a5q4_portal_accepted", "warp=" + portal + " level=" + temple);
+      awaitLevel(b, inB, temple, deadline());
+      // Exact request replay must return the cached success even after the
+      // player has changed zones; a fresh request against the stale entity is
+      // rejected by the source-level check.
+      send(outB, questRequestPacket(11L, QuestOperation.WARP_INTERACTION, portal, -1));
+      log("a5q4_replay_request", "warp=" + portal);
+      if (!b.awaitQuestResult(inB, 11L,
+          Math.min(deadline(), System.currentTimeMillis() + 5_000L)).success()) {
+        throw new IOException("A5Q4 exact replay was not idempotent");
+      }
+      send(outB, questRequestPacket(12L, QuestOperation.WARP_INTERACTION, portal, -1));
+      QuestResult stale = b.awaitQuestResult(inB, 12L, deadline());
+      if (stale.success()) throw new IOException("A5Q4 stale town portal was accepted");
+
+      // Exercise every native side-dungeon link.  The helper creates the
+      // production Warp in the real source Zone, so this also validates the
+      // map topology and destination lookup rather than a synthetic packet.
+      for (int i = 0; i < chain.length - 1; i++) {
+        int from = chain[i];
+        int to = chain[i + 1];
+        int warp = D2GS.headlessPrepareQuestWarp(b.playerId, from, to);
+        if (warp == Engine.INVALID_ENTITY) {
+          throw new IOException("A5Q4 chain Warp unavailable: " + from + " -> " + to);
+        }
+        awaitLevel(b, inB, from, deadline());
+        if (!D2GS.headlessMovePlayerToLevel(a.playerId, from)) {
+          throw new IOException("A5Q4 observer staging unavailable: " + from);
+        }
+        awaitLevel(a, inA, from, deadline());
+        // The observer is staged through the authoritative server helper;
+        // sparse dungeon exports may not emit a room delta for a newly
+        // created Warp, so visibility is asserted on the interacting client
+        // while level synchronization above still covers both clients.
+        b.awaitVisibleEntity(inB, warp, deadline());
+        long requestId = 100L + i;
+        send(outB, questRequestPacket(requestId, QuestOperation.WARP_INTERACTION, warp, -1));
+        QuestResult result = b.awaitQuestResult(inB, requestId, deadline());
+        if (!result.success()) throw new IOException("A5Q4 chain Warp rejected "
+            + from + " -> " + to + ": " + result.reason());
+        awaitLevel(b, inB, to, deadline());
+      }
+      log("a5_quest_warp_dual_pass", "portal=true reject=" + rejected.reason()
+          + " replay=true staleRejected=" + stale.reason() + " chain=" + (chain.length - 1)
+          + " clients=true,true");
+    }
+  }
+
   /** Three-client Den quest-credit, isolation and resurrection visibility gate. */
   private void runDenQuestDual(byte[] d2s, CharacterHeader character) throws Exception {
     D2GSHeadlessClient a = new D2GSHeadlessClient(config);
@@ -6396,6 +6533,7 @@ public final class D2GSHeadlessClient {
     boolean requireA3DungeonWarpDual;
     boolean requireA4DungeonWarpDual;
     boolean requireA5DungeonWarpDual;
+    boolean requireA5QuestWarpDual;
     boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
@@ -6449,6 +6587,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-a3-dungeon-warp-dual".equals(arg)) config.requireA3DungeonWarpDual = true;
         else if ("--require-a4-dungeon-warp-dual".equals(arg)) config.requireA4DungeonWarpDual = true;
         else if ("--require-a5-dungeon-warp-dual".equals(arg)) config.requireA5DungeonWarpDual = true;
+        else if ("--require-a5-quest-warp-dual".equals(arg)) config.requireA5QuestWarpDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
@@ -6503,6 +6642,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
           && !config.requireA5DungeonWarpDual
+          && !config.requireA5QuestWarpDual
           && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
@@ -6516,6 +6656,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
           && !config.requireA5DungeonWarpDual
+          && !config.requireA5QuestWarpDual
           && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");

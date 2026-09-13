@@ -506,6 +506,21 @@ public class Act5QuestSystem extends BaseSystem {
         ensureNihlathakPortal(drehya);
         return;
       }
+      // Sparse/headless DS1 exports may defer Harrogath NPC preset rooms, so
+      // Drehya is temporarily absent even though the player is already in
+      // town.  Keep the native record-driven portal recoverable by anchoring
+      // the transient visual/Warp at that player's walkable position; once
+      // Drehya's room is activated, ensureNihlathakPortal remains idempotent
+      // and will retain the existing quest Warp.
+      MapWrapper playerWrapper = mMapWrapper.has(playerId) ? mMapWrapper.get(playerId) : null;
+      Position playerPosition = mPosition.has(playerId) ? mPosition.get(playerId) : null;
+      if (playerWrapper != null && playerWrapper.zone != null && playerPosition != null
+          && playerWrapper.zone.level != null
+          && playerWrapper.zone.level.Id == D2LevelIds.LEVEL_HARROGATH) {
+        ensureNihlathakPortalAt(playerWrapper.zone, playerPosition.position.x,
+            playerPosition.position.y, playerId);
+        return;
+      }
     }
   }
 
@@ -535,21 +550,28 @@ public class Act5QuestSystem extends BaseSystem {
     if (town.findWarp(questWarpIndex) != Engine.INVALID_ENTITY) return true;
 
     Position source = mPosition.get(drehyaId);
-    float portalX = source.position.x + 10f;
-    float portalY = source.position.y + 5f;
+    ensureNihlathakPortalAt(town, source.position.x + 10f, source.position.y + 5f, drehyaId);
+    return true;
+  }
+
+  private boolean ensureNihlathakPortalAt(Map.Zone town, float portalX, float portalY,
+      int anchorEntityId) {
+    if (town == null) return false;
+    int questWarpIndex = QuestWarp.encode(Act5NihlathakQuest.NIHLATHAK_TEMPLE);
+    if (town.findWarp(questWarpIndex) != Engine.INVALID_ENTITY) return true;
     int visual = factory.createStaticObjectByClassId(
         NativeQuestObjectResolver.TOWN_PORTAL, portalX, portalY);
     int warp = factory.createQuestWarp(Act5NihlathakQuest.NIHLATHAK_TEMPLE,
         portalX, portalY);
     if (warp == Engine.INVALID_ENTITY) {
       if (visual != Engine.INVALID_ENTITY && world != null) world.delete(visual);
-      log.error("[A5Q4] Nihlathak portal creation failed: drehya={} destination={}",
-          drehyaId, Act5NihlathakQuest.NIHLATHAK_TEMPLE);
+      log.error("[A5Q4] Nihlathak portal creation failed: anchor={} destination={}",
+          anchorEntityId, Act5NihlathakQuest.NIHLATHAK_TEMPLE);
       return false;
     }
     town.addWarp(warp);
     log.info("[A5Q4] Nihlathak portal opened: drehya={} visual={} warp={} destination={} "
-        + "position=({}, {})", drehyaId, visual, warp,
+        + "position=({}, {})", anchorEntityId, visual, warp,
         Act5NihlathakQuest.NIHLATHAK_TEMPLE, portalX, portalY);
     return true;
   }

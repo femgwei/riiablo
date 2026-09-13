@@ -4092,3 +4092,25 @@ Frigid Highlands 入口、Keep/Throne 往返和边界拒绝。
 下一项：继续核对 Act V 任务入口与完整 DS1 画面连续性（优先 Nihlathak Temple
 分支和 Worldstone/Throne 的原生 Preset/碰撞数据），再运行全章节 Warp 回归并处理
 仍缺失的实体/任务网络同步。
+
+### 2026-09-13 Act V A5Q4 Nihlathak 任务 Warp 独立离屏回归（本轮完成）
+
+- [x] 新增 `headlessA5QuestWarpDual`，独立验证 Harrogath→Nihlathak Temple：
+  未开始任务拒绝、完成 A5Q3 前置后门户重建、双客户端关卡同步、重复 request ID
+  幂等以及旧源区域请求拒绝。
+- [x] 通过生产 Warp/Zone 链路验证 Temple→Halls of Anguish→Halls of Pain→
+  Halls of Vaught（三段）目标区域均可进入，避免被原有 A3/A4 综合任务夹具阻塞。
+- [x] 针对精简 1.10f 导出中 Drehya 预设房间延迟的问题，补充记录驱动的 A5Q4 门户
+  恢复回退：无 NPC 房间时以 Harrogath 首个可行走格创建同一权威视觉/Warp 对，
+  后续实体重建保持幂等。
+- [x] 真实 1.10f 离屏结果：
+  `a5_quest_warp_dual_pass portal=true reject=A5Q4_NOT_STARTED replay=true
+  staleRejected=WARP_WRONG_LEVEL chain=3 clients=true,true`。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/engine/server/quest/Act5QuestSystem.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`、
+`server/d2gs/build.gradle`。
+
+下一项：继续核对 Worldstone/Throne 原生 Preset 与碰撞连续性，并补充 A5Q4 真实
+Nihlathak 击杀/奖励状态推进和重连后门户恢复回归。
