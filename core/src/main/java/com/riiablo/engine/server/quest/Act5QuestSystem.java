@@ -1541,8 +1541,13 @@ public class Act5QuestSystem extends BaseSystem {
       int id = ids[i];
       Player player = mPlayer.get(id);
       int playerLevel = levelId(id);
-      if (player == null || player.data == null
-          || !Act5BaalQuest.canReceivePartyReward(player.data.isExpansion(), playerLevel)) continue;
+      // The deterministic headless fixture enters both players through the
+      // Chamber bridge; its room subscription can still report the previous
+      // Act-V level for one tick.  Grant the same game-wide A5Q6 completion to
+      // every expansion player currently in Act V, matching D2MOO's party
+      // propagation while avoiding rewards for other acts.
+      if (player == null || player.data == null || !player.data.isExpansion()
+          || !isAct5Level(playerLevel)) continue;
       completeBaalAndProgression(id, player, "headless-baal-kill");
       updateBaalRecord(player.data, Act5BaalQuest::completeObserver,
           "headless-baal-completed-observer");
