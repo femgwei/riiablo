@@ -1376,6 +1376,8 @@ public class Act5QuestSystem extends BaseSystem {
       int id = ids[i];
       if (isBaal(id) && levelId(id) == levelId) {
         existing = true;
+        System.err.println("[A5Q6] existing terminal Baal entity=" + id
+            + " hasPosition=" + (mPosition != null && mPosition.has(id)));
         // A previous terminal spawn may have used the throne fallback before
         // the Chamber Zone was active.  Keep the entity but relocate it into
         // the authoritative Chamber bounds so recipient visibility includes
