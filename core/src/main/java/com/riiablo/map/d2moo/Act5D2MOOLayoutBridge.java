@@ -71,6 +71,9 @@ public final class Act5D2MOOLayoutBridge {
       for (int levelId : LEVELS) {
         Zone zone = findZone(map, levelId);
         D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+        D2Log.debug("ACT5_NATIVE_LEVEL_PROBE id=%d allocated=%s drlgType=%d levelType=%d",
+            levelId, level != null, level == null ? -1 : level.getDrlgType(),
+            level == null ? -1 : level.getLevelType());
         if (zone == null || level == null) continue;
         if (level.getFirstRoomEx() == null) DrlgDrlg.initLevel(level);
         if (level.getFirstRoomEx() == null || level.getLevelCoords() == null) continue;

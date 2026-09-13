@@ -4196,3 +4196,27 @@ Warp 和碰撞状态恢复回归。
 下一项：继续定位 Keep 1/2/3 缺失的原生导出原因（LvlPrest/LvlMaze/DS1 archive 或
   D2MOO 关卡初始化分支），同时为 Throne/Chamber 增加动态门、实体碰撞和房间切换
   回归；完成后进入 A5Q5 Ancient's Summit 门与 A5Q6 Baal 波次的任务/网络核对。
+
+### 2026-09-13 修正 Act V Worldstone LvlPrest 映射（本轮完成）
+
+- [x] 对照 libd2 的 1.10f `LvlPrest.txt` 和 D2MOO `LevelsIds.h`，确认 Java 之前
+  使用的是另一版本的枚举序号（1120--1131），在 1.10f 表中实际不存在，导致
+  `DRLGMAZE_RollBasicPresets` 全部返回空，Keep 1/2/3 只有 metadata。
+- [x] 将 Act V Temple、Lava、Baal 基础/Prev/Next/Waypoint、Throne、Worldstone
+  预设常量改为 1.10f 的 Def 值（Baal 基础 1059--1073，Prev 1074--1077，
+  Next 1078--1081，Waypoint 1082--1085，Throne/Chamber 1086/1087），并补齐
+  方向组合常量，避免跨版本 ordinal 漂移。
+- [x] 增加 `Act5MapBuilderD2MODTest.worldstonePresetIdsMatch110fLvlPrestDefs`，
+  固定校验关键 Def→DS1 映射，防止后续移植再次回退到错误序号。
+- [x] 真实 1.10f 离屏双客户端回归通过：
+  `a5_worldstone_preset_dual_pass levels=5 reconnect=true chamber=132 clients=true,true`；
+  Keep 1/2/3 现可导出原生房间/地板（示例 floors=9/…），Throne/Chamber 原生
+  RoomEx、碰撞和重连校验保持通过。
+
+共享文件最小修改：`D2MOO_JAVA/src/main/java/com/d2moo/common/drlg/D2LvlPrestIds.java`、
+`D2MOO_JAVA/src/main/java/com/d2moo/common/datatbls/DataTbls.java`、
+`core/src/main/java/com/riiablo/map/d2moo/Act5D2MOOLayoutBridge.java`、
+`core/src/test/java/com/riiablo/map/Act5MapBuilderD2MODTest.java`。
+
+下一项：继续细化 Worldstone Keep/Throne 的动态门、预设对象和房间边界碰撞，
+随后核对 A5Q5 Ancient's Summit 门及 A5Q6 Baal 波次的任务/网络同步。

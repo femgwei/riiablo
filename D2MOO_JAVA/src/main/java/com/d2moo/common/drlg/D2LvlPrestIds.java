@@ -656,36 +656,60 @@ public class D2LvlPrestIds {
     // Act 4 迷宫预设
     public static final int LVLPREST_ACT4_LAVA_X = 941; // 与 MESA_BORDER_1 相同
     
-    // Act 5 迷宫预设
-    public static final int LVLPREST_ACT5_BARRICADE_16_SNOW = 1111; // 与 BARRICADE_1_SNOW 相同
-    public static final int LVLPREST_ACT5_LAVA_NS = 1118;
-    public static final int LVLPREST_ACT5_TEMPLE_SW = 1119;
-    // Act5 巴尔基础预设
-    public static final int LVLPREST_ACT5_BAAL_N = 1120;
-    public static final int LVLPREST_ACT5_BAAL_E = 1121;
-    public static final int LVLPREST_ACT5_BAAL_S = 1122;
-    public static final int LVLPREST_ACT5_BAAL_W = 1123;
-    // Act5 巴尔特殊预设
-    public static final int LVLPREST_ACT5_BAAL_NEXT_N = 1124;
-    public static final int LVLPREST_ACT5_BAAL_NEXT_E = 1125;
-    public static final int LVLPREST_ACT5_BAAL_NEXT_S = 1126;
-    public static final int LVLPREST_ACT5_BAAL_NEXT_W = 1127;
-    public static final int LVLPREST_ACT5_BAAL_WAYPOINT_N = 1128;
-    public static final int LVLPREST_ACT5_BAAL_WAYPOINT_E = 1129;
-    public static final int LVLPREST_ACT5_BAAL_WAYPOINT_S = 1130;
-    public static final int LVLPREST_ACT5_BAAL_WAYPOINT_W = 1131;
-    public static final int LVLPREST_ACT5_TEMPLE_SE_UP = 1120;
-    public static final int LVLPREST_ACT5_TEMPLE_NW = 1121;
-    public static final int LVLPREST_ACT5_TEMPLE_NE = 1122;
-    public static final int LVLPREST_ACT5_LAVA_W = 1123;
-    public static final int LVLPREST_ACT5_LAVA_E = 1124;
-    public static final int LVLPREST_ACT5_LAVA_EW = 1125;
-    public static final int LVLPREST_ACT5_LAVA_S = 1126;
-    public static final int LVLPREST_ACT5_LAVA_N = 1127;
-    
-    // Act5 巴尔预设
-    public static final int LVLPREST_ACT5_BAAL_PREV_NSE = 1128;
-    public static final int LVLPREST_ACT5_BAAL_PREV_SEW = 1129;
-    public static final int LVLPREST_ACT5_BAAL_PREV_NSW = 1130;
-    public static final int LVLPREST_ACT5_BAAL_PREV_NEW = 1131;
+    // Act 5 maze presets.  These are the Def values in the 1.10f
+    // LvlPrest.txt table (the D2MOO enum ordinals are from a different table
+    // revision and cannot be used as runtime ids).
+    public static final int LVLPREST_ACT5_BARRICADE_16_SNOW = 1111;
+    public static final int LVLPREST_ACT5_TEMPLE_NE = 1042;
+    public static final int LVLPREST_ACT5_TEMPLE_NW = 1043;
+    public static final int LVLPREST_ACT5_TEMPLE_SE_UP = 1044;
+    public static final int LVLPREST_ACT5_TEMPLE_SW = 1045;
+    public static final int LVLPREST_ACT5_TEMPLE_NE_DOWN = 1046;
+    public static final int LVLPREST_ACT5_TEMPLE_NW_DOWN = 1047;
+    public static final int LVLPREST_ACT5_TEMPLE_SW_DOWN = 1048;
+    public static final int LVLPREST_ACT5_TEMPLE_NE_WAYPOINT = 1049;
+    public static final int LVLPREST_ACT5_TEMPLE_NW_WAYPOINT = 1050;
+    public static final int LVLPREST_ACT5_TEMPLE_SE_WAYPOINT = 1051;
+    public static final int LVLPREST_ACT5_TEMPLE_SW_WAYPOINT = 1052;
+    public static final int LVLPREST_ACT5_LAVA_N = 1053;
+    public static final int LVLPREST_ACT5_LAVA_S = 1054;
+    public static final int LVLPREST_ACT5_LAVA_E = 1055;
+    public static final int LVLPREST_ACT5_LAVA_W = 1056;
+    public static final int LVLPREST_ACT5_LAVA_EW = 1057;
+    public static final int LVLPREST_ACT5_LAVA_NS = 1058;
+
+    // Act 5 Baal base presets (all sixteen edge combinations).
+    public static final int LVLPREST_ACT5_BAAL_W = 1059;
+    public static final int LVLPREST_ACT5_BAAL_E = 1060;
+    public static final int LVLPREST_ACT5_BAAL_EW = 1061;
+    public static final int LVLPREST_ACT5_BAAL_S = 1062;
+    public static final int LVLPREST_ACT5_BAAL_SW = 1063;
+    public static final int LVLPREST_ACT5_BAAL_SE = 1064;
+    public static final int LVLPREST_ACT5_BAAL_SEW = 1065;
+    public static final int LVLPREST_ACT5_BAAL_N = 1066;
+    public static final int LVLPREST_ACT5_BAAL_NW = 1067;
+    public static final int LVLPREST_ACT5_BAAL_NE = 1068;
+    public static final int LVLPREST_ACT5_BAAL_NEW = 1069;
+    public static final int LVLPREST_ACT5_BAAL_NS = 1070;
+    public static final int LVLPREST_ACT5_BAAL_NSW = 1071;
+    public static final int LVLPREST_ACT5_BAAL_NSE = 1072;
+    public static final int LVLPREST_ACT5_BAAL_NSEW = 1073;
+
+    // Act 5 Baal special presets.
+    public static final int LVLPREST_ACT5_BAAL_PREV_NEW = 1074;
+    public static final int LVLPREST_ACT5_BAAL_PREV_NSE = 1075;
+    public static final int LVLPREST_ACT5_BAAL_PREV_NSW = 1076;
+    public static final int LVLPREST_ACT5_BAAL_PREV_SEW = 1077;
+    public static final int LVLPREST_ACT5_BAAL_NEXT_N = 1078;
+    public static final int LVLPREST_ACT5_BAAL_NEXT_S = 1079;
+    public static final int LVLPREST_ACT5_BAAL_NEXT_E = 1080;
+    public static final int LVLPREST_ACT5_BAAL_NEXT_W = 1081;
+    public static final int LVLPREST_ACT5_BAAL_WAYPOINT_N = 1082;
+    public static final int LVLPREST_ACT5_BAAL_WAYPOINT_S = 1083;
+    public static final int LVLPREST_ACT5_BAAL_WAYPOINT_E = 1084;
+    public static final int LVLPREST_ACT5_BAAL_WAYPOINT_W = 1085;
+    public static final int LVLPREST_ACT5_THRONEROOM = 1086;
+    public static final int LVLPREST_ACT5_WORLDSTONE = 1087;
+    public static final int LVLPREST_ACT5_TEMPLE_ENTRANCE = 1088;
+    public static final int LVLPREST_ACT5_BAAL_ENTRANCE = 1089;
 }
