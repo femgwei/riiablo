@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-12
+更新时间：2026-09-13
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -16,6 +16,20 @@
 存档和测试；已关闭的独立战斗 Chat 不再作为进度来源。跨本地/远程访问时，先读取
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
+
+## 2026-09-13 A5Q6 Baal 终态重连闭环（本轮完成）
+
+- Baal 死亡后对所有资料片玩家执行幂等奖励校正，避免房间订阅滞后导致队友或重连玩家
+  缺少 `PRIMARY_GOAL_DONE/REWARD_GRANTED`。
+- 网络 Quest 校验识别原生 Tyrael3（hcIdx 522），终结对话前离屏客户端会自动走到 NPC
+  交互范围；Tyrael 终结标记（CUSTOM3）向队伍传播并在重连后恢复。
+- Chamber→Harrogath 门户与 Throne→Chamber 门户分开识别；重连进场和 Room 重建均会
+  显式同步正确的门户实体，避免旧实体 ID 或错误门户造成不可见/不可传送。
+- 离屏双客户端测试修正 A5 扁平 QuestResult 索引（Act V 记录索引 46），覆盖五波、
+  Baal/Tyrael 同步、奖励重连、终结门户和门户重建。
+
+当前下一项：A5Q5 Ancient Summit 三名远古守护者的真实生成、击杀、死亡重置和多人
+重连闭环；随后继续 A2–A5 地图/任务剩余分支。
 
 ## 2026-09-13 Act V 主链 Warp（本轮完成）
 
