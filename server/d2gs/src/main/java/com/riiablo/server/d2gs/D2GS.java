@@ -416,7 +416,13 @@ public class D2GS extends ApplicationAdapter {
         if (server.mapManager != null) server.mapManager.createNativeObjects(zone);
         if (levelId == Act5BaalQuest.WORLDSTONE_CHAMBER) {
           Act5QuestSystem quests = server.world.getSystem(Act5QuestSystem.class);
-          if (quests != null) quests.ensureTerminalBaalForHeadless();
+          if (quests != null) {
+            quests.ensureTerminalBaalForHeadless();
+            // Factory-created entities are inserted into Artemis subscriptions
+            // on process().  Flush once more before the baseline transaction so
+            // the newly spawned Baal is present in both clients' snapshots.
+            server.world.process();
+          }
         }
         // RoomEntityTrackingSystem may fall back to Map#getZone(position)
         // when a generated dungeon has no native RoomEx at the spawn point.
