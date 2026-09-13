@@ -2205,6 +2205,12 @@ public final class D2GSHeadlessClient {
       send(outB, connectionPacket(peerCharacter, peerD2s));
       a.awaitConnection(inA, deadline());
       b.awaitConnection(inB, deadline());
+      // Native quest completion credit is shared through the party. Form it
+      // before running the cross-act object chain so A5Q5 rewards are
+      // propagated to both observers just like an in-game party.
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
+        throw new IOException("quest-object party setup failed");
+      }
 
       int frig = com.riiablo.engine.server.quest.Act5RescueQuest.FRIGID_HIGHLANDS;
       int cages = com.riiablo.engine.server.quest.Act5RescueQuest.CAGED_SOLDIER_OBJECT;
@@ -2319,6 +2325,11 @@ public final class D2GSHeadlessClient {
             + java.util.Arrays.toString(resetAncients) + " objects="
             + java.util.Arrays.toString(resetObjects));
       }
+      // DeathEvent transitions through the native death animation before a
+      // respawn request is accepted. Wait for both players to reach MODE_DD
+      // instead of racing the lifecycle packet against that transition.
+      awaitRespawnable(a.playerId);
+      awaitRespawnable(b.playerId);
       send(outA, playerLifecyclePacket(501L, PlayerLifecycleOperation.RESPAWN));
       PlayerLifecycleResult respawnA = awaitPlayerLifecycleResult(inA, 501L,
           System.currentTimeMillis() + config.testTimeoutMillis);
@@ -2328,6 +2339,9 @@ public final class D2GSHeadlessClient {
       if (!respawnA.success() || !respawnB.success()
           || !D2GS.headlessEnterLevel(a.playerId, summit)
           || !D2GS.headlessEnterLevel(b.playerId, summit)) {
+        log("a5q5_respawn_diag", "respawnA=" + respawnA.success()
+            + " respawnB=" + respawnB.success() + " playerA=" + a.playerId
+            + " playerB=" + b.playerId);
         throw new IOException("A5Q5 players could not respawn and re-enter Summit");
       }
       awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 reset re-entry");
@@ -2348,6 +2362,10 @@ public final class D2GSHeadlessClient {
               + java.util.Arrays.toString(ancientEntities));
         }
       }
+      // DeathEvent completion (including party reward propagation and door
+      // state) is finalized on the simulation tick; wait for all guardians
+      // to leave the authoritative alive set before taking snapshots.
+      awaitAncientAliveCount(summit, 0, deadline());
       if (!D2GS.headlessRebuildQuestObjects(a.playerId)) {
         throw new IOException("A5Q5 Ancient door rebuild unavailable");
       }

@@ -4453,3 +4453,23 @@ Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰�
 
 下一项：继续 A2--A5 尚未覆盖的任务对象与地图碰撞分支，优先补齐仍缺少双方
 客户端可见性/接近格验证的地下入口、房屋和 Warp 连接。
+
+### 2026-09-13 A5Q2/A5Q3 精简导出任务对象物化（本轮完成）
+
+- [x] 对照 D2MOO 的关卡初始化路径，在 Frigid Highlands 缺少 473 号预设时自动
+  物化五个 Caged Soldier，并写入 `NativeObjectState`/Map-owned provenance；已有
+  DS1 笼子优先，不重复创建。
+- [x] 在 Frozen River 缺少 558 号 Frozen Anya 预设时物化单个冰封对象；记录驱动
+  的解冻/重连恢复仍走原有 `restoreFrozenAnyaState`，不改变任务条件。
+- [x] `a5q2_object_rebuild_pass cages=[5,5,...]`、`a5q3_object_rebuild_pass
+  anya=[0,0,1,1,...]` 已通过；独立 `headlessA5AncientDual`（含死亡重置、奖励、
+  门碰撞与重连）保持通过。
+- [ ] 组合 `headlessQuestObjectDual` 已越过 A5Q2/A5Q3，但在其旧有 A5Q5 奖励
+  观察阶段仍未捕获双方 `REWARD_GRANTED`；不影响独立 A5Q5 回归，后续需单独
+  修正组合夹具的任务快照时序。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/engine/server/quest/Act5QuestSystem.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：修正组合 QuestObject 夹具的 A5Q5 奖励快照同步，然后继续 A2--A5 其余
+任务对象（尤其 A4 封印/入口对象）的碰撞与双客户端可见性验收。

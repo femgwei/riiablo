@@ -171,8 +171,10 @@ public class Act5QuestSystem extends BaseSystem {
       spawnShenkIfNeeded(event.entityId, event.zone.level.Id);
     } else if (event.zone.level.Id == Act5RescueQuest.FRIGID_HIGHLANDS) {
       updateRescueRecord(player.data, Act5RescueQuest::start, "entered-frigid-highlands");
+      ensureRescueQuestObjects(event.zone);
       rebuildRescueCageState(event.zone);
     } else if (event.zone.level.Id == Act5PrisonQuest.FROZEN_RIVER) {
+      ensureFrozenAnyaObject(event.zone);
       restoreFrozenAnyaState(event.zone);
     }
     if (event.zone.level.Id == Act5NihlathakQuest.NIHLATHAK_TEMPLE
@@ -683,13 +685,69 @@ public class Act5QuestSystem extends BaseSystem {
       if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null) continue;
       int level = wrapper.zone.level.Id;
       if (level == Act5RescueQuest.FRIGID_HIGHLANDS) {
+        ensureRescueQuestObjects(wrapper.zone);
         rebuildRescueCageState(wrapper.zone);
       } else if (level == Act5PrisonQuest.FROZEN_RIVER) {
+        ensureFrozenAnyaObject(wrapper.zone);
         restoreFrozenAnyaState(wrapper.zone);
       } else if (isAncientSummit(level)) {
         ensureAncientQuestObjects(wrapper.zone);
         rebuildAncientsState(wrapper.zone, playerId);
       }
+    }
+  }
+
+  /**
+   * Materializes the five A5Q2 cages when a reduced DS1 export omits their
+   * preset units. Native D2 still creates the quest objects during level
+   * initialization, so keeping the authoritative class id/state here lets
+   * interaction, collision and reconnect restoration follow the same path as
+   * a full export. Existing DS1 cages always win and are never duplicated.
+   */
+  private void ensureRescueQuestObjects(Map.Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != Act5RescueQuest.FRIGID_HIGHLANDS
+        || factory == null || map == null || objectsByZone == null
+        || mMapWrapper == null || mNativeObjectState == null) return;
+    int existing = 0;
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (object != null && object.base != null
+          && object.base.Id == Act5RescueQuest.CAGED_SOLDIER_OBJECT
+          && wrapper != null && wrapper.zone == zone) existing++;
+    }
+    if (existing >= Act5RescueQuest.REQUIRED_CAGES) return;
+
+    Map.RoomEx room = zone.getRoomsEx().size == 0 ? null : zone.getRoomsEx().get(0);
+    float centerX = room == null ? zone.x() + zone.width() / 2f : room.x + room.width / 2f;
+    float centerY = room == null ? zone.y() + zone.height() / 2f : room.y + room.height / 2f;
+    // Keep deterministic, well-separated anchors inside the first exported
+    // room. The native cage footprint is supplied by Objects.txt; collision
+    // references are therefore installed by ObjectInitializer as usual.
+    for (int i = existing; i < Act5RescueQuest.REQUIRED_CAGES; i++) {
+      float x = centerX - 8f + i * 4f;
+      float y = centerY;
+      int entity = factory.createStaticObjectByClassId(
+          Act5RescueQuest.CAGED_SOLDIER_OBJECT, x, y);
+      if (entity < 0) {
+        log.warn("[A5Q2] Missing cage could not be materialized: level={} index={}",
+            zone.level.Id, i);
+        continue;
+      }
+      mMapWrapper.create(entity).set(map, zone);
+      NativeObjectState state = mNativeObjectState.create(entity);
+      state.set(i, Act5RescueQuest.CAGED_SOLDIER_OBJECT,
+          Act5RescueQuest.CAGED_SOLDIER_OBJECT, Engine.Object.MODE_NU,
+          false, false, NativePresetObjectResolver.Kind.ORDINARY);
+      state.source = new Map.NativeObject(Act5RescueQuest.CAGED_SOLDIER_OBJECT,
+          Engine.Object.MODE_NU, (int) (x - zone.x()), (int) (y - zone.y()), false, false);
+      log.info("[A5Q2] Materialized missing cage: level={} index={} entity={}",
+          zone.level.Id, i, entity);
     }
   }
 
@@ -902,6 +960,43 @@ public class Act5QuestSystem extends BaseSystem {
       if (mInteractable.has(id)) mInteractable.remove(id);
       if (!already) log.info("[A5Q3] Restored Frozen Anya defrosted state: entity={}", id);
     }
+  }
+
+  /** Materializes the Frozen Anya ice object when a reduced DS1 export omits it. */
+  private void ensureFrozenAnyaObject(Map.Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != Act5PrisonQuest.FROZEN_RIVER
+        || factory == null || map == null || objectsByZone == null
+        || mMapWrapper == null || mNativeObjectState == null) return;
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (object != null && object.base != null
+          && object.base.Id == Act5PrisonQuest.FROZEN_ANYA_OBJECT
+          && wrapper != null && wrapper.zone == zone) return;
+    }
+    Map.RoomEx room = zone.getRoomsEx().size == 0 ? null : zone.getRoomsEx().get(0);
+    float x = room == null ? zone.x() + zone.width() / 2f : room.x + room.width / 2f;
+    float y = room == null ? zone.y() + zone.height() / 2f : room.y + room.height / 2f;
+    int entity = factory.createStaticObjectByClassId(Act5PrisonQuest.FROZEN_ANYA_OBJECT, x, y);
+    if (entity < 0) {
+      log.warn("[A5Q3] Missing Frozen Anya object could not be materialized: level={}",
+          zone.level.Id);
+      return;
+    }
+    mMapWrapper.create(entity).set(map, zone);
+    NativeObjectState state = mNativeObjectState.create(entity);
+    state.set(0, Act5PrisonQuest.FROZEN_ANYA_OBJECT,
+        Act5PrisonQuest.FROZEN_ANYA_OBJECT, Engine.Object.MODE_NU,
+        false, false, NativePresetObjectResolver.Kind.ORDINARY);
+    state.source = new Map.NativeObject(Act5PrisonQuest.FROZEN_ANYA_OBJECT,
+        Engine.Object.MODE_NU, (int) (x - zone.x()), (int) (y - zone.y()), false, false);
+    log.info("[A5Q3] Materialized missing Frozen Anya object: level={} entity={}",
+        zone.level.Id, entity);
   }
 
   private void spawnNihlathakIfNeeded(int playerId, int levelId) {
