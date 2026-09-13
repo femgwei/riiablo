@@ -1454,6 +1454,8 @@ public class Act5QuestSystem extends BaseSystem {
     // The caller has already entered the Chamber after observing the terminal
     // wave gate.  Reconcile unconditionally; spawnBaalAfterWaves() itself is
     // idempotent and will simply return when the authoritative boss exists.
+    System.err.println("[A5Q6] headless terminal reconcile factory=" + (factory != null)
+        + " monstersByZone=" + (monstersByZone != null));
     spawnBaalAfterWaves();
   }
 
