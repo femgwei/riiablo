@@ -3759,9 +3759,64 @@ public final class D2GSHeadlessClient {
               com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)) {
         throw new IOException("A5Q4 Nihlathak completion was not credited to both clients");
       }
+      // Return to Harrogath and drive Drehya's native reward message for each
+      // player.  The NPC helper resolves the real MonStats hcIdx and only
+      // materializes a fallback NPC when a sparse export deferred the preset.
+      if (!D2GS.headlessEnterLevel(a.playerId, source)
+          || !D2GS.headlessEnterLevel(b.playerId, source)) {
+        throw new IOException("A5Q4 reward Harrogath staging unavailable");
+      }
+      awaitLevel(a, inA, source, deadline());
+      awaitLevel(b, inB, source, deadline());
+      int drehyaClass = -1;
+      if (Riiablo.files != null && Riiablo.files.monstats != null) {
+        for (com.riiablo.codec.excel.MonStats.Entry entry : Riiablo.files.monstats) {
+          if (entry != null && "Drehya".equalsIgnoreCase(entry.Id)) {
+            drehyaClass = entry.hcIdx;
+            break;
+          }
+        }
+      }
+      if (drehyaClass < 0) throw new IOException("Drehya MonStats row unavailable");
+      int drehya = D2GS.headlessPrepareQuestNpc(a.playerId, drehyaClass);
+      if (drehya == Engine.INVALID_ENTITY) {
+        throw new IOException("Drehya NPC fixture unavailable");
+      }
+      if (D2GS.headlessPrepareQuestNpc(b.playerId, drehyaClass) != drehya) {
+        throw new IOException("Drehya NPC was not shared between clients");
+      }
+      send(outA, questRequestPacket(600L, QuestOperation.NPC_MESSAGE, drehya,
+          com.riiablo.engine.server.quest.Act5NihlathakQuest.MESSAGE_DREHYA_REWARD));
+      QuestResult rewardA = a.awaitQuestResult(inA, 600L, deadline());
+      send(outB, questRequestPacket(601L, QuestOperation.NPC_MESSAGE, drehya,
+          com.riiablo.engine.server.quest.Act5NihlathakQuest.MESSAGE_DREHYA_REWARD));
+      QuestResult rewardB = b.awaitQuestResult(inB, 601L, deadline());
+      if (!rewardA.success() || !rewardB.success()) {
+        throw new IOException("A5Q4 Drehya reward rejected: A=" + rewardA.reason()
+            + " B=" + rewardB.reason());
+      }
+      // Replaying the same request id must return the cached success and not
+      // mutate the already-granted record a second time.
+      send(outA, questRequestPacket(600L, QuestOperation.NPC_MESSAGE, drehya,
+          com.riiablo.engine.server.quest.Act5NihlathakQuest.MESSAGE_DREHYA_REWARD));
+      if (!a.awaitQuestResult(inA, 600L, deadline()).success()) {
+        throw new IOException("A5Q4 Drehya reward replay was not idempotent");
+      }
+      QuestResult rewardSnapshotA = requestSnapshot(a, inA, outA, 602L);
+      QuestResult rewardSnapshotB = requestSnapshot(b, inB, outB, 603L);
+      if (!hasQuestFlagAt(rewardSnapshotA, Riiablo.ACT5, a5Record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+          || !hasQuestFlagAt(rewardSnapshotA, Riiablo.ACT5, a5Record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.CUSTOM1)
+          || !hasQuestFlagAt(rewardSnapshotB, Riiablo.ACT5, a5Record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
+          || !hasQuestFlagAt(rewardSnapshotB, Riiablo.ACT5, a5Record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.CUSTOM1)) {
+        throw new IOException("A5Q4 Drehya reward state was not persisted for both clients");
+      }
       log("a5_quest_warp_dual_pass", "portal=true reject=" + rejected.reason()
           + " replay=true staleRejected=" + stale.reason() + " chain=" + (chain.length - 1)
-          + " nihlathak=true rewardPending=true clients=true,true");
+          + " nihlathak=true rewardPending=true rewardGranted=true clients=true,true");
     }
   }
 

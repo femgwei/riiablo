@@ -3236,6 +3236,30 @@ public class D2GS extends ApplicationAdapter {
           npcId.set(entityId);
           return;
         }
+        // Reduced/headless DS1 exports can defer town NPC preset rooms.  Use
+        // the authoritative MonStats row to materialize the requested NPC in
+        // the player's current zone so dialogue validation still follows the
+        // production EventSystem path.
+        if (Riiablo.files != null && Riiablo.files.monstats != null) {
+          com.riiablo.codec.excel.MonStats.Entry stats = null;
+          for (com.riiablo.codec.excel.MonStats.Entry entry : Riiablo.files.monstats) {
+            if (entry != null && entry.hcIdx == monsterClass) {
+              stats = entry;
+              break;
+            }
+          }
+          if (stats != null && stats.npc && stats.interact) {
+            int entityId = server.world.create();
+            server.world.getMapper(com.riiablo.engine.server.component.Monster.class)
+                .create(entityId).set(stats, null);
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+                .create(entityId).set(server.map, playerWrapper.zone);
+            server.world.getMapper(Position.class).create(entityId).position
+                .set(playerPosition.position.x + 1f, playerPosition.position.y);
+            server.world.process();
+            npcId.set(entityId);
+          }
+        }
       } finally { done.countDown(); }
     });
     try {

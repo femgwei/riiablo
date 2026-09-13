@@ -4129,3 +4129,23 @@ Nihlathak 击杀/奖励状态推进和重连后门户恢复回归。
 
 下一项：补齐 A5Q4 Drehya 奖励对话和奖励发放的双客户端回归，并继续核对
 Worldstone Keep/Throne 的原生 Preset、碰撞层和断线重连恢复。
+
+### 2026-09-13 A5Q4 Drehya 奖励消息与多人幂等（本轮完成）
+
+- [x] `Act5QuestMessageValidator` 新增原生 Drehya 消息校验：A5Q4 开始消息仅在
+  Prison 前置和未完成状态下允许，奖励消息仅在 `REWARD_PENDING` 时允许。
+- [x] `headlessA5QuestWarpDual` 现在让两个客户端分别发送 Drehya 奖励消息，验证
+  `REWARD_GRANTED + CUSTOM1` 都写入各自任务记录；同一 request ID 重放返回缓存结果，
+  不会重复发放。
+- [x] 对精简 DS1 中未加载 Drehya 预设的情况，离屏 NPC 夹具按真实 `MonStats` 行
+  临时物化，仍通过生产 `NPC_MESSAGE → Act5QuestSystem` 路径，不绕过服务端校验。
+- [x] 真实 1.10f 离屏结果：
+  `a5_quest_warp_dual_pass ... nihlathak=true rewardPending=true
+  rewardGranted=true clients=true,true`。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/engine/server/quest/Act5QuestMessageValidator.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：核对 Worldstone Keep/Throne 原生 Preset 与碰撞层，补充断线重连后地图实体、
+Warp 和碰撞状态恢复回归。
