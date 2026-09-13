@@ -10,7 +10,8 @@ public final class Act4DiabloQuest {
   public static final int RECORD = 2;
   public static final int FIRST_SEAL = 392;
   public static final int LAST_SEAL = 396;
-  public static final int CHAOS_SANCTUARY = 110;
+  /** Native 1.10f level id (D2LevelIds.LEVEL_CHAOSSANCTUARY = 108). */
+  public static final int CHAOS_SANCTUARY = D2LevelIds.LEVEL_CHAOSSANCTUARY;
   public static final int PANDEMONIUM_FORTRESS = D2LevelIds.LEVEL_THEPANDEMONIUMFORTRESS;
   public static final int HARROGATH = D2LevelIds.LEVEL_HARROGATH;
   public static final int MESSAGE_TYRAEL_ACT5 = 20000;

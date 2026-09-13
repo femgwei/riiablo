@@ -4490,3 +4490,18 @@ Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰�
 
 下一项：继续 A2--A5 其余任务对象（优先 A4 封印、入口和 Warp）的双方可见性、
 接近格及动态碰撞验收；再补齐尚未覆盖的任务奖励重连快照。
+
+### 2026-09-13 A4 Chaos Sanctuary Level 对齐（本轮完成）
+
+- [x] 对照 1.10f `D2LevelIds` 修正 `Act4DiabloQuest.CHAOS_SANCTUARY`：原值误写为
+  110，实际 Chaos Sanctuary 为 108（`LEVEL_CHAOSSANCTUARY`）。进入区域、五枚
+  封印交互/状态重建、封印 Boss 与 Diablo 生成现在统一使用原生 Level ID。
+- [x] 同步修正 `Act4DiabloQuestTest` 断言；`:core:test --tests
+  com.riiablo.engine.server.quest.Act4DiabloQuestTest`、`:server:d2gs:headlessA4DungeonWarpDual`
+  与 `:server:d2gs:headlessA5QuestWarpDual` 均通过。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/engine/server/quest/Act4DiabloQuest.java`、
+`core/src/test/java/com/riiablo/engine/server/quest/Act4DiabloQuestTest.java`。
+
+下一项：在修正后的 108 号 Chaos Sanctuary 上补齐五枚封印的双客户端对象可见性、
+接近格/动态碰撞和三组封印 Boss 生成回归，再核对 A4Q3 Hellforge 的入口与奖励重连。

@@ -21,7 +21,7 @@ class Act4DiabloQuestTest {
   void usesNativeChaosSealRange() {
     assertTrue(Act4DiabloQuest.FIRST_SEAL == 392);
     assertTrue(Act4DiabloQuest.LAST_SEAL == 396);
-    assertTrue(Act4DiabloQuest.CHAOS_SANCTUARY == 110);
+    assertTrue(Act4DiabloQuest.CHAOS_SANCTUARY == 108);
     assertTrue(Act4DiabloQuest.isSealObject(392));
     assertTrue(Act4DiabloQuest.isSealObject(396));
     assertFalse(Act4DiabloQuest.isSealObject(391));
