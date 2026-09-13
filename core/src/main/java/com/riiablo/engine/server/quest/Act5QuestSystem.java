@@ -1419,6 +1419,13 @@ public class Act5QuestSystem extends BaseSystem {
     }
     int entity = factory.createMonster(stats, spawnX, spawnY);
     if (entity >= 0) {
+      // Map#getZone(x,y) can resolve an older overlapping Act zone in the
+      // generated headless map.  The destination Chamber is authoritative for
+      // this quest spawn, so re-assert its wrapper explicitly (the same level
+      // identity used by Room/visibility filtering and network snapshots).
+      if (chamber != null && mMapWrapper != null && mMapWrapper.has(entity)) {
+        mMapWrapper.get(entity).set(map, chamber);
+      }
       spawnedBaalLevels.add(levelId);
       log.info("[A5Q6] Baal spawned after waves: entity={} level={} position=({}, {})",
           entity, levelId, spawnX, spawnY);
