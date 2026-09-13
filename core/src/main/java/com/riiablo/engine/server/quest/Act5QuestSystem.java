@@ -1382,7 +1382,8 @@ public class Act5QuestSystem extends BaseSystem {
         // both clients after the level switch.
         if (chamber != null && mPosition != null && mPosition.has(id)) {
           Position position = mPosition.get(id);
-          if (position == null || !chamber.contains(position.position.x, position.position.y)) {
+          if (position == null || !chamber.contains(Math.round(position.position.x),
+              Math.round(position.position.y))) {
             position.position.set(chamber.x() + chamber.width() * 0.5f,
                 chamber.y() + chamber.height() * 0.5f);
             if (mMapWrapper != null && mMapWrapper.has(id)) {
