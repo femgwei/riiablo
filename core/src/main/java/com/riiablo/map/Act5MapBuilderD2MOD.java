@@ -44,7 +44,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
   static final int LEVEL_ARREATSUMMIT = D2LevelIds.LEVEL_ARREATSUMMIT;
   /** Current D2MOO_JAVA aliases for the Worldstone Keep/Throne tail. */
   static final int LEVEL_WORLDSTONEKEEPLEV1 = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV1;
-  static final int LEVEL_THRONEOFDESTRUCTION = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2;
+  static final int LEVEL_THRONEOFDESTRUCTION = D2LevelIds.LEVEL_THRONEOFDESTRUCTION;
   static final int LEVEL_WORLDSTONECHAMBER = D2LevelIds.LEVEL_WORLDSTONECHAMBER;
 
   /** Native A5Q4 temple branch entered through Drehya's town portal. */

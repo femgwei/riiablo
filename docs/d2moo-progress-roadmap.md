@@ -4030,3 +4030,21 @@ Act III Warp 单测、`git diff --check` 均通过。
 下一项：在修正后的 1.10f 序号基础上核对 Act V 关卡常量和主链，优先补
 Harrogath→Bloody Foothills→Frigid Highlands 的 Warp/边界离屏回归；随后再处理
 Act IV/Act V 任务入口与完整 DS1 画面连续性。
+
+### 2026-09-13 Act V 原生关卡序号对齐（本轮完成）
+
+- [x] 将 `D2LevelIds` 的 Act V 常量按 D2MOO `LevelsIds.h` 顺序重排（Harrogath=109、
+  Bloody Foothills=110、Barricade/Frigid Highlands=111、Arreat Plateau=112，直到
+  Worldstone Chamber=132），同时保留项目现有语义别名，避免 Act V Zone 误读到 Act IV
+  或内部关卡记录。
+- [x] 修正 Act V 地图生成器的 Throne of Destruction 常量，改为原生 131；此前错误
+  复用了 Worldstone Keep Level 2，导致主链末端目标错误。
+- [x] `D2MOO_JAVA`、`core`、`server:d2gs` 编译通过；Act V 地图拓扑单测和 Drlg 房间查询
+  单测通过。未宣称真实 A5 离屏回归通过，因当前尚无 A5 主链双客户端夹具。
+
+共享文件最小修改：`D2MOO_JAVA/src/main/java/com/d2moo/common/drlg/D2LevelIds.java`、
+`core/src/main/java/com/riiablo/map/Act5MapBuilderD2MOD.java`。
+
+下一项：补齐 Act V 主链中 Worldstone Keep Level 1→2→3→Throne→Chamber 的完整
+`Vis/Warp` 双向槽位物化，并新增 `headlessA5DungeonWarpDual` 验证 Harrogath 出口、
+Frigid Highlands 入口、Keep/Throne 往返和边界拒绝。

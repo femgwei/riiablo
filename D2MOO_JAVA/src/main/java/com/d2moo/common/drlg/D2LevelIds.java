@@ -163,34 +163,41 @@ public class D2LevelIds {
     public static final int LEVEL_CHAOSSANCTUARY = 108;
     public static final int LEVEL_CHAOSSANCTUM = 108;  // 别名
     
-    // Act 5 关卡
-    public static final int LEVEL_HARROGATH = 111;
-    public static final int LEVEL_BLOODYFOOTHILLS = 112;
-    // D2MOO's barricade level is the next record after Bloody Foothills;
-    // the old alias incorrectly pointed back to Bloody Foothills itself.
-    public static final int LEVEL_ID_ACT5_BARRICADE_1 = 113;
-    public static final int LEVEL_FRIGIDHIGHLANDS = 113;
-    public static final int LEVEL_ARREATPLATEAU = 114;
-    public static final int LEVEL_CRYSTALLINEPASSAGE = 115;
-    public static final int LEVEL_FROZENTUNDRA = 116;
-    public static final int LEVEL_TUNDRAWASTELANDS = 116; // 与 FROZENTUNDRA 相同
-    public static final int LEVEL_GLACIALTRAIL = 117;
-    public static final int LEVEL_DRIFTERSCAVERN = 118;
-    public static final int LEVEL_FROZENRIVER = 119;
-    public static final int LEVEL_ANCIENTSWAY = 120;
-    public static final int LEVEL_ICYCELLAR = 121;
-    public static final int LEVEL_ARREATSUMMIT = 122;
-    public static final int LEVEL_NIHLATHAKSTEMPLE = 123;
-    public static final int LEVEL_HALLSOFANGUISH = 124;
-    public static final int LEVEL_ROCKYSUMMIT = 125;
-    public static final int LEVEL_HALLSOFPAIN = 126;
-    public static final int LEVEL_HALLSOFVAUGHT = 127;
-    public static final int LEVEL_ABADDON = 128;
-    public static final int LEVEL_PITOFACHERON = 129;
-    public static final int LEVEL_INFERNALPIT = 130;
-    public static final int LEVEL_WORLDSTONECHAMBER = 131;
-    public static final int LEVEL_THEWORLDSTONEKEEPLEV1 = 129;  // 可能是 PITOFACHERON 或 INFERNALPIT
-    public static final int LEVEL_THEWORLDSTONEKEEPLEV2 = 130;  // 可能是 INFERNALPIT 或 WORLDSTONECHAMBER
+    // Act 5 关卡 (native D2C_Levels enum; follows Chaos Sanctuary=108)
+    public static final int LEVEL_HARROGATH = 109;
+    public static final int LEVEL_BLOODYFOOTHILLS = 110;
+    public static final int LEVEL_ID_ACT5_BARRICADE_1 = 111;
+    public static final int LEVEL_FRIGIDHIGHLANDS = LEVEL_ID_ACT5_BARRICADE_1;
+    public static final int LEVEL_ARREATPLATEAU = 112;
+    public static final int LEVEL_CRYSTALIZEDCAVERNLEV1 = 113;
+    public static final int LEVEL_CRYSTALLINEPASSAGE = LEVEL_CRYSTALIZEDCAVERNLEV1;
+    public static final int LEVEL_CELLAROFPITY = 114;
+    public static final int LEVEL_GLACIALTRAIL = LEVEL_CELLAROFPITY;
+    public static final int LEVEL_CRYSTALIZEDCAVERNLEV2 = 115;
+    public static final int LEVEL_FROZENRIVER = LEVEL_CRYSTALIZEDCAVERNLEV2;
+    public static final int LEVEL_ECHOCHAMBER = 116;
+    public static final int LEVEL_ANCIENTSWAY = LEVEL_ECHOCHAMBER;
+    public static final int LEVEL_TUNDRAWASTELANDS = 117;
+    public static final int LEVEL_FROZENTUNDRA = LEVEL_TUNDRAWASTELANDS;
+    public static final int LEVEL_GLACIALCAVESLEV1 = 118;
+    public static final int LEVEL_DRIFTERSCAVERN = LEVEL_GLACIALCAVESLEV1;
+    public static final int LEVEL_GLACIALCAVESLEV2 = 119;
+    public static final int LEVEL_ICYCELLAR = LEVEL_GLACIALCAVESLEV2;
+    public static final int LEVEL_ROCKYSUMMIT = 120;
+    public static final int LEVEL_ARREATSUMMIT = LEVEL_ROCKYSUMMIT;
+    public static final int LEVEL_NIHLATHAKSTEMPLE = 121;
+    public static final int LEVEL_HALLSOFANGUISH = 122;
+    public static final int LEVEL_HALLSOFDEATHSCALLING = 123;
+    public static final int LEVEL_HALLSOFPAIN = LEVEL_HALLSOFDEATHSCALLING;
+    public static final int LEVEL_HALLSOFVAUGHT = 124;
+    public static final int LEVEL_ABADDON = 125;
+    public static final int LEVEL_PITOFACHERON = 126;
+    public static final int LEVEL_INFERNALPIT = 127;
+    public static final int LEVEL_THEWORLDSTONEKEEPLEV1 = 128;
+    public static final int LEVEL_THEWORLDSTONEKEEPLEV2 = 129;
+    public static final int LEVEL_THEWORLDSTONEKEEPLEV3 = 130;
+    public static final int LEVEL_THRONEOFDESTRUCTION = 131;
+    public static final int LEVEL_WORLDSTONECHAMBER = 132;
     
     // 城镇关卡ID数组（用于快速查找）
     public static final int[] TOWN_LEVEL_IDS = {
