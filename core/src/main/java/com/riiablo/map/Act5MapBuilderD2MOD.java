@@ -127,8 +127,14 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
         Gdx.app.error(TAG, "Level not found: " + act5Links[i].level);
         continue;
       }
-      int sizeX = NativeDataTables.levelSizeX(level, diff, 1);
-      int sizeY = NativeDataTables.levelSizeY(level, diff, 1);
+      // Some stripped 1.10f exports omit LevelSize rows for the Worldstone
+      // tail.  Keep the link graph spatially separated with the same minimum
+      // one-grid footprint used by BaseMapBuilderD2MOD instead of collapsing
+      // several levels onto the same origin.
+      int sizeX = Math.max(OutdoorGrid.GRID_SIZE_TILES,
+          NativeDataTables.levelSizeX(level, diff, 1));
+      int sizeY = Math.max(OutdoorGrid.GRID_SIZE_TILES,
+          NativeDataTables.levelSizeY(level, diff, 1));
       linkData.coords[i].width = sizeX * 5;
       linkData.coords[i].height = sizeY * 5;
     }

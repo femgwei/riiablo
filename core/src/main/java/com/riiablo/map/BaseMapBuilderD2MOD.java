@@ -205,10 +205,10 @@ public class BaseMapBuilderD2MOD {
     int gridSizeY = OutdoorGrid.GRID_SIZE_TILES;  // 每个网格 8 tiles
     
     // 计算网格数量
-    int tilesX = NativeDataTables.levelSizeX(level, diff, 1);
-    int tilesY = NativeDataTables.levelSizeY(level, diff, 1);
-    int gridsX = tilesX / gridSizeX;  // 例如：80 / 8 = 10
-    int gridsY = tilesY / gridSizeY;  // 例如：80 / 8 = 10
+    int tilesX = Math.max(gridSizeX, NativeDataTables.levelSizeX(level, diff, 1));
+    int tilesY = Math.max(gridSizeY, NativeDataTables.levelSizeY(level, diff, 1));
+    int gridsX = Math.max(1, (tilesX + gridSizeX - 1) / gridSizeX);
+    int gridsY = Math.max(1, (tilesY + gridSizeY - 1) / gridSizeY);
     
     // 使用带网格数量的 addZone 方法
     Zone zone = map.addZone(level, gridSizeX, gridSizeY, gridsX, gridsY);

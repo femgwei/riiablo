@@ -38,7 +38,15 @@ public class RoomEntityTrackingSystem extends IteratingSystem {
         && position.x >= oldZone.x() && position.y >= oldZone.y()
         && position.x < oldZone.x() + oldZone.width()
         && position.y < oldZone.y() + oldZone.height();
-    if (room == null && !insideOldZone) {
+    // A5 reduced/native metadata-only zones can have no collision grid and a
+    // zero-sized geometric envelope.  Do not relabel those players through
+    // Map#getZone (or clear the wrapper) merely because no RoomEx was found;
+    // the warp transaction already established the authoritative level.
+    boolean syntheticA5 = oldZone != null && oldZone.level != null
+        && oldZone.level.Id >= 109 && oldZone.level.Id <= 132
+        && (!oldZone.hasNativeRoomTopology() || oldZone.width() <= 0
+            || oldZone.height() <= 0);
+    if (room == null && !insideOldZone && !syntheticA5) {
       zone = wrapper.map.getZone(position);
       room = zone != null ? zone.findRoomEx(position.x, position.y) : null;
     }

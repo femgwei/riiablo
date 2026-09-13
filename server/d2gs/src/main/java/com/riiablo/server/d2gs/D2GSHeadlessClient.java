@@ -2988,6 +2988,13 @@ public final class D2GSHeadlessClient {
             || !D2GS.headlessEnterLevel(b.playerId, source)) {
           throw new IOException("A5 source staging unavailable: " + source);
         }
+        // Explicitly request a fresh BEGIN/sync/END transaction after each
+        // offscreen stage. This drains stale frames left by the previous
+        // round-trip before validating that both clients observe the same
+        // source level.
+        long resyncId = 18_000L + i * 2L;
+        send(outA, ByteBuffer.wrap(snapshotResyncPacket(resyncId, a.lastSnapshotTick, "a5-stage")));
+        send(outB, ByteBuffer.wrap(snapshotResyncPacket(resyncId + 1L, b.lastSnapshotTick, "a5-stage")));
         awaitTwoQuestLevels(a, b, inA, inB, source, "a5-source-" + source);
         int warp = D2GS.headlessStaticWarpEntity(source, destination);
         if (warp == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, warp)) {
@@ -5685,6 +5692,12 @@ public final class D2GSHeadlessClient {
     if (packet.dataType() != D2GSData.EntitySync) return;
     EntitySync sync = (EntitySync) packet.data(new EntitySync());
     int packetLevelId = sync.levelId();
+    if (sync.entityId() == playerId && packetLevelId >= 0
+        && packetLevelId != currentLevelId) {
+      System.err.println("[HEADLESS_CLIENT] level_sync player=" + playerId
+          + " previous=" + currentLevelId + " packet=" + packetLevelId
+          + " tick=" + sync.tick() + " components=" + sync.componentLength());
+    }
     if (sync.entityId() != playerId && packetLevelId >= 0 && currentLevelId >= 0
         && packetLevelId != currentLevelId) {
       wrongLevelDrops++;

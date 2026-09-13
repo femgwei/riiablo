@@ -224,7 +224,8 @@ public class NetworkSynchronizer extends BaseEntitySystem {
     byte[] state = serialize(entityId, false);
     byte[] snapshot = serialize(entityId, true);
     snapshotsFor(clientId).update(entityId, state);
-    if (!outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(snapshot)))
+    int recipientMask = 1 << clientId;
+    if (!outPackets.offer(Packet.obtain(recipientMask, ByteBuffer.wrap(snapshot)))
         && !QUIET) {
       Gdx.app.log(TAG, "[NET_SYNC] phase=self_baseline_failed client=" + clientId
           + " entity=" + entityId);
@@ -235,6 +236,18 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       Gdx.app.log(TAG, "[NET_SYNC] phase=self_baseline client=" + clientId
           + " entity=" + entityId + " level=" + level);
     }
+    if (QUIET) {
+      System.err.println("[NET_SYNC] phase=self_baseline client=" + clientId
+          + " entity=" + entityId + " level=" + levelOf(entityId)
+          + " recipientMask=0x" + Integer.toHexString(recipientMask)
+          + " queued=" + outPackets.size());
+    }
+  }
+
+  private int levelOf(int entityId) {
+    MapWrapper wrapper = mMapWrapper.has(entityId) ? mMapWrapper.get(entityId) : null;
+    return wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+        ? -1 : wrapper.zone.level.Id;
   }
 
   /** Number of currently networked entities included in a baseline. */

@@ -4064,3 +4064,31 @@ Act IV/Act V 任务入口与完整 DS1 画面连续性。
 下一项：补齐 Act V 主链中 Worldstone Keep Level 1→2→3→Throne→Chamber 的完整
 `Vis/Warp` 双向槽位物化，并新增 `headlessA5DungeonWarpDual` 验证 Harrogath 出口、
 Frigid Highlands 入口、Keep/Throne 往返和边界拒绝。
+
+### 2026-09-13 Act V 双客户端 Warp 基线同步与合成区域修复（本轮完成）
+
+- [x] 修复 Warp 后客户端只在 RoomEx 更新时才收到关卡变化的问题：服务端在权威
+  `WARP_INTERACTION` 成功提交后，立即向执行玩家发送自身 `EntitySync`，确保
+  `levelId` 不会停留在旧区域；同时保留离屏基线的连接槽位诊断日志。
+- [x] 修复第二客户端基线延迟：`headlessEnterLevel` 按实体反查连接槽位，清理该槽位
+  的陈旧 outbound 包后重新发送 BEGIN/sync/END；回归日志包含 player、client、baseline
+  和 recipient mask，便于定位多人不同步。
+- [x] 对齐精简 1.10f A5 导出：缺失 LevelSize 的 Worldstone Keep 区域至少分配一个
+  8×8 tile 网格，并在链路坐标计算中使用同样的最小 footprint，避免 Keep 2/3 合并
+  到同一坐标；无碰撞网格的合成区域保持权威 Zone，不被 RoomEntityTrackingSystem
+  清空或错误重标记。
+- [x] `headlessWarpState`/边界探针为 metadata-only A5 区域提供安全回退，避免零尺寸
+  Zone 或缺失碰撞数组导致测试误报。
+- [x] 真实 1.10f 离屏结果：
+  `a5_dungeon_warp_dual_pass pairs=7 roundTrips=7 boundaryRejects=7 clients=true,true`。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/NetworkSynchronizer.java`、
+`core/src/main/java/com/riiablo/engine/server/RoomEntityTrackingSystem.java`、
+`core/src/main/java/com/riiablo/map/BaseMapBuilderD2MOD.java`、
+`core/src/main/java/com/riiablo/map/Act5MapBuilderD2MOD.java`。
+
+下一项：继续核对 Act V 任务入口与完整 DS1 画面连续性（优先 Nihlathak Temple
+分支和 Worldstone/Throne 的原生 Preset/碰撞数据），再运行全章节 Warp 回归并处理
+仍缺失的实体/任务网络同步。
