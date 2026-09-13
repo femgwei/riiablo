@@ -22,8 +22,12 @@ class Act5MapBuilderD2MODTest {
         Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[10]);
     assertEquals(D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2,
         Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[11]);
-    assertEquals(D2LevelIds.LEVEL_WORLDSTONECHAMBER,
+    assertEquals(D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV3,
         Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[12]);
+    assertEquals(D2LevelIds.LEVEL_THRONEOFDESTRUCTION,
+        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[13]);
+    assertEquals(D2LevelIds.LEVEL_WORLDSTONECHAMBER,
+        Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN[14]);
     assertEquals(Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN.length - 1,
         Act5MapBuilderD2MOD.ACT5_MAIN_LINKS.length);
   }
@@ -42,15 +46,19 @@ class Act5MapBuilderD2MODTest {
 
   @Test
   void worldstoneTailIsLinkedAfterArreatSummit() {
-    int summit = Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN.length - 4;
+    int summit = Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN.length - 6;
     assertEquals(D2LevelIds.LEVEL_ARREATSUMMIT,
         Act5MapBuilderD2MOD.ACT5_MAIN_LINKS[summit][0]);
     assertEquals(D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV1,
         Act5MapBuilderD2MOD.ACT5_MAIN_LINKS[summit][1]);
     assertEquals(D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2,
         Act5MapBuilderD2MOD.ACT5_MAIN_LINKS[summit + 1][1]);
-    assertEquals(D2LevelIds.LEVEL_WORLDSTONECHAMBER,
+    assertEquals(D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV3,
         Act5MapBuilderD2MOD.ACT5_MAIN_LINKS[summit + 2][1]);
+    assertEquals(D2LevelIds.LEVEL_THRONEOFDESTRUCTION,
+        Act5MapBuilderD2MOD.ACT5_MAIN_LINKS[summit + 3][1]);
+    assertEquals(D2LevelIds.LEVEL_WORLDSTONECHAMBER,
+        Act5MapBuilderD2MOD.ACT5_MAIN_LINKS[summit + 4][1]);
   }
 
   @Test

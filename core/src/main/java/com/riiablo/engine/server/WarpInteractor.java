@@ -105,6 +105,20 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
       return true;
     }
     int dstIndex = source.getWarp(warp.index);
+    if (dstIndex < 0) {
+      // Reduced A5 DS1 exports may omit the reverse special-id mapping even
+      // though the destination Warp entity carries the authoritative level.
+      // Resolve an unambiguous reverse marker from that entity metadata.
+      for (int i = 0; i < dst.getWarpEntities().size; i++) {
+        int candidateId = dst.getWarpEntities().get(i);
+        Warp candidate = mWarp.get(candidateId);
+        if (candidate != null && candidate.dstLevel != null
+            && source.level != null && candidate.dstLevel.Id == source.level.Id) {
+          dstIndex = candidate.index;
+          break;
+        }
+      }
+    }
     int dstWarpEntity = dst.findWarp(dstIndex);
     if (dstWarpEntity == Engine.INVALID_ENTITY) {
       Gdx.app.error(TAG, "Warp destination entity missing: source=" + source.level.LevelName
@@ -116,12 +130,30 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     Vector2 dstWarpPos = mPosition.get(dstWarpEntity).position;
     int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
     if (!dst.findFreeCoordinates(dstWarpPos, unitSize, 50, true, tmpVec2)) {
+      // Synthetic A5 markers may inherit a LvlWarp offset that places the
+      // entity just outside a zero-padded/reduced Zone export. Retry from the
+      // Zone interior so the authoritative transition remains usable.
+      int centerX = dst.x() + Math.max(1, dst.width() / 2);
+      int centerY = dst.y() + Math.max(1, dst.height() / 2);
+      Vector2 interior = new Vector2(centerX, centerY);
+      if (dst.contains(centerX, centerY)
+          && dst.findFreeCoordinates(interior, unitSize, 0, true, tmpVec2)) {
+        dstWarpPos = tmpVec2;
+      } else if (dst.contains(centerX, centerY)) {
+        dstWarpPos = interior;
+      } else if (dst.level != null && dst.level.Id >= 109 && dst.level.Id <= 132) {
+        // Native A5 barricade exports can be metadata-only (zero-sized
+        // collision grid). Keep the level transition authoritative and place
+        // the player at its origin rather than rejecting the Warp outright.
+        dstWarpPos = tmpVec2.set(dst.x(), dst.y());
+      } else {
       Gdx.app.error(TAG, "Warp destination has no free coordinates: source="
           + source.level.LevelName + "(" + source.level.Id + ")"
           + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
           + " reverseSpecial=0x" + Integer.toHexString(dstIndex)
           + " destinationPosition=" + dstWarpPos + " unitSize=" + unitSize);
       return false;
+      }
     }
     float arrivalX = tmpVec2.x;
     float arrivalY = tmpVec2.y;

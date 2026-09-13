@@ -60,6 +60,30 @@ public class MapManager extends PassiveSystem {
         int x = zone.x + (Map.Zone.tileHashX(hash) * DT1.Tile.SUBTILE_SIZE);
         int y = zone.y + (Map.Zone.tileHashY(hash) * DT1.Tile.SUBTILE_SIZE);
         int id = factory.createWarp(cell.id, x, y);
+        // Native wall markers may be authored on the exclusive outer edge of
+        // a Zone.  The factory resolves its source Zone from coordinates, so
+        // retry one subtile inward before dropping the interactive Warp.
+        if (id == Engine.INVALID_ENTITY) {
+          int inwardX = x > zone.x() ? x - 1 : x + 1;
+          int inwardY = y > zone.y() ? y - 1 : y + 1;
+          if (zone.contains(inwardX, y)) id = factory.createWarp(cell.id, inwardX, y);
+          if (id == Engine.INVALID_ENTITY && zone.contains(x, inwardY)) {
+            id = factory.createWarp(cell.id, x, inwardY);
+          }
+          // A reduced DS1 export can put a Warp marker on a corner where no
+          // neighboring subtile belongs to the Zone (for example the native
+          // Frigid Highlands barricade). Resolve the source metadata from a
+          // guaranteed interior coordinate as a final fallback. The visual
+          // marker remains at its authored location; only the factory lookup
+          // coordinate is adjusted.
+          if (id == Engine.INVALID_ENTITY && zone.width() > 2 && zone.height() > 2) {
+            int centerX = zone.x() + zone.width() / 2;
+            int centerY = zone.y() + zone.height() / 2;
+            if (zone.contains(centerX, centerY)) {
+              id = factory.createWarp(cell.id, centerX, centerY);
+            }
+          }
+        }
         if (id != Engine.INVALID_ENTITY) {
           zone.addWarp(id);
         } else {

@@ -860,8 +860,42 @@ public class ServerEntityFactory extends EntityFactory {
     final int orientation = DT1.Tile.Index.orientation(index);
 
     Map.Zone zone = map.getZone(x, y);
-    if (zone == null || zone.level == null) return Engine.INVALID_ENTITY;
-    int dstFromOverride = map.getWarpDestinationOverride(zone.level.Id, mainIndex);
+    int dstFromOverride = zone == null || zone.level == null
+        ? -1 : map.getWarpDestinationOverride(zone.level.Id, mainIndex);
+    if (dstFromOverride <= 0 && map != null) {
+      // Coordinates of synthetic/outdoor markers can be outside the strict
+      // rectangle (or overlap an earlier quest branch). Prefer the Zone that
+      // owns an explicit runtime destination for this logical slot, choosing
+      // the nearest rectangle when several levels reuse the slot number.
+      Map.Zone best = null;
+      long bestDistance = Long.MAX_VALUE;
+      for (int zi = 0; zi < map.getZones().size; zi++) {
+        Map.Zone candidate = map.getZones().get(zi);
+        if (candidate == null || candidate.level == null) continue;
+        int candidateDestination = map.getWarpDestinationOverride(candidate.level.Id, mainIndex);
+        if (candidateDestination <= 0) continue;
+        int cx = Math.max(candidate.x(), Math.min(Math.round(x), candidate.x() + candidate.width() - 1));
+        int cy = Math.max(candidate.y(), Math.min(Math.round(y), candidate.y() + candidate.height() - 1));
+        long dx = Math.round(x) - cx, dy = Math.round(y) - cy;
+        long distance = dx * dx + dy * dy;
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = candidate;
+          dstFromOverride = candidateDestination;
+        }
+      }
+      if (best != null && best != zone) {
+        zone = best;
+        Gdx.app.log(TAG, "[WARP] runtime slot owner resolved: level=" + zone.level.Id
+            + " mainIndex=" + mainIndex + " destination=" + dstFromOverride);
+      }
+    }
+    if (zone == null || zone.level == null) {
+      Gdx.app.error(TAG, String.format("[WARP] source zone missing index=0x%08X pos=(%.1f,%.1f)", index, x, y));
+      log.warn("[WARP] creation failed: sourceZone={} index={} pos=({}, {})",
+          zone == null ? "null" : zone.level, index, x, y);
+      return Engine.INVALID_ENTITY;
+    }
     int dst = dstFromOverride;
     if (dst <= 0) {
       if (zone.level.Vis == null || mainIndex < 0 || mainIndex >= zone.level.Vis.length) {
@@ -887,14 +921,27 @@ public class ServerEntityFactory extends EntityFactory {
     // the neutral portal bounds entry while retaining the authoritative
     // destination level.
     if (wrp < 0 && dstFromOverride > 0) wrp = 0;
-    if (wrp < 0) return Engine.INVALID_ENTITY;
+    if (wrp < 0) {
+      Gdx.app.error(TAG, String.format("[WARP] warp row missing source=%d mainIndex=%d dst=%d override=%d",
+          zone.level.Id, mainIndex, dst, dstFromOverride));
+      return Engine.INVALID_ENTITY;
+    }
 
     Levels.Entry dstLevel = Riiablo.files.Levels.get(dst);
+    if (dstLevel == null) {
+      Gdx.app.error(TAG, String.format("[WARP] destination level missing source=%d mainIndex=%d dst=%d override=%d index=0x%08X",
+          zone.level.Id, mainIndex, dst, dstFromOverride, index));
+      log.error("[WARP] destination level missing: source={} mainIndex={} dst={} override={} index=0x{}",
+          zone.level.Id, mainIndex, dst, dstFromOverride, Integer.toHexString(index));
+      return Engine.INVALID_ENTITY;
+    }
 
     LvlWarp.Entry warp = Riiablo.files.LvlWarp.get(wrp);
     if (warp == null && dstFromOverride > 0) warp = neutralWarpBounds();
     if (warp == null) {
       // LvlWarp entry not found, skip creating warp
+      log.error("[WARP] bounds missing: source={} mainIndex={} dst={} wrp={} override={} index=0x{}",
+          zone.level.Id, mainIndex, dst, wrp, dstFromOverride, Integer.toHexString(index));
       return Engine.INVALID_ENTITY;
     }
 

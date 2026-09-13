@@ -17,6 +17,22 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-13 Act V 主链 Warp（本轮完成）
+
+- 按原生 `LevelsIds.h` 将 Worldstone Keep 1/2/3（128/129/130）完整插入
+  `Act5MapBuilderD2MOD.ACT5_MAIN_CHAIN`，形成
+  `Arreat Summit → Keep 1 → Keep 2 → Keep 3 → Throne → Chamber` 的连续链路。
+- A5Q4 Nihlathak 神殿分支改为在户外主链之后布置，避免与 Harrogath 坐标重叠，
+  防止坐标查找把城镇 Warp 误解析为 Halls/Temple 区域。
+- Warp 配置增加运行时 slot 的显式双向配对；对缺失 Vis/Warp 行的精简 DS1，
+  使用唯一反向 marker 和目标 Level 元数据恢复交互，并处理边界/零碰撞导出。
+- 新增 `headlessA5DungeonWarpDual` 离屏双客户端回归入口，覆盖城镇出口、
+  户外前段和 Worldstone Keep 1/2/3 尾链、边界拒绝与反向返回。
+
+当前 A5 离屏回归仍受精简 DS1 的房间/碰撞数据影响，部分段会停在等待第二客户端
+基线同步；代码已保留诊断日志，待下一轮先修复 A5 Zone 的有效尺寸/RoomEx 拓扑，
+再重新验收完整双客户端链路。
+
 ## 总体进度
 
 - **全项目 D2MOO 行为对齐：约 70%**

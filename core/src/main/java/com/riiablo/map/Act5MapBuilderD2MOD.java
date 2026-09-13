@@ -44,6 +44,8 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
   static final int LEVEL_ARREATSUMMIT = D2LevelIds.LEVEL_ARREATSUMMIT;
   /** Current D2MOO_JAVA aliases for the Worldstone Keep/Throne tail. */
   static final int LEVEL_WORLDSTONEKEEPLEV1 = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV1;
+  static final int LEVEL_WORLDSTONEKEEPLEV2 = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV2;
+  static final int LEVEL_WORLDSTONEKEEPLEV3 = D2LevelIds.LEVEL_THEWORLDSTONEKEEPLEV3;
   static final int LEVEL_THRONEOFDESTRUCTION = D2LevelIds.LEVEL_THRONEOFDESTRUCTION;
   static final int LEVEL_WORLDSTONECHAMBER = D2LevelIds.LEVEL_WORLDSTONECHAMBER;
 
@@ -74,6 +76,8 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       LEVEL_ANCIENTSWAY,
       LEVEL_ARREATSUMMIT,
       LEVEL_WORLDSTONEKEEPLEV1,
+      LEVEL_WORLDSTONEKEEPLEV2,
+      LEVEL_WORLDSTONEKEEPLEV3,
       LEVEL_THRONEOFDESTRUCTION,
       LEVEL_WORLDSTONECHAMBER
   };
@@ -89,7 +93,9 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       {LEVEL_FROZENTUNDRA, LEVEL_ANCIENTSWAY},
       {LEVEL_ANCIENTSWAY, LEVEL_ARREATSUMMIT},
       {LEVEL_ARREATSUMMIT, LEVEL_WORLDSTONEKEEPLEV1},
-      {LEVEL_WORLDSTONEKEEPLEV1, LEVEL_THRONEOFDESTRUCTION},
+      {LEVEL_WORLDSTONEKEEPLEV1, LEVEL_WORLDSTONEKEEPLEV2},
+      {LEVEL_WORLDSTONEKEEPLEV2, LEVEL_WORLDSTONEKEEPLEV3},
+      {LEVEL_WORLDSTONEKEEPLEV3, LEVEL_THRONEOFDESTRUCTION},
       {LEVEL_THRONEOFDESTRUCTION, LEVEL_WORLDSTONECHAMBER}
   };
 
@@ -180,10 +186,6 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
     base.factory = factory;
     base.socket = socket;
 
-    // A5Q4 is a separate temple branch. It is not part of the outdoor
-    // Harrogath-to-Summit chain and must not inherit a fake Summit edge.
-    createNihlathakQuestZones(map, diff, base);
-    
     for (int i = 0; i < act5Links.length && act5Links[i] != null; i++) {
       Levels.Entry level = Riiablo.files.Levels.get(act5Links[i].level);
       if (level == null) continue;
@@ -221,6 +223,12 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
         }
       }
     }
+
+    // Place the independent A5Q4 temple branch after the outdoor chain.  The
+    // branch used to be inserted at x=32 before Harrogath was materialized,
+    // causing its zones to overlap the town and making coordinate-based Warp
+    // resolution select Nihlathak Temple for Harrogath markers.
+    createNihlathakQuestZones(map, diff, base);
 
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTSIEGE_InitAct5OutdoorLevel
@@ -315,6 +323,7 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
       map.addWarpDestinationOverride(link[1], destinationSlot, link[0]);
       ensureWarpMarker(map, link[0], sourceSlot);
       ensureWarpMarker(map, link[1], destinationSlot);
+      pairWarpSlots(map, link[0], sourceSlot, link[1], destinationSlot);
       configured++;
     }
     linkNativeWarpSpecials(map);
@@ -322,12 +331,44 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
         label, configured, links.length));
   }
 
+  private static void pairWarpSlots(Map map, int sourceLevelId, int sourceSlot,
+      int destinationLevelId, int destinationSlot) {
+    Zone source = findZone(map, sourceLevelId);
+    Zone destination = findZone(map, destinationLevelId);
+    DS1.Cell sourceCell = findWarpByMainIndex(source, sourceSlot);
+    DS1.Cell destinationCell = findWarpByMainIndex(destination, destinationSlot);
+    if (source != null && destination != null && sourceCell != null && destinationCell != null) {
+      source.setWarp(sourceCell.id, destinationCell.id);
+      destination.setWarp(destinationCell.id, sourceCell.id);
+      Gdx.app.log(TAG, "A5 warp pair " + sourceLevelId + ":0x" + Integer.toHexString(sourceCell.id)
+          + " <-> " + destinationLevelId + ":0x" + Integer.toHexString(destinationCell.id));
+    }
+  }
+
+  private static DS1.Cell findWarpByMainIndex(Zone zone, int mainIndex) {
+    if (zone == null || zone.specials == null) return null;
+    for (IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell != null && Map.ID.WARPS.contains(cell.id) && cell.mainIndex == mainIndex) return cell;
+    }
+    return null;
+  }
+
   /** Pair exported/synthetic warp cells with the reverse cell expected by WarpInteractor. */
   void linkNativeWarpSpecials(Map map) {
     if (map == null) return;
     int linked = 0;
     int missing = 0;
-    for (Zone source : map.zones) {
+    // LibGDX Array forbids nested iterators. Build the level index once so
+    // resolving a destination while walking source zones cannot invalidate
+    // the outer iterator (this occurs frequently for the long A5 chain).
+    IntMap<Zone> zonesByLevel = new IntMap<>();
+    for (int i = 0; i < map.zones.size; i++) {
+      Zone zone = map.zones.get(i);
+      if (zone != null && zone.level != null) zonesByLevel.put(zone.level.Id, zone);
+    }
+    for (int zi = 0; zi < map.zones.size; zi++) {
+      Zone source = map.zones.get(zi);
       if (source == null || source.level == null || source.specials == null) continue;
       for (IntMap.Entry<DS1.Cell> entry : source.specials.entries()) {
         DS1.Cell sourceCell = entry.value;
@@ -337,12 +378,28 @@ public enum Act5MapBuilderD2MOD implements MapBuilder {
             && sourceCell.mainIndex >= 0 && sourceCell.mainIndex < source.level.Vis.length) {
           target = source.level.Vis[sourceCell.mainIndex];
         }
-        Zone destination = findZone(map, target);
+        Zone destination = zonesByLevel.get(target);
         if (destination == null || destination.specials == null) {
           missing++;
           continue;
         }
         DS1.Cell reverse = findReverseWarp(map, destination, source.level.Id);
+        if (reverse == null) {
+          // Some A5 barricade/corner exports preserve the visual Warp cell but
+          // omit its reverse Vis row. If the destination has exactly one
+          // native Warp marker, it is unambiguous and can still be paired to
+          // the runtime link (the authoritative destination is already held
+          // by the override table).
+          DS1.Cell only = null;
+          boolean multiple = false;
+          for (IntMap.Entry<DS1.Cell> candidate : destination.specials.entries()) {
+            DS1.Cell cell = candidate.value;
+            if (cell == null || !Map.ID.WARPS.contains(cell.id)) continue;
+            if (only != null) { multiple = true; break; }
+            only = cell;
+          }
+          if (!multiple) reverse = only;
+        }
         if (reverse == null) {
           missing++;
           continue;

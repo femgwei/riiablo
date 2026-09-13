@@ -102,6 +102,15 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_CITYOFTHEDAMNED = 106;
   private static final int LEVEL_RIVEROFFLAME = 107;
   private static final int LEVEL_CHAOSSANCTUM = 108;
+  private static final int LEVEL_HARROGATH = 109;
+  private static final int LEVEL_BLOODYFOOTHILLS = 110;
+  private static final int LEVEL_FRIGIDHIGHLANDS = 111;
+  private static final int LEVEL_ARREATPLATEAU = 112;
+  private static final int LEVEL_WORLDSTONEKEEPLEV1 = 128;
+  private static final int LEVEL_WORLDSTONEKEEPLEV2 = 129;
+  private static final int LEVEL_WORLDSTONEKEEPLEV3 = 130;
+  private static final int LEVEL_THRONEOFDESTRUCTION = 131;
+  private static final int LEVEL_WORLDSTONECHAMBER = 132;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
@@ -193,6 +202,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA4DungeonWarpDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA5DungeonWarpDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireEarlyObjectDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
@@ -256,6 +267,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA4DungeonWarpDual) {
       runA4DungeonWarpDual(d2s, character);
+      return;
+    }
+    if (config.requireA5DungeonWarpDual) {
+      runA5DungeonWarpDual(d2s, character);
       return;
     }
     if (config.requireEarlyObjectDual) {
@@ -2938,6 +2953,90 @@ public final class D2GSHeadlessClient {
         roundTrips++;
       }
       log("a4_dungeon_warp_dual_pass", "pairs=" + pairs.length
+          + " roundTrips=" + roundTrips + " boundaryRejects=" + boundaryRejects
+          + " clients=true,true");
+    }
+  }
+
+  /** Two-client regression for the complete Act V outdoor/Worldstone chain. */
+  private void runA5DungeonWarpDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A5WarpPeer", 0x41355750);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int[][] pairs = {
+        {LEVEL_HARROGATH, LEVEL_BLOODYFOOTHILLS},
+        {LEVEL_BLOODYFOOTHILLS, LEVEL_FRIGIDHIGHLANDS},
+        {LEVEL_FRIGIDHIGHLANDS, LEVEL_ARREATPLATEAU},
+        {LEVEL_WORLDSTONEKEEPLEV1, LEVEL_WORLDSTONEKEEPLEV2},
+        {LEVEL_WORLDSTONEKEEPLEV2, LEVEL_WORLDSTONEKEEPLEV3},
+        {LEVEL_WORLDSTONEKEEPLEV3, LEVEL_THRONEOFDESTRUCTION},
+        {LEVEL_THRONEOFDESTRUCTION, LEVEL_WORLDSTONECHAMBER}
+    };
+    int roundTrips = 0, boundaryRejects = 0;
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      for (int i = 0; i < pairs.length; i++) {
+        int source = pairs[i][0], destination = pairs[i][1];
+        log("a5_pair_start", "index=" + i + " source=" + source + " destination=" + destination);
+        if (!D2GS.headlessEnterLevel(a.playerId, source)
+            || !D2GS.headlessEnterLevel(b.playerId, source)) {
+          throw new IOException("A5 source staging unavailable: " + source);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB, source, "a5-source-" + source);
+        int warp = D2GS.headlessStaticWarpEntity(source, destination);
+        if (warp == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, warp)) {
+          throw new IOException("A5 Warp entity unavailable: " + source + "->" + destination);
+        }
+        long requestId = 16_000L + i * 10L;
+        send(outA, questRequestPacket(requestId, QuestOperation.WARP_INTERACTION, warp, -1));
+        QuestResult result = a.awaitQuestResult(inA, requestId, deadline());
+        if (result == null || !result.success()) {
+          throw new IOException("A5 Warp rejected: " + source + "->" + destination
+              + " reason=" + (result == null ? "NO_RESULT" : result.reason()));
+        }
+        awaitLevel(a, inA, destination, deadline());
+        log("a5_pair_arrived", "index=" + i + " level=" + destination);
+        int[] state = D2GS.headlessWarpState(a.playerId);
+        if (state.length < 4 || state[0] != destination || state[2] != 1 || state[3] != 0) {
+          throw new IOException("A5 Warp landed outside walkable Zone: " + destination
+              + " state=" + java.util.Arrays.toString(state));
+        }
+        float[] boundary = D2GS.headlessPrepareBoundaryProbe(a.playerId, destination);
+        if (boundary == null) throw new IOException("A5 boundary probe unavailable: " + destination);
+        long sequence = 17_000L + i;
+        send(outA, movementIntentPacket(boundary[2], boundary[3], sequence, 0L, 0L));
+        long boundaryDeadline = System.currentTimeMillis() + 4_000L;
+        while (System.currentTimeMillis() < boundaryDeadline
+            && a.lastMovementAcknowledgement < sequence) {
+          com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+          if (packet != null) a.consume(packet);
+        }
+        if (a.lastMovementAcknowledgement != sequence
+            || a.lastRejectedMovementSequence != sequence) {
+          throw new IOException("A5 boundary move was not rejected: " + destination);
+        }
+        boundaryRejects++;
+        int reverse = D2GS.headlessStaticWarpEntity(destination, source);
+        if (reverse == Engine.INVALID_ENTITY || !D2GS.headlessMovePlayerToObject(a.playerId, reverse)) {
+          throw new IOException("A5 reverse Warp unavailable: " + destination + "->" + source);
+        }
+        long reverseRequest = requestId + 1L;
+        send(outA, questRequestPacket(reverseRequest, QuestOperation.WARP_INTERACTION, reverse, -1));
+        QuestResult reverseResult = a.awaitQuestResult(inA, reverseRequest, deadline());
+        if (reverseResult == null || !reverseResult.success()) {
+          throw new IOException("A5 reverse Warp rejected: " + destination + "->" + source);
+        }
+        awaitLevel(a, inA, source, deadline());
+        log("a5_pair_returned", "index=" + i + " level=" + source);
+        roundTrips++;
+      }
+      log("a5_dungeon_warp_dual_pass", "pairs=" + pairs.length
           + " roundTrips=" + roundTrips + " boundaryRejects=" + boundaryRejects
           + " clients=true,true");
     }
@@ -6277,6 +6376,7 @@ public final class D2GSHeadlessClient {
     boolean requireA2DungeonWarpDual;
     boolean requireA3DungeonWarpDual;
     boolean requireA4DungeonWarpDual;
+    boolean requireA5DungeonWarpDual;
     boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
     boolean requireCountessQuestScenario;
@@ -6329,6 +6429,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-a2-dungeon-warp-dual".equals(arg)) config.requireA2DungeonWarpDual = true;
         else if ("--require-a3-dungeon-warp-dual".equals(arg)) config.requireA3DungeonWarpDual = true;
         else if ("--require-a4-dungeon-warp-dual".equals(arg)) config.requireA4DungeonWarpDual = true;
+        else if ("--require-a5-dungeon-warp-dual".equals(arg)) config.requireA5DungeonWarpDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
         else if ("--require-countess-quest".equals(arg)) config.requireCountessQuestScenario = true;
@@ -6382,6 +6483,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA2DungeonWarpDual
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
+          && !config.requireA5DungeonWarpDual
           && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
@@ -6394,6 +6496,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA2DungeonWarpDual
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
+          && !config.requireA5DungeonWarpDual
           && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
