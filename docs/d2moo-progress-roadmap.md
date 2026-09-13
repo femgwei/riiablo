@@ -4368,5 +4368,23 @@ Tyrael3 奖励/重连观察器修正；随后回到 A2--A5 剩余地图入口和
   检查波次清空屏障与客户端读取窗口，确认 Tyrael3/奖励/重连链后再标记完成。
 
 下一项：修正 `headlessBaalWaveDual` 第三波起的清空/观察时序（必要时加入
-  权威波次状态日志和超时快照），完成 A5Q6 五波、Tyrael3、奖励及重连回归；
-  之后回到 A5Q5 动态门碰撞细化。
+权威波次状态日志和超时快照），完成 A5Q6 五波、Tyrael3、奖励及重连回归；
+之后回到 A5Q5 动态门碰撞细化。
+
+### 2026-09-13 A5Q6 五波、Baal、Tyrael3 与重连全链路（本轮完成）
+
+- [x] 离屏双客户端五波回归全部通过，第三至第五波采用生命周期代数和权威
+  `waveIndex` 对齐，双方实体集合、Monster class、坐标一致。
+- [x] 最终波清空屏障、Baal 生成、Worldstone Chamber 可见性、Tyrael3 快照、
+  20175 对话、城镇 Portal、奖励标志及完成后重连恢复均通过。
+- [x] 为测试观察器增加玩家不可被波次 AI 选中的测试态，仅作用于 headless
+  夹具，不改变生产战斗规则。
+- [x] 实跑日志关键结果：`baal_wave_dual_pass wave=1..5`、
+  `baal_wave_gate_pass`、`baal_spawn_dual_pass`、`baal_terminal_dual_pass`、
+  `baal_post_message_reconnect_pass`，Gradle `BUILD SUCCESSFUL`。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：核对 A5Q5 Ancient Summit 三座雕像、Ancients Door 和 Summit Door 的
+动态碰撞层与入口边界，补充开启前后双方通行性和重连后的碰撞回归。

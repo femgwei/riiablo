@@ -1746,7 +1746,9 @@ public final class D2GSHeadlessClient {
       // being exercised; this test validates wave/entity synchronization, not
       // player survivability or combat balance.
       if (!D2GS.headlessSetPlayerLife(a.playerId, 1_000_000f)
-          || !D2GS.headlessSetPlayerLife(b.playerId, 1_000_000f)) {
+          || !D2GS.headlessSetPlayerLife(b.playerId, 1_000_000f)
+          || !D2GS.headlessSetPlayerTargetable(a.playerId, false)
+          || !D2GS.headlessSetPlayerTargetable(b.playerId, false)) {
         throw new IOException("could not prime Baal wave observer vitality");
       }
 

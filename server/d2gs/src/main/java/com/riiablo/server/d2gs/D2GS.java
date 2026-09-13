@@ -2934,6 +2934,37 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only fixture: keep wave observers out of monster target selection. */
+  static boolean headlessSetPlayerTargetable(int playerId, boolean targetable) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.NativeUnitFlags flags = server.world
+            .getMapper(com.riiablo.engine.server.component.NativeUnitFlags.class)
+            .get(playerId);
+        if (flags == null) {
+          flags = server.world.getMapper(com.riiablo.engine.server.component.NativeUnitFlags.class)
+              .create(playerId).reset();
+        }
+        if (targetable) flags.set(com.riiablo.engine.server.component.NativeUnitFlags.MONSTER_TARGET);
+        else flags.clear(com.riiablo.engine.server.component.NativeUnitFlags.MONSTER_TARGET);
+        updated.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Counts living Ancient guardians, ignoring deferred-deletion corpses. */
   static int headlessAncientAliveCount(int levelId) {
     D2GS server = activeHeadlessInstance;
