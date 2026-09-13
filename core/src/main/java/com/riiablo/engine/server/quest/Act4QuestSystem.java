@@ -270,10 +270,31 @@ public class Act4QuestSystem extends PassiveSystem {
     if (!player.data.getItems().removeItemCode(Act4HellforgeQuest.HAMMER)) return;
     interaction.accept(Engine.Object.MODE_S1);
     short next = Act4HellforgeQuest.complete(record);
-    updateHellforgeRecord(player.data, next, "soulstone-smashed");
+    completeHellforgeForParty(interaction.playerId, player.data, next);
     dropHellforgeRunes(interaction.entityId);
     log.info("[A4Q3] Hellforge completed: player={} object={}", interaction.playerId,
         interaction.entityId);
+  }
+
+  /** Applies Hellforge completion to the smashing player and party members. */
+  private void completeHellforgeForParty(int sourceId, CharData sourceData, short sourceNext) {
+    updateHellforgeRecord(sourceData, sourceNext, "soulstone-smashed");
+    if (playersByZone == null || partyManager == null) return;
+    short partyId = partyManager.getPartyId(sourceId);
+    if (partyId == Party.INVALID_ID) return;
+    IntBag players = playersByZone.getEntities();
+    int[] ids = players.getData();
+    for (int i = 0; i < players.size(); i++) {
+      int id = ids[i];
+      if (id == sourceId || partyManager.getPartyId(id) != partyId) continue;
+      Player member = mPlayer.get(id);
+      if (member == null || member.data == null) continue;
+      short current = hellforgeRecord(member.data);
+      if (NativeQuestRecord.has(current, NativeQuestRecord.REWARD_GRANTED)
+          || NativeQuestRecord.has(current, NativeQuestRecord.REWARD_PENDING)) continue;
+      updateHellforgeRecord(member.data, Act4HellforgeQuest.complete(current),
+          "party-member-soulstone-smashed");
+    }
   }
 
   private void dropHellforgeRunes(int forgeEntityId) {
@@ -516,8 +537,35 @@ public class Act4QuestSystem extends PassiveSystem {
     if (event == null || !mPlayer.has(event.entityId) || !mMonster.has(event.npcId)) return;
     Player player = mPlayer.get(event.entityId);
     Monster npc = mMonster.get(event.npcId);
-    if (player == null || player.data == null || npc == null || npc.monstats == null
-        || npc.monstats.hcIdx != MonsterType.TYRAEL2) return;
+    if (player == null || player.data == null || npc == null || npc.monstats == null) return;
+
+    // Native A4Q3 uses Cain4's scroll message 680 to atomically consume the
+    // player's pending reward state.  The callback is intentionally scoped to
+    // the requesting player: party members retain REWARD_PENDING until they
+    // perform their own conversation, matching D2MOO's per-player quest bits.
+    if (npc.monstats.hcIdx == MonsterType.CAIN4) {
+      if (event.messageIndex == Act4HellforgeQuest.MESSAGE_CAIN_REWARD) {
+        short hellforge = hellforgeRecord(player.data);
+        if (!Act4HellforgeQuest.canClaimReward(hellforge)) {
+          log.debug("[A4Q3] Cain4 reward ignored: player={} state=0x{}",
+              event.entityId, Integer.toHexString(Short.toUnsignedInt(hellforge)));
+          return;
+        }
+        short next = Act4HellforgeQuest.claimReward(hellforge);
+        updateHellforgeRecord(player.data, next, "cain4-reward-claimed");
+        log.info("[A4Q3] Cain4 reward granted: player={} npc={} state=0x{}",
+            event.entityId, event.npcId, Integer.toHexString(Short.toUnsignedInt(next)));
+      } else if (event.messageIndex == Act4HellforgeQuest.MESSAGE_CAIN_INIT_HAS_STONE
+          || event.messageIndex == Act4HellforgeQuest.MESSAGE_CAIN_INIT_NO_STONE) {
+        // Speech-only messages still advance the native started bit when the
+        // quest has not yet been initialized; no reward state is changed.
+        short hellforge = hellforgeRecord(player.data);
+        updateHellforgeRecord(player.data, Act4HellforgeQuest.start(hellforge),
+            "cain4-dialog");
+      }
+      return;
+    }
+    if (npc.monstats.hcIdx != MonsterType.TYRAEL2) return;
     short record = record(player.data);
     if (event.messageIndex == Act4IzualQuest.MESSAGE_TYRAEL_INIT) {
       updateRecord(player.data, Act4IzualQuest::start, "tyrael-init");

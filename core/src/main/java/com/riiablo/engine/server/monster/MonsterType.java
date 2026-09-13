@@ -152,6 +152,8 @@ public final class MonsterType {
   public static final int DECKARDCAIN_ACT2 = 244;
   /** 第三幕迪卡·凯恩（D2MOO MONSTER_CAIN3） */
   public static final int CAIN3 = 245;
+  /** 第四幕迪卡·凯恩（D2MOO MONSTER_CAIN4） */
+  public static final int CAIN4 = 246;
   /** 格瑞兹 (Act 1) */
   public static final int GHEED = 147;
   /** 沃瑞夫 (Act 1) */

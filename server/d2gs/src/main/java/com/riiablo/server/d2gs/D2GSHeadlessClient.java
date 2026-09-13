@@ -2514,6 +2514,12 @@ public final class D2GSHeadlessClient {
       send(outB, connectionPacket(peerCharacter, peerD2s));
       a.awaitConnection(inA, deadline());
       b.awaitConnection(inB, deadline());
+      // D2MOO propagates Hellforge completion to party members; explicitly
+      // place both fixture clients in one party so the snapshot assertion
+      // exercises that native path rather than two unrelated solo saves.
+      if (!D2GS.headlessJoinParty(a.playerId, b.playerId)) {
+        throw new IOException("A4Q3 party staging unavailable");
+      }
       if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT4, record, (short) 0)
           || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT4, record, (short) 0)
           || !D2GS.headlessAddQuestItem(a.playerId,
@@ -2598,9 +2604,49 @@ public final class D2GSHeadlessClient {
           throw new IOException("A4Q3 Hellforge reconnect state lost: runes=" + restoredRunes
               + " approach=" + java.util.Arrays.toString(restoredApproach));
         }
+
+        // Cain4's native scroll message 680 is the only reward claim path.
+        // Claim on the reconnecting client and verify the other party member
+        // remains pending until it submits its own message (D2MOO per-player
+        // quest bits, not a shared one-shot flag).
+        int cain4 = D2GS.headlessPrepareQuestNpc(reconnect.playerId,
+            com.riiablo.engine.server.monster.MonsterType.CAIN4);
+        if (cain4 == Engine.INVALID_ENTITY) {
+          throw new IOException("A4Q3 Cain4 NPC unavailable after reconnect");
+        }
+        send(reconnectOutput, questRequestPacket(816L, QuestOperation.NPC_MESSAGE,
+            cain4, com.riiablo.engine.server.quest.Act4HellforgeQuest.MESSAGE_CAIN_REWARD));
+        QuestResult granted = reconnect.awaitQuestResult(reconnectInput, 816L, deadline());
+        if (granted == null || !granted.success()
+            || !hasQuestFlagAt(granted, Riiablo.ACT4, record,
+                NativeQuestRecord.REWARD_GRANTED)
+            || hasQuestFlagAt(granted, Riiablo.ACT4, record,
+                NativeQuestRecord.REWARD_PENDING)) {
+          throw new IOException("A4Q3 Cain4 reward claim failed: "
+              + (granted == null ? "NO_RESULT" : granted.reason()));
+        }
+        int peerCain4 = D2GS.headlessPrepareQuestNpc(b.playerId,
+            com.riiablo.engine.server.monster.MonsterType.CAIN4);
+        if (peerCain4 != cain4) {
+          throw new IOException("A4Q3 Cain4 NPC was not shared between clients");
+        }
+        QuestResult peerPending = requestSnapshot(b, inB, outB, 817L);
+        if (!hasQuestFlagAt(peerPending, Riiablo.ACT4, record,
+                NativeQuestRecord.REWARD_PENDING)) {
+          throw new IOException("A4Q3 peer reward state changed before claim");
+        }
+        send(outB, questRequestPacket(818L, QuestOperation.NPC_MESSAGE,
+            peerCain4, com.riiablo.engine.server.quest.Act4HellforgeQuest.MESSAGE_CAIN_REWARD));
+        QuestResult peerGranted = b.awaitQuestResult(inB, 818L, deadline());
+        if (peerGranted == null || !peerGranted.success()
+            || !hasQuestFlagAt(peerGranted, Riiablo.ACT4, record,
+                NativeQuestRecord.REWARD_GRANTED)) {
+          throw new IOException("A4Q3 peer Cain4 reward claim failed: "
+              + (peerGranted == null ? "NO_RESULT" : peerGranted.reason()));
+        }
       }
       log("a4q3_hellforge_dual_pass", "forge=" + forge + " hits=3 runes=3"
-          + " reconnect=pending clients=true,true");
+          + " reconnect=pending claim=granted clients=true,true");
     }
   }
 

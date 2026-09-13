@@ -46,7 +46,7 @@ public class Npc extends AI {
   static final IntSet HIRERERS   = new IntSet();
   static {
     // Act 1
-    TALKERS.addAll(MonsterType.DECKARDCAIN, MonsterType.DECKARDCAIN_TOWN,
+    TALKERS.addAll(MonsterType.DECKARDCAIN, MonsterType.DECKARDCAIN_TOWN, MonsterType.CAIN4,
         MonsterType.GHEED, MonsterType.AKARA, MonsterType.KASHYA,
         MonsterType.CHARSI, MonsterType.WARRIV);
     REPAIRERS.addAll(154);
@@ -152,6 +152,15 @@ public class Npc extends AI {
           .addItem("Quest", new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+              if (entType == MonsterType.CAIN4) {
+                com.riiablo.engine.client.Act4QuestDialogController quests =
+                    Riiablo.engine.getSystem(com.riiablo.engine.client.Act4QuestDialogController.class);
+                if (quests != null && Riiablo.game != null) {
+                  menuManager.setMenu(null, Engine.INVALID_ENTITY);
+                  quests.openQuestDialog(Riiablo.game.player, entityId);
+                }
+                return;
+              }
               Act1QuestDialogController quests =
                   Riiablo.engine.getSystem(Act1QuestDialogController.class);
               if (quests != null && Riiablo.game != null) {

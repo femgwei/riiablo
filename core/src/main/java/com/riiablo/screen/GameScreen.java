@@ -117,6 +117,7 @@ import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
 import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
 import com.riiablo.engine.server.quest.Act2HoradricStaffDropSystem;
 import com.riiablo.engine.client.Act2QuestDialogController;
+import com.riiablo.engine.client.Act4QuestDialogController;
 import com.riiablo.engine.server.quest.NativeMercenaryRewardSystem;
 import com.riiablo.engine.server.quest.NativeCountessRewardSystem;
 import com.riiablo.engine.server.quest.NativeCharsiImbueSystem;
@@ -799,6 +800,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // Presentation-only adapter is also required by network clients; quest
     // mutation remains authoritative in the local/server Act2QuestSystem.
     builder.with(new Act2QuestDialogController());
+    builder.with(new Act4QuestDialogController());
     if (socket == null) {
       // Local games own the authoritative combat world.  Dedicated servers
       // already register this system; network clients must not create a

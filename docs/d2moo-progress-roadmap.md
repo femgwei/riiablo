@@ -4575,3 +4575,26 @@ A4Q3 Hellforge 的入口、锤击计数和符文掉落重连。
 
 下一项：补齐 A4Q3 Hellforge 的 NPC 奖励领取（pending→granted）和多人队伍快照，
 然后进入 A2--A5 尚未覆盖的 NPC/任务奖励分支。
+
+### 2026-09-14 A4Q3 Cain4 奖励领取与队伍快照（本轮完成）
+
+- [x] 对齐 D2MOO `A4Q3_Callback11_ScrollMessage`：Cain4 使用原生消息 `678/679/680`，
+  其中 `680` 仅在 `PRIMARY_GOAL_DONE + REWARD_PENDING` 时将记录原子转换为
+  `REWARD_GRANTED`；已领取或非 pending 状态的重放保持幂等。
+- [x] 新增 `Act4QuestMessageValidator`，在 D2GS 网络边界校验 Cain4 消息、灵魂石
+  持有条件和奖励状态；补充 `MonsterType.CAIN4=246`，并接入客户端 Cain4 对话与
+  原生语音资源（无石/有石/奖励三条分支）。
+- [x] Hellforge 三次锤击完成时按 D2MOO 队伍规则同步同队玩家的
+  `PRIMARY_GOAL_DONE + REWARD_PENDING`；领取仍按玩家独立执行，不会错误清除队友的
+  pending。离屏双客户端回归通过：
+  `a4q3_hellforge_dual_pass forge=330 hits=3 runes=3 reconnect=pending claim=granted clients=true,true`。
+- [x] `:core:test --tests com.riiablo.engine.server.quest.Act4HellforgeQuestTest`、
+  `:server:d2gs:compileJava` 与 `:server:d2gs:headlessA4HellforgeDual` 均通过。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/engine/server/ai/Npc.java`、
+`core/src/main/java/com/riiablo/screen/GameScreen.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`；仅增加 A4Q3 对话路由与
+网络校验，不改动战斗注册。
+
+下一项：继续 A2--A5 尚未覆盖的 NPC/任务奖励分支，优先 A4Q1 Izual/Tyrael 与
+A4Q2 Diablo 完成后的多人领取/重连快照，再进入 A3/A5 仍缺少原生 NPC 对话的分支。
