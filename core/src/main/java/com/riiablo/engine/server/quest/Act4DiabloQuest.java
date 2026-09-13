@@ -20,6 +20,16 @@ public final class Act4DiabloQuest {
     return objectClassId >= FIRST_SEAL && objectClassId <= LAST_SEAL;
   }
 
+  /** Native seal groups that spawn a super-unique pack; 395/396 are non-boss seals. */
+  public static int sealBossGroup(int objectClassId) {
+    switch (objectClassId) {
+      case FIRST_SEAL: return 1; // Infector of Souls
+      case FIRST_SEAL + 1: return 2; // Lord De Seis
+      case FIRST_SEAL + 2: return 3; // Grand Vizier of Chaos
+      default: return 0;
+    }
+  }
+
   public static short start(short record) {
     return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
         ? record : NativeQuestRecord.set(record, NativeQuestRecord.STARTED);

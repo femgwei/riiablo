@@ -24,6 +24,11 @@ class Act4DiabloQuestTest {
     assertTrue(Act4DiabloQuest.CHAOS_SANCTUARY == 108);
     assertTrue(Act4DiabloQuest.isSealObject(392));
     assertTrue(Act4DiabloQuest.isSealObject(396));
+    assertTrue(Act4DiabloQuest.sealBossGroup(392) == 1);
+    assertTrue(Act4DiabloQuest.sealBossGroup(393) == 2);
+    assertTrue(Act4DiabloQuest.sealBossGroup(394) == 3);
+    assertTrue(Act4DiabloQuest.sealBossGroup(395) == 0);
+    assertTrue(Act4DiabloQuest.sealBossGroup(396) == 0);
     assertFalse(Act4DiabloQuest.isSealObject(391));
     assertFalse(Act4DiabloQuest.isSealObject(397));
   }

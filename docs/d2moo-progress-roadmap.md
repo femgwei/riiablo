@@ -4505,3 +4505,17 @@ Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰�
 
 下一项：在修正后的 108 号 Chaos Sanctuary 上补齐五枚封印的双客户端对象可见性、
 接近格/动态碰撞和三组封印 Boss 生成回归，再核对 A4Q3 Hellforge 的入口与奖励重连。
+
+### 2026-09-14 A4Q2 五枚封印分组对齐（本轮完成）
+
+- [x] 将三组会生成 SuperUnique 的封印映射（392/393/394）集中到
+  `Act4DiabloQuest.sealBossGroup`，明确 395/396 仅为非 Boss 封印；
+  `Act4QuestSystem` 不再用范围判断误触发 Boss 生成。
+- [x] 新增纯逻辑测试覆盖五枚封印及边界，避免后续对象表/OperateFn 调整时将
+  非 Boss 封印错误绑定到某一组 Boss。
+- [x] `:core:test --tests com.riiablo.engine.server.quest.Act4DiabloQuestTest`、
+  `headlessA4DungeonWarpDual`、`headlessA5QuestWarpDual` 与 A5 组合任务回归均通过。
+
+下一项：新增 A4Q2 离屏双客户端封印验收（五枚封印可见、四侧接近格、开启前后
+动态碰撞，三组 Boss 只生成一次并在 Diablo 前置条件满足后出现），随后处理
+A4Q3 Hellforge 的入口、锤击计数和符文掉落重连。

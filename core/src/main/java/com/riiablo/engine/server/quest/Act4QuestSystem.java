@@ -225,8 +225,7 @@ public class Act4QuestSystem extends PassiveSystem {
   }
 
   private void spawnSealBoss(int objectClassId, int sealEntityId) {
-    if (factory == null || objectClassId < Act4DiabloQuest.FIRST_SEAL
-        || objectClassId > Act4DiabloQuest.FIRST_SEAL + 2) return;
+    if (factory == null || Act4DiabloQuest.sealBossGroup(objectClassId) == 0) return;
     int monsterType;
     switch (objectClassId) {
       case 392: monsterType = MonsterType.INFECTOR_OF_SOULS; break;
