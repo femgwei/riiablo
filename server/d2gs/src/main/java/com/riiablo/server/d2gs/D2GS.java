@@ -470,6 +470,11 @@ public class D2GS extends ApplicationAdapter {
           // Chamber client after the authoritative baseline transaction.
           if (levelId == Act5BaalQuest.WORLDSTONE_CHAMBER) {
             server.syncHeadlessChamberBaal();
+            // Tyrael is a terminal NPC created by the Baal death bridge and
+            // is not guaranteed to be in the normal room-ring baseline.  A
+            // reconnecting client entering the Chamber must receive the same
+            // explicit NPC snapshot as the original recipients.
+            server.syncHeadlessChamberTyrael();
           }
         } else {
           Gdx.app.log(TAG, "[HEADLESS_LEVEL] baseline skipped player=" + playerId
@@ -1010,6 +1015,15 @@ public class D2GS extends ApplicationAdapter {
           && Act5BaalQuest.isTyrael3(monster.monstats.hcIdx, monster.monstats.Id)) return id;
     }
     return Engine.INVALID_ENTITY;
+  }
+
+  /** Primitive-only quest record probe used by the A5Q6 protocol fixture. */
+  static int headlessBaalQuestRecord(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null) return -1;
+    Player player = server.world.getMapper(Player.class).get(playerId);
+    return player == null || player.data == null ? -1
+        : Short.toUnsignedInt(player.data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD]);
   }
 
   private static int findLastPortalWarpEntity(D2GS server) {

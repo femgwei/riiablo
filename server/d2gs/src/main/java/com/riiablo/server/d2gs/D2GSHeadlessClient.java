@@ -1887,8 +1887,8 @@ public final class D2GSHeadlessClient {
       }
       a.awaitDeleted(inA, deadBaal, deadline());
       b.awaitDeleted(inB, deadBaal, deadline());
-      Snapshot tyraelA = awaitTyrael(inA, deadline());
-      Snapshot tyraelB = awaitTyrael(inB, deadline());
+      Snapshot tyraelA = a.awaitTyrael(inA, deadline());
+      Snapshot tyraelB = b.awaitTyrael(inB, deadline());
       if (tyraelA.entityId != tyraelB.entityId
           || tyraelA.monsterClass != tyraelB.monsterClass
           || Math.abs(tyraelA.x - tyraelB.x) > 0.01f
@@ -1929,7 +1929,13 @@ public final class D2GSHeadlessClient {
         QuestResult rewardB = b.awaitQuestResult(inB, 1L, deadline());
         if (!hasBaalReward(rewardReconnect, recordIndex)
             || !hasBaalReward(rewardB, recordIndex)) {
-          throw new IOException("pre-message reconnect lost Baal Chamber reward");
+          throw new IOException("pre-message reconnect lost Baal Chamber reward: reconnect=0x"
+              + Integer.toHexString(rewardReconnect.questRecords(recordIndex) & 0xFFFF)
+              + " peer=0x" + Integer.toHexString(rewardB.questRecords(recordIndex) & 0xFFFF)
+              + " authorityReconnect=0x" + Integer.toHexString(
+                  D2GS.headlessBaalQuestRecord(reconnectedA.playerId))
+              + " authorityPeer=0x" + Integer.toHexString(
+                  D2GS.headlessBaalQuestRecord(b.playerId)));
         }
         if (D2GS.headlessLastPortalEntity() != Engine.INVALID_ENTITY) {
           throw new IOException("Last Portal appeared before Tyrael's terminal message");
@@ -5548,27 +5554,29 @@ public final class D2GSHeadlessClient {
 
   private Snapshot awaitTyrael(DataInputStream input, long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
-      int authoritativeId = D2GS.headlessTyraelEntity();
-      Snapshot authoritative = authoritativeId == Engine.INVALID_ENTITY
-          ? null : monsters.get(authoritativeId);
-      if (authoritative != null && !authoritative.deleted && authoritative.hasPosition) {
-        return authoritative;
-      }
+      // Prefer the packet-backed local snapshot.  Querying the live Artemis
+      // world from this socket thread is racy during the DeathEvent/room
+      // process boundary and could stall the observer even after a complete
+      // Tyrael EntitySync had already been consumed.
       for (Snapshot snapshot : monsters.values()) {
         // Tyrael3 is an NPC monster fixture and does not carry a VitalityP
         // component in the native spawn path; requiring hasVitals would hide
         // an otherwise valid synchronized dialogue entity.
-        if (snapshot.deleted || !snapshot.hasPosition || snapshot.monsterClass < 0
-            || Riiablo.files == null || Riiablo.files.monstats == null) continue;
+        if (snapshot.deleted || !snapshot.hasPosition || snapshot.monsterClass < 0) continue;
         // MonsterP carries the native hcIdx.  Resolve Tyrael by its stable
         // class id first; table lookup by ordinal is not guaranteed when the
         // 1.10f rows are loaded through the projected TXT schema.
         if (com.riiablo.engine.server.quest.Act5BaalQuest.isTyrael3(
             snapshot.monsterClass, null)) return snapshot;
-        com.riiablo.codec.excel.MonStats.Entry row =
-            Riiablo.files.monstats.get(snapshot.monsterClass);
-        if (row != null && ("tyrael3".equalsIgnoreCase(row.Id)
-            || "tyrael".equalsIgnoreCase(row.Id))) return snapshot;
+        // TXT tables are optional in a protocol-only headless client.  The
+        // native hcIdx above is authoritative, so only do the string lookup
+        // when MonStats is available instead of dropping a valid snapshot.
+        if (Riiablo.files != null && Riiablo.files.monstats != null) {
+          com.riiablo.codec.excel.MonStats.Entry row =
+              Riiablo.files.monstats.get(snapshot.monsterClass);
+          if (row != null && ("tyrael3".equalsIgnoreCase(row.Id)
+              || "tyrael".equalsIgnoreCase(row.Id))) return snapshot;
+        }
       }
       com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
       if (packet != null) consume(packet);
@@ -6087,6 +6095,31 @@ public final class D2GSHeadlessClient {
     if (packet.dataType() != D2GSData.EntitySync) return;
     EntitySync sync = (EntitySync) packet.data(new EntitySync());
     int packetLevelId = sync.levelId();
+    // Tyrael3 is a terminal A5Q6 NPC and is intentionally sent through the
+    // explicit headless baseline bridge.  Keep a wire-level trace for this
+    // entity so a failed observer assertion can distinguish a missing packet
+    // from a type/component/level filter in the oracle.
+    int wireMonsterIndex = findComponent(sync, ComponentP.MonsterP);
+    boolean tyraelWire = wireMonsterIndex >= 0
+        && ((MonsterP) sync.component(new MonsterP(), wireMonsterIndex)).monsterId()
+            == com.riiablo.engine.server.quest.Act5BaalQuest.TYRAEL3_CLASS;
+    if (tyraelWire) {
+      StringBuilder trace = new StringBuilder(128)
+          .append("[HEADLESS_CLIENT] tyrael_sync entity=").append(sync.entityId())
+          .append(" type=").append(sync.type())
+          .append(" flags=0x").append(Integer.toHexString(sync.flags()))
+          .append(" level=").append(packetLevelId)
+          .append(" currentLevel=").append(currentLevelId)
+          .append(" tick=").append(sync.tick())
+          .append(" components=").append(sync.componentLength());
+      if (wireMonsterIndex >= 0) {
+        MonsterP monster = (MonsterP) sync.component(new MonsterP(), wireMonsterIndex);
+        trace.append(" monsterClass=").append(monster.monsterId());
+      }
+      trace.append(" hasPosition=").append(findComponent(sync, ComponentP.PositionP) >= 0)
+          .append(" hasVitals=").append(findComponent(sync, ComponentP.VitalsP) >= 0);
+      System.err.println(trace);
+    }
     if (sync.entityId() == playerId && packetLevelId >= 0
         && packetLevelId != currentLevelId) {
       System.err.println("[HEADLESS_CLIENT] level_sync player=" + playerId
@@ -6292,6 +6325,12 @@ public final class D2GSHeadlessClient {
           && cof.mode() != Engine.Monster.MODE_WL
           && cof.mode() != Engine.Monster.MODE_RN;
     }
+    if (snapshot.monsterClass == com.riiablo.engine.server.quest.Act5BaalQuest.TYRAEL3_CLASS) {
+      System.err.println("[HEADLESS_CLIENT] tyrael_snapshot entity=" + sync.entityId()
+          + " class=" + snapshot.monsterClass + " deleted=" + snapshot.deleted
+          + " everActive=" + snapshot.everActive + " position=" + snapshot.hasPosition
+          + " vitals=" + snapshot.hasVitals + " life=" + snapshot.life);
+    }
   }
 
   /** Records the authoritative StateP projection without mutating local state. */
@@ -6363,6 +6402,13 @@ public final class D2GSHeadlessClient {
   private static com.riiablo.net.packet.d2gs.D2GS readPacket(DataInputStream input)
       throws IOException {
     try {
+      // BufferedInputStream can wait indefinitely for the first byte even
+      // when the underlying socket has a read timeout (notably after a
+      // recipient-scoped baseline).  Keep the protocol oracle non-blocking:
+      // a partial frame is simply retried on the next poll.
+      if (input.available() < 4) {
+        return null;
+      }
       int size = readLittleEndianInt(input);
       if (size <= 0 || size > MAX_PACKET_SIZE) {
         throw new IOException("invalid D2GS packet size " + size);
@@ -6566,7 +6612,9 @@ public final class D2GSHeadlessClient {
 
   private static byte[] createGeneratedObserverSave(String name, int mapSeed) {
     CharData character = CharData.obtain().clear()
-        .set(Riiablo.NORMAL, false, name, Riiablo.BARBARIAN);
+        // Baal/Tyrael are Expansion-only in native D2; use an expansion save
+        // so the direct Chamber reward gate matches the real A5Q6 path.
+        .set(Riiablo.NORMAL, true, name, Riiablo.BARBARIAN);
     com.riiablo.codec.excel.CharStats.Entry stats = CharacterClass.BARBARIAN.entry();
     StatListRef base = character.getStats().base();
     base.put(Stat.strength, stats.str);

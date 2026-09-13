@@ -1516,9 +1516,37 @@ public class Act5QuestSystem extends BaseSystem {
   public void ensureTyraelAfterHeadlessBaalDeath(int baalEntity) {
     if (!gameState().isBaalDefeated()) {
       gameState().markBaalDefeated();
-      completeBaalForPlayers();
     }
+    // The normal DeathEvent may have marked the game state before this
+    // headless bridge runs (for example when the fixture's terminal Baal was
+    // reconciled by a room tick).  Reward propagation is idempotent, so run
+    // it on every bridge invocation instead of coupling it to the state bit
+    // transition; reconnect tests and late party members must still receive
+    // PRIMARY_GOAL_DONE/REWARD_GRANTED.
+    completeBaalForPlayers();
+    // Room membership subscriptions can lag one Artemis process behind the
+    // deterministic headless DeathEvent.  Scan authoritative Player/
+    // MapWrapper components as a fallback so a reconnect cannot miss the
+    // direct Chamber reward merely because playersByZone was stale.
+    completeBaalForHeadlessPlayers();
     spawnA5Q6Tyrael(baalEntity);
+  }
+
+  private void completeBaalForHeadlessPlayers() {
+    if (world == null || mPlayer == null || mMapWrapper == null) return;
+    IntBag entities = world.getAspectSubscriptionManager().get(
+        Aspect.all(Player.class, MapWrapper.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int id = ids[i];
+      Player player = mPlayer.get(id);
+      int playerLevel = levelId(id);
+      if (player == null || player.data == null
+          || !Act5BaalQuest.canReceivePartyReward(player.data.isExpansion(), playerLevel)) continue;
+      completeBaalAndProgression(id, player, "headless-baal-kill");
+      updateBaalRecord(player.data, Act5BaalQuest::completeObserver,
+          "headless-baal-completed-observer");
+    }
   }
 
   /** Creates the A5Q6 Throne -> Worldstone Chamber portal once. */
