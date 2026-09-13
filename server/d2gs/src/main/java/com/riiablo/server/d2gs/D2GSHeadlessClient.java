@@ -4021,6 +4021,12 @@ public final class D2GSHeadlessClient {
           && (a.currentLevelId != level || b.currentLevelId != level)) {
         D2GS.headlessEnterLevel(a.playerId, level);
         D2GS.headlessEnterLevel(b.playerId, level);
+        int[] authoritativeA = D2GS.headlessWarpState(a.playerId);
+        int[] authoritativeB = D2GS.headlessWarpState(b.playerId);
+        log("level_resync", "requested=" + level
+            + " clientLevels=" + a.currentLevelId + "," + b.currentLevelId
+            + " authoritative=" + java.util.Arrays.toString(authoritativeA)
+            + "," + java.util.Arrays.toString(authoritativeB));
         retryAt = System.currentTimeMillis() + 1_000L;
       }
     }
