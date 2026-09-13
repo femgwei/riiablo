@@ -2399,6 +2399,72 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Samples free approach cells around a quest object: [entity,left,right,up,down]. */
+  static int[] headlessQuestObjectApproachSnapshot(int levelId, int classId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return new int[5];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[5]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.Position.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Object> objectMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Object.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Position> positions =
+            server.world.getMapper(com.riiablo.engine.server.component.Position.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Object object = objectMapper.get(entity);
+          com.riiablo.engine.server.component.Position position = positions.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (object == null || object.base == null || object.base.Id != classId
+              || position == null || wrapper == null || wrapper.zone != zone) continue;
+          int width = Math.max(0, object.base.SizeX);
+          int height = Math.max(0, object.base.SizeY);
+          if (width == 0 || height == 0) {
+            result.set(new int[] {entity, 0, 0, 0, 0});
+            return;
+          }
+          int x = Math.round(position.position.x);
+          int y = Math.round(position.position.y);
+          int dx = Math.max(2, width / 2 + 2);
+          int dy = Math.max(2, height / 2 + 2);
+          com.badlogic.gdx.math.Vector2 candidate = new com.badlogic.gdx.math.Vector2();
+          com.badlogic.gdx.math.Vector2 free = new com.badlogic.gdx.math.Vector2();
+          int[] samples = new int[5];
+          samples[0] = entity;
+          int[][] points = {{x - dx, y}, {x + dx, y}, {x, y + dy}, {x, y - dy}};
+          for (int p = 0; p < points.length; p++) {
+            candidate.set(points[p][0], points[p][1]);
+            samples[p + 1] = zone.findFreeCoordinates(candidate, 1, 0, true, free) ? 1 : 0;
+          }
+          result.set(samples);
+          return;
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[5];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[5];
+    }
+  }
+
   /**
    * Read-only snapshot for early-act quest objects. Result order is
    * {@code [cairnStones, inifussTrees, cainGibbets, malusStands, towerTomes,

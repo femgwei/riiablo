@@ -2408,6 +2408,12 @@ public final class D2GSHeadlessClient {
           com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
       int[] closedSummitDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
           com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
+      int[] closedApproach = D2GS.headlessQuestObjectApproachSnapshot(summit,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
+      if (closedApproach[0] != Engine.INVALID_ENTITY && approachCount(closedApproach) == 0) {
+        throw new IOException("A5Q5 closed Ancients Door has no free approach cell: "
+            + java.util.Arrays.toString(closedApproach));
+      }
       if (closedAncientDoor[0] != Engine.INVALID_ENTITY && closedAncientDoor[3] > 0
               && closedAncientDoor[4] > 0 && closedAncientDoor[5] <= 0
           || closedSummitDoor[0] != Engine.INVALID_ENTITY && closedSummitDoor[3] > 0
@@ -2466,6 +2472,8 @@ public final class D2GSHeadlessClient {
             com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
         int[] openSummitDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
             com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
+        int[] openApproach = D2GS.headlessQuestObjectApproachSnapshot(summit,
+            com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
         QuestResult rewardA = requestSnapshot(a, inA, outA, 560L);
         QuestResult rewardB = requestSnapshot(midReconnect, reconnectInput,
             reconnectOutput, 561L);
@@ -2474,6 +2482,7 @@ public final class D2GSHeadlessClient {
                 && openAncientDoor[4] > 0 && openAncientDoor[5] != 0
             || openSummitDoor[0] != Engine.INVALID_ENTITY && openSummitDoor[3] > 0
                 && openSummitDoor[4] > 0 && openSummitDoor[5] != 0
+            || openApproach[0] != Engine.INVALID_ENTITY && approachCount(openApproach) == 0
             || !hasQuestFlagAt(rewardA, Riiablo.ACT5, record,
                 com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
             || !hasQuestFlagAt(rewardB, Riiablo.ACT5, record,
@@ -2503,6 +2512,8 @@ public final class D2GSHeadlessClient {
               com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
           int[] restoredSummitDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
               com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
+          int[] restoredApproach = D2GS.headlessQuestObjectApproachSnapshot(summit,
+              com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
           if (!hasQuestFlagAt(restored, Riiablo.ACT5, record,
                   com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
               || restoredObjects.length < 10 || (restoredObjects[7] + restoredObjects[9]) < 2) {
@@ -2516,6 +2527,10 @@ public final class D2GSHeadlessClient {
             throw new IOException("A5Q5 restored open door remains colliding: ancient="
                 + java.util.Arrays.toString(restoredAncientDoor) + " summit="
                 + java.util.Arrays.toString(restoredSummitDoor));
+          }
+          if (restoredApproach[0] != Engine.INVALID_ENTITY && approachCount(restoredApproach) == 0) {
+            throw new IOException("A5Q5 restored door has no free approach cell: "
+                + java.util.Arrays.toString(restoredApproach));
           }
           log("a5q5_ancient_post_reconnect_pass", "reward=true doors=true");
         }
@@ -6044,6 +6059,11 @@ public final class D2GSHeadlessClient {
       Thread.sleep(20L);
     }
     throw new IOException("living Ancient count did not reach " + expected);
+  }
+
+  private static int approachCount(int[] samples) {
+    return (samples[1] == 1 ? 1 : 0) + (samples[2] == 1 ? 1 : 0)
+        + (samples[3] == 1 ? 1 : 0) + (samples[4] == 1 ? 1 : 0);
   }
 
   private void awaitEntityInactive(int entityId, long deadline) throws Exception {

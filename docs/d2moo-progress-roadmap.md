@@ -4404,3 +4404,17 @@ Tyrael3 奖励/重连观察器修正；随后回到 A2--A5 剩余地图入口和
 
 下一项：继续补 A5Q5 入口附近的实际通行采样（雕像区域、Ancients Door 两侧和
 Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰撞分支。
+
+### 2026-09-13 A5Q5 入口通行采样（本轮完成）
+
+- [x] 新增 `headlessQuestObjectApproachSnapshot`，按对象 footprint 在门体四侧
+  采样原生 `findFreeCoordinates`，确认入口附近没有被错误墙体完全封死。
+- [x] Ancients Door 关闭、开启及完成后重连均通过接近格校验；动态 footprint
+  引用数与门状态一致。Summit Door 当前资源为 0×0 对象，仍仅校验状态和任务门快照。
+- [x] `headlessA5AncientDual`、`compileJava`、`git diff --check` 通过。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：继续补 A5Q5 三座雕像区域的可通行/阻挡采样和双方同步，再进入 A2--A5
+尚未覆盖的任务对象与地图碰撞分支。
