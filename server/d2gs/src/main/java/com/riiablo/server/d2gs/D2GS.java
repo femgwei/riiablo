@@ -2347,6 +2347,58 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Returns one quest object's dynamic collision sample: [entity,x,y,w,h,refs,doorRefs]. */
+  static int[] headlessQuestObjectCollisionSnapshot(int levelId, int classId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null || Gdx.app == null) {
+      return new int[7];
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[7]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.Position.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Object> objectMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Object.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Position> positions =
+            server.world.getMapper(com.riiablo.engine.server.component.Position.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Object object = objectMapper.get(entity);
+          com.riiablo.engine.server.component.Position position = positions.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (object == null || object.base == null || object.base.Id != classId
+              || position == null || wrapper == null || wrapper.zone != zone) continue;
+          int x = Math.round(position.position.x);
+          int y = Math.round(position.position.y);
+          int width = Math.max(0, object.base.SizeX);
+          int height = Math.max(0, object.base.SizeY);
+          result.set(new int[] {entity, x, y, width, height,
+              zone.objectCollisionReferences(x, y), zone.doorCollisionReferences(x, y)});
+          return;
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[7];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[7];
+    }
+  }
+
   /**
    * Read-only snapshot for early-act quest objects. Result order is
    * {@code [cairnStones, inifussTrees, cainGibbets, malusStands, towerTomes,

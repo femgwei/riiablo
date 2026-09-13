@@ -2404,6 +2404,19 @@ public final class D2GSHeadlessClient {
       awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 focused entry");
       activateAndRequireAncients(a.playerId, b.playerId, summit);
 
+      int[] closedAncientDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
+      int[] closedSummitDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
+          com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
+      if (closedAncientDoor[0] != Engine.INVALID_ENTITY && closedAncientDoor[3] > 0
+              && closedAncientDoor[4] > 0 && closedAncientDoor[5] <= 0
+          || closedSummitDoor[0] != Engine.INVALID_ENTITY && closedSummitDoor[3] > 0
+              && closedSummitDoor[4] > 0 && closedSummitDoor[5] <= 0) {
+        throw new IOException("A5Q5 closed door has no dynamic collision: ancient="
+            + java.util.Arrays.toString(closedAncientDoor) + " summit="
+            + java.util.Arrays.toString(closedSummitDoor));
+      }
+
       int[] inProgress = D2GS.headlessAncientEntities(summit);
       if (inProgress.length != 3 || inProgress[0] == Engine.INVALID_ENTITY
           || !D2GS.headlessKillMonster(a.playerId, inProgress[0])) {
@@ -2449,10 +2462,18 @@ public final class D2GSHeadlessClient {
           throw new IOException("A5Q5 focused post-reconnect door rebuild unavailable");
         }
         int[] objects = D2GS.headlessQuestObjectSnapshot(summit);
+        int[] openAncientDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
+            com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
+        int[] openSummitDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
+            com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
         QuestResult rewardA = requestSnapshot(a, inA, outA, 560L);
         QuestResult rewardB = requestSnapshot(midReconnect, reconnectInput,
             reconnectOutput, 561L);
         if (objects.length < 10 || (objects[7] + objects[9]) < 2
+            || openAncientDoor[0] != Engine.INVALID_ENTITY && openAncientDoor[3] > 0
+                && openAncientDoor[4] > 0 && openAncientDoor[5] != 0
+            || openSummitDoor[0] != Engine.INVALID_ENTITY && openSummitDoor[3] > 0
+                && openSummitDoor[4] > 0 && openSummitDoor[5] != 0
             || !hasQuestFlagAt(rewardA, Riiablo.ACT5, record,
                 com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
             || !hasQuestFlagAt(rewardB, Riiablo.ACT5, record,
@@ -2478,11 +2499,23 @@ public final class D2GSHeadlessClient {
           awaitLevel(postReconnect, postInput, summit, deadline());
           QuestResult restored = requestSnapshot(postReconnect, postInput, postOutput, 562L);
           int[] restoredObjects = D2GS.headlessQuestObjectSnapshot(summit);
+          int[] restoredAncientDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
+              com.riiablo.engine.server.object.NativeQuestObjectResolver.ANCIENT_DOOR);
+          int[] restoredSummitDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
+              com.riiablo.engine.server.object.NativeQuestObjectResolver.SUMMIT_DOOR);
           if (!hasQuestFlagAt(restored, Riiablo.ACT5, record,
                   com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
               || restoredObjects.length < 10 || (restoredObjects[7] + restoredObjects[9]) < 2) {
             throw new IOException("A5Q5 focused post-completion restore failed: "
                 + java.util.Arrays.toString(restoredObjects));
+          }
+          if (restoredAncientDoor[0] != Engine.INVALID_ENTITY && restoredAncientDoor[3] > 0
+                  && restoredAncientDoor[4] > 0 && restoredAncientDoor[5] != 0
+              || restoredSummitDoor[0] != Engine.INVALID_ENTITY && restoredSummitDoor[3] > 0
+                  && restoredSummitDoor[4] > 0 && restoredSummitDoor[5] != 0) {
+            throw new IOException("A5Q5 restored open door remains colliding: ancient="
+                + java.util.Arrays.toString(restoredAncientDoor) + " summit="
+                + java.util.Arrays.toString(restoredSummitDoor));
           }
           log("a5q5_ancient_post_reconnect_pass", "reward=true doors=true");
         }

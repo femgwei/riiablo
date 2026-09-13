@@ -4388,3 +4388,19 @@ Tyrael3 奖励/重连观察器修正；随后回到 A2--A5 剩余地图入口和
 
 下一项：核对 A5Q5 Ancient Summit 三座雕像、Ancients Door 和 Summit Door 的
 动态碰撞层与入口边界，补充开启前后双方通行性和重连后的碰撞回归。
+
+### 2026-09-13 A5Q5 动态门碰撞与重连恢复（本轮完成）
+
+- [x] 新增 `headlessQuestObjectCollisionSnapshot`，读取 Quest Object 的动态
+  footprint、对象引用计数和门引用计数，区分 DT1 静态碰撞与对象动态碰撞。
+- [x] A5Q5 离屏双客户端验证 Ancients Door：关闭时有效 footprint 有动态阻挡，
+  远古击杀并开门后动态引用清零；完成后断线重连仍保持开启/可通行状态。
+- [x] Summit Door 在当前 1.10f `Objects.txt` 中尺寸为 0×0，记录为无可采样
+  footprint，不将其误判为碰撞缺失；门的开启状态仍由对象快照和任务奖励校验。
+- [x] `headlessA5AncientDual`、`compileJava` 和 `git diff --check` 通过。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：继续补 A5Q5 入口附近的实际通行采样（雕像区域、Ancients Door 两侧和
+Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰撞分支。
