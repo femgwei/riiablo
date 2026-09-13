@@ -414,6 +414,10 @@ public class D2GS extends ApplicationAdapter {
         // sparse native outdoor zone exposes its quest objects immediately;
         // normal clients still use RoomActivationSystem's deferred path.
         if (server.mapManager != null) server.mapManager.createNativeObjects(zone);
+        if (levelId == Act5BaalQuest.WORLDSTONE_CHAMBER) {
+          Act5QuestSystem quests = server.world.getSystem(Act5QuestSystem.class);
+          if (quests != null) quests.ensureTerminalBaalForHeadless();
+        }
         // RoomEntityTrackingSystem may fall back to Map#getZone(position)
         // when a generated dungeon has no native RoomEx at the spawn point.
         // Several Acts intentionally reuse coordinate ranges, so that lookup

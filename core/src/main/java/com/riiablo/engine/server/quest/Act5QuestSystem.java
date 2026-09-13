@@ -1444,6 +1444,16 @@ public class Act5QuestSystem extends BaseSystem {
     }
   }
 
+  /**
+   * Reconciles the terminal Baal entity after a headless level transition.
+   * Room activation is normally driven by the render/network loop; the
+   * offscreen harness has no such callback, so it explicitly requests the
+   * same idempotent authoritative pass.
+   */
+  public void ensureTerminalBaalForHeadless() {
+    if (gameState().baalWaves.finished()) spawnBaalAfterWaves();
+  }
+
   /** Creates the A5Q6 Throne -> Worldstone Chamber portal once. */
   private void openWorldstoneChamberPortal() {
     if (factory == null || world == null) return;
