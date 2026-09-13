@@ -487,8 +487,14 @@ public class D2GS extends ApplicationAdapter {
    * only when a deterministic offscreen fixture asks for another act.
    */
   private static void ensureHeadlessAct(D2GS server, int levelId) {
-    if (server == null || server.map == null || server.map.getAct() == headlessAct(levelId)) return;
-    int act = headlessAct(levelId);
+    if (server == null || server.map == null) return;
+    int requestedAct = headlessAct(levelId);
+    com.riiablo.codec.excel.Levels.Entry requestedLevel =
+        Riiablo.files == null || Riiablo.files.Levels == null
+            ? null : Riiablo.files.Levels.get(levelId);
+    if (server.map.getAct() == requestedAct
+        && requestedLevel != null && server.map.findZone(requestedLevel) != null) return;
+    int act = requestedAct;
     com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
         Aspect.all(com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
     int[] ids = entities.getData();
@@ -508,7 +514,10 @@ public class D2GS extends ApplicationAdapter {
     if (levelId <= 39) return 0;
     if (levelId <= 74) return 1;
     if (levelId <= 102) return 2;
-    if (levelId <= 108) return 3;
+    // Act IV includes Pandemonium Fortress (103) and the full outdoor chain
+    // through Chaos Sanctuary (110).  The previous <=108 cutoff routed River
+    // of Flame/Chaos requests into Act V during headless Warp tests.
+    if (levelId <= 110) return 3;
     return 4;
   }
 

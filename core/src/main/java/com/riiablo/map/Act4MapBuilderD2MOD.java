@@ -234,6 +234,10 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
       }
     }
 
+    // Keep a playable fallback when a reduced MPQ export omits one of the
+    // Act IV presets. Native D2GS still materializes the level record.
+    ensureAct4ChainZones(map, diff, base);
+
     // 添加高级功能：边界、路径、传送点、神殿等
     // 参考 D2MOD: DRLGOUTPLACE_InitAct4OutdoorLevel
     for (Zone zone : map.zones) {
@@ -300,7 +304,25 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
         }
       }
     }
+
     Gdx.app.log(TAG, "Act4 native warp special summary: linked=" + linked);
+  }
+
+  private static void ensureAct4ChainZones(Map map, int diff, BaseMapBuilderD2MOD base) {
+    int fallbackX = 0;
+    int fallbackY = 0;
+    for (int i = 0; i < ACT4_CHAIN.length; i++) {
+      int levelId = ACT4_CHAIN[i];
+      if (findZone(map, levelId) != null) continue;
+      Levels.Entry level = Riiablo.files.Levels.get(levelId);
+      if (level == null) continue;
+      int width = NativeDataTables.levelSizeX(level, diff, 1) * 5;
+      int height = NativeDataTables.levelSizeY(level, diff, 1) * 5;
+      Zone zone = base.createZoneWithGenerator(map, level, diff,
+          fallbackX + i * Math.max(width, 256), fallbackY);
+      zone.generator = base.createMonsterGenerator(base.socket);
+      Gdx.app.log(TAG, "Act4 fallback Zone materialized: level=" + levelId);
+    }
   }
 
   static int findRuntimeWarpSlot(int[] vis, int[] warp, int destinationId) {
