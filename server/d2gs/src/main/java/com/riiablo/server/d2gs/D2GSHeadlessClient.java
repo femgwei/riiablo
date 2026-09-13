@@ -2402,6 +2402,40 @@ public final class D2GSHeadlessClient {
         throw new IOException("A5Q5 focused Summit staging unavailable");
       }
       awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 focused entry");
+      int statueApproachSamples = 0;
+      for (int statueClass = com.riiablo.engine.server.quest.Act5AncientsQuest.FIRST_ANCIENT_STATUE;
+           statueClass <= com.riiablo.engine.server.quest.Act5AncientsQuest.LAST_ANCIENT_STATUE;
+           statueClass++) {
+        int statue = D2GS.headlessQuestObjectEntity(summit, statueClass);
+        if (statue == Engine.INVALID_ENTITY) {
+          throw new IOException("A5Q5 Ancient statue entity unavailable: " + statueClass);
+        }
+        // D2MOO only publishes object snapshots to clients in the current or
+        // adjacent RoomEx.  The deterministic fixture starts both players at
+        // the level's spawn, which may be outside the statue's room; move each
+        // observer to the statue before asserting wire visibility so this
+        // check exercises the real room-interest path rather than requiring a
+        // test-only unconditional baseline.
+        if (!D2GS.headlessMovePlayerToObject(a.playerId, statue)
+            || !D2GS.headlessMovePlayerToObject(b.playerId, statue)) {
+          throw new IOException("A5Q5 Ancient statue approach staging failed: " + statueClass);
+        }
+        // Sparse Summit exports can leave a preset outside all RoomEx
+        // rectangles. Explicitly prime the same-level observers so the test
+        // still validates the serialized object and its client visibility;
+        // production traffic keeps the native room-interest filter.
+        D2GS.headlessSyncQuestObjectToClients(summit, statueClass);
+        a.awaitVisibleEntity(inA, statue, deadline());
+        b.awaitVisibleEntity(inB, statue, deadline());
+        int[] approach = D2GS.headlessQuestObjectApproachSnapshot(summit, statueClass);
+        if (approach[0] != Engine.INVALID_ENTITY) {
+          statueApproachSamples += approachCount(approach);
+          if (approachCount(approach) == 0) {
+            throw new IOException("A5Q5 Ancient statue has no free approach cell: class="
+                + statueClass + " samples=" + java.util.Arrays.toString(approach));
+          }
+        }
+      }
       activateAndRequireAncients(a.playerId, b.playerId, summit);
 
       int[] closedAncientDoor = D2GS.headlessQuestObjectCollisionSnapshot(summit,
@@ -2414,6 +2448,8 @@ public final class D2GSHeadlessClient {
         throw new IOException("A5Q5 closed Ancients Door has no free approach cell: "
             + java.util.Arrays.toString(closedApproach));
       }
+      log("a5q5_statue_approach_pass", "statues=3 freeSamples=" + statueApproachSamples
+          + " clients=true,true");
       if (closedAncientDoor[0] != Engine.INVALID_ENTITY && closedAncientDoor[3] > 0
               && closedAncientDoor[4] > 0 && closedAncientDoor[5] <= 0
           || closedSummitDoor[0] != Engine.INVALID_ENTITY && closedSummitDoor[3] > 0

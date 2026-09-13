@@ -2656,6 +2656,64 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /**
+   * Headless-only visibility bridge for sparse quest-object exports. Some
+   * reduced DS1 maps place a preset object outside every exported RoomEx; the
+   * production synchronizer correctly keeps its room-interest filter, but a
+   * deterministic offscreen fixture still needs to verify that the object's
+   * wire representation is valid for every observer in the same level.
+   */
+  static boolean headlessSyncQuestObjectToClients(int levelId, int classId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || server.sync == null || Gdx.app == null) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean synced =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        com.artemis.utils.IntBag objects = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Object.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = objects.getData();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Object> objectMapper =
+            server.world.getMapper(com.riiablo.engine.server.component.Object.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        for (int i = 0; i < objects.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.Object object = objectMapper.get(entity);
+          com.riiablo.engine.server.component.MapWrapper objectWrapper = wrappers.get(entity);
+          if (object == null || object.base == null || object.base.Id != classId
+              || objectWrapper == null || objectWrapper.zone != zone) continue;
+          for (int clientId = 0; clientId < MAX_CLIENTS; clientId++) {
+            int playerId = server.player.get(clientId, Engine.INVALID_ENTITY);
+            if (playerId == Engine.INVALID_ENTITY) continue;
+            com.riiablo.engine.server.component.MapWrapper playerWrapper = wrappers.get(playerId);
+            if (playerWrapper != null && playerWrapper.zone != null
+                && playerWrapper.zone.level != null
+                && playerWrapper.zone.level.Id == levelId) {
+              server.sync.syncEntityTo(clientId, entity);
+              synced.set(true);
+            }
+          }
+          return;
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && synced.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Returns one generated native preset object by its provenance kind. */
   static int headlessNativeObjectEntity(int levelId,
       com.riiablo.map.NativePresetObjectResolver.Kind kind) {

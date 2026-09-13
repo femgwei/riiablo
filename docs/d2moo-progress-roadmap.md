@@ -4418,3 +4418,21 @@ Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰�
 
 下一项：继续补 A5Q5 三座雕像区域的可通行/阻挡采样和双方同步，再进入 A2--A5
 尚未覆盖的任务对象与地图碰撞分支。
+
+### 2026-09-13 A5Q5 雕像区域可见性与接近格采样（本轮完成）
+
+- [x] 离屏双客户端在 Summit 入口分别移动到 474--476 三座 Ancient Statue，
+  采样四侧 `findFreeCoordinates` 接近格；三座雕像均至少保留一个可接近方向，
+  共记录 `freeSamples=6`。
+- [x] 两个客户端均收到三座雕像的 EntitySync；针对精简 DS1 导出中可能位于
+  RoomEx 外的静态对象，新增仅限 headless 的同关卡对象基线桥接，不改变生产
+  NetworkSynchronizer 的 RoomEx 兴趣过滤。
+- [x] `:server:d2gs:compileJava` 与 `headlessA5AncientDual` 通过，关键日志：
+  `a5q5_statue_approach_pass statues=3 freeSamples=6 clients=true,true`、
+  `a5q5_ancient_mid_reconnect_pass`、`a5q5_ancient_post_reconnect_pass`。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：核对 A5Q5 Summit Door 两侧入口（当前 Objects.txt 为 0×0）与 Warp/静态
+碰撞连接；随后继续 A2--A5 尚未覆盖的任务对象和地图碰撞分支。
