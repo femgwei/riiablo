@@ -1532,6 +1532,24 @@ public class Act5QuestSystem extends BaseSystem {
     spawnA5Q6Tyrael(baalEntity);
   }
 
+  /** Headless-only reward reconciliation for all expansion players in the
+   * deterministic A5Q6 room.  The fixture enters players through a direct
+   * level bridge, so Artemis room membership may lag while the death event is
+   * dispatched; player identity remains authoritative for this test hook. */
+  public void ensureHeadlessBaalRewards() {
+    if (world == null || mPlayer == null) return;
+    IntBag entities = world.getAspectSubscriptionManager().get(
+        Aspect.all(Player.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      Player player = mPlayer.get(ids[i]);
+      if (player == null || player.data == null || !player.data.isExpansion()) continue;
+      completeBaalAndProgression(ids[i], player, "headless-baal-reconcile");
+      updateBaalRecord(player.data, Act5BaalQuest::completeObserver,
+          "headless-baal-reconcile-observer");
+    }
+  }
+
   private void completeBaalForHeadlessPlayers() {
     if (world == null || mPlayer == null || mMapWrapper == null) return;
     IntBag entities = world.getAspectSubscriptionManager().get(
@@ -1707,8 +1725,30 @@ public class Act5QuestSystem extends BaseSystem {
     // leaving the portal globally available to the party.
     short next = NativeQuestRecord.set(previous, NativeQuestRecord.CUSTOM3);
     updateBaalRecord(player.data, ignored -> next, "tyrael3-terminal-message");
+    // The end portal is a game-level transition.  Mirror the native party
+    // propagation so a member who reconnects after another player's Tyrael
+    // conversation retains the terminal marker and cannot reopen the same
+    // dialogue against a stale save snapshot.
+    propagateBaalTerminalMarker();
     log.info("[A5Q6] Tyrael3 terminal message accepted: player={} npc={} portal=ready",
         event.entityId, event.npcId);
+  }
+
+  private void propagateBaalTerminalMarker() {
+    if (world == null || mPlayer == null) return;
+    IntBag entities = world.getAspectSubscriptionManager().get(
+        Aspect.all(Player.class)).getEntities();
+    int[] ids = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      Player member = mPlayer.get(ids[i]);
+      if (member == null || member.data == null || !member.data.isExpansion()) continue;
+      short record = baalRecord(member.data);
+      if (!Act5BaalQuest.isFinished(record)
+          || NativeQuestRecord.has(record, NativeQuestRecord.CUSTOM3)) continue;
+      updateBaalRecord(member.data,
+          value -> NativeQuestRecord.set(value, NativeQuestRecord.CUSTOM3),
+          "tyrael3-terminal-party-sync");
+    }
   }
 
   /** Restores Tyrael3 after a room/ECS rebuild while preserving the game-level

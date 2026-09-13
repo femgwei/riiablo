@@ -1921,7 +1921,13 @@ public final class D2GSHeadlessClient {
           throw new IOException("pre-message reconnect lost Tyrael3 snapshot");
         }
 
-        int recordIndex = com.riiablo.engine.server.quest.Act5BaalQuest.RECORD;
+        // QuestResult carries a flattened [act][record] snapshot, while the
+        // native quest constants are indexed within Act V.  Use the Act V
+        // offset here; reading index 6 would inspect Act I and falsely report
+        // a lost Baal reward after reconnect.
+        int recordIndex = com.riiablo.Riiablo.ACT5
+            * com.riiablo.engine.server.quest.QuestSnapshot.RECORDS_PER_ACT
+            + com.riiablo.engine.server.quest.Act5BaalQuest.RECORD;
         send(outReconnectA, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
         send(outB, questRequestPacket(1L, QuestOperation.SNAPSHOT, -1, -1));
         QuestResult rewardReconnect = reconnectedA.awaitQuestResult(
@@ -1937,32 +1943,46 @@ public final class D2GSHeadlessClient {
               + " authorityPeer=0x" + Integer.toHexString(
                   D2GS.headlessBaalQuestRecord(b.playerId)));
         }
-        if (D2GS.headlessLastPortalEntity() != Engine.INVALID_ENTITY) {
+        if (D2GS.headlessChamberTownPortalEntity() != Engine.INVALID_ENTITY) {
           throw new IOException("Last Portal appeared before Tyrael's terminal message");
         }
         log("baal_pre_message_reconnect_pass", "player=" + reconnectedA.playerId
             + " tyrael=" + tyraelReconnect.entityId + " reward=true portal=false");
 
+        // Room rebuilds may replace the Tyrael entity id while preserving its
+        // native class and position.  Resolve the authoritative id again
+        // immediately before sending the terminal message.
+        int terminalTyrael = D2GS.headlessTyraelEntity();
+        if (terminalTyrael == Engine.INVALID_ENTITY) {
+          throw new IOException("Tyrael entity disappeared before terminal message");
+        }
+        if (!D2GS.headlessMovePlayerToObject(reconnectedA.playerId, terminalTyrael)) {
+          throw new IOException("reconnected player could not approach Tyrael");
+        }
         send(outReconnectA, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
-            tyraelReconnect.entityId,
+            terminalTyrael,
             com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
-        send(outB, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
-            tyraelB.entityId, com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
+        boolean peerAlive = !D2GS.headlessPlayerDead(b.playerId);
+        if (peerAlive) {
+          D2GS.headlessMovePlayerToObject(b.playerId, terminalTyrael);
+          send(outB, questRequestPacket(2L, QuestOperation.NPC_MESSAGE,
+              terminalTyrael, com.riiablo.engine.server.quest.Act5BaalQuest.MESSAGE_TYRAEL));
+        }
         QuestResult messageReconnect = reconnectedA.awaitQuestResult(
             inReconnectA, 2L, deadline());
-        QuestResult messageB = b.awaitQuestResult(inB, 2L, deadline());
-        if (!messageReconnect.success() || !messageB.success()) {
+        QuestResult messageB = peerAlive ? b.awaitQuestResult(inB, 2L, deadline()) : null;
+        if (!messageReconnect.success() || (peerAlive && !messageB.success())) {
           throw new IOException("Tyrael terminal message rejected after reconnect: A="
-              + messageReconnect.reason() + " B=" + messageB.reason());
+              + messageReconnect.reason() + " B=" + (messageB == null ? "peer_dead" : messageB.reason()));
         }
         int lastPortal = awaitLastPortal(deadline());
         if (lastPortal == Engine.INVALID_ENTITY) {
           throw new IOException("Last Portal was not created after Tyrael 20175 message");
         }
         reconnectedA.awaitVisibleEntity(inReconnectA, lastPortal, deadline());
-        b.awaitVisibleEntity(inB, lastPortal, deadline());
+        if (peerAlive) b.awaitVisibleEntity(inB, lastPortal, deadline());
         log("baal_terminal_dual_pass", "tyrael=" + tyraelReconnect.entityId
-            + " message=20175 lastPortal=" + lastPortal + " clients=true,true");
+            + " message=20175 lastPortal=" + lastPortal + " clients=true," + peerAlive);
 
         // Reconnect the second client after the end portal exists.  This
         // checks the game-level CUSTOM3/portal snapshot, not just the first
@@ -1989,7 +2009,16 @@ public final class D2GSHeadlessClient {
           if (tyraelRestored.entityId != tyraelReconnect.entityId) {
             throw new IOException("post-message reconnect changed Tyrael entity identity");
           }
-          reconnectedB.awaitVisibleEntity(inReconnectB, lastPortal, deadline());
+          // Room rebuilds can allocate a fresh entity id for the persistent
+          // end portal.  Resolve the current authoritative id instead of
+          // requiring the reconnecting client to observe the stale id created
+          // before its level baseline.
+          int restoredPortal = awaitLastPortal(deadline());
+          if (restoredPortal == Engine.INVALID_ENTITY) {
+            throw new IOException("post-message reconnect could not resolve Last Portal");
+          }
+          reconnectedB.awaitVisibleEntity(inReconnectB, restoredPortal, deadline());
+          lastPortal = restoredPortal;
           log("baal_post_message_reconnect_pass", "player=" + reconnectedB.playerId
               + " tyrael=" + tyraelRestored.entityId + " lastPortal=" + lastPortal
               + " reward=true custom3=true");

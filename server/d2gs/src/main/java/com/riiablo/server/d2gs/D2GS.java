@@ -475,6 +475,10 @@ public class D2GS extends ApplicationAdapter {
             // reconnecting client entering the Chamber must receive the same
             // explicit NPC snapshot as the original recipients.
             server.syncHeadlessChamberTyrael();
+            // The end portal may have been created before a reconnecting
+            // client entered the Chamber.  Prime its current snapshot just
+            // like Baal/Tyrael so the persistent warp is visible immediately.
+            server.syncHeadlessChamberLastPortal();
           }
         } else {
           Gdx.app.log(TAG, "[HEADLESS_LEVEL] baseline skipped player=" + playerId
@@ -767,6 +771,13 @@ public class D2GS extends ApplicationAdapter {
           server.syncHeadlessChamberTyrael();
           server.world.getSystem(EventSystem.class).dispatch(
               com.riiablo.engine.server.event.DeathEvent.obtain(killerId, entity));
+          // Reconcile every authoritative expansion player after the death
+          // event has had a chance to update quest state.  The headless
+          // fixture does not run the normal room-membership callbacks, so the
+          // explicit pass ensures late/reconnected party members receive the
+          // same A5Q6 completion and reward bits as players present in the
+          // Chamber at kill time.
+          if (quests != null) quests.ensureHeadlessBaalRewards();
           if (server.sync != null) server.sync.sendDeletedTo(entity, formerRecipients);
           if (server.world.getEntityManager().isActive(entity)) server.world.delete(entity);
           result.set(entity);
@@ -815,6 +826,17 @@ public class D2GS extends ApplicationAdapter {
         }
       }
       Gdx.app.log(TAG, "[HEADLESS_LEVEL] chamber_tyrael_visibility entity=" + entityId);
+    }
+  }
+
+  private void syncHeadlessChamberLastPortal() {
+    if (sync == null || world == null) return;
+    int portal = findChamberTownPortalWarpEntity(this);
+    if (portal == Engine.INVALID_ENTITY) return;
+    for (int clientId = 0; clientId < MAX_CLIENTS; clientId++) {
+      if (player.get(clientId, Engine.INVALID_ENTITY) != Engine.INVALID_ENTITY) {
+        sync.syncEntityTo(clientId, portal);
+      }
     }
   }
 
@@ -993,6 +1015,30 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Returns only the Chamber -> Harrogath end portal, excluding the
+   * earlier Throne -> Chamber portal that remains in the game world. */
+  static int headlessChamberTownPortalEntity() {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        result.set(findChamberTownPortalWarpEntity(server));
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /** Returns the current authoritative Tyrael3 entity in the Chamber. */
   static int headlessTyraelEntity() {
     D2GS server = activeHeadlessInstance;
@@ -1024,6 +1070,14 @@ public class D2GS extends ApplicationAdapter {
     Player player = server.world.getMapper(Player.class).get(playerId);
     return player == null || player.data == null ? -1
         : Short.toUnsignedInt(player.data.getQuests(Riiablo.ACT5)[Act5BaalQuest.RECORD]);
+  }
+
+  /** Primitive-only liveness probe used by deterministic headless fixtures. */
+  static boolean headlessPlayerDead(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    return server != null && server.world != null
+        && server.world.getMapper(com.riiablo.engine.server.component.PlayerCorpse.class)
+            .has(playerId);
   }
 
   private static int findLastPortalWarpEntity(D2GS server) {
@@ -1060,6 +1114,27 @@ public class D2GS extends ApplicationAdapter {
     return thronePortal;
   }
 
+  private static int findChamberTownPortalWarpEntity(D2GS server) {
+    if (server == null || server.world == null) return Engine.INVALID_ENTITY;
+    com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+        Aspect.all(com.riiablo.engine.server.component.Warp.class,
+            com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+    int[] data = entities.getData();
+    for (int i = 0; i < entities.size(); i++) {
+      int entity = data[i];
+      com.riiablo.engine.server.component.Warp warp = server.world
+          .getMapper(com.riiablo.engine.server.component.Warp.class).get(entity);
+      com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+          .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+      if (warp == null || warp.dstLevel == null || wrapper == null || wrapper.zone == null
+          || wrapper.zone.level == null) continue;
+      if (wrapper.zone.level.Id == Act5BaalQuest.WORLDSTONE_CHAMBER
+          && warp.dstLevel.Id == Act5BaalQuest.HARROGATH
+          && warp.index == QuestWarp.encode(Act5BaalQuest.HARROGATH)) return entity;
+    }
+    return Engine.INVALID_ENTITY;
+  }
+
   /**
    * Deletes the Chamber's transient Last Portal visual/Warp and lets the
    * normal Act5QuestSystem fixed-tick rebuild it from game-level state.
@@ -1073,7 +1148,11 @@ public class D2GS extends ApplicationAdapter {
         new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
     Gdx.app.postRunnable(() -> {
       try {
-        int warpId = findLastPortalWarpEntity(server);
+        // Rebuild only the Chamber -> Harrogath portal.  The generic helper
+        // intentionally falls back to the earlier Throne -> Chamber warp for
+        // pre-terminal checks; using that fallback here would delete/rebuild
+        // the wrong portal and return its entity id to the reconnect test.
+        int warpId = findChamberTownPortalWarpEntity(server);
         com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
             Aspect.all(com.riiablo.engine.server.component.Object.class,
                 com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
@@ -1097,7 +1176,7 @@ public class D2GS extends ApplicationAdapter {
         // Flush the deletion and run the normal quest rebuild path. The state
         // remains lastPortalCreated=true, so this must create exactly one pair.
         server.world.process();
-        result.set(findLastPortalWarpEntity(server));
+        result.set(findChamberTownPortalWarpEntity(server));
       } finally {
         done.countDown();
       }
@@ -5742,7 +5821,9 @@ public class D2GS extends ApplicationAdapter {
     com.riiablo.engine.server.component.Monster npc =
         world.getMapper(com.riiablo.engine.server.component.Monster.class).get(npcId);
     boolean nativeTyrael = npc != null && npc.monstats != null
-        && (npc.monstats.hcIdx == com.riiablo.engine.server.monster.MonsterType.TYRAEL1
+        && (com.riiablo.engine.server.quest.Act5BaalQuest.isTyrael3(
+                npc.monstats.hcIdx, npc.monstats.Id)
+            || npc.monstats.hcIdx == com.riiablo.engine.server.monster.MonsterType.TYRAEL1
             || (npc.monstats.Id != null
                 && npc.monstats.Id.toLowerCase(java.util.Locale.ROOT).startsWith("tyrael")));
     if (npc == null || npc.monstats == null
