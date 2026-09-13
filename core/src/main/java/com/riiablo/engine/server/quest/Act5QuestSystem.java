@@ -877,9 +877,21 @@ public class Act5QuestSystem extends BaseSystem {
         Act5AncientsQuest.SUPERUNIQUE_ANCIENT_1,
         Act5AncientsQuest.SUPERUNIQUE_ANCIENT_2,
         Act5AncientsQuest.SUPERUNIQUE_ANCIENT_3};
+    MonStats.Entry[] resolvedStats = new MonStats.Entry[uniqueIds.length];
     for (int i = 0; i < uniqueIds.length; i++) {
-      MonStats.Entry stats = resolveAncientStats(uniqueIds[i], i + 1);
-      if (stats == null) continue;
+      resolvedStats[i] = resolveAncientStats(uniqueIds[i], i + 1);
+      if (resolvedStats[i] == null) {
+        // D2MOO's SuperUniques rows are an all-or-nothing encounter setup:
+        // do not leave a partial set of Ancients alive when one TXT row is
+        // unavailable.  Retrying on the next zone rebuild keeps the quest
+        // deterministic and makes the missing mapping explicit in logs.
+        log.error("[A5Q5] Ancient spawn deferred: missing MonStats for unique={} ordinal={} ",
+            uniqueIds[i], i + 1);
+        return;
+      }
+    }
+    for (int i = 0; i < uniqueIds.length; i++) {
+      MonStats.Entry stats = resolvedStats[i];
       int statueClass = Act5AncientsQuest.FIRST_ANCIENT_STATUE + i;
       int statueId = ancientStatueEntities.get(statueClass, -1);
       Position statue = statueId >= 0 && mPosition.has(statueId)
