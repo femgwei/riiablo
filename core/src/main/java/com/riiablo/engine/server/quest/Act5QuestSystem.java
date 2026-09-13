@@ -1417,6 +1417,9 @@ public class Act5QuestSystem extends BaseSystem {
       // normal games always use the Worldstone Chamber zone above.
       log.warn("[A5Q6] Worldstone Chamber zone unavailable; spawning Baal at Throne");
     }
+    log.info("[A5Q6] Baal spawn attempt: stats={} hcIdx={} chamber={} position=({}, {})",
+        stats.Id, stats.hcIdx, chamber == null ? "null" : chamber.level.Id,
+        spawnX, spawnY);
     int entity = factory.createMonster(stats, spawnX, spawnY);
     if (entity >= 0) {
       // Map#getZone(x,y) can resolve an older overlapping Act zone in the
@@ -1426,6 +1429,12 @@ public class Act5QuestSystem extends BaseSystem {
       if (chamber != null && mMapWrapper != null && mMapWrapper.has(entity)) {
         mMapWrapper.get(entity).set(map, chamber);
       }
+      MapWrapper bound = mMapWrapper != null && mMapWrapper.has(entity)
+          ? mMapWrapper.get(entity) : null;
+      log.info("[A5Q6] Baal spawn result: entity={} boundLevel={} boundRoom={}", entity,
+          bound == null || bound.zone == null || bound.zone.level == null
+              ? -1 : bound.zone.level.Id,
+          bound == null ? -1 : bound.roomId);
       spawnedBaalLevels.add(levelId);
       log.info("[A5Q6] Baal spawned after waves: entity={} level={} position=({}, {})",
           entity, levelId, spawnX, spawnY);
