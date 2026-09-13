@@ -184,6 +184,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedBaalSave("BaalAma", 0x42414141)
         : config.requireA5AncientDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA4SealDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireQuestWarpDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA5QuestWarpDual
@@ -237,6 +239,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA5AncientDual) {
       runA5AncientDual(d2s, character);
+      return;
+    }
+    if (config.requireA4SealDual) {
+      runA4SealDual(d2s, character);
       return;
     }
     if (config.requireQuestWarpDual) {
@@ -2401,6 +2407,91 @@ public final class D2GSHeadlessClient {
   }
 
   /** Focused two-client A5Q5 reconnect gate, independent of sparse A5Q2/A5Q3 fixtures. */
+  private void runA4SealDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A4SealPeer", 0x4134534C, 80);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    final int chaos = com.riiablo.engine.server.quest.Act4DiabloQuest.CHAOS_SANCTUARY;
+    final int firstSeal = com.riiablo.engine.server.quest.Act4DiabloQuest.FIRST_SEAL;
+    final int lastSeal = com.riiablo.engine.server.quest.Act4DiabloQuest.LAST_SEAL;
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT4,
+              com.riiablo.engine.server.quest.Act4DiabloQuest.RECORD, (short) 0)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT4,
+              com.riiablo.engine.server.quest.Act4DiabloQuest.RECORD, (short) 0)
+          || !D2GS.headlessEnterLevel(a.playerId, chaos)
+          || !D2GS.headlessEnterLevel(b.playerId, chaos)) {
+        throw new IOException("A4Q2 Chaos Sanctuary staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, chaos, "A4Q2 seals");
+      int[] before = D2GS.headlessQuestObjectSnapshot(chaos);
+      if (before.length < 12 || before[10] < 5) {
+        throw new IOException("A4Q2 seal snapshot incomplete: "
+            + java.util.Arrays.toString(before));
+      }
+      int opened = 0;
+      for (int classId = firstSeal; classId <= lastSeal; classId++) {
+        int seal = D2GS.headlessQuestObjectEntity(chaos, classId);
+        if (seal == Engine.INVALID_ENTITY
+            || !D2GS.headlessMovePlayerToObject(a.playerId, seal)
+            || !D2GS.headlessMovePlayerToObject(b.playerId, seal)) {
+          throw new IOException("A4Q2 seal unavailable: class=" + classId);
+        }
+        a.awaitVisibleEntity(inA, seal, deadline());
+        b.awaitVisibleEntity(inB, seal, deadline());
+        int[] approach = D2GS.headlessQuestObjectApproachSnapshot(chaos, classId);
+        if (approach[0] != Engine.INVALID_ENTITY && approachCount(approach) == 0) {
+          throw new IOException("A4Q2 seal has no free approach cell: "
+              + java.util.Arrays.toString(approach));
+        }
+        send(outA, questRequestPacket(700L + classId,
+            QuestOperation.OBJECT_INTERACTION, seal, -1));
+        QuestResult result = a.awaitQuestResult(inA, 700L + classId, deadline());
+        if (result == null || !result.success()) {
+          throw new IOException("A4Q2 seal interaction rejected: class=" + classId
+              + " reason=" + (result == null ? "NO_RESULT" : result.reason()));
+        }
+        D2GS.headlessSyncQuestObjectToClients(chaos, classId);
+        int[] state = D2GS.headlessQuestObjectSnapshot(chaos);
+        opened = state.length < 12 ? opened : state[11];
+      }
+      if (opened < 5) {
+        throw new IOException("A4Q2 not all seals opened: "
+            + java.util.Arrays.toString(D2GS.headlessQuestObjectSnapshot(chaos)));
+      }
+      int infector = D2GS.headlessFindMonsterInLevel(chaos,
+          com.riiablo.engine.server.monster.MonsterType.INFECTOR_OF_SOULS);
+      int deSeis = D2GS.headlessFindMonsterInLevel(chaos,
+          com.riiablo.engine.server.monster.MonsterType.LORD_DE_SEIS);
+      int vizier = D2GS.headlessFindMonsterInLevel(chaos,
+          com.riiablo.engine.server.monster.MonsterType.GRAND_VIZIER_OF_CHAOS);
+      if (infector == Engine.INVALID_ENTITY || deSeis == Engine.INVALID_ENTITY
+          || vizier == Engine.INVALID_ENTITY) {
+        throw new IOException("A4Q2 seal boss set incomplete: " + infector + ","
+            + deSeis + "," + vizier);
+      }
+      if (!D2GS.headlessKillMonster(a.playerId, infector)
+          || !D2GS.headlessKillMonster(a.playerId, deSeis)
+          || !D2GS.headlessKillMonster(a.playerId, vizier)) {
+        throw new IOException("A4Q2 seal boss kill staging failed");
+      }
+      int diablo = D2GS.headlessFindMonsterInLevel(chaos,
+          com.riiablo.engine.server.monster.MonsterType.DIABLO);
+      if (diablo == Engine.INVALID_ENTITY) {
+        throw new IOException("A4Q2 Diablo did not spawn after seal bosses");
+      }
+      log("a4q2_seal_dual_pass", "seals=5 bosses=3 diablo=" + diablo
+          + " clients=true,true");
+    }
+  }
+
   private void runA5AncientDual(byte[] d2s, CharacterHeader character) throws Exception {
     D2GSHeadlessClient a = new D2GSHeadlessClient(config);
     D2GSHeadlessClient b = new D2GSHeadlessClient(config);
@@ -7283,6 +7374,7 @@ public final class D2GSHeadlessClient {
     boolean requireFallenScenario;
     boolean requireBaalWaveDual;
     boolean requireA5AncientDual;
+    boolean requireA4SealDual;
     boolean requireQuestWarpDual;
     boolean requireQuestObjectDual;
     boolean requireA3ObjectInteractionDual;
@@ -7339,6 +7431,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-a5-ancient-dual".equals(arg)) config.requireA5AncientDual = true;
+        else if ("--require-a4-seal-dual".equals(arg)) config.requireA4SealDual = true;
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
         else if ("--require-a3-object-interaction-dual".equals(arg)) config.requireA3ObjectInteractionDual = true;
@@ -7398,6 +7491,7 @@ public final class D2GSHeadlessClient {
             + "Meteor(56), ThunderStorm(57), Blizzard(59), FrozenOrb(64)");
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
+          && !config.requireA4SealDual
           && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
           && !config.requireA2ObjectInteractionDual
@@ -7414,6 +7508,7 @@ public final class D2GSHeadlessClient {
         config.save = firstSave(new File(config.home, "Save"));
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
+          && !config.requireA4SealDual
           && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
           && !config.requireA2ObjectInteractionDual
@@ -7462,6 +7557,7 @@ public final class D2GSHeadlessClient {
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
           + " [--require-a5-ancient-dual]"
+          + " [--require-a4-seal-dual]"
           + " [--require-quest-warp-dual] [--require-quest-object-dual]"
           + " [--require-a3-object-interaction-dual]"
           + " [--require-a2-object-interaction-dual]"

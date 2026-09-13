@@ -45,6 +45,19 @@ public class AnimDataResolver extends PassiveSystem {
     byte mode = c.effectiveMode(logicalType);
     String token = c.effectiveToken();
     byte wclass = c.effectiveWClass();
+    // Reduced 1.10f exports occasionally leave a freshly spawned unit with
+    // an unset mode/weapon class. Native D2 falls back to the type defaults;
+    // never index the compact mode/wclass tables with -1 and crash the sim.
+    if (mode < 0 || mode >= t.MODE.length) {
+      log.warn("COF mode out of range -> default | entity={} type={} mode={}",
+          entityId, t, (int) mode);
+      mode = t.DEFAULT_MODE;
+    }
+    if (wclass < 0 || wclass >= 15) {
+      log.warn("COF wclass out of range -> HTH | entity={} wclass={}",
+          entityId, (int) wclass);
+      wclass = Engine.WEAPON_HTH;
+    }
     String modeStr = t.MODE[mode];
     String wclassStr = Engine.getWClass(wclass);
     String cof = token + modeStr + wclassStr;

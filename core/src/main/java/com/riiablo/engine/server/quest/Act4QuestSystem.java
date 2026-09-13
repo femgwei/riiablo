@@ -58,6 +58,8 @@ public class Act4QuestSystem extends PassiveSystem {
   protected ItemGenerator itemGenerator;
   @Wire(name = "partyManager", failOnNull = false)
   protected PartyManager partyManager;
+  @Wire(name = "map", failOnNull = false)
+  protected Map map;
 
   private EntitySubscription playersByZone;
   private EntitySubscription monstersByZone;
@@ -97,7 +99,10 @@ public class Act4QuestSystem extends PassiveSystem {
     for (int i = 0; i < players.size(); i++) {
       if (levelId(ids[i]) == Act4DiabloQuest.CHAOS_SANCTUARY) {
         MapWrapper wrapper = mMapWrapper.get(ids[i]);
-        if (wrapper != null) rebuildChaosSealState(wrapper.zone);
+        if (wrapper != null) {
+          ensureChaosSealObjects(wrapper.zone);
+          rebuildChaosSealState(wrapper.zone);
+        }
       }
       if (levelId(ids[i]) == Act4DiabloQuest.PANDEMONIUM_FORTRESS) {
         Player player = mPlayer.get(ids[i]);
@@ -125,6 +130,7 @@ public class Act4QuestSystem extends PassiveSystem {
     if (event.zone.level.Id == Act4DiabloQuest.CHAOS_SANCTUARY) {
       updateDiabloRecord(player.data, Act4DiabloQuest::enterArea,
           "entered-chaos-sanctuary");
+      ensureChaosSealObjects(event.zone);
       rebuildChaosSealState(event.zone);
     } else if (event.zone.level.Id == Act4DiabloQuest.PANDEMONIUM_FORTRESS) {
       reconcileAct5PortalState(event.entityId, event.zone, player.data);
@@ -132,6 +138,52 @@ public class Act4QuestSystem extends PassiveSystem {
       updateDiabloRecord(player.data, Act4DiabloQuest::start,
           "entered-act4-combat-area");
     }
+  }
+
+  /** Materializes the five native seal objects when a reduced DS1 export omits them. */
+  private void ensureChaosSealObjects(Map.Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != Act4DiabloQuest.CHAOS_SANCTUARY
+        || factory == null || map == null || objectsByZone == null
+        || mObject == null || mMapWrapper == null || mNativeObjectState == null) return;
+    Map.RoomEx room = zone.getRoomsEx().size == 0 ? null : zone.getRoomsEx().get(0);
+    float centerX = room == null ? zone.x() + zone.width() / 2f : room.x + room.width / 2f;
+    float centerY = room == null ? zone.y() + zone.height() / 2f : room.y + room.height / 2f;
+    float[][] offsets = {{-6f, 0f}, {-2f, 0f}, {2f, 0f}, {6f, 0f}, {0f, 5f}};
+    for (int i = 0; i < 5; i++) {
+      int classId = Act4DiabloQuest.FIRST_SEAL + i;
+      if (hasChaosSealObject(zone, classId)) continue;
+      float x = centerX + offsets[i][0];
+      float y = centerY + offsets[i][1];
+      int entity = factory.createStaticObjectByClassId(classId, x, y);
+      if (entity < 0) {
+        log.warn("[A4Q2] Missing seal could not be materialized: level={} class={}",
+            zone.level.Id, classId);
+        continue;
+      }
+      mMapWrapper.create(entity).set(map, zone);
+      NativeObjectState state = mNativeObjectState.create(entity);
+      state.set(classId, classId, classId, Engine.Object.MODE_NU,
+          false, false, com.riiablo.map.NativePresetObjectResolver.Kind.ORDINARY);
+      state.source = new Map.NativeObject(classId, Engine.Object.MODE_NU,
+          (int) (x - zone.x()), (int) (y - zone.y()), false, false);
+      log.info("[A4Q2] Materialized missing Chaos seal: level={} class={} entity={}",
+          zone.level.Id, classId, entity);
+    }
+  }
+
+  private boolean hasChaosSealObject(Map.Zone zone, int classId) {
+    IntBag objects = objectsByZone.getEntities();
+    int[] ids = objects.getData();
+    for (int i = 0; i < objects.size(); i++) {
+      int id = ids[i];
+      if (!mObject.has(id) || !mMapWrapper.has(id)) continue;
+      com.riiablo.engine.server.component.Object object = mObject.get(id);
+      MapWrapper wrapper = mMapWrapper.get(id);
+      if (object != null && object.base != null && object.base.Id == classId
+          && wrapper != null && wrapper.zone == zone) return true;
+    }
+    return false;
   }
 
   @Subscribe

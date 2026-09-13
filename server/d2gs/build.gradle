@@ -291,6 +291,18 @@ tasks.register('headlessA4DungeonWarpDual', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessA4SealDual', JavaExec) {
+  group = 'verification'
+  description = 'Validates Act IV Chaos Sanctuary seals, approach cells, collision and seal bosses with two windowless clients.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-a4-seal-dual', '--test-timeout', '180'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessA5DungeonWarpDual', JavaExec) {
   group = 'verification'
   description = 'Runs two windowless clients through the Act V outdoor/Worldstone Warp chain and boundary checks.'

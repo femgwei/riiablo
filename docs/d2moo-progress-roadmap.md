@@ -4519,3 +4519,24 @@ Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰�
 下一项：新增 A4Q2 离屏双客户端封印验收（五枚封印可见、四侧接近格、开启前后
 动态碰撞，三组 Boss 只生成一次并在 Diablo 前置条件满足后出现），随后处理
 A4Q3 Hellforge 的入口、锤击计数和符文掉落重连。
+
+### 2026-09-14 A4Q2 封印双客户端闭环（本轮完成）
+
+- [x] 新增 `headlessA4SealDual` 离屏测试入口：使用原生 108 号 Chaos Sanctuary，
+  校验 392--396 五枚封印的对象存在、双方 EntitySync 可见、四侧接近格及开启前后
+  动态状态。
+- [x] 通过生产 `OBJECT_INTERACTION` 逐枚开启封印，确认三组封印 Boss 只生成一次；
+  三组 Boss 全部击杀后 Diablo 正确生成，测试日志为
+  `a4q2_seal_dual_pass seals=5 bosses=3 diablo=340 clients=true,true`。
+- [x] 修复 `AnimDataResolver` 对精简 1.10f 资源中 mode/wclass=-1 的边界处理：按
+  D2 默认 mode/HTH 回退并记录告警，避免进入 A4 地图时动画事件使模拟线程崩溃。
+- [x] `:server:d2gs:headlessA4SealDual` 与 `:core:test --tests
+  com.riiablo.engine.server.quest.Act4DiabloQuestTest` 均通过。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/engine/server/quest/Act4QuestSystem.java`、
+`core/src/main/java/com/riiablo/engine/server/AnimDataResolver.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`、
+`server/d2gs/build.gradle`。
+
+下一项：处理 A4Q3 Hellforge：入口可达性、Soulstone/Hammer 权威校验、三次锤击计数、
+符文掉落的幂等性以及双客户端重连恢复。
