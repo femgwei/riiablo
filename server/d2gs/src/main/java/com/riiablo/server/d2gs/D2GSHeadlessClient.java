@@ -2283,6 +2283,49 @@ public final class D2GSHeadlessClient {
         throw new IOException("A5Q5 Ancient encounter did not spawn three guardians: "
             + java.util.Arrays.toString(ancientEntities));
       }
+
+      // D2MOO A5Q5_OnPlayerDied deactivates the encounter when the last
+      // living player leaves the Summit (death/respawn does not complete the
+      // quest).  Exercise that authoritative reset before the successful
+      // kill path: both clients die, the three guardians are removed, and
+      // the statue modes become interactable again.
+      if (!D2GS.headlessKillPlayer(a.playerId)
+          || !D2GS.headlessKillPlayer(b.playerId)) {
+        throw new IOException("A5Q5 player death reset staging failed");
+      }
+      int[] resetAncients = D2GS.headlessAncientEntities(summit);
+      int[] resetObjects = D2GS.headlessQuestObjectSnapshot(summit);
+      if (resetAncients.length != 3
+          || resetAncients[0] != Engine.INVALID_ENTITY
+          || resetAncients[1] != Engine.INVALID_ENTITY
+          || resetAncients[2] != Engine.INVALID_ENTITY
+          || resetObjects.length < 6 || resetObjects[5] != 0) {
+        throw new IOException("A5Q5 encounter did not reset after all players died: ancients="
+            + java.util.Arrays.toString(resetAncients) + " objects="
+            + java.util.Arrays.toString(resetObjects));
+      }
+      send(outA, playerLifecyclePacket(501L, PlayerLifecycleOperation.RESPAWN));
+      PlayerLifecycleResult respawnA = awaitPlayerLifecycleResult(inA, 501L,
+          System.currentTimeMillis() + config.testTimeoutMillis);
+      send(outB, playerLifecyclePacket(502L, PlayerLifecycleOperation.RESPAWN));
+      PlayerLifecycleResult respawnB = awaitPlayerLifecycleResult(inB, 502L,
+          System.currentTimeMillis() + config.testTimeoutMillis);
+      if (!respawnA.success() || !respawnB.success()
+          || !D2GS.headlessEnterLevel(a.playerId, summit)
+          || !D2GS.headlessEnterLevel(b.playerId, summit)) {
+        throw new IOException("A5Q5 players could not respawn and re-enter Summit");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 reset re-entry");
+      int reactivated = 0;
+      for (int statueClass = com.riiablo.engine.server.quest.Act5AncientsQuest.FIRST_ANCIENT_STATUE;
+           statueClass <= com.riiablo.engine.server.quest.Act5AncientsQuest.LAST_ANCIENT_STATUE;
+           statueClass++) {
+        reactivated += D2GS.headlessActivateQuestObjects(summit, statueClass);
+      }
+      if (reactivated < 3 || D2GS.headlessAncientEntities(summit).length != 3) {
+        throw new IOException("A5Q5 encounter did not re-arm after death reset");
+      }
+      ancientEntities = D2GS.headlessAncientEntities(summit);
       for (int ancient : ancientEntities) {
         if (ancient == Engine.INVALID_ENTITY
             || !D2GS.headlessKillMonster(a.playerId, ancient)) {
