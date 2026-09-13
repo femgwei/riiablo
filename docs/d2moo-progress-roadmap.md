@@ -4291,3 +4291,14 @@ Baal/Tyrael/奖励/重连链。
 
 下一项：重新运行单实例 `headlessBaalWaveDual`，确认终态 Baal/Tyrael/奖励/重连
 全部通过后进入 A5Q5 门与对象碰撞核对。
+
+### 2026-09-13 修复 Chamber Baal 进入网络基线时序（本轮完成）
+
+- [x] 离屏进入 Chamber 后，Baal 生成属于 Artemis 延迟插入实体；此前基线事务
+  可能在 `createMonster()` 之后、`world.process()` 之前执行，导致客户端只收到两名
+  玩家而看不到 Baal。
+- [x] 在终态生成后增加一次世界处理刷新，再建立快照基线，确保 Baal 的 MonsterP、
+  PositionP、VitalsP 同步给两个客户端。
+- [x] `:server:d2gs:compileJava` 通过；完整离屏回归待下一轮单实例复跑确认。
+
+下一项：重新运行 `headlessBaalWaveDual`，确认 Baal/Tyrael/奖励/重连完整通过。
