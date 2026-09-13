@@ -4560,3 +4560,18 @@ A4Q3 Hellforge 的入口、锤击计数和符文掉落重连。
 
 下一项：补充 A4Q3 完成后的断线重连快照（Hellforge 状态、任务 pending/granted、符文
 掉落唯一性），再进入 A2--A5 尚未覆盖的 NPC/任务奖励分支。
+
+### 2026-09-14 A4Q3 Hellforge 重连快照（本轮完成）
+
+- [x] 在 Hellforge 完成后断开首客户端并通过原生重连流程重新进入 River of Flame，
+  校验 A4Q3 `REWARD_PENDING`、Hellforge 接近格和 r07/r08/r09 三枚符文均恢复。
+- [x] 重连不会重新创建 Hellforge 或重复生成符文；离屏日志更新为
+  `a4q3_hellforge_dual_pass forge=330 hits=3 runes=3 reconnect=pending clients=true,true`。
+- [x] `:server:d2gs:headlessA4HellforgeDual` 与此前 A4Q2/A5 任务回归继续通过。
+  A4Q3 的 `REWARD_GRANTED` 仍由后续 NPC 领取流程负责，本轮验证 pending 阶段的
+  持久化边界。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：补齐 A4Q3 Hellforge 的 NPC 奖励领取（pending→granted）和多人队伍快照，
+然后进入 A2--A5 尚未覆盖的 NPC/任务奖励分支。

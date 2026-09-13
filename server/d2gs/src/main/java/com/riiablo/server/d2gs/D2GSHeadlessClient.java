@@ -2573,8 +2573,34 @@ public final class D2GSHeadlessClient {
       if (replay == null || replayRunes != 3) {
         throw new IOException("A4Q3 duplicate hammer request was not idempotent");
       }
+      socketA.close();
+      awaitEntityInactive(a.playerId, deadline());
+      D2GSHeadlessClient reconnect = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnect.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(character, d2s));
+        reconnect.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessEnterLevel(reconnect.playerId, river)) {
+          throw new IOException("A4Q3 Hellforge reconnect staging unavailable");
+        }
+        awaitLevel(reconnect, reconnectInput, river, deadline());
+        QuestResult restored = requestSnapshot(reconnect, reconnectInput,
+            reconnectOutput, 815L);
+        int restoredRunes = D2GS.headlessGroundItemCount(river, "r07")
+            + D2GS.headlessGroundItemCount(river, "r08")
+            + D2GS.headlessGroundItemCount(river, "r09");
+        int[] restoredApproach = D2GS.headlessQuestObjectApproachSnapshot(river, forgeClass);
+        if (!hasQuestFlagAt(restored, Riiablo.ACT4, record, NativeQuestRecord.REWARD_PENDING)
+            || restoredRunes != 3
+            || restoredApproach[0] == Engine.INVALID_ENTITY
+            || approachCount(restoredApproach) == 0) {
+          throw new IOException("A4Q3 Hellforge reconnect state lost: runes=" + restoredRunes
+              + " approach=" + java.util.Arrays.toString(restoredApproach));
+        }
+      }
       log("a4q3_hellforge_dual_pass", "forge=" + forge + " hits=3 runes=3"
-          + " clients=true,true");
+          + " reconnect=pending clients=true,true");
     }
   }
 
