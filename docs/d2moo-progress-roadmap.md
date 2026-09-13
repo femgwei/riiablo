@@ -4540,3 +4540,23 @@ A4Q3 Hellforge 的入口、锤击计数和符文掉落重连。
 
 下一项：处理 A4Q3 Hellforge：入口可达性、Soulstone/Hammer 权威校验、三次锤击计数、
 符文掉落的幂等性以及双客户端重连恢复。
+
+### 2026-09-14 A4Q3 Hellforge 双客户端闭环（本轮完成）
+
+- [x] 对照 1.10f `River of Flame (107)` 与 `Objects.txt` class 376，补齐精简 DS1
+  缺失时的 Hellforge 原生对象物化；已有 DS1 对象优先，不重复创建，并写入
+  `NativeObjectState`/地图 provenance。
+- [x] 新增 `headlessA4HellforgeDual`：两客户端均可见且可到达入口；A 客户端必须
+  持有 Soulstone/Hammer，首次交互消费 Soulstone，随后严格三次锤击，生成 r07/r08/r09
+  各一枚，任务进入 `PRIMARY_GOAL_DONE + REWARD_PENDING`。
+- [x] 重放最后一次交互不会重复消费或重复掉落，日志为
+  `a4q3_hellforge_dual_pass forge=330 hits=3 runes=3 clients=true,true`。
+- [x] `:server:d2gs:headlessA4HellforgeDual` 与 `:core:test --tests
+  com.riiablo.engine.server.quest.Act4DiabloQuestTest` 通过。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/engine/server/quest/Act4QuestSystem.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`、
+`server/d2gs/build.gradle`。
+
+下一项：补充 A4Q3 完成后的断线重连快照（Hellforge 状态、任务 pending/granted、符文
+掉落唯一性），再进入 A2--A5 尚未覆盖的 NPC/任务奖励分支。

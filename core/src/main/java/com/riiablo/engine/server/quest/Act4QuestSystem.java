@@ -104,6 +104,10 @@ public class Act4QuestSystem extends PassiveSystem {
           rebuildChaosSealState(wrapper.zone);
         }
       }
+      if (levelId(ids[i]) == D2LevelIds.LEVEL_RIVEROFFLAME) {
+        MapWrapper wrapper = mMapWrapper.get(ids[i]);
+        if (wrapper != null) ensureHellforgeObject(wrapper.zone);
+      }
       if (levelId(ids[i]) == Act4DiabloQuest.PANDEMONIUM_FORTRESS) {
         Player player = mPlayer.get(ids[i]);
         MapWrapper wrapper = mMapWrapper.get(ids[i]);
@@ -134,6 +138,8 @@ public class Act4QuestSystem extends PassiveSystem {
       rebuildChaosSealState(event.zone);
     } else if (event.zone.level.Id == Act4DiabloQuest.PANDEMONIUM_FORTRESS) {
       reconcileAct5PortalState(event.entityId, event.zone, player.data);
+    } else if (event.zone.level.Id == D2LevelIds.LEVEL_RIVEROFFLAME) {
+      ensureHellforgeObject(event.zone);
     } else if (isAct4Level(event.zone.level.Id)) {
       updateDiabloRecord(player.data, Act4DiabloQuest::start,
           "entered-act4-combat-area");
@@ -184,6 +190,31 @@ public class Act4QuestSystem extends PassiveSystem {
           && wrapper != null && wrapper.zone == zone) return true;
     }
     return false;
+  }
+
+  /** Materializes the native Hellforge object when a reduced DS1 omits it. */
+  private void ensureHellforgeObject(Map.Zone zone) {
+    if (zone == null || zone.level == null
+        || zone.level.Id != D2LevelIds.LEVEL_RIVEROFFLAME
+        || factory == null || map == null || objectsByZone == null
+        || mObject == null || mMapWrapper == null || mNativeObjectState == null) return;
+    if (hasChaosSealObject(zone, Act4HellforgeQuest.HELLFORGE_OBJECT)) return;
+    Map.RoomEx room = zone.getRoomsEx().size == 0 ? null : zone.getRoomsEx().get(0);
+    float x = room == null ? zone.x() + zone.width() / 2f : room.x + room.width / 2f;
+    float y = room == null ? zone.y() + zone.height() / 2f : room.y + room.height / 2f;
+    int entity = factory.createStaticObjectByClassId(Act4HellforgeQuest.HELLFORGE_OBJECT, x, y);
+    if (entity < 0) {
+      log.warn("[A4Q3] Missing Hellforge could not be materialized: level={}", zone.level.Id);
+      return;
+    }
+    mMapWrapper.create(entity).set(map, zone);
+    NativeObjectState state = mNativeObjectState.create(entity);
+    state.set(Act4HellforgeQuest.HELLFORGE_OBJECT, Act4HellforgeQuest.HELLFORGE_OBJECT,
+        Act4HellforgeQuest.HELLFORGE_OBJECT, Engine.Object.MODE_NU, false, false,
+        com.riiablo.map.NativePresetObjectResolver.Kind.ORDINARY);
+    state.source = new Map.NativeObject(Act4HellforgeQuest.HELLFORGE_OBJECT,
+        Engine.Object.MODE_NU, (int) (x - zone.x()), (int) (y - zone.y()), false, false);
+    log.info("[A4Q3] Materialized missing Hellforge: level={} entity={}", zone.level.Id, entity);
   }
 
   @Subscribe

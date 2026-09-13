@@ -46,6 +46,7 @@ import com.riiablo.io.ByteInput;
 import com.riiablo.item.ItemReader;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.server.skill.SkillId;
+import com.riiablo.engine.server.quest.NativeQuestRecord;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -186,6 +187,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA4SealDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA4HellforgeDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireQuestWarpDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA5QuestWarpDual
@@ -243,6 +246,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA4SealDual) {
       runA4SealDual(d2s, character);
+      return;
+    }
+    if (config.requireA4HellforgeDual) {
+      runA4HellforgeDual(d2s, character);
       return;
     }
     if (config.requireQuestWarpDual) {
@@ -2488,6 +2495,85 @@ public final class D2GSHeadlessClient {
         throw new IOException("A4Q2 Diablo did not spawn after seal bosses");
       }
       log("a4q2_seal_dual_pass", "seals=5 bosses=3 diablo=" + diablo
+          + " clients=true,true");
+    }
+  }
+
+  private void runA4HellforgeDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A4HellforgePeer", 0x41344846, 80);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    final int river = LEVEL_RIVEROFFLAME;
+    final int forgeClass = com.riiablo.engine.server.quest.Act4HellforgeQuest.HELLFORGE_OBJECT;
+    final int record = com.riiablo.engine.server.quest.Act4HellforgeQuest.RECORD;
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT4, record, (short) 0)
+          || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT4, record, (short) 0)
+          || !D2GS.headlessAddQuestItem(a.playerId,
+              com.riiablo.engine.server.quest.Act4HellforgeQuest.SOULSTONE)
+          || !D2GS.headlessAddQuestItem(a.playerId,
+              com.riiablo.engine.server.quest.Act4HellforgeQuest.HAMMER)
+          || !D2GS.headlessEnterLevel(a.playerId, river)
+          || !D2GS.headlessEnterLevel(b.playerId, river)) {
+        throw new IOException("A4Q3 River of Flame staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, river, "A4Q3 Hellforge");
+      int forge = D2GS.headlessQuestObjectEntity(river, forgeClass);
+      if (forge == Engine.INVALID_ENTITY) {
+        throw new IOException("A4Q3 Hellforge object unavailable");
+      }
+      if (!D2GS.headlessMovePlayerToObject(a.playerId, forge)
+          || !D2GS.headlessMovePlayerToObject(b.playerId, forge)) {
+        throw new IOException("A4Q3 Hellforge approach unavailable");
+      }
+      a.awaitVisibleEntity(inA, forge, deadline());
+      b.awaitVisibleEntity(inB, forge, deadline());
+      int[] approach = D2GS.headlessQuestObjectApproachSnapshot(river, forgeClass);
+      if (approach[0] != Engine.INVALID_ENTITY && approachCount(approach) == 0) {
+        throw new IOException("A4Q3 Hellforge has no free approach cell: "
+            + java.util.Arrays.toString(approach));
+      }
+      send(outA, questRequestPacket(810L, QuestOperation.OBJECT_INTERACTION, forge, -1));
+      QuestResult opened = a.awaitQuestResult(inA, 810L, deadline());
+      if (opened == null || !opened.success()
+          || !hasQuestFlagAt(opened, Riiablo.ACT4, record, NativeQuestRecord.STARTED)) {
+        throw new IOException("A4Q3 Soulstone opening failed: "
+            + (opened == null ? "NO_RESULT" : opened.reason()));
+      }
+      for (int hit = 1; hit <= 3; hit++) {
+        send(outA, questRequestPacket(810L + hit, QuestOperation.OBJECT_INTERACTION, forge, -1));
+        QuestResult result = a.awaitQuestResult(inA, 810L + hit, deadline());
+        if (result == null || !result.success()) {
+          throw new IOException("A4Q3 hammer hit rejected: " + hit);
+        }
+      }
+      int runeCount = D2GS.headlessGroundItemCount(river, "r07")
+          + D2GS.headlessGroundItemCount(river, "r08")
+          + D2GS.headlessGroundItemCount(river, "r09");
+      QuestResult completed = requestSnapshot(a, inA, outA, 814L);
+      if (runeCount != 3
+          || !hasQuestFlagAt(completed, Riiablo.ACT4, record,
+              NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlagAt(completed, Riiablo.ACT4, record,
+              NativeQuestRecord.REWARD_PENDING)) {
+        throw new IOException("A4Q3 Hellforge completion incomplete: runes=" + runeCount);
+      }
+      send(outA, questRequestPacket(813L, QuestOperation.OBJECT_INTERACTION, forge, -1));
+      QuestResult replay = a.awaitQuestResult(inA, 813L, deadline());
+      int replayRunes = D2GS.headlessGroundItemCount(river, "r07")
+          + D2GS.headlessGroundItemCount(river, "r08")
+          + D2GS.headlessGroundItemCount(river, "r09");
+      if (replay == null || replayRunes != 3) {
+        throw new IOException("A4Q3 duplicate hammer request was not idempotent");
+      }
+      log("a4q3_hellforge_dual_pass", "forge=" + forge + " hits=3 runes=3"
           + " clients=true,true");
     }
   }
@@ -7375,6 +7461,7 @@ public final class D2GSHeadlessClient {
     boolean requireBaalWaveDual;
     boolean requireA5AncientDual;
     boolean requireA4SealDual;
+    boolean requireA4HellforgeDual;
     boolean requireQuestWarpDual;
     boolean requireQuestObjectDual;
     boolean requireA3ObjectInteractionDual;
@@ -7432,6 +7519,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-a5-ancient-dual".equals(arg)) config.requireA5AncientDual = true;
         else if ("--require-a4-seal-dual".equals(arg)) config.requireA4SealDual = true;
+        else if ("--require-a4-hellforge-dual".equals(arg)) config.requireA4HellforgeDual = true;
         else if ("--require-quest-warp-dual".equals(arg)) config.requireQuestWarpDual = true;
         else if ("--require-quest-object-dual".equals(arg)) config.requireQuestObjectDual = true;
         else if ("--require-a3-object-interaction-dual".equals(arg)) config.requireA3ObjectInteractionDual = true;
@@ -7492,6 +7580,7 @@ public final class D2GSHeadlessClient {
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
+          && !config.requireA4HellforgeDual
           && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
           && !config.requireA2ObjectInteractionDual
@@ -7509,6 +7598,7 @@ public final class D2GSHeadlessClient {
       }
       if (!config.generatedAmazon && !config.requireBaalWaveDual && !config.requireA5AncientDual
           && !config.requireA4SealDual
+          && !config.requireA4HellforgeDual
           && !config.requireQuestWarpDual
           && !config.requireQuestObjectDual && !config.requireA3ObjectInteractionDual
           && !config.requireA2ObjectInteractionDual
@@ -7558,6 +7648,7 @@ public final class D2GSHeadlessClient {
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
           + " [--require-a5-ancient-dual]"
           + " [--require-a4-seal-dual]"
+          + " [--require-a4-hellforge-dual]"
           + " [--require-quest-warp-dual] [--require-quest-object-dual]"
           + " [--require-a3-object-interaction-dual]"
           + " [--require-a2-object-interaction-dual]"
