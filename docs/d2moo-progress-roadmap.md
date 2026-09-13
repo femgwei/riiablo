@@ -4149,3 +4149,29 @@ Worldstone Keep/Throne 的原生 Preset、碰撞层和断线重连恢复。
 
 下一项：核对 Worldstone Keep/Throne 原生 Preset 与碰撞层，补充断线重连后地图实体、
 Warp 和碰撞状态恢复回归。
+
+### 2026-09-13 Worldstone Keep/Throne Preset、碰撞与重连诊断（本轮完成）
+
+- [x] `Map.Zone` 新增 `nativeDiagnostics()`，统一输出 Zone 尺寸、tile 数量、RoomEx
+  拓扑、DT1 mask、可行走/阻挡格、floor/wall/shadow tile 及 Warp marker 数量；修正
+  对象池字节数组尾部被误计入碰撞统计的问题。
+- [x] 新增 `D2GS.headlessZoneDiagnostics()` 与
+  `headlessA5WorldstonePresetDual`：双客户端依次进入 Worldstone Keep 1/2/3、
+  Throne、Chamber，校验关卡索引、尺寸、地板、碰撞覆盖、Warp 实体，并断开第二
+  客户端后重连验证 Chamber 基线尺寸和可通行状态保持一致。
+- [x] 对缺失 LevelType DT1 的精简 1.10f 导出增加确定性 floor fallback：优先当前
+  DT1s，随后从已加载 DT1 库选择首个 orientation-0 tile，避免区域渲染成全黑；日志
+  明确标记该回退，不把它误报为完整原生 Preset。
+- [x] 真实 1.10f 离屏结果：
+  `a5_worldstone_preset_dual_pass levels=5 reconnect=true chamber=132 clients=true,true`。
+  Keep 1/2/3 在当前导出中为 metadata-only（无 RoomEx、nativeDt1Mask=0），Throne/
+  Chamber 含部分 floor/wall 与碰撞；所有区域均有有效尺寸、可行走格和 Warp 实体。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/map/Map.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`、
+`server/d2gs/build.gradle`。
+
+下一项：在不改变回退语义的前提下，继续补齐 Worldstone Keep 1/2/3 的原生 RoomEx/DT1
+导出接入（若资源存在则优先加载），并对 Throne/Chamber 的实际 DS1 房间边界和
+动态对象碰撞做更细粒度回归；随后进入 A5Q5/A5Q6 任务与实体网络同步核对。

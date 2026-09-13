@@ -1193,6 +1193,57 @@ public class Map implements Disposable {
       return true;
     }
 
+    /**
+     * Compact native-map diagnostics used by the windowless regression
+     * harness.  The values are intentionally derived from the generated
+     * Zone, rather than from Levels/LvlPrest metadata, so a missing preset or
+     * collision export is visible immediately.
+     *
+     * <p>Layout: {@code [levelId,width,height,tilesX,tilesY,rooms,
+     * nativeTopology,dt1Mask,walkable,blocked,floors,walls,shadows,
+     * warpMarkers]}.</p>
+     */
+    public int[] nativeDiagnostics() {
+      int walkable = 0, blocked = 0;
+      if (flags != null) {
+        // Pooled byte arrays are larger than the requested region.  Only the
+        // logical Zone footprint (width*height) is part of the collision
+        // layer; counting the spare pool tail made diagnostics report more
+        // cells than the Zone actually contains.
+        int logicalSize = Math.min(flags.length, Math.max(0, width * height));
+        for (int i = 0; i < logicalSize; i++) {
+          if ((flags[i] & DT1.Tile.FLAG_BLOCK_WALK) != 0) blocked++;
+          else walkable++;
+        }
+      }
+      int floors = countLayerTiles(Map.FLOOR_OFFSET);
+      int walls = countLayerTiles(Map.WALL_OFFSET);
+      int shadows = countLayerTiles(Map.SHADOW_OFFSET);
+      int adjacent = 0;
+      for (RoomEx room : roomsEx) if (room.hasNativeAdjacency()) adjacent++;
+      int markers = 0;
+      if (specials != null) {
+        for (IntMap.Entry<DS1.Cell> entry : specials.entries()) {
+          DS1.Cell cell = entry.value;
+          if (cell != null && Map.ID.WARPS.contains(cell.id)) markers++;
+        }
+      }
+      return new int[] {
+          level == null ? -1 : level.Id, width, height, tilesX, tilesY,
+          roomsEx.size, adjacent == roomsEx.size && !roomsEx.isEmpty() ? 1 : 0,
+          nativeDt1Mask, walkable, blocked, floors, walls, shadows, markers
+      };
+    }
+
+    private int countLayerTiles(int layer) {
+      DT1.Tile[] values = layer >= 0 && layer < tiles.length ? tiles[layer] : null;
+      if (values == null) return 0;
+      int count = 0;
+      int logicalSize = Math.min(values.length, Math.max(0, tilesX * tilesY));
+      for (int i = 0; i < logicalSize; i++) if (values[i] != null) count++;
+      return count;
+    }
+
     /** True after the server has started tracking CLIENT_IN_ROOM references. */
     public boolean isRoomActivationTracking() {
       return roomActivationTracking;
@@ -1764,6 +1815,49 @@ public class Map implements Disposable {
           Gdx.app.error(TAG, "Failed to apply native exported TileGrid for " + level.LevelName, t);
         }
       }
+
+      // A stripped MPQ/export can provide the level metadata and collision
+      // dimensions but omit the level-type DT1 list.  Leaving every floor
+      // cell null renders a completely black rectangular void.  D2's loader
+      // still has a valid floor library in another level type, so use the
+      // first native orientation-0 tile as a deterministic visual fallback.
+      // This does not replace native presets when present; it only prevents
+      // an empty render while diagnostics explicitly report the fallback.
+      boolean hasFloor = false;
+      DT1.Tile[] floorLayer = tiles[Map.FLOOR_OFFSET];
+      if (floorLayer != null) {
+        for (DT1.Tile tile : floorLayer) {
+          if (tile != null) { hasFloor = true; break; }
+        }
+      }
+      if (!hasFloor && floorLayer != null) {
+        DT1.Tile fallback = firstFloorTile(dt1s);
+        if (fallback == null && map != null) {
+          for (DT1s candidate : map.dt1s.values()) {
+            fallback = firstFloorTile(candidate);
+            if (fallback != null) break;
+          }
+        }
+        if (fallback != null) {
+          java.util.Arrays.fill(floorLayer, fallback);
+          Gdx.app.log(TAG, "Applied deterministic floor fallback for "
+              + (level == null ? "<unknown>" : level.LevelName)
+              + " (native DT1 floor data absent)");
+        } else {
+          Gdx.app.error(TAG, "No orientation-0 DT1 floor tile available for "
+              + (level == null ? "<unknown>" : level.LevelName));
+        }
+      }
+    }
+
+    private static DT1.Tile firstFloorTile(DT1s source) {
+      if (source == null) return null;
+      for (IntMap.Entry<Array<DT1.Tile>> entry : source.tiles.entries()) {
+        if (DT1.Tile.Index.orientation(entry.key) != 0) continue;
+        Array<DT1.Tile> values = entry.value;
+        if (values != null && values.size > 0) return values.first();
+      }
+      return null;
     }
 
     Vector2 find(int id) {

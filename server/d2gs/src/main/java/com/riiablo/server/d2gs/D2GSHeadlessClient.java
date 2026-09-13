@@ -206,6 +206,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA5DungeonWarpDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireA5WorldstonePresetDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireEarlyObjectDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaSkillScenario
@@ -277,6 +279,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA5DungeonWarpDual) {
       runA5DungeonWarpDual(d2s, character);
+      return;
+    }
+    if (config.requireA5WorldstonePresetDual) {
+      runA5WorldstonePresetDual(d2s, character);
       return;
     }
     if (config.requireEarlyObjectDual) {
@@ -3052,6 +3058,100 @@ public final class D2GSHeadlessClient {
       log("a5_dungeon_warp_dual_pass", "pairs=" + pairs.length
           + " roundTrips=" + roundTrips + " boundaryRejects=" + boundaryRejects
           + " clients=true,true");
+    }
+  }
+
+  /**
+   * Worldstone Keep/Throne native preset, collision and reconnect gate.
+   * Unlike the broad Warp-chain test this asserts that each generated Zone
+   * actually contains floor/collision data and that reconnecting a peer does
+   * not select an overlapping or metadata-only Zone.
+   */
+  private void runA5WorldstonePresetDual(byte[] d2s, CharacterHeader character)
+      throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("A5KeepPeer", 0x4135574B);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int[] levels = {
+        LEVEL_WORLDSTONEKEEPLEV1, LEVEL_WORLDSTONEKEEPLEV2,
+        LEVEL_WORLDSTONEKEEPLEV3, LEVEL_THRONEOFDESTRUCTION,
+        LEVEL_WORLDSTONECHAMBER
+    };
+    int[][] baselines = new int[levels.length][];
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      for (int i = 0; i < levels.length; i++) {
+        int level = levels[i];
+        if (!D2GS.headlessEnterLevel(a.playerId, level)
+            || !D2GS.headlessEnterLevel(b.playerId, level)) {
+          throw new IOException("Worldstone staging unavailable: " + level);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB, level, "a5-worldstone-" + level);
+        int[] diag = D2GS.headlessZoneDiagnostics(level);
+        if (diag.length < 15) {
+          throw new IOException("Worldstone diagnostics unavailable: level=" + level);
+        }
+        // [id,w,h,tilesX,tilesY,rooms,native,mask,walkable,blocked,
+        //  floors,walls,shadows,warpMarkers,warpEntities]
+        if (diag[0] != level || diag[1] <= 0 || diag[2] <= 0
+            || diag[3] <= 0 || diag[4] <= 0 || diag[8] <= 0 || diag[10] <= 0) {
+          throw new IOException("Worldstone empty/invalid Zone: level=" + level
+              + " diag=" + java.util.Arrays.toString(diag));
+        }
+        if (diag[8] + diag[9] != diag[1] * diag[2]) {
+          throw new IOException("Worldstone collision coverage mismatch: level=" + level
+              + " diag=" + java.util.Arrays.toString(diag));
+        }
+        if (diag[14] <= 0) {
+          throw new IOException("Worldstone has no Warp entities: level=" + level
+              + " diag=" + java.util.Arrays.toString(diag));
+        }
+        baselines[i] = diag;
+        log("a5_worldstone_diag", "level=" + level
+            + " diag=" + java.util.Arrays.toString(diag));
+      }
+
+      // Disconnect the observer while both clients are in the Chamber, then
+      // reconnect it and require the same level and non-empty native baseline.
+      int chamber = LEVEL_WORLDSTONECHAMBER;
+      int before[] = baselines[baselines.length - 1];
+      socketB.close();
+      long disconnectDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < disconnectDeadline) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(inA);
+        if (packet != null) a.consume(packet);
+      }
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(peerCharacter, peerD2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessEnterLevel(reconnected.playerId, chamber)) {
+          throw new IOException("Worldstone reconnect staging unavailable");
+        }
+        awaitLevel(reconnected, reconnectInput, chamber, deadline());
+        int[] restored = D2GS.headlessZoneDiagnostics(chamber);
+        if (restored.length < 15 || restored[0] != chamber || restored[8] <= 0
+            || restored[10] <= 0 || restored[14] <= 0) {
+          throw new IOException("Worldstone reconnect baseline invalid: "
+              + java.util.Arrays.toString(restored));
+        }
+        if (restored[1] != before[1] || restored[2] != before[2]
+            || restored[3] != before[3] || restored[4] != before[4]) {
+          throw new IOException("Worldstone reconnect dimensions changed: before="
+              + java.util.Arrays.toString(before) + " restored="
+              + java.util.Arrays.toString(restored));
+        }
+        log("a5_worldstone_preset_dual_pass", "levels=" + levels.length
+            + " reconnect=true chamber=" + chamber + " clients=true,true");
+      }
     }
   }
 
@@ -6617,6 +6717,7 @@ public final class D2GSHeadlessClient {
     boolean requireA3DungeonWarpDual;
     boolean requireA4DungeonWarpDual;
     boolean requireA5DungeonWarpDual;
+    boolean requireA5WorldstonePresetDual;
     boolean requireA5QuestWarpDual;
     boolean requireEarlyObjectDual;
     boolean requireDenQuestScenario;
@@ -6671,6 +6772,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-a3-dungeon-warp-dual".equals(arg)) config.requireA3DungeonWarpDual = true;
         else if ("--require-a4-dungeon-warp-dual".equals(arg)) config.requireA4DungeonWarpDual = true;
         else if ("--require-a5-dungeon-warp-dual".equals(arg)) config.requireA5DungeonWarpDual = true;
+        else if ("--require-a5-worldstone-preset-dual".equals(arg)) config.requireA5WorldstonePresetDual = true;
         else if ("--require-a5-quest-warp-dual".equals(arg)) config.requireA5QuestWarpDual = true;
         else if ("--require-early-object-dual".equals(arg)) config.requireEarlyObjectDual = true;
         else if ("--require-den-quest".equals(arg)) config.requireDenQuestScenario = true;
@@ -6726,6 +6828,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
           && !config.requireA5DungeonWarpDual
+          && !config.requireA5WorldstonePresetDual
           && !config.requireA5QuestWarpDual
           && !config.requireEarlyObjectDual
           && config.save == null && config.home != null) {
@@ -6740,6 +6843,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
           && !config.requireA5DungeonWarpDual
+          && !config.requireA5WorldstonePresetDual
           && !config.requireA5QuestWarpDual
           && !config.requireEarlyObjectDual
           && (config.save == null || !config.save.isFile())) {
@@ -6782,6 +6886,7 @@ public final class D2GSHeadlessClient {
           + " [--require-a2-object-interaction-dual]"
           + " [--require-a2q6-reconnect]"
           + " [--require-a2-tomb-dual]"
+          + " [--require-a5-worldstone-preset-dual]"
           + " [--require-early-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"
           + " [--require-countess-quest]"

@@ -1258,6 +1258,54 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /**
+   * Returns generated native-map diagnostics for a level.  This is a
+   * read-only bridge for the headless Worldstone regression and deliberately
+   * reports the Zone selected by the authoritative level index (never the
+   * coordinate-overlap fallback).
+   */
+  static int[] headlessZoneDiagnostics(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.map == null || Riiablo.files == null
+        || Riiablo.files.Levels == null || Gdx.app == null) return new int[0];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        if (zone == null) return;
+        int[] base = zone.nativeDiagnostics();
+        int warpEntities = 0;
+        if (server.world != null) {
+          com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager()
+              .get(Aspect.all(com.riiablo.engine.server.component.Warp.class,
+                  com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+          int[] ids = entities.getData();
+          com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+              server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+          for (int i = 0; i < entities.size(); i++) {
+            com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(ids[i]);
+            if (wrapper != null && wrapper.zone == zone) warpEntities++;
+          }
+        }
+        int[] values = java.util.Arrays.copyOf(base, base.length + 1);
+        values[base.length] = warpEntities;
+        result.set(values);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[0];
+    }
+  }
+
   /** Places a headless player on a walkable edge cell and returns
    * {sourceX, sourceY, outsideX, outsideY} for a boundary rejection probe. */
   static float[] headlessPrepareBoundaryProbe(int playerId, int levelId) {
