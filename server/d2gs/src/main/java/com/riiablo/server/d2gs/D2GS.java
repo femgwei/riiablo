@@ -1176,6 +1176,10 @@ public class D2GS extends ApplicationAdapter {
         // Flush the deletion and run the normal quest rebuild path. The state
         // remains lastPortalCreated=true, so this must create exactly one pair.
         server.world.process();
+        com.riiablo.engine.server.quest.Act5QuestSystem quests = server.world
+            .getSystem(com.riiablo.engine.server.quest.Act5QuestSystem.class);
+        if (quests != null) quests.ensureHeadlessBaalEndPortal();
+        server.world.process();
         result.set(findChamberTownPortalWarpEntity(server));
       } finally {
         done.countDown();
@@ -2837,6 +2841,46 @@ public class D2GS extends ApplicationAdapter {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Engine.INVALID_ENTITY;
+    }
+  }
+
+  /** Returns the three native Ancient SuperUnique entities in encounter order. */
+  static int[] headlessAncientEntities(int levelId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return new int[0];
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[0]);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.SuperUnique.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] found = new int[3];
+        java.util.Arrays.fill(found, Engine.INVALID_ENTITY);
+        int[] ids = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int entity = ids[i];
+          com.riiablo.engine.server.component.SuperUnique unique = server.world
+              .getMapper(com.riiablo.engine.server.component.SuperUnique.class).get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = server.world
+              .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entity);
+          if (unique == null || wrapper == null || wrapper.zone == null
+              || wrapper.zone.level == null || wrapper.zone.level.Id != levelId) continue;
+          int ordinal = unique.id - com.riiablo.engine.server.quest.Act5AncientsQuest.SUPERUNIQUE_ANCIENT_1;
+          if (ordinal >= 0 && ordinal < found.length) found[ordinal] = entity;
+        }
+        result.set(found);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? result.get() : new int[0];
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[0];
     }
   }
 

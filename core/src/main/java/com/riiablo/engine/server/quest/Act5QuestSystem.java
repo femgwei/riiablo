@@ -1802,6 +1802,11 @@ public class Act5QuestSystem extends BaseSystem {
     }
   }
 
+  /** Test-only bridge for deterministic room rebuilds without a render tick. */
+  public void ensureHeadlessBaalEndPortal() {
+    rebuildBaalEndPortalState();
+  }
+
   private boolean ensureLastPortal(Map.Zone zone, float portalX, float portalY) {
     if (zone == null || factory == null || world == null) return false;
     int questWarp = QuestWarp.encode(D2LevelIds.LEVEL_HARROGATH);

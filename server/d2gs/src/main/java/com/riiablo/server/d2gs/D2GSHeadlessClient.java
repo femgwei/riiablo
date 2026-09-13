@@ -2257,16 +2257,39 @@ public final class D2GSHeadlessClient {
           + " clients=true,true");
 
       int summit = com.riiablo.engine.server.quest.Act5AncientsQuest.ARREAT_SUMMIT;
-      short ancientsComplete = com.riiablo.engine.server.quest.Act5AncientsQuest.complete((short) 0);
+      // Start A5Q5 from an incomplete record and drive the native three-statue
+      // encounter instead of only checking a pre-completed door snapshot.
       if (!D2GS.headlessSetQuestRecord(a.playerId, Riiablo.ACT5,
-          com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, ancientsComplete)
+          com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, (short) 0)
           || !D2GS.headlessSetQuestRecord(b.playerId, Riiablo.ACT5,
-              com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, ancientsComplete)
+              com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD, (short) 0)
           || !D2GS.headlessEnterLevel(a.playerId, summit)
           || !D2GS.headlessEnterLevel(b.playerId, summit)) {
         throw new IOException("A5Q5 Arreat Summit staging unavailable");
       }
       awaitTwoQuestLevels(a, b, inA, inB, summit, "A5Q5 objects");
+      int statueActivated = 0;
+      for (int statueClass = com.riiablo.engine.server.quest.Act5AncientsQuest.FIRST_ANCIENT_STATUE;
+           statueClass <= com.riiablo.engine.server.quest.Act5AncientsQuest.LAST_ANCIENT_STATUE;
+           statueClass++) {
+        statueActivated += D2GS.headlessActivateQuestObjects(summit, statueClass);
+      }
+      if (statueActivated < 3 || !D2GS.headlessRebuildQuestObjects(a.playerId)
+          || !D2GS.headlessRebuildQuestObjects(b.playerId)) {
+        throw new IOException("A5Q5 Ancient statue activation failed: " + statueActivated);
+      }
+      int[] ancientEntities = D2GS.headlessAncientEntities(summit);
+      if (ancientEntities.length != 3) {
+        throw new IOException("A5Q5 Ancient encounter did not spawn three guardians: "
+            + java.util.Arrays.toString(ancientEntities));
+      }
+      for (int ancient : ancientEntities) {
+        if (ancient == Engine.INVALID_ENTITY
+            || !D2GS.headlessKillMonster(a.playerId, ancient)) {
+          throw new IOException("A5Q5 Ancient encounter did not spawn all three: "
+              + java.util.Arrays.toString(ancientEntities));
+        }
+      }
       if (!D2GS.headlessRebuildQuestObjects(a.playerId)) {
         throw new IOException("A5Q5 Ancient door rebuild unavailable");
       }
