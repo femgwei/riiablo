@@ -47,6 +47,7 @@ public class Npc extends AI {
   static {
     // Act 1
     TALKERS.addAll(MonsterType.DECKARDCAIN, MonsterType.DECKARDCAIN_TOWN, MonsterType.CAIN4,
+        MonsterType.TYRAEL2,
         MonsterType.GHEED, MonsterType.AKARA, MonsterType.KASHYA,
         MonsterType.CHARSI, MonsterType.WARRIV);
     REPAIRERS.addAll(154);
@@ -152,7 +153,7 @@ public class Npc extends AI {
           .addItem("Quest", new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-              if (entType == MonsterType.CAIN4) {
+              if (entType == MonsterType.CAIN4 || entType == MonsterType.TYRAEL2) {
                 com.riiablo.engine.client.Act4QuestDialogController quests =
                     Riiablo.engine.getSystem(com.riiablo.engine.client.Act4QuestDialogController.class);
                 if (quests != null && Riiablo.game != null) {

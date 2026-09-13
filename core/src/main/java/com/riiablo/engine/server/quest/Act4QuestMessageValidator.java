@@ -9,9 +9,19 @@ public final class Act4QuestMessageValidator {
   private Act4QuestMessageValidator() {}
 
   public static boolean isAllowed(int npcType, CharData data, int messageIndex) {
-    if (data == null || npcType != MonsterType.CAIN4) return false;
+    if (data == null) return false;
     short[] act4 = data.getQuests(Riiablo.ACT4);
-    if (act4 == null || act4.length <= Act4HellforgeQuest.RECORD) return false;
+    if (act4 == null) return false;
+    if (npcType == MonsterType.TYRAEL2) {
+      if (act4.length <= Act4IzualQuest.RECORD) return false;
+      short record = act4[Act4IzualQuest.RECORD];
+      if (messageIndex == Act4IzualQuest.MESSAGE_TYRAEL_REWARD) {
+        return Act4IzualQuest.canClaimReward(record);
+      }
+      return messageIndex == Act4IzualQuest.MESSAGE_TYRAEL_INIT
+          && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+    }
+    if (npcType != MonsterType.CAIN4 || act4.length <= Act4HellforgeQuest.RECORD) return false;
     short record = act4[Act4HellforgeQuest.RECORD];
     if (messageIndex == Act4HellforgeQuest.MESSAGE_CAIN_REWARD) {
       return Act4HellforgeQuest.canClaimReward(record);

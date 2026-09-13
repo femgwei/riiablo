@@ -9,6 +9,7 @@ import com.riiablo.engine.server.event.NpcInteractionEvent;
 import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.quest.Act4HellforgeQuest;
+import com.riiablo.engine.server.quest.Act4IzualQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
@@ -36,15 +37,29 @@ public class Act4QuestDialogController extends PassiveSystem {
     Monster npc = mMonster.get(npcId);
     Player player = mPlayer.get(playerId);
     CharData data = player == null ? null : player.data;
-    if (npc == null || npc.monstats == null || npc.monstats.hcIdx != MonsterType.CAIN4
+    if (npc == null || npc.monstats == null
+        || (npc.monstats.hcIdx != MonsterType.CAIN4
+            && npc.monstats.hcIdx != MonsterType.TYRAEL2)
         || data == null) return false;
     short[] act4 = data.getQuests(Riiablo.ACT4);
-    if (act4 == null || act4.length <= Act4HellforgeQuest.RECORD) return false;
-    short record = act4[Act4HellforgeQuest.RECORD];
-    boolean hasStone = data.getItems() != null
-        && data.getItems().containsItemCode(Act4HellforgeQuest.SOULSTONE);
-    int message = Act4HellforgeQuest.selectCainMessage(record, hasStone);
-    String speech = speech(message);
+    if (act4 == null) return false;
+    final int message;
+    final String speech;
+    if (npc.monstats.hcIdx == MonsterType.TYRAEL2) {
+      if (act4.length <= Act4IzualQuest.RECORD) return false;
+      short record = act4[Act4IzualQuest.RECORD];
+      message = NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
+          ? Act4IzualQuest.MESSAGE_TYRAEL_REWARD : Act4IzualQuest.MESSAGE_TYRAEL_INIT;
+      speech = message == Act4IzualQuest.MESSAGE_TYRAEL_REWARD
+          ? "tyrael_act4_q1_success" : "tyrael_act4_q1_init";
+    } else {
+      if (act4.length <= Act4HellforgeQuest.RECORD) return false;
+      short record = act4[Act4HellforgeQuest.RECORD];
+      boolean hasStone = data.getItems() != null
+          && data.getItems().containsItemCode(Act4HellforgeQuest.SOULSTONE);
+      message = Act4HellforgeQuest.selectCainMessage(record, hasStone);
+      speech = speech(message);
+    }
     if (speech == null) return false;
     dialogManager.setDialog(new NpcDialogBox(speech, dialog -> {
       dialogManager.setDialog(null);
