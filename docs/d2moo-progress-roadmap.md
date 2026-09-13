@@ -4114,3 +4114,18 @@ Frigid Highlands 入口、Keep/Throne 往返和边界拒绝。
 
 下一项：继续核对 Worldstone/Throne 原生 Preset 与碰撞连续性，并补充 A5Q4 真实
 Nihlathak 击杀/奖励状态推进和重连后门户恢复回归。
+
+### 2026-09-13 A5Q4 Nihlathak 击杀与多人任务状态同步（本轮完成）
+
+- [x] 新增服务端离屏夹具 `headlessKillNihlathak`，仅匹配 Halls of Vaught 中
+  原生 SuperUnique 索引 60 或 Nihlathak 名称，并通过生产 `DeathEvent` 进入任务系统。
+- [x] 双客户端同时进入 Halls of Vaught，击杀后都收到实体删除和任务记录更新；
+  `PRIMARY_GOAL_DONE` 与 `REWARD_PENDING` 均已验证，重复击杀不会重复结算。
+- [x] 真实 1.10f 离屏结果：
+  `a5_quest_warp_dual_pass ... nihlathak=true rewardPending=true clients=true,true`。
+
+共享文件最小修改：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：补齐 A5Q4 Drehya 奖励对话和奖励发放的双客户端回归，并继续核对
+Worldstone Keep/Throne 的原生 Preset、碰撞层和断线重连恢复。

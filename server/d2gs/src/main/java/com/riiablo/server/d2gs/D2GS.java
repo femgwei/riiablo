@@ -705,6 +705,58 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Dispatches the native A5Q4 Nihlathak DeathEvent for a deterministic fixture. */
+  static int headlessKillNihlathak(int killerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) return Engine.INVALID_ENTITY;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+            server.world.getMapper(com.riiablo.engine.server.component.Monster.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] data = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int entity = data[i];
+          com.riiablo.engine.server.component.Monster monster = monsters.get(entity);
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(entity);
+          if (monster == null || monster.monstats == null || wrapper == null
+              || wrapper.zone == null || wrapper.zone.level == null
+              || wrapper.zone.level.Id
+                  != com.riiablo.engine.server.quest.Act5NihlathakQuest.HALLS_OF_VAUGHT) {
+            continue;
+          }
+          String id = monster.monstats.Id;
+          String name = monster.monstats.NameStr;
+          boolean nihlathak = monster.monstats.hcIdx
+              == com.riiablo.engine.server.quest.Act5NihlathakQuest.SUPERUNIQUE_NIHLATHAK_BOSS
+              || "Nihlathak".equalsIgnoreCase(id) || "Nihlathak".equalsIgnoreCase(name);
+          if (!nihlathak) continue;
+          server.world.getSystem(EventSystem.class).dispatch(
+              com.riiablo.engine.server.event.DeathEvent.obtain(killerId, entity));
+          if (server.world.getEntityManager().isActive(entity)) server.world.delete(entity);
+          result.set(entity);
+          return;
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /** Dispatches the native A2Q6 Duriel death callback for a deterministic fixture. */
   static int headlessCompleteDurielObjective(int killerId) {
     D2GS server = activeHeadlessInstance;

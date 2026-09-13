@@ -3730,9 +3730,38 @@ public final class D2GSHeadlessClient {
             + from + " -> " + to + ": " + result.reason());
         awaitLevel(b, inB, to, deadline());
       }
+      // Enter Halls of Vaught with both clients and dispatch the production
+      // Nihlathak DeathEvent.  The quest system must credit every player in
+      // the area exactly once and expose the pending reward state.
+      int vaught = chain[chain.length - 1];
+      if (!D2GS.headlessEnterLevel(a.playerId, vaught)
+          || !D2GS.headlessEnterLevel(b.playerId, vaught)) {
+        throw new IOException("A5Q4 Halls of Vaught staging unavailable");
+      }
+      awaitLevel(a, inA, vaught, deadline());
+      awaitLevel(b, inB, vaught, deadline());
+      int deadNihlathak = D2GS.headlessKillNihlathak(a.playerId);
+      if (deadNihlathak == Engine.INVALID_ENTITY) {
+        throw new IOException("A5Q4 Nihlathak fixture was not spawned");
+      }
+      a.awaitDeleted(inA, deadNihlathak, deadline());
+      b.awaitDeleted(inB, deadNihlathak, deadline());
+      QuestResult a5SnapshotA = requestSnapshot(a, inA, outA, 500L);
+      QuestResult a5SnapshotB = requestSnapshot(b, inB, outB, 500L);
+      int a5Record = com.riiablo.engine.server.quest.Act5NihlathakQuest.RECORD;
+      if (!hasQuestFlagAt(a5SnapshotA, Riiablo.ACT5, a5Record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlagAt(a5SnapshotA, Riiablo.ACT5, a5Record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)
+          || !hasQuestFlagAt(a5SnapshotB, Riiablo.ACT5, a5Record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.PRIMARY_GOAL_DONE)
+          || !hasQuestFlagAt(a5SnapshotB, Riiablo.ACT5, a5Record,
+              com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_PENDING)) {
+        throw new IOException("A5Q4 Nihlathak completion was not credited to both clients");
+      }
       log("a5_quest_warp_dual_pass", "portal=true reject=" + rejected.reason()
           + " replay=true staleRejected=" + stale.reason() + " chain=" + (chain.length - 1)
-          + " clients=true,true");
+          + " nihlathak=true rewardPending=true clients=true,true");
     }
   }
 
