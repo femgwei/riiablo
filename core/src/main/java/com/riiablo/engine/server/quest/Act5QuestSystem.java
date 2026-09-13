@@ -1371,10 +1371,27 @@ public class Act5QuestSystem extends BaseSystem {
     IntBag entities = monstersByZone.getEntities();
     int[] ids = entities.getData();
     boolean existing = false;
+    Map.Zone chamber = findZone(Act5BaalQuest.WORLDSTONE_CHAMBER);
     for (int i = 0; i < entities.size(); i++) {
       int id = ids[i];
       if (isBaal(id) && levelId(id) == levelId) {
         existing = true;
+        // A previous terminal spawn may have used the throne fallback before
+        // the Chamber Zone was active.  Keep the entity but relocate it into
+        // the authoritative Chamber bounds so recipient visibility includes
+        // both clients after the level switch.
+        if (chamber != null && mPosition != null && mPosition.has(id)) {
+          Position position = mPosition.get(id);
+          if (position == null || !chamber.contains(position.position.x, position.position.y)) {
+            position.position.set(chamber.x() + chamber.width() * 0.5f,
+                chamber.y() + chamber.height() * 0.5f);
+            if (mMapWrapper != null && mMapWrapper.has(id)) {
+              mMapWrapper.get(id).set(map, chamber);
+            }
+            log.info("[A5Q6] relocated existing Baal into Chamber: entity={} position=({}, {})",
+                id, position.position.x, position.position.y);
+          }
+        }
         break;
       }
     }
@@ -1400,7 +1417,6 @@ public class Act5QuestSystem extends BaseSystem {
     // creation idempotent because the final DeathEvent may be delivered more
     // than once by reconnect/replay paths.
     openWorldstoneChamberPortal();
-    Map.Zone chamber = findZone(Act5BaalQuest.WORLDSTONE_CHAMBER);
     float spawnX = baalWaveOriginX() + 3f;
     float spawnY = baalWaveOriginY();
     if (chamber != null) {
