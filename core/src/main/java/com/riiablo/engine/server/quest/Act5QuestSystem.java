@@ -1171,6 +1171,9 @@ public class Act5QuestSystem extends BaseSystem {
     if (playersByZone == null) return;
     IntSet parties = new IntSet();
     IntBag players = playersByZone.getEntities();
+    log.info("[A5Q5] Completing Ancients for players: zonePlayers={} killed={} spawned={} level={}",
+        players == null ? 0 : players.size(), killedAncientEntities.size,
+        spawnedAncientEntities.size, levelIdForQuestDiagnostics());
     int[] ids = players.getData();
     for (int i = 0; i < players.size(); i++) {
       int id = ids[i];
@@ -1193,6 +1196,17 @@ public class Act5QuestSystem extends BaseSystem {
         completeAncientsAndReward(id, player, "ancients-party-sync");
       }
     }
+  }
+
+  /** Returns one active Summit level for diagnostics without exposing ECS state. */
+  private int levelIdForQuestDiagnostics() {
+    if (spawnedAncientEntities.size > 0) {
+      for (IntSet.IntSetIterator iterator = spawnedAncientEntities.iterator(); iterator.hasNext; ) {
+        int level = levelId(iterator.next());
+        if (level >= 0) return level;
+      }
+    }
+    return -1;
   }
 
   private boolean completeAncientsAndReward(int playerId, Player player, String reason) {

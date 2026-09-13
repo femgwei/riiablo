@@ -4473,3 +4473,20 @@ Summit Door 两侧），再进入 A2--A5 尚未覆盖的任务对象/地图碰�
 
 下一项：修正组合 QuestObject 夹具的 A5Q5 奖励快照同步，然后继续 A2--A5 其余
 任务对象（尤其 A4 封印/入口对象）的碰撞与双客户端可见性验收。
+
+### 2026-09-13 A5Q5 组合任务奖励快照同步（本轮完成）
+
+- [x] 修正 `headlessQuestObjectDual` 的测试观察者存档等级：原夹具使用默认 1 级
+  角色，低于普通难度 Ancients 的 20 级原生门槛，导致服务端按规则只给首个玩家
+  发放奖励，误判为多人同步故障；观察者现在使用 80 级存档。
+- [x] 保留失败路径的权威/线路诊断（玩家记录值与 Quest revision），便于区分
+  “服务端未完成”与“快照未同步”两类问题；不改变生产任务奖励逻辑。
+- [x] `:server:d2gs:headlessQuestObjectDual`、`:server:d2gs:headlessA5AncientDual`
+  和 `:server:d2gs:compileJava` 均通过；组合日志包含
+  `quest_object_dual_pass a5q2=true a5q3=true a5q5=true rebuild=true`。
+
+共享文件最小修改：`core/src/main/java/com/riiablo/engine/server/quest/Act5QuestSystem.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：继续 A2--A5 其余任务对象（优先 A4 封印、入口和 Warp）的双方可见性、
+接近格及动态碰撞验收；再补齐尚未覆盖的任务奖励重连快照。

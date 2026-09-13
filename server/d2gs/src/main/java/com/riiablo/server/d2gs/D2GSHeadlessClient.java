@@ -2196,7 +2196,10 @@ public final class D2GSHeadlessClient {
   private void runQuestObjectDual(byte[] d2s, CharacterHeader character) throws Exception {
     D2GSHeadlessClient a = new D2GSHeadlessClient(config);
     D2GSHeadlessClient b = new D2GSHeadlessClient(config);
-    byte[] peerD2s = createGeneratedObserverSave("QuestObjectPeer", 0x514F424A);
+    // A5Q5's native level gate is 20/40/60 by difficulty.  Use the same
+    // level-80 observer as the focused Ancient fixture so the party-sync
+    // assertion exercises reward propagation rather than an ineligible peer.
+    byte[] peerD2s = createGeneratedObserverSave("QuestObjectPeer", 0x514F424A, 80);
     CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
     try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
       DataInputStream inA = input(socketA), inB = input(socketB);
@@ -2383,6 +2386,12 @@ public final class D2GSHeadlessClient {
               com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)
           || !hasQuestFlagAt(ancientB, Riiablo.ACT5, ancientsRecord,
               com.riiablo.engine.server.quest.NativeQuestRecord.REWARD_GRANTED)) {
+        long[] authoritativeA = D2GS.headlessQuestState(a.playerId);
+        long[] authoritativeB = D2GS.headlessQuestState(b.playerId);
+        log("a5q5_reward_diag", "wireA=" + questRecordDebug(ancientA, Riiablo.ACT5, ancientsRecord)
+            + " wireB=" + questRecordDebug(ancientB, Riiablo.ACT5, ancientsRecord)
+            + " authA=" + questStateDebug(authoritativeA, Riiablo.ACT5, ancientsRecord)
+            + " authB=" + questStateDebug(authoritativeB, Riiablo.ACT5, ancientsRecord));
         throw new IOException("A5Q5 Ancient reward record did not reach both clients");
       }
       log("a5q5_object_rebuild_pass", "ancients="
@@ -3947,6 +3956,22 @@ public final class D2GSHeadlessClient {
     int offset = act * com.riiablo.engine.server.quest.QuestSnapshot.RECORDS_PER_ACT;
     return result != null && result.success() && result.questRecordsLength() > offset + recordIndex
         && hasQuestFlag(result.questRecords(offset + recordIndex), flag);
+  }
+
+  private static String questRecordDebug(QuestResult result, int act, int recordIndex) {
+    int offset = act * com.riiablo.engine.server.quest.QuestSnapshot.RECORDS_PER_ACT;
+    if (result == null || !result.success() || result.questRecordsLength() <= offset + recordIndex) {
+      return "unavailable";
+    }
+    return "0x" + Integer.toHexString(result.questRecords(offset + recordIndex) & 0xFFFF)
+        + "/rev=" + result.questRevision();
+  }
+
+  private static String questStateDebug(long[] state, int act, int recordIndex) {
+    int offset = act * com.riiablo.engine.server.quest.QuestSnapshot.RECORDS_PER_ACT;
+    if (state == null || state.length <= offset + 1 + recordIndex) return "unavailable";
+    return "0x" + Long.toHexString(state[offset + 1 + recordIndex])
+        + "/rev=" + Long.toHexString(state[0]);
   }
 
   /**
