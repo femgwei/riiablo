@@ -10,6 +10,7 @@ import com.riiablo.engine.server.event.NpcQuestMessageEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.quest.Act4HellforgeQuest;
 import com.riiablo.engine.server.quest.Act4IzualQuest;
+import com.riiablo.engine.server.quest.Act4DiabloQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.NpcDialogBox;
@@ -47,11 +48,19 @@ public class Act4QuestDialogController extends PassiveSystem {
     final String speech;
     if (npc.monstats.hcIdx == MonsterType.TYRAEL2) {
       if (act4.length <= Act4IzualQuest.RECORD) return false;
-      short record = act4[Act4IzualQuest.RECORD];
-      message = NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
-          ? Act4IzualQuest.MESSAGE_TYRAEL_REWARD : Act4IzualQuest.MESSAGE_TYRAEL_INIT;
-      speech = message == Act4IzualQuest.MESSAGE_TYRAEL_REWARD
-          ? "tyrael_act4_q1_success" : "tyrael_act4_q1_init";
+      short diablo = act4.length > Act4DiabloQuest.RECORD
+          ? act4[Act4DiabloQuest.RECORD] : 0;
+      short izual = act4[Act4IzualQuest.RECORD];
+      if (NativeQuestRecord.has(izual, NativeQuestRecord.REWARD_PENDING)) {
+        message = Act4IzualQuest.MESSAGE_TYRAEL_REWARD;
+        speech = "tyrael_act4_q1_success";
+      } else if (NativeQuestRecord.has(diablo, NativeQuestRecord.PRIMARY_GOAL_DONE)) {
+        message = Act4DiabloQuest.MESSAGE_TYRAEL_ACT5;
+        speech = "tyrael_act4_q2_success";
+      } else {
+        message = Act4IzualQuest.MESSAGE_TYRAEL_INIT;
+        speech = "tyrael_act4_q1_init";
+      }
     } else {
       if (act4.length <= Act4HellforgeQuest.RECORD) return false;
       short record = act4[Act4HellforgeQuest.RECORD];

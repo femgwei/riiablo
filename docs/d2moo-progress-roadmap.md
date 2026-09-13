@@ -4620,3 +4620,12 @@ A4Q2 Diablo 完成后的多人领取/重连快照，再进入 A3/A5 仍缺少原
 
 下一项：继续 A4Q2 Diablo 完成后的多人奖励/Act V 传送状态重连快照，再处理 A3/A5
 尚未覆盖的原生 NPC 任务对话分支。
+
+### 2026-09-14 A4Q2 Tyrael Act V 消息接线（本轮完成部分）
+
+- [x] D2GS 网络校验器现在接受原生 Tyrael2 消息 `20000`，仅当 A4Q2 已达到
+  `PRIMARY_GOAL_DONE` 时允许创建 Act V 传送门。
+- [x] 客户端 A4 任务控制器会优先显示 A4Q1 pending 奖励；Q1 无 pending 时再显示
+  A4Q2 的 Tyrael Act V 传送对话，避免两个任务链互相遮蔽。
+- [ ] A4Q2 仍需补充完整的 Diablo 击杀→双方记录同步→Tyrael 传送门唯一性→重连
+  快照离屏回归，下一轮继续完成。

@@ -14,6 +14,11 @@ public final class Act4QuestMessageValidator {
     if (act4 == null) return false;
     if (npcType == MonsterType.TYRAEL2) {
       if (act4.length <= Act4IzualQuest.RECORD) return false;
+      if (messageIndex == Act4DiabloQuest.MESSAGE_TYRAEL_ACT5) {
+        return act4.length > Act4DiabloQuest.RECORD
+            && NativeQuestRecord.has(act4[Act4DiabloQuest.RECORD],
+                NativeQuestRecord.PRIMARY_GOAL_DONE);
+      }
       short record = act4[Act4IzualQuest.RECORD];
       if (messageIndex == Act4IzualQuest.MESSAGE_TYRAEL_REWARD) {
         return Act4IzualQuest.canClaimReward(record);
