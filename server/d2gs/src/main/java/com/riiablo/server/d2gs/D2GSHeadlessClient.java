@@ -1742,6 +1742,13 @@ public final class D2GSHeadlessClient {
         throw new IOException("dual clients did not observe Throne level: "
             + a.currentLevelId + ',' + b.currentLevelId);
       }
+      // Keep both protocol observers alive while the native wave scheduler is
+      // being exercised; this test validates wave/entity synchronization, not
+      // player survivability or combat balance.
+      if (!D2GS.headlessSetPlayerLife(a.playerId, 1_000_000f)
+          || !D2GS.headlessSetPlayerLife(b.playerId, 1_000_000f)) {
+        throw new IOException("could not prime Baal wave observer vitality");
+      }
 
       // Drain the baseline before the 250-tick native pre-wave delay.  The
       // delta in entity ids is the protocol-visible wave, independent of

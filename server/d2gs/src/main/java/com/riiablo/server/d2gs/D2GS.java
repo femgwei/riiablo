@@ -2906,6 +2906,34 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only fixture: keep a headless player alive while exercising wave sync. */
+  static boolean headlessSetPlayerLife(int playerId, float life) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || life <= 0f) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(playerId);
+        if (wrapper != null && wrapper.attrs != null) {
+          wrapper.attrs.get(com.riiablo.attributes.Stat.maxhp).set(life);
+          wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints).set(life);
+          updated.set(true);
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Counts living Ancient guardians, ignoring deferred-deletion corpses. */
   static int headlessAncientAliveCount(int levelId) {
     D2GS server = activeHeadlessInstance;
