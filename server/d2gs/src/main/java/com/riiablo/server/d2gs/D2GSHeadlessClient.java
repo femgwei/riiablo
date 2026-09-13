@@ -97,11 +97,11 @@ public final class D2GSHeadlessClient {
   private static final int LEVEL_TRAVINCAL = 83;
   private static final int LEVEL_CANYONOFTHEMAGI = 46;
   private static final int LEVEL_PANDEMONIUMFORTRESS = 103;
-  private static final int LEVEL_OUTERSTEPPES = 106;
-  private static final int LEVEL_PLAINSOFDESPAIR = 107;
-  private static final int LEVEL_CITYOFTHEDAMNED = 108;
-  private static final int LEVEL_RIVEROFFLAME = 109;
-  private static final int LEVEL_CHAOSSANCTUM = 110;
+  private static final int LEVEL_OUTERSTEPPES = 104;
+  private static final int LEVEL_PLAINSOFDESPAIR = 105;
+  private static final int LEVEL_CITYOFTHEDAMNED = 106;
+  private static final int LEVEL_RIVEROFFLAME = 107;
+  private static final int LEVEL_CHAOSSANCTUM = 108;
 
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();

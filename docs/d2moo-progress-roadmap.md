@@ -4003,3 +4003,30 @@ Act III Warp 单测、`git diff --check` 均通过。
 
 下一项：新增 Act IV 双客户端离屏 Warp 回归，验证主链五段入口/出口、Chaos Sanctuary
 落点和边界碰撞，再继续 Act V 地图连接。
+
+### 2026-09-13 Act IV 关卡序号校正与离屏主链回归（本轮完成）
+
+- [x] 对照原始 `D2Common/include/DataTbls/LevelsIds.h` 校正 Act IV 原生序号：
+  Outer Steppes=104、Plains of Despair=105、City of the Damned=106、River of
+  Flame=107、Chaos Sanctuary=108。此前 Java 常量整体偏移两位，导致 106 被解析成
+  River of Flame，Mesa/Pit 预设索引和 Warp 目标全部错位。
+- [x] 修复 Act IV 链接回溯：Plains/City 首次随机方向现在同步计算坐标并提交，避免
+  首次尝试始终 `success=false` 而回溯到空地图，导致离屏 106 无 Zone。
+- [x] 修复 first-empty-slot 的链式槽位覆盖：同一区域已有上一段反向 Warp 时，后续
+  链接会跳过冲突槽位；Zone 生成完成后重新物化 marker，并按逻辑 slot 成对设置
+  `Zone.setWarp`，避免 DS1 预设覆盖合成入口。
+- [x] 服务端移动校验增加 Zone 隔离：普通移动不能跨越相邻/重叠 Zone，跨区域必须走
+  权威 Warp；这也修复了边界探针可从 River of Flame 直接踏入相邻区域的问题。
+- [x] 1.10f 离屏双客户端回归通过：
+  `a4_dungeon_warp_dual_pass pairs=4 roundTrips=4 boundaryRejects=4 clients=true,true`。
+
+共享文件最小修改：`D2MOO_JAVA/src/main/java/com/d2moo/common/drlg/D2LevelIds.java`、
+`core/src/main/java/com/riiablo/map/Act4MapBuilderD2MOD.java`、
+`core/src/main/java/com/riiablo/engine/client/ActTransitionSystem.java`、
+`core/src/test/java/com/riiablo/map/Act4MapBuilderD2MODTest.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`、
+`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GSHeadlessClient.java`。
+
+下一项：在修正后的 1.10f 序号基础上核对 Act V 关卡常量和主链，优先补
+Harrogath→Bloody Foothills→Frigid Highlands 的 Warp/边界离屏回归；随后再处理
+Act IV/Act V 任务入口与完整 DS1 画面连续性。

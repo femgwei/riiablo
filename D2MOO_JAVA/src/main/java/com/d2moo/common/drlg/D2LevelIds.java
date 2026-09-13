@@ -152,13 +152,16 @@ public class D2LevelIds {
     public static final int LEVEL_DURANCEOFHATELEVEL3 = 102;
     public static final int LEVEL_THEPANDEMONIUMFORTRESS = 103;
     
-    // Act 4 关卡
-    public static final int LEVEL_OUTERSTEPPES = 106;
-    public static final int LEVEL_PLAINSOFDESPAIR = 107;
-    public static final int LEVEL_CITYOFTHEDAMNED = 108;
-    public static final int LEVEL_RIVEROFFLAME = 109;
-    public static final int LEVEL_CHAOSSANCTUARY = 110;
-    public static final int LEVEL_CHAOSSANCTUM = 110;  // 别名
+    // Act 4 关卡 (native 1.10f LevelsIds.h; no gap after level 103)
+    // The previous values were shifted by +2, which made level 106 resolve
+    // to River of Flame and caused the Mesa/Pit tables (indexed from 104) to
+    // address the wrong rows.
+    public static final int LEVEL_OUTERSTEPPES = 104;
+    public static final int LEVEL_PLAINSOFDESPAIR = 105;
+    public static final int LEVEL_CITYOFTHEDAMNED = 106;
+    public static final int LEVEL_RIVEROFFLAME = 107;
+    public static final int LEVEL_CHAOSSANCTUARY = 108;
+    public static final int LEVEL_CHAOSSANCTUM = 108;  // 别名
     
     // Act 5 关卡
     public static final int LEVEL_HARROGATH = 111;

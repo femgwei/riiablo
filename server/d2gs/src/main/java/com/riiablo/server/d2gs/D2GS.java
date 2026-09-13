@@ -508,6 +508,17 @@ public class D2GS extends ApplicationAdapter {
     server.map.finishLoading();
     server.map.generate();
     if (server.mapManager != null) server.mapManager.createEntities();
+    if (requestedLevel != null && server.map.findZone(requestedLevel) == null) {
+      StringBuilder levels = new StringBuilder();
+      for (Map.Zone zone : server.map.getZones()) {
+        if (zone != null && zone.level != null) {
+          if (levels.length() > 0) levels.append(',');
+          levels.append(zone.level.Id);
+        }
+      }
+      if (Gdx.app != null) Gdx.app.log("D2GS", "headless_act_zone_missing act=" + act
+          + " requested=" + levelId + " zones=" + levels);
+    }
   }
 
   private static int headlessAct(int levelId) {
@@ -515,9 +526,8 @@ public class D2GS extends ApplicationAdapter {
     if (levelId <= 74) return 1;
     if (levelId <= 102) return 2;
     // Act IV includes Pandemonium Fortress (103) and the full outdoor chain
-    // through Chaos Sanctuary (110).  The previous <=108 cutoff routed River
-    // of Flame/Chaos requests into Act V during headless Warp tests.
-    if (levelId <= 110) return 3;
+    // through Chaos Sanctuary (108).  109 is the native Act V town record.
+    if (levelId <= 108) return 3;
     return 4;
   }
 
@@ -4473,7 +4483,19 @@ public class D2GS extends ApplicationAdapter {
     float dx = input.x - source.position.x;
     float dy = input.y - source.position.y;
     if (Math.abs(dx) > 50f || Math.abs(dy) > 50f) return "target_out_of_range";
-    if (map == null || map.getZone(input.x, input.y) == null) return "target_outside_map";
+    if (map == null) return "target_outside_map";
+    Map.Zone targetZone = map.getZone(input.x, input.y);
+    if (targetZone == null) return "target_outside_map";
+    // Adjacent generated levels may share an edge (and some native layouts
+    // intentionally reuse coordinate ranges).  A movement intent must never
+    // cross into another Zone: level changes are authoritative Warp
+    // transactions, not ordinary walking.  Without this check a one-cell
+    // probe at the edge of River of Flame could step into the touching City
+    // of the Damned zone and bypass its Warp.
+    com.riiablo.engine.server.component.MapWrapper sourceWrapper = world
+        .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(entityId);
+    if (sourceWrapper != null && sourceWrapper.zone != null
+        && sourceWrapper.zone != targetZone) return "target_cross_zone";
     return null;
   }
 

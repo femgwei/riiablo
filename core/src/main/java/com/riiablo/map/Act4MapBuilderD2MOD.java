@@ -120,6 +120,14 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
         if (linkData.rand[1][counter] == -1) {
           linkData.rand[1][counter] = MathUtils.random.nextInt() & 3;
           linkData.rand[0][counter] = linkData.rand[1][counter];
+          // The native routine chooses the first direction and places the
+          // level in the same pass. Leaving success=false here makes the
+          // backtracking loop immediately undo the town link and eventually
+          // return with no Act IV zones at all.
+          int levelLink = linkData.links[counter].levelLink;
+          base.calculateCoordOffsetAlt(linkData.coords[levelLink], linkData.coords[counter],
+              linkData.rand[0][counter], 1);
+          success = true;
         } else {
           int nextRand = (linkData.rand[0][counter] + 1) % 4;
           if (nextRand == linkData.rand[1][counter]) {
@@ -266,9 +274,11 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
       Zone source = findZone(map, sourceId), destination = findZone(map, destinationId);
       if (sourceLevel == null || destinationLevel == null || source == null || destination == null) continue;
       int sourceSlot = findRuntimeWarpSlot(sourceLevel.Vis, sourceLevel.Warp, destinationId);
-      if (sourceSlot < 0) sourceSlot = firstFreeWarpSlot(source);
+      if (sourceSlot >= 0 && conflictingOverride(map, sourceId, sourceSlot, destinationId)) sourceSlot = -1;
+      if (sourceSlot < 0) sourceSlot = firstAvailableWarpSlot(map, sourceId, source);
       int destinationSlot = findRuntimeWarpSlot(destinationLevel.Vis, destinationLevel.Warp, sourceId);
-      if (destinationSlot < 0) destinationSlot = firstFreeWarpSlot(destination);
+      if (destinationSlot >= 0 && conflictingOverride(map, destinationId, destinationSlot, sourceId)) destinationSlot = -1;
+      if (destinationSlot < 0) destinationSlot = firstAvailableWarpSlot(map, destinationId, destination);
       if (sourceSlot < 0 || destinationSlot < 0) {
         Gdx.app.error(TAG, "Act4 warp slot unavailable: " + sourceId + "->" + destinationId);
         continue;
@@ -285,6 +295,26 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
   /** Pairs special cells after Zone.generate and before MapManager creates entities. */
   void linkNativeWarpSpecials(Map map) {
     if (map == null) return;
+    // Preset DS1 walls can overwrite a synthetic marker inserted during the
+    // builder phase.  Re-materialize every configured chain slot after all
+    // Zone.generate() calls, then pair the cells by their logical slot.  This
+    // mirrors D2Common's DRLG_SetWarpId table and does not depend on the
+    // visual sub-index chosen by a particular DS1 export.
+    for (int i = 0; i + 1 < ACT4_CHAIN.length; i++) {
+      int sourceId = ACT4_CHAIN[i], destinationId = ACT4_CHAIN[i + 1];
+      Zone source = findZone(map, sourceId), destination = findZone(map, destinationId);
+      if (source == null || destination == null) continue;
+      int sourceSlot = configuredSlot(map, sourceId, destinationId);
+      int destinationSlot = configuredSlot(map, destinationId, sourceId);
+      if (sourceSlot >= 0) ensureWarpMarker(source, sourceSlot);
+      if (destinationSlot >= 0) ensureWarpMarker(destination, destinationSlot);
+      DS1.Cell sourceCell = findWarpCellByMainIndex(source, sourceSlot);
+      DS1.Cell destinationCell = findWarpCellByMainIndex(destination, destinationSlot);
+      if (sourceCell != null && destinationCell != null) {
+        source.setWarp(sourceCell.id, destinationCell.id);
+        destination.setWarp(destinationCell.id, sourceCell.id);
+      }
+    }
     int linked = 0;
     for (Zone source : new com.badlogic.gdx.utils.Array.ArrayIterator<>(map.zones)) {
       if (source == null || source.level == null || source.specials == null) continue;
@@ -306,6 +336,45 @@ public enum Act4MapBuilderD2MOD implements MapBuilder {
     }
 
     Gdx.app.log(TAG, "Act4 native warp special summary: linked=" + linked);
+  }
+
+  private static int configuredSlot(Map map, int sourceId, int destinationId) {
+    for (int slot = 0; slot < 8; slot++) {
+      if (map.getWarpDestinationOverride(sourceId, slot) == destinationId) return slot;
+    }
+    return -1;
+  }
+
+  private static boolean conflictingOverride(Map map, int levelId, int slot, int destinationId) {
+    int existing = map.getWarpDestinationOverride(levelId, slot);
+    return existing > 0 && existing != destinationId;
+  }
+
+  private static int firstAvailableWarpSlot(Map map, int levelId, Zone zone) {
+    boolean[] used = new boolean[8];
+    if (zone != null && zone.specials != null) {
+      for (com.badlogic.gdx.utils.IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+        DS1.Cell cell = entry.value;
+        if (cell != null && Map.ID.WARPS.contains(cell.id)
+            && cell.mainIndex >= 0 && cell.mainIndex < used.length) {
+          used[cell.mainIndex] = true;
+        }
+      }
+    }
+    for (int slot = 0; slot < used.length; slot++) {
+      if (map.getWarpDestinationOverride(levelId, slot) > 0) used[slot] = true;
+    }
+    for (int slot = 0; slot < used.length; slot++) if (!used[slot]) return slot;
+    return -1;
+  }
+
+  private static DS1.Cell findWarpCellByMainIndex(Zone zone, int mainIndex) {
+    if (zone == null || mainIndex < 0 || zone.specials == null) return null;
+    for (com.badlogic.gdx.utils.IntMap.Entry<DS1.Cell> entry : zone.specials.entries()) {
+      DS1.Cell cell = entry.value;
+      if (cell != null && cell.mainIndex == mainIndex && Map.ID.WARPS.contains(cell.id)) return cell;
+    }
+    return null;
   }
 
   private static void ensureAct4ChainZones(Map map, int diff, BaseMapBuilderD2MOD base) {

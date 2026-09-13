@@ -23,9 +23,9 @@ public class ActTransitionSystem extends PassiveSystem {
         && levelId < D2LevelIds.LEVEL_LUTGHOLEIN) return 0;
     if (levelId >= D2LevelIds.LEVEL_LUTGHOLEIN
         && levelId < D2LevelIds.LEVEL_KURASTDOCKTOWN) return 1;
-    if (levelId >= D2LevelIds.LEVEL_KURASTDOCKTOWN && levelId < 105) return 2;
-    if (levelId >= 105 && levelId < 111) return 3;
-    if (levelId >= 111) return 4;
+    if (levelId >= D2LevelIds.LEVEL_KURASTDOCKTOWN && levelId < D2LevelIds.LEVEL_OUTERSTEPPES) return 2;
+    if (levelId >= D2LevelIds.LEVEL_THEPANDEMONIUMFORTRESS && levelId <= D2LevelIds.LEVEL_CHAOSSANCTUM) return 3;
+    if (levelId >= 109) return 4;
     return -1;
   }
 }
