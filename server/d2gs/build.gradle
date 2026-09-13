@@ -319,6 +319,18 @@ tasks.register('headlessA5QuestWarpDual', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessBaalWaveDual', JavaExec) {
+  group = 'verification'
+  description = 'Runs two windowless clients through the native Act V Baal wave chain and Chamber reward flow.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-baal-wave-dual', '--test-timeout', '240', '--verbose'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
 tasks.register('headlessA2ObjectInteractionDual', JavaExec) {
   group = 'verification'
   description = 'Runs two windowless clients through A2 Tainted Sun and Arcane Tome interactions.'

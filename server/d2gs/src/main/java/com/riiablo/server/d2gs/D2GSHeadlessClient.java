@@ -2056,7 +2056,8 @@ public final class D2GSHeadlessClient {
     Set<Integer> current = livingMonsterIds(client);
     current.removeAll(baseline);
     throw new IOException("timed out waiting for Baal wave: expected=" + expected
-        + " observed=" + current.size() + " ids=" + current);
+        + " observed=" + current.size() + " ids=" + current
+        + " authority=" + java.util.Arrays.toString(D2GS.headlessBaalWaveSnapshot()));
   }
 
   private static Set<Integer> classes(D2GSHeadlessClient client, Set<Integer> ids) {
@@ -6539,7 +6540,9 @@ public final class D2GSHeadlessClient {
     base.put(Stat.goldbank, 0);
     base.put(Stat.armorclass, 1_000_000);
     character.getStats().reset();
-    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT5, 0);
+    // Act V waypoint indices are global save ids 30..38; index 0 is an
+    // Act-I waypoint and is rejected by CharData's native range validation.
+    character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT5, 30);
     character.mapSeed = mapSeed;
     character.initializeStartItems(stats);
     character.getQuests(Riiablo.ACT5)[com.riiablo.engine.server.quest.Act5AncientsQuest.RECORD] =

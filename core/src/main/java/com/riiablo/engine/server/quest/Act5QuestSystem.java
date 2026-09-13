@@ -103,6 +103,9 @@ public class Act5QuestSystem extends BaseSystem {
   private final IntIntMap baalWaveLeaders = new IntIntMap();
   private static final int BAAL_WAVE_RECOVERY_WINDOW_TICKS = 25;
   private int baalWaveMissingTicks;
+  /** One-tick barrier after the final member dies. Artemis removal and the
+   * hostile-radius subscription settle at the end of the current tick. */
+  private boolean baalWaveClearPending;
   @Wire(name = "act5QuestGameState", failOnNull = false)
   protected Act5QuestGameState act5QuestGameState;
   private final Act5QuestGameState fallbackGameState = new Act5QuestGameState();
@@ -124,6 +127,15 @@ public class Act5QuestSystem extends BaseSystem {
   protected void processSystem() {
     Act5BaalWaveState baalWaveState = gameState().baalWaves;
     rebuildBaalWaveEntityIndex();
+    if (baalWaveClearPending) {
+      baalWaveClearPending = false;
+      int activeWave = baalWaveState.activeWaveIndex();
+      if (baalWaveEntities.isEmpty() && (activeWave < 0
+          || countMarkedBaalWaveMembers(activeWave,
+              Act5BaalQuest.WAVE_SUPER_UNIQUES[activeWave]) == 0)) {
+        baalWaveState.markWaveCleared();
+      }
+    }
     if (baalWaveState.started() && !baalWaveState.finished()) {
       int action = baalWaveState.tick(isBaalThroneClear());
       if (action >= 0 && action < Act5BaalQuest.WAVE_COUNT) {
@@ -390,7 +402,7 @@ public class Act5QuestSystem extends BaseSystem {
     if (baalWaveEntities.remove(event.victim)) {
       log.info("[A5Q6] Baal wave member defeated: entity={} remaining={}",
           event.victim, baalWaveEntities.size);
-      if (baalWaveEntities.isEmpty()) gameState().baalWaves.markWaveCleared();
+      if (baalWaveEntities.isEmpty()) baalWaveClearPending = true;
       return;
     }
     if (isNihlathak(event.victim)
