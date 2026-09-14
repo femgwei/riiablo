@@ -16,13 +16,20 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Disposable;
 
 import com.riiablo.Riiablo;
+import com.riiablo.Cvars;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
+import com.riiablo.engine.client.automap.AutomapOptions;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.loader.DC6Loader;
+import com.riiablo.map.RenderSystem;
 import com.riiablo.screen.MenuScreen;
+import com.riiablo.widget.Label;
+import com.riiablo.widget.LabelButton;
 
 public class EscapePanel extends WidgetGroup implements Disposable {
+
+  public enum Page { MAIN, OPTIONS, SOUND, VIDEO, AUTOMAP, CONTROLS }
 
   final AssetDescriptor<DC6> optionsDescriptor = new AssetDescriptor<>("data\\local\\ui\\eng\\options.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
   final AssetDescriptor<DC6> exitDescriptor = new AssetDescriptor<>("data\\local\\ui\\eng\\exit.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
@@ -34,6 +41,19 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   final AssetDescriptor<DC6> pentspinDescriptor = new AssetDescriptor<>("data\\global\\ui\\CURSOR\\pentspin.DC6", DC6.class);
   Animation pentspinL, pentspin;
   FocusActor[] focusActor;
+  Table mainPage;
+  Table optionsPage;
+  Table soundPage;
+  Table videoPage;
+  Table automapPage;
+  Table controlsPage;
+  Page currentPage = Page.MAIN;
+
+  OptionRow automapMode;
+  OptionRow automapFade;
+  OptionRow automapCenter;
+  OptionRow automapParty;
+  OptionRow automapNames;
 
   public EscapePanel() {
     Riiablo.assets.load(optionsDescriptor);
@@ -43,6 +63,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         Riiablo.audio.play(2, true); // select.wav
+        showPage(Page.OPTIONS);
       }
     });
 
@@ -64,7 +85,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         Riiablo.audio.play(2, true); // select.wav
-        setVisible(false);
+        close();
       }
     });
 
@@ -107,27 +128,172 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     returntogame.addListener(focusListener);
 
     final int spacing = 24;
-    Table table = new Table();
-    table.align(Align.center);
-    table.add(focusActor[0]);
-    table.add(options).space(0, spacing, 0, spacing).fillX();
-    table.add(focusActor[1]).row();
-    table.add(focusActor[2]);
-    table.add(exit).space(0, spacing, 0, spacing).fillX();
-    table.add(focusActor[3]).row();
-    table.add(focusActor[4]);
-    table.add(returntogame).space(0, spacing, 0, spacing).fillX();
-    table.add(focusActor[5]).row();
+    mainPage = new Table();
+    mainPage.align(Align.center);
+    mainPage.add(focusActor[0]);
+    mainPage.add(options).space(0, spacing, 0, spacing).fillX();
+    mainPage.add(focusActor[1]).row();
+    mainPage.add(focusActor[2]);
+    mainPage.add(exit).space(0, spacing, 0, spacing).fillX();
+    mainPage.add(focusActor[3]).row();
+    mainPage.add(focusActor[4]);
+    mainPage.add(returntogame).space(0, spacing, 0, spacing).fillX();
+    mainPage.add(focusActor[5]).row();
 
-    table.setFillParent(true);
-    table.setBackground(new PaletteIndexedColorDrawable(Riiablo.colors.modal50));
-    addActor(table);
+    mainPage.setFillParent(true);
+    mainPage.setBackground(new PaletteIndexedColorDrawable(Riiablo.colors.modal50));
+    addActor(mainPage);
+
+    optionsPage = createOptionsPage();
+    soundPage = createPlaceholderPage("SOUND OPTIONS");
+    videoPage = createPlaceholderPage("VIDEO OPTIONS");
+    automapPage = createAutomapPage();
+    controlsPage = createPlaceholderPage("CONFIGURE CONTROLS");
+    addActor(optionsPage);
+    addActor(soundPage);
+    addActor(videoPage);
+    addActor(automapPage);
+    addActor(controlsPage);
+    showPage(Page.MAIN);
 
     setFillParent(true);
     setVisible(false);
     //setTouchable(Touchable.childrenOnly);
     setTouchable(Touchable.enabled);
     //setDebug(true, true);
+  }
+
+  private Table createOptionsPage() {
+    Table page = createPage("OPTIONS");
+    page.add(menuButton("SOUND OPTIONS", () -> showPage(Page.SOUND))).height(24).row();
+    page.add(menuButton("VIDEO OPTIONS", () -> showPage(Page.VIDEO))).height(24).row();
+    page.add(menuButton("AUTOMAP OPTIONS", () -> showPage(Page.AUTOMAP))).height(24).row();
+    page.add(menuButton("CONFIGURE CONTROLS", () -> showPage(Page.CONTROLS))).height(24).row();
+    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.MAIN))).height(24).padTop(12).row();
+    return page;
+  }
+
+  private Table createAutomapPage() {
+    Table page = createPage("AUTOMAP OPTIONS");
+    automapMode = new OptionRow("AUTOMAP SIZE", () -> {
+      int current = Cvars.Client.Automap.Mode.get() == null
+          ? RenderSystem.AUTOMAP_MODE_CENTER : Cvars.Client.Automap.Mode.get();
+      int next = AutomapOptions.nextMode(current);
+      Cvars.Client.Automap.Mode.set((byte) next);
+      RenderSystem.setAutomapPreferredMode(next);
+      refreshAutomapRows();
+    });
+    automapFade = booleanOption("FADE", Cvars.Client.Automap.Fade);
+    automapCenter = booleanOption("CENTER WHEN CLEARED",
+        Cvars.Client.Automap.CenterWhenCleared);
+    automapParty = booleanOption("SHOW PARTY", Cvars.Client.Automap.ShowParty);
+    automapNames = booleanOption("SHOW NAMES", Cvars.Client.Automap.ShowNames);
+    page.add(automapMode).width(520).height(27).row();
+    page.add(automapFade).width(520).height(27).row();
+    page.add(automapCenter).width(520).height(27).row();
+    page.add(automapParty).width(520).height(27).row();
+    page.add(automapNames).width(520).height(27).row();
+    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+        .height(24).padTop(12).row();
+    refreshAutomapRows();
+    return page;
+  }
+
+  private OptionRow booleanOption(String label, final com.riiablo.cvar.Cvar<Boolean> cvar) {
+    return new OptionRow(label, () -> {
+      cvar.set(!Boolean.TRUE.equals(cvar.get()));
+      refreshAutomapRows();
+    });
+  }
+
+  private Table createPlaceholderPage(String title) {
+    Table page = createPage(title);
+    Label unavailable = new Label("AVAILABLE IN A FOLLOW-UP OPTIONS STEP",
+        Riiablo.fonts.fontformal10, Riiablo.colors.grey);
+    unavailable.setAlignment(Align.center);
+    page.add(unavailable).height(30).row();
+    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+        .height(24).padTop(12).row();
+    return page;
+  }
+
+  private Table createPage(String title) {
+    Table page = new Table();
+    page.setFillParent(true);
+    page.setBackground(new PaletteIndexedColorDrawable(Riiablo.colors.modal50));
+    page.align(Align.center);
+    page.defaults().center();
+    Label heading = new Label(title, Riiablo.fonts.font16, Riiablo.colors.gold);
+    heading.setAlignment(Align.center);
+    page.add(heading).height(38).padBottom(12).row();
+    return page;
+  }
+
+  private LabelButton menuButton(String text, final Runnable action) {
+    LabelButton button = new LabelButton(text, Riiablo.fonts.font16);
+    button.setAlignment(Align.center);
+    button.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        Riiablo.audio.play(2, true);
+        action.run();
+      }
+    });
+    return button;
+  }
+
+  private void refreshAutomapRows() {
+    if (automapMode == null) return;
+    int mode = Cvars.Client.Automap.Mode.get() == null
+        ? RenderSystem.AUTOMAP_MODE_CENTER : Cvars.Client.Automap.Mode.get();
+    automapMode.setValue(AutomapOptions.modeLabel(mode));
+    automapFade.setValue(yesNo(Cvars.Client.Automap.Fade.get()));
+    automapCenter.setValue(yesNo(Cvars.Client.Automap.CenterWhenCleared.get()));
+    automapParty.setValue(yesNo(Cvars.Client.Automap.ShowParty.get()));
+    automapNames.setValue(yesNo(Cvars.Client.Automap.ShowNames.get()));
+  }
+
+  private static String yesNo(Boolean value) {
+    return Boolean.TRUE.equals(value) ? "YES" : "NO";
+  }
+
+  public void open() {
+    showPage(Page.MAIN);
+    setVisible(true);
+  }
+
+  public void close() {
+    setVisible(false);
+    showPage(Page.MAIN);
+  }
+
+  /** Returns true when Escape navigated to a parent page instead of closing the menu. */
+  public boolean navigateBack() {
+    switch (currentPage) {
+      case MAIN:
+        return false;
+      case OPTIONS:
+        showPage(Page.MAIN);
+        return true;
+      default:
+        showPage(Page.OPTIONS);
+        return true;
+    }
+  }
+
+  public Page getCurrentPage() {
+    return currentPage;
+  }
+
+  private void showPage(Page page) {
+    currentPage = page;
+    if (page == Page.AUTOMAP) refreshAutomapRows();
+    if (mainPage != null) mainPage.setVisible(page == Page.MAIN);
+    if (optionsPage != null) optionsPage.setVisible(page == Page.OPTIONS);
+    if (soundPage != null) soundPage.setVisible(page == Page.SOUND);
+    if (videoPage != null) videoPage.setVisible(page == Page.VIDEO);
+    if (automapPage != null) automapPage.setVisible(page == Page.AUTOMAP);
+    if (controlsPage != null) controlsPage.setVisible(page == Page.CONTROLS);
   }
 
   @Override
@@ -172,6 +338,33 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     @Override
     public void draw(Batch batch, float a) {
       pentspin.draw(batch, getX(), getY());
+    }
+  }
+
+  private static class OptionRow extends Table {
+    final Label name;
+    final LabelButton value;
+
+    OptionRow(String name, final Runnable action) {
+      this.name = new Label(name, Riiablo.fonts.fontformal10);
+      this.value = new LabelButton("", Riiablo.fonts.fontformal10, Riiablo.colors.gold);
+      this.name.setAlignment(Align.left);
+      this.value.setAlignment(Align.right);
+      add(this.name).width(230).left();
+      add(this.value).width(280).right();
+      ClickListener listener = new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          Riiablo.audio.play(2, true);
+          action.run();
+        }
+      };
+      this.name.addListener(listener);
+      this.value.addListener(listener);
+    }
+
+    void setValue(String text) {
+      value.setText(text);
     }
   }
 }

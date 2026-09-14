@@ -505,14 +505,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           
           // Priority 2 - Normal ESC key handling (show/hide menu)
           if (escapePanel.isVisible()) {
-            escapePanel.setVisible(false);
+            if (!escapePanel.navigateBack()) escapePanel.close();
           } else if (input.isVisible()) {
             input.setVisible(false);
           } else if (left != null || right != null) {
             setLeftPanel(null);
             setRightPanel(null);
           } else {
-            escapePanel.setVisible(true);
+            escapePanel.open();
           }
         } else if (key == Keys.Enter) {
           boolean visible = !input.isVisible();

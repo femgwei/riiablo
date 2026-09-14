@@ -9,26 +9,32 @@ import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 import com.riiablo.Riiablo;
+import com.riiablo.Cvars;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.DC6;
 import com.riiablo.engine.client.automap.AutomapCamera;
 import com.riiablo.engine.client.automap.AutomapEntityCells;
 import com.riiablo.engine.client.automap.AutomapIconType;
 import com.riiablo.engine.client.automap.AutomapManager;
+import com.riiablo.engine.client.automap.AutomapOptions;
 import com.riiablo.engine.client.automap.AutomapRenderState;
 import com.riiablo.engine.client.automap.AutomapTileRenderer;
 import com.riiablo.engine.client.automap.AutomapVisibility;
+import com.riiablo.engine.client.automap.AutomapViewport;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Interactable;
+import com.riiablo.engine.server.party.PartyRelation;
 import com.riiablo.profiler.GpuSystem;
 import com.riiablo.engine.Engine;
 
@@ -52,9 +58,6 @@ import com.riiablo.engine.Engine;
 public class AutomapRenderer extends BaseSystem {
   private static final String TAG = "AutomapRenderer";
   
-  /** automap 窗口大小比例（相对于屏幕） */
-  private static final float SIZE_RATIO = 0.5f;
-  
   protected RenderSystem renderer;
 
   @Wire(name = "iso")
@@ -71,6 +74,9 @@ public class AutomapRenderer extends BaseSystem {
   @Wire(failOnNull = false) protected ComponentMapper<Monster> mMonster;
   @Wire(failOnNull = false) protected ComponentMapper<Object> mObject;
   @Wire(failOnNull = false) protected ComponentMapper<Interactable> mInteractable;
+  @Wire(failOnNull = false) protected ComponentMapper<Networked> mNetworked;
+  @com.artemis.annotations.SkipWire
+  protected ClientNetworkReceiver clientNetworkReceiver;
   private EntitySubscription automapEntities;
   
   /** 小地图管理器 */
@@ -78,6 +84,9 @@ public class AutomapRenderer extends BaseSystem {
   
   /** 小地图专用摄像头 */
   private AutomapCamera automapCamera;
+  private final Rectangle viewport = new Rectangle();
+  private final Matrix4 renderProjection = new Matrix4();
+  private boolean wasVisible;
 
   @Override
   protected void initialize() {
@@ -87,6 +96,7 @@ public class AutomapRenderer extends BaseSystem {
     
     // 创建 automap 专用摄像头
     automapCamera = new AutomapCamera();
+    clientNetworkReceiver = world.getSystem(ClientNetworkReceiver.class);
     automapEntities = world.getAspectSubscriptionManager()
         .get(Aspect.all(Position.class, Class.class));
 
@@ -125,14 +135,19 @@ public class AutomapRenderer extends BaseSystem {
    * 这里将新模式映射到旧模式，或者直接不映射，让RenderSystem直接处理
    */
   private void syncModeFromRenderSystem() {
-    // 新的automap系统由RenderSystem直接处理，这里暂时不映射
-    // 如果需要AutomapManager的功能，可以在这里添加映射逻辑
     int prevMode = automapManager.getMode();
-    if (RenderSystem.AUTOMAP_MODE == RenderSystem.AUTOMAP_MODE_OFF) {
-      automapManager.setMode(AutomapManager.MODE_OFF);
-    } else {
-      // 非关闭模式，设置为OVERLAY模式（半透明叠加）
-      automapManager.setMode(AutomapManager.MODE_OVERLAY);
+    switch (RenderSystem.AUTOMAP_MODE) {
+      case RenderSystem.AUTOMAP_MODE_TOP_LEFT:
+      case RenderSystem.AUTOMAP_MODE_TOP_RIGHT:
+        automapManager.setMode(AutomapManager.MODE_MINIMAP);
+        break;
+      case RenderSystem.AUTOMAP_MODE_CENTER:
+        automapManager.setMode(AutomapManager.MODE_FULL);
+        break;
+      case RenderSystem.AUTOMAP_MODE_OFF:
+      default:
+        automapManager.setMode(AutomapManager.MODE_OFF);
+        break;
     }
     // 如果模式变化，记录日志
     if (prevMode != automapManager.getMode()) {
@@ -153,16 +168,25 @@ public class AutomapRenderer extends BaseSystem {
 
   @Override
   protected void begin() {
+    applyOptions();
     // 同步模式
     syncModeFromRenderSystem();
     
     if (!automapManager.isVisible()) {
+      if (wasVisible && automapManager.centered && automapCamera != null) {
+        automapCamera.reset();
+      }
+      wasVisible = false;
       // 小地图不可见时不渲染
       return;
     }
+    wasVisible = true;
     
     // Gdx.app.log(TAG, "begin(): automap visible, setting up rendering...");
     
+    AutomapViewport.calculate(RenderSystem.AUTOMAP_MODE,
+        Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), viewport);
+
     // 初始化摄像头（延迟初始化，确保 iso 已设置）
     if (!automapCamera.isInitialized() && iso != null) {
       automapCamera.initialize(iso);
@@ -170,10 +194,6 @@ public class AutomapRenderer extends BaseSystem {
     
     // 同步摄像头位置
     if (automapCamera.isInitialized()) {
-      // 在 CENTER 模式下，将 zoom 设置为 1.0（全屏显示）
-      if (RenderSystem.AUTOMAP_MODE == RenderSystem.AUTOMAP_MODE_CENTER) {
-        automapCamera.setAutomapZoom(1.0f);
-      }
       automapCamera.syncWithMainCamera();
     }
     
@@ -181,49 +201,14 @@ public class AutomapRenderer extends BaseSystem {
     automapManager.clearEntityMarkers();
     
     // 设置视口裁剪（仅渲染到 automap 窗口区域）
-    float screenWidth = Gdx.graphics.getWidth();
-    float screenHeight = Gdx.graphics.getHeight();
-    float windowWidth, windowHeight;
-    float windowX, windowY;
-    
-    // 根据模式计算窗口大小
-    if (RenderSystem.AUTOMAP_MODE == RenderSystem.AUTOMAP_MODE_CENTER) {
-      // CENTER 模式：全屏
-      windowWidth = screenWidth;
-      windowHeight = screenHeight;
-    } else {
-      // 其他模式：使用 SIZE_RATIO
-      windowWidth = screenWidth * SIZE_RATIO;
-      windowHeight = screenHeight * SIZE_RATIO;
-    }
-    
-    switch (RenderSystem.AUTOMAP_MODE) {
-      case RenderSystem.AUTOMAP_MODE_TOP_LEFT:
-        windowX = 0;
-        windowY = screenHeight - windowHeight;
-        break;
-      case RenderSystem.AUTOMAP_MODE_TOP_RIGHT:
-        windowX = screenWidth - windowWidth;
-        windowY = screenHeight - windowHeight;
-        break;
-      case RenderSystem.AUTOMAP_MODE_CENTER:
-      default:
-        windowX = (screenWidth - windowWidth) / 2f;
-        windowY = (screenHeight - windowHeight) / 2f;
-        break;
-    }
-    
     // 启用裁剪
     Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
-    Gdx.gl.glScissor((int)windowX, (int)windowY, (int)windowWidth, (int)windowHeight);
+    Gdx.gl.glScissor((int) viewport.x, (int) viewport.y,
+        Math.max(1, (int) viewport.width), Math.max(1, (int) viewport.height));
     
     shapes.identity();
-    // 使用 automap 专用摄像头
-    if (automapCamera.isInitialized()) {
-      shapes.setProjectionMatrix(automapCamera.combined);
-    } else {
-      shapes.setProjectionMatrix(iso.combined);
-    }
+    updateRenderProjection();
+    shapes.setProjectionMatrix(renderProjection);
     shapes.setAutoShapeType(true);
     shapes.begin(ShapeRenderer.ShapeType.Filled);
   }
@@ -264,9 +249,21 @@ public class AutomapRenderer extends BaseSystem {
     if (nativeTerrain == 0) renderer.drawAutomap(shapes);
 
     renderNativeEntitySprites();
+    renderNames();
     
     // 渲染增强的实体标记
     renderEnhancedMarkers();
+  }
+
+  private void updateRenderProjection() {
+    Matrix4 base = automapCamera.isInitialized() ? automapCamera.combined : iso.combined;
+    float screenWidth = Math.max(1f, Gdx.graphics.getWidth());
+    float screenHeight = Math.max(1f, Gdx.graphics.getHeight());
+    float centerX = viewport.x + viewport.width * 0.5f;
+    float centerY = viewport.y + viewport.height * 0.5f;
+    float ndcX = centerX * 2f / screenWidth - 1f;
+    float ndcY = centerY * 2f / screenHeight - 1f;
+    renderProjection.setToTranslation(ndcX, ndcY, 0f).mul(base);
   }
 
   private void updateExplorationFromPlayer() {
@@ -314,9 +311,50 @@ public class AutomapRenderer extends BaseSystem {
             position.position.x, position.position.y, object.base.Name,
             AutomapManager.COLOR_DOOR, 4, cell);
       } else if (clazz.type == Class.Type.PLR) {
-        automapManager.addPlayerMarker(id, position.position.x, position.position.y, null);
+        if (id == Riiablo.game.player) {
+          automapManager.addPlayerMarker(id, position.position.x, position.position.y,
+              Riiablo.charData == null ? null : Riiablo.charData.name);
+        } else if (isPartyMember(id)) {
+          automapManager.addPartyMarker(id, position.position.x, position.position.y,
+              partyMemberName(id));
+        }
       }
     }
+  }
+
+  private boolean isPartyMember(int localEntityId) {
+    ClientPartyState.Member member = partyMember(localEntityId);
+    return member != null && member.relation == PartyRelation.PARTY_MEMBER;
+  }
+
+  private String partyMemberName(int localEntityId) {
+    ClientPartyState.Member member = partyMember(localEntityId);
+    return member == null ? null : member.name;
+  }
+
+  private ClientPartyState.Member partyMember(int localEntityId) {
+    if (clientNetworkReceiver == null || mNetworked == null || !mNetworked.has(localEntityId)) {
+      return null;
+    }
+    Networked networked = mNetworked.get(localEntityId);
+    return networked == null ? null
+        : clientNetworkReceiver.partyState().get(networked.serverId);
+  }
+
+  private void applyOptions() {
+    int mode = Cvars.Client.Automap.Mode.get() == null
+        ? RenderSystem.AUTOMAP_MODE_CENTER : Cvars.Client.Automap.Mode.get();
+    RenderSystem.setAutomapPreferredMode(mode);
+    boolean fade = Boolean.TRUE.equals(Cvars.Client.Automap.Fade.get());
+    float opacity = AutomapOptions.opacity(fade);
+    RenderSystem.setAutomapOpacity(opacity);
+    automapManager.opacity = opacity;
+    automapManager.centered = Boolean.TRUE.equals(
+        Cvars.Client.Automap.CenterWhenCleared.get());
+    automapManager.showPartyMembers = Boolean.TRUE.equals(
+        Cvars.Client.Automap.ShowParty.get());
+    automapManager.showNames = Boolean.TRUE.equals(
+        Cvars.Client.Automap.ShowNames.get());
   }
 
   private void renderNativeEntitySprites() {
@@ -340,8 +378,7 @@ public class AutomapRenderer extends BaseSystem {
     shapes.end();
     try {
       phase = AutomapRenderState.enterSprites(phase);
-      Riiablo.batch.setProjectionMatrix(automapCamera != null && automapCamera.isInitialized()
-          ? automapCamera.combined : iso.combined);
+      Riiablo.batch.setProjectionMatrix(renderProjection);
       Riiablo.batch.begin();
       batchBegun = true;
       automapManager.renderNativeEntitySprites(Riiablo.batch, automapManager.opacity);
@@ -357,6 +394,24 @@ public class AutomapRenderer extends BaseSystem {
     }
   }
 
+  private void renderNames() {
+    if (!automapManager.showNames || Riiablo.batch == null || shapes == null
+        || Riiablo.fonts == null || Riiablo.batch.isDrawing()) return;
+    Matrix4 previousProjection = new Matrix4(shapes.getProjectionMatrix());
+    boolean batchBegun = false;
+    shapes.end();
+    try {
+      Riiablo.batch.setProjectionMatrix(renderProjection);
+      Riiablo.batch.begin();
+      batchBegun = true;
+      automapManager.renderNames(Riiablo.batch, Riiablo.fonts.fontformal10);
+    } finally {
+      if (batchBegun && Riiablo.batch.isDrawing()) Riiablo.batch.end();
+      shapes.setProjectionMatrix(previousProjection);
+      shapes.begin(ShapeRenderer.ShapeType.Filled);
+    }
+  }
+
   /** Draws native terrain/object cells in the same camera space as the map. */
   private int renderNativeTerrainSprites() {
     if (Riiablo.batch == null || shapes == null || automapManager == null) return 0;
@@ -365,8 +420,7 @@ public class AutomapRenderer extends BaseSystem {
     boolean batchBegun = false;
     shapes.end();
     try {
-      Riiablo.batch.setProjectionMatrix(automapCamera != null && automapCamera.isInitialized()
-          ? automapCamera.combined : iso.combined);
+      Riiablo.batch.setProjectionMatrix(renderProjection);
       Riiablo.batch.begin();
       batchBegun = true;
       return automapManager.renderWithSprites(Riiablo.batch, map, 0, 0, 0, 0, 0, 0);
@@ -452,6 +506,8 @@ public class AutomapRenderer extends BaseSystem {
    */
   public void centerOnPlayer() {
     automapManager.centerOnPlayer();
+    if (automapCamera != null) automapCamera.resetOffset();
+    RenderSystem.automapReset();
   }
   
   @Override
@@ -471,56 +527,56 @@ public class AutomapRenderer extends BaseSystem {
    * 放大 (显示更详细)
    */
   public void zoomIn() {
-    // 使用 RenderSystem 的缩放系统
-    com.riiablo.map.RenderSystem.automapZoomIn();
+    if (automapCamera != null) automapCamera.zoomIn();
+    RenderSystem.automapZoomIn();
   }
   
   /**
    * 缩小 (显示更大范围)
    */
   public void zoomOut() {
-    // 使用 RenderSystem 的缩放系统
-    com.riiablo.map.RenderSystem.automapZoomOut();
+    if (automapCamera != null) automapCamera.zoomOut();
+    RenderSystem.automapZoomOut();
   }
   
   /**
    * 向上平移
    */
   public void panUp() {
-    // 使用 RenderSystem 的偏移系统
-    com.riiablo.map.RenderSystem.automapUp();
+    if (automapCamera != null) automapCamera.panUp();
+    RenderSystem.automapUp();
   }
   
   /**
    * 向下平移
    */
   public void panDown() {
-    // 使用 RenderSystem 的偏移系统
-    com.riiablo.map.RenderSystem.automapDown();
+    if (automapCamera != null) automapCamera.panDown();
+    RenderSystem.automapDown();
   }
   
   /**
    * 向左平移
    */
   public void panLeft() {
-    // 使用 RenderSystem 的偏移系统
-    com.riiablo.map.RenderSystem.automapLeft();
+    if (automapCamera != null) automapCamera.panLeft();
+    RenderSystem.automapLeft();
   }
   
   /**
    * 向右平移
    */
   public void panRight() {
-    // 使用 RenderSystem 的偏移系统
-    com.riiablo.map.RenderSystem.automapRight();
+    if (automapCamera != null) automapCamera.panRight();
+    RenderSystem.automapRight();
   }
   
   /**
    * 重置 (缩放和偏移)
    */
   public void reset() {
-    // 使用 RenderSystem 的重置系统
-    com.riiablo.map.RenderSystem.automapReset();
+    if (automapCamera != null) automapCamera.reset();
+    RenderSystem.automapReset();
   }
   
   /**

@@ -471,3 +471,22 @@ Armageddon/Hurricane 的实机观感验证。
   `terrain=600 entities=58 fallback=1 visiblePixels=17910`。
 - 下一项恢复 A4Q2 传送门重连，当前已知失败点为 Harrogath 目标 Zone 尚未注册导致
   `WARP_DESTINATION_MISSING`；相关半成品保持未提交，未混入 Automap 提交。
+
+### 2026-09-15 ESC Options / Automap 三态菜单（本轮完成）
+
+- 当前 Chat 继续统一负责地图、战斗、技能、物品、任务、NPC、网络、存档和 UI；没有
+  独立战斗 Chat 需要避让。
+- ESC `OPTIONS` 已接入二级页面和返回栈；Automap Options 提供并持久化：
+  `AUTOMAP SIZE`、`FADE`、`CENTER WHEN CLEARED`、`SHOW PARTY`、`SHOW NAMES`。
+- `AUTOMAP SIZE` 是三态选择：`FULL SCREEN`、`MINI MAP (Left-Top)`、
+  `MINI MAP (Right-Top)`。全屏模式除 12px margin 外使用整个画面；左右上角模式使用
+  画面宽高各 1/2，并保留外侧 margin。
+- 原生 DC6 与几何回退共享 `AutomapViewport`；Tab 关闭/打开保留所选模式，选项改变时
+  已打开地图立即切换。Party 标记只接受权威 `PARTY_MEMBER`，名称使用 Automap 投影。
+- 验证：Automap 全套无资源测试、RoomEx 集成测试和 `:core:compileJava` 通过；真实 1.10f
+  `:desktop:offscreenAutomapDc6` 通过，输出
+  `terrain=600 entities=58 fallback=1 visiblePixels=17910`。测试中发现并修复了单机没有
+  `ClientNetworkReceiver` 时的可选依赖注入崩溃。
+
+下一项：实现 Sound Options 的声音/音乐开关和音量控件，直接绑定已有音频 Cvar；随后
+实现 Video Options 中已有后端支持的 Gamma/VSync，并把暂不支持的选项明确禁用。

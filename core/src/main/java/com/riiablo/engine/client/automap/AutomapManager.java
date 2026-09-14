@@ -618,14 +618,21 @@ public class AutomapManager implements Disposable {
    */
   public void renderNames(SpriteBatch batch, BitmapFont font) {
     if (!isVisible() || !showNames) return;
-    
+    Color previousColor = font.getColor();
+    float previousR = previousColor.r;
+    float previousG = previousColor.g;
+    float previousB = previousColor.b;
+    float previousA = previousColor.a;
     for (int i = 0, size = entityMarkers.size; i < size; i++) {
       EntityMarker marker = entityMarkers.get(i);
-      if (marker.name != null && !marker.name.isEmpty()) {
-        font.setColor(marker.color);
-        font.draw(batch, marker.name, marker.worldX, marker.worldY + marker.size + 12);
-      }
+      if (marker.type != AutomapIconType.PLAYER
+          && marker.type != AutomapIconType.PARTY_MEMBER) continue;
+      if (marker.name == null || marker.name.isEmpty()) continue;
+      AutomapProjection.worldToAutomap(marker.worldX, marker.worldY, tmpVec);
+      font.setColor(marker.color.r, marker.color.g, marker.color.b, opacity);
+      font.draw(batch, marker.name, tmpVec.x, tmpVec.y + marker.size + 12);
     }
+    font.setColor(previousR, previousG, previousB, previousA);
   }
   
   // ==================== DC6 精灵渲染 ====================

@@ -242,6 +242,43 @@ public class Cvars {
       }
     }
 
+    interface Automap {
+      Cvar<Byte> Mode = Cvar.builder(Byte.class)
+          .alias("Client.Automap.Mode")
+          .description("Automap layout: 1=mini map left-top, 2=mini map right-top, 3=full screen")
+          .defaultValue((byte) 3)
+          .validator(NumberRangeValidator.of(Byte.class, (byte) 1, (byte) 3))
+          .build();
+
+      Cvar<Boolean> Fade = Cvar.builder(Boolean.class)
+          .alias("Client.Automap.Fade")
+          .description("Whether Automap is drawn with reduced opacity")
+          .defaultValue(Boolean.TRUE)
+          .validator(Validator.ACCEPT_NON_NULL)
+          .build();
+
+      Cvar<Boolean> CenterWhenCleared = Cvar.builder(Boolean.class)
+          .alias("Client.Automap.CenterWhenCleared")
+          .description("Whether closing Automap clears pan and zoom offsets")
+          .defaultValue(Boolean.TRUE)
+          .validator(Validator.ACCEPT_NON_NULL)
+          .build();
+
+      Cvar<Boolean> ShowParty = Cvar.builder(Boolean.class)
+          .alias("Client.Automap.ShowParty")
+          .description("Whether party members are shown on Automap")
+          .defaultValue(Boolean.TRUE)
+          .validator(Validator.ACCEPT_NON_NULL)
+          .build();
+
+      Cvar<Boolean> ShowNames = Cvar.builder(Boolean.class)
+          .alias("Client.Automap.ShowNames")
+          .description("Whether player and party member names are shown on Automap")
+          .defaultValue(Boolean.FALSE)
+          .validator(Validator.ACCEPT_NON_NULL)
+          .build();
+    }
+
     interface Map {
       Cvar<Boolean> UseD2MODImplementation = Cvar.builder(Boolean.class)
           .alias("Client.Map.UseD2MODImplementation")

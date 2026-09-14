@@ -4766,3 +4766,17 @@ Quest Warp 入口与过渡，不改战斗公式/技能注册）；测试半成�
 `core/src/main/java/com/riiablo/engine/server/skill/NativeSkillResolver.java`（新增重载），
 未修改战斗公式、技能注册或网络协议。下一步：使用 1.10f 资源进行营地 Throw 点击离屏回归，
 并确认野外 Throw/普通攻击及 NPC 交互不受影响。
+
+### 2026-09-15 ESC Options 与 Automap 三种布局（已完成）
+
+- [x] ~~接通 ESC → Options → Automap Options 页面与逐级 ESC/Previous Menu 返回~~
+- [x] ~~实现 `FULL SCREEN / MINI MAP (Left-Top) / MINI MAP (Right-Top)` 三态选择~~
+- [x] ~~统一原生 DC6 和几何回退的带 margin 视口计算~~
+- [x] ~~持久化 Fade、Center When Cleared、Show Party、Show Names 并接入实际绘制~~
+- [x] ~~修复单机世界将多人 Party 接收器误作强制依赖导致的启动崩溃~~
+- 验证：Automap 专项/RoomEx 集成测试、核心编译、真实 1.10f 隐藏客户端均通过；原生
+  DC6 结果为 `terrain=600 entities=58 fallback=1 visiblePixels=17910`。
+
+当前下一项：完成 Sound Options 的已有后端接线（总声音、效果、音乐开关与音量），再做
+Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前 Chat 继续负责
+全部地图、战斗、技能、物品、任务、NPC、网络、存档和 UI 工作。

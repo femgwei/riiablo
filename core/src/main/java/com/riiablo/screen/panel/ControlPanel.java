@@ -674,7 +674,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
               Actor panel = Riiablo.game.questsPanel;
               Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
             } else if (actor == btnEscapeMenu) {
-              Riiablo.game.escapePanel.setVisible(!Riiablo.game.escapePanel.isVisible());
+              if (Riiablo.game.escapePanel.isVisible()) Riiablo.game.escapePanel.close();
+              else Riiablo.game.escapePanel.open();
             }
           }
         };

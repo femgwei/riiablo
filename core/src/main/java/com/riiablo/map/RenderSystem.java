@@ -26,6 +26,7 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Align;
@@ -47,6 +48,8 @@ import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.client.component.Overlay;
 import com.riiablo.engine.client.component.Selectable;
+import com.riiablo.engine.client.automap.AutomapOptions;
+import com.riiablo.engine.client.automap.AutomapViewport;
 import com.riiablo.engine.server.component.AIWrapper;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.AnimData;
@@ -103,6 +106,8 @@ public class RenderSystem extends BaseEntitySystem {
   public static final int AUTOMAP_MODE_TOP_RIGHT = 2;
   public static final int AUTOMAP_MODE_CENTER = 3;
   public static final int AUTOMAP_MODES = 3;
+  private static int AUTOMAP_PREFERRED_MODE = AUTOMAP_MODE_CENTER;
+  private static float AUTOMAP_OPACITY = AutomapOptions.FADED_OPACITY;
   
   // automap窗口大小：屏幕的1/2
   private static final float AUTOMAP_SIZE_RATIO = 0.5f;
@@ -2174,15 +2179,10 @@ public class RenderSystem extends BaseEntitySystem {
     float screenWidth = iso.viewportWidth;
     float screenHeight = iso.viewportHeight;
     
-    // automap窗口大小：
-    // - CENTER 模式：占满全屏
-    // - TOP_LEFT / TOP_RIGHT 模式：屏幕的 1/2
-    float sizeRatio = AUTOMAP_SIZE_RATIO; // 默认 0.5
-    if (AUTOMAP_MODE == AUTOMAP_MODE_CENTER) {
-      sizeRatio = 1.0f;
-    }
-    float automapWidth = screenWidth * sizeRatio;
-    float automapHeight = screenHeight * sizeRatio;
+    Rectangle automapViewport = AutomapViewport.calculate(
+        AUTOMAP_MODE, screenWidth, screenHeight, new Rectangle());
+    float automapWidth = automapViewport.width;
+    float automapHeight = automapViewport.height;
     
     // 调试日志：检查 automap 尺寸计算（已屏蔽）
     // if (isFirstRender) {
@@ -2192,22 +2192,8 @@ public class RenderSystem extends BaseEntitySystem {
     // }
     
     // 计算automap窗口位置
-    float automapScreenX, automapScreenY;
-    switch (AUTOMAP_MODE) {
-      case AUTOMAP_MODE_TOP_LEFT:
-        automapScreenX = 0;
-        automapScreenY = screenHeight - automapHeight;
-        break;
-      case AUTOMAP_MODE_TOP_RIGHT:
-        automapScreenX = screenWidth - automapWidth;
-        automapScreenY = screenHeight - automapHeight;
-        break;
-      case AUTOMAP_MODE_CENTER:
-      default:
-        automapScreenX = (screenWidth - automapWidth) / 2f;
-        automapScreenY = (screenHeight - automapHeight) / 2f;
-        break;
-    }
+    float automapScreenX = automapViewport.x;
+    float automapScreenY = automapViewport.y;
     
     // 调试日志：检查 automap 窗口位置和大小（已屏蔽）
     // if (isFirstRender) {
@@ -2308,7 +2294,7 @@ public class RenderSystem extends BaseEntitySystem {
     Gdx.gl.glLineWidth(lineWidth);
     
     // Set alpha
-    float alpha = 0.7f;
+    float alpha = AUTOMAP_OPACITY;
     
     // 等距坐标转换公式（Isometric Projection）：
     // 暗黑2使用等距视角，世界坐标需要转换为等距屏幕坐标
@@ -2724,28 +2710,12 @@ public class RenderSystem extends BaseEntitySystem {
     // 与 drawAutomap 中保持一致：
     // - CENTER 模式：全屏
     // - TOP_LEFT / TOP_RIGHT：屏幕 1/2
-    float sizeRatio = AUTOMAP_SIZE_RATIO; // 默认 0.5
-    if (AUTOMAP_MODE == AUTOMAP_MODE_CENTER) {
-      sizeRatio = 1.0f;
-    }
-    float automapWidth = screenWidth * sizeRatio;
-    float automapHeight = screenHeight * sizeRatio;
-    float automapScreenX, automapScreenY;
-    switch (AUTOMAP_MODE) {
-      case AUTOMAP_MODE_TOP_LEFT:
-        automapScreenX = 0;
-        automapScreenY = screenHeight - automapHeight;
-        break;
-      case AUTOMAP_MODE_TOP_RIGHT:
-        automapScreenX = screenWidth - automapWidth;
-        automapScreenY = screenHeight - automapHeight;
-        break;
-      case AUTOMAP_MODE_CENTER:
-      default:
-        automapScreenX = (screenWidth - automapWidth) / 2f;
-        automapScreenY = (screenHeight - automapHeight) / 2f;
-        break;
-    }
+    Rectangle automapViewport = AutomapViewport.calculate(
+        AUTOMAP_MODE, screenWidth, screenHeight, new Rectangle());
+    float automapWidth = automapViewport.width;
+    float automapHeight = automapViewport.height;
+    float automapScreenX = automapViewport.x;
+    float automapScreenY = automapViewport.y;
     
     // 调试日志：检查 drawAutomapEntities 中的尺寸计算（已屏蔽）
     // if (isFirstRender) {
@@ -2984,28 +2954,12 @@ public class RenderSystem extends BaseEntitySystem {
     // 获取窗口参数（用于坐标转换）
     float screenWidth = iso.viewportWidth;
     float screenHeight = iso.viewportHeight;
-    float sizeRatio = AUTOMAP_SIZE_RATIO;
-    if (AUTOMAP_MODE == AUTOMAP_MODE_CENTER) {
-      sizeRatio = 1.0f;
-    }
-    float automapWidth = screenWidth * sizeRatio;
-    float automapHeight = screenHeight * sizeRatio;
-    float automapScreenX, automapScreenY;
-    switch (AUTOMAP_MODE) {
-      case AUTOMAP_MODE_TOP_LEFT:
-        automapScreenX = 0;
-        automapScreenY = screenHeight - automapHeight;
-        break;
-      case AUTOMAP_MODE_TOP_RIGHT:
-        automapScreenX = screenWidth - automapWidth;
-        automapScreenY = screenHeight - automapHeight;
-        break;
-      case AUTOMAP_MODE_CENTER:
-      default:
-        automapScreenX = (screenWidth - automapWidth) / 2f;
-        automapScreenY = (screenHeight - automapHeight) / 2f;
-        break;
-    }
+    Rectangle automapViewport = AutomapViewport.calculate(
+        AUTOMAP_MODE, screenWidth, screenHeight, new Rectangle());
+    float automapWidth = automapViewport.width;
+    float automapHeight = automapViewport.height;
+    float automapScreenX = automapViewport.x;
+    float automapScreenY = automapViewport.y;
     
     // 计算显示范围边界
     Vector2 playerPos = iso.position;
@@ -3487,8 +3441,8 @@ public class RenderSystem extends BaseEntitySystem {
    */
   public static void toggleAutomap() {
     if (AUTOMAP_MODE == AUTOMAP_MODE_OFF) {
-      // 打开automap，使用默认位置（屏幕中间）
-      AUTOMAP_MODE = AUTOMAP_MODE_CENTER;
+      // Open using the persisted Options selection.
+      AUTOMAP_MODE = AUTOMAP_PREFERRED_MODE;
       // 重置偏移量，让地图回到玩家当前位置对应的屏幕范围
       automapViewX = 0;
       automapViewY = 0;
@@ -3502,8 +3456,12 @@ public class RenderSystem extends BaseEntitySystem {
     } else {
       // 关闭automap，重置显示范围
       AUTOMAP_MODE = AUTOMAP_MODE_OFF;
-      automapViewWidth = 0;
-      automapViewHeight = 0;
+      if (Boolean.TRUE.equals(com.riiablo.Cvars.Client.Automap.CenterWhenCleared.get())) {
+        automapReset();
+      } else {
+        automapViewWidth = 0;
+        automapViewHeight = 0;
+      }
       // Gdx.app.log(TAG, ">>> Automap DISABLED");
     }
   }
@@ -3516,7 +3474,7 @@ public class RenderSystem extends BaseEntitySystem {
   public static void toggleAutomapPosition() {
     if (AUTOMAP_MODE == AUTOMAP_MODE_OFF) {
       // 如果automap关闭，先打开到默认位置
-      AUTOMAP_MODE = AUTOMAP_MODE_CENTER;
+      AUTOMAP_MODE = AUTOMAP_PREFERRED_MODE;
       return;
     }
     
@@ -3538,6 +3496,8 @@ public class RenderSystem extends BaseEntitySystem {
         AUTOMAP_MODE = AUTOMAP_MODE_CENTER;
         break;
     }
+    AUTOMAP_PREFERRED_MODE = AUTOMAP_MODE;
+    com.riiablo.Cvars.Client.Automap.Mode.set((byte) AUTOMAP_PREFERRED_MODE);
     
     // 切换后新的窗口比例
     float newSizeRatio = (AUTOMAP_MODE == AUTOMAP_MODE_CENTER) ? 1.0f : AUTOMAP_SIZE_RATIO;
@@ -3685,6 +3645,30 @@ public class RenderSystem extends BaseEntitySystem {
    */
   public static boolean isAutomapVisible() {
     return AUTOMAP_MODE != AUTOMAP_MODE_OFF;
+  }
+
+  /** Sets the layout selected in Options and changes an already open Automap immediately. */
+  public static void setAutomapPreferredMode(int mode) {
+    int normalized = AutomapOptions.normalizeMode(mode);
+    if (AUTOMAP_PREFERRED_MODE == normalized
+        && (AUTOMAP_MODE == AUTOMAP_MODE_OFF || AUTOMAP_MODE == normalized)) return;
+    AUTOMAP_PREFERRED_MODE = normalized;
+    if (AUTOMAP_MODE != AUTOMAP_MODE_OFF) {
+      AUTOMAP_MODE = normalized;
+      automapReset();
+    }
+  }
+
+  public static int getAutomapPreferredMode() {
+    return AUTOMAP_PREFERRED_MODE;
+  }
+
+  public static void setAutomapOpacity(float opacity) {
+    AUTOMAP_OPACITY = MathUtils.clamp(opacity, 0f, 1f);
+  }
+
+  public static float getAutomapOpacity() {
+    return AUTOMAP_OPACITY;
   }
   
   // 静态标志，用于在 toggleAutomap 和 drawAutomap 之间通信
