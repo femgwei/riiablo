@@ -43,9 +43,13 @@ public class CofManager extends BaseEntitySystem {
 
   public void setMode(int id, byte mode, boolean force) {
     CofReference reference = mCofReference.get(id);
-    if (reference.mode == mode && !force) return;
+    boolean restart = reference.mode == mode;
+    if (restart && !force) return;
     reference.mode = mode;
-    event.dispatch(ModeChangeEvent.obtain(id, mode));
+    // A forced same-mode update is used by repeated attacks to restart the
+    // animation at frame zero.  Mark it explicitly so the client can reset
+    // the existing Animation without unloading/reloading every DCC layer.
+    event.dispatch(ModeChangeEvent.obtain(id, mode, restart));
   }
 
   public void setWClass(int id, byte wclass) {

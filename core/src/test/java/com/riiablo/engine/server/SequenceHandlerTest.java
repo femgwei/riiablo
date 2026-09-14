@@ -38,6 +38,8 @@ class SequenceHandlerTest {
       assertTrue(sequence.started);
       assertEquals(baselineEvents + 1, probe.modeEvents,
           "a repeated TH action must force a new mode event");
+      assertTrue(probe.lastRestart,
+          "same-mode forced restart must be distinguishable from a COF change");
       assertEquals(0, anim.frame,
           "the forced event must restart animation instead of inheriting a post-keyframe frame");
     } finally {
@@ -47,10 +49,12 @@ class SequenceHandlerTest {
 
   private static final class AnimationResetProbe extends PassiveSystem {
     int modeEvents;
+    boolean lastRestart;
 
     @Subscribe
     public void onModeChanged(ModeChangeEvent event) {
       modeEvents++;
+      lastRestart = event.restart;
       AnimData anim = world.getMapper(AnimData.class).get(event.entityId);
       if (anim != null) {
         anim.frame = 0;

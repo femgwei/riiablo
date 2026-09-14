@@ -11,6 +11,7 @@ import com.riiablo.engine.client.component.CofWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.event.CofChangeEvent;
+import com.riiablo.engine.server.event.ModeChangeEvent;
 import com.riiablo.codec.COF;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -31,6 +32,11 @@ public class CofResolver extends PassiveSystem {
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
     if (DEBUG_EVENTS) Gdx.app.debug(TAG, "onCofChanged");
+    if (event instanceof ModeChangeEvent && ((ModeChangeEvent) event).restart) {
+      // A forced same-mode event is an animation restart, not a visual COF
+      // change. Preserve the resolved COF and its resident DCC layers.
+      return;
+    }
     mCofWrapper.remove(event.entityId);
     updateCof(event.entityId);
   }

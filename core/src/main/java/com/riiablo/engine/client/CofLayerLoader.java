@@ -17,10 +17,13 @@ import com.riiablo.engine.client.component.CofComponentDescriptors;
 import com.riiablo.engine.client.component.CofDirtyComponents;
 import com.riiablo.engine.client.component.CofLoadingComponents;
 import com.riiablo.engine.client.component.CofWrapper;
+import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.event.CofChangeEvent;
+import com.riiablo.engine.server.event.ModeChangeEvent;
+import com.riiablo.codec.Animation;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
 
@@ -42,6 +45,7 @@ public class CofLayerLoader extends IteratingSystem {
   protected ComponentMapper<CofDirtyComponents> mCofDirtyComponents;
   protected ComponentMapper<CofLoadingComponents> mCofLoadingComponents;
   protected ComponentMapper<CofComponentDescriptors> mCofComponentDescriptors;
+  protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
 
   @Override
   protected void process(int entityId) {}
@@ -58,6 +62,20 @@ public class CofLayerLoader extends IteratingSystem {
   @Subscribe
   public void onCofChanged(CofChangeEvent event) {
     if (DEBUG_EVENTS) Gdx.app.debug(TAG, "onCofChanged");
+    if (event instanceof ModeChangeEvent && ((ModeChangeEvent) event).restart) {
+      // Repeated attacks use a forced same-mode update only to restart the
+      // action. Keep the already resident layers and reset the frame instead
+      // of tearing down DCC assets and showing a blank frame while reloading.
+      AnimationWrapper wrapper = mAnimationWrapper.has(event.entityId)
+          ? mAnimationWrapper.get(event.entityId) : null;
+      Animation animation = wrapper == null ? null : wrapper.animation;
+      if (animation != null && animation.getNumFramesPerDir() > 0) {
+        animation.setFrame(0);
+        animation.updateBox();
+      }
+      if (DEBUG_EVENTS) Gdx.app.debug(TAG, "restart animation without COF reload");
+      return;
+    }
     mCofDirtyComponents.create(event.entityId).flags |= Dirty.ALL;
   }
 

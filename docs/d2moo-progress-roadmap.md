@@ -35,6 +35,23 @@
 协议文件。下一步：在真实资源可视化条件具备后，对三种模式截帧比对 DC6 比例与 NPC/玩家图标
 位置，并继续处理 Automap 选项持久化和更多实体 cell 映射。
 
+## 2026-09-15 攻击动画同模式重启防闪烁（本轮完成）
+
+- [x] 修复连续攻击/投掷时 `SequenceHandler` 强制同模式重启引发的 COF/DCC 重载闪烁。
+  `ModeChangeEvent.restart` 区分“同模式仅重启动画”和真实模式切换。
+- [x] 客户端 `CofResolver`、`CofLayerLoader` 对 restart 事件保留现有 COF 与 DCC 层，
+  只将 `Animation` 帧归零并更新包围盒；真实模式切换仍完整加载新 COF。
+- [x] 修复同一实体 marker/资源刷新期间的旧帧丢失风险，不改变服务器关键帧、伤害或
+  投射物时序。
+- [x] `SequenceHandlerTest.repeatedModeRestartsAnimationBeforeItCanSkipTheKeyframe` 扩展
+  restart 标志断言并通过；核心编译通过。
+
+本轮涉及 `CofManager.java`、`ModeChangeEvent.java`、`CofResolver.java`、
+`CofLayerLoader.java`、`SequenceHandlerTest.java`，属于动画表现与事件协议的最小改动，
+未修改地图生成、网络 schema 或物品/伤害公式。下一步：在可运行环境中进行连续左键攻击、
+连续 Throw、攻击中切换方向和攻击结束回到站立的离屏/实际画面回归，确认无空白帧且关键帧
+仍只触发一次。
+
 ## 2026-09-15 城镇技能禁用状态对齐（本轮完成）
 
 - [x] 客户端 `HotkeyButton` 根据玩家当前 `MapWrapper.zone.isTown()` 和原生
