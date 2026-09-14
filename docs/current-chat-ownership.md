@@ -692,3 +692,13 @@ Armageddon/Hurricane 的实机观感验证。
 
 当前下一项：覆盖死亡实体本身的断线重连，比较尸体保留、旧实体删除帧和死亡事件水位，
 并加入重复死亡请求的协议级幂等断言。
+
+### 2026-09-15 死亡实体断线重连（本轮完成）
+
+- [x] ~~新增 `headlessDeathReconnect` 双客户端门槛~~：击杀后断开并重连同一角色，
+  尸体保持死亡状态，实体 incarnation=1，地面掉落数量不增加。
+- [x] ~~死亡水位跨连接校验~~：`deathTick`/`deathHandled` 已记录，重连后的 Sim Tick
+  单调前进；XP 以持久化快照为准，不跨连接比较内存玩家实体。
+- 验证：1.10f 通过，`death_reconnect_pass ... corpseDead=true rewardsStable=true`。
+
+当前下一项：补充重复死亡请求的协议级幂等断言，并覆盖尸体删除/保留窗口的重连边界。

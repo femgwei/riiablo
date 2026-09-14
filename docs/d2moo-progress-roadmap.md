@@ -4979,3 +4979,16 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：继续覆盖死亡实体本身的断线重连（尸体保留、旧实体删除帧和死亡事件水位），
 并把重复死亡请求的幂等结果写入协议级断言。
+
+### 2026-09-15 死亡实体断线重连（本轮完成）
+
+- [x] ~~新增 `headlessDeathReconnect` 双客户端夹具~~：普通 Blood Moor 怪物死亡后
+  断开击杀客户端，再以新连接恢复同一角色，验证尸体仍为死亡状态、实体 incarnation
+  不重复、地面掉落数量不增加。
+- [x] ~~死亡水位跨连接校验~~：记录 `deathTick`/`deathHandled`，重连后的 Sim Tick
+  单调前进；XP 使用新连接持久化快照，不把内存玩家实体 ID 直接作跨连接比较。
+- 验证：真实 1.10f `headlessDeathReconnect` 通过，日志
+  `death_reconnect_pass ... deathTick=1 reconnectSimTick=111 corpseDead=true`
+  `rewardsStable=true incarnation=1`。
+
+下一项：继续补充重复死亡请求的协议级幂等断言，并把尸体删除/保留窗口纳入重连边界测试。
