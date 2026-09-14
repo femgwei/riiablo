@@ -370,7 +370,11 @@ public class NetworkSynchronizer extends BaseEntitySystem {
 
   private void removeSnapshots(int entityId) {
     for (IntMap.Entry<EntitySnapshotCache> entry : snapshotsByRecipient.entries()) {
-      entry.value.remove(entityId);
+      // IntMap entries can be cleared concurrently with entity removal when
+      // a reconnect releases a recipient cache during the same tick.  The
+      // subscription callback must remain idempotent and tolerate the stale
+      // null value instead of taking down the simulation thread.
+      if (entry.value != null) entry.value.remove(entityId);
     }
   }
 

@@ -34,6 +34,11 @@ public class AnimStepper extends IntervalIteratingSystem {
   @Override
   protected void process(int entityId) {
     AnimData animData = mAnimData.get(entityId);
+    // Artemis may remove components while an interval system is draining its
+    // subscription.  A death/removal event can therefore leave an entity id
+    // in this batch with no AnimData anymore; treat it as a completed
+    // animation instead of dereferencing a stale component.
+    if (animData == null) return;
     if (animData.numFrames <= 0) return;
 
     int delta = animData.override >= 0 ? animData.override : animData.speed;

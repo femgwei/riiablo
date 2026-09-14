@@ -411,6 +411,18 @@ tasks.register('headlessBaalWaveDual', JavaExec) {
   if (d2Home.isPresent()) args '--home', d2Home.get()
 }
 
+tasks.register('headlessQuestRewardRegression') {
+  group = 'verification'
+  description = 'Runs the A1-A5 quest reward snapshot, idempotency and reconnect gates.'
+  // Keep the individual fixtures as the source of truth; this aggregate gives
+  // CI and local validation one deterministic entry point without duplicating
+  // quest logic in a second harness.
+  dependsOn 'headlessDenQuestDual', 'headlessCountessQuestDual',
+      'headlessAndarielQuestDual', 'headlessA2Q6Reconnect',
+      'headlessA4IzualDual', 'headlessA4HellforgeDual',
+      'headlessA5AncientDual', 'headlessBaalWaveDual'
+}
+
 tasks.register('headlessA2ObjectInteractionDual', JavaExec) {
   group = 'verification'
   description = 'Runs two windowless clients through A2 Tainted Sun and Arcane Tome interactions.'

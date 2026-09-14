@@ -4849,3 +4849,16 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：在区域切换基线之上收敛 A1–A5 任务奖励快照，优先检查奖励 pending/granted
 状态、重复请求幂等和多人断线重连恢复。
+
+### 2026-09-15 A1–A5 任务奖励回归入口与生命周期稳定性（本轮完成）
+
+- [x] ~~新增 `headlessQuestRewardRegression` 聚合任务~~，统一串联 Den、Countess、
+  Andariel、A2Q6、A4Q1、A4Q3、A5Q5 和 Baal 奖励快照/幂等/重连夹具。
+- [x] ~~修复任务完成后实体移除的竞态崩溃~~：`AnimStepper` 对已移除的 `AnimData` 做
+  空组件保护，`NetworkSynchronizer` 清理 recipient 快照时容忍并发失效的空缓存。
+- 验证：核心/D2GS 编译通过；真实 1.10f `headlessCountessQuestDual` 通过，日志确认
+  `rewardGranted=true pending=false duplicate=true reconnect=true`。整合回归曾在修复前
+  暴露上述 NPE，修复后针对性回归无再现。
+
+下一项：补齐多人任务奖励的统一快照断言（跨 Act 同一玩家在不同区域、奖励 revision
+  单调性），再进入多人快照与断线重连专项收敛。
