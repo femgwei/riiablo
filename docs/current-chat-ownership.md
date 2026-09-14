@@ -582,4 +582,16 @@ Armageddon/Hurricane 的实机观感验证。
   暴露上述 NPE，修复后针对性回归无再现。
 
 下一项：补齐多人任务奖励的统一快照断言（跨 Act 同一玩家在不同区域、奖励 revision
-  单调性），再进入多人快照与断线重连专项收敛。
+单调性），再进入多人快照与断线重连专项收敛。
+
+### 2026-09-15 多人任务快照 revision 单调性（本轮完成）
+
+- [x] ~~新增 `headlessQuestRevisionDual` 离屏门槛~~：同一玩家在 A1、A2、A4、A5
+  区域间切换并请求 Quest 快照，双方 40 条任务记录逐项一致。
+- [x] ~~验证 revision 单调和重连恢复~~：跨区域 revision 不回退；断线重连后 revision
+  与奖励标志均保持一致。
+- 验证：真实 1.10f `:server:d2gs:headlessQuestRevisionDual` 通过，日志为
+  `quest_revision_dual_pass levels=4 reconnect=true flagsEqual=true`。
+
+下一项：进入多人快照专项，验证区域切换、任务奖励和战斗实体更新不会互相覆盖，随后
+补齐断线重连后的增量快照/旧实体清理检查。

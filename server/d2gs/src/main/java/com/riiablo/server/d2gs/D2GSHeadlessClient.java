@@ -211,6 +211,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireAreaTransitionDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireQuestRevisionDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireA3DungeonWarpDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA4DungeonWarpDual
@@ -298,6 +300,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireAreaTransitionDual) {
       runAreaTransitionDual(d2s, character);
+      return;
+    }
+    if (config.requireQuestRevisionDual) {
+      runQuestRevisionDual(d2s, character);
       return;
     }
     if (config.requireA3DungeonWarpDual) {
@@ -3741,6 +3747,87 @@ public final class D2GSHeadlessClient {
       }
       log("area_transition_dual_pass", "pairs=" + pairs.length
           + " transitions=" + transitions + " clients=true,true");
+    }
+  }
+
+  /**
+   * Verifies that quest snapshots remain identical and revision-monotonic
+   * while the same party crosses representative Act boundaries.  A fresh
+   * connection then requests the final snapshot to ensure the revision and
+   * all reward flags survive reconnect without relying on a render client.
+   */
+  private void runQuestRevisionDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("QuestRevPeer", 0x51525650);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    int[] levels = {2, 40, LEVEL_PANDEMONIUMFORTRESS, LEVEL_HARROGATH};
+    long previousRevision = Long.MIN_VALUE;
+    QuestResult lastA = null;
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      for (int i = 0; i < levels.length; i++) {
+        int level = levels[i];
+        if (!D2GS.headlessEnterLevel(a.playerId, level)
+            || !D2GS.headlessEnterLevel(b.playerId, level)) {
+          throw new IOException("quest revision staging unavailable: level=" + level);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB, level, "quest-revision-level-" + level);
+        QuestResult snapshotA = requestSnapshot(a, inA, outA, 40_000L + i * 2L);
+        QuestResult snapshotB = requestSnapshot(b, inB, outB, 40_001L + i * 2L);
+        if (snapshotA == null || snapshotB == null || !snapshotA.success() || !snapshotB.success()
+            || snapshotA.questRevision() != snapshotB.questRevision()
+            || snapshotA.questRecordsLength() != snapshotB.questRecordsLength()) {
+          throw new IOException("quest snapshot diverged at level=" + level);
+        }
+        for (int r = 0; r < snapshotA.questRecordsLength(); r++) {
+          if (snapshotA.questRecords(r) != snapshotB.questRecords(r)) {
+            throw new IOException("quest reward flag diverged at level=" + level
+                + " record=" + r);
+          }
+        }
+        if (snapshotA.questRevision() < previousRevision) {
+          throw new IOException("quest revision regressed at level=" + level
+              + ": previous=" + previousRevision + " current=" + snapshotA.questRevision());
+        }
+        previousRevision = snapshotA.questRevision();
+        lastA = snapshotA;
+        log("quest_revision_stage_pass", "level=" + level
+            + " revision=" + snapshotA.questRevision()
+            + " records=" + snapshotA.questRecordsLength());
+      }
+    }
+
+    D2GSHeadlessClient reconnect = new D2GSHeadlessClient(config);
+    try (Socket socket = reconnect.openSocket();
+         DataInputStream input = input(socket);
+         OutputStream output = output(socket)) {
+      send(output, connectionPacket(character, d2s));
+      reconnect.awaitConnection(input, deadline());
+      if (!D2GS.headlessEnterLevel(reconnect.playerId, LEVEL_HARROGATH)) {
+        throw new IOException("quest revision reconnect staging unavailable");
+      }
+      awaitLevel(reconnect, input, LEVEL_HARROGATH, deadline());
+      QuestResult restored = requestSnapshot(reconnect, input, output, 41_000L);
+      if (restored == null || !restored.success() || lastA == null
+          || restored.questRevision() != previousRevision
+          || restored.questRecordsLength() != lastA.questRecordsLength()) {
+        throw new IOException("quest revision reconnect snapshot mismatch: revision="
+            + (restored == null ? "null" : restored.questRevision())
+            + " expected=" + previousRevision);
+      }
+      for (int r = 0; r < restored.questRecordsLength(); r++) {
+        if (restored.questRecords(r) != lastA.questRecords(r)) {
+          throw new IOException("quest reward flag changed after reconnect: record=" + r);
+        }
+      }
+      log("quest_revision_dual_pass", "levels=" + levels.length
+          + " revision=" + previousRevision + " reconnect=true flagsEqual=true");
     }
   }
 
@@ -7797,6 +7884,7 @@ public final class D2GSHeadlessClient {
     boolean requireA2TombDual;
     boolean requireA2DungeonWarpDual;
     boolean requireAreaTransitionDual;
+    boolean requireQuestRevisionDual;
     boolean requireA3DungeonWarpDual;
     boolean requireA4DungeonWarpDual;
     boolean requireA5DungeonWarpDual;
@@ -7857,6 +7945,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-a2-tomb-dual".equals(arg)) config.requireA2TombDual = true;
         else if ("--require-a2-dungeon-warp-dual".equals(arg)) config.requireA2DungeonWarpDual = true;
         else if ("--require-area-transition-dual".equals(arg)) config.requireAreaTransitionDual = true;
+        else if ("--require-quest-revision-dual".equals(arg)) config.requireQuestRevisionDual = true;
         else if ("--require-a3-dungeon-warp-dual".equals(arg)) config.requireA3DungeonWarpDual = true;
         else if ("--require-a4-dungeon-warp-dual".equals(arg)) config.requireA4DungeonWarpDual = true;
         else if ("--require-a5-dungeon-warp-dual".equals(arg)) config.requireA5DungeonWarpDual = true;
@@ -7918,6 +8007,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA2TombDual
           && !config.requireA2DungeonWarpDual
           && !config.requireAreaTransitionDual
+          && !config.requireQuestRevisionDual
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
           && !config.requireA5DungeonWarpDual
@@ -7938,6 +8028,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA2TombDual
           && !config.requireA2DungeonWarpDual
           && !config.requireAreaTransitionDual
+          && !config.requireQuestRevisionDual
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
           && !config.requireA5DungeonWarpDual
@@ -7988,6 +8079,7 @@ public final class D2GSHeadlessClient {
           + " [--require-a2q6-reconnect]"
           + " [--require-a2-tomb-dual]"
           + " [--require-area-transition-dual]"
+          + " [--require-quest-revision-dual]"
           + " [--require-a5-worldstone-preset-dual]"
           + " [--require-early-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"
