@@ -31,6 +31,7 @@ public final class OffscreenCampScreen extends GameScreen {
   private final boolean validateWarpGraph;
   private final boolean validateContinuity;
   private final boolean validateWarpCollision;
+  private final boolean validateNativeAutomap;
   private int renderedFrames;
   private boolean completed;
   private boolean targetApplied;
@@ -112,11 +113,16 @@ public final class OffscreenCampScreen extends GameScreen {
     this.validateWarpGraph = validateWarpGraph;
     this.validateContinuity = validateContinuity;
     this.validateWarpCollision = validateWarpCollision;
+    this.validateNativeAutomap = Boolean.getBoolean("riiablo.offscreen-automap-native");
   }
 
   /** Select a requested non-Act-I level before the normal screen setup. */
   @Override
   public void show() {
+    if (validateNativeAutomap) {
+      com.riiablo.map.RenderSystem.AUTOMAP_MODE =
+          com.riiablo.map.RenderSystem.AUTOMAP_MODE_CENTER;
+    }
     if (map.getAct() == -1 && targetLevelId >= 0) {
       Levels.Entry target = Riiablo.files.Levels.get(targetLevelId);
       if (target == null) {
@@ -177,6 +183,7 @@ public final class OffscreenCampScreen extends GameScreen {
           + " details=" + dynamicCollisionDetails);
     }
     validateTargetAutomap();
+    if (validateNativeAutomap) validateNativeAutomapRendering();
     completed = true;
 
     com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
@@ -195,6 +202,7 @@ public final class OffscreenCampScreen extends GameScreen {
         + "targetNativeCells=" + targetNativeCells + "\n"
         + "targetRooms=" + targetRoomCount + "\n"
         + "targetNativeObjects=" + targetNativeObjects + "\n"
+        + "automapNative=" + validateNativeAutomap + "\n"
         + "targetWarpCount=" + targetWarpCount + "\n"
         + "targetReverseWarpCount=" + targetReverseWarpCount + "\n"
         + "targetWarpWalkable=" + targetWarpWalkable + "\n"
@@ -232,6 +240,25 @@ public final class OffscreenCampScreen extends GameScreen {
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_CAMP] result=PASS act="
         + (map.getAct() + 1) + " player=" + player + " frames=" + renderedFrames);
     Gdx.app.exit();
+  }
+
+  private void validateNativeAutomapRendering() {
+    AutomapRenderer automap = engine.getSystem(AutomapRenderer.class);
+    if (automap == null || automap.getAutomapManager() == null) {
+      throw new IllegalStateException("Native Automap renderer unavailable");
+    }
+    AutomapManager manager = automap.getAutomapManager();
+    if (!manager.canUseSprites()) {
+      throw new IllegalStateException("MaxiMap.dc6 was not loaded");
+    }
+    int terrain = manager.getNativeTerrainDrawCount();
+    int entities = manager.getNativeEntityDrawCount();
+    int fallback = manager.getGeometricFallbackDrawCount();
+    if (terrain <= 0) {
+      throw new IllegalStateException("Native Automap rendered zero DC6 terrain cells");
+    }
+    Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_AUTOMAP_DC6] terrain=" + terrain
+        + " entities=" + entities + " fallback=" + fallback);
   }
 
   /** Builds a bounded probe over loaded native objects whose modes differ in collision. */

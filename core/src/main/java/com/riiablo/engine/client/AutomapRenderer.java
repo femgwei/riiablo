@@ -247,14 +247,21 @@ public class AutomapRenderer extends BaseSystem {
     if (!automapManager.isVisible()) {
       return;
     }
+    // The descriptor is queued by GameScreen and may use a normalized path;
+    // AutomapTileRenderer performs a lazy lookup again on the first frame.
+    automapManager.getTileRenderer().ensureSpriteLoaded();
 
     // Gdx.app.log(TAG, "processSystem: automap is visible, calling drawAutomap()...");
     
     // 收集实体标记
     collectEntityMarkers();
-    
-    // 使用原有的地形渲染
-    renderer.drawAutomap(shapes);
+
+    // Native AutoMap.txt/MaxiMap.dc6 is the primary terrain path.  The old
+    // RenderSystem line/icon renderer is only retained when no native cells
+    // can be drawn (e.g. reduced resources), so production clients do not
+    // paint the custom geometric map on top of DC6 art.
+    int nativeTerrain = renderNativeTerrainSprites();
+    if (nativeTerrain == 0) renderer.drawAutomap(shapes);
 
     renderNativeEntitySprites();
     
@@ -345,6 +352,26 @@ public class AutomapRenderer extends BaseSystem {
       if (phase == AutomapRenderState.Phase.SPRITES) {
         AutomapRenderState.leaveSprites(phase);
       }
+      shapes.setProjectionMatrix(previousProjection);
+      shapes.begin(ShapeRenderer.ShapeType.Filled);
+    }
+  }
+
+  /** Draws native terrain/object cells in the same camera space as the map. */
+  private int renderNativeTerrainSprites() {
+    if (Riiablo.batch == null || shapes == null || automapManager == null) return 0;
+    if (Riiablo.batch.isDrawing()) return 0;
+    Matrix4 previousProjection = new Matrix4(shapes.getProjectionMatrix());
+    boolean batchBegun = false;
+    shapes.end();
+    try {
+      Riiablo.batch.setProjectionMatrix(automapCamera != null && automapCamera.isInitialized()
+          ? automapCamera.combined : iso.combined);
+      Riiablo.batch.begin();
+      batchBegun = true;
+      return automapManager.renderWithSprites(Riiablo.batch, map, 0, 0, 0, 0, 0, 0);
+    } finally {
+      if (batchBegun && Riiablo.batch.isDrawing()) Riiablo.batch.end();
       shapes.setProjectionMatrix(previousProjection);
       shapes.begin(ShapeRenderer.ShapeType.Filled);
     }

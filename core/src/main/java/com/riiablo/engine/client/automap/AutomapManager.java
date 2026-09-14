@@ -126,6 +126,10 @@ public class AutomapManager implements Disposable {
   
   /** 小地图瓷砖渲染器 */
   private AutomapTileRenderer tileRenderer;
+
+  private int nativeTerrainDrawCount;
+  private int nativeEntityDrawCount;
+  private int geometricFallbackDrawCount;
   
   /** 小地图偏移 */
   private float offsetX = 0;
@@ -394,7 +398,13 @@ public class AutomapManager implements Disposable {
    */
   public void clearEntityMarkers() {
     entityMarkers.clear();
+    nativeEntityDrawCount = 0;
+    geometricFallbackDrawCount = 0;
   }
+
+  public int getNativeTerrainDrawCount() { return nativeTerrainDrawCount; }
+  public int getNativeEntityDrawCount() { return nativeEntityDrawCount; }
+  public int getGeometricFallbackDrawCount() { return geometricFallbackDrawCount; }
 
   /** Number of markers currently collected for the active Automap frame. */
   public int getEntityMarkerCount() {
@@ -633,14 +643,15 @@ public class AutomapManager implements Disposable {
    * @param screenCenterX 屏幕中心X
    * @param screenCenterY 屏幕中心Y
    */
-  public void renderWithSprites(PaletteIndexedBatch batch, Map map,
+  public int renderWithSprites(PaletteIndexedBatch batch, Map map,
                                 int viewStartX, int viewStartY, 
                                 int viewWidth, int viewHeight,
                                 float screenCenterX, float screenCenterY) {
-    if (!isVisible() || !tileRenderer.hasSprite()) return;
+    nativeTerrainDrawCount = 0;
+    if (!isVisible() || !tileRenderer.hasSprite()) return 0;
     
     AutomapLayer layer = getActiveLayer();
-    if (layer == null) return;
+    if (layer == null) return 0;
     
     float alpha = opacity;
     if (currentMode == MODE_OVERLAY) {
@@ -652,14 +663,14 @@ public class AutomapManager implements Disposable {
 
     // Native terrain cells are rendered before object/icon cells and are
     // filtered by the RoomEx-driven exploration mask.
-    renderNativeCells(batch, layer.floors, layer, alpha);
-    renderNativeCells(batch, layer.walls, layer, alpha);
+    nativeTerrainDrawCount += renderNativeCells(batch, layer.floors, layer, alpha);
+    nativeTerrainDrawCount += renderNativeCells(batch, layer.walls, layer, alpha);
     
     // 渲染物体图标
     for (int i = 0, size = layer.objects.size; i < size; i++) {
       AutomapCell cell = layer.objects.get(i);
       if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
-        tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel);
+        if (tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) nativeTerrainDrawCount++;
       }
     }
     
@@ -667,12 +678,13 @@ public class AutomapManager implements Disposable {
     for (int i = 0, size = layer.extras.size; i < size; i++) {
       AutomapCell cell = layer.extras.get(i);
       if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
-        tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel);
+        if (tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) nativeTerrainDrawCount++;
       }
     }
     
     // 恢复颜色
     batch.setColor(1f, 1f, 1f, 1f);
+    return nativeTerrainDrawCount;
   }
 
   /**
@@ -685,27 +697,31 @@ public class AutomapManager implements Disposable {
     batch.setColor(1f, 1f, 1f, alpha);
     for (int i = 0, size = entityMarkers.size; i < size; i++) {
       EntityMarker marker = entityMarkers.get(i);
+      if (AutomapEntityCells.hasCell(marker.nativeCell) && tileRenderer.hasSprite()) continue;
+      geometricFallbackDrawCount++;
       if (!AutomapEntityCells.hasCell(marker.nativeCell)) continue;
       try {
-        tileRenderer.renderTile(batch, marker.nativeCell,
-            marker.worldX, marker.worldY);
-        drawn++;
+        if (tileRenderer.renderTile(batch, marker.nativeCell,
+            marker.worldX, marker.worldY)) drawn++;
       } catch (RuntimeException ignored) {
         // Invalid/missing DC6 frame falls back to the geometric marker.
       }
     }
     batch.setColor(1f, 1f, 1f, 1f);
+    nativeEntityDrawCount = drawn;
     return drawn;
   }
 
-  private void renderNativeCells(PaletteIndexedBatch batch, Array<AutomapCell> cells,
+  private int renderNativeCells(PaletteIndexedBatch batch, Array<AutomapCell> cells,
       AutomapLayer layer, float alpha) {
+    int drawn = 0;
     for (int i = 0, size = cells.size; i < size; i++) {
       AutomapCell cell = cells.get(i);
       if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
-        tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel);
+        if (tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) drawn++;
       }
     }
+    return drawn;
   }
   
   /**

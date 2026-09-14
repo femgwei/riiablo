@@ -4642,3 +4642,27 @@ A4Q2 Diablo 完成后的多人领取/重连快照，再进入 A3/A5 仍缺少原
 
 下一项：补充 A4Q2 传送门创建后的断线重连快照（包括已有 Warp/视觉对象和玩家
 目标 Level），随后继续 A3/A5 尚未覆盖的原生 NPC 任务奖励分支。
+
+### 2026-09-14 Automap 原生 DC6 离屏绘制回归（本轮完成）
+
+- [x] 修正 `AutomapRenderer` 调用链：地形/墙体/对象优先通过
+  `AutoMap.txt + MaxiMap.dc6` 的原生 cell 绘制；仅在资源未就绪或无可绘制 cell 时
+  才进入旧几何回退路径，避免自定义墙线和方块图标覆盖原生 DC6。
+- [x] `AutomapTileRenderer` 增加延迟资源解析，兼容 AssetManager 路径规范化，并可在
+  异步资源完成后从 MPQ 装载 `MaxiMap.dc6`，不再因初始化时机永久停留在回退模式。
+- [x] 增加 `:desktop:offscreenAutomapDc6` 隐藏 1×1 入口，输出原生地形/实体绘制计数，
+  断言 `MaxiMap.dc6` 已加载且原生地形 cell 数大于 0。
+- [x] 完整 1.10f MPQ 的 Blood Moor 实跑通过：
+  `AUTOMAP_NATIVE ... cells=5505`、`OFFSCREEN_AUTOMAP_DC6 terrain=600 entities=0`
+  且 Gradle `BUILD SUCCESSFUL`。`fallback=1` 仅为玩家无原生 automapCel 的正常回退，
+  不影响地形 DC6 绘制。
+
+共享文件：`core/src/main/java/com/riiablo/engine/client/AutomapRenderer.java`、
+`core/src/main/java/com/riiablo/engine/client/automap/AutomapManager.java`、
+`core/src/main/java/com/riiablo/engine/client/automap/AutomapTileRenderer.java`、
+`core/src/main/java/com/riiablo/screen/OffscreenCampScreen.java`、
+`desktop/build.gradle`、`desktop/src/main/java/com/riiablo/OffscreenRenderClient.java`；
+未修改战斗目录、网络 schema 或生成网络文件。
+
+下一项：继续核对 Automap 原生 cell 的坐标投影和实体原生图标帧（对象/怪物/NPC），
+再处理 A4Q2 传送门断线重连快照。

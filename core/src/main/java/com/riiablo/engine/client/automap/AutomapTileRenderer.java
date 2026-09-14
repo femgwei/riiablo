@@ -157,6 +157,45 @@ public class AutomapTileRenderer implements Disposable {
     frameCaches.clear(); // 清除缓存以重新构建
   }
 
+  /**
+   * Resolves MaxiMap.dc6 lazily.  GameScreen queues the descriptor during
+   * construction and AssetManager may finish it after AutomapRenderer has
+   * initialized, so a one-shot lookup would permanently select the geometric
+   * fallback path.
+   */
+  public boolean ensureSpriteLoaded() {
+    if (currentSprite != null) return true;
+    if (Riiablo.assets == null) return false;
+    String[] paths = {PATH_MAXIMAP, PATH_MAXIMAP.replace('\\', '/')};
+    try {
+      for (String path : paths) {
+        if (!Riiablo.assets.isLoaded(path)) continue;
+        maxiMap = Riiablo.assets.get(path, DC6.class);
+        if (maxiMap == null) continue;
+        currentSprite = maxiMap;
+        if (currentSprite != null) {
+          Gdx.app.log(TAG, "Loaded native MaxiMap.dc6 lazily");
+        }
+        break;
+      }
+      if (currentSprite == null && Riiablo.mpqs != null) {
+        // AssetManager keys are platform-normalized and differ between the
+        // legacy and current clients.  Resolve the native DC6 directly from
+        // the mounted MPQ as a deterministic last step instead of silently
+        // switching to geometric markers.
+        maxiMap = DC6.loadFromFile(Riiablo.mpqs.resolve(PATH_MAXIMAP));
+        if (maxiMap != null) {
+          maxiMap.loadDirection(0);
+          currentSprite = maxiMap;
+          Gdx.app.log(TAG, "Loaded native MaxiMap.dc6 directly from MPQ");
+        }
+      }
+    } catch (RuntimeException e) {
+      Gdx.app.debug(TAG, "MaxiMap.dc6 is not ready yet: " + e.getMessage());
+    }
+    return currentSprite != null;
+  }
+
   /** 注册旧 API 使用的 levelId 到 AutoMap.txt LevelName 映射。 */
   public void setLevelName(int levelId, String levelName) {
     if (levelName == null || levelName.trim().isEmpty()) levelNames.remove(levelId);
@@ -378,18 +417,20 @@ public class AutomapTileRenderer implements Disposable {
    * @param x 屏幕X坐标
    * @param y 屏幕Y坐标
    */
-  public void renderTile(PaletteIndexedBatch batch, int frameIndex, float x, float y) {
-    if (currentSprite == null || frameIndex < 0) return;
+  public boolean renderTile(PaletteIndexedBatch batch, int frameIndex, float x, float y) {
+    if (!ensureSpriteLoaded() || frameIndex < 0) return false;
     
     try {
       // 获取纹理区域
       TextureRegion region = currentSprite.getTexture(0, frameIndex);
       if (region != null) {
         batch.draw(region, x, y);
+        return true;
       }
     } catch (Exception e) {
       // 帧索引越界，忽略
     }
+    return false;
   }
   
   /**
@@ -445,7 +486,7 @@ public class AutomapTileRenderer implements Disposable {
    * 检查是否已加载精灵资源
    */
   public boolean hasSprite() {
-    return currentSprite != null;
+    return ensureSpriteLoaded();
   }
   
   /**

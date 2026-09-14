@@ -96,6 +96,19 @@ task offscreenWarpCollision(type: JavaExec) {
   ignoreExitValue = false
 }
 
+task offscreenAutomapDc6(type: JavaExec) {
+  group = 'verification'
+  description = 'Render native AutoMap.txt/MaxiMap.dc6 cells in a hidden 1x1 client.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/automap-dc6',
+       '--mode', 'camp', '--level', project.findProperty('offscreenLevel') ?: '2',
+       '--automap-native', '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  ignoreExitValue = false
+}
+
 run {
   workingDir = rootProject.file('assets').path
   setIgnoreExitValue(true)
