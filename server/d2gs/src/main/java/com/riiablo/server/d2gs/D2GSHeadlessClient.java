@@ -266,6 +266,10 @@ public final class D2GSHeadlessClient {
       runEntityIdReuse(d2s, character);
       return;
     }
+    if (config.requireCrossAreaBaseline) {
+      runCrossAreaBaseline(d2s, character);
+      return;
+    }
     if (config.requireBaalWaveDual) {
       runBaalWaveDual(d2s, character);
       return;
@@ -2051,6 +2055,178 @@ public final class D2GSHeadlessClient {
           + firstIncarnation + " replacementIncarnation=" + secondSnapshot.incarnation
           + " delayedTombstoneIgnored=true creationTick=" + firstCreationTick
           + "->" + secondSnapshot.creationTick);
+    }
+  }
+
+  /**
+   * Cross-level continuation of the recycled-id gate.  The old entity is
+   * deleted in Underground Passage, its id is reused by a Blood Moor corpse,
+   * and the delayed old-level tombstone is delivered after the destination
+   * baseline.  A fresh connection then requests another complete baseline.
+   */
+  private void runCrossAreaBaseline(byte[] d2s, CharacterHeader character) throws Exception {
+    final int sourceLevel = 10;
+    final int destinationLevel = 2;
+    final int sourceRoom = D2GS.headlessNonAdjacentRoomPair(sourceLevel)[0];
+    int recycledId;
+    long sourceCreationTick;
+    long destinationCreationTick;
+    D2GSHeadlessClient first = new D2GSHeadlessClient(config);
+    try (Socket socket = first.openSocket();
+         DataInputStream input = input(socket);
+         OutputStream output = output(socket)) {
+      send(output, connectionPacket(character, d2s));
+      first.awaitConnection(input, deadline());
+      if (!D2GS.headlessMovePlayerToRoom(first.playerId, sourceLevel, sourceRoom)) {
+        throw new IOException("failed to stage cross-area source room");
+      }
+      awaitLevel(first, input, sourceLevel);
+
+      recycledId = D2GS.headlessCreateRoomDeadMonsterFixture(
+          first.playerId, sourceLevel, sourceRoom);
+      if (recycledId < 0) throw new IOException("failed to create source-area fixture");
+      Snapshot source = first.awaitEntity(input, recycledId, deadline());
+      Visibility sourceVisibility = first.visibility.get(recycledId);
+      sourceCreationTick = source.creationTick;
+      if (source.incarnation != 1 || sourceVisibility == null
+          || sourceVisibility.levelId != sourceLevel) {
+        throw new IllegalStateException("source-area baseline invalid: entity=" + recycledId
+            + " incarnation=" + source.incarnation + " level="
+            + (sourceVisibility == null ? -1 : sourceVisibility.levelId));
+      }
+      if (!D2GS.headlessDeleteDeadEntity(recycledId)) {
+        throw new IOException("failed to delete source-area fixture " + recycledId);
+      }
+      first.awaitDeleted(input, recycledId, deadline());
+      long inactiveDeadline = System.currentTimeMillis() + 5_000L;
+      while (D2GS.headlessEntityActive(recycledId)
+          && System.currentTimeMillis() < inactiveDeadline) {
+        Thread.sleep(40L);
+      }
+      if (D2GS.headlessEntityActive(recycledId)) {
+        throw new IllegalStateException("source-area fixture remained active: " + recycledId);
+      }
+
+      int replacement = D2GS.headlessCreateRoomDeadMonsterFixture(
+          first.playerId, destinationLevel, -1);
+      if (replacement != recycledId) {
+        throw new IllegalStateException("cross-area id was not reused: source=" + recycledId
+            + " destination=" + replacement);
+      }
+      int wrongLevelDropsBefore = first.wrongLevelDrops;
+      if (!D2GS.headlessEnterLevel(first.playerId, destinationLevel)) {
+        throw new IOException("failed to enter cross-area destination");
+      }
+      awaitLevel(first, input, destinationLevel);
+      Snapshot destination = first.awaitEntity(input, replacement, deadline());
+      Visibility destinationVisibility = first.visibility.get(replacement);
+      destinationCreationTick = destination.creationTick;
+      if (destination.incarnation != 2 || destination.deleted
+          || destinationVisibility == null
+          || destinationVisibility.levelId != destinationLevel
+          || destinationCreationTick < sourceCreationTick) {
+        throw new IllegalStateException("destination-area baseline invalid: entity=" + replacement
+            + " incarnation=" + destination.incarnation + " deleted=" + destination.deleted
+            + " level=" + (destinationVisibility == null ? -1 : destinationVisibility.levelId)
+            + " creationTick=" + sourceCreationTick + "->" + destinationCreationTick);
+      }
+
+      first.consumeFor(input, 1_500L);
+      Snapshot afterDelayedDelete = first.monsters.get(replacement);
+      Visibility afterVisibility = first.visibility.get(replacement);
+      if (afterDelayedDelete == null || afterDelayedDelete.deleted
+          || afterDelayedDelete.incarnation != 2 || afterVisibility == null
+          || afterVisibility.deleted || afterVisibility.levelId != destinationLevel
+          || first.wrongLevelDrops <= wrongLevelDropsBefore) {
+        throw new IllegalStateException("old-area tombstone contaminated destination: entity="
+            + replacement + " incarnation="
+            + (afterDelayedDelete == null ? -1 : afterDelayedDelete.incarnation)
+            + " level=" + (afterVisibility == null ? -1 : afterVisibility.levelId)
+            + " oldLevelDrops=" + wrongLevelDropsBefore + "->" + first.wrongLevelDrops);
+      }
+    }
+
+    D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+    try (Socket socket = reconnected.openSocket();
+         DataInputStream input = input(socket);
+         OutputStream output = output(socket)) {
+      send(output, connectionPacket(character, d2s));
+      reconnected.awaitConnection(input, deadline());
+      if (!D2GS.headlessEnterLevel(reconnected.playerId, destinationLevel)) {
+        throw new IOException("failed to restore destination on reconnect");
+      }
+      awaitLevel(reconnected, input, destinationLevel);
+      // awaitLevel returns as soon as it sees the player frame, which is
+      // intentionally before the END marker of headlessEnterLevel's atomic
+      // baseline. Drain that transaction before issuing a second request so
+      // its END cannot be mistaken for the response below.
+      boolean stagingBaselineEnd = false;
+      long stagingDeadline = deadline();
+      while (System.currentTimeMillis() < stagingDeadline && !stagingBaselineEnd) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+        if (packet == null) continue;
+        if (packet.dataType() == D2GSData.SnapshotBaseline) {
+          SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+          stagingBaselineEnd = marker.phase() == SnapshotBaselinePhase.END && marker.success();
+        }
+        reconnected.consume(packet);
+      }
+      if (!stagingBaselineEnd) {
+        throw new IOException("destination staging baseline did not complete");
+      }
+      // The generated outdoor level can contain non-adjacent RoomEx cells.
+      // Put the reconnecting observer in the replacement's exact room before
+      // requesting the atomic baseline, just as a real room-ring update does.
+      if (!D2GS.headlessEntityActive(recycledId)
+          || !D2GS.headlessMovePlayerToObject(reconnected.playerId, recycledId)) {
+        throw new IllegalStateException("destination fixture did not survive reconnect: entity="
+            + recycledId);
+      }
+
+      long requestId = 0x43524F53L;
+      send(output, ByteBuffer.wrap(snapshotResyncPacket(
+          requestId, reconnected.lastSnapshotTick, "cross_area_reconnect")));
+      boolean begin = false;
+      boolean end = false;
+      long baselineTick = -1L;
+      int entityFrames = 0;
+      long baselineDeadline = deadline();
+      while (System.currentTimeMillis() < baselineDeadline && !end) {
+        com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+        if (packet == null) continue;
+        if (packet.dataType() == D2GSData.SnapshotBaseline) {
+          SnapshotBaseline marker = (SnapshotBaseline) packet.data(new SnapshotBaseline());
+          if (marker.phase() == SnapshotBaselinePhase.BEGIN) {
+            begin = true;
+            baselineTick = marker.serverTick();
+          } else if (marker.phase() == SnapshotBaselinePhase.END) {
+            end = marker.success();
+          }
+        } else if (begin && packet.dataType() == D2GSData.EntitySync) {
+          entityFrames++;
+        }
+        reconnected.consume(packet);
+      }
+      Snapshot restored = reconnected.monsters.get(recycledId);
+      Visibility restoredVisibility = reconnected.visibility.get(recycledId);
+      if (!begin || !end || entityFrames == 0 || baselineTick < destinationCreationTick
+          || restored == null || restored.deleted || restored.incarnation != 1
+          || restoredVisibility == null || restoredVisibility.deleted
+          || restoredVisibility.levelId != destinationLevel
+          || restored.creationTick < destinationCreationTick) {
+        throw new IllegalStateException("cross-area resync baseline invalid: begin=" + begin
+            + " end=" + end + " tick=" + baselineTick + " entities=" + entityFrames
+            + " restored=" + (restored != null && !restored.deleted)
+            + " level=" + (restoredVisibility == null ? -1 : restoredVisibility.levelId)
+            + " creationTick=" + destinationCreationTick + "->"
+            + (restored == null ? -1 : restored.creationTick));
+      }
+      log("cross_area_baseline_pass", "entity=" + recycledId + " levels="
+          + sourceLevel + "->" + destinationLevel + " incarnation=1->2"
+          + " creationTick=" + sourceCreationTick + "->" + destinationCreationTick
+          + " reconnectCreationTick=" + restored.creationTick
+          + " baselineTick=" + baselineTick + " frames=" + entityFrames
+          + " oldLevelTombstoneIgnored=true reconnect=true");
     }
   }
 
@@ -8268,6 +8444,7 @@ public final class D2GSHeadlessClient {
     boolean requireDeathReconnect;
     boolean requireDeathIdempotency;
     boolean requireEntityIdReuse;
+    boolean requireCrossAreaBaseline;
     boolean requireBaalWaveDual;
     boolean requireA5AncientDual;
     boolean requireA4SealDual;
@@ -8332,6 +8509,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-death-reconnect".equals(arg)) config.requireDeathReconnect = true;
         else if ("--require-death-idempotency".equals(arg)) config.requireDeathIdempotency = true;
         else if ("--require-entity-id-reuse".equals(arg)) config.requireEntityIdReuse = true;
+        else if ("--require-cross-area-baseline".equals(arg)) config.requireCrossAreaBaseline = true;
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-a5-ancient-dual".equals(arg)) config.requireA5AncientDual = true;
         else if ("--require-a4-seal-dual".equals(arg)) config.requireA4SealDual = true;
@@ -8418,6 +8596,7 @@ public final class D2GSHeadlessClient {
           && !config.requireDeathReconnect
           && !config.requireDeathIdempotency
           && !config.requireEntityIdReuse
+          && !config.requireCrossAreaBaseline
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
@@ -8442,6 +8621,7 @@ public final class D2GSHeadlessClient {
           && !config.requireDeathReconnect
           && !config.requireDeathIdempotency
           && !config.requireEntityIdReuse
+          && !config.requireCrossAreaBaseline
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -8480,6 +8660,7 @@ public final class D2GSHeadlessClient {
           + " [--require-death-reconnect]"
           + " [--require-death-idempotency]"
           + " [--require-entity-id-reuse]"
+          + " [--require-cross-area-baseline]"
           + " [--require-a5-ancient-dual]"
           + " [--require-a4-seal-dual]"
           + " [--require-a4-hellforge-dual]"

@@ -5044,3 +5044,17 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 
 下一项：补齐跨区域实体基线恢复测试，验证 RoomEx 切换期间旧区域实体的删除帧、
 新区域实体快照和重连基线按 level/creation watermark 单调应用。
+
+### 2026-09-15 跨区域实体基线恢复（本轮完成）
+
+- [x] ~~跨区域同 ID 复用~~：死亡实体在地下通道 Level 10 删除回收后，同一数字 ID
+  由鲜血荒地 Level 2 的新实体复用；客户端将 incarnation 从 1 推进到 2。
+- [x] ~~旧区域 tombstone 隔离~~：注入 20 个 Sim Tick 延迟的 Level 10 删除帧，确保
+  它在 Level 2 新实体快照之后到达，仍被 level/tick 水位过滤，不污染目标区域。
+- [x] ~~重连完整基线~~：新连接进入目标实体的实际 RoomEx 后，通过 BEGIN/END 原子
+  基线恢复实体；基线 tick 与 creation watermark 不回退，旧区域实体不会复现。
+- 验证：真实 1.10f `:server:d2gs:headlessCrossAreaBaseline` 通过，日志
+  `cross_area_baseline_pass ... levels=10->2 incarnation=1->2 ... reconnect=true`。
+
+下一项：覆盖跨区域切换期间的在途 missile/state 引用清理，确保离开 Level 后旧区域
+投射物、周期状态及 owner 引用不会进入目标区域或重连基线。

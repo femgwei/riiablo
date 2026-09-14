@@ -2043,7 +2043,8 @@ public class D2GS extends ApplicationAdapter {
   }
 
   /**
-   * Creates one deterministic dead zombie in the requested RoomEx.  This is
+   * Creates one deterministic dead zombie in the requested RoomEx, or at the
+   * level entry when {@code roomId < 0}.  This is
    * intentionally smaller than the reconnect fixture above: the entity-id
    * reuse regression only needs a monster lifecycle and a tombstone, not a
    * ground item or opened object.
@@ -2063,12 +2064,16 @@ public class D2GS extends ApplicationAdapter {
         Map.Zone zone = level == null ? null : server.map.findZone(level);
         Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
             ? null : zone.getRoomsEx().get(roomId);
-        Vector2 position = findHeadlessRoomPosition(server, zone, room);
+        Vector2 position = roomId < 0
+            ? findHeadlessLevelPosition(server, levelId)
+            : findHeadlessRoomPosition(server, zone, room);
         int zombieClass = Riiablo.files.monstats == null
             ? -1 : Riiablo.files.monstats.index("zombie1");
         if (position == null || zombieClass < 0) return;
         int monsterId = server.factory.createMonster(zombieClass, position.x, position.y);
         if (monsterId < 0) return;
+        server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class)
+            .get(monsterId).set(server.map, zone);
         com.riiablo.engine.server.component.AttributesWrapper attributes = server.world
             .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(monsterId);
         com.riiablo.attributes.StatRef life = attributes == null || attributes.attrs == null

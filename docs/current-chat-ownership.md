@@ -749,3 +749,14 @@ incarnation，并继续检查跨区域实体基线恢复。
 
 当前下一项：跨区域 RoomEx 切换与重连基线恢复，校验旧区域删除帧不会影响新区域
 实体，且 level/creation watermark 保持单调。
+
+### 2026-09-15 跨区域实体基线恢复（本轮完成）
+
+- [x] `headlessCrossAreaBaseline` 覆盖 Level 10 → Level 2 的同数字 ID 复用。
+- [x] 旧 Level 延迟 tombstone 不会删除目标 Level 的新 incarnation。
+- [x] 重连后在目标 RoomEx 请求原子 BEGIN/END 基线，实体、level 和 creationTick 水位
+  保持正确且不回退。
+- 验证：真实 1.10f 离屏测试通过，输出
+  `cross_area_baseline_pass ... oldLevelTombstoneIgnored=true reconnect=true`。
+
+当前下一项：检查跨区域切换时在途 missile/state 与 owner 引用的清理和重连基线隔离。
