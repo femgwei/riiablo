@@ -19,6 +19,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.Cvars;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
+import com.riiablo.audio.SoundOptions;
 import com.riiablo.engine.client.automap.AutomapOptions;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.loader.DC6Loader;
@@ -54,6 +55,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   OptionRow automapCenter;
   OptionRow automapParty;
   OptionRow automapNames;
+  OptionRow soundEnabled;
+  OptionRow effectsEnabled;
+  OptionRow effectsVolume;
+  OptionRow musicEnabled;
+  OptionRow musicVolume;
 
   public EscapePanel() {
     Riiablo.assets.load(optionsDescriptor);
@@ -145,7 +151,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     addActor(mainPage);
 
     optionsPage = createOptionsPage();
-    soundPage = createPlaceholderPage("SOUND OPTIONS");
+    soundPage = createSoundPage();
     videoPage = createPlaceholderPage("VIDEO OPTIONS");
     automapPage = createAutomapPage();
     controlsPage = createPlaceholderPage("CONFIGURE CONTROLS");
@@ -196,6 +202,43 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshAutomapRows();
+    return page;
+  }
+
+  private Table createSoundPage() {
+    Table page = createPage("SOUND OPTIONS");
+    soundEnabled = new OptionRow("SOUND", () -> {
+      Cvars.Client.Sound.Enabled.set(!Boolean.TRUE.equals(Cvars.Client.Sound.Enabled.get()));
+      refreshSoundRows();
+    });
+    effectsEnabled = new OptionRow("SOUND EFFECTS", () -> {
+      Cvars.Client.Sound.Effects.Enabled.set(
+          !Boolean.TRUE.equals(Cvars.Client.Sound.Effects.Enabled.get()));
+      refreshSoundRows();
+    });
+    effectsVolume = new OptionRow("SOUND VOLUME", () -> {
+      Cvars.Client.Sound.Effects.Volume.set(
+          SoundOptions.nextVolume(volume(Cvars.Client.Sound.Effects.Volume.get())));
+      refreshSoundRows();
+    });
+    musicEnabled = new OptionRow("MUSIC", () -> {
+      Cvars.Client.Sound.Music.Enabled.set(
+          !Boolean.TRUE.equals(Cvars.Client.Sound.Music.Enabled.get()));
+      refreshSoundRows();
+    });
+    musicVolume = new OptionRow("MUSIC VOLUME", () -> {
+      Cvars.Client.Sound.Music.Volume.set(
+          SoundOptions.nextVolume(volume(Cvars.Client.Sound.Music.Volume.get())));
+      refreshSoundRows();
+    });
+    page.add(soundEnabled).width(520).height(27).row();
+    page.add(effectsEnabled).width(520).height(27).row();
+    page.add(effectsVolume).width(520).height(27).row();
+    page.add(musicEnabled).width(520).height(27).row();
+    page.add(musicVolume).width(520).height(27).row();
+    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+        .height(24).padTop(12).row();
+    refreshSoundRows();
     return page;
   }
 
@@ -253,6 +296,21 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     automapNames.setValue(yesNo(Cvars.Client.Automap.ShowNames.get()));
   }
 
+  private void refreshSoundRows() {
+    if (soundEnabled == null) return;
+    soundEnabled.setValue(yesNo(Cvars.Client.Sound.Enabled.get()));
+    effectsEnabled.setValue(yesNo(Cvars.Client.Sound.Effects.Enabled.get()));
+    effectsVolume.setValue(SoundOptions.percentageLabel(
+        volume(Cvars.Client.Sound.Effects.Volume.get())));
+    musicEnabled.setValue(yesNo(Cvars.Client.Sound.Music.Enabled.get()));
+    musicVolume.setValue(SoundOptions.percentageLabel(
+        volume(Cvars.Client.Sound.Music.Volume.get())));
+  }
+
+  private static float volume(Float value) {
+    return value == null ? 0f : value;
+  }
+
   private static String yesNo(Boolean value) {
     return Boolean.TRUE.equals(value) ? "YES" : "NO";
   }
@@ -287,6 +345,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private void showPage(Page page) {
     currentPage = page;
+    if (page == Page.SOUND) refreshSoundRows();
     if (page == Page.AUTOMAP) refreshAutomapRows();
     if (mainPage != null) mainPage.setVisible(page == Page.MAIN);
     if (optionsPage != null) optionsPage.setVisible(page == Page.OPTIONS);

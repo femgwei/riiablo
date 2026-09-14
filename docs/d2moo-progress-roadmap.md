@@ -4780,3 +4780,16 @@ Quest Warp 入口与过渡，不改战斗公式/技能注册）；测试半成�
 当前下一项：完成 Sound Options 的已有后端接线（总声音、效果、音乐开关与音量），再做
 Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前 Chat 继续负责
 全部地图、战斗、技能、物品、任务、NPC、网络、存档和 UI 工作。
+
+### 2026-09-15 ESC Sound Options（已完成）
+
+- [x] ~~总声音 `SOUND` 开关接入 `Client.Sounds.Enabled`~~
+- [x] ~~音效开关与 0%–100%（10% 步进）音量接入 Effects Cvar~~
+- [x] ~~音乐开关与 0%–100%（10% 步进）音量接入 Music Cvar~~
+- [x] ~~进入页面时刷新显示，并沿用 Cvar 自动持久化~~
+- [x] ~~音量纯逻辑测试、核心编译、真实 1.10f 隐藏营地回归~~
+- 现有短音效播放器只在创建播放实例时读取新音量，不能调整已经播放中的实例；音乐会
+  即时刷新。该限制记录为音频后端后续项，不阻塞 Sound Options 闭环。
+
+当前下一项：实现 Video Options 的 Gamma/VSync；已有后端无法实现的显示选项先明确
+禁用。随后实现 Configure Controls 键位编辑页面。当前 Chat 继续负责全部模块。
