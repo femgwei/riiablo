@@ -17,11 +17,12 @@ import com.badlogic.gdx.utils.Disposable;
 
 import com.riiablo.Riiablo;
 import com.riiablo.Cvars;
+import com.riiablo.audio.SoundOptions;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
-import com.riiablo.audio.SoundOptions;
 import com.riiablo.engine.client.automap.AutomapOptions;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
+import com.riiablo.graphics.VideoOptions;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.screen.MenuScreen;
@@ -60,6 +61,9 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   OptionRow effectsVolume;
   OptionRow musicEnabled;
   OptionRow musicVolume;
+  OptionRow gamma;
+  OptionRow vsync;
+  OptionRow resolution;
 
   public EscapePanel() {
     Riiablo.assets.load(optionsDescriptor);
@@ -152,7 +156,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
     optionsPage = createOptionsPage();
     soundPage = createSoundPage();
-    videoPage = createPlaceholderPage("VIDEO OPTIONS");
+    videoPage = createVideoPage();
     automapPage = createAutomapPage();
     controlsPage = createPlaceholderPage("CONFIGURE CONTROLS");
     addActor(optionsPage);
@@ -242,6 +246,27 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     return page;
   }
 
+  private Table createVideoPage() {
+    Table page = createPage("VIDEO OPTIONS");
+    gamma = new OptionRow("GAMMA", () -> {
+      Cvars.Client.Display.Gamma.set(
+          VideoOptions.nextGamma(value(Cvars.Client.Display.Gamma.get())));
+      refreshVideoRows();
+    });
+    vsync = new OptionRow("VERTICAL SYNC", () -> {
+      Cvars.Client.Display.VSync.set(!Boolean.TRUE.equals(Cvars.Client.Display.VSync.get()));
+      refreshVideoRows();
+    });
+    resolution = new OptionRow("RESOLUTION", null, false);
+    page.add(gamma).width(520).height(27).row();
+    page.add(vsync).width(520).height(27).row();
+    page.add(resolution).width(520).height(27).row();
+    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+        .height(24).padTop(12).row();
+    refreshVideoRows();
+    return page;
+  }
+
   private OptionRow booleanOption(String label, final com.riiablo.cvar.Cvar<Boolean> cvar) {
     return new OptionRow(label, () -> {
       cvar.set(!Boolean.TRUE.equals(cvar.get()));
@@ -307,8 +332,19 @@ public class EscapePanel extends WidgetGroup implements Disposable {
         volume(Cvars.Client.Sound.Music.Volume.get())));
   }
 
+  private void refreshVideoRows() {
+    if (gamma == null) return;
+    gamma.setValue(VideoOptions.gammaLabel(value(Cvars.Client.Display.Gamma.get())));
+    vsync.setValue(yesNo(Cvars.Client.Display.VSync.get()));
+    resolution.setValue("NOT AVAILABLE");
+  }
+
   private static float volume(Float value) {
     return value == null ? 0f : value;
+  }
+
+  private static float value(Float value) {
+    return value == null ? 1.0f : value;
   }
 
   private static String yesNo(Boolean value) {
@@ -346,6 +382,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   private void showPage(Page page) {
     currentPage = page;
     if (page == Page.SOUND) refreshSoundRows();
+    if (page == Page.VIDEO) refreshVideoRows();
     if (page == Page.AUTOMAP) refreshAutomapRows();
     if (mainPage != null) mainPage.setVisible(page == Page.MAIN);
     if (optionsPage != null) optionsPage.setVisible(page == Page.OPTIONS);
@@ -402,24 +439,36 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private static class OptionRow extends Table {
     final Label name;
-    final LabelButton value;
+    final Label value;
 
     OptionRow(String name, final Runnable action) {
+      this(name, action, true);
+    }
+
+    OptionRow(String name, final Runnable action, boolean enabled) {
       this.name = new Label(name, Riiablo.fonts.fontformal10);
-      this.value = new LabelButton("", Riiablo.fonts.fontformal10, Riiablo.colors.gold);
+      this.value = enabled
+          ? new LabelButton("", Riiablo.fonts.fontformal10, Riiablo.colors.gold)
+          : new Label("", Riiablo.fonts.fontformal10, Riiablo.colors.grey);
       this.name.setAlignment(Align.left);
       this.value.setAlignment(Align.right);
       add(this.name).width(230).left();
       add(this.value).width(280).right();
-      ClickListener listener = new ClickListener() {
-        @Override
-        public void clicked(InputEvent event, float x, float y) {
-          Riiablo.audio.play(2, true);
-          action.run();
-        }
-      };
-      this.name.addListener(listener);
-      this.value.addListener(listener);
+      if (enabled && action != null) {
+        ClickListener listener = new ClickListener() {
+          @Override
+          public void clicked(InputEvent event, float x, float y) {
+            Riiablo.audio.play(2, true);
+            action.run();
+          }
+        };
+        this.name.addListener(listener);
+        this.value.addListener(listener);
+      } else {
+        this.name.setColor(Riiablo.colors.grey);
+        this.name.setTouchable(Touchable.disabled);
+        this.value.setTouchable(Touchable.disabled);
+      }
     }
 
     void setValue(String text) {

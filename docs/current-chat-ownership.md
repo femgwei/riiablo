@@ -506,3 +506,16 @@ Armageddon/Hurricane 的实机观感验证。
 
 下一项：实现 Video Options 中已有后端支持的 Gamma/VSync，并将当前没有后端支持的
 视频选项明确显示为禁用，避免菜单给出虚假的可操作状态。
+
+### 2026-09-15 ESC Video Options（本轮完成）
+
+- [x] ~~将 `VIDEO OPTIONS` 占位页替换为可操作页面~~：Gamma 和 Vertical Sync 直接
+  绑定现有显示 Cvar，修改后立即作用于调色板批次和 LibGDX 图形上下文。
+- [x] ~~Gamma 按 50%–400% 每次 10% 循环~~，并对异常持久化值做边界归一化。
+- [x] ~~将当前没有运行时后端的 `RESOLUTION` 显示为 `NOT AVAILABLE` 且不可点击~~，
+  避免菜单提供无效操作。
+- [x] ~~补充 VideoOptions 纯逻辑测试~~；专项测试、核心编译、真实 1.10f 隐藏营地
+  回归均通过，营地结果为 `result=PASS act=1 player=99 frames=3`。
+
+下一项：实现 Configure Controls 键位编辑页面，沿用现有 `GdxKeyMapper` 持久化和
+冲突处理能力；暂不支持的控制项继续明确标记为禁用。

@@ -4793,3 +4793,14 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 当前下一项：实现 Video Options 的 Gamma/VSync；已有后端无法实现的显示选项先明确
 禁用。随后实现 Configure Controls 键位编辑页面。当前 Chat 继续负责全部模块。
+
+### 2026-09-15 ESC Video Options（已完成）
+
+- [x] ~~Gamma 控件接入 `Client.Display.Gamma`（50%–400%，10% 步进）~~
+- [x] ~~VSync 控件接入 `Client.Display.VSync`，沿用 `Gdx.graphics.setVSync` 后端~~
+- [x] ~~无运行时后端的 Resolution 控件显示为 `NOT AVAILABLE` 并禁用~~
+- [x] ~~Gamma 边界归一化、步进和标签单元测试~~
+- [x] ~~核心编译与真实 1.10f 隐藏营地回归~~
+
+当前下一项：实现 Configure Controls 键位编辑页面，接入现有 `GdxKeyMapper` 的按键
+保存、冲突检测和恢复默认能力。
