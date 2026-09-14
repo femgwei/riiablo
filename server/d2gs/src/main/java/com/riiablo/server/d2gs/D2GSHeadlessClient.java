@@ -132,6 +132,10 @@ public final class D2GSHeadlessClient {
   private final Set<Integer> areaHydraDeletes = new HashSet<>();
   private final Set<Integer> observedMonsterClasses = new HashSet<>();
   private final Map<Integer, AreaState> areaStates = new HashMap<>();
+  /** Per-entity state lifecycle watermarks, keyed by (entityId,stateId). */
+  private final Map<Long, Long> stateCreationTicks = new HashMap<>();
+  private final Map<Long, Long> stateExpirationTicks = new HashMap<>();
+  private final Map<Integer, Set<Integer>> entityStateIds = new HashMap<>();
   private final Set<Long> snapshotTicks = new HashSet<>();
   private int playerId = Engine.INVALID_ENTITY;
   private boolean sawAttackMode;
@@ -931,6 +935,7 @@ public final class D2GSHeadlessClient {
         Set<Integer> reconnectStates = areaStateIds(reconnected, skillId);
         boolean missileSnapshotValid = ownerActive.containsAll(reconnectActive);
         boolean stateSnapshotValid = ownerStates.containsAll(reconnectStates);
+        boolean stateWatermarkValid = lifecycleWatermarksValid(owner, reconnected);
         // A short-lived missile/state can legitimately finish during the
         // disconnect window.  In that case both the authoritative and
         // replacement sets are empty; this is a successful expiration, not a
@@ -939,7 +944,7 @@ public final class D2GSHeadlessClient {
         boolean fullyExpired = ownerActive.isEmpty() && ownerStates.isEmpty()
             && reconnectActive.isEmpty() && reconnectStates.isEmpty();
         if ((fullyExpired || !reconnectActive.isEmpty() || !reconnectStates.isEmpty())
-            && missileSnapshotValid && stateSnapshotValid) {
+            && missileSnapshotValid && stateSnapshotValid && stateWatermarkValid) {
           log("area_skill_reconnect_pass", "skill=" + skillId
               + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
               + " active=" + reconnectActive + " expiredDuringReconnect="
@@ -1038,6 +1043,16 @@ public final class D2GSHeadlessClient {
         com.riiablo.engine.server.state.StateId.ARMAGEDDON);
     expected.retainAll(client.areaStates.keySet());
     return expected;
+  }
+
+  /** Ensures a reconnect never reintroduces a state from an older tick. */
+  private static boolean lifecycleWatermarksValid(D2GSHeadlessClient owner,
+      D2GSHeadlessClient reconnected) {
+    for (Map.Entry<Long, Long> entry : reconnected.stateCreationTicks.entrySet()) {
+      Long ownerTick = owner.stateCreationTicks.get(entry.getKey());
+      if (ownerTick != null && entry.getValue() < ownerTick) return false;
+    }
+    return true;
   }
 
   private static void awaitAreaBaselines(D2GSHeadlessClient a, D2GSHeadlessClient b,
@@ -7454,8 +7469,12 @@ public final class D2GSHeadlessClient {
     if (stateIndex < 0) return;
     StateP states = (StateP) sync.component(new StateP(), stateIndex);
     int count = states.stateIdLength();
+    Set<Integer> current = new HashSet<>();
     for (int i = 0; i < count; i++) {
       int stateId = states.stateId(i);
+      current.add(stateId);
+      long key = (((long) sync.entityId()) << 32) | (stateId & 0xFFFFFFFFL);
+      stateCreationTicks.putIfAbsent(key, sync.tick());
       AreaState area = areaStates.get(stateId);
       if (area == null) {
         area = new AreaState(stateId);
@@ -7475,6 +7494,17 @@ public final class D2GSHeadlessClient {
           + " duration=" + area.duration + " level=" + area.level
           + " periodic=" + area.periodicDelayFrames + "/"
           + area.periodicCountdownFrames);
+    }
+    Set<Integer> previous = entityStateIds.put(sync.entityId(), current);
+    if (previous != null) {
+      for (Integer stateId : previous) {
+        if (!current.contains(stateId)) {
+          long key = (((long) sync.entityId()) << 32) | (stateId & 0xFFFFFFFFL);
+          stateExpirationTicks.putIfAbsent(key, sync.tick());
+          log("area_state_expire", "entity=" + sync.entityId() + " state=" + stateId
+              + " tick=" + sync.tick());
+        }
+      }
     }
   }
 

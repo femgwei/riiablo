@@ -4942,3 +4942,16 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：将死亡队列和短生命周期 state 的创建/过期 tick 纳入同一顺序观测，并在
 断线重连测试中比较实体水位，确保删除事件不会在重连后重复投递。
+
+### 2026-09-15 State 过期与重连水位（本轮完成）
+
+- [x] ~~记录 StateP 的实体级创建/过期 Tick~~：StateP 从实体快照中出现时建立水位，
+  后续快照中消失时记录过期 Tick，并输出 `area_state_expire` 调试日志。
+- [x] ~~重连水位校验~~：替代客户端恢复的 state 创建 Tick 不得早于原客户端水位；
+  与现有 missile 活动集合子集约束同时生效，避免旧 state 在重连后复活。
+- 验证：真实 1.10f `headlessAreaSkill -PareaSkill=57` 通过，日志包含
+  `area_state_expire`、`area_skill_reconnect_pass ... fullyExpired=false stale=false`；
+  Hydra 62 重连也保持通过。
+
+下一项：把死亡队列本身的入队、处理和实体删除 Tick 暴露给离屏夹具，验证同一死亡
+事件在一个或相邻 Tick 内只结算一次，并与重连后的死亡/掉落水位对齐。
