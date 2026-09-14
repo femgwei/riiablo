@@ -19,6 +19,8 @@ import org.apache.commons.collections4.Trie;
 import org.apache.commons.collections4.trie.PatriciaTrie;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.SortedMap;
 
 public class GdxKeyMapper extends SaveableKeyMapper {
@@ -26,6 +28,30 @@ public class GdxKeyMapper extends SaveableKeyMapper {
 
   private final Preferences PREFERENCES = Gdx.app.getPreferences(TAG);
   private final Trie<String, MappedKey> KEYS = new PatriciaTrie<>();
+  private final Map<String, int[]> DEFAULTS = new HashMap<>();
+
+  @Override
+  public boolean add(MappedKey key) {
+    // Capture the constructor assignment before SaveableKeyMapper loads a persisted
+    // override. This gives the controls screen a stable, per-process default.
+    DEFAULTS.putIfAbsent(key.getAlias().toLowerCase(), key.getAssignments());
+    return super.add(key);
+  }
+
+  /** Restores one mapping to its constructor default and persists it immediately. */
+  public boolean reset(MappedKey key) {
+    if (key == null) return false;
+    int[] defaults = DEFAULTS.get(key.getAlias().toLowerCase());
+    if (defaults == null) return false;
+    key.assign(defaults);
+    save(key);
+    return true;
+  }
+
+  /** Restores all registered mappings to their constructor defaults. */
+  public void resetAll() {
+    for (MappedKey key : this) reset(key);
+  }
 
   @NonNull
   public SortedMap<String, MappedKey> prefixMap(String alias) {

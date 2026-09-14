@@ -519,3 +519,17 @@ Armageddon/Hurricane 的实机观感验证。
 
 下一项：实现 Configure Controls 键位编辑页面，沿用现有 `GdxKeyMapper` 持久化和
 冲突处理能力；暂不支持的控制项继续明确标记为禁用。
+
+### 2026-09-15 ESC Configure Controls（本轮完成）
+
+- [x] ~~将 `CONFIGURE CONTROLS` 占位页替换为可操作按键页面~~；常用游戏、技能、腰带、
+  移动和 Automap 映射均显示主键/副键。
+- [x] ~~点击主键或副键后捕获下一次键盘输入~~；Esc 取消，Backspace 清除，重复占用会
+  显示冲突并保留原绑定。
+- [x] ~~接入 `GdxKeyMapper` 的即时保存和默认值恢复~~；默认值在加载持久化覆盖前捕获，
+  `RESET DEFAULTS` 可恢复并写回配置。
+- [x] ~~完成核心编译与真实 1.10f 隐藏营地回归~~；营地结果为
+  `result=PASS act=1 player=99 frames=3`。
+
+下一项：继续补齐 Options 中尚未覆盖的客户端显示/输入细节，并把键位编辑的离屏 UI
+状态纳入专项截图测试；战斗、地图和网络逻辑保持不变。

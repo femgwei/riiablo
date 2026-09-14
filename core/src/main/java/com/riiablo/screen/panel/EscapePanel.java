@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -14,9 +15,14 @@ import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.Input;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import com.riiablo.Riiablo;
 import com.riiablo.Cvars;
+import com.riiablo.Keys;
 import com.riiablo.audio.SoundOptions;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
@@ -25,6 +31,7 @@ import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.graphics.VideoOptions;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.map.RenderSystem;
+import com.riiablo.key.MappedKey;
 import com.riiablo.screen.MenuScreen;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
@@ -64,6 +71,19 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   OptionRow gamma;
   OptionRow vsync;
   OptionRow resolution;
+  Label controlsStatus;
+  final List<ControlBindingRow> controlRows = new ArrayList<>();
+  ControlBindingRow capturingRow;
+  int capturingAssignment;
+
+  private static final MappedKey[] CONFIGURABLE_KEYS = {
+      Keys.Inventory, Keys.Character, Keys.Spells, Keys.Hireling, Keys.Quests,
+      Keys.Party, Keys.Stash, Keys.Vendor, Keys.SwapWeapons, Keys.Enter, Keys.Automap,
+      Keys.Skill1, Keys.Skill2, Keys.Skill3, Keys.Skill4, Keys.Skill5, Keys.Skill6,
+      Keys.Skill7, Keys.Skill8, Keys.Belt1, Keys.Belt2, Keys.Belt3, Keys.Belt4,
+      Keys.MoveUp, Keys.MoveDown, Keys.MoveLeft, Keys.MoveRight, Keys.Run,
+      Keys.AutomapZoomIn, Keys.AutomapZoomOut, Keys.AutomapReset
+  };
 
   public EscapePanel() {
     Riiablo.assets.load(optionsDescriptor);
@@ -158,7 +178,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     soundPage = createSoundPage();
     videoPage = createVideoPage();
     automapPage = createAutomapPage();
-    controlsPage = createPlaceholderPage("CONFIGURE CONTROLS");
+    controlsPage = createControlsPage();
     addActor(optionsPage);
     addActor(soundPage);
     addActor(videoPage);
@@ -170,6 +190,12 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     setVisible(false);
     //setTouchable(Touchable.childrenOnly);
     setTouchable(Touchable.enabled);
+    addListener(new InputListener() {
+      @Override
+      public boolean keyDown(InputEvent event, int keycode) {
+        return captureKey(keycode);
+      }
+    });
     //setDebug(true, true);
   }
 
@@ -265,6 +291,92 @@ public class EscapePanel extends WidgetGroup implements Disposable {
         .height(24).padTop(12).row();
     refreshVideoRows();
     return page;
+  }
+
+  private Table createControlsPage() {
+    Table page = createPage("CONFIGURE CONTROLS");
+    controlsStatus = new Label("SELECT A BINDING TO CHANGE IT", Riiablo.fonts.fontformal10,
+        Riiablo.colors.grey);
+    controlsStatus.setAlignment(Align.center);
+    page.add(controlsStatus).width(570).height(24).row();
+
+    Table grid = new Table();
+    grid.defaults().pad(1);
+    controlRows.clear();
+    for (int i = 0; i < CONFIGURABLE_KEYS.length; i++) {
+      ControlBindingRow row = new ControlBindingRow(CONFIGURABLE_KEYS[i]);
+      controlRows.add(row);
+      grid.add(row).width(190).height(27);
+      if ((i + 1) % 3 == 0) grid.row();
+    }
+    if (CONFIGURABLE_KEYS.length % 3 != 0) grid.row();
+    page.add(grid).width(580).row();
+    page.add(menuButton("RESET DEFAULTS", this::resetControlDefaults))
+        .height(24).padTop(8).row();
+    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+        .height(24).padTop(4).row();
+    return page;
+  }
+
+  private void beginCapture(ControlBindingRow row, int assignment) {
+    capturingRow = row;
+    capturingAssignment = assignment;
+    controlsStatus.setText("PRESS A KEY FOR " + row.mapping.getName()
+        + (assignment == MappedKey.PRIMARY_MAPPING ? " (PRIMARY)" : " (SECONDARY)"));
+    if (getStage() != null) getStage().setKeyboardFocus(this);
+  }
+
+  private boolean captureKey(int keycode) {
+    if (currentPage != Page.CONTROLS || capturingRow == null) return false;
+    if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
+      cancelCapture("KEY CHANGE CANCELLED");
+      return true;
+    }
+    if (keycode == Input.Keys.BACKSPACE) {
+      capturingRow.mapping.unassign(capturingAssignment);
+      Riiablo.keys.save(capturingRow.mapping);
+      refreshControlRows();
+      cancelCapture("BINDING CLEARED");
+      return true;
+    }
+
+    for (MappedKey existing : Riiablo.keys.get(keycode)) {
+      if (existing != capturingRow.mapping) {
+        controlsStatus.setText("CONFLICT: " + existing.getName());
+        return true;
+      }
+    }
+    if (capturingRow.mapping.isAssigned(keycode)
+        && capturingRow.mapping.getMapping(capturingAssignment) != keycode) {
+      controlsStatus.setText("ALREADY USED BY " + capturingRow.mapping.getName());
+      return true;
+    }
+
+    try {
+      capturingRow.mapping.assign(capturingAssignment, keycode);
+      Riiablo.keys.save(capturingRow.mapping);
+      refreshControlRows();
+      cancelCapture("BINDING SAVED");
+    } catch (IllegalArgumentException e) {
+      controlsStatus.setText("KEY CANNOT BE ASSIGNED");
+    }
+    return true;
+  }
+
+  private void cancelCapture(String message) {
+    capturingRow = null;
+    controlsStatus.setText(message);
+    if (getStage() != null) getStage().setKeyboardFocus(null);
+  }
+
+  private void resetControlDefaults() {
+    Riiablo.keys.resetAll();
+    refreshControlRows();
+    cancelCapture("DEFAULTS RESTORED");
+  }
+
+  private void refreshControlRows() {
+    for (ControlBindingRow row : controlRows) row.refresh();
   }
 
   private OptionRow booleanOption(String label, final com.riiablo.cvar.Cvar<Boolean> cvar) {
@@ -474,5 +586,47 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     void setValue(String text) {
       value.setText(text);
     }
+  }
+
+  private final class ControlBindingRow extends Table {
+    final MappedKey mapping;
+    final Label name;
+    final LabelButton primary;
+    final LabelButton secondary;
+
+    ControlBindingRow(MappedKey mapping) {
+      this.mapping = mapping;
+      name = new Label(mapping.getName(), Riiablo.fonts.fontformal10);
+      primary = new LabelButton("", Riiablo.fonts.fontformal10, Riiablo.colors.gold);
+      secondary = new LabelButton("", Riiablo.fonts.fontformal10, Riiablo.colors.gold);
+      name.setAlignment(Align.left);
+      primary.setAlignment(Align.center);
+      secondary.setAlignment(Align.center);
+      add(name).width(88).left();
+      add(primary).width(49).center();
+      add(secondary).width(49).center();
+      primary.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          beginCapture(ControlBindingRow.this, MappedKey.PRIMARY_MAPPING);
+        }
+      });
+      secondary.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          beginCapture(ControlBindingRow.this, MappedKey.SECONDARY_MAPPING);
+        }
+      });
+      refresh();
+    }
+
+    void refresh() {
+      primary.setText(keyLabel(mapping.getPrimaryAssignment()));
+      secondary.setText(keyLabel(mapping.getSecondaryMapping()));
+    }
+  }
+
+  private static String keyLabel(int keycode) {
+    return keycode == MappedKey.NOT_MAPPED ? "--" : Input.Keys.toString(keycode);
   }
 }
