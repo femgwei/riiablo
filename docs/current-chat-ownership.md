@@ -40,6 +40,17 @@
 - 总体对齐进度：约 70%（详见路线图）
 - 第一章最小可玩闭环：约 79%
 
+## 最近更新（2026-09-14，A4Q2 重连）
+
+- 当前 Chat 继续统一负责地图、战斗、技能、物品、任务、NPC、网络和存档。
+- A4Q2 Diablo → Tyrael → Harrogath 传送门已加入断线重连回归：断线客户端恢复
+  `REWARD_GRANTED`、共享传送门和目标 Level；跨 Act Warp 由 D2GS 原子切换目标地图并
+  发送新的权威快照。
+- 验证命令：`./gradlew.bat :server:d2gs:headlessA4SealDual --no-daemon`，真实 1.10f
+  MPQ 通过；结果记录在 `d2moo-progress-roadmap.md`。
+- 本轮唯一共享逻辑修改为 `server/d2gs/.../D2GS.java` 的跨 Act Warp 分支；
+  `WarpInteractor` 同 Act 路径和战斗系统注册保持不变。
+
 ## 最近更新（2026-09-11）
 
 - Automap 原生 DC6 实体 SpriteBatch 阶段已加入 ShapeRenderer 投影矩阵保存/恢复、异常

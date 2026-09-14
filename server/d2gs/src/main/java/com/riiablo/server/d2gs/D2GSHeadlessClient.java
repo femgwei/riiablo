@@ -2543,8 +2543,46 @@ public final class D2GSHeadlessClient {
               com.riiablo.engine.server.quest.Act4DiabloQuest.HARROGATH) != portal) {
         throw new IOException("A4Q2 second Tyrael claim duplicated or failed");
       }
+      socketA.close();
+      awaitEntityInactive(a.playerId, deadline());
+      D2GSHeadlessClient reconnect = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnect.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(character, d2s));
+        reconnect.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessEnterLevel(reconnect.playerId, fortress)) {
+          throw new IOException("A4Q2 portal reconnect staging unavailable");
+        }
+        awaitLevel(reconnect, reconnectInput, fortress, deadline());
+        QuestResult restored = requestSnapshot(reconnect, reconnectInput,
+            reconnectOutput, 764L);
+        if (!hasQuestFlagAt(restored, Riiablo.ACT4,
+                com.riiablo.engine.server.quest.Act4DiabloQuest.RECORD,
+                NativeQuestRecord.REWARD_GRANTED)) {
+          throw new IOException("A4Q2 granted record lost after reconnect");
+        }
+        int restoredPortal = D2GS.headlessQuestWarpEntity(fortress,
+            com.riiablo.engine.server.quest.Act4DiabloQuest.HARROGATH);
+        if (restoredPortal == Engine.INVALID_ENTITY) {
+          throw new IOException("A4Q2 Act V portal Warp lost after reconnect");
+        }
+        reconnect.awaitVisibleEntity(reconnectInput, restoredPortal, deadline());
+        if (!D2GS.headlessMovePlayerToObject(reconnect.playerId, restoredPortal)) {
+          throw new IOException("A4Q2 reconnect portal approach unavailable");
+        }
+        send(reconnectOutput, questRequestPacket(765L, QuestOperation.WARP_INTERACTION,
+            restoredPortal, -1));
+        QuestResult warp = reconnect.awaitQuestResult(reconnectInput, 765L, deadline());
+        if (warp == null || !warp.success()) {
+          throw new IOException("A4Q2 reconnect portal Warp rejected: "
+              + (warp == null ? "NO_RESULT" : warp.reason()));
+        }
+        awaitLevel(reconnect, reconnectInput,
+            com.riiablo.engine.server.quest.Act4DiabloQuest.HARROGATH, deadline());
+      }
       log("a4q2_seal_dual_pass", "seals=5 bosses=3 diablo=" + diablo
-          + " portal=" + portal + " claims=2 clients=true,true");
+          + " portal=" + portal + " claims=2 reconnect=restored warp=true clients=true,true");
     }
   }
 

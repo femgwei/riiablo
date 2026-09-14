@@ -4687,3 +4687,23 @@ A4Q2 Diablo 完成后的多人领取/重连快照，再进入 A3/A5 仍缺少原
 
 下一项：恢复 A4Q2 Tyrael→Harrogath 传送门断线重连测试，修复重连后的
 `WARP_DESTINATION_MISSING`，随后继续 A3/A5 尚未覆盖的原生 NPC 任务奖励分支。
+
+### 2026-09-14 A4Q2 传送门断线重连修复（本轮完成）
+
+- [x] `D2GS.QuestRequest` 识别跨 Act Quest Warp；在目标 Zone 尚未生成时，不再误报
+  `WARP_DESTINATION_MISSING`，而是进入权威跨 Act 过渡。
+- [x] 新增最小原子过渡：捕获源 Warp 目标、切换并生成目标 Act、重新绑定玩家
+  `MapWrapper/RoomEx/Box2DBody`，发布 `ZoneChangeEvent`，刷新原生对象并同步玩家快照。
+  同 Act Warp 仍完全走 `WarpInteractor` 原路径。
+- [x] 扩展 `headlessA4SealDual`：A4Q2 五封印/三 Boss/Diablo、双端 Tyrael 唯一传送门、
+  客户端 A 断线重连、任务 `REWARD_GRANTED` 恢复、复用原 Warp 并成功进入 Harrogath。
+- [x] 真实 1.10f MPQ 离屏回归通过：
+  `:server:d2gs:headlessA4SealDual --no-daemon`，输出
+  `a4q2_seal_dual_pass ... reconnect=restored warp=true clients=true,true`。
+
+共享文件：`server/d2gs/src/main/java/com/riiablo/server/d2gs/D2GS.java`（仅增加跨 Act
+Quest Warp 入口与过渡，不改战斗公式/技能注册）；测试半成品
+`D2GSHeadlessClient.java` 已纳入本次提交。工作区历史 `.log` 测试产物仍保持未跟踪。
+
+下一项：继续 A3/A5 尚未覆盖的原生 NPC 任务奖励分支，并补充跨 Act 过渡对多玩家
+同时处于不同区域时的会话策略验证。

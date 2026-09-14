@@ -6133,10 +6133,23 @@ public class D2GS extends ApplicationAdapter {
         world.getSystem(ObjectInteractor.class).interact(playerId, request.targetEntityId());
       }
     } else if (request.operation() == QuestOperation.WARP_INTERACTION) {
-      reason = validateWarpInteraction(playerId, request.targetEntityId());
-      if (reason == null && !world.getSystem(WarpInteractor.class)
-          .warp(playerId, request.targetEntityId())) {
-        reason = "WARP_TRANSITION_FAILED";
+      // A D2GS instance owns one generated Act at a time.  Quest portals
+      // (notably A4Q2 Diablo -> Harrogath) can legitimately target another
+      // Act, so the destination Zone is not present until the transition
+      // starts.  Capture that case before the normal WarpInteractor path;
+      // the helper performs the same authoritative validation and commits an
+      // atomic map/position/ZoneChange transition after loading the target Act.
+      if (isCrossActWarp(playerId, request.targetEntityId())) {
+        reason = validateWarpInteraction(playerId, request.targetEntityId(), true);
+        if (reason == null && !warpAcrossAct(playerId, request.targetEntityId())) {
+          reason = "WARP_TRANSITION_FAILED";
+        }
+      } else {
+        reason = validateWarpInteraction(playerId, request.targetEntityId());
+        if (reason == null && !world.getSystem(WarpInteractor.class)
+            .warp(playerId, request.targetEntityId())) {
+          reason = "WARP_TRANSITION_FAILED";
+        }
       }
       // A warp changes the player's level metadata even when the destination
       // has no native RoomEx topology.  Publish the player's authoritative
@@ -6238,6 +6251,11 @@ public class D2GS extends ApplicationAdapter {
   }
 
   private String validateWarpInteraction(int playerId, int warpId) {
+    return validateWarpInteraction(playerId, warpId, false);
+  }
+
+  private String validateWarpInteraction(int playerId, int warpId,
+                                         boolean allowMissingCrossActDestination) {
     com.riiablo.engine.server.component.Warp warp =
         world.getMapper(com.riiablo.engine.server.component.Warp.class).get(warpId);
     com.riiablo.engine.server.component.Interactable interactable =
@@ -6264,7 +6282,78 @@ public class D2GS extends ApplicationAdapter {
     float range = Math.max(1f, interactable.range) + 2f;
     if (source.position.dst2(target.position) > range * range) return "WARP_OUT_OF_RANGE";
     Map.Zone destination = map.findZone(warp.dstLevel);
-    return destination == null ? "WARP_DESTINATION_MISSING" : null;
+    if (destination != null) return null;
+    if (allowMissingCrossActDestination
+        && headlessAct(warp.dstLevel.Id) != map.getAct()) return null;
+    return "WARP_DESTINATION_MISSING";
+  }
+
+  /**
+   * Returns whether a Warp targets an Act that is not currently generated.
+   * This is intentionally limited to the single-Act D2GS map lifecycle; a
+   * normal same-Act Warp continues through WarpInteractor unchanged.
+   */
+  private boolean isCrossActWarp(int playerId, int warpId) {
+    if (map == null || world == null || map.getAct() < 0) return false;
+    com.riiablo.engine.server.component.Warp warp = world
+        .getMapper(com.riiablo.engine.server.component.Warp.class).get(warpId);
+    return warp != null && warp.dstLevel != null
+        && QuestWarp.isQuestWarp(warp.index)
+        && headlessAct(warp.dstLevel.Id) != map.getAct();
+  }
+
+  /**
+   * Commits a cross-Act quest Warp on the simulation thread.  The source Warp
+   * entity is allowed to disappear when the old Act is disposed; its target
+   * Level is captured before that point and the player is rebound to the new
+   * Zone before the ZoneChange event is published.
+   */
+  private boolean warpAcrossAct(int playerId, int warpId) {
+    com.riiablo.engine.server.component.Warp warp = world
+        .getMapper(com.riiablo.engine.server.component.Warp.class).get(warpId);
+    com.riiablo.engine.server.component.Position position = world
+        .getMapper(com.riiablo.engine.server.component.Position.class).get(playerId);
+    com.riiablo.engine.server.component.MapWrapper wrapper = world
+        .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+    if (warp == null || warp.dstLevel == null || position == null || wrapper == null) return false;
+    final int destinationLevelId = warp.dstLevel.Id;
+    final int sourceAct = map.getAct();
+    final int destinationAct = headlessAct(destinationLevelId);
+    if (destinationAct == map.getAct()) return false;
+
+    ensureHeadlessAct(this, destinationLevelId);
+    com.riiablo.codec.excel.Levels.Entry level = Riiablo.files == null
+        || Riiablo.files.Levels == null ? null : Riiablo.files.Levels.get(destinationLevelId);
+    Map.Zone destination = level == null ? null : map.findZone(level);
+    Vector2 arrival = findHeadlessLevelPosition(this, destinationLevelId);
+    if (destination == null || arrival == null) {
+      Gdx.app.error(TAG, "[WARP_CROSS_ACT] destination unavailable level="
+          + destinationLevelId + " act=" + destinationAct);
+      return false;
+    }
+
+    position.position.set(arrival);
+    wrapper.set(map, destination);
+    Map.RoomEx room = destination.findRoomEx(arrival.x, arrival.y);
+    wrapper.roomId = room == null ? -1 : room.id;
+    com.riiablo.engine.server.component.Box2DBody body = world
+        .getMapper(com.riiablo.engine.server.component.Box2DBody.class).get(playerId);
+    if (body != null && body.body != null) body.body.setTransform(arrival, body.body.getAngle());
+    com.riiablo.engine.server.component.UnitStates states = world
+        .getMapper(com.riiablo.engine.server.component.UnitStates.class).get(playerId);
+    if (states != null) {
+      if (states.stateList == null) states.init(playerId);
+      states.stateList.addState(com.riiablo.engine.server.state.StateId.SYNC_WARPED,
+          2, 1, playerId);
+    }
+    world.getSystem(EventSystem.class).dispatch(
+        com.riiablo.engine.server.event.ZoneChangeEvent.obtain(playerId, destination));
+    world.process();
+    if (mapManager != null) mapManager.createNativeObjects(destination);
+    Gdx.app.log(TAG, "[WARP_CROSS_ACT] player=" + playerId + " sourceAct="
+        + sourceAct + " destinationAct=" + destinationAct + " destination=" + destination.level.LevelName + "("
+        + destinationLevelId + ") arrival=" + arrival);
+    return true;
   }
 
   private static boolean isNetworkQuestObject(
