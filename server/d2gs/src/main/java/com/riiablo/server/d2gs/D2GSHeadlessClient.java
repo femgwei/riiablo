@@ -209,6 +209,8 @@ public final class D2GSHeadlessClient {
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA2DungeonWarpDual
         ? createGeneratedAmazonSave(80, 0)
+        : config.requireAreaTransitionDual
+        ? createGeneratedAmazonSave(80, 0)
         : config.requireA3DungeonWarpDual
         ? createGeneratedAmazonSave(80, 0)
         : config.requireA4DungeonWarpDual
@@ -292,6 +294,10 @@ public final class D2GSHeadlessClient {
     }
     if (config.requireA2DungeonWarpDual) {
       runA2DungeonWarpDual(d2s, character);
+      return;
+    }
+    if (config.requireAreaTransitionDual) {
+      runAreaTransitionDual(d2s, character);
       return;
     }
     if (config.requireA3DungeonWarpDual) {
@@ -3647,6 +3653,94 @@ public final class D2GSHeadlessClient {
       log("a2_dungeon_warp_dual_pass", "pairs=" + pairs.length
           + " roundTrips=" + roundTrips + " boundaryRejects=" + boundaryRejects
           + " clients=true,true");
+    }
+  }
+
+  /**
+   * Compact cross-Act area-transition gate.  The focused dungeon fixtures
+   * exercise every side-area pair, but until now there was no single check
+   * that the normal outdoor progression survives a client-to-client level
+   * change.  Each representative 1.10f edge is traversed in both directions
+   * by both clients through the normal WARP_INTERACTION request path.
+   */
+  private void runAreaTransitionDual(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient a = new D2GSHeadlessClient(config);
+    D2GSHeadlessClient b = new D2GSHeadlessClient(config);
+    byte[] peerD2s = createGeneratedObserverSave("AreaPeer", 0x41545250);
+    CharacterHeader peerCharacter = CharacterHeader.read(peerD2s);
+    // Outdoor A1 exits are represented by edge metadata rather than Warp
+    // entities in the reduced export, so A1 is covered by an authoritative
+    // level staging hop below.  A2-A5 use real static Warp entities.
+    int[][] pairs = {
+        {42, 56},
+        {76, 84},
+        {LEVEL_OUTERSTEPPES, LEVEL_PLAINSOFDESPAIR},
+        {LEVEL_HARROGATH, LEVEL_BLOODYFOOTHILLS}
+    };
+    int transitions = 0;
+    try (Socket socketA = a.openSocket(); Socket socketB = b.openSocket()) {
+      DataInputStream inA = input(socketA), inB = input(socketB);
+      OutputStream outA = output(socketA), outB = output(socketB);
+      send(outA, connectionPacket(character, d2s));
+      send(outB, connectionPacket(peerCharacter, peerD2s));
+      a.awaitConnection(inA, deadline());
+      b.awaitConnection(inB, deadline());
+      if (!D2GS.headlessEnterLevel(a.playerId, 2)
+          || !D2GS.headlessEnterLevel(b.playerId, 2)) {
+        throw new IOException("area transition A1 staging unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, 2, "area-transition-a1-source");
+      if (!D2GS.headlessEnterLevel(a.playerId, 3)
+          || !D2GS.headlessEnterLevel(b.playerId, 3)) {
+        throw new IOException("area transition A1 destination unavailable");
+      }
+      awaitTwoQuestLevels(a, b, inA, inB, 3, "area-transition-a1-destination");
+      transitions++;
+      for (int i = 0; i < pairs.length; i++) {
+        int source = pairs[i][0], destination = pairs[i][1];
+        if (!D2GS.headlessEnterLevel(a.playerId, source)
+            || !D2GS.headlessEnterLevel(b.playerId, source)) {
+          throw new IOException("area transition source unavailable: " + source);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB, source, "area-transition-source-" + source);
+        int warp = D2GS.headlessStaticWarpEntity(source, destination);
+        int reverse = D2GS.headlessStaticWarpEntity(destination, source);
+        if (warp == Engine.INVALID_ENTITY || reverse == Engine.INVALID_ENTITY
+            || !D2GS.headlessMovePlayerToObject(a.playerId, warp)
+            || !D2GS.headlessMovePlayerToObject(b.playerId, warp)) {
+          throw new IOException("area transition Warp unavailable: " + source + "->" + destination);
+        }
+        long request = 30_000L + i * 10L;
+        send(outA, questRequestPacket(request, QuestOperation.WARP_INTERACTION, warp, -1));
+        send(outB, questRequestPacket(request + 1L, QuestOperation.WARP_INTERACTION, warp, -1));
+        QuestResult resultA = a.awaitQuestResult(inA, request, deadline());
+        QuestResult resultB = b.awaitQuestResult(inB, request + 1L, deadline());
+        if (resultA == null || !resultA.success() || resultB == null || !resultB.success()) {
+          throw new IOException("area transition rejected: " + source + "->" + destination);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB, destination,
+            "area-transition-destination-" + destination);
+        transitions += 2;
+
+        if (!D2GS.headlessMovePlayerToObject(a.playerId, reverse)
+            || !D2GS.headlessMovePlayerToObject(b.playerId, reverse)) {
+          throw new IOException("area transition reverse Warp unavailable: "
+              + destination + "->" + source);
+        }
+        long reverseRequest = request + 2L;
+        send(outA, questRequestPacket(reverseRequest, QuestOperation.WARP_INTERACTION, reverse, -1));
+        send(outB, questRequestPacket(reverseRequest + 1L,
+            QuestOperation.WARP_INTERACTION, reverse, -1));
+        QuestResult reverseA = a.awaitQuestResult(inA, reverseRequest, deadline());
+        QuestResult reverseB = b.awaitQuestResult(inB, reverseRequest + 1L, deadline());
+        if (reverseA == null || !reverseA.success() || reverseB == null || !reverseB.success()) {
+          throw new IOException("area transition reverse rejected: " + destination + "->" + source);
+        }
+        awaitTwoQuestLevels(a, b, inA, inB, source,
+            "area-transition-return-" + source);
+      }
+      log("area_transition_dual_pass", "pairs=" + pairs.length
+          + " transitions=" + transitions + " clients=true,true");
     }
   }
 
@@ -7702,6 +7796,7 @@ public final class D2GSHeadlessClient {
     boolean requireA1ObjectInteractionDual;
     boolean requireA2TombDual;
     boolean requireA2DungeonWarpDual;
+    boolean requireAreaTransitionDual;
     boolean requireA3DungeonWarpDual;
     boolean requireA4DungeonWarpDual;
     boolean requireA5DungeonWarpDual;
@@ -7761,6 +7856,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-a1-object-interaction-dual".equals(arg)) config.requireA1ObjectInteractionDual = true;
         else if ("--require-a2-tomb-dual".equals(arg)) config.requireA2TombDual = true;
         else if ("--require-a2-dungeon-warp-dual".equals(arg)) config.requireA2DungeonWarpDual = true;
+        else if ("--require-area-transition-dual".equals(arg)) config.requireAreaTransitionDual = true;
         else if ("--require-a3-dungeon-warp-dual".equals(arg)) config.requireA3DungeonWarpDual = true;
         else if ("--require-a4-dungeon-warp-dual".equals(arg)) config.requireA4DungeonWarpDual = true;
         else if ("--require-a5-dungeon-warp-dual".equals(arg)) config.requireA5DungeonWarpDual = true;
@@ -7821,6 +7917,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA2Q6Reconnect
           && !config.requireA2TombDual
           && !config.requireA2DungeonWarpDual
+          && !config.requireAreaTransitionDual
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
           && !config.requireA5DungeonWarpDual
@@ -7840,6 +7937,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA2Q6Reconnect
           && !config.requireA2TombDual
           && !config.requireA2DungeonWarpDual
+          && !config.requireAreaTransitionDual
           && !config.requireA3DungeonWarpDual
           && !config.requireA4DungeonWarpDual
           && !config.requireA5DungeonWarpDual
@@ -7889,6 +7987,7 @@ public final class D2GSHeadlessClient {
           + " [--require-a2-object-interaction-dual]"
           + " [--require-a2q6-reconnect]"
           + " [--require-a2-tomb-dual]"
+          + " [--require-area-transition-dual]"
           + " [--require-a5-worldstone-preset-dual]"
           + " [--require-early-object-dual] [--require-den-quest]"
           + " [--require-quest-recovery]"
