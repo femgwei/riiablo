@@ -636,3 +636,16 @@ Armageddon/Hurricane 的实机观感验证。
 
 下一项：补充多 missile 并发和死亡事件幂等的独立离屏门槛，继续检查同一 Sim Tick 内
   生成、命中、删除与重连基线的顺序一致性。
+
+### 2026-09-15 多 missile 并发与死亡奖励边界（本轮完成）
+
+- [x] ~~`headlessMissileCombat` 增加并发投射物断言~~：至少 2 个不同 missile entity、
+  owner 字段有效、同一 tick 的重复非删除同步直接失败。
+- [x] ~~新增 `headlessCombatEntityEdges` 聚合任务~~：与 `headlessFallenDual` 一起
+  验证复活 Fallen 的第二次死亡不会重复经验/掉落，且双客户端死亡、复活和拾取一致。
+- 验证：1.10f `headlessMissileCombat` 通过（4 个 missile entity）；
+  `headlessFallenDual` 通过（`dual_revive_pass`、`dual_native_no_reward_pass`、
+  `dual_pickup_pass`）。
+
+当前下一项：在上述门槛上增加固定 40ms Sim Tick 的生成→命中→删除顺序观测，并将
+  missile 生命周期水位纳入重连基线比较；继续避免修改伤害和技能公式。

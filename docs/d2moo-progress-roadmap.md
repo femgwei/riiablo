@@ -4912,3 +4912,20 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：增加多 missile 并发、死亡事件幂等的独立离屏门槛，验证同一 40ms Sim Tick
   内生成/命中/删除顺序及重连基线一致性。
+
+### 2026-09-15 多 missile 并发与死亡奖励边界（本轮完成）
+
+- [x] ~~强化 `headlessMissileCombat` 多投射物断言~~：真实 1.10f 资源下连续攻击必须
+  观察到至少 2 个不同 missile entity ID；记录其 owner，并拒绝同一实体在同一服务器
+  tick 的重复非删除同步。
+- [x] ~~纳入 `headlessCombatEntityEdges` 聚合入口~~：统一运行多 missile 门槛与
+  `headlessFallenDual` 双客户端死亡/复活/奖励生命周期门槛，验证复活 Fallen 的第二次
+  死亡不会重复经验或掉落，两个客户端的死亡、复活和拾取结果一致。
+- 验证：`D2_HOME=G:\\BaiduNetdiskDownload\\Diablo II 1.10F`
+  `:server:d2gs:headlessMissileCombat` 通过（`missiles=4`）；
+  `:server:d2gs:headlessFallenDual` 通过（`dual_revive_pass`、
+  `dual_native_no_reward_pass`、`dual_pickup_pass`）；聚合任务已纳入
+  `headlessCombatReconnectRegression`。
+
+下一项：补充固定 40ms Sim Tick 的“同 tick 生成→命中→删除”顺序观测，覆盖 missile
+  生命周期和死亡队列在重连前后的 tick/实体水位一致性；继续保持只读验证，不改伤害公式。

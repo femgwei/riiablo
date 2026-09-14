@@ -104,6 +104,16 @@ tasks.register('headlessMissileCombat', JavaExec) {
   }
 }
 
+tasks.register('headlessCombatEntityEdges') {
+  group = 'verification'
+  description = 'Runs the multi-missile and death-idempotency edge gates.'
+  // The missile fixture asserts multiple authoritative projectile ids, while
+  // the Fallen dual fixture asserts duplicate-death reward idempotency.  Keep
+  // these as separate protocol runs so one low-life native spawn cannot mask
+  // the other edge case.
+  dependsOn 'headlessMissileCombat', 'headlessFallenDual'
+}
+
 tasks.register('headlessMultiplayer', JavaExec) {
   group = 'verification'
   description = 'Runs two windowless clients and verifies bidirectional player visibility.'
@@ -445,7 +455,8 @@ tasks.register('headlessMultiplayerSnapshotRegression') {
 tasks.register('headlessCombatReconnectRegression') {
   group = 'verification'
   description = 'Runs missile, area-state, death/resurrection and reconnect entity gates.'
-  dependsOn 'headlessMissileCombat', 'headlessFallenDual', 'headlessAreaSkillRegression'
+  dependsOn 'headlessMissileCombat', 'headlessFallenDual', 'headlessAreaSkillRegression',
+      'headlessCombatEntityEdges'
 }
 
 tasks.register('headlessA2ObjectInteractionDual', JavaExec) {

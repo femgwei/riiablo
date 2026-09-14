@@ -117,6 +117,12 @@ public final class D2GSHeadlessClient {
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
   private final Map<Integer, Visibility> visibility = new HashMap<>();
   private final Set<Integer> playerMissiles = new HashSet<>();
+  /** Last authoritative tick observed for each missile entity. */
+  private final Map<Integer, Long> missileTicks = new HashMap<>();
+  /** Entity ids that were sent more than once in the same tick. */
+  private final Set<Integer> duplicateMissileFrames = new HashSet<>();
+  /** Owner id carried by each observed missile entity. */
+  private final Map<Integer, Integer> missileOwners = new HashMap<>();
   /** Area-skill entities observed on this protocol client. */
   private final Map<Integer, AreaMissile> areaMissiles = new HashMap<>();
   private final Set<Integer> areaHydraMonsters = new HashSet<>();
@@ -433,6 +439,23 @@ public final class D2GSHeadlessClient {
         }
 
         Snapshot result = monsters.get(target.entityId);
+        if (config.requireMissile && playerMissiles.size() < 2) {
+          throw new IllegalStateException("missile fixture observed fewer than two authoritative "
+              + "projectile entities: " + playerMissiles.size());
+        }
+        if (config.requireMissile) {
+          for (Integer missile : playerMissiles) {
+            Integer owner = missileOwners.get(missile);
+            if (owner == null || owner <= 0) {
+              throw new IllegalStateException("missile owner mismatch: entity=" + missile
+                  + " owner=" + owner + " player=" + playerId);
+            }
+          }
+          if (!duplicateMissileFrames.isEmpty()) {
+            throw new IllegalStateException("missile entity synchronised twice in one tick: "
+                + duplicateMissileFrames);
+          }
+        }
         log("pass", String.format(
             "player=%d target=%d skill=%d life=%.2f->%.2f damaged=%s attackMode=%s missiles=%d",
             playerId, target.entityId, config.skillId, initialLife,
@@ -7299,6 +7322,12 @@ public final class D2GSHeadlessClient {
       int missileIndex = findComponent(sync, ComponentP.MissileP);
       if (missileIndex >= 0) {
         MissileP missile = (MissileP) sync.component(new MissileP(), missileIndex);
+        long tick = sync.tick();
+        Long previousTick = missileTicks.put(sync.entityId(), tick);
+        if (previousTick != null && previousTick.longValue() == tick
+            && (sync.flags() & EntityFlags.deleted) == 0) {
+          duplicateMissileFrames.add(sync.entityId());
+        }
         AreaMissile area = areaMissiles.get(sync.entityId());
         if (area == null) {
           area = new AreaMissile(sync.entityId());
@@ -7309,6 +7338,7 @@ public final class D2GSHeadlessClient {
         area.damageLevel = missile.damageLevel();
         area.deleted = (sync.flags() & EntityFlags.deleted) != 0;
         if (!area.deleted) area.everActive = true;
+        missileOwners.putIfAbsent(sync.entityId(), missile.ownerId());
         if (missile.ownerId() == playerId && playerMissiles.add(sync.entityId())) {
           log("missile", "entity=" + sync.entityId() + " owner=" + missile.ownerId()
               + " missile=" + missile.missileId() + " skill=" + missile.skillId()
