@@ -41,6 +41,8 @@
   `ModeChangeEvent.restart` 区分“同模式仅重启动画”和真实模式切换。
 - [x] 客户端 `CofResolver`、`CofLayerLoader` 对 restart 事件保留现有 COF 与 DCC 层，
   只将 `Animation` 帧归零并更新包围盒；真实模式切换仍完整加载新 COF。
+- [x] 本地玩家的已加载 DCC 描述在攻击/站立模式间切换时保留，重复路径不再增加
+  AssetManager 引用；新帧就绪前继续使用旧层，避免异步资源窗口造成空白闪帧。
 - [x] 修复同一实体 marker/资源刷新期间的旧帧丢失风险，不改变服务器关键帧、伤害或
   投射物时序。
 - [x] `SequenceHandlerTest.repeatedModeRestartsAnimationBeforeItCanSkipTheKeyframe` 扩展

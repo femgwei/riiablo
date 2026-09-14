@@ -118,7 +118,7 @@ public class CofLayerLoader extends IteratingSystem {
           .replace(start +  7, start + 10, type.COMP[component[c]])
           .replace(start + 12, start + 15, layer.weaponClass);
 
-      unload(c, descriptors);
+      if (!isLocalPlayer(entityId)) unload(c, descriptors);
       AssetDescriptor<? extends DC> descriptor = descriptors[c];
       String path = builder.replace(start + 16, start + 19, DCC.EXT).toString();
       if (Riiablo.mpqs.contains(path)) {
@@ -130,7 +130,7 @@ public class CofLayerLoader extends IteratingSystem {
       }
 
       if (DEBUG) Gdx.app.log(TAG, "Loading[" + Engine.getComposite(c) + "] " + path);
-      Riiablo.assets.load(descriptor);
+      if (!Riiablo.assets.isLoaded(descriptor)) Riiablo.assets.load(descriptor);
       requiresReload |= (1 << c);
     }
 
@@ -143,5 +143,9 @@ public class CofLayerLoader extends IteratingSystem {
     descriptors[c] = null;
     Riiablo.assets.unload(descriptor.fileName);
     if (DEBUG) Gdx.app.debug(TAG, "Unloading[" + Engine.getComposite(c) + "] " + descriptor.fileName);
+  }
+
+  private static boolean isLocalPlayer(int entityId) {
+    return Riiablo.game != null && Riiablo.game.player == entityId;
   }
 }
