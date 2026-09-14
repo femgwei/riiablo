@@ -4816,3 +4816,13 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 当前下一项：将 Configure Controls 的离屏 UI 状态（捕获中、冲突、恢复默认）纳入
 截图/自动化测试，随后继续 Options 其余客户端输入细节。当前 Chat 继续负责全部模块。
+
+### 2026-09-15 Configure Controls 离屏状态回归（已完成）
+
+- [x] ~~状态契约与生产菜单共用~~（捕获、冲突、保存、清除、恢复默认）
+- [x] ~~新增 `controls-capture` / `controls-conflict` / `controls-defaults` PNG 场景~~
+- [x] ~~manifest 自动断言 9 个界面场景全部 PASS~~
+- [x] ~~ControlsOptionsState 单元测试、核心编译通过~~
+
+当前下一项：继续核对 Options 中尚未覆盖的客户端输入/显示细节；随后收敛 A1–A5
+游戏流程的离屏回归。

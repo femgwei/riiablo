@@ -534,3 +534,15 @@ Armageddon/Hurricane 的实机观感验证。
 
 下一项：继续补齐 Options 中尚未覆盖的客户端显示/输入细节，并把键位编辑的离屏 UI
 状态纳入专项截图测试；战斗、地图和网络逻辑保持不变。
+
+### 2026-09-15 Configure Controls 离屏状态回归（本轮完成）
+
+- [x] ~~抽取 Configure Controls 状态契约~~：统一描述空闲、等待主/副键、冲突、已保存、
+  清除和恢复默认状态。
+- [x] ~~隐藏渲染入口增加三种状态场景~~：`controls-capture`、`controls-conflict`、
+  `controls-defaults`，与实际菜单共用状态标签。
+- [x] ~~生成 854x480 PNG 并写入 manifest~~；三种新增场景及原有六种界面场景全部 PASS。
+- [x] ~~补充 `ControlsOptionsStateTest` 状态转换测试~~，核心编译和测试均通过。
+
+下一项：继续核对并实现 Options 中尚未覆盖的客户端输入/显示细节；若无新的 UI 缺口，
+转入 A1–A5 游戏流程的离屏回归收敛。

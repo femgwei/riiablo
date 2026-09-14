@@ -72,6 +72,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   OptionRow vsync;
   OptionRow resolution;
   Label controlsStatus;
+  final ControlsOptionsState controlsState = new ControlsOptionsState();
   final List<ControlBindingRow> controlRows = new ArrayList<>();
   ControlBindingRow capturingRow;
   int capturingAssignment;
@@ -322,14 +323,15 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     capturingRow = row;
     capturingAssignment = assignment;
     Riiablo.keys.setCaptureMode(true);
-    controlsStatus.setText("PRESS A KEY FOR " + row.mapping.getName()
-        + (assignment == MappedKey.PRIMARY_MAPPING ? " (PRIMARY)" : " (SECONDARY)"));
+    controlsState.beginCapture(row.mapping.getName(), assignment != MappedKey.PRIMARY_MAPPING);
+    controlsStatus.setText(controlsState.label());
     if (getStage() != null) getStage().setKeyboardFocus(this);
   }
 
   private boolean captureKey(int keycode) {
     if (currentPage != Page.CONTROLS || capturingRow == null) return false;
     if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
+      controlsState.cancel();
       cancelCapture("KEY CHANGE CANCELLED");
       return true;
     }
@@ -337,18 +339,21 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       capturingRow.mapping.unassign(capturingAssignment);
       Riiablo.keys.save(capturingRow.mapping);
       refreshControlRows();
+      controlsState.cleared();
       cancelCapture("BINDING CLEARED");
       return true;
     }
 
     for (MappedKey existing : Riiablo.keys.get(keycode)) {
       if (existing != capturingRow.mapping) {
-        controlsStatus.setText("CONFLICT: " + existing.getName());
+        controlsState.conflict(existing.getName());
+        controlsStatus.setText(controlsState.label());
         return true;
       }
     }
     if (capturingRow.mapping.isAssigned(keycode)
         && capturingRow.mapping.getMapping(capturingAssignment) != keycode) {
+      controlsState.conflict(capturingRow.mapping.getName());
       controlsStatus.setText("ALREADY USED BY " + capturingRow.mapping.getName());
       return true;
     }
@@ -357,7 +362,8 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       capturingRow.mapping.assign(capturingAssignment, keycode);
       Riiablo.keys.save(capturingRow.mapping);
       refreshControlRows();
-      cancelCapture("BINDING SAVED");
+      controlsState.saved();
+      cancelCapture(controlsState.label());
     } catch (IllegalArgumentException e) {
       controlsStatus.setText("KEY CANNOT BE ASSIGNED");
     }
@@ -374,7 +380,8 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   private void resetControlDefaults() {
     Riiablo.keys.resetAll();
     refreshControlRows();
-    cancelCapture("DEFAULTS RESTORED");
+    controlsState.defaultsRestored();
+    cancelCapture(controlsState.label());
   }
 
   private void refreshControlRows() {

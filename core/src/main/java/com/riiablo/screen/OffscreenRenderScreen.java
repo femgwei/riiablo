@@ -15,6 +15,7 @@ import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
 import com.riiablo.graphics.PaletteIndexedBatch;
+import com.riiablo.screen.panel.ControlsOptionsState;
 import java.util.Locale;
 
 /**
@@ -27,7 +28,7 @@ public final class OffscreenRenderScreen extends ScreenAdapter {
   private static final int HEIGHT = 480;
   private static final String[] CASES = {
       "death-overlay", "inventory-open", "character-panel-open", "npc-dialog", "party-panel",
-      "dual-client-combat"
+      "dual-client-combat", "controls-capture", "controls-conflict", "controls-defaults"
   };
 
   private final FileHandle output;
@@ -84,6 +85,7 @@ public final class OffscreenRenderScreen extends ScreenAdapter {
     else if ("npc-dialog".equals(scenario)) drawNpcDialog();
     else if ("party-panel".equals(scenario)) drawPartyPanel();
     else if ("dual-client-combat".equals(scenario)) drawDualClientCombat();
+    else if (scenario.startsWith("controls-")) drawControlsState(scenario);
     shapes.end();
 
     drawText(scenario);
@@ -173,6 +175,19 @@ public final class OffscreenRenderScreen extends ScreenAdapter {
     }
   }
 
+  private void drawControlsState(String scenario) {
+    shapes.setColor(0.09f, 0.07f, 0.05f, 1f);
+    shapes.rect(90, 68, WIDTH - 180, 365);
+    shapes.setColor(0.22f, 0.17f, 0.1f, 1f);
+    for (int row = 0; row < 8; row++) {
+      for (int column = 0; column < 3; column++) {
+        shapes.rect(110 + column * 210, 345 - row * 31, 195, 23);
+      }
+    }
+    shapes.setColor(0.42f, 0.30f, 0.12f, 1f);
+    shapes.rect(180, 92, WIDTH - 360, 27);
+  }
+
   private void drawText(String scenario) {
     PaletteIndexedBatch batch = Riiablo.batch;
     BitmapFont font = Riiablo.fonts != null && Riiablo.fonts.fontformal12 != null
@@ -199,6 +214,21 @@ public final class OffscreenRenderScreen extends ScreenAdapter {
       font.draw(batch, "CLIENT A  Fallen revived   drop before pickup", 42, 385);
       font.draw(batch, "CLIENT B  Fallen revived   item after pickup", 450, 385);
       font.draw(batch, "A/B snapshots consistent   ground removed after pickup", 184, 82);
+    } else if (scenario.startsWith("controls-")) {
+      ControlsOptionsState state = new ControlsOptionsState();
+      if ("controls-capture".equals(scenario)) {
+        state.beginCapture("Skill 1", false);
+      } else if ("controls-conflict".equals(scenario)) {
+        state.beginCapture("Skill 1", false);
+        state.conflict("Inventory");
+      } else {
+        state.defaultsRestored();
+      }
+      center(font, batch, "CONFIGURE CONTROLS", 407);
+      center(font, batch, state.label(), 103);
+      font.draw(batch, "Inventory   I / B", 125, 348);
+      font.draw(batch, "Skill 1     F1 / --", 335, 348);
+      font.draw(batch, "Automap     TAB / --", 545, 348);
     } else {
       font.draw(batch, "PARTY", 55, 380);
       font.draw(batch, "Invite   Accept   Leave   Hostile", 55, 105);
