@@ -321,6 +321,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   private void beginCapture(ControlBindingRow row, int assignment) {
     capturingRow = row;
     capturingAssignment = assignment;
+    Riiablo.keys.setCaptureMode(true);
     controlsStatus.setText("PRESS A KEY FOR " + row.mapping.getName()
         + (assignment == MappedKey.PRIMARY_MAPPING ? " (PRIMARY)" : " (SECONDARY)"));
     if (getStage() != null) getStage().setKeyboardFocus(this);
@@ -365,6 +366,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private void cancelCapture(String message) {
     capturingRow = null;
+    Riiablo.keys.setCaptureMode(false);
     controlsStatus.setText(message);
     if (getStage() != null) getStage().setKeyboardFocus(null);
   }

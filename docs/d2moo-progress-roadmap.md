@@ -4811,6 +4811,7 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 - [x] ~~点击绑定后捕获按键，支持 Esc 取消与 Backspace 清除~~
 - [x] ~~检测跨动作键位冲突并保留原绑定~~
 - [x] ~~接入 `GdxKeyMapper` 即时保存和注册默认值恢复~~
+- [x] ~~录入期间抑制原快捷键动作，避免改键误触发游戏操作~~
 - [x] ~~核心编译、专项测试和真实 1.10f 隐藏营地回归~~
 
 当前下一项：将 Configure Controls 的离屏 UI 状态（捕获中、冲突、恢复默认）纳入

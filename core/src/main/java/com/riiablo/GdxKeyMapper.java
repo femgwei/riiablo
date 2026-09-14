@@ -29,6 +29,7 @@ public class GdxKeyMapper extends SaveableKeyMapper {
   private final Preferences PREFERENCES = Gdx.app.getPreferences(TAG);
   private final Trie<String, MappedKey> KEYS = new PatriciaTrie<>();
   private final Map<String, int[]> DEFAULTS = new HashMap<>();
+  private boolean captureMode;
 
   @Override
   public boolean add(MappedKey key) {
@@ -51,6 +52,11 @@ public class GdxKeyMapper extends SaveableKeyMapper {
   /** Restores all registered mappings to their constructor defaults. */
   public void resetAll() {
     for (MappedKey key : this) reset(key);
+  }
+
+  /** Temporarily prevents captured keys from also dispatching gameplay actions. */
+  public void setCaptureMode(boolean captureMode) {
+    this.captureMode = captureMode;
   }
 
   @NonNull
@@ -150,6 +156,7 @@ public class GdxKeyMapper extends SaveableKeyMapper {
 
     @Override
     public boolean keyDown(int keycode) {
+      if (captureMode) return false;
       ObjectSet<MappedKey> keys = lookup(keycode);
       if (keys != null) {
         for (MappedKey key : keys) {
@@ -162,6 +169,7 @@ public class GdxKeyMapper extends SaveableKeyMapper {
 
     @Override
     public boolean keyUp(int keycode) {
+      if (captureMode) return false;
       ObjectSet<MappedKey> keys = lookup(keycode);
       if (keys != null) {
         for (MappedKey key : keys) {
