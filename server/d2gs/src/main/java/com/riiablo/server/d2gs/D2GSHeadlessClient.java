@@ -397,6 +397,20 @@ public final class D2GSHeadlessClient {
         }
         if (config.requirePeer) verifyPeerVisibility(character, d2s, input, output);
 
+        // The generated Amazon save intentionally starts in Rogue Encampment,
+        // which has no hostile monsters in native 1.10f.  The missile fixture
+        // is a combat-path test, so enter Blood Moor through the same
+        // authoritative level transition used by the multiplayer scenarios
+        // before selecting a target.  This keeps the fixture deterministic
+        // across resource versions instead of relying on town inhabitants or
+        // a random initial spawn.
+        if (config.requireMissile) {
+          if (!D2GS.headlessEnterLevel(playerId, 2)) {
+            throw new IOException("could not enter Blood Moor for missile fixture");
+          }
+          log("combat_fixture_level", "player=" + playerId + " level=2");
+        }
+
         Snapshot target = awaitTarget(input, System.currentTimeMillis() + config.testTimeoutMillis);
         if (config.requireMonsterMovement) {
           Snapshot movingTarget = awaitMeleeTarget(
@@ -822,7 +836,6 @@ public final class D2GSHeadlessClient {
       throw new IllegalStateException("area-skill reconnect has no active missiles: skill="
           + skillId + " missiles=" + areaMissileSummary(owner.areaMissiles));
     }
-    Set<Integer> statesBefore = areaStateIds(owner, skillId);
     int oldObserverId = oldObserver.playerId;
     oldSocket.close();
     long disconnectDeadline = System.currentTimeMillis() + 5_000L;
@@ -859,15 +872,15 @@ public final class D2GSHeadlessClient {
         Set<Integer> ownerActive = activeAreaMissiles(owner, skillId);
         Set<Integer> reconnectActive = activeAreaMissiles(reconnected, skillId);
         // A short-lived child may expire between the old observer's last
-        // packet and the replacement baseline. That is valid native timing;
-        // a reconnect may only contain missiles that were active before the
-        // disconnect, and must not resurrect a deleted/unknown entity.
+        // packet and the replacement baseline. Conversely, persistent area
+        // skills (for example Frozen Orb) may spawn a new child while the
+        // observer is disconnected. Reconnect must therefore be a subset of
+        // the *current authoritative* set, never a resurrection of a deleted
+        // or unknown entity; both cases are handled by the ownerActive check.
         Set<Integer> ownerStates = areaStateIds(owner, skillId);
         Set<Integer> reconnectStates = areaStateIds(reconnected, skillId);
-        boolean missileSnapshotValid = activeBefore.containsAll(reconnectActive)
-            && ownerActive.containsAll(reconnectActive);
-        boolean stateSnapshotValid = statesBefore.containsAll(reconnectStates)
-            && ownerStates.containsAll(reconnectStates);
+        boolean missileSnapshotValid = ownerActive.containsAll(reconnectActive);
+        boolean stateSnapshotValid = ownerStates.containsAll(reconnectStates);
         if ((!reconnectActive.isEmpty() || !reconnectStates.isEmpty())
             && missileSnapshotValid && stateSnapshotValid) {
           log("area_skill_reconnect_pass", "skill=" + skillId

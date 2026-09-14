@@ -4888,3 +4888,17 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：继续补齐断线重连后的战斗实体增量（导弹、状态和死亡事件）专项，重点确认
 旧实体 ID 不复活、短生命周期实体自然过期不会污染重连基线。
+
+### 2026-09-15 断线重连战斗实体增量（已完成）
+
+- [x] ~~修复 1.10f 下 `headlessMissileCombat` 无目标问题~~：战斗夹具连接后通过
+  权威 Level 2 入口进入 Blood Moor，避免在无敌对单位的营地等待目标。
+- [x] ~~收敛导弹/区域技能/状态/死亡实体的重连规则~~：重连快照以服务器当前活动集合
+  为准，允许断线期间合法生成的新 missile/state，已删除实体 ID 不会复活或污染基线。
+- 验证：`D2_HOME=G:\\BaiduNetdiskDownload\\Diablo II 1.10F`
+  `:server:d2gs:headlessCombatReconnectRegression` 通过（`headlessMissileCombat`、
+  `headlessFallenDual`、`headlessAreaSkillRegression` 全部成功）；标枪命中、Frozen Orb
+  重连、Fallen 复活/掉落/对端拾取均有协议级断言。
+
+下一项：继续补齐多人战斗快照边界场景，覆盖多 missile 并发、状态过期与实体删除同 tick、
+  重连后死亡事件幂等，并持续检查固定 40ms Sim Tick 的时序一致性。

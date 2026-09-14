@@ -609,3 +609,19 @@ Armageddon/Hurricane 的实机观感验证。
 
 下一项：继续补齐断线重连后的战斗实体增量（导弹、状态和死亡事件）专项，重点确认
 旧实体 ID 不复活、短生命周期实体自然过期不会污染重连基线。
+
+### 2026-09-15 断线重连战斗实体增量（本轮完成）
+
+- [x] ~~修正 `headlessMissileCombat` 1.10f 夹具初始场景~~：生成角色先通过权威
+  `headlessEnterLevel` 进入 Blood Moor，再选择原生敌对目标，避免在 Rogue Encampment
+  等待不存在的怪物。
+- [x] ~~验证导弹、AreaSkill、State 和死亡/复活实体的重连增量~~：允许断线期间合法
+  生成的新子实体，仍拒绝已删除或未知实体重新出现；Fallen 双客户端死亡/复活、掉落
+  和对端拾取保持一致。
+- 验证：真实 1.10f `:server:d2gs:headlessCombatReconnectRegression` 通过，包含
+  `headlessMissileCombat`、`headlessFallenDual`、`headlessAreaSkillRegression`；
+  基础标枪命中 `life=5.00->3.00`，Frozen Orb 重连 `stale=false`，Fallen 重连复活/掉落
+  与拾取均通过。
+
+下一项：继续完善多人战斗快照的边界场景（多投射物并发、状态过期与实体删除同 tick、
+  重连后死亡事件幂等），并保持固定 40ms Sim Tick 与渲染线程隔离。

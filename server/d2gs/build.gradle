@@ -442,6 +442,12 @@ tasks.register('headlessMultiplayerSnapshotRegression') {
       'headlessReconnectVisibility', 'headlessReconnectGroundLoot'
 }
 
+tasks.register('headlessCombatReconnectRegression') {
+  group = 'verification'
+  description = 'Runs missile, area-state, death/resurrection and reconnect entity gates.'
+  dependsOn 'headlessMissileCombat', 'headlessFallenDual', 'headlessAreaSkillRegression'
+}
+
 tasks.register('headlessA2ObjectInteractionDual', JavaExec) {
   group = 'verification'
   description = 'Runs two windowless clients through A2 Tainted Sun and Arcane Tome interactions.'
