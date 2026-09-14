@@ -136,10 +136,12 @@ public class AutomapRenderer extends BaseSystem {
    */
   private void syncModeFromRenderSystem() {
     int prevMode = automapManager.getMode();
+    boolean miniMap = false;
     switch (RenderSystem.AUTOMAP_MODE) {
       case RenderSystem.AUTOMAP_MODE_TOP_LEFT:
       case RenderSystem.AUTOMAP_MODE_TOP_RIGHT:
         automapManager.setMode(AutomapManager.MODE_MINIMAP);
+        miniMap = true;
         break;
       case RenderSystem.AUTOMAP_MODE_CENTER:
         automapManager.setMode(AutomapManager.MODE_FULL);
@@ -149,6 +151,7 @@ public class AutomapRenderer extends BaseSystem {
         automapManager.setMode(AutomapManager.MODE_OFF);
         break;
     }
+    if (automapCamera != null) automapCamera.setMiniMapMode(miniMap);
     // 如果模式变化，记录日志
     if (prevMode != automapManager.getMode()) {
       // Gdx.app.log(TAG, "Mode synced: RenderSystem.AUTOMAP_MODE=" + RenderSystem.AUTOMAP_MODE 
@@ -435,8 +438,11 @@ public class AutomapRenderer extends BaseSystem {
    * 渲染增强的实体标记（使用 AutomapManager 的标记系统）
    */
   private void renderEnhancedMarkers() {
-    // AutomapManager 会处理实体的增强渲染
-    // 目前使用 RenderSystem 的基础渲染，将来可以替换为更复杂的图标渲染
+    if (automapManager == null || shapes == null) return;
+    // Player/NPC markers do not have a MaxiMap.dc6 cell in all 1.10f table
+    // exports. Draw geometric fallbacks in the same projection instead of
+    // silently dropping those markers.
+    automapManager.render(shapes, map, 0, 0, 0, 0, 0, 0);
   }
   
   /**

@@ -57,6 +57,9 @@ public class AutomapCamera extends OrthographicCamera {
   
   /** 当前缩放值 */
   private float automapZoom = DEFAULT_ZOOM;
+
+  /** Whether the camera is currently rendered through a half-size mini-map viewport. */
+  private boolean miniMapMode;
   
   /** 是否已初始化 */
   private boolean initialized = false;
@@ -87,7 +90,7 @@ public class AutomapCamera extends OrthographicCamera {
     this.far = mainCamera.far;
     
     // 设置初始缩放
-    this.zoom = automapZoom;
+    this.zoom = effectiveZoom();
     
     // 同步位置
     syncWithMainCamera();
@@ -129,7 +132,7 @@ public class AutomapCamera extends OrthographicCamera {
     this.position.set(projectedPosition.x, projectedPosition.y, 0f);
     
     // 设置缩放
-    this.zoom = automapZoom;
+    this.zoom = effectiveZoom();
     
     // 更新投影矩阵
     this.update();
@@ -184,6 +187,26 @@ public class AutomapCamera extends OrthographicCamera {
    */
   public void setAutomapZoom(float zoom) {
     this.automapZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+  }
+
+  /** Selects full-screen or half-size viewport projection. */
+  public void setMiniMapMode(boolean miniMapMode) {
+    this.miniMapMode = miniMapMode;
+    this.zoom = effectiveZoom();
+    if (initialized) update();
+  }
+
+  public boolean isMiniMapMode() {
+    return miniMapMode;
+  }
+
+  private float effectiveZoom() {
+    // AutomapRenderer applies a 0.5 viewport in mini-map mode while retaining
+    // the camera's native viewport dimensions.  Keeping the same zoom makes
+    // every native DC6 cell, terrain edge, and entity marker exactly 1/2 the
+    // full-screen pixel size.  Multiplying zoom here would compound the
+    // viewport reduction and incorrectly shrink content to 1/4.
+    return automapZoom;
   }
   
   //==========================================================================

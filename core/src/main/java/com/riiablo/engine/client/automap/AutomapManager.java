@@ -130,6 +130,8 @@ public class AutomapManager implements Disposable {
   private int nativeTerrainDrawCount;
   private int nativeEntityDrawCount;
   private int geometricFallbackDrawCount;
+  /** Marker instances whose native DC6 cell was actually rendered this frame. */
+  private final Array<EntityMarker> nativeRenderedMarkers = new Array<>();
   
   /** 小地图偏移 */
   private float offsetX = 0;
@@ -316,7 +318,15 @@ public class AutomapManager implements Disposable {
       return;
     }
     Map.Zone zone = map.getZone(playerX, playerY);
-    layer.updateRoomExploration(zone, playerX, playerY);
+    // Native D2 towns are fully revealed from the moment the level opens;
+    // exploration fog only applies to outdoor/dungeon levels.  Reveal the
+    // whole town footprint before building cells so its NPCs, waypoints and
+    // exits are visible immediately.
+    if (zone != null && zone.isTown()) {
+      layer.revealRect(zone.x(), zone.y(), zone.width(), zone.height());
+    } else {
+      layer.updateRoomExploration(zone, playerX, playerY);
+    }
     if (zone != null && !nativeCellsBuilt.containsKey(levelId)) {
       String nativeName = zone.automapLevelName();
       if (nativeName != null) {
@@ -398,6 +408,7 @@ public class AutomapManager implements Disposable {
    */
   public void clearEntityMarkers() {
     entityMarkers.clear();
+    nativeRenderedMarkers.clear();
     nativeEntityDrawCount = 0;
     geometricFallbackDrawCount = 0;
   }
@@ -444,7 +455,15 @@ public class AutomapManager implements Disposable {
   public void addNativeEntityMarker(int entityId, int type, float worldX, float worldY,
                                     String name, Color color, float size, int nativeCell) {
     addEntityMarker(entityId, type, worldX, worldY, name, color, size);
-    entityMarkers.peek().nativeCell = nativeCell;
+    // addEntityMarker updates an existing id in place; peek() could assign the
+    // cell to an unrelated marker when duplicate refreshes are received.
+    for (int i = 0, n = entityMarkers.size; i < n; i++) {
+      EntityMarker marker = entityMarkers.get(i);
+      if (marker.entityId == entityId) {
+        marker.nativeCell = nativeCell;
+        return;
+      }
+    }
   }
   
   /**
@@ -549,6 +568,14 @@ public class AutomapManager implements Disposable {
   private void renderEntityMarkers(ShapeRenderer shapes, float alpha) {
     for (int i = 0, size = entityMarkers.size; i < size; i++) {
       EntityMarker marker = entityMarkers.get(i);
+      // Only suppress the geometric fallback after a native cell was
+      // successfully drawn.  A valid-looking frame can still be absent from
+      // a reduced MaxiMap.dc6 export; in that case the player/NPC must remain
+      // visible through the fallback marker.
+      if (nativeRenderedMarkers.contains(marker, true)) continue;
+      AutomapProjection.worldToAutomap(marker.worldX, marker.worldY, tmpVec);
+      float markerX = tmpVec.x;
+      float markerY = tmpVec.y;
       
       Color color = marker.color;
       shapes.setColor(color.r, color.g, color.b, alpha);
@@ -557,57 +584,57 @@ public class AutomapManager implements Disposable {
       switch (marker.type) {
         case AutomapIconType.PLAYER:
           // 玩家用较大的圆点
-          shapes.circle(marker.worldX, marker.worldY, marker.size);
+          shapes.circle(markerX, markerY, marker.size);
           // 绘制方向指示器（箭头）
           shapes.triangle(
-            marker.worldX, marker.worldY + marker.size + 4,
-            marker.worldX - 4, marker.worldY + marker.size,
-            marker.worldX + 4, marker.worldY + marker.size
+            markerX, markerY + marker.size + 4,
+            markerX - 4, markerY + marker.size,
+            markerX + 4, markerY + marker.size
           );
           break;
           
         case AutomapIconType.PARTY_MEMBER:
           // 队友用较小的圆点
-          shapes.circle(marker.worldX, marker.worldY, marker.size);
+          shapes.circle(markerX, markerY, marker.size);
           break;
           
         case AutomapIconType.MONSTER:
           // 怪物用小方块
           float halfSize = marker.size / 2;
-          shapes.rect(marker.worldX - halfSize, marker.worldY - halfSize, 
+          shapes.rect(markerX - halfSize, markerY - halfSize,
                      marker.size, marker.size);
           break;
           
         case AutomapIconType.NPC:
           // NPC用圆点
-          shapes.circle(marker.worldX, marker.worldY, marker.size);
+          shapes.circle(markerX, markerY, marker.size);
           break;
           
         case AutomapIconType.WAYPOINT:
           // 传送点用菱形
-          DebugUtils.drawDiamond(shapes, marker.worldX, marker.worldY, 
+          DebugUtils.drawDiamond(shapes, markerX, markerY,
                                 (int)(marker.size * 2), (int)marker.size);
           break;
           
         case AutomapIconType.SHRINE:
           // 神殿用三角形
           shapes.triangle(
-            marker.worldX, marker.worldY + marker.size,
-            marker.worldX - marker.size, marker.worldY - marker.size,
-            marker.worldX + marker.size, marker.worldY - marker.size
+            markerX, markerY + marker.size,
+            markerX - marker.size, markerY - marker.size,
+            markerX + marker.size, markerY - marker.size
           );
           break;
           
         case AutomapIconType.PORTAL:
           // 传送门用圆环
-          shapes.circle(marker.worldX, marker.worldY, marker.size);
+          shapes.circle(markerX, markerY, marker.size);
           shapes.setColor(0, 0, 0, alpha * 0.5f);
-          shapes.circle(marker.worldX, marker.worldY, marker.size * 0.5f);
+          shapes.circle(markerX, markerY, marker.size * 0.5f);
           break;
           
         default:
           // 默认用圆点
-          shapes.circle(marker.worldX, marker.worldY, marker.size);
+          shapes.circle(markerX, markerY, marker.size);
           break;
       }
     }
@@ -714,6 +741,7 @@ public class AutomapManager implements Disposable {
       }
       try {
         if (renderProjectedTile(batch, marker.nativeCell, marker.worldX, marker.worldY)) {
+          nativeRenderedMarkers.add(marker);
           drawn++;
         } else {
           geometricFallbackDrawCount++;

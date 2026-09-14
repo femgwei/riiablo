@@ -17,6 +17,24 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-15 Automap 选项、城镇揭示与实体标记（本轮完成）
+
+- [x] Options 子菜单的 OptionRow 使用与上级菜单一致的 `font16` 字体和 24px 行高；
+  Automap、Sound、Video、Controls 子页的行间距统一。
+- [x] 城镇 Zone 首次进入时直接揭示完整 Zone；野外和地下区域继续按 RoomEx 激活环/探索
+  半径揭示，不改变原生探索规则。
+- [x] CENTER 全屏与 TOP_LEFT/TOP_RIGHT 小地图共用原生 Automap 投影；小地图使用 1/2
+  视口并保持相机 zoom，使 DC6 地形、墙体和实体内容均为全屏的 1/2（避免重复缩放成 1/4）。
+- [x] 玩家、队友和无对应 MaxiMap.dc6 cell 的 NPC/实体使用同一 `worldToAutomap` 投影
+  的几何回退标记；有原生 cell 时只绘制 DC6，避免重复图标。
+- [x] 真实 1.10f MPQ 离屏 `:desktop:offscreenAutomapDc6` 通过：原生地形 600、实体 58、
+  几何回退 1，像素检测通过；Automap 专项单元测试通过。
+
+本轮修改文件：`EscapePanel.java`、`AutomapCamera.java`、`AutomapManager.java`、
+`AutomapRenderer.java`，以及 `AutomapCameraScaleTest.java`；未修改战斗、地图生成或网络
+协议文件。下一步：在真实资源可视化条件具备后，对三种模式截帧比对 DC6 比例与 NPC/玩家图标
+位置，并继续处理 Automap 选项持久化和更多实体 cell 映射。
+
 ## 2026-09-15 城镇技能禁用状态对齐（本轮完成）
 
 - [x] 客户端 `HotkeyButton` 根据玩家当前 `MapWrapper.zone.isTown()` 和原生

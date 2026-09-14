@@ -229,11 +229,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
         Cvars.Client.Automap.CenterWhenCleared);
     automapParty = booleanOption("SHOW PARTY", Cvars.Client.Automap.ShowParty);
     automapNames = booleanOption("SHOW NAMES", Cvars.Client.Automap.ShowNames);
-    page.add(automapMode).width(520).height(27).row();
-    page.add(automapFade).width(520).height(27).row();
-    page.add(automapCenter).width(520).height(27).row();
-    page.add(automapParty).width(520).height(27).row();
-    page.add(automapNames).width(520).height(27).row();
+    page.add(automapMode).width(520).height(24).row();
+    page.add(automapFade).width(520).height(24).row();
+    page.add(automapCenter).width(520).height(24).row();
+    page.add(automapParty).width(520).height(24).row();
+    page.add(automapNames).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshAutomapRows();
@@ -266,11 +266,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
           SoundOptions.nextVolume(volume(Cvars.Client.Sound.Music.Volume.get())));
       refreshSoundRows();
     });
-    page.add(soundEnabled).width(520).height(27).row();
-    page.add(effectsEnabled).width(520).height(27).row();
-    page.add(effectsVolume).width(520).height(27).row();
-    page.add(musicEnabled).width(520).height(27).row();
-    page.add(musicVolume).width(520).height(27).row();
+    page.add(soundEnabled).width(520).height(24).row();
+    page.add(effectsEnabled).width(520).height(24).row();
+    page.add(effectsVolume).width(520).height(24).row();
+    page.add(musicEnabled).width(520).height(24).row();
+    page.add(musicVolume).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshSoundRows();
@@ -295,12 +295,12 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       refreshVideoRows();
     });
     resolution = new OptionRow("RESOLUTION", null, false);
-    page.add(gamma).width(520).height(27).row();
-    page.add(vsync).width(520).height(27).row();
-    page.add(showFps).width(520).height(27).row();
-    page.add(resolution).width(520).height(27).row();
+    page.add(gamma).width(520).height(24).row();
+    page.add(vsync).width(520).height(24).row();
+    page.add(showFps).width(520).height(24).row();
+    page.add(resolution).width(520).height(24).row();
     statusBar = new OptionRow("STATUS BAR (ANDROID)", null, false);
-    page.add(statusBar).width(520).height(27).row();
+    page.add(statusBar).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshVideoRows();
@@ -329,7 +329,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       Cvars.Client.Input.Vibration.set(!Boolean.TRUE.equals(Cvars.Client.Input.Vibration.get()));
       refreshControlsRows();
     });
-    page.add(vibration).width(520).height(27).row();
+    page.add(vibration).width(520).height(24).row();
     page.add(menuButton("RESET DEFAULTS", this::resetControlDefaults))
         .height(24).padTop(8).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
@@ -594,10 +594,13 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     }
 
     OptionRow(String name, final Runnable action, boolean enabled) {
-      this.name = new Label(name, Riiablo.fonts.fontformal10);
+      // Match the parent Escape menu typography and row rhythm.  The old
+      // formal10 rows made the Options pages visibly smaller and tighter than
+      // the parent menu buttons.
+      this.name = new Label(name, Riiablo.fonts.font16);
       this.value = enabled
-          ? new LabelButton("", Riiablo.fonts.fontformal10, Riiablo.colors.gold)
-          : new Label("", Riiablo.fonts.fontformal10, Riiablo.colors.grey);
+          ? new LabelButton("", Riiablo.fonts.font16, Riiablo.colors.gold)
+          : new Label("", Riiablo.fonts.font16, Riiablo.colors.grey);
       this.name.setAlignment(Align.left);
       this.value.setAlignment(Align.right);
       add(this.name).width(230).left();
