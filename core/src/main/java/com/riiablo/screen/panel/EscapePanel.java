@@ -28,6 +28,7 @@ import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC6;
 import com.riiablo.engine.client.automap.AutomapOptions;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
+import com.riiablo.graphics.DisplayOptions;
 import com.riiablo.graphics.VideoOptions;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.map.RenderSystem;
@@ -71,6 +72,9 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   OptionRow gamma;
   OptionRow vsync;
   OptionRow resolution;
+  OptionRow showFps;
+  OptionRow statusBar;
+  OptionRow vibration;
   Label controlsStatus;
   final ControlsOptionsState controlsState = new ControlsOptionsState();
   final List<ControlBindingRow> controlRows = new ArrayList<>();
@@ -284,10 +288,19 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       Cvars.Client.Display.VSync.set(!Boolean.TRUE.equals(Cvars.Client.Display.VSync.get()));
       refreshVideoRows();
     });
+    showFps = new OptionRow("SHOW FPS", () -> {
+      byte current = Cvars.Client.Display.ShowFPS.get() == null
+          ? com.riiablo.Client.FPS_NONE : Cvars.Client.Display.ShowFPS.get();
+      Cvars.Client.Display.ShowFPS.set(DisplayOptions.nextFpsMode(current));
+      refreshVideoRows();
+    });
     resolution = new OptionRow("RESOLUTION", null, false);
     page.add(gamma).width(520).height(27).row();
     page.add(vsync).width(520).height(27).row();
+    page.add(showFps).width(520).height(27).row();
     page.add(resolution).width(520).height(27).row();
+    statusBar = new OptionRow("STATUS BAR (ANDROID)", null, false);
+    page.add(statusBar).width(520).height(27).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshVideoRows();
@@ -312,6 +325,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     }
     if (CONFIGURABLE_KEYS.length % 3 != 0) grid.row();
     page.add(grid).width(580).row();
+    vibration = new OptionRow("VIBRATION", () -> {
+      Cvars.Client.Input.Vibration.set(!Boolean.TRUE.equals(Cvars.Client.Input.Vibration.get()));
+      refreshControlsRows();
+    });
+    page.add(vibration).width(520).height(27).row();
     page.add(menuButton("RESET DEFAULTS", this::resetControlDefaults))
         .height(24).padTop(8).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
@@ -386,6 +404,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private void refreshControlRows() {
     for (ControlBindingRow row : controlRows) row.refresh();
+    refreshControlsRows();
+  }
+
+  private void refreshControlsRows() {
+    if (vibration != null) vibration.setValue(yesNo(Cvars.Client.Input.Vibration.get()));
   }
 
   private OptionRow booleanOption(String label, final com.riiablo.cvar.Cvar<Boolean> cvar) {
@@ -457,7 +480,10 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     if (gamma == null) return;
     gamma.setValue(VideoOptions.gammaLabel(value(Cvars.Client.Display.Gamma.get())));
     vsync.setValue(yesNo(Cvars.Client.Display.VSync.get()));
+    showFps.setValue(DisplayOptions.fpsModeLabel(Cvars.Client.Display.ShowFPS.get() == null
+        ? com.riiablo.Client.FPS_NONE : Cvars.Client.Display.ShowFPS.get()));
     resolution.setValue("NOT AVAILABLE");
+    statusBar.setValue("NOT AVAILABLE");
   }
 
   private static float volume(Float value) {
@@ -504,6 +530,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     currentPage = page;
     if (page == Page.SOUND) refreshSoundRows();
     if (page == Page.VIDEO) refreshVideoRows();
+    if (page == Page.CONTROLS) refreshControlsRows();
     if (page == Page.AUTOMAP) refreshAutomapRows();
     if (mainPage != null) mainPage.setVisible(page == Page.MAIN);
     if (optionsPage != null) optionsPage.setVisible(page == Page.OPTIONS);

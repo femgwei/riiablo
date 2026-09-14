@@ -4826,3 +4826,13 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 当前下一项：继续核对 Options 中尚未覆盖的客户端输入/显示细节；随后收敛 A1–A5
 游戏流程的离屏回归。
+
+### 2026-09-15 Options 显示/输入细节（已完成）
+
+- [x] ~~`SHOW FPS` 五态显示位置接入 `Client.Display.ShowFPS`~~
+- [x] ~~`VIBRATION` 接入 `Client.Input.Vibration`~~
+- [x] ~~桌面端 `STATUS BAR (ANDROID)` 明确禁用~~
+- [x] ~~FPS 模式纯逻辑测试、核心编译和 1.10f 隐藏营地回归~~
+
+当前下一项：进入 A1–A5 游戏流程离屏回归收敛，优先区域切换、任务奖励、多人快照和
+断线重连，不再新增无后端支持的 Options 控件。
