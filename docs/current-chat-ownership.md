@@ -726,3 +726,15 @@ Armageddon/Hurricane 的实机观感验证。
 
 当前下一项：验证删除后重连基线，以及延迟 tombstone 与新实体同 ID/incarnation 复用的
 快照顺序。
+
+### 2026-09-15 延迟 tombstone 与重连基线（本轮完成）
+
+- [x] ~~`headlessDelayedDeleteFrames`~~：注入 3 tick 删除延迟和重复删除帧，客户端
+  通过删除水位忽略过期 tombstone，不回退当前快照。
+- [x] ~~删除后重连~~：掉落实体断线重连基线保持数量、归属与 incarnation 稳定，删除后
+  不会在新基线复现旧实体。
+- 验证：1.10f 离屏测试通过，`stale_delete_ignored`、
+  `reconnect_ground_loot_pass ... incarnation=1`。
+
+当前下一项：增加同一数字实体 ID 快速复用测试，确保旧 tombstone 到达时不会误删新
+incarnation，并继续检查跨区域实体基线恢复。

@@ -5020,3 +5020,15 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 
 下一项：进入实体删除后的重连基线恢复，覆盖旧实体 tombstone 与新实体同 ID 复用时的
  incarnation/快照顺序，防止延迟删除帧误删新生成单位。
+
+### 2026-09-15 延迟 tombstone 与重连基线（本轮完成）
+
+- [x] ~~延迟删除帧回归~~：`headlessDelayedDeleteFrames` 注入 3 个 Sim Tick 的删除
+  延迟并重复投递，客户端按删除水位忽略过期 tombstone，不回退最新快照。
+- [x] ~~删除后重连基线~~：地面掉落断线重连测试确认删除/拾取后的实体不会在新基线中
+  复现，数量、归属和 incarnation 保持稳定。
+- 验证：真实 1.10f `headlessDelayedDeleteFrames` 通过，日志包含
+  `stale_delete_ignored` 与 `reconnect_ground_loot_pass ... incarnation=1`。
+
+下一项：增加“同一数字实体 ID 快速复用”场景，验证旧 tombstone 到达新实体之后，
+客户端仍保留新 incarnation，并继续推进跨区域实体基线恢复。

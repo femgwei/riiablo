@@ -473,7 +473,8 @@ tasks.register('headlessMultiplayerSnapshotRegression') {
   group = 'verification'
   description = 'Runs multiplayer snapshot ordering, resync, reconnect and stale-entity gates.'
   dependsOn 'headlessSnapshotOrder', 'headlessSnapshotResync',
-      'headlessReconnectVisibility', 'headlessReconnectGroundLoot'
+      'headlessReconnectVisibility', 'headlessReconnectGroundLoot',
+      'headlessDelayedDeleteFrames'
 }
 
 tasks.register('headlessCombatReconnectRegression') {
