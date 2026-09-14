@@ -6024,17 +6024,25 @@ public final class D2GSHeadlessClient {
           }
           Snapshot reconnectedDrop = awaitVisibleGroundEntity(reconnected, reconnectInput,
               goldEntity, deadline());
-          if (reconnectedDrop.groundOwnerId != reconnected.playerId
-              || D2GS.headlessGroundGoldQuantity(goldEntity) != 15) {
-            throw new IllegalStateException("reconnect gold baseline mismatch: quantity="
-                + reconnectedDrop.groundQuantity + " owner=" + reconnectedDrop.groundOwnerId
-                + " expectedOwner=" + oldOwnerId);
+        if (reconnectedDrop.groundOwnerId != reconnected.playerId
+              || D2GS.headlessGroundGoldQuantity(goldEntity) != 15
+              || reconnectedDrop.creationTick < ownerDrop.creationTick
+              || reconnectedDrop.incarnation != 1
+              || peerAfterDisconnect.incarnation != 1) {
+          throw new IllegalStateException("reconnect gold baseline mismatch: quantity="
+              + reconnectedDrop.groundQuantity + " owner=" + reconnectedDrop.groundOwnerId
+                + " expectedOwner=" + oldOwnerId + " creationTick="
+                + reconnectedDrop.creationTick + " initialTick=" + ownerDrop.creationTick
+                + " incarnation=" + reconnectedDrop.incarnation + "/"
+                + peerAfterDisconnect.incarnation);
           }
           log("reconnect_ground_loot_pass", "entity=" + goldEntity
               + " quantity=20->5 credited->15 remaining=15"
               + " oldOwner=" + oldOwnerId + " newOwner=" + reconnected.playerId
               + " peerQuantity=" + peerAfterDisconnect.groundQuantity
               + " baselineQuantity=" + reconnectedDrop.groundQuantity
+              + " creationTick=" + ownerDrop.creationTick + "->" + reconnectedDrop.creationTick
+              + " deletionTick=" + reconnectedDrop.deletionTick + " incarnation=1"
               + " ownerWindowPreserved=true");
         }
       }
@@ -7345,6 +7353,7 @@ public final class D2GSHeadlessClient {
       if (snapshot.deleted || !snapshot.everActive) snapshot.incarnation++;
       snapshot.everActive = true;
       snapshot.deleted = false;
+      if (snapshot.creationTick < 0L) snapshot.creationTick = sync.tick();
       snapshot.groundItem = findComponent(sync, ComponentP.ItemP) >= 0;
       int itemIndex = findComponent(sync, ComponentP.ItemP);
       if (itemIndex >= 0) {
@@ -7941,6 +7950,7 @@ public final class D2GSHeadlessClient {
     boolean deleted;
     long deletionTick = -1L;
     boolean groundItem;
+    long creationTick = -1L;
     int groundQuantity = -1;
     int groundOwnerId = -1;
     int groundPartyId = -1;

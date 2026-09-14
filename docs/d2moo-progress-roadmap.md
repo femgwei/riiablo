@@ -4967,3 +4967,15 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：把死亡/掉落水位继续接入断线重连夹具，比较死亡实体、尸体和地面掉落的
 创建/删除 Tick，确保重连不会重复投递死亡事件或复制掉落。
+
+### 2026-09-15 死亡/掉落重连水位（本轮完成）
+
+- [x] ~~记录地面掉落创建 Tick 与实体 incarnation~~：重连前后同一掉落实体的
+  incarnation 保持为 1，创建 Tick 不回退；删除 Tick 按权威删除帧记录。
+- [x] ~~接入 `headlessReconnectGroundLoot`~~：部分拾取后的金币数量、归属、实体 ID
+  和生命周期水位在断线重连后保持一致，不复制掉落。
+- 验证：真实 1.10f 通过，日志
+  `reconnect_ground_loot_pass ... creationTick=11->19 deletionTick=-1 incarnation=1`。
+
+下一项：继续覆盖死亡实体本身的断线重连（尸体保留、旧实体删除帧和死亡事件水位），
+并把重复死亡请求的幂等结果写入协议级断言。
