@@ -64,18 +64,24 @@ public class NetworkSynchronizer extends BaseEntitySystem {
   // FIXME: this assumes that removing Networked component implies deletion -- may not always be case
   @Override
   protected void removed(int entityId) {
+    // Capture the last authoritative visibility mask before removing caches
+    // and components.  Once Artemis detaches Networked/MapWrapper, a normal
+    // process(entityId) call can no longer derive recipients, which used to
+    // leave retained monster corpses silently disappearing on reconnect.
+    int departedRecipients = lastRecipients.get(entityId, 0);
     removeSnapshots(entityId);
     lastRecipients.remove(entityId, 0);
     movementAcknowledgements.remove(entityId);
-    Class.Type type = mClass.get(entityId).type;
-    switch (type) {
-      case PLR:
-        // TODO: handled by disconnection packet, need to handle here also
-        break;
-      default:
-        mFlags.get(entityId).flags |= EntityFlags.deleted;
-        process(entityId);
+    Class.Type type = mClass.has(entityId) ? mClass.get(entityId).type : null;
+    if (type == Class.Type.PLR) {
+      // TODO: handled by disconnection packet, need to handle here also
+      return;
     }
+    // Deletion is a terminal snapshot and must be sent to every client
+    // that last observed the entity, even though its ECS components are
+    // already detached. sendDeletedTo splits the mask into independent
+    // packets so each socket owns its ByteBuffer.
+    if (departedRecipients != 0) sendDeletedTo(entityId, departedRecipients);
   }
 
   @Override
@@ -170,6 +176,16 @@ public class NetworkSynchronizer extends BaseEntitySystem {
       int mask = 1 << bit;
       if ((recipients & mask) != 0) sendVisibilityDeletion(entityId, mask);
     }
+  }
+
+  /** Last visibility mask retained for a test/diagnostic deletion hook. */
+  public int lastRecipientsFor(int entityId) {
+    return entityId < 0 ? 0 : lastRecipients.get(entityId, 0);
+  }
+
+  /** Marks an explicit deletion as already queued, preventing a duplicate on ECS removal. */
+  public void clearRecipientsFor(int entityId) {
+    if (entityId >= 0) lastRecipients.remove(entityId, 0);
   }
 
   /** D2MOO sends unit updates only to clients in the current/adjacent RoomEx. */

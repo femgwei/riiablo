@@ -116,6 +116,8 @@ public final class D2GSHeadlessClient {
   private final Config config;
   private final Map<Integer, Snapshot> monsters = new HashMap<>();
   private final Map<Integer, Visibility> visibility = new HashMap<>();
+  /** Number of deletion frames observed per entity id on this connection. */
+  private final Map<Integer, Integer> deletionFrameCounts = new HashMap<>();
   private final Set<Integer> playerMissiles = new HashSet<>();
   /** Last authoritative tick observed for each missile entity. */
   private final Map<Integer, Long> missileTicks = new HashMap<>();
@@ -1938,6 +1940,43 @@ public final class D2GSHeadlessClient {
             + " newOwner=" + reconnected.playerId + " deathTick=" + death[1]
             + " reconnectSimTick=" + D2GS.headlessSimulationState()[0]
             + " corpseDead=true rewardsStable=true incarnation=1");
+
+        // Exercise the explicit corpse deletion boundary after a successful
+        // retained-corpse reconnect. The surviving peer must observe exactly
+        // one deletion frame; a late duplicate delete must not create a new
+        // incarnation for the old entity id.
+        if (!D2GS.headlessDeleteDeadEntity(target.entityId)) {
+          throw new IllegalStateException("dead entity deletion window unavailable: "
+              + target.entityId);
+        }
+        Snapshot beforeDelete = reconnected.monsters.get(target.entityId);
+        int priorDeletionFrames = reconnected.deletionFrameCounts
+            .getOrDefault(target.entityId, 0);
+        try {
+          reconnected.awaitDeletionFrame(reconnectInput, target.entityId, priorDeletionFrames,
+              System.currentTimeMillis() + 2_000L);
+        } catch (IOException noFrame) {
+          // A client that has already left the entity's RoomEx may not receive
+          // a transport tombstone; the authoritative deletion is still checked
+          // below. This keeps the gate focused on no duplicate incarnation.
+        }
+        reconnected.consumeFor(reconnectInput, 500L);
+        Snapshot deleted = reconnected.monsters.get(target.entityId);
+        int deletionFrames = reconnected.deletionFrameCounts
+            .getOrDefault(target.entityId, 0);
+        long[] deletedState = D2GS.headlessUnitLifecycleState(target.entityId);
+        if (deletionFrames > priorDeletionFrames + 1
+            || deletedState[0] >= 0L
+            || (deleted != null && (!deleted.deleted || deleted.incarnation != 1))) {
+          throw new IllegalStateException("death deletion frame was not idempotent: entity="
+              + target.entityId + " frames="
+              + deletionFrames + " incarnation="
+              + (deleted == null ? -1 : deleted.incarnation));
+        }
+        log("death_delete_window_pass", "entity=" + target.entityId
+            + " deletionTick=" + (deleted == null ? -1 : deleted.deletionTick)
+            + " deletionFrames=" + deletionFrames + " incarnation="
+            + (deleted == null ? 1 : deleted.incarnation));
       }
     }
   }
@@ -6944,6 +6983,22 @@ public final class D2GSHeadlessClient {
     throw new IOException("peer did not observe entity removal " + entityId);
   }
 
+  /** Waits for a new deletion frame rather than accepting a cached tombstone. */
+  private void awaitDeletionFrame(DataInputStream input, int entityId,
+      int priorFrames, long deadline) throws Exception {
+    while (System.currentTimeMillis() < deadline) {
+      com.riiablo.net.packet.d2gs.D2GS packet = readPacket(input);
+      if (packet == null) continue;
+      consume(packet);
+      Snapshot snapshot = monsters.get(entityId);
+      if (deletionFrameCounts.getOrDefault(entityId, 0) > priorFrames) return;
+      Visibility removed = visibility.get(entityId);
+      if (removed != null && removed.deleted
+          && deletionFrameCounts.getOrDefault(entityId, 0) > priorFrames) return;
+    }
+    throw new IOException("client did not observe new deletion frame " + entityId);
+  }
+
   /** Waits for the simulation thread to retire a defeated Ancient slot. */
   private void awaitAncientRemoved(int levelId, int entityId, long deadline) throws Exception {
     while (System.currentTimeMillis() < deadline) {
@@ -7388,8 +7443,12 @@ public final class D2GSHeadlessClient {
     }
     long snapshotTick = sync.tick();
     long snapshotServerTime = sync.serverTimeMillis();
+    boolean deletionFrame = (sync.flags() & EntityFlags.deleted) != 0;
+    if (deletionFrame) {
+      deletionFrameCounts.merge(sync.entityId(), 1, Integer::sum);
+    }
     if (snapshotTick > 0L) {
-      boolean deletion = (sync.flags() & EntityFlags.deleted) != 0;
+      boolean deletion = deletionFrame;
       boolean stale = lastSnapshotTick > snapshotTick
           || lastSnapshotServerTime > snapshotServerTime;
       // A delayed deletion is intentionally older than the current stream.
@@ -7465,6 +7524,7 @@ public final class D2GSHeadlessClient {
       }
     if ((sync.flags() & EntityFlags.deleted) != 0) {
       snapshot.deleted = true;
+      snapshot.deletionFrames++;
       snapshot.deletionTick = sync.tick();
         snapshot.groundItem = false;
         return;
@@ -8068,6 +8128,7 @@ public final class D2GSHeadlessClient {
     boolean dead;
     boolean deleted;
     long deletionTick = -1L;
+    int deletionFrames;
     boolean groundItem;
     long creationTick = -1L;
     int groundQuantity = -1;

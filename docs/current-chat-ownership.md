@@ -714,3 +714,15 @@ Armageddon/Hurricane 的实机观感验证。
 
 当前下一项：继续覆盖尸体保留窗口与删除窗口的断线重连边界，确认删除帧只投递一次、
 旧实体 incarnation 不复用。
+
+### 2026-09-15 尸体保留/删除窗口（本轮完成）
+
+- [x] ~~保留窗口重连~~：死亡实体仍在权威 RoomEx 时重连，快照保持死亡状态且
+  incarnation 不变。
+- [x] ~~删除窗口~~：NetworkSynchronizer 在 ECS 组件移除前缓存原接收者并发送一次
+  删除终态；离开 RoomEx 的客户端按原生规则可不接收 tombstone。
+- 验证：1.10f `headlessDeathReconnect` 通过，输出
+  `death_delete_window_pass ... deletionFrames=1 incarnation=1`。
+
+当前下一项：验证删除后重连基线，以及延迟 tombstone 与新实体同 ID/incarnation 复用的
+快照顺序。

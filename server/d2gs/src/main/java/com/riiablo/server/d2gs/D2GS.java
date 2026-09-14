@@ -2260,6 +2260,48 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Schedules deletion of a dead monster/corpse on the authoritative tick thread. */
+  static boolean headlessDeleteDeadEntity(int entityId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || entityId < 0) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean deleted = new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        if (!server.world.getEntityManager().isActive(entityId)
+            || !server.world.getMapper(com.riiablo.engine.server.component.Monster.class).has(entityId)) {
+          return;
+        }
+        com.riiablo.engine.server.component.UnitLifecycle lifecycle = server.world
+            .getMapper(com.riiablo.engine.server.component.UnitLifecycle.class).get(entityId);
+        if (lifecycle == null || !lifecycle.isDead()) return;
+        NetworkSynchronizer synchronizer = server.world.getSystem(NetworkSynchronizer.class);
+        if (synchronizer != null) {
+          int recipients = synchronizer.lastRecipientsFor(entityId);
+          if (recipients == 0 && server.player != null) {
+            for (com.badlogic.gdx.utils.IntIntMap.Entry entry : server.player.entries()) {
+              if (entry.key >= 0 && entry.key < 32) recipients |= 1 << entry.key;
+            }
+          }
+          if (recipients != 0) {
+            synchronizer.sendDeletedTo(entityId, recipients);
+            synchronizer.clearRecipientsFor(entityId);
+          }
+        }
+        server.world.delete(entityId);
+        deleted.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && deleted.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Creates a non-hireling summon owned by the supplied player in one RoomEx. */
   static int headlessCreateRoomSummon(int playerId, int levelId, int roomId) {
     D2GS server = activeHeadlessInstance;

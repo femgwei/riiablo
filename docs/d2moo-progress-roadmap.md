@@ -5006,3 +5006,17 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：覆盖尸体保留窗口与实体删除窗口的重连边界，分别验证尸体仍在当前
 RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 incarnation 不复用。
+
+### 2026-09-15 尸体保留/删除窗口（本轮完成）
+
+- [x] ~~尸体保留窗口重连~~：`headlessDeathReconnect` 在死亡实体仍受权威世界管理时
+  断开并重连，恢复后的快照保持死亡状态，incarnation 不递增。
+- [x] ~~删除窗口与网络终态~~：删除前缓存 NetworkSynchronizer 的最后接收者掩码，
+  组件移除时发送一次终态删除帧；测试钩子校验实体已从权威世界移除且不会产生第二个
+  incarnation。对已离开 RoomEx 的客户端，允许按原生可见性规则不接收 tombstone。
+- 验证：真实 1.10f `headlessDeathReconnect` 通过，日志
+  `death_reconnect_pass ... corpseDead=true`、
+  `death_delete_window_pass ... deletionFrames=1 incarnation=1`。
+
+下一项：进入实体删除后的重连基线恢复，覆盖旧实体 tombstone 与新实体同 ID 复用时的
+ incarnation/快照顺序，防止延迟删除帧误删新生成单位。
