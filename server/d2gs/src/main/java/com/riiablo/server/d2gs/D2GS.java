@@ -614,6 +614,147 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /**
+   * Seeds one owner-bound missile and one source-owned periodic state in the
+   * player's current level.  The headless cross-area fixture uses the ids to
+   * verify that the subsequent ZoneChangeEvent removes both references before
+   * the destination baseline is serialized.
+   *
+   * @return {@code [missileId, targetId, sourceLevel]} or {@code [-1,-1,-1]}
+   */
+  static int[] headlessSeedCrossAreaEffects(int playerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.factory == null
+        || server.map == null || Riiablo.files == null || Gdx.app == null) {
+      return new int[] {-1, -1, -1};
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[] {-1, -1, -1});
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.MapWrapper ownerWrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.MapWrapper.class).get(playerId);
+        if (ownerWrapper == null || ownerWrapper.zone == null || ownerWrapper.zone.level == null) return;
+        int sourceLevel = ownerWrapper.zone.level.Id;
+        com.riiablo.engine.server.component.Position ownerPosition = server.world
+            .getMapper(com.riiablo.engine.server.component.Position.class).get(playerId);
+        if (ownerPosition == null) return;
+
+        int missileType = -1;
+        for (com.riiablo.codec.excel.Missiles.Entry candidate : Riiablo.files.Missiles) {
+          if (candidate != null && candidate.Missile != null && candidate.Missile.length() > 0) {
+            missileType = candidate.Id;
+            break;
+          }
+        }
+        if (missileType < 0) return;
+        int missileId = server.factory.createMissile(missileType,
+            new Vector2(1f, 0f), ownerPosition.position, playerId);
+
+        int targetId = Engine.INVALID_ENTITY;
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Monster> monsters =
+            server.world.getMapper(com.riiablo.engine.server.component.Monster.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.MapWrapper> wrappers =
+            server.world.getMapper(com.riiablo.engine.server.component.MapWrapper.class);
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.UnitStates> states =
+            server.world.getMapper(com.riiablo.engine.server.component.UnitStates.class);
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Monster.class,
+                com.riiablo.engine.server.component.MapWrapper.class)).getEntities();
+        int[] ids = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          int candidateId = ids[i];
+          com.riiablo.engine.server.component.MapWrapper wrapper = wrappers.get(candidateId);
+          if (wrapper == null || wrapper.zone == null || wrapper.zone.level == null
+              || wrapper.zone.level.Id != sourceLevel) continue;
+          targetId = candidateId;
+          break;
+        }
+        if (targetId == Engine.INVALID_ENTITY) {
+          server.world.delete(missileId);
+          return;
+        }
+        com.riiablo.engine.server.component.UnitStates targetStates = states.has(targetId)
+            ? states.get(targetId) : states.create(targetId);
+        if (targetStates.stateList == null) targetStates.init(targetId);
+        targetStates.stateList.addState(
+            com.riiablo.engine.server.state.StateId.POISON, 100, 1, playerId);
+        server.world.process();
+        result.set(new int[] {missileId, targetId, sourceLevel});
+        Gdx.app.log("D2GS", "[ZONE_CLEANUP] seeded missile=" + missileId
+            + " target=" + targetId + " sourceLevel=" + sourceLevel
+            + " owner=" + playerId);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[] {-1, -1, -1};
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[] {-1, -1, -1};
+    }
+  }
+
+  /** Returns server-side liveness for the cross-area cleanup seed. */
+  static int[] headlessCrossAreaEffectState(int missileId, int targetId, int ownerId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) {
+      return new int[] {-1, -1, -1};
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<int[]> result =
+        new java.util.concurrent.atomic.AtomicReference<>(new int[] {-1, -1, -1});
+    Gdx.app.postRunnable(() -> {
+      try {
+        boolean missileAlive = missileId >= 0
+            && server.world.getMapper(com.riiablo.engine.server.component.Missile.class)
+                .has(missileId);
+        boolean statePresent = false;
+        com.riiablo.engine.server.component.UnitStates targetStates = targetId >= 0
+            ? server.world.getMapper(com.riiablo.engine.server.component.UnitStates.class)
+                .get(targetId) : null;
+        if (targetStates != null && targetStates.stateList != null) {
+          for (com.riiablo.engine.server.state.UnitState state
+              : targetStates.stateList.getStates()) {
+            if (state != null && state.sourceEntityId == ownerId) {
+              statePresent = true;
+              break;
+            }
+          }
+        }
+        boolean ownerReference = false;
+        com.artemis.utils.IntBag entities = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Missile.class)).getEntities();
+        com.artemis.ComponentMapper<com.riiablo.engine.server.component.Missile> missiles =
+            server.world.getMapper(com.riiablo.engine.server.component.Missile.class);
+        int[] ids = entities.getData();
+        for (int i = 0; i < entities.size(); i++) {
+          com.riiablo.engine.server.component.Missile missile = missiles.get(ids[i]);
+          if (missile != null && (missile.ownerId == ownerId
+              || missile.damageOwnerId == ownerId || missile.attachedEntityId == ownerId
+              || missile.rabiesSourceId == ownerId)) {
+            ownerReference = true;
+            break;
+          }
+        }
+        result.set(new int[] {missileAlive ? 1 : 0, statePresent ? 1 : 0,
+            ownerReference ? 1 : 0});
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : new int[] {-1, -1, -1};
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new int[] {-1, -1, -1};
+    }
+  }
+
   /** Headless-only visibility bridge for the A5Q6 terminal boss. */
   private void syncHeadlessChamberBaal() {
     if (sync == null || world == null) return;
@@ -4649,6 +4790,9 @@ public class D2GS extends ApplicationAdapter {
     combatPositionHistory = new CombatPositionHistory(map);
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem())
+        // Zone changes must invalidate owner-bound missiles and periodic
+        // state layers before the next snapshot baseline is serialized.
+        .with(new com.riiablo.engine.server.ZoneTransitionCleanupSystem())
         .with(new Act1QuestSystem())
         .with(new Act2QuestSystem())
         .with(new Act3QuestSystem())

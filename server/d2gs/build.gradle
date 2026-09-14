@@ -475,7 +475,7 @@ tasks.register('headlessMultiplayerSnapshotRegression') {
   dependsOn 'headlessSnapshotOrder', 'headlessSnapshotResync',
       'headlessReconnectVisibility', 'headlessReconnectGroundLoot',
       'headlessDelayedDeleteFrames', 'headlessEntityIdReuse',
-      'headlessCrossAreaBaseline'
+      'headlessCrossAreaBaseline', 'headlessCrossAreaMissileState'
 }
 
 tasks.register('headlessCombatReconnectRegression') {
@@ -656,6 +656,18 @@ tasks.register('headlessCrossAreaBaseline', JavaExec) {
   workingDir = rootProject.file('assets').path
   args '--generated-amazon', '--require-cross-area-baseline', '--test-timeout', '90'
   jvmArgs '-Driiablo.headless.duplicateDeletes=true', '-Driiablo.headless.deleteDelayTicks=20'
+
+  def d2Home = providers.environmentVariable('D2_HOME')
+  if (d2Home.isPresent()) args '--home', d2Home.get()
+}
+
+tasks.register('headlessCrossAreaMissileState', JavaExec) {
+  group = 'verification'
+  description = 'Verifies cross-level cleanup of owner-bound missiles and periodic state layers.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.server.d2gs.D2GSHeadlessClient'
+  workingDir = rootProject.file('assets').path
+  args '--generated-amazon', '--require-cross-area-missile-state', '--test-timeout', '90'
 
   def d2Home = providers.environmentVariable('D2_HOME')
   if (d2Home.isPresent()) args '--home', d2Home.get()

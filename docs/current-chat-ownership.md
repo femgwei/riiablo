@@ -760,3 +760,14 @@ incarnation，并继续检查跨区域实体基线恢复。
   `cross_area_baseline_pass ... oldLevelTombstoneIgnored=true reconnect=true`。
 
 当前下一项：检查跨区域切换时在途 missile/state 与 owner 引用的清理和重连基线隔离。
+
+### 2026-09-15 跨区域 missile/state 引用清理（本轮完成）
+
+- [x] 新增 `ZoneTransitionCleanupSystem`：迁移玩家离开 Level 后，旧区域中引用该玩家的
+  missile 及附着控制器排队删除；旧目标上的 source-owned 周期状态同步移除。
+- [x] 新增 `headlessCrossAreaMissileState` 离屏回归，验证服务器清理结果为
+  `serverState=[0, 0, 0]`，重连基线不恢复旧 missile/state。
+- 仅修改地图/同步所需的服务端系统与测试夹具；未改动技能伤害公式。
+
+当前下一项：补充多客户端处于不同 Level 时的负向同步断言，并将 owner incarnation
+ 水位并入跨区域快照校验。

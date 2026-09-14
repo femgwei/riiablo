@@ -270,6 +270,10 @@ public final class D2GSHeadlessClient {
       runCrossAreaBaseline(d2s, character);
       return;
     }
+    if (config.requireCrossAreaMissileState) {
+      runCrossAreaMissileState(d2s, character);
+      return;
+    }
     if (config.requireBaalWaveDual) {
       runBaalWaveDual(d2s, character);
       return;
@@ -2064,6 +2068,91 @@ public final class D2GSHeadlessClient {
    * and the delayed old-level tombstone is delivered after the destination
    * baseline.  A fresh connection then requests another complete baseline.
    */
+  /**
+   * Verifies that owner-bound missiles and source-owned periodic states are
+   * removed while crossing levels, and that a reconnect baseline cannot
+   * resurrect either reference.
+   */
+  private void runCrossAreaMissileState(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
+    try (Socket socket = owner.openSocket();
+         DataInputStream input = input(socket);
+         OutputStream output = output(socket)) {
+      send(output, connectionPacket(character, d2s));
+      owner.awaitConnection(input, deadline());
+      if (!D2GS.headlessEnterLevel(owner.playerId, 2)) {
+        throw new IOException("cross-area missile fixture could not enter Blood Moor");
+      }
+      long levelDeadline = System.currentTimeMillis() + 5_000L;
+      while (System.currentTimeMillis() < levelDeadline && owner.currentLevelId != 2) {
+        consumeOne(input, owner);
+      }
+      if (owner.currentLevelId != 2) {
+        throw new IOException("cross-area missile fixture did not receive Blood Moor baseline");
+      }
+
+      int[] seeded = D2GS.headlessSeedCrossAreaEffects(owner.playerId);
+      if (seeded.length < 3 || seeded[0] < 0 || seeded[1] < 0) {
+        throw new IOException("cross-area missile fixture could not seed effects");
+      }
+      int missileId = seeded[0];
+      int targetId = seeded[1];
+      int sourceLevel = seeded[2];
+      log("cross_area_effect_seed", "missile=" + missileId + " target=" + targetId
+          + " owner=" + owner.playerId + " level=" + sourceLevel);
+
+      if (!D2GS.headlessEnterLevel(owner.playerId, 10)) {
+        throw new IOException("cross-area missile fixture could not enter Underground Passage");
+      }
+      long transitionDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+      while (System.currentTimeMillis() < transitionDeadline && owner.currentLevelId != 10) {
+        consumeOne(input, owner);
+      }
+      if (owner.currentLevelId != 10) {
+        throw new IOException("cross-area missile fixture did not receive destination baseline");
+      }
+      int[] serverState = D2GS.headlessCrossAreaEffectState(
+          missileId, targetId, owner.playerId);
+      if (serverState.length < 3 || serverState[0] != 0 || serverState[1] != 0
+          || serverState[2] != 0) {
+        throw new IllegalStateException("cross-area cleanup left stale effects: missile="
+            + java.util.Arrays.toString(serverState));
+      }
+
+      // Reconnect from the same save and enter the destination. The old
+      // missile/state ids must not occur in the replacement baseline.
+      socket.close();
+      D2GSHeadlessClient reconnected = new D2GSHeadlessClient(config);
+      try (Socket reconnectSocket = reconnected.openSocket();
+           DataInputStream reconnectInput = input(reconnectSocket);
+           OutputStream reconnectOutput = output(reconnectSocket)) {
+        send(reconnectOutput, connectionPacket(character, d2s));
+        reconnected.awaitConnection(reconnectInput, deadline());
+        if (!D2GS.headlessEnterLevel(reconnected.playerId, 10)) {
+          throw new IOException("cross-area cleanup reconnect could not enter Underground Passage");
+        }
+        long reconnectDeadline = System.currentTimeMillis() + config.testTimeoutMillis;
+        while (System.currentTimeMillis() < reconnectDeadline
+            && reconnected.currentLevelId != 10) {
+          consumeOne(reconnectInput, reconnected);
+        }
+        if (reconnected.currentLevelId != 10) {
+          throw new IOException("cross-area cleanup reconnect did not receive destination baseline");
+        }
+        long settleDeadline = System.currentTimeMillis() + 2_000L;
+        while (System.currentTimeMillis() < settleDeadline) consumeOne(reconnectInput, reconnected);
+        AreaMissile stale = reconnected.areaMissiles.get(missileId);
+        if (stale != null && stale.everActive && !stale.deleted) {
+          throw new IllegalStateException("reconnect baseline resurrected old missile=" + missileId);
+        }
+        log("cross_area_missile_state_pass", "levels=" + sourceLevel + "->10"
+            + " missile=" + missileId + " target=" + targetId
+            + " serverState=" + java.util.Arrays.toString(serverState)
+            + " reconnectStale=false baseline=" + reconnected.baselineQuestRevision);
+      }
+    }
+  }
+
   private void runCrossAreaBaseline(byte[] d2s, CharacterHeader character) throws Exception {
     final int sourceLevel = 10;
     final int destinationLevel = 2;
@@ -8445,6 +8534,7 @@ public final class D2GSHeadlessClient {
     boolean requireDeathIdempotency;
     boolean requireEntityIdReuse;
     boolean requireCrossAreaBaseline;
+    boolean requireCrossAreaMissileState;
     boolean requireBaalWaveDual;
     boolean requireA5AncientDual;
     boolean requireA4SealDual;
@@ -8510,6 +8600,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-death-idempotency".equals(arg)) config.requireDeathIdempotency = true;
         else if ("--require-entity-id-reuse".equals(arg)) config.requireEntityIdReuse = true;
         else if ("--require-cross-area-baseline".equals(arg)) config.requireCrossAreaBaseline = true;
+        else if ("--require-cross-area-missile-state".equals(arg)) config.requireCrossAreaMissileState = true;
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-a5-ancient-dual".equals(arg)) config.requireA5AncientDual = true;
         else if ("--require-a4-seal-dual".equals(arg)) config.requireA4SealDual = true;
@@ -8597,6 +8688,7 @@ public final class D2GSHeadlessClient {
           && !config.requireDeathIdempotency
           && !config.requireEntityIdReuse
           && !config.requireCrossAreaBaseline
+          && !config.requireCrossAreaMissileState
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
@@ -8622,6 +8714,7 @@ public final class D2GSHeadlessClient {
           && !config.requireDeathIdempotency
           && !config.requireEntityIdReuse
           && !config.requireCrossAreaBaseline
+          && !config.requireCrossAreaMissileState
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -8661,6 +8754,7 @@ public final class D2GSHeadlessClient {
           + " [--require-death-idempotency]"
           + " [--require-entity-id-reuse]"
           + " [--require-cross-area-baseline]"
+          + " [--require-cross-area-missile-state]"
           + " [--require-a5-ancient-dual]"
           + " [--require-a4-seal-dual]"
           + " [--require-a4-hellforge-dual]"

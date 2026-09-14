@@ -5058,3 +5058,17 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 
 下一项：覆盖跨区域切换期间的在途 missile/state 引用清理，确保离开 Level 后旧区域
 投射物、周期状态及 owner 引用不会进入目标区域或重连基线。
+
+### 2026-09-15 跨区域 missile/state 引用清理（本轮完成）
+
+- [x] ~~区域切换清理监听~~：新增 `ZoneTransitionCleanupSystem`，在
+  `ZoneChangeEvent` 后删除仍引用迁移玩家的旧 Level missile（包含 owner、damageOwner、
+  attached 和 Rabies source 引用）。删除走正常 ECS/NetworkSynchronizer 终态路径。
+- [x] ~~周期状态隔离~~：旧 Level 目标上的 source-owned `StateList` 层在切换时移除；
+  同 Level 状态和迁移玩家自身状态保持不变，避免误清理其他玩家的效果。
+- [x] ~~重连基线回归~~：新增 `headlessCrossAreaMissileState`，使用真实 1.10f D2GS
+  离屏客户端验证 Level 2→10：服务器 missile/state/owner 引用均为 0，重连目标基线不
+  复活旧投射物（`cross_area_missile_state_pass ... serverState=[0, 0, 0]`）。
+
+下一项：补充跨区域切换的负向同步断言，确认旧实体删除帧、状态移除帧和新区域基线在
+  多客户端不同 Level 场景下不会互相污染，并将 owner incarnation 水位纳入统一快照检查。
