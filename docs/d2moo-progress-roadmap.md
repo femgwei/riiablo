@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-13
+更新时间：2026-09-15
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -35,6 +35,25 @@ Summit Door。双客户端已实际通过三名 SuperUnique 生成、两名玩�
 雕像复位、复活重进、重新激活、三名全部击杀、双方奖励和两扇门开启验证。
 下一步补齐战斗中与完成后的断线重连，确认实体、QuestResult、经验幂等和门碰撞恢复，
 随后继续 A2–A5 地图/任务剩余分支。
+
+## 2026-09-15 1.10f 启动音乐与异步音效容错（本轮完成）
+
+- [x] 核对 `game.log.###`：1.10f MPQ 已正常装载；启动退出点是可选的
+  `data/global/music/Act4/diablo.wav` 加载失败，而不是地图或 TXT 表整体失败。
+- [x] `MusicController.next()` 对单条音乐的解析/加载异常记录告警并继续队列，
+  不再因版本缺少一首音乐终止 Splash；成功音乐的播放和完成回调保持不变。
+- [x] `Audio.Instance` 增加停止标记、空委托和无效声道 ID 保护。导弹/实体在
+  异步音效加载完成前被移除时，`SoundEmitter.reset()` 不再触发空指针；已取消的
+  延迟实例不会在 `Audio.update()` 中重新播放，`play`/`setVolume` 也安全返回。
+- [x] 使用 `G:/BaiduNetdiskDownload/Diablo II 1.10F` 真实 MPQ 运行
+  `:desktop:offscreenCamp`：`OFFSCREEN_CAMP result=PASS`，营地、原生 Automap
+  和隐藏渲染均通过。当前资源包含该音乐时正常播放，缺失路径由新容错覆盖。
+- [x] `:core:test --tests com.riiablo.engine.server.CombatPipelineIntegrationTest`
+  与 `:desktop:compileJava` 均 `BUILD SUCCESSFUL`。
+
+本轮仅修改 `core/src/main/java/com/riiablo/audio/Audio.java` 与
+`core/src/main/java/com/riiablo/audio/MusicController.java`，未修改共享地图/战斗
+接口、网络协议或生成网络文件；历史未跟踪 `.log` 测试产物保持不变。
 
 ## 2026-09-13 Act V 主链 Warp（本轮完成）
 

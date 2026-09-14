@@ -39,6 +39,13 @@ public class Audio {
     // TODO: check deferred time and don't play if past some threshold (20-40ms maybe)
     for (Iterator<Instance> it = deferred.iterator(); it.hasNext();) {
       Instance instance = it.next();
+      // An emitter may be removed before an asynchronously loaded sound is
+      // ready (for example, a missile leaving town).  A stopped deferred
+      // instance must never be resurrected by this queue.
+      if (instance.stopped) {
+        it.remove();
+        continue;
+      }
       if (assets.isLoaded(instance.descriptor)) {
         instance.delegate = assets.get(instance.descriptor);
         boolean played = instance.play();
@@ -106,6 +113,7 @@ public class Audio {
     boolean stream;
     Object  delegate;
     long    id;
+    boolean stopped;
 
     static Instance obtain(AssetDescriptor descriptor, Object delegate, long id) {
       Instance instance = Pools.obtain(Instance.class);
@@ -113,6 +121,7 @@ public class Audio {
       instance.stream   = delegate instanceof Music;
       instance.delegate = delegate;
       instance.id       = id;
+      instance.stopped  = false;
       return instance;
     }
 
@@ -120,6 +129,7 @@ public class Audio {
     public void reset() {
       delegate = null;
       id = -1;
+      stopped = false;
     }
 
     public boolean isLoaded() {
@@ -127,6 +137,7 @@ public class Audio {
     }
 
     public boolean play() {
+      if (stopped || delegate == null) return false;
       if (stream) {
         ((Music) delegate).play();
         return true;
@@ -137,14 +148,17 @@ public class Audio {
     }
 
     public void stop() {
+      stopped = true;
+      if (delegate == null) return;
       if (stream) {
         ((Music) delegate).stop();
-      } else {
+      } else if (id != -1) {
         ((Sound) delegate).stop(id);
       }
     }
 
     public void setVolume(float volume) {
+      if (stopped || delegate == null) return;
       if (stream) {
         ((Music) delegate).setVolume(volume);
       } else {

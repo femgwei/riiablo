@@ -77,19 +77,38 @@ public class MusicController implements Music.OnCompletionListener {
 
   public void next() {
     stop();
-    if (PLAYLIST.isEmpty()) {
-      return;
+    // Music entries are data-driven and may legitimately be absent from a
+    // particular game version/MPQ set (1.10f does not ship every expansion
+    // track).  Keep trying the remaining playlist instead of allowing an
+    // optional track failure to abort the whole client during splash screen.
+    while (!PLAYLIST.isEmpty()) {
+      this.asset = PLAYLIST.removeFirst();
+      try {
+        ASSETS.load(asset, Music.class);
+        ASSETS.finishLoadingAsset(asset);
+        this.track = ASSETS.get(asset, Music.class);
+        if (track == null) {
+          throw new IllegalStateException("Asset manager returned null music");
+        }
+        track.setOnCompletionListener(this);
+        track.play();
+        if (Gdx.app.getLogLevel() >= Application.LOG_DEBUG) {
+          Gdx.app.debug(TAG, "Now playing \"" + asset + "\"");
+        }
+        return;
+      } catch (RuntimeException ex) {
+        // Resolver/load failures are non-fatal for music.  Unload any partial
+        // entry so a later enqueue can retry cleanly after resources change.
+        try {
+          ASSETS.unload(asset);
+        } catch (RuntimeException ignored) {
+          // Keep the original load failure as the diagnostic below.
+        }
+        this.track = null;
+        Gdx.app.error(TAG, "Skipping unavailable music \"" + asset + "\"", ex);
+      }
     }
-
-    this.asset = PLAYLIST.removeFirst();
-    ASSETS.load(asset, Music.class);
-    ASSETS.finishLoadingAsset(asset);
-    this.track = ASSETS.get(asset, Music.class);
-    track.setOnCompletionListener(this);
-    track.play();
-    if (Gdx.app.getLogLevel() >= Application.LOG_DEBUG) {
-      Gdx.app.debug(TAG, "Now playing \"" + asset + "\"");
-    }
+    this.asset = null;
   }
 
 
