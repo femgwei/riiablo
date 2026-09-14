@@ -1704,6 +1704,16 @@ public final class D2GSHeadlessClient {
 
       a.attackUntilDead(inA, outA, fallenA, deadline());
       b.awaitDead(inB, fallenA.entityId, deadline());
+      long[] deathWatermark = D2GS.headlessUnitLifecycleState(fallenA.entityId);
+      if (deathWatermark[0] < com.riiablo.engine.server.component.UnitLifecycle.Phase.DEATH.ordinal()
+          || deathWatermark[1] < 0L || deathWatermark[2] <= 0L || deathWatermark[3] == 0L) {
+        throw new IllegalStateException("death queue watermark invalid: phase="
+            + deathWatermark[0] + " deathTick=" + deathWatermark[1]
+            + " simTick=" + deathWatermark[2] + " handled=" + deathWatermark[3]);
+      }
+      log("death_queue_pass", "fallen=" + fallenA.entityId + " phase="
+          + deathWatermark[0] + " deathTick=" + deathWatermark[1]
+          + " simTick=" + deathWatermark[2] + " handled=true");
       Vector2 observation = D2GS.headlessRoomObservationPosition(2, fallenA.x, fallenA.y);
       if (observation == null) throw new IOException("Fallen observation point unavailable");
       send(outA, positionPacket(a.playerId, observation.x, observation.y));
@@ -7326,8 +7336,9 @@ public final class D2GSHeadlessClient {
         snapshot = new Snapshot(sync.entityId());
         monsters.put(sync.entityId(), snapshot);
       }
-      if ((sync.flags() & EntityFlags.deleted) != 0) {
-        snapshot.deleted = true;
+    if ((sync.flags() & EntityFlags.deleted) != 0) {
+      snapshot.deleted = true;
+      snapshot.deletionTick = sync.tick();
         snapshot.groundItem = false;
         return;
       }
@@ -7928,6 +7939,7 @@ public final class D2GSHeadlessClient {
     float maxLife;
     boolean dead;
     boolean deleted;
+    long deletionTick = -1L;
     boolean groundItem;
     int groundQuantity = -1;
     int groundOwnerId = -1;

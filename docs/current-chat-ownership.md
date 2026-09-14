@@ -670,3 +670,14 @@ Armageddon/Hurricane 的实机观感验证。
 
 当前下一项：暴露死亡队列的入队、处理、实体删除 Tick，验证重复死亡事件只结算一次，
 并把死亡/掉落水位纳入重连比较。
+
+### 2026-09-15 死亡队列 Tick 水位（本轮完成）
+
+- [x] ~~新增 `headlessUnitLifecycleState` 只读接口~~：提供生命周期阶段、死亡序号、
+  当前 Sim Tick 和 `deathHandled` 标记。
+- [x] ~~Fallen 双客户端接入~~：死亡进入 DEATH 阶段后双方观察到复活，复活后的再次
+  死亡继续保持无重复经验/掉落。
+- 验证：1.10f `headlessFallenDual` 通过，`death_queue_pass ... handled=true`。
+
+当前下一项：将死亡/掉落生命周期水位接入断线重连，比较死亡实体、尸体和地面掉落的
+创建/删除 Tick，防止重连重复死亡事件或复制掉落。

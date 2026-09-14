@@ -4955,3 +4955,15 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：把死亡队列本身的入队、处理和实体删除 Tick 暴露给离屏夹具，验证同一死亡
 事件在一个或相邻 Tick 内只结算一次，并与重连后的死亡/掉落水位对齐。
+
+### 2026-09-15 死亡队列 Tick 水位（本轮完成）
+
+- [x] ~~增加 `headlessUnitLifecycleState` 只读采样~~：暴露实体生命周期阶段、
+  `deathHandled`、死亡序号和当前 Sim Tick，不触碰生产奖励计算。
+- [x] ~~接入 Fallen 双客户端回归~~：死亡后必须进入 DEATH 阶段且已处理，随后两个
+  客户端都观察到复活；复活后的再次死亡仍保持原生无经验/无掉落规则。
+- 验证：真实 1.10f `headlessFallenDual` 通过，日志
+  `death_queue_pass ... phase=3 deathTick=1 simTick=20 handled=true`。
+
+下一项：把死亡/掉落水位继续接入断线重连夹具，比较死亡实体、尸体和地面掉落的
+创建/删除 Tick，确保重连不会重复投递死亡事件或复制掉落。

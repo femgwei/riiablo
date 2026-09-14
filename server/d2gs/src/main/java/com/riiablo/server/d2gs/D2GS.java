@@ -230,6 +230,39 @@ public class D2GS extends ApplicationAdapter {
     };
   }
 
+  /** Read-only lifecycle/death watermark sampled on the authoritative thread. */
+  static long[] headlessUnitLifecycleState(int entityId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) {
+      return new long[] {-1L, -1L, -1L, 0L};
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<long[]> state =
+        new java.util.concurrent.atomic.AtomicReference<>(new long[] {-1L, -1L, -1L, 0L});
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.UnitLifecycle lifecycle = server.world
+            .getMapper(com.riiablo.engine.server.component.UnitLifecycle.class).get(entityId);
+        long tick = server.simulation == null ? -1L : server.simulation.tickNumber();
+        state.set(new long[] {
+            lifecycle == null ? -1L : lifecycle.phase.ordinal(),
+            lifecycle == null ? -1L : lifecycle.deathTick,
+            tick,
+            lifecycle != null && lifecycle.deathHandled ? 1L : 0L
+        });
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? state.get()
+          : new long[] {-1L, -1L, -1L, 0L};
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new long[] {-1L, -1L, -1L, 0L};
+    }
+  }
+
   /**
    * Test-only fallback for skills whose COF keyframe is not available in the
    * headless animation tables. The network client still submits a real
