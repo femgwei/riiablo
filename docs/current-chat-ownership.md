@@ -557,3 +557,15 @@ Armageddon/Hurricane 的实机观感验证。
 
 下一项：进入 A1–A5 游戏流程离屏回归收敛，优先检查区域切换、任务奖励、多人快照和
 重连状态，Options 暂不再扩张。
+### 2026-09-15 A1–A5 区域切换双客户端回归（本轮完成）
+
+- [x] ~~新增 `headlessAreaTransitionDual` 离屏双客户端门槛~~：A1 通过权威区域切换
+  验证，A2/A3/A4/A5 各选一条原生 1.10f 静态 Warp 边并双向往返。
+- [x] ~~每条边均经正常 `WARP_INTERACTION` 网络请求~~，两个客户端同时移动到目标区，
+  检查目标区快照和反向 Warp，避免仅调用服务端测试钩子掩盖网络/同步问题。
+- 验证：`D2_HOME=G:\\BaiduNetdiskDownload\\Diablo II 1.10F`
+  `:server:d2gs:headlessAreaTransitionDual` 通过，日志为
+  `area_transition_dual_pass pairs=4 transitions=9 clients=true,true`。
+
+下一项：在区域切换基线之上收敛 A1–A5 任务奖励快照，优先检查奖励 pending/granted
+状态、重复请求幂等和多人断线重连恢复。
