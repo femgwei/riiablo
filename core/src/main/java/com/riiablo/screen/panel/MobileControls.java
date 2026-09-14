@@ -103,6 +103,12 @@ public class MobileControls extends WidgetGroup implements Disposable {
         }
 
         HotkeyButton actor = (HotkeyButton) event.getListenerActor();
+        // Button's disabled drawable is not sufficient here: the gesture
+        // listener receives taps independently of Scene2D's Button listener.
+        // Respect the same availability state used by the HUD so a red
+        // Throw/Attack icon cannot still start an animation or packet.
+        actor.refreshDisabled();
+        if (actor.isDisabled()) return;
         final int skillId = actor.getSkill();
         if (skillId == -1) return;
         final int player = Riiablo.game.player;

@@ -60,7 +60,7 @@
 
 ## 最近更新（2026-09-15，城镇技能点击拦截）
 
-- `CursorMovementSystem` 现在在普通点击、输入队列、按住/释放及联机发送前复用
+- `CursorMovementSystem` 和 `MobileControls` 现在在普通点击、输入队列、按住/释放及联机发送前复用
   原生 `Skills.txt:InTown` 规则。红色 `Throw` 等技能在营地点击不会启动
   `Actioneer` 攻击动画、不会发送施法请求，也不会自动走向怪物；NPC/传送点交互
   路径保持优先。

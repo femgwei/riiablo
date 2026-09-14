@@ -4761,7 +4761,8 @@ Quest Warp 入口与过渡，不改战斗公式/技能注册）；测试半成�
   `:core:test --tests com.riiablo.engine.server.skill.NativeSkillResolverTest` 与
   `:core:compileJava` 均通过。
 
-共享文件：`core/src/main/java/com/riiablo/engine/client/CursorMovementSystem.java`（输入层最小
-改动）、`core/src/main/java/com/riiablo/engine/server/skill/NativeSkillResolver.java`（新增重载），
+共享文件：`core/src/main/java/com/riiablo/engine/client/CursorMovementSystem.java`、
+`core/src/main/java/com/riiablo/screen/panel/MobileControls.java`（输入层最小改动）、
+`core/src/main/java/com/riiablo/engine/server/skill/NativeSkillResolver.java`（新增重载），
 未修改战斗公式、技能注册或网络协议。下一步：使用 1.10f 资源进行营地 Throw 点击离屏回归，
 并确认野外 Throw/普通攻击及 NPC 交互不受影响。
