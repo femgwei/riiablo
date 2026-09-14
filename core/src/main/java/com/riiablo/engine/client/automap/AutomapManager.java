@@ -670,7 +670,9 @@ public class AutomapManager implements Disposable {
     for (int i = 0, size = layer.objects.size; i < size; i++) {
       AutomapCell cell = layer.objects.get(i);
       if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
-        if (tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) nativeTerrainDrawCount++;
+        if (renderProjectedTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) {
+          nativeTerrainDrawCount++;
+        }
       }
     }
     
@@ -678,7 +680,9 @@ public class AutomapManager implements Disposable {
     for (int i = 0, size = layer.extras.size; i < size; i++) {
       AutomapCell cell = layer.extras.get(i);
       if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
-        if (tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) nativeTerrainDrawCount++;
+        if (renderProjectedTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) {
+          nativeTerrainDrawCount++;
+        }
       }
     }
     
@@ -697,14 +701,19 @@ public class AutomapManager implements Disposable {
     batch.setColor(1f, 1f, 1f, alpha);
     for (int i = 0, size = entityMarkers.size; i < size; i++) {
       EntityMarker marker = entityMarkers.get(i);
-      if (AutomapEntityCells.hasCell(marker.nativeCell) && tileRenderer.hasSprite()) continue;
-      geometricFallbackDrawCount++;
-      if (!AutomapEntityCells.hasCell(marker.nativeCell)) continue;
+      if (!AutomapEntityCells.hasCell(marker.nativeCell)) {
+        geometricFallbackDrawCount++;
+        continue;
+      }
       try {
-        if (tileRenderer.renderTile(batch, marker.nativeCell,
-            marker.worldX, marker.worldY)) drawn++;
+        if (renderProjectedTile(batch, marker.nativeCell, marker.worldX, marker.worldY)) {
+          drawn++;
+        } else {
+          geometricFallbackDrawCount++;
+        }
       } catch (RuntimeException ignored) {
         // Invalid/missing DC6 frame falls back to the geometric marker.
+        geometricFallbackDrawCount++;
       }
     }
     batch.setColor(1f, 1f, 1f, 1f);
@@ -718,10 +727,17 @@ public class AutomapManager implements Disposable {
     for (int i = 0, size = cells.size; i < size; i++) {
       AutomapCell cell = cells.get(i);
       if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
-        if (tileRenderer.renderTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) drawn++;
+        if (renderProjectedTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) drawn++;
       }
     }
     return drawn;
+  }
+
+  /** Keeps exploration in world coordinates while drawing in isometric screen space. */
+  private boolean renderProjectedTile(PaletteIndexedBatch batch, int cellNo,
+                                      float worldX, float worldY) {
+    AutomapProjection.worldToAutomap(worldX, worldY, tmpVec);
+    return tileRenderer.renderTile(batch, cellNo, tmpVec.x, tmpVec.y);
   }
   
   /**

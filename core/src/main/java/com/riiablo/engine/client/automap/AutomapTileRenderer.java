@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.ObjectMap;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.AutoMap;
+import com.riiablo.codec.util.BBox;
 import com.riiablo.graphics.PaletteIndexedBatch;
 
 /**
@@ -424,7 +425,12 @@ public class AutomapTileRenderer implements Disposable {
       // 获取纹理区域
       TextureRegion region = currentSprite.getTexture(0, frameIndex);
       if (region != null) {
-        batch.draw(region, x, y);
+        // DC6 frame offsets are relative to the cell origin. Ignoring the
+        // frame box makes native Automap strokes drift by the frame size and
+        // disconnects adjacent walls.
+        BBox box = currentSprite.getBox(0, frameIndex);
+        if (box == null) return false;
+        batch.draw(region, x + box.xMin, y - box.yMax);
         return true;
       }
     } catch (Exception e) {

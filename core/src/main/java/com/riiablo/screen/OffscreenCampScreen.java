@@ -1,8 +1,12 @@
 package com.riiablo.screen;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.riiablo.save.CharData;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
@@ -19,6 +23,7 @@ import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.automap.AutomapLayer;
 import com.riiablo.engine.client.automap.AutomapManager;
+import com.riiablo.engine.client.automap.AutomapProjection;
 
 /**
  * Production {@link GameScreen} smoke test driven by a 1x1 hidden LWJGL
@@ -26,6 +31,9 @@ import com.riiablo.engine.client.automap.AutomapManager;
  * DRLG generation, Rogue Encampment entity creation and the real renderer.
  */
 public final class OffscreenCampScreen extends GameScreen {
+  private static final int AUTOMAP_CAPTURE_WIDTH = 854;
+  private static final int AUTOMAP_CAPTURE_HEIGHT = 480;
+
   private final String outputDirectory;
   private final int targetLevelId;
   private final boolean validateWarpGraph;
@@ -257,8 +265,89 @@ public final class OffscreenCampScreen extends GameScreen {
     if (terrain <= 0) {
       throw new IllegalStateException("Native Automap rendered zero DC6 terrain cells");
     }
+    int visiblePixels = captureNativeAutomap(manager);
+    if (visiblePixels < 100) {
+      throw new IllegalStateException("Native Automap DC6 cells were drawn outside the visible viewport"
+          + ": terrain=" + terrain + " visiblePixels=" + visiblePixels);
+    }
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_AUTOMAP_DC6] terrain=" + terrain
-        + " entities=" + entities + " fallback=" + fallback);
+        + " entities=" + entities + " fallback=" + fallback
+        + " visiblePixels=" + visiblePixels);
+  }
+
+  /**
+   * Renders only native Automap DC6 cells into a production-sized FBO. The
+   * original 1x1 smoke image proved that draw calls happened, but could not
+   * detect world coordinates being sent directly to a screen-space batch.
+   */
+  private int captureNativeAutomap(AutomapManager manager) {
+    Position playerPosition = engine.getMapper(Position.class).get(player);
+    if (playerPosition == null || playerPosition.position == null) {
+      throw new IllegalStateException("Automap capture player position unavailable");
+    }
+    Vector2 center = new Vector2();
+    AutomapProjection.worldToAutomap(
+        playerPosition.position.x, playerPosition.position.y, center);
+    OrthographicCamera camera = new OrthographicCamera(
+        AUTOMAP_CAPTURE_WIDTH, AUTOMAP_CAPTURE_HEIGHT);
+    camera.position.set(center.x, center.y, 0f);
+    camera.update();
+
+    FrameBuffer frameBuffer = new FrameBuffer(Pixmap.Format.RGBA8888,
+        AUTOMAP_CAPTURE_WIDTH, AUTOMAP_CAPTURE_HEIGHT, false);
+    Pixmap pixels = null;
+    try {
+      frameBuffer.begin();
+      Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+      Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
+      Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+      Riiablo.batch.setProjectionMatrix(camera.combined);
+      Riiablo.batch.setPalette(automapPalette());
+      Riiablo.batch.begin();
+      try {
+        manager.renderWithSprites(Riiablo.batch, map, 0, 0, 0, 0, 0, 0);
+        manager.renderNativeEntitySprites(Riiablo.batch, manager.opacity);
+      } finally {
+        if (Riiablo.batch.isDrawing()) Riiablo.batch.end();
+      }
+      pixels = Pixmap.createFromFrameBuffer(
+          0, 0, AUTOMAP_CAPTURE_WIDTH, AUTOMAP_CAPTURE_HEIGHT);
+    } finally {
+      frameBuffer.end();
+      frameBuffer.dispose();
+    }
+
+    int visiblePixels = 0;
+    Pixmap flipped = new Pixmap(AUTOMAP_CAPTURE_WIDTH, AUTOMAP_CAPTURE_HEIGHT,
+        Pixmap.Format.RGBA8888);
+    try {
+      for (int y = 0; y < AUTOMAP_CAPTURE_HEIGHT; y++) {
+        for (int x = 0; x < AUTOMAP_CAPTURE_WIDTH; x++) {
+          int pixel = pixels.getPixel(x, y);
+          flipped.drawPixel(x, AUTOMAP_CAPTURE_HEIGHT - y - 1, pixel);
+          if ((pixel >>> 8) != 0) visiblePixels++;
+        }
+      }
+      com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
+      output.mkdirs();
+      PixmapIO.writePNG(output.child("automap-native-dc6.png"), flipped);
+    } finally {
+      if (pixels != null) pixels.dispose();
+      flipped.dispose();
+    }
+    return visiblePixels;
+  }
+
+  private Texture automapPalette() {
+    if (Riiablo.palettes == null) return null;
+    switch (map.getAct()) {
+      case 1: return Riiablo.palettes.act2;
+      case 2: return Riiablo.palettes.act3;
+      case 3: return Riiablo.palettes.act4;
+      case 4: return Riiablo.palettes.act5;
+      case 0:
+      default: return Riiablo.palettes.act1;
+    }
   }
 
   /** Builds a bounded probe over loaded native objects whose modes differ in collision. */

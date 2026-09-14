@@ -1,10 +1,10 @@
 package com.riiablo.engine.client.automap;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.math.Vector2;
 
 import com.riiablo.camera.IsometricCamera;
-import com.riiablo.map.DT1.Tile;
 
 /**
  * Automap 专用摄像头
@@ -20,14 +20,14 @@ import com.riiablo.map.DT1.Tile;
  * 
  * @author riiablo team
  */
-public class AutomapCamera extends IsometricCamera {
+public class AutomapCamera extends OrthographicCamera {
   private static final String TAG = "AutomapCamera";
   
   //==========================================================================
   // 常量
   //==========================================================================
   
-  /** 默认缩放值 (1.0 = 与主摄像头相同，0.5 = 缩小一半显示更大范围) */
+  /** 默认 Automap DC6 缩放值。 */
   public static final float DEFAULT_ZOOM = 0.5f;
   
   /** 最小缩放值 (显示最大范围) */
@@ -39,7 +39,7 @@ public class AutomapCamera extends IsometricCamera {
   /** 缩放步进值 */
   public static final float ZOOM_STEP = 0.1f;
   
-  /** 平移步进值 (世界坐标单位) */
+  /** 平移步进值（世界子格坐标） */
   public static final float PAN_STEP = 2.0f;
   
   //==========================================================================
@@ -60,6 +60,9 @@ public class AutomapCamera extends IsometricCamera {
   
   /** 是否已初始化 */
   private boolean initialized = false;
+
+  /** 主世界子格坐标转换后的原生 Automap 像素位置。 */
+  private final Vector2 projectedPosition = new Vector2();
   
   //==========================================================================
   // 构造函数
@@ -83,9 +86,6 @@ public class AutomapCamera extends IsometricCamera {
     this.near = mainCamera.near;
     this.far = mainCamera.far;
     
-    // 设置与主摄像头相同的偏移
-    this.offset(0, -Tile.SUBTILE_HEIGHT50);
-    
     // 设置初始缩放
     this.zoom = automapZoom;
     
@@ -94,8 +94,10 @@ public class AutomapCamera extends IsometricCamera {
     
     this.initialized = true;
     
-    Gdx.app.log(TAG, "AutomapCamera initialized: zoom=" + automapZoom 
-        + ", viewport=" + viewportWidth + "x" + viewportHeight);
+    if (Gdx.app != null) {
+      Gdx.app.log(TAG, "AutomapCamera initialized: zoom=" + automapZoom
+          + ", viewport=" + viewportWidth + "x" + viewportHeight);
+    }
   }
   
   /**
@@ -117,12 +119,14 @@ public class AutomapCamera extends IsometricCamera {
   public void syncWithMainCamera() {
     if (mainCamera == null) return;
     
-    // 位置 = 主摄像头位置 + 偏移
-    float newX = mainCamera.position.x + offsetX;
-    float newY = mainCamera.position.y + offsetY;
-    
-    // 设置位置
-    this.set(newX, newY);
+    // Automap DC6 cells use an 8x4 pixel diamond per DT1 tile, not the
+    // gameplay renderer's 160x80 tile projection. Project the main camera's
+    // world-subtile position before assigning the orthographic camera.
+    AutomapProjection.worldToAutomap(
+        mainCamera.position.x + offsetX,
+        mainCamera.position.y + offsetY,
+        projectedPosition);
+    this.position.set(projectedPosition.x, projectedPosition.y, 0f);
     
     // 设置缩放
     this.zoom = automapZoom;

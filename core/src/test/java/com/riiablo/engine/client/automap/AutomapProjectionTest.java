@@ -13,11 +13,34 @@ class AutomapProjectionTest {
     assertEquals(-7.5f, out.y, 0.001f);
   }
 
-  @Test void worldProjectionIsSharedCoordinateSpace() {
+  @Test void worldProjectionUsesIsometricScreenSpace() {
     Vector2 out = new Vector2();
     AutomapProjection.worldToAutomap(12.5f, -3.25f, out);
-    assertEquals(12.5f, out.x, 0.001f);
-    assertEquals(-3.25f, out.y, 0.001f);
+    assertEquals(25.2f, out.x, 0.001f);
+    assertEquals(-7.4f, out.y, 0.001f);
+  }
+
+  @Test void worldProjectionMatchesTileAxes() {
+    Vector2 out = new Vector2();
+    AutomapProjection.worldToAutomap(1f, 0f, out);
+    assertEquals(1.6f, out.x, 0.001f);
+    assertEquals(-0.8f, out.y, 0.001f);
+    AutomapProjection.worldToAutomap(0f, 1f, out);
+    assertEquals(-1.6f, out.x, 0.001f);
+    assertEquals(-0.8f, out.y, 0.001f);
+  }
+
+  @Test void adjacentDt1TilesUseNativeMaxiMapSpacing() {
+    Vector2 origin = new Vector2();
+    Vector2 east = new Vector2();
+    Vector2 south = new Vector2();
+    AutomapProjection.worldToAutomap(0f, 0f, origin);
+    AutomapProjection.worldToAutomap(5f, 0f, east);
+    AutomapProjection.worldToAutomap(0f, 5f, south);
+    assertEquals(8f, east.x - origin.x, 0.001f);
+    assertEquals(-4f, east.y - origin.y, 0.001f);
+    assertEquals(-8f, south.x - origin.x, 0.001f);
+    assertEquals(-4f, south.y - origin.y, 0.001f);
   }
 
   @Test void negativeWorldCoordinatesUseFloorTileDivision() {

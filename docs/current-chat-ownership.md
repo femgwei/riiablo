@@ -415,3 +415,14 @@ Armageddon/Hurricane 的实机观感验证。
   `D2_HOME` 仓库变量启用。
 - 工作流不会下载、缓存或提交暴雪 MPQ；真实任务先检查 `d2data.mpq`，再调用
   `headlessAreaSkillRegression`。
+
+### 2026-09-14 Automap 原生 DC6 可见性修复
+
+- 当前 Chat 继续统一负责地图、战斗、技能、物品、任务、NPC、网络和存档；本轮只修改
+  Automap 客户端绘制与离屏验证，没有独立战斗 Chat 需要避让。
+- Automap 地形/对象/怪物/NPC cell 已统一使用原生 8x4-per-DT1-tile 投影和 DC6 BBox
+  锚点；修复了有效实体 cell 被条件反转跳过的问题。
+- 真实 1.10f 的 854x480 离屏截图通过，结果为
+  `terrain=600 entities=58 fallback=1 visiblePixels=17910`。
+- 下一项恢复 A4Q2 传送门重连，当前已知失败点为 Harrogath 目标 Zone 尚未注册导致
+  `WARP_DESTINATION_MISSING`；相关半成品保持未提交，未混入 Automap 提交。

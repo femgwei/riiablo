@@ -5,6 +5,10 @@ import com.riiablo.map.DT1;
 
 /** Shared world-to-Automap coordinate conventions. */
 public final class AutomapProjection {
+  /** Native MaxiMap cells are spaced 8x4 pixels per 5x5 DT1 tile. */
+  public static final float PIXELS_PER_SUBTILE_X = 8f / DT1.Tile.SUBTILE_SIZE;
+  public static final float PIXELS_PER_SUBTILE_Y = 4f / DT1.Tile.SUBTILE_SIZE;
+
   private AutomapProjection() {}
 
   /** DT1 tile origin to the center of its first 5x5 subtile footprint. */
@@ -15,7 +19,9 @@ public final class AutomapProjection {
 
   /** Converts a world point to the coordinate space used by AutomapCamera. */
   public static void worldToAutomap(float worldX, float worldY, Vector2 out) {
-    out.set(worldX, worldY);
+    out.set(
+        (worldX - worldY) * PIXELS_PER_SUBTILE_X,
+        -(worldX + worldY) * PIXELS_PER_SUBTILE_Y);
   }
 
   /** Returns the DT1 tile index containing a world-subtile coordinate. */

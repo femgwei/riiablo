@@ -4666,3 +4666,24 @@ A4Q2 Diablo 完成后的多人领取/重连快照，再进入 A3/A5 仍缺少原
 
 下一项：继续核对 Automap 原生 cell 的坐标投影和实体原生图标帧（对象/怪物/NPC），
 再处理 A4Q2 传送门断线重连快照。
+
+### 2026-09-14 Automap 原生投影与实体帧修复（本轮完成）
+
+- [x] 修正原生地形、对象、额外标记和实体 cell 的坐标链：探索状态继续使用世界子格，
+  绘制统一转换为 MaxiMap 的等距空间。对照本地 `libd2` 原生 Automap 导出约定，采用
+  每个 5x5 DT1 tile 对应 8x4 Automap 像素，避免旧实现把原始世界坐标直接送入批次，
+  也避免误用主地图 160x80 tile 比例造成 cell 大面积断开。
+- [x] `AutomapCamera` 改为独立正交相机，并以投影后的主相机世界位置居中；Automap
+  不再继承主地图的 160x80 等距变换后对坐标进行二次投影。
+- [x] 修复原生实体帧判断反转：存在 `Objects.AutoMap` / `MonStats2.automapCel` 时现在
+  实际绘制 MaxiMap DC6；无 cell 或帧加载失败时才计入几何回退。
+- [x] 按 DC6 `BBox` 应用 `xMin/yMax` 锚点，墙体和图标不再因忽略帧偏移而错位。
+- [x] 离屏入口升级为 854x480 FBO，可输出真实像素截图并拒绝“draw call 存在但全部
+  落在视口外”的假通过。真实 1.10f Blood Moor 验收：
+  `terrain=600 entities=58 fallback=1 visiblePixels=17910`，截图中的原生地形连续可见；
+  `fallback=1` 是没有原生 cell 的玩家标记。
+- [x] Automap 投影、原生表匹配、实体 cell 与可见性专项测试全部通过；未修改战斗目录、
+  网络 schema 或生成网络文件。
+
+下一项：恢复 A4Q2 Tyrael→Harrogath 传送门断线重连测试，修复重连后的
+`WARP_DESTINATION_MISSING`，随后继续 A3/A5 尚未覆盖的原生 NPC 任务奖励分支。
