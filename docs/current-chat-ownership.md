@@ -51,6 +51,12 @@
 - 本轮唯一共享逻辑修改为 `server/d2gs/.../D2GS.java` 的跨 Act Warp 分支；
   `WarpInteractor` 同 Act 路径和战斗系统注册保持不变。
 
+## 最近更新（2026-09-14，本地标枪）
+
+- 修复本地 `ServerSkillSystem(true)` 提前过滤玩家 Throw 的问题；标枪现在由服务端
+  在 `MIS` 关键帧创建权威 Missile，客户端不再只播放空动画。
+- 已运行 `CombatPipelineIntegrationTest`；本轮未修改网络 schema 或生成网络文件。
+
 ## 最近更新（2026-09-11）
 
 - Automap 原生 DC6 实体 SpriteBatch 阶段已加入 ShapeRenderer 投影矩阵保存/恢复、异常

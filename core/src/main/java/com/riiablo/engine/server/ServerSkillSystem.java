@@ -428,6 +428,13 @@ public class ServerSkillSystem extends PassiveSystem {
         && event.srvdofunc != 124
         && event.srvdofunc != 114 && event.srvdofunc != 115 && event.srvdofunc != 119
         && event.srvdofunc != 144
+        // Local GameScreen uses the monstersOnly adapter to avoid duplicating
+        // ordinary player effects, but Throw is now authoritative as well.
+        // Keep the explicit Throw functions in the server path so the
+        // javelin missile is created at the MIS keyframe instead of merely
+        // consuming quantity and returning here.
+        && event.skillId != SkillCodes.throw_ && event.skillId != SkillCodes.left_hand_throw
+        && event.srvdofunc != 3 && event.srvdofunc != 5
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
         && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -446,6 +453,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 124
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
         && skill.srvdofunc != 144
+        && skill.srvdofunc != 3 && skill.srvdofunc != 5
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
         && !PaladinSkills.isHolyBolt(skill)) {
       consumeRangedAmmoForSkill(event, skill);

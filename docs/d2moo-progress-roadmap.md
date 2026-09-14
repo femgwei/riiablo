@@ -4707,3 +4707,12 @@ Quest Warp 入口与过渡，不改战斗公式/技能注册）；测试半成�
 
 下一项：继续 A3/A5 尚未覆盖的原生 NPC 任务奖励分支，并补充跨 Act 过渡对多玩家
 同时处于不同区域时的会话策略验证。
+
+### 2026-09-14 本地标枪投掷修复
+
+- [x] 修复 `GameScreen` 本地权威 ECS 使用 `ServerSkillSystem(true)` 时，显式
+  `Throw/Left Hand Throw` 在 `SkillDoEvent` 被 monsters-only 过滤的问题。现在
+  `MIS` 关键帧会进入服务端标枪解析/创建路径，不再出现“动画播放、数量减少但没有导弹”。
+- [x] 保持普通客户端展示去重逻辑，未修改网络协议或其他技能分支。
+- [x] `:core:test --tests com.riiablo.engine.server.CombatPipelineIntegrationTest --no-daemon`
+  通过；日志对应的 `skillId=2/srvDoFunc=3` 路径已覆盖修复条件。
