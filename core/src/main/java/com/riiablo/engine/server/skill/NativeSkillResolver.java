@@ -40,6 +40,27 @@ public final class NativeSkillResolver {
     return owner < 0 || owner == characterClassId;
   }
 
+  /**
+   * Returns the native Skills.txt InTown flag.  The flag is an allow-list:
+   * attack/weapon skills and offensive spells normally resolve to false in a
+   * town, while utility skills are enabled only when their native row says so.
+   * Keep a conservative system-skill fallback for reduced/custom tables.
+   */
+  public static boolean isAllowedInTown(Skills.Entry skill) {
+    if (skill == null) return true;
+    if (com.riiablo.Riiablo.files != null
+        && com.riiablo.Riiablo.files.NativeSkills != null) {
+      com.riiablo.codec.excel.NativeSkills nativeSkills = com.riiablo.Riiablo.files.NativeSkills;
+      if (nativeSkills.source().columnIndex("InTown") >= 0) {
+        com.riiablo.codec.excel.NativeSkills.Entry nativeSkill = nativeSkills.get(skill.Id);
+        if (nativeSkill != null) return nativeSkill.bool("InTown");
+      }
+    }
+    // If the native row is unavailable, still preserve the most visible
+    // vanilla rule: basic weapon actions cannot be used in town.
+    return !isSystemSkill(skill);
+  }
+
   /** Effective native mana cost in display units (fixed-point shift applied). */
   public static float manaCost(Skills.Entry skill, int level) {
     if (skill == null) return 0f;

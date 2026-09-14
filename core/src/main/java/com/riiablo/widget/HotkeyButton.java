@@ -8,11 +8,14 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.key.MappedKey;
 import com.riiablo.item.Item;
 import com.riiablo.save.ItemData;
 import com.riiablo.skill.SkillCodes;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 
 public class HotkeyButton extends Button {
   MappedKey mapping;
@@ -91,6 +94,19 @@ public class HotkeyButton extends Button {
         disabled = true;
         reason = "dead";
       }
+
+      // D2 evaluates the Skills.txt InTown bit against the caster's current
+      // room.  Weapon attacks and offensive spells therefore remain visible
+      // but receive the red disabled tint while the player is in a town; the
+      // same selected skill becomes usable immediately after leaving it.
+      if (!disabled && isPlayerInTown()) {
+        Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+            ? Riiablo.files.skills.get(skillId) : null;
+        if (!NativeSkillResolver.isAllowedInTown(skill)) {
+          disabled = true;
+          reason = "town";
+        }
+      }
     }
 
     setDisabled(disabled);
@@ -102,6 +118,20 @@ public class HotkeyButton extends Button {
       disabledInitialized = true;
     }
     return disabled;
+  }
+
+  private static boolean isPlayerInTown() {
+    if (Riiablo.game == null || Riiablo.engine == null || Riiablo.game.player < 0) return false;
+    try {
+      com.artemis.ComponentMapper<MapWrapper> mapper = Riiablo.engine.getMapper(MapWrapper.class);
+      if (mapper == null || !mapper.has(Riiablo.game.player)) return false;
+      MapWrapper wrapper = mapper.get(Riiablo.game.player);
+      return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
+    } catch (RuntimeException ignored) {
+      // UI can be drawn during world teardown; retain the previous usable
+      // state instead of making a transient mapper failure fatal.
+      return false;
+    }
   }
 
   public void copy(HotkeyButton other) {

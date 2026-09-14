@@ -223,6 +223,16 @@ public class ServerSkillSystem extends PassiveSystem {
       return;
     }
 
+    // Native D2 rejects skills whose Skills.txt InTown bit is clear while the
+    // caster is in a town.  Keep this authoritative check alongside the
+    // client red-tint gate so a forged network cast cannot bypass the UI.
+    if (isTownUnit(event.entityId) && !NativeSkillResolver.isAllowedInTown(skill)) {
+      reject(event, 3, "skill is not usable in town");
+      log.info("[SKILL_CAST] phase=reject source={} skill={} reason=town_in_town_flag",
+          event.entityId, skill.skill);
+      return;
+    }
+
     UnitStates casterStates = mUnitStates.has(event.entityId)
         ? mUnitStates.get(event.entityId) : null;
     StateList casterStateList = casterStates != null ? casterStates.stateList : null;

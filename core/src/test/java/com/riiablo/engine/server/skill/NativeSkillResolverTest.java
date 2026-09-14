@@ -24,6 +24,19 @@ public class NativeSkillResolverTest {
   }
 
   @Test
+  public void weaponActionsAreNotAllowedInTownWithoutNativeTable() {
+    Skills.Entry attack = new Skills.Entry();
+    attack.Id = com.riiablo.skill.SkillCodes.attack;
+    attack.skill = "Attack";
+    assertFalse(NativeSkillResolver.isAllowedInTown(attack));
+
+    Skills.Entry utility = new Skills.Entry();
+    utility.Id = -1;
+    utility.skill = "Scroll of Townportal";
+    assertTrue(NativeSkillResolver.isAllowedInTown(utility));
+  }
+
+  @Test
   public void manaUsesNativeFixedPointFormula() {
     Skills.Entry skill = new Skills.Entry();
     skill.mana = 12;

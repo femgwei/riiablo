@@ -17,6 +17,19 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-15 城镇技能禁用状态对齐（本轮完成）
+
+- [x] 客户端 `HotkeyButton` 根据玩家当前 `MapWrapper.zone.isTown()` 和原生
+  `Skills.txt` 的 `InTown` 位刷新禁用态；攻击、投掷及 `InTown=0` 的攻击法术在
+  营地显示红色禁用图标，离开城镇后自动恢复可用。
+- [x] 服务端 `ServerSkillSystem` 增加同一 `InTown` 权威校验，网络客户端无法通过
+  伪造施法包在城镇释放被禁止技能；未加载原生表时仅对基础武器动作采用保守回退。
+- [x] 新增 1.10f MPQ 集成测试，确认 Attack、Throw、Left Hand Throw、Fire Bolt、
+  Teleport 等原生行的 `InTown=false`，并补充无资源回退测试。
+
+涉及文件：`HotkeyButton.java`、`NativeSkillResolver.java`、`ServerSkillSystem.java`
+及对应测试；未修改地图、网络 schema 或生成网络文件。
+
 ## 2026-09-13 A5Q6 Baal 终态重连闭环（本轮完成）
 
 - Baal 死亡后对所有资料片玩家执行幂等奖励校正，避免房间订阅滞后导致队友或重连玩家
