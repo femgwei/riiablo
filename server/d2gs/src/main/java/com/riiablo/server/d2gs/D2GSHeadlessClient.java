@@ -119,6 +119,9 @@ public final class D2GSHeadlessClient {
   private final Set<Integer> playerMissiles = new HashSet<>();
   /** Last authoritative tick observed for each missile entity. */
   private final Map<Integer, Long> missileTicks = new HashMap<>();
+  /** First active and terminal ticks observed for each missile incarnation. */
+  private final Map<Integer, Long> missileCreationTicks = new HashMap<>();
+  private final Map<Integer, Long> missileDeletionTicks = new HashMap<>();
   /** Entity ids that were sent more than once in the same tick. */
   private final Set<Integer> duplicateMissileFrames = new HashSet<>();
   /** Owner id carried by each observed missile entity. */
@@ -138,6 +141,7 @@ public final class D2GSHeadlessClient {
   private long lastRejectedMovementSequence;
   private long lastMovementAcknowledgementTick = -1L;
   private long combatSequence;
+  private long lastDamageTick = -1L;
   private int currentLevelId = -1;
   private int wrongLevelDrops;
   private float playerX = Float.NaN;
@@ -444,6 +448,9 @@ public final class D2GSHeadlessClient {
               + "projectile entities: " + playerMissiles.size());
         }
         if (config.requireMissile) {
+          // Drain one additional second so short-lived projectiles emit their
+          // terminal deletion frame before checking the lifecycle ordering.
+          consumeFor(input, 1_000L);
           for (Integer missile : playerMissiles) {
             Integer owner = missileOwners.get(missile);
             if (owner == null || owner <= 0) {
@@ -455,6 +462,26 @@ public final class D2GSHeadlessClient {
             throw new IllegalStateException("missile entity synchronised twice in one tick: "
                 + duplicateMissileFrames);
           }
+          int deleted = 0;
+          for (Integer missile : playerMissiles) {
+            Long created = missileCreationTicks.get(missile);
+            Long removed = missileDeletionTicks.get(missile);
+            if (created == null || (lastDamageTick > 0L && created > lastDamageTick)) {
+              throw new IllegalStateException("missile was created after target damage: entity="
+                  + missile + " createdTick=" + created + " damageTick=" + lastDamageTick);
+            }
+            if (removed != null) {
+              deleted++;
+              if (removed < created || (lastDamageTick > 0L && removed < lastDamageTick)) {
+                throw new IllegalStateException("missile lifecycle order regressed: entity="
+                    + missile + " created=" + created + " damage=" + lastDamageTick
+                    + " deleted=" + removed);
+              }
+            }
+          }
+          log("missile_lifecycle_pass", "created=" + playerMissiles.size()
+              + " deleted=" + deleted + " damageTick=" + lastDamageTick
+              + " ordered=true");
         }
         log("pass", String.format(
             "player=%d target=%d skill=%d life=%.2f->%.2f damaged=%s attackMode=%s missiles=%d",
@@ -7138,7 +7165,10 @@ public final class D2GSHeadlessClient {
         if (config.requirePeer && sawAttackMode) return false;
         Snapshot current = monsters.get(selected.entityId);
         boolean damaged = current != null && (current.life < initialLife || current.dead);
-        if (damaged && (!config.requireMissile || !playerMissiles.isEmpty())) return true;
+        if (damaged && (!config.requireMissile || !playerMissiles.isEmpty())) {
+          lastDamageTick = lastSnapshotTick;
+          return true;
+        }
       }
     }
     return false;
@@ -7337,7 +7367,12 @@ public final class D2GSHeadlessClient {
         area.skillId = missile.skillId();
         area.damageLevel = missile.damageLevel();
         area.deleted = (sync.flags() & EntityFlags.deleted) != 0;
-        if (!area.deleted) area.everActive = true;
+        if (!area.deleted) {
+          area.everActive = true;
+          missileCreationTicks.putIfAbsent(sync.entityId(), tick);
+        } else {
+          missileDeletionTicks.putIfAbsent(sync.entityId(), tick);
+        }
         missileOwners.putIfAbsent(sync.entityId(), missile.ownerId());
         if (missile.ownerId() == playerId && playerMissiles.add(sync.entityId())) {
           log("missile", "entity=" + sync.entityId() + " owner=" + missile.ownerId()

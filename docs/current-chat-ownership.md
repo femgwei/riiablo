@@ -649,3 +649,13 @@ Armageddon/Hurricane 的实机观感验证。
 
 当前下一项：在上述门槛上增加固定 40ms Sim Tick 的生成→命中→删除顺序观测，并将
   missile 生命周期水位纳入重连基线比较；继续避免修改伤害和技能公式。
+
+### 2026-09-15 固定 Tick 的 missile 生命周期顺序（本轮完成）
+
+- [x] ~~记录 missile 创建、目标受伤和删除 tick~~：创建/命中/删除顺序单调，
+  同一 tick 的重复非删除帧会被测试拒绝。
+- [x] ~~固定步长回归~~：真实 1.10f `headlessSimulationTick` 通过，观测 25 TPS、
+  `step=0.04s`；`headlessMissileCombat` 通过，4 个 missile 的生命周期顺序通过。
+
+当前下一项：继续把死亡队列和短生命周期 state 的过期 tick 纳入顺序观测，并扩展到
+断线重连实体水位比较，防止删除事件在重连后重复投递。

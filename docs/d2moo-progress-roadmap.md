@@ -4928,4 +4928,17 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
   `headlessCombatReconnectRegression`。
 
 下一项：补充固定 40ms Sim Tick 的“同 tick 生成→命中→删除”顺序观测，覆盖 missile
-  生命周期和死亡队列在重连前后的 tick/实体水位一致性；继续保持只读验证，不改伤害公式。
+生命周期和死亡队列在重连前后的 tick/实体水位一致性；继续保持只读验证，不改伤害公式。
+
+### 2026-09-15 固定 Tick 的 missile 生命周期顺序（本轮完成）
+
+- [x] ~~记录每个 missile 的创建/删除 tick 与目标受伤 tick~~：测试夹具确认创建不会
+  晚于命中，删除不会早于创建或命中；同 tick 重复非删除帧会失败。
+- [x] ~~补充固定步长门槛~~：`headlessSimulationTick` 在真实 1.10f 资源下观测到
+  30 个 tick/1.2 秒，步长保持 `0.04s`（25 TPS）。
+- 验证：`:server:d2gs:headlessMissileCombat` 通过，日志
+  `missile_lifecycle_pass created=4 deleted=0 damageTick=156 ordered=true`；
+  `:server:d2gs:headlessSimulationTick` 通过，日志 `sim_tick_pass ... step=0.04`。
+
+下一项：将死亡队列和短生命周期 state 的创建/过期 tick 纳入同一顺序观测，并在
+断线重连测试中比较实体水位，确保删除事件不会在重连后重复投递。
