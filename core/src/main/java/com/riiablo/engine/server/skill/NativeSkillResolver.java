@@ -61,6 +61,17 @@ public final class NativeSkillResolver {
     return !isSystemSkill(skill);
   }
 
+  /**
+   * Returns whether a skill may be submitted from the caster's current room.
+   * Keeping the room check next to the native table lookup lets both HUD and
+   * input code use exactly the same InTown semantics.  The server still
+   * performs its own authoritative validation; this method is only an input
+   * side-effect guard (so a rejected click does not start an animation).
+   */
+  public static boolean isAllowedInTown(Skills.Entry skill, boolean inTown) {
+    return !inTown || isAllowedInTown(skill);
+  }
+
   /** Effective native mana cost in display units (fixed-point shift applied). */
   public static float manaCost(Skills.Entry skill, int level) {
     if (skill == null) return 0f;

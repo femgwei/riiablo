@@ -25,6 +25,7 @@ import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Interactable;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Networked;
@@ -152,6 +153,10 @@ public class CursorMovementSystem extends BaseSystem {
       } else {
         final int skillId = Riiablo.charData.getAction(leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
+        if (!isSkillAllowedForInput(playerId, skillId)) {
+          actioneer.moveTo(playerId, Engine.INVALID_ENTITY);
+          return;
+        }
         // Shift-click/right-click bypasses updateLeft(). Keep the same melee
         // range contract here so normal Attack cannot damage a distant target.
         // Bows and crossbows are the exception: their normal Attack is ranged.
@@ -256,6 +261,10 @@ public class CursorMovementSystem extends BaseSystem {
       return true;
     }
     int skillId = Riiablo.charData.getAction(Input.Buttons.RIGHT);
+    if (!isSkillAllowedForInput(src, skillId)) {
+      actioneer.moveTo(src, Engine.INVALID_ENTITY);
+      return true;
+    }
     iso.agg(tmpVec2.set(click.screenX, click.screenY)).unproject().toWorld();
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
       tmpVec2.set(mPosition.get(targetId).position);
@@ -360,6 +369,14 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void requestCast(int sourceId, int skillId, int targetId, Vector2 targetVec) {
+    // The HUD tint is an affordance, not an input gate.  Mouse clicks can hit
+    // the world directly, so repeat the native InTown check here before
+    // invoking Actioneer (local) or sending a packet (multiplayer).  Without
+    // this guard a red Throw icon still starts the throw animation.
+    if (!isSkillAllowedForInput(sourceId, skillId)) {
+      actioneer.moveTo(sourceId, Engine.INVALID_ENTITY);
+      return;
+    }
     if (socket == null) {
       actioneer.cast(sourceId, skillId, targetId, targetVec);
       return;
@@ -372,6 +389,36 @@ public class CursorMovementSystem extends BaseSystem {
     long targetTick = observedTick == 0L ? 0L : observedTick + 2L;
     NetworkedActionSender.cast(socket, skillId, targetServerId, targetVec,
         NetworkedActionSender.nextCombatSequence(), observedTick, targetTick);
+  }
+
+  /**
+   * Client-side side-effect guard shared by queued clicks and the legacy
+   * press/release path.  It intentionally mirrors the native table rule but
+   * does not replace ServerSkillSystem's authoritative validation.
+   */
+  private boolean isSkillAllowedForInput(int sourceId, int skillId) {
+    if (!isPlayerInTown(sourceId)) return true;
+    Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(skillId) : null;
+    boolean allowed = com.riiablo.engine.server.skill.NativeSkillResolver
+        .isAllowedInTown(skill, true);
+    if (!allowed && Gdx.app != null) {
+      Gdx.app.log(TAG, "[SKILL_CAST] phase=input_reject skill=" + skillId
+          + " reason=town_in_town_flag player=" + sourceId);
+    }
+    return allowed;
+  }
+
+  private boolean isPlayerInTown(int playerId) {
+    if (Riiablo.engine == null || playerId < 0) return false;
+    try {
+      ComponentMapper<MapWrapper> mapper = Riiablo.engine.getMapper(MapWrapper.class);
+      if (mapper == null || !mapper.has(playerId)) return false;
+      MapWrapper wrapper = mapper.get(playerId);
+      return wrapper != null && wrapper.zone != null && wrapper.zone.isTown();
+    } catch (RuntimeException ignored) {
+      return false;
+    }
   }
 
   /** Returns whether a new cast may be submitted this frame. */
@@ -501,6 +548,15 @@ public class CursorMovementSystem extends BaseSystem {
       traceInteraction(src, target, selectedInteractable, distance, "click", true);
     } else {
       if (isTargetDead(target)) return false;
+
+      // A disabled offensive skill must not turn a town click into an
+      // approach/attack command.  Keep interactables above unaffected so NPC
+      // and waypoint clicks remain usable while an attack icon is red.
+      final int selectedSkill = Riiablo.charData.getAction(Input.Buttons.LEFT);
+      if (!isSkillAllowedForInput(src, selectedSkill)) {
+        actioneer.moveTo(src, Engine.INVALID_ENTITY);
+        return true;
+      }
       
       Vector2 targetPos = mPosition.get(target).position;
       float dst = mPosition.get(src).position.dst(targetPos);
@@ -508,7 +564,7 @@ public class CursorMovementSystem extends BaseSystem {
       // Check if in melee range
       boolean inMeleeRange = actioneer.isInMeleeRange(src, target, 3);
       
-      final int selectedSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
+      final int selectedSkillId = selectedSkill;
       final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
 
       // Check if the selected skill is an explicit throw and the equipped

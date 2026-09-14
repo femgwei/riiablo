@@ -58,6 +58,16 @@
 - 本轮未修改共享地图/战斗接口、网络 schema 或生成网络文件；工作区中的历史
   未跟踪 `.log` 产物保持不变。
 
+## 最近更新（2026-09-15，城镇技能点击拦截）
+
+- `CursorMovementSystem` 现在在普通点击、输入队列、按住/释放及联机发送前复用
+  原生 `Skills.txt:InTown` 规则。红色 `Throw` 等技能在营地点击不会启动
+  `Actioneer` 攻击动画、不会发送施法请求，也不会自动走向怪物；NPC/传送点交互
+  路径保持优先。
+- 服务端 `ServerSkillSystem` 的权威校验未移除；本轮只是客户端副作用防护。
+- 验证：`:core:test --tests com.riiablo.engine.server.skill.NativeSkillResolverTest`
+  和 `:core:compileJava` 通过。下一步为 1.10f 营地离屏点击回归及野外攻击回归。
+
 ## 最近更新（2026-09-14，A4Q2 重连）
 
 - 当前 Chat 继续统一负责地图、战斗、技能、物品、任务、NPC、网络和存档。

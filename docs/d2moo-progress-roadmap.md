@@ -4749,3 +4749,19 @@ Quest Warp 入口与过渡，不改战斗公式/技能注册）；测试半成�
 - [x] `:core:test --tests com.riiablo.engine.server.CombatPipelineIntegrationTest --no-daemon`
   通过；`playerThrowConsumesQuantityCreatesMissileAndDamagesMonster` 现在直接使用
   本地 `ServerSkillSystem(true)`，覆盖 `skillId=2/srvDoFunc=3` 的修复条件。
+
+### 2026-09-15 城镇禁用技能输入拦截（本轮完成）
+
+- [x] 将原生 `Skills.txt:InTown` 规则接入 `CursorMovementSystem` 的普通点击、队列点击、
+  按住/释放和联机施法发送入口。城镇内红色 `Throw`、攻击及禁用法术现在不会调用
+  `Actioneer.cast`、不会发送 `NetworkedActionSender.cast`，也不会继续向目标移动触发攻击动画。
+- [x] 保留 `ServerSkillSystem` 的权威校验，客户端拦截仅用于避免错误动画和网络请求；NPC、
+  传送点等可交互对象仍优先走交互路径。
+- [x] 新增 `NativeSkillResolverTest.inputGateAllowsUtilityOnlyOutsideTownRestriction`；
+  `:core:test --tests com.riiablo.engine.server.skill.NativeSkillResolverTest` 与
+  `:core:compileJava` 均通过。
+
+共享文件：`core/src/main/java/com/riiablo/engine/client/CursorMovementSystem.java`（输入层最小
+改动）、`core/src/main/java/com/riiablo/engine/server/skill/NativeSkillResolver.java`（新增重载），
+未修改战斗公式、技能注册或网络协议。下一步：使用 1.10f 资源进行营地 Throw 点击离屏回归，
+并确认野外 Throw/普通攻击及 NPC 交互不受影响。

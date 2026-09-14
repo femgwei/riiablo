@@ -37,6 +37,20 @@ public class NativeSkillResolverTest {
   }
 
   @Test
+  public void inputGateAllowsUtilityOnlyOutsideTownRestriction() {
+    Skills.Entry attack = new Skills.Entry();
+    attack.Id = com.riiablo.skill.SkillCodes.attack;
+    attack.skill = "Attack";
+    assertFalse(NativeSkillResolver.isAllowedInTown(attack, true));
+    assertTrue(NativeSkillResolver.isAllowedInTown(attack, false));
+
+    Skills.Entry utility = new Skills.Entry();
+    utility.Id = -1;
+    utility.skill = "Scroll of Townportal";
+    assertTrue(NativeSkillResolver.isAllowedInTown(utility, true));
+  }
+
+  @Test
   public void manaUsesNativeFixedPointFormula() {
     Skills.Entry skill = new Skills.Entry();
     skill.mana = 12;
