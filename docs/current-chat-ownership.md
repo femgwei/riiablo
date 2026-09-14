@@ -738,3 +738,14 @@ Armageddon/Hurricane 的实机观感验证。
 
 当前下一项：增加同一数字实体 ID 快速复用测试，确保旧 tombstone 到达时不会误删新
 incarnation，并继续检查跨区域实体基线恢复。
+
+### 2026-09-15 同一数字实体 ID 快速复用（本轮完成）
+
+- [x] 新增 `headlessEntityIdReuse`：死亡实体 A 删除并回收后，实体 B 复用相同数字
+  ID，客户端观察到 incarnation 从 1 递增到 2。
+- [x] 延迟重复 tombstone 在 B 快照之后到达时被忽略，B 保持可见且未被误删。
+- 验证：真实 1.10f 离屏任务通过，输出
+  `entity_id_reuse_pass ... delayedTombstoneIgnored=true`。
+
+当前下一项：跨区域 RoomEx 切换与重连基线恢复，校验旧区域删除帧不会影响新区域
+实体，且 level/creation watermark 保持单调。

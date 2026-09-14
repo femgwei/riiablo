@@ -262,6 +262,10 @@ public final class D2GSHeadlessClient {
       runDeathReconnect(d2s, character, config.requireDeathIdempotency);
       return;
     }
+    if (config.requireEntityIdReuse) {
+      runEntityIdReuse(d2s, character);
+      return;
+    }
     if (config.requireBaalWaveDual) {
       runBaalWaveDual(d2s, character);
       return;
@@ -1978,6 +1982,75 @@ public final class D2GSHeadlessClient {
             + " deletionFrames=" + deletionFrames + " incarnation="
             + (deleted == null ? 1 : deleted.incarnation));
       }
+    }
+  }
+
+  /**
+   * Verifies that a delayed tombstone for an old incarnation cannot remove a
+   * newly-created entity that reuses the same numeric server id.
+   */
+  private void runEntityIdReuse(byte[] d2s, CharacterHeader character) throws Exception {
+    D2GSHeadlessClient client = new D2GSHeadlessClient(config);
+    int room = D2GS.headlessNonAdjacentRoomPair(10)[0];
+    try (Socket socket = client.openSocket();
+         DataInputStream input = input(socket);
+         OutputStream output = output(socket)) {
+      send(output, connectionPacket(character, d2s));
+      client.awaitConnection(input, deadline());
+      if (!D2GS.headlessMovePlayerToRoom(client.playerId, 10, room)) {
+        throw new IOException("failed to stage entity-id reuse client");
+      }
+      Thread.sleep(250L);
+
+      int first = D2GS.headlessCreateRoomDeadMonsterFixture(client.playerId, 10, room);
+      if (first < 0) throw new IOException("failed to create first recycled monster");
+      Snapshot firstSnapshot = client.awaitEntity(input, first, deadline());
+      if (!firstSnapshot.dead && firstSnapshot.life > 0f) {
+        throw new IllegalStateException("first recycled fixture was not dead: " + first);
+      }
+      int firstIncarnation = firstSnapshot.incarnation;
+      long firstCreationTick = firstSnapshot.creationTick;
+      if (firstIncarnation != 1) {
+        throw new IllegalStateException("first recycled incarnation invalid: id=" + first
+            + " incarnation=" + firstIncarnation);
+      }
+      if (!D2GS.headlessDeleteDeadEntity(first)) {
+        throw new IOException("failed to delete first recycled monster " + first);
+      }
+      client.awaitDeleted(input, first, deadline());
+      long deleteWait = System.currentTimeMillis() + 5_000L;
+      while (D2GS.headlessEntityActive(first) && System.currentTimeMillis() < deleteWait) {
+        Thread.sleep(40L);
+      }
+      if (D2GS.headlessEntityActive(first)) {
+        throw new IllegalStateException("first recycled monster remained active: " + first);
+      }
+
+      int second = D2GS.headlessCreateRoomDeadMonsterFixture(client.playerId, 10, room);
+      if (second != first) {
+        throw new IllegalStateException("entity id was not reused promptly: first=" + first
+            + " second=" + second);
+      }
+      Snapshot secondSnapshot = client.awaitEntity(input, second, deadline());
+      if (secondSnapshot.incarnation < 2 || secondSnapshot.deleted) {
+        throw new IllegalStateException("reused entity incarnation invalid: id=" + second
+            + " incarnation=" + secondSnapshot.incarnation
+            + " deleted=" + secondSnapshot.deleted);
+      }
+
+      // The fault-injected duplicate delete is delayed by a few ticks.  It
+      // now arrives after the replacement snapshot and must be ignored.
+      client.consumeFor(input, 1_000L);
+      Snapshot afterDelayedDelete = client.monsters.get(second);
+      if (afterDelayedDelete == null || afterDelayedDelete.deleted
+          || afterDelayedDelete.incarnation < 2) {
+        throw new IllegalStateException("stale tombstone removed replacement: id=" + second
+            + " incarnation=" + (afterDelayedDelete == null ? -1 : afterDelayedDelete.incarnation));
+      }
+      log("entity_id_reuse_pass", "entity=" + first + " firstIncarnation="
+          + firstIncarnation + " replacementIncarnation=" + secondSnapshot.incarnation
+          + " delayedTombstoneIgnored=true creationTick=" + firstCreationTick
+          + "->" + secondSnapshot.creationTick);
     }
   }
 
@@ -7467,6 +7540,10 @@ public final class D2GSHeadlessClient {
       } else if (deletion) {
         log("stale_delete_ignored", "entity=" + sync.entityId()
             + " tick=" + snapshotTick + " latest=" + lastSnapshotTick);
+        // Do not apply a delayed tombstone to the current projection.  The
+        // packet belongs to an older server tick and can target an id that has
+        // already been recycled for a newer incarnation.
+        return;
       }
     }
     if (sync.entityId() == playerId) {
@@ -7621,6 +7698,7 @@ public final class D2GSHeadlessClient {
     if (snapshot.deleted || !snapshot.everActive) snapshot.incarnation++;
     snapshot.everActive = true;
     snapshot.deleted = false;
+    if (snapshot.creationTick < 0L) snapshot.creationTick = sync.tick();
     int index = findComponent(sync, ComponentP.MonsterP);
     if (index >= 0) {
       MonsterP monster = (MonsterP) sync.component(new MonsterP(), index);
@@ -8189,6 +8267,7 @@ public final class D2GSHeadlessClient {
     boolean requireFallenScenario;
     boolean requireDeathReconnect;
     boolean requireDeathIdempotency;
+    boolean requireEntityIdReuse;
     boolean requireBaalWaveDual;
     boolean requireA5AncientDual;
     boolean requireA4SealDual;
@@ -8252,6 +8331,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-death-reconnect".equals(arg)) config.requireDeathReconnect = true;
         else if ("--require-death-idempotency".equals(arg)) config.requireDeathIdempotency = true;
+        else if ("--require-entity-id-reuse".equals(arg)) config.requireEntityIdReuse = true;
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-a5-ancient-dual".equals(arg)) config.requireA5AncientDual = true;
         else if ("--require-a4-seal-dual".equals(arg)) config.requireA4SealDual = true;
@@ -8337,6 +8417,7 @@ public final class D2GSHeadlessClient {
           && !config.requireEarlyObjectDual
           && !config.requireDeathReconnect
           && !config.requireDeathIdempotency
+          && !config.requireEntityIdReuse
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
@@ -8360,6 +8441,7 @@ public final class D2GSHeadlessClient {
           && !config.requireEarlyObjectDual
           && !config.requireDeathReconnect
           && !config.requireDeathIdempotency
+          && !config.requireEntityIdReuse
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -8397,6 +8479,7 @@ public final class D2GSHeadlessClient {
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
           + " [--require-death-reconnect]"
           + " [--require-death-idempotency]"
+          + " [--require-entity-id-reuse]"
           + " [--require-a5-ancient-dual]"
           + " [--require-a4-seal-dual]"
           + " [--require-a4-hellforge-dual]"

@@ -2042,6 +2042,56 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /**
+   * Creates one deterministic dead zombie in the requested RoomEx.  This is
+   * intentionally smaller than the reconnect fixture above: the entity-id
+   * reuse regression only needs a monster lifecycle and a tombstone, not a
+   * ground item or opened object.
+   */
+  static int headlessCreateRoomDeadMonsterFixture(int playerId, int levelId, int roomId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || server.map == null
+        || server.factory == null || Riiablo.files == null || Gdx.app == null) {
+      return Engine.INVALID_ENTITY;
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicInteger result =
+        new java.util.concurrent.atomic.AtomicInteger(Engine.INVALID_ENTITY);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.codec.excel.Levels.Entry level = Riiablo.files.Levels.get(levelId);
+        Map.Zone zone = level == null ? null : server.map.findZone(level);
+        Map.RoomEx room = zone == null || roomId < 0 || roomId >= zone.getRoomsEx().size
+            ? null : zone.getRoomsEx().get(roomId);
+        Vector2 position = findHeadlessRoomPosition(server, zone, room);
+        int zombieClass = Riiablo.files.monstats == null
+            ? -1 : Riiablo.files.monstats.index("zombie1");
+        if (position == null || zombieClass < 0) return;
+        int monsterId = server.factory.createMonster(zombieClass, position.x, position.y);
+        if (monsterId < 0) return;
+        com.riiablo.engine.server.component.AttributesWrapper attributes = server.world
+            .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(monsterId);
+        com.riiablo.attributes.StatRef life = attributes == null || attributes.attrs == null
+            ? null : attributes.attrs.get(com.riiablo.attributes.Stat.hitpoints,
+                com.riiablo.attributes.StatRef.obtain());
+        if (life != null) life.set(0f);
+        EventSystem events = server.world.getSystem(EventSystem.class);
+        if (events == null) return;
+        events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(playerId, monsterId));
+        result.set(monsterId);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS)
+          ? result.get() : Engine.INVALID_ENTITY;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Engine.INVALID_ENTITY;
+    }
+  }
+
   /** Creates a persistent native gold pile in a RoomEx for reconnect tests. */
   static int headlessCreateRoomGoldFixture(int playerId, int levelId, int roomId,
       int amount) {

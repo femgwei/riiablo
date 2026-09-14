@@ -5032,3 +5032,15 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 
 下一项：增加“同一数字实体 ID 快速复用”场景，验证旧 tombstone 到达新实体之后，
 客户端仍保留新 incarnation，并继续推进跨区域实体基线恢复。
+
+### 2026-09-15 同一数字实体 ID 快速复用（本轮完成）
+
+- [x] ~~实体回收与快速复用夹具~~：在真实 1.10f D2GS 中创建死亡僵尸 A，发送删除
+  tombstone 并等待 ECS 回收，随后创建实体 B，确认 Artemis 复用同一数字 ID。
+- [x] ~~延迟 tombstone 防护~~：开启 3 个 Sim Tick 的重复删除注入；旧删除帧在 B 的
+  快照之后到达时被客户端按全局 tick 水位忽略，不会删除 B 或回退其 incarnation。
+- 验证：`:server:d2gs:headlessEntityIdReuse` 通过，日志
+  `entity_id_reuse_pass ... firstIncarnation=1 replacementIncarnation=2 delayedTombstoneIgnored=true`。
+
+下一项：补齐跨区域实体基线恢复测试，验证 RoomEx 切换期间旧区域实体的删除帧、
+新区域实体快照和重连基线按 level/creation watermark 单调应用。
