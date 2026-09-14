@@ -881,13 +881,20 @@ public final class D2GSHeadlessClient {
         Set<Integer> reconnectStates = areaStateIds(reconnected, skillId);
         boolean missileSnapshotValid = ownerActive.containsAll(reconnectActive);
         boolean stateSnapshotValid = ownerStates.containsAll(reconnectStates);
-        if ((!reconnectActive.isEmpty() || !reconnectStates.isEmpty())
+        // A short-lived missile/state can legitimately finish during the
+        // disconnect window.  In that case both the authoritative and
+        // replacement sets are empty; this is a successful expiration, not a
+        // missing baseline.  The subset checks still reject resurrection of
+        // any deleted or unknown entity.
+        boolean fullyExpired = ownerActive.isEmpty() && ownerStates.isEmpty()
+            && reconnectActive.isEmpty() && reconnectStates.isEmpty();
+        if ((fullyExpired || !reconnectActive.isEmpty() || !reconnectStates.isEmpty())
             && missileSnapshotValid && stateSnapshotValid) {
           log("area_skill_reconnect_pass", "skill=" + skillId
               + " oldObserver=" + oldObserverId + " observer=" + reconnected.playerId
               + " active=" + reconnectActive + " expiredDuringReconnect="
               + (activeBefore.size() - reconnectActive.size()) + " states="
-              + reconnectStates + " stale=false");
+              + reconnectStates + " fullyExpired=" + fullyExpired + " stale=false");
           return;
         }
       }

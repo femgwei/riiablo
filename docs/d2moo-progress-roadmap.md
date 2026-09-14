@@ -4902,3 +4902,13 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
 
 下一项：继续补齐多人战斗快照边界场景，覆盖多 missile 并发、状态过期与实体删除同 tick、
   重连后死亡事件幂等，并持续检查固定 40ms Sim Tick 的时序一致性。
+
+### 2026-09-15 战斗实体全量过期边界（已完成）
+
+- [x] ~~处理短生命周期 missile/state 在断线窗口内全部过期的合法终态~~：重连集合
+  允许为空，但必须同时满足权威集合为空及子集约束，杜绝已删除实体复活。
+- 验证：真实 1.10f `:server:d2gs:headlessAreaSkill -PareaSkill=62` 通过，Hydra
+  子实体清理后 `stale=false`；战斗重连聚合回归保持成功。
+
+下一项：增加多 missile 并发、死亡事件幂等的独立离屏门槛，验证同一 40ms Sim Tick
+  内生成/命中/删除顺序及重连基线一致性。
