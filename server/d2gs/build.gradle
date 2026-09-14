@@ -480,7 +480,7 @@ tasks.register('headlessCombatReconnectRegression') {
   group = 'verification'
   description = 'Runs missile, area-state, death/resurrection and reconnect entity gates.'
   dependsOn 'headlessMissileCombat', 'headlessFallenDual', 'headlessAreaSkillRegression',
-      'headlessCombatEntityEdges', 'headlessDeathReconnect'
+      'headlessCombatEntityEdges', 'headlessDeathReconnect', 'headlessDeathIdempotency'
 }
 
 tasks.register('headlessA2ObjectInteractionDual', JavaExec) {
