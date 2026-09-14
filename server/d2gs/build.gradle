@@ -435,6 +435,13 @@ tasks.register('headlessQuestRewardRegression') {
       'headlessA5AncientDual', 'headlessBaalWaveDual'
 }
 
+tasks.register('headlessMultiplayerSnapshotRegression') {
+  group = 'verification'
+  description = 'Runs multiplayer snapshot ordering, resync, reconnect and stale-entity gates.'
+  dependsOn 'headlessSnapshotOrder', 'headlessSnapshotResync',
+      'headlessReconnectVisibility', 'headlessReconnectGroundLoot'
+}
+
 tasks.register('headlessA2ObjectInteractionDual', JavaExec) {
   group = 'verification'
   description = 'Runs two windowless clients through A2 Tainted Sun and Arcane Tome interactions.'

@@ -595,3 +595,17 @@ Armageddon/Hurricane 的实机观感验证。
 
 下一项：进入多人快照专项，验证区域切换、任务奖励和战斗实体更新不会互相覆盖，随后
 补齐断线重连后的增量快照/旧实体清理检查。
+
+### 2026-09-15 多人快照与断线重连专项（本轮完成）
+
+- [x] ~~新增 `headlessMultiplayerSnapshotRegression` 聚合入口~~，统一运行快照顺序、
+  定向重同步、RoomEx 可见性/实体清理和地面金币重连四项门槛。
+- [x] ~~验证跨区域旧快照丢弃与增量基线~~：区域切换后旧 level snapshot 不覆盖当前位置，
+  recipient 基线只发送给请求方；断线后旧玩家/召唤物删除，掉落物和对象保持可见。
+- 验证：真实 1.10f 聚合任务通过，日志包含
+  `snapshot_resync_pass ... oldLevelDrops=167`、
+  `room_persistence_pass ... prematureUnload=false` 和
+  `reconnect_ground_loot_pass ... ownerWindowPreserved=true`。
+
+下一项：继续补齐断线重连后的战斗实体增量（导弹、状态和死亡事件）专项，重点确认
+旧实体 ID 不复活、短生命周期实体自然过期不会污染重连基线。
