@@ -4715,4 +4715,5 @@ Quest Warp 入口与过渡，不改战斗公式/技能注册）；测试半成�
   `MIS` 关键帧会进入服务端标枪解析/创建路径，不再出现“动画播放、数量减少但没有导弹”。
 - [x] 保持普通客户端展示去重逻辑，未修改网络协议或其他技能分支。
 - [x] `:core:test --tests com.riiablo.engine.server.CombatPipelineIntegrationTest --no-daemon`
-  通过；日志对应的 `skillId=2/srvDoFunc=3` 路径已覆盖修复条件。
+  通过；`playerThrowConsumesQuantityCreatesMissileAndDamagesMonster` 现在直接使用
+  本地 `ServerSkillSystem(true)`，覆盖 `skillId=2/srvDoFunc=3` 的修复条件。

@@ -98,7 +98,9 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
     assertNotNull(quantity);
     int quantityBefore = quantity.asInt();
 
-    Harness harness = new Harness(true);
+    // Exercise the same monsters-only adapter used by the local GameScreen;
+    // explicit Throw must still be handled authoritatively there.
+    Harness harness = new Harness(true, true);
     try {
       Attributes playerAttrs = combatAttributes(60, 1, 2, 10_000);
       playerAttrs.base().put(Stat.item_throw_mindamage, 7);
@@ -293,9 +295,13 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
     final World world;
 
     Harness(boolean missiles) {
+      this(missiles, false);
+    }
+
+    Harness(boolean missiles, boolean monstersOnly) {
       WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
           .with(new EventSystem(), probe, actioneer, new Pathfinder(), new AnimStepper());
-      if (missiles) builder.with(new ServerSkillSystem(), factory, new MissileCollisionSystem());
+      if (missiles) builder.with(new ServerSkillSystem(monstersOnly), factory, new MissileCollisionSystem());
       else builder.with(factory);
       world = new World(builder.build()
           .register("factory", factory)
