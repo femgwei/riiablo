@@ -57,7 +57,8 @@
 - `ModeChangeEvent.restart` 将连续攻击的同模式强制重启与真实 COF 切换区分开。
 - 客户端收到同模式 restart 时保留现有 DCC 层，仅重置动画帧，不再因卸载/异步加载造成
   闪烁；服务器关键帧和伤害时序不变。
-- `SequenceHandlerTest` 已覆盖该语义并通过。当前修改待提交，完成后更新 commit/hash。
+- `SequenceHandlerTest` 已覆盖该语义并通过；本轮提交为 `bbbd02c2`，已推送到
+  `origin/master`。
 
 ## 最近更新（2026-09-15，城镇技能限制）
 
