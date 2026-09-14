@@ -256,8 +256,8 @@ public final class D2GSHeadlessClient {
       runFallenDual(d2s, character);
       return;
     }
-    if (config.requireDeathReconnect) {
-      runDeathReconnect(d2s, character);
+    if (config.requireDeathReconnect || config.requireDeathIdempotency) {
+      runDeathReconnect(d2s, character, config.requireDeathIdempotency);
       return;
     }
     if (config.requireBaalWaveDual) {
@@ -1718,6 +1718,7 @@ public final class D2GSHeadlessClient {
       log("death_queue_pass", "fallen=" + fallenA.entityId + " phase="
           + deathWatermark[0] + " deathTick=" + deathWatermark[1]
           + " simTick=" + deathWatermark[2] + " handled=true");
+
       Vector2 observation = D2GS.headlessRoomObservationPosition(2, fallenA.x, fallenA.y);
       if (observation == null) throw new IOException("Fallen observation point unavailable");
       send(outA, positionPacket(a.playerId, observation.x, observation.y));
@@ -1840,7 +1841,8 @@ public final class D2GSHeadlessClient {
   }
 
   /** Two-client death/corpse reconnect gate for a normal Blood Moor monster. */
-  private void runDeathReconnect(byte[] d2s, CharacterHeader character) throws Exception {
+  private void runDeathReconnect(byte[] d2s, CharacterHeader character,
+      boolean idempotencyOnly) throws Exception {
     D2GSHeadlessClient owner = new D2GSHeadlessClient(config);
     D2GSHeadlessClient peer = new D2GSHeadlessClient(config);
     byte[] peerD2s = createGeneratedObserverSave("DeathPeer", 0x44454154);
@@ -1870,6 +1872,34 @@ public final class D2GSHeadlessClient {
         throw new IllegalStateException("death reconnect watermark invalid: phase=" + death[0]
             + " deathTick=" + death[1] + " handled=" + death[3]);
       }
+      if (idempotencyOnly) {
+        // Replay the exact authoritative death event twice. Melee and missile
+        // paths can race in one tick; lifecycle, XP, loot claims and corpse
+        // state must remain unchanged and the dead unit must not become live.
+        long[] beforeReplay = D2GS.headlessDeathIdempotencyState(
+            owner.playerId, target.entityId);
+        if (!D2GS.headlessReplayDeathEvent(owner.playerId, target.entityId)
+            || !D2GS.headlessReplayDeathEvent(owner.playerId, target.entityId)) {
+          throw new IllegalStateException("duplicate death event dispatch failed");
+        }
+        peer.consumeFor(peerInput, 250L);
+        long[] afterReplay = D2GS.headlessDeathIdempotencyState(
+            owner.playerId, target.entityId);
+        if (!java.util.Arrays.equals(beforeReplay, afterReplay)
+            || beforeReplay[2] == 0L || beforeReplay[1] < 0L) {
+          throw new IllegalStateException("duplicate death event changed authoritative state: before="
+              + java.util.Arrays.toString(beforeReplay) + " after="
+              + java.util.Arrays.toString(afterReplay));
+        }
+        log("death_idempotency_pass", "entity=" + target.entityId
+            + " deathTick=" + beforeReplay[1] + " claims=" + beforeReplay[3]
+            + " corpsePresent=" + (beforeReplay[5] != 0)
+            + " corpseUsable=" + (beforeReplay[4] != 0)
+            + " xp=" + beforeReplay[6] + " groundItems=" + beforeReplay[7]
+            + " duplicateEvents=2");
+        return;
+      }
+
       // Move the surviving observer away from AI range so the corpse remains
       // dead while the owner socket is closed and re-established.
       send(peerOutput, positionPacket(peer.playerId, target.x + 12f, target.y + 12f));
@@ -8097,6 +8127,7 @@ public final class D2GSHeadlessClient {
     boolean requireSnapshotResync;
     boolean requireFallenScenario;
     boolean requireDeathReconnect;
+    boolean requireDeathIdempotency;
     boolean requireBaalWaveDual;
     boolean requireA5AncientDual;
     boolean requireA4SealDual;
@@ -8159,6 +8190,7 @@ public final class D2GSHeadlessClient {
         else if ("--require-snapshot-resync".equals(arg)) config.requireSnapshotResync = true;
         else if ("--require-fallen-scenario".equals(arg)) config.requireFallenScenario = true;
         else if ("--require-death-reconnect".equals(arg)) config.requireDeathReconnect = true;
+        else if ("--require-death-idempotency".equals(arg)) config.requireDeathIdempotency = true;
         else if ("--require-baal-wave-dual".equals(arg)) config.requireBaalWaveDual = true;
         else if ("--require-a5-ancient-dual".equals(arg)) config.requireA5AncientDual = true;
         else if ("--require-a4-seal-dual".equals(arg)) config.requireA4SealDual = true;
@@ -8243,6 +8275,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA5QuestWarpDual
           && !config.requireEarlyObjectDual
           && !config.requireDeathReconnect
+          && !config.requireDeathIdempotency
           && config.save == null && config.home != null) {
         config.save = firstSave(new File(config.home, "Save"));
       }
@@ -8265,6 +8298,7 @@ public final class D2GSHeadlessClient {
           && !config.requireA5QuestWarpDual
           && !config.requireEarlyObjectDual
           && !config.requireDeathReconnect
+          && !config.requireDeathIdempotency
           && (config.save == null || !config.save.isFile())) {
         throw new IOException("provide --save <character.d2s>, or put a save in <home>/Save");
       }
@@ -8301,6 +8335,7 @@ public final class D2GSHeadlessClient {
           + " [--require-snapshot-order] [--require-snapshot-resync]"
           + " [--require-fallen-scenario] [--require-baal-wave-dual]"
           + " [--require-death-reconnect]"
+          + " [--require-death-idempotency]"
           + " [--require-a5-ancient-dual]"
           + " [--require-a4-seal-dual]"
           + " [--require-a4-hellforge-dual]"

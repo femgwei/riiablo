@@ -4992,3 +4992,17 @@ Video Options 的 Gamma/VSync 和 Configure Controls 键位编辑页面。当前
   `rewardsStable=true incarnation=1`。
 
 下一项：继续补充重复死亡请求的协议级幂等断言，并把尸体删除/保留窗口纳入重连边界测试。
+
+### 2026-09-15 重复死亡事件协议幂等（本轮完成）
+
+- [x] ~~新增 `headlessReplayDeathEvent` 测试桥接~~：在 D2GS 应用线程重放与
+  近战/投射物相同的 `DeathEvent`，不允许从 socket 线程直接操作 ECS。
+- [x] ~~新增 `headlessDeathIdempotency` 离屏门槛~~：同一死亡事件连续重放两次后，
+  `deathHandled`、`deathTick`、生命周期阶段、奖励 claim、经验、地面掉落数量以及
+  尸体存在/可用状态全部保持不变，死亡实体不会重新变为活体。
+- 验证：真实 1.10f `headlessDeathIdempotency` 通过，日志
+  `death_idempotency_pass ... deathTick=1 claims=3 duplicateEvents=2`；
+  `headlessDeathReconnect` 在独立时序下仍保持通过。
+
+下一项：覆盖尸体保留窗口与实体删除窗口的重连边界，分别验证尸体仍在当前
+RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 incarnation 不复用。

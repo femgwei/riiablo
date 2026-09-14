@@ -16,6 +16,7 @@ import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.component.UnitLifecycle;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
@@ -51,10 +52,25 @@ public class ServerMonsterCorpseSystem extends PassiveSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<UnitStates> mUnitStates;
+  protected ComponentMapper<UnitLifecycle> mLifecycle;
 
   @Subscribe
   public void onDeath(DeathEvent event) {
     if (event == null || event.victim < 0 || !mMonster.has(event.victim)) return;
+
+    // UnitLifecycleSystem claims the authoritative death boundary first. A
+    // late duplicate DeathEvent must not re-run AI.kill(), enqueue another
+    // DT/DD sequence, or reset a corpse that is already in its native death
+    // window. This guard is intentionally scoped to the death phase so the
+    // first event still performs the normal transition when the component is
+    // absent in legacy fixtures.
+    UnitLifecycle lifecycle = mLifecycle == null ? null : mLifecycle.get(event.victim);
+    if (lifecycle != null && lifecycle.deathHandled
+        && lifecycle.phase.ordinal() >= UnitLifecycle.Phase.DEATH.ordinal()) {
+      log.debug("[MONSTER_CORPSE] phase=duplicate_death_ignored entity={} killer={} phase={}",
+          event.victim, event.killer, lifecycle.phase);
+      return;
+    }
 
     Monster monster = mMonster.get(event.victim);
     if (mUnitStates.has(event.victim) && mUnitStates.get(event.victim).stateList != null) {

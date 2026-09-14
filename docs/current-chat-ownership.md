@@ -702,3 +702,15 @@ Armageddon/Hurricane 的实机观感验证。
 - 验证：1.10f 通过，`death_reconnect_pass ... corpseDead=true rewardsStable=true`。
 
 当前下一项：补充重复死亡请求的协议级幂等断言，并覆盖尸体删除/保留窗口的重连边界。
+
+### 2026-09-15 重复死亡事件协议幂等（本轮完成）
+
+- [x] ~~`headlessReplayDeathEvent`~~：在 D2GS 权威应用线程重放 DeathEvent，模拟
+  近战/投射物重复通知，避免测试线程直接访问 ECS。
+- [x] ~~`headlessDeathIdempotency`~~：连续重放两次后，死亡阶段、水位、奖励 claim、
+  XP、掉落数量及尸体状态均保持稳定；不会把旧实体复活。
+- 验证：1.10f 离屏测试通过，`death_idempotency_pass ... duplicateEvents=2`；
+  `headlessDeathReconnect` 在独立时序下仍保持通过。
+
+当前下一项：继续覆盖尸体保留窗口与删除窗口的断线重连边界，确认删除帧只投递一次、
+旧实体 incarnation 不复用。

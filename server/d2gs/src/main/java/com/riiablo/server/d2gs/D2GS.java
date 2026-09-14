@@ -264,6 +264,88 @@ public class D2GS extends ApplicationAdapter {
   }
 
   /**
+   * Test-only replay of an authoritative death notification.  Production
+   * clients never call this path; it deliberately exercises the same event
+   * bus used by melee/missile resolution so duplicate notifications can be
+   * checked without mutating the world from the socket thread.
+   */
+  static boolean headlessReplayDeathEvent(int killerId, int victimId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null
+        || victimId < 0) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean dispatched =
+        new java.util.concurrent.atomic.AtomicBoolean();
+    Gdx.app.postRunnable(() -> {
+      try {
+        if (!server.world.getEntityManager().isActive(victimId)) return;
+        EventSystem events = server.world.getSystem(EventSystem.class);
+        if (events == null) return;
+        events.dispatch(com.riiablo.engine.server.event.DeathEvent.obtain(killerId, victimId));
+        dispatched.set(true);
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && dispatched.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
+  /**
+   * Read-only aggregate used by the death idempotency headless gate.
+   * [phase, deathTick, handled, rewardClaims, corpseUsable, corpsePresent,
+   *  experience, groundItemCount].
+   */
+  static long[] headlessDeathIdempotencyState(int playerId, int monsterId) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null) {
+      return new long[] {-1L, -1L, 0L, 0L, 0L, 0L, 0L, 0L};
+    }
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicReference<long[]> state =
+        new java.util.concurrent.atomic.AtomicReference<>(
+            new long[] {-1L, -1L, 0L, 0L, 0L, 0L, 0L, 0L});
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.UnitLifecycle lifecycle = server.world
+            .getMapper(com.riiablo.engine.server.component.UnitLifecycle.class).get(monsterId);
+        com.riiablo.engine.server.component.MonsterRewardState rewards = server.world
+            .getMapper(com.riiablo.engine.server.component.MonsterRewardState.class).get(monsterId);
+        com.riiablo.engine.server.component.Corpse corpse = server.world
+            .getMapper(com.riiablo.engine.server.component.Corpse.class).get(monsterId);
+        Player player = server.world.getMapper(Player.class).get(playerId);
+        int experience = player == null || player.data == null ? 0
+            : statInt(player.data.getStats(), com.riiablo.attributes.Stat.experience);
+        int groundItems = server.world.getAspectSubscriptionManager().get(
+            Aspect.all(com.riiablo.engine.server.component.Item.class)).getEntities().size();
+        state.set(new long[] {
+            lifecycle == null ? -1L : lifecycle.phase.ordinal(),
+            lifecycle == null ? -1L : lifecycle.deathTick,
+            lifecycle != null && lifecycle.deathHandled ? 1L : 0L,
+            rewards == null ? 0L : rewards.flags(),
+            corpse != null && corpse.usable ? 1L : 0L,
+            corpse == null ? 0L : 1L,
+            experience,
+            groundItems
+        });
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) ? state.get()
+          : new long[] {-1L, -1L, 0L, 0L, 0L, 0L, 0L, 0L};
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new long[] {-1L, -1L, 0L, 0L, 0L, 0L, 0L, 0L};
+    }
+  }
+
+  /**
    * Test-only fallback for skills whose COF keyframe is not available in the
    * headless animation tables. The network client still submits a real
    * CastSkillRequest first; this hook dispatches the same authoritative
