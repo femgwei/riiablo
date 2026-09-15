@@ -212,16 +212,16 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private Table createOptionsPage() {
     Table page = createPage(null);
-    page.add(menuButton("SOUND OPTIONS", () -> showPage(Page.SOUND))).height(46).row();
-    page.add(menuButton("VIDEO OPTIONS", () -> showPage(Page.VIDEO))).height(46).row();
-    page.add(menuButton("AUTOMAP OPTIONS", () -> showPage(Page.AUTOMAP))).height(46).row();
-    page.add(menuButton("CONFIGURE CONTROLS", () -> showPage(Page.CONTROLS))).height(46).row();
-    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.MAIN))).height(46).padTop(12).row();
+    page.add(largeMenuButton("SOUND OPTIONS", () -> showPage(Page.SOUND))).height(46).row();
+    page.add(largeMenuButton("VIDEO OPTIONS", () -> showPage(Page.VIDEO))).height(46).row();
+    page.add(largeMenuButton("AUTOMAP OPTIONS", () -> showPage(Page.AUTOMAP))).height(46).row();
+    page.add(largeMenuButton("CONFIGURE CONTROLS", () -> showPage(Page.CONTROLS))).height(46).row();
+    page.add(largeMenuButton("PREVIOUS MENU", () -> showPage(Page.MAIN))).height(46).padTop(12).row();
     return page;
   }
 
   private Table createAutomapPage() {
-    Table page = createPage("AUTOMAP OPTIONS");
+    Table page = createPage("AUTOMAP");
     automapMode = new OptionRow("AUTOMAP SIZE", () -> {
       int current = Cvars.Client.Automap.Mode.get() == null
           ? RenderSystem.AUTOMAP_MODE_CENTER : Cvars.Client.Automap.Mode.get();
@@ -256,13 +256,13 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     page.add(automapQuestIndicators).width(520).height(24).row();
     page.add(automapMinimapPointers).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(46).padTop(12).row();
+        .height(24).padTop(12).row();
     refreshAutomapRows();
     return page;
   }
 
   private Table createSoundPage() {
-    Table page = createPage("SOUND OPTIONS");
+    Table page = createPage("SOUND");
     soundEnabled = new OptionRow("SOUND", () -> {
       Cvars.Client.Sound.Enabled.set(!Boolean.TRUE.equals(Cvars.Client.Sound.Enabled.get()));
       refreshSoundRows();
@@ -293,13 +293,13 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     page.add(musicEnabled).width(520).height(24).row();
     page.add(musicVolume).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(46).padTop(12).row();
+        .height(24).padTop(12).row();
     refreshSoundRows();
     return page;
   }
 
   private Table createVideoPage() {
-    Table page = createPage("VIDEO OPTIONS");
+    Table page = createPage("VIDEO");
     gamma = new OptionRow("GAMMA", () -> {
       Cvars.Client.Display.Gamma.set(
           VideoOptions.nextGamma(value(Cvars.Client.Display.Gamma.get())));
@@ -323,13 +323,13 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     statusBar = new OptionRow("STATUS BAR (ANDROID)", null, false);
     page.add(statusBar).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(46).padTop(12).row();
+        .height(24).padTop(12).row();
     refreshVideoRows();
     return page;
   }
 
   private Table createControlsPage() {
-    Table page = createPage("CONFIGURE CONTROLS");
+    Table page = createPage("CONTROLS");
     controlsStatus = new Label("SELECT A BINDING TO CHANGE IT", Riiablo.fonts.font16,
         Riiablo.colors.grey);
     controlsStatus.setAlignment(Align.center);
@@ -352,9 +352,9 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     });
     page.add(vibration).width(520).height(24).row();
     page.add(menuButton("RESET DEFAULTS", this::resetControlDefaults))
-        .height(46).padTop(8).row();
+        .height(24).padTop(8).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(46).padTop(4).row();
+        .height(24).padTop(4).row();
     return page;
   }
 
@@ -446,7 +446,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     unavailable.setAlignment(Align.center);
     page.add(unavailable).height(30).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(46).padTop(12).row();
+        .height(24).padTop(12).row();
     return page;
   }
 
@@ -465,6 +465,19 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   private LabelButton menuButton(String text, final Runnable action) {
+    LabelButton button = new LabelButton(text, Riiablo.fonts.font16);
+    button.setAlignment(Align.center);
+    button.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        Riiablo.audio.play(2, true);
+        action.run();
+      }
+    });
+    return button;
+  }
+
+  private LabelButton largeMenuButton(String text, final Runnable action) {
     LabelButton button = new LabelButton(text, Riiablo.fonts.font42);
     button.setAlignment(Align.center);
     button.addListener(new ClickListener() {
