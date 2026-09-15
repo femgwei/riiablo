@@ -162,7 +162,7 @@ public class AutomapLayer {
   public int getExploredCount() {
     return exploredTiles.size;
   }
-  
+
   /**
    * 清除探索数据
    */
