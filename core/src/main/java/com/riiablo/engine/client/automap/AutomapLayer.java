@@ -17,6 +17,9 @@ public class AutomapLayer {
   
   /** 是否已保存（用于持久化） */
   public boolean saved;
+
+  /** Native outdoor Automap uses roads/borders and markers, not a solid floor fill. */
+  public boolean renderFloorCells = true;
   
   /** 地板单元格列表 */
   public final Array<AutomapCell> floors = new Array<>();
@@ -166,6 +169,7 @@ public class AutomapLayer {
     walls.clear();
     objects.clear();
     extras.clear();
+    renderFloorCells = true;
   }
   
   /**

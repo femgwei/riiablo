@@ -363,6 +363,11 @@ public class AutomapManager implements Disposable {
     if (zone == null || automapLevelName == null || tileRenderer == null) return 0;
     AutomapLayer layer = getOrCreateLayer(zone.levelId());
     layer.clearCells();
+    // The native outdoor automap is line/road based.  Rendering every DT1
+    // orientation-0 tile paints the entire wilderness (and town) as a solid
+    // floor, unlike D2 where only roads, boundaries, and markers are shown.
+    // Keep floor cells available for indoor maps, but suppress them outdoors.
+    layer.renderFloorCells = zone.level != null && zone.level.IsInside;
     int added = 0;
     int tileCount = 0;
     int lookupMisses = 0;
@@ -773,7 +778,9 @@ public class AutomapManager implements Disposable {
 
     // Native terrain cells are rendered before object/icon cells and are
     // filtered by the RoomEx-driven exploration mask.
-    nativeTerrainDrawCount += renderNativeCells(batch, layer.floors, layer, alpha);
+    if (layer.renderFloorCells) {
+      nativeTerrainDrawCount += renderNativeCells(batch, layer.floors, layer, alpha);
+    }
     nativeTerrainDrawCount += renderNativeCells(batch, layer.walls, layer, alpha);
     
     // 渲染物体图标
