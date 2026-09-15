@@ -24,6 +24,7 @@ public final class OffscreenRenderClient {
         .addOption(Option.builder().longOpt("continuity").hasArg(false).build())
         .addOption(Option.builder().longOpt("warp-collision").hasArg(false).build())
         .addOption(Option.builder().longOpt("automap-native").hasArg(false).build())
+        .addOption(Option.builder().longOpt("automap-mode").hasArg().build())
         .addOption(Option.builder().longOpt("d2-version").hasArg().build());
     CommandLine command = new DefaultParser().parse(options, args);
     String output = command.getOptionValue("output", "build/visual-tests");
@@ -46,6 +47,8 @@ public final class OffscreenRenderClient {
         Boolean.toString(command.hasOption("warp-collision")));
     System.setProperty("riiablo.offscreen-automap-native",
         Boolean.toString(command.hasOption("automap-native")));
+    System.setProperty("riiablo.offscreen-automap-mode",
+        command.getOptionValue("automap-mode", "3"));
     System.setProperty("riiablo.d2-version",
         command.getOptionValue("d2-version", "unspecified"));
 

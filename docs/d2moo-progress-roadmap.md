@@ -17,6 +17,24 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-15 Automap 三模式与攻击动画回归（本轮验证）
+
+- [x] `:desktop:offscreenAutomapDc6` 增加 `-PautomapMode=1|2|3`，分别覆盖
+  `TOP_LEFT`、`TOP_RIGHT`、`CENTER`；真实 1.10f 隐藏客户端三模式均通过，地形/实体/
+  几何回退/可见像素计数保持 `600/58/1/17910`，未发现 marker 消失或重复。
+- [x] Automap 专项测试通过：
+  `./gradlew.bat :core:test --tests 'com.riiablo.engine.client.automap.*' --no-daemon`。
+- [x] 连续攻击 restart 语义回归通过：
+  `./gradlew.bat :core:test --tests 'com.riiablo.engine.server.SequenceHandlerTest' --no-daemon`；
+  同模式重启保留 DCC、攻击关键帧测试通过。
+- [ ] 真实 D2GS 普通攻击/Throw 门槛本轮未形成稳定伤害断言：`headlessCombat` 在等待
+  live monster snapshot 超时，`headlessMissileCombat` 观察到连续 Throw 导弹但目标生命
+  未下降。该结果记录为环境/夹具不稳定，不修改战斗公式；下一步应先固定目标生成与碰撞
+  位置，再补连续普通攻击、Throw/标枪和攻击结束回 NU 的离屏帧采样。
+
+本轮修改：`OffscreenRenderClient`、`OffscreenCampScreen`、`desktop/build.gradle`，仅增加
+离屏 Automap 模式选择，不改变战斗、网络或资源逻辑。历史未跟踪 `.log` 保持不变。
+
 ## 2026-09-15 Automap 选项、城镇揭示与实体标记（本轮完成）
 
 - [x] Options 子菜单的 OptionRow 使用与上级菜单一致的 `font16` 字体和 24px 行高；

@@ -128,8 +128,13 @@ public final class OffscreenCampScreen extends GameScreen {
   @Override
   public void show() {
     if (validateNativeAutomap) {
-      com.riiablo.map.RenderSystem.AUTOMAP_MODE =
-          com.riiablo.map.RenderSystem.AUTOMAP_MODE_CENTER;
+      int mode = Integer.getInteger("riiablo.offscreen-automap-mode",
+          com.riiablo.map.RenderSystem.AUTOMAP_MODE_CENTER);
+      if (mode < com.riiablo.map.RenderSystem.AUTOMAP_MODE_TOP_LEFT
+          || mode > com.riiablo.map.RenderSystem.AUTOMAP_MODE_CENTER) {
+        mode = com.riiablo.map.RenderSystem.AUTOMAP_MODE_CENTER;
+      }
+      com.riiablo.map.RenderSystem.AUTOMAP_MODE = mode;
     }
     if (map.getAct() == -1 && targetLevelId >= 0) {
       Levels.Entry target = Riiablo.files.Levels.get(targetLevelId);

@@ -63,6 +63,14 @@ git ls-remote origin refs/heads/master
 
 ## 下一步建议
 
+### 2026-09-15 三模式/动画回归记录
+
+- 已为 `offscreenAutomapDc6` 增加 `-PautomapMode=1|2|3`，真实 1.10f 三模式均通过，
+  计数 `terrain=600 entities=58 fallback=1 visiblePixels=17910`。
+- Automap 专项测试和 `SequenceHandlerTest` 均通过。D2GS 普通攻击与 Throw 门槛分别因
+  live monster snapshot 超时、目标生命未下降而未通过；未观察到模式闪烁断言失败，待固定
+  目标生成/碰撞夹具后重试。
+
 1. 先做 Automap 三种模式的离屏像素/包围盒比例回归，确认玩家、队友、NPC marker 与
    DC6 地形坐标重合。
 2. 做连续普通攻击、Throw/标枪和攻击结束回 NU 的离屏动画回归；若首次模式切换仍闪烁，

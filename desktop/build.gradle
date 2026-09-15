@@ -106,6 +106,9 @@ task offscreenAutomapDc6(type: JavaExec) {
        '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/automap-dc6',
        '--mode', 'camp', '--level', project.findProperty('offscreenLevel') ?: '2',
        '--automap-native', '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  if (project.hasProperty('automapMode')) {
+    args '--automap-mode', project.property('automapMode')
+  }
   ignoreExitValue = false
 }
 
