@@ -58,6 +58,11 @@ public class AutomapManager implements Disposable {
   
   /** 是否显示名称 */
   public boolean showNames = false;
+
+  /** Whether distant quest/entrance destinations are compressed into pointers. */
+  public boolean showMinimapPointers = true;
+  private float pointerThreshold = AutomapMarkerPolicy.POINTER_THRESHOLD;
+  private float pointerRadius = AutomapMarkerPolicy.POINTER_RADIUS;
   
   /** 是否居中显示 */
   public boolean centered = true;
@@ -87,6 +92,16 @@ public class AutomapManager implements Disposable {
   
   /** 怪物颜色 - 红色 */
   public static final Color COLOR_MONSTER = new Color(1.0f, 0.0f, 0.0f, 1.0f);
+
+  public static final Color COLOR_CORPSE = new Color(0.55f, 0.55f, 0.55f, 1.0f);
+  public static final Color COLOR_MISSILE = new Color(1.0f, 0.35f, 0.1f, 1.0f);
+  public static final Color COLOR_ITEM = new Color(1.0f, 1.0f, 1.0f, 1.0f);
+  public static final Color COLOR_CHAMPION = new Color(0.25f, 0.55f, 1.0f, 1.0f);
+  public static final Color COLOR_UNIQUE = new Color(1.0f, 0.72f, 0.12f, 1.0f);
+  public static final Color COLOR_MINION = new Color(1.0f, 0.45f, 0.2f, 1.0f);
+  public static final Color COLOR_BOSS = new Color(0.85f, 0.05f, 0.85f, 1.0f);
+  public static final Color COLOR_QUEST = new Color(0.2f, 1.0f, 0.9f, 1.0f);
+  public static final Color COLOR_ENTRANCE = new Color(0.65f, 0.35f, 1.0f, 1.0f);
   
   /** NPC颜色 - 黄色 */
   public static final Color COLOR_NPC = new Color(1.0f, 1.0f, 0.0f, 1.0f);
@@ -139,6 +154,8 @@ public class AutomapManager implements Disposable {
   
   /** 临时向量 */
   private final Vector2 tmpVec = new Vector2();
+  private final Vector2 pointerSource = new Vector2();
+  private final Vector2 pointerTarget = new Vector2();
   
   // ==================== 实体标记 ====================
   
@@ -417,6 +434,12 @@ public class AutomapManager implements Disposable {
   public int getNativeEntityDrawCount() { return nativeEntityDrawCount; }
   public int getGeometricFallbackDrawCount() { return geometricFallbackDrawCount; }
 
+  /** Keeps compressed destinations inside the current full/mini Automap viewport. */
+  public void setPointerRadius(float radius) {
+    pointerRadius = Math.max(16f, radius);
+    pointerThreshold = pointerRadius * 1.25f;
+  }
+
   /** Number of markers currently collected for the active Automap frame. */
   public int getEntityMarkerCount() {
     return entityMarkers.size;
@@ -566,16 +589,29 @@ public class AutomapManager implements Disposable {
    * 渲染实体标记
    */
   private void renderEntityMarkers(ShapeRenderer shapes, float alpha) {
+    boolean hasPointerSource = false;
     for (int i = 0, size = entityMarkers.size; i < size; i++) {
       EntityMarker marker = entityMarkers.get(i);
+      if (marker.type == AutomapIconType.PLAYER) {
+        AutomapProjection.worldToAutomap(marker.worldX, marker.worldY, pointerSource);
+        hasPointerSource = true;
+        break;
+      }
+    }
+    for (int i = 0, size = entityMarkers.size; i < size; i++) {
+      EntityMarker marker = entityMarkers.get(i);
+      AutomapProjection.worldToAutomap(marker.worldX, marker.worldY, tmpVec);
+      boolean distantPointer = AutomapMarkerPolicy.isPointerTarget(marker.type)
+          && AutomapMarkerPolicy.projectPointer(hasPointerSource ? pointerSource : null,
+              tmpVec, showMinimapPointers, pointerThreshold, pointerRadius, pointerTarget);
       // Only suppress the geometric fallback after a native cell was
       // successfully drawn.  A valid-looking frame can still be absent from
       // a reduced MaxiMap.dc6 export; in that case the player/NPC must remain
       // visible through the fallback marker.
-      if (nativeRenderedMarkers.contains(marker, true)) continue;
-      AutomapProjection.worldToAutomap(marker.worldX, marker.worldY, tmpVec);
-      float markerX = tmpVec.x;
-      float markerY = tmpVec.y;
+      if (nativeRenderedMarkers.contains(marker, true) && !distantPointer
+          && !AutomapMarkerPolicy.requiresColorOverlay(marker.type)) continue;
+      float markerX = distantPointer ? pointerTarget.x : tmpVec.x;
+      float markerY = distantPointer ? pointerTarget.y : tmpVec.y;
       
       Color color = marker.color;
       shapes.setColor(color.r, color.g, color.b, alpha);
@@ -599,10 +635,50 @@ public class AutomapManager implements Disposable {
           break;
           
         case AutomapIconType.MONSTER:
+        case AutomapIconType.CHAMPION:
+        case AutomapIconType.UNIQUE:
+        case AutomapIconType.MINION:
+        case AutomapIconType.BOSS:
           // 怪物用小方块
           float halfSize = marker.size / 2;
           shapes.rect(markerX - halfSize, markerY - halfSize,
                      marker.size, marker.size);
+          break;
+
+        case AutomapIconType.CORPSE:
+          shapes.line(markerX - marker.size, markerY - marker.size,
+              markerX + marker.size, markerY + marker.size);
+          shapes.line(markerX - marker.size, markerY + marker.size,
+              markerX + marker.size, markerY - marker.size);
+          break;
+
+        case AutomapIconType.MISSILE:
+          shapes.triangle(markerX, markerY + marker.size,
+              markerX - marker.size, markerY - marker.size,
+              markerX + marker.size, markerY - marker.size);
+          break;
+
+        case AutomapIconType.ITEM:
+          DebugUtils.drawDiamond(shapes, markerX, markerY,
+              (int) (marker.size * 2), (int) marker.size);
+          break;
+
+        case AutomapIconType.QUEST:
+        case AutomapIconType.ENTRANCE:
+        case AutomapIconType.EXIT:
+          DebugUtils.drawDiamond(shapes, markerX, markerY,
+              (int) (marker.size * 2), (int) marker.size);
+          if (distantPointer) {
+            float dx = markerX - pointerSource.x;
+            float dy = markerY - pointerSource.y;
+            float length = (float) Math.sqrt(dx * dx + dy * dy);
+            if (length > 0f) {
+              dx /= length;
+              dy /= length;
+              shapes.rectLine(markerX - dx * 18f, markerY - dy * 18f,
+                  markerX - dx * 5f, markerY - dy * 5f, 2f);
+            }
+          }
           break;
           
         case AutomapIconType.NPC:

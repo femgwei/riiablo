@@ -141,8 +141,32 @@ public class CofLayerLoader extends IteratingSystem {
     AssetDescriptor descriptor = descriptors[c];
     if (descriptor == null) return;
     descriptors[c] = null;
-    Riiablo.assets.unload(descriptor.fileName);
+    releaseAsset(Riiablo.assets, descriptor);
     if (DEBUG) Gdx.app.debug(TAG, "Unloading[" + Engine.getComposite(c) + "] " + descriptor.fileName);
+  }
+
+  /** Idempotently releases a descriptor, including an asynchronously queued asset. */
+  static void releaseAsset(com.badlogic.gdx.assets.AssetManager assets,
+      AssetDescriptor descriptor) {
+    if (descriptor == null) return;
+    // A descriptor can outlive its AssetManager entry when another entity
+    // releases the same shared DCC while this entity is still being refreshed.
+    // AssetManager.unload throws for that stale state (and used to crash the
+    // LWJGL application thread).  Treat release as idempotent: queued assets
+    // are still present in contains() and are cancelled; already-removed
+    // assets simply have no reference left to release.
+    if (assets != null && assets.contains(descriptor.fileName)) {
+      try {
+        assets.unload(descriptor.fileName);
+      } catch (RuntimeException ex) {
+        // Asset loading is asynchronous; a completion/failure callback may
+        // remove the entry between contains() and unload().  Do not let a
+        // presentation resource race terminate the game loop.
+        if (DEBUG_EVENTS && Gdx.app != null) {
+          Gdx.app.debug(TAG, "Ignoring stale COF asset release " + descriptor.fileName, ex);
+        }
+      }
+    }
   }
 
   private static boolean isLocalPlayer(int entityId) {

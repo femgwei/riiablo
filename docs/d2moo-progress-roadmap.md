@@ -5127,6 +5127,25 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 
 下一项：补充跨区域切换的负向同步断言，确认旧实体删除帧、状态移除帧和新区域基线在
   多客户端不同 Level 场景下不会互相污染，并将 owner incarnation 水位纳入统一快照检查。
+
+### 2026-09-15 d2hackmap Automap 实体与目的地标记移植（本轮完成）
+
+- [x] ~~尸体、导弹和地面物品 marker~~：直接读取现有 `Corpse`、`Missile`、`Item`
+  ECS 组件，保持 RoomEx 可见性过滤和统一 `AutomapProjection` 投影；分别使用叉号、
+  三角和菱形几何标记。
+- [x] ~~Champion/Unique/Minion/Boss 颜色~~：以服务器保存的原生 `Monster.rank` 分类，
+  即使怪物已有 MaxiMap 原生 cell，也叠加等级颜色，避免分类信息被原生精灵遮蔽。
+- [x] ~~任务地点、地下入口和远处 pointer~~：从 `Objects.txt:AutoMap/OpenWarp` 识别
+  已知任务 cell 和开启地下 Warp 的对象；远距离目的地在投影空间内按视口尺寸压缩，
+  保留真实方向并绘制短方向线，不修改实体世界坐标。
+- [x] ~~开发/调试开关~~：新增 `Client.Automap.ShowCorpses`、`ShowMissiles`、
+  `ShowItems`、`ShowMonsterRanks`、`ShowQuestIndicators`、`ShowMinimapPointers`，全部
+  默认开启，并接入 ESC → Automap Options。
+- 验证：Automap 专项共 40 项测试及 `:core:compileJava` 通过；真实 1.10f
+  `:desktop:offscreenAutomapDc6 -PautomapMode=1` 通过，保持原生 DC6 主路径。
+
+下一项：增加带尸体、地面物品、在途导弹、精英怪和跨 RoomEx 入口对象的专用离屏夹具，
+对每类 marker 的像素颜色和远距 pointer 包围盒做真实资源断言。
 ## Git 交接基线（2026-09-15）
 
 当前可交接 commit 为 `c297c6ecf1f0f542cfa05d5e7c3dc668d6e81712`，且已在

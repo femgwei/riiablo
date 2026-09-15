@@ -99,6 +99,30 @@ public final class AutomapIconType {
   /** Generic object marker; native cell is used when Objects.txt provides one. */
   public static final int OBJECT = -8;
 
+  /** Dead monster/player body. */
+  public static final int CORPSE = -12;
+
+  /** Active projectile or server-side missile controller. */
+  public static final int MISSILE = -13;
+
+  /** Item lying in the world. */
+  public static final int ITEM = -14;
+
+  /** Champion monster. */
+  public static final int CHAMPION = -15;
+
+  /** Unique or super-unique monster. */
+  public static final int UNIQUE = -16;
+
+  /** Minion belonging to a unique pack. */
+  public static final int MINION = -17;
+
+  /** Act/end boss. */
+  public static final int BOSS = -18;
+
+  /** Quest object or quest destination. */
+  public static final int QUEST = -19;
+
   // ==================== 出入口图标 ====================
   
   /** 楼梯/入口 */

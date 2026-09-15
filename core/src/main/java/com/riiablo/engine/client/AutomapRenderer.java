@@ -21,6 +21,7 @@ import com.riiablo.engine.client.automap.AutomapCamera;
 import com.riiablo.engine.client.automap.AutomapEntityCells;
 import com.riiablo.engine.client.automap.AutomapIconType;
 import com.riiablo.engine.client.automap.AutomapManager;
+import com.riiablo.engine.client.automap.AutomapMarkerPolicy;
 import com.riiablo.engine.client.automap.AutomapOptions;
 import com.riiablo.engine.client.automap.AutomapRenderState;
 import com.riiablo.engine.client.automap.AutomapTileRenderer;
@@ -30,6 +31,9 @@ import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Monster;
+import com.riiablo.engine.server.component.Corpse;
+import com.riiablo.engine.server.component.Item;
+import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Networked;
@@ -72,6 +76,9 @@ public class AutomapRenderer extends BaseSystem {
   @Wire(failOnNull = false) protected ComponentMapper<Position> mPosition;
   @Wire(failOnNull = false) protected ComponentMapper<Class> mClass;
   @Wire(failOnNull = false) protected ComponentMapper<Monster> mMonster;
+  @Wire(failOnNull = false) protected ComponentMapper<Corpse> mCorpse;
+  @Wire(failOnNull = false) protected ComponentMapper<Missile> mMissile;
+  @Wire(failOnNull = false) protected ComponentMapper<Item> mItem;
   @Wire(failOnNull = false) protected ComponentMapper<Object> mObject;
   @Wire(failOnNull = false) protected ComponentMapper<Interactable> mInteractable;
   @Wire(failOnNull = false) protected ComponentMapper<Networked> mNetworked;
@@ -198,6 +205,8 @@ public class AutomapRenderer extends BaseSystem {
     // 同步摄像头位置
     if (automapCamera.isInitialized()) {
       automapCamera.syncWithMainCamera();
+      automapManager.setPointerRadius(Math.min(viewport.width, viewport.height)
+          * automapCamera.zoom * 0.4f);
     }
     
     // 清除之前的实体标记
@@ -298,21 +307,43 @@ public class AutomapRenderer extends BaseSystem {
       Map.Zone entityZone = map == null ? null : map.getZone(position.position.x, position.position.y);
       if (!AutomapVisibility.isEntityVisible(entityZone, position.position.x, position.position.y)) continue;
       String name = null;
-      if (mMonster != null && mMonster.has(id) && mMonster.get(id).monstats != null) {
+      if (show(Cvars.Client.Automap.ShowCorpses) && mCorpse != null && mCorpse.has(id)) {
+        Monster monster = mMonster != null && mMonster.has(id) ? mMonster.get(id) : null;
+        name = monster == null || monster.monstats == null ? null : monster.monstats.NameStr;
+        automapManager.addEntityMarker(id, AutomapIconType.CORPSE,
+            position.position.x, position.position.y, name,
+            AutomapManager.COLOR_CORPSE, 4);
+      } else if (show(Cvars.Client.Automap.ShowMissiles)
+          && mMissile != null && mMissile.has(id)) {
+        Missile missile = mMissile.get(id);
+        name = missile == null || missile.missile == null ? null : missile.missile.Missile;
+        automapManager.addEntityMarker(id, AutomapIconType.MISSILE,
+            position.position.x, position.position.y, name,
+            AutomapManager.COLOR_MISSILE, 3);
+      } else if (show(Cvars.Client.Automap.ShowItems) && mItem != null && mItem.has(id)) {
+        Item item = mItem.get(id);
+        name = item == null || item.item == null ? null : item.item.getNameString();
+        automapManager.addEntityMarker(id, AutomapIconType.ITEM,
+            position.position.x, position.position.y, name,
+            AutomapManager.COLOR_ITEM, 4);
+      } else if (mMonster != null && mMonster.has(id) && mMonster.get(id).monstats != null) {
         Monster monster = mMonster.get(id);
         name = monster.monstats.NameStr;
         boolean npc = monster.monstats.npc || (mInteractable != null && mInteractable.has(id));
         int cell = monster.monstats2 == null ? -1 : AutomapEntityCells.monsterCell(monster.monstats2);
-        int type = npc ? AutomapIconType.NPC : AutomapIconType.MONSTER;
+        int type = npc ? AutomapIconType.NPC : show(Cvars.Client.Automap.ShowMonsterRanks)
+            ? AutomapMarkerPolicy.monsterType(monster.rank) : AutomapIconType.MONSTER;
         automapManager.addNativeEntityMarker(id, type, position.position.x, position.position.y,
-            name, npc ? AutomapManager.COLOR_NPC : AutomapManager.COLOR_MONSTER,
+            name, npc ? AutomapManager.COLOR_NPC : monsterColor(type),
             npc ? 5 : 4, cell);
       } else if (mObject != null && mObject.has(id) && mObject.get(id).base != null) {
         Object object = mObject.get(id);
         int cell = AutomapEntityCells.objectCell(object.base);
-        automapManager.addNativeEntityMarker(id, AutomapIconType.OBJECT,
+        int type = show(Cvars.Client.Automap.ShowQuestIndicators)
+            ? AutomapMarkerPolicy.objectType(object.base) : AutomapIconType.OBJECT;
+        automapManager.addNativeEntityMarker(id, type,
             position.position.x, position.position.y, object.base.Name,
-            AutomapManager.COLOR_DOOR, 4, cell);
+            objectColor(type), type == AutomapIconType.OBJECT ? 4 : 6, cell);
       } else if (clazz.type == Class.Type.PLR) {
         if (id == Riiablo.game.player) {
           automapManager.addPlayerMarker(id, position.position.x, position.position.y,
@@ -323,6 +354,28 @@ public class AutomapRenderer extends BaseSystem {
         }
       }
     }
+  }
+
+  private static boolean show(com.riiablo.cvar.Cvar<Boolean> option) {
+    return Boolean.TRUE.equals(option.get());
+  }
+
+  private static com.badlogic.gdx.graphics.Color monsterColor(int type) {
+    switch (type) {
+      case AutomapIconType.CHAMPION: return AutomapManager.COLOR_CHAMPION;
+      case AutomapIconType.UNIQUE: return AutomapManager.COLOR_UNIQUE;
+      case AutomapIconType.MINION: return AutomapManager.COLOR_MINION;
+      case AutomapIconType.BOSS: return AutomapManager.COLOR_BOSS;
+      default: return AutomapManager.COLOR_MONSTER;
+    }
+  }
+
+  private static com.badlogic.gdx.graphics.Color objectColor(int type) {
+    if (type == AutomapIconType.QUEST) return AutomapManager.COLOR_QUEST;
+    if (type == AutomapIconType.ENTRANCE || type == AutomapIconType.EXIT) {
+      return AutomapManager.COLOR_ENTRANCE;
+    }
+    return AutomapManager.COLOR_DOOR;
   }
 
   private boolean isPartyMember(int localEntityId) {
@@ -358,6 +411,8 @@ public class AutomapRenderer extends BaseSystem {
         Cvars.Client.Automap.ShowParty.get());
     automapManager.showNames = Boolean.TRUE.equals(
         Cvars.Client.Automap.ShowNames.get());
+    automapManager.showMinimapPointers = Boolean.TRUE.equals(
+        Cvars.Client.Automap.ShowMinimapPointers.get());
   }
 
   private void renderNativeEntitySprites() {

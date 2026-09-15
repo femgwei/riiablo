@@ -277,6 +277,25 @@ public class Cvars {
           .defaultValue(Boolean.FALSE)
           .validator(Validator.ACCEPT_NON_NULL)
           .build();
+
+      Cvar<Boolean> ShowCorpses = debugOption("ShowCorpses", "corpse markers");
+      Cvar<Boolean> ShowMissiles = debugOption("ShowMissiles", "missile markers");
+      Cvar<Boolean> ShowItems = debugOption("ShowItems", "ground item markers");
+      Cvar<Boolean> ShowMonsterRanks = debugOption("ShowMonsterRanks",
+          "Champion/Unique/Minion/Boss marker colors");
+      Cvar<Boolean> ShowQuestIndicators = debugOption("ShowQuestIndicators",
+          "quest-location and dungeon-entrance indicators");
+      Cvar<Boolean> ShowMinimapPointers = debugOption("ShowMinimapPointers",
+          "compressed pointers for distant Automap destinations");
+
+      static Cvar<Boolean> debugOption(String name, String feature) {
+        return Cvar.builder(Boolean.class)
+            .alias("Client.Automap." + name)
+            .description("Development option: show " + feature)
+            .defaultValue(Boolean.TRUE)
+            .validator(Validator.ACCEPT_NON_NULL)
+            .build();
+      }
     }
 
     interface Map {

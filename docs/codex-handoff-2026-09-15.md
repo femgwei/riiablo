@@ -63,6 +63,29 @@ git ls-remote origin refs/heads/master
 
 ## 下一步建议
 
+### 2026-09-15 自动验证与桌面日志分析记录
+
+- 自动验证四层方案以及 `C:/Users/DELL/Desktop/game.log` 的错误分级已记录在
+  [`runtime-validation-and-game-log-analysis-2026-09-15.md`](runtime-validation-and-game-log-analysis-2026-09-15.md)。
+- `CofLayerLoader.unload` 对已不在 AssetManager 中的 `SITRLITNUhth.dcc` 再次 unload
+  的崩溃已修复为幂等释放，并新增 `CofLayerLoaderReleaseTest`；仍需真实重复怪物/RoomEx
+  场景复测资源引用归零。
+- `desktop:run` 随后仍报告 `BUILD SUCCESSFUL`，存在自动门槛假通过风险；后续验证必须
+  使用明确 PASS manifest/非零 fatal 退出，不能只看 Gradle 结果。
+- 前两次 `Act4/diablo.wav` 失败属于同一追加日志中的较早运行；当前代码已有可选音乐
+  fallback，需用当前 HEAD 做缺失 WAV 启动复验。
+
+### 2026-09-15 d2hackmap Automap marker 移植
+
+- 已加入尸体、导弹、地面物品 marker，以及 Champion/Unique/Minion/Boss 等级颜色。
+- `Objects.txt:AutoMap/OpenWarp` 驱动任务地点与地下入口分类；远处目的地可压缩为方向
+  pointer。实现仍遵守 RoomEx 可见性，不包含外挂式整 Act 自动揭示或任何内存 patch。
+- 六个 `Client.Automap.Show*` 开发选项均默认开启，也可在 ESC → Automap Options
+  单独关闭。
+- `AutomapMarkerPolicyTest` 覆盖分类、默认值、负坐标方向和远距压缩；Automap 专项
+  40 项测试、核心编译和真实 1.10f 模式 1 离屏测试均通过。
+- 下一步应建立包含六类新标记的专用真实资源离屏场景，补足渲染像素级验收。
+
 ### 2026-09-15 三模式/动画回归记录
 
 - 已为 `offscreenAutomapDc6` 增加 `-PautomapMode=1|2|3`，真实 1.10f 三模式均通过，

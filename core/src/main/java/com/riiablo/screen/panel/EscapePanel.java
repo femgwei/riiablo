@@ -64,6 +64,12 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   OptionRow automapCenter;
   OptionRow automapParty;
   OptionRow automapNames;
+  OptionRow automapCorpses;
+  OptionRow automapMissiles;
+  OptionRow automapItems;
+  OptionRow automapMonsterRanks;
+  OptionRow automapQuestIndicators;
+  OptionRow automapMinimapPointers;
   OptionRow soundEnabled;
   OptionRow effectsEnabled;
   OptionRow effectsVolume;
@@ -229,11 +235,26 @@ public class EscapePanel extends WidgetGroup implements Disposable {
         Cvars.Client.Automap.CenterWhenCleared);
     automapParty = booleanOption("SHOW PARTY", Cvars.Client.Automap.ShowParty);
     automapNames = booleanOption("SHOW NAMES", Cvars.Client.Automap.ShowNames);
+    automapCorpses = booleanOption("DEV: CORPSE MARKERS", Cvars.Client.Automap.ShowCorpses);
+    automapMissiles = booleanOption("DEV: MISSILE MARKERS", Cvars.Client.Automap.ShowMissiles);
+    automapItems = booleanOption("DEV: ITEM MARKERS", Cvars.Client.Automap.ShowItems);
+    automapMonsterRanks = booleanOption("DEV: MONSTER RANK COLORS",
+        Cvars.Client.Automap.ShowMonsterRanks);
+    automapQuestIndicators = booleanOption("DEV: QUEST / ENTRANCE",
+        Cvars.Client.Automap.ShowQuestIndicators);
+    automapMinimapPointers = booleanOption("DEV: DISTANT POINTERS",
+        Cvars.Client.Automap.ShowMinimapPointers);
     page.add(automapMode).width(520).height(24).row();
     page.add(automapFade).width(520).height(24).row();
     page.add(automapCenter).width(520).height(24).row();
     page.add(automapParty).width(520).height(24).row();
     page.add(automapNames).width(520).height(24).row();
+    page.add(automapCorpses).width(520).height(24).row();
+    page.add(automapMissiles).width(520).height(24).row();
+    page.add(automapItems).width(520).height(24).row();
+    page.add(automapMonsterRanks).width(520).height(24).row();
+    page.add(automapQuestIndicators).width(520).height(24).row();
+    page.add(automapMinimapPointers).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshAutomapRows();
@@ -309,10 +330,10 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private Table createControlsPage() {
     Table page = createPage("CONFIGURE CONTROLS");
-    controlsStatus = new Label("SELECT A BINDING TO CHANGE IT", Riiablo.fonts.fontformal10,
+    controlsStatus = new Label("SELECT A BINDING TO CHANGE IT", Riiablo.fonts.font16,
         Riiablo.colors.grey);
     controlsStatus.setAlignment(Align.center);
-    page.add(controlsStatus).width(570).height(24).row();
+    page.add(controlsStatus).width(750).height(24).row();
 
     Table grid = new Table();
     grid.defaults().pad(1);
@@ -320,11 +341,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     for (int i = 0; i < CONFIGURABLE_KEYS.length; i++) {
       ControlBindingRow row = new ControlBindingRow(CONFIGURABLE_KEYS[i]);
       controlRows.add(row);
-      grid.add(row).width(190).height(27);
+      grid.add(row).width(246).height(27);
       if ((i + 1) % 3 == 0) grid.row();
     }
     if (CONFIGURABLE_KEYS.length % 3 != 0) grid.row();
-    page.add(grid).width(580).row();
+    page.add(grid).width(750).row();
     vibration = new OptionRow("VIBRATION", () -> {
       Cvars.Client.Input.Vibration.set(!Boolean.TRUE.equals(Cvars.Client.Input.Vibration.get()));
       refreshControlsRows();
@@ -421,7 +442,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   private Table createPlaceholderPage(String title) {
     Table page = createPage(title);
     Label unavailable = new Label("AVAILABLE IN A FOLLOW-UP OPTIONS STEP",
-        Riiablo.fonts.fontformal10, Riiablo.colors.grey);
+        Riiablo.fonts.font16, Riiablo.colors.grey);
     unavailable.setAlignment(Align.center);
     page.add(unavailable).height(30).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
@@ -463,6 +484,12 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     automapCenter.setValue(yesNo(Cvars.Client.Automap.CenterWhenCleared.get()));
     automapParty.setValue(yesNo(Cvars.Client.Automap.ShowParty.get()));
     automapNames.setValue(yesNo(Cvars.Client.Automap.ShowNames.get()));
+    automapCorpses.setValue(yesNo(Cvars.Client.Automap.ShowCorpses.get()));
+    automapMissiles.setValue(yesNo(Cvars.Client.Automap.ShowMissiles.get()));
+    automapItems.setValue(yesNo(Cvars.Client.Automap.ShowItems.get()));
+    automapMonsterRanks.setValue(yesNo(Cvars.Client.Automap.ShowMonsterRanks.get()));
+    automapQuestIndicators.setValue(yesNo(Cvars.Client.Automap.ShowQuestIndicators.get()));
+    automapMinimapPointers.setValue(yesNo(Cvars.Client.Automap.ShowMinimapPointers.get()));
   }
 
   private void refreshSoundRows() {
@@ -635,15 +662,15 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
     ControlBindingRow(MappedKey mapping) {
       this.mapping = mapping;
-      name = new Label(mapping.getName(), Riiablo.fonts.fontformal10);
-      primary = new LabelButton("", Riiablo.fonts.fontformal10, Riiablo.colors.gold);
-      secondary = new LabelButton("", Riiablo.fonts.fontformal10, Riiablo.colors.gold);
+      name = new Label(mapping.getName(), Riiablo.fonts.font16);
+      primary = new LabelButton("", Riiablo.fonts.font16, Riiablo.colors.gold);
+      secondary = new LabelButton("", Riiablo.fonts.font16, Riiablo.colors.gold);
       name.setAlignment(Align.left);
       primary.setAlignment(Align.center);
       secondary.setAlignment(Align.center);
-      add(name).width(88).left();
-      add(primary).width(49).center();
-      add(secondary).width(49).center();
+      add(name).width(126).left();
+      add(primary).width(58).center();
+      add(secondary).width(58).center();
       primary.addListener(new ClickListener() {
         @Override
         public void clicked(InputEvent event, float x, float y) {
