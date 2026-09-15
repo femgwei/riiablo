@@ -130,7 +130,12 @@ public class CofLayerLoader extends IteratingSystem {
       }
 
       if (DEBUG) Gdx.app.log(TAG, "Loading[" + Engine.getComposite(c) + "] " + path);
-      if (!Riiablo.assets.isLoaded(descriptor)) Riiablo.assets.load(descriptor);
+      // AssetManager keeps a reference count per load call.  Every entity
+      // needs its own reference, even when another entity (for example the
+      // cached local player) already loaded the same DCC.  Skipping load when
+      // isLoaded() is true lets a monster release the shared asset out from
+      // under the player and leaves revived monsters with missing layers.
+      Riiablo.assets.load(descriptor);
       requiresReload |= (1 << c);
     }
 
