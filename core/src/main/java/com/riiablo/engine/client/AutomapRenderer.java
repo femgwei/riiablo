@@ -97,6 +97,8 @@ public class AutomapRenderer extends BaseSystem {
   private final Rectangle viewport = new Rectangle();
   private final Matrix4 renderProjection = new Matrix4();
   private boolean wasVisible;
+  private boolean nativeAutomapLoaded;
+  private AutomapExplorationStore.MaFile loadedNativeAutomap;
 
   @Override
   protected void initialize() {
@@ -139,6 +141,8 @@ public class AutomapRenderer extends BaseSystem {
   }
 
   private void loadNativeAutomapSave() {
+    if (nativeAutomapLoaded) return;
+    nativeAutomapLoaded = true;
     if (Riiablo.saves == null || Riiablo.charData == null) return;
     String name = Riiablo.charData.name;
     int difficulty = Riiablo.charData.diff;
@@ -153,8 +157,10 @@ public class AutomapRenderer extends BaseSystem {
         }
       }
       FileHandle maFile = Riiablo.saves.child(name + ".ma" + difficulty);
-      if (maFile.exists()) automapManager.loadNativeAutomap(
-          AutomapExplorationStore.readMa(maFile));
+      if (maFile.exists()) {
+        loadedNativeAutomap = AutomapExplorationStore.readMa(maFile);
+        automapManager.loadNativeAutomap(loadedNativeAutomap);
+      }
     } catch (IOException | RuntimeException e) {
       Gdx.app.error(TAG, "Failed to load native Automap save", e);
     }
@@ -173,7 +179,14 @@ public class AutomapRenderer extends BaseSystem {
       seeds.seeds[difficulty] = Riiablo.charData.mapSeed;
       AutomapExplorationStore.writeMap(mapFile, seeds);
       AutomapExplorationStore.writeMa(Riiablo.saves.child(name + ".ma" + difficulty),
-          automapManager.createNativeAutomap());
+          automapManager.createNativeAutomap(loadedNativeAutomap));
+      if (Gdx.app != null) {
+        FileHandle maFile = Riiablo.saves.child(name + ".ma" + difficulty);
+        Gdx.app.log(TAG, String.format(
+            "Saved native Automap: path=%s difficulty=%d seed=%d bytes=%d",
+            maFile.file().getAbsolutePath(), difficulty, Riiablo.charData.mapSeed,
+            maFile.length()));
+      }
     } catch (IOException | RuntimeException e) {
       Gdx.app.error(TAG, "Failed to save native Automap save", e);
     }

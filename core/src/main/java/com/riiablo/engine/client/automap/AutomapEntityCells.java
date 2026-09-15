@@ -10,10 +10,14 @@ public final class AutomapEntityCells {
   /** Returns Objects.txt AutoMap, or -1 when the row has no native icon. */
   public static int objectCell(Objects.Entry object) {
     if (object == null) return -1;
-    if (object.AutoMap >= 0) return object.AutoMap;
+    // D2CLIENT only allocates an object AutomapCell when Objects.txt AutoMap
+    // is non-zero. Zero is the table sentinel used by ordinary scenery such
+    // as camp torches; treating it as MaxiMap frame 0 draws a path fragment.
+    if (object.AutoMap > 0) return object.AutoMap;
     // D2MOO object rows sometimes omit AutoMap while the object class has a
     // well-known native cell (waypoint, shrine, well, stash).
-    return AutomapIconType.getIconForObject(object.Id, object.ShrineFunction);
+    int fallback = AutomapIconType.getIconForObject(object.Id, object.ShrineFunction);
+    return fallback > 0 ? fallback : -1;
   }
 
   /** Returns MonStats2.txt automapCel, or -1 for monsters hidden on automap. */

@@ -149,6 +149,7 @@ public class AutomapManager implements Disposable {
   private int nativeTerrainDrawCount;
   private int nativeEntityDrawCount;
   private int geometricFallbackDrawCount;
+  private final IntMap<Boolean> renderedNativeLayers = new IntMap<>();
   /** Marker instances whose native DC6 cell was actually rendered this frame. */
   private final Array<EntityMarker> nativeRenderedMarkers = new Array<>();
   
@@ -348,21 +349,52 @@ public class AutomapManager implements Disposable {
 
   /** Converts current runtime cells to the native .ma representation. */
   public AutomapExplorationStore.MaFile createNativeAutomap() {
-    AutomapExplorationStore.MaFile result = new AutomapExplorationStore.MaFile();
+    return createNativeAutomap(null);
+  }
+
+  /**
+   * Merges generated runtime layers into an existing native file. Layers that
+   * were not generated in this session must be retained byte-for-byte at the
+   * cell-record level instead of being erased on exit.
+   */
+  public AutomapExplorationStore.MaFile createNativeAutomap(
+      AutomapExplorationStore.MaFile existing) {
+    AutomapExplorationStore.MaFile result = copyNativeAutomap(existing);
     if (Riiablo.files == null || Riiablo.files.Levels == null) return result;
-    for (IntMap.Entry<AutomapLayer> entry : layers) {
-      Levels.Entry level = Riiablo.files.Levels.get(entry.key);
+    for (IntMap.Entry<Boolean> built : nativeCellsBuilt) {
+      if (!Boolean.TRUE.equals(built.value)) continue;
+      AutomapLayer source = layers.get(built.key);
+      if (source == null) continue;
+      Levels.Entry level = Riiablo.files.Levels.get(built.key);
       if (level == null || level.Layer < 1 || level.Layer > result.layers.length) continue;
-      AutomapLayer source = entry.value;
-      AutomapExplorationStore.Layer nativeLayer = new AutomapExplorationStore.Layer();
-      Integer unknown = nativeLayerUnknown.get(entry.key);
-      nativeLayer.unknown = unknown == null ? 0 : unknown;
+      AutomapExplorationStore.Layer nativeLayer = result.layers[level.Layer - 1];
+      if (nativeLayer == null) nativeLayer = new AutomapExplorationStore.Layer();
+      Integer unknown = nativeLayerUnknown.get(built.key);
+      if (unknown != null) nativeLayer.unknown = unknown;
       copyNativeCells(source.floors, source, nativeLayer.floors);
       copyNativeCells(source.roads, source, nativeLayer.floors);
       copyNativeCells(source.walls, source, nativeLayer.walls);
       copyNativeCells(source.objects, source, nativeLayer.objects);
       copyNativeCells(source.extras, source, nativeLayer.extras);
       result.layers[level.Layer - 1] = nativeLayer;
+    }
+    return result;
+  }
+
+  private static AutomapExplorationStore.MaFile copyNativeAutomap(
+      AutomapExplorationStore.MaFile source) {
+    AutomapExplorationStore.MaFile result = new AutomapExplorationStore.MaFile();
+    if (source == null) return result;
+    for (int i = 0; i < source.layers.length; i++) {
+      AutomapExplorationStore.Layer layer = source.layers[i];
+      if (layer == null) continue;
+      AutomapExplorationStore.Layer copy = new AutomapExplorationStore.Layer();
+      copy.unknown = layer.unknown;
+      copy.floors.addAll(layer.floors);
+      copy.walls.addAll(layer.walls);
+      copy.objects.addAll(layer.objects);
+      copy.extras.addAll(layer.extras);
+      result.layers[i] = copy;
     }
     return result;
   }
@@ -387,9 +419,18 @@ public class AutomapManager implements Disposable {
       if (!layer.isExplored(cell.xPixel, cell.yPixel)) continue;
       int tx = Math.floorDiv(cell.xPixel, DT1.Tile.SUBTILE_SIZE);
       int ty = Math.floorDiv(cell.yPixel, DT1.Tile.SUBTILE_SIZE);
-      target.add(new AutomapExplorationStore.Cell(cell.cellNo, (short) (8 * (tx - ty)),
-          (short) (4 * (tx + ty))));
+      addNativeCell(target, cell.cellNo, (short) (8 * (tx - ty)),
+          (short) (4 * (tx + ty)));
     }
+  }
+
+  private static void addNativeCell(Array<AutomapExplorationStore.Cell> target, int cellNo,
+      short x, short y) {
+    for (int i = 0, n = target.size; i < n; i++) {
+      AutomapExplorationStore.Cell existing = target.get(i);
+      if (existing.cellNo == cellNo && existing.x == x && existing.y == y) return;
+    }
+    target.add(new AutomapExplorationStore.Cell(cellNo, x, y));
   }
 
   /** Updates exploration from native RoomEx activation state when available. */
@@ -462,8 +503,9 @@ public class AutomapManager implements Disposable {
             firstTileStyle = tile.mainIndex;
             firstTileSequence = tile.subIndex;
           }
+          long cellSeed = automapSeed ^ (worldX * 31L + worldY);
           int cell = tileRenderer.getAutomapCellId(automapLevelName, tileName,
-              tile.mainIndex, tile.subIndex, automapSeed ^ (worldX * 31L + worldY));
+              tile.mainIndex, tile.subIndex, cellSeed);
           if (cell < 0) {
             lookupMisses++;
             continue;
@@ -481,6 +523,17 @@ public class AutomapManager implements Disposable {
               if (grid != null && grid.inBounds(localTx, localTy)
                   && grid.dirtPathFlags[localTy][localTx]) {
                 layer.addRoad(cell, worldX, worldY);
+              } else {
+                // The broad any-style compatibility fallback is useful for
+                // incomplete Jungle/Kurast tables, but on Act I floor style 0
+                // it turns ordinary grass into a path. Only an exact native
+                // AutoMap.txt match may contribute a non-road outdoor floor,
+                // and cells 0..3 remain reserved for DirtPathGrid roads.
+                int exactCell = tileRenderer.getExactAutomapCellId(automapLevelName,
+                    tileName, tile.mainIndex, tile.subIndex, cellSeed);
+                if (AutomapTileRenderer.isOutdoorFloorFeature(exactCell)) {
+                  layer.addFloor(exactCell, worldX, worldY);
+                }
               }
             }
           }
@@ -846,48 +899,41 @@ public class AutomapManager implements Disposable {
     nativeTerrainDrawCount = 0;
     if (!isVisible() || !tileRenderer.hasSprite()) return 0;
     
-    AutomapLayer layer = getActiveLayer();
-    if (layer == null) return 0;
-    
     float alpha = opacity;
-    if (currentMode == MODE_OVERLAY) {
-      alpha *= 0.6f;
-    }
     
     // 设置透明度
     batch.setColor(1f, 1f, 1f, alpha);
 
-    // Native terrain cells are rendered before object/icon cells and are
-    // filtered by the RoomEx-driven exploration mask.
-    if (layer.renderFloorCells) {
-      nativeTerrainDrawCount += renderNativeCells(batch, layer.floors, layer, alpha);
-    }
-    nativeTerrainDrawCount += renderNativeCells(batch, layer.roads, layer, alpha);
-    nativeTerrainDrawCount += renderNativeCells(batch, layer.walls, layer, alpha);
-    
-    // 渲染物体图标
-    for (int i = 0, size = layer.objects.size; i < size; i++) {
-      AutomapCell cell = layer.objects.get(i);
-      if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
-        if (renderProjectedTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) {
-          nativeTerrainDrawCount++;
-        }
+    // Draw every generated zone belonging to the current map. Town and its
+    // adjacent wilderness are separate native layers, but D2 keeps both at
+    // the same brightness while crossing their boundary.
+    if (map != null) {
+      renderedNativeLayers.clear();
+      for (Map.Zone zone : map.getZones()) {
+        int levelId = zone.levelId();
+        if (renderedNativeLayers.containsKey(levelId)
+            || !nativeCellsBuilt.containsKey(levelId)) continue;
+        renderedNativeLayers.put(levelId, Boolean.TRUE);
+        renderNativeLayer(batch, layers.get(levelId), alpha);
       }
-    }
-    
-    // 渲染额外图标（传送点、神殿等）
-    for (int i = 0, size = layer.extras.size; i < size; i++) {
-      AutomapCell cell = layer.extras.get(i);
-      if (cell.cellNo >= 0 && layer.isExplored(cell.xPixel, cell.yPixel)) {
-        if (renderProjectedTile(batch, cell.cellNo, cell.xPixel, cell.yPixel)) {
-          nativeTerrainDrawCount++;
-        }
-      }
+    } else {
+      renderNativeLayer(batch, getActiveLayer(), alpha);
     }
     
     // 恢复颜色
     batch.setColor(1f, 1f, 1f, 1f);
     return nativeTerrainDrawCount;
+  }
+
+  private void renderNativeLayer(PaletteIndexedBatch batch, AutomapLayer layer, float alpha) {
+    if (layer == null) return;
+    // Outdoor floors contain only explicitly retained features (rivers and
+    // bridges); indoor/town floors additionally contain their path cells.
+    nativeTerrainDrawCount += renderNativeCells(batch, layer.floors, layer, alpha);
+    nativeTerrainDrawCount += renderNativeCells(batch, layer.roads, layer, alpha);
+    nativeTerrainDrawCount += renderNativeCells(batch, layer.walls, layer, alpha);
+    nativeTerrainDrawCount += renderNativeCells(batch, layer.objects, layer, alpha);
+    nativeTerrainDrawCount += renderNativeCells(batch, layer.extras, layer, alpha);
   }
 
   /**
@@ -1018,6 +1064,7 @@ public class AutomapManager implements Disposable {
     layers.clear();
     nativeLayerUnknown.clear();
     nativeCellsBuilt.clear();
+    renderedNativeLayers.clear();
     entityMarkers.clear();
     automapData = null;
     iconSprite = null;

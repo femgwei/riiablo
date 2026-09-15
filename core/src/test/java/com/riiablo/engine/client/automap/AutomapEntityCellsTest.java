@@ -11,6 +11,8 @@ class AutomapEntityCellsTest {
     Objects.Entry object = new Objects.Entry();
     object.AutoMap = 307;
     assertEquals(307, AutomapEntityCells.objectCell(object));
+    object.AutoMap = 0;
+    assertEquals(-1, AutomapEntityCells.objectCell(object));
     object.AutoMap = -1;
     assertEquals(-1, AutomapEntityCells.objectCell(object));
     object.Id = 119;

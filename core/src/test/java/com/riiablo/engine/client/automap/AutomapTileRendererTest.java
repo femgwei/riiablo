@@ -7,6 +7,14 @@ import org.junit.jupiter.api.Test;
 
 /** 无资源验证 D2MOO AutoMap.txt 查询语义。 */
 class AutomapTileRendererTest {
+  @Test void outdoorFloorFeaturesExcludeGenericPathFrames() {
+    assertFalse(AutomapTileRenderer.isOutdoorFloorFeature(-1));
+    assertFalse(AutomapTileRenderer.isOutdoorFloorFeature(0));
+    assertFalse(AutomapTileRenderer.isOutdoorFloorFeature(3));
+    assertTrue(AutomapTileRenderer.isOutdoorFloorFeature(4));
+    assertTrue(AutomapTileRenderer.isOutdoorFloorFeature(79));
+  }
+
   private static AutoMap.Entry entry(String level, String tile, int style, int start, int end, int... cel) {
     AutoMap.Entry e = new AutoMap.Entry();
     e.LevelName = level;

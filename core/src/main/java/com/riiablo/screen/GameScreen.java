@@ -1389,6 +1389,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   public void dispose() {
     //map.dispose(); // FIXME: additional instances aren't reloading textures properly (DT1s disposal)
     charData.clearListeners();
+    AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+    if (automapRenderer != null) automapRenderer.saveNativeAutomap();
     engine.dispose();
     for (Actor actor : stage.getActors()) if (actor instanceof Disposable) ((Disposable) actor).dispose();
     stage.dispose();

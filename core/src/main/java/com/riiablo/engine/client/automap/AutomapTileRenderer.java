@@ -271,6 +271,21 @@ public class AutomapTileRenderer implements Disposable {
     return selectCellId(frames, automapSeed);
   }
 
+  /** Exact DATATBLS-style lookup without the compatibility any-style fallback. */
+  public int getExactAutomapCellId(String levelName, String tileName, int tileStyle,
+      int tileSequence, long automapSeed) {
+    return selectCellId(getFrameIndices(levelName, tileName, tileStyle, tileSequence), automapSeed);
+  }
+
+  /**
+   * Outdoor cells 0..3 are the four generic dirt-path strokes. Native D2 only
+   * emits those where DirtPathGrid says a road exists; higher floor cells are
+   * real features such as rivers, bridges, waypoints and fire pits.
+   */
+  public static boolean isOutdoorFloorFeature(int cell) {
+    return cell > 3;
+  }
+
   private int[] getFrameIndicesAnyStyle(String levelName, String tileName) {
     if (automapData == null || levelName == null || tileName == null) return null;
     for (AutoMap.Entry entry : automapData) {
