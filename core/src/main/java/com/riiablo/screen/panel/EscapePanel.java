@@ -64,12 +64,6 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   OptionRow automapCenter;
   OptionRow automapParty;
   OptionRow automapNames;
-  OptionRow automapCorpses;
-  OptionRow automapMissiles;
-  OptionRow automapItems;
-  OptionRow automapMonsterRanks;
-  OptionRow automapQuestIndicators;
-  OptionRow automapMinimapPointers;
   OptionRow soundEnabled;
   OptionRow effectsEnabled;
   OptionRow effectsVolume;
@@ -235,26 +229,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
         Cvars.Client.Automap.CenterWhenCleared);
     automapParty = booleanOption("SHOW PARTY", Cvars.Client.Automap.ShowParty);
     automapNames = booleanOption("SHOW NAMES", Cvars.Client.Automap.ShowNames);
-    automapCorpses = booleanOption("DEV: CORPSE MARKERS", Cvars.Client.Automap.ShowCorpses);
-    automapMissiles = booleanOption("DEV: MISSILE MARKERS", Cvars.Client.Automap.ShowMissiles);
-    automapItems = booleanOption("DEV: ITEM MARKERS", Cvars.Client.Automap.ShowItems);
-    automapMonsterRanks = booleanOption("DEV: MONSTER RANK COLORS",
-        Cvars.Client.Automap.ShowMonsterRanks);
-    automapQuestIndicators = booleanOption("DEV: QUEST / ENTRANCE",
-        Cvars.Client.Automap.ShowQuestIndicators);
-    automapMinimapPointers = booleanOption("DEV: DISTANT POINTERS",
-        Cvars.Client.Automap.ShowMinimapPointers);
     page.add(automapMode).width(520).height(24).row();
     page.add(automapFade).width(520).height(24).row();
     page.add(automapCenter).width(520).height(24).row();
     page.add(automapParty).width(520).height(24).row();
     page.add(automapNames).width(520).height(24).row();
-    page.add(automapCorpses).width(520).height(24).row();
-    page.add(automapMissiles).width(520).height(24).row();
-    page.add(automapItems).width(520).height(24).row();
-    page.add(automapMonsterRanks).width(520).height(24).row();
-    page.add(automapQuestIndicators).width(520).height(24).row();
-    page.add(automapMinimapPointers).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshAutomapRows();
@@ -499,12 +478,6 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     automapCenter.setValue(yesNo(Cvars.Client.Automap.CenterWhenCleared.get()));
     automapParty.setValue(yesNo(Cvars.Client.Automap.ShowParty.get()));
     automapNames.setValue(yesNo(Cvars.Client.Automap.ShowNames.get()));
-    automapCorpses.setValue(yesNo(Cvars.Client.Automap.ShowCorpses.get()));
-    automapMissiles.setValue(yesNo(Cvars.Client.Automap.ShowMissiles.get()));
-    automapItems.setValue(yesNo(Cvars.Client.Automap.ShowItems.get()));
-    automapMonsterRanks.setValue(yesNo(Cvars.Client.Automap.ShowMonsterRanks.get()));
-    automapQuestIndicators.setValue(yesNo(Cvars.Client.Automap.ShowQuestIndicators.get()));
-    automapMinimapPointers.setValue(yesNo(Cvars.Client.Automap.ShowMinimapPointers.get()));
   }
 
   private void refreshSoundRows() {
