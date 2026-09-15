@@ -23,6 +23,9 @@ public class AutomapLayer {
   
   /** 地板单元格列表 */
   public final Array<AutomapCell> floors = new Array<>();
+
+  /** 户外土路单元格列表（与普通地面分开，原版只显示道路）。 */
+  public final Array<AutomapCell> roads = new Array<>();
   
   /** 墙壁单元格列表 */
   public final Array<AutomapCell> walls = new Array<>();
@@ -49,6 +52,10 @@ public class AutomapLayer {
    */
   public void addFloor(int cellNo, int x, int y) {
     addUnique(floors, cellNo, x, y);
+  }
+
+  public void addRoad(int cellNo, int x, int y) {
+    addUnique(roads, cellNo, x, y);
   }
   
   /**
@@ -166,6 +173,7 @@ public class AutomapLayer {
   /** Clears generated DC6 cells while preserving exploration progress. */
   public void clearCells() {
     floors.clear();
+    roads.clear();
     walls.clear();
     objects.clear();
     extras.clear();

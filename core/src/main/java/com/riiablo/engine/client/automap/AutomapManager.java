@@ -402,7 +402,22 @@ public class AutomapManager implements Disposable {
             lookupMisses++;
             continue;
           }
-          if (Orientation.isFloor(tile.orientation)) layer.addFloor(cell, worldX, worldY);
+          if (Orientation.isFloor(tile.orientation)) {
+            if (layer.renderFloorCells) {
+              layer.addFloor(cell, worldX, worldY);
+            } else {
+              // Outdoor TileGrid coordinates are local to the zone.  Only
+              // cells marked by the native dirt-path topology are rendered;
+              // generic wilderness floor cells remain invisible.
+              com.riiablo.drlg.TileGrid grid = zone.nativeTileGrid();
+              int localTx = tx - Math.floorDiv(zone.x(), com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
+              int localTy = ty - Math.floorDiv(zone.y(), com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
+              if (grid != null && grid.inBounds(localTx, localTy)
+                  && grid.dirtPathFlags[localTy][localTx]) {
+                layer.addRoad(cell, worldX, worldY);
+              }
+            }
+          }
           else if (Orientation.isWall(tile.orientation)) layer.addWall(cell, worldX, worldY);
           else layer.addObject(cell, worldX, worldY);
           added++;
@@ -781,6 +796,7 @@ public class AutomapManager implements Disposable {
     if (layer.renderFloorCells) {
       nativeTerrainDrawCount += renderNativeCells(batch, layer.floors, layer, alpha);
     }
+    nativeTerrainDrawCount += renderNativeCells(batch, layer.roads, layer, alpha);
     nativeTerrainDrawCount += renderNativeCells(batch, layer.walls, layer, alpha);
     
     // 渲染物体图标
