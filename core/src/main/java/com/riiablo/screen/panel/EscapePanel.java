@@ -211,12 +211,12 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   private Table createOptionsPage() {
-    Table page = createPage("OPTIONS");
-    page.add(menuButton("SOUND OPTIONS", () -> showPage(Page.SOUND))).height(24).row();
-    page.add(menuButton("VIDEO OPTIONS", () -> showPage(Page.VIDEO))).height(24).row();
-    page.add(menuButton("AUTOMAP OPTIONS", () -> showPage(Page.AUTOMAP))).height(24).row();
-    page.add(menuButton("CONFIGURE CONTROLS", () -> showPage(Page.CONTROLS))).height(24).row();
-    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.MAIN))).height(24).padTop(12).row();
+    Table page = createPage(null);
+    page.add(menuButton("SOUND OPTIONS", () -> showPage(Page.SOUND))).height(46).row();
+    page.add(menuButton("VIDEO OPTIONS", () -> showPage(Page.VIDEO))).height(46).row();
+    page.add(menuButton("AUTOMAP OPTIONS", () -> showPage(Page.AUTOMAP))).height(46).row();
+    page.add(menuButton("CONFIGURE CONTROLS", () -> showPage(Page.CONTROLS))).height(46).row();
+    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.MAIN))).height(46).padTop(12).row();
     return page;
   }
 
@@ -256,7 +256,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     page.add(automapQuestIndicators).width(520).height(24).row();
     page.add(automapMinimapPointers).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(24).padTop(12).row();
+        .height(46).padTop(12).row();
     refreshAutomapRows();
     return page;
   }
@@ -293,7 +293,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     page.add(musicEnabled).width(520).height(24).row();
     page.add(musicVolume).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(24).padTop(12).row();
+        .height(46).padTop(12).row();
     refreshSoundRows();
     return page;
   }
@@ -323,7 +323,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     statusBar = new OptionRow("STATUS BAR (ANDROID)", null, false);
     page.add(statusBar).width(520).height(24).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(24).padTop(12).row();
+        .height(46).padTop(12).row();
     refreshVideoRows();
     return page;
   }
@@ -352,9 +352,9 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     });
     page.add(vibration).width(520).height(24).row();
     page.add(menuButton("RESET DEFAULTS", this::resetControlDefaults))
-        .height(24).padTop(8).row();
+        .height(46).padTop(8).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(24).padTop(4).row();
+        .height(46).padTop(4).row();
     return page;
   }
 
@@ -446,7 +446,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     unavailable.setAlignment(Align.center);
     page.add(unavailable).height(30).row();
     page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
-        .height(24).padTop(12).row();
+        .height(46).padTop(12).row();
     return page;
   }
 
@@ -456,14 +456,16 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     page.setBackground(new PaletteIndexedColorDrawable(Riiablo.colors.modal50));
     page.align(Align.center);
     page.defaults().center();
-    Label heading = new Label(title, Riiablo.fonts.font16, Riiablo.colors.gold);
-    heading.setAlignment(Align.center);
-    page.add(heading).height(38).padBottom(12).row();
+    if (title != null) {
+      Label heading = new Label(title, Riiablo.fonts.font42, Riiablo.colors.gold);
+      heading.setAlignment(Align.center);
+      page.add(heading).height(50).padBottom(12).row();
+    }
     return page;
   }
 
   private LabelButton menuButton(String text, final Runnable action) {
-    LabelButton button = new LabelButton(text, Riiablo.fonts.font16);
+    LabelButton button = new LabelButton(text, Riiablo.fonts.font42);
     button.setAlignment(Align.center);
     button.addListener(new ClickListener() {
       @Override
