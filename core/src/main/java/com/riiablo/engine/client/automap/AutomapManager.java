@@ -16,6 +16,8 @@ import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.map.Map;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Orientation;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Levels;
 import com.riiablo.util.DebugUtils;
 
 /**
@@ -128,6 +130,8 @@ public class AutomapManager implements Disposable {
   
   /** 各关卡的小地图图层 */
   private final IntMap<AutomapLayer> layers = new IntMap<>();
+  /** Native per-layer metadata retained when an existing .ma file is loaded. */
+  private final IntMap<Integer> nativeLayerUnknown = new IntMap<>();
   private final IntMap<Boolean> nativeCellsBuilt = new IntMap<>();
   
   /** 当前激活的图层ID */
@@ -323,6 +327,68 @@ public class AutomapManager implements Disposable {
     AutomapLayer layer = getActiveLayer();
     if (layer != null) {
       layer.updateExploration(playerX, playerY);
+    }
+  }
+
+  /** Restores explored cells from a native difficulty-specific .ma file. */
+  public void loadNativeAutomap(AutomapExplorationStore.MaFile file) {
+    if (file == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    for (Levels.Entry level : Riiablo.files.Levels) {
+      int index = level.Layer - 1;
+      if (index < 0 || index >= file.layers.length || file.layers[index] == null) continue;
+      AutomapExplorationStore.Layer nativeLayer = file.layers[index];
+      nativeLayerUnknown.put(level.Id, nativeLayer.unknown);
+      AutomapLayer layer = getOrCreateLayer(level.Id);
+      restoreNativeCells(layer, nativeLayer.floors);
+      restoreNativeCells(layer, nativeLayer.walls);
+      restoreNativeCells(layer, nativeLayer.objects);
+      restoreNativeCells(layer, nativeLayer.extras);
+    }
+  }
+
+  /** Converts current runtime cells to the native .ma representation. */
+  public AutomapExplorationStore.MaFile createNativeAutomap() {
+    AutomapExplorationStore.MaFile result = new AutomapExplorationStore.MaFile();
+    if (Riiablo.files == null || Riiablo.files.Levels == null) return result;
+    for (IntMap.Entry<AutomapLayer> entry : layers) {
+      Levels.Entry level = Riiablo.files.Levels.get(entry.key);
+      if (level == null || level.Layer < 1 || level.Layer > result.layers.length) continue;
+      AutomapLayer source = entry.value;
+      AutomapExplorationStore.Layer nativeLayer = new AutomapExplorationStore.Layer();
+      Integer unknown = nativeLayerUnknown.get(entry.key);
+      nativeLayer.unknown = unknown == null ? 0 : unknown;
+      copyNativeCells(source.floors, source, nativeLayer.floors);
+      copyNativeCells(source.roads, source, nativeLayer.floors);
+      copyNativeCells(source.walls, source, nativeLayer.walls);
+      copyNativeCells(source.objects, source, nativeLayer.objects);
+      copyNativeCells(source.extras, source, nativeLayer.extras);
+      result.layers[level.Layer - 1] = nativeLayer;
+    }
+    return result;
+  }
+
+  private static void restoreNativeCells(AutomapLayer target,
+      Array<AutomapExplorationStore.Cell> cells) {
+    for (AutomapExplorationStore.Cell cell : cells) {
+      int tx = cell.x / 8;
+      int ty = cell.y / 4;
+      int sum = tx + ty;
+      int diff = tx - ty;
+      if (((sum + diff) & 1) != 0) continue;
+      int worldX = ((sum + diff) / 2) * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;
+      int worldY = ((sum - diff) / 2) * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;
+      target.revealRect(worldX, worldY, 1, 1);
+    }
+  }
+
+  private static void copyNativeCells(Array<AutomapCell> source, AutomapLayer layer,
+      Array<AutomapExplorationStore.Cell> target) {
+    for (AutomapCell cell : source) {
+      if (!layer.isExplored(cell.xPixel, cell.yPixel)) continue;
+      int tx = Math.floorDiv(cell.xPixel, DT1.Tile.SUBTILE_SIZE);
+      int ty = Math.floorDiv(cell.yPixel, DT1.Tile.SUBTILE_SIZE);
+      target.add(new AutomapExplorationStore.Cell(cell.cellNo, (short) (8 * (tx - ty)),
+          (short) (4 * (tx + ty))));
     }
   }
 
@@ -950,6 +1016,7 @@ public class AutomapManager implements Disposable {
   @Override
   public void dispose() {
     layers.clear();
+    nativeLayerUnknown.clear();
     nativeCellsBuilt.clear();
     entityMarkers.clear();
     automapData = null;
@@ -979,6 +1046,7 @@ public class AutomapManager implements Disposable {
       layer.clear();
     }
     layers.clear();
+    nativeLayerUnknown.clear();
     nativeCellsBuilt.clear();
     activeLayerId = -1;
   }

@@ -12,12 +12,15 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.files.FileHandle;
+import java.io.IOException;
 
 import com.riiablo.Riiablo;
 import com.riiablo.Cvars;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.DC6;
 import com.riiablo.engine.client.automap.AutomapCamera;
+import com.riiablo.engine.client.automap.AutomapExplorationStore;
 import com.riiablo.engine.client.automap.AutomapEntityCells;
 import com.riiablo.engine.client.automap.AutomapIconType;
 import com.riiablo.engine.client.automap.AutomapManager;
@@ -134,6 +137,47 @@ public class AutomapRenderer extends BaseSystem {
   public AutomapManager getAutomapManager() {
     return automapManager;
   }
+
+  private void loadNativeAutomapSave() {
+    if (Riiablo.saves == null || Riiablo.charData == null) return;
+    String name = Riiablo.charData.name;
+    int difficulty = Riiablo.charData.diff;
+    if (name == null || name.isEmpty() || difficulty < 0 || difficulty > 3) return;
+    try {
+      FileHandle mapFile = Riiablo.saves.child(name + ".map");
+      if (mapFile.exists()) {
+        AutomapExplorationStore.MapSeeds seeds = AutomapExplorationStore.readMap(mapFile);
+        if (seeds.seed(difficulty) != 0 && seeds.seed(difficulty) != Riiablo.charData.mapSeed) {
+          Gdx.app.log(TAG, "Ignoring native Automap save with mismatched map seed");
+          return;
+        }
+      }
+      FileHandle maFile = Riiablo.saves.child(name + ".ma" + difficulty);
+      if (maFile.exists()) automapManager.loadNativeAutomap(
+          AutomapExplorationStore.readMa(maFile));
+    } catch (IOException | RuntimeException e) {
+      Gdx.app.error(TAG, "Failed to load native Automap save", e);
+    }
+  }
+
+  /** Saves the current difficulty's native Automap sidecars. */
+  public void saveNativeAutomap() {
+    if (Riiablo.saves == null || Riiablo.charData == null || automapManager == null) return;
+    String name = Riiablo.charData.name;
+    int difficulty = Riiablo.charData.diff;
+    if (name == null || name.isEmpty() || difficulty < 0 || difficulty > 3) return;
+    try {
+      FileHandle mapFile = Riiablo.saves.child(name + ".map");
+      AutomapExplorationStore.MapSeeds seeds = mapFile.exists()
+          ? AutomapExplorationStore.readMap(mapFile) : new AutomapExplorationStore.MapSeeds();
+      seeds.seeds[difficulty] = Riiablo.charData.mapSeed;
+      AutomapExplorationStore.writeMap(mapFile, seeds);
+      AutomapExplorationStore.writeMa(Riiablo.saves.child(name + ".ma" + difficulty),
+          automapManager.createNativeAutomap());
+    } catch (IOException | RuntimeException e) {
+      Gdx.app.error(TAG, "Failed to save native Automap save", e);
+    }
+  }
   
   /**
    * 从 RenderSystem 同步显示模式
@@ -158,6 +202,8 @@ public class AutomapRenderer extends BaseSystem {
         automapManager.setMode(AutomapManager.MODE_OFF);
         break;
     }
+
+    loadNativeAutomapSave();
     if (automapCamera != null) automapCamera.setMiniMapMode(miniMap);
     // 如果模式变化，记录日志
     if (prevMode != automapManager.getMode()) {
@@ -574,6 +620,7 @@ public class AutomapRenderer extends BaseSystem {
   @Override
   protected void dispose() {
     super.dispose();
+    saveNativeAutomap();
     if (automapManager != null) {
       automapManager.dispose();
       automapManager = null;
