@@ -112,7 +112,14 @@ dependencies {
   testImplementation 'org.junit.jupiter:junit-jupiter'
   testImplementation 'org.mockito:mockito-junit-jupiter:5.4.0'
   testImplementation "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
-  testImplementation "com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion"
+  testImplementation("com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion") {
+    // The LWJGL2 test backend and LWJGL3 cannot share the same test JVM:
+    // both publish org.lwjgl classes with incompatible binary APIs.  The
+    // opt-in window smoke test uses LWJGL3; legacy visual tests remain
+    // available in their dedicated backend modules.
+    exclude group: 'org.lwjgl.lwjgl'
+  }
+  testImplementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
   testImplementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 }
 
