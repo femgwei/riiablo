@@ -100,6 +100,8 @@ public class AutomapRenderer extends BaseSystem {
   private boolean nativeAutomapLoaded;
   private AutomapExplorationStore.MaFile loadedNativeAutomap;
   private String lastOptionsDiagnostic;
+  private int lastAutomapLevelId = Integer.MIN_VALUE;
+  private boolean lastAutomapTown;
 
   @Override
   protected void initialize() {
@@ -346,7 +348,17 @@ public class AutomapRenderer extends BaseSystem {
     if (position == null || position.position == null) return;
     Map.Zone zone = map.getZone(position.position.x, position.position.y);
     if (zone == null) return;
-    automapManager.updatePlayerPosition(zone.levelId(),
+    int levelId = zone.levelId();
+    boolean town = zone.isTown();
+    if ((levelId != lastAutomapLevelId || town != lastAutomapTown) && Gdx.app != null) {
+      Gdx.app.log(TAG, "[AUTOMAP_LEVEL] levelId=" + levelId
+          + " town=" + town
+          + " x=" + Math.round(position.position.x)
+          + " y=" + Math.round(position.position.y));
+      lastAutomapLevelId = levelId;
+      lastAutomapTown = town;
+    }
+    automapManager.updatePlayerPosition(levelId,
         Math.round(position.position.x), Math.round(position.position.y), map);
   }
   

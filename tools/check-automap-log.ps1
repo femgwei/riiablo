@@ -15,6 +15,7 @@ $errors = [System.Collections.Generic.List[string]]::new()
 $warnings = [System.Collections.Generic.List[string]]::new()
 $options = @()
 $renders = @()
+$levels = @()
 
 foreach ($line in $lines) {
   if ($line -match '\[AUTOMAP_OPTIONS\]\s+mode=(\d+)\s+fade=(True|False|true|false)\s+opacity=([0-9.]+)') {
@@ -38,6 +39,10 @@ foreach ($line in $lines) {
     if ($ids.Count -eq 0) { $warnings.Add('native render reported no generated layers') }
   }
 
+  if ($line -match '\[AUTOMAP_LEVEL\]\s+levelId=(-?\d+)\s+town=(True|False|true|false)\s+x=(-?\d+)\s+y=(-?\d+)') {
+    $levels += [pscustomobject]@{ LevelId = [int]$Matches[1]; Town = $Matches[2]; X = [int]$Matches[3]; Y = [int]$Matches[4] }
+  }
+
   if ($line -match '(?i)(Failed to save native Automap|Failed to load native Automap|Exception|crash|fatal error)') {
     $errors.Add("runtime/save failure: $line")
   }
@@ -50,8 +55,13 @@ $lastOptions = if ($options.Count) { $options[-1] } else { $null }
 $lastRender = if ($renders.Count) { $renders[-1] } else { $null }
 Write-Output ("Automap log: {0}" -f (Resolve-Path -LiteralPath $Path))
 Write-Output ("  option records: {0}, render records: {1}" -f $options.Count, $renders.Count)
+Write-Output ("  level transitions: {0}" -f $levels.Count)
 if ($lastOptions) { Write-Output ("  last options: mode={0} fade={1} opacity={2}" -f $lastOptions.Mode, $lastOptions.Fade, $lastOptions.Opacity) }
 if ($lastRender) { Write-Output ("  last render: alpha={0} layers={1}" -f $lastRender.Alpha, $lastRender.Ids.Count) }
+if ($levels.Count -gt 0) {
+  $distinctLevels = @($levels | Select-Object -ExpandProperty LevelId -Unique)
+  Write-Output ("  distinct levels: {0}" -f ($distinctLevels -join ','))
+}
 foreach ($warning in $warnings) { Write-Warning $warning }
 foreach ($errorText in $errors) { Write-Error $errorText }
 
