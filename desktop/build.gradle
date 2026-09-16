@@ -47,6 +47,7 @@ task offscreenCamp(type: JavaExec) {
        '--mode', 'camp',
        '--level', project.findProperty('offscreenLevel') ?: '-1',
        '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  if (project.hasProperty('offscreenCharacter')) args '--character', project.property('offscreenCharacter')
   if (project.findProperty('warpGraph')?.toString()?.toBoolean()) args '--warp-graph'
   ignoreExitValue = false
 }
@@ -106,6 +107,7 @@ task offscreenAutomapDc6(type: JavaExec) {
        '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/automap-dc6',
        '--mode', 'camp', '--level', project.findProperty('offscreenLevel') ?: '2',
        '--automap-native', '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  if (project.hasProperty('offscreenCharacter')) args '--character', project.property('offscreenCharacter')
   if (project.hasProperty('automapMode')) {
     args '--automap-mode', project.property('automapMode')
   }

@@ -70,6 +70,7 @@ import com.riiablo.map.DT1;
 import com.riiablo.map.DT1Loader;
 import com.riiablo.mpq.MPQFileHandleResolver;
 import com.riiablo.save.CharData;
+import com.riiablo.save.D2SReader;
 import com.riiablo.screen.AudioUnpackerScreen;
 import com.riiablo.screen.CreateCharacterScreen;
 import com.riiablo.screen.OffscreenCampScreen;
@@ -369,12 +370,36 @@ public class Client extends Game {
       setScreen(new com.riiablo.screen.OffscreenRenderScreen(
           System.getProperty("riiablo.offscreen-output", "build/visual-tests")));
     } else if (Boolean.getBoolean("riiablo.offscreen-camp")) {
-      CharData smokeCharacter = charData.clear().set(
-          Riiablo.NORMAL, false, "CampSmoke", (byte) CharacterClass.AMAZON.id);
-      CreateCharacterScreen.initializeNewCharacter(smokeCharacter, CharacterClass.AMAZON);
-      // Keep the map deterministic so a later regression can be compared to
-      // this exact room layout rather than a wall-clock seed.
-      smokeCharacter.mapSeed = 0x110FCA4D;
+      String requestedCharacter = System.getProperty("riiablo.offscreen-character", "").trim();
+      CharData smokeCharacter;
+      if (!requestedCharacter.isEmpty()) {
+        FileHandle d2s = saves.child(requestedCharacter + ".d2s");
+        if (!d2s.exists()) {
+          throw new IllegalStateException("Offscreen character save not found: " + d2s.path());
+        }
+        // The current full-body reader still expects the expansion mercenary
+        // trailer, which classic 1.10f saves omit.  The Automap fixture only
+        // needs header identity and map seed; initialize normal runtime stats
+        // and inventory, then apply the original header values.
+        com.riiablo.save.D2S header = D2SReader.INSTANCE.readD2S(d2s);
+        smokeCharacter = charData.clear().set(Riiablo.NORMAL, false,
+            header.name(), header.charClass());
+        CreateCharacterScreen.initializeNewCharacter(smokeCharacter,
+            CharacterClass.get(header.charClass()));
+        smokeCharacter.flags = header.flags();
+        smokeCharacter.level = header.level();
+        smokeCharacter.mapSeed = header.mapSeed();
+        Gdx.app.log(TAG, "[OFFSCREEN_CHARACTER] loaded=" + requestedCharacter
+            + " expansion=" + smokeCharacter.isExpansion()
+            + " mapSeed=" + smokeCharacter.mapSeed);
+      } else {
+        smokeCharacter = charData.clear().set(
+            Riiablo.NORMAL, false, "CampSmoke", (byte) CharacterClass.AMAZON.id);
+        CreateCharacterScreen.initializeNewCharacter(smokeCharacter, CharacterClass.AMAZON);
+        // Keep the map deterministic for the synthetic smoke fixture.
+        smokeCharacter.mapSeed = 0x110FCA4D;
+      }
+      Riiablo.charData = charData = smokeCharacter;
       int offscreenLevel = Integer.getInteger("riiablo.offscreen-level", -1);
       boolean offscreenWarpGraph = Boolean.getBoolean("riiablo.offscreen-warp-graph");
       boolean offscreenContinuity = Boolean.getBoolean("riiablo.offscreen-continuity");

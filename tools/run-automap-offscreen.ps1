@@ -3,6 +3,7 @@ param(
   [Parameter(Mandatory = $true)] [string] $D2Home,
   [Parameter(Mandatory = $true)] [string] $SavesDir,
   [int] $Level = 1,
+  [string] $Character = '',
   [string] $LogPath = 'build/automap-offscreen.log',
   [switch] $RequireTransition
 )
@@ -15,11 +16,12 @@ $logParent = Split-Path -Parent $logFile
 New-Item -ItemType Directory -Force -Path $logParent | Out-Null
 if (Test-Path -LiteralPath $logFile) { Remove-Item -LiteralPath $logFile }
 
-& "$repoRoot\gradlew.bat" :desktop:offscreenAutomapDc6 `
-  "-Pd2Home=$D2Home" `
-  "-PsavesDir=$SavesDir" `
-  "-PoffscreenLevel=$Level" `
-  '-PautomapMode=3' --no-daemon *>&1 | Tee-Object -FilePath $logFile
+$gradleArgs = @(
+  ':desktop:offscreenAutomapDc6', "-Pd2Home=$D2Home", "-PsavesDir=$SavesDir",
+  "-PoffscreenLevel=$Level", '-PautomapMode=3', '--no-daemon'
+)
+if ($Character) { $gradleArgs += "-PoffscreenCharacter=$Character" }
+& "$repoRoot\gradlew.bat" @gradleArgs *>&1 | Tee-Object -FilePath $logFile
 if ($LASTEXITCODE -ne 0) { throw "Offscreen Automap client failed with exit code $LASTEXITCODE" }
 
 powershell -NoProfile -ExecutionPolicy Bypass `

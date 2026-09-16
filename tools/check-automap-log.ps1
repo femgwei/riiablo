@@ -44,14 +44,18 @@ foreach ($line in $lines) {
     $levels += [pscustomobject]@{ LevelId = [int]$Matches[1]; Town = $Matches[2]; X = [int]$Matches[3]; Y = [int]$Matches[4] }
   }
 
-  if ($line -match '\[AUTOMAP_CELL_AUDIT\]\s+level=(-?\d+)\s+total=(\d+)\s+within=(\d+)\s+cross=(\d+)\s+positionConflict=(\d+)') {
+  if ($line -match '\[AUTOMAP_CELL_AUDIT\]\s+level=(-?\d+)\s+total=(\d+)\s+within=(\d+)\s+cross=(\d+)\s+positionConflict=(\d+)(?:\s+sameCategoryConflict=(\d+)\s+crossCategoryConflict=(\d+))?') {
+    $sameCategoryConflict = if ($Matches[6]) { [int]$Matches[6] } else { [int]$Matches[5] }
+    $crossCategoryConflict = if ($Matches[7]) { [int]$Matches[7] } else { 0 }
     $audit = [pscustomobject]@{
       LevelId = [int]$Matches[1]; Total = [int]$Matches[2]; Within = [int]$Matches[3]
       Cross = [int]$Matches[4]; PositionConflict = [int]$Matches[5]
+      SameCategoryConflict = $sameCategoryConflict
+      CrossCategoryConflict = $crossCategoryConflict
     }
     $audits += $audit
-    if ($audit.Within -gt 0 -or $audit.Cross -gt 0 -or $audit.PositionConflict -gt 0) {
-      $warnings.Add("cell overlap level=$($audit.LevelId) within=$($audit.Within) cross=$($audit.Cross) positionConflict=$($audit.PositionConflict)")
+    if ($audit.Within -gt 0 -or $audit.Cross -gt 0 -or $audit.SameCategoryConflict -gt 0) {
+      $warnings.Add("cell overlap level=$($audit.LevelId) within=$($audit.Within) cross=$($audit.Cross) sameCategoryConflict=$($audit.SameCategoryConflict)")
     }
   }
 

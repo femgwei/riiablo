@@ -20,7 +20,22 @@ class AutomapCellAuditTest {
     assertEquals(1, result.withinCategoryExact);
     assertEquals(1, result.crossCategoryExact);
     assertEquals(1, result.samePositionDifferentCell);
+    assertEquals(0, result.sameCategoryPositionConflict);
+    assertEquals(1, result.crossCategoryPositionConflict);
     assertTrue(result.hasDuplicates());
+  }
+
+  @Test
+  void distinguishesInvalidSameCategoryPositionConflict() {
+    AutomapLayer layer = new AutomapLayer(2);
+    layer.walls.add(new AutomapCell(61, -93, -58));
+    layer.walls.add(new AutomapCell(14, -93, -58));
+
+    AutomapCellAudit.Result result = AutomapCellAudit.audit(layer);
+
+    assertEquals(1, result.samePositionDifferentCell);
+    assertEquals(1, result.sameCategoryPositionConflict);
+    assertEquals(0, result.crossCategoryPositionConflict);
   }
 
   @Test
@@ -35,5 +50,7 @@ class AutomapCellAuditTest {
     assertEquals(0, result.withinCategoryExact);
     assertEquals(0, result.crossCategoryExact);
     assertEquals(0, result.samePositionDifferentCell);
+    assertEquals(0, result.sameCategoryPositionConflict);
+    assertEquals(0, result.crossCategoryPositionConflict);
   }
 }

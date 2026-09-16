@@ -28,6 +28,7 @@ public final class AutomapCellAudit {
     Map<String, String> exactOwner = new HashMap<>();
     Map<String, Set<Integer>> cellsByPosition = new HashMap<>();
     Map<String, Set<String>> categoriesByPosition = new HashMap<>();
+    Map<String, Map<String, Set<Integer>>> cellsByCategoryPosition = new HashMap<>();
     for (Map.Entry<String, Array<AutomapCell>> category : categories.entrySet()) {
       Set<String> seenInCategory = new HashSet<>();
       for (AutomapCell cell : category.getValue()) {
@@ -47,12 +48,27 @@ public final class AutomapCellAudit {
             .add(cell.cellNo);
         categoriesByPosition.computeIfAbsent(position, ignored -> new LinkedHashSet<>())
             .add(category.getKey());
+        cellsByCategoryPosition.computeIfAbsent(position, ignored -> new LinkedHashMap<>())
+            .computeIfAbsent(category.getKey(), ignored -> new LinkedHashSet<>())
+            .add(cell.cellNo);
       }
     }
 
     for (Map.Entry<String, Set<Integer>> position : cellsByPosition.entrySet()) {
       if (position.getValue().size() > 1) {
         result.samePositionDifferentCell++;
+        boolean sameCategory = false;
+        for (Set<Integer> categoryCells
+            : cellsByCategoryPosition.get(position.getKey()).values()) {
+          if (categoryCells.size() > 1) {
+            sameCategory = true;
+            break;
+          }
+        }
+        if (sameCategory) result.sameCategoryPositionConflict++;
+        if (categoriesByPosition.get(position.getKey()).size() > 1) {
+          result.crossCategoryPositionConflict++;
+        }
         String[] xy = position.getKey().split(",");
         Conflict conflict = new Conflict(Integer.parseInt(xy[0]), Integer.parseInt(xy[1]),
             position.getValue(), categoriesByPosition.get(position.getKey()));
@@ -71,11 +87,21 @@ public final class AutomapCellAudit {
     return cell.xPixel + "," + cell.yPixel;
   }
 
+  public static int maX(int worldX, int worldY) {
+    return 8 * (Math.floorDiv(worldX, 5) - Math.floorDiv(worldY, 5));
+  }
+
+  public static int maY(int worldX, int worldY) {
+    return 4 * (Math.floorDiv(worldX, 5) + Math.floorDiv(worldY, 5));
+  }
+
   public static final class Result {
     public int total;
     public int withinCategoryExact;
     public int crossCategoryExact;
     public int samePositionDifferentCell;
+    public int sameCategoryPositionConflict;
+    public int crossCategoryPositionConflict;
     public final Array<String> samples = new Array<>();
     public final Array<Conflict> conflicts = new Array<>();
 
@@ -102,10 +128,8 @@ public final class AutomapCellAudit {
       this.worldY = worldY;
       this.cellNos = new LinkedHashSet<>(cellNos);
       this.categories = new LinkedHashSet<>(categories);
-      int tx = Math.floorDiv(worldX, 5);
-      int ty = Math.floorDiv(worldY, 5);
-      this.maX = 8 * (tx - ty);
-      this.maY = 4 * (tx + ty);
+      this.maX = AutomapCellAudit.maX(worldX, worldY);
+      this.maY = AutomapCellAudit.maY(worldX, worldY);
     }
 
     @Override public String toString() {

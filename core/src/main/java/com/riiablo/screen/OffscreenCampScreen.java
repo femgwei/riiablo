@@ -23,6 +23,7 @@ import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.automap.AutomapLayer;
 import com.riiablo.engine.client.automap.AutomapCellAudit;
+import com.riiablo.engine.client.automap.AutomapCell;
 import com.riiablo.engine.client.automap.AutomapManager;
 import com.riiablo.engine.client.automap.AutomapProjection;
 
@@ -1148,6 +1149,7 @@ public final class OffscreenCampScreen extends GameScreen {
     targetNativeCells = layer.floors.size + layer.roads.size + layer.walls.size
         + layer.objects.size + layer.extras.size;
     targetCellAudit = AutomapCellAudit.audit(layer);
+    exportAutomapCells(layer);
     if (targetNativeCells == 0) {
       throw new IllegalStateException("Automap has no native cells for target level=" + targetLevelId);
     }
@@ -1164,6 +1166,34 @@ public final class OffscreenCampScreen extends GameScreen {
         + " within=" + targetCellAudit.withinCategoryExact
         + " cross=" + targetCellAudit.crossCategoryExact
         + " positionConflict=" + targetCellAudit.samePositionDifferentCell
+        + " sameCategoryConflict=" + targetCellAudit.sameCategoryPositionConflict
+        + " crossCategoryConflict=" + targetCellAudit.crossCategoryPositionConflict
         + " samples=" + targetCellAudit.samples);
+  }
+
+  private void exportAutomapCells(AutomapLayer layer) {
+    StringBuilder csv = new StringBuilder("category,cellNo,worldX,worldY,maX,maY\n");
+    appendAutomapCells(csv, "floors", layer.floors);
+    appendAutomapCells(csv, "roads", layer.roads);
+    appendAutomapCells(csv, "walls", layer.walls);
+    appendAutomapCells(csv, "objects", layer.objects);
+    appendAutomapCells(csv, "extras", layer.extras);
+    com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
+    output.mkdirs();
+    output.child("automap-cells-level-" + targetLevelId + ".csv")
+        .writeString(csv.toString(), false, "UTF-8");
+    Gdx.app.log("OffscreenCampScreen", "[AUTOMAP_CELL_EXPORT] path=" + output.path()
+        + " cells=" + (layer.floors.size + layer.roads.size + layer.walls.size
+        + layer.objects.size + layer.extras.size));
+  }
+
+  private static void appendAutomapCells(StringBuilder csv, String category,
+      com.badlogic.gdx.utils.Array<AutomapCell> cells) {
+    for (AutomapCell cell : cells) {
+      csv.append(category).append(',').append(cell.cellNo).append(',')
+          .append(cell.xPixel).append(',').append(cell.yPixel).append(',')
+          .append(AutomapCellAudit.maX(cell.xPixel, cell.yPixel)).append(',')
+          .append(AutomapCellAudit.maY(cell.xPixel, cell.yPixel)).append('\n');
+    }
   }
 }

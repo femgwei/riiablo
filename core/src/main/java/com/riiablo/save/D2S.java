@@ -106,6 +106,14 @@ public class D2S {
     return charClass;
   }
 
+  public int mapSeed() {
+    return mapSeed;
+  }
+
+  public int flags() {
+    return flags;
+  }
+
   /**
    * @deprecated may be removed when {@link com.riiablo.entity.CharacterPreview
    * character previews} are rewritten

@@ -82,7 +82,10 @@ public class AutomapLayer {
   private static void addUnique(Array<AutomapCell> cells, int cellNo, int x, int y) {
     for (int i = 0, n = cells.size; i < n; i++) {
       AutomapCell existing = cells.get(i);
-      if (existing.cellNo == cellNo && existing.xPixel == x && existing.yPixel == y) return;
+      // Native D2Client AddAutomapCell keeps one node per coordinate in each
+      // category tree.  Category trees remain independent, so a floor and a
+      // wall may coexist while a later wall at the same position is ignored.
+      if (existing.xPixel == x && existing.yPixel == y) return;
     }
     cells.add(new AutomapCell(cellNo, x, y));
   }

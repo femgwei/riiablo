@@ -34,4 +34,14 @@ class AutomapLayerTest {
     assertEquals(1, layer.objects.size);
     assertEquals(1, layer.extras.size);
   }
+
+  @Test void nativeCategoryTreeKeepsFirstCellAtEachPosition() {
+    AutomapLayer layer = new AutomapLayer(2);
+    layer.addWall(61, -93, -58);
+    layer.addWall(14, -93, -58);
+    layer.addFloor(8, -93, -58);
+    assertEquals(1, layer.walls.size);
+    assertEquals(61, layer.walls.first().cellNo);
+    assertEquals(1, layer.floors.size);
+  }
 }
