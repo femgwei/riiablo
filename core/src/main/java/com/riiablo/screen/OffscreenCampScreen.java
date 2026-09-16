@@ -22,6 +22,7 @@ import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
 import com.riiablo.engine.client.AutomapRenderer;
 import com.riiablo.engine.client.automap.AutomapLayer;
+import com.riiablo.engine.client.automap.AutomapCellAudit;
 import com.riiablo.engine.client.automap.AutomapManager;
 import com.riiablo.engine.client.automap.AutomapProjection;
 
@@ -47,6 +48,7 @@ public final class OffscreenCampScreen extends GameScreen {
   private int targetNativeCells;
   private int targetRoomCount;
   private int targetNativeObjects;
+  private AutomapCellAudit.Result targetCellAudit;
   private int targetWarpCount;
   private int targetReverseWarpCount;
   private int targetWarpWalkable;
@@ -215,6 +217,9 @@ public final class OffscreenCampScreen extends GameScreen {
         + "targetNativeCells=" + targetNativeCells + "\n"
         + "targetRooms=" + targetRoomCount + "\n"
         + "targetNativeObjects=" + targetNativeObjects + "\n"
+        + "automapAuditWithin=" + (targetCellAudit == null ? 0 : targetCellAudit.withinCategoryExact) + "\n"
+        + "automapAuditCross=" + (targetCellAudit == null ? 0 : targetCellAudit.crossCategoryExact) + "\n"
+        + "automapAuditPositionConflict=" + (targetCellAudit == null ? 0 : targetCellAudit.samePositionDifferentCell) + "\n"
         + "automapNative=" + validateNativeAutomap + "\n"
         + "targetWarpCount=" + targetWarpCount + "\n"
         + "targetReverseWarpCount=" + targetReverseWarpCount + "\n"
@@ -1140,7 +1145,9 @@ public final class OffscreenCampScreen extends GameScreen {
     if (layer == null) {
       throw new IllegalStateException("Automap layer missing for target level=" + targetLevelId);
     }
-    targetNativeCells = layer.floors.size + layer.walls.size + layer.objects.size + layer.extras.size;
+    targetNativeCells = layer.floors.size + layer.roads.size + layer.walls.size
+        + layer.objects.size + layer.extras.size;
+    targetCellAudit = AutomapCellAudit.audit(layer);
     if (targetNativeCells == 0) {
       throw new IllegalStateException("Automap has no native cells for target level=" + targetLevelId);
     }
@@ -1152,5 +1159,11 @@ public final class OffscreenCampScreen extends GameScreen {
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_AUTOMAP] level=" + targetLevelId
         + " cells=" + targetNativeCells + " rooms=" + targetRoomCount
         + " nativeObjects=" + targetNativeObjects);
+    Gdx.app.log("OffscreenCampScreen", "[AUTOMAP_CELL_AUDIT] level=" + targetLevelId
+        + " total=" + targetCellAudit.total
+        + " within=" + targetCellAudit.withinCategoryExact
+        + " cross=" + targetCellAudit.crossCategoryExact
+        + " positionConflict=" + targetCellAudit.samePositionDifferentCell
+        + " samples=" + targetCellAudit.samples);
   }
 }

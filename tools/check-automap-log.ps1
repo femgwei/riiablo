@@ -16,6 +16,7 @@ $warnings = [System.Collections.Generic.List[string]]::new()
 $options = @()
 $renders = @()
 $levels = @()
+$audits = @()
 
 foreach ($line in $lines) {
   if ($line -match '\[AUTOMAP_OPTIONS\]\s+mode=(\d+)\s+fade=(True|False|true|false)\s+opacity=([0-9.]+)') {
@@ -43,6 +44,17 @@ foreach ($line in $lines) {
     $levels += [pscustomobject]@{ LevelId = [int]$Matches[1]; Town = $Matches[2]; X = [int]$Matches[3]; Y = [int]$Matches[4] }
   }
 
+  if ($line -match '\[AUTOMAP_CELL_AUDIT\]\s+level=(-?\d+)\s+total=(\d+)\s+within=(\d+)\s+cross=(\d+)\s+positionConflict=(\d+)') {
+    $audit = [pscustomobject]@{
+      LevelId = [int]$Matches[1]; Total = [int]$Matches[2]; Within = [int]$Matches[3]
+      Cross = [int]$Matches[4]; PositionConflict = [int]$Matches[5]
+    }
+    $audits += $audit
+    if ($audit.Within -gt 0 -or $audit.Cross -gt 0 -or $audit.PositionConflict -gt 0) {
+      $warnings.Add("cell overlap level=$($audit.LevelId) within=$($audit.Within) cross=$($audit.Cross) positionConflict=$($audit.PositionConflict)")
+    }
+  }
+
   if ($line -match '(?i)(Failed to save native Automap|Failed to load native Automap|Exception|crash|fatal error)') {
     $errors.Add("runtime/save failure: $line")
   }
@@ -56,6 +68,7 @@ $lastRender = if ($renders.Count) { $renders[-1] } else { $null }
 Write-Output ("Automap log: {0}" -f (Resolve-Path -LiteralPath $Path))
 Write-Output ("  option records: {0}, render records: {1}" -f $options.Count, $renders.Count)
 Write-Output ("  level transitions: {0}" -f $levels.Count)
+Write-Output ("  cell audits: {0}" -f $audits.Count)
 if ($lastOptions) { Write-Output ("  last options: mode={0} fade={1} opacity={2}" -f $lastOptions.Mode, $lastOptions.Fade, $lastOptions.Opacity) }
 if ($lastRender) { Write-Output ("  last render: alpha={0} layers={1}" -f $lastRender.Alpha, $lastRender.Ids.Count) }
 if ($levels.Count -gt 0) {
