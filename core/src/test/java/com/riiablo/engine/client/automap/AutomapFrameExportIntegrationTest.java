@@ -82,6 +82,7 @@ class AutomapFrameExportIntegrationTest {
       }
       Map<Integer, String> nativeCells = exportNativeCellsFromSave(dc6, palette, output, manifest);
       exportNativeRiiabloComparison(nativeCells, output, manifest);
+      exportNativeCompositeFromSave(dc6, palette, output, manifest);
       exportBridgeFromSave(dc6, palette, output, manifest);
       Files.write(new File(output, "索引.txt").toPath(),
           manifest.toString().getBytes(StandardCharsets.UTF_8));
@@ -204,6 +205,58 @@ class AutomapFrameExportIntegrationTest {
     }
   }
 
+  /** Composes every cell recorded by D2Client so relative placement can be compared visually. */
+  private static void exportNativeCompositeFromSave(DC6 dc6, Palette palette, File output,
+      StringBuilder manifest) throws Exception {
+    String fixtures = value("D2_AUTOMAP_FIXTURES", "d2.automap.fixtures");
+    if (fixtures == null || fixtures.isEmpty()) return;
+    String character = value("D2_AUTOMAP_CHARACTER", "d2.automap.character");
+    if (character == null || character.isEmpty()) character = "aaa";
+    File save = new File(fixtures, character + ".ma0");
+    if (!save.isFile()) return;
+
+    AutomapExplorationStore.MaFile ma = AutomapExplorationStore.readMa(new FileHandle(save));
+    Array<AutomapExplorationStore.Cell> cells = new Array<>();
+    for (int layerNo = 0; layerNo < ma.layers.length; layerNo++) {
+      if (!includeLayer(layerNo)) continue;
+      AutomapExplorationStore.Layer layer = ma.layers[layerNo];
+      if (layer == null) continue;
+      cells.addAll(layer.floors);
+      cells.addAll(layer.walls);
+      cells.addAll(layer.objects);
+      cells.addAll(layer.extras);
+    }
+    if (cells.size == 0) return;
+
+    int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+    int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+    for (AutomapExplorationStore.Cell cell : cells) {
+      if (cell.cellNo < 0 || cell.cellNo >= dc6.getNumFramesPerDir()) continue;
+      BBox box = dc6.getBox(0, cell.cellNo);
+      minX = Math.min(minX, cell.x + box.xMin);
+      minY = Math.min(minY, cell.y + box.yMin);
+      maxX = Math.max(maxX, cell.x + box.xMax);
+      maxY = Math.max(maxY, cell.y + box.yMax);
+    }
+    if (minX == Integer.MAX_VALUE) return;
+    Pixmap composite = new Pixmap(maxX - minX + 1, maxY - minY + 1,
+        Pixmap.Format.RGBA8888);
+    composite.setBlending(Pixmap.Blending.SourceOver);
+    for (AutomapExplorationStore.Cell cell : cells) {
+      if (cell.cellNo < 0 || cell.cellNo >= dc6.getNumFramesPerDir()) continue;
+      BBox box = dc6.getBox(0, cell.cellNo);
+      drawFrame(dc6.getPixmap(0, cell.cellNo), palette, composite,
+          cell.x + box.xMin - minX, cell.y + box.yMin - minY);
+    }
+    File png = new File(output, "native-ma0-composite.png");
+    PixmapIO.writePNG(new FileHandle(png), composite);
+    composite.dispose();
+    manifest.append("nativeComposite=").append(png.getPath())
+        .append(" cells=").append(cells.size)
+        .append(" bounds=").append(minX).append(',').append(minY)
+        .append("..").append(maxX).append(',').append(maxY).append('\n');
+  }
+
   /** Composes bridge cells 73..79 from an original character .maN sidecar. */
   private static void exportBridgeFromSave(DC6 dc6, Palette palette, File output,
       StringBuilder manifest) throws Exception {
@@ -276,6 +329,7 @@ class AutomapFrameExportIntegrationTest {
     frames.put("河流_中段A_cell6", 6);
     frames.put("河流_中段B_cell7", 7);
     frames.put("河流_中段C_cell8", 8);
+    frames.put("Riiablo额外墙体_cell65", 65);
     frames.put("桥_下沿A_cell73", 73);
     frames.put("桥_下沿B_cell74", 74);
     frames.put("桥_下沿C_cell75", 75);

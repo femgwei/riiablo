@@ -261,7 +261,7 @@ public class AutomapTileRenderer implements Disposable {
   public int getAutomapCellId(String levelName, String tileName, int tileStyle, int tileSequence,
       long automapSeed) {
     int[] frames = getFrameIndices(levelName, tileName, tileStyle, tileSequence);
-    if (frames == null) {
+    if (frames == null && allowsAnyStyleFallback(levelName)) {
       // Some 1.10f Jungle/Kurast terrain rows are generated with the base
       // style (0) while AutoMap.txt only lists the visual style variants.
       // Keep level/tile semantics, but tolerate that data-table gap by using
@@ -269,6 +269,12 @@ public class AutomapTileRenderer implements Disposable {
       frames = getFrameIndicesAnyStyle(levelName, tileName);
     }
     return selectCellId(frames, automapSeed);
+  }
+
+  static boolean allowsAnyStyleFallback(String levelName) {
+    if (levelName == null) return false;
+    String normalized = levelName.trim().toLowerCase(java.util.Locale.ROOT);
+    return normalized.contains("jungle") || normalized.contains("kurast");
   }
 
   /** Exact DATATBLS-style lookup without the compatibility any-style fallback. */

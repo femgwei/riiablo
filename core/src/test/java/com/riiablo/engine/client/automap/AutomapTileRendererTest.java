@@ -63,4 +63,11 @@ class AutomapTileRendererTest {
     assertEquals("wld", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.LEFT_WALL_DOOR));
     assertEquals("rf", AutomapTileRenderer.tileNameForOrientation(com.riiablo.map.Orientation.ROOF));
   }
+
+  @Test void anyStyleFallbackIsLimitedToActThreeCompatibilityLevels() {
+    assertFalse(AutomapTileRenderer.allowsAnyStyleFallback("1 Town"));
+    assertFalse(AutomapTileRenderer.allowsAnyStyleFallback("1 Wilderness"));
+    assertTrue(AutomapTileRenderer.allowsAnyStyleFallback("3 Jungle"));
+    assertTrue(AutomapTileRenderer.allowsAnyStyleFallback("3 Kurast"));
+  }
 }

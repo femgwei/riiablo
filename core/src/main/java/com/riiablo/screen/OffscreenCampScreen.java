@@ -1230,7 +1230,8 @@ public final class OffscreenCampScreen extends GameScreen {
     targetNativeCells = layer.floors.size + layer.roads.size + layer.walls.size
         + layer.objects.size + layer.extras.size;
     targetCellAudit = AutomapCellAudit.audit(layer);
-    exportAutomapCells(layer);
+    exportAutomapCells(layer, manager);
+    exportAutomapTable();
     if (targetNativeCells == 0) {
       throw new IllegalStateException("Automap has no native cells for target level=" + targetLevelId);
     }
@@ -1252,13 +1253,14 @@ public final class OffscreenCampScreen extends GameScreen {
         + " samples=" + targetCellAudit.samples);
   }
 
-  private void exportAutomapCells(AutomapLayer layer) {
-    StringBuilder csv = new StringBuilder("category,cellNo,worldX,worldY,maX,maY\n");
-    appendAutomapCells(csv, "floors", layer.floors);
-    appendAutomapCells(csv, "roads", layer.roads);
-    appendAutomapCells(csv, "walls", layer.walls);
-    appendAutomapCells(csv, "objects", layer.objects);
-    appendAutomapCells(csv, "extras", layer.extras);
+  private void exportAutomapCells(AutomapLayer layer, AutomapManager manager) {
+    StringBuilder csv = new StringBuilder(
+        "category,cellNo,worldX,worldY,maX,maY,sourceMapLayer,tileName,orientation,style,sequence\n");
+    appendAutomapCells(csv, "floors", layer.floors, manager);
+    appendAutomapCells(csv, "roads", layer.roads, manager);
+    appendAutomapCells(csv, "walls", layer.walls, manager);
+    appendAutomapCells(csv, "objects", layer.objects, manager);
+    appendAutomapCells(csv, "extras", layer.extras, manager);
     com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
     output.mkdirs();
     output.child("automap-cells-level-" + targetLevelId + ".csv")
@@ -1268,13 +1270,62 @@ public final class OffscreenCampScreen extends GameScreen {
         + layer.objects.size + layer.extras.size));
   }
 
-  private static void appendAutomapCells(StringBuilder csv, String category,
-      com.badlogic.gdx.utils.Array<AutomapCell> cells) {
+  private void appendAutomapCells(StringBuilder csv, String category,
+      com.badlogic.gdx.utils.Array<AutomapCell> cells, AutomapManager manager) {
     for (AutomapCell cell : cells) {
+      String source = automapCellSource(cell, manager);
       csv.append(category).append(',').append(cell.cellNo).append(',')
           .append(cell.xPixel).append(',').append(cell.yPixel).append(',')
           .append(AutomapCellAudit.maX(cell.xPixel, cell.yPixel)).append(',')
-          .append(AutomapCellAudit.maY(cell.xPixel, cell.yPixel)).append('\n');
+          .append(AutomapCellAudit.maY(cell.xPixel, cell.yPixel)).append(',')
+          .append(source).append('\n');
     }
+  }
+
+  private String automapCellSource(AutomapCell cell, AutomapManager manager) {
+    if (targetZone == null || targetZone.automapLevelName() == null) return ",,,,";
+    int tx = AutomapProjection.tileIndex(cell.xPixel);
+    int ty = AutomapProjection.tileIndex(cell.yPixel);
+    long seed = targetLevelId ^ (cell.xPixel * 31L + cell.yPixel);
+    for (int mapLayer = 0; mapLayer < Map.MAX_LAYERS; mapLayer++) {
+      com.riiablo.map.DT1.Tile tile = targetZone.get(mapLayer, tx, ty);
+      if (tile == null) continue;
+      String tileName = com.riiablo.engine.client.automap.AutomapTileRenderer
+          .tileNameForOrientation(tile.orientation);
+      if (tileName == null) continue;
+      int resolved = manager.getTileRenderer().getAutomapCellId(
+          targetZone.automapLevelName(), tileName, tile.mainIndex, tile.subIndex, seed);
+      if (resolved != cell.cellNo) continue;
+      return mapLayer + "," + tileName + "," + tile.orientation + ","
+          + tile.mainIndex + "," + tile.subIndex;
+    }
+    return ",,,,";
+  }
+
+  private void exportAutomapTable() {
+    if (targetZone == null || targetZone.automapLevelName() == null
+        || Riiablo.files == null || Riiablo.files.AutoMap == null) return;
+    String levelName = targetZone.automapLevelName();
+    StringBuilder csv = new StringBuilder(
+        "row,levelName,tileName,style,startSequence,endSequence,cel1,cel2,cel3,cel4\n");
+    int row = 0;
+    for (com.riiablo.codec.excel.AutoMap.Entry entry : Riiablo.files.AutoMap) {
+      if (entry.LevelName == null || !entry.LevelName.trim().equalsIgnoreCase(levelName.trim())) {
+        row++;
+        continue;
+      }
+      csv.append(row).append(',').append(csvValue(entry.LevelName)).append(',')
+          .append(csvValue(entry.TileName)).append(',').append(entry.Style).append(',')
+          .append(entry.StartSequence).append(',').append(entry.EndSequence);
+      for (int i = 0; i < 4; i++) {
+        csv.append(',').append(entry.Cel != null && i < entry.Cel.length ? entry.Cel[i] : -1);
+      }
+      csv.append('\n');
+      row++;
+    }
+    com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
+    output.mkdirs();
+    output.child("automap-table-level-" + targetLevelId + ".csv")
+        .writeString(csv.toString(), false, "UTF-8");
   }
 }
