@@ -276,6 +276,7 @@ public final class OffscreenCampScreen extends GameScreen {
     if (terrain <= 0) {
       throw new IllegalStateException("Native Automap rendered zero DC6 terrain cells");
     }
+    exportAutomapEntityMarkers(manager);
     int visiblePixels = captureNativeAutomap(manager);
     if (visiblePixels < 100) {
       throw new IllegalStateException("Native Automap DC6 cells were drawn outside the visible viewport"
@@ -284,6 +285,86 @@ public final class OffscreenCampScreen extends GameScreen {
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_AUTOMAP_DC6] terrain=" + terrain
         + " entities=" + entities + " fallback=" + fallback
         + " visiblePixels=" + visiblePixels);
+  }
+
+  /**
+   * Exports the native cell chosen for each runtime entity and the closest
+   * terrain cell. This distinguishes a bad Objects.txt marker from a terrain
+   * cell that is drawn a second time by the entity pass.
+   */
+  private void exportAutomapEntityMarkers(AutomapManager manager) {
+    com.artemis.ComponentMapper<com.riiablo.engine.server.component.Object> objects =
+        engine.getMapper(com.riiablo.engine.server.component.Object.class);
+    StringBuilder csv = new StringBuilder(
+        "entityId,type,name,nativeCell,worldX,worldY,levelId,objectId,objectAutoMap,"
+            + "shrineFunction,openWarp,nearestCategory,nearestCell,nearestDistance,"
+            + "sameCellWithin16\n");
+    for (int i = 0; i < manager.getEntityMarkerCount(); i++) {
+      AutomapManager.EntityMarker marker = manager.getEntityMarker(i);
+      Map.Zone zone = map.getZone(marker.worldX, marker.worldY);
+      int levelId = zone == null ? -1 : zone.levelId();
+      com.riiablo.engine.server.component.Object object = marker.entityId >= 0
+          && objects.has(marker.entityId) ? objects.get(marker.entityId) : null;
+      com.riiablo.codec.excel.Objects.Entry base = object == null ? null : object.base;
+      NearestAutomapCell nearest = nearestAutomapCell(manager.getLayer(levelId), marker);
+      csv.append(marker.entityId).append(',').append(marker.type).append(',')
+          .append(csvValue(marker.name)).append(',').append(marker.nativeCell).append(',')
+          .append(marker.worldX).append(',').append(marker.worldY).append(',')
+          .append(levelId).append(',')
+          .append(base == null ? -1 : base.Id).append(',')
+          .append(base == null ? -1 : base.AutoMap).append(',')
+          .append(base == null ? -1 : base.ShrineFunction).append(',')
+          .append(base != null && base.OpenWarp).append(',')
+          .append(nearest.category).append(',').append(nearest.cellNo).append(',')
+          .append(String.format(java.util.Locale.ROOT, "%.2f", nearest.distance)).append(',')
+          .append(nearest.sameCellWithin16).append('\n');
+    }
+    com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
+    output.mkdirs();
+    output.child("automap-entity-markers.csv").writeString(csv.toString(), false, "UTF-8");
+  }
+
+  private static NearestAutomapCell nearestAutomapCell(AutomapLayer layer,
+      AutomapManager.EntityMarker marker) {
+    NearestAutomapCell nearest = new NearestAutomapCell();
+    if (layer == null) return nearest;
+    scanNearest(nearest, "floors", layer.floors, marker);
+    scanNearest(nearest, "roads", layer.roads, marker);
+    scanNearest(nearest, "walls", layer.walls, marker);
+    scanNearest(nearest, "objects", layer.objects, marker);
+    scanNearest(nearest, "extras", layer.extras, marker);
+    return nearest;
+  }
+
+  private static void scanNearest(NearestAutomapCell nearest, String category,
+      com.badlogic.gdx.utils.Array<AutomapCell> cells, AutomapManager.EntityMarker marker) {
+    Vector2 markerPoint = new Vector2();
+    Vector2 cellPoint = new Vector2();
+    AutomapProjection.worldToAutomap(marker.worldX, marker.worldY, markerPoint);
+    for (AutomapCell cell : cells) {
+      AutomapProjection.worldToAutomap(cell.xPixel, cell.yPixel, cellPoint);
+      float distance = markerPoint.dst(cellPoint);
+      if (cell.cellNo == marker.nativeCell && distance <= 16f) {
+        nearest.sameCellWithin16++;
+      }
+      if (distance < nearest.distance) {
+        nearest.category = category;
+        nearest.cellNo = cell.cellNo;
+        nearest.distance = distance;
+      }
+    }
+  }
+
+  private static String csvValue(String value) {
+    if (value == null) return "";
+    return '"' + value.replace("\"", "\"\"") + '"';
+  }
+
+  private static final class NearestAutomapCell {
+    String category = "";
+    int cellNo = -1;
+    float distance = Float.POSITIVE_INFINITY;
+    int sameCellWithin16;
   }
 
   /**

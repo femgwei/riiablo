@@ -413,6 +413,15 @@ public class AutomapRenderer extends BaseSystem {
         int cell = AutomapEntityCells.objectCell(object.base);
         int type = show(Cvars.Client.Automap.ShowQuestIndicators)
             ? AutomapMarkerPolicy.objectType(object.base) : AutomapIconType.OBJECT;
+        // Town waypoints and the stash already exist in the generated native
+        // terrain cell lists. The runtime object is interactive state, not a
+        // second Automap picture; suppress its duplicate native marker.
+        if (cell >= 0 && entityZone != null
+            && !AutomapMarkerPolicy.requiresColorOverlay(type)
+            && automapManager.hasNearbyTerrainCell(entityZone.levelId(), cell,
+                position.position.x, position.position.y, 16f)) {
+          continue;
+        }
         automapManager.addNativeEntityMarker(id, type,
             position.position.x, position.position.y, object.base.Name,
             objectColor(type), type == AutomapIconType.OBJECT ? 4 : 6, cell);

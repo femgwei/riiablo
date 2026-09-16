@@ -26,6 +26,8 @@ class AutomapEntityCellsTest {
     MonStats2.Entry monster = new MonStats2.Entry();
     monster.automapCel = 405;
     assertEquals(405, AutomapEntityCells.monsterCell(monster));
+    monster.automapCel = 0;
+    assertEquals(-1, AutomapEntityCells.monsterCell(monster));
     monster.automapCel = -1;
     assertEquals(-1, AutomapEntityCells.monsterCell(monster));
   }
@@ -44,6 +46,15 @@ class AutomapEntityCellsTest {
     // The marker remains a monster marker while retaining its native frame;
     // rendering can choose DC6 and fall back to geometry independently.
     assertEquals(AutomapIconType.MONSTER, AutomapIconType.MONSTER);
+    manager.dispose();
+  }
+
+  @Test void terrainBackedObjectMarkerIsDetectedWithinNativeCellExtent() {
+    AutomapManager manager = new AutomapManager();
+    manager.getOrCreateLayer(1).addFloor(307, 82, 67);
+    assertTrue(manager.hasNearbyTerrainCell(1, 307, 84, 69, 16f));
+    assertFalse(manager.hasNearbyTerrainCell(1, 319, 84, 69, 16f));
+    assertFalse(manager.hasNearbyTerrainCell(2, 307, 84, 69, 16f));
     manager.dispose();
   }
 }

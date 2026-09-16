@@ -589,6 +589,39 @@ public class AutomapManager implements Disposable {
   public EntityMarker getEntityMarker(int index) {
     return entityMarkers.get(index);
   }
+
+  /**
+   * Returns true when terrain already supplies the same native cell close to
+   * an entity anchor. Native D2 represents waypoints and the town stash in
+   * the generated Automap cells, so drawing their runtime object cell again
+   * produces a visible double image.
+   */
+  public boolean hasNearbyTerrainCell(int levelId, int cellNo, float worldX, float worldY,
+      float maxAutomapDistance) {
+    if (cellNo < 0 || maxAutomapDistance < 0f) return false;
+    AutomapLayer layer = layers.get(levelId);
+    if (layer == null) return false;
+    float maxDistance2 = maxAutomapDistance * maxAutomapDistance;
+    return hasNearbyTerrainCell(layer.floors, cellNo, worldX, worldY, maxDistance2)
+        || hasNearbyTerrainCell(layer.roads, cellNo, worldX, worldY, maxDistance2)
+        || hasNearbyTerrainCell(layer.walls, cellNo, worldX, worldY, maxDistance2)
+        || hasNearbyTerrainCell(layer.objects, cellNo, worldX, worldY, maxDistance2)
+        || hasNearbyTerrainCell(layer.extras, cellNo, worldX, worldY, maxDistance2);
+  }
+
+  private static boolean hasNearbyTerrainCell(Array<AutomapCell> cells, int cellNo,
+      float worldX, float worldY, float maxDistance2) {
+    for (int i = 0, size = cells.size; i < size; i++) {
+      AutomapCell cell = cells.get(i);
+      if (cell.cellNo != cellNo) continue;
+      float dx = ((cell.xPixel - worldX) - (cell.yPixel - worldY))
+          * AutomapProjection.PIXELS_PER_SUBTILE_X;
+      float dy = -((cell.xPixel - worldX) + (cell.yPixel - worldY))
+          * AutomapProjection.PIXELS_PER_SUBTILE_Y;
+      if (dx * dx + dy * dy <= maxDistance2) return true;
+    }
+    return false;
+  }
   
   /**
    * 添加实体标记

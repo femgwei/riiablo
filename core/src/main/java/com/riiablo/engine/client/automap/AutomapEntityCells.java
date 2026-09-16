@@ -22,7 +22,10 @@ public final class AutomapEntityCells {
 
   /** Returns MonStats2.txt automapCel, or -1 for monsters hidden on automap. */
   public static int monsterCell(MonStats2.Entry monster) {
-    return monster == null || monster.automapCel < 0 ? -1 : monster.automapCel;
+    // automapCel=0 is the native table sentinel used by ordinary monsters and
+    // town NPCs. Treating it as MaxiMap frame 0 paints the same path fragment
+    // once per entity, which looks like repeated scenery/chest markers.
+    return monster == null || monster.automapCel <= 0 ? -1 : monster.automapCel;
   }
 
   /** Native cells are valid DC6 frame numbers; zero is a valid frame. */
