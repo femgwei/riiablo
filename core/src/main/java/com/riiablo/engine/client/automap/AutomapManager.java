@@ -147,6 +147,7 @@ public class AutomapManager implements Disposable {
   private AutomapTileRenderer tileRenderer;
 
   private int nativeTerrainDrawCount;
+  private String lastNativeRenderDiagnostic;
   private int nativeEntityDrawCount;
   private int geometricFallbackDrawCount;
   private final IntMap<Boolean> renderedNativeLayers = new IntMap<>();
@@ -909,12 +910,27 @@ public class AutomapManager implements Disposable {
     // the same brightness while crossing their boundary.
     if (map != null) {
       renderedNativeLayers.clear();
+      StringBuilder diagnostic = new StringBuilder(160);
+      diagnostic.append("alpha=").append(alpha).append(" zones=");
       for (Map.Zone zone : map.getZones()) {
         int levelId = zone.levelId();
         if (renderedNativeLayers.containsKey(levelId)
             || !nativeCellsBuilt.containsKey(levelId)) continue;
         renderedNativeLayers.put(levelId, Boolean.TRUE);
+        AutomapLayer layer = layers.get(levelId);
+        diagnostic.append(levelId).append('(')
+            .append(layer == null ? 0 : layer.floors.size).append('/')
+            .append(layer == null ? 0 : layer.roads.size).append('/')
+            .append(layer == null ? 0 : layer.walls.size).append('/')
+            .append(layer == null ? 0 : layer.objects.size).append('/')
+            .append(layer == null ? 0 : layer.extras.size).append(';')
+            .append(layer == null ? 0 : layer.getExploredCount()).append(')');
         renderNativeLayer(batch, layers.get(levelId), alpha);
+      }
+      String diagnosticText = diagnostic.toString();
+      if (!diagnosticText.equals(lastNativeRenderDiagnostic) && Gdx.app != null) {
+        Gdx.app.debug(TAG, "[AUTOMAP_NATIVE_RENDER] " + diagnosticText);
+        lastNativeRenderDiagnostic = diagnosticText;
       }
     } else {
       renderNativeLayer(batch, getActiveLayer(), alpha);

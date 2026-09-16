@@ -99,6 +99,7 @@ public class AutomapRenderer extends BaseSystem {
   private boolean wasVisible;
   private boolean nativeAutomapLoaded;
   private AutomapExplorationStore.MaFile loadedNativeAutomap;
+  private String lastOptionsDiagnostic;
 
   @Override
   protected void initialize() {
@@ -472,6 +473,11 @@ public class AutomapRenderer extends BaseSystem {
         Cvars.Client.Automap.ShowNames.get());
     automapManager.showMinimapPointers = Boolean.TRUE.equals(
         Cvars.Client.Automap.ShowMinimapPointers.get());
+    String diagnostic = "mode=" + mode + " fade=" + fade + " opacity=" + opacity;
+    if (!diagnostic.equals(lastOptionsDiagnostic) && Gdx.app != null) {
+      Gdx.app.debug(TAG, "[AUTOMAP_OPTIONS] " + diagnostic);
+      lastOptionsDiagnostic = diagnostic;
+    }
   }
 
   private void renderNativeEntitySprites() {
