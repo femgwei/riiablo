@@ -53,8 +53,11 @@ public final class AutomapCellAudit {
     for (Map.Entry<String, Set<Integer>> position : cellsByPosition.entrySet()) {
       if (position.getValue().size() > 1) {
         result.samePositionDifferentCell++;
-        result.sample("position " + position.getKey() + " cells=" + position.getValue()
-            + " categories=" + categoriesByPosition.get(position.getKey()));
+        String[] xy = position.getKey().split(",");
+        Conflict conflict = new Conflict(Integer.parseInt(xy[0]), Integer.parseInt(xy[1]),
+            position.getValue(), categoriesByPosition.get(position.getKey()));
+        result.conflicts.add(conflict);
+        result.sample(conflict.toString());
       }
     }
     return result;
@@ -74,6 +77,7 @@ public final class AutomapCellAudit {
     public int crossCategoryExact;
     public int samePositionDifferentCell;
     public final Array<String> samples = new Array<>();
+    public final Array<Conflict> conflicts = new Array<>();
 
     private void sample(String value) {
       if (samples.size < MAX_SAMPLES) samples.add(value);
@@ -82,6 +86,31 @@ public final class AutomapCellAudit {
     public boolean hasDuplicates() {
       return withinCategoryExact != 0 || crossCategoryExact != 0
           || samePositionDifferentCell != 0;
+    }
+  }
+
+  public static final class Conflict {
+    public final int worldX;
+    public final int worldY;
+    public final Set<Integer> cellNos;
+    public final Set<String> categories;
+    public final int maX;
+    public final int maY;
+
+    Conflict(int worldX, int worldY, Set<Integer> cellNos, Set<String> categories) {
+      this.worldX = worldX;
+      this.worldY = worldY;
+      this.cellNos = new LinkedHashSet<>(cellNos);
+      this.categories = new LinkedHashSet<>(categories);
+      int tx = Math.floorDiv(worldX, 5);
+      int ty = Math.floorDiv(worldY, 5);
+      this.maX = 8 * (tx - ty);
+      this.maY = 4 * (tx + ty);
+    }
+
+    @Override public String toString() {
+      return "position " + worldX + "," + worldY + " ma=" + maX + "," + maY
+          + " cells=" + cellNos + " categories=" + categories;
     }
   }
 }
