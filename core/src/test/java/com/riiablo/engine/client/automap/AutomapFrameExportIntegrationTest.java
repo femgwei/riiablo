@@ -12,6 +12,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.Palette;
 import com.riiablo.codec.util.BBox;
 import com.riiablo.mpq.MPQFileHandleResolver;
+import com.badlogic.gdx.utils.Array;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -78,11 +79,63 @@ class AutomapFrameExportIntegrationTest {
             .append("..").append(box.xMax).append(',').append(box.yMax)
             .append('\n');
       }
+      exportBridgeFromSave(dc6, palette, output, manifest);
       Files.write(new File(output, "索引.txt").toPath(),
           manifest.toString().getBytes(StandardCharsets.UTF_8));
       assertTrue(new File(output, "桥_中段_cell79.png").isFile());
     } finally {
       dc6.dispose();
+    }
+  }
+
+  /** Composes bridge cells 73..79 from an original character .maN sidecar. */
+  private static void exportBridgeFromSave(DC6 dc6, Palette palette, File output,
+      StringBuilder manifest) throws Exception {
+    String fixtures = value("D2_AUTOMAP_FIXTURES", "d2.automap.fixtures");
+    if (fixtures == null || fixtures.isEmpty()) return;
+    String character = value("D2_AUTOMAP_CHARACTER", "d2.automap.character");
+    if (character == null || character.isEmpty()) character = "aaa";
+    File save = new File(fixtures, character + ".ma0");
+    if (!save.isFile()) return;
+
+    AutomapExplorationStore.MaFile ma = AutomapExplorationStore.readMa(new FileHandle(save));
+    Array<AutomapExplorationStore.Cell> bridge = new Array<>();
+    for (AutomapExplorationStore.Layer layer : ma.layers) {
+      if (layer == null) continue;
+      addBridgeCells(layer.floors, bridge);
+      addBridgeCells(layer.walls, bridge);
+      addBridgeCells(layer.objects, bridge);
+      addBridgeCells(layer.extras, bridge);
+    }
+    if (bridge.size == 0) return;
+
+    int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+    int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+    for (AutomapExplorationStore.Cell cell : bridge) {
+      BBox box = dc6.getBox(0, cell.cellNo);
+      minX = Math.min(minX, cell.x + box.xMin);
+      minY = Math.min(minY, cell.y + box.yMin);
+      maxX = Math.max(maxX, cell.x + box.xMax);
+      maxY = Math.max(maxY, cell.y + box.yMax);
+    }
+    Pixmap composite = new Pixmap(maxX - minX + 1, maxY - minY + 1,
+        Pixmap.Format.RGBA8888);
+    composite.setBlending(Pixmap.Blending.None);
+    for (AutomapExplorationStore.Cell cell : bridge) {
+      BBox box = dc6.getBox(0, cell.cellNo);
+      drawFrame(dc6.getPixmap(0, cell.cellNo), palette, composite,
+          cell.x + box.xMin - minX, cell.y + box.yMin - minY);
+      manifest.append("桥存档 cell=").append(cell.cellNo)
+          .append(" x=").append(cell.x).append(" y=").append(cell.y).append('\n');
+    }
+    PixmapIO.writePNG(new FileHandle(new File(output, "桥_存档拼接.png")), composite);
+    composite.dispose();
+  }
+
+  private static void addBridgeCells(Array<AutomapExplorationStore.Cell> source,
+      Array<AutomapExplorationStore.Cell> target) {
+    for (AutomapExplorationStore.Cell cell : source) {
+      if (cell.cellNo >= 73 && cell.cellNo <= 79) target.add(cell);
     }
   }
 
@@ -111,16 +164,21 @@ class AutomapFrameExportIntegrationTest {
     Pixmap indexed = dc6.getPixmap(0, frame);
     Pixmap rgba = new Pixmap(indexed.getWidth(), indexed.getHeight(), Pixmap.Format.RGBA8888);
     rgba.setBlending(Pixmap.Blending.None);
+    drawFrame(indexed, palette, rgba, 0, 0);
+    PixmapIO.writePNG(new FileHandle(output), rgba);
+    rgba.dispose();
+  }
+
+  private static void drawFrame(Pixmap indexed, Palette palette, Pixmap rgba, int offsetX,
+      int offsetY) {
     ByteBuffer pixels = indexed.getPixels().duplicate();
     int[] colors = palette.get();
     for (int y = 0; y < indexed.getHeight(); y++) {
       for (int x = 0; x < indexed.getWidth(); x++) {
         int paletteIndex = pixels.get(y * indexed.getWidth() + x) & 0xff;
-        rgba.drawPixel(x, y, colors[paletteIndex]);
+        rgba.drawPixel(offsetX + x, offsetY + y, colors[paletteIndex]);
       }
     }
-    PixmapIO.writePNG(new FileHandle(output), rgba);
-    rgba.dispose();
   }
 
   private static String value(String environment, String property) {
