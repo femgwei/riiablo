@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -79,12 +80,127 @@ class AutomapFrameExportIntegrationTest {
             .append("..").append(box.xMax).append(',').append(box.yMax)
             .append('\n');
       }
+      Map<Integer, String> nativeCells = exportNativeCellsFromSave(dc6, palette, output, manifest);
+      exportNativeRiiabloComparison(nativeCells, output, manifest);
       exportBridgeFromSave(dc6, palette, output, manifest);
       Files.write(new File(output, "索引.txt").toPath(),
           manifest.toString().getBytes(StandardCharsets.UTF_8));
       assertTrue(new File(output, "桥_中段_cell79.png").isFile());
     } finally {
       dc6.dispose();
+    }
+  }
+
+  /** Exports every unique DC6 cell referenced by an original .maN fixture. */
+  private static Map<Integer, String> exportNativeCellsFromSave(DC6 dc6, Palette palette,
+      File output, StringBuilder manifest) throws Exception {
+    Map<Integer, String> cells = new TreeMap<>();
+    String fixtures = value("D2_AUTOMAP_FIXTURES", "d2.automap.fixtures");
+    if (fixtures == null || fixtures.isEmpty()) return cells;
+    String character = value("D2_AUTOMAP_CHARACTER", "d2.automap.character");
+    if (character == null || character.isEmpty()) character = "aaa";
+    File save = new File(fixtures, character + ".ma0");
+    if (!save.isFile()) return cells;
+
+    AutomapExplorationStore.MaFile ma = AutomapExplorationStore.readMa(new FileHandle(save));
+    for (int layerNo = 0; layerNo < ma.layers.length; layerNo++) {
+      if (!includeLayer(layerNo)) continue;
+      AutomapExplorationStore.Layer layer = ma.layers[layerNo];
+      if (layer == null) continue;
+      collectNativeCells(cells, "floors", layer.floors);
+      collectNativeCells(cells, "walls", layer.walls);
+      collectNativeCells(cells, "objects", layer.objects);
+      collectNativeCells(cells, "extras", layer.extras);
+    }
+    for (Map.Entry<Integer, String> entry : cells.entrySet()) {
+      int frame = entry.getKey();
+      if (frame < 0 || frame >= dc6.getNumFramesPerDir()) continue;
+      exportFrame(dc6, palette, frame,
+          new File(output, "native-cell-" + frame + ".png"));
+      manifest.append("native-cell-").append(frame).append(".png cell=")
+          .append(frame).append(" refs=").append(entry.getValue()).append('\n');
+    }
+    return cells;
+  }
+
+  /**
+   * Compares the native cell set recorded by D2Client (.ma0) with the cell set
+   * exported by the Riiablo off-screen renderer.  The PNGs are decoded from
+   * the same native MaxiMap.dc6, so differences here identify cell selection
+   * or coordinate issues rather than palette/texture decoding differences.
+   */
+  private static void exportNativeRiiabloComparison(Map<Integer, String> nativeCells,
+      File output, StringBuilder manifest) throws Exception {
+    String configured = value("RIABLO_AUTOMAP_CSV", "riiablo.automap.csv");
+    if (configured == null || configured.isEmpty()) {
+      configured = "build/automap-bb-town/automap-cells-level-1.csv";
+    }
+    File riiabloCsv = new File(configured);
+    if (!riiabloCsv.isFile()) {
+      manifest.append("comparison=skipped missing Riiablo CSV ")
+          .append(riiabloCsv.getPath()).append('\n');
+      return;
+    }
+
+    Map<Integer, String> riiabloCells = new TreeMap<>();
+    Map<Integer, Integer> riiabloCounts = new TreeMap<>();
+    for (String line : Files.readAllLines(riiabloCsv.toPath(), StandardCharsets.UTF_8)) {
+      if (line.isEmpty() || line.startsWith("category,")) continue;
+      String[] fields = line.split(",", -1);
+      if (fields.length < 6) continue;
+      int cell;
+      try {
+        cell = Integer.parseInt(fields[1].trim());
+      } catch (NumberFormatException ignored) {
+        continue;
+      }
+      riiabloCounts.put(cell, riiabloCounts.containsKey(cell) ? riiabloCounts.get(cell) + 1 : 1);
+      if (!riiabloCells.containsKey(cell)) {
+        riiabloCells.put(cell, fields[0] + "@" + fields[4] + "," + fields[5]);
+      }
+    }
+
+    Map<Integer, String> allCells = new TreeMap<>();
+    allCells.putAll(nativeCells);
+    allCells.putAll(riiabloCells);
+    File report = new File(output, "native-vs-riiablo-cells.csv");
+    StringBuilder csv = new StringBuilder("cell,nativeRefs,riiabloCount,riiabloFirst,status\n");
+    int nativeOnly = 0;
+    int riiabloOnly = 0;
+    int both = 0;
+    for (Map.Entry<Integer, String> entry : allCells.entrySet()) {
+      int cell = entry.getKey();
+      boolean inNative = nativeCells.containsKey(cell);
+      boolean inRiiablo = riiabloCells.containsKey(cell);
+      String status = inNative && inRiiablo ? "both"
+          : inNative ? "native-only" : "riiablo-only";
+      if ("both".equals(status)) both++;
+      else if ("native-only".equals(status)) nativeOnly++;
+      else riiabloOnly++;
+      csv.append(cell).append(',')
+          .append(csvValue(nativeCells.get(cell))).append(',')
+          .append(riiabloCounts.containsKey(cell) ? riiabloCounts.get(cell) : 0).append(',')
+          .append(csvValue(riiabloCells.get(cell))).append(',').append(status).append('\n');
+    }
+    Files.write(report.toPath(), csv.toString().getBytes(StandardCharsets.UTF_8));
+    manifest.append("comparisonCsv=").append(report.getPath())
+        .append(" nativeOnly=").append(nativeOnly)
+        .append(" riiabloOnly=").append(riiabloOnly)
+        .append(" both=").append(both).append('\n');
+  }
+
+  private static String csvValue(String value) {
+    if (value == null) return "";
+    return '"' + value.replace("\"", "\"\"") + '"';
+  }
+
+  private static void collectNativeCells(Map<Integer, String> cells, String category,
+      Array<AutomapExplorationStore.Cell> source) {
+    for (AutomapExplorationStore.Cell cell : source) {
+      String ref = category + "@" + cell.x + "," + cell.y;
+      String previous = cells.get(cell.cellNo);
+      if (previous == null) cells.put(cell.cellNo, ref);
+      else if (!previous.contains(ref)) cells.put(cell.cellNo, previous + ";" + ref);
     }
   }
 
@@ -100,7 +216,9 @@ class AutomapFrameExportIntegrationTest {
 
     AutomapExplorationStore.MaFile ma = AutomapExplorationStore.readMa(new FileHandle(save));
     Array<AutomapExplorationStore.Cell> bridge = new Array<>();
-    for (AutomapExplorationStore.Layer layer : ma.layers) {
+    for (int layerNo = 0; layerNo < ma.layers.length; layerNo++) {
+      if (!includeLayer(layerNo)) continue;
+      AutomapExplorationStore.Layer layer = ma.layers[layerNo];
       if (layer == null) continue;
       addBridgeCells(layer.floors, bridge);
       addBridgeCells(layer.walls, bridge);
@@ -136,6 +254,16 @@ class AutomapFrameExportIntegrationTest {
       Array<AutomapExplorationStore.Cell> target) {
     for (AutomapExplorationStore.Cell cell : source) {
       if (cell.cellNo >= 73 && cell.cellNo <= 79) target.add(cell);
+    }
+  }
+
+  private static boolean includeLayer(int layerNo) {
+    String configured = value("D2_AUTOMAP_LEVEL", "d2.automap.level");
+    if (configured == null || configured.trim().isEmpty()) return true;
+    try {
+      return Integer.parseInt(configured.trim()) == layerNo;
+    } catch (NumberFormatException ignored) {
+      return true;
     }
   }
 
