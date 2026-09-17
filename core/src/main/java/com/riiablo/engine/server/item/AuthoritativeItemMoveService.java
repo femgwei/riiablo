@@ -155,8 +155,7 @@ public final class AuthoritativeItemMoveService {
     // the inventory. Both placements remain one authoritative transaction.
     boolean stored;
     try {
-      stored = character.getItems().addPotionToBelt(groundItem)
-          || character.getItems().addToInventory(groundItem);
+      stored = character.getItems().addGroundPickup(groundItem);
     } catch (Throwable t) {
       GroundDropOwnership.release(intent.groundEntityId);
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);

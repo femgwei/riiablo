@@ -490,6 +490,16 @@ public class ItemData {
   }
 
   /**
+   * Applies native ground-pickup placement without using the mouse cursor.
+   * Belt-compatible potions take the first native belt slot and fall back to
+   * the character inventory; every other item goes directly to inventory.
+   * The item is left untouched when neither destination has room.
+   */
+  public boolean addGroundPickup(Item item) {
+    return addPotionToBelt(item) || addToInventory(item);
+  }
+
+  /**
    * Returns whether an item can be placed in the native 3x4 Horadric Cube
    * store.  This is deliberately a read-only preflight so quest transmutations
    * can validate capacity before consuming their inputs.

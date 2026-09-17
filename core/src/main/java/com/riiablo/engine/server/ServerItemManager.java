@@ -40,9 +40,18 @@ public class ServerItemManager extends ItemManager {
     }
     if (!GroundDropOwnership.claim(dst, entityId, partyId)) return;
     try {
-      super.groundToCursor(entityId, dst);
-      GroundDropOwnership.clear(dst);
-      world.delete(dst);
+      CharData character = mPlayer.get(entityId).data;
+      boolean stored = character != null && character.getItems().addGroundPickup(ground);
+      if (stored) {
+        if (ground.code != null) {
+          event.dispatch(com.riiablo.engine.server.event.QuestItemPickedUpEvent.obtain(
+              entityId, dst, ground.code));
+        }
+        GroundDropOwnership.clear(dst);
+        world.delete(dst);
+      } else {
+        GroundDropOwnership.release(dst);
+      }
     } catch (RuntimeException | Error t) {
       GroundDropOwnership.release(dst);
       throw t;

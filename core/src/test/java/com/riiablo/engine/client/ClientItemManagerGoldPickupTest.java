@@ -3,6 +3,7 @@ package com.riiablo.engine.client;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.artemis.World;
@@ -14,6 +15,9 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.Item;
+import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Location;
+import com.riiablo.item.StoreLoc;
 import com.riiablo.save.CharData;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -81,6 +85,98 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
     }
   }
 
+  @Test
+  void localPotionPickupUsesBeltWithoutUsingCursor() {
+    Riiablo.charData = character("LocalPotion", 0, 1);
+    ClientItemManager manager = new ClientItemManager();
+    World world = world(manager);
+    try {
+      com.riiablo.item.Item potion = generated("hp1", 50);
+      int entity = groundItem(world, potion);
+
+      manager.groundToCursor(entity);
+      world.process();
+
+      assertEquals(Location.BELT, potion.location);
+      assertEquals(StoreLoc.NONE, potion.storeLoc);
+      assertNull(Riiablo.charData.getItems().getCursor());
+      assertFalse(world.getEntityManager().isActive(entity));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void localPotionPickupFallsBackToInventoryWhenBeltIsFull() {
+    Riiablo.charData = character("LocalPotionInventory", 0, 1);
+    for (int i = 0; i < 16; i++) {
+      assertTrue(Riiablo.charData.getItems().addPotionToBelt(generated("hp1", 100 + i)));
+    }
+    ClientItemManager manager = new ClientItemManager();
+    World world = world(manager);
+    try {
+      com.riiablo.item.Item potion = generated("mp1", 200);
+      int entity = groundItem(world, potion);
+
+      manager.groundToCursor(entity);
+      world.process();
+
+      assertEquals(Location.STORED, potion.location);
+      assertEquals(StoreLoc.INVENTORY, potion.storeLoc);
+      assertNull(Riiablo.charData.getItems().getCursor());
+      assertFalse(world.getEntityManager().isActive(entity));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void localEquipmentPickupGoesDirectlyToInventory() {
+    Riiablo.charData = character("LocalEquipment", 0, 1);
+    ClientItemManager manager = new ClientItemManager();
+    World world = world(manager);
+    try {
+      com.riiablo.item.Item armor = generated("cap", 300);
+      int entity = groundItem(world, armor);
+
+      manager.groundToCursor(entity);
+      world.process();
+
+      assertEquals(Location.STORED, armor.location);
+      assertEquals(StoreLoc.INVENTORY, armor.storeLoc);
+      assertNull(Riiablo.charData.getItems().getCursor());
+      assertFalse(world.getEntityManager().isActive(entity));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void localPickupLeavesItemOnGroundWhenAllDestinationsAreFull() {
+    Riiablo.charData = character("LocalNoSpace", 0, 1);
+    for (int i = 0; i < 16; i++) {
+      assertTrue(Riiablo.charData.getItems().addPotionToBelt(generated("hp1", 400 + i)));
+    }
+    for (int i = 0; i < 40; i++) {
+      assertTrue(Riiablo.charData.getItems().addToInventory(generated("hp1", 500 + i)));
+    }
+    ClientItemManager manager = new ClientItemManager();
+    World world = world(manager);
+    try {
+      com.riiablo.item.Item potion = generated("hp1", 600);
+      int entity = groundItem(world, potion);
+
+      manager.groundToCursor(entity);
+      world.process();
+
+      assertTrue(world.getEntityManager().isActive(entity));
+      assertSame(potion, world.getMapper(Item.class).get(entity).item);
+      assertNull(Riiablo.charData.getItems().getCursor());
+    } finally {
+      world.dispose();
+    }
+  }
+
   private static World world(ClientItemManager manager) {
     TestFactory factory = new TestFactory();
     return new World(new WorldConfigurationBuilder().with(manager, factory).build()
@@ -107,6 +203,19 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
     gold.attrs.aggregate().put(Stat.quantity, quantity);
     int entity = world.create();
     world.getMapper(Item.class).create(entity).item = gold;
+    world.process();
+    return entity;
+  }
+
+  private static com.riiablo.item.Item generated(String code, int id) {
+    com.riiablo.item.Item item = new ItemGenerator().generate(code);
+    item.id = id;
+    return item;
+  }
+
+  private static int groundItem(World world, com.riiablo.item.Item item) {
+    int entity = world.create();
+    world.getMapper(Item.class).create(entity).item = item;
     world.process();
     return entity;
   }

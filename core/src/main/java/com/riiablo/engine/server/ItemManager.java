@@ -27,8 +27,8 @@ public class ItemManager extends PassiveSystem {
 
   public void groundToCursor(int entityId, int dst) {
     com.riiablo.item.Item item = mItem.get(dst).item;
-    mPlayer.get(entityId).data.groundToCursor(item);
-    if (item.code != null) {
+    boolean stored = mPlayer.get(entityId).data.getItems().addGroundPickup(item);
+    if (stored && item.code != null) {
       event.dispatch(QuestItemPickedUpEvent.obtain(entityId, dst, item.code));
     }
   }

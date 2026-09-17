@@ -57,9 +57,16 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
           entityId, grant.credited, grant.remaining);
       return;
     }
-    Riiablo.charData.groundToCursor(item);
-
+    boolean stored = Riiablo.charData != null
+        && Riiablo.charData.getItems().addGroundPickup(item);
+    if (!stored) {
+      log.info("[GROUND_PICKUP] phase=reject mode=local entity={} item={} reason=no_space",
+          entityId, item.id);
+      return;
+    }
     world.delete(entityId);
+    log.info("[GROUND_PICKUP] phase=stored mode=local entity={} item={} location={} store={}",
+        entityId, item.id, item.location, item.storeLoc);
   }
 
   private static int quantity(com.riiablo.item.Item item) {
