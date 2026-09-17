@@ -1421,6 +1421,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
               + item.id + " code=" + item.code, t);
         }
       }
+      if (result.success()
+          && result.operation() == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR) {
+        ClientItemManager.playPickupSound();
+      }
     }
     if (result.groundEntityId() >= 0 && result.groundItemDataLength() == 0) {
       int localEntityId = syncIds.get(result.groundEntityId());

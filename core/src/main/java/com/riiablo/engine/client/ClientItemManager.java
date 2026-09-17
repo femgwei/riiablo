@@ -52,6 +52,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       } else {
         world.delete(entityId);
       }
+      playPickupSound();
       log.info(
           "[GROUND_PICKUP] phase=gold_granted mode=local entity={} credited={} remaining={}",
           entityId, grant.credited, grant.remaining);
@@ -65,8 +66,14 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       return;
     }
     world.delete(entityId);
+    playPickupSound();
     log.info("[GROUND_PICKUP] phase=stored mode=local entity={} item={} location={} store={}",
         entityId, item.id, item.location, item.storeLoc);
+  }
+
+  /** Native D2 uses one generic sound when an item is taken by the player. */
+  protected static void playPickupSound() {
+    if (Riiablo.audio != null) Riiablo.audio.play("item_pickup", true);
   }
 
   private static int quantity(com.riiablo.item.Item item) {
