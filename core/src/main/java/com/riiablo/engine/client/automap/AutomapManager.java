@@ -812,7 +812,7 @@ public class AutomapManager implements Disposable {
       // 根据类型绘制不同形状
       switch (marker.type) {
         case AutomapIconType.PLAYER:
-          drawNativeCross(shapes, markerX, markerY);
+          NativeAutomapGlyph.draw(shapes, markerX, markerY);
           break;
           
         case AutomapIconType.PARTY_MEMBER:
@@ -868,7 +868,7 @@ public class AutomapManager implements Disposable {
           break;
           
         case AutomapIconType.NPC:
-          drawNativeCross(shapes, markerX, markerY);
+          NativeAutomapGlyph.draw(shapes, markerX, markerY);
           break;
           
         case AutomapIconType.WAYPOINT:
@@ -925,28 +925,6 @@ public class AutomapManager implements Disposable {
     font.setColor(previousR, previousG, previousB, previousA);
   }
 
-  /** D2CLIENT draws the four-armed player/NPC glyph as vectors. */
-  private static void drawNativeCross(ShapeRenderer shapes, float x, float y) {
-    final float armX = 6f;
-    final float armY = 3f;
-    final float hookX = 2f;
-    final float hookY = 2f;
-    // Each diagonal arm ends in a short fork, producing the curled X-shaped
-    // marker visible in the original renderer rather than a plain plus sign.
-    shapes.line(x, y, x + armX, y + armY);
-    shapes.line(x, y, x - armX, y + armY);
-    shapes.line(x, y, x + armX, y - armY);
-    shapes.line(x, y, x - armX, y - armY);
-    shapes.line(x + armX, y + armY, x + armX - hookX, y + armY + hookY);
-    shapes.line(x + armX, y + armY, x + armX + hookX, y + armY - hookY);
-    shapes.line(x - armX, y + armY, x - armX + hookX, y + armY + hookY);
-    shapes.line(x - armX, y + armY, x - armX - hookX, y + armY - hookY);
-    shapes.line(x + armX, y - armY, x + armX - hookX, y - armY - hookY);
-    shapes.line(x + armX, y - armY, x + armX + hookX, y - armY + hookY);
-    shapes.line(x - armX, y - armY, x - armX + hookX, y - armY - hookY);
-    shapes.line(x - armX, y - armY, x - armX - hookX, y - armY + hookY);
-  }
-  
   // ==================== DC6 精灵渲染 ====================
   
   /**
