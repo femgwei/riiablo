@@ -86,8 +86,8 @@ public class AutomapManager implements Disposable {
   /** 门颜色 */
   public static final Color COLOR_DOOR = new Color(0.8f, 0.6f, 0.2f, 1.0f);
   
-  /** 玩家颜色 - 绿色 */
-  public static final Color COLOR_PLAYER = new Color(0.0f, 1.0f, 0.0f, 1.0f);
+  /** Native player Automap cross - light blue. */
+  public static final Color COLOR_PLAYER = new Color(0.5f, 0.75f, 1.0f, 1.0f);
   
   /** 队友颜色 - 浅绿色 */
   public static final Color COLOR_PARTY = new Color(0.5f, 1.0f, 0.5f, 1.0f);
@@ -105,8 +105,8 @@ public class AutomapManager implements Disposable {
   public static final Color COLOR_QUEST = new Color(0.2f, 1.0f, 0.9f, 1.0f);
   public static final Color COLOR_ENTRANCE = new Color(0.65f, 0.35f, 1.0f, 1.0f);
   
-  /** NPC颜色 - 黄色 */
-  public static final Color COLOR_NPC = new Color(1.0f, 1.0f, 0.0f, 1.0f);
+  /** Native NPC Automap cross - white. */
+  public static final Color COLOR_NPC = new Color(1.0f, 1.0f, 1.0f, 1.0f);
   
   /** 佣兵颜色 - 青色 */
   public static final Color COLOR_MERCENARY = new Color(0.0f, 1.0f, 1.0f, 1.0f);
@@ -792,14 +792,7 @@ public class AutomapManager implements Disposable {
       // 根据类型绘制不同形状
       switch (marker.type) {
         case AutomapIconType.PLAYER:
-          // 玩家用较大的圆点
-          shapes.circle(markerX, markerY, marker.size);
-          // 绘制方向指示器（箭头）
-          shapes.triangle(
-            markerX, markerY + marker.size + 4,
-            markerX - 4, markerY + marker.size,
-            markerX + 4, markerY + marker.size
-          );
+          drawNativeCross(shapes, markerX, markerY);
           break;
           
         case AutomapIconType.PARTY_MEMBER:
@@ -855,8 +848,7 @@ public class AutomapManager implements Disposable {
           break;
           
         case AutomapIconType.NPC:
-          // NPC用圆点
-          shapes.circle(markerX, markerY, marker.size);
+          drawNativeCross(shapes, markerX, markerY);
           break;
           
         case AutomapIconType.WAYPOINT:
@@ -909,6 +901,13 @@ public class AutomapManager implements Disposable {
       font.draw(batch, marker.name, tmpVec.x, tmpVec.y + marker.size + 12);
     }
     font.setColor(previousR, previousG, previousB, previousA);
+  }
+
+  /** D2CLIENT draws player/NPC Automap markers as vectors, not MaxiMap cells. */
+  private static void drawNativeCross(ShapeRenderer shapes, float x, float y) {
+    final float halfLength = 4f;
+    shapes.line(x - halfLength, y, x + halfLength, y);
+    shapes.line(x, y - halfLength, x, y + halfLength);
   }
   
   // ==================== DC6 精灵渲染 ====================

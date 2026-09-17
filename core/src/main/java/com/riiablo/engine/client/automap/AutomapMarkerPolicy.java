@@ -1,6 +1,8 @@
 package com.riiablo.engine.client.automap;
 
 import com.badlogic.gdx.math.Vector2;
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.server.monster.MonsterRank;
 
@@ -22,10 +24,43 @@ public final class AutomapMarkerPolicy {
     }
   }
 
+  /** Native Automap excludes neutral presentation monsters and ambient critters. */
+  public static boolean shouldDisplayMonster(
+      MonStats.Entry monster, MonStats2.Entry visual, boolean npc) {
+    if (monster == null) return false;
+    if (npc) return true;
+    if (monster.Align != 0 || !monster.killable) return false;
+    if (visual != null && (visual.noMap || visual.critter)) return false;
+    return !isDecorativeCreature(monster.Id)
+        && !isDecorativeCreature(monster.BaseId)
+        && !isDecorativeCreature(monster.Code);
+  }
+
+  static boolean isDecorativeCreature(String id) {
+    if (id == null || id.isEmpty()) return false;
+    String normalized = id.toLowerCase(java.util.Locale.ROOT);
+    return normalized.equals("chicken")
+        || normalized.equals("frog")
+        || normalized.equals("rat")
+        || normalized.equals("smallbird")
+        || normalized.equals("largebird")
+        || normalized.equals("bird")
+        || normalized.equals("bat")
+        || normalized.equals("cow")
+        || normalized.equals("camel")
+        || normalized.equals("bunny")
+        || normalized.equals("critter");
+  }
+
   public static int objectType(Objects.Entry object) {
     if (object == null) return AutomapIconType.OBJECT;
     if (object.OpenWarp) return AutomapIconType.ENTRANCE;
     return isQuestCell(object.AutoMap) ? AutomapIconType.QUEST : AutomapIconType.OBJECT;
+  }
+
+  /** Ordinary AutoMap=0 scenery has no marker; explicit enhanced targets do. */
+  public static boolean shouldDisplayObject(int nativeCell, int markerType) {
+    return nativeCell >= 0 || markerType != AutomapIconType.OBJECT;
   }
 
   public static boolean isPointerTarget(int type) {

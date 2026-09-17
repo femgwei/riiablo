@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Cvars;
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.server.monster.MonsterRank;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,49 @@ class AutomapMarkerPolicyTest {
     Objects.Entry ordinary = new Objects.Entry();
     ordinary.AutoMap = AutomapIconType.WAYPOINT;
     assertEquals(AutomapIconType.OBJECT, AutomapMarkerPolicy.objectType(ordinary));
+  }
+
+  @Test void hidesOrdinarySceneryWithoutNativeAutomapCell() {
+    assertFalse(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.OBJECT));
+    assertTrue(AutomapMarkerPolicy.shouldDisplayObject(405, AutomapIconType.OBJECT));
+    assertTrue(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.ENTRANCE));
+    assertTrue(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.QUEST));
+  }
+
+  @Test void hidesNeutralAndDecorativeMonstersButKeepsNpcsAndHostiles() {
+    MonStats.Entry monster = new MonStats.Entry();
+    MonStats2.Entry visual = new MonStats2.Entry();
+    monster.Id = "fallen1";
+    monster.Align = 0;
+    monster.killable = true;
+    assertTrue(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
+
+    monster.Align = 1;
+    assertFalse(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
+    assertTrue(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, true));
+
+    monster.Align = 0;
+    monster.killable = false;
+    assertFalse(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
+
+    monster.killable = true;
+    monster.Id = "chicken";
+    assertFalse(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
+    monster.Id = "quillrat1";
+    assertTrue(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
+
+    monster.Id = "spearcat1";
+    assertTrue(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
+    monster.Id = "ratman1";
+    assertTrue(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
+
+    visual.critter = true;
+    assertFalse(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
+    assertTrue(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, true));
+
+    visual.critter = false;
+    visual.noMap = true;
+    assertFalse(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
   }
 
   @Test void distantPointerPreservesDirectionAndCapsDistance() {

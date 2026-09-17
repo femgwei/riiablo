@@ -402,6 +402,8 @@ public class AutomapRenderer extends BaseSystem {
         Monster monster = mMonster.get(id);
         name = monster.monstats.NameStr;
         boolean npc = monster.monstats.npc || (mInteractable != null && mInteractable.has(id));
+        if (!AutomapMarkerPolicy.shouldDisplayMonster(
+            monster.monstats, monster.monstats2, npc)) continue;
         int cell = monster.monstats2 == null ? -1 : AutomapEntityCells.monsterCell(monster.monstats2);
         int type = npc ? AutomapIconType.NPC : show(Cvars.Client.Automap.ShowMonsterRanks)
             ? AutomapMarkerPolicy.monsterType(monster.rank) : AutomapIconType.MONSTER;
@@ -413,6 +415,11 @@ public class AutomapRenderer extends BaseSystem {
         int cell = AutomapEntityCells.objectCell(object.base);
         int type = show(Cvars.Client.Automap.ShowQuestIndicators)
             ? AutomapMarkerPolicy.objectType(object.base) : AutomapIconType.OBJECT;
+        // AutoMap=0 means this object has no Automap representation. Ordinary
+        // scenery such as camp torches must stay invisible instead of turning
+        // into a generic geometric marker. Enhanced entrances/quest targets
+        // remain eligible for their explicit overlay markers.
+        if (!AutomapMarkerPolicy.shouldDisplayObject(cell, type)) continue;
         // Town waypoints and the stash already exist in the generated native
         // terrain cell lists. The runtime object is interactive state, not a
         // second Automap picture; suppress its duplicate native marker.
@@ -580,9 +587,9 @@ public class AutomapRenderer extends BaseSystem {
    */
   private void renderEnhancedMarkers() {
     if (automapManager == null || shapes == null) return;
-    // Player/NPC markers do not have a MaxiMap.dc6 cell in all 1.10f table
-    // exports. Draw geometric fallbacks in the same projection instead of
-    // silently dropping those markers.
+    // Native D2 draws player/NPC markers as vectors after the MaxiMap terrain
+    // pass. Enhanced HackMap-only categories use their configured geometric
+    // marker when no native terrain cell exists.
     automapManager.render(shapes, map, 0, 0, 0, 0, 0, 0);
   }
   
