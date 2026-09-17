@@ -336,6 +336,10 @@ public class Client extends Game {
     for (Throwable t : throwables) {
       Gdx.app.error(TAG, t.getMessage(), t);
     }
+    String offscreenHackMap = System.getProperty("riiablo.offscreen-hackmap");
+    if (offscreenHackMap != null) {
+      Cvars.Client.Automap.HackMap.set(Boolean.valueOf(offscreenHackMap));
+    }
 
     Riiablo.keys = keys = new GdxKeyMapper();
     throwables = Keys.addTo(keys);

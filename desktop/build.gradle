@@ -111,6 +111,9 @@ task offscreenAutomapDc6(type: JavaExec) {
   if (project.hasProperty('automapMode')) {
     args '--automap-mode', project.property('automapMode')
   }
+  if (project.findProperty('automapHackMap')?.toString()?.toBoolean()) {
+    args '--hackmap'
+  }
   ignoreExitValue = false
 }
 

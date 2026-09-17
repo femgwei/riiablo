@@ -5,6 +5,7 @@ param(
   [int] $Level = 1,
   [string] $Character = '',
   [string] $LogPath = 'build/automap-offscreen.log',
+  [switch] $HackMap,
   [switch] $RequireTransition
 )
 
@@ -21,8 +22,12 @@ $gradleArgs = @(
   "-PoffscreenLevel=$Level", '-PautomapMode=3', '--no-daemon'
 )
 if ($Character) { $gradleArgs += "-PoffscreenCharacter=$Character" }
+if ($HackMap) { $gradleArgs += '-PautomapHackMap=true' }
+$ErrorActionPreference = 'Continue' # javac writes warnings to stderr on Windows
 & "$repoRoot\gradlew.bat" @gradleArgs *>&1 | Tee-Object -FilePath $logFile
-if ($LASTEXITCODE -ne 0) { throw "Offscreen Automap client failed with exit code $LASTEXITCODE" }
+$gradleExitCode = $LASTEXITCODE
+$ErrorActionPreference = 'Stop'
+if ($gradleExitCode -ne 0) { throw "Offscreen Automap client failed with exit code $gradleExitCode" }
 
 powershell -NoProfile -ExecutionPolicy Bypass `
   -File "$repoRoot\tools\check-automap-log.ps1" -Path $logFile

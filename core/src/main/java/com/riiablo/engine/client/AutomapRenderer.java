@@ -419,7 +419,8 @@ public class AutomapRenderer extends BaseSystem {
         // scenery such as camp torches must stay invisible instead of turning
         // into a generic geometric marker. Enhanced entrances/quest targets
         // remain eligible for their explicit overlay markers.
-        if (!AutomapMarkerPolicy.shouldDisplayObject(cell, type)) continue;
+        if (!AutomapMarkerPolicy.shouldDisplayObject(cell, type, object.base,
+            object.mode, automapManager.isHackMapEnabled())) continue;
         // Town waypoints and the stash already exist in the generated native
         // terrain cell lists. The runtime object is interactive state, not a
         // second Automap picture; suppress its duplicate native marker.
@@ -501,7 +502,11 @@ public class AutomapRenderer extends BaseSystem {
         Cvars.Client.Automap.ShowNames.get());
     automapManager.showMinimapPointers = Boolean.TRUE.equals(
         Cvars.Client.Automap.ShowMinimapPointers.get());
-    String diagnostic = "mode=" + mode + " fade=" + fade + " opacity=" + opacity;
+    automapManager.setHackMapEnabled(
+        Boolean.TRUE.equals(Cvars.Client.Automap.HackMap.get()), Riiablo.home);
+    String diagnostic = "mode=" + mode + " fade=" + fade + " opacity=" + opacity
+        + " hackMap=" + automapManager.isHackMapEnabled()
+        + " hackMapIcons=" + automapManager.getHackMapIconCount();
     if (!diagnostic.equals(lastOptionsDiagnostic) && Gdx.app != null) {
       Gdx.app.debug(TAG, "[AUTOMAP_OPTIONS] " + diagnostic);
       lastOptionsDiagnostic = diagnostic;

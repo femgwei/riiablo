@@ -63,6 +63,35 @@ public final class AutomapMarkerPolicy {
     return nativeCell >= 0 || markerType != AutomapIconType.OBJECT;
   }
 
+  /** HackMap adds a blob only for closed, selectable container-style objects. */
+  public static boolean shouldDisplayObject(int nativeCell, int markerType,
+      Objects.Entry object, int mode, boolean hackMapEnabled) {
+    return shouldDisplayObject(nativeCell, markerType)
+        || (hackMapEnabled && isHackMapChest(object, mode));
+  }
+
+  static boolean isHackMapChest(Objects.Entry object, int mode) {
+    if (object == null || mode != 0 || object.Selectable == null
+        || object.Selectable.length == 0 || !object.Selectable[0]) return false;
+    switch (object.OperateFn) {
+      case 1:  // bed, grave, casket, sarcophagus
+      case 3:  // basket, urn, rock pile
+      case 4:  // chest/corpse containers
+      case 5:  // barrel
+      case 7:  // exploding barrel
+      case 14: // loose boulder
+      case 19: // armor stand
+      case 20: // weapon rack
+      case 33: // writ
+      case 48: // trapped soul
+      case 51: // stash
+      case 68: // evil urn
+        return true;
+      default:
+        return false;
+    }
+  }
+
   public static boolean isPointerTarget(int type) {
     return type == AutomapIconType.QUEST || type == AutomapIconType.ENTRANCE
         || type == AutomapIconType.EXIT;

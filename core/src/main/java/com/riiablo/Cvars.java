@@ -278,6 +278,13 @@ public class Cvars {
           .validator(Validator.ACCEPT_NON_NULL)
           .build();
 
+      Cvar<Boolean> HackMap = Cvar.builder(Boolean.class)
+          .alias("Client.Automap.HackMap")
+          .description("Use d2hackmap Plugin/blob*.bmp icons when available")
+          .defaultValue(Boolean.FALSE)
+          .validator(Validator.ACCEPT_NON_NULL)
+          .build();
+
       Cvar<Boolean> ShowCorpses = debugOption("ShowCorpses", "corpse markers");
       Cvar<Boolean> ShowMissiles = debugOption("ShowMissiles", "missile markers");
       Cvar<Boolean> ShowItems = debugOption("ShowItems", "ground item markers");

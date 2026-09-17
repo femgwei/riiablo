@@ -47,6 +47,24 @@ class AutomapMarkerPolicyTest {
     assertTrue(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.QUEST));
   }
 
+  @Test void hackMapShowsOnlyClosedSelectableContainerObjects() {
+    Objects.Entry chest = new Objects.Entry();
+    chest.Selectable = new boolean[] {true};
+    chest.OperateFn = 4;
+    assertTrue(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.OBJECT,
+        chest, 0, true));
+    assertFalse(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.OBJECT,
+        chest, 0, false));
+    assertFalse(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.OBJECT,
+        chest, 1, true));
+
+    Objects.Entry torch = new Objects.Entry();
+    torch.Selectable = new boolean[] {false};
+    torch.OperateFn = 0;
+    assertFalse(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.OBJECT,
+        torch, 0, true));
+  }
+
   @Test void hidesNeutralAndDecorativeMonstersButKeepsNpcsAndHostiles() {
     MonStats.Entry monster = new MonStats.Entry();
     MonStats2.Entry visual = new MonStats2.Entry();
@@ -116,6 +134,7 @@ class AutomapMarkerPolicyTest {
   }
 
   @Test void enhancedDevelopmentOptionsDefaultOn() {
+    assertEquals(Boolean.FALSE, Cvars.Client.Automap.HackMap.get());
     assertEquals(Boolean.TRUE, Cvars.Client.Automap.ShowCorpses.get());
     assertEquals(Boolean.TRUE, Cvars.Client.Automap.ShowMissiles.get());
     assertEquals(Boolean.TRUE, Cvars.Client.Automap.ShowItems.get());

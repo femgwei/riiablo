@@ -153,6 +153,9 @@ public class AutomapManager implements Disposable {
   private final IntMap<Boolean> renderedNativeLayers = new IntMap<>();
   /** Marker instances whose native DC6 cell was actually rendered this frame. */
   private final Array<EntityMarker> nativeRenderedMarkers = new Array<>();
+  /** Marker instances replaced by an external d2hackmap blob icon this frame. */
+  private final Array<EntityMarker> hackMapRenderedMarkers = new Array<>();
+  private final HackMapIconRenderer hackMapIcons = new HackMapIconRenderer();
   
   /** 小地图偏移 */
   private float offsetX = 0;
@@ -217,6 +220,19 @@ public class AutomapManager implements Disposable {
    */
   public AutomapTileRenderer getTileRenderer() {
     return tileRenderer;
+  }
+
+  /** Enables external d2hackmap blobs only when a compatible Plugin directory exists. */
+  public void setHackMapEnabled(boolean enabled, com.badlogic.gdx.files.FileHandle d2Home) {
+    hackMapIcons.setEnabled(enabled, d2Home);
+  }
+
+  public boolean isHackMapEnabled() {
+    return hackMapIcons.isActive();
+  }
+
+  public int getHackMapIconCount() {
+    return hackMapIcons.getLoadedIconCount();
   }
   
   /**
@@ -566,6 +582,7 @@ public class AutomapManager implements Disposable {
   public void clearEntityMarkers() {
     entityMarkers.clear();
     nativeRenderedMarkers.clear();
+    hackMapRenderedMarkers.clear();
     nativeEntityDrawCount = 0;
     geometricFallbackDrawCount = 0;
   }
@@ -777,6 +794,8 @@ public class AutomapManager implements Disposable {
       boolean distantPointer = AutomapMarkerPolicy.isPointerTarget(marker.type)
           && AutomapMarkerPolicy.projectPointer(hasPointerSource ? pointerSource : null,
               tmpVec, showMinimapPointers, pointerThreshold, pointerRadius, pointerTarget);
+      // HackMap blobs already encode both the marker shape and its rank color.
+      if (hackMapRenderedMarkers.contains(marker, true) && !distantPointer) continue;
       // Only suppress the geometric fallback after a native cell was
       // successfully drawn.  A valid-looking frame can still be absent from
       // a reduced MaxiMap.dc6 export; in that case the player/NPC must remain
@@ -989,17 +1008,23 @@ public class AutomapManager implements Disposable {
    * invoke this after ending ShapeRenderer and before beginning it again.
    */
   public int renderNativeEntitySprites(PaletteIndexedBatch batch, float alpha) {
-    if (batch == null || tileRenderer == null || !tileRenderer.hasSprite()) return 0;
+    if (batch == null) return 0;
     int drawn = 0;
     batch.setColor(1f, 1f, 1f, alpha);
     for (int i = 0, size = entityMarkers.size; i < size; i++) {
       EntityMarker marker = entityMarkers.get(i);
+      if (hackMapIcons.render(batch, marker, alpha)) {
+        hackMapRenderedMarkers.add(marker);
+        drawn++;
+        continue;
+      }
       if (!AutomapEntityCells.hasCell(marker.nativeCell)) {
         geometricFallbackDrawCount++;
         continue;
       }
       try {
-        if (renderProjectedTile(batch, marker.nativeCell, marker.worldX, marker.worldY)) {
+        if (tileRenderer != null && tileRenderer.hasSprite()
+            && renderProjectedTile(batch, marker.nativeCell, marker.worldX, marker.worldY)) {
           nativeRenderedMarkers.add(marker);
           drawn++;
         } else {
@@ -1116,6 +1141,7 @@ public class AutomapManager implements Disposable {
     entityMarkers.clear();
     automapData = null;
     iconSprite = null;
+    hackMapIcons.dispose();
     if (tileRenderer != null) {
       tileRenderer.dispose();
       tileRenderer = null;
