@@ -1404,6 +1404,19 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           if (nativeZone != null) {
             nativeZone.nativeObjects.addAll(nativeObjects);
             exportNativeRooms(drlg, levelId, nativeZone);
+            DrlgLevel nativeTarget = drlgLevels.get(levelId);
+            if (nativeTarget != null && nativeTarget.grid != null) {
+              TileGrid nativeGrid = nativeTarget.grid;
+              int dirtPaths = DrlgExport.exportLevelDirtPaths(drlg, levelId,
+                  (pathLevel, tx, ty) -> {
+                    if (nativeGrid.inBounds(tx, ty)) nativeGrid.dirtPathFlags[ty][tx] = true;
+                  });
+              nativeZone.setNativeTileGrid(nativeGrid, exportedDt1Mask);
+              if (dirtPaths > 0) {
+                Gdx.app.log(TAG, "[AUTOMAP_DIRT_PATH] level=" + levelId
+                    + " cells=" + dirtPaths);
+              }
+            }
           }
           D2DrlgLevel nativeLevel = DrlgDrlg.getLevel(drlg, levelId);
           if (hasNativeDirtPath(nativeLevel)) {

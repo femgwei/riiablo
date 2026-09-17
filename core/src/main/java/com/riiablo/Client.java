@@ -617,7 +617,12 @@ public class Client extends Game {
   @Override
   public void dispose() {
     Gdx.app.debug(TAG, "Disposing screen...");
+    Screen activeScreen = getScreen();
     super.dispose();
+    // libGDX Game.dispose() only hides the active screen. Explicitly dispose
+    // it while save paths and render resources are still valid so GameScreen
+    // can flush native .map/.ma exploration on window/process exit.
+    if (activeScreen != null) activeScreen.dispose();
 
     Gdx.app.debug(TAG, "Disposing shader...");
     shader.dispose();

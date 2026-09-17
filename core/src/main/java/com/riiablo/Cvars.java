@@ -273,7 +273,7 @@ public class Cvars {
 
       Cvar<Boolean> ShowNames = Cvar.builder(Boolean.class)
           .alias("Client.Automap.ShowNames")
-          .description("Whether player and party member names are shown on Automap")
+          .description("Whether interactable NPC names are shown on Automap")
           .defaultValue(Boolean.FALSE)
           .validator(Validator.ACCEPT_NON_NULL)
           .build();

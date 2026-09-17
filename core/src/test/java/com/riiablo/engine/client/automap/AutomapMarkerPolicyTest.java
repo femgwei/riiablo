@@ -101,6 +101,27 @@ class AutomapMarkerPolicyTest {
     assertFalse(AutomapMarkerPolicy.shouldDisplayMonster(monster, visual, false));
   }
 
+  @Test void npcMarkersRequireInteractionAndStayNearTheGameplayViewport() {
+    MonStats.Entry npc = new MonStats.Entry();
+    npc.npc = true;
+    assertFalse(AutomapMarkerPolicy.shouldDisplayNpc(npc, false));
+    assertTrue(AutomapMarkerPolicy.shouldDisplayNpc(npc, true));
+    npc.npc = false;
+    assertFalse(AutomapMarkerPolicy.shouldDisplayNpc(npc, true));
+
+    assertTrue(AutomapMarkerPolicy.isNpcWithinScreenRange(
+        100, 100, 110, 110, 800, 600));
+    assertFalse(AutomapMarkerPolicy.isNpcWithinScreenRange(
+        100, 100, 200, 100, 800, 600));
+  }
+
+  @Test void showNamesAppliesOnlyToNpcMarkers() {
+    assertTrue(AutomapMarkerPolicy.shouldDisplayName(AutomapIconType.NPC));
+    assertFalse(AutomapMarkerPolicy.shouldDisplayName(AutomapIconType.PLAYER));
+    assertFalse(AutomapMarkerPolicy.shouldDisplayName(AutomapIconType.PARTY_MEMBER));
+    assertFalse(AutomapMarkerPolicy.shouldDisplayName(AutomapIconType.MONSTER));
+  }
+
   @Test void distantPointerPreservesDirectionAndCapsDistance() {
     Vector2 source = new Vector2(-20, 30);
     Vector2 target = new Vector2(380, 330);

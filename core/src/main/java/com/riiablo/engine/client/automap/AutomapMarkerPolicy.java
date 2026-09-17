@@ -5,6 +5,7 @@ import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Objects;
 import com.riiablo.engine.server.monster.MonsterRank;
+import com.riiablo.map.DT1;
 
 /** Pure classification and distant-pointer rules for enhanced Automap markers. */
 public final class AutomapMarkerPolicy {
@@ -34,6 +35,27 @@ public final class AutomapMarkerPolicy {
     return !isDecorativeCreature(monster.Id)
         && !isDecorativeCreature(monster.BaseId)
         && !isDecorativeCreature(monster.Code);
+  }
+
+  /** Native Automap only lists town NPCs which actually expose interaction. */
+  public static boolean shouldDisplayNpc(MonStats.Entry monster, boolean interactable) {
+    return monster != null && monster.npc && interactable;
+  }
+
+  /** Limits NPC markers to roughly one normal gameplay viewport. */
+  public static boolean isNpcWithinScreenRange(float playerX, float playerY,
+      float npcX, float npcY, float screenWidth, float screenHeight) {
+    float dx = npcX - playerX;
+    float dy = npcY - playerY;
+    float projectedX = (dx - dy) * DT1.Tile.SUBTILE_WIDTH50;
+    float projectedY = (dx + dy) * DT1.Tile.SUBTILE_HEIGHT50;
+    return Math.abs(projectedX) <= Math.max(1f, screenWidth)
+        && Math.abs(projectedY) <= Math.max(1f, screenHeight);
+  }
+
+  /** ShowNames controls native NPC labels, not player or party names. */
+  public static boolean shouldDisplayName(int markerType) {
+    return markerType == AutomapIconType.NPC;
   }
 
   static boolean isDecorativeCreature(String id) {

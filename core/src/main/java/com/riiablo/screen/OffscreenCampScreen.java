@@ -47,6 +47,7 @@ public final class OffscreenCampScreen extends GameScreen {
   private boolean targetApplied;
   private Map.Zone targetZone;
   private int targetNativeCells;
+  private int targetRoadCells;
   private int targetRoomCount;
   private int targetNativeObjects;
   private AutomapCellAudit.Result targetCellAudit;
@@ -216,6 +217,7 @@ public final class OffscreenCampScreen extends GameScreen {
         + "act=" + (map.getAct() + 1) + "\n"
         + "targetLevel=" + targetLevelId + "\n"
         + "targetNativeCells=" + targetNativeCells + "\n"
+        + "targetRoadCells=" + targetRoadCells + "\n"
         + "targetRooms=" + targetRoomCount + "\n"
         + "targetNativeObjects=" + targetNativeObjects + "\n"
         + "automapAuditWithin=" + (targetCellAudit == null ? 0 : targetCellAudit.withinCategoryExact) + "\n"
@@ -1229,11 +1231,15 @@ public final class OffscreenCampScreen extends GameScreen {
     }
     targetNativeCells = layer.floors.size + layer.roads.size + layer.walls.size
         + layer.objects.size + layer.extras.size;
+    targetRoadCells = layer.roads.size;
     targetCellAudit = AutomapCellAudit.audit(layer);
     exportAutomapCells(layer, manager);
     exportAutomapTable();
     if (targetNativeCells == 0) {
       throw new IllegalStateException("Automap has no native cells for target level=" + targetLevelId);
+    }
+    if (targetLevelId == 2 && targetRoadCells == 0) {
+      throw new IllegalStateException("Blood Moor Automap has no native DirtPathGrid cells");
     }
     // Underground sub-levels must expose at least one exported entrance/object
     // record; otherwise a successful Zone switch would hide a broken cave link.
@@ -1241,7 +1247,8 @@ public final class OffscreenCampScreen extends GameScreen {
       throw new IllegalStateException("Cave target has no native entrance objects: level=" + targetLevelId);
     }
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_AUTOMAP] level=" + targetLevelId
-        + " cells=" + targetNativeCells + " rooms=" + targetRoomCount
+        + " cells=" + targetNativeCells + " roads=" + targetRoadCells
+        + " rooms=" + targetRoomCount
         + " nativeObjects=" + targetNativeObjects);
     Gdx.app.log("OffscreenCampScreen", "[AUTOMAP_CELL_AUDIT] level=" + targetLevelId
         + " total=" + targetCellAudit.total

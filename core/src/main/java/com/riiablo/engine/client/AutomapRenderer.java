@@ -99,6 +99,9 @@ public class AutomapRenderer extends BaseSystem {
   private boolean wasVisible;
   private boolean nativeAutomapLoaded;
   private AutomapExplorationStore.MaFile loadedNativeAutomap;
+  private String nativeAutomapCharacter;
+  private int nativeAutomapDifficulty = -1;
+  private int nativeAutomapSeed;
   private String lastOptionsDiagnostic;
   private int lastAutomapLevelId = Integer.MIN_VALUE;
   private boolean lastAutomapTown;
@@ -150,6 +153,9 @@ public class AutomapRenderer extends BaseSystem {
     String name = Riiablo.charData.name;
     int difficulty = Riiablo.charData.diff;
     if (name == null || name.isEmpty() || difficulty < 0 || difficulty > 3) return;
+    nativeAutomapCharacter = name;
+    nativeAutomapDifficulty = difficulty;
+    nativeAutomapSeed = Riiablo.charData.mapSeed;
     try {
       FileHandle mapFile = Riiablo.saves.child(name + ".map");
       if (mapFile.exists()) {
@@ -171,23 +177,28 @@ public class AutomapRenderer extends BaseSystem {
 
   /** Saves the current difficulty's native Automap sidecars. */
   public void saveNativeAutomap() {
-    if (Riiablo.saves == null || Riiablo.charData == null || automapManager == null) return;
-    String name = Riiablo.charData.name;
-    int difficulty = Riiablo.charData.diff;
+    if (Riiablo.saves == null || automapManager == null) return;
+    loadNativeAutomapSave();
+    // Shutdown/menu transitions can clear or reuse the shared CharData before
+    // this system is disposed. Persist against the identity captured at load.
+    String name = nativeAutomapCharacter;
+    int difficulty = nativeAutomapDifficulty;
+    int mapSeed = nativeAutomapSeed;
     if (name == null || name.isEmpty() || difficulty < 0 || difficulty > 3) return;
     try {
       FileHandle mapFile = Riiablo.saves.child(name + ".map");
       AutomapExplorationStore.MapSeeds seeds = mapFile.exists()
           ? AutomapExplorationStore.readMap(mapFile) : new AutomapExplorationStore.MapSeeds();
-      seeds.seeds[difficulty] = Riiablo.charData.mapSeed;
+      seeds.seeds[difficulty] = mapSeed;
       AutomapExplorationStore.writeMap(mapFile, seeds);
+      loadedNativeAutomap = automapManager.createNativeAutomap(loadedNativeAutomap);
       AutomapExplorationStore.writeMa(Riiablo.saves.child(name + ".ma" + difficulty),
-          automapManager.createNativeAutomap(loadedNativeAutomap));
+          loadedNativeAutomap);
       if (Gdx.app != null) {
         FileHandle maFile = Riiablo.saves.child(name + ".ma" + difficulty);
         Gdx.app.log(TAG, String.format(
             "Saved native Automap: path=%s difficulty=%d seed=%d bytes=%d",
-            maFile.file().getAbsolutePath(), difficulty, Riiablo.charData.mapSeed,
+            maFile.file().getAbsolutePath(), difficulty, mapSeed,
             maFile.length()));
       }
     } catch (IOException | RuntimeException e) {
@@ -401,7 +412,13 @@ public class AutomapRenderer extends BaseSystem {
       } else if (mMonster != null && mMonster.has(id) && mMonster.get(id).monstats != null) {
         Monster monster = mMonster.get(id);
         name = monster.monstats.NameStr;
-        boolean npc = monster.monstats.npc || (mInteractable != null && mInteractable.has(id));
+        if (monster.monstats.npc && Riiablo.string != null) {
+          name = Riiablo.string.lookup(name);
+        }
+        boolean interactable = mInteractable != null && mInteractable.has(id);
+        boolean npc = monster.monstats.npc;
+        if (npc && (!AutomapMarkerPolicy.shouldDisplayNpc(monster.monstats, interactable)
+            || !isNpcWithinRange(position.position.x, position.position.y))) continue;
         if (!AutomapMarkerPolicy.shouldDisplayMonster(
             monster.monstats, monster.monstats2, npc)) continue;
         int cell = monster.monstats2 == null ? -1 : AutomapEntityCells.monsterCell(monster.monstats2);
@@ -443,6 +460,17 @@ public class AutomapRenderer extends BaseSystem {
         }
       }
     }
+  }
+
+  private boolean isNpcWithinRange(float npcX, float npcY) {
+    if (Riiablo.game == null || mPosition == null) return false;
+    int playerId = Riiablo.game.player;
+    if (playerId == Engine.INVALID_ENTITY || !mPosition.has(playerId)) return false;
+    Position player = mPosition.get(playerId);
+    return player != null && player.position != null
+        && AutomapMarkerPolicy.isNpcWithinScreenRange(
+            player.position.x, player.position.y, npcX, npcY,
+            Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
   }
 
   private static boolean show(com.riiablo.cvar.Cvar<Boolean> option) {

@@ -64,6 +64,38 @@ public final class DrlgExport {
     }
 
     /**
+     * Exports the native outdoor DirtPathGrid. The 0x82 low-byte flag marks a
+     * generated dirt-path floor and the high byte contains its resolved tile.
+     */
+    public static int exportLevelDirtPaths(D2DrlgStrc drlg, int levelId,
+            DrlgDirtPathExporter exporter) {
+        if (drlg == null || exporter == null) return 0;
+        D2DrlgLevel level = DrlgDrlg.getLevel(drlg, levelId);
+        if (level == null || level.getLevelCoords() == null) return 0;
+        int originX = level.getLevelCoords().getNPosX();
+        int originY = level.getLevelCoords().getNPosY();
+        int count = 0;
+        for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
+                room = room.getDrlgRoomNext()) {
+            if (!(room.getMazeOrOutdoor() instanceof D2DrlgOutdoorRoomStrc)) continue;
+            D2DrlgGridStrc floor =
+                ((D2DrlgOutdoorRoomStrc) room.getMazeOrOutdoor()).getPFloorGrid();
+            if (floor == null || floor.getPCellsFlags() == null) continue;
+            for (int y = 0; y < floor.getNHeight(); y++) {
+                for (int x = 0; x < floor.getNWidth(); x++) {
+                    int flags = floor.getFlag(x, y);
+                    if ((flags & 0xFF) != 0x82 || ((flags >>> 8) & 0xFF) == 0) continue;
+                    int tx = room.getNTileXPos() + x - originX;
+                    int ty = room.getNTileYPos() + y - originY;
+                    exporter.onDirtPath(levelId, tx, ty);
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
      * Returns the union of the DT1 masks attached to every generated room in
      * a level. Outdoor preset rooms can extend the base outdoor mask, so a
      * renderer consuming {@link #exportLevelTiles} must use this union rather

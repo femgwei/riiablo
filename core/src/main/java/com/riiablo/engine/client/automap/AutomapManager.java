@@ -912,8 +912,7 @@ public class AutomapManager implements Disposable {
     float previousA = previousColor.a;
     for (int i = 0, size = entityMarkers.size; i < size; i++) {
       EntityMarker marker = entityMarkers.get(i);
-      if (marker.type != AutomapIconType.PLAYER
-          && marker.type != AutomapIconType.PARTY_MEMBER) continue;
+      if (!AutomapMarkerPolicy.shouldDisplayName(marker.type)) continue;
       if (marker.name == null || marker.name.isEmpty()) continue;
       AutomapProjection.worldToAutomap(marker.worldX, marker.worldY, tmpVec);
       font.setColor(marker.color.r, marker.color.g, marker.color.b, opacity);
@@ -922,11 +921,26 @@ public class AutomapManager implements Disposable {
     font.setColor(previousR, previousG, previousB, previousA);
   }
 
-  /** D2CLIENT draws player/NPC Automap markers as vectors, not MaxiMap cells. */
+  /** D2CLIENT draws the four-armed player/NPC glyph as vectors. */
   private static void drawNativeCross(ShapeRenderer shapes, float x, float y) {
-    final float halfLength = 4f;
-    shapes.line(x - halfLength, y, x + halfLength, y);
-    shapes.line(x, y - halfLength, x, y + halfLength);
+    final float armX = 6f;
+    final float armY = 3f;
+    final float hookX = 2f;
+    final float hookY = 2f;
+    // Each diagonal arm ends in a short fork, producing the curled X-shaped
+    // marker visible in the original renderer rather than a plain plus sign.
+    shapes.line(x, y, x + armX, y + armY);
+    shapes.line(x, y, x - armX, y + armY);
+    shapes.line(x, y, x + armX, y - armY);
+    shapes.line(x, y, x - armX, y - armY);
+    shapes.line(x + armX, y + armY, x + armX - hookX, y + armY + hookY);
+    shapes.line(x + armX, y + armY, x + armX + hookX, y + armY - hookY);
+    shapes.line(x - armX, y + armY, x - armX + hookX, y + armY + hookY);
+    shapes.line(x - armX, y + armY, x - armX - hookX, y + armY - hookY);
+    shapes.line(x + armX, y - armY, x + armX - hookX, y - armY - hookY);
+    shapes.line(x + armX, y - armY, x + armX + hookX, y - armY + hookY);
+    shapes.line(x - armX, y - armY, x - armX + hookX, y - armY - hookY);
+    shapes.line(x - armX, y - armY, x - armX - hookX, y - armY + hookY);
   }
   
   // ==================== DC6 精灵渲染 ====================

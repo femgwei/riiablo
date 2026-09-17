@@ -228,7 +228,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     automapCenter = booleanOption("CENTER WHEN CLEARED",
         Cvars.Client.Automap.CenterWhenCleared);
     automapParty = booleanOption("SHOW PARTY", Cvars.Client.Automap.ShowParty);
-    automapNames = booleanOption("SHOW NAMES", Cvars.Client.Automap.ShowNames);
+    automapNames = booleanOption("SHOW NPC NAMES", Cvars.Client.Automap.ShowNames);
     page.add(automapMode).width(520).height(24).row();
     page.add(automapFade).width(520).height(24).row();
     page.add(automapCenter).width(520).height(24).row();
