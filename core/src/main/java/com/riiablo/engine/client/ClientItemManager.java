@@ -128,4 +128,13 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   public void swapBeltItem(int i) {
     Riiablo.charData.swapBeltItem(i);
   }
+
+  @Override
+  public void useBeltSlot(int column) {
+    if (Riiablo.charData == null) return;
+    com.riiablo.item.Item potion = Riiablo.charData.getItems().getBeltPotion(column);
+    if (potion != null && Riiablo.charData.useBeltPotion(column)) {
+      Riiablo.audio.play(potion.getUseSound(), true);
+    }
+  }
 }

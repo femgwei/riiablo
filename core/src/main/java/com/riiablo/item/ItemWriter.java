@@ -227,7 +227,10 @@ public class ItemWriter {
     boolean hasQuantity = item.base.stackable;
     if (hasQuantity) {
       StatRef quantity = item.attrs.base().get(Stat.quantity);
-      bits.write15u(quantity.asInt(), 9);
+      // Legacy saves can omit quantity on stackable consumables. Emitting a
+      // native minimum stack keeps the following fields bit-aligned instead
+      // of dropping the entire item from an authoritative snapshot.
+      bits.write15u(quantity == null ? 1 : Math.max(1, quantity.asInt()), 9);
     }
     return hasQuantity;
   }

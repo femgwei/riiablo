@@ -18,7 +18,7 @@ public final class ItemMoveValidator {
   public static byte validate(CharData character, ItemMoveIntent intent) {
     if (character == null || character.getItems() == null) return ItemMoveFailure.PLAYER_NOT_FOUND;
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.SWAP_BELT_ITEM) return ItemMoveFailure.INVALID_OPERATION;
+        || intent.operation > ItemMoveOperation.USE_BELT_ITEM) return ItemMoveFailure.INVALID_OPERATION;
     if (intent.merc) return ItemMoveFailure.MERC_NOT_SUPPORTED;
     ItemData data = character.getItems();
     Item cursor = data.getCursor();
@@ -91,6 +91,13 @@ public final class ItemMoveValidator {
         if (cursor.typeEntry == null || !cursor.typeEntry.Beltable) return ItemMoveFailure.ITEM_NOT_BELTABLE;
         Item target = ownedById(data, intent.itemId);
         return target == null || target.location != Location.BELT
+            ? ItemMoveFailure.ITEM_NOT_OWNED : ItemMoveFailure.NONE;
+      }
+      case ItemMoveOperation.USE_BELT_ITEM: {
+        if (intent.x < 0 || intent.x >= 4) return ItemMoveFailure.INVALID_BELT_SLOT;
+        Item potion = data.getBeltPotion(intent.x);
+        return potion == null || potion.id != intent.itemId || potion.type == null
+            || !potion.type.is(com.riiablo.item.Type.POTI)
             ? ItemMoveFailure.ITEM_NOT_OWNED : ItemMoveFailure.NONE;
       }
       default: return ItemMoveFailure.INVALID_OPERATION;

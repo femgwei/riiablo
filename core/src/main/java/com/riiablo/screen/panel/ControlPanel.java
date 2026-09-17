@@ -586,7 +586,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       Array<Item> items = itemData.toItemArray(beltItems);
 
       belt = new BeltGrid(4, 4, 31, 31, this);
-      belt.setRows(4);
+      belt.setRows(itemData.getBeltRows());
       belt.setBackground(popbelt);
       belt.setPosition(177, 8);
       belt.populate(items);
@@ -612,6 +612,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     @Override
     public void draw(Batch batch, float a) {
       ItemData itemData = Riiablo.charData.getItems();
+      belt.setRows(itemData.getBeltRows());
       belt.syncItems(itemData.toItemArray(itemData.getLocation(Location.BELT)));
       batch.draw(background, getX(), getY());
       super.draw(batch, a);

@@ -168,4 +168,12 @@ public class NetworkedClientItemManager extends ClientItemManager {
   public void swapBeltItem(int i) {
     send(ItemMoveOperation.SWAP_BELT_ITEM, itemId(i), -1, -1, -1, -1, -1, false);
   }
+
+  @Override
+  public void useBeltSlot(int column) {
+    com.riiablo.item.Item potion = Riiablo.charData == null
+        ? null : Riiablo.charData.getItems().getBeltPotion(column);
+    if (potion == null) return;
+    send(ItemMoveOperation.USE_BELT_ITEM, potion.id, -1, -1, column, -1, -1, false);
+  }
 }

@@ -124,6 +124,11 @@ public class ItemWrapper extends Actor implements Disposable {
 
   @Override
   public void dispose() {
-    Riiablo.assets.unload(invFileDescriptor.fileName);
+    if (invFileDescriptor == null || Riiablo.assets == null) return;
+    if (Riiablo.assets.contains(invFileDescriptor.fileName)) {
+      Riiablo.assets.unload(invFileDescriptor.fileName);
+    }
+    invFileDescriptor = null;
+    invFile = null;
   }
 }

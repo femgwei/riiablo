@@ -61,7 +61,7 @@ public final class AuthoritativeItemMoveService {
     long current = revision(playerEntityId);
     if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.SWAP_BELT_ITEM)
+        || intent.operation > ItemMoveOperation.USE_BELT_ITEM)
       return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
     if (intent.revision != current)
       return new Outcome(false, ItemMoveFailure.STALE_INVENTORY, current);
@@ -90,6 +90,11 @@ public final class AuthoritativeItemMoveService {
           character.cursorToBelt(intent.x, intent.y); break;
         case ItemMoveOperation.SWAP_BELT_ITEM:
           character.swapBeltItem(indexOf(character, intent.itemId)); break;
+        case ItemMoveOperation.USE_BELT_ITEM:
+          if (!character.useBeltPotion(intent.x)) {
+            return new Outcome(false, ItemMoveFailure.ITEM_NOT_OWNED, current);
+          }
+          break;
         case ItemMoveOperation.GROUND_TO_CURSOR:
         case ItemMoveOperation.CURSOR_TO_GROUND:
           // Ground entities are owned by ECS and use the overloads below.

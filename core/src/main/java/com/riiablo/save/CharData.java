@@ -879,6 +879,51 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     itemData.pickup(i);
   }
 
+  /** Uses the lowest potion in one of the four native belt columns. */
+  public boolean useBeltPotion(int column) {
+    Item potion = itemData.getBeltPotion(column);
+    if (potion == null || potion.type == null || !potion.type.is(Type.POTI)) return false;
+
+    if (potion.type.is(Type.HPOT)) {
+      restorePotionStat(Stat.hitpoints, Stat.maxhp, potionAmount(potion.code, true));
+    } else if (potion.type.is(Type.MPOT)) {
+      restorePotionStat(Stat.mana, Stat.maxmana, potionAmount(potion.code, false));
+    } else if (potion.type.is(Type.RPOT)) {
+      float percent = "rvl".equalsIgnoreCase(potion.code) ? 1f : 0.35f;
+      restorePotionPercent(Stat.hitpoints, Stat.maxhp, percent);
+      restorePotionPercent(Stat.mana, Stat.maxmana, percent);
+    } else {
+      // Do not silently delete stamina/antidote/thawing potions until their
+      // timed state effects are implemented.
+      return false;
+    }
+    return itemData.consumeBeltPotion(potion);
+  }
+
+  private static int potionAmount(String code, boolean health) {
+    int tier = code != null && code.length() > 2 && Character.isDigit(code.charAt(2))
+        ? code.charAt(2) - '0' : 1;
+    int[] values = health
+        ? new int[] {0, 30, 60, 100, 180, 320}
+        : new int[] {0, 40, 80, 160, 300, 500};
+    return values[Math.max(1, Math.min(5, tier))];
+  }
+
+  private void restorePotionPercent(short currentStat, short maximumStat, float percent) {
+    StatRef maximum = statData.aggregate().get(maximumStat, StatRef.obtain());
+    restorePotionStat(currentStat, maximumStat,
+        maximum == null ? 0f : maximum.asFixed() * percent);
+  }
+
+  private void restorePotionStat(short currentStat, short maximumStat, float amount) {
+    StatRef current = statData.aggregate().get(currentStat, StatRef.obtain());
+    StatRef maximum = statData.aggregate().get(maximumStat, StatRef.obtain());
+    if (current == null || maximum == null) return;
+    float value = Math.min(maximum.asFixed(), current.asFixed() + Math.max(0f, amount));
+    statData.base().put(currentStat, value);
+    statData.aggregate().put(currentStat, value);
+  }
+
   public static class MercData {
     public int   flags;
     public int   seed;

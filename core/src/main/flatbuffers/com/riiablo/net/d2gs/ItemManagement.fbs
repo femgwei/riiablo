@@ -12,7 +12,8 @@ enum ItemMoveOperation:byte {
   SWAP_BODY_ITEM,
   BELT_TO_CURSOR,
   CURSOR_TO_BELT,
-  SWAP_BELT_ITEM
+  SWAP_BELT_ITEM,
+  USE_BELT_ITEM
 }
 
 enum ItemMoveFailure:byte {

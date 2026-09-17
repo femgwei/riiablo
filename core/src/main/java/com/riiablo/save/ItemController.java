@@ -15,4 +15,5 @@ public interface ItemController {
   void beltToCursor(int i);
   void cursorToBelt(int x, int y);
   void swapBeltItem(int i);
+  void useBeltSlot(int column);
 }

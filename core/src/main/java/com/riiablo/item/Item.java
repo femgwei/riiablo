@@ -655,6 +655,11 @@ public class Item {
     wrapper.load();
   }
 
+  /** Releases client inventory artwork before an authoritative replacement. */
+  public void unload() {
+    wrapper.dispose();
+  }
+
   public float getX() {
     return wrapper.getX();
   }

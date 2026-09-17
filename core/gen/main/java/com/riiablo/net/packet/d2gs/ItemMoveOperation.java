@@ -15,8 +15,9 @@ public final class ItemMoveOperation {
   public static final byte BELT_TO_CURSOR = 8;
   public static final byte CURSOR_TO_BELT = 9;
   public static final byte SWAP_BELT_ITEM = 10;
+  public static final byte USE_BELT_ITEM = 11;
 
-  public static final String[] names = { "GROUND_TO_CURSOR", "CURSOR_TO_GROUND", "STORE_TO_CURSOR", "CURSOR_TO_STORE", "SWAP_STORE_ITEM", "BODY_TO_CURSOR", "CURSOR_TO_BODY", "SWAP_BODY_ITEM", "BELT_TO_CURSOR", "CURSOR_TO_BELT", "SWAP_BELT_ITEM", };
+  public static final String[] names = { "GROUND_TO_CURSOR", "CURSOR_TO_GROUND", "STORE_TO_CURSOR", "CURSOR_TO_STORE", "SWAP_STORE_ITEM", "BODY_TO_CURSOR", "CURSOR_TO_BODY", "SWAP_BODY_ITEM", "BELT_TO_CURSOR", "CURSOR_TO_BELT", "SWAP_BELT_ITEM", "USE_BELT_ITEM", };
 
   public static String name(int e) { return names[e]; }
 }

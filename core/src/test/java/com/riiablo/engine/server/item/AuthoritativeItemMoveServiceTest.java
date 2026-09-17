@@ -2,15 +2,23 @@ package com.riiablo.engine.server.item;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.netty.buffer.Unpooled;
 
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.BodyLoc;
+import com.riiablo.item.ItemReader;
+import com.riiablo.item.ItemWriter;
 import com.riiablo.item.Location;
 import com.riiablo.item.StoreLoc;
+import com.riiablo.io.ByteInput;
+import com.riiablo.io.ByteOutput;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.save.CharData;
@@ -122,6 +130,7 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   @Test
   void groundPotionUsesNextFreeBeltSlotThenFallsBackToInventory() {
     CharData character = character();
+    equipBelt(character, "hbl", 99);
     for (int i = 0; i < 16; i++) {
       assertTrue(character.getItems().addPotionToBelt(item("hp1", 100 + i)));
     }
@@ -139,6 +148,7 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   @Test
   void groundPotionFillsMatchingFamilyColumnBeforeStartingAnotherQuickSlot() {
     CharData character = character();
+    equipBelt(character, "hbl", 201);
     Item minorHealing = item("hp1", 202);
     assertTrue(character.getItems().addPotionToBelt(minorHealing));
     Item greaterHealing = item("hp5", 203);
@@ -165,6 +175,7 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   @Test
   void fullMatchingPotionColumnStartsAtFirstEmptyQuickSlot() {
     CharData character = character();
+    equipBelt(character, "hbl", 209);
     for (int i = 0; i < 4; i++) {
       Item potion = item(i == 0 ? "hp1" : "hp5", 210 + i);
       assertTrue(character.getItems().addPotionToBelt(potion));
@@ -197,6 +208,55 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
     assertEquals(StoreLoc.INVENTORY, armor.storeLoc);
   }
 
+  @Test
+  void characterWithoutBeltHasOnlyFourQuickSlots() {
+    CharData character = character();
+    assertEquals(1, character.getItems().getBeltRows());
+    for (int i = 0; i < 4; i++) {
+      assertTrue(character.getItems().addPotionToBelt(item("hp1", 230 + i)));
+    }
+    assertFalse(character.getItems().addPotionToBelt(item("hp1", 240)));
+  }
+
+  @Test
+  void useBeltItemConsumesBottomPotionAndShiftsColumnDown() {
+    CharData character = character();
+    equipBelt(character, "hbl", 250);
+    Item first = item("hp1", 251);
+    Item second = item("hp2", 252);
+    assertTrue(character.getItems().addPotionToBelt(first));
+    assertTrue(character.getItems().addPotionToBelt(second));
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+
+    AuthoritativeItemMoveService.Outcome result = service.apply(13, character,
+        intent(ItemMoveOperation.USE_BELT_ITEM, first.id, -1, 0, -1));
+
+    assertTrue(result.success);
+    assertFalse(character.getItems().contains(first));
+    assertSame(second, character.getItems().getBeltPotion(0));
+    assertEquals(0, second.gridY);
+  }
+
+  @Test
+  void townPortalScrollSurvivesPickupAndSnapshotEncoding() {
+    CharData character = character();
+    Item scroll = item("tsc", 260);
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+
+    AuthoritativeItemMoveService.Outcome result = service.pickup(
+        14, character, pickupIntent(0L, scroll), scroll);
+
+    assertTrue(result.success);
+    assertEquals(Location.STORED, scroll.location);
+    assertEquals(StoreLoc.INVENTORY, scroll.storeLoc);
+    ByteOutput encoded = ByteOutput.wrap(Unpooled.buffer());
+    new ItemWriter().writeItem(scroll, encoded);
+    Item decoded = new ItemReader().readItem(ByteInput.wrap(encoded.buffer()));
+
+    assertNotNull(decoded);
+    assertEquals("tsc", decoded.code);
+  }
+
   private static CharData character() {
     return CharData.obtain().set(Riiablo.NORMAL, false, "MoveHero", Riiablo.AMAZON);
   }
@@ -205,6 +265,12 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
     Item item = new ItemGenerator().generate(code);
     item.id = id;
     return item;
+  }
+
+  private static void equipBelt(CharData character, String code, int id) {
+    Item belt = item(code, id);
+    character.getItems().add(belt);
+    character.getItems().equipItem(BodyLoc.BELT, belt);
   }
 
   private static ItemMoveIntent intent(byte operation, int itemId,

@@ -16,6 +16,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Location;
 import com.riiablo.item.StoreLoc;
 import com.riiablo.save.CharData;
@@ -111,6 +112,7 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
   @Test
   void localPotionPickupFallsBackToInventoryWhenBeltIsFull() {
     Riiablo.charData = character("LocalPotionInventory", 0, 1);
+    equipBelt(Riiablo.charData, "hbl", 99);
     for (int i = 0; i < 16; i++) {
       assertTrue(Riiablo.charData.getItems().addPotionToBelt(generated("hp1", 100 + i)));
     }
@@ -160,6 +162,7 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
   @Test
   void localPickupLeavesItemOnGroundWhenAllDestinationsAreFull() {
     Riiablo.charData = character("LocalNoSpace", 0, 1);
+    equipBelt(Riiablo.charData, "hbl", 399);
     for (int i = 0; i < 16; i++) {
       assertTrue(Riiablo.charData.getItems().addPotionToBelt(generated("hp1", 400 + i)));
     }
@@ -217,6 +220,12 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
     com.riiablo.item.Item item = new ItemGenerator().generate(code);
     item.id = id;
     return item;
+  }
+
+  private static void equipBelt(CharData character, String code, int id) {
+    com.riiablo.item.Item belt = generated(code, id);
+    character.getItems().add(belt);
+    character.getItems().equipItem(BodyLoc.BELT, belt);
   }
 
   private static int groundItem(World world, com.riiablo.item.Item item) {

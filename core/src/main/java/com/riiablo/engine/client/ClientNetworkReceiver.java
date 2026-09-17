@@ -1410,6 +1410,17 @@ public class ClientNetworkReceiver extends IntervalSystem {
         }
       }
       Riiablo.charData.getItems().replaceFromAuthoritativeSnapshot(snapshot);
+      // Artwork is client-only state and must not decide whether an
+      // authoritative item exists. Load each icon after ownership has been
+      // committed so a missing/bad asset cannot make a picked item disappear.
+      for (Item item : snapshot) {
+        try {
+          item.load();
+        } catch (Throwable t) {
+          Gdx.app.error(TAG, "[ITEM_MOVE_SNAPSHOT] failed to load artwork for item "
+              + item.id + " code=" + item.code, t);
+        }
+      }
     }
     if (result.groundEntityId() >= 0 && result.groundItemDataLength() == 0) {
       int localEntityId = syncIds.get(result.groundEntityId());

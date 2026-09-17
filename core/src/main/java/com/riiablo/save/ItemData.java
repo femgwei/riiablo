@@ -111,6 +111,9 @@ public class ItemData {
 
   /** Replaces this ownership set from a server-authoritative snapshot. */
   public void replaceFromAuthoritativeSnapshot(Array<Item> snapshot) {
+    for (Item item : itemData) {
+      if (item != null) item.unload();
+    }
     itemData.clear();
     equipped.clear();
     equippedSets.clear();
@@ -590,13 +593,14 @@ public class ItemData {
         || !item.typeEntry.Beltable || item.type == null
         || !item.type.is(Type.POTI)) return false;
 
-    Item[][] occupied = new Item[4][4];
+    int rows = getBeltRows();
+    Item[][] occupied = new Item[rows][4];
     for (int i = 0; i < itemData.size; i++) {
       Item beltItem = itemData.get(i);
       if (beltItem == null || beltItem.location != Location.BELT) continue;
       int x = beltItem.gridX;
       int y = beltItem.gridY;
-      if (x < 0 || x >= 4 || y < 0 || y >= 4) return false;
+      if (x < 0 || x >= 4 || y < 0 || y >= rows) return false;
       occupied[y][x] = beltItem;
     }
 
@@ -604,7 +608,7 @@ public class ItemData {
     // 0..3 for a comparable potion, then walks that column by increments of 4.
     for (int x = 0; x < 4; x++) {
       if (!sameNativePotionType(item, occupied[0][x])) continue;
-      for (int y = 0; y < 4; y++) {
+      for (int y = 0; y < rows; y++) {
         if (occupied[y][x] == null) return addToBeltSlot(item, x, y);
       }
     }
@@ -615,6 +619,42 @@ public class ItemData {
       if (occupied[0][x] == null) return addToBeltSlot(item, x, 0);
     }
     return false;
+  }
+
+  /** Native belt height: four quick slots without a belt, up to four rows. */
+  public int getBeltRows() {
+    Item belt = getSlot(BodyLoc.BELT);
+    if (belt == null || belt.code == null) return 1;
+    String code = belt.code.toLowerCase(java.util.Locale.ROOT);
+    if ("hbl".equals(code) || "zhb".equals(code) || "uhc".equals(code)) return 4;
+    if ("mbl".equals(code) || "tbl".equals(code)
+        || "zmb".equals(code) || "ztb".equals(code)
+        || "umc".equals(code) || "utc".equals(code)) return 3;
+    return 2;
+  }
+
+  /** Returns the potion consumed by a number-key column, nearest row first. */
+  public Item getBeltPotion(int column) {
+    if (column < 0 || column >= 4) return null;
+    Item best = null;
+    for (Item item : itemData) {
+      if (item == null || item.location != Location.BELT || item.gridX != column) continue;
+      if (best == null || item.gridY < best.gridY) best = item;
+    }
+    return best;
+  }
+
+  /** Removes one belt potion and shifts the remaining column toward row zero. */
+  public boolean consumeBeltPotion(Item potion) {
+    if (potion == null || potion.location != Location.BELT) return false;
+    int column = potion.gridX;
+    int row = potion.gridY;
+    if (!removeOwnedItem(potion)) return false;
+    for (Item item : itemData) {
+      if (item != null && item.location == Location.BELT
+          && item.gridX == column && item.gridY > row) item.gridY--;
+    }
+    return true;
   }
 
   private boolean addToBeltSlot(Item item, int x, int y) {

@@ -551,6 +551,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           setLeftPanel(vendorPanel.isVisible() ? null : vendorPanel);
         } else if (key == Keys.SwapWeapons) {
           Riiablo.charData.getItems().alternate();
+        } else if (key == Keys.Belt1) {
+          itemController.useBeltSlot(0);
+        } else if (key == Keys.Belt2) {
+          itemController.useBeltSlot(1);
+        } else if (key == Keys.Belt3) {
+          itemController.useBeltSlot(2);
+        } else if (key == Keys.Belt4) {
+          itemController.useBeltSlot(3);
         }
       }
     };
@@ -1279,6 +1287,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     Keys.SwapWeapons.addStateListener(mappedKeyStateListener);
     Keys.Stash.addStateListener(mappedKeyStateListener);
     Keys.Vendor.addStateListener(mappedKeyStateListener);
+    Keys.Belt1.addStateListener(mappedKeyStateListener);
+    Keys.Belt2.addStateListener(mappedKeyStateListener);
+    Keys.Belt3.addStateListener(mappedKeyStateListener);
+    Keys.Belt4.addStateListener(mappedKeyStateListener);
     Riiablo.input.addProcessor(testingInputProcessor);
     Riiablo.input.addProcessor(stage);
     Riiablo.input.addProcessor(scaledStage);
@@ -1378,6 +1390,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     Keys.SwapWeapons.removeStateListener(mappedKeyStateListener);
     Keys.Stash.removeStateListener(mappedKeyStateListener);
     Keys.Vendor.removeStateListener(mappedKeyStateListener);
+    Keys.Belt1.removeStateListener(mappedKeyStateListener);
+    Keys.Belt2.removeStateListener(mappedKeyStateListener);
+    Keys.Belt3.removeStateListener(mappedKeyStateListener);
+    Keys.Belt4.removeStateListener(mappedKeyStateListener);
     Riiablo.input.removeProcessor(testingInputProcessor);
     Riiablo.input.removeProcessor(stage);
     Riiablo.input.removeProcessor(scaledStage);
