@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.IntMap;
@@ -916,7 +917,10 @@ public class AutomapManager implements Disposable {
       if (marker.name == null || marker.name.isEmpty()) continue;
       AutomapProjection.worldToAutomap(marker.worldX, marker.worldY, tmpVec);
       font.setColor(marker.color.r, marker.color.g, marker.color.b, opacity);
-      font.draw(batch, marker.name, tmpVec.x, tmpVec.y + marker.size + 12);
+      // Keep the label centered on the same projected point as the marker.
+      font.draw(batch, marker.name,
+          tmpVec.x, tmpVec.y + marker.size + 12,
+          0, Align.center, false);
     }
     font.setColor(previousR, previousG, previousB, previousA);
   }
