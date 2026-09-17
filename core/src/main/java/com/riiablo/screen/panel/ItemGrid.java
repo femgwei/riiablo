@@ -15,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectSet;
+import com.badlogic.gdx.utils.SnapshotArray;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.AttributesUpdater;
@@ -121,6 +122,50 @@ public class ItemGrid extends Group {
   public void populate(Array<Item> items) {
     for (Item item : items) {
       addItem(item);
+    }
+  }
+
+  /**
+   * Reconciles the visible grid with the authoritative ItemData collection.
+   * Direct ground pickup and network snapshots mutate ItemData without going
+   * through the grid's cursor click handlers, so the UI cannot rely on those
+   * handlers to add or remove actors.
+   */
+  public void syncItems(Array<Item> items) {
+    SnapshotArray<Actor> children = getChildren();
+    Actor[] snapshot = children.begin();
+    for (int i = children.size - 1; i >= 0; i--) {
+      Actor child = snapshot[i];
+      if (!(child instanceof ItemGrid.StoredItem)) continue;
+      StoredItem stored = (StoredItem) child;
+      if (items == null || !items.contains(stored.item, true)) removeActor(stored);
+    }
+    children.end();
+
+    if (items == null) return;
+    for (Item item : items) {
+      StoredItem stored = findItemActor(item);
+      if (stored == null) {
+        stored = addItem(item);
+      } else {
+        stored.setPosition(item.gridX * boxWidth,
+            getHeight() - item.gridY * boxHeight - stored.getHeight());
+      }
+    }
+  }
+
+  private StoredItem findItemActor(Item item) {
+    SnapshotArray<Actor> children = getChildren();
+    Actor[] snapshot = children.begin();
+    try {
+      for (int i = 0, size = children.size; i < size; i++) {
+        Actor child = snapshot[i];
+        if (child instanceof ItemGrid.StoredItem
+            && ((StoredItem) child).item == item) return (StoredItem) child;
+      }
+      return null;
+    } finally {
+      children.end();
     }
   }
 

@@ -99,6 +99,8 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
 
       assertEquals(Location.BELT, potion.location);
       assertEquals(StoreLoc.NONE, potion.storeLoc);
+      assertTrue(Riiablo.charData.getItems().toItemArray(
+          Riiablo.charData.getItems().getLocation(Location.BELT)).contains(potion, true));
       assertNull(Riiablo.charData.getItems().getCursor());
       assertFalse(world.getEntityManager().isActive(entity));
     } finally {
@@ -123,6 +125,8 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
 
       assertEquals(Location.STORED, potion.location);
       assertEquals(StoreLoc.INVENTORY, potion.storeLoc);
+      assertTrue(Riiablo.charData.getItems().toItemArray(
+          Riiablo.charData.getItems().getStore(StoreLoc.INVENTORY)).contains(potion, true));
       assertNull(Riiablo.charData.getItems().getCursor());
       assertFalse(world.getEntityManager().isActive(entity));
     } finally {
@@ -144,6 +148,8 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
 
       assertEquals(Location.STORED, armor.location);
       assertEquals(StoreLoc.INVENTORY, armor.storeLoc);
+      assertTrue(Riiablo.charData.getItems().toItemArray(
+          Riiablo.charData.getItems().getStore(StoreLoc.INVENTORY)).contains(armor, true));
       assertNull(Riiablo.charData.getItems().getCursor());
       assertFalse(world.getEntityManager().isActive(entity));
     } finally {

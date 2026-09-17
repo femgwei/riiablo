@@ -76,6 +76,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   protected AttributesUpdater updater = new AttributesUpdater(); // TODO: inject
   final BodyPart[] bodyParts = new BodyPart[BodyLocs.NUM_LOCS];
+  final ItemGrid grid;
 
   public InventoryPanel() {
     Riiablo.assets.load(invcharDescriptor);
@@ -273,7 +274,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       }
     });
 
-    ItemGrid grid = new ItemGrid(inventory, this);
+    grid = new ItemGrid(inventory, this);
     IntArray inventoryItems = itemData.getStore(StoreLoc.INVENTORY);
     Array<Item> items = itemData.toItemArray(inventoryItems);
     grid.populate(items);
@@ -326,6 +327,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     // death/corpse handling, so refresh from the authoritative slot map and
     // never leave a clickable image for an already detached item.
     ItemData itemData = Riiablo.charData.getItems();
+    grid.syncItems(itemData.toItemArray(itemData.getStore(StoreLoc.INVENTORY)));
     for (BodyPart bodyPart : bodyParts) {
       if (bodyPart != null) bodyPart.item = itemData.getSlot(bodyPart.bodyLoc);
     }

@@ -547,6 +547,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     MinipanelWidget minipanelWidget;
 
     Texture background;
+    final BeltGrid belt;
 
     ControlWidget(Texture background) {
       this.background = background;
@@ -584,7 +585,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       IntArray beltItems = itemData.getLocation(Location.BELT);
       Array<Item> items = itemData.toItemArray(beltItems);
 
-      final BeltGrid belt = new BeltGrid(4, 4, 31, 31, this);
+      belt = new BeltGrid(4, 4, 31, 31, this);
       belt.setRows(4);
       belt.setBackground(popbelt);
       belt.setPosition(177, 8);
@@ -610,6 +611,8 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void draw(Batch batch, float a) {
+      ItemData itemData = Riiablo.charData.getItems();
+      belt.syncItems(itemData.toItemArray(itemData.getLocation(Location.BELT)));
       batch.draw(background, getX(), getY());
       super.draw(batch, a);
     }
