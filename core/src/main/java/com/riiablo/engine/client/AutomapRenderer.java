@@ -148,19 +148,23 @@ public class AutomapRenderer extends BaseSystem {
 
   private void loadNativeAutomapSave() {
     if (nativeAutomapLoaded) return;
-    nativeAutomapLoaded = true;
     if (Riiablo.saves == null || Riiablo.charData == null) return;
     String name = Riiablo.charData.name;
     int difficulty = Riiablo.charData.diff;
     if (name == null || name.isEmpty() || difficulty < 0 || difficulty > 3) return;
+    // Mark the load complete only after all prerequisites and character
+    // identity are available.  GameScreen/world construction can call this
+    // before the global save handle has been installed; keeping the flag
+    // false allows the next render/save transition to retry.
+    nativeAutomapLoaded = true;
     nativeAutomapCharacter = name;
     nativeAutomapDifficulty = difficulty;
-    nativeAutomapSeed = Riiablo.charData.mapSeed;
+    nativeAutomapSeed = map != null ? map.seed() : Riiablo.charData.mapSeed;
     try {
       FileHandle mapFile = Riiablo.saves.child(name + ".map");
       if (mapFile.exists()) {
         AutomapExplorationStore.MapSeeds seeds = AutomapExplorationStore.readMap(mapFile);
-        if (seeds.seed(difficulty) != 0 && seeds.seed(difficulty) != Riiablo.charData.mapSeed) {
+        if (seeds.seed(difficulty) != 0 && seeds.seed(difficulty) != nativeAutomapSeed) {
           Gdx.app.log(TAG, "Ignoring native Automap save with mismatched map seed");
           return;
         }
@@ -179,6 +183,10 @@ public class AutomapRenderer extends BaseSystem {
   public void saveNativeAutomap() {
     if (Riiablo.saves == null || automapManager == null) return;
     loadNativeAutomapSave();
+    // A quit/menu transition can happen between fixed simulation ticks. Make
+    // the current room reveal authoritative before converting runtime cells
+    // back into the native .ma representation.
+    updateExplorationFromPlayer();
     // Shutdown/menu transitions can clear or reuse the shared CharData before
     // this system is disposed. Persist against the identity captured at load.
     String name = nativeAutomapCharacter;

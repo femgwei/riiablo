@@ -379,15 +379,18 @@ public class AutomapManager implements Disposable {
       AutomapExplorationStore.MaFile existing) {
     AutomapExplorationStore.MaFile result = copyNativeAutomap(existing);
     if (Riiablo.files == null || Riiablo.files.Levels == null) return result;
-    for (IntMap.Entry<Boolean> built : nativeCellsBuilt) {
-      if (!Boolean.TRUE.equals(built.value)) continue;
-      AutomapLayer source = layers.get(built.key);
+    for (IntMap.Entry<AutomapLayer> entry : layers) {
+      int levelId = entry.key;
+      AutomapLayer source = entry.value;
       if (source == null) continue;
-      Levels.Entry level = Riiablo.files.Levels.get(built.key);
+      boolean hasCells = source.floors.size > 0 || source.roads.size > 0
+          || source.walls.size > 0 || source.objects.size > 0 || source.extras.size > 0;
+      if (!Boolean.TRUE.equals(nativeCellsBuilt.get(levelId)) && !hasCells) continue;
+      Levels.Entry level = Riiablo.files.Levels.get(levelId);
       if (level == null || level.Layer < 1 || level.Layer > result.layers.length) continue;
       AutomapExplorationStore.Layer nativeLayer = result.layers[level.Layer - 1];
       if (nativeLayer == null) nativeLayer = new AutomapExplorationStore.Layer();
-      Integer unknown = nativeLayerUnknown.get(built.key);
+      Integer unknown = nativeLayerUnknown.get(levelId);
       if (unknown != null) nativeLayer.unknown = unknown;
       copyNativeCells(source.floors, source, nativeLayer.floors);
       copyNativeCells(source.roads, source, nativeLayer.floors);

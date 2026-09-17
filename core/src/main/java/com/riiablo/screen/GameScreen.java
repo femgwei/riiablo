@@ -1018,6 +1018,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     // including the experience bar, then re-anchor from the new layout.
     stage.getViewport().update(width, height, true);
     if (controlPanel == null) return;
+    if (inventoryPanel != null) inventoryPanel.setPosition(
+        stage.getWidth() - inventoryPanel.getWidth(),
+        stage.getHeight() - inventoryPanel.getHeight());
     if (Boolean.TRUE.equals(Cvars.Client.Display.KeepControlPanelGrouped.get())) {
       controlPanel.setWidth(stage.getWidth());
       controlPanel.layout();
@@ -1379,6 +1382,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   @Override
   public void hide() {
+    // Persist exploration on every screen transition as well as final
+    // disposal.  Waypoint/act loading keeps this GameScreen on the screen
+    // stack, so waiting for dispose would otherwise lose the latest reveal.
+    if (engine != null) {
+      AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
+      if (automapRenderer != null) automapRenderer.saveNativeAutomap();
+    }
     Keys.DebugMode.removeStateListener(debugKeyListener);
     Keys.Esc.removeStateListener(mappedKeyStateListener);
     Keys.Enter.removeStateListener(mappedKeyStateListener);
@@ -1420,6 +1430,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     if (actor == null) return;
     actor.setVisible(true);
+    // The control panel is intentionally brought to the front during screen
+    // creation.  An opened equipment/side panel must be promoted afterwards,
+    // otherwise the health/mana bar paints over its lower edge.
+    actor.toFront();
     right = actor;
   }
 
@@ -1430,6 +1444,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     if (actor == null) return;
     actor.setVisible(true);
+    actor.toFront();
     left = actor;
   }
 
