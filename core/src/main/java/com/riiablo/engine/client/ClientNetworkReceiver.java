@@ -1265,10 +1265,10 @@ public class ClientNetworkReceiver extends IntervalSystem {
     com.riiablo.engine.server.component.serializer.VitalsSerializer.apply(wrapper, data);
     float hitpoints = wrapper.attrs.aggregate().getValue(Stat.hitpoints, 0f);
     if (oldHitpoints != hitpoints || data.dead()) {
-      Gdx.app.log(TAG, String.format(
-          "[VITALS_SYNC] entity=%d hp=%.3f oldHp=%.3f maxHp=%.3f mana=%.3f maxMana=%.3f dead=%s",
+          Gdx.app.log(TAG, String.format(
+          "[VITALS_SYNC] entity=%d hp=%.3f oldHp=%.3f maxHp=%.3f mana=%.3f maxMana=%.3f stamina=%.3f maxStamina=%.3f dead=%s",
           entityId, hitpoints, oldHitpoints, data.maxHitpoints(), data.mana(),
-          data.maxMana(), data.dead()));
+          data.maxMana(), data.stamina(), data.maxStamina(), data.dead()));
     }
     if (oldHitpoints > 0f && data.dead()) {
       Gdx.app.log(TAG, String.format(

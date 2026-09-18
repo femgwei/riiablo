@@ -54,6 +54,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   final AssetDescriptor<DC6> ctrlpnlDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl7.DC6", DC6.class);
   HealthWidget healthWidget;
   ManaWidget manaWidget;
+  StaminaWidget staminaWidget;
   ControlWidget controlWidget;
 
   final AssetDescriptor<DC6> hlthmanaDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\hlthmana.DC6", DC6.class);
@@ -144,6 +145,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     final int numFrames = ctrlpnl.getNumFramesPerDir();
     healthWidget = new HealthWidget(ctrlpnl.getTexture(0));
     manaWidget = new ManaWidget(ctrlpnl.getTexture(numFrames - 2));
+    staminaWidget = new StaminaWidget();
 
     // Create experience widget (无纹理依赖，参考 OpenDiablo2)
     experienceWidget = new ExperienceWidget();
@@ -237,7 +239,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     experienceWidget.setWidth(EXP_BAR_WIDTH);
     experienceWidget.setHeight(EXP_BAR_HEIGHT);
     addActor(experienceWidget); // 直接添加到面板，但位置跟随 controlWidget 布局
+    addActor(staminaWidget);
     updateExperienceWidgetLayout();
+    updateStaminaWidgetLayout();
 
     //setHeight(controlWidget.background.getHeight() - 7);
     //setY(0);
@@ -266,10 +270,26 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     experienceWidget.setPosition(anchorX, anchorY);
   }
 
+  /** Keeps the stamina meter centered above the control panel as the UI scales. */
+  private void updateStaminaWidgetLayout() {
+    if (staminaWidget == null) return;
+    float anchorX;
+    float anchorY;
+    if (controlWidget != null) {
+      anchorX = controlWidget.getX() + (controlWidget.getWidth() - staminaWidget.getWidth()) / 2f;
+      anchorY = controlWidget.getY() + controlWidget.getHeight() - 7f;
+    } else {
+      anchorX = (getWidth() - staminaWidget.getWidth()) / 2f;
+      anchorY = getHeight() - 7f;
+    }
+    staminaWidget.setPosition(anchorX, anchorY);
+  }
+
   @Override
   public void layout() {
     super.layout();
     updateExperienceWidgetLayout();
+    updateStaminaWidgetLayout();
   }
 
   @Override
@@ -297,6 +317,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     Riiablo.assets.unload(hlthmanaDescriptor.fileName);
     Riiablo.assets.unload(SkilliconDescriptor.fileName);
     if (experienceWidget != null) experienceWidget.dispose();
+    if (staminaWidget != null) staminaWidget.dispose();
     if (controlWidget != null) controlWidget.dispose();
   }
 
@@ -404,6 +425,51 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
             (int) maxMana));
         label.draw(batch, a);
       }
+    }
+  }
+
+  /** Compact stamina meter matching the native panel's horizontal resource cue. */
+  private class StaminaWidget extends Actor {
+    private static final float WIDTH = 62f;
+    private static final float HEIGHT = 3f;
+    private static final float BORDER = 1f;
+    private final TextureRegion pixel;
+    private final Texture pixelTexture;
+
+    StaminaWidget() {
+      setSize(WIDTH, HEIGHT);
+      Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+      pixmap.setColor(Color.WHITE);
+      pixmap.fill();
+      pixelTexture = new Texture(pixmap);
+      pixel = new TextureRegion(pixelTexture);
+      pixmap.dispose();
+      setTouchable(Touchable.disabled);
+    }
+
+    @Override
+    public void draw(Batch batch, float a) {
+      if (Riiablo.charData == null || Riiablo.charData.getStats() == null) return;
+      StatRef currentRef = Riiablo.charData.getStats().get(Stat.stamina);
+      StatRef maximumRef = Riiablo.charData.getStats().get(Stat.maxstamina);
+      if (currentRef == null || maximumRef == null) return;
+      float current = currentRef.asFixed();
+      float maximum = maximumRef.asFixed();
+      float ratio = maximum > 0f ? Math.max(0f, Math.min(1f, current / maximum)) : 0f;
+      float x = getX();
+      float y = getY();
+      batch.setColor(0f, 0f, 0f, 0.72f);
+      batch.draw(pixel, x, y, WIDTH, HEIGHT);
+      if (ratio > 0f) {
+        batch.setColor(0.95f, 0.72f, 0.16f, 1f);
+        batch.draw(pixel, x + BORDER, y + BORDER, (WIDTH - 2f * BORDER) * ratio,
+            HEIGHT - 2f * BORDER);
+      }
+      batch.setColor(Color.WHITE);
+    }
+
+    void dispose() {
+      pixelTexture.dispose();
     }
   }
 

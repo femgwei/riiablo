@@ -208,6 +208,8 @@ table VitalsP {
   mana:float32;
   maxMana:float32;
   dead:bool;
+  stamina:float32;
+  maxStamina:float32;
 }
 
 // Animation identity is authoritative because attack/death transitions are

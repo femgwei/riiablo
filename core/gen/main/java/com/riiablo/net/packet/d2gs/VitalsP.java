@@ -20,14 +20,20 @@ public final class VitalsP extends Table {
   public float mana() { int o = __offset(8); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
   public float maxMana() { int o = __offset(10); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
   public boolean dead() { int o = __offset(12); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
+  public float stamina() { int o = __offset(14); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
+  public float maxStamina() { int o = __offset(16); return o != 0 ? bb.getFloat(o + bb_pos) : 0.0f; }
 
   public static int createVitalsP(FlatBufferBuilder builder,
       float hitpoints,
       float maxHitpoints,
       float mana,
       float maxMana,
-      boolean dead) {
-    builder.startTable(5);
+      boolean dead,
+      float stamina,
+      float maxStamina) {
+    builder.startTable(7);
+    VitalsP.addMaxStamina(builder, maxStamina);
+    VitalsP.addStamina(builder, stamina);
     VitalsP.addMaxMana(builder, maxMana);
     VitalsP.addMana(builder, mana);
     VitalsP.addMaxHitpoints(builder, maxHitpoints);
@@ -36,12 +42,14 @@ public final class VitalsP extends Table {
     return VitalsP.endVitalsP(builder);
   }
 
-  public static void startVitalsP(FlatBufferBuilder builder) { builder.startTable(5); }
+  public static void startVitalsP(FlatBufferBuilder builder) { builder.startTable(7); }
   public static void addHitpoints(FlatBufferBuilder builder, float hitpoints) { builder.addFloat(0, hitpoints, 0.0f); }
   public static void addMaxHitpoints(FlatBufferBuilder builder, float maxHitpoints) { builder.addFloat(1, maxHitpoints, 0.0f); }
   public static void addMana(FlatBufferBuilder builder, float mana) { builder.addFloat(2, mana, 0.0f); }
   public static void addMaxMana(FlatBufferBuilder builder, float maxMana) { builder.addFloat(3, maxMana, 0.0f); }
   public static void addDead(FlatBufferBuilder builder, boolean dead) { builder.addBoolean(4, dead, false); }
+  public static void addStamina(FlatBufferBuilder builder, float stamina) { builder.addFloat(5, stamina, 0.0f); }
+  public static void addMaxStamina(FlatBufferBuilder builder, float maxStamina) { builder.addFloat(6, maxStamina, 0.0f); }
   public static int endVitalsP(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

@@ -4822,6 +4822,7 @@ public class D2GS extends ApplicationAdapter {
         // Native 25 Hz phase order: state/stat decay first, then projectile
         // movement and collision, then unit/AI behavior and death handlers.
         .with(new StateUpdater())
+        .with(new com.riiablo.engine.server.StaminaSystem())
         .with(new MissileCollisionSystem())
         .with(new Actioneer())
         .with(new com.riiablo.engine.server.MercenaryFollowSystem())

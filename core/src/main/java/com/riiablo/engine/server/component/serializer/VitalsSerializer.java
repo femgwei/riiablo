@@ -9,7 +9,7 @@ import com.riiablo.net.packet.d2gs.ComponentP;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.VitalsP;
 
-/** Serializes the resolved server-authoritative life and mana resources. */
+/** Serializes the resolved server-authoritative life, mana, and stamina resources. */
 public class VitalsSerializer implements FlatBuffersSerializer<AttributesWrapper, VitalsP> {
   public static final VitalsP table = new VitalsP();
 
@@ -28,7 +28,9 @@ public class VitalsSerializer implements FlatBuffersSerializer<AttributesWrapper
         fixed(attrs, Stat.maxhp),
         fixed(attrs, Stat.mana),
         fixed(attrs, Stat.maxmana),
-        hitpoints <= 0f);
+        hitpoints <= 0f,
+        fixed(attrs, Stat.stamina),
+        fixed(attrs, Stat.maxstamina));
   }
 
   @Override
@@ -52,6 +54,8 @@ public class VitalsSerializer implements FlatBuffersSerializer<AttributesWrapper
     component.attrs.aggregate().put(Stat.maxhp, sanitize(data.maxHitpoints()));
     component.attrs.aggregate().put(Stat.mana, sanitize(data.mana()));
     component.attrs.aggregate().put(Stat.maxmana, sanitize(data.maxMana()));
+    component.attrs.aggregate().put(Stat.stamina, sanitize(data.stamina()));
+    component.attrs.aggregate().put(Stat.maxstamina, sanitize(data.maxStamina()));
   }
 
   private static float fixed(Attributes attrs, short stat) {

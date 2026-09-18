@@ -793,6 +793,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         // Explicit native 25 Hz order: state/stat decay, missile movement and
         // collision, then unit/AI behavior and death processing.
         .with(new StateUpdater())
+        .with(new com.riiablo.engine.server.StaminaSystem())
         .with(new MissileCollisionSystem())
         .with(new Actioneer()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.server.ServerMonsterCorpseSystem())

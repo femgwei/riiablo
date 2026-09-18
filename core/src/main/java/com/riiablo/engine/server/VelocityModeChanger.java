@@ -15,6 +15,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.AnimData;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MovementModes;
@@ -36,6 +37,7 @@ public class VelocityModeChanger extends IteratingSystem {
   static final int PLAYER_WALK_ANIM_SPEED = 213;
 
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<MovementModes> mMovementModes;
@@ -70,7 +72,7 @@ public class VelocityModeChanger extends IteratingSystem {
     if (velocityComp == null) return; // Player may be dead (Velocity component removed)
     Vector2 velocity = velocityComp.velocity;
     if (velocity.isZero()) return;
-    if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+    if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || !hasRunStamina(Riiablo.game.player)) {
       mRunning.remove(Riiablo.game.player);
       velocity.setLength(velocityComp.walkSpeed);
     } else {
@@ -123,6 +125,16 @@ public class VelocityModeChanger extends IteratingSystem {
             PLAYER_WALK_ANIM_SPEED, currentVelocity.len(), velocity.walkSpeed);
       }
     }
+  }
+
+  /** A depleted stamina pool must force walking until recovery begins. */
+  private boolean hasRunStamina(int entityId) {
+    if (!mAttributes.has(entityId)) return true;
+    AttributesWrapper wrapper = mAttributes.get(entityId);
+    if (wrapper == null || wrapper.attrs == null) return true;
+    float stamina = wrapper.attrs.aggregate().getValue(com.riiablo.attributes.Stat.stamina, 0f);
+    float maximum = wrapper.attrs.aggregate().getValue(com.riiablo.attributes.Stat.maxstamina, 0f);
+    return maximum <= 0f || stamina > 0.0001f;
   }
 
   static int scaleAnimationSpeed(int baseAnimSpeed, float currentSpeed, float baseVelocity) {
