@@ -94,11 +94,12 @@ public class PlayerStatsManager {
     StatListRef aggregate = charData.getStats().aggregate();
 
     // 检查是否有可用属性点
-    int availablePoints = getInt(stats, Stat.statpts, 0);
+    int availablePoints = charData.getAvailableStatPoints();
     if (availablePoints <= 0) {
       log.debug("No stat points available");
       return RESULT_NO_POINTS;
     }
+    charData.setAvailablePoints(Stat.statpts, availablePoints);
 
     // 获取角色职业配置
     CharacterClass classId = CharacterClass.get(charData.charClass & 0xFF);
@@ -272,18 +273,16 @@ public class PlayerStatsManager {
     if (!SKILL_OK.equals(validation)) return false;
 
     StatListRef stats = charData.getStats().base();
-    int availablePoints = getInt(stats, Stat.newskills, 0);
+    int availablePoints = charData.getAvailableSkillPoints();
     int currentLevel = charData.getBaseSkillLevel(skillId);
 
     // 扣除技能点
-    stats.put(Stat.newskills, availablePoints - 1);
-    charData.getStats().aggregate().put(Stat.newskills, availablePoints - 1);
+    charData.setAvailablePoints(Stat.newskills, availablePoints - 1);
 
     // Increase the saved/base skill level and notify the client UI.
     if (!charData.setSkillLevel(skillId, currentLevel + 1)) {
       // Keep the point available if the character data rejected the update.
-      stats.put(Stat.newskills, availablePoints);
-      charData.getStats().aggregate().put(Stat.newskills, availablePoints);
+      charData.setAvailablePoints(Stat.newskills, availablePoints);
       return false;
     }
     log.info("[SKILL_POINT_SPEND] character={} skill={} level={}->{} points={}->{}",
@@ -299,7 +298,7 @@ public class PlayerStatsManager {
     if (skill == null) return SKILL_INVALID;
     int classId = charData.charClass & 0xFF;
     if (!isValidSkillForClass(classId, skillId)) return SKILL_WRONG_CLASS;
-    if (getInt(charData.getStats().base(), Stat.newskills, 0) <= 0) return SKILL_NO_POINTS;
+    if (charData.getAvailableSkillPoints() <= 0) return SKILL_NO_POINTS;
     if (charData.getBaseSkillLevel(skillId) >= getMaxSkillLevel(skillId)) {
       return SKILL_MAX_LEVEL;
     }
@@ -392,7 +391,7 @@ public class PlayerStatsManager {
    */
   public int getAvailableStatPoints(CharData charData) {
     if (charData == null) return 0;
-    return getInt(charData.getStats().base(), Stat.statpts, 0);
+    return charData.getAvailableStatPoints();
   }
 
   /**
@@ -400,7 +399,7 @@ public class PlayerStatsManager {
    */
   public int getAvailableSkillPoints(CharData charData) {
     if (charData == null) return 0;
-    return getInt(charData.getStats().base(), Stat.newskills, 0);
+    return charData.getAvailableSkillPoints();
   }
 
   /**

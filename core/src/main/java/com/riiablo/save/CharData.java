@@ -664,7 +664,22 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   /** Returns the unspent skill points currently available to this character. */
   public int getAvailableSkillPoints() {
     StatRef points = statData.aggregate().get(Stat.newskills);
+    if (points == null) points = statData.base().get(Stat.newskills);
     return points == null ? 0 : Math.max(0, points.asInt());
+  }
+
+  /** Returns unspent attribute points, preferring the presentation aggregate. */
+  public int getAvailableStatPoints() {
+    StatRef points = statData.aggregate().get(Stat.statpts);
+    if (points == null) points = statData.base().get(Stat.statpts);
+    return points == null ? 0 : Math.max(0, points.asInt());
+  }
+
+  /** Updates an unspent point counter in both the save/base and presentation lists. */
+  public void setAvailablePoints(short stat, int value) {
+    int safeValue = Math.max(0, value);
+    statData.base().put(stat, safeValue);
+    statData.aggregate().put(stat, safeValue);
   }
 
   /**

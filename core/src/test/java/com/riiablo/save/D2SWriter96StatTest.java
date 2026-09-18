@@ -18,6 +18,8 @@ class D2SWriter96StatTest extends RiiabloTest {
     source.attrs = Attributes.obtainLarge();
     source.attrs.base().putEncoded(Stat.hitpoints, 50 << 8);
     source.attrs.base().put(Stat.level, 1);
+    source.attrs.base().put(Stat.statpts, 5);
+    source.attrs.base().put(Stat.newskills, 1);
 
     ByteOutput out = ByteOutput.wrap(Unpooled.buffer());
     new D2SWriter96().writeStatData(source, out);
@@ -27,5 +29,7 @@ class D2SWriter96StatTest extends RiiabloTest {
     assertEquals(50, decoded.attrs.base().get(Stat.hitpoints).asInt());
     assertEquals(50 << 8, decoded.attrs.base().get(Stat.hitpoints).encodedValues());
     assertEquals(1, decoded.attrs.base().get(Stat.level).asInt());
+    assertEquals(5, decoded.attrs.base().get(Stat.statpts).asInt());
+    assertEquals(1, decoded.attrs.base().get(Stat.newskills).asInt());
   }
 }

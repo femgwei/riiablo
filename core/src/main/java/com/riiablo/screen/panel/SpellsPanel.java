@@ -187,8 +187,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
 
   private void updateSkillPoints(CharData client) {
     if (client == null || client.getStats() == null) return;
-    StatRef points = client.getStats().aggregate().get(com.riiablo.attributes.Stat.newskills);
-    int value = points == null ? 0 : Math.max(0, points.asInt());
+    int value = client.getAvailableSkillPoints();
     if (value == availableSkillPoints) return;
     availableSkillPoints = value;
     skillsRemaining.setText(Integer.toString(value));
@@ -206,6 +205,12 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     // the allocation controls appear immediately when the panel is open.
     updateSkillPoints(Riiablo.charData);
     super.act(delta);
+  }
+
+  @Override
+  public void setVisible(boolean visible) {
+    super.setVisible(visible);
+    updateSkillPoints(Riiablo.charData);
   }
 
   private static Color getColor(String str) {

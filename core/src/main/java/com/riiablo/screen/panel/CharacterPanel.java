@@ -290,7 +290,7 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   }
 
   private void updateStatPointControls() {
-    int available = PlayerStatsManager.INSTANCE.getAvailableStatPoints(Riiablo.charData);
+    int available = Riiablo.charData == null ? 0 : Riiablo.charData.getAvailableStatPoints();
     if (statPoints != null) statPoints.setText(Integer.toString(available));
     if (levelValue != null) {
       levelValue.setText(Integer.toString(
@@ -308,6 +308,14 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   @Override
   public void act(float delta) {
     super.act(delta);
+    updateStatPointControls();
+  }
+
+  @Override
+  public void setVisible(boolean visible) {
+    super.setVisible(visible);
+    // Refresh synchronously when the panel is opened. Waiting for the next
+    // stage tick made newly awarded points appear to be missing.
     updateStatPointControls();
   }
 

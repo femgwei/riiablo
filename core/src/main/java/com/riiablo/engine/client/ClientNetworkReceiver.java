@@ -564,10 +564,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
     Riiablo.charData.getStats().aggregate().put(Stat.experience, experience);
     Riiablo.charData.getStats().base().put(Stat.level, level);
     Riiablo.charData.getStats().aggregate().put(Stat.level, level);
-    Riiablo.charData.getStats().base().put(Stat.newskills, skillPoints);
-    Riiablo.charData.getStats().aggregate().put(Stat.newskills, skillPoints);
-    Riiablo.charData.getStats().base().put(Stat.statpts, statPoints);
-    Riiablo.charData.getStats().aggregate().put(Stat.statpts, statPoints);
+    Riiablo.charData.setAvailablePoints(Stat.newskills, skillPoints);
+    Riiablo.charData.setAvailablePoints(Stat.statpts, statPoints);
     Riiablo.charData.level = (byte) level;
 
     int questCount = Math.min(data.questRecordsLength(), com.riiablo.Riiablo.NUM_ACTS * 8);
@@ -616,6 +614,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
           entityId, experience, oldExperience, level, oldLevel, skillPoints, oldSkillPoints,
           statPoints, oldStatPoints, wireSkills));
     }
+    if (oldSkillPoints != skillPoints) Riiablo.charData.notifySkillChanged();
   }
 
   private void applyObjectSnapshot(int entityId, com.riiablo.net.packet.d2gs.ObjectP snapshot) {
@@ -684,8 +683,8 @@ public class ClientNetworkReceiver extends IntervalSystem {
         new SpendSkillPointResult());
     if (Riiablo.charData != null && result.success()) {
       Riiablo.charData.setSkillLevel(result.skillId(), result.skillLevel());
-      Riiablo.charData.getStats().base().put(Stat.newskills, result.skillPoints());
-      Riiablo.charData.getStats().aggregate().put(Stat.newskills, result.skillPoints());
+      Riiablo.charData.setAvailablePoints(Stat.newskills, result.skillPoints());
+      Riiablo.charData.notifySkillChanged();
     }
     Gdx.app.log(TAG, "[SKILL_POINT_NET] phase=result request=" + result.requestId()
         + " success=" + result.success() + " reason=" + result.reason()
@@ -713,8 +712,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
         Riiablo.charData.getStats().base().put(stat, result.statValue());
         Riiablo.charData.getStats().aggregate().put(stat, result.statValue());
       }
-      Riiablo.charData.getStats().base().put(Stat.statpts, result.statPoints());
-      Riiablo.charData.getStats().aggregate().put(Stat.statpts, result.statPoints());
+      Riiablo.charData.setAvailablePoints(Stat.statpts, result.statPoints());
     }
     Gdx.app.log(TAG, "[STAT_POINT_NET] phase=result request=" + result.requestId()
         + " success=" + result.success() + " reason=" + result.reason()
