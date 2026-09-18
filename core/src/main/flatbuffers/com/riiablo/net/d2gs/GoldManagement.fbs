@@ -1,0 +1,24 @@
+namespace com.riiablo.net.packet.d2gs;
+
+enum GoldOperation:byte {
+  DROP,
+  DEPOSIT,
+  WITHDRAW
+}
+
+table GoldRequest {
+  requestId:uint32;
+  operation:GoldOperation;
+  amount:uint32;
+}
+
+table GoldResult {
+  requestId:uint32;
+  success:bool;
+  reason:string;
+  operation:GoldOperation;
+  amount:uint32;
+  gold:uint32;
+  goldBank:uint32;
+  groundEntityId:int32 = -1;
+}

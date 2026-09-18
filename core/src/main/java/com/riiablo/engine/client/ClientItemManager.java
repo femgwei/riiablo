@@ -9,6 +9,7 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.StoreLoc;
 import com.riiablo.item.VendorPricing;
@@ -143,5 +144,35 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     if (potion != null && Riiablo.charData.useBeltPotion(column)) {
       Riiablo.audio.play(potion.getUseSound(), true);
     }
+  }
+
+  @Override
+  public void dropGold(int amount) {
+    if (Riiablo.charData == null || amount <= 0) return;
+    StatRef carriedRef = Riiablo.charData.getStats().get(Stat.gold);
+    if (carriedRef == null || amount > carriedRef.asInt()) return;
+    if (Riiablo.game == null || Riiablo.game.player < 0) return;
+    Position position = mPosition.get(Riiablo.game.player);
+    ItemGenerator generator = world.getSystem(ItemGenerator.class);
+    com.riiablo.item.Item gold = generator == null ? null : generator.generate("gld");
+    if (position == null || gold == null) return;
+    gold.quality = com.riiablo.item.Quality.NORMAL;
+    gold.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
+    gold.attrs.base().put(Stat.quantity, amount);
+    gold.attrs.aggregate().put(Stat.quantity, amount);
+    int entityId = factory.createItem(gold, position.position.x, position.position.y);
+    if (entityId >= 0) {
+      VendorPricing.dropCarriedGold(Riiablo.charData, amount);
+    }
+  }
+
+  @Override
+  public void depositGold(int amount) {
+    VendorPricing.depositGold(Riiablo.charData, amount);
+  }
+
+  @Override
+  public void withdrawGold(int amount) {
+    VendorPricing.withdrawGold(Riiablo.charData, amount);
   }
 }

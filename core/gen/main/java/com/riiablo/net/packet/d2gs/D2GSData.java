@@ -43,8 +43,10 @@ public final class D2GSData {
   public static final byte QuestResult = 36;
   public static final byte SnapshotResyncRequest = 37;
   public static final byte SnapshotBaseline = 38;
+  public static final byte GoldRequest = 39;
+  public static final byte GoldResult = 40;
 
-  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", "CastSkillResult", "SpendSkillPointRequest", "SpendSkillPointResult", "SpendStatPointRequest", "SpendStatPointResult", "NpcServiceRequest", "NpcServiceResult", "ItemMoveRequest", "ItemMoveResult", "SelectSkillRequest", "PartyRequest", "PartyResult", "PlayerLifecycleRequest", "PlayerLifecycleResult", "QuestRequest", "QuestResult", "SnapshotResyncRequest", "SnapshotBaseline", };
+  public static final String[] names = { "NONE", "WalkToLocation", "WalkToEntity", "RunToLocation", "RunToEntity", "Connection", "Disconnect", "Ping", "EntitySync", "GroundToCursor", "CursorToGround", "StoreToCursor", "CursorToStore", "SwapStoreItem", "BodyToCursor", "CursorToBody", "SwapBodyItem", "BeltToCursor", "CursorToBelt", "SwapBeltItem", "CastSkillRequest", "CastSkillResult", "SpendSkillPointRequest", "SpendSkillPointResult", "SpendStatPointRequest", "SpendStatPointResult", "NpcServiceRequest", "NpcServiceResult", "ItemMoveRequest", "ItemMoveResult", "SelectSkillRequest", "PartyRequest", "PartyResult", "PlayerLifecycleRequest", "PlayerLifecycleResult", "QuestRequest", "QuestResult", "SnapshotResyncRequest", "SnapshotBaseline", "GoldRequest", "GoldResult", };
 
   public static String name(int e) { return names[e]; }
 }

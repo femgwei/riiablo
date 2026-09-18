@@ -136,6 +136,30 @@ class VendorPricingTest extends RiiabloTest {
     assertEquals(2, session.revision);
   }
 
+  @Test
+  void goldDropAndStashTransfersAreAtomicAndRespectCaps() {
+    CharData character = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "GoldHero", Riiablo.AMAZON);
+    character.level = 10;
+    character.getStats().base().put(Stat.gold, 500);
+    character.getStats().base().put(Stat.goldbank, 700);
+    character.getStats().aggregate().put(Stat.gold, 500);
+    character.getStats().aggregate().put(Stat.goldbank, 700);
+
+    assertTrue(VendorPricing.dropCarriedGold(character, 125));
+    assertEquals(375, character.getStats().get(Stat.gold).asInt());
+    assertEquals(700, character.getStats().get(Stat.goldbank).asInt());
+    assertTrue(VendorPricing.depositGold(character, 75));
+    assertEquals(300, character.getStats().get(Stat.gold).asInt());
+    assertEquals(775, character.getStats().get(Stat.goldbank).asInt());
+    assertTrue(VendorPricing.withdrawGold(character, 200));
+    assertEquals(500, character.getStats().get(Stat.gold).asInt());
+    assertEquals(575, character.getStats().get(Stat.goldbank).asInt());
+    assertTrue(!VendorPricing.withdrawGold(character, 20_000));
+    assertEquals(500, character.getStats().get(Stat.gold).asInt());
+    assertEquals(575, character.getStats().get(Stat.goldbank).asInt());
+  }
+
   private static Item item(String code, int width, int height) {
     Item item = new Item();
     item.reset();

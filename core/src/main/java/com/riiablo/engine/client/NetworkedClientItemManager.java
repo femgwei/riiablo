@@ -26,6 +26,8 @@ import com.riiablo.net.packet.d2gs.SwapStoreItem;
 import com.riiablo.net.packet.d2gs.ItemMoveRequest;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.ItemMoveResult;
+import com.riiablo.net.packet.d2gs.GoldOperation;
+import com.riiablo.net.packet.d2gs.GoldRequest;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -44,6 +46,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
 
   private int nextRequestId = 1;
   private long inventoryRevision;
+  private int nextGoldRequestId = 1;
 
   public long inventoryRevision() { return inventoryRevision; }
   /** Establishes the server revision after a complete snapshot baseline. */
@@ -86,6 +89,20 @@ public class NetworkedClientItemManager extends ClientItemManager {
 
   private FlatBufferBuilder obtainBuilder() {
     return new FlatBufferBuilder(0);
+  }
+
+  private void sendGold(byte operation, int amount) {
+    if (amount <= 0) return;
+    FlatBufferBuilder builder = obtainBuilder();
+    int dataOffset = GoldRequest.createGoldRequest(builder, nextGoldRequestId++, operation, amount);
+    int root = D2GS.createD2GS(builder, D2GSData.GoldRequest, dataOffset);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      OutputStream out = socket.getOutputStream();
+      Channels.newChannel(out).write(builder.dataBuffer());
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "failed to send gold request", t);
+    }
   }
 
   private void send(byte operation, int itemId, int groundEntityId, int storeLoc,
@@ -176,4 +193,8 @@ public class NetworkedClientItemManager extends ClientItemManager {
     if (potion == null) return;
     send(ItemMoveOperation.USE_BELT_ITEM, potion.id, -1, -1, column, -1, -1, false);
   }
+
+  @Override public void dropGold(int amount) { sendGold(GoldOperation.DROP, amount); }
+  @Override public void depositGold(int amount) { sendGold(GoldOperation.DEPOSIT, amount); }
+  @Override public void withdrawGold(int amount) { sendGold(GoldOperation.WITHDRAW, amount); }
 }

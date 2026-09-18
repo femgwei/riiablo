@@ -31,6 +31,7 @@ import com.riiablo.Keys;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatListRef;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.attributes.ExperienceTable;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;

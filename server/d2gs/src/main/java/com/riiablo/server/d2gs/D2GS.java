@@ -178,6 +178,9 @@ import com.riiablo.net.packet.d2gs.RunToLocation;
 import com.riiablo.net.packet.d2gs.WalkToEntity;
 import com.riiablo.net.packet.d2gs.WalkToLocation;
 import com.riiablo.net.packet.d2gs.GroundToCursor;
+import com.riiablo.net.packet.d2gs.GoldRequest;
+import com.riiablo.net.packet.d2gs.GoldResult;
+import com.riiablo.net.packet.d2gs.GoldOperation;
 import com.riiablo.net.packet.d2gs.Ping;
 import com.riiablo.net.packet.d2gs.PositionP;
 import com.riiablo.net.packet.d2gs.VelocityP;
@@ -5110,6 +5113,9 @@ public class D2GS extends ApplicationAdapter {
       case D2GSData.ItemMoveRequest:
         ItemMoveRequest(packet);
         break;
+      case D2GSData.GoldRequest:
+        GoldRequest(packet);
+        break;
       case D2GSData.PlayerLifecycleRequest:
         PlayerLifecycleRequest(packet);
         break;
@@ -6970,6 +6976,86 @@ public class D2GS extends ApplicationAdapter {
 
     packet.id = (1 << packet.id);
     outPackets.offer(packet);
+  }
+
+  /** Handles server-authoritative carried/stash gold operations. */
+  private void GoldRequest(Packet packet) {
+    GoldRequest request = (GoldRequest) packet.data.data(new GoldRequest());
+    int playerEntityId = player.get(packet.id, Engine.INVALID_ENTITY);
+    Player playerComponent = playerEntityId == Engine.INVALID_ENTITY ? null
+        : world.getMapper(Player.class).get(playerEntityId);
+    CharData character = playerComponent == null ? null : playerComponent.data;
+    int amount = (int) Math.min(Integer.MAX_VALUE, request.amount());
+    boolean success = false;
+    String reason = "invalid_request";
+    int groundEntityId = -1;
+    if (character != null && amount > 0) {
+      switch (request.operation()) {
+        case GoldOperation.DROP: {
+          int carried = gold(character, com.riiablo.attributes.Stat.gold);
+          Position position = world.getMapper(Position.class).get(playerEntityId);
+          ItemGenerator generator = world.getSystem(ItemGenerator.class);
+          com.riiablo.item.Item dropped = generator == null ? null : generator.generate("gld");
+          if (amount > carried) reason = "not_enough_carried_gold";
+          else if (position == null || dropped == null) reason = "drop_position_unavailable";
+          else {
+            dropped.quality = com.riiablo.item.Quality.NORMAL;
+            dropped.flags |= com.riiablo.item.Item.ITEMFLAG_IDENTIFIED;
+            dropped.attrs.base().put(com.riiablo.attributes.Stat.quantity, amount);
+            dropped.attrs.aggregate().put(com.riiablo.attributes.Stat.quantity, amount);
+            groundEntityId = factory.createItem(dropped, position.position.x, position.position.y);
+            if (groundEntityId >= 0) {
+              com.riiablo.engine.server.component.Item item = mItemSafe(groundEntityId);
+              com.riiablo.engine.server.item.GroundDropOwnership.applyMetadata(item,
+                  playerEntityId, partyManager.getPartyId(playerEntityId), 10_000L, 10_000L, true);
+              com.riiablo.engine.server.item.GroundDropOwnership.register(groundEntityId,
+                  playerEntityId, partyManager.getPartyId(playerEntityId), 10_000L, 10_000L);
+              com.riiablo.item.VendorPricing.setGoldSnapshot(character, carried - amount,
+                  gold(character, com.riiablo.attributes.Stat.goldbank));
+              success = true;
+              reason = "";
+            } else {
+              reason = "ground_creation_failed";
+            }
+          }
+          break;
+        }
+        case GoldOperation.DEPOSIT:
+          success = com.riiablo.item.VendorPricing.depositGold(character, amount);
+          reason = success ? "" : "deposit_limit_or_balance";
+          break;
+        case GoldOperation.WITHDRAW:
+          success = com.riiablo.item.VendorPricing.withdrawGold(character, amount);
+          reason = success ? "" : "withdraw_limit_or_balance";
+          break;
+        default:
+          break;
+      }
+    } else if (character == null) {
+      reason = "player_not_found";
+    }
+    sendGoldResult(packet.id, request.requestId(), request.operation(), amount, success, reason,
+        character, groundEntityId);
+  }
+
+  private static int gold(CharData character, short stat) {
+    if (character == null || character.getStats() == null) return 0;
+    com.riiablo.attributes.StatRef ref = character.getStats().get(stat);
+    return ref == null ? 0 : Math.max(0, ref.asInt());
+  }
+
+  private void sendGoldResult(int clientId, long requestId, byte operation, int amount,
+                              boolean success, String reason, CharData character,
+                              int groundEntityId) {
+    FlatBufferBuilder builder = new FlatBufferBuilder(256);
+    int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int result = GoldResult.createGoldResult(builder, requestId, success, reasonOffset,
+        operation, Math.max(0, amount), gold(character, com.riiablo.attributes.Stat.gold),
+        gold(character, com.riiablo.attributes.Stat.goldbank), groundEntityId);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(builder, D2GSData.GoldResult, result);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer bytes = builder.dataBuffer();
+    outPackets.offer(Packet.obtain(1 << clientId, bytes));
   }
 
   /** Handles the unified server-authoritative item protocol. */

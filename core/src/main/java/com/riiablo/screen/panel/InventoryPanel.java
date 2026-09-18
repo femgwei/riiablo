@@ -6,6 +6,8 @@ import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
@@ -297,6 +299,25 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       down = new TextureRegionDrawable(goldcoinbtn.getTexture(1));
     }});
     btnDropGold.setPosition(84, 23);
+    btnDropGold.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        Gdx.input.getTextInput(new Input.TextInputListener() {
+          @Override
+          public void input(String text) {
+            try {
+              int amount = Integer.parseInt(text.trim());
+              if (amount > 0 && itemController != null) itemController.dropGold(amount);
+            } catch (NumberFormatException ignored) {
+              // Native input dialogs are user-facing; invalid text is a cancel.
+            }
+          }
+
+          @Override
+          public void canceled() {}
+        }, "Drop Gold", "", "Amount");
+      }
+    });
     addActor(btnDropGold);
 
     //setDebug(true, true);

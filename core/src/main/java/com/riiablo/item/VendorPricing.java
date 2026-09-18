@@ -15,6 +15,8 @@ public final class VendorPricing {
   /** Maximum vendor transaction price (kept separate from wallet capacity). */
   public static final int MAX_GOLD = 50000;
   public static final int MAX_CARRIED_GOLD = 990000;
+  /** Native personal stash gold cap used by the stash transfer UI. */
+  public static final int MAX_BANK_GOLD = 2500000;
   public enum Transaction { BUY, SELL, REPAIR, GAMBLE }
   /** Result of depositing a ground gold pile into the character's carried wallet. */
   public static final class GoldGrant {
@@ -229,6 +231,33 @@ public final class VendorPricing {
   public static void setGoldSnapshot(CharData character, int carried, int bank) {
     if (character == null) return;
     setGold(character, Math.max(0, carried), Math.max(0, bank));
+  }
+
+  public static boolean dropCarriedGold(CharData character, int amount) {
+    if (character == null || amount <= 0) return false;
+    int carried = value(character.getStats().get(Stat.gold));
+    if (amount > carried) return false;
+    setGold(character, carried - amount, value(character.getStats().get(Stat.goldbank)));
+    return true;
+  }
+
+  public static boolean depositGold(CharData character, int amount) {
+    if (character == null || amount <= 0) return false;
+    int carried = value(character.getStats().get(Stat.gold));
+    int bank = value(character.getStats().get(Stat.goldbank));
+    if (amount > carried || bank > MAX_BANK_GOLD - amount) return false;
+    setGold(character, carried - amount, bank + amount);
+    return true;
+  }
+
+  public static boolean withdrawGold(CharData character, int amount) {
+    if (character == null || amount <= 0) return false;
+    int carried = value(character.getStats().get(Stat.gold));
+    int bank = value(character.getStats().get(Stat.goldbank));
+    int limit = carriedGoldLimit(character);
+    if (amount > bank || amount > limit - carried) return false;
+    setGold(character, carried + amount, bank - amount);
+    return true;
   }
   public static int reducedPrices(CharData character) {
     return character == null || character.getStats() == null ? 0

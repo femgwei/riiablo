@@ -16,4 +16,10 @@ public interface ItemController {
   void cursorToBelt(int x, int y);
   void swapBeltItem(int i);
   void useBeltSlot(int column);
+  /** Drops carried gold at the player's position. */
+  void dropGold(int amount);
+  /** Moves carried gold into the personal stash. */
+  void depositGold(int amount);
+  /** Moves stash gold into the carried wallet. */
+  void withdrawGold(int amount);
 }

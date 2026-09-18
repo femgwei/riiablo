@@ -73,6 +73,7 @@ import com.riiablo.net.packet.d2gs.Disconnect;
 import com.riiablo.net.packet.d2gs.EntityFlags;
 import com.riiablo.net.packet.d2gs.EntitySync;
 import com.riiablo.net.packet.d2gs.GroundToCursor;
+import com.riiablo.net.packet.d2gs.GoldResult;
 import com.riiablo.net.packet.d2gs.ItemP;
 import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.Ping;
@@ -315,6 +316,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.ItemMoveResult:
         ItemMoveResult(packet);
+        break;
+      case D2GSData.GoldResult:
+        GoldResult(packet);
         break;
       case D2GSData.SpendSkillPointResult:
         SpendSkillPointResult(packet);
@@ -1469,6 +1473,23 @@ public class ClientNetworkReceiver extends IntervalSystem {
     if (!result.success()) {
       Gdx.app.log(TAG, "[ITEM_MOVE_REJECTED] request=" + result.requestId()
           + " failure=" + result.failure() + " revision=" + result.revision());
+    }
+  }
+
+  private void GoldResult(D2GS packet) {
+    GoldResult result = (GoldResult) packet.data(new GoldResult());
+    if (result.success() && Riiablo.charData != null) {
+      com.riiablo.item.VendorPricing.setGoldSnapshot(Riiablo.charData,
+          (int) Math.min(Integer.MAX_VALUE, result.gold()),
+          (int) Math.min(Integer.MAX_VALUE, result.goldBank()));
+    }
+    if (result.success() && result.groundEntityId() >= 0) {
+      Gdx.app.log(TAG, "[GOLD_DROP] entity=" + result.groundEntityId()
+          + " amount=" + result.amount());
+    }
+    if (!result.success()) {
+      Gdx.app.log(TAG, "[GOLD_OPERATION_REJECTED] request=" + result.requestId()
+          + " operation=" + result.operation() + " reason=" + result.reason());
     }
   }
 
