@@ -170,6 +170,16 @@ public abstract class EntityFactory extends PassiveSystem {
 
   public abstract int createWarp(int index, float x, float y);
 
+  /**
+   * Creates a Warp with an explicit owning Zone when the caller has one.
+   * Native Act I layouts can overlap Zone rectangles, so coordinate-only
+   * ownership is ambiguous for DS1 markers. Factories that do not need the
+   * hint retain the ordinary coordinate-based behavior.
+   */
+  public int createWarp(Map.Zone sourceZone, int index, float x, float y) {
+    return createWarp(index, x, y);
+  }
+
   /** Creates a network-serializable warp whose destination is owned by a quest. */
   public int createQuestWarp(int destinationLevelId, float x, float y) {
     return createWarp(QuestWarp.encode(destinationLevelId), x, y);

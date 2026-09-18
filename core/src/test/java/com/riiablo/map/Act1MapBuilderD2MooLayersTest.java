@@ -291,6 +291,24 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void keepsHiddenWarpMarkerForCaveReverseEndpoint() {
+    TileGrid grid = new TileGrid(1, 1);
+    grid.wallIds[0][0][0] = Map.ID.VIS_0_03;
+    grid.hiddenWallCells[0][0][0] = true;
+    IntMap<DS1.Cell> specials = new IntMap<>();
+
+    Act1MapBuilderD2MOD.SpecialApplyCounts counts =
+        Act1MapBuilderD2MOD.registerSpecialWalls(grid, specials, 1, 1);
+
+    assertEquals(1, counts.total);
+    assertEquals(1, counts.warps);
+    DS1.Cell marker = specials.get(Map.Zone.tileHashCode(Map.WALL_OFFSET, 0, 0));
+    assertNotNull(marker);
+    assertEquals(Map.ID.VIS_0_03, marker.id);
+    assertTrue((marker.value & DS1.Cell.HIDDEN_MASK) != 0);
+  }
+
+  @Test
   void linksStonyUndergroundAndDarkWoodWarpsInBothDirections() {
     Map map = new Map(1, 0);
     Map.Zone stony = zone(4, "Stony Field", vis(4, 10));
@@ -314,6 +332,28 @@ class Act1MapBuilderD2MooLayersTest {
     assertEquals(Map.ID.VIS_1_15, darkWood.getWarp(Map.ID.VIS_3_30));
     assertEquals(Map.ID.VIS_3_30, underground.getWarp(Map.ID.VIS_1_15));
     assertEquals(-1, underground.getWarp(Map.ID.VIS_4_38));
+  }
+
+  @Test
+  void resolvesWarpSourceFromMarkerWhenZonesOverlap() {
+    Map map = new Map(1, 0);
+    Map.Zone town = zone(1, "Rogue Encampment", vis(5, 2));
+    Map.Zone bloodMoor = zone(2, "Blood Moor", vis(5, 8));
+    town.setPosition(0, 0);
+    bloodMoor.setPosition(0, 0);
+    map.zones.add(town);
+    map.zones.add(bloodMoor);
+
+    DS1.Cell townMarker = new DS1.Cell();
+    townMarker.id = Map.ID.VIS_5_42;
+    town.specials.put(Map.Zone.tileHashCode(Map.WALL_OFFSET, 0, 0), townMarker);
+    DS1.Cell bloodMarker = new DS1.Cell();
+    bloodMarker.id = Map.ID.VIS_5_42;
+    bloodMoor.specials.put(Map.Zone.tileHashCode(Map.WALL_OFFSET, 1, 1), bloodMarker);
+    int markerX = bloodMoor.x + DT1.Tile.SUBTILE_SIZE;
+    int markerY = bloodMoor.y + DT1.Tile.SUBTILE_SIZE;
+    assertSame(bloodMoor,
+        map.findWarpSourceZone(Map.ID.VIS_5_42, markerX, markerY));
   }
 
   @Test

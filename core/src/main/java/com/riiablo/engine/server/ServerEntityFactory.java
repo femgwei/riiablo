@@ -835,9 +835,14 @@ public class ServerEntityFactory extends EntityFactory {
 
   @Override
   public int createWarp(int index, float x, float y) {
+    return createWarp(null, index, x, y);
+  }
+
+  @Override
+  public int createWarp(Map.Zone sourceZoneHint, int index, float x, float y) {
     if (com.riiablo.engine.server.quest.QuestWarp.isQuestWarp(index)) {
       int destination = com.riiablo.engine.server.quest.QuestWarp.destinationLevelId(index);
-      Map.Zone zone = map.getZone(x, y);
+      Map.Zone zone = sourceZoneHint != null ? sourceZoneHint : map.getZone(x, y);
       Levels.Entry destinationLevel = Riiablo.files.Levels.get(destination);
       LvlWarp.Entry portalBounds = neutralWarpBounds();
       if (zone == null || destinationLevel == null || portalBounds == null) {
@@ -859,10 +864,15 @@ public class ServerEntityFactory extends EntityFactory {
     final int subIndex    = DT1.Tile.Index.subIndex(index);
     final int orientation = DT1.Tile.Index.orientation(index);
 
-    Map.Zone zone = map.getZone(x, y);
+    // Act I native zones may overlap in world coordinates. Resolve the
+    // source from the exact DS1 Warp marker first; coordinate-only lookup can
+    // otherwise classify Blood Moor's Den entrance as a town exit and create
+    // a 2->2 self-warp instead of the intended 2->8 transition.
+    Map.Zone zone = sourceZoneHint != null
+        ? sourceZoneHint : map.findWarpSourceZone(index, x, y);
     int dstFromOverride = zone == null || zone.level == null
         ? -1 : map.getWarpDestinationOverride(zone.level.Id, mainIndex);
-    if (dstFromOverride <= 0 && map != null) {
+    if (dstFromOverride <= 0 && map != null && sourceZoneHint == null) {
       // Coordinates of synthetic/outdoor markers can be outside the strict
       // rectangle (or overlap an earlier quest branch). Prefer the Zone that
       // owns an explicit runtime destination for this logical slot, choosing

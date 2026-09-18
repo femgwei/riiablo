@@ -247,7 +247,12 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   @Override
   public int createWarp(int index, float x, float y) {
-    if (map.getZone(x, y) == null) {
+    return createWarp(null, index, x, y);
+  }
+
+  @Override
+  public int createWarp(Map.Zone sourceZoneHint, int index, float x, float y) {
+    if (sourceZoneHint == null && map.getZone(x, y) == null) {
       // The server currently sends static entities outside the client's
       // loaded map. ServerEntityFactory.createWarp dereferences the source
       // zone immediately, so reject this remote replica before delegating.
@@ -262,7 +267,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
     final int subIndex    = DT1.Tile.Index.subIndex(index);
     final int orientation = DT1.Tile.Index.orientation(index);
 
-    int id = super.createWarp(index, x, y);
+    int id = super.createWarp(sourceZoneHint, index, x, y);
     if (id == Engine.INVALID_ENTITY) {
       // Server factory returned INVALID_ENTITY (e.g., LvlWarp entry not found), skip
       return Engine.INVALID_ENTITY;

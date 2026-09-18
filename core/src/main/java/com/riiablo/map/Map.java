@@ -812,6 +812,33 @@ public class Map implements Disposable {
     return null;
   }
 
+  /**
+   * Resolves the owning Zone for a native Warp marker.
+   *
+   * <p>Act I's detached dungeon zones deliberately share rectangular world
+   * bounds with outdoor/town zones in the compatibility layout. A plain
+   * coordinate lookup therefore can return Rogue Encampment for a Blood Moor
+   * cave marker (or another overlapping level), changing the Warp destination
+   * to the wrong level. Native MapManager already knows the marker's logical
+   * tile; use that exact marker ownership before falling back to coordinates
+   * for synthetic/quest portals that have no DS1 cell.</p>
+   */
+  public Zone findWarpSourceZone(int warpIndex, float x, float y) {
+    int worldX = Math.round(x);
+    int worldY = Math.round(y);
+    for (Zone zone : zones) {
+      if (zone == null || zone.specials == null || zone.specials.isEmpty()) continue;
+      int tx = Math.floorDiv(worldX - zone.x, DT1.Tile.SUBTILE_SIZE);
+      int ty = Math.floorDiv(worldY - zone.y, DT1.Tile.SUBTILE_SIZE);
+      for (int layer = Map.WALL_OFFSET;
+          layer < Map.WALL_OFFSET + Map.MAX_WALLS; layer++) {
+        DS1.Cell cell = zone.specials.get(Zone.tileHashCode(layer, tx, ty));
+        if (cell != null && cell.id == warpIndex) return zone;
+      }
+    }
+    return getZone(worldX, worldY);
+  }
+
   public Zone findZone(Levels.Entry level) {
     if (level == null) return null;
     // Levels rows may be materialized more than once when an Act is lazily

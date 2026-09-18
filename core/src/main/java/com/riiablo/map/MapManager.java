@@ -59,16 +59,17 @@ public class MapManager extends PassiveSystem {
         int hash = entry.key;
         int x = zone.x + (Map.Zone.tileHashX(hash) * DT1.Tile.SUBTILE_SIZE);
         int y = zone.y + (Map.Zone.tileHashY(hash) * DT1.Tile.SUBTILE_SIZE);
-        int id = factory.createWarp(cell.id, x, y);
+        int id = factory.createWarp(zone, cell.id, x, y);
         // Native wall markers may be authored on the exclusive outer edge of
-        // a Zone.  The factory resolves its source Zone from coordinates, so
-        // retry one subtile inward before dropping the interactive Warp.
+        // a Zone. Keep the owning Zone hint on every retry; only the visual
+        // anchor moves inward, otherwise overlapping Act I rectangles can
+        // resolve the retry as a different level.
         if (id == Engine.INVALID_ENTITY) {
           int inwardX = x > zone.x() ? x - 1 : x + 1;
           int inwardY = y > zone.y() ? y - 1 : y + 1;
-          if (zone.contains(inwardX, y)) id = factory.createWarp(cell.id, inwardX, y);
+          if (zone.contains(inwardX, y)) id = factory.createWarp(zone, cell.id, inwardX, y);
           if (id == Engine.INVALID_ENTITY && zone.contains(x, inwardY)) {
-            id = factory.createWarp(cell.id, x, inwardY);
+            id = factory.createWarp(zone, cell.id, x, inwardY);
           }
           // A reduced DS1 export can put a Warp marker on a corner where no
           // neighboring subtile belongs to the Zone (for example the native
@@ -80,7 +81,7 @@ public class MapManager extends PassiveSystem {
             int centerX = zone.x() + zone.width() / 2;
             int centerY = zone.y() + zone.height() / 2;
             if (zone.contains(centerX, centerY)) {
-              id = factory.createWarp(cell.id, centerX, centerY);
+              id = factory.createWarp(zone, cell.id, centerX, centerY);
             }
           }
         }

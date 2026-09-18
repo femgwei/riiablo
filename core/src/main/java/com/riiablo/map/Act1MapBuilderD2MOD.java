@@ -3276,7 +3276,16 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           // A DS1 warp commonly uses sub-index 0 as its logical trigger and
           // sub-index 1 as the paired visual marker. The legacy copyWalls
           // path deliberately excludes the latter from Zone.specials.
-          if (Map.ID.WARPS.contains(id) && DT1.Tile.Index.subIndex(id) == 1) {
+          //
+          // Cave entrances are an important exception: Den of Evil's
+          // denent2.ds1 contains only a hidden sub-index-1 marker. D2Common
+          // still registers that marker as the logical reverse warp, while
+          // omitting it from the rendered/collision wall layers. Keep hidden
+          // markers in Zone.specials so linkNativeWarpSpecials and
+          // WarpInteractor can create/use the reverse endpoint.
+          boolean hiddenWarpMarker = grid.hiddenWallCells[slot][y][x];
+          if (Map.ID.WARPS.contains(id) && DT1.Tile.Index.subIndex(id) == 1
+              && !hiddenWarpMarker) {
             counts.skippedWarpPairMarkers++;
             continue;
           }
@@ -3287,6 +3296,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           cell.subIndex = (short) DT1.Tile.Index.subIndex(id);
           cell.orientation = (short) orientation;
           cell.value = ((cell.mainIndex & 0x3F) << 20) | ((cell.subIndex & 0xFF) << 8);
+          if (hiddenWarpMarker) cell.value |= DS1.Cell.HIDDEN_MASK;
           int layer = Map.WALL_OFFSET + slot;
           specials.put(Zone.tileHashCode(layer, x, y), cell);
           counts.total++;
