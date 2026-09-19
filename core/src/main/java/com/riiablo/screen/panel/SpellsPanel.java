@@ -67,7 +67,10 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     skltree = Riiablo.assets.get(skltreeDescriptor).getTexture(0);
     setSize(skltree.getRegionWidth(), skltree.getRegionHeight());
     setTouchable(Touchable.enabled);
-    setVisible(false);
+    // Avoid dispatching to the overridden setVisible while this panel is
+    // still being constructed. The skill point label and buttons are created
+    // below and are not safe to refresh yet.
+    super.setVisible(false);
 
     SkilliconDescriptor = new AssetDescriptor<>(SPELLS_PATH + charClass.spellIcons + ".dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
     Riiablo.assets.load(SkilliconDescriptor);
@@ -186,6 +189,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
   }
 
   private void updateSkillPoints(CharData client) {
+    if (skillsRemaining == null || buttons == null) return;
     if (client == null || client.getStats() == null) return;
     int value = client.getAvailableSkillPoints();
     if (value == availableSkillPoints) return;
