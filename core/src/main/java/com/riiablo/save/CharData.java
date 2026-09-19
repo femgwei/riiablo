@@ -452,6 +452,36 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   }
 
   /**
+   * Clamps live resources to their resolved maxima and mirrors them into the
+   * persistent list used by D2S. Combat changes the aggregate list, while
+   * save/load and progression snapshots also touch the base list; keeping the
+   * two current values aligned prevents a later XP or item refresh from
+   * restoring stale life.
+   */
+  public void synchronizeCurrentResources() {
+    synchronizeCurrentResource(Stat.hitpoints, Stat.maxhp);
+    synchronizeCurrentResource(Stat.mana, Stat.maxmana);
+    synchronizeCurrentResource(Stat.stamina, Stat.maxstamina);
+  }
+
+  private void synchronizeCurrentResource(short currentStat, short maximumStat) {
+    StatRef current = statData.aggregate().get(currentStat, StatRef.obtain());
+    StatRef maximum = statData.aggregate().get(maximumStat, StatRef.obtain());
+    if (current == null || maximum == null) return;
+    float currentValue = current.asFixed();
+    float maximumValue = maximum.asFixed();
+    float value = Math.max(0f, Math.min(currentValue, maximumValue));
+    if (currentValue != value) {
+      StatRef base = statData.base().get(currentStat, StatRef.obtain());
+      log.warn("[RESOURCE_CLAMP] character={} stat={} current={} maximum={} base={}",
+          name, currentStat, currentValue, maximumValue,
+          base == null ? "missing" : Float.toString(base.asFixed()));
+    }
+    statData.aggregate().put(currentStat, value);
+    statData.base().put(currentStat, value);
+  }
+
+  /**
    * Creates and places the new-character items declared by CharStats.txt.
    * Placement follows D2Game's PLAYER_CreateStartItem rules: belt-compatible
    * items are placed in the belt first, declared body slots are equipped, and
@@ -582,7 +612,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     // ItemData can be mutated while a character is still being assembled
     // (for example when a legacy/remote record has no stat section yet).
     // Native characters always contain these core vitals; skip the derived
-    // refresh until they are present instead of throwing from StatListRef.set.
+    // refresh until the character record is complete.
     if (statData.get(Stat.stamina) == null
         || statData.get(Stat.maxstamina) == null
         || statData.get(Stat.hitpoints) == null
@@ -594,11 +624,6 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
       log.debug("Skipping derived stat refresh for incomplete character stat list");
       return;
     }
-
-    // FIXME: This corrects a mismatch between max and current, algorithm should be tested later for correctness in other cases
-    statData.set(Stat.stamina, Stat.maxstamina);
-    statData.set(Stat.hitpoints, Stat.maxhp);
-    statData.set(Stat.mana, Stat.maxmana);
 
     // This appears to be hard-coded in the original client
     int dex = statData.get(Stat.dexterity).asInt();

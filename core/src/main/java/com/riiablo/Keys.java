@@ -49,6 +49,7 @@ public class Keys {
   public static final MappedKey SwapWeapons = new MappedKey("SwapWeapons", "swap", Input.Keys.W);
   public static final MappedKey Enter = new MappedKey("Enter", "enter", Input.Keys.ENTER);
   public static final MappedKey Automap = new MappedKey("Automap", "automap", Input.Keys.TAB);
+  public static final MappedKey Help = new MappedKey("Help", "help", Input.Keys.H);
 
   public static final MappedKey Skill1  = new MappedKey("Skill 1",  "skill1",  Input.Keys.F1);
   public static final MappedKey Skill2  = new MappedKey("Skill 2",  "skill2",  Input.Keys.F2);

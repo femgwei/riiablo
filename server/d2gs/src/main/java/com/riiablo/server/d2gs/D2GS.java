@@ -4826,6 +4826,7 @@ public class D2GS extends ApplicationAdapter {
         // movement and collision, then unit/AI behavior and death handlers.
         .with(new StateUpdater())
         .with(new com.riiablo.engine.server.StaminaSystem())
+        .with(new com.riiablo.engine.server.ManaRecoverySystem())
         .with(new MissileCollisionSystem())
         .with(new Actioneer())
         .with(new com.riiablo.engine.server.MercenaryFollowSystem())
@@ -5915,7 +5916,7 @@ public class D2GS extends ApplicationAdapter {
           && (weapon.type.is(com.riiablo.item.Type.BOW)
               || weapon.type.is(com.riiablo.item.Type.XBOW));
       if (!rangedWeapon && !world.getSystem(Actioneer.class)
-          .isInMeleeRangeAtTick(entityId, targetId, 3, snapshotTick)) {
+          .isInMeleeRangeAtTick(entityId, targetId, 0, snapshotTick)) {
         Gdx.app.log(TAG, "[NET_CAST] phase=reject player=" + entityId
             + " skill=" + request.skillId + " reason=melee_out_of_range target=" + targetId
             + " tick=" + snapshotTick);

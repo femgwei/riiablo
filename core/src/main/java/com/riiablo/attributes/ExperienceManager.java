@@ -607,15 +607,22 @@ public class ExperienceManager extends PassiveSystem {
     charData.getStats().aggregate().put(Stat.experience, encodedExp);
     charData.getStats().aggregate().put(Stat.lastexp, encodedLastExp);
 
-    log.info("[XP_SYNC] character={} gained={} total={} oldLevel={} aggregate={}",
-        charData.name, experienceGained, newExp, oldLevel,
-        charData.getStats().get(Stat.experience).asLong());
-
     // 检查是否升级
     int newLevel = getCurrentLevelFromExp(charClass, newExp);
     if (newLevel != oldLevel) {
       levelUp(charData, oldLevel, newLevel);
     }
+
+    // An experience award inserts/updates progression stats in both backing
+    // lists. Reassert the current-resource invariant before the resulting
+    // player snapshot is serialized, even when this kill did not level up.
+    charData.synchronizeCurrentResources();
+    log.info("[XP_SYNC] character={} gained={} total={} oldLevel={} aggregate={} hp={}/{} baseHp={}",
+        charData.name, experienceGained, newExp, oldLevel,
+        charData.getStats().get(Stat.experience).asLong(),
+        getFixed(charData.getStats().aggregate(), Stat.hitpoints, 0f),
+        getFixed(charData.getStats().aggregate(), Stat.maxhp, 0f),
+        getFixed(charData.getStats().base(), Stat.hitpoints, 0f));
   }
 
   /**

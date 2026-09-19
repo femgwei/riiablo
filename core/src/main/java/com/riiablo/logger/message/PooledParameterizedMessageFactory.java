@@ -9,7 +9,9 @@ public enum PooledParameterizedMessageFactory implements MessageFactory {
 
   @Override
   public Message newMessage(String message, Object... params) {
-    return new FormattedMessage(message, params);
+    // More than ten arguments reaches this fallback instead of the pooled
+    // fixed-arity overloads. Preserve {} parameter semantics here as well.
+    return new ParameterizedMessage(message, params);
   }
 
   @Override

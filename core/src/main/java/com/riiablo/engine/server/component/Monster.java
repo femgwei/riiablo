@@ -43,12 +43,18 @@ public class Monster extends Component {
   public int attack2MaxDamage;
   public int attack2ToHit;
 
+  /** Runtime provenance for monsters restored from a corpse. */
+  public boolean resurrected;
+  public int resurrectedBy = -1;
+  public boolean playerRevive;
+
   /** Native activation anchor. Monsters do not pursue targets outside their
    * spawn level/room scope; Zone is the current ECS equivalent of a level
    * room boundary. Null is retained for synthetic unit tests. */
   public Map.Zone spawnZone;
   public float spawnX;
   public float spawnY;
+  public boolean hasSpawnAnchor;
 
   /** Native Conversion alignment/ownership overlay.  The MonStats row remains
    * immutable; this runtime projection is cleared by the Conversion state
@@ -73,9 +79,13 @@ public class Monster extends Component {
     attack2MinDamage = 0;
     attack2MaxDamage = 0;
     attack2ToHit = 0;
+    resurrected = false;
+    resurrectedBy = -1;
+    playerRevive = false;
     spawnZone = null;
     spawnX = 0f;
     spawnY = 0f;
+    hasSpawnAnchor = false;
     converted = false;
     conversionOwnerId = -1;
     return this;
@@ -117,10 +127,44 @@ public class Monster extends Component {
     return this;
   }
 
+  public Monster setResurrected(int sourceId, boolean playerRevive) {
+    resurrected = true;
+    resurrectedBy = sourceId;
+    this.playerRevive = playerRevive;
+    return this;
+  }
+
+  public static boolean isMeleeMode(int mode) {
+    return mode == com.riiablo.engine.Engine.Monster.MODE_A1
+        || mode == com.riiablo.engine.Engine.Monster.MODE_A2;
+  }
+
+  public static String modeName(int mode) {
+    switch (mode) {
+      case com.riiablo.engine.Engine.Monster.MODE_DT: return "DT";
+      case com.riiablo.engine.Engine.Monster.MODE_NU: return "NU";
+      case com.riiablo.engine.Engine.Monster.MODE_WL: return "WL";
+      case com.riiablo.engine.Engine.Monster.MODE_GH: return "GH";
+      case com.riiablo.engine.Engine.Monster.MODE_A1: return "A1";
+      case com.riiablo.engine.Engine.Monster.MODE_A2: return "A2";
+      case com.riiablo.engine.Engine.Monster.MODE_BL: return "BL";
+      case com.riiablo.engine.Engine.Monster.MODE_SC: return "SC";
+      case com.riiablo.engine.Engine.Monster.MODE_S1: return "S1";
+      case com.riiablo.engine.Engine.Monster.MODE_S2: return "S2";
+      case com.riiablo.engine.Engine.Monster.MODE_S3: return "S3";
+      case com.riiablo.engine.Engine.Monster.MODE_S4: return "S4";
+      case com.riiablo.engine.Engine.Monster.MODE_DD: return "DD";
+      case com.riiablo.engine.Engine.Monster.MODE_XX: return "XX";
+      case com.riiablo.engine.Engine.Monster.MODE_RN: return "RN";
+      default: return "UNKNOWN(" + mode + ")";
+    }
+  }
+
   public Monster setSpawnAnchor(Map.Zone zone, float x, float y) {
     spawnZone = zone;
     spawnX = x;
     spawnY = y;
+    hasSpawnAnchor = true;
     return this;
   }
 }

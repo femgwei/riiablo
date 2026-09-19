@@ -13,23 +13,31 @@ final class PointerClickQueue {
     final float screenY;
     final long capturedAtMillis;
     final long observedTick;
+    final boolean shiftDown;
 
-    Click(float screenX, float screenY, long capturedAtMillis, long observedTick) {
+    Click(float screenX, float screenY, long capturedAtMillis, long observedTick,
+        boolean shiftDown) {
       this.screenX = screenX;
       this.screenY = screenY;
       this.capturedAtMillis = capturedAtMillis;
       this.observedTick = observedTick;
+      this.shiftDown = shiftDown;
     }
   }
 
   private Click pending;
 
   void capture(float screenX, float screenY, long capturedAtMillis, long observedTick) {
+    capture(screenX, screenY, capturedAtMillis, observedTick, false);
+  }
+
+  void capture(float screenX, float screenY, long capturedAtMillis, long observedTick,
+      boolean shiftDown) {
     // A second render-frame edge cannot overwrite an unconsumed command; the
     // client sends one movement intent at a time and the next edge is sampled
     // after the first fixed Tick has consumed this slot.
     if (pending == null) {
-      pending = new Click(screenX, screenY, capturedAtMillis, observedTick);
+      pending = new Click(screenX, screenY, capturedAtMillis, observedTick, shiftDown);
     }
   }
 

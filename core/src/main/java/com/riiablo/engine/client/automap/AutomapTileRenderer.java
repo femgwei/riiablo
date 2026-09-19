@@ -285,9 +285,14 @@ public class AutomapTileRenderer implements Disposable {
 
   /**
    * Outdoor cells 0..3 are the four generic dirt-path strokes. Native D2 only
-   * emits those where DirtPathGrid says a road exists; higher floor cells are
-   * real features such as rivers, bridges, waypoints and fire pits.
+   * emits them for floor tiles that match the corresponding AutoMap.txt row;
+   * higher floor cells are real features such as rivers, bridges, waypoints
+   * and fire pits.
    */
+  public static boolean isOutdoorRoadCell(int cell) {
+    return cell >= 0 && cell <= 3;
+  }
+
   public static boolean isOutdoorFloorFeature(int cell) {
     return cell > 3;
   }

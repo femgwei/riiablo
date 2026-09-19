@@ -100,7 +100,9 @@ public final class GenericMonster extends AI {
     }
 
     float attackRange = resolveAttackRange();
-    if (distance <= attackRange) {
+    boolean rangedAttack = firstNonEmpty(
+        monster.monstats.MissA1, monster.monstats.MissA2) != null;
+    if (rangedAttack ? distance <= attackRange : isInNativeMeleeRange(targetId)) {
       stopMovement();
       lookAt(targetId);
       state = "ATTACK";

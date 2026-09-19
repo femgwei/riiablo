@@ -236,7 +236,6 @@ public class BaseMapBuilderD2MOD {
    */
   protected Zone.Generator createMonsterGenerator(final com.badlogic.gdx.net.Socket finalSocket) {
     return new Zone.Generator() {
-      final float SPAWN_MULT = 2f;
       MonStats.Entry[] monsters;
 
       @Override
@@ -323,8 +322,13 @@ public class BaseMapBuilderD2MOD {
             
             // 生成怪物（仅在客户端）
             if (finalSocket == null && zone.map.factory != null && monsters != null && monsters.length > 0) {
-              if (MathUtils.randomBoolean(SPAWN_MULT
-                  * NativeMonsterRegion.density(zone.level, zone.diff) / 100000f)) {
+              int populationTile = x * gridSize + y;
+              int populationAttempts =
+                  NativeMonsterRegion.populationAttemptsForGameTile(populationTile);
+              for (int attempt = 0; attempt < populationAttempts; attempt++) {
+                if (!NativeMonsterRegion.densityRoll(
+                    NativeMonsterRegion.density(zone.level, zone.diff),
+                    MathUtils.random(99999))) continue;
                 int idx = MathUtils.random(monsters.length - 1);
                 MonStats.Entry monster = monsters[idx];
                 if (monster == null) continue;

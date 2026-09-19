@@ -28,6 +28,7 @@ import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.event.SkillStartEvent;
 import com.riiablo.engine.server.Pathfinder;
+import com.riiablo.engine.server.combat.NativeMeleeDistance;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
@@ -258,9 +259,7 @@ public abstract class AI implements Interactable.Interactor {
       stopMovement();
       return true;
     }
-    float melee = 1f + (monster != null && monster.monstats2 != null
-        ? monster.monstats2.MeleeRng : 0);
-    if (distance <= melee) {
+    if (isInNativeMeleeRange(sourceId)) {
       stopMovement();
       lookAt(sourceId);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
@@ -339,8 +338,7 @@ public abstract class AI implements Interactable.Interactor {
       stopMovement();
       return true;
     }
-    float melee = 1f + (monster.monstats2 != null ? monster.monstats2.MeleeRng : 0);
-    if (distance[0] <= melee) {
+    if (isInNativeMeleeRange(targetId)) {
       stopMovement();
       lookAt(targetId);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
@@ -357,6 +355,27 @@ public abstract class AI implements Interactable.Interactor {
       stopMovement();
     }
     return true;
+  }
+
+  /** Exact D2Common footprint-aware test used to populate native AI bCombat. */
+  protected final boolean isInNativeMeleeRange(int targetId) {
+    if (targetId == Engine.INVALID_ENTITY || !mPosition.has(entityId)
+        || !mPosition.has(targetId)) return false;
+    Position source = mPosition.get(entityId);
+    Position target = mPosition.get(targetId);
+    int sourceSize = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
+    int targetSize = mSize.has(targetId) ? mSize.get(targetId).size : Size.INSIGNIFICANT;
+    int meleeRange = monster != null && monster.monstats2 != null
+        ? monster.monstats2.MeleeRng : 0;
+    return isInNativeMeleeRange(source, sourceSize, target, targetSize, meleeRange);
+  }
+
+  static boolean isInNativeMeleeRange(
+      Position source, int sourceSize, Position target, int targetSize, int meleeRange) {
+    return NativeMeleeDistance.isInRange(
+        Math.round(source.position.x), Math.round(source.position.y), sourceSize,
+        Math.round(target.position.x), Math.round(target.position.y), targetSize,
+        meleeRange, 0);
   }
 
   private UnitState state(int stateId) {
@@ -680,7 +699,9 @@ public abstract class AI implements Interactable.Interactor {
         return override.targetId;
       }
     }
-    return findNearestOrdinaryEnemy(outDistance, resolveAiDistance());
+    int targetId = findNearestOrdinaryEnemy(outDistance, resolveAiDistance());
+    if (targetId == Engine.INVALID_ENTITY) stopMovement();
+    return targetId;
   }
 
   /**
@@ -768,6 +789,28 @@ public abstract class AI implements Interactable.Interactor {
       if (aidist > 0) maxSearchDist = aidist;
     }
     return maxSearchDist;
+  }
+
+  /**
+   * Keeps ordinary monsters in the activation area where they spawned. The
+   * regular aiDist check is relative to the monster and therefore moves with
+   * it; by itself it can sustain an unlimited chase. Native RoomEx maps use
+   * the spawn room plus its immediate sight ring. Legacy maps use a wider
+   * fixed radius so acquiring and losing a target do not happen at one edge.
+   */
+  private boolean isWithinSpawnPursuitScope(int targetId) {
+    if (monster == null || !monster.hasSpawnAnchor
+        || mSummonedPet.has(entityId) || !mPosition.has(targetId)) return true;
+    Position targetPosition = mPosition.get(targetId);
+    if (monster.spawnZone != null && monster.spawnZone.hasNativeRoomTopology()) {
+      return monster.spawnZone.areRoomsAdjacent(
+          monster.spawnX, monster.spawnY,
+          targetPosition.position.x, targetPosition.position.y);
+    }
+    float pursuitDistance = resolveAiDistance() * 2f;
+    float dx = targetPosition.position.x - monster.spawnX;
+    float dy = targetPosition.position.y - monster.spawnY;
+    return dx * dx + dy * dy <= pursuitDistance * pursuitDistance;
   }
 
   protected int findNearestOrdinaryEnemy(float[] outDistance, float maxSearchDist) {
@@ -866,6 +909,7 @@ public abstract class AI implements Interactable.Interactor {
         return false;
       }
     }
+    if (!isWithinSpawnPursuitScope(targetId)) return false;
     // Reuse the native aiDist limit for legacy AI implementations that still
     // iterate their own subscription. This keeps their behavior bounded while
     // they are migrated to findNearestTargetWithAidist().

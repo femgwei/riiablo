@@ -40,6 +40,29 @@ import org.junit.jupiter.api.Test;
 /** Authoritative AI target behavior for D2Game's Dim Vision/Attract/Confuse modes. */
 class NecromancerCurseAiIntegrationTest extends RiiabloTest {
   @Test
+  void ordinaryMonsterDropsTargetOutsideItsSpawnLeash() {
+    Fixture fixture = new Fixture();
+    try {
+      int actor = fixture.monster(0, 0);
+      int player = fixture.player(10, 0);
+      fixture.world.getMapper(Monster.class).get(actor).setSpawnAnchor(null, 0, 0);
+      ProbeAI ai = fixture.ai(actor);
+      assertEquals(player, ai.nearest());
+
+      fixture.world.getMapper(Position.class).get(actor).position.set(990, 0);
+      fixture.world.getMapper(Position.class).get(player).position.set(1000, 0);
+      fixture.world.getMapper(Pathfind.class).create(actor).targetEntityId = player;
+
+      assertEquals(Engine.INVALID_ENTITY, ai.nearest(),
+          "being close to the monster must not extend pursuit indefinitely");
+      assertFalse(fixture.world.getMapper(Pathfind.class).has(actor),
+          "losing the target must cancel the stale chase path");
+    } finally {
+      fixture.close();
+    }
+  }
+
+  @Test
   void summonInheritsOwnerTargetAndUsesOwnerPvpRelation() {
     Fixture fixture = new Fixture();
     try {
@@ -325,7 +348,7 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
       mCorpse = world.getMapper(Corpse.class);
       mTarget = world.getMapper(Target.class);
       partyManager = parties;
-      pathfinder = new NoopPathfinder();
+      pathfinder = new NoopPathfinder(world);
     }
     boolean tickSpecial() { return updateSpecialAiControl(1f / 25f); }
     int nearest() { return findNearestTargetWithAidist(new float[1]); }
@@ -340,9 +363,16 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
 
   @All({Pathfind.class, Position.class, Velocity.class})
   private static final class NoopPathfinder extends Pathfinder {
+    private final World world;
+
+    NoopPathfinder(World world) {
+      this.world = world;
+    }
+
     @Override
     public boolean findPath(
         int src, Vector2 target, boolean raycast, int targetEntityId) {
+      if (target == null) world.getMapper(Pathfind.class).remove(src);
       return false;
     }
   }

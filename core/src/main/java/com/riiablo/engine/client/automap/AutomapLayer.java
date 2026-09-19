@@ -166,6 +166,20 @@ public class AutomapLayer {
     return exploredTiles.size;
   }
 
+  /** Returns whether persisted exploration intersects the supplied world-subtile rectangle. */
+  public boolean hasExplorationInRect(int x, int y, int width, int height) {
+    int maxX = x + Math.max(1, width);
+    int maxY = y + Math.max(1, height);
+    for (IntMap.Entry<Boolean> entry : exploredTiles) {
+      int exploredX = entry.key >> 16;
+      int exploredY = (short) entry.key;
+      if (exploredX >= x && exploredX < maxX && exploredY >= y && exploredY < maxY) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * 清除探索数据
    */

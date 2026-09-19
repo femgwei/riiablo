@@ -143,6 +143,8 @@ public class SkillCastHandler extends PassiveSystem {
       case 3: // Aura toggle
         // Visual aura effect
         break;
+      case 12: // Jab uses the server-synchronized native SQ presentation.
+        break;
       default:
         log.warn("Unsupported cltstfunc({}) for {} casting {}", event.cltstfunc, event.entityId, event.skillId);
     }

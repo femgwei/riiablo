@@ -1,11 +1,21 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.riiablo.engine.server.component.Velocity;
 import org.junit.jupiter.api.Test;
 
 class VelocityModeChangerTest {
+  @Test
+  void temporaryRunCombinesWithPersistentPreferenceWithoutChangingIt() {
+    assertFalse(VelocityModeChanger.isRunRequested(false, false));
+    assertTrue(VelocityModeChanger.isRunRequested(false, true));
+    assertTrue(VelocityModeChanger.isRunRequested(true, false));
+    assertTrue(VelocityModeChanger.isRunRequested(true, true));
+  }
+
   @Test
   void usesNativePlayerWalkAndRunAnimationRatesAtBaseVelocity() {
     assertEquals(213, VelocityModeChanger.scaleAnimationSpeed(

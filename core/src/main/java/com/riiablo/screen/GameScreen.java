@@ -2,6 +2,7 @@ package com.riiablo.screen;
 
 import com.artemis.Aspect;
 import com.artemis.BaseSystem;
+import com.artemis.ComponentMapper;
 import com.artemis.World;
 import com.artemis.WorldConfiguration;
 import com.artemis.WorldConfigurationBuilder;
@@ -101,6 +102,7 @@ import com.riiablo.engine.server.AIStepper;
 import com.riiablo.engine.server.RoomActivationSystem;
 import com.riiablo.engine.server.RoomEntityTrackingSystem;
 import com.riiablo.engine.server.Actioneer;
+import com.riiablo.engine.server.InteractionRange;
 import com.riiablo.engine.server.combat.CombatPositionCaptureSystem;
 import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.AngularVelocity;
@@ -149,8 +151,11 @@ import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.ZoneMovementModesChanger;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Box2DBody;
+import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.server.component.TemporaryRunning;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
@@ -170,12 +175,14 @@ import com.riiablo.profiler.ProfilerManager;
 import com.riiablo.profiler.SystemProfiler;
 import com.riiablo.profiler.GpuSystem;
 import com.riiablo.save.CharData;
+import com.riiablo.save.D2SWriter;
 import com.riiablo.screen.panel.CharacterPanel;
 import com.riiablo.screen.panel.ControlPanel;
 import com.riiablo.screen.panel.CubePanel;
 import com.riiablo.screen.panel.EscapeController;
 import com.riiablo.screen.panel.EscapePanel;
 import com.riiablo.screen.panel.HirelingPanel;
+import com.riiablo.screen.panel.HelpPanel;
 import com.riiablo.screen.panel.InventoryPanel;
 import com.riiablo.screen.panel.MobileControls;
 import com.riiablo.screen.panel.MobilePanel;
@@ -205,16 +212,15 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
    */
   static final float BACKGROUND_DELTA_THRESHOLD = 0.25f;
 
-  /**
-   * A visible frame may be delayed by the desktop compositor or a focus
-   * transition.  Do not turn that delay into a burst of two or more gameplay
-   * ticks: interval systems (animation, AI and cooldowns) would all advance
-   * together and the next frame looks like a speed-up.  The accumulator still
-   * handles ordinary 60 Hz fractional frames; a delayed frame contributes at
-   * most one native 40 ms tick and deliberately drops the excess wall time.
-   */
-  static final float MAX_SIMULATION_DELTA = SimulationClock.STEP_SECONDS;
   static final int MAX_SIMULATION_STEPS_PER_RENDER = 4;
+
+  /**
+   * Preserve visible-frame time so the fixed-step accumulator can maintain the
+   * native 25 Hz simulation when rendering falls below 25 FPS. Catch-up remains
+   * bounded, while suspended/background deltas are discarded separately.
+   */
+  static final float MAX_SIMULATION_DELTA =
+      SimulationClock.STEP_SECONDS * MAX_SIMULATION_STEPS_PER_RENDER;
 
   private static final int[] ITEMS = {
       205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223,
@@ -289,6 +295,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   RenderSystem renderer;
   public int player;
   CharData charData;
+  boolean characterSavedForExit;
   Socket socket;
 
   EngineConfig config;
@@ -296,12 +303,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   MapManager mapManager;
   com.riiablo.engine.server.party.PartyManager partyManager;
   Levels.Entry pendingWaypointTarget;
+  int activeWaygateEntity = Engine.INVALID_ENTITY;
   IsometricCamera iso;
   InputProcessor testingInputProcessor;
 
   ClientItemManager itemController;
 
   public EscapePanel escapePanel;
+  public HelpPanel helpPanel;
   public ControlPanel controlPanel;
   MobilePanel mobilePanel;
   MobileControls mobileControls;
@@ -474,10 +483,18 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     spellsQuickPanelR.setVisible(false);
     stage.addActor(spellsQuickPanelR);
 
+    helpPanel = new HelpPanel();
+    stage.addActor(helpPanel);
+
     mappedKeyStateListener = new MappedKeyStateAdapter() {
       @Override
       public void onPressed(MappedKey key, int keycode) {
         if (input.isVisible() && (key != Keys.Enter && key != Keys.Esc)) {
+          return;
+        }
+
+        if (helpPanel.isVisible()) {
+          if (key == Keys.Help || key == Keys.Esc) helpPanel.close();
           return;
         }
 
@@ -514,6 +531,13 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           } else {
             escapePanel.open();
           }
+        } else if (key == Keys.Help) {
+          escapePanel.close();
+          setLeftPanel(null);
+          setRightPanel(null);
+          spellsQuickPanelL.setVisible(false);
+          spellsQuickPanelR.setVisible(false);
+          helpPanel.open();
         } else if (key == Keys.Enter) {
           boolean visible = !input.isVisible();
           if (!visible) {
@@ -533,6 +557,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
             input.setText("");
             stage.setKeyboardFocus(input);
           }
+        } else if (key == Keys.Run && keycode != Input.Keys.SHIFT_LEFT) {
+          toggleRunWalk();
         } else if (key == Keys.Inventory) {
           setRightPanel(inventoryPanel.isVisible() ? null : inventoryPanel);
         } else if (key == Keys.Character) {
@@ -568,6 +594,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
       @Override
       public boolean scrolled(float amountX, float amountY) {
+        if (helpPanel != null && helpPanel.isVisible()) return true;
         if (amountY < 0) {
           if (UIUtils.ctrl()) {
             renderer.zoom(Math.max(0.20f, renderer.zoom() - ZOOM_AMOUNT));
@@ -583,6 +610,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
       @Override
       public boolean keyDown(int keycode) {
+        if (helpPanel != null && helpPanel.isVisible()) return true;
         switch (keycode) {
           case Input.Keys.TAB:
             if (UIUtils.shift()) {
@@ -784,6 +812,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new ObjectInitializer())
         .with(new ObjectInteractor(), new WarpInteractor(), new ItemInteractor())
         .with(new MenuManager(), new DialogManager())
+        // Hover selection owns all pointer hit testing and must be current
+        // before CursorMovementSystem consumes a captured click.
+        .with(new SelectableManager())
+        .with(new HoveredManager())
         ;
     if (!DEBUG_TOUCHPAD && Gdx.app.getType() == Application.ApplicationType.Desktop) {
       builder.with(new CursorMovementSystem());
@@ -794,6 +826,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         // collision, then unit/AI behavior and death processing.
         .with(new StateUpdater())
         .with(new com.riiablo.engine.server.StaminaSystem())
+        .with(new com.riiablo.engine.server.ManaRecoverySystem())
         .with(new MissileCollisionSystem())
         .with(new Actioneer()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.server.ServerMonsterCorpseSystem())
@@ -901,8 +934,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
         .with(new FootstepEmitter())
 
-        .with(new SelectableManager())
-        .with(new HoveredManager())
         .with(new WarpSubstManager())
         ;
     if (socket == null) {
@@ -963,6 +994,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     if (touchpad != null) touchpad.toBack();
     input.toFront();
     escapePanel.toFront();
+    helpPanel.toFront();
 
     if (Gdx.app.getType() == Application.ApplicationType.Android
      || Riiablo.defaultViewport.getWorldHeight() == Riiablo.MOBILE_VIEWPORT_HEIGHT) {
@@ -1029,6 +1061,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       controlPanel.pack();
       controlPanel.setPosition(stage.getWidth() / 2f, 0,
           Align.bottom | Align.center);
+    }
+    if (helpPanel != null) {
+      helpPanel.setSize(stage.getWidth(), stage.getHeight());
+      helpPanel.invalidate();
     }
   }
 
@@ -1133,6 +1169,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
 
     Riiablo.assets.update();
+    updateTemporaryRunInput();
     CursorMovementSystem cursorMovement = engine.getSystem(CursorMovementSystem.class);
     if (cursorMovement != null) cursorMovement.capturePointerInput();
     int simulationSteps;
@@ -1161,6 +1198,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
           simulationSteps, simulationAccumulator.getStepSeconds(),
           simulationAccumulator.getAccumulated()));
     }
+    closeWaygatePanelIfOutOfRange();
     if (interpolationSystem != null) interpolationSystem.beginRender(delta);
     try {
       renderSystemRunner.render(delta);
@@ -1282,7 +1320,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     Riiablo.game = this;
     Keys.DebugMode.addStateListener(debugKeyListener);
     Keys.Esc.addStateListener(mappedKeyStateListener);
+    Keys.Help.addStateListener(mappedKeyStateListener);
     Keys.Enter.addStateListener(mappedKeyStateListener);
+    Keys.Run.addStateListener(mappedKeyStateListener);
     Keys.Inventory.addStateListener(mappedKeyStateListener);
     Keys.Character.addStateListener(mappedKeyStateListener);
     Keys.Hireling.addStateListener(mappedKeyStateListener);
@@ -1392,7 +1432,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
     Keys.DebugMode.removeStateListener(debugKeyListener);
     Keys.Esc.removeStateListener(mappedKeyStateListener);
+    Keys.Help.removeStateListener(mappedKeyStateListener);
     Keys.Enter.removeStateListener(mappedKeyStateListener);
+    Keys.Run.removeStateListener(mappedKeyStateListener);
     Keys.Inventory.removeStateListener(mappedKeyStateListener);
     Keys.Character.removeStateListener(mappedKeyStateListener);
     Keys.Hireling.removeStateListener(mappedKeyStateListener);
@@ -1415,6 +1457,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   @Override
   public void dispose() {
     //map.dispose(); // FIXME: additional instances aren't reloading textures properly (DT1s disposal)
+    if (!characterSavedForExit && !saveCharacter()) {
+      Gdx.app.error(TAG, "Failed to save character while disposing GameScreen");
+    }
     charData.clearListeners();
     AutomapRenderer automapRenderer = engine.getSystem(AutomapRenderer.class);
     if (automapRenderer != null) automapRenderer.saveNativeAutomap();
@@ -1422,6 +1467,107 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     for (Actor actor : stage.getActors()) if (actor instanceof Disposable) ((Disposable) actor).dispose();
     stage.dispose();
     for (AssetDescriptor asset : preloadedAssets) Riiablo.assets.unload(asset.fileName);
+  }
+
+  /** Persists the local character before leaving the current game. */
+  public boolean saveCharacter() {
+    if (charData == null || !charData.isManaged()) {
+      characterSavedForExit = true;
+      return true;
+    }
+    if (Riiablo.saves == null) {
+      Gdx.app.error(TAG, "Cannot save character: save directory is unavailable");
+      return false;
+    }
+
+    characterSavedForExit = D2SWriter.INSTANCE.save(charData);
+    return characterSavedForExit;
+  }
+
+  public boolean toggleRunWalk() {
+    if (engine == null || player < 0) return false;
+    VelocityModeChanger movement = engine.getSystem(VelocityModeChanger.class);
+    return movement != null && movement.toggleRunWalk(player);
+  }
+
+  public boolean isRunModeEnabled() {
+    if (engine == null || player < 0) return false;
+    VelocityModeChanger movement = engine.getSystem(VelocityModeChanger.class);
+    return movement != null && movement.isRunning(player);
+  }
+
+  private void updateTemporaryRunInput() {
+    if (engine == null || player < 0 || Gdx.input == null) return;
+    boolean controlPressed = Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)
+        || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
+    com.artemis.ComponentMapper<TemporaryRunning> temporaryRunning =
+        engine.getMapper(TemporaryRunning.class);
+    if (shouldUseTemporaryRun(controlPressed, isRunModeEnabled())) {
+      temporaryRunning.create(player);
+    } else {
+      temporaryRunning.remove(player);
+    }
+  }
+
+  static boolean shouldUseTemporaryRun(boolean controlPressed, boolean persistentRun) {
+    return controlPressed && !persistentRun;
+  }
+
+  /** Closes paired item-trading panels before a world movement command is issued. */
+  public boolean closeTradePanelsForMovement() {
+    if (!shouldCloseTradePanelsForMovement(
+        inventoryPanel != null && inventoryPanel.isVisible(),
+        stashPanel != null && stashPanel.isVisible(),
+        vendorPanel != null && vendorPanel.isVisible())) {
+      return false;
+    }
+
+    // Use the panel setters so VendorPanel also clears its active trade state.
+    setLeftPanel(null);
+    setRightPanel(null);
+    return true;
+  }
+
+  static boolean shouldCloseTradePanelsForMovement(
+      boolean inventoryVisible, boolean stashVisible, boolean vendorVisible) {
+    return inventoryVisible && (stashVisible || vendorVisible);
+  }
+
+  public void openWaygatePanel(int waypointEntity) {
+    activeWaygateEntity = waypointEntity;
+    waygatePanel.refresh();
+    setLeftPanel(waygatePanel);
+  }
+
+  private void closeWaygatePanelIfOutOfRange() {
+    if (activeWaygateEntity == Engine.INVALID_ENTITY) return;
+    if (waygatePanel == null || !waygatePanel.isVisible() || engine == null
+        || player == Engine.INVALID_ENTITY) {
+      activeWaygateEntity = Engine.INVALID_ENTITY;
+      return;
+    }
+
+    ComponentMapper<Position> positions = engine.getMapper(Position.class);
+    if (!positions.has(player) || !positions.has(activeWaygateEntity)) {
+      setLeftPanel(null);
+      return;
+    }
+
+    Interactable waypoint = engine.getMapper(Interactable.class).get(activeWaygateEntity);
+    Size playerSize = engine.getMapper(Size.class).get(player);
+    Vector2 playerPosition = positions.get(player).position;
+    Vector2 waypointPosition = positions.get(activeWaygateEntity).position;
+    if (isWaygateWithinRange(playerPosition, waypointPosition, waypoint, playerSize)) return;
+
+    Gdx.app.debug(TAG, "Closing waypoint panel after leaving interaction range: entity="
+        + activeWaygateEntity + " distance=" + playerPosition.dst(waypointPosition));
+    setLeftPanel(null);
+  }
+
+  static boolean isWaygateWithinRange(Vector2 playerPosition, Vector2 waypointPosition,
+      Interactable waypoint, Size playerSize) {
+    return playerPosition != null && waypointPosition != null && waypoint != null
+        && InteractionRange.contains(playerPosition.dst(waypointPosition), waypoint, playerSize);
   }
 
   public void setRightPanel(Actor actor) {
@@ -1439,6 +1585,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   }
 
   public void setLeftPanel(Actor actor) {
+    if (actor == null || actor != waygatePanel) activeWaygateEntity = Engine.INVALID_ENTITY;
     if (left != null) {
       left.setVisible(false);
       left = null;

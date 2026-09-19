@@ -572,6 +572,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
     Riiablo.charData.setAvailablePoints(Stat.statpts, statPoints);
     Riiablo.charData.level = (byte) level;
 
+    // PlayerP and VitalsP are independent components in the same snapshot.
+    // Keep progression insertion from exposing a stale base resource between
+    // component applications (or after a packet that omits unchanged vitals).
+    Riiablo.charData.synchronizeCurrentResources();
+
     int questCount = Math.min(data.questRecordsLength(), com.riiablo.Riiablo.NUM_ACTS * 8);
     if (questCount > 0) {
       int currentDifficulty = Riiablo.charData.diff;

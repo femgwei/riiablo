@@ -496,9 +496,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       final com.badlogic.gdx.net.Socket finalSocket = socket;
       final int finalSeed = seed;
       zone.generator = new Zone.Generator() {
-        // D2MOO compares one 0..99999 game-seed roll directly with MonDen;
-        // do not multiply density in the compatibility generator.
-        final float SPAWN_MULT = 1f;
+        // D2MOO compares each 0..99999 game-seed roll directly with MonDen.
+        // The per-tile attempt budget below mirrors its 3x3-subtile population cells.
         MonStats.Entry[] monsters;
 
         @Override
@@ -693,8 +692,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               
               // 生成怪物（仅在客户端）
               if (finalSocket == null && zone.map.factory != null && monsters != null && monsters.length > 0) {
-                if (MathUtils.randomBoolean(SPAWN_MULT
-                    * NativeMonsterRegion.density(zone.level, zone.diff) / 100000f)) {
+                int populationTile = x * gridSize + y;
+                int populationAttempts =
+                    NativeMonsterRegion.populationAttemptsForGameTile(populationTile);
+                for (int attempt = 0; attempt < populationAttempts; attempt++) {
+                  if (!NativeMonsterRegion.densityRoll(
+                      NativeMonsterRegion.density(zone.level, zone.diff),
+                      MathUtils.random(99999))) continue;
                   int idx = MathUtils.random(monsters.length - 1);
                   MonStats.Entry monster = monsters[idx];
                   if (monster == null) continue;

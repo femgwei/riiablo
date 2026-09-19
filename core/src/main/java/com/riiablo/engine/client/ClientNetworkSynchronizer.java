@@ -29,6 +29,7 @@ import com.riiablo.engine.server.component.PlayerCorpse;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Target;
+import com.riiablo.engine.server.component.TemporaryRunning;
 import com.riiablo.net.packet.d2gs.Connection;
 import com.riiablo.net.packet.d2gs.D2GS;
 import com.riiablo.net.packet.d2gs.D2GSData;
@@ -65,6 +66,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<TemporaryRunning> mTemporaryRunning;
   protected ComponentMapper<Class> mClass;
 
   protected NetworkIdManager idManager;
@@ -174,7 +176,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
     final long observedServerTick = receiver.latestServerTick();
     final long targetTick = observedServerTick == 0L ? 0L
         : observedServerTick + MOVEMENT_TARGET_LEAD_TICKS;
-    final boolean running = mRunning.has(entityId);
+    final boolean running = mRunning.has(entityId) || mTemporaryRunning.has(entityId);
 
     int targetEntityId = Engine.INVALID_ENTITY;
     int targetType = 0;

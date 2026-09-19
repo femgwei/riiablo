@@ -51,6 +51,17 @@ public class NativeSkillResolverTest {
   }
 
   @Test
+  public void basicAttackRetainsTargetableOnlyFallback() {
+    Skills.Entry attack = new Skills.Entry();
+    attack.Id = com.riiablo.skill.SkillCodes.attack;
+    assertTrue(NativeSkillResolver.isTargetableOnly(attack));
+
+    Skills.Entry groundSkill = new Skills.Entry();
+    groundSkill.Id = -1;
+    assertFalse(NativeSkillResolver.isTargetableOnly(groundSkill));
+  }
+
+  @Test
   public void manaUsesNativeFixedPointFormula() {
     Skills.Entry skill = new Skills.Entry();
     skill.mana = 12;
@@ -61,6 +72,13 @@ public class NativeSkillResolverTest {
     assertEquals(10f, NativeSkillResolver.manaCost(skill, 3), 0.0001f);
     skill.lvlmana = -10;
     assertEquals(5f, NativeSkillResolver.manaCost(skill, 3), 0.0001f);
+  }
+
+  @Test
+  public void manaAvailabilityUsesTheSameFractionalBoundaryAsCasting() {
+    assertTrue(NativeSkillResolver.hasEnoughMana(6f, 6f));
+    assertTrue(NativeSkillResolver.hasEnoughMana(0f, 0f));
+    assertFalse(NativeSkillResolver.hasEnoughMana(5.996f, 6f));
   }
 
   @Test

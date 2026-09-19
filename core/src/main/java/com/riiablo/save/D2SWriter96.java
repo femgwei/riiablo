@@ -42,6 +42,11 @@ public class D2SWriter96 {
           "Character name is not compatible with Diablo II 1.13c: " + charData.name);
     }
 
+    // Runtime combat owns the aggregate resource values, whereas the D2S
+    // stat section is written from base(). Synchronize at the persistence
+    // boundary so damage and recovery cannot be replaced by a stale value.
+    charData.synchronizeCurrentResources();
+
     D2S d2s = new D2S();
     d2s.version = VERSION;
     d2s.alternate = charData.getItems().alternate;

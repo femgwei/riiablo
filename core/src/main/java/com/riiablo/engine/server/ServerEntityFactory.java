@@ -688,6 +688,7 @@ public class ServerEntityFactory extends EntityFactory {
     mCasting.remove(monsterId);
     mSequence.remove(monsterId);
     AI ai = restoredMonsterAi(monsterId, monster.monstats, playerRevive);
+    monster.setResurrected(sourceId, playerRevive);
     mAIWrapper.create(monsterId).ai = ai;
     world.getInjector().inject(ai);
     ai.initialize();
@@ -734,9 +735,11 @@ public class ServerEntityFactory extends EntityFactory {
     }
 
     log.info("[MONSTER_RAISE] phase=restored source={} target={} monster={} hp={} "
-            + "mode={} resurrectSkill={} playerRevive={} ai={} position=({}, {})",
+            + "mode={} resurrectSkill={} resurrected={} resurrectedBy={} playerRevive={} "
+            + "ai={} position=({}, {})",
         sourceId, monsterId, monster.monstats.Id, hitpoints.asFixed(), resurrectMode,
-        configuredSkill, playerRevive, ai.getClass().getSimpleName(),
+        configuredSkill, monster.resurrected, monster.resurrectedBy, playerRevive,
+        ai.getClass().getSimpleName(),
         mPosition.get(monsterId).position.x, mPosition.get(monsterId).position.y);
     return true;
   }

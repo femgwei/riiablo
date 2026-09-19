@@ -21,6 +21,14 @@ class AutomapLayerTest {
     assertEquals(1, layer.getExploredCount());
   }
 
+  @Test void detectsPersistedExplorationInsideAZoneBeforeEntry() {
+    AutomapLayer layer = new AutomapLayer(2);
+    layer.revealRect(280, 80, 3, 2);
+
+    assertTrue(layer.hasExplorationInRect(200, 40, 160, 120));
+    assertFalse(layer.hasExplorationInRect(0, 0, 100, 100));
+  }
+
   @Test void duplicateNativeCellsAreCollapsedPerLayer() {
     AutomapLayer layer = new AutomapLayer(2);
     layer.addFloor(11, -5, 7);

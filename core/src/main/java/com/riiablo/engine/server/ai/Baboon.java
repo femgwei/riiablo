@@ -102,15 +102,7 @@ public class Baboon extends AI {
    * Check if monster is in combat (within melee range).
    */
   private boolean isInCombat(int targetId) {
-    if (targetId == Engine.INVALID_ENTITY) return false;
-    if (!mPosition.has(targetId)) return false;
-    
-    Vector2 entityPos = mPosition.get(entityId).position;
-    Vector2 targetPos = mPosition.get(targetId).position;
-    float distance = entityPos.dst(targetPos);
-    float meleeRng = 1f + monster.monstats2.MeleeRng;
-    
-    return distance <= meleeRng;
+    return isInNativeMeleeRange(targetId);
   }
 
   /**
@@ -178,7 +170,7 @@ public class Baboon extends AI {
       IntBag entities = enemyEntities.getEntities();
       for (int i = 0, size = entities.size(); i < size; i++) {
         int ent = entities.get(i);
-        if (mClass.get(ent).type == Class.Type.PLR) {
+        if (mClass.get(ent).type == Class.Type.PLR && isValidEnemyTarget(ent)) {
           Vector2 targetPos = mPosition.get(ent).position;
           float dst = entityPos.dst(targetPos);
           if (dst < targetDistance) {
@@ -263,7 +255,7 @@ public class Baboon extends AI {
     IntBag entities = enemyEntities.getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int ent = entities.get(i);
-      if (mClass.get(ent).type == Class.Type.PLR) {
+      if (mClass.get(ent).type == Class.Type.PLR && isValidEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
         float dst = entityPos.dst(targetPos);
         if (dst < targetDistance) {
@@ -274,6 +266,7 @@ public class Baboon extends AI {
     }
 
     if (targetId == Engine.INVALID_ENTITY) {
+      stopMovement();
       // No target, idle behavior
       switch (stateMachine.getCurrentState()) {
         case IDLE:

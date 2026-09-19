@@ -28,6 +28,7 @@ import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.engine.server.player.PlayerStatsManager;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.logger.LogManager;
@@ -333,7 +334,9 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     }
 
     void updateEnabledState() {
-      setDisabled(availableSkillPoints <= 0);
+      String validation = PlayerStatsManager.INSTANCE.validateSkillPoint(
+          Riiablo.charData, skill.Id);
+      setDisabled(!PlayerStatsManager.SKILL_OK.equals(validation));
     }
 
     @Override

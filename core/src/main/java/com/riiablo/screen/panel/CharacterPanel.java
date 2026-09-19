@@ -19,13 +19,17 @@ import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.Cvars;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.ExperienceTable;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC6;
+import com.riiablo.codec.excel.CharStats;
+import com.riiablo.codec.excel.Weapons;
+import com.riiablo.item.BodyLoc;
+import com.riiablo.item.Item;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
-import com.riiablo.widget.LabelButton;
 import com.riiablo.widget.StatLabel;
 import com.riiablo.engine.server.player.PlayerStatsManager;
 
@@ -35,11 +39,17 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   TextureRegion invchar;
 
   final AssetDescriptor<DC6> buysellbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\buysellbtn.DC6", DC6.class);
+  final AssetDescriptor<DC6> levelButtonDescriptor =
+      new AssetDescriptor<>("data\\global\\ui\\PANEL\\level.DC6", DC6.class);
   Button btnExit;
   private Label statPoints;
   private Label levelValue;
   private Label experienceValue;
-  private final LabelButton[] statButtons = new LabelButton[4];
+  private Label nextLevelValue;
+  private final Label[] damageValues = new Label[2];
+  private final Label[] attackRatingValues = new Label[2];
+  private final Button[] statButtons = new Button[4];
+  private Button.ButtonStyle statButtonStyle;
 
   public CharacterPanel() {
     Riiablo.assets.load(invcharDescriptor);
@@ -48,6 +58,14 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     setSize(invchar.getRegionWidth(), invchar.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
+
+    Riiablo.assets.load(levelButtonDescriptor);
+    Riiablo.assets.finishLoadingAsset(levelButtonDescriptor);
+    DC6 levelButton = Riiablo.assets.get(levelButtonDescriptor);
+    statButtonStyle = new Button.ButtonStyle(
+        new TextureRegionDrawable(levelButton.getTexture(0)),
+        new TextureRegionDrawable(levelButton.getTexture(1)));
+    statButtonStyle.disabled = new TextureRegionDrawable(levelButton.getTexture(2));
 
     btnExit = new Button(new Button.ButtonStyle() {{
       Riiablo.assets.load(buysellbtnDescriptor);
@@ -102,7 +120,8 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     nextLevel.setPosition(194, getHeight() - 65);
     nextLevel.setSize(114, 33);
     nextLevel.add(new Label(4059, Riiablo.fonts.ReallyTheLastSucker)).row();
-    nextLevel.add(new Label("...", Riiablo.fonts.font16)).growY().row();
+    nextLevelValue = new Label("0", Riiablo.fonts.font16);
+    nextLevel.add(nextLevelValue).growY().row();
     addActor(nextLevel);
 
     Label strLabel = new Label(4060, Riiablo.fonts.ReallyTheLastSucker);
@@ -111,11 +130,14 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     strLabel.setAlignment(Align.center);
     addActor(strLabel);
 
-    Label str = createStatLabel(Stat.strength);
+    Label str = createPrimaryStatLabel(Stat.strength);
     str.setPosition(78, getHeight() - 100);
     str.setSize(36, 16);
     addActor(str);
-    addStatButton(PlayerStatsManager.STAT_TYPE_STRENGTH, 118, getHeight() - 100);
+    addStatButton(PlayerStatsManager.STAT_TYPE_STRENGTH, 137, getHeight() - 92);
+
+    addCombatRow(4061, getHeight() - 100, damageValues, 0);
+    addCombatRow(4061, getHeight() - 124, damageValues, 1);
 
     Label dexLabel = new Label(4062, Riiablo.fonts.ReallyTheLastSucker);
     dexLabel.setPosition(11, getHeight() - 162);
@@ -123,11 +145,14 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     dexLabel.setAlignment(Align.center);
     addActor(dexLabel);
 
-    Label dex = createStatLabel(Stat.dexterity);
+    Label dex = createPrimaryStatLabel(Stat.dexterity);
     dex.setPosition(78, getHeight() - 162);
     dex.setSize(36, 16);
     addActor(dex);
-    addStatButton(PlayerStatsManager.STAT_TYPE_DEXTERITY, 118, getHeight() - 162);
+    addStatButton(PlayerStatsManager.STAT_TYPE_DEXTERITY, 137, getHeight() - 154);
+
+    addCombatRow(4063, getHeight() - 162, attackRatingValues, 0);
+    addCombatRow(4063, getHeight() - 186, attackRatingValues, 1);
 
     Label defenseLabel = Label.i18n("strchrdef", Riiablo.fonts.ReallyTheLastSucker);
     defenseLabel.setPosition(165, getHeight() - 210);
@@ -146,11 +171,11 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     vitLabel.setAlignment(Align.center);
     addActor(vitLabel);
 
-    Label vit = createStatLabel(Stat.vitality);
+    Label vit = createPrimaryStatLabel(Stat.vitality);
     vit.setPosition(78, getHeight() - 248);
     vit.setSize(36, 16);
     addActor(vit);
-    addStatButton(PlayerStatsManager.STAT_TYPE_VITALITY, 118, getHeight() - 248);
+    addStatButton(PlayerStatsManager.STAT_TYPE_VITALITY, 137, getHeight() - 240);
 
     Label staminaLabel = Label.i18n("strchrstm", Riiablo.fonts.ReallyTheLastSucker);
     staminaLabel.setPosition(165, getHeight() - 248);
@@ -190,11 +215,11 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     eneLabel.setAlignment(Align.center);
     addActor(eneLabel);
 
-    Label ene = createStatLabel(Stat.energy);
+    Label ene = createPrimaryStatLabel(Stat.energy);
     ene.setPosition(78, getHeight() - 310);
     ene.setSize(36, 16);
     addActor(ene);
-    addStatButton(PlayerStatsManager.STAT_TYPE_ENERGY, 118, getHeight() - 310);
+    addStatButton(PlayerStatsManager.STAT_TYPE_ENERGY, 137, getHeight() - 302);
 
     Label manaLabel = Label.i18n("strchrman", Riiablo.fonts.ReallyTheLastSucker);
     manaLabel.setPosition(165, getHeight() - 310);
@@ -263,16 +288,34 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
     return createStatLabel(statId, StatLabel.Colorizer.DEFAULT);
   }
 
+  private Label createPrimaryStatLabel(short statId) {
+    return createStatLabel(statId, StatLabel.Colorizer.BASE_DIFFERENCE);
+  }
+
   private Label createStatLabel(short statId, StatLabel.Colorizer colorizer) {
     Attributes attrs = Riiablo.charData.getStats();
     return new StatLabel(attrs, statId, colorizer);
   }
 
-  private void addStatButton(final int statType, float x, float y) {
-    LabelButton button = new LabelButton("+", Riiablo.fonts.font16, Riiablo.colors.gold);
-    button.setAlignment(Align.center);
-    button.setSize(18, 18);
-    button.setPosition(x, y);
+  private void addCombatRow(int labelId, float y, Label[] values, int index) {
+    Label name = new Label(labelId, Riiablo.fonts.ReallyTheLastSucker);
+    name.setPosition(165, y);
+    name.setSize(108, 16);
+    name.setAlignment(Align.center);
+    addActor(name);
+
+    Label value = values[index] = new Label("0", Riiablo.fonts.font16);
+    value.setPosition(272, y);
+    value.setSize(40, 16);
+    value.setAlignment(Align.center);
+    addActor(value);
+  }
+
+  private void addStatButton(final int statType, float centerX, float centerY) {
+    Button button = new Button(statButtonStyle);
+    button.setPosition(
+        centerX - button.getWidth() / 2f,
+        centerY - button.getHeight() / 2f);
     button.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
@@ -297,12 +340,145 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
           Riiablo.charData.getStats().get(Stat.level).asInt()));
     }
     if (experienceValue != null) {
-      experienceValue.setText(NumberFormat.getInstance(Cvars.Client.Locale.get()).format(
-          Riiablo.charData.getStats().get(Stat.experience).asLong()));
+      setNumber(experienceValue, statLong(Stat.experience));
     }
-    for (LabelButton button : statButtons) {
+    if (nextLevelValue != null) {
+      int level = statInt(Stat.level);
+      long threshold = level >= ExperienceTable.MAX_LEVEL
+          ? statLong(Stat.experience)
+          : ExperienceTable.getInstance().getExperienceForNextLevel(
+              level, Riiablo.charData.classId.id);
+      setNumber(nextLevelValue, threshold);
+    }
+
+    int[] damage = displayedPhysicalDamage();
+    Color damageColor = displayedDamageColor();
+    String damageText = damage[0] + "-" + damage[1];
+    for (Label label : damageValues) {
+      if (label == null) continue;
+      setCompactText(label, damageText);
+      label.setColor(damageColor);
+    }
+
+    int attackRating = displayedAttackRating();
+    for (Label label : attackRatingValues) {
+      if (label != null) setNumber(label, attackRating);
+    }
+    for (Button button : statButtons) {
       if (button != null) button.setVisible(isVisible() && available > 0);
     }
+  }
+
+  private int statInt(short stat) {
+    StatRef value = Riiablo.charData.getStats().get(stat, StatRef.obtain());
+    return value == null ? 0 : value.asInt();
+  }
+
+  private long statLong(short stat) {
+    StatRef value = Riiablo.charData.getStats().get(stat, StatRef.obtain());
+    return value == null ? 0L : value.asLong();
+  }
+
+  private void setNumber(Label label, long value) {
+    String text = NumberFormat.getInstance(Cvars.Client.Locale.get()).format(value);
+    setCompactText(label, text);
+  }
+
+  private void setCompactText(Label label, String text) {
+    BitmapFont font = getFont(text.length());
+    if (label.getStyle().font != font) {
+      label.getStyle().font = font;
+      label.setStyle(label.getStyle());
+    }
+    label.setText(text);
+  }
+
+  int displayedAttackRating() {
+    int dexterity = statInt(Stat.dexterity);
+    int toHit = statInt(Stat.tohit);
+    CharStats.Entry charStats = Riiablo.charData.classId.entry();
+    int classFactor = charStats == null ? 0 : charStats.ToHitFactor;
+    return calculateAttackRating(dexterity, toHit, classFactor);
+  }
+
+  static int calculateAttackRating(int dexterity, int toHit, int classFactor) {
+    return Math.max(0, toHit + 5 * (dexterity - 7) + classFactor);
+  }
+
+  int[] displayedPhysicalDamage() {
+    int minimum = statInt(Stat.mindamage);
+    int maximum = statInt(Stat.maxdamage);
+    int secondaryMinimum = statInt(Stat.secondary_mindamage);
+    int secondaryMaximum = statInt(Stat.secondary_maxdamage);
+    if (secondaryMinimum > 0 && secondaryMaximum > 0) {
+      minimum = secondaryMinimum;
+      maximum = secondaryMaximum;
+    }
+    if (minimum <= 0 && maximum <= 0) {
+      minimum = 1;
+      maximum = 2;
+    }
+    maximum = Math.max(minimum, maximum);
+
+    int strengthBonus = 100;
+    int dexterityBonus = 0;
+    Item weapon = activeWeapon();
+    if (weapon != null && weapon.base instanceof Weapons.Entry) {
+      Weapons.Entry record = (Weapons.Entry) weapon.base;
+      strengthBonus = record.StrBonus;
+      dexterityBonus = record.DexBonus;
+    }
+    return calculateDamageRange(minimum, maximum, statInt(Stat.strength),
+        statInt(Stat.dexterity), strengthBonus, dexterityBonus,
+        statInt(Stat.damagepercent));
+  }
+
+  static int[] calculateDamageRange(int minimum, int maximum, int strength, int dexterity,
+      int strengthBonus, int dexterityBonus, int damagePercent) {
+    int bonus = damagePercent
+        + strengthBonus * strength / 100
+        + dexterityBonus * dexterity / 100;
+    bonus = Math.max(-90, bonus);
+    return new int[] {
+        Math.max(0, minimum + minimum * bonus / 100),
+        Math.max(0, maximum + maximum * bonus / 100)
+    };
+  }
+
+  private Item activeWeapon() {
+    Item right = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
+    if (right != null && right.base instanceof Weapons.Entry) return right;
+    Item left = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
+    return left != null && left.base instanceof Weapons.Entry ? left : null;
+  }
+
+  private Color displayedDamageColor() {
+    Attributes attrs = Riiablo.charData.getStats();
+    if (hasPositiveDamage(attrs, Stat.poisonmindam, Stat.poisonmaxdam)) {
+      return Riiablo.colors.green;
+    }
+    if (hasPositiveDamage(attrs, Stat.firemindam, Stat.firemaxdam)) {
+      return Riiablo.colors.red;
+    }
+    if (hasPositiveDamage(attrs, Stat.coldmindam, Stat.coldmaxdam)) {
+      return Riiablo.colors.blue;
+    }
+    if (hasPositiveDamage(attrs, Stat.lightmindam, Stat.lightmaxdam)) {
+      return Riiablo.colors.yellow;
+    }
+    return Riiablo.colors.white;
+  }
+
+  private static boolean hasPositiveDamage(Attributes attrs, short minimum, short maximum) {
+    return statValue(attrs.aggregate(), minimum) > 0
+        || statValue(attrs.aggregate(), maximum) > 0
+        || statValue(attrs.remaining(), minimum) > 0
+        || statValue(attrs.remaining(), maximum) > 0;
+  }
+
+  private static int statValue(com.riiablo.attributes.StatListRef stats, short stat) {
+    StatRef value = stats.get(stat, StatRef.obtain());
+    return value == null ? 0 : value.asInt();
   }
 
   @Override
@@ -353,6 +529,10 @@ public class CharacterPanel extends WidgetGroup implements Disposable {
   public void dispose() {
     Riiablo.assets.unload(invcharDescriptor.fileName);
     Riiablo.assets.unload(buysellbtnDescriptor.fileName);
+    Riiablo.assets.unload(levelButtonDescriptor.fileName);
+    for (Button button : statButtons) {
+      if (button != null) button.dispose();
+    }
   }
 
   @Override

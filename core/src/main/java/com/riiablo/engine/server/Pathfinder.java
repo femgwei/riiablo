@@ -10,11 +10,12 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Pools;
 import com.riiablo.engine.server.component.Angle;
-import com.riiablo.engine.server.component.Class;
+import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
+import com.riiablo.engine.server.component.TemporaryRunning;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Interactable;
@@ -40,11 +41,12 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Angle> mAngle;
+  protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<TemporaryRunning> mTemporaryRunning;
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Interactable> mInteractable;
-  protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<MapWrapper> mMapWrapper;
 
@@ -95,16 +97,12 @@ public class Pathfinder extends IteratingSystem {
       // Check if in attack range (melee or ranged)
       float distance = position0.dst(targetPos);
       
-      // Check melee range
-      int meleeRange = actioneer.getMeleeRange(entityId);
-      int rangeBonus = 0; // Default for monsters
-      if (mClass.has(entityId)) {
-        Class.Type type = mClass.get(entityId).type;
-        if (type == Class.Type.PLR) {
-          rangeBonus = 3; // D2MOD: 2 * (pAttacker->dwUnitType == UNIT_PLAYER) + 1 = 2 * 1 + 1 = 3
-        }
-      }
-      float meleeRangeThreshold = meleeRange + rangeBonus + 1f;
+      // Chase until the same footprint-aware range used to start the attack.
+      // The player's +3 server hit allowance belongs to keyframe validation;
+      // using it here stops the path before the client may begin attacking.
+      boolean inMeleeApproachRange = isInMeleeApproachRange(
+          actioneer, entityId, targetId);
+      float meleeRangeThreshold = actioneer.getMeleeRange(entityId) + 1f;
       
       // Check ranged attack range (if monster has ranged attack capability)
       float rangedRangeThreshold = 0f;
@@ -130,16 +128,15 @@ public class Pathfinder extends IteratingSystem {
         }
       }
       
-      // Interaction targets use their own native range. Do not apply the
-      // player's melee stop threshold to an NPC: that can stop the player
-      // several tiles away, leaving CursorMovementSystem waiting forever for
-      // the interaction range and facing check.
+      // Interaction movement and activation share one footprint-aware range.
+      // Applying the melee stop threshold here can leave an NPC or object
+      // target pending forever just outside its activation boundary.
       boolean interactionTarget = targetId != Engine.INVALID_ENTITY
           && mInteractable.has(targetId);
-      float interactionRange = interactionTarget
-          ? Math.max(0.5f, mInteractable.get(targetId).range) : 0f;
-      if ((interactionTarget && distance <= interactionRange)
-          || (!interactionTarget && (distance <= meleeRangeThreshold
+      Interactable interactable = interactionTarget ? mInteractable.get(targetId) : null;
+      if ((interactionTarget
+              && InteractionRange.contains(distance, interactable, mSize.get(entityId)))
+          || (!interactionTarget && (inMeleeApproachRange
               || (rangedRangeThreshold > 0f && distance <= rangedRangeThreshold)))) {
         if (interactionTarget && mAngle.has(entityId)) {
           Vector2 facing = new Vector2(targetPos).sub(position0);
@@ -177,7 +174,10 @@ public class Pathfinder extends IteratingSystem {
     }
 
     Velocity velocity = mVelocity.get(entityId);
-    boolean running = mRunning.has(entityId);
+    boolean running = VelocityModeChanger.isRunRequested(
+            mRunning.has(entityId), mTemporaryRunning.has(entityId))
+        && (!mAttributes.has(entityId)
+            || StaminaSystem.hasRunStamina(mAttributes.get(entityId)));
     float speed = velocity.speed(running);
     if (speed <= 0f) {
       log.warn("[MOVEMENT] invalid speed entity={} running={} walkSpeed={} runSpeed={}",
@@ -224,6 +224,11 @@ public class Pathfinder extends IteratingSystem {
     }
 
     velocity.velocity.set(tmpVec2).setLength(speed);
+  }
+
+  static boolean isInMeleeApproachRange(
+      Actioneer actioneer, int attackerId, int targetId) {
+    return actioneer.isInMeleeRange(attackerId, targetId, 0);
   }
 
   /**

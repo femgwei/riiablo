@@ -149,6 +149,10 @@ public class Actioneer extends PassiveSystem {
     if (!mVelocity.has(entityId)) {
       return;
     }
+    // A ground command replaces entity-follow/interaction intent. Leaving the
+    // old Target attached lets release handling revive a stale target while
+    // the player is already following a new ground path.
+    mTarget.remove(entityId);
     pathfinder.findPath(entityId, targetVec, true);
   }
 
@@ -169,12 +173,15 @@ public class Actioneer extends PassiveSystem {
       // entering the interaction range. Pick a free point on the source side
       // of the target and retain the target entity for range checking.
       if (mInteractable.has(targetId) && mPosition.has(entityId)) {
-        float range = Math.max(0.5f, mInteractable.get(targetId).range);
+        com.riiablo.engine.server.component.Interactable interactable =
+            mInteractable.get(targetId);
+        Size sourceSize = mSize.get(entityId);
+        float range = InteractionRange.effective(interactable, sourceSize);
         Vector2 source = mPosition.get(entityId).position;
         float distance = source.dst(destination);
-        if (distance > range) {
+        if (!InteractionRange.contains(distance, interactable, sourceSize)) {
           Vector2 approach = new Vector2(source).sub(destination).nor()
-              .scl(Math.max(0.5f, range - 0.25f)).add(destination);
+              .scl(Math.max(0.5f, range - 0.75f)).add(destination);
           if (map != null) {
             Map.Zone zone = map.getZone(approach);
             Vector2 free = new Vector2();
@@ -262,6 +269,15 @@ public class Actioneer extends PassiveSystem {
         log.info("[ATTACK_ANIM] rejected_dead entity={} skill={} target={}", entityId, skillId, targetId);
         return;
       }
+    }
+    boolean player = mPlayer.has(entityId);
+    boolean rangedNormalAttack = player && isPlayerRangedNormalAttack(entityId);
+    if (requiresNormalMeleeCastRange(skillId, targetId, player, rangedNormalAttack)
+        && !isInMeleeRangeAtTick(entityId, targetId, 0, snapshotTick)) {
+      log.info("[ATTACK_ANIM] phase=reject entity={} skill={} target={} "
+              + "reason=melee_out_of_range tick={}",
+          entityId, skillId, targetId, snapshotTick);
+      return;
     }
     moveTo(entityId, Engine.INVALID_ENTITY);
     final Skills.Entry skill = Riiablo.files.skills.get(skillId);
@@ -390,7 +406,15 @@ public class Actioneer extends PassiveSystem {
   int getMode(Skills.Entry skill, Class.Type type) {
     switch (type) {
       case MON: return type.getMode(skill.monanim);
-      case PLR: return type.getMode(skill.anim);
+      case PLR: {
+        int mode = type.getMode(skill.anim);
+        // Player SQ is a hard-coded native sequence rather than a COF mode.
+        // Start with Skills.txt's transition animation instead of SC.
+        if (mode == Engine.INVALID_MODE && "SQ".equalsIgnoreCase(skill.anim)) {
+          mode = type.getMode(skill.seqtrans);
+        }
+        return mode;
+      }
       default:
         log.error("Unsupported mode translation for class type: " + type);
         return type.getMode(skill.anim);
@@ -517,6 +541,14 @@ public class Actioneer extends PassiveSystem {
     log.info("[ATTACK_ANIM] keyframe entity={} skill={} target={} keyframe={} mode={} frame={}",
         event.entityId, casting.skillId, casting.targetId,
         Engine.getKeyframe(event.keyframe), (int) mode, frame);
+    if (isMonsterMeleeMode(event.entityId)) {
+      Monster monster = mMonster.get(event.entityId);
+      log.info("[MONSTER_MELEE] phase=keyframe_dispatch entity={} monster={} mode={} skill={} "
+              + "target={} keyframe={} frame={} resurrected={} resurrectedBy={} playerRevive={}",
+          event.entityId, monsterName(monster), Monster.modeName(mode), casting.skillId,
+          casting.targetId, Engine.getKeyframe(event.keyframe), frame, monster.resurrected,
+          monster.resurrectedBy, monster.playerRevive);
+    }
     
     // D2MOD: Check if target is dead before processing attack keyframe
     // If target is dead, skip damage/events but allow animation to complete
@@ -659,6 +691,13 @@ public class Actioneer extends PassiveSystem {
           event.entityId, completedTargetId);
       return;
     }
+    if (casting.jabRemainingStrikes > 0
+        && casting.jabStrikeProcessed
+        && !targetDead) {
+      log.info("[AMAZON_JAB] phase=continue entity={} target={} remaining={}",
+          event.entityId, completedTargetId, casting.jabRemainingStrikes);
+      return;
+    }
     if (casting.furyInitialized
         && casting.furyRemainingStrikes > 0
         && casting.furyStrikeProcessed) {
@@ -735,9 +774,19 @@ public class Actioneer extends PassiveSystem {
       case 1: // attack
         break;
       case 3: // throw
-      case 5: // left hand throw
       case 65: // Throw skill (skillId=2)
         break;
+      case 5: { // Left-hand action; Jab owns native player sequence 1.
+        Casting casting = mCasting.get(entityId);
+        Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
+        if (skill != null && skill.srvdofunc == 7) {
+          casting.jabRemainingStrikes = 3;
+          casting.jabStrikeProcessed = false;
+          log.info("[AMAZON_JAB] phase=start entity={} target={} strikes={}",
+              entityId, targetId, casting.jabRemainingStrikes);
+        }
+        break;
+      }
       case 6: // Amazon Power/Charged Strike; combat resolves at the keyframe
       case 10: // Amazon Lightning Strike; chain resolves at the keyframe
         log.debug("[AMAZON_SKILL] phase=start entity={} target={} srvStFunc={} delegated=keyframe",
@@ -1230,6 +1279,8 @@ public class Actioneer extends PassiveSystem {
         Item dragonClawWeapon = null;
         boolean dragonTail = srvdofunc == 50;
         boolean dragonFlight = srvdofunc == 52;
+        boolean jab = srvdofunc == 7 && activeCasting != null
+            && activeCasting.jabRemainingStrikes > 0;
         boolean berserk = activeSkill != null && activeSkill.srvstfunc == 39
             && activeSkill.srvdofunc == 2;
         boolean fireClaws = activeSkill != null && DruidSkills.isFireClaws(activeSkill);
@@ -1334,12 +1385,26 @@ public class Actioneer extends PassiveSystem {
           activeCasting.dragonClawRemainingStrikes--;
           dragonClawWeapon = dragonClawWeapon(entityId, dragonClawStrike);
         }
+        if (jab) {
+          activeCasting.jabStrikeProcessed = true;
+          activeCasting.jabRemainingStrikes--;
+          log.info("[AMAZON_JAB] phase=strike entity={} target={} remaining={}",
+              entityId, targetId, activeCasting.jabRemainingStrikes);
+        }
         if (fireClaws) {
           resolveFireClaws(entityId, targetId);
           break;
         }
-        if (targetId == Engine.INVALID_ENTITY) break;
-        if (!mAttributesWrapper.has(targetId)) break;
+        boolean loggedMonsterMelee = isMonsterMeleeMode(entityId);
+        Monster attackingMonster = loggedMonsterMelee ? mMonster.get(entityId) : null;
+        if (targetId == Engine.INVALID_ENTITY) {
+          logMonsterMeleeReject(entityId, attackingMonster, targetId, "invalid_target");
+          break;
+        }
+        if (!mAttributesWrapper.has(targetId)) {
+          logMonsterMeleeReject(entityId, attackingMonster, targetId, "target_attributes_missing");
+          break;
+        }
         // Player components are authoritative for PvP identity.  Some native
         // monster tests intentionally omit the presentation Class component,
         // so using isPlayerEntity() here would misclassify a valid player
@@ -1353,6 +1418,7 @@ public class Actioneer extends PassiveSystem {
           log.info("[COMBAT_RELATION] phase=reject source={} target={} "
                   + "sourcePlayerAligned={} targetPlayerAligned={}",
               entityId, targetId, attackerPlayerUnit, targetPlayerUnit);
+          logMonsterMeleeReject(entityId, attackingMonster, targetId, "relation_rejected");
           break;
         }
         boolean attackerPlayer = isPlayerEntity(entityId);
@@ -1382,6 +1448,14 @@ public class Actioneer extends PassiveSystem {
                 entityId, targetId,
                 mPosition.get(entityId).position.dst(mPosition.get(targetId).position),
                 getMeleeRange(entityId) + bonus + 1);
+            if (loggedMonsterMelee) {
+              log.info("[MONSTER_MELEE] phase=range_reject entity={} monster={} mode={} target={} "
+                      + "distance={} range={} resurrected={} resurrectedBy={} playerRevive={}",
+                  entityId, monsterName(attackingMonster), monsterModeName(entityId), targetId,
+                  mPosition.get(entityId).position.dst(mPosition.get(targetId).position),
+                  getMeleeRange(entityId) + bonus + 1, attackingMonster.resurrected,
+                  attackingMonster.resurrectedBy, attackingMonster.playerRevive);
+            }
             break;
           }
         }
@@ -1441,6 +1515,8 @@ public class Actioneer extends PassiveSystem {
 
         if (!mAttributesWrapper.has(entityId)) {
           log.debug("{} has no attributes, cannot attack", entityId);
+          logMonsterMeleeReject(entityId, attackingMonster, targetId,
+              "attacker_attributes_missing");
           break;
         }
         Attributes attackerAttrs = mAttributesWrapper.get(entityId).attrs;
@@ -1581,6 +1657,27 @@ public class Actioneer extends PassiveSystem {
         // consumes this event instead of the later DAMAGEDINMELEE packet.
         events.dispatch(MeleeAttackEvent.obtain(
             entityId, targetId, combat.hit, combat.blocked));
+        if (loggedMonsterMelee) {
+          int attackRating = monsterAttackRating(entityId);
+          if (attackRating <= 0) attackRating = statInt(attackerAttrs, Stat.tohit);
+          int minDamage = monsterAttackMinDamage(entityId);
+          int maxDamage = monsterAttackMaxDamage(entityId);
+          if (minDamage <= 0 && maxDamage <= 0) {
+            minDamage = statInt(attackerAttrs, Stat.mindamage);
+            maxDamage = statInt(attackerAttrs, Stat.maxdamage);
+          }
+          String result = !combat.hit ? "miss" : combat.blocked ? "blocked" : "hit";
+          log.info("[MONSTER_MELEE] phase=roll entity={} monster={} mode={} target={} result={} "
+                  + "chance={}% attackerLevel={} targetLevel={} ar={} defense={} "
+                  + "damageRange={}..{} rolledDamage={} targetHp={} resurrected={} "
+                  + "resurrectedBy={} playerRevive={}",
+              entityId, monsterName(attackingMonster), monsterModeName(entityId), targetId,
+              result, combat.hitChance, statInt(attackerAttrs, Stat.level),
+              statInt(attrs, Stat.level), attackRating, statInt(attrs, Stat.armorclass),
+              minDamage, Math.max(minDamage, maxDamage), combat.totalDamage,
+              hitpoints.asFixed(), attackingMonster.resurrected,
+              attackingMonster.resurrectedBy, attackingMonster.playerRevive);
+        }
         if (!combat.hit) {
           log.info("[COMBAT_HIT] entity={} target={} result=miss chance={}% attackerLevel={} targetLevel={} ar={} defense={}",
               entityId, targetId, combat.hitChance,
@@ -1664,6 +1761,14 @@ public class Actioneer extends PassiveSystem {
         }
         if (damage <= 0 && combat.absorbedLife <= 0) {
           log.debug("{} melee hit on {} caused no damage", entityId, targetId);
+          if (loggedMonsterMelee) {
+            log.info("[MONSTER_MELEE] phase=damage entity={} monster={} mode={} target={} "
+                    + "result=no_damage rolledDamage={} absorbedLife={} targetHp={} "
+                    + "resurrected={} resurrectedBy={} playerRevive={}",
+                entityId, monsterName(attackingMonster), monsterModeName(entityId), targetId,
+                damage, combat.absorbedLife, hitpoints.asFixed(), attackingMonster.resurrected,
+                attackingMonster.resurrectedBy, attackingMonster.playerRevive);
+          }
           if (progressiveRelease != null && progressiveRelease.hasEffects()) {
             applyAssassinProgressiveStageEffects(
                 entityId, targetId, progressiveRelease, attackerAttrs);
@@ -1692,6 +1797,14 @@ public class Actioneer extends PassiveSystem {
         }
         log.debug("{} hp after {} attack: damage={}, hp: {} -> {}", targetId,
             entityId, appliedDamage, hpBefore, hpAfter);
+        if (loggedMonsterMelee) {
+          log.info("[MONSTER_MELEE] phase=damage entity={} monster={} mode={} target={} "
+                  + "result=applied requestedDamage={} appliedDamage={} targetHp={} -> {} "
+                  + "resurrected={} resurrectedBy={} playerRevive={}",
+              entityId, monsterName(attackingMonster), monsterModeName(entityId), targetId,
+              damage, appliedDamage, hpBefore, hpAfter, attackingMonster.resurrected,
+              attackingMonster.resurrectedBy, attackingMonster.playerRevive);
+        }
         if (hpAfter > 0f) queueHitReaction(targetId, false);
 
         if (progressiveRelease != null && progressiveRelease.hasEffects()) {
@@ -1876,6 +1989,29 @@ public class Actioneer extends PassiveSystem {
   private boolean isDemonTarget(int entityId) {
     return mMonster.has(entityId) && mMonster.get(entityId).monstats != null
         && mMonster.get(entityId).monstats.demon;
+  }
+
+  private boolean isMonsterMeleeMode(int entityId) {
+    return mMonster.has(entityId) && mCofReference.has(entityId)
+        && Monster.isMeleeMode(mCofReference.get(entityId).mode);
+  }
+
+  private String monsterModeName(int entityId) {
+    return mCofReference.has(entityId)
+        ? Monster.modeName(mCofReference.get(entityId).mode) : "UNKNOWN";
+  }
+
+  private static String monsterName(Monster monster) {
+    return monster != null && monster.monstats != null ? monster.monstats.Id : "unknown";
+  }
+
+  private void logMonsterMeleeReject(
+      int entityId, Monster monster, int targetId, String reason) {
+    if (monster == null) return;
+    log.info("[MONSTER_MELEE] phase=reject entity={} monster={} mode={} target={} reason={} "
+            + "resurrected={} resurrectedBy={} playerRevive={}",
+        entityId, monsterName(monster), monsterModeName(entityId), targetId, reason,
+        monster.resurrected, monster.resurrectedBy, monster.playerRevive);
   }
 
   private boolean isUndeadTarget(int entityId) {
@@ -3360,6 +3496,12 @@ public class Actioneer extends PassiveSystem {
     if (weapon == null) weapon = mPlayer.get(entityId).data.getItems().getEquipped(BodyLoc.LARM);
     return weapon != null && weapon.type != null
         && (weapon.type.is(Type.BOW) || weapon.type.is(Type.XBOW));
+  }
+
+  static boolean requiresNormalMeleeCastRange(
+      int skillId, int targetId, boolean player, boolean rangedNormalAttack) {
+    return player && skillId == SkillCodes.attack
+        && targetId != Engine.INVALID_ENTITY && !rangedNormalAttack;
   }
 
   private static int statInt(Attributes attrs, short stat) {

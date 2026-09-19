@@ -225,9 +225,12 @@ class MissileNativePolicyTest {
       for (int i = 0; i < count; i++) {
         int id = world.create();
         Missile missile = world.getMapper(Missile.class).create(id);
-        missile.missile = new Missiles.Entry();
-        missile.missile.Collision = false;
-        missile.nativeLifetimeFrames = 5;
+        Missiles.Entry row = new Missiles.Entry();
+        row.Collision = false;
+        row.Vel = 0;
+        row.Range = 5;
+        missile.set(row, Vector2.Zero, row.Range);
+        assertEquals(row.Range, missile.nativeLifetimeFrames);
         missile.ownerId = -1;
         world.getMapper(Position.class).create(id).position.set(i % 64, i / 64);
         world.getMapper(Velocity.class).create(id).velocity.setZero();

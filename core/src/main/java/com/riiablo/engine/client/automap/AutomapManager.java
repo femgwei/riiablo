@@ -152,6 +152,7 @@ public class AutomapManager implements Disposable {
   private int nativeEntityDrawCount;
   private int geometricFallbackDrawCount;
   private final IntMap<Boolean> renderedNativeLayers = new IntMap<>();
+  private boolean restoredNativeCellsPrepared;
   /** Marker instances whose native DC6 cell was actually rendered this frame. */
   private final Array<EntityMarker> nativeRenderedMarkers = new Array<>();
   /** Marker instances replaced by an external d2hackmap blob icon this frame. */
@@ -352,9 +353,10 @@ public class AutomapManager implements Disposable {
   /** Restores explored cells from a native difficulty-specific .ma file. */
   public void loadNativeAutomap(AutomapExplorationStore.MaFile file) {
     if (file == null || Riiablo.files == null || Riiablo.files.Levels == null) return;
+    restoredNativeCellsPrepared = false;
     for (Levels.Entry level : Riiablo.files.Levels) {
-      int index = level.Layer - 1;
-      if (index < 0 || index >= file.layers.length || file.layers[index] == null) continue;
+      int index = nativeLayerIndex(level);
+      if (index < 0 || file.layers[index] == null) continue;
       AutomapExplorationStore.Layer nativeLayer = file.layers[index];
       nativeLayerUnknown.put(level.Id, nativeLayer.unknown);
       AutomapLayer layer = getOrCreateLayer(level.Id);
@@ -387,8 +389,9 @@ public class AutomapManager implements Disposable {
           || source.walls.size > 0 || source.objects.size > 0 || source.extras.size > 0;
       if (!Boolean.TRUE.equals(nativeCellsBuilt.get(levelId)) && !hasCells) continue;
       Levels.Entry level = Riiablo.files.Levels.get(levelId);
-      if (level == null || level.Layer < 1 || level.Layer > result.layers.length) continue;
-      AutomapExplorationStore.Layer nativeLayer = result.layers[level.Layer - 1];
+      int index = nativeLayerIndex(level);
+      if (index < 0) continue;
+      AutomapExplorationStore.Layer nativeLayer = result.layers[index];
       if (nativeLayer == null) nativeLayer = new AutomapExplorationStore.Layer();
       Integer unknown = nativeLayerUnknown.get(levelId);
       if (unknown != null) nativeLayer.unknown = unknown;
@@ -397,9 +400,16 @@ public class AutomapManager implements Disposable {
       copyNativeCells(source.walls, source, nativeLayer.walls);
       copyNativeCells(source.objects, source, nativeLayer.objects);
       copyNativeCells(source.extras, source, nativeLayer.extras);
-      result.layers[level.Layer - 1] = nativeLayer;
+      result.layers[index] = nativeLayer;
     }
     return result;
+  }
+
+  /** Levels.txt stores native Automap layer numbers as zero-based directory indexes. */
+  static int nativeLayerIndex(Levels.Entry level) {
+    if (level == null) return -1;
+    int index = level.Layer;
+    return index >= 0 && index < AutomapExplorationStore.LAYER_COUNT ? index : -1;
   }
 
   private static AutomapExplorationStore.MaFile copyNativeAutomap(
@@ -420,16 +430,16 @@ public class AutomapManager implements Disposable {
     return result;
   }
 
-  private static void restoreNativeCells(AutomapLayer target,
+  static void restoreNativeCells(AutomapLayer target,
       Array<AutomapExplorationStore.Cell> cells) {
     for (AutomapExplorationStore.Cell cell : cells) {
-      int tx = cell.x / 8;
-      int ty = cell.y / 4;
-      int sum = tx + ty;
-      int diff = tx - ty;
-      if (((sum + diff) & 1) != 0) continue;
-      int worldX = ((sum + diff) / 2) * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;
-      int worldY = ((sum - diff) / 2) * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;
+      int difference = cell.x / 8;
+      int sum = cell.y / 4;
+      if (((difference + sum) & 1) != 0) continue;
+      int tileX = (difference + sum) / 2;
+      int tileY = (sum - difference) / 2;
+      int worldX = tileX * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;
+      int worldY = tileY * DT1.Tile.SUBTILE_SIZE + DT1.Tile.SUBTILE_SIZE / 2;
       target.revealRect(worldX, worldY, 1, 1);
     }
   }
@@ -535,26 +545,17 @@ public class AutomapManager implements Disposable {
             if (layer.renderFloorCells) {
               layer.addFloor(cell, worldX, worldY);
             } else {
-              // Outdoor TileGrid coordinates are local to the zone.  Only
-              // cells marked by the native dirt-path topology are rendered;
-              // generic wilderness floor cells remain invisible.
-              com.riiablo.drlg.TileGrid grid = zone.nativeTileGrid();
-              int localTx = tx - Math.floorDiv(zone.x(), com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
-              int localTy = ty - Math.floorDiv(zone.y(), com.riiablo.map.DT1.Tile.SUBTILE_SIZE);
-              if (grid != null && grid.inBounds(localTx, localTy)
-                  && grid.dirtPathFlags[localTy][localTx]) {
-                layer.addRoad(cell, worldX, worldY);
-              } else {
-                // The broad any-style compatibility fallback is useful for
-                // incomplete Jungle/Kurast tables, but on Act I floor style 0
-                // it turns ordinary grass into a path. Only an exact native
-                // AutoMap.txt match may contribute a non-road outdoor floor,
-                // and cells 0..3 remain reserved for DirtPathGrid roads.
-                int exactCell = tileRenderer.getExactAutomapCellId(automapLevelName,
-                    tileName, tile.mainIndex, tile.subIndex, cellSeed);
-                if (AutomapTileRenderer.isOutdoorFloorFeature(exactCell)) {
-                  layer.addFloor(exactCell, worldX, worldY);
-                }
+              // Native D2 consumes the final semantic DT1 tile here. Bare
+              // dirt outside the generated DirtPathGrid still uses the same
+              // AutoMap.txt road cells, so filtering by dirtPathFlags drops
+              // valid road shoulders and clearings. Require an exact table
+              // match instead; ordinary grass has no matching floor row.
+              int exactCell = tileRenderer.getExactAutomapCellId(automapLevelName,
+                  tileName, tile.mainIndex, tile.subIndex, cellSeed);
+              if (AutomapTileRenderer.isOutdoorRoadCell(exactCell)) {
+                layer.addRoad(exactCell, worldX, worldY);
+              } else if (AutomapTileRenderer.isOutdoorFloorFeature(exactCell)) {
+                layer.addFloor(exactCell, worldX, worldY);
               }
             }
           }
@@ -959,6 +960,7 @@ public class AutomapManager implements Disposable {
     // adjacent wilderness are separate native layers, but D2 keeps both at
     // the same brightness while crossing their boundary.
     if (map != null) {
+      prepareRestoredNativeCells(map);
       renderedNativeLayers.clear();
       StringBuilder diagnostic = new StringBuilder(160);
       diagnostic.append("alpha=").append(alpha).append(" zones=");
@@ -989,6 +991,23 @@ public class AutomapManager implements Disposable {
     // 恢复颜色
     batch.setColor(1f, 1f, 1f, 1f);
     return nativeTerrainDrawCount;
+  }
+
+  /** Builds map glyphs for persisted areas before the player re-enters those zones. */
+  private void prepareRestoredNativeCells(Map map) {
+    if (restoredNativeCellsPrepared || map == null) return;
+    for (Map.Zone zone : map.getZones()) {
+      int levelId = zone.levelId();
+      if (nativeCellsBuilt.containsKey(levelId)) continue;
+      AutomapLayer layer = layers.get(levelId);
+      if (layer == null || !layer.hasExplorationInRect(
+          zone.x(), zone.y(), zone.width(), zone.height())) continue;
+      String nativeName = zone.automapLevelName();
+      if (nativeName == null) continue;
+      rebuildNativeCells(zone, nativeName, levelId);
+      nativeCellsBuilt.put(levelId, Boolean.TRUE);
+    }
+    restoredNativeCellsPrepared = true;
   }
 
   private void renderNativeLayer(PaletteIndexedBatch batch, AutomapLayer layer, float alpha) {
@@ -1168,6 +1187,7 @@ public class AutomapManager implements Disposable {
     layers.clear();
     nativeLayerUnknown.clear();
     nativeCellsBuilt.clear();
+    restoredNativeCellsPrepared = false;
     activeLayerId = -1;
   }
 }

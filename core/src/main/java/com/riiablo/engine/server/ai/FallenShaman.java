@@ -99,15 +99,7 @@ public class FallenShaman extends AI {
    * D2MOD: bCombat = UNITS_IsInMeleeRange(pUnit, pTarget, 0)
    */
   private boolean isInCombat(int targetId) {
-    if (targetId == Engine.INVALID_ENTITY) return false;
-    if (!mPosition.has(targetId)) return false;
-    
-    Vector2 entityPos = mPosition.get(entityId).position;
-    Vector2 targetPos = mPosition.get(targetId).position;
-    float distance = entityPos.dst(targetPos);
-    float meleeRng = 1f + monster.monstats2.MeleeRng;
-    
-    return distance <= meleeRng;
+    return isInNativeMeleeRange(targetId);
   }
 
   /** Native AITHINK_TargetCallback_FallenShaman corpse search. */

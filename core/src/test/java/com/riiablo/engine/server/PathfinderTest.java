@@ -44,6 +44,16 @@ class PathfinderTest {
   }
 
   @Test
+  void meleeApproachDoesNotUsePlayerHitAllowance() {
+    RecordingActioneer actioneer = new RecordingActioneer();
+
+    assertTrue(Pathfinder.isInMeleeApproachRange(actioneer, 11, 22));
+    assertEquals(11, actioneer.attackerId);
+    assertEquals(22, actioneer.targetId);
+    assertEquals(0, actioneer.rangeBonus);
+  }
+
+  @Test
   void adjacentMovementDirectionMustRemainStableBeforeChangingFacing() {
     Angle angle = new Angle().set(Vector2.X);
     Pathfind pathfind = new Pathfind();
@@ -91,5 +101,19 @@ class PathfinderTest {
     angle.reset();
     assertTrue(angle.angle.epsilonEquals(expected, 0.0001f));
     assertTrue(angle.target.epsilonEquals(expected, 0.0001f));
+  }
+
+  private static final class RecordingActioneer extends Actioneer {
+    int attackerId;
+    int targetId;
+    int rangeBonus = Integer.MIN_VALUE;
+
+    @Override
+    public boolean isInMeleeRange(int attackerId, int targetId, int rangeBonus) {
+      this.attackerId = attackerId;
+      this.targetId = targetId;
+      this.rangeBonus = rangeBonus;
+      return true;
+    }
   }
 }

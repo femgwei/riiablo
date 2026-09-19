@@ -21,16 +21,19 @@ public class VitalsSerializer implements FlatBuffersSerializer<AttributesWrapper
   @Override
   public int putData(FlatBufferBuilder builder, AttributesWrapper component) {
     Attributes attrs = component.attrs;
-    float hitpoints = fixed(attrs, Stat.hitpoints);
+    float maxHitpoints = fixed(attrs, Stat.maxhp);
+    float maxMana = fixed(attrs, Stat.maxmana);
+    float maxStamina = fixed(attrs, Stat.maxstamina);
+    float hitpoints = Math.min(fixed(attrs, Stat.hitpoints), maxHitpoints);
     return VitalsP.createVitalsP(
         builder,
         hitpoints,
-        fixed(attrs, Stat.maxhp),
-        fixed(attrs, Stat.mana),
-        fixed(attrs, Stat.maxmana),
+        maxHitpoints,
+        Math.min(fixed(attrs, Stat.mana), maxMana),
+        maxMana,
         hitpoints <= 0f,
-        fixed(attrs, Stat.stamina),
-        fixed(attrs, Stat.maxstamina));
+        Math.min(fixed(attrs, Stat.stamina), maxStamina),
+        maxStamina);
   }
 
   @Override
@@ -50,12 +53,18 @@ public class VitalsSerializer implements FlatBuffersSerializer<AttributesWrapper
   /** Applies resolved values only to the aggregate list to avoid double-counting equipment. */
   public static void apply(AttributesWrapper component, VitalsP data) {
     if (component == null || component.attrs == null) return;
-    component.attrs.aggregate().put(Stat.hitpoints, sanitize(data.hitpoints()));
-    component.attrs.aggregate().put(Stat.maxhp, sanitize(data.maxHitpoints()));
-    component.attrs.aggregate().put(Stat.mana, sanitize(data.mana()));
-    component.attrs.aggregate().put(Stat.maxmana, sanitize(data.maxMana()));
-    component.attrs.aggregate().put(Stat.stamina, sanitize(data.stamina()));
-    component.attrs.aggregate().put(Stat.maxstamina, sanitize(data.maxStamina()));
+    float maxHitpoints = sanitize(data.maxHitpoints());
+    float maxMana = sanitize(data.maxMana());
+    float maxStamina = sanitize(data.maxStamina());
+    component.attrs.aggregate().put(Stat.maxhp, maxHitpoints);
+    component.attrs.aggregate().put(Stat.hitpoints,
+        Math.min(sanitize(data.hitpoints()), maxHitpoints));
+    component.attrs.aggregate().put(Stat.maxmana, maxMana);
+    component.attrs.aggregate().put(Stat.mana,
+        Math.min(sanitize(data.mana()), maxMana));
+    component.attrs.aggregate().put(Stat.maxstamina, maxStamina);
+    component.attrs.aggregate().put(Stat.stamina,
+        Math.min(sanitize(data.stamina()), maxStamina));
   }
 
   private static float fixed(Attributes attrs, short stat) {

@@ -8,6 +8,11 @@ import org.junit.jupiter.api.Test;
 /** 无资源验证 D2MOO AutoMap.txt 查询语义。 */
 class AutomapTileRendererTest {
   @Test void outdoorFloorFeaturesExcludeGenericPathFrames() {
+    assertFalse(AutomapTileRenderer.isOutdoorRoadCell(-1));
+    assertTrue(AutomapTileRenderer.isOutdoorRoadCell(0));
+    assertTrue(AutomapTileRenderer.isOutdoorRoadCell(3));
+    assertFalse(AutomapTileRenderer.isOutdoorRoadCell(4));
+
     assertFalse(AutomapTileRenderer.isOutdoorFloorFeature(-1));
     assertFalse(AutomapTileRenderer.isOutdoorFloorFeature(0));
     assertFalse(AutomapTileRenderer.isOutdoorFloorFeature(3));

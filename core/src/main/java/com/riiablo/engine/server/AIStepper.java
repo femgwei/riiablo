@@ -117,19 +117,24 @@ public class AIStepper extends IteratingSystem {
 
     byte currentMode = mCofReference.has(entityId) ? mCofReference.get(entityId).mode : -1;
     byte requestedMode = mSequence.has(entityId) ? mSequence.get(entityId).mode1 : -1;
-    String marker = casting.skillId == SkillCodes.attack
-        ? "[MONSTER_ATTACK]" : "[MONSTER_SKILL]";
+    boolean melee = casting.skillId == SkillCodes.attack
+        && Monster.isMeleeMode(requestedMode);
+    String marker = melee ? "[MONSTER_MELEE]"
+        : casting.skillId == SkillCodes.attack ? "[MONSTER_ACTION]" : "[MONSTER_SKILL]";
     log.info("{} phase=decision entity={} monster={} ai={} skill={} currentMode={} "
-            + "requestedMode={} target={} replaced={}",
+            + "requestedMode={} target={} replaced={} resurrected={} resurrectedBy={} playerRevive={}",
         marker,
         entityId,
         monster.monstats != null ? monster.monstats.Id : "unknown",
         wrapper.ai.getClass().getSimpleName(),
         casting.skillId,
-        (int) currentMode,
-        (int) requestedMode,
+        Monster.modeName(currentMode),
+        Monster.modeName(requestedMode),
         casting.targetId,
-        hadCasting);
+        hadCasting,
+        monster.resurrected,
+        monster.resurrectedBy,
+        monster.playerRevive);
   }
 
   /**

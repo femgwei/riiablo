@@ -8,6 +8,7 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -38,6 +39,7 @@ import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.graphics.BlendMode;
+import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.item.Item;
 import com.riiablo.item.Location;
 import com.riiablo.key.MappedKey;
@@ -79,6 +81,28 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   // assembled control widget's geometric center. This keeps the fill aligned
   // with the slot border rather than the transparent texture margin.
   private static final float EXP_BAR_CENTER_OFFSET_X = 21.5f;
+  // The native 800-wide HUD places the stamina fill at x=273. Express that
+  // from the HUD center so grouped and full-width panel layouts agree.
+  private static final float STATUS_BAR_CENTER_OFFSET_X = 273f - 400f;
+  private static final float STAMINA_BAR_BOTTOM_OFFSET = 9f;
+  private static final float ADD_POINTS_LABEL_GAP = 24f;
+  private static final float ADD_POINTS_VERTICAL_ADJUST = -10f;
+  private static final float PROMPT_LABEL_GAP = 2f;
+  private static final float QUEST_PROMPT_STEP_Y = 60f;
+
+  final AssetDescriptor<DC6> levelButtonDescriptor =
+      new AssetDescriptor<>("data\\global\\ui\\PANEL\\level.DC6", DC6.class);
+  final AssetDescriptor<Sound> levelUpSoundDescriptor =
+      new AssetDescriptor<>("data\\global\\sfx\\cursor\\levelup.wav", Sound.class);
+  Button btnAddStats;
+  Button btnAddSkills;
+  Button btnQuestLog;
+  Label addStatsLabel;
+  Label addSkillsLabel;
+  Label questLogLabel;
+  Sound levelUpSound;
+  private int observedLevel = Integer.MIN_VALUE;
+  private long observedQuestRevision = Long.MIN_VALUE;
 
   final AssetDescriptor<DC6> popbeltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\ctrlpnl_popbelt.DC6", DC6.class);
   TextureRegion popbelt;
@@ -125,6 +149,47 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     Riiablo.assets.load(ctrlpnlDescriptor);
     Riiablo.assets.finishLoadingAsset(ctrlpnlDescriptor);
     DC6 ctrlpnl = Riiablo.assets.get(ctrlpnlDescriptor);
+
+    Riiablo.assets.load(levelButtonDescriptor);
+    Riiablo.assets.finishLoadingAsset(levelButtonDescriptor);
+    DC6 levelButton = Riiablo.assets.get(levelButtonDescriptor);
+    Button.ButtonStyle addPointStyle = new Button.ButtonStyle(
+        new TextureRegionDrawable(levelButton.getTexture(0)),
+        new TextureRegionDrawable(levelButton.getTexture(1)));
+    btnAddStats = new Button(addPointStyle);
+    btnAddStats.setVisible(false);
+    btnAddStats.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        if (Riiablo.game != null) Riiablo.game.setLeftPanel(Riiablo.game.characterPanel);
+      }
+    });
+    btnAddSkills = new Button(addPointStyle);
+    btnAddSkills.setVisible(false);
+    btnAddSkills.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        if (Riiablo.game != null) Riiablo.game.setRightPanel(Riiablo.game.spellsPanel);
+      }
+    });
+    btnQuestLog = new Button(new Button.ButtonStyle(addPointStyle));
+    btnQuestLog.setVisible(false);
+    btnQuestLog.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        if (Riiablo.game != null) {
+          Riiablo.game.setLeftPanel(Riiablo.game.questsPanel);
+        }
+        setQuestPromptVisible(false);
+      }
+    });
+    addStatsLabel = createPromptLabel("NEW STATS");
+    addSkillsLabel = createPromptLabel("NEW SKILL");
+    questLogLabel = createPromptLabel("QUEST LOG");
+
+    Riiablo.assets.load(levelUpSoundDescriptor);
+    Riiablo.assets.finishLoadingAsset(levelUpSoundDescriptor);
+    levelUpSound = Riiablo.assets.get(levelUpSoundDescriptor);
 
     Riiablo.assets.load(popbeltDescriptor);
     Riiablo.assets.finishLoadingAsset(popbeltDescriptor);
@@ -241,8 +306,15 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     experienceWidget.setHeight(EXP_BAR_HEIGHT);
     addActor(experienceWidget); // 直接添加到面板，但位置跟随 controlWidget 布局
     addActor(staminaWidget);
+    addActor(btnAddStats);
+    addActor(btnAddSkills);
+    addActor(btnQuestLog);
+    addActor(addStatsLabel);
+    addActor(addSkillsLabel);
+    addActor(questLogLabel);
     updateExperienceWidgetLayout();
     updateStaminaWidgetLayout();
+    updateAddPointButtonLayout();
 
     //setHeight(controlWidget.background.getHeight() - 7);
     //setY(0);
@@ -271,19 +343,84 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     experienceWidget.setPosition(anchorX, anchorY);
   }
 
-  /** Keeps the stamina meter centered above the control panel as the UI scales. */
+  /** Keeps the stamina fill left-aligned with the experience bar. */
   private void updateStaminaWidgetLayout() {
     if (staminaWidget == null) return;
-    float anchorX;
+    float anchorX = getWidth() / 2f + STATUS_BAR_CENTER_OFFSET_X;
     float anchorY;
     if (controlWidget != null) {
-      anchorX = controlWidget.getX() + (controlWidget.getWidth() - staminaWidget.getWidth()) / 2f;
-      anchorY = controlWidget.getY() + controlWidget.getHeight() - 7f;
+      anchorY = controlWidget.getY() + STAMINA_BAR_BOTTOM_OFFSET;
     } else {
-      anchorX = (getWidth() - staminaWidget.getWidth()) / 2f;
-      anchorY = getHeight() - 7f;
+      anchorY = STAMINA_BAR_BOTTOM_OFFSET;
     }
     staminaWidget.setPosition(anchorX, anchorY);
+  }
+
+  private void updateAddPointButtonLayout() {
+    if (btnAddStats == null || btnAddSkills == null || btnQuestLog == null
+        || healthWidget == null || manaWidget == null) return;
+    btnAddStats.setPosition(
+        healthWidget.getX()
+            + (healthWidget.background.getRegionWidth() - btnAddStats.getWidth()) / 2f,
+        healthWidget.getY() + healthWidget.background.getRegionHeight()
+            + healthWidget.label.getPrefHeight() + ADD_POINTS_LABEL_GAP
+            + ADD_POINTS_VERTICAL_ADJUST);
+    btnAddSkills.setPosition(
+        manaWidget.getX()
+            + (manaWidget.background.getRegionWidth() - btnAddSkills.getWidth()) / 2f,
+        manaWidget.getY() + manaWidget.background.getRegionHeight()
+            + manaWidget.label.getPrefHeight() + ADD_POINTS_LABEL_GAP
+            + ADD_POINTS_VERTICAL_ADJUST);
+    btnQuestLog.setPosition(btnAddStats.getX(), btnAddStats.getY() + QUEST_PROMPT_STEP_Y);
+    positionPromptLabel(addStatsLabel, btnAddStats);
+    positionPromptLabel(addSkillsLabel, btnAddSkills);
+    positionPromptLabel(questLogLabel, btnQuestLog);
+  }
+
+  private static Label createPromptLabel(String text) {
+    Label label = new Label(text, Riiablo.fonts.font16, Riiablo.colors.white);
+    label.setSize(label.getPrefWidth(), label.getPrefHeight());
+    label.setAlignment(Align.center);
+    label.setTouchable(Touchable.disabled);
+    label.setVisible(false);
+    return label;
+  }
+
+  private static void positionPromptLabel(Label label, Button button) {
+    if (label == null || button == null) return;
+    label.setPosition(
+        button.getX() + (button.getWidth() - label.getWidth()) / 2f,
+        button.getY() + button.getHeight() + PROMPT_LABEL_GAP);
+  }
+
+  private void setQuestPromptVisible(boolean visible) {
+    btnQuestLog.setVisible(visible);
+    questLogLabel.setVisible(visible);
+  }
+
+  private static boolean hasQuestProgress() {
+    if (Riiablo.charData == null) return false;
+    for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
+      short[] quests = Riiablo.charData.getQuests(act);
+      if (quests == null) continue;
+      for (short quest : quests) if (quest != 0) return true;
+    }
+    return false;
+  }
+
+  private static long currentQuestRevision() {
+    long revision = 1469598103934665603L;
+    if (Riiablo.charData == null) return revision;
+    int index = 0;
+    for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
+      short[] quests = Riiablo.charData.getQuests(act);
+      if (quests == null) continue;
+      for (short quest : quests) {
+        revision ^= (quest & 0xFFFFL) + ((long) index++ << 16);
+        revision *= 1099511628211L;
+      }
+    }
+    return revision;
   }
 
   @Override
@@ -291,6 +428,40 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     super.layout();
     updateExperienceWidgetLayout();
     updateStaminaWidgetLayout();
+    updateAddPointButtonLayout();
+  }
+
+  @Override
+  public void act(float delta) {
+    super.act(delta);
+    if (Riiablo.charData == null || Riiablo.charData.getStats() == null) return;
+    StatListRef stats = Riiablo.charData.getStats().aggregate();
+    int level = stats.getValue(Stat.level, Riiablo.charData.level & 0xFF);
+    if (observedLevel != Integer.MIN_VALUE && level > observedLevel) {
+      levelUpSound.play();
+      Gdx.app.log(TAG, "[LEVEL_UP_FEEDBACK] level=" + observedLevel + "->" + level
+          + " sound=cursor_level_up");
+    }
+    observedLevel = level;
+    boolean showStats = stats.getValue(Stat.statpts, 0) > 0;
+    boolean showSkills = stats.getValue(Stat.newskills, 0) > 0;
+    btnAddStats.setVisible(showStats);
+    addStatsLabel.setVisible(showStats);
+    btnAddSkills.setVisible(showSkills);
+    addSkillsLabel.setVisible(showSkills);
+
+    long questRevision = currentQuestRevision();
+    if (observedQuestRevision == Long.MIN_VALUE) {
+      observedQuestRevision = questRevision;
+      setQuestPromptVisible(hasQuestProgress());
+    } else if (questRevision != observedQuestRevision) {
+      observedQuestRevision = questRevision;
+      setQuestPromptVisible(hasQuestProgress());
+    }
+    if (Riiablo.game != null && Riiablo.game.questsPanel != null
+        && Riiablo.game.questsPanel.isVisible()) {
+      setQuestPromptVisible(false);
+    }
   }
 
   @Override
@@ -317,8 +488,12 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     Riiablo.assets.unload(overlapDescriptor.fileName);
     Riiablo.assets.unload(hlthmanaDescriptor.fileName);
     Riiablo.assets.unload(SkilliconDescriptor.fileName);
+    Riiablo.assets.unload(levelButtonDescriptor.fileName);
+    Riiablo.assets.unload(levelUpSoundDescriptor.fileName);
+    if (btnAddStats != null) btnAddStats.dispose();
+    if (btnAddSkills != null) btnAddSkills.dispose();
+    if (btnQuestLog != null) btnQuestLog.dispose();
     if (experienceWidget != null) experienceWidget.dispose();
-    if (staminaWidget != null) staminaWidget.dispose();
     if (controlWidget != null) controlWidget.dispose();
   }
 
@@ -429,48 +604,36 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     }
   }
 
-  /** Compact stamina meter matching the native panel's horizontal resource cue. */
+  /** Native-size stamina fill drawn over the control panel's built-in slot. */
   private class StaminaWidget extends Actor {
-    private static final float WIDTH = 62f;
-    private static final float HEIGHT = 3f;
-    private static final float BORDER = 1f;
-    private final TextureRegion pixel;
-    private final Texture pixelTexture;
+    private static final float WIDTH = 102f;
+    private static final float HEIGHT = 19f;
+    private static final float LOW_STAMINA_RATIO = 0.25f;
+    private final PaletteIndexedColorDrawable normalFill =
+        new PaletteIndexedColorDrawable(new Color(0xAF8848C8));
+    private final PaletteIndexedColorDrawable lowFill =
+        new PaletteIndexedColorDrawable(new Color(0xFF0000C8));
 
     StaminaWidget() {
       setSize(WIDTH, HEIGHT);
-      Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-      pixmap.setColor(Color.WHITE);
-      pixmap.fill();
-      pixelTexture = new Texture(pixmap);
-      pixel = new TextureRegion(pixelTexture);
-      pixmap.dispose();
       setTouchable(Touchable.disabled);
     }
 
     @Override
     public void draw(Batch batch, float a) {
       if (Riiablo.charData == null || Riiablo.charData.getStats() == null) return;
-      StatRef currentRef = Riiablo.charData.getStats().get(Stat.stamina);
-      StatRef maximumRef = Riiablo.charData.getStats().get(Stat.maxstamina);
-      if (currentRef == null || maximumRef == null) return;
-      float current = currentRef.asFixed();
-      float maximum = maximumRef.asFixed();
+      StatListRef stats = Riiablo.charData.getStats().aggregate();
+      float current = stats.getValue(Stat.stamina, 0f);
+      float maximum = stats.getValue(Stat.maxstamina, 0f);
       float ratio = maximum > 0f ? Math.max(0f, Math.min(1f, current / maximum)) : 0f;
       float x = getX();
       float y = getY();
-      batch.setColor(0f, 0f, 0f, 0.72f);
-      batch.draw(pixel, x, y, WIDTH, HEIGHT);
-      if (ratio > 0f) {
-        batch.setColor(0.95f, 0.72f, 0.16f, 1f);
-        batch.draw(pixel, x + BORDER, y + BORDER, (WIDTH - 2f * BORDER) * ratio,
-            HEIGHT - 2f * BORDER);
+      int fillPixels = Math.round(WIDTH * ratio);
+      if (fillPixels > 0) {
+        PaletteIndexedColorDrawable fill = ratio < LOW_STAMINA_RATIO ? lowFill : normalFill;
+        fill.setPercent(fillPixels / WIDTH);
+        fill.draw(batch, x, y, WIDTH, HEIGHT);
       }
-      batch.setColor(Color.WHITE);
-    }
-
-    void dispose() {
-      pixelTexture.dispose();
     }
   }
 
@@ -606,6 +769,14 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   }
 
   private class ControlWidget extends WidgetGroup implements Disposable, ItemGrid.GridListener {
+    private static final float RUN_BUTTON_X = 10f;
+    private static final float RUN_BUTTON_Y = 10f;
+
+    final AssetDescriptor<DC6> runButtonDescriptor =
+        new AssetDescriptor<>("data\\global\\ui\\PANEL\\runbutton.dc6", DC6.class);
+    Button btnRun;
+    Button.ButtonStyle walkStyle, runStyle;
+
     final AssetDescriptor<DC6> menubuttonDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\menubutton.DC6", DC6.class);
     Button btnMenu;
     Button.ButtonStyle menuHidden, menuShown;
@@ -620,6 +791,27 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       this.background = background;
       setSize(background.getWidth(), background.getHeight() - 7);
       setTouchable(Touchable.enabled);
+
+      Riiablo.assets.load(runButtonDescriptor);
+      Riiablo.assets.finishLoadingAsset(runButtonDescriptor);
+      DC6 runButton = Riiablo.assets.get(runButtonDescriptor);
+      walkStyle = new Button.ButtonStyle(
+          new TextureRegionDrawable(runButton.getTexture(0)),
+          new TextureRegionDrawable(runButton.getTexture(1)));
+      runStyle = new Button.ButtonStyle(
+          new TextureRegionDrawable(runButton.getTexture(2)),
+          new TextureRegionDrawable(runButton.getTexture(3)));
+      btnRun = new Button(walkStyle);
+      // The centered 640-wide panel maps this widget's left edge to native x=245;
+      // runbutton's native x=255 therefore becomes child-local x=10.
+      btnRun.setPosition(RUN_BUTTON_X, RUN_BUTTON_Y);
+      btnRun.addListener(new ClickListener() {
+        @Override
+        public void clicked(InputEvent event, float x, float y) {
+          if (Riiablo.game != null) Riiablo.game.toggleRunWalk();
+        }
+      });
+      addActor(btnRun);
 
       Riiablo.assets.load(minipanelDescriptor);
       Riiablo.assets.finishLoadingAsset(minipanelDescriptor);
@@ -669,7 +861,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
     @Override
     public void dispose() {
+      btnRun.dispose();
       btnMenu.dispose();
+      Riiablo.assets.unload(runButtonDescriptor.fileName);
       Riiablo.assets.unload(minipanelDescriptor.fileName);
       minipanelWidget.dispose();
       background.dispose();
@@ -681,6 +875,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       ItemData itemData = Riiablo.charData.getItems();
       belt.setRows(itemData.getBeltRows());
       belt.syncItems(itemData.toItemArray(itemData.getLocation(Location.BELT)));
+      Button.ButtonStyle desiredRunStyle =
+          Riiablo.game != null && Riiablo.game.isRunModeEnabled() ? runStyle : walkStyle;
+      if (btnRun.getStyle() != desiredRunStyle) btnRun.setStyle(desiredRunStyle);
       batch.draw(background, getX(), getY());
       super.draw(batch, a);
     }

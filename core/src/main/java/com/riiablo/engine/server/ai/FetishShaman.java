@@ -105,15 +105,7 @@ public class FetishShaman extends AI {
    * Check if monster is in combat (within melee range).
    */
   private boolean isInCombat(int targetId) {
-    if (targetId == Engine.INVALID_ENTITY) return false;
-    if (!mPosition.has(targetId)) return false;
-    
-    Vector2 entityPos = mPosition.get(entityId).position;
-    Vector2 targetPos = mPosition.get(targetId).position;
-    float distance = entityPos.dst(targetPos);
-    float meleeRng = 1f + monster.monstats2.MeleeRng;
-    
-    return distance <= meleeRng;
+    return isInNativeMeleeRange(targetId);
   }
 
   /** Native FetishShaman corpse eligibility used by the raise-dead branch. */
@@ -227,7 +219,7 @@ public class FetishShaman extends AI {
     IntBag entities = enemyEntities.getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int ent = entities.get(i);
-      if (mClass.get(ent).type == Class.Type.PLR) {
+      if (mClass.get(ent).type == Class.Type.PLR && isValidEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
         float dst = entityPos.dst(targetPos);
         if (dst < targetDistance) {
@@ -236,6 +228,7 @@ public class FetishShaman extends AI {
         }
       }
     }
+    if (targetId == Engine.INVALID_ENTITY) stopMovement();
 
     // FetishInferno is a real server missile skill (not a weapon throw).  The
     // previous port compared distance with a hard-coded level of one and then

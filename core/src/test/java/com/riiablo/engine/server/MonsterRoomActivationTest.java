@@ -215,6 +215,37 @@ class MonsterRoomActivationTest {
   }
 
   @Test
+  void townExitPrewarmSpawnsEntranceSightRingThenReleasesActivation() {
+    Map map = new Map(0, 0);
+    Map.Zone zone = nativeThreeRoomZone();
+    zone.map = map;
+    zone.getRoomsEx().get(0).addMonsterSpawn(7, 10, 10);
+    zone.getRoomsEx().get(1).addMonsterSpawn(7, 50, 10);
+    zone.getRoomsEx().get(2).addMonsterSpawn(7, 90, 10);
+    RecordingFactory factory = new RecordingFactory();
+    RoomActivationSystem activation = new RoomActivationSystem();
+    World world = new World(new WorldConfigurationBuilder().with(activation, factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      assertEquals(zone.getRoomsEx().get(0), RoomActivationSystem.nearestRoom(zone, -5, 10));
+      assertEquals(2, activation.prewarmZoneAt(zone, -5, 10));
+      assertEquals(2, factory.monstersCreated,
+          "the entrance and its direct sight ring must be generated");
+      assertFalse(zone.getRoomsEx().get(2).isMonsterPopulationSpawned(),
+          "rooms beyond direct sight must remain deferred");
+      assertTrue(zone.isRoomActivationTracking());
+      for (Map.RoomEx room : zone.getRoomsEx()) {
+        assertEquals(Map.RoomEx.COUNT, room.getActivationStatus(),
+            "temporary prewarm references must be released before gameplay");
+      }
+      assertFalse(zone.isRoomActiveForAI(10, 10));
+      assertFalse(zone.isRoomActiveForAI(50, 10));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void presetObjectSpawnMayResolveRoomDuringActivationAndRunsOnlyOnce() {
     Map map = new Map(0, 0);
     Map.Zone zone = nativeThreeRoomZone();

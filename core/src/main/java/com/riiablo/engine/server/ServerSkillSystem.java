@@ -162,7 +162,6 @@ public class ServerSkillSystem extends PassiveSystem {
 
   @Subscribe
   public void onSkillCast(SkillCastEvent event) {
-    if (monstersOnly) return;
     // Monsters use their existing AI/casting path and do not have player mana.
     if (!mPlayer.has(event.entityId)) return;
 
@@ -348,8 +347,14 @@ public class ServerSkillSystem extends PassiveSystem {
     }
 
     float manaCost = NativeSkillResolver.manaCost(skill, skillLevel);
+    if (event.targetId == Engine.INVALID_ENTITY
+        && NativeSkillResolver.isTargetableOnly(skill)) {
+      // Shift-forced target-only attacks retain their presentation animation,
+      // but no valid skill execution occurred and native D2 spends no mana.
+      manaCost = 0f;
+    }
     event.manaCost = manaCost;
-    if (manaCost > 0 && mana.asFixed() + 0.0001f < manaCost) {
+    if (!NativeSkillResolver.hasEnoughMana(mana.asFixed(), manaCost)) {
       reject(event, 1, "not enough mana");
       return;
     }

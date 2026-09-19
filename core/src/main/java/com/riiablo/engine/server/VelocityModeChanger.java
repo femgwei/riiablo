@@ -4,8 +4,6 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Exclude;
 import com.artemis.systems.IteratingSystem;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.codec.D2;
@@ -20,8 +18,10 @@ import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.MovementModes;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.TemporaryRunning;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -40,9 +40,11 @@ public class VelocityModeChanger extends IteratingSystem {
   protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Running> mRunning;
+  protected ComponentMapper<TemporaryRunning> mTemporaryRunning;
   protected ComponentMapper<MovementModes> mMovementModes;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Networked> mNetworked;
+  protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
 
@@ -57,7 +59,7 @@ public class VelocityModeChanger extends IteratingSystem {
   }
 
   /**
-   * @param applyLocalRunInput whether this world reads Shift and adjusts the local player's speed
+   * @param applyLocalRunInput whether this world applies the local player's run/walk preference
    * @param updateNetworkedModes whether this world owns COF modes for Networked entities
    */
   public VelocityModeChanger(boolean applyLocalRunInput, boolean updateNetworkedModes) {
@@ -72,12 +74,34 @@ public class VelocityModeChanger extends IteratingSystem {
     if (velocityComp == null) return; // Player may be dead (Velocity component removed)
     Vector2 velocity = velocityComp.velocity;
     if (velocity.isZero()) return;
-    if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || !hasRunStamina(Riiablo.game.player)) {
-      mRunning.remove(Riiablo.game.player);
-      velocity.setLength(velocityComp.walkSpeed);
+    applyMovementSpeed(Riiablo.game.player, velocityComp);
+  }
+
+  /** Toggles the persistent player preference used by mouse and keyboard movement. */
+  public boolean toggleRunWalk(int entityId) {
+    if (entityId < 0 || !mVelocity.has(entityId)) return false;
+    boolean running = !mRunning.has(entityId);
+    if (running) {
+      mRunning.create(entityId);
     } else {
-      mRunning.create(Riiablo.game.player);
+      mRunning.remove(entityId);
+    }
+    applyMovementSpeed(entityId, mVelocity.get(entityId));
+    log.info("[PLAYER_RUN_WALK] entity={} mode={}", entityId, running ? "run" : "walk");
+    return running;
+  }
+
+  public boolean isRunning(int entityId) {
+    return entityId >= 0 && mRunning.has(entityId);
+  }
+
+  private void applyMovementSpeed(int entityId, Velocity velocityComp) {
+    Vector2 velocity = velocityComp.velocity;
+    if (velocity.isZero()) return;
+    if (isEffectivelyRunning(entityId)) {
       velocity.setLength(velocityComp.runSpeed);
+    } else {
+      velocity.setLength(velocityComp.walkSpeed);
     }
   }
 
@@ -98,43 +122,69 @@ public class VelocityModeChanger extends IteratingSystem {
     Velocity velocity = mVelocity.get(entityId);
     Vector2 currentVelocity = velocity.velocity;
     if (currentVelocity.isZero()) {
-      cofs.setMode(entityId, mMovementModes.get(entityId).NU);
+      setMovementMode(entityId, mMovementModes.get(entityId).NU, currentVelocity);
       mAnimData.get(entityId).override = -1;
     } else if (mMonster.has(entityId)) {
       AnimData animData = mAnimData.get(entityId);
       boolean running = mRunning.has(entityId);
       int baseAnimSpeed = resolveMonsterBaseAnimationSpeed(entityId, running, animData);
       if (running) {
-        cofs.setMode(entityId, mMovementModes.get(entityId).RN);
+        setMovementMode(entityId, mMovementModes.get(entityId).RN, currentVelocity);
         animData.override = scaleAnimationSpeed(
             baseAnimSpeed, currentVelocity.len(), velocity.runSpeed);
       } else {
-        cofs.setMode(entityId, mMovementModes.get(entityId).WL);
+        setMovementMode(entityId, mMovementModes.get(entityId).WL, currentVelocity);
         animData.override = scaleAnimationSpeed(
             baseAnimSpeed, currentVelocity.len(), velocity.walkSpeed);
       }
       syncClientAnimation(entityId, animData, velocity, running, baseAnimSpeed);
     } else {
-      if (mRunning.has(entityId)) {
-        cofs.setMode(entityId, mMovementModes.get(entityId).RN);
+      if (isEffectivelyRunning(entityId)) {
+        setMovementMode(entityId, mMovementModes.get(entityId).RN, currentVelocity);
         mAnimData.get(entityId).override = scaleAnimationSpeed(
             PLAYER_RUN_ANIM_SPEED, currentVelocity.len(), velocity.runSpeed);
       } else {
-        cofs.setMode(entityId, mMovementModes.get(entityId).WL);
+        setMovementMode(entityId, mMovementModes.get(entityId).WL, currentVelocity);
         mAnimData.get(entityId).override = scaleAnimationSpeed(
             PLAYER_WALK_ANIM_SPEED, currentVelocity.len(), velocity.walkSpeed);
       }
     }
   }
 
-  /** A depleted stamina pool must force walking until recovery begins. */
-  private boolean hasRunStamina(int entityId) {
-    if (!mAttributes.has(entityId)) return true;
-    AttributesWrapper wrapper = mAttributes.get(entityId);
-    if (wrapper == null || wrapper.attrs == null) return true;
-    float stamina = wrapper.attrs.aggregate().getValue(com.riiablo.attributes.Stat.stamina, 0f);
-    float maximum = wrapper.attrs.aggregate().getValue(com.riiablo.attributes.Stat.maxstamina, 0f);
-    return maximum <= 0f || stamina > 0.0001f;
+  private void setMovementMode(int entityId, byte mode, Vector2 velocity) {
+    CofReference reference = mCofReference.get(entityId);
+    if (reference.mode != mode && Riiablo.game != null && entityId == Riiablo.game.player) {
+      MovementModes modes = mMovementModes.get(entityId);
+      log.info("[PLAYER_MOVEMENT_MODE] entity={} mode={}->{} speed={} path={}",
+          entityId,
+          movementModeName(modes, reference.mode),
+          movementModeName(modes, mode),
+          velocity.len(),
+          mPathfind.has(entityId));
+    }
+    cofs.setMode(entityId, mode);
+  }
+
+  private static String movementModeName(MovementModes modes, byte mode) {
+    if (mode == modes.NU) return "NU";
+    if (mode == modes.WL) return "WL";
+    if (mode == modes.RN) return "RN";
+    return Byte.toString(mode);
+  }
+
+  private boolean isEffectivelyRunning(int entityId) {
+    return isRunRequested(mRunning.has(entityId), mTemporaryRunning.has(entityId))
+        && canRun(entityId);
+  }
+
+  static boolean isRunRequested(boolean persistentRun, boolean temporaryRun) {
+    return persistentRun || temporaryRun;
+  }
+
+  /** A depleted stamina pool temporarily forces walking without changing the run preference. */
+  private boolean canRun(int entityId) {
+    return !mAttributes.has(entityId)
+        || StaminaSystem.hasRunStamina(mAttributes.get(entityId));
   }
 
   static int scaleAnimationSpeed(int baseAnimSpeed, float currentSpeed, float baseVelocity) {

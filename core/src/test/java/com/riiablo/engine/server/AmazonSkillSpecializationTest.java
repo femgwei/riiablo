@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.event.SkillDoEvent;
+import com.riiablo.engine.server.event.SkillCastEvent;
 import com.riiablo.engine.server.component.serializer.PlayerSerializer;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
@@ -41,6 +42,35 @@ import org.junit.jupiter.api.Test;
 
 /** Native-data regression coverage for Amazon specialist skill handlers. */
 class AmazonSkillSpecializationTest extends RiiabloTest {
+  @Test
+  void localMonsterEffectsModeStillValidatesAndConsumesPlayerMana() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      Skills.Entry innerSight = Riiablo.files.skills.get("Inner Sight");
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      data.setSkillLevel(innerSight.Id, 1);
+      Attributes attrs = attributes(10, 100);
+      attrs.base().put(Stat.mana, 20f);
+      attrs.base().put(Stat.maxmana, 20f);
+      attrs.reset();
+
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attrs;
+      SkillCastEvent event = SkillCastEvent.obtain(
+          amazon, innerSight.Id, Engine.INVALID_ENTITY, new Vector2());
+      world.getSystem(EventSystem.class).dispatch(event);
+
+      assertTrue(event.accepted);
+      assertEquals(15f, attrs.get(Stat.mana).asFixed(), 0.0001f);
+    } finally {
+      world.dispose();
+    }
+  }
+
   @Test
   void elementalArrowsCaptureNativeSkillDamageAndFreezeSemantics() {
     Attributes owner = attributes(20, 200);

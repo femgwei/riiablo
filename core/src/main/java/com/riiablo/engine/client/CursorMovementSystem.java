@@ -5,7 +5,6 @@ import com.artemis.BaseSystem;
 import com.artemis.ComponentMapper;
 import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
-import com.artemis.utils.IntBag;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -19,17 +18,18 @@ import com.badlogic.gdx.utils.TimeUtils;
 import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.Engine;
-import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
-import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.Actioneer;
+import com.riiablo.engine.server.InteractionRange;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
-import com.riiablo.engine.server.component.Object;
+import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Target;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
@@ -45,13 +45,16 @@ import com.riiablo.skill.SkillCodes;
 @Wire(failOnNull = false)
 public class CursorMovementSystem extends BaseSystem {
   private static final String TAG = "CursorMovementSystem";
+  static final int MELEE_APPROACH_RANGE_BONUS = 0;
+  private static final float HELD_PATH_REFRESH_DISTANCE = 1.5f;
+  private static final float HELD_PATH_DIRECTION_COS = 0.99026805f; // 8 degrees
 
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Networked> mNetworked;
+  protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Interactable> mInteractable;
-  protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
-  protected ComponentMapper<Object> mObject;
+  protected ComponentMapper<Size> mSize;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
 
   protected RenderSystem renderer;
@@ -59,6 +62,7 @@ public class CursorMovementSystem extends BaseSystem {
   protected DialogManager dialogManager;
   protected ProfilerSystem profiler;
   protected Actioneer actioneer;
+  protected HoveredManager hoveredManager;
   protected DeathHandler deathHandler;
   protected ClientNetworkReceiver networkReceiver;
 
@@ -81,8 +85,6 @@ public class CursorMovementSystem extends BaseSystem {
   protected ItemController itemController;
 
   EntitySubscription hoveredSubscriber;
-  EntitySubscription selectableSubscriber;
-  EntitySubscription waypointInputSubscriber;
   boolean requireRelease;
   /** One-shot left-click captured on the render frame and consumed by the next sim tick. */
   private final PointerClickQueue pendingLeftClicks = new PointerClickQueue();
@@ -100,16 +102,10 @@ public class CursorMovementSystem extends BaseSystem {
   long lastAttackRangeTraceMillis;
 
   private final Vector2 tmpVec2 = new Vector2();
-  private final Vector2 cursorScreen = new Vector2();
-  private final Vector2 entityScreen = new Vector2();
 
   @Override
   protected void initialize() {
     hoveredSubscriber = world.getAspectSubscriptionManager().get(Aspect.all(Hovered.class));
-    selectableSubscriber = world.getAspectSubscriptionManager().get(
-        Aspect.all(Selectable.class, Position.class, BBoxWrapper.class));
-    waypointInputSubscriber = world.getAspectSubscriptionManager().get(
-        Aspect.all(Interactable.class, Position.class, BBoxWrapper.class, Object.class));
   }
 
   @Override
@@ -146,12 +142,15 @@ public class CursorMovementSystem extends BaseSystem {
     }
 
     final boolean leftPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
-    if ((leftPressed && UIUtils.shift()) || Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
+    final boolean rightPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+    final boolean shiftDown = UIUtils.shift();
+    if ((leftPressed && shiftDown) || rightPressed) {
       final int targetId = getHovered(playerId);
       if (targetId != Engine.INVALID_ENTITY && (isTargetDead(targetId) || actioneer.didLastAttackTargetDie(playerId))) {
         actioneer.moveTo(playerId, Engine.INVALID_ENTITY);
       } else {
-        final int skillId = Riiablo.charData.getAction(leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
+        final int skillId = Riiablo.charData.getAction(
+            leftPressed ? Input.Buttons.LEFT : Input.Buttons.RIGHT);
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
         if (!isSkillAllowedForInput(playerId, skillId)) {
           actioneer.moveTo(playerId, Engine.INVALID_ENTITY);
@@ -163,11 +162,19 @@ public class CursorMovementSystem extends BaseSystem {
         if (!canStartCast(playerId)) {
           return;
         }
-        if (targetId != Engine.INVALID_ENTITY && isMeleeNormalAttack(skillId)
-            && !actioneer.isInMeleeRange(playerId, targetId, 3)) {
+        if (rightPressed && !shiftDown && shouldMoveOnUntargetedRightClick(
+            targetId, false, skillEntry(skillId))) {
+          moveToGround(playerId, tmpVec2);
+        } else if (targetId != Engine.INVALID_ENTITY && isMeleeNormalAttack(skillId)
+            && !actioneer.isInMeleeRange(
+                playerId, targetId, MELEE_APPROACH_RANGE_BONUS)) {
           Gdx.app.log(TAG, "[ATTACK_RANGE] rejected remote normal attack player=" + playerId
               + " skill=" + skillId + " target=" + targetId + " mode=melee");
-          actioneer.moveTo(playerId, targetId);
+          if (shiftDown) {
+            requestCast(playerId, skillId, Engine.INVALID_ENTITY, tmpVec2);
+          } else {
+            moveToTarget(playerId, targetId);
+          }
         } else {
           requestCast(playerId, skillId, targetId, tmpVec2);
         }
@@ -183,13 +190,13 @@ public class CursorMovementSystem extends BaseSystem {
     boolean leftDown = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
     if (leftDown && !sampledLeftDown) {
       pendingLeftClicks.capture(Gdx.input.getX(), Gdx.input.getY(), TimeUtils.millis(),
-          networkReceiver == null ? 0L : networkReceiver.latestServerTick());
+          networkReceiver == null ? 0L : networkReceiver.latestServerTick(), UIUtils.shift());
     }
     sampledLeftDown = leftDown;
     boolean rightDown = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
     if (rightDown && !sampledRightDown) {
       pendingRightClicks.capture(Gdx.input.getX(), Gdx.input.getY(), TimeUtils.millis(),
-          networkReceiver == null ? 0L : networkReceiver.latestServerTick());
+          networkReceiver == null ? 0L : networkReceiver.latestServerTick(), UIUtils.shift());
     }
     sampledRightDown = rightDown;
   }
@@ -222,6 +229,26 @@ public class CursorMovementSystem extends BaseSystem {
           + " x=" + pendingLeftX + " y=" + pendingLeftY);
     }
 
+    if (click.shiftDown) {
+      if (!canStartCast(src)) {
+        pendingLeftClicks.restore(click);
+        return false;
+      }
+      int skillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
+      if (!isSkillAllowedForInput(src, skillId)) {
+        actioneer.moveTo(src, Engine.INVALID_ENTITY);
+        return true;
+      }
+      int targetId = getHoveredAt(src, pendingLeftX, pendingLeftY);
+      iso.agg(tmpVec2.set(pendingLeftX, pendingLeftY)).unproject().toWorld();
+      if (targetId != Engine.INVALID_ENTITY && isMeleeNormalAttack(skillId)
+          && !actioneer.isInMeleeRange(src, targetId, MELEE_APPROACH_RANGE_BONUS)) {
+        targetId = Engine.INVALID_ENTITY;
+      }
+      requestCast(src, skillId, targetId, tmpVec2);
+      return true;
+    }
+
     // If HoveredManager already observed the clicked entity, preserve the
     // normal interaction/attack path. Otherwise this is a ground click and we
     // can immediately enqueue its world destination from the captured point.
@@ -235,7 +262,7 @@ public class CursorMovementSystem extends BaseSystem {
       return false;
     }
     iso.agg(tmpVec2.set(pendingLeftX, pendingLeftY)).unproject().toWorld();
-    if (actioneer.canInterrupt(src)) actioneer.moveTo(src, tmpVec2);
+    if (actioneer.canInterrupt(src)) moveToGround(src, tmpVec2);
     return true;
   }
 
@@ -268,6 +295,20 @@ public class CursorMovementSystem extends BaseSystem {
     iso.agg(tmpVec2.set(click.screenX, click.screenY)).unproject().toWorld();
     if (targetId != Engine.INVALID_ENTITY && mPosition.has(targetId)) {
       tmpVec2.set(mPosition.get(targetId).position);
+    }
+    if (shouldMoveOnUntargetedRightClick(
+        targetId, click.shiftDown, skillEntry(skillId))) {
+      moveToGround(src, tmpVec2);
+      return true;
+    }
+    if (targetId != Engine.INVALID_ENTITY && isMeleeNormalAttack(skillId)
+        && !actioneer.isInMeleeRange(src, targetId, MELEE_APPROACH_RANGE_BONUS)) {
+      if (click.shiftDown) {
+        requestCast(src, skillId, Engine.INVALID_ENTITY, tmpVec2);
+      } else {
+        moveToTarget(src, targetId);
+      }
+      return true;
     }
     requestCast(src, skillId, targetId, tmpVec2);
     return true;
@@ -303,7 +344,7 @@ public class CursorMovementSystem extends BaseSystem {
       boolean touched = touchDown(src);
       if (!touched && actioneer.canInterrupt(src)) {
         iso.agg(tmpVec2.set(Gdx.input.getX(), Gdx.input.getY())).unproject().toWorld();
-        actioneer.moveTo(src, tmpVec2);
+        moveToGround(src, tmpVec2);
       }
     } else if (!pressed && actioneer.canInterrupt(src)) {
       requireRelease = false;
@@ -320,7 +361,8 @@ public class CursorMovementSystem extends BaseSystem {
         // not interactable -> attacking? check weapon range to auto attack or cast spell
         Interactable interactable = mInteractable.get(targetId);
         final float dst = srcPos.dst(targetPos);
-        if (interactable != null && dst <= interactable.range) {
+        if (interactable != null
+            && InteractionRange.contains(dst, interactable, mSize.get(src))) {
           traceInteraction(src, targetId, interactable, dst, "trigger", true);
           actioneer.moveTo(src, Engine.INVALID_ENTITY);
           actioneer.faceTarget(src, targetId);
@@ -335,7 +377,8 @@ public class CursorMovementSystem extends BaseSystem {
           if (actioneer.didLastAttackTargetDie(src)) return;
           
           // Check if in melee range
-          boolean inMeleeRange = actioneer.isInMeleeRange(src, targetId, 3);
+          boolean inMeleeRange = actioneer.isInMeleeRange(
+              src, targetId, MELEE_APPROACH_RANGE_BONUS);
           
           final int selectedSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
           final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
@@ -366,6 +409,46 @@ public class CursorMovementSystem extends BaseSystem {
         }
       }
     }
+  }
+
+  private void moveToGround(int src, Vector2 destination) {
+    Position position = mPosition.get(src);
+    Pathfind pathfind = mPathfind.get(src);
+    if (!shouldRefreshHeldGroundPath(
+        position != null ? position.position : null, pathfind, destination)) {
+      return;
+    }
+    closeTradePanelsForMovement();
+    actioneer.moveTo(src, destination);
+  }
+
+  private void moveToTarget(int src, int target) {
+    closeTradePanelsForMovement();
+    actioneer.moveTo(src, target);
+  }
+
+  private void closeTradePanelsForMovement() {
+    if (Riiablo.game != null) Riiablo.game.closeTradePanelsForMovement();
+  }
+
+  static boolean shouldRefreshHeldGroundPath(
+      Vector2 position, Pathfind pathfind, Vector2 requestedDestination) {
+    if (position == null || pathfind == null || requestedDestination == null) return true;
+    if (pathfind.targetEntityId != Engine.INVALID_ENTITY) return true;
+
+    float remainingX = pathfind.destination.x - position.x;
+    float remainingY = pathfind.destination.y - position.y;
+    float remainingLen2 = remainingX * remainingX + remainingY * remainingY;
+    if (remainingLen2 <= HELD_PATH_REFRESH_DISTANCE * HELD_PATH_REFRESH_DISTANCE) return true;
+
+    float requestedX = requestedDestination.x - position.x;
+    float requestedY = requestedDestination.y - position.y;
+    float requestedLen2 = requestedX * requestedX + requestedY * requestedY;
+    if (requestedLen2 <= 0.0001f) return false;
+
+    float alignment = (remainingX * requestedX + remainingY * requestedY)
+        / (float) Math.sqrt(remainingLen2 * requestedLen2);
+    return alignment < HELD_PATH_DIRECTION_COS;
   }
 
   private void requestCast(int sourceId, int skillId, int targetId, Vector2 targetVec) {
@@ -432,96 +515,9 @@ public class CursorMovementSystem extends BaseSystem {
     return getHoveredAt(src, Gdx.input.getX(), Gdx.input.getY());
   }
 
-  /** Hit-tests the supplied screen coordinates against the current selectable snapshot. */
+  /** Delegates captured-coordinate hit testing to the hover/selection owner. */
   private int getHoveredAt(int src, float screenX, float screenY) {
-    Position srcPosition = mPosition.get(src);
-    int selected = Engine.INVALID_ENTITY;
-    boolean selectedInteractable = false;
-    float selectedDst2 = Float.POSITIVE_INFINITY;
-    // HoveredManager first converts the native input point through the camera
-    // before comparing it with iso.toScreen(entityPosition).  The queued click
-    // path must use the exact same coordinate space; comparing raw window
-    // coordinates makes every monster/NPC miss whenever the viewport or camera
-    // has a non-zero projection offset.
-    cursorScreen.set(screenX, screenY);
-    iso.unproject(cursorScreen);
-    IntBag selectableEntities = selectableSubscriber.getEntities();
-    for (int i = 0, size = selectableEntities.size(); i < size; i++) {
-      int candidate = selectableEntities.get(i);
-      Position candidatePosition = mPosition.get(candidate);
-      BBoxWrapper boxWrapper = mBBoxWrapper.get(candidate);
-      if (candidatePosition == null || boxWrapper == null || boxWrapper.box == null) continue;
-
-      boolean candidateInteractable = mInteractable.has(candidate);
-      iso.toScreen(entityScreen.set(candidatePosition.position));
-      if (!containsScreenPoint(boxWrapper.box, entityScreen,
-          cursorScreen)) continue;
-      float candidateDst2 = srcPosition == null
-          ? Float.POSITIVE_INFINITY
-          : srcPosition.position.dst2(candidatePosition.position);
-      if (selected == Engine.INVALID_ENTITY
-          || shouldReplaceHoveredTarget(candidateInteractable, candidateDst2,
-              selectedInteractable, selectedDst2)) {
-        selected = candidate;
-        selectedInteractable = candidateInteractable;
-        selectedDst2 = candidateDst2;
-      }
-    }
-
-    // CursorMovementSystem runs before HoveredManager. A waypoint that becomes
-    // selectable or is entered by the cursor on the click frame would
-    // otherwise be absent until the following frame. Perform a synchronous
-    // hit test for waypoints so the click cannot be lost to system ordering.
-    cursorScreen.set(screenX, screenY);
-    iso.unproject(cursorScreen);
-    IntBag waypoints = waypointInputSubscriber.getEntities();
-    for (int i = 0, size = waypoints.size(); i < size; i++) {
-      int candidate = waypoints.get(i);
-      Object object = mObject.get(candidate);
-      if (!isWaypoint(object)) continue;
-
-      Position candidatePosition = mPosition.get(candidate);
-      BBoxWrapper boxWrapper = mBBoxWrapper.get(candidate);
-      if (candidatePosition == null || boxWrapper == null || boxWrapper.box == null) continue;
-      iso.toScreen(entityScreen.set(candidatePosition.position));
-      if (!containsScreenPoint(boxWrapper.box, entityScreen, cursorScreen)) continue;
-
-      float candidateDst2 = srcPosition == null
-          ? Float.POSITIVE_INFINITY
-          : srcPosition.position.dst2(candidatePosition.position);
-      if (selected == Engine.INVALID_ENTITY
-          || !selectedInteractable
-          || candidateDst2 < selectedDst2) {
-        selected = candidate;
-        selectedInteractable = true;
-        selectedDst2 = candidateDst2;
-      }
-    }
-    return selected;
-  }
-
-  static boolean isWaypoint(Object object) {
-    return object != null
-        && object.base != null
-        && (object.base.SubClass & Engine.Object.SUBCLASS_WAYPOINT)
-            == Engine.Object.SUBCLASS_WAYPOINT;
-  }
-
-  static boolean containsScreenPoint(com.riiablo.codec.util.BBox box,
-      Vector2 entityScreen, Vector2 cursorScreen) {
-    float x = entityScreen.x + box.xMin;
-    float y = entityScreen.y - box.yMax;
-    return x <= cursorScreen.x && cursorScreen.x <= x + box.width
-        && y <= cursorScreen.y && cursorScreen.y <= y + box.height;
-  }
-
-  static boolean shouldReplaceHoveredTarget(
-      boolean candidateInteractable,
-      float candidateDst2,
-      boolean selectedInteractable,
-      float selectedDst2) {
-    if (candidateInteractable != selectedInteractable) return candidateInteractable;
-    return candidateDst2 < selectedDst2;
+    return hoveredManager.getHoveredAt(src, screenX, screenY);
   }
 
   private boolean touchDown(int src) {
@@ -562,7 +558,8 @@ public class CursorMovementSystem extends BaseSystem {
       float dst = mPosition.get(src).position.dst(targetPos);
       
       // Check if in melee range
-      boolean inMeleeRange = actioneer.isInMeleeRange(src, target, 3);
+      boolean inMeleeRange = actioneer.isInMeleeRange(
+          src, target, MELEE_APPROACH_RANGE_BONUS);
       
       final int selectedSkillId = selectedSkill;
       final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
@@ -589,8 +586,29 @@ public class CursorMovementSystem extends BaseSystem {
       }
     }
     
-    actioneer.moveTo(src, target);
+    Target currentTarget = mTarget.get(src);
+    Pathfind currentPath = mPathfind.get(src);
+    if (shouldIssueTargetMove(currentTarget, currentPath, target)) {
+      moveToTarget(src, target);
+    }
     return true;
+  }
+
+  private static Skills.Entry skillEntry(int skillId) {
+    return skillId >= 0 && Riiablo.files != null && Riiablo.files.skills != null
+        ? Riiablo.files.skills.get(skillId) : null;
+  }
+
+  static boolean shouldMoveOnUntargetedRightClick(
+      int targetId, boolean shiftDown, Skills.Entry skill) {
+    return targetId == Engine.INVALID_ENTITY && !shiftDown
+        && NativeSkillResolver.isTargetableOnly(skill);
+  }
+
+  static boolean shouldIssueTargetMove(Target currentTarget, Pathfind currentPath,
+      int requestedTarget) {
+    return currentTarget == null || currentTarget.target != requestedTarget
+        || currentPath == null || currentPath.targetEntityId != requestedTarget;
   }
 
   private void traceInteraction(int src, int target, Interactable interactable,
@@ -608,6 +626,7 @@ public class CursorMovementSystem extends BaseSystem {
     Gdx.app.log(TAG, "Interaction target: phase=" + phase
         + " player=" + src + " entity=" + target
         + " distance=" + distance + " range=" + interactable.range
+        + " effectiveRange=" + InteractionRange.effective(interactable, mSize.get(src))
         + " hovered=" + hoveredSubscriber.getEntities().size());
   }
 
@@ -617,26 +636,8 @@ public class CursorMovementSystem extends BaseSystem {
   }
 
   private void traceNoInteractionTarget(int src) {
-    cursorScreen.set(Gdx.input.getX(), Gdx.input.getY());
-    iso.unproject(cursorScreen);
-    int nearest = Engine.INVALID_ENTITY;
-    float nearestScreenDst2 = Float.POSITIVE_INFINITY;
-    IntBag waypoints = waypointInputSubscriber.getEntities();
-    for (int i = 0, size = waypoints.size(); i < size; i++) {
-      int candidate = waypoints.get(i);
-      if (!isWaypoint(mObject.get(candidate))) continue;
-      Position position = mPosition.get(candidate);
-      if (position == null) continue;
-      iso.toScreen(entityScreen.set(position.position));
-      float dst2 = cursorScreen.dst2(entityScreen);
-      if (dst2 < nearestScreenDst2) {
-        nearest = candidate;
-        nearestScreenDst2 = dst2;
-      }
-    }
-    traceInput("miss player=" + src + " cursor=" + cursorScreen
-        + " nearestWaypoint=" + nearest
-        + " nearestScreenDistance=" + (float) Math.sqrt(nearestScreenDst2)
+    traceInput("miss player=" + src
+        + " cursor=(" + Gdx.input.getX() + "," + Gdx.input.getY() + ")"
         + " hovered=" + hoveredSubscriber.getEntities().size());
   }
 

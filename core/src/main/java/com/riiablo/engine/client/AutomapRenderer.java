@@ -173,6 +173,9 @@ public class AutomapRenderer extends BaseSystem {
       if (maFile.exists()) {
         loadedNativeAutomap = AutomapExplorationStore.readMa(maFile);
         automapManager.loadNativeAutomap(loadedNativeAutomap);
+        Gdx.app.log(TAG, String.format(
+            "Loaded native Automap: path=%s difficulty=%d seed=%d bytes=%d",
+            maFile.file().getAbsolutePath(), difficulty, nativeAutomapSeed, maFile.length()));
       }
     } catch (IOException | RuntimeException e) {
       Gdx.app.error(TAG, "Failed to load native Automap save", e);

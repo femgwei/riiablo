@@ -3,6 +3,7 @@ package com.riiablo.engine.server.skill;
 import com.riiablo.CharacterClass;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.save.CharData;
+import com.riiablo.skill.SkillCodes;
 
 /**
  * Data-driven view of the native Skills.txt rules shared by all seven
@@ -72,6 +73,22 @@ public final class NativeSkillResolver {
     return !inTown || isAllowedInTown(skill);
   }
 
+  /** Returns the native TargetableOnly rule used by unmodified mouse input. */
+  public static boolean isTargetableOnly(Skills.Entry skill) {
+    if (skill == null) return false;
+    if (com.riiablo.Riiablo.files != null
+        && com.riiablo.Riiablo.files.NativeSkills != null) {
+      com.riiablo.codec.excel.NativeSkills nativeSkills =
+          com.riiablo.Riiablo.files.NativeSkills;
+      if (nativeSkills.source().columnIndex("TargetableOnly") >= 0) {
+        com.riiablo.codec.excel.NativeSkills.Entry nativeSkill = nativeSkills.get(skill.Id);
+        if (nativeSkill != null) return nativeSkill.bool("TargetableOnly");
+      }
+    }
+    // Preserve basic Attack semantics for reduced/custom tables.
+    return skill.Id == SkillCodes.attack;
+  }
+
   /** Effective native mana cost in display units (fixed-point shift applied). */
   public static float manaCost(Skills.Entry skill, int level) {
     if (skill == null) return 0f;
@@ -84,6 +101,11 @@ public final class NativeSkillResolver {
     // fractional costs and low-level skills consistent with the native path.
     double minimum = Math.max(0, skill.minmana);
     return (float) Math.max(minimum, calculated);
+  }
+
+  /** Shared client/server boundary check for fractional fixed-point mana costs. */
+  public static boolean hasEnoughMana(float currentMana, float manaCost) {
+    return manaCost <= 0f || currentMana + 0.0001f >= manaCost;
   }
 
   /** Evaluates one of Skills.txt Calc1..Calc4 with native bounded semantics. */

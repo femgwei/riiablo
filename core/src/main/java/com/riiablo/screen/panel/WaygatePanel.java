@@ -66,7 +66,8 @@ public class WaygatePanel extends WidgetGroup implements Disposable {
     btnExit.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        setVisible(false);
+        if (Riiablo.game != null) Riiablo.game.setLeftPanel(null);
+        else setVisible(false);
       }
     });
     addActor(btnExit);

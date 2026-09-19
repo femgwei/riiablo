@@ -17,12 +17,14 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.audio.Audio;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.ai.AI;
+import com.riiablo.engine.server.ai.Fallen;
 import com.riiablo.engine.server.ai.FallenShaman;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.component.AIWrapper;
@@ -46,6 +48,51 @@ import org.junit.jupiter.api.Test;
 
 /** End-to-end headless regression for automatic combat followed by Shaman resurrection. */
 class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
+  @Test
+  void ordinaryFallenAttacksWhenNativeFootprintsAreInMeleeRange() throws Exception {
+    MonStats.Entry fallenRow = Riiablo.files.monstats.get("fallen1");
+    MonStats2.Entry fallenStats2 = Riiablo.files.monstats2.get(fallenRow.MonStatsEx);
+    World previousEngine = Riiablo.engine;
+    Audio previousAudio = Riiablo.audio;
+    Riiablo.audio = new SilentAudio();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new Actioneer(), new Pathfinder(),
+            new CofManager(), new ServerMonsterCorpseSystem(), new AnimStepper(),
+            new Probe(), new TestFactory())
+        .build()
+        .register("map", new Map(0, 0)));
+    Riiablo.engine = world;
+    try {
+      int player = createPlayer(world);
+      world.getMapper(Size.class).create(player).size = Size.MEDIUM;
+      int fallen = createMonster(world, fallenRow, fallenStats2, 12.6f, 10f, 24f);
+      world.getMapper(Size.class).get(fallen).size = Size.MEDIUM;
+      world.getMapper(CofReference.class).create(fallen)
+          .set(fallenRow.Code, Engine.Monster.MODE_NU);
+
+      Fallen ai = new Fallen(fallen);
+      world.getInjector().inject(ai);
+      ai.initialize();
+      Field params = AI.class.getDeclaredField("params");
+      params.setAccessible(true);
+      int[] values = (int[]) params.get(ai);
+      values[0] = 0;
+      values[2] = 100;
+      ai.update(1f);
+
+      assertTrue(world.getMapper(com.riiablo.engine.server.component.Casting.class).has(fallen));
+      assertEquals(player,
+          world.getMapper(com.riiablo.engine.server.component.Casting.class).get(fallen).targetId);
+      byte mode = world.getMapper(com.riiablo.engine.server.component.Sequence.class)
+          .get(fallen).mode1;
+      assertTrue(mode == Engine.Monster.MODE_A1 || mode == Engine.Monster.MODE_A2);
+    } finally {
+      Riiablo.engine = previousEngine;
+      Riiablo.audio = previousAudio;
+      world.dispose();
+    }
+  }
+
   @Test
   void autoCombatKillsFallenThenShamanResurrectsIt() throws Exception {
     MathUtils.random.setSeed(0xFA11EL);
@@ -226,6 +273,17 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
 
   private static final class Probe extends BaseSystem {
     @Override protected void processSystem() {}
+  }
+
+  private static final class SilentAudio extends Audio {
+    SilentAudio() {
+      super(null);
+    }
+
+    @Override
+    public Instance play(String id, boolean global) {
+      return null;
+    }
   }
 
   private static final class TestFactory extends EntityFactory {

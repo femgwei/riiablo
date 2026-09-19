@@ -1,6 +1,7 @@
 package com.riiablo.engine.server;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
@@ -14,9 +15,19 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
+import com.riiablo.engine.Engine;
+import com.riiablo.skill.SkillCodes;
 import org.junit.jupiter.api.Test;
 
 class ActioneerTest {
+  @Test
+  void playerSequenceSkillStartsWithItsTransitionAnimation() {
+    Skills.Entry jab = new Skills.Entry();
+    jab.anim = "SQ";
+    jab.seqtrans = "A1";
+    assertEquals(Engine.Player.MODE_A1, new Actioneer().getMode(jab, Class.Type.PLR));
+  }
+
   @Test
   void nativeResurrectSkillMayExecuteAgainstDeadTarget() {
     Skills.Entry resurrect = new Skills.Entry();
@@ -56,6 +67,24 @@ class ActioneerTest {
     } finally {
       world.dispose();
     }
+  }
+
+  @Test
+  void playerNormalMeleeAttackRequiresTargetRange() {
+    assertTrue(Actioneer.requiresNormalMeleeCastRange(
+        SkillCodes.attack, 42, true, false));
+  }
+
+  @Test
+  void rangedAndUntargetedNormalAttacksDoNotRequireMeleeRange() {
+    assertFalse(Actioneer.requiresNormalMeleeCastRange(
+        SkillCodes.attack, 42, true, true));
+    assertFalse(Actioneer.requiresNormalMeleeCastRange(
+        SkillCodes.attack, Engine.INVALID_ENTITY, true, false));
+    assertFalse(Actioneer.requiresNormalMeleeCastRange(
+        SkillCodes.attack, 42, false, false));
+    assertFalse(Actioneer.requiresNormalMeleeCastRange(
+        SkillCodes.throw_, 42, true, false));
   }
 
   private static int unit(World world, float x, float y) {

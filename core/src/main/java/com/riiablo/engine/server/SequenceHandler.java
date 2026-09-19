@@ -59,6 +59,17 @@ public class SequenceHandler extends IteratingSystem {
           event.entityId, (int) nextMode);
       return;
     }
+    if (casting != null && casting.jabRemainingStrikes > 0
+        && casting.jabStrikeProcessed) {
+      sequence.sequence(com.riiablo.engine.Engine.Player.MODE_A2, sequence.mode2);
+      casting.jabStrikeProcessed = false;
+      mAnimData.get(event.entityId).override = -1;
+      com.riiablo.logger.LogManager.getLogger(SequenceHandler.class).info(
+          "[AMAZON_JAB] phase=next_animation entity={} remaining={} mode={}",
+          event.entityId, casting.jabRemainingStrikes,
+          (int) com.riiablo.engine.Engine.Player.MODE_A2);
+      return;
+    }
     if (casting != null && casting.furyInitialized
         && casting.furyRemainingStrikes > 0
         && casting.furyStrikeProcessed) {
@@ -90,8 +101,8 @@ public class SequenceHandler extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     Sequence sequence = mSequence.get(entityId);
+    Casting casting = mCasting.get(entityId);
     if (!sequence.started) {
-      Casting casting = mCasting.get(entityId);
       if (casting != null && casting.dragonTalonInitialized) {
         casting.dragonTalonKickProcessed = false;
       }
@@ -113,6 +124,14 @@ public class SequenceHandler extends IteratingSystem {
       log.trace("Starting sequence for entity {}: setting mode to {}", entityId, sequence.mode1);
       cofs.setMode(entityId, sequence.mode1);
       mAnimData.get(entityId).override = -1;
+    }
+    if (casting != null && (casting.jabRemainingStrikes > 0
+        || casting.jabStrikeProcessed)) {
+      // D2's hard-coded Jab sequence selects roughly one third of each A1/A2
+      // animation. Advancing the complete COFs at 3x preserves its native
+      // three-thrust cadence while retaining their real attack keyframes.
+      AnimData animData = mAnimData.get(entityId);
+      animData.override = Math.max(1, animData.speed * 3);
     }
   }
 }

@@ -64,4 +64,16 @@ class FixedStepAccumulatorTest {
     assertEquals(25, count[0]);
     assertEquals(0f, accumulator.getAccumulated(), 0.0001f);
   }
+
+  @Test
+  void tenFpsRenderingStillRunsTwentyFiveSimulationTicks() {
+    FixedStepAccumulator accumulator = new FixedStepAccumulator(STEP, 4);
+    int[] count = {0};
+    for (int i = 0; i < 10; i++) {
+      accumulator.advance(0.1f, ignored -> count[0]++);
+    }
+
+    assertEquals(25, count[0]);
+    assertEquals(0f, accumulator.getAccumulated(), 0.0001f);
+  }
 }

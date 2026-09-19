@@ -908,6 +908,13 @@ public class ItemData {
 
   /** Rebuilds aggregate attributes from base stats and currently equipped items. */
   public void updateStats() {
+    // Runtime combat changes current resources on the aggregate list.  A
+    // rebuild starts by copying the persistent base list, whose current value
+    // may be stale (for example 69 base HP while combat has reduced aggregate
+    // HP to 60). Preserve the authoritative runtime values across the reset.
+    float hitpoints = currentResource(Stat.hitpoints);
+    float mana = currentResource(Stat.mana);
+    float stamina = currentResource(Stat.stamina);
     StatRef stat;
     int equippedArmorClass = 0;
     final UpdateSequence update = updater.update(stats, charStats);
@@ -1023,8 +1030,29 @@ public class ItemData {
         }
       }
     }
+
+    restoreCurrentResource(Stat.hitpoints, Stat.maxhp, hitpoints);
+    restoreCurrentResource(Stat.mana, Stat.maxmana, mana);
+    restoreCurrentResource(Stat.stamina, Stat.maxstamina, stamina);
     
     notifyUpdated();
+  }
+
+  private float currentResource(short statId) {
+    StatRef current = stats.aggregate().get(statId, StatRef.obtain());
+    if (current == null) current = stats.base().get(statId, StatRef.obtain());
+    return current != null ? current.asFixed() : 0f;
+  }
+
+  private void restoreCurrentResource(short statId, short maximumStatId, float value) {
+    StatRef maximum = stats.aggregate().get(maximumStatId, StatRef.obtain());
+    if (maximum == null) return;
+    float current = Math.max(0f, Math.min(value, maximum.asFixed()));
+    stats.aggregate().put(statId, current);
+    // D2S writes the base list, so keep it aligned with the authoritative
+    // runtime value whenever an aggregate rebuild gives us a synchronization
+    // point.
+    stats.base().put(statId, current);
   }
 
   private void updateSet(Item item, int add) {

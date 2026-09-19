@@ -18,6 +18,9 @@ public class Casting extends PooledComponent {
   public final Vector2 targetVec = new Vector2();
   /** Authoritative 25 Hz position frame frozen for this cast/attack. */
   public long positionSnapshotTick;
+  /** Native Amazon Jab sequence: A1 followed by two A2 thrusts. */
+  public int jabRemainingStrikes;
+  public boolean jabStrikeProcessed;
   /** Server-only state for native Dragon Talon SrvSt24/SrvDo042 chaining. */
   public int dragonTalonRemainingKicks;
   public int dragonTalonSuccessfulKicks;
@@ -97,6 +100,8 @@ public class Casting extends PooledComponent {
     this.targetId = targetId;
     this.targetVec.set(targetVec);
     this.positionSnapshotTick = positionSnapshotTick;
+    jabRemainingStrikes = 0;
+    jabStrikeProcessed = false;
     dragonTalonRemainingKicks = 0;
     dragonTalonSuccessfulKicks = 0;
     dragonTalonInitialized = false;
@@ -160,6 +165,8 @@ public class Casting extends PooledComponent {
     targetId = Engine.INVALID_ENTITY;
     targetVec.setZero();
     positionSnapshotTick = 0L;
+    jabRemainingStrikes = 0;
+    jabStrikeProcessed = false;
     dragonTalonRemainingKicks = 0;
     dragonTalonSuccessfulKicks = 0;
     dragonTalonInitialized = false;

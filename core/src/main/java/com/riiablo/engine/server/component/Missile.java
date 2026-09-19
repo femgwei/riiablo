@@ -320,6 +320,11 @@ public class Missile extends PooledComponent {
     this.missile = missile;
     this.start.set(start);
     this.range = range;
+    // Missiles.txt.Range is a frame lifetime for stationary missiles. A
+    // distance-only range can never expire zero-velocity impact animations.
+    this.nativeLifetimeFrames = missile != null && missile.Vel == 0 && range > 0
+        ? Math.max(1, Math.round(range))
+        : 0;
     this.missileDescriptor = new AssetDescriptor<>(Class.Type.MIS.PATH + '\\' + missile.CelFile + ".dcc", DCC.class);
     return this;
   }

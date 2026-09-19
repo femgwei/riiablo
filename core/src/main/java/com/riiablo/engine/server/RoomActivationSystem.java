@@ -5,6 +5,7 @@ import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.IntSet;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
@@ -34,6 +35,7 @@ public class RoomActivationSystem extends IteratingSystem {
   @Wire(failOnNull = false)
   protected MapManager mapManager;
   private final IntMap<ClientRoom> clients = new IntMap<>();
+  private final IntSet prewarmedTownLevels = new IntSet();
 
   @Override
   protected void process(int entityId) {
@@ -60,6 +62,10 @@ public class RoomActivationSystem extends IteratingSystem {
       clients.put(entityId, new ClientRoom(map, zone, roomId));
       spawnActiveRoomObjects(zone);
       spawnActiveRoomPopulations(zone);
+      if (zone.isTown() && !prewarmedTownLevels.contains(levelId(zone))
+          && prewarmTownExit(zone)) {
+        prewarmedTownLevels.add(levelId(zone));
+      }
       log.debug("[ROOM_ACTIVATE] player={} fromLevel={} fromRoom={} toLevel={} toRoom={} action=change",
           entityId, previous == null ? -1 : levelId(previous.zone),
           previous == null ? -1 : previous.roomId, levelId(zone), roomId);
@@ -85,6 +91,113 @@ public class RoomActivationSystem extends IteratingSystem {
 
   private static int levelId(Map.Zone zone) {
     return zone != null && zone.level != null ? zone.level.Id : -1;
+  }
+
+  /** Pre-generates the directly connected wilderness entrance while its AI stays dormant. */
+  private boolean prewarmTownExit(Map.Zone town) {
+    Map.Zone exterior = findTownExitZone(town);
+    if (exterior == null || !exterior.hasNativeRoomTopology()) return false;
+
+    float exitX = townExitX(town);
+    float exitY = townExitY(town);
+    Map.RoomEx entrance = nearestRoom(exterior, exitX, exitY);
+    if (entrance == null) return false;
+    int spawned = prewarmZoneAt(exterior, exitX, exitY);
+    log.info("[TOWN_EXIT_PREWARM] town={} exterior={} entranceRoom={} spawnedRooms={} action=complete",
+        levelId(town), levelId(exterior), entrance.id, spawned);
+    return true;
+  }
+
+  private Map.Zone findTownExitZone(Map.Zone town) {
+    if (town == null || town.map == null || town.level == null) return null;
+    Map.Zone connected = nearestCandidate(town, true);
+    return connected != null ? connected : nearestCandidate(town, false);
+  }
+
+  private Map.Zone nearestCandidate(Map.Zone town, boolean requireVisConnection) {
+    float exitX = townExitX(town);
+    float exitY = townExitY(town);
+    Map.Zone best = null;
+    float bestDistance = Float.POSITIVE_INFINITY;
+    for (Map.Zone candidate : town.map.getZones()) {
+      if (candidate == null || candidate == town || candidate.isTown()
+          || candidate.level == null || candidate.level.Act != town.level.Act
+          || candidate.level.IsInside
+          || !candidate.hasNativeRoomTopology()) continue;
+      if (requireVisConnection && !isVisConnected(town, candidate.level.Id)) continue;
+      float distance = distanceSquaredToRect(
+          exitX, exitY, candidate.x(), candidate.y(), candidate.width(), candidate.height());
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = candidate;
+      }
+    }
+    return best;
+  }
+
+  private static float townExitX(Map.Zone town) {
+    if (town.townExitDirection == 0) return town.x();
+    if (town.townExitDirection == 2) return town.x() + town.width();
+    return town.x() + town.width() * 0.5f;
+  }
+
+  private static float townExitY(Map.Zone town) {
+    if (town.townExitDirection == 1) return town.y();
+    if (town.townExitDirection == 3) return town.y() + town.height();
+    return town.y() + town.height() * 0.5f;
+  }
+
+  private static boolean isVisConnected(Map.Zone town, int levelId) {
+    if (town == null || town.level == null || town.level.Vis == null) return false;
+    for (int visibleLevel : town.level.Vis) if (visibleLevel == levelId) return true;
+    return false;
+  }
+
+  static Map.RoomEx nearestRoom(Map.Zone zone, float x, float y) {
+    if (zone == null) return null;
+    Map.RoomEx nearest = null;
+    float nearestDistance = Float.POSITIVE_INFINITY;
+    final int roomCount = zone.getRoomsEx().size;
+    for (int i = 0; i < roomCount; i++) {
+      Map.RoomEx room = zone.getRoomsEx().get(i);
+      float distance = distanceSquaredToRect(x, y, room.x, room.y, room.width, room.height);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = room;
+      }
+    }
+    return nearest;
+  }
+
+  private static float distanceSquaredToRect(
+      float x, float y, float rectX, float rectY, float width, float height) {
+    float dx = x < rectX ? rectX - x : x > rectX + width ? x - (rectX + width) : 0f;
+    float dy = y < rectY ? rectY - y : y > rectY + height ? y - (rectY + height) : 0f;
+    return dx * dx + dy * dy;
+  }
+
+  /** Activates just long enough to consume the entrance and direct-sight spawn queues. */
+  int prewarmZoneAt(Map.Zone zone, float x, float y) {
+    Map.RoomEx entrance = nearestRoom(zone, x, y);
+    if (entrance == null || !zone.hasNativeRoomTopology()) return 0;
+    int before = countSpawnedPopulations(zone);
+    zone.enterClientRoom(entrance.id);
+    try {
+      spawnActiveRoomObjects(zone);
+      spawnActiveRoomPopulations(zone);
+    } finally {
+      zone.leaveClientRoom(entrance.id);
+    }
+    return countSpawnedPopulations(zone) - before;
+  }
+
+  private static int countSpawnedPopulations(Map.Zone zone) {
+    int count = 0;
+    final int roomCount = zone.getRoomsEx().size;
+    for (int i = 0; i < roomCount; i++) {
+      if (zone.getRoomsEx().get(i).isMonsterPopulationSpawned()) count++;
+    }
+    return count;
   }
 
   private void spawnActiveRoomPopulations(Map.Zone zone) {

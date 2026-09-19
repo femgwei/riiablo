@@ -84,6 +84,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   private static final MappedKey[] CONFIGURABLE_KEYS = {
       Keys.Inventory, Keys.Character, Keys.Spells, Keys.Hireling, Keys.Quests,
       Keys.Party, Keys.Stash, Keys.Vendor, Keys.SwapWeapons, Keys.Enter, Keys.Automap,
+      Keys.Help,
       Keys.Skill1, Keys.Skill2, Keys.Skill3, Keys.Skill4, Keys.Skill5, Keys.Skill6,
       Keys.Skill7, Keys.Skill8, Keys.Belt1, Keys.Belt2, Keys.Belt3, Keys.Belt4,
       Keys.MoveUp, Keys.MoveDown, Keys.MoveLeft, Keys.MoveRight, Keys.Run,
@@ -109,6 +110,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         Riiablo.audio.play(2, true); // select.wav
+        if (Riiablo.game != null && !Riiablo.game.saveCharacter()) return;
         Riiablo.client.clearAndSet(new MenuScreen());
       }
     });

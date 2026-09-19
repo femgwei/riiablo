@@ -39,10 +39,22 @@ class NativeMonsterRegionTest {
   }
 
   @Test
-  void densityRollUsesNativeInclusiveHundredThousandRange() {
+  void densityRollUsesNativeInclusiveRangeAndTenThousandCap() {
     assertFalse(NativeMonsterRegion.densityRoll(0, 0));
     assertTrue(NativeMonsterRegion.densityRoll(100, 100));
     assertFalse(NativeMonsterRegion.densityRoll(100, 101));
-    assertTrue(NativeMonsterRegion.densityRoll(100000, 99999));
+    assertTrue(NativeMonsterRegion.densityRoll(100000, 10000));
+    assertFalse(NativeMonsterRegion.densityRoll(100000, 10001));
+  }
+
+  @Test
+  void populationAttemptsPreserveNativeThreeByThreeSubtileBudget() {
+    int attempts = 0;
+    for (int tile = 0; tile < 9; tile++) {
+      int tileAttempts = NativeMonsterRegion.populationAttemptsForGameTile(tile);
+      assertTrue(tileAttempts == 2 || tileAttempts == 3);
+      attempts += tileAttempts;
+    }
+    assertEquals(25, attempts);
   }
 }

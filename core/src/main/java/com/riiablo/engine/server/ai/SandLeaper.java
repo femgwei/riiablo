@@ -81,15 +81,7 @@ public class SandLeaper extends AI {
    * Check if monster is in combat (within melee range).
    */
   private boolean isInCombat(int targetId) {
-    if (targetId == Engine.INVALID_ENTITY) return false;
-    if (!mPosition.has(targetId)) return false;
-    
-    Vector2 entityPos = mPosition.get(entityId).position;
-    Vector2 targetPos = mPosition.get(targetId).position;
-    float distance = entityPos.dst(targetPos);
-    float meleeRng = 1f + monster.monstats2.MeleeRng;
-    
-    return distance <= meleeRng;
+    return isInNativeMeleeRange(targetId);
   }
 
   @Override

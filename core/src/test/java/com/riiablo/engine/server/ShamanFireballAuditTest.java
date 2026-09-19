@@ -66,6 +66,18 @@ public class ShamanFireballAuditTest extends RiiabloTest {
   }
 
   @Test
+  void stationaryShamanExplosionReceivesNativeFrameLifetime() {
+    Missiles.Entry row = Riiablo.files.Missiles.get("shamanexp");
+    assertNotNull(row);
+    assertEquals(0, row.Vel);
+    assertTrue(row.Range > 0);
+
+    Missile explosion = new Missile();
+    explosion.set(row, Vector2.Zero, row.Range);
+    assertEquals(row.Range, explosion.nativeLifetimeFrames);
+  }
+
+  @Test
   void shamanFireballUsesMissileElementalSnapshotAndFireResistance() {
     Missiles.Entry row = Riiablo.files.Missiles.get("shafire3");
     assertNotNull(row);

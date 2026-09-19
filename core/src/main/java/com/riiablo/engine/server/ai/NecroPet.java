@@ -119,8 +119,7 @@ public final class NecroPet extends AI {
       return;
     }
 
-    float melee = 1f + (monster.monstats2 != null ? monster.monstats2.MeleeRng : 0);
-    if (distance[0] <= melee) {
+    if (isInNativeMeleeRange(targetId)) {
       stopMovement();
       lookAt(targetId);
       if (rollAiChance(80)) {

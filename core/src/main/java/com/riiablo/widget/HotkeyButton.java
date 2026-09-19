@@ -23,6 +23,7 @@ public class HotkeyButton extends Button {
   Label charges;
   int skillId;
   StatRef chargedSkill;
+  final SkillDetails details;
   private boolean lastDisabled;
   private boolean disabledInitialized;
 
@@ -40,6 +41,7 @@ public class HotkeyButton extends Button {
 
     this.skillId = skillId;
     this.chargedSkill = chargedSkill;
+    this.details = new SkillDetails(skillId, chargedSkill);
     add(hotkey = new Label("", Riiablo.fonts.font16, Riiablo.colors.gold)).align(Align.topRight);
     row();
     add().grow();
@@ -95,6 +97,21 @@ public class HotkeyButton extends Button {
         reason = "dead";
       }
 
+      // Item charges replace the mana payment. Learned and system skills use
+      // the same fixed-point cost comparison as the authoritative cast path.
+      if (!disabled && chargedSkill == null) {
+        Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+            ? Riiablo.files.skills.get(skillId) : null;
+        int level = Math.max(1, Riiablo.charData.getSkill(skillId));
+        float manaCost = NativeSkillResolver.manaCost(skill, level);
+        StatRef mana = Riiablo.charData.getStats().get(Stat.mana);
+        float currentMana = mana == null ? 0f : mana.asFixed();
+        if (!NativeSkillResolver.hasEnoughMana(currentMana, manaCost)) {
+          disabled = true;
+          reason = "insufficient_mana";
+        }
+      }
+
       // D2 evaluates the Skills.txt InTown bit against the caster's current
       // room.  Weapon attacks and offensive spells therefore remain visible
       // but receive the red disabled tint while the player is in a town; the
@@ -145,6 +162,8 @@ public class HotkeyButton extends Button {
     setHighlightedBlendMode(other.highlightedBlendMode, other.highlightedColor);
     hotkey.setText(other.hotkey.getText());
     skillId = other.skillId;
+    chargedSkill = other.chargedSkill;
+    details.setSkill(skillId, chargedSkill);
     setDisabled(other.refreshDisabled());
   }
 
@@ -152,5 +171,9 @@ public class HotkeyButton extends Button {
   public void draw(com.badlogic.gdx.graphics.g2d.Batch batch, float parentAlpha) {
     refreshDisabled();
     super.draw(batch, parentAlpha);
+    if (skillId >= 0 && isOver() && Riiablo.game != null && getParent() != null) {
+      details.refresh();
+      Riiablo.game.setDetails(details, null, getParent(), this);
+    }
   }
 }

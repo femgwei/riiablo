@@ -39,4 +39,12 @@ class PointerClickQueueTest {
     assertEquals(56L, restored.capturedAtMillis);
     assertEquals(78L, restored.observedTick);
   }
+
+  @Test
+  void preservesShiftModifierCapturedWithPointerEdge() {
+    PointerClickQueue queue = new PointerClickQueue();
+    queue.capture(12f, 34f, 56L, 78L, true);
+
+    assertTrue(queue.poll().shiftDown);
+  }
 }

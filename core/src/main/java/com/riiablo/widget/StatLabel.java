@@ -6,12 +6,14 @@ import com.badlogic.gdx.utils.Align;
 
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 
 public class StatLabel extends Label {
   Attributes attrs;
   short stat;
   int value;
+  boolean initialized;
   Colorizer colorizer;
 
   public StatLabel(Attributes attrs, short stat) {
@@ -33,14 +35,15 @@ public class StatLabel extends Label {
   }
 
   private void updateValue() {
-    StatRef s = attrs.get(stat);
-    int curValue = s.asInt();
-    if (value != curValue) {
+    StatRef s = attrs.get(stat, StatRef.obtain());
+    int curValue = s == null ? 0 : s.asInt();
+    if (!initialized || value != curValue) {
+      initialized = true;
       value = curValue;
       setAlignment(Align.center);
       setText(Integer.toString(value));
-      setColor(colorizer.getColor(attrs.get(stat)));
     }
+    setColor(colorizer.getColor(attrs, s));
   }
 
   @Override
@@ -67,30 +70,44 @@ public class StatLabel extends Label {
   public enum Colorizer {
     DEFAULT {
       @Override
-      Color getColor(StatRef stat) {
-        return stat.modified()
+      Color getColor(Attributes attrs, StatRef stat) {
+        return stat != null && stat.modified()
+            ? Riiablo.colors.blue
+            : Riiablo.colors.white;
+      }
+    },
+    BASE_DIFFERENCE {
+      @Override
+      Color getColor(Attributes attrs, StatRef stat) {
+        if (stat == null) return Riiablo.colors.white;
+        StatRef base = attrs.base().get(stat.id(), StatRef.obtain());
+        return base != null && base.encodedValues() != stat.encodedValues()
             ? Riiablo.colors.blue
             : Riiablo.colors.white;
       }
     },
     RESISTANCE {
       @Override
-      Color getColor(StatRef stat) {
+      Color getColor(Attributes attrs, StatRef stat) {
+        if (stat == null) return Riiablo.colors.white;
         int value = stat.asInt();
         if (value < 0) {
           return Riiablo.colors.red;
-        } else if (value < 75) {
-          return Riiablo.colors.white;
-        //} else if (value == MAX) {
-        //  return Riiablo.colors.gold;
-        //} else if (75 < value < MAX) {
-        //  return Riiablo.colors.blue;
-        } else {
-          return Riiablo.colors.white;
         }
+
+        String maxstat = stat.entry().maxstat;
+        if (maxstat != null && !maxstat.isEmpty()) {
+          StatRef maximum = attrs.get(Stat.index(maxstat), StatRef.obtain());
+          if (maximum != null && value >= maximum.asInt()) return Riiablo.colors.gold;
+        }
+
+        StatRef base = attrs.base().get(stat.id(), StatRef.obtain());
+        return base != null && base.encodedValues() != stat.encodedValues()
+            ? Riiablo.colors.blue
+            : Riiablo.colors.white;
       }
     };
 
-    abstract Color getColor(StatRef stat);
+    abstract Color getColor(Attributes attrs, StatRef stat);
   }
 }

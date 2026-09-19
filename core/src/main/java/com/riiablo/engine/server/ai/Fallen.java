@@ -298,21 +298,7 @@ public class Fallen extends AI {
    * Note: D2MOD uses MeleeRng + 1, and also checks collision
    */
   private boolean isInCombat(int targetId) {
-    if (targetId == Engine.INVALID_ENTITY) return false;
-    if (!mPosition.has(targetId)) return false;
-    
-    Vector2 entityPos = mPosition.get(entityId).position;
-    Vector2 targetPos = mPosition.get(targetId).position;
-    
-    // Calculate distance between unit centers
-    float distance = entityPos.dst(targetPos);
-    
-    // Get melee range: D2MOD uses MeleeRng + 1 (nRangeBonus=0, so +1)
-    float meleeRng = monster.monstats2.MeleeRng + 1f;
-    
-    // D2MOD: UNITS_GetMeleeRange(pUnit1) + nRangeBonus + 1 >= nDistance
-    // This means: MeleeRng + 0 + 1 >= distance, so MeleeRng + 1 >= distance
-    return distance <= meleeRng;
+    return isInNativeMeleeRange(targetId);
   }
 
   @Override

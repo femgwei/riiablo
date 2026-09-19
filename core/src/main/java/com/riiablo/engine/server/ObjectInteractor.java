@@ -399,8 +399,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
         // This system is installed in client and headless server worlds. Only
         // the client owns UI; activation itself is stored on the source player.
         if (openMenu && Riiablo.game != null) {
-          Riiablo.game.waygatePanel.refresh();
-          Riiablo.game.setLeftPanel(Riiablo.game.waygatePanel);
+          Riiablo.game.openWaygatePanel(entityId);
         }
         return newlyActivated;
       }

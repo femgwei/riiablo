@@ -12,6 +12,11 @@ import com.riiablo.engine.server.NativeDataTables;
  * present, while tests can verify the selection without booting a world.
  */
 public final class NativeMonsterRegion {
+  private static final int DENSITY_ROLL_RANGE = 100000;
+  private static final int MAX_DENSITY = 10000;
+  private static final int GAME_TILE_SUBTILES = 5;
+  private static final int POPULATION_CELL_SUBTILES = 3;
+
   private NativeMonsterRegion() {}
 
   /** Returns the difficulty-specific list, falling back only when it is empty. */
@@ -38,11 +43,24 @@ public final class NativeMonsterRegion {
     return level == null ? 0 : NativeDataTables.value(level.MonDen, difficulty, 0);
   }
 
-  /** Inclusive native density check: roll 0..99999 succeeds when roll <= MonDen. */
+  /** Inclusive native density check after D2Game's population-time MonDen cap. */
   public static boolean densityRoll(int monDen, int roll) {
     if (monDen <= 0) return false;
-    int normalizedRoll = Math.floorMod(roll, 100000);
-    return normalizedRoll <= Math.min(monDen, 100000);
+    int normalizedRoll = Math.floorMod(roll, DENSITY_ROLL_RANGE);
+    return normalizedRoll <= Math.min(monDen, MAX_DENSITY);
+  }
+
+  /**
+   * Distributes D2Game's one attempt per 3x3 subtiles over riiablo's 5x5 game tiles.
+   * The cumulative form avoids rounding every tile down to two attempts.
+   */
+  public static int populationAttemptsForGameTile(int tileIndex) {
+    if (tileIndex < 0) return 0;
+    int numerator = GAME_TILE_SUBTILES * GAME_TILE_SUBTILES;
+    int denominator = POPULATION_CELL_SUBTILES * POPULATION_CELL_SUBTILES;
+    long before = (long) tileIndex * numerator / denominator;
+    long after = (long) (tileIndex + 1) * numerator / denominator;
+    return (int) (after - before);
   }
 
   private static boolean hasValue(String[] values) {
