@@ -41,17 +41,27 @@ class DrlgTileSubPresetUnitTest {
   }
 
   @Test
-  void onlyWaypointLvlSubObjectsAreExposedToTheExternalEntityBridge() {
+  void onlyGameplayLvlSubObjectsAreExposedToTheExternalEntityBridge() {
     D2LvlSubTxt waypoint = new D2LvlSubTxt();
     waypoint.setSzFile("Act1/Outdoors/Waypoint.ds1");
     D2LvlSubTxt smallWaypoint = new D2LvlSubTxt();
     smallWaypoint.setSzFile("Act1/Outdoors/WaySmall.ds1");
+    D2LvlSubTxt shrine = new D2LvlSubTxt();
+    shrine.setSzFile("Act1/Outdoors/ShrineW.ds1");
+    D2LvlSubTxt object = new D2LvlSubTxt();
+    object.setSzFile("Act1\\Outdoors\\Object.ds1");
     D2LvlSubTxt border = new D2LvlSubTxt();
     border.setSzFile("Act1/Outdoors/BorderMiddle.ds1");
+    D2LvlSubTxt trees = new D2LvlSubTxt();
+    trees.setSzFile("Act1/Outdoors/Trees.ds1");
 
     assertTrue(DrlgTileSub.isWaypointSubstitution(waypoint));
     assertTrue(DrlgTileSub.isWaypointSubstitution(smallWaypoint));
+    assertTrue(DrlgTileSub.isInteractiveSubstitution(shrine));
+    assertTrue(DrlgTileSub.isInteractiveSubstitution(object));
     org.junit.jupiter.api.Assertions.assertFalse(DrlgTileSub.isWaypointSubstitution(border));
+    org.junit.jupiter.api.Assertions.assertFalse(DrlgTileSub.isInteractiveSubstitution(border));
+    org.junit.jupiter.api.Assertions.assertFalse(DrlgTileSub.isInteractiveSubstitution(trees));
 
     D2PresetUnit copy = DrlgTileSub.copySubstitutionPresetUnit(
         new D2DrlgRoom(), null, unit(15, 20), 7, 8,

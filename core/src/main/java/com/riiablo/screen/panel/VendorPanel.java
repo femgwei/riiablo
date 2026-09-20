@@ -21,8 +21,11 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Inventory;
+import com.riiablo.codec.excel.Npc;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.item.Item;
+import com.riiablo.item.Location;
+import com.riiablo.item.StoreLoc;
 import com.riiablo.item.VendorPricing;
 import com.riiablo.item.ItemReader;
 import com.riiablo.io.ByteInput;
@@ -87,6 +90,9 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private Label goldLabel;
   private boolean selling;
   private boolean repairing;
+  /** Local-mode stock is retained between opening/closing the panel. */
+  private Array<Item> localStock;
+  private Npc.Entry localPricing;
   @com.artemis.annotations.Wire(name = "client.socket", failOnNull = false)
   private Socket clientSocket;
   // Artemis 2.3 treats a field-level @Wire system dependency as mandatory,
@@ -324,7 +330,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   }
 
   public void config(int flags, Array<Item> items) {
+    config(flags, items, localPricing);
+  }
+
+  public void config(int flags, Array<Item> items, Npc.Entry pricing) {
     networkFlags = 0;
+    localStock = items;
+    localPricing = pricing;
     configuredFlags = flags;
     selling = false;
     repairing = false;
@@ -372,7 +384,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   /** Opens a server-owned vendor session. Local inventory generation is skipped. */
   public void configNetwork(int flags, int npcEntityId, byte service) {
-    config(flags, new Array<Item>(false, 0, Item.class));
+    config(flags, new Array<Item>(false, 0, Item.class), null);
     networkFlags = flags;
     networkNpcEntityId = npcEntityId;
     networkService = service;
@@ -578,13 +590,33 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       // a conflicting STORE_TO_CURSOR request for the same item.
       return true;
     }
-    int value = VendorPricing.sellPrice(item);
-    boolean sold = VendorPricing.sell(Riiablo.charData, itemIndex);
+    int value = VendorPricing.sellPrice(item, localPricing, Riiablo.charData,
+        Riiablo.charData.diff);
+    boolean sold = VendorPricing.sell(Riiablo.charData, itemIndex, localPricing,
+        Riiablo.charData.diff);
     if (sold) {
+      if (localStock != null) {
+        // Native D2 adds a vendor copy to the shared trade inventory. Keep the
+        // object out of the player inventory while preserving its id and data
+        // so it can be bought back before the town stock is refreshed.
+        item.flags2 |= Item.ITEMFLAG2_INSTORE;
+        item.location = Location.STORED;
+        item.storeLoc = StoreLoc.NONE;
+        item.gridX = 0;
+        item.gridY = 0;
+        item.vendorPrice = -1;
+        if (!localStock.contains(item, true)) localStock.insert(0, item);
+      }
       Gdx.app.debug(TAG, "Sold " + item.code + " for " + value + " gold");
       Gdx.app.log(TAG, "[VENDOR_SELL] phase=result mode=local success=true item="
           + item.id + " value=" + value);
       refreshGold();
+      if (localStock != null) {
+        boolean restoreSelling = selling;
+        boolean restoreRepairing = repairing;
+        config(configuredFlags, localStock);
+        restoreTradeMode(restoreSelling, restoreRepairing);
+      }
     } else {
       Gdx.app.log(TAG, "[VENDOR_SELL] phase=reject mode=local item=" + item.id
           + " location=" + item.location + " store=" + item.storeLoc);
@@ -601,9 +633,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       pendingOperation = NpcServiceOperation.BUY;
       return false;
     }
-    int value = VendorPricing.buyPrice(item);
-    boolean bought = VendorPricing.buy(Riiablo.charData, item);
+    int value = VendorPricing.buyPrice(item, localPricing, Riiablo.charData);
+    boolean bought = VendorPricing.buy(Riiablo.charData, item, localPricing);
     if (bought) {
+      if (localStock != null) {
+        localStock.removeValue(item, true);
+        config(configuredFlags, localStock);
+      }
       Gdx.app.debug(TAG, "Bought " + item.code + " for " + value + " gold");
       refreshGold();
     }

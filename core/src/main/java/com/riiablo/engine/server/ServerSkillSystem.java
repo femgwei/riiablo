@@ -4115,27 +4115,11 @@ public class ServerSkillSystem extends PassiveSystem {
   }
 
   static boolean isAmazonBowSkill(Skills.Entry skill) {
-    if (skill == null || skill.skill == null) return false;
-    switch (skill.skill.trim().toLowerCase(java.util.Locale.ROOT)) {
-      case "magic arrow":
-      case "fire arrow":
-      case "cold arrow":
-      case "multiple shot":
-      case "exploding arrow":
-      case "ice arrow":
-      case "guided arrow":
-      case "strafe":
-      case "immolation arrow":
-      case "freezing arrow":
-        return true;
-      default:
-        return false;
-    }
+    return NativeSkillResolver.isAmazonBowSkill(skill);
   }
 
   static boolean requiresRangedAmmo(Skills.Entry skill, Item weapon) {
-    if (!ItemData.isRangedWeapon(weapon) || skill == null || skill.noammo) return false;
-    return skill.Id == SkillCodes.attack || skill.decquant || isAmazonBowSkill(skill);
+    return NativeSkillResolver.requiresRangedAmmo(skill, weapon);
   }
 
   static boolean hasQuantity(Item item) {

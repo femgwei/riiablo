@@ -88,7 +88,7 @@ public class ItemGrid extends Group {
 
     setTouchable(Touchable.enabled);
     setSize(width * boxWidth, height * boxHeight);
-    addListener(clickListener = new ClickListener() {
+    addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         if (event.isHandled()) return;
@@ -185,9 +185,9 @@ public class ItemGrid extends Group {
     return false;
   }
 
-  /** Lets specialized grids route usable items through their item controller. */
+  /** Lets specialized grids route a right-click through their item controller. */
   protected boolean onUse(Item item) {
-    return false;
+    return gridListener != null && gridListener.onUse(item);
   }
 
   void onDrop(int x, int y) {
@@ -343,7 +343,7 @@ public class ItemGrid extends Group {
 
       ItemEntry entry = item.base;
       setSize(entry.invwidth * boxWidth, entry.invheight * boxHeight);
-      addListener(clickListener = new ClickListener() {
+      addListener(clickListener = new ClickListener(Input.Buttons.LEFT) {
         @Override
         public void clicked(InputEvent event, float x, float y) {
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
@@ -363,14 +363,23 @@ public class ItemGrid extends Group {
         @Override
         public void clicked(InputEvent event, float x, float y) {
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
+            if (onStoredItemClicked(item)) removeActor(StoredItem.this);
+            event.handle();
+            return;
+          }
+          // The inventory listener gets first refusal for every owned item.
+          // Vendor selling applies to equipment as well as usable consumables;
+          // restricting this hook to ItemEntry.useable made equipment clicks
+          // disappear and let potions fall through to their normal use sound.
+          boolean routed = onUse(StoredItem.this.item);
+          if (routed) {
             event.handle();
             return;
           }
           ItemEntry entry = StoredItem.this.item.base;
           if (entry.useable) {
-            boolean routed = onUse(StoredItem.this.item);
-            if (!routed) Riiablo.audio.play(StoredItem.this.item.getUseSound(), true);
-            if (!routed && entry instanceof Misc.Entry) {
+            Riiablo.audio.play(StoredItem.this.item.getUseSound(), true);
+            if (entry instanceof Misc.Entry) {
               Misc.Entry misc = StoredItem.this.item.getBase();
               switch (misc.pSpell) {
                 case 7:

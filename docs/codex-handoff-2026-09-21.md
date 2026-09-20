@@ -66,3 +66,24 @@
 3. 从 Rogue Encampment 进入 Blood Moor，再从 Blood Moor 接近 Cold Plains，观察
    `[TOWN_EXIT_PREWARM]` 与 `[LEVEL_EXIT_PREWARM]` 日志及跨区前后的怪物出现时机。
 4. 后续单独处理 Immolation Arrow 持续火焰场测试，以及仓库完整测试集中的既有失败。
+
+## 2026-09-21 商人交易修正
+
+- 对照 D2MOO `D2Common/src/Items/Items.cpp` 修正箭/弩矢售价：quiver 使用
+  `quantity * dwCost / 1024`，不再把整叠弹药直接乘出几千金币；本地交易同时使用对应 NPC 的买卖倍率。
+- 对照 D2MOO `D2Game/src/UNIT/SUnitNpc.cpp`，出售的普通装备会进入当前 NPC 的公共库存，
+  在库存刷新前可以从商人货物栏买回；买回后从库存移除。
+- 本地模式缓存普通商人库存，关闭交易窗口不会重新生成；网络模式继续使用 NPC 共享 session 和 revision。
+- 增加城镇库存刷新监听：城镇内最后一名玩家离开后清空普通交易/赌博库存并重新生成；多人同城时，
+  单个玩家关闭窗口或离开不会刷新其他玩家正在使用的公共库存。
+- 新增 `NpcVendorSessionSystem`，同时接入本地 `GameScreen` 和 D2GS；新增 quiver 定价回归测试源码。
+
+## 本轮验证与待测
+
+- 已通过：`:desktop:compileJava`、`:server:d2gs:compileJava`、`:core:compileTestJava`。
+- 尚未进行运行时验证，需要重点确认：
+  1. 出售完整十字弓弹药堆，售价应为几十金币量级，而不是几千或上万；同时检查普通装备、药水和不同 NPC 的价格倍率。
+  2. 出售普通装备后，在未离开城镇前关闭并重新打开交易窗口，确认物品仍在货物栏且只能买回一次；买回后确认物品回到背包、商人库存移除。
+  3. 分别测试本地模式和 D2GS 模式的出售/买回、库存 revision 变化及背包空间不足时的失败处理。
+  4. 多人场景下让一名玩家离开城镇、另一名玩家仍留在城镇，确认商人库存不刷新；最后一名玩家离开后再进入，确认库存重新生成。
+  5. 观察 `[VENDOR_SELL]`、NPC service result 和区域切换日志，确认出售金额、库存快照和刷新时机一致。

@@ -13,7 +13,6 @@ import com.riiablo.graphics.BlendMode;
 import com.riiablo.key.MappedKey;
 import com.riiablo.item.Item;
 import com.riiablo.save.ItemData;
-import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 
@@ -26,6 +25,7 @@ public class HotkeyButton extends Button {
   final SkillDetails details;
   private boolean lastDisabled;
   private boolean disabledInitialized;
+  private String displayedQuantity;
 
   public HotkeyButton(final DC dc, final int index, int skillId) {
     this(dc, index, skillId, null);
@@ -78,17 +78,34 @@ public class HotkeyButton extends Button {
   public boolean refreshDisabled() {
     boolean disabled = skillId < 0 || Riiablo.charData == null;
     String reason = disabled ? (skillId < 0 ? "unassigned" : "no_char_data") : "";
+    String quantityText = chargedSkill != null ? Integer.toString(chargedSkill.value0()) : "";
 
     if (!disabled) {
       ItemData items = Riiablo.charData.getItems();
-      if (skillId == SkillCodes.throw_ || skillId == SkillCodes.left_hand_throw) {
-        Item throwable = items.getEquippedThrowableWeapon();
-        StatRef quantity = throwable == null || throwable.attrs == null
-            ? null : throwable.attrs.base().get(Stat.quantity);
-        int value = quantity == null ? 0 : quantity.asInt();
-        disabled = throwable == null || value <= 0;
-        if (throwable == null) reason = "no_throwable_weapon";
-        else if (value <= 0) reason = "empty_quantity";
+      Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
+          ? Riiablo.files.skills.get(skillId) : null;
+
+      if (chargedSkill == null) {
+        Item rangedWeapon = items.getEquippedRangedWeapon();
+        if (NativeSkillResolver.isAmazonBowSkill(skill) && rangedWeapon == null) {
+          disabled = true;
+          reason = "no_ranged_weapon";
+        } else if (NativeSkillResolver.requiresRangedAmmo(skill, rangedWeapon)) {
+          Item ammo = items.getEquippedAmmo(rangedWeapon);
+          int value = itemQuantity(ammo);
+          quantityText = Integer.toString(value);
+          disabled = value <= 0;
+          if (ammo == null) reason = "missing_ammo";
+          else if (value <= 0) reason = "empty_quantity";
+        } else if (!NativeSkillResolver.isAmazonBowSkill(skill)
+            && NativeSkillResolver.isThrowableSkill(skill)) {
+          Item throwable = items.getEquippedThrowableWeapon();
+          int value = itemQuantity(throwable);
+          if (throwable != null) quantityText = Integer.toString(value);
+          disabled = throwable == null || value <= 0;
+          if (throwable == null) reason = "no_throwable_weapon";
+          else if (value <= 0) reason = "empty_quantity";
+        }
       }
 
       StatRef hp = Riiablo.charData.getStats().get(Stat.hitpoints);
@@ -100,8 +117,6 @@ public class HotkeyButton extends Button {
       // Item charges replace the mana payment. Learned and system skills use
       // the same fixed-point cost comparison as the authoritative cast path.
       if (!disabled && chargedSkill == null) {
-        Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-            ? Riiablo.files.skills.get(skillId) : null;
         int level = Math.max(1, Riiablo.charData.getSkill(skillId));
         float manaCost = NativeSkillResolver.manaCost(skill, level);
         StatRef mana = Riiablo.charData.getStats().get(Stat.mana);
@@ -117,14 +132,14 @@ public class HotkeyButton extends Button {
       // but receive the red disabled tint while the player is in a town; the
       // same selected skill becomes usable immediately after leaving it.
       if (!disabled && isPlayerInTown()) {
-        Skills.Entry skill = Riiablo.files != null && Riiablo.files.skills != null
-            ? Riiablo.files.skills.get(skillId) : null;
         if (!NativeSkillResolver.isAllowedInTown(skill)) {
           disabled = true;
           reason = "town";
         }
       }
     }
+
+    updateQuantityText(quantityText);
 
     setDisabled(disabled);
     if (!disabledInitialized || disabled != lastDisabled) {
@@ -135,6 +150,18 @@ public class HotkeyButton extends Button {
       disabledInitialized = true;
     }
     return disabled;
+  }
+
+  private static int itemQuantity(Item item) {
+    if (item == null || item.attrs == null) return 0;
+    StatRef quantity = item.attrs.base().get(Stat.quantity);
+    return quantity == null ? 0 : Math.max(0, quantity.asInt());
+  }
+
+  private void updateQuantityText(String text) {
+    if (text.equals(displayedQuantity)) return;
+    charges.setText(text);
+    displayedQuantity = text;
   }
 
   private static boolean isPlayerInTown() {

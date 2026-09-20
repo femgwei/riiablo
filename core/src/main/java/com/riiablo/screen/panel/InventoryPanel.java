@@ -269,12 +269,14 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
       @Override
       public void onAlternated(ItemData items, int alternate, Item LH, Item RH) {
-        bodyParts[BodyLocs.RARM].bodyLoc = BodyLoc.getAlternate(BodyLoc.RARM, alternate);
-        bodyParts[BodyLocs.LARM].bodyLoc = BodyLoc.getAlternate(BodyLoc.LARM, alternate);
-        bodyParts[BodyLocs.RARM].item = RH;
-        bodyParts[BodyLocs.LARM].item = LH;
+        syncActiveWeaponSet(alternate, LH, RH);
       }
     });
+    // D2SReader restores the active set before UI listeners exist. Initialize
+    // the two visible weapon slots from that saved state instead of waiting
+    // for the player to switch sets once after entering the game.
+    syncActiveWeaponSet(itemData.getAlternate(),
+        itemData.getEquipped(BodyLoc.LARM), itemData.getEquipped(BodyLoc.RARM));
 
     grid = new ItemGrid(inventory, this);
     IntArray inventoryItems = itemData.getStore(StoreLoc.INVENTORY);
@@ -321,6 +323,13 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     addActor(btnDropGold);
 
     //setDebug(true, true);
+  }
+
+  private void syncActiveWeaponSet(int alternate, Item leftHand, Item rightHand) {
+    bodyParts[BodyLocs.RARM].bodyLoc = BodyLoc.getAlternate(BodyLoc.RARM, alternate);
+    bodyParts[BodyLocs.LARM].bodyLoc = BodyLoc.getAlternate(BodyLoc.LARM, alternate);
+    bodyParts[BodyLocs.RARM].item = rightHand;
+    bodyParts[BodyLocs.LARM].item = leftHand;
   }
 
   @Override

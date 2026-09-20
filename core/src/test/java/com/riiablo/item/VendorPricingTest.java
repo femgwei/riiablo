@@ -11,6 +11,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Npc;
+import com.riiablo.codec.excel.ItemTypes;
 import com.riiablo.engine.server.npc.NpcVendorSessionManager;
 import com.riiablo.save.CharData;
 
@@ -54,6 +55,21 @@ class VendorPricingTest extends RiiabloTest {
     npc.buyMult = 512;
     assertEquals(800, VendorPricing.transactionCost(item, npc, VendorPricing.Transaction.BUY, 0));
     assertEquals(200, VendorPricing.transactionCost(item, npc, VendorPricing.Transaction.SELL, 0));
+  }
+
+  @Test
+  void quiverUsesNativeFractionalStackCost() {
+    Item item = item("cqv", 1, 1);
+    item.base.cost = 80;
+    item.base.stackable = true;
+    item.typeEntry = new ItemTypes.Entry();
+    item.typeEntry.Quiver = "xbow";
+    item.attrs.base().put(Stat.quantity, 250);
+    Npc.Entry npc = new Npc.Entry();
+    npc.buyMult = VendorPricing.MULTIPLIER_SCALE;
+
+    assertEquals(19, VendorPricing.transactionCost(
+        item, npc, VendorPricing.Transaction.SELL, 0));
   }
 
   @Test

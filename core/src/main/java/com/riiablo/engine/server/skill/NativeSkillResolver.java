@@ -2,7 +2,9 @@ package com.riiablo.engine.server.skill;
 
 import com.riiablo.CharacterClass;
 import com.riiablo.codec.excel.Skills;
+import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
+import com.riiablo.save.ItemData;
 import com.riiablo.skill.SkillCodes;
 
 /**
@@ -106,6 +108,43 @@ public final class NativeSkillResolver {
   /** Shared client/server boundary check for fractional fixed-point mana costs. */
   public static boolean hasEnoughMana(float currentMana, float manaCost) {
     return manaCost <= 0f || currentMana + 0.0001f >= manaCost;
+  }
+
+  /** Skills whose native animation/projectile path requires a bow or crossbow. */
+  public static boolean isAmazonBowSkill(Skills.Entry skill) {
+    if (skill == null || skill.skill == null) return false;
+    switch (skill.skill.trim().toLowerCase(java.util.Locale.ROOT)) {
+      case "magic arrow":
+      case "fire arrow":
+      case "cold arrow":
+      case "multiple shot":
+      case "exploding arrow":
+      case "ice arrow":
+      case "guided arrow":
+      case "strafe":
+      case "immolation arrow":
+      case "freezing arrow":
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /** Whether this skill consumes the quiver paired with the equipped ranged weapon. */
+  public static boolean requiresRangedAmmo(Skills.Entry skill, Item weapon) {
+    if (!ItemData.isRangedWeapon(weapon) || skill == null || skill.noammo) return false;
+    return skill.Id == SkillCodes.attack || skill.decquant || isAmazonBowSkill(skill);
+  }
+
+  /**
+   * Whether this skill uses a javelin, throwing knife, or throwing axe quantity.
+   * Keep this aligned with Actioneer's native throw animation/keyframe paths.
+   */
+  public static boolean isThrowableSkill(Skills.Entry skill) {
+    return skill != null && (skill.Id == SkillCodes.throw_
+        || skill.Id == SkillCodes.left_hand_throw
+        || skill.cltdofunc == 3 || skill.cltdofunc == 5
+        || skill.srvdofunc == 3 || skill.srvdofunc == 5);
   }
 
   /** Evaluates one of Skills.txt Calc1..Calc4 with native bounded semantics. */

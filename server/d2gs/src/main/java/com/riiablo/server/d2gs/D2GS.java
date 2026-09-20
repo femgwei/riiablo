@@ -4793,6 +4793,7 @@ public class D2GS extends ApplicationAdapter {
     combatPositionHistory = new CombatPositionHistory(map);
     WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
         .with(new EventSystem())
+        .with(new com.riiablo.engine.server.npc.NpcVendorSessionSystem(npcVendors))
         // Zone changes must invalidate owner-bound missiles and periodic
         // state layers before the next snapshot baseline is serialized.
         .with(new com.riiablo.engine.server.ZoneTransitionCleanupSystem())

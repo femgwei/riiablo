@@ -44,6 +44,7 @@ public class Npc extends AI {
   static final IntSet TRADERS    = new IntSet();
   static final IntSet GAMBLERS   = new IntSet();
   static final IntSet HIRERERS   = new IntSet();
+  private static final Array<Npc> VENDOR_NPCS = new Array<>(false, 16, Npc.class);
   static {
     // Act 1
     TALKERS.addAll(MonsterType.DECKARDCAIN, MonsterType.DECKARDCAIN_TOWN, MonsterType.CAIN4,
@@ -101,6 +102,9 @@ public class Npc extends AI {
   MonStats.Entry monstats;
 
   protected VendorGenerator vendors;
+  /** Normal trade stock persists until the town inventory is refreshed. */
+  private Array<Item> vendorStock;
+  private String vendorStockType;
 
   public Npc(int entityId) {
     super(entityId);
@@ -230,15 +234,34 @@ public class Npc extends AI {
     }
     Array<Item> items;
     try {
-      items = service == com.riiablo.net.packet.d2gs.NpcServiceType.GAMBLE
-          ? vendors.generateGamble() : vendors.generate(monstats.Id);
+      if (service == com.riiablo.net.packet.d2gs.NpcServiceType.GAMBLE) {
+        // Gambling is player-specific and rerolls when the panel is opened.
+        items = vendors.generateGamble();
+      } else {
+        if (vendorStock == null || !monstats.Id.equals(vendorStockType)) {
+          vendorStock = vendors.generate(monstats.Id);
+          vendorStockType = monstats.Id;
+        }
+        if (!VENDOR_NPCS.contains(this, true)) VENDOR_NPCS.add(this);
+        items = vendorStock;
+      }
     } catch (Throwable t) {
       items = new Array<>(false, 0, Item.class);
       log.error("Failed to generate vendor items: entityId={}, monsterId={}, error={}",
           entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
     }
-    Riiablo.game.vendorPanel.config(flags, items);
+    Riiablo.game.vendorPanel.config(flags, items, Riiablo.files.Npc.get(monstats.Id));
     Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
+  }
+
+  /** Called when the last player leaves the town and native vendor stock rerolls. */
+  public void clearVendorStock() {
+    vendorStock = null;
+    vendorStockType = null;
+  }
+
+  public static void clearAllVendorStocks() {
+    for (Npc npc : VENDOR_NPCS) if (npc != null) npc.clearVendorStock();
   }
 
   @Override

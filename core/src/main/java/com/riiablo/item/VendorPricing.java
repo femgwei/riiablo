@@ -72,7 +72,15 @@ public final class VendorPricing {
       int ac = stat(item, Stat.armorclass, armor.minac);
       if (armor.maxac > 0 && armor.maxac != armor.minac - 1) cost = Math.max(1, ac * cost / armor.maxac);
     }
-    if (base.stackable && quantity > 1) cost = safeMultiply(cost, quantity);
+    // D2Common treats quivers (arrows/bolts) as a fractional stack price:
+    // nQuantity * dwCost / 1024.  They are deliberately excluded from the
+    // normal stackable-item multiplication below; multiplying a full quiver
+    // directly by its quantity turns a few gold into thousands.
+    if (isQuiver(item)) {
+      cost = safeMultiply(cost, quantity) / MULTIPLIER_SCALE;
+    } else if (base.stackable && quantity > 1) {
+      cost = safeMultiply(cost, quantity);
+    }
     cost = applyQuality(cost, item);
     // Native nBuyCost is the amount paid by an NPC to the player.
     if (item.hasFlag(Item.ITEMFLAG_ETHEREAL) && transaction == Transaction.SELL) cost /= 4;
@@ -153,6 +161,15 @@ public final class VendorPricing {
   }
 
   private static int quantity(Item item) { return Math.max(1, Math.min(511, stat(item, Stat.quantity, 1))); }
+  private static boolean isQuiver(Item item) {
+    if (item == null) return false;
+    if (item.typeEntry != null && item.typeEntry.Quiver != null
+        && !item.typeEntry.Quiver.isEmpty() && !"0".equals(item.typeEntry.Quiver)) {
+      return true;
+    }
+    // Keep headless fixtures and legacy-loaded items on the native path too.
+    return "aqv".equalsIgnoreCase(item.code) || "cqv".equalsIgnoreCase(item.code);
+  }
   private static boolean isArmor(Item item) { return item.base instanceof Armor.Entry; }
   private static int stat(Item item, short stat, int fallback) {
     if (item.attrs == null) return fallback;

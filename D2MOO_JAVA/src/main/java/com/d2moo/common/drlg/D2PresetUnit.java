@@ -20,8 +20,9 @@ public class D2PresetUnit {
      * <p>D2Common also copies objects from decorative LvlSub files (trees,
      * borders, puddles, and similar substitutions). Those copies remain part
      * of the native RoomEx data, but riiablo must not reinterpret their DS1
-     * preset index as an Objects.txt class id. Waypoint substitutions are the
-     * only LvlSub objects currently exposed to the external entity bridge.</p>
+     * preset index as an Objects.txt class id. Only the retail waypoint,
+     * shrine, and gameplay-object LvlSub records are exposed to the external
+     * entity bridge.</p>
      */
     private boolean externalEntity = true;
     private D2MapAIStrc pMapAI;                  // 0x18 D2MapAIStrc*

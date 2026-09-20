@@ -708,7 +708,7 @@ public class DrlgTileSub {
                 && pLvlSubTxtRecord.getPDrlgFile().getPPresetUnit() != null) {
             // 遍历预设单位链表
             D2PresetUnit pPresetUnit = pLvlSubTxtRecord.getPDrlgFile().getPPresetUnit();
-            boolean exportDs1Origin = isWaypointSubstitution(pLvlSubTxtRecord);
+            boolean exportDs1Origin = isInteractiveSubstitution(pLvlSubTxtRecord);
             while (pPresetUnit != null) {
                 copySubstitutionPresetUnit(pOutdoorLevel.getPDrlgRoom(), pMemPool,
                         pPresetUnit, nX, nY, tBox, exportDs1Origin);
@@ -752,24 +752,45 @@ public class DrlgTileSub {
                 subtileY + unitY - minSubtileY);
         // Index provenance and external visibility are separate concerns.
         // Every LvlSub copy still carries the DS1 Obj/MonPreset index
-        // contract. Only waypoint substitutions are currently safe to expose
-        // to riiablo's ECS; decorative substitutions stay native-only.
+        // contract. Only LvlSub records whose retail DS1 contains gameplay
+        // objects are exposed to riiablo's ECS; terrain-only substitutions
+        // (trees, stones, puddles and borders) stay native-only.
         copy.setDs1Raw(source.isDs1Raw());
         copy.setExternalEntity(exportDs1Origin);
         return copy;
     }
 
     static boolean isWaypointSubstitution(D2LvlSubTxt record) {
-        if (record == null || record.getSzFile() == null) return false;
-        String file = record.getSzFile().replace('\\', '/');
-        int separator = file.lastIndexOf('/');
-        String name = separator >= 0 ? file.substring(separator + 1) : file;
-        // SubWaypoint's second native mask bit (Cold Plains' 0x20000 room
-        // flag) selects WaySmall.ds1 rather than Waypoint.ds1. Both files
-        // contain the waypoint object's DS1 preset unit and must remain
-        // visible to riiablo's external entity bridge.
+        String name = substitutionFileName(record);
         return name.equalsIgnoreCase("Waypoint.ds1")
                 || name.equalsIgnoreCase("WaySmall.ds1");
+    }
+
+    /**
+     * Returns whether a retail LvlSub DS1 is an object-bearing gameplay
+     * substitution.  These names are the records used by Act I outdoor
+     * waypoint/shrine/object placement in the 1.10f data.  Other LvlSub files
+     * are visual terrain patches and must not be reinterpreted as Objects.txt
+     * entities by the Java bridge.
+     */
+    static boolean isInteractiveSubstitution(D2LvlSubTxt record) {
+        String name = substitutionFileName(record);
+        // SubWaypoint's second native mask bit (Cold Plains' 0x20000 room
+        // flag) selects WaySmall.ds1 rather than Waypoint.ds1. ShrineW and
+        // Object are the corresponding retail records for shrines and
+        // ground containers.  Keep the check filename-based because the
+        // LvlSub type may have multiple rows for different sub-themes.
+        return name.equalsIgnoreCase("Waypoint.ds1")
+                || name.equalsIgnoreCase("WaySmall.ds1")
+                || name.equalsIgnoreCase("ShrineW.ds1")
+                || name.equalsIgnoreCase("Object.ds1");
+    }
+
+    private static String substitutionFileName(D2LvlSubTxt record) {
+        if (record == null || record.getSzFile() == null) return "";
+        String file = record.getSzFile().replace('\\', '/');
+        int separator = file.lastIndexOf('/');
+        return separator >= 0 ? file.substring(separator + 1) : file;
     }
     
     /**

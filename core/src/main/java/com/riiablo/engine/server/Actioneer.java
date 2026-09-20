@@ -36,6 +36,7 @@ import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.BarbarianSkills;
 import com.riiablo.engine.server.skill.DruidSkills;
 import com.riiablo.engine.server.skill.NecromancerSkills;
+import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.Engine;
 import com.riiablo.item.Item;
 import com.riiablo.item.BodyLoc;
@@ -295,7 +296,7 @@ public class Actioneer extends PassiveSystem {
     // Diablo II, a javelin/throwing knife/throwing axe can still be used for a
     // point-blank melee Attack; only explicit Throw skills (or throw functions
     // in Skills.txt) create a missile and consume quantity here.
-    boolean isThrowAttack = isThrowSkill || isThrowFunc;
+    boolean isThrowAttack = NativeSkillResolver.isThrowableSkill(skill);
 
     if (mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR
         && mPlayer.has(entityId) && mPlayer.get(entityId).data != null) {
@@ -1487,10 +1488,7 @@ public class Actioneer extends PassiveSystem {
         if (mCasting.has(entityId)) {
           Casting casting = mCasting.get(entityId);
           Skills.Entry skill = Riiablo.files.skills.get(casting.skillId);
-          boolean isThrowSkill = (casting.skillId == SkillCodes.throw_ || casting.skillId == SkillCodes.left_hand_throw);
-          boolean isThrowFunc = (skill != null && (skill.cltdofunc == 3 || skill.cltdofunc == 5));
-          
-          boolean isThrowAttack = isThrowSkill || isThrowFunc;
+          boolean isThrowAttack = NativeSkillResolver.isThrowableSkill(skill);
           if (isThrowAttack && mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR) {
             Item weapon = getThrowableWeapon(entityId);
             

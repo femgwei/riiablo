@@ -115,15 +115,33 @@ public final class NpcVendorSessionManager {
   }
 
   /** Atomically sells an owned item. Returns zero on validation failure. */
-  public int sell(Session session, CharData player, int itemIndex) {
+  public synchronized int sell(Session session, CharData player, int itemIndex) {
     if (player == null) return 0;
     com.riiablo.save.ItemData items = player.getItems();
     if (itemIndex < 0 || itemIndex >= items.getItems().size) return 0;
     Item item = items.getItem(itemIndex);
     int price = VendorPricing.sellPrice(item, session == null ? null : session.pricing,
         player, session == null ? 0 : session.difficulty);
-    return VendorPricing.sell(player, itemIndex, session == null ? null : session.pricing,
-        session == null ? 0 : session.difficulty) ? price : 0;
+    if (!VendorPricing.sell(player, itemIndex, session == null ? null : session.pricing,
+        session == null ? 0 : session.difficulty)) return 0;
+
+    // Native D2 places a duplicate of a sold item into the NPC's shared
+    // inventory.  The item is no longer owned by the player, but retaining
+    // this object gives the session a stable id for the subsequent buyback
+    // request and preserves its affixes/quality.
+    if (session != null && !session.isGamble()) {
+      item.flags2 |= Item.ITEMFLAG2_INSTORE;
+      item.location = com.riiablo.item.Location.STORED;
+      item.storeLoc = com.riiablo.item.StoreLoc.NONE;
+      item.gridX = 0;
+      item.gridY = 0;
+      item.vendorPrice = -1;
+      if (find(session, item.id) == null) {
+        session.stock.insert(0, item);
+        session.revision++;
+      }
+    }
+    return price;
   }
 
   public synchronized void clear(int npcEntityId) {

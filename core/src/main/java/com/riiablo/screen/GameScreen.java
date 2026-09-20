@@ -932,6 +932,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
         .with(new ZoneChangeTracker())
         .with(new ZoneMovementModesChanger())
+        .with(new com.riiablo.engine.server.npc.NpcVendorSessionSystem())
         .with(new ZoneEntryDisplayer())
 
         .with(new FootstepEmitter())
