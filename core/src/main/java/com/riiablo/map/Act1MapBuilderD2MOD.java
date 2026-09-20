@@ -3179,7 +3179,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         if (tileIndex < 0 || tileIndex >= layerSize) continue;
         int floorId = grid.floorIds[y][x];
         if (floorId != -1) {
-          DT1.Tile tile = dt1s.get(floorId);
+          String sourceFile = grid.sourceFile(grid.floorSourceFiles[y][x]);
+          DT1.Tile tile = dt1s.get(sourceFile, floorId);
+          if (tile == null) tile = dt1s.get(floorId);
           if (tile != null) {
             layers[Map.FLOOR_OFFSET][tileIndex] = tile;
             counts.floors++;

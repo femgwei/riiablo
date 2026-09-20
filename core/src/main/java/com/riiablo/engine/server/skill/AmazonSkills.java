@@ -2,6 +2,8 @@ package com.riiablo.engine.server.skill;
 
 import com.badlogic.gdx.math.MathUtils;
 
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -268,8 +270,11 @@ public final class AmazonSkills {
    * @return 穿透概率百分比
    */
   public static int getPierceChance(int skillLevel) {
-    // 基础 23%，每级 +9%
-    return Math.min(100, 23 + (skillLevel - 1) * 9);
+    if (skillLevel <= 0 || Riiablo.files == null) return 0;
+    Skills.Entry pierce = Riiablo.files.skills.get(SkillId.PIERCE);
+    if (pierce == null || pierce.passivecalc == null || pierce.passivecalc.length == 0) return 0;
+    return Math.max(0, Math.min(100,
+        SkillFormula.evaluate(pierce.passivecalc[0], pierce, skillLevel)));
   }
 
   //==========================================================================

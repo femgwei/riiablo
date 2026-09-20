@@ -30,6 +30,18 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
   }
 
   @Test
+  void onlyVisibleInventoryRequestsManualNonGoldPickup() {
+    com.riiablo.item.Item armor = new com.riiablo.item.Item();
+    armor.code = "cap";
+    com.riiablo.item.Item gold = new com.riiablo.item.Item();
+    gold.code = "gld";
+
+    assertTrue(ClientItemManager.prefersCursorPickup(armor, true));
+    assertFalse(ClientItemManager.prefersCursorPickup(armor, false));
+    assertFalse(ClientItemManager.prefersCursorPickup(gold, true));
+  }
+
+  @Test
   void localGoldPickupCreditsWalletWithoutUsingCursor() {
     Riiablo.charData = character("LocalGold", 10, 1);
     ClientItemManager manager = new ClientItemManager();
@@ -160,6 +172,26 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
   }
 
   @Test
+  void localEquipmentPickupUsesCursorWhileInventoryIsOpen() {
+    Riiablo.charData = character("LocalManualEquipment", 0, 1);
+    ClientItemManager manager = new CursorPickupManager();
+    World world = world(manager);
+    try {
+      com.riiablo.item.Item armor = generated("cap", 301);
+      int entity = groundItem(world, armor);
+
+      manager.groundToCursor(entity);
+      world.process();
+
+      assertSame(armor, Riiablo.charData.getItems().getCursor());
+      assertEquals(Location.CURSOR, armor.location);
+      assertFalse(world.getEntityManager().isActive(entity));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void localPickupLeavesItemOnGroundWhenAllDestinationsAreFull() {
     Riiablo.charData = character("LocalNoSpace", 0, 1);
     equipBelt(Riiablo.charData, "hbl", 399);
@@ -169,7 +201,7 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
     for (int i = 0; i < 40; i++) {
       assertTrue(Riiablo.charData.getItems().addToInventory(generated("hp1", 500 + i)));
     }
-    ClientItemManager manager = new ClientItemManager();
+    BounceRecordingItemManager manager = new BounceRecordingItemManager();
     World world = world(manager);
     try {
       com.riiablo.item.Item potion = generated("hp1", 600);
@@ -181,6 +213,7 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
       assertTrue(world.getEntityManager().isActive(entity));
       assertSame(potion, world.getMapper(Item.class).get(entity).item);
       assertNull(Riiablo.charData.getItems().getCursor());
+      assertEquals(entity, manager.replayedEntity);
     } finally {
       world.dispose();
     }
@@ -244,5 +277,22 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
     @Override public int createWarp(int index, float x, float y) { return -1; }
     @Override public int createItem(com.riiablo.item.Item item, float x, float y) { return -1; }
     @Override public int createMissile(int id, Vector2 angle, Vector2 position) { return -1; }
+  }
+
+  private static final class CursorPickupManager extends ClientItemManager {
+    @Override
+    protected boolean prefersCursorPickup(com.riiablo.item.Item item) {
+      return true;
+    }
+  }
+
+  private static final class BounceRecordingItemManager extends ClientItemManager {
+    int replayedEntity = -1;
+
+    @Override
+    protected boolean replayGroundDrop(int entityId) {
+      replayedEntity = entityId;
+      return true;
+    }
   }
 }

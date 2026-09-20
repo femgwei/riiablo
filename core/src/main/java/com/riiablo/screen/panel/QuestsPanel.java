@@ -15,6 +15,7 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
@@ -380,8 +381,10 @@ public class QuestsPanel extends WidgetGroup implements Disposable {
     }
 
     boolean isAvailable() {
+      int level = Riiablo.charData == null ? 0
+          : Riiablo.charData.getStats().aggregate().getValue(Stat.level, 0);
       return nativeRecordIndex <= 0
-          || Act1QuestPresentation.isAvailable(nativeRecordIndex, record());
+          || Act1QuestPresentation.isAvailable(nativeRecordIndex, record(), level);
     }
 
     short record() {

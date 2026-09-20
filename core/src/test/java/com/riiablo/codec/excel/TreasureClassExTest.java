@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
@@ -52,7 +53,8 @@ class TreasureClassExTest extends RiiabloTest {
   @Test
   void expandsActualActOneChestClassToLeafTokens() {
     TreasureClassEx table = Riiablo.files.TreasureClassEx;
-    List<TreasureClassResolver.Drop> drops = new TreasureClassResolver(table)
+    List<TreasureClassResolver.Drop> drops = new TreasureClassResolver(
+        table, Riiablo.files.itemTypeTreasureClasses)
         .resolve("Act 1 Chest A", 1, bound -> bound - 1);
 
     assertFalse(drops.isEmpty());
@@ -72,11 +74,40 @@ class TreasureClassExTest extends RiiabloTest {
     assertEquals(60, fallen.itemProbability());
     assertEquals(160, fallen.totalProbability());
 
-    TreasureClassResolver resolver = new TreasureClassResolver(Riiablo.files.TreasureClassEx);
+    TreasureClassResolver resolver = new TreasureClassResolver(
+        Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses);
     assertTrue(resolver.resolve("Act 1 H2H A", 0, bound -> 99).isEmpty());
     List<TreasureClassResolver.Drop> firstDrop =
         resolver.resolve("Act 1 H2H A", 0, bound -> 100);
     assertEquals(1, firstDrop.size());
     assertEquals("gld", TreasureClassResolver.baseToken(firstDrop.get(0).token));
+  }
+
+  @Test
+  void expandsSyntheticLowLevelArmorClassToBaseItem() {
+    TreasureClassResolver resolver = new TreasureClassResolver(
+        Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses);
+
+    List<TreasureClassResolver.Drop> drops = resolver.resolve("armo3", 0, bound -> 0);
+
+    assertEquals(1, drops.size());
+    assertNotNull(Riiablo.files.armor.get(drops.get(0).token));
+  }
+
+  @Test
+  void fallenEquipmentBranchProducesARealBaseItem() {
+    TreasureClassResolver resolver = new TreasureClassResolver(
+        Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses);
+    int[] rolls = {121, 0, 0};
+    AtomicInteger index = new AtomicInteger();
+
+    List<TreasureClassResolver.Drop> drops = resolver.resolve(
+        "Act 1 H2H A", 0, bound -> rolls[index.getAndIncrement()]);
+
+    assertEquals(1, drops.size());
+    String code = drops.get(0).token;
+    assertTrue(Riiablo.files.armor.get(code) != null
+        || Riiablo.files.weapons.get(code) != null
+        || Riiablo.files.misc.get(code) != null);
   }
 }

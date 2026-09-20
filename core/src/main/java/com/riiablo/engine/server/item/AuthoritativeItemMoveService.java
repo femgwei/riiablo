@@ -155,12 +155,17 @@ public final class AuthoritativeItemMoveService {
       revisions.put(playerEntityId, next);
       return new Outcome(true, ItemMoveFailure.NONE, next, grant.remaining == 0, grant.remaining);
     }
-    // Native ground pickup gives belt-compatible potions the first free belt
-    // cell, then falls back to the inventory. Other item types go directly to
-    // the inventory. Both placements remain one authoritative transaction.
+    // With the inventory panel open native pickup leaves the item on the
+    // cursor for manual placement. Otherwise potions prefer the belt and all
+    // other items use automatic inventory placement.
     boolean stored;
     try {
-      stored = character.getItems().addGroundPickup(groundItem);
+      if (intent.pickupToCursor) {
+        character.groundToCursor(groundItem);
+        stored = true;
+      } else {
+        stored = character.getItems().addGroundPickup(groundItem);
+      }
     } catch (Throwable t) {
       GroundDropOwnership.release(intent.groundEntityId);
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);

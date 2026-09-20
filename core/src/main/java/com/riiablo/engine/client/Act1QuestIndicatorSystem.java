@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.Stat;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.server.component.Monster;
@@ -87,9 +88,11 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
             || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
       case MonsterType.CHARSI:
         record = quests[Act1MalusQuest.RECORD];
-        return !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
+        int level = data.getStats().aggregate().getValue(Stat.level, 0);
+        return Act1MalusQuest.canStart(record, level)
             || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)
-            || data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE);
+            || (level >= Act1MalusQuest.MINIMUM_LEVEL
+                && data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE));
       case MonsterType.WARRIV:
         record = quests[Act1AndarielQuest.RECORD];
         return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);

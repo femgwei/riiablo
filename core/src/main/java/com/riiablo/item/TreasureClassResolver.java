@@ -129,10 +129,17 @@ public final class TreasureClassResolver {
   }
 
   private final TreasureClassEx table;
+  private final ItemTypeTreasureClasses itemTypeClasses;
 
   public TreasureClassResolver(TreasureClassEx table) {
+    this(table, null);
+  }
+
+  public TreasureClassResolver(TreasureClassEx table,
+      ItemTypeTreasureClasses itemTypeClasses) {
     if (table == null) throw new NullPointerException("table");
     this.table = table;
+    this.itemTypeClasses = itemTypeClasses;
   }
 
   public List<Drop> resolve(String treasureClass, int level, RandomSource random) {
@@ -153,7 +160,16 @@ public final class TreasureClassResolver {
 
     int id = table.index(treasureClass);
     TreasureClassEx.Entry root = id < 0 ? table.get(treasureClass) : table.getForLevel(id, level);
-    if (root == null) return Collections.emptyList();
+    if (root == null) {
+      if (itemTypeClasses == null || !itemTypeClasses.contains(treasureClass)) {
+        return Collections.emptyList();
+      }
+      String item = itemTypeClasses.select(treasureClass, random);
+      if (item == null) return Collections.emptyList();
+      List<Drop> drops = new ArrayList<>(1);
+      drops.add(new Drop(item, new Quality()));
+      return Collections.unmodifiableList(drops);
+    }
 
     List<Drop> drops = new ArrayList<>(Math.min(maxDrops, NATIVE_MAX_DROPS));
     expand(root, Quality.root(root), random, Math.min(maxDrops, NATIVE_MAX_DROPS),
@@ -187,7 +203,12 @@ public final class TreasureClassResolver {
       String lookupToken = baseToken(token);
       TreasureClassEx.Entry child = table.get(lookupToken);
       if (child == null) {
-        drops.add(new Drop(token, quality));
+        if (itemTypeClasses != null && itemTypeClasses.contains(lookupToken)) {
+          String item = itemTypeClasses.select(lookupToken, random);
+          if (item != null) drops.add(new Drop(item, quality));
+        } else {
+          drops.add(new Drop(token, quality));
+        }
       } else {
         expand(child, quality.child(child), random, maxDrops, effectivePlayers,
             depth + 1, drops);

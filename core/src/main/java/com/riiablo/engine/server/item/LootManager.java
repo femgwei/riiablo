@@ -319,7 +319,8 @@ public class LootManager {
         players.monsterPlayerCount, players.effectivePlayerCount());
     List<TreasureClassResolver.Drop> drops;
     try {
-      TreasureClassResolver resolver = new TreasureClassResolver(Riiablo.files.TreasureClassEx);
+      TreasureClassResolver resolver = new TreasureClassResolver(
+          Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses);
       NativeRng rng = new NativeRng(config.rngSeed == 0 ? Riiablo.gameSeed : config.rngSeed);
       drops = resolver.resolve(config.treasureClass, tcLookupLevel,
           rng::nextInt, TreasureClassResolver.NATIVE_MAX_DROPS, players);

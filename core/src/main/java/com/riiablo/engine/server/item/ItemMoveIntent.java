@@ -12,10 +12,18 @@ public final class ItemMoveIntent {
   public final int y;
   public final int bodyLoc;
   public final boolean merc;
+  public final boolean pickupToCursor;
 
   public ItemMoveIntent(long requestId, long revision, byte operation,
                         int itemId, int groundEntityId, int storeLoc, int x, int y,
                         int bodyLoc, boolean merc) {
+    this(requestId, revision, operation, itemId, groundEntityId, storeLoc, x, y,
+        bodyLoc, merc, false);
+  }
+
+  public ItemMoveIntent(long requestId, long revision, byte operation,
+                        int itemId, int groundEntityId, int storeLoc, int x, int y,
+                        int bodyLoc, boolean merc, boolean pickupToCursor) {
     this.requestId = requestId;
     this.revision = revision;
     this.operation = operation;
@@ -26,6 +34,7 @@ public final class ItemMoveIntent {
     this.y = y;
     this.bodyLoc = bodyLoc;
     this.merc = merc;
+    this.pickupToCursor = pickupToCursor;
   }
 
   /** Stable equality used by the idempotency cache; requestId is deliberately excluded. */
@@ -34,6 +43,7 @@ public final class ItemMoveIntent {
     return revision == other.revision && operation == other.operation
         && itemId == other.itemId && groundEntityId == other.groundEntityId
         && storeLoc == other.storeLoc && x == other.x && y == other.y
-        && bodyLoc == other.bodyLoc && merc == other.merc;
+        && bodyLoc == other.bodyLoc && merc == other.merc
+        && pickupToCursor == other.pickupToCursor;
   }
 }

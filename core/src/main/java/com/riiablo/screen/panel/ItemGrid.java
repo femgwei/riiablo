@@ -185,6 +185,11 @@ public class ItemGrid extends Group {
     return false;
   }
 
+  /** Lets specialized grids route usable items through their item controller. */
+  protected boolean onUse(Item item) {
+    return false;
+  }
+
   void onDrop(int x, int y) {
     if (gridListener == null) return;
     gridListener.onDrop(x, y);
@@ -326,6 +331,7 @@ public class ItemGrid extends Group {
     void onDrop(int x, int y);
     boolean onPickup(int i);
     void onSwap(int i, int x, int y);
+    default boolean onUse(Item item) { return false; }
   }
 
   class StoredItem extends Actor {
@@ -362,8 +368,9 @@ public class ItemGrid extends Group {
           }
           ItemEntry entry = StoredItem.this.item.base;
           if (entry.useable) {
-            Riiablo.audio.play(StoredItem.this.item.getUseSound(), true);
-            if (entry instanceof Misc.Entry) {
+            boolean routed = onUse(StoredItem.this.item);
+            if (!routed) Riiablo.audio.play(StoredItem.this.item.getUseSound(), true);
+            if (!routed && entry instanceof Misc.Entry) {
               Misc.Entry misc = StoredItem.this.item.getBase();
               switch (misc.pSpell) {
                 case 7:

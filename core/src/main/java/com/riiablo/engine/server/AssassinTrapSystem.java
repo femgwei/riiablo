@@ -461,6 +461,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     missile.range = Math.max(1, Math.min(255, path));
     missile.pierceEnabled = true;
     missile.pierceChance = 100;
+    missile.pierceRemaining = -1;
     missile.skillId = attackSkill.Id;
     missile.damageLevel = level;
   }
@@ -621,6 +622,7 @@ public class AssassinTrapSystem extends IteratingSystem {
     blade.range = 0f;
     blade.pierceEnabled = true;
     blade.pierceChance = 100;
+    blade.pierceRemaining = -1;
     Attributes ownerAttrs = trap.ownerId >= 0 && mAttributes.has(trap.ownerId)
         ? mAttributes.get(trap.ownerId).attrs : null;
     MissileDamageResolver.initializeSkill(blade, skill, ownerAttrs,

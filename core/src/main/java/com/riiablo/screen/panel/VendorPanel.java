@@ -95,6 +95,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   @com.artemis.annotations.SkipWire
   private ClientNetworkSynchronizer networkSynchronizer;
   private int networkFlags;
+  private int configuredFlags;
   private int networkNpcEntityId;
   private byte networkService;
   private long networkStockRevision;
@@ -190,6 +191,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       public void clicked(InputEvent event, float x, float y) {
         repairing = false;
         selling = btnSell.isChecked();
+        Gdx.app.log(TAG, "[VENDOR_MODE] mode=sell enabled=" + selling);
         if (btnSell.isChecked()) {
           Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 4);
         } else {
@@ -323,7 +325,9 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   public void config(int flags, Array<Item> items) {
     networkFlags = 0;
+    configuredFlags = flags;
     selling = false;
+    repairing = false;
     buttonGroup.uncheckAll();
     btnBuy.setVisible((flags & BUY) == BUY);
     btnSell.setVisible((flags & SELL) == SELL);
@@ -407,6 +411,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ALL) {
         applyRepairAllResult();
       }
+      if (pendingOperation == NpcServiceOperation.SELL) {
+        Gdx.app.log(TAG, "[VENDOR_SELL] phase=result request=" + result.requestId()
+            + " success=" + result.success() + " reason=" + result.reason()
+            + " itemIndex=" + pendingItemIndex);
+      }
       pendingRequestId = 0;
       pendingItemIndex = -1;
     }
@@ -419,6 +428,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       return;
     }
     networkStockRevision = result.stockRevision();
+    boolean restoreSelling = isSelling();
+    boolean restoreRepairing = isRepairing();
     Array<Item> stock = new Array<>(true, result.stockLength(), Item.class);
     for (int i = 0; i < result.stockLength(); i++) {
       NpcServiceStock entry = result.stock(i);
@@ -434,7 +445,22 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     int flags = networkFlags;
     config(flags, stock);
     networkFlags = flags;
+    restoreTradeMode(restoreSelling, restoreRepairing);
     if (!result.success()) Gdx.app.log(TAG, "[NPC_SERVICE] " + result.reason());
+  }
+
+  private void restoreTradeMode(boolean restoreSelling, boolean restoreRepairing) {
+    if (restoreSelling && (configuredFlags & SELL) != 0) {
+      btnSell.setChecked(true);
+      selling = true;
+      repairing = false;
+      Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 4);
+    } else if (restoreRepairing && (configuredFlags & REPAIR) != 0) {
+      btnRepair.setChecked(true);
+      repairing = true;
+      selling = false;
+      Riiablo.cursor.setCursor(Riiablo.cursor.buysell, 1);
+    }
   }
 
   private Item decodeItem(int itemId, java.nio.ByteBuffer data, boolean inStore) {
@@ -448,11 +474,16 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   }
 
   public boolean isSelling() {
-    return isVisible() && selling;
+    return isVisible() && (selling || btnSell.isChecked());
   }
 
   public boolean isRepairing() {
-    return isVisible() && repairing;
+    return isVisible() && (repairing || btnRepair.isChecked());
+  }
+
+  /** The trade window accepts native right-click selling without selecting Sell first. */
+  public boolean canSellItems() {
+    return isVisible() && (configuredFlags & SELL) != 0;
   }
 
   public boolean repairItem(int itemIndex) {
@@ -520,22 +551,43 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   /** Called by the inventory grid when the Sell mode is active. */
   public boolean sellItem(int itemIndex) {
-    if (!isSelling() || Riiablo.charData == null) return false;
-    if (networkFlags != 0 && networkSynchronizer != null) {
-      if (pendingRequestId != 0) return false;
-      pendingRequestId = networkSynchronizer.requestNpcService(networkNpcEntityId, networkService,
-          NpcServiceOperation.SELL, 0, itemIndex, networkStockRevision);
-      pendingOperation = NpcServiceOperation.SELL;
-      pendingItemIndex = itemIndex;
-      return false;
-    }
+    if ((!isSelling() && !canSellItems()) || Riiablo.charData == null) return false;
     Item item = itemIndex >= 0 && itemIndex < Riiablo.charData.getItems().getItems().size
         ? Riiablo.charData.getItems().getItem(itemIndex) : null;
+    if (item == null) {
+      Gdx.app.log(TAG, "[VENDOR_SELL] phase=reject itemIndex=" + itemIndex
+          + " reason=item_not_owned");
+      return false;
+    }
+    if (networkFlags != 0 && networkSynchronizer != null) {
+      if (pendingRequestId != 0) {
+        Gdx.app.log(TAG, "[VENDOR_SELL] phase=reject item=" + item.id
+            + " reason=request_pending request=" + pendingRequestId);
+        return false;
+      }
+      long requestId = networkSynchronizer.requestNpcService(networkNpcEntityId, networkService,
+          NpcServiceOperation.SELL, 0, itemIndex, networkStockRevision);
+      if (requestId == 0) return false;
+      pendingRequestId = requestId;
+      pendingOperation = NpcServiceOperation.SELL;
+      pendingItemIndex = itemIndex;
+      Gdx.app.log(TAG, "[VENDOR_SELL] phase=request request=" + requestId
+          + " itemIndex=" + itemIndex + " stockRevision=" + networkStockRevision);
+      // The click is handled even though inventory removal waits for the
+      // authoritative result. Returning false would make InventoryPanel send
+      // a conflicting STORE_TO_CURSOR request for the same item.
+      return true;
+    }
     int value = VendorPricing.sellPrice(item);
     boolean sold = VendorPricing.sell(Riiablo.charData, itemIndex);
     if (sold) {
       Gdx.app.debug(TAG, "Sold " + item.code + " for " + value + " gold");
+      Gdx.app.log(TAG, "[VENDOR_SELL] phase=result mode=local success=true item="
+          + item.id + " value=" + value);
       refreshGold();
+    } else {
+      Gdx.app.log(TAG, "[VENDOR_SELL] phase=reject mode=local item=" + item.id
+          + " location=" + item.location + " store=" + item.storeLoc);
     }
     return sold;
   }

@@ -59,6 +59,9 @@ table ItemMoveRequest {
   y:int32 = -1;
   bodyLoc:int32 = -1;
   merc:bool;
+  // True when the inventory panel is open and the item should remain on the
+  // mouse cursor instead of using native automatic belt/inventory placement.
+  pickupToCursor:bool;
 }
 
 /** One serialized item in the complete authoritative ownership snapshot. */

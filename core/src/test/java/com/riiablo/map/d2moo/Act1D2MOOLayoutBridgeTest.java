@@ -164,6 +164,58 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
     }
   }
 
+  @Test
+  public void coldPlainsCaveWarpRetainsCavedrFloorSource() {
+    int seed = Integer.decode(System.getProperty("d2.seed", DEFAULT_SEED));
+    int burialId = findLevelId("Burial Grounds");
+    Act1D2MOOLayoutBridge.LayoutAndDrlg generated =
+        Act1D2MOOLayoutBridge.getLayoutAndDrlg(
+            seed, DEFAULT_DIFFICULTY, burialId);
+    assertNotNull(generated, "D2MOO Act1 layout failed");
+    try {
+      int levelId = D2LevelIds.LEVEL_COLDPLAINS;
+      D2DrlgLevel level = DrlgDrlg.getLevel(generated.drlg, levelId);
+      TileGrid grid = new TileGrid(
+          level.getLevelCoords().getNWidth(), level.getLevelCoords().getNHeight());
+      D2MooTileApplier applier = new D2MooTileApplier();
+      applier.putGrid(levelId, grid);
+      assertTrue(DrlgExport.exportLevelTiles(generated.drlg, levelId, applier) > 0);
+
+      int marker = com.riiablo.map.DT1.Tile.Index.create(
+          com.riiablo.map.Orientation.SPECIAL_10, 6, 24);
+      int warpX = -1;
+      int warpY = -1;
+      for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS && warpX < 0; slot++) {
+        for (int y = 0; y < grid.height && warpX < 0; y++) {
+          for (int x = 0; x < grid.width; x++) {
+            if (grid.wallIds[slot][y][x] == marker) {
+              warpX = x;
+              warpY = y;
+              break;
+            }
+          }
+        }
+      }
+      assertTrue(warpX > 0 && warpY > 0, "Cold Plains cave warp marker is missing");
+
+      int sequence = 0;
+      for (int y = warpY - 1; y <= warpY; y++) {
+        for (int x = warpX - 1; x <= warpX; x++, sequence++) {
+          assertEquals(com.riiablo.map.DT1.Tile.Index.create(
+                  com.riiablo.map.Orientation.FLOOR, 24, sequence),
+              grid.floorIds[y][x], "wrong default cave floor at " + x + "," + y);
+          String source = grid.sourceFile(grid.floorSourceFiles[y][x]);
+          assertTrue(source != null && source.replace('\\', '/').toLowerCase()
+                  .endsWith("act1/caves/cavedr.dt1"),
+              "cave floor lost its native DT1 source: " + source);
+        }
+      }
+    } finally {
+      DrlgDrlg.freeDrlg(generated.drlg);
+      Act1D2MOOLayoutBridge.releaseDataTables();
+    }
+  }
+
   private static String nativeDirtPathSignature(D2DrlgLevel level) {
     StringBuilder signature = new StringBuilder();
     D2DrlgOutdoorInfoStrc outdoors = level.getOutdoors();

@@ -1741,7 +1741,7 @@ public class Map implements Disposable {
         Riiablo.assets.finishLoadingAsset(asset);
         if (asset.type == DT1.class) {
           DT1 dt1 = (DT1) Riiablo.assets.get(asset);
-          dt1s.add(dt1);
+          dt1s.add(dt1, asset.fileName);
           dt1Count++;
           if (DEBUG_BUILD) {
             int floorTiles = 0;

@@ -59,11 +59,26 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
           entityId, grant.credited, grant.remaining);
       return;
     }
+    if (prefersCursorPickup(item)) {
+      if (Riiablo.charData == null || Riiablo.charData.getItems().getCursor() != null) {
+        log.info("[GROUND_PICKUP] phase=reject mode=local entity={} item={} reason=cursor_occupied",
+            entityId, item.id);
+        return;
+      }
+      Riiablo.charData.groundToCursor(item);
+      world.delete(entityId);
+      log.info("[GROUND_PICKUP] phase=cursor mode=local entity={} item={} code={}",
+          entityId, item.id, item.code);
+      return;
+    }
     boolean stored = Riiablo.charData != null
         && Riiablo.charData.getItems().addGroundPickup(item);
     if (!stored) {
+      boolean replayed = replayGroundDrop(entityId);
       log.info("[GROUND_PICKUP] phase=reject mode=local entity={} item={} reason=no_space",
           entityId, item.id);
+      log.info("[GROUND_DROP] phase=bounce mode=local entity={} item={} replayed={}",
+          entityId, item.id, replayed);
       return;
     }
     world.delete(entityId);
@@ -72,9 +87,25 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
         entityId, item.id, item.location, item.storeLoc);
   }
 
+  protected boolean replayGroundDrop(int entityId) {
+    ItemEffectManager effects = world.getSystem(ItemEffectManager.class);
+    return effects != null && effects.replayDrop(entityId);
+  }
+
   /** Native D2 uses one generic sound when an item is taken by the player. */
   protected static void playPickupSound() {
     if (Riiablo.audio != null) Riiablo.audio.play("item_pickup", true);
+  }
+
+  protected boolean prefersCursorPickup(com.riiablo.item.Item item) {
+    boolean inventoryVisible = Riiablo.game != null
+        && Riiablo.game.inventoryPanel != null
+        && Riiablo.game.inventoryPanel.isVisible();
+    return prefersCursorPickup(item, inventoryVisible);
+  }
+
+  static boolean prefersCursorPickup(com.riiablo.item.Item item, boolean inventoryVisible) {
+    return inventoryVisible && item != null && !"gld".equalsIgnoreCase(item.code);
   }
 
   private static int quantity(com.riiablo.item.Item item) {

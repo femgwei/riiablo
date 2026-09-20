@@ -134,6 +134,12 @@ public class Animation extends BaseDrawable implements Pool.Poolable {
     }
   }
 
+  /** Restarts the current animation range even when it is already on its first frame. */
+  public void restart() {
+    frame = startIndex;
+    elapsedTime = 0;
+  }
+
   public float getFrameDuration() {
     return frameDuration;
   }

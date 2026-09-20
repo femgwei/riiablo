@@ -1428,8 +1428,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
               + item.id + " code=" + item.code, t);
         }
       }
+      Item cursorItem = Riiablo.charData.getItems().getCursor();
+      if (Riiablo.cursor != null) Riiablo.cursor.setItem(cursorItem);
       if (result.success()
-          && result.operation() == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR) {
+          && result.operation() == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
+          && cursorItem == null) {
         ClientItemManager.playPickupSound();
       }
     }
@@ -1473,6 +1476,16 @@ public class ClientNetworkReceiver extends IntervalSystem {
         // the normal EntitySync path restores it without producing a
         // cross-level or ownerless ghost.
         requestSnapshotResync(lastResyncObservedTick, "item_ground_missing");
+      }
+    }
+    if (!result.success()
+        && result.operation() == com.riiablo.net.packet.d2gs.ItemMoveOperation.GROUND_TO_CURSOR
+        && result.failure() == com.riiablo.net.packet.d2gs.ItemMoveFailure.INVENTORY_OCCUPIED
+        && result.groundEntityId() >= 0) {
+      int localEntityId = syncIds.get(result.groundEntityId());
+      ItemEffectManager effects = world.getSystem(ItemEffectManager.class);
+      if (localEntityId != Engine.INVALID_ENTITY && effects != null) {
+        effects.replayDrop(localEntityId);
       }
     }
     if (!result.success()) {

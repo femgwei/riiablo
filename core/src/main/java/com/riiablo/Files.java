@@ -67,6 +67,7 @@ import com.riiablo.codec.excel.TreasureClassEx;
 import com.riiablo.codec.excel.UniqueItems;
 import com.riiablo.codec.excel.WeaponClass;
 import com.riiablo.codec.excel.Weapons;
+import com.riiablo.item.ItemTypeTreasureClasses;
 
 public class Files {
   private static final String TAG = "Files";
@@ -147,6 +148,7 @@ public class Files {
   public final States           States;
   public final SuperUniques     SuperUniques;
   public final TreasureClassEx  TreasureClassEx;
+  public final ItemTypeTreasureClasses itemTypeTreasureClasses;
   public final UniqueItems      UniqueItems;
   //public final UniquePrefix   UniquePrefix;
   //public final UniqueSuffix   UniqueSuffix;
@@ -231,6 +233,7 @@ public class Files {
     //UniqueSuffix   = load(UniqueSuffix.class);
     WeaponClass      = load(WeaponClass.class);
     weapons          = load(Weapons.class, Excel.EXPANSION);
+    itemTypeTreasureClasses = new ItemTypeTreasureClasses(ItemTypes, weapons, armor, misc);
 
     long end = System.currentTimeMillis();
     Gdx.app.debug(TAG, "Loaded files in " + (end - start) + "ms");

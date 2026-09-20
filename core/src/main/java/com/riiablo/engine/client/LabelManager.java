@@ -5,6 +5,8 @@ import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -15,14 +17,17 @@ import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
 import com.riiablo.engine.client.component.Hovered;
 import com.riiablo.engine.client.component.Label;
+import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.profiler.GpuSystem;
 
 @GpuSystem
-@All({Hovered.class, Label.class, Position.class})
+@All({Label.class, Position.class})
 public class LabelManager extends IteratingSystem {
+  protected ComponentMapper<Hovered> mHovered;
   protected ComponentMapper<Label> mLabel;
+  protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Position> mPosition;
 
   protected RenderSystem renderer;
@@ -33,6 +38,7 @@ public class LabelManager extends IteratingSystem {
 
   private final Vector2 tmpVec2 = new Vector2();
   private final Array<Actor> labels = new Array<>();
+  private boolean showGroundItems;
 
   @Override
   protected boolean checkProcessing() {
@@ -42,6 +48,8 @@ public class LabelManager extends IteratingSystem {
   @Override
   protected void begin() {
     labels.clear();
+    showGroundItems = Gdx.input.isKeyPressed(Input.Keys.ALT_LEFT)
+        || Gdx.input.isKeyPressed(Input.Keys.ALT_RIGHT);
   }
 
   @Override
@@ -63,6 +71,10 @@ public class LabelManager extends IteratingSystem {
 
   @Override
   protected void process(int entityId) {
+    if (!shouldDisplayLabel(mHovered.has(entityId), mItem.has(entityId), showGroundItems)) {
+      return;
+    }
+
     tmpVec2.set(mPosition.get(entityId).position);
     iso.toScreen(tmpVec2);
 
@@ -72,5 +84,10 @@ public class LabelManager extends IteratingSystem {
     Actor actor = label.actor;
     actor.setPosition(tmpVec2.x, tmpVec2.y, Align.center | Align.bottom);
     labels.add(actor);
+  }
+
+  static boolean shouldDisplayLabel(boolean hovered, boolean groundItem,
+      boolean showGroundItems) {
+    return hovered || groundItem && showGroundItems;
   }
 }

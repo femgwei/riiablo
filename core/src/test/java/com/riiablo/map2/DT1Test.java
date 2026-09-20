@@ -106,6 +106,25 @@ public class DT1Test extends RiiabloTest {
     assertTrue(matches > 0);
   }
 
+  @Test
+  @DisplayName("Act 1 outdoor cave floor warp contains default and lit variants")
+  public void act1OutdoorCaveFloorWarpContainsBothVariants() {
+    FileHandle handle = Riiablo.mpqs.resolve(
+        "DATA\\GLOBAL\\TILES\\Act1\\Caves\\Cavedr.dt1");
+    assertNotNull(handle);
+    DT1 dt1 = testDt1(handle);
+    boolean[] variants = new boolean[8];
+    for (int i = 0; i < dt1.numTiles(); i++) {
+      Tile tile = dt1.tile(i);
+      if (tile.orientation != Orientation.FLOOR
+          || tile.mainIndex != 24 || tile.subIndex >= variants.length) continue;
+      variants[tile.subIndex] = true;
+    }
+    for (int sequence = 0; sequence < variants.length; sequence++) {
+      assertTrue(variants[sequence], "missing cave warp floor sequence " + sequence);
+    }
+  }
+
   String[] getDt1s() {
     return new String[]{
         "data\\global\\tiles\\ACT1\\BARRACKS\\barracks.dt1",

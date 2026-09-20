@@ -2,6 +2,7 @@ package com.riiablo.engine.server.quest;
 
 /** Native save-record transitions for Act 1 Quest 3 (Tools of the Trade). */
 public final class Act1MalusQuest {
+  public static final int MINIMUM_LEVEL = 8;
   /** Act-local D2S record index; Q1 and Q2 occupy indices 1 and 2. */
   public static final int RECORD = 3;
   /** D2 item code dropped by the Horadric Malus object. */
@@ -32,14 +33,22 @@ public final class Act1MalusQuest {
     return NativeQuestRecord.set(record, NativeQuestRecord.CUSTOM2);
   }
 
+  /** Native A1Q3 only offers Charsi's introduction at character level 8+. */
+  public static boolean canStart(short record, int level) {
+    return level >= MINIMUM_LEVEL
+        && !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+  }
+
   public static boolean canOpenMalus(short record, int level) {
-    return level >= 8
+    return level >= MINIMUM_LEVEL
         && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
         && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
   }
 
   public static boolean canTurnIn(short record, int level, boolean hasMalus) {
-    return level >= 8 && hasMalus
+    return level >= MINIMUM_LEVEL && hasMalus
         && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
         && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
   }
@@ -78,7 +87,7 @@ public final class Act1MalusQuest {
   public static int selectCharsiMessage(short record, int level, boolean hasMalus) {
     if (isRewarded(record)) return MESSAGE_NONE;
     if (canTurnIn(record, level, hasMalus)) return MESSAGE_MALUS;
-    if (!NativeQuestRecord.has(record, NativeQuestRecord.STARTED)) return MESSAGE_INIT;
+    if (canStart(record, level)) return MESSAGE_INIT;
     return MESSAGE_NONE;
   }
 

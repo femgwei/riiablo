@@ -327,6 +327,24 @@ public class MapManager extends PassiveSystem {
     Map.Zone zone = map.findZone(level);
     if (zone == null) return null;
 
+    Vector2 position = findSpawnedWaypointPosition(zone, out);
+    if (position != null) return position;
+
+    Map.RoomEx waypointRoom = findNativeWaypointRoom(zone);
+    if (waypointRoom != null && !waypointRoom.isPresetUnitsSpawned()) {
+      Gdx.app.log(TAG, "Materializing waypoint room for travel: level=" + level.LevelName
+          + "(" + level.Id + ") room=" + waypointRoom.id);
+      createNativeObjects(zone, waypointRoom);
+      position = findSpawnedWaypointPosition(zone, out);
+      if (position != null) return position;
+    }
+
+    Gdx.app.error(TAG, "Waypoint entity not found: level=" + level.LevelName
+        + "(" + level.Id + ")");
+    return null;
+  }
+
+  private Vector2 findSpawnedWaypointPosition(Map.Zone zone, Vector2 out) {
     for (int i = 0; i < zone.entities.size; i++) {
       int entityId = zone.entities.get(i);
       Object object = mObject.get(entityId);
@@ -338,9 +356,26 @@ public class MapManager extends PassiveSystem {
 
       return copyWaypointCenter(position.position, out);
     }
+    return null;
+  }
 
-    Gdx.app.error(TAG, "Waypoint entity not found: level=" + level.LevelName
-        + "(" + level.Id + ")");
+  /** Locates the deferred native RoomEx containing this level's waypoint. */
+  private Map.RoomEx findNativeWaypointRoom(Map.Zone zone) {
+    if (zone == null || zone.level == null || !zone.hasNativeRoomTopology()) return null;
+    final int objectAct = zone.level.Act + 1;
+    for (int i = 0; i < zone.nativeObjects.size; i++) {
+      Map.NativeObject nativeObject = zone.nativeObjects.get(i);
+      int objectId = nativeObject.ds1Raw
+          ? resolveDs1ObjectId(objectAct, nativeObject.presetIndex)
+          : nativeObject.presetIndex;
+      NativePresetObjectResolver.Resolution resolution =
+          NativePresetObjectResolver.resolve(objectAct, zone.level.Id, objectId,
+              map.seed, nativeObject.x, nativeObject.y);
+      if (!resolution.shouldCreate()) continue;
+      Objects.Entry base = Riiablo.files.objects.get(resolution.classId);
+      if (base == null || (base.SubClass & Engine.Object.SUBCLASS_WAYPOINT) == 0) continue;
+      return zone.findRoomEx(zone.x + nativeObject.x, zone.y + nativeObject.y);
+    }
     return null;
   }
 

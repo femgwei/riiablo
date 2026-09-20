@@ -181,7 +181,8 @@ public final class DrlgExport {
                 int ty = roomBaseTy + t.getNPosY() - levelOriginY;
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
-                exporter.onTile(levelId, LAYER_FLOOR, tx, ty, tileId, t.getDwFlags());
+                exporter.onTile(levelId, LAYER_FLOOR, tx, ty, tileId, t.getDwFlags(),
+                        sourceFile(t));
                 counts.floors++;
             }
         }
@@ -197,7 +198,8 @@ public final class DrlgExport {
                 int ty = roomBaseTy + t.getNPosY() - levelOriginY;
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
-                exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId, t.getDwFlags());
+                exporter.onTile(levelId, LAYER_WALL, tx, ty, tileId, t.getDwFlags(),
+                        sourceFile(t));
                 counts.walls++;
             }
         }
@@ -213,7 +215,8 @@ public final class DrlgExport {
                 int ty = roomBaseTy + t.getNPosY() - levelOriginY;
                 int tileId = packTileId(t.getPTile());
                 if (tileId < 0) continue;
-                exporter.onTile(levelId, LAYER_SHADOW, tx, ty, tileId, t.getDwFlags());
+                exporter.onTile(levelId, LAYER_SHADOW, tx, ty, tileId, t.getDwFlags(),
+                        sourceFile(t));
                 counts.shadows++;
             }
         }
@@ -303,6 +306,11 @@ public final class DrlgExport {
         int style = D2Cmp.getTileStyle(pTile) & 0xFFF;
         int seq = D2Cmp.getTileSequence(pTile) & 0xFFF;
         return (style << 12) | seq;
+    }
+
+    private static String sourceFile(D2DrlgTileDataStrc tile) {
+        Object source = tile.getPTile();
+        return source instanceof D2TileData ? ((D2TileData) source).getSourceFile() : null;
     }
 
     private DrlgExport() {}

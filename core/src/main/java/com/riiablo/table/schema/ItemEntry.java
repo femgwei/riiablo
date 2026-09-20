@@ -39,6 +39,7 @@ public class ItemEntry {
   public int quest;
   /** Native Items.txt material flags; bit 1 marks an Iron Golem-compatible metal item. */
   public int bitfield1;
+  public boolean spawnable;
   public boolean nodurability;
   public int level;
   public int levelreq;

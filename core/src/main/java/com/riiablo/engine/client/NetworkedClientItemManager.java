@@ -107,9 +107,15 @@ public class NetworkedClientItemManager extends ClientItemManager {
 
   private void send(byte operation, int itemId, int groundEntityId, int storeLoc,
                     int x, int y, int bodyLoc, boolean merc) {
+    send(operation, itemId, groundEntityId, storeLoc, x, y, bodyLoc, merc, false);
+  }
+
+  private void send(byte operation, int itemId, int groundEntityId, int storeLoc,
+                    int x, int y, int bodyLoc, boolean merc, boolean pickupToCursor) {
     FlatBufferBuilder builder = obtainBuilder();
     int dataOffset = ItemMoveRequest.createItemMoveRequest(builder, nextRequestId++,
-        inventoryRevision, operation, itemId, groundEntityId, storeLoc, x, y, bodyLoc, merc);
+        inventoryRevision, operation, itemId, groundEntityId, storeLoc, x, y, bodyLoc, merc,
+        pickupToCursor);
     wrapAndSend(builder, D2GSData.ItemMoveRequest, dataOffset);
   }
 
@@ -133,7 +139,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
     log.info("[GROUND_PICKUP] phase=request mode=network entity={} serverEntity={} item={} code={}",
         entityId, serverId, item.item.id, item.item.code);
     send(ItemMoveOperation.GROUND_TO_CURSOR, item == null || item.item == null ? -1 : item.item.id,
-        serverId, -1, -1, -1, -1, false);
+        serverId, -1, -1, -1, -1, false, prefersCursorPickup(item.item));
   }
 
   @Override
@@ -191,6 +197,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
     com.riiablo.item.Item potion = Riiablo.charData == null
         ? null : Riiablo.charData.getItems().getBeltPotion(column);
     if (potion == null) return;
+    Riiablo.audio.play(potion.getUseSound(), true);
     send(ItemMoveOperation.USE_BELT_ITEM, potion.id, -1, -1, column, -1, -1, false);
   }
 

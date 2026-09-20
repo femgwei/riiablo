@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.math.Vector2;
+import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.ai.AI;
@@ -246,6 +247,153 @@ class MonsterRoomActivationTest {
   }
 
   @Test
+  void townWithoutRoomTopologyPrewarmsDirectionalExteriorOnFirstPlayerTick() {
+    Map map = new Map(0, 0);
+    TestZone town = new TestZone(0, 0, 280, 200, true);
+    town.level = level(1, 0, false, 3);
+    town.map = map;
+    town.townExitDirection = 2;
+
+    TestZone bloodMoor = nativeThreeRoomZoneAt(280, 80);
+    bloodMoor.level = level(2, 0, false);
+    bloodMoor.map = map;
+    bloodMoor.getRoomsEx().get(0).addMonsterSpawn(7, 290, 90);
+    bloodMoor.getRoomsEx().get(1).addMonsterSpawn(7, 330, 90);
+    bloodMoor.getRoomsEx().get(2).addMonsterSpawn(7, 370, 90);
+
+    // Levels.txt may point at a later outdoor level. Geometry and the stored
+    // town-gate direction must still select the directly touching entrance.
+    TestZone coldPlains = nativeThreeRoomZoneAt(600, 80);
+    coldPlains.level = level(3, 0, false);
+    coldPlains.map = map;
+    coldPlains.getRoomsEx().get(0).addMonsterSpawn(7, 610, 90);
+
+    map.getZones().add(town);
+    map.getZones().add(bloodMoor);
+    map.getZones().add(coldPlains);
+
+    RecordingFactory factory = new RecordingFactory();
+    ResolvingMapManager mapManager = new ResolvingMapManager();
+    RoomActivationSystem activation = new RoomActivationSystem();
+    World world = new World(new WorldConfigurationBuilder().with(activation, factory)
+        .build().register("factory", factory).register("map", map));
+    activation.mapManager = mapManager;
+    try {
+      int playerId = world.create();
+      world.getMapper(Player.class).create(playerId);
+      world.getMapper(Position.class).create(playerId).position.set(100, 100);
+      world.getMapper(MapWrapper.class).create(playerId).set(map, town);
+
+      world.process();
+
+      assertEquals(2, factory.monstersCreated,
+          "the entrance room and its direct neighbor must spawn while the player is in town");
+      assertEquals(2, mapManager.roomsSpawned,
+          "preset objects in the same two rooms must be generated during prewarm");
+      assertTrue(bloodMoor.getRoomsEx().get(0).isMonsterPopulationSpawned());
+      assertTrue(bloodMoor.getRoomsEx().get(1).isMonsterPopulationSpawned());
+      assertFalse(bloodMoor.getRoomsEx().get(2).isMonsterPopulationSpawned());
+      assertFalse(coldPlains.getRoomsEx().get(0).isMonsterPopulationSpawned(),
+          "a misleading Levels.Vis target must not replace the directly connected exterior");
+
+      world.process();
+      assertEquals(2, factory.monstersCreated, "town prewarm must run only once");
+      assertEquals(2, mapManager.roomsSpawned);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void approachingConnectedOutdoorLevelPrewarmsItsEntranceSightRing() {
+    Map map = new Map(0, 0);
+    TestZone source = nativeThreeRoomZoneAt(0, 0);
+    source.level = level(2, 0, false, 3);
+    source.map = map;
+
+    TestZone destination = nativeThreeRoomZoneAt(150, 0);
+    destination.level = level(3, 0, false, 2);
+    destination.map = map;
+    destination.getRoomsEx().get(0).addMonsterSpawn(7, 160, 10);
+    destination.getRoomsEx().get(1).addMonsterSpawn(7, 200, 10);
+    destination.getRoomsEx().get(2).addMonsterSpawn(7, 240, 10);
+
+    map.getZones().add(source);
+    map.getZones().add(destination);
+
+    RecordingFactory factory = new RecordingFactory();
+    ResolvingMapManager mapManager = new ResolvingMapManager();
+    RoomActivationSystem activation = new RoomActivationSystem();
+    World world = new World(new WorldConfigurationBuilder().with(activation, factory)
+        .build().register("factory", factory).register("map", map));
+    activation.mapManager = mapManager;
+    try {
+      int playerId = world.create();
+      world.getMapper(Player.class).create(playerId);
+      Position playerPosition = world.getMapper(Position.class).create(playerId);
+      playerPosition.position.set(10, 10);
+      world.getMapper(MapWrapper.class).create(playerId).set(map, source);
+
+      world.process();
+      assertFalse(destination.getRoomsEx().get(0).isMonsterPopulationSpawned(),
+          "a distant connected level must remain deferred");
+
+      playerPosition.position.set(110, 10);
+      world.process();
+
+      assertTrue(destination.getRoomsEx().get(0).isMonsterPopulationSpawned());
+      assertTrue(destination.getRoomsEx().get(1).isMonsterPopulationSpawned());
+      assertFalse(destination.getRoomsEx().get(2).isMonsterPopulationSpawned(),
+          "prewarm must stop after the destination entrance sight ring");
+      assertEquals(Map.RoomEx.COUNT,
+          destination.getRoomsEx().get(0).getActivationStatus());
+      assertEquals(Map.RoomEx.COUNT,
+          destination.getRoomsEx().get(1).getActivationStatus());
+
+      int monstersAfterPrewarm = factory.monstersCreated;
+      world.process();
+      assertEquals(monstersAfterPrewarm, factory.monstersCreated,
+          "a connected level transition must only be prewarmed once");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void nearbyUnconnectedOutdoorLevelIsNotPrewarmed() {
+    Map map = new Map(0, 0);
+    TestZone source = nativeThreeRoomZoneAt(0, 0);
+    source.level = level(2, 0, false);
+    source.map = map;
+
+    TestZone destination = nativeThreeRoomZoneAt(130, 0);
+    destination.level = level(17, 0, false);
+    destination.map = map;
+    destination.getRoomsEx().get(0).addMonsterSpawn(7, 140, 10);
+
+    map.getZones().add(source);
+    map.getZones().add(destination);
+
+    RecordingFactory factory = new RecordingFactory();
+    RoomActivationSystem activation = new RoomActivationSystem();
+    World world = new World(new WorldConfigurationBuilder().with(activation, factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int playerId = world.create();
+      world.getMapper(Player.class).create(playerId);
+      world.getMapper(Position.class).create(playerId).position.set(110, 10);
+      world.getMapper(MapWrapper.class).create(playerId).set(map, source);
+
+      world.process();
+
+      assertFalse(destination.getRoomsEx().get(0).isMonsterPopulationSpawned(),
+          "geometry alone must not preload an unrelated outdoor level");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
   void presetObjectSpawnMayResolveRoomDuringActivationAndRunsOnlyOnce() {
     Map map = new Map(0, 0);
     Map.Zone zone = nativeThreeRoomZone();
@@ -289,6 +437,27 @@ class MonsterRoomActivationTest {
     second.setAdjacentRoomIds(new int[] {first.id, third.id});
     third.setAdjacentRoomIds(new int[] {second.id});
     return zone;
+  }
+
+  private static TestZone nativeThreeRoomZoneAt(int x, int y) {
+    TestZone zone = new TestZone(x, y, 120, 40, false);
+    Map.RoomEx first = zone.addRoomEx(x, y, 40, 40);
+    Map.RoomEx second = zone.addRoomEx(x + 40, y, 40, 40);
+    Map.RoomEx third = zone.addRoomEx(x + 80, y, 40, 40);
+    first.setAdjacentRoomIds(new int[] {second.id});
+    second.setAdjacentRoomIds(new int[] {first.id, third.id});
+    third.setAdjacentRoomIds(new int[] {second.id});
+    return zone;
+  }
+
+  private static Levels.Entry level(int id, int act, boolean inside, int... vis) {
+    Levels.Entry level = new Levels.Entry();
+    level.Id = id;
+    level.Act = act;
+    level.IsInside = inside;
+    level.Vis = vis;
+    level.LevelName = "level-" + id;
+    return level;
   }
 
   private static Map.Zone nativeFourRoomZone() {
@@ -345,5 +514,27 @@ class MonsterRoomActivationTest {
       room.markPresetUnitsSpawned();
       roomsSpawned++;
     }
+  }
+
+  private static final class TestZone extends Map.Zone {
+    private final int x;
+    private final int y;
+    private final int width;
+    private final int height;
+    private final boolean town;
+
+    TestZone(int x, int y, int width, int height, boolean town) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+      this.town = town;
+    }
+
+    @Override public int x() { return x; }
+    @Override public int y() { return y; }
+    @Override public int width() { return width; }
+    @Override public int height() { return height; }
+    @Override public boolean isTown() { return town; }
   }
 }

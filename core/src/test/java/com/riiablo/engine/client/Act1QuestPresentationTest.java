@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import org.junit.jupiter.api.Test;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
+import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.codec.excel.Quests;
 
 class Act1QuestPresentationTest {
@@ -22,6 +23,15 @@ class Act1QuestPresentationTest {
   void onlyFirstActQuestIsVisibleBeforeItsRecordIsStarted() {
     assertEquals("akara_act1_q1_init", Act1QuestPresentation.replaySpeech(1, (short) 0));
     assertFalse(Act1QuestPresentation.isComplete((short) 0));
+  }
+
+  @Test
+  void malusQuestLogRemainsLockedBelowLevelEight() {
+    short incorrectlyStarted = NativeQuestRecord.set((short) 0, NativeQuestRecord.STARTED);
+    assertFalse(Act1QuestPresentation.isAvailable(
+        Act1MalusQuest.RECORD, incorrectlyStarted, 7));
+    assertEquals(true, Act1QuestPresentation.isAvailable(
+        Act1MalusQuest.RECORD, incorrectlyStarted, 8));
   }
 
   @Test

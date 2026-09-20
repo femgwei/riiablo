@@ -373,13 +373,29 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   @Override
   public boolean onPickup(int i) {
     if (Riiablo.game != null && Riiablo.game.vendorPanel != null
-        && Riiablo.game.vendorPanel.sellItem(i)) return true;
+        && Riiablo.game.vendorPanel.isSelling()) {
+      // Sell mode owns this click even while another authoritative request is
+      // pending or rejected. Never reinterpret it as STORE_TO_CURSOR.
+      return Riiablo.game.vendorPanel.sellItem(i);
+    }
     if (Riiablo.game != null && Riiablo.game.vendorPanel != null
         && Riiablo.game.vendorPanel.isRepairing()) {
       Riiablo.game.vendorPanel.repairItem(i);
       return false;
     }
     itemController.storeToCursor(i);
+    return true;
+  }
+
+  @Override
+  public boolean onUse(Item item) {
+    VendorPanel vendor = Riiablo.game == null ? null : Riiablo.game.vendorPanel;
+    if (vendor == null || !vendor.canSellItems() || Riiablo.charData == null) return false;
+    int itemIndex = Riiablo.charData.getItems().indexOf(item);
+    // A right-click in an open trade window is a sell command. Consume the
+    // click even if an authoritative request is already pending so a potion
+    // cannot be used accidentally while the player is trading.
+    vendor.sellItem(itemIndex);
     return true;
   }
 

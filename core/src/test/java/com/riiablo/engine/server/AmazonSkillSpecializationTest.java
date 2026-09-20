@@ -28,6 +28,7 @@ import com.riiablo.engine.server.component.serializer.PlayerSerializer;
 import com.riiablo.engine.server.skill.SkillFormula;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.skill.AssassinSkills;
+import com.riiablo.engine.server.skill.AmazonSkills;
 import com.riiablo.engine.server.combat.DefenseCalculator;
 import com.riiablo.engine.server.combat.CombatSystem;
 import com.riiablo.engine.server.missile.MissileDamageResolver;
@@ -36,6 +37,7 @@ import com.riiablo.engine.server.state.UnitState;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import com.riiablo.net.packet.d2gs.PlayerP;
+import com.riiablo.skill.SkillCodes;
 import com.google.flatbuffers.FlatBufferBuilder;
 import net.mostlyoriginal.api.event.common.EventSystem;
 import org.junit.jupiter.api.Test;
@@ -522,7 +524,9 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       Missile guided = factory.created.get(0);
       assertEquals(target, guided.targetId);
       assertTrue(guided.homing);
-      assertTrue(guided.pierceEnabled);
+      assertTrue(!guided.pierceEnabled);
+      assertEquals(0, guided.pierceChance);
+      assertEquals(0, guided.pierceRemaining);
       assertTrue(guided.damageMultiplier > 1f);
       assertTrue(!guided.usesAttackRating, "Guided Arrow keeps its native always-hit behavior");
 
@@ -534,6 +538,8 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       java.util.HashSet<Integer> strafeTargets = new java.util.HashSet<>();
       for (Missile arrow : factory.created) {
         assertTrue(!arrow.homing);
+        assertEquals(AmazonSkills.getPierceChance(1), arrow.pierceChance);
+        assertTrue(arrow.pierceRemaining >= 0 && arrow.pierceRemaining <= 4);
         if (arrow.targetId >= 0) assertTrue(strafeTargets.add(arrow.targetId));
       }
     } finally {
@@ -750,6 +756,58 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
       world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
           amazon, fireArrow.Id, target, null, fireArrow.srvdofunc, fireArrow.cltdofunc));
       assertEquals(createdAtEmpty, factory.created.size(), "empty quiver must not create a missile");
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void localEffectsModeCreatesAuthoritativeArrowForNormalBowAttack() {
+    RecordingMissileFactory factory = new RecordingMissileFactory();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new ServerSkillSystem(true), factory)
+        .build().register("factory", factory).register("map", new com.riiablo.map.Map(0, 0)));
+    try {
+      CharData data = CharData.createRemote("amazon", (byte) Riiablo.AMAZON);
+      data.getItems().unequipItem(com.riiablo.item.BodyLoc.RARM);
+      data.getItems().unequipItem(com.riiablo.item.BodyLoc.LARM);
+      Item bow = new Item();
+      bow.reset();
+      bow.setBase(Riiablo.files.weapons.get("sbw"));
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.RARM, data.getItems().add(bow));
+      Item arrows = new Item();
+      arrows.reset();
+      arrows.setBase(Riiablo.files.misc.get("aqv"));
+      arrows.attrs.base().put(Stat.quantity, 2);
+      arrows.attrs.reset();
+      data.getItems().equipItem(com.riiablo.item.BodyLoc.LARM, data.getItems().add(arrows));
+
+      Attributes attrs = attributes(1, 50);
+      attrs.base().put(Stat.mindamage, 3);
+      attrs.base().put(Stat.maxdamage, 7);
+      attrs.base().put(Stat.tohit, 42);
+      attrs.reset();
+      int amazon = world.create();
+      world.getMapper(Player.class).create(amazon).data = data;
+      world.getMapper(Position.class).create(amazon).position.set(0, 0);
+      world.getMapper(AttributesWrapper.class).create(amazon).attrs = attrs;
+      int target = monster(world, 4, 0);
+      Skills.Entry attack = Riiablo.files.skills.get(SkillCodes.attack);
+
+      world.getSystem(EventSystem.class).dispatch(SkillDoEvent.obtain(
+          amazon, SkillCodes.attack, target, null, attack.srvdofunc, attack.cltdofunc));
+
+      assertEquals(1, factory.created.size());
+      assertEquals("arrow", factory.createdNames.get(0));
+      assertEquals(1, arrows.attrs.base().get(Stat.quantity).asInt());
+      Missile arrow = factory.created.get(0);
+      assertTrue(arrow.damageSnapshot);
+      assertEquals(3, arrow.damage.get(Stat.mindamage).asInt());
+      assertEquals(7, arrow.damage.get(Stat.maxdamage).asInt());
+      assertEquals(42, arrow.damage.get(Stat.tohit).asInt());
+      assertTrue(!arrow.pierceEnabled);
+      assertEquals(0, arrow.pierceChance);
+      assertEquals(0, arrow.pierceRemaining);
     } finally {
       world.dispose();
     }

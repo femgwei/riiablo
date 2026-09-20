@@ -827,6 +827,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new StateUpdater())
         .with(new com.riiablo.engine.server.StaminaSystem())
         .with(new com.riiablo.engine.server.ManaRecoverySystem())
+        .with(new com.riiablo.engine.server.PotionRecoverySystem())
         .with(new MissileCollisionSystem())
         .with(new Actioneer()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.server.ServerMonsterCorpseSystem())
@@ -906,14 +907,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new ObjectCollisionUpdater())
         // Bone Wall/Prison are monster units, not map objects. Their
         // temporary walk footprint must exist in local and network clients.
-        .with(new com.riiablo.engine.server.BoneWallCollisionSystem())
-
-        // In multiplayer, D2GS owns CofReference modes. The client still
-        // computes local movement velocity, but must not overwrite server
-        // attack/walk/neutral modes for Networked replicas.
-        .with(socket == null
-            ? new VelocityModeChanger()
-            : new VelocityModeChanger(true, false));
+        .with(new com.riiablo.engine.server.BoneWallCollisionSystem());
 //        .with(new VelocityAdder());
     if (socket != null) {
       // FIXME: crash when changing acts in multiplayer
@@ -923,6 +917,14 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new Box2DSynchronizerPre())
         .with(new Box2DPhysics(SimulationClock.STEP_SECONDS))
         .with(new Box2DSynchronizerPost())
+
+        // Resolve movement modes from post-collision displacement. A path can
+        // still request movement into a torch or wall after Box2D has stopped
+        // the body; using the requested velocity leaves the player running in
+        // place. Multiplayer replicas retain their D2GS-owned modes.
+        .with(socket == null
+            ? new VelocityModeChanger()
+            : new VelocityModeChanger(true, false))
 
         .with(new com.riiablo.engine.server.DruidShapeShiftResolver())
         .with(new ExperienceManager())

@@ -307,6 +307,13 @@ public class Act1QuestSystem extends PassiveSystem {
     CharData data = player.data;
     short record = getMalusRecord(data);
     if (message.messageIndex == Act1MalusQuest.MESSAGE_INIT) {
+      int playerLevel = level(message.entityId, player);
+      if (!Act1MalusQuest.canStart(record, playerLevel)) {
+        log.info("[A1Q3] Charsi quest start rejected: player={} level={} record=0x{}",
+            message.entityId, playerLevel,
+            Integer.toHexString(Short.toUnsignedInt(record)));
+        return;
+      }
       setMalusRecord(data, Act1MalusQuest.start(record));
       persist(data);
       log.info("[A1Q3] Charsi started Horadric Malus quest: player={}", message.entityId);

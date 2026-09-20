@@ -25,6 +25,7 @@ public final class ItemMoveRequest extends Table {
   public int y() { int o = __offset(18); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
   public int bodyLoc() { int o = __offset(20); return o != 0 ? bb.getInt(o + bb_pos) : -1; }
   public boolean merc() { int o = __offset(22); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
+  public boolean pickupToCursor() { int o = __offset(24); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
   public static int createItemMoveRequest(FlatBufferBuilder builder,
       long requestId,
@@ -36,8 +37,9 @@ public final class ItemMoveRequest extends Table {
       int x,
       int y,
       int bodyLoc,
-      boolean merc) {
-    builder.startTable(10);
+      boolean merc,
+      boolean pickupToCursor) {
+    builder.startTable(11);
     ItemMoveRequest.addBodyLoc(builder, bodyLoc);
     ItemMoveRequest.addY(builder, y);
     ItemMoveRequest.addX(builder, x);
@@ -46,12 +48,13 @@ public final class ItemMoveRequest extends Table {
     ItemMoveRequest.addItemId(builder, itemId);
     ItemMoveRequest.addRevision(builder, revision);
     ItemMoveRequest.addRequestId(builder, requestId);
+    ItemMoveRequest.addPickupToCursor(builder, pickupToCursor);
     ItemMoveRequest.addMerc(builder, merc);
     ItemMoveRequest.addOperation(builder, operation);
     return ItemMoveRequest.endItemMoveRequest(builder);
   }
 
-  public static void startItemMoveRequest(FlatBufferBuilder builder) { builder.startTable(10); }
+  public static void startItemMoveRequest(FlatBufferBuilder builder) { builder.startTable(11); }
   public static void addRequestId(FlatBufferBuilder builder, long requestId) { builder.addInt(0, (int)requestId, (int)0L); }
   public static void addRevision(FlatBufferBuilder builder, long revision) { builder.addInt(1, (int)revision, (int)0L); }
   public static void addOperation(FlatBufferBuilder builder, byte operation) { builder.addByte(2, operation, 0); }
@@ -62,6 +65,7 @@ public final class ItemMoveRequest extends Table {
   public static void addY(FlatBufferBuilder builder, int y) { builder.addInt(7, y, -1); }
   public static void addBodyLoc(FlatBufferBuilder builder, int bodyLoc) { builder.addInt(8, bodyLoc, -1); }
   public static void addMerc(FlatBufferBuilder builder, boolean merc) { builder.addBoolean(9, merc, false); }
+  public static void addPickupToCursor(FlatBufferBuilder builder, boolean pickupToCursor) { builder.addBoolean(10, pickupToCursor, false); }
   public static int endItemMoveRequest(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;

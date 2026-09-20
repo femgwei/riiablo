@@ -10,6 +10,8 @@ class Act1MalusQuestTest {
   @Test
   void requiresLevelEightAndTracksObjectAndPickup() {
     short record = 0;
+    assertFalse(Act1MalusQuest.canStart(record, 7));
+    assertTrue(Act1MalusQuest.canStart(record, 8));
     assertFalse(Act1MalusQuest.canOpenMalus(record, 7));
     assertTrue(Act1MalusQuest.canOpenMalus(record, 8));
     record = Act1MalusQuest.leaveTown(record);
@@ -36,7 +38,7 @@ class Act1MalusQuestTest {
 
   @Test
   void selectsCharsiSpeechOnlyWhenMalusIsPresent() {
-    assertEquals(Act1MalusQuest.MESSAGE_INIT,
+    assertEquals(Act1MalusQuest.MESSAGE_NONE,
         Act1MalusQuest.selectCharsiMessage((short) 0, 1, false));
     assertEquals(Act1MalusQuest.MESSAGE_INIT,
         Act1MalusQuest.selectCharsiMessage((short) 0, 8, false));

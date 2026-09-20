@@ -19,6 +19,9 @@ class ItemMoveRequestCacheTest {
     assertNotNull(hit);
     assertTrue(hit.matches(first));
     assertFalse(hit.matches(different));
+    ItemMoveIntent cursorPickup = new ItemMoveIntent(7, 0,
+        ItemMoveOperation.STORE_TO_CURSOR, 100, -1, -1, -1, -1, -1, false, true);
+    assertFalse(hit.matches(cursorPickup));
     assertArrayEquals(new byte[] {1, 2, 3}, hit.response);
 
     ItemMoveIntent second = new ItemMoveIntent(8, 0, ItemMoveOperation.CURSOR_TO_GROUND,

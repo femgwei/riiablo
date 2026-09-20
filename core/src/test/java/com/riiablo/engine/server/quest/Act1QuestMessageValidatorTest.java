@@ -44,7 +44,9 @@ class Act1QuestMessageValidatorTest {
   @Test
   void requiresMalusTurnInRequirements() {
     CharData data = character();
-    assertTrue(Act1QuestMessageValidator.isAllowed(MonsterType.CHARSI, data, 1,
+    assertFalse(Act1QuestMessageValidator.isAllowed(MonsterType.CHARSI, data, 1,
+        false, Act1MalusQuest.MESSAGE_INIT));
+    assertTrue(Act1QuestMessageValidator.isAllowed(MonsterType.CHARSI, data, 8,
         false, Act1MalusQuest.MESSAGE_INIT));
     assertFalse(Act1QuestMessageValidator.isAllowed(MonsterType.CHARSI, data, 8,
         false, Act1MalusQuest.MESSAGE_MALUS));

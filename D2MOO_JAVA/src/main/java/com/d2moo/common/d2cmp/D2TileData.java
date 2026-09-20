@@ -20,6 +20,7 @@ public class D2TileData {
     private int nSubTileFlags;           // 兼容旧调用的聚合子瓦片标志
     private byte[] pSubTileFlags = new byte[25]; // DT1 5x5 子瓦片碰撞标志
     private int nRarity;                 // 稀有度（动画瓦片时为帧号）
+    private String sourceFile;
     
     public D2TileData() {
         this.nTileId = 0;
@@ -142,5 +143,13 @@ public class D2TileData {
 
     public void setNRarity(int nRarity) {
         this.nRarity = nRarity;
+    }
+
+    public String getSourceFile() {
+        return sourceFile;
+    }
+
+    public void setSourceFile(String sourceFile) {
+        this.sourceFile = sourceFile;
     }
 }

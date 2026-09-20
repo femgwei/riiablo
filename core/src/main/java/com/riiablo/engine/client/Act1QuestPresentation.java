@@ -1,6 +1,7 @@
 package com.riiablo.engine.client;
 
 import com.riiablo.codec.excel.Quests;
+import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 
 /** Converts native Act I quest records into quest-log presentation state. */
@@ -23,6 +24,14 @@ public final class Act1QuestPresentation {
 
   public static boolean isAvailable(int recordIndex, short record) {
     return recordIndex == 1 || record != 0;
+  }
+
+  /** Level-aware variant used by the live quest log. */
+  public static boolean isAvailable(int recordIndex, short record, int level) {
+    if (recordIndex == Act1MalusQuest.RECORD && level < Act1MalusQuest.MINIMUM_LEVEL) {
+      return false;
+    }
+    return isAvailable(recordIndex, record);
   }
 
   public static boolean isComplete(short record) {

@@ -209,6 +209,24 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   }
 
   @Test
+  void inventoryOpenGroundPickupLeavesItemOnCursor() {
+    CharData character = character();
+    Item armor = item("cap", 202);
+    ItemMoveIntent manualPickup = new ItemMoveIntent(1L, 0L,
+        ItemMoveOperation.GROUND_TO_CURSOR, armor.id, 9000 + armor.id,
+        -1, -1, -1, -1, false, true);
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+
+    AuthoritativeItemMoveService.Outcome result = service.pickup(
+        10, character, manualPickup, armor);
+
+    assertTrue(result.success);
+    assertTrue(result.consumeGroundEntity);
+    assertSame(armor, character.getItems().getCursor());
+    assertEquals(Location.CURSOR, armor.location);
+  }
+
+  @Test
   void characterWithoutBeltHasOnlyFourQuickSlots() {
     CharData character = character();
     assertEquals(1, character.getItems().getBeltRows());

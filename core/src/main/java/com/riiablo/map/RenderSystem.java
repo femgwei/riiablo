@@ -831,7 +831,8 @@ public class RenderSystem extends BaseEntitySystem {
       TextureRegion texture;
       int subst = map.warpSubsts.get(tile.id, -1);
       if (subst != -1) { // TODO: Performance can be improved if the reference is updated to below subst
-        texture = map.dt1s.get(zone.level.LevelType).get(subst).texture;
+        Tile replacement = zone.dt1s.getSibling(tile, subst);
+        texture = replacement == null ? tile.texture : replacement.texture;
       } else {
         texture = tile.texture;
       }

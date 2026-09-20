@@ -48,6 +48,19 @@ class D2MooTileApplierTest {
   }
 
   @Test
+  void retainsNativeFloorDt1Source() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+    String source = "data\\global\\tiles\\Act1\\Caves\\Cavedr.dt1";
+
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, 0, 0,
+        pack(Orientation.FLOOR, 24, 0), 0, source);
+
+    assertEquals(source, grid.sourceFile(grid.floorSourceFiles[0][0]));
+  }
+
+  @Test
   void retainsHiddenWarpMarkersForInteractionWithoutLosingVisibilityState() {
     TileGrid grid = new TileGrid(1, 1);
     D2MooTileApplier applier = new D2MooTileApplier();

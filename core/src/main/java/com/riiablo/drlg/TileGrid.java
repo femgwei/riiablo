@@ -1,5 +1,8 @@
 package com.riiablo.drlg;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * DRLG 生成用的 Tile 网格，对应 D2MOO 的 D2DrlgTileGridStrc。
  *
@@ -21,6 +24,10 @@ public class TileGrid {
    * -1 表示尚未写入（空）。
    */
   public final int[][] floorIds;
+
+  /** DT1 source selected by native DRLG, encoded as an index into sourceFiles. */
+  public final byte[][] floorSourceFiles;
+  private final List<String> sourceFiles = new ArrayList<>();
 
   /**
    * True only where D2MOO exported an actual floor cell. Outdoor levels are
@@ -58,6 +65,7 @@ public class TileGrid {
     this.width = width;
     this.height = height;
     this.floorIds = new int[height][width];
+    this.floorSourceFiles = new byte[height][width];
     this.exportedFloorCells = new boolean[height][width];
     this.wallIds = new int[MAX_WALL_LAYERS][height][width];
     this.hiddenWallCells = new boolean[MAX_WALL_LAYERS][height][width];
@@ -71,6 +79,7 @@ public class TileGrid {
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
+        floorSourceFiles[y][x] = 0;
         exportedFloorCells[y][x] = false;
       }
     }
@@ -78,9 +87,11 @@ public class TileGrid {
 
   /** Resets every D2MOO-exported render layer without changing path flags. */
   public void clearExportedTileIds() {
+    sourceFiles.clear();
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
         floorIds[y][x] = -1;
+        floorSourceFiles[y][x] = 0;
         exportedFloorCells[y][x] = false;
         shadowIds[y][x] = -1;
         for (int layer = 0; layer < MAX_WALL_LAYERS; layer++) {
@@ -93,6 +104,21 @@ public class TileGrid {
 
   public boolean inBounds(int x, int y) {
     return x >= 0 && x < width && y >= 0 && y < height;
+  }
+
+  public byte registerSourceFile(String sourceFile) {
+    if (sourceFile == null || sourceFile.isEmpty()) return 0;
+    for (int i = 0; i < sourceFiles.size(); i++) {
+      if (sourceFiles.get(i).equalsIgnoreCase(sourceFile)) return (byte) (i + 1);
+    }
+    if (sourceFiles.size() >= 255) return 0;
+    sourceFiles.add(sourceFile);
+    return (byte) sourceFiles.size();
+  }
+
+  public String sourceFile(byte sourceIndex) {
+    int index = (sourceIndex & 0xff) - 1;
+    return index >= 0 && index < sourceFiles.size() ? sourceFiles.get(index) : null;
   }
 }
 

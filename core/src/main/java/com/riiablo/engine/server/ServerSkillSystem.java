@@ -412,6 +412,7 @@ public class ServerSkillSystem extends PassiveSystem {
     if (!mPlayer.has(event.entityId) && !mMonster.has(event.entityId)) return;
     Skills.Entry skill = Riiablo.files.skills.get(event.skillId);
     if (skill == null) return;
+    boolean rangedNormalAttack = isPlayerRangedNormalAttack(event.entityId, event.skillId);
     if (mPlayer.has(event.entityId) && mPlayer.get(event.entityId).data != null) {
       ItemData items = mPlayer.get(event.entityId).data.getItems();
       Item weapon = items.getEquippedRangedWeapon();
@@ -425,6 +426,9 @@ public class ServerSkillSystem extends PassiveSystem {
     // native summons are server entities rather than visual projectiles and
     // must still be created in the local authoritative world.
     if (monstersOnly && !mMonster.has(event.entityId)
+        // Normal bow/crossbow Attack has no legacy client projectile. It must
+        // reach the authoritative missile path below just like Throw does.
+        && !rangedNormalAttack
         && event.srvdofunc != 15 && event.srvdofunc != 16
         && event.srvdofunc != 18 && event.srvdofunc != 25
         && event.srvdofunc != 44 && event.srvdofunc != 45
@@ -851,7 +855,6 @@ public class ServerSkillSystem extends PassiveSystem {
       if (mPlayer.has(event.entityId)
           && (event.skillId == SkillCodes.throw_ || event.skillId == SkillCodes.left_hand_throw)
           && mMissile.has(missileId)) {
-        configurePierce(mMissile.get(missileId), event.entityId, skillLevel, false);
         log.info("[THROW_PIERCE] phase=configure entity={} missileId={} chance={} enabled={}",
             event.entityId, missileId, mMissile.get(missileId).pierceChance,
             mMissile.get(missileId).pierceEnabled);
@@ -870,6 +873,12 @@ public class ServerSkillSystem extends PassiveSystem {
                 + "speed={} range={} direction=({}, {})",
             event.entityId, event.skillId, missileId, missile.Missile,
             missile.Vel, missile.Range, direction.x, direction.y);
+      }
+      if (normalAttackMissile != null) {
+        log.info("[RANGED_NORMAL_ATTACK] phase=create entity={} target={} missileId={} "
+                + "missile={} damageSnapshot={}",
+            event.entityId, event.targetId, missileId, missile.Missile,
+            mMissile.has(missileId) && mMissile.get(missileId).damageSnapshot);
       }
       ordinal++;
     }
@@ -2859,7 +2868,6 @@ public class ServerSkillSystem extends PassiveSystem {
         bonus = AmazonSkills.calculateGuidedArrowDamageBonus(skillLevel);
       }
       projectile.damageMultiplier = 1f + Math.max(0, bonus) / 100f;
-      configurePierce(projectile, event.entityId, skillLevel, true);
       consumeRangedAmmoForSkill(event, skill);
       log.info("[GUIDED_ARROW] phase=create entity={} missileId={} target={} homing={} "
               + "level={} damageBonus={} pierceChance={}", event.entityId, id, targetId,
@@ -2927,7 +2935,6 @@ public class ServerSkillSystem extends PassiveSystem {
         initializeSkillDamage(id, skill, event.entityId, skillLevel);
         Missile arrow = mMissile.get(id);
         arrow.targetId = targetId;
-        configurePierce(arrow, event.entityId, skillLevel, false);
         created++;
       }
     }
@@ -2936,7 +2943,6 @@ public class ServerSkillSystem extends PassiveSystem {
       int id = createMissile(missile, direction, start, event.entityId, null, skillLevel);
       if (id >= 0 && mMissile.has(id)) {
         initializeSkillDamage(id, skill, event.entityId, skillLevel);
-        configurePierce(mMissile.get(id), event.entityId, skillLevel, false);
         created = 1;
       }
     }
@@ -2950,27 +2956,34 @@ public class ServerSkillSystem extends PassiveSystem {
         || NativeTargeting.isValidCombatTarget(mNativeUnitFlags.get(entityId));
   }
 
-  private void configurePierce(Missile projectile, int ownerId, int skillLevel,
-      boolean guided) {
-    if (projectile == null || projectile.missile == null) return;
-    // The row flag is intrinsic for explicitly native piercing skills (for
-    // example Guided Arrow), but the generic Throw path uses the same
-    // javelin missile row and must not inherit a 100% chance.
-    int chance = guided && projectile.missile.Pierce ? 100 : 0;
+  private void configurePierce(Missile projectile, int ownerId) {
+    if (projectile == null) return;
+    projectile.pierceEnabled = false;
+    projectile.pierceChance = 0;
+    projectile.pierceRemaining = 0;
+    // Missiles.txt.Pierce only permits ITEM_PIERCE/SKILL_PIERCE to be read.
+    // It does not grant an intrinsic 100% chance.
+    if (projectile.missile == null || !projectile.missile.Pierce) return;
+    int itemChance = 0;
+    int skillChance = 0;
     if (mAttributesWrapper.has(ownerId)) {
-      chance = Math.max(chance, statInt(mAttributesWrapper.get(ownerId).attrs, Stat.skill_pierce));
+      Attributes attrs = mAttributesWrapper.get(ownerId).attrs;
+      itemChance = statInt(attrs, Stat.item_pierce);
+      skillChance = statInt(attrs, Stat.skill_pierce);
     }
     if (mPlayer.has(ownerId)) {
       Player player = mPlayer.get(ownerId);
       if (player.data != null) {
         int pierceLevel = player.data.getSkill(SkillId.PIERCE);
         if (pierceLevel > 0) {
-          chance = Math.max(chance, AmazonSkills.getPierceChance(pierceLevel));
+          skillChance = Math.max(skillChance, AmazonSkills.getPierceChance(pierceLevel));
         }
       }
     }
-    projectile.pierceChance = Math.max(0, Math.min(100, chance));
-    projectile.pierceEnabled = projectile.pierceChance > 0;
+    projectile.pierceChance = Math.max(0, Math.min(100, itemChance + skillChance));
+    projectile.pierceRemaining = MissileCollisionSystem.rollPierceCount(
+        projectile, projectile.pierceChance);
+    projectile.pierceEnabled = projectile.pierceRemaining > 0;
   }
 
   static int firstParam(Skills.Entry skill, int index, int fallback) {
@@ -3013,6 +3026,7 @@ public class ServerSkillSystem extends PassiveSystem {
       int ownerMode = mCofReference.has(ownerId) ? mCofReference.get(ownerId).mode : -1;
       MissileDamageResolver.initialize(projectile, ownerAttrs, ownerMonster,
           ownerMode, damageLevel, 0);
+      configurePierce(projectile, ownerId);
     }
     return missileId;
   }
@@ -3131,6 +3145,7 @@ public class ServerSkillSystem extends PassiveSystem {
       // per-projectile hit set prevents re-hitting one unit.
       projectile.pierceEnabled = true;
       projectile.pierceChance = 100;
+      projectile.pierceRemaining = -1;
     }
     captureThrowingMastery(mMissile.get(missileId), skill, ownerId);
   }
@@ -3507,6 +3522,7 @@ public class ServerSkillSystem extends PassiveSystem {
       cloud.remainingFrames = Math.max(1, cloudRow.Range);
       cloud.tickInterval = 1;
       cloud.pierceEnabled = true;
+      cloud.pierceRemaining = -1;
       if (mVelocity.has(missileId)) {
         mVelocity.get(missileId).velocity.set(direction).setLength(velocity);
       }
@@ -4089,6 +4105,13 @@ public class ServerSkillSystem extends PassiveSystem {
     String name = weapon.type.is(Type.BOW) ? "arrow"
         : weapon.type.is(Type.XBOW) ? "bolt" : null;
     return name != null && Riiablo.files.Missiles.get(name) != null ? name : null;
+  }
+
+  private boolean isPlayerRangedNormalAttack(int entityId, int skillId) {
+    if (skillId != SkillCodes.attack || !mPlayer.has(entityId)) return false;
+    Player player = mPlayer.get(entityId);
+    return player.data != null && player.data.getItems() != null
+        && player.data.getItems().getEquippedRangedWeapon() != null;
   }
 
   static boolean isAmazonBowSkill(Skills.Entry skill) {

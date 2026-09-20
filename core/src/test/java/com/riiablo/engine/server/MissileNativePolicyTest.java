@@ -58,6 +58,24 @@ class MissileNativePolicyTest {
   }
 
   @Test
+  void pierceCountIsPreRolledCappedAndConsumed() {
+    Missile missile = new Missile();
+    missile.rngState = 0x12345678;
+    assertEquals(0, MissileCollisionSystem.rollPierceCount(missile, 0));
+    assertEquals(4, MissileCollisionSystem.rollPierceCount(missile, 100));
+
+    missile.pierceEnabled = true;
+    missile.pierceRemaining = 4;
+    for (int i = 0; i < 4; i++) assertTrue(MissileCollisionSystem.consumePierce(missile));
+    assertEquals(0, missile.pierceRemaining);
+    assertFalse(MissileCollisionSystem.consumePierce(missile));
+
+    missile.pierceRemaining = -1;
+    assertTrue(MissileCollisionSystem.consumePierce(missile));
+    assertEquals(-1, missile.pierceRemaining);
+  }
+
+  @Test
   void collideTypeMapsToNativeBarrierAndWallMasks() {
     assertEquals(0, MissileCollisionSystem.nativeMapCollisionMask(0));
     assertEquals(0, MissileCollisionSystem.nativeMapCollisionMask(4));

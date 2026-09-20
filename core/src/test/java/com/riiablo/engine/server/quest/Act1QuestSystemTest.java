@@ -583,6 +583,34 @@ class Act1QuestSystemTest extends RiiabloTest {
   }
 
   @Test
+  void rejectsCharsiQuestStartBelowNativeMinimumLevel() {
+    Harness harness = new Harness();
+    try {
+      CharData data = character("MalusStartLevel", Riiablo.NORMAL);
+      data.getStats().base().put(Stat.level, 7);
+      data.getStats().reset();
+      int player = harness.createPlayer(data);
+      int charsi = harness.createCharsi();
+      harness.process();
+
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, charsi, Act1MalusQuest.MESSAGE_INIT));
+      assertEquals(0, Short.toUnsignedInt(
+          data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD]));
+
+      data.getStats().base().put(Stat.level, Act1MalusQuest.MINIMUM_LEVEL);
+      data.getStats().reset();
+      harness.events.dispatch(NpcQuestMessageEvent.obtain(
+          player, charsi, Act1MalusQuest.MESSAGE_INIT));
+      assertTrue(NativeQuestRecord.has(
+          data.getQuests(Riiablo.ACT1)[Act1MalusQuest.RECORD],
+          NativeQuestRecord.STARTED));
+    } finally {
+      harness.dispose();
+    }
+  }
+
+  @Test
   void marksMalusRecordWhenQuestItemIsPickedUp() {
     Harness harness = new Harness();
     try {

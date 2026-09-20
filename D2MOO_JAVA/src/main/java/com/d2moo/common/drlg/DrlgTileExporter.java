@@ -27,4 +27,10 @@ public interface DrlgTileExporter {
     default void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags) {
         onTile(levelId, layer, tx, ty, tileId);
     }
+
+    /** Extended callback retaining the concrete DT1 selected by native DRLG. */
+    default void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags,
+            String sourceFile) {
+        onTile(levelId, layer, tx, ty, tileId, flags);
+    }
 }

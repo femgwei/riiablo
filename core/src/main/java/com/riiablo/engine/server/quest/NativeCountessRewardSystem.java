@@ -56,7 +56,8 @@ public class NativeCountessRewardSystem extends PassiveSystem {
     int itemLevel = monsterLevel(event.countessId, event.difficulty);
     RandomXS128 random = new RandomXS128(seed(event, position));
     List<TreasureClassResolver.Drop> drops = new TreasureClassResolver(
-        Riiablo.files.TreasureClassEx).resolve(treasureClass, itemLevel,
+        Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses)
+            .resolve(treasureClass, itemLevel,
             random::nextInt, TreasureClassResolver.NATIVE_MAX_DROPS);
 
     int created = 0;

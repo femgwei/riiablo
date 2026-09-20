@@ -66,6 +66,11 @@ public class BeltGrid extends ItemGrid {
     return item != null && item.type.is(Type.POTI);
   }
 
+  @Override
+  protected boolean onUse(Item item) {
+    return gridListener != null && gridListener.onUse(item);
+  }
+
   public void setRows(int rows) {
     if (this.rows != rows) {
       this.rows = rows;

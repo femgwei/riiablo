@@ -23,6 +23,7 @@ import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.DifficultyLevels;
 import com.riiablo.codec.excel.CharStats;
+import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.io.ByteInput;
 import com.riiablo.item.BodyLoc;
@@ -73,6 +74,10 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   final IntIntMap  skillData = new IntIntMap();
   final ItemData   itemData = new ItemData(statData, null);
         Item       golemItemData;
+
+  private final PotionRecovery healthPotion = new PotionRecovery();
+  private final PotionRecovery manaPotion = new PotionRecovery();
+  private int potionSeed;
 
   public int diff;
   public boolean managed;
@@ -143,6 +148,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     for (int[] actions : actions) Arrays.fill(actions, SkillCodes.attack);
     // 新角色：mapSeed 必须在创建时设置，与 D2 一致。用于地图生成的随机数序列，保证每个角色地图不同。
     mapSeed = (int) (System.currentTimeMillis() & 0xFFFFFFFF);
+    potionSeed = mapSeed ^ 0x51ED270B;
     return this;
   }
 
@@ -199,6 +205,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     for (int i = 0, s = D2S.NUM_ACTIONS; i < s; i++) Arrays.fill(actions[i], 0);
     Arrays.fill(towns, (byte) 0);
     mapSeed   = 0;
+    potionSeed = 0;
     Arrays.fill(realmData, (byte) 0);
 
     mercData.flags = 0;
@@ -216,6 +223,8 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   }
 
   void softReset() {
+    healthPotion.clear();
+    manaPotion.clear();
     statData.base().clear();
     statData.reset();
     skillData.clear();
@@ -923,45 +932,179 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   public boolean useBeltPotion(int column) {
     Item potion = itemData.getBeltPotion(column);
     if (potion == null || potion.type == null || !potion.type.is(Type.POTI)) return false;
-
-    if (potion.type.is(Type.HPOT)) {
-      restorePotionStat(Stat.hitpoints, Stat.maxhp, potionAmount(potion.code, true));
-    } else if (potion.type.is(Type.MPOT)) {
-      restorePotionStat(Stat.mana, Stat.maxmana, potionAmount(potion.code, false));
-    } else if (potion.type.is(Type.RPOT)) {
-      float percent = "rvl".equalsIgnoreCase(potion.code) ? 1f : 0.35f;
-      restorePotionPercent(Stat.hitpoints, Stat.maxhp, percent);
-      restorePotionPercent(Stat.mana, Stat.maxmana, percent);
+    Misc.Entry misc = potion.base instanceof Misc.Entry ? (Misc.Entry) potion.base : null;
+    int pSpell = misc == null ? 0 : misc.pSpell;
+    boolean applied;
+    if (pSpell == 3) {
+      applied = applyTimedPotion(potion.code, misc);
+    } else if (pSpell == 5) {
+      applied = applyRejuvenationPotion(potion.code, misc);
     } else {
-      // Do not silently delete stamina/antidote/thawing potions until their
-      // timed state effects are implemented.
-      return false;
+      // Classification by code is only a compatibility fallback for old
+      // compact item snapshots that did not preserve all Misc.txt fields.
+      String code = potion.code == null ? "" : potion.code.toLowerCase(Locale.ROOT);
+      if (code.startsWith("hp") || code.startsWith("mp")) {
+        applied = applyTimedPotion(code, misc);
+      } else if ("rvs".equals(code) || "rvl".equals(code)) {
+        applied = applyRejuvenationPotion(code, misc);
+      } else {
+        // Stamina, antidote and thawing potions require their own timed states.
+        return false;
+      }
     }
+    if (!applied) return false;
     return itemData.consumeBeltPotion(potion);
   }
 
-  private static int potionAmount(String code, boolean health) {
-    int tier = code != null && code.length() > 2 && Character.isDigit(code.charAt(2))
-        ? code.charAt(2) - '0' : 1;
-    int[] values = health
-        ? new int[] {0, 30, 60, 100, 180, 320}
-        : new int[] {0, 40, 80, 160, 300, 500};
-    return values[Math.max(1, Math.min(5, tier))];
+  private boolean applyTimedPotion(String code, Misc.Entry misc) {
+    String stat = first(misc == null ? null : misc.stat);
+    boolean health = "hpregen".equalsIgnoreCase(stat);
+    boolean mana = "manarecovery".equalsIgnoreCase(stat);
+    if (!health && !mana) {
+      String normalized = code == null ? "" : code.toLowerCase(Locale.ROOT);
+      health = normalized.startsWith("hp");
+      mana = normalized.startsWith("mp");
+    }
+    if (!health && !mana) return false;
+
+    int amount = parsePositive(first(misc == null ? null : misc.calc));
+    int frames = parsePositive(misc == null ? null : misc.len);
+    if (amount <= 0 || frames <= 0) {
+      int tier = potionTier(code);
+      amount = health
+          ? new int[] {0, 30, 60, 100, 180, 320}[tier]
+          : new int[] {0, 20, 40, 80, 150, 250}[tier];
+      frames = health
+          ? new int[] {0, 192, 160, 171, 192, 256}[tier]
+          : 128;
+    }
+
+    amount = health ? bonusLifeByClass(amount) : bonusManaByClass(amount);
+    short chanceStat = health ? Stat.vitality : Stat.energy;
+    int chanceAttribute = statData.aggregate().getValue(chanceStat, 0);
+    if (rollPotionDouble(chanceAttribute)) amount *= 2;
+    (health ? healthPotion : manaPotion).add(amount << 8, frames);
+    return true;
   }
 
-  private void restorePotionPercent(short currentStat, short maximumStat, float percent) {
+  private boolean applyRejuvenationPotion(String code, Misc.Entry misc) {
+    int healthPercent = percentageFor(misc, "hitpoints");
+    int manaPercent = percentageFor(misc, "mana");
+    if (healthPercent <= 0 && manaPercent <= 0) {
+      int percent = "rvl".equalsIgnoreCase(code) ? 100 : 35;
+      healthPercent = percent;
+      manaPercent = percent;
+    }
+    if (healthPercent > 0) restorePotionPercent(Stat.hitpoints, Stat.maxhp, healthPercent);
+    if (manaPercent > 0) restorePotionPercent(Stat.mana, Stat.maxmana, manaPercent);
+    return healthPercent > 0 || manaPercent > 0;
+  }
+
+  /** Advances native HEALTHPOT/MANAPOT state by one 25 Hz game frame. */
+  public void tickPotionRecovery() {
+    tickPotionRecovery(healthPotion, Stat.hitpoints, Stat.maxhp);
+    tickPotionRecovery(manaPotion, Stat.mana, Stat.maxmana);
+  }
+
+  private void tickPotionRecovery(
+      PotionRecovery recovery, short currentStat, short maximumStat) {
+    if (recovery.framesRemaining <= 0) return;
+    restorePotionStatEncoded(currentStat, maximumStat, recovery.rateEncoded);
+    if (--recovery.framesRemaining == 0) recovery.rateEncoded = 0;
+  }
+
+  private void restorePotionPercent(short currentStat, short maximumStat, int percent) {
     StatRef maximum = statData.aggregate().get(maximumStat, StatRef.obtain());
-    restorePotionStat(currentStat, maximumStat,
-        maximum == null ? 0f : maximum.asFixed() * percent);
+    if (maximum == null) return;
+    long amount = (long) maximum.encodedValues() * percent / 100L;
+    restorePotionStatEncoded(currentStat, maximumStat,
+        (int) Math.min(Integer.MAX_VALUE, amount));
   }
 
-  private void restorePotionStat(short currentStat, short maximumStat, float amount) {
+  private void restorePotionStatEncoded(
+      short currentStat, short maximumStat, int amountEncoded) {
     StatRef current = statData.aggregate().get(currentStat, StatRef.obtain());
     StatRef maximum = statData.aggregate().get(maximumStat, StatRef.obtain());
     if (current == null || maximum == null) return;
-    float value = Math.min(maximum.asFixed(), current.asFixed() + Math.max(0f, amount));
-    statData.base().put(currentStat, value);
-    statData.aggregate().put(currentStat, value);
+    int value = (int) Math.min((long) maximum.encodedValues(),
+        (long) current.encodedValues() + Math.max(0, amountEncoded));
+    current.setEncoded(value);
+  }
+
+  private static String first(String[] values) {
+    return values == null || values.length == 0 ? null : values[0];
+  }
+
+  private static int parsePositive(String value) {
+    if (value == null) return 0;
+    try {
+      return Math.max(0, Integer.parseInt(value.trim()));
+    } catch (NumberFormatException ignored) {
+      return 0;
+    }
+  }
+
+  private static int potionTier(String code) {
+    int tier = code != null && code.length() > 2 && Character.isDigit(code.charAt(2))
+        ? code.charAt(2) - '0' : 1;
+    return Math.max(1, Math.min(5, tier));
+  }
+
+  private static int percentageFor(Misc.Entry misc, String requestedStat) {
+    if (misc == null || misc.stat == null || misc.calc == null) return 0;
+    int count = Math.min(misc.stat.length, misc.calc.length);
+    for (int i = 0; i < count; i++) {
+      if (requestedStat.equalsIgnoreCase(misc.stat[i])) return parsePositive(misc.calc[i]);
+    }
+    return 0;
+  }
+
+  private int bonusLifeByClass(int value) {
+    if (classId == CharacterClass.BARBARIAN) return value * 2;
+    if (classId == CharacterClass.AMAZON || classId == CharacterClass.PALADIN
+        || classId == CharacterClass.ASSASSIN) return value + (value >> 1);
+    return value;
+  }
+
+  private int bonusManaByClass(int value) {
+    if (classId == CharacterClass.SORCERESS || classId == CharacterClass.NECROMANCER
+        || classId == CharacterClass.DRUID) return value * 2;
+    if (classId == CharacterClass.AMAZON || classId == CharacterClass.PALADIN
+        || classId == CharacterClass.ASSASSIN) return value + (value >> 1);
+    return value;
+  }
+
+  private boolean rollPotionDouble(int attribute) {
+    if (attribute <= 0) return false;
+    int roll = nextPotionRandom() % 100;
+    int attributeRoll = nextPotionRandom() % attribute;
+    return roll < attributeRoll / 2;
+  }
+
+  private int nextPotionRandom() {
+    if (potionSeed == 0) {
+      potionSeed = (mapSeed != 0 ? mapSeed : name == null ? 1 : name.hashCode()) ^ 0x51ED270B;
+    }
+    potionSeed = potionSeed * 1103515245 + 12345;
+    return potionSeed & 0x7FFFFFFF;
+  }
+
+  private static final class PotionRecovery {
+    int rateEncoded;
+    int framesRemaining;
+
+    void add(int amountEncoded, int frames) {
+      int combinedFrames = framesRemaining + frames;
+      long combinedAmount = (long) framesRemaining * rateEncoded + amountEncoded;
+      rateEncoded = combinedFrames <= 0 ? 0
+          : (int) Math.min(Integer.MAX_VALUE, combinedAmount / combinedFrames);
+      framesRemaining = Math.max(0, combinedFrames);
+    }
+
+    void clear() {
+      rateEncoded = 0;
+      framesRemaining = 0;
+    }
   }
 
   public static class MercData {

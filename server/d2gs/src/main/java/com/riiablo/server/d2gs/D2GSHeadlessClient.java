@@ -8209,7 +8209,7 @@ public final class D2GSHeadlessClient {
   private static ByteBuffer itemMovePacket(long requestId, long revision, int groundEntityId) {
     FlatBufferBuilder builder = new FlatBufferBuilder(128);
     int request = ItemMoveRequest.createItemMoveRequest(builder, requestId, revision,
-        ItemMoveOperation.GROUND_TO_CURSOR, -1, groundEntityId, -1, -1, -1, -1, false);
+        ItemMoveOperation.GROUND_TO_CURSOR, -1, groundEntityId, -1, -1, -1, -1, false, false);
     int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
         builder, D2GSData.ItemMoveRequest, request);
     com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);

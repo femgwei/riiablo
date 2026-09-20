@@ -548,6 +548,7 @@ public class D2Cmp {
                         + " at offset " + offset + ": " + fileName);
                 return null;
             }
+            tile.setSourceFile(fileName);
             tiles[i] = tile;
         }
 

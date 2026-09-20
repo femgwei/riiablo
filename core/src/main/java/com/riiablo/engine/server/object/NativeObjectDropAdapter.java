@@ -56,7 +56,8 @@ public final class NativeObjectDropAdapter {
   public NativeObjectDropAdapter(Files files) {
     if (files == null) throw new NullPointerException("files");
     this.files = files;
-    resolver = new TreasureClassResolver(files.TreasureClassEx);
+    resolver = new TreasureClassResolver(
+        files.TreasureClassEx, files.itemTypeTreasureClasses);
   }
 
   public List<Drop> rollChest(Levels.Entry level, int difficulty,

@@ -4827,6 +4827,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new StateUpdater())
         .with(new com.riiablo.engine.server.StaminaSystem())
         .with(new com.riiablo.engine.server.ManaRecoverySystem())
+        .with(new com.riiablo.engine.server.PotionRecoverySystem())
         .with(new MissileCollisionSystem())
         .with(new Actioneer())
         .with(new com.riiablo.engine.server.MercenaryFollowSystem())
@@ -4859,12 +4860,12 @@ public class D2GS extends ApplicationAdapter {
         .with(new AIStepper())
         .with(new Pathfinder())
 
-        // D2GS is the authoritative owner of player/monster movement modes.
-        // Without this, client movement changes position and velocity while
-        // the server keeps broadcasting the initial TN/NU mode.
-        .with(new com.riiablo.engine.server.VelocityModeChanger(false, true))
-
         .with(new VelocityAdder()) // FIXME: temp until proper physics implemented
+
+        // Resolve modes after collision-aware movement has replaced a blocked
+        // requested velocity with zero. D2GS remains the authoritative owner
+        // of player and monster movement modes.
+        .with(new com.riiablo.engine.server.VelocityModeChanger(false, true))
         .with(new com.riiablo.engine.server.WhirlwindSystem())
         .with(new LeapSystem())
 
@@ -7065,7 +7066,7 @@ public class D2GS extends ApplicationAdapter {
     byte operation = request.operation();
     ItemMoveIntent intent = new ItemMoveIntent(request.requestId(), request.revision(), operation,
         request.itemId(), request.groundEntityId(), request.storeLoc(), request.x(), request.y(),
-        request.bodyLoc(), request.merc());
+        request.bodyLoc(), request.merc(), request.pickupToCursor());
     // Idempotency is evaluated before any current-state validation. An exact
     // retransmission must replay the original response even when the first
     // request changed inventory, consumed the ground entity, or the player

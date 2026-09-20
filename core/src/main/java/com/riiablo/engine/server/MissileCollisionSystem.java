@@ -1555,10 +1555,11 @@ public class MissileCollisionSystem extends IteratingSystem {
       // A miss/block still consumes the projectile, while a dead target is
       // handled by the normal death path above.
       if (missile.attached) return true;
-      if (damageHit && missile.pierceEnabled && missile.pierceChance > 0
-          && rollPierce(missile, missile.pierceChance)) {
-        log.info("[MISSILE_PIERCE] phase=continue missileId={} target={} chance={} hitCount={}",
-            missileId, targetId, missile.pierceChance, missile.hitTargets.size);
+      if (damageHit && consumePierce(missile)) {
+        log.info("[MISSILE_PIERCE] phase=continue missileId={} target={} chance={} "
+                + "remaining={} hitCount={}",
+            missileId, targetId, missile.pierceChance, missile.pierceRemaining,
+            missile.hitTargets.size);
         return true;
       }
       if (!missile.persistent && collidesKill(missile)) world.delete(missileId);
@@ -1871,11 +1872,25 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   static boolean rollPierce(Missile missile, int chance) {
-    if (chance >= 100) return true;
+    if (missile == null || chance <= 0) return false;
     NativeRng rng = new NativeRng(missile.rngState);
-    boolean result = rng.roll(chance, 100);
+    boolean result = rng.roll(Math.min(100, chance), 100);
     missile.rngState = rng.state();
     return result;
+  }
+
+  static int rollPierceCount(Missile missile, int chance) {
+    int count = 0;
+    while (count < 4 && rollPierce(missile, chance)) count++;
+    return count;
+  }
+
+  static boolean consumePierce(Missile missile) {
+    if (missile == null || !missile.pierceEnabled) return false;
+    if (missile.pierceRemaining < 0) return true;
+    if (missile.pierceRemaining == 0) return false;
+    missile.pierceRemaining--;
+    return true;
   }
 
   private static StateList.WeaponMasteryBonus missileMastery(Missile missile) {
@@ -2263,6 +2278,7 @@ public class MissileCollisionSystem extends IteratingSystem {
         fire.remainingFrames = Math.max(1, row.Range);
         fire.tickInterval = Math.max(1, row.DamageRate > 0 ? row.DamageRate : 1);
         fire.pierceEnabled = true;
+        fire.pierceRemaining = -1;
         // HitShift=2 stores sub-1-point fixed damage in D2; retain at least
         // one integer point in this engine's integer combat representation.
         if (fire.damage.get(Stat.firemaxdam) == null
@@ -2352,6 +2368,7 @@ public class MissileCollisionSystem extends IteratingSystem {
     cloud.tickInterval = Math.max(1,
         cloud.missile.DamageRate > 0 ? cloud.missile.DamageRate : 10);
     cloud.pierceEnabled = true;
+    cloud.pierceRemaining = -1;
   }
 
   private static boolean isStationaryPoisonCloud(Missile missile, Velocity velocity) {

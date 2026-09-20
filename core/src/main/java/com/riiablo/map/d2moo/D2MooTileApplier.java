@@ -105,6 +105,12 @@ public final class D2MooTileApplier implements DrlgTileExporter {
 
     @Override
     public void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags) {
+        onTile(levelId, layer, tx, ty, tileId, flags, null);
+    }
+
+    @Override
+    public void onTile(int levelId, int layer, int tx, int ty, int tileId, int flags,
+            String sourceFile) {
         callbackCount++;
         if (layer < DrlgExport.LAYER_FLOOR || layer > DrlgExport.LAYER_SHADOW) {
             ignoredLayerCount++;
@@ -149,7 +155,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         int orientation = DT1.Tile.Index.orientation(riiabloTileId);
         switch (layer) {
             case DrlgExport.LAYER_FLOOR:
-                applyFloor(grid, tx, ty, riiabloTileId, orientation);
+                applyFloor(grid, tx, ty, riiabloTileId, orientation, sourceFile);
                 break;
             case DrlgExport.LAYER_WALL:
                 applyWall(grid, tx, ty, riiabloTileId, orientation, flags);
@@ -162,11 +168,13 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         }
     }
 
-    private void applyFloor(TileGrid grid, int tx, int ty, int tileId, int orientation) {
+    private void applyFloor(TileGrid grid, int tx, int ty, int tileId, int orientation,
+            String sourceFile) {
         if (orientation != Orientation.FLOOR) nonFloorOrientationCount++;
         if (grid.floorIds[ty][tx] != -1) duplicatePositionCount++;
         if (tileId == 0) zeroTileIdCount++;
         grid.floorIds[ty][tx] = tileId;
+        grid.floorSourceFiles[ty][tx] = grid.registerSourceFile(sourceFile);
         grid.exportedFloorCells[ty][tx] = true;
         uniqueFloorIds.add(tileId);
         exportedFloorCount++;

@@ -44,6 +44,7 @@ import com.riiablo.item.Item;
 import com.riiablo.item.Location;
 import com.riiablo.key.MappedKey;
 import com.riiablo.loader.DC6Loader;
+import com.riiablo.map.RenderSystem;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
 import com.riiablo.widget.Button;
@@ -898,6 +899,12 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       itemController.swapBeltItem(i);
     }
 
+    @Override
+    public boolean onUse(Item item) {
+      itemController.useBeltSlot(item.gridX);
+      return true;
+    }
+
     private class MinipanelWidget extends WidgetGroup implements Disposable {
       final AssetDescriptor<DC6> minipanelbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\minipanelbtn.DC6", DC6.class);
 
@@ -935,7 +942,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
               Actor panel = Riiablo.game.partyPanel;
               Riiablo.game.setLeftPanel(panel.isVisible() ? null : panel);
             } else if (actor == btnMap) {
-
+              RenderSystem.toggleAutomap();
             } else if (actor == btnMessages) {
 
             } else if (actor == btnQuests) {
