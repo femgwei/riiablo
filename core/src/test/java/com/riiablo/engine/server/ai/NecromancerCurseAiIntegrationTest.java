@@ -63,6 +63,33 @@ class NecromancerCurseAiIntegrationTest extends RiiabloTest {
   }
 
   @Test
+  void aiDistZeroUsesNativeDefaultAndGridDistance() {
+    Fixture fixture = new Fixture();
+    MonStats.Entry row = null;
+    int[] originalAiDist = null;
+    try {
+      int actor = fixture.monster(0, 0);
+      row = fixture.world.getMapper(Monster.class).get(actor).monstats;
+      originalAiDist = row.aidist;
+      // D2Game treats a zero difficulty column as the native 35-unit default,
+      // not as an unlimited search radius.  The weighted grid distance for
+      // (28, 21) is 38, while its Euclidean distance is exactly 35.
+      row.aidist = new int[] {0, 0, 0};
+      int player = fixture.player(28, 21);
+      ProbeAI ai = fixture.ai(actor);
+
+      assertEquals(38f, AI.nativeAiDistance(
+          fixture.world.getMapper(Position.class).get(actor).position,
+          fixture.world.getMapper(Position.class).get(player).position), 0.0001f);
+      assertEquals(Engine.INVALID_ENTITY, ai.nearest(),
+          "zero aidist must use the native 35-unit weighted grid range");
+    } finally {
+      if (row != null) row.aidist = originalAiDist;
+      fixture.close();
+    }
+  }
+
+  @Test
   void summonInheritsOwnerTargetAndUsesOwnerPvpRelation() {
     Fixture fixture = new Fixture();
     try {

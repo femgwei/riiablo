@@ -64,6 +64,8 @@ import net.mostlyoriginal.api.event.common.EventSystem;
 
 public abstract class AI implements Interactable.Interactor {
   private static final Logger log = LogManager.getLogger(AI.class);
+  /** D2Game's fallback when MonStats.aiDist for the current difficulty is 0. */
+  private static final float DEFAULT_AI_DISTANCE = 35f;
 
   public static final AI IDLE = new Idle();
 
@@ -777,7 +779,7 @@ public abstract class AI implements Interactable.Interactor {
   }
 
   private float resolveAiDistance() {
-    float maxSearchDist = 35f;
+    float maxSearchDist = DEFAULT_AI_DISTANCE;
     if (monster != null && monster.monstats != null && monster.monstats.aidist != null
         && monster.monstats.aidist.length > 0) {
       int difficulty = 0;
@@ -789,6 +791,21 @@ public abstract class AI implements Interactable.Interactor {
       if (aidist > 0) maxSearchDist = aidist;
     }
     return maxSearchDist;
+  }
+
+  /**
+   * Returns the integer-grid distance used by D2Game's AI target-node scan.
+   * This is not Euclidean distance: the larger axis is weighted twice and the
+   * smaller axis once, then the result is divided by two.  Using a circular
+   * Euclidean radius admits diagonal targets that the native scan rejects.
+   */
+  static float nativeAiDistance(Vector2 source, Vector2 target) {
+    if (source == null || target == null) return Float.MAX_VALUE;
+    float dx = Math.abs(target.x - source.x);
+    float dy = Math.abs(target.y - source.y);
+    float major = Math.max(dx, dy);
+    float minor = Math.min(dx, dy);
+    return (float) Math.floor((minor + 2f * major) / 2f);
   }
 
   /**
@@ -808,30 +825,23 @@ public abstract class AI implements Interactable.Interactor {
           targetPosition.position.x, targetPosition.position.y);
     }
     float pursuitDistance = resolveAiDistance() * 2f;
-    float dx = targetPosition.position.x - monster.spawnX;
-    float dy = targetPosition.position.y - monster.spawnY;
-    return dx * dx + dy * dy <= pursuitDistance * pursuitDistance;
+    Vector2 spawn = tmpVec2.set(monster.spawnX, monster.spawnY);
+    return nativeAiDistance(spawn, targetPosition.position) <= pursuitDistance;
   }
 
   protected int findNearestOrdinaryEnemy(float[] outDistance, float maxSearchDist) {
     Vector2 entityPos = mPosition.get(entityId).position;
     int targetId = Engine.INVALID_ENTITY;
     float best = Float.MAX_VALUE;
-    float maxSearchDistSq = maxSearchDist * maxSearchDist;
     IntBag entities = getEnemyEntities().getEntities();
     for (int i = 0, size = entities.size(); i < size; i++) {
       int ent = entities.get(i);
       if (isValidOrdinaryEnemyTarget(ent)) {
         Vector2 targetPos = mPosition.get(ent).position;
-        float dx = targetPos.x - entityPos.x;
-        float dy = targetPos.y - entityPos.y;
-        float dstSq = dx * dx + dy * dy;
-        if (dstSq <= maxSearchDistSq) {
-          float dst = (float) Math.sqrt(dstSq);
-          if (dst < best) {
-            best = dst;
-            targetId = ent;
-          }
+        float dst = nativeAiDistance(entityPos, targetPos);
+        if (dst <= maxSearchDist && dst < best) {
+          best = dst;
+          targetId = ent;
         }
       }
     }
@@ -911,22 +921,13 @@ public abstract class AI implements Interactable.Interactor {
     }
     if (!isWithinSpawnPursuitScope(targetId)) return false;
     // Reuse the native aiDist limit for legacy AI implementations that still
-    // iterate their own subscription. This keeps their behavior bounded while
-    // they are migrated to findNearestTargetWithAidist().
-    if (monster != null && monster.monstats != null
-        && monster.monstats.aidist != null && monster.monstats.aidist.length > 0) {
-      int difficulty = 0;
-      if (mMapWrapper.has(entityId) && mMapWrapper.get(entityId).map != null) {
-        difficulty = mMapWrapper.get(entityId).map.getDifficulty();
-      }
-      int index = Math.min(difficulty, monster.monstats.aidist.length - 1);
-      int maxDistance = monster.monstats.aidist[index];
-      if (maxDistance > 0 && mPosition.has(entityId)) {
-        float max = maxDistance;
-        if (mPosition.get(entityId).position.dst2(mPosition.get(targetId).position) > max * max) {
-          return false;
-        }
-      }
+    // iterate their own subscription.  A zero MonStats value is not unlimited:
+    // D2Game falls back to 35.  Keep the same weighted grid metric as the
+    // target-node scan so diagonal targets cannot bypass the range gate.
+    if (mPosition.has(entityId)
+        && nativeAiDistance(mPosition.get(entityId).position,
+            mPosition.get(targetId).position) > resolveAiDistance()) {
+      return false;
     }
     return true;
   }
