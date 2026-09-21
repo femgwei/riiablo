@@ -68,6 +68,15 @@ class Act2DurielQuestTest {
   }
 
   @Test
+  void tyraelPortalRequiresDurielProgressButRemainsReplayable() {
+    assertFalse(Act2DurielQuest.canAcceptTyraelPortal((short) 0));
+    short killed = Act2DurielQuest.markDurielKilled((short) 0);
+    assertTrue(Act2DurielQuest.canAcceptTyraelPortal(killed));
+    short credited = Act2DurielQuest.acceptTyraelPortal(killed);
+    assertTrue(Act2DurielQuest.canAcceptTyraelPortal(credited));
+  }
+
+  @Test
   void reconnectRestoresDoorAfterDurielButNotTownPortalBeforeTyrael() {
     short killed = Act2DurielQuest.markDurielKilled((short) 0);
     assertTrue(Act2DurielQuest.shouldRestoreTyraelDoor(killed));

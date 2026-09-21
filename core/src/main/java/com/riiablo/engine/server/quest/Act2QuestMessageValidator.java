@@ -37,10 +37,8 @@ public final class Act2QuestMessageValidator {
     if ((npcType == MonsterType.TYRAEL1 || npcType == 257)
       && messageIndex == Act2DurielQuest.MESSAGE_TYRAEL_PORTAL
         && act2.length > Act2DurielQuest.RECORD) {
-      // Tyrael is spawned by the authoritative Duriel-death handler only;
-      // its presence is therefore the native admission gate.  Accept the
-      // message even when a legacy save has a partially migrated quest word.
-      return true;
+      return Act2DurielQuest.canAcceptTyraelPortal(
+          act2[Act2DurielQuest.RECORD]);
     }
     return false;
   }

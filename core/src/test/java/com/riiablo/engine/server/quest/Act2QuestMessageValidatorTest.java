@@ -27,6 +27,8 @@ class Act2QuestMessageValidatorTest {
   @Test
   void acceptsDurielTyraelPortalMessageOutsideByteRange() {
     CharData data = CharData.obtain().set(Riiablo.NORMAL, false, "A2Q6Validation", Riiablo.AMAZON);
+    data.getQuests(Riiablo.ACT2)[Act2DurielQuest.RECORD] =
+        Act2DurielQuest.markDurielKilled((short) 0);
     assertTrue(Act2QuestMessageValidator.isAllowed(
         MonsterType.TYRAEL1, data, Act2DurielQuest.MESSAGE_TYRAEL_PORTAL));
     assertFalse(Act2QuestMessageValidator.isAllowed(

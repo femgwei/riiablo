@@ -204,6 +204,7 @@ public class Act2DurielQuestSystem extends BaseSystem {
     if (npcType == MonsterType.TYRAEL1
         && event.messageIndex == Act2DurielQuest.MESSAGE_TYRAEL_PORTAL) {
       if (!isInLevel(event.entityId, D2LevelIds.LEVEL_DURIELSLAIR)
+          || !Act2DurielQuest.canAcceptTyraelPortal(record(player.data))
           || !openLutGholeinPortal(event.npcId, event.entityId)) return;
       grantTyraelCredit();
     } else if (npcType == MonsterType.JERHYN

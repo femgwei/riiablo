@@ -37,6 +37,11 @@ public final class Act2DurielQuest {
         && NativeQuestRecord.has(horadricStaffRecord, NativeQuestRecord.PRIMARY_GOAL_DONE);
   }
 
+  /** Tyrael's portal message is admissible only after Duriel progress exists. */
+  public static boolean canAcceptTyraelPortal(short record) {
+    return shouldRestoreTyraelDoor(repairLegacyOrificeFlags(record));
+  }
+
   /** Tyrael's message 302 grants the primary goal and enables the town return. */
   public static short acceptTyraelPortal(short record) {
     record = repairLegacyOrificeFlags(record);
