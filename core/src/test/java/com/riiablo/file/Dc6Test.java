@@ -28,6 +28,7 @@ public class Dc6Test extends RiiabloTest {
   @ValueSource(strings = {
       "data\\global\\monsters\\ty\\ra\\tyralitnuhth.dc6",
       "data\\global\\ui\\panel\\invchar6.dc6",
+      "data\\global\\ui\\panel\\invwarn.dc6",
       "data\\global\\ui\\Loading\\loadingscreen.dc6",
       "data\\global\\ui\\AUTOMAP\\MaxiMap.dc6",
   })

@@ -1,5 +1,8 @@
 package com.riiablo.screen.panel;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.lang3.ArrayUtils;
 
 import com.artemis.annotations.Wire;
@@ -67,6 +70,12 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
   final AssetDescriptor<DC6> overlapDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\overlap.DC6", DC6.class);
   DC6 overlap;
+
+  /** Native low-ammo/low-durability warning sprites used by the right HUD. */
+  final AssetDescriptor<DC6> invwarnDescriptor =
+      new AssetDescriptor<>("data\\global\\ui\\PANEL\\invwarn.dc6", DC6.class);
+  DC6 invwarn;
+  InventoryWarningWidget inventoryWarningWidget;
 
   ExperienceWidget experienceWidget;
   
@@ -147,6 +156,10 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     Riiablo.assets.load(overlapDescriptor);
     Riiablo.assets.finishLoadingAsset(overlapDescriptor);
     overlap = Riiablo.assets.get(overlapDescriptor);
+
+    Riiablo.assets.load(invwarnDescriptor);
+    Riiablo.assets.finishLoadingAsset(invwarnDescriptor);
+    invwarn = Riiablo.assets.get(invwarnDescriptor);
 
     Riiablo.assets.load(ctrlpnlDescriptor);
     Riiablo.assets.finishLoadingAsset(ctrlpnlDescriptor);
@@ -314,9 +327,12 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     addActor(addStatsLabel);
     addActor(addSkillsLabel);
     addActor(questLogLabel);
+    inventoryWarningWidget = new InventoryWarningWidget(invwarn);
+    addActor(inventoryWarningWidget);
     updateExperienceWidgetLayout();
     updateStaminaWidgetLayout();
     updateAddPointButtonLayout();
+    updateInventoryWarningWidgetLayout();
 
     //setHeight(controlWidget.background.getHeight() - 7);
     //setY(0);
@@ -356,6 +372,16 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       anchorY = STAMINA_BAR_BOTTOM_OFFSET;
     }
     staminaWidget.setPosition(anchorX, anchorY);
+  }
+
+  /** Keep warning sprites centered above the mana globe after table relayout. */
+  private void updateInventoryWarningWidgetLayout() {
+    if (inventoryWarningWidget == null || manaWidget == null) return;
+    float width = inventoryWarningWidget.getWidth();
+    float height = inventoryWarningWidget.getHeight();
+    inventoryWarningWidget.setPosition(
+        manaWidget.getX() + (manaWidget.getWidth() - width) / 2f,
+        manaWidget.getY() + manaWidget.getHeight() + 4f);
   }
 
   private void updateAddPointButtonLayout() {
@@ -457,11 +483,13 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     updateExperienceWidgetLayout();
     updateStaminaWidgetLayout();
     updateAddPointButtonLayout();
+    updateInventoryWarningWidgetLayout();
   }
 
   @Override
   public void act(float delta) {
     super.act(delta);
+    if (inventoryWarningWidget != null) inventoryWarningWidget.refresh();
     if (Riiablo.charData == null || Riiablo.charData.getStats() == null) return;
     StatListRef stats = Riiablo.charData.getStats().aggregate();
     int level = stats.getValue(Stat.level, Riiablo.charData.level & 0xFF);
@@ -515,6 +543,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     Riiablo.assets.unload(popbeltDescriptor.fileName);
     Riiablo.assets.unload(overlapDescriptor.fileName);
     Riiablo.assets.unload(hlthmanaDescriptor.fileName);
+    Riiablo.assets.unload(invwarnDescriptor.fileName);
     Riiablo.assets.unload(SkilliconDescriptor.fileName);
     Riiablo.assets.unload(levelButtonDescriptor.fileName);
     Riiablo.assets.unload(levelUpSoundDescriptor.fileName);
@@ -522,6 +551,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     if (btnAddSkills != null) btnAddSkills.dispose();
     if (btnQuestLog != null) btnQuestLog.dispose();
     if (experienceWidget != null) experienceWidget.dispose();
+    if (inventoryWarningWidget != null) inventoryWarningWidget.dispose();
     if (controlWidget != null) controlWidget.dispose();
   }
 
@@ -667,6 +697,80 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
 
   private boolean hasVisibleSidePanel() {
     return Riiablo.game != null && Riiablo.game.hasVisibleSidePanel();
+  }
+
+  /**
+   * Renders the native invwarn sprites above the mana globe.  The original
+   * client exposes one quantity warning and one durability warning at a time;
+   * when several equipped items qualify, the most severe item in each class is
+   * selected before drawing.
+   */
+  private class InventoryWarningWidget extends Actor implements Disposable {
+    private static final float GAP = 2f;
+    private static final float ICON_WIDTH = 40f;
+    private static final float ICON_HEIGHT = 41f;
+
+    private final DC6 sprites;
+    private final List<InventoryWarning.Entry> entries = new ArrayList<>();
+
+    InventoryWarningWidget(DC6 sprites) {
+      this.sprites = sprites;
+      setSize(ICON_WIDTH, ICON_HEIGHT * 2f + GAP);
+      setTouchable(Touchable.disabled);
+      setVisible(false);
+    }
+
+    void refresh() {
+      entries.clear();
+      if (Riiablo.charData == null || Riiablo.charData.getItems() == null) {
+        setVisible(false);
+        return;
+      }
+
+      InventoryWarning.Entry quantity = null;
+      InventoryWarning.Entry durability = null;
+      for (InventoryWarning.Entry entry : InventoryWarning.collect(Riiablo.charData.getItems())) {
+        if (entry.kind == InventoryWarning.Kind.QUANTITY) {
+          if (isMoreSevere(entry, quantity)) quantity = entry;
+        } else if (isMoreSevere(entry, durability)) {
+          durability = entry;
+        }
+      }
+      // Preserve the native ordering: quantity/ammunition first, durability
+      // second.  This also makes the layout stable while items are changing.
+      if (quantity != null) entries.add(quantity);
+      if (durability != null) entries.add(durability);
+      setVisible(!entries.isEmpty());
+    }
+
+    private boolean isMoreSevere(InventoryWarning.Entry candidate,
+        InventoryWarning.Entry current) {
+      if (current == null) return true;
+      int candidateSeverity = InventoryWarning.severity(
+          candidate.current, candidate.threshold, candidate.threshold);
+      int currentSeverity = InventoryWarning.severity(
+          current.current, current.threshold, current.threshold);
+      if (candidateSeverity != currentSeverity) return candidateSeverity > currentSeverity;
+      long candidateRatio = (long) candidate.current * Math.max(1, current.threshold);
+      long currentRatio = (long) current.current * Math.max(1, candidate.threshold);
+      return candidateRatio < currentRatio;
+    }
+
+    @Override
+    public void draw(Batch batch, float parentAlpha) {
+      if (sprites == null || entries.isEmpty()) return;
+      for (int i = 0; i < entries.size(); i++) {
+        InventoryWarning.Entry entry = entries.get(i);
+        TextureRegion icon = sprites.getTexture(entry.frame);
+        if (icon != null) batch.draw(icon, getX(), getY() + (entries.size() - 1 - i) * (ICON_HEIGHT + GAP));
+      }
+    }
+
+    @Override
+    public void dispose() {
+      // The asset manager owns the DC6 texture and unloads it from ControlPanel.dispose().
+      entries.clear();
+    }
   }
 
   private class ExperienceWidget extends Actor {

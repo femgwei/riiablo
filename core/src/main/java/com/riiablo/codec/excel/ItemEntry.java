@@ -40,6 +40,10 @@ public class ItemEntry extends Excel.Entry {
   @Column public boolean useable;
   @Column public String  usesound;
   @Column public int     quest;
+  /** Native low-durability warning icon selector/threshold from Items.txt. */
+  @Column public int     durwarning;
+  /** Native low-quantity warning threshold from Items.txt. */
+  @Column public int     qntwarning;
   /** Native Items.txt material flags; bit 1 marks an Iron Golem-compatible metal item. */
   @Column public int     bitfield1;
   @Column public boolean spawnable;
