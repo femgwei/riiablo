@@ -5030,6 +5030,7 @@ public class D2GS extends ApplicationAdapter {
       process(packet);
     }
     playerTrades.update();
+    cancelTradesOutsideSharedArea();
     applyReadyMovementIntents();
     // Freeze authoritative positions only after due movement commands have
     // been accepted, and before any due combat command starts its animation.
@@ -6539,6 +6540,28 @@ public class D2GS extends ApplicationAdapter {
       return "TOO_FAR";
     }
     return null;
+  }
+
+  /** Cancels sessions that became invalid after a warp or movement tick. */
+  private void cancelTradesOutsideSharedArea() {
+    java.util.ArrayList<TradeSession> invalid = new java.util.ArrayList<>();
+    for (TradeSession session : playerTrades.getSessions().values()) {
+      if (session == null || tradeRequestRejection(session.getPlayer1Id(),
+          session.getPlayer2Id()) == null) continue;
+      invalid.add(session);
+    }
+    for (TradeSession session : invalid) {
+      int p1 = session.getPlayer1Id();
+      int p2 = session.getPlayer2Id();
+      int sessionId = session.getSessionId();
+      playerTrades.cancelTrade(p1);
+      int c1 = clientForEntity(p1);
+      int c2 = clientForEntity(p2);
+      if (c1 >= 0) sendTradeResult(c1, 0, TradeOperation.CANCEL, false,
+          "TRADE_INVALIDATED", sessionId, p1, p2, TradeState.CANCELLED, null);
+      if (c2 >= 0 && c2 != c1) sendTradeResult(c2, 0, TradeOperation.CANCEL, false,
+          "TRADE_INVALIDATED", sessionId, p1, p2, TradeState.CANCELLED, null);
+    }
   }
 
   private int addTradeItem(int source, TradeRequest request) {
