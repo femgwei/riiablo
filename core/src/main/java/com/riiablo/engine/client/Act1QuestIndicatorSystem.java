@@ -86,6 +86,9 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
         return !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
             || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
       case MonsterType.KASHYA:
+        if (!Act1DenOfEvilQuest.unlocksNextQuest(quests[Act1DenOfEvilQuest.RECORD])) {
+          return false;
+        }
         record = quests[Act1BloodRavenQuest.RECORD];
         return !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)
             || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);

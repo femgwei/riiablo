@@ -92,10 +92,12 @@ public class Act1QuestSystem extends PassiveSystem {
 
     int levelId = event.zone.level.Id;
     if (levelId == D2LevelIds.LEVEL_ROGUEENCAMPMENT) return;
-    updateBloodRavenRecord(player.data, Act1BloodRavenQuest::leaveTown, "left-town");
-    if (levelId == D2LevelIds.LEVEL_BURIALGROUNDS) {
-      updateBloodRavenRecord(player.data, Act1BloodRavenQuest::enterBurialGrounds,
-          "entered-burial-grounds");
+    if (Act1DenOfEvilQuest.unlocksNextQuest(getRecord(player.data))) {
+      updateBloodRavenRecord(player.data, Act1BloodRavenQuest::leaveTown, "left-town");
+      if (levelId == D2LevelIds.LEVEL_BURIALGROUNDS) {
+        updateBloodRavenRecord(player.data, Act1BloodRavenQuest::enterBurialGrounds,
+            "entered-burial-grounds");
+      }
     }
     updateRecord(player.data, Act1DenOfEvilQuest::leaveTown, "left-town");
     if (levelId == D2LevelIds.LEVEL_DENOFEVIL) {
@@ -220,6 +222,7 @@ public class Act1QuestSystem extends PassiveSystem {
   }
 
   private void onKashyaMessage(NpcQuestMessageEvent message, Player player) {
+    if (!Act1DenOfEvilQuest.unlocksNextQuest(getRecord(player.data))) return;
     if (message.messageIndex == Act1BloodRavenQuest.MESSAGE_INIT) {
       updateBloodRavenRecord(player.data, Act1BloodRavenQuest::start,
           "kashya-init-message");
@@ -729,6 +732,9 @@ public class Act1QuestSystem extends PassiveSystem {
     for (int i = 0, size = players.size(); i < size; i++) {
       int playerId = ids[i];
       if (!isPlayerInLevel(playerId, D2LevelIds.LEVEL_BURIALGROUNDS)) continue;
+      Player player = mPlayer.get(playerId);
+      if (player == null || player.data == null
+          || !Act1DenOfEvilQuest.unlocksNextQuest(getRecord(player.data))) continue;
       completeBloodRavenFor(playerId, "near-blood-raven");
       if (partyManager != null) {
         short partyId = partyManager.getPartyId(playerId);
@@ -750,6 +756,7 @@ public class Act1QuestSystem extends PassiveSystem {
       int playerId = ids[i];
       Player player = mPlayer.get(playerId);
       if (player == null || player.data == null) continue;
+      if (!Act1DenOfEvilQuest.unlocksNextQuest(getRecord(player.data))) continue;
       updateBloodRavenRecord(player.data, Act1BloodRavenQuest::markCompletedNow,
           "blood-raven-died-this-game");
     }
@@ -761,6 +768,7 @@ public class Act1QuestSystem extends PassiveSystem {
     if (!mPlayer.has(playerId)) return;
     Player player = mPlayer.get(playerId);
     if (player == null || player.data == null) return;
+    if (!Act1DenOfEvilQuest.unlocksNextQuest(getRecord(player.data))) return;
     updateBloodRavenRecord(player.data, Act1BloodRavenQuest::completeObjective, reason);
   }
 
@@ -770,6 +778,7 @@ public class Act1QuestSystem extends PassiveSystem {
     if (!mPlayer.has(playerId)) return;
     Player player = mPlayer.get(playerId);
     if (player == null || player.data == null) return;
+    if (!Act1DenOfEvilQuest.unlocksNextQuest(getRecord(player.data))) return;
     updateBloodRavenRecord(player.data, record ->
         NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
             || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)

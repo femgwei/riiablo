@@ -82,6 +82,8 @@ public class Act1QuestDialogController extends PassiveSystem {
       messageIndex = Act1MalusQuest.selectCharsiMessage(record, level, hasMalus);
       speech = Act1MalusQuest.getCharsiSpeech(messageIndex);
     } else if (npc.monstats.hcIdx == MonsterType.KASHYA) {
+      short denRecord = data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD];
+      if (!Act1DenOfEvilQuest.unlocksNextQuest(denRecord)) return false;
       short record = data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD];
       messageIndex = Act1BloodRavenQuest.selectKashyaMessage(record);
       speech = Act1BloodRavenQuest.getKashyaSpeech(messageIndex);

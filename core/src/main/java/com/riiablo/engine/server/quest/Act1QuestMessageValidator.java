@@ -25,6 +25,8 @@ public final class Act1QuestMessageValidator {
         return messageIndex == Act1MalusQuest.selectCharsiMessage(
             act1[Act1MalusQuest.RECORD], level, hasMalus);
       case MonsterType.KASHYA:
+        if (!Act1DenOfEvilQuest.unlocksNextQuest(
+            act1[Act1DenOfEvilQuest.RECORD])) return false;
         return messageIndex == Act1BloodRavenQuest.selectKashyaMessage(
             act1[Act1BloodRavenQuest.RECORD]);
       case MonsterType.WARRIV:

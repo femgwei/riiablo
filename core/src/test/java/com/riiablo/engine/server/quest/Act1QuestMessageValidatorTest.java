@@ -28,6 +28,10 @@ class Act1QuestMessageValidatorTest {
   @Test
   void validatesKashyaAndWarrivAgainstRewardPendingRecords() {
     CharData data = character();
+    assertFalse(Act1QuestMessageValidator.isAllowed(MonsterType.KASHYA, data, 1,
+        false, Act1BloodRavenQuest.MESSAGE_INIT));
+    data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
+        Act1DenOfEvilQuest.claimReward(Act1DenOfEvilQuest.completeObjective((short) 0));
     assertTrue(Act1QuestMessageValidator.isAllowed(MonsterType.KASHYA, data, 1,
         false, Act1BloodRavenQuest.MESSAGE_INIT));
     assertFalse(Act1QuestMessageValidator.isAllowed(MonsterType.KASHYA, data, 1,

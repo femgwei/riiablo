@@ -7,6 +7,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.server.monster.MonsterType;
+import com.riiablo.engine.server.quest.Act1BloodRavenQuest;
 import com.riiablo.engine.server.quest.Act1CainQuest;
 import com.riiablo.engine.server.quest.Act1DenOfEvilQuest;
 import com.riiablo.engine.server.quest.Act1MalusQuest;
@@ -58,5 +59,19 @@ class Act1QuestIndicatorSystemTest extends RiiabloTest {
     data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
         Act1DenOfEvilQuest.start((short) 0);
     assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.WARRIV, data));
+  }
+
+  @Test
+  void kashyaMarkerWaitsForDenOfEvilReward() {
+    CharData data = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "KashyaMarker", Riiablo.AMAZON);
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.KASHYA, data));
+
+    data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
+        Act1DenOfEvilQuest.claimReward(Act1DenOfEvilQuest.completeObjective((short) 0));
+    assertTrue(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.KASHYA, data));
+    data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] =
+        Act1BloodRavenQuest.start((short) 0);
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.KASHYA, data));
   }
 }

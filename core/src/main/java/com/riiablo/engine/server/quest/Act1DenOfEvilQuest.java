@@ -62,6 +62,16 @@ public final class Act1DenOfEvilQuest {
         || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
   }
 
+  /**
+   * Returns whether the next Act I quest may become active.  A pending reward
+   * is deliberately not enough: in the native game A1Q2 is not activated
+   * until Akara has granted the A1Q1 reward.
+   */
+  public static boolean unlocksNextQuest(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)
+        || NativeQuestRecord.has(record, NativeQuestRecord.COMPLETED_BEFORE);
+  }
+
   /** Selects Akara's A1Q1 speech from the native message-state sequence. */
   public static int selectAkaraMessage(short record) {
     if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED)) return MESSAGE_NONE;

@@ -273,6 +273,8 @@ class Act1QuestSystemTest extends RiiabloTest {
     Harness harness = new Harness();
     try {
       CharData data = character("BloodRavenHero", Riiablo.NORMAL);
+      data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
+          Act1DenOfEvilQuest.claimReward(Act1DenOfEvilQuest.completeObjective((short) 0));
       int player = harness.createPlayer(data);
       harness.setPlayerLevel(player, D2LevelIds.LEVEL_BURIALGROUNDS);
       int kashya = harness.createKashya();
@@ -299,6 +301,10 @@ class Act1QuestSystemTest extends RiiabloTest {
       CharData hunterData = character("BloodRavenHunter", Riiablo.NORMAL);
       CharData partyOutsideData = character("BloodRavenParty", Riiablo.NORMAL);
       CharData unrelatedData = character("BloodRavenUnrelated", Riiablo.NORMAL);
+      for (CharData data : new CharData[] {hunterData, partyOutsideData, unrelatedData}) {
+        data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
+            Act1DenOfEvilQuest.claimReward(Act1DenOfEvilQuest.completeObjective((short) 0));
+      }
       int hunter = harness.createPlayer(hunterData);
       int partyOutside = harness.createPlayer(partyOutsideData);
       int unrelated = harness.createPlayer(unrelatedData);
@@ -334,6 +340,8 @@ class Act1QuestSystemTest extends RiiabloTest {
     Harness harness = new Harness();
     try {
       CharData data = character("BloodRavenReward", Riiablo.NORMAL);
+      data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
+          Act1DenOfEvilQuest.claimReward(Act1DenOfEvilQuest.completeObjective((short) 0));
       data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] =
           Act1BloodRavenQuest.completeObjective((short) 0);
       int player = harness.createPlayer(data);
@@ -356,6 +364,8 @@ class Act1QuestSystemTest extends RiiabloTest {
     Harness harness = new Harness();
     try {
       CharData data = character("BloodRavenGranted", Riiablo.NORMAL);
+      data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
+          Act1DenOfEvilQuest.claimReward(Act1DenOfEvilQuest.completeObjective((short) 0));
       data.getQuests(Riiablo.ACT1)[Act1BloodRavenQuest.RECORD] =
           Act1BloodRavenQuest.completeObjective((short) 0);
       int player = harness.createPlayer(data);
