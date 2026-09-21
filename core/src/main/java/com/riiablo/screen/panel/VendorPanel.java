@@ -1,6 +1,7 @@
 package com.riiablo.screen.panel;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -13,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.ObjectSet;
 import com.badlogic.gdx.net.Socket;
 
 import com.riiablo.Riiablo;
@@ -21,8 +23,11 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.Inventory;
+import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.codec.excel.Npc;
 import com.riiablo.graphics.BlendMode;
+import com.riiablo.graphics.PaletteIndexedBatch;
+import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.item.Item;
 import com.riiablo.item.Location;
 import com.riiablo.item.StoreLoc;
@@ -59,7 +64,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   public static final int REPAIRER = REPAIR | REPAIR_ALL;
   public static final int TRADER   = BUYSELL | EXIT;
   public static final int SMITHY   = BUYSELL | REPAIRER;
-  public static final int GAMBLER  = TRADER;
+  /** Gambling stock is buy-only, but the gambling page still accepts sales. */
+  public static final int GAMBLER  = BUYSELL | EXIT;
 
   static final int BLANK_MASKS[] = {
       BUY,
@@ -92,6 +98,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private boolean repairing;
   /** Local-mode stock is retained between opening/closing the panel. */
   private Array<Item> localStock;
+  /** Base items that were permanently supplied by the currently opened vendor. */
+  private final ObjectSet<ItemEntry> permanentStockBases = new ObjectSet<>();
   private Npc.Entry localPricing;
   @com.artemis.annotations.Wire(name = "client.socket", failOnNull = false)
   private Socket clientSocket;
@@ -104,12 +112,40 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private int configuredFlags;
   private int networkNpcEntityId;
   private byte networkService;
+  /** Current local/network service. Gambling sales are accepted but never restocked. */
+  private byte serviceType = NpcServiceType.TRADE;
   private long networkStockRevision;
   private final ItemReader networkItemReader = new ItemReader();
   private long pendingRequestId;
   private byte pendingOperation;
   private int pendingItemIndex = -1;
   private boolean pendingBuyToCursor;
+  private WidgetGroup purchasePrompt;
+  private Label purchasePromptText;
+  private LabelButton purchaseConfirm;
+  private LabelButton purchaseCancel;
+  private Item pendingPurchaseItem;
+
+  /** The in-game purchase prompt uses the same restrained treatment as the original UI. */
+  private static final class PurchasePromptDrawable extends PaletteIndexedColorDrawable {
+    PurchasePromptDrawable() {
+      super(Riiablo.colors.modal75);
+    }
+
+    @Override
+    public void draw(Batch batch, float x, float y, float width, float height) {
+      super.draw(batch, x, y, width, height);
+      if (!(batch instanceof PaletteIndexedBatch)) return;
+
+      PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
+      b.setBlendMode(BlendMode.SOLID, Riiablo.colors.gold);
+      b.draw(Riiablo.textures.white, x, y + height - 1, width, 1);
+      b.draw(Riiablo.textures.white, x, y, width, 1);
+      b.draw(Riiablo.textures.white, x, y, 1, height);
+      b.draw(Riiablo.textures.white, x + width - 1, y, 1, height);
+      b.resetBlendMode();
+    }
+  }
 
   public VendorPanel() {
     Riiablo.assets.load(buysellDescriptor);
@@ -118,6 +154,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     setSize(buysell.getRegionWidth(), buysell.getRegionHeight());
     setTouchable(Touchable.enabled);
     setVisible(false);
+    addListener(new ClickListener(Input.Buttons.LEFT) {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        if (event.isHandled() || purchasePrompt != null && purchasePrompt.isVisible()) return;
+        if (sellCursorItem()) event.handle();
+      }
+    });
 
     Riiablo.assets.load(buyselltabsDescriptor);
     Riiablo.assets.finishLoadingAsset(buyselltabsDescriptor);
@@ -286,6 +329,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         public boolean onPurchase(Item item, boolean direct) {
           return purchase(item, direct);
         }
+
+        @Override
+        public boolean onSell(Item item) {
+          return sellCursorItem();
+        }
       });
       grid.setPosition(
           inventory.gridLeft - inventory.invLeft,
@@ -293,6 +341,51 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       grid.setVisible(false);
       addActor(grid);
     }
+
+    purchasePrompt = new WidgetGroup();
+    purchasePrompt.setTouchable(Touchable.enabled);
+    purchasePrompt.setSize(230, 86);
+    purchasePrompt.setPosition((getWidth() - purchasePrompt.getWidth()) / 2f,
+        (getHeight() - purchasePrompt.getHeight()) / 2f);
+    purchasePrompt.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+      @Override
+      public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+        return true;
+      }
+    });
+    Label purchasePromptBackground = new Label("", Riiablo.fonts.font16);
+    purchasePromptBackground.getStyle().background = new PurchasePromptDrawable();
+    purchasePromptBackground.setTouchable(Touchable.disabled);
+    purchasePromptBackground.setBounds(0, 0, purchasePrompt.getWidth(), purchasePrompt.getHeight());
+    purchasePrompt.addActor(purchasePromptBackground);
+    purchasePromptText = new Label("", Riiablo.fonts.font16, Riiablo.colors.gold);
+    purchasePromptText.setAlignment(Align.center);
+    purchasePromptText.setBounds(4, 42, purchasePrompt.getWidth() - 8, 36);
+    purchasePrompt.addActor(purchasePromptText);
+    purchaseConfirm = new LabelButton("BUY", Riiablo.fonts.font16);
+    purchaseConfirm.setColor(Riiablo.colors.gold);
+    purchaseConfirm.setBounds(35, 10, 70, 24);
+    purchaseConfirm.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        Item item = pendingPurchaseItem;
+        hidePurchasePrompt();
+        if (item != null) purchaseNow(item, false);
+      }
+    });
+    purchasePrompt.addActor(purchaseConfirm);
+    purchaseCancel = new LabelButton("CANCEL", Riiablo.fonts.font16);
+    purchaseCancel.setColor(Riiablo.colors.gold);
+    purchaseCancel.setBounds(125, 10, 70, 24);
+    purchaseCancel.addListener(new ClickListener() {
+      @Override
+      public void clicked(InputEvent event, float x, float y) {
+        hidePurchasePrompt();
+      }
+    });
+    purchasePrompt.addActor(purchaseCancel);
+    purchasePrompt.setVisible(false);
+    addActor(purchasePrompt);
 
     //setDebug(true, true);
   }
@@ -310,6 +403,30 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     Riiablo.assets.unload(buysellbtnDescriptor.fileName);
   }
 
+  private void showPurchasePrompt(Item item) {
+    if (item == null) return;
+    pendingPurchaseItem = item;
+    int price = isGambling()
+        ? VendorPricing.gamblePrice(item, Riiablo.charData)
+        : localPricing == null
+            ? VendorPricing.buyPrice(item)
+            : VendorPricing.buyPrice(item, localPricing, Riiablo.charData);
+    purchasePromptText.setText("BUY " + item.getNameString() + " FOR " + price + " GOLD?");
+    purchasePrompt.setVisible(true);
+  }
+
+  private void hidePurchasePrompt() {
+    pendingPurchaseItem = null;
+    if (purchasePrompt != null) purchasePrompt.setVisible(false);
+  }
+
+  private boolean sellCursorItem() {
+    if (Riiablo.charData == null) return false;
+    Item cursor = Riiablo.charData.getItems().getCursor();
+    return cursor != null && canSellItems()
+        && sellItem(Riiablo.charData.getItems().indexOf(cursor));
+  }
+
   @Override
   public void draw(Batch batch, float a) {
     refreshGold();
@@ -323,6 +440,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     if (visible) {
       Riiablo.game.setRightPanel(Riiablo.game.inventoryPanel);
     } else {
+      hidePurchasePrompt();
       networkFlags = 0;
       clearPendingRequest();
       if (buttonGroup != null && buttonGroup.getCheckedIndex() >= 0) {
@@ -336,6 +454,20 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   }
 
   public void config(int flags, Array<Item> items, Npc.Entry pricing) {
+    config(flags, items, pricing, NpcServiceType.TRADE);
+  }
+
+  public void config(int flags, Array<Item> items, Npc.Entry pricing, byte service) {
+    boolean newStock = localStock != items || serviceType != service;
+    if (newStock) {
+      permanentStockBases.clear();
+      if (service != NpcServiceType.GAMBLE && items != null) {
+        for (Item item : items) {
+          if (VendorPricing.isPermanentStoreItem(item)) permanentStockBases.add(item.base);
+        }
+      }
+    }
+    serviceType = service;
     networkFlags = 0;
     clearPendingRequest();
     localStock = items;
@@ -387,7 +519,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   /** Opens a server-owned vendor session. Local inventory generation is skipped. */
   public void configNetwork(int flags, int npcEntityId, byte service) {
-    config(flags, new Array<Item>(false, 0, Item.class), null);
+    config(flags, new Array<Item>(false, 0, Item.class), null, service);
     networkFlags = flags;
     networkNpcEntityId = npcEntityId;
     networkService = service;
@@ -425,10 +557,17 @@ public class VendorPanel extends WidgetGroup implements Disposable {
           if (!placed) {
             Gdx.app.error(TAG, "[VENDOR_BUY] requested destination unavailable; preserving item in inventory");
             Riiablo.charData.getItems().addToInventory(purchased);
+          } else if (Riiablo.audio != null) {
+            Riiablo.audio.play(purchased.getDropSound(), true);
           }
         }
       } else if (result.success() && pendingOperation == NpcServiceOperation.SELL) {
-        Riiablo.charData.getItems().removeOwnedItem(pendingItemIndex);
+        Item sold = pendingItemIndex >= 0 && pendingItemIndex < Riiablo.charData.getItems().getItems().size
+            ? Riiablo.charData.getItems().getItems().get(pendingItemIndex) : null;
+        if (sold != null) {
+          Riiablo.charData.getItems().removeOwnedItem(sold);
+          playSellSounds(sold);
+        }
       } else if (result.success() && pendingOperation == NpcServiceOperation.REPAIR_ITEM) {
         Item repaired = findOwnedItem(result.itemId(), pendingItemIndex);
         if (repaired != null) ItemDurabilityManager.INSTANCE.restoreDurability(repaired);
@@ -468,7 +607,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       }
     }
     int flags = networkFlags;
-    config(flags, stock);
+    config(flags, stock, null, networkService);
     networkFlags = flags;
     restoreTradeMode(restoreSelling, restoreRepairing);
     if (!result.success()) Gdx.app.log(TAG, "[NPC_SERVICE] " + result.reason());
@@ -509,6 +648,10 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   /** The trade window accepts native right-click selling without selecting Sell first. */
   public boolean canSellItems() {
     return isVisible() && (configuredFlags & SELL) != 0;
+  }
+
+  private boolean isGambling() {
+    return serviceType == NpcServiceType.GAMBLE;
   }
 
   public boolean repairItem(int itemIndex) {
@@ -584,6 +727,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
           + " reason=item_not_owned");
       return false;
     }
+    boolean addToStock = localStock != null && !isGambling() && canAddSoldItem(item);
     if (networkFlags != 0 && networkSynchronizer != null) {
       if (pendingRequestId != 0) {
         Gdx.app.log(TAG, "[VENDOR_SELL] phase=reject item=" + item.id
@@ -618,16 +762,18 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         item.gridX = 0;
         item.gridY = 0;
         item.vendorPrice = -1;
-        if (!localStock.contains(item, true)) localStock.insert(0, item);
+        if (addToStock && !VendorPricing.isQuiver(item)
+            && !localStock.contains(item, true)) localStock.insert(0, item);
       }
       Gdx.app.debug(TAG, "Sold " + item.code + " for " + value + " gold");
       Gdx.app.log(TAG, "[VENDOR_SELL] phase=result mode=local success=true item="
           + item.id + " value=" + value);
       refreshGold();
+      playSellSounds(item);
       if (localStock != null) {
         boolean restoreSelling = selling;
         boolean restoreRepairing = repairing;
-        config(configuredFlags, localStock);
+        config(configuredFlags, localStock, localPricing, serviceType);
         restoreTradeMode(restoreSelling, restoreRepairing);
       }
     } else {
@@ -637,8 +783,34 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     return sold;
   }
 
-  /** Purchases to cursor for left-click, or directly to inventory for right-click. */
+  private void playSellSounds(Item item) {
+    if (Riiablo.audio == null) return;
+    Riiablo.audio.play("item_gold", true);
+    if (item != null) Riiablo.audio.play(item.getDropSound(), true);
+  }
+
+  private boolean canAddSoldItem(Item item) {
+    if (item == null || VendorPricing.isQuiver(item)
+        || item.base != null && permanentStockBases.contains(item.base)) return false;
+    String page = item.typeEntry == null ? "misc" : item.typeEntry.StorePage;
+    if ("armo".equalsIgnoreCase(page)) return tabs[TAB_ARMOR].grid.hasRoom(item);
+    if ("weap".equalsIgnoreCase(page)) {
+      return tabs[TAB_WEAPONS].grid.hasRoom(item) || tabs[TAB_WEAPONS2].grid.hasRoom(item);
+    }
+    return tabs[TAB_MISC].grid.hasRoom(item);
+  }
+
+  /** Left-click asks for confirmation; right-click purchases directly. */
   private boolean purchase(Item item, boolean direct) {
+    if (!direct) {
+      showPurchasePrompt(item);
+      return false;
+    }
+    return purchaseNow(item, true);
+  }
+
+  /** Executes a confirmed purchase. */
+  private boolean purchaseNow(Item item, boolean direct) {
     if (selling || Riiablo.charData == null) return false;
     boolean toCursor = !direct;
     if (toCursor && Riiablo.charData.getItems().getCursor() != null) return false;
@@ -654,17 +826,24 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       pendingBuyToCursor = toCursor;
       return false;
     }
-    int value = VendorPricing.buyPrice(item, localPricing, Riiablo.charData);
-    boolean bought = toCursor
-        ? VendorPricing.buyToCursor(Riiablo.charData, item, localPricing)
-        : VendorPricing.buy(Riiablo.charData, item, localPricing);
+    int value = isGambling()
+        ? VendorPricing.gamblePrice(item, Riiablo.charData)
+        : VendorPricing.buyPrice(item, localPricing, Riiablo.charData);
+    boolean bought = isGambling()
+        ? (toCursor
+            ? VendorPricing.gambleToCursor(Riiablo.charData, item)
+            : VendorPricing.gamble(Riiablo.charData, item))
+        : (toCursor
+            ? VendorPricing.buyToCursor(Riiablo.charData, item, localPricing)
+            : VendorPricing.buy(Riiablo.charData, item, localPricing));
     if (bought) {
       if (localStock != null) {
         localStock.removeValue(item, true);
-        config(configuredFlags, localStock);
+        config(configuredFlags, localStock, localPricing, serviceType);
       }
       Gdx.app.debug(TAG, "Bought " + item.code + " for " + value + " gold");
       refreshGold();
+      if (Riiablo.audio != null) Riiablo.audio.play(item.getDropSound(), true);
     }
     return bought;
   }

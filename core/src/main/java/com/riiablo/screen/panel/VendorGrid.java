@@ -4,10 +4,13 @@ import java.util.Comparator;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.GridPoint2;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.SnapshotArray;
 
 import com.riiablo.codec.excel.Inventory;
 import com.riiablo.item.Item;
+import com.riiablo.item.Type;
 
 public class VendorGrid extends ItemGrid {
   private static final String TAG = "VendorGrid";
@@ -40,8 +43,14 @@ public class VendorGrid extends ItemGrid {
     return purchaseListener != null && purchaseListener.onPurchase(item, direct);
   }
 
+  @Override
+  protected boolean onCursorDrop(Item item) {
+    return purchaseListener != null && purchaseListener.onSell(item);
+  }
+
   public interface PurchaseListener {
     boolean onPurchase(Item item, boolean direct);
+    default boolean onSell(Item item) { return false; }
   }
 
   public static Array<Item> sort(Array<Item> items) {
@@ -58,7 +67,7 @@ public class VendorGrid extends ItemGrid {
     for (Array.ArrayIterator<Item> it = new Array.ArrayIterator<>(items); it.hasNext(); ) {
       Item item = it.next();
       coords.set(0, 0); // TODO: handle non-zero when switching below state
-      boolean placed = item.base.multibuy
+      boolean placed = rightAligned(item)
           ? placeMultibuyItem(coords, item, placedItems)
           : placeItem(coords, item, placedItems);
       if (placed) {
@@ -74,6 +83,29 @@ public class VendorGrid extends ItemGrid {
     }
 
     return placedItems.size;
+  }
+
+  /** Returns whether another item can be displayed on this page. */
+  public boolean hasRoom(Item item) {
+    if (item == null || item.base == null) return false;
+    Array<Item> placed = new Array<>(true, getChildren().size, Item.class);
+    SnapshotArray<Actor> children = getChildren();
+    for (Actor child : children) {
+      if (child instanceof ItemGrid.StoredItem) placed.add(((ItemGrid.StoredItem) child).item);
+    }
+    GridPoint2 coords = new GridPoint2();
+    return rightAligned(item)
+        ? placeMultibuyItem(coords, item, placed)
+        : placeItem(coords, item, placed);
+  }
+
+  private static boolean rightAligned(Item item) {
+    return item.base.multibuy || item.type != null
+        && (item.type.is(Type.POTI)
+            || item.type.is(Type.TPOT)
+            || item.type.is(Type.KEY)
+            || item.type.is(Type.SCRO)
+            || item.type.is(Type.BOOK));
   }
 
   // y isn't used -- just for posterity in case it will be needed

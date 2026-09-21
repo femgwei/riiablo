@@ -549,13 +549,13 @@ public class NpcDialogManager {
     registerNpc(148, "Akara", 1, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(150, "Kashya", 1, NPC_TYPE_HIRELING, false, false, false, true, false);
     registerNpc(154, "Charsi", 1, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
-    registerNpc(147, "Gheed", 1, NPC_TYPE_GAMBLER, false, true, false, false, false);
+    registerNpc(147, "Gheed", 1, NPC_TYPE_GAMBLER, true, true, false, false, false);
     registerNpc(155, "Warriv", 1, NPC_TYPE_TRAVEL, false, false, false, false, true);
 
     // 第二幕 NPC
     registerNpc(177, "Fara", 2, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
     registerNpc(175, "Drognan", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
-    registerNpc(199, "Elzix", 2, NPC_TYPE_GAMBLER, false, true, false, false, false);
+    registerNpc(199, "Elzix", 2, NPC_TYPE_GAMBLER, true, true, false, false, false);
     registerNpc(198, "Greiz", 2, NPC_TYPE_HIRELING, false, false, false, true, false);
     registerNpc(176, "Lysander", 2, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(210, "Meshif", 2, NPC_TYPE_TRAVEL, false, false, false, false, true);
@@ -564,7 +564,7 @@ public class NpcDialogManager {
     // D2MOO MonsterIds: Asheara=252, Hratli=253, Alkor=254, Ormus=255.
     registerNpc(255, "Ormus", 3, NPC_TYPE_VENDOR, true, false, false, false, false);
     registerNpc(253, "Hratli", 3, NPC_TYPE_BLACKSMITH, true, false, true, false, false);
-    registerNpc(254, "Alkor", 3, NPC_TYPE_GAMBLER, false, true, false, false, false);
+    registerNpc(254, "Alkor", 3, NPC_TYPE_GAMBLER, true, true, false, false, false);
     registerNpc(252, "Asheara", 3, NPC_TYPE_HIRELING, false, false, false, true, false);
     registerNpc(245, "Deckard Cain", 3, NPC_TYPE_NORMAL, false, false, false, false, false);
     registerNpc(264, "Meshif", 3, NPC_TYPE_TRAVEL, false, false, false, false, true);

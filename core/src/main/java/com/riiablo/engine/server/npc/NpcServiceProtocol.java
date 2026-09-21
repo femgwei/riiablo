@@ -20,7 +20,8 @@ public final class NpcServiceProtocol {
     if (service == null || operation == null) return false;
     switch (service) {
       case TRADE: return operation == Operation.OPEN || operation == Operation.BUY || operation == Operation.SELL;
-      case GAMBLE: return operation == Operation.OPEN || operation == Operation.BUY;
+      case GAMBLE: return operation == Operation.OPEN || operation == Operation.BUY
+          || operation == Operation.SELL;
       case REPAIR: return operation == Operation.OPEN || operation == Operation.REPAIR_ITEM || operation == Operation.REPAIR_ALL;
       case HIRE: return operation == Operation.OPEN || operation == Operation.HIRE;
       case RESURRECT: return operation == Operation.OPEN || operation == Operation.RESURRECT;

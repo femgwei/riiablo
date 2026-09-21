@@ -59,29 +59,29 @@ public class Npc extends AI {
     // Act 2
     TALKERS.addAll();
     REPAIRERS.addAll();
-    TRADERS.addAll();
-    GAMBLERS.addAll();
+    TRADERS.addAll(199);
+    GAMBLERS.addAll(199);
     HIRERERS.addAll();
 
     // Act 3
     TALKERS.addAll();
     REPAIRERS.addAll();
-    TRADERS.addAll();
-    GAMBLERS.addAll();
+    TRADERS.addAll(254);
+    GAMBLERS.addAll(254);
     HIRERERS.addAll();
 
     // Act 4
     TALKERS.addAll();
     REPAIRERS.addAll();
-    TRADERS.addAll();
-    GAMBLERS.addAll();
+    TRADERS.addAll(406);
+    GAMBLERS.addAll(406);
     HIRERERS.addAll();
 
     // Act 5
     TALKERS.addAll();
     REPAIRERS.addAll();
-    TRADERS.addAll();
-    GAMBLERS.addAll();
+    TRADERS.addAll(514);
+    GAMBLERS.addAll(514);
     HIRERERS.addAll();
   }
 
@@ -250,7 +250,7 @@ public class Npc extends AI {
       log.error("Failed to generate vendor items: entityId={}, monsterId={}, error={}",
           entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
     }
-    Riiablo.game.vendorPanel.config(flags, items, Riiablo.files.Npc.get(monstats.Id));
+    Riiablo.game.vendorPanel.config(flags, items, Riiablo.files.Npc.get(monstats.Id), service);
     Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
   }
 

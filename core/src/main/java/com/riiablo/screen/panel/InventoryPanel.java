@@ -27,6 +27,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.AttributesUpdater;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.engine.client.NetworkedClientItemManager;
 import com.riiablo.codec.DC6;
 import com.riiablo.codec.excel.BodyLocs;
 import com.riiablo.codec.excel.Inventory;
@@ -382,12 +383,6 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   @Override
   public boolean onPickup(int i) {
     if (Riiablo.game != null && Riiablo.game.vendorPanel != null
-        && Riiablo.game.vendorPanel.isSelling()) {
-      // Sell mode owns this click even while another authoritative request is
-      // pending or rejected. Never reinterpret it as STORE_TO_CURSOR.
-      return Riiablo.game.vendorPanel.sellItem(i);
-    }
-    if (Riiablo.game != null && Riiablo.game.vendorPanel != null
         && Riiablo.game.vendorPanel.isRepairing()) {
       Riiablo.game.vendorPanel.repairItem(i);
       return false;
@@ -398,14 +393,16 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
   @Override
   public boolean onUse(Item item) {
-    VendorPanel vendor = Riiablo.game == null ? null : Riiablo.game.vendorPanel;
-    if (vendor == null || !vendor.canSellItems() || Riiablo.charData == null) return false;
-    int itemIndex = Riiablo.charData.getItems().indexOf(item);
-    // A right-click in an open trade window is a sell command. Consume the
-    // click even if an authoritative request is already pending so a potion
-    // cannot be used accidentally while the player is trading.
-    vendor.sellItem(itemIndex);
-    return true;
+    // Selling is intentionally not handled here. Native D2 sells by dragging
+    // an item from the inventory onto the vendor area; right-click remains the
+    // use action for consumables and does nothing for equipment.
+    if (item != null && item.base != null && item.base.useable
+        && !(itemController instanceof NetworkedClientItemManager)
+        && Riiablo.charData != null && Riiablo.charData.useInventoryPotion(item)) {
+      if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
+      return true;
+    }
+    return item != null && item.base != null && !item.base.useable;
   }
 
   @Override

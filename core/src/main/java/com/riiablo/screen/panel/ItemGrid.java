@@ -95,6 +95,10 @@ public class ItemGrid extends Group {
         ItemGrid.this.mouseMoved();
         Item cursor = itemData.getCursor();
         if (blocked) {
+          if (cursor != null && onCursorDrop(cursor)) {
+            event.handle();
+            return;
+          }
           if (cursor != null) Riiablo.audio.play("sorceress_impossible_1", false);
           event.handle();
           return;
@@ -188,6 +192,11 @@ public class ItemGrid extends Group {
   /** Store-grid hook that can distinguish left-click pickup from right-click direct actions. */
   protected boolean onStoredItemClicked(Item item, boolean direct) {
     return onStoredItemClicked(item);
+  }
+
+  /** Hook for a store grid that accepts a cursor item outside its cells. */
+  protected boolean onCursorDrop(Item item) {
+    return false;
   }
 
   /** Lets specialized grids route a right-click through their item controller. */

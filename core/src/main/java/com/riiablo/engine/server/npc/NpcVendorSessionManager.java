@@ -3,6 +3,8 @@ package com.riiablo.engine.server.npc;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.ObjectMap;
+import com.badlogic.gdx.utils.ObjectSet;
+import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.item.Item;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.VendorPricing;
@@ -15,6 +17,8 @@ public final class NpcVendorSessionManager {
     public final int npcEntityId;
     public final String npcType;
     public final Array<Item> stock = new Array<>(true, 64, Item.class);
+    /** Base items permanently supplied by this vendor at session creation. */
+    private final ObjectSet<ItemEntry> permanentStockBases = new ObjectSet<>();
     public long revision = 1;
     private boolean gamble;
     public final Npc.Entry pricing;
@@ -90,6 +94,7 @@ public final class NpcVendorSessionManager {
       Array<Item> generated = gamble ? generator.generateGamble() : generator.generate(npcType);
       session.stock.addAll(generated);
     }
+    rememberPermanentStock(session);
     if (gamble) ownerSessions.put(npcEntityId, session);
     else sessions.put(npcEntityId, session);
     return session;
@@ -97,8 +102,17 @@ public final class NpcVendorSessionManager {
 
   private static void replaceStock(Session session, Array<Item> stock) {
     session.stock.clear();
+    session.permanentStockBases.clear();
     if (stock != null) session.stock.addAll(stock);
+    rememberPermanentStock(session);
     session.revision++;
+  }
+
+  private static void rememberPermanentStock(Session session) {
+    if (session == null || session.gamble) return;
+    for (Item item : session.stock) {
+      if (VendorPricing.isPermanentStoreItem(item)) session.permanentStockBases.add(item.base);
+    }
   }
 
   public synchronized Session get(int npcEntityId) { return sessions.get(npcEntityId); }
@@ -159,7 +173,9 @@ public final class NpcVendorSessionManager {
       item.gridX = 0;
       item.gridY = 0;
       item.vendorPrice = -1;
-      if (find(session, item.id) == null) {
+      if (!VendorPricing.isQuiver(item)
+          && (item.base == null || !session.permanentStockBases.contains(item.base))
+          && find(session, item.id) == null) {
         session.stock.insert(0, item);
         session.revision++;
       }

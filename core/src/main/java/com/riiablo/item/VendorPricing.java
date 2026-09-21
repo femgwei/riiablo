@@ -161,15 +161,6 @@ public final class VendorPricing {
   }
 
   private static int quantity(Item item) { return Math.max(1, Math.min(511, stat(item, Stat.quantity, 1))); }
-  private static boolean isQuiver(Item item) {
-    if (item == null) return false;
-    if (item.typeEntry != null && item.typeEntry.Quiver != null
-        && !item.typeEntry.Quiver.isEmpty() && !"0".equals(item.typeEntry.Quiver)) {
-      return true;
-    }
-    // Keep headless fixtures and legacy-loaded items on the native path too.
-    return "aqv".equalsIgnoreCase(item.code) || "cqv".equalsIgnoreCase(item.code);
-  }
   private static boolean isArmor(Item item) { return item.base instanceof Armor.Entry; }
   private static int stat(Item item, short stat, int fallback) {
     if (item.attrs == null) return fallback;
@@ -234,12 +225,27 @@ public final class VendorPricing {
     ItemData items = character.getItems();
     if (itemIndex < 0 || itemIndex >= items.getItems().size) return false;
     Item item = items.getItem(itemIndex);
-    if (item == null || item.location != Location.STORED || item.storeLoc != StoreLoc.INVENTORY) return false;
+    if (item == null || (item.location != Location.CURSOR
+        && (item.location != Location.STORED || item.storeLoc != StoreLoc.INVENTORY))) return false;
     int value = sellPrice(item, npc, character, difficulty);
-    if (!items.removeOwnedItem(itemIndex)) return false;
+    if (!items.removeOwnedItem(item)) return false;
     addGold(character, value);
     return true;
   }
+
+  /** Returns whether the item is an arrow/bolt quiver excluded from NPC stock. */
+  public static boolean isQuiver(Item item) {
+    if (item == null) return false;
+    if (item.typeEntry != null && item.typeEntry.Quiver != null
+        && !item.typeEntry.Quiver.isEmpty() && !"0".equals(item.typeEntry.Quiver)) return true;
+    return "aqv".equalsIgnoreCase(item.code) || "cqv".equalsIgnoreCase(item.code);
+  }
+
+  /** Native item flag used for stock that is always replenished by a vendor. */
+  public static boolean isPermanentStoreItem(Item item) {
+    return item != null && item.base != null && item.base.PermStoreItem;
+  }
+
   public static int availableGold(CharData character) {
     if (character == null || character.getStats() == null) return 0;
     return Math.max(0, value(character.getStats().get(Stat.gold))) + Math.max(0, value(character.getStats().get(Stat.goldbank)));

@@ -932,6 +932,18 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
   public boolean useBeltPotion(int column) {
     Item potion = itemData.getBeltPotion(column);
     if (potion == null || potion.type == null || !potion.type.is(Type.POTI)) return false;
+    if (!applyPotion(potion)) return false;
+    return itemData.consumeBeltPotion(potion);
+  }
+
+  /** Uses one potion directly from the character inventory. */
+  public boolean useInventoryPotion(Item potion) {
+    if (potion == null || potion.type == null || !potion.type.is(Type.POTI)
+        || potion.location != Location.STORED || potion.storeLoc != StoreLoc.INVENTORY) return false;
+    return applyPotion(potion) && itemData.consumeStoredItem(potion);
+  }
+
+  private boolean applyPotion(Item potion) {
     Misc.Entry misc = potion.base instanceof Misc.Entry ? (Misc.Entry) potion.base : null;
     int pSpell = misc == null ? 0 : misc.pSpell;
     boolean applied;
@@ -953,7 +965,7 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
       }
     }
     if (!applied) return false;
-    return itemData.consumeBeltPotion(potion);
+    return true;
   }
 
   private boolean applyTimedPotion(String code, Misc.Entry misc) {

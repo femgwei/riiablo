@@ -758,6 +758,18 @@ public class ItemData {
     return false;
   }
 
+  /** Consumes one unit from this exact inventory item, preserving its stack. */
+  public boolean consumeStoredItem(Item item) {
+    if (item == null || item.location != Location.STORED || item.storeLoc != StoreLoc.INVENTORY) return false;
+    StatRef quantity = item.attrs == null ? null : item.attrs.base().get(Stat.quantity);
+    int current = quantity == null ? 0 : quantity.asInt();
+    if (current <= 1) return removeOwnedItem(item);
+    item.attrs.base().put(Stat.quantity, current - 1);
+    item.attrs.reset();
+    notifyUpdated();
+    return true;
+  }
+
   public void addAll(Array<? extends Item> items) {
     itemData.addAll(items);
   }
