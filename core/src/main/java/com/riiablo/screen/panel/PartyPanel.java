@@ -18,6 +18,7 @@ import com.riiablo.engine.server.party.Party;
 import com.riiablo.engine.server.party.PartyRelation;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.net.packet.d2gs.PartyOperation;
+import com.riiablo.net.packet.d2gs.TradeOperation;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
 
@@ -172,6 +173,9 @@ public class PartyPanel extends Table {
     row.add(detailsLabel).width(86).top();
 
     Table actions = new Table();
+    if (!self && member.online) {
+      actions.add(actionButton("Trade", () -> requestTrade(member.entityId))).right().row();
+    }
     byte[] available = actionsFor(self, localPartyId, member.partyId, member.relation);
     if (available.length == 0) {
       Label relation = new Label(relationLabel(self, member.relation),
@@ -194,6 +198,14 @@ public class PartyPanel extends Table {
         operation == PartyOperation.LEAVE ? -1 : targetEntityId);
     status.setColor(requestId == 0 ? Riiablo.colors.red : Riiablo.colors.gold);
     status.setText(requestId == 0 ? "Unable to send request" : "Request sent...");
+  }
+
+  private void requestTrade(int targetEntityId) {
+    if (synchronizer == null) return;
+    long requestId = synchronizer.requestTrade(TradeOperation.REQUEST, targetEntityId,
+        0, -1, 0, 0, 0);
+    status.setColor(requestId == 0 ? Riiablo.colors.red : Riiablo.colors.gold);
+    status.setText(requestId == 0 ? "Unable to send trade request" : "Trade request sent...");
   }
 
   private LabelButton actionButton(String text, final Runnable action) {

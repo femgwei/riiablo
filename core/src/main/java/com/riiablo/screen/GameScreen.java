@@ -191,6 +191,7 @@ import com.riiablo.screen.panel.PartyPanel;
 import com.riiablo.screen.panel.SpellsPanel;
 import com.riiablo.screen.panel.SpellsQuickPanel;
 import com.riiablo.screen.panel.StashPanel;
+import com.riiablo.screen.panel.TradePanel;
 import com.riiablo.screen.panel.VendorPanel;
 import com.riiablo.screen.panel.WaygatePanel;
 import com.riiablo.widget.TextArea;
@@ -330,6 +331,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   public WaygatePanel waygatePanel;
   public QuestsPanel questsPanel;
   public PartyPanel partyPanel;
+  public TradePanel tradePanel;
   public CubePanel cubePanel;
   public VendorPanel vendorPanel;
   public SpellsQuickPanel spellsQuickPanelL;
@@ -471,6 +473,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     partyPanel = new PartyPanel();
     partyPanel.setPosition(0, stage.getHeight() - partyPanel.getHeight());
     stage.addActor(partyPanel);
+
+    tradePanel = new TradePanel();
+    tradePanel.setPosition(0, stage.getHeight() - tradePanel.getHeight());
+    stage.addActor(tradePanel);
 
     waygatePanel = new WaygatePanel(charData);
     waygatePanel.setPosition(0, stage.getHeight() - waygatePanel.getHeight());
@@ -796,6 +802,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     if (socket != null) {
       vendorPanel.setNetworkSynchronizer(engine.getSystem(ClientNetworkSynchronizer.class));
       partyPanel.setNetworkSystems(engine.getSystem(ClientNetworkSynchronizer.class),
+          engine.getSystem(com.riiablo.engine.client.ClientNetworkReceiver.class));
+      tradePanel.setNetworkSystems(engine.getSystem(ClientNetworkSynchronizer.class),
           engine.getSystem(com.riiablo.engine.client.ClientNetworkReceiver.class));
     }
 // TODO: maybe it would be better to do more like?:
@@ -1533,6 +1541,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
   /** Closes paired item-trading panels before a world movement command is issued. */
   public boolean closeTradePanelsForMovement() {
+    if (tradePanel != null && tradePanel.isVisible()) {
+      tradePanel.setVisible(false);
+      return true;
+    }
     if (!shouldCloseTradePanelsForMovement(
         inventoryPanel != null && inventoryPanel.isVisible(),
         stashPanel != null && stashPanel.isVisible(),
@@ -1544,6 +1556,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     setLeftPanel(null);
     setRightPanel(null);
     return true;
+  }
+
+  /** Opens the network trade window after an invitation or accepted request. */
+  public void openTradePanel() {
+    setLeftPanel(tradePanel);
   }
 
   static boolean shouldCloseTradePanelsForMovement(

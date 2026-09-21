@@ -53,8 +53,11 @@
   sessionId 由服务端约束；CONFIRM 经 `ItemDataTradeAuthority` 原子提交，结果/快照回传双方。
 - 新增 `TradeRequestCache`：按连接和 requestId 重放完全相同的结果，requestId 复用但 intent
   不同会被拒绝；断线会取消活动交易并通知仍在线的一方，交易操作持续校验双方区域/距离。
-- D2GS 每个 tick 会检查活动会话；warp/换图或距离超限后主动取消交易并通知双方；仍缺
-  客户端交易窗口 UI，这不影响当前服务端 authority 的安全边界。
+- D2GS 每个 tick 会检查活动会话；warp/换图或距离超限后主动取消交易并通知双方；基础
+  客户端窗口已接入，完整交易栏交互仍在补齐。
+- 客户端已接入 `TradeResult` 快照、交易请求发送和基础 `TradePanel`：Party 面板可发起
+  Trade，收到邀请会自动打开窗口，可执行 Accept/Confirm/Cancel；物品拖放、金币输入和
+  正式交易栏美术仍待补齐。
 - 仍需真实资源/原版客户端验证的项目单独记录，不把“代码已存在”误报为实机完成：
   `headlessMissileCombat` 的 Throw/标枪实际伤害、原版 `.d2s/.map/.ma*` 外部识别、
   Automap 原生/ HackMap 像素级图标与城镇/野外迷雾连续性，以及带真实 MPQ 的完整退出重载。

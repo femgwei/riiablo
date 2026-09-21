@@ -79,6 +79,7 @@ import com.riiablo.net.packet.d2gs.MonsterP;
 import com.riiablo.net.packet.d2gs.Ping;
 import com.riiablo.net.packet.d2gs.NpcServiceResult;
 import com.riiablo.net.packet.d2gs.PartyResult;
+import com.riiablo.net.packet.d2gs.TradeResult;
 import com.riiablo.net.packet.d2gs.PlayerP;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.net.packet.d2gs.QuestResult;
@@ -172,6 +173,7 @@ public class ClientNetworkReceiver extends IntervalSystem {
   /** Last authoritative level observed for each server entity. */
   private final IntIntMap serverEntityLevels = new IntIntMap();
   private final ClientPartyState partyState = new ClientPartyState();
+  private final ClientTradeState tradeState = new ClientTradeState();
   private long latestServerTick;
   private long latestServerTickReceiptMillis;
   private long lastCombatSequence;
@@ -313,6 +315,9 @@ public class ClientNetworkReceiver extends IntervalSystem {
         break;
       case D2GSData.PartyResult:
         PartyResult(packet);
+        break;
+      case D2GSData.TradeResult:
+        TradeResult(packet);
         break;
       case D2GSData.ItemMoveResult:
         ItemMoveResult(packet);
@@ -685,6 +690,27 @@ public class ClientNetworkReceiver extends IntervalSystem {
 
   public ClientPartyState partyState() {
     return partyState;
+  }
+
+  private void TradeResult(D2GS packet) {
+    TradeResult result = (TradeResult) packet.data(new TradeResult());
+    tradeState.apply(result);
+    if (Riiablo.game != null && Riiablo.game.tradePanel != null) {
+      if (tradeState.active()) {
+        Riiablo.game.openTradePanel();
+      } else if (Riiablo.game.tradePanel.isVisible()) {
+        Riiablo.game.setLeftPanel(null);
+      }
+    }
+    Gdx.app.log(TAG, "[TRADE] request=" + result.requestId()
+        + " operation=" + result.operation() + " success=" + result.success()
+        + " reason=" + result.reason() + " session=" + result.sessionId()
+        + " state=" + result.state() + " sourceItems=" + result.sourceItemsLength()
+        + " targetItems=" + result.targetItemsLength());
+  }
+
+  public ClientTradeState tradeState() {
+    return tradeState;
   }
 
   private void SpendSkillPointResult(D2GS packet) {

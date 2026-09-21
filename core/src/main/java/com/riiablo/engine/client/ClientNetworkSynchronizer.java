@@ -43,6 +43,8 @@ import com.riiablo.net.packet.d2gs.PartyRequest;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleOperation;
 import com.riiablo.net.packet.d2gs.PlayerLifecycleRequest;
 import com.riiablo.net.packet.d2gs.QuestRequest;
+import com.riiablo.net.packet.d2gs.TradeOperation;
+import com.riiablo.net.packet.d2gs.TradeRequest;
 import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
 import com.riiablo.net.SizePrefixedPacketReader;
 import com.riiablo.save.CharData;
@@ -77,6 +79,7 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
   private long nextPartyRequestId = 1;
   private long nextLifecycleRequestId = 1;
   private long nextQuestRequestId = 1;
+  private long nextTradeRequestId = 1;
   private long nextSnapshotResyncRequestId = 1;
   private long nextMovementLogTime;
   private long nextMovementSequence = 1L;
@@ -356,6 +359,29 @@ public class ClientNetworkSynchronizer extends IntervalSystem {
       return requestId;
     } catch (Throwable t) {
       Gdx.app.error(TAG, "Failed to send party request", t);
+      return 0;
+    }
+  }
+
+  /** Sends an authenticated player trade intent; D2GS resolves the source identity. */
+  public long requestTrade(byte operation, int localTargetEntityId, int sessionId,
+                           int itemId, int x, int y, long gold) {
+    if (socket == null) return 0;
+    long requestId = nextTradeRequestId++;
+    int serverTargetId = localTargetEntityId >= 0 && mNetworked.has(localTargetEntityId)
+        ? mNetworked.get(localTargetEntityId).serverId : localTargetEntityId;
+    FlatBufferBuilder builder = new FlatBufferBuilder(128);
+    int request = TradeRequest.createTradeRequest(builder, requestId, operation,
+        serverTargetId, sessionId, itemId, x, y, gold);
+    int root = D2GS.createD2GS(builder, D2GSData.TradeRequest, request);
+    D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    try {
+      WritableByteChannel channel = Channels.newChannel(socket.getOutputStream());
+      ByteBuffer frame = builder.dataBuffer();
+      while (frame.hasRemaining()) channel.write(frame);
+      return requestId;
+    } catch (Throwable t) {
+      Gdx.app.error(TAG, "Failed to send trade request", t);
       return 0;
     }
   }
