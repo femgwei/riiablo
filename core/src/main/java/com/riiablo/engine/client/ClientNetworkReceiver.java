@@ -1273,6 +1273,13 @@ public class ClientNetworkReceiver extends IntervalSystem {
     float oldHitpoints = wrapper.attrs.aggregate().getValue(Stat.hitpoints, 0f);
     com.riiablo.engine.server.component.serializer.VitalsSerializer.apply(wrapper, data);
     float hitpoints = wrapper.attrs.aggregate().getValue(Stat.hitpoints, 0f);
+    // Vitals snapshots do not carry the attacker's hit sound.  A real decrease
+    // in a player entity's hit points is therefore the reliable network-side
+    // signal for the character's class-specific pain voice.  Do not trigger on
+    // healing, max-hp changes, or an initial snapshot.
+    if (hitpoints < oldHitpoints && mPlayer.has(entityId)) {
+      PlayerHitSound.play(mPlayer.get(entityId));
+    }
     if (oldHitpoints != hitpoints || data.dead()) {
           Gdx.app.log(TAG, String.format(
           "[VITALS_SYNC] entity=%d hp=%.3f oldHp=%.3f maxHp=%.3f mana=%.3f maxMana=%.3f stamina=%.3f maxStamina=%.3f dead=%s",

@@ -92,6 +92,14 @@ public class DamageHandler extends PassiveSystem {
       log.info("Monster attack: damage={}, monster={}, playerHp={}/{}, attackerId={}, victimId={}",
           event.damage, monsterName, playerHp, playerMaxHp, event.attacker, event.victim);
     }
+
+    // Character pain sounds are not part of DamageEvent.hitSound (that field is
+    // the attacker's weapon/missile impact sound).  Play the victim's class
+    // voice when the event carries actual damage.  In particular, this covers
+    // local player damage events, whose entities do not have an AIWrapper.
+    if (event.damage > 0f && isPlayerVictim) {
+      PlayerHitSound.play(mPlayer.get(event.victim));
+    }
     
     // Trigger hit reaction for entities with AI (monsters, NPCs, etc.)
     // Players don't have AI components, so we need to check first
