@@ -5,6 +5,7 @@ import com.badlogic.gdx.math.Vector2;
 /** Shared validation rules for the multiplayer NPC service boundary. */
 public final class NpcServiceProtocol {
   public static final float MAX_INTERACTION_DISTANCE_SQ = 64f;
+  public static final int BUY_TO_CURSOR_ITEM_INDEX = -2;
 
   public enum Service { TRADE, GAMBLE, REPAIR, HIRE, RESURRECT }
   public enum Operation { OPEN, BUY, SELL, REPAIR_ITEM, REPAIR_ALL, HIRE, RESURRECT }

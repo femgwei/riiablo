@@ -492,6 +492,18 @@ public class ItemData {
     return true;
   }
 
+  /** Adds a purchased item to the native mouse cursor. */
+  public boolean addToCursor(Item item) {
+    if (item == null || contains(item) || cursor != INVALID_ITEM) return false;
+    int index = add(item);
+    cursor = index;
+    item.storeLoc = StoreLoc.NONE;
+    item.gridX = 0;
+    item.gridY = 0;
+    setLocation(item, Location.CURSOR);
+    return true;
+  }
+
   /**
    * Applies native ground-pickup placement without using the mouse cursor.
    * Belt-compatible potions take the first native belt slot and fall back to

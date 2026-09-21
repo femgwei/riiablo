@@ -109,6 +109,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   private long pendingRequestId;
   private byte pendingOperation;
   private int pendingItemIndex = -1;
+  private boolean pendingBuyToCursor;
 
   public VendorPanel() {
     Riiablo.assets.load(buysellDescriptor);
@@ -282,8 +283,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       VendorGrid grid = tabs[i].grid = new VendorGrid(inventory, null);
       grid.setPurchaseListener(new VendorGrid.PurchaseListener() {
         @Override
-        public boolean onPurchase(Item item) {
-          return purchase(item);
+        public boolean onPurchase(Item item, boolean direct) {
+          return purchase(item, direct);
         }
       });
       grid.setPosition(
@@ -323,6 +324,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       Riiablo.game.setRightPanel(Riiablo.game.inventoryPanel);
     } else {
       networkFlags = 0;
+      clearPendingRequest();
       if (buttonGroup != null && buttonGroup.getCheckedIndex() >= 0) {
         Riiablo.cursor.resetCursor();
       }
@@ -335,6 +337,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   public void config(int flags, Array<Item> items, Npc.Entry pricing) {
     networkFlags = 0;
+    clearPendingRequest();
     localStock = items;
     localPricing = pricing;
     configuredFlags = flags;
@@ -390,9 +393,12 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     networkService = service;
     networkStockRevision = 0;
     if (networkSynchronizer != null) {
-      pendingRequestId = networkSynchronizer.requestNpcService(npcEntityId, service, NpcServiceOperation.OPEN,
+      long requestId = networkSynchronizer.requestNpcService(npcEntityId, service, NpcServiceOperation.OPEN,
           0, -1, 0);
-      pendingOperation = NpcServiceOperation.OPEN;
+      if (requestId != 0) {
+        pendingRequestId = requestId;
+        pendingOperation = NpcServiceOperation.OPEN;
+      }
     } else {
       Gdx.app.error(TAG, "Network vendor requested without ClientNetworkSynchronizer");
     }
@@ -413,7 +419,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
           && result.itemDataLength() > 0) {
         Item purchased = decodeItem(result.itemId(), result.itemDataAsByteBuffer(), false);
         if (purchased != null && !Riiablo.charData.getItems().contains(purchased)) {
-          Riiablo.charData.getItems().addToInventory(purchased);
+          boolean placed = pendingBuyToCursor
+              ? Riiablo.charData.getItems().addToCursor(purchased)
+              : Riiablo.charData.getItems().addToInventory(purchased);
+          if (!placed) {
+            Gdx.app.error(TAG, "[VENDOR_BUY] requested destination unavailable; preserving item in inventory");
+            Riiablo.charData.getItems().addToInventory(purchased);
+          }
         }
       } else if (result.success() && pendingOperation == NpcServiceOperation.SELL) {
         Riiablo.charData.getItems().removeOwnedItem(pendingItemIndex);
@@ -430,6 +442,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       }
       pendingRequestId = 0;
       pendingItemIndex = -1;
+      pendingBuyToCursor = false;
     }
     if (networkFlags == 0) return;
     // REPAIR and early validation failures carry no vendor-stock snapshot.
@@ -624,17 +637,27 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     return sold;
   }
 
-  private boolean purchase(Item item) {
+  /** Purchases to cursor for left-click, or directly to inventory for right-click. */
+  private boolean purchase(Item item, boolean direct) {
     if (selling || Riiablo.charData == null) return false;
+    boolean toCursor = !direct;
+    if (toCursor && Riiablo.charData.getItems().getCursor() != null) return false;
     if (networkFlags != 0 && networkSynchronizer != null) {
       if (pendingRequestId != 0) return false;
-      pendingRequestId = networkSynchronizer.requestNpcService(networkNpcEntityId, networkService,
-          NpcServiceOperation.BUY, item.id, -1, networkStockRevision);
+      long requestId = networkSynchronizer.requestNpcService(networkNpcEntityId, networkService,
+          NpcServiceOperation.BUY, item.id,
+          toCursor ? com.riiablo.engine.server.npc.NpcServiceProtocol.BUY_TO_CURSOR_ITEM_INDEX : -1,
+          networkStockRevision);
+      if (requestId == 0) return false;
+      pendingRequestId = requestId;
       pendingOperation = NpcServiceOperation.BUY;
+      pendingBuyToCursor = toCursor;
       return false;
     }
     int value = VendorPricing.buyPrice(item, localPricing, Riiablo.charData);
-    boolean bought = VendorPricing.buy(Riiablo.charData, item, localPricing);
+    boolean bought = toCursor
+        ? VendorPricing.buyToCursor(Riiablo.charData, item, localPricing)
+        : VendorPricing.buy(Riiablo.charData, item, localPricing);
     if (bought) {
       if (localStock != null) {
         localStock.removeValue(item, true);
@@ -644,6 +667,13 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       refreshGold();
     }
     return bought;
+  }
+
+  private void clearPendingRequest() {
+    pendingRequestId = 0;
+    pendingOperation = 0;
+    pendingItemIndex = -1;
+    pendingBuyToCursor = false;
   }
 
   private void refreshGold() {

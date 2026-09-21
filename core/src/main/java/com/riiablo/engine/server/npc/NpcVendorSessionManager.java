@@ -95,12 +95,18 @@ public final class NpcVendorSessionManager {
 
   /** Atomically buys and removes one stock item after all player checks pass. */
   public synchronized int buy(Session session, CharData player, int itemId) {
+    return buy(session, player, itemId, false);
+  }
+
+  public synchronized int buy(Session session, CharData player, int itemId, boolean toCursor) {
     Item item = find(session, itemId);
     if (item == null || player == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return 0;
     int price = price(session, item, player);
     boolean purchased = session.isGamble()
-        ? VendorPricing.gamble(player, item)
-        : VendorPricing.buy(player, item, session.pricing);
+        ? (toCursor ? VendorPricing.gambleToCursor(player, item)
+            : VendorPricing.gamble(player, item))
+        : (toCursor ? VendorPricing.buyToCursor(player, item, session.pricing)
+            : VendorPricing.buy(player, item, session.pricing));
     if (!purchased) return 0;
     session.stock.removeValue(item, true);
     session.revision++;

@@ -36,6 +36,30 @@ class VendorPricingTest extends RiiabloTest {
   }
 
   @Test
+  void leftClickPurchaseUsesCursorAndRejectsAnOccupiedCursorAtomically() {
+    CharData character = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "CursorBuyer", Riiablo.AMAZON);
+    character.getStats().base().put(Stat.gold, 1000);
+    character.getStats().aggregate().put(Stat.gold, 1000);
+
+    Item first = item("hp1", 1, 1);
+    first.flags2 |= Item.ITEMFLAG2_INSTORE;
+    int firstPrice = VendorPricing.buyPrice(first);
+    assertTrue(VendorPricing.buyToCursor(character, first, null));
+    assertEquals(first, character.getItems().getCursor());
+    assertEquals(Location.CURSOR, first.location);
+    assertEquals(1000 - firstPrice, character.getStats().get(Stat.gold).asInt());
+
+    Item second = item("mp1", 1, 1);
+    second.flags2 |= Item.ITEMFLAG2_INSTORE;
+    int goldBeforeRejectedPurchase = character.getStats().get(Stat.gold).asInt();
+    assertTrue(!VendorPricing.buyToCursor(character, second, null));
+    assertEquals(goldBeforeRejectedPurchase, character.getStats().get(Stat.gold).asInt());
+    assertTrue(second.hasFlag2(Item.ITEMFLAG2_INSTORE));
+    assertTrue(!character.getItems().contains(second));
+  }
+
+  @Test
   void sellingAnInventoryItemAddsQuarterValue() {
     CharData character = CharData.obtain().clear().set(Riiablo.NORMAL, false, "VendorHero", Riiablo.AMAZON);
     Item item = item("hp1", 1, 1);

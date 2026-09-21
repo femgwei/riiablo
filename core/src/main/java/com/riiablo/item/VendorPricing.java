@@ -194,12 +194,34 @@ public final class VendorPricing {
     spend(character, price);
     return true;
   }
+
+  /** Buys an item and leaves it on the native mouse cursor. */
+  public static boolean buyToCursor(CharData character, Item item, Npc.Entry npc) {
+    if (character == null || item == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return false;
+    int price = buyPrice(item, npc, character);
+    if (!canSpend(character, price)) return false;
+    if (!character.getItems().addToCursor(item)) return false;
+    item.flags2 &= ~Item.ITEMFLAG2_INSTORE;
+    spend(character, price);
+    return true;
+  }
   public static boolean gamble(CharData character, Item item) {
     if (character == null || item == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return false;
     int price = gamblePrice(item, character);
     if (!canSpend(character, price)) return false;
     ItemData items = character.getItems();
     if (!items.addToInventory(item)) return false;
+    item.flags2 &= ~Item.ITEMFLAG2_INSTORE;
+    spend(character, price);
+    return true;
+  }
+
+  /** Gambles an item and leaves it on the native mouse cursor. */
+  public static boolean gambleToCursor(CharData character, Item item) {
+    if (character == null || item == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return false;
+    int price = gamblePrice(item, character);
+    if (!canSpend(character, price)) return false;
+    if (!character.getItems().addToCursor(item)) return false;
     item.flags2 &= ~Item.ITEMFLAG2_INSTORE;
     spend(character, price);
     return true;

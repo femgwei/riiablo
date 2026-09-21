@@ -185,6 +185,11 @@ public class ItemGrid extends Group {
     return false;
   }
 
+  /** Store-grid hook that can distinguish left-click pickup from right-click direct actions. */
+  protected boolean onStoredItemClicked(Item item, boolean direct) {
+    return onStoredItemClicked(item);
+  }
+
   /** Lets specialized grids route a right-click through their item controller. */
   protected boolean onUse(Item item) {
     return gridListener != null && gridListener.onUse(item);
@@ -347,7 +352,7 @@ public class ItemGrid extends Group {
         @Override
         public void clicked(InputEvent event, float x, float y) {
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
-            if (onStoredItemClicked(item)) removeActor(StoredItem.this);
+            if (onStoredItemClicked(item, false)) removeActor(StoredItem.this);
             event.handle();
             return;
           }
@@ -363,7 +368,7 @@ public class ItemGrid extends Group {
         @Override
         public void clicked(InputEvent event, float x, float y) {
           if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
-            if (onStoredItemClicked(item)) removeActor(StoredItem.this);
+            if (onStoredItemClicked(item, true)) removeActor(StoredItem.this);
             event.handle();
             return;
           }

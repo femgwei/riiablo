@@ -6374,7 +6374,9 @@ public class D2GS extends ApplicationAdapter {
           if (item == null) reason = "UNKNOWN_STOCK_ITEM";
           else {
             resultItemId = item.id;
-            int price = npcVendors.buy(session, playerComponent.data, request.itemId());
+            boolean toCursor = request.itemIndex()
+                == com.riiablo.engine.server.npc.NpcServiceProtocol.BUY_TO_CURSOR_ITEM_INDEX;
+            int price = npcVendors.buy(session, playerComponent.data, request.itemId(), toCursor);
             if (price <= 0) reason = "BUY_REJECTED";
             else resultItemData = serializeItem(item);
           }

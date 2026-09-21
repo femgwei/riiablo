@@ -36,12 +36,12 @@ public class VendorGrid extends ItemGrid {
   }
 
   @Override
-  protected boolean onStoredItemClicked(Item item) {
-    return purchaseListener != null && purchaseListener.onPurchase(item);
+  protected boolean onStoredItemClicked(Item item, boolean direct) {
+    return purchaseListener != null && purchaseListener.onPurchase(item, direct);
   }
 
   public interface PurchaseListener {
-    boolean onPurchase(Item item);
+    boolean onPurchase(Item item, boolean direct);
   }
 
   public static Array<Item> sort(Array<Item> items) {
