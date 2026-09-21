@@ -77,6 +77,19 @@ class Act2DurielQuestTest {
   }
 
   @Test
+  void jerhynAndMeshifMessagesRemainReplayableAfterReconnect() {
+    short killed = Act2DurielQuest.markDurielKilled((short) 0);
+    short tyrael = Act2DurielQuest.acceptTyraelPortal(killed);
+    assertTrue(Act2DurielQuest.canAcceptJerhynEnd(tyrael));
+    short entered = Act2DurielQuest.acknowledgeJerhyn(tyrael);
+    assertTrue(Act2DurielQuest.canAcceptJerhynEnd(entered));
+    assertTrue(Act2DurielQuest.canAcceptMeshifTravel(entered));
+    short rewarded = Act2DurielQuest.travelWithMeshif(entered);
+    assertTrue(Act2DurielQuest.canAcceptJerhynEnd(rewarded));
+    assertTrue(Act2DurielQuest.canAcceptMeshifTravel(rewarded));
+  }
+
+  @Test
   void reconnectRestoresDoorAfterDurielButNotTownPortalBeforeTyrael() {
     short killed = Act2DurielQuest.markDurielKilled((short) 0);
     assertTrue(Act2DurielQuest.shouldRestoreTyraelDoor(killed));

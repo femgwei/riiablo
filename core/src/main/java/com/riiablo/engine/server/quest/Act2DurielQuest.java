@@ -42,6 +42,20 @@ public final class Act2DurielQuest {
     return shouldRestoreTyraelDoor(repairLegacyOrificeFlags(record));
   }
 
+  /** Jerhyn may be replayed after reconnect once his transition was applied. */
+  public static boolean canAcceptJerhynEnd(short record) {
+    record = repairLegacyOrificeFlags(record);
+    return NativeQuestRecord.has(record, NativeQuestRecord.LEFT_TOWN)
+        || NativeQuestRecord.has(record, NativeQuestRecord.ENTERED_AREA)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
+  /** Meshif may be replayed after reconnect without granting twice. */
+  public static boolean canAcceptMeshifTravel(short record) {
+    return NativeQuestRecord.has(record, NativeQuestRecord.ENTERED_AREA)
+        || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
   /** Tyrael's message 302 grants the primary goal and enables the town return. */
   public static short acceptTyraelPortal(short record) {
     record = repairLegacyOrificeFlags(record);

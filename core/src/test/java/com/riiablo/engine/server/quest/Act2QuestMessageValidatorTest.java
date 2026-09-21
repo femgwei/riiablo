@@ -55,5 +55,13 @@ class Act2QuestMessageValidatorTest {
         Act2DurielQuest.acknowledgeJerhyn(tyrael);
     assertTrue(Act2QuestMessageValidator.isAllowed(
         MonsterType.MESHIF1, data, Act2DurielQuest.MESSAGE_MESHIF_TRAVEL));
+
+    data.getQuests(Riiablo.ACT2)[Act2DurielQuest.RECORD] =
+        Act2DurielQuest.travelWithMeshif(
+            data.getQuests(Riiablo.ACT2)[Act2DurielQuest.RECORD]);
+    assertTrue(Act2QuestMessageValidator.isAllowed(
+        MonsterType.JERHYN, data, Act2DurielQuest.MESSAGE_JERHYN_END));
+    assertTrue(Act2QuestMessageValidator.isAllowed(
+        MonsterType.MESHIF1, data, Act2DurielQuest.MESSAGE_MESHIF_TRAVEL));
   }
 }
