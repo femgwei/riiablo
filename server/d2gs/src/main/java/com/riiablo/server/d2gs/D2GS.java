@@ -139,7 +139,15 @@ import com.riiablo.engine.server.party.PartyRequestCache;
 import com.riiablo.engine.server.party.PartyServiceProtocol;
 import com.riiablo.engine.server.party.PartyGoldShareService;
 import com.riiablo.engine.server.party.PvpCombatRules;
+import com.riiablo.engine.server.trade.TradeManager;
+import com.riiablo.engine.server.trade.TradeSession;
+import com.riiablo.engine.server.trade.TradeSlot;
+import com.riiablo.engine.server.trade.TradeState;
+import com.riiablo.engine.server.trade.ItemDataTradeAuthority;
+import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
+import com.riiablo.item.Location;
+import com.riiablo.item.StoreLoc;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.ItemWriter;
 import com.riiablo.io.ByteOutput;
@@ -206,6 +214,9 @@ import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.net.packet.d2gs.QuestOperation;
 import com.riiablo.net.packet.d2gs.QuestRequest;
 import com.riiablo.net.packet.d2gs.QuestResult;
+import com.riiablo.net.packet.d2gs.TradeOperation;
+import com.riiablo.net.packet.d2gs.TradeRequest;
+import com.riiablo.net.packet.d2gs.TradeResult;
 import com.riiablo.net.packet.d2gs.SnapshotResyncRequest;
 import com.riiablo.net.packet.d2gs.SnapshotBaseline;
 import com.riiablo.net.packet.d2gs.SnapshotBaselinePhase;
@@ -4700,6 +4711,7 @@ public class D2GS extends ApplicationAdapter {
       new com.riiablo.engine.server.party.PartyManager();
   final NpcVendorSessionManager npcVendors = new NpcVendorSessionManager();
   final NpcServiceRequestCache npcRequestCache = new NpcServiceRequestCache();
+  final TradeManager playerTrades = new TradeManager();
   final AuthoritativeItemMoveService authoritativeItems = new AuthoritativeItemMoveService();
   final ItemMoveRequestCache itemMoveRequestCache = new ItemMoveRequestCache();
   final SkillPointRequestCache skillPointRequestCache = new SkillPointRequestCache();
@@ -4885,6 +4897,30 @@ public class D2GS extends ApplicationAdapter {
         ;
     Riiablo.engine = world = new World(config);
 
+    playerTrades.setAuthority(new ItemDataTradeAuthority(entityId -> {
+      Player component = world.getMapper(Player.class).get(entityId);
+      return component == null ? null : component.data;
+    }));
+    playerTrades.setCallback(new TradeManager.TradeCallback() {
+      @Override public void onTradeRequest(int requesterId, int targetId) {}
+      @Override public void onTradeStart(TradeSession session) {}
+      @Override public void onTradeUpdate(TradeSession session, int playerId) {}
+      @Override public void onConfirmChanged(TradeSession session, int playerId,
+                                              boolean confirmed) {}
+      @Override public void onTradeComplete(TradeSession session) {}
+      @Override public void onTradeCancelled(TradeSession session, int cancelledBy) {
+        if (cancelledBy != -1 || session == null) return;
+        int p1 = session.getPlayer1Id();
+        int p2 = session.getPlayer2Id();
+        int c1 = clientForEntity(p1);
+        int c2 = clientForEntity(p2);
+        if (c1 >= 0) sendTradeResult(c1, 0, TradeOperation.CANCEL, false,
+            "TIMEOUT", session.getSessionId(), p1, p2, TradeState.CANCELLED, session);
+        if (c2 >= 0 && c2 != c1) sendTradeResult(c2, 0, TradeOperation.CANCEL, false,
+            "TIMEOUT", session.getSessionId(), p1, p2, TradeState.CANCELLED, session);
+      }
+    });
+
     world.inject(map);
     map.setEntityFactory(factory);
     world.inject(Act1MapBuilder.INSTANCE);
@@ -4991,6 +5027,7 @@ public class D2GS extends ApplicationAdapter {
       if (DEBUG_RECEIVED_PACKETS && !ignoredPackets.get(packet.data.dataType())) Gdx.app.log(TAG, "processing " + D2GSData.name(packet.data.dataType()) + " packet from " + packet.id);
       process(packet);
     }
+    playerTrades.update();
     applyReadyMovementIntents();
     // Freeze authoritative positions only after due movement commands have
     // been accepted, and before any due combat command starts its animation.
@@ -5109,6 +5146,9 @@ public class D2GS extends ApplicationAdapter {
         break;
       case D2GSData.PartyRequest:
         PartyRequest(packet);
+        break;
+      case D2GSData.TradeRequest:
+        TradeRequest(packet);
         break;
       case D2GSData.SwapBeltItem:
         SwapBeltItem(packet);
@@ -6303,6 +6343,218 @@ public class D2GS extends ApplicationAdapter {
     response.duplicate().get(bytes);
     if (cacheResponse) partyRequestCache.put(clientId, requestId, intent, bytes);
     outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
+  }
+
+  /**
+   * Authenticated player-to-player trade boundary.  The connection identity
+   * is authoritative; entity ids, item ids, coordinates and gold supplied by
+   * the client are only intents and are checked against the current session
+   * and character data before the TradeManager is allowed to mutate state.
+   */
+  private void TradeRequest(Packet packet) {
+    TradeRequest request = (TradeRequest) packet.data.data(new TradeRequest());
+    int source = player.get(packet.id, Engine.INVALID_ENTITY);
+    byte operation = request.operation();
+    if (source == Engine.INVALID_ENTITY || operation < TradeOperation.REQUEST
+        || operation > TradeOperation.SNAPSHOT) {
+      sendTradeResult(packet.id, request.requestId(), operation, false,
+          "UNAUTHENTICATED_OR_INVALID_OPERATION", 0, source,
+          request.targetEntityId(), TradeState.NONE, null);
+      return;
+    }
+
+    if (operation == TradeOperation.REQUEST) {
+      handleTradeRequest(packet.id, request, source);
+      return;
+    }
+
+    TradeSession session = playerTrades.getPlayerSession(source);
+    if (session == null) {
+      sendTradeResult(packet.id, request.requestId(), operation, false,
+          "NO_ACTIVE_SESSION", 0, source, Engine.INVALID_ENTITY,
+          TradeState.NONE, null);
+      return;
+    }
+    int sessionId = session.getSessionId();
+    int sessionSource = session.getPlayer1Id();
+    int sessionTarget = session.getPlayer2Id();
+    int target = session.getOtherPlayer(source);
+    if (request.sessionId() != 0 && request.sessionId() != sessionId) {
+      sendTradeResult(packet.id, request.requestId(), operation, false,
+          "SESSION_MISMATCH", sessionId, source, target, session.getState(), session);
+      return;
+    }
+
+    // SNAPSHOT is read-only and is useful after reconnecting a trade window.
+    if (operation == TradeOperation.SNAPSHOT) {
+      sendTradeResult(packet.id, request.requestId(), operation, true, "OK",
+          sessionId, sessionSource, sessionTarget,
+          session.getState(), session);
+      return;
+    }
+
+    boolean willComplete = operation == TradeOperation.CONFIRM
+        && ((source == session.getPlayer1Id() && session.isPlayer2Confirmed())
+        || (source == session.getPlayer2Id() && session.isPlayer1Confirmed()));
+    int result;
+    switch (operation) {
+      case TradeOperation.ACCEPT:
+        result = playerTrades.acceptTrade(source);
+        break;
+      case TradeOperation.DECLINE:
+        result = playerTrades.declineTrade(source);
+        break;
+      case TradeOperation.ADD_ITEM:
+        result = addTradeItem(source, request);
+        break;
+      case TradeOperation.REMOVE_ITEM:
+        result = playerTrades.removeItem(source, request.itemId());
+        break;
+      case TradeOperation.SET_GOLD:
+        result = request.gold() > Integer.MAX_VALUE
+            ? TradeState.RESULT_NO_GOLD : playerTrades.setGold(source, (int) request.gold());
+        break;
+      case TradeOperation.CONFIRM:
+        result = playerTrades.confirmTrade(source);
+        break;
+      case TradeOperation.CANCEL:
+        result = playerTrades.cancelTrade(source);
+        break;
+      default:
+        result = TradeState.RESULT_ERROR;
+        break;
+    }
+
+    boolean success = result == TradeState.RESULT_SUCCESS;
+    TradeSession current = playerTrades.getPlayerSession(source);
+    int state = success && operation == TradeOperation.CANCEL ? TradeState.CANCELLED
+        : success && operation == TradeOperation.DECLINE ? TradeState.CANCELLED
+        : success && willComplete && operation == TradeOperation.CONFIRM ? TradeState.COMPLETED
+        : current == null ? TradeState.NONE : current.getState();
+    String reason = success ? "OK" : TradeState.getResultName(result);
+    TradeSession snapshot = current == null ? null : current;
+    sendTradeResult(packet.id, request.requestId(), operation, success, reason,
+        sessionId, sessionSource, sessionTarget, state, snapshot);
+    int otherClient = clientForEntity(target);
+    if (otherClient >= 0 && otherClient != packet.id) {
+      sendTradeResult(otherClient, 0, operation, success, reason, sessionId,
+          sessionSource, sessionTarget, state, snapshot);
+    }
+    Gdx.app.log(TAG, "[TRADE] connection=" + packet.id + " source=" + source
+        + " target=" + target + " session=" + sessionId + " operation="
+        + TradeOperation.name(operation) + " success=" + success + " reason=" + reason);
+  }
+
+  private void handleTradeRequest(int clientId, TradeRequest request, int source) {
+    int target = request.targetEntityId();
+    String rejection = tradeRequestRejection(source, target);
+    if (rejection != null) {
+      sendTradeResult(clientId, request.requestId(), TradeOperation.REQUEST, false,
+          rejection, 0, source, target, TradeState.NONE, null);
+      return;
+    }
+    int result = playerTrades.requestTrade(source, target);
+    TradeSession session = playerTrades.getPlayerSession(source);
+    boolean success = result == TradeState.RESULT_SUCCESS && session != null;
+    int sessionId = session == null ? 0 : session.getSessionId();
+    int state = session == null ? TradeState.NONE : session.getState();
+    String reason = success ? "OK" : TradeState.getResultName(result);
+    sendTradeResult(clientId, request.requestId(), TradeOperation.REQUEST, success, reason,
+        sessionId, source, target, state, session);
+    int targetClient = clientForEntity(target);
+    if (success && targetClient >= 0 && targetClient != clientId) {
+      sendTradeResult(targetClient, 0, TradeOperation.REQUEST, true, "TRADE_INVITED",
+          sessionId, source, target, state, session);
+    }
+    Gdx.app.log(TAG, "[TRADE] connection=" + clientId + " source=" + source
+        + " target=" + target + " operation=REQUEST success=" + success
+        + " reason=" + reason);
+  }
+
+  private String tradeRequestRejection(int source, int target) {
+    if (source == Engine.INVALID_ENTITY || target == Engine.INVALID_ENTITY) {
+      return "PLAYER_OFFLINE";
+    }
+    if (source == target) return "SELF_TRADE";
+    if (clientForEntity(target) < 0) return "PLAYER_OFFLINE";
+    Position sourcePosition = world.getMapper(Position.class).get(source);
+    Position targetPosition = world.getMapper(Position.class).get(target);
+    com.riiablo.engine.server.component.MapWrapper sourceWrapper = world.getMapper(
+        com.riiablo.engine.server.component.MapWrapper.class).get(source);
+    com.riiablo.engine.server.component.MapWrapper targetWrapper = world.getMapper(
+        com.riiablo.engine.server.component.MapWrapper.class).get(target);
+    if (sourcePosition == null || targetPosition == null
+        || sourceWrapper == null || targetWrapper == null
+        || sourceWrapper.zone == null || targetWrapper.zone == null) {
+      return "PLAYER_NOT_IN_AREA";
+    }
+    if (sourceWrapper.zone != targetWrapper.zone) return "DIFFERENT_AREA";
+    if (sourcePosition.position.dst2(targetPosition.position)
+        > TradeManager.MAX_TRADE_DISTANCE * TradeManager.MAX_TRADE_DISTANCE) {
+      return "TOO_FAR";
+    }
+    return null;
+  }
+
+  private int addTradeItem(int source, TradeRequest request) {
+    Player component = world.getMapper(Player.class).get(source);
+    CharData data = component == null ? null : component.data;
+    Item item = data == null ? null : data.getItems().findItemById(request.itemId());
+    if (item == null || item.location != Location.STORED
+        || item.storeLoc != StoreLoc.INVENTORY || item.base == null) {
+      return TradeState.RESULT_ITEM_NOT_TRADABLE;
+    }
+    TradeSlot slot = new TradeSlot(item.id, request.x(), request.y());
+    slot.width = item.base.invwidth;
+    slot.height = item.base.invheight;
+    slot.itemCode = item.code == null ? "" : item.code;
+    slot.quantity = 1;
+    slot.identified = (item.flags & Item.ITEMFLAG_IDENTIFIED) != 0;
+    return playerTrades.addItem(source, slot);
+  }
+
+  private void sendTradeResult(int clientId, long requestId, byte operation,
+                               boolean success, String reason, int sessionId,
+                               int sourceEntityId, int targetEntityId, int state,
+                               TradeSession session) {
+    if (clientId < 0 || clientId >= MAX_CLIENTS) return;
+    FlatBufferBuilder builder = new FlatBufferBuilder(1024);
+    int reasonOffset = builder.createString(reason == null ? "" : reason);
+    int sourceItems = 0;
+    int targetItems = 0;
+    long sourceGold = 0;
+    long targetGold = 0;
+    if (session != null) {
+      sourceItems = createTradeItemVector(builder, session.getPlayer1Items(), true);
+      targetItems = createTradeItemVector(builder, session.getPlayer2Items(), false);
+      sourceGold = Math.max(0, session.getPlayer1Gold());
+      targetGold = Math.max(0, session.getPlayer2Gold());
+    }
+    int result = TradeResult.createTradeResult(builder, requestId, success,
+        reasonOffset, operation, sessionId, sourceEntityId, targetEntityId, state,
+        sourceGold, targetGold, sourceItems, targetItems);
+    int root = com.riiablo.net.packet.d2gs.D2GS.createD2GS(
+        builder, D2GSData.TradeResult, result);
+    com.riiablo.net.packet.d2gs.D2GS.finishSizePrefixedD2GSBuffer(builder, root);
+    ByteBuffer response = builder.dataBuffer();
+    byte[] bytes = new byte[response.remaining()];
+    response.duplicate().get(bytes);
+    outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
+  }
+
+  private static int createTradeItemVector(FlatBufferBuilder builder,
+                                           com.badlogic.gdx.utils.Array<TradeSlot> slots,
+                                           boolean source) {
+    if (slots == null || slots.size == 0) return 0;
+    int[] offsets = new int[slots.size];
+    for (int i = 0; i < slots.size; i++) {
+      TradeSlot slot = slots.get(i);
+      offsets[i] = com.riiablo.net.packet.d2gs.TradeItemSnapshot.createTradeItemSnapshot(
+          builder, slot.itemEntityId, slot.x, slot.y, slot.width, slot.height,
+          Math.max(0, slot.quantity), slot.identified);
+    }
+    return source ? TradeResult.createSourceItemsVector(builder, offsets)
+        : TradeResult.createTargetItemsVector(builder, offsets);
   }
 
   private void NpcServiceRequest(Packet packet) {

@@ -19,7 +19,7 @@
 
 ## 2026-09-21 当前基线（以 Git HEAD 为准）
 
-- 当前 HEAD：`9b25fb53`（`Split vendor purchases by mouse button`）；工作区在本轮开始时干净，
+- 当前 HEAD：以本轮交易接入提交为准；工作区在本轮开始时仅保留 D2GS 交易 handler 的未提交改动，
   已与 `origin/master` 同步。后续提交仍按“修改、定向测试、commit、push”交付。
 - 最近已完成并可由代码/专项测试复验：商店左键购买到光标、右键直接入包及服务端同步；
   受击声；A1Q1 未接取时离开营地不改变任务；`.key` 快捷键读写；Nightmare/Hell 怪物
@@ -44,11 +44,15 @@
   再提交原子转移；缺少 authority、验证失败或提交失败都会保留会话并清除确认，不会
   把未转移的交易报告为完成。
 - 新增 `ItemDataTradeAuthority`：按稳定物品 ID 校验双方真实背包归属、灵魂绑定和接收
-  空间，并支持 carried gold 的预检/转移；D2GS 角色解析器接线和跨进程网络请求仍待补，
-  当前已用无 MPQ 的纯 Java 测试覆盖零额原子提交与金币不足拒绝。
+  空间，并支持 carried gold 的预检/转移；当前已用无 MPQ 的纯 Java 测试覆盖零额原子
+  提交与金币不足拒绝。
 - 新增 D2GS `TradeService.fbs`：定义 REQUEST/ACCEPT/DECLINE/ADD_ITEM/REMOVE_ITEM/
-  SET_GOLD/CONFIRM/CANCEL/SNAPSHOT 及会话物品快照，并通过 D2GS union 往返测试；尚未
-  接入 D2GS 分发、距离/双方授权校验和客户端 UI。
+  SET_GOLD/CONFIRM/CANCEL/SNAPSHOT 及会话物品快照，并通过 D2GS union 往返测试。
+- D2GS 已接入 `TradeRequest` 分发：source identity 来自连接映射；REQUEST 校验目标在线、
+  同一 Map.Zone 和 `MAX_TRADE_DISTANCE`；物品仅允许当前角色真实背包物品，金币范围和
+  sessionId 由服务端约束；CONFIRM 经 `ItemDataTradeAuthority` 原子提交，结果/快照回传双方。
+- 玩家交易仍缺交易 request cache 幂等回放、断线/换图主动回滚，以及客户端交易窗口 UI；
+  这些不影响当前服务端 authority 的安全边界。
 - 仍需真实资源/原版客户端验证的项目单独记录，不把“代码已存在”误报为实机完成：
   `headlessMissileCombat` 的 Throw/标枪实际伤害、原版 `.d2s/.map/.ma*` 外部识别、
   Automap 原生/ HackMap 像素级图标与城镇/野外迷雾连续性，以及带真实 MPQ 的完整退出重载。
