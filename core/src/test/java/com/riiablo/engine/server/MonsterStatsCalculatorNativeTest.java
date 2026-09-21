@@ -73,6 +73,24 @@ class MonsterStatsCalculatorNativeTest extends RiiabloTest {
   }
 
   @Test
+  void mirrorsNightmareHellExpansionMultiplayerCombatMultiplier() {
+    MonStats.Entry evil = new MonStats.Entry();
+    evil.Align = 0;
+    MonStats.Entry allied = new MonStats.Entry();
+    allied.Align = 1;
+
+    assertEquals(0, MonsterStatsCalculator.nativeCombatMultiplier(evil, 0, 8, true));
+    assertEquals(0, MonsterStatsCalculator.nativeCombatMultiplier(evil, 1, 1, true));
+    assertEquals(8, MonsterStatsCalculator.nativeCombatMultiplier(evil, 1, 2, true));
+    assertEquals(56, MonsterStatsCalculator.nativeCombatMultiplier(evil, 2, 8, true));
+    assertEquals(56, MonsterStatsCalculator.nativeCombatMultiplier(evil, 2, 9, true));
+    assertEquals(64, MonsterStatsCalculator.nativeCombatMultiplier(evil, 2, 10, true));
+    assertEquals(0, MonsterStatsCalculator.nativeCombatMultiplier(evil, 2, 8, false));
+    assertEquals(0, MonsterStatsCalculator.nativeCombatMultiplier(allied, 2, 8, true));
+    assertEquals(106, MonsterStatsCalculator.scaleMonsterCombatValue(100, 8));
+  }
+
+  @Test
   void applyRatioMatchesNativeZeroAndOverflowAvoidanceBranches() {
     assertEquals(0, MonsterStatsCalculator.applyRatio(100, 50, 0));
     assertEquals(560, MonsterStatsCalculator.applyRatio(123, 456, 100));

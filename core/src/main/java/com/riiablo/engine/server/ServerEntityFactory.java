@@ -354,6 +354,10 @@ public class ServerEntityFactory extends EntityFactory {
     int connectedPlayers = world.getAspectSubscriptionManager()
         .get(Aspect.all(Player.class)).getEntities().size();
     int playerCount = MonsterStatsCalculator.nativePlayerCount(monstats, connectedPlayers);
+    int combatMultiplier = MonsterStatsCalculator.nativeCombatMultiplier(
+        monstats, difficulty, playerCount, gameType != 0);
+    MonsterStatsCalculator.applyNativeCombatMultiplier(attack1Init, combatMultiplier);
+    MonsterStatsCalculator.applyNativeCombatMultiplier(attack2Init, combatMultiplier);
     int hpBonus = MonsterStatsCalculator.nativeHpBonus(playerCount);
     int expBonus = MonsterStatsCalculator.nativeExperienceBonus(playerCount);
     int minHp = Math.min(statsInit.minHP, statsInit.maxHP);
@@ -402,11 +406,12 @@ public class ServerEntityFactory extends EntityFactory {
     mUnitStates.create(id).init(id);
     log.debug("[MONSTER_NATIVE_STATS] entity={} monster={} level={} baseLevel={} "
             + "difficulty={} players={} hp={} baseHpRange={}..{} exp={} "
-            + "a1={}..{} ar={} a2={}..{} ar={}",
+            + "a1={}..{} ar={} a2={}..{} ar={} combatMultiplier={}",
         id, monstats.Id, monsterLevel, baseMonsterLevel, difficulty, playerCount,
         hitpoints, statsInit.minHP, statsInit.maxHP, experience,
         attack1Init.A1MinD, attack1Init.A1MaxD, attack1Init.TH,
-        attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH);
+        attack2Init.A2MinD, attack2Init.A2MaxD, attack2Init.TH,
+        combatMultiplier);
 
     mPosition.create(id).position.set(x, y);
     // Monsters created by map/quest generators must carry their owning zone,

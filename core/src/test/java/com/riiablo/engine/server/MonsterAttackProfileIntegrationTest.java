@@ -11,6 +11,8 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.server.combat.CombatSystem;
+import com.riiablo.engine.server.combat.MonsterModeDamageResolver;
+import com.riiablo.engine.Engine;
 import org.junit.jupiter.api.Test;
 
 /** Verifies the real MonStats/MonLvl contract used by native ranged attacks. */
@@ -48,6 +50,21 @@ class MonsterAttackProfileIntegrationTest extends RiiabloTest {
     assertTrue(result.hit);
     assertEquals(1, result.physicalDamage,
         "native zero profile is clamped to one, not replaced by A1 8 damage");
+  }
+
+  @Test
+  void nightmareMultiplayerScalesResolvedMonsterAttackProfile() {
+    MonStats.Entry quillRat = Riiablo.files.monstats.get("quillrat1");
+    assertNotNull(quillRat);
+    int level = quillRat.Level[1];
+
+    MonsterModeDamageResolver.Profile solo = MonsterModeDamageResolver.resolve(
+        quillRat, level, 1, Engine.Monster.MODE_A1, 1, true);
+    MonsterModeDamageResolver.Profile duo = MonsterModeDamageResolver.resolve(
+        quillRat, level, 1, Engine.Monster.MODE_A1, 2, true);
+    assertEquals(solo.attackRating + solo.attackRating * 8 / 128, duo.attackRating);
+    assertEquals(solo.minDamage + solo.minDamage * 8 / 128, duo.minDamage);
+    assertEquals(solo.maxDamage + solo.maxDamage * 8 / 128, duo.maxDamage);
   }
 
   private static Attributes attributes(int hp, int minDamage, int maxDamage, int toHit) {

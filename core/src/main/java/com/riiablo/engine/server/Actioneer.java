@@ -1666,12 +1666,13 @@ public class Actioneer extends PassiveSystem {
           }
           String result = !combat.hit ? "miss" : combat.blocked ? "blocked" : "hit";
           log.info("[MONSTER_MELEE] phase=roll entity={} monster={} mode={} target={} result={} "
-                  + "chance={}% attackerLevel={} targetLevel={} ar={} defense={} "
-                  + "damageRange={}..{} rolledDamage={} targetHp={} resurrected={} "
+                  + "monsterLevel={} attackRating={} targetDefense={} targetLevel={} "
+                  + "chance={}% roll={} damageRange={}..{} damage={} targetHp={} resurrected={} "
                   + "resurrectedBy={} playerRevive={}",
               entityId, monsterName(attackingMonster), monsterModeName(entityId), targetId,
-              result, combat.hitChance, statInt(attackerAttrs, Stat.level),
-              statInt(attrs, Stat.level), attackRating, statInt(attrs, Stat.armorclass),
+              result, statInt(attackerAttrs, Stat.level), combat.attackRating > 0
+                  ? combat.attackRating : attackRating, combat.targetDefense,
+              statInt(attrs, Stat.level), combat.hitChance, combat.hitRoll,
               minDamage, Math.max(minDamage, maxDamage), combat.totalDamage,
               hitpoints.asFixed(), attackingMonster.resurrected,
               attackingMonster.resurrectedBy, attackingMonster.playerRevive);
@@ -4310,8 +4311,13 @@ public class Actioneer extends PassiveSystem {
     Attributes attacker = mAttributesWrapper.get(entityId).attrs;
     Attributes defender = mAttributesWrapper.get(targetId).attrs;
     int level = Math.max(1, statInt(attacker, Stat.level));
+    int connectedPlayers = world.getAspectSubscriptionManager()
+        .get(Aspect.all(Player.class)).getEntities().size();
+    int playerCount = MonsterStatsCalculator.nativePlayerCount(
+        monster.monstats, connectedPlayers);
     MonsterModeDamageResolver.Profile profile = MonsterModeDamageResolver.resolve(
-        monster.monstats, level, 0, Engine.Monster.MODE_S1);
+        monster.monstats, level, combatDifficulty(), Engine.Monster.MODE_S1,
+        playerCount, true);
     log.info("[MONSTER_SKILL] phase=fire_hit_profile entity={} monster={} target={} "
             + "source=monstats_s1 physical={}..{} ar={} fire={}..{} lightning={}..{} "
             + "cold={}..{} poison={}..{} magic={}..{} elements={}",

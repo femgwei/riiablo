@@ -119,8 +119,9 @@ public class DesktopLauncher {
     LogManager.setLevel(DesktopLauncher.class.getName(), logLevel);
     
     // 屏蔽非地图相关的DEBUG日志，只保留地图拼接相关的日志
-    // 设置战斗、动画、序列等系统的日志级别为WARN，屏蔽DEBUG日志
-    LogManager.setLevel("com.riiablo.engine.server.Actioneer", Level.WARN);
+    // 保留 Actioneer 的 INFO 战斗审计（命中率、roll、伤害），屏蔽其 DEBUG 噪声。
+    LogManager.setLevel("com.riiablo.engine.server.Actioneer", Level.INFO);
+    // 设置其余战斗、动画、序列系统的日志级别为 WARN，避免日志过大。
     LogManager.setLevel("com.riiablo.engine.server.combat.DamageCalculator", Level.WARN);
     LogManager.setLevel("com.riiablo.engine.server.AnimStepper", Level.WARN);
     LogManager.setLevel("com.riiablo.engine.server.SequenceHandler", Level.WARN);

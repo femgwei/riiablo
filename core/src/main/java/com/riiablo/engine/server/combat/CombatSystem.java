@@ -334,6 +334,13 @@ public class CombatSystem {
     /** 实际命中率 */
     public int hitChance;
 
+    /** Effective attack rating and target defense used for the hit formula. */
+    public int attackRating;
+    public int targetDefense;
+
+    /** The 0..99 hit roll; -1 means the attack used the native always-hit path. */
+    public int hitRoll = -1;
+
     /** 状态效果持续时间（帧） */
     public int coldDuration;
     public int poisonDuration;
@@ -361,6 +368,9 @@ public class CombatSystem {
       manaStolen = 0;
       absorbedLife = 0;
       hitChance = 0;
+      attackRating = 0;
+      targetDefense = 0;
+      hitRoll = -1;
       coldDuration = 0;
       poisonDuration = 0;
       poisonDamagePerFrame = 0f;
@@ -1339,8 +1349,11 @@ public class CombatSystem {
     CombatResult result = new CombatResult();
 
     // 1. 计算命中率并判定命中
+    result.attackRating = calculateEffectiveAttackRating(attacker, defender);
+    result.targetDefense = calculateEffectiveDefense(attacker, defender);
     result.hitChance = attacker.alwaysHit ? 100 : calculateHitChance(attacker, defender);
-    result.hit = attacker.alwaysHit || rollHit(result.hitChance);
+    result.hitRoll = attacker.alwaysHit ? -1 : MathUtils.random(99);
+    result.hit = attacker.alwaysHit || result.hitRoll < result.hitChance;
 
     if (!result.hit) {
       log.debug("[COMBAT_HIT] result=miss ar={} defense={} attackerLevel={} defenderLevel={} chance={}%",
@@ -1553,13 +1566,6 @@ public class CombatSystem {
     }
 
     return Math.max(0, defense);
-  }
-
-  /**
-   * 命中判定
-   */
-  private boolean rollHit(int hitChance) {
-    return MathUtils.random(99) < hitChance;
   }
 
   static boolean hasBlockablePhysicalDamage(AttackerData attacker) {

@@ -116,6 +116,46 @@ public class MonsterStatsCalculator {
     return monster != null && monster.Align == 0 ? Math.max(1, connectedPlayers) : 1;
   }
 
+  /**
+   * Returns the LoD Nightmare/Hell multiplayer combat multiplier used by
+   * D2Game's monster mode stat refresh (sub_6FC627B0).  The value is a
+   * fixed-point numerator over 128, not a percentage.
+   *
+   * <p>The classic game has a separate non-expansion adjustment.  This fork
+   * runs the expansion rules, so callers must pass {@code expansion=true}
+   * when they want the LoD multiplayer bonus.
+   */
+  public static int nativeCombatMultiplier(
+      MonStats.Entry monster, int difficulty, int playerCount, boolean expansion) {
+    if (!expansion || monster == null || monster.Align != 0
+        || difficulty <= 0 || playerCount < 2) {
+      return 0;
+    }
+    if (playerCount >= 9) return 8 * playerCount - 16;
+    return new int[] {0, 0, 8, 16, 24, 32, 40, 48, 56}[playerCount];
+  }
+
+  /** Applies the native fixed-point combat multiplier with integer truncation. */
+  public static int scaleMonsterCombatValue(int value, int multiplier) {
+    if (value <= 0 || multiplier <= 0) return Math.max(0, value);
+    return value + multiplier * value / 128;
+  }
+
+  /** Applies the LoD multiplayer bonus to one resolved physical attack profile. */
+  static void applyNativeCombatMultiplier(MonsterStatsInit stats, int multiplier) {
+    if (stats == null || multiplier <= 0) return;
+    stats.TH = scaleMonsterCombatValue(stats.TH, multiplier);
+    stats.A1MinD = scaleMonsterCombatValue(stats.A1MinD, multiplier);
+    stats.A1MaxD = scaleMonsterCombatValue(stats.A1MaxD, multiplier);
+    stats.A2MinD = scaleMonsterCombatValue(stats.A2MinD, multiplier);
+    stats.A2MaxD = scaleMonsterCombatValue(stats.A2MaxD, multiplier);
+    stats.S1MinD = scaleMonsterCombatValue(stats.S1MinD, multiplier);
+    stats.S1MaxD = scaleMonsterCombatValue(stats.S1MaxD, multiplier);
+    stats.ElMinD = scaleMonsterCombatValue(stats.ElMinD, multiplier);
+    stats.ElMaxD = scaleMonsterCombatValue(stats.ElMaxD, multiplier);
+    stats.ElDur = scaleMonsterCombatValue(stats.ElDur, multiplier);
+  }
+
   static int nativeHpBonus(int playerCount) {
     if (playerCount >= 9) return 10 * (5 * playerCount - 10);
     return new int[] {0, 0, 50, 100, 150, 200, 250, 300, 350}

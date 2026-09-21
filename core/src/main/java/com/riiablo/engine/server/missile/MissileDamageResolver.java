@@ -92,8 +92,11 @@ public final class MissileDamageResolver {
     if (sourceScale > 0 && ownerMonster != null && ownerMonster.monstats != null) {
       int mode = resolveAttackMode(ownerMonster.monstats, row, currentMode);
       int[] duration = {coldLength, poisonLength};
+      int playerCount = Math.max(1, statInt(ownerAttrs, Stat.monster_playercount));
+      int combatMultiplier = MonsterStatsCalculator.nativeCombatMultiplier(
+          ownerMonster.monstats, difficulty, playerCount, true);
       addMonsterElemental(ownerMonster.monstats, mode, level, difficulty,
-          sourceScale, elementalMin, elementalMax, duration);
+          sourceScale, combatMultiplier, elementalMin, elementalMax, duration);
       coldLength = duration[0];
       poisonLength = duration[1];
     }
@@ -522,7 +525,8 @@ public final class MissileDamageResolver {
   }
 
   private static void addMonsterElemental(MonStats.Entry monster, int mode,
-      int level, int difficulty, int sourceScale, int[] min, int[] max,
+      int level, int difficulty, int sourceScale, int combatMultiplier,
+      int[] min, int[] max,
       int[] duration) {
     String[] modes = {monster.El1Mode, monster.El2Mode, monster.El3Mode};
     String[] types = {monster.El1Type, monster.El2Type, monster.El3Type};
@@ -537,9 +541,12 @@ public final class MissileDamageResolver {
           difficulty, level, (short) (0x40 << i), stats)) continue;
       int type = damageType(types[i]);
       if (type <= PHYSICAL) continue;
-      int elementMin = stats.ElMinD;
-      int elementMax = stats.ElMaxD;
-      int elementLength = stats.ElDur;
+      int elementMin = MonsterStatsCalculator.scaleMonsterCombatValue(
+          stats.ElMinD, combatMultiplier);
+      int elementMax = MonsterStatsCalculator.scaleMonsterCombatValue(
+          stats.ElMaxD, combatMultiplier);
+      int elementLength = MonsterStatsCalculator.scaleMonsterCombatValue(
+          stats.ElDur, combatMultiplier);
       if (type == POISON) {
         // MonsterMode.cpp stores monster poison as per-frame poison stats.
         elementMin *= 10;

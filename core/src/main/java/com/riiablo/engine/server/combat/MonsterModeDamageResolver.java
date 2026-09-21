@@ -37,16 +37,24 @@ public final class MonsterModeDamageResolver {
    * roll succeeds.
    */
   public static Profile resolve(MonStats.Entry monster, int level, int difficulty, int mode) {
+    return resolve(monster, level, difficulty, mode, 1, true);
+  }
+
+  /** Resolves a mode profile with the game-wide LoD multiplayer combat rules. */
+  public static Profile resolve(MonStats.Entry monster, int level, int difficulty, int mode,
+      int playerCount, boolean expansion) {
     Profile profile = new Profile();
     if (monster == null) return profile;
 
     level = Math.max(1, level);
     difficulty = MathUtils.clamp(difficulty, 0, 2);
+    int combatMultiplier = MonsterStatsCalculator.nativeCombatMultiplier(
+        monster, difficulty, playerCount, expansion);
     short physicalFlag = physicalFlag(mode);
     MonsterStatsCalculator.MonsterStatsInit physical =
         new MonsterStatsCalculator.MonsterStatsInit();
     if (MonsterStatsCalculator.calculateMonsterStatsByLevel(
-        monster.hcIdx, 1, difficulty, level, physicalFlag, physical)) {
+        monster.hcIdx, expansion ? 1 : 0, difficulty, level, physicalFlag, physical)) {
       profile.attackRating = Math.max(0, physical.TH);
       if (physicalFlag == 0x10) {
         profile.minDamage = Math.max(0, physical.A2MinD);
@@ -58,6 +66,12 @@ public final class MonsterModeDamageResolver {
         profile.minDamage = Math.max(0, physical.A1MinD);
         profile.maxDamage = Math.max(profile.minDamage, physical.A1MaxD);
       }
+      profile.attackRating = MonsterStatsCalculator.scaleMonsterCombatValue(
+          profile.attackRating, combatMultiplier);
+      profile.minDamage = MonsterStatsCalculator.scaleMonsterCombatValue(
+          profile.minDamage, combatMultiplier);
+      profile.maxDamage = Math.max(profile.minDamage,
+          MonsterStatsCalculator.scaleMonsterCombatValue(profile.maxDamage, combatMultiplier));
     }
 
     String[] modes = {monster.El1Mode, monster.El2Mode, monster.El3Mode};
@@ -71,14 +85,17 @@ public final class MonsterModeDamageResolver {
       MonsterStatsCalculator.MonsterStatsInit element =
           new MonsterStatsCalculator.MonsterStatsInit();
       if (!MonsterStatsCalculator.calculateMonsterStatsByLevel(
-          monster.hcIdx, 1, difficulty, level, (short) (0x40 << i), element)) {
+          monster.hcIdx, expansion ? 1 : 0, difficulty, level, (short) (0x40 << i), element)) {
         continue;
       }
       int type = damageType(types[i]);
       if (type <= CombatSystem.DAMAGE_PHYSICAL) continue;
-      int min = Math.max(0, element.ElMinD);
-      int max = Math.max(min, element.ElMaxD);
-      int length = Math.max(0, element.ElDur);
+      int min = MonsterStatsCalculator.scaleMonsterCombatValue(
+          Math.max(0, element.ElMinD), combatMultiplier);
+      int max = Math.max(min, MonsterStatsCalculator.scaleMonsterCombatValue(
+          Math.max(min, element.ElMaxD), combatMultiplier));
+      int length = MonsterStatsCalculator.scaleMonsterCombatValue(
+          Math.max(0, element.ElDur), combatMultiplier);
       if (type == CombatSystem.DAMAGE_POISON) {
         // MonsterMode.cpp stores monster poison as per-frame damage and uses
         // twice the MonStats duration when installing the attack stat list.
