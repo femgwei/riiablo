@@ -794,18 +794,33 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       applier.resetLastExportedFloorCount();
       int attempted = DrlgExport.exportLevelTiles(drlg, levelId, applier);
       int[] unitStats = new int[4];
+      int[] nativeShrines = new int[1];
+      int[] nativeChests = new int[1];
       int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
           (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
             unitStats[0]++;
             if (unitType == D2UnitTypes.UNIT_OBJECT && !spawned) {
               unitStats[1]++;
+              int objectId = ds1Raw ? Riiablo.files.obj.getObjectId(1, index) : index;
+              com.riiablo.map.NativePresetObjectResolver.Resolution resolution =
+                  com.riiablo.map.NativePresetObjectResolver.resolve(
+                      1, exportLevelId, objectId, 0, x, y);
+              if (resolution.kind
+                  == com.riiablo.map.NativePresetObjectResolver.Kind.SHRINE) {
+                nativeShrines[0]++;
+              } else if (resolution.kind
+                  == com.riiablo.map.NativePresetObjectResolver.Kind.SPECIAL_CHEST
+                  || resolution.kind
+                  == com.riiablo.map.NativePresetObjectResolver.Kind.PRESET_CHEST) {
+                nativeChests[0]++;
+              }
               if (ds1Raw) {
                 unitStats[2]++;
                 assertTrue(index >= 0 && index < Riiablo.files.obj.getSize(1),
                     "Act I DS1 object preset index is invalid: level=" + levelId
                         + " index=" + index);
-                int objectId = Riiablo.files.obj.getObjectId(1, index);
-                com.riiablo.codec.excel.Objects.Entry base = Riiablo.files.objects.get(objectId);
+                int nativeObjectId = Riiablo.files.obj.getObjectId(1, index);
+                com.riiablo.codec.excel.Objects.Entry base = Riiablo.files.objects.get(nativeObjectId);
                 if (base != null
                     && (base.SubClass & com.riiablo.engine.Engine.Object.SUBCLASS_WAYPOINT) != 0) {
                   unitStats[3]++;
@@ -815,6 +830,12 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
           });
       assertEquals(presetUnits, unitStats[0],
           "preset-unit callback accounting mismatch for level " + levelId);
+      if (levelId == D2LevelIds.LEVEL_BLOODMOOR) {
+        assertTrue(nativeShrines[0] <= 5,
+            "Blood Moor exported more than native five shrines: " + nativeShrines[0]);
+        assertTrue(nativeChests[0] > 0,
+            "Blood Moor exported no native outdoor chest objects");
+      }
       int expectedObjects = expectedFixedSeedRawObjects(levelId);
       if (expectedObjects >= 0) assertEquals(expectedObjects, unitStats[2],
           "fixed-seed native DS1 object coverage changed for level " + levelId);

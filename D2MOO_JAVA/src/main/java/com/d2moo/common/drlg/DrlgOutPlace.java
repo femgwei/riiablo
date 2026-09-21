@@ -193,11 +193,15 @@ public class DrlgOutPlace {
         D2Log.debug("DRLG_LINKS end act=%d", actNo);
     }
     
-    // 房间标志常量
-    private static final int DRLGROOMFLAG_HAS_WAYPOINT_MASK = 0x1F0000;
-    private static final int DRLGROOMFLAG_HAS_WAYPOINT_FIRST_BIT = 16;
-    private static final int DRLGROOMFLAG_SUBSHRINE_ROWS_MASK = 0x1F000000;
-    private static final int DRLGROOMFLAG_SUBSHRINE_ROWS_FIRST_BIT = 24;
+    static int waypointSubThemeFromFlags(int flags) {
+        return (flags & D2DrlgRoomFlags.HAS_WAYPOINT_MASK)
+                >>> D2DrlgRoomFlags.HAS_WAYPOINT_FIRST_BIT;
+    }
+
+    static int shrineSubThemeFromFlags(int flags) {
+        return (flags & D2DrlgRoomFlags.SUBSHRINE_ROWS_MASK)
+                >>> D2DrlgRoomFlags.SUBSHRINE_ROWS_FIRST_BIT;
+    }
     
     /**
      * D2Common.0x6FD83A20
@@ -221,8 +225,8 @@ public class DrlgOutPlace {
         D2LevelDefBin pLevelDefBinRecord = DataTbls.getLevelDefRecord(drlgRoom.getLevel().getLevelId());
         
         // 提取传送点和神殿子主题
-        int nWaypointSubTheme = (drlgRoom.getFlags() & DRLGROOMFLAG_HAS_WAYPOINT_MASK) >> DRLGROOMFLAG_HAS_WAYPOINT_FIRST_BIT;
-        int nShrineSubTheme = (drlgRoom.getFlags() & DRLGROOMFLAG_SUBSHRINE_ROWS_MASK) >> DRLGROOMFLAG_SUBSHRINE_ROWS_FIRST_BIT;
+        int nWaypointSubTheme = waypointSubThemeFromFlags(drlgRoom.getFlags());
+        int nShrineSubTheme = shrineSubThemeFromFlags(drlgRoom.getFlags());
         
         // 网格大小（宽度和高度各加1）
         int nWidth = drlgRoom.getNTileWidth() + 1;
