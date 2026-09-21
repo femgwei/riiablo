@@ -120,6 +120,18 @@ public final class D2MooTileApplier implements DrlgTileExporter {
             invalidTileCount++;
             return;
         }
+        // Native DRLG keeps hidden floor/roof records in the linked tile
+        // arrays for warp and reveal bookkeeping. They are not visible map
+        // graphics. Writing them into riiablo's render layers produces a
+        // solid DT1 diamond at doors and preset entrances (often mistaken
+        // for a chest or other object). Keep hidden wall markers available
+        // for warp registration, but never materialize hidden floor/roof
+        // records as visible tiles.
+        if ((flags & DrlgTileExporter.FLAG_HIDDEN) != 0
+                && (layer == DrlgExport.LAYER_FLOOR || layer == DrlgExport.LAYER_SHADOW)) {
+            ignoredLayerCount++;
+            return;
+        }
         TileGrid grid = levelIdToGrid.get(levelId);
         if (grid == null) {
             missingGridCount++;

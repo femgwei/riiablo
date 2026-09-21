@@ -70,7 +70,10 @@ import com.riiablo.util.DebugUtils;
 @All(AnimationWrapper.class)
 public class RenderSystem extends BaseEntitySystem {
   private static final String TAG = "RenderSystem";
-  private static final boolean DEBUG          = true;
+  // Debug overlays are opt-in.  Leaving the historical compile-time switch on
+  // paints grid/special-cell geometry over the game world and can look like a
+  // solid green chest-sized tile in normal gameplay.
+  private static final boolean DEBUG          = false;
   private static final boolean DEBUG_MATH     = DEBUG && !true;
   private static final boolean DEBUG_BUFFER   = DEBUG && true;
   private static final boolean DEBUG_SUBTILE  = DEBUG && !true;

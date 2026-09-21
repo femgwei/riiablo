@@ -74,6 +74,23 @@ class D2MooTileApplierTest {
   }
 
   @Test
+  void skipsHiddenFloorAndShadowGraphics() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_FLOOR, 0, 0,
+        pack(Orientation.FLOOR, 6, 1), DrlgTileExporter.FLAG_HIDDEN);
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_SHADOW, 0, 0,
+        pack(Orientation.SHADOW, 6, 1), DrlgTileExporter.FLAG_HIDDEN);
+
+    assertEquals(-1, grid.floorIds[0][0]);
+    assertEquals(false, grid.exportedFloorCells[0][0]);
+    assertEquals(-1, grid.shadowIds[0][0]);
+    assertEquals(2, applier.getIgnoredLayerCount());
+  }
+
+  @Test
   void reportsOverflowDuplicatesInvalidOrientationAndCoordinates() {
     TileGrid grid = new TileGrid(1, 1);
     D2MooTileApplier applier = new D2MooTileApplier();
