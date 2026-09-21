@@ -144,6 +144,7 @@ import com.riiablo.engine.server.trade.TradeSession;
 import com.riiablo.engine.server.trade.TradeSlot;
 import com.riiablo.engine.server.trade.TradeState;
 import com.riiablo.engine.server.trade.ItemDataTradeAuthority;
+import com.riiablo.engine.server.trade.TradeRequestCache;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.Location;
@@ -4712,6 +4713,7 @@ public class D2GS extends ApplicationAdapter {
   final NpcVendorSessionManager npcVendors = new NpcVendorSessionManager();
   final NpcServiceRequestCache npcRequestCache = new NpcServiceRequestCache();
   final TradeManager playerTrades = new TradeManager();
+  final TradeRequestCache tradeRequestCache = new TradeRequestCache();
   final AuthoritativeItemMoveService authoritativeItems = new AuthoritativeItemMoveService();
   final ItemMoveRequestCache itemMoveRequestCache = new ItemMoveRequestCache();
   final SkillPointRequestCache skillPointRequestCache = new SkillPointRequestCache();
@@ -5449,6 +5451,22 @@ public class D2GS extends ApplicationAdapter {
   private synchronized void Disconnect(int id) {
     int entityId = player.get(id, Engine.INVALID_ENTITY);
     if (entityId != Engine.INVALID_ENTITY) {
+      TradeSession disconnectedTrade = playerTrades.getPlayerSession(entityId);
+      int disconnectedTradeSession = disconnectedTrade == null ? 0
+          : disconnectedTrade.getSessionId();
+      int disconnectedTradeP1 = disconnectedTrade == null ? Engine.INVALID_ENTITY
+          : disconnectedTrade.getPlayer1Id();
+      int disconnectedTradeP2 = disconnectedTrade == null ? Engine.INVALID_ENTITY
+          : disconnectedTrade.getPlayer2Id();
+      int tradePeer = disconnectedTrade == null ? Engine.INVALID_ENTITY
+          : disconnectedTrade.getOtherPlayer(entityId);
+      if (disconnectedTrade != null) playerTrades.cancelTrade(entityId);
+      int tradePeerClient = clientForEntity(tradePeer);
+      if (tradePeerClient >= 0 && tradePeerClient != id) {
+        sendTradeResult(tradePeerClient, 0, TradeOperation.CANCEL, false,
+            "PLAYER_DISCONNECTED", disconnectedTradeSession, disconnectedTradeP1,
+            disconnectedTradeP2, TradeState.CANCELLED, null);
+      }
       Player disconnectedPlayer = world.getMapper(Player.class).get(entityId);
       if (disconnectedPlayer != null && disconnectedPlayer.data != null
           && disconnectedPlayer.data.name != null && !disconnectedPlayer.data.name.isEmpty()) {
@@ -5474,6 +5492,7 @@ public class D2GS extends ApplicationAdapter {
       skillPointRequestCache.clearConnection(id);
       statPointRequestCache.clearConnection(id);
       partyRequestCache.clear(id);
+      tradeRequestCache.clear(id);
       questRequestCache.clear(id);
       authoritativeItems.reset(entityId);
       partyManager.removePlayer(entityId);
@@ -6363,8 +6382,22 @@ public class D2GS extends ApplicationAdapter {
       return;
     }
 
+    TradeRequestCache.Intent intent = TradeRequestCache.intent(operation,
+        request.targetEntityId(), request.sessionId(), request.itemId(), request.x(),
+        request.y(), request.gold());
+    TradeRequestCache.Entry cached = tradeRequestCache.lookup(packet.id, request.requestId());
+    if (cached != null) {
+      if (cached.matches(intent)) {
+        outPackets.offer(Packet.obtain(1 << packet.id, ByteBuffer.wrap(cached.response())));
+      } else {
+        sendTradeResult(packet.id, request.requestId(), operation, false,
+            "REQUEST_ID_REUSED", 0, source, request.targetEntityId(), TradeState.NONE, null);
+      }
+      return;
+    }
+
     if (operation == TradeOperation.REQUEST) {
-      handleTradeRequest(packet.id, request, source);
+      handleTradeRequest(packet.id, request, source, intent);
       return;
     }
 
@@ -6372,7 +6405,7 @@ public class D2GS extends ApplicationAdapter {
     if (session == null) {
       sendTradeResult(packet.id, request.requestId(), operation, false,
           "NO_ACTIVE_SESSION", 0, source, Engine.INVALID_ENTITY,
-          TradeState.NONE, null);
+          TradeState.NONE, null, intent, true);
       return;
     }
     int sessionId = session.getSessionId();
@@ -6381,15 +6414,26 @@ public class D2GS extends ApplicationAdapter {
     int target = session.getOtherPlayer(source);
     if (request.sessionId() != 0 && request.sessionId() != sessionId) {
       sendTradeResult(packet.id, request.requestId(), operation, false,
-          "SESSION_MISMATCH", sessionId, source, target, session.getState(), session);
+          "SESSION_MISMATCH", sessionId, source, target, session.getState(), session,
+          intent, true);
       return;
+    }
+
+    if (operation != TradeOperation.CANCEL && operation != TradeOperation.DECLINE) {
+      String rangeRejection = tradeRequestRejection(source, target);
+      if (rangeRejection != null) {
+        sendTradeResult(packet.id, request.requestId(), operation, false,
+            rangeRejection, sessionId, sessionSource, sessionTarget, session.getState(),
+            session, intent, true);
+        return;
+      }
     }
 
     // SNAPSHOT is read-only and is useful after reconnecting a trade window.
     if (operation == TradeOperation.SNAPSHOT) {
       sendTradeResult(packet.id, request.requestId(), operation, true, "OK",
           sessionId, sessionSource, sessionTarget,
-          session.getState(), session);
+          session.getState(), session, intent, true);
       return;
     }
 
@@ -6434,7 +6478,7 @@ public class D2GS extends ApplicationAdapter {
     String reason = success ? "OK" : TradeState.getResultName(result);
     TradeSession snapshot = current == null ? null : current;
     sendTradeResult(packet.id, request.requestId(), operation, success, reason,
-        sessionId, sessionSource, sessionTarget, state, snapshot);
+        sessionId, sessionSource, sessionTarget, state, snapshot, intent, true);
     int otherClient = clientForEntity(target);
     if (otherClient >= 0 && otherClient != packet.id) {
       sendTradeResult(otherClient, 0, operation, success, reason, sessionId,
@@ -6445,12 +6489,13 @@ public class D2GS extends ApplicationAdapter {
         + TradeOperation.name(operation) + " success=" + success + " reason=" + reason);
   }
 
-  private void handleTradeRequest(int clientId, TradeRequest request, int source) {
+  private void handleTradeRequest(int clientId, TradeRequest request, int source,
+                                  TradeRequestCache.Intent intent) {
     int target = request.targetEntityId();
     String rejection = tradeRequestRejection(source, target);
     if (rejection != null) {
       sendTradeResult(clientId, request.requestId(), TradeOperation.REQUEST, false,
-          rejection, 0, source, target, TradeState.NONE, null);
+          rejection, 0, source, target, TradeState.NONE, null, intent, true);
       return;
     }
     int result = playerTrades.requestTrade(source, target);
@@ -6460,7 +6505,7 @@ public class D2GS extends ApplicationAdapter {
     int state = session == null ? TradeState.NONE : session.getState();
     String reason = success ? "OK" : TradeState.getResultName(result);
     sendTradeResult(clientId, request.requestId(), TradeOperation.REQUEST, success, reason,
-        sessionId, source, target, state, session);
+        sessionId, source, target, state, session, intent, true);
     int targetClient = clientForEntity(target);
     if (success && targetClient >= 0 && targetClient != clientId) {
       sendTradeResult(targetClient, 0, TradeOperation.REQUEST, true, "TRADE_INVITED",
@@ -6517,6 +6562,15 @@ public class D2GS extends ApplicationAdapter {
                                boolean success, String reason, int sessionId,
                                int sourceEntityId, int targetEntityId, int state,
                                TradeSession session) {
+    sendTradeResult(clientId, requestId, operation, success, reason, sessionId,
+        sourceEntityId, targetEntityId, state, session, null, false);
+  }
+
+  private void sendTradeResult(int clientId, long requestId, byte operation,
+                               boolean success, String reason, int sessionId,
+                               int sourceEntityId, int targetEntityId, int state,
+                               TradeSession session, TradeRequestCache.Intent intent,
+                               boolean cacheResponse) {
     if (clientId < 0 || clientId >= MAX_CLIENTS) return;
     FlatBufferBuilder builder = new FlatBufferBuilder(1024);
     int reasonOffset = builder.createString(reason == null ? "" : reason);
@@ -6539,6 +6593,9 @@ public class D2GS extends ApplicationAdapter {
     ByteBuffer response = builder.dataBuffer();
     byte[] bytes = new byte[response.remaining()];
     response.duplicate().get(bytes);
+    if (cacheResponse && intent != null) {
+      tradeRequestCache.put(clientId, requestId, intent, bytes);
+    }
     outPackets.offer(Packet.obtain(1 << clientId, ByteBuffer.wrap(bytes)));
   }
 

@@ -51,8 +51,9 @@
 - D2GS 已接入 `TradeRequest` 分发：source identity 来自连接映射；REQUEST 校验目标在线、
   同一 Map.Zone 和 `MAX_TRADE_DISTANCE`；物品仅允许当前角色真实背包物品，金币范围和
   sessionId 由服务端约束；CONFIRM 经 `ItemDataTradeAuthority` 原子提交，结果/快照回传双方。
-- 玩家交易仍缺交易 request cache 幂等回放、断线/换图主动回滚，以及客户端交易窗口 UI；
-  这些不影响当前服务端 authority 的安全边界。
+- 新增 `TradeRequestCache`：按连接和 requestId 重放完全相同的结果，requestId 复用但 intent
+  不同会被拒绝；断线会取消活动交易并通知仍在线的一方，交易操作持续校验双方区域/距离。
+- 玩家交易仍缺换图主动回滚，以及客户端交易窗口 UI；这些不影响当前服务端 authority 的安全边界。
 - 仍需真实资源/原版客户端验证的项目单独记录，不把“代码已存在”误报为实机完成：
   `headlessMissileCombat` 的 Throw/标枪实际伤害、原版 `.d2s/.map/.ma*` 外部识别、
   Automap 原生/ HackMap 像素级图标与城镇/野外迷雾连续性，以及带真实 MPQ 的完整退出重载。
