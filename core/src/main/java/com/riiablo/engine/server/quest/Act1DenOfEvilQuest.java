@@ -20,13 +20,19 @@ public final class Act1DenOfEvilQuest {
   }
 
   public static short leaveTown(short record) {
-    if (isFinished(record)) return record;
-    record = start(record);
+    // Leaving the Encampment is only a progression event after Akara has
+    // activated A1Q1.  The native quest callback does not implicitly accept
+    // the quest when a fresh character changes level.
+    if (isFinished(record) || !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)) {
+      return record;
+    }
     return NativeQuestRecord.set(record, NativeQuestRecord.LEFT_TOWN);
   }
 
   public static short enterDen(short record) {
-    if (isFinished(record)) return record;
+    if (isFinished(record) || !NativeQuestRecord.has(record, NativeQuestRecord.STARTED)) {
+      return record;
+    }
     record = leaveTown(record);
     return NativeQuestRecord.set(record, NativeQuestRecord.ENTERED_AREA);
   }

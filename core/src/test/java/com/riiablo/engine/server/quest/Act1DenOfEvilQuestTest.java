@@ -46,6 +46,15 @@ class Act1DenOfEvilQuestTest {
   }
 
   @Test
+  void leavingTownDoesNotAcceptAnUnstartedQuest() {
+    short record = Act1DenOfEvilQuest.leaveTown((short) 0);
+    assertEquals(0, record);
+    assertEquals(0, Act1DenOfEvilQuest.enterDen(record));
+    assertEquals(Act1DenOfEvilQuest.MESSAGE_INIT,
+        Act1DenOfEvilQuest.selectAkaraMessage(record));
+  }
+
+  @Test
   void selectsNativeAkaraMessageSequence() {
     short record = 0;
     assertEquals(Act1DenOfEvilQuest.MESSAGE_INIT,
