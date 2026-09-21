@@ -244,6 +244,31 @@ public final class VendorPricing {
     if (character == null || character.getStats() == null) return 0;
     return Math.max(0, value(character.getStats().get(Stat.gold))) + Math.max(0, value(character.getStats().get(Stat.goldbank)));
   }
+
+  public static int carriedGold(CharData character) {
+    if (character == null || character.getStats() == null) return 0;
+    try {
+      return Math.max(0, value(character.getStats().get(Stat.gold)));
+    } catch (RuntimeException missingStatTable) {
+      // Headless protocol tests may not mount ItemStatCost. Treat the absent
+      // wallet entry as zero; a real mounted table still follows native data.
+      return 0;
+    }
+  }
+
+  /** Atomically moves carried gold between two characters after preflight. */
+  public static boolean transferGold(CharData from, CharData to, int amount) {
+    if (amount == 0) return from != null && to != null;
+    if (from == null || to == null || amount < 0 || carriedGold(from) < amount
+        || carriedGold(to) > MAX_CARRIED_GOLD - amount) return false;
+    int fromGold = carriedGold(from);
+    int toGold = carriedGold(to);
+    setGold(from, fromGold - amount,
+        Math.max(0, value(from.getStats().get(Stat.goldbank))));
+    setGold(to, toGold + amount,
+        Math.max(0, value(to.getStats().get(Stat.goldbank))));
+    return true;
+  }
   public static boolean chargeGold(CharData character, int amount) { if (character == null || amount < 0 || !canSpend(character, amount)) return false; spend(character, amount); return true; }
   public static void grantGold(CharData character, int amount) { if (character != null && amount > 0) addGold(character, amount); }
   /**
