@@ -49,6 +49,14 @@ class CursorMovementSystemTest {
   }
 
   @Test
+  void bowNormalAttackCanStartOutsideMeleeRange() {
+    assertTrue(CursorMovementSystem.canStartTargetedAttack(false, false, true));
+    assertTrue(CursorMovementSystem.canStartTargetedAttack(true, false, false));
+    assertTrue(CursorMovementSystem.canStartTargetedAttack(false, true, false));
+    assertFalse(CursorMovementSystem.canStartTargetedAttack(false, false, false));
+  }
+
+  @Test
   void heldPointerDoesNotRebuildAPathWhileDirectionRemainsStable() {
     Vector2 position = new Vector2(10f, 10f);
     Pathfind pathfind = new Pathfind();

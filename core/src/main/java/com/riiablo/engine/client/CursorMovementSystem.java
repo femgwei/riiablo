@@ -34,8 +34,6 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.item.Item;
-import com.riiablo.item.BodyLoc;
-import com.riiablo.item.Type;
 import com.riiablo.map.Map;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.profiler.ProfilerSystem;
@@ -98,6 +96,7 @@ public class CursorMovementSystem extends BaseSystem {
   int lastAttackRangeSkill = Integer.MIN_VALUE;
   boolean lastAttackRangeInMelee;
   boolean lastAttackRangeCanThrow;
+  boolean lastAttackRangeRangedNormal;
   boolean attackRangeTraceInitialized;
   long lastAttackRangeTraceMillis;
 
@@ -382,6 +381,7 @@ public class CursorMovementSystem extends BaseSystem {
           
           final int selectedSkillId = Riiablo.charData.getAction(Input.Buttons.LEFT);
           final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
+          final boolean rangedNormalAttack = isRangedNormalAttack(selectedSkillId);
 
           // Check if the selected skill is an explicit throw and the equipped
           // weapon is throwable and has quantity. A throwable weapon does not
@@ -396,10 +396,13 @@ public class CursorMovementSystem extends BaseSystem {
           }
 
           traceAttackRange(src, targetId, selectedSkillId, dst, inMeleeRange,
-              explicitThrowSkill, canThrow);
+              explicitThrowSkill, canThrow, rangedNormalAttack);
 
-          // Allow attack if in melee range or can throw
-          if (inMeleeRange || canThrow) {
+          // Bow/crossbow Attack is a normal ranged attack, even though it uses
+          // SkillCodes.attack rather than an explicit bow skill.  Treating
+          // only Throw as ranged made an unshifted left click chase the target
+          // until melee range before ServerSkillSystem could create the arrow.
+          if (canStartTargetedAttack(inMeleeRange, canThrow, rangedNormalAttack)) {
             requestCast(src, selectedSkillId, targetId, targetPos);
             // A release is a single attack request.  Clear the interaction
             // target immediately; retaining it caused every subsequent
@@ -563,6 +566,7 @@ public class CursorMovementSystem extends BaseSystem {
       
       final int selectedSkillId = selectedSkill;
       final boolean explicitThrowSkill = isThrowSkill(selectedSkillId);
+      final boolean rangedNormalAttack = isRangedNormalAttack(selectedSkillId);
 
       // Check if the selected skill is an explicit throw and the equipped
       // weapon is throwable and has quantity. Normal Attack remains point-
@@ -577,10 +581,9 @@ public class CursorMovementSystem extends BaseSystem {
       }
       
       traceAttackRange(src, target, selectedSkillId, dst, inMeleeRange,
-          explicitThrowSkill, canThrow);
+          explicitThrowSkill, canThrow, rangedNormalAttack);
 
-      // Allow attack if in melee range or can throw
-      if (inMeleeRange || canThrow) {
+      if (canStartTargetedAttack(inMeleeRange, canThrow, rangedNormalAttack)) {
         requestCast(src, selectedSkillId, target, targetPos);
         return true;
       }
@@ -676,22 +679,32 @@ public class CursorMovementSystem extends BaseSystem {
     return explicitThrowSkill && hasThrowableWeapon && quantity > 0;
   }
 
+  static boolean canStartTargetedAttack(
+      boolean inMeleeRange, boolean canThrow, boolean rangedNormalAttack) {
+    return inMeleeRange || canThrow || rangedNormalAttack;
+  }
+
+  private boolean isRangedNormalAttack(int skillId) {
+    return skillId == SkillCodes.attack
+        && Riiablo.charData != null
+        && Riiablo.charData.getItems() != null
+        && Riiablo.charData.getItems().getEquippedRangedWeapon() != null;
+  }
+
   private boolean isMeleeNormalAttack(int skillId) {
-    if (skillId != SkillCodes.attack) return false;
-    Item weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.RARM);
-    if (weapon == null) weapon = Riiablo.charData.getItems().getEquipped(BodyLoc.LARM);
-    if (weapon == null || weapon.type == null) return true;
-    return !weapon.type.is(Type.BOW) && !weapon.type.is(Type.XBOW);
+    return skillId == SkillCodes.attack && !isRangedNormalAttack(skillId);
   }
 
   private void traceAttackRange(int src, int targetId, int skillId, float distance,
-      boolean inMeleeRange, boolean explicitThrowSkill, boolean canThrow) {
+      boolean inMeleeRange, boolean explicitThrowSkill, boolean canThrow,
+      boolean rangedNormalAttack) {
     long now = TimeUtils.millis();
     boolean stateChanged = !attackRangeTraceInitialized
         || lastAttackRangeTarget != targetId
         || lastAttackRangeSkill != skillId
         || lastAttackRangeInMelee != inMeleeRange
-        || lastAttackRangeCanThrow != canThrow;
+        || lastAttackRangeCanThrow != canThrow
+        || lastAttackRangeRangedNormal != rangedNormalAttack;
     if (!stateChanged && now - lastAttackRangeTraceMillis < 1000L) return;
 
     Item throwable = Riiablo.charData != null && Riiablo.charData.getItems() != null
@@ -703,7 +716,8 @@ public class CursorMovementSystem extends BaseSystem {
     }
     Gdx.app.log(TAG, "[ATTACK_RANGE] player=" + src + " target=" + targetId
         + " skill=" + skillId + " distance=" + distance
-        + " mode=" + (explicitThrowSkill ? "throw" : "melee")
+        + " mode=" + (explicitThrowSkill ? "throw"
+            : rangedNormalAttack ? "bow_normal" : "melee")
         + " inMelee=" + inMeleeRange + " canThrow=" + canThrow
         + " throwable=" + (throwable != null ? throwable.code : "none")
         + " quantity=" + quantity);
@@ -711,6 +725,7 @@ public class CursorMovementSystem extends BaseSystem {
     lastAttackRangeSkill = skillId;
     lastAttackRangeInMelee = inMeleeRange;
     lastAttackRangeCanThrow = canThrow;
+    lastAttackRangeRangedNormal = rangedNormalAttack;
     attackRangeTraceInitialized = true;
     lastAttackRangeTraceMillis = now;
   }
