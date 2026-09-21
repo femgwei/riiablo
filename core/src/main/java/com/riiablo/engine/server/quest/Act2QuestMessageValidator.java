@@ -40,6 +40,23 @@ public final class Act2QuestMessageValidator {
       return Act2DurielQuest.canAcceptTyraelPortal(
           act2[Act2DurielQuest.RECORD]);
     }
+    if (act2.length > Act2DurielQuest.RECORD
+        && npcType == MonsterType.JERHYN
+        && messageIndex == Act2DurielQuest.MESSAGE_JERHYN_END) {
+      // Jerhyn consumes Tyrael's temporary LEFT_TOWN flag and advances the
+      // player into the entered-area state.  Do not let an arbitrary dialog
+      // packet manufacture that transition.
+      return NativeQuestRecord.has(act2[Act2DurielQuest.RECORD],
+          NativeQuestRecord.LEFT_TOWN);
+    }
+    if (act2.length > Act2DurielQuest.RECORD
+        && npcType == MonsterType.MESHIF1
+        && messageIndex == Act2DurielQuest.MESSAGE_MESHIF_TRAVEL) {
+      // Meshif is the actual A2Q6 reward turn-in and is only valid after
+      // Jerhyn has moved the player to ENTERED_AREA.
+      return NativeQuestRecord.has(act2[Act2DurielQuest.RECORD],
+          NativeQuestRecord.ENTERED_AREA);
+    }
     return false;
   }
 }
