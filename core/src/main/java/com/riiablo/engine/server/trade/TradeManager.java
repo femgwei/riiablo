@@ -225,7 +225,7 @@ public class TradeManager {
    */
   public int addItem(int playerId, TradeSlot slot) {
     TradeSession session = getPlayerSession(playerId);
-    if (session == null) {
+    if (session == null || slot == null) {
       return TradeState.RESULT_ERROR;
     }
     

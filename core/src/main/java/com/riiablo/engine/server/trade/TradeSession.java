@@ -160,7 +160,8 @@ public class TradeSession {
    * @return true 如果成功
    */
   public boolean addItem(int playerId, TradeSlot slot) {
-    if (state != TradeState.TRADING) {
+    if (state != TradeState.TRADING || slot == null || !slot.isTradable()
+        || slot.width <= 0 || slot.height <= 0) {
       return false;
     }
     
@@ -172,6 +173,13 @@ public class TradeSession {
     // 检查槽位是否可用
     if (!canPlaceItem(playerId, slot.x, slot.y, slot.width, slot.height)) {
       return false;
+    }
+
+    // An item identity belongs to exactly one inventory location.  Reject a
+    // repeated submission before mutating the trade state; otherwise a client
+    // could offer the same item twice and receive two copies on completion.
+    for (TradeSlot existing : items) {
+      if (existing.itemEntityId == slot.itemEntityId) return false;
     }
     
     items.add(slot);
@@ -222,7 +230,7 @@ public class TradeSession {
    */
   public boolean canPlaceItem(int playerId, int x, int y, int width, int height) {
     // 检查边界
-    if (x < 0 || y < 0 || 
+    if (width <= 0 || height <= 0 || x < 0 || y < 0 ||
         x + width > TradeSlot.TRADE_WIDTH || 
         y + height > TradeSlot.TRADE_HEIGHT) {
       return false;
