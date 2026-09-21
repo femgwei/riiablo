@@ -30,7 +30,14 @@ public final class NativeQuestRecord {
 
   public static short set(short record, int flag) {
     validateFlag(flag);
-    return (short) (Short.toUnsignedInt(record) | (1 << flag));
+    int value = Short.toUnsignedInt(record) | (1 << flag);
+    // QFLAG_UPDATEQUESTLOG is the native acknowledgement bit written when
+    // the quest journal has been viewed.  Any subsequent quest-state change
+    // makes the journal stale again, so clear that bit while recording a
+    // progress flag.  Setting the acknowledgement itself is intentionally
+    // left untouched.
+    if (flag != UPDATE_QUEST_LOG) value &= ~(1 << UPDATE_QUEST_LOG);
+    return (short) value;
   }
 
   public static short clear(short record, int flag) {

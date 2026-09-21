@@ -22,10 +22,12 @@ import com.riiablo.engine.server.quest.Act1MalusQuest;
 import com.riiablo.engine.server.quest.Act1CainQuest;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.map.RenderSystem;
+import com.riiablo.profiler.GpuSystem;
 import com.riiablo.save.CharData;
 import com.riiablo.widget.Label;
 
 /** Draws the native Act I quest-available/reward marker above town NPCs. */
+@GpuSystem
 @All({Monster.class, Position.class})
 public class Act1QuestIndicatorSystem extends IteratingSystem {
   protected ComponentMapper<Monster> mMonster;
@@ -71,6 +73,7 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
 
   static boolean hasQuestMarker(int monsterType, CharData data) {
     short[] quests = data.getQuests(Riiablo.ACT1);
+    if (quests == null) return false;
     short record;
     switch (monsterType) {
       case MonsterType.AKARA:
@@ -95,12 +98,22 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
                 && data.getItems().containsItemCode(Act1MalusQuest.MALUS_CODE));
       case MonsterType.WARRIV:
         record = quests[Act1AndarielQuest.RECORD];
-        return NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
+        // A new character has the native Act I gossip/intro pending even
+        // though the A1Q6 record has not been created yet.  Once any Act I
+        // quest starts, Warriv's initial marker is replaced by the normal
+        // A1Q6 reward marker below.
+        return isFreshAct1(quests)
+            || NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING);
       case MonsterType.DECKARDCAIN:
       case MonsterType.DECKARDCAIN_TOWN:
         return false;
       default:
         return false;
     }
+  }
+
+  private static boolean isFreshAct1(short[] quests) {
+    for (short quest : quests) if (quest != 0) return false;
+    return true;
   }
 }

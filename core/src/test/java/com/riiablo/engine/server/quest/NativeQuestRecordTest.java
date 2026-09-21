@@ -32,6 +32,19 @@ class NativeQuestRecordTest {
   }
 
   @Test
+  void progressInvalidatesPreviouslyViewedQuestLog() {
+    short viewed = NativeQuestRecord.set((short) 0, NativeQuestRecord.UPDATE_QUEST_LOG);
+    assertTrue(NativeQuestRecord.has(viewed, NativeQuestRecord.UPDATE_QUEST_LOG));
+
+    short progressed = NativeQuestRecord.set(viewed, NativeQuestRecord.STARTED);
+    assertTrue(NativeQuestRecord.has(progressed, NativeQuestRecord.STARTED));
+    assertFalse(NativeQuestRecord.has(progressed, NativeQuestRecord.UPDATE_QUEST_LOG));
+
+    short acknowledged = NativeQuestRecord.set(progressed, NativeQuestRecord.UPDATE_QUEST_LOG);
+    assertTrue(NativeQuestRecord.has(acknowledged, NativeQuestRecord.UPDATE_QUEST_LOG));
+  }
+
+  @Test
   void rejectsFlagsOutsideSixteenBitRecord() {
     assertThrows(IllegalArgumentException.class,
         () -> NativeQuestRecord.set((short) 0, -1));

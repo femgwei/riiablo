@@ -585,6 +585,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         } else if (key == Keys.Spells) {
           setRightPanel(spellsPanel.isVisible() ? null : spellsPanel);
         } else if (key == Keys.Quests) {
+          if (!questsPanel.isVisible() && controlPanel != null) {
+            controlPanel.acknowledgeQuestLog();
+          }
           setLeftPanel(questsPanel.isVisible() ? null : questsPanel);
         } else if (key == Keys.Party) {
           setLeftPanel(partyPanel.isVisible() ? null : partyPanel);
@@ -865,8 +868,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // Local games own the authoritative combat world.  Dedicated servers
       // already register this system; network clients must not create a
       // duplicate missile for the same SkillDoEvent.
-      builder.with(new Act1QuestDialogController(), new Act1QuestIndicatorSystem(),
-          new ActTransitionSystem());
+      builder.with(new Act1QuestDialogController(), new ActTransitionSystem());
       builder.with(new Act1QuestSystem());
       builder.with(new Act2QuestSystem());
       builder.with(new Act3QuestSystem());
@@ -975,6 +977,9 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new DirectionResolver())
 
         .with(renderer)
+        // Quest markers are GPU systems and must run after the world renderer
+        // so the map cannot overwrite the NPC "!" labels.
+        .with(new Act1QuestIndicatorSystem())
         .with(new LabelManager())
         .with(new MonsterLabelManager())
 

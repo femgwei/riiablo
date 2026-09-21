@@ -46,4 +46,17 @@ class Act1QuestIndicatorSystemTest extends RiiabloTest {
         NativeQuestRecord.set((short) 0, NativeQuestRecord.STARTED);
     assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.CHARSI, data));
   }
+
+  @Test
+  void freshCharacterShowsInitialAkaraAndWarrivMarkers() {
+    CharData data = CharData.obtain().clear()
+        .set(Riiablo.NORMAL, false, "FreshMarker", Riiablo.AMAZON);
+
+    assertTrue(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.AKARA, data));
+    assertTrue(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.WARRIV, data));
+
+    data.getQuests(Riiablo.ACT1)[Act1DenOfEvilQuest.RECORD] =
+        Act1DenOfEvilQuest.start((short) 0);
+    assertFalse(Act1QuestIndicatorSystem.hasQuestMarker(MonsterType.WARRIV, data));
+  }
 }

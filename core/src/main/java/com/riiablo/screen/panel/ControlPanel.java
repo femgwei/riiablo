@@ -47,6 +47,7 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
+import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.HotkeyButton;
 import com.riiablo.widget.Label;
@@ -181,7 +182,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         if (Riiablo.game != null) {
           Riiablo.game.setLeftPanel(Riiablo.game.questsPanel);
         }
-        setQuestPromptVisible(false);
+        acknowledgeQuestLog();
       }
     });
     addStatsLabel = createPromptLabel("NEW STATS");
@@ -404,9 +405,35 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
       short[] quests = Riiablo.charData.getQuests(act);
       if (quests == null) continue;
-      for (short quest : quests) if (quest != 0) return true;
+      for (short quest : quests) {
+        if (quest != 0 && !NativeQuestRecord.has(quest, NativeQuestRecord.UPDATE_QUEST_LOG)) {
+          return true;
+        }
+      }
     }
     return false;
+  }
+
+  /**
+   * Persists the native quest-log acknowledgement for every quest currently
+   * present in the journal.  The original client acknowledges quest-log
+   * updates by quest id; opening the journal displays all rows, so marking all
+   * existing rows is the equivalent local operation.  New progress clears
+   * this bit in {@link NativeQuestRecord#set(short, int)} and becomes visible
+   * again on the next update.
+   */
+  public void acknowledgeQuestLog() {
+    if (Riiablo.charData == null) return;
+    for (int act = 0; act < Riiablo.NUM_ACTS; act++) {
+      short[] quests = Riiablo.charData.getQuests(act);
+      if (quests == null) continue;
+      for (int i = 0; i < quests.length; i++) {
+        if (quests[i] != 0) {
+          quests[i] = NativeQuestRecord.set(quests[i], NativeQuestRecord.UPDATE_QUEST_LOG);
+        }
+      }
+    }
+    setQuestPromptVisible(false);
   }
 
   private static long currentQuestRevision() {
@@ -461,7 +488,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     }
     if (Riiablo.game != null && Riiablo.game.questsPanel != null
         && Riiablo.game.questsPanel.isVisible()) {
-      setQuestPromptVisible(false);
+      acknowledgeQuestLog();
     }
   }
 
