@@ -78,6 +78,24 @@ class D2MooTileApplierTest {
   }
 
   @Test
+  void doesNotMergeIdenticalWallIdsFromDifferentDt1Sources() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+    int tileId = pack(Orientation.LEFT_WALL, 8, 3);
+
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 0, 0, tileId, 0, "a.dt1");
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 0, 0, tileId, 0, "b.dt1");
+
+    assertEquals(index(Orientation.LEFT_WALL, 8, 3), grid.wallIds[0][0][0]);
+    assertEquals(index(Orientation.LEFT_WALL, 8, 3), grid.wallIds[1][0][0]);
+    assertEquals("a.dt1", grid.sourceFile(grid.wallSourceFiles[0][0][0]));
+    assertEquals("b.dt1", grid.sourceFile(grid.wallSourceFiles[1][0][0]));
+    assertEquals(0, applier.getDuplicateWallCount());
+    assertEquals(2, applier.getExportedWallCount());
+  }
+
+  @Test
   void retainsHiddenWarpMarkersForInteractionWithoutLosingVisibilityState() {
     TileGrid grid = new TileGrid(1, 1);
     D2MooTileApplier applier = new D2MooTileApplier();
