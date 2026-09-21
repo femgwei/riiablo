@@ -881,7 +881,7 @@ public class RenderSystem extends BaseEntitySystem {
     for (int i = Map.WALL_OFFSET; i < Map.WALL_OFFSET + Map.MAX_WALLS; i++) {
       Tile tile = zone.get(i, tx, ty);
       if (tile == null) continue;
-      if (popped.get(tile.mainIndex)) continue;
+      if (isPoppedPopPad(popped, tile)) continue;
       if (!isDrawableWallOrientation(tile.orientation)) continue;
       if (py + tile.texture.getRegionHeight() < renderMinY) continue;
       batch.draw(tile.texture, px, py);
@@ -914,12 +914,22 @@ public class RenderSystem extends BaseEntitySystem {
     }
   }
 
+  /**
+   * Pop-pad masks are indexed by the special cell sub-index.  The old code
+   * used mainIndex here, so a marker such as ID._59 (main=8, sub=46) remained
+   * visible as a full DT1 diamond even after its covered preset was popped.
+   */
+  static boolean isPoppedPopPad(Bits popped, Tile tile) {
+    return tile != null && Map.ID.POPPADS.contains(tile.id)
+        && popped != null && popped.get(tile.subIndex);
+  }
+
   void drawRoofs(PaletteIndexedBatch batch, Map.Zone zone, int tx, int ty, float px, float py) {
     if (px > renderMaxX || px + Tile.WIDTH < renderMinX) return;
     for (int i = Map.WALL_OFFSET; i < Map.WALL_OFFSET + Map.MAX_WALLS; i++) {
       Tile tile = zone.get(i, tx, ty);
       if (tile == null || tile == null) continue;
-      if (popped.get(tile.mainIndex)) continue;
+      if (isPoppedPopPad(popped, tile)) continue;
       if (!Orientation.isRoof(tile.orientation)) continue;
       if (py + tile.roofHeight > renderMaxY) continue;
       if (py + tile.roofHeight + tile.texture.getRegionHeight() < renderMinY) continue;

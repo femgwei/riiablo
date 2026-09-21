@@ -33,6 +33,7 @@ import com.riiablo.drlg.TileGrid;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.EntityFactory;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Bits;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
 import com.riiablo.engine.server.component.NativeObjectState;
@@ -192,6 +193,20 @@ class Act1MapBuilderD2MooLayersTest {
   void warpExitTilesAreDrawableWalls() {
     assertTrue(RenderSystem.isDrawableWallOrientation(Orientation.SPECIAL_10));
     assertTrue(RenderSystem.isDrawableWallOrientation(Orientation.SPECIAL_11));
+  }
+
+  @Test
+  void hidesPoppedPresetMarkersByPopPadSubIndex() throws Exception {
+    DT1.Tile popPad = tile(Orientation.SPECIAL_10, 8, 46);
+    Bits popped = new Bits();
+    popped.set(popPad.subIndex);
+
+    assertTrue(Map.ID.POPPADS.contains(popPad.id));
+    assertTrue(RenderSystem.isPoppedPopPad(popped, popPad));
+
+    Bits wrongIndex = new Bits();
+    wrongIndex.set(popPad.mainIndex);
+    assertTrue(!RenderSystem.isPoppedPopPad(wrongIndex, popPad));
   }
 
   @Test

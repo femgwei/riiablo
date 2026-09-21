@@ -64,6 +64,11 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   private static final boolean DEBUG_HIGHLIGHT_DS1_ROOMS = false;
   // 地面/路径调试：打印 grid↔zone 坐标、瓦片 ID 分布、解析失败等（用于诊断纹理错位、重复纹理）
   private static final boolean DEBUG_GROUND_MAP = true;
+  // One-cell layer audit used to diagnose full-tile artifacts reported in
+  // Blood Moor. Kept opt-in so normal map generation does not emit per-layer
+  // diagnostics.
+  private static final boolean DEBUG_TILE_LAYER_AUDIT =
+      Boolean.getBoolean("riiablo.debug-tile-layer-audit");
   // D2MOD: gAct1WildernessDrlgLink 数组
   // 定义 Act1 野外区域的连接关系（具体数值会在运行时根据 Levels.txt 校正）
   private static final int LEVEL_ROGUEENCAMPMENT = 1;
@@ -3296,9 +3301,43 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             counts.failedShadowIds.add(shadowId);
           }
         }
+
+        if (DEBUG_TILE_LAYER_AUDIT && x == 19 && y == 59) {
+          logTileLayerAudit(grid, dt1s, x, y, floorId);
+        }
       }
     }
     return counts;
+  }
+
+  private static void logTileLayerAudit(TileGrid grid, DT1s dt1s, int x, int y,
+      int floorId) {
+    StringBuilder out = new StringBuilder("tile=(").append(x).append(',').append(y)
+        .append(") floor=").append(describeTile(dt1s, grid.sourceFile(grid.floorSourceFiles[y][x]), floorId));
+    for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS; slot++) {
+      int id = grid.wallIds[slot][y][x];
+      if (id != -1) {
+        out.append(" wall").append(slot).append('=').append(describeTile(
+            dt1s, grid.sourceFile(grid.wallSourceFiles[slot][y][x]), id));
+      }
+    }
+    int shadowId = grid.shadowIds[y][x];
+    if (shadowId != -1) {
+      out.append(" shadow=").append(describeTile(
+          dt1s, grid.sourceFile(grid.shadowSourceFiles[y][x]), shadowId));
+    }
+    Gdx.app.log(TAG, "[TILE_LAYER_AUDIT] " + out);
+  }
+
+  private static String describeTile(DT1s dt1s, String sourceFile, int id) {
+    if (id == -1) return "-";
+    DT1.Tile sourceTile = dt1s.get(sourceFile, id);
+    DT1.Tile fallbackTile = dt1s.get(id);
+    DT1.Tile tile = sourceTile != null ? sourceTile : fallbackTile;
+    if (tile == null) return String.format("id=0x%08X source=%s unresolved", id, sourceFile);
+    return String.format("id=0x%08X source=%s selected=%s/%dx%d ori=%d main=%d sub=%d",
+        id, sourceFile, sourceTile != null ? "native" : "fallback", tile.width, tile.height,
+        tile.orientation, tile.mainIndex, tile.subIndex);
   }
 
   /** Applies a native export to any Zone, including Act II–V consumers. */
