@@ -88,6 +88,7 @@ import com.riiablo.engine.server.object.NativeShrineEffectSystem;
 import com.riiablo.engine.server.object.NativeTrapSystem;
 import com.riiablo.engine.server.object.NativeTrapFireSystem;
 import com.riiablo.engine.server.Pathfinder;
+import com.riiablo.engine.server.DynamicUnitCollisionSystem;
 import com.riiablo.engine.server.LeapSystem;
 import com.riiablo.engine.server.SerializationManager;
 import com.riiablo.engine.server.ServerEntityFactory;
@@ -4873,6 +4874,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new RoomEntityTrackingSystem())
         .with(new RoomActivationSystem())
         .with(new AIStepper())
+        .with(new DynamicUnitCollisionSystem())
         .with(new Pathfinder())
 
         .with(new VelocityAdder()) // FIXME: temp until proper physics implemented

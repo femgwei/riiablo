@@ -649,6 +649,18 @@ public class Map implements Disposable {
     return mapGraph.searchNodePath(pathFinder, src, dst, flags, size, path);
   }
 
+  public boolean findPath(Vector2 src, Vector2 dst, int flags, int size,
+      GraphPath<Point2> path, MapGraph.Obstacle obstacle) {
+    return mapGraph.searchNodePath(pathFinder, src, dst, flags, size, path, obstacle);
+  }
+
+  public boolean findPath(Vector2 src, Vector2 dst, int flags, int size,
+      GraphPath<Point2> path, MapGraph.Obstacle obstacle,
+      int moverId, int targetId) {
+    return mapGraph.searchNodePath(pathFinder, src, dst, flags, size, path,
+        obstacle, moverId, targetId);
+  }
+
   public void smoothPath(SmoothableGraphPath<Point2, Vector2> path) {
     smoothPath(DT1.Tile.FLAG_BLOCK_WALK, 0, path);
   }

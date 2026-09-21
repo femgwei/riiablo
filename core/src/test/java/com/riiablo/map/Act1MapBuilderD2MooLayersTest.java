@@ -251,6 +251,23 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void reservesPreviouslyAcceptedMonsterFootprints() {
+    int width = 7;
+    int height = 7;
+    byte[] flags = new byte[width * height];
+    Act1MapBuilderD2MOD.WalkableRegion region =
+        Act1MapBuilderD2MOD.largestWalkableRegion(
+            flags, width, height, DT1.Tile.FLAG_BLOCK_WALK);
+    boolean[] occupied = new boolean[width * height];
+    occupied[3 * width + 3] = true;
+    int[] spawn = new int[2];
+
+    assertTrue(Act1MapBuilderD2MOD.findNearestMonsterSpawn(
+        flags, width, height, 3, 3, 1, region, 4, spawn, occupied));
+    assertFalse(spawn[0] == 3 && spawn[1] == 3);
+  }
+
+  @Test
   void registersNativeSpecialWallsForWarpEntityCreation() {
     TileGrid grid = new TileGrid(2, 1);
     grid.wallIds[0][0][0] = Map.ID.VIS_0_00;

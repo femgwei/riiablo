@@ -31,12 +31,15 @@ public final class NativeMonsterRegion {
   public static int selectedEntryCount(Levels.Entry level, int difficulty) {
     if (level == null || level.NumMon <= 0) return 0;
     String[] columns = monsterColumns(level, difficulty);
-    int declared = level.NumMon > 0 ? level.NumMon : columns.length;
     int populated = 0;
-    for (int i = 0; i < columns.length && i < declared; i++) {
+    // D2MOO first reads the difficulty-specific spawn list and then chooses
+    // NumMon entries from that list without replacement.  Counting the whole
+    // list here is important: a valid entry after an empty/placeholder cell
+    // must not be silently excluded by the Java prefix scan.
+    for (int i = 0; i < columns.length; i++) {
       if (columns[i] != null && !columns[i].isEmpty() && !"0".equals(columns[i])) populated++;
     }
-    return Math.min(populated, 13);
+    return Math.min(Math.min(level.NumMon, populated), 13);
   }
 
   public static int density(Levels.Entry level, int difficulty) {
@@ -48,6 +51,23 @@ public final class NativeMonsterRegion {
     if (monDen <= 0) return false;
     int normalizedRoll = Math.floorMod(roll, DENSITY_ROLL_RANGE);
     return normalizedRoll <= Math.min(monDen, MAX_DENSITY);
+  }
+
+  /** Native {@code SparsePopulate} check used after a density hit. */
+  public static boolean sparsePopulationRoll(int sparsePopulate, int roll) {
+    if (sparsePopulate <= 0) return true;
+    return Math.floorMod(roll, 100) <= Math.min(sparsePopulate, 100);
+  }
+
+  /**
+   * Fallen and Scarab normal groups are deliberately single-member groups in
+   * D2Game, regardless of their MinGrp/MaxGrp table values.
+   */
+  public static boolean isSingleMemberNormalGroup(String baseId, String id) {
+    String base = baseId == null ? "" : baseId.toLowerCase(java.util.Locale.ROOT);
+    String name = id == null ? "" : id.toLowerCase(java.util.Locale.ROOT);
+    return base.startsWith("fallen") || base.startsWith("scarab")
+        || name.startsWith("fallen") || name.startsWith("scarab");
   }
 
   /**

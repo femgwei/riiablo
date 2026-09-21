@@ -48,6 +48,20 @@ class NativeMonsterRegionTest {
   }
 
   @Test
+  void sparsePopulateUsesNativeInclusivePercentage() {
+    assertTrue(NativeMonsterRegion.sparsePopulationRoll(0, 99));
+    assertTrue(NativeMonsterRegion.sparsePopulationRoll(25, 25));
+    assertFalse(NativeMonsterRegion.sparsePopulationRoll(25, 26));
+  }
+
+  @Test
+  void fallenAndScarabNormalGroupsAreSingleMember() {
+    assertTrue(NativeMonsterRegion.isSingleMemberNormalGroup("Fallen1", "fallen1"));
+    assertTrue(NativeMonsterRegion.isSingleMemberNormalGroup("scarab1", "scarab1"));
+    assertFalse(NativeMonsterRegion.isSingleMemberNormalGroup("zombie1", "zombie1"));
+  }
+
+  @Test
   void populationAttemptsPreserveNativeThreeByThreeSubtileBudget() {
     int attempts = 0;
     for (int tile = 0; tile < 9; tile++) {

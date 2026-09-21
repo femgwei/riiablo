@@ -64,20 +64,31 @@ public class AStarPathFinder implements PathFinder {
   }
 
   public boolean search(Point2 startNode, Point2 endNode, int flags, int size, GraphPath<Point2> outPath) {
-    boolean found = search(startNode, endNode, flags, size);
+    return search(startNode, endNode, flags, size, outPath, null);
+  }
+
+  @Override
+  public boolean search(Point2 startNode, Point2 endNode, int flags, int size,
+      GraphPath<Point2> outPath, MapGraph.Obstacle obstacle) {
+    boolean found = search(startNode, endNode, flags, size, obstacle);
     if (found) generateNodePath(startNode, outPath);
     return found;
   }
 
 
   protected boolean search(Point2 startNode, Point2 endNode, int flags, int size) {
+    return search(startNode, endNode, flags, size, (MapGraph.Obstacle) null);
+  }
+
+  protected boolean search(Point2 startNode, Point2 endNode, int flags, int size,
+      MapGraph.Obstacle obstacle) {
     initSearch(startNode, endNode);
     int limit = 0;
     do {
       current = openList.pop();
       current.category = Point2.CLOSED;
       if (current == endNode) return true;
-      visitChildren(current, endNode, flags, size);
+      visitChildren(current, endNode, flags, size, obstacle);
       if (metrics != null) metrics.visitedNodes++;
     } while (openList.size > 0 && limit++ < 300);
     return false;
@@ -96,10 +107,11 @@ public class AStarPathFinder implements PathFinder {
     current = null;
   }
 
-  protected void visitChildren(Point2 startNode, Point2 endNode, int flags, int size) {
-    Array<Point2> neighbors = graph.getNeighbors(startNode, flags, this.neighbors);
+  protected void visitChildren(Point2 startNode, Point2 endNode, int flags, int size,
+      MapGraph.Obstacle obstacle) {
+    Array<Point2> neighbors = graph.getNeighbors(startNode, flags, size, obstacle,
+        -1, -1, this.neighbors);
     for (Point2 neighbor : neighbors) {
-      if (neighbor.clearance < size) continue;
       float g = startNode.g() + uniformHeuristic.estimate(startNode, neighbor);
 
       float h;
@@ -126,6 +138,11 @@ public class AStarPathFinder implements PathFinder {
 
       addToOpenList(neighbor, g + h);
     }
+  }
+
+  /** Compatibility hook for the optional JPS implementation. */
+  protected void visitChildren(Point2 startNode, Point2 endNode, int flags, int size) {
+    visitChildren(startNode, endNode, flags, size, null);
   }
 
   protected void generateNodePath(Point2 startNode, GraphPath<Point2> outPath) {

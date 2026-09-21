@@ -49,6 +49,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected DynamicUnitCollisionSystem dynamicCollision;
 
   @Wire(name = "map")
   protected Map map;
@@ -306,7 +307,7 @@ public class Pathfinder extends IteratingSystem {
     int flags = DT1.Tile.FLAG_BLOCK_WALK;
     int size = mSize.get(src).size;
     GraphPath path = Pools.obtain(GraphPath.class);
-    boolean success = findPath(src, position, target, flags, size, path);
+    boolean success = findPath(src, position, target, flags, size, path, targetEntityId);
     if (success) {
       // Store target entity ID in Pathfind component for dynamic repathing
       if (mPathfind.has(src)) {
@@ -326,7 +327,7 @@ public class Pathfinder extends IteratingSystem {
       ray.set(position, target);
       success = map.castRay(ray, flags, size, collision);
       if (success) {
-        success = findPath(src, position, collision.point, flags, size, path);
+        success = findPath(src, position, collision.point, flags, size, path, targetEntityId);
         if (!success || path.getCount() <= 1) {
           // The ray ended at the blocking boundary and there is no usable
           // path to its last clear point. Moving directly toward the original
@@ -380,6 +381,11 @@ public class Pathfinder extends IteratingSystem {
   }
 
   protected boolean findPath(int src, Vector2 srcPos, Vector2 targetPos, int flags, int size, GraphPath path) {
+    return findPath(src, srcPos, targetPos, flags, size, path, Engine.INVALID_ENTITY);
+  }
+
+  protected boolean findPath(int src, Vector2 srcPos, Vector2 targetPos,
+      int flags, int size, GraphPath path, int targetEntityId) {
     if (!isNativeMonsterRoomPathAllowed(src, srcPos, targetPos)) {
       if (mMonster.has(src)) {
         Monster monster = mMonster.get(src);
@@ -389,7 +395,12 @@ public class Pathfinder extends IteratingSystem {
       }
       return false;
     }
-    boolean success = map.findPath(srcPos, targetPos, flags, size, path);
+    com.riiablo.map.MapGraph.Obstacle obstacle = dynamicCollision == null
+        ? null
+        : (moverId, ignoredTargetId, x, y, footprint) ->
+            dynamicCollision.isFreeForPath(src, targetEntityId, x, y, footprint);
+    boolean success = map.findPath(srcPos, targetPos, flags, size, path, obstacle,
+        src, targetEntityId);
     if (success) {
       if (!pathWithinNativeMonsterRooms(src, path)) {
         path.clear();
@@ -397,7 +408,10 @@ public class Pathfinder extends IteratingSystem {
             src, srcPos.x, srcPos.y, targetPos.x, targetPos.y);
         return false;
       }
-      map.smoothPath(flags, size, path);
+      // Smoothing through a moving unit would discard the dynamic checks made
+      // by A*. Keep the discrete path until the dynamic-aware ray smoother is
+      // available; movement can still advance multiple points per tick.
+      if (dynamicCollision == null) map.smoothPath(flags, size, path);
       mPathfind.create(src).set(path);
     }
 

@@ -903,6 +903,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new VendorGenerator()); // TODO: #89
     }
     builder
+        // D2 uses a dynamic collision footprint rather than physics-engine
+        // pushing.  Keep the local simulation authoritative while networked
+        // clients remain replicas of D2GS positions.
+        .with(new com.riiablo.engine.server.DynamicUnitCollisionSystem(socket == null))
         .with(new Pathfinder())
         .with(new LeapSystem())
 

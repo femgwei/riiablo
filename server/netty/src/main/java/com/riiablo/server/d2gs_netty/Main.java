@@ -230,6 +230,7 @@ public class Main extends ApplicationAdapter {
         .with(new RoomEntityTrackingSystem())
         .with(new RoomActivationSystem())
         .with(new AIStepper())
+        .with(new com.riiablo.engine.server.DynamicUnitCollisionSystem())
         .with(new Pathfinder())
 
         .with(new VelocityAdder()) // FIXME: temp until proper physics implemented

@@ -241,19 +241,33 @@ public class BaseMapBuilderD2MOD {
       @Override
       public void init(Zone zone) {
         int prob = 0;
-        int numMon = zone.level.NumMon;
-        if (numMon <= 0) {
+        int numMon = NativeMonsterRegion.selectedEntryCount(zone.level, zone.diff);
+        String[] columns = NativeMonsterRegion.monsterColumns(zone.level, zone.diff);
+        Array<String> available = new Array<>();
+        for (String mon : columns) {
+          if (mon != null && !mon.isEmpty() && !"0".equals(mon)) available.add(mon);
+        }
+        if (numMon <= 0 || available.size == 0) {
           monsters = new MonStats.Entry[0];
           return;
         }
-        MonStats.Entry[] monstats = new MonStats.Entry[numMon];
-        for (int j = 0; j < numMon; j++) {
-          String mon = zone.level.mon[j];
-          if (mon == null || mon.isEmpty()) continue;
-          monstats[j] = Riiablo.files.monstats.get(mon);
-          if (monstats[j] != null) {
-            prob += monstats[j].Rarity;
+        Array<MonStats.Entry> selected = new Array<>();
+        int selectionCount = Math.min(numMon, available.size);
+        for (int i = 0; i < selectionCount; i++) {
+          int index = MathUtils.random(available.size - 1);
+          if (i == 0 && zone.level.rangedspawn && available.size > 1) {
+            for (int attempt = 0; attempt < 20; attempt++) {
+              MonStats.Entry candidate = Riiablo.files.monstats.get(available.get(index));
+              if (candidate != null && candidate.rangedtype) break;
+              index = MathUtils.random(available.size - 1);
+            }
           }
+          MonStats.Entry entry = Riiablo.files.monstats.get(available.removeIndex(index));
+          if (entry != null && entry.isSpawn) selected.add(entry);
+        }
+        MonStats.Entry[] monstats = selected.toArray(MonStats.Entry.class);
+        for (MonStats.Entry entry : monstats) {
+          prob += entry.Rarity;
         }
 
         if (prob <= 0) {
@@ -329,17 +343,23 @@ public class BaseMapBuilderD2MOD {
                 if (!NativeMonsterRegion.densityRoll(
                     NativeMonsterRegion.density(zone.level, zone.diff),
                     MathUtils.random(99999))) continue;
-                int idx = MathUtils.random(monsters.length - 1);
-                MonStats.Entry monster = monsters[idx];
-                if (monster == null) continue;
-                int count = monster.MinGrp == monster.MaxGrp
-                    ? monster.MaxGrp
-                    : MathUtils.random(NativeDataTables.minGroup(monster),
-                        NativeDataTables.maxGroup(monster));
+                MonStats.Entry selectedMonster = monsters[MathUtils.random(monsters.length - 1)];
+                if (selectedMonster == null) continue;
+                if (!NativeMonsterRegion.sparsePopulationRoll(
+                    selectedMonster.sparsePopulate, MathUtils.random(99))) continue;
+                int minGroup = NativeDataTables.minGroup(selectedMonster);
+                int maxGroup = NativeDataTables.maxGroup(selectedMonster);
+                if (NativeMonsterRegion.isSingleMemberNormalGroup(
+                    selectedMonster.BaseId, selectedMonster.Id)) {
+                  minGroup = 1;
+                  maxGroup = 1;
+                }
+                int count = minGroup == maxGroup
+                    ? maxGroup : MathUtils.random(minGroup, maxGroup);
                 for (int j = 0; j < count; j++) {
                   float px = zone.getGlobalX((currentTx - zone.tx) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
                   float py = zone.getGlobalY((currentTy - zone.ty) * DT1.Tile.SUBTILE_SIZE) + MathUtils.random(-2f, 2f);
-                  zone.map.factory.createMonster(monster, px, py);
+                  zone.map.factory.createMonster(selectedMonster, px, py);
                 }
               }
             }

@@ -504,7 +504,12 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         public void init(Zone zone) {
           int prob = 0;
           int numMon = NativeMonsterRegion.selectedEntryCount(zone.level, zone.diff);
-          if (numMon <= 0) {
+          String[] monsterColumns = NativeMonsterRegion.monsterColumns(zone.level, zone.diff);
+          Array<String> available = new Array<>();
+          for (String mon : monsterColumns) {
+            if (mon != null && !mon.isEmpty() && !"0".equals(mon)) available.add(mon);
+          }
+          if (numMon <= 0 || available.size == 0) {
             monsters = new MonStats.Entry[0];
             Gdx.app.log(TAG, String.format(
                 "[MONSTER_SPAWN] phase=generator_init level=%s(%d) candidates=0 "
@@ -513,24 +518,31 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                 zone.map.factory != null));
             return;
           }
-          // Blood Moor's native region population also permits Fallen
-          // Shaman even though it is not represented by the truncated
-          // NumMon prefix used by the compatibility generator.
-          boolean addBloodMoorShaman = zone.level.Id == LEVEL_BLOODMOOR;
-          String[] monsterColumns = NativeMonsterRegion.monsterColumns(zone.level, zone.diff);
-          MonStats.Entry[] monstats = new MonStats.Entry[numMon + (addBloodMoorShaman ? 1 : 0)];
-          for (int j = 0; j < numMon; j++) {
-            String mon = monsterColumns[j];
-            if (mon == null || mon.isEmpty()) continue;
-            monstats[j] = Riiablo.files.monstats.get(mon);
-            if (monstats[j] != null) {
-              prob += monstats[j].Rarity;
+
+          // D2MOO selects the region list without replacement.  This is not
+          // equivalent to repeatedly choosing the first NumMon columns: the
+          // list can contain placeholders and the selected rows are filtered
+          // by IsSpawn after the draw.
+          Array<MonStats.Entry> selected = new Array<>();
+          int selectionCount = Math.min(numMon, available.size);
+          for (int i = 0; i < selectionCount; i++) {
+            int index = MathUtils.random(available.size - 1);
+            if (i == 0 && zone.level.rangedspawn && available.size > 1) {
+              for (int attempt = 0; attempt < 20; attempt++) {
+                String candidate = available.get(index);
+                MonStats.Entry entry = Riiablo.files.monstats.get(candidate);
+                if (entry != null && entry.rangedtype) break;
+                index = MathUtils.random(available.size - 1);
+              }
             }
+            String mon = available.removeIndex(index);
+            MonStats.Entry entry = Riiablo.files.monstats.get(mon);
+            if (entry != null && entry.isSpawn) selected.add(entry);
           }
-          if (addBloodMoorShaman) {
-            MonStats.Entry shaman = Riiablo.files.monstats.get("fallenshaman1");
-            monstats[numMon] = shaman;
-            if (shaman != null) prob += shaman.Rarity;
+
+          MonStats.Entry[] monstats = selected.toArray(MonStats.Entry.class);
+          for (MonStats.Entry entry : monstats) {
+            prob += entry.Rarity;
           }
 
           if (prob <= 0) {
@@ -702,10 +714,18 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                   int idx = MathUtils.random(monsters.length - 1);
                   MonStats.Entry monster = monsters[idx];
                   if (monster == null) continue;
-                  int count = monster.MinGrp == monster.MaxGrp
-                      ? monster.MaxGrp
-                      : MathUtils.random(NativeDataTables.minGroup(monster),
-                          NativeDataTables.maxGroup(monster));
+                  if (!NativeMonsterRegion.sparsePopulationRoll(
+                      monster.sparsePopulate, MathUtils.random(99))) continue;
+                  int minGroup = NativeDataTables.minGroup(monster);
+                  int maxGroup = NativeDataTables.maxGroup(monster);
+                  if (NativeMonsterRegion.isSingleMemberNormalGroup(
+                      monster.BaseId, monster.Id)) {
+                    minGroup = 1;
+                    maxGroup = 1;
+                  }
+                  int count = minGroup == maxGroup
+                      ? maxGroup
+                      : MathUtils.random(minGroup, maxGroup);
                   int packId = nextMonsterPackId++;
                   for (int j = 0; j < count; j++) {
                     // currentTx/currentTy identify the top-left subtile of a 5x5
@@ -1687,12 +1707,17 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int relocated = 0;
     int rejected = 0;
     int[] local = new int[2];
+    // Reserve every accepted footprint while placing the pending list.  The
+    // native spawn routine updates the collision grid between members of a
+    // pack; checking only static terrain lets several members land on the
+    // same cell before the ECS world exists.
+    boolean[] occupied = new boolean[Math.max(0, zone.width * zone.height)];
     for (PendingMonsterSpawn candidate : pending) {
       int preferredX = Map.round(candidate.x - zone.x);
       int preferredY = Map.round(candidate.y - zone.y);
       if (!findNearestMonsterSpawn(zone.flags, zone.width, zone.height,
           preferredX, preferredY, candidate.size, region,
-          MONSTER_SPAWN_SEARCH_RADIUS, local)) {
+          MONSTER_SPAWN_SEARCH_RADIUS, local, occupied)) {
         rejected++;
         continue;
       }
@@ -1704,6 +1729,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         spawnY = zone.y + local[1];
         relocated++;
       }
+      markMonsterSpawnFootprint(occupied, zone.width, zone.height,
+          local[0], local[1], candidate.size);
       Map.RoomEx room = zone.findRoomEx(spawnX, spawnY);
       if (zone.hasNativeRoomTopology() && room != null) {
         room.addMonsterSpawn(candidate.monsterId, spawnX, spawnY,
@@ -1847,12 +1874,19 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   static boolean findNearestMonsterSpawn(byte[] flags, int width, int height,
       int preferredX, int preferredY, int unitSize, WalkableRegion region,
       int maxRadius, int[] out) {
+    return findNearestMonsterSpawn(flags, width, height, preferredX, preferredY,
+        unitSize, region, maxRadius, out, null);
+  }
+
+  static boolean findNearestMonsterSpawn(byte[] flags, int width, int height,
+      int preferredX, int preferredY, int unitSize, WalkableRegion region,
+      int maxRadius, int[] out, boolean[] occupied) {
     if (out == null || out.length < 2 || region == null) return false;
     maxRadius = Math.max(0, maxRadius);
     for (int radius = 0; radius <= maxRadius; radius++) {
       if (radius == 0) {
         if (isMonsterSpawnCellValid(
-            flags, width, height, preferredX, preferredY, unitSize, region)) {
+            flags, width, height, preferredX, preferredY, unitSize, region, occupied)) {
           out[0] = preferredX;
           out[1] = preferredY;
           return true;
@@ -1865,14 +1899,14 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
       int minY = preferredY - radius;
       int maxY = preferredY + radius;
       for (int x = minX; x <= maxX; x++) {
-        if (setMonsterSpawnIfValid(flags, width, height, x, minY, unitSize, region, out)
-            || setMonsterSpawnIfValid(flags, width, height, x, maxY, unitSize, region, out)) {
+        if (setMonsterSpawnIfValid(flags, width, height, x, minY, unitSize, region, out, occupied)
+            || setMonsterSpawnIfValid(flags, width, height, x, maxY, unitSize, region, out, occupied)) {
           return true;
         }
       }
       for (int y = minY + 1; y < maxY; y++) {
-        if (setMonsterSpawnIfValid(flags, width, height, minX, y, unitSize, region, out)
-            || setMonsterSpawnIfValid(flags, width, height, maxX, y, unitSize, region, out)) {
+        if (setMonsterSpawnIfValid(flags, width, height, minX, y, unitSize, region, out, occupied)
+            || setMonsterSpawnIfValid(flags, width, height, maxX, y, unitSize, region, out, occupied)) {
           return true;
         }
       }
@@ -1881,8 +1915,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
   }
 
   private static boolean setMonsterSpawnIfValid(byte[] flags, int width, int height,
-      int x, int y, int unitSize, WalkableRegion region, int[] out) {
-    if (!isMonsterSpawnCellValid(flags, width, height, x, y, unitSize, region)) return false;
+      int x, int y, int unitSize, WalkableRegion region, int[] out, boolean[] occupied) {
+    if (!isMonsterSpawnCellValid(flags, width, height, x, y, unitSize, region, occupied)) return false;
     out[0] = x;
     out[1] = y;
     return true;
@@ -1890,6 +1924,13 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   static boolean isMonsterSpawnCellValid(byte[] flags, int width, int height,
       int centerX, int centerY, int unitSize, WalkableRegion region) {
+    return isMonsterSpawnCellValid(flags, width, height, centerX, centerY,
+        unitSize, region, null);
+  }
+
+  static boolean isMonsterSpawnCellValid(byte[] flags, int width, int height,
+      int centerX, int centerY, int unitSize, WalkableRegion region,
+      boolean[] occupied) {
     if (flags == null || region == null || region.label == 0) return false;
     int radius = Math.max(0, unitSize - 1);
     for (int y = centerY - radius; y <= centerY + radius; y++) {
@@ -1898,12 +1939,26 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         int index = y * width + x;
         if (index >= flags.length || index >= region.labels.length
             || (flags[index] & region.blockMask) != 0
-            || region.labels[index] != region.label) {
+            || region.labels[index] != region.label
+            || (occupied != null && index < occupied.length && occupied[index])) {
           return false;
         }
       }
     }
     return true;
+  }
+
+  private static void markMonsterSpawnFootprint(boolean[] occupied, int width,
+      int height, int centerX, int centerY, int unitSize) {
+    if (occupied == null) return;
+    int radius = Math.max(0, unitSize - 1);
+    for (int y = centerY - radius; y <= centerY + radius; y++) {
+      for (int x = centerX - radius; x <= centerX + radius; x++) {
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          occupied[y * width + x] = true;
+        }
+      }
+    }
   }
 
   static final class WalkableRegion {

@@ -27,6 +27,8 @@ public class VelocityAdder extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Size> mSize;
 
+  protected DynamicUnitCollisionSystem dynamicCollision;
+
   @Wire(name = "map", failOnNull = false)
   protected Map map;
 
@@ -106,9 +108,12 @@ public class VelocityAdder extends IteratingSystem {
     // Some headless/unit worlds intentionally omit generated zones. Preserve
     // the legacy velocity behaviour there; generated maps use the authoritative
     // collision grid below.
-    if (map == null || map.getZone(from) == null) return true;
+    if (map == null || map.getZone(from) == null) {
+      return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
+    }
     ray.set(from, to);
     int size = mSize.has(entityId) ? mSize.get(entityId).size : Size.INSIGNIFICANT;
-    return !map.castRay(ray, DT1.Tile.FLAG_BLOCK_WALK, size, collision);
+    if (map.castRay(ray, DT1.Tile.FLAG_BLOCK_WALK, size, collision)) return false;
+    return dynamicCollision == null || dynamicCollision.tryMove(entityId, to);
   }
 }
