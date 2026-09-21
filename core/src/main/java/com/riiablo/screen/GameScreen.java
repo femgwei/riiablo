@@ -357,6 +357,15 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     this.charData = charData;
     this.socket = socket;
 
+    // Native Diablo II key bindings are character-scoped (unlike the
+    // preferences fallback used by the controls screen).  Load them as soon
+    // as the local character is known, before any gameplay input is handled.
+    if (socket == null && charData != null && charData.isManaged()
+        && Riiablo.keys != null && Riiablo.saves != null
+        && charData.name != null && !charData.name.isEmpty()) {
+      Riiablo.keys.loadCharacterKey(Riiablo.saves.child(charData.name + ".key"));
+    }
+
     Riiablo.viewport = viewport = Riiablo.extendViewport;
     stage = new Stage(viewport, Riiablo.batch);
 
@@ -1484,6 +1493,12 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     }
 
     characterSavedForExit = D2SWriter.INSTANCE.save(charData);
+    boolean keySaved = Riiablo.keys == null || Riiablo.keys.saveCharacterKey(
+        Riiablo.saves.child(charData.name + ".key"));
+    if (!keySaved) {
+      Gdx.app.error(TAG, "Failed to save native key bindings for " + charData.name);
+    }
+    characterSavedForExit &= keySaved;
     return characterSavedForExit;
   }
 
