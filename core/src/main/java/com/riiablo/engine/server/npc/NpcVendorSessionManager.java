@@ -2,6 +2,7 @@ package com.riiablo.engine.server.npc;
 
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
+import com.badlogic.gdx.utils.ObjectMap;
 import com.riiablo.item.Item;
 import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.VendorPricing;
@@ -31,7 +32,8 @@ public final class NpcVendorSessionManager {
   }
 
   private final IntMap<Session> sessions = new IntMap<>();
-  private final IntMap<IntMap<Session>> gambleSessions = new IntMap<>();
+  /** Gamble sessions are keyed by character identity, not a transient ECS id. */
+  private final ObjectMap<String, IntMap<Session>> gambleSessions = new ObjectMap<>();
 
   /** Opens an existing session or creates the initial server inventory. */
   public synchronized Session open(int npcEntityId, String npcType,
@@ -48,13 +50,28 @@ public final class NpcVendorSessionManager {
                                     VendorGenerator generator, boolean gamble,
                                     Npc.Entry pricing, int difficulty,
                                     int playerEntityId, boolean refreshGamble) throws Exception {
+    return open(npcEntityId, npcType, generator, gamble, pricing, difficulty,
+        playerEntityId, Integer.toString(playerEntityId), refreshGamble);
+  }
+
+  /**
+   * Opens a session using a stable character identity.  The entity id is kept
+   * only for the NPC key; it is deliberately not used to own gamble stock so
+   * a reconnect with a new ECS entity cannot inherit another character's page.
+   */
+  public synchronized Session open(int npcEntityId, String npcType,
+                                    VendorGenerator generator, boolean gamble,
+                                    Npc.Entry pricing, int difficulty,
+                                    int playerEntityId, String playerKey,
+                                    boolean refreshGamble) throws Exception {
     IntMap<Session> ownerSessions = null;
     Session session;
     if (gamble) {
-      ownerSessions = gambleSessions.get(playerEntityId);
+      String key = stablePlayerKey(playerKey, playerEntityId);
+      ownerSessions = gambleSessions.get(key);
       if (ownerSessions == null) {
         ownerSessions = new IntMap<>();
-        gambleSessions.put(playerEntityId, ownerSessions);
+        gambleSessions.put(key, ownerSessions);
       }
       session = ownerSessions.get(npcEntityId);
     } else {
@@ -158,11 +175,21 @@ public final class NpcVendorSessionManager {
   }
 
   public synchronized void clearPlayer(int playerEntityId) {
-    gambleSessions.remove(playerEntityId);
+    gambleSessions.remove(Integer.toString(playerEntityId));
+  }
+
+  /** Clears a reconnecting character's private gamble sessions by stable name. */
+  public synchronized void clearPlayer(int playerEntityId, String playerKey) {
+    gambleSessions.remove(stablePlayerKey(playerKey, playerEntityId));
   }
 
   public synchronized void clearAll() {
     sessions.clear();
     gambleSessions.clear();
+  }
+
+  private static String stablePlayerKey(String playerKey, int playerEntityId) {
+    return playerKey == null || playerKey.trim().isEmpty()
+        ? Integer.toString(playerEntityId) : playerKey;
   }
 }

@@ -34,4 +34,24 @@ class NpcVendorSessionManagerTest {
     assertNotSame(first, manager.open(10, "gheed", null, true, null, 0, 1, false));
     assertSame(other, manager.open(10, "gheed", null, true, null, 0, 2, false));
   }
+
+  @Test void gambleOwnershipUsesStableCharacterKeyAcrossEntityIds() throws Exception {
+    NpcVendorSessionManager manager = new NpcVendorSessionManager();
+    NpcVendorSessionManager.Session first = manager.open(
+        10, "gheed", null, true, null, 0, 41, "aaa", false);
+    NpcVendorSessionManager.Session reconnect = manager.open(
+        10, "gheed", null, true, null, 0, 99, "aaa", false);
+    assertSame(first, reconnect);
+
+    NpcVendorSessionManager.Session otherCharacter = manager.open(
+        10, "gheed", null, true, null, 0, 99, "bb", false);
+    assertNotSame(first, otherCharacter);
+
+    manager.clearPlayer(99, "aaa");
+    NpcVendorSessionManager.Session refreshed = manager.open(
+        10, "gheed", null, true, null, 0, 120, "aaa", false);
+    assertNotSame(first, refreshed);
+    assertSame(otherCharacter, manager.open(
+        10, "gheed", null, true, null, 0, 99, "bb", false));
+  }
 }

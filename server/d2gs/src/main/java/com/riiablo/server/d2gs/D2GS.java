@@ -5427,6 +5427,9 @@ public class D2GS extends ApplicationAdapter {
       outPackets.offer(broadcast);
       npcRequestCache.clear(id);
       npcVendors.clearPlayer(entityId);
+      if (disconnectedPlayer != null && disconnectedPlayer.data != null) {
+        npcVendors.clearPlayer(entityId, disconnectedPlayer.data.name);
+      }
       itemMoveRequestCache.clearConnection(id);
       skillPointRequestCache.clearConnection(id);
       statPointRequestCache.clearConnection(id);
@@ -6358,6 +6361,8 @@ public class D2GS extends ApplicationAdapter {
             world.getSystem(VendorGenerator.class),
             service == com.riiablo.engine.server.npc.NpcServiceProtocol.Service.GAMBLE,
             Riiablo.files.Npc.get(npc.monstats.Id), diff, playerId,
+            playerComponent == null || playerComponent.data == null
+                ? null : playerComponent.data.name,
             operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN);
       } catch (Throwable t) {
         reason = "STOCK_GENERATION_FAILED";
