@@ -6425,7 +6425,7 @@ public class D2GS extends ApplicationAdapter {
       } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.OPEN) {
         // The client may open Kashya's hire panel before choosing a candidate.
       } else if (operation == com.riiablo.engine.server.npc.NpcServiceProtocol.Operation.HIRE) {
-        if (!mercenaries.hireAct1Rogue(playerId)) reason = "HIRE_REJECTED";
+        if (!mercenaries.hireMercenary(playerId, npc.monstats.hcIdx)) reason = "HIRE_REJECTED";
         else resultItemId = mercenaries.mercenaryEntityId(playerId);
       } else {
         reason = "OPERATION_NOT_IMPLEMENTED";

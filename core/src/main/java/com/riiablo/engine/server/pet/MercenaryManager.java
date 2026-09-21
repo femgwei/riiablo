@@ -407,6 +407,16 @@ public class MercenaryManager {
     return true;
   }
 
+  /** Returns whether this NPC is a native hireling vendor. */
+  public static boolean isHirelingNpc(int npcId) {
+    return getMercTypeForNpcStatic(npcId) >= 0;
+  }
+
+  /** Returns the native hireling type offered by an NPC, or -1 when unsupported. */
+  public static int mercenaryTypeForNpc(int npcId) {
+    return getMercTypeForNpcStatic(npcId);
+  }
+
   /**
    * Grants Kashya's Blood Raven reward without charging the player.
    *
@@ -830,6 +840,10 @@ public class MercenaryManager {
    * 获取 NPC 对应的雇佣兵类型
    */
   private int getMercTypeForNpc(int npcId) {
+    return getMercTypeForNpcStatic(npcId);
+  }
+
+  private static int getMercTypeForNpcStatic(int npcId) {
     switch (npcId) {
       case NPC_KASHYA: return MERC_TYPE_ROGUE;
       case NPC_GREIZ: return MERC_TYPE_DESERT;

@@ -35,6 +35,9 @@
   不会重复发奖励、重复开门或回退任务记录。
 - NPC 赌博 session 的生产路径改用角色名作为稳定 owner key；重连后 ECS entity ID 改变
   不会串用其他角色的库存，断线清理仍只清除当前角色，普通交易库存继续按 NPC 共享。
+- NPC 雇佣请求不再无条件落到 Kashya/A1 Rogue：D2GS 现在按实际 NPC 的 native `hcIdx`
+  选择 Kashya、Greiz、Asheara 或 Qual-Kehk 对应的佣兵池，并拒绝未知雇佣 NPC；保留
+  `hireAct1Rogue` 作为任务兼容入口。
 - 仍需真实资源/原版客户端验证的项目单独记录，不把“代码已存在”误报为实机完成：
   `headlessMissileCombat` 的 Throw/标枪实际伤害、原版 `.d2s/.map/.ma*` 外部识别、
   Automap 原生/ HackMap 像素级图标与城镇/野外迷雾连续性，以及带真实 MPQ 的完整退出重载。

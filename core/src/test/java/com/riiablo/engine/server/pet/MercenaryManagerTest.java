@@ -10,6 +10,18 @@ import org.junit.jupiter.api.Test;
 
 class MercenaryManagerTest {
   @Test
+  void mapsEachNativeHirelingNpcToItsMercenaryType() {
+    assertEquals(MercenaryManager.MERC_TYPE_ROGUE,
+        MercenaryManager.mercenaryTypeForNpc(MercenaryManager.NPC_KASHYA));
+    assertEquals(MercenaryManager.MERC_TYPE_DESERT,
+        MercenaryManager.mercenaryTypeForNpc(MercenaryManager.NPC_GREIZ));
+    assertEquals(MercenaryManager.MERC_TYPE_IRON_WOLF,
+        MercenaryManager.mercenaryTypeForNpc(MercenaryManager.NPC_ASHEARA));
+    assertEquals(MercenaryManager.MERC_TYPE_BARBARIAN,
+        MercenaryManager.mercenaryTypeForNpc(MercenaryManager.NPC_QUAL_KEHK));
+    assertFalse(MercenaryManager.isHirelingNpc(999));
+  }
+  @Test
   void freeRogueCommitsOnlyAfterEntityCreation() {
     MercenaryManager manager = new MercenaryManager();
     Callback callback = new Callback();

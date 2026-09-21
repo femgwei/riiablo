@@ -100,23 +100,34 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   /** Hires the first available Act I Rogue through the same entity transaction as A1Q2. */
   public boolean hireAct1Rogue(int playerId) {
+    return hireMercenary(playerId, MercenaryManager.NPC_KASHYA);
+  }
+
+  /** Hires the first affordable native mercenary offered by the selected NPC. */
+  public boolean hireMercenary(int playerId, int npcId) {
     if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null
         || mPlayer.get(playerId).data.hasMerc()) {
-      log.warn("[ACT1_HIRE] player already owns a persisted mercenary: player={}", playerId);
+      log.warn("[MERC_HIRE] player already owns a persisted mercenary: player={}", playerId);
+      return false;
+    }
+    if (!MercenaryManager.isHirelingNpc(npcId)) {
+      log.warn("[MERC_HIRE] unsupported hireling NPC: npc={}", npcId);
       return false;
     }
     int level = getPlayerLevel(playerId);
     Array<MercenaryManager.AvailableMercenary> available = mercenaries.getAvailableMercenaries(
-        MercenaryManager.NPC_KASHYA, level);
+        npcId, level);
     for (int i = 0; i < available.size; i++) {
       if (!available.get(i).hired
-          && mercenaries.hireMercenary(playerId, MercenaryManager.NPC_KASHYA, i)) {
-        log.info("[ACT1_HIRE] paid Rogue hired: player={} slot={} level={}", playerId, i,
+          && mercenaries.hireMercenary(playerId, npcId, i)) {
+        log.info("[MERC_HIRE] paid mercenary hired: player={} npc={} type={} slot={} level={}",
+            playerId, npcId, MercenaryManager.mercenaryTypeForNpc(npcId), i,
             available.get(i).level);
         return true;
       }
     }
-    log.warn("[ACT1_HIRE] no affordable/available Rogue: player={} level={}", playerId, level);
+    log.warn("[MERC_HIRE] no affordable/available mercenary: player={} npc={} level={}",
+        playerId, npcId, level);
     return false;
   }
 
