@@ -27,6 +27,10 @@ public class TileGrid {
 
   /** DT1 source selected by native DRLG, encoded as an index into sourceFiles. */
   public final byte[][] floorSourceFiles;
+  /** DT1 source selected for each native wall/roof layer. */
+  public final byte[][][] wallSourceFiles;
+  /** DT1 source selected for the native shadow layer. */
+  public final byte[][] shadowSourceFiles;
   private final List<String> sourceFiles = new ArrayList<>();
 
   /**
@@ -66,6 +70,8 @@ public class TileGrid {
     this.height = height;
     this.floorIds = new int[height][width];
     this.floorSourceFiles = new byte[height][width];
+    this.wallSourceFiles = new byte[MAX_WALL_LAYERS][height][width];
+    this.shadowSourceFiles = new byte[height][width];
     this.exportedFloorCells = new boolean[height][width];
     this.wallIds = new int[MAX_WALL_LAYERS][height][width];
     this.hiddenWallCells = new boolean[MAX_WALL_LAYERS][height][width];
@@ -94,8 +100,10 @@ public class TileGrid {
         floorSourceFiles[y][x] = 0;
         exportedFloorCells[y][x] = false;
         shadowIds[y][x] = -1;
+        shadowSourceFiles[y][x] = 0;
         for (int layer = 0; layer < MAX_WALL_LAYERS; layer++) {
           wallIds[layer][y][x] = -1;
+          wallSourceFiles[layer][y][x] = 0;
           hiddenWallCells[layer][y][x] = false;
         }
       }

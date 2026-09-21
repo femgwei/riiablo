@@ -2233,8 +2233,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
   private static void clearSeamObstacles(TileGrid grid, int x, int y) {
     grid.shadowIds[y][x] = -1;
+    grid.shadowSourceFiles[y][x] = 0;
     for (int layer = 0; layer < TileGrid.MAX_WALL_LAYERS; layer++) {
       grid.wallIds[layer][y][x] = -1;
+      grid.wallSourceFiles[layer][y][x] = 0;
     }
   }
 
@@ -3258,7 +3260,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             counts.hiddenWarpWalls++;
             continue;
           }
-          DT1.Tile tile = dt1s.get(wallId);
+          String sourceFile = grid.sourceFile(grid.wallSourceFiles[slot][y][x]);
+          DT1.Tile tile = dt1s.get(sourceFile, wallId);
+          if (tile == null) tile = dt1s.get(wallId);
           if (tile == null) {
             counts.failedResolve++;
             counts.failedWalls++;
@@ -3276,7 +3280,9 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
 
         int shadowId = grid.shadowIds[y][x];
         if (shadowId != -1) {
-          DT1.Tile tile = dt1s.get(shadowId);
+          String sourceFile = grid.sourceFile(grid.shadowSourceFiles[y][x]);
+          DT1.Tile tile = dt1s.get(sourceFile, shadowId);
+          if (tile == null) tile = dt1s.get(shadowId);
           if (tile != null) {
             if (layers[Map.SHADOW_OFFSET] == null) {
               layers[Map.SHADOW_OFFSET] = Zone.obtainTileArray(layerSize);

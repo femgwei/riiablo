@@ -170,10 +170,10 @@ public final class D2MooTileApplier implements DrlgTileExporter {
                 applyFloor(grid, tx, ty, riiabloTileId, orientation, sourceFile);
                 break;
             case DrlgExport.LAYER_WALL:
-                applyWall(grid, tx, ty, riiabloTileId, orientation, flags);
+                applyWall(grid, tx, ty, riiabloTileId, orientation, flags, sourceFile);
                 break;
             case DrlgExport.LAYER_SHADOW:
-                applyShadow(grid, tx, ty, riiabloTileId, orientation);
+                applyShadow(grid, tx, ty, riiabloTileId, orientation, sourceFile);
                 break;
             default:
                 throw new AssertionError("validated layer " + layer);
@@ -192,13 +192,16 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         exportedFloorCount++;
     }
 
-    private void applyWall(TileGrid grid, int tx, int ty, int tileId, int orientation, int flags) {
+    private void applyWall(TileGrid grid, int tx, int ty, int tileId, int orientation, int flags,
+            String sourceFile) {
         if (!isWallLayerOrientation(orientation)) nonWallOrientationCount++;
+        byte sourceIndex = grid.registerSourceFile(sourceFile);
         // Adjacent native RoomEx grids share their boundary row/column and
         // may report the same wall more than once. Do not consume another of
         // riiablo's four wall slots for an identical tile.
         for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS; slot++) {
-            if (grid.wallIds[slot][ty][tx] == tileId) {
+            if (grid.wallIds[slot][ty][tx] == tileId
+                    && grid.wallSourceFiles[slot][ty][tx] == sourceIndex) {
                 grid.hiddenWallCells[slot][ty][tx] |=
                     (flags & DrlgTileExporter.FLAG_HIDDEN) != 0;
                 duplicateWallCount++;
@@ -208,6 +211,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         for (int slot = 0; slot < TileGrid.MAX_WALL_LAYERS; slot++) {
             if (grid.wallIds[slot][ty][tx] == -1) {
                 grid.wallIds[slot][ty][tx] = tileId;
+                grid.wallSourceFiles[slot][ty][tx] = sourceIndex;
                 grid.hiddenWallCells[slot][ty][tx] =
                     (flags & DrlgTileExporter.FLAG_HIDDEN) != 0;
                 uniqueWallIds.add(tileId);
@@ -218,7 +222,8 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         wallLayerOverflowCount++;
     }
 
-    private void applyShadow(TileGrid grid, int tx, int ty, int tileId, int orientation) {
+    private void applyShadow(TileGrid grid, int tx, int ty, int tileId, int orientation,
+            String sourceFile) {
         if (orientation != Orientation.SHADOW) {
             if (nonShadowOrientationCount < 16 && Gdx.app != null) {
                 Gdx.app.log("D2MooTileApplier", String.format(
@@ -231,6 +236,7 @@ public final class D2MooTileApplier implements DrlgTileExporter {
         }
         if (grid.shadowIds[ty][tx] != -1) duplicateShadowCount++;
         grid.shadowIds[ty][tx] = tileId;
+        grid.shadowSourceFiles[ty][tx] = grid.registerSourceFile(sourceFile);
         uniqueShadowIds.add(tileId);
         exportedShadowCount++;
     }

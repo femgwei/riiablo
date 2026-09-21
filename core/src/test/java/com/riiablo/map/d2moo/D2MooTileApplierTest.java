@@ -61,6 +61,23 @@ class D2MooTileApplierTest {
   }
 
   @Test
+  void retainsNativeWallAndShadowDt1Sources() {
+    TileGrid grid = new TileGrid(1, 1);
+    D2MooTileApplier applier = new D2MooTileApplier();
+    applier.putGrid(LEVEL_ID, grid);
+    String wallSource = "data\\global\\tiles\\Act1\\Outdoors\\Walls.dt1";
+    String shadowSource = "data\\global\\tiles\\Act1\\Outdoors\\Trees.dt1";
+
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_WALL, 0, 0,
+        pack(Orientation.LEFT_WALL, 8, 3), 0, wallSource);
+    applier.onTile(LEVEL_ID, DrlgExport.LAYER_SHADOW, 0, 0,
+        pack(Orientation.SHADOW, 9, 4), 0, shadowSource);
+
+    assertEquals(wallSource, grid.sourceFile(grid.wallSourceFiles[0][0][0]));
+    assertEquals(shadowSource, grid.sourceFile(grid.shadowSourceFiles[0][0]));
+  }
+
+  @Test
   void retainsHiddenWarpMarkersForInteractionWithoutLosingVisibilityState() {
     TileGrid grid = new TileGrid(1, 1);
     D2MooTileApplier applier = new D2MooTileApplier();
@@ -145,8 +162,10 @@ class D2MooTileApplierTest {
     grid.floorIds[0][0] = 1;
     grid.exportedFloorCells[0][0] = true;
     grid.wallIds[0][0][0] = 2;
+    grid.wallSourceFiles[0][0][0] = grid.registerSourceFile("wall.dt1");
     grid.hiddenWallCells[0][0][0] = true;
     grid.shadowIds[0][0] = 3;
+    grid.shadowSourceFiles[0][0] = grid.registerSourceFile("shadow.dt1");
     grid.dirtPathFlags[0][0] = true;
 
     grid.clearExportedTileIds();
@@ -154,8 +173,10 @@ class D2MooTileApplierTest {
     assertEquals(-1, grid.floorIds[0][0]);
     assertEquals(false, grid.exportedFloorCells[0][0]);
     assertEquals(-1, grid.wallIds[0][0][0]);
+    assertEquals(0, grid.wallSourceFiles[0][0][0]);
     assertEquals(false, grid.hiddenWallCells[0][0][0]);
     assertEquals(-1, grid.shadowIds[0][0]);
+    assertEquals(0, grid.shadowSourceFiles[0][0]);
     assertEquals(true, grid.dirtPathFlags[0][0]);
   }
 
