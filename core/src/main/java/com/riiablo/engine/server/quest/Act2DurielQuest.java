@@ -21,6 +21,22 @@ public final class Act2DurielQuest {
     return NativeQuestRecord.set(record, NativeQuestRecord.CUSTOM1);
   }
 
+  /** Returns whether the Horadric Staff may still be inserted into the orifice. */
+  public static boolean canInsertStaff(short record) {
+    record = repairLegacyOrificeFlags(record);
+    return !NativeQuestRecord.has(record, NativeQuestRecord.CUSTOM1)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.PRIMARY_GOAL_DONE)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.LEFT_TOWN)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.ENTERED_AREA)
+        && !NativeQuestRecord.has(record, NativeQuestRecord.REWARD_GRANTED);
+  }
+
+  /** A2Q2 is atomically completed when the assembled staff is inserted. */
+  public static boolean staffAlreadyInserted(short horadricStaffRecord) {
+    return NativeQuestRecord.has(horadricStaffRecord, NativeQuestRecord.REWARD_GRANTED)
+        && NativeQuestRecord.has(horadricStaffRecord, NativeQuestRecord.PRIMARY_GOAL_DONE);
+  }
+
   /** Tyrael's message 302 grants the primary goal and enables the town return. */
   public static short acceptTyraelPortal(short record) {
     record = repairLegacyOrificeFlags(record);

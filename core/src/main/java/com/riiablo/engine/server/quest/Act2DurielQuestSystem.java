@@ -117,10 +117,17 @@ public class Act2DurielQuestSystem extends BaseSystem {
     }
 
     ItemData items = player.data.getItems();
-    if (items == null || !items.containsItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF)) {
+    short[] quests = player.data.getQuests(Riiablo.ACT2);
+    boolean staffAlreadyInserted = quests != null
+        && quests.length > Act2HoradricStaffQuest.RECORD
+        && Act2DurielQuest.staffAlreadyInserted(quests[Act2HoradricStaffQuest.RECORD]);
+    if (items == null
+        || !Act2DurielQuest.canInsertStaff(record(player.data))
+        || staffAlreadyInserted
+        || !items.containsItemCode(Act2HoradricStaffQuest.HORADRIC_STAFF)) {
       rollbackOrifice(event.entityId);
-      log.warn("[A2Q6] Staff orifice activation had no authoritative hst: player={}",
-          event.playerId);
+      log.warn("[A2Q6] Staff orifice activation rejected by quest/item state: player={} record={}",
+          event.playerId, record(player.data));
       return;
     }
     float portalX = source.position.x - 13f;

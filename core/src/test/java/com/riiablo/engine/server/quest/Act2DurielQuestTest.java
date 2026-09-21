@@ -49,6 +49,25 @@ class Act2DurielQuestTest {
   }
 
   @Test
+  void staffInsertionIsOneShotAndRejectedAfterDurielProgress() {
+    assertTrue(Act2DurielQuest.canInsertStaff((short) 0));
+    assertFalse(Act2DurielQuest.canInsertStaff(
+        Act2DurielQuest.markDurielKilled((short) 0)));
+    assertFalse(Act2DurielQuest.canInsertStaff(
+        Act2DurielQuest.acceptTyraelPortal(
+            Act2DurielQuest.markDurielKilled((short) 0))));
+    assertFalse(Act2DurielQuest.canInsertStaff(
+        Act2DurielQuest.travelWithMeshif(
+            Act2DurielQuest.acknowledgeJerhyn(
+                Act2DurielQuest.acceptTyraelPortal(
+                Act2DurielQuest.markDurielKilled((short) 0))))));
+    assertFalse(Act2DurielQuest.staffAlreadyInserted((short) 0));
+    short assembled = NativeQuestRecord.set((short) 0, NativeQuestRecord.REWARD_GRANTED);
+    assembled = NativeQuestRecord.set(assembled, NativeQuestRecord.PRIMARY_GOAL_DONE);
+    assertTrue(Act2DurielQuest.staffAlreadyInserted(assembled));
+  }
+
+  @Test
   void reconnectRestoresDoorAfterDurielButNotTownPortalBeforeTyrael() {
     short killed = Act2DurielQuest.markDurielKilled((short) 0);
     assertTrue(Act2DurielQuest.shouldRestoreTyraelDoor(killed));
