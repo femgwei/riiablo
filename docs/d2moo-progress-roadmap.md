@@ -46,6 +46,9 @@
 - 新增 `ItemDataTradeAuthority`：按稳定物品 ID 校验双方真实背包归属、灵魂绑定和接收
   空间，并支持 carried gold 的预检/转移；D2GS 角色解析器接线和跨进程网络请求仍待补，
   当前已用无 MPQ 的纯 Java 测试覆盖零额原子提交与金币不足拒绝。
+- 新增 D2GS `TradeService.fbs`：定义 REQUEST/ACCEPT/DECLINE/ADD_ITEM/REMOVE_ITEM/
+  SET_GOLD/CONFIRM/CANCEL/SNAPSHOT 及会话物品快照，并通过 D2GS union 往返测试；尚未
+  接入 D2GS 分发、距离/双方授权校验和客户端 UI。
 - 仍需真实资源/原版客户端验证的项目单独记录，不把“代码已存在”误报为实机完成：
   `headlessMissileCombat` 的 Throw/标枪实际伤害、原版 `.d2s/.map/.ma*` 外部识别、
   Automap 原生/ HackMap 像素级图标与城镇/野外迷雾连续性，以及带真实 MPQ 的完整退出重载。

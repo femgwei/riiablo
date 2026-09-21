@@ -9,6 +9,7 @@ include "PartyService.fbs";
 include "PlayerLifecycle.fbs";
 include "QuestService.fbs";
 include "GoldManagement.fbs";
+include "TradeService.fbs";
 
 namespace com.riiablo.net.packet.d2gs;
 
@@ -53,6 +54,8 @@ union D2GSData {
   SnapshotBaseline,
   GoldRequest,
   GoldResult,
+  TradeRequest,
+  TradeResult,
 }
 
 table D2GS {

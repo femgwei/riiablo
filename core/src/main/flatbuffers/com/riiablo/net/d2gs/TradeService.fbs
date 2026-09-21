@@ -1,0 +1,53 @@
+namespace com.riiablo.net.packet.d2gs;
+
+/** Authoritative player-to-player trade operation. */
+enum TradeOperation:byte {
+  REQUEST,
+  ACCEPT,
+  DECLINE,
+  ADD_ITEM,
+  REMOVE_ITEM,
+  SET_GOLD,
+  CONFIRM,
+  CANCEL,
+  SNAPSHOT
+}
+
+/** One item offered in a player's trade area. */
+table TradeItemSnapshot {
+  itemId:int32;
+  x:ubyte;
+  y:ubyte;
+  width:ubyte;
+  height:ubyte;
+  quantity:uint32;
+  identified:bool;
+}
+
+/** Client intent. The source player is always resolved from the connection. */
+table TradeRequest {
+  requestId:uint32;
+  operation:TradeOperation;
+  targetEntityId:int32;
+  sessionId:int32;
+  itemId:int32;
+  x:ubyte;
+  y:ubyte;
+  gold:uint32;
+}
+
+/** Authoritative acknowledgement and optional session snapshot. */
+table TradeResult {
+  requestId:uint32;
+  success:bool;
+  reason:string;
+  operation:TradeOperation;
+  sessionId:int32;
+  sourceEntityId:int32;
+  targetEntityId:int32;
+  state:ubyte;
+  sourceGold:uint32;
+  targetGold:uint32;
+  sourceItems:[TradeItemSnapshot];
+  targetItems:[TradeItemSnapshot];
+}
