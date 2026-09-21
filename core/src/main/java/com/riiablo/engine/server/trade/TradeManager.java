@@ -65,8 +65,19 @@ public class TradeManager {
     /** 交易取消 */
     void onTradeCancelled(TradeSession session, int cancelledBy);
   }
+
+  /**
+   * Authoritative two-phase inventory boundary.  Implementations validate
+   * current item ownership, wallet balances and destination capacity, then
+   * atomically commit both participants or return failure without mutation.
+   */
+  public interface TradeAuthority {
+    int validate(TradeSession session);
+    boolean commit(TradeSession session);
+  }
   
   private TradeCallback callback;
+  private TradeAuthority authority;
 
   //==========================================================================
   // 构造函数
@@ -88,6 +99,10 @@ public class TradeManager {
    */
   public void setCallback(TradeCallback callback) {
     this.callback = callback;
+  }
+
+  public void setAuthority(TradeAuthority authority) {
+    this.authority = authority;
   }
 
   //==========================================================================
@@ -395,9 +410,21 @@ public class TradeManager {
     if (validationResult != TradeState.RESULT_SUCCESS) {
       log.warn("交易验证失败: sessionId={}, result={}", 
                session.getSessionId(), TradeState.getResultName(validationResult));
+      session.unconfirm(session.getPlayer1Id());
+      session.unconfirm(session.getPlayer2Id());
       return validationResult;
     }
     
+    // A notification callback is not an inventory authority.  Never report
+    // success or discard the offers until a two-phase authority has committed
+    // both item and gold transfers.
+    if (authority == null || !authority.commit(session)) {
+      session.unconfirm(session.getPlayer1Id());
+      session.unconfirm(session.getPlayer2Id());
+      log.warn("交易提交失败，保留会话供重试: sessionId={}", session.getSessionId());
+      return TradeState.RESULT_ERROR;
+    }
+
     // 标记完成
     session.setState(TradeState.COMPLETED);
     
@@ -420,12 +447,11 @@ public class TradeManager {
    * @return 结果代码
    */
   private int validateTrade(TradeSession session) {
-    // TODO: 实现详细的验证逻辑
-    // - 检查物品是否仍在玩家背包
-    // - 检查金币是否足够
-    // - 检查背包空间是否足够
-    
-    return TradeState.RESULT_SUCCESS;
+    if (session == null || session.getState() != TradeState.CONFIRMED
+        || !session.isBothConfirmed() || authority == null) {
+      return TradeState.RESULT_ERROR;
+    }
+    return authority.validate(session);
   }
 
   //==========================================================================
