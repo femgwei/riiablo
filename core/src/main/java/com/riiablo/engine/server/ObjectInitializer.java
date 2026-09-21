@@ -91,8 +91,31 @@ public class ObjectInitializer extends BaseEntitySystem {
       default:
         Gdx.app.error(TAG, "Invalid InitFn for " + mClassname.get(entityId).classname + ": " + base.InitFn);
     }
+    normalizeInactiveShrineMode(entityId, base, nativeState);
     restorePersistentInteractionState(entityId, base, nativeState);
     syncSnapshotState(entityId, nativeState);
+  }
+
+  /**
+   * An unactivated shrine is always rendered in its neutral state.  The
+   * native outdoor substitution files carry mode NU, but older exports and
+   * room recreation can briefly retain OP (the ten-frame activation loop).
+   * OP is a transient sequence mode and must never be restored for a shrine
+   * whose persistent activation flag is false.
+   */
+  private void normalizeInactiveShrineMode(int entityId, Objects.Entry base,
+      NativeObjectState state) {
+    if (base == null || state == null || state.activated
+        || NativeObjectOperateTable.resolve(base, state.kind) != Lifecycle.SHRINE) {
+      return;
+    }
+    if (state.currentMode != Engine.Object.MODE_NU) {
+      state.persistMode(Engine.Object.MODE_NU);
+    }
+    if (mCofReference.has(entityId)
+        && mCofReference.get(entityId).mode != Engine.Object.MODE_NU) {
+      cofs.setMode(entityId, Engine.Object.MODE_NU);
+    }
   }
 
   private void syncSnapshotState(int entityId, NativeObjectState state) {
