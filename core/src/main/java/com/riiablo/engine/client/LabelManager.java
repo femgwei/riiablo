@@ -79,6 +79,11 @@ public class LabelManager extends IteratingSystem {
     iso.toScreen(tmpVec2);
 
     Label label = mLabel.get(entityId);
+    // Ground gold can be partially picked up without replacing its entity.
+    // Refresh the cached header so the displayed amount follows quantity.
+    if (mItem.has(entityId)) {
+      label.actor = mItem.get(entityId).item.header();
+    }
     tmpVec2.add(label.offset);
 
     Actor actor = label.actor;
