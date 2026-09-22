@@ -64,6 +64,21 @@ class NativeItemGenerationTest extends RiiabloTest {
     assertFalse(NativeItemGeneration.canBeEthereal(item, Quality.NORMAL));
   }
 
+  @Test
+  void forcedEtherealityUsesPropertyFunc23Guard() {
+    Item item = armor(4, 2, 2, 40);
+    item.attrs.base().put(Stat.armorclass, 100);
+    item.attrs.base().put(Stat.maxdurability, 40);
+    item.attrs.base().put(Stat.durability, 30);
+
+    assertTrue(NativeItemGeneration.applyEtherealIfNeeded(item));
+    assertEquals(150, item.attrs.base().get(Stat.armorclass).asInt());
+    assertEquals(21, item.attrs.base().get(Stat.maxdurability).asInt());
+    assertFalse(NativeItemGeneration.applyEtherealIfNeeded(item));
+    assertEquals(150, item.attrs.base().get(Stat.armorclass).asInt(),
+        "PropertyFunc23 must not scale an already ethereal item twice");
+  }
+
   private static Item armor(int sockets, int width, int height, int durability) {
     Armor.Entry base = new Armor.Entry();
     base.gemsockets = sockets;

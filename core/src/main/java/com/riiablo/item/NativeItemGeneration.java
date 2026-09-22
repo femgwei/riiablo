@@ -112,6 +112,22 @@ public final class NativeItemGeneration {
     }
   }
 
+  /**
+   * Applies the native PropertyFunc23 guard before etherealizing an item.
+   * Cube outputs and other forced-property callers must not scale an item a
+   * second time when the source is already ethereal or has no durability.
+   *
+   * @return true when the item was changed
+   */
+  public static boolean applyEtherealIfNeeded(Item item) {
+    if (item == null || item.isEthereal() || item.base == null
+        || item.base.nodurability) return false;
+    StatRef max = item.attrs.base().get(Stat.maxdurability);
+    if (max == null || max.asInt() <= 0) return false;
+    applyEthereal(item);
+    return true;
+  }
+
   private static void initializeDurability(Item item, int durability, RandomSource random) {
     int max = item.base.nodurability ? 0 : Math.max(0, Math.min(255, durability));
     item.attrs.base().put(Stat.maxdurability, max);
