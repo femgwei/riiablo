@@ -444,7 +444,13 @@ public class ItemGrid extends Group {
       b.resetBlendMode();
       item.draw(b, 1);
       if (clickListener.isOver() && itemData.getCursor() == null) {
-        Riiablo.game.setDetails(item.details(updater), item, ItemGrid.this, item.wrapper);
+        Actor details = item.details(updater);
+        VendorPanel vendor = Riiablo.game.vendorPanel;
+        if (!item.hasFlag2(Item.ITEMFLAG2_INSTORE)
+            && vendor != null && vendor.canSellItems()) {
+          details = vendor.sellDetails(item, updater);
+        }
+        Riiablo.game.setDetails(details, item, ItemGrid.this, item.wrapper);
       }
     }
   }

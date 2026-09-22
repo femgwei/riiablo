@@ -523,7 +523,13 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       }
 
       if (isOver && item != null && cursorItem == null) {
-        Riiablo.game.setDetails(item.details(updater), item, InventoryPanel.this, this);
+        Actor details = item.details(updater);
+        VendorPanel vendor = Riiablo.game.vendorPanel;
+        if (!item.hasFlag2(Item.ITEMFLAG2_INSTORE)
+            && vendor != null && vendor.canSellItems()) {
+          details = vendor.sellDetails(item, updater);
+        }
+        Riiablo.game.setDetails(details, item, InventoryPanel.this, this);
       }
     }
   }

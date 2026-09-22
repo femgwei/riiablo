@@ -159,6 +159,10 @@ public class ItemLabeler {
   }
 
   public Table updateLabel(Item item, Table table, int labelFlags) {
+    return updateLabel(item, table, labelFlags, -1);
+  }
+
+  public Table updateLabel(Item item, Table table, int labelFlags, int transactionPrice) {
     BitmapFont font = Riiablo.fonts.font16;
     Label name = new Label(item.getNameString(), font);
     Label type = new Label(Riiablo.string.lookup(item.base.namestr), font);
@@ -167,6 +171,10 @@ public class ItemLabeler {
     table.clearChildren();
     table.setBackground(PaletteIndexedColorDrawable.MODAL_FONT16);
 
+    if ((labelFlags & LABELFLAG_CANSELL) != 0 && transactionPrice >= 0) {
+      table.add(new Label(formatSellPrice(transactionPrice), font, Riiablo.colors.gold))
+          .center().space(SPACING).row();
+    }
     if (item.hasFlag2(Item.ITEMFLAG2_INSTORE)) {
       table.add(new Label(Riiablo.string.lookup("cost") + VendorPricing.buyPrice(item), font, name.getColor())).center().space(SPACING).row();
     }
@@ -398,5 +406,9 @@ public class ItemLabeler {
 
     table.pack();
     return table;
+  }
+
+  static String formatSellPrice(int price) {
+    return "出售价格：" + Math.max(0, price);
   }
 }

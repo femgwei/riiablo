@@ -18,6 +18,7 @@ import com.badlogic.gdx.utils.ObjectSet;
 import com.badlogic.gdx.net.Socket;
 
 import com.riiablo.Riiablo;
+import com.riiablo.attributes.AttributesUpdater;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.DC;
@@ -519,7 +520,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
 
   /** Opens a server-owned vendor session. Local inventory generation is skipped. */
   public void configNetwork(int flags, int npcEntityId, byte service) {
-    config(flags, new Array<Item>(false, 0, Item.class), null, service);
+    configNetwork(flags, npcEntityId, service, null);
+  }
+
+  public void configNetwork(int flags, int npcEntityId, byte service, Npc.Entry pricing) {
+    config(flags, new Array<Item>(false, 0, Item.class), pricing, service);
     networkFlags = flags;
     networkNpcEntityId = npcEntityId;
     networkService = service;
@@ -607,7 +612,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       }
     }
     int flags = networkFlags;
-    config(flags, stock, null, networkService);
+    config(flags, stock, localPricing, networkService);
     networkFlags = flags;
     restoreTradeMode(restoreSelling, restoreRepairing);
     if (!result.success()) Gdx.app.log(TAG, "[NPC_SERVICE] " + result.reason());
@@ -648,6 +653,19 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   /** The trade window accepts native right-click selling without selecting Sell first. */
   public boolean canSellItems() {
     return isVisible() && (configuredFlags & SELL) != 0;
+  }
+
+  /** Returns the exact local/native sale value shown by the trade tooltip. */
+  public int sellPrice(Item item) {
+    if (item == null || Riiablo.charData == null) return 0;
+    return VendorPricing.sellPrice(
+        item, localPricing, Riiablo.charData, Riiablo.charData.diff);
+  }
+
+  /** Uses a separate table so the ordinary cached inventory tooltip is untouched. */
+  public com.badlogic.gdx.scenes.scene2d.ui.Table sellDetails(
+      Item item, AttributesUpdater updater) {
+    return item.sellDetails(updater, sellPrice(item));
   }
 
   private boolean isGambling() {

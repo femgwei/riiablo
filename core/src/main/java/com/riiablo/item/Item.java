@@ -148,6 +148,10 @@ public class Item {
   Table details; // TODO: decouple
   long detailsStatsRevision = Long.MIN_VALUE;
   long detailsItemRevision = Long.MIN_VALUE;
+  Table sellDetails;
+  long sellDetailsStatsRevision = Long.MIN_VALUE;
+  long sellDetailsItemRevision = Long.MIN_VALUE;
+  int sellDetailsPrice = Integer.MIN_VALUE;
   Table header; // TODO: decouple
   int headerGoldQuantity = Integer.MIN_VALUE;
   public ItemWrapper wrapper; // TODO: decouple
@@ -196,6 +200,10 @@ public class Item {
     details = null;
     detailsStatsRevision = Long.MIN_VALUE;
     detailsItemRevision = Long.MIN_VALUE;
+    sellDetails = null;
+    sellDetailsStatsRevision = Long.MIN_VALUE;
+    sellDetailsItemRevision = Long.MIN_VALUE;
+    sellDetailsPrice = Integer.MIN_VALUE;
     header = null;
     headerGoldQuantity = Integer.MIN_VALUE;
     wrapper = new ItemWrapper(this);
@@ -805,6 +813,26 @@ public class Item {
     }
 
     return details;
+  }
+
+  /** Builds a vendor-context tooltip with the sale value first. */
+  public Table sellDetails(AttributesUpdater updater, int sellPrice) {
+    long characterRevision = Riiablo.charData == null || Riiablo.charData.getStats() == null
+        ? Long.MIN_VALUE : Riiablo.charData.getStats().aggregateRevision();
+    long itemRevision = attrs == null ? Long.MIN_VALUE : attrs.aggregateRevision();
+    if (sellDetails == null || sellPrice != sellDetailsPrice
+        || characterRevision != sellDetailsStatsRevision
+        || itemRevision != sellDetailsItemRevision) {
+      // TODO: use item parent itemdata for equipped set counter
+      update(updater, Riiablo.charData.getStats(), Riiablo.charData.classId.entry(),
+          Riiablo.charData.getItems().getEquippedSets());
+      sellDetails = DEFAULT_LABELER.updateLabel(
+          this, new Table(), ItemLabeler.LABELFLAG_CANSELL, sellPrice);
+      sellDetailsPrice = sellPrice;
+      sellDetailsStatsRevision = characterRevision;
+      sellDetailsItemRevision = attrs == null ? Long.MIN_VALUE : attrs.aggregateRevision();
+    }
+    return sellDetails;
   }
 
   public Table header() {

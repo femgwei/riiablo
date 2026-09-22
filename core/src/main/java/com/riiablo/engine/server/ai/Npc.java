@@ -228,7 +228,8 @@ public class Npc extends AI {
 
   private void openVendor(int flags, byte service) {
     if (Riiablo.game.vendorPanel.isNetworked()) {
-      Riiablo.game.vendorPanel.configNetwork(flags, entityId, service);
+      Riiablo.game.vendorPanel.configNetwork(
+          flags, entityId, service, Riiablo.files.Npc.get(monstats.Id));
       Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
       return;
     }
