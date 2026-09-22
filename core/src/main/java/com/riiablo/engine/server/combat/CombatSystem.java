@@ -1681,8 +1681,11 @@ public class CombatSystem {
 
     // 力量加成（仅近战）
     if (!attacker.isMissile) {
-      int strBonus = attacker.strength / 100; // 100 点力量 = +100% 伤害
-      damage = damage * (100 + strBonus) / 100;
+      // D2MOO applies the weapon's strength factor in percent: ordinary
+      // melee weapons use 100%, so 100 strength doubles weapon damage. The
+      // previous strength/100 expression made 100 strength worth only +1%.
+      int strengthBonus = Math.max(0, attacker.strength);
+      damage = damage * (100 + strengthBonus) / 100;
     }
 
     // 增强伤害百分比

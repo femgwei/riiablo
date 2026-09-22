@@ -138,6 +138,25 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void meleeStrengthUsesNativePercentScaling() {
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.alwaysHit = true;
+    attacker.level = 1;
+    attacker.strength = 100;
+    attacker.minDamage = 10;
+    attacker.maxDamage = 10;
+
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.level = 1;
+
+    CombatSystem.CombatResult result = combat.calculateAttack(attacker, defender);
+
+    assertTrue(result.hit);
+    assertEquals(20, result.physicalDamage,
+        "100 strength must provide +100% melee weapon damage");
+  }
+
+  @Test
   public void deterministicHitResultKeepsArDefenseChanceAndRollTogether() {
     CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
     attacker.level = 10;
