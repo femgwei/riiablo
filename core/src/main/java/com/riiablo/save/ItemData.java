@@ -645,6 +645,18 @@ public class ItemData {
     return 2;
   }
 
+  /** Returns whether an item can occupy one of the currently equipped belt's slots. */
+  public boolean canStoreInBelt(Item item, int x, int y) {
+    if (item == null || item.typeEntry == null || !item.typeEntry.Beltable
+        || item.type == null || !item.type.is(Type.POTI)
+        || x < 0 || x >= 4 || y < 0 || y >= getBeltRows()) return false;
+    for (Item other : itemData) {
+      if (other == null || other == item || other.location != Location.BELT) continue;
+      if (other.gridX == x && other.gridY == y) return false;
+    }
+    return true;
+  }
+
   /** Returns the potion consumed by a number-key column, nearest row first. */
   public Item getBeltPotion(int column) {
     if (column < 0 || column >= 4) return null;

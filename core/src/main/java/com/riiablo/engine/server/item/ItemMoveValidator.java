@@ -78,8 +78,11 @@ public final class ItemMoveValidator {
       }
       case ItemMoveOperation.CURSOR_TO_BELT:
         if (cursor == null) return ItemMoveFailure.CURSOR_EMPTY;
-        if (cursor.typeEntry == null || !cursor.typeEntry.Beltable) return ItemMoveFailure.ITEM_NOT_BELTABLE;
-        if (intent.x < 0 || intent.x >= 4 || intent.y < 0 || intent.y >= 4)
+        if (cursor.typeEntry == null || !cursor.typeEntry.Beltable
+            || cursor.type == null || !cursor.type.is(com.riiablo.item.Type.POTI))
+          return ItemMoveFailure.ITEM_NOT_BELTABLE;
+        if (intent.x < 0 || intent.x >= 4 || intent.y < 0
+            || intent.y >= data.getBeltRows())
           return ItemMoveFailure.INVALID_BELT_SLOT;
         for (Item other : data.getItems()) {
           if (other != null && other != cursor && other.location == Location.BELT

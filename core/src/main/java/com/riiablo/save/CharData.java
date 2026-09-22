@@ -897,8 +897,11 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "cursorToBelt");
     assert itemData.cursor != ItemData.INVALID_ITEM;
     int i = itemData.cursor;
-    itemData.cursor = ItemData.INVALID_ITEM;
     Item item = itemData.getItem(i);
+    // Keep the cursor untouched when a stale UI/network command targets a
+    // belt row that the currently equipped belt does not provide.
+    if (!itemData.canStoreInBelt(item, x, y)) return;
+    itemData.cursor = ItemData.INVALID_ITEM;
     item.gridX = (byte) x;
     item.gridY = (byte) y;
     itemData.setLocation(item, Location.BELT);

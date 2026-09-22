@@ -237,6 +237,20 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   }
 
   @Test
+  void manualBeltMoveRejectsRowsNotProvidedByEquippedBelt() {
+    CharData character = character();
+    equipBelt(character, "mbl", 245); // Native medium belt: three rows.
+    Item potion = item("hp1", 246);
+    character.groundToCursor(potion);
+
+    assertEquals(ItemMoveFailure.INVALID_BELT_SLOT, ItemMoveValidator.validate(character,
+        intent(ItemMoveOperation.CURSOR_TO_BELT, -1, StoreLoc.NONE.ordinal(), 0, 3)));
+    assertSame(potion, character.getItems().getCursor());
+    assertFalse(character.getItems().canStoreInBelt(potion, 0, 3));
+    assertTrue(character.getItems().canStoreInBelt(potion, 0, 2));
+  }
+
+  @Test
   void useBeltItemConsumesBottomPotionAndShiftsColumnDown() {
     CharData character = character();
     equipBelt(character, "hbl", 250);
