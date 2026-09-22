@@ -4,6 +4,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.NativeHirelingExperienceTable;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -285,6 +286,9 @@ public class MercenaryManager {
   /** 经验表 */
   private final long[] expTable = new long[99];
 
+  /** Optional native Hireling.txt table; the legacy table remains the safe fallback. */
+  private NativeHirelingExperienceTable nativeExperienceTable;
+
   /** 回调 */
   private MercenaryCallback callback;
 
@@ -371,7 +375,7 @@ public class MercenaryManager {
     merc.nameId = available.nameId;
     merc.seed = available.seed;
     merc.level = available.level;
-    merc.experience = getExpForLevel(available.level);
+    merc.experience = getExpForLevel(available.definition.mercType, available.level);
     merc.state = STATE_HIRED;
     merc.hireTime = System.currentTimeMillis();
 
@@ -570,7 +574,7 @@ public class MercenaryManager {
     merc.nameId = available.nameId;
     merc.seed = available.seed;
     merc.level = available.level;
-    merc.experience = getExpForLevel(available.level);
+    merc.experience = getExpForLevel(available.definition.mercType, available.level);
     merc.state = STATE_HIRED;
     merc.hireTime = System.currentTimeMillis();
     merc.maxLife = calculateMercLife(available.definition, available.level);
@@ -695,15 +699,29 @@ public class MercenaryManager {
    */
   public void addExperience(int playerId, long exp) {
     ActiveMercenary merc = playerMercs.get(playerId);
-    if (merc == null || merc.state == STATE_DEAD) {
+    if (merc == null || merc.state == STATE_DEAD || exp <= 0) {
       return;
     }
 
-    merc.experience += exp;
+    // Without a runtime callback there is no authoritative owner-level
+    // snapshot; retain the legacy standalone-manager behavior and allow the
+    // native cap to apply once the server supplies the owner level.
+    int ownerLevel = callback != null ? Math.max(1, callback.getPlayerLevel(playerId)) : 98;
+    if (merc.level >= ownerLevel) return;
+
+    long award = exp;
+    NativeHirelingExperienceTable table = nativeExperienceTable;
+    if (table != null && table.row(merc.definition.mercType, merc.level) != null) {
+      long maximumAward = table.maximumAward(merc.definition.mercType, merc.level);
+      if (maximumAward > 0) award = Math.min(award, maximumAward);
+    }
+    if (award <= 0) return;
+    merc.experience = Math.min(0xFFFFFFFFL, merc.experience + award);
 
     // 检查升级
-    while (merc.level < 98) {
-      long expNeeded = getExpForLevel(merc.level + 1);
+    while (merc.level < 98 && merc.level < ownerLevel) {
+      long expNeeded = nextExperienceThreshold(merc.definition.mercType, merc.level);
+      if (expNeeded <= 0) break;
       if (merc.experience >= expNeeded) {
         int oldLevel = merc.level;
         merc.level++;
@@ -871,6 +889,27 @@ public class MercenaryManager {
     if (level < 1) return 0;
     if (level >= 99) return expTable[98];
     return expTable[level - 1];
+  }
+
+  private long getExpForLevel(int mercType, int level) {
+    if (nativeExperienceTable != null
+        && nativeExperienceTable.row(mercType, level) != null) {
+      return nativeExperienceTable.thresholdForHireling(mercType, level);
+    }
+    return getExpForLevel(level);
+  }
+
+  private long nextExperienceThreshold(int mercType, int currentLevel) {
+    if (nativeExperienceTable != null
+        && nativeExperienceTable.row(mercType, currentLevel) != null) {
+      return nativeExperienceTable.nextThreshold(mercType, currentLevel);
+    }
+    return getExpForLevel(currentLevel + 1);
+  }
+
+  /** Installs the native Hireling.txt experience table when MPQ data is available. */
+  public void setNativeExperienceTable(NativeHirelingExperienceTable table) {
+    nativeExperienceTable = table;
   }
 
   /**

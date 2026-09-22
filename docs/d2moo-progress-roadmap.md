@@ -77,6 +77,9 @@
 - [x] 统一常规攻击、固定元素区域和持续元素伤害的 Magic Damage Reduced by X 处理；
   火焰/闪电/冰冷/魔法包在抗性后、吸收前扣除 MDR，毒素不受该属性影响，并有普通命中与
   固定元素回归测试覆盖。
+- [x] `MercenaryManager` 接入已有 `Hireling.txt` 经验表适配器；有原生表时按
+  `SUNITDMG_ComputeExperienceGain` 限制单次奖励，并禁止佣兵升级超过主人等级；无 MPQ
+  时继续使用兼容回退表，新增佣兵管理器回归测试。
 - [ ] 战斗主体仍需继续补齐原版 `D2DamageStrc` 的完整 ToHit、伤害、抗性、状态和投射物分支；
   当前可在无真实客户端条件下继续使用纯 Java 与 D2GS 离屏测试推进。
 

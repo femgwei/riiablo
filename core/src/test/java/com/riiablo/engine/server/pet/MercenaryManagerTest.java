@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.NativeHirelingExperienceTable;
 import org.junit.jupiter.api.Test;
 
 class MercenaryManagerTest {
@@ -146,6 +147,38 @@ class MercenaryManagerTest {
   }
 
   @Test
+  void nativeExperienceCapsAwardsAndNeverExceedsOwnerLevel() {
+    MercenaryManager manager = new MercenaryManager();
+    NativeHirelingExperienceTable table = new NativeHirelingExperienceTable()
+        .add(0, 1, 100)
+        .add(0, 2, 100)
+        .add(0, 3, 100);
+    manager.setNativeExperienceTable(table);
+    Callback callback = new Callback();
+    callback.entityId = 120;
+    callback.playerLevel = 2;
+    manager.setCallback(callback);
+
+    assertTrue(manager.restoreMercenary(20, MercenaryManager.MERC_TYPE_ROGUE,
+        1, 0, 77, 0, false));
+    MercenaryManager.ActiveMercenary merc = manager.getPlayerMercenary(20);
+
+    // Native maximumAward is one sixty-fourth of the current level span:
+    // (threshold 2 - threshold 1) / 64 = (1200 - 200) / 64 = 15.
+    manager.addExperience(20, 10_000);
+    assertEquals(15, merc.experience);
+    assertEquals(1, merc.level);
+
+    // A final award may reach exactly the owner's level, but not pass it.
+    merc.experience = 1_200;
+    manager.addExperience(20, 1);
+    assertEquals(2, merc.level);
+    merc.experience = 3_600;
+    manager.addExperience(20, 10_000);
+    assertEquals(2, merc.level);
+  }
+
+  @Test
   void logoutUnloadPreservesPersistentCallbacksAndAllowsReconnect() {
     MercenaryManager manager = new MercenaryManager();
     Callback callback = new Callback();
@@ -174,6 +207,7 @@ class MercenaryManagerTest {
     int resurrectCalls;
     int removeCalls;
     int dismissedCalls;
+    int playerLevel = 1;
     boolean resurrectResult;
 
     @Override
@@ -208,7 +242,7 @@ class MercenaryManagerTest {
       return resurrectResult;
     }
     @Override public int getPlayerGold(int playerId) { return gold; }
-    @Override public int getPlayerLevel(int playerId) { return 1; }
+    @Override public int getPlayerLevel(int playerId) { return playerLevel; }
     @Override public int getDifficulty() { return 0; }
   }
 }
