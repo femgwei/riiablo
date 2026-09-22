@@ -220,13 +220,23 @@ public class ServerEntityFactory extends EntityFactory {
     if (base == null) return Engine.INVALID_ENTITY;
 
     int id = super.createEntity(Class.Type.OBJ, base.Description);
-    mObject.create(id).base = base;
+    Object object = mObject.create(id);
+    object.base = base;
+
+    // Town portal objects have no neutral (NU) TR sprite in the 1.10 MPQ.
+    // They are spawned already open by D2Game, so starting them in NU makes
+    // the client request the nonexistent TPTRLITNUhth.dc6 and crash while the
+    // AssetManager is resolving the object animation. Mirror the native ON
+    // state for both ordinary and permanent portal visuals.
+    byte initialMode = (objectId == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+        || objectId == 60) ? Engine.Object.MODE_ON : Class.Type.OBJ.DEFAULT_MODE;
+    object.mode = initialMode;
 
     mPosition.create(id).position.set(x, y);
     mMapWrapper.create(id).set(map, map.getZone(x, y));
 
     if (base.Draw) {
-      mCofReference.create(id).set(base.Token, Class.Type.OBJ.DEFAULT_MODE);
+      mCofReference.create(id).set(base.Token, initialMode);
       int[] component = mCofComponents.create(id).component;
       Arrays.fill(component, CofComponents.COMPONENT_NULL);
       mCofAlphas.create(id);
