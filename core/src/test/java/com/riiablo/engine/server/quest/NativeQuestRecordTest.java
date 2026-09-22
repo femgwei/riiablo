@@ -45,6 +45,18 @@ class NativeQuestRecordTest {
   }
 
   @Test
+  void travelFlagsPreservePreviouslyViewedQuestLog() {
+    short viewed = NativeQuestRecord.set((short) 0, NativeQuestRecord.UPDATE_QUEST_LOG);
+    short leftTown = NativeQuestRecord.set(viewed, NativeQuestRecord.LEFT_TOWN);
+    assertTrue(NativeQuestRecord.has(leftTown, NativeQuestRecord.LEFT_TOWN));
+    assertTrue(NativeQuestRecord.has(leftTown, NativeQuestRecord.UPDATE_QUEST_LOG));
+
+    short enteredArea = NativeQuestRecord.set(leftTown, NativeQuestRecord.ENTERED_AREA);
+    assertTrue(NativeQuestRecord.has(enteredArea, NativeQuestRecord.ENTERED_AREA));
+    assertTrue(NativeQuestRecord.has(enteredArea, NativeQuestRecord.UPDATE_QUEST_LOG));
+  }
+
+  @Test
   void rejectsFlagsOutsideSixteenBitRecord() {
     assertThrows(IllegalArgumentException.class,
         () -> NativeQuestRecord.set((short) 0, -1));

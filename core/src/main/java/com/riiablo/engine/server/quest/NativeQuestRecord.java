@@ -32,11 +32,13 @@ public final class NativeQuestRecord {
     validateFlag(flag);
     int value = Short.toUnsignedInt(record) | (1 << flag);
     // QFLAG_UPDATEQUESTLOG is the native acknowledgement bit written when
-    // the quest journal has been viewed.  Any subsequent quest-state change
-    // makes the journal stale again, so clear that bit while recording a
-    // progress flag.  Setting the acknowledgement itself is intentionally
-    // left untouched.
-    if (flag != UPDATE_QUEST_LOG) value &= ~(1 << UPDATE_QUEST_LOG);
+    // the quest journal has been viewed.  Actual quest progress makes the
+    // journal stale again, but merely leaving town or entering the objective
+    // area does not create a new journal notification in the native client.
+    // Setting the acknowledgement itself is intentionally left untouched.
+    if (flag != UPDATE_QUEST_LOG && flag != LEFT_TOWN && flag != ENTERED_AREA) {
+      value &= ~(1 << UPDATE_QUEST_LOG);
+    }
     return (short) value;
   }
 
