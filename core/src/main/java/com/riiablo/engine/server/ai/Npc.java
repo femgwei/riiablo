@@ -251,7 +251,8 @@ public class Npc extends AI {
       log.error("Failed to generate vendor items: entityId={}, monsterId={}, error={}",
           entityId, monstats.Id, ExceptionUtils.getRootCauseMessage(t), t);
     }
-    Riiablo.game.vendorPanel.config(flags, items, Riiablo.files.Npc.get(monstats.Id), service);
+    Riiablo.game.vendorPanel.config(
+        flags, items, Riiablo.files.Npc.get(monstats.Id), service, vendors);
     Riiablo.game.setLeftPanel(Riiablo.game.vendorPanel);
   }
 

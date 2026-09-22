@@ -1,7 +1,6 @@
 package com.riiablo.item;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
@@ -9,6 +8,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
+import com.badlogic.gdx.utils.Array;
 import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Npc;
 import com.riiablo.codec.excel.ItemTypes;
@@ -147,6 +147,55 @@ class VendorPricingTest extends RiiabloTest {
 
     assertEquals(19, VendorPricing.transactionCost(
         item, npc, VendorPricing.Transaction.SELL, 0));
+  }
+
+  @Test
+  void nativeConsumablesAreInfiniteStockButThrowingWeaponsAreNot() {
+    Item arrows = item("aqv", 1, 1);
+    arrows.type = Type.get("bowq");
+    Item healthPotion = item("hp1", 1, 1);
+    healthPotion.type = Type.get("hpot");
+    Item manaPotion = item("mp5", 1, 1);
+    manaPotion.type = Type.get("mpot");
+    Item javelin = new ItemGenerator().generate("jav");
+
+    assertTrue(VendorPricing.isInfiniteStockItem(arrows));
+    assertTrue(VendorPricing.isInfiniteStockItem(healthPotion));
+    assertTrue(VendorPricing.isInfiniteStockItem(manaPotion));
+    assertFalse(VendorPricing.isInfiniteStockItem(javelin));
+  }
+
+  @Test
+  void serverPurchaseReplacesInfiniteStockWithANewItem() throws Exception {
+    Item potion = item("hp1", 1, 1);
+    potion.id = 41;
+    potion.type = Type.get("hpot");
+    potion.flags2 |= Item.ITEMFLAG2_INSTORE;
+    Item replacement = item("hp1", 1, 1);
+    replacement.id = 42;
+    replacement.type = Type.get("hpot");
+    replacement.flags2 |= Item.ITEMFLAG2_INSTORE;
+    VendorGenerator generator = new VendorGenerator() {
+      @Override public Array<Item> generate(String vendor) {
+        Array<Item> stock = new Array<>(true, 1, Item.class);
+        stock.add(potion);
+        return stock;
+      }
+      @Override public Item restock(Item purchased) { return replacement; }
+    };
+    NpcVendorSessionManager manager = new NpcVendorSessionManager();
+    NpcVendorSessionManager.Session session =
+        manager.open(10, "akara", generator, false, null, 0);
+    CharData character = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "PotionBuyer", Riiablo.AMAZON);
+    character.getStats().base().put(Stat.gold, 1000);
+    character.getStats().aggregate().put(Stat.gold, 1000);
+
+    assertTrue(manager.buy(session, character, potion.id) > 0);
+    assertTrue(character.getItems().contains(potion));
+    assertEquals(1, session.stock.size);
+    assertSame(replacement, session.stock.first());
+    assertNotEquals(potion.id, replacement.id);
   }
 
   @Test

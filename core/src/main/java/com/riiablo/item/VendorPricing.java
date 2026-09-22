@@ -57,9 +57,12 @@ public final class VendorPricing {
                                     int reducedPrices, int difficulty) {
     if (item == null || item.base == null || transaction == null) return 0;
     if (item.hasFlag(Item.ITEMFLAG_BEGINNER)) return 1;
+    boolean quantityRepair = transaction == Transaction.REPAIR
+        && isRepairableThrowQuantity(item);
     if (transaction == Transaction.REPAIR
-        && (item.hasFlag(Item.ITEMFLAG_ETHEREAL) || item.base.nodurability
-            || stat(item, Stat.item_indesctructible, 0) > 0)) return 0;
+        && (item.hasFlag(Item.ITEMFLAG_ETHEREAL)
+            || !quantityRepair && (item.base.nodurability
+                || stat(item, Stat.item_indesctructible, 0) > 0))) return 0;
     ItemEntry base = item.base;
     if (transaction == Transaction.GAMBLE) {
       int gamble = base.gambleCost > 0 ? base.gambleCost : baseCost(base);
@@ -100,12 +103,22 @@ public final class VendorPricing {
     if (transaction == Transaction.REPAIR) {
       int max = stat(item, Stat.maxdurability, 0);
       int current = stat(item, Stat.durability, max);
-      if (max <= 0 || current >= max) return 0;
-      boolean replenishes = stat(item, Stat.item_replenish_durability, 0) > 0;
-      int missing = replenishes ? Math.max(0, max - 1 - Math.max(0, current))
-          : max - Math.max(0, current);
-      if (missing <= 0) return 0;
-      cost = (int) ((long) cost * missing / max);
+      int repairCost = 0;
+      if (!item.base.nodurability && stat(item, Stat.item_indesctructible, 0) <= 0
+          && max > 0 && current < max) {
+        boolean replenishes = stat(item, Stat.item_replenish_durability, 0) > 0;
+        int missing = replenishes ? Math.max(0, max - 1 - Math.max(0, current))
+            : max - Math.max(0, current);
+        if (missing > 0) repairCost = (int) ((long) cost * missing / max);
+      }
+      if (quantityRepair) {
+        int currentQuantity = Math.max(0, stat(item, Stat.quantity, 0));
+        int missingQuantity = Math.max(0, item.base.maxstack - currentQuantity);
+        int perUnit = applyQuality(baseCost(item.base), item);
+        repairCost = safeAdd(repairCost, safeMultiply(perUnit, missingQuantity));
+      }
+      if (repairCost <= 0) return 0;
+      cost = repairCost;
     }
     cost = scale(cost, multiplier);
     if (transaction == Transaction.BUY || transaction == Transaction.REPAIR) cost = applyReduced(cost, reducedPrices);
@@ -171,6 +184,7 @@ public final class VendorPricing {
   private static int applyReduced(int value, int percent) { int pct = Math.max(0, Math.min(99, percent)); return value - value * pct / 100; }
   private static int scale(int value, int multiplier) { long result = (long) value * positiveOrDefault(multiplier) / MULTIPLIER_SCALE; return result > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result; }
   private static int safeMultiply(int a, int b) { long result = (long) a * b; return result > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result; }
+  private static int safeAdd(int a, int b) { long result = (long) a + b; return result > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result; }
 
   public static boolean buy(CharData character, Item item) {
     return buy(character, item, null);
@@ -244,6 +258,25 @@ public final class VendorPricing {
   /** Native item flag used for stock that is always replenished by a vendor. */
   public static boolean isPermanentStoreItem(Item item) {
     return item != null && item.base != null && item.base.PermStoreItem;
+  }
+
+  /** Stock that native vendors replenish immediately after every purchase. */
+  public static boolean isInfiniteStockItem(Item item) {
+    if (item == null) return false;
+    if (isPermanentStoreItem(item) || isQuiver(item)) return true;
+    if (item.type != null && (item.type.is(Type.HPOT) || item.type.is(Type.MPOT))) return true;
+    String code = item.code;
+    return code != null && code.length() == 3
+        && (code.regionMatches(true, 0, "hp", 0, 2)
+            || code.regionMatches(true, 0, "mp", 0, 2))
+        && code.charAt(2) >= '1' && code.charAt(2) <= '5';
+  }
+
+  /** Throwing weapons are retained at zero and their stack is restored by repair. */
+  public static boolean isRepairableThrowQuantity(Item item) {
+    if (item == null || item.base == null || item.base.maxstack <= 0
+        || !ItemData.isThrowableWeapon(item)) return false;
+    return Math.max(0, stat(item, Stat.quantity, 0)) < item.base.maxstack;
   }
 
   public static int availableGold(CharData character) {

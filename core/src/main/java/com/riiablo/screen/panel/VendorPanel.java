@@ -33,6 +33,7 @@ import com.riiablo.item.Item;
 import com.riiablo.item.Location;
 import com.riiablo.item.StoreLoc;
 import com.riiablo.item.VendorPricing;
+import com.riiablo.item.VendorGenerator;
 import com.riiablo.item.ItemReader;
 import com.riiablo.io.ByteInput;
 import com.riiablo.util.BufferUtils;
@@ -102,6 +103,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   /** Base items that were permanently supplied by the currently opened vendor. */
   private final ObjectSet<ItemEntry> permanentStockBases = new ObjectSet<>();
   private Npc.Entry localPricing;
+  private VendorGenerator localVendorGenerator;
   @com.artemis.annotations.Wire(name = "client.socket", failOnNull = false)
   private Socket clientSocket;
   // Artemis 2.3 treats a field-level @Wire system dependency as mandatory,
@@ -459,6 +461,11 @@ public class VendorPanel extends WidgetGroup implements Disposable {
   }
 
   public void config(int flags, Array<Item> items, Npc.Entry pricing, byte service) {
+    config(flags, items, pricing, service, null);
+  }
+
+  public void config(int flags, Array<Item> items, Npc.Entry pricing, byte service,
+                     VendorGenerator generator) {
     boolean newStock = localStock != items || serviceType != service;
     if (newStock) {
       permanentStockBases.clear();
@@ -473,6 +480,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     clearPendingRequest();
     localStock = items;
     localPricing = pricing;
+    localVendorGenerator = generator;
     configuredFlags = flags;
     selling = false;
     repairing = false;
@@ -791,7 +799,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       if (localStock != null) {
         boolean restoreSelling = selling;
         boolean restoreRepairing = repairing;
-        config(configuredFlags, localStock, localPricing, serviceType);
+        config(configuredFlags, localStock, localPricing, serviceType, localVendorGenerator);
         restoreTradeMode(restoreSelling, restoreRepairing);
       }
     } else {
@@ -856,8 +864,12 @@ public class VendorPanel extends WidgetGroup implements Disposable {
             : VendorPricing.buy(Riiablo.charData, item, localPricing));
     if (bought) {
       if (localStock != null) {
-        localStock.removeValue(item, true);
-        config(configuredFlags, localStock, localPricing, serviceType);
+        int stockIndex = localStock.indexOf(item, true);
+        Item replacement = !isGambling() && VendorPricing.isInfiniteStockItem(item)
+            && localVendorGenerator != null ? localVendorGenerator.restock(item) : null;
+        if (replacement != null && stockIndex >= 0) localStock.set(stockIndex, replacement);
+        else localStock.removeValue(item, true);
+        config(configuredFlags, localStock, localPricing, serviceType, localVendorGenerator);
       }
       Gdx.app.debug(TAG, "Bought " + item.code + " for " + value + " gold");
       refreshGold();

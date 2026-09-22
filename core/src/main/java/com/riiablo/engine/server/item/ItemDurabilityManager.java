@@ -216,27 +216,21 @@ public class ItemDurabilityManager {
       return 0;
     }
 
-    // 不可破坏物品无需修理
-    if (isIndestructible(item)) {
+    if (isEthereal(item)) {
       return 0;
     }
 
     int currentDur = getCurrentDurability(item);
     int maxDur = getMaxDurability(item);
-    
-    // 已经满耐久度
-    if (currentDur >= maxDur) {
-      return 0;
-    }
-
-    // 计算损坏程度
-    int damageLost = maxDur - currentDur;
 
     // 获取基础修理费（从物品表）
     int baseCost = getBaseRepairCost(item);
 
-    // 计算总费用
-    int totalCost = baseCost * damageLost;
+    int damageLost = isIndestructible(item) ? 0 : Math.max(0, maxDur - currentDur);
+    int quantityLost = getRepairableQuantityLost(item);
+    if (damageLost <= 0 && quantityLost <= 0) return 0;
+    long rawCost = (long) baseCost * (damageLost + quantityLost);
+    int totalCost = rawCost > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) rawCost;
 
     // 魔法物品修理费更高
     if (item.quality != null && item.quality.ordinal() > 1) {
@@ -248,16 +242,24 @@ public class ItemDurabilityManager {
 
   /** Returns whether an NPC repair operation may restore this item. */
   public boolean isRepairable(Item item) {
-    if (item == null || isIndestructible(item) || isEthereal(item)) return false;
+    if (item == null || isEthereal(item)) return false;
     int max = getMaxDurability(item);
-    return max > 0 && getCurrentDurability(item) < max;
+    boolean durability = !isIndestructible(item)
+        && max > 0 && getCurrentDurability(item) < max;
+    return durability || getRepairableQuantityLost(item) > 0;
   }
 
   /** Restores a previously validated repair target to full durability. */
   public boolean restoreDurability(Item item) {
     if (!isRepairable(item)) return false;
-    setCurrentDurability(item, getMaxDurability(item));
-    item.flags &= ~Item.ITEMFLAG_BROKEN;
+    int maxDurability = getMaxDurability(item);
+    if (!isIndestructible(item) && maxDurability > 0) {
+      setCurrentDurability(item, maxDurability);
+      item.flags &= ~Item.ITEMFLAG_BROKEN;
+    }
+    if (getRepairableQuantityLost(item) > 0) {
+      setQuantity(item, item.base.maxstack);
+    }
     return true;
   }
 
@@ -282,9 +284,7 @@ public class ItemDurabilityManager {
       return 0; // 金币不足
     }
 
-    // 恢复满耐久度
-    int maxDur = getMaxDurability(item);
-    setCurrentDurability(item, maxDur);
+    restoreDurability(item);
 
     log.debug("Repaired item {} for {} gold", item.getNameString(), cost);
 
@@ -382,6 +382,19 @@ public class ItemDurabilityManager {
     item.attrs.aggregate().put(Stat.durability, value);
   }
 
+  private int getRepairableQuantityLost(Item item) {
+    if (item == null || item.attrs == null || item.base == null
+        || item.base.maxstack <= 0 || !ItemData.isThrowableWeapon(item)) return 0;
+    StatRef quantity = item.attrs.base().get(Stat.quantity);
+    int current = quantity == null ? item.base.maxstack : Math.max(0, quantity.asInt());
+    return Math.max(0, item.base.maxstack - current);
+  }
+
+  private void setQuantity(Item item, int value) {
+    item.attrs.base().put(Stat.quantity, value);
+    item.attrs.aggregate().put(Stat.quantity, value);
+  }
+
   /**
    * 获取最大耐久度
    */
@@ -444,10 +457,11 @@ public class ItemDurabilityManager {
    * 检查物品是否需要修理
    */
   public boolean needsRepair(Item item) {
-    if (item == null || isIndestructible(item)) {
+    if (item == null || isEthereal(item)) {
       return false;
     }
-    return getCurrentDurability(item) < getMaxDurability(item);
+    return !isIndestructible(item) && getCurrentDurability(item) < getMaxDurability(item)
+        || getRepairableQuantityLost(item) > 0;
   }
 
   /**
