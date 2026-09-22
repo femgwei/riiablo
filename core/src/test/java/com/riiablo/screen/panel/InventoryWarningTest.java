@@ -20,4 +20,13 @@ class InventoryWarningTest {
     assertEquals(23, InventoryWarning.frame(99, 99));
     assertEquals(7, InventoryWarning.frame(2, 1));
   }
+
+  @Test
+  void layoutUsesVisibleManaTextureInsteadOfStretchableTableCell() {
+    // A stretched mana cell can be much wider than its visible globe.  The
+    // warning must stay on the globe's right edge, not in the middle of that
+    // expanded cell.
+    assertEquals(260f, InventoryWarning.rightAlignedX(220f, 80f, 40f));
+    assertEquals(144f, InventoryWarning.aboveY(0f, 140f, 4f));
+  }
 }

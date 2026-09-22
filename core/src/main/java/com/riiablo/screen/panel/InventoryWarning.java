@@ -16,6 +16,7 @@ import com.riiablo.save.ItemData;
 final class InventoryWarning {
   static final int FRAME_GROUPS = 8;
   static final int COLORS_PER_GROUP = 3;
+  static final float DEFAULT_TOP_GAP = 4f;
 
   enum Kind { QUANTITY, DURABILITY }
 
@@ -102,6 +103,24 @@ final class InventoryWarning {
     int safeGroup = Math.max(0, Math.min(FRAME_GROUPS - 1, group));
     int safeSeverity = Math.max(0, Math.min(COLORS_PER_GROUP - 1, severity));
     return safeGroup * COLORS_PER_GROUP + safeSeverity;
+  }
+
+  /**
+   * Returns the left edge for the warning stack in HUD coordinates.
+   *
+   * The mana cell is allowed to grow when the control panel is stretched to
+   * the viewport.  Its actor width is therefore not the width of the visible
+   * mana-globe texture.  Anchoring to the texture's right edge keeps the
+   * warning in the native upper-right HUD position in both grouped and
+   * full-width layouts.
+   */
+  static float rightAlignedX(float visibleManaX, float visibleManaWidth,
+      float warningWidth) {
+    return visibleManaX + Math.max(0f, visibleManaWidth) - Math.max(0f, warningWidth);
+  }
+
+  static float aboveY(float visibleManaY, float visibleManaHeight, float topGap) {
+    return visibleManaY + Math.max(0f, visibleManaHeight) + Math.max(0f, topGap);
   }
 
   /** Quantity warning icon classes: arrows, bolts, potions, javelins/knives, axes. */

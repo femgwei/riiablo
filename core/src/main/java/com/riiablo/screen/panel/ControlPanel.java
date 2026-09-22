@@ -374,14 +374,21 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     staminaWidget.setPosition(anchorX, anchorY);
   }
 
-  /** Keep warning sprites centered above the mana globe after table relayout. */
+  /**
+   * Keep warning sprites at the native upper-right edge of the mana globe
+   * after table relayout.  Do not use manaWidget.getWidth() here: the Table
+   * stretches that actor's cell in full-width HUD mode, while the visible
+   * globe remains only background.getRegionWidth() wide.
+   */
   private void updateInventoryWarningWidgetLayout() {
     if (inventoryWarningWidget == null || manaWidget == null) return;
     float width = inventoryWarningWidget.getWidth();
-    float height = inventoryWarningWidget.getHeight();
     inventoryWarningWidget.setPosition(
-        manaWidget.getX() + (manaWidget.getWidth() - width) / 2f,
-        manaWidget.getY() + manaWidget.getHeight() + 4f);
+        InventoryWarning.rightAlignedX(
+            manaWidget.getX(), manaWidget.background.getRegionWidth(), width),
+        InventoryWarning.aboveY(
+            manaWidget.getY(), manaWidget.background.getRegionHeight(),
+            InventoryWarning.DEFAULT_TOP_GAP));
   }
 
   private void updateAddPointButtonLayout() {
