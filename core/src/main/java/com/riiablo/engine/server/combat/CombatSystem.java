@@ -1272,11 +1272,12 @@ public class CombatSystem {
     d.level = Math.max(1, statInt(defender, Stat.level, 1));
     d.dexterity = statInt(defender, Stat.dexterity, 0);
     d.defense = statInt(defender, Stat.armorclass, 0);
-    int alternateDefense = statInt(defender,
-        missile ? Stat.armorclass_vs_missile : Stat.armorclass_vs_hth, 0);
-    if (d.defense == 0) {
-      d.defense = alternateDefense;
-    }
+    // D2 keeps the base armor class and the attack-mode-specific armor class
+    // as separate additive values. The previous fallback only used the
+    // specialized stat when base defense was zero, silently dropping missile
+    // or melee defense bonuses on normally armored targets.
+    d.defenseVsMissile = statInt(defender, Stat.armorclass_vs_missile, 0);
+    d.defenseVsMelee = statInt(defender, Stat.armorclass_vs_hth, 0);
     if (defenderStates != null) {
       d.defense = Math.max(0, d.defense * (100 + defenderStates.getTotalDefenseModifier()) / 100);
     }

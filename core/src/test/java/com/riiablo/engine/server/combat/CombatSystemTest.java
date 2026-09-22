@@ -157,6 +157,25 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void attackModeDefenseBonusesAreAddedToBaseDefense() {
+    CombatSystem.AttackerData missile = new CombatSystem.AttackerData();
+    missile.isMissile = true;
+    missile.level = 10;
+    missile.attackRating = 100;
+
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.level = 10;
+    defender.defense = 100;
+    defender.defenseVsMissile = 50;
+    defender.defenseVsMelee = 25;
+
+    assertEquals(40, combat.calculateHitChance(missile, defender));
+
+    missile.isMissile = false;
+    assertEquals(44, combat.calculateHitChance(missile, defender));
+  }
+
+  @Test
   public void deterministicHitResultKeepsArDefenseChanceAndRollTogether() {
     CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
     attacker.level = 10;
