@@ -40,6 +40,12 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
   protected ComponentMapper<UnitStates> mUnitStates;
   protected ComponentMapper<Player> mPlayer;
 
+  /** Dynamic unit footprints used by movement/pathing.  A warp bypasses the
+   * normal movement step, so it must consult the same grid before committing
+   * the destination position. */
+  @Wire(failOnNull = false)
+  protected DynamicUnitCollisionSystem dynamicCollision;
+
   protected Pathfinder pathfinder;
   protected Actioneer actioneer;
   protected EventSystem events;
@@ -92,7 +98,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
         return false;
       }
       int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
-      Vector2 arrival = findQuestArrival(dst, unitSize);
+      Vector2 arrival = findQuestArrival(src, dst, unitSize);
       if (arrival == null) {
         Gdx.app.error(TAG, "Quest warp destination has no free coordinates: player=" + src
             + " destination=" + dst.level.LevelName + "(" + dst.level.Id + ")"
@@ -132,7 +138,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     }
     Vector2 dstWarpPos = mPosition.get(dstWarpEntity).position;
     int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
-    if (!dst.findFreeCoordinates(dstWarpPos, unitSize, 50, true, tmpVec2)) {
+    if (!findArrivalAvoidingUnits(src, dst, dstWarpPos, unitSize, 50, tmpVec2)) {
       // Synthetic A5 markers may inherit a LvlWarp offset that places the
       // entity just outside a zero-padded/reduced Zone export. Retry from the
       // Zone interior so the authoritative transition remains usable.
@@ -140,10 +146,8 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
       int centerY = dst.y() + Math.max(1, dst.height() / 2);
       Vector2 interior = new Vector2(centerX, centerY);
       if (dst.contains(centerX, centerY)
-          && dst.findFreeCoordinates(interior, unitSize, 0, true, tmpVec2)) {
+          && findArrivalAvoidingUnits(src, dst, interior, unitSize, 0, tmpVec2)) {
         dstWarpPos = tmpVec2;
-      } else if (dst.contains(centerX, centerY)) {
-        dstWarpPos = interior;
       } else if (dst.level != null && dst.level.Id >= 109 && dst.level.Id <= 132) {
         // Native A5 barricade exports can be metadata-only (zero-sized
         // collision grid). Keep the level transition authoritative and place
@@ -255,27 +259,73 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     if (events != null) events.dispatch(ZoneChangeEvent.obtain(entityId, destination));
   }
 
-  private Vector2 findQuestArrival(Map.Zone destination, int unitSize) {
+  private Vector2 findQuestArrival(int moverId, Map.Zone destination, int unitSize) {
     int centerX = destination.x() + destination.width() / 2;
     int centerY = destination.y() + destination.height() / 2;
     // Native quest rooms are often irregular and their geometric center can
     // land on a wall/void.  D2Common expands the search over the destination
     // room graph rather than failing the portal outright; mirror that by
     // trying a wider radius first and then each exported RoomEx center.
-    return destination.findFreeCoordinates(
-        tmpVec2.set(centerX, centerY), unitSize, 200, true, tmpVec2)
-        ? tmpVec2 : findQuestRoomArrival(destination, unitSize);
+    return findArrivalAvoidingUnits(moverId, destination,
+        tmpVec2.set(centerX, centerY), unitSize, 200, tmpVec2)
+        ? tmpVec2 : findQuestRoomArrival(moverId, destination, unitSize);
   }
 
-  private Vector2 findQuestRoomArrival(Map.Zone destination, int unitSize) {
+  private Vector2 findQuestRoomArrival(int moverId, Map.Zone destination, int unitSize) {
     com.badlogic.gdx.utils.Array<Map.RoomEx> rooms = destination.getRoomsEx();
     for (int i = 0; i < rooms.size; i++) {
       Map.RoomEx room = rooms.get(i);
       int x = room.x + room.width / 2;
       int y = room.y + room.height / 2;
-      if (destination.findFreeCoordinates(tmpVec2.set(x, y), unitSize, 32,
-          true, tmpVec2)) return tmpVec2;
+      if (findArrivalAvoidingUnits(moverId, destination, tmpVec2.set(x, y),
+          unitSize, 32, tmpVec2)) return tmpVec2;
     }
     return null;
+  }
+
+  /**
+   * Finds a static-collision-free arrival which is also free in the dynamic
+   * unit grid.  Warp transitions write the player's position directly, so
+   * calling only Zone.findFreeCoordinates can land on a monster that was
+   * already spawned in the destination room.  That leaves the player inside
+   * a dynamic footprint and movement remains blocked until the monster dies.
+   */
+  private boolean findArrivalAvoidingUnits(int moverId, Map.Zone destination,
+      Vector2 anchor, int unitSize, int maxDistance, Vector2 result) {
+    if (destination == null || anchor == null || result == null) return false;
+    int originX = Map.round(anchor.x);
+    int originY = Map.round(anchor.y);
+    int limit = Math.max(0, maxDistance);
+    for (int radius = 0; radius <= limit; radius++) {
+      if (radius == 0) {
+        if (isArrivalFree(moverId, destination, originX, originY, unitSize, result)) {
+          return true;
+        }
+        continue;
+      }
+      for (int dx = -radius; dx <= radius; dx++) {
+        if (isArrivalFree(moverId, destination, originX + dx, originY - radius,
+            unitSize, result)
+            || isArrivalFree(moverId, destination, originX + dx, originY + radius,
+                unitSize, result)) return true;
+      }
+      for (int dy = -radius + 1; dy < radius; dy++) {
+        if (isArrivalFree(moverId, destination, originX - radius, originY + dy,
+            unitSize, result)
+            || isArrivalFree(moverId, destination, originX + radius, originY + dy,
+                unitSize, result)) return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isArrivalFree(int moverId, Map.Zone destination, int x, int y,
+      int unitSize, Vector2 result) {
+    if (!destination.findFreeCoordinates(tmpVec2.set(x, y), unitSize, 0,
+        true, result)) return false;
+    if (dynamicCollision != null
+        && !dynamicCollision.isFreeForPath(moverId, -1,
+            Map.round(result.x), Map.round(result.y), unitSize)) return false;
+    return true;
   }
 }

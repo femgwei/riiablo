@@ -952,9 +952,16 @@ public class DrlgPreset {
 
     private static void scanLevelTileInfo(D2DrlgRoom drlgRoom, D2DrlgMapStrc map) {
         if (drlgRoom == null || map == null || map.getPFile() == null
-                || drlgRoom.getLevel() == null || map.getPLvlPrestTxtRecord() == null
-                || map.getPLvlPrestTxtRecord().getDwScan() == 0) return;
+                || drlgRoom.getLevel() == null || map.getPLvlPrestTxtRecord() == null) return;
         D2DrlgLevel level = drlgRoom.getLevel();
+        // Rogue Encampment uses the fixed Act-1 link-portal marker (tile 11)
+        // even in the 1.10 preset variants whose LvlPrest Scan flag is zero.
+        // The native DUNGEON_FindActSpawnLocationEx path still scans that
+        // marker; skipping it here makes the Java bridge fall back to the
+        // bonfire/zone heuristic and puts the town portal behind the tents.
+        // Keep the original Scan gate for every other preset.
+        boolean forceAct1TownScan = level.getLevelId() == D2LevelIds.LEVEL_ROGUEENCAMPMENT;
+        if (!forceAct1TownScan && map.getPLvlPrestTxtRecord().getDwScan() == 0) return;
         D2DrlgFileStrc file = map.getPFile();
         D2DrlgCoord mapCoord = map.getPDrlgCoord();
         int stride = file.getNWidth() + 1;
