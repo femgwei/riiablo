@@ -12,6 +12,7 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.codec.excel.Missiles;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.Engine;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Mercenary;
@@ -314,11 +315,25 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
     if (factory == null || itemGenerator == null || !mPosition.has(event.playerId)) return;
     int count = Math.max(1, event.arg1 - event.arg0 + 1);
     Vector2 origin = mPosition.get(event.playerId).position;
+    int difficulty = 0;
+    int itemLevel = 1;
+    if (mPlayer != null && mPlayer.has(event.playerId) && mPlayer.get(event.playerId).data != null) {
+      com.riiablo.save.CharData data = mPlayer.get(event.playerId).data;
+      difficulty = Math.max(0, Math.min(2, data.diff));
+      itemLevel = Math.max(1, data.getStats().aggregate().getValue(
+          Stat.level, data.level & 0xFF));
+    }
+    NativeRng random = new NativeRng(Riiablo.gameSeed ^ (event.playerId * 0x45D9F3B)
+        ^ (event.entityId * 0x9E3779B9) ^ event.shrineId ^ code.hashCode());
     for (int i = 0; i < count; i++) {
       try {
-        Item item = itemGenerator.generate(code);
-        if (item != null) factory.createItem(item, origin.x + (i - count / 2) * 0.8f,
-            origin.y + 1f);
+        Item item = itemGenerator.generateLootItem(code, itemLevel, com.riiablo.item.Quality.NORMAL,
+            random.nextInt(), difficulty);
+        if (item != null) {
+          int entityId = factory.createItem(item,
+              origin.x + (i - count / 2) * 0.8f, origin.y + 1f);
+          item.id = entityId;
+        }
       } catch (RuntimeException ex) {
         log.warn("[SHRINE_SPECIAL] drop rejected player={} code={} reason={}",
             event.playerId, code, ex.toString());
