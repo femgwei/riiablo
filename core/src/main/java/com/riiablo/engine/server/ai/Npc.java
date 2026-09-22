@@ -38,6 +38,8 @@ import com.riiablo.widget.NpcMenu;
 
 public class Npc extends AI {
   private static final Logger log = LogManager.getLogger(Npc.class);
+  private static final float PATH_STALL_REPATH_TIME = 0.4f;
+  private static final float PATH_STALL_RETRY_DELAY = 0.5f;
 
   static final IntSet TALKERS    = new IntSet();
   static final IntSet REPAIRERS  = new IntSet();
@@ -295,6 +297,25 @@ public class Npc extends AI {
     }
 
     Pathfind pathfind = mPathfind.get(entityId);
+    if (pathfind != null && pathfind.stalledTime >= PATH_STALL_REPATH_TIME) {
+      Vector2 position = mPosition.get(entityId).position;
+      tmpVec2.set(pathfind.destination);
+      float stalledTime = pathfind.stalledTime;
+      boolean blockedByDynamic = pathfind.blockedByDynamic;
+      boolean success = pathfinder.findPath(entityId, tmpVec2, true);
+      log.info("[NPC_PATH_STALLED] entity={} monster={} position=({}, {}) "
+              + "destination=({}, {}) stalledTime={} action={} blockedByDynamic={}",
+          entityId, monstats != null ? monstats.Id : "unknown",
+          position.x, position.y, tmpVec2.x, tmpVec2.y, stalledTime,
+          success ? "repath" : "select_new_target", blockedByDynamic);
+      if (!success) {
+        pathfinder.findPath(entityId, null);
+        actionTimer = PATH_STALL_RETRY_DELAY;
+        actionPerformed = false;
+        state = "BLOCKED";
+      }
+      return;
+    }
     if (pathfind == null) {
       PathWrapper pathWrapper = mPathWrapper.get(entityId);
       DS1.Path path = pathWrapper.path;

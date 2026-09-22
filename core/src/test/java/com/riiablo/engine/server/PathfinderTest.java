@@ -33,6 +33,23 @@ class PathfinderTest {
   }
 
   @Test
+  void pathfindTracksOnlyRequestedMovementWithoutProgress() {
+    Pathfind pathfind = new Pathfind();
+
+    pathfind.recordMovement(true, 0f, 0.2f, true);
+    pathfind.recordMovement(true, 0f, 0.2f, true);
+    assertEquals(0.4f, pathfind.stalledTime, 0.0001f);
+    assertTrue(pathfind.blockedByDynamic);
+
+    pathfind.recordMovement(true, 0.01f, 0.2f, false);
+    assertEquals(0f, pathfind.stalledTime);
+    assertFalse(pathfind.blockedByDynamic);
+
+    pathfind.recordMovement(false, 0f, 0.2f, false);
+    assertEquals(0f, pathfind.stalledTime);
+  }
+
+  @Test
   void blockedRaycastFallbackStopsInsteadOfMovingDirectlyToTarget() {
     Velocity velocity = new Velocity();
     velocity.velocity.set(30f, -20f);

@@ -9,6 +9,7 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Missile;
+import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Size;
@@ -20,6 +21,7 @@ public class Box2DSynchronizerPost extends IteratingSystem {
   protected ComponentMapper<Box2DBody> mBox2DBody;
   protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Missile> mMissile;
+  protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<Class> mClass;
@@ -33,10 +35,14 @@ public class Box2DSynchronizerPost extends IteratingSystem {
     Vector2 current = body.getPosition();
     float oldX = previous.x;
     float oldY = previous.y;
+    boolean requestedMovement = mVelocity.has(entityId)
+        && !mVelocity.get(entityId).velocity.isZero(STOPPED_EPSILON);
+    boolean blockedByDynamic = false;
     float resolvedX = current.x;
     float resolvedY = current.y;
     if (dynamicCollision != null && isCollidableUnit(entityId)
         && !dynamicCollision.tryMove(entityId, resolvedX, resolvedY)) {
+      blockedByDynamic = true;
       // Preserve D2's axis-slide behaviour while keeping the rejected unit
       // out of the other unit's footprint.  No Box2D impulse is applied.
       boolean moved = false;
@@ -66,6 +72,12 @@ public class Box2DSynchronizerPost extends IteratingSystem {
       }
       body.setTransform(resolvedX, resolvedY, body.getAngle());
       current = body.getPosition();
+    }
+    if (mPathfind.has(entityId)) {
+      float dx = current.x - oldX;
+      float dy = current.y - oldY;
+      mPathfind.get(entityId).recordMovement(
+          requestedMovement, dx * dx + dy * dy, world.delta, blockedByDynamic);
     }
     // MissileCollisionSystem advances missiles before the Box2D phase. Their
     // bodies merely catch up to that new position, so interpreting the zero

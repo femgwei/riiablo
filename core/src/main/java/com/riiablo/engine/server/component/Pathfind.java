@@ -29,6 +29,11 @@ public class Pathfind extends PooledComponent {
   public int pendingDirection = -1;
   public int pendingDirectionFrames;
 
+  /** Time spent requesting movement without making authoritative progress. */
+  public float stalledTime;
+  /** Whether the most recent stalled tick was rejected by dynamic-unit collision. */
+  public boolean blockedByDynamic;
+
   public void reset() {
     path = null;
     target.setZero();
@@ -39,6 +44,8 @@ public class Pathfind extends PooledComponent {
     repathTimer = 0f;
     pendingDirection = -1;
     pendingDirectionFrames = 0;
+    stalledTime = 0f;
+    blockedByDynamic = false;
   }
 
   public Pathfind set(GraphPath path) {
@@ -47,6 +54,19 @@ public class Pathfind extends PooledComponent {
     Vector2 position = targets.next();
     target.set(targets.hasNext() ? targets.next() : position);
     destination.set(path.getNodePosition(path.getCount() - 1));
+    stalledTime = 0f;
+    blockedByDynamic = false;
     return this;
+  }
+
+  public void recordMovement(
+      boolean requested, float distance2, float delta, boolean dynamicBlocked) {
+    if (requested && distance2 <= 0.000001f && delta > 0f) {
+      stalledTime += delta;
+      blockedByDynamic = dynamicBlocked;
+    } else {
+      stalledTime = 0f;
+      blockedByDynamic = false;
+    }
   }
 }
