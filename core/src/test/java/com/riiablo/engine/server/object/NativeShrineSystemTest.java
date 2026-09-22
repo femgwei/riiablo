@@ -21,6 +21,7 @@ import com.riiablo.engine.server.ObjectInteractor;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.event.WellInteractionEvent;
 import com.riiablo.map.Map;
 import com.riiablo.map.NativePresetObjectResolver;
@@ -161,6 +162,38 @@ class NativeShrineSystemTest extends RiiabloTest {
       assertEquals(Engine.Object.MODE_NU, object.mode);
       assertEquals(com.riiablo.engine.server.component.Object.STATE_INTERACTABLE,
           object.stateFlags);
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void clearsTransientOperationFromInactiveShrineEveryThink() {
+    World world = objectWorld();
+    try {
+      int entityId = world.create();
+      Objects.Entry shrine = shrineObject(0);
+      shrine.Id = 136;
+      shrine.Token = "zd";
+      shrine.OperateFn = 2;
+      shrine.SubClass = Engine.Object.SUBCLASS_SHRINE;
+      world.getMapper(com.riiablo.engine.server.component.Object.class)
+          .create(entityId).base = shrine;
+      NativeObjectState state = world.getMapper(NativeObjectState.class).create(entityId)
+          .set(0, 136, 136, Engine.Object.MODE_OP, false, false,
+              NativePresetObjectResolver.Kind.SHRINE);
+      world.getMapper(CofReference.class).create(entityId)
+          .set(shrine.Token, Engine.Object.MODE_OP);
+      world.getMapper(Sequence.class).create(entityId)
+          .sequence(Engine.Object.MODE_OP, Engine.Object.MODE_ON);
+
+      world.delta = 1f / 25f;
+      world.process();
+
+      assertFalse(world.getMapper(Sequence.class).has(entityId));
+      assertEquals(Engine.Object.MODE_NU, state.currentMode);
+      assertEquals(Engine.Object.MODE_NU,
+          world.getMapper(CofReference.class).get(entityId).mode);
     } finally {
       world.dispose();
     }

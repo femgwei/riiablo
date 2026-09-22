@@ -91,6 +91,21 @@ public class CofLayerLoader extends IteratingSystem {
     int[] component = mCofComponents.get(entityId).component;
     AssetDescriptor<? extends DC>[] descriptors = mCofComponentDescriptors.get(entityId).descriptors;
 
+    // Object OP is an operation transition (for example the ten-frame shrine
+    // activation animation), not a persistent idle animation.  Animation's
+    // default mode is LOOP, which made a stale/missed OP snapshot visibly loop
+    // forever even after the authoritative object state had settled.  Clamp
+    // object operation animations to their final frame; the following ON/NU
+    // mode change still replaces the COF normally.  Unit animations retain
+    // their normal looping behavior.
+    if (mAnimationWrapper.has(entityId)) {
+      Animation animation = mAnimationWrapper.get(entityId).animation;
+      if (logicalType == Class.Type.OBJ) {
+        animation.setMode(mode == Engine.Object.MODE_OP
+            ? Animation.Mode.CLAMP : Animation.Mode.LOOP);
+      }
+    }
+
     // data\global\monsters\FK\rh\FKRHFBLA11HS.dcc
     final int start = type.PATH.length() + 4; // start after token
     builder.setLength(0);

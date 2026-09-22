@@ -19,6 +19,7 @@ import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.event.ObjectInteractionEvent;
 import com.riiablo.engine.server.event.ShrineInteractionEvent;
 import com.riiablo.engine.server.event.WellInteractionEvent;
@@ -44,6 +45,7 @@ public class NativeShrineSystem extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<CofReference> mCofReference;
   protected ComponentMapper<Interactable> mInteractable;
+  protected ComponentMapper<Sequence> mSequence;
 
   protected EventSystem event;
   protected CofManager cofs;
@@ -154,11 +156,32 @@ public class NativeShrineSystem extends IteratingSystem {
     float elapsedFrames = Math.max(0f, world.delta) * NATIVE_FRAMES_PER_SECOND;
 
     if (lifecycle == Lifecycle.SHRINE) {
+      normalizeInactiveShrine(entityId, state);
       processShrineCooldown(entityId, state, object.base, elapsedFrames);
     } else if (lifecycle == Lifecycle.WELL) {
       processWellRegeneration(entityId, state, object.base, elapsedFrames);
     }
     syncSnapshotState(entityId, state, object);
+  }
+
+  /**
+   * OP is only a transient activation sequence.  Room recreation, a delayed
+   * snapshot, or a legacy native export can otherwise leave an unactivated
+   * shrine in OP and make the client render the operation animation forever.
+   */
+  private void normalizeInactiveShrine(int entityId, NativeObjectState state) {
+    if (state.activated) return;
+    if (state.currentMode != Engine.Object.MODE_NU) {
+      state.persistMode(Engine.Object.MODE_NU);
+    }
+    // An invalid operation sequence would immediately force OP again on the
+    // next SequenceHandler tick.  It cannot be valid while the shrine is not
+    // activated, so discard it before applying the neutral COF mode.
+    if (mSequence.has(entityId)) mSequence.remove(entityId);
+    if (mCofReference.has(entityId)
+        && mCofReference.get(entityId).mode != Engine.Object.MODE_NU) {
+      cofs.setMode(entityId, Engine.Object.MODE_NU);
+    }
   }
 
   private void syncSnapshotState(int entityId, NativeObjectState state,
