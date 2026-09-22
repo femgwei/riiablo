@@ -955,6 +955,8 @@ public class Map implements Disposable {
     int width, height;
     /** D2MOO D2DrlgLevel seed ({@code levelId + drlg.startSeed}). */
     private int levelSeed;
+    /** Native Act spawn coordinate used for ordinary town portals, world subtiles. */
+    private Vector2 townPortalSpawn;
     /** Optional native Arcane Sanctuary graph; populated only for level 75. */
     private Act2ArcaneSanctuaryTopology arcaneSanctuaryTopology;
     /** Native exported tile layers kept until Zone.generate applies them. */
@@ -1016,6 +1018,14 @@ public class Map implements Disposable {
     public int levelId() { return level == null ? -1 : level.Id; }
     /** Stable native DRLG seed shared by server and client projections. */
     public int levelSeed() { return levelSeed; }
+    public Vector2 townPortalSpawn() {
+      return townPortalSpawn == null ? null : new Vector2(townPortalSpawn);
+    }
+
+    public void setTownPortalSpawn(float x, float y) {
+      if (townPortalSpawn == null) townPortalSpawn = new Vector2();
+      townPortalSpawn.set(x, y);
+    }
     public Act2ArcaneSanctuaryTopology arcaneSanctuaryTopology() {
       return arcaneSanctuaryTopology;
     }
@@ -1091,6 +1101,7 @@ public class Map implements Disposable {
           ? Act2ArcaneSanctuaryTopology.generate(this.levelSeed) : null;
       this.nativeTileGrid = null;
       this.nativeDt1Mask = 0;
+      this.townPortalSpawn = null;
       this.type      = Riiablo.files.LvlTypes.get(level.LevelType);
       this.gridSizeX = gridSizeX;
       this.gridSizeY = gridSizeY;
@@ -1137,6 +1148,7 @@ public class Map implements Disposable {
       arcaneSanctuaryTopology = null;
       nativeTileGrid = null;
       nativeDt1Mask = 0;
+      townPortalSpawn = null;
       gridSizeX = gridSizeY = 0;
       gridsX = gridsY = 0;
       tx = ty = 0;

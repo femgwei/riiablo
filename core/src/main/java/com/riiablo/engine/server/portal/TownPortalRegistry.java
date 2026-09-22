@@ -3,8 +3,11 @@ package com.riiablo.engine.server.portal;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import com.artemis.ComponentMapper;
 import com.artemis.World;
 import com.badlogic.gdx.math.Vector2;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.Map.Zone;
@@ -113,6 +116,55 @@ public final class TownPortalRegistry {
 
   public synchronized int size() {
     return active.size();
+  }
+
+  /** Returns the native town-side anchor, with a conservative center fallback. */
+  public static Vector2 preferredTownPosition(Zone townZone) {
+    return preferredTownPosition(townZone, null);
+  }
+
+  /**
+   * Resolves a town anchor using the generated native bonfire when the
+   * D2MOO spawn marker is unavailable (some 1.10 town DS1 variants do not
+   * populate the tile-info table).  The bonfire is the stable visual landmark
+   * used by the original client; the portal is placed just below it, rather
+   * than behind a tent at the rectangular zone center.
+   */
+  public static Vector2 preferredTownPosition(Zone townZone, World world) {
+    if (townZone == null) return null;
+    Vector2 nativeSpawn = townZone.townPortalSpawn();
+    if (nativeSpawn != null) return nativeSpawn;
+    if (world != null && townZone.levelId() == 1) {
+      ComponentMapper<com.riiablo.engine.server.component.Object> objects =
+          world.getMapper(com.riiablo.engine.server.component.Object.class);
+      ComponentMapper<Position> positions = world.getMapper(Position.class);
+      ComponentMapper<MapWrapper> wrappers = world.getMapper(MapWrapper.class);
+      com.badlogic.gdx.utils.IntArray entities = townZone.getEntities();
+      for (int i = 0; i < entities.size; i++) {
+        int entity = entities.get(i);
+        com.riiablo.engine.server.component.Object object = objects.get(entity);
+        Position position = positions.get(entity);
+        MapWrapper wrapper = wrappers.get(entity);
+        if (object == null || object.base == null || position == null
+            || wrapper == null || wrapper.zone != townZone) continue;
+        // Act I obj.txt: RogueBonfire (DS1 index 2) -> Objects class 39.
+        if (object.base.Id == 39) {
+          Vector2 result = new Vector2(position.position.x,
+              position.position.y + 8f);
+          if (townZone.findFreeCoordinates(result, 1, 8, true, result)) {
+            if (com.badlogic.gdx.Gdx.app != null) {
+              com.badlogic.gdx.Gdx.app.log("TownPortalRegistry",
+                  "[TOWN_PORTAL_SPAWN] source=rogue_bonfire fire=("
+                      + position.position.x + "," + position.position.y
+                      + ") portal=(" + result.x + "," + result.y + ")");
+            }
+            return result;
+          }
+        }
+      }
+    }
+    return new Vector2(townZone.x() + Math.max(1, townZone.width() / 2f),
+        townZone.y() + Math.max(1, townZone.height() / 2f));
   }
 
   /** Removes all active ordinary portals; useful when a game world shuts down. */

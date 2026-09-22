@@ -201,9 +201,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     Map.Zone townZone = sourceLevel <= 0 || Riiablo.files.Levels.get(destinationTown) == null
         || wrapper.map == null ? null
         : wrapper.map.findZone(Riiablo.files.Levels.get(destinationTown));
-    Vector2 returnPosition = townZone == null ? null : new Vector2(
-        townZone.x() + Math.max(1, townZone.width() / 2),
-        townZone.y() + Math.max(1, townZone.height() / 2));
+    Vector2 returnPosition = TownPortalRegistry.preferredTownPosition(townZone, world);
     if (returnPosition == null
         || townPortalRegistry == null
         || !townPortalRegistry.findFreeTownPosition(townZone, returnPosition, 1, 64,

@@ -291,6 +291,12 @@ public class ServerEntityFactory extends EntityFactory {
 
   protected static float resolveObjectInteractionRange(Objects.Entry base) {
     if (base == null) return 0;
+    // Town portals are dynamic objects with a deliberately small/omitted
+    // OperateRange in some converted Objects.txt tables.  Native D2 treats
+    // the portal like a chest: clicking its sprite selects it and the player
+    // walks into a generous interaction radius before warping.
+    if (base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+        || base.Id == 60) return 5f;
     if (isWaypointObject(base)) return base.OperateRange > 0 ? base.OperateRange : 5f;
     if (base.OperateRange > 0 && ArrayUtils.contains(base.Selectable, true)) {
       return base.OperateRange;

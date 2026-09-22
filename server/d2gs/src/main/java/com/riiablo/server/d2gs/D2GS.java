@@ -7580,9 +7580,7 @@ public class D2GS extends ApplicationAdapter {
           com.riiablo.codec.excel.Levels.Entry townLevel = Riiablo.files.Levels.get(destinationTown);
           town[0] = townLevel == null ? null : map.findZone(townLevel);
           if (sourceLevel <= 0 || town[0] == null) return false;
-          Vector2 returnPortal = new Vector2(
-              town[0].x() + Math.max(1, town[0].width() / 2),
-              town[0].y() + Math.max(1, town[0].height() / 2));
+          Vector2 returnPortal = TownPortalRegistry.preferredTownPosition(town[0], world);
           if (!townPortalRegistry.findFreeTownPosition(town[0], returnPortal, 1, 64,
               returnPortal)) return false;
           sourcePosition[0] = new Vector2(portal);

@@ -35,6 +35,8 @@ public class SelectableManager extends PassiveSystem {
 
   static boolean isSelectable(Objects.Entry base, int mode) {
     if (base == null) return false;
+    if (base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+        || base.Id == 60) return true;
     if ((base.SubClass & Engine.Object.SUBCLASS_WAYPOINT)
         == Engine.Object.SUBCLASS_WAYPOINT) {
       // Native waypoint data does not consistently mark every animation mode

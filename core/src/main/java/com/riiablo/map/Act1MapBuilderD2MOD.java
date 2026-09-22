@@ -389,6 +389,18 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         townZone.setPosition(finalX, finalY);
         townZone.town = true;
         townZone.townExitDirection = townExitAltDirection;
+        if (result.townSpawnX >= 0 && result.townSpawnY >= 0) {
+          // D2MOO returns absolute level subtiles.  Map zones are translated
+          // by offsetX/offsetY (expressed in game tiles), so apply the same
+          // translation before retaining the spawn anchor.
+          townZone.setTownPortalSpawn(
+              result.townSpawnX + offsetX * DT1.Tile.SUBTILE_SIZE,
+              result.townSpawnY + offsetY * DT1.Tile.SUBTILE_SIZE);
+          Gdx.app.log(TAG, String.format(
+              "Native town portal spawn: level=%d world=(%.1f,%.1f)",
+              level.Id, townZone.townPortalSpawn().x,
+              townZone.townPortalSpawn().y));
+        }
 
         if (DEBUG_BUILD) {
           Gdx.app.debug(TAG, String.format("Placed town %s (id=%d) at (%d, %d)", level.LevelName, result.levelIds[i], finalX, finalY));

@@ -131,6 +131,18 @@ public class ClientEntityFactory extends ServerEntityFactory {
     } else if (mAnimationWrapper.has(id)) {
       boxWrapper.box = mAnimationWrapper.get(id).animation.getBox();
     }
+    if (base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+        || base.Id == 60) {
+      // Portal animation bounds are only a few pixels wide.  Keep the native
+      // sprite unchanged, but expose a chest-like click target around it.
+      BBox box = boxWrapper.box = new BBox();
+      box.xMin = -16;
+      box.yMin = -16;
+      box.width = 32;
+      box.height = 32;
+      box.xMax = box.xMin + box.width;
+      box.yMax = box.yMin + box.height;
+    }
 
     Label label = mLabel.create(id);
     label.offset.y = -base.NameOffset;
@@ -165,6 +177,8 @@ public class ClientEntityFactory extends ServerEntityFactory {
   static boolean isInitiallySelectable(Objects.Entry base) {
     if (isWaypoint(base)) return true;
     if (base == null) return false;
+    if (base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+        || base.Id == 60) return true;
     if (base.Selectable != null
         && Engine.Object.MODE_NU < base.Selectable.length
         && base.Selectable[Engine.Object.MODE_NU]) return true;

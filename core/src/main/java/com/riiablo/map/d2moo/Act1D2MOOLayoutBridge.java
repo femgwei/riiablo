@@ -13,6 +13,7 @@ import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2DrlgTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
+import com.d2moo.common.dungeon.Dungeon;
 import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2MemoryPool;
@@ -86,6 +87,9 @@ public final class Act1D2MOOLayoutBridge {
         public final int[] levelLinkEx;
         /** 城镇出口方向 0–3 (D2MOD rand[0][townIndex])，用于预设选择与路径 */
         public int townDirection;
+        /** Native DUNGEON_FindActSpawnLocationEx result, in level subtile coordinates. */
+        public int townSpawnX = -1;
+        public int townSpawnY = -1;
 
         public Act1LayoutResult() {
             this(D2MOO_ACT1_LEVEL_IDS.length);
@@ -222,6 +226,22 @@ public final class Act1D2MOOLayoutBridge {
                     D2DrlgPresetInfoStrc preset = level.getPreset();
                     if (preset != null) {
                         result.townDirection = preset.getNDirection();
+                    }
+                    // D2Game_CreateLinkPortal_6FD13B20 uses spawn location
+                    // class 11 for the town-side endpoint.  Do this while the
+                    // native DRLG is still alive; replacing it with the Zone
+                    // center puts the portal behind tents in Rogue Encampment.
+                    int[] spawnX = {-1};
+                    int[] spawnY = {-1};
+                    if (Dungeon.findActSpawnLocationEx(act, levelId, 11,
+                            spawnX, spawnY, 3) != null
+                            && spawnX[0] >= 0 && spawnY[0] >= 0) {
+                        result.townSpawnX = spawnX[0];
+                        result.townSpawnY = spawnY[0];
+                        D2Log.debug("ACT1_D2MOO_TOWN_SPAWN level=%d tile=11 subtile=(%d,%d)",
+                            levelId, spawnX[0], spawnY[0]);
+                    } else {
+                        D2Log.warning("ACT1_D2MOO_TOWN_SPAWN missing level=%d tile=11", levelId);
                     }
                 }
             }

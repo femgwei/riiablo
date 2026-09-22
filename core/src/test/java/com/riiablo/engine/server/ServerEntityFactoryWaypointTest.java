@@ -49,4 +49,13 @@ class ServerEntityFactoryWaypointTest {
 
     assertEquals(0f, ServerEntityFactory.resolveObjectInteractionRange(trigger));
   }
+
+  @Test
+  void townPortalUsesChestLikeInteractionRangeEvenWhenTableOmitsRange() {
+    Objects.Entry portal = new Objects.Entry();
+    portal.Id = com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL;
+    portal.Draw = true;
+    portal.Selectable = new boolean[8];
+    assertEquals(5f, ServerEntityFactory.resolveObjectInteractionRange(portal));
+  }
 }
