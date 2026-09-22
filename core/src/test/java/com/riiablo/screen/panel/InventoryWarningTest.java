@@ -22,11 +22,12 @@ class InventoryWarningTest {
   }
 
   @Test
-  void layoutUsesVisibleManaTextureInsteadOfStretchableTableCell() {
-    // The warning is anchored to the HUD edge, independently of the
-    // stretchable mana Table cell.
+  void layoutUsesScreenCenterAndRightEdge() {
     assertEquals(600f, InventoryWarning.rightEdgeX(640f, 40f));
-    assertEquals(144f, InventoryWarning.aboveManaY(0f, 140f, 4f));
+    assertEquals(219.5f, InventoryWarning.screenSlotY(
+        InventoryWarning.Kind.QUANTITY, 480f, 41f, 2f));
+    assertEquals(176.5f, InventoryWarning.screenSlotY(
+        InventoryWarning.Kind.DURABILITY, 480f, 41f, 2f));
   }
 
   @Test

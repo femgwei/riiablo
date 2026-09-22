@@ -18,6 +18,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.PixmapTextureData;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -76,6 +77,7 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       new AssetDescriptor<>("data\\global\\ui\\PANEL\\invwarn.dc6", DC6.class);
   DC6 invwarn;
   InventoryWarningWidget inventoryWarningWidget;
+  private final Vector2 inventoryWarningPosition = new Vector2();
 
   ExperienceWidget experienceWidget;
   
@@ -375,18 +377,24 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   }
 
   /**
-   * Keep warning sprites at the native right edge of the HUD, immediately
-   * above the visible mana globe. The previous panel-centered anchor placed
-   * the stack on top of the blue mana bar because ControlPanel's height is the
-   * bottom HUD height, not the free space above it.
+   * Position warning sprites in screen space rather than relative to the
+   * bottom HUD. The quantity icon is centered on the horizontal screen
+   * midpoint, durability occupies the fixed slot directly below it, and the
+   * icon's right edge touches the screen's right edge.
    */
   private void updateInventoryWarningWidgetLayout() {
-    if (inventoryWarningWidget == null || manaWidget == null) return;
-    float width = inventoryWarningWidget.getWidth();
+    if (inventoryWarningWidget == null || getStage() == null) return;
+    inventoryWarningPosition.set(
+        InventoryWarning.rightEdgeX(
+            getStage().getWidth(), inventoryWarningWidget.getWidth()),
+        InventoryWarning.screenSlotY(
+            InventoryWarning.Kind.DURABILITY,
+            getStage().getHeight(),
+            InventoryWarningWidget.ICON_HEIGHT,
+            InventoryWarningWidget.GAP));
+    stageToLocalCoordinates(inventoryWarningPosition);
     inventoryWarningWidget.setPosition(
-        InventoryWarning.rightEdgeX(getWidth(), width),
-        InventoryWarning.aboveManaY(
-            manaWidget.getY(), manaWidget.background.getRegionHeight(), 4f));
+        inventoryWarningPosition.x, inventoryWarningPosition.y);
   }
 
   private void updateAddPointButtonLayout() {
@@ -494,7 +502,10 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   @Override
   public void act(float delta) {
     super.act(delta);
-    if (inventoryWarningWidget != null) inventoryWarningWidget.refresh();
+    if (inventoryWarningWidget != null) {
+      updateInventoryWarningWidgetLayout();
+      inventoryWarningWidget.refresh();
+    }
     if (Riiablo.charData == null || Riiablo.charData.getStats() == null) return;
     StatListRef stats = Riiablo.charData.getStats().aggregate();
     int level = stats.getValue(Stat.level, Riiablo.charData.level & 0xFF);
