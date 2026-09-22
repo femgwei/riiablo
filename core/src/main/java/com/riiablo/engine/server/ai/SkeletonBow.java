@@ -81,7 +81,7 @@ public class SkeletonBow extends AI {
     pathfinder.findPath(entityId, null);
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    Riiablo.audio.play(monsound + "_death_1", true);
+    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
   }
 
   /**
@@ -123,7 +123,7 @@ public class SkeletonBow extends AI {
       Vector2 targetPos = mPosition.get(targetId).position;
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-      Riiablo.audio.play(monsound + "_attack_1", true);
+      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
       time = MathUtils.random(1f, 2f);
       return;
     }
@@ -184,7 +184,7 @@ public class SkeletonBow extends AI {
         stateMachine.changeState(State.ATTACK);
         mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
         mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-        Riiablo.audio.play(monsound + "_attack_1", true);
+        com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
         time = MathUtils.random(1f, 2);
         return;
       }

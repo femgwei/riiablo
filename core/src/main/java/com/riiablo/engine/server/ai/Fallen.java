@@ -85,7 +85,7 @@ public class Fallen extends AI {
     pathfinder.findPath(entityId, null);
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    Riiablo.audio.play(monsound + "_death_1", true);
+    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
   }
 
   @Override
@@ -353,7 +353,7 @@ public class Fallen extends AI {
         if (MathUtils.random(20) < 1) {
           // Use flee sounds (fallen_flee_1 to fallen_flee_5) instead of attack sound
           int fleeSoundIndex = MathUtils.random(1, 5);
-          Riiablo.audio.play(monsound + "_flee_" + fleeSoundIndex, true);
+          com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_flee_" + fleeSoundIndex, true);
         }
         time = MathUtils.random(1f, 2);
         // Debug log disabled
@@ -531,7 +531,7 @@ public class Fallen extends AI {
     byte attackMode = MathUtils.randomBoolean(params[3] / 100f) ? Engine.Monster.MODE_A2 : Engine.Monster.MODE_A1;
     mSequence.create(entityId).sequence(attackMode, Engine.Monster.MODE_NU);
     mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, targetPos);
-    Riiablo.audio.play(monsound + "_attack_1", true);
+    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
     time = MathUtils.random(1f, 2);
   }
 

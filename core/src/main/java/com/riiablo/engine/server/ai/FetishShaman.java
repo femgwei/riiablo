@@ -98,7 +98,7 @@ public class FetishShaman extends AI {
     pathfinder.findPath(entityId, null);
     stateMachine.changeState(State.DEAD);
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    Riiablo.audio.play(monsound + "_death_1", true);
+    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
   }
 
   /**

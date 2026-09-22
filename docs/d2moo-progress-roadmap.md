@@ -5298,8 +5298,13 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
   半径一致）内触发怪物音效，远处怪物不再全局播放。
 - 验证：`MonsterSoundEmitterTest`、`:core:compileJava` 和定向 `:core:test` 通过。
 
-下一项：若真实客户端仍出现跨区域声音，继续收敛旧 AI 直接调用 `Riiablo.audio.play`
-的攻击/死亡音效入口，使其复用同一 listener/Zone 距离策略。
+- [x] ~~旧 AI 声音入口统一~~：AI 基类及各类怪物 AI 的攻击、命中、死亡、逃跑和远程
+  射击音效改走 `MonsterAudio.play(entityId, ...)`，保留原事件时机，只统一 listener、
+  Zone 和距离过滤；NPC 对话音效仍保持原有非空间播放。
+- 验证：`:core:compileJava` 和 `MonsterSoundEmitterTest` 定向测试通过。
+
+下一项：真实客户端验收音量衰减曲线；当前 20 格半径用于防止跨区域串音，后续可继续
+校准为原版的分段音量/声道衰减。
 
 ## Git 交接基线（2026-09-15）
 

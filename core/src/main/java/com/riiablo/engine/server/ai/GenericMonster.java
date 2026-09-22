@@ -108,7 +108,7 @@ public final class GenericMonster extends AI {
       state = "ATTACK";
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(com.riiablo.skill.SkillCodes.attack, targetId, target);
-      Riiablo.audio.play(monsound + "_attack_1", true);
+      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
       return;
     }
 
@@ -213,7 +213,7 @@ public final class GenericMonster extends AI {
     stopMovement();
     state = "DEAD";
     mSequence.create(entityId).sequence(Engine.Monster.MODE_DT, Engine.Monster.MODE_DD);
-    Riiablo.audio.play(monsound + "_death_1", true);
+    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_death_1", true);
   }
 
   @Override

@@ -266,7 +266,7 @@ public abstract class AI implements Interactable.Interactor {
       lookAt(sourceId);
       mSequence.create(entityId).sequence(Engine.Monster.MODE_A1, Engine.Monster.MODE_NU);
       mCasting.create(entityId).set(SkillCodes.attack, sourceId, source);
-      Riiablo.audio.play(monsound + "_attack_1", true);
+      com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_attack_1", true);
     } else {
       walkTo(source, sourceId);
     }
@@ -429,7 +429,7 @@ public abstract class AI implements Interactable.Interactor {
   }
 
   public void hit() {
-    Riiablo.audio.play(monsound + "_hit_1", true);
+    com.riiablo.audio.MonsterAudio.play(entityId, monsound + "_hit_1", true);
   }
 
   public void kill() {}

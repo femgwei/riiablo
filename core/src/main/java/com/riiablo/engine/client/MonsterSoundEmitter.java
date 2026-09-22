@@ -6,14 +6,13 @@ import com.artemis.systems.IteratingSystem;
 import com.badlogic.gdx.utils.IntMap;
 
 import com.riiablo.Riiablo;
+import com.riiablo.audio.MonsterAudio;
 import com.riiablo.codec.Animation;
 import com.riiablo.codec.excel.MonSounds;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.server.component.CofReference;
-import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
-import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
 
 /**
@@ -24,20 +23,18 @@ import com.riiablo.engine.server.component.Velocity;
  * vocalizations while idle or walking.  Previously only player footsteps were
  * emitted by Riiablo, leaving moving monsters completely silent.</p>
  */
-@All({Monster.class, AnimationWrapper.class, Velocity.class, CofReference.class, Position.class})
+@All({Monster.class, AnimationWrapper.class, Velocity.class, CofReference.class})
 public class MonsterSoundEmitter extends IteratingSystem {
   private static final float FRAMES_PER_SECOND = Animation.FRAMES_PER_SECOND;
   private static final float DEFAULT_NEUTRAL_DELAY = 2f;
   /** Matches the positional falloff radius used by {@link SoundEmitterHandler}. */
-  static final float AUDIBLE_RADIUS = 20f;
-  static final float AUDIBLE_RADIUS2 = AUDIBLE_RADIUS * AUDIBLE_RADIUS;
+  static final float AUDIBLE_RADIUS = MonsterAudio.AUDIBLE_RADIUS;
+  static final float AUDIBLE_RADIUS2 = MonsterAudio.AUDIBLE_RADIUS2;
 
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<CofReference> mCofReference;
-  protected ComponentMapper<Position> mPosition;
-  protected ComponentMapper<MapWrapper> mMapWrapper;
 
   private final IntMap<State> states = new IntMap<>();
 
@@ -45,7 +42,7 @@ public class MonsterSoundEmitter extends IteratingSystem {
   protected void process(int entityId) {
     Monster monster = mMonster.get(entityId);
     if (monster == null || monster.monstats == null || Riiablo.files == null
-        || Riiablo.audio == null || !isAudible(entityId)) return;
+        || Riiablo.audio == null || !MonsterAudio.isAudible(entityId)) return;
 
     MonSounds.Entry bank = soundBank(monster);
     if (bank == null) return;
@@ -132,26 +129,8 @@ public class MonsterSoundEmitter extends IteratingSystem {
     return Riiablo.files.MonSounds.get(id);
   }
 
-  private boolean isAudible(int entityId) {
-    if (Riiablo.game == null || Riiablo.game.player < 0
-        || !mPosition.has(Riiablo.game.player)) return false;
-    int listenerId = Riiablo.game.player;
-    if (mMapWrapper.has(listenerId) && mMapWrapper.has(entityId)) {
-      MapWrapper listener = mMapWrapper.get(listenerId);
-      MapWrapper emitter = mMapWrapper.get(entityId);
-      // Town and its preloaded outdoor neighbours share one client world but
-      // are separate native levels.  Never leak a monster bank across that
-      // boundary, even when their generated coordinates happen to be close.
-      if (listener != null && emitter != null && listener.zone != null
-          && emitter.zone != null && listener.zone != emitter.zone) return false;
-    }
-    float distance2 = mPosition.get(listenerId).position.dst2(
-        mPosition.get(entityId).position);
-    return isAudible(distance2, true);
-  }
-
   static boolean isAudible(float distance2, boolean sameZone) {
-    return sameZone && distance2 >= 0f && distance2 <= AUDIBLE_RADIUS2;
+    return MonsterAudio.isAudible(distance2, sameZone);
   }
 
   private static float neutralDelay(MonSounds.Entry bank) {
