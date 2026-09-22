@@ -113,6 +113,12 @@ final class InventoryWarning {
     return Math.max(0f, hudWidth) - Math.max(0f, warningWidth);
   }
 
+  static float slotOffsetY(Kind kind, float iconHeight, float gap) {
+    return kind == Kind.QUANTITY
+        ? Math.max(0f, iconHeight) + Math.max(0f, gap)
+        : 0f;
+  }
+
   /** Quantity warning icon classes: arrows, bolts, potions, javelins/knives, axes. */
   private static int quantityGroup(Item item) {
     if (item.type != null) {

@@ -764,13 +764,12 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     @Override
     public void draw(Batch batch, float parentAlpha) {
       if (sprites == null || entries.isEmpty()) return;
-      float stackHeight = entries.size() * ICON_HEIGHT + (entries.size() - 1) * GAP;
-      float stackY = getY() + (getHeight() - stackHeight) / 2f;
       for (int i = 0; i < entries.size(); i++) {
         InventoryWarning.Entry entry = entries.get(i);
         TextureRegion icon = sprites.getTexture(entry.frame);
         if (icon != null) {
-          batch.draw(icon, getX(), stackY + (entries.size() - 1 - i) * (ICON_HEIGHT + GAP));
+          batch.draw(icon, getX(), getY()
+              + InventoryWarning.slotOffsetY(entry.kind, ICON_HEIGHT, GAP));
         }
       }
     }

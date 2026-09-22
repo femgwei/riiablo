@@ -34,4 +34,12 @@ class InventoryWarningTest {
     assertEquals(0, InventoryWarning.quantitySeverity(1, 10));
     assertEquals(2, InventoryWarning.quantitySeverity(0, 10));
   }
+
+  @Test
+  void quantityAndDurabilityUseFixedUpperAndLowerSlots() {
+    assertEquals(43f, InventoryWarning.slotOffsetY(
+        InventoryWarning.Kind.QUANTITY, 41f, 2f));
+    assertEquals(0f, InventoryWarning.slotOffsetY(
+        InventoryWarning.Kind.DURABILITY, 41f, 2f));
+  }
 }
