@@ -4,12 +4,16 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.camera.IsometricCamera;
+import com.riiablo.codec.Animation;
+import com.riiablo.codec.DCC;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
@@ -39,10 +43,15 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
 
   private final Array<Vector2> markers = new Array<>();
   private final Label marker = new Label("!", Riiablo.fonts.font16, Riiablo.colors.gold);
+  private static final AssetDescriptor<DCC> QUEST_MARKER_DESCRIPTOR =
+      new AssetDescriptor<>("data\\global\\overlays\\NPCSpeechBalloon.dcc", DCC.class);
+  private Animation questMarkerAnimation;
+  private boolean questMarkerLoadQueued;
 
   @Override
   protected void begin() {
     markers.clear();
+    loadQuestMarkerAnimation();
   }
 
   @Override
@@ -63,12 +72,33 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   @Override
   protected void end() {
     if (markers.size == 0) return;
+    if (questMarkerAnimation != null) questMarkerAnimation.act(Gdx.graphics.getDeltaTime());
     Riiablo.batch.begin();
     for (Vector2 position : markers) {
-      marker.setPosition(position.x, position.y, Align.center | Align.bottom);
-      marker.draw(Riiablo.batch, 1f);
+      if (questMarkerAnimation != null) {
+        // Animation's origin is the NPC's ground anchor.  The marker position
+        // is already raised to the top of the NPC, so the DCC box is centered
+        // on that point in the same way as the native overlay path.
+        questMarkerAnimation.draw(Riiablo.batch, position.x, position.y);
+      } else {
+        marker.setPosition(position.x, position.y, Align.center | Align.bottom);
+        marker.draw(Riiablo.batch, 1f);
+      }
     }
     Riiablo.batch.end();
+  }
+
+  private void loadQuestMarkerAnimation() {
+    if (questMarkerAnimation != null || Riiablo.assets == null) return;
+    if (!questMarkerLoadQueued) {
+      Riiablo.assets.load(QUEST_MARKER_DESCRIPTOR);
+      questMarkerLoadQueued = true;
+    }
+    if (!Riiablo.assets.isLoaded(QUEST_MARKER_DESCRIPTOR)) return;
+
+    DCC dcc = Riiablo.assets.get(QUEST_MARKER_DESCRIPTOR);
+    questMarkerAnimation = Animation.builder().layer(dcc).build();
+    questMarkerAnimation.setMode(Animation.Mode.LOOP);
   }
 
   static boolean hasQuestMarker(int monsterType, CharData data) {
