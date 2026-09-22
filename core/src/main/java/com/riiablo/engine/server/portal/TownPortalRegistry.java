@@ -135,10 +135,43 @@ public final class TownPortalRegistry {
     Vector2 nativeSpawn = townZone.townPortalSpawn();
     if (nativeSpawn != null) return nativeSpawn;
     if (world != null && townZone.levelId() == 1) {
+      // The 1.10 Rogue Encampment DS1s used by some MPQ variants omit the
+      // tile-info record consumed by DUNGEON_FindActSpawnLocationEx.  The
+      // native fallback is the town-side end of the Blood Moor gate, inset
+      // into the camp; using the bonfire here puts the portal behind the
+      // fire/tents instead of at the original red-diamond location.
+      ComponentMapper<Warp> warps = world.getMapper(Warp.class);
       ComponentMapper<com.riiablo.engine.server.component.Object> objects =
           world.getMapper(com.riiablo.engine.server.component.Object.class);
       ComponentMapper<Position> positions = world.getMapper(Position.class);
       ComponentMapper<MapWrapper> wrappers = world.getMapper(MapWrapper.class);
+      com.badlogic.gdx.utils.IntArray warpEntities = townZone.getWarpEntities();
+      for (int i = 0; i < warpEntities.size; i++) {
+        int entity = warpEntities.get(i);
+        Warp warp = warps.get(entity);
+        Position position = positions.get(entity);
+        if (warp == null || position == null || warp.dstLevel == null
+            || warp.dstLevel.Id != 2) continue; // Rogue Encampment -> Blood Moor
+        Vector2 candidate = new Vector2(position.position);
+        float inset = 24f;
+        switch (townZone.townExitDirection) {
+          case 0: candidate.x += inset; break; // west edge -> move east
+          case 1: candidate.y += inset; break; // north edge -> move south
+          case 2: candidate.x -= inset; break; // east edge -> move west
+          case 3: candidate.y -= inset; break; // south edge -> move north
+          default: break;
+        }
+        if (townZone.findFreeCoordinates(candidate, 1, 16, true, candidate)) {
+          if (com.badlogic.gdx.Gdx.app != null) {
+            com.badlogic.gdx.Gdx.app.log("TownPortalRegistry",
+                "[TOWN_PORTAL_SPAWN] source=town_gate gate=("
+                    + position.position.x + "," + position.position.y
+                    + ") portal=(" + candidate.x + "," + candidate.y + ")");
+          }
+          return candidate;
+        }
+      }
+
       com.badlogic.gdx.utils.IntArray entities = townZone.getEntities();
       for (int i = 0; i < entities.size; i++) {
         int entity = entities.get(i);

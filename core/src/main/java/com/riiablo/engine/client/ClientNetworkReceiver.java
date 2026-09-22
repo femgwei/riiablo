@@ -560,6 +560,14 @@ public class ClientNetworkReceiver extends IntervalSystem {
         Gdx.app.log(TAG, "[RANGED_AMMO_SYNC] itemId=" + data.ammoItemId()
             + " code=" + ammo.code + " quantity=" + quantity);
       }
+    } else {
+      com.riiablo.save.ItemData items = Riiablo.charData.getItems();
+      com.riiablo.item.Item staleQuiver = items.getEquippedRangedAmmo();
+      if (staleQuiver != null && com.riiablo.item.VendorPricing.isQuiver(staleQuiver)) {
+        items.removeOwnedItem(staleQuiver);
+        Gdx.app.log(TAG, "[RANGED_AMMO_SYNC] removed depleted quiver itemId="
+            + staleQuiver.id + " code=" + staleQuiver.code);
+      }
     }
 
     long oldExperience = Riiablo.charData.getStats().aggregate()

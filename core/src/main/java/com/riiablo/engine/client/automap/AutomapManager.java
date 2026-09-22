@@ -118,8 +118,8 @@ public class AutomapManager implements Disposable {
   /** 神殿颜色 - 蓝色 */
   public static final Color COLOR_SHRINE = new Color(0.3f, 0.5f, 1.0f, 1.0f);
   
-  /** 传送门颜色 - 原版自动地图使用的浅蓝色 */
-  public static final Color COLOR_PORTAL = new Color(0.35f, 0.75f, 1.0f, 1.0f);
+  /** 传送门颜色 - 原版使用与 NPC 相同的金黄色标记色 */
+  public static final Color COLOR_PORTAL = new Color(1.0f, 0.84f, 0.0f, 1.0f);
   
   /** 未探索区域颜色 - 黑色 */
   public static final Color COLOR_UNEXPLORED = new Color(0.0f, 0.0f, 0.0f, 0.9f);
@@ -907,10 +907,8 @@ public class AutomapManager implements Disposable {
           break;
           
         case AutomapIconType.PORTAL:
-          // 传送门用圆环
-          shapes.circle(markerX, markerY, marker.size);
-          shapes.setColor(0, 0, 0, alpha * 0.5f);
-          shapes.circle(markerX, markerY, marker.size * 0.5f);
+          // Native D2 uses the same yellow NPC-style glyph for a portal.
+          NativeAutomapGlyph.draw(shapes, markerX, markerY);
           break;
           
         default:

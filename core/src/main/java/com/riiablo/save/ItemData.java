@@ -688,6 +688,13 @@ public class ItemData {
     int index = indexOf(item);
     if (index == INVALID_ITEM || item.location == Location.GROUND) return false;
     if (item.location == Location.STORED) notifyStoreRemoved(item);
+    if (item.location == Location.EQUIPPED) {
+      BodyLoc bodyLoc = item.bodyLoc;
+      if (bodyLoc == null || equipped.get(bodyLoc) != index) return false;
+      equipped.remove(bodyLoc);
+      updateSet(item, -1);
+      notifyUnequip(bodyLoc, item);
+    }
     if (cursor == index) cursor = INVALID_ITEM;
     else if (cursor > index) cursor--;
     setLocation(item, null);

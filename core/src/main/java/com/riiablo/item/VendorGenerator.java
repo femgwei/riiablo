@@ -98,6 +98,13 @@ public class VendorGenerator extends PassiveSystem {
     return item;
   }
 
+  /** Creates an independent replacement for native infinite vendor stock. */
+  public Item restock(Item purchased) {
+    if (purchased == null || purchased.base == null
+        || !VendorPricing.isInfiniteStockItem(purchased)) return null;
+    return createNormal(purchased.base);
+  }
+
   private Item createMagic(ItemEntry base, int magicLevel) {
     int id = nextId();
     try {

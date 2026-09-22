@@ -687,7 +687,8 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
     assertTrue(ServerSkillSystem.consumeRangedAmmo(data.getItems(), bow));
     assertEquals(1, arrows.attrs.base().get(Stat.quantity).asInt());
     assertTrue(ServerSkillSystem.consumeRangedAmmo(data.getItems(), bow));
-    assertEquals(0, arrows.attrs.base().get(Stat.quantity).asInt());
+    assertTrue(!data.getItems().contains(arrows));
+    assertTrue(data.getItems().getSlot(com.riiablo.item.BodyLoc.LARM) == null);
     assertTrue(!ServerSkillSystem.consumeRangedAmmo(data.getItems(), bow));
   }
 

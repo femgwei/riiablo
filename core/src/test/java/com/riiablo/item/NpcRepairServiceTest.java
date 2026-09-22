@@ -82,6 +82,25 @@ class NpcRepairServiceTest extends RiiabloTest {
     assertEquals(100 - result.cost, character.getStats().get(Stat.gold).asInt());
   }
 
+  @Test void zeroQuantityThrowingWeaponIsRetainedAndRepairRestoresItsStack() {
+    CharData character = characterWithGold(100000);
+    Item javelin = new ItemGenerator().generate("jav");
+    javelin.id = 0x5151;
+    javelin.quality = Quality.NORMAL;
+    javelin.attrs.base().put(Stat.quantity, 0);
+    javelin.attrs.aggregate().put(Stat.quantity, 0);
+    assertTrue(character.getItems().addToInventory(javelin));
+    int index = character.getItems().indexOf(javelin);
+
+    NpcRepairService.Result result = NpcRepairService.repairItem(
+        character, new Npc.Entry(), index, javelin.id);
+
+    assertTrue(result.success);
+    assertTrue(character.getItems().contains(javelin));
+    assertEquals(javelin.base.maxstack,
+        javelin.attrs.base().get(Stat.quantity).asInt());
+  }
+
   private static CharData characterWithGold(int gold) {
     CharData character = CharData.obtain().clear().set(
         Riiablo.NORMAL, false, "RepairHero", Riiablo.AMAZON);

@@ -4140,6 +4140,11 @@ public class ServerSkillSystem extends PassiveSystem {
     // without rebuilding the character's derived attributes every shot.
     StatRef aggregate = ammo.attrs.aggregate().get(Stat.quantity);
     if (aggregate != null) aggregate.set(before - 1);
+    boolean depleted = before == 1 && (ammo.type != null
+        && (ammo.type.is(com.riiablo.item.Type.BOWQ)
+            || ammo.type.is(com.riiablo.item.Type.XBOQ))
+        || "aqv".equalsIgnoreCase(ammo.code) || "cqv".equalsIgnoreCase(ammo.code));
+    if (depleted) items.removeOwnedItem(ammo);
     log.info("[RANGED_AMMO] phase=consume weapon={} ammo={} itemId={} before={} after={}",
         weapon.code, ammo.code, ammo.id, before, before - 1);
     return true;

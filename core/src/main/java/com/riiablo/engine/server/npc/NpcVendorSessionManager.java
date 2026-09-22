@@ -23,13 +23,16 @@ public final class NpcVendorSessionManager {
     private boolean gamble;
     public final Npc.Entry pricing;
     public final int difficulty;
+    private final VendorGenerator generator;
 
-    private Session(int npcEntityId, String npcType, boolean gamble, Npc.Entry pricing, int difficulty) {
+    private Session(int npcEntityId, String npcType, boolean gamble, Npc.Entry pricing,
+                    int difficulty, VendorGenerator generator) {
       this.npcEntityId = npcEntityId;
       this.npcType = npcType;
       this.gamble = gamble;
       this.pricing = pricing;
       this.difficulty = difficulty;
+      this.generator = generator;
     }
 
     public boolean isGamble() { return gamble; }
@@ -89,7 +92,7 @@ public final class NpcVendorSessionManager {
       }
       return session;
     }
-    session = new Session(npcEntityId, npcType, gamble, pricing, difficulty);
+    session = new Session(npcEntityId, npcType, gamble, pricing, difficulty, generator);
     if (generator != null) {
       Array<Item> generated = gamble ? generator.generateGamble() : generator.generate(npcType);
       session.stock.addAll(generated);
@@ -132,6 +135,8 @@ public final class NpcVendorSessionManager {
   public synchronized int buy(Session session, CharData player, int itemId, boolean toCursor) {
     Item item = find(session, itemId);
     if (item == null || player == null || !item.hasFlag2(Item.ITEMFLAG2_INSTORE)) return 0;
+    Item replacement = !session.isGamble() && VendorPricing.isInfiniteStockItem(item)
+        && session.generator != null ? session.generator.restock(item) : null;
     int price = price(session, item, player);
     boolean purchased = session.isGamble()
         ? (toCursor ? VendorPricing.gambleToCursor(player, item)
@@ -139,7 +144,9 @@ public final class NpcVendorSessionManager {
         : (toCursor ? VendorPricing.buyToCursor(player, item, session.pricing)
             : VendorPricing.buy(player, item, session.pricing));
     if (!purchased) return 0;
-    session.stock.removeValue(item, true);
+    int stockIndex = session.stock.indexOf(item, true);
+    if (replacement != null && stockIndex >= 0) session.stock.set(stockIndex, replacement);
+    else session.stock.removeValue(item, true);
     session.revision++;
     return price;
   }
