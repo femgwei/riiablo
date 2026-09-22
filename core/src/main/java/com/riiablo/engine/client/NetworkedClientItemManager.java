@@ -205,7 +205,7 @@ public class NetworkedClientItemManager extends ClientItemManager {
   public void useInventoryItem(com.riiablo.item.Item item) {
     if (item == null || item.id < 0 || item.code == null
         || (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code))) return;
-    if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
+    if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_cast", true);
     send(ItemMoveOperation.USE_INVENTORY_ITEM, item.id, -1, -1, -1, -1, -1, false);
   }
 

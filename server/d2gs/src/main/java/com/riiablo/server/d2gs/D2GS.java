@@ -7553,7 +7553,10 @@ public class D2GS extends ApplicationAdapter {
       int playerEntityId, CharData character, ItemMoveIntent intent) {
     final int[] visual = {Engine.INVALID_ENTITY};
     final int[] warp = {Engine.INVALID_ENTITY};
+    final int[] returnVisual = {Engine.INVALID_ENTITY};
+    final int[] returnWarp = {Engine.INVALID_ENTITY};
     final Map.Zone[] source = {null};
+    final Map.Zone[] town = {null};
     AuthoritativeItemMoveService.Outcome outcome = authoritativeItems.useInventoryItem(
         playerEntityId, character, intent, () -> {
           if (playerEntityId == Engine.INVALID_ENTITY || factory == null) return false;
@@ -7565,30 +7568,53 @@ public class D2GS extends ApplicationAdapter {
           Vector2 portal = new Vector2(position.position);
           if (!wrapper.zone.findFreeCoordinates(portal, 1, 16, true, portal)) return false;
           source[0] = wrapper.zone;
+          int sourceLevel = source[0].level == null ? -1 : source[0].level.Id;
+          int destinationTown = townLevelForAct(source[0].level == null
+              ? 1 : source[0].level.Act);
+          com.riiablo.codec.excel.Levels.Entry townLevel = Riiablo.files.Levels.get(destinationTown);
+          town[0] = townLevel == null ? null : map.findZone(townLevel);
+          if (sourceLevel <= 0 || town[0] == null) return false;
+          Vector2 returnPortal = new Vector2(
+              town[0].x() + Math.max(1, town[0].width() / 2),
+              town[0].y() + Math.max(1, town[0].height() / 2));
+          if (!town[0].findFreeCoordinates(returnPortal, 1, 64, true, returnPortal)) return false;
           visual[0] = factory.createStaticObjectByClassId(
               com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
               portal.x, portal.y);
+          returnVisual[0] = factory.createStaticObjectByClassId(
+              com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
+              returnPortal.x, returnPortal.y);
+          returnWarp[0] = factory.createWarp(town[0], QuestWarp.encode(sourceLevel),
+              returnPortal.x, returnPortal.y);
           warp[0] = factory.createWarp(wrapper.zone,
-              QuestWarp.encode(townLevelForAct(wrapper.zone.level == null
-                  ? 1 : wrapper.zone.level.Act)),
+              QuestWarp.encode(destinationTown),
               portal.x, portal.y);
-          if (visual[0] == Engine.INVALID_ENTITY || warp[0] == Engine.INVALID_ENTITY) {
+          if (visual[0] == Engine.INVALID_ENTITY || warp[0] == Engine.INVALID_ENTITY
+              || returnVisual[0] == Engine.INVALID_ENTITY
+              || returnWarp[0] == Engine.INVALID_ENTITY) {
             if (warp[0] != Engine.INVALID_ENTITY) world.delete(warp[0]);
             if (visual[0] != Engine.INVALID_ENTITY) world.delete(visual[0]);
+            if (returnWarp[0] != Engine.INVALID_ENTITY) world.delete(returnWarp[0]);
+            if (returnVisual[0] != Engine.INVALID_ENTITY) world.delete(returnVisual[0]);
             visual[0] = warp[0] = Engine.INVALID_ENTITY;
+            returnVisual[0] = returnWarp[0] = Engine.INVALID_ENTITY;
             return false;
           }
           return true;
         });
     if (outcome.success) {
       if (source[0] != null) source[0].addWarp(warp[0]);
+      if (town[0] != null) town[0].addWarp(returnWarp[0]);
       Gdx.app.log(TAG, "[TOWN_PORTAL] created player=" + playerEntityId
           + " visual=" + visual[0] + " warp=" + warp[0]
+          + " returnVisual=" + returnVisual[0] + " returnWarp=" + returnWarp[0]
           + " destination=" + (source[0] == null || source[0].level == null
               ? 1 : townLevelForAct(source[0].level.Act)));
     } else {
       if (warp[0] != Engine.INVALID_ENTITY) world.delete(warp[0]);
       if (visual[0] != Engine.INVALID_ENTITY) world.delete(visual[0]);
+      if (returnWarp[0] != Engine.INVALID_ENTITY) world.delete(returnWarp[0]);
+      if (returnVisual[0] != Engine.INVALID_ENTITY) world.delete(returnVisual[0]);
     }
     return outcome;
   }

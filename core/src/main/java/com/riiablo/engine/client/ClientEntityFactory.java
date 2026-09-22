@@ -81,6 +81,13 @@ public class ClientEntityFactory extends ServerEntityFactory {
     // try to attach client-only components to that sentinel entity id.
     if (id == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;
 
+    if (mObject.has(id) && mObject.get(id).base != null
+        && mObject.get(id).base.Id
+            == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+        && Riiablo.audio != null) {
+      Riiablo.audio.play("object_townportal", true);
+    }
+
     Objects.Entry base = mObject.get(id).base;
     boolean waypoint = isWaypoint(base);
 

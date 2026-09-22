@@ -17,6 +17,7 @@ import com.riiablo.item.StoreLoc;
 import com.riiablo.item.VendorPricing;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
+import com.riiablo.map.Map;
 import com.riiablo.save.ItemController;
 
 import net.mostlyoriginal.api.system.core.PassiveSystem;
@@ -191,23 +192,42 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
     Vector2 portalPosition = new Vector2(playerPosition.position);
     if (!wrapper.zone.findFreeCoordinates(portalPosition, 1, 16, true, portalPosition)) return;
+    int sourceLevel = wrapper.zone.level == null ? -1 : wrapper.zone.level.Id;
+    int destinationTown = townLevelForAct(wrapper.zone.level == null ? 1 : wrapper.zone.level.Act);
+    Map.Zone townZone = sourceLevel <= 0 || Riiablo.files.Levels.get(destinationTown) == null
+        || wrapper.map == null ? null
+        : wrapper.map.findZone(Riiablo.files.Levels.get(destinationTown));
+    Vector2 returnPosition = townZone == null ? null : new Vector2(
+        townZone.x() + Math.max(1, townZone.width() / 2),
+        townZone.y() + Math.max(1, townZone.height() / 2));
+    if (returnPosition == null
+        || !townZone.findFreeCoordinates(returnPosition, 1, 64, true, returnPosition)) return;
     int visual = factory.createStaticObjectByClassId(
         com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
         portalPosition.x, portalPosition.y);
-    int destinationTown = townLevelForAct(wrapper.zone.level == null ? 1 : wrapper.zone.level.Act);
     int warp = factory.createWarp(wrapper.zone, QuestWarp.encode(destinationTown),
         portalPosition.x, portalPosition.y);
-    if (warp < 0) {
+    int returnVisual = factory.createStaticObjectByClassId(
+        com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
+        returnPosition.x, returnPosition.y);
+    int returnWarp = factory.createWarp(townZone, QuestWarp.encode(sourceLevel),
+        returnPosition.x, returnPosition.y);
+    if (warp < 0 || returnWarp < 0 || visual < 0 || returnVisual < 0) {
       if (visual >= 0) world.delete(visual);
+      if (returnVisual >= 0) world.delete(returnVisual);
+      if (returnWarp >= 0) world.delete(returnWarp);
       return;
     }
     if (!Riiablo.charData.getItems().consumeStoredItem(item)) {
       world.delete(warp);
       if (visual >= 0) world.delete(visual);
+      world.delete(returnWarp);
+      if (returnVisual >= 0) world.delete(returnVisual);
       return;
     }
     wrapper.zone.addWarp(warp);
-    if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
+    townZone.addWarp(returnWarp);
+    if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_cast", true);
   }
 
   private static int townLevelForAct(int act) {
