@@ -41,12 +41,24 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
 
   @Wire(name = "iso") protected IsometricCamera iso;
 
-  private final Array<Vector2> markers = new Array<>();
+  private final Array<MarkerPosition> markers = new Array<>();
   private final Label marker = new Label("!", Riiablo.fonts.font16, Riiablo.colors.gold);
   private static final AssetDescriptor<DCC> QUEST_MARKER_DESCRIPTOR =
       new AssetDescriptor<>("data\\global\\overlays\\NPCSpeechBalloon.dcc", DCC.class);
   private Animation questMarkerAnimation;
   private boolean questMarkerLoadQueued;
+
+  private static final class MarkerPosition {
+    final float x;
+    final float anchorY;
+    final float fallbackY;
+
+    MarkerPosition(float x, float anchorY, float fallbackY) {
+      this.x = x;
+      this.anchorY = anchorY;
+      this.fallbackY = fallbackY;
+    }
+  }
 
   @Override
   protected void begin() {
@@ -65,8 +77,11 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     Vector2 screen = new Vector2(mPosition.get(entityId).position);
     iso.toScreen(screen);
     MonStats2.Entry visual = Riiablo.files.monstats2.get(npc.monstats.MonStatsEx);
-    screen.y += visual == null ? 80 : Math.max(64, visual.pixHeight);
-    markers.add(screen);
+    float markerHeight = visual == null ? 80 : Math.max(64, visual.pixHeight);
+    // NPCSpeechBalloon.dcc is authored around the unit's native ground
+    // anchor. Keep both anchors: the DCC uses the ground point, while the
+    // text fallback needs the old head-height position.
+    markers.add(new MarkerPosition(screen.x, screen.y, screen.y + markerHeight));
   }
 
   @Override
@@ -74,14 +89,11 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     if (markers.size == 0) return;
     if (questMarkerAnimation != null) questMarkerAnimation.act(Gdx.graphics.getDeltaTime());
     Riiablo.batch.begin();
-    for (Vector2 position : markers) {
+    for (MarkerPosition position : markers) {
       if (questMarkerAnimation != null) {
-        // Animation's origin is the NPC's ground anchor.  The marker position
-        // is already raised to the top of the NPC, so the DCC box is centered
-        // on that point in the same way as the native overlay path.
-        questMarkerAnimation.draw(Riiablo.batch, position.x, position.y);
+        questMarkerAnimation.draw(Riiablo.batch, position.x, position.anchorY);
       } else {
-        marker.setPosition(position.x, position.y, Align.center | Align.bottom);
+        marker.setPosition(position.x, position.fallbackY, Align.center | Align.bottom);
         marker.draw(Riiablo.batch, 1f);
       }
     }
