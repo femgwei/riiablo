@@ -865,8 +865,10 @@ public class ItemData {
     item.bodyLoc = bodyLoc;
     int j = equipped.put(bodyLoc, i);
     assert j == INVALID_ITEM : "Item " + j + " should have been unequipped by this point.";
-    updateStats(); // TODO: add support for appending to existing stats if this is an additional item
     updateSet(item, 1);
+    // The set count is an input to Item.update(); update it before rebuilding
+    // aggregates so partial/full set bonuses apply immediately on equip.
+    updateStats(); // TODO: add support for appending to existing stats if this is an additional item
     
     // Log weapon quantity when equipping ranged/throwing weapons
     if (item != null && item.base != null && (bodyLoc == BodyLoc.RARM || bodyLoc == BodyLoc.LARM)) {
@@ -893,8 +895,10 @@ public class ItemData {
       return INVALID_ITEM;
     }
     Item item = itemData.get(i);
-    updateStats();
     updateSet(item, -1);
+    // Remove the set contribution before rebuilding aggregates; otherwise the
+    // unequipped item's partial/full set bonus survives until the next refresh.
+    updateStats();
     notifyUnequip(bodyLoc, item);
     return i;
   }
