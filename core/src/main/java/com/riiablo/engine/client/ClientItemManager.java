@@ -75,7 +75,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       return;
     }
     boolean stored = Riiablo.charData != null
-        && Riiablo.charData.getItems().addGroundPickup(item);
+        && Riiablo.charData.getItems().addGroundPickup(item, Riiablo.charData);
     if (!stored) {
       boolean replayed = replayGroundDrop(entityId);
       log.info("[GROUND_PICKUP] phase=reject mode=local entity={} item={} reason=no_space",

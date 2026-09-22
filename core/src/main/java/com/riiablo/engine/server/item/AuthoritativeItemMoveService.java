@@ -197,7 +197,7 @@ public final class AuthoritativeItemMoveService {
         character.groundToCursor(groundItem);
         stored = true;
       } else {
-        stored = character.getItems().addGroundPickup(groundItem);
+        stored = character.getItems().addGroundPickup(groundItem, character);
       }
     } catch (Throwable t) {
       GroundDropOwnership.release(intent.groundEntityId);

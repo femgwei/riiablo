@@ -41,7 +41,8 @@ public class ServerItemManager extends ItemManager {
     if (!GroundDropOwnership.claim(dst, entityId, partyId)) return;
     try {
       CharData character = mPlayer.get(entityId).data;
-      boolean stored = character != null && character.getItems().addGroundPickup(ground);
+      boolean stored = character != null
+          && character.getItems().addGroundPickup(ground, character);
       if (stored) {
         if (ground.code != null) {
           event.dispatch(com.riiablo.engine.server.event.QuestItemPickedUpEvent.obtain(

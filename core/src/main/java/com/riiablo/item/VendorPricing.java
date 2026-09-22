@@ -180,7 +180,7 @@ public final class VendorPricing {
     int price = buyPrice(item, npc, character);
     if (!canSpend(character, price)) return false;
     ItemData items = character.getItems();
-    if (!items.addToInventory(item)) return false;
+    if (!items.addAutoPickup(item, character)) return false;
     item.flags2 &= ~Item.ITEMFLAG2_INSTORE;
     spend(character, price);
     return true;
@@ -201,7 +201,7 @@ public final class VendorPricing {
     int price = gamblePrice(item, character);
     if (!canSpend(character, price)) return false;
     ItemData items = character.getItems();
-    if (!items.addToInventory(item)) return false;
+    if (!items.addAutoPickup(item, character)) return false;
     item.flags2 &= ~Item.ITEMFLAG2_INSTORE;
     spend(character, price);
     return true;

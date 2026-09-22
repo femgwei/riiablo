@@ -12,6 +12,7 @@ import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Misc;
 import com.riiablo.codec.excel.Npc;
 import com.riiablo.codec.excel.ItemTypes;
+import com.riiablo.codec.excel.Weapons;
 import com.riiablo.engine.server.npc.NpcVendorSessionManager;
 import com.riiablo.save.CharData;
 
@@ -33,6 +34,58 @@ class VendorPricingTest extends RiiabloTest {
     assertEquals(100 - Math.max(0, price - 20), character.getStats().get(Stat.goldbank).asInt());
     assertTrue(!item.hasFlag2(Item.ITEMFLAG2_INSTORE));
     assertTrue(character.getItems().contains(item));
+  }
+
+  @Test
+  void purchaseAutoEquipsUsableItemIntoEmptyBodySlot() {
+    CharData character = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "EquipBuyer", Riiablo.AMAZON);
+    character.getStats().base().put(Stat.gold, 100000);
+    character.getStats().aggregate().put(Stat.gold, 100000);
+
+    Item weapon = item("sw1", 2, 3);
+    weapon.base = new Weapons.Entry();
+    weapon.base.code = "sw1";
+    weapon.base.invwidth = 2;
+    weapon.base.invheight = 3;
+    weapon.typeEntry = new ItemTypes.Entry();
+    weapon.typeEntry.BodyLoc = new String[] {"rarm"};
+    weapon.type = Type.get("swor");
+    weapon.flags2 |= Item.ITEMFLAG2_INSTORE;
+
+    assertTrue(VendorPricing.buy(character, weapon));
+    assertEquals(weapon, character.getItems().getSlot(BodyLoc.RARM));
+    assertEquals(Location.EQUIPPED, weapon.location);
+    assertTrue(!character.getItems().getStore(StoreLoc.INVENTORY).contains(
+        character.getItems().indexOf(weapon)));
+  }
+
+  @Test
+  void pickupAutoFillsBeltThenTomeBeforeInventory() {
+    CharData character = CharData.obtain().clear().set(
+        Riiablo.NORMAL, false, "ConsumableBuyer", Riiablo.AMAZON);
+    Item potion = item("hp1", 1, 1);
+    potion.typeEntry = new ItemTypes.Entry();
+    potion.typeEntry.Beltable = true;
+    potion.type = Type.get("hpot");
+    assertTrue(character.getItems().addGroundPickup(potion, character));
+    assertEquals(Location.BELT, potion.location);
+
+    Item tome = item("tbk", 1, 1);
+    tome.base.maxstack = 20;
+    tome.attrs.base().put(Stat.quantity, 19);
+    tome.typeEntry = new ItemTypes.Entry();
+    tome.type = Type.get("book");
+    assertTrue(character.getItems().addToInventory(tome));
+
+    Item scroll = item("tsc", 1, 1);
+    scroll.attrs.base().put(Stat.quantity, 1);
+    scroll.typeEntry = new ItemTypes.Entry();
+    scroll.type = Type.get("scro");
+    assertTrue(character.getItems().addGroundPickup(scroll, character));
+    assertEquals(20, tome.attrs.base().get(Stat.quantity).asInt());
+    assertEquals(Location.STORED, tome.location);
+    assertTrue(!character.getItems().contains(scroll));
   }
 
   @Test

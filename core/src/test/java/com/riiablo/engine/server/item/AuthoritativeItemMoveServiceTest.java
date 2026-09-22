@@ -195,7 +195,7 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   }
 
   @Test
-  void groundNonPotionStillUsesInventory() {
+  void groundEquipmentAutoEquipsEmptyBodySlot() {
     CharData character = character();
     Item armor = item("cap", 201);
     AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
@@ -204,8 +204,9 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
         10, character, pickupIntent(0L, armor), armor);
 
     assertTrue(result.success);
-    assertEquals(Location.STORED, armor.location);
-    assertEquals(StoreLoc.INVENTORY, armor.storeLoc);
+    assertEquals(Location.EQUIPPED, armor.location);
+    assertEquals(BodyLoc.HEAD, armor.bodyLoc);
+    assertSame(armor, character.getItems().getSlot(BodyLoc.HEAD));
   }
 
   @Test

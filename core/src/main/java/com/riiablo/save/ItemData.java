@@ -14,6 +14,7 @@ import com.riiablo.codec.excel.CharStats;
 import com.riiablo.codec.excel.SetItems;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
+import com.riiablo.item.ItemRequirements;
 import com.riiablo.item.Location;
 import com.riiablo.item.Quality;
 import com.riiablo.item.StoreLoc;
@@ -506,12 +507,117 @@ public class ItemData {
 
   /**
    * Applies native ground-pickup placement without using the mouse cursor.
-   * Belt-compatible potions take the first native belt slot and fall back to
-   * the character inventory; every other item goes directly to inventory.
+   * Belt-compatible potions take the first native belt slot, scrolls fill a
+   * matching tome, and usable equipment fills an empty body slot. Every item
+   * falls back to the character inventory when its preferred destination is
+   * unavailable.
    * The item is left untouched when neither destination has room.
    */
   public boolean addGroundPickup(Item item) {
-    return addPotionToBelt(item) || addToInventory(item);
+    return addAutoPickup(item, null);
+  }
+
+  /** Applies native pickup placement with the character requirement context. */
+  public boolean addGroundPickup(Item item, CharData character) {
+    return addAutoPickup(item, character);
+  }
+
+  /**
+   * Places a newly acquired item using the same automatic destination rules as
+   * D2's pickup/buy path.  Cursor purchases deliberately do not call this
+   * method: an explicit cursor destination must remain on the cursor.
+   */
+  public boolean addAutoPickup(Item item, CharData character) {
+    if (item == null || contains(item)) return false;
+    if (addPotionToBelt(item)) return true;
+    if (addScrollToTome(item)) return true;
+
+    BodyLoc bodyLoc = character == null ? null : findAutoEquipLocation(item, character);
+    if (bodyLoc != null) {
+      equip(bodyLoc, item);
+      return true;
+    }
+    return addToInventory(item);
+  }
+
+  private BodyLoc findAutoEquipLocation(Item item, CharData character) {
+    if (item.typeEntry == null || item.typeEntry.BodyLoc == null
+        || !ItemRequirements.check(item, character).usable()) return null;
+
+    // Keep the native primary-set ordering: armor/accessories first, then the
+    // right hand before the left hand. Alternate weapon slots are never an
+    // automatic pickup destination.
+    BodyLoc[] candidates = {
+        BodyLoc.HEAD, BodyLoc.TORS, BodyLoc.RARM, BodyLoc.LARM,
+        BodyLoc.RRIN, BodyLoc.LRIN, BodyLoc.FEET, BodyLoc.GLOV, BodyLoc.BELT
+    };
+    for (BodyLoc candidate : candidates) {
+      if (getSlot(candidate) != null || !supportsBodyLoc(item, candidate)) continue;
+      if ((candidate == BodyLoc.RARM || candidate == BodyLoc.LARM)
+          && item.base instanceof com.riiablo.codec.excel.Weapons.Entry
+          && ((com.riiablo.codec.excel.Weapons.Entry) item.base)._2handed) {
+        BodyLoc opposite = candidate == BodyLoc.RARM ? BodyLoc.LARM : BodyLoc.RARM;
+        if (getSlot(opposite) != null) continue;
+      }
+      return candidate;
+    }
+    return null;
+  }
+
+  private static boolean supportsBodyLoc(Item item, BodyLoc bodyLoc) {
+    String expected = bodyLoc.name().toLowerCase(java.util.Locale.ROOT);
+    for (String value : item.typeEntry.BodyLoc) {
+      if (value != null && expected.equalsIgnoreCase(value.trim())) return true;
+    }
+    return false;
+  }
+
+  /** Merges a scroll into its matching tome when the tome has capacity. */
+  private boolean addScrollToTome(Item scroll) {
+    String tomeCode;
+    if ("isc".equalsIgnoreCase(scroll.code)) tomeCode = "ibk";
+    else if ("tsc".equalsIgnoreCase(scroll.code)) tomeCode = "tbk";
+    else return false;
+
+    int sourceQuantity = quantity(scroll);
+    for (Item tome : itemData) {
+      if (tome == null || tome.location == Location.GROUND
+          || !tomeCode.equalsIgnoreCase(tome.code) || tome.attrs == null) continue;
+      int current = quantity(tome);
+      int maximum = tome.base == null || tome.base.maxstack <= 0
+          ? 20 : tome.base.maxstack;
+      if (current >= maximum || sourceQuantity <= 0) continue;
+      int moved = Math.min(sourceQuantity, maximum - current);
+      setQuantity(tome, current + moved);
+      sourceQuantity -= moved;
+      if (sourceQuantity == 0) {
+        notifyUpdated();
+        return true;
+      }
+      setQuantity(scroll, sourceQuantity);
+      if (addToInventory(scroll)) {
+        notifyUpdated();
+        return true;
+      }
+      // No inventory room for the remainder: roll back the tome mutation so
+      // the caller can report a failed pickup without losing the scroll.
+      setQuantity(tome, current);
+      setQuantity(scroll, sourceQuantity + moved);
+      return false;
+    }
+    return false;
+  }
+
+  private static int quantity(Item item) {
+    if (item == null || item.attrs == null) return 1;
+    StatRef value = item.attrs.base().get(Stat.quantity);
+    return value == null ? 1 : Math.max(1, value.asInt());
+  }
+
+  private static void setQuantity(Item item, int value) {
+    if (item == null || item.attrs == null) return;
+    item.attrs.base().put(Stat.quantity, Math.max(0, value));
+    item.attrs.aggregate().put(Stat.quantity, Math.max(0, value));
   }
 
   /**

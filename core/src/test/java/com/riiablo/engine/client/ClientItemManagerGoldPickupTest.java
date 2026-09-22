@@ -149,7 +149,7 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
   }
 
   @Test
-  void localEquipmentPickupGoesDirectlyToInventory() {
+  void localEquipmentPickupAutoEquipsEmptyBodySlot() {
     Riiablo.charData = character("LocalEquipment", 0, 1);
     ClientItemManager manager = new ClientItemManager();
     World world = world(manager);
@@ -160,10 +160,9 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
       manager.groundToCursor(entity);
       world.process();
 
-      assertEquals(Location.STORED, armor.location);
-      assertEquals(StoreLoc.INVENTORY, armor.storeLoc);
-      assertTrue(Riiablo.charData.getItems().toItemArray(
-          Riiablo.charData.getItems().getStore(StoreLoc.INVENTORY)).contains(armor, true));
+      assertEquals(Location.EQUIPPED, armor.location);
+      assertEquals(BodyLoc.HEAD, armor.bodyLoc);
+      assertSame(armor, Riiablo.charData.getItems().getSlot(BodyLoc.HEAD));
       assertNull(Riiablo.charData.getItems().getCursor());
       assertFalse(world.getEntityManager().isActive(entity));
     } finally {

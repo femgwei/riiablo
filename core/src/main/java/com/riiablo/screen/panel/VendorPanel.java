@@ -553,7 +553,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         if (purchased != null && !Riiablo.charData.getItems().contains(purchased)) {
           boolean placed = pendingBuyToCursor
               ? Riiablo.charData.getItems().addToCursor(purchased)
-              : Riiablo.charData.getItems().addToInventory(purchased);
+              : Riiablo.charData.getItems().addAutoPickup(purchased, Riiablo.charData);
           if (!placed) {
             Gdx.app.error(TAG, "[VENDOR_BUY] requested destination unavailable; preserving item in inventory");
             Riiablo.charData.getItems().addToInventory(purchased);
