@@ -38,6 +38,14 @@ class VelocityModeChangerTest {
   }
 
   @Test
+  void keepsWalkingAnimationAliveDuringAZeroDisplacementPathTick() {
+    assertEquals(192, VelocityModeChanger.movementAnimationRate(256, 6f, 8f));
+    // A blocked/contact-corrected tick must not turn an active walk into a
+    // zero-rate animation; the caller supplies the configured intended speed.
+    assertEquals(256, VelocityModeChanger.movementAnimationRate(256, 0f, 0f));
+  }
+
+  @Test
   void appliesNativeMonsterBaseAndAiVelocityBonus() {
     Velocity velocity = new Velocity().setMonster(8f);
 

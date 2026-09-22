@@ -122,8 +122,27 @@ public class VelocityModeChanger extends IteratingSystem {
     Velocity velocity = mVelocity.get(entityId);
     Vector2 currentVelocity = velocity.velocity;
     if (currentVelocity.isZero()) {
-      setMovementMode(entityId, mMovementModes.get(entityId).NU, currentVelocity);
-      mAnimData.get(entityId).override = -1;
+      AnimData animData = mAnimData.get(entityId);
+      if (mMonster.has(entityId) && hasMovementIntent(entityId)) {
+        // Box2D can report zero displacement for a tick while an active path
+        // is being resolved (contact correction, room seams, or a dynamic
+        // unit footprint).  Native D2 keeps the walk COF selected during that
+        // intent; switching to NU here makes the body slide while its feet
+        // remain on the idle frame.  Use the configured effective speed so
+        // the visual animation continues until Pathfinder clears the intent.
+        boolean running = mRunning.has(entityId);
+        int baseAnimSpeed = resolveMonsterBaseAnimationSpeed(entityId, running, animData);
+        setMovementMode(entityId,
+            running ? mMovementModes.get(entityId).RN : mMovementModes.get(entityId).WL,
+            currentVelocity);
+        float intendedSpeed = velocity.speed(running);
+        animData.override = movementAnimationRate(
+            baseAnimSpeed, intendedSpeed, running ? velocity.runSpeed : velocity.walkSpeed);
+        syncClientAnimation(entityId, animData, velocity, running, baseAnimSpeed);
+      } else {
+        setMovementMode(entityId, mMovementModes.get(entityId).NU, currentVelocity);
+        animData.override = -1;
+      }
     } else if (mMonster.has(entityId)) {
       AnimData animData = mAnimData.get(entityId);
       boolean running = mRunning.has(entityId);
@@ -149,6 +168,22 @@ public class VelocityModeChanger extends IteratingSystem {
             PLAYER_WALK_ANIM_SPEED, currentVelocity.len(), velocity.walkSpeed);
       }
     }
+  }
+
+  private boolean hasMovementIntent(int entityId) {
+    if (!mPathfind.has(entityId)) return false;
+    Pathfind pathfind = mPathfind.get(entityId);
+    return pathfind.path != null
+        || pathfind.targetEntityId != Engine.INVALID_ENTITY
+        || !pathfind.target.isZero(0.0001f)
+        || !pathfind.destination.isZero(0.0001f);
+  }
+
+  static int movementAnimationRate(
+      int baseAnimSpeed, float movementSpeed, float baseVelocity) {
+    if (baseAnimSpeed <= 0) return 1;
+    int scaled = scaleAnimationSpeed(baseAnimSpeed, movementSpeed, baseVelocity);
+    return scaled > 0 ? scaled : baseAnimSpeed;
   }
 
   private void setMovementMode(int entityId, byte mode, Vector2 velocity) {
