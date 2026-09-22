@@ -196,6 +196,28 @@ class Act1MapBuilderD2MooLayersTest {
   }
 
   @Test
+  void keepsSpecialMarkersOutOfRenderableWallLayers() throws Exception {
+    DT1.Tile marker = tile(Orientation.SPECIAL_10, 8, 46);
+    DT1s dt1s = new DT1s();
+    dt1s.add(marker);
+    TileGrid grid = new TileGrid(1, 1);
+    grid.wallIds[0][0][0] = marker.id;
+    DT1.Tile[][] layers = new DT1.Tile[Map.MAX_LAYERS][];
+    layers[Map.FLOOR_OFFSET] = new DT1.Tile[1];
+
+    Act1MapBuilderD2MOD.LayerApplyCounts counts =
+        Act1MapBuilderD2MOD.applyTileGridLayers(grid, dt1s, layers, 1, 1, 1, null);
+
+    assertEquals(0, counts.walls);
+    assertEquals(1, counts.specialMarkerWalls);
+    assertNull(layers[Map.WALL_OFFSET]);
+
+    IntMap<DS1.Cell> specials = new IntMap<>();
+    Act1MapBuilderD2MOD.registerSpecialWalls(grid, specials, 1, 1);
+    assertNotNull(specials.get(Map.Zone.tileHashCode(Map.WALL_OFFSET, 0, 0)));
+  }
+
+  @Test
   void hidesPoppedPresetMarkersByPopPadSubIndex() throws Exception {
     DT1.Tile popPad = tile(Orientation.SPECIAL_10, 8, 46);
     Bits popped = new Bits();

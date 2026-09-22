@@ -3205,12 +3205,14 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     if (levelsFilledByExport.contains(zone.level.Id)) {
       Gdx.app.log(TAG, String.format(
           "D2MOO apply: level=%s(%d) grid=%dx%d zone=%dx%d floor=%d wall=%d shadow=%d "
-              + "special=%d warpSpecial=%d skippedWarpPair=%d warpVisual=%d hiddenWarpMarker=%d failedWarpVisual=%d "
+              + "special=%d warpSpecial=%d skippedWarpPair=%d specialMarkerWall=%d "
+              + "warpVisual=%d hiddenWarpMarker=%d failedWarpVisual=%d "
               + "failedFloor=%d failedWall=%d failedShadow=%d voidTiles=%d "
               + "collisionTiles=%d blockedSubtiles=%d",
           zone.level.LevelName, zone.level.Id, grid.width, grid.height,
           zone.tilesX, zone.tilesY, counts.floors, counts.walls, counts.shadows,
           specialCounts.total, specialCounts.warps, specialCounts.skippedWarpPairMarkers,
+          counts.specialMarkerWalls,
           counts.warpWalls, counts.hiddenWarpWalls, counts.failedWarpWalls,
           counts.failedFloors, counts.failedWalls, counts.failedShadows, collisionCounts.voidTiles,
           collisionCounts.tiles, collisionCounts.blockedSubtiles));
@@ -3261,6 +3263,20 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           int wallId = grid.wallIds[slot][y][x];
           if (wallId == -1) continue;
           boolean warpWall = Map.ID.WARPS.contains(wallId);
+          // Orientation 10/11 cells are logical DS1 markers.  The legacy
+          // Preset.copyWalls path stores them only in Zone.specials and never
+          // resolves them into zone.tiles.  Rendering a native-exported
+          // marker through the global DT1 fallback produces a bogus full
+          // diamond (for example Blood Moor ID._59 at the cottage pop-pad).
+          // Keep the ID in TileGrid for registerSpecialWalls, but never put it
+          // into a visible wall layer.
+          if (Orientation.isSpecial(DT1.Tile.Index.orientation(wallId))) {
+            counts.specialMarkerWalls++;
+            if (warpWall && grid.hiddenWallCells[slot][y][x]) {
+              counts.hiddenWarpWalls++;
+            }
+            continue;
+          }
           if (warpWall && grid.hiddenWallCells[slot][y][x]) {
             counts.hiddenWarpWalls++;
             continue;
@@ -3537,6 +3553,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
     int floors;
     int walls;
     int shadows;
+    int specialMarkerWalls;
     int warpWalls;
     int hiddenWarpWalls;
     int failedResolve;
