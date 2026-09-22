@@ -16,7 +16,6 @@ import com.riiablo.save.ItemData;
 final class InventoryWarning {
   static final int FRAME_GROUPS = 8;
   static final int COLORS_PER_GROUP = 3;
-  static final float DEFAULT_TOP_GAP = 4f;
 
   enum Kind { QUANTITY, DURABILITY }
 
@@ -69,7 +68,7 @@ final class InventoryWarning {
           item,
           quantity,
           quantityThreshold,
-          frame(quantityGroup(item), severity(quantity, quantityThreshold, 0))));
+          frame(quantityGroup(item), quantitySeverity(quantity, quantityThreshold))));
     }
 
     int durabilityThreshold = Math.max(0, item.base.durwarning);
@@ -105,22 +104,13 @@ final class InventoryWarning {
     return safeGroup * COLORS_PER_GROUP + safeSeverity;
   }
 
-  /**
-   * Returns the left edge for the warning stack in HUD coordinates.
-   *
-   * The mana cell is allowed to grow when the control panel is stretched to
-   * the viewport.  Its actor width is therefore not the width of the visible
-   * mana-globe texture.  Anchoring to the texture's right edge keeps the
-   * warning in the native upper-right HUD position in both grouped and
-   * full-width layouts.
-   */
-  static float rightAlignedX(float visibleManaX, float visibleManaWidth,
-      float warningWidth) {
-    return visibleManaX + Math.max(0f, visibleManaWidth) - Math.max(0f, warningWidth);
+  /** Native ammunition warning colors: yellow for 1..threshold, red at zero. */
+  static int quantitySeverity(int current, int threshold) {
+    return current <= 0 ? 2 : 0;
   }
 
-  static float aboveY(float visibleManaY, float visibleManaHeight, float topGap) {
-    return visibleManaY + Math.max(0f, visibleManaHeight) + Math.max(0f, topGap);
+  static float rightEdgeX(float hudWidth, float warningWidth) {
+    return Math.max(0f, hudWidth) - Math.max(0f, warningWidth);
   }
 
   /** Quantity warning icon classes: arrows, bolts, potions, javelins/knives, axes. */

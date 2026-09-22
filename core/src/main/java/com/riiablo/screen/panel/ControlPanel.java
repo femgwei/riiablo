@@ -375,20 +375,18 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   }
 
   /**
-   * Keep warning sprites at the native upper-right edge of the mana globe
-   * after table relayout.  Do not use manaWidget.getWidth() here: the Table
-   * stretches that actor's cell in full-width HUD mode, while the visible
-   * globe remains only background.getRegionWidth() wide.
+   * Keep warning sprites at the native right edge of the HUD, centered
+   * vertically. With both warnings present the quantity icon is in the upper
+   * half and the durability icon in the lower half. This deliberately does
+   * not use manaWidget.getWidth(): the Table may stretch that cell across the
+   * viewport while the warning remains attached to the HUD edge.
    */
   private void updateInventoryWarningWidgetLayout() {
-    if (inventoryWarningWidget == null || manaWidget == null) return;
+    if (inventoryWarningWidget == null) return;
     float width = inventoryWarningWidget.getWidth();
     inventoryWarningWidget.setPosition(
-        InventoryWarning.rightAlignedX(
-            manaWidget.getX(), manaWidget.background.getRegionWidth(), width),
-        InventoryWarning.aboveY(
-            manaWidget.getY(), manaWidget.background.getRegionHeight(),
-            InventoryWarning.DEFAULT_TOP_GAP));
+        InventoryWarning.rightEdgeX(getWidth(), width),
+        Math.max(0f, (getHeight() - inventoryWarningWidget.getHeight()) / 2f));
   }
 
   private void updateAddPointButtonLayout() {
@@ -766,10 +764,14 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
     @Override
     public void draw(Batch batch, float parentAlpha) {
       if (sprites == null || entries.isEmpty()) return;
+      float stackHeight = entries.size() * ICON_HEIGHT + (entries.size() - 1) * GAP;
+      float stackY = getY() + (getHeight() - stackHeight) / 2f;
       for (int i = 0; i < entries.size(); i++) {
         InventoryWarning.Entry entry = entries.get(i);
         TextureRegion icon = sprites.getTexture(entry.frame);
-        if (icon != null) batch.draw(icon, getX(), getY() + (entries.size() - 1 - i) * (ICON_HEIGHT + GAP));
+        if (icon != null) {
+          batch.draw(icon, getX(), stackY + (entries.size() - 1 - i) * (ICON_HEIGHT + GAP));
+        }
       }
     }
 

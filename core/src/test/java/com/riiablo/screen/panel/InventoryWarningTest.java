@@ -23,10 +23,15 @@ class InventoryWarningTest {
 
   @Test
   void layoutUsesVisibleManaTextureInsteadOfStretchableTableCell() {
-    // A stretched mana cell can be much wider than its visible globe.  The
-    // warning must stay on the globe's right edge, not in the middle of that
-    // expanded cell.
-    assertEquals(260f, InventoryWarning.rightAlignedX(220f, 80f, 40f));
-    assertEquals(144f, InventoryWarning.aboveY(0f, 140f, 4f));
+    // The warning is anchored to the HUD edge, independently of the
+    // stretchable mana Table cell.
+    assertEquals(600f, InventoryWarning.rightEdgeX(640f, 40f));
+  }
+
+  @Test
+  void ammunitionKeepsYellowUntilTheStackIsEmpty() {
+    assertEquals(0, InventoryWarning.quantitySeverity(10, 10));
+    assertEquals(0, InventoryWarning.quantitySeverity(1, 10));
+    assertEquals(2, InventoryWarning.quantitySeverity(0, 10));
   }
 }
