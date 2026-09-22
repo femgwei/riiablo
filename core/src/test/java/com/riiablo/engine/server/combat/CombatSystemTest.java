@@ -176,6 +176,23 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void attackRatingVsMonsterOnlyAffectsMonsterTargets() {
+    Attributes attacker = attrs(100, 10, 0, 10, 10, 100);
+    attacker.base().put(Stat.item_tohit_percent_vs_monster, 100);
+    attacker.reset();
+    Attributes monster = attrs(100, 10, 100, 1, 1, 0);
+    Attributes player = attrs(100, 10, 100, 1, 1, 0);
+
+    CombatSystem.CombatResult vsMonster = combat.calculateAttack(
+        attacker, monster, true, false, false, 10, 10, 100, false);
+    CombatSystem.CombatResult vsPlayer = combat.calculateAttack(
+        attacker, player, true, true, false, 10, 10, 100, false);
+
+    assertEquals(66, vsMonster.hitChance);
+    assertEquals(50, vsPlayer.hitChance);
+  }
+
+  @Test
   public void deterministicHitResultKeepsArDefenseChanceAndRollTogether() {
     CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
     attacker.level = 10;

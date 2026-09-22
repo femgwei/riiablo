@@ -1151,6 +1151,12 @@ public class CombatSystem {
       a.attackRating = Math.max(1, a.dexterity * 5 + Math.max(1, a.level) * 2);
     }
     a.attackRatingPercent = statInt(attacker, Stat.item_tohit_percent, 0);
+    // "Attack Rating vs Monster" is a separate native percentage modifier;
+    // it must affect monster targets only and must not leak into PvP/player
+    // hit checks.
+    if (!defenderPlayer) {
+      a.attackRatingPercent += statInt(attacker, Stat.item_tohit_percent_vs_monster, 0);
+    }
     a.demonToHit = statInt(attacker, Stat.item_demon_tohit, 0);
     a.undeadToHit = statInt(attacker, Stat.item_undead_tohit, 0);
     a.demonDamagePercent = statInt(attacker, Stat.item_demondamage_percent, 0);
