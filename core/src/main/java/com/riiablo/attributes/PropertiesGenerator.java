@@ -160,7 +160,12 @@ public class PropertiesGenerator {
         return;
       }
       case 18: { // */time // TODO: Add support
-        log.error("Unsupported property function: {}", func);
+        // D2Common ITEMMODS_PropertyFunc18 stores the by-time range in the
+        // stat's special Encode=4 payload.  The low two bits carry the time
+        // layer, the next ten bits carry the minimum (offset by 256), and the
+        // following ten bits carry the maximum (also offset by 256).
+        stats.putEncoded((short) entry.ID, 0,
+            encodeByTimeValue(prop.val[propId], min, max));
         return;
       }
       case 19: { // charged (skill)
@@ -212,5 +217,17 @@ public class PropertiesGenerator {
 
   final int random(int min, int max) {
     return random.betweenInclusive(min, max);
+  }
+
+  /** Encodes the native ITEMMODS_PropertyFunc18 by-time payload. */
+  static int encodeByTimeValue(int layer, int min, int max) {
+    int propLayer = Math.max(0, Math.min(3, layer));
+    int encodedMin = clampTimeValue(min + 256);
+    int encodedMax = clampTimeValue(max + 256);
+    return propLayer + 4 * (encodedMin + (encodedMax << 10));
+  }
+
+  private static int clampTimeValue(int value) {
+    return Math.max(0, Math.min(1023, value));
   }
 }
