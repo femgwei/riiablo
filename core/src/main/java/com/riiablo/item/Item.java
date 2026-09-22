@@ -11,6 +11,7 @@ import com.riiablo.Riiablo;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.AttributesUpdater;
 import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import com.riiablo.attributes.StatListFlags;
 import com.riiablo.attributes.StatListRef;
 import com.riiablo.attributes.UpdateSequence;
@@ -148,6 +149,7 @@ public class Item {
   long detailsStatsRevision = Long.MIN_VALUE;
   long detailsItemRevision = Long.MIN_VALUE;
   Table header; // TODO: decouple
+  int headerGoldQuantity = Integer.MIN_VALUE;
   public ItemWrapper wrapper; // TODO: decouple
 
   /** Public constructor for server-side/test item fabrication. */
@@ -195,6 +197,7 @@ public class Item {
     detailsStatsRevision = Long.MIN_VALUE;
     detailsItemRevision = Long.MIN_VALUE;
     header = null;
+    headerGoldQuantity = Integer.MIN_VALUE;
     wrapper = new ItemWrapper(this);
   }
 
@@ -805,10 +808,20 @@ public class Item {
   }
 
   public Table header() {
-    if (header == null) {
+    int goldQuantity = getHeaderGoldQuantity();
+    if (header == null || goldQuantity != headerGoldQuantity) {
       header = DEFAULT_LABELER.updateHeader(this, new Table());
+      headerGoldQuantity = goldQuantity;
     }
 
     return header;
+  }
+
+  private int getHeaderGoldQuantity() {
+    if (type == null || !type.is(Type.GOLD)) return Integer.MIN_VALUE;
+    if (attrs == null) return 0;
+    StatRef quantity = attrs.base().get(Stat.quantity);
+    if (quantity == null) quantity = attrs.aggregate().get(Stat.quantity);
+    return quantity == null ? 0 : quantity.asInt();
   }
 }

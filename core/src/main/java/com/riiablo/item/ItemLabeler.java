@@ -108,9 +108,34 @@ public class ItemLabeler {
   protected StatListLabeler labelFormatter = new StatListLabeler(statFormatter); // TODO: inject
   protected PropertiesGenerator propertiesGenerator = new PropertiesGenerator(); // TODO: inject
 
+  /**
+   * Formats the name used by the compact header shown over a ground item.
+   *
+   * <p>Gold is represented as a normal item on the ground, but its quantity
+   * is the useful part of the label.  Native D2 shows that quantity alongside
+   * the gold name (for example, {@code Gold: 125}); keeping this formatting
+   * here avoids changing inventory/detail names for the synthetic gold item.
+   */
+  static String formatGoldHeader(String name, int quantity) {
+    return quantity > 0 ? name + ": " + quantity : name;
+  }
+
+  private static String headerName(Item item) {
+    String name = item.getNameString();
+    if (item.type == null || !item.type.is(Type.GOLD)) return name;
+
+    int quantity = 0;
+    if (item.attrs != null) {
+      StatRef quantityRef = item.attrs.base().get(Stat.quantity);
+      if (quantityRef == null) quantityRef = item.attrs.aggregate().get(Stat.quantity);
+      if (quantityRef != null) quantity = quantityRef.asInt();
+    }
+    return formatGoldHeader(name, quantity);
+  }
+
   public Table updateHeader(Item item, Table table) {
     BitmapFont font = Riiablo.fonts.font16;
-    Label name = new Label(item.getNameString(), font);
+    Label name = new Label(headerName(item), font);
     Label type = new Label(Riiablo.string.lookup(item.base.namestr), font);
     updateHeaderColors(item, name, type);
 
