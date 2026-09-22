@@ -9,12 +9,12 @@ import com.artemis.EntitySubscription;
 import com.artemis.annotations.Wire;
 import com.artemis.utils.IntBag;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.RandomXS128;
 import com.badlogic.gdx.math.Vector2;
 import com.riiablo.Riiablo;
 import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.NativeObjectState;
@@ -265,7 +265,7 @@ public class NativeObjectDropSystem extends BaseSystem {
       }
       return;
     }
-    RandomXS128 random = new RandomXS128(objectSeed(event, position));
+    NativeRng random = objectRng(event, position);
     NativeObjectState state = mNativeObjectState.get(event.entityId);
     int interactType = state == null ? 0 : state.interactType;
     boolean locked = NativeObjectInteractTypeResolver.locked(interactType);
@@ -353,7 +353,7 @@ public class NativeObjectDropSystem extends BaseSystem {
   }
 
   private int createItem(NativeObjectDropAdapter.Drop drop, int itemLevel, int difficulty,
-      float x, float y, RandomXS128 random, Quality forcedContainerQuality) {
+      float x, float y, NativeRng random, Quality forcedContainerQuality) {
     try {
       Quality quality = forcedContainerQuality != Quality.NONE
           ? forcedContainerQuality : safeQuality(drop);
@@ -432,6 +432,12 @@ public class NativeObjectDropSystem extends BaseSystem {
     seed = 31 * seed + Float.floatToRawIntBits(position.position.x);
     seed = 31 * seed + Float.floatToRawIntBits(position.position.y);
     return seed;
+  }
+
+  /** Keeps one deterministic native stream per container interaction. */
+  private NativeRng objectRng(ObjectInteractionEvent event, Position position) {
+    long seed = objectSeed(event, position);
+    return new NativeRng((int) (seed ^ (seed >>> 32)));
   }
 
   private Vector2 findDropPosition(Map map, Vector2 origin, int index) {
