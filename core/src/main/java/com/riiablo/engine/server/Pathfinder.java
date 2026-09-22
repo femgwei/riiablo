@@ -59,6 +59,9 @@ public class Pathfinder extends IteratingSystem {
   private final Vector2 tmpVec2 = new Vector2();
   private final Ray<Vector2> ray = new Ray<>(new Vector2(), new Vector2());
   private final Collision<Vector2> collision = new Collision<>(new Vector2(), new Vector2());
+  private final Ray<Vector2> smoothRay = new Ray<>(new Vector2(), new Vector2());
+  private final Vector2 smoothStart = new Vector2();
+  private final Vector2 smoothEnd = new Vector2();
 
   @Override
   protected void process(int entityId) {
@@ -408,14 +411,67 @@ public class Pathfinder extends IteratingSystem {
             src, srcPos.x, srcPos.y, targetPos.x, targetPos.y);
         return false;
       }
-      // Smoothing through a moving unit would discard the dynamic checks made
-      // by A*. Keep the discrete path until the dynamic-aware ray smoother is
-      // available; movement can still advance multiple points per tick.
-      if (dynamicCollision == null) map.smoothPath(flags, size, path);
+      // Keep dynamic-unit avoidance while still removing unnecessary grid
+      // corners. A raw A* path makes units alternate between neighboring
+      // directions, which is especially visible in the walk/run animation.
+      smoothPathWithDynamicCollision(src, targetEntityId, flags, size, path);
       mPathfind.create(src).set(path);
     }
 
     return success;
+  }
+
+  /**
+   * Smooths an A* path without allowing the shortcut to cross a current
+   * dynamic unit footprint. Static map collision is checked by the existing
+   * map raycaster; dynamic collision is sampled at half-cell intervals.
+   */
+  private void smoothPathWithDynamicCollision(
+      int moverId, int targetId, int flags, int size, GraphPath path) {
+    int length = path.getCount();
+    if (length <= 2) return;
+
+    int outId = 1;
+    int inId = 2;
+    while (inId < length) {
+      smoothStart.set(path.getNodePosition(outId - 1));
+      smoothEnd.set(path.getNodePosition(inId));
+      smoothRay.start.set(smoothStart);
+      smoothRay.end.set(smoothEnd);
+
+      boolean blocked = map.castRay(smoothRay, flags, size, collision);
+      if (!blocked && isDynamicSegmentFree(moverId, targetId, size,
+          smoothStart, smoothEnd)) {
+        inId++;
+        continue;
+      }
+
+      path.swapNodes(outId, inId - 1);
+      outId++;
+      inId++;
+    }
+
+    path.swapNodes(outId, inId - 1);
+    path.truncatePath(outId + 1);
+  }
+
+  private boolean isDynamicSegmentFree(
+      int moverId, int targetId, int size, Vector2 start, Vector2 end) {
+    if (dynamicCollision == null) return true;
+
+    float dx = end.x - start.x;
+    float dy = end.y - start.y;
+    int samples = Math.max(1,
+        (int) Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 2f));
+    for (int i = 1; i <= samples; i++) {
+      float fraction = i / (float) samples;
+      int x = com.riiablo.map.Map.round(start.x + dx * fraction);
+      int y = com.riiablo.map.Map.round(start.y + dy * fraction);
+      if (!dynamicCollision.isFreeForPath(moverId, targetId, x, y, size)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   static boolean isRoomPathAllowed(Map.Zone zone, Vector2 source, Vector2 target) {

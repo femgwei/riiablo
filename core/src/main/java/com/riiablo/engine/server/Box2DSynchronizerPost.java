@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Box2DBody;
+import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Missile;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Velocity;
@@ -17,6 +18,7 @@ public class Box2DSynchronizerPost extends IteratingSystem {
   static final float STOPPED_EPSILON = 0.001f;
 
   protected ComponentMapper<Box2DBody> mBox2DBody;
+  protected ComponentMapper<Angle> mAngle;
   protected ComponentMapper<Missile> mMissile;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Velocity> mVelocity;
@@ -71,6 +73,14 @@ public class Box2DSynchronizerPost extends IteratingSystem {
     if (shouldResolveActualVelocity(mVelocity.has(entityId), mMissile.has(entityId))) {
       resolveActualVelocity(previous, current, world.delta,
           mVelocity.get(entityId).velocity);
+      // Pathfinder computes the requested direction before collision
+      // resolution. If a unit slides along another unit or a wall, use the
+      // displacement that actually happened so the animation does not turn
+      // back and forth against the blocked path.
+      if (mAngle.has(entityId)
+          && !mVelocity.get(entityId).velocity.isZero(STOPPED_EPSILON)) {
+        mAngle.get(entityId).target.set(mVelocity.get(entityId).velocity).nor();
+      }
     }
     previous.set(current);
   }
