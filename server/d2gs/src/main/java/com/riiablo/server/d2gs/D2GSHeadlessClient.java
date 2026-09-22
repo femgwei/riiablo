@@ -44,7 +44,9 @@ import com.riiablo.net.packet.d2gs.PlayerLifecycleResult;
 import com.riiablo.save.CharData;
 import com.riiablo.save.D2SWriter96;
 import com.riiablo.io.ByteInput;
+import com.riiablo.io.ByteOutput;
 import com.riiablo.item.ItemReader;
+import com.riiablo.item.ItemWriter;
 import com.riiablo.skill.SkillCodes;
 import com.riiablo.engine.server.skill.SkillId;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
@@ -67,6 +69,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * Windowless protocol client for an authoritative D2GS combat smoke test.
@@ -6578,9 +6583,15 @@ public final class D2GSHeadlessClient {
       send(output, itemMovePacket(100L, 0L, farItem));
       ItemMoveResult picked = client.awaitItemMoveResult(input, deadline());
       requireSuccessfulPickup(picked, farItem, "successful_pickup");
+      requireSnapshotItemRoundTrip(picked, farItem, "successful_pickup_d2s_roundtrip");
+      Visibility beforeDelete = client.visibility.get(farItem);
+      if (beforeDelete != null && beforeDelete.deleted) {
+        throw new IllegalStateException("ground deletion arrived before successful result");
+      }
       send(output, itemMovePacket(100L, 0L, farItem));
       ItemMoveResult replay = client.awaitItemMoveResult(input, deadline());
       requireSuccessfulPickupReplay(picked, replay, "duplicate_pickup");
+      client.awaitDeleted(input, farItem, deadline());
       farItem = D2GS.headlessCreateRoomItemFixture(client.playerId, 10, rooms[0], "cap");
       farDrop = awaitVisibleGroundEntity(client, input, farItem, deadline());
       if (farDrop == null) throw new IOException("far-item retry baseline was not visible");
@@ -6702,6 +6713,48 @@ public final class D2GSHeadlessClient {
           + (replay == null ? -1L : replay.revision()) + " firstSnapshot="
           + (first == null ? 0 : first.snapshotLength()) + " replaySnapshot="
           + (replay == null ? 0 : replay.snapshotLength()));
+    }
+  }
+
+  /** Re-encodes the picked item's native D2S payload before accepting it. */
+  private static void requireSnapshotItemRoundTrip(ItemMoveResult result, int entityId,
+      String label) {
+    ItemMoveSnapshotEntry matched = null;
+    for (int i = 0; i < result.snapshotLength(); i++) {
+      ItemMoveSnapshotEntry entry = result.snapshot(i);
+      if (entry != null && entry.itemId() == entityId) {
+        matched = entry;
+        break;
+      }
+    }
+    if (matched == null || matched.itemDataLength() == 0) {
+      throw new IllegalStateException(label + " item entry missing");
+    }
+    byte[] encoded = new byte[matched.itemDataLength()];
+    for (int i = 0; i < encoded.length; i++) encoded[i] = (byte) matched.itemData(i);
+    com.riiablo.item.Item first = new ItemReader().readItem(ByteInput.wrap(encoded));
+    if (first == null || first.id != entityId) {
+      throw new IllegalStateException(label + " initial D2S decode mismatch");
+    }
+    ByteBuf buffer = Unpooled.buffer(encoded.length + 64);
+    try {
+      ByteOutput output = ByteOutput.wrap(buffer);
+      new ItemWriter().writeItem(first, output);
+      byte[] rewritten = new byte[output.bytesWritten()];
+      buffer.getBytes(0, rewritten);
+      com.riiablo.item.Item second = new ItemReader().readItem(ByteInput.wrap(rewritten));
+      if (second == null || second.id != first.id
+          || !java.util.Objects.equals(second.code, first.code)
+          || second.quality != first.quality
+          || second.qualityId != first.qualityId
+          || second.flags != first.flags
+          || second.location != first.location
+          || second.storeLoc != first.storeLoc
+          || second.gridX != first.gridX || second.gridY != first.gridY) {
+        throw new IllegalStateException(label + " D2S round-trip drifted item identity or placement");
+      }
+    } finally {
+      buffer.release();
     }
   }
 

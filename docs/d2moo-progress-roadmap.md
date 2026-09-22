@@ -5280,9 +5280,15 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
   `ItemMoveRequestCacheTest`、`NetworkedClientItemManagerTest`、
   `GroundItemSnapshotRoundTripTest` 定向测试通过。
 
-下一项：在同一协议门槛中增加成功拾取后的 D2S 写出/重新读取断言，并继续核对
-地面实体删除帧与库存快照到达顺序；`headlessFallenDual` 仍需先补 Blood Moor
-Fallen/Shaman 测试房间夹具，不将夹具缺失误判为物品回归。
+- [x] ~~成功拾取后的 D2S 物品段往返~~：对快照中拾取物重新写出并读取，确认实体 ID、
+  code、quality/qualityId、flags、location、storeLoc 和网格坐标不漂移。
+- [x] ~~结果/删除顺序~~：成功 `ItemMoveResult` 返回时地面实体尚未被客户端标记删除，
+  后续重复请求完成后才观察到删除帧，避免客户端先删地面实体却尚未提交库存。
+- 验证：上述离屏门槛新增 `successful_pickup_d2s_roundtrip` 和删除顺序断言，真实
+  1.10f 运行通过。
+
+下一项：继续覆盖部分金币拾取的 D2S 数量更新和重连后库存 revision；`headlessFallenDual`
+仍需先补 Blood Moor Fallen/Shaman 测试房间夹具，不将夹具缺失误判为物品回归。
 
 ## Git 交接基线（2026-09-15）
 
