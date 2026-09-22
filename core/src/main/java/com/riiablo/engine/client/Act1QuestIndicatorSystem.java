@@ -28,6 +28,7 @@ import com.riiablo.engine.server.quest.NativeQuestRecord;
 import com.riiablo.map.RenderSystem;
 import com.riiablo.profiler.GpuSystem;
 import com.riiablo.save.CharData;
+import com.riiablo.graphics.BlendMode;
 import com.riiablo.widget.Label;
 
 /** Draws the native Act I quest-available/reward marker above town NPCs. */
@@ -45,6 +46,7 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
   private final Label marker = new Label("!", Riiablo.fonts.font16, Riiablo.colors.gold);
   private static final AssetDescriptor<DCC> QUEST_MARKER_DESCRIPTOR =
       new AssetDescriptor<>("data\\global\\overlays\\NPCSpeechBalloon.dcc", DCC.class);
+  private static final float QUEST_MARKER_X_OFFSET = -6f;
   private Animation questMarkerAnimation;
   private boolean questMarkerLoadQueued;
 
@@ -91,7 +93,8 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     Riiablo.batch.begin();
     for (MarkerPosition position : markers) {
       if (questMarkerAnimation != null) {
-        questMarkerAnimation.draw(Riiablo.batch, position.x, position.anchorY);
+        questMarkerAnimation.draw(
+            Riiablo.batch, position.x + QUEST_MARKER_X_OFFSET, position.anchorY);
       } else {
         marker.setPosition(position.x, position.fallbackY, Align.center | Align.bottom);
         marker.draw(Riiablo.batch, 1f);
@@ -109,7 +112,9 @@ public class Act1QuestIndicatorSystem extends IteratingSystem {
     if (!Riiablo.assets.isLoaded(QUEST_MARKER_DESCRIPTOR)) return;
 
     DCC dcc = Riiablo.assets.get(QUEST_MARKER_DESCRIPTOR);
-    questMarkerAnimation = Animation.builder().layer(dcc).build();
+    // The native overlay uses luminance-derived alpha.  Using the default ID
+    // blend makes the DCC's glow background opaque instead of translucent.
+    questMarkerAnimation = Animation.builder().layer(dcc, BlendMode.LUMINOSITY).build();
     questMarkerAnimation.setMode(Animation.Mode.LOOP);
   }
 
