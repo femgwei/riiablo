@@ -82,6 +82,7 @@ import com.riiablo.engine.client.LabelManager;
 import com.riiablo.engine.client.MenuManager;
 import com.riiablo.engine.client.MissileLoader;
 import com.riiablo.engine.client.MonsterLabelManager;
+import com.riiablo.engine.client.MonsterSoundEmitter;
 import com.riiablo.engine.client.NetworkIdManager;
 import com.riiablo.engine.client.NetworkedClientItemManager;
 import com.riiablo.engine.client.NetworkedActionSender;
@@ -959,6 +960,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new ZoneEntryDisplayer())
 
         .with(new FootstepEmitter())
+        .with(new MonsterSoundEmitter())
 
         .with(new WarpSubstManager())
         ;

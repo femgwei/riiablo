@@ -42,6 +42,7 @@ import com.riiablo.codec.excel.MonMode;
 import com.riiablo.codec.excel.MonPreset;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
+import com.riiablo.codec.excel.MonSounds;
 import com.riiablo.codec.excel.Obj;
 import com.riiablo.codec.excel.ObjMode;
 import com.riiablo.codec.excel.Objects;
@@ -127,6 +128,8 @@ public class Files {
   public final MonMode          MonMode;
   public final MonStats         monstats;
   public final MonStats2        monstats2;
+  /** Native monster sound banks from MonSounds.txt. */
+  public final MonSounds        MonSounds;
   public final MonPreset        MonPreset;
   public final Objects          objects;
   public final ObjMode          ObjMode;
@@ -207,6 +210,7 @@ public class Files {
     MonMode          = load(MonMode.class);
     monstats         = load(MonStats.class, Excel.EXPANSION);
     monstats2        = load(MonStats2.class, Excel.EXPANSION);
+    MonSounds        = load(MonSounds.class);
     MonPreset        = load(MonPreset.class, Excel.EXPANSION);
     RarePrefix       = load(RarePrefix.class, Excel.EXPANSION);
     RareSuffix       = load(RareSuffix.class, Excel.EXPANSION);
