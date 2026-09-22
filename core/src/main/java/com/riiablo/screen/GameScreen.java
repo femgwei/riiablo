@@ -1313,7 +1313,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       return;
     }
     
-    String message = "You have died, Press ESC to continue"; // "You have died, Press ESC to continue"
+    String message = Riiablo.bundle.get("death_continue");
     
     // Calculate text position (center of screen)
     float screenWidth = Gdx.graphics.getWidth();

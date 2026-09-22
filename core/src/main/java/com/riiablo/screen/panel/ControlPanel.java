@@ -200,9 +200,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         acknowledgeQuestLog();
       }
     });
-    addStatsLabel = createPromptLabel("NEW STATS");
-    addSkillsLabel = createPromptLabel("NEW SKILL");
-    questLogLabel = createPromptLabel("QUEST LOG");
+    addStatsLabel = createPromptLabel(Riiablo.bundle.get("new_stats"));
+    addSkillsLabel = createPromptLabel(Riiablo.bundle.get("new_skill"));
+    questLogLabel = createPromptLabel(Riiablo.bundle.get("quest_log"));
 
     Riiablo.assets.load(levelUpSoundDescriptor);
     Riiablo.assets.finishLoadingAsset(levelUpSoundDescriptor);

@@ -36,14 +36,14 @@ public class TradePanel extends Table {
     pad(12);
     defaults().growX();
 
-    Label title = new Label("Player Trade", Riiablo.fonts.font16, Riiablo.colors.gold);
+    Label title = new Label(text("trade_title"), Riiablo.fonts.font16, Riiablo.colors.gold);
     title.setAlignment(Align.center);
     add(title).height(28).row();
 
     Table offers = new Table();
     offers.defaults().top().pad(4);
-    offers.add(offerColumn("You", sourceOffer)).width(160).top();
-    offers.add(offerColumn("Other Player", targetOffer)).width(160).top();
+    offers.add(offerColumn(text("party_you"), sourceOffer)).width(160).top();
+    offers.add(offerColumn(text("trade_other_player"), targetOffer)).width(160).top();
     add(offers).grow().row();
 
     status.setAlignment(Align.center);
@@ -51,11 +51,11 @@ public class TradePanel extends Table {
     add(status).height(28).padTop(4).row();
 
     Table actions = new Table();
-    actions.add(actionButton("Accept", () -> request(TradeOperation.ACCEPT))).pad(2);
-    actions.add(actionButton("Confirm", () -> request(TradeOperation.CONFIRM))).pad(2);
-    actions.add(actionButton("Cancel", () -> request(TradeOperation.CANCEL))).pad(2);
+    actions.add(actionButton(text("accept"), () -> request(TradeOperation.ACCEPT))).pad(2);
+    actions.add(actionButton(text("confirm"), () -> request(TradeOperation.CONFIRM))).pad(2);
+    actions.add(actionButton(text("cancel"), () -> request(TradeOperation.CANCEL))).pad(2);
     add(actions).height(24).row();
-    add(actionButton("Close", () -> close())).height(20).center();
+    add(actionButton(text("close"), () -> close())).height(20).center();
     setVisible(false);
   }
 
@@ -90,7 +90,8 @@ public class TradePanel extends Table {
     if (state.lastRequestId() != 0 && state.lastRequestId() != displayedRequestId) {
       displayedRequestId = state.lastRequestId();
       status.setColor(state.lastSuccess() ? Riiablo.colors.green : Riiablo.colors.red);
-      status.setText(state.lastSuccess() ? stateLabel(state.state()) : humanize(state.lastReason()));
+      status.setText(state.lastSuccess() ? localizedStateLabel(state.state())
+          : localizedFailure(state.lastReason()));
     }
   }
 
@@ -100,16 +101,16 @@ public class TradePanel extends Table {
     targetOffer.clearChildren();
     addItems(sourceOffer, state.sourceItems());
     addItems(targetOffer, state.targetItems());
-    sourceOffer.add(new Label("Gold: " + state.sourceGold(),
+    sourceOffer.add(new Label(format("trade_gold", state.sourceGold()),
         Riiablo.fonts.fontformal10, Riiablo.colors.gold)).left().row();
-    targetOffer.add(new Label("Gold: " + state.targetGold(),
+    targetOffer.add(new Label(format("trade_gold", state.targetGold()),
         Riiablo.fonts.fontformal10, Riiablo.colors.gold)).left().row();
-    status.setText(stateLabel(state.state()));
+    status.setText(localizedStateLabel(state.state()));
   }
 
   private static void addItems(Table target, com.badlogic.gdx.utils.Array<ClientTradeState.Item> items) {
     if (items.size == 0) {
-      target.add(new Label("Empty", Riiablo.fonts.fontformal10, Riiablo.colors.grey)).left().row();
+      target.add(new Label(text("empty"), Riiablo.fonts.fontformal10, Riiablo.colors.grey)).left().row();
       return;
     }
     for (ClientTradeState.Item item : items) {
@@ -125,7 +126,7 @@ public class TradePanel extends Table {
     long requestId = synchronizer.requestTrade(operation, -1, state.sessionId(),
         -1, 0, 0, 0);
     status.setColor(requestId == 0 ? Riiablo.colors.red : Riiablo.colors.gold);
-    status.setText(requestId == 0 ? "Unable to send trade request" : "Request sent...");
+    status.setText(requestId == 0 ? text("trade_request_send_failed") : text("request_sent"));
     if (operation == TradeOperation.CANCEL) close();
   }
 
@@ -142,21 +143,48 @@ public class TradePanel extends Table {
     return button;
   }
 
-  private static String stateLabel(int state) {
+  private static String localizedStateLabel(int state) {
     switch (state) {
-      case TradeState.PENDING: return "Waiting for acceptance";
-      case TradeState.INVITED: return "Trade invitation";
-      case TradeState.TRADING: return "Trading";
-      case TradeState.CONFIRMED: return "Both players confirmed";
-      case TradeState.COMPLETED: return "Trade completed";
-      case TradeState.CANCELLED: return "Trade cancelled";
-      default: return "No active trade";
+      case TradeState.PENDING: return text("trade_state_pending");
+      case TradeState.INVITED: return text("trade_state_invited");
+      case TradeState.TRADING: return text("trade_state_trading");
+      case TradeState.CONFIRMED: return text("trade_state_confirmed");
+      case TradeState.COMPLETED: return text("trade_state_completed");
+      case TradeState.CANCELLED: return text("trade_state_cancelled");
+      default: return text("trade_state_none");
     }
   }
 
-  private static String humanize(String reason) {
-    if (reason == null || reason.isEmpty()) return "Trade request rejected";
-    String text = reason.replace('_', ' ').toLowerCase(java.util.Locale.ROOT);
-    return Character.toUpperCase(text.charAt(0)) + text.substring(1);
+  private static String localizedFailure(String reason) {
+    if (reason == null || reason.isEmpty()) return text("trade_request_rejected");
+    switch (reason) {
+      case "UNAUTHENTICATED_OR_INVALID_OPERATION": return text("trade_error_invalid_operation");
+      case "REQUEST_ID_REUSED": return text("trade_error_request_reused");
+      case "NO_ACTIVE_SESSION": return text("trade_error_no_session");
+      case "SESSION_MISMATCH": return text("trade_error_session_mismatch");
+      case "PLAYER_OFFLINE": return text("trade_error_player_offline");
+      case "SELF_TRADE": return text("trade_error_self_trade");
+      case "PLAYER_NOT_IN_AREA": return text("trade_error_not_in_area");
+      case "DIFFERENT_AREA": return text("trade_error_different_area");
+      case "TOO_FAR":
+      case "Too Far": return text("trade_error_too_far");
+      case "TRADE_INVALIDATED": return text("trade_error_invalidated");
+      case "Target Busy": return text("trade_error_target_busy");
+      case "No Space": return text("trade_error_no_space");
+      case "No Gold": return text("trade_error_no_gold");
+      case "Cancelled": return text("trade_state_cancelled");
+      case "Item Not Tradable": return text("trade_error_item_not_tradable");
+      case "Timeout": return text("trade_error_timeout");
+      case "Error": return text("trade_error_generic");
+      default: return format("trade_request_rejected_reason", reason);
+    }
+  }
+
+  private static String text(String key) {
+    return Riiablo.bundle.get(key);
+  }
+
+  private static String format(String key, Object... args) {
+    return Riiablo.bundle.format(key, args);
   }
 }

@@ -214,17 +214,17 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private Table createOptionsPage() {
     Table page = createPage(null);
-    page.add(largeMenuButton("SOUND OPTIONS", () -> showPage(Page.SOUND))).height(46).row();
-    page.add(largeMenuButton("VIDEO OPTIONS", () -> showPage(Page.VIDEO))).height(46).row();
-    page.add(largeMenuButton("AUTOMAP OPTIONS", () -> showPage(Page.AUTOMAP))).height(46).row();
-    page.add(largeMenuButton("CONFIGURE CONTROLS", () -> showPage(Page.CONTROLS))).height(46).row();
-    page.add(largeMenuButton("PREVIOUS MENU", () -> showPage(Page.MAIN))).height(46).padTop(12).row();
+    page.add(largeMenuButton(ui("options_sound"), () -> showPage(Page.SOUND))).height(46).row();
+    page.add(largeMenuButton(ui("options_video"), () -> showPage(Page.VIDEO))).height(46).row();
+    page.add(largeMenuButton(ui("options_automap"), () -> showPage(Page.AUTOMAP))).height(46).row();
+    page.add(largeMenuButton(ui("options_controls"), () -> showPage(Page.CONTROLS))).height(46).row();
+    page.add(largeMenuButton(ui("previous_menu"), () -> showPage(Page.MAIN))).height(46).padTop(12).row();
     return page;
   }
 
   private Table createAutomapPage() {
-    Table page = createPage("AUTOMAP");
-    automapMode = new OptionRow("AUTOMAP SIZE", () -> {
+    Table page = createPage(ui("automap_title"));
+    automapMode = new OptionRow(ui("automap_size"), () -> {
       int current = Cvars.Client.Automap.Mode.get() == null
           ? RenderSystem.AUTOMAP_MODE_CENTER : Cvars.Client.Automap.Mode.get();
       int next = AutomapOptions.nextMode(current);
@@ -232,44 +232,44 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       RenderSystem.setAutomapPreferredMode(next);
       refreshAutomapRows();
     });
-    automapFade = booleanOption("FADE", Cvars.Client.Automap.Fade);
-    automapCenter = booleanOption("CENTER WHEN CLEARED",
+    automapFade = booleanOption(ui("automap_fade"), Cvars.Client.Automap.Fade);
+    automapCenter = booleanOption(ui("automap_center_when_cleared"),
         Cvars.Client.Automap.CenterWhenCleared);
-    automapParty = booleanOption("SHOW PARTY", Cvars.Client.Automap.ShowParty);
-    automapNames = booleanOption("SHOW NPC NAMES", Cvars.Client.Automap.ShowNames);
+    automapParty = booleanOption(ui("automap_show_party"), Cvars.Client.Automap.ShowParty);
+    automapNames = booleanOption(ui("automap_show_npc_names"), Cvars.Client.Automap.ShowNames);
     page.add(automapMode).width(520).height(24).row();
     page.add(automapFade).width(520).height(24).row();
     page.add(automapCenter).width(520).height(24).row();
     page.add(automapParty).width(520).height(24).row();
     page.add(automapNames).width(520).height(24).row();
-    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+    page.add(menuButton(ui("previous_menu"), () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshAutomapRows();
     return page;
   }
 
   private Table createSoundPage() {
-    Table page = createPage("SOUND");
-    soundEnabled = new OptionRow("SOUND", () -> {
+    Table page = createPage(ui("sound_title"));
+    soundEnabled = new OptionRow(ui("sound_enabled"), () -> {
       Cvars.Client.Sound.Enabled.set(!Boolean.TRUE.equals(Cvars.Client.Sound.Enabled.get()));
       refreshSoundRows();
     });
-    effectsEnabled = new OptionRow("SOUND EFFECTS", () -> {
+    effectsEnabled = new OptionRow(ui("sound_effects"), () -> {
       Cvars.Client.Sound.Effects.Enabled.set(
           !Boolean.TRUE.equals(Cvars.Client.Sound.Effects.Enabled.get()));
       refreshSoundRows();
     });
-    effectsVolume = new OptionRow("SOUND VOLUME", () -> {
+    effectsVolume = new OptionRow(ui("sound_volume"), () -> {
       Cvars.Client.Sound.Effects.Volume.set(
           SoundOptions.nextVolume(volume(Cvars.Client.Sound.Effects.Volume.get())));
       refreshSoundRows();
     });
-    musicEnabled = new OptionRow("MUSIC", () -> {
+    musicEnabled = new OptionRow(ui("music_enabled"), () -> {
       Cvars.Client.Sound.Music.Enabled.set(
           !Boolean.TRUE.equals(Cvars.Client.Sound.Music.Enabled.get()));
       refreshSoundRows();
     });
-    musicVolume = new OptionRow("MUSIC VOLUME", () -> {
+    musicVolume = new OptionRow(ui("music_volume"), () -> {
       Cvars.Client.Sound.Music.Volume.set(
           SoundOptions.nextVolume(volume(Cvars.Client.Sound.Music.Volume.get())));
       refreshSoundRows();
@@ -279,45 +279,45 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     page.add(effectsVolume).width(520).height(24).row();
     page.add(musicEnabled).width(520).height(24).row();
     page.add(musicVolume).width(520).height(24).row();
-    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+    page.add(menuButton(ui("previous_menu"), () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshSoundRows();
     return page;
   }
 
   private Table createVideoPage() {
-    Table page = createPage("VIDEO");
-    gamma = new OptionRow("GAMMA", () -> {
+    Table page = createPage(ui("video_title"));
+    gamma = new OptionRow(ui("video_gamma"), () -> {
       Cvars.Client.Display.Gamma.set(
           VideoOptions.nextGamma(value(Cvars.Client.Display.Gamma.get())));
       refreshVideoRows();
     });
-    vsync = new OptionRow("VERTICAL SYNC", () -> {
+    vsync = new OptionRow(ui("video_vsync"), () -> {
       Cvars.Client.Display.VSync.set(!Boolean.TRUE.equals(Cvars.Client.Display.VSync.get()));
       refreshVideoRows();
     });
-    showFps = new OptionRow("SHOW FPS", () -> {
+    showFps = new OptionRow(ui("video_show_fps"), () -> {
       byte current = Cvars.Client.Display.ShowFPS.get() == null
           ? com.riiablo.Client.FPS_NONE : Cvars.Client.Display.ShowFPS.get();
       Cvars.Client.Display.ShowFPS.set(DisplayOptions.nextFpsMode(current));
       refreshVideoRows();
     });
-    resolution = new OptionRow("RESOLUTION", null, false);
+    resolution = new OptionRow(ui("video_resolution"), null, false);
     page.add(gamma).width(520).height(24).row();
     page.add(vsync).width(520).height(24).row();
     page.add(showFps).width(520).height(24).row();
     page.add(resolution).width(520).height(24).row();
-    statusBar = new OptionRow("STATUS BAR (ANDROID)", null, false);
+    statusBar = new OptionRow(ui("video_status_bar"), null, false);
     page.add(statusBar).width(520).height(24).row();
-    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+    page.add(menuButton(ui("previous_menu"), () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     refreshVideoRows();
     return page;
   }
 
   private Table createControlsPage() {
-    Table page = createPage("CONTROLS");
-    controlsStatus = new Label("SELECT A BINDING TO CHANGE IT", Riiablo.fonts.font16,
+    Table page = createPage(ui("controls_title"));
+    controlsStatus = new Label(ui("controls_select_binding"), Riiablo.fonts.font16,
         Riiablo.colors.grey);
     controlsStatus.setAlignment(Align.center);
     page.add(controlsStatus).width(750).height(24).row();
@@ -333,14 +333,14 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     }
     if (CONFIGURABLE_KEYS.length % 3 != 0) grid.row();
     page.add(grid).width(750).row();
-    vibration = new OptionRow("VIBRATION", () -> {
+    vibration = new OptionRow(ui("controls_vibration"), () -> {
       Cvars.Client.Input.Vibration.set(!Boolean.TRUE.equals(Cvars.Client.Input.Vibration.get()));
       refreshControlsRows();
     });
     page.add(vibration).width(520).height(24).row();
-    page.add(menuButton("RESET DEFAULTS", this::resetControlDefaults))
+    page.add(menuButton(ui("controls_reset_defaults"), this::resetControlDefaults))
         .height(24).padTop(8).row();
-    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+    page.add(menuButton(ui("previous_menu"), () -> showPage(Page.OPTIONS)))
         .height(24).padTop(4).row();
     return page;
   }
@@ -349,8 +349,8 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     capturingRow = row;
     capturingAssignment = assignment;
     Riiablo.keys.setCaptureMode(true);
-    controlsState.beginCapture(row.mapping.getName(), assignment != MappedKey.PRIMARY_MAPPING);
-    controlsStatus.setText(controlsState.label());
+    controlsState.beginCapture(mappingLabel(row.mapping), assignment != MappedKey.PRIMARY_MAPPING);
+    controlsStatus.setText(controlsStatusLabel());
     if (getStage() != null) getStage().setKeyboardFocus(this);
   }
 
@@ -358,7 +358,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     if (currentPage != Page.CONTROLS || capturingRow == null) return false;
     if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
       controlsState.cancel();
-      cancelCapture("KEY CHANGE CANCELLED");
+      cancelCapture(ui("controls_change_cancelled"));
       return true;
     }
     if (keycode == Input.Keys.BACKSPACE) {
@@ -366,21 +366,21 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       Riiablo.keys.save(capturingRow.mapping);
       refreshControlRows();
       controlsState.cleared();
-      cancelCapture("BINDING CLEARED");
+      cancelCapture(ui("controls_binding_cleared"));
       return true;
     }
 
     for (MappedKey existing : Riiablo.keys.get(keycode)) {
       if (existing != capturingRow.mapping) {
-        controlsState.conflict(existing.getName());
-        controlsStatus.setText(controlsState.label());
+        controlsState.conflict(mappingLabel(existing));
+        controlsStatus.setText(controlsStatusLabel());
         return true;
       }
     }
     if (capturingRow.mapping.isAssigned(keycode)
         && capturingRow.mapping.getMapping(capturingAssignment) != keycode) {
-      controlsState.conflict(capturingRow.mapping.getName());
-      controlsStatus.setText("ALREADY USED BY " + capturingRow.mapping.getName());
+      controlsState.conflict(mappingLabel(capturingRow.mapping));
+      controlsStatus.setText(ui("controls_already_used_by", mappingLabel(capturingRow.mapping)));
       return true;
     }
 
@@ -389,9 +389,9 @@ public class EscapePanel extends WidgetGroup implements Disposable {
       Riiablo.keys.save(capturingRow.mapping);
       refreshControlRows();
       controlsState.saved();
-      cancelCapture(controlsState.label());
+      cancelCapture(controlsStatusLabel());
     } catch (IllegalArgumentException e) {
-      controlsStatus.setText("KEY CANNOT BE ASSIGNED");
+      controlsStatus.setText(ui("controls_key_cannot_assign"));
     }
     return true;
   }
@@ -407,7 +407,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     Riiablo.keys.resetAll();
     refreshControlRows();
     controlsState.defaultsRestored();
-    cancelCapture(controlsState.label());
+    cancelCapture(controlsStatusLabel());
   }
 
   private void refreshControlRows() {
@@ -428,11 +428,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   private Table createPlaceholderPage(String title) {
     Table page = createPage(title);
-    Label unavailable = new Label("AVAILABLE IN A FOLLOW-UP OPTIONS STEP",
+    Label unavailable = new Label(ui("options_unavailable"),
         Riiablo.fonts.font16, Riiablo.colors.grey);
     unavailable.setAlignment(Align.center);
     page.add(unavailable).height(30).row();
-    page.add(menuButton("PREVIOUS MENU", () -> showPage(Page.OPTIONS)))
+    page.add(menuButton(ui("previous_menu"), () -> showPage(Page.OPTIONS)))
         .height(24).padTop(12).row();
     return page;
   }
@@ -481,7 +481,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     if (automapMode == null) return;
     int mode = Cvars.Client.Automap.Mode.get() == null
         ? RenderSystem.AUTOMAP_MODE_CENTER : Cvars.Client.Automap.Mode.get();
-    automapMode.setValue(AutomapOptions.modeLabel(mode));
+    automapMode.setValue(automapModeLabel(mode));
     automapFade.setValue(yesNo(Cvars.Client.Automap.Fade.get()));
     automapCenter.setValue(yesNo(Cvars.Client.Automap.CenterWhenCleared.get()));
     automapParty.setValue(yesNo(Cvars.Client.Automap.ShowParty.get()));
@@ -503,10 +503,10 @@ public class EscapePanel extends WidgetGroup implements Disposable {
     if (gamma == null) return;
     gamma.setValue(VideoOptions.gammaLabel(value(Cvars.Client.Display.Gamma.get())));
     vsync.setValue(yesNo(Cvars.Client.Display.VSync.get()));
-    showFps.setValue(DisplayOptions.fpsModeLabel(Cvars.Client.Display.ShowFPS.get() == null
+    showFps.setValue(fpsModeLabel(Cvars.Client.Display.ShowFPS.get() == null
         ? com.riiablo.Client.FPS_NONE : Cvars.Client.Display.ShowFPS.get()));
-    resolution.setValue("NOT AVAILABLE");
-    statusBar.setValue("NOT AVAILABLE");
+    resolution.setValue(ui("not_available"));
+    statusBar.setValue(ui("not_available"));
   }
 
   private static float volume(Float value) {
@@ -518,7 +518,49 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   }
 
   private static String yesNo(Boolean value) {
-    return Boolean.TRUE.equals(value) ? "YES" : "NO";
+    return Boolean.TRUE.equals(value) ? ui("yes") : ui("no");
+  }
+
+  private static String automapModeLabel(int mode) {
+    switch (AutomapOptions.normalizeMode(mode)) {
+      case RenderSystem.AUTOMAP_MODE_TOP_LEFT: return ui("automap_mode_top_left");
+      case RenderSystem.AUTOMAP_MODE_TOP_RIGHT: return ui("automap_mode_top_right");
+      default: return ui("automap_mode_full_screen");
+    }
+  }
+
+  private static String fpsModeLabel(byte mode) {
+    switch (DisplayOptions.normalizeFpsMode(mode)) {
+      case com.riiablo.Client.FPS_TOPLEFT: return ui("position_top_left");
+      case com.riiablo.Client.FPS_TOPRIGHT: return ui("position_top_right");
+      case com.riiablo.Client.FPS_BOTTOMLEFT: return ui("position_bottom_left");
+      case com.riiablo.Client.FPS_BOTTOMRIGHT: return ui("position_bottom_right");
+      default: return ui("off");
+    }
+  }
+
+  private String controlsStatusLabel() {
+    switch (controlsState.getStatus()) {
+      case CAPTURING:
+        return ui("controls_press_key", controlsState.getBinding(),
+            "SECONDARY".equals(controlsState.getDetail())
+                ? ui("controls_secondary") : ui("controls_primary"));
+      case CONFLICT: return ui("controls_conflict", controlsState.getDetail());
+      case SAVED: return ui("controls_binding_saved");
+      case CLEARED: return ui("controls_binding_cleared");
+      case DEFAULTS_RESTORED: return ui("controls_defaults_restored");
+      default: return ui("controls_select_binding");
+    }
+  }
+
+  private static String mappingLabel(MappedKey mapping) {
+    return Riiablo.language == com.riiablo.D2Language.CHINESE
+        ? ui("key_" + mapping.getAlias())
+        : mapping.getName();
+  }
+
+  private static String ui(String key, Object... args) {
+    return args.length == 0 ? Riiablo.bundle.get(key) : Riiablo.bundle.format(key, args);
   }
 
   public void open() {
@@ -658,7 +700,7 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
     ControlBindingRow(MappedKey mapping) {
       this.mapping = mapping;
-      name = new Label(mapping.getName(), Riiablo.fonts.font16);
+      name = new Label(mappingLabel(mapping), Riiablo.fonts.font16);
       primary = new LabelButton("", Riiablo.fonts.font16, Riiablo.colors.gold);
       secondary = new LabelButton("", Riiablo.fonts.font16, Riiablo.colors.gold);
       name.setAlignment(Align.left);

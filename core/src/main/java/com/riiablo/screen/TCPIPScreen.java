@@ -148,7 +148,7 @@ public class TCPIPScreen extends ScreenAdapter {
 
               @Override
               public void canceled() {}
-            }, "Enter IP", "127.0.0.1", "127.0.0.1");
+            }, Riiablo.bundle.get("tcp_enter_ip"), "127.0.0.1", "127.0.0.1");
           } catch (GdxRuntimeException e) {
             Gdx.app.log(TAG, e.getMessage(), e);
           }
@@ -201,7 +201,7 @@ public class TCPIPScreen extends ScreenAdapter {
 
   private void hostLocalGame() {
     btnHostGame.setDisabled(true);
-    lbDescription.setText("Starting local game server...");
+    lbDescription.setText(Riiablo.bundle.get("tcp_starting_server"));
     Thread launcher = new Thread(() -> {
       try {
         HostedD2GS.start();
@@ -213,7 +213,7 @@ public class TCPIPScreen extends ScreenAdapter {
         Gdx.app.error(TAG, "Unable to host local game", t);
         Gdx.app.postRunnable(() -> {
           btnHostGame.setDisabled(false);
-          lbDescription.setText("Unable to start local game server.");
+          lbDescription.setText(Riiablo.bundle.get("tcp_server_failed"));
         });
       }
     }, "d2gs-launcher");

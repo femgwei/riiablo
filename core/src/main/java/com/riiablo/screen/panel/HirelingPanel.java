@@ -153,7 +153,8 @@ public class HirelingPanel extends WidgetGroup implements Disposable {
       bodyParts[i].setBodyPart(Riiablo.files.bodylocs.get(i).Code);
     }
 
-    Label name = new Label("UNIMPLEMENTED", Riiablo.fonts.ReallyTheLastSucker);
+    Label name = new Label(Riiablo.bundle.get("hireling_unnamed"),
+        Riiablo.fonts.ReallyTheLastSucker);
     name.setSize(150, 16);
     name.setPosition(6, 216);
     name.setAlignment(Align.left);

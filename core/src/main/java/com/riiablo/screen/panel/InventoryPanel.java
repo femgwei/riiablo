@@ -319,7 +319,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
 
           @Override
           public void canceled() {}
-        }, "Drop Gold", "", "Amount");
+        }, Riiablo.bundle.get("drop_gold"), "", Riiablo.bundle.get("amount"));
       }
     });
     addActor(btnDropGold);

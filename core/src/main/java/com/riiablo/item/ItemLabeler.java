@@ -263,21 +263,24 @@ public class ItemLabeler {
         if ((i & 1) != 0 && (prop = attrs.get(Stat.maxdamage)) != null) {
           Table t = new Table();
           t.add(new Label(Riiablo.string.lookup("ItemStats1l") + " ", font));
-          t.add(new Label(attrs.get(Stat.mindamage, tmp).asString() + " to " + prop.asString(), font, prop.modified() ? Riiablo.colors.blue : Riiablo.colors.white));
+          t.add(new Label(formatRange(attrs.get(Stat.mindamage, tmp).asString(), prop.asString()),
+              font, prop.modified() ? Riiablo.colors.blue : Riiablo.colors.white));
           t.pack();
           table.add(t).space(SPACING).row();
         }
         if ((i & 2) != 0 && (prop = attrs.get(Stat.secondary_maxdamage)) != null) {
           Table t = new Table();
           t.add(new Label(Riiablo.string.lookup("ItemStats1m") + " ", font));
-          t.add(new Label(attrs.get(Stat.secondary_mindamage, tmp).asString() + " to " + prop.asString(), font, prop.modified() ? Riiablo.colors.blue : Riiablo.colors.white));
+          t.add(new Label(formatRange(attrs.get(Stat.secondary_mindamage, tmp).asString(),
+              prop.asString()), font, prop.modified() ? Riiablo.colors.blue : Riiablo.colors.white));
           t.pack();
           table.add(t).space(SPACING).row();
         }
         if (item.typeEntry.Throwable && (prop = attrs.get(Stat.item_throw_maxdamage)) != null) {
           Table t = new Table();
           t.add(new Label(Riiablo.string.lookup("ItemStats1n") + " ", font));
-          t.add(new Label(attrs.get(Stat.item_throw_mindamage, tmp).asString() + " to " + prop.asString(), font, prop.modified() ? Riiablo.colors.blue : Riiablo.colors.white));
+          t.add(new Label(formatRange(attrs.get(Stat.item_throw_mindamage, tmp).asString(),
+              prop.asString()), font, prop.modified() ? Riiablo.colors.blue : Riiablo.colors.white));
           t.pack();
           table.add(t).space(SPACING).row();
         }
@@ -291,7 +294,9 @@ public class ItemLabeler {
           table.add(t).space(SPACING).row();
         }
         if (Riiablo.charData.classId == CharacterClass.PALADIN && (prop = attrs.get(Stat.maxdamage)) != null && prop.asInt() > 0)
-          table.add(new Label(Riiablo.string.lookup("ItemStats1o") + " " + attrs.get(Stat.mindamage, tmp).asString() + " to " + prop.asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
+          table.add(new Label(Riiablo.string.lookup("ItemStats1o") + " "
+              + formatRange(attrs.get(Stat.mindamage, tmp).asString(), prop.asString()),
+              font, Riiablo.colors.white)).center().space(SPACING).row();
       }
       if (!item.base.nodurability && (prop = attrs.get(Stat.durability)) != null)
         table.add(new Label(Riiablo.string.lookup("ItemStats1d") + " " + prop.asString() + " " + Riiablo.string.lookup("ItemStats1j") + " " + attrs.get(Stat.maxdurability, tmp).asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
@@ -413,5 +418,11 @@ public class ItemLabeler {
     return Riiablo.bundle == null
         ? "Sell Value: " + value
         : Riiablo.bundle.format("vendor_sell_value", value);
+  }
+
+  private static String formatRange(String minimum, String maximum) {
+    return Riiablo.bundle == null
+        ? minimum + " to " + maximum
+        : Riiablo.bundle.format("item_range", minimum, maximum);
   }
 }

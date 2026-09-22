@@ -365,7 +365,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
     purchasePromptText.setAlignment(Align.center);
     purchasePromptText.setBounds(4, 42, purchasePrompt.getWidth() - 8, 36);
     purchasePrompt.addActor(purchasePromptText);
-    purchaseConfirm = new LabelButton("BUY", Riiablo.fonts.font16);
+    purchaseConfirm = new LabelButton(Riiablo.bundle.get("vendor_buy"), Riiablo.fonts.font16);
     purchaseConfirm.setColor(Riiablo.colors.gold);
     purchaseConfirm.setBounds(35, 10, 70, 24);
     purchaseConfirm.addListener(new ClickListener() {
@@ -377,7 +377,7 @@ public class VendorPanel extends WidgetGroup implements Disposable {
       }
     });
     purchasePrompt.addActor(purchaseConfirm);
-    purchaseCancel = new LabelButton("CANCEL", Riiablo.fonts.font16);
+    purchaseCancel = new LabelButton(Riiablo.bundle.get("cancel"), Riiablo.fonts.font16);
     purchaseCancel.setColor(Riiablo.colors.gold);
     purchaseCancel.setBounds(125, 10, 70, 24);
     purchaseCancel.addListener(new ClickListener() {
@@ -414,7 +414,8 @@ public class VendorPanel extends WidgetGroup implements Disposable {
         : localPricing == null
             ? VendorPricing.buyPrice(item)
             : VendorPricing.buyPrice(item, localPricing, Riiablo.charData);
-    purchasePromptText.setText("BUY " + item.getNameString() + " FOR " + price + " GOLD?");
+    purchasePromptText.setText(Riiablo.bundle.format(
+        "vendor_buy_prompt", item.getNameString(), price));
     purchasePrompt.setVisible(true);
   }
 

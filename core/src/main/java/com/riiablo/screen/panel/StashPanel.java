@@ -114,7 +114,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
 
           @Override
           public void canceled() {}
-        }, "Stash Gold (+deposit / -withdraw)", "", "Amount");
+        }, Riiablo.bundle.get("stash_gold_transfer"), "", Riiablo.bundle.get("amount"));
       }
     });
     addActor(btnDropGold);

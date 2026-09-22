@@ -147,9 +147,9 @@ public class SelectCharacterScreen3 extends ScreenAdapter {
     label.setWrap(true);
     label.setAlignment(Align.center);
 
-    btnDeleteYes = new TextButton("Yes", mediumButtonStyle);
+    btnDeleteYes = new TextButton(Riiablo.bundle.get("yes"), mediumButtonStyle);
     btnDeleteYes.addListener(clickListener);
-    btnDeleteNo = new TextButton("No", mediumButtonStyle);
+    btnDeleteNo = new TextButton(Riiablo.bundle.get("no"), mediumButtonStyle);
     btnDeleteNo.addListener(clickListener);
 
     box.add(label).width(320).pad(8).row();

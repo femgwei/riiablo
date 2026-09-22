@@ -42,11 +42,11 @@ public class PartyPanel extends Table {
     pad(12);
     defaults().growX();
 
-    Label title = new Label("Party", Riiablo.fonts.font16, Riiablo.colors.gold);
+    Label title = new Label(text("party_title"), Riiablo.fonts.font16, Riiablo.colors.gold);
     title.setAlignment(Align.center);
     add(title).height(28).row();
 
-    Label hint = new Label("Players and relationships", Riiablo.fonts.fontformal10,
+    Label hint = new Label(text("party_hint"), Riiablo.fonts.fontformal10,
         Riiablo.colors.grey);
     hint.setAlignment(Align.center);
     add(hint).height(18).row();
@@ -58,7 +58,7 @@ public class PartyPanel extends Table {
     status.setWrap(true);
     add(status).height(28).padTop(4).row();
 
-    LabelButton close = actionButton("Close", () -> {
+    LabelButton close = actionButton(text("close"), () -> {
       if (Riiablo.game != null) Riiablo.game.setLeftPanel(null);
       else setVisible(false);
     });
@@ -94,7 +94,7 @@ public class PartyPanel extends Table {
     if (!snapshotRequested) {
       snapshotRequested = true;
       long requestId = synchronizer.requestParty(PartyOperation.SNAPSHOT, -1);
-      if (requestId == 0) status.setText("Unable to request party roster");
+      if (requestId == 0) status.setText(text("party_roster_failed"));
     }
 
     ClientPartyState state = receiver.partyState();
@@ -103,15 +103,15 @@ public class PartyPanel extends Table {
       displayedRequestId = state.lastRequestId();
       status.setColor(state.lastSuccess() ? Riiablo.colors.green : Riiablo.colors.red);
       status.setText(state.lastSuccess()
-          ? operationLabel(state.lastOperation()) + " completed"
-          : failureMessage(state.lastReason(), state.lastRetryAfterMillis()));
+          ? format("party_operation_completed", localizedOperationLabel(state.lastOperation()))
+          : localizedFailureMessage(state.lastReason(), state.lastRetryAfterMillis()));
     }
   }
 
   private void showOffline() {
     displayedRevision = -1;
     roster.clearChildren();
-    Label label = new Label("Party actions are available in multiplayer games.",
+    Label label = new Label(text("party_multiplayer_only"),
         Riiablo.fonts.fontformal10, Riiablo.colors.grey);
     label.setWrap(true);
     label.setAlignment(Align.center);
@@ -141,7 +141,7 @@ public class PartyPanel extends Table {
     });
 
     if (players.size == 0) {
-      Label empty = new Label("No connected players", Riiablo.fonts.fontformal10,
+      Label empty = new Label(text("party_no_players"), Riiablo.fonts.fontformal10,
           Riiablo.colors.grey);
       empty.setAlignment(Align.center);
       roster.add(empty).width(WIDTH - 32).padTop(40);
@@ -161,30 +161,31 @@ public class PartyPanel extends Table {
     row.pad(5);
     row.defaults().left();
 
-    String name = member.name + (self ? " (You)" : "") + (member.leader ? " *" : "");
+    String name = member.name + (self ? " (" + text("party_you") + ")" : "")
+        + (member.leader ? " *" : "");
     Label nameLabel = new Label(name, Riiablo.fonts.fontformal11, relationColor(member.relation));
     row.add(nameLabel).width(116).top();
 
-    String details = "Lv " + Math.max(1, member.level);
-    if (member.levelId >= 0) details += "  Area " + member.levelId;
-    if (member.maxHp > 0) details += "\nHP " + member.hp + "/" + member.maxHp;
+    String details = format("party_level", Math.max(1, member.level));
+    if (member.levelId >= 0) details += "  " + format("party_area", member.levelId);
+    if (member.maxHp > 0) details += "\n" + format("party_health", member.hp, member.maxHp);
     Label detailsLabel = new Label(details, Riiablo.fonts.fontformal10, Riiablo.colors.grey);
     detailsLabel.setWrap(true);
     row.add(detailsLabel).width(86).top();
 
     Table actions = new Table();
     if (!self && member.online) {
-      actions.add(actionButton("Trade", () -> requestTrade(member.entityId))).right().row();
+      actions.add(actionButton(text("trade"), () -> requestTrade(member.entityId))).right().row();
     }
     byte[] available = actionsFor(self, localPartyId, member.partyId, member.relation);
     if (available.length == 0) {
-      Label relation = new Label(relationLabel(self, member.relation),
+      Label relation = new Label(localizedRelationLabel(self, member.relation),
           Riiablo.fonts.fontformal10, relationColor(member.relation));
       relation.setAlignment(Align.right);
       actions.add(relation).right();
     } else {
       for (byte operation : available) {
-        actions.add(actionButton(operationLabel(operation),
+        actions.add(actionButton(localizedOperationLabel(operation),
             () -> request(operation, member.entityId))).right().row();
       }
     }
@@ -197,7 +198,7 @@ public class PartyPanel extends Table {
     long requestId = synchronizer.requestParty(operation,
         operation == PartyOperation.LEAVE ? -1 : targetEntityId);
     status.setColor(requestId == 0 ? Riiablo.colors.red : Riiablo.colors.gold);
-    status.setText(requestId == 0 ? "Unable to send request" : "Request sent...");
+    status.setText(requestId == 0 ? text("request_send_failed") : text("request_sent"));
   }
 
   private void requestTrade(int targetEntityId) {
@@ -205,7 +206,8 @@ public class PartyPanel extends Table {
     long requestId = synchronizer.requestTrade(TradeOperation.REQUEST, targetEntityId,
         0, -1, 0, 0, 0);
     status.setColor(requestId == 0 ? Riiablo.colors.red : Riiablo.colors.gold);
-    status.setText(requestId == 0 ? "Unable to send trade request" : "Trade request sent...");
+    status.setText(requestId == 0 ? text("trade_request_send_failed")
+        : text("trade_request_sent"));
   }
 
   private LabelButton actionButton(String text, final Runnable action) {
@@ -243,14 +245,14 @@ public class PartyPanel extends Table {
     }
   }
 
-  private static String relationLabel(boolean self, int relation) {
-    if (self) return "You";
+  private static String localizedRelationLabel(boolean self, int relation) {
+    if (self) return text("party_you");
     switch (relation) {
-      case PartyRelation.PARTY_MEMBER: return "Party";
-      case PartyRelation.INVITED: return "Invited you";
-      case PartyRelation.INVITER: return "Invited";
-      case PartyRelation.HOSTILE: return "Hostile";
-      default: return "Player";
+      case PartyRelation.PARTY_MEMBER: return text("party_relation_member");
+      case PartyRelation.INVITED: return text("party_relation_invited_you");
+      case PartyRelation.INVITER: return text("party_relation_invited");
+      case PartyRelation.HOSTILE: return text("party_relation_hostile");
+      default: return text("party_relation_player");
     }
   }
 
@@ -264,17 +266,17 @@ public class PartyPanel extends Table {
     }
   }
 
-  private static String operationLabel(byte operation) {
+  private static String localizedOperationLabel(byte operation) {
     switch (operation) {
-      case PartyOperation.INVITE: return "Invite";
-      case PartyOperation.ACCEPT: return "Accept";
-      case PartyOperation.DECLINE: return "Decline";
-      case PartyOperation.CANCEL: return "Cancel";
-      case PartyOperation.LEAVE: return "Leave";
-      case PartyOperation.HOSTILE: return "Hostile";
-      case PartyOperation.UNHOSTILE: return "Unhostile";
-      case PartyOperation.SNAPSHOT: return "Refresh";
-      default: return "Party action";
+      case PartyOperation.INVITE: return text("party_action_invite");
+      case PartyOperation.ACCEPT: return text("accept");
+      case PartyOperation.DECLINE: return text("decline");
+      case PartyOperation.CANCEL: return text("cancel");
+      case PartyOperation.LEAVE: return text("party_action_leave");
+      case PartyOperation.HOSTILE: return text("party_relation_hostile");
+      case PartyOperation.UNHOSTILE: return text("party_action_unhostile");
+      case PartyOperation.SNAPSHOT: return text("refresh");
+      default: return text("party_action_generic");
     }
   }
 
@@ -294,5 +296,41 @@ public class PartyPanel extends Table {
       return "Hostility requires both players at level 9, you in town, and no shared party.";
     }
     return humanize(reason);
+  }
+
+  private static String localizedFailureMessage(String reason, long retryAfterMillis) {
+    if ("HOSTILE_COOLDOWN".equals(reason)) {
+      long seconds = Math.max(1L, (Math.max(0L, retryAfterMillis) + 999L) / 1000L);
+      return format("party_hostile_cooldown", seconds);
+    }
+    if ("HOSTILE_REJECTED".equals(reason)) return text("party_hostile_rejected");
+    return localizedPartyReason(reason);
+  }
+
+  private static String localizedPartyReason(String reason) {
+    if (reason == null || reason.isEmpty()) return text("party_request_rejected");
+    switch (reason) {
+      case "PLAYER_NOT_FOUND": return text("party_error_player_not_found");
+      case "INVITE_REJECTED": return text("party_error_invite_rejected");
+      case "NO_PENDING_INVITATION": return text("party_error_no_invitation");
+      case "INVITER_MISMATCH": return text("party_error_inviter_mismatch");
+      case "ACCEPT_REJECTED": return text("party_error_accept_rejected");
+      case "NOT_INVITER": return text("party_error_not_inviter");
+      case "NOT_IN_PARTY": return text("party_error_not_in_party");
+      case "NOT_HOSTILE": return text("party_error_not_hostile");
+      case "INVALID_OPERATION": return text("party_error_invalid_operation");
+      case "INVALID_TARGET": return text("party_error_invalid_target");
+      case "SELF_TARGET": return text("party_error_self_target");
+      case "TARGET_OFFLINE": return text("party_error_target_offline");
+      default: return format("party_request_rejected_reason", reason);
+    }
+  }
+
+  private static String text(String key) {
+    return Riiablo.bundle.get(key);
+  }
+
+  private static String format(String key, Object... args) {
+    return Riiablo.bundle.format(key, args);
   }
 }
