@@ -66,6 +66,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     if (systemFactory != null) factory = systemFactory;
     mercenaries.setCallback(this);
     hirelingTable = com.riiablo.engine.server.NativeHirelingExperienceTable.load();
+    mercenaries.setNativeExperienceTable(hirelingTable);
   }
 
   @Subscribe
