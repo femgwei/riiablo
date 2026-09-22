@@ -383,12 +383,10 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   @Override
   public void onMercenaryResurrected(int playerId, MercenaryManager.ActiveMercenary merc) {
-    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null) return;
+    if (!mPlayer.has(playerId) || mPlayer.get(playerId).data == null || merc == null) return;
     com.riiablo.save.CharData.MercData data = mPlayer.get(playerId).data.getMerc();
     data.flags &= ~MercenaryManager.FLAG_DEAD;
-    StatRef maxhp = data.getStats().get(Stat.maxhp, StatRef.obtain());
-    StatRef hitpoints = data.getStats().get(Stat.hitpoints, StatRef.obtain());
-    if (hitpoints != null && maxhp != null) hitpoints.set(Math.max(1f, maxhp.asFixed()));
+    refreshMercenaryStats(playerId, merc, true);
     log.info("[MERC_LIFECYCLE] phase=resurrect owner={} entity={} level={} cost={}",
         playerId, merc.entityId, merc.level,
         MercenaryManager.nativeResurrectionCost(merc.level));
@@ -396,14 +394,20 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
   @Override public void onMercenaryLevelUp(int playerId, MercenaryManager.ActiveMercenary merc,
       int oldLevel, int newLevel) {
     if (merc == null || newLevel <= oldLevel) return;
+    refreshMercenaryStats(playerId, merc, merc.state != MercenaryManager.STATE_DEAD);
+  }
+
+  /** Rebuilds native hireling stats, skills, equipment bonuses, and runtime vitals. */
+  private boolean refreshMercenaryStats(int playerId, MercenaryManager.ActiveMercenary merc,
+      boolean restoreLife) {
+    if (merc == null) return false;
     com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
         hirelingTable == null ? null
-            : hirelingTable.stats(merc.definition.mercType, newLevel);
+            : hirelingTable.stats(merc.definition.mercType, merc.level);
     if (nativeStats == null) {
-      log.warn("[MERC_LEVEL] phase=refresh_skip owner={} entity={} oldLevel={} newLevel={} "
-              + "reason=hireling_row_missing",
-          playerId, merc.entityId, oldLevel, newLevel);
-      return;
+      log.warn("[MERC_LEVEL] phase=refresh_skip owner={} entity={} level={} "
+              + "reason=hireling_row_missing", playerId, merc.entityId, merc.level);
+      return false;
     }
 
     com.riiablo.save.CharData owner = mPlayer.has(playerId)
@@ -425,6 +429,20 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
           && mAttributesWrapper.get(merc.entityId).attrs != stats) {
         mAttributesWrapper.get(merc.entityId).attrs = stats;
       }
+      StatRef hitpoints = stats.get(Stat.hitpoints, StatRef.obtain());
+      if (hitpoints != null) {
+        float restoredLife;
+        if (restoreLife) {
+          StatRef maxhp = stats.get(Stat.maxhp, StatRef.obtain());
+          restoredLife = Math.max(1f, maxhp == null ? nativeStats.hitpoints : maxhp.asFixed());
+        } else if (merc.state == MercenaryManager.STATE_DEAD) {
+          restoredLife = 0f;
+        } else {
+          restoredLife = hitpoints.asFixed();
+        }
+        hitpoints.set(restoredLife);
+        stats.base().put(Stat.hitpoints, restoredLife);
+      }
     }
     if (mMercenary.has(merc.entityId)) {
       com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(
@@ -434,12 +452,17 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
       saved.xp = merc.experience;
     }
     merc.maxLife = nativeStats.hitpoints;
-    if (merc.state != MercenaryManager.STATE_DEAD) merc.currentLife = merc.maxLife;
-    log.info("[MERC_LEVEL] phase=refresh owner={} entity={} oldLevel={} newLevel={} "
+    if (restoreLife || merc.state != MercenaryManager.STATE_DEAD) {
+      merc.currentLife = merc.maxLife;
+    } else {
+      merc.currentLife = 0;
+    }
+    log.info("[MERC_LEVEL] phase=refresh owner={} entity={} level={} "
             + "life={} damage={}..{} ar={} xp={}",
-        playerId, merc.entityId, oldLevel, newLevel, nativeStats.hitpoints,
+        playerId, merc.entityId, merc.level, nativeStats.hitpoints,
         nativeStats.damageMin, nativeStats.damageMax, nativeStats.attackRate,
         merc.experience);
+    return true;
   }
 
   @Override
