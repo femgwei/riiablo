@@ -5290,6 +5290,17 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 下一项：继续覆盖部分金币拾取的 D2S 数量更新和重连后库存 revision；`headlessFallenDual`
 仍需先补 Blood Moor Fallen/Shaman 测试房间夹具，不将夹具缺失误判为物品回归。
 
+### 2026-09-22 怪物音效区域与距离过滤（本轮完成）
+
+- [x] ~~同 Zone 过滤~~：`MonsterSoundEmitter` 不再让城镇中预加载的野外怪物触发
+  Init/Taunt/Neutral/脚步声；玩家与怪物属于不同 `Map.Zone` 时直接静音。
+- [x] ~~听觉半径~~：同一区域内只在 20 格（与现有 `SoundEmitterHandler` 的位置衰减
+  半径一致）内触发怪物音效，远处怪物不再全局播放。
+- 验证：`MonsterSoundEmitterTest`、`:core:compileJava` 和定向 `:core:test` 通过。
+
+下一项：若真实客户端仍出现跨区域声音，继续收敛旧 AI 直接调用 `Riiablo.audio.play`
+的攻击/死亡音效入口，使其复用同一 listener/Zone 距离策略。
+
 ## Git 交接基线（2026-09-15）
 
 当前可交接 commit 为 `c297c6ecf1f0f542cfa05d5e7c3dc668d6e81712`，且已在
