@@ -80,7 +80,9 @@ final class InventoryWarning {
     int durabilityThreshold = Math.max(0, item.base.durwarning);
     int maximumDurability = value(item, Stat.maxdurability, 0);
     int durability = value(item, Stat.durability, maximumDurability);
-    if (durabilityThreshold > 0 && maximumDurability > 0
+    if (supportsDurabilityWarning(item)
+        && durabilityThreshold > 0
+        && maximumDurability > 0
         && durability <= durabilityThreshold) {
       int group = durabilityGroup(item);
       result.add(new Entry(
@@ -153,6 +155,18 @@ final class InventoryWarning {
         || item.type.is(Type.JAVE)
         || item.type.is(Type.TKNI)
         || item.type.is(Type.TAXE);
+  }
+
+  /**
+   * Stack-based missiles and throwing weapons consume quantity, not
+   * durability. Respect nodurability even when a stale/generated durability
+   * stat is present on the runtime item.
+   */
+  static boolean supportsDurabilityWarning(Item item) {
+    return item != null
+        && item.base != null
+        && !item.base.nodurability
+        && !supportsQuantityWarning(item);
   }
 
   private static int quantityGroup(Item item) {

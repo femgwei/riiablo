@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
+import com.riiablo.codec.excel.ItemEntry;
 
 class InventoryWarningTest {
   @Test
@@ -68,8 +69,19 @@ class InventoryWarningTest {
   void meleeWeaponWithoutAQuantityTypeCannotProduceAnAmmoWarning() {
     Item meleeWeapon = new Item();
     meleeWeapon.bodyLoc = BodyLoc.RARM;
+    meleeWeapon.base = new ItemEntry();
     assertEquals(false, InventoryWarning.supportsQuantityWarning(meleeWeapon));
+    assertEquals(true, InventoryWarning.supportsDurabilityWarning(meleeWeapon));
     assertEquals(4, InventoryWarning.durabilityGroup(meleeWeapon));
+  }
+
+  @Test
+  void noDurabilityItemsIgnoreStaleDurabilityStats() {
+    Item javelin = new Item();
+    javelin.bodyLoc = BodyLoc.RARM;
+    javelin.base = new ItemEntry();
+    javelin.base.nodurability = true;
+    assertEquals(false, InventoryWarning.supportsDurabilityWarning(javelin));
   }
 
   @Test
