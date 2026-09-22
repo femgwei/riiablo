@@ -113,6 +113,10 @@ final class InventoryWarning {
     return Math.max(0f, hudWidth) - Math.max(0f, warningWidth);
   }
 
+  static float aboveManaY(float manaY, float visibleManaHeight, float gap) {
+    return manaY + Math.max(0f, visibleManaHeight) + Math.max(0f, gap);
+  }
+
   static float slotOffsetY(Kind kind, float iconHeight, float gap) {
     return kind == Kind.QUANTITY
         ? Math.max(0f, iconHeight) + Math.max(0f, gap)

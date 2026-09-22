@@ -26,6 +26,7 @@ class InventoryWarningTest {
     // The warning is anchored to the HUD edge, independently of the
     // stretchable mana Table cell.
     assertEquals(600f, InventoryWarning.rightEdgeX(640f, 40f));
+    assertEquals(144f, InventoryWarning.aboveManaY(0f, 140f, 4f));
   }
 
   @Test

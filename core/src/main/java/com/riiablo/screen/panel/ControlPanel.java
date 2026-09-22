@@ -375,18 +375,18 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   }
 
   /**
-   * Keep warning sprites at the native right edge of the HUD, centered
-   * vertically. With both warnings present the quantity icon is in the upper
-   * half and the durability icon in the lower half. This deliberately does
-   * not use manaWidget.getWidth(): the Table may stretch that cell across the
-   * viewport while the warning remains attached to the HUD edge.
+   * Keep warning sprites at the native right edge of the HUD, immediately
+   * above the visible mana globe. The previous panel-centered anchor placed
+   * the stack on top of the blue mana bar because ControlPanel's height is the
+   * bottom HUD height, not the free space above it.
    */
   private void updateInventoryWarningWidgetLayout() {
-    if (inventoryWarningWidget == null) return;
+    if (inventoryWarningWidget == null || manaWidget == null) return;
     float width = inventoryWarningWidget.getWidth();
     inventoryWarningWidget.setPosition(
         InventoryWarning.rightEdgeX(getWidth(), width),
-        Math.max(0f, (getHeight() - inventoryWarningWidget.getHeight()) / 2f));
+        InventoryWarning.aboveManaY(
+            manaWidget.getY(), manaWidget.background.getRegionHeight(), 4f));
   }
 
   private void updateAddPointButtonLayout() {
