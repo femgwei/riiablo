@@ -5268,6 +5268,22 @@ RoomEx 时可恢复、离开 RoomEx 后删除帧只投递一次且旧实体 inca
 
 下一项：增加带尸体、地面物品、在途导弹、精英怪和跨 RoomEx 入口对象的专用离屏夹具，
 对每类 marker 的像素颜色和远距 pointer 包围盒做真实资源断言。
+### 2026-09-22 ItemMoveResult 成功快照与重复请求幂等（本轮完成）
+
+- [x] ~~成功拾取快照断言~~：离屏 D2GS 真实协议现在验证成功拾取结果包含完整库存
+  `ItemMoveSnapshotEntry`，拾取物的实体 ID、`STORED/INVENTORY` 位置和非空 D2S 载荷均
+  保持一致；`groundEntityId` 指向原地面实体且空 `groundItemData` 明确表示删除。
+- [x] ~~重复请求重放~~：相同连接、相同 requestId 和相同意图重发时，服务端返回缓存的
+  原始结果；revision、snapshot 数量和地面删除语义不重复推进或改变。
+- 验证：`:server:d2gs:headlessItemFailureCorrections` 通过，日志包含
+  `successSnapshot=true duplicateReplay=true`；`AuthoritativeItemMoveServiceTest`、
+  `ItemMoveRequestCacheTest`、`NetworkedClientItemManagerTest`、
+  `GroundItemSnapshotRoundTripTest` 定向测试通过。
+
+下一项：在同一协议门槛中增加成功拾取后的 D2S 写出/重新读取断言，并继续核对
+地面实体删除帧与库存快照到达顺序；`headlessFallenDual` 仍需先补 Blood Moor
+Fallen/Shaman 测试房间夹具，不将夹具缺失误判为物品回归。
+
 ## Git 交接基线（2026-09-15）
 
 当前可交接 commit 为 `c297c6ecf1f0f542cfa05d5e7c3dc668d6e81712`，且已在

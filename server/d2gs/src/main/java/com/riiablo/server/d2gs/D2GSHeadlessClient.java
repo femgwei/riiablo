@@ -22,6 +22,7 @@ import com.riiablo.net.packet.d2gs.ItemP;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveRequest;
 import com.riiablo.net.packet.d2gs.ItemMoveResult;
+import com.riiablo.net.packet.d2gs.ItemMoveSnapshotEntry;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.net.packet.d2gs.ItemP;
 import com.riiablo.net.packet.d2gs.MonsterP;
@@ -6574,10 +6575,19 @@ public final class D2GSHeadlessClient {
       int farItem = D2GS.headlessCreateRoomItemFixture(client.playerId, 10, rooms[0], "cap");
       Snapshot farDrop = awaitVisibleGroundEntity(client, input, farItem, deadline());
       if (farDrop == null) throw new IOException("far-item baseline was not visible");
+      send(output, itemMovePacket(100L, 0L, farItem));
+      ItemMoveResult picked = client.awaitItemMoveResult(input, deadline());
+      requireSuccessfulPickup(picked, farItem, "successful_pickup");
+      send(output, itemMovePacket(100L, 0L, farItem));
+      ItemMoveResult replay = client.awaitItemMoveResult(input, deadline());
+      requireSuccessfulPickupReplay(picked, replay, "duplicate_pickup");
+      farItem = D2GS.headlessCreateRoomItemFixture(client.playerId, 10, rooms[0], "cap");
+      farDrop = awaitVisibleGroundEntity(client, input, farItem, deadline());
+      if (farDrop == null) throw new IOException("far-item retry baseline was not visible");
       if (!D2GS.headlessMovePlayerToRoom(client.playerId, 10, rooms[1])) {
         throw new IOException("failed to move correction client away from drop");
       }
-      send(output, itemMovePacket(101L, 0L, farItem));
+      send(output, itemMovePacket(101L, picked.revision(), farItem));
       ItemMoveResult farResult = client.awaitItemMoveResult(input, deadline());
       requireGroundFailure(farResult, ItemMoveFailure.GROUND_ITEM_TOO_FAR,
           farItem, farDrop, "too_far");
@@ -6628,7 +6638,8 @@ public final class D2GSHeadlessClient {
       requireGroundFailure(deadResult, ItemMoveFailure.PLAYER_DEAD,
           deadItem, deadDrop, "player_dead");
       log("item_failure_correction_pass", "tooFar=true inventoryOccupied=true playerDead=true"
-          + " completeGroundData=true ownerMetadata=true position=true");
+          + " completeGroundData=true ownerMetadata=true position=true"
+          + " successSnapshot=true duplicateReplay=true");
     }
   }
 
@@ -6643,6 +6654,54 @@ public final class D2GSHeadlessClient {
           + (result == null ? "timeout" : result.failure())
           + " entity=" + (result == null ? -1 : result.groundEntityId())
           + " data=" + (result == null ? 0 : result.groundItemDataLength()));
+    }
+  }
+
+  private static void requireSuccessfulPickup(ItemMoveResult result, int entityId,
+      String label) {
+    if (result == null || !result.success()
+        || result.failure() != ItemMoveFailure.NONE
+        || result.groundEntityId() != entityId
+        || result.groundItemDataLength() != 0
+        || result.snapshotLength() == 0
+        || result.revision() == 0L) {
+      throw new IllegalStateException(label + " result mismatch: result="
+          + (result == null ? "timeout" : result.failure())
+          + " success=" + (result != null && result.success())
+          + " entity=" + (result == null ? -1 : result.groundEntityId())
+          + " snapshot=" + (result == null ? 0 : result.snapshotLength())
+          + " revision=" + (result == null ? -1L : result.revision()));
+    }
+    boolean hasStoredItem = false;
+    for (int i = 0; i < result.snapshotLength(); i++) {
+      ItemMoveSnapshotEntry entry = result.snapshot(i);
+      if (entry != null && entry.itemDataLength() > 0
+          && entry.itemId() == entityId
+          && entry.location() == com.riiablo.item.Location.STORED.ordinal()
+          && entry.storeLoc() == com.riiablo.item.StoreLoc.INVENTORY.ordinal()) {
+        hasStoredItem = true;
+        break;
+      }
+    }
+    if (!hasStoredItem) {
+      throw new IllegalStateException(label + " did not contain a stored inventory item");
+    }
+  }
+
+  private static void requireSuccessfulPickupReplay(ItemMoveResult first,
+      ItemMoveResult replay, String label) {
+    if (first == null || replay == null || !replay.success()
+        || replay.failure() != ItemMoveFailure.NONE
+        || replay.requestId() != first.requestId()
+        || replay.revision() != first.revision()
+        || replay.snapshotLength() != first.snapshotLength()
+        || replay.groundEntityId() != first.groundEntityId()
+        || replay.groundItemDataLength() != first.groundItemDataLength()) {
+      throw new IllegalStateException(label + " was not idempotent: firstRevision="
+          + (first == null ? -1L : first.revision()) + " replayRevision="
+          + (replay == null ? -1L : replay.revision()) + " firstSnapshot="
+          + (first == null ? 0 : first.snapshotLength()) + " replaySnapshot="
+          + (replay == null ? 0 : replay.snapshotLength()));
     }
   }
 
