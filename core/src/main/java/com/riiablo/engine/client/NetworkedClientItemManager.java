@@ -201,6 +201,14 @@ public class NetworkedClientItemManager extends ClientItemManager {
     send(ItemMoveOperation.USE_BELT_ITEM, potion.id, -1, -1, column, -1, -1, false);
   }
 
+  @Override
+  public void useInventoryItem(com.riiablo.item.Item item) {
+    if (item == null || item.id < 0 || item.code == null
+        || (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code))) return;
+    if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
+    send(ItemMoveOperation.USE_INVENTORY_ITEM, item.id, -1, -1, -1, -1, -1, false);
+  }
+
   @Override public void dropGold(int amount) { sendGold(GoldOperation.DROP, amount); }
   @Override public void depositGold(int amount) { sendGold(GoldOperation.DEPOSIT, amount); }
   @Override public void withdrawGold(int amount) { sendGold(GoldOperation.WITHDRAW, amount); }

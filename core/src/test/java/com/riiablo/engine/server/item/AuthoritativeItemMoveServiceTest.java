@@ -289,6 +289,35 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
     assertEquals("tsc", decoded.code);
   }
 
+  @Test
+  void inventoryTownPortalConsumesScrollOnlyAfterWorldEffectSucceeds() {
+    CharData character = character();
+    Item scroll = item("tsc", 261);
+    assertTrue(character.getItems().addToInventory(scroll));
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+
+    AuthoritativeItemMoveService.Outcome rejected = service.useInventoryItem(15, character,
+        intent(ItemMoveOperation.USE_INVENTORY_ITEM, scroll.id, -1, -1, -1), () -> false);
+    assertFalse(rejected.success);
+    assertTrue(character.getItems().contains(scroll));
+    assertEquals(0L, service.revision(15));
+
+    AuthoritativeItemMoveService.Outcome used = service.useInventoryItem(15, character,
+        intent(ItemMoveOperation.USE_INVENTORY_ITEM, scroll.id, -1, -1, -1), () -> true);
+    assertTrue(used.success);
+    assertFalse(character.getItems().contains(scroll));
+    assertEquals(1L, service.revision(15));
+  }
+
+  @Test
+  void inventoryTownPortalRejectsNonPortalMiscItems() {
+    CharData character = character();
+    Item potion = item("hp1", 262);
+    assertTrue(character.getItems().addToInventory(potion));
+    ItemMoveIntent use = intent(ItemMoveOperation.USE_INVENTORY_ITEM, potion.id, -1, -1, -1);
+    assertEquals(ItemMoveFailure.INVALID_ITEM, ItemMoveValidator.validate(character, use));
+  }
+
   private static CharData character() {
     return CharData.obtain().set(Riiablo.NORMAL, false, "MoveHero", Riiablo.AMAZON);
   }

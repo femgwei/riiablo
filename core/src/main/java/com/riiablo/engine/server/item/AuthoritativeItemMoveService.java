@@ -2,6 +2,7 @@ package com.riiablo.engine.server.item;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
@@ -61,7 +62,7 @@ public final class AuthoritativeItemMoveService {
     long current = revision(playerEntityId);
     if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.USE_BELT_ITEM)
+        || intent.operation > ItemMoveOperation.USE_INVENTORY_ITEM)
       return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
     if (intent.revision != current)
       return new Outcome(false, ItemMoveFailure.STALE_INVENTORY, current);
@@ -95,6 +96,11 @@ public final class AuthoritativeItemMoveService {
             return new Outcome(false, ItemMoveFailure.ITEM_NOT_OWNED, current);
           }
           break;
+        case ItemMoveOperation.USE_INVENTORY_ITEM:
+          // Portal creation is world-owned and is performed by the caller
+          // after validation. The callback is deliberately invoked before
+          // consuming the item so a missing map/portal entity cannot eat it.
+          return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
         case ItemMoveOperation.GROUND_TO_CURSOR:
         case ItemMoveOperation.CURSOR_TO_GROUND:
           // Ground entities are owned by ECS and use the overloads below.
@@ -102,6 +108,33 @@ public final class AuthoritativeItemMoveService {
         default:
           return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
       }
+    } catch (Throwable t) {
+      return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+    }
+    long next = current + 1L;
+    revisions.put(playerEntityId, next);
+    return new Outcome(true, ItemMoveFailure.NONE, next);
+  }
+
+  /** Applies a validated inventory consumable whose world side effect is
+   * supplied by the authoritative world owner (D2GS or a local game world). */
+  public synchronized Outcome useInventoryItem(int playerEntityId, CharData character,
+                                                ItemMoveIntent intent,
+                                                BooleanSupplier createEffect) {
+    long current = revision(playerEntityId);
+    if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
+    if (intent == null || intent.operation != ItemMoveOperation.USE_INVENTORY_ITEM)
+      return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
+    if (intent.revision != current)
+      return new Outcome(false, ItemMoveFailure.STALE_INVENTORY, current);
+    byte failure = ItemMoveValidator.validate(character, intent);
+    if (failure != ItemMoveFailure.NONE) return new Outcome(false, failure, current);
+    Item item = ownedById(character, intent.itemId);
+    try {
+      if (createEffect == null || !createEffect.getAsBoolean())
+        return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+      if (!character.getItems().consumeStoredItem(item))
+        return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
     } catch (Throwable t) {
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
     }
@@ -265,5 +298,13 @@ public final class AuthoritativeItemMoveService {
       if (item != null && item.id == idOrIndex) return i;
     }
     return com.riiablo.save.ItemData.INVALID_ITEM;
+  }
+
+  private static Item ownedById(CharData character, int itemId) {
+    for (int i = 0; i < character.getItems().getItems().size; i++) {
+      Item item = character.getItems().getItems().get(i);
+      if (item != null && item.id == itemId) return item;
+    }
+    return null;
   }
 }

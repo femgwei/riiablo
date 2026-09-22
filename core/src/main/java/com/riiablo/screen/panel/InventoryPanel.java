@@ -397,11 +397,20 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     // Selling is intentionally not handled here. Native D2 sells by dragging
     // an item from the inventory onto the vendor area; right-click remains the
     // use action for consumables and does nothing for equipment.
-    if (item != null && item.base != null && item.base.useable
-        && !(itemController instanceof NetworkedClientItemManager)
-        && Riiablo.charData != null && Riiablo.charData.useInventoryPotion(item)) {
-      if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
-      return true;
+    if (item != null && item.base != null && item.base.useable) {
+      if (item.type != null && item.type.is(com.riiablo.item.Type.POTI)
+          && !(itemController instanceof NetworkedClientItemManager)
+          && Riiablo.charData != null && Riiablo.charData.useInventoryPotion(item)) {
+        if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
+        return true;
+      }
+      // Misc consumables (notably tsc/tbk) must be routed through the item
+      // controller instead of falling through to the legacy "play sound only"
+      // branch in ItemGrid.StoredItem.
+      if ("tsc".equalsIgnoreCase(item.code) || "tbk".equalsIgnoreCase(item.code)) {
+        itemController.useInventoryItem(item);
+        return true;
+      }
     }
     return item != null && item.base != null && !item.base.useable;
   }

@@ -7536,6 +7536,8 @@ public class D2GS extends ApplicationAdapter {
             playerEntityId, partyManager.getPartyId(playerEntityId), 10_000L, 10_000L);
         return true;
       });
+    } else if (operation == ItemMoveOperation.USE_INVENTORY_ITEM) {
+      outcome = useInventoryItem(playerEntityId, character, intent);
     } else {
       outcome = authoritativeItems.apply(playerEntityId, character, intent);
     }
@@ -7544,6 +7546,61 @@ public class D2GS extends ApplicationAdapter {
         + " revision=" + outcome.revision + " consumeGround=" + outcome.consumeGroundEntity);
     sendItemMoveResult(packet.id, intent, outcome.success, outcome.failure, outcome.revision, true,
         operation == ItemMoveOperation.GROUND_TO_CURSOR && !outcome.consumeGroundEntity);
+  }
+
+  /** Creates a native town-portal visual/warp pair for a validated tsc/tbk. */
+  private AuthoritativeItemMoveService.Outcome useInventoryItem(
+      int playerEntityId, CharData character, ItemMoveIntent intent) {
+    final int[] visual = {Engine.INVALID_ENTITY};
+    final int[] warp = {Engine.INVALID_ENTITY};
+    final Map.Zone[] source = {null};
+    AuthoritativeItemMoveService.Outcome outcome = authoritativeItems.useInventoryItem(
+        playerEntityId, character, intent, () -> {
+          if (playerEntityId == Engine.INVALID_ENTITY || factory == null) return false;
+          com.riiablo.engine.server.component.MapWrapper wrapper = world.getMapper(
+              com.riiablo.engine.server.component.MapWrapper.class).get(playerEntityId);
+          Position position = world.getMapper(Position.class).get(playerEntityId);
+          if (wrapper == null || wrapper.zone == null || wrapper.zone.isTown()
+              || position == null) return false;
+          Vector2 portal = new Vector2(position.position);
+          if (!wrapper.zone.findFreeCoordinates(portal, 1, 16, true, portal)) return false;
+          source[0] = wrapper.zone;
+          visual[0] = factory.createStaticObjectByClassId(
+              com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
+              portal.x, portal.y);
+          warp[0] = factory.createWarp(wrapper.zone,
+              QuestWarp.encode(townLevelForAct(wrapper.zone.level == null
+                  ? 1 : wrapper.zone.level.Act)),
+              portal.x, portal.y);
+          if (visual[0] == Engine.INVALID_ENTITY || warp[0] == Engine.INVALID_ENTITY) {
+            if (warp[0] != Engine.INVALID_ENTITY) world.delete(warp[0]);
+            if (visual[0] != Engine.INVALID_ENTITY) world.delete(visual[0]);
+            visual[0] = warp[0] = Engine.INVALID_ENTITY;
+            return false;
+          }
+          return true;
+        });
+    if (outcome.success) {
+      if (source[0] != null) source[0].addWarp(warp[0]);
+      Gdx.app.log(TAG, "[TOWN_PORTAL] created player=" + playerEntityId
+          + " visual=" + visual[0] + " warp=" + warp[0]
+          + " destination=" + (source[0] == null || source[0].level == null
+              ? 1 : townLevelForAct(source[0].level.Act)));
+    } else {
+      if (warp[0] != Engine.INVALID_ENTITY) world.delete(warp[0]);
+      if (visual[0] != Engine.INVALID_ENTITY) world.delete(visual[0]);
+    }
+    return outcome;
+  }
+
+  private static int townLevelForAct(int act) {
+    switch (act) {
+      case 2: return 40;  // Lut Gholein
+      case 3: return 75;  // Kurast Docks
+      case 4: return 103; // Pandemonium Fortress
+      case 5: return 109; // Harrogath
+      default: return 1;  // Rogue Encampment
+    }
   }
 
   private com.riiablo.engine.server.component.Item mItemSafe(int entityId) {

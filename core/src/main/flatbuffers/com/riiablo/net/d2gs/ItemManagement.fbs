@@ -13,7 +13,10 @@ enum ItemMoveOperation:byte {
   BELT_TO_CURSOR,
   CURSOR_TO_BELT,
   SWAP_BELT_ITEM,
-  USE_BELT_ITEM
+  USE_BELT_ITEM,
+  // Uses a scroll/tome (or another future inventory consumable) from the
+  // character inventory. Appended to preserve all existing wire values.
+  USE_INVENTORY_ITEM
 }
 
 enum ItemMoveFailure:byte {

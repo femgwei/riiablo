@@ -9,6 +9,8 @@ import com.riiablo.attributes.StatRef;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.quest.QuestWarp;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.StoreLoc;
@@ -25,6 +27,7 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   protected ComponentMapper<Item> mItem;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
 
   @Wire(name = "factory")
   protected EntityFactory factory;
@@ -174,6 +177,46 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
     com.riiablo.item.Item potion = Riiablo.charData.getItems().getBeltPotion(column);
     if (potion != null && Riiablo.charData.useBeltPotion(column)) {
       Riiablo.audio.play(potion.getUseSound(), true);
+    }
+  }
+
+  @Override
+  public void useInventoryItem(com.riiablo.item.Item item) {
+    if (item == null || item.code == null || Riiablo.charData == null
+        || Riiablo.game == null || Riiablo.game.player < 0) return;
+    if (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code)) return;
+    MapWrapper wrapper = mMapWrapper == null ? null : mMapWrapper.get(Riiablo.game.player);
+    Position playerPosition = mPosition.get(Riiablo.game.player);
+    if (wrapper == null || wrapper.zone == null || wrapper.zone.isTown() || playerPosition == null) return;
+
+    Vector2 portalPosition = new Vector2(playerPosition.position);
+    if (!wrapper.zone.findFreeCoordinates(portalPosition, 1, 16, true, portalPosition)) return;
+    int visual = factory.createStaticObjectByClassId(
+        com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
+        portalPosition.x, portalPosition.y);
+    int destinationTown = townLevelForAct(wrapper.zone.level == null ? 1 : wrapper.zone.level.Act);
+    int warp = factory.createWarp(wrapper.zone, QuestWarp.encode(destinationTown),
+        portalPosition.x, portalPosition.y);
+    if (warp < 0) {
+      if (visual >= 0) world.delete(visual);
+      return;
+    }
+    if (!Riiablo.charData.getItems().consumeStoredItem(item)) {
+      world.delete(warp);
+      if (visual >= 0) world.delete(visual);
+      return;
+    }
+    wrapper.zone.addWarp(warp);
+    if (Riiablo.audio != null) Riiablo.audio.play(item.getUseSound(), true);
+  }
+
+  private static int townLevelForAct(int act) {
+    switch (act) {
+      case 2: return 40;  // Lut Gholein
+      case 3: return 75;  // Kurast Docks
+      case 4: return 103; // Pandemonium Fortress
+      case 5: return 109; // Harrogath
+      default: return 1;  // Rogue Encampment
     }
   }
 

@@ -18,7 +18,7 @@ public final class ItemMoveValidator {
   public static byte validate(CharData character, ItemMoveIntent intent) {
     if (character == null || character.getItems() == null) return ItemMoveFailure.PLAYER_NOT_FOUND;
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.USE_BELT_ITEM) return ItemMoveFailure.INVALID_OPERATION;
+        || intent.operation > ItemMoveOperation.USE_INVENTORY_ITEM) return ItemMoveFailure.INVALID_OPERATION;
     if (intent.merc) return ItemMoveFailure.MERC_NOT_SUPPORTED;
     ItemData data = character.getItems();
     Item cursor = data.getCursor();
@@ -102,6 +102,16 @@ public final class ItemMoveValidator {
         return potion == null || potion.id != intent.itemId || potion.type == null
             || !potion.type.is(com.riiablo.item.Type.POTI)
             ? ItemMoveFailure.ITEM_NOT_OWNED : ItemMoveFailure.NONE;
+      }
+      case ItemMoveOperation.USE_INVENTORY_ITEM: {
+        Item item = ownedById(data, intent.itemId);
+        if (item == null || item.location != Location.STORED
+            || item.storeLoc != StoreLoc.INVENTORY || item.code == null) {
+          return ItemMoveFailure.ITEM_NOT_OWNED;
+        }
+        String code = item.code.toLowerCase(java.util.Locale.ROOT);
+        return "tsc".equals(code) || "tbk".equals(code)
+            ? ItemMoveFailure.NONE : ItemMoveFailure.INVALID_ITEM;
       }
       default: return ItemMoveFailure.INVALID_OPERATION;
     }

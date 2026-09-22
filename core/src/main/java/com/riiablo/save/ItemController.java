@@ -16,6 +16,8 @@ public interface ItemController {
   void cursorToBelt(int x, int y);
   void swapBeltItem(int i);
   void useBeltSlot(int column);
+  /** Uses a consumable directly from the character inventory. */
+  void useInventoryItem(com.riiablo.item.Item item);
   /** Drops carried gold at the player's position. */
   void dropGold(int amount);
   /** Moves carried gold into the personal stash. */
