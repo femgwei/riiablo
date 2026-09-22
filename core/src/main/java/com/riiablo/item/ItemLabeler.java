@@ -409,6 +409,9 @@ public class ItemLabeler {
   }
 
   static String formatSellPrice(int price) {
-    return "出售价格：" + Math.max(0, price);
+    // font16 is loaded from Diablo II's English bitmap font and does not
+    // contain CJK glyphs. Keep this native-style label ASCII so the entire
+    // first line is visible in the vendor tooltip.
+    return "Sell Value: " + Math.max(0, price);
   }
 }

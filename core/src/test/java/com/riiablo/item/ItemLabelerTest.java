@@ -19,7 +19,7 @@ class ItemLabelerTest {
 
   @Test
   void salePriceUsesTheRequestedTopLineText() {
-    assertEquals("出售价格：1234", ItemLabeler.formatSellPrice(1234));
-    assertEquals("出售价格：0", ItemLabeler.formatSellPrice(-1));
+    assertEquals("Sell Value: 1234", ItemLabeler.formatSellPrice(1234));
+    assertEquals("Sell Value: 0", ItemLabeler.formatSellPrice(-1));
   }
 }
