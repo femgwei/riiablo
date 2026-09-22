@@ -66,6 +66,10 @@ public class ServerItemManager extends ItemManager {
 
     Vector2 position = mPosition.get(entityId).position;
     int droppedEntity = factory.createItem(item, position);
+    // The ground component keeps the same Item instance that was removed
+    // from the cursor.  Replace its inventory id with the authoritative ECS
+    // entity id before broadcasting or serializing the drop.
+    if (droppedEntity >= 0 && item != null) item.id = droppedEntity;
     if (droppedEntity >= 0 && mItem.has(droppedEntity)) {
       com.riiablo.engine.server.component.Item dropped = mItem.get(droppedEntity);
       GroundDropOwnership.applyMetadata(dropped, entityId, -1,
