@@ -394,7 +394,53 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
         MercenaryManager.nativeResurrectionCost(merc.level));
   }
   @Override public void onMercenaryLevelUp(int playerId, MercenaryManager.ActiveMercenary merc,
-      int oldLevel, int newLevel) {}
+      int oldLevel, int newLevel) {
+    if (merc == null || newLevel <= oldLevel) return;
+    com.riiablo.engine.server.NativeHirelingExperienceTable.Stats nativeStats =
+        hirelingTable == null ? null
+            : hirelingTable.stats(merc.definition.mercType, newLevel);
+    if (nativeStats == null) {
+      log.warn("[MERC_LEVEL] phase=refresh_skip owner={} entity={} oldLevel={} newLevel={} "
+              + "reason=hireling_row_missing",
+          playerId, merc.entityId, oldLevel, newLevel);
+      return;
+    }
+
+    com.riiablo.save.CharData owner = mPlayer.has(playerId)
+        ? mPlayer.get(playerId).data : null;
+    com.riiablo.save.CharData.MercData saved = owner != null ? owner.getMerc() : null;
+    com.riiablo.attributes.Attributes stats = saved != null ? saved.getStats()
+        : (mAttributesWrapper.has(merc.entityId)
+            ? mAttributesWrapper.get(merc.entityId).attrs : null);
+    if (stats != null) {
+      // Rebuild native base values first, then re-apply equipped mercenary
+      // items so level-up never drops item bonuses from the aggregate list.
+      com.riiablo.engine.server.NativeHirelingStatsUpdater.apply(stats, nativeStats);
+      stats.base().put(Stat.experience,
+          (int) Math.min(Integer.MAX_VALUE, Math.max(0L, merc.experience)));
+      stats.aggregate().put(Stat.experience,
+          (int) Math.min(Integer.MAX_VALUE, Math.max(0L, merc.experience)));
+      if (saved != null) saved.getItems().updateStats();
+      if (mAttributesWrapper.has(merc.entityId)
+          && mAttributesWrapper.get(merc.entityId).attrs != stats) {
+        mAttributesWrapper.get(merc.entityId).attrs = stats;
+      }
+    }
+    if (mMercenary.has(merc.entityId)) {
+      com.riiablo.engine.server.NativeHirelingStatsUpdater.applySkills(
+          mMercenary.get(merc.entityId), nativeStats);
+    }
+    if (saved != null) {
+      saved.xp = merc.experience;
+    }
+    merc.maxLife = nativeStats.hitpoints;
+    if (merc.state != MercenaryManager.STATE_DEAD) merc.currentLife = merc.maxLife;
+    log.info("[MERC_LEVEL] phase=refresh owner={} entity={} oldLevel={} newLevel={} "
+            + "life={} damage={}..{} ar={} xp={}",
+        playerId, merc.entityId, oldLevel, newLevel, nativeStats.hitpoints,
+        nativeStats.damageMin, nativeStats.damageMax, nativeStats.attackRate,
+        merc.experience);
+  }
 
   @Override
   public int getPlayerGold(int playerId) {
