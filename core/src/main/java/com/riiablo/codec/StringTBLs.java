@@ -1,6 +1,7 @@
 package com.riiablo.codec;
 
 import com.badlogic.gdx.Gdx;
+import com.riiablo.D2Language;
 import com.riiablo.mpq.MPQFileHandleResolver;
 
 public class StringTBLs {
@@ -10,9 +11,14 @@ public class StringTBLs {
   public final StringTBL string, expansionstring, patchstring;
 
   public StringTBLs(MPQFileHandleResolver resolver) {
-    string          = StringTBL.loadFromFile(resolver.resolve("data\\local\\lng\\eng\\string.tbl"));
-    expansionstring = StringTBL.loadFromFile(resolver.resolve("data\\local\\lng\\eng\\expansionstring.tbl"));
-    patchstring     = StringTBL.loadFromFile(resolver.resolve("data\\local\\lng\\eng\\patchstring.tbl"));
+    this(resolver, D2Language.ENGLISH);
+  }
+
+  public StringTBLs(MPQFileHandleResolver resolver, D2Language language) {
+    String root = "data\\local\\lng\\" + language.resourceCode + "\\";
+    string          = StringTBL.loadFromFile(resolver.resolve(root + "string.tbl"));
+    expansionstring = StringTBL.loadFromFile(resolver.resolve(root + "expansionstring.tbl"));
+    patchstring     = StringTBL.loadFromFile(resolver.resolve(root + "patchstring.tbl"));
 
     patchstring.getEntry("strModEnhancedDamage").strOffset--;
 
@@ -28,7 +34,7 @@ public class StringTBLs {
     for (int i = 0; i < patch.indexes.length; i++) {
       int index = patch.indexes[i];
       StringTBL.HashTable.Entry patchEntry = patch.hashTable.entries[index];
-      String key = new String(patch.text, patchEntry.keyOffset - patch.header.startIndex, patchEntry.strOffset - patchEntry.keyOffset - 1);
+      String key = patch.key(patchEntry);
       int stringHash = strings.lookupHash(key);
       if (stringHash == -1) {
         continue;

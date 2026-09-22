@@ -41,9 +41,9 @@ public class EscapePanel extends WidgetGroup implements Disposable {
 
   public enum Page { MAIN, OPTIONS, SOUND, VIDEO, AUTOMAP, CONTROLS }
 
-  final AssetDescriptor<DC6> optionsDescriptor = new AssetDescriptor<>("data\\local\\ui\\eng\\options.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
-  final AssetDescriptor<DC6> exitDescriptor = new AssetDescriptor<>("data\\local\\ui\\eng\\exit.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
-  final AssetDescriptor<DC6> returntogameDescriptor = new AssetDescriptor<>("data\\local\\ui\\eng\\returntogame.dc6", DC6.class, DC6Loader.DC6Parameters.COMBINE);
+  final AssetDescriptor<DC6> optionsDescriptor = localUi("options.dc6");
+  final AssetDescriptor<DC6> exitDescriptor = localUi("exit.dc6");
+  final AssetDescriptor<DC6> returntogameDescriptor = localUi("returntogame.dc6");
   EscapeButton options;
   EscapeButton exit;
   EscapeButton returntogame;
@@ -80,6 +80,12 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   final List<ControlBindingRow> controlRows = new ArrayList<>();
   ControlBindingRow capturingRow;
   int capturingAssignment;
+
+  private static AssetDescriptor<DC6> localUi(String file) {
+    String language = Riiablo.language == null ? "eng" : Riiablo.language.resourceCode;
+    return new AssetDescriptor<>("data\\local\\ui\\" + language + "\\" + file,
+        DC6.class, DC6Loader.DC6Parameters.COMBINE);
+  }
 
   private static final MappedKey[] CONFIGURABLE_KEYS = {
       Keys.Inventory, Keys.Character, Keys.Spells, Keys.Hireling, Keys.Quests,

@@ -81,6 +81,13 @@ public class DesktopLauncher {
             .hasArg()
             .argName("path")
             .build())
+        .addOption(Option
+            .builder()
+            .longOpt("language")
+            .desc("resource language: auto, en, or zh")
+            .hasArg()
+            .argName("language")
+            .build())
         ;
 
     CommandLine cmd = null;
@@ -117,6 +124,12 @@ public class DesktopLauncher {
     }
     log.debug("logLevel: {}", logLevel);
     LogManager.setLevel(DesktopLauncher.class.getName(), logLevel);
+
+    if (cmd != null && cmd.hasOption("language")) {
+      String language = cmd.getOptionValue("language");
+      log.debug("--language={}", language);
+      System.setProperty("riiablo.language", language);
+    }
     
     // 屏蔽非地图相关的DEBUG日志，只保留地图拼接相关的日志
     // 保留 Actioneer 的 INFO 战斗审计（命中率、roll、伤害），屏蔽其 DEBUG 噪声。

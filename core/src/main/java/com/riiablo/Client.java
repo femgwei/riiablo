@@ -4,6 +4,7 @@ import java.io.OutputStream;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Locale;
 
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Game;
@@ -288,7 +289,17 @@ public class Client extends Game {
     }
 
     Riiablo.mpqs = mpqs = new MPQFileHandleResolver();
-    Riiablo.string = string = new StringTBLs(mpqs);
+    D2Language language = D2Language.resolve(
+        System.getProperty("riiablo.language"), Locale.getDefault());
+    if (language == D2Language.CHINESE
+        && (!mpqs.contains("data\\local\\lng\\chi\\string.tbl")
+            || !mpqs.contains("data\\local\\font\\chi\\font16.tbl"))) {
+      Gdx.app.error(TAG, "Chinese resources are incomplete; falling back to English");
+      language = D2Language.ENGLISH;
+    }
+    Riiablo.language = language;
+    Gdx.app.log(TAG, "Language: " + language + " (" + language.resourceCode + ")");
+    Riiablo.string = string = new StringTBLs(mpqs, language);
 
     Riiablo.assets = assets = new AssetManager();
     Texture.setAssetManager(assets);
@@ -310,14 +321,15 @@ public class Client extends Game {
 
     Riiablo.palettes = palettes = new Palettes(assets);
     Riiablo.colormaps = colormaps = new Colormaps(assets);
-    Riiablo.fonts = fonts = new Fonts(assets);
+    Riiablo.fonts = fonts = new Fonts(assets, language);
     Riiablo.files = files = new Files(assets);
     Riiablo.cofs = cofs = new COFs(assets);
     Riiablo.audio = audio = new Audio(assets);
     Riiablo.music = music = new MusicController(assets);
 
     Riiablo.colors = colors = new Colors();
-    Riiablo.bundle = bundle = I18NBundle.createBundle(Gdx.files.internal("lang/Client"));
+    Riiablo.bundle = bundle = I18NBundle.createBundle(
+        Gdx.files.internal("lang/Client"), language.locale);
     Riiablo.textures = textures = new Textures();
     Riiablo.cursor = cursor = new Cursor(assets);
     Riiablo.charData = charData = CharData.obtain();

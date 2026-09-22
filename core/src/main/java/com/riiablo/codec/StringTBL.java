@@ -11,10 +11,10 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class StringTBL {
@@ -30,13 +30,16 @@ public class StringTBL {
   final Header      header;
   final short       indexes[];
   final HashTable   hashTable;
-  final char        text[];
+  final byte        text[];
+  final Charset     charset;
 
-  private StringTBL(Header header, short[] indexes, HashTable hashTable, char[] text) {
+  private StringTBL(
+      Header header, short[] indexes, HashTable hashTable, byte[] text, Charset charset) {
     this.header = header;
     this.indexes = indexes;
     this.hashTable = hashTable;
     this.text = text;
+    this.charset = charset;
   }
   
   public String lookup(int index) {
@@ -46,7 +49,7 @@ public class StringTBL {
       return null;
     }
 
-    return new String(text, entry.strOffset - header.startIndex, entry.strLen - 1);
+    return decode(entry.strOffset, unsigned(entry.strLen) - 1, charset);
   }
 
   public String getKey(int index) {
@@ -56,7 +59,7 @@ public class StringTBL {
       return null;
     }
 
-    return new String(text, entry.keyOffset - header.startIndex, entry.strOffset - entry.keyOffset);
+    return decode(entry.keyOffset, entry.strOffset - entry.keyOffset - 1, StandardCharsets.US_ASCII);
   }
 
   /*
@@ -106,7 +109,7 @@ public class StringTBL {
         KEY.offset = entry.keyOffset - header.startIndex;
         KEY.length = entry.strOffset - entry.keyOffset - 1;
         if (key.contentEquals(KEY)) {
-          String value = new String(text, entry.strOffset - header.startIndex, entry.strLen - 1);
+          String value = decode(entry.strOffset, unsigned(entry.strLen) - 1, charset);
           if (DEBUG_LOOKUP) Gdx.app.debug(TAG, key + " took " + hashTries + " : \"" + value + "\"");
           return value;
         }
@@ -153,6 +156,21 @@ public class StringTBL {
     return hashTable.entries[indexes[index]].ptr;
   }
 
+  String key(HashTable.Entry entry) {
+    if (entry == null || entry.keyOffset == 0) return null;
+    return decode(entry.keyOffset, entry.strOffset - entry.keyOffset - 1,
+        StandardCharsets.US_ASCII);
+  }
+
+  private String decode(int absoluteOffset, int length, Charset charset) {
+    if (length <= 0) return "";
+    return new String(text, absoluteOffset - header.startIndex, length, charset);
+  }
+
+  private static int unsigned(short value) {
+    return value & 0xffff;
+  }
+
   HashTable.Entry getEntry(String key) {
     if (key.equalsIgnoreCase("x")) {
       return null;
@@ -192,7 +210,7 @@ public class StringTBL {
 
     @Override
     public char charAt(int index) {
-      return text[offset + index];
+      return (char) (text[offset + index] & 0xff);
     }
 
     @Override
@@ -233,7 +251,7 @@ public class StringTBL {
     try {
       Header header = new Header(in);
       if (DEBUG) Gdx.app.debug(TAG, header.toString());
-      if (header.version != 1)
+      if (header.version != 0 && header.version != 1)
         throw new GdxRuntimeException("Unsupported version: " + (header.version & 0xFF));
 
       short[] indexes = new short[header.numElements];
@@ -246,13 +264,14 @@ public class StringTBL {
       HashTable hashTable = new HashTable(header, in);
       if (DEBUG) Gdx.app.debug(TAG, hashTable.toString());
 
-      // TODO: Support other languages
       final int dataSize = header.endIndex - header.startIndex;
-      char[] text = new char[dataSize];
-      Reader reader = new InputStreamReader(in, "US-ASCII");
-      IOUtils.readFully(reader, text);
-
-      return new StringTBL(header, indexes, hashTable, text);
+      byte[] text = IOUtils.readFully(in, dataSize);
+      // Blizzard's v1 tables use single-byte ASCII/Latin strings. The East
+      // Asian v0 tables bundled with Diablo II use UTF-8 values while keeping
+      // their lookup keys in ASCII. Offsets and lengths are byte-based, so the
+      // raw data must remain bytes until an individual value is decoded.
+      Charset charset = header.version == 0 ? StandardCharsets.UTF_8 : StandardCharsets.US_ASCII;
+      return new StringTBL(header, indexes, hashTable, text, charset);
     } catch (Throwable t) {
       throw new GdxRuntimeException("Couldn't load StringTBL from stream.", t);
     } finally {

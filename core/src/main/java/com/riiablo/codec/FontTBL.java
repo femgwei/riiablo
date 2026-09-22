@@ -15,6 +15,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.PixmapTextureData;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.StreamUtils;
 
@@ -27,8 +28,10 @@ public class FontTBL {
   private static final boolean DEBUG       = true;
   private static final boolean DEBUG_CHARS = DEBUG && false;
 
+  /** Number of entries in the Latin font tables; CJK tables contain 13,806. */
   public static final int CHARS = 256;
   private static final int CHAR_SHEET_PADDING = 2;
+  private static final int MAX_SHEET_SIZE = 2048;
 
   final Header   header;
   final CharData cData[];
@@ -52,28 +55,35 @@ public class FontTBL {
 
   public class BitmapFontData extends com.badlogic.gdx.graphics.g2d.BitmapFont.BitmapFontData {
     final  com.riiablo.codec.DC6 dc6;
-    final  Pixmap               fontSheet;
+    final  Array<Pixmap>        fontSheets;
     public int                  blendMode;
     BitmapFontData(DC6 dc6) {
       this.dc6 = dc6;
-      fontSheet = createFontSheet();
       BBox box = dc6.directions[0].box;
       final int charWidth = box.width;
       final int charHeight = box.height;
+      final int columnWidth = charWidth + CHAR_SHEET_PADDING;
+      final int columnHeight = charHeight + CHAR_SHEET_PADDING;
+      final int columns = Math.max(1, MAX_SHEET_SIZE / columnWidth);
+      final int rows = Math.max(1, MAX_SHEET_SIZE / columnHeight);
+      final int glyphsPerPage = columns * rows;
+      fontSheets = createFontSheets(columns, rows, glyphsPerPage, columnWidth, columnHeight);
       padLeft = padTop = padRight = padBottom = 0;
       lineHeight = xHeight = capHeight = charHeight;
       descent = 0;
-      for (char c = 0; c < CHARS; c++) {
+      for (int i = 0; i < cData.length; i++) {
+        CharData cData = FontTBL.this.cData[i];
         BitmapFont.Glyph glyph = new BitmapFont.Glyph();
-        setGlyph(c, glyph);
-        if (missingGlyph == null) missingGlyph = glyph;
+        setGlyph(cData.wChar, glyph);
+        if (missingGlyph == null || cData.wChar == '\ufffd') missingGlyph = glyph;
 
-        glyph.id = c;
+        glyph.id = cData.wChar;
+        glyph.page = i / glyphsPerPage;
+        int pageIndex = i % glyphsPerPage;
 
-        glyph.srcX = (c % 16) * (charWidth  + CHAR_SHEET_PADDING);
-        glyph.srcY = (c / 16) * (charHeight + CHAR_SHEET_PADDING);
+        glyph.srcX = (pageIndex % columns) * columnWidth;
+        glyph.srcY = (pageIndex / columns) * columnHeight;
 
-        CharData cData = FontTBL.this.cData[c];
         glyph.width = Math.min(cData.width + 1, charWidth);
         glyph.height = charHeight; // this was  {@code charHeight - 1} before, maybe because of no glyph padding in the backing texture
         glyph.yoffset = -(2 * glyph.height);
@@ -87,31 +97,31 @@ public class FontTBL {
       down = -lineHeight;
     }
 
-    Pixmap createFontSheet() {
-      DC.Direction dir = dc6.getDirection(0);
-      final int columnWidth = dir.box.width + CHAR_SHEET_PADDING;
-      final int columnHeight = dir.box.height + CHAR_SHEET_PADDING;
-
-      final int columns = 16;
-      final int rows = 16;
-      final int width = columnWidth * columns;
-      final int height = columnHeight * rows;
-
-      Pixmap sheet = new PaletteIndexedPixmap(width, height);
-
-      int f = 0, x = 0, y = 0;
-      for (int r = 0; r < rows; r++) {
-        for (int c = 0; c < columns; c++) {
-          Pixmap frame = dc6.getPixmap(0, f++);
-          sheet.drawPixmap(frame, x, y);
-          x += columnWidth;
+    Array<Pixmap> createFontSheets(
+        int columns, int rows, int glyphsPerPage, int columnWidth, int columnHeight) {
+      int pages = (cData.length + glyphsPerPage - 1) / glyphsPerPage;
+      Array<Pixmap> sheets = new Array<>(true, pages, Pixmap.class);
+      for (int page = 0; page < pages; page++) {
+        int first = page * glyphsPerPage;
+        int count = Math.min(glyphsPerPage, cData.length - first);
+        int usedRows = (count + columns - 1) / columns;
+        int usedColumns = Math.min(columns, count);
+        Pixmap sheet = new PaletteIndexedPixmap(
+            usedColumns * columnWidth, usedRows * columnHeight);
+        sheets.add(sheet);
+        for (int local = 0; local < count; local++) {
+          CharData charData = cData[first + local];
+          int frameIndex = charData.imageIndex | charData.nChar << 8;
+          if (frameIndex < 0 || frameIndex >= dc6.getNumFramesPerDir()) {
+            throw new GdxRuntimeException("Font glyph frame is out of range: " + frameIndex);
+          }
+          Pixmap frame = dc6.getPixmap(0, frameIndex);
+          sheet.drawPixmap(frame,
+              local % columns * columnWidth,
+              local / columns * columnHeight);
         }
-
-        x = 0;
-        y += columnHeight;
       }
-
-      return sheet;
+      return sheets;
     }
   }
 
@@ -119,9 +129,18 @@ public class FontTBL {
     private int blendMode;
 
     public BitmapFont(FontTBL.BitmapFontData data) {
-      super(data, new TextureRegion(new Texture(new PixmapTextureData(data.fontSheet, null, false, true, false))), true);
+      super(data, createRegions(data), true);
       blendMode = data.blendMode;
       setOwnsTexture(true);
+    }
+
+    private static Array<TextureRegion> createRegions(FontTBL.BitmapFontData data) {
+      Array<TextureRegion> regions = new Array<>(true, data.fontSheets.size, TextureRegion.class);
+      for (Pixmap sheet : data.fontSheets) {
+        Texture texture = new Texture(new PixmapTextureData(sheet, null, false, true, false));
+        regions.add(new TextureRegion(texture));
+      }
+      return regions;
     }
 
     public int getBlendMode() {
@@ -151,11 +170,15 @@ public class FontTBL {
       if (header.one != 0x01)
         throw new GdxRuntimeException("Not a valid TBL file version: " + header.one);
 
-      CharData[] cData = new CharData[CHARS];
-      for (int i = 0; i < CHARS; i++) {
+      int remaining = in.available();
+      if (remaining == 0 || remaining % CharData.SIZE != 0) {
+        throw new GdxRuntimeException("Invalid font TBL glyph data length: " + remaining);
+      }
+      int chars = remaining / CharData.SIZE;
+      CharData[] cData = new CharData[chars];
+      for (int i = 0; i < chars; i++) {
         CharData c = cData[i] = new CharData(in);
         if (DEBUG_CHARS) Gdx.app.debug(TAG, c.toString());
-        assert c.wChar == i;
         assert c.bTrue == 1;
       }
 

@@ -24,7 +24,14 @@ public class Fonts {
   public final FontTBL.BitmapFont fontridiculous;
   public final FontTBL.BitmapFont ReallyTheLastSucker;
 
+  private final String fontDirectory;
+
   public Fonts(AssetManager assets) {
+    this(assets, D2Language.ENGLISH);
+  }
+
+  public Fonts(AssetManager assets, D2Language language) {
+    fontDirectory = language.fontDirectory;
     consolas12   = loadEx(assets, "consolas12.fnt");
     consolas16   = loadEx(assets, "consolas16.fnt");
     font6        = load(assets, "font6",  BlendMode.LUMINOSITY_TINT);
@@ -90,7 +97,7 @@ public class Fonts {
     return assets.get(descriptor);
   }
 
-  private static AssetDescriptor<FontTBL.BitmapFont> getDescriptor(String fontName, int blendMode) {
-    return new AssetDescriptor<>("data\\local\\font\\latin\\" + fontName + ".TBL", FontTBL.BitmapFont.class, BitmapFontLoader.Params.of(blendMode));
+  private AssetDescriptor<FontTBL.BitmapFont> getDescriptor(String fontName, int blendMode) {
+    return new AssetDescriptor<>("data\\local\\font\\" + fontDirectory + "\\" + fontName + ".TBL", FontTBL.BitmapFont.class, BitmapFontLoader.Params.of(blendMode));
   }
 }

@@ -34,6 +34,7 @@ task offscreenRender(type: JavaExec) {
        '--mode', 'visual',
        '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
   ignoreExitValue = false
+  if (project.hasProperty('language')) systemProperty 'riiablo.language', project.property('language')
 }
 
 task offscreenCamp(type: JavaExec) {

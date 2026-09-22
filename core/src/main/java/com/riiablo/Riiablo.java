@@ -81,6 +81,7 @@ public class Riiablo {
   public static GdxCvarManager        cvars;
   public static GdxKeyMapper          keys;
   public static I18NBundle            bundle;
+  public static D2Language            language;
   public static StringTBLs            string;
   public static Colors                colors;
   public static Palettes              palettes;
