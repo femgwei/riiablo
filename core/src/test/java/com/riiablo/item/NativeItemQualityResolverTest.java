@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.riiablo.codec.excel.ItemEntry;
 import com.riiablo.codec.excel.ItemRatio;
 import com.riiablo.codec.excel.ItemTypes;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.item.ItemQuality;
 import org.junit.jupiter.api.Test;
 
@@ -64,6 +65,40 @@ class NativeItemQualityResolverTest {
     magic.Magic = true;
     assertEquals(ItemQuality.MAGIC, NativeItemQualityResolver.roll(ratio, base, magic,
         1, 0, 0, 0, 0, 0, 0, 0, bound -> bound - 1));
+  }
+
+  @Test
+  void nativeRngMakesQualityRollsRepeatable() {
+    ItemRatio.Entry ratio = new ItemRatio.Entry();
+    ratio.Unique = 100;
+    ratio.UniqueDivisor = 1;
+    ratio.UniqueMin = 1;
+    ratio.Set = 100;
+    ratio.SetDivisor = 1;
+    ratio.SetMin = 1;
+    ratio.Rare = 100;
+    ratio.RareDivisor = 1;
+    ratio.RareMin = 1;
+    ratio.Magic = 100;
+    ratio.MagicDivisor = 1;
+    ratio.MagicMin = 1;
+    ratio.HiQuality = 100;
+    ratio.HiQualityDivisor = 1;
+    ratio.Normal = 100;
+    ratio.NormalDivisor = 1;
+    ItemEntry base = new ItemEntry();
+    base.level = 20;
+    ItemTypes.Entry type = new ItemTypes.Entry();
+
+    NativeRng firstRng = new NativeRng(0x13572468);
+    NativeRng secondRng = new NativeRng(0x13572468);
+    for (int i = 0; i < 8; i++) {
+      int first = NativeItemQualityResolver.roll(ratio, base, type, 20, 75,
+          0, 0, 0, 0, 0, 0, firstRng::nextInt);
+      int second = NativeItemQualityResolver.roll(ratio, base, type, 20, 75,
+          0, 0, 0, 0, 0, 0, secondRng::nextInt);
+      assertEquals(first, second, "same item seed must reproduce quality sequence");
+    }
   }
 
 }

@@ -317,11 +317,11 @@ public class LootManager {
         root != null ? root.itemProbability() : 0,
         players.totalPlayers, players.partyMembersInLevel,
         players.monsterPlayerCount, players.effectivePlayerCount());
+    NativeRng rng = new NativeRng(config.rngSeed == 0 ? Riiablo.gameSeed : config.rngSeed);
     List<TreasureClassResolver.Drop> drops;
     try {
       TreasureClassResolver resolver = new TreasureClassResolver(
           Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses);
-      NativeRng rng = new NativeRng(config.rngSeed == 0 ? Riiablo.gameSeed : config.rngSeed);
       drops = resolver.resolve(config.treasureClass, tcLookupLevel,
           rng::nextInt, TreasureClassResolver.NATIVE_MAX_DROPS, players);
     } catch (RuntimeException ex) {
@@ -337,7 +337,7 @@ public class LootManager {
       String token = TreasureClassResolver.baseToken(drop.token);
       if (token == null || token.isEmpty()) continue;
       if ("gld".equalsIgnoreCase(token)) {
-        result.goldAmount += nativeGoldAmount(itemLevel, config, drop.token);
+        result.goldAmount += nativeGoldAmount(itemLevel, config, drop.token, rng);
         continue;
       }
       String code = token;
@@ -348,7 +348,7 @@ public class LootManager {
           log.debug("[LOOT_TC] unresolved leaf {}, skipping", drop.token);
           continue;
         }
-        quality = rollTreasureQuality(drop, base, itemLevel, config);
+        quality = rollTreasureQuality(drop, base, itemLevel, config, rng);
       } else {
         if (quality == ItemQuality.UNIQUE) {
           com.riiablo.codec.excel.UniqueItems.Entry unique = Riiablo.files.UniqueItems.get(token);
@@ -384,21 +384,21 @@ public class LootManager {
 
   /** Applies ItemRatio, MF diminishing returns, and inherited TC modifiers. */
   private int rollTreasureQuality(TreasureClassResolver.Drop drop, ItemEntry base, int itemLevel,
-                                  LootConfig config) {
+                                  LootConfig config, NativeRng rng) {
     com.riiablo.codec.excel.ItemTypes.Entry type =
         base == null ? null : Riiablo.files.ItemTypes.get(base.type);
     com.riiablo.codec.excel.ItemRatio.Entry ratio = Riiablo.files.ItemRatio == null
         ? null : Riiablo.files.ItemRatio.get(base, type, 100);
-    if (ratio == null) return rollItemQuality(config, itemLevel);
+    if (ratio == null) return rollItemQuality(config, itemLevel, rng);
     return NativeItemQualityResolver.roll(ratio, base, type, itemLevel, config.magicFind,
         drop.Unique, drop.Set, drop.Rare, drop.Magic, drop.Superior, drop.Normal,
-        bound -> MathUtils.random(bound - 1));
+        rng::nextInt);
   }
 
-  private int nativeGoldAmount(int itemLevel, LootConfig config, String token) {
+  private int nativeGoldAmount(int itemLevel, LootConfig config, String token, NativeRng rng) {
     int min = Math.max(1, itemLevel / 2 + 1);
     int max = Math.max(min, itemLevel * 2 + 5);
-    int amount = MathUtils.random(min, max);
+    int amount = min + rng.nextInt(max - min + 1);
     if (config.isBoss) amount *= 3;
     else if (config.isElite) amount *= 2;
     if (config.goldFind > 0) amount = amount * (100 + config.goldFind) / 100;
@@ -625,39 +625,48 @@ public class LootManager {
    * </ol>
    */
   private int rollItemQuality(LootConfig config, int itemLevel) {
+    return rollItemQuality(config, itemLevel, null);
+  }
+
+  /**
+   * Procedural quality fallback with an optional per-drop native RNG.  Native
+   * TreasureClass paths must not consume LibGDX's process-global RNG even when
+   * an ItemRatio row is unavailable (custom/modded data).
+   */
+  private int rollItemQuality(LootConfig config, int itemLevel, NativeRng rng) {
     // 计算有效 MF（应用收益递减）
     int effectiveMF = config.magicFind;
 
     // 尝试暗金
     int uniqueChance = calculateUniqueChance(itemLevel, effectiveMF, config);
-    if (MathUtils.random(999) < uniqueChance) {
+    if (randomInt(rng, 1000) < uniqueChance) {
       log.debug("Rolled UNIQUE quality: chance={}‰", uniqueChance);
       return ItemQuality.UNIQUE;
     }
 
     // 尝试套装
     int setChance = calculateSetChance(itemLevel, effectiveMF, config);
-    if (MathUtils.random(999) < setChance) {
+    if (randomInt(rng, 1000) < setChance) {
       log.debug("Rolled SET quality: chance={}‰", setChance);
       return ItemQuality.SET;
     }
 
     // 尝试稀有
     int rareChance = calculateRareChance(itemLevel, effectiveMF, config);
-    if (MathUtils.random(999) < rareChance) {
+    if (randomInt(rng, 1000) < rareChance) {
       log.debug("Rolled RARE quality: chance={}‰", rareChance);
       return ItemQuality.RARE;
     }
 
     // 尝试魔法
     int magicChance = calculateMagicChance(itemLevel, effectiveMF, config);
-    if (MathUtils.random(999) < magicChance) {
+    if (randomInt(rng, 1000) < magicChance) {
       log.debug("Rolled MAGIC quality: chance={}‰", magicChance);
       return ItemQuality.MAGIC;
     }
 
     // 普通品质判定
-    return rollNormalQuality();
+    return rollNormalQuality(rng);
   }
 
   /**
@@ -765,7 +774,11 @@ public class LootManager {
    * 判定普通品质（劣质/普通/超强）
    */
   private int rollNormalQuality() {
-    int roll = MathUtils.random(99);
+    return rollNormalQuality(null);
+  }
+
+  private int rollNormalQuality(NativeRng rng) {
+    int roll = randomInt(rng, 100);
 
     if (roll < INFERIOR_CHANCE) {
       return ItemQuality.INFERIOR;
@@ -774,6 +787,10 @@ public class LootManager {
     } else {
       return ItemQuality.NORMAL;
     }
+  }
+
+  private int randomInt(NativeRng rng, int bound) {
+    return rng == null ? MathUtils.random(bound - 1) : rng.nextInt(bound);
   }
 
   /**
