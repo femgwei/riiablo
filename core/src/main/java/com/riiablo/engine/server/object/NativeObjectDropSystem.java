@@ -300,7 +300,7 @@ public class NativeObjectDropSystem extends BaseSystem {
     for (int i = 0; i < drops.size(); i++) {
       NativeObjectDropAdapter.Drop drop = drops.get(i);
       Vector2 target = findDropPosition(wrapper.map, position.position, i);
-      int entityId = createItem(drop, itemLevel, target.x, target.y, random,
+      int entityId = createItem(drop, itemLevel, difficulty, target.x, target.y, random,
           forcedContainerQuality);
       if (entityId >= 0) created++;
     }
@@ -352,14 +352,21 @@ public class NativeObjectDropSystem extends BaseSystem {
     }
   }
 
-  private int createItem(NativeObjectDropAdapter.Drop drop, int itemLevel,
+  private int createItem(NativeObjectDropAdapter.Drop drop, int itemLevel, int difficulty,
       float x, float y, RandomXS128 random, Quality forcedContainerQuality) {
     try {
-      Item item = itemGenerator.generate(drop.code);
-      item.ilvl = (byte) MathUtils.clamp(itemLevel, 1, 99);
-      item.quality = forcedContainerQuality != Quality.NONE
+      Quality quality = forcedContainerQuality != Quality.NONE
           ? forcedContainerQuality : safeQuality(drop);
-      item.flags |= Item.ITEMFLAG_IDENTIFIED;
+      // Container drops must go through the same seeded generator as monster
+      // drops.  Setting Item.quality after generate(code) only changes the
+      // label; it omits the persisted magic/rare/unique/set data and makes the
+      // item change when the entity is serialized and reloaded.
+      int itemSeed = drop.isGold() ? 0 : random.nextInt();
+      Item item = drop.isGold()
+          ? itemGenerator.generate(drop.code)
+          : itemGenerator.generateLootItem(drop.code, itemLevel, quality,
+              itemSeed, difficulty);
+      item.ilvl = (byte) MathUtils.clamp(itemLevel, 1, 99);
       if (drop.isGold()) {
         int baseGold = itemLevel + random.nextInt(Math.max(1, 5 * itemLevel));
         long adjusted = (long) baseGold * drop.goldMultiplier >> 8;
@@ -376,14 +383,7 @@ public class NativeObjectDropSystem extends BaseSystem {
   }
 
   private Quality safeQuality(NativeObjectDropAdapter.Drop drop) {
-    if (drop.forcedQuality == Quality.UNIQUE || drop.forcedQuality == Quality.SET) {
-      // Unique/set property application is a later migration stage. MAGIC is
-      // serializable today and avoids emitting structurally incomplete items.
-      log.warn("[OBJECT_DROP] {} properties unavailable; downgrade token {} to MAGIC",
-          drop.forcedQuality, drop.sourceToken);
-      return Quality.MAGIC;
-    }
-    return Quality.NORMAL;
+    return drop.forcedQuality == Quality.NONE ? Quality.NORMAL : drop.forcedQuality;
   }
 
   private int difficulty(int playerId) {
