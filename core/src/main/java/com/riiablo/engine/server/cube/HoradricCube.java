@@ -3,6 +3,8 @@ package com.riiablo.engine.server.cube;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
 
+import com.riiablo.item.Item;
+import com.riiablo.item.NativeItemGeneration;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 
@@ -380,6 +382,7 @@ public class HoradricCube {
     result.recipe = recipe;
     result.outputItemCode = recipe.output.itemCode;
     result.outputQuantity = recipe.output.quantity;
+    result.outputEthereal = recipe.output.ethereal;
     result.success = true;
 
     log.debug("Transmute successful: {}", recipe);
@@ -389,6 +392,17 @@ public class HoradricCube {
     }
 
     return result;
+  }
+
+  /**
+   * Applies output traits that are represented by the recipe but must be
+   * applied to the concrete generated item by the server callback.  This
+   * mirrors D2MOO's forced ethereal property path and is idempotent.
+   */
+  public static boolean applyOutputTraits(Item item, CubeRecipe recipe) {
+    return item != null && recipe != null && recipe.output != null
+        && recipe.output.ethereal
+        && NativeItemGeneration.applyEtherealIfNeeded(item);
   }
 
   //==========================================================================
@@ -403,6 +417,8 @@ public class HoradricCube {
     public CubeRecipe recipe;
     public String outputItemCode;
     public int outputQuantity;
+    /** Whether the recipe requests forced ethereal output. */
+    public boolean outputEthereal;
     public String errorMessage;
   }
 
