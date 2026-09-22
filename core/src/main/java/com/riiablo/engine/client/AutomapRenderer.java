@@ -41,6 +41,7 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Interactable;
+import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.party.PartyRelation;
 import com.riiablo.profiler.GpuSystem;
 import com.riiablo.engine.Engine;
@@ -84,6 +85,7 @@ public class AutomapRenderer extends BaseSystem {
   @Wire(failOnNull = false) protected ComponentMapper<Item> mItem;
   @Wire(failOnNull = false) protected ComponentMapper<Object> mObject;
   @Wire(failOnNull = false) protected ComponentMapper<Interactable> mInteractable;
+  @Wire(failOnNull = false) protected ComponentMapper<Warp> mWarp;
   @Wire(failOnNull = false) protected ComponentMapper<Networked> mNetworked;
   @com.artemis.annotations.SkipWire
   protected ClientNetworkReceiver clientNetworkReceiver;
@@ -420,6 +422,13 @@ public class AutomapRenderer extends BaseSystem {
         automapManager.addEntityMarker(id, AutomapIconType.ITEM,
             position.position.x, position.position.y, name,
             AutomapManager.COLOR_ITEM, 4);
+      } else if (mWarp != null && mWarp.has(id)
+          && mWarp.get(id).townPortalOwner >= 0) {
+        // Dynamic Town Portals have a logical Warp entity and a separate
+        // object entity for the animated visual.  The logical endpoint is the
+        // authoritative automap marker; add it before the visual object and
+        // let AutomapManager coalesce the two at the same location.
+        automapManager.addPortalMarker(id, position.position.x, position.position.y, null);
       } else if (mMonster != null && mMonster.has(id) && mMonster.get(id).monstats != null) {
         Monster monster = mMonster.get(id);
         name = monster.monstats.NameStr;
@@ -440,9 +449,18 @@ public class AutomapRenderer extends BaseSystem {
             npc ? 5 : 4, cell);
       } else if (mObject != null && mObject.has(id) && mObject.get(id).base != null) {
         Object object = mObject.get(id);
-        int cell = AutomapEntityCells.objectCell(object.base);
-        int type = show(Cvars.Client.Automap.ShowQuestIndicators)
-            ? AutomapMarkerPolicy.objectType(object.base) : AutomapIconType.OBJECT;
+        boolean portal = AutomapMarkerPolicy.isTownPortalObject(object.base);
+        // Portal visuals are animated object sprites, not MaxiMap terrain
+        // cells.  Never interpret their table value as a native cell: that
+        // was the source of the yellow NPC-like fallback marker.
+        int cell = portal ? -1 : AutomapEntityCells.objectCell(object.base);
+        int type = portal ? AutomapIconType.PORTAL
+            : show(Cvars.Client.Automap.ShowQuestIndicators)
+                ? AutomapMarkerPolicy.objectType(object.base) : AutomapIconType.OBJECT;
+        if (portal) {
+          automapManager.addPortalMarker(id, position.position.x, position.position.y, null);
+          continue;
+        }
         // AutoMap=0 means this object has no Automap representation. Ordinary
         // scenery such as camp torches must stay invisible instead of turning
         // into a generic geometric marker. Enhanced entrances/quest targets

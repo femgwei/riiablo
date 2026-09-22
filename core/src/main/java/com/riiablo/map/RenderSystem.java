@@ -867,6 +867,12 @@ public class RenderSystem extends BaseEntitySystem {
       for (int entity : c) {
 //        CofComponent cofComponent = this.cofComponent.get(entity);
 //        if (cofComponent != null && cofComponent.load != Dirty.NONE) continue;
+        // Town portals are animated portal overlays, not ground objects.  The
+        // native client does not submit them to the unit-shadow pass; doing so
+        // paints a dark oval beneath the portal and makes it look like it has
+        // a cast shadow.  Keep the filter local to portal objects so ordinary
+        // monsters, NPCs, and scenery retain their normal shadows.
+        if (isPortalObject(entity)) continue;
         Animation animation = mAnimationWrapper.get(entity).animation;
         Vector2 pos = mPosition.get(entity).position;
         Vector2 tmp = iso.toScreen(tmpVec2.set(pos));
@@ -874,6 +880,14 @@ public class RenderSystem extends BaseEntitySystem {
       }
     }
     batch.resetBlendMode();
+  }
+
+  private boolean isPortalObject(int entity) {
+    Object object = mObject.get(entity);
+    if (object == null || object.base == null) return false;
+    int objectId = object.base.Id;
+    return objectId == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
+        || objectId == 60;
   }
 
   void drawWalls(PaletteIndexedBatch batch, Map.Zone zone, int tx, int ty, float px, float py) {

@@ -40,6 +40,17 @@ class AutomapMarkerPolicyTest {
     assertEquals(AutomapIconType.OBJECT, AutomapMarkerPolicy.objectType(ordinary));
   }
 
+  @Test void classifiesTownPortalAsPortalOverlayNotEntranceOrNativeCell() {
+    Objects.Entry portal = new Objects.Entry();
+    portal.Id = 59;
+    portal.OpenWarp = true;
+    portal.AutoMap = AutomapIconType.NPC;
+    assertTrue(AutomapMarkerPolicy.isTownPortalObject(portal));
+    assertEquals(AutomapIconType.PORTAL, AutomapMarkerPolicy.objectType(portal));
+    assertEquals(-1, AutomapEntityCells.objectCell(portal));
+    assertTrue(AutomapMarkerPolicy.requiresColorOverlay(AutomapIconType.PORTAL));
+  }
+
   @Test void hidesOrdinarySceneryWithoutNativeAutomapCell() {
     assertFalse(AutomapMarkerPolicy.shouldDisplayObject(-1, AutomapIconType.OBJECT));
     assertTrue(AutomapMarkerPolicy.shouldDisplayObject(405, AutomapIconType.OBJECT));

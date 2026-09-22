@@ -118,8 +118,8 @@ public class AutomapManager implements Disposable {
   /** 神殿颜色 - 蓝色 */
   public static final Color COLOR_SHRINE = new Color(0.3f, 0.5f, 1.0f, 1.0f);
   
-  /** 传送门颜色 - 橙色 */
-  public static final Color COLOR_PORTAL = new Color(1.0f, 0.5f, 0.0f, 1.0f);
+  /** 传送门颜色 - 原版自动地图使用的浅蓝色 */
+  public static final Color COLOR_PORTAL = new Color(0.35f, 0.75f, 1.0f, 1.0f);
   
   /** 未探索区域颜色 - 黑色 */
   public static final Color COLOR_UNEXPLORED = new Color(0.0f, 0.0f, 0.0f, 0.9f);
@@ -738,6 +738,22 @@ public class AutomapManager implements Disposable {
    * 添加传送门标记
    */
   public void addPortalMarker(int entityId, float worldX, float worldY, String owner) {
+    // A dynamic portal consists of a logical Warp and a separate animated
+    // Object visual.  They can differ by the LvlWarp anchor offset, so merge
+    // nearby portal entries instead of painting two icons on top of each
+    // other.  Ordinary portals are far enough apart that this does not merge
+    // distinct endpoints.
+    for (int i = 0, n = entityMarkers.size; i < n; i++) {
+      EntityMarker existing = entityMarkers.get(i);
+      if (existing.type != AutomapIconType.PORTAL) continue;
+      float dx = existing.worldX - worldX;
+      float dy = existing.worldY - worldY;
+      if (dx * dx + dy * dy > 16f * 16f) continue;
+      existing.set(existing.entityId >= 0 ? existing.entityId : entityId,
+          AutomapIconType.PORTAL, worldX, worldY, owner, COLOR_PORTAL, 5);
+      existing.nativeCell = -1;
+      return;
+    }
     addEntityMarker(entityId, AutomapIconType.PORTAL, worldX, worldY,
                    owner, COLOR_PORTAL, 5);
   }

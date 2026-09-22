@@ -76,8 +76,14 @@ public final class AutomapMarkerPolicy {
 
   public static int objectType(Objects.Entry object) {
     if (object == null) return AutomapIconType.OBJECT;
+    if (isTownPortalObject(object)) return AutomapIconType.PORTAL;
     if (object.OpenWarp) return AutomapIconType.ENTRANCE;
     return isQuestCell(object.AutoMap) ? AutomapIconType.QUEST : AutomapIconType.OBJECT;
+  }
+
+  /** Town Portal and permanent quest portal visuals are Objects.txt rows 59/60. */
+  public static boolean isTownPortalObject(Objects.Entry object) {
+    return object != null && (object.Id == 59 || object.Id == 60);
   }
 
   /** Ordinary AutoMap=0 scenery has no marker; explicit enhanced targets do. */
@@ -124,7 +130,7 @@ public final class AutomapMarkerPolicy {
     return type == AutomapIconType.CHAMPION || type == AutomapIconType.UNIQUE
         || type == AutomapIconType.MINION || type == AutomapIconType.BOSS
         || type == AutomapIconType.QUEST || type == AutomapIconType.ENTRANCE
-        || type == AutomapIconType.EXIT;
+        || type == AutomapIconType.EXIT || type == AutomapIconType.PORTAL;
   }
 
   /**

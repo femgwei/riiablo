@@ -10,6 +10,10 @@ public final class AutomapEntityCells {
   /** Returns Objects.txt AutoMap, or -1 when the row has no native icon. */
   public static int objectCell(Objects.Entry object) {
     if (object == null) return -1;
+    // Town portals are animated object overlays.  They do not use a
+    // MaxiMap.dc6 cell; returning a table value here can make them render as
+    // an unrelated yellow/NPC glyph.
+    if (AutomapMarkerPolicy.isTownPortalObject(object)) return -1;
     // D2CLIENT only allocates an object AutomapCell when Objects.txt AutoMap
     // is non-zero. Zero is the table sentinel used by ordinary scenery such
     // as camp torches; treating it as MaxiMap frame 0 draws a path fragment.
