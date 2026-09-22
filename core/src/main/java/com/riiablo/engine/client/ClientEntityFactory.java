@@ -133,15 +133,11 @@ public class ClientEntityFactory extends ServerEntityFactory {
     }
     if (base.Id == com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL
         || base.Id == 60) {
-      // Portal animation bounds are only a few pixels wide.  Keep the native
-      // sprite unchanged, but expose a chest-like click target around it.
+      // The warp endpoint is anchored at the portal's ground tile, while the
+      // animation rises above it.  Native D2 accepts clicks over the whole
+      // portal, not only the bottom tile; use a generous visual-sized box.
       BBox box = boxWrapper.box = new BBox();
-      box.xMin = -16;
-      box.yMin = -16;
-      box.width = 32;
-      box.height = 32;
-      box.xMax = box.xMin + box.width;
-      box.yMax = box.yMin + box.height;
+      box.asBox(-32, -64, 64, 96);
     }
 
     Label label = mLabel.create(id);
@@ -304,6 +300,15 @@ public class ClientEntityFactory extends ServerEntityFactory {
     box.xMax = box.width + box.xMin;
     box.yMax = box.height + box.yMin;
 
+    // Ordinary town portals are encoded as QuestWarp endpoints.  Their
+    // LvlWarp selection rectangle is intentionally tiny because it describes
+    // the floor anchor, but the client hit test must cover the complete
+    // animated portal.  Detect both endpoints so this also works for a
+    // network-created portal where no local registry metadata is available.
+    if (questWarp && isTownPortalEndpoint(sourceZoneHint, x, y, warp.dstLevel)) {
+      box.asBox(-32, -64, 64, 96);
+    }
+
     String name = Riiablo.string.lookup(warp.dstLevel.LevelWarp);
 
     IntIntMap substs = warp.substs;
@@ -331,6 +336,16 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
     mSelectable.create(id);
     return id;
+  }
+
+  private boolean isTownPortalEndpoint(Map.Zone sourceZoneHint, float x, float y,
+      com.riiablo.codec.excel.Levels.Entry destinationLevel) {
+    Map.Zone sourceZone = sourceZoneHint != null ? sourceZoneHint : map.getZone(x, y);
+    if (sourceZone != null && sourceZone.isTown()) return true;
+    if (destinationLevel == null) return false;
+    int destination = destinationLevel.Id;
+    return destination == 1 || destination == 40 || destination == 75
+        || destination == 103 || destination == 109;
   }
 
   @Override
