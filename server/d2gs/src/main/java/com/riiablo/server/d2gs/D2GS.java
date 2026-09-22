@@ -120,6 +120,7 @@ import com.riiablo.engine.server.quest.Act5BaalQuest;
 import com.riiablo.engine.server.quest.QuestWarpPolicy;
 import com.riiablo.engine.server.quest.Act5QuestMessageValidator;
 import com.riiablo.engine.server.quest.QuestWarp;
+import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.quest.Act2TaintedSunQuestSystem;
 import com.riiablo.engine.server.quest.Act2DurielQuestSystem;
 import com.riiablo.engine.server.quest.Act2QuestMessageValidator;
@@ -4733,6 +4734,7 @@ public class D2GS extends ApplicationAdapter {
   CombatPositionHistory combatPositionHistory;
   final com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
       new com.riiablo.engine.server.quest.Act5QuestGameState();
+  final TownPortalRegistry townPortalRegistry = new TownPortalRegistry();
 
   EntityFactory factory;
   ItemManager itemManager;
@@ -4927,6 +4929,7 @@ public class D2GS extends ApplicationAdapter {
         .register("partyManager", partyManager)
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)
+        .register("townPortalRegistry", townPortalRegistry)
         ;
     Riiablo.engine = world = new World(config);
 
@@ -5527,6 +5530,7 @@ public class D2GS extends ApplicationAdapter {
       tradeRequestCache.clear(id);
       questRequestCache.clear(id);
       authoritativeItems.reset(entityId);
+      townPortalRegistry.remove(entityId, world);
       partyManager.removePlayer(entityId);
 
       NativeMercenaryRewardSystem mercenaryRewards =
@@ -7557,6 +7561,8 @@ public class D2GS extends ApplicationAdapter {
     final int[] returnWarp = {Engine.INVALID_ENTITY};
     final Map.Zone[] source = {null};
     final Map.Zone[] town = {null};
+    final Vector2[] sourcePosition = {null};
+    final Vector2[] townPosition = {null};
     AuthoritativeItemMoveService.Outcome outcome = authoritativeItems.useInventoryItem(
         playerEntityId, character, intent, () -> {
           if (playerEntityId == Engine.INVALID_ENTITY || factory == null) return false;
@@ -7577,7 +7583,10 @@ public class D2GS extends ApplicationAdapter {
           Vector2 returnPortal = new Vector2(
               town[0].x() + Math.max(1, town[0].width() / 2),
               town[0].y() + Math.max(1, town[0].height() / 2));
-          if (!town[0].findFreeCoordinates(returnPortal, 1, 64, true, returnPortal)) return false;
+          if (!townPortalRegistry.findFreeTownPosition(town[0], returnPortal, 1, 64,
+              returnPortal)) return false;
+          sourcePosition[0] = new Vector2(portal);
+          townPosition[0] = new Vector2(returnPortal);
           visual[0] = factory.createStaticObjectByClassId(
               com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
               portal.x, portal.y);
@@ -7603,8 +7612,8 @@ public class D2GS extends ApplicationAdapter {
           return true;
         });
     if (outcome.success) {
-      if (source[0] != null) source[0].addWarp(warp[0]);
-      if (town[0] != null) town[0].addWarp(returnWarp[0]);
+      townPortalRegistry.replace(playerEntityId, world, source[0], sourcePosition[0],
+          visual[0], warp[0], town[0], townPosition[0], returnVisual[0], returnWarp[0]);
       Gdx.app.log(TAG, "[TOWN_PORTAL] created player=" + playerEntityId
           + " visual=" + visual[0] + " warp=" + warp[0]
           + " returnVisual=" + returnVisual[0] + " returnWarp=" + returnWarp[0]

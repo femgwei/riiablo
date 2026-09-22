@@ -1601,6 +1601,13 @@ public class Map implements Disposable {
       }
     }
 
+    /** Removes a dynamic Warp from this zone without touching the ECS entity. */
+    public void removeWarp(int entityId) {
+      if (entityId == Engine.INVALID_ENTITY) return;
+      if (warpEntities != EMPTY_ENTITY_ARRAY) warpEntities.removeValue(entityId);
+      if (entities != EMPTY_ENTITY_ARRAY) entities.removeValue(entityId);
+    }
+
     void setWarp(int src, int dst) {
       if (warps == EMPTY_INT_INT_MAP) warps = new IntIntMap(4);
       warps.put(src, dst);

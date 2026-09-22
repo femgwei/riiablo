@@ -11,6 +11,7 @@ import com.riiablo.engine.server.component.Item;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.quest.QuestWarp;
+import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.StoreLoc;
@@ -32,6 +33,9 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
 
   @Wire(name = "factory")
   protected EntityFactory factory;
+
+  @Wire(name = "townPortalRegistry")
+  protected TownPortalRegistry townPortalRegistry;
 
   @Override
   public void groundToCursor(int entityId) {
@@ -201,7 +205,9 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
         townZone.x() + Math.max(1, townZone.width() / 2),
         townZone.y() + Math.max(1, townZone.height() / 2));
     if (returnPosition == null
-        || !townZone.findFreeCoordinates(returnPosition, 1, 64, true, returnPosition)) return;
+        || townPortalRegistry == null
+        || !townPortalRegistry.findFreeTownPosition(townZone, returnPosition, 1, 64,
+            returnPosition)) return;
     int visual = factory.createStaticObjectByClassId(
         com.riiablo.engine.server.object.NativeQuestObjectResolver.TOWN_PORTAL,
         portalPosition.x, portalPosition.y);
@@ -225,8 +231,8 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
       if (returnVisual >= 0) world.delete(returnVisual);
       return;
     }
-    wrapper.zone.addWarp(warp);
-    townZone.addWarp(returnWarp);
+    townPortalRegistry.replace(Riiablo.game.player, world, wrapper.zone, portalPosition,
+        visual, warp, townZone, returnPosition, returnVisual, returnWarp);
     if (Riiablo.audio != null) Riiablo.audio.play("player_townportal_cast", true);
   }
 

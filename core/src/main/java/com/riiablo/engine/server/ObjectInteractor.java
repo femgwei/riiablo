@@ -154,6 +154,7 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
   private boolean interactQuestPortal(int playerId, int visualEntityId) {
     if (warpInteractor == null || warps == null || !mPosition.has(visualEntityId)) return false;
     Position visual = mPosition.get(visualEntityId);
+    MapWrapper visualWrapper = mMapWrapper.get(visualEntityId);
     IntBag entities = warps.getEntities();
     int[] ids = entities.getData();
     int nearest = Engine.INVALID_ENTITY;
@@ -162,6 +163,9 @@ public class ObjectInteractor extends PassiveSystem implements Interactable.Inte
       int candidate = ids[i];
       Warp warp = mWarp.get(candidate);
       if (warp == null || !QuestWarp.isQuestWarp(warp.index)) continue;
+      MapWrapper candidateWrapper = mMapWrapper.get(candidate);
+      if (visualWrapper == null || candidateWrapper == null
+          || candidateWrapper.zone != visualWrapper.zone) continue;
       float distance = mPosition.get(candidate).position.dst2(visual.position);
       if (distance <= nearestDistance) {
         nearestDistance = distance;

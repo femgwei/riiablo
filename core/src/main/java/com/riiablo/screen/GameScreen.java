@@ -150,6 +150,7 @@ import com.riiablo.attributes.ExperienceManager;
 import com.riiablo.engine.server.VelocityModeChanger;
 import com.riiablo.engine.server.WarpInteractor;
 import com.riiablo.engine.server.ZoneMovementModesChanger;
+import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.engine.server.component.Interactable;
@@ -746,6 +747,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     scaledStage = new Stage(new ScreenViewport(iso), Riiablo.batch);
     factory = new ClientEntityFactory();
     itemController = socket == null ? new ClientItemManager() : new NetworkedClientItemManager();
+    TownPortalRegistry townPortalRegistry = new TownPortalRegistry();
 
     CombatPositionHistory combatPositionHistory = new CombatPositionHistory(map);
     com.riiablo.engine.server.quest.Act5QuestGameState act5QuestGameState =
@@ -757,6 +759,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .register("map", map)
         .register("factory", factory)
         .register("itemController", itemController)
+        .register("townPortalRegistry", townPortalRegistry)
         .register("partyManager", partyManager)
         .register("combatPositionHistory", combatPositionHistory)
         .register("act5QuestGameState", act5QuestGameState)

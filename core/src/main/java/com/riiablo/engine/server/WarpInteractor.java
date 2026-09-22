@@ -76,6 +76,9 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
           + " entity=" + entity + " warp=" + warp + " source=" + source + " dst=" + dst);
       return false;
     }
+    if (warp.linkedTownPortal != Engine.INVALID_ENTITY && mWarp.has(warp.linkedTownPortal)) {
+      return warpToLinkedTownPortal(src, entity, source, warp.linkedTownPortal);
+    }
     if (QuestWarp.isQuestWarp(warp.index)) {
       Player player = mPlayer == null ? null : mPlayer.get(src);
       String rejection = QuestWarpPolicy.rejectionReason(
@@ -172,6 +175,35 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     LvlWarp.Entry dstWarpEntry = dstWarp.warp;
     tmpVec2.set(arrivalX, arrivalY).add(dstWarpEntry.ExitWalkX, dstWarpEntry.ExitWalkY);
     actioneer.moveTo(src, tmpVec2);
+    return true;
+  }
+
+  /** Uses the exact paired endpoint registered for an ordinary player TP. */
+  private boolean warpToLinkedTownPortal(int src, int sourceEntity, Map.Zone source,
+      int destinationEntity) {
+    MapWrapper destinationWrapper = mMapWrapper.get(destinationEntity);
+    Warp destinationWarp = mWarp.get(destinationEntity);
+    Map.Zone destination = destinationWrapper == null ? null : destinationWrapper.zone;
+    Position destinationPosition = mPosition.get(destinationEntity);
+    if (destination == null || destinationWarp == null || destinationPosition == null) {
+      Gdx.app.error(TAG, "Town portal pair endpoint missing: source=" + sourceEntity
+          + " destination=" + destinationEntity);
+      return false;
+    }
+    int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
+    Vector2 arrival = new Vector2(destinationPosition.position);
+    if (!destination.findFreeCoordinates(arrival, unitSize, 50, true, tmpVec2)) {
+      Gdx.app.error(TAG, "Town portal destination has no free coordinates: player=" + src
+          + " destination=" + destination.level.LevelName + "(" + destination.level.Id + ")"
+          + " endpoint=" + destinationEntity);
+      return false;
+    }
+    commitTransition(src, destination, tmpVec2);
+    actioneer.moveTo(src, tmpVec2);
+    Gdx.app.log(TAG, "Town portal interaction: player=" + src
+        + " source=" + (source.level == null ? -1 : source.level.Id)
+        + " destination=" + (destination.level == null ? -1 : destination.level.Id)
+        + " endpoint=" + destinationEntity + " arrival=" + tmpVec2);
     return true;
   }
 
