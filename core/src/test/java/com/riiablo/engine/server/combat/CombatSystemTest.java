@@ -403,6 +403,41 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void magicDamageReductionAppliesToRegularElementalPacketsBeforeAbsorb() {
+    Attributes attacker = attrs(100, 1, 0, 1, 1, 1000);
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.magic_damage_reduction, 10);
+    defender.reset();
+    assertEquals(10, defender.get(Stat.magic_damage_reduction).asInt());
+    int[] fireMin = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    int[] fireMax = new int[CombatSystem.DAMAGE_TYPE_COUNT];
+    fireMin[CombatSystem.DAMAGE_FIRE] = 100;
+    fireMax[CombatSystem.DAMAGE_FIRE] = 100;
+
+    CombatSystem.CombatResult result = combat.calculateAttack(
+        attacker, defender, false, false, false, 1, 1, 1000, true,
+        fireMin, fireMax, 0, 0, null, null);
+
+    assertEquals(90, result.elementalDamage[CombatSystem.DAMAGE_FIRE],
+        "mdr=" + defender.get(Stat.magic_damage_reduction).asInt()
+            + " physical=" + result.physicalDamage);
+    assertEquals(91, result.totalDamage);
+  }
+
+  @Test
+  public void fixedElementalDamageUsesTheSameMagicDamageReductionRule() {
+    Attributes defender = attrs(100, 1, 0, 1, 1, 1);
+    defender.base().put(Stat.magic_damage_reduction, 10);
+    defender.reset();
+
+    CombatSystem.CombatResult result = combat.calculateFixedElementalDamage(
+        defender, false, true, CombatSystem.DAMAGE_FIRE, 100, 0, null, 0);
+
+    assertEquals(90, result.elementalDamage[CombatSystem.DAMAGE_FIRE]);
+    assertEquals(90, result.totalDamage);
+  }
+
+  @Test
   public void fixedElementalAreaDamageUsesSameAbsorbAndPvpChain() {
     Attributes defender = attrs(100, 1, 0, 1, 1, 1);
     defender.base().put(Stat.fireresist, 50);

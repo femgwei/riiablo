@@ -674,6 +674,8 @@ public class CombatSystem {
     d.absorbFlat[DAMAGE_LIGHTNING] = statInt(defender, Stat.item_absorblight, 0);
     d.absorbFlat[DAMAGE_COLD] = statInt(defender, Stat.item_absorbcold, 0);
     d.absorbFlat[DAMAGE_MAGIC] = statInt(defender, Stat.item_absorbmagic, 0);
+    d.magicDamageReduced = Math.max(0,
+        statInt(defender, Stat.magic_damage_reduction, 0));
     if (defenderStates != null) {
       d.resistances[DAMAGE_FIRE] += defenderStates.getTotalResistModifier(0);
       d.resistances[DAMAGE_COLD] += defenderStates.getTotalResistModifier(1);
@@ -848,6 +850,11 @@ public class CombatSystem {
       adjusted = 100L * adjusted / (100L - resistance);
     }
     long reduced = adjusted * (100L - resistance) / 100L;
+    // Magic Damage Reduced by X applies to the same non-poison elemental
+    // packet as the regular attack path, after resistance and before absorb.
+    if (damageType != DAMAGE_POISON) {
+      reduced = Math.max(0L, reduced - statInt(defender, Stat.magic_damage_reduction, 0));
+    }
     int absorbPercent = absorbPercentStats[damageType] != 0
         ? Math.max(0, Math.min(100,
             statInt(defender, absorbPercentStats[damageType], 0))) : 0;
@@ -1773,8 +1780,10 @@ public class CombatSystem {
 
     damage = damage * (100 - resistance) / 100;
 
-    // 魔法伤害还有固定减免
-    if (damageType == DAMAGE_MAGIC) {
+    // Native Magic Damage Reduced by X applies to fire, lightning, cold and
+    // magic packets (but not physical or poison) after resistance and before
+    // elemental absorb.
+    if (damageType != DAMAGE_POISON && damageType != DAMAGE_PHYSICAL) {
       damage -= defender.magicDamageReduced;
     }
 

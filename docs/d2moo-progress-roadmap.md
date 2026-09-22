@@ -72,8 +72,11 @@
 - [x] 修复 `CombatPipelineIntegrationTest` 因动态单位碰撞系统新增依赖导致的 Artemis wiring 失败；
   Throw、近战、弓箭和 Throwing Mastery 定向测试重新通过。
 - [x] 收敛 `headlessMissileCombat` 夹具：为测试目标注入独立高生命值，明确验证导弹实体、
-  owner、生命下降和创建/删除 Tick 顺序；当前输出为 `life=1000.00->997.00`、
+  owner、生命下降和创建/删除 Tick 顺序；当前输出为 `life=1000.00->994.00`、
   `missile_lifecycle_pass ... ordered=true`。
+- [x] 统一常规攻击、固定元素区域和持续元素伤害的 Magic Damage Reduced by X 处理；
+  火焰/闪电/冰冷/魔法包在抗性后、吸收前扣除 MDR，毒素不受该属性影响，并有普通命中与
+  固定元素回归测试覆盖。
 - [ ] 战斗主体仍需继续补齐原版 `D2DamageStrc` 的完整 ToHit、伤害、抗性、状态和投射物分支；
   当前可在无真实客户端条件下继续使用纯 Java 与 D2GS 离屏测试推进。
 
