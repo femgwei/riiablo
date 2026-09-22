@@ -24,13 +24,15 @@ final class InventoryWarning {
     final Item item;
     final int current;
     final int threshold;
+    final int group;
     final int frame;
 
-    Entry(Kind kind, Item item, int current, int threshold, int frame) {
+    Entry(Kind kind, Item item, int current, int threshold, int group, int frame) {
       this.kind = kind;
       this.item = item;
       this.current = current;
       this.threshold = threshold;
+      this.group = group;
       this.frame = frame;
     }
   }
@@ -62,13 +64,17 @@ final class InventoryWarning {
 
     int quantityThreshold = Math.max(0, item.base.qntwarning);
     int quantity = value(item, Stat.quantity, 0);
-    if (quantityThreshold > 0 && quantity <= quantityThreshold) {
+    if (supportsQuantityWarning(item)
+        && quantityThreshold > 0
+        && quantity <= quantityThreshold) {
+      int group = quantityGroup(item);
       result.add(new Entry(
           Kind.QUANTITY,
           item,
           quantity,
           quantityThreshold,
-          frame(quantityGroup(item), quantitySeverity(quantity, quantityThreshold))));
+          group,
+          frame(group, quantitySeverity(quantity, quantityThreshold))));
     }
 
     int durabilityThreshold = Math.max(0, item.base.durwarning);
@@ -76,12 +82,14 @@ final class InventoryWarning {
     int durability = value(item, Stat.durability, maximumDurability);
     if (durabilityThreshold > 0 && maximumDurability > 0
         && durability <= durabilityThreshold) {
+      int group = durabilityGroup(item);
       result.add(new Entry(
           Kind.DURABILITY,
           item,
           durability,
           durabilityThreshold,
-          frame(durabilityGroup(item), severity(durability, durabilityThreshold, maximumDurability))));
+          group,
+          frame(group, durabilitySeverity(durability))));
     }
   }
 
@@ -109,6 +117,11 @@ final class InventoryWarning {
     return current <= 0 ? 2 : 0;
   }
 
+  /** Native durability colors: yellow while low, red only when broken. */
+  static int durabilitySeverity(int current) {
+    return current <= 0 ? 2 : 0;
+  }
+
   static float rightInsetX(float screenWidth, float iconWidth, float inset) {
     return Math.max(0f, screenWidth)
         - Math.max(0f, inset)
@@ -132,20 +145,47 @@ final class InventoryWarning {
   }
 
   /** Quantity warning icon classes: arrows, bolts, potions, javelins/knives, axes. */
+  static boolean supportsQuantityWarning(Item item) {
+    if (item == null || item.type == null) return false;
+    return item.type.is(Type.BOWQ)
+        || item.type.is(Type.XBOQ)
+        || item.type.is(Type.TPOT)
+        || item.type.is(Type.JAVE)
+        || item.type.is(Type.TKNI)
+        || item.type.is(Type.TAXE);
+  }
+
   private static int quantityGroup(Item item) {
     if (item.type != null) {
       if (item.type.is(Type.BOWQ)) return 0;
       if (item.type.is(Type.XBOQ)) return 1;
       if (item.type.is(Type.TPOT)) return 2;
-      if (item.type.is(Type.JAVE) || item.type.is(Type.TKNI)
-          || item.type.is(Type.SPEA)) return 3;
+      if (item.type.is(Type.JAVE) || item.type.is(Type.TKNI)) return 3;
       if (item.type.is(Type.TAXE)) return 4;
     }
     return 3;
   }
 
   /** Durability warning icon classes: weapon, shield, armor, helmet. */
-  private static int durabilityGroup(Item item) {
+  static int durabilityGroup(Item item) {
+    if (item.bodyLoc != null) {
+      switch (item.bodyLoc) {
+        case HEAD:
+          return 7;
+        case TORS:
+        case BELT:
+        case FEET:
+        case GLOV:
+          return 6;
+        case RARM:
+        case LARM:
+        case RARM2:
+        case LARM2:
+          return item.type != null && item.type.is(Type.SHIE) ? 5 : 4;
+        default:
+          break;
+      }
+    }
     if (item.type != null) {
       if (item.type.is(Type.SHIE)) return 5;
       if (item.type.is(Type.HELM) || item.type.is(Type.HEAD)
@@ -153,6 +193,7 @@ final class InventoryWarning {
           || item.type.is(Type.CIRC)) return 7;
       if (item.type.is(Type.ARMO)) return 6;
     }
-    return 4;
+    // Unknown armor-like slots must never masquerade as a broken weapon.
+    return 6;
   }
 }

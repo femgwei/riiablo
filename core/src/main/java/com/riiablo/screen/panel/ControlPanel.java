@@ -747,18 +747,21 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       }
 
       InventoryWarning.Entry quantity = null;
-      InventoryWarning.Entry durability = null;
+      InventoryWarning.Entry[] durabilityByGroup =
+          new InventoryWarning.Entry[InventoryWarning.FRAME_GROUPS];
       for (InventoryWarning.Entry entry : InventoryWarning.collect(Riiablo.charData.getItems())) {
         if (entry.kind == InventoryWarning.Kind.QUANTITY) {
           if (isMoreSevere(entry, quantity)) quantity = entry;
-        } else if (isMoreSevere(entry, durability)) {
-          durability = entry;
+        } else if (isMoreSevere(entry, durabilityByGroup[entry.group])) {
+          durabilityByGroup[entry.group] = entry;
         }
       }
-      // Preserve the native ordering: quantity/ammunition first, durability
-      // second.  This also makes the layout stable while items are changing.
+      // Quantity uses the upper slot. Durability parts share the lower slot
+      // and overlay into the native equipment-status figure.
       if (quantity != null) entries.add(quantity);
-      if (durability != null) entries.add(durability);
+      for (InventoryWarning.Entry durability : durabilityByGroup) {
+        if (durability != null) entries.add(durability);
+      }
       setVisible(!entries.isEmpty());
     }
 

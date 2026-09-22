@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import com.riiablo.item.BodyLoc;
+import com.riiablo.item.Item;
+
 class InventoryWarningTest {
   @Test
   void severityUsesGoldOrangeRedStates() {
@@ -38,6 +41,35 @@ class InventoryWarningTest {
     assertEquals(0, InventoryWarning.quantitySeverity(10, 10));
     assertEquals(0, InventoryWarning.quantitySeverity(1, 10));
     assertEquals(2, InventoryWarning.quantitySeverity(0, 10));
+  }
+
+  @Test
+  void durabilityKeepsYellowUntilTheItemIsBroken() {
+    assertEquals(0, InventoryWarning.durabilitySeverity(1));
+    assertEquals(2, InventoryWarning.durabilitySeverity(0));
+  }
+
+  @Test
+  void armorSlotsNeverFallBackToTheWeaponFrame() {
+    Item helmet = new Item();
+    helmet.bodyLoc = BodyLoc.HEAD;
+    assertEquals(7, InventoryWarning.durabilityGroup(helmet));
+
+    Item gloves = new Item();
+    gloves.bodyLoc = BodyLoc.GLOV;
+    assertEquals(6, InventoryWarning.durabilityGroup(gloves));
+
+    Item boots = new Item();
+    boots.bodyLoc = BodyLoc.FEET;
+    assertEquals(6, InventoryWarning.durabilityGroup(boots));
+  }
+
+  @Test
+  void meleeWeaponWithoutAQuantityTypeCannotProduceAnAmmoWarning() {
+    Item meleeWeapon = new Item();
+    meleeWeapon.bodyLoc = BodyLoc.RARM;
+    assertEquals(false, InventoryWarning.supportsQuantityWarning(meleeWeapon));
+    assertEquals(4, InventoryWarning.durabilityGroup(meleeWeapon));
   }
 
   @Test
