@@ -138,6 +138,41 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void deterministicHitResultKeepsArDefenseChanceAndRollTogether() {
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.level = 10;
+    attacker.attackRating = 100;
+
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+    defender.level = 10;
+    defender.defense = 100;
+
+    CombatSystem.HitResult hit = combat.calculateHit(attacker, defender, 49);
+    assertEquals(100, hit.attackRating);
+    assertEquals(100, hit.targetDefense);
+    assertEquals(50, hit.chance);
+    assertEquals(49, hit.roll);
+    assertTrue(hit.hit);
+
+    CombatSystem.HitResult miss = combat.calculateHit(attacker, defender, 50);
+    assertEquals(50, miss.chance);
+    assertEquals(50, miss.roll);
+    assertTrue(!miss.hit);
+  }
+
+  @Test
+  public void alwaysHitUsesNativeSentinelRoll() {
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.alwaysHit = true;
+    CombatSystem.DefenderData defender = new CombatSystem.DefenderData();
+
+    CombatSystem.HitResult result = combat.calculateHit(attacker, defender, 99);
+    assertEquals(100, result.chance);
+    assertEquals(-1, result.roll);
+    assertTrue(result.hit);
+  }
+
+  @Test
   public void runtimeMightStateIncreasesAuthoritativePhysicalDamage() {
     Attributes attacker = attrs(100, 1, 0, 10, 10, 1000);
     Attributes defender = attrs(100, 1, 0, 1, 1, 1);

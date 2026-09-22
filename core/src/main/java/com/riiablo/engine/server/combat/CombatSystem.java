@@ -404,6 +404,28 @@ public class CombatSystem {
         0, 0, 0);
   }
 
+  /**
+   * Immutable hit-test output shared by melee and missile callers.  Keeping
+   * the effective AR/defense, chance and roll together prevents diagnostics
+   * and damage paths from recomputing different snapshots of the same attack.
+   */
+  public static final class HitResult {
+    public final int attackRating;
+    public final int targetDefense;
+    public final int chance;
+    public final int roll;
+    public final boolean hit;
+
+    private HitResult(int attackRating, int targetDefense, int chance,
+        int roll, boolean hit) {
+      this.attackRating = attackRating;
+      this.targetDefense = targetDefense;
+      this.chance = chance;
+      this.roll = roll;
+      this.hit = hit;
+    }
+  }
+
   /** Signed 8.8 result used by Static Field's fractional native damage path. */
   public static class StaticFieldDamageResult {
     public int damageFixed;
@@ -1348,12 +1370,15 @@ public class CombatSystem {
   public CombatResult calculateAttack(AttackerData attacker, DefenderData defender) {
     CombatResult result = new CombatResult();
 
-    // 1. 计算命中率并判定命中
-    result.attackRating = calculateEffectiveAttackRating(attacker, defender);
-    result.targetDefense = calculateEffectiveDefense(attacker, defender);
-    result.hitChance = attacker.alwaysHit ? 100 : calculateHitChance(attacker, defender);
-    result.hitRoll = attacker.alwaysHit ? -1 : MathUtils.random(99);
-    result.hit = attacker.alwaysHit || result.hitRoll < result.hitChance;
+    // 1. Resolve the complete hit packet once. Both the combat result and
+    // the structured missile audit consume this same AR/defense/chance/roll
+    // snapshot instead of recalculating individual fields.
+    HitResult hit = rollHit(attacker, defender);
+    result.attackRating = hit.attackRating;
+    result.targetDefense = hit.targetDefense;
+    result.hitChance = hit.chance;
+    result.hitRoll = hit.roll;
+    result.hit = hit.hit;
 
     if (!result.hit) {
       log.debug("[COMBAT_HIT] result=miss ar={} defense={} attackerLevel={} defenderLevel={} chance={}%",
@@ -1523,6 +1548,23 @@ public class CombatSystem {
     hitChance = Math.max(MIN_TO_HIT_CHANCE, Math.min(MAX_TO_HIT_CHANCE, hitChance));
 
     return hitChance;
+  }
+
+  /** Resolves a deterministic native hit roll for boundary and replay tests. */
+  public HitResult calculateHit(AttackerData attacker, DefenderData defender, int roll) {
+    if (attacker == null || defender == null) {
+      return new HitResult(0, 0, MIN_TO_HIT_CHANCE, -1, false);
+    }
+    int attackRating = calculateEffectiveAttackRating(attacker, defender);
+    int targetDefense = calculateEffectiveDefense(attacker, defender);
+    int chance = attacker.alwaysHit ? 100 : calculateHitChance(attacker, defender);
+    int normalizedRoll = attacker.alwaysHit ? -1 : Math.max(0, Math.min(99, roll));
+    boolean hit = attacker.alwaysHit || normalizedRoll < chance;
+    return new HitResult(attackRating, targetDefense, chance, normalizedRoll, hit);
+  }
+
+  private HitResult rollHit(AttackerData attacker, DefenderData defender) {
+    return calculateHit(attacker, defender, MathUtils.random(99));
   }
 
   /**
