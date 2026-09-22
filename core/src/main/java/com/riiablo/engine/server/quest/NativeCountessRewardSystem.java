@@ -5,11 +5,11 @@ import java.util.List;
 import com.artemis.ComponentMapper;
 import com.artemis.annotations.Wire;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.RandomXS128;
 import com.riiablo.Riiablo;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.NativeRng;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.event.NativeCountessQuestEvent;
@@ -54,7 +54,7 @@ public class NativeCountessRewardSystem extends PassiveSystem {
 
     Position position = mPosition.get(event.countessId);
     int itemLevel = monsterLevel(event.countessId, event.difficulty);
-    RandomXS128 random = new RandomXS128(seed(event, position));
+    NativeRng random = new NativeRng(foldSeed(seed(event, position)));
     List<TreasureClassResolver.Drop> drops = new TreasureClassResolver(
         Riiablo.files.TreasureClassEx, Riiablo.files.itemTypeTreasureClasses)
             .resolve(treasureClass, itemLevel,
@@ -65,7 +65,7 @@ public class NativeCountessRewardSystem extends PassiveSystem {
       TreasureClassResolver.Drop drop = drops.get(i);
       String code = TreasureClassResolver.baseToken(drop.token);
       if (createItem(code, itemLevel, position.position.x, position.position.y,
-          i, random) >= 0) {
+          i, event.difficulty, random) >= 0) {
         created++;
       }
     }
@@ -100,16 +100,14 @@ public class NativeCountessRewardSystem extends PassiveSystem {
   }
 
   private int createItem(String code, int itemLevel, float x, float y,
-      int index, RandomXS128 random) {
+      int index, int difficulty, NativeRng random) {
     if (code == null || code.isEmpty()) return -1;
     try {
-      Item item = itemGenerator.generate(code);
-      item.ilvl = (byte) MathUtils.clamp(itemLevel, 1, 99);
-      item.version = Item.VERSION_110;
-      item.quality = Quality.NORMAL;
-      item.flags |= Item.ITEMFLAG_IDENTIFIED;
+      int itemSeed = random.nextInt();
+      Item item = itemGenerator.generateLootItem(code, itemLevel, Quality.NORMAL,
+          itemSeed, difficulty);
       float angle = index * MathUtils.PI2 / Math.max(1, TreasureClassResolver.NATIVE_MAX_DROPS);
-      float radius = 1.5f + random.nextFloat() * 1.5f;
+      float radius = 1.5f + random.nextInt(10000) / 10000f * 1.5f;
       int entityId = factory.createItem(item,
           x + MathUtils.cos(angle) * radius, y + MathUtils.sin(angle) * radius);
       item.id = entityId;
@@ -126,5 +124,9 @@ public class NativeCountessRewardSystem extends PassiveSystem {
     seed = 31 * seed + event.difficulty;
     seed = 31 * seed + Float.floatToRawIntBits(position.position.x);
     return 31 * seed + Float.floatToRawIntBits(position.position.y);
+  }
+
+  private static int foldSeed(long seed) {
+    return (int) (seed ^ (seed >>> 32));
   }
 }
