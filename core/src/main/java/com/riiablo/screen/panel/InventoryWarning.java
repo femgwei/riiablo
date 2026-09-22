@@ -109,16 +109,20 @@ final class InventoryWarning {
     return current <= 0 ? 2 : 0;
   }
 
-  static float rightEdgeX(float hudWidth, float warningWidth) {
-    return Math.max(0f, hudWidth) - Math.max(0f, warningWidth);
+  static float rightInsetX(float screenWidth, float iconWidth, float inset) {
+    return Math.max(0f, screenWidth)
+        - Math.max(0f, inset)
+        - Math.max(0f, iconWidth);
   }
 
-  static float screenSlotY(Kind kind, float screenHeight, float iconHeight, float gap) {
+  static float screenSlotY(Kind kind, float screenHeight, float iconHeight,
+      float centerOffset) {
     float height = Math.max(0f, iconHeight);
-    float quantityY = Math.max(0f, screenHeight) / 2f - height / 2f;
+    float middle = Math.max(0f, screenHeight) / 2f;
+    float offset = Math.max(0f, centerOffset);
     return kind == Kind.QUANTITY
-        ? quantityY
-        : quantityY - height - Math.max(0f, gap);
+        ? middle + offset
+        : middle - offset - height;
   }
 
   static float slotOffsetY(Kind kind, float iconHeight, float gap) {

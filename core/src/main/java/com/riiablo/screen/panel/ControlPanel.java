@@ -379,19 +379,20 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
   /**
    * Position warning sprites in screen space rather than relative to the
    * bottom HUD. The quantity icon is centered on the horizontal screen
-   * midpoint, durability occupies the fixed slot directly below it, and the
-   * icon's right edge touches the screen's right edge.
+   * midpoint: quantity starts 10 pixels above it, durability ends 10 pixels
+   * below it, and both icons keep a 20-pixel inset from the right edge.
    */
   private void updateInventoryWarningWidgetLayout() {
     if (inventoryWarningWidget == null || getStage() == null) return;
     inventoryWarningPosition.set(
-        InventoryWarning.rightEdgeX(
-            getStage().getWidth(), inventoryWarningWidget.getWidth()),
+        InventoryWarning.rightInsetX(
+            getStage().getWidth(), inventoryWarningWidget.getWidth(),
+            InventoryWarningWidget.RIGHT_INSET),
         InventoryWarning.screenSlotY(
             InventoryWarning.Kind.DURABILITY,
             getStage().getHeight(),
             InventoryWarningWidget.ICON_HEIGHT,
-            InventoryWarningWidget.GAP));
+            InventoryWarningWidget.CENTER_OFFSET));
     stageToLocalCoordinates(inventoryWarningPosition);
     inventoryWarningWidget.setPosition(
         inventoryWarningPosition.x, inventoryWarningPosition.y);
@@ -722,7 +723,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
    * selected before drawing.
    */
   private class InventoryWarningWidget extends Actor implements Disposable {
-    private static final float GAP = 2f;
+    private static final float RIGHT_INSET = 20f;
+    private static final float CENTER_OFFSET = 10f;
+    private static final float GAP = CENTER_OFFSET * 2f;
     private static final float ICON_WIDTH = 40f;
     private static final float ICON_HEIGHT = 41f;
 

@@ -23,11 +23,14 @@ class InventoryWarningTest {
 
   @Test
   void layoutUsesScreenCenterAndRightEdge() {
-    assertEquals(600f, InventoryWarning.rightEdgeX(640f, 40f));
-    assertEquals(219.5f, InventoryWarning.screenSlotY(
-        InventoryWarning.Kind.QUANTITY, 480f, 41f, 2f));
-    assertEquals(176.5f, InventoryWarning.screenSlotY(
-        InventoryWarning.Kind.DURABILITY, 480f, 41f, 2f));
+    assertEquals(580f, InventoryWarning.rightInsetX(640f, 40f, 20f));
+    float quantityY = InventoryWarning.screenSlotY(
+        InventoryWarning.Kind.QUANTITY, 480f, 41f, 10f);
+    float durabilityY = InventoryWarning.screenSlotY(
+        InventoryWarning.Kind.DURABILITY, 480f, 41f, 10f);
+    assertEquals(250f, quantityY); // bottom = center + 10
+    assertEquals(189f, durabilityY); // top = center - 10
+    assertEquals(230f, durabilityY + 41f);
   }
 
   @Test
@@ -39,9 +42,9 @@ class InventoryWarningTest {
 
   @Test
   void quantityAndDurabilityUseFixedUpperAndLowerSlots() {
-    assertEquals(43f, InventoryWarning.slotOffsetY(
-        InventoryWarning.Kind.QUANTITY, 41f, 2f));
+    assertEquals(61f, InventoryWarning.slotOffsetY(
+        InventoryWarning.Kind.QUANTITY, 41f, 20f));
     assertEquals(0f, InventoryWarning.slotOffsetY(
-        InventoryWarning.Kind.DURABILITY, 41f, 2f));
+        InventoryWarning.Kind.DURABILITY, 41f, 20f));
   }
 }
