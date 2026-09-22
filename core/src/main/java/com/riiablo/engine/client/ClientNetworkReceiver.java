@@ -475,6 +475,11 @@ public class ClientNetworkReceiver extends IntervalSystem {
         byte[] bytes = BufferUtils.readRemaining(item.dataAsByteBuffer());
         ByteInput byteInput = ByteInput.wrap(bytes);
         Item itemObj = itemReader.readItem(byteInput);
+        // Ground item moves address the authoritative server entity and the
+        // server uses that same value as the item id.  Older snapshots may
+        // carry a pre-entity item id in the serialized payload; normalize it
+        // before the replica can issue a pickup request.
+        itemObj.id = sync.entityId();
         int entityId = factory.createItem(itemObj, position.x(), position.y());
         if (entityId != Engine.INVALID_ENTITY && mItem.has(entityId)) {
           applyGroundItemMetadata(mItem.get(entityId), item);
