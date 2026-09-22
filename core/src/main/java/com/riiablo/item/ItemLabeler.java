@@ -113,11 +113,20 @@ public class ItemLabeler {
    *
    * <p>Gold is represented as a normal item on the ground, but its quantity
    * is the useful part of the label.  Native D2 shows that quantity alongside
-   * the gold name (for example, {@code Gold: 125}); keeping this formatting
+   * the gold name (for example, {@code 125 Gold}); keeping this formatting
    * here avoids changing inventory/detail names for the synthetic gold item.
    */
   static String formatGoldHeader(String name, int quantity) {
-    return quantity > 0 ? name + ": " + quantity : name;
+    if (quantity <= 0) return name;
+    // Asian localization strings conventionally place the quantity directly
+    // before the noun ("1黄金"), while the English label uses a separator
+    // ("1 Gold").
+    boolean cjk = !name.isEmpty() && name.codePoints().anyMatch(ItemLabeler::isCjk);
+    return quantity + (cjk ? "" : " ") + name;
+  }
+
+  private static boolean isCjk(int codePoint) {
+    return codePoint >= 0x2E80 && codePoint <= 0x9FFF;
   }
 
   private static String headerName(Item item) {

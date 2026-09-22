@@ -7,7 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ItemLabelerTest {
   @Test
   void goldHeaderIncludesGroundQuantity() {
-    assertEquals("Gold: 125", ItemLabeler.formatGoldHeader("Gold", 125));
+    assertEquals("125 Gold", ItemLabeler.formatGoldHeader("Gold", 125));
+    assertEquals("125黄金", ItemLabeler.formatGoldHeader("黄金", 125));
   }
 
   @Test
