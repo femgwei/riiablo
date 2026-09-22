@@ -193,6 +193,40 @@ public class CombatSystemTest extends RiiabloTest {
   }
 
   @Test
+  public void ignoreTargetDefenseOnlyAppliesToEligibleMonsterTargets() {
+    CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
+    attacker.isPlayer = true;
+    attacker.ignoreTargetDefense = true;
+    attacker.level = 10;
+    attacker.attackRating = 100;
+
+    CombatSystem.DefenderData normal = new CombatSystem.DefenderData();
+    normal.isMonster = true;
+    normal.level = 10;
+    normal.defense = 1000;
+    assertEquals(95, combat.calculateHitChance(attacker, normal));
+
+    CombatSystem.DefenderData unique = new CombatSystem.DefenderData();
+    unique.isMonster = true;
+    unique.ignoreTargetDefenseAllowed = false;
+    unique.level = 10;
+    unique.defense = 1000;
+    assertEquals(9, combat.calculateHitChance(attacker, unique));
+
+    CombatSystem.DefenderData player = new CombatSystem.DefenderData();
+    player.isPlayer = true;
+    player.level = 10;
+    player.defense = 1000;
+    assertEquals(9, combat.calculateHitChance(attacker, player));
+
+    CombatSystem.AttackerData monsterAttacker = new CombatSystem.AttackerData();
+    monsterAttacker.ignoreTargetDefense = true;
+    monsterAttacker.level = 10;
+    monsterAttacker.attackRating = 100;
+    assertEquals(9, combat.calculateHitChance(monsterAttacker, normal));
+  }
+
+  @Test
   public void deterministicHitResultKeepsArDefenseChanceAndRollTogether() {
     CombatSystem.AttackerData attacker = new CombatSystem.AttackerData();
     attacker.level = 10;

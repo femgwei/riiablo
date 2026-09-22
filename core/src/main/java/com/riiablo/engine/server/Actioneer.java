@@ -1424,6 +1424,7 @@ public class Actioneer extends PassiveSystem {
         }
         boolean attackerPlayer = isPlayerEntity(entityId);
         boolean targetPlayer = isPlayerEntity(targetId);
+        boolean ignoreTargetDefenseAllowed = isIgnoreTargetDefenseAllowed(targetId);
         log.debug("{} attack {}", entityId, targetId);
 
         if (mCasting.has(entityId)
@@ -1648,7 +1649,8 @@ public class Actioneer extends PassiveSystem {
               monsterAttackRating(entityId),
               stateList(entityId), stateList(targetId), isEntityMoving(targetId),
               weaponMastery(entityId, attackWeapon, false),
-              isDemonTarget(targetId), isUndeadTarget(targetId));
+              isDemonTarget(targetId), isUndeadTarget(targetId),
+              ignoreTargetDefenseAllowed);
         }
         // D2Game UNITEVENT_ATTACKEDINMELEE is emitted for every valid melee
         // attack roll, before miss/block stops the damage path. Shiver Armor
@@ -1993,6 +1995,15 @@ public class Actioneer extends PassiveSystem {
   private boolean isMonsterMeleeMode(int entityId) {
     return mMonster.has(entityId) && mCofReference.has(entityId)
         && Monster.isMeleeMode(mCofReference.get(entityId).mode);
+  }
+
+  /** Native ITD excludes players, hirelings, bosses, and unique monsters. */
+  private boolean isIgnoreTargetDefenseAllowed(int entityId) {
+    if (mPlayer.has(entityId) || mMercenary.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    if (monster == null) return true;
+    if (MonsterRank.isUnique(monster.rank) || monster.rank == MonsterRank.BOSS) return false;
+    return monster.monstats == null || !monster.monstats.boss && !monster.monstats.primeevil;
   }
 
   private String monsterModeName(int entityId) {

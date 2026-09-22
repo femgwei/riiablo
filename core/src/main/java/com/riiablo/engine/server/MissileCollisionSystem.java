@@ -937,6 +937,15 @@ public class MissileCollisionSystem extends IteratingSystem {
         && (monster.monstats.lUndead || monster.monstats.hUndead);
   }
 
+  /** Native ITD excludes players, hirelings, bosses, and unique monsters. */
+  private boolean isIgnoreTargetDefenseAllowed(int entityId) {
+    if (mPlayer.has(entityId) || mMercenary.has(entityId)) return false;
+    Monster monster = mMonster.get(entityId);
+    if (monster == null) return true;
+    if (MonsterRank.isUnique(monster.rank) || monster.rank == MonsterRank.BOSS) return false;
+    return monster.monstats == null || !monster.monstats.boss && !monster.monstats.primeevil;
+  }
+
   /** D2MOO SrvDo30/SrvHit53: infected units periodically pass remaining poison. */
   private void processRabiesController(
       int entityId, Missile controller, Position position, int elapsedFrames) {
@@ -1447,6 +1456,7 @@ public class MissileCollisionSystem extends IteratingSystem {
       int arOverride = missile.damageSnapshot ? 0 : missile.attackRating;
       boolean alwaysHit = missile.damageSnapshot && missile.missile != null
           && !missile.missile.ToHit && !missile.usesAttackRating;
+      boolean ignoreTargetDefenseAllowed = isIgnoreTargetDefenseAllowed(targetId);
       CombatSystem.CombatResult combat = CombatSystem.INSTANCE.calculateAttackAtDifficulty(
           attackAttrs,
           targetAttrs,
@@ -1464,7 +1474,8 @@ public class MissileCollisionSystem extends IteratingSystem {
               missile, mMonster.has(targetId) ? mMonster.get(targetId) : null),
           mMonster.has(targetId) && mMonster.get(targetId).monstats != null
               && mMonster.get(targetId).monstats.demon,
-          mMonster.has(targetId) && isUndead(mMonster.get(targetId)));
+          mMonster.has(targetId) && isUndead(mMonster.get(targetId)),
+          ignoreTargetDefenseAllowed);
       boolean damageHit = combat.hit && !combat.blocked;
       if (!combat.hit) {
         log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss "

@@ -225,6 +225,14 @@ public class CombatSystem {
     /** 是否是怪物 */
     public boolean isMonster;
 
+    /**
+     * Whether the native Ignore Target Defense property is allowed to zero
+     * this defender's armor class.  D2 excludes players, unique/super-unique
+     * monsters, bosses, and hirelings; synthetic callers default to true so
+     * ordinary monster behavior remains backwards compatible.
+     */
+    public boolean ignoreTargetDefenseAllowed = true;
+
     /** 等级 */
     public int level;
 
@@ -562,7 +570,7 @@ public class CombatSystem {
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery, 0, 0,
-        false, false);
+        false, false, true);
   }
 
   /** Regular attack with the native monster-type context needed by Sanctuary. */
@@ -576,7 +584,28 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
         null, null, 0, 0, attackerStates, defenderStates, defenderMoving, false,
-        0, DAMAGE_PHYSICAL, mastery, 0, 0, defenderDemon, defenderUndead);
+        0, DAMAGE_PHYSICAL, mastery, 0, 0, defenderDemon, defenderUndead, true);
+  }
+
+  /**
+   * Regular attack with explicit native Ignore Target Defense eligibility.
+   * The flag is supplied by the authoritative entity layer because the
+   * aggregated Attributes object does not retain monster quality or hireling
+   * identity.
+   */
+  public CombatResult calculateAttackAgainstMonsterType(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, false,
+        null, null, 0, 0, attackerStates, defenderStates, defenderMoving, false,
+        0, DAMAGE_PHYSICAL, mastery, 0, 0, defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed);
   }
 
   /** Full context with native Nightmare/Hell resistance penalty selection. */
@@ -594,7 +623,7 @@ public class CombatSystem {
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
-        difficulty, 0, false, false);
+        difficulty, 0, false, false, true);
   }
 
   /**
@@ -616,7 +645,28 @@ public class CombatSystem {
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
-        difficulty, Math.max(0, magicTargetBonusPercent), false, false);
+        difficulty, Math.max(0, magicTargetBonusPercent), false, false, true);
+  }
+
+  /** Full difficulty context with explicit Ignore Target Defense eligibility. */
+  public CombatResult calculateAttackAtDifficulty(
+      Attributes attacker, Attributes defender,
+      boolean attackerPlayer, boolean defenderPlayer, boolean missile,
+      int attackMinDamageOverride, int attackMaxDamageOverride,
+      int attackRatingOverride, boolean alwaysHit,
+      int[] elementalMinOverride, int[] elementalMaxOverride,
+      int coldLengthOverride, int poisonLengthOverride,
+      StateList attackerStates, StateList defenderStates,
+      boolean defenderMoving, StateList.WeaponMasteryBonus mastery,
+      int difficulty, int magicTargetBonusPercent,
+      boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed) {
+    return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, missile,
+        attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
+        elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
+        attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
+        difficulty, Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead,
+        defenderIgnoreTargetDefenseAllowed);
   }
 
   /** Missile/ranged attack with target-class metadata for Sanctuary bonuses. */
@@ -635,7 +685,7 @@ public class CombatSystem {
         attackMinDamageOverride, attackMaxDamageOverride, attackRatingOverride, alwaysHit,
         elementalMinOverride, elementalMaxOverride, coldLengthOverride, poisonLengthOverride,
         attackerStates, defenderStates, defenderMoving, false, 0, DAMAGE_PHYSICAL, mastery,
-        difficulty, Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead);
+        difficulty, Math.max(0, magicTargetBonusPercent), defenderDemon, defenderUndead, true);
   }
 
   /** Resolves a fixed elemental packet for area effects that have no missile
@@ -1016,7 +1066,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         physicalMin, physicalMax, attackRating, false, combinedMin, combinedMax,
         coldLength, poisonLength, attackerStates, defenderStates, defenderMoving, true,
-        0, DAMAGE_PHYSICAL, null, 0, 0, false, false);
+        0, DAMAGE_PHYSICAL, null, 0, 0, false, false, true);
   }
 
   /** Native Barbarian weapon mastery context for one concrete weapon hand. */
@@ -1053,7 +1103,7 @@ public class CombatSystem {
     return calculateAttackInternal(attacker, defender, attackerPlayer, defenderPlayer, false,
         attackMinDamage, attackMaxDamage, attackRating, false,
         null, null, 0, 0, attackerStates, defenderStates, defenderMoving, true,
-        physicalConversionPercent, physicalConversionType, mastery, 0, 0, false, false);
+        physicalConversionPercent, physicalConversionType, mastery, 0, 0, false, false, true);
   }
 
   /**
@@ -1111,7 +1161,7 @@ public class CombatSystem {
         physicalMin, physicalMax, attackRating, alwaysHit,
         elementalMin, elementalMax, coldLength, poisonLength,
         attackerStates, defenderStates, defenderMoving, true, 0, DAMAGE_PHYSICAL, null, 0, 0,
-        false, false);
+        false, false, true);
   }
 
   private CombatResult calculateAttackInternal(
@@ -1125,7 +1175,8 @@ public class CombatSystem {
       boolean defenderMoving, boolean precomputedPhysicalDamage,
       int physicalConversionPercent, int physicalConversionType,
       StateList.WeaponMasteryBonus mastery, int difficulty,
-      int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead) {
+      int magicTargetBonusPercent, boolean defenderDemon, boolean defenderUndead,
+      boolean defenderIgnoreTargetDefenseAllowed) {
     if (attacker == null || defender == null) {
       CombatResult result = new CombatResult();
       result.reset();
@@ -1273,6 +1324,7 @@ public class CombatSystem {
     DefenderData d = new DefenderData();
     d.isPlayer = defenderPlayer;
     d.isMonster = !defenderPlayer;
+    d.ignoreTargetDefenseAllowed = defenderIgnoreTargetDefenseAllowed;
     d.isDemon = defenderDemon;
     d.isUndead = defenderUndead;
     d.level = Math.max(1, statInt(defender, Stat.level, 1));
@@ -1542,7 +1594,8 @@ public class CombatSystem {
     int defense = calculateEffectiveDefense(attacker, defender);
 
     // 如果无视防御
-    if (attacker.ignoreTargetDefense && !defender.isPlayer) {
+    if (attacker.ignoreTargetDefense && attacker.isPlayer && !defender.isPlayer
+        && defender.ignoreTargetDefenseAllowed) {
       defense = 0;
     }
 
