@@ -300,7 +300,11 @@ class CombatPipelineIntegrationTest extends RiiabloTest {
 
     Harness(boolean missiles, boolean monstersOnly) {
       WorldConfigurationBuilder builder = new WorldConfigurationBuilder()
-          .with(new EventSystem(), probe, actioneer, new Pathfinder(), new AnimStepper());
+          // Pathfinder now consumes the shared dynamic-collision service.  The
+          // combat harness does not simulate movement, but it still needs the
+          // service registered so Artemis can wire the real production system.
+          .with(new EventSystem(), probe, actioneer, new DynamicUnitCollisionSystem(false),
+              new Pathfinder(), new AnimStepper());
       if (missiles) builder.with(new ServerSkillSystem(monstersOnly), factory, new MissileCollisionSystem());
       else builder.with(factory);
       world = new World(builder.build()

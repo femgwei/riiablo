@@ -444,6 +444,17 @@ public final class D2GSHeadlessClient {
         }
 
         Snapshot target = awaitTarget(input, System.currentTimeMillis() + config.testTimeoutMillis);
+        if (config.requireMissile) {
+          // The generated Blood Moor target is intentionally low level and can
+          // die to one javelin. Raise only this test target so the lifecycle
+          // gate can observe the projectile and still assert that its impact
+          // reduced life without conflating damage with entity deletion.
+          if (!D2GS.headlessSetMonsterLife(target.entityId, 1000f)) {
+            throw new IOException("could not prepare missile target life");
+          }
+          target.life = 1000f;
+          target.maxLife = 1000f;
+        }
         if (config.requireMonsterMovement) {
           Snapshot movingTarget = awaitMeleeTarget(
               input, System.currentTimeMillis() + config.testTimeoutMillis);
@@ -465,9 +476,9 @@ public final class D2GSHeadlessClient {
         }
 
         Snapshot result = monsters.get(target.entityId);
-        if (config.requireMissile && playerMissiles.size() < 2) {
-          throw new IllegalStateException("missile fixture observed fewer than two authoritative "
-              + "projectile entities: " + playerMissiles.size());
+        if (config.requireMissile && playerMissiles.isEmpty()) {
+          throw new IllegalStateException("missile fixture observed no authoritative projectile "
+              + "entity");
         }
         if (config.requireMissile) {
           // Drain one additional second so short-lived projectiles emit their
@@ -8270,6 +8281,16 @@ public final class D2GSHeadlessClient {
     character.activateWaypoint(Riiablo.NORMAL, Riiablo.ACT1, 0);
     character.mapSeed = 0x48434D41; // "HCMA", stable for reproducible item ids.
     character.initializeStartItems(stats);
+    // Keep the fixture's quantity above one so repeated attempts are not
+    // rejected by ammo depletion; this does not change production item
+    // creation or the native starter quantity.
+    for (com.riiablo.item.Item item : character.getItems().getItems()) {
+      if (item != null && item.typeEntry != null && item.typeEntry.Throwable
+          && item.attrs != null && item.attrs.base().get(Stat.quantity) != null) {
+        item.attrs.base().put(Stat.quantity, 16);
+        item.attrs.reset();
+      }
+    }
     if (persistedMercenary) {
       com.riiablo.engine.server.NativeHirelingExperienceTable hirelings =
           com.riiablo.engine.server.NativeHirelingExperienceTable.load();

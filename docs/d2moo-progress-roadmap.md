@@ -1,6 +1,6 @@
 # riiablo / D2MOO 对齐进度与实施路线
 
-更新时间：2026-09-21
+更新时间：2026-09-22
 基线：`F:/3rd_src/D2MOO`（Diablo II 1.10f）与仓库内 `D2MOO_JAVA`
 
 ## 说明
@@ -59,11 +59,23 @@
   Trade，收到邀请会自动打开窗口，可执行 Accept/Confirm/Cancel；物品拖放、金币输入和
   正式交易栏美术仍待补齐。
 - 仍需真实资源/原版客户端验证的项目单独记录，不把“代码已存在”误报为实机完成：
-  `headlessMissileCombat` 的 Throw/标枪实际伤害、原版 `.d2s/.map/.ma*` 外部识别、
+  `headlessMissileCombat` 与原版 DLL 的 Throw/标枪伤害差异、原版 `.d2s/.map/.ma*` 外部识别、
   Automap 原生/ HackMap 像素级图标与城镇/野外迷雾连续性，以及带真实 MPQ 的完整退出重载。
-- 这些外部门槛不阻塞当前代码推进。当前优先级是：A2Q6 七墓/Arcane Symbol 的稳定
-  预设与对话状态 → NPC 会话重连和雇佣流程 → 玩家交易协议；战斗投射物伤害与 Automap
+- 这些外部门槛不阻塞当前代码推进。当前优先级调整为：战斗 ToHit/伤害/投射物结算链
+  → 佣兵经验与生命周期 → 物品词缀和属性聚合 → NPC 服务与多人交易完整 UI；Automap
   像素比对保留到可稳定启动真实客户端时验收。
+
+## 2026-09-22 Automap 持久化确认与战斗夹具收敛
+
+- [x] 使用 `aaa/bb` 真实存档验证 Automap 探索区域退出保存、重新加载以及在城镇中恢复显示；
+  该项不再作为当前阻塞项。原版 `.map/.ma0-.ma3` 的外部字节级兼容仍属于单独的兼容性审计。
+- [x] 修复 `CombatPipelineIntegrationTest` 因动态单位碰撞系统新增依赖导致的 Artemis wiring 失败；
+  Throw、近战、弓箭和 Throwing Mastery 定向测试重新通过。
+- [x] 收敛 `headlessMissileCombat` 夹具：为测试目标注入独立高生命值，明确验证导弹实体、
+  owner、生命下降和创建/删除 Tick 顺序；当前输出为 `life=1000.00->997.00`、
+  `missile_lifecycle_pass ... ordered=true`。
+- [ ] 战斗主体仍需继续补齐原版 `D2DamageStrc` 的完整 ToHit、伤害、抗性、状态和投射物分支；
+  当前可在无真实客户端条件下继续使用纯 Java 与 D2GS 离屏测试推进。
 
 ## 2026-09-21 地图预热、物品流程与投射物对齐（本轮完成）
 

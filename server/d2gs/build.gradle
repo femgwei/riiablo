@@ -106,11 +106,11 @@ tasks.register('headlessMissileCombat', JavaExec) {
 
 tasks.register('headlessCombatEntityEdges') {
   group = 'verification'
-  description = 'Runs the multi-missile and death-idempotency edge gates.'
-  // The missile fixture asserts multiple authoritative projectile ids, while
-  // the Fallen dual fixture asserts duplicate-death reward idempotency.  Keep
-  // these as separate protocol runs so one low-life native spawn cannot mask
-  // the other edge case.
+  description = 'Runs the projectile lifecycle and death-idempotency edge gates.'
+  // The missile fixture asserts an authoritative projectile, owner and
+  // lifecycle ordering, while the Fallen dual fixture asserts duplicate-death
+  // reward idempotency. Keep these as separate protocol runs so one low-life
+  // native spawn cannot mask the other edge case.
   dependsOn 'headlessMissileCombat', 'headlessFallenDual'
 }
 

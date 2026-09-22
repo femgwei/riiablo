@@ -1467,20 +1467,32 @@ public class MissileCollisionSystem extends IteratingSystem {
           mMonster.has(targetId) && isUndead(mMonster.get(targetId)));
       boolean damageHit = combat.hit && !combat.blocked;
       if (!combat.hit) {
-        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss chance={} damage=0",
-            missileId, missile.ownerId, targetId, combat.hitChance);
+        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=miss "
+                + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
+                + "chance={} roll={} damage=0",
+            missileId, missile.ownerId, targetId,
+            statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
+            combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
         log.debug("Missile {} ranged miss on {} (owner={}, hitChance={}%)",
             missileId, targetId, missile.ownerId, combat.hitChance);
       } else if (combat.blocked) {
-        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=blocked chance={} damage=0",
-            missileId, missile.ownerId, targetId, combat.hitChance);
+        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=blocked "
+                + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
+                + "chance={} roll={} damage=0",
+            missileId, missile.ownerId, targetId,
+            statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
+            combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
         log.debug("Missile {} attack blocked by {} (owner={})", missileId, targetId, missile.ownerId);
         queueHitReaction(targetId, true);
       } else {
         float damage = combat.totalDamage * Math.max(0.01f, missile.damageMultiplier);
-        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit chance={} "
+        log.info("[MISSILE_HIT] phase=result missileId={} owner={} target={} result=hit "
+                + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
+                + "chance={} roll={} "
                 + "physical={} total={} critical={} deadly={} crushing={}",
-            missileId, missile.ownerId, targetId, combat.hitChance,
+            missileId, missile.ownerId, targetId,
+            statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
+            combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll,
             combat.physicalDamage, damage, combat.critical, combat.deadlyStrike,
             combat.crushingBlow);
         if (damage > 0 && mAttributesWrapper.has(targetId)) {
@@ -1534,6 +1546,14 @@ public class MissileCollisionSystem extends IteratingSystem {
           }
           if (hpAfter > 0f) queueHitReaction(targetId, false);
           if (mercenaryDamage) mercenaryLastDamageAfter = hpAfter;
+          log.info("[MISSILE_HIT] phase=impact missileId={} owner={} target={} "
+                  + "damageBefore={} damageAfter={} appliedDamage={} total={} "
+                  + "attackerLevel={} monsterLevel={} attackRating={} targetDefense={} "
+                  + "chance={} roll={}",
+              missileId, missile.ownerId, targetId, targetHitpoints.asFixed() + appliedDamage,
+              hpAfter, appliedDamage, combat.totalDamage,
+              statInt(attackAttrs, Stat.level), statInt(targetAttrs, Stat.level),
+              combat.attackRating, combat.targetDefense, combat.hitChance, combat.hitRoll);
           if (hpAfter <= 0) {
             log.debug("{} killed by missile from {}", targetId, missile.ownerId);
             events.dispatch(DeathEvent.obtain(missile.ownerId, targetId));

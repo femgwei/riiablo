@@ -3481,6 +3481,35 @@ public class D2GS extends ApplicationAdapter {
     }
   }
 
+  /** Test-only fixture: raise a live monster's life so a projectile impact can
+   * be observed without the target entering its death lifecycle immediately. */
+  static boolean headlessSetMonsterLife(int monsterId, float life) {
+    D2GS server = activeHeadlessInstance;
+    if (server == null || server.world == null || Gdx.app == null || life <= 0f) return false;
+    java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.atomic.AtomicBoolean updated =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    Gdx.app.postRunnable(() -> {
+      try {
+        com.riiablo.engine.server.component.AttributesWrapper wrapper = server.world
+            .getMapper(com.riiablo.engine.server.component.AttributesWrapper.class).get(monsterId);
+        if (wrapper != null && wrapper.attrs != null) {
+          wrapper.attrs.get(com.riiablo.attributes.Stat.maxhp).set(life);
+          wrapper.attrs.get(com.riiablo.attributes.Stat.hitpoints).set(life);
+          updated.set(true);
+        }
+      } finally {
+        done.countDown();
+      }
+    });
+    try {
+      return done.await(5, java.util.concurrent.TimeUnit.SECONDS) && updated.get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
+
   /** Test-only fixture: keep wave observers out of monster target selection. */
   static boolean headlessSetPlayerTargetable(int playerId, boolean targetable) {
     D2GS server = activeHeadlessInstance;
