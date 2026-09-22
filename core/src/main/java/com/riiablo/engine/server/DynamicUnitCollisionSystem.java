@@ -83,7 +83,9 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
     Class.Type type = mClass.get(entityId).type;
     if (type != Class.Type.MON && type != Class.Type.PLR) return false;
     if (type == Class.Type.MON && mMonster.has(entityId)) {
-      MonStats.Entry stats = mMonster.get(entityId).monstats;
+      Monster monster = mMonster.get(entityId);
+      if (!isDynamicObstacle(monster)) return false;
+      MonStats.Entry stats = monster.monstats;
       if (stats != null) {
         String base = stats.BaseId == null ? "" : stats.BaseId.toLowerCase(java.util.Locale.ROOT);
         String id = stats.Id == null ? "" : stats.Id.toLowerCase(java.util.Locale.ROOT);
@@ -94,6 +96,16 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       }
     }
     return true;
+  }
+
+  /**
+   * Ambient critters are not dynamic path obstacles in native D2.  They can
+   * still be targeted/rendered by their own systems; this only keeps them out
+   * of the authoritative unit-footprint grid so a player can pass through a
+   * chicken, rat, or similar small animal.
+   */
+  static boolean isDynamicObstacle(Monster monster) {
+    return monster == null || monster.monstats2 == null || !monster.monstats2.critter;
   }
 
   private int footprint(int entityId) {
