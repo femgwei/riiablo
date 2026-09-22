@@ -145,6 +145,8 @@ public class Item {
 
   String name;
   Table details; // TODO: decouple
+  long detailsStatsRevision = Long.MIN_VALUE;
+  long detailsItemRevision = Long.MIN_VALUE;
   Table header; // TODO: decouple
   public ItemWrapper wrapper; // TODO: decouple
 
@@ -190,6 +192,8 @@ public class Item {
 
     name = null;
     details = null;
+    detailsStatsRevision = Long.MIN_VALUE;
+    detailsItemRevision = Long.MIN_VALUE;
     header = null;
     wrapper = new ItemWrapper(this);
   }
@@ -785,10 +789,16 @@ public class Item {
   }
 
   public Table details(AttributesUpdater updater) {
-    if (details == null) {
+    long characterRevision = Riiablo.charData == null || Riiablo.charData.getStats() == null
+        ? Long.MIN_VALUE : Riiablo.charData.getStats().aggregateRevision();
+    long itemRevision = attrs == null ? Long.MIN_VALUE : attrs.aggregateRevision();
+    if (details == null || characterRevision != detailsStatsRevision
+        || itemRevision != detailsItemRevision) {
       // TODO: use item parent itemdata for equipped set counter
       update(updater, Riiablo.charData.getStats(), Riiablo.charData.classId.entry(), Riiablo.charData.getItems().getEquippedSets());
       details = DEFAULT_LABELER.updateLabel(this, new Table(), 0);
+      detailsStatsRevision = characterRevision;
+      detailsItemRevision = attrs == null ? Long.MIN_VALUE : attrs.aggregateRevision();
     }
 
     return details;

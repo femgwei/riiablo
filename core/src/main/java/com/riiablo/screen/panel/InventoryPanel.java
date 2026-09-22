@@ -36,6 +36,7 @@ import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
+import com.riiablo.item.ItemRequirements;
 import com.riiablo.item.StoreLoc;
 import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
@@ -478,13 +479,20 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       boolean blocked = false;
       Item cursorItem = Riiablo.cursor.getItem();
       if (cursorItem != null) {
-        blocked = !ArrayUtils.contains(cursorItem.typeEntry.BodyLoc, bodyPart);
+        blocked = !ArrayUtils.contains(cursorItem.typeEntry.BodyLoc, bodyPart)
+            || !ItemRequirements.check(cursorItem, Riiablo.charData).usable();
       }
 
-      // TODO: red if does not meet item requirements
       boolean isOver = clickListener.isOver();
       PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
-      if (isOver && !blocked && (cursorItem != null || item != null)) {
+      boolean itemRequirementsMet = item == null
+          || ItemRequirements.check(item, Riiablo.charData).usable();
+      if (item != null && !itemRequirementsMet) {
+        b.setBlendMode(BlendMode.SOLID, backgroundColorR);
+        b.draw(fill, getX(), getY(), getWidth(), getHeight());
+        b.resetBlendMode();
+      }
+      if (isOver && !blocked && itemRequirementsMet && (cursorItem != null || item != null)) {
         b.setBlendMode(BlendMode.SOLID, backgroundColorG);
         b.draw(fill, getX(), getY(), getWidth(), getHeight());
         b.resetBlendMode();

@@ -2,13 +2,13 @@ package com.riiablo.engine.server.item;
 
 import com.riiablo.item.BodyLoc;
 import com.riiablo.item.Item;
+import com.riiablo.item.ItemRequirements;
 import com.riiablo.item.Location;
 import com.riiablo.item.StoreLoc;
 import com.riiablo.save.CharData;
 import com.riiablo.save.ItemData;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
-import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.Weapons;
 
 /** Pure validation rules for authoritative item moves. No state is mutated here. */
@@ -154,27 +154,14 @@ public final class ItemMoveValidator {
     for (String loc : item.typeEntry.BodyLoc) if (loc != null && code.equalsIgnoreCase(loc)) { allowed = true; break; }
     if (!allowed) return ItemMoveFailure.BODY_LOC_MISMATCH;
     if (replacing != null && replacing == item) return ItemMoveFailure.BODY_SLOT_OCCUPIED;
-    if (item.classOnly != Item.NO_CLASS_ONLY) {
-      int classId = character.charClass & 0xFF;
-      if (item.classOnly != classId && (item.classOnly & (1 << classId)) == 0)
-        return ItemMoveFailure.REQUIREMENTS_NOT_MET;
-    }
+    if (!ItemRequirements.check(item, character).usable())
+      return ItemMoveFailure.REQUIREMENTS_NOT_MET;
     if (item.base instanceof Weapons.Entry && ((Weapons.Entry) item.base)._2handed
         && BodyLoc.isWeaponLoc(body)) {
       BodyLoc opposite = body == BodyLoc.RARM ? BodyLoc.LARM : BodyLoc.RARM;
       if (character.getItems().getSlot(opposite) != null && character.getItems().getSlot(opposite) != replacing)
         return ItemMoveFailure.BODY_SLOT_OCCUPIED;
     }
-    if (item.attrs != null) {
-      int level = value(character.getStats().get(Stat.level));
-      int reqLevel = value(item.attrs.base().get(Stat.item_levelreq));
-      int reqStr = value(item.attrs.base().get(Stat.reqstr));
-      int reqDex = value(item.attrs.base().get(Stat.reqdex));
-      if (level < reqLevel || value(character.getStats().get(Stat.strength)) < reqStr
-          || value(character.getStats().get(Stat.dexterity)) < reqDex) return ItemMoveFailure.REQUIREMENTS_NOT_MET;
-    }
     return ItemMoveFailure.NONE;
   }
-
-  private static int value(com.riiablo.attributes.StatRef stat) { return stat == null ? 0 : stat.asInt(); }
 }

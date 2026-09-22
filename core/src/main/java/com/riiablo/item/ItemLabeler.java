@@ -197,6 +197,7 @@ public class ItemLabeler {
     }
 
     final Attributes attrs = item.attrs;
+    final ItemRequirements.Result requirements = ItemRequirements.check(item, Riiablo.charData);
     final StatRef tmp = StatRef.obtain();
     //if ((flags & COMPACT) == 0) {
       StatRef prop;
@@ -252,15 +253,20 @@ public class ItemLabeler {
       }
       if (!item.base.nodurability && (prop = attrs.get(Stat.durability)) != null)
         table.add(new Label(Riiablo.string.lookup("ItemStats1d") + " " + prop.asString() + " " + Riiablo.string.lookup("ItemStats1j") + " " + attrs.get(Stat.maxdurability, tmp).asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
-      if (item.type.is(Type.CLAS)) {
-        table.add(new Label(Riiablo.string.lookup(CharacterClass.get(item.typeEntry.Class).entry().StrClassOnly), font, Riiablo.colors.white)).center().space(SPACING).row();
+      CharacterClass requiredClass = ItemRequirements.requiredClass(item);
+      if (requiredClass != null) {
+        table.add(new Label(Riiablo.string.lookup(requiredClass.entry().StrClassOnly), font,
+            requirements.classMet ? Riiablo.colors.white : Riiablo.colors.red)).center().space(SPACING).row();
       }
       if ((prop = attrs.get(Stat.reqdex)) != null && prop.asInt() > 0)
-        table.add(new Label(Riiablo.string.lookup("ItemStats1f") + " " + prop.asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
+        table.add(new Label(Riiablo.string.lookup("ItemStats1f") + " " + prop.asString(), font,
+            requirements.dexterityMet ? Riiablo.colors.white : Riiablo.colors.red)).center().space(SPACING).row();
       if ((prop = attrs.get(Stat.reqstr)) != null && prop.asInt() > 0)
-        table.add(new Label(Riiablo.string.lookup("ItemStats1e") + " " + prop.asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
+        table.add(new Label(Riiablo.string.lookup("ItemStats1e") + " " + prop.asString(), font,
+            requirements.strengthMet ? Riiablo.colors.white : Riiablo.colors.red)).center().space(SPACING).row();
       if ((prop = attrs.get(Stat.item_levelreq)) != null && prop.asInt() > 0)
-        table.add(new Label(Riiablo.string.lookup("ItemStats1p") + " " + prop.asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
+        table.add(new Label(Riiablo.string.lookup("ItemStats1p") + " " + prop.asString(), font,
+            requirements.levelMet ? Riiablo.colors.white : Riiablo.colors.red)).center().space(SPACING).row();
       if ((prop = attrs.get(Stat.quantity)) != null)
         table.add(new Label(Riiablo.string.lookup("ItemStats1i") + " " + prop.asString(), font, Riiablo.colors.white)).center().space(SPACING).row();
       if (item.type.is(Type.WEAP)) {

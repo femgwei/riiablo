@@ -25,6 +25,7 @@ import com.riiablo.codec.excel.Misc;
 import com.riiablo.graphics.BlendMode;
 import com.riiablo.graphics.PaletteIndexedBatch;
 import com.riiablo.item.Item;
+import com.riiablo.item.ItemRequirements;
 import com.riiablo.save.ItemData;
 
 public class ItemGrid extends Group {
@@ -433,7 +434,12 @@ public class ItemGrid extends Group {
     @Override
     public void draw(Batch batch, float parentAlpha) {
       PaletteIndexedBatch b = (PaletteIndexedBatch) batch;
-      b.setBlendMode(BlendMode.SOLID, clickListener.isOver() && itemData.getCursor() == null ? backgroundColorG : backgroundColorB);
+      boolean requirementsMet = ItemRequirements.check(item, Riiablo.charData).usable();
+      Color background = !requirementsMet
+          ? backgroundColorR
+          : clickListener.isOver() && itemData.getCursor() == null
+              ? backgroundColorG : backgroundColorB;
+      b.setBlendMode(BlendMode.SOLID, background);
       b.draw(fill, getX(), getY(), getWidth(), getHeight());
       b.resetBlendMode();
       item.draw(b, 1);
