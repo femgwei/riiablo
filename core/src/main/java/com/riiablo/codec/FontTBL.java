@@ -121,15 +121,12 @@ public class FontTBL {
       copy.scaleY = scaleY;
       copy.markupEnabled = markupEnabled;
       copy.blankLineScale = blankLineScale;
-      copy.missingGlyph = copyGlyph(missingGlyph);
+      // Glyph metadata is immutable after FontTBL construction. Share the
+      // page arrays instead of cloning every CJK glyph for every visual font
+      // variant; the old deep copy allocated ~150k Glyph objects at startup.
+      copy.missingGlyph = missingGlyph;
       for (int page = 0; page < glyphs.length; page++) {
-        if (glyphs[page] == null) continue;
-        for (int slot = 0; slot < glyphs[page].length; slot++) {
-          if (glyphs[page][slot] != null) {
-            BitmapFont.Glyph glyph = copyGlyph(glyphs[page][slot]);
-            copy.setGlyph(glyph.id, glyph);
-          }
-        }
+        copy.glyphs[page] = glyphs[page];
       }
       return copy;
     }

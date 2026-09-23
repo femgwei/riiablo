@@ -995,8 +995,10 @@ public class Map implements Disposable {
     static final Array<AssetDescriptor> EMPTY_ASSET_ARRAY = new Array<>(0);
     Array<AssetDescriptor> dependencies = EMPTY_ASSET_ARRAY;
 
-    /** Persistent copies of native RoomEx DS1 objects. */
+    /** Persistent copies of native RoomEx DS1 objects used by ECS. */
     final Array<NativeObject> nativeObjects = new Array<>();
+    /** Complete RoomEx object export, including native-only substitutions. */
+    final Array<NativeObject> nativeObjectAudit = new Array<>();
     /** Native D2MOO RoomEx rectangles in world subtiles. */
     final Array<RoomEx> roomsEx = new Array<>();
     private boolean roomActivationTracking;
@@ -1169,6 +1171,7 @@ public class Map implements Disposable {
       dependencies = EMPTY_ASSET_ARRAY;
 
       nativeObjects.clear();
+      nativeObjectAudit.clear();
       roomsEx.clear();
       roomActivationTracking = false;
 
@@ -1223,6 +1226,11 @@ public class Map implements Disposable {
 
     public Array<NativeObject> getNativeObjects() {
       return nativeObjects;
+    }
+
+    /** All exported object units, including entries deliberately kept out of ECS. */
+    public Array<NativeObject> getNativeObjectAudit() {
+      return nativeObjectAudit;
     }
 
     /** Entity IDs created for this zone, including native warps. */
@@ -2017,6 +2025,7 @@ public class Map implements Disposable {
       this.spawned = spawned;
       this.sourceFile = sourceFile == null ? "" : sourceFile;
       this.externalEntity = externalEntity;
+      if (!externalEntity) this.creationStatus = "audit_only_external_false";
       this.currentMode = validObjectMode(mode) ? (byte) mode : 0;
     }
 

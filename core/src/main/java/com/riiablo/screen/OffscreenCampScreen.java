@@ -296,8 +296,10 @@ public final class OffscreenCampScreen extends GameScreen {
     int[] trapCapable = new int[3];
     int[] nativeDefinitions = new int[2];
     for (Map.Zone zone : map.getZones()) {
-      if (zone.levelId() == 1) nativeDefinitions[0] += zone.getNativeObjects().size;
-      if (zone.levelId() == 2) nativeDefinitions[1] += zone.getNativeObjects().size;
+      int definitions = zone.getNativeObjectAudit().size > 0
+          ? zone.getNativeObjectAudit().size : zone.getNativeObjects().size;
+      if (zone.levelId() == 1) nativeDefinitions[0] += definitions;
+      if (zone.levelId() == 2) nativeDefinitions[1] += definitions;
     }
     for (int i = 0; i < entities.size(); i++) {
       int id = entities.get(i);
@@ -381,7 +383,9 @@ public final class OffscreenCampScreen extends GameScreen {
     for (Map.Zone zone : map.getZones()) {
       if (zone == null || zone.level == null) continue;
       int act = zone.levelAct();
-      for (Map.NativeObject nativeObject : zone.getNativeObjects()) {
+      com.badlogic.gdx.utils.Array<Map.NativeObject> auditObjects = zone.getNativeObjectAudit();
+      if (auditObjects.size == 0) auditObjects = zone.getNativeObjects();
+      for (Map.NativeObject nativeObject : auditObjects) {
         int objectId = nativeObject.ds1Raw ? -1 : nativeObject.presetIndex;
         try {
           if (nativeObject.ds1Raw && nativeObject.presetIndex >= 0

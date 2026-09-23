@@ -1402,6 +1402,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         applier.resetLastExportedFloorCount();
         int n = DrlgExport.exportLevelTiles(drlg, levelId, applier);
         Array<Map.NativeObject> nativeObjects = new Array<>();
+        Array<Map.NativeObject> nativeObjectAudit = new Array<>();
         int[] rawObjectCounts = new int[2];
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
@@ -1419,8 +1420,10 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               // Keep both provenance and bSpawned. D2Game skips spawned
               // preset units; MapManager applies the same rule after the
               // complete native list has been exported.
-              nativeObjects.add(new Map.NativeObject(roomId, index, mode, x, y, ds1Raw,
-                  spawned, sourceFile, externalEntity));
+              Map.NativeObject exportedObject = new Map.NativeObject(roomId, index, mode, x, y,
+                  ds1Raw, spawned, sourceFile, externalEntity);
+              nativeObjectAudit.add(exportedObject);
+              if (externalEntity) nativeObjects.add(exportedObject);
             });
         int exportedDt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
         d2MooDt1Masks.put(levelId, exportedDt1Mask);
@@ -1446,6 +1449,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
           Zone nativeZone = findZoneByLevelId(map, levelId);
           if (nativeZone != null) {
             nativeZone.nativeObjects.addAll(nativeObjects);
+            nativeZone.nativeObjectAudit.addAll(nativeObjectAudit);
             exportNativeRooms(drlg, levelId, nativeZone);
             DrlgLevel nativeTarget = drlgLevels.get(levelId);
             if (nativeTarget != null && nativeTarget.grid != null) {
