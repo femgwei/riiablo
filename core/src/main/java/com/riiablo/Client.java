@@ -288,9 +288,25 @@ public class Client extends Game {
       throw new GdxRuntimeException("saves folder does not exist. Copy saves to " + saves);
     }
 
+    // Cvars must be loaded before language resources and fonts. Client.Language
+    // intentionally defaults to empty so the system locale remains the fallback.
+    Riiablo.cvars = cvars = new GdxCvarManager();
+    Collection<Throwable> throwables = Cvars.addTo(cvars);
+    for (Throwable t : throwables) {
+      Gdx.app.error(TAG, t.getMessage(), t);
+    }
+
     Riiablo.mpqs = mpqs = new MPQFileHandleResolver();
+    String commandLineLanguage = System.getProperty("riiablo.language");
+    String configuredLanguage = Cvars.Client.Language.get();
     D2Language language = D2Language.resolve(
-        System.getProperty("riiablo.language"), Locale.getDefault());
+        commandLineLanguage, configuredLanguage, Locale.getDefault());
+    String languageSource = commandLineLanguage != null && !commandLineLanguage.trim().isEmpty()
+        ? "command line"
+        : configuredLanguage != null && !configuredLanguage.trim().isEmpty()
+            ? "Client.Language"
+            : "system locale";
+    Gdx.app.log(TAG, "Language source: " + languageSource);
     if (language == D2Language.CHINESE
         && (!mpqs.contains("data\\local\\lng\\chi\\string.tbl")
             || !mpqs.contains("data\\local\\font\\chi\\font16.tbl"))) {
@@ -336,18 +352,12 @@ public class Client extends Game {
     Riiablo.anim = anim = D2.loadFromFile(mpqs.resolve("data\\global\\eanimdata.d2"));
     Riiablo.metrics = metrics = new Metrics();
 
-    Collection<Throwable> throwables;
     Riiablo.commands = commands = new GdxCommandManager();
     throwables = Commands.addTo(commands);
     for (Throwable t : throwables) {
       Gdx.app.error(TAG, t.getMessage(), t);
     }
 
-    Riiablo.cvars = cvars = new GdxCvarManager();
-    throwables = Cvars.addTo(cvars);
-    for (Throwable t : throwables) {
-      Gdx.app.error(TAG, t.getMessage(), t);
-    }
     String offscreenHackMap = System.getProperty("riiablo.offscreen-hackmap");
     if (offscreenHackMap != null) {
       Cvars.Client.Automap.HackMap.set(Boolean.valueOf(offscreenHackMap));

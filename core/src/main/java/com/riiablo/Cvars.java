@@ -50,6 +50,12 @@ public class Cvars {
   private Cvars() {}
 
   public interface Client {
+    Cvar<String> Language = Cvar.builder(String.class)
+        .alias("Client.Language")
+        .description("Resource language override; empty uses the system language")
+        .defaultValue("")
+        .build();
+
     Cvar<Locale> Locale = Cvar.builder(Locale.class)
         .alias("Client.Locale")
         .description("Locale of the game client")

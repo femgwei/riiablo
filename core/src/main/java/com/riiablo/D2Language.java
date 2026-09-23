@@ -34,4 +34,18 @@ public enum D2Language {
         ? CHINESE
         : ENGLISH;
   }
+
+  /**
+   * Resolves language with the runtime precedence used by the client:
+   * command-line override, persisted Client.Language cvar, then system locale.
+   */
+  public static D2Language resolve(String commandLine, String configured, Locale systemLocale) {
+    if (commandLine != null && !commandLine.trim().isEmpty()) {
+      return resolve(commandLine, systemLocale);
+    }
+    if (configured != null && !configured.trim().isEmpty()) {
+      return resolve(configured, systemLocale);
+    }
+    return resolve(null, systemLocale);
+  }
 }
