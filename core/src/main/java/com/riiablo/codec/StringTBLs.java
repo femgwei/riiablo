@@ -3,6 +3,8 @@ package com.riiablo.codec;
 import com.badlogic.gdx.Gdx;
 import com.riiablo.D2Language;
 import com.riiablo.mpq.MPQFileHandleResolver;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class StringTBLs {
   private static final String TAG = "StringTBLs";
@@ -16,9 +18,12 @@ public class StringTBLs {
 
   public StringTBLs(MPQFileHandleResolver resolver, D2Language language) {
     String root = "data\\local\\lng\\" + language.resourceCode + "\\";
-    string          = StringTBL.loadFromFile(resolver.resolve(root + "string.tbl"));
-    expansionstring = StringTBL.loadFromFile(resolver.resolve(root + "expansionstring.tbl"));
-    patchstring     = StringTBL.loadFromFile(resolver.resolve(root + "patchstring.tbl"));
+    Charset valueCharset = language == D2Language.CHINESE
+        ? StandardCharsets.UTF_8
+        : StandardCharsets.US_ASCII;
+    string          = StringTBL.loadFromFile(resolver.resolve(root + "string.tbl"), valueCharset);
+    expansionstring = StringTBL.loadFromFile(resolver.resolve(root + "expansionstring.tbl"), valueCharset);
+    patchstring     = StringTBL.loadFromFile(resolver.resolve(root + "patchstring.tbl"), valueCharset);
 
     patchstring.getEntry("strModEnhancedDamage").strOffset--;
 

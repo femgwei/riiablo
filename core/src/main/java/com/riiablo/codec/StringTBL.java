@@ -244,10 +244,26 @@ public class StringTBL {
   }
 
   public static StringTBL loadFromFile(FileHandle file) {
-    return loadFromStream(new ByteArrayInputStream(file.readBytes()));
+    return loadFromFile(file, null);
+  }
+
+  /**
+   * Loads a table using the specified encoding for string values.
+   *
+   * <p>All lookup keys remain ASCII and are decoded independently. The original
+   * English tables use single-byte text, while the native Asian tables may use
+   * UTF-8 even when their table version is still v1, so callers must be able to
+   * select the value encoding explicitly.
+   */
+  public static StringTBL loadFromFile(FileHandle file, Charset charset) {
+    return loadFromStream(new ByteArrayInputStream(file.readBytes()), charset);
   }
 
   public static StringTBL loadFromStream(InputStream in) {
+    return loadFromStream(in, null);
+  }
+
+  public static StringTBL loadFromStream(InputStream in, Charset valueCharset) {
     try {
       Header header = new Header(in);
       if (DEBUG) Gdx.app.debug(TAG, header.toString());
@@ -266,11 +282,14 @@ public class StringTBL {
 
       final int dataSize = header.endIndex - header.startIndex;
       byte[] text = IOUtils.readFully(in, dataSize);
-      // Blizzard's v1 tables use single-byte ASCII/Latin strings. The East
-      // Asian v0 tables bundled with Diablo II use UTF-8 values while keeping
-      // their lookup keys in ASCII. Offsets and lengths are byte-based, so the
-      // raw data must remain bytes until an individual value is decoded.
-      Charset charset = header.version == 0 ? StandardCharsets.UTF_8 : StandardCharsets.US_ASCII;
+      // Blizzard's English tables use single-byte ASCII/Latin strings. Some
+      // localized tables store UTF-8 values while retaining the v1 table
+      // version, so the encoding cannot be inferred from the version alone.
+      // Offsets and lengths are byte-based, so the raw data must remain bytes
+      // until an individual value is decoded.
+      Charset charset = valueCharset != null
+          ? valueCharset
+          : (header.version == 0 ? StandardCharsets.UTF_8 : StandardCharsets.US_ASCII);
       return new StringTBL(header, indexes, hashTable, text, charset);
     } catch (Throwable t) {
       throw new GdxRuntimeException("Couldn't load StringTBL from stream.", t);

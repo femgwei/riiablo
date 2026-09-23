@@ -50,9 +50,50 @@ class D2LocalizationResourceProbeTest {
       assertTrue(fontData.fontSheets.size > 0);
       assertTrue(fontData.getGlyph('\u82b1') != null);
       assertTrue(fontData.getGlyph('\u8cbb') != null);
+      assertDistinctGlyphFrames(font, dc6, '\u82b1', '\u8cbb', '\u552e', '\u50f9');
     } finally {
       for (Pixmap sheet : fontData.fontSheets) sheet.dispose();
       dc6.dispose();
+    }
+  }
+
+  private static void assertDistinctGlyphFrames(FontTBL font, DC6 dc6, char... chars) {
+    java.util.HashSet<Integer> frames = new java.util.HashSet<>();
+    for (char ch : chars) {
+      FontTBL.CharData data = null;
+      for (FontTBL.CharData candidate : font.cData) {
+        if (candidate.wChar == ch) {
+          data = candidate;
+          break;
+        }
+      }
+      assertTrue(data != null, "Missing font table entry for " + ch);
+      int frame = data.imageIndex | data.nChar << 8;
+      assertTrue(frames.add(frame), "Chinese glyphs unexpectedly share frame " + frame);
+      assertTrue(frame < dc6.getNumFramesPerDir(), "Font frame outside DC6: " + frame);
+    }
+  }
+
+  @Test
+  void everyNativeChineseFontContainsUnicodeGlyphs() {
+    String home = System.getenv("D2_LOCALIZATION_HOME");
+    Assumptions.assumeTrue(home != null && new File(home, "d2data.mpq").isFile());
+    Gdx.app = new HeadlessApplication(new ApplicationAdapter() {});
+    MPQFileHandleResolver resolver = new MPQFileHandleResolver(new FileHandle(home));
+    String[] names = {"font6", "font8", "font16", "font24", "font30", "font42",
+        "fontformal10", "fontformal11", "fontformal12", "fontexocet10", "fontridiculous",
+        "ReallyTheLastSucker"};
+    for (String name : names) {
+      FontTBL font = FontTBL.loadFromFile(resolver.resolve("data\\local\\font\\chi\\" + name + ".tbl"));
+      DC6 dc6 = DC6.loadFromFile(resolver.resolve("data\\local\\font\\chi\\" + name + ".dc6"));
+      FontTBL.BitmapFontData data = font.data(dc6);
+      try {
+        assertTrue(data.getGlyph('\u82b1') != null, name + " lacks 花");
+        assertTrue(data.getGlyph('\u8cbb') != null, name + " lacks 費");
+      } finally {
+        for (Pixmap sheet : data.fontSheets) sheet.dispose();
+        dc6.dispose();
+      }
     }
   }
 }
