@@ -6,11 +6,15 @@ import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
 import com.riiablo.codec.FontTBL;
+import com.riiablo.codec.excel.Speech;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 public class DialogScroller extends Table implements Disposable {
+  private static final Logger log = LogManager.getLogger(DialogScroller.class);
 
   private static final FontTBL.BitmapFont FONT = Riiablo.fonts.fontformal11;
   public static final float PADDING = 8;
@@ -74,8 +78,17 @@ public class DialogScroller extends Table implements Disposable {
     // FIXME: scrollSpeed should be in pixels/sec, but timing is off by about 10-15%
     //        problem seems to be with fontformat11 metrics, applying scalar to line height
     final float lineScalar = 0.85f;
-    String key = Riiablo.files.speech.get(dialog).soundstr;
-    String text = Riiablo.string.lookup(key);
+    Speech.Entry speech = Riiablo.files.speech.get(dialog);
+    if (speech == null) {
+      log.error("Missing speech mapping: {}", dialog);
+      textArea.setText(Riiablo.bundle.get("unknown"));
+      scrollPane.layout();
+      scrollSpeed = 0;
+      scrollPane.setScrollY(0);
+      audio = null;
+      return;
+    }
+    String text = Riiablo.string.lookup(speech.soundstr);
     String[] parts = text.split("\n", 2);
     scrollSpeed = NumberUtils.toFloat(parts[0]) / 60 * FONT.getLineHeight() * lineScalar;
     textArea.setText(parts[1]);

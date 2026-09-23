@@ -3,6 +3,7 @@ package com.riiablo.engine.server.ai;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import java.util.Locale;
 
 import com.artemis.ComponentMapper;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -103,6 +104,12 @@ public class Npc extends AI {
   String name;
   MonStats.Entry monstats;
 
+  /** Stable, language-independent prefix used for speech and sound table keys. */
+  private String speechPrefix() {
+    String id = monstats != null ? monstats.Id : name;
+    return id == null ? "" : id.trim().toLowerCase(Locale.ROOT);
+  }
+
   protected VendorGenerator vendors;
   /** Normal trade stock persists until the town inventory is refreshed. */
   private Array<Item> vendorStock;
@@ -132,8 +139,7 @@ public class Npc extends AI {
           .addItem(3399, new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-              String name = Npc.this.name.toLowerCase();
-              String id = name + "_act1_intro";
+              String id = speechPrefix() + "_act1_intro";
               dialogManager.setDialog(new NpcDialogBox(id, new NpcDialogBox.DialogCompletionListener() {
                 @Override
                 public void onCompleted(NpcDialogBox d) {
@@ -146,8 +152,7 @@ public class Npc extends AI {
           .addItem(3395, new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-              String name = Npc.this.name.toLowerCase();
-              String id = name + "_act1_gossip_1";
+              String id = speechPrefix() + "_act1_gossip_1";
               dialogManager.setDialog(new NpcDialogBox(id, new NpcDialogBox.DialogCompletionListener() {
                 @Override
                 public void onCompleted(NpcDialogBox d) {
@@ -276,11 +281,10 @@ public class Npc extends AI {
     // TODO: need some kind of static method that can take in some state params, e.g., character
     //       class, player mode and spit out the proper file index.
     //       I.e., akara_act1_intro -> akara_act1_intro_sor automatically if it exists
-    String name = Npc.this.name.toLowerCase();
-    String id = name + "_greeting_1";
+    String id = speechPrefix() + "_greeting_1";
     Audio.Instance instance = Riiablo.audio.play(id, false);
     if (instance == null) {
-      id = name + "_greeting_inactive_1";
+      id = speechPrefix() + "_greeting_inactive_1";
       Riiablo.audio.play(id, false);
     }
 

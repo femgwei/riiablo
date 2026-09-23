@@ -6,13 +6,17 @@ import com.badlogic.gdx.utils.Disposable;
 import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
 import com.riiablo.codec.FontTBL;
+import com.riiablo.codec.excel.Speech;
 import com.riiablo.graphics.BorderedPaletteIndexedDrawable;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 // FIXME: should extend DialogScroller
 public class NpcDialogBox extends Table implements Disposable {
+  private static final Logger log = LogManager.getLogger(NpcDialogBox.class);
 
   DialogCompletionListener listener;
   TextArea textArea;
@@ -30,12 +34,22 @@ public class NpcDialogBox extends Table implements Disposable {
     //        problem seems to be with fontformat11 metrics, applying scalar to line height
     final float lineScalar = 0.85f;
     final FontTBL.BitmapFont FONT = Riiablo.fonts.fontformal11;
-    String key = Riiablo.files.speech.get(sound).soundstr;
-    String text = Riiablo.string.lookup(key);
+    Speech.Entry speech = Riiablo.files.speech.get(sound);
+    if (speech == null) {
+      // Speech IDs are data keys and must not be derived from localized NPC
+      // display names. Keep malformed/missing rows from taking down the client.
+      log.error("Missing speech mapping: {}", sound);
+    }
+    String text = speech != null && speech.soundstr != null
+        ? Riiablo.string.lookup(speech.soundstr)
+        : Riiablo.bundle.get("unknown");
     String[] parts = text.split("\n", 2);
-    scrollSpeed = NumberUtils.toFloat(parts[0]) / 60 * FONT.getLineHeight() * lineScalar;
-    final int count = StringUtils.countMatches(parts[1], '\n');
-    textArea = new TextArea(parts[1], new TextArea.TextFieldStyle() {{
+    String body = parts.length > 1 ? parts[1] : parts[0];
+    scrollSpeed = parts.length > 1
+        ? NumberUtils.toFloat(parts[0]) / 60 * FONT.getLineHeight() * lineScalar
+        : FONT.getLineHeight();
+    final int count = StringUtils.countMatches(body, '\n');
+    textArea = new TextArea(body, new TextArea.TextFieldStyle() {{
       font = FONT;
       fontColor = Riiablo.colors.white;
     }}) {
@@ -59,7 +73,7 @@ public class NpcDialogBox extends Table implements Disposable {
     pack();
 
     scrollPane.setScrollY(-scrollPane.getScrollHeight() + textArea.getStyle().font.getLineHeight() / 2);
-    audio = Riiablo.audio.play(sound, false);
+    audio = speech == null ? null : Riiablo.audio.play(sound, false);
   }
 
   @Override
@@ -73,7 +87,7 @@ public class NpcDialogBox extends Table implements Disposable {
 
   @Override
   public void dispose() {
-    audio.stop();
+    if (audio != null) audio.stop();
   }
 
   public interface DialogCompletionListener {
