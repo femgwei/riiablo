@@ -1404,7 +1404,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         Array<Map.NativeObject> nativeObjects = new Array<>();
         int[] rawObjectCounts = new int[2];
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
-            (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+            (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
+                externalEntity, sourceFile) -> {
               if (unitType != D2UnitTypes.UNIT_OBJECT) return;
               rawObjectCounts[0]++;
               DrlgLevel targetLevel = drlgLevels.get(exportLevelId);
@@ -1418,7 +1419,8 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
               // Keep both provenance and bSpawned. D2Game skips spawned
               // preset units; MapManager applies the same rule after the
               // complete native list has been exported.
-              nativeObjects.add(new Map.NativeObject(index, mode, x, y, ds1Raw, spawned));
+              nativeObjects.add(new Map.NativeObject(roomId, index, mode, x, y, ds1Raw,
+                  spawned, sourceFile, externalEntity));
             });
         int exportedDt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
         d2MooDt1Masks.put(levelId, exportedDt1Mask);

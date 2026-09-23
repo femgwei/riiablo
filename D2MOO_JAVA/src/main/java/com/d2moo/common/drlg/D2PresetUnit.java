@@ -25,6 +25,7 @@ public class D2PresetUnit {
      * entity bridge.</p>
      */
     private boolean externalEntity = true;
+    private String sourceFile;
     private D2MapAIStrc pMapAI;                  // 0x18 D2MapAIStrc*
     private D2PresetUnit pNext;                  // 0x1C
     
@@ -53,6 +54,9 @@ public class D2PresetUnit {
     public void setExternalEntity(boolean externalEntity) {
         this.externalEntity = externalEntity;
     }
+
+    public String getSourceFile() { return sourceFile; }
+    public void setSourceFile(String sourceFile) { this.sourceFile = sourceFile; }
     
     public D2MapAIStrc getPMapAI() { return pMapAI; }
     public void setPMapAI(D2MapAIStrc pMapAI) { this.pMapAI = pMapAI; }

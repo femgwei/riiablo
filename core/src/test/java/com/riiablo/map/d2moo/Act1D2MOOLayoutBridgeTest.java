@@ -797,7 +797,8 @@ public class Act1D2MOOLayoutBridgeTest extends RiiabloTest {
       int[] nativeShrines = new int[1];
       int[] nativeChests = new int[1];
       int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
-          (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+          (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
+              externalEntity, sourceFile) -> {
             unitStats[0]++;
             if (unitType == D2UnitTypes.UNIT_OBJECT && !spawned) {
               unitStats[1]++;

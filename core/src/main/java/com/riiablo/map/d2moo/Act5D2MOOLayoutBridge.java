@@ -97,12 +97,14 @@ public final class Act5D2MOOLayoutBridge {
         zone.setNativeTileGrid(grid, dt1Mask);
         int[] objectCounts = {0, 0};
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
-            (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+            (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
+                externalEntity, sourceFile) -> {
               if (unitType == D2UnitTypes.UNIT_OBJECT) objectCounts[0]++;
               if (unitType == D2UnitTypes.UNIT_OBJECT && x >= 0 && y >= 0
                   && x < width * com.riiablo.map.DT1.Tile.SUBTILE_SIZE
                   && y < height * com.riiablo.map.DT1.Tile.SUBTILE_SIZE) {
-                zone.addNativeObject(index, mode, x, y);
+                zone.getNativeObjects().add(new Map.NativeObject(roomId, index, mode, x, y,
+                    ds1Raw, spawned, sourceFile, externalEntity));
               } else if (unitType == D2UnitTypes.UNIT_OBJECT) objectCounts[1]++;
             });
         exportedLevels++;

@@ -22,6 +22,7 @@ public class D2DrlgFileStrc {
     private int nSubstGroups;                    // 0x4C 替换组数量（原始游戏中称为 nClusters）
     private D2DrlgSubstGroupStrc[] pSubstGroups; // 0x50 D2DrlgSubstGroupStrc* 替换组数组
     private D2PresetUnit pPresetUnit;           // 0x54 预设单位链表
+    private String sourceFile;
     private D2DrlgFileStrc pNext;                // 0x58 下一个文件
     
     public D2DrlgFileStrc() {
@@ -195,6 +196,9 @@ public class D2DrlgFileStrc {
     public void setPPresetUnit(D2PresetUnit pPresetUnit) {
         this.pPresetUnit = pPresetUnit;
     }
+
+    public String getSourceFile() { return sourceFile; }
+    public void setSourceFile(String sourceFile) { this.sourceFile = sourceFile; }
     
     public D2DrlgFileStrc getPNext() {
         return pNext;

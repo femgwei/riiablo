@@ -757,6 +757,7 @@ public class DrlgTileSub {
         // (trees, stones, puddles and borders) stay native-only.
         copy.setDs1Raw(source.isDs1Raw());
         copy.setExternalEntity(exportDs1Origin);
+        copy.setSourceFile(source.getSourceFile());
         return copy;
     }
 
@@ -783,6 +784,9 @@ public class DrlgTileSub {
         return name.equalsIgnoreCase("Waypoint.ds1")
                 || name.equalsIgnoreCase("WaySmall.ds1")
                 || name.equalsIgnoreCase("ShrineW.ds1")
+                || name.equalsIgnoreCase("ShrineD.ds1")
+                || name.equalsIgnoreCase("ShrineF.ds1")
+                || name.equalsIgnoreCase("ShrineH.ds1")
                 || name.equalsIgnoreCase("Object.ds1");
     }
 

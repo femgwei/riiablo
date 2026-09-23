@@ -48,6 +48,12 @@ class DrlgTileSubPresetUnitTest {
     smallWaypoint.setSzFile("Act1/Outdoors/WaySmall.ds1");
     D2LvlSubTxt shrine = new D2LvlSubTxt();
     shrine.setSzFile("Act1/Outdoors/ShrineW.ds1");
+    D2LvlSubTxt shrineD = new D2LvlSubTxt();
+    shrineD.setSzFile("Act1/Outdoors/ShrineD.ds1");
+    D2LvlSubTxt shrineF = new D2LvlSubTxt();
+    shrineF.setSzFile("Act1/Outdoors/ShrineF.ds1");
+    D2LvlSubTxt shrineH = new D2LvlSubTxt();
+    shrineH.setSzFile("Act1/Outdoors/ShrineH.ds1");
     D2LvlSubTxt object = new D2LvlSubTxt();
     object.setSzFile("Act1\\Outdoors\\Object.ds1");
     D2LvlSubTxt border = new D2LvlSubTxt();
@@ -58,6 +64,9 @@ class DrlgTileSubPresetUnitTest {
     assertTrue(DrlgTileSub.isWaypointSubstitution(waypoint));
     assertTrue(DrlgTileSub.isWaypointSubstitution(smallWaypoint));
     assertTrue(DrlgTileSub.isInteractiveSubstitution(shrine));
+    assertTrue(DrlgTileSub.isInteractiveSubstitution(shrineD));
+    assertTrue(DrlgTileSub.isInteractiveSubstitution(shrineF));
+    assertTrue(DrlgTileSub.isInteractiveSubstitution(shrineH));
     assertTrue(DrlgTileSub.isInteractiveSubstitution(object));
     org.junit.jupiter.api.Assertions.assertFalse(DrlgTileSub.isWaypointSubstitution(border));
     org.junit.jupiter.api.Assertions.assertFalse(DrlgTileSub.isInteractiveSubstitution(border));

@@ -1965,6 +1965,8 @@ public class Map implements Disposable {
 
   /** A DS1 object exported from a native D2MOO RoomEx, in Zone-local subtiles. */
   public static final class NativeObject {
+    /** Native RoomEx ordinal which owns this preset unit, or -1 when unknown. */
+    public final int roomId;
     public final int presetIndex;
     public final int mode;
     public final int x;
@@ -1973,6 +1975,15 @@ public class Map implements Disposable {
     public final boolean ds1Raw;
     /** D2MOO bSpawned flag; spawned units are already materialized by D2Game. */
     public final boolean spawned;
+    /** DS1 substitution/preset source path, when exported by D2MOO. */
+    public final String sourceFile;
+    /** Whether this native unit is intended for external ECS materialization. */
+    public final boolean externalEntity;
+    /** Resolver/classification values populated by MapManager for audits. */
+    public int resolvedObjectId = -1;
+    public String resolverKind = "UNRESOLVED";
+    public String creationStatus = "PENDING";
+    public int entityId = -1;
     /** Persistent logical state retained when the owning ECS entity is rebuilt. */
     private byte currentMode;
     private boolean opened;
@@ -1986,18 +1997,26 @@ public class Map implements Disposable {
     private float wellRegenFrames;
 
     NativeObject(int presetIndex, int mode, int x, int y) {
-      this(presetIndex, mode, x, y, true, false);
+      this(-1, presetIndex, mode, x, y, true, false, null, true);
     }
 
     /** Public for resource bridges in map.d2moo; state remains immutable. */
     public NativeObject(int presetIndex, int mode, int x, int y,
         boolean ds1Raw, boolean spawned) {
+      this(-1, presetIndex, mode, x, y, ds1Raw, spawned, null, true);
+    }
+
+    public NativeObject(int roomId, int presetIndex, int mode, int x, int y,
+        boolean ds1Raw, boolean spawned, String sourceFile, boolean externalEntity) {
+      this.roomId = roomId;
       this.presetIndex = presetIndex;
       this.mode = mode;
       this.x = x;
       this.y = y;
       this.ds1Raw = ds1Raw;
       this.spawned = spawned;
+      this.sourceFile = sourceFile == null ? "" : sourceFile;
+      this.externalEntity = externalEntity;
       this.currentMode = validObjectMode(mode) ? (byte) mode : 0;
     }
 

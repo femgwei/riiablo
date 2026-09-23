@@ -134,20 +134,19 @@ public final class DrlgExport {
         int levelOriginY = level.getLevelCoords().getNPosY();
         int count = 0;
         int suppressed = 0;
+        int roomId = 0;
         for (D2DrlgRoom room = level.getFirstRoomEx(); room != null;
-                room = room.getDrlgRoomNext()) {
+                room = room.getDrlgRoomNext(), roomId++) {
             if (room.getTileGrid() == null) DrlgActivate.initializeRoomEx(room);
             int roomX = (room.getNTileXPos() - levelOriginX) * 5;
             int roomY = (room.getNTileYPos() - levelOriginY) * 5;
             for (D2PresetUnit unit = room.getPresetUnits(); unit != null;
                     unit = unit.getPNext()) {
-                if (!unit.isExternalEntity()) {
-                    suppressed++;
-                    continue;
-                }
-                exporter.onPresetUnit(levelId, unit.getNUnitType(), unit.getNIndex(),
+                if (!unit.isExternalEntity()) suppressed++;
+                exporter.onPresetUnit(levelId, roomId, unit.getNUnitType(), unit.getNIndex(),
                     unit.getNMode(), roomX + unit.getNXpos(), roomY + unit.getNYpos(),
-                    unit.isDs1Raw(), unit.isBSpawned());
+                    unit.isDs1Raw(), unit.isBSpawned(), unit.isExternalEntity(),
+                    unit.getSourceFile());
                 count++;
             }
         }

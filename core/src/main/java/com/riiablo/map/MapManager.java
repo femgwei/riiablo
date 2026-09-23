@@ -158,6 +158,11 @@ public class MapManager extends PassiveSystem {
     int skipped = 0;
     IntSet roomsInBatch = new IntSet();
     for (Map.NativeObject object : zone.nativeObjects) {
+      if (!object.externalEntity) {
+        object.creationStatus = "skipped_external_entity_false";
+        skipped++;
+        continue;
+      }
       int worldX = zone.x + object.x;
       int worldY = zone.y + object.y;
       Map.RoomEx room = zone.findRoomEx(worldX, worldY);
@@ -167,11 +172,13 @@ public class MapManager extends PassiveSystem {
         // D2Game::SUNIT_SpawnPresetUnitsInRoom ignores units already marked
         // as spawned. Creating them again would duplicate generated objects.
         skipped++;
+        object.creationStatus = "skipped_spawned";
         continue;
       }
 
       if (room != null && room.isPresetUnitsSpawned() && !roomsInBatch.contains(room.id)) {
         skipped++;
+        object.creationStatus = "skipped_room_processed";
         continue;
       }
       if (room != null) roomsInBatch.add(room.id);
@@ -187,6 +194,9 @@ public class MapManager extends PassiveSystem {
               map.seed, object.x, object.y);
       if (!resolution.shouldCreate()) {
         skipped++;
+        object.resolvedObjectId = resolution.classId;
+        object.resolverKind = resolution.kind.name();
+        object.creationStatus = "skipped_resolver";
         Gdx.app.debug(TAG, String.format(
             "Skipping D2MOO native object: level=%s(%d) presetIndex=%d classId=%d ds1Raw=%s spawned=%s",
             zone.level.LevelName, zone.level.Id, object.presetIndex, objectId,
@@ -194,6 +204,8 @@ public class MapManager extends PassiveSystem {
         continue;
       }
       int resolvedObjectId = resolution.classId;
+      object.resolvedObjectId = resolvedObjectId;
+      object.resolverKind = resolution.kind.name();
       if (resolvedObjectId != objectId
           || resolution.kind != NativePresetObjectResolver.Kind.ORDINARY) {
         Gdx.app.log(TAG, String.format(
@@ -208,6 +220,7 @@ public class MapManager extends PassiveSystem {
               resolvedObjectId, worldX, worldY);
       if (id == Engine.INVALID_ENTITY) {
         failed++;
+        object.creationStatus = "failed_factory";
         Gdx.app.error(TAG, String.format(
             "Unable to create D2MOO native object: level=%s(%d) presetIndex=%d objectId=%d resolvedObjectId=%d mode=%d "
                 + "local=(%d,%d) world=(%d,%d)",
@@ -215,6 +228,8 @@ public class MapManager extends PassiveSystem {
             resolvedObjectId, object.mode,
             object.x, object.y, zone.x + object.x, zone.y + object.y));
       } else {
+        object.entityId = id;
+        object.creationStatus = "created";
         // Native exports already tell us the owning level. Do not resolve it
         // again from coordinates: adjacent/overlapping zone bounds can make a
         // waypoint activate the wrong Levels.txt record.

@@ -1283,6 +1283,7 @@ public class DrlgPreset {
         newPresetUnit.setBSpawned(presetUnit.isBSpawned());
         newPresetUnit.setDs1Raw(presetUnit.isDs1Raw());
         newPresetUnit.setExternalEntity(presetUnit.isExternalEntity());
+        newPresetUnit.setSourceFile(presetUnit.getSourceFile());
         
         // 复制 MapAI（如果存在）
         if (presetUnit.getPMapAI() != null) {
@@ -1443,6 +1444,7 @@ public class DrlgPreset {
         if (pDrlgFile == null || szFile == null || szFile.isEmpty()) {
             return;
         }
+        pDrlgFile.setSourceFile(szFile);
         byte[] fileData = readDS1FileData(hArchive, szFile);
         if (fileData == null || fileData.length == 0) {
             D2Log.warning("DRLGPRESET_ParseDS1File: Failed to read DS1 file: " + szFile);
@@ -1531,6 +1533,7 @@ public class DrlgPreset {
                 // external renderer does not confuse it with hard-coded
                 // class ids added later by DRLGROOMTILE_AddTilePresetUnits.
                 unit.setDs1Raw(true);
+                unit.setSourceFile(fileName);
                 unit.setPNext(first);
                 first = unit;
             }

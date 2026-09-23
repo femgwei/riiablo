@@ -339,6 +339,7 @@ public final class OffscreenCampScreen extends GameScreen {
     output.mkdirs();
     output.child("act1-town-bloodmoor-objects.csv")
         .writeString(csv.toString(), false, "UTF-8");
+    writeNativeObjectAudit(output);
     StringBuilder summary = new StringBuilder();
     summary.append("objectAudit=true\n");
     summary.append("objectAuditLevel1Total=").append(total[0]).append('\n');
@@ -370,6 +371,50 @@ public final class OffscreenCampScreen extends GameScreen {
       throw new IllegalStateException("Act1 town/outdoor object generation is empty: level1="
           + total[0] + " level2=" + total[1]);
     }
+  }
+
+  /** Writes every exported RoomEx object, including native-only/deferred rows. */
+  private void writeNativeObjectAudit(com.badlogic.gdx.files.FileHandle output) {
+    StringBuilder csv = new StringBuilder(
+        "levelId,roomId,presetIndex,objectId,unitType,mode,worldX,worldY,sourceFile,"
+            + "ds1Raw,externalEntity,spawned,resolverKind,creationStatus,entityId,name,operateFn,trapProb\n");
+    for (Map.Zone zone : map.getZones()) {
+      if (zone == null || zone.level == null) continue;
+      int act = zone.levelAct();
+      for (Map.NativeObject nativeObject : zone.getNativeObjects()) {
+        int objectId = nativeObject.ds1Raw ? -1 : nativeObject.presetIndex;
+        try {
+          if (nativeObject.ds1Raw && nativeObject.presetIndex >= 0
+              && nativeObject.presetIndex < Riiablo.files.obj.getSize(act)) {
+            objectId = Riiablo.files.obj.getObjectId(act, nativeObject.presetIndex);
+          }
+        } catch (RuntimeException ignored) {
+          // Preserve the row even when a malformed DS1 index cannot be resolved.
+        }
+        com.riiablo.codec.excel.Objects.Entry base = objectId >= 0
+            ? Riiablo.files.objects.get(objectId) : null;
+        String resolverKind = nativeObject.resolverKind;
+        if ("UNRESOLVED".equals(resolverKind) && objectId >= 0) {
+          try {
+            resolverKind = NativePresetObjectResolver.resolve(act, zone.level.Id, objectId,
+                map.seed(), nativeObject.x, nativeObject.y).kind.name();
+          } catch (RuntimeException ignored) {}
+        }
+        csv.append(zone.level.Id).append(',').append(nativeObject.roomId).append(',')
+            .append(nativeObject.presetIndex).append(',').append(objectId).append(',')
+            .append(com.d2moo.common.drlg.D2UnitTypes.UNIT_OBJECT).append(',')
+            .append(nativeObject.mode).append(',').append(zone.x() + nativeObject.x).append(',')
+            .append(zone.y() + nativeObject.y).append(',').append(csvValue(nativeObject.sourceFile))
+            .append(',').append(nativeObject.ds1Raw).append(',').append(nativeObject.externalEntity)
+            .append(',').append(nativeObject.spawned).append(',').append(csvValue(resolverKind))
+            .append(',').append(csvValue(nativeObject.creationStatus)).append(',')
+            .append(nativeObject.entityId).append(',')
+            .append(csvValue(base == null || base.Name == null ? "" : base.Name)).append(',')
+            .append(base == null ? -1 : base.OperateFn).append(',')
+            .append(base == null ? 0 : base.TrapProb).append('\n');
+      }
+    }
+    output.child("native-object-audit.csv").writeString(csv.toString(), false, "UTF-8");
   }
 
   private void validateNativeAutomapRendering() {

@@ -141,7 +141,8 @@ public final class Act3D2MOOLayoutBridge {
         com.badlogic.gdx.utils.Array<Map.NativeObject> exportedObjects =
             new com.badlogic.gdx.utils.Array<>();
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
-            (exportLevelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+            (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
+                externalEntity, sourceFile) -> {
               if (unitType == D2UnitTypes.UNIT_TILE) {
                 // Floor/room exits are emitted as UNIT_TILE and carry the
                 // destination LevelId instead of a DS1 wall style.
@@ -166,7 +167,7 @@ public final class Act3D2MOOLayoutBridge {
                 return;
               }
               exportedObjects.add(new Map.NativeObject(
-                  index, mode, x, y, ds1Raw, spawned));
+                  roomId, index, mode, x, y, ds1Raw, spawned, sourceFile, externalEntity));
             });
         int dt1Mask = DrlgExport.collectLevelDt1Mask(drlg, levelId);
         if (floors > 0) {

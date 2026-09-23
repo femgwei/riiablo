@@ -509,7 +509,8 @@ class Act1MapBuilderD2MooLayersTest {
 
     int[] exported = new int[8];
     int count = DrlgExport.exportLevelPresetUnits(drlg, 4,
-        (levelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+        (levelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
+            externalEntity, sourceFile) -> {
           exported[0] = levelId;
           exported[1] = unitType;
           exported[2] = index;

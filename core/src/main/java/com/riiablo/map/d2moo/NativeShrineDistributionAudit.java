@@ -56,7 +56,8 @@ public final class NativeShrineDistributionAudit {
         final int seed = gameSeed;
         bloodMoorUnits[0] += DrlgExport.exportLevelPresetUnits(generated,
             D2LevelIds.LEVEL_BLOODMOOR,
-            (levelId, unitType, index, mode, x, y, ds1Raw, spawned) -> {
+            (levelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
+                externalEntity, sourceFile) -> {
               // D2MOO exports non-object presets too; only Objects.txt classes
               // participate in shrine/well creation.
               if (unitType != D2UnitTypes.UNIT_OBJECT || spawned) return;
