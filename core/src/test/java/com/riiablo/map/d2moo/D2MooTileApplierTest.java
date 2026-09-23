@@ -109,7 +109,7 @@ class D2MooTileApplierTest {
   }
 
   @Test
-  void skipsHiddenFloorAndShadowGraphics() {
+  void retainsHiddenFloorAndShadowRecordsForNativeRendering() {
     TileGrid grid = new TileGrid(1, 1);
     D2MooTileApplier applier = new D2MooTileApplier();
     applier.putGrid(LEVEL_ID, grid);
@@ -119,10 +119,10 @@ class D2MooTileApplierTest {
     applier.onTile(LEVEL_ID, DrlgExport.LAYER_SHADOW, 0, 0,
         pack(Orientation.SHADOW, 6, 1), DrlgTileExporter.FLAG_HIDDEN);
 
-    assertEquals(-1, grid.floorIds[0][0]);
-    assertEquals(false, grid.exportedFloorCells[0][0]);
-    assertEquals(-1, grid.shadowIds[0][0]);
-    assertEquals(2, applier.getIgnoredLayerCount());
+    assertEquals(index(Orientation.FLOOR, 6, 1), grid.floorIds[0][0]);
+    assertEquals(true, grid.exportedFloorCells[0][0]);
+    assertEquals(index(Orientation.SHADOW, 6, 1), grid.shadowIds[0][0]);
+    assertEquals(0, applier.getIgnoredLayerCount());
   }
 
   @Test
