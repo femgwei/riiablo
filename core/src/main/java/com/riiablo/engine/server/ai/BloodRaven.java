@@ -28,6 +28,10 @@ public final class BloodRaven extends AI {
 
   private final Vector2 anchor = new Vector2();
   private float nextThink;
+  /** Native dwAiParam[0]: accumulated chance for the first monster skill. */
+  private int quickStrikeRollChance;
+  /** Native dwAiParam[2]: Blood Raven is currently returning to her anchor. */
+  private boolean returningToAnchor;
   private int specialUses;
   private String state = "IDLE";
 
@@ -45,6 +49,8 @@ public final class BloodRaven extends AI {
     super.initialize();
     if (mPosition.has(entityId)) anchor.set(mPosition.get(entityId).position);
     nextThink = 0f;
+    quickStrikeRollChance = 0;
+    returningToAnchor = false;
     specialUses = 0;
   }
 
@@ -76,35 +82,50 @@ public final class BloodRaven extends AI {
       return;
     }
 
-    // Keep the boss close to its native spawn point.  The original uses a
-    // running path for this branch, not an unrestricted chase.
+    // D2MOO keeps two distances here: the target's distance from the spawn
+    // point and Blood Raven's own distance from it.  The five-unit stop
+    // threshold applies only after the AI has entered the return-home state;
+    // applying it unconditionally makes her take a few steps and immediately
+    // snap back, which looks like an immobile ranged boss.
+    float targetAnchorDistance = target.dst(anchor);
     float anchorDistance = position.dst(anchor);
-    if (anchorDistance >= ANCHOR_LEASH) {
+    if (targetAnchorDistance >= ANCHOR_LEASH || anchorDistance > ANCHOR_LEASH) {
+      returningToAnchor = true;
       state = "RETURN";
-      runTo(anchor, 100, Engine.INVALID_ENTITY);
-      return;
+      if (runTo(anchor, 100, Engine.INVALID_ENTITY)) return;
+      returningToAnchor = false;
     }
-    if (anchorDistance > ANCHOR_STOP) {
+    if (returningToAnchor && anchorDistance > ANCHOR_STOP) {
       state = "RETURN";
-      runTo(anchor, 100, Engine.INVALID_ENTITY);
-      return;
+      if (runTo(anchor, 100, Engine.INVALID_ENTITY)) return;
+      returningToAnchor = false;
     }
+    returningToAnchor = false;
 
-    if (targetDistance > 20f) {
-      // Native Blood Raven closes only part of the gap before deciding again.
+    if (targetDistance > 20f && targetAnchorDistance < ANCHOR_LEASH) {
+      // Native Blood Raven closes only part of the gap before deciding again:
+      // max(targetDistance / 2, 12) units from the target.  Running directly
+      // to the target makes her collide with the player and prevents the
+      // ranged branch from behaving like the original.
       state = "APPROACH";
-      runTo(target, 100, targetId);
-      return;
+      float desiredDistance = Math.max(targetDistance / 2f, 12f);
+      Vector2 approach = target.cpy().sub(position);
+      if (!approach.isZero(0.0001f)) {
+        approach.nor().scl(-desiredDistance).add(target);
+        if (runTo(approach, 100, Engine.INVALID_ENTITY)) return;
+      }
     }
 
     lookAt(targetId);
 
-    // Skill2 is Quick Strike in the 1.10 data.  Native chance is
-    // 10 * (difficulty + 4); normal difficulty therefore uses 40%.
+    // Skill2 is Quick Strike in the 1.10 data.  D2MOO accumulates this
+    // chance by three points on every think tick (dwAiParam[0]) rather than
+    // rolling a fresh fixed 40% chance each time.
+    quickStrikeRollChance = Math.min(100, quickStrikeRollChance + 3);
     if (targetDistance > CLOSE_DISTANCE
         && hasSkill(QUICK_STRIKE_SLOT)
         && specialUses < quickStrikeLimit()
-        && rollAiChance(quickStrikeChance())) {
+        && rollAiChance(quickStrikeRollChance)) {
       // The 1.10 data names a dedicated BR sequence (XX), but a number of
       // reduced asset sets do not contain CRXXBOW.cof.  Use the native bow
       // attack mode as a presentation-safe fallback; SrvSt50/SrvDo092 and
@@ -112,6 +133,7 @@ public final class BloodRaven extends AI {
       if (useMonsterSkill(QUICK_STRIKE_SLOT, targetId, target.cpy(),
           Engine.Monster.MODE_A1)) {
         specialUses++;
+        quickStrikeRollChance = 0;
         state = "QUICK_STRIKE";
         return;
       }
@@ -155,10 +177,6 @@ public final class BloodRaven extends AI {
   private int difficulty() {
     if (!mMapWrapper.has(entityId) || mMapWrapper.get(entityId).map == null) return 0;
     return Math.max(0, Math.min(2, mMapWrapper.get(entityId).map.getDifficulty()));
-  }
-
-  private int quickStrikeChance() {
-    return Math.min(100, 10 * (difficulty() + 4));
   }
 
   private int quickStrikeLimit() {
