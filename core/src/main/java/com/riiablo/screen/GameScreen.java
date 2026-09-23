@@ -1409,27 +1409,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     engine.getSystem(Box2DPhysics.class).createBodies();
 
-    if (socket == null) {
-      // MapManager creates the town NPCs during show(). Their COF/DCC layers
-      // are queued by CofResolver/CofLayerLoader only when ECS processes the
-      // newly-created components.  Leaving those requests asynchronous makes
-      // a newly entered town render for one or two seconds without Warriv.
-      // Run the small initial presentation pipeline to completion before the
-      // game screen becomes visible. Subsequent room monsters remain lazy.
-      long presentationStart = System.nanoTime();
-      processInitialPresentationPass(); // queue COF descriptors
-      Riiablo.assets.finishLoading();    // decode COFs
-      processInitialPresentationPass(); // queue DCC/DC6 layers
-      Riiablo.assets.finishLoading();    // decode layers
-      processInitialPresentationPass(); // attach decoded layers to Animation
-      long presentationElapsed = System.nanoTime() - presentationStart;
-      if (presentationElapsed >= 1_000_000L) {
-        Gdx.app.log(TAG, String.format(
-            "[INITIAL_PRESENTATION_ASSETS] elapsedMs=%.2f queuedTownEntities=true",
-            presentationElapsed / 1_000_000f));
-      }
-    }
-
     Levels.Entry waypointTarget = pendingWaypointTarget;
     Vector2 origin = waypointTarget != null && waypointTarget.Act == map.getAct()
         ? mapManager.findWaypointPosition(waypointTarget, new Vector2())
@@ -1471,6 +1450,28 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       }
     }
     pendingWaypointTarget = null;
+
+    if (socket == null) {
+      // Artemis dispatches entity-insert callbacks when the world is
+      // processed.  MapManager created the town entities before the player,
+      // but the presentation pass must run after both are present: systems
+      // such as sound/automap use the local player as their listener.  The
+      // first process tick now publishes the NPC COF/DCC requests, including
+      // Warriv's immediate NU -> WL transition, before the screen is visible.
+      long presentationStart = System.nanoTime();
+      engine.process();
+      processInitialPresentationPass(); // queue COF descriptors
+      Riiablo.assets.finishLoading();    // decode COFs
+      processInitialPresentationPass(); // queue DCC/DC6 layers
+      Riiablo.assets.finishLoading();    // decode layers
+      processInitialPresentationPass(); // attach decoded layers to Animation
+      long presentationElapsed = System.nanoTime() - presentationStart;
+      if (presentationElapsed >= 1_000_000L) {
+        Gdx.app.log(TAG, String.format(
+            "[INITIAL_PRESENTATION_ASSETS] elapsedMs=%.2f queuedTownEntities=true",
+            presentationElapsed / 1_000_000f));
+      }
+    }
 
     renderer.setSrc(player);
     renderer.updatePosition(true);
