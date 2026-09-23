@@ -152,6 +152,9 @@ public class SkillCastHandler extends PassiveSystem {
       case 39: // Resurrect: ServerEntityFactory owns the revive; the client
                 // already presents stsound/castoverlay above.
         break;
+      case 36: // Nest: the server creates the summoned monster at the MIS
+                // keyframe; client presentation is limited to sound/overlay.
+        break;
       default:
         log.warn("Unsupported cltstfunc({}) for {} casting {}", event.cltstfunc, event.entityId, event.skillId);
     }
