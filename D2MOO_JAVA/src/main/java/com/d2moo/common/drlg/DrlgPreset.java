@@ -1566,7 +1566,12 @@ public class DrlgPreset {
                 // ints are absent. D2's archive allocator exposes zero-filled
                 // tail padding, so native D2Common parses a zero-extended
                 // final group. Limit compatibility to less than one group.
-                D2Log.warning("DRLGPRESET_ParseDS1File: zero-padding final substitution group"
+                // Retail Trees.ds1 intentionally ends with a partially
+                // serialized final group. Native archive allocation exposes
+                // zero-filled tail bytes, and readIntOrZero below reproduces
+                // that behavior. This is expected data, not a malformed
+                // preset, so keep it out of the warning stream.
+                D2Log.debug("DRLGPRESET_ParseDS1File: zero-padding final substitution group"
                                 + " file=%s version=%d groups=%d missingBytes=%d",
                         fileName, version, groups, missingGroupBytes);
             }
