@@ -31,6 +31,7 @@ import com.riiablo.map.pfa.GraphPath;
 
 import java.util.Iterator;
 
+@Wire(failOnNull = false)
 @All({Pathfind.class, Position.class, Velocity.class})
 public class Pathfinder extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(Pathfinder.class);
@@ -49,6 +50,12 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<MapWrapper> mMapWrapper;
+  /**
+   * Optional for focused headless tests and legacy worlds.  The movement
+   * queries below already treat a missing dynamic-collision service as an
+   * empty dynamic layer; gameplay worlds register the full service.
+   */
+  @Wire(failOnNull = false)
   protected DynamicUnitCollisionSystem dynamicCollision;
 
   @Wire(name = "map")
