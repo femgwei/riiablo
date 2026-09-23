@@ -149,6 +149,9 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 12: // Jab uses the server-synchronized native SQ presentation.
         break;
+      case 39: // Resurrect: ServerEntityFactory owns the revive; the client
+                // already presents stsound/castoverlay above.
+        break;
       default:
         log.warn("Unsupported cltstfunc({}) for {} casting {}", event.cltstfunc, event.entityId, event.skillId);
     }
