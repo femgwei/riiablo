@@ -511,12 +511,30 @@ public class Actioneer extends PassiveSystem {
       CombatPositionHistory.RangeResult result = combatPositionHistory.meleeRange(
           attackerId, targetId, meleeRange, rangeBonus, tick);
       if (result == CombatPositionHistory.RangeResult.MISSING_SNAPSHOT) {
-        log.warn("[MELEE_RANGE] phase=reject source={} target={} tick={} reason=missing_snapshot",
-            attackerId, targetId, tick);
+        // Room activation can create an entity after the fixed-tick history
+        // was captured. Native D2 evaluates the current unit positions in
+        // that case; rejecting the attack makes every newly awakened monster
+        // lose its first melee swing. Keep historical validation whenever a
+        // snapshot exists, and use the current authoritative ECS positions
+        // only for this initialization gap.
+        log.debug("[MELEE_RANGE] phase=fallback source={} target={} tick={} "
+                + "reason=missing_snapshot using=current_positions", attackerId, targetId, tick);
+        return currentMeleeRange(attackerId, targetId, meleeRange, rangeBonus);
       }
       return result == CombatPositionHistory.RangeResult.IN_RANGE;
     }
 
+    Position attacker = mPosition.get(attackerId);
+    Position target = mPosition.get(targetId);
+    int attackerSize = mSize.has(attackerId) ? mSize.get(attackerId).size : Size.INSIGNIFICANT;
+    int targetSize = mSize.has(targetId) ? mSize.get(targetId).size : Size.INSIGNIFICANT;
+    return NativeMeleeDistance.isInRange(
+        Math.round(attacker.position.x), Math.round(attacker.position.y), attackerSize,
+        Math.round(target.position.x), Math.round(target.position.y), targetSize,
+        meleeRange, rangeBonus);
+  }
+
+  private boolean currentMeleeRange(int attackerId, int targetId, int meleeRange, int rangeBonus) {
     Position attacker = mPosition.get(attackerId);
     Position target = mPosition.get(targetId);
     int attackerSize = mSize.has(attackerId) ? mSize.get(attackerId).size : Size.INSIGNIFICANT;
