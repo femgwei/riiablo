@@ -78,6 +78,17 @@ public class BeltGrid extends ItemGrid {
     }
   }
 
+  /** Belt row zero is the bottom quick-slot row; inventory rows are top-origin. */
+  @Override
+  protected float itemY(Item item, float itemHeight) {
+    return item.gridY * boxHeight;
+  }
+
+  @Override
+  protected int gridY(float y, float itemHeight) {
+    return (int) y / boxHeight;
+  }
+
   public void setHidden(boolean b) {
     if (hidden != b) {
       hidden = b;

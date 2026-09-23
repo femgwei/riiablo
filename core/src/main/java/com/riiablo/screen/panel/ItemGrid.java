@@ -153,8 +153,7 @@ public class ItemGrid extends Group {
       if (stored == null) {
         stored = addItem(item);
       } else {
-        stored.setPosition(item.gridX * boxWidth,
-            getHeight() - item.gridY * boxHeight - stored.getHeight());
+        stored.setPosition(item.gridX * boxWidth, itemY(item, stored.getHeight()));
       }
     }
   }
@@ -176,9 +175,19 @@ public class ItemGrid extends Group {
 
   protected StoredItem addItem(Item item) {
     StoredItem store = new StoredItem(item);
-    store.setPosition(item.gridX * boxWidth, getHeight() - item.gridY * boxHeight - store.getHeight());
+    store.setPosition(item.gridX * boxWidth, itemY(item, store.getHeight()));
     addActor(store);
     return store;
+  }
+
+  /** Converts a persisted grid row into the actor's bottom-origin y coordinate. */
+  protected float itemY(Item item, float itemHeight) {
+    return getHeight() - item.gridY * boxHeight - itemHeight;
+  }
+
+  /** Converts a clamped bottom-origin actor y coordinate back to a grid row. */
+  protected int gridY(float y, float itemHeight) {
+    return (int) (getHeight() - y - itemHeight) / boxHeight;
   }
 
   protected boolean accept(Item item) {
@@ -222,7 +231,7 @@ public class ItemGrid extends Group {
     gridListener.onSwap(i, x, y);
   }
 
-  private void mouseMoved() {
+  protected void mouseMoved() {
     swap = null;
     blocked = true;
     hits.clear();
@@ -271,7 +280,7 @@ public class ItemGrid extends Group {
       itemSize.set(itemWidth, itemHeight);
 
       grid.x = (int) x / boxWidth;
-      grid.y = (int) (getHeight() - y - itemHeight) / boxHeight;
+      grid.y = gridY(y, itemHeight);
 
       hits.clear();
       float boxWidth50  = boxWidth  / 2f;

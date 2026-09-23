@@ -238,6 +238,20 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   }
 
   @Test
+  void equippingBeltKeepsExistingPotionInBottomQuickSlot() {
+    CharData character = character();
+    Item potion = item("hp1", 244);
+    assertTrue(character.getItems().addPotionToBelt(potion));
+    assertEquals(0, potion.gridY);
+
+    equipBelt(character, "mbl", 245);
+
+    assertEquals(3, character.getItems().getBeltRows());
+    assertEquals(0, potion.gridY);
+    assertSame(potion, character.getItems().getBeltPotion(potion.gridX));
+  }
+
+  @Test
   void manualBeltMoveRejectsRowsNotProvidedByEquippedBelt() {
     CharData character = character();
     equipBelt(character, "mbl", 245); // Native medium belt: three rows.
