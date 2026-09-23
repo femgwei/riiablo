@@ -19,10 +19,12 @@ import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.map.Map;
 import com.riiablo.map.MapManager;
 import com.riiablo.item.Item;
 import com.riiablo.save.CharData;
+import com.riiablo.engine.server.monster.MonsterRank;
 import org.junit.jupiter.api.Test;
 
 class MonsterRoomActivationTest {
@@ -155,6 +157,38 @@ class MonsterRoomActivationTest {
     Map.MonsterSpawn spawn = room.getPendingMonsterSpawns().get(0);
     assertEquals(41, spawn.packId);
     assertTrue(spawn.minion);
+  }
+
+  @Test
+  void deferredSuperUniqueSpawnRetainsNativeIdentityAndRank() {
+    Map map = new Map(0, 0);
+    Map.Zone zone = nativeThreeRoomZone();
+    zone.map = map;
+    Map.RoomEx room = zone.getRoomsEx().get(0);
+    room.addMonsterSpawn(7, 10, 10, -1, false, 42, "Blood Raven");
+
+    RecordingFactory factory = new RecordingFactory();
+    RoomActivationSystem activation = new RoomActivationSystem();
+    World world = new World(new WorldConfigurationBuilder().with(activation, factory)
+        .build().register("factory", factory).register("map", map));
+    try {
+      int playerId = world.create();
+      world.getMapper(Player.class).create(playerId);
+      world.getMapper(Position.class).create(playerId).position.set(10, 10);
+      world.getMapper(MapWrapper.class).create(playerId).set(map, zone);
+
+      world.process();
+
+      assertEquals(1, factory.monstersCreated);
+      assertEquals(MonsterRank.SUPER_UNIQUE, factory.lastRank);
+      assertEquals(42, factory.lastUniqueId);
+      assertEquals(42, world.getMapper(SuperUnique.class).get(factory.lastMonsterId).id);
+      assertEquals("Blood Raven",
+          world.getMapper(SuperUnique.class).get(factory.lastMonsterId).key);
+      assertTrue(room.isMonsterPopulationSpawned());
+    } finally {
+      world.dispose();
+    }
   }
 
   @Test
@@ -484,6 +518,9 @@ class MonsterRoomActivationTest {
 
   private static final class RecordingFactory extends EntityFactory {
     int monstersCreated;
+    int lastMonsterId = Engine.INVALID_ENTITY;
+    int lastRank = MonsterRank.NORMAL;
+    int lastUniqueId = -1;
 
     @Override public int createPlayer(CharData data, Vector2 position) { return Engine.INVALID_ENTITY; }
     @Override public int createDynamicObject(int act, int id, float x, float y) { return Engine.INVALID_ENTITY; }
@@ -497,9 +534,18 @@ class MonsterRoomActivationTest {
     public int createMonster(int monsterId, float x, float y) {
       monstersCreated++;
       int id = world.create();
+      lastMonsterId = id;
       world.getMapper(Monster.class).create(id);
       world.getMapper(Position.class).create(id).position.set(x, y);
       return id;
+    }
+
+    @Override
+    public int createMonster(int monsterId, float x, float y, int rank, long affixes,
+        int championType, int uniqueId) {
+      lastRank = rank;
+      lastUniqueId = uniqueId;
+      return createMonster(monsterId, x, y);
     }
   }
 
