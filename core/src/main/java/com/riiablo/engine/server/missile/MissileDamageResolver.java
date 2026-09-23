@@ -468,7 +468,13 @@ public final class MissileDamageResolver {
       int coldLength, int poisonLength) {
     StatListRef base = projectile.damage.base();
     base.clear();
-    base.put(Stat.level, level);
+    // The level used to evaluate a Skills.txt/Missiles.txt row is not
+    // necessarily the attacker's character level (for example, an elemental
+    // arrow is initialized with the skill level).  CombatSystem reads
+    // Stat.level from this snapshot for the chance-to-hit formula, so preserve
+    // the owner level here and keep the row/skill level in damageLevel.
+    int ownerLevel = ownerAttrs != null ? statInt(ownerAttrs, Stat.level) : 0;
+    base.put(Stat.level, Math.max(1, ownerLevel > 0 ? ownerLevel : level));
     if (ownerAttrs != null) {
       base.put(Stat.strength, statInt(ownerAttrs, Stat.strength));
       base.put(Stat.dexterity, statInt(ownerAttrs, Stat.dexterity));

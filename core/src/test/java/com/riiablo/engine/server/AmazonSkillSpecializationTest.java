@@ -86,6 +86,8 @@ class AmazonSkillSpecializationTest extends RiiabloTest {
         new Vector2(), 40).setOwner(1);
     assertTrue(MissileDamageResolver.initializeSkill(fireMissile, fire, owner, 10));
     assertTrue(fireMissile.damageSnapshot);
+    assertEquals(20, fireMissile.damage.get(Stat.level).asInt(),
+        "hit chance must use the character level, not the elemental arrow skill level");
     assertTrue(fireMissile.usesAttackRating);
     assertTrue(fireMissile.damage.get(Stat.firemindam).asInt() >= 1);
     assertTrue(fireMissile.damage.get(Stat.mindamage).asInt() < 10,
