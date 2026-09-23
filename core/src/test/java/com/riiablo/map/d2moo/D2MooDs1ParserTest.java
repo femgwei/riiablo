@@ -89,6 +89,38 @@ class D2MooDs1ParserTest extends RiiabloTest {
   }
 
   @Test
+  void rogueEncampmentSouthPortalMarkerUsesNativeTile11Encoding() {
+    for (String variant : new String[] {"TownN1", "TownE1", "TownS1", "TownW1"}) {
+      D2DrlgFileStrc file = load("Act1/Town/" + variant + ".ds1");
+      int markerCount = 0;
+      int tile11X = -1;
+      int tile11Y = -1;
+      int stride = file.getNWidth() + 1;
+      for (int layer = 0; layer < file.getNWallLayers(); layer++) {
+        int[] walls = (int[]) file.getPWallLayer(layer);
+        int[] types = (int[]) file.getPTileTypeLayer(layer);
+        for (int y = 0; y < file.getNHeight(); y++) {
+          for (int x = 0; x < file.getNWidth(); x++) {
+            int offset = y * stride + x;
+            int type = types[offset] & 0xFF;
+            int marker = walls[offset] >>> 20 & 0x3F;
+            if (type != 10 && type != 11) continue;
+            if (marker >= 30 && marker <= 34) {
+              markerCount++;
+              if (marker == 33) { tile11X = x; tile11Y = y; }
+            }
+          }
+        }
+      }
+      System.out.println("[ACT1-TOWN-PORTAL] " + variant + " tile11=("
+          + tile11X + "," + tile11Y + ") markers=" + markerCount);
+      assertTrue(markerCount > 0, variant + " must contain native spawn markers");
+      assertTrue(tile11X >= 0 && tile11Y >= 0,
+          variant + " must contain tile 11 marker 33");
+    }
+  }
+
+  @Test
   void zeroPadsRetailTreesFinalSubstitutionGroup() {
     D2DrlgFileStrc file = load("Act1/Outdoors/Trees.ds1");
 

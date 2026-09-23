@@ -154,12 +154,27 @@ public final class TownPortalRegistry {
             || warp.dstLevel.Id != 2) continue; // Rogue Encampment -> Blood Moor
         Vector2 candidate = new Vector2(position.position);
         float inset = 24f;
-        switch (townZone.townExitDirection) {
-          case 0: candidate.x += inset; break; // west edge -> move east
-          case 1: candidate.y += inset; break; // north edge -> move south
-          case 2: candidate.x -= inset; break; // east edge -> move west
-          case 3: candidate.y -= inset; break; // south edge -> move north
-          default: break;
+        // The DS1 coordinate origin is not consistent with the semantic
+        // NORTH/SOUTH names used by the DRLG direction field (Rogue's south
+        // exit is at y=0 in the generated TownS1 map).  Infer the inward
+        // normal from the actual gate edge first; use the direction only for
+        // malformed markers that are not on a zone boundary.
+        float left = townZone.x();
+        float top = townZone.y();
+        float right = left + townZone.width();
+        float bottom = top + townZone.height();
+        if (position.position.x <= left + 8f) candidate.x += inset;
+        else if (position.position.x >= right - 8f) candidate.x -= inset;
+        else if (position.position.y <= top + 8f) candidate.y += inset;
+        else if (position.position.y >= bottom - 8f) candidate.y -= inset;
+        else {
+          switch (townZone.townExitDirection) {
+            case 0: candidate.x += inset; break;
+            case 1: candidate.y += inset; break;
+            case 2: candidate.x -= inset; break;
+            case 3: candidate.y -= inset; break;
+            default: break;
+          }
         }
         if (townZone.findFreeCoordinates(candidate, 1, 16, true, candidate)) {
           if (com.badlogic.gdx.Gdx.app != null) {

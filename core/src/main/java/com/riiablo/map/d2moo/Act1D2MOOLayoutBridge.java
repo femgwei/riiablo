@@ -8,12 +8,12 @@ import com.d2moo.common.drlg.D2C_Acts;
 import com.d2moo.common.drlg.D2DrlgCoord;
 import com.d2moo.common.drlg.D2DrlgLevel;
 import com.d2moo.common.drlg.D2DrlgPresetInfoStrc;
+import com.d2moo.common.drlg.D2DrlgTileInfoStrc;
 import com.d2moo.common.drlg.D2DrlgStrc;
 import com.d2moo.common.drlg.D2LevelIds;
 import com.d2moo.common.drlg.D2DrlgTypes;
 import com.d2moo.common.drlg.DrlgDrlg;
 import com.d2moo.common.drlg.DrlgExport;
-import com.d2moo.common.dungeon.Dungeon;
 import com.d2moo.common.util.D2Log;
 import com.d2moo.common.util.D2FileReader;
 import com.d2moo.common.util.D2MemoryPool;
@@ -231,15 +231,25 @@ public final class Act1D2MOOLayoutBridge {
                     // class 11 for the town-side endpoint.  Do this while the
                     // native DRLG is still alive; replacing it with the Zone
                     // center puts the portal behind tents in Rogue Encampment.
-                    int[] spawnX = {-1};
-                    int[] spawnY = {-1};
-                    if (Dungeon.findActSpawnLocationEx(act, levelId, 11,
-                            spawnX, spawnY, 3) != null
-                            && spawnX[0] >= 0 && spawnY[0] >= 0) {
-                        result.townSpawnX = spawnX[0];
-                        result.townSpawnY = spawnY[0];
+                    D2DrlgTileInfoStrc portalMarker = null;
+                    for (int tile = 0; tile < level.getNTileInfo(); tile++) {
+                        D2DrlgTileInfoStrc candidate = level.getPTileInfo(tile);
+                        if (candidate != null && candidate.getNTileIndex() == 11) {
+                            portalMarker = candidate;
+                            break;
+                        }
+                    }
+                    if (portalMarker != null) {
+                        // DUNGEON_FindActSpawnLocationEx converts the native
+                        // game-tile marker to subtile coordinates as x*5+3,
+                        // y*5+3 before doing its collision adjustment.  The
+                        // generated Zone performs its own free-position scan,
+                        // so retaining that canonical anchor is sufficient and
+                        // avoids initializing a transient ActiveRoom here.
+                        result.townSpawnX = portalMarker.getNPosX() * 5 + 3;
+                        result.townSpawnY = portalMarker.getNPosY() * 5 + 3;
                         D2Log.debug("ACT1_D2MOO_TOWN_SPAWN level=%d tile=11 subtile=(%d,%d)",
-                            levelId, spawnX[0], spawnY[0]);
+                            levelId, result.townSpawnX, result.townSpawnY);
                     } else {
                         D2Log.warning("ACT1_D2MOO_TOWN_SPAWN missing level=%d tile=11", levelId);
                     }

@@ -973,8 +973,14 @@ public class DrlgPreset {
                 for (int x = 0; x < file.getNWidth(); x++) {
                     int offset = y * stride + x;
                     if (offset >= types.length || offset >= walls.length) continue;
-                    if (types[offset] != DrlgRoomTile.TILETYPE_WALL_RIGHT_EXIT
-                            && types[offset] != DrlgRoomTile.TILETYPE_WALL_LEFT_EXIT) continue;
+                    // The DS1 tile-type cell carries layer/edge flags in the
+                    // upper bits after parsing.  Native DRLGGRID_GetGridEntry
+                    // compares the low-byte orientation, not the packed int;
+                    // comparing the full value silently skipped every TownS1
+                    // marker and left tile 11 unavailable to the portal code.
+                    int tileType = types[offset] & 0xFF;
+                    if (tileType != DrlgRoomTile.TILETYPE_WALL_RIGHT_EXIT
+                            && tileType != DrlgRoomTile.TILETYPE_WALL_LEFT_EXIT) continue;
                     int packed = walls[offset];
                     int marker = (packed >>> 20) & 0x3F;
                     if (marker < 30 || marker > 34 || level.getNTileInfo() >= level.getPTileInfo().length) continue;
@@ -1077,8 +1083,8 @@ public class DrlgPreset {
                 for (int x = 0; x < file.getNWidth(); x++) {
                     int offset = y * stride + x;
                     if (offset >= types.length || offset >= walls.length
-                            || (types[offset] != DrlgRoomTile.TILETYPE_WALL_RIGHT_EXIT
-                            && types[offset] != DrlgRoomTile.TILETYPE_WALL_LEFT_EXIT)) {
+                            || ((types[offset] & 0xFF) != DrlgRoomTile.TILETYPE_WALL_RIGHT_EXIT
+                            && (types[offset] & 0xFF) != DrlgRoomTile.TILETYPE_WALL_LEFT_EXIT)) {
                         continue;
                     }
                     int packed = walls[offset];
@@ -2245,6 +2251,30 @@ public class DrlgPreset {
         D2DrlgCoord map = pDrlgMap.getPDrlgCoord();
         if (prest == null || map == null || map.getNWidth() <= 0 || map.getNHeight() <= 0) return;
 
+        // DUNGEON_FindActSpawnLocationEx is called immediately after the town
+        // level is initialized, before any individual preset room is activated.
+        // The native DRLGPRESET path has already loaded the selected DS1 and
+        // populated pLevel->pTileInfo at that point.  The Java port used to
+        // defer this work to initPresetRoomGrids, so Rogue Encampment's tile 11
+        // marker was still absent and ordinary town portals fell back to the
+        // bonfire heuristic.  Materialize the town DS1 and scan its markers at
+        // build time, while retaining the per-room scan as a duplicate-safe
+        // fallback for other preset variants.
+        if (level.getLevelId() == D2LevelIds.LEVEL_ROGUEENCAMPMENT
+                && pDrlgMap.getPFile() == null) {
+            Object[] file = new Object[1];
+            loadDrlgFile(file, level.getDrlg().getArchive(),
+                prest.getSzFile(pDrlgMap.getNPickedFile()), level.getDrlg());
+            if (file[0] instanceof D2DrlgFileStrc) {
+                pDrlgMap.setPFile((D2DrlgFileStrc) file[0]);
+                addPresetUnitToDrlgMap(level.getDrlg().getMempool(), pDrlgMap,
+                    level.getSeed());
+            } else {
+                D2Log.warning("DRLGPRESET_TOWN_TILEINFO failed to load level=%d file=%s",
+                    level.getLevelId(), prest.getSzFile(pDrlgMap.getNPickedFile()));
+            }
+        }
+
         // DRLGPRESET_BuildPresetArea marks Vis links whose LvlWarp entry is
         // -1 on every room in the preset. The Java port omitted this loop,
         // leaving native near-room/Warp initialization without its source
@@ -2259,6 +2289,12 @@ public class DrlgPreset {
 
         if (bSingleRoom != 0) {
             initPresetRoomData(level, pDrlgMap, map, prest.getDwDt1Mask(), nFlags, 1);
+            if (level.getLevelId() == D2LevelIds.LEVEL_ROGUEENCAMPMENT) {
+                scanLevelTileInfo(level.getFirstRoomEx(), pDrlgMap);
+                D2Log.debug("DRLGPRESET_TOWN_TILEINFO level=%d file=%s count=%d",
+                    level.getLevelId(), prest.getSzFile(pDrlgMap.getNPickedFile()),
+                    level.getNTileInfo());
+            }
             return;
         }
 
@@ -2273,6 +2309,12 @@ public class DrlgPreset {
                 roomCoord.setNHeight(Math.min(8, yEnd - y));
                 initPresetRoomData(level, pDrlgMap, roomCoord, prest.getDwDt1Mask(), nFlags, 0);
             }
+        }
+        if (level.getLevelId() == D2LevelIds.LEVEL_ROGUEENCAMPMENT) {
+            scanLevelTileInfo(level.getFirstRoomEx(), pDrlgMap);
+            D2Log.debug("DRLGPRESET_TOWN_TILEINFO level=%d file=%s count=%d",
+                level.getLevelId(), prest.getSzFile(pDrlgMap.getNPickedFile()),
+                level.getNTileInfo());
         }
         D2Log.debug("DRLGPRESET_BuildArea level=%d prest=%d file=%d pos=(%d,%d) size=%dx%d rooms=%d flags=0x%X",
                 level.getLevelId(), pDrlgMap.getNLevelPrest(), pDrlgMap.getNPickedFile(),
