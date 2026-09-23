@@ -105,7 +105,12 @@ public final class BloodRaven extends AI {
         && hasSkill(QUICK_STRIKE_SLOT)
         && specialUses < quickStrikeLimit()
         && rollAiChance(quickStrikeChance())) {
-      if (useMonsterSkill(QUICK_STRIKE_SLOT, targetId, target.cpy())) {
+      // The 1.10 data names a dedicated BR sequence (XX), but a number of
+      // reduced asset sets do not contain CRXXBOW.cof.  Use the native bow
+      // attack mode as a presentation-safe fallback; SrvSt50/SrvDo092 and
+      // the authoritative missile row still provide Quick Strike behavior.
+      if (useMonsterSkill(QUICK_STRIKE_SLOT, targetId, target.cpy(),
+          Engine.Monster.MODE_A1)) {
         specialUses++;
         state = "QUICK_STRIKE";
         return;
