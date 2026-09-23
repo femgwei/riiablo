@@ -11,6 +11,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.SuperUnique;
 import com.riiablo.map.Map;
 import com.riiablo.map.MapManager;
 import com.riiablo.engine.Engine;
@@ -32,6 +33,7 @@ public class RoomActivationSystem extends IteratingSystem {
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<SuperUnique> mSuperUnique;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
   @Wire(failOnNull = false)
@@ -300,7 +302,11 @@ public class RoomActivationSystem extends IteratingSystem {
           || !room.claimMonsterPopulation()) continue;
       int spawned = 0;
       for (Map.MonsterSpawn spawn : room.getPendingMonsterSpawns()) {
-        int monsterId = factory.createMonster(spawn.monsterId, spawn.x, spawn.y);
+        boolean superUnique = spawn.superUniqueId >= 0;
+        int monsterId = factory.createMonster(spawn.monsterId, spawn.x, spawn.y,
+            superUnique ? com.riiablo.engine.server.monster.MonsterRank.SUPER_UNIQUE
+                : com.riiablo.engine.server.monster.MonsterRank.NORMAL,
+            0L, -1, superUnique ? spawn.superUniqueId : -1);
         if (monsterId == Engine.INVALID_ENTITY) continue;
         mMapWrapper.create(monsterId).set(zone.map, zone);
         if (mMonster.has(monsterId)) {
@@ -311,6 +317,9 @@ public class RoomActivationSystem extends IteratingSystem {
           if (spawn.packId >= 0) {
             mMonster.get(monsterId).setNativePack(spawn.packId, !spawn.minion);
           }
+        }
+        if (superUnique && mSuperUnique != null) {
+          mSuperUnique.create(monsterId).set(spawn.superUniqueId, spawn.superUniqueKey);
         }
         spawned++;
       }

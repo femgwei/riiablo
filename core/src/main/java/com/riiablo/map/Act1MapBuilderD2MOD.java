@@ -27,6 +27,7 @@ import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.LvlPrest;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
+import com.riiablo.codec.excel.SuperUniques;
 import com.riiablo.engine.server.NativeDataTables;
 import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.monster.NativeMonsterRegion;
@@ -1403,20 +1404,79 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
         int n = DrlgExport.exportLevelTiles(drlg, levelId, applier);
         Array<Map.NativeObject> nativeObjects = new Array<>();
         Array<Map.NativeObject> nativeObjectAudit = new Array<>();
+        Array<Map.NativeMonster> nativeMonsters = new Array<>();
         int[] rawObjectCounts = new int[2];
+        int[] rawMonsterCounts = new int[2];
         int presetUnits = DrlgExport.exportLevelPresetUnits(drlg, levelId,
             (exportLevelId, roomId, unitType, index, mode, x, y, ds1Raw, spawned,
                 externalEntity, sourceFile) -> {
-              if (unitType != D2UnitTypes.UNIT_OBJECT) return;
-              rawObjectCounts[0]++;
               DrlgLevel targetLevel = drlgLevels.get(exportLevelId);
               if (targetLevel == null || targetLevel.grid == null
                   || x < 0 || y < 0
                   || x >= targetLevel.grid.width * DT1.Tile.SUBTILE_SIZE
                   || y >= targetLevel.grid.height * DT1.Tile.SUBTILE_SIZE) {
-                rawObjectCounts[1]++;
+                if (unitType == D2UnitTypes.UNIT_OBJECT) rawObjectCounts[1]++;
+                if (unitType == D2UnitTypes.UNIT_MONSTER) rawMonsterCounts[1]++;
                 return;
               }
+              if (unitType == D2UnitTypes.UNIT_MONSTER) {
+                rawMonsterCounts[0]++;
+                if (spawned) return;
+                String placement = null;
+                if (ds1Raw) {
+                  try {
+                    // Act1 DS1 MonPreset indices are local to the act's
+                    // MonPreset bucket, not MonStats class IDs.
+                    placement = Riiablo.files.MonPreset.getPlace(1, index);
+                  } catch (RuntimeException ignored) {
+                    // Keep the direct class-id path below for native units
+                    // created after DS1 expansion.
+                  }
+                }
+                MonStats.Entry monster = placement == null
+                    ? Riiablo.files.monstats.get(index)
+                    : Riiablo.files.monstats.get(placement);
+                int superUniqueId = -1;
+                String superUniqueKey = null;
+                SuperUniques.Entry superUnique = placement == null
+                    || Riiablo.files.SuperUniques == null
+                    ? null : Riiablo.files.SuperUniques.get(placement);
+                if (monster == null && superUnique != null) {
+                  monster = Riiablo.files.monstats.get(superUnique.MonClass);
+                  superUniqueId = superUnique.hcIdx;
+                  superUniqueKey = superUnique.Superunique;
+                }
+                if (monster == null && superUnique == null
+                    && Riiablo.files.SuperUniques != null) {
+                  // D2MOO encodes preset SuperUniques as
+                  // MonStatsCount + SuperUniquesCount + hcIdx.
+                  int suIndex = index - Riiablo.files.monstats.size()
+                      - Riiablo.files.SuperUniques.size();
+                  superUnique = Riiablo.files.SuperUniques.get(suIndex);
+                  if (superUnique != null) {
+                    monster = Riiablo.files.monstats.get(superUnique.MonClass);
+                    superUniqueId = superUnique.hcIdx;
+                    superUniqueKey = superUnique.Superunique;
+                  }
+                }
+                if (monster == null) {
+                  Gdx.app.error(TAG, String.format(
+                      "D2MOO preset monster unresolved: level=%d room=%d index=%d mode=%d",
+                      exportLevelId, roomId, index, mode));
+                  return;
+                }
+                if (superUnique != null) {
+                  Gdx.app.log(TAG, String.format(
+                      "D2MOO preset super unique: level=%d room=%d key=%s hcIdx=%d base=%s pos=(%d,%d)",
+                      exportLevelId, roomId, superUnique.Superunique, superUnique.hcIdx,
+                      monster.Id, x, y));
+                }
+                nativeMonsters.add(new Map.NativeMonster(roomId, monster.hcIdx, mode,
+                    x, y, superUniqueId, superUniqueKey, false));
+                return;
+              }
+              if (unitType != D2UnitTypes.UNIT_OBJECT) return;
+              rawObjectCounts[0]++;
               // Keep both provenance and bSpawned. D2Game skips spawned
               // preset units; MapManager applies the same rule after the
               // complete native list has been exported.
@@ -1451,6 +1511,21 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             nativeZone.nativeObjects.addAll(nativeObjects);
             nativeZone.nativeObjectAudit.addAll(nativeObjectAudit);
             exportNativeRooms(drlg, levelId, nativeZone);
+            for (Map.NativeMonster nativeMonster : nativeMonsters) {
+              Map.RoomEx room = nativeZone.findRoomEx(
+                  nativeZone.x + nativeMonster.x, nativeZone.y + nativeMonster.y);
+              if (room == null) {
+                Gdx.app.error(TAG, String.format(
+                    "D2MOO preset monster has no RoomEx: level=%d room=%d monster=%d pos=(%.1f,%.1f)",
+                    levelId, nativeMonster.roomId, nativeMonster.monsterId,
+                    nativeMonster.x, nativeMonster.y));
+                continue;
+              }
+              room.addMonsterSpawn(nativeMonster.monsterId,
+                  nativeZone.x + nativeMonster.x, nativeZone.y + nativeMonster.y,
+                  -1, false, nativeMonster.superUniqueId, nativeMonster.superUniqueKey);
+            }
+            nativeZone.nativeMonsters.addAll(nativeMonsters);
             DrlgLevel nativeTarget = drlgLevels.get(levelId);
             if (nativeTarget != null && nativeTarget.grid != null) {
               TileGrid nativeGrid = nativeTarget.grid;
@@ -1483,6 +1558,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
                 + "ignoredLayer=%d missingGrid=%d outOfBounds=%d invalidTile=%d "
                 + "clippedBoundary=%d clippedFloor=%d wall=%d shadow=%d dt1Mask=0x%X "
                 + "presetUnits=%d rawObjects=%d acceptedObjects=%d invalidObjectPos=%d "
+                + "rawMonsters=%d acceptedMonsters=%d invalidMonsterPos=%d "
                 + "qualityPassed=%s renderEnabled=%s acceptedForRendering=%s",
             levelId, n, applier.getCallbackCount(), written,
             applier.getIgnoredLayerCount(), applier.getMissingGridCount(),
@@ -1490,6 +1566,7 @@ public enum Act1MapBuilderD2MOD implements MapBuilder {
             applier.getClippedBoundaryCount(), applier.getClippedBoundaryFloorCount(),
             applier.getExportedWallCount(), applier.getExportedShadowCount(), exportedDt1Mask,
             presetUnits, rawObjectCounts[0], nativeObjects.size, rawObjectCounts[1],
+            rawMonsterCounts[0], nativeMonsters.size, rawMonsterCounts[1],
             qualityPassed, renderExportedFloors, acceptedForRendering)
             + String.format(" duplicatePosition=%d duplicateWall=%d duplicateShadow=%d wallOverflow=%d"
                 + " nonFloorOrientation=%d nonWallOrientation=%d nonShadowOrientation=%d"

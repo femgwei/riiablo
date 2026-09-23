@@ -999,6 +999,8 @@ public class Map implements Disposable {
     final Array<NativeObject> nativeObjects = new Array<>();
     /** Complete RoomEx object export, including native-only substitutions. */
     final Array<NativeObject> nativeObjectAudit = new Array<>();
+    /** Native preset monsters exported by D2MOO and materialized on room activation. */
+    final Array<NativeMonster> nativeMonsters = new Array<>();
     /** Native D2MOO RoomEx rectangles in world subtiles. */
     final Array<RoomEx> roomsEx = new Array<>();
     private boolean roomActivationTracking;
@@ -1172,6 +1174,7 @@ public class Map implements Disposable {
 
       nativeObjects.clear();
       nativeObjectAudit.clear();
+      nativeMonsters.clear();
       roomsEx.clear();
       roomActivationTracking = false;
 
@@ -1231,6 +1234,10 @@ public class Map implements Disposable {
     /** All exported object units, including entries deliberately kept out of ECS. */
     public Array<NativeObject> getNativeObjectAudit() {
       return nativeObjectAudit;
+    }
+
+    public Array<NativeMonster> getNativeMonsters() {
+      return nativeMonsters;
     }
 
     /** Entity IDs created for this zone, including native warps. */
@@ -2098,6 +2105,30 @@ public class Map implements Disposable {
     }
   }
 
+  /** Immutable D2MOO preset monster export; spawned when its RoomEx activates. */
+  public static final class NativeMonster {
+    public final int roomId;
+    public final int monsterId;
+    public final int mode;
+    public final float x;
+    public final float y;
+    public final int superUniqueId;
+    public final String superUniqueKey;
+    public final boolean spawned;
+
+    public NativeMonster(int roomId, int monsterId, int mode, float x, float y,
+        int superUniqueId, String superUniqueKey, boolean spawned) {
+      this.roomId = roomId;
+      this.monsterId = monsterId;
+      this.mode = mode;
+      this.x = x;
+      this.y = y;
+      this.superUniqueId = superUniqueId;
+      this.superUniqueKey = superUniqueKey;
+      this.spawned = spawned;
+    }
+  }
+
   /** Immutable world-space projection of a native D2DrlgRoom/RoomEx. */
     public static final class RoomEx {
     public static final int CLIENT_IN_ROOM = 0;
@@ -2183,9 +2214,15 @@ public class Map implements Disposable {
     /** Adds a deferred spawn while preserving the native pack owner relation. */
     public void addMonsterSpawn(int monsterId, float worldX, float worldY,
         int packId, boolean minion) {
+      addMonsterSpawn(monsterId, worldX, worldY, packId, minion, -1, null);
+    }
+
+    /** Adds a deferred spawn while preserving a native SuperUniques identity. */
+    public void addMonsterSpawn(int monsterId, float worldX, float worldY,
+        int packId, boolean minion, int superUniqueId, String superUniqueKey) {
       if (!monsterPopulationSpawned) {
         pendingMonsterSpawns.add(new MonsterSpawn(monsterId, worldX, worldY,
-            packId, minion));
+            packId, minion, superUniqueId, superUniqueKey));
       }
     }
 
@@ -2256,17 +2293,28 @@ public class Map implements Disposable {
     public final int packId;
     /** True when this entry is a party minion of the pack leader. */
     public final boolean minion;
+    /** SuperUniques.txt hcIdx, or -1 for an ordinary preset monster. */
+    public final int superUniqueId;
+    /** SuperUniques.txt key, retained for diagnostics and marker identity. */
+    public final String superUniqueKey;
 
     MonsterSpawn(int monsterId, float x, float y) {
       this(monsterId, x, y, -1, false);
     }
 
     MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion) {
+      this(monsterId, x, y, packId, minion, -1, null);
+    }
+
+    MonsterSpawn(int monsterId, float x, float y, int packId, boolean minion,
+        int superUniqueId, String superUniqueKey) {
       this.monsterId = monsterId;
       this.x = x;
       this.y = y;
       this.packId = packId;
       this.minion = minion;
+      this.superUniqueId = superUniqueId;
+      this.superUniqueKey = superUniqueKey;
     }
   }
 
