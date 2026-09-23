@@ -56,7 +56,7 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
     Audio previousAudio = Riiablo.audio;
     Riiablo.audio = new SilentAudio();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new Actioneer(), new Pathfinder(),
+        .with(new EventSystem(), new Actioneer(), new DynamicUnitCollisionSystem(false), new Pathfinder(),
             new CofManager(), new ServerMonsterCorpseSystem(), new AnimStepper(),
             new Probe(), new TestFactory())
         .build()
@@ -107,7 +107,7 @@ class FallenShamanAutoCombatIntegrationTest extends RiiabloTest {
 
     World previousEngine = Riiablo.engine;
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), new Actioneer(), new Pathfinder(),
+        .with(new EventSystem(), new Actioneer(), new DynamicUnitCollisionSystem(false), new Pathfinder(),
             new CofManager(), new ServerMonsterCorpseSystem(), new AnimStepper(),
             new Probe(), new TestFactory())
         .build()

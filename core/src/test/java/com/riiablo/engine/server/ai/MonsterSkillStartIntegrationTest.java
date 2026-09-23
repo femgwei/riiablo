@@ -16,6 +16,7 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.Actioneer;
 import com.riiablo.engine.server.CofManager;
+import com.riiablo.engine.server.DynamicUnitCollisionSystem;
 import com.riiablo.engine.server.Pathfinder;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Casting;
@@ -46,7 +47,8 @@ class MonsterSkillStartIntegrationTest extends RiiabloTest {
     Probe probe = new Probe();
     NoopFactory factory = new NoopFactory();
     World world = new World(new WorldConfigurationBuilder()
-        .with(new EventSystem(), probe, new Actioneer(), new Pathfinder(), new CofManager(), factory)
+        .with(new EventSystem(), probe, new Actioneer(),
+            new DynamicUnitCollisionSystem(false), new Pathfinder(), new CofManager(), factory)
         .build()
         .register("factory", factory)
         .register("map", new Map(0, 0)));
