@@ -84,7 +84,11 @@ public class EscapePanel extends WidgetGroup implements Disposable {
   private static AssetDescriptor<DC6> localUi(String file) {
     String language = Riiablo.language == null ? "eng" : Riiablo.language.resourceCode;
     return new AssetDescriptor<>("data\\local\\ui\\" + language + "\\" + file,
-        DC6.class, DC6Loader.DC6Parameters.COMBINE);
+        // These localized menu files contain independent button frames.  They
+        // must not use COMBINE: that mode is for tile sheets and treats the
+        // alternate frame as another page, producing a wrong size/crop for
+        // the Chinese assets.
+        DC6.class, new DC6Loader.DC6Parameters());
   }
 
   private static final MappedKey[] CONFIGURABLE_KEYS = {
