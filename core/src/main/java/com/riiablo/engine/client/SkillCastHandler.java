@@ -139,6 +139,8 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 1: // Generic start function
         break;
+      case 11: // Arrow/Bolt client start; cltdofunc owns the presentation.
+        break;
       case 2: // Channeled skills (inferno, arctic blast)
         // Start channeling effect
         break;

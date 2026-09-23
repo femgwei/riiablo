@@ -774,6 +774,11 @@ public class Actioneer extends PassiveSystem {
         break;
       case 1: // attack
         break;
+      case 4: // SKILLS_SrvSt04_Arrow_Bolt: ammo/weapon validation is owned
+               // by ServerSkillSystem; the arrow is emitted at MIS keyframe.
+        log.debug("[AMAZON_ARROW] phase=start entity={} target={} delegated=keyframe",
+            entityId, targetId);
+        break;
       case 3: // throw
       case 65: // Throw skill (skillId=2)
         break;
