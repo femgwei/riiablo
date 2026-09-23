@@ -72,6 +72,15 @@ class AuthoritativeAreaSkillSnapshotTest extends RiiabloTest {
     assertEquals(firstClient.range, secondClient.range);
   }
 
+  @Test
+  void multipleShotReusesLocalAuthoritativeMissiles() {
+    Skills.Entry skill = Riiablo.files.skills.get("Multiple Shot");
+    assertNotNull(skill);
+    assertEquals(8, skill.srvdofunc);
+    assertTrue(SkillCastHandler.shouldReuseServerMissile(skill,
+        false, false, false, false, false, false, false, true));
+  }
+
   private static String firstNonEmpty(String first, String second) {
     return first != null && !first.isEmpty() ? first : second;
   }

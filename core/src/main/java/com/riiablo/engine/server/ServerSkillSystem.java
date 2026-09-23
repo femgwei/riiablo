@@ -454,6 +454,10 @@ public class ServerSkillSystem extends PassiveSystem {
         // consuming quantity and returning here.
         && event.skillId != SkillCodes.throw_ && event.skillId != SkillCodes.left_hand_throw
         && event.srvdofunc != 3 && event.srvdofunc != 5
+        // Multiple Shot (SrvDo008) is authoritative in local games too. If
+        // it is filtered here, SkillCastHandler falls back to client-only
+        // fan arrows created without an owner, so they can never collide.
+        && event.srvdofunc != 8
         && skill.srvdofunc != 15 && skill.srvdofunc != 16
         && skill.srvdofunc != 18 && skill.srvdofunc != 25
         && skill.srvdofunc != 44 && skill.srvdofunc != 45
@@ -473,6 +477,7 @@ public class ServerSkillSystem extends PassiveSystem {
         && skill.srvdofunc != 114 && skill.srvdofunc != 115 && skill.srvdofunc != 119
         && skill.srvdofunc != 144
         && skill.srvdofunc != 3 && skill.srvdofunc != 5
+        && skill.srvdofunc != 8
         && event.skillId != SkillId.FROZEN_ORB && skill.Id != SkillId.FROZEN_ORB
         && !PaladinSkills.isHolyBolt(skill)) {
       consumeRangedAmmoForSkill(event, skill);
