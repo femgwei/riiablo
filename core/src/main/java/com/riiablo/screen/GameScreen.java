@@ -1459,6 +1459,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       // first process tick now publishes the NPC COF/DCC requests, including
       // Warriv's immediate NU -> WL transition, before the screen is visible.
       long presentationStart = System.nanoTime();
+      // CursorMovementSystem is part of the normal world tick and reads the
+      // renderer source entity.  Set it before the initialization tick so the
+      // prewarm pass cannot observe its default INVALID_ENTITY value.
+      renderer.setSrc(player);
       engine.process();
       processInitialPresentationPass(); // queue COF descriptors
       Riiablo.assets.finishLoading();    // decode COFs
@@ -1473,7 +1477,6 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       }
     }
 
-    renderer.setSrc(player);
     renderer.updatePosition(true);
   }
 
