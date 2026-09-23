@@ -71,6 +71,8 @@ public class SkillCastHandler extends PassiveSystem {
         break;
       case 42: // Fire Hit performs its native pre-hit setup on the server
         break;
+      case 50: // Monster Quick Strike uses the authoritative SrvDo092 missile.
+        break;
       case 40: // Leap landing/path setup is server-authoritative
         break;
       default:

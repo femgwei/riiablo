@@ -777,6 +777,11 @@ public class Actioneer extends PassiveSystem {
       case 3: // throw
       case 65: // Throw skill (skillId=2)
         break;
+      case 50: // SKILLS_SrvSt50_QuickStrike: reserve the target; SrvDo092
+                // creates the authoritative missile at the attack keyframe.
+        log.info("[MONSTER_QUICK_STRIKE] phase=start entity={} target={} delegated=keyframe",
+            entityId, targetId);
+        break;
       case 5: { // Left-hand action; Jab owns native player sequence 1.
         Casting casting = mCasting.get(entityId);
         Skills.Entry skill = casting != null ? Riiablo.files.skills.get(casting.skillId) : null;
