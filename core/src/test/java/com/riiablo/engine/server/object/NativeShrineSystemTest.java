@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.junit.jupiter.api.Test;
 
 import com.artemis.World;
@@ -64,6 +67,19 @@ class NativeShrineSystemTest extends RiiabloTest {
     assertNotNull(selected);
     assertEquals(2, selected.EffectClass);
     assertTrue(selected.LevelMin <= 100);
+  }
+
+  @Test
+  void randomizesGenericOutdoorShrinesInsteadOfForcingHealth() {
+    Shrines table = Riiablo.files.Shrines;
+    Objects.Entry base = shrineObject(1);
+    Set<Integer> selected = new HashSet<>();
+    for (int seed = 0; seed < 64; seed++) {
+      selected.add(NativeShrineResolver.resolve(table, base, 84, 1, seed, 20, 30));
+    }
+
+    assertTrue(selected.size() > 1, "generic outdoor shrine should not always be row 2");
+    assertFalse(selected.size() == 1 && selected.contains(2));
   }
 
   @Test

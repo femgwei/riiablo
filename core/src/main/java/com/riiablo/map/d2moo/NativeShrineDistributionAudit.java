@@ -31,6 +31,7 @@ public final class NativeShrineDistributionAudit {
     }
 
     Map<Integer, Integer> rawCounts = new TreeMap<>();
+    Map<Integer, String> rawDetails = new TreeMap<>();
     Map<Integer, Integer> shrineCounts = new TreeMap<>();
     Map<String, Integer> viewCounts = new TreeMap<>();
     Map<Integer, String> shrineDetails = new TreeMap<>();
@@ -63,6 +64,12 @@ public final class NativeShrineDistributionAudit {
               NativePresetObjectResolver.Resolution resolution =
                   NativePresetObjectResolver.resolve(1, levelId, objectId, seed, x, y);
               Objects.Entry base = Riiablo.files.objects.get(resolution.classId);
+              if (base != null) {
+                rawDetails.put(objectId, "name=" + base.Name
+                    + ",operateFn=" + base.OperateFn
+                    + ",shrineFunction=" + base.ShrineFunction
+                    + ",parm0=" + parm(base, 0));
+              }
               // Runtime lifecycle classification also treats ordinary
               // Objects.txt rows with OperateFn=2/22 as shrine/well. The
               // reserved 574..579 rows are only one of the native paths.
@@ -106,6 +113,7 @@ public final class NativeShrineDistributionAudit {
         .append("wells=").append(wells[0]).append('\n')
         .append("ordinaryObjects=").append(ordinaryObjects[0]).append('\n')
         .append("rawObjectCounts=").append(rawCounts).append('\n')
+        .append("rawObjectDetails=").append(rawDetails).append('\n')
         .append("shrineIdCounts=").append(shrineCounts).append('\n')
         .append("shrineDetails=").append(shrineDetails).append('\n')
         .append("shrineViewCounts=").append(viewCounts).append('\n')
@@ -115,6 +123,11 @@ public final class NativeShrineDistributionAudit {
 
   private static boolean isWell(int objectId) {
     return objectId == 122 || objectId == 183 || objectId == 185;
+  }
+
+  private static int parm(Objects.Entry object, int index) {
+    return object == null || object.Parm == null || index >= object.Parm.length
+        ? 0 : object.Parm[index];
   }
 
   private static int findLevelId(String name) {

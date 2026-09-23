@@ -7,6 +7,8 @@ import com.riiablo.codec.excel.Shrines;
 public final class NativeShrineResolver {
   private static final int FIRST_PRESET_SHRINE = 574;
   private static final int LAST_PRESET_SHRINE = 579;
+  /** Objects.txt class used by ShrineW/ShrineD/ShrineF/ShrineH. */
+  private static final int GENERIC_OUTDOOR_SHRINE = 84;
   private static final int[][] PRESET_RANGES = {
       {2, 6}, {7, 7}, {8, 11}, {12, 12}, {1, 5}, {14, 14}
   };
@@ -30,23 +32,33 @@ public final class NativeShrineResolver {
     }
 
     int shrineId;
-    int parm0 = parm(object, 0);
-    if (parm0 != 0) {
-      int effectClass;
-      switch (parm0 - 1) {
-        case 0:
-          effectClass = 2;
-          break;
-        case 1:
-          effectClass = 3;
-          break;
-        default:
-          effectClass = random.nextInt(10) == 0 ? 1 : 4;
-          break;
-      }
-      shrineId = selectEffectClass(shrines, effectClass, levelId, random);
-    } else {
+    // The outdoor ShrineW/D/F/H substitutions all carry the generic class 84.
+    // Their visual sub-theme (W/D/F/H) controls placement, not the gameplay
+    // effect.  D2Game then rolls a normal eligible shrine for this object.
+    // Treating Parm0=1 as a hard health-shrine selector made every generated
+    // Blood Moor shrine become row 2.  Class 136 is a separate fixed shrine
+    // dispatch path and intentionally retains the Parm0 effect-class rules.
+    if (originalClassId == GENERIC_OUTDOOR_SHRINE) {
       shrineId = selectAny(shrines, levelId, random);
+    } else {
+      int parm0 = parm(object, 0);
+      if (parm0 != 0) {
+        int effectClass;
+        switch (parm0 - 1) {
+          case 0:
+            effectClass = 2;
+            break;
+          case 1:
+            effectClass = 3;
+            break;
+          default:
+            effectClass = random.nextInt(10) == 0 ? 1 : 4;
+            break;
+        }
+        shrineId = selectEffectClass(shrines, effectClass, levelId, random);
+      } else {
+        shrineId = selectAny(shrines, levelId, random);
+      }
     }
 
     // OBJECTS_InitFunction01_Shrine performs this compatibility remapping.
