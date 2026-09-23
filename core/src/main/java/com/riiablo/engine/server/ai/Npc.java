@@ -107,7 +107,13 @@ public class Npc extends AI {
   /** Stable, language-independent prefix used for speech and sound table keys. */
   private String speechPrefix() {
     String id = monstats != null ? monstats.Id : name;
-    return id == null ? "" : id.trim().toLowerCase(Locale.ROOT);
+    if (id == null) return "";
+    id = id.trim().toLowerCase(Locale.ROOT);
+    // MonStats uses variants such as warriv1/warriv2, while speech.txt
+    // keys are shared by the base NPC (warriv, akara, cain, ...).
+    int end = id.length();
+    while (end > 0 && Character.isDigit(id.charAt(end - 1))) end--;
+    return end == 0 ? id : id.substring(0, end);
   }
 
   protected VendorGenerator vendors;
