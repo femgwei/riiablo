@@ -37,7 +37,7 @@ public enum D2Language {
 
   /**
    * Resolves language with the runtime precedence used by the client:
-   * command-line override, persisted Client.Language cvar, then system locale.
+   * command-line override, persisted Client.UI_Language cvar, then system locale.
    */
   public static D2Language resolve(String commandLine, String configured, Locale systemLocale) {
     if (commandLine != null && !commandLine.trim().isEmpty()) {

@@ -288,7 +288,7 @@ public class Client extends Game {
       throw new GdxRuntimeException("saves folder does not exist. Copy saves to " + saves);
     }
 
-    // Cvars must be loaded before language resources and fonts. Client.Language
+    // Cvars must be loaded before language resources and fonts. Client.UI_Language
     // intentionally defaults to empty so the system locale remains the fallback.
     Riiablo.cvars = cvars = new GdxCvarManager();
     Collection<Throwable> throwables = Cvars.addTo(cvars);
@@ -298,13 +298,13 @@ public class Client extends Game {
 
     Riiablo.mpqs = mpqs = new MPQFileHandleResolver();
     String commandLineLanguage = System.getProperty("riiablo.language");
-    String configuredLanguage = Cvars.Client.Language.get();
+    String configuredLanguage = Cvars.Client.UILanguage.get();
     D2Language language = D2Language.resolve(
         commandLineLanguage, configuredLanguage, Locale.getDefault());
     String languageSource = commandLineLanguage != null && !commandLineLanguage.trim().isEmpty()
         ? "command line"
         : configuredLanguage != null && !configuredLanguage.trim().isEmpty()
-            ? "Client.Language"
+            ? "Client.UI_Language"
             : "system locale";
     Gdx.app.log(TAG, "Language source: " + languageSource);
     if (language == D2Language.CHINESE

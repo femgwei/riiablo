@@ -50,9 +50,9 @@ public class Cvars {
   private Cvars() {}
 
   public interface Client {
-    Cvar<String> Language = Cvar.builder(String.class)
-        .alias("Client.Language")
-        .description("Resource language override; empty uses the system language")
+    Cvar<String> UILanguage = Cvar.builder(String.class)
+        .alias("Client.UI_Language")
+        .description("UI/resource language override; empty uses the system language")
         .defaultValue("")
         .build();
 
