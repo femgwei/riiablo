@@ -418,6 +418,7 @@ public class AutomapRenderer extends BaseSystem {
             AutomapManager.COLOR_MISSILE, 3);
       } else if (show(Cvars.Client.Automap.ShowItems) && mItem != null && mItem.has(id)) {
         Item item = mItem.get(id);
+        if (item == null || !shouldDisplayItemMarker(item.item)) continue;
         name = item == null || item.item == null ? null : item.item.getNameString();
         automapManager.addEntityMarker(id, AutomapIconType.ITEM,
             position.position.x, position.position.y, name,
@@ -489,6 +490,11 @@ public class AutomapRenderer extends BaseSystem {
         }
       }
     }
+  }
+
+  /** Ground gold is rendered as a quantity label, not as an automap item icon. */
+  static boolean shouldDisplayItemMarker(com.riiablo.item.Item item) {
+    return item != null && item.code != null && !"gld".equalsIgnoreCase(item.code);
   }
 
   private boolean isNpcWithinRange(float npcX, float npcY) {

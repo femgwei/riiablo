@@ -15,6 +15,7 @@ import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
 import com.riiablo.engine.client.component.BBoxWrapper;
 import com.riiablo.engine.client.component.Hovered;
+import com.riiablo.engine.client.component.Label;
 import com.riiablo.engine.client.component.Selectable;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Item;
@@ -31,6 +32,7 @@ public class HoveredManager extends IteratingSystem {
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Item> mItem;
 
@@ -89,8 +91,17 @@ public class HoveredManager extends IteratingSystem {
       if (candidatePosition == null || boxWrapper == null || boxWrapper.box == null) continue;
 
       iso.toScreen(hitEntityScreen.set(candidatePosition.position));
-      if (!containsScreenPoint(boxWrapper.box, hitEntityScreen, hitCoords,
-          hitPaddingX(candidate), hitPaddingY(candidate))) continue;
+      boolean hitAnimation = containsScreenPoint(boxWrapper.box, hitEntityScreen, hitCoords,
+          hitPaddingX(candidate), hitPaddingY(candidate));
+      // Ground-item names are drawn directly by LabelManager instead of being
+      // attached to a Scene2D stage, so stage.hit() cannot select them. Treat
+      // the visible label bounds as an additional pickup hit area. The label
+      // is only eligible while it is actually shown (Alt or normal hover),
+      // which avoids leaving a stale, invisible actor clickable.
+      boolean hitLabel = isVisibleItemLabel(candidate) && mLabel.has(candidate)
+          && mLabel.get(candidate).actor != null
+          && containsLabelPoint(mLabel.get(candidate).actor, hitCoords);
+      if (!hitAnimation && !hitLabel) continue;
 
       boolean candidateInteractable = mInteractable.has(candidate);
       float candidateDst2 = sourcePosition == null
@@ -105,6 +116,14 @@ public class HoveredManager extends IteratingSystem {
       }
     }
     return selected;
+  }
+
+  private boolean isVisibleItemLabel(int entityId) {
+    if (!mItem.has(entityId)) return false;
+    if (mHovered.has(entityId)) return true;
+    return Gdx.input != null
+        && (Gdx.input.isKeyPressed(com.badlogic.gdx.Input.Keys.ALT_LEFT)
+            || Gdx.input.isKeyPressed(com.badlogic.gdx.Input.Keys.ALT_RIGHT));
   }
 
   private float hitPaddingX(int entityId) {
@@ -123,6 +142,14 @@ public class HoveredManager extends IteratingSystem {
     float y = entityScreen.y - box.yMax - paddingY;
     return x <= pointer.x && pointer.x <= x + box.width + paddingX * 2f
         && y <= pointer.y && pointer.y <= y + box.height + paddingY * 2f;
+  }
+
+  static boolean containsLabelPoint(com.badlogic.gdx.scenes.scene2d.Actor actor,
+      Vector2 pointer) {
+    float x = actor.getX();
+    float y = actor.getY();
+    return x <= pointer.x && pointer.x <= x + actor.getWidth()
+        && y <= pointer.y && pointer.y <= y + actor.getHeight();
   }
 
   static boolean shouldReplaceTarget(boolean candidateInteractable, float candidateDst2,

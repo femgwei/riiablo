@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.riiablo.codec.util.BBox;
 
 class HoveredManagerTest {
@@ -37,5 +38,16 @@ class HoveredManagerTest {
         box, entity, new Vector2(472, 300), 12f, 8f));
     assertFalse(HoveredManager.containsScreenPoint(
         box, entity, new Vector2(471, 300), 12f, 8f));
+  }
+
+  @Test
+  void labelBoundsAreSelectable() {
+    Actor label = new Actor();
+    label.setBounds(100, 200, 80, 16);
+
+    assertTrue(HoveredManager.containsLabelPoint(label, new Vector2(140, 208)));
+    assertTrue(HoveredManager.containsLabelPoint(label, new Vector2(100, 200)));
+    assertFalse(HoveredManager.containsLabelPoint(label, new Vector2(99, 208)));
+    assertFalse(HoveredManager.containsLabelPoint(label, new Vector2(140, 217)));
   }
 }
