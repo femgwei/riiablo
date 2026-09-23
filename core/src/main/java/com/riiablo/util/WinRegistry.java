@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.prefs.Preferences;
 import java.util.regex.Pattern;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.concurrent.TimeUnit;
 
 public class WinRegistry {
   public static final int HKEY_CURRENT_USER = 0x80000001;
@@ -39,11 +42,15 @@ public class WinRegistry {
 
   private static final int KEY_READ = 0x20019;
 
-  private static Preferences userRoot = Preferences.userRoot();
+  // Do not initialize java.util.prefs.WindowsPreferences here. Java 17 no
+  // longer permits the reflective native calls used by this legacy helper,
+  // and Preferences.userRoot() itself prints an alarming stack trace before
+  // the launcher has a chance to fall back to configured paths.
+  private static Preferences userRoot;
 
-  private static Preferences systemRoot = Preferences.systemRoot();
+  private static Preferences systemRoot;
 
-  private static Class<? extends Preferences> userClass = userRoot.getClass();
+  private static Class<? extends Preferences> userClass;
 
   private static Method regOpenKey = null;
 
@@ -68,48 +75,9 @@ public class WinRegistry {
   private static Pattern REGISTRY_REFERENCE_REGEX = Pattern.compile("\\$\\(Registry:([A-Z_]+)\\\\(.*)@(.*)\\)");
 
   static {
-    try {
-      regOpenKey = userClass.getDeclaredMethod(
-          "WindowsRegOpenKey", new Class[]{long.class, byte[].class, int.class}
-      );
-      regOpenKey.setAccessible(true);
-      regCloseKey = userClass.getDeclaredMethod("WindowsRegCloseKey", new Class[]{long.class});
-      regCloseKey.setAccessible(true);
-      regQueryValueEx = userClass.getDeclaredMethod(
-          "WindowsRegQueryValueEx", new Class[]{long.class, byte[].class}
-      );
-      regQueryValueEx.setAccessible(true);
-      regEnumValue = userClass.getDeclaredMethod(
-          "WindowsRegEnumValue", new Class[]{long.class, int.class, int.class}
-      );
-      regEnumValue.setAccessible(true);
-      regQueryInfoKey = userClass.getDeclaredMethod("WindowsRegQueryInfoKey1", new Class[]{long.class});
-      regQueryInfoKey.setAccessible(true);
-      regEnumKeyEx = userClass.getDeclaredMethod(
-          "WindowsRegEnumKeyEx", new Class[]{long.class, int.class, int.class}
-      );
-      regEnumKeyEx.setAccessible(true);
-      regCreateKeyEx = userClass.getDeclaredMethod(
-          "WindowsRegCreateKeyEx", new Class[]{long.class, byte[].class}
-      );
-      regCreateKeyEx.setAccessible(true);
-      regSetValueEx = userClass.getDeclaredMethod(
-          "WindowsRegSetValueEx", new Class[]{long.class, byte[].class, byte[].class}
-      );
-      regSetValueEx.setAccessible(true);
-      regDeleteValue = userClass.getDeclaredMethod(
-          "WindowsRegDeleteValue", new Class[]{long.class, byte[].class}
-      );
-      regDeleteValue.setAccessible(true);
-      regDeleteKey = userClass.getDeclaredMethod(
-          "WindowsRegDeleteKey", new Class[]{long.class, byte[].class}
-      );
-      regDeleteKey.setAccessible(true);
-    } catch (NoSuchMethodException e) {
-      // we are not on windows, then!
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+    // Legacy reflection is intentionally disabled on Java 9+. Reads use the
+    // supported reg.exe command below; the old fields remain for source/API
+    // compatibility with callers that do not use registry writes.
   }
 
   public WinRegistry() {
@@ -131,12 +99,39 @@ public class WinRegistry {
       IllegalArgumentException,
       IllegalAccessException,
       InvocationTargetException {
-    if (hkey == HKEY_LOCAL_MACHINE) {
-      return readString(systemRoot, hkey, key, valueName);
-    } else if (hkey == HKEY_CURRENT_USER) {
-      return readString(userRoot, hkey, key, valueName);
-    } else {
+    String value = readStringViaRegExe(hkey, key, valueName);
+    if (value != null) return value;
+    if (hkey != HKEY_LOCAL_MACHINE && hkey != HKEY_CURRENT_USER) {
       throw new IllegalArgumentException("hkey=" + hkey);
+    }
+    throw new IllegalStateException("Windows registry query unavailable for " + key);
+  }
+
+  /** Reads a registry value without opening java.prefs internals. */
+  static String readStringViaRegExe(int hkey, String key, String valueName) {
+    if (!System.getProperty("os.name", "").toLowerCase().contains("win")) return null;
+    String root;
+    if (hkey == HKEY_CURRENT_USER) root = "HKCU";
+    else if (hkey == HKEY_LOCAL_MACHINE) root = "HKLM";
+    else return null;
+    Process process = null;
+    try {
+      process = new ProcessBuilder("reg", "query", root + "\\" + key, "/v", valueName)
+          .redirectErrorStream(true).start();
+      if (!process.waitFor(2, TimeUnit.SECONDS)) {
+        process.destroyForcibly();
+        return null;
+      }
+      if (process.exitValue() != 0) return null;
+      String output = new String(process.getInputStream().readAllBytes(), Charset.defaultCharset());
+      Pattern valuePattern = Pattern.compile("(?m)^\\s*" + Pattern.quote(valueName)
+          + "\\s+REG_[^\\s]+\\s+(.*)$");
+      java.util.regex.Matcher matcher = valuePattern.matcher(output);
+      return matcher.find() ? matcher.group(1).trim() : null;
+    } catch (IOException | InterruptedException | RuntimeException ignored) {
+      if (process != null) process.destroyForcibly();
+      if (ignored instanceof InterruptedException) Thread.currentThread().interrupt();
+      return null;
     }
   }
 

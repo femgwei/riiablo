@@ -164,7 +164,7 @@ public abstract class InstallationFinder {
       try {
         return WinRegistry.readString(WinRegistry.HKEY_CURRENT_USER, D2_REG_KEY, valueName);
       } catch (Throwable t) {
-        log.warn(t.getMessage(), t);
+        log.debug("Registry lookup unavailable for {}: {}", valueName, t.getMessage());
         return defaultValue;
       }
     }
