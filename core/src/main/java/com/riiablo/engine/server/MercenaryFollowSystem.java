@@ -184,7 +184,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     return MOTION_NONE;
   }
 
-  static boolean findLanding(Map map, Map.Zone zone, Vector2 owner, int footprint, Vector2 out) {
+  public static boolean findLanding(Map map, Map.Zone zone, Vector2 owner, int footprint, Vector2 out) {
     if (map == null || zone == null || owner == null || out == null) return false;
     return findLanding(owner, out, (x, y) -> {
       if (map.getZone(x, y) != zone) return false;

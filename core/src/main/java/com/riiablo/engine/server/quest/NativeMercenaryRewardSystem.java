@@ -14,15 +14,18 @@ import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Corpse;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Mercenary;
+import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.MercenaryFollowSystem;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.pet.MercenaryManager;
 import com.riiablo.item.VendorPricing;
 import com.badlogic.gdx.utils.Array;
+import com.riiablo.map.Map;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
 import net.mostlyoriginal.api.event.common.EventSystem;
@@ -37,6 +40,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<AIWrapper> mAIWrapper;
@@ -281,12 +285,13 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
       return Engine.INVALID_ENTITY;
     }
     Vector2 owner = mPosition.get(playerId).position;
+    Vector2 spawn = chooseMercenarySpawn(playerId, owner, new Vector2());
     int monsterId = monsterId(def.mercType);
     if (monsterId == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;
 
     final int entityId;
     try {
-      entityId = factory.createMonster(monsterId, owner.x + 1f, owner.y + 1f);
+      entityId = factory.createMonster(monsterId, spawn.x, spawn.y);
     } catch (Throwable t) {
       log.error("[A1Q2] Failed to create Rogue entity: player={}", playerId, t);
       return Engine.INVALID_ENTITY;
@@ -309,6 +314,32 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     if (mInteractable.has(entityId)) mInteractable.remove(entityId);
     if (mSelectable.has(entityId)) mSelectable.remove(entityId);
     return entityId;
+  }
+
+  /**
+   * Chooses a hireling landing point that cannot share the owner's immediate
+   * collision footprint.  D2 does not persist a hireling world position in
+   * the character header, so this path is used both for a new reward and for
+   * every relog restore; keeping it deterministic prevents the overlap from
+   * returning after a reload.
+   */
+  Vector2 chooseMercenarySpawn(int playerId, Vector2 owner, Vector2 out) {
+    Map map = null;
+    Map.Zone zone = null;
+    if (mMapWrapper != null && mMapWrapper.has(playerId)) {
+      MapWrapper wrapper = mMapWrapper.get(playerId);
+      map = wrapper.map;
+      zone = wrapper.zone != null ? wrapper.zone : map == null ? null : map.getZone(owner);
+    }
+    if (map != null && zone != null
+        && MercenaryFollowSystem.findLanding(map, zone, owner, 1, out)) {
+      return out;
+    }
+
+    // Detached/unit-test worlds do not always provide MapWrapper.  Still
+    // avoid owner+1,owner+1: that offset can round back into the owner's
+    // collision cell.  The follow system uses the same minimum radius.
+    return out.set(Math.round(owner.x) + 2f, Math.round(owner.y));
   }
 
   private static int monsterId(int mercType) {
