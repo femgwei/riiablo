@@ -40,4 +40,12 @@ class MercenaryFollowSystemTest {
     assertEquals(new Vector2(12, 10), result);
     assertFalse(result.epsilonEquals(10, 10));
   }
+
+  @Test
+  void mediumOwnerAndHirelingNeedThreeCellCenterSeparation() {
+    assertTrue(MercenaryFollowSystem.footprintsOverlap(
+        new Vector2(10, 10), new Vector2(12, 10), 2, 2));
+    assertFalse(MercenaryFollowSystem.footprintsOverlap(
+        new Vector2(10, 10), new Vector2(13, 10), 2, 2));
+  }
 }

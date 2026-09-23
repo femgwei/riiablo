@@ -87,14 +87,40 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     Map.Zone mercenaryZone = map.getZone(mercenaryPosition);
     if (ownerZone == null) return;
 
+    // UnitCollisionGrid stores a square footprint for each unit (size 2 has
+    // cells at center +/- 1).  A hireling spawned only two cells from a
+    // medium player therefore still overlaps the player's starting cell even
+    // though their center coordinates differ.  Once that happens the
+    // pathfinder treats the player's source cell as dynamically occupied and
+    // every ground path can fail.  Repair old saves as well as newly restored
+    // hirelings before normal follow logic runs.
+    int ownerFootprint = footprint(ownerId);
+    int mercenaryFootprint = footprint(entityId);
+    float distance = mercenaryPosition.dst(ownerPosition);
+    if (!isDead(entityId) && footprintsOverlap(ownerPosition,
+        mercenaryPosition, ownerFootprint, mercenaryFootprint)) {
+      if (findLanding(map, ownerZone, ownerPosition, mercenaryFootprint,
+          ownerFootprint, landing)) {
+        teleport(entityId, ownerId, map, ownerZone, landing, distance, false);
+      } else {
+        log.warn("[MERC_FOLLOW] phase=separation_reject merc={} owner={} "
+                + "ownerPos=({}, {}) mercPos=({}, {}) ownerSize={} mercSize={} "
+                + "reason=no_walkable_landing",
+            entityId, ownerId, ownerPosition.x, ownerPosition.y,
+            mercenaryPosition.x, mercenaryPosition.y, ownerFootprint,
+            mercenaryFootprint);
+      }
+      return;
+    }
+
     boolean sameZone = ownerWrapper.map == mercenaryWrapper.map
         && ownerZone == mercenaryZone;
     boolean dead = isDead(entityId);
-    float distance = mercenaryPosition.dst(ownerPosition);
     int motion = motion(sameZone, distance, dead);
     if (motion == MOTION_TELEPORT) {
-      int footprint = mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : 1;
-      if (!findLanding(map, ownerZone, ownerPosition, footprint, landing)) {
+      int footprint = footprint(entityId);
+      if (!findLanding(map, ownerZone, ownerPosition, footprint,
+          footprint(ownerId), landing)) {
         log.warn("[MERC_FOLLOW] phase=teleport_reject merc={} owner={} level={} "
                 + "ownerPos=({}, {}) reason=no_walkable_landing",
             entityId, ownerId, ownerZone.level != null ? ownerZone.level.Id : -1,
@@ -141,6 +167,19 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     return life != null && life.asFixed() <= 0f;
   }
 
+  private int footprint(int entityId) {
+    return mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : 1;
+  }
+
+  static boolean footprintsOverlap(Vector2 first, Vector2 second,
+      int firstSize, int secondSize) {
+    if (first == null || second == null) return false;
+    int firstRadius = Math.max(0, Math.max(1, firstSize) - 1);
+    int secondRadius = Math.max(0, Math.max(1, secondSize) - 1);
+    return Math.abs(first.x - second.x) <= firstRadius + secondRadius
+        && Math.abs(first.y - second.y) <= firstRadius + secondRadius;
+  }
+
   private void teleport(int entityId, int ownerId, Map map, Map.Zone ownerZone,
       Vector2 destination, float oldDistance, boolean dead) {
     Vector2 position = mPosition.get(entityId).position;
@@ -185,6 +224,12 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   }
 
   public static boolean findLanding(Map map, Map.Zone zone, Vector2 owner, int footprint, Vector2 out) {
+    return findLanding(map, zone, owner, footprint, 1, out);
+  }
+
+  /** Finds a static-walkable hireling landing point outside both unit footprints. */
+  public static boolean findLanding(Map map, Map.Zone zone, Vector2 owner,
+      int footprint, int ownerFootprint, Vector2 out) {
     if (map == null || zone == null || owner == null || out == null) return false;
     return findLanding(owner, out, (x, y) -> {
       if (map.getZone(x, y) != zone) return false;
@@ -196,16 +241,21 @@ public final class MercenaryFollowSystem extends IteratingSystem {
         }
       }
       return true;
-    });
+    }, Math.max(2, Math.max(1, footprint) + Math.max(1, ownerFootprint) - 1));
   }
 
   static boolean findLanding(Vector2 owner, Vector2 out, LandingValidator validator) {
+    return findLanding(owner, out, validator, 2);
+  }
+
+  private static boolean findLanding(Vector2 owner, Vector2 out,
+      LandingValidator validator, int minimumRadius) {
     if (owner == null || out == null || validator == null) return false;
     int centerX = MathUtils.round(owner.x);
     int centerY = MathUtils.round(owner.y);
     // Native PetMove motion 3 selects an unoccupied point around the owner;
     // begin outside the owner's own collision footprint.
-    for (int radius = 2; radius <= 8; radius++) {
+    for (int radius = Math.max(2, minimumRadius); radius <= 8; radius++) {
       for (int dy = -radius; dy <= radius; dy++) {
         for (int dx = -radius; dx <= radius; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;

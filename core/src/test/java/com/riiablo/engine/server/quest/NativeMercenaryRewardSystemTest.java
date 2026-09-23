@@ -22,7 +22,7 @@ class NativeMercenaryRewardSystemTest {
     NativeMercenaryRewardSystem rewards = new NativeMercenaryRewardSystem();
     Vector2 spawn = rewards.chooseMercenarySpawn(1, new Vector2(10.6f, 10.6f), new Vector2());
 
-    assertEquals(13f, spawn.x);
+    assertEquals(14f, spawn.x);
     assertEquals(11f, spawn.y);
     assertTrue(spawn.dst(new Vector2(10.6f, 10.6f)) >= 1f,
         "fallback landing must not reuse the owner's rounded cell");

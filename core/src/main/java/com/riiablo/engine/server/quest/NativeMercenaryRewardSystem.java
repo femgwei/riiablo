@@ -18,6 +18,7 @@ import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeUnitFlags;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
+import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.MercenaryFollowSystem;
 import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.DeathEvent;
@@ -40,6 +41,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
 
   protected ComponentMapper<Player> mPlayer;
   protected ComponentMapper<Position> mPosition;
+  protected ComponentMapper<Size> mSize;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<AttributesWrapper> mAttributesWrapper;
   protected ComponentMapper<Corpse> mCorpse;
@@ -298,6 +300,14 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     }
     if (entityId == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;
     factory.applyNativeUnitFlags(entityId, NativeUnitFlags.MERCENARY);
+    log.info("[MERC_SPAWN] player={} entity={} ownerPos=({}, {}) spawn=({}, {}) "
+            + "ownerSize={} mercSize={} mapContext={}",
+        playerId, entityId, owner.x, owner.y, spawn.x, spawn.y,
+        ownerFootprint(playerId),
+        mSize != null && mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : 1,
+        mMapWrapper != null && mMapWrapper.has(playerId)
+            && mMapWrapper.get(playerId).map != null
+            && mMapWrapper.get(playerId).zone != null);
 
     // Hirelings use monster presentation data, but must never run hostile
     // monster AI or expose the hostile click target installed by that factory.
@@ -332,14 +342,21 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
       zone = wrapper.zone != null ? wrapper.zone : map == null ? null : map.getZone(owner);
     }
     if (map != null && zone != null
-        && MercenaryFollowSystem.findLanding(map, zone, owner, 1, out)) {
+        && MercenaryFollowSystem.findLanding(map, zone, owner, 1,
+            ownerFootprint(playerId), out)) {
       return out;
     }
 
-    // Detached/unit-test worlds do not always provide MapWrapper.  Still
-    // avoid owner+1,owner+1: that offset can round back into the owner's
-    // collision cell.  The follow system uses the same minimum radius.
-    return out.set(Math.round(owner.x) + 2f, Math.round(owner.y));
+    // Detached/unit-test worlds do not always provide MapWrapper.  Keep the
+    // fallback outside the combined medium-player/medium-hireling footprint;
+    // center distance two is still overlapping for size-2 units.
+    return out.set(Math.round(owner.x) + Math.max(2, ownerFootprint(playerId) + 1f),
+        Math.round(owner.y));
+  }
+
+  private int ownerFootprint(int playerId) {
+    return mSize != null && mSize.has(playerId)
+        ? Math.max(1, mSize.get(playerId).size) : Size.MEDIUM;
   }
 
   private static int monsterId(int mercType) {
