@@ -62,6 +62,23 @@ public class AnimDataResolver extends PassiveSystem {
     String wclassStr = Engine.getWClass(wclass);
     String cof = token + modeStr + wclassStr;
     D2.Entry entry = Riiablo.anim.getEntry(cof);
+    if (entry == null) {
+      // A few 1.10f asset packs omit presentation-only monster COFs (most
+      // commonly BL/XX).  Native DATATBLS_GetAnimDataRecord falls back to a
+      // usable mode record rather than running a 2048-frame empty animation.
+      // Keep the requested mode in CofReference for networking, but resolve
+      // the local keyframes through the closest safe attack/reaction mode.
+      for (String fallbackMode : fallbackModes(modeStr)) {
+        String candidate = token + fallbackMode + wclassStr;
+        D2.Entry fallback = Riiablo.anim.getEntry(candidate);
+        if (fallback != null) {
+          entry = fallback;
+          log.warn("COF lookup fallback | entity={} requested=\"{}\" resolved=\"{}\"",
+              entityId, cof, candidate);
+          break;
+        }
+      }
+    }
     if (DEBUG) Gdx.app.debug(TAG, cof + "=" + entry);
     
     AnimData animData = mAnimData.create(entityId);
@@ -87,5 +104,15 @@ public class AnimDataResolver extends PassiveSystem {
       animData.keyframes = entry.data;
       animData.lastKeyframeIndex = -1;
     }
+  }
+
+  /** Ordered local fallbacks for presentation-only monster modes. */
+  static String[] fallbackModes(String mode) {
+    if ("BL".equals(mode)) return new String[] {"GH", "A1"};
+    if ("XX".equals(mode)) return new String[] {"A1", "S1"};
+    if ("S2".equals(mode) || "S3".equals(mode) || "S4".equals(mode)
+        || "SC".equals(mode)) return new String[] {"S1", "A1"};
+    if ("RN".equals(mode)) return new String[] {"WL"};
+    return new String[0];
   }
 }
