@@ -220,7 +220,21 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   @Override
   public int createMonster(int monsterId, float x, float y) {
-    int id = super.createMonster(monsterId, x, y);
+    return createMonster(monsterId, x, y, 0, 0L, -1, -1);
+  }
+
+  /**
+   * Creates a ranked monster and attaches the client-side presentation
+   * components. Room activation uses this overload for native SuperUnique
+   * metadata; keeping the presentation setup here is essential because the
+   * server factory implementation only creates authoritative components.
+   */
+  @Override
+  public int createMonster(int monsterId, float x, float y,
+      int rank, long affixes, int championType, int uniqueId) {
+    int id = super.createMonster(monsterId, x, y, rank, affixes, championType, uniqueId);
+    if (id == Engine.INVALID_ENTITY) return id;
+
     Monster monster = mMonster.get(id);
     MonStats.Entry monstats = monster.monstats;
     MonStats2.Entry monstats2 = monster.monstats2;
