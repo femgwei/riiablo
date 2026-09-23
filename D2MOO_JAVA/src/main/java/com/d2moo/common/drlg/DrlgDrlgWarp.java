@@ -216,9 +216,14 @@ public class DrlgDrlgWarp {
         while (warp != null) {
             if (warp.getNLevel() == level.getLevelId()) {
                 if (arrayId >= 0 && arrayId < 8) {
-                    int[] nWarpArray = warp.getNWarp();
-                    if (nWarpArray != null && arrayId < nWarpArray.length) {
-                        return nWarpArray[arrayId];
+                    // Levels.txt stores the destination level in VisN. The
+                    // parallel WarpN array is the LvlWarp tile/type id, not
+                    // the destination. Returning WarpN makes outdoor exit
+                    // styles (for example style 3 -> level 10) resolve to a
+                    // bogus level such as 0.
+                    int[] nVisArray = warp.getNVis();
+                    if (nVisArray != null && arrayId < nVisArray.length) {
+                        return nVisArray[arrayId];
                     }
                 }
             }

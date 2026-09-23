@@ -114,6 +114,23 @@ class DrlgDrlgWarpStateTest {
         DrlgDrlgWarp.getWarpIdArrayFromLevelId(new D2DrlgStrc(), Integer.MAX_VALUE));
   }
 
+  @Test
+  void warpDestinationReadsVisibleLevelNotWarpTileType() {
+    D2DrlgStrc drlg = new D2DrlgStrc();
+    D2DrlgLevel level = new D2DrlgLevel();
+    level.setDrlg(drlg);
+    level.setLevelId(4);
+    drlg.setLevel(level);
+
+    D2DrlgWarp warp = new D2DrlgWarp();
+    warp.setNLevel(4);
+    warp.getNVis()[3] = 10;
+    warp.getNWarp()[3] = 0;
+    drlg.setWarp(warp);
+
+    assertEquals(10, DrlgDrlgWarp.getWarpDestinationFromArray(level, (byte) 3));
+  }
+
   private static D2RoomTile warp(int levelId, D2DrlgTileDataStrc inactive,
       D2DrlgTileDataStrc active) {
     D2LvlWarpTxt record = new D2LvlWarpTxt();
