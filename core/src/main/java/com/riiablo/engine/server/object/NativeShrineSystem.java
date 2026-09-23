@@ -125,7 +125,15 @@ public class NativeShrineSystem extends IteratingSystem {
     Objects.Entry base = object.base;
     int maxCharges = wellMaxCharges(base);
     if (state.wellCharges < 0) state.persistWellCharges(maxCharges);
-    if (state.wellCharges <= 0) return;
+    if (state.wellCharges <= 0) {
+      log.debug("[WELL_ANIM] phase=use_rejected entity={} player={} reason=no_charges "
+              + "mode={} charges={}/{}", interaction.entityId, interaction.playerId,
+          state.currentMode, state.wellCharges, maxCharges);
+      return;
+    }
+
+    int chargesBefore = state.wellCharges;
+    byte modeBefore = state.currentMode;
 
     Attributes attrs = attributes(interaction.playerId);
     int restorationMask = applyWellEffects(attrs, base);
@@ -141,10 +149,14 @@ public class NativeShrineSystem extends IteratingSystem {
     state.persistWellRegenFrames(wellRegenDelay(base));
     updateWellMode(interaction.entityId, state, base);
     log.info("[WELL] used: entity={}, player={}, localMask={}, externalEffect={}, "
-            + "charges={}/{}, regenFrames={}",
+            + "charges={}/{}, regenFrames={}, mode={} -> {}", 
         interaction.entityId, interaction.playerId, restorationMask,
         wellEvent.appliedByConsumer, state.wellCharges,
-        maxCharges, state.wellRegenFrames);
+        maxCharges, state.wellRegenFrames, modeBefore, state.currentMode);
+    log.info("[WELL_ANIM] phase=use entity={} player={} charges={} -> {} "
+            + "mode={} -> {} modeChanged={}", interaction.entityId,
+        interaction.playerId, chargesBefore, state.wellCharges,
+        modeBefore, state.currentMode, modeBefore != state.currentMode);
   }
 
   @Override
@@ -237,7 +249,16 @@ public class NativeShrineSystem extends IteratingSystem {
 
   private void updateWellMode(int entityId, NativeObjectState state, Objects.Entry base) {
     byte mode = (byte) wellMode(state.currentMode, state.wellCharges, parm(base, 2));
-    if (state.currentMode == mode) return;
+    if (state.currentMode == mode) {
+      log.debug("[WELL_ANIM] phase=mode_unchanged entity={} mode={} charges={} "
+              + "chargesPerMode={}", entityId, state.currentMode, state.wellCharges,
+          parm(base, 2));
+      return;
+    }
+    byte previous = state.currentMode;
+    log.info("[WELL_ANIM] phase=mode_change entity={} previous={} requested={} "
+            + "charges={} chargesPerMode={} hasCof={}", entityId, previous, mode,
+        state.wellCharges, parm(base, 2), mCofReference.has(entityId));
     state.persistMode(mode);
     if (mCofReference.has(entityId)) cofs.setMode(entityId, mode);
   }
