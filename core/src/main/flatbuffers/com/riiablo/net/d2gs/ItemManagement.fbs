@@ -16,7 +16,10 @@ enum ItemMoveOperation:byte {
   USE_BELT_ITEM,
   // Uses a scroll/tome (or another future inventory consumable) from the
   // character inventory. Appended to preserve all existing wire values.
-  USE_INVENTORY_ITEM
+  USE_INVENTORY_ITEM,
+  // Atomically moves a belt-compatible potion from the inventory to the
+  // first requested native belt slot. Appended for wire compatibility.
+  STORE_TO_BELT
 }
 
 enum ItemMoveFailure:byte {

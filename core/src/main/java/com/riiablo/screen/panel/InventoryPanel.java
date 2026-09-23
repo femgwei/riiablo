@@ -388,8 +388,22 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
       Riiablo.game.vendorPanel.repairItem(i);
       return false;
     }
+    com.riiablo.item.Item item = i >= 0 && i < Riiablo.charData.getItems().getItems().size
+        ? Riiablo.charData.getItems().getItems().get(i) : null;
+    if (isShiftHeld() && item != null && item.type != null
+        && item.type.is(com.riiablo.item.Type.POTI)) {
+      // Native D2's Shift+left-click auto-belt action bypasses the mouse
+      // cursor and leaves the item in the first compatible free quick slot.
+      return itemController.inventoryToBelt(i);
+    }
     itemController.storeToCursor(i);
     return true;
+  }
+
+  private static boolean isShiftHeld() {
+    return Gdx.input != null
+        && (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)
+            || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT));
   }
 
   @Override

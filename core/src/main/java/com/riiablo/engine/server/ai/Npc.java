@@ -17,6 +17,8 @@ import com.badlogic.gdx.utils.IntSet;
 
 import com.riiablo.Riiablo;
 import com.riiablo.audio.Audio;
+import com.riiablo.attributes.Attributes;
+import com.riiablo.attributes.Stat;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.DialogManager;
@@ -47,6 +49,7 @@ public class Npc extends AI {
   static final IntSet TRADERS    = new IntSet();
   static final IntSet GAMBLERS   = new IntSet();
   static final IntSet HIRERERS   = new IntSet();
+  static final IntSet HEALERS    = new IntSet();
   private static final Array<Npc> VENDOR_NPCS = new Array<>(false, 16, Npc.class);
   static {
     // Act 1
@@ -58,6 +61,7 @@ public class Npc extends AI {
     TRADERS.addAll(147, 148, 154);
     GAMBLERS.addAll(147);
     HIRERERS.addAll(150);
+    HEALERS.addAll(MonsterType.AKARA, MonsterType.FARA, MonsterType.ORMUS, 406, 513);
 
     // Act 2
     TALKERS.addAll();
@@ -279,10 +283,39 @@ public class Npc extends AI {
     for (Npc npc : VENDOR_NPCS) if (npc != null) npc.clearVendorStock();
   }
 
+  static boolean isHealer(int monsterId) {
+    return HEALERS.contains(monsterId);
+  }
+
+  /** Native town healer service: restore all three resources and cure harmful states. */
+  private void healPlayer(int playerId) {
+    if (!isHealer(monstats == null ? -1 : monstats.hcIdx)
+        || !mAttributesWrapper.has(playerId)) return;
+    Attributes attrs = mAttributesWrapper.get(playerId).attrs;
+    if (attrs == null || attrs.aggregate() == null || attrs.base() == null) return;
+    restoreResource(attrs, Stat.hitpoints, Stat.maxhp);
+    restoreResource(attrs, Stat.mana, Stat.maxmana);
+    restoreResource(attrs, Stat.stamina, Stat.maxstamina);
+    if (mUnitStates.has(playerId)) {
+      com.riiablo.engine.server.component.UnitStates states = mUnitStates.get(playerId);
+      if (states != null && states.stateList != null) {
+        states.stateList.removeNegativeEffects(Riiablo.files == null ? null : Riiablo.files.States);
+      }
+    }
+    log.info("[NPC_HEAL] npc={} player={} restored=life,mana,stamina", monstats.hcIdx, playerId);
+  }
+
+  private static void restoreResource(Attributes attrs, short resource, short maximum) {
+    float value = attrs.aggregate().getValue(maximum, 0f);
+    attrs.base().put(resource, value);
+    attrs.aggregate().put(resource, value);
+  }
+
   @Override
   public void interact(int src, final int entityId) {
     pathfinder.findPath(entityId, null);
     lookAt(src);
+    healPlayer(src);
 
     // TODO: need some kind of static method that can take in some state params, e.g., character
     //       class, player mode and spit out the proper file index.

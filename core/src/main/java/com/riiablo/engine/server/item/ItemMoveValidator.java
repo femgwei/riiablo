@@ -18,7 +18,7 @@ public final class ItemMoveValidator {
   public static byte validate(CharData character, ItemMoveIntent intent) {
     if (character == null || character.getItems() == null) return ItemMoveFailure.PLAYER_NOT_FOUND;
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.USE_INVENTORY_ITEM) return ItemMoveFailure.INVALID_OPERATION;
+        || intent.operation > ItemMoveOperation.STORE_TO_BELT) return ItemMoveFailure.INVALID_OPERATION;
     if (intent.merc) return ItemMoveFailure.MERC_NOT_SUPPORTED;
     ItemData data = character.getItems();
     Item cursor = data.getCursor();
@@ -112,6 +112,22 @@ public final class ItemMoveValidator {
         String code = item.code.toLowerCase(java.util.Locale.ROOT);
         return "tsc".equals(code) || "tbk".equals(code)
             ? ItemMoveFailure.NONE : ItemMoveFailure.INVALID_ITEM;
+      }
+      case ItemMoveOperation.STORE_TO_BELT: {
+        Item item = ownedById(data, intent.itemId);
+        if (item == null || item.location != Location.STORED
+            || item.storeLoc != StoreLoc.INVENTORY) return ItemMoveFailure.ITEM_NOT_OWNED;
+        if (intent.x < 0 || intent.x >= 4 || intent.y < 0
+            || intent.y >= data.getBeltRows()) return ItemMoveFailure.INVALID_BELT_SLOT;
+        if (item.typeEntry == null || !item.typeEntry.Beltable
+            || item.type == null || !item.type.is(com.riiablo.item.Type.POTI))
+          return ItemMoveFailure.ITEM_NOT_BELTABLE;
+        for (Item other : data.getItems()) {
+          if (other != null && other != item && other.location == Location.BELT
+              && other.gridX == intent.x && other.gridY == intent.y)
+            return ItemMoveFailure.BELT_SLOT_OCCUPIED;
+        }
+        return ItemMoveFailure.NONE;
       }
       default: return ItemMoveFailure.INVALID_OPERATION;
     }

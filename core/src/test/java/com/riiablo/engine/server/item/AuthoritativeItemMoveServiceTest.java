@@ -238,6 +238,25 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   }
 
   @Test
+  void inventoryPotionCanMoveDirectlyToBeltWithoutUsingCursor() {
+    CharData character = character();
+    Item potion = item("hp1", 83);
+    assertTrue(character.getItems().addToInventory(potion));
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+    ItemMoveIntent intent = new ItemMoveIntent(0L, 0L, ItemMoveOperation.STORE_TO_BELT,
+        potion.id, -1, -1, 0, 0, -1, false);
+
+    AuthoritativeItemMoveService.Outcome result = service.apply(8, character, intent);
+
+    assertTrue(result.success);
+    assertEquals(Location.BELT, potion.location);
+    assertEquals(StoreLoc.NONE, potion.storeLoc);
+    assertEquals(0, potion.gridX);
+    assertEquals(0, potion.gridY);
+    assertEquals(null, character.getItems().getCursor());
+  }
+
+  @Test
   void equippingBeltKeepsExistingPotionInBottomQuickSlot() {
     CharData character = character();
     Item potion = item("hp1", 244);

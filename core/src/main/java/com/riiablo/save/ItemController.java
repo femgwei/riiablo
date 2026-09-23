@@ -7,6 +7,8 @@ public interface ItemController {
   void groundToCursor(int entityId);
   void cursorToGround();
   void storeToCursor(int i);
+  /** Moves an inventory potion directly into the first available belt slot. */
+  boolean inventoryToBelt(int i);
   void cursorToStore(StoreLoc storeLoc, int x, int y);
   void swapStoreItem(int i, StoreLoc storeLoc, int x, int y);
   void bodyToCursor(BodyLoc bodyLoc, boolean merc);

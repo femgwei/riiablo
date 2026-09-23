@@ -137,6 +137,16 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   }
 
   @Override
+  public boolean inventoryToBelt(int i) {
+    if (Riiablo.charData == null || i < 0 || i >= Riiablo.charData.getItems().getItems().size)
+      return false;
+    com.riiablo.item.Item item = Riiablo.charData.getItems().getItems().get(i);
+    int slot = Riiablo.charData.getItems().findFreeBeltSlot(item);
+    return slot >= 0 && Riiablo.charData.getItems().movePotionToBelt(
+        item, slot & 3, slot >>> 2);
+  }
+
+  @Override
   public void cursorToStore(StoreLoc storeLoc, int x, int y) {
     Riiablo.charData.cursorToStore(storeLoc, x, y);
   }

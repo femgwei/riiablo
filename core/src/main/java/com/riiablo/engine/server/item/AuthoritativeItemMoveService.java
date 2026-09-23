@@ -62,7 +62,7 @@ public final class AuthoritativeItemMoveService {
     long current = revision(playerEntityId);
     if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.USE_INVENTORY_ITEM)
+        || intent.operation > ItemMoveOperation.STORE_TO_BELT)
       return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
     if (intent.revision != current)
       return new Outcome(false, ItemMoveFailure.STALE_INVENTORY, current);
@@ -101,6 +101,12 @@ public final class AuthoritativeItemMoveService {
           // after validation. The callback is deliberately invoked before
           // consuming the item so a missing map/portal entity cannot eat it.
           return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+        case ItemMoveOperation.STORE_TO_BELT: {
+          Item item = ownedById(character, intent.itemId);
+          if (!character.getItems().movePotionToBelt(item, intent.x, intent.y))
+            return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+          break;
+        }
         case ItemMoveOperation.GROUND_TO_CURSOR:
         case ItemMoveOperation.CURSOR_TO_GROUND:
           // Ground entities are owned by ECS and use the overloads below.

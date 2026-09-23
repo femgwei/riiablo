@@ -718,6 +718,15 @@ public class ItemData {
         || !item.typeEntry.Beltable || item.type == null
         || !item.type.is(Type.POTI)) return false;
 
+    int slot = findFreeBeltSlot(item);
+    if (slot < 0) return false;
+    return addToBeltSlot(item, slot & 3, slot >>> 2);
+  }
+
+  /** Returns the native auto-belt slot (x + 4*y), or -1 when none is free. */
+  public int findFreeBeltSlot(Item item) {
+    if (item == null || item.typeEntry == null || !item.typeEntry.Beltable
+        || item.type == null || !item.type.is(Type.POTI)) return -1;
     int rows = getBeltRows();
     Item[][] occupied = new Item[rows][4];
     for (int i = 0; i < itemData.size; i++) {
@@ -725,7 +734,7 @@ public class ItemData {
       if (beltItem == null || beltItem.location != Location.BELT) continue;
       int x = beltItem.gridX;
       int y = beltItem.gridY;
-      if (x < 0 || x >= 4 || y < 0 || y >= rows) return false;
+      if (x < 0 || x >= 4 || y < 0 || y >= rows) return -1;
       occupied[y][x] = beltItem;
     }
 
@@ -734,16 +743,34 @@ public class ItemData {
     for (int x = 0; x < 4; x++) {
       if (!sameNativePotionType(item, occupied[0][x])) continue;
       for (int y = 0; y < rows; y++) {
-        if (occupied[y][x] == null) return addToBeltSlot(item, x, y);
+        if (occupied[y][x] == null) return x + 4 * y;
       }
     }
 
     // If every matching column is full (or none exists), native AutoBelt
     // starts a new family only in the first empty quick slot.
     for (int x = 0; x < 4; x++) {
-      if (occupied[0][x] == null) return addToBeltSlot(item, x, 0);
+      if (occupied[0][x] == null) return x;
     }
-    return false;
+    return -1;
+  }
+
+  /** Moves an already-owned inventory potion into an explicit belt slot. */
+  public boolean movePotionToBelt(Item item, int x, int y) {
+    if (item == null || indexOf(item) == INVALID_ITEM
+        || item.location != Location.STORED || item.storeLoc != StoreLoc.INVENTORY
+        || !canStoreInBelt(item, x, y)) return false;
+    notifyStoreRemoved(item);
+    item.storeLoc = StoreLoc.NONE;
+    item.bodyLoc = BodyLoc.NONE;
+    item.gridX = (byte) x;
+    item.gridY = (byte) y;
+    setLocation(item, Location.BELT);
+    if (Riiablo.files != null) {
+      updateStats();
+      notifyUpdated();
+    }
+    return true;
   }
 
   /** Native belt height: four quick slots without a belt, up to four rows. */

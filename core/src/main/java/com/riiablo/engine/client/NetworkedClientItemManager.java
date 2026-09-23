@@ -153,6 +153,18 @@ public class NetworkedClientItemManager extends ClientItemManager {
   }
 
   @Override
+  public boolean inventoryToBelt(int i) {
+    com.riiablo.save.ItemData data = Riiablo.charData == null ? null : Riiablo.charData.getItems();
+    if (data == null || i < 0 || i >= data.getItems().size) return false;
+    com.riiablo.item.Item item = data.getItems().get(i);
+    int slot = data.findFreeBeltSlot(item);
+    if (slot < 0) return false;
+    send(ItemMoveOperation.STORE_TO_BELT, item == null ? -1 : item.id, -1, -1,
+        slot & 3, slot >>> 2, -1, false);
+    return true;
+  }
+
+  @Override
   public void cursorToStore(StoreLoc storeLoc, int x, int y) {
     send(ItemMoveOperation.CURSOR_TO_STORE, -1, -1, storeLoc.ordinal(), x, y, -1, false);
   }

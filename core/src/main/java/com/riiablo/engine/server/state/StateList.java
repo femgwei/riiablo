@@ -233,6 +233,43 @@ public class StateList {
     return count;
   }
 
+  /** Removes native harmful effects while preserving beneficial/aura states. */
+  public int removeNegativeEffects(States table) {
+    int count = 0;
+    for (int i = states.size - 1; i >= 0; i--) {
+      UnitState state = states.get(i);
+      States.Entry definition = table != null ? table.get(state.stateId) : null;
+      boolean negative = StateId.isCurse(state.stateId) || definition != null
+          && (definition.curse || definition.curable || definition.damageRed
+              || definition.armorRed || definition.fireResistRed
+              || definition.coldResistRed || definition.lightningResistRed
+              || definition.poisonResistRed);
+      switch (state.stateId) {
+        case StateId.FREEZE:
+        case StateId.POISON:
+        case StateId.COLD:
+        case StateId.STUNNED:
+        case StateId.SLOWED:
+        case StateId.PREVENTHEAL:
+        case StateId.OPENWOUNDS:
+        case StateId.BURNING:
+        case StateId.CONVERSION:
+        case StateId.CONVERSION_SAVE:
+          negative = true;
+          break;
+        default:
+          break;
+      }
+      if (!negative) continue;
+      int stateId = state.stateId;
+      states.removeIndex(i);
+      statePool.free(state);
+      refreshFlag(stateId);
+      count++;
+    }
+    return count;
+  }
+
   private UnitState createState(int stateId, int duration, int level,
       int sourceEntityId, int skillId) {
     UnitState state = statePool.obtain();
