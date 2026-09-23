@@ -142,7 +142,13 @@ public class StateOverlaySystem extends IteratingSystem {
     String[] candidates;
     switch (stateId) {
       case StateId.DIMVISION:
-        candidates = new String[] {"dimvision", "dimvisionoverlay", "curse"};
+        // Overlay.txt's native key is "cursedimvision"; its Filename is
+        // CurseDimVisionEffect. Keep filename/mod aliases after the native
+        // key because Excel lookups are case-sensitive.
+        candidates = new String[] {
+            "cursedimvision", "CurseDimVisionEffect", "CurseDimVision",
+            "dimvision", "dimvisionoverlay", "curse"
+        };
         break;
       case StateId.BLADESHIELD:
         candidates = new String[] {"bladeshield"};
@@ -166,7 +172,9 @@ public class StateOverlaySystem extends IteratingSystem {
         candidates = new String[] {"battlecry"};
         break;
       case StateId.CONVERSION:
-        candidates = new String[] {"conversion"};
+        // The native row is "conversionaura" and points at Conversion.dcc.
+        // Keep filename/lower-case aliases as compatibility fallbacks.
+        candidates = new String[] {"conversionaura", "Conversion", "conversion"};
         break;
       case StateId.FROZENARMOR:
         candidates = new String[] {"frozenarmor"};

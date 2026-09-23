@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.artemis.World;
 import com.artemis.WorldConfigurationBuilder;
 import com.badlogic.gdx.utils.IntMap;
+import com.riiablo.Riiablo;
 import com.riiablo.RiiabloTest;
 import com.riiablo.codec.COF;
 import com.riiablo.engine.server.CofManager;
@@ -79,6 +80,32 @@ class StateOverlaySystemTest extends RiiabloTest {
       states.stateList.removeState(StateId.BERSERK);
       world.process();
       assertFalse(overlays.overlays.containsKey(StateId.BERSERK));
+    } finally {
+      world.dispose();
+    }
+  }
+
+  @Test
+  void nativeDimVisionAndConversionUseOverlayTxtKeys() {
+    // Overlay.txt keys are case-sensitive. These rows are present in the
+    // stock 1.10f data set and should be selected before mod aliases.
+    assertTrue(Riiablo.files.Overlay.get("cursedimvision") != null,
+        "stock Overlay.txt must contain the Dim Vision overlay row");
+    assertTrue(Riiablo.files.Overlay.get("conversionaura") != null,
+        "stock Overlay.txt must contain the Conversion overlay row");
+
+    RecordingOverlayManager overlays = new RecordingOverlayManager();
+    World world = new World(new WorldConfigurationBuilder()
+        .with(new EventSystem(), new CofManager(), overlays, new StateOverlaySystem())
+        .build());
+    try {
+      int entity = world.create();
+      UnitStates states = world.getMapper(UnitStates.class).create(entity).init(entity);
+      states.stateList.addState(StateId.DIMVISION, 100, 1, entity);
+      states.stateList.addState(StateId.CONVERSION, 100, 1, entity);
+      world.process();
+      assertEquals("cursedimvision", overlays.overlayFor(StateId.DIMVISION));
+      assertEquals("conversionaura", overlays.overlayFor(StateId.CONVERSION));
     } finally {
       world.dispose();
     }
