@@ -156,10 +156,19 @@ public class MapManager extends PassiveSystem {
     int created = 0;
     int failed = 0;
     int skipped = 0;
-    IntSet roomsInBatch = new IntSet();
     for (Map.NativeObject object : zone.nativeObjects) {
       if (!object.externalEntity) {
         object.creationStatus = "skipped_external_entity_false";
+        skipped++;
+        continue;
+      }
+      // Offline D2MOO export initializes every RoomEx to obtain its final
+      // preset list. That native initialization can make a room look
+      // "spawned" before any ECS object exists. The per-preset status is the
+      // authoritative idempotence guard for the Java bridge; using the room
+      // flag here would permanently drop deferred objects in streamed levels
+      // (including Den of Evil's interactive corpses).
+      if (!"PENDING".equals(object.creationStatus)) {
         skipped++;
         continue;
       }
@@ -175,13 +184,6 @@ public class MapManager extends PassiveSystem {
         object.creationStatus = "skipped_spawned";
         continue;
       }
-
-      if (room != null && room.isPresetUnitsSpawned() && !roomsInBatch.contains(room.id)) {
-        skipped++;
-        object.creationStatus = "skipped_room_processed";
-        continue;
-      }
-      if (room != null) roomsInBatch.add(room.id);
 
       // DS1 stores Act as zero-based in the file and riiablo's loader exposes
       // it as one-based. Act I therefore uses table section 1 here. Units
@@ -257,11 +259,12 @@ public class MapManager extends PassiveSystem {
         created++;
       }
     }
-    for (IntSet.IntSetIterator it = roomsInBatch.iterator(); it.hasNext; ) {
-      int roomId = it.next();
-      if (roomId >= 0 && roomId < zone.roomsEx.size) {
-        zone.roomsEx.get(roomId).markPresetUnitsSpawned();
-      }
+    if (onlyRoom != null) {
+      // Keep the native one-shot room marker for RoomActivationSystem. It no
+      // longer decides whether exported objects are created; their individual
+      // creationStatus values make re-entry idempotent without losing the
+      // initial room snapshot.
+      onlyRoom.markPresetUnitsSpawned();
     }
     if (zone.nativeObjects.size > 0 && (onlyRoom == null || created + failed + skipped > 0)) {
       Gdx.app.log(TAG, String.format(
