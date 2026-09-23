@@ -37,15 +37,13 @@ public class Fonts {
     consolas12   = loadEx(assets, "consolas12.fnt");
     consolas16   = loadEx(assets, "consolas16.fnt");
     if (language == D2Language.CHINESE
-        && !Boolean.getBoolean("riiablo.chinese.fullFonts")) {
+        && Boolean.getBoolean("riiablo.chinese.sharedFont")) {
       // Native CJK fonts contain 13,806 glyphs each. Build the complete
       // font16 atlas once and share it across the UI variants; each copy has
       // isolated metrics and blend mode but does not duplicate textures.
       FontTBL.BitmapFont base = load(assets, "font16", BlendMode.LUMINOSITY_TINT);
-      // Keep the quest title (font16) and dialogue body (fontformal11) on
-      // the same visual baseline.  The original per-size CJK TBL files carry
-      // this one-pixel bearing, but it is not present when all variants reuse
-      // the font16 glyph atlas.
+      // This compatibility mode is opt-in. Native Chinese fonts have distinct
+      // glyph bearings and must be loaded independently for accurate layout.
       ((FontTBL.BitmapFontData) base.getData())
           .shiftGlyphsY(CHINESE_SHARED_BASELINE_ADJUST);
       font16 = base;

@@ -53,6 +53,16 @@ public class FontTBL {
     return new BitmapFontData(dc6);
   }
 
+  /** Recreates font data from a decoded atlas cache without loading the DC6. */
+  public BitmapFontData data(FontAtlasCache.CachedData cached) {
+    return new BitmapFontData(cached);
+  }
+
+  /** Recreates font data from cache without requiring a parsed TBL instance. */
+  public static BitmapFontData dataFromCache(FontAtlasCache.CachedData cached) {
+    return new FontTBL(null, null).new BitmapFontData(cached);
+  }
+
   public class BitmapFontData extends com.badlogic.gdx.graphics.g2d.BitmapFont.BitmapFontData {
     final  com.riiablo.codec.DC6 dc6;
     final  Array<Pixmap>        fontSheets;
@@ -100,6 +110,74 @@ public class FontTBL {
     private BitmapFontData(DC6 dc6, Array<Pixmap> fontSheets) {
       this.dc6 = dc6;
       this.fontSheets = fontSheets;
+    }
+
+    private BitmapFontData(FontAtlasCache.CachedData cached) {
+      this.dc6 = null;
+      this.fontSheets = cached.pages;
+      padTop = cached.padTop;
+      padRight = cached.padRight;
+      padBottom = cached.padBottom;
+      padLeft = cached.padLeft;
+      lineHeight = cached.lineHeight;
+      xHeight = cached.xHeight;
+      capHeight = cached.capHeight;
+      descent = cached.descent;
+      ascent = cached.ascent;
+      down = cached.down;
+      spaceXadvance = cached.spaceXadvance;
+      scaleX = cached.scaleX;
+      scaleY = cached.scaleY;
+      markupEnabled = cached.markupEnabled;
+      blankLineScale = cached.blankLineScale;
+      for (FontAtlasCache.GlyphData cachedGlyph : cached.glyphs) {
+        BitmapFont.Glyph glyph = new BitmapFont.Glyph();
+        glyph.id = cachedGlyph.id;
+        glyph.page = cachedGlyph.page;
+        glyph.srcX = cachedGlyph.srcX;
+        glyph.srcY = cachedGlyph.srcY;
+        glyph.width = cachedGlyph.width;
+        glyph.height = cachedGlyph.height;
+        glyph.xoffset = cachedGlyph.xoffset;
+        glyph.yoffset = cachedGlyph.yoffset;
+        glyph.xadvance = cachedGlyph.xadvance;
+        glyph.fixedWidth = cachedGlyph.fixedWidth;
+        setGlyph(glyph.id, glyph);
+      }
+      missingGlyph = getGlyph((char) cached.missingGlyphId);
+    }
+
+    FontAtlasCache.GlyphData[] glyphsSnapshot() {
+      int count = 0;
+      for (BitmapFont.Glyph[] page : glyphs) {
+        if (page != null) {
+          for (BitmapFont.Glyph glyph : page) if (glyph != null) count++;
+        }
+      }
+      FontAtlasCache.GlyphData[] result = new FontAtlasCache.GlyphData[count];
+      int index = 0;
+      for (BitmapFont.Glyph[] page : glyphs) {
+        if (page == null) continue;
+        for (BitmapFont.Glyph glyph : page) {
+          if (glyph == null) continue;
+          FontAtlasCache.GlyphData cached = result[index++] = new FontAtlasCache.GlyphData();
+          cached.id = glyph.id;
+          cached.page = glyph.page;
+          cached.srcX = glyph.srcX;
+          cached.srcY = glyph.srcY;
+          cached.width = glyph.width;
+          cached.height = glyph.height;
+          cached.xoffset = glyph.xoffset;
+          cached.yoffset = glyph.yoffset;
+          cached.xadvance = glyph.xadvance;
+          cached.fixedWidth = glyph.fixedWidth;
+        }
+      }
+      return result;
+    }
+
+    int missingGlyphId() {
+      return missingGlyph == null ? -1 : missingGlyph.id;
     }
 
     /** Creates a metrics-isolated view that reuses this font's glyph atlas. */
