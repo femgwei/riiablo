@@ -105,10 +105,30 @@ public class MusicController implements Music.OnCompletionListener {
           // Keep the original load failure as the diagnostic below.
         }
         this.track = null;
-        Gdx.app.error(TAG, "Skipping unavailable music \"" + asset + "\"", ex);
+        if (isMissingMusicFailure(ex)) {
+          // Missing optional tracks are expected across 1.10/1.11/1.13 MPQ
+          // sets. Do not print a several-dozen-line AssetManager stack trace
+          // for a normal playlist skip.
+          Gdx.app.log(TAG, "Skipping unavailable music \"" + asset + "\"");
+        } else {
+          Gdx.app.error(TAG, "Skipping music after load failure \"" + asset + "\"", ex);
+        }
       }
     }
     this.asset = null;
+  }
+
+  static boolean isMissingMusicFailure(Throwable failure) {
+    for (Throwable current = failure; current != null; current = current.getCause()) {
+      String message = current.getMessage();
+      if (message == null) continue;
+      String lower = message.toLowerCase(java.util.Locale.ROOT);
+      if (lower.contains("file cannot be null")
+          || lower.contains("couldn't load dependencies of asset")
+          || lower.contains("file not found")
+          || lower.contains("asset not found")) return true;
+    }
+    return false;
   }
 
 
