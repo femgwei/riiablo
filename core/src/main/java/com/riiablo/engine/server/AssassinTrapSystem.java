@@ -620,6 +620,12 @@ public class AssassinTrapSystem extends IteratingSystem {
     blade.attached = true;
     blade.attachedEntityId = entityId;
     blade.range = 0f;
+    // The Blade Sentinel controller owns the visual missile lifetime.  The
+    // missile row's Range may have been converted to a stationary
+    // nativeLifetimeFrames value by EntityFactory; retaining that value would
+    // delete the attached blade before the controller completes its return
+    // pass.
+    blade.nativeLifetimeFrames = 0;
     blade.pierceEnabled = true;
     blade.pierceChance = 100;
     blade.pierceRemaining = -1;
