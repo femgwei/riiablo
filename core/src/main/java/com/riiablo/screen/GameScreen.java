@@ -39,7 +39,10 @@ import com.riiablo.Cvars;
 import com.riiablo.Keys;
 import com.riiablo.Riiablo;
 import com.riiablo.camera.IsometricCamera;
+import com.riiablo.codec.COF;
+import com.riiablo.codec.DC;
 import com.riiablo.codec.DC6;
+import com.riiablo.codec.DCC;
 import com.riiablo.codec.excel.Levels;
 import com.riiablo.codec.excel.Sounds;
 import com.riiablo.cvar.Cvar;
@@ -153,13 +156,18 @@ import com.riiablo.engine.server.ZoneMovementModesChanger;
 import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.component.Angle;
 import com.riiablo.engine.server.component.Box2DBody;
+import com.riiablo.engine.server.component.Class;
+import com.riiablo.engine.server.component.CofComponents;
+import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.TemporaryRunning;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.event.ZoneChangeEvent;
+import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 import com.riiablo.item.Item;
 import com.riiablo.item.ItemGenerator;
@@ -1469,6 +1477,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       processInitialPresentationPass(); // queue DCC/DC6 layers
       Riiablo.assets.finishLoading();    // decode layers
       processInitialPresentationPass(); // attach decoded layers to Animation
+      // Warriv starts in NU, then approaches the player after his first AI
+      // delay.  That WL transition happens after this generic pipeline, so
+      // retain its COF/DCC explicitly while the loading screen is still up.
+      prewarmMonsterMode(MonsterType.WARRIV, Engine.Monster.MODE_WL);
       long presentationElapsed = System.nanoTime() - presentationStart;
       if (presentationElapsed >= 1_000_000L) {
         Gdx.app.log(TAG, String.format(
@@ -1493,6 +1505,91 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     engine.getSystem(CofLoader.class).process();
     engine.getSystem(CofLayerLoader.class).process();
     engine.getSystem(CofLayerCacher.class).process();
+  }
+
+  /**
+   * Loads and retains one alternate monster animation mode without changing
+   * the entity's authoritative mode.  This is used for town NPC transitions
+   * that occur only after an AI delay and therefore cannot be discovered by
+   * the ordinary initial presentation pass.
+   */
+  private void prewarmMonsterMode(int monsterType, byte mode) {
+    ComponentMapper<Monster> monsters = engine.getMapper(Monster.class);
+    ComponentMapper<Class> classes = engine.getMapper(Class.class);
+    ComponentMapper<CofReference> references = engine.getMapper(CofReference.class);
+    ComponentMapper<CofComponents> components = engine.getMapper(CofComponents.class);
+    IntBag entities = engine.getAspectSubscriptionManager()
+        .get(Aspect.all(Monster.class, Class.class, CofReference.class, CofComponents.class))
+        .getEntities();
+
+    for (int i = 0, size = entities.size(); i < size; i++) {
+      int entityId = entities.get(i);
+      Monster monster = monsters.get(entityId);
+      if (monster == null || monster.monstats == null
+          || monster.monstats.hcIdx != monsterType) continue;
+
+      Class.Type logicalType = classes.get(entityId).type;
+      CofReference reference = references.get(entityId);
+      Class.Type type = reference.effectiveType(logicalType);
+      String token = reference.effectiveToken();
+      byte wclass = reference.effectiveWClass();
+      String modeName = type.getMode(mode);
+      String cofName = token + modeName + Engine.getWClass(wclass);
+      String cofPath = type.PATH + '\\' + token + "\\cof\\" + cofName + ".cof";
+      if (!Riiablo.mpqs.contains(cofPath)) {
+        Gdx.app.error(TAG, "[NPC_PRESENTATION_PREWARM] missingCof=" + cofPath);
+        return;
+      }
+
+      AssetDescriptor<COF> cofDescriptor = new AssetDescriptor<>(cofPath, COF.class);
+      Riiablo.assets.load(cofDescriptor);
+      preloadedAssets.add(cofDescriptor);
+      Riiablo.assets.finishLoading();
+      COF cof = Riiablo.assets.get(cofDescriptor);
+
+      Array<AssetDescriptor<? extends DC>> layerDescriptors = new Array<>();
+      int[] componentCodes = components.get(entityId).component;
+      for (int layerIndex = 0; layerIndex < cof.getNumLayers(); layerIndex++) {
+        COF.Layer layer = cof.getLayer(layerIndex);
+        int component = layer.component;
+        int componentCode = componentCodes[component];
+        if (componentCode == CofComponents.COMPONENT_NIL) continue;
+        if (componentCode == CofComponents.COMPONENT_NULL) {
+          componentCode = CofComponents.COMPONENT_LIT;
+        }
+
+        String composite = Engine.getComposite(component);
+        String basePath = type.PATH + '\\' + token + '\\' + composite + '\\'
+            + token + composite + type.COMP[componentCode] + modeName + layer.weaponClass;
+        AssetDescriptor<? extends DC> descriptor;
+        String dccPath = basePath + '.' + DCC.EXT;
+        if (Riiablo.mpqs.contains(dccPath)) {
+          descriptor = new AssetDescriptor<>(dccPath, DCC.class);
+        } else {
+          String dc6Path = basePath + '.' + DC6.EXT;
+          if (!Riiablo.mpqs.contains(dc6Path)) {
+            Gdx.app.error(TAG, "[NPC_PRESENTATION_PREWARM] missingLayer=" + basePath);
+            continue;
+          }
+          descriptor = new AssetDescriptor<>(dc6Path, DC6.class);
+        }
+        Riiablo.assets.load(descriptor);
+        preloadedAssets.add(descriptor);
+        layerDescriptors.add(descriptor);
+      }
+
+      Riiablo.assets.finishLoading();
+      for (AssetDescriptor<? extends DC> descriptor : layerDescriptors) {
+        Riiablo.assets.get(descriptor).loadDirections();
+      }
+      Gdx.app.log(TAG, "[NPC_PRESENTATION_PREWARM] entity=" + entityId
+          + " monster=" + monster.monstats.Id + " mode=" + modeName
+          + " layers=" + layerDescriptors.size + " action=complete");
+      return;
+    }
+
+    Gdx.app.error(TAG, "[NPC_PRESENTATION_PREWARM] monsterType=" + monsterType
+        + " mode=" + mode + " result=entity_not_found");
   }
 
   @Override
