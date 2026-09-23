@@ -131,6 +131,25 @@ public class FontTBL {
       return copy;
     }
 
+    /**
+     * Applies a small baseline correction to every glyph in this atlas.
+     *
+     * <p>The native Chinese font16 atlas is reused by the compact/formal
+     * font variants.  Those variants have different line metrics, while the
+     * shared glyph records keep the same bitmap baseline.  Adjusting the
+     * glyph offset once on the base atlas keeps all shared views aligned.</p>
+     */
+    public void shiftGlyphsY(int delta) {
+      if (delta == 0) return;
+      for (int page = 0; page < glyphs.length; page++) {
+        BitmapFont.Glyph[] pageGlyphs = glyphs[page];
+        if (pageGlyphs == null) continue;
+        for (BitmapFont.Glyph glyph : pageGlyphs) {
+          if (glyph != null) glyph.yoffset += delta;
+        }
+      }
+    }
+
     private BitmapFont.Glyph copyGlyph(BitmapFont.Glyph source) {
       if (source == null) return null;
       BitmapFont.Glyph target = new BitmapFont.Glyph();

@@ -9,6 +9,8 @@ import com.riiablo.codec.FontTBL;
 import com.riiablo.loader.BitmapFontLoader;
 
 public class Fonts {
+  /** Native CJK glyphs sit one pixel high when the font16 atlas is shared. */
+  private static final int CHINESE_SHARED_BASELINE_ADJUST = -1;
   public final BitmapFont         consolas12;
   public final BitmapFont         consolas16;
   public final FontTBL.BitmapFont font6;
@@ -40,6 +42,12 @@ public class Fonts {
       // font16 atlas once and share it across the UI variants; each copy has
       // isolated metrics and blend mode but does not duplicate textures.
       FontTBL.BitmapFont base = load(assets, "font16", BlendMode.LUMINOSITY_TINT);
+      // Keep the quest title (font16) and dialogue body (fontformal11) on
+      // the same visual baseline.  The original per-size CJK TBL files carry
+      // this one-pixel bearing, but it is not present when all variants reuse
+      // the font16 glyph atlas.
+      ((FontTBL.BitmapFontData) base.getData())
+          .shiftGlyphsY(CHINESE_SHARED_BASELINE_ADJUST);
       font16 = base;
       font6 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
       font8 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
