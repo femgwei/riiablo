@@ -32,6 +32,7 @@ public final class NativeShrineDistributionAudit {
 
     Map<Integer, Integer> rawCounts = new TreeMap<>();
     Map<Integer, String> rawDetails = new TreeMap<>();
+    Map<Integer, Integer> shrineModeCounts = new TreeMap<>();
     Map<Integer, Integer> shrineCounts = new TreeMap<>();
     Map<String, Integer> viewCounts = new TreeMap<>();
     Map<Integer, String> shrineDetails = new TreeMap<>();
@@ -76,6 +77,7 @@ public final class NativeShrineDistributionAudit {
               if (resolution.kind == NativePresetObjectResolver.Kind.SHRINE
                   || (base != null && base.OperateFn == 2)) {
                 shrinePresets[0]++;
+                shrineModeCounts.merge(mode, 1, Integer::sum);
                 int shrineId = NativeShrineResolver.resolve(Riiablo.files.Shrines, base,
                     objectId, levelId, seed, x, y);
                 shrineCounts.merge(shrineId, 1, Integer::sum);
@@ -114,6 +116,7 @@ public final class NativeShrineDistributionAudit {
         .append("ordinaryObjects=").append(ordinaryObjects[0]).append('\n')
         .append("rawObjectCounts=").append(rawCounts).append('\n')
         .append("rawObjectDetails=").append(rawDetails).append('\n')
+        .append("shrineModeCounts=").append(shrineModeCounts).append('\n')
         .append("shrineIdCounts=").append(shrineCounts).append('\n')
         .append("shrineDetails=").append(shrineDetails).append('\n')
         .append("shrineViewCounts=").append(viewCounts).append('\n')

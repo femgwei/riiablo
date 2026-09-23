@@ -15,6 +15,8 @@ import com.riiablo.engine.EntityFactory;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.NativeObjectState;
+import com.riiablo.engine.server.object.NativeObjectOperateTable;
+import com.riiablo.engine.server.object.NativeObjectOperateTable.Lifecycle;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 
@@ -221,6 +223,16 @@ public class MapManager extends PassiveSystem {
             object.presetIndex, objectId,
             resolvedObjectId, object.mode, object.ds1Raw, object.spawned, resolution.kind);
         CofReference nativeCof = mCofReference.get(id);
+        // D2MOO's ShrineW/ShrineD/ShrineF/ShrineH substitutions can carry the
+        // transient OP mode from their DS1 preset.  OP is the activation
+        // sequence, not the idle visual state; a fresh/unactivated shrine must
+        // always enter NU before its COF is exposed to the renderer.
+        Objects.Entry nativeBase = Riiablo.files.objects.get(resolvedObjectId);
+        if (!nativeState.activated
+          && NativeObjectOperateTable.resolve(nativeBase, resolution.kind)
+                == Lifecycle.SHRINE) {
+          nativeState.persistMode(Engine.Object.MODE_NU);
+        }
         if (nativeCof != null && nativeState.currentMode >= Engine.Object.MODE_NU
             && nativeState.currentMode <= Engine.Object.MODE_S5) {
           nativeCof.mode = nativeState.currentMode;
