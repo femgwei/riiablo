@@ -131,6 +131,39 @@ class DrlgDrlgWarpStateTest {
     assertEquals(10, DrlgDrlgWarp.getWarpDestinationFromArray(level, (byte) 3));
   }
 
+  @Test
+  void warpCoordinateQueryKeepsNativeNineSlotContract() {
+    D2DrlgStrc drlg = new D2DrlgStrc();
+    D2DrlgLevel level = new D2DrlgLevel();
+    level.setDrlg(drlg);
+    level.setLevelId(4);
+    drlg.setLevel(level);
+    D2DrlgWarp warp = new D2DrlgWarp();
+    warp.setNLevel(4);
+    warp.getNVis()[0] = 10;
+    drlg.setWarp(warp);
+    D2DrlgRoom first = null;
+    D2DrlgRoom previous = null;
+    for (int i = 0; i < 10; i++) {
+      D2DrlgRoom room = new D2DrlgRoom();
+      room.setFlags(D2DrlgRoomFlags.HAS_WARP_0);
+      room.setNTileXPos(i * 8);
+      room.setNTileYPos(0);
+      room.setNTileWidth(8);
+      room.setNTileHeight(8);
+      if (first == null) first = room;
+      if (previous != null) previous.setDrlgRoomNext(room);
+      previous = room;
+    }
+    level.setFirstRoomEx(first);
+
+    DrlgDrlg.computeLevelWarpInfo(level);
+
+    assertEquals(9, level.getNRoomCenterWarpX().length);
+    assertEquals(9, level.getNRoomCenterWarpY().length);
+    assertEquals(9, level.getNRoomCoords());
+  }
+
   private static D2RoomTile warp(int levelId, D2DrlgTileDataStrc inactive,
       D2DrlgTileDataStrc active) {
     D2LvlWarpTxt record = new D2LvlWarpTxt();

@@ -612,6 +612,22 @@ public class DrlgDrlg {
                 int nRoomCoords = level.getNRoomCoords();
                 int[] nRoomCenterWarpX = level.getNRoomCenterWarpX();
                 int[] nRoomCenterWarpY = level.getNRoomCenterWarpY();
+
+                // Native D2 exposes nine room-center warp slots.  A malformed
+                // or modded DS1 can mark more rooms than fit that contract;
+                // do not let a diagnostic coordinate overflow abort the
+                // entire level build. The first nine remain authoritative for
+                // the public D2Common query, matching the native ABI.
+                if (nRoomCenterWarpX == null || nRoomCenterWarpY == null
+                        || nRoomCoords < 0
+                        || nRoomCoords >= nRoomCenterWarpX.length
+                        || nRoomCoords >= nRoomCenterWarpY.length) {
+                    D2Log.warning("DRLG_ComputeLevelWarpInfo: warp room slot overflow"
+                            + " level=%d slots=%d room=(%d,%d)", level.getLevelId(),
+                        nRoomCoords, drlgRoom.getNTileXPos(), drlgRoom.getNTileYPos());
+                    drlgRoom = drlgRoom.getDrlgRoomNext();
+                    continue;
+                }
                 
                 // 将传送门放在房间中心
                 nRoomCenterWarpX[nRoomCoords] = drlgRoom.getDrlgCoord().getNTileXPos() 
