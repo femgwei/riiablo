@@ -34,18 +34,38 @@ public class Fonts {
     fontDirectory = language.fontDirectory;
     consolas12   = loadEx(assets, "consolas12.fnt");
     consolas16   = loadEx(assets, "consolas16.fnt");
-    font6        = load(assets, "font6",  BlendMode.LUMINOSITY_TINT);
-    font8        = load(assets, "font8",  BlendMode.LUMINOSITY_TINT);
-    font16       = load(assets, "font16", BlendMode.LUMINOSITY_TINT);
-    font24       = load(assets, "font24", BlendMode.ID);
-    font30       = load(assets, "font30", BlendMode.ID);
-    font42       = load(assets, "font42", BlendMode.ID);
-    fontformal10 = load(assets, "fontformal10", BlendMode.LUMINOSITY_TINT);
-    fontformal11 = load(assets, "fontformal11", BlendMode.LUMINOSITY_TINT);
-    fontformal12 = load(assets, "fontformal12", BlendMode.LUMINOSITY_TINT);
-    fontexocet10 = load(assets, "fontexocet10", BlendMode.TINT_BLACKS);
-    fontridiculous = load(assets, "fontridiculous", BlendMode.TINT_BLACKS);
-    ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
+    if (language == D2Language.CHINESE
+        && !Boolean.getBoolean("riiablo.chinese.fullFonts")) {
+      // Native CJK fonts contain 13,806 glyphs each. Build the complete
+      // font16 atlas once and share it across the UI variants; each copy has
+      // isolated metrics and blend mode but does not duplicate textures.
+      FontTBL.BitmapFont base = load(assets, "font16", BlendMode.LUMINOSITY_TINT);
+      font16 = base;
+      font6 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      font8 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      font24 = base.sharedAtlasCopy(BlendMode.ID);
+      font30 = base.sharedAtlasCopy(BlendMode.ID);
+      font42 = base.sharedAtlasCopy(BlendMode.ID);
+      fontformal10 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      fontformal11 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      fontformal12 = base.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      fontexocet10 = base.sharedAtlasCopy(BlendMode.TINT_BLACKS);
+      fontridiculous = base.sharedAtlasCopy(BlendMode.TINT_BLACKS);
+      ReallyTheLastSucker = base.sharedAtlasCopy(BlendMode.ID);
+    } else {
+      font6        = load(assets, "font6",  BlendMode.LUMINOSITY_TINT);
+      font8        = load(assets, "font8",  BlendMode.LUMINOSITY_TINT);
+      font16       = load(assets, "font16", BlendMode.LUMINOSITY_TINT);
+      font24       = load(assets, "font24", BlendMode.ID);
+      font30       = load(assets, "font30", BlendMode.ID);
+      font42       = load(assets, "font42", BlendMode.ID);
+      fontformal10 = load(assets, "fontformal10", BlendMode.LUMINOSITY_TINT);
+      fontformal11 = load(assets, "fontformal11", BlendMode.LUMINOSITY_TINT);
+      fontformal12 = load(assets, "fontformal12", BlendMode.LUMINOSITY_TINT);
+      fontexocet10 = load(assets, "fontexocet10", BlendMode.TINT_BLACKS);
+      fontridiculous = load(assets, "fontridiculous", BlendMode.TINT_BLACKS);
+      ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
+    }
 
     BitmapFont.BitmapFontData data;
     data = font8.getData();

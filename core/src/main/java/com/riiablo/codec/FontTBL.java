@@ -97,6 +97,64 @@ public class FontTBL {
       down = -lineHeight;
     }
 
+    private BitmapFontData(DC6 dc6, Array<Pixmap> fontSheets) {
+      this.dc6 = dc6;
+      this.fontSheets = fontSheets;
+    }
+
+    /** Creates a metrics-isolated view that reuses this font's glyph atlas. */
+    BitmapFontData copyForSharedSheets() {
+      BitmapFontData copy = new BitmapFontData(dc6, fontSheets);
+      copy.blendMode = blendMode;
+      copy.padTop = padTop;
+      copy.padRight = padRight;
+      copy.padBottom = padBottom;
+      copy.padLeft = padLeft;
+      copy.lineHeight = lineHeight;
+      copy.xHeight = xHeight;
+      copy.capHeight = capHeight;
+      copy.descent = descent;
+      copy.ascent = ascent;
+      copy.down = down;
+      copy.spaceXadvance = spaceXadvance;
+      copy.scaleX = scaleX;
+      copy.scaleY = scaleY;
+      copy.markupEnabled = markupEnabled;
+      copy.blankLineScale = blankLineScale;
+      copy.missingGlyph = copyGlyph(missingGlyph);
+      for (int page = 0; page < glyphs.length; page++) {
+        if (glyphs[page] == null) continue;
+        for (int slot = 0; slot < glyphs[page].length; slot++) {
+          if (glyphs[page][slot] != null) {
+            BitmapFont.Glyph glyph = copyGlyph(glyphs[page][slot]);
+            copy.setGlyph(glyph.id, glyph);
+          }
+        }
+      }
+      return copy;
+    }
+
+    private BitmapFont.Glyph copyGlyph(BitmapFont.Glyph source) {
+      if (source == null) return null;
+      BitmapFont.Glyph target = new BitmapFont.Glyph();
+      target.id = source.id;
+      target.srcX = source.srcX;
+      target.srcY = source.srcY;
+      target.width = source.width;
+      target.height = source.height;
+      target.u = source.u;
+      target.v = source.v;
+      target.u2 = source.u2;
+      target.v2 = source.v2;
+      target.xoffset = source.xoffset;
+      target.yoffset = source.yoffset;
+      target.xadvance = source.xadvance;
+      target.fixedWidth = source.fixedWidth;
+      target.page = source.page;
+      if (source.kerning != null) target.kerning = source.kerning.clone();
+      return target;
+    }
+
     Array<Pixmap> createFontSheets(
         int columns, int rows, int glyphsPerPage, int columnWidth, int columnHeight) {
       int pages = (cData.length + glyphsPerPage - 1) / glyphsPerPage;
@@ -132,6 +190,22 @@ public class FontTBL {
       super(data, createRegions(data), true);
       blendMode = data.blendMode;
       setOwnsTexture(true);
+    }
+
+    private BitmapFont(FontTBL.BitmapFontData data, Array<TextureRegion> regions, int blendMode) {
+      super(data, regions, false);
+      this.blendMode = blendMode;
+      data.blendMode = blendMode;
+    }
+
+    /**
+     * Returns a font with independent metrics and blend mode backed by the
+     * same texture atlas. This avoids rebuilding the full CJK DC6 atlas for
+     * every visual font size.
+     */
+    public BitmapFont sharedAtlasCopy(int blendMode) {
+      FontTBL.BitmapFontData copy = ((FontTBL.BitmapFontData) getData()).copyForSharedSheets();
+      return new BitmapFont(copy, getRegions(), blendMode);
     }
 
     private static Array<TextureRegion> createRegions(FontTBL.BitmapFontData data) {
