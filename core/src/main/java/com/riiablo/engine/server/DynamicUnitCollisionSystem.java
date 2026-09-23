@@ -12,19 +12,28 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.map.Map;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 /** Maintains D2-style dynamic unit footprints without physics-engine pushing. */
 public class DynamicUnitCollisionSystem extends BaseSystem {
+  private static final Logger log = LogManager.getLogger(DynamicUnitCollisionSystem.class);
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<MapWrapper> mMapWrapper;
+  protected ComponentMapper<Box2DBody> mBox2DBody;
 
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
   private EntitySubscription units;
   private final boolean enabled;
+  private final Vector2 candidate = new Vector2();
+  private final Vector2 resolved = new Vector2();
 
   public DynamicUnitCollisionSystem() {
     this(true);
@@ -42,17 +51,82 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   @Override
   protected void processSystem() {
-    if (!enabled) return;
+    rebuildNow();
+  }
+
+  /** Rebuilds the dynamic footprint index after a warp preloads a room. */
+  public void rebuildNow() {
+    if (!enabled || units == null) return;
     grid.clear();
     IntBag entities = units.getEntities();
+    // Preserve player positions when a deferred room population appears on
+    // top of an arrival point.  Insert players first, then relocate monsters
+    // which would otherwise make the player's source cell dynamically
+    // occupied and leave pathfinding with no valid first step.
+    insertUnits(entities, true);
+    insertUnits(entities, false);
+  }
+
+  private void insertUnits(IntBag entities, boolean players) {
     for (int i = 0; i < entities.size(); i++) {
       int entityId = entities.get(i);
-      if (hasPresence(entityId)) {
-        Position position = mPosition.get(entityId);
-        grid.put(entityId, Map.round(position.position.x),
-            Map.round(position.position.y), footprint(entityId));
+      if (!hasPresence(entityId) || isPlayer(entityId) != players) continue;
+      Position position = mPosition.get(entityId);
+      int x = Map.round(position.position.x);
+      int y = Map.round(position.position.y);
+      int size = footprint(entityId);
+      if (grid.isFree(entityId, -1, x, y, size)) {
+        grid.put(entityId, x, y, size);
+      } else if (!relocateOverlappingUnit(entityId, x, y, size)) {
+        // Keep a deterministic footprint even when a malformed/reduced map
+        // has no walkable relocation candidate; later ticks can retry after
+        // the room topology finishes loading.
+        grid.put(entityId, x, y, size);
       }
     }
+  }
+
+  private boolean isPlayer(int entityId) {
+    return mClass.has(entityId) && mClass.get(entityId).type == Class.Type.PLR;
+  }
+
+  private boolean relocateOverlappingUnit(int entityId, int originX, int originY,
+      int size) {
+    Position position = mPosition.get(entityId);
+    Map.Zone zone = null;
+    if (mMapWrapper != null && mMapWrapper.has(entityId)) {
+      MapWrapper wrapper = mMapWrapper.get(entityId);
+      zone = wrapper == null ? null : wrapper.zone;
+    }
+    for (int radius = 1; radius <= 16; radius++) {
+      for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
+          int x = originX + dx;
+          int y = originY + dy;
+          if (!staticWalkable(zone, x, y, size)) continue;
+          if (!grid.isFree(entityId, -1, x, y, size)) continue;
+          position.position.set(x, y);
+          if (mBox2DBody != null && mBox2DBody.has(entityId)
+              && mBox2DBody.get(entityId).body != null) {
+            mBox2DBody.get(entityId).body.setTransform(position.position, 0f);
+            mBox2DBody.get(entityId).body.setLinearVelocity(0f, 0f);
+          }
+          grid.put(entityId, x, y, size);
+          log.warn("[DYNAMIC_SPAWN_RELOCATE] entity={} from=({}, {}) to=({}, {}) size={} level={}",
+              entityId, originX, originY, x, y, size,
+              zone != null && zone.level != null ? zone.level.Id : -1);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private boolean staticWalkable(Map.Zone zone, int x, int y, int size) {
+    if (zone == null) return true;
+    if (!zone.contains(x, y)) return false;
+    return zone.findFreeCoordinates(candidate.set(x, y), size, 0, true, resolved);
   }
 
   /** Used by the pathfinder; targetId is ignored for approach paths. */

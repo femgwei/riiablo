@@ -45,6 +45,8 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
    * the destination position. */
   @Wire(failOnNull = false)
   protected DynamicUnitCollisionSystem dynamicCollision;
+  @Wire(failOnNull = false)
+  protected RoomActivationSystem roomActivation;
 
   protected Pathfinder pathfinder;
   protected Actioneer actioneer;
@@ -98,6 +100,9 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
         return false;
       }
       int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
+      prewarmDestination(dst, new Vector2(
+          dst.x() + Math.max(1, dst.width() / 2f),
+          dst.y() + Math.max(1, dst.height() / 2f)));
       Vector2 arrival = findQuestArrival(src, dst, unitSize);
       if (arrival == null) {
         Gdx.app.error(TAG, "Quest warp destination has no free coordinates: player=" + src
@@ -138,6 +143,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     }
     Vector2 dstWarpPos = mPosition.get(dstWarpEntity).position;
     int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
+    prewarmDestination(dst, dstWarpPos);
     if (!findArrivalAvoidingUnits(src, dst, dstWarpPos, unitSize, 50, tmpVec2)) {
       // Synthetic A5 markers may inherit a LvlWarp offset that places the
       // entity just outside a zero-padded/reduced Zone export. Retry from the
@@ -196,6 +202,7 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
     }
     int unitSize = mSize != null && mSize.has(src) ? mSize.get(src).size : Size.MEDIUM;
     Vector2 arrival = new Vector2(destinationPosition.position);
+    prewarmDestination(destination, arrival);
     if (!destination.findFreeCoordinates(arrival, unitSize, 50, true, tmpVec2)) {
       Gdx.app.error(TAG, "Town portal destination has no free coordinates: player=" + src
           + " destination=" + destination.level.LevelName + "(" + destination.level.Id + ")"
@@ -317,6 +324,20 @@ public class WarpInteractor extends PassiveSystem implements Interactable.Intera
       }
     }
     return false;
+  }
+
+  /**
+   * Materializes the destination entrance sight ring before selecting the
+   * player's arrival coordinate.  Otherwise RoomActivationSystem can create
+   * a deferred monster population one tick after the warp and place it on the
+   * player, leaving the dynamic path grid blocked at its source cell.
+   */
+  private void prewarmDestination(Map.Zone destination, Vector2 anchor) {
+    if (roomActivation != null && destination != null && anchor != null
+        && destination.hasNativeRoomTopology()) {
+      roomActivation.prewarmZoneAt(destination, anchor.x, anchor.y);
+    }
+    if (dynamicCollision != null) dynamicCollision.rebuildNow();
   }
 
   private boolean isArrivalFree(int moverId, Map.Zone destination, int x, int y,

@@ -4,6 +4,7 @@ import com.artemis.ComponentMapper;
 import com.artemis.annotations.All;
 import com.artemis.annotations.Wire;
 import com.artemis.systems.IteratingSystem;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.IntMap;
 import com.badlogic.gdx.utils.IntSet;
@@ -12,6 +13,7 @@ import com.riiablo.engine.server.component.Monster;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.SuperUnique;
+import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.Map;
 import com.riiablo.map.MapManager;
 import com.riiablo.engine.Engine;
@@ -34,6 +36,7 @@ public class RoomActivationSystem extends IteratingSystem {
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Monster> mMonster;
   protected ComponentMapper<SuperUnique> mSuperUnique;
+  protected ComponentMapper<Warp> mWarp;
   @Wire(name = "factory", failOnNull = false)
   protected EntityFactory factory;
   @Wire(failOnNull = false)
@@ -115,6 +118,13 @@ public class RoomActivationSystem extends IteratingSystem {
         || source.level.IsInside) return;
 
     float threshold2 = LEVEL_EXIT_PREWARM_DISTANCE * LEVEL_EXIT_PREWARM_DISTANCE;
+    // Prefer the actual LvlWarp endpoint over rectangle proximity.  Acts can
+    // place generated level rectangles far apart in world coordinates even
+    // though the player crosses between them through a warp.  Rectangle-only
+    // prewarming then misses the destination entrance and its first monster
+    // room, allowing a late spawn directly on the arrival coordinate.
+    prewarmOutdoorWarpExits(source, playerX, playerY, threshold2);
+
     Array<Map.Zone> zones = source.map.getZones();
     for (int i = 0; i < zones.size; i++) {
       Map.Zone destination = zones.get(i);
@@ -137,6 +147,48 @@ public class RoomActivationSystem extends IteratingSystem {
               + "distance={} spawnedRooms={} action=complete",
           levelId(source), levelId(destination), entrance.id,
           (float) Math.sqrt(distance2), spawned);
+    }
+  }
+
+  private void prewarmOutdoorWarpExits(Map.Zone source, float playerX, float playerY,
+      float threshold2) {
+    if (mWarp == null || mPosition == null || source.getWarpEntities() == null) return;
+    final int sourceLevel = levelId(source);
+    for (int i = 0; i < source.getWarpEntities().size; i++) {
+      int warpEntity = source.getWarpEntities().get(i);
+      if (!mWarp.has(warpEntity) || !mPosition.has(warpEntity)) continue;
+      Warp warp = mWarp.get(warpEntity);
+      if (warp == null || warp.dstLevel == null) continue;
+      Map.Zone destination = source.map.findZone(warp.dstLevel);
+      if (!isOutdoorTransitionCandidate(source, destination)) continue;
+      Vector2 warpPosition = mPosition.get(warpEntity).position;
+      float dx = playerX - warpPosition.x;
+      float dy = playerY - warpPosition.y;
+      if (dx * dx + dy * dy > threshold2) continue;
+
+      int transition = transitionKey(sourceLevel, levelId(destination));
+      if (prewarmedOutdoorTransitions.contains(transition)) continue;
+
+      Vector2 entrance = new Vector2(warpPosition);
+      int reverseIndex = source.getWarp(warp.index);
+      int destinationWarp = reverseIndex < 0
+          ? Engine.INVALID_ENTITY : destination.findWarp(reverseIndex);
+      if (destinationWarp != Engine.INVALID_ENTITY && mPosition.has(destinationWarp)) {
+        entrance.set(mPosition.get(destinationWarp).position);
+      } else {
+        entrance.set(clamp(warpPosition.x, destination.x(),
+                destination.x() + destination.width()),
+            clamp(warpPosition.y, destination.y(),
+                destination.y() + destination.height()));
+      }
+      Map.RoomEx entranceRoom = nearestRoom(destination, entrance.x, entrance.y);
+      if (entranceRoom == null) continue;
+      int spawned = prewarmZoneAt(destination, entrance.x, entrance.y);
+      prewarmedOutdoorTransitions.add(transition);
+      log.info("[LEVEL_EXIT_PREWARM] source={} destination={} warp={} reverseWarp={} "
+              + "entranceRoom={} distance={} spawnedRooms={} action=warp_endpoint",
+          sourceLevel, levelId(destination), warp.index, reverseIndex,
+          entranceRoom.id, (float) Math.sqrt(dx * dx + dy * dy), spawned);
     }
   }
 
