@@ -54,6 +54,13 @@ public enum D2SWriter {
 
     try {
       file.writeBytes(data, false);
+      // Character selection and network reconnect paths can reuse the
+      // header-only D2S object that was cached by D2SReader.  Keep that
+      // compatibility cache in lockstep with the bytes that were just
+      // committed to disk; otherwise CharData.load() may resurrect an older
+      // quest/inventory snapshot after a save (notably A1Q2 after the free
+      // mercenary reward).
+      D2SWriterStub.put(d2s, data);
       log.info("Saved character '{}' to {}", d2s.name, file.path());
       return true;
     } catch (Exception e) {
