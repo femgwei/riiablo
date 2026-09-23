@@ -176,8 +176,15 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     if (first == null || second == null) return false;
     int firstRadius = Math.max(0, Math.max(1, firstSize) - 1);
     int secondRadius = Math.max(0, Math.max(1, secondSize) - 1);
-    return Math.abs(first.x - second.x) <= firstRadius + secondRadius
-        && Math.abs(first.y - second.y) <= firstRadius + secondRadius;
+    // DynamicUnitCollisionSystem indexes positions with Map.round(...), so
+    // use the same cells here.  Comparing raw floats would miss an overlap
+    // such as owner=10.6 (cell 11), merc=13.0 (cell 13).
+    int firstX = Map.round(first.x);
+    int firstY = Map.round(first.y);
+    int secondX = Map.round(second.x);
+    int secondY = Map.round(second.y);
+    return Math.abs(firstX - secondX) <= firstRadius + secondRadius
+        && Math.abs(firstY - secondY) <= firstRadius + secondRadius;
   }
 
   private void teleport(int entityId, int ownerId, Map map, Map.Zone ownerZone,
