@@ -14,6 +14,7 @@ import com.riiablo.RiiabloTest;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.engine.EntityFactory;
+import com.riiablo.engine.server.portal.TownPortalRegistry;
 import com.riiablo.engine.server.component.Item;
 import com.riiablo.item.ItemGenerator;
 import com.riiablo.item.BodyLoc;
@@ -222,6 +223,7 @@ class ClientItemManagerGoldPickupTest extends RiiabloTest {
     TestFactory factory = new TestFactory();
     return new World(new WorldConfigurationBuilder().with(manager, factory).build()
         .register("factory", factory)
+        .register("townPortalRegistry", new TownPortalRegistry())
         .register("map", new com.riiablo.map.Map(0, 0)));
   }
 
