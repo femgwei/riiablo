@@ -29,10 +29,15 @@ public class RaycastCollisionDetector {
     delta.set(end).sub(start).setLength(DELTA);
     float add = delta.len();
     for (float curDist = 0, maxDist = start.dst(end); curDist < maxDist; curDist += add, sample.add(delta)) {
-      if (map.flags(sample) != 0) return true;
+      // Map flags are a bit field, not a boolean walkability value.  D2
+      // deliberately keeps movement-only flags (for example swamp/deep
+      // water) separate from FLAG_BLOCK_JUMP, which is the native missile
+      // barrier.  Testing != 0 made every non-empty terrain cell stop arrows
+      // even when the requested collision mask did not include that bit.
+      if ((map.flags(sample) & flags) != 0) return true;
     }
 
-    return map.flags(end) != 0;
+    return (map.flags(end) & flags) != 0;
   }
 
 
@@ -47,11 +52,14 @@ public class RaycastCollisionDetector {
     delta.set(end).sub(start).setLength(DELTA);
     float add = delta.len();
     for (float curDist = 0, maxDist = start.dst(end); curDist < maxDist; curDist += add, last.set(sample), sample.add(delta)) {
-      if (map.flags(sample) != 0 || graph.getOrCreate(sample).clearance < size) {
+      // Use the caller's native collision mask here as well.  In particular,
+      // a missile ray must ignore FLAG_BLOCK_WALK while still stopping on
+      // FLAG_BLOCK_JUMP (walls/explicit missile barriers).
+      if ((map.flags(sample) & flags) != 0 || graph.getOrCreate(sample).clearance < size) {
         return true;
       }
     }
 
-    return false;
+    return (map.flags(end) & flags) != 0;
   }
 }
