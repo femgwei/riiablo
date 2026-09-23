@@ -6,15 +6,20 @@ import com.artemis.systems.IteratingSystem;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.Casting;
 import com.riiablo.engine.server.component.CofReference;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.component.Sequence;
 import com.riiablo.engine.server.component.WhirlwindRuntime;
 import com.riiablo.engine.server.event.AnimDataFinishedEvent;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 @All({CofReference.class, Sequence.class, AnimData.class})
 public class SequenceHandler extends IteratingSystem {
+  private static final Logger log = LogManager.getLogger(SequenceHandler.class);
   protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<Sequence> mSequence;
   protected ComponentMapper<AnimData> mAnimData;
   protected ComponentMapper<Casting> mCasting;
@@ -26,6 +31,15 @@ public class SequenceHandler extends IteratingSystem {
   public void onAnimDataFinished(AnimDataFinishedEvent event) {
     if (!mSequence.has(event.entityId)) return;
     Sequence sequence = mSequence.get(event.entityId);
+    NativeObjectState shrine = mNativeObjectState.get(event.entityId);
+    if (shrine != null && shrine.kind == com.riiablo.map.NativePresetObjectResolver.Kind.SHRINE) {
+      AnimData anim = mAnimData.get(event.entityId);
+      log.info("[SHRINE_ANIM] phase=finished entity={} mode1={} mode2={} cofMode={} "
+              + "frame={} frames={} activated={} persistentMode={} sequenceStillPresent=true",
+          event.entityId, sequence.mode1, sequence.mode2,
+          mCofReference.get(event.entityId).mode, anim == null ? -1 : anim.frame,
+          anim == null ? -1 : anim.numFrames, shrine.activated, shrine.currentMode);
+    }
     Casting casting = mCasting.get(event.entityId);
     if (casting != null && casting.dragonTalonInitialized
         && casting.dragonTalonRemainingKicks > 0
@@ -113,6 +127,15 @@ public class SequenceHandler extends IteratingSystem {
         casting.furyStrikeProcessed = false;
       }
       sequence.started = true;
+      NativeObjectState shrine = mNativeObjectState.get(entityId);
+      if (shrine != null && shrine.kind == com.riiablo.map.NativePresetObjectResolver.Kind.SHRINE) {
+        AnimData anim = mAnimData.get(entityId);
+        log.info("[SHRINE_ANIM] phase=started entity={} mode1={} mode2={} cofMode={} "
+                + "frame={} frames={} activated={} persistentMode={}",
+            entityId, sequence.mode1, sequence.mode2, mCofReference.get(entityId).mode,
+            anim == null ? -1 : anim.frame, anim == null ? -1 : anim.numFrames,
+            shrine.activated, shrine.currentMode);
+      }
       // D2 starts each action at frame zero. Force the COF event even when a
       // repeated action uses the same mode (for example consecutive Throws),
       // otherwise it inherits the previous frame and can skip its keyframe.

@@ -9,6 +9,7 @@ import com.riiablo.engine.server.component.CofAlphas;
 import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.CofTransforms;
+import com.riiablo.engine.server.component.NativeObjectState;
 import com.riiablo.engine.server.event.AlphaChangeEvent;
 import com.riiablo.engine.server.event.CofChangeEvent;
 import com.riiablo.engine.server.event.ModeChangeEvent;
@@ -16,10 +17,14 @@ import com.riiablo.engine.server.event.TransformChangeEvent;
 import com.riiablo.engine.server.event.WClassChangeEvent;
 
 import net.mostlyoriginal.api.event.common.EventSystem;
+import com.riiablo.logger.LogManager;
+import com.riiablo.logger.Logger;
 
 @All(CofReference.class)
 public class CofManager extends BaseEntitySystem {
+  private static final Logger log = LogManager.getLogger(CofManager.class);
   protected ComponentMapper<CofReference> mCofReference;
+  protected ComponentMapper<NativeObjectState> mNativeObjectState;
   protected ComponentMapper<CofComponents> mCofComponents;
   protected ComponentMapper<CofDirtyComponents> mCofDirtyComponents;
   protected ComponentMapper<CofAlphas> mCofAlphas;
@@ -45,6 +50,14 @@ public class CofManager extends BaseEntitySystem {
     CofReference reference = mCofReference.get(id);
     boolean restart = reference.mode == mode;
     if (restart && !force) return;
+    NativeObjectState state = mNativeObjectState.get(id);
+    if (state != null && state.kind == com.riiablo.map.NativePresetObjectResolver.Kind.SHRINE) {
+      log.info("[SHRINE_ANIM] phase=set_mode entity={} requested={} previous={} force={} "
+              + "restart={} activated={} persistentMode={} sequence={}",
+          id, mode, reference.mode, force, restart, state.activated,
+          state.currentMode,
+          world.getMapper(com.riiablo.engine.server.component.Sequence.class).has(id));
+    }
     reference.mode = mode;
     // A forced same-mode update is used by repeated attacks to restart the
     // animation at frame zero.  Mark it explicitly so the client can reset
