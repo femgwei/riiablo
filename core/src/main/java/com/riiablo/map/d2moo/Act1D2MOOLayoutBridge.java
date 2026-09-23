@@ -268,9 +268,65 @@ public final class Act1D2MOOLayoutBridge {
     public static Act1LayoutResult getLayout(int seed, int diff, int burialGroundsId) {
         LayoutAndDrlg layoutAndDrlg = getLayoutAndDrlg(seed, diff, burialGroundsId);
         if (layoutAndDrlg == null) return null;
-        DrlgDrlg.freeDrlg(layoutAndDrlg.drlg);
-        releaseDataTables();
+        releaseLayout(layoutAndDrlg);
         return layoutAndDrlg.result;
+    }
+
+    /**
+     * Lightweight DRLG entry point for diagnostics that only need Blood Moor.
+     * The full layout path initializes every linked Act-I level; shrine
+     * distribution audits do not need those rooms and would otherwise take
+     * minutes per seed.
+     */
+    public static D2DrlgStrc getBloodMoorDrlg(int seed, int diff, int burialGroundsId) {
+        D2DrlgStrc drlg = null;
+        try {
+            D2LevelDefBin[] cache = buildLevelDefCache(diff, burialGroundsId);
+            if (cache == null) return null;
+            DataTbls.setLevelDefBinCache(cache);
+            DataTbls.setLevelTypesTxtCache(buildLevelTypesCache());
+            D2DrlgAct act = new D2DrlgAct();
+            act.setAct(D2C_Acts.ACT_I);
+            act.setTownId(D2LevelIds.LEVEL_ROGUEENCAMPMENT);
+            act.setPMemPool(new D2MemoryPool());
+            D2FileReader.ArchiveReader archive = Act1D2MOOLayoutBridge::readArchiveFile;
+            DataTbls.loadLvlPrestTxt(archive, 0);
+            DataTbls.loadLvlSubTxt(archive);
+            DataTbls.loadLvlMazeTxt(archive);
+            DataTbls.loadLvlWarpTxt(archive);
+            drlg = DrlgDrlg.allocDrlg(act, D2C_Acts.ACT_I, archive, seed,
+                D2LevelIds.LEVEL_ROGUEENCAMPMENT, 0, null, (byte) diff, null, null);
+            if (drlg == null) {
+                releaseDataTables();
+                return null;
+            }
+            D2DrlgLevel bloodMoor = DrlgDrlg.getLevel(drlg, D2LevelIds.LEVEL_BLOODMOOR);
+            if (bloodMoor == null) {
+                DrlgDrlg.freeDrlg(drlg);
+                releaseDataTables();
+                return null;
+            }
+            DrlgDrlg.initLevel(bloodMoor);
+            return drlg;
+        } catch (Throwable t) {
+            D2Log.error("ACT1_D2MOO_BLOODMOOR failed seed=%d diff=%d: %s",
+                seed, diff, t.toString());
+            if (drlg != null) DrlgDrlg.freeDrlg(drlg);
+            releaseDataTables();
+            return null;
+        }
+    }
+
+    /** Releases a layout returned by {@link #getLayoutAndDrlg} and its table caches. */
+    public static void releaseLayout(LayoutAndDrlg layoutAndDrlg) {
+        if (layoutAndDrlg == null) return;
+        releaseDrlg(layoutAndDrlg.drlg);
+    }
+
+    /** Releases a DRLG returned by either layout entry point. */
+    public static void releaseDrlg(D2DrlgStrc drlg) {
+        if (drlg != null) DrlgDrlg.freeDrlg(drlg);
+        releaseDataTables();
     }
 
     /**

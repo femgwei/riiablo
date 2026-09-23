@@ -118,6 +118,22 @@ task offscreenAutomapDc6(type: JavaExec) {
   ignoreExitValue = false
 }
 
+task offscreenShrineAudit(type: JavaExec) {
+  group = 'verification'
+  description = 'Generate Blood Moor repeatedly in a hidden 1x1 client and report shrine types.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/shrine-audit',
+       '--mode', 'shrine-audit', '--level', '2',
+       '--shrine-seed-count', project.findProperty('shrineSeedCount') ?: '64',
+       '--shrine-first-seed', project.findProperty('shrineFirstSeed') ?: '0',
+       '--shrine-difficulty', project.findProperty('shrineDifficulty') ?: '0',
+       '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  ignoreExitValue = false
+}
+
 run {
   workingDir = rootProject.file('assets').path
   setIgnoreExitValue(true)

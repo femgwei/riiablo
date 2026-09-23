@@ -24,6 +24,10 @@ public final class OffscreenRenderClient {
         .addOption(Option.builder().longOpt("continuity").hasArg(false).build())
         .addOption(Option.builder().longOpt("warp-collision").hasArg(false).build())
         .addOption(Option.builder().longOpt("automap-native").hasArg(false).build())
+        .addOption(Option.builder().longOpt("shrine-audit").hasArg(false).build())
+        .addOption(Option.builder().longOpt("shrine-first-seed").hasArg().build())
+        .addOption(Option.builder().longOpt("shrine-seed-count").hasArg().build())
+        .addOption(Option.builder().longOpt("shrine-difficulty").hasArg().build())
         .addOption(Option.builder().longOpt("hackmap").hasArg(false).build())
         .addOption(Option.builder().longOpt("character").hasArg().build())
         .addOption(Option.builder().longOpt("automap-mode").hasArg().build())
@@ -31,13 +35,14 @@ public final class OffscreenRenderClient {
     CommandLine command = new DefaultParser().parse(options, args);
     String output = command.getOptionValue("output", "build/visual-tests");
     String mode = command.getOptionValue("mode", "visual").toLowerCase(Locale.ROOT);
-    if (!"visual".equals(mode) && !"camp".equals(mode)) {
+    if (!"visual".equals(mode) && !"camp".equals(mode) && !"shrine-audit".equals(mode)) {
       throw new IllegalArgumentException("Unsupported offscreen mode: " + mode);
     }
     FileHandle saves = new FileHandle(command.getOptionValue("saves"));
     saves.mkdirs();
     System.setProperty("riiablo.offscreen-render", Boolean.toString("visual".equals(mode)));
-    System.setProperty("riiablo.offscreen-camp", Boolean.toString("camp".equals(mode)));
+    System.setProperty("riiablo.offscreen-camp", Boolean.toString("camp".equals(mode)
+        || "shrine-audit".equals(mode)));
     System.setProperty("riiablo.offscreen-output", output);
     System.setProperty("riiablo.offscreen-level",
         command.getOptionValue("level", "-1"));
@@ -49,6 +54,20 @@ public final class OffscreenRenderClient {
         Boolean.toString(command.hasOption("warp-collision")));
     System.setProperty("riiablo.offscreen-automap-native",
         Boolean.toString(command.hasOption("automap-native")));
+    System.setProperty("riiablo.offscreen-shrine-audit",
+        Boolean.toString(command.hasOption("shrine-audit") || "shrine-audit".equals(mode)));
+    if (command.hasOption("shrine-first-seed")) {
+      System.setProperty("riiablo.offscreen-shrine-first-seed",
+          command.getOptionValue("shrine-first-seed"));
+    }
+    if (command.hasOption("shrine-seed-count")) {
+      System.setProperty("riiablo.offscreen-shrine-seed-count",
+          command.getOptionValue("shrine-seed-count"));
+    }
+    if (command.hasOption("shrine-difficulty")) {
+      System.setProperty("riiablo.offscreen-shrine-difficulty",
+          command.getOptionValue("shrine-difficulty"));
+    }
     System.setProperty("riiablo.offscreen-hackmap",
         Boolean.toString(command.hasOption("hackmap")));
     System.setProperty("riiablo.offscreen-automap-mode",
