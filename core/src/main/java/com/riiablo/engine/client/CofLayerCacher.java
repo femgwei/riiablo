@@ -19,6 +19,8 @@ import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.AnimData;
 import com.riiablo.engine.server.component.CofComponents;
 import com.riiablo.engine.server.component.Player;
+import com.riiablo.engine.server.component.AIWrapper;
+import com.riiablo.engine.server.ai.Npc;
 import com.riiablo.engine.server.event.CofChangeEvent;
 
 import net.mostlyoriginal.api.event.common.Subscribe;
@@ -38,6 +40,7 @@ public class CofLayerCacher extends IteratingSystem {
   protected ComponentMapper<CofLoadingComponents> mCofLoadingComponents;
   protected ComponentMapper<CofComponentDescriptors> mCofComponentDescriptors;
   protected ComponentMapper<Player> mPlayer;
+  protected ComponentMapper<AIWrapper> mAIWrapper;
 
   protected CofManager cofs;
 
@@ -113,6 +116,17 @@ public class CofLayerCacher extends IteratingSystem {
         // Limit eager loading to the local player to keep monster memory use
         // bounded.
         if (mPlayer.has(entityId)) dc.loadDirections();
+        // Town NPCs are visible immediately after the loading screen and can
+        // start walking on the first simulation tick (Warriv is the common
+        // case).  Loading only the current facing leaves the first direction
+        // change to create/upload DCC textures on the render thread, which is
+        // perceived as the NPC appearing late.  NPC composites are few and
+        // persistent for the whole town, so eagerly materialize every facing
+        // while the initial presentation pass is still running.  Monsters
+        // remain lazy to avoid multiplying their texture footprint.
+        if (mAIWrapper.has(entityId) && mAIWrapper.get(entityId).ai instanceof Npc) {
+          dc.loadDirections();
+        }
         animation.setLayer(layer, dc, false);
       }
     }
