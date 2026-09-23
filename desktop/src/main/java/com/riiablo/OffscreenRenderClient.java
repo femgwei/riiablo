@@ -35,13 +35,15 @@ public final class OffscreenRenderClient {
     CommandLine command = new DefaultParser().parse(options, args);
     String output = command.getOptionValue("output", "build/visual-tests");
     String mode = command.getOptionValue("mode", "visual").toLowerCase(Locale.ROOT);
-    if (!"visual".equals(mode) && !"camp".equals(mode) && !"shrine-audit".equals(mode)) {
+    if (!"visual".equals(mode) && !"camp".equals(mode)
+        && !"object-audit".equals(mode) && !"shrine-audit".equals(mode)) {
       throw new IllegalArgumentException("Unsupported offscreen mode: " + mode);
     }
     FileHandle saves = new FileHandle(command.getOptionValue("saves"));
     saves.mkdirs();
     System.setProperty("riiablo.offscreen-render", Boolean.toString("visual".equals(mode)));
     System.setProperty("riiablo.offscreen-camp", Boolean.toString("camp".equals(mode)
+        || "object-audit".equals(mode)
         || "shrine-audit".equals(mode)));
     System.setProperty("riiablo.offscreen-output", output);
     System.setProperty("riiablo.offscreen-level",
@@ -56,6 +58,8 @@ public final class OffscreenRenderClient {
         Boolean.toString(command.hasOption("automap-native")));
     System.setProperty("riiablo.offscreen-shrine-audit",
         Boolean.toString(command.hasOption("shrine-audit") || "shrine-audit".equals(mode)));
+    System.setProperty("riiablo.offscreen-object-audit",
+        Boolean.toString("object-audit".equals(mode)));
     if (command.hasOption("shrine-first-seed")) {
       System.setProperty("riiablo.offscreen-shrine-first-seed",
           command.getOptionValue("shrine-first-seed"));

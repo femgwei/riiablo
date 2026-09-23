@@ -134,6 +134,20 @@ task offscreenShrineAudit(type: JavaExec) {
   ignoreExitValue = false
 }
 
+task offscreenObjectAudit(type: JavaExec) {
+  group = 'verification'
+  description = 'Audit Act I town and Blood Moor object generation in a hidden 1x1 client.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.riiablo.OffscreenRenderClient'
+  args '--d2', project.findProperty('d2Home') ?: 'build/riiablo-offscreen-d2',
+       '--saves', project.findProperty('savesDir') ?: 'build/riiablo-offscreen-saves',
+       '--output', project.findProperty('visualOutput') ?: 'build/visual-tests/object-audit',
+       '--mode', 'object-audit', '--level', '2',
+       '--d2-version', project.findProperty('d2Version') ?: 'unspecified'
+  if (project.hasProperty('offscreenCharacter')) args '--character', project.property('offscreenCharacter')
+  ignoreExitValue = false
+}
+
 run {
   workingDir = rootProject.file('assets').path
   setIgnoreExitValue(true)

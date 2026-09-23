@@ -1,5 +1,8 @@
 package com.riiablo.screen;
 
+import com.artemis.Aspect;
+import com.artemis.ComponentMapper;
+import com.artemis.utils.IntBag;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -42,6 +45,8 @@ public final class OffscreenCampScreen extends GameScreen {
   private final boolean validateContinuity;
   private final boolean validateWarpCollision;
   private final boolean validateNativeAutomap;
+  private final boolean validateObjectAudit;
+  private String objectAuditSummary = "";
   private int renderedFrames;
   private boolean completed;
   private boolean targetApplied;
@@ -126,6 +131,7 @@ public final class OffscreenCampScreen extends GameScreen {
     this.validateContinuity = validateContinuity;
     this.validateWarpCollision = validateWarpCollision;
     this.validateNativeAutomap = Boolean.getBoolean("riiablo.offscreen-automap-native");
+    this.validateObjectAudit = Boolean.getBoolean("riiablo.offscreen-object-audit");
   }
 
   /** Select a requested non-Act-I level before the normal screen setup. */
@@ -201,6 +207,7 @@ public final class OffscreenCampScreen extends GameScreen {
     }
     validateTargetAutomap();
     if (validateNativeAutomap) validateNativeAutomapRendering();
+    if (validateObjectAudit) validateObjectGeneration();
     completed = true;
 
     com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
@@ -224,6 +231,7 @@ public final class OffscreenCampScreen extends GameScreen {
         + "automapAuditCross=" + (targetCellAudit == null ? 0 : targetCellAudit.crossCategoryExact) + "\n"
         + "automapAuditPositionConflict=" + (targetCellAudit == null ? 0 : targetCellAudit.samePositionDifferentCell) + "\n"
         + "automapNative=" + validateNativeAutomap + "\n"
+        + objectAuditSummary
         + "targetWarpCount=" + targetWarpCount + "\n"
         + "targetReverseWarpCount=" + targetReverseWarpCount + "\n"
         + "targetWarpWalkable=" + targetWarpWalkable + "\n"
@@ -261,6 +269,107 @@ public final class OffscreenCampScreen extends GameScreen {
     Gdx.app.log("OffscreenCampScreen", "[OFFSCREEN_CAMP] result=PASS act="
         + (map.getAct() + 1) + " player=" + player + " frames=" + renderedFrames);
     Gdx.app.exit();
+  }
+
+  /**
+   * Audits the two Act-I zones involved in the first town-to-outdoor
+   * transition.  Objects are reported from the live ECS, not inferred from
+   * Automap cells, so a missing chest/corpse/trap can be separated from a
+   * missing marker.  Level 1 is Rogue Encampment and level 2 is Blood Moor.
+   */
+  private void validateObjectGeneration() {
+    ComponentMapper<com.riiablo.engine.server.component.Object> objects =
+        engine.getMapper(com.riiablo.engine.server.component.Object.class);
+    ComponentMapper<Position> positions = engine.getMapper(Position.class);
+    ComponentMapper<MapWrapper> wrappers = engine.getMapper(MapWrapper.class);
+    IntBag entities = engine.getAspectSubscriptionManager()
+        .get(Aspect.all(com.riiablo.engine.server.component.Object.class,
+            Position.class, MapWrapper.class)).getEntities();
+    StringBuilder csv = new StringBuilder(
+        "entityId,levelId,zone,town,objectId,name,operateFn,initFn,autoMap,trapProb,"
+            + "interactable,mode,stateFlags,x,y\n");
+    int[] total = new int[3];
+    int[] interactable = new int[3];
+    int[] containers = new int[3];
+    int[] sceneCorpses = new int[3];
+    int[] traps = new int[3];
+    int[] trapCapable = new int[3];
+    int[] nativeDefinitions = new int[2];
+    for (Map.Zone zone : map.getZones()) {
+      if (zone.levelId() == 1) nativeDefinitions[0] += zone.getNativeObjects().size;
+      if (zone.levelId() == 2) nativeDefinitions[1] += zone.getNativeObjects().size;
+    }
+    for (int i = 0; i < entities.size(); i++) {
+      int id = entities.get(i);
+      com.riiablo.engine.server.component.Object object = objects.get(id);
+      MapWrapper wrapper = wrappers.get(id);
+      Position position = positions.get(id);
+      if (object == null || object.base == null || wrapper == null || wrapper.zone == null) continue;
+      int levelId = wrapper.zone.levelId();
+      int bucket = levelId == 1 ? 0 : levelId == 2 ? 1 : 2;
+      total[bucket]++;
+      boolean canInteract = (object.stateFlags
+          & com.riiablo.engine.server.component.Object.STATE_INTERACTABLE) != 0;
+      if (canInteract) interactable[bucket]++;
+      String name = object.base.Name == null ? "" : object.base.Name;
+      String token = object.base.Token == null ? "" : object.base.Token;
+      String lower = (name + " " + token).toLowerCase(java.util.Locale.ROOT);
+      boolean corpse = lower.contains("corpse") || lower.contains("dead")
+          || lower.contains("body") || lower.contains("casket") || lower.contains("coffin");
+      boolean trap = object.base.OperateFn == 7 || lower.contains("trap");
+      boolean container = object.base.OperateFn == 3 || object.base.OperateFn == 4
+          || object.base.OperateFn == 57 || object.base.OperateFn == 58
+          || object.base.OperateFn == 59 || lower.contains("chest")
+          || lower.contains("barrel") || lower.contains("urn") || lower.contains("casket");
+      if (corpse) sceneCorpses[bucket]++;
+      if (trap) traps[bucket]++;
+      if (object.base.TrapProb > 0) trapCapable[bucket]++;
+      if (container) containers[bucket]++;
+      csv.append(id).append(',').append(levelId).append(',')
+          .append(csvValue(wrapper.zone.level == null ? "" : wrapper.zone.level.LevelName)).append(',')
+          .append(wrapper.zone.isTown()).append(',').append(object.base.Id).append(',')
+          .append(csvValue(name)).append(',').append(object.base.OperateFn).append(',')
+          .append(object.base.InitFn).append(',').append(object.base.AutoMap).append(',')
+          .append(object.base.TrapProb).append(',').append(canInteract).append(',')
+          .append(object.mode).append(',').append(object.stateFlags).append(',')
+          .append(position == null ? 0 : position.position.x).append(',')
+          .append(position == null ? 0 : position.position.y).append('\n');
+    }
+    com.badlogic.gdx.files.FileHandle output = Gdx.files.absolute(outputDirectory);
+    output.mkdirs();
+    output.child("act1-town-bloodmoor-objects.csv")
+        .writeString(csv.toString(), false, "UTF-8");
+    StringBuilder summary = new StringBuilder();
+    summary.append("objectAudit=true\n");
+    summary.append("objectAuditLevel1Total=").append(total[0]).append('\n');
+    summary.append("objectAuditLevel1NativeDefinitions=").append(nativeDefinitions[0]).append('\n');
+    summary.append("objectAuditLevel1Interactable=").append(interactable[0]).append('\n');
+    summary.append("objectAuditLevel1Containers=").append(containers[0]).append('\n');
+    summary.append("objectAuditLevel1SceneCorpses=").append(sceneCorpses[0]).append('\n');
+    summary.append("objectAuditLevel1Traps=").append(traps[0]).append('\n');
+    summary.append("objectAuditLevel1TrapCapable=").append(trapCapable[0]).append('\n');
+    summary.append("objectAuditLevel2Total=").append(total[1]).append('\n');
+    summary.append("objectAuditLevel2NativeDefinitions=").append(nativeDefinitions[1]).append('\n');
+    summary.append("objectAuditLevel2Interactable=").append(interactable[1]).append('\n');
+    summary.append("objectAuditLevel2Containers=").append(containers[1]).append('\n');
+    summary.append("objectAuditLevel2SceneCorpses=").append(sceneCorpses[1]).append('\n');
+    summary.append("objectAuditLevel2Traps=").append(traps[1]).append('\n');
+    summary.append("objectAuditLevel2TrapCapable=").append(trapCapable[1]).append('\n');
+    summary.append("objectAuditOtherLevels=").append(total[2]).append('\n');
+    objectAuditSummary = summary.toString();
+    Gdx.app.log("OffscreenCampScreen", "[OBJECT_AUDIT] level1 total=" + total[0]
+        + " native=" + nativeDefinitions[0]
+        + " interactable=" + interactable[0] + " containers=" + containers[0]
+        + " corpses=" + sceneCorpses[0] + " traps=" + traps[0]
+        + " trapCapable=" + trapCapable[0]
+        + "; level2 total=" + total[1] + " native=" + nativeDefinitions[1]
+        + " interactable=" + interactable[1]
+        + " containers=" + containers[1] + " corpses=" + sceneCorpses[1]
+        + " traps=" + traps[1] + " trapCapable=" + trapCapable[1]);
+    if (total[0] == 0 || total[1] == 0) {
+      throw new IllegalStateException("Act1 town/outdoor object generation is empty: level1="
+          + total[0] + " level2=" + total[1]);
+    }
   }
 
   private void validateNativeAutomapRendering() {
