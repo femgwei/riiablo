@@ -1409,6 +1409,27 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     engine.getSystem(Box2DPhysics.class).createBodies();
 
+    if (socket == null) {
+      // MapManager creates the town NPCs during show(). Their COF/DCC layers
+      // are queued by CofResolver/CofLayerLoader only when ECS processes the
+      // newly-created components.  Leaving those requests asynchronous makes
+      // a newly entered town render for one or two seconds without Warriv.
+      // Run the small initial presentation pipeline to completion before the
+      // game screen becomes visible. Subsequent room monsters remain lazy.
+      long presentationStart = System.nanoTime();
+      processInitialPresentationPass(); // queue COF descriptors
+      Riiablo.assets.finishLoading();    // decode COFs
+      processInitialPresentationPass(); // queue DCC/DC6 layers
+      Riiablo.assets.finishLoading();    // decode layers
+      processInitialPresentationPass(); // attach decoded layers to Animation
+      long presentationElapsed = System.nanoTime() - presentationStart;
+      if (presentationElapsed >= 1_000_000L) {
+        Gdx.app.log(TAG, String.format(
+            "[INITIAL_PRESENTATION_ASSETS] elapsedMs=%.2f queuedTownEntities=true",
+            presentationElapsed / 1_000_000f));
+      }
+    }
+
     Levels.Entry waypointTarget = pendingWaypointTarget;
     Vector2 origin = waypointTarget != null && waypointTarget.Act == map.getAct()
         ? mapManager.findWaypointPosition(waypointTarget, new Vector2())
@@ -1453,6 +1474,21 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
 
     renderer.setSrc(player);
     renderer.updatePosition(true);
+  }
+
+  /**
+   * Runs only the presentation-resource systems used to prime initial town
+   * assets. A complete ECS tick is unsafe here because the player entity is
+   * created later in show(), while input/AI systems already become eligible
+   * as soon as MapManager creates the town entities.
+   */
+  private void processInitialPresentationPass() {
+    engine.getSystem(CofManager.class).process();
+    engine.getSystem(AnimDataResolver.class).process();
+    engine.getSystem(CofResolver.class).process();
+    engine.getSystem(CofLoader.class).process();
+    engine.getSystem(CofLayerLoader.class).process();
+    engine.getSystem(CofLayerCacher.class).process();
   }
 
   @Override
