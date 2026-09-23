@@ -1,11 +1,24 @@
 package com.d2moo.common.util;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * 内存池工具类
  * 提供静态方法用于内存池分配和释放
  * 对应 C++ 的 D2_CALLOC_POOL, D2_CALLOC_STRC_POOL, D2_FREE_POOL
  */
 public class D2Pool {
+    /**
+     * A null pool is expected for a few temporary/native-parser allocations.
+     * Keep the diagnostic useful without emitting one warning per tile.
+     */
+    private static final AtomicBoolean MISSING_POOL_WARNED = new AtomicBoolean();
+
+    private static void warnMissingPool(String fallback) {
+        if (MISSING_POOL_WARNED.compareAndSet(false, true)) {
+            D2Log.warning("Memory pool not provided; using Java fallback allocation (%s)", fallback);
+        }
+    }
     
     /**
      * 分配内存并初始化为零（对应 D2_CALLOC_POOL）
@@ -19,7 +32,7 @@ public class D2Pool {
         }
         
         // 如果没有提供内存池，使用 Java 数组
-        D2Log.warning("Memory pool not provided, using Java array allocation");
+        warnMissingPool("byte[]");
         return new byte[size];
     }
     
@@ -39,7 +52,7 @@ public class D2Pool {
             return arr;
         }
         
-        D2Log.warning("Memory pool not provided, using Java array allocation");
+        warnMissingPool("int[]");
         return new int[length];
     }
     
@@ -56,7 +69,7 @@ public class D2Pool {
         }
         
         // 如果没有提供内存池，直接创建实例
-        D2Log.warning("Memory pool not provided, using direct instantiation");
+        warnMissingPool("object");
         try {
             return clazz.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
@@ -98,7 +111,7 @@ public class D2Pool {
         }
         
         // 如果没有提供内存池，使用 Java 数组
-        D2Log.warning("Memory pool not provided, using Java array allocation");
+        warnMissingPool("array");
         return (T[]) java.lang.reflect.Array.newInstance(clazz, length);
     }
     
