@@ -70,13 +70,17 @@ public class Act4QuestDialogController extends PassiveSystem {
       speech = speech(message);
     }
     if (speech == null) return false;
+    submitMessage(playerId, npcId, message);
     dialogManager.setDialog(new NpcDialogBox(speech, dialog -> {
       dialogManager.setDialog(null);
-      if (network != null && network.requestQuest(
-          com.riiablo.net.packet.d2gs.QuestOperation.NPC_MESSAGE, npcId, message) != 0) return;
-      if (events != null) events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, message));
     }));
     return true;
+  }
+
+  private void submitMessage(int playerId, int npcId, int message) {
+    if (network != null && network.requestQuest(
+        com.riiablo.net.packet.d2gs.QuestOperation.NPC_MESSAGE, npcId, message) != 0) return;
+    if (events != null) events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, message));
   }
 
   static String speech(int message) {

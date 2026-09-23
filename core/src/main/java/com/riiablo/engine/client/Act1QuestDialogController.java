@@ -92,6 +92,14 @@ public class Act1QuestDialogController extends PassiveSystem {
       if (NativeQuestRecord.has(record, NativeQuestRecord.REWARD_PENDING)) {
         messageIndex = Act1AndarielQuest.MESSAGE_WARRIV_REWARD;
         speech = "warriv_act1_q6_success";
+      } else if (isFreshAct1(data.getQuests(Riiablo.ACT1))) {
+        // The initial Warriv conversation is Act I's intro gossip, not an
+        // A1Q6 quest message.  It still has a quest marker in the native UI,
+        // so consume the interaction here instead of falling through to the
+        // generic NPC menu.  -1 is presentation-only and is not sent to the
+        // quest authority.
+        messageIndex = -1;
+        speech = "warriv_act1_intro";
       } else {
         return false;
       }
@@ -106,17 +114,31 @@ public class Act1QuestDialogController extends PassiveSystem {
     }
     if (speech == null) return false;
 
-    final int selectedMessage = messageIndex;
     log.info("[ACT1_QUEST_DIALOG] player={} npc={} message={} speech={}",
         playerId, npc.monstats.Id, messageIndex, speech);
+    submitMessage(playerId, npcId, messageIndex);
     dialogManager.setDialog(new NpcDialogBox(speech, dialog -> {
       dialogManager.setDialog(null);
-      if (network != null && network.requestQuest(
-          com.riiablo.net.packet.d2gs.QuestOperation.NPC_MESSAGE,
-          npcId, selectedMessage) != 0) return;
-      // Offline/single-player worlds retain the local event path.
-      events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, selectedMessage));
     }));
+    return true;
+  }
+
+  private void submitMessage(int playerId, int npcId, int messageIndex) {
+    if (messageIndex < 0) return;
+    if (network != null && network.requestQuest(
+        com.riiablo.net.packet.d2gs.QuestOperation.NPC_MESSAGE,
+        npcId, messageIndex) != 0) return;
+    // Offline/single-player worlds retain the local event path.  Dispatch at
+    // dialog open, matching D2: text scrolling is presentation only and must
+    // not delay quest acceptance or reward delivery.
+    if (events != null) {
+      events.dispatch(NpcQuestMessageEvent.obtain(playerId, npcId, messageIndex));
+    }
+  }
+
+  private static boolean isFreshAct1(short[] quests) {
+    if (quests == null) return false;
+    for (short quest : quests) if (quest != 0) return false;
     return true;
   }
 }
