@@ -79,6 +79,11 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
       int size = footprint(entityId);
       if (grid.isFree(entityId, -1, x, y, size)) {
         grid.put(entityId, x, y, size);
+      } else if (isOwnedMercenaryOverlappingOwner(entityId)) {
+        // Keep the real position in the collision index. MercenaryFollowSystem
+        // will install a native Escape path; changing the coordinate here
+        // produces a visible one-cell teleport when the player approaches.
+        grid.put(entityId, x, y, size);
       } else if (!relocateOverlappingUnit(entityId, x, y, size)) {
         // Keep a deterministic footprint even when a malformed/reduced map
         // has no walkable relocation candidate; later ticks can retry after
@@ -196,8 +201,20 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
    * Monster movers still see the hireling, matching COLLIDE_PET behavior.
    */
   private UnitCollisionGrid.UnitBlocker blockerFor(int moverId) {
-    if (!isPlayer(moverId)) return null;
-    return entityId -> mMercenary == null || !mMercenary.has(entityId)
-        || mMercenary.get(entityId).ownerId != moverId;
+    if (isPlayer(moverId)) {
+      return entityId -> mMercenary == null || !mMercenary.has(entityId)
+          || mMercenary.get(entityId).ownerId != moverId;
+    }
+    if (mMercenary != null && mMercenary.has(moverId)) {
+      int ownerId = mMercenary.get(moverId).ownerId;
+      return entityId -> entityId != ownerId;
+    }
+    return null;
+  }
+
+  private boolean isOwnedMercenaryOverlappingOwner(int entityId) {
+    if (mMercenary == null || !mMercenary.has(entityId)) return false;
+    int ownerId = mMercenary.get(entityId).ownerId;
+    return ownerId >= 0 && isPlayer(ownerId) && mPosition.has(ownerId);
   }
 }

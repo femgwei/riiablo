@@ -58,6 +58,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Player;
 import com.riiablo.engine.server.component.Sequence;
+import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.component.SummonedPet;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
@@ -90,6 +91,7 @@ public class Actioneer extends PassiveSystem {
 
   protected ComponentMapper<Class> mClass;
   protected ComponentMapper<Sequence> mSequence;
+  protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<MovementModes> mMovementModes;
   protected ComponentMapper<Casting> mCasting;
   protected ComponentMapper<FrenzyRuntime> mFrenzyRuntime;
@@ -539,6 +541,29 @@ public class Actioneer extends PassiveSystem {
     if (!mVelocity.has(entityId)) return false;
     moveTo(entityId, targetId);
     return mPathfind.has(entityId);
+  }
+
+  /** Starts a ground movement command and reports whether a path was installed. */
+  public boolean tryMoveTo(int entityId, Vector2 target) {
+    if (!mVelocity.has(entityId)) return false;
+    moveTo(entityId, target);
+    return mPathfind.has(entityId);
+  }
+
+  /** Native pet follow run: path first, then install the temporary run speed. */
+  public boolean tryRunTo(int entityId, int targetId, int velocityBonusPercent) {
+    if (!tryMoveTo(entityId, targetId)) return false;
+    mRunning.create(entityId);
+    mVelocity.get(entityId).setModeSpeedBonusPercent(velocityBonusPercent);
+    return true;
+  }
+
+  /** Native pet escape run toward a free coordinate. */
+  public boolean tryRunTo(int entityId, Vector2 target, int velocityBonusPercent) {
+    if (!tryMoveTo(entityId, target)) return false;
+    mRunning.create(entityId);
+    mVelocity.get(entityId).setModeSpeedBonusPercent(velocityBonusPercent);
+    return true;
   }
 
   private boolean currentMeleeRange(int attackerId, int targetId, int meleeRange, int rangeBonus) {

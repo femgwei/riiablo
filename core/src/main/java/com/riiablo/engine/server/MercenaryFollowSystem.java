@@ -23,6 +23,7 @@ import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
+import com.riiablo.engine.server.component.Running;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -50,6 +51,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   protected ComponentMapper<AttributesWrapper> mAttributes;
   protected ComponentMapper<Corpse> mCorpse;
   protected ComponentMapper<Velocity> mVelocity;
+  protected ComponentMapper<Running> mRunning;
   protected ComponentMapper<Pathfind> mPathfind;
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Casting> mCasting;
@@ -101,7 +103,13 @@ public final class MercenaryFollowSystem extends IteratingSystem {
         mercenaryPosition, ownerFootprint, mercenaryFootprint)) {
       if (findLanding(map, ownerZone, ownerPosition, mercenaryFootprint,
           ownerFootprint, landing)) {
-        teleport(entityId, ownerId, map, ownerZone, landing, distance, false);
+        if (actioneer != null && actioneer.canInterrupt(entityId)
+            && actioneer.tryRunTo(entityId, landing, 60)) {
+          repathCooldown.put(entityId, REPATH_SECONDS);
+          log.debug("[MERC_FOLLOW] phase=avoid_owner merc={} owner={} from=({}, {}) to=({}, {})",
+              entityId, ownerId, mercenaryPosition.x, mercenaryPosition.y,
+              landing.x, landing.y);
+        }
       } else {
         log.warn("[MERC_FOLLOW] phase=separation_reject merc={} owner={} "
                 + "ownerPos=({}, {}) mercPos=({}, {}) ownerSize={} mercSize={} "
@@ -121,6 +129,12 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     // remains for focused compatibility tests, while the live path uses the
     // map-aware rule.
     int motion = motion(sameMap, sameZone, distance, dead, true);
+    // Native hirelings also follow inside the 16..24 band while the owner is
+    // actively walking/running; otherwise they wait until the outer leash.
+    if (motion == MOTION_NONE && !dead && distance > SETTLE_DISTANCE
+        && mVelocity.has(ownerId) && !mVelocity.get(ownerId).velocity.isZero(0.001f)) {
+      motion = MOTION_FOLLOW;
+    }
     if (motion == MOTION_TELEPORT) {
       int footprint = footprint(entityId);
       if (!findLanding(map, ownerZone, ownerPosition, footprint,
@@ -149,7 +163,10 @@ public final class MercenaryFollowSystem extends IteratingSystem {
         return;
       }
       if (actioneer.canInterrupt(entityId)) {
-        boolean pathStarted = actioneer.tryMoveTo(entityId, ownerId);
+        boolean run = distance > FOLLOW_DISTANCE || mRunning.has(ownerId);
+        boolean pathStarted = run
+            ? actioneer.tryRunTo(entityId, ownerId, 60)
+            : actioneer.tryMoveTo(entityId, ownerId);
         if (!pathStarted) {
           int mercFootprint = footprint(entityId);
           if (findLanding(map, ownerZone, ownerPosition, mercFootprint,

@@ -13,6 +13,7 @@ import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
 import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Casting;
@@ -173,6 +174,11 @@ public final class MercenarySkillSystem extends IteratingSystem {
       lastTarget = target;
       lastSkill = row.skills[slot];
       blockStage = 6;
+    } else if (merc.mercType == 0 && (useSkill || rangedRegroup)
+        && castRogueFallback(entityId, target)) {
+      // D2MOO sub_6FCE4830: Rogue hirelings fall back to MonStats.Skill1
+      // when the Hireling.txt weighted roll selects no explicit skill.
+      blockStage = 8;
     } else if ((useSkill || (!melee && distance < 4f))
         && actioneer.isInMeleeRange(entityId, target, 0)) {
       // sub_6FCE4830 falls back to the hireling's ordinary attack when its
@@ -276,6 +282,26 @@ public final class MercenarySkillSystem extends IteratingSystem {
   private static boolean isMeleeMercenary(Mercenary merc) {
     // Hireling.txt's ids are 0=Rogue, 1=Desert, 2=Iron Wolf, 3=Barbarian.
     return merc.mercType == 1 || merc.mercType == 3;
+  }
+
+  private boolean castRogueFallback(int entityId, int targetId) {
+    Monster monster = mMonster.get(entityId);
+    if (monster == null || monster.monstats == null || Riiablo.files == null
+        || Riiablo.files.skills == null) return false;
+    String skillName = monster.monstats.Skill1;
+    if (skillName == null || skillName.isEmpty()) return false;
+    Skills.Entry skill = Riiablo.files.skills.get(skillName);
+    if (skill == null) return false;
+    int mode = Riiablo.files.MonMode.index(monster.monstats.Sk1mode);
+    if (mode < 0) mode = Engine.Monster.MODE_S1;
+    actioneer.castWithMode(entityId, skill.Id, (byte) mode, targetId,
+        mPosition.get(targetId).position.cpy());
+    castCount++;
+    lastTarget = targetId;
+    lastSkill = skill.Id;
+    log.info("[MERC_SKILL] phase=rogue_fallback entity={} target={} skill={} mode={}",
+        entityId, targetId, skill.Id, mode);
+    return true;
   }
 
   private boolean isHostile(int entityId) {
