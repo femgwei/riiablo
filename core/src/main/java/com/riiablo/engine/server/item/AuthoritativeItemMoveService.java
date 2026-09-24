@@ -62,7 +62,7 @@ public final class AuthoritativeItemMoveService {
     long current = revision(playerEntityId);
     if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.STORE_TO_BELT)
+        || intent.operation > ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY)
       return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
     if (intent.revision != current)
       return new Outcome(false, ItemMoveFailure.STALE_INVENTORY, current);

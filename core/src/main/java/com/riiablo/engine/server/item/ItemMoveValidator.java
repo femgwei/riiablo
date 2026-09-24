@@ -18,7 +18,7 @@ public final class ItemMoveValidator {
   public static byte validate(CharData character, ItemMoveIntent intent) {
     if (character == null || character.getItems() == null) return ItemMoveFailure.PLAYER_NOT_FOUND;
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
-        || intent.operation > ItemMoveOperation.STORE_TO_BELT) return ItemMoveFailure.INVALID_OPERATION;
+        || intent.operation > ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY) return ItemMoveFailure.INVALID_OPERATION;
     if (intent.merc && intent.operation != ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY)
       return ItemMoveFailure.MERC_NOT_SUPPORTED;
     ItemData data = character.getItems();
