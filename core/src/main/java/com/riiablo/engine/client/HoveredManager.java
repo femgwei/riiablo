@@ -32,6 +32,7 @@ public class HoveredManager extends IteratingSystem {
   protected ComponentMapper<BBoxWrapper> mBBoxWrapper;
   protected ComponentMapper<Position> mPosition;
   protected ComponentMapper<AnimationWrapper> mAnimationWrapper;
+  protected ComponentMapper<com.riiablo.engine.client.component.Overlay> mOverlay;
   protected ComponentMapper<Label> mLabel;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Item> mItem;
@@ -166,5 +167,6 @@ public class HoveredManager extends IteratingSystem {
     }
 
     if (mAnimationWrapper.has(id)) mAnimationWrapper.get(id).animation.setHighlighted(b);
+    if (mOverlay.has(id)) mOverlay.get(id).animation.setHighlighted(b);
   }
 }

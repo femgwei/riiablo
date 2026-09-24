@@ -239,6 +239,19 @@ public class MapManager extends PassiveSystem {
         NativeObjectState nativeState = mNativeObjectState.create(id).set(object,
             object.presetIndex, objectId,
             resolvedObjectId, object.mode, object.ds1Raw, object.spawned, resolution.kind);
+        // Resolve the gameplay shrine before the client presentation is built.
+        // The DS1 preset class (574..579) is only a spawn selector; the
+        // renderable object is the shared Shrine row.  Keeping the selected
+        // Shrines.txt row in the map-owned state makes the type deterministic
+        // across room re-entry and lets the client show the matching native
+        // shrine glyph before the first interaction.
+        if (resolution.kind == NativePresetObjectResolver.Kind.SHRINE
+            && nativeState.shrineId < 0 && Riiablo.files.Shrines != null) {
+          int shrineId = com.riiablo.engine.server.object.NativeShrineResolver.resolve(
+              Riiablo.files.Shrines, nativeBaseFor(resolvedObjectId), objectId,
+              zone.level.Id, map.seed, object.x, object.y);
+          nativeState.persistShrineId(shrineId);
+        }
         CofReference nativeCof = mCofReference.get(id);
         // D2MOO's ShrineW/ShrineD/ShrineF/ShrineH substitutions can carry the
         // transient OP mode from their DS1 preset.  OP is the activation
@@ -277,6 +290,11 @@ public class MapManager extends PassiveSystem {
             zone.level.LevelName, zone.level.Id, skipped));
       }
     }
+  }
+
+  private static com.riiablo.codec.excel.Objects.Entry nativeBaseFor(int objectId) {
+    return Riiablo.files == null || Riiablo.files.objects == null
+        ? null : Riiablo.files.objects.get(objectId);
   }
 
   private static int resolveDs1ObjectId(int act, int presetIndex) {

@@ -17,6 +17,8 @@ import com.riiablo.logger.Logger;
 @All(com.riiablo.engine.client.component.Overlay.class)
 public class OverlayManager extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(OverlayManager.class);
+  /** Reserved owner id for an unactivated shrine's world-space glyph. */
+  static final int SHRINE_ICON_STATE = Integer.MIN_VALUE + 0x5249;
 
   protected ComponentMapper<com.riiablo.engine.client.component.Overlay> mOverlay;
 
@@ -84,6 +86,16 @@ public class OverlayManager extends IteratingSystem {
     dispose(overlay);
     mOverlay.remove(entityId);
     log.info("[STATE_OVERLAY] entity={} state={} result=cleared", entityId, stateId);
+  }
+
+  /** Installs the stock shrine glyph above an unused shrine object. */
+  public void setShrineIcon(int entityId, String overlayId) {
+    setPersistent(entityId, SHRINE_ICON_STATE, overlayId);
+  }
+
+  /** Removes the shrine glyph after the one-shot activation begins. */
+  public void clearShrineIcon(int entityId) {
+    clearPersistent(entityId, SHRINE_ICON_STATE);
   }
 
   void dispose(com.riiablo.engine.client.component.Overlay overlay) {

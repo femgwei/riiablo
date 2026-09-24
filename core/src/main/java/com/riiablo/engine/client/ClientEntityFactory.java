@@ -16,6 +16,7 @@ import com.riiablo.codec.excel.Missiles;
 import com.riiablo.codec.excel.MonStats;
 import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.codec.excel.Objects;
+import com.riiablo.codec.excel.Shrines;
 import com.riiablo.codec.util.BBox;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.client.component.AnimationWrapper;
@@ -33,6 +34,7 @@ import com.riiablo.engine.server.component.Warp;
 import com.riiablo.map.DT1;
 import com.riiablo.map.Map;
 import com.riiablo.save.CharData;
+import com.riiablo.engine.server.object.NativeShrineResolver;
 
 public class ClientEntityFactory extends ServerEntityFactory {
   private static final String TAG = "ClientEntityFactory";
@@ -47,6 +49,7 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   protected MenuManager menuManager;
   protected DialogManager dialogManager;
+  protected OverlayManager overlayManager;
 
   @Override
   public int createPlayer(CharData charData, Vector2 position) {
@@ -111,7 +114,11 @@ public class ClientEntityFactory extends ServerEntityFactory {
         name = String.format("%s\n%s", levelName, objectName);
       }
     } else {
-      name = base.Name.equalsIgnoreCase("dummy") ? base.Description : Riiablo.string.lookup(base.Name);
+      name = shrineViewName(base, x, y);
+      if (name == null) {
+        name = base.Name.equalsIgnoreCase("dummy")
+            ? base.Description : Riiablo.string.lookup(base.Name);
+      }
     }
 
     if (base.Draw) {
@@ -168,6 +175,51 @@ public class ClientEntityFactory extends ServerEntityFactory {
 
   static boolean isWaypoint(Objects.Entry base) {
     return isWaypointObject(base);
+  }
+
+  static boolean isShrine(Objects.Entry base) {
+    return base != null && (base.OperateFn == 2 || base.ShrineFunction != 0);
+  }
+
+  private String shrineViewName(Objects.Entry base, float x, float y) {
+    if (!isShrine(base) || Riiablo.files == null || Riiablo.files.Shrines == null) {
+      return null;
+    }
+    int shrineId = resolveClientShrineId(base, x, y);
+    if (shrineId < 0 || shrineId >= Riiablo.files.Shrines.size()) return null;
+    Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
+    if (shrine == null || shrine.ViewName == null || shrine.ViewName.isEmpty()) return null;
+    String view = Riiablo.string.lookup(shrine.ViewName);
+    return view == null || view.isEmpty() ? shrine.ViewName : view;
+  }
+
+  private int resolveClientShrineId(Objects.Entry base, float x, float y) {
+    if (!isShrine(base) || map == null || Riiablo.files == null
+        || Riiablo.files.Shrines == null) return -1;
+    Map.Zone zone = map.getZone(x, y);
+    int levelId = zone == null || zone.level == null ? 0 : zone.level.Id;
+    return NativeShrineResolver.resolve(Riiablo.files.Shrines, base, base.Id,
+        levelId, map.seed(), (int) x, (int) y);
+  }
+
+  /** Maps the native Shrines.txt code to its stock overhead icon. */
+  static String shrineOverlay(int shrineId) {
+    if (Riiablo.files == null || Riiablo.files.Shrines == null) return null;
+    Shrines.Entry shrine = Riiablo.files.Shrines.get(shrineId);
+    if (shrine == null) return null;
+    switch (shrine.Code) {
+      case 6: return "shrine_armor";
+      case 7: return "shrine_combat";
+      case 8: return "shrine_resist_fire";
+      case 9: return "shrine_resist_cold";
+      case 10: return "shrine_resist_lightning";
+      case 11: return "shrine_resist_poison";
+      case 12: return "shrine_skill";
+      case 13: return "shrine_mana_regen";
+      case 14: return "shrine_stamina";
+      case 15: return "shrine_experience";
+      default: return null;
+    }
   }
 
   static boolean isInitiallySelectable(Objects.Entry base) {
