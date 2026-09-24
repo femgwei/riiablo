@@ -27,6 +27,10 @@ public class BitmapFontLoader extends AsynchronousAssetLoader<FontTBL.BitmapFont
 
   @Override
   public void loadAsync(AssetManager assets, String fileName, FileHandle file, Params params) {
+    FileHandle tblFile = resolve(name + ".TBL");
+    FileHandle dc6File = resolve(name + ".DC6");
+    cacheFile = FontAtlasCache.fileFor(tblFile, dc6File);
+    cached = FontAtlasCache.read(cacheFile);
     if (cached != null) {
       data = FontTBL.dataFromCache(cached);
       cached = null;
@@ -52,10 +56,10 @@ public class BitmapFontLoader extends AsynchronousAssetLoader<FontTBL.BitmapFont
   @Override
   public Array<AssetDescriptor> getDependencies(String assets, FileHandle file, Params params) {
     name = file.pathWithoutExtension();
-    FileHandle dc6File = resolve(name + ".DC6");
-    cacheFile = FontAtlasCache.fileFor(file, dc6File);
-    cached = FontAtlasCache.read(cacheFile);
-    if (cached != null) return null;
+    // Cache probing is deliberately deferred to loadAsync. getDependencies is
+    // called by AssetManager on the render thread; hashing and reading a full
+    // CJK atlas here made screen transitions appear frozen.
+    cached = null;
     return Array.<AssetDescriptor>with(new AssetDescriptor<>(name + ".DC6", DC6.class));
   }
 

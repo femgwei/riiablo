@@ -217,7 +217,7 @@ public class CreateCharacterScreen extends ScreenAdapter {
             if (onCreated != null) {
               onCreated.run();
             } else {
-              Riiablo.client.clearAndSet(new GameScreen(charData));
+              Riiablo.client.clearAndSet(new GameEntryLoadingScreen(charData));
             }
           } else {
             // TODO: Show error message to user

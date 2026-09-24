@@ -121,6 +121,20 @@ public class Fonts {
     applyMetrics();
   }
 
+  /** Queues staged fonts without blocking the render thread. */
+  public void queueGameplayFonts() {
+    if (gameplayFontsLoaded) return;
+    assets.load(getDescriptor("font6", BlendMode.LUMINOSITY_TINT));
+    assets.load(getDescriptor("font8", BlendMode.LUMINOSITY_TINT));
+    assets.load(getDescriptor("font24", BlendMode.ID));
+    assets.load(getDescriptor("font30", BlendMode.ID));
+    assets.load(getDescriptor("font42", BlendMode.ID));
+    assets.load(getDescriptor("fontformal10", BlendMode.LUMINOSITY_TINT));
+    assets.load(getDescriptor("fontformal11", BlendMode.LUMINOSITY_TINT));
+    assets.load(getDescriptor("fontridiculous", BlendMode.TINT_BLACKS));
+    assets.load(getDescriptor("ReallyTheLastSucker", BlendMode.ID));
+  }
+
   public boolean isGameplayFontsLoaded() {
     return gameplayFontsLoaded;
   }
