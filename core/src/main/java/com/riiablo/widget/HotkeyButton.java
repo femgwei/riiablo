@@ -117,7 +117,7 @@ public class HotkeyButton extends Button {
       // Item charges replace the mana payment. Learned and system skills use
       // the same fixed-point cost comparison as the authoritative cast path.
       if (!disabled && chargedSkill == null) {
-        int level = Math.max(1, Riiablo.charData.getSkill(skillId));
+        int level = Math.max(1, SkillDetails.effectivePlayerSkillLevel(skillId));
         float manaCost = NativeSkillResolver.manaCost(skill, level);
         StatRef mana = Riiablo.charData.getStats().get(Stat.mana);
         float currentMana = mana == null ? 0f : mana.asFixed();

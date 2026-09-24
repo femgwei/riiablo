@@ -13,6 +13,7 @@ import com.riiablo.codec.excel.SkillDesc;
 import com.riiablo.codec.excel.Skills;
 import com.riiablo.engine.server.skill.NativeSkillResolver;
 import com.riiablo.engine.server.skill.SkillFormula;
+import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.graphics.PaletteIndexedColorDrawable;
 
 /** Compact native-style tooltip shared by HUD and quick-skill buttons. */
@@ -32,6 +33,36 @@ public final class SkillDetails extends Table {
     refresh();
   }
 
+  /**
+   * Returns the local player's effective skill level, including temporary
+   * state bonuses such as the Skill Shrine's +2 all skills.  CharData holds
+   * the permanent/equipment skill table while UnitStates carries timed native
+   * modifiers, so using CharData alone leaves the skill book and HUD stale
+   * during a shrine effect.
+   */
+  public static int effectivePlayerSkillLevel(int skillId) {
+    if (Riiablo.charData == null) return 0;
+    int level = Math.max(0, Riiablo.charData.getSkill(skillId));
+    return Math.max(0, level + activePlayerSkillBonus());
+  }
+
+  /** Returns the active temporary all-skills modifier for the local player. */
+  public static int activePlayerSkillBonus() {
+    if (Riiablo.engine == null || Riiablo.game == null || Riiablo.game.player < 0) return 0;
+    try {
+      com.artemis.ComponentMapper<UnitStates> mapper =
+          Riiablo.engine.getMapper(UnitStates.class);
+      if (mapper == null || !mapper.has(Riiablo.game.player)) return 0;
+      UnitStates states = mapper.get(Riiablo.game.player);
+      return states != null && states.stateList != null
+          ? states.stateList.getTotalSkillModifier() : 0;
+    } catch (RuntimeException ignored) {
+      // The HUD can be queried during world teardown. Treat that as no
+      // temporary modifier instead of making tooltip rendering fatal.
+      return 0;
+    }
+  }
+
   public void refresh() {
     if (skillId < 0 || Riiablo.files == null || Riiablo.files.skills == null
         || Riiablo.files.skilldesc == null) return;
@@ -41,7 +72,7 @@ public final class SkillDetails extends Table {
     if (desc == null) return;
     int level = chargedSkill != null
         ? Math.max(1, chargedSkill.param0())
-        : Riiablo.charData != null ? Math.max(1, Riiablo.charData.getSkill(skillId)) : 1;
+        : Math.max(1, effectivePlayerSkillLevel(skillId));
     if (level == displayedLevel) return;
     displayedLevel = level;
 

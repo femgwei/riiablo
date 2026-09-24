@@ -37,6 +37,7 @@ import com.riiablo.save.CharData;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.Label;
 import com.riiablo.widget.LabelButton;
+import com.riiablo.widget.SkillDetails;
 
 public class SpellsPanel extends WidgetGroup implements Disposable, CharData.SkillListener {
   private static final String TAG = "SpellsPanel";
@@ -209,6 +210,11 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     // change a skill level. Poll the authoritative stat so a level-up makes
     // the allocation controls appear immediately when the panel is open.
     updateSkillPoints(Riiablo.charData);
+    if (buttons != null) {
+      for (SkillButton button : buttons) {
+        if (button != null) button.refreshTemporaryLevel();
+      }
+    }
     super.act(delta);
   }
 
@@ -304,6 +310,7 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     final Label label;
 
     int sLvl;
+    int permanentLvl;
 
     SkillButton(Skills.Entry skill, SkillDesc.Entry desc) {
       super(new Button.ButtonStyle(
@@ -322,15 +329,33 @@ public class SpellsPanel extends WidgetGroup implements Disposable, CharData.Ski
     }
 
     void update(int sLvl) {
-      this.sLvl = sLvl;
+      this.permanentLvl = Math.max(0, sLvl);
+      this.sLvl = Math.max(0, sLvl + SkillDetails.activePlayerSkillBonus());
       details.update();
-      label.setStyle(sLvl > 9 ? SMALL_LABEL_STYLE : LARGE_LABEL_STYLE);
-      label.setText(sLvl > 0 ? Integer.toString(sLvl) : "");
+      label.setStyle(this.sLvl > 9 ? SMALL_LABEL_STYLE : LARGE_LABEL_STYLE);
+      label.setColor(this.sLvl > this.permanentLvl ? Riiablo.colors.blue : Riiablo.colors.white);
+      label.setText(this.sLvl > 0 ? Integer.toString(this.sLvl) : "");
       label.setPosition(52, -5, Align.center);
       // Unlearned skills must remain clickable while points are available;
       // the authoritative server validates level, class and prerequisites.
       // The old sLvl <= 0 condition made every skill impossible to learn.
       updateEnabledState();
+    }
+
+    /** Refreshes only the timed all-skills layer without rebuilding the panel. */
+    void refreshTemporaryLevel() {
+      if (Riiablo.charData == null) return;
+      int permanent = Math.max(0, Riiablo.charData.getSkill(skill.Id));
+      int effective = Math.max(0,
+          permanent + SkillDetails.activePlayerSkillBonus());
+      if (permanent == permanentLvl && effective == sLvl) return;
+      permanentLvl = permanent;
+      sLvl = effective;
+      details.update();
+      label.setStyle(sLvl > 9 ? SMALL_LABEL_STYLE : LARGE_LABEL_STYLE);
+      label.setColor(sLvl > permanentLvl ? Riiablo.colors.blue : Riiablo.colors.white);
+      label.setText(sLvl > 0 ? Integer.toString(sLvl) : "");
+      label.setPosition(52, -5, Align.center);
     }
 
     void updateEnabledState() {
