@@ -4,7 +4,6 @@ import com.artemis.annotations.Wire;
 
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -27,6 +26,7 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
 import com.riiablo.widget.Button;
+import com.riiablo.widget.GoldAmountDialog;
 import com.riiablo.widget.Label;
 
 public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.GridListener {
@@ -38,6 +38,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
   final AssetDescriptor<DC6> goldcoinbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\goldcoinbtn.dc6", DC6.class);
   Button btnDropGold;
   Label stashgold;
+  GoldAmountDialog goldDialog;
 
   final AssetDescriptor<DC6> buysellbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\buysellbtn.DC6", DC6.class);
   Button btnExit;
@@ -99,25 +100,28 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
     btnDropGold.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        Gdx.input.getTextInput(new Input.TextInputListener() {
-          @Override
-          public void input(String text) {
-            try {
-              int amount = Integer.parseInt(text.trim());
-              if (itemController == null || amount == 0) return;
-              if (amount > 0) itemController.depositGold(amount);
-              else itemController.withdrawGold(-amount);
-            } catch (NumberFormatException ignored) {
-              // Treat malformed input as cancel.
-            }
-          }
-
-          @Override
-          public void canceled() {}
-        }, Riiablo.bundle.get("stash_gold_transfer"), "", Riiablo.bundle.get("amount"));
+        goldDialog.open();
       }
     });
     addActor(btnDropGold);
+
+    goldDialog = new GoldAmountDialog(new GoldAmountDialog.Listener() {
+      @Override
+      public void submitted(String text) {
+        try {
+          int amount = Integer.parseInt(text.trim());
+          if (itemController == null || amount == 0) return;
+          if (amount > 0) itemController.depositGold(amount);
+          else itemController.withdrawGold(-amount);
+        } catch (NumberFormatException ignored) {
+          // The native dialog filters digits; retain defensive parsing.
+        }
+      }
+
+      @Override
+      public void canceled() {}
+    }, true);
+    addActor(goldDialog);
 
     //setDebug(true, true);
   }
@@ -128,6 +132,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
     Riiablo.assets.unload(TradeStashDescriptor.fileName);
     Riiablo.assets.unload(goldcoinbtnDescriptor.fileName);
     Riiablo.assets.unload(buysellbtnDescriptor.fileName);
+    goldDialog.dispose();
   }
 
   @Override
@@ -159,6 +164,7 @@ public class StashPanel extends WidgetGroup implements Disposable, ItemGrid.Grid
 
   @Override
   public void setVisible(boolean visible) {
+    if (!visible && goldDialog != null) goldDialog.close();
     super.setVisible(visible);
     if (visible) {
       Riiablo.game.setRightPanel(Riiablo.game.inventoryPanel);

@@ -17,6 +17,27 @@
 [`current-chat-ownership.md`](current-chat-ownership.md)，再以 Git `HEAD` 和本文件的
 “当前下一项”作为唯一状态。
 
+## 2026-09-24 游戏内对话框资源替换
+
+- [x] 用户实机确认原版商人购买存在确认流程；当前 `VendorPanel` 的左键确认、确认后
+  放到鼠标光标以及右键直接购买的行为保留，不再按“原版没有购买确认”处理。后续只替换
+  窗口视觉资源，不改变该交互分流。
+- [x] Inventory/箱子金币输入不再调用平台原生 `Gdx.input.getTextInput`。新增
+  `GoldAmountDialog`，使用原版 `MENU/dialogbackground.dc6` 与
+  `MENU/buttontempok.dc6`/`buttontempcancel.dc6`，保留数字过滤、Enter/按钮确认、取消和
+  现有本地/D2GS 金币回调；箱子继续兼容正数存入、负数取出。资源导出器清单也已补充
+  `dialogbackground`、`buttontemp*`、`okcancelbtn` 和 `goldbtn`，可用同一 MPQ 命令复核。
+- [ ] 商人购买确认框仍使用程序化背景和文字按钮；下一步应将其替换为原版游戏内对话框资源，
+  但必须保持已经实机确认的购买确认行为。
+- [ ] 角色删除确认：`SelectCharacterScreen*` 当前使用 `Label.MODAL`，待评估
+  `CharSelect/PopUpOKCancel.dc6`。
+- [ ] TCP/IP 地址输入：`TCPIPScreen` 当前使用平台原生输入，待评估
+  `FrontEnd/IPAddressBox.dc6`。
+- [ ] 玩家交易窗口：`TradePanel` 当前使用程序化 modal，待评估
+  `PANEL/trade.dc6`/`tradebtn.dc6` 的整体替换。
+- [ ] NPC/任务文本框：NPC 边框已使用原版 `MENU/boxpieces.dc6`；继续核对
+  `MENU/dialogbackground.dc6` 与文本滚动、按钮资源的职责，不直接替换现有对话布局。
+
 ## 2026-09-21 当前基线（以 Git HEAD 为准）
 
 - 当前 HEAD：以本轮交易接入提交为准；工作区在本轮开始时仅保留 D2GS 交易 handler 的未提交改动，

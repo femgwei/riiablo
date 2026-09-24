@@ -42,6 +42,7 @@ import com.riiablo.loader.DC6Loader;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
 import com.riiablo.widget.Button;
+import com.riiablo.widget.GoldAmountDialog;
 import com.riiablo.widget.Label;
 
 public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.GridListener {
@@ -60,6 +61,7 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
   final AssetDescriptor<DC6> goldcoinbtnDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\goldcoinbtn.dc6", DC6.class);
   Button btnDropGold;
   Label invgold;
+  GoldAmountDialog goldDialog;
 
   final AssetDescriptor<DC6> inv_armorDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\inv_armor.DC6", DC6.class);
   final AssetDescriptor<DC6> inv_beltDescriptor = new AssetDescriptor<>("data\\global\\ui\\PANEL\\inv_belt.DC6", DC6.class);
@@ -306,23 +308,26 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     btnDropGold.addListener(new ClickListener() {
       @Override
       public void clicked(InputEvent event, float x, float y) {
-        Gdx.input.getTextInput(new Input.TextInputListener() {
-          @Override
-          public void input(String text) {
-            try {
-              int amount = Integer.parseInt(text.trim());
-              if (amount > 0 && itemController != null) itemController.dropGold(amount);
-            } catch (NumberFormatException ignored) {
-              // Native input dialogs are user-facing; invalid text is a cancel.
-            }
-          }
-
-          @Override
-          public void canceled() {}
-        }, Riiablo.bundle.get("drop_gold"), "", Riiablo.bundle.get("amount"));
+        goldDialog.open();
       }
     });
     addActor(btnDropGold);
+
+    goldDialog = new GoldAmountDialog(new GoldAmountDialog.Listener() {
+      @Override
+      public void submitted(String text) {
+        try {
+          int amount = Integer.parseInt(text.trim());
+          if (amount > 0 && itemController != null) itemController.dropGold(amount);
+        } catch (NumberFormatException ignored) {
+          // The native dialog filters digits; retain defensive parsing.
+        }
+      }
+
+      @Override
+      public void canceled() {}
+    });
+    addActor(goldDialog);
 
     //setDebug(true, true);
   }
@@ -346,6 +351,13 @@ public class InventoryPanel extends WidgetGroup implements Disposable, ItemGrid.
     Riiablo.assets.unload(inv_helm_gloveDescriptor.fileName);
     Riiablo.assets.unload(inv_ring_amuletDescriptor.fileName);
     Riiablo.assets.unload(inv_weaponsDescriptor.fileName);
+    goldDialog.dispose();
+  }
+
+  @Override
+  public void setVisible(boolean visible) {
+    if (!visible && goldDialog != null) goldDialog.close();
+    super.setVisible(visible);
   }
 
   @Override

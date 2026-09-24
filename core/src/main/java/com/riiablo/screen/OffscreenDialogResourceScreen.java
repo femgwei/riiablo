@@ -24,6 +24,10 @@ public final class OffscreenDialogResourceScreen extends ScreenAdapter {
   private static final Resource[] RESOURCES = {
       r("conversation", "dialogbackground", "data\\global\\ui\\MENU\\dialogbackground.dc6"),
       r("conversation", "boxpieces", "data\\global\\ui\\MENU\\boxpieces.dc6"),
+      r("in-game-gold-dialog", "buttontempok", "data\\global\\ui\\MENU\\buttontempok.dc6"),
+      r("in-game-gold-dialog", "buttontempcancel", "data\\global\\ui\\MENU\\buttontempcancel.dc6"),
+      r("in-game-gold-dialog", "okcancelbtn", "data\\global\\ui\\MENU\\okcancelbtn.dc6"),
+      r("in-game-gold-dialog", "goldbtn", "data\\global\\ui\\MENU\\goldbtn.dc6"),
       r("popup-background", "TileableDialog", "data\\global\\ui\\FrontEnd\\TileableDialog.dc6"),
       r("popup-background", "PopUp_340x224", "data\\global\\ui\\FrontEnd\\PopUp_340x224.dc6"),
       r("popup-background", "PopUpLarge", "data\\global\\ui\\FrontEnd\\PopUpLarge.dc6"),
