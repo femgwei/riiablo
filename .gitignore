@@ -3,6 +3,7 @@
 .gradle/
 gradle-app.setting
 build/
+cache/
 
 ## IntelliJ, Android Studio:
 .idea/*
