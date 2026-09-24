@@ -73,6 +73,23 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
         return false;
       }
     });
+    // TextField handles most key events on its own and may consume ESC before
+    // the event bubbles back to this group. Capture it on the dialog so ESC
+    // always has the native modal-dialog close behavior.
+    addCaptureListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+      @Override
+      public boolean keyDown(InputEvent event, int keycode) {
+        if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
+          cancel();
+          return true;
+        }
+        if (keycode == Input.Keys.ENTER || keycode == Input.Keys.NUMPAD_ENTER) {
+          submit();
+          return true;
+        }
+        return false;
+      }
+    });
 
     Riiablo.assets.load(backgroundDescriptor);
     Riiablo.assets.load(okCancelDescriptor);
@@ -100,10 +117,30 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
         submit();
       }
     });
-    cancelButton.addListener(new ClickListener() {
+    cancelButton.addListener(new ClickListener(Input.Buttons.LEFT) {
       @Override
       public void clicked(InputEvent event, float x, float y) {
         cancel();
+      }
+    });
+    // Keep a direct touch path as well as ClickListener.  This is important
+    // for the native square glyph: some Stage/input combinations deliver the
+    // button release without synthesizing ClickListener.clicked.
+    cancelButton.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+      private boolean pressed;
+
+      @Override
+      public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+        pressed = button == Input.Buttons.LEFT;
+        return pressed;
+      }
+
+      @Override
+      public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+        if (pressed && button == Input.Buttons.LEFT && cancelButton.hit(x, y, true) != null) {
+          cancel();
+        }
+        pressed = false;
       }
     });
     increaseButton = new Button(new Button.ButtonStyle(
