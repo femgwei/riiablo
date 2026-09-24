@@ -14,6 +14,7 @@ import com.riiablo.engine.server.CofManager;
 import com.riiablo.engine.server.component.MapWrapper;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.client.component.Label;
+import com.riiablo.engine.server.object.NativeObjectOperateTable;
 import com.riiablo.map.Map;
 
 /**
@@ -42,8 +43,9 @@ public final class NativeShrinePresentationSystem extends IteratingSystem {
   protected void process(int entityId) {
     NativeObjectState state = mNativeObjectState.get(entityId);
     Object object = mObject.get(entityId);
-    if (state == null || object == null || object.base == null || state.kind
-        != com.riiablo.map.NativePresetObjectResolver.Kind.SHRINE) return;
+    if (state == null || object == null || object.base == null
+        || NativeObjectOperateTable.resolve(object.base, state.kind)
+            != NativeObjectOperateTable.Lifecycle.SHRINE) return;
 
     if (state.shrineId < 0 && Riiablo.files != null && Riiablo.files.Shrines != null) {
       MapWrapper wrapper = mMapWrapper.get(entityId);
