@@ -22,6 +22,7 @@ public final class OffscreenShrineAuditScreen extends ScreenAdapter {
     int seedCount = Integer.getInteger("riiablo.offscreen-shrine-seed-count", 64);
     int difficulty = Integer.getInteger("riiablo.offscreen-shrine-difficulty", 0);
     String report = NativeShrineDistributionAudit.run(firstSeed, seedCount, difficulty);
+    report += "\n" + com.riiablo.engine.server.object.ShrineEffectAudit.run();
     FileHandle output = Gdx.files.absolute(outputDirectory);
     output.mkdirs();
     output.child("shrine-distribution-audit.txt").writeString(report, false, "UTF-8");

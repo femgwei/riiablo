@@ -65,6 +65,29 @@ public class StateOverlaySystem extends IteratingSystem {
         states.stateList.getState(StateId.SHIVERARMOR));
     reconcile(entityId, StateId.CHILLINGARMOR,
         states.stateList.getState(StateId.CHILLINGARMOR));
+    // D2's shrine buffs are native timed states with the same overhead
+    // presentation used by the original client.  Keep these in the client
+    // reconciliation path so StateP snapshots and local games behave alike.
+    reconcile(entityId, StateId.SHRINE_ARMOR,
+        states.stateList.getState(StateId.SHRINE_ARMOR));
+    reconcile(entityId, StateId.SHRINE_COMBAT,
+        states.stateList.getState(StateId.SHRINE_COMBAT));
+    reconcile(entityId, StateId.SHRINE_RESIST_LIGHTNING,
+        states.stateList.getState(StateId.SHRINE_RESIST_LIGHTNING));
+    reconcile(entityId, StateId.SHRINE_RESIST_FIRE,
+        states.stateList.getState(StateId.SHRINE_RESIST_FIRE));
+    reconcile(entityId, StateId.SHRINE_RESIST_COLD,
+        states.stateList.getState(StateId.SHRINE_RESIST_COLD));
+    reconcile(entityId, StateId.SHRINE_RESIST_POISON,
+        states.stateList.getState(StateId.SHRINE_RESIST_POISON));
+    reconcile(entityId, StateId.SHRINE_SKILL,
+        states.stateList.getState(StateId.SHRINE_SKILL));
+    reconcile(entityId, StateId.SHRINE_MANA_REGEN,
+        states.stateList.getState(StateId.SHRINE_MANA_REGEN));
+    reconcile(entityId, StateId.SHRINE_STAMINA,
+        states.stateList.getState(StateId.SHRINE_STAMINA));
+    reconcile(entityId, StateId.SHRINE_EXPERIENCE,
+        states.stateList.getState(StateId.SHRINE_EXPERIENCE));
     reconcileVenomTransform(entityId,
         states.stateList.getState(StateId.VENOMCLAWS));
   }
@@ -184,6 +207,36 @@ public class StateOverlaySystem extends IteratingSystem {
         break;
       case StateId.CHILLINGARMOR:
         candidates = new String[] {"chillarmor", "chillingarmor"};
+        break;
+      case StateId.SHRINE_ARMOR:
+        candidates = new String[] {"shrine_armor"};
+        break;
+      case StateId.SHRINE_COMBAT:
+        candidates = new String[] {"shrine_combat"};
+        break;
+      case StateId.SHRINE_RESIST_LIGHTNING:
+        candidates = new String[] {"shrine_resist_lightning"};
+        break;
+      case StateId.SHRINE_RESIST_FIRE:
+        candidates = new String[] {"shrine_resist_fire"};
+        break;
+      case StateId.SHRINE_RESIST_COLD:
+        candidates = new String[] {"shrine_resist_cold"};
+        break;
+      case StateId.SHRINE_RESIST_POISON:
+        candidates = new String[] {"shrine_resist_poison"};
+        break;
+      case StateId.SHRINE_SKILL:
+        candidates = new String[] {"shrine_skill"};
+        break;
+      case StateId.SHRINE_MANA_REGEN:
+        candidates = new String[] {"shrine_mana_regen"};
+        break;
+      case StateId.SHRINE_STAMINA:
+        candidates = new String[] {"shrine_stamina"};
+        break;
+      case StateId.SHRINE_EXPERIENCE:
+        candidates = new String[] {"shrine_experience"};
         break;
       default:
         return null;

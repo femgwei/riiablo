@@ -122,6 +122,7 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
   @Subscribe
   public void onShrineInteraction(ShrineInteractionEvent event) {
     if (event == null) return;
+    playShrineSound(event.code);
     if (event.code >= 17 && event.code <= 22) {
       applySpecialShrine(event);
       return;
@@ -434,6 +435,69 @@ public final class NativeShrineEffectSystem extends PassiveSystem {
       case 15: return StateId.SHRINE_EXPERIENCE;
       default: return StateId.NONE;
     }
+  }
+
+  /** Plays the native shrine operation sound when the corresponding resource exists. */
+  private static void playShrineSound(int code) {
+    if (Riiablo.audio == null || Riiablo.files == null || Riiablo.files.Sounds == null) return;
+    String sound;
+    switch (code) {
+      case 1:
+      case 2:
+      case 3:
+        sound = "shrine_refill";
+        break;
+      case 4:
+      case 5:
+        sound = "shrine_exchange";
+        break;
+      case 6:
+        sound = "shrine_armorboost";
+        break;
+      case 7:
+        sound = "shrine_combatboost";
+        break;
+      case 8:
+        sound = "shrine_resistfire";
+        break;
+      case 9:
+        sound = "shrine_resistcold";
+        break;
+      case 10:
+        sound = "shrine_resistlightning";
+        break;
+      case 11:
+        sound = "shrine_resistpoison";
+        break;
+      case 12:
+        sound = "shrine_skill";
+        break;
+      case 13:
+      case 14:
+        sound = "shrine_recharge";
+        break;
+      case 15:
+        sound = "shrine_experience";
+        break;
+      case 17:
+        sound = "shrine_warping";
+        break;
+      case 18:
+        sound = "shrine_gemupgrade";
+        break;
+      case 19:
+        sound = "shrine_storm";
+        break;
+      case 21:
+        sound = "shrine_exploding";
+        break;
+      case 22:
+        sound = "shrine_poison";
+        break;
+      default:
+        return;
+    }
+    if (Riiablo.files.Sounds.get(sound) != null) Riiablo.audio.play(sound, true);
   }
 
   private boolean cleanse(int entityId, boolean poison, boolean freeze,

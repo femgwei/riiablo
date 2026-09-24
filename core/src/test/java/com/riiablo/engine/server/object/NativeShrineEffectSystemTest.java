@@ -77,14 +77,20 @@ class NativeShrineEffectSystemTest extends RiiabloTest {
         states, 11, 12, 99, 99, 2);
     assertNotNull(skill);
     assertEquals(2, states.getTotalSkillModifier());
+    assertEquals(200, states.getTotalAttackModifier(),
+        "different persistent shrine buffs stack in the native stat list");
+    assertEquals(100, states.getTotalDamageModifier());
 
     UnitState experience = NativeShrineEffectSystem.applyTimedEffect(
         states, 12, 15, 50, 0, 2);
     assertNotNull(experience);
     assertEquals(50, states.getTotalExperienceModifier());
+    assertEquals(2, states.getTotalSkillModifier(),
+        "experience shrine must not remove the skill shrine");
 
     states.update();
     assertEquals(2, states.getTotalSkillModifier());
+    assertEquals(50, states.getTotalExperienceModifier());
     states.update();
     assertEquals(0, states.getTotalSkillModifier());
     assertEquals(0, states.getTotalExperienceModifier());
