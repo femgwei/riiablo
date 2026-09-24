@@ -30,6 +30,8 @@ import com.riiablo.logger.Logger;
 public final class MercenarySkillSystem extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(MercenarySkillSystem.class);
   private static final float RETRY_SECONDS = 0.4f;
+  /** AITHINK_Fn061_Hireable only enters the skill branch below 25 native cells. */
+  private static final float HIRELING_COMBAT_DISTANCE = 24f;
   private final IntMap<Float> cooldown = new IntMap<>();
   private int decisionTick;
 
@@ -95,6 +97,20 @@ public final class MercenarySkillSystem extends IteratingSystem {
       blockStage = 4;
       return;
     }
+    float distance = nativeAiDistance(mPosition.get(entityId).position,
+        mPosition.get(target).position);
+    if (distance >= HIRELING_COMBAT_DISTANCE) {
+      // D2MOO can still retain a candidate from the wider 35-cell scan, but
+      // does not attack it until the hireling is inside the 25-cell gate.
+      if (merc.ownerId >= 0 && mPosition.has(merc.ownerId)) {
+        actioneer.tryMoveTo(entityId, merc.ownerId);
+      } else {
+        actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
+      }
+      blockStage = 5;
+      cooldown.put(entityId, 0.20f);
+      return;
+    }
     NativeRng rng = new NativeRng(merc.aiRngState);
     int chance = NativeHirelingExperienceTable.useSkillChance(
         merc.mercType, merc.level, merc.aiChanceParam);
@@ -116,8 +132,6 @@ public final class MercenarySkillSystem extends IteratingSystem {
     // sub_6FCE4830.  This is a property of the hireling class, not of the
     // currently selected skill (auras have no missile but are ranged AI).
     boolean melee = isMeleeMercenary(merc);
-    float distance = nativeAiDistance(mPosition.get(entityId).position,
-        mPosition.get(target).position);
     if (melee && (distance >= 3f || !actioneer.isInMeleeRange(entityId, target, 0))) {
       actioneer.moveTo(entityId, target);
       blockStage = 7;
