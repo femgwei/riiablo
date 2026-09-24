@@ -175,9 +175,9 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     }}) {
       @Override
       protected void drawCursor(Drawable cursor, Batch batch, BitmapFont font, float x, float y) {
-        // LibGDX positions the cursor from the text baseline. Raising that
-        // baseline by two pixels moves only the blinking line upward.
-        super.drawCursor(cursor, batch, font, x, y + 2f);
+        // LibGDX positions the cursor from the text baseline. Raise the
+        // blinking line four pixels in total to match the native dialog.
+        super.drawCursor(cursor, batch, font, x, y + 4f);
       }
     };
     amount.setAlignment(Align.left);
