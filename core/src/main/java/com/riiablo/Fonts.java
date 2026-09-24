@@ -142,7 +142,15 @@ public class Fonts {
         for (int i = 0; i < names.length; i++) {
           FileHandle tbl = Riiablo.mpqs.resolve("data\\local\\font\\" + fontDirectory + "\\" + names[i] + ".TBL");
           FileHandle dc6 = Riiablo.mpqs.resolve("data\\local\\font\\" + fontDirectory + "\\" + names[i] + ".DC6");
-          FileHandle cache = com.riiablo.codec.FontAtlasCache.fileFor(tbl, dc6);
+          FileHandle index = com.riiablo.codec.FontAtlasCache.indexFor(tbl, dc6);
+          FileHandle cache = com.riiablo.codec.FontAtlasCache.indexed(index);
+          if (cache == null) {
+            // One-time migration for caches written by the MD5-only version.
+            cache = com.riiablo.codec.FontAtlasCache.fileFor(tbl, dc6);
+            if (cache != null && cache.exists()) {
+              com.riiablo.codec.FontAtlasCache.remember(index, cache);
+            }
+          }
           result[i] = new FontProbe(names[i], modes[i], cache != null && cache.exists());
         }
         return result;
