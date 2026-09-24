@@ -425,7 +425,12 @@ public class AutomapRenderer extends BaseSystem {
         automapManager.addEntityMarker(id, AutomapIconType.MISSILE,
             position.position.x, position.position.y, name,
             AutomapManager.COLOR_MISSILE, 3);
-      } else if (show(Cvars.Client.Automap.ShowItems) && mItem != null && mItem.has(id)) {
+      } else if (show(Cvars.Client.Automap.ShowItems)
+          && automapManager.isHackMapEnabled()
+          && mItem != null && mItem.has(id)) {
+        // Native D2 does not add ground items to the Automap entity layer.
+        // Keep this branch exclusively for the optional HackMap/plugin icon
+        // path; the normal Automap therefore remains item-marker free.
         Item item = mItem.get(id);
         if (item == null || !shouldDisplayItemMarker(item.item)) continue;
         name = item == null || item.item == null ? null : item.item.getNameString();
