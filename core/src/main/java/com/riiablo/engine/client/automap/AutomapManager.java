@@ -757,6 +757,12 @@ public class AutomapManager implements Disposable {
     addEntityMarker(entityId, AutomapIconType.PORTAL, worldX, worldY,
                    owner, COLOR_PORTAL, 5);
   }
+
+  /** Adds the native hireling marker (muted teal, same glyph family as player). */
+  public void addMercenaryMarker(int entityId, float worldX, float worldY, String name) {
+    addEntityMarker(entityId, AutomapIconType.MERCENARY, worldX, worldY,
+        name, COLOR_MERCENARY, 7);
+  }
   
   // ==================== 渲染 ====================
   
@@ -838,6 +844,10 @@ public class AutomapManager implements Disposable {
         case AutomapIconType.PARTY_MEMBER:
           // 队友用较小的圆点
           shapes.circle(markerX, markerY, marker.size);
+          break;
+
+        case AutomapIconType.MERCENARY:
+          NativeAutomapGlyph.draw(shapes, markerX, markerY);
           break;
           
         case AutomapIconType.MONSTER:

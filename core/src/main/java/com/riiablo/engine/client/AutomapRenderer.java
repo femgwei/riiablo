@@ -41,6 +41,7 @@ import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Networked;
 import com.riiablo.engine.server.component.Interactable;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Warp;
 import com.riiablo.engine.server.party.PartyRelation;
 import com.riiablo.profiler.GpuSystem;
@@ -80,6 +81,7 @@ public class AutomapRenderer extends BaseSystem {
   @Wire(failOnNull = false) protected ComponentMapper<Position> mPosition;
   @Wire(failOnNull = false) protected ComponentMapper<Class> mClass;
   @Wire(failOnNull = false) protected ComponentMapper<Monster> mMonster;
+  @Wire(failOnNull = false) protected ComponentMapper<Mercenary> mMercenary;
   @Wire(failOnNull = false) protected ComponentMapper<Corpse> mCorpse;
   @Wire(failOnNull = false) protected ComponentMapper<Missile> mMissile;
   @Wire(failOnNull = false) protected ComponentMapper<Item> mItem;
@@ -403,7 +405,14 @@ public class AutomapRenderer extends BaseSystem {
       Map.Zone entityZone = map == null ? null : map.getZone(position.position.x, position.position.y);
       if (!AutomapVisibility.isEntityVisible(entityZone, position.position.x, position.position.y)) continue;
       String name = null;
-      if (show(Cvars.Client.Automap.ShowCorpses) && mCorpse != null && mCorpse.has(id)) {
+      // Hirelings also retain Monster/Class components for animation and
+      // combat. Handle them before the generic monster branch; otherwise
+      // AutomapMarkerPolicy correctly rejects them as non-hostile monsters
+      // and the dedicated mercenary marker is never added.
+      if (mMercenary != null && mMercenary.has(id)) {
+        String mercName = Riiablo.charData == null ? null : Riiablo.charData.getMerc().getName();
+        automapManager.addMercenaryMarker(id, position.position.x, position.position.y, mercName);
+      } else if (show(Cvars.Client.Automap.ShowCorpses) && mCorpse != null && mCorpse.has(id)) {
         Monster monster = mMonster != null && mMonster.has(id) ? mMonster.get(id) : null;
         name = monster == null || monster.monstats == null ? null : monster.monstats.NameStr;
         automapManager.addEntityMarker(id, AutomapIconType.CORPSE,
