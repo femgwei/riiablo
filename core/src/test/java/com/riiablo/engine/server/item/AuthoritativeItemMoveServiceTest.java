@@ -22,6 +22,8 @@ import com.riiablo.io.ByteOutput;
 import com.riiablo.net.packet.d2gs.ItemMoveFailure;
 import com.riiablo.net.packet.d2gs.ItemMoveOperation;
 import com.riiablo.save.CharData;
+import com.riiablo.attributes.Stat;
+import com.riiablo.attributes.StatRef;
 import org.junit.jupiter.api.Test;
 
 class AuthoritativeItemMoveServiceTest extends RiiabloTest {
@@ -285,6 +287,30 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   }
 
   @Test
+  void equippedQuiverMergesCursorQuantityAndKeepsRemainder() {
+    CharData character = character();
+    Item equipped = item("aqv", 270);
+    Item incoming = item("aqv", 271);
+    assertTrue(equipped.base.maxstack > 0);
+    assertTrue(character.getItems().add(equipped) >= 0);
+    character.getItems().equipItem(BodyLoc.LARM, equipped);
+    setQuantity(equipped, equipped.base.maxstack - 20);
+    setQuantity(incoming, 112);
+    character.groundToCursor(incoming);
+
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+    AuthoritativeItemMoveService.Outcome result = service.apply(16, character,
+        new ItemMoveIntent(1L, 0L, ItemMoveOperation.SWAP_BODY_ITEM, -1, -1,
+            -1, -1, -1, BodyLoc.LARM.ordinal(), false));
+
+    assertTrue(result.success);
+    assertEquals(equipped.base.maxstack, quantity(equipped));
+    assertEquals(92, quantity(incoming));
+    assertSame(incoming, character.getItems().getCursor());
+    assertEquals(Location.CURSOR, incoming.location);
+  }
+
+  @Test
   void useBeltItemConsumesBottomPotionAndShiftsColumnDown() {
     CharData character = character();
     equipBelt(character, "hbl", 250);
@@ -360,6 +386,16 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
     Item item = new ItemGenerator().generate(code);
     item.id = id;
     return item;
+  }
+
+  private static int quantity(Item item) {
+    StatRef ref = item.attrs.base().get(Stat.quantity);
+    return ref == null ? 0 : ref.asInt();
+  }
+
+  private static void setQuantity(Item item, int quantity) {
+    item.attrs.base().put(Stat.quantity, quantity);
+    item.attrs.aggregate().put(Stat.quantity, quantity);
   }
 
   private static void equipBelt(CharData character, String code, int id) {

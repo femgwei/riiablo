@@ -826,6 +826,9 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
           bodyLoc, merc);
       return;
     }
+    // Some UI paths use CURSOR_TO_BODY even when the destination is already
+    // occupied.  Preserve native quiver-merge behavior for that path too.
+    if (!merc && itemData.mergeCursorIntoEquippedAmmo(bodyLoc)) return;
     if (merc) {
       Item item = itemData.getItem(itemData.cursor);
       itemData.remove(itemData.cursor);
@@ -852,6 +855,11 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
           bodyLoc, merc);
       return;
     }
+
+    // Dragging a compatible arrow/bolt quiver onto the equipped quiver is a
+    // native quantity merge.  Keep this before the regular swap path so a
+    // partially consumed equipped stack is topped up instead of replaced.
+    if (!merc && itemData.mergeCursorIntoEquippedAmmo(bodyLoc)) return;
 
     ItemData equippedItems = merc ? mercData.itemData : itemData;
     if (equippedItems.getSlot(bodyLoc) == null) {

@@ -517,6 +517,59 @@ public class ItemData {
     return addAutoPickup(item, null);
   }
 
+  /**
+   * Fills an equipped arrow/bolt stack from the cursor, preserving any
+   * remainder on the cursor when the equipped stack reaches maxstack.
+   *
+   * <p>Native D2 treats dragging a compatible quiver onto the equipped
+   * quiver as a quantity merge, rather than a weapon-slot swap.  The method
+   * returns {@code true} only when the cursor item is a compatible quiver and
+   * at least one unit can be moved; callers can then skip the ordinary swap
+   * transaction.</p>
+   */
+  public boolean mergeCursorIntoEquippedAmmo(BodyLoc bodyLoc) {
+    if (bodyLoc == null || cursor == INVALID_ITEM) return false;
+    Item source = getItem(cursor);
+    Item target = getSlot(bodyLoc);
+    if (!isCompatibleAmmoStack(source, target)) return false;
+
+    int sourceQuantity = quantity(source);
+    int targetQuantity = quantity(target);
+    int maximum = target.base == null ? 0 : target.base.maxstack;
+    if (sourceQuantity <= 0 || maximum <= targetQuantity) return false;
+
+    int moved = Math.min(sourceQuantity, maximum - targetQuantity);
+    setQuantity(target, targetQuantity + moved);
+    sourceQuantity -= moved;
+    if (sourceQuantity > 0) {
+      setQuantity(source, sourceQuantity);
+    } else {
+      // Remove the fully consumed cursor stack without routing it through
+      // removeOwnedItem(), which intentionally accepts stored inventory only.
+      int sourceIndex = cursor;
+      cursor = INVALID_ITEM;
+      setLocation(source, null);
+      remove(sourceIndex);
+    }
+    notifyUpdated();
+    return true;
+  }
+
+  private static boolean isCompatibleAmmoStack(Item source, Item target) {
+    if (source == null || target == null || source == target
+        || source.type == null || target.type == null
+        || source.base == null || target.base == null
+        || source.base.maxstack <= 0 || target.base.maxstack <= 0
+        || source.code == null || !source.code.equalsIgnoreCase(target.code)) {
+      return false;
+    }
+    boolean sourceArrows = source.type.is(Type.BOWQ);
+    boolean targetArrows = target.type.is(Type.BOWQ);
+    boolean sourceBolts = source.type.is(Type.XBOQ);
+    boolean targetBolts = target.type.is(Type.XBOQ);
+    return (sourceArrows && targetArrows) || (sourceBolts && targetBolts);
+  }
+
   /** Applies native pickup placement with the character requirement context. */
   public boolean addGroundPickup(Item item, CharData character) {
     return addAutoPickup(item, character);
