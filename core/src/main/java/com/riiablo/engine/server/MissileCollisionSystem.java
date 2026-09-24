@@ -421,6 +421,10 @@ public class MissileCollisionSystem extends IteratingSystem {
     return null;
   }
 
+  private static boolean hasMissileName(String name) {
+    return name != null && !name.isEmpty();
+  }
+
   /** Native Volcano missile mode: periodic deterministic upward eruptions. */
   private void processDruidVolcanoController(int entityId, Missile controller,
       Position position) {
@@ -1384,7 +1388,22 @@ public class MissileCollisionSystem extends IteratingSystem {
           missilePos.x, missilePos.y, missile.distanceTraveled, missile.range);
 
       if (missile.missile != null && missile.missile.pSrvHitFunc == 4) {
-        spawnAmazonExplosion(missile, missilePos);
+        // SrvHit04 (Amazon magic/elemental arrow family) may describe the
+        // impact effect in either HitSubMissile or ExplosionMissile depending
+        // on the 1.10 data pack.  The old path only consulted HitSubMissile,
+        // which made Magic Arrow show its burst on map barriers (the generic
+        // map-explosion path) but not when it struck a monster.
+        int spawned = spawnAmazonExplosion(missile, missilePos);
+        if (spawned == 0) {
+          spawnNativeMapExplosion(missile, missilePos);
+        }
+      } else if (missile.missile != null
+          && (missile.missile.Explosion != 0
+              || hasMissileName(missile.missile.ExplosionMissile))) {
+        // Rows that do not use SrvHit04 still route their unit impact through
+        // the native explosion fields.  Keep this in the unit-hit path so the
+        // visual is emitted for monster/player impacts as well as walls.
+        spawnNativeMapExplosion(missile, missilePos);
       }
       if (missile.missile != null && missile.missile.pSrvHitFunc == 9) {
         spawnImmolationFire(missile, missilePos);
@@ -2113,16 +2132,18 @@ public class MissileCollisionSystem extends IteratingSystem {
   }
 
   /** D2MOO SrvHit04 creates a zero-velocity SrvHit01 explosion sub-missile. */
-  private void spawnAmazonExplosion(Missile source, Vector2 origin) {
+  private int spawnAmazonExplosion(Missile source, Vector2 origin) {
     if (factory == null || source == null || source.missile == null
-        || source.missile.HitSubMissile == null) return;
+        || source.missile.HitSubMissile == null) return 0;
     Skills.Entry skill = source.skillId >= 0 ? Riiablo.files.skills.get(source.skillId) : null;
+    int spawned = 0;
     for (String name : source.missile.HitSubMissile) {
       if (name == null || name.isEmpty()) continue;
       Missiles.Entry row = Riiablo.files.Missiles.get(name);
       if (row == null) continue;
       int childId = factory.createMissile(row, new Vector2(1f, 0f), origin, source.ownerId);
       if (childId < 0 || !mMissile.has(childId)) continue;
+      spawned++;
       Missile child = mMissile.get(childId);
       if (skill != null) {
         Attributes ownerAttrs = mAttributesWrapper.has(source.ownerId)
@@ -2142,6 +2163,7 @@ public class MissileCollisionSystem extends IteratingSystem {
           source.ownerId, source.skillId, source.missile.Missile, childId, name,
           nativeAreaRadius(child), child.freezesTarget);
     }
+    return spawned;
   }
 
   /**
