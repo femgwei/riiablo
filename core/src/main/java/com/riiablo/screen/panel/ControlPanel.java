@@ -52,6 +52,8 @@ import com.riiablo.map.RenderSystem;
 import com.riiablo.save.ItemController;
 import com.riiablo.save.ItemData;
 import com.riiablo.engine.server.quest.NativeQuestRecord;
+import com.riiablo.engine.server.component.UnitStates;
+import com.riiablo.engine.server.state.StateId;
 import com.riiablo.widget.Button;
 import com.riiablo.widget.HotkeyButton;
 import com.riiablo.widget.Label;
@@ -688,6 +690,9 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
         new PaletteIndexedColorDrawable(new Color(0xAF8848C8));
     private final PaletteIndexedColorDrawable lowFill =
         new PaletteIndexedColorDrawable(new Color(0xFF0000C8));
+    /** Native stambarblue presentation used by the stamina shrine state. */
+    private final PaletteIndexedColorDrawable shrineFill =
+        new PaletteIndexedColorDrawable(new Color(0x6969FFC8));
 
     StaminaWidget() {
       setSize(WIDTH, HEIGHT);
@@ -705,10 +710,21 @@ public class ControlPanel extends Table implements Disposable, EscapeController 
       float y = getY();
       int fillPixels = Math.round(WIDTH * ratio);
       if (fillPixels > 0) {
-        PaletteIndexedColorDrawable fill = ratio < LOW_STAMINA_RATIO ? lowFill : normalFill;
+        PaletteIndexedColorDrawable fill = hasStaminaShrine()
+            ? shrineFill : ratio < LOW_STAMINA_RATIO ? lowFill : normalFill;
         fill.setPercent(fillPixels / WIDTH);
         fill.draw(batch, x, y, WIDTH, HEIGHT);
       }
+    }
+
+    private boolean hasStaminaShrine() {
+      if (Riiablo.engine == null || Riiablo.game == null || Riiablo.game.player < 0) {
+        return false;
+      }
+      UnitStates states = Riiablo.engine.getMapper(UnitStates.class)
+          .get(Riiablo.game.player);
+      return states != null && states.stateList != null
+          && states.stateList.hasState(StateId.SHRINE_STAMINA);
     }
   }
 
