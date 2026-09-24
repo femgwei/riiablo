@@ -145,6 +145,14 @@ public class RenderSystem extends BaseEntitySystem {
   private static final Color AUTOMAP_MERC_MISSILE_COLOR = new Color(0x80c0ffff);
   // Monster missile color - red
   private static final Color AUTOMAP_MONSTER_MISSILE_COLOR = new Color(0xff0000ff);
+
+  /**
+   * Entity marker size in the automap's local pixel space.  The map viewport
+   * may change with the game window, but the native marker is drawn in the
+   * automap surface rather than in world units, so its size must not depend on
+   * the visible world width.
+   */
+  private static final float AUTOMAP_ENTITY_MARKER_SIZE = 10f;
   
   // automap 显示范围（世界坐标）
   // 默认：屏幕左上角对应的世界坐标和屏幕范围对应的世界坐标大小
@@ -2839,14 +2847,10 @@ public class RenderSystem extends BaseEntitySystem {
 
       if (mClass.has(entityId)) {
         Class.Type type = mClass.get(entityId).type;
-        // 根据 automap 显示范围动态缩放图标大小：
-        // - 缩放放大（viewWidth 变小）时，图标变大
-        // - 缩放缩小（viewWidth 变大）时，图标变小
-        float referenceWidth = 2000f; // 参考世界宽度（可根据感觉微调）
-        float zoomFactor = referenceWidth / Math.max(automapViewWidth, 1f);
-        // 基础尺寸为 3 像素，根据 zoomFactor 缩放，并限制在 [2, 7] 像素范围内
-        float markerSize = 3f * zoomFactor;
-        markerSize = Math.max(markerSize, 2f);
+        // Entity markers use fixed automap-local pixels.  Do not derive this
+        // from automapViewWidth: doing so makes markers shrink when the window
+        // grows and grow when the window shrinks.
+        float markerSize = AUTOMAP_ENTITY_MARKER_SIZE;
         
         switch (type) {
           case PLR:
@@ -3013,11 +3017,10 @@ public class RenderSystem extends BaseEntitySystem {
     float textAlpha = Math.max(alpha, 0.8f);
     font.setColor(1.0f, 1.0f, 1.0f, textAlpha);  // 白色
     
-    // 计算 markerSize（与 drawAutomapEntities 中的计算保持一致）
-    float referenceWidth = 2000f;
-    float zoomFactor = referenceWidth / Math.max(automapViewWidth, 1f);
-    float markerSize = 3f * zoomFactor;
-    markerSize = Math.max(markerSize, 2f);
+    // Keep text placement tied to the same fixed-size marker used by the
+    // entity pass; resizing the game window must not move the label relative
+    // to its icon.
+    float markerSize = AUTOMAP_ENTITY_MARKER_SIZE;
     
     for (int i = 0, size = entities.size(); i < size; i++) {
       int entityId = entityIds[i];
@@ -3169,18 +3172,10 @@ public class RenderSystem extends BaseEntitySystem {
     
     // 根据方向绘制箭头 (参考 Devilution)
     // 使用 amLine 系统，但需要根据缩放比例转换
-    // 箭头大小应该受屏幕大小和显示模式影响：
-    // - 在 CENTER 模式下，大小是其他模式的 2 倍
-    // - 根据屏幕大小调整（全屏时大些，窗口时小些）
-    float sizeMultiplier = 1.0f;
-    if (AUTOMAP_MODE == AUTOMAP_MODE_CENTER) {
-      sizeMultiplier = 2.0f; // CENTER 模式：2 倍大小
-    }
-    // 根据屏幕大小调整（相对于参考屏幕大小 854x480）
-    float screenSizeFactor = Math.min(screenWidth / 854.0f, screenHeight / 480.0f);
-    sizeMultiplier *= screenSizeFactor;
-    // 整体缩小到 1/6
-    sizeMultiplier *= 1.0f / 6.0f;
+    // The native player marker is sized in automap-local pixels.  Keep one
+    // scale for every viewport mode and window size; only its position is
+    // transformed by worldToScreenScale above.
+    float sizeMultiplier = 1.0f / 3.0f;
     
     float line16 = amLine16 * scaleY / 2 * sizeMultiplier;
     float line8 = amLine8 * scaleY / 2 * sizeMultiplier;
