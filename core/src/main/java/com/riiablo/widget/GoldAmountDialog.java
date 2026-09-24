@@ -4,6 +4,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
@@ -194,19 +195,19 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
   }
 
   public void open() {
-    if (getParent() != null) {
-      setSize(getParent().getWidth(), getParent().getHeight());
-    }
+    sizeToStage();
     dialogX = (getWidth() - background.getRegionWidth()) / 2f;
     dialogY = (getHeight() - background.getRegionHeight()) / 2f;
 
     amount.setText("0");
-    amount.setBounds(dialogX + 30, dialogY + 61, 169, 26);
+    // dialogbackground already paints the textbox border. Keep the editable
+    // text/cursor inset from both inner edges like the native dialog.
+    amount.setBounds(dialogX + 45, dialogY + 61, 139, 26);
     title.setBounds(dialogX + 8, dialogY + 108, background.getRegionWidth() - 16, 20);
     placeButton(increaseButton, dialogX + 7, dialogY + 79);
     placeButton(decreaseButton, dialogX + 7, dialogY + 61);
-    placeButton(okButton, dialogX + 35, dialogY + 14);
-    placeButton(cancelButton, dialogX + 140, dialogY + 14);
+    placeButton(okButton, dialogX + 35, dialogY + 10);
+    placeButton(cancelButton, dialogX + 140, dialogY + 10);
     setVisible(true);
     toFront();
     if (getStage() != null) getStage().setKeyboardFocus(amount);
@@ -233,6 +234,22 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     button.setBounds(x, y, width, height);
   }
 
+  private void sizeToStage() {
+    if (getStage() != null && getParent() != null) {
+      // This actor belongs to InventoryPanel/StashPanel, whose origin is at a
+      // side of the viewport. Convert the Stage bounds into that parent's
+      // coordinates so the modal and its artwork are centered on the screen,
+      // not merely within the owning panel.
+      Vector2 bottomLeft = getParent().stageToLocalCoordinates(new Vector2(0, 0));
+      Vector2 topRight = getParent().stageToLocalCoordinates(
+          new Vector2(getStage().getWidth(), getStage().getHeight()));
+      setBounds(bottomLeft.x, bottomLeft.y,
+          topRight.x - bottomLeft.x, topRight.y - bottomLeft.y);
+    } else if (getParent() != null) {
+      setBounds(0, 0, getParent().getWidth(), getParent().getHeight());
+    }
+  }
+
   private void submit() {
     if (!isVisible()) return;
     String value = amount.getText().trim();
@@ -250,7 +267,9 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
     }
     long next = (long) value + delta;
     if (next > 999_999_999L) next = 999_999_999L;
-    if (next < -999_999_999L) next = -999_999_999L;
+    // Native arrow controls never cross below zero. Stash withdrawal remains
+    // available by typing a negative value when allowNegative is enabled.
+    if (next < 0) next = 0;
     amount.setText(Long.toString(next));
     if (getStage() != null) getStage().setKeyboardFocus(amount);
   }
