@@ -396,6 +396,12 @@ public class Client extends Game {
       setScreen(new com.riiablo.screen.OffscreenRenderScreen(
           System.getProperty("riiablo.offscreen-output", "build/visual-tests")));
     } else if (Boolean.getBoolean("riiablo.offscreen-camp")) {
+      if (Boolean.getBoolean("riiablo.offscreen-dialog-resources")) {
+        setScreen(new com.riiablo.screen.OffscreenDialogResourceScreen(
+            System.getProperty("riiablo.offscreen-output", "build/visual-tests")));
+        Gdx.gl.glDisable(GL20.GL_DEPTH_TEST);
+        return;
+      }
       if (Boolean.getBoolean("riiablo.offscreen-shrine-audit")) {
         setScreen(new com.riiablo.screen.OffscreenShrineAuditScreen(
             System.getProperty("riiablo.offscreen-output", "build/visual-tests")));

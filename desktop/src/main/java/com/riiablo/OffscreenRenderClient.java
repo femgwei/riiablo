@@ -25,6 +25,7 @@ public final class OffscreenRenderClient {
         .addOption(Option.builder().longOpt("warp-collision").hasArg(false).build())
         .addOption(Option.builder().longOpt("automap-native").hasArg(false).build())
         .addOption(Option.builder().longOpt("shrine-audit").hasArg(false).build())
+        .addOption(Option.builder().longOpt("dialog-resources").hasArg(false).build())
         .addOption(Option.builder().longOpt("shrine-first-seed").hasArg().build())
         .addOption(Option.builder().longOpt("shrine-seed-count").hasArg().build())
         .addOption(Option.builder().longOpt("shrine-difficulty").hasArg().build())
@@ -36,7 +37,8 @@ public final class OffscreenRenderClient {
     String output = command.getOptionValue("output", "build/visual-tests");
     String mode = command.getOptionValue("mode", "visual").toLowerCase(Locale.ROOT);
     if (!"visual".equals(mode) && !"camp".equals(mode)
-        && !"object-audit".equals(mode) && !"shrine-audit".equals(mode)) {
+        && !"object-audit".equals(mode) && !"shrine-audit".equals(mode)
+        && !"dialog-resources".equals(mode)) {
       throw new IllegalArgumentException("Unsupported offscreen mode: " + mode);
     }
     FileHandle saves = new FileHandle(command.getOptionValue("saves"));
@@ -44,7 +46,10 @@ public final class OffscreenRenderClient {
     System.setProperty("riiablo.offscreen-render", Boolean.toString("visual".equals(mode)));
     System.setProperty("riiablo.offscreen-camp", Boolean.toString("camp".equals(mode)
         || "object-audit".equals(mode)
-        || "shrine-audit".equals(mode)));
+        || "shrine-audit".equals(mode)
+        || "dialog-resources".equals(mode)));
+    System.setProperty("riiablo.offscreen-dialog-resources",
+        Boolean.toString(command.hasOption("dialog-resources") || "dialog-resources".equals(mode)));
     System.setProperty("riiablo.offscreen-output", output);
     System.setProperty("riiablo.offscreen-level",
         command.getOptionValue("level", "-1"));
