@@ -19,7 +19,10 @@ enum ItemMoveOperation:byte {
   USE_INVENTORY_ITEM,
   // Atomically moves a belt-compatible potion from the inventory to the
   // first requested native belt slot. Appended for wire compatibility.
-  STORE_TO_BELT
+  STORE_TO_BELT,
+  // Uses the item currently held by the cursor on the owner's hireling.
+  // Appended so all legacy item operation values remain unchanged.
+  USE_CURSOR_ITEM_ON_MERCENARY
 }
 
 enum ItemMoveFailure:byte {

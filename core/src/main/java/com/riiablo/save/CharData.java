@@ -954,6 +954,11 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
     return applyPotion(potion) && itemData.consumeStoredItem(potion);
   }
 
+  /** Removes one unit after an authoritative cursor-potion use succeeds. */
+  public boolean consumeCursorPotion(Item potion) {
+    return itemData.consumeCursorItem(potion);
+  }
+
   private boolean applyPotion(Item potion) {
     Misc.Entry misc = potion.base instanceof Misc.Entry ? (Misc.Entry) potion.base : null;
     int pSpell = misc == null ? 0 : misc.pSpell;

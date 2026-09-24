@@ -107,6 +107,8 @@ public final class AuthoritativeItemMoveService {
             return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
           break;
         }
+        case ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY:
+          return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
         case ItemMoveOperation.GROUND_TO_CURSOR:
         case ItemMoveOperation.CURSOR_TO_GROUND:
           // Ground entities are owned by ECS and use the overloads below.
@@ -140,6 +142,28 @@ public final class AuthoritativeItemMoveService {
       if (createEffect == null || !createEffect.getAsBoolean())
         return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
       if (!character.getItems().consumeStoredItem(item))
+        return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+    } catch (Throwable t) {
+      return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
+    }
+    long next = current + 1L;
+    revisions.put(playerEntityId, next);
+    return new Outcome(true, ItemMoveFailure.NONE, next);
+  }
+
+  /** Applies a validated cursor-held potion after the world confirms the hireling heal. */
+  public synchronized Outcome useCursorItemOnMercenary(int playerEntityId, CharData character,
+      ItemMoveIntent intent, BooleanSupplier heal) {
+    long current = revision(playerEntityId);
+    if (character == null) return new Outcome(false, ItemMoveFailure.PLAYER_NOT_FOUND, current);
+    if (intent == null || intent.operation != ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY)
+      return new Outcome(false, ItemMoveFailure.INVALID_OPERATION, current);
+    if (intent.revision != current) return new Outcome(false, ItemMoveFailure.STALE_INVENTORY, current);
+    byte failure = ItemMoveValidator.validate(character, intent);
+    if (failure != ItemMoveFailure.NONE) return new Outcome(false, failure, current);
+    Item item = character.getItems().getCursor();
+    try {
+      if (heal == null || !heal.getAsBoolean() || !character.consumeCursorPotion(item))
         return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);
     } catch (Throwable t) {
       return new Outcome(false, ItemMoveFailure.MUTATION_FAILED, current);

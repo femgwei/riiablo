@@ -18,6 +18,8 @@ public interface ItemController {
   void cursorToBelt(int x, int y);
   void swapBeltItem(int i);
   void useBeltSlot(int column);
+  /** Uses the cursor-held healing potion on the active hireling. */
+  boolean useCursorPotionOnMercenary();
   /** Uses a consumable directly from the character inventory. */
   void useInventoryItem(com.riiablo.item.Item item);
   /** Drops carried gold at the player's position. */

@@ -196,6 +196,20 @@ public class ClientItemManager extends PassiveSystem implements ItemController {
   }
 
   @Override
+  public boolean useCursorPotionOnMercenary() {
+    if (Riiablo.charData == null || Riiablo.game == null) return false;
+    com.riiablo.item.Item potion = Riiablo.charData.getItems().getCursor();
+    if (!com.riiablo.engine.server.MercenaryPotionSystem.isHealingPotion(potion)) return false;
+    com.riiablo.engine.server.MercenaryPotionSystem service =
+        world.getSystem(com.riiablo.engine.server.MercenaryPotionSystem.class);
+    if (service == null || !service.useOnMercenary(Riiablo.game.player, potion)) return false;
+    if (!Riiablo.charData.consumeCursorPotion(potion)) return false;
+    if (Riiablo.audio != null) Riiablo.audio.play(potion.getUseSound(), true);
+    log.info("[MERC_POTION] phase=used mode=local item={} player={}", potion.id, Riiablo.game.player);
+    return true;
+  }
+
+  @Override
   public void useInventoryItem(com.riiablo.item.Item item) {
     if (item == null || item.code == null || Riiablo.charData == null
         || Riiablo.game == null || Riiablo.game.player < 0) return;

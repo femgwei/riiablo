@@ -4875,6 +4875,7 @@ public class D2GS extends ApplicationAdapter {
         .with(new com.riiablo.engine.server.StaminaSystem())
         .with(new com.riiablo.engine.server.ManaRecoverySystem())
         .with(new com.riiablo.engine.server.PotionRecoverySystem())
+        .with(new com.riiablo.engine.server.MercenaryPotionSystem())
         .with(new MissileCollisionSystem())
         .with(new Actioneer())
         .with(new com.riiablo.engine.server.MercenaryFollowSystem())
@@ -7542,6 +7543,12 @@ public class D2GS extends ApplicationAdapter {
       });
     } else if (operation == ItemMoveOperation.USE_INVENTORY_ITEM) {
       outcome = useInventoryItem(playerEntityId, character, intent);
+    } else if (operation == ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY) {
+      com.riiablo.engine.server.MercenaryPotionSystem potions =
+          world.getSystem(com.riiablo.engine.server.MercenaryPotionSystem.class);
+      outcome = authoritativeItems.useCursorItemOnMercenary(playerEntityId, character, intent,
+          () -> potions != null && potions.useOnMercenary(playerEntityId,
+              character.getItems().getCursor()));
     } else {
       outcome = authoritativeItems.apply(playerEntityId, character, intent);
     }

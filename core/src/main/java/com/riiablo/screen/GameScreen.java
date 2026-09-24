@@ -192,6 +192,7 @@ import com.riiablo.screen.panel.CubePanel;
 import com.riiablo.screen.panel.EscapeController;
 import com.riiablo.screen.panel.EscapePanel;
 import com.riiablo.screen.panel.HirelingPanel;
+import com.riiablo.screen.panel.MercenaryHud;
 import com.riiablo.screen.panel.HelpPanel;
 import com.riiablo.screen.panel.InventoryPanel;
 import com.riiablo.screen.panel.MobileControls;
@@ -338,6 +339,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   public SpellsPanel spellsPanel;
   public StashPanel stashPanel;
   public HirelingPanel hirelingPanel;
+  public MercenaryHud mercenaryHud;
   public WaygatePanel waygatePanel;
   public QuestsPanel questsPanel;
   public PartyPanel partyPanel;
@@ -459,6 +461,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     hirelingPanel = new HirelingPanel();
     hirelingPanel.setPosition(0, stage.getHeight() - hirelingPanel.getHeight());
     stage.addActor(hirelingPanel);
+
+    mercenaryHud = new MercenaryHud(itemController);
+    mercenaryHud.setPosition(8, stage.getHeight() - mercenaryHud.getHeight());
+    stage.addActor(mercenaryHud);
 
     stashPanel = new StashPanel();
     stashPanel.setPosition(0, stage.getHeight() - stashPanel.getHeight());
@@ -860,6 +866,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
         .with(new com.riiablo.engine.server.StaminaSystem())
         .with(new com.riiablo.engine.server.ManaRecoverySystem())
         .with(new com.riiablo.engine.server.PotionRecoverySystem())
+        .with(new com.riiablo.engine.server.MercenaryPotionSystem())
         .with(new MissileCollisionSystem())
         .with(new Actioneer()) // TODO: move to more appropriate spot in list
         .with(new com.riiablo.engine.server.ServerMonsterCorpseSystem())
@@ -1037,6 +1044,7 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     controlPanel.toFront();
     output.toFront();
     if (mobilePanel != null) mobilePanel.toFront();
+    if (mercenaryHud != null) mercenaryHud.toFront();
 //  if (mobileControls != null) mobileControls.toFront();
     if (touchpad != null) touchpad.toBack();
     input.toFront();
@@ -1101,6 +1109,8 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
     if (inventoryPanel != null) inventoryPanel.setPosition(
         stage.getWidth() - inventoryPanel.getWidth(),
         stage.getHeight() - inventoryPanel.getHeight());
+    if (mercenaryHud != null) mercenaryHud.setPosition(
+        8, stage.getHeight() - mercenaryHud.getHeight());
     if (Boolean.TRUE.equals(Cvars.Client.Display.KeepControlPanelGrouped.get())) {
       controlPanel.setWidth(stage.getWidth());
       controlPanel.layout();

@@ -19,7 +19,8 @@ public final class ItemMoveValidator {
     if (character == null || character.getItems() == null) return ItemMoveFailure.PLAYER_NOT_FOUND;
     if (intent == null || intent.operation < ItemMoveOperation.GROUND_TO_CURSOR
         || intent.operation > ItemMoveOperation.STORE_TO_BELT) return ItemMoveFailure.INVALID_OPERATION;
-    if (intent.merc) return ItemMoveFailure.MERC_NOT_SUPPORTED;
+    if (intent.merc && intent.operation != ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY)
+      return ItemMoveFailure.MERC_NOT_SUPPORTED;
     ItemData data = character.getItems();
     Item cursor = data.getCursor();
     switch (intent.operation) {
@@ -129,6 +130,11 @@ public final class ItemMoveValidator {
         }
         return ItemMoveFailure.NONE;
       }
+      case ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY:
+        if (!intent.merc || cursor == null || cursor.location != Location.CURSOR)
+          return ItemMoveFailure.CURSOR_EMPTY;
+        return com.riiablo.engine.server.MercenaryPotionSystem.isHealingPotion(cursor)
+            ? ItemMoveFailure.NONE : ItemMoveFailure.INVALID_ITEM;
       default: return ItemMoveFailure.INVALID_OPERATION;
     }
   }

@@ -214,6 +214,16 @@ public class NetworkedClientItemManager extends ClientItemManager {
   }
 
   @Override
+  public boolean useCursorPotionOnMercenary() {
+    com.riiablo.item.Item potion = Riiablo.charData == null
+        ? null : Riiablo.charData.getItems().getCursor();
+    if (!com.riiablo.engine.server.MercenaryPotionSystem.isHealingPotion(potion)) return false;
+    send(ItemMoveOperation.USE_CURSOR_ITEM_ON_MERCENARY, potion.id, -1, -1,
+        -1, -1, -1, true);
+    return true;
+  }
+
+  @Override
   public void useInventoryItem(com.riiablo.item.Item item) {
     if (item == null || item.id < 0 || item.code == null
         || (!"tsc".equalsIgnoreCase(item.code) && !"tbk".equalsIgnoreCase(item.code))) return;

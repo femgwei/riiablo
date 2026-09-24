@@ -975,6 +975,26 @@ public class ItemData {
     return true;
   }
 
+  /** Consumes one unit of the exact item currently held by the cursor. */
+  public boolean consumeCursorItem(Item item) {
+    if (item == null || cursor == INVALID_ITEM || getItem(cursor) != item
+        || item.location != Location.CURSOR) return false;
+    StatRef quantity = item.attrs == null ? null : item.attrs.base().get(Stat.quantity);
+    int current = quantity == null ? 0 : quantity.asInt();
+    if (current > 1) {
+      item.attrs.base().put(Stat.quantity, current - 1);
+      item.attrs.reset();
+      notifyUpdated();
+      return true;
+    }
+    drop();
+    if (Riiablo.files != null) {
+      updateStats();
+      notifyUpdated();
+    }
+    return true;
+  }
+
   public void addAll(Array<? extends Item> items) {
     itemData.addAll(items);
   }
