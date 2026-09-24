@@ -243,6 +243,20 @@ public class StateOverlaySystem extends IteratingSystem {
     }
     for (String candidate : candidates) {
       if (Riiablo.files.Overlay.get(candidate) != null) return candidate;
+      // Overlay.txt keys are case-sensitive in the Java index, while MPQ
+      // filenames and some 1.10 table variants are not.  Resolve aliases by
+      // key or filename before giving up on a valid native overlay.
+      for (com.riiablo.codec.excel.Overlay.Entry row : Riiablo.files.Overlay) {
+        if (row == null) continue;
+        if ((row.overlay != null && row.overlay.equalsIgnoreCase(candidate))
+            || (row.Filename != null && row.Filename.equalsIgnoreCase(candidate))) {
+          return row.overlay;
+        }
+      }
+      // The stock shrine DCCs are present in the MPQ even in a few trimmed
+      // Overlay.txt packs. OverlayManager supplies the canonical row in that
+      // case, so do not suppress the request here.
+      if (candidate.regionMatches(true, 0, "shrine_", 0, 7)) return candidate;
     }
     if (!missingOverlayLogged.contains(stateId)) {
       missingOverlayLogged.add(stateId);
