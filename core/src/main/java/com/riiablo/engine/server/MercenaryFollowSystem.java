@@ -24,6 +24,7 @@ import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.UnitStates;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.Running;
+import com.riiablo.engine.server.combat.CombatPositionHistory;
 import com.riiablo.engine.server.state.StateId;
 import com.riiablo.logger.LogManager;
 import com.riiablo.logger.Logger;
@@ -60,6 +61,8 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   protected ComponentMapper<Size> mSize;
   protected ComponentMapper<UnitStates> mUnitStates;
   protected Actioneer actioneer;
+  @Wire(name = "combatPositionHistory", failOnNull = false)
+  protected CombatPositionHistory positionHistory;
 
   private final IntMap<Float> repathCooldown = new IntMap<>();
   private final Vector2 landing = new Vector2();
@@ -98,7 +101,8 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     // hirelings before normal follow logic runs.
     int ownerFootprint = footprint(ownerId);
     int mercenaryFootprint = footprint(entityId);
-    float distance = mercenaryPosition.dst(ownerPosition);
+    float distance = nativeFollowDistance(
+        mercenaryPosition, ownerPosition, mercenaryFootprint);
     if (!isDead(entityId) && footprintsOverlap(ownerPosition,
         mercenaryPosition, ownerFootprint, mercenaryFootprint)) {
       if (findLanding(map, ownerZone, ownerPosition, mercenaryFootprint,
@@ -157,6 +161,10 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     if (isCombatTarget(entityId, ownerId)) return;
 
     if (motion == MOTION_FOLLOW) {
+      // Native Hireable AI does not rethink while its walk/run path is still
+      // active. Replacing the route every 0.5 seconds made the authoritative
+      // velocity and animation direction visibly stutter.
+      if (mPathfind.has(entityId)) return;
       float remaining = repathCooldown.get(entityId, 0f) - Math.max(0f, world.getDelta());
       if (remaining > 0f) {
         repathCooldown.put(entityId, remaining);
@@ -164,19 +172,31 @@ public final class MercenaryFollowSystem extends IteratingSystem {
       }
       if (actioneer.canInterrupt(entityId)) {
         boolean run = distance > FOLLOW_DISTANCE || mRunning.has(ownerId);
-        boolean pathStarted = run
-            ? actioneer.tryRunTo(entityId, ownerId, 60)
-            : actioneer.tryMoveTo(entityId, ownerId);
+        // D2GAME_PETAI_PetMove motion 1 follows one of the owner's recent 20
+        // path coordinates instead of pathing into the owner's occupied
+        // centre. This lets a hireling finish the selected route and regroup
+        // close to the player; 16/24 remain AI trigger bands, not stop ranges.
+        boolean pathStarted = tryOwnerTrail(entityId, ownerId, ownerZone,
+            mercenaryPosition, mercenaryFootprint, run);
         if (!pathStarted) {
           int mercFootprint = footprint(entityId);
           if (findLanding(map, ownerZone, ownerPosition, mercFootprint,
               footprint(ownerId), landing)) {
-            teleport(entityId, ownerId, map, ownerZone, landing, distance, false);
-          } else {
-            log.debug("[MERC_FOLLOW] phase=path_failed_no_landing merc={} owner={} distance={}",
-                entityId, ownerId, distance);
+            pathStarted = run
+                ? actioneer.tryRunTo(entityId, landing, 60)
+                : actioneer.tryMoveTo(entityId, landing);
           }
-        } else {
+          if (!pathStarted) {
+            if (findLanding(map, ownerZone, ownerPosition, mercFootprint,
+                footprint(ownerId), landing)) {
+              teleport(entityId, ownerId, map, ownerZone, landing, distance, false);
+            } else {
+              log.debug("[MERC_FOLLOW] phase=path_failed_no_landing merc={} owner={} distance={}",
+                  entityId, ownerId, distance);
+            }
+          }
+        }
+        if (pathStarted) {
           repathCooldown.put(entityId, REPATH_SECONDS);
           followCount++;
           lastMercenary = entityId;
@@ -186,11 +206,29 @@ public final class MercenaryFollowSystem extends IteratingSystem {
               ownerZone.level != null ? ownerZone.level.Id : -1);
         }
       }
-    } else if (motion == MOTION_SETTLE && mTarget.has(entityId)
-        && mTarget.get(entityId).target == ownerId) {
-      actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
-      repathCooldown.remove(entityId);
     }
+  }
+
+  private boolean tryOwnerTrail(int entityId, int ownerId, Map.Zone ownerZone,
+      Vector2 mercenaryPosition, int mercenaryFootprint, boolean run) {
+    if (positionHistory == null) return false;
+    int frames = Math.min(20, positionHistory.capacity());
+    for (int age = 0; age < frames; age++) {
+      CombatPositionHistory.Snapshot snapshot =
+          positionHistory.recentSnapshot(ownerId, age);
+      if (snapshot == null || snapshot.zone != null && snapshot.zone != ownerZone) continue;
+      landing.set(snapshot.x, snapshot.y);
+      // PetMove ignores trail coordinates at most five native cells from the
+      // hireling and keeps searching backward through the ring buffer.
+      if (nativeFollowDistance(mercenaryPosition, landing, mercenaryFootprint) <= 5f) {
+        continue;
+      }
+      boolean started = run
+          ? actioneer.tryRunTo(entityId, landing, 60)
+          : actioneer.tryMoveTo(entityId, landing);
+      if (started) return true;
+    }
+    return false;
   }
 
   @Override
@@ -220,7 +258,7 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     return mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : 1;
   }
 
-  static boolean footprintsOverlap(Vector2 first, Vector2 second,
+  public static boolean footprintsOverlap(Vector2 first, Vector2 second,
       int firstSize, int secondSize) {
     if (first == null || second == null) return false;
     int firstRadius = Math.max(0, Math.max(1, firstSize) - 1);
@@ -234,6 +272,18 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     int secondY = Map.round(second.y);
     return Math.abs(firstX - secondX) <= firstRadius + secondRadius
         && Math.abs(firstY - secondY) <= firstRadius + secondRadius;
+  }
+
+  /** Exact projection of D2Game AIUTIL_GetDistanceToCoordinates_FullUnitSize. */
+  static float nativeFollowDistance(Vector2 unit, Vector2 target, int unitSize) {
+    if (unit == null || target == null) return Float.MAX_VALUE;
+    int dx = Math.abs(Math.abs(Map.round(unit.x) - Map.round(target.x))
+        - Math.max(0, unitSize));
+    int dy = Math.abs(Math.abs(Map.round(unit.y) - Map.round(target.y))
+        - Math.max(0, unitSize));
+    int major = Math.max(dx, dy);
+    int minor = Math.min(dx, dy);
+    return (minor + 2 * major) / 2;
   }
 
   private void teleport(int entityId, int ownerId, Map map, Map.Zone ownerZone,

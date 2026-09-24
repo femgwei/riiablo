@@ -31,10 +31,12 @@ import com.riiablo.logger.Logger;
 public final class MercenarySkillSystem extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(MercenarySkillSystem.class);
   private static final float RETRY_SECONDS = 0.4f;
+  private static final float BLOCK_LOG_SECONDS = 3f;
   /** AITHINK_Fn061_Hireable only enters the skill branch below 25 native cells. */
   private static final float HIRELING_COMBAT_DISTANCE = 24f;
   private final IntMap<Float> cooldown = new IntMap<>();
-  private int decisionTick;
+  private final IntMap<Float> blockLogCooldown = new IntMap<>();
+  private final IntMap<Integer> lastBlockedStage = new IntMap<>();
 
   protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<Monster> mMonster;
@@ -67,6 +69,10 @@ public final class MercenarySkillSystem extends IteratingSystem {
   @Override
   protected void process(int entityId) {
     processCount++;
+    float logRemaining = blockLogCooldown.get(entityId, 0f)
+        - Math.max(0f, world.getDelta());
+    blockLogCooldown.put(entityId, Math.max(0f, logRemaining));
+    Mercenary merc = mMercenary.get(entityId);
     Float remaining = cooldown.get(entityId);
     if (remaining != null) {
       remaining -= world.getDelta();
@@ -77,25 +83,25 @@ public final class MercenarySkillSystem extends IteratingSystem {
       cooldown.remove(entityId);
     }
     if (mCasting.has(entityId) || mSequence.has(entityId)) {
-      blockStage = 1;
+      blocked(entityId, merc, 1, merc.targetId, Float.NaN, "busy");
       return;
     }
     if (actioneer == null || table == null || table.size() == 0) {
-      blockStage = 2;
+      blocked(entityId, merc, 2, merc.targetId, Float.NaN,
+          actioneer == null ? "actioneer_missing" : "hireling_table_missing");
       return;
     }
 
-    Mercenary merc = mMercenary.get(entityId);
     int target = targetWithContinuity(entityId, merc);
     if (target < 0) {
       merc.targetId = Engine.INVALID_ENTITY;
-      blockStage = 3;
+      blocked(entityId, merc, 3, target, Float.NaN, "no_hostile_target");
       return;
     }
     merc.targetId = target;
     NativeHirelingExperienceTable.Row row = table.row(merc.mercType, merc.level);
     if (row == null) {
-      blockStage = 4;
+      blocked(entityId, merc, 4, target, Float.NaN, "hireling_row_missing");
       return;
     }
     float distance = nativeAiDistance(mPosition.get(entityId).position,
@@ -108,7 +114,7 @@ public final class MercenarySkillSystem extends IteratingSystem {
       } else {
         actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
       }
-      blockStage = 5;
+      blocked(entityId, merc, 5, target, distance, "target_outside_combat_gate");
       cooldown.put(entityId, 0.20f);
       return;
     }
@@ -135,7 +141,7 @@ public final class MercenarySkillSystem extends IteratingSystem {
     boolean melee = isMeleeMercenary(merc);
     if (melee && (distance >= 3f || !actioneer.isInMeleeRange(entityId, target, 0))) {
       actioneer.moveTo(entityId, target);
-      blockStage = 7;
+      blocked(entityId, merc, 7, target, distance, "melee_approach");
       cooldown.put(entityId, 0.20f);
       return;
     }
@@ -150,14 +156,14 @@ public final class MercenarySkillSystem extends IteratingSystem {
     if (rangedRegroup) {
       if (merc.ownerId >= 0 && mPosition.has(merc.ownerId)) {
         if (actioneer.tryMoveTo(entityId, merc.ownerId)) {
-          blockStage = 5;
+          blocked(entityId, merc, 5, target, distance, "ranged_regroup");
           merc.aiRngState = rng.state();
           cooldown.put(entityId, RETRY_SECONDS);
           return;
         }
       } else {
         actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
-        blockStage = 5;
+        blocked(entityId, merc, 5, target, distance, "ranged_regroup");
         merc.aiRngState = rng.state();
         cooldown.put(entityId, RETRY_SECONDS);
         return;
@@ -192,10 +198,31 @@ public final class MercenarySkillSystem extends IteratingSystem {
     }
     merc.aiRngState = rng.state();
     cooldown.put(entityId, RETRY_SECONDS);
+    lastBlockedStage.remove(entityId);
+    blockLogCooldown.remove(entityId);
     log.info("[MERC_SKILL] phase={} entity={} owner={} target={} chance={} aiParam={} slot={} skill={} level={} mode={}",
         slot >= 0 ? "cast" : "normal_attack", entityId, merc.ownerId, target,
         chance, merc.aiChanceParam, slot + 1, slot >= 0 ? row.skills[slot] : -1,
         slot >= 0 ? row.skillLevels[slot] : 0, slot >= 0 ? row.skillModes[slot] : -1);
+  }
+
+  private void blocked(int entityId, Mercenary merc, int stage, int target,
+      float distance, String reason) {
+    blockStage = stage;
+    int previous = lastBlockedStage.get(entityId, Integer.MIN_VALUE);
+    float remaining = blockLogCooldown.get(entityId, 0f);
+    if (remaining <= 0f) {
+      MapWrapper wrapper = mMap.has(entityId) ? mMap.get(entityId) : null;
+      int level = wrapper != null && wrapper.zone != null && wrapper.zone.level != null
+          ? wrapper.zone.level.Id : -1;
+      log.info("[MERC_SKILL_BLOCK] entity={} owner={} stage={} previousStage={} level={} "
+              + "target={} distance={} mercType={} mercLevel={} reason={}",
+          entityId, merc != null ? merc.ownerId : Engine.INVALID_ENTITY,
+          stage, previous, level, target, distance,
+          merc != null ? merc.mercType : -1, merc != null ? merc.level : -1, reason);
+      blockLogCooldown.put(entityId, BLOCK_LOG_SECONDS);
+    }
+    lastBlockedStage.put(entityId, stage);
   }
 
   public int castCount() {

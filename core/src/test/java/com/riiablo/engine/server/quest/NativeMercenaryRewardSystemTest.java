@@ -29,6 +29,16 @@ class NativeMercenaryRewardSystemTest {
   }
 
   @Test
+  void mediumHirelingSpawnUsesItsRealCollisionFootprint() {
+    NativeMercenaryRewardSystem rewards = new NativeMercenaryRewardSystem();
+    Vector2 owner = new Vector2(10.6f, 10.6f);
+    Vector2 spawn = rewards.chooseMercenarySpawn(1, owner, 2, new Vector2());
+
+    assertFalse(com.riiablo.engine.server.MercenaryFollowSystem.footprintsOverlap(
+        owner, spawn, 2, 2));
+  }
+
+  @Test
   void acknowledgesQuestOnlyAfterMercenaryEntityExists() {
     StubRewardSystem rewards = new StubRewardSystem(73);
     RewardProbe probe = new RewardProbe();

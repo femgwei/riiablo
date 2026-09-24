@@ -60,4 +60,12 @@ class MercenaryFollowSystemTest {
     assertFalse(MercenaryFollowSystem.footprintsOverlap(
         new Vector2(10, 10), new Vector2(13, 10), 2, 2));
   }
+
+  @Test
+  void nativeFollowDistanceUsesHirelingFootprintAndWeightedGridMetric() {
+    assertEquals(17f, MercenaryFollowSystem.nativeFollowDistance(
+        new Vector2(10, 10), new Vector2(28, 10), 2));
+    assertEquals(18f, MercenaryFollowSystem.nativeFollowDistance(
+        new Vector2(10, 10), new Vector2(28, 16), 2));
+  }
 }

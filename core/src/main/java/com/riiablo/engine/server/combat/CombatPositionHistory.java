@@ -107,6 +107,20 @@ public final class CombatPositionHistory {
     return ticks[slot] == tick ? frames[slot].get(entityId) : null;
   }
 
+  /**
+   * Returns an entity position from the most recently captured movement
+   * history. {@code age == 0} is the newest frame, {@code age == 1} the
+   * preceding frame, and so on.
+   *
+   * <p>D2Game keeps a short player path history for hirelings. Exposing the
+   * already-authoritative combat history avoids maintaining a second,
+   * render-timed copy of the same coordinates.</p>
+   */
+  public Snapshot recentSnapshot(int entityId, int age) {
+    if (age < 0 || age >= capacity || latestTick <= age) return null;
+    return snapshot(entityId, latestTick - age);
+  }
+
   public long latestTick() {
     return latestTick;
   }

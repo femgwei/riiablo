@@ -24,6 +24,9 @@ import com.riiablo.engine.server.event.NativeQuestRewardEvent;
 import com.riiablo.engine.server.event.DeathEvent;
 import com.riiablo.engine.server.monster.MonsterType;
 import com.riiablo.engine.server.pet.MercenaryManager;
+import com.riiablo.Riiablo;
+import com.riiablo.codec.excel.MonStats;
+import com.riiablo.codec.excel.MonStats2;
 import com.riiablo.item.VendorPricing;
 import com.badlogic.gdx.utils.Array;
 import com.riiablo.map.Map;
@@ -286,10 +289,12 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
       log.error("[A1Q2] Failed to create Rogue entity: owner position missing player={}", playerId);
       return Engine.INVALID_ENTITY;
     }
-    Vector2 owner = mPosition.get(playerId).position;
-    Vector2 spawn = chooseMercenarySpawn(playerId, owner, new Vector2());
     int monsterId = monsterId(def.mercType);
     if (monsterId == Engine.INVALID_ENTITY) return Engine.INVALID_ENTITY;
+    Vector2 owner = mPosition.get(playerId).position;
+    int mercenaryFootprint = mercenaryFootprint(monsterId);
+    Vector2 spawn = chooseMercenarySpawn(
+        playerId, owner, mercenaryFootprint, new Vector2());
 
     final int entityId;
     try {
@@ -334,6 +339,12 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
    * returning after a reload.
    */
   Vector2 chooseMercenarySpawn(int playerId, Vector2 owner, Vector2 out) {
+    return chooseMercenarySpawn(playerId, owner, Size.MEDIUM, out);
+  }
+
+  Vector2 chooseMercenarySpawn(
+      int playerId, Vector2 owner, int mercenaryFootprint, Vector2 out) {
+    mercenaryFootprint = Math.max(1, mercenaryFootprint);
     Map map = null;
     Map.Zone zone = null;
     if (mMapWrapper != null && mMapWrapper.has(playerId)) {
@@ -342,7 +353,7 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
       zone = wrapper.zone != null ? wrapper.zone : map == null ? null : map.getZone(owner);
     }
     if (map != null && zone != null
-        && MercenaryFollowSystem.findLanding(map, zone, owner, 1,
+        && MercenaryFollowSystem.findLanding(map, zone, owner, mercenaryFootprint,
             ownerFootprint(playerId), out)) {
       return out;
     }
@@ -350,8 +361,18 @@ public class NativeMercenaryRewardSystem extends PassiveSystem
     // Detached/unit-test worlds do not always provide MapWrapper.  Keep the
     // fallback outside the combined medium-player/medium-hireling footprint;
     // center distance two is still overlapping for size-2 units.
-    return out.set(Math.round(owner.x) + Math.max(2, ownerFootprint(playerId) + 1f),
+    return out.set(Math.round(owner.x) + Math.max(2,
+            ownerFootprint(playerId) + mercenaryFootprint - 1f),
         Math.round(owner.y));
+  }
+
+  private static int mercenaryFootprint(int monsterId) {
+    if (Riiablo.files == null || Riiablo.files.monstats == null
+        || Riiablo.files.monstats2 == null) return Size.MEDIUM;
+    MonStats.Entry stats = Riiablo.files.monstats.get(monsterId);
+    if (stats == null) return Size.MEDIUM;
+    MonStats2.Entry stats2 = Riiablo.files.monstats2.get(stats.MonStatsEx);
+    return stats2 == null ? Size.MEDIUM : Math.max(1, stats2.SizeX);
   }
 
   private int ownerFootprint(int playerId) {
