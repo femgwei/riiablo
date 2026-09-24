@@ -12,6 +12,7 @@ import com.badlogic.gdx.utils.IntMap;
 import com.riiablo.attributes.Attributes;
 import com.riiablo.attributes.Stat;
 import com.riiablo.attributes.StatRef;
+import com.riiablo.Riiablo;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.server.component.AttributesWrapper;
 import com.riiablo.engine.server.component.Casting;
@@ -99,6 +100,19 @@ public final class MercenarySkillSystem extends IteratingSystem {
       blockStage = 5;
       return;
     }
+
+    // Native hirelings use their skill as the attack command.  A melee skill
+    // must first establish a target-follow path; casting it at long range
+    // merely queues an animation whose impact range check rejects the hit.
+    // Ranged hireling skills (those with a server/client missile) may cast
+    // directly at the selected target.
+    if (requiresMeleeApproach(row.skills[slot])
+        && !actioneer.isInMeleeRange(entityId, target, 0)) {
+      actioneer.moveTo(entityId, target);
+      blockStage = 7;
+      cooldown.put(entityId, 0.20f);
+      return;
+    }
     actioneer.castWithMode(entityId, row.skills[slot], (byte) row.skillModes[slot], target,
         mPosition.get(target).position.cpy());
     castCount++;
@@ -171,5 +185,20 @@ public final class MercenarySkillSystem extends IteratingSystem {
     MapWrapper target = mMap.get(targetId);
     if (source.map != null && target.map != null && source.map != target.map) return false;
     return source.zone == null || target.zone == null || source.zone == target.zone;
+  }
+
+  private boolean requiresMeleeApproach(int skillId) {
+    if (Riiablo.files == null || Riiablo.files.skills == null) return true;
+    com.riiablo.codec.excel.Skills.Entry skill = Riiablo.files.skills.get(skillId);
+    if (skill == null) return true;
+    return empty(skill.srvmissile) && empty(skill.srvmissilea)
+        && empty(skill.srvmissileb) && empty(skill.srvmissilec)
+        && empty(skill.srvmissiled) && empty(skill.cltmissile)
+        && empty(skill.cltmissilea) && empty(skill.cltmissileb)
+        && empty(skill.cltmissilec) && empty(skill.cltmissiled);
+  }
+
+  private static boolean empty(String value) {
+    return value == null || value.isEmpty();
   }
 }

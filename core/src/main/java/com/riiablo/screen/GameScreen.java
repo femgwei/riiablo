@@ -893,6 +893,11 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
       builder.with(new com.riiablo.engine.server.MercenaryFollowSystem());
       builder.with(new com.riiablo.engine.server.SummonedPetSystem());
       builder.with(new com.riiablo.engine.server.AssassinTrapSystem());
+      // Local games own the authoritative hireling combat loop just like
+      // D2GS.  Without this registration mercenaries can still be moved by
+      // MercenaryFollowSystem (and relocated through warps), but their native
+      // Hireling.txt skills are never selected or cast.
+      builder.with(new com.riiablo.engine.server.MercenarySkillSystem());
       builder.with(new NativeCountessRewardSystem());
       builder.with(new NativeCharsiImbueSystem());
       builder.with(new ServerSkillSystem(true));

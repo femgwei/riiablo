@@ -132,6 +132,12 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     }
     if (dead || actioneer == null) return;
 
+    // A combat chase installs the hostile entity as Target while the
+    // hireling is outside its skill range.  Do not replace that target with
+    // the owner on the next follow tick; doing so made a hireling oscillate
+    // between the player and the monster and, in practice, never attack.
+    if (isCombatTarget(entityId, ownerId)) return;
+
     if (motion == MOTION_FOLLOW) {
       float remaining = repathCooldown.get(entityId, 0f) - Math.max(0f, world.getDelta());
       if (remaining > 0f) {
@@ -165,6 +171,17 @@ public final class MercenaryFollowSystem extends IteratingSystem {
     if (!mAttributes.has(entityId) || mAttributes.get(entityId).attrs == null) return false;
     StatRef life = mAttributes.get(entityId).attrs.get(Stat.hitpoints, StatRef.obtain());
     return life != null && life.asFixed() <= 0f;
+  }
+
+  private boolean isCombatTarget(int entityId, int ownerId) {
+    if (!mTarget.has(entityId)) return false;
+    int targetId = mTarget.get(entityId).target;
+    if (targetId == Engine.INVALID_ENTITY || targetId == ownerId
+        || !mPosition.has(targetId)) return false;
+    // A Target component can survive a completed interaction on legacy saves;
+    // only treat a living, non-owner target as a combat chase.  The target's
+    // actual hostility is validated by MercenarySkillSystem.
+    return !isDead(targetId);
   }
 
   private int footprint(int entityId) {
