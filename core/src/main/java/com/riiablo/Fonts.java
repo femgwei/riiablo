@@ -117,9 +117,6 @@ public class Fonts {
     font42       = load(assets, "font42", BlendMode.ID);
     fontformal10 = load(assets, "fontformal10", BlendMode.LUMINOSITY_TINT);
     fontformal11 = load(assets, "fontformal11", BlendMode.LUMINOSITY_TINT);
-    FontTBL.BitmapFontData formal11Data = (FontTBL.BitmapFontData) fontformal11.getData();
-    com.badlogic.gdx.graphics.g2d.BitmapFont.Glyph formal11Glyph = formal11Data.getGlyph('\u4e2d');
-    if (formal11Glyph != null) formal11Data.shiftGlyphsY(formal11Glyph.height / 2);
     fontridiculous = load(assets, "fontridiculous", BlendMode.TINT_BLACKS);
     ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
     gameplayFontsLoaded = true;
@@ -219,7 +216,7 @@ public class Fonts {
   }
 
   private FontTBL.BitmapFont load(AssetManager assets, String fontName, int blendMode) {
-    AssetDescriptor<FontTBL.BitmapFont> descriptor = getDescriptor(fontName, blendMode);
+    AssetDescriptor<FontTBL.BitmapFont> descriptor = getDescriptor(fontName, blendMode, hasCache(fontName));
     assets.load(descriptor);
     assets.finishLoadingAsset(descriptor);
     return assets.get(descriptor);
@@ -227,6 +224,25 @@ public class Fonts {
 
   private AssetDescriptor<FontTBL.BitmapFont> getDescriptor(String fontName, int blendMode) {
     return getDescriptor(fontName, blendMode, false);
+  }
+
+  private boolean hasCache(String fontName) {
+    String path = "data\\local\\font\\" + fontDirectory + "\\" + fontName;
+    FileHandle tbl = Riiablo.mpqs.resolve(path + ".TBL");
+    FileHandle dc6 = Riiablo.mpqs.resolve(path + ".DC6");
+    FileHandle cache = com.riiablo.codec.FontAtlasCache.indexed(
+        com.riiablo.codec.FontAtlasCache.indexFor(tbl, dc6));
+    if (cache == null) {
+      // One-time migration for caches created before the lightweight index.
+      // The result is immediately indexed so subsequent launches never hash
+      // the large CJK DC6 again.
+      cache = com.riiablo.codec.FontAtlasCache.fileFor(tbl, dc6);
+      if (cache != null && cache.exists()) {
+        com.riiablo.codec.FontAtlasCache.remember(
+            com.riiablo.codec.FontAtlasCache.indexFor(tbl, dc6), cache);
+      }
+    }
+    return cache != null && cache.exists();
   }
 
   private AssetDescriptor<FontTBL.BitmapFont> getDescriptor(String fontName, int blendMode, boolean cached) {

@@ -30,7 +30,9 @@ public class BitmapFontLoader extends AsynchronousAssetLoader<FontTBL.BitmapFont
     String fontName = file.pathWithoutExtension();
     FileHandle tblFile = file;
     FileHandle dc6File = resolve(fontName + ".DC6");
-    FileHandle currentCacheFile = FontAtlasCache.fileFor(tblFile, dc6File);
+    FileHandle indexFile = FontAtlasCache.indexFor(tblFile, dc6File);
+    FileHandle currentCacheFile = FontAtlasCache.indexed(indexFile);
+    if (currentCacheFile == null) currentCacheFile = FontAtlasCache.fileFor(tblFile, dc6File);
     FontAtlasCache.CachedData currentCache = FontAtlasCache.read(currentCacheFile);
     if (currentCache != null) {
       cached = currentCache;
@@ -42,6 +44,7 @@ public class BitmapFontLoader extends AsynchronousAssetLoader<FontTBL.BitmapFont
       data = tbl.data(dc6);
       FontAtlasCache.write(currentCacheFile, data);
     }
+    FontAtlasCache.remember(indexFile, currentCacheFile);
     data.blendMode = params != null ? params.blendMode : BlendMode.LUMINOSITY_TINT;
   }
 

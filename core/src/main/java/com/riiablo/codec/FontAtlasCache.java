@@ -47,6 +47,65 @@ public final class FontAtlasCache {
     }
   }
 
+  /** Path-based lookup for the persistent content-addressed cache index. */
+  public static FileHandle indexFor(FileHandle tbl, FileHandle dc6) {
+    try {
+      String configured = System.getProperty("riiablo.cache.dir", "").trim();
+      File root;
+      if (!configured.isEmpty()) {
+        root = new File(configured);
+      } else {
+        String localAppData = System.getenv("LOCALAPPDATA");
+        root = localAppData == null || localAppData.trim().isEmpty()
+            ? new File(System.getProperty("user.home"), ".riiablo/cache")
+            : new File(localAppData, "Riiablo/cache");
+      }
+      // MPQFileHandle.path() only returns the parent directory. Include the
+      // file names and cheap source sizes so each font gets its own index and
+      // a changed resource naturally selects a new cache entry. This avoids
+      // reading the complete TBL/DC6 just to calculate an MD5 on startup.
+      String identity = tbl.toString() + "|" + tbl.length() + "|"
+          + dc6.toString() + "|" + dc6.length();
+      StringBuilder key = new StringBuilder(identity.length());
+      for (int i = 0; i < identity.length(); i++) {
+        char c = identity.charAt(i);
+        key.append(Character.isLetterOrDigit(c) || c == '.' || c == '-'
+            ? c : '_');
+      }
+      return new FileHandle(new File(root, "fonts/index-" + key + ".idx"));
+    } catch (Throwable ignored) {
+      return null;
+    }
+  }
+
+  /** Returns the cache path recorded in an index, or {@code null}. */
+  public static FileHandle indexed(FileHandle index) {
+    if (index == null || !index.exists()) return null;
+    try {
+      String path = index.readString("UTF-8").trim();
+      if (path.isEmpty()) return null;
+      FileHandle cache = new FileHandle(path);
+      return cache.exists() ? cache : null;
+    } catch (Throwable ignored) {
+      return null;
+    }
+  }
+
+  /** Atomically records a content-addressed cache path for future startups. */
+  public static void remember(FileHandle index, FileHandle cache) {
+    if (index == null || cache == null) return;
+    try {
+      FileHandle parent = index.parent();
+      if (parent != null) parent.mkdirs();
+      FileHandle temporary = new FileHandle(index.path() + ".tmp");
+      temporary.writeString(cache.path(), false, "UTF-8");
+      if (index.exists()) index.delete();
+      temporary.moveTo(index);
+    } catch (Throwable t) {
+      if (Gdx.app != null) Gdx.app.debug("FontAtlasCache", "Unable to write " + index, t);
+    }
+  }
+
   public static CachedData read(FileHandle file) {
     if (file == null || !file.exists()) return null;
     try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(file.readBytes()))) {
