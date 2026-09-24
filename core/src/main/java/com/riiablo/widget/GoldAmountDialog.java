@@ -2,6 +2,7 @@ package com.riiablo.widget;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetDescriptor;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
@@ -9,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Disposable;
@@ -170,7 +172,14 @@ public final class GoldAmountDialog extends WidgetGroup implements Disposable {
       font = Riiablo.fonts.fontformal11;
       fontColor = Riiablo.colors.white;
       cursor = new TextureRegionDrawable(Riiablo.textures.white);
-    }});
+    }}) {
+      @Override
+      protected void drawCursor(Drawable cursor, Batch batch, BitmapFont font, float x, float y) {
+        // LibGDX positions the cursor from the text baseline. Raising that
+        // baseline by two pixels moves only the blinking line upward.
+        super.drawCursor(cursor, batch, font, x, y + 2f);
+      }
+    };
     amount.setAlignment(Align.left);
     amount.setMaxLength(9);
     amount.setTextFieldFilter((textField, c) -> Character.isDigit(c)
