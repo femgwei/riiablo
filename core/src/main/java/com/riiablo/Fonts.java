@@ -13,26 +13,29 @@ public class Fonts {
   private static final int CHINESE_SHARED_BASELINE_ADJUST = -1;
   public final BitmapFont         consolas12;
   public final BitmapFont         consolas16;
-  public final FontTBL.BitmapFont font6;
-  public final FontTBL.BitmapFont font8;
-  public final FontTBL.BitmapFont font16;
-  public final FontTBL.BitmapFont font24;
-  public final FontTBL.BitmapFont font30;
-  public final FontTBL.BitmapFont font42;
-  public final FontTBL.BitmapFont fontformal10;
-  public final FontTBL.BitmapFont fontformal11;
-  public final FontTBL.BitmapFont fontformal12;
-  public final FontTBL.BitmapFont fontexocet10;
-  public final FontTBL.BitmapFont fontridiculous;
-  public final FontTBL.BitmapFont ReallyTheLastSucker;
+  public FontTBL.BitmapFont font6;
+  public FontTBL.BitmapFont font8;
+  public FontTBL.BitmapFont font16;
+  public FontTBL.BitmapFont font24;
+  public FontTBL.BitmapFont font30;
+  public FontTBL.BitmapFont font42;
+  public FontTBL.BitmapFont fontformal10;
+  public FontTBL.BitmapFont fontformal11;
+  public FontTBL.BitmapFont fontformal12;
+  public FontTBL.BitmapFont fontexocet10;
+  public FontTBL.BitmapFont fontridiculous;
+  public FontTBL.BitmapFont ReallyTheLastSucker;
 
   private final String fontDirectory;
+  private final AssetManager assets;
+  private boolean gameplayFontsLoaded;
 
   public Fonts(AssetManager assets) {
     this(assets, D2Language.ENGLISH);
   }
 
   public Fonts(AssetManager assets, D2Language language) {
+    this.assets = assets;
     fontDirectory = language.fontDirectory;
     consolas12   = loadEx(assets, "consolas12.fnt");
     consolas16   = loadEx(assets, "consolas16.fnt");
@@ -58,6 +61,27 @@ public class Fonts {
       fontexocet10 = base.sharedAtlasCopy(BlendMode.TINT_BLACKS);
       fontridiculous = base.sharedAtlasCopy(BlendMode.TINT_BLACKS);
       ReallyTheLastSucker = base.sharedAtlasCopy(BlendMode.ID);
+      gameplayFontsLoaded = true;
+    } else if (language == D2Language.CHINESE) {
+      // The splash/menu only need these three fonts.  The remaining native
+      // CJK atlases are staged until the first GameScreen is constructed.
+      font16       = load(assets, "font16", BlendMode.LUMINOSITY_TINT);
+      fontformal12 = load(assets, "fontformal12", BlendMode.LUMINOSITY_TINT);
+      fontexocet10 = load(assets, "fontexocet10", BlendMode.TINT_BLACKS);
+
+      // Keep all public fields usable by pre-game screens. These lightweight
+      // views share font16's atlas and are replaced with native fonts when
+      // initializeGameplayFonts() runs.
+      font6 = font16.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      font8 = font16.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      font24 = font16.sharedAtlasCopy(BlendMode.ID);
+      font30 = font16.sharedAtlasCopy(BlendMode.ID);
+      font42 = font16.sharedAtlasCopy(BlendMode.ID);
+      fontformal10 = font16.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      fontformal11 = font16.sharedAtlasCopy(BlendMode.LUMINOSITY_TINT);
+      fontridiculous = font16.sharedAtlasCopy(BlendMode.TINT_BLACKS);
+      ReallyTheLastSucker = font16.sharedAtlasCopy(BlendMode.ID);
+      gameplayFontsLoaded = false;
     } else {
       font6        = load(assets, "font6",  BlendMode.LUMINOSITY_TINT);
       font8        = load(assets, "font8",  BlendMode.LUMINOSITY_TINT);
@@ -71,8 +95,33 @@ public class Fonts {
       fontexocet10 = load(assets, "fontexocet10", BlendMode.TINT_BLACKS);
       fontridiculous = load(assets, "fontridiculous", BlendMode.TINT_BLACKS);
       ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
+      gameplayFontsLoaded = true;
     }
 
+    applyMetrics();
+  }
+
+  /** Loads the remaining native fonts at the first transition into gameplay. */
+  public void initializeGameplayFonts() {
+    if (gameplayFontsLoaded) return;
+    font6        = load(assets, "font6",  BlendMode.LUMINOSITY_TINT);
+    font8        = load(assets, "font8",  BlendMode.LUMINOSITY_TINT);
+    font24       = load(assets, "font24", BlendMode.ID);
+    font30       = load(assets, "font30", BlendMode.ID);
+    font42       = load(assets, "font42", BlendMode.ID);
+    fontformal10 = load(assets, "fontformal10", BlendMode.LUMINOSITY_TINT);
+    fontformal11 = load(assets, "fontformal11", BlendMode.LUMINOSITY_TINT);
+    fontridiculous = load(assets, "fontridiculous", BlendMode.TINT_BLACKS);
+    ReallyTheLastSucker = load(assets, "ReallyTheLastSucker", BlendMode.ID);
+    gameplayFontsLoaded = true;
+    applyMetrics();
+  }
+
+  public boolean isGameplayFontsLoaded() {
+    return gameplayFontsLoaded;
+  }
+
+  private void applyMetrics() {
     BitmapFont.BitmapFontData data;
     data = font8.getData();
     data.lineHeight = data.xHeight = data.capHeight = 12;

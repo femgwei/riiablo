@@ -366,6 +366,10 @@ public class GameScreen extends ScreenAdapter implements GameLoadingScreen.Loada
   }
 
   public GameScreen(CharData charData, Socket socket) {
+    // Native CJK gameplay fonts are intentionally staged so the splash/menu
+    // can render immediately. Finish their initialization at the first town
+    // entry, before any gameplay panels or dialogue are constructed.
+    if (Riiablo.fonts != null) Riiablo.fonts.initializeGameplayFonts();
     this.charData = charData;
     this.socket = socket;
 
