@@ -21,6 +21,7 @@ import com.riiablo.engine.server.component.Target;
 import com.riiablo.engine.server.component.Interactable;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.Engine;
 import com.riiablo.engine.Direction;
 import com.riiablo.logger.LogManager;
@@ -49,6 +50,7 @@ public class Pathfinder extends IteratingSystem {
   protected ComponentMapper<Target> mTarget;
   protected ComponentMapper<Interactable> mInteractable;
   protected ComponentMapper<Monster> mMonster;
+  protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   /**
    * Optional for focused headless tests and legacy worlds.  The movement
@@ -117,7 +119,15 @@ public class Pathfinder extends IteratingSystem {
       
       // Check ranged attack range (if monster has ranged attack capability)
       float rangedRangeThreshold = 0f;
-      if (mMonster.has(entityId)) {
+      // A hireling follows its owner through the same target-entity path used
+      // for hostile pursuit.  Do not apply the hireling's MissA1/MissA2 range
+      // to that friendly target: doing so made an A1 rogue stop roughly one
+      // missile range away from the player instead of regrouping at the
+      // native owner-follow distance.  The ranged stop remains valid for
+      // actual hostile targets.
+      boolean ownerFollowTarget = mMercenary.has(entityId)
+          && isMercenaryOwnerTarget(mMercenary.get(entityId), targetId);
+      if (!ownerFollowTarget && mMonster.has(entityId)) {
         com.riiablo.engine.server.component.Monster monster = mMonster.get(entityId);
         if ((monster.monstats.MissA1 != null && !monster.monstats.MissA1.isEmpty()) ||
             (monster.monstats.MissA2 != null && !monster.monstats.MissA2.isEmpty())) {
@@ -240,6 +250,11 @@ public class Pathfinder extends IteratingSystem {
   static boolean isInMeleeApproachRange(
       Actioneer actioneer, int attackerId, int targetId) {
     return actioneer.isInMeleeRange(attackerId, targetId, 0);
+  }
+
+  static boolean isMercenaryOwnerTarget(Mercenary mercenary, int targetId) {
+    return mercenary != null && mercenary.ownerId != Engine.INVALID_ENTITY
+        && mercenary.ownerId == targetId;
   }
 
   /**

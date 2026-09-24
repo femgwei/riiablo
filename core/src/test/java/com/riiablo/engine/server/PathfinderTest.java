@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import com.riiablo.engine.Direction;
 import com.riiablo.engine.server.component.Angle;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Pathfind;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.map.pfa.GraphPath;
@@ -68,6 +69,15 @@ class PathfinderTest {
     assertEquals(11, actioneer.attackerId);
     assertEquals(22, actioneer.targetId);
     assertEquals(0, actioneer.rangeBonus);
+  }
+
+  @Test
+  void mercenaryOwnerFollowIsNotRangedAttackApproach() {
+    Mercenary mercenary = new Mercenary().set(42, 0, 1, 1, 0);
+
+    assertTrue(Pathfinder.isMercenaryOwnerTarget(mercenary, 42));
+    assertFalse(Pathfinder.isMercenaryOwnerTarget(mercenary, 43));
+    assertFalse(Pathfinder.isMercenaryOwnerTarget(mercenary, -1));
   }
 
   @Test
