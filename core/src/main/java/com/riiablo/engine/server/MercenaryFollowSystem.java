@@ -113,10 +113,14 @@ public final class MercenaryFollowSystem extends IteratingSystem {
       return;
     }
 
-    boolean sameZone = ownerWrapper.map == mercenaryWrapper.map
-        && ownerZone == mercenaryZone;
+    boolean sameMap = ownerWrapper.map == mercenaryWrapper.map;
+    boolean sameZone = sameMap && ownerZone == mercenaryZone;
     boolean dead = isDead(entityId);
-    int motion = motion(sameZone, distance, dead);
+    // A zone/room transition inside one map is still pathable in native D2;
+    // do not turn it into an unconditional warp.  The old sameZone overload
+    // remains for focused compatibility tests, while the live path uses the
+    // map-aware rule.
+    int motion = motion(sameMap, sameZone, distance, dead, true);
     if (motion == MOTION_TELEPORT) {
       int footprint = footprint(entityId);
       if (!findLanding(map, ownerZone, ownerPosition, footprint,
@@ -145,14 +149,25 @@ public final class MercenaryFollowSystem extends IteratingSystem {
         return;
       }
       if (actioneer.canInterrupt(entityId)) {
-        actioneer.moveTo(entityId, ownerId);
-        repathCooldown.put(entityId, REPATH_SECONDS);
-        followCount++;
-        lastMercenary = entityId;
-        lastOwner = ownerId;
-        log.debug("[MERC_FOLLOW] phase=path merc={} owner={} distance={} level={}",
-            entityId, ownerId, distance,
-            ownerZone.level != null ? ownerZone.level.Id : -1);
+        boolean pathStarted = actioneer.tryMoveTo(entityId, ownerId);
+        if (!pathStarted) {
+          int mercFootprint = footprint(entityId);
+          if (findLanding(map, ownerZone, ownerPosition, mercFootprint,
+              footprint(ownerId), landing)) {
+            teleport(entityId, ownerId, map, ownerZone, landing, distance, false);
+          } else {
+            log.debug("[MERC_FOLLOW] phase=path_failed_no_landing merc={} owner={} distance={}",
+                entityId, ownerId, distance);
+          }
+        } else {
+          repathCooldown.put(entityId, REPATH_SECONDS);
+          followCount++;
+          lastMercenary = entityId;
+          lastOwner = ownerId;
+          log.debug("[MERC_FOLLOW] phase=path merc={} owner={} distance={} level={}",
+              entityId, ownerId, distance,
+              ownerZone.level != null ? ownerZone.level.Id : -1);
+        }
       }
     } else if (motion == MOTION_SETTLE && mTarget.has(entityId)
         && mTarget.get(entityId).target == ownerId) {
@@ -242,6 +257,21 @@ public final class MercenaryFollowSystem extends IteratingSystem {
   static int motion(boolean sameZone, float distance, boolean dead) {
     if (!sameZone || distance > TELEPORT_DISTANCE) return MOTION_TELEPORT;
     if (dead) return MOTION_NONE;
+    if (distance > FOLLOW_DISTANCE) return MOTION_FOLLOW;
+    if (distance <= SETTLE_DISTANCE) return MOTION_SETTLE;
+    return MOTION_NONE;
+  }
+
+  /**
+   * Native pet movement does not warp merely because two active rooms differ.
+   * It attempts WalkToOwner first; a teleport is reserved for a different
+   * level/map or a genuinely unreachable/very distant hireling.
+   */
+  static int motion(boolean sameMap, boolean sameZone, float distance, boolean dead,
+      boolean pathAvailable) {
+    if (!sameMap || distance > TELEPORT_DISTANCE) return MOTION_TELEPORT;
+    if (dead) return MOTION_NONE;
+    if (!pathAvailable && distance > FOLLOW_DISTANCE) return MOTION_TELEPORT;
     if (distance > FOLLOW_DISTANCE) return MOTION_FOLLOW;
     if (distance <= SETTLE_DISTANCE) return MOTION_SETTLE;
     return MOTION_NONE;

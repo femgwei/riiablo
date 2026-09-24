@@ -45,6 +45,12 @@ public final class UnitCollisionGrid {
   /** Returns whether a footprint can occupy the destination. */
   public boolean isFree(int moverId, int ignoredEntityId,
       int x, int y, int size) {
+    return isFree(moverId, ignoredEntityId, x, y, size, null);
+  }
+
+  /** Returns whether a footprint is free after applying a native collision mask. */
+  public boolean isFree(int moverId, int ignoredEntityId,
+      int x, int y, int size, UnitBlocker blocker) {
     Footprint candidate = new Footprint();
     candidate.x = x;
     candidate.y = y;
@@ -57,7 +63,7 @@ public final class UnitCollisionGrid {
         // removed before authoritative movement checks, and path queries use
         // ignoredEntityId only for the target unit; both are handled by the
         // owner map below when a cell is occupied.
-        if (hasOtherUnit(cellX, cellY, moverId, ignoredEntityId)) free[0] = false;
+        if (hasOtherUnit(cellX, cellY, moverId, ignoredEntityId, blocker)) free[0] = false;
       }
     });
     return free[0];
@@ -66,33 +72,43 @@ public final class UnitCollisionGrid {
   /** Atomically transfers a unit footprint, restoring it if blocked. */
   public boolean move(int entityId, int ignoredEntityId,
       int x, int y, int size) {
+    return move(entityId, ignoredEntityId, x, y, size, null);
+  }
+
+  public boolean move(int entityId, int ignoredEntityId,
+      int x, int y, int size, UnitBlocker blocker) {
     Footprint previous = units.get(entityId);
     if (previous != null) {
       int oldX = previous.x;
       int oldY = previous.y;
       int oldSize = previous.size;
       remove(entityId);
-      if (isFree(entityId, ignoredEntityId, x, y, size)) {
+      if (isFree(entityId, ignoredEntityId, x, y, size, blocker)) {
         put(entityId, x, y, size);
         return true;
       }
       put(entityId, oldX, oldY, oldSize);
       return false;
     }
-    if (!isFree(entityId, ignoredEntityId, x, y, size)) return false;
+    if (!isFree(entityId, ignoredEntityId, x, y, size, blocker)) return false;
     put(entityId, x, y, size);
     return true;
   }
 
   private boolean hasOtherUnit(int cellX, int cellY,
-      int moverId, int ignoredEntityId) {
+      int moverId, int ignoredEntityId, UnitBlocker blocker) {
     long cell = key(cellX, cellY);
     for (IntMap.Entry<Footprint> entry : units.entries()) {
       if (entry.key == moverId || entry.key == ignoredEntityId) continue;
+      if (blocker != null && !blocker.blocks(entry.key)) continue;
       Footprint footprint = entry.value;
       if (contains(footprint, cellX, cellY)) return true;
     }
     return false;
+  }
+
+  public interface UnitBlocker {
+    boolean blocks(int entityId);
   }
 
   private static boolean contains(Footprint footprint, int x, int y) {

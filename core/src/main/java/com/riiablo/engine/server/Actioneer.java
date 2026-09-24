@@ -534,6 +534,13 @@ public class Actioneer extends PassiveSystem {
         meleeRange, rangeBonus);
   }
 
+  /** Starts target movement and reports whether a path was installed. */
+  public boolean tryMoveTo(int entityId, int targetId) {
+    if (!mVelocity.has(entityId)) return false;
+    moveTo(entityId, targetId);
+    return mPathfind.has(entityId);
+  }
+
   private boolean currentMeleeRange(int attackerId, int targetId, int meleeRange, int rangeBonus) {
     Position attacker = mPosition.get(attackerId);
     Position target = mPosition.get(targetId);

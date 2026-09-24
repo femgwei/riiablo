@@ -38,6 +38,28 @@ class NativeHirelingExperienceTableTest {
   }
 
   @Test
+  void nativeSkillDecisionUsesHirelingClassBranchAndAccumulatedAiParam() {
+    assertEquals(98, NativeHirelingExperienceTable.useSkillChance(1, 1, 0));
+    assertEquals(98, NativeHirelingExperienceTable.useSkillChance(3, 30, 100));
+    assertEquals(42, NativeHirelingExperienceTable.useSkillChance(0, 1, 0));
+    assertEquals(95, NativeHirelingExperienceTable.useSkillChance(2, 30, 100));
+  }
+
+  @Test
+  void skillRollBoundMatchesInclusiveCumulativeRange() {
+    NativeHirelingExperienceTable.Row row = new NativeHirelingExperienceTable.Row(
+        0, 1, 100, 40, 0, 10, 0, 20, 0, 20, 0,
+        10, 0, 1, 2, 1, 0, 0,
+        new int[] { 6, 7 }, new int[] { 1, 1 },
+        new int[] { 1, 1 }, new int[] { 0, 0 })
+        .withDefaultChance(10)
+        .withChances(new int[] { 4, 8 }, new int[] { 0, 0 });
+    NativeHirelingExperienceTable table = new NativeHirelingExperienceTable().add(row);
+
+    assertEquals(23, table.skillRollBound(0, 1));
+  }
+
+  @Test
   void rebuildsSavedLevelWithoutOwnerLevelCap() {
     NativeHirelingExperienceTable table = new NativeHirelingExperienceTable()
         .add(new NativeHirelingExperienceTable.Row(0, 1, 100));

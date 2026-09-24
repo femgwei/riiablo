@@ -29,7 +29,7 @@ import com.riiablo.logger.Logger;
 @All({Mercenary.class, Monster.class, Position.class})
 public final class MercenarySkillSystem extends IteratingSystem {
   private static final Logger log = LogManager.getLogger(MercenarySkillSystem.class);
-  private static final float RETRY_SECONDS = 0.75f;
+  private static final float RETRY_SECONDS = 0.4f;
   private final IntMap<Float> cooldown = new IntMap<>();
   private int decisionTick;
 
@@ -83,46 +83,99 @@ public final class MercenarySkillSystem extends IteratingSystem {
     }
 
     Mercenary merc = mMercenary.get(entityId);
-    int target = nearestHostile(entityId, merc.ownerId);
+    int target = targetWithContinuity(entityId, merc);
     if (target < 0) {
+      merc.targetId = Engine.INVALID_ENTITY;
       blockStage = 3;
       return;
     }
+    merc.targetId = target;
     NativeHirelingExperienceTable.Row row = table.row(merc.mercType, merc.level);
     if (row == null) {
       blockStage = 4;
       return;
     }
-    int slot = table.selectSkill(merc.mercType, merc.level,
-        entityId * 1103515245 + decisionTick++);
-    if (slot < 0 || slot >= row.skills.length || row.skills[slot] < 0
-        || row.skillModes[slot] >= 16 || row.skillLevels[slot] <= 0) {
-      blockStage = 5;
-      return;
+    NativeRng rng = new NativeRng(merc.aiRngState);
+    int chance = NativeHirelingExperienceTable.useSkillChance(
+        merc.mercType, merc.level, merc.aiChanceParam);
+    boolean useSkill = rng.nextInt(100) < chance;
+    if (useSkill) {
+      merc.aiChanceParam = 0;
+    } else {
+      // D2 increments the non-skill counter by ten after a failed AI roll.
+      merc.aiChanceParam = Math.min(100, merc.aiChanceParam + 10);
     }
 
-    // Native hirelings use their skill as the attack command.  A melee skill
-    // must first establish a target-follow path; casting it at long range
-    // merely queues an animation whose impact range check rejects the hit.
-    // Ranged hireling skills (those with a server/client missile) may cast
-    // directly at the selected target.
-    if (requiresMeleeApproach(row.skills[slot])
-        && !actioneer.isInMeleeRange(entityId, target, 0)) {
+    int slot = -1;
+    if (useSkill) {
+      slot = table.selectSkill(merc.mercType, merc.level,
+          rng.nextInt(table.skillRollBound(merc.mercType, merc.level)));
+    }
+
+    // sub_6FCE4610 distinguishes melee and ranged hirelings before invoking
+    // sub_6FCE4830.  This is a property of the hireling class, not of the
+    // currently selected skill (auras have no missile but are ranged AI).
+    boolean melee = isMeleeMercenary(merc);
+    float distance = nativeAiDistance(mPosition.get(entityId).position,
+        mPosition.get(target).position);
+    if (melee && (distance >= 3f || !actioneer.isInMeleeRange(entityId, target, 0))) {
       actioneer.moveTo(entityId, target);
       blockStage = 7;
       cooldown.put(entityId, 0.20f);
       return;
     }
-    actioneer.castWithMode(entityId, row.skills[slot], (byte) row.skillModes[slot], target,
-        mPosition.get(target).position.cpy());
-    castCount++;
-    lastTarget = target;
-    lastSkill = row.skills[slot];
-    blockStage = 6;
+
+    // D2MOO's ranged branch does not fire at point-blank range on every tick:
+    // when it declines the skill roll it first tries to regroup with its owner.
+    // D2MOO makes a second 50% roll for a ranged hireling that is too close:
+    // it first tries to return to the owner instead of repeatedly firing at
+    // point blank.  If that path cannot be installed, it falls through to
+    // sub_6FCE4830 and may still cast/attack.
+    boolean rangedRegroup = !melee && distance < 4f && rng.nextInt(100) < 50;
+    if (rangedRegroup) {
+      if (merc.ownerId >= 0 && mPosition.has(merc.ownerId)) {
+        if (actioneer.tryMoveTo(entityId, merc.ownerId)) {
+          blockStage = 5;
+          merc.aiRngState = rng.state();
+          cooldown.put(entityId, RETRY_SECONDS);
+          return;
+        }
+      } else {
+        actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
+        blockStage = 5;
+        merc.aiRngState = rng.state();
+        cooldown.put(entityId, RETRY_SECONDS);
+        return;
+      }
+      if (slot < 0) {
+        slot = table.selectSkill(merc.mercType, merc.level,
+            rng.nextInt(table.skillRollBound(merc.mercType, merc.level)));
+      }
+    } else if (slot >= 0 && slot < row.skills.length && row.skills[slot] >= 0
+        && row.skillLevels[slot] > 0) {
+      actioneer.castWithMode(entityId, row.skills[slot], (byte) row.skillModes[slot], target,
+          mPosition.get(target).position.cpy());
+      castCount++;
+      lastTarget = target;
+      lastSkill = row.skills[slot];
+      blockStage = 6;
+    } else if ((useSkill || (!melee && distance < 4f))
+        && actioneer.isInMeleeRange(entityId, target, 0)) {
+      // sub_6FCE4830 falls back to the hireling's ordinary attack when its
+      // skill roll selects no usable skill and the target is in melee range.
+      actioneer.attack(entityId, (byte) 0, (byte) Engine.INVALID_MODE, target,
+          mPosition.get(target).position.cpy());
+      blockStage = 8;
+    } else {
+      actioneer.moveTo(entityId, Engine.INVALID_ENTITY);
+      blockStage = 5;
+    }
+    merc.aiRngState = rng.state();
     cooldown.put(entityId, RETRY_SECONDS);
-    log.info("[MERC_SKILL] phase=cast entity={} owner={} target={} slot={} skill={} level={} mode={}",
-        entityId, merc.ownerId, target, slot + 1, row.skills[slot], row.skillLevels[slot],
-        row.skillModes[slot]);
+    log.info("[MERC_SKILL] phase={} entity={} owner={} target={} chance={} aiParam={} slot={} skill={} level={} mode={}",
+        slot >= 0 ? "cast" : "normal_attack", entityId, merc.ownerId, target,
+        chance, merc.aiChanceParam, slot + 1, slot >= 0 ? row.skills[slot] : -1,
+        slot >= 0 ? row.skillLevels[slot] : 0, slot >= 0 ? row.skillModes[slot] : -1);
   }
 
   public int castCount() {
@@ -155,13 +208,60 @@ public final class MercenarySkillSystem extends IteratingSystem {
       int candidate = data.get(i);
       if (candidate == entityId || candidate == ownerId || mMercenary.has(candidate)) continue;
       if (!isHostile(candidate) || !isAlive(candidate) || !sameZone(sourceMap, candidate)) continue;
-      float distance = source.dst2(mPosition.get(candidate).position);
+      float distance = nativeAiDistance(source, mPosition.get(candidate).position);
+      if (distance > maxSearchDistance(entityId)) continue;
       if (distance < bestDistance) {
         bestDistance = distance;
         bestId = candidate;
       }
     }
     return bestId;
+  }
+
+  private int targetWithContinuity(int entityId, Mercenary merc) {
+    if (merc.targetId >= 0 && isValidHostile(entityId, merc.ownerId, merc.targetId)
+        && nativeAiDistance(mPosition.get(entityId).position,
+            mPosition.get(merc.targetId).position) <= maxSearchDistance(entityId)) {
+      return merc.targetId;
+    }
+    return nearestHostile(entityId, merc.ownerId);
+  }
+
+  /** D2Game's target-node scan uses MonStats.aiDist, not an unlimited screen scan. */
+  private float maxSearchDistance(int entityId) {
+    Monster monster = mMonster.get(entityId);
+    if (monster != null && monster.monstats != null && monster.monstats.aidist != null
+        && monster.monstats.aidist.length > 0) {
+      int difficulty = 0;
+      MapWrapper wrapper = mMap.has(entityId) ? mMap.get(entityId) : null;
+      if (wrapper != null && wrapper.map != null) difficulty = wrapper.map.getDifficulty();
+      int index = Math.min(Math.max(0, difficulty), monster.monstats.aidist.length - 1);
+      int value = monster.monstats.aidist[index];
+      if (value > 0) return value;
+    }
+    return 35f;
+  }
+
+  /** Same weighted grid metric used by D2MOO's AI target-node distance helper. */
+  static float nativeAiDistance(Vector2 source, Vector2 target) {
+    if (source == null || target == null) return Float.MAX_VALUE;
+    float dx = Math.abs(target.x - source.x);
+    float dy = Math.abs(target.y - source.y);
+    float major = Math.max(dx, dy);
+    float minor = Math.min(dx, dy);
+    return (float) Math.floor((minor + 2f * major) / 2f);
+  }
+
+  private boolean isValidHostile(int sourceId, int ownerId, int candidate) {
+    if (candidate == sourceId || candidate == ownerId || !mPosition.has(candidate)
+        || !isHostile(candidate) || !isAlive(candidate)) return false;
+    MapWrapper source = mMap.has(sourceId) ? mMap.get(sourceId) : null;
+    return sameZone(source, candidate);
+  }
+
+  private static boolean isMeleeMercenary(Mercenary merc) {
+    // Hireling.txt's ids are 0=Rogue, 1=Desert, 2=Iron Wolf, 3=Barbarian.
+    return merc.mercType == 1 || merc.mercType == 3;
   }
 
   private boolean isHostile(int entityId) {

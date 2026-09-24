@@ -31,6 +31,16 @@ class MercenaryFollowSystemTest {
   }
 
   @Test
+  void roomTransitionDoesNotForceWarpWhenMapAndFollowPathAreAvailable() {
+    assertEquals(MercenaryFollowSystem.MOTION_FOLLOW,
+        MercenaryFollowSystem.motion(true, false, 40f, false, true));
+    assertEquals(MercenaryFollowSystem.MOTION_TELEPORT,
+        MercenaryFollowSystem.motion(false, false, 2f, false, true));
+    assertEquals(MercenaryFollowSystem.MOTION_TELEPORT,
+        MercenaryFollowSystem.motion(true, false, 40f, false, false));
+  }
+
+  @Test
   void landingSearchSkipsOwnerAndBlockedCandidates() {
     Vector2 result = new Vector2();
     boolean found = MercenaryFollowSystem.findLanding(new Vector2(10, 10), result,

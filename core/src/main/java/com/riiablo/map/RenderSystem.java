@@ -58,6 +58,7 @@ import com.riiablo.engine.server.component.Class;
 import com.riiablo.engine.server.component.Classname;
 import com.riiablo.engine.server.component.CofReference;
 import com.riiablo.engine.server.component.Networked;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Object;
 import com.riiablo.engine.server.component.Position;
 import com.riiablo.graphics.BlendMode;
@@ -124,7 +125,7 @@ public class RenderSystem extends BaseEntitySystem {
 
   // Automap color definitions - based on original Diablo/D2 style
   // Player arrow color - light blue
-  private static final Color AUTOMAP_PLAYER_COLOR = new Color(0x80c0ffff);
+  private static final Color AUTOMAP_PLAYER_COLOR = new Color(0x2460D8ff);
   // Wall color - dark yellow (COLOR_DIM from D1/D2)
   private static final Color AUTOMAP_WALL_COLOR = new Color(0xa0a060ff);
   // Bright elements (doors, stairs) - bright yellow (COLOR_BRIGHT from D1/D2)
@@ -138,7 +139,7 @@ public class RenderSystem extends BaseEntitySystem {
   // Warp/Portal color - light blue (for "<P>" marker)
   private static final Color AUTOMAP_WARP_COLOR = new Color(0x80c0ffff);
   // Mercenary color - light blue (for "+" marker)
-  private static final Color AUTOMAP_MERC_COLOR = new Color(0x80c0ffff);
+  private static final Color AUTOMAP_MERC_COLOR = new Color(0x447074ff);
   // Player missile color - green
   private static final Color AUTOMAP_PLAYER_MISSILE_COLOR = new Color(0x00ff00ff);
   // Mercenary missile color - light blue
@@ -238,6 +239,7 @@ public class RenderSystem extends BaseEntitySystem {
   protected ComponentMapper<com.riiablo.engine.server.component.Missile> mMissile;
   protected ComponentMapper<com.riiablo.engine.server.component.Interactable> mInteractable;
   protected ComponentMapper<com.riiablo.engine.server.component.Monster> mMonster;
+  protected ComponentMapper<Mercenary> mMercenary;
   protected ComponentMapper<com.riiablo.engine.server.component.Corpse> mCorpse;
   protected EntitySubscription debugEntitites;
 
@@ -2861,6 +2863,16 @@ public class RenderSystem extends BaseEntitySystem {
             break;
             
           case MON:
+            if (mMercenary.has(entityId)) {
+              // Native hirelings use the same directional automap glyph as a
+              // player, but with the dedicated muted teal palette entry.
+              shapes.setColor(AUTOMAP_MERC_COLOR.r, AUTOMAP_MERC_COLOR.g,
+                  AUTOMAP_MERC_COLOR.b, alpha);
+              drawAutomapPlayerArrow(shapes, localX, localY, entityId,
+                  worldToScreenScaleX, worldToScreenScaleY, automapWidth,
+                  automapHeight, screenWidth, screenHeight);
+              break;
+            }
             // Determine if monster is hostile using MonStats.Align field
             // Align: 0 = enemy (hostile), 1 = friendly/neutral, 2 = neutral
             boolean isHostile = true; // default to hostile
@@ -3149,7 +3161,10 @@ public class RenderSystem extends BaseEntitySystem {
     
     // Direction stabilization: only change direction if it persists for DIRECTION_STABLE_THRESHOLD ms
     long currentTime = System.currentTimeMillis();
-    if (rawDirection != stableDirection) {
+    // The historical debounce state is global because the local client has
+    // one player.  A hireling must use its own immediate direction or it will
+    // overwrite the player's pending direction every frame.
+    if (!mMercenary.has(entityId) && rawDirection != stableDirection) {
       if (rawDirection != pendingDirection) {
         // New direction detected, start timing
         pendingDirection = rawDirection;
@@ -3162,13 +3177,13 @@ public class RenderSystem extends BaseEntitySystem {
         //     radians * MathUtils.radiansToDegrees));
         stableDirection = rawDirection;
       }
-    } else {
+    } else if (!mMercenary.has(entityId)) {
       // Direction matches stable, reset pending
       pendingDirection = stableDirection;
     }
     
     // Use the stable direction for rendering
-    int direction = stableDirection;
+    int direction = mMercenary.has(entityId) ? rawDirection : stableDirection;
     
     // 根据方向绘制箭头 (参考 Devilution)
     // 使用 amLine 系统，但需要根据缩放比例转换

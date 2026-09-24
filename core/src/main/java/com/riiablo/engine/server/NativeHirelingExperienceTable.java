@@ -376,5 +376,31 @@ public final class NativeHirelingExperienceTable {
     return -1;
   }
 
+  /**
+   * Inclusive upper bound used by D2's {@code RollLimitedRandomNumber} when
+   * selecting a Hireling.txt skill.  Keeping this next to {@link #selectSkill}
+   * prevents callers from replacing the native cumulative range with a
+   * uniform slot choice.
+   */
+  public int skillRollBound(int hirelingId, int level) {
+    Row row = row(hirelingId, level);
+    if (row == null) return 1;
+    int levelUps = Math.max(0, level - row.level);
+    int total = row.defaultChance;
+    for (int i = 0; i < row.skills.length; i++) {
+      if (row.skills[i] < 0 || row.skillModes[i] >= 16 || row.skillLevels[i] <= 0) continue;
+      total += Math.max(0, row.chances[i] + levelUps * row.chancePerLevels[i] / 4);
+    }
+    return Math.max(1, total + 1);
+  }
+
+  /** D2Game sub_6FCE4610's pre-skill-use chance calculation. */
+  public static int useSkillChance(int hirelingId, int level, int aiParam) {
+    // Act II and Act V hirelings use the native 98% branch.  The remaining
+    // hirelings build toward a 95% cap using their persistent AI parameter.
+    if (hirelingId == 1 || hirelingId == 3) return 98;
+    return Math.min(Math.max(0, aiParam) + 40 + 2 * Math.max(1, level), 95);
+  }
+
   public int size() { return rows.size; }
 }

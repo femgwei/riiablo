@@ -13,6 +13,7 @@ import com.riiablo.engine.server.component.Position;
 import com.riiablo.engine.server.component.Size;
 import com.riiablo.engine.server.component.Velocity;
 import com.riiablo.engine.server.component.MapWrapper;
+import com.riiablo.engine.server.component.Mercenary;
 import com.riiablo.engine.server.component.Box2DBody;
 import com.riiablo.map.Map;
 import com.riiablo.logger.LogManager;
@@ -28,6 +29,7 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   protected ComponentMapper<Velocity> mVelocity;
   protected ComponentMapper<MapWrapper> mMapWrapper;
   protected ComponentMapper<Box2DBody> mBox2DBody;
+  protected ComponentMapper<Mercenary> mMercenary;
 
   private final UnitCollisionGrid grid = new UnitCollisionGrid();
   private EntitySubscription units;
@@ -132,14 +134,15 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
   /** Used by the pathfinder; targetId is ignored for approach paths. */
   public boolean isFreeForPath(int moverId, int targetId,
       int x, int y, int size) {
-    return !enabled || grid.isFree(moverId, targetId, x, y, size);
+    return !enabled || grid.isFree(moverId, targetId, x, y, size,
+        blockerFor(moverId));
   }
 
   /** Transfers a unit to a destination without pushing another unit. */
   public boolean tryMove(int entityId, Vector2 destination) {
     if (!enabled || destination == null || !hasPresence(entityId)) return true;
     return grid.move(entityId, -1, Map.round(destination.x),
-        Map.round(destination.y), footprint(entityId));
+        Map.round(destination.y), footprint(entityId), blockerFor(entityId));
   }
 
   public boolean tryMove(int entityId, float x, float y) {
@@ -184,5 +187,17 @@ public class DynamicUnitCollisionSystem extends BaseSystem {
 
   private int footprint(int entityId) {
     return mSize.has(entityId) ? Math.max(1, mSize.get(entityId).size) : 1;
+  }
+
+  /**
+   * D2's player path mask contains no monster/pet bit.  Keep ordinary unit
+   * collision intact for the rest of this legacy grid, but do not let the
+   * owner's own hireling block player path planning or authoritative steps.
+   * Monster movers still see the hireling, matching COLLIDE_PET behavior.
+   */
+  private UnitCollisionGrid.UnitBlocker blockerFor(int moverId) {
+    if (!isPlayer(moverId)) return null;
+    return entityId -> mMercenary == null || !mMercenary.has(entityId)
+        || mMercenary.get(entityId).ownerId != moverId;
   }
 }
