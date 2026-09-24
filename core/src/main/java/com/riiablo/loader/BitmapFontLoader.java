@@ -27,18 +27,20 @@ public class BitmapFontLoader extends AsynchronousAssetLoader<FontTBL.BitmapFont
 
   @Override
   public void loadAsync(AssetManager assets, String fileName, FileHandle file, Params params) {
-    FileHandle tblFile = resolve(name + ".TBL");
-    FileHandle dc6File = resolve(name + ".DC6");
-    cacheFile = FontAtlasCache.fileFor(tblFile, dc6File);
-    cached = FontAtlasCache.read(cacheFile);
-    if (cached != null) {
+    String fontName = file.pathWithoutExtension();
+    FileHandle tblFile = file;
+    FileHandle dc6File = resolve(fontName + ".DC6");
+    FileHandle currentCacheFile = FontAtlasCache.fileFor(tblFile, dc6File);
+    FontAtlasCache.CachedData currentCache = FontAtlasCache.read(currentCacheFile);
+    if (currentCache != null) {
+      cached = currentCache;
       data = FontTBL.dataFromCache(cached);
       cached = null;
     } else {
-      dc6 = assets.get(name.replace('\\', '/') + ".DC6", DC6.class); // workaround for libgdx path delimiter constraint
-      FontTBL tbl = FontTBL.loadFromFile(resolve(name + ".TBL"));
+      dc6 = assets.get(fontName.replace('\\', '/') + ".DC6", DC6.class); // workaround for libgdx path delimiter constraint
+      FontTBL tbl = FontTBL.loadFromFile(resolve(fontName + ".TBL"));
       data = tbl.data(dc6);
-      FontAtlasCache.write(cacheFile, data);
+      FontAtlasCache.write(currentCacheFile, data);
     }
     data.blendMode = params != null ? params.blendMode : BlendMode.LUMINOSITY_TINT;
   }
