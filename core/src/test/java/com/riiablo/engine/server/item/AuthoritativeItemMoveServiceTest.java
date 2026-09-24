@@ -311,6 +311,29 @@ class AuthoritativeItemMoveServiceTest extends RiiabloTest {
   }
 
   @Test
+  void inventoryQuiverMergesCursorQuantityAndKeepsRemainder() {
+    CharData character = character();
+    Item stored = item("aqv", 272);
+    Item incoming = item("aqv", 273);
+    assertTrue(character.getItems().addToInventory(stored));
+    setQuantity(stored, stored.base.maxstack - 20);
+    setQuantity(incoming, 112);
+    character.groundToCursor(incoming);
+
+    AuthoritativeItemMoveService service = new AuthoritativeItemMoveService();
+    AuthoritativeItemMoveService.Outcome result = service.apply(17, character,
+        intent(ItemMoveOperation.SWAP_STORE_ITEM, stored.id,
+            StoreLoc.INVENTORY.ordinal(), stored.gridX, stored.gridY));
+
+    assertTrue(result.success);
+    assertEquals(stored.base.maxstack, quantity(stored));
+    assertEquals(92, quantity(incoming));
+    assertSame(incoming, character.getItems().getCursor());
+    assertEquals(Location.STORED, stored.location);
+    assertEquals(StoreLoc.INVENTORY, stored.storeLoc);
+  }
+
+  @Test
   void useBeltItemConsumesBottomPotionAndShiftsColumnDown() {
     CharData character = character();
     equipBelt(character, "hbl", 250);

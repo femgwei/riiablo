@@ -529,8 +529,22 @@ public class ItemData {
    */
   public boolean mergeCursorIntoEquippedAmmo(BodyLoc bodyLoc) {
     if (bodyLoc == null || cursor == INVALID_ITEM) return false;
+    return mergeCursorIntoAmmo(getSlot(bodyLoc));
+  }
+
+  /** Fills a compatible arrow/bolt stack in the character inventory. */
+  public boolean mergeCursorIntoStoredAmmo(int targetIndex) {
+    if (cursor == INVALID_ITEM || targetIndex < 0 || targetIndex >= itemData.size
+        || targetIndex == cursor) return false;
+    Item target = getItem(targetIndex);
+    if (target == null || target.location != Location.STORED
+        || target.storeLoc != StoreLoc.INVENTORY) return false;
+    return mergeCursorIntoAmmo(target);
+  }
+
+  private boolean mergeCursorIntoAmmo(Item target) {
+    if (cursor == INVALID_ITEM) return false;
     Item source = getItem(cursor);
-    Item target = getSlot(bodyLoc);
     if (!isCompatibleAmmoStack(source, target)) return false;
 
     int sourceQuantity = quantity(source);

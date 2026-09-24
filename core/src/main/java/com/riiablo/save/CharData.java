@@ -775,6 +775,10 @@ public class CharData implements ItemData.UpdateListener, Pool.Poolable {
 //  @Override
   public void swapStoreItem(int i, StoreLoc storeLoc, int x, int y) {
     if (DEBUG_ITEMS) Gdx.app.log(TAG, "swapStoreItem " + i + "," + storeLoc + "," + x + "," + y);
+    // Native inventory behavior tops up a compatible arrow/bolt quiver
+    // instead of exchanging the two item objects. Any excess remains on the
+    // cursor so it can be placed elsewhere.
+    if (storeLoc == StoreLoc.INVENTORY && itemData.mergeCursorIntoStoredAmmo(i)) return;
     cursorToStore(storeLoc, x, y);
     storeToCursor(i);
   }
