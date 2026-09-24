@@ -45,7 +45,7 @@ public class DialogScroller extends Table implements Disposable {
       @Override
       public void setText(String str) {
         super.setText(str);
-        count = StringUtils.countMatches(str, '\n');
+        count = StringUtils.countMatches(str, '\n') + 1;
         prefHeight = count * getStyle().font.getLineHeight();
         setHeight(getPrefHeight());
       }

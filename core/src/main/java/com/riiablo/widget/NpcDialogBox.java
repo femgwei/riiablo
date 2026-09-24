@@ -48,7 +48,7 @@ public class NpcDialogBox extends Table implements Disposable {
     scrollSpeed = parts.length > 1
         ? NumberUtils.toFloat(parts[0]) / 60 * FONT.getLineHeight() * lineScalar
         : FONT.getLineHeight();
-    final int count = StringUtils.countMatches(body, '\n');
+    final int count = StringUtils.countMatches(body, '\n') + 1;
     textArea = new TextArea(body, new TextArea.TextFieldStyle() {{
       font = FONT;
       fontColor = Riiablo.colors.white;

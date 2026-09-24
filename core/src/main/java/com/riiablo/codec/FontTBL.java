@@ -228,17 +228,6 @@ public class FontTBL {
       }
     }
 
-    /** Aligns glyph bitmaps to the LibGDX baseline used by scrolling text fields. */
-    public void alignGlyphsToBaseline() {
-      for (int page = 0; page < glyphs.length; page++) {
-        BitmapFont.Glyph[] pageGlyphs = glyphs[page];
-        if (pageGlyphs == null) continue;
-        for (BitmapFont.Glyph glyph : pageGlyphs) {
-          if (glyph != null) glyph.yoffset = -glyph.height;
-        }
-      }
-    }
-
     private BitmapFont.Glyph copyGlyph(BitmapFont.Glyph source) {
       if (source == null) return null;
       BitmapFont.Glyph target = new BitmapFont.Glyph();
